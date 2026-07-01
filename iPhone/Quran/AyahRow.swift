@@ -107,6 +107,7 @@ struct AyahRow: View, Equatable {
 
     private var shouldShowManualKhatmButton: Bool {
         settings.quranSortMode == .khatm &&
+        settings.isHafsDisplay &&   // khatm marking only works on Hafs an Asim; hide the dead button otherwise
         !settings.automaticKhatmCompletion &&
         comparisonQiraahOverride == nil &&
         searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
@@ -369,7 +370,7 @@ struct AyahRow: View, Equatable {
                     if shouldShowManualKhatmButton {
                         Button {
                             settings.hapticFeedback()
-                            settings.markKhatmAyahComplete(surah: surah.id, ayah: ayah.id)
+                            settings.markKhatmAyahComplete(surah: surah.id, ayah: ayah.id, immediate: true)
                         } label: {
                             Image(systemName: "checkmark.circle")
                                 .resizable()

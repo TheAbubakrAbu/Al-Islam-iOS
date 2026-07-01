@@ -375,6 +375,8 @@ extension Settings {
 
     func applyKhatmCompletedAyahKeys(_ keys: [String], persistImmediately: Bool) {
         khatmProgressSaveTask?.cancel()
+        khatmProgressSaveTask = nil
+        khatmProgressRefreshPending = false
         khatmCompletedAyahSetCache = Set(keys)
         khatmCompletedSurahCountsCache = Self.khatmSurahCounts(from: khatmCompletedAyahSetCache)
 
@@ -402,13 +404,36 @@ extension Settings {
         khatmCompletedAyahsData = (try? Self.encoder.encode(keys)) ?? Data()
     }
 
-    private func scheduleKhatmProgressSaveAndRefresh() {
-        khatmProgressSaveTask?.cancel()
+    /// Debounces the expensive work of a khatm mark. The disk write (encode + UserDefaults) is always
+    /// coalesced onto a 250ms trailing timer so rapid marks — e.g. auto-marking while scrolling — never
+    /// hit storage per ayah. `refresh` controls whether this task is also responsible for the UI update:
+    /// auto-marking passes `true` so the checkmark/progress snap in once scrolling settles; a manual tap
+    /// passes `false` because it already fired `objectWillChange` synchronously for instant feedback.
+    private func scheduleKhatmProgressSaveAndRefresh(refresh: Bool = true) {
+        if refresh { khatmProgressRefreshPending = true }
+        // Re-arm the existing debounce instead of churning a fresh Task per ayah. Auto-marking while
+        // scrolling can fire this many times a second; allocating/cancelling a main-actor Task each time
+        // is exactly the overhead that made scrolling stutter.
+        khatmSaveGeneration &+= 1
+        guard khatmProgressSaveTask == nil else { return }
         khatmProgressSaveTask = Task { @MainActor [weak self] in
-            try? await Task.sleep(nanoseconds: 250_000_000)
-            guard let self, !Task.isCancelled else { return }
-            withAnimation {
-                self.persistKhatmProgressNow()
+            var lastSeen = -1
+            while true {
+                guard let self else { return }
+                // Cancellation only comes from applyKhatmCompletedAyahKeys, which frees the slot itself,
+                // so just bail — don't touch the shared task handle (it may already hold a newer task).
+                if Task.isCancelled { return }
+                if self.khatmSaveGeneration == lastSeen { break }   // no new marks in the last window
+                lastSeen = self.khatmSaveGeneration
+                try? await Task.sleep(nanoseconds: 250_000_000)
+            }
+            guard let self else { return }
+            self.khatmProgressSaveTask = nil
+            // No withAnimation here: animating objectWillChange animates every khatm view observing
+            // `settings` at once, which makes the checkmark appear laggy. Let it snap in.
+            self.persistKhatmProgressNow()
+            if self.khatmProgressRefreshPending {
+                self.khatmProgressRefreshPending = false
                 self.objectWillChange.send()
             }
         }
@@ -419,12 +444,16 @@ extension Settings {
         return khatmCompletedAyahSetCache.contains(khatmKey(surah: surah, ayah: ayah))
     }
 
-    func markKhatmAyahComplete(surah: Int, ayah: Int) {
+    /// - Parameter immediate: pass `true` for a deliberate user tap so the checkmark appears at once;
+    ///   leave `false` for automatic marking while scrolling so the UI update is coalesced with the
+    ///   debounced disk write and never stutters the scroll.
+    func markKhatmAyahComplete(surah: Int, ayah: Int, immediate: Bool = false) {
         guard isHafsDisplay else { return }
         let key = khatmKey(surah: surah, ayah: ayah)
         guard khatmCompletedAyahSetCache.insert(key).inserted else { return }
         khatmCompletedSurahCountsCache[surah, default: 0] += 1
-        scheduleKhatmProgressSaveAndRefresh()
+        if immediate { objectWillChange.send() }
+        scheduleKhatmProgressSaveAndRefresh(refresh: !immediate)
     }
 
     func khatmCompletedCount(for surah: Surah) -> Int {

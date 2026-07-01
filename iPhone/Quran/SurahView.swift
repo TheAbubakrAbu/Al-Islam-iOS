@@ -1609,32 +1609,49 @@ struct SurahView: View {
     private func khatmProgressSection() -> some View {
         if shouldShowKhatmProgress {
             Section {
-                VStack(alignment: .leading, spacing: 10) {
-                    Color.clear.frame(height: 0).onAppear { computeKhatmOverviewIfNeeded(force: false) }
+                if settings.isHafsDisplay {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Color.clear.frame(height: 0).onAppear { computeKhatmOverviewIfNeeded(force: false) }
 
-                    HStack(alignment: .firstTextBaseline) {
-                        Label("\(khatmCompletedAyahCount)/\(surah.numberOfAyahs) ayahs", systemImage: khatmCompletedAyahCount >= surah.numberOfAyahs ? "checkmark.circle.fill" : "circle.dashed")
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(settings.accentColor.color.opacity(khatmCompletedAyahCount > 0 ? 1 : 0.65))
+                        HStack(alignment: .firstTextBaseline) {
+                            Label("\(khatmCompletedAyahCount)/\(surah.numberOfAyahs) ayahs", systemImage: khatmCompletedAyahCount >= surah.numberOfAyahs ? "checkmark.circle.fill" : "circle.dashed")
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(settings.accentColor.color.opacity(khatmCompletedAyahCount > 0 ? 1 : 0.65))
 
-                        Spacer()
+                            Spacer()
 
-                        Text("\(khatmCompletionPercent)%")
-                            .font(.caption.monospacedDigit().weight(.semibold))
-                            .foregroundStyle(.secondary)
+                            Text("\(khatmCompletionPercent)%")
+                                .font(.caption.monospacedDigit().weight(.semibold))
+                                .foregroundStyle(.secondary)
+                        }
+
+                        ProgressView(value: Double(khatmCompletedAyahCount), total: Double(max(surah.numberOfAyahs, 1)))
+                            .tint(settings.accentColor.color)
+
+                        HStack {
+                            Text("Overall: \(khatmOverviewPercent)% completed")
+                                .font(.subheadline)
+                                .foregroundStyle(settings.accentColor.color)
+                            Spacer()
+                        }
                     }
-
-                    ProgressView(value: Double(khatmCompletedAyahCount), total: Double(max(surah.numberOfAyahs, 1)))
-                        .tint(settings.accentColor.color)
-                    
-                    HStack {
-                        Text("Overall: \(khatmOverviewPercent)% completed")
+                    .padding(.vertical, 4)
+                } else {
+                    // Khatm tracking is Hafs-only (see `markKhatmAyahComplete` / `isKhatmAyahComplete`, both
+                    // guarded by `isHafsDisplay`). On any other riwayah the bar would just sit at 0, so say
+                    // why instead of showing a dead progress bar. The riwayah notice below has the switch button.
+                    HStack(alignment: .firstTextBaseline, spacing: 10) {
+                        Image(systemName: "info.circle.fill")
                             .font(.subheadline)
                             .foregroundStyle(settings.accentColor.color)
-                        Spacer()
+
+                        Text("Khatm progress is only tracked on Hafs an Asim. Switch back to the default riwayah below to track this reading.")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
+                    .padding(.vertical, 4)
                 }
-                .padding(.vertical, 4)
             } header: {
                 Text("KHATM PROGRESS")
             }

@@ -626,6 +626,12 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     var khatmCompletedAyahSetCache: Set<String> = []
     var khatmCompletedSurahCountsCache: [Int: Int] = [:]
     var khatmProgressSaveTask: Task<Void, Never>?
+    /// Bumped on every khatm mark. The single debounce task re-arms itself while this keeps changing, so a
+    /// burst of auto-marks (scrolling) rides one timer instead of cancelling/recreating a Task per ayah.
+    var khatmSaveGeneration = 0
+    /// Whether the pending debounce task should also fire a UI refresh (set by auto-marks; manual marks
+    /// refresh synchronously and leave this false).
+    var khatmProgressRefreshPending = false
 
     var khatmCompletedAyahs: [String] {
         get {

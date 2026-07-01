@@ -989,10 +989,12 @@ struct QuranView: View {
                 }
             }
         ).animation(.easeInOut)) {
-            Text("Surah").tag(false)
+            Text("Surah")
                 .accessibilityLabel("Group by Surah")
-            Text("Juz").tag(true)
+                .tag(false)
+            Text("Juz")
                 .accessibilityLabel("Group by Juz")
+                .tag(true)
         }
         .pickerStyle(SegmentedPickerStyle())
         .conditionalGlassEffect()
@@ -1912,7 +1914,23 @@ struct QuranView: View {
             Text("Khatm mode tracks your progress through a complete reading of the Quran. As you read, ayahs are marked as completed so you can see how much of the Quran you have finished by ayah, page, and juz.")
                 .font(.caption)
                 .foregroundColor(.secondary)
-            
+
+            if !settings.isHafsDisplay {
+                // Khatm progress is Hafs-only (marking/completion are guarded by `isHafsDisplay`), so the
+                // stats below sit at 0 on any other riwayah. Say why rather than leave it unexplained.
+                HStack(alignment: .firstTextBaseline, spacing: 10) {
+                    Image(systemName: "info.circle.fill")
+                        .font(.subheadline)
+                        .foregroundStyle(settings.accentColor.color)
+
+                    Text("Khatm progress is only tracked on Hafs an Asim. Switch back to the default riwayah in Quran settings to track your reading.")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .padding(.vertical, 2)
+            }
+
             VStack(alignment: .leading, spacing: 4) {
                 Toggle("Automatically Mark Ayahs", isOn: $settings.automaticKhatmCompletion.animation(.easeInOut))
                     .font(.subheadline)
