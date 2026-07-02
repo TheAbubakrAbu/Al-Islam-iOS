@@ -952,26 +952,20 @@ struct QuranView: View {
         if settings.quranSortMode == .khatm {
             khatmGroupingPicker
         } else {
-            Picker("Sort Direction", selection: Binding(
-                get: {
-                    sortDirectionOptions.contains(settings.quranSortDirection) ? settings.quranSortDirection : .ascending
-                },
-                set: { newDirection in
-                    settings.hapticFeedback()
-                    withAnimation(.easeInOut(duration: 0.22)) {
-                        settings.quranSortDirection = newDirection
-                    }
-                }
-            ).animation(.easeInOut)) {
+            // Bind to the stored @AppStorage raw via its projected binding (like SettingsView's color-theme
+            // picker). A hand-rolled Binding(get:set:) closure over `settings` does NOT drive a segmented
+            // Picker's selection here — the segment never commits — which is why this used to refuse to switch.
+            Picker("Sort Direction", selection: $settings.quranSortDirectionRaw.animation(.easeInOut)) {
                 ForEach(sortDirectionOptions) { direction in
                     Text(direction.title)
-                        .tag(direction)
                         .accessibilityLabel(direction.accessibilityTitle)
+                        .tag(direction.rawValue)
                 }
             }
             .pickerStyle(SegmentedPickerStyle())
             .conditionalGlassEffect()
             .frame(maxWidth: .infinity)
+            .onChange(of: settings.quranSortDirectionRaw) { _ in settings.hapticFeedback() }
         }
         #else
         EmptyView()
@@ -980,15 +974,9 @@ struct QuranView: View {
 
     private var khatmGroupingPicker: some View {
         #if os(iOS)
-        Picker("Khatm Grouping", selection: Binding(
-            get: { settings.khatmGroupByJuz },
-            set: { groupByJuz in
-                settings.hapticFeedback()
-                withAnimation(.easeInOut(duration: 0.22)) {
-                    settings.khatmGroupByJuz = groupByJuz
-                }
-            }
-        ).animation(.easeInOut)) {
+        // Projected @AppStorage binding (like ArabicView's font picker). A custom Binding(get:set:) closure
+        // wouldn't commit the segment here — that was the "can't switch to Juz" bug.
+        Picker("Khatm Grouping", selection: $settings.khatmGroupByJuz.animation(.easeInOut)) {
             Text("Surah")
                 .accessibilityLabel("Group by Surah")
                 .tag(false)
@@ -999,6 +987,7 @@ struct QuranView: View {
         .pickerStyle(SegmentedPickerStyle())
         .conditionalGlassEffect()
         .frame(maxWidth: .infinity)
+        .onChange(of: settings.khatmGroupByJuz) { _ in settings.hapticFeedback() }
         #else
         EmptyView()
         #endif
