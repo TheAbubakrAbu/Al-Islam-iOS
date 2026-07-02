@@ -963,7 +963,9 @@ struct QuranView: View {
                 }
             }
             .pickerStyle(SegmentedPickerStyle())
-            .conditionalGlassEffect()
+            // Non-interactive glass: interactive Liquid Glass steals per-segment taps on real iOS 26
+            // hardware (works in the simulator, freezes on device), so keep it decorative only.
+            .conditionalGlassEffect(interactive: false)
             .frame(maxWidth: .infinity)
             .onChange(of: settings.quranSortDirectionRaw) { _ in settings.hapticFeedback() }
         }
@@ -985,7 +987,9 @@ struct QuranView: View {
                 .tag(true)
         }
         .pickerStyle(SegmentedPickerStyle())
-        .conditionalGlassEffect()
+        // Non-interactive glass: interactive Liquid Glass steals per-segment taps on real iOS 26 hardware
+        // (works in the simulator, freezes on device), so keep it decorative only.
+        .conditionalGlassEffect(interactive: false)
         .frame(maxWidth: .infinity)
         .onChange(of: settings.khatmGroupByJuz) { _ in settings.hapticFeedback() }
         #else

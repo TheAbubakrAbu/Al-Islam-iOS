@@ -154,7 +154,8 @@ private struct DuaCollectionView: View {
                     Text("Basic Font").tag(false)
                 }
                 .pickerStyle(.segmented)
-                .conditionalGlassEffect()
+                // Non-interactive glass: interactive Liquid Glass steals per-segment taps on real iOS 26 hardware.
+                .conditionalGlassEffect(interactive: false)
                 .onChange(of: settings.useFontArabic) { _ in settings.hapticFeedback() }
 
                 SearchBar(text: $searchText.animation(.easeInOut))
