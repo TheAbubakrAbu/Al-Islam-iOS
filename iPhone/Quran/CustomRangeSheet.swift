@@ -514,6 +514,11 @@ struct PlayCustomRangeSheet: View {
                             .font(.caption)
                             .foregroundStyle(.secondary)
                             .fixedSize(horizontal: false, vertical: true)
+                    } else if let note = selectedRangeReciter?.ayahMurattalStyleNote {
+                        Text("Ayahs play in \(note).")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
                 }
             }

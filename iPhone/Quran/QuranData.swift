@@ -4058,11 +4058,11 @@ final class QuranData: ObservableObject {
     }
 
     var shouldWaitForFullLaunchReadiness: Bool {
-        #if os(watchOS)
+        // Reveal as soon as the core Quran data is applied (loadState == .buildingIndexes). The verse-search
+        // index cache finishes loading a moment later in the background (see `loadAttempt`), and search shows
+        // a brief "preparing" state until it does. Previously iOS waited for full readiness, which held the
+        // launch screen up while the large search-index cache decoded — unnecessary just to display the Quran.
         false
-        #else
-        true
-        #endif
     }
 
     var hasLoadFailed: Bool {
@@ -4168,24 +4168,27 @@ final class QuranData: ObservableObject {
         let cacheSignature = resourceSignature(for: [url] + qiraatURLs) + (includeQiraat ? "-q" : "-noq")
 
         if let staticCache = loadStaticCache(resourceSignature: cacheSignature) {
+            // Apply the core data first and let the launch reveal on it (loadState → .buildingIndexes). The
+            // larger verse-search-index (dynamic) cache is only needed for search, not to display the Quran,
+            // so its decode/apply is deferred to *after* this hop instead of holding the launch screen up.
+            // This is why the launch no longer waits on the full search index (see shouldWaitForFullLaunch-
+            // Readiness). The app opens on the Adhan tab with the Quran tab warmed behind the cover, so the
+            // brief second render when the search index lands isn't visible.
+            await MainActor.run {
+                applyStaticCache(staticCache)
+            }
+
             #if !os(watchOS)
-            // Fast path for returning users (the common case): load the dynamic search-index cache too, then
-            // apply BOTH caches in a SINGLE main-actor hop. Two separate hops made QuranView run its heavy
-            // first List build when `quran` landed, then immediately re-render again when the search indexes
-            // landed — the visible double-layout stutter the first time the Quran tab opens. One hop → SwiftUI
-            // coalesces all the @Published writes into a single render. (loadDynamicCache reads off-main here.)
+            // Fast path for returning users (the common case): the search-index cache exists, so apply it
+            // (→ .ready, verse search ready). Decoded here — after the static apply above — so its cost no
+            // longer blocks the reveal. (loadDynamicCache reads off-main.)
             if let cachedDynamic = loadDynamicCache(resourceSignature: cacheSignature, qiraahKey: qiraahKey) {
                 await MainActor.run {
-                    applyStaticCache(staticCache)
                     applyDynamicCache(cachedDynamic)
                 }
                 return
             }
             #endif
-
-            await MainActor.run {
-                applyStaticCache(staticCache)
-            }
 
             let currentQiraah = await MainActor.run { settings.displayQiraahForArabic }
             let surahsToPublish = await MainActor.run { self.quran }

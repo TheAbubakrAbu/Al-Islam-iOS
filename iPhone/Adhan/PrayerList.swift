@@ -2,6 +2,11 @@ import SwiftUI
 
 struct PrayerList: View {
     @EnvironmentObject private var settings: Settings
+    @Environment(\.scenePhase) private var scenePhase
+
+    // The calendar day this view last considered "today". Used to detect a rollover that happened while the
+    // app was suspended so a stale `selectedDate` doesn't spuriously trigger the TODAY comparison on reopen.
+    @State private var lastActiveDay = Calendar.current.startOfDay(for: Date())
 
     @State private var expandedPrayerKey: String?
     @State private var fullPrayers = false
@@ -115,6 +120,29 @@ struct PrayerList: View {
         Section(header: sectionHeader) {
             prayerContentStack
         }
+        .onChange(of: scenePhase) { phase in
+            if phase == .active { resetToTodayIfDayChanged() }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .NSCalendarDayChanged)) { _ in
+            resetToTodayIfDayChanged()
+        }
+    }
+
+    /// Snaps `selectedDate` back to today when the calendar day has actually rolled over since we last saw
+    /// it — e.g. the app was suspended overnight and reopened. Without this, the stale `selectedDate` (still
+    /// on the previous day) makes `isShowingDifferentDay` true and the "TODAY vs that day" comparison block
+    /// renders on reopen. Guarded on an actual day change, so a day the user deliberately picked earlier the
+    /// same session (background → foreground within one day) is left untouched.
+    private func resetToTodayIfDayChanged() {
+        let currentDay = Calendar.current.startOfDay(for: Date())
+        guard currentDay != lastActiveDay else { return }
+        lastActiveDay = currentDay
+        if isShowingDifferentDay {
+            withAnimation {
+                selectedDate = Date()
+                compareToday = true
+            }
+        }
     }
 
     @ViewBuilder
@@ -140,6 +168,7 @@ struct PrayerList: View {
     /// persisted settings used elsewhere — this is just a more discoverable entry point.
     @ViewBuilder
     private var optionalPrayersFooter: some View {
+        #if os(iOS)
         // Everything lives in one VStack so it's a single list row — no internal separators to fight with.
         // The row's own bottom separator is hidden so the button reads as a clean standalone pill.
         VStack(spacing: 18) {
@@ -168,7 +197,6 @@ struct PrayerList: View {
             Divider()
         }
         .padding(.vertical, -12)
-        #if os(iOS)
         .listRowSeparator(.hidden)
         #endif
     }
@@ -784,6 +812,27 @@ private struct PrayerDetailBlock: View {
                         .foregroundColor(.secondary)
                         .font(.footnote)
                 }
+            }
+
+            // The "other" Asr: when the user follows the Standard (majority) opinion, show the later Hanafi
+            // Asr; when they follow Hanafi, show the earlier Standard Asr — so both timings are visible from
+            // the Asr detail regardless of the madhab setting.
+            if prayer.nameTransliteration == "Asr",
+               let otherAsr = settings.otherMadhabAsrTime(onSameDayAs: prayer.time) {
+                (
+                    Text(settings.hanafiMadhab ? "Standard Asr: " : "Hanafi Asr: ")
+                        + Text(otherAsr, style: .time)
+                )
+                .foregroundColor(.primary)
+                .font(.footnote)
+                .padding(.top, 2)
+
+                Text(settings.hanafiMadhab
+                     ? "The majority (Shāfiʿī/Mālikī/Ḥanbalī) time, when an object’s shadow equals its length."
+                     : "The Ḥanafī time, when an object’s shadow reaches twice its length.")
+                    .foregroundColor(.secondary)
+                    .font(.caption2)
+                    .fixedSize(horizontal: false, vertical: true)
             }
 
             if let referenceText {

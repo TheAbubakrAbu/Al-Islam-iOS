@@ -348,6 +348,12 @@ extension Settings {
 
         let coord = CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
 
+        // On watchOS, `NWPathMonitor` frequently reports `.unsatisfied` even though `CLGeocoder` still
+        // resolves fine by relaying through the paired iPhone — and because the path never "becomes
+        // reachable," the queued retry never fires, so the watch would sit on raw coordinates forever. So we
+        // only trust the reachability flag to pre-empt the geocode on iOS; on the watch we always attempt it
+        // and let a real geocode error (handled in the catch below) decide whether to defer.
+        #if os(iOS)
         if !Self.isNetworkReachable {
             queueGeocodeForReconnect(coord)
 
@@ -360,6 +366,7 @@ extension Settings {
             }
             return
         }
+        #endif
 
         if let cached = Self.cachedPlacemark,
            CLLocation(latitude: cached.coord.latitude, longitude: cached.coord.longitude)
@@ -401,7 +408,15 @@ extension Settings {
             Self.cachedPlacemark = (coord, newCity, detectedCountryCode)
 
         } catch {
-            if isNetworkGeocodeError(error) || !Self.isNetworkReachable {
+            // On iOS an unreachable path means "wait for reconnect." On watchOS the path flag is unreliable
+            // (see above), so only a genuine network geocode error defers — otherwise we fall through to the
+            // backed-off retry, which is what actually lands a city on the watch.
+            #if os(iOS)
+            let networkDefer = isNetworkGeocodeError(error) || !Self.isNetworkReachable
+            #else
+            let networkDefer = isNetworkGeocodeError(error)
+            #endif
+            if networkDefer {
                 queueGeocodeForReconnect(coord)
                 logger.warning("Geocode deferred until network returns")
                 return
@@ -882,6 +897,22 @@ extension Settings {
         return list
     }
 
+    /// The Asr time computed with the *opposite* madhab to the user's current setting (Hanafi ↔ Standard),
+    /// for the day of `referenceTime` at the current location, using the same calculation method and Asr
+    /// offset as the shown times. Used to display "the other Asr" in the Asr detail. Nil if no valid location.
+    func otherMadhabAsrTime(onSameDayAs referenceTime: Date) -> Date? {
+        guard let loc = currentLocation, loc.latitude != 1000, loc.longitude != 1000 else { return nil }
+        var params = calculationParameters(forStoredLabel: prayerCalculation)
+        params.madhab = hanafiMadhab ? Madhab.shafi : Madhab.hanafi
+        let comps = Self.gregorian.dateComponents([.year, .month, .day], from: referenceTime)
+        guard let raw = PrayerTimes(
+            coordinates: Coordinates(latitude: loc.latitude, longitude: loc.longitude),
+            date: comps,
+            calculationParameters: params
+        ) else { return nil }
+        return raw.asr.addingTimeInterval(Double(offsetAsr) * 60)
+    }
+
     /// Computes the enabled optional prayer times (Duhaa, Islamic Midnight, Last Third) for a given date.
     /// These are NOT stored in `prayers` (which is shared with widgets) and NOT shown in widgets.
     func getOptionalPrayers(for date: Date) -> [Prayer] {
@@ -963,7 +994,14 @@ extension Settings {
         
         if force || loc.city.contains("(") {
             let coord = CLLocationCoordinate2D(latitude: loc.latitude, longitude: loc.longitude)
-            if Self.isNetworkReachable {
+            // watchOS: attempt the geocode regardless of the path-monitor flag (it under-reports on the watch,
+            // see `updateCity`). iOS: only when the network is actually reachable, otherwise defer.
+            #if os(iOS)
+            let shouldAttemptGeocode = Self.isNetworkReachable
+            #else
+            let shouldAttemptGeocode = true
+            #endif
+            if shouldAttemptGeocode {
                 Task { @MainActor in
                     await updateCity(latitude: loc.latitude, longitude: loc.longitude)
                     if Bundle.main.bundleIdentifier?.contains("Widget") != true,
@@ -1403,6 +1441,13 @@ extension Settings {
         center.getPendingNotificationRequests { pending in
             let stale = pending.map(\.identifier).filter { id in
                 guard !desiredIDs.contains(id) else { return false }
+                // Never prune the one-shot informational alerts (traveling-mode on/off, auto-calculation
+                // change). They are scheduled by `checkIfTraveling` / `checkAutomaticPrayerCalculation` with
+                // their own fixed IDs and a ~1s trigger, so they are always "pending" for about a second and
+                // are never part of `desiredIDs`. Because those very state changes trigger this reschedule,
+                // pruning them here would delete the alert before it is ever delivered — which is exactly why
+                // the "traveling mode turned on/off" notification never appeared.
+                if id == Self.travelingNotificationId || id == Self.calculationNotificationId { return false }
                 // When there were no prayers to rebuild (no location yet), only prune the categories we DID
                 // rebuild — events and refresh nags. Leaving prayer notifications alone means a momentary
                 // location gap can't wipe a working adhan schedule.

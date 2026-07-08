@@ -833,6 +833,28 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     @AppStorage("fontArabicSize") var fontArabicSize: Double = Double(UIFont.preferredFont(forTextStyle: .title1).pointSize)
     @AppStorage("useFontArabic") var useFontArabic = true
 
+    // MARK: - Arabic Alphabet screen size
+
+    /// The Arabic Alphabet screens (ArabicView / ArabicLetterView) expose a size slider. This is its position
+    /// as an index into `arabicLetterDynamicTypeSizes`. The views apply the result as a Dynamic-Type *floor*
+    /// so text only ever grows from the device size, and the custom Arabic glyphs (built with `relativeTo:`)
+    /// grow along with every other label.
+    @AppStorage("arabicLetterSizeIndex") var arabicLetterSizeIndex: Int = 0
+
+    static let arabicLetterDynamicTypeSizes: [DynamicTypeSize] =
+        [.large, .xLarge, .xxLarge, .xxxLarge, .accessibility1, .accessibility2, .accessibility3]
+
+    var arabicLetterDynamicTypeSize: DynamicTypeSize {
+        let sizes = Self.arabicLetterDynamicTypeSizes
+        return sizes[min(max(arabicLetterSizeIndex, 0), sizes.count - 1)]
+    }
+
+    /// A custom Arabic font that scales with Dynamic Type (so the Arabic Alphabet size slider affects it).
+    /// `base` is the point size at the default (`.large`) content size.
+    func scalableArabicFont(base: CGFloat, relativeTo style: Font.TextStyle) -> Font {
+        .custom(fontArabic, size: base, relativeTo: style)
+    }
+
     @AppStorage("favoriteLetterData") private var favoriteLetterData = Data()
     var favoriteLetters: [LetterData] {
         get {

@@ -146,6 +146,16 @@ struct AdhanView: View {
                 settings.calculationAutoChanged = false
             }
         }
+        // Belt-and-suspenders for the dialog: when a travel/calculation change is auto-detected while this
+        // view isn't actively on screen — in the background, or behind the launch cover — the `.onChange`
+        // handlers above can miss the flag flip (their baseline was captured while it was still false). The
+        // standing @AppStorage flag persists, so the instant the app is revealed, present it directly instead
+        // of depending on a later prayer-fetch completion firing.
+        .onChange(of: appRevealed) { revealed in
+            if revealed && showAlert == nil {
+                showAlert = nextAlertToPresent
+            }
+        }
         .navigationTitle("Al-Adhan")
         #if os(iOS)
         .toolbar {
@@ -449,7 +459,10 @@ private struct CurrentLocationRow: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
-                locationLabel
+                VStack(alignment: .leading, spacing: 6) {
+                    locationLabel
+                    coordinatesLabel
+                }
 
                 Spacer()
 
@@ -543,6 +556,48 @@ private struct CurrentLocationRow: View {
         .font(.subheadline)
         .lineLimit(2)
         #endif
+    }
+
+    /// The device's actual latitude/longitude, shown under the location (city) only while the big Qibla
+    /// compass is expanded — a precise readout of "where you actually are" beneath the resolved place name.
+    @ViewBuilder
+    private var coordinatesLabel: some View {
+        if showBigQibla,
+           let loc = settings.currentLocation,
+           loc.latitude != 1000, loc.longitude != 1000 {
+            HStack(spacing: 5) {
+                Image(systemName: "globe")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(settings.accentColor.color)
+
+                Text(Self.formatCoordinates(latitude: loc.latitude, longitude: loc.longitude))
+                    .font(.caption2)
+                    .monospacedDigit()
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
+            }
+            .padding(.leading, 14)
+            .padding(.top, 1)
+            #if os(iOS)
+            .contextMenu {
+                Button {
+                    settings.hapticFeedback()
+                    UIPasteboard.general.string = "\(loc.latitude), \(loc.longitude)"
+                } label: {
+                    Label("Copy Coordinates", systemImage: "doc.on.doc")
+                }
+            }
+            #endif
+            .transition(.opacity)
+        }
+    }
+
+    /// Formats a coordinate pair as e.g. "21.4225° N, 39.8262° E".
+    static func formatCoordinates(latitude: Double, longitude: Double) -> String {
+        let latDir = latitude >= 0 ? "N" : "S"
+        let lonDir = longitude >= 0 ? "E" : "W"
+        return String(format: "%.4f° %@, %.4f° %@", abs(latitude), latDir, abs(longitude), lonDir)
     }
 }
 

@@ -416,6 +416,11 @@ final class QuranPlayer: ObservableObject {
         if reciter.defaultToMinshawi {
             return Reciter.minshawiAyahFallbackName
         }
+        // Mujawwad/Muallim variants with no per-ayah recording in that style play the reciter's Murattal —
+        // show that during ayah/range playback so the label matches what's actually heard.
+        if let note = reciter.ayahMurattalStyleNote {
+            return note
+        }
         return reciter.displayNameForNowPlaying
     }
 
@@ -724,20 +729,25 @@ final class QuranPlayer: ObservableObject {
     private func surahSkipBackward() {
         guard currentSurahNumber != nil else { return }
         let now = Date()
-        if let last = backButtonClickTimestamp, now.timeIntervalSince(last) < 0.75 {
+        // Two clicks within this window = go to the previous surah; a lone click just restarts the current
+        // one. Widened to 1.5s (was 0.75s) so the second tap is easier to land from Control Center / the
+        // Lock Screen / Notification Center where taps are slower.
+        if let last = backButtonClickTimestamp, now.timeIntervalSince(last) < 1.5 {
             backButtonClickCount += 1
         } else {
             backButtonClickCount = 1
         }
         backButtonClickTimestamp = now
-        
+
         if backButtonClickCount == 2 {
             playPreviousSurah(); backButtonClickCount = 0
         } else {
             pause()
             player?.seek(to: .zero) { [weak self] _ in self?.resume() }
             updateNowPlayingInfo()
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.85) { self.backButtonClickCount = 0 }
+            // Reset must outlast the double-tap window above, otherwise a legitimate second tap near the
+            // 1.5s edge would be counted as a fresh first tap and just restart instead of going back.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.6) { self.backButtonClickCount = 0 }
         }
     }
     private func surahSkipForward() { playNextSurah() }
@@ -1228,8 +1238,16 @@ final class QuranPlayer: ObservableObject {
         ayahNumber: Int,
         isBismillah: Bool = false
     ) -> AVPlayerItem? {
-        let globalId = quranData.quran.prefix(surah.id - 1).reduce(0) { $0 + $1.numberOfAyahs } + ayahNumber
-        let urlStr = "https://cdn.islamic.network/quran/audio/\(reciter.ayahBitrate)/\(reciter.ayahIdentifier)/\(globalId).mp3"
+        let urlStr: String
+        if let folder = reciter.everyayahFolder {
+            // everyayah.com uses a surah+ayah filename scheme. Used for editions whose cdn.islamic.network
+            // feed is unreliable — Minshawi Mujawwad's islamic.network ayahs are the Murattal recording for
+            // ~1 in 5 verses (same md5), which is what audibly dropped playback to Murattal mid-surah.
+            urlStr = "https://everyayah.com/data/\(folder)/\(String(format: "%03d%03d", surah.id, ayahNumber)).mp3"
+        } else {
+            let globalId = quranData.quran.prefix(surah.id - 1).reduce(0) { $0 + $1.numberOfAyahs } + ayahNumber
+            urlStr = "https://cdn.islamic.network/quran/audio/\(reciter.ayahBitrate)/\(reciter.ayahIdentifier)/\(globalId).mp3"
+        }
         guard let url = URL(string: urlStr) else {
             presentPlaybackFailure("A valid audio link could not be created for this ayah.")
             return nil

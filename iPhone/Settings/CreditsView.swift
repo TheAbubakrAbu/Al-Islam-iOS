@@ -130,6 +130,8 @@ struct CreditsView: View {
                 
                 creditLink("Credit for the Ayah Quran Recitations goes to Al Quran", url: "https://alquran.cloud/cdn")
 
+                creditLink("Credit for additional Ayah Quran Recitations goes to EveryAyah", url: "https://everyayah.com/")
+
                 creditLink("Credit for the English Quran translation comparison API goes to Al Quran Cloud", url: "https://alquran.cloud/api")
 
                 creditLink("Credit for the Tafsir API goes to Quran API Pages", url: "https://quranapi.pages.dev/")

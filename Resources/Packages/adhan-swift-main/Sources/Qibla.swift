@@ -30,7 +30,7 @@ public struct Qibla {
     public let direction: Double
 
     public init(coordinates: Coordinates) {
-        let makkah = Coordinates(latitude: 21.422445, longitude: 39.826388)
+        let makkah = Coordinates(latitude: 21.4225241, longitude: 39.8261818)
 
         /* Equation from "Spherical Trigonometry For the use of colleges and schools" page 50 */
         let term1 = sin(makkah.longitudeAngle.radians - coordinates.longitudeAngle.radians)

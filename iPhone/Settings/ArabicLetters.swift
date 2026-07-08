@@ -49,7 +49,7 @@ let standardArabicLetters: [LetterData] = [
         id: LetterID.next(),
         letter: "ا",
         forms: ["ـا", "ـا ـ", "ا ـ"],
-        name: "اَلِف",
+        name: "أَلِف",
         transliteration: "alif",
         showTashkeel: false,
         sound: "a",

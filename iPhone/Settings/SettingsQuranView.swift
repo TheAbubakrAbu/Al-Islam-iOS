@@ -792,6 +792,7 @@ struct ReciterListView: View {
     @State private var pendingQiraahReciter: Reciter?
     @State private var pendingDisplayQiraahTag: String?
     @State private var pendingMinshawiReciter: Reciter?
+    @State private var pendingMurattalStyleReciter: Reciter?
     @State private var pendingScrollToReciterID: String? = nil
     @State private var confirmHideQiraahDetails = false
     @AppStorage("splitMurattalRecitersByGroup") private var splitMurattalRecitersByGroup = false
@@ -1248,6 +1249,10 @@ struct ReciterListView: View {
     private func handleReciterTap(_ reciter: Reciter) {
         if reciter.defaultToMinshawi {
             pendingMinshawiReciter = reciter
+        } else if reciter.ayahMurattalStyleNote != nil {
+            // Mujawwad/Muallim variant with no true per-ayah recording in that style — confirm the ayah
+            // audio will be this reciter's own Murattal.
+            pendingMurattalStyleReciter = reciter
         } else {
             applyReciterSelection(reciter)
         }
@@ -1645,6 +1650,24 @@ struct ReciterListView: View {
             } message: {
                 Text("\(pendingMinshawiReciter?.name ?? "This reciter") only has full-surah recitation. Individual ayahs and custom ranges will play in \(Reciter.minshawiAyahFallbackName).")
             }
+            .confirmationDialog("Ayahs Play in Murattal", isPresented: Binding(
+                get: { pendingMurattalStyleReciter != nil },
+                set: { if !$0 { pendingMurattalStyleReciter = nil } }
+            ), titleVisibility: .visible) {
+                Button("Select This Reciter") {
+                    settings.hapticFeedback()
+                    if let reciter = pendingMurattalStyleReciter {
+                        pendingMurattalStyleReciter = nil
+                        applyReciterSelection(reciter)
+                    }
+                }
+
+                Button("Cancel") {
+                    pendingMurattalStyleReciter = nil
+                }
+            } message: {
+                Text("\(pendingMurattalStyleReciter?.name ?? "This reciter") has no separate ayah-by-ayah recording in this style, so individual ayahs and custom ranges will play in \(pendingMurattalStyleReciter?.ayahMurattalStyleNote ?? "Murattal"). Full-surah playback is unaffected.")
+            }
             .confirmationDialog("Convert Qiraah to Hafs an Asim?", isPresented: $confirmHideQiraahDetails, titleVisibility: .visible) {
                 Button("Yes") {
                     settings.hapticFeedback()
@@ -1723,7 +1746,10 @@ struct ReciterListView: View {
     }
 
     private var shouldHideDuplicateMinshawiEntries: Bool {
-        showDownloadedOnly
+        // The three Minshawi variants are always shown together in their own featured section, so they must
+        // be excluded from the Mujawwad/Muallim/Murattal style sections in every case — otherwise each shows
+        // up twice (the "two reciters" duplication). (Previously only hidden while filtering to downloads.)
+        true
     }
     #else
     private var shouldHideDuplicateMinshawiEntries: Bool {

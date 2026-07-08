@@ -104,6 +104,9 @@ struct ArabicView: View {
                 searchResultsSection
             }
             .themedListRowBackground()
+            // Size slider raises the Dynamic-Type *floor* for the alphabet content (custom Arabic glyphs
+            // included — they now use `relativeTo:`), so everything only ever grows from the device size.
+            .dynamicTypeSize(settings.arabicLetterDynamicTypeSize...)
         }
         #if os(watchOS)
         .searchable(text: $searchText.animation(.easeInOut))
@@ -111,6 +114,8 @@ struct ArabicView: View {
         .adaptiveSafeArea(edge: .bottom) {
             VStack(spacing: SafeAreaInsetVStackSpacing.standard) {
                 arabicFontPicker
+
+                ArabicSizeSlider()
 
                 HStack(spacing: 0) {
                     SearchBar(text: $searchText.animation(.easeInOut))
@@ -329,6 +334,37 @@ struct ArabicView: View {
     }
 }
 
+/// Bottom size control shared by the Arabic Alphabet list and the per-letter detail. Drives
+/// `settings.arabicLetterSizeIndex`, which both screens apply as a Dynamic-Type floor.
+struct ArabicSizeSlider: View {
+    @EnvironmentObject var settings: Settings
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "textformat.size.smaller")
+                .foregroundStyle(.secondary)
+
+            Slider(
+                value: Binding(
+                    get: { Double(settings.arabicLetterSizeIndex) },
+                    set: { settings.arabicLetterSizeIndex = Int($0.rounded()) }
+                ),
+                in: 0...Double(Settings.arabicLetterDynamicTypeSizes.count - 1),
+                step: 1
+            ) { editing in
+                if !editing { settings.hapticFeedback() }
+            }
+            .tint(settings.accentColor.color)
+
+            Image(systemName: "textformat.size.larger")
+                .foregroundStyle(.secondary)
+        }
+        // Keep the control itself a stable size regardless of the floor it sets for the content.
+        .dynamicTypeSize(.large)
+        .accessibilityLabel("Letter size")
+    }
+}
+
 struct LetterSectionHeader: View {
     @EnvironmentObject var settings: Settings
     let letterData: LetterData
@@ -388,7 +424,7 @@ struct ArabicLetterView: View {
                         Text(letterData.letter)
                             .font(
                                 useQuranicFontForLetter
-                                    ? .custom(settings.fontArabic, size: UIFont.preferredFont(forTextStyle: .largeTitle).pointSize)
+                                    ? settings.scalableArabicFont(base: 34, relativeTo: .largeTitle)
                                     : .title
                             )
                         
@@ -397,7 +433,7 @@ struct ArabicLetterView: View {
                         Text(letterData.name)
                             .font(
                                 useQuranicFontForLetter
-                                    ? .custom(settings.fontArabic, size: UIFont.preferredFont(forTextStyle: .title1).pointSize)
+                                    ? settings.scalableArabicFont(base: 28, relativeTo: .title)
                                     : .title2
                             )
                     }
@@ -432,7 +468,7 @@ struct ArabicLetterView: View {
                             Text(letterData.forms[index])
                                 .font(
                                     useQuranicFontForLetter
-                                        ? .custom(settings.fontArabic, size: UIFont.preferredFont(forTextStyle: .title1).pointSize)
+                                        ? settings.scalableArabicFont(base: 28, relativeTo: .title)
                                         : .title2
                                 )
 
@@ -531,11 +567,16 @@ struct ArabicLetterView: View {
             }
             }
             .themedListRowBackground()
+            // Same size slider as the alphabet list: a Dynamic-Type floor so the letter, its forms, and the
+            // explanatory text all grow together (the Arabic glyphs use `relativeTo:` so they scale too).
+            .dynamicTypeSize(settings.arabicLetterDynamicTypeSize...)
         }
         #if !os(watchOS)
         .adaptiveSafeArea(edge: .bottom) {
             VStack(spacing: SafeAreaInsetVStackSpacing.standard) {
                 arabicFontPicker
+
+                ArabicSizeSlider()
             }
             .padding(.horizontal, 24)
             .padding(.bottom)
@@ -675,7 +716,7 @@ struct TashkeelRow: View {
                     Text(letterData.letter + tk.tashkeelMark)
                         .font(
                             useQuranicFontForLetter
-                                ? .custom(settings.fontArabic, size: UIFont.preferredFont(forTextStyle: .title1).pointSize)
+                                ? settings.scalableArabicFont(base: 28, relativeTo: .title)
                                 : .title
                         )
                         .frame(maxWidth: .infinity)
@@ -782,7 +823,7 @@ struct HamzaPracticeRow: View {
                     Text(syllable.arabic)
                         .font(
                             useQuranicFontForLetter
-                                ? .custom(settings.fontArabic, size: UIFont.preferredFont(forTextStyle: .title1).pointSize)
+                                ? settings.scalableArabicFont(base: 28, relativeTo: .title)
                                 : .title
                         )
                         .frame(maxWidth: .infinity)
@@ -834,7 +875,7 @@ struct NonArabicVowelPracticeRow: View {
                     Text(syllable.arabic)
                         .font(
                             useQuranicFontForLetter
-                                ? .custom(settings.fontArabic, size: UIFont.preferredFont(forTextStyle: .title1).pointSize)
+                                ? settings.scalableArabicFont(base: 28, relativeTo: .title)
                                 : .title
                         )
                         .frame(maxWidth: .infinity)
@@ -894,7 +935,7 @@ struct ArabicLetterRow: View, Equatable {
                     source: letterData.letter,
                     term: searchQuery,
                     font: (useFontArabic && !letterData.isNonArabicScriptLetter)
-                        ? .custom(fontArabic, size: UIFont.preferredFont(forTextStyle: .title2).pointSize)
+                        ? .custom(fontArabic, size: 22, relativeTo: .title2)
                         : .title2,
                     accent: accentColor.color,
                     fg: accentColor.color,
@@ -980,7 +1021,7 @@ struct ArabicNumberRow: View {
                 Text(numberData.name)
                     .font(
                         settings.useFontArabic
-                            ? .custom(settings.fontArabic, size: UIFont.preferredFont(forTextStyle: .subheadline).pointSize)
+                            ? settings.scalableArabicFont(base: 15, relativeTo: .subheadline)
                             : .subheadline
                     )
                     .foregroundColor(settings.accentColor.color)

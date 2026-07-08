@@ -47,10 +47,13 @@ struct PrayersProvider: TimelineProvider {
     private let store   = UserDefaults(suiteName: AppIdentifiers.appGroupSuiteName)
     private let settings = Settings.shared
 
-    func placeholder(in context: Context) -> PrayersEntry { makeEntry() }
+    // Placeholder (redacted skeleton) and the gallery preview show representative sample times so they never
+    // render blank when the app hasn't cached prayers yet. The real timeline still shows only real data —
+    // a prayer app must never display fake prayer times as if they were the user's actual schedule.
+    func placeholder(in context: Context) -> PrayersEntry { sampleEntry() }
 
     func getSnapshot(in ctx: Context, completion: @escaping (PrayersEntry)->Void) {
-        completion(makeEntry())
+        completion(ctx.isPreview ? sampleEntry() : makeEntry())
     }
 
     func getTimeline(in ctx: Context, completion: @escaping (Timeline<PrayersEntry>)->Void) {
@@ -93,6 +96,38 @@ struct PrayersProvider: TimelineProvider {
             nextPrayer:                 settings.nextPrayer,
             hijriOffset:                settings.hijriOffset,
             switchHijriDateAtMaghrib:   settings.switchHijriDateAtMaghrib
+        )
+    }
+
+    /// Representative sample prayer times (today, fixed clock times) for the gallery preview and loading
+    /// placeholder, so those surfaces are never blank. Only ever shown in preview/placeholder contexts.
+    private func sampleEntry() -> PrayersEntry {
+        let accent = AccentColor(rawValue: store?.string(forKey: "accentColor") ?? AppIdentifiers.mainColorString) ?? AppIdentifiers.mainColor
+        let cal = Calendar.current
+        let now = Date()
+        func at(_ h: Int, _ m: Int) -> Date { cal.date(bySettingHour: h, minute: m, second: 0, of: now) ?? now }
+        func prayer(_ ar: String, _ tr: String, _ en: String, _ img: String, _ h: Int, _ m: Int) -> Prayer {
+            Prayer(nameArabic: ar, nameTransliteration: tr, nameEnglish: en, time: at(h, m),
+                   image: img, rakah: "", sunnahBefore: "", sunnahAfter: "")
+        }
+        let prayers = [
+            prayer("الفَجر", "Fajr", "Dawn", "sun.horizon", 5, 30),
+            prayer("الشُرُوق", "Shurooq", "Sunrise", "sunrise", 6, 45),
+            prayer("الظُهر", "Dhuhr", "Noon", "sun.max", 12, 30),
+            prayer("العَصر", "Asr", "Afternoon", "sun.min", 15, 45),
+            prayer("المَغرِب", "Maghrib", "Sunset", "sunset", 18, 30),
+            prayer("العِشَاء", "Isha", "Night", "moon", 20, 0),
+        ]
+        return PrayersEntry(
+            date: now,
+            accentColor: accent,
+            currentCity: "Mecca",
+            prayers: prayers,
+            fullPrayers: prayers,
+            currentPrayer: prayers.last { $0.time <= now } ?? prayers.first,
+            nextPrayer: prayers.first { $0.time > now } ?? prayers.first,
+            hijriOffset: 0,
+            switchHijriDateAtMaghrib: false
         )
     }
 

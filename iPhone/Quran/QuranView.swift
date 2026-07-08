@@ -2311,7 +2311,17 @@ struct QuranView: View {
 
     @ViewBuilder
     private func juzSections(context: SearchDisplayContext) -> some View {
-        let sections = usesDescendingQuranSort ? Array(quranData.juzSections.reversed()) : quranData.juzSections
+        // Descending must reverse both the juz order *and* the surah rows within each juz, so the list
+        // reads as a true reverse of ascending (e.g. juz 30 first, and inside it An-Nas before An-Naba').
+        let sections = usesDescendingQuranSort
+            ? quranData.juzSections.reversed().map { section in
+                QuranData.JuzSectionData(
+                    juz: section.juz,
+                    surahIDs: Array(section.surahIDs.reversed()),
+                    rows: Array(section.rows.reversed())
+                )
+            }
+            : quranData.juzSections
 
         ForEach(sections) { sectionData in
             let juz = sectionData.juz

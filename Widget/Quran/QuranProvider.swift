@@ -46,15 +46,51 @@ struct QuranWidgetEntry: TimelineEntry {
 struct QuranWidgetProvider: TimelineProvider {
     let kind: QuranWidgetKind
 
-    func placeholder(in context: Context) -> QuranWidgetEntry { makeEntry() }
+    // Placeholder (the redacted skeleton) and the widget-gallery preview must always show representative
+    // content so they can never render blank — the app may not have written a snapshot yet (fresh install,
+    // Quran data still loading), which previously left these surfaces empty.
+    func placeholder(in context: Context) -> QuranWidgetEntry { sampleEntry() }
 
     func getSnapshot(in context: Context, completion: @escaping (QuranWidgetEntry) -> Void) {
-        completion(makeEntry())
+        completion(context.isPreview ? sampleEntry() : makeEntry())
     }
 
     func getTimeline(in context: Context, completion: @escaping (Timeline<QuranWidgetEntry>) -> Void) {
         let entry = makeEntry()
         completion(Timeline(entries: [entry], policy: .after(Date().addingTimeInterval(30 * 60))))
+    }
+
+    /// Representative fake data (Al-Fātiḥah 1:1) for the gallery preview and the loading placeholder, so these
+    /// surfaces show a real-looking ayah instead of blank or an "open the app" prompt. Rendered with the
+    /// system font (no `arabicFontName`) so it displays even where the custom Uthmani font isn't available.
+    private func sampleEntry() -> QuranWidgetEntry {
+        let settings = Settings.shared
+        switch kind {
+        case .lastListenedSurah:
+            return QuranWidgetEntry(
+                date: Date(),
+                kind: kind,
+                title: kind.title,
+                icon: kind.icon,
+                primaryText: "Al-Fatihah",
+                secondaryText: "Mishary Alafasy",
+                tertiaryText: "00:42 / 01:30",
+                accentColor: settings.accentColor,
+                fallbackText: nil
+            )
+        case .lastReadAyah, .lastListenedAyah, .ayahOfTheDay:
+            return QuranWidgetEntry(
+                date: Date(),
+                kind: kind,
+                title: kind.title,
+                icon: kind.icon,
+                primaryText: "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ",
+                secondaryText: "Surah 1:1 • Al-Fatihah",
+                tertiaryText: "In the name of Allah, the Entirely Merciful, the Especially Merciful.",
+                accentColor: settings.accentColor,
+                fallbackText: nil
+            )
+        }
     }
 
     private func makeEntry() -> QuranWidgetEntry {
@@ -77,7 +113,11 @@ struct QuranWidgetProvider: TimelineProvider {
     }
 
     private func makeAyahEntry(settings: Settings, card: QuranWidgetSnapshot.AyahCard?, emptyMessage: String) -> QuranWidgetEntry {
-        guard let card else {
+        // Treat a card whose text is empty as missing, so a partially-written/blank card shows the guidance
+        // message rather than rendering an empty widget body.
+        guard let card,
+              !card.arabic.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                || !card.english.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             return fallbackEntry(settings: settings, message: emptyMessage)
         }
         return QuranWidgetEntry(
@@ -96,7 +136,7 @@ struct QuranWidgetProvider: TimelineProvider {
     }
 
     private func makeLastListenedEntry(settings: Settings, card: QuranWidgetSnapshot.ListenCard?) -> QuranWidgetEntry {
-        guard let card else {
+        guard let card, !card.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             return fallbackEntry(settings: settings, message: "Open the app to resume your last listened surah.")
         }
         return QuranWidgetEntry(
