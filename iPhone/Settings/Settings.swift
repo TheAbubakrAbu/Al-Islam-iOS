@@ -97,6 +97,7 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
         Self.locationManager.delegate = self
 
         runQuranStartupMigrations()
+        runAdhanSoundStartupMigrations()
         isReadyForUI = true
 
         // Defer CoreLocation + NWPathMonitor startup off the synchronous init/first-paint path. Settings.shared
@@ -379,7 +380,7 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     @AppStorage("naggingStartOffset") var naggingStartOffset: Int = 30 {
         didSet { self.fetchPrayerTimes(notification: true) }
     }
-    @AppStorage("adhanNotificationSound") var adhanNotificationSound: String = "egypt-30" {
+    @AppStorage("adhanNotificationSound") var adhanNotificationSound: String = Settings.defaultAdhanSoundID {
         didSet { self.fetchPrayerTimes(notification: true) }
     }
 
@@ -657,6 +658,9 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     /// One master grid toggle (driven by the toolbar button) for every list on the Quran tab except the
     /// summary: bookmarked ayahs, favorite surahs, and the surah / juz browse list.
     @AppStorage("quranGridMode") var quranGridMode = false
+    /// Reads a surah as swipeable mushaf pages instead of a scrolling ayah list. Toggled from the Quran tab's
+    /// toolbar, but only takes effect inside SurahView — the surah browse list itself is unchanged.
+    @AppStorage("quranPageMode") var quranPageMode = false
     /// Shows the spelled-out pronunciation aid above muqatta'at ayahs (e.g. أَلِفۡ لَآم مِيٓمۡ). Off by default.
     @AppStorage("showMuqattaatHelper") var showMuqattaatHelper = false
 
@@ -841,8 +845,11 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     /// grow along with every other label.
     @AppStorage("arabicLetterSizeIndex") var arabicLetterSizeIndex: Int = 0
 
+    /// Starts at `.xSmall`, not `.large`: a floor is a *minimum*, so anchoring it at `.large` silently forced
+    /// the alphabet up to the default text size for anyone whose system Dynamic Type is set smaller. The
+    /// lowest slider position must mean "whatever the device is set to", which only `.xSmall` guarantees.
     static let arabicLetterDynamicTypeSizes: [DynamicTypeSize] =
-        [.large, .xLarge, .xxLarge, .xxxLarge, .accessibility1, .accessibility2, .accessibility3]
+        [.xSmall, .small, .medium, .large, .xLarge, .xxLarge, .xxxLarge, .accessibility1, .accessibility2, .accessibility3]
 
     var arabicLetterDynamicTypeSize: DynamicTypeSize {
         let sizes = Self.arabicLetterDynamicTypeSizes

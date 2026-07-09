@@ -36,7 +36,6 @@ struct QuranWidgetEntry: TimelineEntry {
     let secondaryText: String?
     let tertiaryText: String?
     let accentColor: AccentColor
-    let fallbackText: String?
     /// When set, `primaryText` is Arabic and should render with this font (e.g. the Uthmani font).
     var arabicFontName: String? = nil
     /// Tajweed color spans over `primaryText` (Arabic only).
@@ -60,9 +59,10 @@ struct QuranWidgetProvider: TimelineProvider {
         completion(Timeline(entries: [entry], policy: .after(Date().addingTimeInterval(30 * 60))))
     }
 
-    /// Representative fake data (Al-Fātiḥah 1:1) for the gallery preview and the loading placeholder, so these
-    /// surfaces show a real-looking ayah instead of blank or an "open the app" prompt. Rendered with the
-    /// system font (no `arabicFontName`) so it displays even where the custom Uthmani font isn't available.
+    /// Representative fake data (Al-Fātiḥah 1:1) used wherever there is nothing real to show: the gallery
+    /// preview, the loading placeholder, and a device with no snapshot written yet. Showing a real-looking
+    /// ayah beats both a blank card and an "open the app" prompt. Rendered with the system font (no
+    /// `arabicFontName`) so it displays even where the custom Uthmani font isn't available.
     private func sampleEntry() -> QuranWidgetEntry {
         let settings = Settings.shared
         switch kind {
@@ -75,8 +75,7 @@ struct QuranWidgetProvider: TimelineProvider {
                 primaryText: "Al-Fatihah",
                 secondaryText: "Mishary Alafasy",
                 tertiaryText: "00:42 / 01:30",
-                accentColor: settings.accentColor,
-                fallbackText: nil
+                accentColor: settings.accentColor
             )
         case .lastReadAyah, .lastListenedAyah, .ayahOfTheDay:
             return QuranWidgetEntry(
@@ -87,8 +86,7 @@ struct QuranWidgetProvider: TimelineProvider {
                 primaryText: "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ",
                 secondaryText: "Surah 1:1 • Al-Fatihah",
                 tertiaryText: "In the name of Allah, the Entirely Merciful, the Especially Merciful.",
-                accentColor: settings.accentColor,
-                fallbackText: nil
+                accentColor: settings.accentColor
             )
         }
     }
@@ -99,26 +97,23 @@ struct QuranWidgetProvider: TimelineProvider {
 
         switch kind {
         case .lastReadAyah:
-            return makeAyahEntry(settings: settings, card: snapshot?.lastRead,
-                                 emptyMessage: "Open the app to set your last read verse.")
+            return makeAyahEntry(settings: settings, card: snapshot?.lastRead)
         case .lastListenedSurah:
             return makeLastListenedEntry(settings: settings, card: snapshot?.lastListened)
         case .lastListenedAyah:
-            return makeAyahEntry(settings: settings, card: snapshot?.lastListenedAyah,
-                                 emptyMessage: "Open the app to set your last listened ayah.")
+            return makeAyahEntry(settings: settings, card: snapshot?.lastListenedAyah)
         case .ayahOfTheDay:
-            return makeAyahEntry(settings: settings, card: snapshot?.ayahOfTheDay ?? ayahOfTheDayCard(from: snapshot),
-                                 emptyMessage: "Open the app to load the Ayah of the Day.")
+            return makeAyahEntry(settings: settings, card: snapshot?.ayahOfTheDay ?? ayahOfTheDayCard(from: snapshot))
         }
     }
 
-    private func makeAyahEntry(settings: Settings, card: QuranWidgetSnapshot.AyahCard?, emptyMessage: String) -> QuranWidgetEntry {
-        // Treat a card whose text is empty as missing, so a partially-written/blank card shows the guidance
-        // message rather than rendering an empty widget body.
+    private func makeAyahEntry(settings: Settings, card: QuranWidgetSnapshot.AyahCard?) -> QuranWidgetEntry {
+        // Treat a card whose text is empty as missing, so a partially-written/blank card falls back to the
+        // sample ayah rather than rendering an empty widget body.
         guard let card,
               !card.arabic.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
                 || !card.english.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            return fallbackEntry(settings: settings, message: emptyMessage)
+            return sampleEntry()
         }
         return QuranWidgetEntry(
             date: Date(),
@@ -129,7 +124,6 @@ struct QuranWidgetProvider: TimelineProvider {
             secondaryText: card.reference,
             tertiaryText: snippet(card.english),
             accentColor: settings.accentColor,
-            fallbackText: nil,
             arabicFontName: card.fontName,
             arabicColorRuns: card.colorRuns
         )
@@ -137,7 +131,7 @@ struct QuranWidgetProvider: TimelineProvider {
 
     private func makeLastListenedEntry(settings: Settings, card: QuranWidgetSnapshot.ListenCard?) -> QuranWidgetEntry {
         guard let card, !card.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            return fallbackEntry(settings: settings, message: "Open the app to resume your last listened surah.")
+            return sampleEntry()
         }
         return QuranWidgetEntry(
             date: Date(),
@@ -147,8 +141,7 @@ struct QuranWidgetProvider: TimelineProvider {
             primaryText: card.name,
             secondaryText: card.reciter,
             tertiaryText: "\(formatDurationMMSS(card.current)) / \(formatDurationMMSS(card.full))",
-            accentColor: settings.accentColor,
-            fallbackText: nil
+            accentColor: settings.accentColor
         )
     }
 
@@ -158,20 +151,6 @@ struct QuranWidgetProvider: TimelineProvider {
         guard let pool = snapshot?.randomPool, !pool.isEmpty else { return nil }
         let bucket = Int(Date().timeIntervalSince1970 / 86_400)
         return pool[((bucket % pool.count) + pool.count) % pool.count]
-    }
-
-    private func fallbackEntry(settings: Settings, message: String) -> QuranWidgetEntry {
-        QuranWidgetEntry(
-            date: Date(),
-            kind: kind,
-            title: kind.title,
-            icon: kind.icon,
-            primaryText: message,
-            secondaryText: nil,
-            tertiaryText: nil,
-            accentColor: settings.accentColor,
-            fallbackText: message
-        )
     }
 
     private func snippet(_ text: String, maxLength: Int = 90) -> String {
@@ -215,12 +194,7 @@ struct QuranWidgetEntryView: View {
         VStack(alignment: .leading, spacing: 6) {
             header
 
-            if let fallbackText = entry.fallbackText {
-                Text(fallbackText)
-                    .font(isAccessoryRectangularFamily ? .caption2 : .caption)
-                    .foregroundColor(.secondary)
-                    .lineLimit(isAccessoryRectangularFamily ? 2 : 4)
-            } else if isAccessoryRectangularFamily {
+            if isAccessoryRectangularFamily {
                 accessoryBody
             } else {
                 regularBody
@@ -230,6 +204,9 @@ struct QuranWidgetEntryView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .padding(contentPadding)
+        // The placeholder entry is already representative sample content, so show it as-is. Left redacted,
+        // WidgetKit blurs it into the grey smudge that reads as "this widget is broken".
+        .unredacted()
         .widgetContainerBackground(accessory: isAccessoryRectangularFamily)
     }
 

@@ -753,6 +753,28 @@ struct QuranView: View {
         #if os(iOS)
         .toolbar {
             ToolbarItem(placement: .navigationBarLeading) {
+                // Page mode changes nothing here — it only decides whether opening a surah reads as swipeable
+                // mushaf pages or as the scrolling ayah list.
+                Button {
+                    settings.hapticFeedback()
+                    withAnimation { settings.quranPageMode.toggle() }
+                } label: {
+                    Image(systemName: settings.quranPageMode ? "list.bullet.rectangle" : "book")
+                }
+                .accessibilityLabel(settings.quranPageMode ? "Read surahs as a list" : "Read surahs as pages")
+            }
+
+            ToolbarItem(placement: .navigationBarLeading) {
+                Button {
+                    settings.hapticFeedback()
+                    withAnimation { settings.quranGridMode.toggle() }
+                } label: {
+                    Image(systemName: settings.quranGridMode ? "list.bullet" : "square.grid.2x2")
+                }
+                .accessibilityLabel(settings.quranGridMode ? "Show lists" : "Show grids")
+            }
+
+            ToolbarItem(placement: .navigationBarTrailing) {
                 if settings.quranSortMode == .khatm {
                     Button {
                         settings.hapticFeedback()
@@ -764,16 +786,6 @@ struct QuranView: View {
                     }
                     .accessibilityLabel(khatmEditMode ? "Done" : "Edit")
                 }
-            }
-            
-            ToolbarItem(placement: .navigationBarTrailing) {
-                Button {
-                    settings.hapticFeedback()
-                    withAnimation { settings.quranGridMode.toggle() }
-                } label: {
-                    Image(systemName: settings.quranGridMode ? "list.bullet" : "square.grid.2x2")
-                }
-                .accessibilityLabel(settings.quranGridMode ? "Show lists" : "Show grids")
             }
 
             ToolbarItem(placement: .navigationBarTrailing) {

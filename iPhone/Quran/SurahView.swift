@@ -934,11 +934,26 @@ struct SurahView: View {
         }
     }
 
+    /// Page mode swaps the ayah list for the swipeable mushaf pages; everything wrapped around it (toolbar,
+    /// sheets, dialogs) is shared by both.
+    @ViewBuilder
+    private var surahReadingBody: some View {
+        #if os(iOS)
+        if settings.quranPageMode {
+            SurahPageReader(surah: surah, initialAyah: ayah)
+        } else {
+            surahCoreBody
+        }
+        #else
+        surahCoreBody
+        #endif
+    }
+
     var body: some View {
         #if os(iOS)
         // The centered title is now a Menu (Surah List / Surah Info / Revelation Info), so the toolbar
         // only carries the principal title and the trailing settings gear.
-        applySurahToolbar(to: surahCoreBody)
+        applySurahToolbar(to: surahReadingBody)
         .onAppear {
             quranPlayer.recordReadingHistory(surahNumber: surah.id, surahName: surah.nameTransliteration, ayahNumber: ayah ?? 1)
         }
@@ -2473,6 +2488,239 @@ private struct TajweedLegendMenu: View {
             }
             .smallMediumSheetPresentation()
         }
+    }
+}
+
+// MARK: - Page mode
+
+/// A mushaf page: every ayah printed on absolute page `page`, grouped into runs by surah so a page that
+/// straddles a surah boundary can draw a divider where the surah changes.
+struct MushafPage: Identifiable {
+    struct Segment: Identifiable {
+        let surah: Surah
+        let ayahs: [Ayah]
+
+        var id: Int { surah.id }
+    }
+
+    let page: Int
+    let segments: [Segment]
+
+    var id: Int { page }
+
+    var firstSurah: Surah? { segments.first?.surah }
+    var firstAyah: Ayah? { segments.first?.ayahs.first }
+    var juz: Int? { firstAyah?.juz }
+}
+
+/// The whole mushaf as swipeable pages: each page holds every ayah printed on it — across surah boundaries —
+/// as one continuous block of Arabic, the way a printed mushaf sets them. Shown in place of the ayah list
+/// when `settings.quranPageMode` is on. Swiping left/right moves through the mushaf continuously; reaching the
+/// end of a surah simply carries you into the next one.
+struct SurahPageReader: View {
+    @EnvironmentObject private var settings: Settings
+    @EnvironmentObject private var quranData: QuranData
+
+    /// The surah the reader was opened from, and the ayah within it (a bookmark, a search hit, last-read).
+    /// Together they decide the starting page; after that the reader is no longer bound to this surah.
+    let surah: Surah
+    var initialAyah: Int?
+
+    @State private var pageIndex = 0
+    @State private var didSetInitialPage = false
+
+    /// Paginating all 6,236 ayahs is not free, so do it once per (qiraah, quran-size) and reuse. Keyed by
+    /// qiraah because ayahs missing from a qiraah are dropped, which changes what lands on each page.
+    @MainActor private static var pageCache: (key: String, pages: [MushafPage])?
+
+    @MainActor
+    private static func pages(quran: [Surah], qiraah: String?) -> [MushafPage] {
+        let key = "\(qiraah ?? "Hafs")|\(quran.count)"
+        if let cached = pageCache, cached.key == key { return cached.pages }
+
+        var pages: [MushafPage] = []
+        // Surahs and their ayahs are already in mushaf order, so a page's segments accumulate in order too:
+        // extend the trailing segment when the surah repeats, else start a new one.
+        for surah in quran {
+            for ayah in surah.ayahs where ayah.existsInQiraah(qiraah) {
+                guard let page = ayah.page else { continue }
+
+                if var last = pages.last, last.page == page {
+                    var segments = last.segments
+                    if let lastSegment = segments.last, lastSegment.surah.id == surah.id {
+                        segments[segments.count - 1] = MushafPage.Segment(surah: surah, ayahs: lastSegment.ayahs + [ayah])
+                    } else {
+                        segments.append(MushafPage.Segment(surah: surah, ayahs: [ayah]))
+                    }
+                    last = MushafPage(page: page, segments: segments)
+                    pages[pages.count - 1] = last
+                } else {
+                    pages.append(MushafPage(page: page, segments: [MushafPage.Segment(surah: surah, ayahs: [ayah])]))
+                }
+            }
+        }
+
+        pageCache = (key, pages)
+        return pages
+    }
+
+    /// Where to land when the reader opens: the page holding `initialAyah` of the surah we came from, else
+    /// the page holding the last-read ayah, else that surah's first page.
+    private func startingPageIndex(in pages: [MushafPage]) -> Int {
+        let targetAyah = initialAyah
+            ?? (settings.lastReadSurah == surah.id && settings.lastReadAyah > 0 ? settings.lastReadAyah : nil)
+
+        if let targetAyah,
+           let index = pages.firstIndex(where: { page in
+               page.segments.contains { $0.surah.id == surah.id && $0.ayahs.contains { $0.id == targetAyah } }
+           }) {
+            return index
+        }
+
+        return pages.firstIndex { $0.segments.contains { $0.surah.id == surah.id } } ?? 0
+    }
+
+    var body: some View {
+        let pages = Self.pages(quran: quranData.quran, qiraah: settings.displayQiraahForArabic)
+
+        Group {
+            if pages.isEmpty {
+                Text("No ayahs to display")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                TabView(selection: $pageIndex) {
+                    // `MushafPageContent` is a view struct, not an inline builder, so SwiftUI only evaluates
+                    // a page's (expensive) Arabic body when that page is actually on screen — otherwise all
+                    // ~600 pages would render up front.
+                    ForEach(Array(pages.enumerated()), id: \.offset) { index, page in
+                        MushafPageContent(page: page, index: index, total: pages.count)
+                            .tag(index)
+                    }
+                }
+                .tabViewStyle(.page(indexDisplayMode: .never))
+            }
+        }
+        .onAppear {
+            // Seed the index once. Re-deriving it on every render (font change, qiraah switch) would yank the
+            // reader back to the page it was opened at.
+            guard !didSetInitialPage else { return }
+            didSetInitialPage = true
+            pageIndex = startingPageIndex(in: pages)
+        }
+        .onChange(of: pageIndex) { index in
+            guard pages.indices.contains(index),
+                  let surah = pages[index].firstSurah,
+                  let ayah = pages[index].firstAyah else { return }
+            saveLastRead(surahID: surah.id, ayahID: ayah.id)
+        }
+    }
+
+    private func saveLastRead(surahID: Int, ayahID: Int) {
+        guard settings.saveLastReadAyah else { return }
+        guard settings.lastReadSurah != surahID || settings.lastReadAyah != ayahID else { return }
+
+        settings.lastReadSurah = surahID
+        settings.lastReadAyah = ayahID
+        settings.refreshQuranWidgets()
+    }
+}
+
+/// One page of the mushaf. Its body is only built when the page scrolls into view.
+private struct MushafPageContent: View {
+    @EnvironmentObject private var settings: Settings
+
+    let page: MushafPage
+    let index: Int
+    let total: Int
+
+    private var arabicFont: Font {
+        settings.useFontArabic
+            ? .custom(settings.fontArabic, size: settings.fontArabicSize)
+            : .system(size: settings.fontArabicSize)
+    }
+
+    var body: some View {
+        VStack(spacing: 12) {
+            header
+
+            ScrollView {
+                VStack(spacing: 18) {
+                    ForEach(page.segments) { segment in
+                        VStack(spacing: 12) {
+                            surahDivider(segment.surah)
+                            segmentBody(segment)
+                        }
+                    }
+                }
+                .padding(.horizontal, 20)
+                .padding(.vertical, 16)
+            }
+
+            Text("\(index + 1) of \(total)")
+                .font(.caption2)
+                .monospacedDigit()
+                .foregroundStyle(.secondary)
+                .padding(.bottom, 8)
+        }
+    }
+
+    private var header: some View {
+        HStack {
+            if let juz = page.juz {
+                Text("Juz \(juz)")
+            }
+
+            Spacer()
+
+            Text("Page \(page.page)")
+        }
+        .font(.caption.weight(.semibold))
+        .foregroundStyle(settings.accentColor.color)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 8)
+        .conditionalGlassEffect()
+        .padding(.horizontal, 16)
+        .padding(.top, 8)
+    }
+
+    /// Marks where a surah begins (or continues, when the page opens mid-surah) so a page that spans a
+    /// boundary always says which surah its text belongs to.
+    private func surahDivider(_ surah: Surah) -> some View {
+        HStack(spacing: 10) {
+            VStack { Divider() }
+
+            Text("\(surah.id) · \(surah.nameTransliteration)")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(settings.accentColor.color)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+
+            VStack { Divider() }
+        }
+    }
+
+    /// A surah's ayahs on this page run together as one right-to-left block, each closed by its Arabic number.
+    private func segmentBody(_ segment: MushafPage.Segment) -> some View {
+        let clean = settings.cleanArabicText
+
+        return segment.ayahs.reduce(Text("")) { combined, ayah in
+            let arabic = Text(ayah.displayArabicText(surahId: segment.surah.id, clean: clean))
+                .font(arabicFont)
+                .foregroundColor(.primary)
+
+            let marker = Text(" \(ayah.idArabic) ")
+                .font(.custom(Settings.qiraatUthmaniFontName, size: settings.fontArabicSize * 0.85))
+                .foregroundColor(settings.accentColor.color)
+
+            return combined + arabic + marker
+        }
+        .multilineTextAlignment(.center)
+        .lineSpacing(12)
+        .environment(\.layoutDirection, .rightToLeft)
+        .textSelection(.enabled)
+        .frame(maxWidth: .infinity)
     }
 }
 

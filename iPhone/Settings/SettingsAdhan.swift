@@ -12,37 +12,108 @@ struct AdhanSoundOption: Identifiable, Equatable {
 }
 
 extension Settings {
+    /// Each adhan ships as two clips: `<id>.caf` (the whole adhan) and `<id>-30.caf` (its opening 30
+    /// seconds). iOS rejects notification sounds longer than 30 seconds, so notifications always get the
+    /// short cut, while in-app playback and the settings preview get the full recording.
     static let supportedAdhanSounds: [AdhanSoundOption] = [
         .init(id: "default", title: "Default"),
-        .init(id: "egypt-30", title: "Egypt"),
-        .init(id: "makkah-30", title: "Makkah"),
-        .init(id: "madina-30", title: "Madina"),
-        .init(id: "alaqsa-30", title: "Al-Aqsa"),
-        .init(id: "alaqsa-2-30", title: "Al-Aqsa 2"),
-        
-        .init(id: "abdulbaset-30", title: "Abdul Baset"),
-        .init(id: "abdulghaffar-30", title: "Abdul Ghaffar"),
-        .init(id: "al-qatami-30", title: "Al-Qatami"),
-        .init(id: "zakariya-30", title: "Zakariya")
+        .init(id: "egypt", title: "Egypt"),
+        .init(id: "makkah", title: "Makkah"),
+        .init(id: "madina", title: "Madina"),
+        .init(id: "alaqsa", title: "Al-Aqsa"),
+        .init(id: "alaqsa-2", title: "Al-Aqsa 2"),
+
+        .init(id: "abdulbaset", title: "Abdul Baset"),
+        .init(id: "abdulghaffar", title: "Abdul Ghaffar"),
+        .init(id: "al-qatami", title: "Al-Qatami"),
+        .init(id: "minshawi-1", title: "Minshawi 1"),
+        .init(id: "minshawi-2", title: "Minshawi 2"),
+        .init(id: "zakariya", title: "Zakariya")
     ]
 
-    private static let supportedAdhanSoundIDs = Set(supportedAdhanSounds.map(\.id))
-    private static var adhanSoundFilenameCache: [String: String] = [:]
+    static let defaultAdhanSoundID = "minshawi-1"
+    static let adhanNotificationClipSuffix = "-30"
 
-    func adhanSoundFilename(for selection: String) -> String? {
-        if let cached = Self.adhanSoundFilenameCache[selection] {
+    static let supportedAdhanSoundIDs = Set(supportedAdhanSounds.map(\.id))
+    private static var adhanSoundResourceCache: [String: String?] = [:]
+
+    /// Resolves a picker id to a bundled `.caf` resource name, or `nil` for "Default" and for any id whose
+    /// clip is missing from the bundle. `variant` picks the full recording ("") or the 30-second cut.
+    private func adhanSoundResource(for selection: String, variant: String) -> String? {
+        let resource = selection + variant
+        if let cached = Self.adhanSoundResourceCache[resource] {
             return cached
         }
 
-        guard selection != "default",
-              Self.supportedAdhanSoundIDs.contains(selection),
-              Bundle.main.path(forResource: selection, ofType: "caf") != nil else {
-            return nil
+        let resolved: String? = {
+            guard selection != "default",
+                  Self.supportedAdhanSoundIDs.contains(selection),
+                  Bundle.main.path(forResource: resource, ofType: "caf") != nil else {
+                return nil
+            }
+            return resource
+        }()
+
+        Self.adhanSoundResourceCache[resource] = resolved
+        return resolved
+    }
+
+    /// Resource name (no extension) of the full-length adhan, for in-app playback and the preview button.
+    func adhanFullSoundResource(for selection: String) -> String? {
+        adhanSoundResource(for: selection, variant: "")
+    }
+
+    /// Filename of the 30-second cut, for `UNNotificationSound`.
+    func adhanNotificationSoundFilename(for selection: String) -> String? {
+        adhanSoundResource(for: selection, variant: Self.adhanNotificationClipSuffix)
+            .map { "\($0).caf" }
+    }
+
+    /// Repairs a selection stored by an older build, or pushed over by a Watch still running one: ids used
+    /// to carry the `-30` suffix of the notification clip, and now name the adhan itself.
+    static func normalizedAdhanSoundID(_ stored: String) -> String {
+        let base = stored.hasSuffix(adhanNotificationClipSuffix)
+            ? String(stored.dropLast(adhanNotificationClipSuffix.count))
+            : stored
+        return supportedAdhanSoundIDs.contains(base) ? base : defaultAdhanSoundID
+    }
+
+    func normalizeAdhanSoundSelection() {
+        let normalized = Self.normalizedAdhanSoundID(adhanNotificationSound)
+        if normalized != adhanNotificationSound {
+            adhanNotificationSound = normalized
+        }
+    }
+
+    private static let didAdoptMinshawiDefaultKey = "didAdoptMinshawiAdhanDefault"
+
+    /// One-time startup migrations for the adhan sound selection. These write straight to `UserDefaults`
+    /// (where `@AppStorage` reads from) instead of going through the property, so they can run inside
+    /// `Settings.init` without the `didSet` kicking off a prayer-time refresh mid-initialization.
+    func runAdhanSoundStartupMigrations() {
+        let defaults = UserDefaults.standard
+        let key = "adhanNotificationSound"
+
+        if let stored = defaults.string(forKey: key) {
+            let normalized = Self.normalizedAdhanSoundID(stored)
+            if normalized != stored {
+                defaults.set(normalized, forKey: key)
+            }
         }
 
-        let filename = "\(selection).caf"
-        Self.adhanSoundFilenameCache[selection] = filename
-        return filename
+        // Minshawi 1 became the app's adhan. Adopt it once for everyone, including users who had already
+        // picked something else, then never touch the choice again — the flag is what keeps a later re-pick
+        // from being stomped on the next launch.
+        if !defaults.bool(forKey: Self.didAdoptMinshawiDefaultKey) {
+            defaults.set(true, forKey: Self.didAdoptMinshawiDefaultKey)
+            // Only overwrite an explicit prior choice. A device that never set the key already resolves to
+            // Minshawi 1 through the `@AppStorage` default, and the key must stay unset so `watchSyncSnapshot`
+            // still omits it — otherwise a fresh Watch install would broadcast this default over an
+            // established iPhone's real selection.
+            if defaults.object(forKey: key) != nil {
+                defaults.set(Self.defaultAdhanSoundID, forKey: key)
+            }
+        }
     }
 
     static let locationManager: CLLocationManager = {
@@ -1542,7 +1613,7 @@ extension Settings {
         guard minutesBefore == nil else { return .default }
 
         #if os(iOS)
-        guard let filename = adhanSoundFilename(for: adhanNotificationSound) else {
+        guard let filename = adhanNotificationSoundFilename(for: adhanNotificationSound) else {
             return .default
         }
         return UNNotificationSound(named: UNNotificationSoundName(filename))

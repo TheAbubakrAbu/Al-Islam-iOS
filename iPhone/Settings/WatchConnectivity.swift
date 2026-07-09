@@ -222,7 +222,7 @@ extension Settings {
         "useFontArabic", "THEfontArabic", "fontArabicSize", "englishFontSize",
         "showTajweedColors", "reciter", "reciterId", "reciteType", "displayQiraah",
         "showOtherQiraatReciters", "qiraatComparisonMode", "ignoreSilentLettersInQuranSearch",
-        "quranSummaryMode", "quranGridMode", "showFullSurahRow", "showMuqattaatHelper",
+        "quranSummaryMode", "quranGridMode", "quranPageMode", "showFullSurahRow", "showMuqattaatHelper",
         "showPageJuzDividers", "searchForSurahs", "showBookmarks", "showFavorites",
         "saveLastReadAyah", "saveLastListenedSurah", "saveLastListenedAyah", "showAyahOfTheDay",
         // Tajweed categories

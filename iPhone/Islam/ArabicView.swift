@@ -113,9 +113,9 @@ struct ArabicView: View {
         #else
         .adaptiveSafeArea(edge: .bottom) {
             VStack(spacing: SafeAreaInsetVStackSpacing.standard) {
-                arabicFontPicker
-
                 ArabicSizeSlider()
+
+                arabicFontPicker
 
                 HStack(spacing: 0) {
                     SearchBar(text: $searchText.animation(.easeInOut))
@@ -335,33 +335,59 @@ struct ArabicView: View {
 }
 
 /// Bottom size control shared by the Arabic Alphabet list and the per-letter detail. Drives
-/// `settings.arabicLetterSizeIndex`, which both screens apply as a Dynamic-Type floor.
+/// `settings.arabicLetterSizeIndex`, which both screens apply as a Dynamic-Type floor. Position 0 is
+/// `.xSmall`, i.e. no floor at all — the alphabet then renders at whatever size the device is set to.
 struct ArabicSizeSlider: View {
     @EnvironmentObject var settings: Settings
 
-    var body: some View {
-        HStack(spacing: 12) {
-            Image(systemName: "textformat.size.smaller")
-                .foregroundStyle(.secondary)
+    private var maxIndex: Int { Settings.arabicLetterDynamicTypeSizes.count - 1 }
 
-            Slider(
-                value: Binding(
-                    get: { Double(settings.arabicLetterSizeIndex) },
-                    set: { settings.arabicLetterSizeIndex = Int($0.rounded()) }
-                ),
-                in: 0...Double(Settings.arabicLetterDynamicTypeSizes.count - 1),
-                step: 1
-            ) { editing in
+    private var indexBinding: Binding<Double> {
+        Binding(
+            get: { Double(min(max(settings.arabicLetterSizeIndex, 0), maxIndex)) },
+            set: { settings.arabicLetterSizeIndex = min(max(Int($0.rounded()), 0), maxIndex) }
+        )
+    }
+
+    private func step(by delta: Int) {
+        let next = min(max(settings.arabicLetterSizeIndex + delta, 0), maxIndex)
+        guard next != settings.arabicLetterSizeIndex else { return }
+        settings.hapticFeedback()
+        settings.arabicLetterSizeIndex = next
+    }
+
+    var body: some View {
+        HStack(spacing: 10) {
+            sizeStepButton(systemImage: "textformat.size.smaller", delta: -1, enabled: settings.arabicLetterSizeIndex > 0)
+
+            Slider(value: indexBinding, in: 0...Double(maxIndex), step: 1) { editing in
                 if !editing { settings.hapticFeedback() }
             }
             .tint(settings.accentColor.color)
 
-            Image(systemName: "textformat.size.larger")
-                .foregroundStyle(.secondary)
+            sizeStepButton(systemImage: "textformat.size.larger", delta: 1, enabled: settings.arabicLetterSizeIndex < maxIndex)
         }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 6)
+        .conditionalGlassEffect()
         // Keep the control itself a stable size regardless of the floor it sets for the content.
         .dynamicTypeSize(.large)
+        .accessibilityElement(children: .combine)
         .accessibilityLabel("Letter size")
+    }
+
+    private func sizeStepButton(systemImage: String, delta: Int, enabled: Bool) -> some View {
+        Button {
+            step(by: delta)
+        } label: {
+            Image(systemName: systemImage)
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(enabled ? settings.accentColor.color : Color.secondary)
+                .frame(width: 30, height: 30)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .disabled(!enabled)
     }
 }
 
@@ -574,9 +600,9 @@ struct ArabicLetterView: View {
         #if !os(watchOS)
         .adaptiveSafeArea(edge: .bottom) {
             VStack(spacing: SafeAreaInsetVStackSpacing.standard) {
-                arabicFontPicker
-
                 ArabicSizeSlider()
+
+                arabicFontPicker
             }
             .padding(.horizontal, 24)
             .padding(.bottom)
@@ -969,6 +995,22 @@ struct ArabicLetterRow: View, Equatable {
         #if os(iOS)
         Text("Letter Actions")
             .foregroundStyle(.secondary)
+
+        Button {
+            settings.hapticFeedback()
+            FocusOverlayPresenter.shared.present(.letter(letterData))
+        } label: {
+            Label("View Fullscreen", systemImage: "arrow.up.left.and.arrow.down.right")
+        }
+
+        Button {
+            settings.hapticFeedback()
+            presentSystemShareSheet(items: [FocusItem.letter(letterData).shareText])
+        } label: {
+            Label("Share Letter", systemImage: "square.and.arrow.up")
+        }
+
+        Divider()
 
         Button(role: isFavorite ? .destructive : nil) {
             settings.hapticFeedback()

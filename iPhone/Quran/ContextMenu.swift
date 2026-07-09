@@ -24,6 +24,26 @@ struct SurahContextMenu: View {
     }
 
     var body: some View {
+        #if os(iOS)
+        if let surah = quranData.surah(surahID) {
+            Button {
+                settings.hapticFeedback()
+                FocusOverlayPresenter.shared.present(.surah(surah))
+            } label: {
+                Label("View Fullscreen", systemImage: "arrow.up.left.and.arrow.down.right")
+            }
+
+            Button {
+                settings.hapticFeedback()
+                presentSystemShareSheet(items: [FocusItem.surah(surah).shareText])
+            } label: {
+                Label("Share Surah", systemImage: "square.and.arrow.up")
+            }
+
+            Divider()
+        }
+        #endif
+
         Button(role: isFavorite ? .destructive : .cancel) {
             settings.hapticFeedback()
             withAnimation(.easeInOut) {
@@ -2210,6 +2230,27 @@ private struct SurahContextMenuPreviewContent: View {
             )
         }
         .padding()
+    }
+}
+
+// The generic focus overlay lives in Helpers and knows nothing about the Quran; a surah teaches it how to
+// render itself here, so the overlay stays usable in an app that ships without a Quran.
+extension FocusItem {
+    static func surah(_ surah: Surah) -> FocusItem {
+        FocusItem(
+            id: "surah-\(surah.id)",
+            arabic: surah.nameArabic,
+            title: "\(surah.id) · \(surah.nameTransliteration)",
+            subtitle: surah.nameEnglish,
+            footnote: "\(surah.type.capitalized) · \(surah.numberOfAyahs) ayahs",
+            secondaryArabic: surah.idArabic,
+            shareLabel: "Share Surah",
+            shareText: """
+            Surah \(surah.id) — \(surah.nameTransliteration) (\(surah.nameArabic))
+            \(surah.nameEnglish)
+            \(surah.type.capitalized) · \(surah.numberOfAyahs) ayahs
+            """
+        )
     }
 }
 

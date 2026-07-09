@@ -536,6 +536,21 @@ private struct NameRow: View, Equatable {
                 Text("Name Actions")
                     .foregroundStyle(.secondary)
 
+                Button {
+                    settings.hapticFeedback()
+                    FocusOverlayPresenter.shared.present(.name(name))
+                } label: {
+                    Label("View Fullscreen", systemImage: "arrow.up.left.and.arrow.down.right")
+                }
+
+                Button {
+                    settings.hapticFeedback()
+                    presentSystemShareSheet(items: [FocusItem.name(name).shareText])
+                } label: {
+                    Label("Share Name", systemImage: "square.and.arrow.up")
+                }
+
+                Divider()
                 favoriteMenuItem
                 Divider()
                 copyMenu
@@ -860,6 +875,26 @@ private struct NameGridTile: View {
             settings.hapticFeedback()
             settings.toggleNameFavorite(number: name.number)
         }
+        #if os(iOS)
+        .contextMenu {
+            Text("Name Actions")
+                .foregroundStyle(.secondary)
+
+            Button {
+                settings.hapticFeedback()
+                FocusOverlayPresenter.shared.present(.name(name))
+            } label: {
+                Label("View Fullscreen", systemImage: "arrow.up.left.and.arrow.down.right")
+            }
+
+            Button {
+                settings.hapticFeedback()
+                presentSystemShareSheet(items: [FocusItem.name(name).shareText])
+            } label: {
+                Label("Share Name", systemImage: "square.and.arrow.up")
+            }
+        }
+        #endif
     }
 }
 

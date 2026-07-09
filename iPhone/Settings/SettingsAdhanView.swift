@@ -614,6 +614,7 @@ struct NotificationView: View {
     @State private var requestAccessAlertMessage: String?
     #if os(iOS)
     @State private var previewPlayer: AVAudioPlayer?
+    @State private var isPreviewingAdhan = false
     #endif
 
     private var notificationSoundsDisabled: Bool {
@@ -659,7 +660,10 @@ struct NotificationView: View {
                                 .foregroundStyle(.secondary)
                         }
                     }
-                    .onChange(of: settings.adhanNotificationSound) { _ in settings.hapticFeedback() }
+                    .onChange(of: settings.adhanNotificationSound) { _ in
+                        settings.hapticFeedback()
+                        stopAdhanPreview()
+                    }
 
                     if notificationSoundsDisabled {
                         Label("Notification sounds are off in iPhone Settings, so the adhan will be silent.", systemImage: "speaker.slash.fill")
@@ -668,16 +672,22 @@ struct NotificationView: View {
                     }
 
                     if settings.adhanNotificationSound != "default" {
-                        Label("Preview Sound", systemImage: "play.circle.fill")
+                        Label(isPreviewingAdhan ? "Stop Preview" : "Preview Sound",
+                              systemImage: isPreviewingAdhan ? "stop.circle.fill" : "play.circle.fill")
                             .font(.subheadline)
                             .foregroundColor(settings.accentColor.color)
+                            .contentShape(Rectangle())
                             .onTapGesture {
                                 settings.hapticFeedback()
-                                playAdhanPreview()
+                                if isPreviewingAdhan {
+                                    stopAdhanPreview()
+                                } else {
+                                    playAdhanPreview()
+                                }
                             }
                     }
 
-                    Text("Used only for the actual prayer-time notification. Prenotifications and nagging reminders still use the default sound.")
+                    Text("The notification plays the adhan's first 30 seconds — iOS won't play a longer notification sound. Previewing, or having the app open when the prayer comes in, plays it in full. Prenotifications and nagging reminders still use the default sound.")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
@@ -694,8 +704,13 @@ struct NotificationView: View {
         }
         .task { await refresh() }
         .onAppear {
-            normalizeAdhanSoundSelection()
+            settings.normalizeAdhanSoundSelection()
             requestAuthorizationAndFetchPrayerTimes()
+        }
+        .onDisappear {
+            #if os(iOS)
+            stopAdhanPreview()
+            #endif
         }
         .onChange(of: scenePhase) { _ in requestAuthorizationAndFetchPrayerTimes() }
         .confirmationDialog("Notifications Off", isPresented: $showAlert, titleVisibility: .visible) {
@@ -902,21 +917,14 @@ struct NotificationView: View {
         }
     }
 
-    private func normalizeAdhanSoundSelection() {
-        if settings.adhanNotificationSound == "egypt" {
-            settings.adhanNotificationSound = "egypt-30"
-        } else if !Settings.supportedAdhanSounds.contains(where: { $0.id == settings.adhanNotificationSound }) {
-            settings.adhanNotificationSound = "default"
-        }
-    }
-
     #if os(iOS)
+    /// Previews the full adhan rather than the 30-second notification cut, so it can run for several
+    /// minutes — hence the stop control instead of a fire-and-forget tap.
     private func playAdhanPreview() {
-        previewPlayer?.stop()
-        try? AVAudioSession.sharedInstance().setActive(false, options: [.notifyOthersOnDeactivation])
+        stopAdhanPreview()
 
-        guard let filename = settings.adhanSoundFilename(for: settings.adhanNotificationSound),
-              let path = Bundle.main.path(forResource: filename.replacingOccurrences(of: ".caf", with: ""), ofType: "caf") else { return }
+        guard let resource = settings.adhanFullSoundResource(for: settings.adhanNotificationSound),
+              let path = Bundle.main.path(forResource: resource, ofType: "caf") else { return }
 
         do {
             let session = AVAudioSession.sharedInstance()
@@ -927,16 +935,24 @@ struct NotificationView: View {
             player.prepareToPlay()
             player.play()
             previewPlayer = player
+            isPreviewingAdhan = true
 
             let duration = player.duration
             DispatchQueue.main.asyncAfter(deadline: .now() + duration + 0.25) {
                 if previewPlayer === player {
-                    try? AVAudioSession.sharedInstance().setActive(false, options: [.notifyOthersOnDeactivation])
+                    stopAdhanPreview()
                 }
             }
         } catch {
             logger.error("Adhan preview playback failed: \(error.localizedDescription)")
         }
+    }
+
+    private func stopAdhanPreview() {
+        previewPlayer?.stop()
+        previewPlayer = nil
+        isPreviewingAdhan = false
+        try? AVAudioSession.sharedInstance().setActive(false, options: [.notifyOthersOnDeactivation])
     }
     #endif
 }

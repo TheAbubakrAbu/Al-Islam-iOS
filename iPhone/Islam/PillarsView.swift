@@ -2203,26 +2203,38 @@ struct PillarsOtherView: View {
             }
             .padding(.vertical, 4)
             
-            NavigationLink(destination: SahabahView()) {
-                Text("The Sahabah (Companions)")
+            NavigationLink(destination: AhlulBaytView()) {
+                Text("The Ahlul Bayt (People of the Household)")
                     .font(.subheadline)
             }
             .padding(.vertical, 4)
-            
+
             NavigationLink(destination: WivesView()) {
                 Text("The Wives of the Prophet")
                     .font(.subheadline)
             }
             .padding(.vertical, 4)
-            
+
+            NavigationLink(destination: SahabahView()) {
+                Text("The Sahabah (Companions)")
+                    .font(.subheadline)
+            }
+            .padding(.vertical, 4)
+
             NavigationLink(destination: CaliphatesView()) {
                 Text("The Caliphates")
                     .font(.subheadline)
             }
             .padding(.vertical, 4)
-            
+
             NavigationLink(destination: MadhabView()) {
-                Text("The 4 Madhabs")
+                Text("The 4 Madhaahib (Schools of Thought)")
+                    .font(.subheadline)
+            }
+            .padding(.vertical, 4)
+
+            NavigationLink(destination: AhlusSunnahView()) {
+                Text("Ahl As-Sunnah Wal Jama'ah")
                     .font(.subheadline)
             }
             .padding(.vertical, 4)
@@ -3278,6 +3290,51 @@ struct QiraatView: View {
                     .font(.body)
                 }
 
+                Section(header: Text("THE COMPANIONS BEHIND EACH QIRAAH")) {
+                    Text("Every Qiraah traces back through its Imam and narrators to the Companions (may Allah be pleased with them) who learned the Quran directly from Prophet Muhammad (peace and blessings be upon him). The chains below show which Companions each reading is transmitted from.")
+                        .font(.body)
+
+                    Group {
+                        Text("**Nafi (Qari of Madinah)** — narrated by Warsh and Qalun. Transmitted from Umar ibn al-Khattab, Zayd ibn Thabit, Ubayy ibn Ka‘b, Abdullah ibn Abbas, Abdullah ibn Ayyash, and Abu Hurayrah (may Allah be pleased with them).")
+
+                        Text("**Ibn Kathir (Qari of Makkah)** — narrated by al-Bazzi and Qunbul. Transmitted from Umar ibn al-Khattab, Zayd ibn Thabit, Ubayy ibn Ka‘b, Abdullah ibn Abbas, and Abdullah ibn as-Sa’ib (may Allah be pleased with them).")
+
+                        Text("**Abu Amr al-Basri (Qari of Basrah)** — narrated by ad-Duri and as-Susi. Transmitted from Umar ibn al-Khattab, Uthman ibn Affan, Ali ibn Abi Talib, Abdullah ibn Mas‘ud, Abu Musa al-Ash‘ari, Abdullah ibn Abbas, Abdullah ibn Ayyash, Abdullah ibn as-Sa’ib, Ubayy ibn Ka‘b, Zayd ibn Thabit, and Abu Hurayrah (may Allah be pleased with them).")
+
+                        Text("**Ibn Amir (Qari of Sham)** — narrated by Hisham and Ibn Dhakwan. Transmitted from Uthman ibn Affan and Abu ad-Darda (may Allah be pleased with them).")
+
+                        Text("**Asim ibn Abi an-Najud (Qari of Kufah)** — narrated by Shu‘bah and Hafs. Most Muslims today recite via Hafs from Asim. Transmitted from Uthman ibn Affan, Ali ibn Abi Talib, Abdullah ibn Mas‘ud, Zayd ibn Thabit, and Ubayy ibn Ka‘b (may Allah be pleased with them).")
+
+                        Text("**Hamzah az-Zayyat** — narrated by Khalaf and Khallad. Transmitted from Uthman ibn Affan, Ali ibn Abi Talib, Ubayy ibn Ka‘b, Zayd ibn Thabit, Abdullah ibn Mas‘ud, and Husayn ibn Ali ibn Abi Talib (may Allah be pleased with them).")
+
+                        Text("**Ali ibn Hamzah al-Kisai** — narrated by Abu al-Harith and ad-Duri. Transmitted from Umar ibn al-Khattab, Uthman ibn Affan, Ali ibn Abi Talib, Ubayy ibn Ka‘b, Zayd ibn Thabit, Abdullah ibn Mas‘ud, Abdullah ibn Abbas, Abdullah ibn Ayyash, Abu Hurayrah, and Husayn ibn Ali ibn Abi Talib (may Allah be pleased with them).")
+
+                        Text("**Ya‘qub al-Hadrami** — narrated by Ruways and Rawh. Transmitted from Umar ibn al-Khattab, Uthman ibn Affan, Ali ibn Abi Talib, Ubayy ibn Ka‘b, Zayd ibn Thabit, Abdullah ibn Mas‘ud, Abu Musa al-Ash‘ari, Abdullah ibn Abbas, Abdullah ibn Ayyash, Abdullah ibn as-Sa’ib, and Abu Hurayrah (may Allah be pleased with them).")
+
+                        Text("**Khalaf al-Bazzar** — narrated by Idris and Ishaq. Transmitted from Uthman ibn Affan, Ali ibn Abi Talib, Abdullah ibn Mas‘ud, Zayd ibn Thabit, Ubayy ibn Ka‘b, and Husayn ibn Ali ibn Abi Talib (may Allah be pleased with them).")
+
+                        Text("**Abu Ja‘far al-Madani** — narrated by Ibn Wardan and Ibn Jammaz. Transmitted from Zayd ibn Thabit, Ubayy ibn Ka‘b, Abdullah ibn Abbas, Abdullah ibn Ayyash, and Abu Hurayrah (may Allah be pleased with them).")
+                    }
+                    .font(.body)
+                }
+
+                Section(header: Text("WHAT THIS CHAIN SHOWS")) {
+                    Text("We begin with what Prophet Muhammad (peace and blessings be upon him) began with: the Book of Allah (Glorified and Exalted be He). It is well established that the Quran has reached us by mass transmission (tawatur) through the chains of Ahl as-Sunnah wal-Jama‘ah.")
+                        .font(.body)
+
+                    Text("Every one of these narrators of the noble Quran received it, through the chains above, from the Messenger of Allah (peace and blessings be upon him) by way of his Companions (may Allah be pleased with them) — the first to learn, gather, preserve, and transmit it.")
+                        .font(.body)
+
+                    Text("Not a single Ithna Ashari (Twelver) Shia is found among these transmitters. This is part of the Quran’s preservation: Allah (Glorified and Exalted be He) did not place in the transmission of His Book anyone who slanders the Companions of His Prophet (peace and blessings be upon him).")
+                        .font(.body)
+                        .foregroundColor(settings.accentColor.color)
+
+                    Link(destination: URL(string: "https://mahajjah.com/the-manner-in-which-the-ahlus-sunnah-and-shia-act-upon-this-hadith/")!) {
+                        Label("Source: Mahajjah — Ahlus Sunnah and Shia on this hadith", systemImage: "link")
+                    }
+                    .font(.caption)
+                }
+
                 Section(header: Text("OTHER REPORTED QIRAAT")) {
                     Text("There are other reported qiraat besides these Ten. Unlike the 10 Qiraat, which are mutawatir and mass attested, those others do not reach mutawatir status. That does not automatically make them inauthentic — some have isnad to Prophet Muhammad (peace and blessings be upon him) — but because they are not mass attested, we avoid them in public recitation and worship.")
                         .font(.body)
@@ -3870,7 +3927,243 @@ struct MadhabView: View {
             }
             .themedListRowBackground()
         }
-        .navigationTitle("The 4 Madhabs")
+        .navigationTitle("The 4 Madhahib")
+        .applyConditionalListStyle()
+    }
+}
+
+struct AhlulBaytView: View {
+    @EnvironmentObject var settings: Settings
+
+    var body: some View {
+        List {
+            Group {
+                Section(header: Text("OVERVIEW")) {
+                    Text("The **Ahlul Bayt (أَهلُ البَيت)** — literally “the People of the House“ — are the family of Prophet Muhammad (peace be upon him). Loving them, honoring them, and upholding their rights is part of the religion, and hating them or belittling them is a grave sin.")
+                        .font(.body)
+
+                    Text("The Quran uses the term directly when addressing the Prophet’s household:")
+                        .font(.body)
+
+                    Text("“Allah only intends to remove from you the impurity [of sin], O people of the household, and to purify you with [extensive] purification” (Quran 33:33).")
+                        .font(.body)
+                        .foregroundColor(settings.accentColor.color)
+
+                    Text("This is one continuous passage. It is essential to read the verses immediately before and after it to see who is being addressed.")
+                        .font(.body)
+                }
+
+                Section(header: Text("THE WIVES ARE PART OF THE AHLUL BAYT")) {
+                    Text("The verse of purification (33:33) sits in the middle of a passage directed to the Prophet’s wives (may Allah be pleased with them). The address begins:")
+                        .font(.body)
+
+                    Text("“O wives of the Prophet, you are not like anyone among women. If you fear Allah, then do not be soft in speech…” (Quran 33:32).")
+                        .font(.body)
+                        .foregroundColor(settings.accentColor.color)
+
+                    Text("“And abide in your houses and do not display yourselves as [was] the display of the former times of ignorance. And establish prayer and give zakah and obey Allah and His Messenger. Allah only intends to remove from you the impurity, O people of the household, and to purify you with [extensive] purification” (Quran 33:33).")
+                        .font(.body)
+                        .foregroundColor(settings.accentColor.color)
+
+                    Text("“And remember what is recited in your houses of the verses of Allah and wisdom. Indeed, Allah is ever Subtle and Acquainted [with all things]” (Quran 33:34).")
+                        .font(.body)
+                        .foregroundColor(settings.accentColor.color)
+
+                    Text("The phrase “O people of the household“ is therefore addressed, first and foremost, to the wives of the Prophet (peace be upon him) — the **Mothers of the Believers (أُمَّهَاتُ المُؤمِنِين)**, whom Allah placed in the position of mothers to every believer (Quran 33:6).")
+                        .font(.body)
+
+                    Text("Allah also called the wife of Ibrahim (peace be upon him) part of the “people of the house“ using the very same expression:")
+                        .font(.body)
+
+                    Text("“They said, ‘Are you amazed at the decree of Allah? May the mercy of Allah and His blessings be upon you, people of the house. Indeed, He is Praiseworthy and Honorable’” (Quran 11:73).")
+                        .font(.body)
+                        .foregroundColor(settings.accentColor.color)
+
+                    Text("So a prophet’s wives being included in “Ahl al-Bayt“ is the established Quranic usage, not an exception.")
+                        .font(.body)
+                }
+
+                Section(header: Text("THE FAMILY OF THE CLOAK")) {
+                    Text("The Ahlul Bayt also includes the Prophet’s daughter **Fatimah**, his cousin and son-in-law **Ali**, and their sons **al-Hasan** and **al-Husayn** (may Allah be pleased with them all).")
+                        .font(.body)
+
+                    Text("Aisha (may Allah be pleased with her) narrated: “The Prophet (peace be upon him) went out one morning wearing a cloak of black camel hair. Al-Hasan ibn Ali came and he took him in, then al-Husayn came in with him, then Fatimah, then Ali. Then he said: ‘Allah only intends to remove from you the impurity, O people of the household, and to purify you with [extensive] purification’” (Sahih Muslim 2424).")
+                        .font(.body)
+                        .foregroundColor(settings.accentColor.color)
+
+                    Text("Including these four does not exclude the wives — the Prophet (peace be upon him) was gathering additional members of his household under the cloak, within a passage whose context is already addressing his wives. The two are complementary, not contradictory.")
+                        .font(.body)
+
+                    Text("The Prophet (peace be upon him) said of his grandsons: “Al-Hasan and al-Husayn are the two masters of the youth of Paradise” (Sunan al-Tirmidhi 3768).")
+                        .font(.body)
+
+                    Text("And of Fatimah (may Allah be pleased with her) he said: “Fatimah is a part of me. Whoever angers her angers me” (Sahih al-Bukhari 3714).")
+                        .font(.body)
+                }
+
+                Section(header: Text("THE BANU HASHIM AND THE PROPHET’S KIN")) {
+                    Text("The Ahlul Bayt further includes the relatives of the Prophet (peace be upon him) upon whom charity (sadaqah) is forbidden: the family of Ali, the family of Ja‘far, the family of Aqil, and the family of al-Abbas (may Allah be pleased with them).")
+                        .font(.body)
+
+                    Text("The Prophet (peace be upon him) said: “Charity is not permissible for Muhammad or the family of Muhammad; it is only the people’s impurities” (Sahih Muslim 1072).")
+                        .font(.body)
+
+                    Text("Zayd ibn Arqam (may Allah be pleased with him) was asked, “Who are the people of his household? Are not his wives among the people of his household?” He said: “His wives are among the people of his household, but the people of his household are those for whom charity is forbidden after him” (Sahih Muslim 2408).")
+                        .font(.body)
+                        .foregroundColor(settings.accentColor.color)
+                }
+
+                Section(header: Text("THE COMMAND TO LOVE THEM")) {
+                    Text("Allah (Glorified and Exalted be He) says:")
+                        .font(.body)
+
+                    Text("“Say, ‘I do not ask you for it any payment—only affection for [my] kinship’” (Quran 42:23).")
+                        .font(.body)
+                        .foregroundColor(settings.accentColor.color)
+
+                    Text("In his farewell address the Prophet (peace be upon him) said: “I am leaving among you two weighty things: the first is the Book of Allah, in which there is guidance and light… hold fast to the Book of Allah.” Then he said: “And the people of my household. I remind you of Allah concerning the people of my household. I remind you of Allah concerning the people of my household” (Sahih Muslim 2408).")
+                        .font(.body)
+                        .foregroundColor(settings.accentColor.color)
+
+                    Text("Every believer sends blessings upon them in each prayer: “O Allah, send prayers upon Muhammad and upon the family of Muhammad, as You sent prayers upon Ibrahim and upon the family of Ibrahim” (Sahih al-Bukhari 3370).")
+                        .font(.body)
+
+                    Text("Loving the Ahlul Bayt is a sign of faith. It is never in tension with loving the Companions (may Allah be pleased with them) — Ali, al-Hasan, al-Husayn, and the Prophet’s wives were themselves among the Companions.")
+                        .font(.body)
+                }
+
+                Section(header: Text("THE BALANCED POSITION")) {
+                    Text("There are two errors regarding the Ahlul Bayt. Some **neglect their rights** and fail to honor them as Allah and His Messenger commanded. Others **exaggerate beyond bounds**, elevating them past the station Allah gave them, or using love of them as a pretext to curse and slander the Companions.")
+                        .font(.body)
+
+                    Text("The straight path is between the two: love and honor them without exaggeration, and love all the Companions of the Prophet (peace be upon him) alongside them.")
+                        .font(.body)
+
+                    Text("“And [there is a share for] those who came after them, saying, ‘Our Lord, forgive us and our brothers who preceded us in faith and put not in our hearts [any] resentment toward those who have believed. Our Lord, indeed You are Kind and Merciful’” (Quran 59:10).")
+                        .font(.body)
+                        .foregroundColor(settings.accentColor.color)
+
+                    Text("Ali, al-Hasan, and al-Husayn (may Allah be pleased with them) themselves loved, prayed behind, married into, and named their children after Abu Bakr, Umar, and Uthman (may Allah be pleased with them). Their example is the proof of this unity.")
+                        .font(.body)
+                }
+            }
+            .themedListRowBackground()
+        }
+        .navigationTitle("The Ahlul Bayt")
+        .applyConditionalListStyle()
+    }
+}
+
+struct AhlusSunnahView: View {
+    @EnvironmentObject var settings: Settings
+
+    var body: some View {
+        List {
+            Group {
+                Section(header: Text("OVERVIEW")) {
+                    Text("**Ahl as-Sunnah wal-Jama‘ah (أَهلُ السُّنَّةِ وَالجَمَاعَة)** means “the People of the Sunnah and the Community.“ They are those who hold to the Sunnah of the Prophet Muhammad (peace be upon him) and remain united upon the understanding of his Companions (may Allah be pleased with them).")
+                        .font(.body)
+
+                    Text("**Sunnah** here means the Prophet’s way — his beliefs, statements, actions, and approvals. **Jama‘ah** means the united body of the believers, and specifically the way of the Companions and those who followed them in goodness.")
+                        .font(.body)
+
+                    Text("Allah (Glorified and Exalted be He) says:")
+                        .font(.body)
+
+                    Text("“And whoever opposes the Messenger after guidance has become clear to him and follows other than the way of the believers—We will give him what he has taken and drive him into Hell, and evil it is as a destination” (Quran 4:115).")
+                        .font(.body)
+                        .foregroundColor(settings.accentColor.color)
+
+                    Text("“The way of the believers“ in this verse is the way of the first believers: the Companions.")
+                        .font(.body)
+                }
+
+                Section(header: Text("THE THREE FOUNDATIONS")) {
+                    Text("**1. The Quran** — taken as it is, without distortion, denial, or asking “how.“")
+                        .font(.body)
+
+                    Text("**2. The authentic Sunnah** — accepted as binding revelation alongside the Quran, whether the report is mutawatir or an authentic single narration (ahad).")
+                        .font(.body)
+
+                    Text("**3. The understanding of the Salaf** — the Quran and Sunnah are understood the way the first three generations understood them, not according to later opinions or personal reasoning that contradicts them.")
+                        .font(.body)
+
+                    Text("Allah (Glorified and Exalted be He) says: “And the first forerunners among the Muhajireen and the Ansar and those who followed them with good conduct—Allah is pleased with them and they are pleased with Him” (Quran 9:100).")
+                        .font(.body)
+                        .foregroundColor(settings.accentColor.color)
+
+                    Text("The Prophet (peace be upon him) said: “The best of people are my generation, then those who follow them, then those who follow them” (Sahih al-Bukhari 2652).")
+                        .font(.body)
+                        .foregroundColor(settings.accentColor.color)
+                }
+
+                Section(header: Text("THEIR CREED (AQEEDAH)")) {
+                    Text("• **Tawhid**: Allah alone is worshipped, and He alone is the Lord, and He is called by His beautiful Names and described by His perfect Attributes.")
+                        .font(.body)
+
+                    Text("• **Names and Attributes**: affirmed as Allah affirmed them for Himself, without likening Him to creation (tashbih) and without stripping the meanings away (ta‘til).")
+                        .font(.body)
+
+                    Text("“There is nothing like unto Him, and He is the Hearing, the Seeing” (Quran 42:11).")
+                        .font(.body)
+                        .foregroundColor(settings.accentColor.color)
+
+                    Text("• **Iman** consists of belief in the heart, statement of the tongue, and action of the limbs. It increases with obedience and decreases with disobedience.")
+                        .font(.body)
+
+                    Text("• **Qadar**: everything occurs by Allah’s knowledge, writing, will, and creation, while the servant has real choice and responsibility.")
+                        .font(.body)
+
+                    Text("• **No takfir** of a Muslim for a major sin, so long as he does not deem it lawful. The sinner remains a believer, deficient in faith.")
+                        .font(.body)
+
+                    Text("• Love for **all the Companions** (may Allah be pleased with them) and the **Ahlul Bayt**, without exaggeration in either direction.")
+                        .font(.body)
+                }
+
+                Section(header: Text("THE SAVED GROUP")) {
+                    Text("The Prophet (peace be upon him) said: “The Jews split into seventy-one sects, the Christians into seventy-two, and my nation will split into seventy-three sects, all of them in the Fire except one.“ They asked, “Who are they, O Messenger of Allah?“ He said: “Those who are upon what I and my Companions are upon today” (Sunan al-Tirmidhi 2641).")
+                        .font(.body)
+                        .foregroundColor(settings.accentColor.color)
+
+                    Text("The defining measure in this hadith is not a name or a label, but a **standard**: what the Prophet (peace be upon him) and his Companions were upon. Ahl as-Sunnah wal-Jama‘ah is simply the name for those who hold to that standard.")
+                        .font(.body)
+
+                    Text("He (peace be upon him) also said: “Hold fast to my Sunnah and the Sunnah of the rightly guided caliphs after me. Cling to it with your molar teeth, and beware of newly invented matters, for every innovation is misguidance” (Sunan Abi Dawud 4607).")
+                        .font(.body)
+                }
+
+                Section(header: Text("UNITY, NOT SECTARIANISM")) {
+                    Text("Allah (Glorified and Exalted be He) commands unity upon the truth:")
+                        .font(.body)
+
+                    Text("“And hold firmly to the rope of Allah all together and do not become divided” (Quran 3:103).")
+                        .font(.body)
+                        .foregroundColor(settings.accentColor.color)
+
+                    Text("“Indeed, those who have divided their religion and become sects—you are not associated with them in anything” (Quran 6:159).")
+                        .font(.body)
+                        .foregroundColor(settings.accentColor.color)
+
+                    Text("Ahl as-Sunnah wal-Jama‘ah is therefore not a sect among sects. It is the original, undivided Islam of the Prophet (peace be upon him) and his Companions. Its adherents differ in fiqh across the four madhahib, yet stand united in creed.")
+                        .font(.body)
+
+                    Text("They are known for mercy toward the believers, honesty toward opponents, obedience to Muslim authority in what is good, and refusal to declare the general body of Muslims outside of Islam.")
+                        .font(.body)
+                }
+
+                Section(header: Text("CONCLUSION")) {
+                    Text("To be from Ahl as-Sunnah wal-Jama‘ah is to take the Quran and the authentic Sunnah as they came, to understand them as the Companions understood them, to love the Prophet’s family and his Companions together, and to hold to the community of the Muslims.")
+                        .font(.body)
+
+                    Text("“So if they believe in the same as you believe in, then they have been rightly guided” (Quran 2:137).")
+                        .font(.body)
+                        .foregroundColor(settings.accentColor.color)
+                }
+            }
+            .themedListRowBackground()
+        }
+        .navigationTitle("Ahl As-Sunnah")
         .applyConditionalListStyle()
     }
 }

@@ -565,7 +565,7 @@ private struct CurrentLocationRow: View {
         if showBigQibla,
            let loc = settings.currentLocation,
            loc.latitude != 1000, loc.longitude != 1000 {
-            HStack(spacing: 5) {
+            HStack(spacing: 6) {
                 Image(systemName: "globe")
                     .font(.system(size: 11, weight: .semibold))
                     .foregroundStyle(settings.accentColor.color)
@@ -577,8 +577,11 @@ private struct CurrentLocationRow: View {
                     .lineLimit(1)
                     .minimumScaleFactor(0.6)
             }
-            .padding(.leading, 14)
-            .padding(.top, 1)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .conditionalGlassEffect()
+            .padding(.leading, 2)
+            .padding(.top, 8)
             #if os(iOS)
             .contextMenu {
                 Button {

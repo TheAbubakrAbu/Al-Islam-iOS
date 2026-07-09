@@ -1370,17 +1370,6 @@ extension ShareAyahSheet {
 
 }
 
-struct ActivityView: UIViewControllerRepresentable {
-    let activityItems: [Any]
-    var applicationActivities: [UIActivity]? = nil
-    func makeUIViewController(context: Context) -> UIActivityViewController {
-        let vc = UIActivityViewController(activityItems: activityItems, applicationActivities: applicationActivities)
-        vc.modalPresentationStyle = .formSheet
-        return vc
-    }
-    func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
-}
-
 extension Color { var uiColor: UIColor { UIColor(self) } }
 
 private extension UIColor {
