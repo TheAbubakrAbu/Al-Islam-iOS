@@ -1,15 +1,16 @@
 import SwiftUI
+import Adhan
 import UserNotifications
 #if os(iOS)
 import AVFoundation
 #endif
 
 struct SettingsAdhanView: View {
-    @EnvironmentObject var settings: Settings
+    @ObservedObject var settings = Settings.shared
     @Environment(\.dismiss) private var dismiss
-    
+
     @State private var showingMap = false
-    
+
     @State private var showAlert: AlertType?
     enum AlertType: Identifiable {
         case travelTurnOnAutomatic, travelTurnOffAutomatic, calculationAutomaticChanged
@@ -22,7 +23,7 @@ struct SettingsAdhanView: View {
             }
         }
     }
-    
+
     @State var showNotifications: Bool
     private let presentedAsSheet: Bool
 
@@ -43,7 +44,7 @@ struct SettingsAdhanView: View {
             return ""
         }
     }
-    
+
     var body: some View {
         List {
             Group {
@@ -68,6 +69,33 @@ struct SettingsAdhanView: View {
                         prayerOffsetsDestination
                     }
                 }
+                Section {
+                    adhanSettingsLink(title: "Custom Prayer Names", systemImage: "character.cursor.ibeam") {
+                        customPrayerNamesDestination
+                    }
+                }
+                #if os(iOS)
+                Section {
+                    VStack(alignment: .leading) {
+                        Toggle("Show Sky", isOn: $settings.showSkyView.animation(.easeInOut))
+                            .font(.subheadline)
+                            .tint(settings.accentColor.color)
+                            .onChange(of: settings.showSkyView) { _ in settings.hapticFeedback() }
+
+                        Text("The sun on today's arc, the moon at its true phase, and the stars at night. Drag the sun to see any moment of the day. Turn it off for a plain Current/Upcoming card.")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .padding(.vertical, 2)
+                    }
+
+                    // Nothing to color when the sky isn't drawn.
+                    if settings.showSkyView {
+                        adhanSettingsLink(title: "Sky Colors", systemImage: "paintpalette") {
+                            SkyColorsView()
+                        }
+                    }
+                }
+                #endif
             }
             .themedListRowBackground()
         }
@@ -172,7 +200,7 @@ struct SettingsAdhanView: View {
                     settings.hapticFeedback()
                     settings.confirmAutomaticCalculationChange()
                 }
-                
+
             case .none:
                 EmptyView()
             }
@@ -244,6 +272,12 @@ struct SettingsAdhanView: View {
         }
     }
 
+    private var customPrayerNamesDestination: some View {
+        adhanSettingsSubList(title: "Custom Prayer Names") {
+            CustomPrayerNamesSection()
+        }
+    }
+
     @ViewBuilder
     private var notificationsSection: some View {
         #if os(iOS)
@@ -308,7 +342,46 @@ struct SettingsAdhanView: View {
             automaticCalculationToggle
             calculationPickerGroup
             hanafiCalculationGroup
+            highLatitudeRuleGroup
         }
+    }
+
+    /// Above roughly 48° the sun never dips far enough below the horizon for the twilight angles that define
+    /// Fajr and Isha, so those two have to be approximated. Below that latitude the rule changes nothing.
+    private var highLatitudeRuleGroup: some View {
+        VStack(alignment: .leading) {
+            Picker("High Latitude Rule", selection: $settings.highLatitudeRule.animation(.easeInOut)) {
+                Section {
+                    ForEach(Settings.highLatitudeRuleOptions, id: \.self) { option in
+                        Text(option).tag(option)
+                            .font(.subheadline)
+                    }
+                } header: {
+                    Text("High Latitude Rule")
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .font(.subheadline)
+            .onChange(of: settings.highLatitudeRule) { _ in settings.hapticFeedback() }
+
+            Text(highLatitudeRuleCaption)
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .padding(.vertical, 2)
+        }
+    }
+
+    private var highLatitudeRuleCaption: String {
+        // Not merely a high-latitude concern: on a short summer night the rule can shift Fajr and Isha as far
+        // south as Cairo (~30°N). Only in winter, or near the equator, does the choice make no difference.
+        var caption = "When the night is short, the sun never sinks low enough for the twilight that defines "
+            + "Fajr and Isha, so they are estimated. This matters most far from the equator, but can shift "
+            + "summer times at any latitude."
+        if let location = settings.currentLocation, location.latitude != 1000, location.longitude != 1000 {
+            let coordinates = Coordinates(latitude: location.latitude, longitude: location.longitude)
+            caption += " Automatic uses \(settings.recommendedHighLatitudeRuleLabel(at: coordinates)) in \(location.city)."
+        }
+        return caption
     }
 
     private var automaticCalculationToggle: some View {
@@ -528,11 +601,12 @@ let calculationOptions: [String] = {
 }()
 
 struct PrayerOffsetsView: View {
-    @EnvironmentObject var settings: Settings
+    @ObservedObject var settings = Settings.shared
 
     @ViewBuilder
     private func offsetStepper(title: String, icon: String, value: Binding<Int>) -> some View {
-        Stepper(value: value.animation(.easeInOut), in: -10...10) {
+        // Wide enough to follow a local mosque that runs well off the calculated time, not just to nudge it.
+        Stepper(value: value.animation(.easeInOut), in: -190...190) {
             HStack {
                 Image(systemName: icon)
                     .foregroundColor(settings.accentColor.color)
@@ -562,7 +636,7 @@ struct PrayerOffsetsView: View {
             return nil
         }
     }
-    
+
     var body: some View {
         Section(header: Text("HIJRI DATE")) {
             VStack(alignment: .leading, spacing: 6) {
@@ -575,14 +649,14 @@ struct PrayerOffsetsView: View {
                     .font(.caption)
                     .foregroundColor(.secondary)
                     .padding(.vertical, 2)
-                
+
                 Text("In Islam, the day begins at sunset (Maghrib). Keeping this on follows that Islamic tradition, while turning it off matches the usual midnight-to-midnight day.")
                     .font(.caption)
                     .foregroundColor(.secondary)
                     .padding(.vertical, 2)
             }
         }
-        
+
         Section(header: Text("PRAYER OFFSETS")) {
             offsetStepper(title: "Fajr", icon: "sunrise", value: $settings.offsetFajr)
             offsetStepper(title: "Sunrise", icon: "sunrise.fill", value: $settings.offsetSunrise)
@@ -595,7 +669,7 @@ struct PrayerOffsetsView: View {
                 .font(.caption)
                 .foregroundColor(.secondary)
                 .padding(.vertical, 2)
-            
+
             Text("Use these offsets to shift the calculated prayer times earlier or later. Negative values move the time earlier, positive values move it later.")
                 .font(.caption)
                 .foregroundColor(.secondary)
@@ -605,10 +679,10 @@ struct PrayerOffsetsView: View {
 }
 
 struct NotificationView: View {
-    @EnvironmentObject var settings: Settings
-    
+    @ObservedObject var settings = Settings.shared
+
     @Environment(\.scenePhase) private var scenePhase
-    
+
     @State private var showAlert: Bool = false
     @State private var notifSettings: UNNotificationSettings?
     @State private var requestAccessAlertMessage: String?
@@ -620,7 +694,7 @@ struct NotificationView: View {
     private var notificationSoundsDisabled: Bool {
         notifSettings?.soundSetting == .disabled
     }
-    
+
     var body: some View {
         List {
             Group {
@@ -740,7 +814,7 @@ struct NotificationView: View {
         .applyConditionalListStyle()
         .navigationTitle("Notification Settings")
     }
-    
+
     #if os(iOS)
     private var permissionCard: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -802,11 +876,11 @@ struct NotificationView: View {
         .animation(.easeInOut(duration: 0.25), value: notifSettings?.authorizationStatus.rawValue)
     }
     #endif
-    
+
     private var permissionPillText: String {
         statusText(notifSettings?.authorizationStatus ?? .notDetermined)
     }
-    
+
     private var permissionPillColor: Color {
         guard let status = notifSettings?.authorizationStatus else { return .secondary }
         switch status {
@@ -820,19 +894,19 @@ struct NotificationView: View {
             return .secondary
         }
     }
-    
+
     private func infoRow(_ left: String, _ right: String) -> some View {
         HStack {
             Text(left)
                 .foregroundColor(.secondary)
-            
+
             Spacer()
-            
+
             Text(right)
                 .foregroundColor(.primary)
         }
     }
-    
+
     private func statusText(_ s: UNAuthorizationStatus) -> String {
         switch s {
         case .notDetermined: return "Not asked"
@@ -843,7 +917,7 @@ struct NotificationView: View {
         @unknown default: return "Unknown"
         }
     }
-    
+
     private func notificationSettingText(_ s: UNNotificationSetting) -> String {
         switch s {
         case .enabled: return "On"
@@ -852,11 +926,11 @@ struct NotificationView: View {
         @unknown default: return "Unknown"
         }
     }
-    
+
     private func smallButton(_ title: String, systemImage: String) -> some View {
         HStack(spacing: 6) {
             Image(systemName: systemImage)
-            
+
             Text(title)
                 .font(.footnote.weight(.semibold))
                 .lineLimit(1)
@@ -873,7 +947,7 @@ struct NotificationView: View {
                 .stroke(settings.accentColor.color.opacity(0.35), lineWidth: 1)
         )
     }
-    
+
     private func openSystemSettings() {
         #if os(iOS)
         if let url = URL(string: UIApplication.openSettingsURLString) {
@@ -881,13 +955,13 @@ struct NotificationView: View {
         }
         #endif
     }
-    
+
     @MainActor
     private func refresh() async {
         let center = UNUserNotificationCenter.current()
         notifSettings = await center.notificationSettings()
     }
-    
+
     private func requestAuthorizationAndFetchPrayerTimes() {
         settings.requestNotificationAuthorization {
             settings.fetchPrayerTimes {
@@ -899,7 +973,7 @@ struct NotificationView: View {
             }
         }
     }
-    
+
     @MainActor
     private func onRequestAccessTapped() async {
         let center = UNUserNotificationCenter.current()
@@ -958,12 +1032,12 @@ struct NotificationView: View {
 }
 
 struct MoreNotificationView: View {
-    @EnvironmentObject var settings: Settings
-    
+    @ObservedObject var settings = Settings.shared
+
     @Environment(\.scenePhase) private var scenePhase
-    
+
     @State private var showAlert: Bool = false
-    
+
     private func turnOffNaggingModeIfAllOff() {
         if !settings.naggingFajr &&
            !settings.naggingSunrise &&
@@ -971,13 +1045,13 @@ struct MoreNotificationView: View {
            !settings.naggingAsr &&
            !settings.naggingMaghrib &&
            !settings.naggingIsha {
-            
+
             withAnimation {
                 settings.naggingMode = false
             }
         }
     }
-    
+
     var body: some View {
         List {
             Group {
@@ -985,13 +1059,13 @@ struct MoreNotificationView: View {
                 Text("Nagging mode helps those who struggle to pray on time. Once enabled, you'll get a notification at the chosen start time before each prayer, then another every 15 minutes, plus final reminders at 10 and 5 minutes remaining.")
                     .font(.caption)
                     .foregroundColor(.secondary)
-                
+
                 Toggle("Turn on Nagging Mode", isOn: Binding(
                     get: { settings.naggingMode },
                     set: { newValue in
                         withAnimation {
                             settings.naggingMode = newValue
-                            
+
                             if newValue {
                                 settings.notificationFajr = true
                                 settings.notificationSunrise = true
@@ -999,7 +1073,7 @@ struct MoreNotificationView: View {
                                 settings.notificationAsr = true
                                 settings.notificationMaghrib = true
                                 settings.notificationIsha = true
-                                
+
                                 settings.naggingFajr = true
                                 settings.naggingSunrise = true
                                 settings.naggingDhuhr = true
@@ -1032,7 +1106,7 @@ struct MoreNotificationView: View {
                     .pickerStyle(.segmented)
                     #endif
                     .onChange(of: settings.naggingStartOffset) { _ in settings.hapticFeedback() }
-                    
+
                     Group {
                         Toggle("Nagging before Fajr", isOn: Binding(
                             get: { settings.naggingFajr },
@@ -1091,7 +1165,7 @@ struct MoreNotificationView: View {
                     .tint(settings.accentColor.color)
                 }
             }
-            
+
             if !settings.naggingMode {
                 Section(header: Text("ALL PRAYER NOTIFICATIONS")) {
                     Toggle("Turn On All Prayer Notifications", isOn: Binding(
@@ -1130,7 +1204,7 @@ struct MoreNotificationView: View {
                                 settings.preNotificationIsha = newValue
                             }
                         }
-                    ), in: 0...30, step: 5) {
+                    ), in: 0...120, step: 1) {
                         Text("All Prayer Prenotifications:")
                             .font(.subheadline)
                         Text("\(settings.preNotificationFajr) minute\(settings.preNotificationFajr != 1 ? "s" : "")")
@@ -1139,7 +1213,7 @@ struct MoreNotificationView: View {
                     }
                 }
             }
-            
+
             if !settings.naggingMode {
                 NotificationSettingsSection(prayerName: "Fajr", preNotificationTime: $settings.preNotificationFajr, isNotificationOn: $settings.notificationFajr)
                 NotificationSettingsSection(prayerName: "Shurooq", preNotificationTime: $settings.preNotificationSunrise, isNotificationOn: $settings.notificationSunrise)
@@ -1233,10 +1307,10 @@ struct MoreNotificationView: View {
 }
 
 struct NotificationSettingsSection: View {
-    @EnvironmentObject var settings: Settings
-    
+    @ObservedObject var settings = Settings.shared
+
     let prayerName: String
-    
+
     @Binding var preNotificationTime: Int
     @Binding var isNotificationOn: Bool
 
@@ -1251,6 +1325,34 @@ struct NotificationSettingsSection: View {
         }
     }
 
+    /// Only the five daily prayers carry an adhan. Shurooq and the optional times always use the default
+    /// notification sound (see `prayerNotificationSound`), so they get no adhan controls at all.
+    private var shortAdhan: Binding<Bool>? {
+        switch prayerName {
+        case "Fajr":    return $settings.shortAdhanFajr
+        case "Dhuhr":   return $settings.shortAdhanDhuhr
+        case "Asr":     return $settings.shortAdhanAsr
+        case "Maghrib": return $settings.shortAdhanMaghrib
+        case "Isha":    return $settings.shortAdhanIsha
+        default:        return nil
+        }
+    }
+
+    private var adhanSound: Binding<Bool>? {
+        switch prayerName {
+        case "Fajr":    return $settings.adhanSoundFajr
+        case "Dhuhr":   return $settings.adhanSoundDhuhr
+        case "Asr":     return $settings.adhanSoundAsr
+        case "Maghrib": return $settings.adhanSoundMaghrib
+        case "Isha":    return $settings.adhanSoundIsha
+        default:        return nil
+        }
+    }
+
+    /// With "Default" chosen there is no recording to play or shorten, so the per-prayer adhan controls have
+    /// nothing to act on and are hidden rather than shown doing nothing.
+    private var hasAdhanRecording: Bool { settings.adhanNotificationSound != "default" }
+
     var body: some View {
         Section(header: Text(prayerName.uppercased())) {
             Toggle("Notification", isOn: $isNotificationOn.animation(.easeInOut))
@@ -1258,13 +1360,40 @@ struct NotificationSettingsSection: View {
                 .onChange(of: isNotificationOn) { _ in settings.hapticFeedback() }
 
             if isNotificationOn {
-                Stepper(value: $preNotificationTime.animation(.easeInOut), in: 0...30, step: 5) {
+                Stepper(value: $preNotificationTime.animation(.easeInOut), in: 0...120, step: 1) {
                     Text("Prenotification Time:")
                         .font(.subheadline)
-                    
+
                     Text("\(preNotificationTime) minute\(preNotificationTime != 1 ? "s" : "")")
                         .font(.subheadline)
                         .foregroundColor(settings.accentColor.color)
+                }
+
+                if let adhanSound, hasAdhanRecording {
+                    VStack(alignment: .leading) {
+                        Toggle("Play Adhan", isOn: adhanSound.animation(.easeInOut))
+                            .font(.subheadline)
+                            .onChange(of: adhanSound.wrappedValue) { _ in settings.hapticFeedback() }
+
+                        Text("Turn off to get an ordinary notification sound for this prayer, while the others still call the adhan.")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .padding(.vertical, 2)
+                    }
+
+                    // Nothing to shorten once the adhan itself is off.
+                    if let shortAdhan, adhanSound.wrappedValue {
+                        VStack(alignment: .leading) {
+                            Toggle("Short Adhan", isOn: shortAdhan.animation(.easeInOut))
+                                .font(.subheadline)
+                                .onChange(of: shortAdhan.wrappedValue) { _ in settings.hapticFeedback() }
+
+                            Text("Plays a brief excerpt instead of the adhan's first 30 seconds.")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                                .padding(.vertical, 2)
+                        }
+                    }
                 }
             }
 

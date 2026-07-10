@@ -16,6 +16,12 @@ struct Widgets: WidgetBundle {
             LockScreen3Widget()
             LockScreen4Widget()
         }
+        // Gated at 16.2 rather than 16.1, where Live Activities first appeared: `ActivityContent` — which the
+        // app uses to start and update this one — only exists from 16.2. Suhoor and iftar countdowns; only
+        // ever on screen during Ramadan.
+        if #available(iOS 16.2, *) {
+            FastingLiveActivity()
+        }
         #endif
         
         LastListenedSurahWidget()

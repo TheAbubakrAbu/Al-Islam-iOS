@@ -24,7 +24,7 @@ struct TinyProgressBar: View {
 }
 
 struct SurahRow: View, Equatable {
-    @EnvironmentObject var settings: Settings
+    @ObservedObject var settings = Settings.shared
     
     let surah: Surah
     var ayah: Int?
@@ -438,7 +438,7 @@ struct SurahRow: View, Equatable {
 }
 
 struct SurahAyahRow: View {
-    @EnvironmentObject var settings: Settings
+    @ObservedObject var settings = Settings.shared
     @State private var confirmRemoveNote = false
     
     var surah: Surah
@@ -687,9 +687,9 @@ func formatMMSS(_ seconds: Double) -> String {
 
 #if os(iOS)
 struct LastListenedSurahRow: View {
-    @EnvironmentObject private var settings: Settings
-    @EnvironmentObject private var quranData: QuranData
-    @EnvironmentObject private var quranPlayer: QuranPlayer
+    @ObservedObject private var settings = Settings.shared
+    @ObservedObject private var quranData = QuranData.shared
+    @ObservedObject private var quranPlayer = QuranPlayer.shared
 
     let lastListenedSurah: LastListenedSurah
     let favoriteSurahs: Set<Int>
@@ -959,7 +959,7 @@ struct LastListenedSurahRow: View {
 /// Compact summary-mode tile that previews a single ayah (Arabic / transliteration / English),
 /// each limited to two lines — like a normal AyahRow but trimmed to fit a tile.
 struct SummaryAyahTile: View {
-    @EnvironmentObject var settings: Settings
+    @ObservedObject var settings = Settings.shared
 
     let title: String
     let icon: String
@@ -1077,8 +1077,8 @@ struct SummaryAyahTile: View {
 /// Compact summary-mode tile for the last-listened surah. There is no ayah, so it shows the reciter,
 /// duration, a play button, and a tiny progress bar instead — sized to match the ayah tile beside it.
 struct SummarySurahTile: View {
-    @EnvironmentObject var settings: Settings
-    @EnvironmentObject var quranPlayer: QuranPlayer
+    @ObservedObject var settings = Settings.shared
+    @ObservedObject var quranPlayer = QuranPlayer.shared
 
     let title: String
     let icon: String
@@ -1179,9 +1179,9 @@ struct SummarySurahTile: View {
 #endif
 
 struct LastReadAyahRow: View {
-    @EnvironmentObject private var settings: Settings
-    @EnvironmentObject private var quranPlayer: QuranPlayer
-    @EnvironmentObject private var quranData: QuranData
+    @ObservedObject private var settings = Settings.shared
+    @ObservedObject private var quranPlayer = QuranPlayer.shared
+    @ObservedObject private var quranData = QuranData.shared
 
     let surah: Surah
     let ayah: Ayah
@@ -1359,9 +1359,9 @@ struct LastReadAyahRow: View {
 #if os(iOS)
 /// The last individual ayah the user listened to (single ayah or custom range). Mirrors LastReadAyahRow.
 struct LastListenedAyahRow: View {
-    @EnvironmentObject private var settings: Settings
-    @EnvironmentObject private var quranPlayer: QuranPlayer
-    @EnvironmentObject private var quranData: QuranData
+    @ObservedObject private var settings = Settings.shared
+    @ObservedObject private var quranPlayer = QuranPlayer.shared
+    @ObservedObject private var quranData = QuranData.shared
 
     let surah: Surah
     let ayah: Ayah
@@ -1539,8 +1539,8 @@ struct LastListenedAyahRow: View {
 
 /// The deterministic daily "Ayah of the Day" card shown at the top of the Quran tab.
 struct AyahOfTheDayRow: View {
-    @EnvironmentObject private var settings: Settings
-    @EnvironmentObject private var quranPlayer: QuranPlayer
+    @ObservedObject private var settings = Settings.shared
+    @ObservedObject private var quranPlayer = QuranPlayer.shared
 
     let surah: Surah
     let ayah: Ayah
@@ -1636,7 +1636,7 @@ struct AyahOfTheDayRow: View {
 /// plus the Arabic text with tajweed + all reading settings applied, sized down to read nicely in
 /// page/juz search results and the Pages browse list.
 struct CompactAyahArabicRow: View {
-    @EnvironmentObject var settings: Settings
+    @ObservedObject var settings = Settings.shared
 
     let surah: Surah
     let ayah: Ayah
@@ -1709,7 +1709,7 @@ struct CompactAyahArabicRow: View {
 /// tajweed colors, beginner-mode spacing, and Allah highlighting — sized by `scale`. Used for compact
 /// previews such as the page/juz dividers in SurahView.
 struct AyahArabicSnippet: View {
-    @EnvironmentObject var settings: Settings
+    @ObservedObject var settings = Settings.shared
 
     let surah: Surah
     let ayah: Ayah
@@ -1760,7 +1760,7 @@ struct AyahArabicSnippet: View {
 }
 
 struct AyahSearchResultRow: View {
-    @EnvironmentObject private var settings: Settings
+    @ObservedObject private var settings = Settings.shared
 
     let surah: Surah
     let ayah: Ayah
@@ -1851,7 +1851,7 @@ struct AyahSearchResultRow: View {
 }
 
 struct AyahSearchRow: View, Equatable {
-    @EnvironmentObject private var settings: Settings
+    @ObservedObject private var settings = Settings.shared
     @State private var confirmRemoveNote = false
 
     

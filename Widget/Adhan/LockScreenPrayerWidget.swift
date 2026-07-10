@@ -17,7 +17,7 @@ struct LockScreen2EntryView: View {
                             .padding(.trailing, -4)
                     }
                     
-                    Text(currentPrayer.nameTransliteration)
+                    Text(currentPrayer.displayName)
                         .font(.headline)
                     
                     Text("\(nextPrayer.time, style: .timer)")
@@ -25,7 +25,7 @@ struct LockScreen2EntryView: View {
                         .font(.footnote)
                 }
                 
-                Text("\(nextPrayer.nameTransliteration) at \(nextPrayer.time, style: .time)")
+                Text("\(nextPrayer.displayName) at \(nextPrayer.time, style: .time)")
                     .font(.caption)
                 
                 HStack {

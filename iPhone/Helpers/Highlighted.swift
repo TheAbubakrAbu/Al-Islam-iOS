@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct HighlightedSnippet: View {
-    @EnvironmentObject var settings: Settings
+    @ObservedObject var settings = Settings.shared
 
     let source: String
     let term: String

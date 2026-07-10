@@ -64,7 +64,7 @@ struct PrayersEntryView: View {
                                         .foregroundColor(getPrayerColor(for: prayer, in: entry.prayers))
                                         .padding(.trailing, -5)
                                     
-                                    Text(prayer.nameTransliteration)
+                                    Text(prayer.displayName)
                                         .font(.subheadline)
                                         .fontWeight(.bold)
                                         .foregroundColor(getPrayerColor(for: prayer, in: entry.prayers))
@@ -90,7 +90,7 @@ struct PrayersEntryView: View {
                                         .foregroundColor(getPrayerColor(for: prayer, in: entry.prayers))
                                         .padding(.trailing, -5)
                                     
-                                    Text(prayer.nameTransliteration)
+                                    Text(prayer.displayName)
                                         .font(.subheadline)
                                         .fontWeight(.bold)
                                         .foregroundColor(getPrayerColor(for: prayer, in: entry.prayers))
@@ -125,7 +125,7 @@ struct PrayersEntryView: View {
                                         .frame(width: 22, height: 22)
                                         .foregroundColor(currentPrayer.nameTransliteration == "Shurooq" ? .primary : entry.accentColor.color)
                                     
-                                    Text(currentPrayer.nameTransliteration)
+                                    Text(currentPrayer.displayName)
                                         .font(.title3)
                                         .foregroundColor(currentPrayer.nameTransliteration == "Shurooq" ? .primary : entry.accentColor.color)
                                     
@@ -143,7 +143,7 @@ struct PrayersEntryView: View {
                                     Text("Starts at \(nextPrayer.time, style: .time)")
                                         .font(.caption)
                                     
-                                    Text(nextPrayer.nameTransliteration)
+                                    Text(nextPrayer.displayName)
                                         .font(.title3)
                                         .foregroundColor(nextPrayer.nameTransliteration == "Shurooq" ? .primary : entry.accentColor.color)
                                     

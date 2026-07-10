@@ -2,7 +2,7 @@
 import SwiftUI
 
 struct PlayCustomRangeSheet: View {
-    @EnvironmentObject var settings: Settings
+    @ObservedObject var settings = Settings.shared
 
     enum SelectionMode: String, CaseIterable {
         case ayahs, pages

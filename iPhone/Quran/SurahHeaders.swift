@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct SurahsHeader: View {
-    @EnvironmentObject var quranData: QuranData
+    @ObservedObject var quranData = QuranData.shared
 
     @State private var randomSurah: Surah?
 
@@ -56,9 +56,9 @@ struct SurahsHeader: View {
 }
 
 struct JuzHeader: View {
-    @EnvironmentObject var quranData: QuranData
+    @ObservedObject var quranData = QuranData.shared
     #if os(iOS)
-    @EnvironmentObject var settings: Settings
+    @ObservedObject var settings = Settings.shared
     #endif
 
     let juz: Juz
@@ -195,8 +195,8 @@ struct PageHeader: View {
 }
 
 struct SurahSectionHeader: View {
-    @EnvironmentObject var settings: Settings
-    @EnvironmentObject var quranPlayer: QuranPlayer
+    @ObservedObject var settings = Settings.shared
+    @ObservedObject var quranPlayer = QuranPlayer.shared
 
     var surah: Surah
     var compact: Bool = false
@@ -313,8 +313,8 @@ struct SurahSectionHeader: View {
 }
 
 struct HeaderRow: View {
-    @EnvironmentObject var settings: Settings
-    @EnvironmentObject var quranPlayer: QuranPlayer
+    @ObservedObject var settings = Settings.shared
+    @ObservedObject var quranPlayer = QuranPlayer.shared
 
     let arabicText: String
     let englishTransliteration: String

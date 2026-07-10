@@ -7,14 +7,14 @@ enum ActionMode: String {
 }
 
 struct ShareAyahSheet: View {
-    @EnvironmentObject private var settings: Settings
-    @EnvironmentObject private var quranData: QuranData
-    
+    @ObservedObject private var settings = Settings.shared
+    @ObservedObject private var quranData = QuranData.shared
+
     @Environment(\.presentationMode) private var presentationMode
-    
+
     let surahNumber: Int
     let ayahNumber: Int
-    
+
     @State private var shareSettings = ShareSettings()
 
     @AppStorage("shareIncludeRiwayah") private var shareIncludeRiwayah = false
@@ -25,7 +25,7 @@ struct ShareAyahSheet: View {
     @AppStorage("copyAyahEnglishSaheeh") private var storedCopyEnglishSaheeh = false
     @AppStorage("copyAyahEnglishMustafa") private var storedCopyEnglishMustafa = false
     @State private var actionMode: ActionMode = .image
-    
+
     @State private var didInit = false
     @State private var didFinishInitialSetup = false
 
@@ -37,7 +37,7 @@ struct ShareAyahSheet: View {
     @State private var isSharing = false
     @State private var imageGenerationID = 0
     private static let shareImageQueue = DispatchQueue(label: "app.shareAyah.imageGeneration", qos: .userInitiated)
-    
+
     private func fetchNote() -> String? {
         if let idx = settings.bookmarkedAyahs.firstIndex(where: {
             $0.surah == surahNumber && $0.ayah == ayahNumber
@@ -48,13 +48,13 @@ struct ShareAyahSheet: View {
         }
         return nil
     }
-    
+
     private var noteText: String? {
         guard let n = fetchNote()?.trimmingCharacters(in: .whitespacesAndNewlines),
               !n.isEmpty else { return nil }
         return n
     }
-        
+
     private var surah: Surah? { quranData.quran.first(where: { $0.id == surahNumber }) }
     private var ayah: Ayah? { surah?.ayahs.first(where: { $0.id == ayahNumber }) }
     private var effectiveCleanArabic: Bool { shareSettings.cleanArabic }
@@ -400,7 +400,7 @@ struct ShareAyahSheet: View {
         Self.applyAllahHighlight(to: attributed, source: displayText, enabled: settings.highlightAllahNames)
         return attributed
     }
-    
+
     private var shareText: String {
         guard let surah = surah, let ayah = ayah else { return "" }
 
@@ -447,7 +447,7 @@ struct ShareAyahSheet: View {
             let header: String? = settings.showAyahInformation
                 ? "[\(trLabelName) \(surah.id):\(ayah.id)]"
                 : nil
-            
+
             appendBlock(
                 label: header,
                 text: settings.showAyahInformation ? ayah.textTransliteration : "\(ayah.textTransliteration) (\(ayah.id))"
@@ -471,7 +471,7 @@ struct ShareAyahSheet: View {
                 if settings.showAyahInformation {
                     s += "— Saheeh International\n"
                 }
-                
+
                 s += settings.showAyahInformation ? ayah.textEnglishSaheeh : "\(ayah.textEnglishSaheeh) (\(ayah.id))"
             }
 
@@ -506,7 +506,7 @@ struct ShareAyahSheet: View {
     private var shareAttributedText: AttributedString {
         Self.allahHighlightedSwiftUIText(shareText, baseColor: .white, enabled: settings.highlightAllahNames)
     }
-    
+
     private func combinedName(translit: String, english: String) -> String {
         if translit.isEmpty { return english }
         if english.isEmpty { return translit }
@@ -523,7 +523,7 @@ struct ShareAyahSheet: View {
         NavigationView {
             VStack {
                 Spacer()
-                
+
                 ZStack {
                     if actionMode == .image {
                         if let img = generatedImage {
@@ -554,7 +554,7 @@ struct ShareAyahSheet: View {
                 .scaleEffect(isSharing ? 0.98 : 1)
                 .animation(.easeInOut, value: actionMode)
                 .animation(.easeInOut, value: isSharing)
-                
+
                 Spacer()
 
                 ScrollView {
@@ -594,7 +594,7 @@ struct ShareAyahSheet: View {
                                 .padding(.horizontal, -24)
                                 .padding(.vertical, 2)
                         }
-                        
+
                         if shareSettings.arabic {
                             if actionMode == .image && !shareSettings.hideArabicDots {
                                 Picker("Arabic Font", selection: Binding(
@@ -695,12 +695,12 @@ struct ShareAyahSheet: View {
                 .pickerStyle(SegmentedPickerStyle())
                 .padding(.horizontal, 16)
                 .padding(.vertical, 4)
-                
+
                 HStack(spacing: 12) {
                     actionButton("Copy") {
                         performCopyOrGenerate()
                     }
-                    
+
                     actionButton("Share", isAnimating: isSharing)  {
                         performShareOrGenerate()
                     }
@@ -740,7 +740,7 @@ struct ShareAyahSheet: View {
                     hideArabicDots: settings.removeArabicDots,
                     showTajweed: settings.showTajweedColors
                 )
-                
+
                 actionMode = ActionMode(rawValue: storedActionModeRaw) ?? .image
                 generatePreviewImage()
             }
@@ -794,7 +794,7 @@ struct ShareAyahSheet: View {
         }
         .onChange(of: showingActivityView) { if !$0 { presentationMode.wrappedValue.dismiss() } }
     }
-    
+
     @ViewBuilder
     private func toggle(_ title: LocalizedStringKey, _ binding: Binding<Bool>, disabled: Bool) -> some View {
         Toggle(isOn: binding.animation(.easeInOut)) {
@@ -805,7 +805,7 @@ struct ShareAyahSheet: View {
         .padding(.horizontal, 20)
         .padding(.vertical, 4)
     }
-    
+
     private func actionButton(_ title: String, isAnimating: Bool = false, action: @escaping () -> Void) -> some View {
         Button {
             settings.hapticFeedback()
@@ -819,7 +819,7 @@ struct ShareAyahSheet: View {
         }
         .conditionalGlassEffect(useColor: 0.25)
     }
-    
+
     private func copyMenu(image: UIImage?) -> some View {
         Group {
             Text("Copy")
@@ -860,10 +860,10 @@ struct ShareAyahSheet: View {
     }
 
 
-    
+
     private func performCopyOrGenerate() {
         settings.hapticFeedback()
-        
+
         switch actionMode {
         case .text:
             UIPasteboard.general.string = shareText
@@ -880,7 +880,7 @@ struct ShareAyahSheet: View {
             }
         }
     }
-    
+
     private func performShareOrGenerate() {
         switch actionMode {
         case .text:
@@ -895,7 +895,7 @@ struct ShareAyahSheet: View {
             }
         }
     }
-    
+
     private func generatePreviewImage(completion: @escaping (UIImage) -> Void = { _ in }) {
         let snapshot = shareSettings
         let generationID = imageGenerationID + 1
@@ -919,7 +919,7 @@ struct ShareAyahSheet: View {
             }
         }
     }
-    
+
     private func drawImage(shareSettings: ShareSettings) -> UIImage {
         guard let surah = surah, let ayah = ayah else { return UIImage() }
 
@@ -931,22 +931,22 @@ struct ShareAyahSheet: View {
             : (UIFont(name: arabicFontName, size: bodyFont.pointSize * 1.15) ?? bodyFont)
         let arabicNumberFont = UIFont(name: Settings.hafsUthmaniFontName, size: bodyFont.pointSize * 1.15) ?? arabicFont
         let captionFont = UIFont.preferredFont(forTextStyle: .caption2)
-        
+
         let textColor      = UIColor.white
         let secondaryColor = UIColor.secondaryLabel
         let accent         = settings.accentColor.color.uiColor
-        
+
         // --- Layout constants
         let padding: CGFloat = 20, spacing: CGFloat = 8, extraSpacing: CGFloat = 30
         let iPhoneCanvasCap: CGFloat = 500
         let deviceWidth = UIScreen.main.bounds.width - 50
         let maxWidth = min(deviceWidth, iPhoneCanvasCap)
-        
+
         // Paragraph styles
         let right = NSMutableParagraphStyle();  right.alignment = .right
         let left  = NSMutableParagraphStyle();  left.alignment  = .left
         let cent  = NSMutableParagraphStyle();  cent.alignment  = .center
-        
+
         // Attr dictionaries
         let bodyAttr = [NSAttributedString.Key.font: bodyFont, .foregroundColor: textColor] as [NSAttributedString.Key: Any]
         let arAttr = [NSAttributedString.Key.font: arabicFont, .foregroundColor: textColor, .paragraphStyle: right]
@@ -956,7 +956,7 @@ struct ShareAyahSheet: View {
         let centAccent = [NSAttributedString.Key.font: bodyFont, .foregroundColor: accent,    .paragraphStyle: cent]
         let captionAttr = [NSAttributedString.Key.font: captionFont, .foregroundColor: secondaryColor,.paragraphStyle: left]
         let captionCentAttr = [NSAttributedString.Key.font: captionFont, .foregroundColor: secondaryColor, .paragraphStyle: cent] as [NSAttributedString.Key: Any]
-        
+
         // --- Compose full attributed text once
         let text = NSMutableAttributedString()
         func append(_ str: String, _ attrs: [NSAttributedString.Key: Any], highlightAllah: Bool = true) {
@@ -964,7 +964,7 @@ struct ShareAyahSheet: View {
         }
         func appendAttributed(_ attributed: NSAttributedString) { text.append(attributed) }
         func sepIfNeeded() { if text.length > 0 { append("\n\n", bodyAttr, highlightAllah: false) } }
-        
+
         // Arabic
         if shareSettings.arabic {
             let arabicText = Self.shareArabicText(
@@ -1002,7 +1002,7 @@ struct ShareAyahSheet: View {
                 }
             }
         }
-        
+
         // Transliteration (Hafs only)
         if shareSettings.transliteration, settings.isHafsDisplay {
             let trLabelName = (!shareSettings.englishSaheeh && !shareSettings.englishMustafa)
@@ -1010,12 +1010,12 @@ struct ShareAyahSheet: View {
                 : surah.nameTransliteration
 
             sepIfNeeded()
-            
+
             if settings.showAyahInformation {
                 append("[\(trLabelName) \(surah.id):\(ayah.id)]", accentAttr, highlightAllah: false)
                 append("\n", bodyAttr, highlightAllah: false)
             }
-            
+
             append(settings.showAyahInformation ? ayah.textTransliteration : "\(ayah.textTransliteration) (\(ayah.id))", bodyAttr)
         }
 
@@ -1050,7 +1050,7 @@ struct ShareAyahSheet: View {
                 append(settings.showAyahInformation ? ayah.textEnglishMustafa : "\(ayah.textEnglishMustafa) (\(ayah.id))", bodyAttr)
             }
         }
-        
+
         if includeNote, let note = noteText {
             sepIfNeeded()
             append("— Note", captionAttr, highlightAllah: false)
@@ -1071,12 +1071,12 @@ struct ShareAyahSheet: View {
         let wmString = AppIdentifiers.appFullName
         let wmText = NSAttributedString(string: wmString, attributes: centAccent)
         var logo = UIImage(named: AppIdentifiers.appName)
-        
+
         var wmTextSize = wmText.size()
         var logoSize = CGSize(width: wmTextSize.height, height: wmTextSize.height)
         let availWidth = maxWidth - 2*padding
         let desiredWmW = logoSize.width + spacing + wmTextSize.width
-        
+
         if desiredWmW > availWidth {
             let scale = availWidth / desiredWmW
             wmTextSize = CGSize(width: wmTextSize.width*scale, height: wmTextSize.height*scale)
@@ -1086,19 +1086,19 @@ struct ShareAyahSheet: View {
                 logo = r.image { _ in img.draw(in: CGRect(origin: .zero, size: logoSize)) }
             }
         }
-        
+
         let constraint = CGSize(width: availWidth, height: .greatestFiniteMagnitude)
         var textRect = text.boundingRect(with: constraint, options: [.usesLineFragmentOrigin, .usesFontLeading], context: nil).integral
         textRect.size.width  += 2*padding
         textRect.size.height += logoSize.height + extraSpacing + 25
-        
+
         let canvas = CGRect(origin: .zero, size: CGSize(width: maxWidth, height: textRect.height))
-        
+
         let r1 = UIGraphicsImageRenderer(size: canvas.size)
         let blackCard = r1.image { ctx in
             UIColor.black.setFill(); ctx.fill(canvas)
             text.draw(in: CGRect(x: padding, y: padding, width: canvas.width - 2*padding, height: canvas.height))
-            
+
             let wmY = canvas.height - logoSize.height - extraSpacing/2
             let wmX = (canvas.width - (logoSize.width + spacing + wmTextSize.width)) / 2
             if let logo = logo {

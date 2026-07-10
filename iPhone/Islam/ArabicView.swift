@@ -1,9 +1,11 @@
 import SwiftUI
 
 struct ArabicView: View {
-    @EnvironmentObject private var settings: Settings
+    @ObservedObject private var settings = Settings.shared
     @State private var searchText = ""
     @AppStorage("arabicFilterMode") private var filterModeRaw: String = ArabicFilterMode.normal.rawValue
+    /// List of rows, or a grid of tiles — the same choice the 99 Names screen offers. Watch is always a list.
+    @AppStorage("arabicDisplayMode") private var arabicDisplayMode: String = "list"
 
     private enum ArabicFilterMode: String, CaseIterable, Identifiable {
         case normal
@@ -111,6 +113,7 @@ struct ArabicView: View {
         #if os(watchOS)
         .searchable(text: $searchText.animation(.easeInOut))
         #else
+        .background(gridNavigationLink)
         .adaptiveSafeArea(edge: .bottom) {
             VStack(spacing: SafeAreaInsetVStackSpacing.standard) {
                 ArabicSizeSlider()
@@ -157,6 +160,20 @@ struct ArabicView: View {
         #endif
         .applyConditionalListStyle()
         .navigationTitle("Arabic Alphabet")
+        #if os(iOS)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                // Same grid/list toggle as the 99 Names screen.
+                Button {
+                    settings.hapticFeedback()
+                    withAnimation { arabicDisplayMode = isGridMode ? "list" : "grid" }
+                } label: {
+                    Image(systemName: isGridMode ? "list.bullet" : "square.grid.2x2")
+                }
+                .accessibilityLabel(isGridMode ? "Show list" : "Show grid")
+            }
+        }
+        #endif
     }
 
     private func adaptiveMenuButtonLabel<Content: View>(
@@ -174,9 +191,7 @@ struct ArabicView: View {
     private var favoriteLettersSection: some View {
         if searchText.isEmpty, !settings.favoriteLetters.isEmpty {
             Section("FAVORITE LETTERS") {
-                ForEach(settings.favoriteLetters.sorted(), id: \.id) {
-                    letterRow(for: $0)
-                }
+                letterCollection(settings.favoriteLetters.sorted())
             }
         }
     }
@@ -204,6 +219,64 @@ struct ArabicView: View {
         .onChange(of: settings.useFontArabic) { _ in settings.hapticFeedback() }
     }
 
+    private var isGridMode: Bool {
+        #if os(iOS)
+        return arabicDisplayMode == "grid"
+        #else
+        return false
+        #endif
+    }
+
+    #if os(iOS)
+    /// The letter a grid tile asked to open. Every grid section shares the one link below, so exactly one
+    /// letter is ever pushed.
+    @State private var gridSelection: LetterData?
+
+    @ViewBuilder
+    private var gridNavigationLink: some View {
+        NavigationLink(
+            isActive: Binding(
+                get: { gridSelection != nil },
+                set: { if !$0 { gridSelection = nil } }
+            )
+        ) {
+            if let gridSelection {
+                ArabicLetterView(letterData: gridSelection)
+            }
+        } label: {
+            EmptyView()
+        }
+        .opacity(0)
+    }
+    #endif
+
+    /// Every letter section renders through here, so list and grid can never fall out of sync on *which*
+    /// letters a section contains — only on how they're drawn.
+    @ViewBuilder
+    private func letterCollection(_ letters: [LetterData]) -> some View {
+        #if os(iOS)
+        if isGridMode {
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 4), spacing: 8) {
+                ForEach(letters) { letter in
+                    ArabicLetterGridTile(
+                        letterData: letter,
+                        isFavorite: settings.isLetterFavorite(letterData: letter),
+                        accentColor: settings.accentColor,
+                        useFontArabic: settings.useFontArabic,
+                        fontArabic: settings.fontArabic,
+                        onTap: { gridSelection = letter }
+                    )
+                }
+            }
+            .padding(.horizontal, -8)
+        } else {
+            ForEach(letters) { letterRow(for: $0) }
+        }
+        #else
+        ForEach(letters) { letterRow(for: $0) }
+        #endif
+    }
+
     private func letterRow(for letterData: LetterData) -> some View {
         ArabicLetterRow(
             letterData: letterData,
@@ -222,9 +295,7 @@ struct ArabicView: View {
             standardLetterSections
 
             Section("SPECIAL ARABIC LETTERS") {
-                ForEach(otherArabicLetters, id: \.letter) {
-                    letterRow(for: $0)
-                }
+                letterCollection(otherArabicLetters)
             }
 
             Section("ARABIC NUMBERS") {
@@ -234,9 +305,7 @@ struct ArabicView: View {
             tajweedSection
 
             Section("NON-ARABIC LETTERS") {
-                ForEach(nonArabicArabicScriptLetters, id: \.letter) {
-                    letterRow(for: $0)
-                }
+                letterCollection(nonArabicArabicScriptLetters)
             }
         }
     }
@@ -246,47 +315,35 @@ struct ArabicView: View {
         switch filterMode {
         case .normal:
             Section("STANDARD ARABIC LETTERS") {
-                ForEach(standardArabicLetters, id: \.letter) {
-                    letterRow(for: $0)
-                }
+                letterCollection(standardArabicLetters)
             }
         case .similarity:
             ForEach(similarityGroups.indices, id: \.self) { idx in
                 let group = similarityGroups[idx]
                 let header = idx == 0 ? "VOWEL LETTERS" : group.joined(separator: " - ")
                 Section(header) {
-                    ForEach(group, id: \.self) { ch in
-                        letterData(for: ch).map { letterRow(for: $0) }
-                    }
+                    letterCollection(group.compactMap { letterData(for: $0) })
                 }
             }
         case .heavyLight:
             Section("FOLLOWS PREVIOUS") {
-                ForEach(standardArabicLetters.filter { $0.weight == .followsPrevious }, id: \.letter) {
-                    letterRow(for: $0)
-                }
+                letterCollection(standardArabicLetters.filter { $0.weight == .followsPrevious })
             }
             
             Section("CONDITIONAL") {
-                ForEach(standardArabicLetters.filter { $0.weight == .conditional }, id: \.letter) {
-                    letterRow(for: $0)
-                }
+                letterCollection(standardArabicLetters.filter { $0.weight == .conditional })
             }
             
             Section("HEAVY LETTERS") {
-                ForEach(standardArabicLetters.filter { $0.weight == .heavy }, id: \.letter) {
-                    letterRow(for: $0)
-                }
+                letterCollection(standardArabicLetters.filter { $0.weight == .heavy })
             }
 
             Section("LIGHT LETTERS") {
-                ForEach((standardArabicLetters + otherArabicLetters).filter {
+                letterCollection((standardArabicLetters + otherArabicLetters).filter {
                     $0.weight == .light
                         || $0.transliteration == "taa marbuuTah"
                         || $0.transliteration.lowercased().contains("hamza")
-                }, id: \.id) {
-                    letterRow(for: $0)
-                }
+                })
             }
         }
     }
@@ -295,13 +352,7 @@ struct ArabicView: View {
     private var searchResultsSection: some View {
         if !searchText.isEmpty {
             Section {
-                ForEach(filteredStandardForMode) {
-                    letterRow(for: $0)
-                }
-
-                ForEach(filteredOther) {
-                    letterRow(for: $0)
-                }
+                letterCollection(filteredStandardForMode + filteredOther)
             } header: {
                 HStack {
                     Text("ARABIC SEARCH RESULTS")
@@ -338,7 +389,7 @@ struct ArabicView: View {
 /// `settings.arabicLetterSizeIndex`, which both screens apply as a Dynamic-Type floor. Position 0 is
 /// `.xSmall`, i.e. no floor at all — the alphabet then renders at whatever size the device is set to.
 struct ArabicSizeSlider: View {
-    @EnvironmentObject var settings: Settings
+    @ObservedObject var settings = Settings.shared
 
     private var maxIndex: Int { Settings.arabicLetterDynamicTypeSizes.count - 1 }
 
@@ -392,7 +443,7 @@ struct ArabicSizeSlider: View {
 }
 
 struct LetterSectionHeader: View {
-    @EnvironmentObject var settings: Settings
+    @ObservedObject var settings = Settings.shared
     let letterData: LetterData
 
     var body: some View {
@@ -413,7 +464,7 @@ struct LetterSectionHeader: View {
 }
 
 struct ArabicLetterView: View {
-    @EnvironmentObject var settings: Settings
+    @ObservedObject var settings = Settings.shared
 
     let letterData: LetterData
 
@@ -707,7 +758,7 @@ extension Array {
 }
 
 struct TashkeelRow: View {
-    @EnvironmentObject var settings: Settings
+    @ObservedObject var settings = Settings.shared
 
     let letterData: LetterData
     let tashkeels: [Tashkeel]
@@ -761,7 +812,7 @@ struct TashkeelRow: View {
 }
 
 struct HamzaPracticeRow: View {
-    @EnvironmentObject var settings: Settings
+    @ObservedObject var settings = Settings.shared
 
     let letterData: LetterData
     let useQuranicFontForLetter: Bool
@@ -876,7 +927,7 @@ struct HamzaPracticeRow: View {
 }
 
 struct NonArabicVowelPracticeRow: View {
-    @EnvironmentObject var settings: Settings
+    @ObservedObject var settings = Settings.shared
 
     let letterData: LetterData
     let baseSound: String
@@ -913,7 +964,7 @@ struct NonArabicVowelPracticeRow: View {
 }
 
 struct ArabicLetterRow: View, Equatable {
-    @EnvironmentObject private var settings: Settings
+    @ObservedObject private var settings = Settings.shared
     let letterData: LetterData
     let isFavorite: Bool
     let accentColor: AccentColor
@@ -993,48 +1044,7 @@ struct ArabicLetterRow: View, Equatable {
     @ViewBuilder
     private func contextItems() -> some View {
         #if os(iOS)
-        Text("Letter Actions")
-            .foregroundStyle(.secondary)
-
-        Button {
-            settings.hapticFeedback()
-            FocusOverlayPresenter.shared.present(.letter(letterData))
-        } label: {
-            Label("View Fullscreen", systemImage: "arrow.up.left.and.arrow.down.right")
-        }
-
-        Button {
-            settings.hapticFeedback()
-            presentSystemShareSheet(items: [FocusItem.letter(letterData).shareText])
-        } label: {
-            Label("Share Letter", systemImage: "square.and.arrow.up")
-        }
-
-        Divider()
-
-        Button(role: isFavorite ? .destructive : nil) {
-            settings.hapticFeedback()
-            withAnimation(.easeInOut) {
-                settings.toggleLetterFavorite(letterData: letterData)
-            }
-        } label: {
-            Label(isFavorite ? "Unfavorite Letter" : "Favorite Letter",
-                  systemImage: isFavorite ? "star.fill" : "star")
-        }
-
-        Button {
-            settings.hapticFeedback()
-            UIPasteboard.general.string = letterData.letter
-        } label: {
-            Label("Copy Letter", systemImage: "doc.on.doc")
-        }
-
-        Button {
-            settings.hapticFeedback()
-            UIPasteboard.general.string = letterData.transliteration
-        } label: {
-            Label("Copy Transliteration", systemImage: "doc.on.doc")
-        }
+        arabicLetterContextItems(letterData, isFavorite: isFavorite)
         #endif
     }
 
@@ -1049,7 +1059,7 @@ struct ArabicLetterRow: View, Equatable {
 }
 
 struct ArabicNumberRow: View {
-    @EnvironmentObject private var settings: Settings
+    @ObservedObject private var settings = Settings.shared
     let numberData: (number: String, name: String, transliteration: String, englishNumber: String)
 
     var body: some View {
@@ -1170,3 +1180,128 @@ struct QuranSignsSectionContent: View {
         ArabicView()
     }
 }
+
+#if os(iOS)
+/// The long-press menu for a single letter. Shared by `ArabicLetterRow` and `ArabicLetterGridTile` so the two
+/// presentations can never drift apart on what a letter lets you do.
+@ViewBuilder
+func arabicLetterContextItems(_ letterData: LetterData, isFavorite: Bool) -> some View {
+    let settings = Settings.shared
+
+    Text("Letter Actions")
+        .foregroundStyle(.secondary)
+
+    Button {
+        settings.hapticFeedback()
+        FocusOverlayPresenter.shared.present(.letter(letterData))
+    } label: {
+        Label("View Fullscreen", systemImage: "arrow.up.left.and.arrow.down.right")
+    }
+
+    Button {
+        settings.hapticFeedback()
+        presentSystemShareSheet(items: [FocusItem.letter(letterData).shareText])
+    } label: {
+        Label("Share Letter", systemImage: "square.and.arrow.up")
+    }
+
+    Divider()
+
+    Button(role: isFavorite ? .destructive : nil) {
+        settings.hapticFeedback()
+        withAnimation(.easeInOut) {
+            settings.toggleLetterFavorite(letterData: letterData)
+        }
+    } label: {
+        Label(isFavorite ? "Unfavorite Letter" : "Favorite Letter",
+              systemImage: isFavorite ? "star.fill" : "star")
+    }
+
+    Button {
+        settings.hapticFeedback()
+        UIPasteboard.general.string = letterData.letter
+    } label: {
+        Label("Copy Letter", systemImage: "doc.on.doc")
+    }
+
+    Button {
+        settings.hapticFeedback()
+        UIPasteboard.general.string = letterData.transliteration
+    } label: {
+        Label("Copy Transliteration", systemImage: "doc.on.doc")
+    }
+}
+
+/// A letter as a tile, mirroring `NameGridTile` on the 99 Names screen. Tapping opens the letter's detail —
+/// the same primary action the list row has — rather than toggling a favorite, which lives in the menu.
+struct ArabicLetterGridTile: View {
+    @ObservedObject private var settings = Settings.shared
+
+    let letterData: LetterData
+    let isFavorite: Bool
+    let accentColor: AccentColor
+    let useFontArabic: Bool
+    let fontArabic: String
+
+    /// Letters from other scripts (پ, چ, ژ) aren't in the Quranic font, so they fall back to the system one.
+    private var glyphFont: Font {
+        useFontArabic && !letterData.isNonArabicScriptLetter
+            ? .custom(fontArabic, size: 30, relativeTo: .title)
+            : .title
+    }
+
+    /// The tile reports the tap instead of carrying its own `NavigationLink`. A per-tile link — even a hidden
+    /// one behind the tile — pushes *every* letter at once, because the whole `LazyVGrid` is a single `List`
+    /// row and one tap activates every link inside that row. `ArabicView` owns one link for the grid.
+    let onTap: () -> Void
+
+    var body: some View {
+        Button {
+            settings.hapticFeedback()
+            onTap()
+        } label: {
+            tile
+        }
+        .buttonStyle(.plain)
+        .contextMenu { arabicLetterContextItems(letterData, isFavorite: isFavorite) }
+    }
+
+    private var tile: some View {
+        Group {
+            VStack(spacing: 6) {
+                Text(letterData.letter)
+                    .font(glyphFont)
+                    .foregroundColor(accentColor.color)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
+
+                Text(letterData.transliteration)
+                    .font(.caption.weight(.semibold))
+                    .foregroundColor(.primary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.5)
+
+                // Em spaces, not a plain space: the initial/medial/final forms of a letter run together
+                // otherwise, and they read as one word. One `Text` (rather than an `HStack`) so all three
+                // forms shrink by the same factor when the tile is tight.
+                Text(letterData.forms.prefix(3).joined(separator: "\u{2003}\u{2003}"))
+                    .font(useFontArabic && !letterData.isNonArabicScriptLetter
+                          ? .custom(fontArabic, size: 12, relativeTo: .caption2)
+                          : .caption2)
+                    .foregroundColor(.secondary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.5)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 10)
+            .padding(.horizontal, 4)
+            .contentShape(Rectangle())
+            .conditionalGlassEffect(
+                rectangle: true,
+                useColor: isFavorite ? 0.25 : 0.12,
+                customTint: isFavorite ? accentColor.color : nil
+            )
+        }
+    }
+}
+#endif

@@ -67,6 +67,10 @@ final class WatchConnectivityManager: NSObject, WCSessionDelegate {
     #endif
 
     private override init() {
+        // Let `Settings` run its startup migrations first. One of them clears the sync digest to force a
+        // re-push; snapshotting the digest before that runs would resurrect the stale value.
+        _ = Settings.shared.isReadyForUI
+
         let store = UserDefaults(suiteName: AppIdentifiers.appGroupSuiteName) ?? .standard
         self.store = store
         self.knownTimestamp = store.double(forKey: Self.timestampKey)
@@ -207,6 +211,8 @@ extension Settings {
         // Prayer / notifications
         "calculationAutomatic", "travelAutomatic", "switchHijriDateAtMaghrib", "dateNotifications",
         "naggingMode", "naggingStartOffset", "adhanNotificationSound", "showPrayerInfo",
+        "shortAdhanFajr", "shortAdhanDhuhr", "shortAdhanAsr", "shortAdhanMaghrib", "shortAdhanIsha",
+        "adhanSoundFajr", "adhanSoundDhuhr", "adhanSoundAsr", "adhanSoundMaghrib", "adhanSoundIsha",
         "notificationFajr", "notificationSunrise", "notificationDhuhr", "notificationAsr",
         "notificationMaghrib", "notificationIsha", "notificationDuha", "notificationIslamicMidnight",
         "notificationLastThird", "showDuha", "showIslamicMidnight", "showLastThird",
@@ -245,16 +251,20 @@ extension Settings {
     func watchSyncSnapshot() -> [String: Any] {
         var dict: [String: Any] = [:]
 
-        // Core @Published settings live in the app-group store; their `didSet` only writes once changed,
-        // so `object(forKey:) != nil` means the user (or a prior sync) genuinely set this value.
-        let appGroup = UserDefaults(suiteName: AppIdentifiers.appGroupSuiteName)
-        if appGroup?.object(forKey: "accentColor") != nil { dict["accentColor"] = accentColor.rawValue }
-        if appGroup?.object(forKey: "customAccentColorHex") != nil { dict["customAccentColorHex"] = customAccentColorHex }
-        if appGroup?.object(forKey: "customBackgroundColorHex") != nil { dict["customBackgroundColorHex"] = customBackgroundColorHex }
-        if appGroup?.object(forKey: "prayerCalculation") != nil { dict["prayerCalculation"] = prayerCalculation }
-        if appGroup?.object(forKey: "hanafiMadhab") != nil { dict["hanafiMadhab"] = hanafiMadhab }
-        if appGroup?.object(forKey: "travelingMode") != nil { dict["travelingMode"] = travelingMode }
-        if appGroup?.object(forKey: "hijriOffset") != nil { dict["hijriOffset"] = hijriOffset }
+        // Core @Published settings live in the app-group store. Transmit one only if it was *chosen* — the
+        // mere existence of the key isn't enough, because a process that assigns a default creates the key
+        // too. See `Settings.explicitlySetKeys`.
+        let chosen = explicitlySetKeys
+        if chosen.contains("accentColor") { dict["accentColor"] = accentColor.rawValue }
+        if chosen.contains("customAccentColorHex") { dict["customAccentColorHex"] = customAccentColorHex }
+        if chosen.contains("customAccentColorHex2") { dict["customAccentColorHex2"] = customAccentColorHex2 }
+        if chosen.contains("customBackgroundColorHex") { dict["customBackgroundColorHex"] = customBackgroundColorHex }
+        if chosen.contains("prayerCalculation") { dict["prayerCalculation"] = prayerCalculation }
+        if chosen.contains("hanafiMadhab") { dict["hanafiMadhab"] = hanafiMadhab }
+        if chosen.contains("travelingMode") { dict["travelingMode"] = travelingMode }
+        if chosen.contains("hijriOffset") { dict["hijriOffset"] = hijriOffset }
+        if chosen.contains("highLatitudeRule") { dict["highLatitudeRule"] = highLatitudeRule }
+        if chosen.contains("customPrayerNames") { dict["customPrayerNames"] = customPrayerNames }
 
         // @AppStorage settings — likewise only keys that have been explicitly written.
         let store = UserDefaults.standard
@@ -270,11 +280,14 @@ extension Settings {
     func applyWatchSyncSnapshot(_ dict: [String: Any]) {
         if let raw = dict["accentColor"] as? String, let c = AccentColor(rawValue: raw), c != accentColor { accentColor = c }
         if let v = dict["customAccentColorHex"] as? String, v != customAccentColorHex { customAccentColorHex = v }
+        if let v = dict["customAccentColorHex2"] as? String, v != customAccentColorHex2 { customAccentColorHex2 = v }
         if let v = dict["customBackgroundColorHex"] as? String, v != customBackgroundColorHex { customBackgroundColorHex = v }
         if let v = dict["prayerCalculation"] as? String, v != prayerCalculation { prayerCalculation = v }
         if let v = dict["hanafiMadhab"] as? Bool, v != hanafiMadhab { hanafiMadhab = v }
         if let v = dict["travelingMode"] as? Bool, v != travelingMode { travelingMode = v }
         if let v = dict["hijriOffset"] as? Int, v != hijriOffset { hijriOffset = v }
+        if let v = dict["highLatitudeRule"] as? String, v != highLatitudeRule { highLatitudeRule = v }
+        if let v = dict["customPrayerNames"] as? [String: String], v != customPrayerNames { customPrayerNames = v }
 
         let store = UserDefaults.standard
         for key in Self.watchSyncedAppStorageKeys where dict[key] != nil {

@@ -4,8 +4,8 @@ import UIKit
 #endif
 
 struct SettingsQuranView: View {
-    @EnvironmentObject var settings: Settings
-    @EnvironmentObject var quranData: QuranData
+    @ObservedObject var settings = Settings.shared
+    @ObservedObject var quranData = QuranData.shared
     @Environment(\.dismiss) private var dismiss
 
     @State private var confirmHideQiraahDetails = false
@@ -553,8 +553,27 @@ struct SettingsQuranView: View {
             }
 
             Slider(value: $settings.fontArabicSize.animation(.easeInOut), in: 15...75, step: 1)
+
+            #if os(iOS)
+            fitPageControls
+            #endif
         }
     }
+
+    #if os(iOS)
+    private var fitPageControls: some View {
+        VStack(alignment: .leading) {
+            Toggle("Fit Page to Screen", isOn: $settings.mushafFitPage.animation(.easeInOut))
+                .font(.subheadline)
+                .onChange(of: settings.mushafFitPage) { _ in settings.hapticFeedback() }
+
+            Text("In reading mode, shrinks each mushaf page's Arabic just enough that all of its ayahs fit on one screen, the way a printed mushaf sets them. Never larger than your chosen font size. Turn this off to read at exactly the size above and scroll.")
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .padding(.vertical, 2)
+        }
+    }
+    #endif
 
     private var beginnerModeGroup: some View {
         VStack(alignment: .leading) {
@@ -785,7 +804,7 @@ struct ReciterListView: View {
     /// When `false`, list opens at top without scrolling to the selected reciter.
     var autoScrollToInitialSelection = true
 
-    @EnvironmentObject var settings: Settings
+    @ObservedObject var settings = Settings.shared
     @Environment(\.presentationMode) private var presentationMode
     @State private var didAutoScrollToSelection = false
     @State private var searchText = ""
@@ -1863,8 +1882,8 @@ struct ReciterListView: View {
 
 #if os(iOS)
 private struct ReciterRow: View {
-    @EnvironmentObject private var settings: Settings
-    @EnvironmentObject private var downloadManager: ReciterDownloadManager
+    @ObservedObject private var settings = Settings.shared
+    @ObservedObject private var downloadManager = ReciterDownloadManager.shared
 
     let reciter: Reciter
     let qiraah: Bool
@@ -2028,7 +2047,7 @@ private struct ReciterRow: View {
 }
 #else
 private struct WatchReciterRow: View {
-    @EnvironmentObject private var settings: Settings
+    @ObservedObject private var settings = Settings.shared
 
     let reciter: Reciter
     let qiraah: Bool
@@ -2093,8 +2112,8 @@ enum FavoriteType: Identifiable {
 /// Bulk editor for the user's saved Quran items — favorite surahs, bookmarked ayahs, favorite letters, and
 /// khatm progress — with swipe-to-delete, EditButton, and a "Delete All". Reachable from Quran Settings.
 struct FavoritesView: View {
-    @EnvironmentObject var quranData: QuranData
-    @EnvironmentObject var settings: Settings
+    @ObservedObject var quranData = QuranData.shared
+    @ObservedObject var settings = Settings.shared
 
     @State private var editMode: EditMode = .inactive
 

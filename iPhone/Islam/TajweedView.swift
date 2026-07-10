@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct TajweedFoundationsView: View {
-    @EnvironmentObject var settings: Settings
+    @ObservedObject var settings = Settings.shared
     @State private var showTajweedLegend = false
 
     private let topics: [String] = [
@@ -33,7 +33,7 @@ struct TajweedFoundationsView: View {
                         Text("Quick Reference Guide")
                             .font(.subheadline.weight(.semibold))
                             .foregroundColor(settings.accentColor.color)
-                        
+
                         Text("Simple way to view basic Hafs an Asim Tajweed rules with colors")
                             .font(.caption)
                             .foregroundColor(.secondary)
@@ -67,7 +67,7 @@ struct TajweedFoundationsView: View {
                     Text("And recite the Quran with measured recitation (tartil).")
                         .font(.headline)
                         .foregroundColor(settings.accentColor.color)
-                    
+
                     Text("(73:4)")
                         .font(.subheadline)
                         .foregroundColor(.secondary)
@@ -198,7 +198,7 @@ struct TajweedFoundationsView: View {
 }
 
 private struct TajweedImprovingRecitationView: View {
-    @EnvironmentObject var settings: Settings
+    @ObservedObject var settings = Settings.shared
 
     var body: some View {
         List {
@@ -334,7 +334,7 @@ private struct TajweedImprovingRecitationView: View {
 }
 
 private struct TajweedFoundationsTopicView: View {
-    @EnvironmentObject var settings: Settings
+    @ObservedObject var settings = Settings.shared
 
     var body: some View {
         List {
@@ -394,12 +394,12 @@ private struct TajweedFoundationsTopicView: View {
 }
 
 private struct TajweedInMushafView: View {
-    @EnvironmentObject var settings: Settings
+    @ObservedObject var settings = Settings.shared
 
     private var arabicHeadlineFont: Font {
         .custom(settings.fontArabic, size: UIFont.preferredFont(forTextStyle: .title1).pointSize)
     }
-    
+
     private var arabicFont: Font {
         .custom(settings.fontArabic, size: UIFont.preferredFont(forTextStyle: .title2).pointSize)
     }
@@ -628,12 +628,12 @@ private struct TajweedInMushafView: View {
 }
 
 private struct TajweedMakharijView: View {
-    @EnvironmentObject var settings: Settings
+    @ObservedObject var settings = Settings.shared
 
     private var arabicHeadlineFont: Font {
         .custom(settings.fontArabic, size: UIFont.preferredFont(forTextStyle: .title1).pointSize)
     }
-    
+
     private var arabicFont: Font {
         .custom(settings.fontArabic, size: UIFont.preferredFont(forTextStyle: .title2).pointSize)
     }
@@ -868,7 +868,7 @@ private struct TajweedMakharijView: View {
 }
 
 private struct TajweedHeavyLightView: View {
-    @EnvironmentObject var settings: Settings
+    @ObservedObject var settings = Settings.shared
 
     private var arabicHeadlineFont: Font {
         .custom(settings.fontArabic, size: UIFont.preferredFont(forTextStyle: .title1).pointSize)
@@ -1064,7 +1064,7 @@ private struct TajweedHeavyLightView: View {
 }
 
 private struct TajweedShamsQamarView: View {
-    @EnvironmentObject var settings: Settings
+    @ObservedObject var settings = Settings.shared
 
     private var arabicHeadlineFont: Font {
         .custom(settings.fontArabic, size: UIFont.preferredFont(forTextStyle: .title1).pointSize)
@@ -1189,7 +1189,7 @@ private struct TajweedShamsQamarView: View {
 }
 
 private struct TajweedMaddView: View {
-    @EnvironmentObject var settings: Settings
+    @ObservedObject var settings = Settings.shared
 
     private var arabicHeadlineFont: Font {
         .custom(settings.fontArabic, size: UIFont.preferredFont(forTextStyle: .title1).pointSize)
@@ -1582,7 +1582,7 @@ private struct TajweedMaddView: View {
 }
 
 private struct TajweedQalqalahView: View {
-    @EnvironmentObject var settings: Settings
+    @ObservedObject var settings = Settings.shared
 
     private var arabicHeadlineFont: Font {
         .custom(settings.fontArabic, size: UIFont.preferredFont(forTextStyle: .title1).pointSize)
@@ -1695,7 +1695,7 @@ private struct TajweedQalqalahView: View {
 }
 
 private struct TajweedIdghamIkhfaView: View {
-    @EnvironmentObject var settings: Settings
+    @ObservedObject var settings = Settings.shared
 
     private var arabicHeadlineFont: Font {
         .custom(settings.fontArabic, size: UIFont.preferredFont(forTextStyle: .title1).pointSize)
@@ -1924,7 +1924,7 @@ private struct TajweedIdghamIkhfaView: View {
 }
 
 private struct TajweedMeemSakinahView: View {
-    @EnvironmentObject var settings: Settings
+    @ObservedObject var settings = Settings.shared
 
     var body: some View {
         List {
@@ -2090,7 +2090,7 @@ private struct TajweedMeemSakinahView: View {
 }
 
 private struct TajweedAaridLisSukoonView: View {
-    @EnvironmentObject var settings: Settings
+    @ObservedObject var settings = Settings.shared
 
     var body: some View {
         List {
@@ -2197,7 +2197,7 @@ private struct TajweedAaridLisSukoonView: View {
 }
 
 private struct TajweedHamzatulWaslView: View {
-    @EnvironmentObject var settings: Settings
+    @ObservedObject var settings = Settings.shared
 
     var body: some View {
         List {
@@ -2348,7 +2348,7 @@ private struct TajweedHamzatulWaslView: View {
 }
 
 private struct TajweedWaqfView: View {
-    @EnvironmentObject var settings: Settings
+    @ObservedObject var settings = Settings.shared
 
     private var arabicHeadlineFont: Font {
         .custom(settings.fontArabic, size: UIFont.preferredFont(forTextStyle: .title1).pointSize)
@@ -2668,9 +2668,9 @@ private struct TajweedPairRow: View {
         HStack {
             Text(english)
                 .font(.subheadline)
-            
+
             Spacer()
-            
+
             Text(arabic)
                 .font(arabicFont)
                 .foregroundColor(.primary)
@@ -2722,7 +2722,7 @@ private struct TajweedWhyRow: View {
 }
 
 private struct TajweedTopicPlaceholderView: View {
-    @EnvironmentObject var settings: Settings
+    @ObservedObject var settings = Settings.shared
 
     let title: String
 

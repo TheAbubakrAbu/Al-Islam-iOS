@@ -1,9 +1,9 @@
 import SwiftUI
 
 struct SurahContextMenu: View {
-    @EnvironmentObject var settings: Settings
-    @EnvironmentObject var quranData: QuranData
-    @EnvironmentObject var quranPlayer: QuranPlayer
+    @ObservedObject var settings = Settings.shared
+    @ObservedObject var quranData = QuranData.shared
+    @ObservedObject var quranPlayer = QuranPlayer.shared
 
     let surahID: Int
     let surahName: String
@@ -208,8 +208,8 @@ private final class AyahTafsirViewModel: ObservableObject {
 }
 
 struct AyahTafsirSheet: View {
-    @EnvironmentObject var settings: Settings
-    @EnvironmentObject var quranData: QuranData
+    @ObservedObject var settings = Settings.shared
+    @ObservedObject var quranData = QuranData.shared
     @Environment(\.dismiss) private var dismiss
 
     let surahName: String
@@ -528,8 +528,8 @@ struct AyahTafsirSheet: View {
 /// "About this Surah" sheet — bundled surah background, mirroring the Tafsir sheet: a source picker
 /// (Maududi / Ibn Ashur), searchable content, and the same accent-foreground search match (no highlight box).
 struct SurahInfoSheet: View {
-    @EnvironmentObject var settings: Settings
-    @EnvironmentObject var quranData: QuranData
+    @ObservedObject var settings = Settings.shared
+    @ObservedObject var quranData = QuranData.shared
     @Environment(\.dismiss) private var dismiss
 
     let surahName: String
@@ -936,7 +936,7 @@ private struct TafsirMarkdownBlock {
 /// Find-in-page control bar: "current/total" plus up/down arrows, styled to match the app. Shown over the
 /// Tafsir / Surah Info sheets while a search query is active.
 private struct TafsirFindBar: View {
-    @EnvironmentObject var settings: Settings
+    @ObservedObject var settings = Settings.shared
 
     let current: Int   // 0-based index of the active match
     let total: Int
@@ -991,8 +991,8 @@ private struct TafsirSheetPresentationModifier: ViewModifier {
 }
 
 struct AyahQiraahComparisonSheet: View {
-    @EnvironmentObject var settings: Settings
-    @EnvironmentObject var quranData: QuranData
+    @ObservedObject var settings = Settings.shared
+    @ObservedObject var quranData = QuranData.shared
     @Environment(\.dismiss) private var dismiss
 
     let surahNumber: Int
@@ -1131,7 +1131,7 @@ struct AyahQiraahComparisonSheet: View {
                         accent: settings.accentColor.color,
                         fg: .primary
                     )
-                    
+
                     HighlightedSnippet(
                         source: option.arabicCaption,
                         term: searchText,
@@ -1275,8 +1275,8 @@ private final class EnglishComparisonViewModel: ObservableObject {
 }
 
 struct AyahEnglishComparisonSheet: View {
-    @EnvironmentObject var settings: Settings
-    @EnvironmentObject var quranData: QuranData
+    @ObservedObject var settings = Settings.shared
+    @ObservedObject var quranData = QuranData.shared
     @Environment(\.dismiss) private var dismiss
 
     let surahNumber: Int
@@ -1506,16 +1506,16 @@ struct AyahEnglishComparisonSheet: View {
 #endif
 
 struct AyahContextMenuModifier: ViewModifier {
-    @EnvironmentObject var settings: Settings
-    @EnvironmentObject var quranData: QuranData
-    @EnvironmentObject var quranPlayer: QuranPlayer
+    @ObservedObject var settings = Settings.shared
+    @ObservedObject var quranData = QuranData.shared
+    @ObservedObject var quranPlayer = QuranPlayer.shared
 
     let surah: Int
     let ayah: Int
-    
+
     let favoriteSurahs: Set<Int>
     let bookmarkedAyahs: Set<String>
-    
+
     @Binding var searchText: String
     @Binding var scrollToSurahID: Int
 
@@ -1524,7 +1524,7 @@ struct AyahContextMenuModifier: ViewModifier {
     var ayahOfTheDay: Bool = false
 
     @State var showAyahSheet = false
-    
+
     @State private var showingNoteSheet = false
     @State private var draftNote: String = ""
     @State private var showRespectAlert = false
@@ -1536,24 +1536,24 @@ struct AyahContextMenuModifier: ViewModifier {
     private var isBookmarked: Bool {
         bookmarkedAyahs.contains("\(surah)-\(ayah)")
     }
-    
+
     func containsProfanity(_ text: String) -> Bool {
         let t = text.folding(options: [.diacriticInsensitive, .widthInsensitive], locale: .current).lowercased()
         return profanityFilter.contains { !$0.isEmpty && t.contains($0) }
     }
-    
+
     private func isNoteAllowed(_ text: String) -> Bool {
         !containsProfanity(text)
     }
-    
+
     private var bookmarkIndex: Int? {
         settings.bookmarkIndex(surah: surah, ayah: ayah)
     }
-    
+
     private var bookmark: BookmarkedAyah? {
         settings.bookmarkedAyah(surah: surah, ayah: ayah)
     }
-    
+
     private var isBookmarkedHere: Bool { bookmarkIndex != nil }
     private var currentNote: String {
         settings.bookmarkNoteText(surah: surah, ayah: ayah)
@@ -1601,7 +1601,7 @@ struct AyahContextMenuModifier: ViewModifier {
         }
     }
     #endif
-    
+
     private func setNote(_ text: String?) {
         settings.setBookmarkNote(surah: surah, ayah: ayah, note: text)
     }
@@ -1609,7 +1609,7 @@ struct AyahContextMenuModifier: ViewModifier {
     private func removeNote() {
         settings.removeBookmarkNote(surah: surah, ayah: ayah)
     }
-    
+
     @State private var confirmRemoveNote = false
     @State private var confirmDeleteForever = false
 
@@ -1669,7 +1669,7 @@ struct AyahContextMenuModifier: ViewModifier {
                         systemImage: isBookmarked ? "bookmark.fill" : "bookmark"
                     )
                 }
-                
+
                 Button {
                     settings.hapticFeedback()
                     if !isBookmarked {
@@ -1702,7 +1702,7 @@ struct AyahContextMenuModifier: ViewModifier {
                 }
 
                 comparisonMenuBlock
-                
+
                 if settings.isHafsDisplay {
                     Menu {
                         Button {
@@ -1731,7 +1731,7 @@ struct AyahContextMenuModifier: ViewModifier {
                         Label("Play Ayah", systemImage: "play.circle")
                     }
                 }
-                
+
                 Button {
                     settings.hapticFeedback()
                     ShareAyahSheet.copyAyahToPasteboard(surahNumber: surah, ayahNumber: ayah, settings: settings, quranData: quranData)
@@ -1897,7 +1897,7 @@ extension View {
 }
 
 struct LeftSwipeActions: ViewModifier {
-    @EnvironmentObject private var settings: Settings
+    @ObservedObject private var settings = Settings.shared
 
     let surah: Int
     let favoriteSurahs: Set<Int>
@@ -1915,24 +1915,24 @@ struct LeftSwipeActions: ViewModifier {
         }
         return false
     }
-    
+
     private var bookmarkIndex: Int? {
         let surah = bookmarkedSurah ?? 1
         let ayah = bookmarkedAyah ?? 1
-        
+
         return settings.bookmarkIndex(surah: surah, ayah: ayah)
     }
-    
+
     private var bookmark: BookmarkedAyah? {
         settings.bookmarkedAyah(surah: bookmarkedSurah ?? 1, ayah: bookmarkedAyah ?? 1)
     }
-    
+
     private var isBookmarkedHere: Bool { bookmarkIndex != nil }
-    
+
     private var currentNote: String {
         settings.bookmarkNoteText(surah: bookmarkedSurah ?? 1, ayah: bookmarkedAyah ?? 1)
     }
-    
+
     @State private var confirmRemoveNote = false
 
     private func toggleBookmarkWithNoteGuard(_ surah: Int, _ ayah: Int) {
@@ -1997,8 +1997,8 @@ public extension View {
 }
 
 struct RightSwipeActions: ViewModifier {
-    @EnvironmentObject private var settings: Settings
-    @EnvironmentObject private var quranPlayer: QuranPlayer
+    @ObservedObject private var settings = Settings.shared
+    @ObservedObject private var quranPlayer = QuranPlayer.shared
 
     let surahID: Int
     let surahName: String
@@ -2079,8 +2079,8 @@ public extension View {
 import SwiftUI
 
 struct NoteEditorSheet: View {
-    @EnvironmentObject var settings: Settings
-    
+    @ObservedObject var settings = Settings.shared
+
     let title: String
     @Binding var text: String
     var onAttemptSave: (String) -> Bool
@@ -2089,7 +2089,7 @@ struct NoteEditorSheet: View {
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var scheme
-    
+
     private let maxChars: Int = 300
 
     private var characterCount: Int { text.count }

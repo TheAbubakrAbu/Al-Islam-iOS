@@ -5,7 +5,7 @@ import CoreLocation
 import UIKit
 
 struct MapView: View {
-    @EnvironmentObject private var settings: Settings
+    @ObservedObject private var settings = Settings.shared
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var systemScheme
 
@@ -434,7 +434,7 @@ private struct AnimatedMarkerBubble: View {
 }
 
 private struct SearchOverlay: View {
-    @EnvironmentObject private var settings: Settings
+    @ObservedObject private var settings = Settings.shared
 
     @Binding var searchText: String
     let cityItems: [MKMapItem]
@@ -499,7 +499,7 @@ private struct SearchOverlay: View {
 }
 
 private struct SearchResultRow: View {
-    @EnvironmentObject private var settings: Settings
+    @ObservedObject private var settings = Settings.shared
 
     let item: MKMapItem
     let primaryTitle: String
@@ -555,7 +555,7 @@ private struct SearchResultRow: View {
 }
 
 private struct HomeLocationSummaryCard: View {
-    @EnvironmentObject private var settings: Settings
+    @ObservedObject private var settings = Settings.shared
 
     let home: Location
     let distanceString: String?

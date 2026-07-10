@@ -15,8 +15,8 @@ extension EnvironmentValues {
 }
 
 struct AdhanView: View {
-    @EnvironmentObject var settings: Settings
-    
+    @ObservedObject var settings = Settings.shared
+
     @Environment(\.scenePhase) private var scenePhase
     // False while this view is being built behind the launch/splash cover; holds prompts until we're on screen.
     @Environment(\.appRevealed) private var appRevealed
@@ -83,12 +83,21 @@ struct AdhanView: View {
         List {
             Group {
                 #if os(iOS)
+                // Date, location and Qibla stay where the thumb expects them; the sky sits beneath as the
+                // header of the prayer information it now contains.
                 DateAndLocationSection(showBigQibla: $showBigQibla)
+
+                if settings.showSkyView, settings.prayers != nil, settings.currentLocation != nil {
+                    Section {
+                        SkyView()
+                    }
+                    .listRowBackground(Color.clear)
+                }
 
                 prayersSection
 
-                Section(header: Text("LOCATION AND CALCULATION")) {
-                    LocationCalculationCard()
+                Section(header: Text("AT A GLANCE")) {
+                    GlanceCard()
                 }
                 #else
                 // Watch order: prayer times first (2 per row), then countdown, then city, then qibla.
@@ -110,6 +119,8 @@ struct AdhanView: View {
         .onAppear {
             prayerTimeRefresh(force: false)
             settings.beginLocationRefinement()
+
+
         }
         .onDisappear {
             settings.endLocationRefinement()
@@ -159,6 +170,14 @@ struct AdhanView: View {
         .navigationTitle("Al-Adhan")
         #if os(iOS)
         .toolbar {
+            ToolbarItem(placement: .navigationBarLeading) {
+                NavigationLink {
+                    PrayerCalendarView()
+                } label: {
+                    Image(systemName: "calendar")
+                }
+                .simultaneousGesture(TapGesture().onEnded { settings.hapticFeedback() })
+            }
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button {
                     settings.hapticFeedback()
@@ -182,7 +201,11 @@ struct AdhanView: View {
     private var prayersSection: some View {
         #if os(iOS)
         if settings.prayers != nil && settings.currentLocation != nil {
-            PrayerCountdown()
+            // With the sky on, the countdown rides inside its card (see `SkyView.countdownStrip`). With the
+            // sky off, it returns to being its own section — nothing is lost by turning the drawing off.
+            if !settings.showSkyView {
+                PrayerCountdown()
+            }
             PrayerList()
         }
         #else
@@ -380,7 +403,7 @@ struct AdhanView: View {
 }
 
 private struct DateAndLocationSection: View {
-    @EnvironmentObject private var settings: Settings
+    @ObservedObject private var settings = Settings.shared
 
     @Binding var showBigQibla: Bool
 
@@ -403,7 +426,7 @@ private struct DateAndLocationSection: View {
 }
 
 private struct HijriDateRow: View {
-    @EnvironmentObject private var settings: Settings
+    @ObservedObject private var settings = Settings.shared
 
     let hijriDate: HijriDate
 
@@ -451,7 +474,7 @@ private struct HijriDateRow: View {
 }
 
 private struct CurrentLocationRow: View {
-    @EnvironmentObject private var settings: Settings
+    @ObservedObject private var settings = Settings.shared
 
     let showBigQibla: Bool
     @State private var showingPrayerTimesMap = false
@@ -473,7 +496,7 @@ private struct CurrentLocationRow: View {
             .foregroundColor(.primary)
             .font(.subheadline)
             .contentShape(Rectangle())
-            
+
             #if os(watchOS)
             Text("Compass may not be accurate on Apple Watch")
                 .font(.caption2)
@@ -604,103 +627,12 @@ private struct CurrentLocationRow: View {
     }
 }
 
-private struct LocationCalculationCard: View {
-    @EnvironmentObject private var settings: Settings
 
-    private let columns = [
-        GridItem(.flexible(), spacing: 10, alignment: .top),
-        GridItem(.flexible(), spacing: 10, alignment: .top)
-    ]
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            LazyVGrid(columns: columns, alignment: .leading, spacing: 10) {
-                ForEach(Array(summaryItems.enumerated()), id: \.offset) { _, item in
-                    SummaryTile(title: item.title, value: item.value)
-                }
-            }
-        }
-        .padding(.vertical, 2)
-    }
-
-    private var summaryItems: [(title: String, value: String)] {
-        var items: [(String, String)] = [
-            ("Current Location", currentLocationSummary),
-            ("Prayer Calculation", prayerCalculationSummary)
-        ]
-
-        if let home = settings.homeLocation {
-            items.append(("Home Location", home.city))
-            items.append(("Travel Distance", distanceFromHomeText ?? "Unavailable"))
-        }
-
-        return items
-    }
-
-    private var currentLocationSummary: String {
-        settings.currentLocation?.city ?? "Unavailable"
-    }
-
-    private var prayerCalculationSummary: String {
-        settings.hanafiMadhab ? "\(settings.prayerCalculation)\nHanafi Asr" : settings.prayerCalculation
-    }
-
-    private var distanceFromHomeText: String? {
-        guard
-            let current = settings.currentLocation,
-            let home = settings.homeLocation,
-            current.latitude != 1000,
-            current.longitude != 1000
-        else { return nil }
-
-        let here = CLLocation(latitude: current.latitude, longitude: current.longitude)
-        let there = CLLocation(latitude: home.latitude, longitude: home.longitude)
-        let meters = here.distance(from: there)
-        let miles = meters / 1609.34
-        let kilometers = meters / 1000
-
-        if miles >= 10 {
-            return String(format: "%.0f mi (%.0f km)", miles, kilometers)
-        }
-
-        return String(format: "%.1f mi (%.1f km)", miles, kilometers)
-    }
-}
-
-private struct SummaryTile: View {
-    let title: String
-    let value: String
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(title.uppercased())
-                .font(.caption2.weight(.semibold))
-                .foregroundStyle(.secondary)
-                .lineLimit(1)
-
-            if #available(iOS 16.0, *) {
-                Text(value)
-                    .font(.footnote.weight(.semibold))
-                    .foregroundStyle(.primary)
-                    .lineLimit(2, reservesSpace: true)
-                    .multilineTextAlignment(.leading)
-            } else {
-                Text(value)
-                    .font(.footnote.weight(.semibold))
-                    .foregroundStyle(.primary)
-                    .lineLimit(2)
-                    .multilineTextAlignment(.leading)
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .topLeading)
-        .padding(.horizontal, 12)
-        .padding(.vertical, 9)
-        .conditionalGlassEffect(rectangle: true, useColor: 0.15)
-    }
-}
 
 #Preview {
     AlIslamPreviewContainer(embedInNavigation: false) {
         AdhanView()
     }
 }
+
+

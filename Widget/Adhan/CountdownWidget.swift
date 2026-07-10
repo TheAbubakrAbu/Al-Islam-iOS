@@ -43,7 +43,7 @@ struct CountdownEntryView: View {
                                     .font(.subheadline)
                                     .foregroundColor(currentPrayer.nameTransliteration == "Shurooq" ? .primary : entry.accentColor.color)
                                 
-                                Text(currentPrayer.nameTransliteration)
+                                Text(currentPrayer.displayName)
                                     .font(.headline)
                                     .foregroundColor(currentPrayer.nameTransliteration == "Shurooq" ? .primary : entry.accentColor.color)
                                 
@@ -78,7 +78,7 @@ struct CountdownEntryView: View {
                                 Image(systemName: currentPrayer.image)
                                     .font(.subheadline)
                                 
-                                Text(currentPrayer.nameTransliteration)
+                                Text(currentPrayer.displayName)
                                     .font(.headline)
                                     .padding(.leading, -2)
                             }
@@ -93,7 +93,7 @@ struct CountdownEntryView: View {
                                 Image(systemName: nextPrayer.image)
                                     .padding(.horizontal, -6)
                                 
-                                Text(nextPrayer.nameTransliteration)
+                                Text(nextPrayer.displayName)
                             }
                             .font(.caption2)
                             .foregroundColor(nextPrayer.nameTransliteration == "Shurooq" ? .primary : entry.accentColor.color)
@@ -128,7 +128,7 @@ struct CountdownEntryView: View {
                                 Text("Starts at \(nextPrayer.time, style: .time)")
                                     .font(.caption)
                                 
-                                Text(nextPrayer.nameTransliteration)
+                                Text(nextPrayer.displayName)
                                     .font(.headline)
                                     .foregroundColor(nextPrayer.nameTransliteration == "Shurooq" ? .primary : entry.accentColor.color)
                                 

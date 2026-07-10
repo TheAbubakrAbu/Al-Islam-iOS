@@ -34,7 +34,7 @@ private struct DuaCollection: Identifiable {
 }
 
 struct DuaView: View {
-    @EnvironmentObject var settings: Settings
+    @ObservedObject var settings = Settings.shared
 
     private static let collections: [DuaCollection] = [
         DuaCollections.common,
@@ -133,7 +133,7 @@ struct DuaView: View {
 }
 
 private struct DuaCollectionView: View {
-    @EnvironmentObject var settings: Settings
+    @ObservedObject var settings = Settings.shared
     @State private var searchText = ""
 
     let collection: DuaCollection

@@ -5,7 +5,7 @@ import CoreLocation
 // MARK: - PrayerTimesMapView
 
 struct PrayerTimesMapView: View {
-    @EnvironmentObject private var settings: Settings
+    @ObservedObject private var settings = Settings.shared
     @Environment(\.dismiss) private var dismiss
 
     @AppStorage("prayerTimesMapShowCityTime") private var showCityTime: Bool = true
@@ -348,7 +348,7 @@ struct PrayerTimesMapView: View {
                 .frame(width: 30, alignment: .center)
 
             VStack(alignment: .leading, spacing: 1) {
-                Text(prayer.nameTransliteration)
+                Text(prayer.displayName)
                     .font(.headline)
                 Text(prayer.nameEnglish)
                     .font(.caption2)
@@ -380,9 +380,9 @@ struct PrayerTimesMapView: View {
             HStack(spacing: 10) {
                 Text("Cities:")
                     .font(.subheadline)
-                
+
                 Spacer()
-                
+
                 Text(shortCity(selected))
                     .foregroundStyle(settings.accentColor.color)
                     .frame(width: columnWidth, alignment: .trailing)
@@ -529,7 +529,7 @@ struct PrayerTimesMapView: View {
             guard let currentPrayer = current.first(where: { $0.nameTransliteration == selectedPrayer.nameTransliteration }) else {
                 return nil
             }
-            return (selectedPrayer.nameTransliteration, selectedPrayer.image, currentPrayer, selectedPrayer)
+            return (selectedPrayer.displayName, selectedPrayer.image, currentPrayer, selectedPrayer)
         }
     }
 

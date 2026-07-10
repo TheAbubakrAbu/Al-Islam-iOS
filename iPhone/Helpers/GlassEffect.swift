@@ -1,7 +1,7 @@
 import SwiftUI
 
 struct ConditionalGlassEffect: ViewModifier {
-    @EnvironmentObject private var settings: Settings
+    @ObservedObject private var settings = Settings.shared
 
     var clear: Bool = false
     var rectangle: Bool = false

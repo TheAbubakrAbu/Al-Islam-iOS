@@ -6,7 +6,7 @@ import UIKit
 import Contacts
 
 struct MasjidLocatorView: View {
-    @EnvironmentObject private var settings: Settings
+    @ObservedObject private var settings = Settings.shared
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var sysScheme
 

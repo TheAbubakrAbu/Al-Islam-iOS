@@ -2,7 +2,7 @@
 import SwiftUI
 
 struct TajweedLegendView: View {
-    @EnvironmentObject var settings: Settings
+    @ObservedObject var settings = Settings.shared
     @Environment(\.presentationMode) private var presentationMode
 
     var showsDismissButton = true

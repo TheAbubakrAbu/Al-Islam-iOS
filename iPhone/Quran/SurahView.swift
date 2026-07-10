@@ -1,12 +1,12 @@
 import SwiftUI
 
 struct SurahView: View {
-    @EnvironmentObject var settings: Settings
-    @EnvironmentObject var quranData: QuranData
-    @EnvironmentObject var quranPlayer: QuranPlayer
-    
+    @ObservedObject var settings = Settings.shared
+    @ObservedObject var quranData = QuranData.shared
+    @ObservedObject var quranPlayer = QuranPlayer.shared
+
     @Environment(\.scenePhase) private var scenePhase
-    
+
     @State private var searchText = ""
     @State private var firstVisibleAyahID: Int? = nil
     @State private var visibleAyahIDs = Set<Int>()
@@ -27,6 +27,11 @@ struct SurahView: View {
     @State private var showingSettingsSheet = false
     @State private var showAlert = false
     @State private var showCustomRangeSheet = false
+    /// In page mode the reader crosses surah boundaries, so the toolbar must follow the page rather than the
+    /// surah this view was opened with. `nil` in list mode, where `surah` never changes.
+    @State private var pageSurah: Surah?
+    private var displayedSurah: Surah { pageSurah ?? surah }
+
     @State private var showSurahInfoSheet = false
     @State private var showReciterPickerSheet = false
     @State private var showSurahPickerSheet = false
@@ -172,7 +177,7 @@ struct SurahView: View {
         } else {
             VStack {
                 boundaryDivider(model: model, nextAyahID: nextAyahID, showAyahPreview: showAyahPreview, showAyahLabel: showAyahLabel)
-                
+
                 Divider()
                     .padding(.top, 7)
             }
@@ -748,7 +753,7 @@ struct SurahView: View {
 
     private func boundaryDivider(model: BoundaryDividerModel, isOverlay: Bool = false, nextAyahID: Int? = nil, showAyahPreview: Bool = false, showAyahLabel: Bool = true) -> some View {
         let accent = settings.accentColor.color
-        
+
         let dividerColor: Color = {
             if isOverlay { return settings.accentColor.color }
             switch model.style {
@@ -837,7 +842,7 @@ struct SurahView: View {
         .padding(.horizontal, 0)
         .frame(maxWidth: isOverlay ? .infinity : nil)
         .contentShape(Rectangle())
-        
+
         #if os(iOS)
         // While searching, dividers double as jump targets: a tap navigates to the ayah and the info
         // dialog is reserved for a long-press. When not searching there is nothing to jump to, so a plain
@@ -910,7 +915,7 @@ struct SurahView: View {
         )
         #endif
     }
-    
+
     // Extracted from `body` so the large modifier chain stays under the Swift type-checker limit.
     private var surahCoreBody: some View {
         ScrollViewReader { proxy in
@@ -940,9 +945,11 @@ struct SurahView: View {
     private var surahReadingBody: some View {
         #if os(iOS)
         if settings.quranPageMode {
-            SurahPageReader(surah: surah, initialAyah: ayah)
+            SurahPageReader(surah: surah, initialAyah: ayah) { pageSurah = $0 }
         } else {
             surahCoreBody
+                // Back in list mode the title is fixed to this view's own surah again.
+                .onAppear { pageSurah = nil }
         }
         #else
         surahCoreBody
@@ -962,7 +969,7 @@ struct SurahView: View {
                 .smallMediumSheetPresentation()
         }
         .sheet(isPresented: $showSurahInfoSheet) {
-            SurahInfoSheet(surahName: surah.nameTransliteration, surahNumber: surah.id)
+            SurahInfoSheet(surahName: displayedSurah.nameTransliteration, surahNumber: displayedSurah.id)
                 .environmentObject(settings)
                 .environmentObject(quranData)
         }
@@ -1302,7 +1309,7 @@ struct SurahView: View {
                     if !searchText.isEmpty {
                         HStack {
                             Spacer()
-                            
+
                             Text(String(searchCount))
                                 .font(.caption.weight(.semibold))
                                 .foregroundStyle(settings.accentColor.color)
@@ -1315,7 +1322,7 @@ struct SurahView: View {
                         .padding(.vertical, -12)
                     }
                 }
-                
+
                 #if !os(watchOS)
                 if let previousSurah {
                     Section {
@@ -1323,7 +1330,7 @@ struct SurahView: View {
                     }
                 }
                 #endif
-                 
+
                 Section {
                     VStack {
                         let firstAyahClean = ayahsForQiraah.first?.textCleanArabic.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
@@ -1686,17 +1693,17 @@ struct SurahView: View {
                             .foregroundStyle(settings.accentColor.color)
                             .frame(width: 34, height: 34)
                             .background(settings.accentColor.color.opacity(0.12), in: Circle())
-                        
+
                         VStack(alignment: .leading, spacing: 3) {
                             Text("Current Riwayah")
                                 .font(.caption.weight(.semibold))
                                 .foregroundStyle(.secondary)
-                            
+
                             HStack {
                                 Text(option.label)
                                     .font(.subheadline.weight(.semibold))
                                     .foregroundStyle(.primary)
-                                
+
                                 Text(option.arabic)
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
@@ -1704,10 +1711,10 @@ struct SurahView: View {
                                     .minimumScaleFactor(0.8)
                             }
                         }
-                        
+
                         Spacer(minLength: 0)
                     }
-                    
+
                     Button {
                         settings.hapticFeedback()
                         confirmConvertQiraahToHafs = true
@@ -1742,7 +1749,7 @@ struct SurahView: View {
         khatmOverviewPercent = totalAyahs > 0 ? Int((Double(totalCompleted) / Double(totalAyahs) * 100).rounded()) : 0
     }
 
-    
+
 
     private func floatingHeaderOverlay(
         floatingDividerModel: BoundaryDividerModel?,
@@ -1852,7 +1859,7 @@ struct SurahView: View {
                 }
             }
     }
-    
+
     #if os(iOS)
     @ViewBuilder
     private func playButton(proxy: ScrollViewProxy) -> some View {
@@ -1877,7 +1884,7 @@ struct SurahView: View {
                         Label("Play Last Listened", systemImage: "play.fill")
                     }
                 }
-                
+
                 Button {
                     settings.hapticFeedback()
                     quranPlayer.playSurah(
@@ -1930,14 +1937,14 @@ struct SurahView: View {
                     } label: {
                         Label("Play Random Ayah", systemImage: "shuffle.circle")
                     }
-                    
+
                     Button {
                         settings.hapticFeedback()
                         playRandomReciterForCurrentSurah()
                     } label: {
                         Label("Play Random Reciter", systemImage: "person.wave.2")
                     }
-                    
+
                     Menu {
                         Text("Repeat Count")
                             .foregroundStyle(.secondary)
@@ -1998,7 +2005,7 @@ struct SurahView: View {
             surahName: surah.nameTransliteration
         )
     }
-    
+
     @ViewBuilder
     private func playIcon() -> some View {
         if quranPlayer.isLoading {
@@ -2017,7 +2024,7 @@ struct SurahView: View {
                 .transition(.opacity)
         }
     }
-    
+
     private var surahTitlePickerButton: some View {
         // Tap opens the Surah list; long-press shows Revelation Info (no longer a menu).
         surahTitleLabel
@@ -2027,40 +2034,51 @@ struct SurahView: View {
             }
             .onLongPressGesture(minimumDuration: 0.45) {
                 settings.hapticFeedback()
-                surahInfoDialog = surahInfoDialog(for: surah)
+                surahInfoDialog = surahInfoDialog(for: displayedSurah)
             }
     }
 
     private var surahTitleLabel: some View {
-        Group {
+        let surah = displayedSurah
+        return Group {
             VStack(spacing: 0) {
                 HStack {
                     HStack {
+                        // The Latin side never shrinks — a scaled-down transliteration next to full-size
+                        // Arabic reads as a mistake. It truncates instead.
                         Text("\(surah.id)")
                             .font(.subheadline.bold())
                             .foregroundColor(settings.accentColor.color)
-                        
+                            .lineLimit(1)
+
                         Text(surah.nameTransliteration)
                             .font(.subheadline.bold())
+                            .lineLimit(1)
                     }
-                    
+
                     Spacer()
-                    
+
                     HStack {
+                        // Arabic scales down rather than truncating: a clipped Arabic name is unreadable,
+                        // where a smaller one is not.
                         Text(surah.nameArabic)
                             .font(.custom(settings.fontArabic, size: UIFont.preferredFont(forTextStyle: .headline).pointSize + 2))
-                        
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.5)
+
                         Text(surah.idArabic)
                             .font(.custom(Settings.hafsUthmaniFontName, size: UIFont.preferredFont(forTextStyle: .headline).pointSize + 3))
                             .foregroundColor(settings.accentColor.color)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.5)
                     }
                 }
-                
+
                 Text(surah.nameEnglish)
                     .font(.caption2)
+                    .lineLimit(1)
                     .padding(.top, -8)
             }
-            .lineLimit(1)
             .foregroundColor(.primary)
             .contentShape(Rectangle())
             .padding(.horizontal)
@@ -2088,7 +2106,7 @@ struct SurahView: View {
             ToolbarItem(placement: .navigationBarTrailing) {
                 surahInfoButton
             }
-            
+
             ToolbarItem(placement: .navigationBarTrailing) {
                 navBarTitle
             }
@@ -2114,12 +2132,12 @@ struct SurahView: View {
             EmptyView()
         }
     }
-    
+
     private var settingsSheet: some View {
         NavigationView { SettingsQuranView(presentedAsSheet: true) }
     }
     #endif
-    
+
     /// The ayah currently anchored at the top of the screen (falling back through the last known anchor).
     private func currentReadingAyahID() -> Int? {
         visibleAyahIDs.min()
@@ -2206,7 +2224,7 @@ struct SurahView: View {
 
 struct RotatingGearView: View {
     @State private var rotation: Double = 0
-    
+
     var body: some View {
         Image(systemName: "gear")
             #if os(iOS)
@@ -2227,8 +2245,8 @@ struct RotatingGearView: View {
 #if os(iOS)
 private struct SurahPickerSheet: View {
     @Environment(\.dismiss) private var dismiss
-    @EnvironmentObject private var settings: Settings
-    @EnvironmentObject private var quranData: QuranData
+    @ObservedObject private var settings = Settings.shared
+    @ObservedObject private var quranData = QuranData.shared
 
     @State private var searchText = ""
     let currentSurahID: Int
@@ -2288,7 +2306,7 @@ private struct SurahPickerSheet: View {
         }
         return -2
     }
-    
+
     var body: some View {
         NavigationView {
             ScrollViewReader { proxy in
@@ -2358,8 +2376,8 @@ private struct SurahPickerSheet: View {
 #endif
 
 struct ArabicTextRiwayahPicker: View {
-    @EnvironmentObject private var settings: Settings
-    
+    @ObservedObject private var settings = Settings.shared
+
     @Binding var selection: String
     var useSimpleIOSPicker: Bool = false
 
@@ -2452,7 +2470,7 @@ struct ArabicTextRiwayahPicker: View {
 
 #if os(iOS)
 private struct TajweedLegendMenu: View {
-    @EnvironmentObject private var settings: Settings
+    @ObservedObject private var settings = Settings.shared
 
     @State private var showingSheet = false
 
@@ -2511,6 +2529,21 @@ struct MushafPage: Identifiable {
     var firstSurah: Surah? { segments.first?.surah }
     var firstAyah: Ayah? { segments.first?.ayahs.first }
     var juz: Int? { firstAyah?.juz }
+
+    /// The surah this page is mostly *about*, for the navigation title. Deliberately not `firstSurah`: a page
+    /// that opens with the last two ayahs of one surah and then runs the whole of the next would otherwise be
+    /// titled with the surah you just finished. Ties go to the later segment — the one you're reading into.
+    ///
+    /// A loop rather than `max(by:)`, whose predicate must be a *strict* ordering; the `<=` that makes ties
+    /// fall to the later element would be undefined behavior there.
+    var displayedSurah: Surah? {
+        var dominant: Segment?
+        for segment in segments {
+            if let current = dominant, segment.ayahs.count < current.ayahs.count { continue }
+            dominant = segment
+        }
+        return dominant?.surah ?? firstSurah
+    }
 }
 
 /// The whole mushaf as swipeable pages: each page holds every ayah printed on it — across surah boundaries —
@@ -2518,13 +2551,18 @@ struct MushafPage: Identifiable {
 /// when `settings.quranPageMode` is on. Swiping left/right moves through the mushaf continuously; reaching the
 /// end of a surah simply carries you into the next one.
 struct SurahPageReader: View {
-    @EnvironmentObject private var settings: Settings
-    @EnvironmentObject private var quranData: QuranData
+    @ObservedObject private var settings = Settings.shared
+    @ObservedObject private var quranData = QuranData.shared
 
     /// The surah the reader was opened from, and the ayah within it (a bookmark, a search hit, last-read).
     /// Together they decide the starting page; after that the reader is no longer bound to this surah.
     let surah: Surah
     var initialAyah: Int?
+    /// Fires whenever the visible page belongs to a different surah, so the navigation title can follow the
+    /// reader across surah boundaries instead of naming the surah it was opened from forever.
+    var onSurahChange: ((Surah) -> Void)?
+
+    @Environment(\.layoutDirection) private var layoutDirection
 
     @State private var pageIndex = 0
     @State private var didSetInitialPage = false
@@ -2596,10 +2634,17 @@ struct SurahPageReader: View {
                     // ~600 pages would render up front.
                     ForEach(Array(pages.enumerated()), id: \.offset) { index, page in
                         MushafPageContent(page: page, index: index, total: pages.count)
+                            // Each page's own contents keep the app's reading direction; only the *paging* is
+                            // flipped below.
+                            .environment(\.layoutDirection, layoutDirection)
                             .tag(index)
                     }
                 }
                 .tabViewStyle(.page(indexDisplayMode: .never))
+                // A mushaf is bound on the right: page 1 (Al-Fatiha) sits at the far right, and you turn pages
+                // leftward. Forcing right-to-left on the pager mirrors it, so swiping matches a printed Quran
+                // regardless of the device's language.
+                .environment(\.layoutDirection, .rightToLeft)
             }
         }
         .onAppear {
@@ -2608,13 +2653,20 @@ struct SurahPageReader: View {
             guard !didSetInitialPage else { return }
             didSetInitialPage = true
             pageIndex = startingPageIndex(in: pages)
+            reportSurah(on: pageIndex, in: pages)
         }
         .onChange(of: pageIndex) { index in
+            reportSurah(on: index, in: pages)
             guard pages.indices.contains(index),
                   let surah = pages[index].firstSurah,
                   let ayah = pages[index].firstAyah else { return }
             saveLastRead(surahID: surah.id, ayahID: ayah.id)
         }
+    }
+
+    private func reportSurah(on index: Int, in pages: [MushafPage]) {
+        guard pages.indices.contains(index), let surah = pages[index].displayedSurah else { return }
+        onSurahChange?(surah)
     }
 
     private func saveLastRead(surahID: Int, ayahID: Int) {
@@ -2629,33 +2681,58 @@ struct SurahPageReader: View {
 
 /// One page of the mushaf. Its body is only built when the page scrolls into view.
 private struct MushafPageContent: View {
-    @EnvironmentObject private var settings: Settings
+    @ObservedObject private var settings = Settings.shared
 
     let page: MushafPage
     let index: Int
     let total: Int
 
-    private var arabicFont: Font {
+    /// Horizontal padding around the ayah block; the fitter has to measure against the same text width.
+    private static let textPadding: CGFloat = 20
+
+    private func arabicFont(size: CGFloat) -> Font {
         settings.useFontArabic
-            ? .custom(settings.fontArabic, size: settings.fontArabicSize)
-            : .system(size: settings.fontArabicSize)
+            ? .custom(settings.fontArabic, size: size)
+            : .system(size: size)
+    }
+
+    /// The size this page's text renders at: shrunk to fit the page when "Fit Page to Screen" is on, and the
+    /// user's chosen size otherwise. The `ScrollView` stays either way, so a page that fits doesn't scroll and
+    /// one that (by a hair) doesn't still can.
+    @MainActor
+    private func fontSize(forTextHeight height: CGFloat, width: CGFloat) -> CGFloat {
+        guard settings.mushafFitPage else { return settings.fontArabicSize }
+
+        return MushafPageFitter.fittedFontSize(
+            page: page,
+            availableWidth: width - Self.textPadding * 2,
+            availableHeight: height,
+            baseSize: settings.fontArabicSize,
+            fontName: settings.useFontArabic ? settings.fontArabic : nil,
+            clean: settings.cleanArabicText
+        )
     }
 
     var body: some View {
         VStack(spacing: 12) {
             header
 
-            ScrollView {
-                VStack(spacing: 18) {
-                    ForEach(page.segments) { segment in
-                        VStack(spacing: 12) {
-                            surahDivider(segment.surah)
-                            segmentBody(segment)
+            GeometryReader { geo in
+                let size = fontSize(forTextHeight: geo.size.height, width: geo.size.width)
+
+                ScrollView {
+                    VStack(spacing: 18) {
+                        ForEach(page.segments) { segment in
+                            VStack(spacing: 12) {
+                                surahDivider(segment.surah)
+                                segmentBody(segment, fontSize: size)
+                            }
                         }
                     }
+                    .padding(.horizontal, Self.textPadding)
+                    .padding(.vertical, 16)
+                    .frame(maxWidth: .infinity)
                 }
-                .padding(.horizontal, 20)
-                .padding(.vertical, 16)
             }
 
             Text("\(index + 1) of \(total)")
@@ -2702,22 +2779,22 @@ private struct MushafPageContent: View {
     }
 
     /// A surah's ayahs on this page run together as one right-to-left block, each closed by its Arabic number.
-    private func segmentBody(_ segment: MushafPage.Segment) -> some View {
+    private func segmentBody(_ segment: MushafPage.Segment, fontSize: CGFloat) -> some View {
         let clean = settings.cleanArabicText
 
         return segment.ayahs.reduce(Text("")) { combined, ayah in
             let arabic = Text(ayah.displayArabicText(surahId: segment.surah.id, clean: clean))
-                .font(arabicFont)
+                .font(arabicFont(size: fontSize))
                 .foregroundColor(.primary)
 
             let marker = Text(" \(ayah.idArabic) ")
-                .font(.custom(Settings.qiraatUthmaniFontName, size: settings.fontArabicSize * 0.85))
+                .font(.custom(Settings.qiraatUthmaniFontName, size: fontSize * 0.85))
                 .foregroundColor(settings.accentColor.color)
 
             return combined + arabic + marker
         }
         .multilineTextAlignment(.center)
-        .lineSpacing(12)
+        .lineSpacing(MushafPageFitter.lineSpacing(for: fontSize, baseSize: settings.fontArabicSize))
         .environment(\.layoutDirection, .rightToLeft)
         .textSelection(.enabled)
         .frame(maxWidth: .infinity)
@@ -2731,3 +2808,4 @@ private struct MushafPageContent: View {
         SurahView(surah: AlIslamPreviewData.surah)
     }
 }
+

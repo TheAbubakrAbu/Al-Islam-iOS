@@ -35,7 +35,7 @@ let commonDhikrItems: [CommonDhikr] = [
 ]
 
 struct AdhkarRow: View {
-    @EnvironmentObject var settings: Settings
+    @ObservedObject var settings = Settings.shared
 
     let arabicText: String
     let transliteration: String
@@ -123,7 +123,7 @@ struct AdhkarRow: View {
 }
 
 struct AdhkarView: View {
-    @EnvironmentObject var settings: Settings
+    @ObservedObject var settings = Settings.shared
     @State private var searchText = ""
 
     var body: some View {

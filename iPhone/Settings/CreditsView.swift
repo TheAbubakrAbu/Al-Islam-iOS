@@ -2,7 +2,7 @@
 import SwiftUI
 
 struct CreditsView: View {
-    @EnvironmentObject var settings: Settings
+    @ObservedObject var settings = Settings.shared
     @Environment(\.presentationMode) private var presentationMode
     
     var body: some View {
@@ -227,7 +227,7 @@ struct AppItem: Identifiable {
 }
 
 struct AppLinkRow: View {
-    @EnvironmentObject var settings: Settings
+    @ObservedObject var settings = Settings.shared
     
     var imageName: String
     var title: String

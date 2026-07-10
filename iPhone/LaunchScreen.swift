@@ -17,7 +17,7 @@ enum LaunchScreenLayout {
 }
 
 struct LaunchScreen: View {
-    @EnvironmentObject var settings: Settings
+    @ObservedObject var settings = Settings.shared
     // Note: QuranData / QuranPlayer / NamesViewModel are intentionally NOT observed here. They publish
     // frequently while loading (load-state changes, the 6k-entry verse index, player/names state), and
     // observing them would re-render the launch screen mid-animation — the source of the startup chop.

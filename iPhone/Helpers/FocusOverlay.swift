@@ -67,7 +67,7 @@ final class FocusOverlayPresenter: ObservableObject {
 /// Sits at the top of the app's root `ZStack` — not a sheet, so it can cover the tab bar and animate as a
 /// plain cross-fade instead of the system's slide-up.
 struct FocusOverlayHost: View {
-    @EnvironmentObject private var settings: Settings
+    @ObservedObject private var settings = Settings.shared
     @ObservedObject private var presenter = FocusOverlayPresenter.shared
 
     @State private var showingActivityView = false

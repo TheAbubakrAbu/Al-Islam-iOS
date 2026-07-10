@@ -22,7 +22,7 @@ struct LockScreen3EntryView: View {
                             .font(.caption)
                             .frame(width: 10, alignment: .center)
                         
-                        Text(prayer.nameTransliteration)
+                        Text(prayer.displayName)
                             .fontWeight(.bold)
                             .lineLimit(1)
                             .minimumScaleFactor(0.5)

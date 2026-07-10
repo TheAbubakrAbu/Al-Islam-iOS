@@ -1,9 +1,9 @@
 import SwiftUI
 
 struct SettingsView: View {
-    @EnvironmentObject var settings: Settings
-    @EnvironmentObject var quranData: QuranData
-    
+    @ObservedObject var settings = Settings.shared
+    @ObservedObject var quranData = QuranData.shared
+
     @State private var showingCredits = false
     @State private var selectedDestination: SettingsDestination? = SettingsView.defaultDestination
     @State private var hasSetDefaultSelection = false
@@ -423,7 +423,7 @@ struct SettingsView: View {
 }
 
 struct SettingsAppearanceView: View {
-    @EnvironmentObject var settings: Settings
+    @ObservedObject var settings = Settings.shared
 
     /// Reads/writes the stored custom hex; picking a color also switches the active accent to `.custom`.
     private var customAccentColorBinding: Binding<Color> {
@@ -444,6 +444,68 @@ struct SettingsAppearanceView: View {
                 withAnimation {
                     settings.accentColor = isOn ? .custom : AppIdentifiers.mainColor
                 }
+            }
+        )
+    }
+
+    #if os(iOS)
+    /// The second stop of a custom accent, plus a preview of the resulting gradient.
+    @ViewBuilder
+    private var customGradientRow: some View {
+        HStack(spacing: 12) {
+            ColorPicker("", selection: customSecondColorBinding, supportsOpacity: false)
+                .labelsHidden()
+                .disabled(Color(hex: settings.customAccentColorHex2) == nil)
+
+            Text("Second Color")
+                .font(.subheadline)
+                .foregroundColor(Color(hex: settings.customAccentColorHex2) == nil ? .secondary : .primary)
+
+            Spacer()
+
+            Toggle("", isOn: customSecondColorEnabledBinding)
+                .labelsHidden()
+                .tint(Color(hex: settings.customAccentColorHex2) ?? .green)
+        }
+        .padding(.horizontal, 24)
+        .padding(.top, 6)
+
+        if Color(hex: settings.customAccentColorHex2) != nil {
+            Capsule()
+                .fill(AccentColor.custom.gradient(from: .leading, to: .trailing))
+                .frame(height: 12)
+                .padding(.horizontal, 24)
+                .padding(.top, 6)
+        }
+
+        Text("Turn on a second color to make your accent a two-color gradient. With it off, your accent is the single color above.")
+            .font(.caption)
+            .foregroundColor(.secondary)
+            .padding(.horizontal, 24)
+            .padding(.top, 6)
+    }
+    #endif
+
+    /// The second stop of a custom accent. Off — an empty stored hex — means one color, and both stops of the
+    /// gradient resolve to the primary.
+    private var customSecondColorEnabledBinding: Binding<Bool> {
+        Binding(
+            get: { Color(hex: settings.customAccentColorHex2) != nil },
+            set: { isOn in
+                withAnimation {
+                    settings.customAccentColorHex2 = isOn ? AccentColor.alIslamSecondaryHex : ""
+                    settings.accentColor = .custom
+                }
+            }
+        )
+    }
+
+    private var customSecondColorBinding: Binding<Color> {
+        Binding(
+            get: { Color(hex: settings.customAccentColorHex2) ?? (Color(hex: settings.customAccentColorHex) ?? .green) },
+            set: { newColor in
+                settings.customAccentColorHex2 = newColor.hexString
+                withAnimation { settings.accentColor = .custom }
             }
         )
     }
@@ -484,13 +546,13 @@ struct SettingsAppearanceView: View {
             .font(.subheadline)
             .pickerStyle(SegmentedPickerStyle())
             .onChange(of: settings.colorSchemeString) { _ in settings.hapticFeedback() }
-            
+
             Text("System follows your device. Light theme in Light Mode, Dark theme in Dark Mode. Other themes are ignored.")
                 .font(.caption)
                 .foregroundColor(.secondary)
                 .padding(.vertical, 2)
         }
-         
+
         VStack(alignment: .leading) {
             HStack(spacing: 12) {
                 ColorPicker("", selection: customBackgroundColorBinding, supportsOpacity: false)
@@ -513,7 +575,7 @@ struct SettingsAppearanceView: View {
                 .padding(.vertical, 2)
         }
         #endif
-        
+
         VStack(alignment: .leading) {
             LazyVGrid(columns: [
                 GridItem(.flexible(), spacing: 12),
@@ -522,13 +584,15 @@ struct SettingsAppearanceView: View {
                 GridItem(.flexible(), spacing: 12),
             ], spacing: 12) {
                 ForEach(accentColors, id: \.self) { accentColor in
+                    // Filled with the accent's gradient, which for a single-color preset is that color twice.
                     Circle()
-                        .fill(accentColor.color)
+                        .fill(accentColor.gradient())
                         .frame(width: 30, height: 30)
                         .overlay(
                             Circle()
                                 .stroke(settings.accentColor == accentColor ? Color.primary : Color.clear, lineWidth: 1)
                         )
+                        .accessibilityLabel(accentColor.displayName)
                         .onTapGesture {
                             settings.hapticFeedback()
 
@@ -557,8 +621,10 @@ struct SettingsAppearanceView: View {
             }
             .padding(.horizontal, 24)
             .onChange(of: settings.accentColor) { _ in settings.hapticFeedback() }
+
+            customGradientRow
             #endif
-            
+
             #if os(iOS)
             Text("Anas ibn Malik (may Allah be pleased with him) said, “The most beloved of colors to the Messenger of Allah (peace be upon him) was green.”")
                 .font(.caption)
@@ -567,7 +633,7 @@ struct SettingsAppearanceView: View {
                 .padding(.top, 10)
             #endif
         }
-        
+
         #if os(iOS)
         VStack(alignment: .leading) {
             Toggle("Default List View", isOn: $settings.defaultView.animation(.easeInOut))
@@ -580,7 +646,7 @@ struct SettingsAppearanceView: View {
                 .padding(.vertical, 2)
         }
         #endif
-        
+
         VStack(alignment: .leading) {
             Toggle("Haptic Feedback", isOn: $settings.hapticOn.animation(.easeInOut))
                 .font(.subheadline)
@@ -590,10 +656,10 @@ struct SettingsAppearanceView: View {
 }
 
 struct VersionNumber: View {
-    @EnvironmentObject var settings: Settings
-    
+    @ObservedObject var settings = Settings.shared
+
     var width: CGFloat?
-    
+
     var body: some View {
         HStack {
             if let width = width {
@@ -602,7 +668,7 @@ struct VersionNumber: View {
             } else {
                 Text("Version")
             }
-            
+
             Text(Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0.0")
                 .foregroundColor(settings.accentColor.color)
                 .padding(.leading, -4)

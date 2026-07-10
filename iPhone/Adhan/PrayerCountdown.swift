@@ -1,7 +1,19 @@
 import SwiftUI
 
 struct PrayerCountdown: View {
-    @EnvironmentObject private var settings: Settings
+    /// Where the countdown is being drawn. `.section` is the standalone list card; `.embedded` is inside
+    /// `SkyView`'s gradient, which supplies its own heading and background.
+    enum Presentation {
+        /// The standalone list card, used when the sky is switched off.
+        case section
+        /// Only the progress bar and "Time Left" row, drawn inside `SkyView`, which paints the prayer columns
+        /// itself. `PrayerCountdown` still owns the adaptive refresh timer that drives `progress`.
+        case skyFooter
+    }
+
+    var presentation: Presentation = .section
+
+    @ObservedObject private var settings = Settings.shared
     @Environment(\.scenePhase) private var scenePhase
 
     @State private var progress: Double = 0
@@ -50,15 +62,35 @@ struct PrayerCountdown: View {
             }
     }
 
+    @ViewBuilder
     private func countdownSection(current: Prayer, next: Prayer) -> some View {
-        Section(header: sectionHeader) {
-            countdownBody(current: current, next: next)
-                .contentShape(Rectangle())
-                .onTapGesture {
-                    settings.hapticFeedback()
-                    withAnimation { settings.showPrayerInfo.toggle() }
-                }
+        switch presentation {
+        case .section:
+            Section(header: sectionHeader) {
+                tappableBody(current: current, next: next)
+            }
+        case .skyFooter:
+            // No `Section` — the sky card already is one, and a nested section inside a list row breaks it.
+            VStack(spacing: 2) {
+                countdownProgress(next: next)
+                timeLeftRow(next: next)
+            }
+            .lineLimit(1)
+            .minimumScaleFactor(0.25)
+            // Stated outright rather than left to `.primary`. The sky card forces a dark color scheme, but a
+            // `Text(_, style: .timer)` takes its color from the UIKit trait collection instead, so under a
+            // light system appearance the countdown rendered black on the dark card.
+            .foregroundColor(.white)
         }
+    }
+
+    private func tappableBody(current: Prayer, next: Prayer) -> some View {
+        countdownBody(current: current, next: next)
+            .contentShape(Rectangle())
+            .onTapGesture {
+                settings.hapticFeedback()
+                withAnimation { settings.showPrayerInfo.toggle() }
+            }
     }
 
     private func countdownBody(current: Prayer, next: Prayer) -> some View {
@@ -70,7 +102,7 @@ struct PrayerCountdown: View {
         .lineLimit(1)
         .minimumScaleFactor(0.25)
         .padding(.vertical, {
-        if #available(iOS 26, *) { 0 } else { 8 }
+            if #available(iOS 26, *) { return 0 } else { return 8 }
         }())
     }
 
@@ -122,14 +154,23 @@ struct PrayerCountdown: View {
         }
     }
 
+    @ViewBuilder
     private func countdownProgress(next: Prayer) -> some View {
-        ProgressView(value: progress)
-            .tint(settings.accentColor.color)
-            .conditionalGlassEffect()
-            .padding(.vertical, 2)
-            #if os(watchOS)
-            .padding(.top, 4)
-            #endif
+        Group {
+            // A solid accent keeps the stock `ProgressView` — identical to what shipped. Only a real
+            // two-color accent swaps in the custom bar, which is the only way to fill with a gradient.
+            if settings.accentColor.isGradient {
+                AccentGradientBar(progress: progress)
+            } else {
+                ProgressView(value: progress)
+                    .tint(settings.accentColor.color)
+            }
+        }
+        .conditionalGlassEffect()
+        .padding(.vertical, 2)
+        #if os(watchOS)
+        .padding(.top, 4)
+        #endif
     }
 
     private func timeLeftRow(next: Prayer) -> some View {
@@ -212,7 +253,7 @@ struct PrayerCountdown: View {
 }
 
 private struct CurrentPrayerCell: View {
-    @EnvironmentObject private var settings: Settings
+    @ObservedObject private var settings = Settings.shared
 
     let prayer: Prayer
 
@@ -253,7 +294,7 @@ private struct CurrentPrayerCell: View {
 }
 
 private struct UpcomingPrayerCell: View {
-    @EnvironmentObject private var settings: Settings
+    @ObservedObject private var settings = Settings.shared
 
     let prayer: Prayer
 
@@ -295,11 +336,11 @@ private struct UpcomingPrayerCell: View {
 }
 
 private func countdownDisplayName(for prayer: Prayer) -> String {
-    prayer.nameTransliteration == "Islamic Midnight" ? "Midnight" : prayer.nameTransliteration
+    prayer.nameTransliteration == "Islamic Midnight" ? "Midnight" : prayer.displayName
 }
 
 private struct PrayerTitleStyle: ViewModifier {
-    @EnvironmentObject private var settings: Settings
+    @ObservedObject private var settings = Settings.shared
 
     let prayer: Prayer
 
@@ -315,7 +356,7 @@ private struct PrayerTitleStyle: ViewModifier {
 }
 
 private struct PrayerSubtitleView: View {
-    @EnvironmentObject private var settings: Settings
+    @ObservedObject private var settings = Settings.shared
 
     let prayer: Prayer
     let alignment: TextAlignment
@@ -480,5 +521,30 @@ private struct PrayerSunnahInfoView: View {
             PrayerCountdown()
         }
         .applyConditionalListStyle(disableNowPlayingInset: true)
+    }
+}
+
+/// A linear progress bar filled with the accent gradient. `ProgressView` only accepts a flat `tint`, so a
+/// two-color accent needs its own bar. Matches the stock bar's 4pt height and capsule ends.
+struct AccentGradientBar: View {
+    @ObservedObject private var settings = Settings.shared
+
+    /// 0…1. Clamped, because a stale progress value crossing a prayer boundary can briefly fall outside it.
+    var progress: Double
+
+    var body: some View {
+        GeometryReader { geo in
+            let fraction = min(max(progress, 0), 1)
+
+            ZStack(alignment: .leading) {
+                Capsule()
+                    .fill(Color.primary.opacity(0.18))
+
+                Capsule()
+                    .fill(settings.accentColor.gradient(from: .leading, to: .trailing))
+                    .frame(width: geo.size.width * fraction)
+            }
+        }
+        .frame(height: 4)
     }
 }

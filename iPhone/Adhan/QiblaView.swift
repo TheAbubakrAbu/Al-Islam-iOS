@@ -7,7 +7,7 @@ import UIKit
 #endif
 
 struct QiblaView: View {
-    @EnvironmentObject private var settings: Settings
+    @ObservedObject private var settings = Settings.shared
 
     let size: CGFloat
 

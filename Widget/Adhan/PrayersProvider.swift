@@ -74,6 +74,8 @@ struct PrayersProvider: TimelineProvider {
         }
 
         settings.accentColor = AccentColor(rawValue: store?.string(forKey: "accentColor") ?? AppIdentifiers.mainColorString) ?? AppIdentifiers.mainColor
+        settings.customAccentColorHex = store?.string(forKey: "customAccentColorHex") ?? "34C759"
+        settings.customAccentColorHex2 = store?.string(forKey: "customAccentColorHex2") ?? ""
         settings.travelingMode = store?.bool(forKey: "travelingMode") ?? false
         settings.hanafiMadhab = store?.bool(forKey: "hanafiMadhab") ?? false
         settings.prayerCalculation = store?.string(forKey: "prayerCalculation") ?? "Muslim World League"

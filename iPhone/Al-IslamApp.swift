@@ -103,8 +103,16 @@ struct AlIslamApp: App {
                 // Play the adhan in-app on time while open (the scheduled notification covers the closed
                 // case and can be delivered late by the system, especially on Mac/Catalyst).
                 ForegroundAdhanPlayer.shared.reschedule()
+                // A Live Activity can only be requested from the foreground, so this is the one place that
+                // can start the fasting countdown. It no-ops outside Ramadan, and outside the hour before
+                // Fajr (suhoor) or Maghrib (iftar).
+                FastingActivityController.refresh()
             } else {
                 ForegroundAdhanPlayer.shared.stop()
+                // A high-accuracy burst pins the GPS. `AdhanView.onDisappear` ends it when you navigate away,
+                // but backgrounding the app doesn't disappear the view — without this the burst would run to
+                // its 25-second timeout with the screen off.
+                settings.endLocationRefinement()
                 // Send any just-made setting change before the app is suspended, so it can't be lost (and
                 // can't be reverted by a stale synced value on the next launch).
                 WatchConnectivityManager.shared.flushPendingSync()
@@ -167,9 +175,9 @@ struct AlIslamApp: App {
 }
 
 private struct MainTabView: View {
-    @EnvironmentObject private var settings: Settings
-    @EnvironmentObject private var quranData: QuranData
-    @EnvironmentObject private var quranPlayer: QuranPlayer
+    @ObservedObject private var settings = Settings.shared
+    @ObservedObject private var quranData = QuranData.shared
+    @ObservedObject private var quranPlayer = QuranPlayer.shared
 
     /// True while a launch/splash screen still covers the tabs (drives the under-cover warm below).
     let isCovered: Bool

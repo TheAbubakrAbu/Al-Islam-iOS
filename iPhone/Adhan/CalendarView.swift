@@ -2,7 +2,7 @@
 import SwiftUI
 
 struct CalendarView: View {
-    @EnvironmentObject private var settings: Settings
+    @ObservedObject private var settings = Settings.shared
 
     enum DisplayMode: String {
         case events, calendar
@@ -358,7 +358,7 @@ private struct HijriEventRowModel {
 }
 
 private struct HijriEventRow: View {
-    @EnvironmentObject private var settings: Settings
+    @ObservedObject private var settings = Settings.shared
 
     let row: HijriEventRowModel
     let isPast: Bool
@@ -420,7 +420,7 @@ private struct HijriEventRow: View {
 // MARK: - Hijri Month Calendar (grid)
 
 struct HijriMonthCalendarView: View {
-    @EnvironmentObject private var settings: Settings
+    @ObservedObject private var settings = Settings.shared
 
     @State private var displayedYear = 1445
     @State private var displayedMonth = 1

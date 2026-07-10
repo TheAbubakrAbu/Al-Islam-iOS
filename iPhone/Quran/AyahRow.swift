@@ -2,16 +2,16 @@ import SwiftUI
 import Foundation
 
 struct AyahRow: View, Equatable {
-    @EnvironmentObject var settings: Settings
-    @EnvironmentObject var quranData: QuranData
-    @EnvironmentObject var quranPlayer: QuranPlayer
-    
+    @ObservedObject var settings = Settings.shared
+    @ObservedObject var quranData = QuranData.shared
+    @ObservedObject var quranPlayer = QuranPlayer.shared
+
     @State private var ayahBeginnerMode = false
-    
+
     #if os(iOS)
     @State private var showingAyahSheet = false
     @State private var showTafsirSheet = false
-    
+
     @State private var showingNoteSheet = false
     @State private var draftNote: String = ""
     @State private var showCustomRangeSheet = false
@@ -21,7 +21,7 @@ struct AyahRow: View, Equatable {
     #if os(watchOS)
     @State private var showWatchPlaybackDialog = false
     #endif
-    
+
     let surah: Surah
     let ayah: Ayah
     /// When non-nil (e.g. comparison mode), use this qiraah for Arabic instead of global setting.
@@ -74,24 +74,24 @@ struct AyahRow: View, Equatable {
         return cache
     }()
 
-    
+
     func containsProfanity(_ text: String) -> Bool {
         let t = text.folding(options: [.diacriticInsensitive, .widthInsensitive], locale: .current).lowercased()
         return profanityFilter.contains { !$0.isEmpty && t.contains($0) }
     }
-    
+
     private func isNoteAllowed(_ text: String) -> Bool {
         !containsProfanity(text)
     }
-    
+
     private var bookmarkIndex: Int? {
         settings.bookmarkIndex(surah: surah.id, ayah: ayah.id)
     }
-    
+
     private var bookmark: BookmarkedAyah? {
         settings.bookmarkedAyah(surah: surah.id, ayah: ayah.id)
     }
-    
+
     private var isBookmarkedHere: Bool { bookmarkIndex != nil }
     private var currentNote: String {
         settings.bookmarkNoteText(surah: surah.id, ayah: ayah.id)
@@ -113,7 +113,7 @@ struct AyahRow: View, Equatable {
         searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
         !settings.isKhatmAyahComplete(surah: surah.id, ayah: ayah.id)
     }
-    
+
     private func setNote(_ text: String?) {
         settings.setBookmarkNote(surah: surah.id, ayah: ayah.id, note: text)
     }
@@ -121,7 +121,7 @@ struct AyahRow: View, Equatable {
     private func removeNote() {
         settings.removeBookmarkNote(surah: surah.id, ayah: ayah.id)
     }
-    
+
     private func spacedArabic(_ text: String) -> String {
         (settings.beginnerMode || ayahBeginnerMode) ? text.map { String($0) }.joined(separator: " ") : text
     }
@@ -322,7 +322,7 @@ struct AyahRow: View, Equatable {
         let showEnglishMustafa = hafsOnly && (settings.showEnglishMustafa || mMustafa)
         let highlightQuery = hasSearch ? queryForInlineHighlight(searchText) : ""
         let fontSizeEN = settings.englishFontSize
-        
+
         ZStack {
             if let currentSurah = quranPlayer.currentSurahNumber, let currentAyah = quranPlayer.currentAyahNumber, currentSurah == surah.id {
                 RoundedRectangle(cornerRadius: 24)
@@ -334,7 +334,7 @@ struct AyahRow: View, Equatable {
                     .padding(.horizontal, -12)
                     .padding(.vertical, ayahHighlightBackgroundVerticalPadding)
             }
-            
+
             VStack(alignment: .leading, spacing: 12) {
                 HStack(spacing: 4) {
                     ZStack(alignment: .topTrailing) {
@@ -363,9 +363,9 @@ struct AyahRow: View, Equatable {
                                 .offset(x: 8, y: -6)
                         }
                     }
-                    
+
                     Spacer()
-                    
+
                     #if os(iOS)
                     if shouldShowManualKhatmButton {
                         Button {
@@ -410,7 +410,7 @@ struct AyahRow: View, Equatable {
                                 .frame(width: 28, height: 28)
                         }
                     }
-                    
+
                     Menu {
                         Text("Ayah Actions")
                             .foregroundStyle(.secondary)
@@ -494,7 +494,7 @@ struct AyahRow: View, Equatable {
                 }
                 .padding(.bottom, settings.showArabicText ? 8 : 2)
                 .padding(.trailing, 1)
-                
+
                 ayahTextBlock(
                     showArabic: showArabic,
                     showTranslit: showTranslit,
@@ -611,7 +611,7 @@ struct AyahRow: View, Equatable {
         }
         #endif
     }
-    
+
     @ViewBuilder
     private func ayahTextBlock(
         showArabic: Bool,
@@ -635,7 +635,7 @@ struct AyahRow: View, Equatable {
                 HStack(alignment: .top, spacing: 8) {
                     Image(systemName: "note.text")
                         .foregroundColor(settings.accentColor.color)
-                    
+
                     Text(currentNote)
                         .font(.callout)
                         .foregroundColor(.primary)
@@ -798,7 +798,7 @@ struct AyahRow: View, Equatable {
             } label: {
                 Label("Repeat Ayah", systemImage: "repeat")
             }
-            
+
             Button {
                 settings.hapticFeedback()
                 showCustomRangeSheet = true
@@ -812,7 +812,7 @@ struct AyahRow: View, Equatable {
             } label: {
                 Label("Play From Ayah", systemImage: "play.circle.fill")
             }
-            
+
             Button {
                 settings.hapticFeedback()
                 quranPlayer.playAyah(surahNumber: surah.id, ayahNumber: ayah.id)
@@ -860,7 +860,7 @@ struct AyahRow: View, Equatable {
             } label: {
                 Label("Play From Ayah", systemImage: "play.circle.fill")
             }
-            
+
             Button {
                 settings.hapticFeedback()
                 quranPlayer.playAyah(surahNumber: surah.id, ayahNumber: ayah.id)
@@ -930,7 +930,7 @@ struct AyahRow: View, Equatable {
                     systemImage: isBookmarked ? "bookmark.fill" : "bookmark"
                 )
             }
-            
+
             Button {
                 settings.hapticFeedback()
                 if !isBookmarked {
@@ -966,7 +966,7 @@ struct AyahRow: View, Equatable {
                 canShowQiraah: settings.showQiraahDetails,
                 canShowTranslation: canCompareEnglishText
             )
-            
+
             if settings.showArabicText && !settings.beginnerMode {
                 Button {
                     settings.hapticFeedback()
@@ -980,9 +980,9 @@ struct AyahRow: View, Equatable {
                           : "textformat.size.ar")
                 }
             }
-            
+
             Divider()
-            
+
             if includePlaybackOptions && settings.isHafsDisplay {
                 contextPlaybackMenuBlock()
                 Divider()

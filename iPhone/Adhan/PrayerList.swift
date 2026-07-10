@@ -1,8 +1,9 @@
 import SwiftUI
 
 struct PrayerList: View {
-    @EnvironmentObject private var settings: Settings
+    @ObservedObject private var settings = Settings.shared
     @Environment(\.scenePhase) private var scenePhase
+    @ObservedObject private var scrubber = DayScrubber.shared
 
     // The calendar day this view last considered "today". Used to detect a rollover that happened while the
     // app was suspended so a stale `selectedDate` doesn't spuriously trigger the TODAY comparison on reopen.
@@ -60,7 +61,7 @@ struct PrayerList: View {
     }
 
     private func listDisplayName(for prayer: Prayer) -> String {
-        prayer.nameTransliteration
+        prayer.displayName
     }
 
     private func togglePrayerExpansion(for prayer: Prayer, animated: Bool = true) {
@@ -539,8 +540,11 @@ struct PrayerList: View {
             }
     }
 
+    /// While the sun is being dragged along `SkyView`'s arc, the highlight follows the dragged moment rather
+    /// than the live one, so scrubbing the day walks it down the rows.
     private func isCurrentPrayer(_ prayer: Prayer) -> Bool {
-        settings.currentPrayer?.nameTransliteration.contains(prayer.nameTransliteration) ?? false
+        let reference = scrubber.previewPrayer ?? settings.currentPrayer
+        return reference?.nameTransliteration.contains(prayer.nameTransliteration) ?? false
     }
 
     private func prayerColor(for prayer: Prayer, in prayers: [Prayer]) -> Color {
@@ -707,7 +711,7 @@ struct PrayerList: View {
 }
 
 private struct PrayerListRowCard<TrailingContent: View>: View {
-    @EnvironmentObject private var settings: Settings
+    @ObservedObject private var settings = Settings.shared
 
     let prayer: Prayer
     let displayName: String
@@ -770,7 +774,7 @@ private struct PrayerListRowCard<TrailingContent: View>: View {
 }
 
 private struct PrayerDetailBlock: View {
-    @EnvironmentObject private var settings: Settings
+    @ObservedObject private var settings = Settings.shared
 
     let prayer: Prayer
     let referenceText: String?

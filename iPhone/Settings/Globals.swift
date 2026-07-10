@@ -11,8 +11,8 @@ enum AppIdentifiers {
     static let appFullName = "Al-Islam | Islamic Pillars"
     static let appName = "Al-Islam"
     
-    static let mainColor = AccentColor.green
-    static let mainColorString = "green"
+    static let mainColor = AccentColor.alIslam
+    static let mainColorString = "alIslam"
     
     /// Shared App Group for `UserDefaults` / data (matches entitlements).
     static let appGroupSuiteName = "group.com.IslamicPillars.AppGroup"
@@ -80,13 +80,30 @@ enum AppPerformance {
     }
 }
 
+/// An accent is a *pair* of colors, not one.
+///
+/// `color` is the primary and drives every flat tint in the app — it's what the hundreds of existing
+/// `settings.accentColor.color` call sites read, so none of them change. `secondaryColor` is the far stop,
+/// and for most presets it is simply the same color, which makes `gradient` collapse to a solid fill that
+/// renders identically to the flat one. Only `alIslam` (green → yellow) and a `custom` accent with a second
+/// color chosen actually read as a gradient.
 enum AccentColor: String, CaseIterable, Identifiable {
     var id: String { self.rawValue }
 
-    case red, orange, yellow, green, blue, indigo, cyan, teal, mint, purple, pink, brown, custom
+    /// `alIslam` leads the list because it is the app's own accent, and the default.
+    case alIslam, red, orange, yellow, green, blue, indigo, cyan, teal, mint, purple, pink, brown, custom
+
+    /// The brand pair: systemGreen into systemYellow.
+    static let alIslamPrimaryHex = "34C759"
+    static let alIslamSecondaryHex = "FFD60A"
+
+    var displayName: String {
+        self == .alIslam ? "Al-Islam" : rawValue.capitalized
+    }
 
     var color: Color {
         switch self {
+        case .alIslam: return Color(hex: Self.alIslamPrimaryHex) ?? .green
         case .red: return .red
         case .orange: return .orange
         case .yellow: return .yellow
@@ -102,6 +119,40 @@ enum AccentColor: String, CaseIterable, Identifiable {
         // Resolved from the user's stored hex. Views observe `settings`, so changing the hex re-renders them.
         case .custom: return Color(hex: Settings.shared.customAccentColorHex) ?? .green
         }
+    }
+
+    /// The gradient's far stop. Equal to `color` unless this accent genuinely has two — see `isGradient`.
+    var secondaryColor: Color {
+        switch self {
+        case .alIslam:
+            return Color(hex: Self.alIslamSecondaryHex) ?? .yellow
+        case .custom:
+            // An empty second hex is how "the user picked only one color" is stored: both stops are that color.
+            return Color(hex: Settings.shared.customAccentColorHex2) ?? color
+        default:
+            return color
+        }
+    }
+
+    /// True when the two stops differ, so a view can keep its plain rendering for a solid accent instead of
+    /// swapping in a gradient that would look the same but lay out subtly differently.
+    var isGradient: Bool {
+        switch self {
+        case .alIslam: return true
+        case .custom: return Color(hex: Settings.shared.customAccentColorHex2) != nil
+        default: return false
+        }
+    }
+
+    var gradientColors: [Color] { [color, secondaryColor] }
+
+    func gradient(from start: UnitPoint = .topLeading, to end: UnitPoint = .bottomTrailing) -> LinearGradient {
+        LinearGradient(colors: gradientColors, startPoint: start, endPoint: end)
+    }
+
+    /// For rings and arcs: sweeps out to the second color and back, so the seam at 0° doesn't show.
+    var angularGradient: AngularGradient {
+        AngularGradient(colors: [color, secondaryColor, color], center: .center)
     }
 }
 

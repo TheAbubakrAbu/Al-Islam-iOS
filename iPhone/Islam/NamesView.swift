@@ -205,9 +205,9 @@ final class NamesViewModel: ObservableObject {
 }
 
 struct NamesView: View {
-    @EnvironmentObject var settings: Settings
-    @EnvironmentObject var quranData: QuranData
-    @EnvironmentObject var namesData: NamesViewModel
+    @ObservedObject var settings = Settings.shared
+    @ObservedObject var quranData = QuranData.shared
+    @ObservedObject var namesData = NamesViewModel.shared
 
     @State private var searchText = ""
     @State private var expandedNameNumbers = Set<Int>()
@@ -492,7 +492,7 @@ struct NamesView: View {
 }
 
 private struct NameRow: View, Equatable {
-    @EnvironmentObject var settings: Settings
+    @ObservedObject var settings = Settings.shared
     
     let name: NameOfAllah
     let firstFoundTarget: (surahID: Int, ayahID: Int)?
@@ -746,8 +746,8 @@ private struct NameRow: View, Equatable {
 }
 
 private struct NameRowDetails: View {
-    @EnvironmentObject var settings: Settings
-    @EnvironmentObject var quranData: QuranData
+    @ObservedObject var settings = Settings.shared
+    @ObservedObject var quranData = QuranData.shared
     
     let name: NameOfAllah
     let firstFoundTarget: (surahID: Int, ayahID: Int)?
@@ -805,7 +805,7 @@ private struct NameRowDetails: View {
 }
 
 private struct VerseReflectionCard: View {
-    @EnvironmentObject var settings: Settings
+    @ObservedObject var settings = Settings.shared
     
     let title: String
     let contentText: String
@@ -836,7 +836,7 @@ private struct VerseReflectionCard: View {
 }
 
 private struct NameGridTile: View {
-    @EnvironmentObject private var settings: Settings
+    @ObservedObject private var settings = Settings.shared
 
     let name: NameOfAllah
     let isFavorite: Bool

@@ -2,7 +2,7 @@
 import SwiftUI
 
 struct SplashScreen: View {
-    @EnvironmentObject private var settings: Settings
+    @ObservedObject private var settings = Settings.shared
     @Environment(\.colorScheme) private var systemColorScheme
     @Environment(\.openURL) private var openURL
 

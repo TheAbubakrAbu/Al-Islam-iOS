@@ -27,7 +27,7 @@ struct SimpleEntryView: View {
                             Image(systemName: currentPrayer.image)
                                 .font(.title2)
                             
-                            Text(currentPrayer.nameTransliteration)
+                            Text(currentPrayer.displayName)
                                 .font(.headline)
                                 .padding(.vertical, 1)
                         }
@@ -40,7 +40,7 @@ struct SimpleEntryView: View {
                             Image(systemName: nextPrayer.image)
                                 .padding(.horizontal, -6)
                             
-                            Text(nextPrayer.nameTransliteration)
+                            Text(nextPrayer.displayName)
                         }
                         .font(.caption2)
                         .foregroundColor(nextPrayer.nameTransliteration == "Shurooq" ? .primary : entry.accentColor.color)

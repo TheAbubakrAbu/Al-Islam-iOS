@@ -1,11 +1,11 @@
 import SwiftUI
 
 struct QuranView: View {
-    @EnvironmentObject var settings: Settings
-    @EnvironmentObject var quranData: QuranData
-    @EnvironmentObject var quranPlayer: QuranPlayer
+    @ObservedObject var settings = Settings.shared
+    @ObservedObject var quranData = QuranData.shared
+    @ObservedObject var quranPlayer = QuranPlayer.shared
     @Environment(\.dismiss) private var dismiss
-    
+
     @State private var searchText = ""
     @State private var isQuranSearchFocused = false
     @State private var scrollToSurahID: Int = -1
@@ -37,11 +37,11 @@ struct QuranView: View {
         f.locale = Locale(identifier: "ar")
         return f
     }()
-    
+
     func arabicToEnglishNumber(_ arabicNumber: String) -> Int? {
         QuranView.arFormatter.number(from: arabicNumber)?.intValue
     }
-    
+
     var lastReadSurah: Surah? {
         quranData.surah(settings.lastReadSurah)
     }
@@ -93,7 +93,7 @@ struct QuranView: View {
         }
         return (nil, nil)
     }
-    
+
     /// Verse hits sorted by surah, then ayah (search results are always grouped by surah).
     private var verseHitsGroupedBySurah: [(surahId: Int, hits: [VerseIndexEntry])] {
         var grouped = [Int: [VerseIndexEntry]]()
@@ -321,7 +321,7 @@ struct QuranView: View {
             }
         }
     }
-    
+
     @State private var path: [QuranRoute] = []
     @State private var selectedRoute: QuranRoute?
 
@@ -337,7 +337,23 @@ struct QuranView: View {
         }
         #endif
     }
-    
+
+    /// Turning reading mode on opens the mushaf where you stopped: the reader resolves the page from the
+    /// last-read ayah, so the page and the ayah can't drift apart. Nothing read yet means Al-Fatiha.
+    private func openMushafWhereLeftOff() {
+        #if os(iOS)
+        guard usesColumnNavigation || path.isEmpty else { return }
+
+        if settings.lastReadSurah > 0,
+           settings.lastReadAyah > 0,
+           quranData.surah(settings.lastReadSurah) != nil {
+            push(surahID: settings.lastReadSurah, ayahID: settings.lastReadAyah)
+        } else {
+            push(surahID: 1)
+        }
+        #endif
+    }
+
     private func fetchHitsOffMain(query: String, limit: Int, offset: Int) async -> ([VerseIndexEntry], Bool) {
         guard let snapshot = quranData.verseSearchSnapshot() else {
             return ([], false)
@@ -532,7 +548,7 @@ struct QuranView: View {
     private var shouldPrewarmAllQuranDestinations: Bool {
         !AppPerformance.shouldAvoidBroadPrewarm
     }
-    
+
     private var navigationContainer: some View {
         Group {
             #if os(iOS)
@@ -692,7 +708,7 @@ struct QuranView: View {
             )
         }
     }
-    
+
     var content: some View {
         ScrollViewReader { scrollProxy in
             let context = searchDisplayContext
@@ -747,17 +763,17 @@ struct QuranView: View {
                     }
                 }
             }
-            
+
         }
         .navigationTitle("Al-Quran")
         #if os(iOS)
         .toolbar {
             ToolbarItem(placement: .navigationBarLeading) {
-                // Page mode changes nothing here — it only decides whether opening a surah reads as swipeable
-                // mushaf pages or as the scrolling ayah list.
                 Button {
                     settings.hapticFeedback()
+                    let openingMushaf = !settings.quranPageMode
                     withAnimation { settings.quranPageMode.toggle() }
+                    if openingMushaf { openMushafWhereLeftOff() }
                 } label: {
                     Image(systemName: settings.quranPageMode ? "list.bullet.rectangle" : "book")
                 }
@@ -845,7 +861,7 @@ struct QuranView: View {
         }
         #endif
     }
-    
+
     @ViewBuilder
     private var nowPlayingInset: some View {
         #if os(iOS)
@@ -1227,7 +1243,7 @@ struct QuranView: View {
         } label: {
             Label("Play Random Ayah", systemImage: "shuffle.circle")
         }
-        
+
         Button {
             settings.hapticFeedback()
             showReciterPickerSheet = true
@@ -1951,14 +1967,14 @@ struct QuranView: View {
                     Text("\(khatmPercent)% completed")
                         .font(.headline)
                         .foregroundStyle(settings.accentColor.color)
-                    
+
                     Spacer()
-                    
+
                     Text("\(khatmCompletedAyahs)/\(khatmTotalAyahs) ayahs")
                         .font(.subheadline.monospacedDigit().weight(.semibold))
                         .foregroundStyle(.secondary)
                 }
-                
+
                 ProgressView(value: Double(khatmCompletedAyahs), total: Double(max(khatmTotalAyahs, 1)))
                     .tint(settings.accentColor.color)
             }
@@ -2006,7 +2022,7 @@ struct QuranView: View {
 
                 if khatmEditMode {
                     Divider()
-                    
+
                     Button(role: .destructive) {
                         settings.hapticFeedback()
                         withAnimation {
@@ -2036,7 +2052,7 @@ struct QuranView: View {
         if showKhatmExtraDetails {
             let totals = khatmExtraTotals
             let isLoading = khatmExtraLoading
-            
+
             Section {
                 VStack {
                     if isLoading {
@@ -2049,18 +2065,18 @@ struct QuranView: View {
                     } else if let totals {
                         HStack {
                             Text("Words: \(totals.words)/\(totals.totalWords)")
-                            
+
                             Spacer()
-                            
+
                             Text("\(Int((Double(totals.words)/Double(max(totals.totalWords,1))*100)).description)%")
                                 .monospacedDigit()
                         }
-                        
+
                         HStack {
                             Text("Letters: \(totals.letters)/\(totals.totalLetters)")
-                            
+
                             Spacer()
-                            
+
                             Text("\(Int((Double(totals.letters)/Double(max(totals.totalLetters,1))*100)).description)%")
                                 .monospacedDigit()
                         }
@@ -2235,7 +2251,7 @@ struct QuranView: View {
         Group {
             Section(header: surahSectionHeader(context: context)) { }
                 .padding(.bottom, -12)
-            
+
             ForEach(filteredSurahs, id: \.id) { surah in
                 Section {
                     quranNavigationLink(route: .ayahs(surahID: surah.id, ayah: nil)) {
@@ -2283,7 +2299,7 @@ struct QuranView: View {
             SurahRow(surah: surah, isFavorite: context.favoriteSurahs.contains(surah.id), searchQuery: searchText).equatable()
         }
     }
-    
+
     private var revelationBadgeWidth: CGFloat {
         let font = UIFont.preferredFont(forTextStyle: .caption1)
         let text = "#114" as NSString
@@ -2817,15 +2833,15 @@ struct QuranView: View {
     private func surahSearchSectionHeader(surahId: Int) -> some View {
         if let s = quranData.surah(surahId) {
             let latinHeader1 = "\(s.id). \(s.nameTransliteration)".uppercased()
-            
+
             let latinHeader2 = "(\(s.nameEnglish)) —".uppercased()
-            
+
             HStack(spacing: 6) {
                 Text(latinHeader1)
-                
+
                 Text(latinHeader2)
                     .font(.caption)
-                
+
                 Text(s.nameArabic)
                     .font(.caption)
             }
@@ -2943,7 +2959,7 @@ struct QuranView: View {
             .lineLimit(1)
             .minimumScaleFactor(0.5)
             #endif
-            
+
             Button {
                 settings.hapticFeedback()
                 ayahSearchTask?.cancel()

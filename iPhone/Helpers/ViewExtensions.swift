@@ -79,8 +79,8 @@ enum SafeAreaInsetVStackSpacing {
 }
 
 struct ConditionalListStyle: ViewModifier {
-    @EnvironmentObject private var settings: Settings
-    @EnvironmentObject private var quranPlayer: QuranPlayer
+    @ObservedObject private var settings = Settings.shared
+    @ObservedObject private var quranPlayer = QuranPlayer.shared
     @Environment(\.colorScheme) private var systemColorScheme
     @Environment(\.customColorScheme) private var customColorScheme
 
@@ -160,7 +160,7 @@ struct ConditionalListStyle: ViewModifier {
 /// Paints the per-row background for the Sepia / Gray reading themes. Must be applied to rows/sections inside
 /// a `List` so `.listRowBackground` actually reaches the cells. No-op for Light/Dark/System (system colors).
 struct ThemedListRowBackground: ViewModifier {
-    @EnvironmentObject private var settings: Settings
+    @ObservedObject private var settings = Settings.shared
 
     @ViewBuilder
     func body(content: Content) -> some View {

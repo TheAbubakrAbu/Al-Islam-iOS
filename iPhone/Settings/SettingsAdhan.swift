@@ -12,11 +12,16 @@ struct AdhanSoundOption: Identifiable, Equatable {
 }
 
 extension Settings {
-    /// Each adhan ships as two clips: `<id>.caf` (the whole adhan) and `<id>-30.caf` (its opening 30
-    /// seconds). iOS rejects notification sounds longer than 30 seconds, so notifications always get the
-    /// short cut, while in-app playback and the settings preview get the full recording.
+    /// Each adhan ships as three clips: `<id>.caf` (the whole adhan), `<id>-30.caf` (its opening 30 seconds)
+    /// and `<id>-short.caf` (a 5–15 second excerpt). iOS rejects notification sounds longer than 30 seconds,
+    /// so a notification gets one of the two cuts — which one is a per-prayer choice — while in-app playback
+    /// and the settings preview get the full recording.
     static let supportedAdhanSounds: [AdhanSoundOption] = [
         .init(id: "default", title: "Default"),
+        // A 3.6-second chime, not a call to prayer — for being told without being called. All three of its
+        // clips are the same recording, because there is nothing to cut down.
+        .init(id: "echo", title: "Echo"),
+
         .init(id: "egypt", title: "Egypt"),
         .init(id: "makkah", title: "Makkah"),
         .init(id: "madina", title: "Madina"),
@@ -33,6 +38,49 @@ extension Settings {
 
     static let defaultAdhanSoundID = "minshawi-1"
     static let adhanNotificationClipSuffix = "-30"
+    static let adhanShortClipSuffix = "-short"
+
+    /// Which cut of the adhan a prayer's notification plays. Both fit inside iOS's 30-second ceiling.
+    enum AdhanClipLength {
+        case full, short
+        var suffix: String {
+            switch self {
+            case .full: return Settings.adhanNotificationClipSuffix
+            case .short: return Settings.adhanShortClipSuffix
+            }
+        }
+    }
+
+    /// Per-prayer opt-in to the short cut. Prayers with no toggle of their own — Friday's Jumuah and the
+    /// traveling-mode pairs — inherit from whichever prayer owns their notification preferences, matching
+    /// how `notifTable` already routes them.
+    func adhanClipLength(forPrayer transliteration: String) -> AdhanClipLength {
+        let useShort: Bool
+        switch transliteration {
+        case "Fajr":                          useShort = shortAdhanFajr
+        case "Dhuhr", "Jumuah", "Dhuhr/Asr":  useShort = shortAdhanDhuhr
+        case "Asr":                           useShort = shortAdhanAsr
+        case "Maghrib", "Maghrib/Isha":       useShort = shortAdhanMaghrib
+        case "Isha":                          useShort = shortAdhanIsha
+        default:                              useShort = false
+        }
+        return useShort ? .short : .full
+    }
+
+    /// Whether this prayer's at-time notification carries the chosen adhan, or just the system sound.
+    /// Routed the same way as `adhanClipLength`, so Jumuah and the traveling pairs follow their base prayer.
+    func playsAdhanSound(forPrayer transliteration: String) -> Bool {
+        switch transliteration {
+        case "Fajr":                          return adhanSoundFajr
+        case "Dhuhr", "Jumuah", "Dhuhr/Asr":  return adhanSoundDhuhr
+        case "Asr":                           return adhanSoundAsr
+        case "Maghrib", "Maghrib/Isha":       return adhanSoundMaghrib
+        case "Isha":                          return adhanSoundIsha
+        // Shurooq and the optional times never carry an adhan; `prayerNotificationSound` already returns
+        // `.default` for them before this is consulted.
+        default:                              return false
+        }
+    }
 
     static let supportedAdhanSoundIDs = Set(supportedAdhanSounds.map(\.id))
     private static var adhanSoundResourceCache: [String: String?] = [:]
@@ -63,10 +111,12 @@ extension Settings {
         adhanSoundResource(for: selection, variant: "")
     }
 
-    /// Filename of the 30-second cut, for `UNNotificationSound`.
-    func adhanNotificationSoundFilename(for selection: String) -> String? {
-        adhanSoundResource(for: selection, variant: Self.adhanNotificationClipSuffix)
-            .map { "\($0).caf" }
+    /// Filename of the notification cut, for `UNNotificationSound`. Falls back to the 30-second cut when the
+    /// requested short clip isn't bundled, so a missing asset degrades to a longer adhan rather than silence.
+    func adhanNotificationSoundFilename(for selection: String, length: AdhanClipLength = .full) -> String? {
+        let resource = adhanSoundResource(for: selection, variant: length.suffix)
+            ?? adhanSoundResource(for: selection, variant: Self.adhanNotificationClipSuffix)
+        return resource.map { "\($0).caf" }
     }
 
     /// Repairs a selection stored by an older build, or pushed over by a Watch still running one: ids used
@@ -116,9 +166,15 @@ extension Settings {
         }
     }
 
+    /// Accuracy while simply tracking where you are. 100 m costs a fraction of the power of `Best` (which
+    /// pins the GPS chip), and is far finer than prayer times need: 100 m of longitude shifts solar noon by
+    /// about a quarter of a second, and the Qibla bearing by a rounding error. `Best` is switched on only for
+    /// the bounded refinement burst in `beginLocationRefinement`.
+    static let restingAccuracy = kCLLocationAccuracyHundredMeters
+
     static let locationManager: CLLocationManager = {
         let lm = CLLocationManager()
-        lm.desiredAccuracy = kCLLocationAccuracyBest
+        lm.desiredAccuracy = restingAccuracy
         lm.distanceFilter = halfMile
         return lm
     }()
@@ -157,11 +213,18 @@ extension Settings {
         let longitude: Double
         let calculation: String
         let hanafiMadhab: Bool
+        let highLatitudeRule: String
         let offsets: [Int]
     }
 
     private static var rawPrayerCache: [RawPrayerCacheKey: [Prayer]] = [:]
     private static let rawPrayerCacheLimit = 10
+
+    /// Drops memoized prayer times. Needed when something that is *baked into* a cached `Prayer` changes but
+    /// isn't part of the cache key — custom prayer names, which alter the struct without altering the times.
+    static func invalidatePrayerComputationCache() {
+        rawPrayerCache.removeAll(keepingCapacity: true)
+    }
     private static let geocodeActor = GeocodeActor()
     private static let networkMonitor = NWPathMonitor()
     private static let networkMonitorQueue = DispatchQueue(label: AppIdentifiers.networkMonitorQueueLabel)
@@ -173,7 +236,39 @@ extension Settings {
     private static let halfMile: CLLocationDistance = 500      // m
     private static let maxAge: TimeInterval = 180              // s
     
-    private static let travelThresholdM: CLLocationDistance = 48 * oneMile   // ≈ 77 112 m
+    /// The distance from home at which prayers may be shortened (qasr). 48 miles is the classical
+    /// two-marhalah threshold. The single source of truth — `checkIfTraveling` compares against this, and
+    /// nothing else should restate the number.
+    static let travelThresholdM: CLLocationDistance = 48 * oneMile   // ≈ 77 249 m
+
+    /// How far you can be from where a city name was *resolved* and still plausibly be in that city. Wide
+    /// enough to cover a large metro area and a commute across it; narrow enough that a long drive, or the
+    /// first hour of a flight, stops the app from claiming you are somewhere you left.
+    private static let sameCityRadius: CLLocationDistance = 25_000   // 25 km ≈ 15.5 mi
+
+    private static let cityAnchorLatitudeKey = "cityAnchorLatitude"
+    private static let cityAnchorLongitudeKey = "cityAnchorLongitude"
+    private static let anchorStore = UserDefaults(suiteName: AppIdentifiers.appGroupSuiteName)
+
+    /// The coordinate at which the current city label was last resolved by the geocoder. Persisted, so a cold
+    /// launch in airplane mode still knows whether the saved city name is still true.
+    private static var cityAnchor: CLLocation? {
+        get {
+            guard let store = anchorStore, store.object(forKey: cityAnchorLatitudeKey) != nil else { return nil }
+            return CLLocation(latitude: store.double(forKey: cityAnchorLatitudeKey),
+                              longitude: store.double(forKey: cityAnchorLongitudeKey))
+        }
+        set {
+            guard let store = anchorStore else { return }
+            guard let newValue else {
+                store.removeObject(forKey: cityAnchorLatitudeKey)
+                store.removeObject(forKey: cityAnchorLongitudeKey)
+                return
+            }
+            store.set(newValue.coordinate.latitude, forKey: cityAnchorLatitudeKey)
+            store.set(newValue.coordinate.longitude, forKey: cityAnchorLongitudeKey)
+        }
+    }
 
     private static func ensureNetworkMonitorStarted() {
         guard !didStartNetworkMonitor else { return }
@@ -188,10 +283,23 @@ extension Settings {
 
             let pending = pendingGeocodeCoord
             pendingGeocodeCoord = nil
-            guard let pending else { return }
+            guard pending != nil else { return }
 
             Task { @MainActor in
-                await Settings.shared.updateCity(latitude: pending.latitude, longitude: pending.longitude)
+                // Geocode where we are *now*, not the coordinate that was queued when the signal dropped.
+                // `updateCity` writes the coordinates it is handed straight into `currentLocation`, so feeding
+                // it the stale one would teleport a passenger who lost signal over the Atlantic back there the
+                // moment their phone reconnects on the ground in Istanbul.
+                let coord = Settings.shared.currentLocation.map {
+                    CLLocationCoordinate2D(latitude: $0.latitude, longitude: $0.longitude)
+                } ?? pending!
+
+                // Ask for a fresh fix too: significant-change monitoring leans on cell towers, so a flight in
+                // airplane mode delivers no updates at all, and the newest coordinate we hold may be the
+                // departure airport.
+                Settings.locationManager.requestLocation()
+
+                await Settings.shared.updateCity(latitude: coord.latitude, longitude: coord.longitude)
                 Settings.shared.fetchPrayerTimes(force: true)
             }
         }
@@ -357,8 +465,11 @@ extension Settings {
         Self.refinementTimeout = nil
 
         // Stop the continuous burst; significant-change monitoring stays active for background movement.
+        // Accuracy goes back to the cheap resting value — leaving it on `Best` would keep the GPS awake for
+        // every subsequent one-shot fix.
         Self.locationManager.stopUpdatingLocation()
         Self.locationManager.distanceFilter = Self.halfMile
+        Self.locationManager.desiredAccuracy = Self.restingAccuracy
         #endif
     }
 
@@ -401,11 +512,39 @@ extension Settings {
     /// the old name would be wrong, raw coordinates are shown instead of a stale/"fake" city.
     private func cityFallback(latitude: Double, longitude: Double) -> String {
         if let cur = currentLocation, !cur.city.contains("(") {
-            let moved = CLLocation(latitude: cur.latitude, longitude: cur.longitude)
-                .distance(from: CLLocation(latitude: latitude, longitude: longitude))
-            if moved < Self.halfMile { return cur.city }
+            // Measured from where the name was actually resolved, not from the last (possibly sharpened) fix —
+            // otherwise a chain of small offline moves drags the reference along with you and the name never
+            // expires. Falls back to the saved coordinate for anyone upgrading without an anchor yet.
+            let anchor = Self.cityAnchor ?? CLLocation(latitude: cur.latitude, longitude: cur.longitude)
+            let moved = anchor.distance(from: CLLocation(latitude: latitude, longitude: longitude))
+            if moved <= Self.sameCityRadius { return cur.city }
         }
         return "(\(latitude.stringRepresentation), \(longitude.stringRepresentation))"
+    }
+
+    /// The best label we can produce without a geocoder: the saved city while we are plausibly still inside
+    /// it, otherwise honest coordinates. Called on every fix that arrives while offline — no signal, airplane
+    /// mode, mid-flight — so standing still keeps the city name and travelling far enough drops it.
+    ///
+    /// Writes only on an actual change, since this runs for every committed fix.
+    @MainActor
+    private func applyLabelWithoutGeocode(latitude: Double, longitude: Double) {
+        let label = cityFallback(latitude: latitude, longitude: longitude)
+        let unchanged = currentLocation?.city == label
+            && currentLocation?.latitude == latitude
+            && currentLocation?.longitude == longitude
+        guard !unchanged else { return }
+
+        withAnimation {
+            currentLocation = Location(city: label, latitude: latitude, longitude: longitude)
+            // Once the label degrades to coordinates we no longer know the country, so automatic
+            // calculation-method switching must not keep acting on a stale one.
+            if label.contains("(") {
+                currentCountryCode = ""
+                Self.cityAnchor = nil
+            }
+            WidgetCenter.shared.reloadAllTimelines()
+        }
     }
 
     /// Reverse‑geocode utilities.
@@ -427,14 +566,10 @@ extension Settings {
         #if os(iOS)
         if !Self.isNetworkReachable {
             queueGeocodeForReconnect(coord)
-
-            // Keep coordinates usable for prayer calculations while waiting for connectivity.
-            if currentLocation == nil || currentLocation?.city.contains("(") == true {
-                withAnimation {
-                    currentLocation = Location(city: cityFallback(latitude: latitude, longitude: longitude),
-                                               latitude: latitude, longitude: longitude)
-                }
-            }
+            // Re-evaluate the label every time, not just when it is missing. The old check only ever *added* a
+            // label, so a phone that lost signal in one city and landed in another kept displaying — and
+            // country-matching — the city it left.
+            applyLabelWithoutGeocode(latitude: latitude, longitude: longitude)
             return
         }
         #endif
@@ -477,6 +612,9 @@ extension Settings {
             }
 
             Self.cachedPlacemark = (coord, newCity, detectedCountryCode)
+            // Anchor the name to where it was resolved, so `cityFallback` can later tell "still here" from
+            // "long gone" without a network.
+            Self.cityAnchor = CLLocation(latitude: latitude, longitude: longitude)
 
         } catch {
             // On iOS an unreachable path means "wait for reconnect." On watchOS the path flag is unreliable
@@ -489,6 +627,7 @@ extension Settings {
             #endif
             if networkDefer {
                 queueGeocodeForReconnect(coord)
+                applyLabelWithoutGeocode(latitude: latitude, longitude: longitude)
                 logger.warning("Geocode deferred until network returns")
                 return
             }
@@ -497,14 +636,7 @@ extension Settings {
             guard attempt + 1 < maxAttempts else {
                 // Only degrade the visible label to coordinates when we don't already have a still-valid
                 // nearby city (handled by `cityFallback`); a far move yields honest coordinates.
-                let fallbackCity = cityFallback(latitude: latitude, longitude: longitude)
-                if fallbackCity != currentLocation?.city {
-                    withAnimation {
-                        currentLocation = Location(city: fallbackCity, latitude: latitude, longitude: longitude)
-                        currentCountryCode = ""
-                        WidgetCenter.shared.reloadAllTimelines()
-                    }
-                }
+                applyLabelWithoutGeocode(latitude: latitude, longitude: longitude)
                 return
             }
             // Backed-off retry, capped so the tail attempts don't stretch the wait out indefinitely.
@@ -589,6 +721,54 @@ extension Settings {
         "TH": "Singapore",
         "PH": "Singapore"
     ]
+
+    // MARK: - High latitude rule
+
+    static let automaticHighLatitudeRule = "Automatic"
+
+    /// Picker labels, in the order they read best. `Automatic` uses Adhan's own recommendation, which is
+    /// `seventhOfTheNight` above 48° latitude and `middleOfTheNight` below it.
+    static let highLatitudeRuleOptions: [String] = [
+        automaticHighLatitudeRule,
+        "Middle of the Night",
+        "Seventh of the Night",
+        "Twilight Angle"
+    ]
+
+    private static let highLatitudeRuleValues: [String: HighLatitudeRule] = [
+        "Middle of the Night": .middleOfTheNight,
+        "Seventh of the Night": .seventhOfTheNight,
+        "Twilight Angle": .twilightAngle
+    ]
+
+    private static let highLatitudeRuleLabels: [HighLatitudeRule: String] = [
+        .middleOfTheNight: "Middle of the Night",
+        .seventhOfTheNight: "Seventh of the Night",
+        .twilightAngle: "Twilight Angle"
+    ]
+
+    /// The rule actually applied at a coordinate. `Automatic` resolves per-location, so viewing another city's
+    /// times in the map picker uses the rule appropriate to *that* latitude rather than the user's.
+    func resolvedHighLatitudeRule(at coordinates: Coordinates) -> HighLatitudeRule {
+        Self.highLatitudeRuleValues[highLatitudeRule] ?? HighLatitudeRule.recommended(for: coordinates)
+    }
+
+    /// Label for the rule `Automatic` would pick here — shown under the picker so the choice isn't opaque.
+    func recommendedHighLatitudeRuleLabel(at coordinates: Coordinates) -> String {
+        Self.highLatitudeRuleLabels[.recommended(for: coordinates)] ?? "Middle of the Night"
+    }
+
+    // MARK: - Custom prayer names
+
+    /// Prayers a user may rename. Sunrise and the optional times are excluded — they aren't prayers.
+    static let renameablePrayerNames = ["Fajr", "Dhuhr", "Asr", "Maghrib", "Isha"]
+
+    /// The user's spelling of a prayer, or `nil` when they haven't set one. Blank entries count as unset.
+    func customPrayerName(for transliteration: String) -> String? {
+        guard let custom = customPrayerNames[transliteration]?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !custom.isEmpty else { return nil }
+        return custom
+    }
 
     private func automaticCalculationMethod(for countryCode: String) -> String {
         Self.countryCalculationMap[countryCode] ?? "Muslim World League"
@@ -675,8 +855,9 @@ extension Settings {
 
         let here  = CLLocation(latitude: currentLocation.latitude, longitude: currentLocation.longitude)
         let home  = CLLocation(latitude: homeLocation.latitude, longitude: homeLocation.longitude)
-        let miles = here.distance(from: home) / 1609.34
-        let isAway = miles >= 48
+        // Compared in metres against the one declared threshold, rather than re-deriving 48 miles here with a
+        // second copy of the metres-per-mile constant.
+        let isAway = here.distance(from: home) >= Self.travelThresholdM
 
         if isAway {
             if !travelingMode {
@@ -839,8 +1020,19 @@ extension Settings {
             image: p.img,
             rakah: p.rakah,
             sunnahBefore: p.sunnahB,
-            sunnahAfter: p.sunnahA
+            sunnahAfter: p.sunnahA,
+            nameCustom: customDisplayName(forPrayerKey: p.tr)
         )
+    }
+
+    /// The custom name for a prayer key, including the traveling-mode pairs — "Dhuhr/Asr" reads as the user's
+    /// two spellings joined, and only differs from the default when at least one half was actually renamed.
+    private func customDisplayName(forPrayerKey key: String) -> String? {
+        let halves = key.split(separator: "/").map(String.init)
+        guard halves.count > 1 else { return customPrayerName(for: key) }
+
+        guard halves.contains(where: { customPrayerName(for: $0) != nil }) else { return nil }
+        return halves.map { customPrayerName(for: $0) ?? $0 }.joined(separator: "/")
     }
     
     /// Ultra‑fast prayer generator. Returns `nil` if location is not valid.
@@ -904,6 +1096,7 @@ extension Settings {
             longitude: here.longitude,
             calculation: method,
             hanafiMadhab: hanafiMadhab,
+            highLatitudeRule: highLatitudeRule,
             offsets: [offsetFajr, offsetSunrise, offsetDhuhr, offsetAsr, offsetMaghrib, offsetIsha]
         )
 
@@ -911,11 +1104,23 @@ extension Settings {
             return cached
         }
 
+        let coordinates = Coordinates(latitude: here.latitude, longitude: here.longitude)
+
         var params = Self.calcParams[method] ?? Self.calcParams["Muslim World League"]!
         params.madhab = hanafiMadhab ? Madhab.hanafi : Madhab.shafi
+        params.highLatitudeRule = resolvedHighLatitudeRule(at: coordinates)
+
+        // Umm Al-Qura delays Isha by 30 minutes throughout Ramadan. The reference date is pushed a day forward
+        // because taraweeh on the night *before* 1 Ramadan already follows the Ramadan timing.
+        if Self.calcParams[method] == CalculationMethod.ummAlQura.params {
+            let hijriMonth = Self.hijriCalendarAR.dateComponents([.month], from: date.addingTimeInterval(86_400)).month
+            if hijriMonth == 9 {
+                params.adjustments.isha += 30
+            }
+        }
 
         guard let raw = PrayerTimes(
-                coordinates: Coordinates(latitude: here.latitude, longitude: here.longitude),
+                coordinates: coordinates,
                 date: comps,
                 calculationParameters: params
         )
@@ -960,7 +1165,16 @@ extension Settings {
             prayer(from: "Maghrib", time: maghrib),
             prayer(from: "Isha",    time: isha)
         ]
-        
+
+        // Manual offsets reach +/-190 minutes, which is more than enough to push Fajr past Sunrise. The list
+        // is consumed as a chronology — widgets slice its head and tail, the countdown walks it, the calendar
+        // prints it — so order it by time rather than by the sequence it happens to be built in. Sorted on
+        // (time, build index) because `sort` isn't stable and two prayers can share a minute once offsets
+        // collide; ties then keep their canonical order.
+        list = list.enumerated()
+            .sorted { ($0.element.time, $0.offset) < ($1.element.time, $1.offset) }
+            .map(\.element)
+
         if Self.rawPrayerCache.count > Self.rawPrayerCacheLimit {
             Self.rawPrayerCache.removeAll(keepingCapacity: true)
         }
@@ -1146,14 +1360,35 @@ extension Settings {
         completion?()
     }
     
-    /// Efficiently filters raw prayers to traveling mode format (condensed list)
+    /// Condenses the day into the traveling (Qasr) list: Fajr, Sunrise, Dhuhr+Asr, Maghrib+Isha.
+    ///
+    /// Looked up by name rather than by position: the source list is sorted by time, so a large enough manual
+    /// offset moves prayers around in it, and on Friday index 2 is Jumuah rather than Dhuhr. Returns the list
+    /// unchanged if any prayer it needs is missing, so a partial day can never yield a wrong combination.
     private func _filterTravelingMode(_ rawPrayers: [Prayer]) -> [Prayer] {
-        guard rawPrayers.count >= 6 else { return rawPrayers }
+        func prayer(named names: String...) -> Prayer? {
+            for name in names {
+                if let match = rawPrayers.first(where: { $0.nameTransliteration == name }) { return match }
+            }
+            return nil
+        }
 
-        let combinedDhuhrAsr = prayer(from: "Dhuhr/Asr", time: rawPrayers[2].time)
-        let combinedMaghribIsha = prayer(from: "Maghrib/Isha", time: rawPrayers[4].time)
+        guard let fajr = prayer(named: "Fajr"),
+              let sunrise = prayer(named: "Shurooq"),
+              // Friday replaces Dhuhr with Jumuah, but the combined traveling prayer keeps its own name.
+              let dhuhr = prayer(named: "Dhuhr", "Jumuah"),
+              let maghrib = prayer(named: "Maghrib")
+        else { return rawPrayers }
 
-        return [rawPrayers[0], rawPrayers[1], combinedDhuhrAsr, combinedMaghribIsha]
+        return [
+            fajr,
+            sunrise,
+            self.prayer(from: "Dhuhr/Asr", time: dhuhr.time),
+            self.prayer(from: "Maghrib/Isha", time: maghrib.time)
+        ]
+        .enumerated()
+        .sorted { ($0.element.time, $0.offset) < ($1.element.time, $1.offset) }
+        .map(\.element)
     }
     
     func updateCurrentAndNextPrayer() {
@@ -1191,12 +1426,6 @@ extension Settings {
         }
     }
 
-    /// Efficiently gets just the first prayer of a given day (optimized for getting tomorrow's Fajr)
-    private func _getFirstPrayerOfDay(for date: Date) -> Prayer? {
-        let raw = _computeRawPrayers(for: date)
-        return raw.first  // Fajr is always first regardless of mode
-    }
-    
     /// Whether THIS device should schedule prayer notifications locally.
     ///
     /// The iPhone always schedules. The Watch schedules **only when it is standalone** — i.e. there is no
@@ -1338,33 +1567,37 @@ extension Settings {
     ]
 
     /// Pre‑computes the full list of minutes‑before offsets for a prayer.
+    /// The distinct minutes-before offsets a prayer should fire at. Deduplicated: a prenotification of 15
+    /// minutes and a nagging step at 15 minutes describe the same notification, and every offset consumes one
+    /// slot of iOS's 64-request budget — a duplicate would silently cost a *later* prayer its adhan.
     private func offsets(for prefs: NotifPrefs) -> [Int] {
-        var result: [Int] = []
+        var result: Set<Int> = []
 
-        // “at time” alert
-        if self[keyPath: prefs.enabled] { result.append(0) }
+        if self[keyPath: prefs.enabled] { result.insert(0) }
 
-        // user‑defined single offset
         let minutes = self[keyPath: prefs.preMinutes]
         if self[keyPath: prefs.enabled], minutes > 0 {
-            result.append(minutes)
+            result.insert(minutes)
         }
 
-        // nagging offsets (if globally on *and* per‑prayer nagging on)
         if naggingMode && self[keyPath: prefs.nagging] {
-            result += naggingCascade(start: naggingStartOffset)
+            result.formUnion(naggingCascade(start: naggingStartOffset))
         }
-        return result
+        return result.sorted(by: >)
     }
 
-    /// Generates exponential‑type cascade: 30,15,10,5 (by default)
-    private func naggingCascade(start: Int) -> [Int] {
+    /// The reminder cascade leading up to a prayer: 30, 15, 10, 5 minutes before, by default.
+    ///
+    /// A *set*, because the arithmetic overlaps for some starting values — a start of 20 walks down to 5, and
+    /// the trailing `[10, 5]` re-adds 5. Duplicates each claimed a notification slot while resolving to the
+    /// same identifier, so the second silently replaced the first and the budget was spent for nothing.
+    private func naggingCascade(start: Int) -> Set<Int> {
         guard start > 0 else { return [] }
         var m = start
-        var out: [Int] = []
-        while m > 15 { out.append(m); m -= 15 }
-        if m >= 5  { out.append(m) }
-        out += [10,5].filter { $0 < start }
+        var out: Set<Int> = []
+        while m > 15 { out.insert(m); m -= 15 }
+        if m >= 5 { out.insert(m) }
+        out.formUnion([10, 5].filter { $0 < start })
         return out
     }
 
@@ -1400,17 +1633,6 @@ extension Settings {
         return (req, date)
     }
 
-    private func scheduleRefreshNag(
-        inDays offset: Int = 2,
-        hour: Int = 12,
-        minute: Int = 0,
-        using center: UNUserNotificationCenter = .current()
-    ) {
-        guard let built = makeRefreshNagRequest(inDays: offset, hour: hour, minute: minute) else { return }
-        center.add(built.request) { error in
-            if let error { logger.debug("Refresh reminder add failed: \(error.localizedDescription)") }
-        }
-    }
 
     func schedulePrayerTimeNotifications() {
         #if os(watchOS)
@@ -1569,6 +1791,9 @@ extension Settings {
 
     private func isForegroundAdhanEligible(_ name: String) -> Bool {
         guard name != "Shurooq", !Self.optionalPrayerNames.contains(name) else { return false }
+        // A prayer whose adhan sound is off gets the system notification sound; playing the recording in-app
+        // anyway would be the exact thing the user turned off.
+        guard playsAdhanSound(forPrayer: name) else { return false }
         guard let prefs = Self.notifTable[name] else { return false }
         return self[keyPath: prefs.enabled]
     }
@@ -1588,18 +1813,19 @@ extension Settings {
 
         if let m = minutesBefore {
             // “n m until …”
-            return "\(m)m until \(prayer.nameTransliteration)\(englishPart) in \(city)"
+            return "\(m)m until \(prayer.displayName)\(englishPart) in \(city)"
                  + (travelingMode ? " (traveling)" : "")
                  + " [\(formatDate(prayer.time))]"
         } else if prayer.nameTransliteration == "Fajr",
-                  let list = prayers?.prayers, list.count > 1 {
-            // Special Fajr “ends at …” text
-            return "Time for \(prayer.nameTransliteration)\(englishPart)"
+                  // Fajr ends at sunrise — found by name, because a manual offset can move Sunrise off index 1.
+                  let sunrise = prayers?.prayers.first(where: { $0.nameTransliteration == "Shurooq" })?.time,
+                  sunrise > prayer.time {
+            return "Time for \(prayer.displayName)\(englishPart)"
                  + " at \(formatDate(prayer.time)) in \(city)"
                  + (travelingMode ? " (traveling)" : "")
-                 + " [ends at \(formatDate(list[1].time))]"
+                 + " [ends at \(formatDate(sunrise))]"
         } else {
-            return "Time for \(prayer.nameTransliteration)\(englishPart)"
+            return "Time for \(prayer.displayName)\(englishPart)"
                  + " at \(formatDate(prayer.time)) in \(city)"
                  + (travelingMode ? " (traveling)" : "")
         }
@@ -1613,7 +1839,10 @@ extension Settings {
         guard minutesBefore == nil else { return .default }
 
         #if os(iOS)
-        guard let filename = adhanNotificationSoundFilename(for: adhanNotificationSound) else {
+        guard playsAdhanSound(forPrayer: prayer.nameTransliteration) else { return .default }
+
+        let length = adhanClipLength(forPrayer: prayer.nameTransliteration)
+        guard let filename = adhanNotificationSoundFilename(for: adhanNotificationSound, length: length) else {
             return .default
         }
         return UNNotificationSound(named: UNNotificationSoundName(filename))
@@ -1683,7 +1912,10 @@ extension Settings {
             // Fajr needs computed prayer times, which need a location; if those aren't available, fall back
             // to 5:00 AM so the reminder still lands pre-dawn.
             let candidate: Date?
-            if let fajr = getPrayerTimes(for: eventDay, fullPrayers: true)?.first {
+            // Found by name, not by position: a large manual Fajr offset can move it out of first place
+            // now that the day is ordered chronologically.
+            if let fajr = getPrayerTimes(for: eventDay, fullPrayers: true)?
+                .first(where: { $0.nameTransliteration == "Fajr" }) {
                 candidate = gregorianCalendar.date(byAdding: .minute, value: -30, to: fajr.time)
                 beforeFajr = true
             } else {

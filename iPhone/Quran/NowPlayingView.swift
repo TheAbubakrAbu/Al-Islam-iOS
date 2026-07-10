@@ -2,8 +2,8 @@ import SwiftUI
 import AVFoundation
 
 struct NowPlayingView: View {
-    @EnvironmentObject var settings: Settings
-    @EnvironmentObject var quranPlayer: QuranPlayer
+    @ObservedObject var settings = Settings.shared
+    @ObservedObject var quranPlayer = QuranPlayer.shared
 
     @State private var quranView: Bool
     @Binding private var scrollDown: Int

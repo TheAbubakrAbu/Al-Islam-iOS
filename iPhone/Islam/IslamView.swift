@@ -1,8 +1,8 @@
 import SwiftUI
 
 struct IslamView: View {
-    @EnvironmentObject var settings: Settings
-    @EnvironmentObject var namesData: NamesViewModel
+    @ObservedObject var settings = Settings.shared
+    @ObservedObject var namesData = NamesViewModel.shared
     #if os(iOS)
     @State private var selectedResource: IslamDestination? = .arabicAlphabet
 
@@ -212,7 +212,7 @@ struct IslamView: View {
         .tag(value)
     }
     #endif
-    
+
     private func resourceLink<Destination: View>(
         title: String,
         systemImage: String,
@@ -239,7 +239,7 @@ struct IslamView: View {
 }
 
 struct ProphetQuote: View {
-    @EnvironmentObject var settings: Settings
+    @ObservedObject var settings = Settings.shared
     @State private var isCardVisible = false
     @State private var animateBadge = false
 
@@ -350,7 +350,7 @@ struct ProphetQuote: View {
             Text(attributionText1)
                 .foregroundColor(.primary)
                 .font(.caption)
-            
+
             Text(attributionText2)
                 .foregroundColor(.secondary)
                 .font(.caption2)
@@ -364,7 +364,7 @@ struct ProphetQuote: View {
 }
 
 struct AlIslamAppsSection: View {
-    @EnvironmentObject var settings: Settings
+    @ObservedObject var settings = Settings.shared
     #if os(iOS)
     @State private var showLearnMoreSheet = false
     #endif
@@ -382,7 +382,7 @@ struct AlIslamAppsSection: View {
         Section(header: Text("AL-ISLAMIC APPS")) {
             ZStack {
                 cardBackground
-                
+
                 VStack(spacing: 10) {
                     appCardsRow
                         .padding(.top, 8)
@@ -506,7 +506,7 @@ struct AlIslamAppsSection: View {
 }
 
 private struct Card: View {
-    @EnvironmentObject var settings: Settings
+    @ObservedObject var settings = Settings.shared
     @Environment(\.openURL) private var openURL
     @State private var showActions = false
 

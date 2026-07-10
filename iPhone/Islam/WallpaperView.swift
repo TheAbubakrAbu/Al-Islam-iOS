@@ -17,7 +17,7 @@ private let wallpapers: [Wallpaper] = [
 ]
 
 struct WallpaperView: View {
-    @EnvironmentObject private var settings: Settings
+    @ObservedObject private var settings = Settings.shared
 
     var body: some View {
         List {
@@ -39,7 +39,7 @@ struct WallpaperView: View {
 }
 
 private struct WallpaperCell: View {
-    @EnvironmentObject private var settings: Settings
+    @ObservedObject private var settings = Settings.shared
 
     let wallpaper: Wallpaper
 

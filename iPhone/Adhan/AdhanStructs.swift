@@ -26,6 +26,8 @@ struct Prayer: Identifiable, Codable, Equatable {
     var id = UUID()
 
     let nameArabic: String
+    /// The canonical name. Everything that *looks a prayer up* — notification preferences, the optional-prayer
+    /// set, the scrubber's highlight match, Siri's search keys — keys off this, so it is never user-editable.
     let nameTransliteration: String
     let nameEnglish: String
     let time: Date
@@ -33,6 +35,12 @@ struct Prayer: Identifiable, Codable, Equatable {
     let rakah: String
     let sunnahBefore: String
     let sunnahAfter: String
+    /// The user's own spelling, baked in at construction so widgets and the Watch pick it up for free when they
+    /// decode the shared `prayersData`. Optional, so prayer data written by an older build still decodes.
+    var nameCustom: String? = nil
+
+    /// What a human should read. Prefer this over `nameTransliteration` at every display site.
+    var displayName: String { nameCustom ?? nameTransliteration }
 
     static func == (lhs: Prayer, rhs: Prayer) -> Bool {
         lhs.id == rhs.id

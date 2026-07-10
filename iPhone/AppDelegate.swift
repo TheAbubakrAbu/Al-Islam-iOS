@@ -147,6 +147,12 @@ class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterD
 final class ForegroundAdhanPlayer: NSObject, ObservableObject {
     static let shared = ForegroundAdhanPlayer()
 
+    /// The prayer whose adhan is playing right now, or `nil` when silent. Drives the on-screen stop control —
+    /// the full recording runs for minutes, so there has to be a way to cut it short.
+    @Published private(set) var playingPrayerName: String?
+
+    var isPlaying: Bool { playingPrayerName != nil }
+
     private var timer: DispatchSourceTimer?
     private var player: AVAudioPlayer?
     private var pausedQuranForAdhan = false
@@ -213,11 +219,25 @@ final class ForegroundAdhanPlayer: NSObject, ObservableObject {
         // Drop the redundant scheduled notification so it can't double-sound late.
         UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: [notificationID])
 
-        playAdhan(path: path)
+        playAdhan(path: path, prayerName: settings.currentPrayer?.displayName)
         reschedule()
     }
 
-    private func playAdhan(path: String) {
+    /// Fades out a playing adhan and restores whatever it interrupted. Safe to call when nothing is playing.
+    func stopAdhan() {
+        guard let player else { return }
+        player.setVolume(0, fadeDuration: 0.4)
+        // Hold the reference so `audioPlayerDidFinishPlaying` (which never fires for a manual stop) can't
+        // race this cleanup against a fresh adhan armed in the meantime.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) { [weak self] in
+            guard let self, self.player === player else { return }
+            player.stop()
+            self.player = nil
+            self.finishPlayback()
+        }
+    }
+
+    private func playAdhan(path: String, prayerName: String?) {
         // Pause in-app audio (Quran) so the adhan isn't talked over; resume it when the adhan finishes.
         if QuranPlayer.shared.isPlaying {
             QuranPlayer.shared.pause(saveInfo: false)
@@ -234,6 +254,7 @@ final class ForegroundAdhanPlayer: NSObject, ObservableObject {
             p.prepareToPlay()
             p.play()
             player = p
+            playingPrayerName = prayerName ?? "Adhan"
         } catch {
             logger.error("Foreground adhan playback failed: \(error.localizedDescription)")
             player = nil
@@ -242,6 +263,7 @@ final class ForegroundAdhanPlayer: NSObject, ObservableObject {
     }
 
     private func finishPlayback() {
+        playingPrayerName = nil
         if pausedQuranForAdhan {
             pausedQuranForAdhan = false
             QuranPlayer.shared.resume()

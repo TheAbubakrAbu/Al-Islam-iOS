@@ -27,7 +27,7 @@ struct PrayersEntryView: View {
                 .font(.title3)
                 .foregroundColor(accent(for: nextPrayer))
                 .widgetLabel {
-                    Text("\(nextPrayer.nameTransliteration) \(nextPrayer.time, style: .time)")
+                    Text("\(nextPrayer.displayName) \(nextPrayer.time, style: .time)")
                 }
         } else {
             Image(systemName: "moon.stars.fill")
@@ -68,7 +68,7 @@ struct PrayersEntryView: View {
                             .padding(.trailing, -4)
                     }
                     
-                    Text(currentPrayer.nameTransliteration)
+                    Text(currentPrayer.displayName)
                         .font(.headline)
                     
                     Text("\(nextPrayer.time, style: .timer)")
@@ -77,7 +77,7 @@ struct PrayersEntryView: View {
                 }
                 .foregroundColor(accent(for: currentPrayer))
                     
-                Text("\(nextPrayer.nameTransliteration) at \(nextPrayer.time, style: .time)")
+                Text("\(nextPrayer.displayName) at \(nextPrayer.time, style: .time)")
                     .font(.subheadline)
                 
                 HStack {
@@ -139,7 +139,7 @@ struct CountdownComplicationView: View {
             switch family {
             case .accessoryInline:
                 Label {
-                    Text("\(next.nameTransliteration) \(next.time, style: .timer)")
+                    Text("\(next.displayName) \(next.time, style: .timer)")
                 } icon: {
                     Image(systemName: next.image)
                 }
@@ -193,7 +193,7 @@ struct CountdownComplicationView: View {
             HStack(spacing: 4) {
                 Image(systemName: next.image)
                     .font(.subheadline)
-                Text(next.nameTransliteration)
+                Text(next.displayName)
                     .font(.headline)
             }
             .foregroundColor(accent(for: next))
