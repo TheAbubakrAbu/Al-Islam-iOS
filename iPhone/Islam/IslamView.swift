@@ -254,7 +254,7 @@ struct ProphetQuote: View {
     @State private var animateBadge = false
     @State private var rotateRing = false
 
-    private let quoteText = "“O people, your Lord is one and your father Adam is one. There is no superiority of an Arab over a non-Arab, nor a non-Arab over an Arab, and neither a white over a black, nor a black over a white, except by righteousness.“"
+    private let quoteText = "“O people, your Lord is one and your father Adam is one. There is no superiority of an Arab over a non-Arab, nor of a non-Arab over an Arab, nor of a red man over a black man, nor of a black man over a red man, except by taqwa.“"
     private let attributionText1 = "Farewell Sermon\nMusnad Ahmad 22978"
     private let attributionText2 = "Jumuah, 9 Dhul-Hijjah 10 AH\nFriday, 6 March 632 CE"
 
@@ -303,7 +303,7 @@ struct ProphetQuote: View {
                 .foregroundStyle(.secondary)
 
             Button {
-                UIPasteboard.general.string = "O people, your Lord is one and your father Adam is one. There is no superiority of an Arab over a non-Arab, nor a non-Arab over an Arab, and neither a white over a black, nor a black over a white, except by righteousness.\n\n– Farewell Sermon\nMusnad Ahmad 22978\n\nJumuah, 9 Dhul-Hijjah 10 AH\nFriday, 6 March 632 CE"
+                UIPasteboard.general.string = "O people, your Lord is one and your father Adam is one. There is no superiority of an Arab over a non-Arab, nor of a non-Arab over an Arab, nor of a red man over a black man, nor of a black man over a red man, except by taqwa.\n\n– Farewell Sermon\nMusnad Ahmad 22978\n\nJumuah, 9 Dhul-Hijjah 10 AH\nFriday, 6 March 632 CE"
             } label: {
                 Label("Copy Text", systemImage: "doc.on.doc")
             }

@@ -77,7 +77,7 @@ let standardArabicLetters: [LetterData] = [
         showTashkeel: true,
         sound: "r",
         weight: .conditional,
-        weightRule: "Heavy with fatha/damma, or sukoon preceded by fatha/damma; light with kasra."
+        weightRule: "Heavy with fatha/damma, or sukoon preceded by fatha/damma (or by an incidental kasra); light with kasra, or sukoon preceded by an original kasra — unless an isti'la letter with fatha/damma follows in the same word (قِرْطَاس), which makes it heavy."
     ),
 
     LetterData(id: LetterID.next(), letter: "ز", forms: ["ـز", "ـز ـ", "ز ـ"], name: "زَاي", transliteration: "zaay", showTashkeel: true, sound: "z", weight: .light),
@@ -140,7 +140,7 @@ let otherArabicLetters: [LetterData] = [
     LetterData(id: LetterID.next(), letter: "ة", forms: ["ـة", "ـة ـ", "ة ـ"], name: "تَاء مَربُوطَة", transliteration: "taa marbuuTah", showTashkeel: false, sound: ""),
     LetterData(id: LetterID.next(), letter: "ء", forms: ["ـ ء", "ـ ء ـ", "ء ـ"], name: "هَمزَة", transliteration: "hamza", showTashkeel: false, sound: ""),
     LetterData(id: LetterID.next(), letter: "أ", forms: ["ـأ", "ـأ ـ", "أ ـ"], name: "هَمزَة عَلَى أَلِف", transliteration: "hamza on alif", showTashkeel: false, sound: ""),
-    LetterData(id: LetterID.next(), letter: "إ", forms: ["ـإ", "ـإ ـ", "إ ـ"], name: "هَمزَة عَلَى أَلِف", transliteration: "hamza on alif", showTashkeel: false, sound: ""),
+    LetterData(id: LetterID.next(), letter: "إ", forms: ["ـإ", "ـإ ـ", "إ ـ"], name: "هَمزَة تَحتَ أَلِف", transliteration: "hamza under alif", showTashkeel: false, sound: ""),
     LetterData(id: LetterID.next(), letter: "ئ", forms: ["ـئ", "ـئ ـ", "ئ ـ"], name: "هَمزَة عَلَى يَاء", transliteration: "hamza on yaa", showTashkeel: false, sound: ""),
     LetterData(id: LetterID.next(), letter: "ؤ", forms: ["ـؤ", "ـؤ ـ", "ؤ ـ"], name: "هَمزَة عَلَى وَاو", transliteration: "hamza on waaw", showTashkeel: false, sound: ""),
     LetterData(id: LetterID.next(), letter: "ٱ", forms: ["ٱـ", "ـٱ", "ـٱـ"], name: "هَمزَة الوَصل", transliteration: "hamzatul waSl", showTashkeel: false, sound: ""),
@@ -148,8 +148,7 @@ let otherArabicLetters: [LetterData] = [
     LetterData(id: LetterID.next(), letter: "يٓ", forms: ["ـيٓ", "ـيٓـ", "يٓـ"], name: "يَاء مَدّ", transliteration: "yaa madd", showTashkeel: false, sound: ""),
     LetterData(id: LetterID.next(), letter: "وٓ", forms: ["ـوٓ", "ـوٓـ", "وٓـ"], name: "واو مَدّ", transliteration: "waaw madd", showTashkeel: false, sound: ""),
     LetterData(id: LetterID.next(), letter: "ى", forms: ["ـى", "ـى ـ", "ى ـ"], name: "أَلِف مَقصُورَة", transliteration: "alif maqSoorah", showTashkeel: false, sound: ""),
-    LetterData(id: LetterID.next(), letter: "ل ا - لا", forms: ["ـلا", "ـلا ـ", "لا ـ"], name: "لَاء", transliteration: "laa", showTashkeel: false, sound: ""),
-    LetterData(id: LetterID.next(), letter: "ـ", forms: ["ـ", "ـ", "ـ"], name: "تَطوِيل", transliteration: "tatweel", showTashkeel: false, sound: "")
+    LetterData(id: LetterID.next(), letter: "ل ا - لا", forms: ["ـلا", "ـلا ـ", "لا ـ"], name: "لَام أَلِف", transliteration: "laam alif", showTashkeel: false, sound: ""),
 ]
 
 let nonArabicArabicScriptLetters: [LetterData] = [
@@ -164,7 +163,7 @@ let nonArabicArabicScriptLetters: [LetterData] = [
 let numbers = [
     (number: "٠", name: "صِفر", transliteration: "sifr", englishNumber: "0"),
     (number: "١", name: "وَاحِد", transliteration: "waahid", englishNumber: "1"),
-    (number: "٢", name: "اِثنَين", transliteration: "ithnaan", englishNumber: "2"),
+    (number: "٢", name: "اِثنَان", transliteration: "ithnaan", englishNumber: "2"),
     (number: "٣", name: "ثَلاثَة", transliteration: "thalaathah", englishNumber: "3"),
     (number: "٤", name: "أَربَعَة", transliteration: "arba'ah", englishNumber: "4"),
     (number: "٥", name: "خَمسَة", transliteration: "khamsah", englishNumber: "5"),
@@ -175,26 +174,37 @@ let numbers = [
     (number: "١٠", name: "عَشَرَة", transliteration: "'asharah", englishNumber: "10")
 ]
 
-// Each vowel triplet is ordered fatha (a), damma (u), kasra (i) so every harakaat row reads a, u, i.
+/// Ordered a → i → u (fatha, kasra, damma) — the order these are taught in — and grouped in threes, which is
+/// how `ArabicLetterView` chunks them into rows: short vowels, then tanween, then the long vowels and their
+/// madd forms, each triple following the same a/i/u sequence.
 let tashkeels: [Tashkeel] = [
     Tashkeel(english: "Fatha", arabic: "فَتحَة", tashkeelMark: "َ", transliteration: "a"),
-    Tashkeel(english: "Damma", arabic: "ضَمَّة", tashkeelMark: "ُ", transliteration: "u"),
     Tashkeel(english: "Kasra", arabic: "كَسرَة", tashkeelMark: "ِ", transliteration: "i"),
+    Tashkeel(english: "Damma", arabic: "ضَمَّة", tashkeelMark: "ُ", transliteration: "u"),
     Tashkeel(english: "Fathatayn", arabic: "فَتحَتَين", tashkeelMark: "ًا", transliteration: "an"),
-    Tashkeel(english: "Dammatayn", arabic: "ضَمَّتَين", tashkeelMark: "ٌ", transliteration: "un"),
     Tashkeel(english: "Kasratayn", arabic: "كَسرَتَين", tashkeelMark: "ٍ", transliteration: "in"),
+    Tashkeel(english: "Dammatayn", arabic: "ضَمَّتَين", tashkeelMark: "ٌ", transliteration: "un"),
     Tashkeel(english: "Alif", arabic: "أَلِف", tashkeelMark: "َا", transliteration: "aa"),
-    Tashkeel(english: "Waaw", arabic: "وَاو", tashkeelMark: "ُو", transliteration: "uu"),
     Tashkeel(english: "Yaa", arabic: "يَاء", tashkeelMark: "ِي", transliteration: "ii"),
+    Tashkeel(english: "Waaw", arabic: "وَاو", tashkeelMark: "ُو", transliteration: "uu"),
     Tashkeel(english: "Dagger Alif", arabic: "ألف خنجرية", tashkeelMark: "\u{064E}\u{0670}\u{0640}", transliteration: "aa"),
-    Tashkeel(english: "Miniature Waaw", arabic: "واو صغيرة", tashkeelMark: "ُۥ", transliteration: "uu"),
     Tashkeel(english: "Miniature Yaa", arabic: "يَاء صغيرة", tashkeelMark: "ِۦ", transliteration: "ii"),
-    Tashkeel(english: "Alif Madd", arabic: "أَلِف مَدّ", tashkeelMark: "َآ", transliteration: "aaaa"),
-    Tashkeel(english: "Waaw Madd", arabic: "واو مَدّ", tashkeelMark: "ُوٓ", transliteration: "uuuu"),
+    Tashkeel(english: "Miniature Waaw", arabic: "واو صغيرة", tashkeelMark: "ُۥ", transliteration: "uu"),
+    // Alif + a COMBINING maddah (U+0653), exactly like the yaa and waaw madds below it. It used to be the
+    // precomposed ALEF WITH MADDA ABOVE (U+0622), which the Quranic fonts draw in its isolated form — so it sat
+    // detached from the letter it belongs to (شَ آ instead of شَآ).
+    Tashkeel(english: "Alif Madd", arabic: "أَلِف مَدّ", tashkeelMark: "\u{064E}\u{0627}\u{0653}", transliteration: "aaaa"),
     Tashkeel(english: "Yaa Madd", arabic: "يَاء مَدّ", tashkeelMark: "ِيٓ", transliteration: "iiii"),
-    Tashkeel(english: "Alif MaqSuurah", arabic: "ياء بلا نقاط", tashkeelMark: "َى", transliteration: "aa"),
-    Tashkeel(english: "Small Waaw Madd", arabic: "واو مدّ صغيرة", tashkeelMark: "ُۥٓ", transliteration: "uuuu"),
+    Tashkeel(english: "Waaw Madd", arabic: "واو مَدّ", tashkeelMark: "ُوٓ", transliteration: "uuuu"),
+    // The small (superscript) forms, in the same a/i/u order. The dagger alif takes a maddah just as the
+    // miniature yaa and waaw do — it was the one missing from the set. Like the plain dagger alif above, it
+    // rides on a tatweel (ـ) rather than sitting on the letter, which is how it's shown in isolation.
+    Tashkeel(english: "Small Alif Madd", arabic: "ألف خنجرية مدّ", tashkeelMark: "\u{064E}\u{0670}\u{0653}\u{0640}", transliteration: "aaaa"),
     Tashkeel(english: "Small Yaa Madd", arabic: "ياء مدّ صغيرة", tashkeelMark: "ِۦٓ", transliteration: "iiii"),
+    Tashkeel(english: "Small Waaw Madd", arabic: "واو مدّ صغيرة", tashkeelMark: "ُۥٓ", transliteration: "uuuu"),
+    // Last two rows: [MaqSuurah · Shaddah · Sukoon], then the Uthmani sukoon ALONE beneath the plain one —
+    // they're the same mark in two scripts, so they read as a pair stacked in the same column.
+    Tashkeel(english: "Alif MaqSuurah", arabic: "أَلِف مَقصُورَة", tashkeelMark: "َى", transliteration: "aa"),
     Tashkeel(english: "Shaddah", arabic: "شَدَّة", tashkeelMark: "ّ", transliteration: ""),
     Tashkeel(english: "Sukuun 1", arabic: "سُكُون", tashkeelMark: "ْ", transliteration: ""),
     Tashkeel(english: "Sukuun 2", arabic: "سكون عثماني", tashkeelMark: "ۡ", transliteration: "")

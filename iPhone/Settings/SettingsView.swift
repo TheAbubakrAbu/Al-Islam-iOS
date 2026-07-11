@@ -8,6 +8,7 @@ struct SettingsView: View {
     @State private var selectedDestination: SettingsDestination? = SettingsView.defaultDestination
     @State private var hasSetDefaultSelection = false
     @State private var showResetConfirmation = false
+    @State private var confirmEraseEverything = false
 
     /// The destination shown when nothing is explicitly selected (single source of truth).
     private static let defaultDestination: SettingsDestination = .quranSettings
@@ -185,20 +186,44 @@ struct SettingsView: View {
                     .font(.subheadline)
                     .foregroundColor(.red)
             }
+            // Two very different things, so they're two buttons rather than one that quietly picks for you:
+            // the everyday "put the options back" and the "make it as if I'd never installed this".
             .confirmationDialog(
                 "Reset All Settings?",
                 isPresented: $showResetConfirmation,
                 titleVisibility: .visible
             ) {
-                Button("Reset All Settings", role: .destructive) {
+                Button("Reset Settings, Keep My Content") {
                     settings.hapticFeedback()
                     withAnimation {
-                        settings.resetAllSettings()
+                        settings.resetAllSettings(keepingContent: true)
+                    }
+                }
+
+                Button("Erase Everything", role: .destructive) {
+                    settings.hapticFeedback()
+                    confirmEraseEverything = true
+                }
+
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("Reset restores every setting (appearance, prayer, and Quran options) to its default and keeps your bookmarks, favorites, khatm progress, and saved location.\n\nErase removes those too.")
+            }
+            // A second confirmation, because this one cannot be undone.
+            .confirmationDialog(
+                "Erase Everything?",
+                isPresented: $confirmEraseEverything,
+                titleVisibility: .visible
+            ) {
+                Button("Erase Everything", role: .destructive) {
+                    settings.hapticFeedback()
+                    withAnimation {
+                        settings.resetAllSettings(keepingContent: false)
                     }
                 }
                 Button("Cancel", role: .cancel) {}
             } message: {
-                Text("This restores every setting (appearance, prayer, and Quran options) to its default. Your bookmarks, favorites, khatm progress, and saved location are kept.")
+                Text("This deletes your bookmarks, favorite surahs, letters and names, khatm progress, reading and listening positions, search history, and saved locations — leaving the app exactly as it was on a fresh install. This cannot be undone.")
             }
         }
         #endif

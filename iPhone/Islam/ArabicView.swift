@@ -42,6 +42,27 @@ struct ArabicView: View {
         ["ف", "ق"], ["ك", "ل"], ["م", "ن"], ["ه", "ة"]
     ]
 
+    /// What the letters in a similarity group have in COMMON — the shared skeleton, with the dots stripped off.
+    /// The letters themselves are right there in the section, so listing them again in the header ("ب - ت - ث")
+    /// said nothing; the dotless form is the actual point of the grouping. Where the letters don't merely differ
+    /// by dots (kaaf/laam, meem/nuun), there's no shared skeleton to show, so the group falls back to naming them.
+    private static let dotlessSkeletons: [String: String] = [
+        "بتث": "\u{066E}",   // dotless beh
+        "جحخ": "ح",          // the letters are haa + a dot above / below
+        "دذ": "د",
+        "رز": "ر",
+        "سش": "س",
+        "صض": "ص",
+        "طظ": "ط",
+        "عغ": "ع",
+        "فق": "\u{066F}",    // dotless qaf
+        "هة": "ه",           // taa marbuutah is a haa with two dots
+    ]
+
+    private static func similarityHeader(for group: [String]) -> String {
+        dotlessSkeletons[group.joined()] ?? group.joined(separator: " - ")
+    }
+
     private var filteredStandard: [LetterData] {
         guard !searchText.isEmpty else { return standardArabicLetters }
         let st = searchText.lowercased()
@@ -254,7 +275,7 @@ struct ArabicView: View {
     private func letterCollection(_ letters: [LetterData]) -> some View {
         #if os(iOS)
         if isGridMode {
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 4), spacing: 8) {
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 6), count: 4), spacing: 6) {
                 ForEach(letters) { letter in
                     ArabicLetterGridTile(
                         letterData: letter,
@@ -267,11 +288,30 @@ struct ArabicView: View {
                 }
             }
             .padding(.horizontal, -8)
+            .padding(.vertical, 2)
         } else {
             ForEach(letters) { letterRow(for: $0) }
         }
         #else
         ForEach(letters) { letterRow(for: $0) }
+        #endif
+    }
+
+    /// The numbers follow the letters' display mode, so the screen is either all rows or all tiles.
+    @ViewBuilder
+    private var numberCollection: some View {
+        #if os(iOS)
+        if isGridMode {
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 6), count: 4), spacing: 6) {
+                ForEach(numbers, id: \.number) { ArabicNumberGridTile(numberData: $0) }
+            }
+            .padding(.horizontal, -8)
+            .padding(.vertical, 2)
+        } else {
+            ForEach(numbers, id: \.number) { ArabicNumberRow(numberData: $0) }
+        }
+        #else
+        ForEach(numbers, id: \.number) { ArabicNumberRow(numberData: $0) }
         #endif
     }
 
@@ -292,12 +332,33 @@ struct ArabicView: View {
         if searchText.isEmpty {
             standardLetterSections
 
+            Section("TASHKEEL") {
+                NavigationLink {
+                    TashkeelLettersView()
+                } label: {
+                    Label {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Letters with Tashkeel")
+                                .foregroundColor(.primary)
+
+                            Text("Every letter carrying one harakah at a time")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                    } icon: {
+                        Text("\u{0640}\u{064E}")
+                            .foregroundColor(settings.accentColor.color)
+                    }
+                    .padding(.vertical, 4)
+                }
+            }
+
             Section("SPECIAL ARABIC LETTERS") {
                 letterCollection(otherArabicLetters)
             }
 
             Section("ARABIC NUMBERS") {
-                ForEach(numbers, id: \.number) { ArabicNumberRow(numberData: $0) }
+                numberCollection
             }
 
             tajweedSection
@@ -318,7 +379,7 @@ struct ArabicView: View {
         case .similarity:
             ForEach(similarityGroups.indices, id: \.self) { idx in
                 let group = similarityGroups[idx]
-                let header = idx == 0 ? "VOWEL LETTERS" : group.joined(separator: " - ")
+                let header = idx == 0 ? "VOWEL LETTERS" : Self.similarityHeader(for: group)
                 Section(header) {
                     letterCollection(group.compactMap { letterData(for: $0) })
                 }
@@ -440,6 +501,328 @@ struct ArabicSizeSlider: View {
     }
 }
 
+/// The alphabet seen through one harakah at a time — the transpose of the per-letter detail, which shows one
+/// letter carrying every harakah. Pick a mark and all 28 letters (plus the hamza) are rendered with it.
+///
+/// Shaddah is the exception: on its own it only says "double this letter", and in real words it always carries
+/// a vowel with it, so selecting it reveals the four readings (bare, then with fatha / damma / kasra) and every
+/// letter becomes tappable to see its own three side by side.
+struct TashkeelLettersView: View {
+    @ObservedObject private var settings = Settings.shared
+
+    private static let shaddahMark = "\u{0651}"
+
+    /// Every mark the per-letter detail shows — the short vowels, the tanween, the long vowels and their madd
+    /// forms, the dagger alif and the miniatures, both sukoons, and the shaddah. This screen is the same table
+    /// read the other way round, so it must not be a subset of it.
+    ///
+    /// The two sukoons are the exception: they're the same mark in two scripts (the plain one and the Uthmani
+    /// one), so they share a single chip and the script is chosen below the grid — two tiles for one idea left
+    /// the grid with an odd tile hanging off the end.
+    private var marks: [Tashkeel] {
+        tashkeels.filter { $0.english != Self.quranicSukoonName }
+    }
+
+    private static let plainSukoonName = "Sukuun 1"
+    private static let quranicSukoonName = "Sukuun 2"
+
+    /// Baa is the carrier in the chips. A harakah drawn on a bare tatweel (ـَ) is a floating stroke that reads
+    /// as nothing; on a real letter it reads as the syllable it is.
+    private static let carrierLetter = "ب"
+
+    /// What a mark can actually be placed on: the letters, plus the standalone hamza.
+    ///
+    /// Alif is excluded. It never carries a harakah of its own — it's the long vowel that a *previous* letter's
+    /// fatha lengthens (or a seat for a hamza), so "أَلِف with a damma" isn't a thing that occurs.
+    private var letters: [LetterData] {
+        standardArabicLetters.filter { $0.letter != "ا" }
+            + otherArabicLetters.filter { $0.letter == "ء" }
+    }
+
+    @State private var selectedMarkName = "Fatha"
+    /// Which vowel rides on the shaddah, or nil for the bare doubling. Only used while Shaddah is selected.
+    @State private var shaddahVowelName: String?
+    /// Which sukoon is drawn: the plain one, or the Uthmani one a mushaf prints. Only used while Sukoon is
+    /// selected.
+    @State private var useQuranicSukoon = false
+    @State private var detailLetter: LetterData?
+
+    /// The mark actually drawn. For the sukoon that's whichever script is chosen below the grid; for everything
+    /// else it's simply the chip you picked.
+    private var selectedMark: Tashkeel? {
+        if isSukoon, useQuranicSukoon {
+            return tashkeels.first { $0.english == Self.quranicSukoonName }
+        }
+        return marks.first { $0.english == selectedMarkName }
+    }
+
+    private var isShaddah: Bool { selectedMarkName == "Shaddah" }
+    private var isSukoon: Bool { selectedMarkName == Self.plainSukoonName }
+
+    private var shaddahVowels: [Tashkeel] {
+        ["Fatha", "Kasra", "Damma"].compactMap { name in tashkeels.first { $0.english == name } }
+    }
+
+    private var useQuranicFont: Bool { settings.useFontArabic }
+
+    /// "Sukuun 1" / "Sukuun 2" are how the mark table distinguishes the two scripts; to the reader they are both
+    /// just the sukoon, and the script is a choice made below the grid.
+    private func displayName(_ mark: Tashkeel) -> String {
+        (mark.english == Self.plainSukoonName || mark.english == Self.quranicSukoonName) ? "Sukoon" : mark.english
+    }
+
+    /// The hamza has no consonant sound of its own in the table, so it gets the glottal stop.
+    private func baseSound(_ letter: LetterData) -> String {
+        letter.sound.isEmpty ? "'" : letter.sound
+    }
+
+    private func glyph(_ letter: LetterData) -> String {
+        guard let mark = selectedMark else { return letter.letter }
+        if isShaddah {
+            let vowel = shaddahVowelName.flatMap { name in shaddahVowels.first { $0.english == name } }
+            return letter.letter + Self.shaddahMark + (vowel?.tashkeelMark ?? "")
+        }
+        return letter.letter + mark.tashkeelMark
+    }
+
+    /// How the marked letter is read: "ba", "bun", "b" (sukoon), "bb" (shaddah), "bba" (shaddah + fatha).
+    private func reading(_ letter: LetterData) -> String {
+        let sound = baseSound(letter)
+        guard let mark = selectedMark else { return sound }
+
+        if isShaddah {
+            let vowel = shaddahVowelName.flatMap { name in shaddahVowels.first { $0.english == name } }
+            return sound + sound + (vowel?.transliteration ?? "")
+        }
+        // A sukoon carries no vowel, so the letter is just its own consonant sound.
+        return sound + mark.transliteration
+    }
+
+    /// The chip's specimen: the mark drawn on baa.
+    private func carrierGlyph(_ mark: Tashkeel) -> String {
+        Self.carrierLetter + mark.tashkeelMark
+    }
+
+    var body: some View {
+        List {
+            Group {
+                markPickerSection
+                lettersSection
+            }
+            .themedListRowBackground()
+        }
+        .applyConditionalListStyle()
+        .navigationTitle("Tashkeel")
+        #if os(iOS)
+        .adaptiveSafeArea(edge: .bottom) {
+            VStack(spacing: SafeAreaInsetVStackSpacing.standard) {
+                ArabicSizeSlider()
+
+                // The same Quranic/Basic choice the alphabet screen offers — a harakah sits very differently on
+                // a Quranic face than on the system one, which is half of what you'd come here to see.
+                Picker("Arabic Font", selection: $settings.useFontArabic.animation(.easeInOut)) {
+                    Text("Quranic Font").tag(true)
+                    Text("Basic Font").tag(false)
+                }
+                .pickerStyle(.segmented)
+            }
+            .padding(.horizontal, 24)
+            .padding(.bottom, 8)
+        }
+        .sheet(item: $detailLetter) { letter in
+            NavigationView {
+                shaddahDetail(for: letter)
+            }
+        }
+        #endif
+    }
+
+    private var markPickerSection: some View {
+        Section("HARAKAH") {
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 76), spacing: 10)], spacing: 10) {
+                ForEach(marks, id: \.english) { mark in
+                    markChip(mark)
+                }
+            }
+            .padding(.vertical, 4)
+
+            if isShaddah {
+                // A bare shaddah is only ever half the story — these are the readings it actually appears with.
+                Picker("Shaddah vowel", selection: $shaddahVowelName.animation(.easeInOut)) {
+                    Text("Shaddah").tag(String?.none)
+                    ForEach(shaddahVowels, id: \.english) { vowel in
+                        Text("+ \(vowel.english)").tag(String?.some(vowel.english))
+                    }
+                }
+                #if !os(watchOS)
+                .pickerStyle(.segmented)
+                #endif
+            }
+
+            if isSukoon {
+                // Same mark, two scripts: the plain sukoon, and the Uthmani one a printed mushaf uses.
+                Picker("Sukoon script", selection: $useQuranicSukoon.animation(.easeInOut)) {
+                    Text("Normal").tag(false)
+                    Text("Quranic").tag(true)
+                }
+                #if !os(watchOS)
+                .pickerStyle(.segmented)
+                #endif
+            }
+        }
+    }
+
+    private func markChip(_ mark: Tashkeel) -> some View {
+        let isSelected = mark.english == selectedMarkName
+        // The sukoon chip previews whichever script is currently chosen, so the tile matches the letters below.
+        let previewMark = (mark.english == Self.plainSukoonName && useQuranicSukoon)
+            ? (tashkeels.first { $0.english == Self.quranicSukoonName } ?? mark)
+            : mark
+
+        return Button {
+            settings.hapticFeedback()
+            withAnimation(.easeInOut) {
+                selectedMarkName = mark.english
+                if mark.english != "Shaddah" { shaddahVowelName = nil }
+                if mark.english != Self.plainSukoonName { useQuranicSukoon = false }
+            }
+        } label: {
+            VStack(spacing: 1) {
+                // Drawn on baa, not on a bare tatweel: a floating stroke isn't recognizable, "بَ" is.
+                Text(carrierGlyph(previewMark))
+                    .font(useQuranicFont ? settings.scalableArabicFont(base: 24, relativeTo: .title2) : .title2)
+                    .dynamicTypeSize(settings.arabicLetterDynamicTypeSize...)
+                    .foregroundColor(isSelected ? settings.accentColor.color : .primary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
+                    .frame(height: 32)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Text(displayName(mark))
+                    .font(.caption2)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
+                    .foregroundColor(isSelected ? settings.accentColor.color : .secondary)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 5)
+            .padding(.horizontal, 2)
+            .contentShape(Rectangle())
+            .background(
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .fill(settings.accentColor.color.opacity(isSelected ? 0.18 : 0.06))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 10, style: .continuous)
+                    .stroke(isSelected ? settings.accentColor.color : .clear, lineWidth: 1.5)
+            )
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var lettersSection: some View {
+        Section(selectedMark.map { "LETTERS WITH \(displayName($0).uppercased())" } ?? "LETTERS") {
+            LazyVGrid(columns: [GridItem(.adaptive(minimum: 60), spacing: 6)], spacing: 6) {
+                ForEach(letters) { letter in
+                    letterTile(letter)
+                }
+            }
+            .padding(.vertical, 2)
+        }
+    }
+
+    /// Sized to the glyph, not to the Quranic face's (very tall) line box — but it grows with the size slider,
+    /// or the letters would be pinned at whatever fits 34pt no matter where the slider sat.
+    private var glyphBoxHeight: CGFloat {
+        let steps = Settings.arabicLetterDynamicTypeSizes.count - 1
+        let index = min(max(settings.arabicLetterSizeIndex, 0), steps)
+        return 34 + CGFloat(index) * 7
+    }
+
+    private func letterTile(_ letter: LetterData) -> some View {
+        VStack(spacing: 2) {
+            Text(glyph(letter))
+                .font(useQuranicFont ? settings.scalableArabicFont(base: 28, relativeTo: .title) : .title)
+                .dynamicTypeSize(settings.arabicLetterDynamicTypeSize...)
+                .lineLimit(1)
+                .minimumScaleFactor(0.6)
+                .frame(height: glyphBoxHeight)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Text(reading(letter))
+                .font(.caption2)
+                .foregroundColor(.secondary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.6)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 5)
+        .contentShape(Rectangle())
+        // Only the shaddah tiles are actionable (they open the three readings), so only they are filled.
+        .conditionalGlassEffect(clear: !isShaddah, rectangle: true)
+        #if os(iOS)
+        .onTapGesture {
+            guard isShaddah else { return }
+            settings.hapticFeedback()
+            detailLetter = letter
+        }
+        #endif
+    }
+
+    #if os(iOS)
+    /// The three readings a shaddah actually takes, for one letter.
+    private func shaddahDetail(for letter: LetterData) -> some View {
+        let sound = baseSound(letter)
+
+        return List {
+            Group {
+                Section {
+                    ForEach(shaddahVowels, id: \.english) { vowel in
+                        HStack {
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Shaddah + \(vowel.english)")
+                                    .font(.subheadline.weight(.semibold))
+
+                                Text(sound + sound + vowel.transliteration)
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
+
+                            Spacer()
+
+                            Text(letter.letter + Self.shaddahMark + vowel.tashkeelMark)
+                                .font(useQuranicFont ? settings.scalableArabicFont(base: 30, relativeTo: .title) : .title)
+                                .dynamicTypeSize(settings.arabicLetterDynamicTypeSize...)
+                        }
+                        .padding(.vertical, 2)
+                    }
+                } header: {
+                    Text("\(letter.transliteration.uppercased()) WITH SHADDAH")
+                } footer: {
+                    Text("A shaddah doubles the letter: the first is silent (sukoon) and the second carries the vowel. It never appears at the start of a word.")
+                }
+            }
+            .themedListRowBackground()
+        }
+        .applyConditionalListStyle()
+        .navigationTitle(letter.transliteration.capitalized)
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .cancellationAction) {
+                Button {
+                    settings.hapticFeedback()
+                    detailLetter = nil
+                } label: {
+                    Image(systemName: "xmark")
+                        .font(.body.weight(.semibold))
+                }
+                .tint(settings.accentColor.color)
+            }
+        }
+    }
+    #endif
+}
+
 struct LetterSectionHeader: View {
     @ObservedObject var settings = Settings.shared
     let letterData: LetterData
@@ -521,8 +904,11 @@ struct ArabicLetterView: View {
             if let weight = letterData.weight {
                 Section(header: Text("LIGHT / HEAVY PRONUNCIATION")) {
                     VStack(alignment: .leading, spacing: 8) {
-                            Text(weight == .heavy ? "Heavy letter (Mufakhamah)"
-                                : weight == .light ? "Light letter (Muraqqaqah)"
+                            // The letter itself is described, so the masculine adjective (mufakhkham /
+                            // muraqqaq) is what applies — not the feminine noun for the act (tafkhim's
+                            // "mufakhkhamah").
+                            Text(weight == .heavy ? "Heavy letter (Mufakhkham)"
+                                : weight == .light ? "Light letter (Muraqqaq)"
                              : weight == .conditional ? "Conditional letter"
                              : "Follows previous letter")
                             .font(.headline)
@@ -559,7 +945,7 @@ struct ArabicLetterView: View {
                 .padding(.vertical, useQuranicFontForLetter ? 0 : 2)
             }
 
-            if ["alif", "waw", "yaa"].contains(letterData.transliteration) {
+            if ["alif", "waaw", "yaa"].contains(letterData.transliteration) {
                 Section(header: Text("SPECIAL ROLE OF VOWEL LETTERS")) {
                     Text("In Arabic, three letters (Alif, Waw, and Yaa) have a special dual role:")
                         .font(.body)
@@ -569,7 +955,7 @@ struct ArabicLetterView: View {
                             .font(.body)
                     }
 
-                    if letterData.transliteration == "waw" {
+                    if letterData.transliteration == "waaw" {
                         Text("- **Waw (و)**: As a **vowel** it is the long \"uu\" (also written \"oo\", and shortened to \"u\"), used after a letter with a damma, like in رَسُول (rasool - messenger). As a **consonant** it makes the \"w\" sound, like in وَقَفَ (waqafa - stood).")
                             .font(.body)
                     }
@@ -582,16 +968,19 @@ struct ArabicLetterView: View {
                     Text("When these letters have no tashkeel, or have sukoon, and the letter before them has the matching harakah, they are treated as Madd Tabee (مَدّ طَبِيعِيّ), or natural Madd: Alif after fatha, Waw after damma, and Yaa after kasra. This is held for 2 harakaat (2 counts).")
                         .font(.body)
 
-                    Text("If a hamzah comes after the vowel letter, or if a shaddah/permanent sukoon comes after it, the natural Madd can turn into one of the special mudood (مُدُود), such as Madd Muttassil, Madd Mufassil, or Madd Lazim. Then the length may become 4, 5, or 6 counts instead of 2.")
+                    Text("If a hamzah comes after the vowel letter, or if a shaddah/permanent sukoon comes after it, the natural Madd can turn into one of the special mudood (مُدُود), such as Madd Muttassil, Madd Munfasil, or Madd Lazim. Then the length may become 4, 5, or 6 counts instead of 2.")
                         .font(.body)
                 }
             }
 
             if letterData.showTashkeel {
                 Section(header: Text("DIFFERENT HARAKAAT (VOWELS)")) {
-                    let chunks = tashkeels.chunked(into: 3)
-                    ForEach(chunks.indices, id: \.self) { idx in
-                        VStack {
+                    // ONE list row holding every triplet — the same shape as the Hamza section below. Each
+                    // triplet used to be its own row, so all seven paid the list's row insets and minimum row
+                    // height on top of their own 14pt padding, which is where the wasted height came from.
+                    VStack(alignment: .leading, spacing: 10) {
+                        let chunks = tashkeels.chunked(into: 3)
+                        ForEach(chunks.indices, id: \.self) { idx in
                             #if os(iOS)
                             if idx > 0 {
                                 Divider().padding(.trailing, -100)
@@ -603,12 +992,9 @@ struct ArabicLetterView: View {
                                 tashkeels: chunks[idx],
                                 useQuranicFontForLetter: useQuranicFontForLetter
                             )
-                            .padding(.top, 14)
                         }
-                        #if os(iOS)
-                        .listRowSeparator(.hidden, edges: .bottom)
-                        #endif
                     }
+                    .padding(.top, 6)
                 }
 
                 Section(header: Text("WITH HAMZA")) {
@@ -730,9 +1116,9 @@ struct ArabicLetterView: View {
                 } else if data.transliteration.contains("mad") {
                     Group {
                         Text("The wavy line above a vowel letter is called \"Madd.\" In Arabic, Madd (مَدّ) means stretching or elongation. In Quranic recitation, it marks a measured elongation, not just a decorative spelling mark.")
-                        Text("In the Quran, this Madd can fall under 3 main long-Madd cases from Tajweed: Madd Muttassil, Madd Mufassil, and Madd Lazim.")
+                        Text("In the Quran, this Madd can fall under 3 main long-Madd cases from Tajweed: Madd Muttassil, Madd Munfasil, and Madd Lazim.")
                         Text("Madd Muttassil (مَدّ مُتَّصِل) means \"connected Madd.\" Muttassil means connected because the Madd letter is followed by a hamzah in the same word, so it is lengthened 4 or 5 counts.")
-                        Text("Madd Mufassil (مَدّ مُنْفَصِل) means \"separated Madd.\" Mufassil means separated because the Madd letter comes at the end of one word and the next word begins with hamzah, so it may be read 2, 4, or 5 counts depending on the recitation style.")
+                        Text("Madd Munfasil (مَدّ مُنْفَصِل) means \"separated Madd.\" Munfasil means separated because the Madd letter comes at the end of one word and the next word begins with hamzah, so it may be read 2, 4, or 5 counts depending on the recitation style.")
                         Text("Madd Lazim (مَدّ لَازِم) means \"necessary Madd.\" Lazim means necessary or required because the Madd letter is followed by a permanent sukoon or shaddah, so it is lengthened 6 counts.")
                         Text("These are special mudood (مُدُود), the plural of Madd. They happen when natural Madd is no longer just 2 counts because hamzah, sukoon, or shaddah changes the rule.")
                     }
@@ -768,28 +1154,35 @@ struct TashkeelRow: View {
         letterData.sound
     }
 
+    /// How the letter is READ with this mark — the only caption a row needs. Naming the mark ("Miniature Waaw",
+    /// "Sukuun 2") told the reader nothing about the sound and made every cell three lines tall.
+    private func reading(_ tk: Tashkeel) -> String {
+        if !tk.transliteration.isEmpty { return baseSound + tk.transliteration }
+        if tk.english == "Shaddah" { return baseSound + baseSound }
+        return baseSound   // the sukoons: the bare consonant
+    }
+
     var body: some View {
-        // Arabic reads right-to-left, so the harakaat columns run right-to-left (first one on the right).
+        // Deliberately the SAME layout as `HamzaPracticeRow.practiceTriplet`: reading above, glyph below, 20pt
+        // between columns, and no fixed glyph box — the letter is free to grow with the size slider, and the
+        // spacing is the one that already reads well on the Hamza section.
         HStack(spacing: 20) {
+            // The table doesn't divide evenly into threes, so the last row is short. Its placeholders come
+            // FIRST, which under right-to-left puts them on the right — leaving the real entry in the column it
+            // continues from (the Uthmani sukoon lands directly beneath the plain one).
+            if tashkeels.count < 3 {
+                ForEach(0..<(3 - tashkeels.count), id: \.self) { _ in
+                    Color.clear.frame(maxWidth: .infinity, maxHeight: 1)
+                }
+            }
+
             ForEach(tashkeels, id: \.english) { tk in
-                VStack(spacing: useQuranicFontForLetter ? 4 : 8) {
-                    Group {
-                        if !tk.transliteration.isEmpty {
-                            Text(baseSound + tk.transliteration)
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                        } else if tk.english == "Shaddah" {
-                            Text(baseSound + baseSound)
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                        } else if tk.english.contains("Sukoon") {
-                            Text(baseSound)
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                        }
-                    }
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.5)
+                VStack {
+                    Text(reading(tk))
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.5)
 
                     Text(letterData.letter + tk.tashkeelMark)
                         .font(
@@ -799,14 +1192,7 @@ struct TashkeelRow: View {
                         )
                         .dynamicTypeSize(settings.arabicLetterDynamicTypeSize...)
                         .frame(maxWidth: .infinity)
-
-                    #if os(iOS)
-                    Text(tk.english)
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.5)
-                    #endif
+                        .padding(.vertical, useQuranicFontForLetter ? 0 : 8)
                 }
             }
         }
@@ -1004,31 +1390,71 @@ struct ArabicLetterRow: View, Equatable {
         let matchedTransliteration = !query.isEmpty && letterData.transliteration.lowercased().contains(query)
         let matchedLetter = !query.isEmpty && letterData.letter.lowercased().contains(query)
         return NavigationLink(destination: ArabicLetterView(letterData: letterData)) {
-            HStack {
-                HighlightedSnippet(
-                    source: letterData.transliteration,
-                    term: searchQuery,
-                    font: .subheadline,
-                    accent: accentColor.color,
-                    fg: .primary,
-                    guaranteeMatch: matchedTransliteration
-                )
-
-                Spacer()
-
+            // The row carries what the grid tile carries — the letter, its Arabic name, its transliteration and
+            // its three joined forms — instead of a transliteration marooned at one edge and a glyph at the
+            // other. The letter leads in the glass badge the Quran and 99 Names rows put their NUMBER in; here
+            // there is no number, so the letter itself takes that place — clear when it's an ordinary letter,
+            // tinted in the accent when it's a favorite, so favorites are visible while scrolling.
+            HStack(spacing: 12) {
                 HighlightedSnippet(
                     source: letterData.letter,
                     term: searchQuery,
                     font: (useFontArabic && !letterData.isNonArabicScriptLetter)
-                        ? .custom(fontArabic, size: 22, relativeTo: .title2)
+                        ? .custom(fontArabic, size: 24, relativeTo: .title2)
                         : .title2,
                     accent: accentColor.color,
                     fg: accentColor.color,
                     guaranteeMatch: matchedLetter
                 )
                 .dynamicTypeSize(settings.arabicLetterDynamicTypeSize...)
+                .lineLimit(1)
+                .minimumScaleFactor(0.6)
+                .frame(width: 42, height: 38)
+                .conditionalGlassEffect(
+                    clear: !isFavorite,
+                    rectangle: true,
+                    useColor: isFavorite ? 0.25 : nil,
+                    customTint: isFavorite ? accentColor.color : nil
+                )
+
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(letterData.name)
+                        .font(
+                            (useFontArabic && !letterData.isNonArabicScriptLetter)
+                                ? .custom(fontArabic, size: 16, relativeTo: .subheadline)
+                                : .subheadline
+                        )
+                        .dynamicTypeSize(settings.arabicLetterDynamicTypeSize...)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+
+                    HighlightedSnippet(
+                        source: letterData.transliteration,
+                        term: searchQuery,
+                        font: .caption,
+                        accent: accentColor.color,
+                        fg: .secondary,
+                        guaranteeMatch: matchedTransliteration
+                    )
+                    .lineLimit(1)
+                }
+
+                Spacer(minLength: 4)
+
+                // `forms` is [final, medial, initial]; reversed so this RTL-rendered text puts the initial form
+                // on the right, matching the detail view.
+                Text(letterData.forms.prefix(3).reversed().joined(separator: "\u{2002}"))
+                    .font(
+                        (useFontArabic && !letterData.isNonArabicScriptLetter)
+                            ? .custom(fontArabic, size: 13, relativeTo: .caption)
+                            : .caption
+                    )
+                    .dynamicTypeSize(settings.arabicLetterDynamicTypeSize...)
+                    .foregroundColor(.secondary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.5)
             }
-            .padding(.vertical, -2)
+            .padding(.vertical, 2)
         }
         #if os(iOS)
         .swipeActions(edge: .leading) { favButton() }
@@ -1059,41 +1485,118 @@ struct ArabicLetterRow: View, Equatable {
     }
 }
 
+/// The Western digit in a badge on the left, the Arabic name and its transliteration in the middle, the Arabic
+/// numeral large on the right — the same left-to-right reading order as a letter row, instead of the three
+/// loose columns it used to be.
 struct ArabicNumberRow: View {
     @ObservedObject private var settings = Settings.shared
     let numberData: (number: String, name: String, transliteration: String, englishNumber: String)
 
     var body: some View {
-        HStack {
+        HStack(spacing: 12) {
             Text(numberData.englishNumber)
-                .font(.title3)
+                .font(.subheadline.weight(.semibold))
+                .monospacedDigit()
+                .foregroundColor(.secondary)
+                .frame(minWidth: 26)
+                .padding(.vertical, 3)
+                .padding(.horizontal, 6)
+                .background(
+                    RoundedRectangle(cornerRadius: 8, style: .continuous)
+                        .fill(settings.accentColor.color.opacity(0.12))
+                )
 
-            Spacer()
-
-            VStack(alignment: .center) {
+            VStack(alignment: .leading, spacing: 1) {
                 Text(numberData.name)
                     .font(
                         settings.useFontArabic
-                            ? settings.scalableArabicFont(base: 15, relativeTo: .subheadline)
+                            ? settings.scalableArabicFont(base: 17, relativeTo: .subheadline)
                             : .subheadline
                     )
                     .dynamicTypeSize(settings.arabicLetterDynamicTypeSize...)
-                    .foregroundColor(settings.accentColor.color)
+                    .foregroundColor(.primary)
 
                 Text(numberData.transliteration)
-                    .font(.subheadline)
+                    .font(.caption)
                     .foregroundColor(.secondary)
             }
 
-            Spacer()
+            Spacer(minLength: 4)
 
             Text(numberData.number)
-                .font(.title2)
+                .font(
+                    settings.useFontArabic
+                        ? settings.scalableArabicFont(base: 26, relativeTo: .title2)
+                        : .title2
+                )
                 .dynamicTypeSize(settings.arabicLetterDynamicTypeSize...)
                 .foregroundColor(settings.accentColor.color)
         }
+        .lineLimit(1)
+        .minimumScaleFactor(0.6)
+        // Negative: the Arabic numeral's line box is taller than the glyph (the Quranic faces leave room for
+        // tashkeel above it), so the row already carries more height than it looks like it does.
+        .padding(.vertical, -2)
+        #if os(iOS)
+        // Tapping a number blows it up full screen, exactly like a letter or a name.
+        .contentShape(Rectangle())
+        .onTapGesture {
+            settings.hapticFeedback()
+            FocusOverlayPresenter.shared.present(.number(numberData))
+        }
+        #endif
     }
 }
+
+#if os(iOS)
+/// The number as a tile, mirroring `ArabicLetterGridTile` so the grid mode covers the whole screen and not
+/// just the letters.
+struct ArabicNumberGridTile: View {
+    @ObservedObject private var settings = Settings.shared
+    let numberData: (number: String, name: String, transliteration: String, englishNumber: String)
+
+    var body: some View {
+        Button {
+            settings.hapticFeedback()
+            FocusOverlayPresenter.shared.present(.number(numberData))
+        } label: {
+            VStack(spacing: 3) {
+                // Fixed box for the same reason as the letter tiles: the Arabic face's line box is much taller
+                // than the glyph, and the difference is dead space.
+                Text(numberData.number)
+                    .font(
+                        settings.useFontArabic
+                            ? settings.scalableArabicFont(base: 30, relativeTo: .title)
+                            : .title
+                    )
+                    .dynamicTypeSize(settings.arabicLetterDynamicTypeSize...)
+                    .foregroundColor(settings.accentColor.color)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
+                    .frame(height: 34)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Text(numberData.englishNumber)
+                    .font(.caption.weight(.semibold))
+                    .monospacedDigit()
+                    .foregroundColor(.primary)
+
+                Text(numberData.transliteration)
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.5)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 4)
+            .padding(.horizontal, 8)
+            .contentShape(Rectangle())
+            .conditionalGlassEffect(clear: true, rectangle: true)
+        }
+        .buttonStyle(.plain)
+    }
+}
+#endif
 
 struct StopSignInfo: Identifiable {
     let title: String
@@ -1218,25 +1721,29 @@ struct ArabicLetterGridTile: View {
         .buttonStyle(.plain)
     }
 
+    /// Sized to the glyph rather than to the Quranic face's (very tall) line box — but it grows with the size
+    /// slider, or the letter would be pinned at whatever fits 34pt no matter where the slider sat.
+    private var glyphBoxHeight: CGFloat {
+        let steps = Settings.arabicLetterDynamicTypeSizes.count - 1
+        let index = min(max(settings.arabicLetterSizeIndex, 0), steps)
+        return 34 + CGFloat(index) * 7
+    }
+
     private var tile: some View {
         Group {
-            VStack(spacing: 0) {
+            VStack(spacing: 3) {
                 Text(letterData.letter)
                     .font(glyphFont)
                     .dynamicTypeSize(settings.arabicLetterDynamicTypeSize...)
                     .foregroundColor(accentColor.color)
                     .lineLimit(1)
                     .minimumScaleFactor(0.6)
+                    .frame(height: glyphBoxHeight)
+                    .fixedSize(horizontal: false, vertical: true)
 
-                Text(letterData.name)
-                    .font(.caption.weight(.semibold))
-                    .foregroundColor(.primary)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.5)
-                
                 Text(letterData.transliteration)
                     .font(.caption2.weight(.semibold))
-                    .foregroundColor(.primary)
+                    .foregroundColor(.secondary)
                     .lineLimit(1)
                     .minimumScaleFactor(0.5)
 
@@ -1253,14 +1760,17 @@ struct ArabicLetterGridTile: View {
                     .foregroundColor(.secondary)
                     .lineLimit(1)
                     .minimumScaleFactor(0.5)
+                    .frame(height: 18)
             }
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 8)
-            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
+            .padding(.horizontal, 8)
             .contentShape(Rectangle())
+            // Clear unless it's a favorite — same as the 99 Names and surah grids.
             .conditionalGlassEffect(
+                clear: !isFavorite,
                 rectangle: true,
-                useColor: isFavorite ? 0.25 : 0.12,
+                useColor: isFavorite ? 0.25 : nil,
                 customTint: isFavorite ? accentColor.color : nil
             )
         }

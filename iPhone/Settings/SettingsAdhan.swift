@@ -241,6 +241,15 @@ extension Settings {
     /// nothing else should restate the number.
     static let travelThresholdM: CLLocationDistance = 48 * oneMile   // ≈ 77 249 m
 
+    /// How far back inside the threshold you must come before traveling mode switches itself OFF again. Kept to
+    /// a single mile: enough that GPS jitter alone can't flip the mode back and forth on the 48-mile line, small
+    /// enough that the threshold stays essentially exact.
+    static let travelHysteresisM: CLLocationDistance = 1 * oneMile   // ≈ 1 609 m
+
+    /// The auto-toggle can't notify more often than this, whatever the location does. A backstop for the case
+    /// hysteresis can't cover: genuinely crossing back and forth over the line (a commute that straddles it).
+    static let travelNotifyCooldown: TimeInterval = 30 * 60
+
     /// How far you can be from where a city name was *resolved* and still plausibly be in that city. Wide
     /// enough to cover a large metro area and a commute across it; narrow enough that a long drive, or the
     /// first hour of a flight, stops the app from claiming you are somewhere you left.
@@ -844,6 +853,11 @@ extension Settings {
         #endif
     }
 
+    // NOTE: deliberately NOT bounced onto the main queue. Deferring this with `DispatchQueue.main.async` makes
+    // it run AFTER its caller has already moved on — so the "the user just toggled this by hand, skip one
+    // auto-check" flag has been cleared by the time the deferred check finally runs, and the auto-check happily
+    // overrides the manual choice and announces it. That is where the notification/dialog spam came from. It
+    // runs inline, on whatever thread called it, exactly as it did before 4.5.3.
     func checkIfTraveling() {
         guard Bundle.main.bundleIdentifier?.contains("Widget") != true,
               travelAutomatic,
@@ -857,39 +871,62 @@ extension Settings {
         let home  = CLLocation(latitude: homeLocation.latitude, longitude: homeLocation.longitude)
         // Compared in metres against the one declared threshold, rather than re-deriving 48 miles here with a
         // second copy of the metres-per-mile constant.
-        let isAway = here.distance(from: home) >= Self.travelThresholdM
+        let distance = here.distance(from: home)
+
+        // HYSTERESIS. A single threshold is what made this spam: sitting anywhere near 48 miles — or simply
+        // having the GPS wander by a few hundred metres, which it does constantly — flipped `travelingMode`
+        // back and forth, and every flip fired a notification AND queued a confirmation dialog. Turning ON
+        // still happens at the threshold, but turning OFF requires coming a clear margin back inside it, so a
+        // borderline position settles on one answer instead of oscillating.
+        let isAway: Bool
+        if travelingMode {
+            isAway = distance > Self.travelThresholdM - Self.travelHysteresisM
+        } else {
+            isAway = distance >= Self.travelThresholdM
+        }
 
         if isAway {
             if !travelingMode {
                 withAnimation { travelingMode = true }
                 travelTurnOffAutomatic = false
                 travelTurnOnAutomatic  = true
-                #if os(iOS)
-                let content = UNMutableNotificationContent()
-                content.title = AppIdentifiers.appName
-                content.body  = "Traveling mode automatically turned on at \(currentLocation.city), away from your home city of \(homeLocation.city)"
-                content.sound = .default
-                let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 1, repeats: false)
-                let req = UNNotificationRequest(identifier: Self.travelingNotificationId, content: content, trigger: trigger)
-                UNUserNotificationCenter.current().add(req)
-                #endif
+                notifyTravelingModeChanged(
+                    body: "Traveling mode automatically turned on at \(currentLocation.city), away from your home city of \(homeLocation.city)"
+                )
             }
         } else {
             if travelingMode {
                 withAnimation { travelingMode = false }
                 travelTurnOnAutomatic  = false
                 travelTurnOffAutomatic = true
-                #if os(iOS)
-                let content = UNMutableNotificationContent()
-                content.title = AppIdentifiers.appName
-                content.body  = "Traveling mode automatically turned off at \(currentLocation.city), near your home city of \(homeLocation.city)"
-                content.sound = .default
-                let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 1, repeats: false)
-                let req = UNNotificationRequest(identifier: Self.travelingNotificationId, content: content, trigger: trigger)
-                UNUserNotificationCenter.current().add(req)
-                #endif
+                notifyTravelingModeChanged(
+                    body: "Traveling mode automatically turned off at \(currentLocation.city), near your home city of \(homeLocation.city)"
+                )
             }
         }
+    }
+
+    /// The auto-toggle's notification, rate-limited. Even with hysteresis, a route that genuinely crosses the
+    /// 48-mile line repeatedly (a commute that straddles it) would otherwise notify on every crossing — so a
+    /// cooldown caps it. The mode itself still switches; only the *announcement* is suppressed.
+    private func notifyTravelingModeChanged(body: String) {
+        #if os(iOS)
+        let now = Date()
+        if let last = lastTravelingNotificationAt,
+           now.timeIntervalSince(last) < Self.travelNotifyCooldown {
+            logger.debug("Traveling-mode notification suppressed (cooldown)")
+            return
+        }
+        lastTravelingNotificationAt = now
+
+        let content = UNMutableNotificationContent()
+        content.title = AppIdentifiers.appName
+        content.body  = body
+        content.sound = .default
+        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 1, repeats: false)
+        let req = UNNotificationRequest(identifier: Self.travelingNotificationId, content: content, trigger: trigger)
+        UNUserNotificationCenter.current().add(req)
+        #endif
     }
     
     private static let hijriCalendarAR: Calendar = {
@@ -1263,10 +1300,13 @@ extension Settings {
         return result
     }
 
+    // Runs inline, on the calling thread — see the note on `checkIfTraveling`. Deferring this onto the main
+    // queue reorders it against the callers that set the one-shot "skip the auto-check" flags, which is what
+    // made traveling mode and the calculation method re-announce themselves.
     func fetchPrayerTimes(force: Bool = false, notification: Bool = false, calledFrom: StaticString = #function, completion: (() -> Void)? = nil) {
         Self.ensureNetworkMonitorStarted()
         updateDates()
-        
+
         guard let loc = currentLocation, loc.latitude  != 1000, loc.longitude != 1000 else {
             logger.debug("No valid location – skip refresh")
             // Hijri-event reminders are date-based and don't need a location, so still (re)schedule

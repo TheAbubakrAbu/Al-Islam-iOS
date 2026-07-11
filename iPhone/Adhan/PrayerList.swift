@@ -392,21 +392,44 @@ struct PrayerList: View {
     @ViewBuilder
     private func tilesContent(prayers: [Prayer], isComparisonBaseline: Bool = false, highlightsCurrent: Bool = true) -> some View {
         #if os(watchOS)
+        // Tighter on the watch: the icon shares the name's line instead of taking one of its own, and the
+        // padding comes down — that's what lets six prayers fit a screen at a readable size.
         let columnCount = 2
+        let tileSpacing: CGFloat = 6
+        let tileHorizontalPadding: CGFloat = 7
+        let tileVerticalPadding: CGFloat = 6
         #else
         let columnCount = settings.travelingMode ? 2 : 3
+        let tileSpacing: CGFloat = 8
+        let tileHorizontalPadding: CGFloat = 10
+        let tileVerticalPadding: CGFloat = 6
         #endif
         let columns = Array(
-            repeating: GridItem(.flexible(), spacing: 10),
+            repeating: GridItem(.flexible(), spacing: tileSpacing),
             count: columnCount
         )
 
-        LazyVGrid(columns: columns, spacing: 10) {
+        LazyVGrid(columns: columns, spacing: tileSpacing) {
             ForEach(prayers, id: \.stableDisplayID) { prayer in
                 let color: Color = isComparisonBaseline ? .secondary : (highlightsCurrent ? prayerColor(for: prayer, in: prayers) : .primary)
                 let isCurrent = highlightsCurrent && !isComparisonBaseline && isCurrentPrayer(prayer)
 
                 VStack(alignment: .leading, spacing: 6) {
+                    #if os(watchOS)
+                    HStack(spacing: 4) {
+                        Image(systemName: prayer.image)
+                            .font(.caption2)
+                            .foregroundColor(color)
+
+                        Text(prayer.compactDisplayName)
+                            .font(.caption.weight(.semibold))
+                            .foregroundColor(color)
+                    }
+
+                    Text(prayer.time, style: .time)
+                        .font(.caption.monospacedDigit())
+                        .foregroundColor(color)
+                    #else
                     HStack(alignment: .top) {
                         Image(systemName: prayer.image)
                             .font(.subheadline)
@@ -414,11 +437,9 @@ struct PrayerList: View {
 
                         Spacer()
 
-                        #if os(iOS)
                         if !isComparisonBaseline {
                             prayerBell(for: prayer, rowColor: color)
                         }
-                        #endif
                     }
 
                     Text(prayer.compactDisplayName)
@@ -428,13 +449,17 @@ struct PrayerList: View {
                     Text(prayer.time, style: .time)
                         .font(.subheadline.monospacedDigit())
                         .foregroundColor(color)
+                    #endif
                 }
-                .padding(.horizontal, 10)
-                .padding(.vertical, 10)
+                .padding(.horizontal, tileHorizontalPadding)
+                .padding(.vertical, tileVerticalPadding)
                 .frame(maxWidth: .infinity, alignment: .leading)
+                // Only the CURRENT prayer's tile is tinted. The rest are clear, so the one that matters reads
+                // at a glance instead of competing with five other filled boxes.
                 .conditionalGlassEffect(
+                    clear: !isCurrent,
                     rectangle: true,
-                    useColor: isCurrent ? 0.25 : 0.10,
+                    useColor: isCurrent ? 0.25 : nil,
                     customTint: isCurrent ? settings.accentColor.accent2 : nil
                 )
                 .contentShape(Rectangle())

@@ -143,8 +143,12 @@ struct CalendarView: View {
                             .listRowSeparator(.hidden)
 
                         ForEach(eventRows, id: \.id) { row in
-                            HijriEventRow(row: row, isPast: isPastEvent(row))
-                                .id(row.id)
+                            HijriEventRow(
+                                row: row,
+                                isPast: isPastEvent(row),
+                                isNext: row.id == nextEventID
+                            )
+                            .id(row.id)
                         }
 
                         yearStepperRow
@@ -311,6 +315,15 @@ struct CalendarView: View {
         row.date < Calendar.current.startOfDay(for: Date())
     }
 
+    /// The soonest event that hasn't happened yet — the one row worth calling out. Nil while browsing a past
+    /// year, where nothing is upcoming.
+    private var nextEventID: String? {
+        eventRows
+            .filter { !isPastEvent($0) }
+            .min(by: { $0.date < $1.date })?
+            .id
+    }
+
     @ViewBuilder
     private var dateOverlayHeader: some View {
         if let hijriDate = settings.hijriDate {
@@ -357,44 +370,94 @@ private struct HijriEventRowModel {
     let date: Date
 }
 
+/// An Islamic date as a card rather than a wall of stacked text: the Hijri day in a badge on the left (the
+/// thing you actually scan for), the event and its meaning in the middle, and how far away it is on the right.
+/// Past events grey out; the next one coming up is called out, since that's the only row anyone is looking for.
 private struct HijriEventRow: View {
     @ObservedObject private var settings = Settings.shared
 
     let row: HijriEventRowModel
     let isPast: Bool
+    /// True for the soonest upcoming event — exactly one row in the list.
+    var isNext: Bool = false
+
+    /// "in 12 days" / "today" / "in 3 months". Nil once the event has passed.
+    private var countdownText: String? {
+        guard !isPast else { return nil }
+        let days = Calendar.current.dateComponents([.day], from: Calendar.current.startOfDay(for: Date()),
+                                                   to: Calendar.current.startOfDay(for: row.date)).day ?? 0
+        switch days {
+        case ..<0:  return nil
+        case 0:     return "Today"
+        case 1:     return "Tomorrow"
+        case 2...30: return "in \(days) days"
+        default:
+            let months = max(days / 30, 1)
+            return months == 1 ? "in 1 month" : "in \(months) months"
+        }
+    }
+
+    /// The Hijri day and month, split out of "10 Muharram, 1448 AH" so the badge can stack the number over the
+    /// month name. The year is dropped — the whole list is one year, and the section header already says which.
+    private var hijriParts: (day: String, month: String) {
+        let parts = row.hijriDateText.split(separator: " ", maxSplits: 1).map(String.init)
+        guard parts.count == 2 else { return (row.hijriDateText, "") }
+        let month = parts[1].split(separator: ",").first.map(String.init) ?? parts[1]
+        return (parts[0], month.trimmingCharacters(in: .whitespaces))
+    }
+
+    private var accent: Color { settings.accentColor.color }
 
     var body: some View {
-        HStack {
-            VStack(alignment: .leading, spacing: 4) {
-                Text(row.title)
-                    .font(.headline)
-                    .foregroundColor(isPast ? settings.accentColor.color.opacity(0.55) : settings.accentColor.color)
+        HStack(alignment: .top, spacing: 12) {
+            dateBadge
+
+            VStack(alignment: .leading, spacing: 3) {
+                HStack(spacing: 6) {
+                    Text(row.title)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundColor(isPast ? .primary.opacity(0.6) : .primary)
+
+                    if isNext, let countdownText {
+                        Text(countdownText.uppercased())
+                            .font(.system(size: 9, weight: .bold))
+                            .foregroundStyle(accent)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Capsule().fill(accent.opacity(0.18)))
+                    }
+                }
 
                 Text(row.subtitle)
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundColor(isPast ? .primary.opacity(0.75) : .primary)
+                    .font(.caption.weight(.semibold))
+                    .foregroundColor(isPast ? accent.opacity(0.5) : accent)
 
                 Text(row.description)
-                    .font(.footnote)
-                    .foregroundColor(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-
-            VStack(alignment: .trailing, spacing: 3) {
-                Text(row.hijriDateText)
-                    .font(.caption.weight(.semibold))
-                    .foregroundColor(isPast ? .secondary : .primary)
-                    .padding(.vertical, 2)
-
-                Text(row.gregorianDateText)
                     .font(.caption)
                     .foregroundColor(.secondary)
-                    .padding(.bottom, 2)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                HStack(spacing: 6) {
+                    Text(row.gregorianDateText)
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+
+                    if !isNext, let countdownText {
+                        Text("·")
+                            .font(.caption2)
+                            .foregroundStyle(.tertiary)
+
+                        Text(countdownText)
+                            .font(.caption2)
+                            .foregroundStyle(.tertiary)
+                    }
+                }
+                .padding(.top, 1)
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .padding(.vertical, 4)
-        .opacity(isPast ? 0.55 : 1)
+        .padding(.vertical, 6)
+        .opacity(isPast ? 0.5 : 1)
         .contextMenu {
             Text("Event Actions")
                 .foregroundStyle(.secondary)
@@ -405,6 +468,32 @@ private struct HijriEventRow: View {
             copyButton("Copy Hijri Date", value: row.hijriDateText)
             copyButton("Copy Gregorian Date", value: row.gregorianDateText)
         }
+    }
+
+    /// The Hijri day, large, over its month — a calendar tile, so the eye can run down the column.
+    private var dateBadge: some View {
+        VStack(spacing: 0) {
+            Text(hijriParts.day)
+                .font(.title3.weight(.bold))
+                .monospacedDigit()
+                .foregroundStyle(isNext ? Color.white : accent)
+
+            Text(hijriParts.month)
+                .font(.system(size: 9, weight: .semibold))
+                .lineLimit(1)
+                .minimumScaleFactor(0.6)
+                .foregroundStyle(isNext ? Color.white.opacity(0.9) : Color.secondary)
+                .padding(.horizontal, 2)
+        }
+        .frame(width: 52, height: 48)
+        .background(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(isNext ? accent : accent.opacity(0.12))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .stroke(isNext ? Color.clear : accent.opacity(0.2), lineWidth: 1)
+        )
     }
 
     private func copyButton(_ title: String, value: String) -> some View {

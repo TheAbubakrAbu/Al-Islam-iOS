@@ -61,7 +61,7 @@ struct TasbihView: View {
 
     /// A counter with no dhikr attached: name it whatever you're reciting, or nothing at all, and count.
     private var freeDhikrSection: some View {
-        Section(header: Text("FREE COUNT"), footer: Text("Count any dhikr of your own. The count is kept between visits and has no limit.")) {
+        Section(header: Text("FREE COUNT"), footer: Text("The count is kept between visits and has no limit.")) {
             ZStack {
                 RoundedRectangle(cornerRadius: 24)
                     .fill(isFreeDhikrSelected ? settings.accentColor.color.opacity(0.15) : .clear)
@@ -196,39 +196,108 @@ struct TasbihView: View {
         // `selectedDhikrIndex` is the free-count sentinel or a real row; never an out-of-range index.
         let selectedDhikr = tasbihData.indices.contains(selectedDhikrIndex) ? tasbihData[selectedDhikrIndex] : nil
         let counterBinding = binding(for: selectedDhikrIndex)
+        let cycle = selectedDhikr == nil ? freeCycle : 33
+        let count = counterBinding.wrappedValue
+        // Which turn of the ring you're on, and how far round it. The count itself never wraps.
+        let laps = cycle > 0 ? count / max(cycle, 1) : 0
+        let withinLap = cycle > 0 ? count % max(cycle, 1) : count
 
-        return ZStack {
-            ProgressCircleView(progress: counterBinding.wrappedValue, cycle: selectedDhikr == nil ? freeCycle : 33)
-                .scaledToFit()
-                .frame(maxWidth: 185, maxHeight: 185)
-
-            VStack(alignment: .center, spacing: 5) {
+        return VStack(spacing: 12) {
+            // The dhikr sits ABOVE the ring rather than crammed inside it — the Arabic needed room, and the
+            // count is what belongs at the centre of a counter.
+            VStack(spacing: 2) {
                 Text(selectedDhikr?.arabicText ?? (freeLabel.isEmpty ? "Free Count" : freeLabel))
-                    .font(.title3)
-                    .fontWeight(.bold)
+                    .font(.title3.weight(.bold))
                     .foregroundColor(settings.accentColor.color)
                     .multilineTextAlignment(.center)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.6)
 
-                Text(selectedDhikr?.transliteration ?? "Tap to count")
-                    .font(.subheadline)
-                    .foregroundColor(.primary)
+                Text(selectedDhikr?.transliteration ?? "Tap anywhere to count")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
+            }
 
-                CounterView(counter: counterBinding)
+            ZStack {
+                ProgressCircleView(progress: count, cycle: cycle)
+                    .scaledToFit()
+                    .frame(maxWidth: 170, maxHeight: 170)
+
+                VStack(spacing: 0) {
+                    Text("\(count)")
+                        .font(.system(size: 44, weight: .semibold))
+                        .monospacedDigit()
+                        .foregroundColor(.primary)
+
+                    // Position within the current turn, so a long session still tells you where you are.
+                    Text("\(withinLap) / \(cycle)")
+                        .font(.caption.monospacedDigit())
+                        .foregroundStyle(.secondary)
+
+                    if laps > 0 {
+                        Text(laps == 1 ? "1 round" : "\(laps) rounds")
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(settings.accentColor.color)
+                            .padding(.top, 2)
+                    }
+                }
+            }
+
+            // Explicit controls, so undoing a miscount doesn't mean starting the dhikr over.
+            HStack(spacing: 10) {
+                counterButton(systemImage: "minus", disabled: count == 0) {
+                    counterBinding.wrappedValue = max(0, count - 1)
+                }
+
+                counterButton(systemImage: "arrow.counterclockwise", disabled: count == 0) {
+                    counterBinding.wrappedValue = 0
+                }
+
+                counterButton(systemImage: "plus", prominent: true) {
+                    counterBinding.wrappedValue = count + 1
+                }
             }
         }
-        .padding()
-        .frame(maxWidth: .infinity, minHeight: 220, alignment: .center)
+        .padding(.vertical, 14)
+        .padding(.horizontal, 16)
+        .frame(maxWidth: .infinity)
         .contentShape(Rectangle())
         #if os(iOS)
         .conditionalGlassEffect(rectangle: true, useColor: 0.12)
         #endif
+        // The whole card is still the counter — the buttons are for correcting, not for the counting itself.
         .onTapGesture {
             settings.hapticFeedback()
-            withAnimation {
+            withAnimation(.easeOut(duration: 0.15)) {
                 counterBinding.wrappedValue += 1
             }
         }
+    }
+
+    private func counterButton(systemImage: String, prominent: Bool = false, disabled: Bool = false,
+                               action: @escaping () -> Void) -> some View {
+        Button {
+            settings.hapticFeedback()
+            withAnimation(.easeOut(duration: 0.15)) { action() }
+        } label: {
+            Image(systemName: systemImage)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(prominent ? Color.white : settings.accentColor.color)
+                .frame(width: prominent ? 64 : 44, height: 36)
+                .background(
+                    Capsule().fill(
+                        prominent
+                            ? settings.accentColor.color.opacity(disabled ? 0.4 : 1)
+                            : settings.accentColor.color.opacity(0.15)
+                    )
+                )
+                .opacity(disabled && !prominent ? 0.4 : 1)
+        }
+        .buttonStyle(.plain)
+        .disabled(disabled)
     }
 }
 

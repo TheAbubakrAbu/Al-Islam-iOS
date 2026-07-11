@@ -415,10 +415,13 @@ struct SurahRow: View, Equatable {
             Spacer(minLength: 0)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
-        .padding(8)
+        .padding(.horizontal, 8)
+        .padding(.vertical, 6)
+        // Favorites are tinted, everything else is clear — see the 99 Names grid for the same reasoning.
         .conditionalGlassEffect(
+            clear: !favoriteState,
             rectangle: true,
-            useColor: favoriteState ? 0.25 : 0.12,
+            useColor: favoriteState ? 0.25 : nil,
             customTint: favoriteState ? accentColor.color : nil
         )
         .contentShape(Rectangle())

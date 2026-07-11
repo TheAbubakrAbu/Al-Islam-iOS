@@ -147,7 +147,10 @@ struct GlanceCard: View {
               let fajr = next.first(where: { $0.nameTransliteration == "Fajr" })?.time,
               fajr > maghrib
         else { return nil }
-        return "\(Self.durationText(fajr.timeIntervalSince(maghrib)))\nMaghrib to Fajr"
+        // The actual clock times, like the fasting window above — "Maghrib to Fajr" only restated the names of
+        // the two prayers, which the list already shows.
+        return "\(Self.durationText(fajr.timeIntervalSince(maghrib)))\n"
+            + "\(settings.formatDate(maghrib)) – \(settings.formatDate(fajr))"
     }
 
     private var moonSummary: String {

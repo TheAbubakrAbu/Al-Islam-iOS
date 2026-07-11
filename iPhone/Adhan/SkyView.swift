@@ -177,16 +177,19 @@ struct SkyView: View {
     @State private var now = Date()
     private let tick = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
-    /// Holds the prayer columns, the arc, the moon and the countdown. Trimmed down: the clock no longer takes
-    /// a row of its own (it only floats in while scrubbing), so the card doesn't need the extra slack.
-    private let height: CGFloat = 250
+    /// Holds the prayer columns, the arc, the moon and the countdown. Trimmed again: the scrubbed-moment
+    /// readout used to need clear air above the moon row to float into, which left a dead band between the arc
+    /// and the moon. It now floats over the prayer columns at the top of the card instead (see `scrubReadout`),
+    /// so that band can go.
+    private let height: CGFloat = 212
 
     /// Horizontal row inset, measured off the sections around this card rather than assumed. A grouped row
     /// already carries the list's own 20pt margin, so the card adds nothing; a plain row carries none, and
     /// its neighbours (the location pill, the prayer tiles) sit at 19.33pt.
     private var sideInset: CGFloat { settings.defaultView ? 0 : 19.33 }
     /// Vertical padding on the arc, keeping its peak and trough clear of the text bands above and below.
-    private let inset: CGFloat = 92
+    /// Scaled down with the card so the curve keeps the same shape in less height.
+    private let inset: CGFloat = 78
 
     // MARK: Derived state
 
@@ -288,6 +291,8 @@ struct SkyView: View {
 
             content
         }
+        .overlay(alignment: .top) { scrubReadout }
+        .animation(.easeInOut(duration: 0.15), value: scrubber.isScrubbing)
         .frame(height: height)
         // Everything inside draws light-on-dark, whatever the phone's appearance.
         .environment(\.colorScheme, .dark)
@@ -316,11 +321,14 @@ struct SkyView: View {
 
             Spacer(minLength: 0)
 
+            // Lifted off the countdown so the moon reads as part of the sky rather than as a caption on the
+            // progress bar. The `Spacer` above absorbs it, so the card doesn't grow.
             moonAndClock
+                .padding(.bottom, 10)
 
             if settings.prayers != nil {
                 PrayerCountdown(presentation: .skyFooter)
-                    .padding(.top, 6)
+                    .padding(.top, 4)
             }
         }
         .padding(.horizontal, 16)
@@ -378,28 +386,32 @@ struct SkyView: View {
             .lineLimit(1)
             .minimumScaleFactor(0.7)
             .frame(maxWidth: .infinity)
-            .overlay(alignment: .top) {
-                if scrubber.isScrubbing {
-                    HStack(spacing: 8) {
-                        if let name = displayedPrayer?.displayName {
-                            Text(name)
-                                .font(.caption.weight(.semibold))
-                                .foregroundStyle(.white)
-                        }
+        }
+    }
 
-                        Text(settings.formatDate(displayedDate))
-                            .font(.caption.monospacedDigit())
-                            .foregroundStyle(.white)
-                    }
-                    .lineLimit(1)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 4)
-                    .background(Capsule().fill(Color.black.opacity(0.35)))
-                    .offset(y: -28)
-                    .transition(.opacity)
+    /// The moment (and prayer) being previewed while the sun is dragged. It rides at the TOP of the card, over
+    /// the two prayer columns — they report the *live* prayer, so a scrub would otherwise be mute — rather than
+    /// above the moon, which forced the card to hold empty space for it at all times.
+    @ViewBuilder
+    private var scrubReadout: some View {
+        if scrubber.isScrubbing {
+            HStack(spacing: 6) {
+                if let name = displayedPrayer?.displayName {
+                    Text(name)
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(.white)
                 }
+
+                Text(settings.formatDate(displayedDate))
+                    .font(.caption2.monospacedDigit())
+                    .foregroundStyle(.white)
             }
-            .animation(.easeInOut(duration: 0.15), value: scrubber.isScrubbing)
+            .lineLimit(1)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 3)
+            .background(Capsule().fill(Color.black.opacity(0.45)))
+            .padding(.top, 4)
+            .transition(.opacity)
         }
     }
 
@@ -425,9 +437,11 @@ struct SkyView: View {
                         style: StrokeStyle(lineWidth: 1.5, dash: [3, 5])
                     )
 
+                // Edge to edge, like the arc it belongs to. Inset by 12 on each side it read as a shorter,
+                // unrelated line floating inside a wider graph.
                 Path { path in
-                    path.move(to: CGPoint(x: rect.minX + 12, y: horizonY))
-                    path.addLine(to: CGPoint(x: rect.maxX - 12, y: horizonY))
+                    path.move(to: CGPoint(x: rect.minX, y: horizonY))
+                    path.addLine(to: CGPoint(x: rect.maxX, y: horizonY))
                 }
                 .stroke(Color.white.opacity(0.45), lineWidth: 1)
 

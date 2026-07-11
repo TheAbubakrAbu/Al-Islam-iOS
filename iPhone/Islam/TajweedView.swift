@@ -87,7 +87,7 @@ struct TajweedFoundationsView: View {
                 Text("Enhancing Spiritual Connection: Many Muslims find that reciting the Quran with Tajweed enhances their spiritual experience. The attention to detail required encourages mindfulness and deeper reflection on the meaning of the verses, making your recitation more immersive and meaningful.")
                     .font(.body)
 
-                Text("Following the Sunnah: The Prophet Muhammad ﷺ emphasized the importance of reciting the Quran correctly, saying: \"Whoever does not recite the Quran in a pleasant manner is not of us.\" By learning Tajweed, you honor his teachings and example.")
+                Text("Following the Sunnah: The Prophet Muhammad ﷺ encouraged reciting the Quran beautifully, saying: \"He is not one of us who does not recite the Quran melodiously\" (Sahih al-Bukhari 7527). By learning Tajweed, you honor his teachings and example.")
                     .font(.body)
             }
 
@@ -547,7 +547,7 @@ private struct TajweedInMushafView: View {
                     TajweedPairRow(arabic: "بًا", english: "ban", arabicFont: arabicHeadlineFont)
                     TajweedPairRow(arabic: "بٌ", english: "bun", arabicFont: arabicHeadlineFont)
                     TajweedPairRow(arabic: "بٍ", english: "bin", arabicFont: arabicHeadlineFont)
-                    TajweedPairRow(arabic: "كِتَابًا عَرَبِيًّا", english: "kitaban arabiyyan", arabicFont: arabicHeadlineFont)
+                    TajweedPairRow(arabic: "قُرْءَانًا عَرَبِيًّا", english: "quraanan arabiyyan", arabicFont: arabicHeadlineFont)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
 
@@ -562,21 +562,21 @@ private struct TajweedInMushafView: View {
                 VStack(alignment: .leading, spacing: 12) {
                     TajweedRuleRow(
                         arabic: "أُمَّةٞ قَدۡ",
-                        pronunciation: "ummatun qad",
+                        pronunciation: "ummatun(g) qad — hidden noon with ghunnah",
                         rule: "Special Dammatayn",
                         arabicFont: arabicFont
                     )
 
                     TajweedRuleRow(
-                        arabic: "صِرَٰطٖ مُّسۡتَقِيمٖا",
-                        pronunciation: "siraatim mustaqeemaa",
+                        arabic: "صِرَٰطٖ مُّسۡتَقِيمٖ",
+                        pronunciation: "siraatim-mustaqeem",
                         rule: "Special Kasratayn",
                         arabicFont: arabicFont
                     )
 
                     TajweedRuleRow(
                         arabic: "أُمَّةٗ وَسَطٗا",
-                        pronunciation: "ummatan wasatan",
+                        pronunciation: "ummataw-wasatan (idghaam with ghunnah)",
                         rule: "Special Fathatayn",
                         arabicFont: arabicFont
                     )
@@ -666,11 +666,13 @@ private struct TajweedMakharijView: View {
                     .resizable()
                     .scaledToFit()
                     .cornerRadius(24)
+                    .focusableImage("Makharij1", title: "Makharij al-Huruf")
 
                 Image("Makharij2")
                     .resizable()
                     .scaledToFit()
                     .cornerRadius(24)
+                    .focusableImage("Makharij2", title: "Makharij al-Huruf")
 
                 Text("Use these diagrams as references, not something to stare at while reciting. Over time, correct makharij become muscle memory.")
                     .font(.body)
@@ -739,7 +741,7 @@ private struct TajweedMakharijView: View {
 
                 VStack(alignment: .leading, spacing: 12) {
                     TajweedPairRow(arabic: "أَحَد", english: "ahad", arabicFont: arabicHeadlineFont)
-                    TajweedPairRow(arabic: "نَعْبُدُ", english: "naabudu", arabicFont: arabicHeadlineFont)
+                    TajweedPairRow(arabic: "نَعْبُدُ", english: "na'-bu-du", arabicFont: arabicHeadlineFont)
                     TajweedPairRow(arabic: "غَفُور", english: "ghafur", arabicFont: arabicHeadlineFont)
                     TajweedPairRow(arabic: "خَالِد", english: "khalid", arabicFont: arabicHeadlineFont)
                 }
@@ -788,7 +790,7 @@ private struct TajweedMakharijView: View {
 
                 VStack(alignment: .leading, spacing: 12) {
                     TajweedPairRow(arabic: "قُلْ", english: "qul", arabicFont: arabicHeadlineFont)
-                    TajweedPairRow(arabic: "سِرَاط", english: "sirat", arabicFont: arabicHeadlineFont)
+                    TajweedPairRow(arabic: "سَمِيع", english: "samee'", arabicFont: arabicHeadlineFont)
                     TajweedPairRow(arabic: "نُور", english: "nur", arabicFont: arabicHeadlineFont)
                     TajweedPairRow(arabic: "رَبِّ", english: "rabbi", arabicFont: arabicHeadlineFont)
                 }
@@ -915,7 +917,7 @@ private struct TajweedHeavyLightView: View {
                 VStack(alignment: .leading, spacing: 12) {
                     TajweedPairRow(arabic: "قَالَ", english: "qala", arabicFont: arabicHeadlineFont)
                     TajweedPairRow(arabic: "صِرَاط", english: "sirat", arabicFont: arabicHeadlineFont)
-                    TajweedPairRow(arabic: "طَبَعَ", english: "tabaa", arabicFont: arabicHeadlineFont)
+                    TajweedPairRow(arabic: "طَبَعَ", english: "ta-ba-'a", arabicFont: arabicHeadlineFont)
                     TajweedPairRow(arabic: "غَفُور", english: "ghafur", arabicFont: arabicHeadlineFont)
                     TajweedPairRow(arabic: "خَالِد", english: "khalid", arabicFont: arabicHeadlineFont)
                 }
@@ -929,7 +931,7 @@ private struct TajweedHeavyLightView: View {
                 Text("Always Light Letters")
                     .font(.subheadline.weight(.semibold))
 
-                Text("ب ت ث ج ح د ذ ز س ش ف ك ل م ن هـ و ي")
+                Text("ء ب ت ث ج ح د ذ ز س ش ف ك م ن هـ و ي")
                     .font(arabicHeadlineFont)
                     .frame(maxWidth: .infinity, alignment: .trailing)
 
@@ -947,7 +949,7 @@ private struct TajweedHeavyLightView: View {
 
                 VStack(alignment: .leading, spacing: 12) {
                     TajweedPairRow(arabic: "بِسْم", english: "bism", arabicFont: arabicHeadlineFont)
-                    TajweedPairRow(arabic: "نَعِيم", english: "naim", arabicFont: arabicHeadlineFont)
+                    TajweedPairRow(arabic: "نَعِيم", english: "na-'eem", arabicFont: arabicHeadlineFont)
                     TajweedPairRow(arabic: "سَبِيل", english: "sabil", arabicFont: arabicHeadlineFont)
                     TajweedPairRow(arabic: "يَوْم", english: "yawm", arabicFont: arabicHeadlineFont)
                     TajweedPairRow(arabic: "فِيهِ", english: "fihi", arabicFont: arabicHeadlineFont)
@@ -984,7 +986,7 @@ private struct TajweedHeavyLightView: View {
                 Text("Light Raa")
                     .font(.subheadline.weight(.semibold))
 
-                Text("With kasrah (ـِ)")
+                Text("Raa with kasrah (ـِ), or raa with sukoon preceded by an ORIGINAL kasrah — unless an isti'la letter with fatha/damma follows it in the same word (قِرْطَاس, مِرْصَاد), which makes it heavy again.")
                     .font(.body)
                     .foregroundColor(.secondary)
 
@@ -995,7 +997,7 @@ private struct TajweedHeavyLightView: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
 
-                Text("Rule of thumb: look at the vowel on the raa, not the surrounding letters.")
+                Text("Rule of thumb: if the raa carries a vowel, look at that vowel. If the raa is sakin, look at the letter BEFORE it — and at what follows, for the isti'la exception.")
                     .font(.body)
             }
 
@@ -1305,7 +1307,7 @@ private struct TajweedMaddView: View {
                 VStack(alignment: .leading, spacing: 12) {
                     TajweedPairRow(arabic: "فِي أَنفُسِكُمْ", english: "fi an-fu-si-kum", arabicFont: arabicHeadlineFont)
                     TajweedPairRow(arabic: "قَالُوا إِنَّا", english: "qalu in-na", arabicFont: arabicHeadlineFont)
-                    TajweedPairRow(arabic: "إِنَّا أَعْطَيْنَاكَ", english: "inna aa-tay-na-ka", arabicFont: arabicHeadlineFont)
+                    TajweedPairRow(arabic: "إِنَّا أَعْطَيْنَاكَ", english: "in-naa a'-tay-naa-ka", arabicFont: arabicHeadlineFont)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
 
@@ -1517,9 +1519,9 @@ private struct TajweedMaddView: View {
                     .font(.body)
 
                 VStack(alignment: .leading, spacing: 12) {
-                    TajweedPairRow(arabic: "الم", english: "Alif Laaaam Miiim", arabicFont: arabicHeadlineFont)
-                    TajweedPairRow(arabic: "كهيعص", english: "Kaaaf Haaa Yaaa Ayyyn Saaaad", arabicFont: arabicHeadlineFont)
-                    TajweedPairRow(arabic: "حم", english: "Haaa Miiim", arabicFont: arabicHeadlineFont)
+                    TajweedPairRow(arabic: "الم", english: "Alif (no madd) Laaaaaam (6) Miiiiiim (6)", arabicFont: arabicHeadlineFont)
+                    TajweedPairRow(arabic: "كهيعص", english: "Kaaaaaaf (6) Haa (2) Yaa (2) 'Ayyyn (4-6) Saaaaaad (6)", arabicFont: arabicHeadlineFont)
+                    TajweedPairRow(arabic: "حم", english: "Haa (2) Miiiiiim (6)", arabicFont: arabicHeadlineFont)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
 
@@ -1546,8 +1548,7 @@ private struct TajweedMaddView: View {
                     .font(.subheadline.weight(.semibold))
 
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("ألف (alone)")
-                    Text("لام (when not followed by sukun internally)")
+                    Text("ألف (alone) — no madd")
                 }
                 .font(.body)
                 .foregroundColor(.secondary)
@@ -1556,7 +1557,20 @@ private struct TajweedMaddView: View {
                 Text("Have Madd")
                     .font(.subheadline.weight(.semibold))
 
-                Text("م س ص ن ق ك ي ع ط ه ر")
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("6 counts — نقص عسلكم")
+                    Text("2 counts — حي طهر")
+                    Text("'Ayn (ع) is a leen letter: 4 or 6 counts.")
+                }
+                .font(.body)
+                .foregroundColor(.secondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+                Text("ن ق ص ع س ل ك م")
+                    .font(arabicHeadlineFont)
+                    .frame(maxWidth: .infinity, alignment: .trailing)
+
+                Text("ح ي ط ه ر")
                     .font(arabicHeadlineFont)
                     .frame(maxWidth: .infinity, alignment: .trailing)
 
@@ -1642,7 +1656,7 @@ private struct TajweedQalqalahView: View {
 
                 VStack(alignment: .leading, spacing: 12) {
                     TajweedPairRow(arabic: "أَحَدْ", english: "aha(d)", arabicFont: arabicHeadlineFont)
-                    TajweedPairRow(arabic: "يَجْعَل", english: "yaj'a(l)", arabicFont: arabicHeadlineFont)
+                    TajweedPairRow(arabic: "يَجْعَل", english: "ya(j)-'al", arabicFont: arabicHeadlineFont)
                     TajweedPairRow(arabic: "أَجْر", english: "a(j)r", arabicFont: arabicHeadlineFont)
                     TajweedPairRow(arabic: "يَقْطَع", english: "ya(q)ta'", arabicFont: arabicHeadlineFont)
                     TajweedPairRow(arabic: "يَبْتَغُون", english: "ya(b)taghun", arabicFont: arabicHeadlineFont)
@@ -1868,7 +1882,7 @@ private struct TajweedIdghamIkhfaView: View {
                 Text("Letters")
                     .font(.subheadline.weight(.semibold))
 
-                Text("The remaining 15 letters (all except idhaar, idghaam, and iqlaab letters)")
+                Text("ت ث ج د ذ ز س ش ص ض ط ظ ف ق ك — the remaining 15 letters (all except the idhaar, idghaam, and iqlaab letters)")
                     .font(.body)
                     .foregroundColor(.secondary)
 
@@ -1893,12 +1907,12 @@ private struct TajweedIdghamIkhfaView: View {
                 VStack(alignment: .leading, spacing: 12) {
                     Text("Strongest")
                         .font(.subheadline.weight(.semibold))
-                    Text("Ikhfaa, Idghaam with ghunnah")
+                    Text("Noon or Miim with shaddah (نّ / مّ)")
                         .foregroundColor(.secondary)
 
                     Text("Medium")
                         .font(.subheadline.weight(.semibold))
-                    Text("Noon or Miim with shaddah")
+                    Text("Idghaam with ghunnah, then Ikhfaa")
                         .foregroundColor(.secondary)
 
                     Text("None")
@@ -2227,7 +2241,7 @@ private struct TajweedHamzatulWaslView: View {
                     Text("ٱمۡشُوا")
                     Text("ٱقۡضُوا")
                     Text("ٱئۡتُوا")
-                    Text("ٱتُونِي")
+                    Text("ٱئۡتُونِي")
                 }
                 .font(.custom(settings.fontArabic, size: 22))
                 .frame(maxWidth: .infinity, alignment: .center)
@@ -2285,7 +2299,7 @@ private struct TajweedHamzatulWaslView: View {
             }
 
             Section("4. Hamzatul-Wasl in Verbs Depends on the Third Letter") {
-                Text("For verbs, examine the third letter: if it has ḍammah, begin with “u”; if it has fatḥah or kasrah, begin with “i”.")
+                Text("For verbs, examine the third letter: if it has ḍammah, begin with “u”; if it has fatḥah or kasrah, begin with “i”. Exception: when that ḍammah is incidental (ʿāriḍah), begin with kasrah instead — ٱمْشُوا، ٱقْضُوا، ٱبْنُوا، ٱمْضُوا، ٱئْتُوا are read imshu, iqdu, ibnu, imdu, i’tu, not umshu / uqdu / ubnu.")
                     .font(.body)
 
                 Text("Example (third letter ḍammah → start with 'u'):")
@@ -2403,7 +2417,7 @@ private struct TajweedWaqfView: View {
                 .foregroundColor(.secondary)
                 .frame(maxWidth: .infinity, alignment: .leading)
 
-                Text("Some scholars said: \"Knowing where to stop is half of recitation.\"")
+                Text("Ali ibn Abi Talib (may Allah be pleased with him) defined tartil as: \"the tajweed of the letters and knowledge of the places of stopping.\"")
                     .font(.body)
             }
 

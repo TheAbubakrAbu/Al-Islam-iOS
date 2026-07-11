@@ -118,46 +118,35 @@ struct SettingsAdhanView: View {
             }
         }
         #endif
+        // The confirmation is raised only in response to something the USER just did here — changing the home
+        // location, or switching one of the automatic modes on — and only once the resulting refresh has
+        // settled. It is deliberately NOT driven by an `.onChange` on the travel/calculation flags themselves:
+        // watching those means the dialog fires the moment a background location update flips one, over and
+        // over, whether or not this screen is on screen. The dialog's buttons clear the flags.
         .onChange(of: settings.homeLocation) { _ in
-            settings.fetchPrayerTimes()
+            settings.fetchPrayerTimes {
+                presentAutoChangeDialogIfPending()
+            }
         }
         .onChange(of: settings.travelAutomatic) { newValue in
             guard newValue else { return }
-            settings.fetchPrayerTimes() {
+            settings.fetchPrayerTimes {
                 if settings.homeLocation == nil {
                     withAnimation { settings.travelingMode = false }
+                } else {
+                    presentAutoChangeDialogIfPending()
                 }
             }
         }
         .onChange(of: settings.calculationAutomatic) { newValue in
             guard newValue else { return }
-            settings.fetchPrayerTimes(force: true)
-        }
-        // Present the automatic-change confirmation the moment the flag flips, from ANY code path that runs
-        // checkIfTraveling()/the auto-calculation change (location updates, scene changes, background
-        // refresh) — not gated behind a specific prayer-fetch completion. The old approach only checked the
-        // flag inside a couple of fetch completions, so the dialog lagged (waited for the fetch) and often
-        // never appeared (when the flag flipped from a fetch not triggered here).
-        // Consume each flag the instant it flips (see AdhanView for the full rationale): capture it into
-        // `showAlert` and reset the @AppStorage flag so the dialog can't re-present on re-entry or after a
-        // tap-outside dismissal.
-        .onChange(of: settings.travelTurnOnAutomatic) { on in
-            if on {
-                showAlert = .travelTurnOnAutomatic
-                settings.travelTurnOnAutomatic = false
+            settings.fetchPrayerTimes(force: true) {
+                presentAutoChangeDialogIfPending()
             }
         }
-        .onChange(of: settings.travelTurnOffAutomatic) { off in
-            if off {
-                showAlert = .travelTurnOffAutomatic
-                settings.travelTurnOffAutomatic = false
-            }
-        }
-        .onChange(of: settings.calculationAutoChanged) { changed in
-            if changed {
-                showAlert = .calculationAutomaticChanged
-                settings.calculationAutoChanged = false
-            }
+        .onChange(of: settings.prayerCalculation) { _ in
+            guard settings.calculationAutoChanged else { return }
+            presentAutoChangeDialogIfPending()
         }
         // NOTE: Confirmation-dialog buttons intentionally avoid `role: .cancel`. On iOS 26+ a `.cancel`
         // button is hidden from the action sheet (the system expects you to cancel by tapping outside / the
@@ -179,6 +168,22 @@ struct SettingsAdhanView: View {
             get: { showAlert != nil },
             set: { if !$0 { showAlert = nil } }
         )
+    }
+
+    /// Raise the auto-change confirmation if one is pending. Deferred a beat, so the dialog doesn't try to
+    /// present while the toggle that triggered it is still animating — presenting into a mid-flight layout is
+    /// how a confirmation ends up silently dropped.
+    private func presentAutoChangeDialogIfPending() {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+            guard showAlert == nil else { return }
+            if settings.travelTurnOnAutomatic {
+                showAlert = .travelTurnOnAutomatic
+            } else if settings.travelTurnOffAutomatic {
+                showAlert = .travelTurnOffAutomatic
+            } else if settings.calculationAutoChanged {
+                showAlert = .calculationAutomaticChanged
+            }
+        }
     }
 
     @ViewBuilder

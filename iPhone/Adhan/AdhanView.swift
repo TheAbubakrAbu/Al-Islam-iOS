@@ -103,14 +103,13 @@ struct AdhanView: View {
                     GlanceCard()
                 }
                 #else
-                // Watch order: prayer times first (2 per row), then countdown, then city, then qibla.
+                // Watch: the countdown and prayer times come first (that's the whole reason you raised your
+                // wrist), then one compact card holding the date, the city and the Qibla — three separate
+                // full-width rows was most of a screen's worth of scrolling for information you glance at.
                 prayersSection
 
-                watchCityRow
-                watchQiblaRow
-
-                if let hijriDate = settings.hijriDate {
-                    HijriDateRow(hijriDate: hijriDate)
+                Section {
+                    watchPlaceCard
                 }
                 #endif
             }
@@ -136,42 +135,13 @@ struct AdhanView: View {
                 settings.beginLocationRefinement()
             }
         }
-        // Present the automatic-change confirmation the moment the flag flips, from ANY code path that runs
-        // checkIfTraveling()/the auto-calculation change — not only after a prayer-fetch completion. That
-        // gating made the dialog lag (waited for the fetch) and often never appear (when the flag flipped
-        // from a fetch not routed through prayerTimeRefresh).
-        // Consume each flag the instant it flips: capture it into `showAlert` (which now owns the
-        // presentation) and immediately reset the @AppStorage flag. Otherwise the flag stayed set
-        // until the user tapped a button — so a tap-outside dismissal, or simply leaving and
-        // re-entering this tab (onAppear → fetch → nextAlertToPresent), re-presented the same dialog.
-        .onChange(of: settings.travelTurnOnAutomatic) { on in
-            if on {
-                showAlert = .travelTurnOnAutomatic
-                settings.travelTurnOnAutomatic = false
-            }
-        }
-        .onChange(of: settings.travelTurnOffAutomatic) { off in
-            if off {
-                showAlert = .travelTurnOffAutomatic
-                settings.travelTurnOffAutomatic = false
-            }
-        }
-        .onChange(of: settings.calculationAutoChanged) { changed in
-            if changed {
-                showAlert = .calculationAutomaticChanged
-                settings.calculationAutoChanged = false
-            }
-        }
-        // Belt-and-suspenders for the dialog: when a travel/calculation change is auto-detected while this
-        // view isn't actively on screen — in the background, or behind the launch cover — the `.onChange`
-        // handlers above can miss the flag flip (their baseline was captured while it was still false). The
-        // standing @AppStorage flag persists, so the instant the app is revealed, present it directly instead
-        // of depending on a later prayer-fetch completion firing.
-        .onChange(of: appRevealed) { revealed in
-            if revealed && showAlert == nil {
-                showAlert = nextAlertToPresent
-            }
-        }
+        // The dialog is presented from ONE place only: the completion of a prayer refresh (see
+        // `prayerTimeRefresh`), a beat later. It is deliberately NOT presented from an `.onChange` on the
+        // travel/calculation flags. Watching those flags means the dialog fires the instant the flag flips —
+        // from any background path, whether or not this screen is even on screen — which is what made it
+        // re-present over and over. The flags are cleared by the dialog's own buttons (`confirmTravelAutomaticChange`
+        // / `overrideTravelingMode`), so a change that happens while you're away is still waiting for you the
+        // next time the tab refreshes, and is announced exactly once.
         .navigationTitle("Al-Adhan")
         #if os(iOS)
         .toolbar {
@@ -226,42 +196,67 @@ struct AdhanView: View {
     }
 
     #if os(watchOS)
-    private var watchCityRow: some View {
-        HStack(spacing: 6) {
-            Image(systemName: settings.currentLocation != nil ? "location.fill" : "location.slash")
-                .foregroundColor(settings.accentColor.color)
-            Text((settings.prayers != nil ? settings.currentLocation?.city : nil) ?? "No location")
-                .font(.subheadline)
-                .lineLimit(2)
-                .minimumScaleFactor(0.6)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
-
-    private var watchQiblaRow: some View {
+    /// Date, city and Qibla in one row: the date and place stacked on the left, the compass on the right. Tap
+    /// the compass to blow it up to the full width of the card, which is the only time it needs the room.
+    private var watchPlaceCard: some View {
         VStack(spacing: 6) {
-            QiblaView(size: showBigQibla ? 100 : 50)
-                .animation(.easeInOut, value: showBigQibla)
-                .onTapGesture {
-                    settings.hapticFeedback()
-                    withAnimation { showBigQibla.toggle() }
-                }
+            HStack(spacing: 8) {
+                VStack(alignment: .leading, spacing: 3) {
+                    if let hijriDate = settings.hijriDate {
+                        Text(hijriDate.english)
+                            .font(.caption2)
+                            .foregroundColor(settings.accentColor.accent1)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.6)
+                    }
 
-            Text("Compass may not be accurate on Apple Watch")
-                .font(.caption2)
-                .foregroundColor(.secondary)
-                .frame(maxWidth: .infinity, alignment: .center)
+                    HStack(spacing: 4) {
+                        Image(systemName: settings.currentLocation != nil ? "location.fill" : "location.slash")
+                            .font(.caption2)
+                            .foregroundColor(settings.accentColor.accent1)
+
+                        Text((settings.prayers != nil ? settings.currentLocation?.city : nil) ?? "No location")
+                            .font(.caption)
+                            .lineLimit(2)
+                            .minimumScaleFactor(0.6)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+                if !showBigQibla {
+                    qiblaCompass(size: 44)
+                }
+            }
+
+            if showBigQibla {
+                qiblaCompass(size: 90)
+
+                Text("The compass may not be accurate on Apple Watch")
+                    .font(.system(size: 10))
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+            }
         }
         .frame(maxWidth: .infinity)
+        .animation(.easeInOut, value: showBigQibla)
+    }
+
+    private func qiblaCompass(size: CGFloat) -> some View {
+        QiblaView(size: size)
+            .onTapGesture {
+                settings.hapticFeedback()
+                withAnimation { showBigQibla.toggle() }
+            }
     }
     #endif
 
     private func prayerTimeRefresh(force: Bool) {
         settings.requestNotificationAuthorization {
             settings.fetchPrayerTimes(force: force) {
+                // The one place the confirmation is raised: after the refresh has actually settled, a beat
+                // later so the list isn't still animating. `nextAlertToPresent` reads the standing flags, and
+                // the dialog's buttons clear them — so it appears once, when you're looking at this screen.
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                    // Don't clobber a dialog the .onChange handlers already presented (travel/calc are
-                    // now consumed there). This only fills in the location/notification prompts.
                     if showAlert == nil { showAlert = nextAlertToPresent }
                 }
             }

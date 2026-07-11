@@ -85,7 +85,7 @@
     "name": "العَزِيز",
     "transliteration": "Al-Aziz",
     "number": 8,
-    "found": "(3:6)(4:15 8)(9:40)(4 8:7)",
+    "found": "(3:6)(4:158)(9:40)(48:7)",
     "meaning": "The Mighty One",
     "desc": "The Strong, The Defeater who is not defeated",
     "otherNames": [
@@ -120,7 +120,7 @@
     ]
   },
   {
-    "name": "الخَٰلِق",
+    "name": "الخَالِق",
     "transliteration": "Al-Khaliq",
     "number": 11,
     "found": "(6:102)(13:16)(39:62)(40:62)(59:24)",
@@ -184,7 +184,7 @@
     "number": 16,
     "found": "(3:8)(38:9)(38:35)",
     "meaning": "The Supreme Bestower",
-    "desc": "The One who is Generous in giving plenty without any return. He is everything that benefits whether Halal or Haram.",
+    "desc": "The One who gives generously and continuously, without expecting anything in return.",
     "otherNames": [
       "The Bestower",
       "The Giver of Gifts"
@@ -229,7 +229,7 @@
     "name": "القَابِض",
     "transliteration": "Al-Qabid",
     "number": 20,
-    "found": "(2:245)",
+    "found": "Hadith list (Tirmidhi 3507)",
     "meaning": "The Restricting One",
     "desc": "The Constrictor, The Withholder, The One who constricts the sustenance by His wisdom and expands and widens it with His Generosity and Mercy.",
     "otherNames": [
@@ -241,7 +241,7 @@
     "name": "البَاسِط",
     "transliteration": "Al-Basit",
     "number": 21,
-    "found": "(2:245)",
+    "found": "Hadith list (Tirmidhi 3507)",
     "meaning": "The Extender",
     "desc": "The Englarger, The One who constricts the sustenance by His wisdom and expands and widens it with His Generosity and Mercy.",
     "otherNames": [
@@ -252,7 +252,7 @@
     "name": "الخَافِض",
     "transliteration": "Al-Khafid",
     "number": 22,
-    "found": "(95:5)",
+    "found": "Hadith list (Tirmidhi 3507)",
     "meaning": "The Reducer",
     "desc": "The Abaser, The One who lowers whoever He willed by His Destruction and raises whoever He willed by His Endowment.",
     "otherNames": [
@@ -263,7 +263,7 @@
     "name": "الرَّافِع",
     "transliteration": "Ar-Rafi",
     "number": 23,
-    "found": "(58:11)(6:83)",
+    "found": "Hadith list (Tirmidhi 3507)",
     "meaning": "The Elevating One",
     "desc": "The Exalter, The Elevator, The One who lowers whoever He willed by His Destruction and raises whoever He willed by His Endowment.",
     "otherNames": [
@@ -275,7 +275,7 @@
     "name": "المُعِزّ",
     "transliteration": "Al-Mu'izz",
     "number": 24,
-    "found": "(3:26)",
+    "found": "Hadith list (Tirmidhi 3507)",
     "meaning": "The Honourer-Bestower",
     "desc": "He gives esteem to whoever He willed, hence there is no one to degrade Him; And He degrades whoever He willed, hence there is no one to give Him esteem.",
     "otherNames": [
@@ -285,9 +285,9 @@
   },
   {
     "name": "المُذِلّ",
-    "transliteration": "Al-Muzil",
+    "transliteration": "Al-Mudhill",
     "number": 25,
-    "found": "(3:26)",
+    "found": "Hadith list (Tirmidhi 3507)",
     "meaning": "The Abaser",
     "desc": "The Dishonourer, The Humiliator, He gives esteem to whoever He willed, hence there is no one to degrade Him; And He degrades whoever He willed, hence there is no one to give Him esteem.",
     "otherNames": [
@@ -319,9 +319,9 @@
     "name": "الحَكَم",
     "transliteration": "Al-Hakam",
     "number": 28,
-    "found": "(22:69)",
+    "found": "(6:114)",
     "meaning": "The Impartial Judge",
-    "desc": "The Judge, He is the Ruler andThe Judge, He is the Ruler and His judgment is His Word. His judgment is His Word.",
+    "desc": "The Judge; He is the Ruler and His judgment is His Word.",
     "otherNames": [
       "The Giver of Justice",
       "The Judge"
@@ -331,7 +331,7 @@
     "name": "العَدل",
     "transliteration": "Al-Adl",
     "number": 29,
-    "found": "(6:115)",
+    "found": "Hadith list (Tirmidhi 3507)",
     "meaning": "The Embodiment of Justice",
     "desc": "The Just, The One who is entitled to do what He does.",
     "otherNames": [
@@ -434,7 +434,7 @@
   },
   {
     "name": "الحَفِيظ",
-    "transliteration": "Al-Hafiz",
+    "transliteration": "Al-Hafeez",
     "number": 38,
     "found": "(11:57)(34:21)(42:6)",
     "meaning": "The Guarding One",
@@ -472,7 +472,7 @@
     "name": "الجَلِيل",
     "transliteration": "Al-Jaleel",
     "number": 41,
-    "found": "(55:27)(39:14)(7:143)",
+    "found": "Hadith list (Tirmidhi 3507)",
     "meaning": "The Majestic One",
     "desc": "The Sublime One, The Beneficent, The One who is attributed with greatness of Power and Glory of status.",
     "otherNames": [
@@ -565,7 +565,7 @@
     "name": "البَاعِث",
     "transliteration": "Al-Ba'ith",
     "number": 49,
-    "found": "(22:7)",
+    "found": "Hadith list (Tirmidhi 3507)",
     "meaning": "The Infuser of New Life",
     "desc": "The Awakener, The Resurrector, The Arouser",
     "otherNames": [
@@ -657,7 +657,7 @@
     "name": "المُحصِي",
     "transliteration": "Al-Muhsi",
     "number": 57,
-    "found": "(72:28)(78:29)(82:10-12)",
+    "found": "Hadith list (Tirmidhi 3507)",
     "meaning": "The All-Enumerating One",
     "desc": "The Counter, The Reckoner, The One who the count of things are known to him.",
     "otherNames": [
@@ -669,7 +669,7 @@
     "name": "المُبدِئ",
     "transliteration": "Al-Mubdi",
     "number": 58,
-    "found": "(10:34)(27:64)(29:19)(85:13)",
+    "found": "Hadith list (Tirmidhi 3507)",
     "meaning": "The Originator",
     "desc": "The One who started the human being. That is, He created him.",
     "otherNames": [
@@ -680,7 +680,7 @@
     "name": "المُعِيد",
     "transliteration": "Al-Muid",
     "number": 59,
-    "found": "(10:34)(27:64)(29:19)(85:13)",
+    "found": "Hadith list (Tirmidhi 3507)",
     "meaning": "The Restorer",
     "desc": "The Reproducer, The One who brings back the creatures after death.",
     "otherNames": [
@@ -691,7 +691,7 @@
     "name": "المُحيِي",
     "transliteration": "Al-Muhyi",
     "number": 60,
-    "found": "(7:158)(15:23)(30:50)(57:2)",
+    "found": "(30:50)(7:158)(15:23)(57:2)",
     "meaning": "The Maintainer of life",
     "desc": "The Restorer, The Giver of Life.",
     "otherNames": [
@@ -702,7 +702,7 @@
     "name": "المُمِيت",
     "transliteration": "Al-Mumeet",
     "number": 61,
-    "found": "(3:156)(7:158)(15:23)(57:2)",
+    "found": "Hadith list (Tirmidhi 3507)",
     "meaning": "The Inflictor of Death",
     "desc": "The Creator of Death, The Destroyer, The One who renders the living dead.",
     "otherNames": [
@@ -736,7 +736,7 @@
     "name": "الوَاجِد",
     "transliteration": "Al-Wajid",
     "number": 64,
-    "found": "(38:44)",
+    "found": "Hadith list (Tirmidhi 3507)",
     "meaning": "The Pointing One",
     "desc": "The Perceiver, The Finder, The Rich who is never poor. Al-Wajid is Richness.",
     "otherNames": [
@@ -748,7 +748,7 @@
     "name": "المَاجِد",
     "transliteration": "Al-Maajid",
     "number": 65,
-    "found": "(11:73)",
+    "found": "Hadith list (Tirmidhi 3507)",
     "meaning": "The All-Noble One",
     "desc": "The Glorious, He who is Most Glorious.",
     "otherNames": [
@@ -820,7 +820,7 @@
     "name": "المُقَدِّم",
     "transliteration": "Al-Muqaddim",
     "number": 71,
-    "found": "(16:61)(17:34)",
+    "found": "Hadith list (Tirmidhi 3507)",
     "meaning": "The Expediting One",
     "desc": "The Expediter, The Promoter, The One who puts things in their right places.",
     "otherNames": [
@@ -832,7 +832,7 @@
     "name": "المُؤَخِّر",
     "transliteration": "Al-Muakhkhir",
     "number": 72,
-    "found": "(71:4)",
+    "found": "Hadith list (Tirmidhi 3507)",
     "meaning": "The Delayer",
     "desc": "The Postponer, He Who Puts Far Away. He makes ahead what He wills and delays what He wills.",
     "otherNames": [
@@ -899,7 +899,7 @@
     ]
   },
   {
-    "name": "المُتَعَالِي",
+    "name": "المُتَعَال",
     "transliteration": "Al-Mutaali",
     "number": 78,
     "found": "(13:9)",
@@ -992,7 +992,7 @@
     "name": "المُقسِط",
     "transliteration": "Al-Muqsit",
     "number": 86,
-    "found": "(7:29)(3:18)",
+    "found": "Hadith list (Tirmidhi 3507)",
     "meaning": "The Just One",
     "desc": "The Equitable, The One who is Just in His judgment.",
     "otherNames": []
@@ -1025,7 +1025,7 @@
     "name": "المُغنِي",
     "transliteration": "Al-Mughni",
     "number": 89,
-    "found": "(9:28)",
+    "found": "Hadith list (Tirmidhi 3507)",
     "meaning": "The Enricher",
     "desc": "The Emancipator, The Fulfiller of Needs, The Bestower of Wealth.",
     "otherNames": []
@@ -1034,7 +1034,7 @@
     "name": "المَانِع",
     "transliteration": "Al-Mani",
     "number": 90,
-    "found": "(67:21)",
+    "found": "Hadith list (Tirmidhi 3507)",
     "meaning": "The Preventer",
     "desc": "The Withholder.",
     "otherNames": [
@@ -1045,7 +1045,7 @@
     "name": "الضَّارّ",
     "transliteration": "Ad-Darr",
     "number": 91,
-    "found": "(6:17)",
+    "found": "Hadith list (Tirmidhi 3507) - only used paired with An-Nafi",
     "meaning": "The Distressor",
     "desc": "The Correcter, The Balancer, The Distresser, The Afflicter, The Punisher.",
     "otherNames": [
@@ -1056,7 +1056,7 @@
     "name": "النَّافِع",
     "transliteration": "An-Naafi",
     "number": 92,
-    "found": "(30:37)",
+    "found": "Hadith list (Tirmidhi 3507)",
     "meaning": "The Bestower of Benefits",
     "desc": "The Creator of Good, The Benefiter, The Propitious, The Auspicious",
     "otherNames": [
@@ -1101,7 +1101,7 @@
     "name": "البَاقِي",
     "transliteration": "Al-Baaqi",
     "number": 96,
-    "found": "(55:27)",
+    "found": "Hadith list (Tirmidhi 3507)",
     "meaning": "The Ever Surviving One",
     "desc": "The Everlasting, The Ever-Enduring, The Ever-Present",
     "otherNames": [
@@ -1123,7 +1123,7 @@
     "name": "الرَّشِيد",
     "transliteration": "Ar-Rasheed",
     "number": 98,
-    "found": "(2:256)",
+    "found": "Hadith list (Tirmidhi 3507)",
     "meaning": "The Guide to Path of Rectitude",
     "desc": "The Guide to the Right Path, The One who guides.",
     "otherNames": [
@@ -1134,7 +1134,7 @@
     "name": "الصَّبُور",
     "transliteration": "As-Sabur",
     "number": 99,
-    "found": "(2:153)(3:200)(103:3)",
+    "found": "Hadith list (Tirmidhi 3507)",
     "meaning": "The Extensively Enduring One",
     "desc": "The Patient, The One who does not quickly punish the sinners.",
     "otherNames": [

@@ -34,15 +34,44 @@ let commonDhikrItems: [CommonDhikr] = [
     CommonDhikr(arabicText: "لَا إِلَٰهَ إِلَّا اللَّهُ وَحدَهُ لَا شَرِيكَ لَهُ لَهُ ٱلمُلكُ وَلَهُ ٱلحَمدُ وَهُوَ عَلَىٰ كُلِّ شَيءٍ قَدِيرٌ", transliteration: "La ilaha illallah wahdahu la sharika lah, lahul-mulk wa lahul-hamd, wa huwa 'ala kulli shayin qadir", translation: "There is no deity worthy of worship except Allah, alone, without any partner. His is the sovereignty and His is the praise, and He is capable of all things")
 ]
 
+/// Measured height of the Arabic block, so a dhikr can decide for itself how to sit on the row.
+private struct ArabicBlockHeightKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = max(value, nextValue()) }
+}
+
+/// Height of ONE line in the same font, for comparison.
+private struct ArabicLineHeightKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = max(value, nextValue()) }
+}
+
 struct AdhkarRow: View {
     @ObservedObject var settings = Settings.shared
 
     let arabicText: String
     let transliteration: String
     let translation: String
-    var alignArabicTrailing: Bool = false
     var useQuranicFont: Bool = false
     var searchQuery: String = ""
+
+    /// The rendered height of the Arabic, and the height of a single line of it. A short dhikr ("سُبحَانَ اللَّهِ")
+    /// is one line and reads best leading, like every other row on the screen; a long one wraps, and a wrapped
+    /// Arabic paragraph has to be trailing-aligned or its ragged edge lands on the wrong side. So this is
+    /// measured rather than declared per-screen — the same dhikr wraps or doesn't depending on the font size,
+    /// the device, and Dynamic Type, and no hardcoded flag can know that.
+    @State private var arabicHeight: CGFloat = 0
+    @State private var arabicLineHeight: CGFloat = 0
+
+    private var arabicWrapsPastTwoLines: Bool {
+        guard arabicLineHeight > 0 else { return false }
+        // A hair over 2 lines' worth, so a two-line dhikr doesn't flip on a rounding error.
+        return arabicHeight > arabicLineHeight * 2.4
+    }
+
+    private var arabicFont: Font {
+        useQuranicFont ? .custom(settings.fontArabic, size: 30) : .title2
+    }
 
     var body: some View {
         Section {
@@ -60,18 +89,40 @@ struct AdhkarRow: View {
             guard !normalizedQuery.isEmpty else { return false }
             return field.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current).contains(normalizedQuery)
         }
+        let trailing = arabicWrapsPastTwoLines
         return VStack(alignment: .leading, spacing: 10) {
             HighlightedSnippet(
                 source: arabicText,
                 term: searchQuery,
-                font: useQuranicFont ? .custom(settings.fontArabic, size: 30) : .title2,
+                font: arabicFont,
                 accent: settings.accentColor.color,
                 fg: settings.accentColor.color,
                 guaranteeMatch: matches(arabicText)
             )
-                .multilineTextAlignment(alignArabicTrailing ? .trailing : .leading)
-                .frame(maxWidth: .infinity, alignment: alignArabicTrailing ? .trailing : .leading)
+                // Only a block that actually wraps gets the trailing treatment; a one-liner stays leading, with
+                // no multiline alignment at all (there's nothing to align).
+                .multilineTextAlignment(trailing ? .trailing : .leading)
+                .frame(maxWidth: .infinity, alignment: trailing ? .trailing : .leading)
                 .padding(.vertical, useQuranicFont ? -8 : 0)
+                .background(
+                    GeometryReader { geo in
+                        Color.clear.preference(key: ArabicBlockHeightKey.self, value: geo.size.height)
+                    }
+                )
+                // An invisible single line in the same face — the yardstick the block is measured against.
+                .background(
+                    Text("ب")
+                        .font(arabicFont)
+                        .hidden()
+                        .fixedSize()
+                        .background(
+                            GeometryReader { geo in
+                                Color.clear.preference(key: ArabicLineHeightKey.self, value: geo.size.height)
+                            }
+                        )
+                )
+                .onPreferenceChange(ArabicBlockHeightKey.self) { arabicHeight = $0 }
+                .onPreferenceChange(ArabicLineHeightKey.self) { arabicLineHeight = $0 }
 
             HighlightedSnippet(
                 source: transliteration,
@@ -172,13 +223,12 @@ struct AdhkarView: View {
     }
 
     @ViewBuilder
-    private func filteredAdhkarRow(_ dhikr: CommonDhikr, alignArabicTrailing: Bool = false) -> some View {
+    private func filteredAdhkarRow(_ dhikr: CommonDhikr) -> some View {
         if matchesSearch(dhikr) {
             AdhkarRow(
                 arabicText: dhikr.arabicText,
                 transliteration: dhikr.transliteration,
                 translation: dhikr.translation,
-                alignArabicTrailing: alignArabicTrailing,
                 useQuranicFont: settings.useFontArabic,
                 searchQuery: searchText
             )
@@ -251,9 +301,9 @@ struct AdhkarView: View {
             ReflectionCard(
                 title: "Prophetic Encouragement",
                 lines: [
-                    "The best of deeds is the remembrance of Allah.",
-                    "Two phrases are light on the tongue and heavy on the scale: SubhanAllahi wa bihamdihi, SubhanAllahil Adheem.",
-                    "Keep your tongue moist with the remembrance of Allah."
+                    "The best of your deeds, and the purest with your Master, is the remembrance of Allah. (Tirmidhi 3377 — sahih)",
+                    "Two words are light on the tongue, heavy on the Scale, and beloved to the Most Merciful: SubhanAllahi wa bihamdihi, SubhanAllahil Adheem. (Bukhari 6682; Muslim 2694)",
+                    "Keep your tongue moist with the remembrance of Allah. (Tirmidhi 3375 — hasan)"
                 ],
                 accent: settings.accentColor.color
             )

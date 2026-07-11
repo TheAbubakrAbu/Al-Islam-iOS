@@ -128,21 +128,26 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     /// offset) to their defaults via their setters so the shared store + widgets update too. Location and
     /// other app-group content are left untouched.
     @MainActor
-    func resetAllSettings() {
+    func resetAllSettings(keepingContent: Bool = true) {
         // Bookmarks, favorites, khatm progress, saved reading/listening positions, and search history are
-        // content, not settings — preserve them across the domain wipe.
+        // content, not settings — preserved across the domain wipe unless the user asked to erase everything.
         let contentKeys = [
             "favoriteSurahsData", "bookmarkedAyahsData", "favoriteLetterData", "favoriteNameNumbersData",
             "khatmCompletedAyahsData", "favoriteReciterIDsData", "favoriteQiraahTagsData",
             "favoriteEnglishTranslationIDsData", "savedSajdahAyahIDsData", "savedBrokenLetterAyahIDsData",
             "lastReadSurah", "lastReadAyah", "lastListenedAyahData", "lastListenedSurahData",
             "quranSearchHistoryData",
+            // Only wiped by a full erase: these are stats/history rather than saved items, but they're still
+            // the user's, not preferences.
+            "surahOpenCountsData", "surahPlayCountsData",
         ]
 
         let standard = UserDefaults.standard
-        let preserved = contentKeys.reduce(into: [String: Any]()) { dict, key in
-            if let value = standard.object(forKey: key) { dict[key] = value }
-        }
+        let preserved = keepingContent
+            ? contentKeys.reduce(into: [String: Any]()) { dict, key in
+                if let value = standard.object(forKey: key) { dict[key] = value }
+            }
+            : [:]
 
         if let bundleID = Bundle.main.bundleIdentifier {
             standard.removePersistentDomain(forName: bundleID)
@@ -150,6 +155,18 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
 
         for (key, value) in preserved {
             standard.set(value, forKey: key)
+        }
+
+        // A full erase also clears the shared app-group store — the saved location, the cached prayer times,
+        // the widgets' copy of everything, and the one-shot migration flags. That's what makes it equivalent to
+        // deleting and reinstalling the app, rather than just to clearing this process's defaults.
+        if !keepingContent {
+            appGroupUserDefaults?.removePersistentDomain(forName: AppIdentifiers.appGroupSuiteName)
+            explicitlySetKeys.removeAll()
+            homeLocation = nil
+            currentLocation = nil
+            favoriteLocations = []
+            prayers = nil
         }
 
         // App-group preferences are mirrored by these @Published properties; reassigning to the defaults
@@ -442,7 +459,7 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
             ("27th Night of Ramadan", DateComponents(year: currentHijriYear, month: 9, day: 27), "Likely Laylatul Qadr", "A strong possibility for Laylatul Qadr — the Night of Decree when the Qur’an was sent down — though not confirmed."),
             ("Eid Al-Fitr", DateComponents(year: currentHijriYear, month: 10, day: 1), "Celebration of ending the fast", "Celebration marking the end of Ramadan; fasting is prohibited on this day; encouraged to fast 6 days in Shawwal."),
 
-            ("First 10 Days of Dhul-Hijjah", DateComponents(year: currentHijriYear, month: 12, day: 1), "Most beloved days", "The best days for righteous deeds; fasting and dhikr are highly encouraged."),
+            ("First 10 Days of Dhul-Hijjah", DateComponents(year: currentHijriYear, month: 12, day: 1), "Most beloved days", "The best days for righteous deeds; fasting the first nine days and dhikr are highly encouraged (the 10th is Eid al-Adha, on which fasting is not permitted)."),
             ("Beginning of Hajj", DateComponents(year: currentHijriYear, month: 12, day: 8), "Pilgrimage begins", "Pilgrims begin the rites of Hajj, heading to Mina to start the sacred journey."),
             ("Day of Arafah", DateComponents(year: currentHijriYear, month: 12, day: 9), "Recommended to fast", "Fasting for non-pilgrims expiates sins of the past and coming year."),
             ("Eid Al-Adha", DateComponents(year: currentHijriYear, month: 12, day: 10), "Celebration of sacrifice during Hajj", "The day of sacrifice; fasting is not allowed and sacrifice of an animal is offered."),
@@ -631,6 +648,15 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     @AppStorage("travelAutomatic") var travelAutomatic: Bool = true
     @AppStorage("travelTurnOffAutomatic") var travelTurnOffAutomatic: Bool = false
     @AppStorage("travelTurnOnAutomatic") var travelTurnOnAutomatic: Bool = false
+
+    /// When the traveling-mode auto-toggle last announced itself. Persisted, so the cooldown survives a relaunch
+    /// — the app is relaunched constantly in the background, and an in-memory timestamp would reset with it and
+    /// let the notification through again. See `notifyTravelingModeChanged`.
+    @AppStorage("lastTravelingNotificationAt") private var lastTravelingNotificationStamp: Double = 0
+    var lastTravelingNotificationAt: Date? {
+        get { lastTravelingNotificationStamp > 0 ? Date(timeIntervalSince1970: lastTravelingNotificationStamp) : nil }
+        set { lastTravelingNotificationStamp = newValue?.timeIntervalSince1970 ?? 0 }
+    }
     /// Set by the UI when the user toggles Traveling Mode; fetchPrayerTimes skips checkIfTraveling once so we don’t override or notify.
     var travelingModeManuallyToggled: Bool = false
 

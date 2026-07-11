@@ -66,9 +66,15 @@ struct PrayerCountdown: View {
     private func countdownSection(current: Prayer, next: Prayer) -> some View {
         switch presentation {
         case .section:
+            #if os(watchOS)
+            Section(header: Text("UP NEXT")) {
+                watchBody(current: current, next: next)
+            }
+            #else
             Section(header: sectionHeader) {
                 tappableBody(current: current, next: next)
             }
+            #endif
         case .skyFooter:
             // No `Section` — the sky card already is one, and a nested section inside a list row breaks it.
             VStack(spacing: 2) {
@@ -110,12 +116,59 @@ struct PrayerCountdown: View {
     private var sectionHeader: some View {
         HStack {
             Text("CURRENT")
-            
+
             Spacer()
-            
+
             Text("UPCOMING")
         }
     }
+
+    #if os(watchOS)
+    /// The watch gets its own shape. The phone's two-column "CURRENT | UPCOMING" card, with a full time under
+    /// each side, is far too much text for a 40mm screen — you end up reading it rather than glancing at it.
+    /// Here the time remaining is the biggest thing on the card, the next prayer names itself right above, and
+    /// the prayer you're currently in is demoted to one quiet line underneath.
+    private func watchBody(current: Prayer, next: Prayer) -> some View {
+        VStack(spacing: 3) {
+            HStack(spacing: 4) {
+                Image(systemName: next.image)
+                    .font(.caption2)
+
+                Text(countdownDisplayName(for: next))
+                    .font(.caption.weight(.semibold))
+
+                Spacer(minLength: 2)
+
+                Text(next.time, style: .time)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
+            .foregroundColor(next.nameTransliteration == "Shurooq" ? .primary : settings.accentColor.accent2)
+
+            Text(next.time, style: .timer)
+                .font(.title2.monospacedDigit().weight(.bold))
+                .frame(maxWidth: .infinity, alignment: .center)
+
+            countdownProgress(next: next)
+
+            HStack(spacing: 4) {
+                Text("Now")
+                    .foregroundStyle(.tertiary)
+
+                Text(countdownDisplayName(for: current))
+                    .foregroundColor(current.nameTransliteration == "Shurooq" ? .primary : settings.accentColor.accent1)
+
+                Spacer(minLength: 2)
+
+                Text(current.time, style: .time)
+                    .foregroundStyle(.secondary)
+            }
+            .font(.caption2)
+        }
+        .lineLimit(1)
+        .minimumScaleFactor(0.5)
+    }
+    #endif
 
     @ViewBuilder
     private func prayerSummary(current: Prayer, next: Prayer) -> some View {
@@ -187,8 +240,7 @@ struct PrayerCountdown: View {
             Spacer(minLength: 4)
 
             Text(next.time, style: .timer)
-                .font(.subheadline.monospacedDigit().weight(.semibold))
-                .foregroundStyle(.primary)
+                .font(.caption.monospacedDigit().weight(.semibold))
         }
         .foregroundStyle(.secondary)
         .frame(maxWidth: .infinity)

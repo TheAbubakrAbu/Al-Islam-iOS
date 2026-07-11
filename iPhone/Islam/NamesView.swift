@@ -299,7 +299,7 @@ struct NamesView: View {
 
     private var descriptionSection: some View {
         Section(header: Text("DESCRIPTION")) {
-            Text("Prophet Muhammad ﷺ said, “Allah has 99 names, and whoever believes in their meanings and acts accordingly, will enter Paradise” (Bukhari 6410).")
+            Text("Prophet Muhammad ﷺ said, “Allah has 99 names, and whoever believes in their meanings and acts accordingly, will enter Paradise” (Bukhari 6410). The count is established in Bukhari and Muslim; the enumerated list below is the one narrated in Tirmidhi 3507, which scholars note is an addition by a narrator rather than the Prophet's own listing. Names marked as coming from that list do not appear as names in the Quran.")
                 .font(.caption)
                 .foregroundColor(.secondary)
 
@@ -484,7 +484,7 @@ struct NamesView: View {
 
             VerseReflectionCard(
                 title: "Surah Al-Hashr 59:23",
-                contentText: "He is Allah: the King, the Most Holy, the Source of Peace, the Guardian, the Almighty, the Compeller, the Supreme. Exalted is He above all partners."
+                contentText: "He is Allah: the King, the Most Holy, the Source of Peace, the Granter of Security, the Guardian, the Almighty, the Compeller, the Supreme. Exalted is He above all partners."
             )
 
             VerseReflectionCard(
@@ -805,11 +805,14 @@ private struct NameGridTile: View {
                 .foregroundColor(.secondary)
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 6)
+        .padding(.vertical, 5)
         .padding(.horizontal, 4)
+        // Only a favorite is tinted; every other tile is clear. A grid where all 99 boxes are filled is just a
+        // wall of color, and the favorites disappear into it.
         .conditionalGlassEffect(
+            clear: !isFavorite,
             rectangle: true,
-            useColor: isFavorite ? 0.25 : 0.12,
+            useColor: isFavorite ? 0.25 : nil,
             customTint: isFavorite ? accentColor.color : nil
         )
         .onTapGesture {

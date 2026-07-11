@@ -16,6 +16,8 @@
 		720CCE102E394375002DD82E /* SurahView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 720CCE092E394375002DD82E /* SurahView.swift */; };
 		720CCE112E394375002DD82E /* QuranPlayer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 720CCE0A2E394375002DD82E /* QuranPlayer.swift */; };
 		720CCE122E394375002DD82E /* SurahHeaders.swift in Sources */ = {isa = PBXBuildFile; fileRef = 720CCE072E394375002DD82E /* SurahHeaders.swift */; };
+		72FA100A2FF0A00100AA000A /* QuranGlyphFonts.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72FA10092FF0A00100AA0009 /* QuranGlyphFonts.swift */; };
+		72FA100B2FF0A00100AA000B /* QuranGlyphFonts.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72FA10092FF0A00100AA0009 /* QuranGlyphFonts.swift */; };
 		720CCE132E394375002DD82E /* SurahRows.swift in Sources */ = {isa = PBXBuildFile; fileRef = 720CCE062E394375002DD82E /* SurahRows.swift */; };
 		720CCE142E394375002DD82E /* QuranData.swift in Sources */ = {isa = PBXBuildFile; fileRef = 720CCE042E394375002DD82E /* QuranData.swift */; };
 		720CCE152E394375002DD82E /* NowPlayingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 720CCE0B2E394375002DD82E /* NowPlayingView.swift */; };
@@ -54,6 +56,9 @@
 		723DA45A2D59FC6900AC20B3 /* Watch.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = 724C667C2FF0836600C0E1BB /* Watch.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		723DA45B2D59FC7000AC20B3 /* Complication.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 724C667D2FF0836600C0E1BB /* Complication.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		724B8BD22FADD98500804C3D /* Uthmani.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 724B8BD12FADD98500804C3D /* Uthmani.ttf */; };
+		72FA10042FF0A00100AA0004 /* QuranCommon.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 72FA10022FF0A00100AA0002 /* QuranCommon.ttf */; };
+		72FA10062FF0A00100AA0006 /* QuranCommon.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 72FA10022FF0A00100AA0002 /* QuranCommon.ttf */; };
+		72FA10082FF0A00100AA0008 /* QuranCommon.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 72FA10022FF0A00100AA0002 /* QuranCommon.ttf */; };
 		724B8BD32FADD98500804C3D /* Uthmani.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 724B8BD12FADD98500804C3D /* Uthmani.ttf */; };
 		724B8BE12FADE8D900804C3D /* Indopak.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 724B8BE02FADE8D900804C3D /* Indopak.ttf */; };
 		724B8BE22FADE8D900804C3D /* Indopak.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 724B8BE02FADE8D900804C3D /* Indopak.ttf */; };
@@ -362,6 +367,7 @@
 		720CCE052E394375002DD82E /* QuranView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuranView.swift; sourceTree = "<group>"; };
 		720CCE062E394375002DD82E /* SurahRows.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SurahRows.swift; sourceTree = "<group>"; };
 		720CCE072E394375002DD82E /* SurahHeaders.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SurahHeaders.swift; sourceTree = "<group>"; };
+		72FA10092FF0A00100AA0009 /* QuranGlyphFonts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuranGlyphFonts.swift; sourceTree = "<group>"; };
 		720CCE082E394375002DD82E /* AyahRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AyahRow.swift; sourceTree = "<group>"; };
 		720CCE092E394375002DD82E /* SurahView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SurahView.swift; sourceTree = "<group>"; };
 		720CCE0A2E394375002DD82E /* QuranPlayer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuranPlayer.swift; sourceTree = "<group>"; };
@@ -380,6 +386,7 @@
 		723B9E0A2F3B141E0042DCDE /* QiraahSusi.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = QiraahSusi.json; sourceTree = "<group>"; };
 		723CE3022FAF0BB900E83F5A /* Qiraat.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = Qiraat.ttf; sourceTree = "<group>"; };
 		724B8BD12FADD98500804C3D /* Uthmani.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = Uthmani.ttf; sourceTree = "<group>"; };
+		72FA10022FF0A00100AA0002 /* QuranCommon.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = QuranCommon.ttf; sourceTree = "<group>"; };
 		724B8BE02FADE8D900804C3D /* Indopak.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = Indopak.ttf; sourceTree = "<group>"; };
 		724C667C2FF0836600C0E1BB /* Watch.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Watch.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		724C667D2FF0836600C0E1BB /* Complication.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = Complication.appex; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -721,6 +728,7 @@
 				720CCE062E394375002DD82E /* SurahRows.swift */,
 				728E2F032E6E6E7E00F2C24C /* ContextMenu.swift */,
 				720CCE072E394375002DD82E /* SurahHeaders.swift */,
+				72FA10092FF0A00100AA0009 /* QuranGlyphFonts.swift */,
 				720CCE092E394375002DD82E /* SurahView.swift */,
 				720CCE082E394375002DD82E /* AyahRow.swift */,
 				7260D5F22F7CB0D80066FBA9 /* TajweedLegendView.swift */,
@@ -751,6 +759,7 @@
 				723CE3022FAF0BB900E83F5A /* Qiraat.ttf */,
 				724B8BD12FADD98500804C3D /* Uthmani.ttf */,
 				724B8BE02FADE8D900804C3D /* Indopak.ttf */,
+				72FA10022FF0A00100AA0002 /* QuranCommon.ttf */,
 			);
 			path = Fonts;
 			sourceTree = "<group>";
@@ -1001,6 +1010,7 @@
 				72E99E872FE8EC0E00CD0D8F /* Qiraat.ttf in Resources */,
 				72E99E882FE8EC0E00CD0D8F /* Indopak.ttf in Resources */,
 				72E99E892FE8EC0E00CD0D8F /* Uthmani.ttf in Resources */,
+				72FA10042FF0A00100AA0004 /* QuranCommon.ttf in Resources */,
 				72F7DB762F0431740037B059 /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -1030,6 +1040,7 @@
 				72C3FE5C2F6A039400136976 /* SurahInfos.json in Resources */,
 				723B9E022F3B138C0042DCDE /* QiraahBuzzi.json in Resources */,
 				724B8BE12FADE8D900804C3D /* Indopak.ttf in Resources */,
+				72FA10062FF0A00100AA0006 /* QuranCommon.ttf in Resources */,
 				723B9E062F3B13B40042DCDE /* QiraahQunbul.json in Resources */,
 				727486622F3D8383001240F8 /* QiraahWarsh.json in Resources */,
 				72D0000E2F78807000AAF60E /* abdulbaset.caf in Resources */,
@@ -1087,6 +1098,7 @@
 				723B9E032F3B138C0042DCDE /* QiraahBuzzi.json in Resources */,
 				723B9E052F3B13B40042DCDE /* QiraahQunbul.json in Resources */,
 				724B8BE22FADE8D900804C3D /* Indopak.ttf in Resources */,
+				72FA10082FF0A00100AA0008 /* QuranCommon.ttf in Resources */,
 				72F7DB772F0431740037B059 /* Assets.xcassets in Resources */,
 				727486612F3D8383001240F8 /* QiraahWarsh.json in Resources */,
 				72D0001B2F78807000AAF61B /* minshawi-1-30.caf in Resources */,
@@ -1221,6 +1233,7 @@
 				720CCE112E394375002DD82E /* QuranPlayer.swift in Sources */,
 				72E832C22F6F53760013428B /* ArabicView.swift in Sources */,
 				720CCE122E394375002DD82E /* SurahHeaders.swift in Sources */,
+				72FA100A2FF0A00100AA000A /* QuranGlyphFonts.swift in Sources */,
 				728E2EE72E6E019700F2C24C /* SettingsQuran.swift in Sources */,
 				720CCE132E394375002DD82E /* SurahRows.swift in Sources */,
 				72827EAC2E3C425B00EBA534 /* SettingsQuranView.swift in Sources */,
@@ -1298,6 +1311,7 @@
 				720CCE1B2E394375002DD82E /* QuranPlayer.swift in Sources */,
 				72827EA62E3C425300EBA534 /* SettingsAdhanView.swift in Sources */,
 				720CCE1C2E394375002DD82E /* SurahHeaders.swift in Sources */,
+				72FA100B2FF0A00100AA000B /* QuranGlyphFonts.swift in Sources */,
 				72574CC62E49EDDE00BFF138 /* AdhanShortcuts.swift in Sources */,
 				728E2EF92E6E2B8700F2C24C /* ProfanityFilter.swift in Sources */,
 				720CCE1D2E394375002DD82E /* SurahRows.swift in Sources */,

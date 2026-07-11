@@ -66,12 +66,13 @@ extension Surah {
     }
 }
 
-/// "Page 102 (3)" — the absolute mushaf page annotated with its position within
-/// `surah` when that can be determined, otherwise just "Page 102". Pass `nil` for
+/// "Page 102 (3/6)" — the absolute mushaf page annotated with its position within `surah`, out of how many
+/// pages that surah spans, when that can be determined; otherwise just "Page 102". The total is what makes the
+/// relative number mean anything — "(3)" alone doesn't say whether you're near the end. Pass `nil` for
 /// cross-surah boundaries (the relative number would belong to a different surah).
 func mushafPageLabel(forAbsolutePage page: Int, in surah: Surah?) -> String {
     if let surah, let relative = surah.pageWithinSurah(page) {
-        return "Page \(page) (\(relative))"
+        return "Page \(page) (\(relative)/\(max(surah.pageCount, relative)))"
     }
     return "Page \(page)"
 }

@@ -136,14 +136,27 @@ struct SettingsQuranView: View {
     }
 
     #if os(iOS)
-    /// Bulk-management screens for the user's saved items. Only shown from the main Settings entry
+    /// Bulk-management screens for the user's saved items. One row like every other setting on this screen —
+    /// the four editors live behind it rather than taking four rows of the root list.
     @ViewBuilder
     private var favoritesAndBookmarksSection: some View {
-        Section(header: Text("FAVORITES AND BOOKMARKS")) {
-            favoritesLink(title: "Edit Favorite Surahs", type: .surah)
-            favoritesLink(title: "Edit Bookmarked Ayahs", type: .ayah)
-            favoritesLink(title: "Edit Favorite Letters", type: .letter)
-            favoritesLink(title: "Edit Khatm Progress", type: .khatm)
+        Section {
+            quranSettingsLink(title: "Favorites and Bookmarks", systemImage: "star") {
+                favoritesAndBookmarksDestination
+            }
+        }
+    }
+
+    private var favoritesAndBookmarksDestination: some View {
+        quranSettingsSubList(title: "Favorites and Bookmarks") {
+            Section {
+                favoritesLink(title: "Edit Favorite Surahs", type: .surah)
+                favoritesLink(title: "Edit Bookmarked Ayahs", type: .ayah)
+                favoritesLink(title: "Edit Favorite Letters", type: .letter)
+                favoritesLink(title: "Edit Khatm Progress", type: .khatm)
+            } footer: {
+                Text("These are kept when you reset your settings, unless you choose to erase everything.")
+            }
         }
     }
 
