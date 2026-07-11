@@ -246,6 +246,24 @@ struct AyahRow: View, Equatable {
 
                     muqattaatNamesView(p, font: arabicFont)
                         .frame(maxWidth: .infinity, alignment: .trailing)
+
+                    Divider()
+                        .padding(.vertical, 2)
+
+                    // Count of the disconnected letters, plus the madd rule with the elongation mark
+                    // actually written out (ـٓ) so learners can see it — madd lāzim is held for 6 counts.
+                    HStack(spacing: 8) {
+                        Text("\(p.letters.count) \(p.letters.count == 1 ? "letter" : "letters")")
+                            .font(.caption2.weight(.semibold))
+                            .foregroundColor(.secondary)
+
+                        Spacer()
+
+                        Text("Madd is 6 counts")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
+                    .frame(maxWidth: .infinity)
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -665,13 +683,17 @@ struct AyahRow: View, Equatable {
             if showArabic {
                 let beginner = settings.beginnerMode || ayahBeginnerMode
                 let arabicSource = arabicDisplayText()
-                let arabicFont: Font = settings.removeArabicDots
+                // "Basic" font (and the dots-removed mode) render with the standard Apple system font.
+                let useSystemArabic = settings.removeArabicDots || settings.quranUsesSystemArabicFont
+                let arabicFont: Font = useSystemArabic
                     ? .system(size: settings.fontArabicSize)
                     : .custom(
                         ayahArabicFontName(for: comparisonQiraahOverride ?? settings.displayQiraahForArabic),
                         size: settings.fontArabicSize
                     )
-                let suffixFont: Font = .custom(Settings.hafsUthmaniFontName, size: settings.fontArabicSize)
+                let suffixFont: Font = settings.quranUsesSystemArabicFont
+                    ? .system(size: settings.fontArabicSize)
+                    : .custom(Settings.hafsUthmaniFontName, size: settings.fontArabicSize)
 
                 HighlightedSnippet(
                     source: arabicSource,

@@ -17,6 +17,7 @@ struct IslamView: View {
         case masjidLocator
         case islamicWallpapers
         case pillarsAndBasics
+        case howToGuides
     }
     #endif
 
@@ -122,6 +123,8 @@ struct IslamView: View {
             WallpaperView()
         case .pillarsAndBasics:
             PillarsView()
+        case .howToGuides:
+            GuidesView()
         }
     }
     #endif
@@ -166,8 +169,12 @@ struct IslamView: View {
                 WallpaperView()
             }
 
-            resourceLink(title: "Islamic Pillars and Basics", systemImage: "moon.stars") {
+            resourceLink(title: "Pillars & Beliefs", systemImage: "moon.stars") {
                 PillarsView()
+            }
+
+            resourceLink(title: "How-To Guides", systemImage: "list.bullet.rectangle") {
+                GuidesView()
             }
         }
     }
@@ -189,7 +196,8 @@ struct IslamView: View {
             #endif
 
             splitResourceLink(title: "Islamic Wallpapers", systemImage: "photo.on.rectangle", value: .islamicWallpapers)
-            splitResourceLink(title: "Islamic Pillars and Basics", systemImage: "moon.stars", value: .pillarsAndBasics)
+            splitResourceLink(title: "Pillars & Beliefs", systemImage: "moon.stars", value: .pillarsAndBasics)
+            splitResourceLink(title: "How-To Guides", systemImage: "list.bullet.rectangle", value: .howToGuides)
         }
     }
 
@@ -238,10 +246,13 @@ struct IslamView: View {
     }
 }
 
+/// The quote card sits between two first-accent sections (resources above, apps below), so it is the screen's
+/// second-accent section — every tint in here reads from `accent2`.
 struct ProphetQuote: View {
     @ObservedObject var settings = Settings.shared
     @State private var isCardVisible = false
     @State private var animateBadge = false
+    @State private var rotateRing = false
 
     private let quoteText = "“O people, your Lord is one and your father Adam is one. There is no superiority of an Arab over a non-Arab, nor a non-Arab over an Arab, and neither a white over a black, nor a black over a white, except by righteousness.“"
     private let attributionText1 = "Farewell Sermon\nMusnad Ahmad 22978"
@@ -274,12 +285,16 @@ struct ProphetQuote: View {
                 withAnimation(.easeInOut(duration: 2.2).repeatForever(autoreverses: true)) {
                     animateBadge = true
                 }
+                withAnimation(.linear(duration: 8).repeatForever(autoreverses: false)) {
+                    rotateRing = true
+                }
             }
             .onDisappear {
                 withAnimation {
                     isCardVisible = false
                     animateBadge = false
                 }
+                rotateRing = false
             }
         }
         #if os(iOS)
@@ -301,9 +316,9 @@ struct ProphetQuote: View {
             .fill(
                 LinearGradient(
                     gradient: Gradient(colors: [
-                        settings.accentColor.color.opacity(0.18),
+                        settings.accentColor.accent2.opacity(0.18),
                         Color.secondary.opacity(0.08),
-                        settings.accentColor.color.opacity(0.08)
+                        settings.accentColor.accent2.opacity(0.08)
                     ]),
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
@@ -311,26 +326,44 @@ struct ProphetQuote: View {
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 24, style: .continuous)
-                    .stroke(settings.accentColor.color.opacity(0.2), lineWidth: 1)
+                    .stroke(settings.accentColor.accent2.opacity(0.2), lineWidth: 1)
             )
-            .shadow(color: settings.accentColor.color.opacity(0.12), radius: 10, x: 0, y: 3)
+            .shadow(color: settings.accentColor.accent2.opacity(0.12), radius: 10, x: 0, y: 3)
     }
 
     private var quoteBadge: some View {
         ZStack {
+            // A slowly rotating shimmer ring behind the badge for a subtle "cool" glow.
             Circle()
-                .strokeBorder(settings.accentColor.color, lineWidth: 1)
+                .stroke(
+                    AngularGradient(
+                        gradient: Gradient(colors: [
+                            settings.accentColor.accent2.opacity(0.0),
+                            settings.accentColor.accent2.opacity(0.55),
+                            settings.accentColor.accent2.opacity(0.0)
+                        ]),
+                        center: .center
+                    ),
+                    lineWidth: 2.5
+                )
+                .frame(width: 66, height: 66)
+                .rotationEffect(.degrees(rotateRing ? 360 : 0))
+
+            Circle()
+                .strokeBorder(settings.accentColor.accent2, lineWidth: 1)
                 .frame(width: 60, height: 60)
 
             Text("ﷺ")
                 .font(.largeTitle)
                 .fontWeight(.bold)
-                .foregroundColor(settings.accentColor.color)
+                .foregroundColor(settings.accentColor.accent2)
                 .padding()
                 .clipShape(Circle())
         }
         .conditionalGlassEffect(circle: true)
         .scaleEffect(animateBadge ? 1.04 : 0.98)
+        .shadow(color: settings.accentColor.accent2.opacity(animateBadge ? 0.45 : 0.12),
+                radius: animateBadge ? 12 : 4)
         .padding(4)
     }
 
@@ -338,7 +371,7 @@ struct ProphetQuote: View {
         Text(quoteText)
             .font(.subheadline)
             .multilineTextAlignment(.center)
-            .foregroundColor(settings.accentColor.color)
+            .foregroundColor(settings.accentColor.accent2)
             .lineLimit(nil)
             .fixedSize(horizontal: false, vertical: true)
             .frame(maxWidth: .infinity, alignment: .center)

@@ -450,6 +450,8 @@ final class QuranPlayer: ObservableObject {
         self.repeatCount = max(1, repeatCount)
         self.repeatRemaining = self.repeatCount
 
+        settings.recordSurahPlayed(surahNumber)
+
         // Synchronous @Published writes coalesce into one view update on their own — no withAnimation needed
         // (it would animate the whole observing List, not just the now-playing inset).
         currentSurahNumber = surahNumber

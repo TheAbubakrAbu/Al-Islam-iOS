@@ -260,13 +260,11 @@ extension FocusItem {
             title: data.transliteration,
             subtitle: data.name,
             footnote: data.weightRule,
-            secondaryArabic: data.forms.prefix(3).joined(separator: "   "),
+            // `forms` is [final, medial, initial]; reversed so this RTL-rendered text puts the initial form on the right.
+            secondaryArabic: data.forms.prefix(3).reversed().joined(separator: "   "),
             shareLabel: "Share Letter",
-            shareText: """
-            \(data.letter) — \(data.transliteration)
-            Name: \(data.name)
-            Forms: \(data.forms.prefix(3).joined(separator: " "))
-            """,
+            // Always share as "English - Arabic", e.g. "Baa - ب".
+            shareText: "\(data.transliteration) - \(data.letter)",
             allowsQuranicFont: !data.isNonArabicScriptLetter
         )
     }
@@ -280,13 +278,8 @@ extension FocusItem {
             footnote: "First found: \(name.firstFoundShort)",
             secondaryArabic: name.numberArabic,
             shareLabel: "Share Name",
-            shareText: """
-            \(name.name.removeDiacriticsFromLastLetter()) — \(name.transliteration)
-            Meaning: \(name.meaning)
-            First Found: \(name.firstFoundShort)
-
-            \(name.desc)
-            """
+            // Always share as "English - Arabic", e.g. "Ar-Rahman - الرحمن".
+            shareText: "\(name.transliteration) - \(name.name.removeDiacriticsFromLastLetter())"
         )
     }
 }

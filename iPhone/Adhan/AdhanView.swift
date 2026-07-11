@@ -83,15 +83,18 @@ struct AdhanView: View {
         List {
             Group {
                 #if os(iOS)
-                // Date, location and Qibla stay where the thumb expects them; the sky sits beneath as the
-                // header of the prayer information it now contains.
-                DateAndLocationSection(showBigQibla: $showBigQibla)
+                // Date/location and the sky are their own sections again — sharing one made the sky's rounded
+                // card fight the rows above it. `compactListSectionSpacing` below closes the gap between them
+                // so they still read as one stacked header rather than two floating islands.
+                Section {
+                    DateAndLocationSection(showBigQibla: $showBigQibla)
+                }
 
                 if settings.showSkyView, settings.prayers != nil, settings.currentLocation != nil {
                     Section {
                         SkyView()
+                            .listRowBackground(Color.clear)
                     }
-                    .listRowBackground(Color.clear)
                 }
 
                 prayersSection
@@ -113,6 +116,8 @@ struct AdhanView: View {
             }
             .themedListRowBackground()
         }
+        // Sections stay separate but sit close together, so the header cards stack instead of drifting apart.
+        .compactListSectionSpacing()
         .refreshable {
             prayerTimeRefresh(force: true)
         }
@@ -170,6 +175,8 @@ struct AdhanView: View {
         .navigationTitle("Al-Adhan")
         #if os(iOS)
         .toolbar {
+            // Leading toolbar is the first accent, trailing is the second — the same split the app uses for
+            // sections. With a single-color accent the two are identical, so nothing changes visually there.
             ToolbarItem(placement: .navigationBarLeading) {
                 NavigationLink {
                     PrayerCalendarView()
@@ -177,6 +184,7 @@ struct AdhanView: View {
                     Image(systemName: "calendar")
                 }
                 .simultaneousGesture(TapGesture().onEnded { settings.hapticFeedback() })
+                .tint(settings.accentColor.accent1)
             }
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button {
@@ -185,6 +193,7 @@ struct AdhanView: View {
                 } label: {
                     Image(systemName: "gear")
                 }
+                .tint(settings.accentColor.accent2)
             }
         }
         .sheet(isPresented: $showingSettingsSheet) {

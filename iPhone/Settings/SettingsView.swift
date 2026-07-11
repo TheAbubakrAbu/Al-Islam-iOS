@@ -448,68 +448,6 @@ struct SettingsAppearanceView: View {
         )
     }
 
-    #if os(iOS)
-    /// The second stop of a custom accent, plus a preview of the resulting gradient.
-    @ViewBuilder
-    private var customGradientRow: some View {
-        HStack(spacing: 12) {
-            ColorPicker("", selection: customSecondColorBinding, supportsOpacity: false)
-                .labelsHidden()
-                .disabled(Color(hex: settings.customAccentColorHex2) == nil)
-
-            Text("Second Color")
-                .font(.subheadline)
-                .foregroundColor(Color(hex: settings.customAccentColorHex2) == nil ? .secondary : .primary)
-
-            Spacer()
-
-            Toggle("", isOn: customSecondColorEnabledBinding)
-                .labelsHidden()
-                .tint(Color(hex: settings.customAccentColorHex2) ?? .green)
-        }
-        .padding(.horizontal, 24)
-        .padding(.top, 6)
-
-        if Color(hex: settings.customAccentColorHex2) != nil {
-            Capsule()
-                .fill(AccentColor.custom.gradient(from: .leading, to: .trailing))
-                .frame(height: 12)
-                .padding(.horizontal, 24)
-                .padding(.top, 6)
-        }
-
-        Text("Turn on a second color to make your accent a two-color gradient. With it off, your accent is the single color above.")
-            .font(.caption)
-            .foregroundColor(.secondary)
-            .padding(.horizontal, 24)
-            .padding(.top, 6)
-    }
-    #endif
-
-    /// The second stop of a custom accent. Off — an empty stored hex — means one color, and both stops of the
-    /// gradient resolve to the primary.
-    private var customSecondColorEnabledBinding: Binding<Bool> {
-        Binding(
-            get: { Color(hex: settings.customAccentColorHex2) != nil },
-            set: { isOn in
-                withAnimation {
-                    settings.customAccentColorHex2 = isOn ? AccentColor.alIslamSecondaryHex : ""
-                    settings.accentColor = .custom
-                }
-            }
-        )
-    }
-
-    private var customSecondColorBinding: Binding<Color> {
-        Binding(
-            get: { Color(hex: settings.customAccentColorHex2) ?? (Color(hex: settings.customAccentColorHex) ?? .green) },
-            set: { newColor in
-                settings.customAccentColorHex2 = newColor.hexString
-                withAnimation { settings.accentColor = .custom }
-            }
-        )
-    }
-
     /// Reads/writes the stored custom background hex; picking a color also switches the active theme to `custom`.
     private var customBackgroundColorBinding: Binding<Color> {
         Binding(
@@ -584,13 +522,13 @@ struct SettingsAppearanceView: View {
                 GridItem(.flexible(), spacing: 12),
             ], spacing: 12) {
                 ForEach(accentColors, id: \.self) { accentColor in
-                    // Filled with the accent's gradient, which for a single-color preset is that color twice.
+                    // Every preset is a single colour, so a plain circle is right here.
                     Circle()
-                        .fill(accentColor.gradient())
+                        .fill(accentColor.color)
                         .frame(width: 30, height: 30)
                         .overlay(
                             Circle()
-                                .stroke(settings.accentColor == accentColor ? Color.primary : Color.clear, lineWidth: 1)
+                                .stroke(settings.accentColor == accentColor ? Color.primary : Color.clear, lineWidth: 2)
                         )
                         .accessibilityLabel(accentColor.displayName)
                         .onTapGesture {
@@ -622,7 +560,6 @@ struct SettingsAppearanceView: View {
             .padding(.horizontal, 24)
             .onChange(of: settings.accentColor) { _ in settings.hapticFeedback() }
 
-            customGradientRow
             #endif
 
             #if os(iOS)

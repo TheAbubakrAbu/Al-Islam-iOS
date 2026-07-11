@@ -57,7 +57,6 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     private override init() {
         self.accentColor = AccentColor(rawValue: appGroupUserDefaults?.string(forKey: "accentColor") ?? AppIdentifiers.mainColorString) ?? AppIdentifiers.mainColor
         self.customAccentColorHex = appGroupUserDefaults?.string(forKey: "customAccentColorHex") ?? "34C759"
-        self.customAccentColorHex2 = appGroupUserDefaults?.string(forKey: "customAccentColorHex2") ?? ""
         self.customBackgroundColorHex = appGroupUserDefaults?.string(forKey: "customBackgroundColorHex") ?? "1C1C1E"
 
         self.prayersData = appGroupUserDefaults?.data(forKey: "prayersData") ?? Data()
@@ -102,7 +101,6 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
         runQuranStartupMigrations()
         runAdhanSoundStartupMigrations()
         runWatchSyncKeyMigration()
-        runAlIslamAccentMigration()
         isReadyForUI = true
 
         // Defer CoreLocation + NWPathMonitor startup off the synchronous init/first-paint path. Settings.shared
@@ -158,7 +156,6 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
         // re-persists them through each didSet. (Mirrors the init defaults.)
         accentColor = AppIdentifiers.mainColor
         customAccentColorHex = "34C759"
-        customAccentColorHex2 = ""
         customBackgroundColorHex = "1C1C1E"
         travelingMode = false
         hanafiMadhab = false
@@ -218,7 +215,7 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
               !appGroup.bool(forKey: migrationKey) else { return }
 
         let syncedAppGroupKeys = [
-            "accentColor", "customAccentColorHex", "customAccentColorHex2", "customBackgroundColorHex", "prayerCalculation",
+            "accentColor", "customAccentColorHex", "customBackgroundColorHex", "prayerCalculation",
             "hanafiMadhab", "travelingMode", "hijriOffset", "highLatitudeRule", "customPrayerNames",
         ]
         explicitlySetKeys.formUnion(syncedAppGroupKeys.filter { appGroup.object(forKey: $0) != nil })
@@ -226,21 +223,6 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
         appGroup.removeObject(forKey: "watchSync.lastSyncedSettingsData")
         appGroup.set(true, forKey: migrationKey)
         #endif
-    }
-
-    /// Moves every existing user onto the Al-Islam accent exactly once. Whoever picked red before gets the
-    /// brand accent on this launch and, because the flag is never cleared, keeps whatever they pick after.
-    ///
-    /// Goes through the property (not straight to `UserDefaults`) so the app-group mirror, the explicit-key
-    /// marker, and the watch push all happen. Both devices run it and land on the same value, so the two
-    /// snapshots agree and no sync round trip is triggered.
-    private func runAlIslamAccentMigration() {
-        let migrationKey = "didAdoptAlIslamAccent"
-        let defaults = UserDefaults.standard
-        guard Self.isAppProcess, !defaults.bool(forKey: migrationKey) else { return }
-        defaults.set(true, forKey: migrationKey)
-
-        if accentColor != .alIslam { accentColor = .alIslam }
     }
 
     @Published var accentColor: AccentColor {
@@ -257,16 +239,6 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
             guard Self.isAppProcess else { return }
             appGroupUserDefaults?.setValue(customAccentColorHex, forKey: "customAccentColorHex")
             markExplicitlySet("customAccentColorHex")
-        }
-    }
-
-    /// Hex backing `AccentColor.custom`'s second stop. Empty means the user chose a single color, and both
-    /// stops resolve to the primary — see `AccentColor.secondaryColor`.
-    @Published var customAccentColorHex2: String {
-        didSet {
-            guard Self.isAppProcess else { return }
-            appGroupUserDefaults?.setValue(customAccentColorHex2, forKey: "customAccentColorHex2")
-            markExplicitlySet("customAccentColorHex2")
         }
     }
 
@@ -860,6 +832,33 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     @AppStorage("lastReadSurah") var lastReadSurah: Int = 0
     @AppStorage("lastReadAyah") var lastReadAyah: Int = 0
 
+    // MARK: - Surah stats (times opened / played)
+    // A tiny [surahID: count] map JSON-encoded in one key each — at most 114 small entries, so it costs
+    // almost nothing in memory and is only decoded when a surah header is shown.
+    @AppStorage("surahOpenCountsData") private var surahOpenCountsData: Data = Data()
+    @AppStorage("surahPlayCountsData") private var surahPlayCountsData: Data = Data()
+
+    private func decodeSurahCounts(_ data: Data) -> [Int: Int] {
+        data.isEmpty ? [:] : ((try? Self.decoder.decode([Int: Int].self, from: data)) ?? [:])
+    }
+
+    func surahOpenCount(_ surahID: Int) -> Int { decodeSurahCounts(surahOpenCountsData)[surahID] ?? 0 }
+    func surahPlayCount(_ surahID: Int) -> Int { decodeSurahCounts(surahPlayCountsData)[surahID] ?? 0 }
+
+    func recordSurahOpened(_ surahID: Int) {
+        guard (1...114).contains(surahID) else { return }
+        var counts = decodeSurahCounts(surahOpenCountsData)
+        counts[surahID, default: 0] += 1
+        if let data = try? Self.encoder.encode(counts) { surahOpenCountsData = data }
+    }
+
+    func recordSurahPlayed(_ surahID: Int) {
+        guard (1...114).contains(surahID) else { return }
+        var counts = decodeSurahCounts(surahPlayCountsData)
+        counts[surahID, default: 0] += 1
+        if let data = try? Self.encoder.encode(counts) { surahPlayCountsData = data }
+    }
+
     /// When off, the app neither saves nor shows the "Last Read Ayah" / "Last Listened Surah" sections.
     @AppStorage("saveLastReadAyah") var saveLastReadAyah: Bool = true
     @AppStorage("saveLastListenedSurah") var saveLastListenedSurah: Bool = true
@@ -876,7 +875,9 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     @AppStorage("lastListenedAyahData") private var lastListenedAyahData: Data?
     var lastListenedAyah: LastListenedAyah? {
         get {
-            guard let data = lastListenedAyahData else { return nil }
+            // Fall back to the App Group suite so Siri/AppIntents can resolve this even when they run
+            // outside the main app's standard UserDefaults domain (which caused "no last listened").
+            guard let data = lastListenedAyahData ?? appGroupUserDefaults?.data(forKey: "lastListenedAyahData") else { return nil }
             do {
                 return try Self.decoder.decode(LastListenedAyah.self, from: data)
             } catch {
@@ -887,12 +888,15 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
         set {
             if let newValue = newValue {
                 do {
-                    lastListenedAyahData = try Self.encoder.encode(newValue)
+                    let encoded = try Self.encoder.encode(newValue)
+                    lastListenedAyahData = encoded
+                    appGroupUserDefaults?.set(encoded, forKey: "lastListenedAyahData")
                 } catch {
                     logger.debug("Failed to encode last listened ayah: \(error)")
                 }
             } else {
                 lastListenedAyahData = nil
+                appGroupUserDefaults?.removeObject(forKey: "lastListenedAyahData")
             }
         }
     }
@@ -900,7 +904,9 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     @AppStorage("lastListenedSurahData") private var lastListenedSurahData: Data?
     var lastListenedSurah: LastListenedSurah? {
         get {
-            guard let data = lastListenedSurahData else { return nil }
+            // Fall back to the App Group suite so Siri/AppIntents can resolve this even when they run
+            // outside the main app's standard UserDefaults domain (which caused "no last listened").
+            guard let data = lastListenedSurahData ?? appGroupUserDefaults?.data(forKey: "lastListenedSurahData") else { return nil }
             do {
                 return try Self.decoder.decode(LastListenedSurah.self, from: data)
             } catch {
@@ -911,12 +917,15 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
         set {
             if let newValue = newValue {
                 do {
-                    lastListenedSurahData = try Self.encoder.encode(newValue)
+                    let encoded = try Self.encoder.encode(newValue)
+                    lastListenedSurahData = encoded
+                    appGroupUserDefaults?.set(encoded, forKey: "lastListenedSurahData")
                 } catch {
                     logger.debug("Failed to encode last listened surah: \(error)")
                 }
             } else {
                 lastListenedSurahData = nil
+                appGroupUserDefaults?.removeObject(forKey: "lastListenedSurahData")
             }
         }
     }
@@ -1003,6 +1012,9 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     @AppStorage("THEfontArabic") var fontArabic: String = "KFGQPCHAFSUthmanicScript-Regula"
     @AppStorage("fontArabicSize") var fontArabicSize: Double = Double(UIFont.preferredFont(forTextStyle: .title1).pointSize)
     @AppStorage("useFontArabic") var useFontArabic = true
+
+    /// True when the Quran Arabic font picker is set to "Basic" (the standard Apple system font).
+    var quranUsesSystemArabicFont: Bool { fontArabic == Settings.systemArabicFontName }
 
     // MARK: - Arabic Alphabet screen size
 

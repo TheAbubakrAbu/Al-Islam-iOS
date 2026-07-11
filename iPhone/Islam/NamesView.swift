@@ -291,6 +291,7 @@ struct NamesView: View {
                     Image(systemName: namesDisplayMode == "grid" ? "list.bullet" : "square.grid.2x2")
                 }
                 .accessibilityLabel(namesDisplayMode == "grid" ? "Show list" : "Show grid")
+                .tint(settings.accentColor.accent2)
             }
         }
         #endif
@@ -302,10 +303,13 @@ struct NamesView: View {
                 .font(.caption)
                 .foregroundColor(.secondary)
 
-            Toggle("Show All Descriptions", isOn: showAllDescriptionsBinding)
-                .font(.caption)
-                .tint(settings.accentColor.color)
-                .onChange(of: settings.showDescription) { _ in settings.hapticFeedback() }
+            // The per-row descriptions only exist in list mode, so hide the toggle in grid mode.
+            if namesDisplayMode != "grid" {
+                Toggle("Show All Descriptions", isOn: showAllDescriptionsBinding)
+                    .font(.caption)
+                    .tint(settings.accentColor.color)
+                    .onChange(of: settings.showDescription) { _ in settings.hapticFeedback() }
+            }
         }
     }
 
@@ -532,29 +536,6 @@ private struct NameRow: View, Equatable {
     var body: some View {
         #if os(iOS)
         content
-            .contextMenu {
-                Text("Name Actions")
-                    .foregroundStyle(.secondary)
-
-                Button {
-                    settings.hapticFeedback()
-                    FocusOverlayPresenter.shared.present(.name(name))
-                } label: {
-                    Label("View Fullscreen", systemImage: "arrow.up.left.and.arrow.down.right")
-                }
-
-                Button {
-                    settings.hapticFeedback()
-                    presentSystemShareSheet(items: [FocusItem.name(name).shareText])
-                } label: {
-                    Label("Share Name", systemImage: "square.and.arrow.up")
-                }
-
-                Divider()
-                favoriteMenuItem
-                Divider()
-                copyMenu
-            }
             .swipeActions(edge: .leading) {
                 Button {
                     settings.hapticFeedback()
@@ -662,18 +643,6 @@ private struct NameRow: View, Equatable {
     }
 
     @ViewBuilder
-    private var favoriteMenuItem: some View {
-        Button(role: isFavorite ? .destructive : nil) {
-            settings.hapticFeedback()
-            withAnimation(.easeInOut) {
-                settings.toggleNameFavorite(number: name.number)
-            }
-        } label: {
-            Label(isFavorite ? "Unfavorite" : "Favorite", systemImage: isFavorite ? "star.fill" : "star")
-        }
-    }
-
-    @ViewBuilder
     private var numberPill: some View {
         ZStack(alignment: .topTrailing) {
             Text("\(name.number)")
@@ -702,34 +671,6 @@ private struct NameRow: View, Equatable {
             if #available(iOS 26, *) { 0 } else { 8 }
         }())
     }
-
-    #if os(iOS)
-    private var copyMenu: some View {
-        Group {
-            menuItem("Copy All", text: """
-            Arabic: \(name.name.removeDiacriticsFromLastLetter())
-            Transliteration: \(name.transliteration)
-            Translation: \(name.meaning)
-            First Found: \(name.firstFoundShort)
-            Description: \(name.desc)
-            """)
-            menuItem("Copy Arabic", text: name.name.removeDiacriticsFromLastLetter())
-            menuItem("Copy Transliteration", text: name.transliteration)
-            menuItem("Copy Translation", text: name.meaning)
-            menuItem("Copy First Found", text: name.firstFoundShort)
-            menuItem("Copy Description", text: name.desc)
-        }
-    }
-
-    private func menuItem(_ label: String, text: String) -> some View {
-        Button {
-            settings.hapticFeedback()
-            UIPasteboard.general.string = text
-        } label: {
-            Label(label, systemImage: "doc.on.doc")
-        }
-    }
-    #endif
 
     static func == (lhs: Self, rhs: Self) -> Bool {
         lhs.name == rhs.name &&
@@ -845,7 +786,7 @@ private struct NameGridTile: View {
     let fontArabic: String
 
     var body: some View {
-        VStack(spacing: 6) {
+        VStack(spacing: 3) {
             Text(name.displayArabicName)
                 .font(useFontArabic ? .custom(fontArabic, size: 20) : .title3)
                 .foregroundColor(accentColor.color)
@@ -864,7 +805,7 @@ private struct NameGridTile: View {
                 .foregroundColor(.secondary)
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 10)
+        .padding(.vertical, 6)
         .padding(.horizontal, 4)
         .conditionalGlassEffect(
             rectangle: true,
@@ -875,26 +816,6 @@ private struct NameGridTile: View {
             settings.hapticFeedback()
             settings.toggleNameFavorite(number: name.number)
         }
-        #if os(iOS)
-        .contextMenu {
-            Text("Name Actions")
-                .foregroundStyle(.secondary)
-
-            Button {
-                settings.hapticFeedback()
-                FocusOverlayPresenter.shared.present(.name(name))
-            } label: {
-                Label("View Fullscreen", systemImage: "arrow.up.left.and.arrow.down.right")
-            }
-
-            Button {
-                settings.hapticFeedback()
-                presentSystemShareSheet(items: [FocusItem.name(name).shareText])
-            } label: {
-                Label("Share Name", systemImage: "square.and.arrow.up")
-            }
-        }
-        #endif
     }
 }
 

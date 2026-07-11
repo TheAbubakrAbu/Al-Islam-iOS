@@ -106,9 +106,6 @@ struct ArabicView: View {
                 searchResultsSection
             }
             .themedListRowBackground()
-            // Size slider raises the Dynamic-Type *floor* for the alphabet content (custom Arabic glyphs
-            // included — they now use `relativeTo:`), so everything only ever grows from the device size.
-            .dynamicTypeSize(settings.arabicLetterDynamicTypeSize...)
         }
         #if os(watchOS)
         .searchable(text: $searchText.animation(.easeInOut))
@@ -171,6 +168,7 @@ struct ArabicView: View {
                     Image(systemName: isGridMode ? "list.bullet" : "square.grid.2x2")
                 }
                 .accessibilityLabel(isGridMode ? "Show list" : "Show grid")
+                .tint(settings.accentColor.accent2)
             }
         }
         #endif
@@ -504,7 +502,8 @@ struct ArabicLetterView: View {
                                     ? settings.scalableArabicFont(base: 34, relativeTo: .largeTitle)
                                     : .title
                             )
-                        
+                            .dynamicTypeSize(settings.arabicLetterDynamicTypeSize...)
+
                         Spacer()
 
                         Text(letterData.name)
@@ -513,6 +512,7 @@ struct ArabicLetterView: View {
                                     ? settings.scalableArabicFont(base: 28, relativeTo: .title)
                                     : .title2
                             )
+                            .dynamicTypeSize(settings.arabicLetterDynamicTypeSize...)
                     }
                 }
                 .padding(.vertical, useQuranicFontForLetter ? 0 : 2)
@@ -521,8 +521,8 @@ struct ArabicLetterView: View {
             if let weight = letterData.weight {
                 Section(header: Text("LIGHT / HEAVY PRONUNCIATION")) {
                     VStack(alignment: .leading, spacing: 8) {
-                            Text(weight == .heavy ? "Heavy letter (Tafkhim)"
-                                : weight == .light ? "Light letter (Tarqiq)"
+                            Text(weight == .heavy ? "Heavy letter (Mufakhamah)"
+                                : weight == .light ? "Light letter (Muraqqaqah)"
                              : weight == .conditional ? "Conditional letter"
                              : "Follows previous letter")
                             .font(.headline)
@@ -538,6 +538,8 @@ struct ArabicLetterView: View {
 
             Section(header: Text("DIFFERENT FORMS")) {
                 VStack {
+                    // `forms` is ordered [final, medial, initial], so laid out left-to-right the initial form
+                    // lands on the right — the correct right-to-left reading order for Arabic.
                     HStack(alignment: .center) {
                         ForEach(0..<min(3, letterData.forms.count), id: \.self) { index in
                             Spacer()
@@ -548,6 +550,7 @@ struct ArabicLetterView: View {
                                         ? settings.scalableArabicFont(base: 28, relativeTo: .title)
                                         : .title2
                                 )
+                                .dynamicTypeSize(settings.arabicLetterDynamicTypeSize...)
 
                             Spacer()
                         }
@@ -567,12 +570,12 @@ struct ArabicLetterView: View {
                     }
 
                     if letterData.transliteration == "waw" {
-                        Text("- **Waw (و)**: Functions as a long vowel \"uu\" when used after a letter with a damma, like in رَسُول (rasool - messenger). Otherwise, Waw is usually a consonant and makes the \"w\" sound, like in وَقَفَ (waqafa - stood).")
+                        Text("- **Waw (و)**: As a **vowel** it is the long \"uu\" (also written \"oo\", and shortened to \"u\"), used after a letter with a damma, like in رَسُول (rasool - messenger). As a **consonant** it makes the \"w\" sound, like in وَقَفَ (waqafa - stood).")
                             .font(.body)
                     }
 
                     if letterData.transliteration == "yaa" {
-                        Text("- **Yaa (ي)**: Functions as a long vowel \"ii\" when used after a letter with a kasra, like in كِتَابِي (kitaabi - my book). Otherwise, Yaa is usually a consonant and makes the \"y\" sound, like in يَد (yad - hand).")
+                        Text("- **Yaa (ي)**: As a **vowel** it is the long \"ee\" (also written \"ii\", and shortened to \"i\"), used after a letter with a kasra, like in كِتَابِي (kitaabi - my book). As a **consonant** it makes the \"y\" sound, like in يَد (yad - hand).")
                             .font(.body)
                     }
 
@@ -644,9 +647,6 @@ struct ArabicLetterView: View {
             }
             }
             .themedListRowBackground()
-            // Same size slider as the alphabet list: a Dynamic-Type floor so the letter, its forms, and the
-            // explanatory text all grow together (the Arabic glyphs use `relativeTo:` so they scale too).
-            .dynamicTypeSize(settings.arabicLetterDynamicTypeSize...)
         }
         #if !os(watchOS)
         .adaptiveSafeArea(edge: .bottom) {
@@ -769,6 +769,7 @@ struct TashkeelRow: View {
     }
 
     var body: some View {
+        // Arabic reads right-to-left, so the harakaat columns run right-to-left (first one on the right).
         HStack(spacing: 20) {
             ForEach(tashkeels, id: \.english) { tk in
                 VStack(spacing: useQuranicFontForLetter ? 4 : 8) {
@@ -796,6 +797,7 @@ struct TashkeelRow: View {
                                 ? settings.scalableArabicFont(base: 28, relativeTo: .title)
                                 : .title
                         )
+                        .dynamicTypeSize(settings.arabicLetterDynamicTypeSize...)
                         .frame(maxWidth: .infinity)
 
                     #if os(iOS)
@@ -808,6 +810,7 @@ struct TashkeelRow: View {
                 }
             }
         }
+        .environment(\.layoutDirection, .rightToLeft)
     }
 }
 
@@ -822,8 +825,8 @@ struct HamzaPracticeRow: View {
         let l = letterData.letter
         return [
             ("a" + s, "أَ" + l),
-            ("i" + s, "إِ" + l),
-            ("u" + s, "أُ" + l)
+            ("u" + s, "أُ" + l),
+            ("i" + s, "إِ" + l)
         ]
     }
 
@@ -832,8 +835,8 @@ struct HamzaPracticeRow: View {
         let l = letterData.letter
         return [
             ("aa" + s, "ءَ" + "ا" + l),
-            ("ii" + s, "إِ" + "ي" + l),
-            ("uu" + s, "أُ" + "و" + l)
+            ("uu" + s, "أُ" + "و" + l),
+            ("ii" + s, "إِ" + "ي" + l)
         ]
     }
 
@@ -842,8 +845,8 @@ struct HamzaPracticeRow: View {
         let l = letterData.letter
         return [
             ("a" + s + "aa", "أَ" + l + "َا"),
-            ("a" + s + "ii", "أَ" + l + "ِي"),
-            ("a" + s + "uu", "أَ" + l + "ُو")
+            ("a" + s + "uu", "أَ" + l + "ُو"),
+            ("a" + s + "ii", "أَ" + l + "ِي")
         ]
     }
 
@@ -852,8 +855,8 @@ struct HamzaPracticeRow: View {
         let l = letterData.letter
         return [
             ("a" + s + s + "aa", "أَ" + l + "َّا"),
-            ("a" + s + s + "ii", "أَ" + l + "ِّي"),
-            ("a" + s + s + "uu", "أَ" + l + "ُّو")
+            ("a" + s + s + "uu", "أَ" + l + "ُّو"),
+            ("a" + s + s + "ii", "أَ" + l + "ِّي")
         ]
     }
 
@@ -862,8 +865,8 @@ struct HamzaPracticeRow: View {
         let l = letterData.letter
         return [
             ("i" + s + s + "aa", "إِ" + l + "َّا"),
-            ("i" + s + s + "ii", "إِ" + l + "ِّي"),
-            ("i" + s + s + "uu", "إِ" + l + "ُّو")
+            ("i" + s + s + "uu", "إِ" + l + "ُّو"),
+            ("i" + s + s + "ii", "إِ" + l + "ِّي")
         ]
     }
 
@@ -872,8 +875,8 @@ struct HamzaPracticeRow: View {
         let l = letterData.letter
         return [
             ("u" + s + s + "aa", "أُ" + l + "َّا"),
-            ("u" + s + s + "ii", "أُ" + l + "ِّي"),
-            ("u" + s + s + "uu", "أُ" + l + "ُّو")
+            ("u" + s + s + "uu", "أُ" + l + "ُّو"),
+            ("u" + s + s + "ii", "أُ" + l + "ِّي")
         ]
     }
 
@@ -883,8 +886,8 @@ struct HamzaPracticeRow: View {
             hamzaLongSyllablesBasic,
             hamzaLongSyllables,
             hamzaShaddahA,
-            hamzaShaddahI,
-            hamzaShaddahU
+            hamzaShaddahU,
+            hamzaShaddahI
         ]
     }
 
@@ -903,11 +906,13 @@ struct HamzaPracticeRow: View {
                                 ? settings.scalableArabicFont(base: 28, relativeTo: .title)
                                 : .title
                         )
+                        .dynamicTypeSize(settings.arabicLetterDynamicTypeSize...)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, useQuranicFontForLetter ? 0 : 8)
                 }
             }
         }
+        .environment(\.layoutDirection, .rightToLeft)
     }
 
     var body: some View {
@@ -936,12 +941,13 @@ struct NonArabicVowelPracticeRow: View {
     private var syllables: [(latin: String, arabic: String)] {
         [
             (baseSound + "a", letterData.letter + "َ"),
-            (baseSound + "i", letterData.letter + "ِ"),
-            (baseSound + "u", letterData.letter + "ُ")
+            (baseSound + "u", letterData.letter + "ُ"),
+            (baseSound + "i", letterData.letter + "ِ")
         ]
     }
 
     var body: some View {
+        // Arabic reads right-to-left, so the syllable columns run right-to-left (first one on the right).
         HStack(spacing: 20) {
             ForEach(syllables, id: \.latin) { syllable in
                 VStack {
@@ -955,11 +961,13 @@ struct NonArabicVowelPracticeRow: View {
                                 ? settings.scalableArabicFont(base: 28, relativeTo: .title)
                                 : .title
                         )
+                        .dynamicTypeSize(settings.arabicLetterDynamicTypeSize...)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, useQuranicFontForLetter ? 0 : 8)
                 }
             }
         }
+        .environment(\.layoutDirection, .rightToLeft)
     }
 }
 
@@ -1018,13 +1026,13 @@ struct ArabicLetterRow: View, Equatable {
                     fg: accentColor.color,
                     guaranteeMatch: matchedLetter
                 )
+                .dynamicTypeSize(settings.arabicLetterDynamicTypeSize...)
             }
             .padding(.vertical, -2)
         }
         #if os(iOS)
         .swipeActions(edge: .leading) { favButton() }
         .swipeActions(edge: .trailing) { favButton() }
-        .contextMenu { contextItems() }
         #endif
     }
 
@@ -1039,13 +1047,6 @@ struct ArabicLetterRow: View, Equatable {
             Image(systemName: isFavorite ? "star.fill" : "star")
         }
         .tint(accentColor.color)
-    }
-
-    @ViewBuilder
-    private func contextItems() -> some View {
-        #if os(iOS)
-        arabicLetterContextItems(letterData, isFavorite: isFavorite)
-        #endif
     }
 
     static func == (lhs: Self, rhs: Self) -> Bool {
@@ -1076,6 +1077,7 @@ struct ArabicNumberRow: View {
                             ? settings.scalableArabicFont(base: 15, relativeTo: .subheadline)
                             : .subheadline
                     )
+                    .dynamicTypeSize(settings.arabicLetterDynamicTypeSize...)
                     .foregroundColor(settings.accentColor.color)
 
                 Text(numberData.transliteration)
@@ -1087,6 +1089,7 @@ struct ArabicNumberRow: View {
 
             Text(numberData.number)
                 .font(.title2)
+                .dynamicTypeSize(settings.arabicLetterDynamicTypeSize...)
                 .foregroundColor(settings.accentColor.color)
         }
     }
@@ -1182,58 +1185,8 @@ struct QuranSignsSectionContent: View {
 }
 
 #if os(iOS)
-/// The long-press menu for a single letter. Shared by `ArabicLetterRow` and `ArabicLetterGridTile` so the two
-/// presentations can never drift apart on what a letter lets you do.
-@ViewBuilder
-func arabicLetterContextItems(_ letterData: LetterData, isFavorite: Bool) -> some View {
-    let settings = Settings.shared
-
-    Text("Letter Actions")
-        .foregroundStyle(.secondary)
-
-    Button {
-        settings.hapticFeedback()
-        FocusOverlayPresenter.shared.present(.letter(letterData))
-    } label: {
-        Label("View Fullscreen", systemImage: "arrow.up.left.and.arrow.down.right")
-    }
-
-    Button {
-        settings.hapticFeedback()
-        presentSystemShareSheet(items: [FocusItem.letter(letterData).shareText])
-    } label: {
-        Label("Share Letter", systemImage: "square.and.arrow.up")
-    }
-
-    Divider()
-
-    Button(role: isFavorite ? .destructive : nil) {
-        settings.hapticFeedback()
-        withAnimation(.easeInOut) {
-            settings.toggleLetterFavorite(letterData: letterData)
-        }
-    } label: {
-        Label(isFavorite ? "Unfavorite Letter" : "Favorite Letter",
-              systemImage: isFavorite ? "star.fill" : "star")
-    }
-
-    Button {
-        settings.hapticFeedback()
-        UIPasteboard.general.string = letterData.letter
-    } label: {
-        Label("Copy Letter", systemImage: "doc.on.doc")
-    }
-
-    Button {
-        settings.hapticFeedback()
-        UIPasteboard.general.string = letterData.transliteration
-    } label: {
-        Label("Copy Transliteration", systemImage: "doc.on.doc")
-    }
-}
-
 /// A letter as a tile, mirroring `NameGridTile` on the 99 Names screen. Tapping opens the letter's detail —
-/// the same primary action the list row has — rather than toggling a favorite, which lives in the menu.
+/// the same primary action the list row has.
 struct ArabicLetterGridTile: View {
     @ObservedObject private var settings = Settings.shared
 
@@ -1263,38 +1216,47 @@ struct ArabicLetterGridTile: View {
             tile
         }
         .buttonStyle(.plain)
-        .contextMenu { arabicLetterContextItems(letterData, isFavorite: isFavorite) }
     }
 
     private var tile: some View {
         Group {
-            VStack(spacing: 6) {
+            VStack(spacing: 0) {
                 Text(letterData.letter)
                     .font(glyphFont)
+                    .dynamicTypeSize(settings.arabicLetterDynamicTypeSize...)
                     .foregroundColor(accentColor.color)
                     .lineLimit(1)
                     .minimumScaleFactor(0.6)
 
-                Text(letterData.transliteration)
+                Text(letterData.name)
                     .font(.caption.weight(.semibold))
+                    .foregroundColor(.primary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.5)
+                
+                Text(letterData.transliteration)
+                    .font(.caption2.weight(.semibold))
                     .foregroundColor(.primary)
                     .lineLimit(1)
                     .minimumScaleFactor(0.5)
 
                 // Em spaces, not a plain space: the initial/medial/final forms of a letter run together
                 // otherwise, and they read as one word. One `Text` (rather than an `HStack`) so all three
-                // forms shrink by the same factor when the tile is tight.
-                Text(letterData.forms.prefix(3).joined(separator: "\u{2003}\u{2003}"))
+                // forms shrink by the same factor when the tile is tight. `forms` is [final, medial, initial];
+                // reversed here so this RTL-rendered `Text` places the initial form on the right, matching the
+                // per-letter detail view's left-to-right layout.
+                Text(letterData.forms.prefix(3).reversed().joined(separator: "\u{2002}"))
                     .font(useFontArabic && !letterData.isNonArabicScriptLetter
                           ? .custom(fontArabic, size: 12, relativeTo: .caption2)
                           : .caption2)
+                    .dynamicTypeSize(settings.arabicLetterDynamicTypeSize...)
                     .foregroundColor(.secondary)
                     .lineLimit(1)
                     .minimumScaleFactor(0.5)
             }
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 10)
-            .padding(.horizontal, 4)
+            .padding(.vertical, 8)
+            .padding(.horizontal, 12)
             .contentShape(Rectangle())
             .conditionalGlassEffect(
                 rectangle: true,

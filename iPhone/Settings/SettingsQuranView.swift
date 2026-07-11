@@ -534,6 +534,7 @@ struct SettingsQuranView: View {
         Picker("Arabic Font", selection: $settings.fontArabic.animation(.easeInOut)) {
             Text("Uthmani").tag(Settings.hafsUthmaniFontName)
             Text("Indopak").tag(Settings.indopakFontName)
+            Text("Basic").tag(Settings.systemArabicFontName)
         }
         #if os(iOS)
         .pickerStyle(SegmentedPickerStyle())
@@ -546,6 +547,7 @@ struct SettingsQuranView: View {
         VStack(alignment: .leading, spacing: 16) {
             Toggle("Use System Font Size", isOn: useSystemArabicFontSize.animation(.easeInOut))
                 .font(.subheadline)
+                .padding(.vertical, 2)
 
             Stepper(value: $settings.fontArabicSize.animation(.easeInOut), in: 15...75, step: 1) {
                 Text("Arabic Font Size: \(Int(settings.fontArabicSize))")
@@ -629,6 +631,7 @@ struct SettingsQuranView: View {
             VStack(alignment: .leading, spacing: 16) {
                 Toggle("Use System Font Size", isOn: useSystemEnglishFontSize.animation(.easeInOut))
                     .font(.subheadline)
+                    .padding(.vertical, 2)
 
                 Stepper(value: $settings.englishFontSize.animation(.easeInOut), in: 13...20, step: 1) {
                     Text("English Font Size: \(Int(settings.englishFontSize))")

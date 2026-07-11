@@ -323,6 +323,8 @@ struct QuranView: View {
     }
 
     @State private var path: [QuranRoute] = []
+    /// Guards the once-per-appearance auto-open of the mushaf when page mode is already on.
+    @State private var didAutoOpenMushaf = false
     @State private var selectedRoute: QuranRoute?
 
     func push(surahID: Int, ayahID: Int? = nil) {
@@ -488,6 +490,14 @@ struct QuranView: View {
         }
         .task {
             prewarmQuranDestinations()
+            #if os(iOS)
+            // If the reader is already in page mode when the Quran tab opens, resume in the mushaf at the
+            // last-read ayah's page. Guarded so backing out to the list doesn't immediately re-open it.
+            if settings.quranPageMode, !didAutoOpenMushaf {
+                didAutoOpenMushaf = true
+                openMushafWhereLeftOff()
+            }
+            #endif
         }
         .onDisappear {
             ayahSearchTask?.cancel()
@@ -778,6 +788,7 @@ struct QuranView: View {
                     Image(systemName: settings.quranPageMode ? "list.bullet.rectangle" : "book")
                 }
                 .accessibilityLabel(settings.quranPageMode ? "Read surahs as a list" : "Read surahs as pages")
+                .tint(settings.accentColor.accent1)
             }
 
             ToolbarItem(placement: .navigationBarLeading) {
@@ -788,6 +799,7 @@ struct QuranView: View {
                     Image(systemName: settings.quranGridMode ? "list.bullet" : "square.grid.2x2")
                 }
                 .accessibilityLabel(settings.quranGridMode ? "Show lists" : "Show grids")
+                .tint(settings.accentColor.accent1)
             }
 
             ToolbarItem(placement: .navigationBarTrailing) {
@@ -801,6 +813,7 @@ struct QuranView: View {
                         Image(systemName: khatmEditMode ? "checkmark" : "square.and.pencil")
                     }
                     .accessibilityLabel(khatmEditMode ? "Done" : "Edit")
+                    .tint(settings.accentColor.accent2)
                 }
             }
 
@@ -815,6 +828,7 @@ struct QuranView: View {
                     } label: {
                         Image(systemName: "gear")
                     }
+                    .tint(settings.accentColor.accent2)
                 }
             }
         }

@@ -9,6 +9,9 @@ extension Settings {
     static let hafsUthmaniFontName = "KFGQPCHAFSUthmanicScript-Regula"
     static let qiraatUthmaniFontName = "KFGQPCQUMBULUthmanicScript-Regu"
     static let indopakFontName = "Al_Mushaf"
+    /// Sentinel `fontArabic` value meaning "use the standard Apple system font" for Quran Arabic. It is not a
+    /// real installed font, so any stray `.custom(_)` with it falls back to the system font anyway.
+    static let systemArabicFontName = "AlIslamSystemArabicFont"
 
     enum QuranSortMode: String, CaseIterable, Identifiable {
         case surah

@@ -171,13 +171,15 @@ struct SkyView: View {
     @ObservedObject private var adhanPlayer = ForegroundAdhanPlayer.shared
     @Environment(\.layoutDirection) private var layoutDirection
 
-    /// Ticks the live sun forward. One minute is finer than the sun visibly moves across ~340 points.
+    /// Ticks every second so the clock is a real live clock and the sun/solar progress advance continuously
+    /// (like the countdown's progress bar) rather than jumping once a minute. The star field has its own
+    /// `TimelineView` and a seeded star list, so it is unaffected by this re-render.
     @State private var now = Date()
-    private let tick = Timer.publish(every: 60, on: .main, in: .common).autoconnect()
+    private let tick = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
-    /// Taller than the old sky, because the card now holds everything: the prayer columns, the arc, the moon
-    /// and the countdown. Nothing lives below it any more.
-    private let height: CGFloat = 300
+    /// Holds the prayer columns, the arc, the moon and the countdown. Trimmed down: the clock no longer takes
+    /// a row of its own (it only floats in while scrubbing), so the card doesn't need the extra slack.
+    private let height: CGFloat = 250
 
     /// Horizontal row inset, measured off the sections around this card rather than assumed. A grouped row
     /// already carries the list's own 20pt margin, so the card adds nothing; a plain row carries none, and
@@ -363,27 +365,41 @@ struct SkyView: View {
         if let playingPrayerName = adhanPlayer.playingPrayerName {
             adhanStopButton(prayerName: playingPrayerName)
         } else {
-            HStack(spacing: 8) {
-                if scrubber.isScrubbing, let name = displayedPrayer?.displayName {
-                    Text(name)
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.white)
-                        .transition(.opacity)
-                }
-
-                Text(settings.formatDate(displayedDate))
-                    .font(.caption.monospacedDigit())
-                    .foregroundStyle(.white)
+            // Only the moon and its phase live in the layout — the clock is *not* shown at rest (it just added
+            // height for something the status bar already says). While the sun is being scrubbed, the previewed
+            // moment floats in as an overlay ABOVE, so the card's height never changes.
+            HStack(spacing: 6) {
+                MoonPhaseView(date: displayedDate, diameter: 20)
 
                 Text(MoonPhase.on(displayedDate).name)
                     .font(.caption2)
                     .foregroundStyle(.white.opacity(0.75))
-
-                MoonPhaseView(date: displayedDate, diameter: 22)
             }
             .lineLimit(1)
             .minimumScaleFactor(0.7)
             .frame(maxWidth: .infinity)
+            .overlay(alignment: .top) {
+                if scrubber.isScrubbing {
+                    HStack(spacing: 8) {
+                        if let name = displayedPrayer?.displayName {
+                            Text(name)
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(.white)
+                        }
+
+                        Text(settings.formatDate(displayedDate))
+                            .font(.caption.monospacedDigit())
+                            .foregroundStyle(.white)
+                    }
+                    .lineLimit(1)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 4)
+                    .background(Capsule().fill(Color.black.opacity(0.35)))
+                    .offset(y: -28)
+                    .transition(.opacity)
+                }
+            }
+            .animation(.easeInOut(duration: 0.15), value: scrubber.isScrubbing)
         }
     }
 

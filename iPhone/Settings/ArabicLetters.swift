@@ -175,25 +175,26 @@ let numbers = [
     (number: "١٠", name: "عَشَرَة", transliteration: "'asharah", englishNumber: "10")
 ]
 
+// Each vowel triplet is ordered fatha (a), damma (u), kasra (i) so every harakaat row reads a, u, i.
 let tashkeels: [Tashkeel] = [
     Tashkeel(english: "Fatha", arabic: "فَتحَة", tashkeelMark: "َ", transliteration: "a"),
-    Tashkeel(english: "Kasra", arabic: "كَسرَة", tashkeelMark: "ِ", transliteration: "i"),
     Tashkeel(english: "Damma", arabic: "ضَمَّة", tashkeelMark: "ُ", transliteration: "u"),
+    Tashkeel(english: "Kasra", arabic: "كَسرَة", tashkeelMark: "ِ", transliteration: "i"),
     Tashkeel(english: "Fathatayn", arabic: "فَتحَتَين", tashkeelMark: "ًا", transliteration: "an"),
-    Tashkeel(english: "Kasratayn", arabic: "كَسرَتَين", tashkeelMark: "ٍ", transliteration: "in"),
     Tashkeel(english: "Dammatayn", arabic: "ضَمَّتَين", tashkeelMark: "ٌ", transliteration: "un"),
+    Tashkeel(english: "Kasratayn", arabic: "كَسرَتَين", tashkeelMark: "ٍ", transliteration: "in"),
     Tashkeel(english: "Alif", arabic: "أَلِف", tashkeelMark: "َا", transliteration: "aa"),
-    Tashkeel(english: "Yaa", arabic: "يَاء", tashkeelMark: "ِي", transliteration: "ii"),
     Tashkeel(english: "Waaw", arabic: "وَاو", tashkeelMark: "ُو", transliteration: "uu"),
+    Tashkeel(english: "Yaa", arabic: "يَاء", tashkeelMark: "ِي", transliteration: "ii"),
     Tashkeel(english: "Dagger Alif", arabic: "ألف خنجرية", tashkeelMark: "\u{064E}\u{0670}\u{0640}", transliteration: "aa"),
-    Tashkeel(english: "Miniature Yaa", arabic: "يَاء صغيرة", tashkeelMark: "ِۦ", transliteration: "ii"),
     Tashkeel(english: "Miniature Waaw", arabic: "واو صغيرة", tashkeelMark: "ُۥ", transliteration: "uu"),
+    Tashkeel(english: "Miniature Yaa", arabic: "يَاء صغيرة", tashkeelMark: "ِۦ", transliteration: "ii"),
     Tashkeel(english: "Alif Madd", arabic: "أَلِف مَدّ", tashkeelMark: "َآ", transliteration: "aaaa"),
-    Tashkeel(english: "Yaa Madd", arabic: "يَاء مَدّ", tashkeelMark: "ِيٓ", transliteration: "iiii"),
     Tashkeel(english: "Waaw Madd", arabic: "واو مَدّ", tashkeelMark: "ُوٓ", transliteration: "uuuu"),
+    Tashkeel(english: "Yaa Madd", arabic: "يَاء مَدّ", tashkeelMark: "ِيٓ", transliteration: "iiii"),
     Tashkeel(english: "Alif MaqSuurah", arabic: "ياء بلا نقاط", tashkeelMark: "َى", transliteration: "aa"),
-    Tashkeel(english: "Small Yaa Madd", arabic: "ياء مدّ صغيرة", tashkeelMark: "ِۦٓ", transliteration: "iiii"),
     Tashkeel(english: "Small Waaw Madd", arabic: "واو مدّ صغيرة", tashkeelMark: "ُۥٓ", transliteration: "uuuu"),
+    Tashkeel(english: "Small Yaa Madd", arabic: "ياء مدّ صغيرة", tashkeelMark: "ِۦٓ", transliteration: "iiii"),
     Tashkeel(english: "Shaddah", arabic: "شَدَّة", tashkeelMark: "ّ", transliteration: ""),
     Tashkeel(english: "Sukuun 1", arabic: "سُكُون", tashkeelMark: "ْ", transliteration: ""),
     Tashkeel(english: "Sukuun 2", arabic: "سكون عثماني", tashkeelMark: "ۡ", transliteration: "")

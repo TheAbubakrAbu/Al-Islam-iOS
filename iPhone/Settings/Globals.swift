@@ -11,8 +11,8 @@ enum AppIdentifiers {
     static let appFullName = "Al-Islam | Islamic Pillars"
     static let appName = "Al-Islam"
     
-    static let mainColor = AccentColor.alIslam
-    static let mainColorString = "alIslam"
+    static let mainColor = AccentColor.green
+    static let mainColorString = "green"
     
     /// Shared App Group for `UserDefaults` / data (matches entitlements).
     static let appGroupSuiteName = "group.com.IslamicPillars.AppGroup"
@@ -80,30 +80,20 @@ enum AppPerformance {
     }
 }
 
-/// An accent is a *pair* of colors, not one.
-///
-/// `color` is the primary and drives every flat tint in the app — it's what the hundreds of existing
-/// `settings.accentColor.color` call sites read, so none of them change. `secondaryColor` is the far stop,
-/// and for most presets it is simply the same color, which makes `gradient` collapse to a solid fill that
-/// renders identically to the flat one. Only `alIslam` (green → yellow) and a `custom` accent with a second
-/// color chosen actually read as a gradient.
+/// One color per accent. `accent1` and `accent2` both resolve to it, so a screen can keep saying "this section
+/// is the second accent" while the two currently look the same — the split stays wired up without a two-color
+/// accent existing to drive it.
 enum AccentColor: String, CaseIterable, Identifiable {
     var id: String { self.rawValue }
 
-    /// `alIslam` leads the list because it is the app's own accent, and the default.
-    case alIslam, red, orange, yellow, green, blue, indigo, cyan, teal, mint, purple, pink, brown, custom
-
-    /// The brand pair: systemGreen into systemYellow.
-    static let alIslamPrimaryHex = "34C759"
-    static let alIslamSecondaryHex = "FFD60A"
+    case red, orange, yellow, green, blue, indigo, cyan, teal, mint, purple, pink, brown, custom
 
     var displayName: String {
-        self == .alIslam ? "Al-Islam" : rawValue.capitalized
+        rawValue.capitalized
     }
 
     var color: Color {
         switch self {
-        case .alIslam: return Color(hex: Self.alIslamPrimaryHex) ?? .green
         case .red: return .red
         case .orange: return .orange
         case .yellow: return .yellow
@@ -121,28 +111,12 @@ enum AccentColor: String, CaseIterable, Identifiable {
         }
     }
 
-    /// The gradient's far stop. Equal to `color` unless this accent genuinely has two — see `isGradient`.
-    var secondaryColor: Color {
-        switch self {
-        case .alIslam:
-            return Color(hex: Self.alIslamSecondaryHex) ?? .yellow
-        case .custom:
-            // An empty second hex is how "the user picked only one color" is stored: both stops are that color.
-            return Color(hex: Settings.shared.customAccentColorHex2) ?? color
-        default:
-            return color
-        }
-    }
+    /// Kept so the (many) gradient/second-accent call sites still compile — it is simply the accent itself, so
+    /// every "gradient" collapses to a solid fill that renders exactly like the flat color.
+    var secondaryColor: Color { color }
 
-    /// True when the two stops differ, so a view can keep its plain rendering for a solid accent instead of
-    /// swapping in a gradient that would look the same but lay out subtly differently.
-    var isGradient: Bool {
-        switch self {
-        case .alIslam: return true
-        case .custom: return Color(hex: Settings.shared.customAccentColorHex2) != nil
-        default: return false
-        }
-    }
+    /// No accent has two stops any more, so views keep their plain rendering.
+    var isGradient: Bool { false }
 
     var gradientColors: [Color] { [color, secondaryColor] }
 
@@ -150,14 +124,30 @@ enum AccentColor: String, CaseIterable, Identifiable {
         LinearGradient(colors: gradientColors, startPoint: start, endPoint: end)
     }
 
-    /// For rings and arcs: sweeps out to the second color and back, so the seam at 0° doesn't show.
+    /// For rings and arcs.
     var angularGradient: AngularGradient {
         AngularGradient(colors: [color, secondaryColor, color], center: .center)
     }
+
+    // MARK: - The two accents, by name
+    //
+    // Sections declare which of the two they belong to (leading toolbar / location on the first, trailing
+    // toolbar / prayer times on the second). Both resolve to the selected color today — picking a color takes
+    // both — but the wiring stays, so a two-color accent can be reintroduced by changing only `secondaryColor`.
+
+    /// The primary accent. Leading toolbar, location, and every "first" section.
+    var accent1: Color { color }
+    /// The secondary accent. Trailing toolbar, prayer times, and every "second" section.
+    var accent2: Color { secondaryColor }
 }
 
 /// Preset swatches shown in Appearance. `.custom` is excluded — it's driven by the color picker instead.
 let accentColors: [AccentColor] = AccentColor.allCases.filter { $0 != .custom }
+
+// A global `.fontDesign(.rounded)` at the root is NOT usable here: `fontDesign` overrides the design of *every*
+// font in its subtree — including `.custom(...)` ones — so it silently replaced the Quranic Arabic faces
+// (Uthmani/Hafs) with a system face. With 50+ custom-font call sites there's no cheap way to opt them all back
+// out, so the app keeps the default system face.
 
 extension Color {
     /// Creates a color from a 6-digit RGB hex string ("RRGGBB", leading "#" optional). Returns nil if invalid.

@@ -1,5 +1,8 @@
 import SwiftUI
 
+/// The prayer-times section. It reads as one block of color, so every tint in here is the accent's *second*
+/// color (`accent2`) — the date/location/sky section above it stays on the first. For a one-color accent the
+/// two are the same color and this looks exactly as it always did.
 struct PrayerList: View {
     @ObservedObject private var settings = Settings.shared
     @Environment(\.scenePhase) private var scenePhase
@@ -207,7 +210,7 @@ struct PrayerList: View {
             Text(label)
                 .font(.subheadline)
         }
-        .tint(settings.accentColor.color)
+        .tint(settings.accentColor.accent2)
         .padding(.vertical, 4)
         .onChange(of: isOn.wrappedValue) { _ in settings.hapticFeedback() }
     }
@@ -277,7 +280,7 @@ struct PrayerList: View {
         let prayerKey = expansionKey(for: prayer)
         let isExpanded = expandedPrayerKey == prayerKey
         let isCurrent = highlightsCurrent && !isComparisonBaseline && isCurrentPrayer(prayer)
-        let listIconColor = prayer.nameTransliteration == "Shurooq" ? Color.primary : settings.accentColor.color
+        let listIconColor = prayer.nameTransliteration == "Shurooq" ? Color.primary : settings.accentColor.accent2
 
         return Group {
             PrayerListRowCard(
@@ -359,7 +362,7 @@ struct PrayerList: View {
             }
 
             Divider()
-                .background(settings.accentColor.color)
+                .background(settings.accentColor.accent2)
                 .padding(.horizontal, 8)
 
             VStack(spacing: 4) {
@@ -432,7 +435,7 @@ struct PrayerList: View {
                 .conditionalGlassEffect(
                     rectangle: true,
                     useColor: isCurrent ? 0.25 : 0.10,
-                    customTint: isCurrent ? settings.accentColor.color : nil
+                    customTint: isCurrent ? settings.accentColor.accent2 : nil
                 )
                 .contentShape(Rectangle())
                 .onTapGesture {
@@ -528,7 +531,7 @@ struct PrayerList: View {
 
     private func footerActionButton(_ title: String, action: @escaping () -> Void) -> some View {
         Text(title)
-            .foregroundColor(settings.accentColor.color)
+            .foregroundColor(settings.accentColor.accent2)
             .frame(maxWidth: .infinity, alignment: .center)
             .padding(8)
             .conditionalGlassEffect()
@@ -560,7 +563,7 @@ struct PrayerList: View {
             return .secondary
         }
         if prayerIndex == currentPrayerIndex {
-            return settings.accentColor.color
+            return settings.accentColor.accent2
         }
         return .primary
     }
@@ -571,7 +574,7 @@ struct PrayerList: View {
         }
 
         if currentPrayer.nameTransliteration.contains(prayer.nameTransliteration) {
-            return settings.accentColor.color
+            return settings.accentColor.accent2
         }
 
         guard let currentPrayerIndex = prayers.firstIndex(where: { $0.id == currentPrayer.id }),
@@ -668,7 +671,7 @@ struct PrayerList: View {
         Image(systemName: mode.symbolName)
             .font(.subheadline)
             .frame(width: 18, height: 18)
-            .foregroundColor(mode == .off ? rowColor : settings.accentColor.color)
+            .foregroundColor(mode == .off ? rowColor : settings.accentColor.accent2)
             .scaleEffect(bellScale(for: prayer))
             .rotationEffect(bellRotation(for: prayer))
             .contentShape(Rectangle())
@@ -680,33 +683,6 @@ struct PrayerList: View {
                 settings.cycleNotificationMode(for: prayer)
             }
             .padding(.leading, 6)
-            #if os(iOS)
-            .contextMenu {
-                Text("Notifications")
-                    .foregroundStyle(.secondary)
-
-                Button {
-                    settings.hapticFeedback()
-                    settings.setNotificationMode(.preNotification, for: prayer)
-                } label: {
-                    Label("Prenotification", systemImage: Settings.PrayerNotificationMode.preNotification.symbolName)
-                }
-
-                Button {
-                    settings.hapticFeedback()
-                    settings.setNotificationMode(.atTime, for: prayer)
-                } label: {
-                    Label("Notification", systemImage: Settings.PrayerNotificationMode.atTime.symbolName)
-                }
-
-                Button {
-                    settings.hapticFeedback()
-                    settings.setNotificationMode(.off, for: prayer)
-                } label: {
-                    Label("No Notification", systemImage: Settings.PrayerNotificationMode.off.symbolName)
-                }
-            }
-            #endif
     }
 }
 
@@ -722,7 +698,7 @@ private struct PrayerListRowCard<TrailingContent: View>: View {
     var body: some View {
         ZStack {
             RoundedRectangle(cornerRadius: 20)
-                .fill(isCurrent ? settings.accentColor.color.opacity(0.25) : .clear)
+                .fill(isCurrent ? settings.accentColor.accent2.opacity(0.25) : .clear)
                 #if os(iOS)
                 .padding(.vertical, backgroundVerticalPadding)
                 .padding(.horizontal, -12)
@@ -787,7 +763,7 @@ private struct PrayerDetailBlock: View {
         VStack(alignment: .leading, spacing: 6) {
             Text(isOptionalPrayer ? prayer.nameEnglish : "\(prayer.nameEnglish) - \(prayer.nameArabic)")
                 .font(.title3)
-                .foregroundColor(settings.accentColor.color)
+                .foregroundColor(settings.accentColor.accent2)
                 .lineLimit(1)
 
             if prayer.nameTransliteration == "Shurooq" {
@@ -867,7 +843,7 @@ private struct PrayerGridTile<TrailingContent: View>: View {
     @ViewBuilder let trailingContent: () -> TrailingContent
 
     var body: some View {
-        VStack(alignment: .center, spacing: 4) {
+        VStack(alignment: .center, spacing: 2) {
             HStack(spacing: 4) {
                 Image(systemName: prayer.image)
                     .font(.subheadline)

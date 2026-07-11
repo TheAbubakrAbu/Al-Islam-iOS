@@ -416,7 +416,11 @@ struct SurahRow: View, Equatable {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
         .padding(8)
-        .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Color.primary.opacity(0.06)))
+        .conditionalGlassEffect(
+            rectangle: true,
+            useColor: favoriteState ? 0.25 : 0.12,
+            customTint: favoriteState ? accentColor.color : nil
+        )
         .contentShape(Rectangle())
     }
     #endif

@@ -101,8 +101,9 @@ struct PrayerCountdown: View {
         }
         .lineLimit(1)
         .minimumScaleFactor(0.25)
+        // Tightened: the card was carrying a lot of empty vertical space.
         .padding(.vertical, {
-            if #available(iOS 26, *) { return 0 } else { return 8 }
+            if #available(iOS 26, *) { return 0 } else { return 4 }
         }())
     }
 
@@ -173,10 +174,24 @@ struct PrayerCountdown: View {
         #endif
     }
 
+    /// Was a plain "Time Left: 00:12:34" headline — visually a relic next to the rest of the card. Now it
+    /// reads as a compact meter caption: a muted label on the left, the live timer in the accent on the right.
     private func timeLeftRow(next: Prayer) -> some View {
-        Text("Time Left: \(next.time, style: .timer)")
-            .font(.headline)
-            .frame(maxWidth: .infinity, alignment: .leading)
+        HStack(spacing: 6) {
+            Image(systemName: "hourglass")
+                .font(.caption2)
+
+            Text("Time left")
+                .font(.caption)
+
+            Spacer(minLength: 4)
+
+            Text(next.time, style: .timer)
+                .font(.subheadline.monospacedDigit().weight(.semibold))
+                .foregroundStyle(.primary)
+        }
+        .foregroundStyle(.secondary)
+        .frame(maxWidth: .infinity)
     }
 
     private func handleScenePhaseChange(_ phase: ScenePhase) {

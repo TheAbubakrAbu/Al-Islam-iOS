@@ -716,6 +716,22 @@ struct SurahInfoSheet: View {
                             .foregroundStyle(.secondary)
                     }
                 }
+
+                Divider()
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Label("Your Stats", systemImage: "chart.bar")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(settings.accentColor.color)
+
+                    Text("Opened: \(settings.surahOpenCount(surahNumber)) time\(settings.surahOpenCount(surahNumber) == 1 ? "" : "s")")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+
+                    Text("Played: \(settings.surahPlayCount(surahNumber)) time\(settings.surahPlayCount(surahNumber) == 1 ? "" : "s")")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
             }
             .padding(14)
             .frame(maxWidth: .infinity, alignment: .leading)

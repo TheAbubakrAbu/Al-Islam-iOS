@@ -257,7 +257,6 @@ extension Settings {
         let chosen = explicitlySetKeys
         if chosen.contains("accentColor") { dict["accentColor"] = accentColor.rawValue }
         if chosen.contains("customAccentColorHex") { dict["customAccentColorHex"] = customAccentColorHex }
-        if chosen.contains("customAccentColorHex2") { dict["customAccentColorHex2"] = customAccentColorHex2 }
         if chosen.contains("customBackgroundColorHex") { dict["customBackgroundColorHex"] = customBackgroundColorHex }
         if chosen.contains("prayerCalculation") { dict["prayerCalculation"] = prayerCalculation }
         if chosen.contains("hanafiMadhab") { dict["hanafiMadhab"] = hanafiMadhab }
@@ -280,7 +279,6 @@ extension Settings {
     func applyWatchSyncSnapshot(_ dict: [String: Any]) {
         if let raw = dict["accentColor"] as? String, let c = AccentColor(rawValue: raw), c != accentColor { accentColor = c }
         if let v = dict["customAccentColorHex"] as? String, v != customAccentColorHex { customAccentColorHex = v }
-        if let v = dict["customAccentColorHex2"] as? String, v != customAccentColorHex2 { customAccentColorHex2 = v }
         if let v = dict["customBackgroundColorHex"] as? String, v != customBackgroundColorHex { customBackgroundColorHex = v }
         if let v = dict["prayerCalculation"] as? String, v != prayerCalculation { prayerCalculation = v }
         if let v = dict["hanafiMadhab"] as? Bool, v != hanafiMadhab { hanafiMadhab = v }

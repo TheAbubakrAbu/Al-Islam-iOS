@@ -163,58 +163,76 @@ struct SettingsAdhanView: View {
         // button is hidden from the action sheet (the system expects you to cancel by tapping outside / the
         // dim background instead), so a meaningful "Confirm: Keep On"-style choice would silently disappear.
         // Plain buttons always render; tapping outside still cancels. Applies to all confirmation dialogs.
-        .confirmationDialog(dialogTitle, isPresented: Binding(
+        .confirmationDialog(dialogTitle, isPresented: autoChangeDialogBinding, titleVisibility: .visible) {
+            autoChangeDialogButtons
+        } message: {
+            autoChangeDialogMessage
+        }
+    }
+
+    /// A dialog anchored only to the root list cannot present while the user is on a *pushed* sub-screen —
+    /// which is exactly why the Traveling Mode confirmation never appeared (the toggle lives on the pushed
+    /// "Traveling Mode" screen). The binding and content are shared so the same dialog can also be attached
+    /// to the sub-screens, and whichever one is actually on screen presents it.
+    private var autoChangeDialogBinding: Binding<Bool> {
+        Binding(
             get: { showAlert != nil },
             set: { if !$0 { showAlert = nil } }
-        ), titleVisibility: .visible) {
-            switch showAlert {
-            case .travelTurnOnAutomatic:
-                Button("Override: Turn Off", role: .destructive) {
-                    settings.hapticFeedback()
-                    settings.overrideTravelingMode(keepOn: false)
-                }
+        )
+    }
 
-                Button("Confirm: Keep On") {
-                    settings.hapticFeedback()
-                    settings.confirmTravelAutomaticChange()
-                }
-
-            case .travelTurnOffAutomatic:
-                Button("Override: Keep On", role: .destructive) {
-                    settings.hapticFeedback()
-                    settings.overrideTravelingMode(keepOn: true)
-                }
-
-                Button("Confirm: Turn Off") {
-                    settings.hapticFeedback()
-                    settings.confirmTravelAutomaticChange()
-                }
-
-            case .calculationAutomaticChanged:
-                Button("Override: Keep \(settings.calculationAutoPreviousMethod)", role: .destructive) {
-                    settings.hapticFeedback()
-                    settings.overrideAutomaticCalculationKeepingPrevious()
-                }
-
-                Button("Confirm: Use \(settings.calculationAutoDetectedMethod)") {
-                    settings.hapticFeedback()
-                    settings.confirmAutomaticCalculationChange()
-                }
-
-            case .none:
-                EmptyView()
+    @ViewBuilder
+    private var autoChangeDialogButtons: some View {
+        switch showAlert {
+        case .travelTurnOnAutomatic:
+            Button("Override: Turn Off", role: .destructive) {
+                settings.hapticFeedback()
+                settings.overrideTravelingMode(keepOn: false)
             }
-        } message: {
-            switch showAlert {
-            case .travelTurnOnAutomatic:
-                Text(settings.automaticTravelMessage(turnOn: true))
-            case .travelTurnOffAutomatic:
-                Text(settings.automaticTravelMessage(turnOn: false))
-            case .calculationAutomaticChanged:
-                Text(settings.automaticCalculationMessage)
-            case .none:
-                EmptyView()
+
+            Button("Confirm: Keep On") {
+                settings.hapticFeedback()
+                settings.confirmTravelAutomaticChange()
             }
+
+        case .travelTurnOffAutomatic:
+            Button("Override: Keep On", role: .destructive) {
+                settings.hapticFeedback()
+                settings.overrideTravelingMode(keepOn: true)
+            }
+
+            Button("Confirm: Turn Off") {
+                settings.hapticFeedback()
+                settings.confirmTravelAutomaticChange()
+            }
+
+        case .calculationAutomaticChanged:
+            Button("Override: Keep \(settings.calculationAutoPreviousMethod)", role: .destructive) {
+                settings.hapticFeedback()
+                settings.overrideAutomaticCalculationKeepingPrevious()
+            }
+
+            Button("Confirm: Use \(settings.calculationAutoDetectedMethod)") {
+                settings.hapticFeedback()
+                settings.confirmAutomaticCalculationChange()
+            }
+
+        case .none:
+            EmptyView()
+        }
+    }
+
+    @ViewBuilder
+    private var autoChangeDialogMessage: some View {
+        switch showAlert {
+        case .travelTurnOnAutomatic:
+            Text(settings.automaticTravelMessage(turnOn: true))
+        case .travelTurnOffAutomatic:
+            Text(settings.automaticTravelMessage(turnOn: false))
+        case .calculationAutomaticChanged:
+            Text(settings.automaticCalculationMessage)
+        case .none:
+            EmptyView()
         }
     }
 
@@ -248,15 +266,28 @@ struct SettingsAdhanView: View {
         .navigationTitle(title)
     }
 
+    // The confirmation is attached to these pushed screens as well as the root list. The toggles that trigger
+    // it live *here*, and a dialog anchored only to the (now off-screen) root list could never present —
+    // which is why the Traveling Mode confirmation appeared to do nothing.
     private var prayerCalculationDestination: some View {
         adhanSettingsSubList(title: "Prayer Calculation") {
             prayerCalculationSection
+        }
+        .confirmationDialog(dialogTitle, isPresented: autoChangeDialogBinding, titleVisibility: .visible) {
+            autoChangeDialogButtons
+        } message: {
+            autoChangeDialogMessage
         }
     }
 
     private var travelingModeDestination: some View {
         adhanSettingsSubList(title: "Traveling Mode") {
             travelingModeSection
+        }
+        .confirmationDialog(dialogTitle, isPresented: autoChangeDialogBinding, titleVisibility: .visible) {
+            autoChangeDialogButtons
+        } message: {
+            autoChangeDialogMessage
         }
     }
 
