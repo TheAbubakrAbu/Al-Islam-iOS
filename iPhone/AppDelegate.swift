@@ -141,13 +141,13 @@ class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterD
 /// can deliver scheduled local notifications late while the app is open (notably on Mac/Catalyst). To make
 /// the adhan reliable in that case, this arms a precise timer for the next at-time adhan and, when it fires
 /// with the app active, plays the selected adhan sound directly and removes the now-redundant scheduled
-/// notification so it can't sound again late. When the app isn't active this does nothing — the system
+/// notification so it can't sound again late. When the app isn't active this does nothing - the system
 /// notification handles it exactly as before.
 @MainActor
 final class ForegroundAdhanPlayer: NSObject, ObservableObject {
     static let shared = ForegroundAdhanPlayer()
 
-    /// The prayer whose adhan is playing right now, or `nil` when silent. Drives the on-screen stop control —
+    /// The prayer whose adhan is playing right now, or `nil` when silent. Drives the on-screen stop control - 
     /// the full recording runs for minutes, so there has to be a way to cut it short.
     @Published private(set) var playingPrayerName: String?
 

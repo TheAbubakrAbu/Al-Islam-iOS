@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Lets the user spell the five daily prayers however they say them — "Fadjr", "Zuhr", "Maghrib" → "Maghreb".
+/// Lets the user spell the five daily prayers however they say them - "Fadjr", "Zuhr", "Maghrib" → "Maghreb".
 ///
 /// Only the *displayed* name changes. `Prayer.nameTransliteration` stays canonical, because notification
 /// preferences, the optional-prayer set, Siri's search keys and the scrubber's highlight all key off it.
@@ -23,7 +23,7 @@ struct CustomPrayerNamesSection: View {
                 row(for: prayer)
             }
 
-            Text("Renaming a prayer only changes how it is displayed — in the app, its notifications, the widgets and on your Apple Watch. Leave a field blank to use the default spelling.")
+            Text("Renaming a prayer only changes how it is displayed - in the app, its notifications, the widgets and on your Apple Watch. Leave a field blank to use the default spelling.")
                 .font(.caption)
                 .foregroundColor(.secondary)
                 .padding(.vertical, 2)
@@ -82,7 +82,7 @@ struct CustomPrayerNamesSection: View {
         let trimmed = draft.trimmingCharacters(in: .whitespacesAndNewlines)
 
         // A name identical to the default, or an empty one, is stored as "no custom name" rather than as a
-        // redundant entry — that keeps `hasAnyCustomName` and the reset button honest.
+        // redundant entry - that keeps `hasAnyCustomName` and the reset button honest.
         var names = settings.customPrayerNames
         if trimmed.isEmpty || trimmed == prayer {
             guard names[prayer] != nil else { return }

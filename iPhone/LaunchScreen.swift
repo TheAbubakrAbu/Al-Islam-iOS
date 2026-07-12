@@ -20,7 +20,7 @@ struct LaunchScreen: View {
     @ObservedObject var settings = Settings.shared
     // Note: QuranData / QuranPlayer / NamesViewModel are intentionally NOT observed here. They publish
     // frequently while loading (load-state changes, the 6k-entry verse index, player/names state), and
-    // observing them would re-render the launch screen mid-animation — the source of the startup chop.
+    // observing them would re-render the launch screen mid-animation - the source of the startup chop.
     // Readiness is awaited via the `.shared` singletons below, which doesn't subscribe to their changes.
     @Environment(\.colorScheme) private var systemColorScheme
     @Environment(\.customColorScheme) private var customColorScheme
@@ -29,7 +29,7 @@ struct LaunchScreen: View {
 
     // Initial state = a plain background with the Al-Islam icon already at rest: no gradient, no glow, no
     // motion. Everything heavy loads during the quiet "hold" below; the gradient / rings / companion apps are
-    // only brought in for the finale once the app is fully ready — so nothing animates while the CPU is busy.
+    // only brought in for the finale once the app is fully ready - so nothing animates while the CPU is busy.
     @State private var size = 0.9
     @State private var opacity = 1.0
     @State private var gradientSize: CGFloat = 0.6
@@ -153,12 +153,12 @@ struct LaunchScreen: View {
     @MainActor
     private func runLaunchAnimation() async {
         // 1) Nothing animates yet. The initial state already shows just the Al-Islam icon on a plain background
-        //    (no gradient), so the heavy load + warm in step 2 stays perfectly smooth — there are no running
+        //    (no gradient), so the heavy load + warm in step 2 stays perfectly smooth - there are no running
         //    animations to drop frames.
         triggerHapticFeedback(.soft)
 
         // 2) Hold on the icon and wait for everything to finish initializing. Nothing is animating during this
-        //    window, so background-init contention is invisible — the screen simply rests on the icon for as
+        //    window, so background-init contention is invisible - the screen simply rests on the icon for as
         //    long as it takes. This is the "keep Al-Islam there and wait" behavior.
         async let settingsReady: Void = Settings.shared.waitUntilReady()
         async let quranReady: Void = {
@@ -181,7 +181,7 @@ struct LaunchScreen: View {
         #endif
 
         // 3) Everything is ready and the CPU is free, so the finale plays smoothly on top of the resting icon:
-        //    the gradient/glow blooms in, the rings expand, the shimmer sweeps the logo, and — a beat later —
+        //    the gradient/glow blooms in, the rings expand, the shimmer sweeps the logo, and - a beat later - 
         //    the Quran/Adhan companion apps are released outward.
         triggerHapticFeedback(.soft)
         withAnimation(.spring(response: 0.6, dampingFraction: 0.82)) {

@@ -5,7 +5,7 @@ import SwiftUI
 /// ornament a mushaf prints at the head of a surah, which no text font can reproduce.
 ///
 /// The font also carries Makkah/Madinah symbols at U+FC22 / U+FC23, but the app deliberately shows the 🕋 / 🕌
-/// emoji for those instead — they read at small sizes and in a list, where the glyphs did not.
+/// emoji for those instead - they read at small sizes and in a list, where the glyphs did not.
 enum QuranGlyphFont {
     static let commonName = "quran-common"
 

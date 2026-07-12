@@ -469,7 +469,7 @@ struct ShareAyahSheet: View {
 
             if shareSettings.englishSaheeh {
                 if settings.showAyahInformation {
-                    s += "— Saheeh International\n"
+                    s += "- Saheeh International\n"
                 }
 
                 s += settings.showAyahInformation ? ayah.textEnglishSaheeh : "\(ayah.textEnglishSaheeh) (\(ayah.id))"
@@ -478,7 +478,7 @@ struct ShareAyahSheet: View {
             if shareSettings.englishMustafa {
                 if shareSettings.englishSaheeh { s += "\n\n" }
                 if settings.showAyahInformation {
-                    s += "— Mustafa Khattab\n"
+                    s += "- Mustafa Khattab\n"
                 }
                 s += settings.showAyahInformation ? ayah.textEnglishMustafa : "\(ayah.textEnglishMustafa) (\(ayah.id))"
             }
@@ -489,7 +489,7 @@ struct ShareAyahSheet: View {
             appendBlock(label: "Note", text: note)
         }
 
-        // Qiraah type (optional) — one line: Riwayah: English - Arabic
+        // Qiraah type (optional) - one line: Riwayah: English - Arabic
         if settings.showQiraahDetails && shareSettings.includeQiraah {
             let labels = Self.qiraahLabels(displayQiraah: settings.displayQiraah)
             appendBlock(label: nil, text: "Riwayah: \(labels.english) – \(labels.arabic)")
@@ -573,13 +573,13 @@ struct ShareAyahSheet: View {
                                 update: { updatedShareSettings(transliteration: $0) }
                             ),
                                    disabled: !shareSettings.arabic && !shareSettings.englishSaheeh && !shareSettings.englishMustafa)
-                            toggle("Translation — Saheeh International", persistentCopyBinding(
+                            toggle("Translation - Saheeh International", persistentCopyBinding(
                                 get: { storedCopyEnglishSaheeh },
                                 set: { storedCopyEnglishSaheeh = $0 },
                                 update: { updatedShareSettings(englishSaheeh: $0) }
                             ),
                                    disabled: !shareSettings.arabic && !shareSettings.transliteration && !shareSettings.englishMustafa)
-                            toggle("Translation — Mustafa Khattab", persistentCopyBinding(
+                            toggle("Translation - Mustafa Khattab", persistentCopyBinding(
                                 get: { storedCopyEnglishMustafa },
                                 set: { storedCopyEnglishMustafa = $0 },
                                 update: { updatedShareSettings(englishMustafa: $0) }
@@ -923,14 +923,16 @@ struct ShareAyahSheet: View {
     private func drawImage(shareSettings: ShareSettings) -> UIImage {
         guard let surah = surah, let ayah = ayah else { return UIImage() }
 
-        let bodyFont   = UIFont.preferredFont(forTextStyle: .body)
+        // Rounded, to match the app's system-font design (the `fontDesign` environment does not reach this
+        // UIKit-drawn image, so the design is asked for explicitly).
+        let bodyFont   = UIFont.roundedSystemFont(ofSize: UIFont.preferredFont(forTextStyle: .body).pointSize)
         let selectedArabicFontName = shareSettings.shareArabicFont.isEmpty ? settings.fontArabic : shareSettings.shareArabicFont
         let arabicFontName = Settings.quranArabicFontName(selectedFontName: selectedArabicFontName, qiraah: settings.displayQiraahForArabic)
         let arabicFont = shareSettings.hideArabicDots
             ? bodyFont.withSize(bodyFont.pointSize * 1.15)
             : (UIFont(name: arabicFontName, size: bodyFont.pointSize * 1.15) ?? bodyFont)
         let arabicNumberFont = UIFont(name: Settings.hafsUthmaniFontName, size: bodyFont.pointSize * 1.15) ?? arabicFont
-        let captionFont = UIFont.preferredFont(forTextStyle: .caption2)
+        let captionFont = UIFont.roundedSystemFont(ofSize: UIFont.preferredFont(forTextStyle: .caption2).pointSize)
 
         let textColor      = UIColor.white
         let secondaryColor = UIColor.secondaryLabel
@@ -1034,7 +1036,7 @@ struct ShareAyahSheet: View {
 
             if shareSettings.englishSaheeh {
                 if settings.showAyahInformation {
-                    append("— Saheeh International", captionAttr, highlightAllah: false)
+                    append("- Saheeh International", captionAttr, highlightAllah: false)
                     append("\n", bodyAttr, highlightAllah: false)
                 }
                 append(settings.showAyahInformation ? ayah.textEnglishSaheeh : "\(ayah.textEnglishSaheeh) (\(ayah.id))", bodyAttr)
@@ -1044,7 +1046,7 @@ struct ShareAyahSheet: View {
                 if shareSettings.englishSaheeh { append("\n\n", bodyAttr, highlightAllah: false) }
 
                 if settings.showAyahInformation {
-                    append("— Clear Quran (Mustafa Khattab)", captionAttr, highlightAllah: false)
+                    append("- Clear Quran (Mustafa Khattab)", captionAttr, highlightAllah: false)
                     append("\n", bodyAttr, highlightAllah: false)
                 }
                 append(settings.showAyahInformation ? ayah.textEnglishMustafa : "\(ayah.textEnglishMustafa) (\(ayah.id))", bodyAttr)
@@ -1053,7 +1055,7 @@ struct ShareAyahSheet: View {
 
         if includeNote, let note = noteText {
             sepIfNeeded()
-            append("— Note", captionAttr, highlightAllah: false)
+            append("- Note", captionAttr, highlightAllah: false)
             append("\n", bodyAttr, highlightAllah: false)
             append(note, bodyAttr)
         }
@@ -1205,12 +1207,12 @@ extension ShareAyahSheet {
             sepIfNeeded()
             if settings.showAyahInformation { s += "[\(headerName) \(surah.id):\(ayah.id)]\n" }
             if shareSettings.englishSaheeh {
-                if settings.showAyahInformation { s += "— Saheeh International\n" }
+                if settings.showAyahInformation { s += "- Saheeh International\n" }
                 s += settings.showAyahInformation ? ayah.textEnglishSaheeh : "\(ayah.textEnglishSaheeh) (\(ayah.id))"
             }
             if shareSettings.englishMustafa {
                 if shareSettings.englishSaheeh { s += "\n\n" }
-                if settings.showAyahInformation { s += "— Mustafa Khattab\n" }
+                if settings.showAyahInformation { s += "- Mustafa Khattab\n" }
                 s += settings.showAyahInformation ? ayah.textEnglishMustafa : "\(ayah.textEnglishMustafa) (\(ayah.id))"
             }
         }
@@ -1227,14 +1229,15 @@ extension ShareAyahSheet {
     }
 
     private static func buildShareImage(surah: Surah, ayah: Ayah, shareSettings: ShareSettings, settings: Settings, includeNote: Bool, noteText: String?) -> UIImage {
-        let bodyFont = UIFont.preferredFont(forTextStyle: .body)
+        // Rounded, to match the app's system-font design (see the note in the other renderer above).
+        let bodyFont = UIFont.roundedSystemFont(ofSize: UIFont.preferredFont(forTextStyle: .body).pointSize)
         let selectedArabicFontName = shareSettings.shareArabicFont.isEmpty ? settings.fontArabic : shareSettings.shareArabicFont
         let arabicFontName = Settings.quranArabicFontName(selectedFontName: selectedArabicFontName, qiraah: settings.displayQiraahForArabic)
         let arabicFont = shareSettings.hideArabicDots
             ? bodyFont.withSize(bodyFont.pointSize * 1.15)
             : (UIFont(name: arabicFontName, size: bodyFont.pointSize * 1.15) ?? bodyFont)
         let arabicNumberFont = UIFont(name: Settings.hafsUthmaniFontName, size: bodyFont.pointSize * 1.15) ?? arabicFont
-        let captionFont = UIFont.preferredFont(forTextStyle: .caption2)
+        let captionFont = UIFont.roundedSystemFont(ofSize: UIFont.preferredFont(forTextStyle: .caption2).pointSize)
         let textColor = UIColor.white
         let secondaryColor = UIColor.secondaryLabel
         let accent = settings.accentColor.color.uiColor
@@ -1309,16 +1312,16 @@ extension ShareAyahSheet {
             sepIfNeeded()
             if settings.showAyahInformation { append("[\(enHeaderName) \(surah.id):\(ayah.id)]", accentAttr, highlightAllah: false); append("\n", bodyAttr, highlightAllah: false) }
             if shareSettings.englishSaheeh {
-                if settings.showAyahInformation { append("— Saheeh International", captionAttr, highlightAllah: false); append("\n", bodyAttr, highlightAllah: false) }
+                if settings.showAyahInformation { append("- Saheeh International", captionAttr, highlightAllah: false); append("\n", bodyAttr, highlightAllah: false) }
                 append(settings.showAyahInformation ? ayah.textEnglishSaheeh : "\(ayah.textEnglishSaheeh) (\(ayah.id))", bodyAttr)
             }
             if shareSettings.englishMustafa {
                 if shareSettings.englishSaheeh { append("\n\n", bodyAttr, highlightAllah: false) }
-                if settings.showAyahInformation { append("— Clear Quran (Mustafa Khattab)", captionAttr, highlightAllah: false); append("\n", bodyAttr, highlightAllah: false) }
+                if settings.showAyahInformation { append("- Clear Quran (Mustafa Khattab)", captionAttr, highlightAllah: false); append("\n", bodyAttr, highlightAllah: false) }
                 append(settings.showAyahInformation ? ayah.textEnglishMustafa : "\(ayah.textEnglishMustafa) (\(ayah.id))", bodyAttr)
             }
         }
-        if includeNote, let note = noteText { sepIfNeeded(); append("— Note", captionAttr, highlightAllah: false); append("\n", bodyAttr, highlightAllah: false); append(note, bodyAttr) }
+        if includeNote, let note = noteText { sepIfNeeded(); append("- Note", captionAttr, highlightAllah: false); append("\n", bodyAttr, highlightAllah: false); append(note, bodyAttr) }
         if shareSettings.includeQiraah {
             sepIfNeeded()
             let labels = qiraahLabels(displayQiraah: settings.displayQiraah)

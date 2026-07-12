@@ -6,8 +6,8 @@ struct TasbihView: View {
     @State private var counters: [Int: Int] = Self.initialCounters
     @State private var selectedDhikrIndex: Int = Self.freeDhikrIndex
 
-    /// A free count for dhikr that isn't on the list. Unlike the preset counters — which are per-session
-    /// scratch — this one persists, because it's meant to be carried across sittings and run up as high as
+    /// A free count for dhikr that isn't on the list. Unlike the preset counters - which are per-session
+    /// scratch - this one persists, because it's meant to be carried across sittings and run up as high as
     /// the user likes.
     @AppStorage("tasbihFreeCount") private var freeCount = 0
     @AppStorage("tasbihFreeLabel") private var freeLabel = ""
@@ -102,7 +102,7 @@ struct TasbihView: View {
         }
     }
 
-    /// The ring is the only thing a cycle length changes — a full turn every N counts, as a visual marker.
+    /// The ring is the only thing a cycle length changes - a full turn every N counts, as a visual marker.
     /// watchOS has no `Menu`, so there the label advances through the choices on tap.
     @ViewBuilder
     private var cyclePicker: some View {
@@ -203,7 +203,7 @@ struct TasbihView: View {
         let withinLap = cycle > 0 ? count % max(cycle, 1) : count
 
         return VStack(spacing: 12) {
-            // The dhikr sits ABOVE the ring rather than crammed inside it — the Arabic needed room, and the
+            // The dhikr sits ABOVE the ring rather than crammed inside it - the Arabic needed room, and the
             // count is what belongs at the centre of a counter.
             VStack(spacing: 2) {
                 Text(selectedDhikr?.arabicText ?? (freeLabel.isEmpty ? "Free Count" : freeLabel))
@@ -268,7 +268,7 @@ struct TasbihView: View {
         #if os(iOS)
         .conditionalGlassEffect(rectangle: true, useColor: 0.12)
         #endif
-        // The whole card is still the counter — the buttons are for correcting, not for the counting itself.
+        // The whole card is still the counter - the buttons are for correcting, not for the counting itself.
         .onTapGesture {
             settings.hapticFeedback()
             withAnimation(.easeOut(duration: 0.15)) {

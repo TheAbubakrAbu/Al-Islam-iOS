@@ -20,7 +20,7 @@ struct HighlightedSnippet: View {
     /// *something*. Meant for ayah search, and only for the field(s) that actually matched the query.
     ///
     /// When `false` (the default, used by Surah rows and anywhere a single query is shown against several
-    /// fields side-by-side), only high-confidence matches are colored — exact substring, a full
+    /// fields side-by-side), only high-confidence matches are colored - exact substring, a full
     /// alef-insensitive Arabic match, or a phrase-prefix. A field that doesn't really contain the term is
     /// left un-highlighted, so a query that matched only the transliteration doesn't also paint the English
     /// name and the Arabic name.
@@ -35,11 +35,11 @@ struct HighlightedSnippet: View {
             .foregroundColor(trailingSuffixColor ?? fg)
 
         if needsAttributedWork {
-            // When highlighting a search term, base the attributed text on the PLAIN `source` — never a
+            // When highlighting a search term, base the attributed text on the PLAIN `source` - never a
             // `preStyledSource` (e.g. tajweed-colored Arabic). The matched ranges are `String.Index` ranges
             // into `source`; a preStyledSource can have a different character layout (clean text / removed
             // dots / beginner spacing), so converting those indices into it silently fails (`Index(_, within:)`
-            // returns nil) and a real — even exact — match never gets colored. On a matched row the search
+            // returns nil) and a real - even exact - match never gets colored. On a matched row the search
             // highlight takes priority over tajweed, matching how text-search results are shown elsewhere.
             let base = needsSearchHighlight ? plainSourceAttributed() : baseAttributedText()
             let highlightedText = highlightAllahIfNeeded(
@@ -149,7 +149,7 @@ struct HighlightedSnippet: View {
         return plainSourceAttributed()
     }
 
-    /// A plain attributed copy of `source` with the base foreground color — indices always align with
+    /// A plain attributed copy of `source` with the base foreground color - indices always align with
     /// `source`, so highlight ranges computed against `source` map cleanly onto it.
     private func plainSourceAttributed() -> AttributedString {
         var attributed = AttributedString(source)
@@ -176,7 +176,7 @@ struct HighlightedSnippet: View {
         }
 
         // --- Step 2: matched ranges in original source, cached per (source, normalizedTerm, guarantee) ---
-        // `guaranteeMatch` changes which fallbacks run, so it must be part of the key — otherwise the same
+        // `guaranteeMatch` changes which fallbacks run, so it must be part of the key - otherwise the same
         // source+term shown once as a matched ayah field and once as a non-matching sibling would collide.
         let matchKey = "\(guaranteeMatch ? "1" : "0")\u{0000}\(source)\u{0000}\(normalizedTerm)" as NSString
         let matchedRanges: [Range<String.Index>]
@@ -210,8 +210,8 @@ struct HighlightedSnippet: View {
             }
             // Phrase-prefix fallback for BOTH scripts: highlights consecutive words where the leading words
             // match and the final word is a prefix (e.g. "those who believ" → "those who believe"). This is
-            // the same "close match" rule the verse search itself uses, so English close matches — which
-            // previously highlighted nothing — now get colored like the Arabic ones.
+            // the same "close match" rule the verse search itself uses, so English close matches - which
+            // previously highlighted nothing - now get colored like the Arabic ones.
             if ranges.isEmpty {
                 ranges = phrasePrefixRanges(
                     in: source,
@@ -220,11 +220,11 @@ struct HighlightedSnippet: View {
                     indexMap: normEntry.indexMap
                 )
             }
-            // Final safety net — ONLY when this field is expected to contain the match (`guaranteeMatch`,
+            // Final safety net - ONLY when this field is expected to contain the match (`guaranteeMatch`,
             // i.e. ayah search on the field that actually matched). If nothing matched yet, highlight the
             // closest word(s) in THIS field so the user always sees at least one thing for their query. It
             // works on the original words normalized individually, so it doesn't depend on the whole-string
-            // index alignment the paths above need — which can silently fail on heavily-marked Arabic and
+            // index alignment the paths above need - which can silently fail on heavily-marked Arabic and
             // leave a real match un-highlighted. Skipped by default so a query that matched a sibling field
             // doesn't force a spurious highlight here.
             if ranges.isEmpty, guaranteeMatch {
@@ -310,7 +310,7 @@ struct HighlightedSnippet: View {
     /// `normalizeForSearch` already folds the dagger alef (ٰ) to a plain alef, so dropping every "ا" from
     /// both the source and the term produces a skeleton where الرحمن, الرحمان and الرحمٰن all compare equal.
     /// The kept-character → source-index map lets a skeleton match map back to a contiguous original range.
-    /// If the whole term skeleton isn't found, the longest leading chunk (≥ 2 letters) is highlighted — but
+    /// If the whole term skeleton isn't found, the longest leading chunk (≥ 2 letters) is highlighted - but
     /// only when `guaranteeMatch` is set, so this "always sees *something*" fuzziness is limited to fields
     /// that are meant to contain the match (ayah search) and doesn't leak onto side-by-side sibling fields.
     private func arabicLooseRanges(
@@ -364,7 +364,7 @@ struct HighlightedSnippet: View {
 
         // Longest-prefix partial: highlight the longest leading chunk of the term we can find. This is a
         // fuzzy guess (it colors a fragment even when the full term isn't present), so it's reserved for
-        // fields that are supposed to contain the match — otherwise a two-letter overlap on an unrelated
+        // fields that are supposed to contain the match - otherwise a two-letter overlap on an unrelated
         // sibling field would light up.
         guard guaranteeMatch else { return [] }
         var prefixLen = termSkeleton.count - 1
@@ -380,7 +380,7 @@ struct HighlightedSnippet: View {
 
     /// Guarantees at least one highlight: scans the original words (each normalized on its own, so there's
     /// no fragile whole-string alignment), scores them against the query, and returns every word that
-    /// contains the query — or, if none do, the single closest word. This is the "something is always
+    /// contains the query - or, if none do, the single closest word. This is the "something is always
     /// highlighted, the closest match" behavior.
     private func closestMatchRanges(in source: String, normalizedTerm: String) -> [Range<String.Index>] {
         // Match against the most specific (longest) query word.
@@ -408,7 +408,7 @@ struct HighlightedSnippet: View {
 
         guard let best = scored.max(by: { $0.score < $1.score }) else {
             // Absolute last resort. The row only passes `term` when its field matched the query, so we should
-            // always show *something* — even a 1% match. If no word scored at all (a normalization mismatch
+            // always show *something* - even a 1% match. If no word scored at all (a normalization mismatch
             // between the verse-search index and this highlighter), highlight the longest word so the user
             // never sees a "matched but nothing colored" row.
             return longestWordRange(in: source).map { [$0] } ?? []

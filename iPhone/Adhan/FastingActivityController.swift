@@ -6,7 +6,7 @@ import ActivityKit
 /// a countdown to Maghrib (iftar) before sunset.
 ///
 /// A Live Activity can only be *requested* while the app is in the foreground, so this is driven from the
-/// app-active path rather than from a timer: every time the app comes forward we ask which phase — if any —
+/// app-active path rather than from a timer: every time the app comes forward we ask which phase - if any - 
 /// we're inside, and start, refresh or end accordingly.
 @MainActor
 enum FastingActivityController {
@@ -42,7 +42,7 @@ enum FastingActivityController {
         )
         let staleDate = window.deadline.addingTimeInterval(60)
 
-        // An activity for this same phase and deadline is already up — update it rather than stacking another.
+        // An activity for this same phase and deadline is already up - update it rather than stacking another.
         if let existing = Activity<FastingAttributes>.activities.first(where: {
             $0.attributes.phase == window.phase
                 && abs($0.content.state.endTime.timeIntervalSince(window.deadline)) < 60
@@ -106,7 +106,7 @@ enum FastingActivityController {
     /// Hijri date the app displays. Sampled at noon: a Hijri day turns over at Maghrib, so reading near either
     /// end of the Gregorian day would land on the wrong Hijri day.
     ///
-    /// Gated at all because suhoor and iftar are Ramadan observances — an unconditional nightly countdown to
+    /// Gated at all because suhoor and iftar are Ramadan observances - an unconditional nightly countdown to
     /// Fajr would sit on the Lock Screen 365 nights a year.
     private static func isFastingDay(_ date: Date, settings: Settings) -> Bool {
         var hijri = Calendar(identifier: .islamicUmmAlQura)

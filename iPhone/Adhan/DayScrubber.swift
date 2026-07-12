@@ -4,7 +4,7 @@ import SwiftUI
 ///
 /// While a drag is in progress the whole Adhan tab previews that moment instead of now: the sky gradient
 /// retints, the moon label follows, and `PrayerList` moves its highlight down the rows. Releasing snaps
-/// everything back to live. A singleton for the same reason `FocusOverlayPresenter` is one — the views that
+/// everything back to live. A singleton for the same reason `FocusOverlayPresenter` is one - the views that
 /// read it (`PrayerList`'s rows) sit deep inside a `List` two sections away from the view that writes it.
 @MainActor
 final class DayScrubber: ObservableObject {
@@ -24,7 +24,7 @@ final class DayScrubber: ObservableObject {
     var previewPrayer: Prayer? {
         guard let scrubbedDate else { return nil }
         // Between midnight and Fajr no prayer has begun *today*, but the prayer in effect is the one that
-        // began last night — Isha, the day's last. Scrubbing to 2 AM should read Isha, not Fajr.
+        // began last night - Isha, the day's last. Scrubbing to 2 AM should read Isha, not Fajr.
         return timeline.last { $0.time <= scrubbedDate } ?? timeline.last
     }
 

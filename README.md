@@ -21,7 +21,7 @@ I received a **Certificate of Congressional Recognition** from U.S. Representati
 - [**Al-Quran | Beginner Quran**](https://github.com/TheAbubakrAbu/Al-Quran-iOS)
 
 ## Overview
-Al-Islam is a simply designed and feature-rich app that helps Muslims strengthen their faith and seamlessly practice Islam. Whether you’re a lifelong believer, a new convert, or simply exploring Islam, this app provides everything you need—from accurate prayer times to Quranic access and essential Islamic tools.
+Al-Islam is a simply designed and feature-rich app that helps Muslims strengthen their faith and seamlessly practice Islam. Whether you’re a lifelong believer, a new convert, or simply exploring Islam, this app provides everything you need - from accurate prayer times to Quranic access and essential Islamic tools.
 
 ## Unique Features
 - **Traveling Mode** – Automatically activates when traveling or can be manually enabled. Adjust settings like prayer calculations, Hanafi madhab, and prayer offsets.
@@ -76,7 +76,7 @@ Al-Islam is a simply designed and feature-rich app that helps Muslims strengthen
 
 ## A Note on Intent
 
-This project is offered as *sadaqah jariyah* — a contribution for the benefit of the Muslim community and anyone building tools to read, learn, and listen to the Quran. If it helps you, please keep the chain of attribution intact and consider contributing improvements back.
+This project is offered as *sadaqah jariyah* - a contribution for the benefit of the Muslim community and anyone building tools to read, learn, and listen to the Quran. If it helps you, please keep the chain of attribution intact and consider contributing improvements back.
 
 ## License
 

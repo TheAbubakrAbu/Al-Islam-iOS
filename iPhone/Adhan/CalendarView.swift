@@ -97,6 +97,15 @@ struct CalendarView: View {
         }
     }
 
+    /// Which Hijri month it is right now, so the list can mark it. Reads the same Umm al-Qura calendar the rest of
+    /// the screen does, and honours the user's Hijri offset.
+    private var currentHijriMonthNumber: Int {
+        var calendar = Calendar(identifier: .islamicUmmAlQura)
+        calendar.locale = Locale(identifier: "en")
+        let adjusted = calendar.date(byAdding: .day, value: settings.hijriOffset, to: Date()) ?? Date()
+        return calendar.component(.month, from: adjusted)
+    }
+
     private var eventsList: some View {
         ScrollViewReader { proxy in
             List {
@@ -135,6 +144,12 @@ struct CalendarView: View {
                             Label("Open Hijri Date Converter", systemImage: "calendar.badge.clock")
                                 .font(.caption.weight(.semibold))
                                 .foregroundColor(settings.accentColor.color)
+                        }
+                    }
+
+                    Section(header: Text("THE TWELVE MONTHS")) {
+                        ForEach(hijriMonths) { month in
+                            HijriMonthRow(month: month, isCurrent: month.number == currentHijriMonthNumber)
                         }
                     }
 
@@ -315,7 +330,7 @@ struct CalendarView: View {
         row.date < Calendar.current.startOfDay(for: Date())
     }
 
-    /// The soonest event that hasn't happened yet — the one row worth calling out. Nil while browsing a past
+    /// The soonest event that hasn't happened yet - the one row worth calling out. Nil while browsing a past
     /// year, where nothing is upcoming.
     private var nextEventID: String? {
         eventRows
@@ -378,7 +393,7 @@ private struct HijriEventRow: View {
 
     let row: HijriEventRowModel
     let isPast: Bool
-    /// True for the soonest upcoming event — exactly one row in the list.
+    /// True for the soonest upcoming event - exactly one row in the list.
     var isNext: Bool = false
 
     /// "in 12 days" / "today" / "in 3 months". Nil once the event has passed.
@@ -398,7 +413,7 @@ private struct HijriEventRow: View {
     }
 
     /// The Hijri day and month, split out of "10 Muharram, 1448 AH" so the badge can stack the number over the
-    /// month name. The year is dropped — the whole list is one year, and the section header already says which.
+    /// month name. The year is dropped - the whole list is one year, and the section header already says which.
     private var hijriParts: (day: String, month: String) {
         let parts = row.hijriDateText.split(separator: " ", maxSplits: 1).map(String.init)
         guard parts.count == 2 else { return (row.hijriDateText, "") }
@@ -470,7 +485,7 @@ private struct HijriEventRow: View {
         }
     }
 
-    /// The Hijri day, large, over its month — a calendar tile, so the eye can run down the column.
+    /// The Hijri day, large, over its month - a calendar tile, so the eye can run down the column.
     private var dateBadge: some View {
         VStack(spacing: 0) {
             Text(hijriParts.day)
@@ -890,6 +905,61 @@ struct HijriMonthCalendarView: View {
 #Preview("Hijri Month Grid") {
     AlIslamPreviewContainer(embedInNavigation: true) {
         HijriMonthCalendarView()
+    }
+}
+
+/// One month of the Hijri year: its number, its name in English and Arabic, whether it is one of the four sacred
+/// months, and what it is known for. The month you are currently in is tinted so the list orients you at a glance.
+struct HijriMonthRow: View {
+    @ObservedObject private var settings = Settings.shared
+
+    let month: HijriMonth
+    let isCurrent: Bool
+
+    private var usesCustomArabicFace: Bool { settings.islamUsesCustomArabicFace }
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 12) {
+            Text("\(month.number)")
+                .font(.subheadline.weight(.semibold).monospacedDigit())
+                .foregroundColor(isCurrent ? .white : settings.accentColor.color)
+                .frame(width: 28, height: 28)
+                .background(
+                    Circle()
+                        .fill(isCurrent ? settings.accentColor.color : settings.accentColor.color.opacity(0.15))
+                )
+
+            VStack(alignment: .leading, spacing: 3) {
+                HStack(spacing: 6) {
+                    Text(month.english)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundColor(.primary)
+
+                    if month.isSacred {
+                        Text("SACRED")
+                            .font(.caption2.weight(.bold))
+                            .foregroundColor(settings.accentColor.color)
+                    }
+
+                    Spacer(minLength: 4)
+
+                    Text(month.arabic)
+                        .font(
+                            usesCustomArabicFace
+                                ? .custom(settings.fontArabic, size: 18, relativeTo: .subheadline)
+                                : .subheadline
+                        )
+                        .arabicFontDesign(custom: usesCustomArabicFace)
+                        .foregroundColor(settings.accentColor.color)
+                }
+
+                Text(month.note)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .padding(.vertical, 2)
     }
 }
 #endif

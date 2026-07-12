@@ -28,11 +28,26 @@ enum LetterWeight: String, Codable {
     case followsPrevious
 }
 
-struct Tashkeel {
+struct Tashkeel: Identifiable, Equatable {
+    /// The English name is already the key the tashkeel views use in their `ForEach`es, and it is unique.
+    var id: String { english }
+
     let english: String
     let arabic: String
     let tashkeelMark: String
     let transliteration: String
+
+    /// The trilateral root of the mark's own Arabic name, spaced out (e.g. "ف ت ح" for fatḥah). The root is the
+    /// teaching aid here: a fatḥah is named from "to open" because you open your mouth to say it, a kasrah from
+    /// "to break" because you drop the jaw, a ḍammah from "to gather" because you gather the lips. Naming the
+    /// root turns each mark from a symbol to memorize into an instruction.
+    var root: String? = nil
+    /// What that root means, phrased as the mouth movement it describes.
+    var rootMeaning: String? = nil
+    /// How to actually make the sound.
+    var howTo: String? = nil
+    /// How long the mark is held, in ḥarakāt. `nil` for marks that are not a vowel length at all (shaddah, sukūn).
+    var length: String? = nil
 }
 
 private enum LetterID {
@@ -77,7 +92,7 @@ let standardArabicLetters: [LetterData] = [
         showTashkeel: true,
         sound: "r",
         weight: .conditional,
-        weightRule: "Heavy with fatha/damma, or sukoon preceded by fatha/damma (or by an incidental kasra); light with kasra, or sukoon preceded by an original kasra — unless an isti'la letter with fatha/damma follows in the same word (قِرْطَاس), which makes it heavy."
+        weightRule: "Heavy with fatha/damma, or sukoon preceded by fatha/damma (or by an incidental kasra); light with kasra, or sukoon preceded by an original kasra - unless an isti'la letter with fatha/damma follows in the same word (قِرْطَاس), which makes it heavy."
     ),
 
     LetterData(id: LetterID.next(), letter: "ز", forms: ["ـز", "ـز ـ", "ز ـ"], name: "زَاي", transliteration: "zaay", showTashkeel: true, sound: "z", weight: .light),
@@ -174,38 +189,166 @@ let numbers = [
     (number: "١٠", name: "عَشَرَة", transliteration: "'asharah", englishNumber: "10")
 ]
 
-/// Ordered a → i → u (fatha, kasra, damma) — the order these are taught in — and grouped in threes, which is
+/// Ordered a → i → u (fatha, kasra, damma) - the order these are taught in - and grouped in threes, which is
 /// how `ArabicLetterView` chunks them into rows: short vowels, then tanween, then the long vowels and their
 /// madd forms, each triple following the same a/i/u sequence.
+///
+/// Every mark carries its own root, because the root *is* the instruction: fatḥah is from "to open" (you open
+/// your mouth), kasrah from "to break" (you break the jaw downward), ḍammah from "to gather" (you gather the
+/// lips forward). Lengths are in ḥarakāt: a short vowel is 1 count, its long partner is 2, and a madd marked
+/// with the squiggle (ٓ) is longer still.
 let tashkeels: [Tashkeel] = [
-    Tashkeel(english: "Fatha", arabic: "فَتحَة", tashkeelMark: "َ", transliteration: "a"),
-    Tashkeel(english: "Kasra", arabic: "كَسرَة", tashkeelMark: "ِ", transliteration: "i"),
-    Tashkeel(english: "Damma", arabic: "ضَمَّة", tashkeelMark: "ُ", transliteration: "u"),
-    Tashkeel(english: "Fathatayn", arabic: "فَتحَتَين", tashkeelMark: "ًا", transliteration: "an"),
-    Tashkeel(english: "Kasratayn", arabic: "كَسرَتَين", tashkeelMark: "ٍ", transliteration: "in"),
-    Tashkeel(english: "Dammatayn", arabic: "ضَمَّتَين", tashkeelMark: "ٌ", transliteration: "un"),
-    Tashkeel(english: "Alif", arabic: "أَلِف", tashkeelMark: "َا", transliteration: "aa"),
-    Tashkeel(english: "Yaa", arabic: "يَاء", tashkeelMark: "ِي", transliteration: "ii"),
-    Tashkeel(english: "Waaw", arabic: "وَاو", tashkeelMark: "ُو", transliteration: "uu"),
-    Tashkeel(english: "Dagger Alif", arabic: "ألف خنجرية", tashkeelMark: "\u{064E}\u{0670}\u{0640}", transliteration: "aa"),
-    Tashkeel(english: "Miniature Yaa", arabic: "يَاء صغيرة", tashkeelMark: "ِۦ", transliteration: "ii"),
-    Tashkeel(english: "Miniature Waaw", arabic: "واو صغيرة", tashkeelMark: "ُۥ", transliteration: "uu"),
+    Tashkeel(
+        english: "Fatha", arabic: "فَتحَة", tashkeelMark: "َ", transliteration: "a",
+        root: "ف ت ح", rootMeaning: "to open",
+        howTo: "Open your mouth and let out a short \"a\", as in \"cup\". The name says what to do: you open.",
+        length: "1 count"
+    ),
+    Tashkeel(
+        english: "Kasra", arabic: "كَسرَة", tashkeelMark: "ِ", transliteration: "i",
+        root: "ك س ر", rootMeaning: "to break",
+        howTo: "Break your jaw downward and lower the sound to a short \"i\", as in \"sit\". The mark is written below the letter, and the sound drops below too.",
+        length: "1 count"
+    ),
+    Tashkeel(
+        english: "Damma", arabic: "ضَمَّة", tashkeelMark: "ُ", transliteration: "u",
+        root: "ض م م", rootMeaning: "to gather, to join together",
+        howTo: "Gather your lips and point them forward into a short \"u\", as in \"put\".",
+        length: "1 count"
+    ),
+    Tashkeel(
+        english: "Fathatayn", arabic: "فَتحَتَين", tashkeelMark: "ًا", transliteration: "an",
+        root: "ف ت ح", rootMeaning: "two fathas",
+        howTo: "Two fathas stacked. Say the fatha, then close it with an \"n\" sound: \"an\". The \"n\" is pronounced but never written as a letter.",
+        length: "1 count, then the noon"
+    ),
+    Tashkeel(
+        english: "Kasratayn", arabic: "كَسرَتَين", tashkeelMark: "ٍ", transliteration: "in",
+        root: "ك س ر", rootMeaning: "two kasras",
+        howTo: "Two kasras stacked. Say the kasra, then close it with an \"n\": \"in\".",
+        length: "1 count, then the noon"
+    ),
+    Tashkeel(
+        english: "Dammatayn", arabic: "ضَمَّتَين", tashkeelMark: "ٌ", transliteration: "un",
+        root: "ض م م", rootMeaning: "two dammas",
+        howTo: "Two dammas stacked. Say the damma, then close it with an \"n\": \"un\".",
+        length: "1 count, then the noon"
+    ),
+    Tashkeel(
+        english: "Alif", arabic: "أَلِف", tashkeelMark: "َا", transliteration: "aa",
+        root: "ف ت ح", rootMeaning: "the stretched fatha",
+        howTo: "A fatha followed by alif. Same open mouth, simply held: the stronger, extended version of the fatha.",
+        length: "2 counts"
+    ),
+    Tashkeel(
+        english: "Yaa", arabic: "يَاء", tashkeelMark: "ِي", transliteration: "ii",
+        root: "ك س ر", rootMeaning: "the stretched kasra",
+        howTo: "A kasra followed by yaa. The extended version of the kasra: \"ee\" as in \"see\".",
+        length: "2 counts"
+    ),
+    Tashkeel(
+        english: "Waaw", arabic: "وَاو", tashkeelMark: "ُو", transliteration: "uu",
+        root: "ض م م", rootMeaning: "the stretched damma",
+        howTo: "A damma followed by waaw. The extended version of the damma: \"oo\" as in \"moon\".",
+        length: "2 counts"
+    ),
+    Tashkeel(
+        english: "Dagger Alif", arabic: "ألف خنجرية", tashkeelMark: "\u{064E}\u{0670}\u{0640}", transliteration: "aa",
+        root: "خ ن ج ر", rootMeaning: "dagger, for the small blade-like stroke",
+        howTo: "A small vertical stroke standing in for a full alif. It sounds exactly like a long alif; only the writing is shorter.",
+        length: "2 counts"
+    ),
+    Tashkeel(
+        english: "Miniature Yaa", arabic: "يَاء صغيرة", tashkeelMark: "ِۦ", transliteration: "ii",
+        root: "ص غ ر", rootMeaning: "to be small",
+        howTo: "A small yaa written above the line. It sounds exactly like a long yaa.",
+        length: "2 counts"
+    ),
+    Tashkeel(
+        english: "Miniature Waaw", arabic: "واو صغيرة", tashkeelMark: "ُۥ", transliteration: "uu",
+        root: "ص غ ر", rootMeaning: "to be small",
+        howTo: "A small waaw written above the line. It sounds exactly like a long waaw.",
+        length: "2 counts"
+    ),
     // Alif + a COMBINING maddah (U+0653), exactly like the yaa and waaw madds below it. It used to be the
-    // precomposed ALEF WITH MADDA ABOVE (U+0622), which the Quranic fonts draw in its isolated form — so it sat
+    // precomposed ALEF WITH MADDA ABOVE (U+0622), which the Quranic fonts draw in its isolated form - so it sat
     // detached from the letter it belongs to (شَ آ instead of شَآ).
-    Tashkeel(english: "Alif Madd", arabic: "أَلِف مَدّ", tashkeelMark: "\u{064E}\u{0627}\u{0653}", transliteration: "aaaa"),
-    Tashkeel(english: "Yaa Madd", arabic: "يَاء مَدّ", tashkeelMark: "ِيٓ", transliteration: "iiii"),
-    Tashkeel(english: "Waaw Madd", arabic: "واو مَدّ", tashkeelMark: "ُوٓ", transliteration: "uuuu"),
+    Tashkeel(
+        english: "Alif Madd", arabic: "أَلِف مَدّ", tashkeelMark: "\u{064E}\u{0627}\u{0653}", transliteration: "aaaa",
+        root: "م د د", rootMeaning: "to stretch, to extend",
+        howTo: "The squiggle (ٓ) over the alif tells you to hold it well past the ordinary two counts. How long depends on which madd rule applies.",
+        length: "4 to 6 counts"
+    ),
+    Tashkeel(
+        english: "Yaa Madd", arabic: "يَاء مَدّ", tashkeelMark: "ِيٓ", transliteration: "iiii",
+        root: "م د د", rootMeaning: "to stretch, to extend",
+        howTo: "The squiggle over the long yaa. Hold the \"ee\" well past two counts.",
+        length: "4 to 6 counts"
+    ),
+    Tashkeel(
+        english: "Waaw Madd", arabic: "واو مَدّ", tashkeelMark: "ُوٓ", transliteration: "uuuu",
+        root: "م د د", rootMeaning: "to stretch, to extend",
+        howTo: "The squiggle over the long waaw. Hold the \"oo\" well past two counts.",
+        length: "4 to 6 counts"
+    ),
     // The small (superscript) forms, in the same a/i/u order. The dagger alif takes a maddah just as the
-    // miniature yaa and waaw do — it was the one missing from the set. Like the plain dagger alif above, it
+    // miniature yaa and waaw do - it was the one missing from the set. Like the plain dagger alif above, it
     // rides on a tatweel (ـ) rather than sitting on the letter, which is how it's shown in isolation.
-    Tashkeel(english: "Small Alif Madd", arabic: "ألف خنجرية مدّ", tashkeelMark: "\u{064E}\u{0670}\u{0653}\u{0640}", transliteration: "aaaa"),
-    Tashkeel(english: "Small Yaa Madd", arabic: "ياء مدّ صغيرة", tashkeelMark: "ِۦٓ", transliteration: "iiii"),
-    Tashkeel(english: "Small Waaw Madd", arabic: "واو مدّ صغيرة", tashkeelMark: "ُۥٓ", transliteration: "uuuu"),
-    // Last two rows: [MaqSuurah · Shaddah · Sukoon], then the Uthmani sukoon ALONE beneath the plain one —
-    // they're the same mark in two scripts, so they read as a pair stacked in the same column.
-    Tashkeel(english: "Alif MaqSuurah", arabic: "أَلِف مَقصُورَة", tashkeelMark: "َى", transliteration: "aa"),
-    Tashkeel(english: "Shaddah", arabic: "شَدَّة", tashkeelMark: "ّ", transliteration: ""),
-    Tashkeel(english: "Sukuun 1", arabic: "سُكُون", tashkeelMark: "ْ", transliteration: ""),
-    Tashkeel(english: "Sukuun 2", arabic: "سكون عثماني", tashkeelMark: "ۡ", transliteration: "")
+    Tashkeel(
+        english: "Small Alif Madd", arabic: "ألف خنجرية مدّ", tashkeelMark: "\u{064E}\u{0670}\u{0653}\u{0640}", transliteration: "aaaa",
+        root: "م د د", rootMeaning: "to stretch, to extend",
+        howTo: "A dagger alif carrying the madd squiggle. Same sound as the full alif madd, written small.",
+        length: "4 to 6 counts"
+    ),
+    Tashkeel(
+        english: "Small Yaa Madd", arabic: "ياء مدّ صغيرة", tashkeelMark: "ِۦٓ", transliteration: "iiii",
+        root: "م د د", rootMeaning: "to stretch, to extend",
+        howTo: "A miniature yaa carrying the madd squiggle. Same sound as the full yaa madd, written small.",
+        length: "4 to 6 counts"
+    ),
+    Tashkeel(
+        english: "Small Waaw Madd", arabic: "واو مدّ صغيرة", tashkeelMark: "ُۥٓ", transliteration: "uuuu",
+        root: "م د د", rootMeaning: "to stretch, to extend",
+        howTo: "A miniature waaw carrying the madd squiggle. Same sound as the full waaw madd, written small.",
+        length: "4 to 6 counts"
+    ),
+    // The three alif maqsuurah forms, a → i → u order not applying here: they are one vowel written three ways,
+    // bare, with the small alif above it, and with the small alif carrying the madd squiggle.
+    Tashkeel(
+        english: "Alif MaqSuurah", arabic: "أَلِف مَقصُورَة", tashkeelMark: "َى", transliteration: "aa",
+        root: "ق ص ر", rootMeaning: "to shorten",
+        howTo: "A yaa without dots doing the job of an alif at the end of a word. It is \"shortened\" only in how it is written; it still sounds like a long alif.",
+        length: "2 counts"
+    ),
+    Tashkeel(
+        english: "Alif MaqSuurah 2", arabic: "أَلِف مَقصُورَة بِأَلِف صَغِيرَة", tashkeelMark: "\u{0649}\u{0670}", transliteration: "aa",
+        root: "ق ص ر", rootMeaning: "to shorten",
+        howTo: "An alif maqsuurah with a small alif written above it, spelling out the long \"aa\" the dotless yaa is standing in for.",
+        length: "2 counts"
+    ),
+    Tashkeel(
+        english: "Alif MaqSuurah Madd", arabic: "أَلِف مَقصُورَة مَدّ", tashkeelMark: "\u{0649}\u{0670}\u{0653}", transliteration: "aaaa",
+        root: "م د د", rootMeaning: "to stretch, to extend",
+        howTo: "The same alif maqsuurah with the madd squiggle on top, so it is held well past two counts.",
+        length: "4 to 6 counts"
+    ),
+    // Not vowel lengths at all: one doubles a letter, the other takes its vowel away.
+    Tashkeel(
+        english: "Shaddah", arabic: "شَدَّة", tashkeelMark: "ّ", transliteration: "",
+        root: "ش د د", rootMeaning: "to make strong, to intensify",
+        howTo: "Doubles the letter. Land on it and hold it, as in the double \"n\" of \"unnatural\". It is not a vowel, so it rides on top of one.",
+        length: nil
+    ),
+    Tashkeel(
+        english: "Sukuun 1", arabic: "سُكُون", tashkeelMark: "ْ", transliteration: "",
+        root: "س ك ن", rootMeaning: "to be still, to be silent",
+        howTo: "Marks a letter with no vowel after it. The mouth stops still on the letter: \"ab\", not \"aba\".",
+        length: nil
+    ),
+    Tashkeel(
+        english: "Sukuun 2", arabic: "سكون عثماني", tashkeelMark: "ۡ", transliteration: "",
+        root: "س ك ن", rootMeaning: "to be still, to be silent",
+        howTo: "The same sukuun, in the Uthmani script of the mushaf. Identical meaning, different shape.",
+        length: nil
+    )
 ]

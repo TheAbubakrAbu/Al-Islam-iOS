@@ -66,9 +66,9 @@ extension Surah {
     }
 }
 
-/// "Page 102 (3/6)" — the absolute mushaf page annotated with its position within `surah`, out of how many
+/// "Page 102 (3/6)" - the absolute mushaf page annotated with its position within `surah`, out of how many
 /// pages that surah spans, when that can be determined; otherwise just "Page 102". The total is what makes the
-/// relative number mean anything — "(3)" alone doesn't say whether you're near the end. Pass `nil` for
+/// relative number mean anything - "(3)" alone doesn't say whether you're near the end. Pass `nil` for
 /// cross-surah boundaries (the relative number would belong to a different surah).
 func mushafPageLabel(forAbsolutePage page: Int, in surah: Surah?) -> String {
     if let surah, let relative = surah.pageWithinSurah(page) {
@@ -263,7 +263,7 @@ struct Reciter: Identifiable, Comparable, Codable, Hashable {
 
     /// When set, per-ayah audio is sourced from everyayah.com's `{surah}{ayah}.mp3` scheme in this folder
     /// instead of cdn.islamic.network's global-ayah-id scheme. Used for editions whose islamic.network feed is
-    /// unreliable — notably Minshawi Mujawwad, whose `ar.minshawimujawwad` files are the *Murattal* recording
+    /// unreliable - notably Minshawi Mujawwad, whose `ar.minshawimujawwad` files are the *Murattal* recording
     /// for ~1 in 5 ayahs (verified by identical md5), which made playback audibly drop to Murattal mid-surah.
     var everyayahFolder: String? = nil
 
@@ -290,7 +290,7 @@ struct Reciter: Identifiable, Comparable, Codable, Hashable {
     static let minshawiAyahFallbackName = "Muhammad Al-Minshawi (Murattal)"
 
     /// True when this reciter has no ayah-by-ayah feed of its own and falls back to Minshawi (Murattal) for
-    /// individual ayah audio. A reciter with its own `everyayahFolder` is NOT a fallback — it plays its own
+    /// individual ayah audio. A reciter with its own `everyayahFolder` is NOT a fallback - it plays its own
     /// voice from everyayah.com, so it must be excluded here (otherwise it would still show the Minshawi
     /// confirmation/label even though its ayahs are genuinely its own).
     var defaultToMinshawi: Bool {

@@ -81,7 +81,7 @@ struct NameOfAllah: Decodable, Identifiable, Equatable {
 
     /// Which of the three *displayed* fields (Arabic name, transliteration, meaning) actually contain the
     /// query. A name can also match on hidden fields (`desc`, `otherNames`, `found`), in which case all three
-    /// are false and the collapsed row shows no highlight — correct, since the match isn't visible. When a
+    /// are false and the collapsed row shows no highlight - correct, since the match isn't visible. When a
     /// displayed field does match, its flag drives `guaranteeMatch` so that field always shows at least one
     /// highlight even if the highlighter's normalization differs from this search's (e.g. `ḥ` vs `h`).
     /// Indices mirror `searchTokens`: [0] = Arabic name, [1] = transliteration, [2] = meaning.
@@ -213,7 +213,7 @@ struct NamesView: View {
     @State private var expandedNameNumbers = Set<Int>()
     @AppStorage("namesDisplayMode") private var namesDisplayMode: String = "list"
 
-    /// Cached so the diacritic-stripping `clean()` only runs when the query changes — not on every `body`
+    /// Cached so the diacritic-stripping `clean()` only runs when the query changes - not on every `body`
     /// re-eval (expand/collapse, favorite toggles, font switches all re-run body but leave the query alone).
     @State private var cleanedSearch = ""
 
@@ -608,12 +608,15 @@ private struct NameRow: View, Equatable {
                             fg: .primary,
                             guaranteeMatch: fieldMatches.arabic
                         )
+                            .arabicFontDesign(custom: useFontArabic && fontArabic != Settings.systemArabicFontName)
                             .lineLimit(2)
                             .multilineTextAlignment(.trailing)
                             .fixedSize(horizontal: false, vertical: true)
 
+                        // Always the Uthmani face: it renders the number as the circled-flower ornament.
                         Text(name.numberArabic)
-                            .font(.custom("KFGQPCQUMBULUthmanicScript-Regu", size: 28))
+                            .font(.custom(Settings.qiraatUthmaniFontName, size: 28))
+                            .arabicFontDesign(custom: true)
                             .foregroundColor(accentColor.color)
                             .lineLimit(1)
                     }
@@ -789,6 +792,7 @@ private struct NameGridTile: View {
         VStack(spacing: 3) {
             Text(name.displayArabicName)
                 .font(useFontArabic ? .custom(fontArabic, size: 20) : .title3)
+                .arabicFontDesign(custom: useFontArabic && fontArabic != Settings.systemArabicFontName)
                 .foregroundColor(accentColor.color)
                 .multilineTextAlignment(.center)
                 .lineLimit(2)

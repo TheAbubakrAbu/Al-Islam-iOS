@@ -136,7 +136,7 @@ struct SettingsQuranView: View {
     }
 
     #if os(iOS)
-    /// Bulk-management screens for the user's saved items. One row like every other setting on this screen —
+    /// Bulk-management screens for the user's saved items. One row like every other setting on this screen - 
     /// the four editors live behind it rather than taking four rows of the root list.
     @ViewBuilder
     private var favoritesAndBookmarksSection: some View {
@@ -301,7 +301,7 @@ struct SettingsQuranView: View {
                     .font(.subheadline)
                     .onChange(of: settings.showFullSurahRow) { _ in settings.hapticFeedback() }
 
-                Text("Adds extra details — revelation type, ayah count, page count, and more — beneath each surah in the main Quran list, the screen where all the surahs are shown.")
+                Text("Adds extra details - revelation type, ayah count, page count, and more - beneath each surah in the main Quran list, the screen where all the surahs are shown.")
                     .font(.caption)
                     .foregroundColor(.secondary)
                     .padding(.vertical, 2)
@@ -312,7 +312,7 @@ struct SettingsQuranView: View {
                     .font(.subheadline)
                     .onChange(of: settings.quranSummaryMode) { _ in settings.hapticFeedback() }
 
-                Text("Bundles Ayah of the Day, Last Listened, and Last Read into one compact \"Your Summary\" section of tiles at the top of the Quran tab — it's all one thing. Turn it off to show each as its own full-width section instead, which is clearer but takes up a lot more space. (Summary is separate from the grid button, so you can keep this on while everything else stays a list.)")
+                Text("Bundles Ayah of the Day, Last Listened, and Last Read into one compact \"Your Summary\" section of tiles at the top of the Quran tab - it's all one thing. Turn it off to show each as its own full-width section instead, which is clearer but takes up a lot more space. (Summary is separate from the grid button, so you can keep this on while everything else stays a list.)")
                     .font(.caption)
                     .foregroundColor(.secondary)
                     .padding(.vertical, 2)
@@ -407,7 +407,7 @@ struct SettingsQuranView: View {
         }
     }
 
-    /// "Use System Font Size" for the Arabic text only — pins the Arabic size to the device's Dynamic Type
+    /// "Use System Font Size" for the Arabic text only - pins the Arabic size to the device's Dynamic Type
     /// body size (+10, the reading-comfortable default). Split out from the English control so each script
     /// can follow the system size independently.
     private var useSystemArabicFontSize: Binding<Bool> {
@@ -425,7 +425,7 @@ struct SettingsQuranView: View {
         )
     }
 
-    /// "Use System Font Size" for the English text only — pins the English size to the device's Dynamic
+    /// "Use System Font Size" for the English text only - pins the English size to the device's Dynamic
     /// Type body size.
     private var useSystemEnglishFontSize: Binding<Bool> {
         Binding(
@@ -1285,7 +1285,7 @@ struct ReciterListView: View {
         if reciter.defaultToMinshawi {
             pendingMinshawiReciter = reciter
         } else if reciter.ayahMurattalStyleNote != nil {
-            // Mujawwad/Muallim variant with no true per-ayah recording in that style — confirm the ayah
+            // Mujawwad/Muallim variant with no true per-ayah recording in that style - confirm the ayah
             // audio will be this reciter's own Murattal.
             pendingMurattalStyleReciter = reciter
         } else {
@@ -1782,7 +1782,7 @@ struct ReciterListView: View {
 
     private var shouldHideDuplicateMinshawiEntries: Bool {
         // The three Minshawi variants are always shown together in their own featured section, so they must
-        // be excluded from the Mujawwad/Muallim/Murattal style sections in every case — otherwise each shows
+        // be excluded from the Mujawwad/Muallim/Murattal style sections in every case - otherwise each shows
         // up twice (the "two reciters" duplication). (Previously only hidden while filtering to downloads.)
         true
     }
@@ -2053,7 +2053,7 @@ private struct ReciterRow: View {
 
             Button("Cancel") {}
         } message: {
-            Text("This downloads all 114 full-surah recitations for offline playback — it does not download ayah-by-ayah audio. It runs in the background and may use significant data and storage.")
+            Text("This downloads all 114 full-surah recitations for offline playback - it does not download ayah-by-ayah audio. It runs in the background and may use significant data and storage.")
         }
         .onAppear {
             downloadManager.ensureStateLoaded(for: reciter)
@@ -2125,8 +2125,8 @@ enum FavoriteType: Identifiable {
     var id: Self { self }
 }
 
-/// Bulk editor for the user's saved Quran items — favorite surahs, bookmarked ayahs, favorite letters, and
-/// khatm progress — with swipe-to-delete, EditButton, and a "Delete All". Reachable from Quran Settings.
+/// Bulk editor for the user's saved Quran items - favorite surahs, bookmarked ayahs, favorite letters, and
+/// khatm progress - with swipe-to-delete, EditButton, and a "Delete All". Reachable from Quran Settings.
 struct FavoritesView: View {
     @ObservedObject var quranData = QuranData.shared
     @ObservedObject var settings = Settings.shared

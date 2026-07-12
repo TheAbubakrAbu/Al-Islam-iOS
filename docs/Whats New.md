@@ -34,7 +34,7 @@ Introducing the new Liquid Glass look, designed to complement the UI across iOS,
 Liquid Glass & UI:
 
 - Refreshed launch and splash experience for a clearer, more polished first impression.
-- Liquid Glass-style controls across the app—search bars, pickers, and other surfaces updated for a more consistent, modern feel.
+- Liquid Glass-style controls across the app - search bars, pickers, and other surfaces updated for a more consistent, modern feel.
 - General UI polish throughout for clearer layout and smoother day-to-day use.
 
 Al-Adhan:
@@ -45,11 +45,11 @@ Al-Adhan:
 
 Al-Quran:
 
-- Tajweed in the Quran: optional color-coded tajweed, and a dedicated Tajweed reference—so rules are easier to notice while you read and listen (in beta).
+- Tajweed in the Quran: optional color-coded tajweed, and a dedicated Tajweed reference - so rules are easier to notice while you read and listen (in beta).
 - Page and Juz structure: new page and Juz dividers, plus an overlay so you always see which Surah and Juz you’re in.
 - Smarter search: find ayahs by Juz and page, whether you’re searching within a Surah or across the whole Quran.
 - Quran search history for quicker repeat lookups.
-- Continue where you left off with your last listened Surah and last read ayah—now with up to 5 recent Surahs and 5 recent ayahs.
+- Continue where you left off with your last listened Surah and last read ayah - now with up to 5 recent Surahs and 5 recent ayahs.
 
 Al-Islamic Tools:
 

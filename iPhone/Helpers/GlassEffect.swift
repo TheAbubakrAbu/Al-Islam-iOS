@@ -82,7 +82,7 @@ struct ConditionalGlassEffect: ViewModifier {
                     shape.fill(fallbackBaseFill)
                 }
             }
-            // Overlays must not intercept taps — otherwise buttons/menus underneath never receive touches.
+            // Overlays must not intercept taps - otherwise buttons/menus underneath never receive touches.
             .overlay(shape.fill(fallbackOverlayColor).allowsHitTesting(false))
             .overlay(shape.stroke(Color.primary.opacity(0.12), lineWidth: 1).allowsHitTesting(false))
     }

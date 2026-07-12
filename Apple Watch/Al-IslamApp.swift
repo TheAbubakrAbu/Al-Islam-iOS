@@ -48,13 +48,12 @@ struct AlIslamApp: App {
         .onChange(of: settings.accentColor) { _ in
             WidgetCenter.shared.reloadAllTimelines()
         }
-        .onChange(of: settings.prayerCalculation) { _ in
-            settings.fetchPrayerTimes(force: true)
-        }
+        // No `.onChange` refresh for `prayerCalculation` or `travelingMode`: every path that writes them
+        // (the manual setters, the dialog overrides, the auto-checks inside a fetch, a synced snapshot)
+        // already performs its own recompute, with auto-checks suppressed where the change was a choice.
+        // A blanket refresh here would re-run the automatic detection with checks ON right after a manual
+        // change - the exact override/spam bug the old one-shot flags existed to paper over.
         .onChange(of: settings.hanafiMadhab) { _ in
-            settings.fetchPrayerTimes(force: true)
-        }
-        .onChange(of: settings.travelingMode) { _ in
             settings.fetchPrayerTimes(force: true)
         }
         .onChange(of: settings.hijriOffset) { _ in
@@ -62,7 +61,15 @@ struct AlIslamApp: App {
             WidgetCenter.shared.reloadAllTimelines()
         }
         .onChange(of: scenePhase) { phase in
-            if phase != .active {
+            if phase == .active {
+                // The watch senses its own location (location is never synced from the phone), but its
+                // continuous updates stop the moment the app suspends - so after a flight, raising the wrist
+                // showed the departure city indefinitely. One immediate one-shot fix on wake, then the same
+                // low-frequency cadence the iPhone uses while frontmost.
+                settings.refreshLocationIfStale()
+                settings.beginForegroundLocationCadence()
+            } else {
+                settings.endForegroundLocationCadence()
                 // Flush any just-made setting change before suspension so it reliably reaches the iPhone.
                 WatchConnectivityManager.shared.flushPendingSync()
             }

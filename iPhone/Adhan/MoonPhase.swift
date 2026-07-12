@@ -3,7 +3,7 @@ import SwiftUI
 /// The Moon's illuminated fraction and whether it is waxing, for a given moment.
 ///
 /// This is the `getMoonIllumination` routine from Vladimir Agafonkin's SunCalc, which is itself the low-precision
-/// lunar theory from Meeus' *Astronomical Algorithms*. It is accurate to well under a percent of illumination —
+/// lunar theory from Meeus' *Astronomical Algorithms*. It is accurate to well under a percent of illumination - 
 /// far tighter than a moon you can draw at 40 points across. Geocentric, so it ignores the observer's position;
 /// the phase is the same everywhere on Earth to within a rounding error.
 struct MoonPhase: Equatable {
@@ -81,7 +81,7 @@ struct MoonPhase: Equatable {
 /// The lit portion of the Moon's disc, as one closed path: the bright limb (a semicircle) joined to the
 /// terminator (a half-ellipse). The terminator's width is `r·|1 − 2f|`, so it collapses to a straight line at
 /// the quarters, bulges *into* the lit side for a crescent, and *away* for a gibbous. Building it as a single
-/// path avoids CoreGraphics boolean ops, which need iOS 16 — this app still supports iOS 15.
+/// path avoids CoreGraphics boolean ops, which need iOS 16 - this app still supports iOS 15.
 struct MoonLitShape: Shape {
     var illumination: Double
     var isWaxing: Bool
@@ -157,7 +157,7 @@ struct MoonPhaseView: View {
     }
 }
 
-/// A tiny monochrome moon that takes the ambient foreground color — for dense contexts like a calendar row,
+/// A tiny monochrome moon that takes the ambient foreground color - for dense contexts like a calendar row,
 /// where the full `MoonPhaseView` (with its gradient and glow) would be noise.
 struct MoonPhaseGlyph: View {
     let illumination: Double

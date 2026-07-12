@@ -3,7 +3,7 @@ import UIKit
 
 /// Writes the prayer calendar to a temporary file for the share sheet.
 ///
-/// The PDF is drawn with `UIGraphicsPDFRenderer` rather than a third-party library — a table of text in boxes
+/// The PDF is drawn with `UIGraphicsPDFRenderer` rather than a third-party library - a table of text in boxes
 /// needs nothing more, and it keeps the dependency list empty.
 enum PrayerCalendarExport {
 
@@ -80,7 +80,7 @@ enum PrayerCalendarExport {
                         y += headerHeight
                         drawSeparator(at: y - 4)
                     }
-                    let cells = [String(day.dayOfMonth)] + columns.map { day.times[$0] ?? "—" }
+                    let cells = [String(day.dayOfMonth)] + columns.map { day.times[$0] ?? "- " }
                     drawRow(cells, y: y,
                             font: day.isToday ? .boldSystemFont(ofSize: 9) : .systemFont(ofSize: 9),
                             color: .black)
@@ -100,7 +100,7 @@ enum PrayerCalendarExport {
         text.draw(at: point, withAttributes: [.font: font, .foregroundColor: color])
     }
 
-    /// First cell left-aligned (the date), the rest right-aligned in equal columns — matching the on-screen table.
+    /// First cell left-aligned (the date), the rest right-aligned in equal columns - matching the on-screen table.
     private static func drawRow(_ cells: [String], y: CGFloat, font: UIFont, color: UIColor) {
         guard let first = cells.first else { return }
         let dateWidth: CGFloat = 40
@@ -132,7 +132,7 @@ enum PrayerCalendarExport {
         let slug = city
             .components(separatedBy: CharacterSet.alphanumerics.inverted)
             .filter { !$0.isEmpty }
-            .joined(separator: "-")
+            .joined(separator: "- ")
             .lowercased()
         return slug.isEmpty ? "prayer-calendar.\(ext)" : "prayer-calendar-\(slug).\(ext)"
     }

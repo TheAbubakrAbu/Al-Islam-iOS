@@ -7,7 +7,7 @@ import SwiftUI
 // MARK: - Fullscreen focus overlay
 
 /// One thing shown as large as the screen allows: an Arabic letter, a surah name, or one of the 99 Names.
-/// `arabic` is the hero — everything else is supporting text under it.
+/// `arabic` is the hero - everything else is supporting text under it.
 struct FocusItem: Identifiable, Equatable {
     let id: String
     let arabic: String
@@ -20,7 +20,7 @@ struct FocusItem: Identifiable, Equatable {
     let shareText: String
     /// Letters from non-Arabic scripts (پ, چ, ژ …) aren't in the Quranic font, so they must fall back.
     let allowsQuranicFont: Bool
-    /// An asset name. When set, the hero is that image — pinch/double-tap to zoom — instead of Arabic text,
+    /// An asset name. When set, the hero is that image - pinch/double-tap to zoom - instead of Arabic text,
     /// and the caption sits under it. This is what makes every diagram in the app openable full screen.
     let imageName: String?
 
@@ -72,7 +72,7 @@ final class FocusOverlayPresenter: ObservableObject {
     }
 }
 
-/// Sits at the top of the app's root `ZStack` — not a sheet, so it can cover the tab bar and animate as a
+/// Sits at the top of the app's root `ZStack` - not a sheet, so it can cover the tab bar and animate as a
 /// plain cross-fade instead of the system's slide-up.
 struct FocusOverlayHost: View {
     @ObservedObject private var settings = Settings.shared
@@ -82,6 +82,11 @@ struct FocusOverlayHost: View {
 
     private var useQuranicFont: Bool {
         settings.useFontArabic && (presenter.item?.allowsQuranicFont ?? false)
+    }
+
+    /// Whether the hero glyph resolves to a bundled face, and so must opt out of the app-wide rounded design.
+    private var usesCustomArabicFace: Bool {
+        useQuranicFont && settings.quranUsesCustomArabicFace
     }
 
     var body: some View {
@@ -151,6 +156,7 @@ struct FocusOverlayHost: View {
         VStack(spacing: 20) {
             Text(item.arabic)
                 .font(useQuranicFont ? .custom(settings.fontArabic, size: 130) : .system(size: 110))
+                .arabicFontDesign(custom: usesCustomArabicFace)
                 .foregroundStyle(settings.accentColor.color)
                 .multilineTextAlignment(.center)
                 .minimumScaleFactor(0.15)
@@ -160,6 +166,7 @@ struct FocusOverlayHost: View {
             if let secondaryArabic = item.secondaryArabic {
                 Text(secondaryArabic)
                     .font(useQuranicFont ? .custom(settings.fontArabic, size: 34) : .system(size: 30))
+                    .arabicFontDesign(custom: usesCustomArabicFace)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
                     .minimumScaleFactor(0.5)
@@ -319,8 +326,8 @@ struct ActivityView: UIViewControllerRepresentable {
     func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
 }
 
-/// Shares from a context-menu button. A `.sheet` can't be used there — the menu's host row is gone by the
-/// time the action runs — so present the activity controller on the topmost view controller instead.
+/// Shares from a context-menu button. A `.sheet` can't be used there - the menu's host row is gone by the
+/// time the action runs - so present the activity controller on the topmost view controller instead.
 @MainActor
 func presentSystemShareSheet(items: [Any]) {
     let scene = UIApplication.shared.connectedScenes
@@ -344,8 +351,8 @@ func presentSystemShareSheet(items: [Any]) {
 
 // MARK: - Focus items for each kind of content
 //
-// Only the kinds this file can build on its own. Content types that live outside Helpers — a Quran `Surah`,
-// say — declare their own `FocusItem` factory next to the model, so this file drops into an app that has no
+// Only the kinds this file can build on its own. Content types that live outside Helpers - a Quran `Surah`,
+// say - declare their own `FocusItem` factory next to the model, so this file drops into an app that has no
 // Quran (Al-Adhan) without dragging the Quran folder along.
 
 extension FocusItem {
@@ -413,13 +420,13 @@ extension FocusItem {
 
 // Outside the `#if os(iOS)` above: the screens that carry these images (Tajweed, Pillars) build for the watch
 // too, so the modifier has to EXIST there or every call site fails to compile. There's no focus overlay on
-// watchOS — no room for one — so it's a no-op there rather than a per-call-site `#if`.
+// watchOS - no room for one - so it's a no-op there rather than a per-call-site `#if`.
 extension View {
     /// Makes an inline image open full screen (zoomable, shareable) on tap. Attach it to the `Image` itself:
     ///
     ///     Image("Makharij1").resizable().scaledToFit().focusableImage("Makharij1", title: "Makharij")
     ///
-    /// The whole image is the hit target, so it's easy to hit — the diagrams in Pillars and Tajweed are far too
+    /// The whole image is the hit target, so it's easy to hit - the diagrams in Pillars and Tajweed are far too
     /// small to read inline, and this is the way out of that.
     @ViewBuilder
     func focusableImage(_ assetName: String, title: String, subtitle: String? = nil) -> some View {

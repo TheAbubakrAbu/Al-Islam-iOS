@@ -7,7 +7,7 @@ import Foundation
 // rebuilds this whenever last-read / last-listened state changes (see `Settings.refreshQuranWidgets`).
 //
 // Lives in the Widget/Quran area (next to `QuranProvider`) rather than in Globals, but is a member of every
-// target — the app/watch/complication write it and the widget reads it.
+// target - the app/watch/complication write it and the widget reads it.
 struct QuranWidgetSnapshot: Codable {
     /// A tajweed color span over the Arabic text, in UTF-16 offsets, with the color as 0–1 RGB. Plain
     /// `Codable` so it survives the App Group without serializing SwiftUI/UIKit color objects.

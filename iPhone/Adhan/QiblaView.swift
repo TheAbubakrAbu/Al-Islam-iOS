@@ -369,7 +369,7 @@ final class LocalQiblaCompass: NSObject, ObservableObject, CLLocationManagerDele
         self.locationProvider = locationProvider
         super.init()
         locationManager.delegate = self
-        // Take every heading sample and do our own smoothing — gives a steadier, sharper needle than
+        // Take every heading sample and do our own smoothing - gives a steadier, sharper needle than
         // letting Core Location drop sub-degree changes.
         locationManager.headingFilter = kCLHeadingFilterNone
         locationManager.headingOrientation = .portrait

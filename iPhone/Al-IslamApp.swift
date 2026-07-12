@@ -5,7 +5,7 @@ import WidgetKit
 ///
 /// The launch screen already has a quiet "hold on the logo and wait for init" phase; it now also waits for
 /// `isWarm` before it plays its finale and hands off. `MainTabView` sets `isWarm` once it has built + retained
-/// the heavy Quran tab and settled back on the Adhan landing tab — all behind the launch cover. Net effect: the
+/// the heavy Quran tab and settled back on the Adhan landing tab - all behind the launch cover. Net effect: the
 /// reveal happens only when everything is already built and on the right tab, so there's no tab flip and no
 /// first-tap stall the user can see.
 @MainActor
@@ -68,6 +68,9 @@ struct AlIslamApp: App {
     var body: some Scene {
         WindowGroup {
             rootContent
+                // Every system font in the app is SF Rounded. Views that render a bundled Arabic face opt back
+                // out with `arabicFontDesign(custom:)` - see the note in `Globals.swift`.
+                .appFontDesign()
                 .environmentObject(settings)
                 .environmentObject(quranData)
                 .environmentObject(quranPlayer)
@@ -82,13 +85,12 @@ struct AlIslamApp: App {
         .onChange(of: settings.accentColor) { _ in
             WidgetCenter.shared.reloadAllTimelines()
         }
-        .onChange(of: settings.prayerCalculation) { _ in
-            settings.fetchPrayerTimes(force: true)
-        }
+        // No `.onChange` refresh for `prayerCalculation` or `travelingMode`: every path that writes them
+        // (the manual setters, the dialog overrides, the auto-checks inside a fetch, a synced snapshot)
+        // already performs its own recompute, with auto-checks suppressed where the change was a choice.
+        // A blanket refresh here would re-run the automatic detection with checks ON right after a manual
+        // change - the exact override/spam bug the old one-shot flags existed to paper over.
         .onChange(of: settings.hanafiMadhab) { _ in
-            settings.fetchPrayerTimes(force: true)
-        }
-        .onChange(of: settings.travelingMode) { _ in
             settings.fetchPrayerTimes(force: true)
         }
         .onChange(of: settings.hijriOffset) { _ in
@@ -107,12 +109,18 @@ struct AlIslamApp: App {
                 // can start the fasting countdown. It no-ops outside Ramadan, and outside the hour before
                 // Fajr (suhoor) or Maghrib (iftar).
                 FastingActivityController.refresh()
+                // Coming back to a stale fix (landed, drove, flew) gets one immediate refresh; the cadence
+                // then keeps it loosely current (every ~5 min) for as long as the app stays frontmost -
+                // significant-change monitoring can't do this without cell coverage, e.g. on a plane.
+                settings.refreshLocationIfStale()
+                settings.beginForegroundLocationCadence()
             } else {
                 ForegroundAdhanPlayer.shared.stop()
                 // A high-accuracy burst pins the GPS. `AdhanView.onDisappear` ends it when you navigate away,
-                // but backgrounding the app doesn't disappear the view — without this the burst would run to
+                // but backgrounding the app doesn't disappear the view - without this the burst would run to
                 // its 25-second timeout with the screen off.
                 settings.endLocationRefinement()
+                settings.endForegroundLocationCadence()
                 // Send any just-made setting change before the app is suspended, so it can't be lost (and
                 // can't be reverted by a stale synced value on the next launch).
                 WatchConnectivityManager.shared.flushPendingSync()
@@ -123,15 +131,15 @@ struct AlIslamApp: App {
     @ViewBuilder
     private var rootContent: some View {
         ZStack {
-            // Keep the tabs mounted from the very first frame — even while the launch/splash screen still covers
-            // the screen — so the Quran tab can realize its (heavy) view tree behind that cover instead of on
+            // Keep the tabs mounted from the very first frame - even while the launch/splash screen still covers
+            // the screen - so the Quran tab can realize its (heavy) view tree behind that cover instead of on
             // the first visible tap. Al-Quran never lags here because Quran is its default tab and realizes
             // under the splash; mounting early gives Al-Islam the same head start while still landing the user
             // on the Adhan tab (see `MainTabView`, which sits on Quran while covered then flips to Adhan on
             // reveal). The launch/splash screens overlay on top and fade out to reveal it.
             MainTabView(isCovered: rootStage != .main)
                 // Always opaque underneath the covers. The launch/splash screens are opaque and simply fade
-                // themselves out (below) to reveal it — a clean single-layer dissolve, no mid-transition dip.
+                // themselves out (below) to reveal it - a clean single-layer dissolve, no mid-transition dip.
                 .zIndex(1)
 
             // Above the tabs but below the covers: a letter / surah / name blown up to fill the screen. It
@@ -148,7 +156,7 @@ struct AlIslamApp: App {
 
             // The splash fades via an explicit `.opacity` (kept mounted through the fade), NOT a removal
             // `.transition`: SplashScreen wraps a NavigationView, which doesn't animate SwiftUI removal
-            // transitions — it just snaps. A plain opacity animation on the hosted content works, giving the
+            // transitions - it just snaps. A plain opacity animation on the hosted content works, giving the
             // splash → main hand-off a real cross-fade. It's unmounted a beat after the fade completes.
             if splashPresented {
                 SplashScreen()
@@ -165,7 +173,7 @@ struct AlIslamApp: App {
             if stage == .splash {
                 splashPresented = true
             } else if splashPresented {
-                // Leaving the splash: its opacity is animating to 0 above — unmount once that fade is done.
+                // Leaving the splash: its opacity is animating to 0 above - unmount once that fade is done.
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
                     if rootStage != .splash { splashPresented = false }
                 }
@@ -185,9 +193,9 @@ private struct MainTabView: View {
     private enum AppTab: Hashable { case adhan, quran, islam, settings }
 
     // We land the user on Adhan, so Adhan is the initial tab and builds first. The Quran tab is realized during
-    // `warmUnderCover()` — briefly selected so `TabView` builds and RETAINS its heavy view tree, then we settle
+    // `warmUnderCover()` - briefly selected so `TabView` builds and RETAINS its heavy view tree, then we settle
     // back on Adhan. All of this happens behind the launch cover, and the launch screen waits for it to finish
-    // (see `LaunchWarmup`) before it reveals — so the user only ever sees a fully-built Adhan tab, and the first
+    // (see `LaunchWarmup`) before it reveals - so the user only ever sees a fully-built Adhan tab, and the first
     // tap on Quran reuses the warm tab instantly. No visible tab flip, no first-tap stall.
     @State private var selectedTab: AppTab = .adhan
     @State private var didWarm = false
@@ -223,8 +231,8 @@ private struct MainTabView: View {
         LaunchWarmup.shared.markWarm()
     }
 
-    /// As soon as the main UI (the Adhan tab) is on screen, warm EVERY surah's Arabic text / tajweed caches —
-    /// and with them the shared Arabic font's CoreText glyph cache — in the background, so the first switch to
+    /// As soon as the main UI (the Adhan tab) is on screen, warm EVERY surah's Arabic text / tajweed caches - 
+    /// and with them the shared Arabic font's CoreText glyph cache - in the background, so the first switch to
     /// the Quran tab is already fully warm. Runs on the main actor (it reads `settings`) but yields + sleeps
     /// between surahs so the Adhan tab stays responsive while it fills in. Runs once per session (shared flag).
     @MainActor
@@ -250,7 +258,7 @@ private struct MainTabView: View {
             }
         }
 
-        // Skip the full sweep on memory-constrained devices (same gate the Quran tab uses) — priority warming
+        // Skip the full sweep on memory-constrained devices (same gate the Quran tab uses) - priority warming
         // above still ran.
         guard !AppPerformance.shouldAvoidBroadPrewarm else { return }
 

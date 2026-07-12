@@ -2,7 +2,7 @@
 import SwiftUI
 import UIKit
 
-/// Thirteen months of prayer times — this month plus a year ahead — browsable, and exportable as PDF or CSV.
+/// Thirteen months of prayer times - this month plus a year ahead - browsable, and exportable as PDF or CSV.
 ///
 /// Months are computed lazily as they scroll into view. A full year is ~400 days × 6 prayers, and computing
 /// that eagerly on `onAppear` stalls the push animation; `MonthModel` is built on demand and cached.
@@ -88,7 +88,7 @@ struct PrayerCalendarView: View {
             .frame(width: dayColumnWidth, alignment: .leading)
 
             ForEach(Self.columns, id: \.self) { column in
-                Text(day.times[column] ?? "—")
+                Text(day.times[column] ?? "- ")
                     .frame(maxWidth: .infinity, alignment: .trailing)
                     // Six times across a phone is tight; let them shrink rather than wrap onto a second line.
                     .lineLimit(1)

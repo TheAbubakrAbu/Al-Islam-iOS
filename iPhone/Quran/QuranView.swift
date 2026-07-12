@@ -521,7 +521,7 @@ struct QuranView: View {
         // first so the most likely next tap is ready, then the rest fill in slowly in the background.
         Task(priority: .utility) { @MainActor in
             // This whole prewarm runs on the main actor (it reads `settings`/builds caches), so doing it the
-            // instant the tab appears stalls the FIRST render — the main cause of "opening Quran feels slow".
+            // instant the tab appears stalls the FIRST render - the main cause of "opening Quran feels slow".
             // Wait for the first render to settle before warming anything, so the list paints immediately and
             // caches fill in afterward. (Cancelled automatically if the user leaves the tab.)
             try? await Task.sleep(nanoseconds: 450_000_000)
@@ -538,10 +538,10 @@ struct QuranView: View {
             }
 
             // The broad prewarm scans all 114 surahs. This `Task` is unstructured (not tied to `.task`), so
-            // leaving and re-entering the Quran tab — common on iPad/Mac split view — would otherwise spawn
+            // leaving and re-entering the Quran tab - common on iPad/Mac split view - would otherwise spawn
             // overlapping full prewarm passes. Run it at most once per session; caches are rebuilt lazily on
             // demand afterward, so correctness is unaffected.
-            // Shared with the app-root prewarm that fires when the Adhan tab appears — whichever finishes the
+            // Shared with the app-root prewarm that fires when the Adhan tab appears - whichever finishes the
             // full sweep first sets the flag, and the other skips it (no duplicate pass).
             guard shouldPrewarmAllQuranDestinations, !QuranData.didBroadPrewarm else { return }
 
@@ -743,7 +743,7 @@ struct QuranView: View {
             .applyConditionalListStyle(disableNowPlayingInset: true)
             .compactListSectionSpacing()
             .listSectionIndexVisibilityWhenAvailable(visible: settings.quranSortMode == .juz && searchText.isEmpty)
-            // No list-level `.animation(...)` here — it makes lazily-loaded rows stutter while scrolling
+            // No list-level `.animation(...)` here - it makes lazily-loaded rows stutter while scrolling
             // (SurahView has none). The sort-change transition is already animated at the toggle sites via
             // `withAnimation` in `sortModeButton` / the sort-direction picker.
             #if os(watchOS)
@@ -765,7 +765,7 @@ struct QuranView: View {
                 guard id > 0 else { return }
                 // Grid mode (a LazyVGrid added after 4.4.4) can't scroll to off-screen tiles, so flip to list
                 // first. Otherwise this is exactly the Version 4.4.4 scroll, which felt right: one delayed,
-                // animated scrollTo — no retry loop, no settle attempts.
+                // animated scrollTo - no retry loop, no settle attempts.
                 if settings.quranGridMode { settings.quranGridMode = false }
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                     withAnimation {
@@ -918,7 +918,7 @@ struct QuranView: View {
         // Strip the inherited animation transaction so this bottom bar SNAPS to its keyboard-driven position
         // instead of easing on its own curve. Dismissing the keyboard on scroll fires onFocusChanged →
         // `withAnimation { isQuranSearchFocused = … }`, whose easeInOut then collides with the keyboard's own
-        // frame animation on the same bar — the "weird" lurch. Same `.transaction { $0.animation = nil }` fix
+        // frame animation on the same bar - the "weird" lurch. Same `.transaction { $0.animation = nil }` fix
         // as NowPlayingView's progress bar; the keyboard supplies the motion, so the bar tracks it cleanly.
         .transaction { $0.animation = nil }
         #else
@@ -996,7 +996,7 @@ struct QuranView: View {
         } else {
             // Bind to the stored @AppStorage raw via its projected binding (like SettingsView's color-theme
             // picker). A hand-rolled Binding(get:set:) closure over `settings` does NOT drive a segmented
-            // Picker's selection here — the segment never commits — which is why this used to refuse to switch.
+            // Picker's selection here - the segment never commits - which is why this used to refuse to switch.
             Picker("Sort Direction", selection: $settings.quranSortDirectionRaw.animation(.easeInOut)) {
                 ForEach(sortDirectionOptions) { direction in
                     Text(direction.title)
@@ -1019,7 +1019,7 @@ struct QuranView: View {
     private var khatmGroupingPicker: some View {
         #if os(iOS)
         // Projected @AppStorage binding (like ArabicView's font picker). A custom Binding(get:set:) closure
-        // wouldn't commit the segment here — that was the "can't switch to Juz" bug.
+        // wouldn't commit the segment here - that was the "can't switch to Juz" bug.
         Picker("Khatm Grouping", selection: $settings.khatmGroupByJuz.animation(.easeInOut)) {
             Text("Surah")
                 .accessibilityLabel("Group by Surah")
@@ -1165,7 +1165,7 @@ struct QuranView: View {
             if quranPlayer.isLoading || quranPlayer.isPlaying || quranPlayer.isPaused {
                 Button {
                     settings.hapticFeedback()
-                    // Fully stop whether loading or playing — a loading tap used to only pause the in-flight
+                    // Fully stop whether loading or playing - a loading tap used to only pause the in-flight
                     // load, which could then resume on its own.
                     quranPlayer.stop()
                 } label: {
@@ -1689,7 +1689,7 @@ struct QuranView: View {
     }
 
     private func orderedQuranSurahs(showsRevelationOrder: Bool) -> [Surah] {
-        // Khatm's Surah grouping is always natural surah order — it reuses the Asc/Desc slot for the
+        // Khatm's Surah grouping is always natural surah order - it reuses the Asc/Desc slot for the
         // Surah/Juz toggle, so `quranSortDirection` (left over from another mode) must not reorder it.
         if settings.quranSortMode == .khatm {
             return quranData.quran
@@ -2675,7 +2675,7 @@ struct QuranView: View {
     }
 
     /// A page/juz search result shows the range's FIRST and LAST ayah (labeled Start / End) rather than
-    /// every ayah — like Juz View marks where a section begins and ends. The header's count pill conveys
+    /// every ayah - like Juz View marks where a section begins and ends. The header's count pill conveys
     /// the total. A single-ayah range shows just the one row (unlabeled).
     @ViewBuilder
     private func pageJuzRangeRows(first: (surah: Surah, ayah: Ayah), last: (surah: Surah, ayah: Ayah)?, count: Int) -> some View {
@@ -2805,7 +2805,7 @@ struct QuranView: View {
 
         // Only worth a separate "Top Ayah Results" section when there's a real contrast: some loaded hits
         // contain the exact phrase and others only matched loosely. If every hit (or no hit) is an exact
-        // phrase match, the section just duplicates the list below — so suppress it instead of showing a
+        // phrase match, the section just duplicates the list below - so suppress it instead of showing a
         // redundant "top" that's no better than the rest.
         guard !exactHits.isEmpty, exactHits.count < verseHits.count else { return [] }
 
@@ -2848,7 +2848,7 @@ struct QuranView: View {
         if let s = quranData.surah(surahId) {
             let latinHeader1 = "\(s.id). \(s.nameTransliteration)".uppercased()
 
-            let latinHeader2 = "(\(s.nameEnglish)) —".uppercased()
+            let latinHeader2 = "(\(s.nameEnglish)) - ".uppercased()
 
             HStack(spacing: 6) {
                 Text(latinHeader1)
@@ -2924,7 +2924,7 @@ struct QuranView: View {
                 disableTajweedColors: true
             )
             // Section-scoped id: the same ayah can appear in both "best" and "grouped" sections, and
-            // duplicate List identities cause scroll jank. No per-row .animation here — that previously
+            // duplicate List identities cause scroll jank. No per-row .animation here - that previously
             // re-animated every visible row whenever verseHits.count changed (e.g. while loading more
             // results during scroll), which is what made scrolling feel laggy versus SurahView.
             .id("ayah-results-\(section)-\(surah.id)-\(ayah.id)")
@@ -3068,7 +3068,7 @@ struct QuranView: View {
             await MainActor.run {
                 guard query == searchText.trimmingCharacters(in: .whitespacesAndNewlines) else { return }
                 // Animate the initial appearance of results so it matches `clearAyahSearchState()` (which
-                // animates) — that mismatch is why search felt "sometimes animated, sometimes not". Only the
+                // animates) - that mismatch is why search felt "sometimes animated, sometimes not". Only the
                 // first page animates; `loadMoreAyahMatches` / "load all" stay un-animated on purpose so
                 // appending rows mid-scroll doesn't re-animate the whole list (see the `.id(...)` note above).
                 withAnimation {

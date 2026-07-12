@@ -399,9 +399,9 @@ enum TajweedLegendCategory: String, CaseIterable, Identifiable {
         case .maddSukoon:
             return "The key condition is pausing at the word ending. This includes madd aarid lis-sukoon, where the final letter becomes temporarily sakin after a normal madd letter, and madd leen, where a sakin waaw or yaa follows a fathah and is stretched softly when stopping. Use 2, 4, or 6 counts consistently, and keep madd leen no longer than the madd aarid length chosen in the same recitation."
         case .maddSeparated:
-            return "Because the hamzah is in the following word, scholars classify this separately from muttasil. Allowed lengths vary by riwayah, so learners should follow one taught pattern and avoid switching counts randomly in the same recitation. This color also marks Madd Munfasil Hukmi (\"ruled\" separated): a handful of words — the vocative يَٰٓ (\"O…\") and demonstrative هَٰٓ (\"these…\") particles written joined to a following hamzah, such as يَٰٓأَيُّهَا and هَٰٓؤُلَآءِ — where only that superscript-particle sequence is treated as separated even though it sits inside one written word."
+            return "Because the hamzah is in the following word, scholars classify this separately from muttasil. Allowed lengths vary by riwayah, so learners should follow one taught pattern and avoid switching counts randomly in the same recitation. This color also marks Madd Munfasil Hukmi (\"ruled\" separated): a handful of words - the vocative يَٰٓ (\"O…\") and demonstrative هَٰٓ (\"these…\") particles written joined to a following hamzah, such as يَٰٓأَيُّهَا and هَٰٓؤُلَآءِ - where only that superscript-particle sequence is treated as separated even though it sits inside one written word."
         case .maddConnected:
-            return "Since both elements occur inside one word, this is treated as a stronger extension than natural madd. Keep the elongation measured and stable according to your riwayah so the hamzah after it remains clear and not swallowed. Note one exception: in the يَٰٓ/هَٰٓ particle words (e.g. يَٰٓأَيُّهَا, هَٰٓؤُلَآءِ) the superscript madd before the hamzah is recited as Madd Munfasil Hukmi instead — but any real madd letter + hamzah elsewhere in those same words (e.g. لَآءِ in هَٰٓؤُلَآءِ) stays muttasil."
+            return "Since both elements occur inside one word, this is treated as a stronger extension than natural madd. Keep the elongation measured and stable according to your riwayah so the hamzah after it remains clear and not swallowed. Note one exception: in the يَٰٓ/هَٰٓ particle words (e.g. يَٰٓأَيُّهَا, هَٰٓؤُلَآءِ) the superscript madd before the hamzah is recited as Madd Munfasil Hukmi instead - but any real madd letter + hamzah elsewhere in those same words (e.g. لَآءِ in هَٰٓؤُلَآءِ) stays muttasil."
         case .maddNecessary:
             return "This category is fixed and not flexible like optional madd forms, so it should be given its full required length whenever encountered. Its consistency is one of the easiest ways to stabilize rhythm and accuracy in longer passages."
             
@@ -449,7 +449,7 @@ enum TajweedLegendCategory: String, CaseIterable, Identifiable {
 ///   Madd letters (superscript): dagger alif U+0670, small waw U+06E5, small yaa U+06E6, small high yaa U+06E7
 ///   Maddah (explicit madd):     U+0653  (turns a carrier into an explicit muttasil/munfasil/lazim madd)
 ///   Hamza (base letters):       U+0621 ء, U+0623 أ, U+0624 ؤ, U+0625 إ, U+0626 ئ
-///   Hamza (combining, on seat): U+0654 (above), U+0655 (below) — e.g. tatweel+ٔ
+///   Hamza (combining, on seat): U+0654 (above), U+0655 (below) - e.g. tatweel+ٔ
 ///   Hamzat al-wasl:             U+0671 ٱ  (silent when connecting)
 ///   Harakat / shadda / sukoon:  fatha U+064E, damma U+064F, kasra U+0650, shadda U+0651, sukoon U+0652
 ///   Tanwin:                     fathatayn U+064B, dammatayn U+064C, kasratayn U+064D (+ Uthmani variants)
@@ -460,7 +460,7 @@ enum TajweedLegendCategory: String, CaseIterable, Identifiable {
 /// --------------------------------------------------------------------------------------------
 /// 3. RULE TAXONOMY (category · trigger · length)
 /// --------------------------------------------------------------------------------------------
-///   MADD — elongation
+///   MADD - elongation
 ///     • maddNatural (Tabi'i) ......... full madd letter preceded by its matching vowel, with NO maddah,
 ///                                      NO sukoon after, and not before hamza/hamzat-wasl. 2 counts.
 ///     • maddNaturalMiniature ......... a superscript madd mark (dagger alif / small waw / small yaa)
@@ -474,7 +474,7 @@ enum TajweedLegendCategory: String, CaseIterable, Identifiable {
 ///     • maddNecessary (Lazim) ........ madd + permanent sukoon or shadda. 6 counts. Includes Lazim
 ///                                      Harfi (muqatta'at letter names) and Lazim Kalimi (e.g. ٱلضَّآلِّينَ).
 ///   GHUNNAH / NASAL (2-count nasal)
-///     • idghamGhunnah, idghamBilaGhunnah, generalGhunnah, ikhfaaLight, ikhfaaHeavy, iqlaab — driven by
+///     • idghamGhunnah, idghamBilaGhunnah, generalGhunnah, ikhfaaLight, ikhfaaHeavy, iqlaab - driven by
 ///       noon/tanwin + following letter (see the noon/tanwin sets below) and by tree annotations.
 ///   SIFAAT / ARTICULATION
 ///     • qalqalah ..... qutb-jad letters (ق ط ب ج د) on sukoon or when stopped. Verse-final too.
@@ -497,7 +497,7 @@ enum TajweedLegendCategory: String, CaseIterable, Identifiable {
 ///   (`fathataynFollowerSkipLetters`).
 ///
 /// --------------------------------------------------------------------------------------------
-/// 5. EXPLICIT-MADDAH CLASSIFIER (the core madd decision)  — `explicitMaddahCategory`
+/// 5. EXPLICIT-MADDAH CLASSIFIER (the core madd decision) - `explicitMaddahCategory`
 /// --------------------------------------------------------------------------------------------
 ///   For any cluster carrying a maddah (U+0653) that is NOT a final-aarid carrier and NOT a tiny mark:
 ///     1. If the NEXT non-space cluster has a shadda → Lazim (maddNecessary).
@@ -518,7 +518,7 @@ enum TajweedLegendCategory: String, CaseIterable, Identifiable {
 ///        sequence is overridden; a real madd letter + hamza elsewhere in the SAME word stays Muttasil
 ///        (e.g. هَٰٓؤُلَآءِ = هَٰٓؤُ munfasil-hukmi + لَآءِ muttasil).
 ///   6.2  GENUINE MUTTASIL WRITTEN WITH A DAGGER ALIF. A dagger alif + hamza inside one true morpheme
-///        (no joined يَا/هَا) is ordinary Muttasil and must NOT be reclassified — أُوْلَٰٓئِكَ, مَلَٰٓئِكَة,
+///        (no joined يَا/هَا) is ordinary Muttasil and must NOT be reclassified - أُوْلَٰٓئِكَ, مَلَٰٓئِكَة,
 ///        إِسۡرَٰٓءِيل. This is why the override is gated by the exact-word set, not by the dagger alif alone.
 ///   6.3  AYAH-FINAL LONE MADD. A lone madd letter ending the ayah is read as natural madd at waqf, not
 ///        as the Lazim catch-all (`ayahFinalMaddNaturalIndex`).
@@ -528,11 +528,11 @@ enum TajweedLegendCategory: String, CaseIterable, Identifiable {
 ///        natural madd, but if it ALSO carries an explicit maddah it is handled by the explicit-maddah
 ///        classifier instead (so it can become muttasil/munfasil/lazim). See `hasMiniatureMaddMark`.
 ///   6.6  MUQATTA'AT (disconnected opening letters). Three buckets:
-///          • `surahsOpeningMuqattaat` — letter names with a madd+sukoon are Lazim Harfi (6 counts);
+///          • `surahsOpeningMuqattaat` - letter names with a madd+sukoon are Lazim Harfi (6 counts);
 ///            in ayah 1 an explicit maddah forces Lazim.
-///          • `completeAyahMuqattaatSurahs` — the letters fill the whole first ayah.
-///          • `firstWordOnlyMuqattaatSurahs` — only the first WORD of ayah 1 is muqatta'at; the rest of
-///            that ayah uses normal rules. (Ash-Shura's letters span the first TWO ayahs — handled apart.)
+///          • `completeAyahMuqattaatSurahs` - the letters fill the whole first ayah.
+///          • `firstWordOnlyMuqattaatSurahs` - only the first WORD of ayah 1 is muqatta'at; the rest of
+///            that ayah uses normal rules. (Ash-Shura's letters span the first TWO ayahs - handled apart.)
 ///   6.7  LAZIM KALIMI. A madd letter immediately before a shadda/permanent sukoon inside a word →
 ///        6 counts: combined alif+shadda clusters (ٱلضَّآلِّينَ) and waw-then-alif-sukoon sequences.
 ///   6.8  HAMZAT AL-WASL. Silent (gray) when connecting from a previous word; pronounced only when the

@@ -58,19 +58,25 @@ struct AdhkarRow: View {
     /// The rendered height of the Arabic, and the height of a single line of it. A short dhikr ("سُبحَانَ اللَّهِ")
     /// is one line and reads best leading, like every other row on the screen; a long one wraps, and a wrapped
     /// Arabic paragraph has to be trailing-aligned or its ragged edge lands on the wrong side. So this is
-    /// measured rather than declared per-screen — the same dhikr wraps or doesn't depending on the font size,
+    /// measured rather than declared per-screen - the same dhikr wraps or doesn't depending on the font size,
     /// the device, and Dynamic Type, and no hardcoded flag can know that.
     @State private var arabicHeight: CGFloat = 0
     @State private var arabicLineHeight: CGFloat = 0
 
-    private var arabicWrapsPastTwoLines: Bool {
+    /// True once the Arabic has wrapped at all, i.e. it occupies more than one line.
+    private var arabicWraps: Bool {
         guard arabicLineHeight > 0 else { return false }
-        // A hair over 2 lines' worth, so a two-line dhikr doesn't flip on a rounding error.
-        return arabicHeight > arabicLineHeight * 2.4
+        // A hair over one line's worth, so a single line doesn't flip on a rounding error.
+        return arabicHeight > arabicLineHeight * 1.4
     }
 
     private var arabicFont: Font {
         useQuranicFont ? .custom(settings.fontArabic, size: 30) : .title2
+    }
+
+    /// Whether `arabicFont` resolves to a bundled face, and so must opt out of the app-wide rounded design.
+    private var usesCustomArabicFace: Bool {
+        useQuranicFont && settings.quranUsesCustomArabicFace
     }
 
     var body: some View {
@@ -89,7 +95,7 @@ struct AdhkarRow: View {
             guard !normalizedQuery.isEmpty else { return false }
             return field.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current).contains(normalizedQuery)
         }
-        let trailing = arabicWrapsPastTwoLines
+        let trailing = arabicWraps
         return VStack(alignment: .leading, spacing: 10) {
             HighlightedSnippet(
                 source: arabicText,
@@ -99,6 +105,7 @@ struct AdhkarRow: View {
                 fg: settings.accentColor.color,
                 guaranteeMatch: matches(arabicText)
             )
+                .arabicFontDesign(custom: usesCustomArabicFace)
                 // Only a block that actually wraps gets the trailing treatment; a one-liner stays leading, with
                 // no multiline alignment at all (there's nothing to align).
                 .multilineTextAlignment(trailing ? .trailing : .leading)
@@ -109,10 +116,11 @@ struct AdhkarRow: View {
                         Color.clear.preference(key: ArabicBlockHeightKey.self, value: geo.size.height)
                     }
                 )
-                // An invisible single line in the same face — the yardstick the block is measured against.
+                // An invisible single line in the same face - the yardstick the block is measured against.
                 .background(
                     Text("ب")
                         .font(arabicFont)
+                        .arabicFontDesign(custom: usesCustomArabicFace)
                         .hidden()
                         .fixedSize()
                         .background(
@@ -132,6 +140,7 @@ struct AdhkarRow: View {
                 fg: .primary,
                 guaranteeMatch: matches(transliteration)
             )
+            .fixedSize(horizontal: false, vertical: true)
 
             HighlightedSnippet(
                 source: translation,
@@ -141,7 +150,11 @@ struct AdhkarRow: View {
                 fg: .secondary,
                 guaranteeMatch: matches(translation)
             )
+            .fixedSize(horizontal: false, vertical: true)
         }
+        // Without this the List is free to hand these rows a height that truncates the long duas to a single
+        // ellipsized line; it lets each block claim the height its text actually needs.
+        .fixedSize(horizontal: false, vertical: true)
         .padding(.vertical, 4)
         #if os(iOS)
         .contextMenu {
@@ -301,9 +314,9 @@ struct AdhkarView: View {
             ReflectionCard(
                 title: "Prophetic Encouragement",
                 lines: [
-                    "The best of your deeds, and the purest with your Master, is the remembrance of Allah. (Tirmidhi 3377 — sahih)",
+                    "The best of your deeds, and the purest with your Master, is the remembrance of Allah. (Tirmidhi 3377 - sahih)",
                     "Two words are light on the tongue, heavy on the Scale, and beloved to the Most Merciful: SubhanAllahi wa bihamdihi, SubhanAllahil Adheem. (Bukhari 6682; Muslim 2694)",
-                    "Keep your tongue moist with the remembrance of Allah. (Tirmidhi 3375 — hasan)"
+                    "Keep your tongue moist with the remembrance of Allah. (Tirmidhi 3375 - hasan)"
                 ],
                 accent: settings.accentColor.color
             )

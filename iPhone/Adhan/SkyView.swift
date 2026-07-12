@@ -5,7 +5,7 @@ import SwiftUI
 
 /// The sun's height above the horizon over one day, normalized to −1…1.
 ///
-/// Solar elevation is `sin(alt) = sinφ·sinδ + cosφ·cosδ·cos(H)` — an affine function of the cosine of the hour
+/// Solar elevation is `sin(alt) = sinφ·sinδ + cosφ·cosδ·cos(H)` - an affine function of the cosine of the hour
 /// angle. So the normalized curve is simply `cos(2π·(x − solarNoon))`, and the horizon sits at whatever height
 /// that curve has at sunrise. Deriving the horizon from the app's *actual* sunrise and Maghrib times (rather
 /// than assuming 6am/6pm) is what makes a long June day show more curve above the line than a short December one.
@@ -29,7 +29,7 @@ struct SolarCurve {
     }
 
     /// Falls back to a nominal quarter-to-three-quarters day when sunrise and sunset don't bracket a sane
-    /// daylight span — no prayer times yet, or a polar day/night where the library returns nothing at all.
+    /// daylight span - no prayer times yet, or a polar day/night where the library returns nothing at all.
     init(sunriseFractionOfWindow s: Double?, sunsetFractionOfWindow e: Double?) {
         if let s, let e, e > s, (0...1).contains(s), (0...1).contains(e) {
             sunriseFraction = s
@@ -44,7 +44,7 @@ struct SolarCurve {
 /// The 24-hour span the arc draws, centred on the location's solar noon.
 ///
 /// Anchoring on solar noon rather than on device-local midnight is what keeps the arc honest when the device's
-/// time zone doesn't match the coordinates it is computing for — someone who just landed and whose phone hasn't
+/// time zone doesn't match the coordinates it is computing for - someone who just landed and whose phone hasn't
 /// switched over, or anyone with automatic time off. Prayer times are absolute instants; midnight is not.
 /// Centring on the midpoint of sunrise and sunset makes the sun's peak land at the middle of the card by
 /// construction, whatever the zone.
@@ -108,7 +108,7 @@ private struct SolarArcShape: Shape {
 /// A field of faint, slowly twinkling stars, faded in over the night prayers.
 ///
 /// Positions are derived from a fixed seed rather than `Math.random`, so the sky doesn't reshuffle itself on
-/// every re-render — and the same star keeps the same twinkle phase across state changes.
+/// every re-render - and the same star keeps the same twinkle phase across state changes.
 private struct StarFieldView: View {
     let opacity: Double
 
@@ -163,7 +163,7 @@ private struct StarFieldView: View {
 // MARK: - Sky view
 
 /// The Adhan tab's one card: the sun on today's arc, the moon at its true phase, the current and upcoming
-/// prayers, and the countdown. Drag the sun to scrub the day — the gradient, the clock and the prayer list
+/// prayers, and the countdown. Drag the sun to scrub the day - the gradient, the clock and the prayer list
 /// below all follow.
 struct SkyView: View {
     @ObservedObject private var settings = Settings.shared
@@ -195,7 +195,7 @@ struct SkyView: View {
 
     private var fallbackDayStart: Date { Calendar.current.startOfDay(for: now) }
 
-    /// Not always 86,400 — DST transitions make a 23- or 25-hour day, and the arc must still span it.
+    /// Not always 86,400 - DST transitions make a 23- or 25-hour day, and the arc must still span it.
     private var fallbackDayLength: TimeInterval {
         let calendar = Calendar.current
         guard let next = calendar.date(byAdding: .day, value: 1, to: fallbackDayStart) else { return 86_400 }
@@ -207,7 +207,7 @@ struct SkyView: View {
         settings.getPrayerTimes(for: now, fullPrayers: true) ?? []
     }
 
-    /// What the *list* is showing — traveling mode combines prayers, and `PrayerList` matches the highlight by
+    /// What the *list* is showing - traveling mode combines prayers, and `PrayerList` matches the highlight by
     /// name. Feeding the scrubber the full six would look up "Dhuhr" while the row says "Dhuhr/Asr", and the
     /// highlight would silently vanish for anyone in traveling mode.
     private var highlightTimeline: [Prayer] {
@@ -245,7 +245,7 @@ struct SkyView: View {
     }
 
     /// Stars come out at night. Full through Isha and the late-night times, fading in over Maghrib and back
-    /// out through Fajr, and gone once the sun is up — which also pauses the twinkle animation.
+    /// out through Fajr, and gone once the sun is up - which also pauses the twinkle animation.
     private var starOpacity: Double {
         switch displayedPrayer?.nameTransliteration {
         case "Isha", "Islamic Midnight", "Last Third": return 1
@@ -276,7 +276,7 @@ struct SkyView: View {
 
             // Legibility scrim, weighted to the two text bands. A soft gradient rather than a hard seam: it
             // reads as dusk gathering at the horizon, and it keeps white text readable over whichever two
-            // colors the user picked — a pale midday cyan included.
+            // colors the user picked - a pale midday cyan included.
             LinearGradient(
                 stops: [
                     .init(color: .black.opacity(0.32), location: 0.00),
@@ -302,7 +302,7 @@ struct SkyView: View {
                 .strokeBorder(Color.primary.opacity(0.10), lineWidth: 1)
         )
         // The two list themes give a row different built-in margins, so the card has to make up the
-        // difference itself. Grouped rows already carry the list's 20pt margin — adding any more is what
+        // difference itself. Grouped rows already carry the list's 20pt margin - adding any more is what
         // made this card sit inset from every other section. Plain rows carry almost none, so without this
         // the card bleeds out past the sections above and below it.
         .listRowInsets(EdgeInsets(top: 6, leading: sideInset, bottom: 6, trailing: sideInset))
@@ -338,7 +338,7 @@ struct SkyView: View {
     }
 
     /// One side of the header: the label, the prayer's symbol and name, and when it started or starts.
-    /// No Arabic or English subtitle — the prayer list below carries those.
+    /// No Arabic or English subtitle - the prayer list below carries those.
     @ViewBuilder
     private func prayerColumn(title: String, prayer: Prayer?, alignment: HorizontalAlignment) -> some View {
         let trailing = alignment == .trailing
@@ -367,13 +367,13 @@ struct SkyView: View {
     }
 
     /// Bottom-centre: the moment being shown and the moon's phase. While dragging, the previewed prayer's name
-    /// joins them — the columns above always report the *live* prayer, so the scrub would otherwise be mute.
+    /// joins them - the columns above always report the *live* prayer, so the scrub would otherwise be mute.
     @ViewBuilder
     private var moonAndClock: some View {
         if let playingPrayerName = adhanPlayer.playingPrayerName {
             adhanStopButton(prayerName: playingPrayerName)
         } else {
-            // Only the moon and its phase live in the layout — the clock is *not* shown at rest (it just added
+            // Only the moon and its phase live in the layout - the clock is *not* shown at rest (it just added
             // height for something the status bar already says). While the sun is being scrubbed, the previewed
             // moment floats in as an overlay ABOVE, so the card's height never changes.
             HStack(spacing: 6) {
@@ -390,7 +390,7 @@ struct SkyView: View {
     }
 
     /// The moment (and prayer) being previewed while the sun is dragged. It rides at the TOP of the card, over
-    /// the two prayer columns — they report the *live* prayer, so a scrub would otherwise be mute — rather than
+    /// the two prayer columns - they report the *live* prayer, so a scrub would otherwise be mute - rather than
     /// above the moon, which forced the card to hold empty space for it at all times.
     @ViewBuilder
     private var scrubReadout: some View {

@@ -14,11 +14,11 @@ struct AdhanSoundOption: Identifiable, Equatable {
 extension Settings {
     /// Each adhan ships as three clips: `<id>.caf` (the whole adhan), `<id>-30.caf` (its opening 30 seconds)
     /// and `<id>-short.caf` (a 5–15 second excerpt). iOS rejects notification sounds longer than 30 seconds,
-    /// so a notification gets one of the two cuts — which one is a per-prayer choice — while in-app playback
+    /// so a notification gets one of the two cuts - which one is a per-prayer choice - while in-app playback
     /// and the settings preview get the full recording.
     static let supportedAdhanSounds: [AdhanSoundOption] = [
         .init(id: "default", title: "Default"),
-        // A 3.6-second chime, not a call to prayer — for being told without being called. All three of its
+        // A 3.6-second chime, not a call to prayer - for being told without being called. All three of its
         // clips are the same recording, because there is nothing to cut down.
         .init(id: "echo", title: "Echo"),
 
@@ -51,8 +51,8 @@ extension Settings {
         }
     }
 
-    /// Per-prayer opt-in to the short cut. Prayers with no toggle of their own — Friday's Jumuah and the
-    /// traveling-mode pairs — inherit from whichever prayer owns their notification preferences, matching
+    /// Per-prayer opt-in to the short cut. Prayers with no toggle of their own - Friday's Jumuah and the
+    /// traveling-mode pairs - inherit from whichever prayer owns their notification preferences, matching
     /// how `notifTable` already routes them.
     func adhanClipLength(forPrayer transliteration: String) -> AdhanClipLength {
         let useShort: Bool
@@ -152,13 +152,13 @@ extension Settings {
         }
 
         // Minshawi 1 became the app's adhan. Adopt it once for everyone, including users who had already
-        // picked something else, then never touch the choice again — the flag is what keeps a later re-pick
+        // picked something else, then never touch the choice again - the flag is what keeps a later re-pick
         // from being stomped on the next launch.
         if !defaults.bool(forKey: Self.didAdoptMinshawiDefaultKey) {
             defaults.set(true, forKey: Self.didAdoptMinshawiDefaultKey)
             // Only overwrite an explicit prior choice. A device that never set the key already resolves to
             // Minshawi 1 through the `@AppStorage` default, and the key must stay unset so `watchSyncSnapshot`
-            // still omits it — otherwise a fresh Watch install would broadcast this default over an
+            // still omits it - otherwise a fresh Watch install would broadcast this default over an
             // established iPhone's real selection.
             if defaults.object(forKey: key) != nil {
                 defaults.set(Self.defaultAdhanSoundID, forKey: key)
@@ -221,7 +221,7 @@ extension Settings {
     private static let rawPrayerCacheLimit = 10
 
     /// Drops memoized prayer times. Needed when something that is *baked into* a cached `Prayer` changes but
-    /// isn't part of the cache key — custom prayer names, which alter the struct without altering the times.
+    /// isn't part of the cache key - custom prayer names, which alter the struct without altering the times.
     static func invalidatePrayerComputationCache() {
         rawPrayerCache.removeAll(keepingCapacity: true)
     }
@@ -237,7 +237,7 @@ extension Settings {
     private static let maxAge: TimeInterval = 180              // s
     
     /// The distance from home at which prayers may be shortened (qasr). 48 miles is the classical
-    /// two-marhalah threshold. The single source of truth — `checkIfTraveling` compares against this, and
+    /// two-marhalah threshold. The single source of truth - `checkIfTraveling` compares against this, and
     /// nothing else should restate the number.
     static let travelThresholdM: CLLocationDistance = 48 * oneMile   // ≈ 77 249 m
 
@@ -283,18 +283,21 @@ extension Settings {
         guard !didStartNetworkMonitor else { return }
         didStartNetworkMonitor = true
 
+        // The handler arrives on the monitor's own queue, but every piece of state it touches
+        // (`isNetworkReachable`, `pendingGeocodeCoord`) is read by the main-confined prayer pipeline - so hop
+        // to main FIRST and do all reads/writes there. This keeps the entire location/prayer state
+        // main-confined, with no cross-thread mutation left anywhere in the pipeline.
         networkMonitor.pathUpdateHandler = { path in
             let isNowReachable = (path.status == .satisfied)
-            let becameReachable = isNowReachable && !isNetworkReachable
-            isNetworkReachable = isNowReachable
-
-            guard becameReachable else { return }
-
-            let pending = pendingGeocodeCoord
-            pendingGeocodeCoord = nil
-            guard pending != nil else { return }
-
             Task { @MainActor in
+                let becameReachable = isNowReachable && !isNetworkReachable
+                isNetworkReachable = isNowReachable
+
+                guard becameReachable else { return }
+
+                let pending = pendingGeocodeCoord
+                pendingGeocodeCoord = nil
+                guard pending != nil else { return }
                 // Geocode where we are *now*, not the coordinate that was queued when the signal dropped.
                 // `updateCity` writes the coordinates it is handed straight into `currentLocation`, so feeding
                 // it the stale one would teleport a passenger who lost signal over the Atlantic back there the
@@ -372,7 +375,7 @@ extension Settings {
     }
 
     /// Seeds the home location from the current location the first time we have a valid fix.
-    /// A freshly installed app — or an existing user who never set a home — automatically adopts the
+    /// A freshly installed app - or an existing user who never set a home - automatically adopts the
     /// first location it gets as home, so Traveling Mode and travel-distance work out of the box.
     /// Once a home exists it is never overwritten here.
     @MainActor
@@ -430,7 +433,7 @@ extension Settings {
             if cityLikelyChanged {
                 await updateCity(latitude: newCoord.latitude, longitude: newCoord.longitude)
             } else {
-                // Same place, just a sharper fix — keep the city label, sharpen the coordinates so the
+                // Same place, just a sharper fix - keep the city label, sharpen the coordinates so the
                 // Qibla bearing and display use the most accurate position available.
                 withAnimation {
                     currentLocation = Location(city: cur.city, latitude: newCoord.latitude, longitude: newCoord.longitude)
@@ -474,12 +477,52 @@ extension Settings {
         Self.refinementTimeout = nil
 
         // Stop the continuous burst; significant-change monitoring stays active for background movement.
-        // Accuracy goes back to the cheap resting value — leaving it on `Best` would keep the GPS awake for
+        // Accuracy goes back to the cheap resting value - leaving it on `Best` would keep the GPS awake for
         // every subsequent one-shot fix.
         Self.locationManager.stopUpdatingLocation()
         Self.locationManager.distanceFilter = Self.halfMile
         Self.locationManager.desiredAccuracy = Self.restingAccuracy
         #endif
+    }
+
+    // MARK: - Location freshness (foreground)
+    //
+    // Significant-change monitoring needs cell towers, so it goes silent exactly when movement is fastest:
+    // on a plane, or just after landing abroad before roaming kicks in. Nothing then asks the GPS for a fix,
+    // and the screen keeps showing the last city (LAX all the way into Tokyo). These two hooks fill that gap
+    // with single one-shot fixes - no continuous updates, no extra radio time when the last fix is recent.
+
+    /// How stale the last committed fix may get while the app is frontmost before a one-shot refresh.
+    private static let foregroundLocationMaxAge: TimeInterval = 5 * 60
+    private static var foregroundLocationTimer: Timer?
+
+    /// Requests a single fresh fix if the last committed one is older than `maxAge` (or none exists).
+    /// One `requestLocation()` - cheap, self-terminating, and rate-limited by the staleness check itself.
+    func refreshLocationIfStale(olderThan maxAge: TimeInterval = Settings.foregroundLocationMaxAge) {
+        let status = Self.locationManager.authorizationStatus
+        guard status == .authorizedAlways || status == .authorizedWhenInUse else { return }
+        // A refinement burst is already streaming fresh fixes; a one-shot request on top is redundant (and
+        // mixing `requestLocation` with `startUpdatingLocation` is discouraged).
+        guard !Self.isRefiningLocation else { return }
+        if let last = Self.lastLocationCommitAt, Date().timeIntervalSince(last) < maxAge { return }
+        Self.locationManager.requestLocation()
+    }
+
+    /// While the app is frontmost, checks staleness every 5 minutes. Deliberately infrequent: the point is
+    /// "the times update over a long flight with the app open", not live tracking. Stopped on backgrounding.
+    func beginForegroundLocationCadence() {
+        Self.foregroundLocationTimer?.invalidate()
+        let timer = Timer(timeInterval: Self.foregroundLocationMaxAge, repeats: true) { [weak self] _ in
+            self?.refreshLocationIfStale(olderThan: Self.foregroundLocationMaxAge - 30)
+        }
+        // .common so the checks still fire while the user is scrolling.
+        RunLoop.main.add(timer, forMode: .common)
+        Self.foregroundLocationTimer = timer
+    }
+
+    func endForegroundLocationCadence() {
+        Self.foregroundLocationTimer?.invalidate()
+        Self.foregroundLocationTimer = nil
     }
 
     // ERROR HANDLER
@@ -521,7 +564,7 @@ extension Settings {
     /// the old name would be wrong, raw coordinates are shown instead of a stale/"fake" city.
     private func cityFallback(latitude: Double, longitude: Double) -> String {
         if let cur = currentLocation, !cur.city.contains("(") {
-            // Measured from where the name was actually resolved, not from the last (possibly sharpened) fix —
+            // Measured from where the name was actually resolved, not from the last (possibly sharpened) fix - 
             // otherwise a chain of small offline moves drags the reference along with you and the name never
             // expires. Falls back to the saved coordinate for anyone upgrading without an anchor yet.
             let anchor = Self.cityAnchor ?? CLLocation(latitude: cur.latitude, longitude: cur.longitude)
@@ -532,8 +575,8 @@ extension Settings {
     }
 
     /// The best label we can produce without a geocoder: the saved city while we are plausibly still inside
-    /// it, otherwise honest coordinates. Called on every fix that arrives while offline — no signal, airplane
-    /// mode, mid-flight — so standing still keeps the city name and travelling far enough drops it.
+    /// it, otherwise honest coordinates. Called on every fix that arrives while offline - no signal, airplane
+    /// mode, mid-flight - so standing still keeps the city name and travelling far enough drops it.
     ///
     /// Writes only on an actual change, since this runs for every committed fix.
     @MainActor
@@ -568,7 +611,7 @@ extension Settings {
         let coord = CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
 
         // On watchOS, `NWPathMonitor` frequently reports `.unsatisfied` even though `CLGeocoder` still
-        // resolves fine by relaying through the paired iPhone — and because the path never "becomes
+        // resolves fine by relaying through the paired iPhone - and because the path never "becomes
         // reachable," the queued retry never fires, so the watch would sit on raw coordinates forever. So we
         // only trust the reachability flag to pre-empt the geocode on iOS; on the watch we always attempt it
         // and let a real geocode error (handled in the catch below) decide whether to defer.
@@ -576,8 +619,8 @@ extension Settings {
         if !Self.isNetworkReachable {
             queueGeocodeForReconnect(coord)
             // Re-evaluate the label every time, not just when it is missing. The old check only ever *added* a
-            // label, so a phone that lost signal in one city and landed in another kept displaying — and
-            // country-matching — the city it left.
+            // label, so a phone that lost signal in one city and landed in another kept displaying - and
+            // country-matching - the city it left.
             applyLabelWithoutGeocode(latitude: latitude, longitude: longitude)
             return
         }
@@ -627,7 +670,7 @@ extension Settings {
 
         } catch {
             // On iOS an unreachable path means "wait for reconnect." On watchOS the path flag is unreliable
-            // (see above), so only a genuine network geocode error defers — otherwise we fall through to the
+            // (see above), so only a genuine network geocode error defers - otherwise we fall through to the
             // backed-off retry, which is what actually lands a city on the watch.
             #if os(iOS)
             let networkDefer = isNetworkGeocodeError(error) || !Self.isNetworkReachable
@@ -762,14 +805,14 @@ extension Settings {
         Self.highLatitudeRuleValues[highLatitudeRule] ?? HighLatitudeRule.recommended(for: coordinates)
     }
 
-    /// Label for the rule `Automatic` would pick here — shown under the picker so the choice isn't opaque.
+    /// Label for the rule `Automatic` would pick here - shown under the picker so the choice isn't opaque.
     func recommendedHighLatitudeRuleLabel(at coordinates: Coordinates) -> String {
         Self.highLatitudeRuleLabels[.recommended(for: coordinates)] ?? "Middle of the Night"
     }
 
     // MARK: - Custom prayer names
 
-    /// Prayers a user may rename. Sunrise and the optional times are excluded — they aren't prayers.
+    /// Prayers a user may rename. Sunrise and the optional times are excluded - they aren't prayers.
     static let renameablePrayerNames = ["Fajr", "Dhuhr", "Asr", "Maghrib", "Isha"]
 
     /// The user's spelling of a prayer, or `nil` when they haven't set one. Blank entries count as unset.
@@ -812,24 +855,26 @@ extension Settings {
         return Self.calcParams[canonical] ?? Self.calcParams["Muslim World League"]!
     }
 
-    func checkAutomaticPrayerCalculation() {
+    /// Returns `true` if it switched `prayerCalculation`, so the enclosing fetch recomputes the prayer list.
+    @discardableResult
+    func checkAutomaticPrayerCalculation() -> Bool {
         guard Bundle.main.bundleIdentifier?.contains("Widget") != true,
               calculationAutomatic,
               let currentLocation = currentLocation,
               currentLocation.latitude != 1000,
               currentLocation.longitude != 1000
-        else { return }
+        else { return false }
 
         let countryCode = currentCountryCode.uppercased()
-        guard !countryCode.isEmpty else { return }
+        guard !countryCode.isEmpty else { return false }
 
         let detectedRaw = automaticCalculationMethod(for: countryCode)
         let detectedMethod = canonicalPrayerCalculationMethod(detectedRaw)
-        guard let detectedParams = Self.calcParams[detectedMethod] else { return }
+        guard let detectedParams = Self.calcParams[detectedMethod] else { return false }
 
         let currentParams = calculationParameters(forStoredLabel: prayerCalculation)
         if detectedParams == currentParams {
-            return
+            return false
         }
 
         let previousMethod = prayerCalculation
@@ -843,6 +888,17 @@ extension Settings {
         calculationAutoChanged = true
 
         #if os(iOS)
+        // Same rate limit as the traveling-mode announcement: the method itself still switches; only the
+        // notification is capped, so a border area (or geocode noise flipping the detected country) can't
+        // announce every flip.
+        let now = Date()
+        if let last = lastCalculationNotificationAt,
+           now.timeIntervalSince(last) < Self.travelNotifyCooldown {
+            logger.debug("Calculation-switch notification suppressed (cooldown)")
+            return true   // the method DID switch; only the announcement is suppressed
+        }
+        lastCalculationNotificationAt = now
+
         let content = UNMutableNotificationContent()
         content.title = AppIdentifiers.appName
         content.body = "Prayer calculation switched to \(detectedMethod) for \(currentLocation.city)."
@@ -851,21 +907,24 @@ extension Settings {
         let req = UNNotificationRequest(identifier: Self.calculationNotificationId, content: content, trigger: trigger)
         UNUserNotificationCenter.current().add(req)
         #endif
+        return true
     }
 
-    // NOTE: deliberately NOT bounced onto the main queue. Deferring this with `DispatchQueue.main.async` makes
-    // it run AFTER its caller has already moved on — so the "the user just toggled this by hand, skip one
-    // auto-check" flag has been cleared by the time the deferred check finally runs, and the auto-check happily
-    // overrides the manual choice and announces it. That is where the notification/dialog spam came from. It
-    // runs inline, on whatever thread called it, exactly as it did before 4.5.3.
-    func checkIfTraveling() {
+    // Runs synchronously inside `fetchPrayerTimes` (its only caller), which itself always runs on the main
+    // thread - hopping there with `sync`, never `async`, so the check can never be reordered against the
+    // caller that asked for it. Whether a manual change suppresses this check is carried by the
+    // `runAutoChecks` parameter, not by mutable state.
+    //
+    /// Returns `true` if it changed `travelingMode`, so the enclosing fetch recomputes the prayer list.
+    @discardableResult
+    func checkIfTraveling() -> Bool {
         guard Bundle.main.bundleIdentifier?.contains("Widget") != true,
               travelAutomatic,
               let currentLocation = currentLocation,
               let homeLocation = homeLocation,
               currentLocation.latitude != 1000,
               currentLocation.longitude != 1000
-        else { return }
+        else { return false }
 
         let here  = CLLocation(latitude: currentLocation.latitude, longitude: currentLocation.longitude)
         let home  = CLLocation(latitude: homeLocation.latitude, longitude: homeLocation.longitude)
@@ -873,8 +932,8 @@ extension Settings {
         // second copy of the metres-per-mile constant.
         let distance = here.distance(from: home)
 
-        // HYSTERESIS. A single threshold is what made this spam: sitting anywhere near 48 miles — or simply
-        // having the GPS wander by a few hundred metres, which it does constantly — flipped `travelingMode`
+        // HYSTERESIS. A single threshold is what made this spam: sitting anywhere near 48 miles - or simply
+        // having the GPS wander by a few hundred metres, which it does constantly - flipped `travelingMode`
         // back and forth, and every flip fired a notification AND queued a confirmation dialog. Turning ON
         // still happens at the threshold, but turning OFF requires coming a clear margin back inside it, so a
         // borderline position settles on one answer instead of oscillating.
@@ -893,6 +952,7 @@ extension Settings {
                 notifyTravelingModeChanged(
                     body: "Traveling mode automatically turned on at \(currentLocation.city), away from your home city of \(homeLocation.city)"
                 )
+                return true
             }
         } else {
             if travelingMode {
@@ -902,12 +962,14 @@ extension Settings {
                 notifyTravelingModeChanged(
                     body: "Traveling mode automatically turned off at \(currentLocation.city), near your home city of \(homeLocation.city)"
                 )
+                return true
             }
         }
+        return false
     }
 
     /// The auto-toggle's notification, rate-limited. Even with hysteresis, a route that genuinely crosses the
-    /// 48-mile line repeatedly (a commute that straddles it) would otherwise notify on every crossing — so a
+    /// 48-mile line repeatedly (a commute that straddles it) would otherwise notify on every crossing - so a
     /// cooldown caps it. The mode itself still switches; only the *announcement* is suppressed.
     private func notifyTravelingModeChanged(body: String) {
         #if os(iOS)
@@ -1062,7 +1124,7 @@ extension Settings {
         )
     }
 
-    /// The custom name for a prayer key, including the traveling-mode pairs — "Dhuhr/Asr" reads as the user's
+    /// The custom name for a prayer key, including the traveling-mode pairs - "Dhuhr/Asr" reads as the user's
     /// two spellings joined, and only differs from the default when at least one half was actually renamed.
     private func customDisplayName(forPrayerKey key: String) -> String? {
         let halves = key.split(separator: "/").map(String.init)
@@ -1204,8 +1266,8 @@ extension Settings {
         ]
 
         // Manual offsets reach +/-190 minutes, which is more than enough to push Fajr past Sunrise. The list
-        // is consumed as a chronology — widgets slice its head and tail, the countdown walks it, the calendar
-        // prints it — so order it by time rather than by the sequence it happens to be built in. Sorted on
+        // is consumed as a chronology - widgets slice its head and tail, the countdown walks it, the calendar
+        // prints it - so order it by time rather than by the sequence it happens to be built in. Sorted on
         // (time, build index) because `sort` isn't stable and two prayers can share a minute once offsets
         // collide; ties then keep their canonical order.
         list = list.enumerated()
@@ -1300,10 +1362,34 @@ extension Settings {
         return result
     }
 
-    // Runs inline, on the calling thread — see the note on `checkIfTraveling`. Deferring this onto the main
-    // queue reorders it against the callers that set the one-shot "skip the auto-check" flags, which is what
-    // made traveling mode and the calculation method re-announce themselves.
-    func fetchPrayerTimes(force: Bool = false, notification: Bool = false, calledFrom: StaticString = #function, completion: (() -> Void)? = nil) {
+    // Always runs on the main thread, and always runs *synchronously* with respect to its caller.
+    //
+    // Both halves matter. It mutates `@Published` UI state (`prayers`, `currentPrayer`, `travelingMode` via
+    // the auto-check) yet is invoked from background contexts - the BGTask handler, App Intents, the widget
+    // provider - so off-main callers must hop to main. But the hop must be `sync`, not `async`: an async
+    // deferral would reorder it against whatever its caller does next, and callers reason about this as an
+    // inline call.
+    //
+    // `runAutoChecks` is how a caller says "this refresh must not second-guess what just happened." A manual
+    // travel/calculation change passes `false`, so the automatic detection can never immediately override the
+    // user's (or the paired device's) explicit choice. This used to be communicated through one-shot mutable
+    // flags consumed at the next fetch - a message passed through time - which twice produced spam bugs when
+    // execution order shifted. A parameter cannot arrive late.
+    //
+    // Deadlock safety: nothing on the main thread ever blocks waiting on the queues that call this
+    // (BGTaskScheduler's queue, the App Intents queue, the widget provider's queue), so `main.sync` from
+    // them cannot deadlock.
+    func fetchPrayerTimes(force: Bool = false, notification: Bool = false, runAutoChecks: Bool = true, calledFrom: StaticString = #function, completion: (() -> Void)? = nil) {
+        if Thread.isMainThread {
+            fetchPrayerTimesCore(force: force, notification: notification, runAutoChecks: runAutoChecks, calledFrom: calledFrom, completion: completion)
+        } else {
+            DispatchQueue.main.sync {
+                self.fetchPrayerTimesCore(force: force, notification: notification, runAutoChecks: runAutoChecks, calledFrom: calledFrom, completion: completion)
+            }
+        }
+    }
+
+    private func fetchPrayerTimesCore(force: Bool, notification: Bool, runAutoChecks: Bool, calledFrom: StaticString, completion: (() -> Void)?) {
         Self.ensureNetworkMonitorStarted()
         updateDates()
 
@@ -1330,9 +1416,12 @@ extension Settings {
                 Task { @MainActor in
                     await updateCity(latitude: loc.latitude, longitude: loc.longitude)
                     if Bundle.main.bundleIdentifier?.contains("Widget") != true,
+                       runAutoChecks,
                        calculationAutomatic,
-                       !calculationManuallyToggled {
-                        checkAutomaticPrayerCalculation()
+                       checkAutomaticPrayerCalculation() {
+                        // The method changed after this fetch already computed, so recompute with it. Checks
+                        // stay off: the switch was just made from a fresh placemark, nothing to re-detect.
+                        fetchPrayerTimes(force: true, runAutoChecks: false)
                     }
                 }
             } else {
@@ -1340,33 +1429,30 @@ extension Settings {
                 logger.debug("Skipping geocode while offline; will retry on reconnect")
             }
         }
-        
+
+        // The automatic travel/calculation checks report whether they changed state; a change makes THIS
+        // fetch recompute the prayer list below. (Previously a change here relied on an app-level `.onChange`
+        // firing a second, later fetch to pick it up.)
         let isWidget = Bundle.main.bundleIdentifier?.contains("Widget") == true
-        if !isWidget, travelAutomatic, homeLocation != nil, !travelingModeManuallyToggled {
-            travelingModeManuallyToggled = false
-            checkIfTraveling()
-        } else if travelingModeManuallyToggled {
-            travelingModeManuallyToggled = false
+        var autoStateChanged = false
+        if !isWidget, runAutoChecks {
+            if travelAutomatic, homeLocation != nil, checkIfTraveling() {
+                autoStateChanged = true
+            }
+            // Coordinate placeholder city means ISO country may still be wrong or empty; geocode runs
+            // asynchronously above - the check reruns from that Task once the placemark is known.
+            if calculationAutomatic, !loc.city.contains("("), checkAutomaticPrayerCalculation() {
+                autoStateChanged = true
+            }
         }
 
-        if !isWidget, calculationAutomatic, !calculationManuallyToggled {
-            calculationManuallyToggled = false
-            // Coordinate placeholder city means ISO country may still be wrong or empty; geocode runs
-            // asynchronously above — we run the check again from that Task once the placemark is known.
-            if !loc.city.contains("(") {
-                checkAutomaticPrayerCalculation()
-            }
-        } else if calculationManuallyToggled {
-            calculationManuallyToggled = false
-        }
-        
         // Decide if we need fresh prayers
         let today      = Date()
         let stored     = prayers
         let staleCity  = stored?.city != currentLocation?.city
         let staleDate  = !(stored?.day.isSameDay(as: today) ?? false)
         let emptyList  = stored?.prayers.isEmpty ?? true
-        let needsFetch = force || stored == nil || staleCity || staleDate || emptyList
+        let needsFetch = force || autoStateChanged || stored == nil || staleCity || staleDate || emptyList
 
         // A caller with a completion (notably the background-refresh task) needs the reschedule to finish
         // before it returns/reports done, so it runs synchronously. Everyone else (the launch burst, setting
@@ -1468,7 +1554,7 @@ extension Settings {
 
     /// Whether THIS device should schedule prayer notifications locally.
     ///
-    /// The iPhone always schedules. The Watch schedules **only when it is standalone** — i.e. there is no
+    /// The iPhone always schedules. The Watch schedules **only when it is standalone** - i.e. there is no
     /// paired iPhone running this app's companion. When a companion iPhone exists it owns prayer
     /// notifications, so the Watch stays silent to avoid double-alerting the user across both devices.
     /// `companionPhoneExists` keys off installation (not Bluetooth range), so a phone left at home still
@@ -1556,7 +1642,7 @@ extension Settings {
     }
 
     /// Reschedule prayer/event notifications, coalescing the launch burst. `deferred == false` runs it
-    /// synchronously (callers that must finish before reporting done — e.g. background refresh). `deferred ==
+    /// synchronously (callers that must finish before reporting done - e.g. background refresh). `deferred ==
     /// true` trailing-debounces it on the main queue so the multiple `fetchPrayerTimes` calls fired during
     /// launch / setting changes collapse to one run, off the synchronous first-paint path.
     func scheduleNotifications(deferred: Bool) {
@@ -1609,7 +1695,7 @@ extension Settings {
     /// Pre‑computes the full list of minutes‑before offsets for a prayer.
     /// The distinct minutes-before offsets a prayer should fire at. Deduplicated: a prenotification of 15
     /// minutes and a nagging step at 15 minutes describe the same notification, and every offset consumes one
-    /// slot of iOS's 64-request budget — a duplicate would silently cost a *later* prayer its adhan.
+    /// slot of iOS's 64-request budget - a duplicate would silently cost a *later* prayer its adhan.
     private func offsets(for prefs: NotifPrefs) -> [Int] {
         var result: Set<Int> = []
 
@@ -1628,7 +1714,7 @@ extension Settings {
 
     /// The reminder cascade leading up to a prayer: 30, 15, 10, 5 minutes before, by default.
     ///
-    /// A *set*, because the arithmetic overlaps for some starting values — a start of 20 walks down to 5, and
+    /// A *set*, because the arithmetic overlaps for some starting values - a start of 20 walks down to 5, and
     /// the trailing `[10, 5]` re-adds 5. Duplicates each claimed a notification slot while resolving to the
     /// same identifier, so the second silently replaced the first and the budget was spent for nothing.
     private func naggingCascade(start: Int) -> Set<Int> {
@@ -1677,7 +1763,7 @@ extension Settings {
     func schedulePrayerTimeNotifications() {
         #if os(watchOS)
         guard shouldScheduleNotificationsLocally else {
-            // A companion iPhone now owns notifications — clear anything this Watch scheduled while it was
+            // A companion iPhone now owns notifications - clear anything this Watch scheduled while it was
             // standalone so the two devices can't double-alert for the same prayer.
             UNUserNotificationCenter.current().removeAllPendingNotificationRequests()
             return
@@ -1689,7 +1775,7 @@ extension Settings {
 
         // iOS keeps at most 64 pending notifications and silently drops the rest. The app can build far
         // more than that (multiple prayers × offsets × days × nags + events), which is why adhan /
-        // notification sounds previously "didn't always work" — later prayers got dropped. Collect every
+        // notification sounds previously "didn't always work" - later prayers got dropped. Collect every
         // candidate, then add them in priority order under a safe cap so the at-time adhan always survives.
         let maxPending = 60
 
@@ -1697,7 +1783,7 @@ extension Settings {
         var reminderRequests: [(request: UNNotificationRequest, date: Date)] = []
 
         // Prayer notifications need a resolved location + computed prayer times. Hijri-event reminders and
-        // refresh nags below do NOT, so they're collected regardless of location — date notifications work
+        // refresh nags below do NOT, so they're collected regardless of location - date notifications work
         // even before (or without) a location fix, instead of being silently skipped by an early return.
         let hasPrayers = currentLocation?.city != nil && prayers != nil
         if let city = currentLocation?.city, let prayerObj = prayers {
@@ -1745,10 +1831,10 @@ extension Settings {
         if let built = makeRefreshNagRequest(inDays: 3) { nagRequests.append(built) }
 
         // Add in priority order, soonest-first within each tier, capped under iOS's 64 limit:
-        //   1. at-time adhan (the actual sound) — must never be dropped
-        //   2. refresh nags — keep the rolling schedule alive so future days get rescheduled
+        //   1. at-time adhan (the actual sound) - must never be dropped
+        //   2. refresh nags - keep the rolling schedule alive so future days get rescheduled
         //   3. special-event reminders
-        //   4. pre-/nagging reminders — fill whatever budget remains
+        //   4. pre-/nagging reminders - fill whatever budget remains
         var finalRequests: [UNNotificationRequest] = []
         func appendCapped(_ items: [(request: UNNotificationRequest, date: Date)]) {
             for item in items.sorted(by: { $0.date < $1.date }) where finalRequests.count < maxPending {
@@ -1762,7 +1848,7 @@ extension Settings {
 
         // Incremental refresh instead of wiping everything first: adding a request with an existing
         // identifier replaces it in place (all our identifiers are stable), so unchanged notifications are
-        // never torn down — no brief window with zero pending, less churn, faster, and the system keeps the
+        // never torn down - no brief window with zero pending, less churn, faster, and the system keeps the
         // already-scheduled fire times steady. Afterwards, prune only the now-stale ones (past days,
         // prayers turned off, items pushed out by the cap).
         let desiredIDs = Set(finalRequests.map { $0.identifier })
@@ -1778,11 +1864,11 @@ extension Settings {
                 // change). They are scheduled by `checkIfTraveling` / `checkAutomaticPrayerCalculation` with
                 // their own fixed IDs and a ~1s trigger, so they are always "pending" for about a second and
                 // are never part of `desiredIDs`. Because those very state changes trigger this reschedule,
-                // pruning them here would delete the alert before it is ever delivered — which is exactly why
+                // pruning them here would delete the alert before it is ever delivered - which is exactly why
                 // the "traveling mode turned on/off" notification never appeared.
                 if id == Self.travelingNotificationId || id == Self.calculationNotificationId { return false }
                 // When there were no prayers to rebuild (no location yet), only prune the categories we DID
-                // rebuild — events and refresh nags. Leaving prayer notifications alone means a momentary
+                // rebuild - events and refresh nags. Leaving prayer notifications alone means a momentary
                 // location gap can't wipe a working adhan schedule.
                 if !hasPrayers { return id.hasPrefix("Event-") || id.hasPrefix("RefreshReminder-") }
                 return true
@@ -1857,7 +1943,7 @@ extension Settings {
                  + (travelingMode ? " (traveling)" : "")
                  + " [\(formatDate(prayer.time))]"
         } else if prayer.nameTransliteration == "Fajr",
-                  // Fajr ends at sunrise — found by name, because a manual offset can move Sunrise off index 1.
+                  // Fajr ends at sunrise - found by name, because a manual offset can move Sunrise off index 1.
                   let sunrise = prayers?.prayers.first(where: { $0.nameTransliteration == "Shurooq" })?.time,
                   sunrise > prayer.time {
             return "Time for \(prayer.displayName)\(englishPart)"
@@ -1940,7 +2026,7 @@ extension Settings {
         // The Hijri components carry the current Hijri year, so an event that already passed this year
         // would otherwise produce no notification at all (its Gregorian date is in the past). Roll the
         // occurrence forward one Hijri year at a time until it lands in the future, so each event always
-        // has an upcoming reminder scheduled — even late in the Hijri year after all of this year's
+        // has an upcoming reminder scheduled - even late in the Hijri year after all of this year's
         // events are behind us.
         var comps = hijriComps
         var finalDate: Date?
@@ -1948,7 +2034,7 @@ extension Settings {
         for _ in 0...1 {
             guard let hijriDate = hijriCalendar.date(from: comps) else { return nil }
             let eventDay = gregorianCalendar.startOfDay(for: hijriDate)
-            // Fire 30 minutes before Fajr on the event day (useful for fasting days — suhoor / intention).
+            // Fire 30 minutes before Fajr on the event day (useful for fasting days - suhoor / intention).
             // Fajr needs computed prayer times, which need a location; if those aren't available, fall back
             // to 5:00 AM so the reminder still lands pre-dawn.
             let candidate: Date?
@@ -1975,8 +2061,8 @@ extension Settings {
         let content = UNMutableNotificationContent()
         content.title = AppIdentifiers.appName
         content.body = beforeFajr
-            ? "\(titleText) is today — \(eventSubTitle). Sent 30 minutes before Fajr."
-            : "\(titleText) is today — \(eventSubTitle)."
+            ? "\(titleText) is today - \(eventSubTitle). Sent 30 minutes before Fajr."
+            : "\(titleText) is today - \(eventSubTitle)."
         content.sound = .default
         #if os(iOS)
         if #available(iOS 15.0, *) {
@@ -2106,8 +2192,8 @@ extension Settings {
 
     func automaticTravelMessage(turnOn: Bool) -> String {
         // Name the home city the detection is measured against so the user knows the reference point. Falls
-        // back to the city-less wording if no home is set (shouldn't happen — checkIfTraveling requires one
-        // before raising this dialog — but keeps the copy clean if it's ever empty).
+        // back to the city-less wording if no home is set (shouldn't happen - checkIfTraveling requires one
+        // before raising this dialog - but keeps the copy clean if it's ever empty).
         let homeCity = homeLocation?.city
         if turnOn {
             if let homeCity, !homeCity.isEmpty {
@@ -2131,14 +2217,38 @@ extension Settings {
         travelTurnOffAutomatic = false
     }
 
+    // MARK: Manual changes
+    //
+    // Every manual travel/calculation change funnels through one of these four, and all of them refresh with
+    // `runAutoChecks: false` - the refresh that applies a person's explicit choice must never be the same
+    // refresh that lets the automatic detection argue with it.
+
+    /// The user flipped the Traveling Mode toggle themselves.
+    func setTravelingModeManually(_ on: Bool) {
+        withAnimation {
+            travelingMode = on
+        }
+        resetTravelAutomaticFlags()
+        fetchPrayerTimes(force: true, runAutoChecks: false)
+    }
+
+    /// The user picked a calculation method themselves (which also ends automatic selection).
+    func setPrayerCalculationManually(_ method: String) {
+        calculationAutomatic = false
+        calculationAutoChanged = false
+        withAnimation {
+            prayerCalculation = method
+        }
+        fetchPrayerTimes(force: true, runAutoChecks: false)
+    }
+
     func overrideTravelingMode(keepOn: Bool) {
-        travelingModeManuallyToggled = true
         withAnimation {
             travelingMode = keepOn
         }
         travelAutomatic = false
         resetTravelAutomaticFlags()
-        fetchPrayerTimes(force: true)
+        fetchPrayerTimes(force: true, runAutoChecks: false)
     }
 
     func confirmTravelAutomaticChange() {
@@ -2146,13 +2256,12 @@ extension Settings {
     }
 
     func overrideAutomaticCalculationKeepingPrevious() {
-        calculationManuallyToggled = true
         withAnimation {
             prayerCalculation = calculationAutoPreviousMethod
         }
         calculationAutomatic = false
         calculationAutoChanged = false
-        fetchPrayerTimes(force: true)
+        fetchPrayerTimes(force: true, runAutoChecks: false)
     }
 
     func confirmAutomaticCalculationChange() {

@@ -59,6 +59,16 @@ struct DateView: View {
         }
     }
 
+    /// The same Hijri date written in Arabic: Arabic-Indic day, the month's Arabic name from the shared table, and
+    /// the year followed by هـ (for hijriyyah).
+    private var hijriArabicText: String {
+        let components = hijriCalendar.dateComponents([.day, .month, .year], from: convertedDate)
+        guard let day = components.day, let month = components.month, let year = components.year,
+              let name = hijriMonths.first(where: { $0.number == month })?.arabic
+        else { return "" }
+        return "\(arabicNumberString(from: day)) \(name) \(arabicNumberString(from: year)) هـ"
+    }
+
     private var convertedDateSection: some View {
         Section("CONVERTED DATES") {
             let hijriDateText = formatted(convertedDate, using: hijriCalendar)
@@ -71,6 +81,17 @@ struct DateView: View {
                 Text(hijriDateText)
                     .bold()
                     .foregroundColor(settings.accentColor.color)
+
+                // The Hijri month has an Arabic name, and this screen only ever showed the English
+                // transliteration of it.
+                Text(hijriArabicText)
+                    .font(
+                        settings.islamUsesCustomArabicFace
+                            ? .custom(settings.fontArabic, size: 20, relativeTo: .body)
+                            : .body
+                    )
+                    .arabicFontDesign(custom: settings.islamUsesCustomArabicFace)
+                    .foregroundColor(.secondary)
             }
             #if os(iOS)
             .contextMenu {
@@ -82,6 +103,13 @@ struct DateView: View {
                     UIPasteboard.general.string = hijriDateText
                 } label: {
                     Label("Copy Hijri Date", systemImage: "doc.on.doc")
+                }
+
+                Button {
+                    settings.hapticFeedback()
+                    UIPasteboard.general.string = hijriArabicText
+                } label: {
+                    Label("Copy Arabic Date", systemImage: "doc.on.doc")
                 }
             }
             #endif

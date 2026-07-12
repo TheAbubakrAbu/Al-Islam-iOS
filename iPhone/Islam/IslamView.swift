@@ -247,7 +247,7 @@ struct IslamView: View {
 }
 
 /// The quote card sits between two first-accent sections (resources above, apps below), so it is the screen's
-/// second-accent section — every tint in here reads from `accent2`.
+/// second-accent section - every tint in here reads from `accent2`.
 struct ProphetQuote: View {
     @ObservedObject var settings = Settings.shared
     @State private var isCardVisible = false

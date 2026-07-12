@@ -233,7 +233,7 @@ struct SurahRow: View, Equatable {
                 .padding(.trailing, 2)
 
             // Khatm progress lives INSIDE this content column so the column (and therefore the full-height
-            // number pill beside it, plus the vertically-centered Arabic name) grows to include it — rather
+            // number pill beside it, plus the vertically-centered Arabic name) grows to include it - rather
             // than hanging below the row where the pill wouldn't reach it.
             VStack(alignment: .leading, spacing: 2) {
                 if let context = positionContextLine {
@@ -301,9 +301,11 @@ struct SurahRow: View, Equatable {
                     // names like آل عمران wrap to two lines.
                     lineLimit: 1
                 )
+                .arabicFontDesign(custom: settings.quranUsesCustomArabicFace)
 
                 Text(surah.idArabic)
                     .font(.custom(Settings.hafsUthmaniFontName, size: UIFont.preferredFont(forTextStyle: .title1).pointSize))
+                    .arabicFontDesign(custom: true)
                     .foregroundColor(accentColor.color)
             }
             .minimumScaleFactor(0.5)
@@ -325,6 +327,7 @@ struct SurahRow: View, Equatable {
             HStack(spacing: 4) {
                 Text(surah.idArabic)
                     .font(.custom(Settings.hafsUthmaniFontName, size: UIFont.preferredFont(forTextStyle: .title3).pointSize))
+                    .arabicFontDesign(custom: true)
                     .foregroundColor(accentColor.color)
 
                 HighlightedSnippet(
@@ -335,6 +338,7 @@ struct SurahRow: View, Equatable {
                     fg: .primary,
                     lineLimit: 1
                 )
+                .arabicFontDesign(custom: settings.quranUsesCustomArabicFace)
 
                 Spacer(minLength: 4)
 
@@ -417,7 +421,7 @@ struct SurahRow: View, Equatable {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
         .padding(.horizontal, 8)
         .padding(.vertical, 6)
-        // Favorites are tinted, everything else is clear — see the 99 Names grid for the same reasoning.
+        // Favorites are tinted, everything else is clear - see the 99 Names grid for the same reasoning.
         .conditionalGlassEffect(
             clear: !favoriteState,
             rectangle: true,
@@ -595,6 +599,7 @@ struct SurahAyahRow: View {
                         beginnerMode: settings.beginnerMode,
                         lineLimit: 1
                     )
+                        .arabicFontDesign(custom: settings.quranUsesCustomArabicFace)
                         .frame(maxWidth: .infinity, alignment: .trailing)
                 }
 
@@ -964,7 +969,7 @@ struct LastListenedSurahRow: View {
 }
 
 /// Compact summary-mode tile that previews a single ayah (Arabic / transliteration / English),
-/// each limited to two lines — like a normal AyahRow but trimmed to fit a tile.
+/// each limited to two lines - like a normal AyahRow but trimmed to fit a tile.
 struct SummaryAyahTile: View {
     @ObservedObject var settings = Settings.shared
 
@@ -1052,6 +1057,7 @@ struct SummaryAyahTile: View {
                     beginnerMode: settings.beginnerMode,
                     lineLimit: 1
                 )
+                .arabicFontDesign(custom: settings.quranUsesCustomArabicFace)
                 .multilineTextAlignment(.trailing)
                 .frame(maxWidth: .infinity, alignment: .trailing)
             }
@@ -1082,7 +1088,7 @@ struct SummaryAyahTile: View {
 }
 
 /// Compact summary-mode tile for the last-listened surah. There is no ayah, so it shows the reciter,
-/// duration, a play button, and a tiny progress bar instead — sized to match the ayah tile beside it.
+/// duration, a play button, and a tiny progress bar instead - sized to match the ayah tile beside it.
 struct SummarySurahTile: View {
     @ObservedObject var settings = Settings.shared
     @ObservedObject var quranPlayer = QuranPlayer.shared
@@ -1565,6 +1571,7 @@ struct AyahOfTheDayRow: View {
             if settings.showArabicText {
                 Text(ayah.displayArabicText(surahId: surah.id, clean: settings.cleanArabicText, qiraahOverride: settings.displayQiraahForArabic))
                     .font(.custom(settings.fontArabic, size: UIFont.preferredFont(forTextStyle: .title2).pointSize))
+                    .arabicFontDesign(custom: settings.quranUsesCustomArabicFace)
                     .multilineTextAlignment(.trailing)
                     .frame(maxWidth: .infinity, alignment: .trailing)
                     .lineSpacing(6)
@@ -1702,6 +1709,7 @@ struct CompactAyahArabicRow: View {
                     beginnerMode: settings.beginnerMode,
                     lineLimit: nil
                 )
+                .arabicFontDesign(custom: settings.quranUsesCustomArabicFace)
                 .multilineTextAlignment(.trailing)
                 .frame(maxWidth: .infinity, alignment: .trailing)
             } else {
@@ -1712,8 +1720,8 @@ struct CompactAyahArabicRow: View {
     }
 }
 
-/// Just the Arabic text of an ayah, rendered through the same pipeline as the reading view — same font,
-/// tajweed colors, beginner-mode spacing, and Allah highlighting — sized by `scale`. Used for compact
+/// Just the Arabic text of an ayah, rendered through the same pipeline as the reading view - same font,
+/// tajweed colors, beginner-mode spacing, and Allah highlighting - sized by `scale`. Used for compact
 /// previews such as the page/juz dividers in SurahView.
 struct AyahArabicSnippet: View {
     @ObservedObject var settings = Settings.shared
@@ -1760,6 +1768,7 @@ struct AyahArabicSnippet: View {
                 lineLimit: lineLimit,
                 highlightAllahNames: settings.highlightAllahNames
             )
+            .arabicFontDesign(custom: settings.quranUsesCustomArabicFace)
             .multilineTextAlignment(.trailing)
             .frame(maxWidth: .infinity, alignment: .trailing)
         }
@@ -2043,7 +2052,7 @@ struct AyahSearchRow: View, Equatable {
     }
 
     /// A source "matches" the query when it contains the whole phrase contiguously OR matches it loosely as
-    /// a phrase-prefix (consecutive words, last is a prefix) — the same close-match rule the verse search
+    /// a phrase-prefix (consecutive words, last is a prefix) - the same close-match rule the verse search
     /// uses. Gating highlights on the strict `contains` alone meant close matches showed the row but never
     /// highlighted; this keeps the two in sync so the matched words always color.
     private func sourceMatchesQuery(_ source: String, normalizedQuery: String) -> Bool {
@@ -2126,6 +2135,7 @@ struct AyahSearchRow: View, Equatable {
                         beginnerMode: settings.beginnerMode,
                         lineLimit: nil
                     )
+                    .arabicFontDesign(custom: settings.quranUsesCustomArabicFace)
                     .frame(maxWidth: .infinity, alignment: .trailing)
                     .multilineTextAlignment(.trailing)
                     // Inside this badge+Arabic HStack SwiftUI otherwise truncates a long ayah to one line;
@@ -2204,6 +2214,7 @@ struct AyahSearchRow: View, Equatable {
                     beginnerMode: settings.beginnerMode,
                     lineLimit: nil
                 )
+                .arabicFontDesign(custom: settings.quranUsesCustomArabicFace)
                 .frame(maxWidth: .infinity, alignment: .trailing)
                 .multilineTextAlignment(.trailing)
                 .fixedSize(horizontal: false, vertical: true)

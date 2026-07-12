@@ -12,7 +12,7 @@ struct NowPlayingView: View {
 
     @State private var confirmRemoveNote = false
     @State private var confirmClearQueue = false
-    /// Last real playback context, kept so the bar can stay mounted (hidden) after playback stops — tearing
+    /// Last real playback context, kept so the bar can stay mounted (hidden) after playback stops - tearing
     /// it down inside the stop action was cancelling "Stop Playing".
     @State private var retainedContext: PlaybackContext?
 
@@ -35,7 +35,7 @@ struct NowPlayingView: View {
         #if os(iOS)
         // The parent inset inserts/removes this view with `if isPlaying||isPaused` + `.animation`, which
         // animates BOTH the fade and the height collapse (a `.frame(height:)` between natural and 0 can't
-        // animate — it snaps). `retainedContext` keeps the last context so the bar still has content to render
+        // animate - it snaps). `retainedContext` keeps the last context so the bar still has content to render
         // while it fades OUT (otherwise `playbackContext` goes nil on stop and there's nothing to fade). The
         // "Stop Playing" action defers `stop()` so this view isn't torn down mid-action (which cancelled it).
         guard let ctx = playbackContext ?? retainedContext else {
@@ -66,7 +66,7 @@ struct NowPlayingView: View {
                     }
                 }
                 // Pin a stable full width so the small and big players are the same size and only the
-                // height animates — keeps the card from resizing sideways when expanding/collapsing.
+                // height animates - keeps the card from resizing sideways when expanding/collapsing.
                 .overlay(alignment: .topTrailing) {
                     expandToggleButton
                 }
@@ -91,7 +91,7 @@ struct NowPlayingView: View {
                 // Fades in/out as the parent inserts/removes the bar (gated on isPlaying||isPaused).
                 .transition(.opacity)
                 // Capture the context on appear AND on change. `onChange` alone misses the very first value
-                // (continuous surah playback never changes the key), leaving `retainedContext` nil — so on
+                // (continuous surah playback never changes the key), leaving `retainedContext` nil - so on
                 // stop the bar fell back to EmptyView and vanished without fading. Capturing on appear fixes it.
                 .onAppear {
                     if let pc = playbackContext { retainedContext = pc }
@@ -259,7 +259,7 @@ struct NowPlayingView: View {
             }
             // The progress bar / times tick every 0.5s and on play/resume. Opt this subtree out of any
             // implicit animation inherited from the player card so the bar jumps to its position instead of
-            // easing — otherwise resuming (and each tick) shows a weird sliding/lurching animation.
+            // easing - otherwise resuming (and each tick) shows a weird sliding/lurching animation.
             .transaction { $0.animation = nil }
         }
     }
@@ -336,9 +336,9 @@ struct NowPlayingView: View {
         .transition(.opacity)
         // No `.animation(value: isPlaying || isPaused)` here: the appearance/disappearance of the player on
         // start/stop is already animated by the enclosing inset (`nowPlayingInset`), and a second animation
-        // at this level fought with it — producing the weird morph when resuming and when playback ended.
+        // at this level fought with it - producing the weird morph when resuming and when playback ended.
         // Animate only the compact<->expanded size change locally, from this single source. The expand button
-        // no longer wraps the toggle in a global `withAnimation` (that animated the whole List — squishing
+        // no longer wraps the toggle in a global `withAnimation` (that animated the whole List - squishing
         // rows and resetting the Quran scroll), so there's no longer a second animation to fight with.
         .animation(.easeInOut, value: isExpanded)
         .confirmationDialog(Settings.bookmarkNoteRemovalDialogTitle, isPresented: $confirmRemoveNote, titleVisibility: .visible) {
@@ -526,7 +526,7 @@ struct NowPlayingView: View {
 
         Button(role: .destructive) {
             settings.hapticFeedback()
-            // Defer stop so the menu action fully completes before this bar (the menu's host) is removed —
+            // Defer stop so the menu action fully completes before this bar (the menu's host) is removed - 
             // removing it synchronously inside the action cancelled the stop.
             DispatchQueue.main.async { quranPlayer.stop() }
         } label: {

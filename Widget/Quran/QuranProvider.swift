@@ -46,7 +46,7 @@ struct QuranWidgetProvider: TimelineProvider {
     let kind: QuranWidgetKind
 
     // Placeholder (the redacted skeleton) and the widget-gallery preview must always show representative
-    // content so they can never render blank — the app may not have written a snapshot yet (fresh install,
+    // content so they can never render blank - the app may not have written a snapshot yet (fresh install,
     // Quran data still loading), which previously left these surfaces empty.
     func placeholder(in context: Context) -> QuranWidgetEntry { sampleEntry() }
 
@@ -228,6 +228,7 @@ struct QuranWidgetEntryView: View {
         if let fontName = entry.arabicFontName, !fontName.isEmpty {
             Text(Self.arabicAttributed(entry.primaryText, runs: entry.arabicColorRuns))
                 .font(.custom(fontName, size: arabicSize))
+                .arabicFontDesign(custom: fontName != Settings.systemArabicFontName)
                 .foregroundColor(.primary)
                 .multilineTextAlignment(.trailing)
                 .frame(maxWidth: .infinity, alignment: .trailing)

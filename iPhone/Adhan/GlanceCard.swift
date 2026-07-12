@@ -6,7 +6,7 @@ import Adhan
 /// The "At a Glance" card on the Adhan tab: everything the app already knows about *today* and *here*,
 /// surfaced instead of left implicit.
 ///
-/// Every value is derived on device from prayer times, coordinates and the calendar — nothing here needs the
+/// Every value is derived on device from prayer times, coordinates and the calendar - nothing here needs the
 /// network, and nothing here is stored. Tiles that can't be computed (no location, a polar day with no
 /// sunrise) are dropped rather than shown as "Unavailable", so the card never pads itself with dead cells.
 struct GlanceCard: View {
@@ -92,11 +92,11 @@ struct GlanceCard: View {
             .distance(from: Self.kaaba)
     }
 
-    /// Bearing to the Kaaba as a true heading plus the compass point it falls in — the same number the Qibla
+    /// Bearing to the Kaaba as a true heading plus the compass point it falls in - the same number the Qibla
     /// compass rotates to, shown as a value you can read without holding the phone flat.
     ///
     /// Standing on the Kaaba itself, the great-circle bearing is meaningless (the library returns whatever
-    /// the degenerate case produces — 325° at the exact coordinate), so say so instead of pointing nowhere.
+    /// the degenerate case produces - 325° at the exact coordinate), so say so instead of pointing nowhere.
     private var qiblaSummary: String? {
         guard let coordinate = validCoordinate, let meters = metersToKaaba else { return nil }
         guard meters > Self.atKaabaRadius else { return "You are here" }
@@ -111,7 +111,7 @@ struct GlanceCard: View {
         return Self.distanceText(meters)
     }
 
-    /// Sunrise to sunset, and how that compares with yesterday — the number that quietly explains why Fajr
+    /// Sunrise to sunset, and how that compares with yesterday - the number that quietly explains why Fajr
     /// keeps creeping earlier.
     private var daylightSummary: String? {
         guard let today = daylightLength(dayOffset: 0) else { return nil }
@@ -147,7 +147,7 @@ struct GlanceCard: View {
               let fajr = next.first(where: { $0.nameTransliteration == "Fajr" })?.time,
               fajr > maghrib
         else { return nil }
-        // The actual clock times, like the fasting window above — "Maghrib to Fajr" only restated the names of
+        // The actual clock times, like the fasting window above - "Maghrib to Fajr" only restated the names of
         // the two prayers, which the list already shows.
         return "\(Self.durationText(fajr.timeIntervalSince(maghrib)))\n"
             + "\(settings.formatDate(maghrib)) – \(settings.formatDate(fajr))"

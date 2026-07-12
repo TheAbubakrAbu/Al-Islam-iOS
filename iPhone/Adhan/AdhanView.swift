@@ -65,11 +65,27 @@ struct AdhanView: View {
         .confirmationDialog(
             dialogTitle,
             isPresented: Binding(
-                // Hold the prompt until the app is actually revealed — otherwise a calc/travel change detected
+                // Hold the prompt until the app is actually revealed - otherwise a calc/travel change detected
                 // while AdhanView is still building behind the launch screen would pop a dialog over it. The
                 // pending `showAlert` (or the standing flag via `nextAlertToPresent`) still presents at reveal.
                 get: { showAlert != nil && appRevealed },
-                set: { if !$0 { showAlert = nil } }
+                set: { presented in
+                    guard !presented else { return }
+                    // ANY dismissal counts as seen - the system Cancel button and a tap outside included.
+                    // Only the two action buttons used to clear the standing travel/calculation flags, so
+                    // cancelling left the flag armed and the same dialog re-presented on every refresh,
+                    // forever. Cancelling now means "accept what was auto-detected, silently."
+                    // (Clearing again after an action button is a harmless no-op.)
+                    switch showAlert {
+                    case .travelTurnOnAutomatic, .travelTurnOffAutomatic:
+                        settings.resetTravelAutomaticFlags()
+                    case .calculationAutomaticChanged:
+                        settings.confirmAutomaticCalculationChange()
+                    default:
+                        break
+                    }
+                    showAlert = nil
+                }
             ),
             titleVisibility: .visible
         ) {
@@ -83,7 +99,7 @@ struct AdhanView: View {
         List {
             Group {
                 #if os(iOS)
-                // Date/location and the sky are their own sections again — sharing one made the sky's rounded
+                // Date/location and the sky are their own sections again - sharing one made the sky's rounded
                 // card fight the rows above it. `compactListSectionSpacing` below closes the gap between them
                 // so they still read as one stacked header rather than two floating islands.
                 Section {
@@ -104,7 +120,7 @@ struct AdhanView: View {
                 }
                 #else
                 // Watch: the countdown and prayer times come first (that's the whole reason you raised your
-                // wrist), then one compact card holding the date, the city and the Qibla — three separate
+                // wrist), then one compact card holding the date, the city and the Qibla - three separate
                 // full-width rows was most of a screen's worth of scrolling for information you glance at.
                 prayersSection
 
@@ -118,6 +134,9 @@ struct AdhanView: View {
         // Sections stay separate but sit close together, so the header cards stack instead of drifting apart.
         .compactListSectionSpacing()
         .refreshable {
+            // A manual refresh means "where am I NOW" - force a fresh fix, not just a re-geocode of the
+            // stored coordinates (which, after a flight, faithfully re-resolved the departure city).
+            settings.refreshLocationIfStale(olderThan: 30)
             prayerTimeRefresh(force: true)
         }
         .onAppear {
@@ -137,15 +156,15 @@ struct AdhanView: View {
         }
         // The dialog is presented from ONE place only: the completion of a prayer refresh (see
         // `prayerTimeRefresh`), a beat later. It is deliberately NOT presented from an `.onChange` on the
-        // travel/calculation flags. Watching those flags means the dialog fires the instant the flag flips —
-        // from any background path, whether or not this screen is even on screen — which is what made it
+        // travel/calculation flags. Watching those flags means the dialog fires the instant the flag flips - 
+        // from any background path, whether or not this screen is even on screen - which is what made it
         // re-present over and over. The flags are cleared by the dialog's own buttons (`confirmTravelAutomaticChange`
         // / `overrideTravelingMode`), so a change that happens while you're away is still waiting for you the
         // next time the tab refreshes, and is announced exactly once.
         .navigationTitle("Al-Adhan")
         #if os(iOS)
         .toolbar {
-            // Leading toolbar is the first accent, trailing is the second — the same split the app uses for
+            // Leading toolbar is the first accent, trailing is the second - the same split the app uses for
             // sections. With a single-color accent the two are identical, so nothing changes visually there.
             ToolbarItem(placement: .navigationBarLeading) {
                 NavigationLink {
@@ -181,7 +200,7 @@ struct AdhanView: View {
         #if os(iOS)
         if settings.prayers != nil && settings.currentLocation != nil {
             // With the sky on, the countdown rides inside its card (see `SkyView.countdownStrip`). With the
-            // sky off, it returns to being its own section — nothing is lost by turning the drawing off.
+            // sky off, it returns to being its own section - nothing is lost by turning the drawing off.
             if !settings.showSkyView {
                 PrayerCountdown()
             }
@@ -255,7 +274,7 @@ struct AdhanView: View {
             settings.fetchPrayerTimes(force: force) {
                 // The one place the confirmation is raised: after the refresh has actually settled, a beat
                 // later so the list isn't still animating. `nextAlertToPresent` reads the standing flags, and
-                // the dialog's buttons clear them — so it appears once, when you're looking at this screen.
+                // the dialog's buttons clear them - so it appears once, when you're looking at this screen.
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                     if showAlert == nil { showAlert = nextAlertToPresent }
                 }
@@ -553,7 +572,7 @@ private struct CurrentLocationRow: View {
                         }
                 }
                 .padding(12)
-                // Clean capsule glass — no .cornerRadius() clip, which previously cut the capsule into a
+                // Clean capsule glass - no .cornerRadius() clip, which previously cut the capsule into a
                 // hard-edged box that looked wrong in Sepia.
                 .conditionalGlassEffect()
             }
@@ -586,7 +605,7 @@ private struct CurrentLocationRow: View {
     }
 
     /// The device's actual latitude/longitude, shown under the location (city) only while the big Qibla
-    /// compass is expanded — a precise readout of "where you actually are" beneath the resolved place name.
+    /// compass is expanded - a precise readout of "where you actually are" beneath the resolved place name.
     @ViewBuilder
     private var coordinatesLabel: some View {
         if showBigQibla,

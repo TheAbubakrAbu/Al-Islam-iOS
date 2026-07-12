@@ -3,7 +3,7 @@ import Foundation
 import ActivityKit
 
 /// The Ramadan fasting Live Activity: a Lock Screen card and Dynamic Island counting down either to Fajr
-/// (the end of suhoor) or to Maghrib (iftar). Compiled into both the app — which starts and ends it — and the
+/// (the end of suhoor) or to Maghrib (iftar). Compiled into both the app - which starts and ends it - and the
 /// widget extension, which renders it, so the two agree on the payload.
 @available(iOS 16.1, *)
 struct FastingAttributes: ActivityAttributes {
@@ -48,7 +48,7 @@ struct FastingAttributes: ActivityAttributes {
 extension FastingAttributes.ContentState {
     var secondsRemaining: TimeInterval { max(0, endTime.timeIntervalSinceNow) }
 
-    /// Fraction of the countdown already elapsed, clamped — for the progress capsule.
+    /// Fraction of the countdown already elapsed, clamped - for the progress capsule.
     var progress: Double {
         let total = endTime.timeIntervalSince(startTime)
         guard total > 0 else { return 1 }

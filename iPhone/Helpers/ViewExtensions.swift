@@ -25,7 +25,7 @@ extension View {
     }
 
     /// Tints list rows for the Sepia / Gray reading themes. Apply this to the rows/sections INSIDE a `List`
-    /// (not to the `List` itself) — `.listRowBackground` only propagates when attached to row content, which
+    /// (not to the `List` itself) - `.listRowBackground` only propagates when attached to row content, which
     /// is why the list-level version in `ConditionalListStyle` couldn't color the cells.
     func themedListRowBackground() -> some View {
         modifier(ThemedListRowBackground())
@@ -108,8 +108,8 @@ struct ConditionalListStyle: ViewModifier {
         .tint(settings.accentColor.color)
         .dismissKeyboardOnScroll()
         .topContentMargin(topContentMargin)
-        // Force the theme's light/dark base here (not just at the app root) so sheets — which are their own
-        // presentation contexts and don't inherit the root's preferredColorScheme — also adopt the theme.
+        // Force the theme's light/dark base here (not just at the app root) so sheets - which are their own
+        // presentation contexts and don't inherit the root's preferredColorScheme - also adopt the theme.
         .preferredColorScheme(settings.colorScheme)
         #if os(iOS)
         .safeAreaInset(edge: .bottom) {
@@ -128,7 +128,7 @@ struct ConditionalListStyle: ViewModifier {
 
     #if os(iOS)
     // Single, structurally-constant modifier chain (only the VALUES change with the theme). Switching to/from
-    // Sepia/Gray used to flip between if/else branches, which changed the view tree and recreated the List —
+    // Sepia/Gray used to flip between if/else branches, which changed the view tree and recreated the List - 
     // scrolling it back to the top. Keeping one branch preserves the List, so no theme change resets scroll.
     // (Row colors are handled separately by `themedListRowBackground()` applied inside each List.)
     @ViewBuilder
@@ -178,10 +178,10 @@ struct DismissKeyboardOnScrollModifier: ViewModifier {
             #if os(iOS)
             if #available(iOS 16.0, *) {
                 // Keep `.immediately` (both `.immediately` and `.interactively` showed a weird lurch). The
-                // lurch isn't the dismiss mode — it's the bottom safe-area bar re-animating its position on a
+                // lurch isn't the dismiss mode - it's the bottom safe-area bar re-animating its position on a
                 // curve that fights the keyboard's. That's fixed at the bar itself: the search-bar container
                 // strips its inherited animation transaction (see QuranView `bottomControls`) so it snaps with
-                // the keyboard instead of easing separately — the same `.transaction { $0.animation = nil }`
+                // the keyboard instead of easing separately - the same `.transaction { $0.animation = nil }`
                 // fix used in NowPlayingView.
                 content.scrollDismissesKeyboard(.immediately)
             } else {

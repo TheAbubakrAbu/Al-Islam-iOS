@@ -437,6 +437,7 @@ struct AyahTafsirSheet: View {
                                     ? .custom(settings.fontArabic, size: UIFont.preferredFont(forTextStyle: .title3).pointSize)
                                     : .title3
                             )
+                            .arabicFontDesign(custom: settings.islamUsesCustomArabicFace)
                             .multilineTextAlignment(.trailing)
                             .lineSpacing(6)
                             .frame(maxWidth: .infinity, alignment: .trailing)
@@ -525,7 +526,7 @@ struct AyahTafsirSheet: View {
     }
 }
 
-/// "About this Surah" sheet — bundled surah background, mirroring the Tafsir sheet: a source picker
+/// "About this Surah" sheet - bundled surah background, mirroring the Tafsir sheet: a source picker
 /// (Maududi / Ibn Ashur), searchable content, and the same accent-foreground search match (no highlight box).
 struct SurahInfoSheet: View {
     @ObservedObject var settings = Settings.shared
@@ -679,7 +680,7 @@ struct SurahInfoSheet: View {
             Label("About this Surah", systemImage: "book.closed")
                 .font(.subheadline.weight(.semibold))
 
-            Text("Background on this surah — its name, period of revelation, and themes. Switch between sources with the picker.")
+            Text("Background on this surah - its name, period of revelation, and themes. Switch between sources with the picker.")
                 .font(.footnote)
                 .foregroundStyle(.secondary)
         }
@@ -1188,6 +1189,7 @@ struct AyahQiraahComparisonSheet: View {
                 accent: settings.accentColor.color,
                 fg: text == nil ? .secondary : .primary
             )
+                .arabicFontDesign(custom: settings.quranUsesCustomArabicFace)
                 .multilineTextAlignment(.trailing)
                 .lineSpacing(6)
                 .frame(maxWidth: .infinity, alignment: .trailing)
@@ -1511,6 +1513,7 @@ struct AyahEnglishComparisonSheet: View {
                 accent: settings.accentColor.color,
                 fg: .primary
             )
+                .arabicFontDesign(custom: isArabic && settings.quranUsesCustomArabicFace)
                 .fixedSize(horizontal: false, vertical: true)
                 .multilineTextAlignment(isArabic ? .trailing : .leading)
                 .frame(maxWidth: .infinity, alignment: isArabic ? .trailing : .leading)
@@ -1639,7 +1642,7 @@ struct AyahContextMenuModifier: ViewModifier {
     func body(content: Content) -> some View {
         // O(1) dictionary lookup, not an O(114) linear scan. This `body` re-evaluates whenever `settings`/
         // `quranPlayer` publish (constant during playback), and the modifier sits on every history/bookmark/
-        // favorite row — the linear scan added up across all visible rows.
+        // favorite row - the linear scan added up across all visible rows.
         let surahObj = quranData.surah(surah)
 
         #if os(iOS)
@@ -2262,7 +2265,7 @@ extension FocusItem {
             secondaryArabic: surah.idArabic,
             shareLabel: "Share Surah",
             shareText: """
-            Surah \(surah.id) — \(surah.nameTransliteration) (\(surah.nameArabic))
+            Surah \(surah.id) - \(surah.nameTransliteration) (\(surah.nameArabic))
             \(surah.nameEnglish)
             \(surah.type.capitalized) · \(surah.numberOfAyahs) ayahs
             """
@@ -2273,6 +2276,140 @@ extension FocusItem {
 #Preview {
     AlIslamPreviewContainer(embedInNavigation: false) {
         SurahContextMenuPreviewContent()
+    }
+}
+
+/// Lets you pull text out of an ayah by hand: drag over any part of the Arabic, the transliteration, or a
+/// translation and copy exactly that.
+///
+/// The reader already has "Copy Ayah", but that copies the whole thing in a fixed format. Selecting inside a row in
+/// the surah list is fussy at best, because the row is competing for the same drag with the list's scroll. Lifting
+/// the text into a sheet of its own gives the selection somewhere to live, and each block also gets a one-tap copy
+/// for when the whole block is what you wanted.
+struct SelectAyahTextSheet: View {
+    @ObservedObject var settings = Settings.shared
+    @Environment(\.dismiss) private var dismiss
+
+    let surah: Surah
+    let ayah: Ayah
+
+    @State private var copiedLabel: String?
+
+    private var usesCustomArabicFace: Bool {
+        !settings.removeArabicDots && settings.quranUsesCustomArabicFace
+    }
+
+    private var arabicText: String {
+        ayah.displayArabicText(
+            surahId: surah.id,
+            clean: settings.cleanArabicText,
+            qiraahOverride: settings.displayQiraahForArabic
+        )
+    }
+
+    var body: some View {
+        NavigationView {
+            List {
+                Group {
+                    if settings.showArabicText {
+                        selectableBlock(
+                            title: "ARABIC",
+                            text: arabicText,
+                            font: usesCustomArabicFace
+                                ? .custom(settings.fontArabic, size: settings.fontArabicSize)
+                                : .system(size: settings.fontArabicSize, design: .rounded),
+                            isArabic: true
+                        )
+                    }
+
+                    if settings.showTransliteration, settings.isHafsDisplay, !ayah.textTransliteration.isEmpty {
+                        selectableBlock(
+                            title: "TRANSLITERATION",
+                            text: ayah.textTransliteration,
+                            font: .system(size: settings.englishFontSize),
+                            isArabic: false
+                        )
+                    }
+
+                    if settings.showEnglishSaheeh, settings.isHafsDisplay, !ayah.textEnglishSaheeh.isEmpty {
+                        selectableBlock(
+                            title: "SAHEEH INTERNATIONAL",
+                            text: ayah.textEnglishSaheeh,
+                            font: .system(size: settings.englishFontSize),
+                            isArabic: false
+                        )
+                    }
+
+                    if settings.showEnglishMustafa, settings.isHafsDisplay, !ayah.textEnglishMustafa.isEmpty {
+                        selectableBlock(
+                            title: "CLEAR QURAN (MUSTAFA KHATTAB)",
+                            text: ayah.textEnglishMustafa,
+                            font: .system(size: settings.englishFontSize),
+                            isArabic: false
+                        )
+                    }
+
+                    Section {
+                        Text("Press and drag over any part of the text above to select it, then copy. The button on each block copies that whole block.")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+                .themedListRowBackground()
+            }
+            .applyConditionalListStyle()
+            .navigationTitle("\(surah.nameTransliteration) \(surah.id):\(ayah.id)")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { dismiss() }
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func selectableBlock(title: String, text: String, font: Font, isArabic: Bool) -> some View {
+        Section {
+            Text(text)
+                .font(font)
+                .arabicFontDesign(custom: isArabic && usesCustomArabicFace)
+                .foregroundColor(.primary)
+                .multilineTextAlignment(isArabic ? .trailing : .leading)
+                .frame(maxWidth: .infinity, alignment: isArabic ? .trailing : .leading)
+                .lineSpacing(isArabic ? 8 : 2)
+                .fixedSize(horizontal: false, vertical: true)
+                .textSelection(.enabled)
+                .padding(.vertical, 4)
+        } header: {
+            HStack {
+                Text(title)
+
+                Spacer()
+
+                Button {
+                    settings.hapticFeedback()
+                    UIPasteboard.general.string = text
+                    withAnimation(.easeInOut) { copiedLabel = title }
+                    // Long enough to read, short enough that it doesn't linger into the next copy.
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                        withAnimation(.easeInOut) {
+                            if copiedLabel == title { copiedLabel = nil }
+                        }
+                    }
+                } label: {
+                    Label(
+                        copiedLabel == title ? "Copied" : "Copy",
+                        systemImage: copiedLabel == title ? "checkmark" : "doc.on.doc"
+                    )
+                    .font(.caption.weight(.semibold))
+                    .foregroundColor(settings.accentColor.color)
+                }
+                .buttonStyle(.plain)
+                .textCase(nil)
+            }
+        }
     }
 }
 #endif

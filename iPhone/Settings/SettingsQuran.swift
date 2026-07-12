@@ -408,7 +408,7 @@ extension Settings {
     }
 
     /// Debounces the expensive work of a khatm mark. The disk write (encode + UserDefaults) is always
-    /// coalesced onto a 250ms trailing timer so rapid marks — e.g. auto-marking while scrolling — never
+    /// coalesced onto a 250ms trailing timer so rapid marks - e.g. auto-marking while scrolling - never
     /// hit storage per ayah. `refresh` controls whether this task is also responsible for the UI update:
     /// auto-marking passes `true` so the checkmark/progress snap in once scrolling settles; a manual tap
     /// passes `false` because it already fired `objectWillChange` synchronously for instant feedback.
@@ -424,7 +424,7 @@ extension Settings {
             while true {
                 guard let self else { return }
                 // Cancellation only comes from applyKhatmCompletedAyahKeys, which frees the slot itself,
-                // so just bail — don't touch the shared task handle (it may already hold a newer task).
+                // so just bail - don't touch the shared task handle (it may already hold a newer task).
                 if Task.isCancelled { return }
                 if self.khatmSaveGeneration == lastSeen { break }   // no new marks in the last window
                 lastSeen = self.khatmSaveGeneration
@@ -645,8 +645,8 @@ extension Settings {
 // MARK: - Quran logic moved out of Settings.swift
 //
 // Behavior that operates on Quran data lives here so Settings.swift holds (mostly) just the stored
-// settings. Only the @AppStorage/@Published *storage* must stay in the main class — Swift forbids stored
-// property wrappers in extensions — but methods and `static` caches are free to live here.
+// settings. Only the @AppStorage/@Published *storage* must stay in the main class - Swift forbids stored
+// property wrappers in extensions - but methods and `static` caches are free to live here.
 extension Settings {
 
     // MARK: Saved sajdah / muqatta'at ayahs
@@ -681,7 +681,7 @@ extension Settings {
         ayahOfTheDayHiddenDate == Self.dayKey()
     }
 
-    /// Words that keep an ayah out of the Ayah of the Day rotation — not because anything is wrong with
+    /// Words that keep an ayah out of the Ayah of the Day rotation - not because anything is wrong with
     /// them, just to keep the daily card gentle/uplifting (matches the widget's safe-pool filter).
     private static let ayahOfTheDayBlockedWords = [
         "kill", "killing", "fight", "fighting", "violence", "violent",
@@ -694,7 +694,7 @@ extension Settings {
         return !ayahOfTheDayBlockedWords.contains { !$0.isEmpty && combined.contains($0) }
     }
 
-    /// Keeps the daily card to roughly two lines by skipping long ayahs. Caps are approximate — tuned so
+    /// Keeps the daily card to roughly two lines by skipping long ayahs. Caps are approximate - tuned so
     /// both the Arabic and the English translation fit a compact card without overflowing.
     private static func isAyahShort(_ ayah: Ayah) -> Bool {
         ayah.textHafs.count <= 120 && ayah.textEnglishSaheeh.count <= 150
@@ -732,7 +732,7 @@ extension Settings {
     // MARK: Quran widgets
 
     /// Rebuilds the App Group payload the Quran widgets read (last read ayah, last listened surah, and a
-    /// pool of safe random ayahs) and reloads their timelines. Runs only in the main app — the widget
+    /// pool of safe random ayahs) and reloads their timelines. Runs only in the main app - the widget
     /// extension just consumes the snapshot. Cheap to call from lifecycle/save hooks.
     func refreshQuranWidgets() {
         guard Bundle.main.bundleIdentifier?.contains("Widget") != true else { return }
@@ -740,7 +740,7 @@ extension Settings {
         guard !data.quran.isEmpty else { return }
 
         // Preserve the existing random pool so this stays cheap when called frequently (e.g. on every
-        // surah navigation) — the widget rotates through the pool over time for variety.
+        // surah navigation) - the widget rotates through the pool over time for variety.
         var snapshot = QuranWidgetStore.load() ?? QuranWidgetSnapshot()
         snapshot.lastRead = nil
 
@@ -813,7 +813,7 @@ extension Settings {
         ) else { return nil }
 
         let ns = NSAttributedString(attributed)
-        // Resolve the adaptive base label color so it can be skipped — only the tajweed hues are stored;
+        // Resolve the adaptive base label color so it can be skipped - only the tajweed hues are stored;
         // the widget keeps un-colored text in its own primary color.
         let label = UIColor.label.resolvedColor(with: .current)
         var lr: CGFloat = 0, lg: CGFloat = 0, lb: CGFloat = 0, la: CGFloat = 0

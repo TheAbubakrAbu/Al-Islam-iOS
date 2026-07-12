@@ -4,13 +4,13 @@ import UIKit
 
 /// Picks the largest Arabic font size at which a whole mushaf page fits on screen without scrolling.
 ///
-/// SwiftUI has no way to ask "how tall would this text be at size N?" — `minimumScaleFactor` only shrinks a
+/// SwiftUI has no way to ask "how tall would this text be at size N?" - `minimumScaleFactor` only shrinks a
 /// `Text` that has a line limit, and `ViewThatFits` needs iOS 16 and a fixed ladder of candidates. So the page
 /// is measured directly with UIKit text layout: the same fonts, the same width, the same line spacing that
 /// SwiftUI will use, laid out into an unbounded height. Then a binary search finds the biggest size whose
 /// total height still fits.
 ///
-/// This never *enlarges* past the user's chosen size — a page with only a few ayahs stays at the size they
+/// This never *enlarges* past the user's chosen size - a page with only a few ayahs stays at the size they
 /// picked rather than ballooning to fill the screen.
 enum MushafPageFitter {
     /// Never shrink below this. Past it the text is unreadable and scrolling is the better answer.
@@ -79,7 +79,7 @@ enum MushafPageFitter {
         if !fits(baseSize) {
             var low = minimumFontSize    // known to fit, or as small as we're willing to go
             var high = baseSize          // known not to fit
-            // 8 halvings of a ≤66pt range lands inside a quarter point — finer than the half-point we round to.
+            // 8 halvings of a ≤66pt range lands inside a quarter point - finer than the half-point we round to.
             for _ in 0..<8 {
                 let mid = (low + high) / 2
                 if fits(mid) { low = mid } else { high = mid }
@@ -164,10 +164,12 @@ enum MushafPageFitter {
         return ceil(bounds.height)
     }
 
-    /// Falls back to the system font when a custom face is missing, exactly as `Font.custom` does.
+    /// Falls back to the system font when a custom face is missing, exactly as `Font.custom` does. The fallback is
+    /// the *rounded* system face so it matches what `MushafPageComposer` actually draws, and so the height this
+    /// fitter measures is the height the page renders at.
     private static func font(named name: String?, size: CGFloat) -> UIFont {
         guard let name, let font = UIFont(name: name, size: size) else {
-            return .systemFont(ofSize: size)
+            return .roundedSystemFont(ofSize: size)
         }
         return font
     }

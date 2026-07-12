@@ -1,7 +1,7 @@
 import SwiftUI
 
 /// The prayer-times section. It reads as one block of color, so every tint in here is the accent's *second*
-/// color (`accent2`) — the date/location/sky section above it stays on the first. For a one-color accent the
+/// color (`accent2`) - the date/location/sky section above it stays on the first. For a one-color accent the
 /// two are the same color and this looks exactly as it always did.
 struct PrayerList: View {
     @ObservedObject private var settings = Settings.shared
@@ -94,8 +94,8 @@ struct PrayerList: View {
 
     /// Prayer times for an arbitrary day, computed on demand. Today reuses the already-fetched
     /// `settings.prayers`; any other day is generated directly (the generator is cached and fast).
-    /// Computing this purely from `date` — instead of relying on `onChange` to populate published
-    /// state — is what makes selecting a different day reliably refresh every display mode.
+    /// Computing this purely from `date` - instead of relying on `onChange` to populate published
+    /// state - is what makes selecting a different day reliably refresh every display mode.
     private func prayers(for date: Date) -> [Prayer] {
         if Calendar.current.isDate(date, inSameDayAs: Date()), let prayers = settings.prayers {
             let base = fullPrayers ? prayers.fullPrayers : prayers.prayers
@@ -133,7 +133,7 @@ struct PrayerList: View {
     }
 
     /// Snaps `selectedDate` back to today when the calendar day has actually rolled over since we last saw
-    /// it — e.g. the app was suspended overnight and reopened. Without this, the stale `selectedDate` (still
+    /// it - e.g. the app was suspended overnight and reopened. Without this, the stale `selectedDate` (still
     /// on the previous day) makes `isShowingDifferentDay` true and the "TODAY vs that day" comparison block
     /// renders on reopen. Guarded on an actual day change, so a day the user deliberately picked earlier the
     /// same session (background → foreground within one day) is left untouched.
@@ -169,11 +169,11 @@ struct PrayerList: View {
 
     /// Lets the optional/extra prayers (Duha, Islamic Midnight, Last Third) be shown or hidden right from
     /// the prayer page, so toggling them no longer means a trip into Settings. These bind to the same
-    /// persisted settings used elsewhere — this is just a more discoverable entry point.
+    /// persisted settings used elsewhere - this is just a more discoverable entry point.
     @ViewBuilder
     private var optionalPrayersFooter: some View {
         #if os(iOS)
-        // Everything lives in one VStack so it's a single list row — no internal separators to fight with.
+        // Everything lives in one VStack so it's a single list row - no internal separators to fight with.
         // The row's own bottom separator is hidden so the button reads as a clean standalone pill.
         VStack(spacing: 18) {
             // Hand-drawn dividers top and bottom (the real list separators are hidden) so both ends match.
@@ -393,7 +393,7 @@ struct PrayerList: View {
     private func tilesContent(prayers: [Prayer], isComparisonBaseline: Bool = false, highlightsCurrent: Bool = true) -> some View {
         #if os(watchOS)
         // Tighter on the watch: the icon shares the name's line instead of taking one of its own, and the
-        // padding comes down — that's what lets six prayers fit a screen at a readable size.
+        // padding comes down - that's what lets six prayers fit a screen at a readable size.
         let columnCount = 2
         let tileSpacing: CGFloat = 6
         let tileHorizontalPadding: CGFloat = 7
@@ -402,7 +402,7 @@ struct PrayerList: View {
         let columnCount = settings.travelingMode ? 2 : 3
         let tileSpacing: CGFloat = 8
         let tileHorizontalPadding: CGFloat = 10
-        let tileVerticalPadding: CGFloat = 6
+        let tileVerticalPadding: CGFloat = 12
         #endif
         let columns = Array(
             repeating: GridItem(.flexible(), spacing: tileSpacing),
@@ -414,7 +414,7 @@ struct PrayerList: View {
                 let color: Color = isComparisonBaseline ? .secondary : (highlightsCurrent ? prayerColor(for: prayer, in: prayers) : .primary)
                 let isCurrent = highlightsCurrent && !isComparisonBaseline && isCurrentPrayer(prayer)
 
-                VStack(alignment: .leading, spacing: 6) {
+                VStack(alignment: .leading, spacing: 3) {
                     #if os(watchOS)
                     HStack(spacing: 4) {
                         Image(systemName: prayer.image)
@@ -731,21 +731,20 @@ private struct PrayerListRowCard<TrailingContent: View>: View {
                 .padding(.horizontal, -10)
                 #endif
 
-            HStack {
-                HStack {
+            // Spacings are explicit. Nested stacks each contributed their own ~8pt default, which stacked into a
+            // wide gap between the icon and the name, while the row itself had no vertical padding at all.
+            HStack(spacing: 0) {
+                HStack(spacing: 10) {
                     Image(systemName: prayer.image)
                         .font(.title3)
                         .foregroundColor(iconColor)
-                        .frame(width: 32, alignment: .center)
-                        .padding(.trailing, 2)
+                        .frame(width: 28, alignment: .center)
 
-                    VStack(alignment: .leading) {
-                        Text(displayName)
-                            .font(.headline)
-                            .foregroundColor(.primary)
-                    }
+                    Text(displayName)
+                        .font(.headline)
+                        .foregroundColor(.primary)
 
-                    Spacer()
+                    Spacer(minLength: 8)
 
                     Text(prayer.time, style: .time)
                         #if os(iOS)
@@ -761,6 +760,7 @@ private struct PrayerListRowCard<TrailingContent: View>: View {
 
                 trailingContent()
             }
+            .padding(.vertical, 4)
         }
     }
 
@@ -820,7 +820,7 @@ private struct PrayerDetailBlock: View {
             }
 
             // The "other" Asr: when the user follows the Standard (majority) opinion, show the later Hanafi
-            // Asr; when they follow Hanafi, show the earlier Standard Asr — so both timings are visible from
+            // Asr; when they follow Hanafi, show the earlier Standard Asr - so both timings are visible from
             // the Asr detail regardless of the madhab setting.
             if prayer.nameTransliteration == "Asr",
                let otherAsr = settings.otherMadhabAsrTime(onSameDayAs: prayer.time) {

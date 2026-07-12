@@ -97,14 +97,15 @@ struct GuidesView: View {
                 }
 
                 Section(header: Text("PURIFICATION & PRAYER")) {
-                    guideLink("How to Make Wudhu & Ghusl", destination: WudhuView())
+                    guideLink("How to Make Wudhu", destination: WudhuView())
+                    guideLink("How to Make Ghusl", destination: GhuslView())
                     guideLink("How to Pray Jumuah", destination: JumuahView())
                     guideLink("How to Give the Adhan", destination: AdhanOtherView())
                     guideLink("How to Give the Iqamah", destination: IqamahView())
                 }
 
                 Section(header: Text("EID")) {
-                    guideLink("How to Say the Eid Takbir", destination: TakbiratView())
+                    guideLink("How to Pray Eid", destination: TakbiratView())
                 }
             }
             .themedListRowBackground()
@@ -124,8 +125,9 @@ struct GuidesView: View {
 
 // MARK: - How-to guides (practical, step-by-step)
 
-/// The primary sources behind a guide, so nothing here has to be taken on this app's word. Only stable,
-/// checkable destinations: `quran.com` for verses and `sunnah.com` for the hadith collections themselves.
+/// Further practical reading for a guide - links that actually explain HOW to perform the act (IslamQA
+/// answers and the like). Deliberately NOT a bibliography: the Quran verses and hadiths that ground a guide
+/// are quoted inside the guide's own text, where the reader is, not stashed behind reference links.
 struct GuideSourcesSection: View {
     @ObservedObject private var settings = Settings.shared
 
@@ -164,7 +166,7 @@ struct GuideSourcesSection: View {
         } header: {
             Text("SOURCES & FURTHER READING")
         } footer: {
-            Text("Every ruling above traces back to the Quran and the authentic Sunnah. These links open the sources themselves — read them, and ask a qualified scholar about anything specific to your situation.")
+            Text("Every ruling above traces back to the Quran and the authentic Sunnah. These links open the sources themselves - read them, and ask a qualified scholar about anything specific to your situation.")
         }
     }
 }
@@ -176,16 +178,16 @@ struct HowToPrayView: View {
         List {
             Group {
                 Section(header: Text("SUMMARY")) {
-                    Text("In short: prayer (**Salah, صَلَاة**) is performed facing the Qibla after purifying yourself, moving through standing, bowing, and prostrating while reciting the Quran and remembering Allah — praying as the Prophet (peace and blessings be upon him) prayed.")
+                    Text("In short: prayer (**Salah, صَلَاة**) is performed facing the Qibla after purifying yourself, moving through standing, bowing, and prostrating while reciting the Quran and remembering Allah - praying as the Prophet (peace and blessings be upon him) prayed.")
                         .font(.body)
                 }
 
                 Section(header: Text("BEFORE YOU PRAY")) {
-                    Text("1. **Purity (Taharah, طَهَارَة)**: have valid **Wudhu (وُضُوء)** — or Ghusl if required — with a clean body, clothes, and place of prayer.").font(.body)
+                    Text("1. **Purity (Taharah, طَهَارَة)**: have valid **Wudhu (وُضُوء)** - or Ghusl if required - with a clean body, clothes, and place of prayer.").font(.body)
                     Text("2. **Cover the Awrah (عَورَة)**: men from the navel to the knee at least; women cover everything except the face and hands.").font(.body)
                     Text("3. **Face the Qibla (قِبلَة)**: the direction of the Kaaba in Makkah.").font(.body)
-                    Text("4. **Correct time**: each prayer has its own window — Fajr, Dhuhr, Asr, Maghrib, and Isha.").font(.body)
-                    Text("5. **Intention (Niyyah, نِيَّة)**: intend the specific prayer in the heart — it is not spoken aloud.").font(.body)
+                    Text("4. **Correct time**: each prayer has its own window - Fajr, Dhuhr, Asr, Maghrib, and Isha.").font(.body)
+                    Text("5. **Intention (Niyyah, نِيَّة)**: intend the specific prayer in the heart - it is not spoken aloud.").font(.body)
                 }
 
                 Section(header: Text("NUMBER OF UNITS (RAKAH)")) {
@@ -198,26 +200,71 @@ struct HowToPrayView: View {
                     Text("“Pray as you have seen me praying” (Sahih al-Bukhari 631).")
                         .font(.title3).foregroundColor(settings.accentColor.color.opacity(0.85))
                     Text("1. **Takbir (تَكبِير)**: raise the hands and say “Allahu Akbar,” then place the right hand over the left upon the chest.").font(.body)
-                    Text("2. **Recitation**: say the opening supplication, then recite Surah **Al-Fatiha (الفَاتِحَة)** — required in every rak'ah — followed by another passage of the Quran in the first two rak'ah.").font(.body)
+                    Text("2. **Recitation**: say the opening supplication, then recite Surah **Al-Fatiha (الفَاتِحَة)** - required in every rak'ah - followed by another passage of the Quran in the first two rak'ah.").font(.body)
                     Text("3. **Ruku (رُكُوع)**: bow with a straight back, hands on the knees, saying “Subhana Rabbi al-Adheem” three times.").font(.body)
                     Text("4. **Rising (I'tidal)**: rise saying “Sami'a Allahu liman hamidah,” then, standing, “Rabbana wa laka al-hamd.”").font(.body)
-                    Text("5. **Sujud (سُجُود)**: prostrate on seven parts — the forehead and nose, both palms, both knees, and the toes — saying “Subhana Rabbi al-A'la” three times.").font(.body)
-                    Text("6. **Sit** and say “Rabbi ighfir li,” then make a second **Sujud** the same way. This completes one rak'ah — stand for the next.").font(.body)
+                    Text("5. **Sujud (سُجُود)**: prostrate on seven parts - the forehead and nose, both palms, both knees, and the toes - saying “Subhana Rabbi al-A'la” three times.").font(.body)
+                    Text("6. **Sit** and say “Rabbi ighfir li,” then make a second **Sujud** the same way. This completes one rak'ah - stand for the next.").font(.body)
                     Text("7. **Tashahhud (تَشَهُّد)**: after every two rak'ah, sit and recite the tashahhud; in the final sitting add the prayers upon the Prophet (peace and blessings be upon him) and supplication.").font(.body)
                     Text("8. **Taslim (تَسلِيم)**: end the prayer by turning the face to the right, then the left, saying each time “As-salamu alaykum wa rahmatullah.”").font(.body)
                 }
 
+                Section(header: Text("THE COMMAND TO PRAY")) {
+                    Text("Allah (Glorified and Exalted be He) says:")
+                        .font(.body)
+                    Text("“And establish prayer and give zakah and bow with those who bow” (Quran 2:43).")
+                        .font(.title3)
+                        .foregroundColor(settings.accentColor.color)
+
+                    Text("“Indeed, prayer has been decreed upon the believers a decree of specified times” (Quran 4:103).")
+                        .font(.title3)
+                        .foregroundColor(settings.accentColor.color)
+
+                    Text("“Maintain with care the [obligatory] prayers and [in particular] the middle prayer and stand before Allah, devoutly obedient” (Quran 2:238).")
+                        .font(.title3)
+                        .foregroundColor(settings.accentColor.color)
+
+                    Text("“Indeed, prayer prohibits immorality and wrongdoing, and the remembrance of Allah is greater” (Quran 29:45).")
+                        .font(.title3)
+                        .foregroundColor(settings.accentColor.color)
+                }
+
+                Section(header: Text("ITS PLACE AND ITS WEIGHT")) {
+                    Text("The prayer is the first thing a person will be asked about. The Prophet (peace and blessings be upon him) said:")
+                        .font(.body)
+                    Text("“The first thing for which a person will be brought to account on the Day of Resurrection is his prayer. If it is sound, he will have prospered and succeeded; and if it is unsound, he will have failed and lost” (Sunan al-Tirmidhi 413).")
+                        .font(.title3)
+                        .foregroundColor(settings.accentColor.color.opacity(0.85))
+
+                    Text("It is the line between belief and disbelief:")
+                        .font(.body)
+                    Text("“Between a man and shirk and kufr is the abandonment of prayer” (Sahih Muslim 82).")
+                        .font(.title3)
+                        .foregroundColor(settings.accentColor.color.opacity(0.85))
+
+                    Text("And it washes a person clean:")
+                        .font(.body)
+                    Text("“If there was a river at the door of any of you, and he bathed in it five times a day, would any dirt remain on him? They said: No dirt would remain on him. He said: That is the example of the five daily prayers; by them Allah wipes away sins” (Sahih al-Bukhari 528, Sahih Muslim 667).")
+                        .font(.title3)
+                        .foregroundColor(settings.accentColor.color.opacity(0.85))
+
+                    Text("Praying in congregation multiplies it further:")
+                        .font(.body)
+                    Text("“Prayer in congregation is twenty-seven times superior to the prayer offered by a person alone” (Sahih al-Bukhari 645, Sahih Muslim 650).")
+                        .font(.title3)
+                        .foregroundColor(settings.accentColor.color.opacity(0.85))
+
+                    Text("And its calm is a mercy. The Prophet (peace and blessings be upon him) would say to Bilal: “Call the prayer, O Bilal, and give us comfort by it” (Sunan Abi Dawud 4985).")
+                        .font(.body)
+                }
+
                 Section(header: Text("IN SUMMARY")) {
-                    Text("Purify yourself, face the Qibla, and pray with presence of heart — Takbir, Fatiha, Ruku, Sujud, Tashahhud, and Taslim — exactly as the Prophet (peace and blessings be upon him) taught.")
+                    Text("Purify yourself, face the Qibla, and pray with presence of heart - Takbir, Fatiha, Ruku, Sujud, Tashahhud, and Taslim - exactly as the Prophet (peace and blessings be upon him) taught.")
                         .font(.body)
                 }
 
                 GuideSourcesSection(sources: [
                     (title: "How to Pray: Description of the Prophet's Prayer", subtitle: "Step-by-step guide, IslamQA", url: "https://islamqa.info/en/answers/13340"),
-                    (title: "Sahih al-Bukhari - Book of Prayer", subtitle: "The Prophet's prayer, narrated in full", url: "https://sunnah.com/bukhari/10"),
-                    (title: "Sahih Muslim - Book of Prayer", subtitle: "Takbir, recitation, ruku, sujud and taslim", url: "https://sunnah.com/muslim/4"),
-                    (title: "Quran 2:238", subtitle: "Guard the prayers, and the middle prayer", url: "https://quran.com/2/238"),
-                    (title: "Quran 1 - Surah al-Fatihah", subtitle: "Recited in every rak'ah", url: "https://quran.com/1"),
                 ])
             }
             .themedListRowBackground()
@@ -234,7 +281,7 @@ struct HowToFastView: View {
         List {
             Group {
                 Section(header: Text("SUMMARY")) {
-                    Text("In short: to fast (**Sawm, صَوم**) is to abstain from food, drink, and intimacy from dawn (**Fajr**) to sunset (**Maghrib**) with the intention of seeking Allah's pleasure — especially in Ramadan.")
+                    Text("In short: to fast (**Sawm, صَوم**) is to abstain from food, drink, and intimacy from dawn (**Fajr**) to sunset (**Maghrib**) with the intention of seeking Allah's pleasure - especially in Ramadan.")
                         .font(.body)
                 }
 
@@ -258,12 +305,12 @@ struct HowToFastView: View {
                 }
 
                 Section(header: Text("4. BREAK THE FAST AT MAGHRIB")) {
-                    Text("Break the fast (**Iftar, إِفطَار**) as soon as the sun sets, hastening it as the Sunnah — traditionally with fresh or dried dates and water, then supplicate, for the fasting person's dua at Iftar is answered.")
+                    Text("Break the fast (**Iftar, إِفطَار**) as soon as the sun sets, hastening it as the Sunnah - traditionally with fresh or dried dates and water, then supplicate, for the fasting person's dua at Iftar is answered.")
                         .font(.body)
                 }
 
                 Section(header: Text("WHAT INVALIDATES THE FAST")) {
-                    Text("Deliberately eating or drinking, intentional intimacy, and the onset of menstruation or postpartum bleeding break the fast. Eating or drinking by genuine forgetfulness does not — one simply continues fasting.")
+                    Text("Deliberately eating or drinking, intentional intimacy, and the onset of menstruation or postpartum bleeding break the fast. Eating or drinking by genuine forgetfulness does not - one simply continues fasting.")
                         .font(.body)
                 }
 
@@ -273,15 +320,36 @@ struct HowToFastView: View {
                 }
 
                 Section(header: Text("IN SUMMARY")) {
-                    Text("Intend the fast, take Suhoor, abstain from dawn to sunset while guarding your character, then hasten to break the fast at Maghrib — turning the whole day into worship and gratitude.")
+                    Text("Intend the fast, take Suhoor, abstain from dawn to sunset while guarding your character, then hasten to break the fast at Maghrib - turning the whole day into worship and gratitude.")
+                        .font(.body)
+                }
+
+                Section(header: Text("WHY WE FAST")) {
+                    Text("Allah (Glorified and Exalted be He) says:")
+                        .font(.body)
+                    Text("“O you who have believed, decreed upon you is fasting as it was decreed upon those before you, that you may become righteous” (Quran 2:183).")
+                        .font(.title3)
+                        .foregroundColor(settings.accentColor.color)
+                    Text("“The month of Ramadan [is that] in which was revealed the Quran, a guidance for the people and clear proofs of guidance and criterion” (Quran 2:185).")
+                        .font(.title3)
+                        .foregroundColor(settings.accentColor.color)
+                    Text("The Prophet (peace and blessings be upon him) said:")
+                        .font(.body)
+                    Text("“Allah said: Every deed of the son of Adam is for him, except fasting; it is for Me, and I shall reward for it” (Sahih al-Bukhari 1904, Sahih Muslim 1151).")
+                        .font(.title3)
+                        .foregroundColor(settings.accentColor.color.opacity(0.85))
+                    Text("“Whoever fasts Ramadan out of faith and seeking reward, his previous sins will be forgiven” (Sahih al-Bukhari 38, Sahih Muslim 760).")
+                        .font(.title3)
+                        .foregroundColor(settings.accentColor.color.opacity(0.85))
+                    Text("“There is a gate in Paradise called Ar-Rayyan, through which those who fast will enter on the Day of Resurrection, and no one but they will enter it” (Sahih al-Bukhari 1896).")
+                        .font(.title3)
+                        .foregroundColor(settings.accentColor.color.opacity(0.85))
+                    Text("And fasting is not of the stomach alone. He said: “Whoever does not give up false speech and acting upon it, Allah has no need of him giving up his food and drink” (Sahih al-Bukhari 1903).")
                         .font(.body)
                 }
 
                 GuideSourcesSection(sources: [
                     (title: "Rulings on Fasting", subtitle: "How to fast, and what breaks it, IslamQA", url: "https://islamqa.info/en/categories/topics/78/fasting"),
-                    (title: "Quran 2:183-187", subtitle: "The verses of fasting: who, when, and why", url: "https://quran.com/2/183-187"),
-                    (title: "Sahih al-Bukhari - Book of Fasting", subtitle: "Suhoor, iftar, and what breaks the fast", url: "https://sunnah.com/bukhari/30"),
-                    (title: "Sahih Muslim - Book of Fasting", subtitle: "The Prophet's practice in Ramadan", url: "https://sunnah.com/muslim/13"),
                 ])
             }
             .themedListRowBackground()
@@ -303,12 +371,12 @@ struct HowToZakahView: View {
                 }
 
                 Section(header: Text("1. CHECK IF YOU MUST PAY")) {
-                    Text("Zakah is due on a Muslim whose zakatable wealth reaches the **Nisab (نِصَاب)** — the minimum threshold, equal to about **85 grams of gold** or **595 grams of silver** — and has been held for one full lunar (Hijri) year (**Hawl, حَول**).")
+                    Text("Zakah is due on a Muslim whose zakatable wealth reaches the **Nisab (نِصَاب)** - the minimum threshold, equal to about **85 grams of gold** or **595 grams of silver** - and has been held for one full lunar (Hijri) year (**Hawl, حَول**).")
                         .font(.body)
                 }
 
                 Section(header: Text("2. TOTAL YOUR ZAKATABLE WEALTH")) {
-                    Text("Include cash and savings, gold and silver, money owed to you that you expect back, business merchandise, and investments held for gain. Personal items — your home, car, and everyday belongings — are not counted.")
+                    Text("Include cash and savings, gold and silver, money owed to you that you expect back, business merchandise, and investments held for gain. Personal items - your home, car, and everyday belongings - are not counted.")
                         .font(.body)
                 }
 
@@ -324,15 +392,35 @@ struct HowToZakahView: View {
                 }
 
                 Section(header: Text("IN SUMMARY")) {
-                    Text("Once your wealth reaches the Nisab and a lunar year passes, give 2.5% of it to the deserving — purifying your wealth, helping the needy, and fulfilling a pillar of Islam.")
+                    Text("Once your wealth reaches the Nisab and a lunar year passes, give 2.5% of it to the deserving - purifying your wealth, helping the needy, and fulfilling a pillar of Islam.")
+                        .font(.body)
+                }
+
+                Section(header: Text("WHY WE GIVE ZAKAH")) {
+                    Text("Allah (Glorified and Exalted be He) says:")
+                        .font(.body)
+                    Text("“Take from their wealth a charity by which you purify them and cause them increase, and invoke [Allah's blessings] upon them” (Quran 9:103).")
+                        .font(.title3)
+                        .foregroundColor(settings.accentColor.color)
+                    Text("“And establish prayer and give zakah, and whatever good you put forward for yourselves, you will find it with Allah” (Quran 2:110).")
+                        .font(.title3)
+                        .foregroundColor(settings.accentColor.color)
+                    Text("It is not a favour to the poor. It is their right in your wealth, and withholding it is a warning:")
+                        .font(.body)
+                    Text("“And let not those who [greedily] withhold what Allah has given them of His bounty ever think that it is better for them. Rather, it is worse for them. Their necks will be encircled by what they withheld on the Day of Resurrection” (Quran 3:180).")
+                        .font(.title3)
+                        .foregroundColor(settings.accentColor.color)
+                    Text("When the Prophet (peace and blessings be upon him) sent Mu'adh to Yemen, he told him:")
+                        .font(.body)
+                    Text("“Teach them that Allah has enjoined upon them a charity to be taken from their rich and given to their poor” (Sahih al-Bukhari 1395, Sahih Muslim 19).")
+                        .font(.title3)
+                        .foregroundColor(settings.accentColor.color.opacity(0.85))
+                    Text("And He named exactly who may receive it: “Zakah expenditures are only for the poor and for the needy and for those employed to collect [zakah] and for bringing hearts together [for Islam] and for freeing captives [or slaves] and for those in debt and for the cause of Allah and for the [stranded] traveler” (Quran 9:60).")
                         .font(.body)
                 }
 
                 GuideSourcesSection(sources: [
                     (title: "How to Calculate and Give Zakah", subtitle: "Nisab, rates, and recipients, IslamQA", url: "https://islamqa.info/en/categories/topics/79/zakah"),
-                    (title: "Quran 9:60", subtitle: "The eight categories zakah may be given to", url: "https://quran.com/9/60"),
-                    (title: "Sahih al-Bukhari - Book of Zakat", subtitle: "The nisab, the rates, and what is exempt", url: "https://sunnah.com/bukhari/24"),
-                    (title: "Sahih Muslim - Book of Zakat", subtitle: "Zakat al-Fitr and the wealth zakah is due on", url: "https://sunnah.com/muslim/12"),
                 ])
             }
             .themedListRowBackground()
@@ -349,7 +437,7 @@ struct HowToHajjView: View {
         List {
             Group {
                 Section(header: Text("SUMMARY")) {
-                    Text("In short: **Hajj (حَجّ)** is the pilgrimage to Makkah performed once in a lifetime by those able, over the days of **Dhul-Hijjah** — entering Ihram, standing at Arafah, and completing the rites the Prophet (peace and blessings be upon him) taught.")
+                    Text("In short: **Hajj (حَجّ)** is the pilgrimage to Makkah performed once in a lifetime by those able, over the days of **Dhul-Hijjah** - entering Ihram, standing at Arafah, and completing the rites the Prophet (peace and blessings be upon him) taught.")
                         .font(.body)
                 }
 
@@ -363,24 +451,24 @@ struct HowToHajjView: View {
                         .font(.body)
                 }
 
-                Section(header: Text("2. DAY 8 — MINA")) {
+                Section(header: Text("2. DAY 8 - MINA")) {
                     Text("Travel to **Mina (مِنَى)** and pray Dhuhr, Asr, Maghrib, Isha, and Fajr there, each at its time (the four-unit prayers shortened to two).")
                         .font(.body)
                 }
 
-                Section(header: Text("3. DAY 9 — ARAFAH")) {
-                    Text("After sunrise proceed to **Arafah (عَرَفَة)** and stand there in supplication until sunset — this standing (**Wuquf**) is the essence of Hajj. Dhuhr and Asr are combined and shortened. The Prophet (peace and blessings be upon him) said:").font(.body)
+                Section(header: Text("3. DAY 9 - ARAFAH")) {
+                    Text("After sunrise proceed to **Arafah (عَرَفَة)** and stand there in supplication until sunset - this standing (**Wuquf**) is the essence of Hajj. Dhuhr and Asr are combined and shortened. The Prophet (peace and blessings be upon him) said:").font(.body)
                     Text("“Hajj is Arafah” (Sunan al-Tirmidhi 889).")
                         .font(.title3).foregroundColor(settings.accentColor.color.opacity(0.85))
                     Text("After sunset, move to **Muzdalifah (مُزدَلِفَة)**, combine Maghrib and Isha, rest for the night, and gather pebbles.").font(.body)
                 }
 
-                Section(header: Text("4. DAY 10 — EID (YAWM AN-NAHR)")) {
+                Section(header: Text("4. DAY 10 - EID (YAWM AN-NAHR)")) {
                     Text("Stone the large pillar (**Jamrat al-Aqabah**) with seven pebbles, offer the sacrifice (**Hady/Qurbani, قُربَان**), shave or trim the hair, then perform **Tawaf al-Ifadah** around the Kaaba and **Sa'i (سَعي)** between Safa and Marwah. With this the pilgrim exits Ihram.")
                         .font(.body)
                 }
 
-                Section(header: Text("5. DAYS 11–13 — TASHREEQ")) {
+                Section(header: Text("5. DAYS 11–13 - TASHREEQ")) {
                     Text("Stay in Mina and stone the three pillars (**Jamarat**) each afternoon. A pilgrim may leave after the 12th if he departs before sunset, otherwise he completes the 13th.")
                         .font(.body)
                 }
@@ -391,16 +479,12 @@ struct HowToHajjView: View {
                 }
 
                 Section(header: Text("IN SUMMARY")) {
-                    Text("Enter Ihram at the Miqat, stand at Arafah, spend the night at Muzdalifah, then on Eid stone, sacrifice, shave, and perform Tawaf and Sa'i — completing the days of Mina and a farewell Tawaf, returning cleansed of sin.")
+                    Text("Enter Ihram at the Miqat, stand at Arafah, spend the night at Muzdalifah, then on Eid stone, sacrifice, shave, and perform Tawaf and Sa'i - completing the days of Mina and a farewell Tawaf, returning cleansed of sin.")
                         .font(.body)
                 }
 
                 GuideSourcesSection(sources: [
                     (title: "How to Perform Hajj: Description of Hajj", subtitle: "Every rite in order, IslamQA", url: "https://islamqa.info/en/answers/31822/description-of-hajj"),
-                    (title: "Quran 2:196-203", subtitle: "The rites of Hajj, from ihram to the days of Mina", url: "https://quran.com/2/196-203"),
-                    (title: "Quran 3:97", subtitle: "Hajj is a duty owed to Allah by those able to find a way", url: "https://quran.com/3/97"),
-                    (title: "Sahih Muslim - Book of Hajj", subtitle: "Jabir's narration of the Farewell Hajj, step by step", url: "https://sunnah.com/muslim/15"),
-                    (title: "Sahih al-Bukhari - Book of Hajj", subtitle: "The rites as the Prophet performed them", url: "https://sunnah.com/bukhari/25"),
                 ])
             }
             .themedListRowBackground()
@@ -417,7 +501,7 @@ struct HowToUmrahView: View {
         List {
             Group {
                 Section(header: Text("SUMMARY")) {
-                    Text("In short: **Umrah (عُمرَة)** — the “lesser pilgrimage,” which may be done at any time of year — is Ihram, Tawaf around the Kaaba, Sa'i between Safa and Marwah, and shaving or trimming the hair.")
+                    Text("In short: **Umrah (عُمرَة)** - the “lesser pilgrimage,” which may be done at any time of year - is Ihram, Tawaf around the Kaaba, Sa'i between Safa and Marwah, and shaving or trimming the hair.")
                         .font(.body)
                 }
 
@@ -432,7 +516,7 @@ struct HowToUmrahView: View {
                 }
 
                 Section(header: Text("3. SA'I")) {
-                    Text("Walk seven times between the hills of **Safa (الصَّفَا)** and **Marwah (المَروَة)** (**Sa'i, سَعي**), starting at Safa and ending at Marwah, remembering Allah and supplicating — as **Hajar** (may Allah be pleased with her) once searched there for water.")
+                    Text("Walk seven times between the hills of **Safa (الصَّفَا)** and **Marwah (المَروَة)** (**Sa'i, سَعي**), starting at Safa and ending at Marwah, remembering Allah and supplicating - as **Hajar** (may Allah be pleased with her) once searched there for water.")
                         .font(.body)
                 }
 
@@ -442,15 +526,30 @@ struct HowToUmrahView: View {
                 }
 
                 Section(header: Text("IN SUMMARY")) {
-                    Text("Enter Ihram at the Miqat, perform Tawaf around the Kaaba, make Sa'i between Safa and Marwah, and shave or trim — a complete Umrah that may be done any time of the year.")
+                    Text("Enter Ihram at the Miqat, perform Tawaf around the Kaaba, make Sa'i between Safa and Marwah, and shave or trim - a complete Umrah that may be done any time of the year.")
+                        .font(.body)
+                }
+
+                Section(header: Text("THE VIRTUE OF UMRAH")) {
+                    Text("Allah (Glorified and Exalted be He) says:")
+                        .font(.body)
+                    Text("“And complete the Hajj and Umrah for Allah” (Quran 2:196).")
+                        .font(.title3)
+                        .foregroundColor(settings.accentColor.color)
+                    Text("The Prophet (peace and blessings be upon him) said:")
+                        .font(.body)
+                    Text("“Umrah to Umrah is an expiation for whatever comes between them, and the accepted Hajj has no reward but Paradise” (Sahih al-Bukhari 1773, Sahih Muslim 1349).")
+                        .font(.title3)
+                        .foregroundColor(settings.accentColor.color.opacity(0.85))
+                    Text("“Umrah in Ramadan is equivalent to Hajj” (Sahih al-Bukhari 1782, Sahih Muslim 1256).")
+                        .font(.title3)
+                        .foregroundColor(settings.accentColor.color.opacity(0.85))
+                    Text("And of the journey itself he said: “Perform Hajj and Umrah consecutively, for they remove poverty and sin as the bellows removes impurity from iron, gold and silver” (Sunan al-Tirmidhi 810).")
                         .font(.body)
                 }
 
                 GuideSourcesSection(sources: [
                     (title: "How to Perform Umrah", subtitle: "Ihram, tawaf, sa'i, and cutting the hair, IslamQA", url: "https://islamqa.info/en/answers/154979"),
-                    (title: "Quran 2:196", subtitle: "Complete the Hajj and the Umrah for Allah", url: "https://quran.com/2/196"),
-                    (title: "Sahih al-Bukhari - Book of Umrah", subtitle: "Ihram, tawaf, sa'i, and shortening the hair", url: "https://sunnah.com/bukhari/26"),
-                    (title: "Sahih Muslim - Book of Hajj", subtitle: "Includes the Prophet's Umrah", url: "https://sunnah.com/muslim/15"),
                 ])
             }
             .themedListRowBackground()
@@ -474,17 +573,20 @@ struct GodPillarView: View {
                 }
 
                 Section(header: Text("OVERVIEW")) {
-                    Text("The question of God's existence is the most important inquiry a person can make. It is the foundation of all meaning, morality, purpose, and accountability. If God exists, then life has objective direction and responsibility. If He does not, then everything—good and evil, justice and injustice, purpose and identity—becomes subjective and ultimately meaningless. Therefore, it is essential to examine this question through reason, evidence, and rational thought.")
+                    Text("The question of God's existence is the most important inquiry a person can make. It is the foundation of all meaning, morality, purpose, and accountability. If God exists, then life has objective direction and responsibility. If He does not, then everything - good and evil, justice and injustice, purpose and identity - becomes subjective and ultimately meaningless. Therefore, it is essential to examine this question through reason, evidence, and rational thought.")
                         .font(.body)
                 }
 
                 Section(header: Text("THE DOMINO EFFECT FRAMEWORK")) {
                     VStack(alignment: .leading, spacing: 6) {
-                        Text("The most honest way to approach truth is through a step-by-step method—what can be called the Domino Effect. Each answer leads logically to the next:")
+                        Text("The most honest way to approach truth is through a step-by-step method - what can be called the Domino Effect. Each answer leads logically to the next, and no step may be skipped:")
                             .font(.body)
                         Group {
-                            Text("• Does God exist?")
-                            Text("• If yes, is He still involved with creation (theism), or did He create and withdraw (deism)?")
+                            Text("• Does a higher power exist at all: something beyond the universe that brought it into being? This comes first. To ask whether God exists is already to assume a great deal about what that power is like.")
+                            Text("• If a higher power exists, is it intelligent, or is it blind and random? A random, unthinking cause cannot account for order, information, or purpose.")
+                            Text("• If it is intelligent, is it powerful or weak? A weak cause cannot sustain a universe it did not have the power to make.")
+                            Text("• An intelligent, powerful, necessary cause is what is meant by God. Only now is the word earned.")
+                            Text("• If God exists, is He still involved with creation (theism), or did He create and withdraw (deism)?")
                             Text("• If He is involved, did He send revelation to guide humanity?")
                             Text("• If revelation exists, then one religion must be objectively true.")
                             Text("• If there is one true religion, is it monotheistic or polytheistic?")
@@ -500,7 +602,7 @@ struct GodPillarView: View {
                         Text("While Christianity asserts universality, it contains internal contradictions and historical issues:")
                             .font(.body)
                         Group {
-                            Text("• The Trinity violates pure monotheism by making God three persons in one essence—an idea that even many Christian scholars admit is a mystery, not a rational doctrine.")
+                            Text("• The Trinity violates pure monotheism by making God three persons in one essence - an idea that even many Christian scholars admit is a mystery, not a rational doctrine.")
                             Text("• The Bible is not preserved in its original language or form. It is a compilation of human writings over centuries with known alterations.")
                             Text("• Christianity does not offer a consistent position on salvation, works, and belief.")
                         }
@@ -508,7 +610,7 @@ struct GodPillarView: View {
                             .font(.body)
                         Group {
                             Text("• Affirms absolute monotheism, **Tawhid (تَوحِيد)**, with no partners, no intermediaries, and no confusion.")
-                            Text("• Preserves the Quran exactly as it was revealed—verbatim, letter for letter, sound for sound, in its original Arabic.")
+                            Text("• Preserves the Quran exactly as it was revealed - verbatim, letter for letter, sound for sound, in its original Arabic.")
                             Text("• Welcomes all of humanity, regardless of ethnicity, race, gender, or background.")
                             Text("• Is the only universal, unambiguous, monotheistic religion with an intellectually sound and preserved foundation.")
                         }
@@ -524,7 +626,7 @@ struct GodPillarView: View {
                     Text("“And the heaven We constructed with strength, and indeed, We are its expander” (Quran 51:47).")
                         .foregroundColor(settings.accentColor.color)
                         .font(.title3)
-                    Text("The existence of anything—matter, time, space—requires an uncaused, necessary being beyond the system: Allah (Glorified and Exalted be He).")
+                    Text("The existence of anything - matter, time, space - requires an uncaused, necessary being beyond the system: Allah (Glorified and Exalted be He).")
                         .font(.body)
                 }
 
@@ -535,7 +637,7 @@ struct GodPillarView: View {
                         Group {
                             Text("• How did non-living matter suddenly become alive?")
                             Text("• How did a cell, containing instructions (DNA), copy itself?")
-                            Text("• A single strand of DNA contains more information than any supercomputer—where did this information come from?")
+                            Text("• A single strand of DNA contains more information than any supercomputer - where did this information come from?")
                         }
                         Text("Scientists admit: “We don’t know.” But nothing in our experience tells us that complex, coded systems arise without a mind. The most rational explanation is that life was created intentionally, not randomly.")
                             .font(.body)
@@ -551,17 +653,17 @@ struct GodPillarView: View {
                 }
 
                 Section(header: Text("THE FINE-TUNING OF THE UNIVERSE")) {
-                    Text("Gravity, electromagnetism, the strong and weak nuclear forces—all must be precisely balanced. If any were off by even a tiny fraction, life could not exist. This is not randomness. It is deliberate fine-tuning. Even atheists like Stephen Hawking acknowledge this astonishing precision. The question is: Who fine-tuned it?")
+                    Text("Gravity, electromagnetism, the strong and weak nuclear forces - all must be precisely balanced. If any were off by even a tiny fraction, life could not exist. This is not randomness. It is deliberate fine-tuning. Even atheists like Stephen Hawking acknowledge this astonishing precision. The question is: Who fine-tuned it?")
                         .font(.body)
                 }
 
                 Section(header: Text("THE MORAL ARGUMENT")) {
-                    Text("Every human being knows certain things are wrong—murder, rape, lying, oppression. But if humans are just chemical accidents, who decides what's right or wrong? Evolution can explain instincts, not moral obligations. The existence of objective morality points to a Moral Lawgiver—someone who defines justice, goodness, and evil: Allah (Glorified and Exalted be He).")
+                    Text("Every human being knows certain things are wrong - murder, rape, lying, oppression. But if humans are just chemical accidents, who decides what's right or wrong? Evolution can explain instincts, not moral obligations. The existence of objective morality points to a Moral Lawgiver - someone who defines justice, goodness, and evil: Allah (Glorified and Exalted be He).")
                         .font(.body)
                 }
 
                 Section(header: Text("ARGUMENT FROM BEAUTY, ORDER, AND DESIGN")) {
-                    Text("Look at the trees, stars, animals, oceans. Look at the symmetry of flowers and the precision of ecosystems. Human creation—skyscrapers, smartphones, aircraft—demonstrates purposeful design. Just as buildings imply builders, the cosmos implies a Creator.")
+                    Text("Look at the trees, stars, animals, oceans. Look at the symmetry of flowers and the precision of ecosystems. Human creation - skyscrapers, smartphones, aircraft - demonstrates purposeful design. Just as buildings imply builders, the cosmos implies a Creator.")
                         .font(.body)
                     Text("“Or were they created by nothing, or were they the creators of themselves? Or did they create the heavens and the earth? Rather, they are not certain” (Quran 52:35–36).")
                         .foregroundColor(settings.accentColor.color)
@@ -573,7 +675,7 @@ struct GodPillarView: View {
                         Text("When choosing a religion, one must not follow emotions, culture, or dreams. The correct belief system should be based on logic, objective evidence, and sound reasoning.")
                             .font(.body)
                         Group {
-                            Text("• Subjective experiences—such as dreams, visions, or personal feelings—may be meaningful, but they are not reliable indicators of truth.")
+                            Text("• Subjective experiences - such as dreams, visions, or personal feelings - may be meaningful, but they are not reliable indicators of truth.")
                             Text("• Anyone from any religion can claim such experiences.")
                             Text("• Truth must be verifiable, logical, and universally applicable.")
                         }
@@ -586,9 +688,9 @@ struct GodPillarView: View {
                 }
 
                 Section(header: Text("FINAL REFLECTION")) {
-                    Text("Belief in God is not blind faith—it is the most rational and coherent explanation for existence, morality, consciousness, and design. Every human is born upon the **Fitrah (فِطرَة)**—the natural disposition to believe in one Creator. However, ego, society, and culture often obscure this truth. Islam calls humanity back to this original clarity.")
+                    Text("Belief in God is not blind faith - it is the most rational and coherent explanation for existence, morality, consciousness, and design. Every human is born upon the **Fitrah (فِطرَة)** - the natural disposition to believe in one Creator. However, ego, society, and culture often obscure this truth. Islam calls humanity back to this original clarity.")
                         .font(.body)
-                    Text("“And do not pursue that of which you have no knowledge. Indeed, the hearing, the sight and the heart — about all those [one] will be questioned” (Quran 17:36).")
+                    Text("“And do not pursue that of which you have no knowledge. Indeed, the hearing, the sight and the heart - about all those [one] will be questioned” (Quran 17:36).")
                         .foregroundColor(settings.accentColor.color)
                         .font(.title3)
                 }
@@ -632,7 +734,7 @@ struct IslamPillarView: View {
 
 
                 Section(header: Text("OVERVIEW")) {
-                    Text("**Islam (إِسلَام)** comes from the Arabic root **s-l-m (س ل م)**, meaning “submission,” “safety,” and “peace”: it is a complete way of life built on the worship of Allah (Glorified and Exalted be He) alone. Muslims believe the Quran, revealed to Prophet Muhammad (peace and blessings be upon him) over 23 years through the angel **Jibril (جِبرِيل)** (Gabriel), is the divine word of Allah—a comprehensive guide to belief, morality, and law.")
+                    Text("**Islam (إِسلَام)** comes from the Arabic root **s-l-m (س ل م)**, meaning “submission,” “safety,” and “peace”: it is a complete way of life built on the worship of Allah (Glorified and Exalted be He) alone. The Quran, revealed to Prophet Muhammad (peace and blessings be upon him) over 23 years through the angel **Jibril (جِبرِيل)** (Gabriel), is the divine word of Allah - a comprehensive guide to belief, morality, and law.")
                         .font(.body)
 
                     Text("The essence of Islam is **Tawhid (تَوحِيد)**, absolute monotheism: there is no deity worthy of worship except Allah. Allah says in the Quran:").font(.body)
@@ -657,36 +759,36 @@ struct IslamPillarView: View {
                         .foregroundColor(settings.accentColor.color.opacity(0.85))
 
                     Text("The Five Pillars are:").font(.body)
-                    Text("1. **Shahadah (شَهَادَة)**: the testimony of faith—“There is no god but Allah, and Muhammad is His Messenger.” It is the foundation of a Muslim's faith.")
-                    Text("2. **Salah (صَلَاة)**: praying five times a day at prescribed times, a direct link between the believer and Allah.")
-                    Text("3. **Zakah (زَكَاة)**: giving a portion of wealth to the needy (typically 2.5% of yearly savings), purifying wealth and fostering social justice.")
-                    Text("4. **Sawm (صَوم)**: fasting the month of **Ramadan (رَمَضَان)**, abstaining from food, drink, and sinful behavior from dawn to sunset, as spiritual reflection and self-discipline.")
-                    Text("5. **Hajj (حَجّ)**: pilgrimage to Makkah, a once-in-a-lifetime obligation for those physically and financially able, symbolizing unity and submission to Allah.")
+                    Text("1. **Shahadah (شَهَادَة)**, from the root **sh-h-d (ش ه د)**, to witness or testify: the testimony of faith - “There is no god but Allah, and Muhammad is His Messenger.” You are not reporting an opinion; you are bearing witness. It is the foundation of a Muslim's faith.")
+                    Text("2. **Salah (صَلَاة)**, from the root **s-l-w (ص ل و)**, to supplicate and to draw near: praying five times a day at prescribed times, a direct link between the believer and Allah.")
+                    Text("3. **Zakah (زَكَاة)**, from the root **z-k-w (ز ك و)**, to purify and to grow: giving a portion of wealth to the needy (typically 2.5% of yearly savings). The word carries both meanings at once - wealth is purified by giving it away, and it grows by being purified.")
+                    Text("4. **Sawm (صَوم)**, from the root **s-w-m (ص و م)**, to abstain or hold back: fasting the month of **Ramadan (رَمَضَان)**, abstaining from food, drink, and sinful behavior from dawn to sunset, as spiritual reflection and self-discipline.")
+                    Text("5. **Hajj (حَجّ)**, from the root **h-j-j (ح ج ج)**, to set out with purpose toward something: pilgrimage to Makkah, a once-in-a-lifetime obligation for those physically and financially able, symbolizing unity and submission to Allah.")
                 }
 
                 Section(header: Text("THE SIX PILLARS OF IMAN")) {
-                    Text("The Six Pillars of **Iman (إِيمَان)** — from the root **a-m-n (أ م ن)**, meaning faith, trust, and security — are the core beliefs every Muslim must hold. These are based on the Quran and the teachings of Prophet Muhammad (peace and blessings be upon him). Allah says in the Quran:")
+                    Text("The Six Pillars of **Iman (إِيمَان)** - from the root **a-m-n (أ م ن)**, meaning faith, trust, and security - are the core beliefs every Muslim must hold. These are based on the Quran and the teachings of Prophet Muhammad (peace and blessings be upon him). Allah says in the Quran:")
                         .font(.body)
                     Text("“The Messenger has believed in what was revealed to him from his Lord, and [so have] the believers. All of them have believed in Allah, His angels, His books, His messengers, and the Last Day. And they say, ‘We hear and we obey. [We seek] Your forgiveness, our Lord, and to You is the [final] destination.’” (Quran 2:285)")
                         .font(.title3)
                         .foregroundColor(settings.accentColor.color)
 
                     Text("The Prophet Muhammad (peace and blessings be upon him) explained the pillars of Iman when he said:").font(.body)
-                    Text("“[It is] that you affirm your faith in Allah, in His angels, in His Books, in His Messengers, in the Day of Judgment, and you affirm your faith in the Divine Decree (Qadr) about good and evil” (Sahih Muslim 8a).")
+                    Text("“[It is] that you affirm your faith in Allah, in His angels, in His Books, in His Messengers, in the Day of Judgment, and you affirm your faith in the Divine Decree (Qadar) about good and evil” (Sahih Muslim 8a).")
                         .font(.title3)
                         .foregroundColor(settings.accentColor.color.opacity(0.85))
 
                     Text("The Six Pillars of Iman are:").font(.body)
-                    Text("1. **Belief in Allah**: The oneness of Allah, who has no partners or equals.")
-                    Text("2. **Belief in the Angels**: Created beings who serve Allah and carry out His commands, such as Jibril (Gabriel).")
-                    Text("3. **Belief in the Books**: The divine scriptures revealed by Allah, including the Torah, Gospel, Psalms, and the Quran, which is the final and unaltered revelation.")
-                    Text("4. **Belief in the Messengers**: Prophets sent to guide humanity, ending with Prophet Muhammad (peace and blessings be upon him).")
-                    Text("5. **Belief in the Last Day**: The Day of Judgment when all will be held accountable for their deeds.")
-                    Text("6. **Belief in Divine Decree, Qadr (القَدَر)**: that everything, good and bad, happens by Allah’s will and wisdom.")
+                    Text("1. **Belief in Allah**, **Tawhid (تَوحِيد)** from the root **w-h-d (و ح د)**, to make one: the oneness of Allah, who has no partners or equals.")
+                    Text("2. **Belief in the Angels**, **Malaikah (مَلَائِكَة)** from the root **l-a-k (ل أ ك)**, to send with a message: created beings of light who serve Allah and carry out His commands, such as Jibril (Gabriel).")
+                    Text("3. **Belief in the Books**, **Kutub (كُتُب)** from the root **k-t-b (ك ت ب)**, to write or prescribe: the divine scriptures revealed by Allah, including the Torah, Gospel, Psalms, and the Quran, which is the final and unaltered revelation.")
+                    Text("4. **Belief in the Messengers**, **Rusul (رُسُل)** from the root **r-s-l (ر س ل)**, to send: prophets sent to guide humanity, ending with Prophet Muhammad (peace and blessings be upon him).")
+                    Text("5. **Belief in the Last Day**, **Yawm al-Qiyamah (يَوم القِيَامَة)** from the root **q-w-m (ق و م)**, to stand: the Day of Judgment, when all people will stand before Allah and be held accountable for their deeds.")
+                    Text("6. **Belief in Divine Decree, Qadar (القَدَر)**, from the root **q-d-r (ق د ر)**, to measure out or determine: that everything, good and bad, happens by Allah’s will and wisdom, measured out precisely.")
                 }
 
                 Section(header: Text("PROPHETHOOD")) {
-                    Text("Muslims believe that Allah sent prophets to every nation to guide them to worship Him alone. These prophets include Adam, Noah, Abraham, Moses, David, Solomon, Jesus, and many others (peace be upon them all). Allah says in the Quran:")
+                    Text("Allah sent prophets to every nation to guide them to worship Him alone. These prophets include Adam, Noah, Abraham, Moses, David, Solomon, Jesus, and many others (peace be upon them all). Allah says in the Quran:")
                         .font(.body)
                     Text("“We make no distinction between any of His messengers” (Quran 2:285).")
                         .font(.title3)
@@ -706,7 +808,7 @@ struct IslamPillarView: View {
                 }
 
                 Section(header: Text("PREVIOUS SCRIPTURES")) {
-                    Text("Islam acknowledges earlier divine scriptures such as the Torah given to Moses (peace be upon him) and the Gospel given to Jesus (peace be upon him). However, Muslims believe that these scriptures were altered over time, and the current versions of the Bible and Torah are not the original revelations. Allah says in the Quran:")
+                    Text("Islam acknowledges earlier divine scriptures such as the Torah given to Moses (peace be upon him) and the Gospel given to Jesus (peace be upon him). However, these scriptures were altered over time, and the current versions of the Bible and Torah are not the original revelations. Allah says in the Quran:")
                         .font(.body)
                     Text("“So woe to those who write the Book with their own hands, then say, ‘This is from Allah,’ to exchange it for a small price. Woe to them for what their hands have written and woe to them for what they earn” (Quran 2:79).")
                         .font(.title3)
@@ -772,12 +874,12 @@ struct MuslimPillarView: View {
         List {
             Group {
                 Section(header: Text("SUMMARY")) {
-                    Text("In short: a Muslim is one who submits to Allah alone—following the Quran and the Sunnah of Prophet Muhammad (peace and blessings be upon him) as understood by his Companions, his family, and the first righteous generations.")
+                    Text("In short: a Muslim is one who submits to Allah alone - following the Quran and the Sunnah of Prophet Muhammad (peace and blessings be upon him) as understood by his Companions, his family, and the first righteous generations.")
                         .font(.body)
                 }
 
                 Section(header: Text("OVERVIEW")) {
-                    Text("A **Muslim (مُسلِم)** is “one who submits.” The word shares the root **s-l-m (س ل م)** with **Islam (إِسلَام)**—a root carrying the meanings of submission, safety, and peace. A Muslim is therefore someone who surrenders to Allah rather than to his own desires or the passing things of this world, turning instead to the One who created him and knows him best.")
+                    Text("A **Muslim (مُسلِم)** is “one who submits.” The word shares the root **s-l-m (س ل م)** with **Islam (إِسلَام)** - a root carrying the meanings of submission, safety, and peace. A Muslim is therefore someone who surrenders to Allah rather than to his own desires or the passing things of this world, turning instead to the One who created him and knows him best.")
                         .font(.body)
                 }
 
@@ -787,7 +889,7 @@ struct MuslimPillarView: View {
                     Text("“And We have already created man and know what his soul whispers to him, and We are closer to him than his jugular vein” (Quran 50:16).")
                         .font(.title3)
                         .foregroundColor(settings.accentColor.color)
-                    Text("Submission, then, is not to a stranger—it is to the Lord who made us and knows us better than we know ourselves.")
+                    Text("Submission, then, is not to a stranger - it is to the Lord who made us and knows us better than we know ourselves.")
                         .font(.body)
                 }
 
@@ -797,7 +899,7 @@ struct MuslimPillarView: View {
                     Text("“When his Lord said to him, ‘Submit,’ he said, ‘I have submitted [in Islam] to the Lord of the worlds’” (Quran 2:131).")
                         .font(.title3)
                         .foregroundColor(settings.accentColor.color)
-                    Text("Ibrahim was neither a Jew nor a Christian, but a Muslim in the truest sense—devoted to the worship of the one God:")
+                    Text("Ibrahim was neither a Jew nor a Christian, but a Muslim in the truest sense - devoted to the worship of the one God:")
                         .font(.body)
                     Text("“Abraham was neither a Jew nor a Christian, but he was one inclining toward truth, a Muslim [submitting to Allah]. And he was not of the polytheists” (Quran 3:67).")
                         .font(.title3)
@@ -815,7 +917,7 @@ struct MuslimPillarView: View {
                 Section(header: Text("AS THE FIRST GENERATIONS UNDERSTOOD IT")) {
                     Text("The Quran and Sunnah are understood as the first believers understood them: the Companions, **the Sahabah (صَحَابَة)**; the Prophet's household, **the Ahl al-Bayt (أَهل البَيت)**, which includes his wives; and the righteous first three generations, **the Salaf (السَّلَف)**.")
                         .font(.body)
-                    Text("“And the first forerunners among the Muhajireen and the Ansar and those who followed them with good conduct—Allah is pleased with them and they are pleased with Him” (Quran 9:100).")
+                    Text("“And the first forerunners among the Muhajireen and the Ansar and those who followed them with good conduct - Allah is pleased with them and they are pleased with Him” (Quran 9:100).")
                         .font(.title3)
                         .foregroundColor(settings.accentColor.color)
                 }
@@ -840,7 +942,7 @@ struct MuslimPillarView: View {
                 }
 
                 Section(header: Text("IN SUMMARY")) {
-                    Text("A Muslim submits to Allah alone—the One who created and knows us best—by holding to the Quran and the Sunnah upon the understanding of the Companions, the Prophet's family, and the Salaf, joined with all the believers as one brotherhood.")
+                    Text("A Muslim submits to Allah alone - the One who created and knows us best - by holding to the Quran and the Sunnah upon the understanding of the Companions, the Prophet's family, and the Salaf, joined with all the believers as one brotherhood.")
                         .font(.body)
                 }
             }
@@ -858,13 +960,13 @@ struct AllahPillarView: View {
         List {
             Group {
                 Section(header: Text("SUMMARY")) {
-                    Text("In short: Allah is the one true God—the sole Creator and Sustainer of all that exists, without partner or equal, known by His Most Beautiful Names and perfect attributes.")
+                    Text("In short: Allah is the one true God - the sole Creator and Sustainer of all that exists, without partner or equal, known by His Most Beautiful Names and perfect attributes.")
                         .font(.body)
                 }
 
 
                 Section(header: Text("OVERVIEW")) {
-                    Text("**Allah (اللَّه)** is the name of the one true God. It comes from **Al-Ilah (الإِلَٰه)**, “The God.” In Islam He (Glorified and Exalted be He) is the unique Creator, Sustainer, and Maintainer of all that exists—without partner, associate, or equal, and absolutely One.")
+                    Text("**Allah (اللَّه)** is the name of the one true God. It comes from **Al-Ilah (الإِلَٰه)**, “The God.” In Islam He (Glorified and Exalted be He) is the unique Creator, Sustainer, and Maintainer of all that exists - without partner, associate, or equal, and absolutely One.")
                         .font(.body)
 
                     Text("The Quran mentions Allah's 99 Names, **Al-Asma al-Husna (الأَسمَاء الحُسنَى)**, the Most Beautiful Names, such as the Most Gracious, the Most Merciful, the All-Knowing, and the King. These Names describe His perfect qualities and emphasize His absolute transcendence. Allah is beyond human comprehension and far above any need, limitation, or resemblance to His creation.")
@@ -892,7 +994,7 @@ struct AllahPillarView: View {
                 }
 
                 Section(header: Text("ESSENCE OF WORSHIP")) {
-                    Text("Muslims believe that the primary purpose of life is to worship Allah (Glorified and Exalted be He). This worship is not limited to rituals but encompasses every sincere action done to seek Allah's pleasure. Allah says in the Quran:")
+                    Text("The primary purpose of life is to worship Allah (Glorified and Exalted be He). This worship is not limited to rituals but encompasses every sincere action done to seek Allah's pleasure. Allah says in the Quran:")
                         .font(.body)
                     Text("“And I did not create the jinn and mankind except to worship Me” (Quran 51:56).")
                         .font(.title3)
@@ -968,7 +1070,7 @@ struct QuranPillarView: View {
 
 
                 Section(header: Text("OVERVIEW")) {
-                    Text("The **Quran (قُرءان)** takes its name from the Arabic root **q-r-a (ق ر أ)**, meaning “to read” or “to recite.” It is the holy book of Islam. Muslims believe it is the literal word of Allah (Glorified and Exalted be He), revealed to Prophet Muhammad (peace and blessings be upon him) through the angel **Jibril (جِبرِيل)** (Gabriel) over 23 years. It is the ultimate source of guidance for humanity.")
+                    Text("The **Quran (قُرءان)** takes its name from the Arabic root **q-r-a (ق ر أ)**, meaning “to read” or “to recite.” It is the holy book of Islam. It is the literal word of Allah (Glorified and Exalted be He), revealed to Prophet Muhammad (peace and blessings be upon him) through the angel **Jibril (جِبرِيل)** (Gabriel) over 23 years. It is the ultimate source of guidance for humanity.")
                         .font(.body)
 
                     Text("Unlike previous scriptures sent to specific nations and later altered, the Quran is a universal message for all people and all times. Allah says in the Quran:")
@@ -987,6 +1089,18 @@ struct QuranPillarView: View {
                     Text("“Say, 'If mankind and the jinn gathered in order to produce the like of this Quran, they could not produce the like of it, even if they were to each assist the other'” (Quran 17:88).")
                         .font(.title3)
                         .foregroundColor(settings.accentColor.color)
+
+                    Text("What makes the challenge sharper is who it came through. Prophet Muhammad (peace and blessings be upon him) was **ummi (أُمِّيّ)**, unlettered: he could neither read nor write, and had never studied poetry, scripture, or the sciences of language. Allah says:")
+                        .font(.body)
+                    Text("“And you did not recite before it any scripture, nor did you inscribe one with your right hand. Otherwise the falsifiers would have had [cause for] doubt” (Quran 29:48).")
+                        .font(.title3)
+                        .foregroundColor(settings.accentColor.color)
+
+                    Text("The Arabs of that era were masters of the spoken word. Poetry was their pride, and their finest verses were hung for all to see. Yet when the Quran was recited to them, they could not place it. It was not poetry, not rhymed prose, not the speech of a soothsayer, and none of their categories fit. They accused him of magic and of madness precisely because they had no literary answer to give. The challenge to produce even a single surah like it (Quran 2:23) was made openly to the very people best equipped to meet it, and it was never met.")
+                        .font(.body)
+
+                    Text("A man who could not write produced, over 23 years, a book their greatest poets could not imitate. That is the argument the Quran makes about itself.")
+                        .font(.body)
 
                     Text("Despite its eloquence and poetic nature, the Quran remains simple and easy to understand, allowing millions of Muslims to memorize it entirely. This combination of literary perfection and accessibility is one of the Quran's miracles.")
                         .font(.body)
@@ -1034,7 +1148,7 @@ struct QuranPillarView: View {
 
 
                 Section(header: Text("IN SUMMARY")) {
-                    Text("Unmatched in eloquence yet easy to memorize and understand, the Quran is Allah's protected, universal guidance—relevant to every people and every age.")
+                    Text("Unmatched in eloquence yet easy to memorize and understand, the Quran is Allah's protected, universal guidance - relevant to every people and every age.")
                         .font(.body)
                 }
             }
@@ -1099,7 +1213,7 @@ struct MuqattaatPillarView: View {
         List {
             Group {
                 Section(header: Text("SUMMARY")) {
-                    Text("In short: the Muqatta'at are the disconnected letters (like Alif-Lam-Mim) that open twenty-nine surahs—recited letter by letter.")
+                    Text("In short: the Muqatta'at are the disconnected letters (like Alif-Lam-Mim) that open twenty-nine surahs - recited letter by letter.")
                         .font(.body)
                 }
 
@@ -1169,6 +1283,7 @@ struct MuqattaatPillarView: View {
 
             Text(row.arabic)
                 .font(arabicFont)
+                .arabicFontDesign(custom: settings.quranUsesCustomArabicFace)
                 .frame(maxWidth: .infinity, alignment: .trailing)
 
             Text(row.letters)
@@ -1215,7 +1330,7 @@ struct ProphetPillarView: View {
                         .font(.title3)
                         .foregroundColor(settings.accentColor.color)
 
-                    Text("Muslims believe Prophet Muhammad (peace and blessings be upon him) is the last and final prophet, completing the chain of messengers that began with Adam (peace be upon him). He delivered the final revelation, the Quran, and exemplified its teachings as the ultimate role model.")
+                    Text("Prophet Muhammad (peace and blessings be upon him) is the last and final prophet, completing the chain of messengers that began with Adam (peace be upon him). He delivered the final revelation, the Quran, and exemplified its teachings as the ultimate role model.")
                         .font(.body)
                 }
 
@@ -1244,7 +1359,7 @@ struct ProphetPillarView: View {
                     Text("“Be calm, for I am not a king. Verily, I am only the son of a woman who ate dried meat” (Sunan Ibn Majah 3312).").font(.title3).foregroundColor(settings.accentColor.color.opacity(0.85))
 
                     Text("He also said:").font(.body)
-                    Text("“I am only a servant. I eat as the servant eats, and I sit as the servant sits” (as-Silsilah as-Sahihah 544 — graded hasan).").font(.title3).foregroundColor(settings.accentColor.color.opacity(0.85))
+                    Text("“I am only a servant. I eat as the servant eats, and I sit as the servant sits” (as-Silsilah as-Sahihah 544 - graded hasan).").font(.title3).foregroundColor(settings.accentColor.color.opacity(0.85))
 
                     Text("Similarly, the Prophet (peace and blessings be upon him) warned against excessive praise, saying:").font(.body)
                     Text("“Do not exaggerate in praising me as the Christians praised the son of Mary (Jesus), for I am only a Slave. So, call me the Slave of Allah and His Messenger” (Sahih al-Bukhari 3445).").font(.title3).foregroundColor(settings.accentColor.color.opacity(0.85))
@@ -1273,7 +1388,7 @@ struct ProphetPillarView: View {
                         .font(.body)
 
                     Text("He said:").font(.body)
-                    Text("“O People, there is no superiority of an Arab over a non-Arab, or of a non-Arab over an Arab; nor of a white person over a black person, or of a black person over a white person—except by piety and good action” (Musnad Ahmad 23489).")
+                    Text("“O People, there is no superiority of an Arab over a non-Arab, or of a non-Arab over an Arab; nor of a white person over a black person, or of a black person over a white person - except by piety and good action” (Musnad Ahmad 23489).")
                         .font(.title3)
                         .foregroundColor(settings.accentColor.color.opacity(0.85))
                 }
@@ -1285,7 +1400,7 @@ struct ProphetPillarView: View {
 
 
                 Section(header: Text("IN SUMMARY")) {
-                    Text("As the seal of the prophets and the finest example for humanity, he is deeply loved and followed—yet he is never worshipped, for worship belongs to Allah alone.")
+                    Text("As the seal of the prophets and the finest example for humanity, he is deeply loved and followed - yet he is never worshipped, for worship belongs to Allah alone.")
                         .font(.body)
                 }
             }
@@ -1303,13 +1418,13 @@ struct SunnahPillarView: View {
         List {
             Group {
                 Section(header: Text("SUMMARY")) {
-                    Text("In short: the Sunnah is the way of Prophet Muhammad (peace and blessings be upon him)—his words, actions, and approvals. It explains the Quran and is the second source of Islam.")
+                    Text("In short: the Sunnah is the way of Prophet Muhammad (peace and blessings be upon him) - his words, actions, and approvals. It explains the Quran and is the second source of Islam.")
                         .font(.body)
                 }
 
 
                 Section(header: Text("OVERVIEW")) {
-                    Text("The **Sunnah (سُنَّة)** — an Arabic word meaning “way,” “path,” or “tradition” — is the teachings, actions, and approvals of Prophet Muhammad (peace and blessings be upon him): his habits, moral conduct, and guidance on worship and dealings. It explains and complements the Quran and is the second source of Islamic knowledge.")
+                    Text("The **Sunnah (سُنَّة)** - an Arabic word meaning “way,” “path,” or “tradition” - is the teachings, actions, and approvals of Prophet Muhammad (peace and blessings be upon him): his habits, moral conduct, and guidance on worship and dealings. It explains and complements the Quran and is the second source of Islamic knowledge.")
                         .font(.body)
 
                     Text("Allah says in the Quran:").font(.body)
@@ -1395,7 +1510,7 @@ struct HadithPillarView: View {
 
 
                 Section(header: Text("OVERVIEW")) {
-                    Text("A **Hadith (حَدِيث)** — an Arabic word meaning “speech,” “narration,” or “report” — is a recorded saying, action, or approval of Prophet Muhammad (peace and blessings be upon him). Hadiths preserve the Sunnah and are an essential source of Islamic knowledge, and scholars verified them meticulously to ensure their authenticity.")
+                    Text("A **Hadith (حَدِيث)** - an Arabic word meaning “speech,” “narration,” or “report” - is a recorded saying, action, or approval of Prophet Muhammad (peace and blessings be upon him). Hadiths preserve the Sunnah and are an essential source of Islamic knowledge, and scholars verified them meticulously to ensure their authenticity.")
                         .font(.body)
 
                     Text("Allah (Glorified and Exalted be He) commands in the Quran:").font(.body)
@@ -1597,7 +1712,7 @@ struct ShahadahView: View {
                 }
 
                 Section(header: Text("IN SUMMARY")) {
-                    Text("Said with sincere conviction and lived by, the Shahadah affirms pure monotheism and acceptance of the Prophet's guidance—renewed in every prayer a Muslim offers.")
+                    Text("Said with sincere conviction and lived by, the Shahadah affirms pure monotheism and acceptance of the Prophet's guidance - renewed in every prayer a Muslim offers.")
                         .font(.body)
                 }
             }
@@ -1615,7 +1730,7 @@ struct SalahView: View {
         List {
             Group {
                 Section(header: Text("SUMMARY")) {
-                    Text("In short: Salah is the five daily prayers—a direct connection between the servant and Allah, and the first deed a person will be asked about on the Day of Judgment.")
+                    Text("In short: Salah is the five daily prayers - a direct connection between the servant and Allah, and the first deed a person will be asked about on the Day of Judgment.")
                         .font(.body)
                 }
 
@@ -1656,12 +1771,12 @@ struct SalahView: View {
                     Text("The Prophet (peace and blessings be upon him) instructed:").font(.body)
                     Text("“Pray as you have seen me praying” (Sahih al-Bukhari 631).")
                         .font(.title3).foregroundColor(settings.accentColor.color.opacity(0.85))
-                    Text("Facing the Qibla, with the **Niyyah (نِيَّة)** — the intention — settled in the heart, each rak'ah proceeds as follows:").font(.body)
+                    Text("Facing the Qibla, with the **Niyyah (نِيَّة)** - the intention - settled in the heart, each rak'ah proceeds as follows:").font(.body)
                     Text("1. **Takbir (تَكبِير)**: raise the hands and say “Allahu Akbar” (Allah is the Greatest), then place the right hand over the left upon the chest.").font(.body)
-                    Text("2. **Recitation**: recite the opening supplication, then Surah **Al-Fatiha (الفَاتِحَة)** — obligatory in every rak'ah — followed by another passage of the Quran in the first two rak'ah.").font(.body)
+                    Text("2. **Recitation**: recite the opening supplication, then Surah **Al-Fatiha (الفَاتِحَة)** - obligatory in every rak'ah - followed by another passage of the Quran in the first two rak'ah.").font(.body)
                     Text("3. **Ruku (رُكُوع)**: say “Allahu Akbar” and bow with a straight back, hands on the knees, saying “Subhana Rabbi al-Adheem” (Glory to my Lord the Most Great) three times.").font(.body)
                     Text("4. **Rising (I'tidal)**: rise saying “Sami'a Allahu liman hamidah” (Allah hears whoever praises Him), then, standing, “Rabbana wa laka al-hamd” (Our Lord, to You is all praise).").font(.body)
-                    Text("5. **Sujud (سُجُود)**: say “Allahu Akbar” and prostrate on seven parts — the forehead and nose, both palms, both knees, and the toes of both feet — saying “Subhana Rabbi al-A'la” (Glory to my Lord the Most High) three times.").font(.body)
+                    Text("5. **Sujud (سُجُود)**: say “Allahu Akbar” and prostrate on seven parts - the forehead and nose, both palms, both knees, and the toes of both feet - saying “Subhana Rabbi al-A'la” (Glory to my Lord the Most High) three times.").font(.body)
                     Text("6. **Sitting**: say “Allahu Akbar,” sit, and say “Rabbi ighfir li” (My Lord, forgive me); then perform a second Sujud in the same way. This completes one rak'ah.").font(.body)
                     Text("7. **Tashahhud (تَشَهُّد)**: after each two rak'ah, sit and recite the tashahhud (“At-tahiyyatu lillah…”). In the final sitting, add the prayers upon the Prophet (peace and blessings be upon him) and supplication.").font(.body)
                     Text("8. **Taslim (تَسلِيم)**: end the prayer by turning the face to the right and then to the left, saying each time “As-salamu alaykum wa rahmatullah” (peace and the mercy of Allah be upon you).").font(.body)
@@ -1707,7 +1822,7 @@ struct SawmView: View {
         List {
             Group {
                 Section(header: Text("SUMMARY")) {
-                    Text("In short: Sawm is fasting from dawn to sunset—especially in Ramadan—abstaining from food, drink, and desires to draw nearer to Allah and attain God-consciousness.")
+                    Text("In short: Sawm is fasting from dawn to sunset - especially in Ramadan - abstaining from food, drink, and desires to draw nearer to Allah and attain God-consciousness.")
                         .font(.body)
                 }
 
@@ -1794,7 +1909,7 @@ struct ZakahView: View {
         List {
             Group {
                 Section(header: Text("SUMMARY")) {
-                    Text("In short: Zakah is an obligatory charity—2.5% of qualifying wealth held for a lunar year—that purifies wealth and supports those in need.")
+                    Text("In short: Zakah is an obligatory charity - 2.5% of qualifying wealth held for a lunar year - that purifies wealth and supports those in need.")
                         .font(.body)
                 }
 
@@ -1862,12 +1977,12 @@ struct HajjView: View {
         List {
             Group {
                 Section(header: Text("SUMMARY")) {
-                    Text("In short: Hajj is the pilgrimage to the Kaaba in Makkah, obligatory once in a lifetime for those able—a journey of submission, forgiveness, and unity.")
+                    Text("In short: Hajj is the pilgrimage to the Kaaba in Makkah, obligatory once in a lifetime for those able - a journey of submission, forgiveness, and unity.")
                         .font(.body)
                 }
 
                 Section(header: Text("OVERVIEW")) {
-                    Text("**Hajj (حَجّ)**, from the root **h-j-j (ح ج ج)** meaning “to intend” or “to set out for” a great destination, is the fifth and final pillar of Islam. It is the pilgrimage to the **Kaaba (الكَعبَة)** in Makkah — the **Qibla (قِبلَة)**, the direction of prayer, for Muslims worldwide — performed annually in the month of **Dhul-Hijjah (ذُو الحِجَّة)** as a profound act of worship and submission to Allah (Glorified and Exalted be He).")
+                    Text("**Hajj (حَجّ)**, from the root **h-j-j (ح ج ج)** meaning “to intend” or “to set out for” a great destination, is the fifth and final pillar of Islam. It is the pilgrimage to the **Kaaba (الكَعبَة)** in Makkah - the **Qibla (قِبلَة)**, the direction of prayer, for Muslims worldwide - performed annually in the month of **Dhul-Hijjah (ذُو الحِجَّة)** as a profound act of worship and submission to Allah (Glorified and Exalted be He).")
                         .font(.body)
 
                     Text("Hajj is a journey of spiritual renewal, forgiveness, and unity among Muslims, symbolizing submission to Allah and the equality of all believers.")
@@ -1983,8 +2098,8 @@ struct ImanPillarsView: View {
             }
             .padding(.vertical, 4)
 
-            NavigationLink(destination: QadrView()) {
-                Text("Belief in Al-Qadr")
+            NavigationLink(destination: QadarView()) {
+                Text("Belief in Al-Qadar")
                     .font(.subheadline)
             }
             .padding(.vertical, 4)
@@ -1999,7 +2114,7 @@ struct GodView: View {
         List {
             Group {
                 Section(header: Text("SUMMARY")) {
-                    Text("In short: the first pillar of faith is to believe in Allah alone—His Lordship, His sole right to worship, and His perfect Names and attributes.")
+                    Text("In short: the first pillar of faith is to believe in Allah alone - His Lordship, His sole right to worship, and His perfect Names and attributes.")
                         .font(.body)
                 }
 
@@ -2017,11 +2132,11 @@ struct GodView: View {
                 Section(header: Text("MEANING OF BELIEF IN ALLAH")) {
                     Text("Belief in Allah, **al-Iman billah (الإِيمَان بِاللَّه)**, involves affirming His Oneness, **Tawhid (تَوحِيد)**, and understanding His divine attributes. It consists of three core aspects:")
                         .font(.body)
-                    Text("1. **Tawhid al-Rububiyyah (تَوحِيد الرُّبُوبِيَّة)** — Oneness of Lordship: Believing that Allah alone is the Creator, Sustainer, and Manager of all that exists.")
+                    Text("1. **Tawhid al-Rububiyyah (تَوحِيد الرُّبُوبِيَّة)** - Oneness of Lordship: Believing that Allah alone is the Creator, Sustainer, and Manager of all that exists.")
                         .font(.body)
-                    Text("2. **Tawhid al-Uluhiyyah (تَوحِيد الأُلُوهِيَّة)** — Oneness of Worship: Worshiping Allah alone without associating partners with Him.")
+                    Text("2. **Tawhid al-Uluhiyyah (تَوحِيد الأُلُوهِيَّة)** - Oneness of Worship: Worshiping Allah alone without associating partners with Him.")
                         .font(.body)
-                    Text("3. **Tawhid al-Asma wa al-Sifat (تَوحِيد الأَسمَاء وَالصِّفَات)** — Oneness of Names and Attributes: Affirming Allah’s names and attributes as mentioned in the Quran and Sunnah, without distortion or anthropomorphism.")
+                    Text("3. **Tawhid al-Asma wa al-Sifat (تَوحِيد الأَسمَاء وَالصِّفَات)** - Oneness of Names and Attributes: Affirming Allah’s names and attributes as mentioned in the Quran and Sunnah, without distortion or anthropomorphism.")
                         .font(.body)
                 }
 
@@ -2040,7 +2155,7 @@ struct GodView: View {
                 Section(header: Text("HADITH ON BELIEF IN ALLAH")) {
                     Text("The Prophet Muhammad (peace and blessings be upon him) explained the essence of belief in Allah. He said:")
                         .font(.body)
-                    Text("“[Iman is] that you affirm your faith in Allah, in His angels, in His Books, in His Messengers, in the Day of Judgment, and you affirm your faith in the Divine Decree (Qadr) about good and evil” (Sahih Muslim 8a).")
+                    Text("“[Iman is] that you affirm your faith in Allah, in His angels, in His Books, in His Messengers, in the Day of Judgment, and you affirm your faith in the Divine Decree (Qadar) about good and evil” (Sahih Muslim 8a).")
                         .foregroundColor(settings.accentColor.color.opacity(0.85))
                         .font(.title3)
                 }
@@ -2072,12 +2187,12 @@ struct AngelsView: View {
         List {
             Group {
                 Section(header: Text("SUMMARY")) {
-                    Text("In short: Muslims believe in the angels—unseen beings created from light who never disobey Allah and carry out His commands throughout creation.")
+                    Text("In short: the angels are unseen beings created from light who never disobey Allah and carry out His commands throughout creation.")
                         .font(.body)
                 }
 
                 Section(header: Text("OVERVIEW")) {
-                    Text("Belief in the angels — **Malaikah (مَلَائِكَة)** — is a fundamental pillar of Islamic faith, **Iman (إِيمَان)**. Angels are unseen beings created by Allah (Glorified and Exalted be He) from light. They are sinless, do not have free will, and continuously obey Allah’s commands. Their roles include delivering revelations, recording deeds, and carrying out Allah’s orders in the universe. Allah, however, does not need angels or anything else, as He is completely self-sufficient, **Al-Ghaniyy (الغَنِيّ)**, and sustains all existence, **Al-Qayyum (القَيُّوم)**. The creation of angels reflects Allah’s wisdom and His divine plan.")
+                    Text("Belief in the angels - **Malaikah (مَلَائِكَة)** - is a fundamental pillar of Islamic faith, **Iman (إِيمَان)**. Angels are unseen beings created by Allah (Glorified and Exalted be He) from light. They are sinless, do not have free will, and continuously obey Allah’s commands. Their roles include delivering revelations, recording deeds, and carrying out Allah’s orders in the universe. Allah, however, does not need angels or anything else, as He is completely self-sufficient, **Al-Ghaniyy (الغَنِيّ)**, and sustains all existence, **Al-Qayyum (القَيُّوم)**. The creation of angels reflects Allah’s wisdom and His divine plan.")
                         .font(.body)
 
                     Text("The Prophet Muhammad (peace and blessings be upon him) said:").font(.body)
@@ -2111,7 +2226,7 @@ struct AngelsView: View {
                         .foregroundColor(settings.accentColor.color)
                         .font(.title3)
 
-                    Text("2. **Mikail (مِيكَائِيل)** — Michael: Responsible for provisions, including rain and sustenance.")
+                    Text("2. **Mikail (مِيكَائِيل)** - Michael: Responsible for provisions, including rain and sustenance.")
                         .font(.body)
 
                     Text("3. **Israfil (إِسرَافِيل)**: The angel who will blow the trumpet to signal the Day of Judgment.")
@@ -2179,12 +2294,12 @@ struct BooksView: View {
         List {
             Group {
                 Section(header: Text("SUMMARY")) {
-                    Text("In short: Muslims believe Allah revealed scriptures to His prophets—including the Torah, Psalms, and Gospel—culminating in the Quran, the final and preserved revelation.")
+                    Text("In short: Allah revealed scriptures to His prophets - including the Torah, Psalms, and Gospel - culminating in the Quran, the final and preserved revelation.")
                         .font(.body)
                 }
 
                 Section(header: Text("OVERVIEW")) {
-                    Text("Muslims believe in the divine scriptures revealed by Allah (Glorified and Exalted be He) to various prophets. These scriptures were sent to guide humanity to righteousness and worship of Allah alone. They include the Scrolls of Ibrahim (Abraham, peace be upon him), the Torah given to Musa (Moses, peace be upon him), the Psalms given to Dawud (David, peace be upon him), the Gospel given to Isa (Jesus, peace be upon him), and the Quran given to Muhammad (peace and blessings be upon him).")
+                    Text("Allah (Glorified and Exalted be He) revealed divine scriptures to various prophets. These scriptures were sent to guide humanity to righteousness and worship of Allah alone. They include the Scrolls of Ibrahim (Abraham, peace be upon him), the Torah given to Musa (Moses, peace be upon him), the Psalms given to Dawud (David, peace be upon him), the Gospel given to Isa (Jesus, peace be upon him), and the Quran given to Muhammad (peace and blessings be upon him).")
                         .font(.body)
 
                     Text("Allah (Glorified and Exalted be He) says in the Quran:").font(.body)
@@ -2208,16 +2323,16 @@ struct BooksView: View {
                 }
 
                 Section(header: Text("PREVIOUS SCRIPTURES")) {
-                    Text("1. **Tawrah (التَّورَاة)** — the Torah: Revealed to Musa (Moses, peace be upon him), it contained laws and guidance for the Children of Israel. Over time, the original text was altered, and its authenticity was compromised.")
+                    Text("1. **Tawrah (التَّورَاة)** - the Torah: Revealed to Musa (Moses, peace be upon him), it contained laws and guidance for the Children of Israel. Over time, the original text was altered, and its authenticity was compromised.")
                         .font(.body)
 
-                    Text("2. **Zabur (الزَّبُور)** — the Psalms: Revealed to Dawud (David, peace be upon him), it was a collection of hymns and praises dedicated to Allah.")
+                    Text("2. **Zabur (الزَّبُور)** - the Psalms: Revealed to Dawud (David, peace be upon him), it was a collection of hymns and praises dedicated to Allah.")
                         .font(.body)
 
-                    Text("3. **Injil (الإِنجِيل)** — the Gospel: Revealed to Isa (Jesus, peace be upon him), it confirmed the Torah and brought new guidance. However, the original Gospel has been lost, and what exists today are interpretations and altered accounts.")
+                    Text("3. **Injil (الإِنجِيل)** - the Gospel: Revealed to Isa (Jesus, peace be upon him), it confirmed the Torah and brought new guidance. However, the original Gospel has been lost, and what exists today are interpretations and altered accounts.")
                         .font(.body)
 
-                    Text("4. **Suhuf (صُحُف)** — the Scrolls: Revealed to Ibrahim (Abraham, peace be upon him) and Musa (Moses, peace be upon him), these contained foundational teachings and guidance. They are mentioned in the Quran but no longer exist.")
+                    Text("4. **Suhuf (صُحُف)** - the Scrolls: Revealed to Ibrahim (Abraham, peace be upon him) and Musa (Moses, peace be upon him), these contained foundational teachings and guidance. They are mentioned in the Quran but no longer exist.")
                         .font(.body)
 
                     Text("Allah (Glorified and Exalted be He) says:").font(.body)
@@ -2228,7 +2343,7 @@ struct BooksView: View {
 
                 Section(header: Text("IMPORTANCE OF BELIEVING IN THE BOOKS")) {
                     Text("Belief in Allah’s books is a fundamental pillar of Iman (faith). The Prophet Muhammad (peace and blessings be upon him) said:").font(.body)
-                    Text("“[Iman is] that you affirm your faith in Allah, in His angels, in His Books, in His Messengers, in the Day of Judgment, and you affirm your faith in the Divine Decree (Qadr) about good and evil” (Sahih Muslim 8a).")
+                    Text("“[Iman is] that you affirm your faith in Allah, in His angels, in His Books, in His Messengers, in the Day of Judgment, and you affirm your faith in the Divine Decree (Qadar) about good and evil” (Sahih Muslim 8a).")
                         .font(.title3)
                         .foregroundColor(settings.accentColor.color.opacity(0.85))
 
@@ -2266,47 +2381,47 @@ struct ProphetsView: View {
         List {
             Group {
                 Section(header: Text("SUMMARY")) {
-                    Text("In short: Muslims believe in all the prophets Allah sent to call people to worship Him alone, from Adam to the final Messenger, Muhammad.")
+                    Text("In short: Allah sent prophets to call people to worship Him alone, from Adam to the final Messenger, Muhammad.")
                         .font(.body)
                 }
 
                 Section(header: Text("OVERVIEW")) {
                     Text("""
-                    Muslims believe in all the prophets sent by Allah (Glorified and Exalted be He). Prophets were chosen by Allah to guide their communities to monotheism and righteous living. The Quran mentions 25 prophets by name, including:
-                    - Adam
-                    - Idris (Enoch)
-                    - Nuh (Noah)
-                    - Hud (Heber)
-                    - Saleh
-                    - Lut (Lot)
-                    - Ibrahim (Abraham)
-                    - Ismail (Ishmael)
-                    - Ishaq (Isaac)
-                    - Yaqub (Jacob)
-                    - Yusuf (Joseph)
-                    - Shu’aib (Jethro)
-                    - Ayyub (Job)
-                    - Dhul-Kifl
-                    - Musa (Moses)
-                    - Harun (Aaron)
-                    - Dawud (David)
-                    - Sulayman (Solomon)
-                    - Ilyas (Elias)
-                    - Alyasa (Elisha)
-                    - Yunus (Jonah)
-                    - Zakariya (Zachariah)
-                    - Yahya (John the Baptist)
-                    - Isa (Jesus)
-                    - Muhammad
+                    Allah sent prophets to every nation, and a Muslim believes in every one of them. Prophets were chosen by Allah to guide their communities to monotheism and righteous living. The Quran mentions 25 prophets by name:
+                    - Adam - آدَم
+                    - Idris (Enoch) - إِدرِيس
+                    - Nuh (Noah) - نُوح
+                    - Hud (Heber) - هُود
+                    - Saleh - صَالِح
+                    - Lut (Lot) - لُوط
+                    - Ibrahim (Abraham) - إِبرَاهِيم
+                    - Ismail (Ishmael) - إِسمَاعِيل
+                    - Ishaq (Isaac) - إِسحَاق
+                    - Yaqub (Jacob) - يَعقُوب
+                    - Yusuf (Joseph) - يُوسُف
+                    - Shu’aib (Jethro) - شُعَيب
+                    - Ayyub (Job) - أَيُّوب
+                    - Dhul-Kifl - ذُو الكِفل
+                    - Musa (Moses) - مُوسَى
+                    - Harun (Aaron) - هَارُون
+                    - Dawud (David) - دَاوُود
+                    - Sulayman (Solomon) - سُلَيمَان
+                    - Ilyas (Elias) - إِليَاس
+                    - Alyasa (Elisha) - اليَسَع
+                    - Yunus (Jonah) - يُونُس
+                    - Zakariya (Zachariah) - زَكَرِيَّا
+                    - Yahya (John the Baptist) - يَحيَى
+                    - Isa (Jesus) - عِيسَى
+                    - Muhammad - مُحَمَّد
                     """)
                     .font(.body)
 
                     Text("Allah (Glorified and Exalted be He) says in the Quran:").font(.body)
-                    Text("“And We gave to Abraham, Isaac and Jacob—all [of them] We guided. And Noah We guided before; and among his descendants, David and Solomon and Job and Joseph and Moses and Aaron. Thus do We reward the doers of good. And Zechariah and John and Jesus and Elias—and all were of the righteous” (Quran 6:84-85).")
+                    Text("“And We gave to Abraham, Isaac and Jacob - all [of them] We guided. And Noah We guided before; and among his descendants, David and Solomon and Job and Joseph and Moses and Aaron. Thus do We reward the doers of good. And Zechariah and John and Jesus and Elias - and all were of the righteous” (Quran 6:84-85).")
                         .font(.title3)
                         .foregroundColor(settings.accentColor.color)
 
-                    Text("Muslims believe that each prophet conveyed Allah’s guidance and served as role models for their people. While all prophets were sent to specific nations and times, Prophet Muhammad was sent as the final messenger for all of humanity. Allah (Glorified and Exalted be He) says in the Quran:").font(.body)
+                    Text("Each prophet conveyed Allah’s guidance and served as role models for their people. While all prophets were sent to specific nations and times, Prophet Muhammad was sent as the final messenger for all of humanity. Allah (Glorified and Exalted be He) says in the Quran:").font(.body)
                     Text("“Muhammad is not the father of [any] one of your men, but [he is] the Messenger of Allah and the seal of the prophets” (Quran 33:40).")
                         .font(.title3)
                         .foregroundColor(settings.accentColor.color)
@@ -2315,18 +2430,44 @@ struct ProphetsView: View {
                 Section(header: Text("PROPHETS AND MESSENGERS")) {
                     Text("There is a distinction between a prophet, **Nabi (نَبِيّ)**, and a messenger, **Rasul (رَسُول)**:").font(.body)
 
-                    Text("1. **Prophet (Nabi):** A prophet is chosen to uphold and reinforce the laws of a previous messenger.").font(.body)
-                    Text("Example: Harun (Aaron) was a prophet who supported Musa (Moses) in spreading the Torah’s teachings.").font(.body)
+                    Text("1. **Prophet, Nabi (نَبِيّ):** From the root **n-b-a (ن ب أ)**, to bring news. A prophet receives revelation from Allah and upholds and reinforces the law of a previous messenger.").font(.body)
+                    Text("Example: Harun (هَارُون), Aaron, was a prophet who supported Musa (مُوسَى), Moses, in spreading the Torah's teachings.").font(.body)
 
-                    Text("2. **Messenger (Rasul):** A messenger is sent with a new scripture or divine law for their people.").font(.body)
-                    Text("Example: Muhammad was a messenger who brought the Quran, the final revelation.").font(.body)
+                    Text("2. **Messenger, Rasul (رَسُول):** From the root **r-s-l (ر س ل)**, to send. A messenger is sent with a new scripture or divine law for their people.").font(.body)
+                    Text("Example: Muhammad (مُحَمَّد) was a messenger who brought the Quran, the final revelation.").font(.body)
 
-                    Text("All messengers are prophets, but not all prophets are messengers.").font(.body)
+                    Text("Every messenger is a prophet, but not every prophet is a messenger. Belief in them is not selective: to reject one prophet is to reject them all, because the One who sent them is One.").font(.body)
+                }
+
+                Section(header: Text("THE CHILDREN OF ISRAEL")) {
+                    Text("More prophets were sent to the **Children of Israel, Bani Israil (بَنِي إِسرَائِيل)**, than to any other people. Allah favoured them openly, and the Quran says so:")
+                        .font(.body)
+                    Text("“O Children of Israel, remember My favor which I have bestowed upon you and that I preferred you over the worlds” (Quran 2:47).")
+                        .font(.title3)
+                        .foregroundColor(settings.accentColor.color)
+
+                    Text("That favour came with a **covenant, Mithaq (مِيثَاق)**: to worship Allah alone, to uphold the Torah, and to obey the prophets sent to them. The favour was never a birthright. It was a trust, and a trust can be broken.")
+                        .font(.body)
+
+                    Text("They broke it repeatedly. They worshipped the calf while Musa (peace be upon him) was away, they demanded to see Allah openly, they refused to enter the land they were commanded to enter, and they twisted the words of the scripture from their places. Worst of all, when the prophets came to them with what they did not want to hear, they rejected them, and they killed them. Allah says:")
+                        .font(.body)
+                    Text("“And they were covered with humiliation and poverty and returned with anger from Allah. That was because they [repeatedly] disbelieved in the signs of Allah and killed the prophets without right. That was because they disobeyed and were [habitually] transgressing” (Quran 2:61).")
+                        .font(.title3)
+                        .foregroundColor(settings.accentColor.color)
+
+                    Text("Among those they sought to kill were Zakariya and Yahya (peace be upon them), and they plotted against Isa (peace be upon him), though Allah raised him to Himself and saved him from them.")
+                        .font(.body)
+
+                    Text("So the covenant was withdrawn from them and the message was carried on through the line of Ismail (إِسمَاعِيل), in Prophet Muhammad (peace and blessings be upon him). This is the crucial point: the covenant was never about lineage. It was about obedience. It was taken from them because of what they did, and it can be lost by anyone who does the same.")
+                        .font(.body)
+
+                    Text("This is a warning to the Muslims before it is a criticism of anyone else. Allah does not favour a people for their ancestry. He favours them for their taqwa, and He removes His favour when they abandon it.")
+                        .font(.body)
                 }
 
                 Section(header: Text("IMPORTANCE OF BELIEF IN PROPHETS")) {
                     Text("Belief in the prophets is a pillar of **Iman (إِيمَان)**, faith. The Prophet Muhammad said:").font(.body)
-                    Text("“[Iman is] that you affirm your faith in Allah, in His angels, in His Books, in His Messengers, in the Day of Judgment, and you affirm your faith in the Divine Decree (Qadr) about good and evil” (Sahih Muslim 8a).")
+                    Text("“[Iman is] that you affirm your faith in Allah, in His angels, in His Books, in His Messengers, in the Day of Judgment, and you affirm your faith in the Divine Decree (Qadar) about good and evil” (Sahih Muslim 8a).")
                         .font(.title3)
                         .foregroundColor(settings.accentColor.color.opacity(0.85))
 
@@ -2350,7 +2491,7 @@ struct ProphetsView: View {
                 }
 
                 Section(header: Text("IN SUMMARY")) {
-                    Text("The prophets all brought one message—worship of Allah alone—and Muhammad sealed and completed that guidance for all humanity.")
+                    Text("The prophets all brought one message - worship of Allah alone - and Muhammad sealed and completed that guidance for all humanity.")
                         .font(.body)
                 }
             }
@@ -2368,12 +2509,12 @@ struct DayView: View {
         List {
             Group {
                 Section(header: Text("SUMMARY")) {
-                    Text("In short: Muslims believe in the Last Day, when Allah will resurrect all people and judge them for their deeds with perfect justice.")
+                    Text("In short: on the Last Day, Allah will resurrect all people and judge them for their deeds with perfect justice.")
                         .font(.body)
                 }
 
                 Section(header: Text("OVERVIEW")) {
-                    Text("Belief in the Last Day — **Yawm al-Qiyamah (يَوم القِيَامَة)**, the Day of Resurrection — is a cornerstone of Islam and the fifth pillar of **Iman (إِيمَان)**, faith. It is the day when Allah (Glorified and Exalted be He) will resurrect all of creation to hold them accountable for their deeds. This belief is essential for understanding the purpose of life and the consequences of human actions.")
+                    Text("Belief in the Last Day - **Yawm al-Qiyamah (يَوم القِيَامَة)**, the Day of Resurrection - is a cornerstone of Islam and the fifth pillar of **Iman (إِيمَان)**, faith. It is the day when Allah (Glorified and Exalted be He) will resurrect all of creation to hold them accountable for their deeds. This belief is essential for understanding the purpose of life and the consequences of human actions.")
                         .font(.body)
 
                     Text("Allah (Glorified and Exalted be He) says in the Quran:").font(.body)
@@ -2385,7 +2526,7 @@ struct DayView: View {
                 Section(header: Text("EVENTS OF THE DAY")) {
                     Text("The Day of Judgment will unfold in stages, including:").font(.body)
 
-                    Text("1. **The Blowing of the Trumpet**: The angel Israfil will blow the trumpet twice—first to end all life and then to resurrect everyone. Allah says:").font(.body)
+                    Text("1. **The Blowing of the Trumpet**: The angel Israfil will blow the trumpet twice - first to end all life and then to resurrect everyone. Allah says:").font(.body)
                     Text("“And the Horn will be blown, and whoever is in the heavens and whoever is on the earth will fall dead except whom Allah wills. Then it will be blown again, and at once they will be standing, looking on” (Quran 39:68).")
                         .font(.title3)
                         .foregroundColor(settings.accentColor.color)
@@ -2398,7 +2539,7 @@ struct DayView: View {
                     Text("3. **The Reckoning, **Hisab (حِسَاب)**,**: Every individual’s deeds will be reviewed, and their record of actions will be presented to them. Those who receive their record in their right hand will rejoice, while those who receive it in their left will despair.").font(.body)
 
                     Text("4. **The Scale, **Mizan (مِيزَان)**,**: Deeds will be weighed on a divine scale. Good deeds that outweigh bad deeds will lead to Paradise. Allah says:").font(.body)
-                    Text("“And the weighing [of deeds] that Day will be the truth. So those whose scales are heavy—it is they who will be successful” (Quran 7:8).")
+                    Text("“And the weighing [of deeds] that Day will be the truth. So those whose scales are heavy - it is they who will be successful” (Quran 7:8).")
                         .font(.title3)
                         .foregroundColor(settings.accentColor.color)
 
@@ -2451,23 +2592,23 @@ struct DayView: View {
     }
 }
 
-struct QadrView: View {
+struct QadarView: View {
     @ObservedObject var settings = Settings.shared
 
     var body: some View {
         List {
             Group {
                 Section(header: Text("SUMMARY")) {
-                    Text("In short: Muslims believe in Al-Qadr—that everything happens by Allah's knowledge, writing, will, and creation—while people still choose and are accountable.")
+                    Text("In short: Al-Qadar means everything happens by Allah's knowledge, writing, will, and creation - while people still choose and are accountable.")
                         .font(.body)
                 }
 
                 Section(header: Text("OVERVIEW")) {
-                    Text("Belief in **Qadr (قَدَر)** — from the root **q-d-r (ق د ر)**, to measure out or decree — or divine decree, is the sixth pillar of **Iman (إِيمَان)**, faith. It is the belief that everything occurs by the will, knowledge, and command of Allah (Glorified and Exalted be He). This includes both the good and the bad, as Allah’s wisdom is perfect, and His plans are flawless.")
+                    Text("Belief in **Qadar (قَدَر)** - from the root **q-d-r (ق د ر)**, to measure out or decree - or divine decree, is the sixth pillar of **Iman (إِيمَان)**, faith. It is the belief that everything occurs by the will, knowledge, and command of Allah (Glorified and Exalted be He). This includes both the good and the bad, as Allah’s wisdom is perfect, and His plans are flawless.")
                         .font(.body)
 
                     Text("Allah (Glorified and Exalted be He) says in the Quran:").font(.body)
-                    Text("“No disaster strikes upon the earth or among yourselves except that it is in a register before We bring it into being—indeed that, for Allah, is easy” (Quran 57:22).")
+                    Text("“No disaster strikes upon the earth or among yourselves except that it is in a register before We bring it into being - indeed that, for Allah, is easy” (Quran 57:22).")
                         .font(.title3)
                         .foregroundColor(settings.accentColor.color)
 
@@ -2476,24 +2617,24 @@ struct QadrView: View {
                 }
 
                 Section(header: Text("COMPONENTS OF QADR")) {
-                    Text("Scholars identify four essential components of Qadr:").font(.body)
+                    Text("Scholars identify four essential components of Qadar:").font(.body)
 
-                    Text("1. **Allah’s Knowledge — Ilm (عِلم)**: Allah’s knowledge is infinite and perfect. He knows everything that has happened, is happening, and will happen. Allah says:").font(.body)
+                    Text("1. **Allah’s Knowledge - Ilm (عِلم)**: Allah’s knowledge is infinite and perfect. He knows everything that has happened, is happening, and will happen. Allah says:").font(.body)
                     Text("“And with Him are the keys of the unseen; none knows them except Him. And He knows what is on the land and in the sea. Not a leaf falls but that He knows it” (Quran 6:59).")
                         .font(.title3)
                         .foregroundColor(settings.accentColor.color)
 
-                    Text("2. **Allah’s Writing — Kitabah (كِتَابَة)**: All things are written in **Al-Lawh Al-Mahfuz (اللَّوح المَحفُوظ)**, the Preserved Tablet,, where every event, action, and outcome is recorded. Allah says:").font(.body)
+                    Text("2. **Allah’s Writing - Kitabah (كِتَابَة)**: All things are written in **Al-Lawh Al-Mahfuz (اللَّوح المَحفُوظ)**, the Preserved Tablet,, where every event, action, and outcome is recorded. Allah says:").font(.body)
                     Text("“Do you not know that Allah knows what is in the heaven and earth? Indeed, it is all in a record. Indeed that, for Allah, is easy” (Quran 22:70).")
                         .font(.title3)
                         .foregroundColor(settings.accentColor.color)
 
-                    Text("3. **Allah’s Will — Mashiah (مَشِيئَة)**: Whatever Allah wills happens, and whatever He does not will does not happen. Allah says:").font(.body)
+                    Text("3. **Allah’s Will - Mashiah (مَشِيئَة)**: Whatever Allah wills happens, and whatever He does not will does not happen. Allah says:").font(.body)
                     Text("“And they [i.e., the disbelievers] planned, but Allah planned. And Allah is the best of planners” (Quran 3:54).")
                         .font(.title3)
                         .foregroundColor(settings.accentColor.color)
 
-                    Text("4. **Allah’s Creation — Khalq (خَلق)**: Allah is the Creator of all things, including actions, circumstances, and outcomes. Allah says:").font(.body)
+                    Text("4. **Allah’s Creation - Khalq (خَلق)**: Allah is the Creator of all things, including actions, circumstances, and outcomes. Allah says:").font(.body)
                     Text("“Allah is the Creator of all things, and He is, over all things, Disposer of affairs” (Quran 39:62).")
                         .font(.title3)
                         .foregroundColor(settings.accentColor.color)
@@ -2510,8 +2651,8 @@ struct QadrView: View {
                 }
 
                 Section(header: Text("PATIENT AND GRATEFUL")) {
-                    Text("Belief in Qadr teaches Muslims to face life’s trials and blessings with patience and gratitude. Allah says in the Quran:").font(.body)
-                    Text("“And We will surely test you with something of fear and hunger and a loss of wealth and lives and fruits, but give good tidings to the patient—those who, when disaster strikes them, say, ‘Indeed we belong to Allah, and indeed to Him we will return.’” (Quran 2:155-156)")
+                    Text("Belief in Qadar teaches Muslims to face life’s trials and blessings with patience and gratitude. Allah says in the Quran:").font(.body)
+                    Text("“And We will surely test you with something of fear and hunger and a loss of wealth and lives and fruits, but give good tidings to the patient - those who, when disaster strikes them, say, ‘Indeed we belong to Allah, and indeed to Him we will return.’” (Quran 2:155-156)")
                         .font(.title3)
                         .foregroundColor(settings.accentColor.color)
 
@@ -2520,7 +2661,7 @@ struct QadrView: View {
                 }
 
                 Section(header: Text("CONCLUSION")) {
-                    Text("Belief in Qadr is a profound reminder of Allah’s ultimate authority, wisdom, and justice. It brings peace to the hearts of believers, knowing that everything happens for a reason, and Allah’s plans are always for the best. It encourages trust, patience, and gratitude in every aspect of life.")
+                    Text("Belief in Qadar is a profound reminder of Allah’s ultimate authority, wisdom, and justice. It brings peace to the hearts of believers, knowing that everything happens for a reason, and Allah’s plans are always for the best. It encourages trust, patience, and gratitude in every aspect of life.")
                         .font(.body)
                 }
 
@@ -2532,7 +2673,7 @@ struct QadrView: View {
             .themedListRowBackground()
         }
         .applyConditionalListStyle()
-        .navigationTitle("Belief in Al-Qadr")
+        .navigationTitle("Belief in Al-Qadar")
     }
 }
 
@@ -2571,7 +2712,7 @@ struct HaramView: View {
         List {
             Group {
                 Section(header: Text("SUMMARY")) {
-                    Text("In short: Masjid al-Haram in Makkah is the holiest mosque in Islam. It surrounds the Kaaba—the House of Allah and the Qiblah toward which all Muslims pray.")
+                    Text("In short: Masjid al-Haram in Makkah is the holiest mosque in Islam. It surrounds the Kaaba - the House of Allah and the Qiblah toward which all Muslims pray.")
                         .font(.body)
                 }
 
@@ -2622,7 +2763,7 @@ struct HaramView: View {
 
                 Section(header: Text("QURANIC VERSES ABOUT MAKKAH")) {
                     Text("Allah mentions the sanctity of Makkah and Masjid Al-Haram in several verses:").font(.body)
-                    Text("“Indeed, the first House [of worship] established for mankind was that at Makkah—blessed and a guidance for the worlds” (Quran 3:96).").font(.title3).foregroundColor(settings.accentColor.color)
+                    Text("“Indeed, the first House [of worship] established for mankind was that at Makkah - blessed and a guidance for the worlds” (Quran 3:96).").font(.title3).foregroundColor(settings.accentColor.color)
                     Text("“And [mention] when We made the House (the Ka'bah) a place of return for the people and [a place of] security” (Quran 2:125).").font(.title3).foregroundColor(settings.accentColor.color)
                 }
 
@@ -2693,7 +2834,33 @@ struct NabawiView: View {
                         .font(.title3)
                         .foregroundColor(settings.accentColor.color.opacity(0.85))
 
-                    Text("The mosque also contains the tomb of the Prophet Muhammad (peace and blessings be upon him) and his companions Abu Bakr As-Siddiq and Umar ibn Al-Khattab (may Allah be pleased with them). Visiting the Prophet’s grave is a recommended act of devotion when in Madinah.")
+                    Text("The mosque also contains the grave of the Prophet Muhammad (peace and blessings be upon him) and his companions Abu Bakr As-Siddiq and Umar ibn Al-Khattab (may Allah be pleased with them). It is from the Sunnah to send salaam upon him when you are there.")
+                        .font(.body)
+                }
+
+                Section(header: Text("A WARNING AGAINST SHIRK")) {
+                    Text("This must be clear, because it is where people fall. You do **not** pray to the Prophet (peace and blessings be upon him). You do **not** pray facing his grave. You do not ask him for anything, you do not seek help or intercession from him, and you do not circle or touch the grave seeking blessing. All of that is **shirk (شِرك)**, associating partners with Allah, and it is the one sin Allah does not forgive if a person dies upon it.")
+                        .font(.body)
+
+                    Text("Duaa is worship, and worship belongs to Allah alone:")
+                        .font(.body)
+                    Text("“And the mosques are for Allah, so do not invoke with Allah anyone” (Quran 72:18).")
+                        .font(.title3)
+                        .foregroundColor(settings.accentColor.color)
+
+                    Text("When you pray in Masjid An-Nabawi, you face the Qiblah, towards the Kaaba in Makkah, exactly as you would anywhere else on earth. The grave happens to lie in that direction from parts of the mosque; that is a fact of geography, not a thing to be prayed towards.")
+                        .font(.body)
+
+                    Text("The Prophet (peace and blessings be upon him) himself warned against precisely this, in his final illness:")
+                        .font(.body)
+                    Text("“May Allah curse the Jews and the Christians, for they took the graves of their prophets as places of worship” (Sahih al-Bukhari 435, Sahih Muslim 531).")
+                        .font(.title3)
+                        .foregroundColor(settings.accentColor.color.opacity(0.85))
+
+                    Text("He also said: “Do not make my grave a place of festivity, and send blessings upon me, for your blessings reach me wherever you are” (Sunan Abi Dawud 2042).")
+                        .font(.body)
+
+                    Text("So love him, follow him, and send salaah and salaam upon him abundantly. But direct every act of worship to Allah alone. That is what he taught, and honouring him means obeying him.")
                         .font(.body)
                 }
 
@@ -2799,7 +2966,7 @@ struct AqsaView: View {
                         .font(.title3)
                         .foregroundColor(settings.accentColor.color.opacity(0.85))
 
-                    Text("A report giving a specific figure for Masjid Al-Aqsa (fifty thousand prayers) is narrated in Sunan Ibn Majah 1413, but its chain is weak (da'if) — and its figure for Masjid An-Nabawi contradicts the authentic hadith above — so it is not relied upon.").font(.body)
+                    Text("A report giving a specific figure for Masjid Al-Aqsa (fifty thousand prayers) is narrated in Sunan Ibn Majah 1413, but its chain is weak (da'if) - and its figure for Masjid An-Nabawi contradicts the authentic hadith above - so it is not relied upon.").font(.body)
                 }
 
                 Section(header: Text("STRUCTURE AND FEATURES")) {
@@ -2848,7 +3015,7 @@ struct AqsaView: View {
 
 import SwiftUI
 
-/// Quran sciences and the Islamic calendar — knowledge sections shown under "Pillars & Beliefs".
+/// Quran sciences and the Islamic calendar - knowledge sections shown under "Pillars & Beliefs".
 struct BeliefsQuranView: View {
     @ObservedObject var settings = Settings.shared
 
@@ -2977,72 +3144,226 @@ struct WudhuView: View {
         List {
             Group {
                 Section(header: Text("SUMMARY")) {
-                    Text("In short: Wudhu is the minor ablution before prayer, and Ghusl is the full-body wash for major impurity—both purify the body and prepare the soul to stand before Allah.")
+                    Text("In short: Wudhu is the minor ablution. It is a condition for the validity of the prayer, and it wipes away sins as it is performed.")
                         .font(.body)
                 }
 
-                Section(header: Text("WUDHU (MINOR ABLUTION)")) {
-                    Text("Wudhu (وُضُوء) — from the root **w-d-a (و ض أ)** (cleanliness and radiance) — is the ritual purification Muslims perform before **Salah (صَلَاة)** (prayer), touching the Quran, or circumambulating the Ka'bah (طَوَاف).")
+                Section(header: Text("OVERVIEW")) {
+                    Text("**Wudhu (وُضُوء)**, from the root **w-d-a (و ض أ)**, meaning cleanliness and radiance, is the purification performed before **Salah (صَلَاة)**, before touching the Quran, and before **Tawaf (طَوَاف)** around the Kaaba.")
                         .font(.body)
-                    Text("It involves washing specific body parts: hands, mouth, nostrils, face, arms, wiping the head, and washing the feet.")
+                    Text("Without it, the prayer is not accepted. The Prophet (peace and blessings be upon him) said:")
                         .font(.body)
-                    Text("Allah (Glorified and Exalted be He) says in the Quran:")
-                        .font(.body)
-                    Text("“O you who have believed, when you rise to [perform] prayer, wash your faces and your forearms to the elbows and wipe over your heads and [wash] your feet to the ankles” (Quran 5:6).")
-                        .font(.title3)
-                        .foregroundColor(settings.accentColor.color)
-                    Text("Wudhu ensures physical cleanliness and also prepares one spiritually to stand before Allah (Glorified and Exalted be He).")
-                        .font(.body)
-                    Text("It is recommended to perform Wudhu before sleeping as well, following the Sunnah of the Prophet Muhammad (peace and blessings be upon him).")
-                        .font(.body)
-                    Text("The Prophet Muhammad (peace and blessings be upon him) said:")
-                        .font(.body)
-                    Text("“When a Muslim or a believer washes his face (in wudhu/ablution), every sin he contemplated with his eyes, will be washed away from his face along with water, or with the last drop of water; when he washes his hands, every sin they wrought will be effaced from his hands with the water, or with the last drop of water; and when he washes his feet, every sin towards which his feet have walked will be washed away with the water or with the last drop of water with the result that he comes out pure from all sins” (Sahih Muslim 244).")
+                    Text("“Allah does not accept the prayer of any of you if he breaks his wudhu until he performs wudhu again” (Sahih al-Bukhari 135, Sahih Muslim 225).")
                         .font(.title3)
                         .foregroundColor(settings.accentColor.color.opacity(0.85))
                 }
 
-                Section(header: Text("GHUSL (MAJOR ABLUTION)")) {
-                    Text("Ghusl (غُسل) — from the root **gh-s-l (غ س ل)**, to wash — is a full-body ritual wash performed in specific circumstances, such as after marital relations, menstruation, or postpartum bleeding.")
+                Section(header: Text("THE COMMAND IN THE QURAN")) {
+                    Text("Allah (Glorified and Exalted be He) says:")
                         .font(.body)
-                    Text("It involves washing the entire body thoroughly.")
-                        .font(.body)
-                    Text("Ghusl becomes obligatory to remove major ritual impurity (**Janabah - جَنَابَة**).")
-                        .font(.body)
-                    Text("It is also recommended before attending Jumuah (Friday) prayer, entering Ihram for Hajj or Umrah, and after washing a deceased person.")
-                        .font(.body)
-                }
-
-                Section(header: Text("SPIRITUAL SIGNIFICANCE")) {
-                    Text("Both Wudhu and Ghusl signify not only physical cleanliness but also spiritual purification.")
-                        .font(.body)
-                    Text("Performing them with the right intention (niyyah - نِيَّة) draws one closer to Allah and prepares the soul for acts of worship.")
+                    Text("“O you who have believed, when you rise to [perform] prayer, wash your faces and your forearms to the elbows and wipe over your heads and [wash] your feet to the ankles” (Quran 5:6).")
+                        .font(.title3)
+                        .foregroundColor(settings.accentColor.color)
+                    Text("This one verse names the four obligatory parts: the face, the arms to the elbows, wiping the head, and the feet to the ankles. Everything else in the description below is Sunnah, following the way the Prophet (peace and blessings be upon him) actually did it.")
                         .font(.body)
                 }
 
-                Section(header: Text("USEFUL LINKS")) {
-                    Text("How to perform Wudhu: https://www.wikihow.com/Perform-Wudu")
-                        .font(.caption)
-                    Text("How to perform Ghusl: https://zamzam.com/blog/purification-bath-in-islam/")
-                        .font(.caption)
+                Section(header: Text("HOW TO MAKE WUDHU")) {
+                    Text("1. Make the **niyyah (نِيَّة)**, the intention, in the heart. It is not said aloud.")
+                        .font(.body)
+                    Text("2. Say **“Bismillah“ (بِسمِ اللهِ)**.")
+                        .font(.body)
+                    Text("3. Wash both **hands** up to the wrists, three times.")
+                        .font(.body)
+                    Text("4. **Rinse the mouth** and **sniff water into the nose** and blow it out, three times. Use the right hand to take the water and the left to blow the nose.")
+                        .font(.body)
+                    Text("5. Wash the **face** three times, from the hairline to under the chin and from ear to ear. If you have a thick beard, run wet fingers through it.")
+                        .font(.body)
+                    Text("6. Wash the **right arm** to and including the elbow, three times. Then the **left arm**, three times.")
+                        .font(.body)
+                    Text("7. **Wipe the head once**, not three times: pass wet hands from the front of the head to the back and return them to the front. Then, with the same water, **wipe the ears**, index fingers inside and thumbs behind.")
+                        .font(.body)
+                    Text("8. Wash the **right foot** to and including the ankle, three times, running the fingers between the toes. Then the **left foot**, three times.")
+                        .font(.body)
+                    Text("9. Then say: **“Ash-hadu an la ilaha illa Allah, wahdahu la sharika lah, wa ash-hadu anna Muhammadan abduhu wa rasuluh.“**")
+                        .font(.body)
+
+                    Text("The Prophet (peace and blessings be upon him) said about that closing testimony:")
+                        .font(.body)
+                    Text("“There is no one among you who performs wudhu and does it well, then says: I bear witness that there is no god but Allah alone with no partner, and that Muhammad is His slave and Messenger, but the eight gates of Paradise will be opened for him, and he may enter through whichever of them he wishes” (Sahih Muslim 234).")
+                        .font(.title3)
+                        .foregroundColor(settings.accentColor.color.opacity(0.85))
+
+                    Text("Do not be wasteful with water, even at a flowing river. That was the Prophet's instruction (Sunan Ibn Majah 425).")
+                        .font(.body)
+                }
+
+                Section(header: Text("WHAT BREAKS WUDHU")) {
+                    Text("• Anything that exits from the front or back passage: urine, stool, or wind.")
+                        .font(.body)
+                    Text("• Deep sleep, in which a person loses awareness.")
+                        .font(.body)
+                    Text("• Loss of consciousness, whether from fainting, intoxication, or illness.")
+                        .font(.body)
+                    Text("• Touching the private parts directly with the hand, without a barrier.")
+                        .font(.body)
+                    Text("• Eating camel meat.")
+                        .font(.body)
+                    Text("Doubt alone does not break it. If you are certain you had wudhu and merely suspect you lost it, you still have it.")
+                        .font(.body)
+                }
+
+                Section(header: Text("THE REWARD")) {
+                    Text("The Prophet Muhammad (peace and blessings be upon him) said:")
+                        .font(.body)
+                    Text("“When a Muslim or a believer washes his face (in wudhu), every sin he contemplated with his eyes will be washed away from his face along with the water, or with the last drop of water; when he washes his hands, every sin they wrought will be effaced from his hands with the water, or with the last drop of water; and when he washes his feet, every sin towards which his feet have walked will be washed away with the water or with the last drop of water, with the result that he comes out pure from all sins” (Sahih Muslim 244).")
+                        .font(.title3)
+                        .foregroundColor(settings.accentColor.color.opacity(0.85))
+
+                    Text("He also said:")
+                        .font(.body)
+                    Text("“Shall I not tell you of that by which Allah erases sins and raises ranks? Performing wudhu properly even when it is difficult, taking many steps to the mosque, and waiting for the next prayer after the previous one” (Sahih Muslim 251).")
+                        .font(.title3)
+                        .foregroundColor(settings.accentColor.color.opacity(0.85))
+
+                    Text("And he said that his nation will be called on the Day of Resurrection with radiant faces, hands, and feet, from the traces of wudhu (Sahih al-Bukhari 136).")
+                        .font(.body)
+
+                    Text("It is also from the Sunnah to make wudhu before sleeping.")
+                        .font(.body)
                 }
 
                 Section(header: Text("IN SUMMARY")) {
-                    Text("Purity is a condition of prayer and a means of erasing sins. Performed with intention, Wudhu and Ghusl are acts of worship in themselves.")
+                    Text("Purity is a condition of prayer and a means of erasing sins. Performed with intention and in the way the Prophet performed it, wudhu is an act of worship in itself.")
                         .font(.body)
+
+                    NavigationLink(destination: GhuslView()) {
+                        Label("Next: How to Make Ghusl", systemImage: "drop.fill")
+                            .font(.body)
+                            .foregroundColor(settings.accentColor.color)
+                    }
                 }
 
                 GuideSourcesSection(sources: [
-                    (title: "How to Perform Wudhu and Ghusl", subtitle: "Step-by-step guide, IslamQA", url: "https://islamqa.info/en/categories/topics/13/wudoo"),
-                    (title: "Quran 5:6", subtitle: "The verse of wudhu, ghusl and tayammum", url: "https://quran.com/5/6"),
-                    (title: "Sahih al-Bukhari - Book of Ablutions", subtitle: "The Prophet's wudhu, described by those who saw it", url: "https://sunnah.com/bukhari/4"),
-                    (title: "Sahih al-Bukhari - Book of Ghusl", subtitle: "The obligatory bath and how it is performed", url: "https://sunnah.com/bukhari/5"),
+                    (title: "How to Perform Wudhu", subtitle: "Step-by-step guide, IslamQA", url: "https://islamqa.info/en/categories/topics/13/wudoo"),
                 ])
             }
             .themedListRowBackground()
         }
         .applyConditionalListStyle()
-        .navigationTitle("Wudhu and Ghusl")
+        .navigationTitle("How to Make Wudhu")
+    }
+}
+
+struct GhuslView: View {
+    @ObservedObject var settings = Settings.shared
+
+    var body: some View {
+        List {
+            Group {
+                Section(header: Text("SUMMARY")) {
+                    Text("In short: Ghusl is the full-body wash that lifts major ritual impurity. Until it is performed, the prayer cannot be prayed.")
+                        .font(.body)
+                }
+
+                Section(header: Text("OVERVIEW")) {
+                    Text("**Ghusl (غُسل)**, from the root **gh-s-l (غ س ل)**, to wash, is a complete washing of the body with the intention of lifting major ritual impurity, **Janabah (جَنَابَة)**.")
+                        .font(.body)
+                    Text("Where wudhu washes specific limbs, ghusl reaches the whole body. Ghusl also removes the need for a separate wudhu, so long as nothing has broken it during the wash.")
+                        .font(.body)
+                }
+
+                Section(header: Text("WHEN GHUSL IS OBLIGATORY")) {
+                    Text("• After marital relations, whether or not there is emission.")
+                        .font(.body)
+                    Text("• After the emission of maniy (sexual fluid) with desire, whether awake or from a wet dream.")
+                        .font(.body)
+                    Text("• At the end of **menstruation (حَيض)**.")
+                        .font(.body)
+                    Text("• At the end of **postpartum bleeding (نِفَاس)**.")
+                        .font(.body)
+                    Text("• Upon accepting Islam.")
+                        .font(.body)
+                    Text("• Upon death, the deceased is washed by the living.")
+                        .font(.body)
+                }
+
+                Section(header: Text("WHEN GHUSL IS RECOMMENDED")) {
+                    Text("• Before the **Jumuah (جُمُعَة)** prayer.")
+                        .font(.body)
+                    Text("• Before the two **Eid** prayers.")
+                        .font(.body)
+                    Text("• Before entering **Ihram (إِحرَام)** for Hajj or Umrah.")
+                        .font(.body)
+                    Text("• After washing a deceased person.")
+                        .font(.body)
+                }
+
+                Section(header: Text("THE COMMAND IN THE QURAN")) {
+                    Text("Allah (Glorified and Exalted be He) says:")
+                        .font(.body)
+                    Text("“And if you are in a state of janabah, then purify yourselves” (Quran 5:6).")
+                        .font(.title3)
+                        .foregroundColor(settings.accentColor.color)
+                    Text("And He says:")
+                        .font(.body)
+                    Text("“And do not approach prayer while you are intoxicated until you know what you are saying, or in a state of janabah, except those passing through [a place of prayer], until you have washed [your whole body]” (Quran 4:43).")
+                        .font(.title3)
+                        .foregroundColor(settings.accentColor.color)
+                }
+
+                Section(header: Text("HOW TO MAKE GHUSL")) {
+                    Text("This is the way described by Aisha and Maymunah (may Allah be pleased with them), who saw the Prophet (peace and blessings be upon him) perform it (Sahih al-Bukhari 248, 249, 257).")
+                        .font(.body)
+
+                    Text("1. Make the **niyyah (نِيَّة)** in the heart to lift the state of janabah.")
+                        .font(.body)
+                    Text("2. Say **“Bismillah“**, and wash both **hands** three times.")
+                        .font(.body)
+                    Text("3. Wash the **private parts** and any impurity from the body with the left hand, then wash the hand.")
+                        .font(.body)
+                    Text("4. Perform a **complete wudhu**, as you would for prayer.")
+                        .font(.body)
+                    Text("5. Pour water over the **head three times**, working the fingers through the hair so the water reaches the roots of every hair.")
+                        .font(.body)
+                    Text("6. Pour water over the **right side** of the body, then the **left side**, ensuring the water reaches every part: under the arms, inside the navel, behind the ears, between the toes.")
+                        .font(.body)
+                    Text("7. Move from your place and **wash the feet**, if you did not wash them during the wudhu.")
+                        .font(.body)
+
+                    Text("**The obligation is only two things:** the intention, and that water reaches every part of the body including the mouth and nose. The order and the repetition above are Sunnah. If a person simply immerses fully in water with the intention, the ghusl is valid.")
+                        .font(.body)
+
+                    Text("Women do **not** need to undo braided hair for the ghusl of janabah, so long as the water reaches the roots. Umm Salamah (may Allah be pleased with her) asked about this, and the Prophet (peace and blessings be upon him) said:")
+                        .font(.body)
+                    Text("“No, it is enough for you to pour three handfuls of water over your head, then pour water over yourself, and you will be purified” (Sahih Muslim 330).")
+                        .font(.title3)
+                        .foregroundColor(settings.accentColor.color.opacity(0.85))
+                }
+
+                Section(header: Text("IF THERE IS NO WATER: TAYAMMUM")) {
+                    Text("If water cannot be found, or using it would cause harm or illness, then **Tayammum (تَيَمُّم)**, dry purification, takes its place for both wudhu and ghusl. Allah says in the same verse:")
+                        .font(.body)
+                    Text("“And if you do not find water, then seek clean earth and wipe over your faces and your hands [with it]” (Quran 5:6).")
+                        .font(.title3)
+                        .foregroundColor(settings.accentColor.color)
+                    Text("Strike clean earth once with both palms, then wipe the face, then wipe the hands. That is all.")
+                        .font(.body)
+                }
+
+                Section(header: Text("IN SUMMARY")) {
+                    Text("Ghusl lifts major impurity and returns a person to the state in which they may pray. Its obligation is simple: intend it, and let the water reach all of you.")
+                        .font(.body)
+                }
+
+                GuideSourcesSection(sources: [
+                    (title: "How to Perform Ghusl", subtitle: "Step-by-step guide, IslamQA", url: "https://islamqa.info/en/answers/83057"),
+                ])
+            }
+            .themedListRowBackground()
+        }
+        .applyConditionalListStyle()
+        .navigationTitle("How to Make Ghusl")
     }
 }
 
@@ -3053,7 +3374,7 @@ struct JumuahView: View {
         List {
             Group {
                 Section(header: Text("SUMMARY")) {
-                    Text("In short: Jumuah is the Friday congregational prayer that replaces Dhuhr—a sermon followed by two rak'ah, obligatory on Muslim men who are able.")
+                    Text("In short: Jumuah is the Friday congregational prayer that replaces Dhuhr - a sermon followed by two rak'ah, obligatory on Muslim men who are able.")
                         .font(.body)
                 }
 
@@ -3134,9 +3455,6 @@ struct JumuahView: View {
 
                 GuideSourcesSection(sources: [
                     (title: "How to Pray Jumuah", subtitle: "The Friday prayer and its khutbah, IslamQA", url: "https://islamqa.info/en/categories/topics/85/jumuah-prayer"),
-                    (title: "Quran 62:9-10", subtitle: "Hasten to the remembrance of Allah and leave off trade", url: "https://quran.com/62/9-10"),
-                    (title: "Sahih al-Bukhari - Book of Friday Prayer", subtitle: "The khutbah, the ghusl, and coming early", url: "https://sunnah.com/bukhari/11"),
-                    (title: "Sahih Muslim - Book of Friday Prayer", subtitle: "What the Prophet recited and how he addressed the people", url: "https://sunnah.com/muslim/7"),
                 ])
             }
             .themedListRowBackground()
@@ -3230,19 +3548,24 @@ struct AdhanOtherView: View {
                     .font(.body)
                 }
 
-                Section(header: Text("FAJR ADHAN")) {
-                    Text("In the Fajr (dawn) Adhan, an additional line is added:")
+                Section(header: Text("ONLY FOR FAJR")) {
+                    Text("**ONLY FOR FAJR:** the following line is added, and it is said in no other Adhan. It comes after “Hayya ala al-falah“ and before the closing takbir.")
                         .font(.body)
+
+                    Text("**ONLY FOR FAJR:**")
+                        .font(.body)
+                        .foregroundColor(settings.accentColor.color)
 
                     Text("الصَّلَاةُ خَيرٌ مِنَ النَّومِ")
                         .font(.body)
                         .foregroundColor(settings.accentColor.color)
                         .multilineTextAlignment(.trailing)
+                        .frame(maxWidth: .infinity, alignment: .trailing)
 
                     Text("As-salatu khayrun mina-nawm\n(Prayer is better than sleep)")
                         .font(.body)
 
-                    Text("This line is repeated twice before concluding the Adhan.")
+                    Text("This line is said twice, and only in the Adhan for Fajr. It is never said in the Adhan for Dhuhr, Asr, Maghrib, or Isha, and it is never said in the Iqamah.")
                         .font(.body)
                 }
 
@@ -3251,11 +3574,31 @@ struct AdhanOtherView: View {
                         .font(.body)
                 }
 
+                Section(header: Text("THE VIRTUE OF THE ADHAN")) {
+                    Text("Allah (Glorified and Exalted be He) says:")
+                        .font(.body)
+                    Text("“O you who have believed, when [the adhan] is called for the prayer on the day of Jumuah, then proceed to the remembrance of Allah and leave trade” (Quran 62:9).")
+                        .font(.title3)
+                        .foregroundColor(settings.accentColor.color)
+                    Text("The Prophet (peace and blessings be upon him) said:")
+                        .font(.body)
+                    Text("“If the people knew what there is in the call to prayer and the first row, and they could find no other way than to draw lots, they would draw lots for it” (Sahih al-Bukhari 615).")
+                        .font(.title3)
+                        .foregroundColor(settings.accentColor.color.opacity(0.85))
+                    Text("“When the call to prayer is made, Satan takes to his heels and passes wind with noise so as not to hear the call” (Sahih al-Bukhari 608).")
+                        .font(.title3)
+                        .foregroundColor(settings.accentColor.color.opacity(0.85))
+                    Text("Answer the muadhin. He said: “When you hear the muadhin, say the like of what he says” (Sahih Muslim 383). Except at “Hayya ala as-salah“ and “Hayya ala al-falah,“ where you say “La hawla wa la quwwata illa billah“ (Sahih Muslim 385).")
+                        .font(.body)
+                    Text("Then send blessings on the Prophet (peace and blessings be upon him), and say:")
+                        .font(.body)
+                    Text("“Allahumma Rabba hadhihi ad-dawati at-tammah, was-salatil-qa'imah, ati Muhammadan al-wasilata wal-fadilah, wab'ath-hu maqaman mahmudan alladhi wa'adtah“ - whoever says this after the adhan, my intercession will be permitted for him on the Day of Resurrection (Sahih al-Bukhari 614).")
+                        .font(.title3)
+                        .foregroundColor(settings.accentColor.color.opacity(0.85))
+                }
+
                 GuideSourcesSection(sources: [
                     (title: "How to Give the Adhan and Iqamah", subtitle: "The wording and its rulings, IslamQA", url: "https://islamqa.info/en/categories/topics/70/adhan-and-iqamah"),
-                    (title: "Sahih al-Bukhari - Book of the Call to Prayer", subtitle: "The wording of the adhan and how it began", url: "https://sunnah.com/bukhari/10"),
-                    (title: "Sahih Muslim - Book of Prayer (Adhan)", subtitle: "Repeating after the muadhin, and the dua after it", url: "https://sunnah.com/muslim/4"),
-                    (title: "Sunan Abi Dawud - Book of Prayer", subtitle: "Bilal, Abdullah ibn Zayd, and the dream of the adhan", url: "https://sunnah.com/abudawud/2"),
                 ])
             }
             .themedListRowBackground()
@@ -3277,7 +3620,7 @@ struct IqamahView: View {
                 }
 
                 Section(header: Text("OVERVIEW")) {
-                    Text("The Iqamah (إِقَامَة) — from the root **q-w-m (ق و م)**, to stand or establish — is the second call to prayer, given right before the congregational Salah begins.")
+                    Text("The Iqamah (إِقَامَة) - from the root **q-w-m (ق و م)**, to stand or establish - is the second call to prayer, given right before the congregational Salah begins.")
                         .font(.body)
 
                     Text("It is generally shorter than the Adhan and serves as a prompt for the congregation to stand and line up for prayer.")
@@ -3351,10 +3694,28 @@ struct IqamahView: View {
                         .font(.body)
                 }
 
+                Section(header: Text("AFTER THE IQAMAH")) {
+                    Text("The Iqamah is said in single phrases, unlike the Adhan, which is said in pairs. Anas (may Allah be pleased with him) said:")
+                        .font(.body)
+                    Text("“Bilal was ordered to say the words of the adhan twice and the words of the iqamah once” (Sahih al-Bukhari 605, Sahih Muslim 378).")
+                        .font(.title3)
+                        .foregroundColor(settings.accentColor.color.opacity(0.85))
+                    Text("Once the Iqamah is called, no other prayer is begun. The Prophet (peace and blessings be upon him) said:")
+                        .font(.body)
+                    Text("“When the iqamah for the prayer has been called, then there is no prayer except the obligatory one” (Sahih Muslim 710).")
+                        .font(.title3)
+                        .foregroundColor(settings.accentColor.color.opacity(0.85))
+                    Text("And straighten the rows before the imam begins:")
+                        .font(.body)
+                    Text("“Straighten your rows, for straightening the rows is part of the perfection of the prayer” (Sahih al-Bukhari 723, Sahih Muslim 433).")
+                        .font(.title3)
+                        .foregroundColor(settings.accentColor.color.opacity(0.85))
+                    Text("Walk to the prayer calmly. He said: “When the iqamah is called, do not come to it running. Come to it walking, with tranquillity. Whatever you catch, pray, and whatever you miss, complete it” (Sahih al-Bukhari 636, Sahih Muslim 602).")
+                        .font(.body)
+                }
+
                 GuideSourcesSection(sources: [
                     (title: "How to Give the Iqamah", subtitle: "Its wording and its rulings, IslamQA", url: "https://islamqa.info/en/categories/topics/70/adhan-and-iqamah"),
-                    (title: "Sahih al-Bukhari - Book of the Call to Prayer", subtitle: "The iqamah, and the phrases said singly", url: "https://sunnah.com/bukhari/10"),
-                    (title: "Sunan Abi Dawud - Book of Prayer", subtitle: "The wording of the iqamah", url: "https://sunnah.com/abudawud/2"),
                 ])
             }
             .themedListRowBackground()
@@ -3371,7 +3732,78 @@ struct TakbiratView: View {
         List {
             Group {
                 Section(header: Text("SUMMARY")) {
-                    Text("In short: the Takbirat al-Eid is the proclamation of Allah's greatness (“Allahu Akbar…”) recited during the days of the two Eids.")
+                    Text("In short: the Eid prayer is two rak'ah with extra takbirs, prayed in congregation after sunrise with no Adhan and no Iqamah, followed by the khutbah.")
+                        .font(.body)
+                }
+
+                Section(header: Text("BEFORE YOU GO")) {
+                    Text("1. Perform **ghusl (غُسل)**, wear your best clothes, and apply perfume (for men).")
+                        .font(.body)
+                    Text("2. For **Eid al-Fitr**, eat an odd number of dates before leaving. For **Eid al-Adha**, do not eat until after the prayer, so that the first thing you eat is from the sacrifice.")
+                        .font(.body)
+                    Text("3. Pay **Zakat al-Fitr** before the prayer (Eid al-Fitr only). If it is paid after the prayer, it counts as ordinary charity, not as Zakat al-Fitr.")
+                        .font(.body)
+                    Text("4. Say the Takbir on the way, out loud (see below).")
+                        .font(.body)
+                    Text("5. Go out to the **musalla (مُصَلَّى)**, the open prayer ground, which is the Sunnah, and take the women and children with you. Go by one route and return by another, as the Prophet (peace and blessings be upon him) did (Sahih al-Bukhari 986).")
+                        .font(.body)
+                }
+
+                Section(header: Text("THE TIME OF THE PRAYER")) {
+                    Text("The Eid prayer begins after the sun has fully risen, roughly 15 to 20 minutes after sunrise, and its time lasts until just before the sun reaches its zenith (before Dhuhr).")
+                        .font(.body)
+                    Text("**Eid al-Adha** is prayed early, so people can go and sacrifice. **Eid al-Fitr** is prayed a little later, so people have time to give Zakat al-Fitr.")
+                        .font(.body)
+                }
+
+                Section(header: Text("HOW TO PRAY EID")) {
+                    Text("There is **no Adhan and no Iqamah** for the Eid prayer, and no call of any kind. It is simply begun.")
+                        .font(.body)
+
+                    Text("It is **two rak'ah**, prayed in congregation behind the imam, and the recitation is out loud.")
+                        .font(.body)
+
+                    Text("**First rak'ah:**")
+                        .font(.body)
+                    Text("1. Make the intention in the heart, then the opening takbir, **Takbirat al-Ihram (تَكبِيرَة الإِحرَام)**, raising the hands.")
+                        .font(.body)
+                    Text("2. Say the opening supplication (**du'a al-istiftah**).")
+                        .font(.body)
+                    Text("3. Say **seven takbirs** in total in this rak'ah before the recitation, raising the hands with each. (Scholars differ over whether the opening takbir is counted as one of the seven; both are practised and the prayer is valid either way. Do not argue over it.)")
+                        .font(.body)
+                    Text("4. Then say the ta'awwudh and recite **al-Fatihah**, followed by a surah. From the Sunnah: **Surah al-A'la (87)** in the first rak'ah and **al-Ghashiyah (88)** in the second, or **Qaf (50)** and **al-Qamar (54)**.")
+                        .font(.body)
+                    Text("5. Then complete the rak'ah as normal: ruku', standing, and two prostrations.")
+                        .font(.body)
+
+                    Text("**Second rak'ah:**")
+                        .font(.body)
+                    Text("6. Stand, and before reciting, say **five takbirs**, raising the hands with each. These are apart from the takbir you said when standing up from prostration.")
+                        .font(.body)
+                    Text("7. Recite al-Fatihah and a surah, then complete the rak'ah, sit for the tashahhud, and give the salaam.")
+                        .font(.body)
+
+                    Text("There is **no nafl prayer** before or after the Eid prayer at the musalla.")
+                        .font(.body)
+
+                    Text("The Prophet (peace and blessings be upon him) is reported to have said:")
+                        .font(.body)
+                    Text("“The takbir in Fitr and Adha is seven in the first rak'ah and five in the second, apart from the two takbirs of ruku'” (Sunan Abi Dawud 1151).")
+                        .font(.title3)
+                        .foregroundColor(settings.accentColor.color.opacity(0.85))
+
+                    Text("If you miss a takbir, or the imam has already begun, join him where he is and do not try to make up the extra takbirs. They are a Sunnah, not a pillar, and forgetting them does not invalidate the prayer or require the prostration of forgetfulness.")
+                        .font(.body)
+                }
+
+                Section(header: Text("AFTER THE PRAYER: THE KHUTBAH")) {
+                    Text("The khutbah comes **after** the Eid prayer, unlike Jumuah, where it comes before.")
+                        .font(.body)
+                    Text("Staying for it is strongly recommended, though it is not obligatory, and one who leaves has not sinned.")
+                        .font(.body)
+                    Text("If you missed the congregation entirely, you may pray two rak'ah on your own.")
+                        .font(.body)
+                    Text("Greet one another with **“Taqabbal Allahu minna wa minkum“ (تَقَبَّلَ اللهُ مِنَّا وَمِنكُم)**, “May Allah accept it from us and from you.“ This was the greeting of the Companions.")
                         .font(.body)
                 }
 
@@ -3466,20 +3898,18 @@ struct TakbiratView: View {
                 }
 
                 Section(header: Text("IN SUMMARY")) {
-                    Text("By glorifying Allah on the days of Eid, Muslims complete their worship with gratitude—after Ramadan for Eid al-Fitr, and around the days of Hajj for Eid al-Adha.")
+                    Text("By glorifying Allah on the days of Eid, Muslims complete their worship with gratitude - after Ramadan for Eid al-Fitr, and around the days of Hajj for Eid al-Adha.")
                         .font(.body)
                 }
 
                 GuideSourcesSection(sources: [
-                    (title: "How to Say the Eid Takbir", subtitle: "Its wording and when it is said, IslamQA", url: "https://islamqa.info/en/answers/36491"),
-                    (title: "Quran 2:185", subtitle: "Magnify Allah for having guided you", url: "https://quran.com/2/185"),
-                    (title: "Quran 22:28", subtitle: "Mention the name of Allah on the appointed days", url: "https://quran.com/22/28"),
-                    (title: "Sahih al-Bukhari - Book of the Two Eids", subtitle: "The takbir, the prayer, and going out to the musalla", url: "https://sunnah.com/bukhari/13"),
+                    (title: "How to Pray Eid", subtitle: "The Eid prayer and its takbirs, IslamQA", url: "https://islamqa.info/en/answers/48983"),
+                    (title: "The Eid Takbir", subtitle: "Its wording and when it is said, IslamQA", url: "https://islamqa.info/en/answers/36491"),
                 ])
             }
             .themedListRowBackground()
         }
-        .navigationTitle("Takbirat Al-Eid")
+        .navigationTitle("How to Pray Eid")
         .applyConditionalListStyle()
     }
 }
@@ -3499,7 +3929,7 @@ struct HijriCalendarView: View {
                     Text("The Hijri calendar, also known as the Islamic or Lunar Hijri calendar, consists of 12 lunar months in a year of 354 or 355 days.")
                         .font(.body)
 
-                    Text("It is used to determine key Islamic dates such as Ramadan, Hajj, and the two Eid festivals. The reference point (epoch) of the calendar is the Hijrah—the migration of Prophet Muhammad (peace and blessings be upon him) from Makkah to Madinah in 622 CE.")
+                    Text("It is used to determine key Islamic dates such as Ramadan, Hajj, and the two Eid festivals. The reference point (epoch) of the calendar is the Hijrah - the migration of Prophet Muhammad (peace and blessings be upon him) from Makkah to Madinah in 622 CE.")
                         .font(.body)
 
                     Text("Allah (Glorified and Exalted be He) says in the Quran:")
@@ -3628,7 +4058,7 @@ struct CompileView: View {
                 }
 
                 Section(header: Text("CONSENSUS OF THE COMPANIONS")) {
-                    Text("The Companions — foremost memorizers and teachers — were unanimous in accepting the compilation and the Uthmanic copies. It is widely reported that Abu Bakr, Umar, Uthman, and Ali were among the foremost memorizers and teachers of the Quran, and none objected to the standardized mushaf.")
+                    Text("The Companions - foremost memorizers and teachers - were unanimous in accepting the compilation and the Uthmanic copies. It is widely reported that Abu Bakr, Umar, Uthman, and Ali were among the foremost memorizers and teachers of the Quran, and none objected to the standardized mushaf.")
                         .font(.body)
 
                     Text("Zayd ibn Thabit led the technical work in both Abu Bakr’s and Uthman’s projects, bringing rigorous verification. Senior scholars, including Quraysh experts, reviewed and approved the copies.")
@@ -3648,7 +4078,7 @@ struct CompileView: View {
                     Text("Prophet Muhammad (peace and blessings be upon him) taught that the Quran was revealed in seven Ahruf (modes) for ease. The Quran was first compiled into one manuscript under Abu Bakr (may Allah be pleased with him), around one year after the Prophet’s death. Later, the Uthmanic rasm allowed what remained of those modes to be read and transmitted through canonical Qiraat verified by chains. The 10 Qiraat (with their 20 Riwayaat) are mutawatir and reflect how the prophetic recitation was preserved in writing and oral teaching.")
                         .font(.body)
 
-                    Text("Thus, standardization did not limit revelation; it safeguarded it — preventing private notes and unverified materials from being mistaken for the Quran — while preserving the legitimate readings taught by Prophet Muhammad (peace and blessings be upon him).")
+                    Text("Thus, standardization did not limit revelation; it safeguarded it - preventing private notes and unverified materials from being mistaken for the Quran - while preserving the legitimate readings taught by Prophet Muhammad (peace and blessings be upon him).")
                         .font(.body)
                 }
 
@@ -3675,7 +4105,7 @@ struct CompileView: View {
                 }
 
                 Section(header: Text("WHY WERE PRIVATE MATERIALS RETIRED?")) {
-                    Text("Some Companions wrote personal notes — duas, explanations, or hadith — near Quranic passages. To prevent confusion between private annotations and the Quran, and to avoid unchecked variants, Uthman ordered that only the verified official copies be used for public recitation and that other materials be retired.")
+                    Text("Some Companions wrote personal notes - duas, explanations, or hadith - near Quranic passages. To prevent confusion between private annotations and the Quran, and to avoid unchecked variants, Uthman ordered that only the verified official copies be used for public recitation and that other materials be retired.")
                         .font(.body)
 
                     Text("No Companion rejected the standardized mushaf. The community recited, taught, and transmitted the same Quran by memorization and writing through every generation.")
@@ -3683,7 +4113,7 @@ struct CompileView: View {
                 }
 
                 Section(header: Text("CONTINUITY UNTIL TODAY")) {
-                    Text("The Quran we hold today is the same revelation taught by Prophet Muhammad (peace and blessings be upon him), preserved through the consensus of the Companions, the Uthmanic rasm, the living tradition of memorization, and the mutawatir Qiraat. Around the world, millions memorize the entire Quran — letter for letter — continuing an unbroken chain of transmission.")
+                    Text("The Quran we hold today is the same revelation taught by Prophet Muhammad (peace and blessings be upon him), preserved through the consensus of the Companions, the Uthmanic rasm, the living tradition of memorization, and the mutawatir Qiraat. Around the world, millions memorize the entire Quran - letter for letter - continuing an unbroken chain of transmission.")
                         .font(.body)
 
                     Text("Public recitation, prayer, and education remain bound to the verified text. The Ummah’s practice fulfills Allah's (Glorified and Exalted be He) promise: its preservation is both textual and living.")
@@ -3710,7 +4140,7 @@ struct CompileView: View {
                 }
 
                 Section(header: Text("IN SUMMARY")) {
-                    Text("Through unbroken memorization and a verified written text, the Quran remains today exactly as it was revealed—fulfilling Allah's promise to preserve it.")
+                    Text("Through unbroken memorization and a verified written text, the Quran remains today exactly as it was revealed - fulfilling Allah's promise to preserve it.")
                         .font(.body)
                 }
             }
@@ -3729,7 +4159,7 @@ struct TajweedView: View {
         List {
             Group {
                 Section(header: Text("SUMMARY")) {
-                    Text("In short: Tajweed is the science of reciting the Quran correctly—giving each letter its proper articulation and every rule its due.")
+                    Text("In short: Tajweed is the science of reciting the Quran correctly - giving each letter its proper articulation and every rule its due.")
                         .font(.body)
                 }
 
@@ -3766,7 +4196,7 @@ struct TajweedView: View {
                 }
 
                 Section(header: Text("IMPORTANCE")) {
-                    Text("Tajweed ensures the Quran is recited in the most accurate and beautiful way possible, exactly as it was revealed to the Prophet ﷺ. Reciting with Tajweed is not just about making recitation sound pleasant—it is about preserving the integrity of the Quran itself.")
+                    Text("Tajweed ensures the Quran is recited in the most accurate and beautiful way possible, exactly as it was revealed to the Prophet ﷺ. Reciting with Tajweed is not just about making recitation sound pleasant - it is about preserving the integrity of the Quran itself.")
                         .font(.body)
 
                     Text("The Quran was revealed in Arabic, and every word, letter, and sound has a specific meaning and weight. A slight mispronunciation could change the meaning of a verse. Tajweed helps safeguard against these errors and honors the sacred text with the care and precision it deserves.")
@@ -3843,7 +4273,7 @@ struct JuzView: View {
         List {
             Group {
                 Section(header: Text("SUMMARY")) {
-                    Text("In short: the Quran is divided into thirty roughly equal parts called Juz, making it easy to read over a month—especially in Ramadan.")
+                    Text("In short: the Quran is divided into thirty roughly equal parts called Juz, making it easy to read over a month - especially in Ramadan.")
                         .font(.body)
                 }
 
@@ -3885,6 +4315,42 @@ struct JuzView: View {
                         .foregroundColor(settings.accentColor.color.opacity(0.85))
                 }
 
+                // Each Juz is named for the word it opens with, and that name is Arabic. Listing them by number
+                // alone (which is all this screen used to do) leaves out the thing they are actually called.
+                Section(header: Text("THE THIRTY JUZ")) {
+                    ForEach(QuranData.juzList) { juz in
+                        HStack(spacing: 12) {
+                            Text("\(juz.id)")
+                                .font(.subheadline.weight(.semibold).monospacedDigit())
+                                .foregroundColor(settings.accentColor.color)
+                                .frame(width: 28, height: 28)
+                                .background(
+                                    Circle().fill(settings.accentColor.color.opacity(0.15))
+                                )
+
+                            Text(juz.nameTransliteration)
+                                .font(.subheadline)
+                                .foregroundColor(.primary)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.7)
+
+                            Spacer(minLength: 8)
+
+                            Text(juz.nameArabic)
+                                .font(
+                                    settings.islamUsesCustomArabicFace
+                                        ? .custom(settings.fontArabic, size: 20, relativeTo: .subheadline)
+                                        : .title3
+                                )
+                                .arabicFontDesign(custom: settings.islamUsesCustomArabicFace)
+                                .foregroundColor(settings.accentColor.color)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.6)
+                        }
+                        .padding(.vertical, 2)
+                    }
+                }
+
                 Section(header: Text("IN SUMMARY")) {
                     Text("The thirty Juz are a practical division for reading and memorization, not part of the revelation's meaning, helping Muslims complete the Quran regularly.")
                         .font(.body)
@@ -3904,18 +4370,18 @@ struct AhrufView: View {
         List {
             Group {
                 Section(header: Text("SUMMARY")) {
-                    Text("In short: the Quran was revealed in seven ahruf—modes of recitation—as a mercy easing its recitation for the different Arab tribes.")
+                    Text("In short: the Quran was revealed in seven ahruf - modes of recitation - as a mercy easing its recitation for the different Arab tribes.")
                         .font(.body)
                 }
 
                 Section(header: Text("OVERVIEW")) {
-                    Text("The Quran was revealed by Allah (Glorified and Exalted be He) in seven Ahruf (أَحرُف) — the plural of Harf (حَرف). The word Harf comes from the Arabic root H–r–f (ح ر ف), meaning “edge, border, side, or angle,” referring to a particular “way” or “mode.” Islamically and Quranically, Ahruf refers to the divinely revealed modes of recitation.")
+                    Text("The Quran was revealed by Allah (Glorified and Exalted be He) in seven Ahruf (أَحرُف) - the plural of Harf (حَرف). The word Harf comes from the Arabic root H–r–f (ح ر ف), meaning “edge, border, side, or angle,” referring to a particular “way” or “mode.” Islamically and Quranically, Ahruf refers to the divinely revealed modes of recitation.")
                         .font(.body)
 
-                    Text("A Harf (حَرف) — literally meaning “edge/side/aspect,” and in this context “a mode/way of reciting” — refers to a divinely revealed manner of recitation that includes slight differences in pronunciation, vowel patterns, pausing/connection, or permitted word-forms, while preserving the exact same meaning and guidance.")
+                    Text("A Harf (حَرف) - literally meaning “edge/side/aspect,” and in this context “a mode/way of reciting” - refers to a divinely revealed manner of recitation that includes slight differences in pronunciation, vowel patterns, pausing/connection, or permitted word-forms, while preserving the exact same meaning and guidance.")
                         .font(.body)
 
-                    Text("All seven Ahruf are revelation from Allah (Glorified and Exalted be He). They are not scholarly opinions nor later inventions — they are part of the Quran that Allah (Glorified and Exalted be He) sent down to Prophet Muhammad (peace and blessings be upon him).")
+                    Text("All seven Ahruf are revelation from Allah (Glorified and Exalted be He). They are not scholarly opinions nor later inventions - they are part of the Quran that Allah (Glorified and Exalted be He) sent down to Prophet Muhammad (peace and blessings be upon him).")
                         .font(.body)
                 }
 
@@ -3923,7 +4389,7 @@ struct AhrufView: View {
                     Text("The Arabs at the time of revelation had many dialects (Quraysh, Hudhayl, Tamim, Hawazin, etc.). Allah (Glorified and Exalted be He), in His mercy, revealed the Quran in seven modes so that every tribe could recite the Quran easily without difficulty or burden.")
                         .font(.body)
 
-                    Text("Allah (Glorified and Exalted be He) did not reveal seven different Qurans — rather, one Quran with divinely allowed flexibility, making memorization and recitation easier.")
+                    Text("Allah (Glorified and Exalted be He) did not reveal seven different Qurans - rather, one Quran with divinely allowed flexibility, making memorization and recitation easier.")
                         .font(.body)
                 }
 
@@ -3931,24 +4397,24 @@ struct AhrufView: View {
                     Text("Prophet Muhammad (peace and blessings be upon him) said:")
                         .font(.body)
 
-                    Text("“The Quran was revealed in seven Ahruf, so recite whichever is easiest for you.”\n— Sahih al-Bukhari • Sahih Muslim")
+                    Text("“The Quran was revealed in seven Ahruf, so recite whichever is easiest for you.”\n- Sahih al-Bukhari • Sahih Muslim")
                         .font(.title3)
                         .foregroundColor(settings.accentColor.color.opacity(0.85))
 
                     Text("Another narration explains how Jibril kept requesting ease for the Ummah:")
                         .font(.body)
 
-                    Text("“Jibril recited to me in one harf. I asked him to increase it… until he ended with seven Ahruf.”\n— Sahih Muslim")
+                    Text("“Jibril recited to me in one harf. I asked him to increase it… until he ended with seven Ahruf.”\n- Sahih Muslim")
                         .font(.title3)
                         .foregroundColor(settings.accentColor.color.opacity(0.85))
 
-                    Text("In the famous incident of Umar and Hisham ibn Hakim — both of them recited differently, and Prophet Muhammad (peace and blessings be upon him) said that both were revealed, proving that the variations are not mistakes but revelation.")
+                    Text("In the famous incident of Umar and Hisham ibn Hakim - both of them recited differently, and Prophet Muhammad (peace and blessings be upon him) said that both were revealed, proving that the variations are not mistakes but revelation.")
                         .font(.title3)
                         .foregroundColor(settings.accentColor.color.opacity(0.85))
                 }
 
                 Section(header: Text("DO THE AHRUF AFFECT PRESERVATION?")) {
-                    Text("No. The Quran remains perfectly preserved — letter for letter, word for word, in every revealed mode. The Ahruf are part of that preservation, not a contradiction to it.")
+                    Text("No. The Quran remains perfectly preserved - letter for letter, word for word, in every revealed mode. The Ahruf are part of that preservation, not a contradiction to it.")
                         .font(.body)
 
                     Text("Allah (Glorified and Exalted be He) promised:")
@@ -3958,10 +4424,10 @@ struct AhrufView: View {
                         .font(.title3)
                         .foregroundColor(settings.accentColor.color)
 
-                    Text("The variations in Ahruf do not alter meanings, beliefs, or rulings. Rather, they highlight precision and perfection — the Ummah memorized and transmitted every letter exactly as revealed.")
+                    Text("The variations in Ahruf do not alter meanings, beliefs, or rulings. Rather, they highlight precision and perfection - the Ummah memorized and transmitted every letter exactly as revealed.")
                         .font(.body)
 
-                    Text("Each harf is revealed, preserved, and protected by Allah (Glorified and Exalted be He). Muslims do not choose or invent a harf — we only recite what Allah (Glorified and Exalted be He) revealed through His Messenger, Prophet Muhammad (peace and blessings be upon him).")
+                    Text("Each harf is revealed, preserved, and protected by Allah (Glorified and Exalted be He). Muslims do not choose or invent a harf - we only recite what Allah (Glorified and Exalted be He) revealed through His Messenger, Prophet Muhammad (peace and blessings be upon him).")
                         .font(.body)
                 }
 
@@ -3969,7 +4435,7 @@ struct AhrufView: View {
                     Text("• Prophet Muhammad (peace and blessings be upon him) taught the Companions each harf personally.\n• Jibril reviewed the Quran with Prophet Muhammad (peace and blessings be upon him) every year in Ramadan.\n• In the year Prophet Muhammad (peace and blessings be upon him) passed away, Jibril reviewed it twice (al-Ardah al-Akhirah).")
                         .font(.body)
 
-                    Text("About one year after the Prophet’s passing, Abu Bakr (may Allah be pleased with him) commissioned the first complete compilation of the Quran into one manuscript. During the caliphate of Uthman (may Allah be pleased with him), the Ummah was then unified upon official copies from that preserved compilation, written in the Uthmanic rasm, which preserved what the Ummah recited — containing what remained from the seven Ahruf in the rasm.")
+                    Text("About one year after the Prophet’s passing, Abu Bakr (may Allah be pleased with him) commissioned the first complete compilation of the Quran into one manuscript. During the caliphate of Uthman (may Allah be pleased with him), the Ummah was then unified upon official copies from that preserved compilation, written in the Uthmanic rasm, which preserved what the Ummah recited - containing what remained from the seven Ahruf in the rasm.")
                         .font(.body)
 
                     Text("The Ahruf are preserved through oral transmission, ijazahs, and chains of narration (isnad).")
@@ -4018,10 +4484,10 @@ struct QiraatView: View {
                 }
 
                 Section(header: Text("OVERVIEW")) {
-                    Text("The 10 Qiraat (قِرَاءَات) — from the root q–r–a (قرأ) meaning “to read/recite” — literally means “readings/recitations.” Islamically and Quranically, a Qiraah (قِرَاءَة) is a specific, verified method of reciting the Quran. The 10 Qiraat are the preserved, mass-transmitted (mutawatir - مُتَوَاتِر) recitations of the Quran — each a precise method taught by Prophet Muhammad (peace and blessings be upon him) and transmitted through authentic chains of narrators (isnad إِسنَاد). They do not represent different Qurans, but different prophetic ways of reciting the same revelation.")
+                    Text("The 10 Qiraat (قِرَاءَات) - from the root q–r–a (قرأ) meaning “to read/recite” - literally means “readings/recitations.” Islamically and Quranically, a Qiraah (قِرَاءَة) is a specific, verified method of reciting the Quran. The 10 Qiraat are the preserved, mass-transmitted (mutawatir - مُتَوَاتِر) recitations of the Quran - each a precise method taught by Prophet Muhammad (peace and blessings be upon him) and transmitted through authentic chains of narrators (isnad إِسنَاد). They do not represent different Qurans, but different prophetic ways of reciting the same revelation.")
                         .font(.body)
 
-                    Text("As covered in the previous section, the Quran was revealed by Allah (Glorified and Exalted be He) in seven Ahruf (أَحرُف) — modes of recitation for ease. Jibril (Gabriel) brought these modes to Prophet Muhammad (peace and blessings be upon him), who taught them to the Ummah. Around one year after the Prophet’s passing, Abu Bakr (may Allah be pleased with him) commissioned the first complete compilation of the Quran into one manuscript, and later Uthman (may Allah be pleased with him) unified public recitation upon official copies from that preserved text. The Qiraat show how those Ahruf were preserved in practice through the Uthmanic rasm (الرَّسم العُثمَانِي) — the consonantal skeleton of the mushaf (مُصحَف).")
+                    Text("As covered in the previous section, the Quran was revealed by Allah (Glorified and Exalted be He) in seven Ahruf (أَحرُف) - modes of recitation for ease. Jibril (Gabriel) brought these modes to Prophet Muhammad (peace and blessings be upon him), who taught them to the Ummah. Around one year after the Prophet’s passing, Abu Bakr (may Allah be pleased with him) commissioned the first complete compilation of the Quran into one manuscript, and later Uthman (may Allah be pleased with him) unified public recitation upon official copies from that preserved text. The Qiraat show how those Ahruf were preserved in practice through the Uthmanic rasm (الرَّسم العُثمَانِي) - the consonantal skeleton of the mushaf (مُصحَف).")
                         .font(.body)
                 }
 
@@ -4033,10 +4499,10 @@ struct QiraatView: View {
                         .font(.body)
                         .foregroundColor(settings.accentColor.color)
 
-                    Text("Most differences are within established rules of tajwid (تجويد), allowable word-forms and vowels, elongation (madd مد), assimilation (idgham إدغام), imalah (إمالة), and stopping/continuation — while preserving the same meanings and guidance.")
+                    Text("Most differences are within established rules of tajwid (تجويد), allowable word-forms and vowels, elongation (madd مد), assimilation (idgham إدغام), imalah (إمالة), and stopping/continuation - while preserving the same meanings and guidance.")
                         .font(.body)
 
-                    Text("Important: The Qiraat are not arbitrary. They reflect how the seven Ahruf were preserved through both writing and oral transmission — essentially a “mix and preserve” of the revealed modes into rigorously taught, verifiable recitational methods.")
+                    Text("Important: The Qiraat are not arbitrary. They reflect how the seven Ahruf were preserved through both writing and oral transmission - essentially a “mix and preserve” of the revealed modes into rigorously taught, verifiable recitational methods.")
                         .font(.body)
                 }
 
@@ -4070,14 +4536,14 @@ struct QiraatView: View {
                 }
 
                 Section(header: Text("AUTHENTICITY & PRESERVATION")) {
-                    Text("The 10 Qiraat are mutawatir — mass attested by many independent chains. They are part of the precise preservation Allah (Glorified and Exalted be He) promised for His Book.")
+                    Text("The 10 Qiraat are mutawatir - mass attested by many independent chains. They are part of the precise preservation Allah (Glorified and Exalted be He) promised for His Book.")
                         .font(.body)
 
                     Text("“Indeed, it is We who sent down the Qur'an and indeed, We will be its guardian.” (Quran 15:9)")
                         .font(.title3)
                         .foregroundColor(settings.accentColor.color)
 
-                    Text("They do not affect preservation; rather, they manifest it: letter for letter, word for word — in all the ways Prophet Muhammad (peace and blessings be upon him) taught.")
+                    Text("They do not affect preservation; rather, they manifest it: letter for letter, word for word - in all the ways Prophet Muhammad (peace and blessings be upon him) taught.")
                         .font(.body)
                 }
 
@@ -4162,25 +4628,25 @@ struct QiraatView: View {
                         .font(.body)
 
                     Group {
-                        Text("**Nafi (Qari of Madinah)** — narrated by Warsh and Qalun. Transmitted from Umar ibn al-Khattab, Zayd ibn Thabit, Ubayy ibn Ka‘b, Abdullah ibn Abbas, Abdullah ibn Ayyash, and Abu Hurayrah (may Allah be pleased with them).")
+                        Text("**Nafi (Qari of Madinah)** - narrated by Warsh and Qalun. Transmitted from Umar ibn al-Khattab, Zayd ibn Thabit, Ubayy ibn Ka‘b, Abdullah ibn Abbas, Abdullah ibn Ayyash, and Abu Hurayrah (may Allah be pleased with them).")
 
-                        Text("**Ibn Kathir (Qari of Makkah)** — narrated by al-Bazzi and Qunbul. Transmitted from Umar ibn al-Khattab, Zayd ibn Thabit, Ubayy ibn Ka‘b, Abdullah ibn Abbas, and Abdullah ibn as-Sa’ib (may Allah be pleased with them).")
+                        Text("**Ibn Kathir (Qari of Makkah)** - narrated by al-Bazzi and Qunbul. Transmitted from Umar ibn al-Khattab, Zayd ibn Thabit, Ubayy ibn Ka‘b, Abdullah ibn Abbas, and Abdullah ibn as-Sa’ib (may Allah be pleased with them).")
 
-                        Text("**Abu Amr al-Basri (Qari of Basrah)** — narrated by ad-Duri and as-Susi. Transmitted from Umar ibn al-Khattab, Uthman ibn Affan, Ali ibn Abi Talib, Abdullah ibn Mas‘ud, Abu Musa al-Ash‘ari, Abdullah ibn Abbas, Abdullah ibn Ayyash, Abdullah ibn as-Sa’ib, Ubayy ibn Ka‘b, Zayd ibn Thabit, and Abu Hurayrah (may Allah be pleased with them).")
+                        Text("**Abu Amr al-Basri (Qari of Basrah)** - narrated by ad-Duri and as-Susi. Transmitted from Umar ibn al-Khattab, Uthman ibn Affan, Ali ibn Abi Talib, Abdullah ibn Mas‘ud, Abu Musa al-Ash‘ari, Abdullah ibn Abbas, Abdullah ibn Ayyash, Abdullah ibn as-Sa’ib, Ubayy ibn Ka‘b, Zayd ibn Thabit, and Abu Hurayrah (may Allah be pleased with them).")
 
-                        Text("**Ibn Amir (Qari of Sham)** — narrated by Hisham and Ibn Dhakwan. Transmitted from Uthman ibn Affan and Abu ad-Darda (may Allah be pleased with them).")
+                        Text("**Ibn Amir (Qari of Sham)** - narrated by Hisham and Ibn Dhakwan. Transmitted from Uthman ibn Affan and Abu ad-Darda (may Allah be pleased with them).")
 
-                        Text("**Asim ibn Abi an-Najud (Qari of Kufah)** — narrated by Shu‘bah and Hafs. Most Muslims today recite via Hafs from Asim. Transmitted from Uthman ibn Affan, Ali ibn Abi Talib, Abdullah ibn Mas‘ud, Zayd ibn Thabit, and Ubayy ibn Ka‘b (may Allah be pleased with them).")
+                        Text("**Asim ibn Abi an-Najud (Qari of Kufah)** - narrated by Shu‘bah and Hafs. Most Muslims today recite via Hafs from Asim. Transmitted from Uthman ibn Affan, Ali ibn Abi Talib, Abdullah ibn Mas‘ud, Zayd ibn Thabit, and Ubayy ibn Ka‘b (may Allah be pleased with them).")
 
-                        Text("**Hamzah az-Zayyat** — narrated by Khalaf and Khallad. Transmitted from Uthman ibn Affan, Ali ibn Abi Talib, Ubayy ibn Ka‘b, Zayd ibn Thabit, Abdullah ibn Mas‘ud, and Husayn ibn Ali ibn Abi Talib (may Allah be pleased with them).")
+                        Text("**Hamzah az-Zayyat** - narrated by Khalaf and Khallad. Transmitted from Uthman ibn Affan, Ali ibn Abi Talib, Ubayy ibn Ka‘b, Zayd ibn Thabit, Abdullah ibn Mas‘ud, and Husayn ibn Ali ibn Abi Talib (may Allah be pleased with them).")
 
-                        Text("**Ali ibn Hamzah al-Kisai** — narrated by Abu al-Harith and ad-Duri. Transmitted from Umar ibn al-Khattab, Uthman ibn Affan, Ali ibn Abi Talib, Ubayy ibn Ka‘b, Zayd ibn Thabit, Abdullah ibn Mas‘ud, Abdullah ibn Abbas, Abdullah ibn Ayyash, Abu Hurayrah, and Husayn ibn Ali ibn Abi Talib (may Allah be pleased with them).")
+                        Text("**Ali ibn Hamzah al-Kisai** - narrated by Abu al-Harith and ad-Duri. Transmitted from Umar ibn al-Khattab, Uthman ibn Affan, Ali ibn Abi Talib, Ubayy ibn Ka‘b, Zayd ibn Thabit, Abdullah ibn Mas‘ud, Abdullah ibn Abbas, Abdullah ibn Ayyash, Abu Hurayrah, and Husayn ibn Ali ibn Abi Talib (may Allah be pleased with them).")
 
-                        Text("**Ya‘qub al-Hadrami** — narrated by Ruways and Rawh. Transmitted from Umar ibn al-Khattab, Uthman ibn Affan, Ali ibn Abi Talib, Ubayy ibn Ka‘b, Zayd ibn Thabit, Abdullah ibn Mas‘ud, Abu Musa al-Ash‘ari, Abdullah ibn Abbas, Abdullah ibn Ayyash, Abdullah ibn as-Sa’ib, and Abu Hurayrah (may Allah be pleased with them).")
+                        Text("**Ya‘qub al-Hadrami** - narrated by Ruways and Rawh. Transmitted from Umar ibn al-Khattab, Uthman ibn Affan, Ali ibn Abi Talib, Ubayy ibn Ka‘b, Zayd ibn Thabit, Abdullah ibn Mas‘ud, Abu Musa al-Ash‘ari, Abdullah ibn Abbas, Abdullah ibn Ayyash, Abdullah ibn as-Sa’ib, and Abu Hurayrah (may Allah be pleased with them).")
 
-                        Text("**Khalaf al-Bazzar** — narrated by Idris and Ishaq. Transmitted from Uthman ibn Affan, Ali ibn Abi Talib, Abdullah ibn Mas‘ud, Zayd ibn Thabit, Ubayy ibn Ka‘b, and Husayn ibn Ali ibn Abi Talib (may Allah be pleased with them).")
+                        Text("**Khalaf al-Bazzar** - narrated by Idris and Ishaq. Transmitted from Uthman ibn Affan, Ali ibn Abi Talib, Abdullah ibn Mas‘ud, Zayd ibn Thabit, Ubayy ibn Ka‘b, and Husayn ibn Ali ibn Abi Talib (may Allah be pleased with them).")
 
-                        Text("**Abu Ja‘far al-Madani** — narrated by Ibn Wardan and Ibn Jammaz. Transmitted from Zayd ibn Thabit, Ubayy ibn Ka‘b, Abdullah ibn Abbas, Abdullah ibn Ayyash, and Abu Hurayrah (may Allah be pleased with them).")
+                        Text("**Abu Ja‘far al-Madani** - narrated by Ibn Wardan and Ibn Jammaz. Transmitted from Zayd ibn Thabit, Ubayy ibn Ka‘b, Abdullah ibn Abbas, Abdullah ibn Ayyash, and Abu Hurayrah (may Allah be pleased with them).")
                     }
                     .font(.body)
                 }
@@ -4189,7 +4655,7 @@ struct QiraatView: View {
                     Text("We begin with what Prophet Muhammad (peace and blessings be upon him) began with: the Book of Allah (Glorified and Exalted be He). It is well established that the Quran has reached us by mass transmission (tawatur) through the chains of Ahl as-Sunnah wal-Jama‘ah.")
                         .font(.body)
 
-                    Text("Every one of these narrators of the noble Quran received it, through the chains above, from the Messenger of Allah (peace and blessings be upon him) by way of his Companions (may Allah be pleased with them) — the first to learn, gather, preserve, and transmit it.")
+                    Text("Every one of these narrators of the noble Quran received it, through the chains above, from the Messenger of Allah (peace and blessings be upon him) by way of his Companions (may Allah be pleased with them) - the first to learn, gather, preserve, and transmit it.")
                         .font(.body)
 
                     Text("Not a single Ithna Ashari (Twelver) Shia is found among these transmitters. This is part of the Quran’s preservation: Allah (Glorified and Exalted be He) did not place in the transmission of His Book anyone who slanders the Companions of His Prophet (peace and blessings be upon him).")
@@ -4197,16 +4663,16 @@ struct QiraatView: View {
                         .foregroundColor(settings.accentColor.color)
 
                     Link(destination: URL(string: "https://mahajjah.com/the-manner-in-which-the-ahlus-sunnah-and-shia-act-upon-this-hadith/")!) {
-                        Label("Source: Mahajjah — Ahlus Sunnah and Shia on this hadith", systemImage: "link")
+                        Label("Source: Mahajjah - Ahlus Sunnah and Shia on this hadith", systemImage: "link")
                     }
                     .font(.caption)
                 }
 
                 Section(header: Text("OTHER REPORTED QIRAAT")) {
-                    Text("There are other reported qiraat besides these Ten. Unlike the 10 Qiraat, which are mutawatir and mass attested, those others do not reach mutawatir status. That does not automatically make them inauthentic — some have isnad to Prophet Muhammad (peace and blessings be upon him) — but because they are not mass attested, we avoid them in public recitation and worship.")
+                    Text("There are other reported qiraat besides these Ten. Unlike the 10 Qiraat, which are mutawatir and mass attested, those others do not reach mutawatir status. That does not automatically make them inauthentic - some have isnad to Prophet Muhammad (peace and blessings be upon him) - but because they are not mass attested, we avoid them in public recitation and worship.")
                         .font(.body)
 
-                    Text("We recite what is known with certainty (yaqin يقين) to be from Prophet Muhammad (peace and blessings be upon him) — the 10 Qiraat and their 20 Riwayaat. This unites the Ummah upon what is rigorously established.")
+                    Text("We recite what is known with certainty (yaqin يقين) to be from Prophet Muhammad (peace and blessings be upon him) - the 10 Qiraat and their 20 Riwayaat. This unites the Ummah upon what is rigorously established.")
                         .font(.body)
                 }
 
@@ -4225,7 +4691,7 @@ struct QiraatView: View {
                 }
 
                 Section(header: Text("RECAP")) {
-                    Text("“The 10 Qiraat are the preserved, mass-transmitted (mutawatir) recitations taught by Prophet Muhammad (peace and blessings be upon him), passed down through authentic chains. Each Qiraah is a specific, verified method of reciting the Quran — not a different text. They reflect how the Ahruf were preserved in writing and oral transmission. All 10 Qiraat (and their 20 Riwayaat) return to Prophet Muhammad (peace and blessings be upon him).”")
+                    Text("“The 10 Qiraat are the preserved, mass-transmitted (mutawatir) recitations taught by Prophet Muhammad (peace and blessings be upon him), passed down through authentic chains. Each Qiraah is a specific, verified method of reciting the Quran - not a different text. They reflect how the Ahruf were preserved in writing and oral transmission. All 10 Qiraat (and their 20 Riwayaat) return to Prophet Muhammad (peace and blessings be upon him).”")
                         .font(.body)
                         .foregroundColor(settings.accentColor.color)
                 }
@@ -4279,7 +4745,7 @@ struct QiraatView: View {
                 }
 
                 Section(header: Text("IN SUMMARY")) {
-                    Text("The differences among the Qiraat are all revelation and add richness of meaning—none contradicts another, and all are recited today.")
+                    Text("The differences among the Qiraat are all revelation and add richness of meaning - none contradicts another, and all are recited today.")
                         .font(.body)
                 }
             }
@@ -4341,7 +4807,7 @@ struct FarewellView: View {
 
                          You have rights over your women, and they have rights over you. Treat them with kindness, for they are your partners. Provide for them with goodness. Worship Allah, pray your five daily prayers, fast during Ramadan, give Zakat, and perform Hajj if able. 
 
-                         All mankind is from Adam and Eve. No Arab is superior to a non-Arab, nor is a non-Arab superior to an Arab; no white is superior to a black, nor is a black superior to a white—except in piety and good deeds. Every Muslim is a brother to every other Muslim. Do not commit injustices.
+                         All mankind is from Adam and Eve. No Arab is superior to a non-Arab, nor is a non-Arab superior to an Arab; no white is superior to a black, nor is a black superior to a white - except in piety and good deeds. Every Muslim is a brother to every other Muslim. Do not commit injustices.
 
                          After me, no prophet will come, and no new religion will be born. I leave behind the Quran and the Sunnah; if you adhere to them, you will never go astray. Be my witness, O Allah, that I have conveyed Your message.
                          """)
@@ -4360,7 +4826,7 @@ struct FarewellView: View {
                 }
 
                 Section(header: Text("IN SUMMARY")) {
-                    Text("In it the Prophet affirmed the sanctity of life and property, the equality of all people, the rights of women, and clinging to the Quran and Sunnah—delivered as his religion was perfected.")
+                    Text("In it the Prophet affirmed the sanctity of life and property, the equality of all people, the rights of women, and clinging to the Quran and Sunnah - delivered as his religion was perfected.")
                         .font(.body)
                 }
             }
@@ -4378,12 +4844,12 @@ struct SahabahView: View {
         List {
             Group {
                 Section(header: Text("SUMMARY")) {
-                    Text("In short: the Sahabah are the Companions who accompanied the Prophet, believed in him, and carried Islam to the world—the best generation of this Ummah.")
+                    Text("In short: the Sahabah are the Companions who accompanied the Prophet, believed in him, and carried Islam to the world - the best generation of this Ummah.")
                         .font(.body)
                 }
 
                 Section(header: Text("OVERVIEW")) {
-                    Text("The **Sahabah (الصَّحَابَة)** — from the root **s-h-b (ص ح ب)**, companionship — are the companions of Prophet Muhammad (peace be upon him).")
+                    Text("The **Sahabah (الصَّحَابَة)** - from the root **s-h-b (ص ح ب)**, companionship - are the companions of Prophet Muhammad (peace be upon him).")
                         .font(.body)
 
                     Text("They supported him in his mission, witnessed the revelation of the Quran, and preserved the teachings of Islam through word and action.")
@@ -4499,7 +4965,7 @@ struct WivesView: View {
                         .font(.title3)
                         .foregroundColor(settings.accentColor.color)
 
-                    Text("Prophet Muhammad (peace be upon him) married a total of **11 women** throughout his lifetime. At one time, he was married to a maximum of **9 wives** simultaneously—an exception granted to him as a Prophet. This exception was not unique to him; it was also granted to previous prophets due to their elevated responsibilities and status. For example, Prophet Solomon (peace be upon him) is known to have had a large number of wives, traditionally said to be 100 or more.")
+                    Text("Prophet Muhammad (peace be upon him) married a total of **11 women** throughout his lifetime. At one time, he was married to a maximum of **9 wives** simultaneously - an exception granted to him as a Prophet. This exception was not unique to him; it was also granted to previous prophets due to their elevated responsibilities and status. For example, Prophet Solomon (peace be upon him) is known to have had a large number of wives, traditionally said to be 100 or more.")
                         .font(.body)
                 }
 
@@ -4524,7 +4990,7 @@ struct WivesView: View {
                     Text("She said: “Never! By Allah, Allah will never disgrace you. You maintain family ties, speak the truth, support the needy, host guests, and assist those afflicted by calamity” (Sahih al-Bukhari 3).")
                         .font(.body)
 
-                    Text("Allah (Glorified and Exalted be He) affirmed the beginning of the Prophet’s (peace be upon him) mission in **Surah Al-Muzzammil (73:1)** and **Surah Al-Muddaththir (74:1)**—moments when Khadijah (may Allah be pleased with her) lovingly wrapped and comforted him.")
+                    Text("Allah (Glorified and Exalted be He) affirmed the beginning of the Prophet’s (peace be upon him) mission in **Surah Al-Muzzammil (73:1)** and **Surah Al-Muddaththir (74:1)** - moments when Khadijah (may Allah be pleased with her) lovingly wrapped and comforted him.")
                         .font(.body)
                         .foregroundColor(settings.accentColor.color)
 
@@ -4613,7 +5079,7 @@ struct WivesView: View {
                 }
 
                 Section(header: Text("IN SUMMARY")) {
-                    Text("Through the Prophet's wives—especially Aisha—much of the Sunnah of the home and worship reached the Ummah; loving and respecting them is part of the religion.")
+                    Text("Through the Prophet's wives - especially Aisha - much of the Sunnah of the home and worship reached the Ummah; loving and respecting them is part of the religion.")
                         .font(.body)
                 }
             }
@@ -4636,17 +5102,17 @@ struct CaliphatesView: View {
                 }
 
                 Section(header: Text("OVERVIEW")) {
-                    Text("The **Caliphate (الخِلَافَة)** — from the root **kh-l-f (خ ل ف)**, meaning succession — refers to the divinely guided system of governance established after the death of Prophet Muhammad (peace be upon him). It aimed to continue his mission of upholding justice, spreading Islam, and preserving the unity of the Ummah.")
+                    Text("The **Caliphate (الخِلَافَة)** - from the root **kh-l-f (خ ل ف)**, meaning succession - refers to the divinely guided system of governance established after the death of Prophet Muhammad (peace be upon him). It aimed to continue his mission of upholding justice, spreading Islam, and preserving the unity of the Ummah.")
                         .font(.body)
 
-                    Text("The Caliph (خَلِيفَة), literally “successor“—was entrusted with political, military, judicial, and spiritual leadership, guided by the Quran and Sunnah. The first four caliphs, known as the **Rightly Guided Caliphs (ٱلخُلَفَاء ٱلرَّاشِدُون)**, are regarded as models of righteous rule.")
+                    Text("The Caliph (خَلِيفَة), literally “successor“ - was entrusted with political, military, judicial, and spiritual leadership, guided by the Quran and Sunnah. The first four caliphs, known as the **Rightly Guided Caliphs (ٱلخُلَفَاء ٱلرَّاشِدُون)**, are regarded as models of righteous rule.")
                         .font(.body)
 
                     Text("The Prophet (peace be upon him) said: “The Caliphate will remain among you for thirty years, then Allah will give the kingdom to whomever He wills” (Sunan Abi Dawud 4646).")
                         .font(.title3)
                         .foregroundColor(settings.accentColor.color.opacity(0.85))
 
-                    Text("These thirty years—known as the **Rashidun Caliphate**—represented the ideal Islamic system. The caliphs were chosen by **consultation (شُورَىٰ)** and the pledge of allegiance (**bay'ah, بَيعَة**) of the community: Abu Bakr at Saqifah and then in the mosque, and Uthman after Abd al-Rahman ibn Awf canvassed the people of Madinah house by house—men and women alike—for three nights (Sahih al-Bukhari 7207). This model emphasized justice, humility, accountability, and service to the people.")
+                    Text("These thirty years - known as the **Rashidun Caliphate** - represented the ideal Islamic system. The caliphs were chosen by **consultation (شُورَىٰ)** and the pledge of allegiance (**bay'ah, بَيعَة**) of the community: Abu Bakr at Saqifah and then in the mosque, and Uthman after Abd al-Rahman ibn Awf canvassed the people of Madinah house by house - men and women alike - for three nights (Sahih al-Bukhari 7207). This model emphasized justice, humility, accountability, and service to the people.")
                         .font(.body)
                 }
 
@@ -4759,7 +5225,7 @@ struct CaliphatesView: View {
                 }
 
                 Section(header: Text("IN SUMMARY")) {
-                    Text("The Rightly Guided Caliphs are the model of just Islamic governance—preserving the Quran, spreading the faith, and upholding the unity of the Ummah.")
+                    Text("The Rightly Guided Caliphs are the model of just Islamic governance - preserving the Quran, spreading the faith, and upholding the unity of the Ummah.")
                         .font(.body)
                 }
             }
@@ -4777,7 +5243,7 @@ struct MadhabView: View {
         List {
             Group {
                 Section(header: Text("SUMMARY")) {
-                    Text("In short: the four madhahib—Hanafi, Maliki, Shafi'i, and Hanbali—are the accepted schools of Islamic jurisprudence, differing in fiqh but united in creed.")
+                    Text("In short: the four madhahib - Hanafi, Maliki, Shafi'i, and Hanbali - are the accepted schools of Islamic jurisprudence, differing in fiqh but united in creed.")
                         .font(.body)
                 }
 
@@ -4788,7 +5254,7 @@ struct MadhabView: View {
                     Text("Madhahib developed as scholars preserved and codified fiqh (فِقه), or Islamic legal reasoning/jurisprudence, to help Muslims navigate daily life, worship, transactions, and society with clarity and consistency.")
                         .font(.body)
 
-                    Text("Following a madhhab ensures one is following a valid, peer-reviewed methodology developed by righteous scholars deeply rooted in the Quran, Sunnah, consensus (إِجمَاع), and analogy (قِيَاس). It is not blind following—it is trust in generations of qualified scholarship.")
+                    Text("Following a madhhab ensures one is following a valid, peer-reviewed methodology developed by righteous scholars deeply rooted in the Quran, Sunnah, consensus (إِجمَاع), and analogy (قِيَاس). It is not blind following - it is trust in generations of qualified scholarship.")
                         .font(.body)
 
                     Text("The Prophet Muhammad (peace be upon him) said: “Scholars are the inheritors of the prophets” (Sunan Abi Dawud 3641).")
@@ -4845,7 +5311,7 @@ struct MadhabView: View {
                     Text("None of the four imams formally founded an institution. Each taught a methodology that his students preserved and systematized into a school over the generations, so historians distinguish between the life of the imam and the emergence of the madhhab.")
                         .font(.body)
 
-                    Text("The Hanafi school began in Kufa during Abu Hanifa’s lifetime and was firmly established by his students Abu Yusuf (d. 182 AH) and Muhammad al-Shaybani (d. 189 AH). The Maliki school developed in Madinah through Imam Malik’s teaching circle and Al-Muwatta. The Shafi‘i school crystallized in Egypt in Imam al-Shafi‘i’s final years—his “new” madhhab—and spread after him through students like al-Muzani and al-Buwayti. The Hanbali school was collected and systematized after Imam Ahmad’s death by his sons and students such as al-Khallal.")
+                    Text("The Hanafi school began in Kufa during Abu Hanifa’s lifetime and was firmly established by his students Abu Yusuf (d. 182 AH) and Muhammad al-Shaybani (d. 189 AH). The Maliki school developed in Madinah through Imam Malik’s teaching circle and Al-Muwatta. The Shafi‘i school crystallized in Egypt in Imam al-Shafi‘i’s final years - his “new” madhhab - and spread after him through students like al-Muzani and al-Buwayti. The Hanbali school was collected and systematized after Imam Ahmad’s death by his sons and students such as al-Khallal.")
                         .font(.body)
 
                     Text("The four imams form an unbroken chain of teacher and student: Imam Malik taught al-Shafi‘i, who in turn taught Ahmad ibn Hanbal. Imam Malik was also a contemporary of Abu Hanifa, and al-Shafi‘i was born in the very year Abu Hanifa passed away (150 AH).")
@@ -4853,16 +5319,16 @@ struct MadhabView: View {
                 }
 
                 Section(header: Text("UNITY THROUGH DIVERSITY")) {
-                    Text("All four madhahib are valid and respected paths within Ahl al-Sunnah wa al-Jama‘ah (أَهل السُّنَّة وَالجَمَاعَة). Though they may differ in legal rulings, they are united in the same ‘aqeedah (عَقِيدَة)—the core beliefs regarding Allah, His names and attributes, prophethood, the Quran, the unseen, and the Afterlife.")
+                    Text("All four madhahib are valid and respected paths within Ahl al-Sunnah wa al-Jama‘ah (أَهل السُّنَّة وَالجَمَاعَة). Though they may differ in legal rulings, they are united in the same ‘aqeedah (عَقِيدَة) - the core beliefs regarding Allah, His names and attributes, prophethood, the Quran, the unseen, and the Afterlife.")
                         .font(.body)
 
                     Text("This shared creed is why they are all considered part of Ahl al-Sunnah wa al-Jama‘ah. The differences among them are in jurisprudence (fiqh), not faith (‘aqeedah), and reflect the depth and mercy of Islamic legal tradition.")
                         .font(.body)
 
-                    Text("No single school is “more Islamic“—each preserved knowledge and served the Ummah according to its time and place. Following any of them keeps one on the path of the Prophet (peace be upon him) and his companions.")
+                    Text("No single school is “more Islamic“ - each preserved knowledge and served the Ummah according to its time and place. Following any of them keeps one on the path of the Prophet (peace be upon him) and his companions.")
                         .font(.body)
 
-                    Text("Imam Malik ibn Anas (may Allah have mercy on him) said: “Everyone's statement may be taken from or rejected, except the one in this grave”—pointing to the grave of the Prophet (peace be upon him).")
+                    Text("Imam Malik ibn Anas (may Allah have mercy on him) said: “Everyone's statement may be taken from or rejected, except the one in this grave” - pointing to the grave of the Prophet (peace be upon him).")
                         .font(.body)
                 }
 
@@ -4889,7 +5355,7 @@ struct MadhabView: View {
     /// short description.
     private func imamEntry(number: Int, name: String, arabic: String, meta: String, description: String) -> some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text("**\(number). \(name)** — \(arabic)")
+            Text("**\(number). \(name)** - \(arabic)")
                 .font(.body)
 
             Text(meta)
@@ -4910,12 +5376,12 @@ struct AhlulBaytView: View {
         List {
             Group {
                 Section(header: Text("SUMMARY")) {
-                    Text("In short: the Ahlul Bayt are the family of the Prophet—loving, honoring, and upholding their rights is part of the religion.")
+                    Text("In short: the Ahlul Bayt are the family of the Prophet - loving, honoring, and upholding their rights is part of the religion.")
                         .font(.body)
                 }
 
                 Section(header: Text("OVERVIEW")) {
-                    Text("The **Ahlul Bayt (أَهلُ البَيت)** — literally “the People of the House“ — are the family of Prophet Muhammad (peace be upon him). Loving them, honoring them, and upholding their rights is part of the religion, and hating them or belittling them is a grave sin.")
+                    Text("The **Ahlul Bayt (أَهلُ البَيت)** - literally “the People of the House“ - are the family of Prophet Muhammad (peace be upon him). Loving them, honoring them, and upholding their rights is part of the religion, and hating them or belittling them is a grave sin.")
                         .font(.body)
 
                     Text("The Quran uses the term directly when addressing the Prophet’s household:")
@@ -4945,7 +5411,7 @@ struct AhlulBaytView: View {
                         .font(.title3)
                         .foregroundColor(settings.accentColor.color)
 
-                    Text("The phrase “O people of the household“ is therefore addressed, first and foremost, to the wives of the Prophet (peace be upon him) — the **Mothers of the Believers (أُمَّهَاتُ المُؤمِنِين)**, whom Allah placed in the position of mothers to every believer (Quran 33:6).")
+                    Text("The phrase “O people of the household“ is therefore addressed, first and foremost, to the wives of the Prophet (peace be upon him) - the **Mothers of the Believers (أُمَّهَاتُ المُؤمِنِين)**, whom Allah placed in the position of mothers to every believer (Quran 33:6).")
                         .font(.body)
 
                     Text("Allah also called the wife of Ibrahim (peace be upon him) part of the “people of the house“ using the very same expression:")
@@ -4967,7 +5433,7 @@ struct AhlulBaytView: View {
                         .font(.title3)
                         .foregroundColor(settings.accentColor.color.opacity(0.85))
 
-                    Text("Including these four does not exclude the wives — the Prophet (peace be upon him) was gathering additional members of his household under the cloak, within a passage whose context is already addressing his wives. The two are complementary, not contradictory.")
+                    Text("Including these four does not exclude the wives - the Prophet (peace be upon him) was gathering additional members of his household under the cloak, within a passage whose context is already addressing his wives. The two are complementary, not contradictory.")
                         .font(.body)
 
                     Text("The Prophet (peace be upon him) said of his grandsons: “Al-Hasan and al-Husayn are the two masters of the youth of Paradise” (Sunan al-Tirmidhi 3768).")
@@ -5004,7 +5470,7 @@ struct AhlulBaytView: View {
                     Text("Every believer sends blessings upon them in each prayer: “O Allah, send prayers upon Muhammad and upon the family of Muhammad, as You sent prayers upon Ibrahim and upon the family of Ibrahim” (Sahih al-Bukhari 3370).")
                         .font(.body)
 
-                    Text("Loving the Ahlul Bayt is a sign of faith. It is never in tension with loving the Companions (may Allah be pleased with them) — Ali, al-Hasan, al-Husayn, and the Prophet’s wives were themselves among the Companions.")
+                    Text("Loving the Ahlul Bayt is a sign of faith. It is never in tension with loving the Companions (may Allah be pleased with them) - Ali, al-Hasan, al-Husayn, and the Prophet’s wives were themselves among the Companions.")
                         .font(.body)
                 }
 
@@ -5024,7 +5490,7 @@ struct AhlulBaytView: View {
                 }
 
                 Section(header: Text("IN SUMMARY")) {
-                    Text("Balanced love for the Prophet's household, without exaggeration or neglect, is the way of the believers—joined with love for all his Companions.")
+                    Text("Balanced love for the Prophet's household, without exaggeration or neglect, is the way of the believers - joined with love for all his Companions.")
                         .font(.body)
                 }
             }
@@ -5050,13 +5516,13 @@ struct AhlusSunnahView: View {
                     Text("**Ahl as-Sunnah wal-Jama‘ah (أَهلُ السُّنَّةِ وَالجَمَاعَة)** means “the People of the Sunnah and the Community.“ They are those who hold to the Sunnah of the Prophet Muhammad (peace be upon him) and remain united upon the understanding of his Companions (may Allah be pleased with them).")
                         .font(.body)
 
-                    Text("**Sunnah** here means the Prophet’s way — his beliefs, statements, actions, and approvals. **Jama‘ah** means the united body of the believers, and specifically the way of the Companions and those who followed them in goodness.")
+                    Text("**Sunnah** here means the Prophet’s way - his beliefs, statements, actions, and approvals. **Jama‘ah** means the united body of the believers, and specifically the way of the Companions and those who followed them in goodness.")
                         .font(.body)
 
                     Text("Allah (Glorified and Exalted be He) says:")
                         .font(.body)
 
-                    Text("“And whoever opposes the Messenger after guidance has become clear to him and follows other than the way of the believers—We will give him what he has taken and drive him into Hell, and evil it is as a destination” (Quran 4:115).")
+                    Text("“And whoever opposes the Messenger after guidance has become clear to him and follows other than the way of the believers - We will give him what he has taken and drive him into Hell, and evil it is as a destination” (Quran 4:115).")
                         .font(.title3)
                         .foregroundColor(settings.accentColor.color)
 
@@ -5065,16 +5531,16 @@ struct AhlusSunnahView: View {
                 }
 
                 Section(header: Text("THE THREE FOUNDATIONS")) {
-                    Text("**1. The Quran** — taken as it is, without distortion, denial, or asking “how.“")
+                    Text("**1. The Quran** - taken as it is, without distortion, denial, or asking “how.“")
                         .font(.body)
 
-                    Text("**2. The authentic Sunnah** — accepted as binding revelation alongside the Quran, whether the report is mutawatir or an authentic single narration (ahad).")
+                    Text("**2. The authentic Sunnah** - accepted as binding revelation alongside the Quran, whether the report is mutawatir or an authentic single narration (ahad).")
                         .font(.body)
 
-                    Text("**3. The understanding of the Salaf** — the Quran and Sunnah are understood the way the first three generations understood them, not according to later opinions or personal reasoning that contradicts them.")
+                    Text("**3. The understanding of the Salaf** - the Quran and Sunnah are understood the way the first three generations understood them, not according to later opinions or personal reasoning that contradicts them.")
                         .font(.body)
 
-                    Text("Allah (Glorified and Exalted be He) says: “And the first forerunners among the Muhajireen and the Ansar and those who followed them with good conduct—Allah is pleased with them and they are pleased with Him” (Quran 9:100).")
+                    Text("Allah (Glorified and Exalted be He) says: “And the first forerunners among the Muhajireen and the Ansar and those who followed them with good conduct - Allah is pleased with them and they are pleased with Him” (Quran 9:100).")
                         .font(.title3)
                         .foregroundColor(settings.accentColor.color)
 
@@ -5127,7 +5593,7 @@ struct AhlusSunnahView: View {
                         .font(.title3)
                         .foregroundColor(settings.accentColor.color)
 
-                    Text("“Indeed, those who have divided their religion and become sects—you are not associated with them in anything” (Quran 6:159).")
+                    Text("“Indeed, those who have divided their religion and become sects - you are not associated with them in anything” (Quran 6:159).")
                         .font(.title3)
                         .foregroundColor(settings.accentColor.color)
 
@@ -5148,7 +5614,7 @@ struct AhlusSunnahView: View {
                 }
 
                 Section(header: Text("IN SUMMARY")) {
-                    Text("Not a sect but the original, undivided Islam—taking the Quran and Sunnah as the Companions did, and loving the Prophet's family and Companions together.")
+                    Text("Not a sect but the original, undivided Islam - taking the Quran and Sunnah as the Companions did, and loving the Prophet's family and Companions together.")
                         .font(.body)
                 }
             }
@@ -5166,7 +5632,7 @@ struct SeerahView: View {
         List {
             Group {
                 Section(header: Text("SUMMARY")) {
-                    Text("In short: the Seerah is the life story of Prophet Muhammad—his character, mission, and example—drawn from the Quran and authentic reports.")
+                    Text("In short: the Seerah is the life story of Prophet Muhammad - his character, mission, and example - drawn from the Quran and authentic reports.")
                         .font(.body)
                 }
 
@@ -5174,7 +5640,7 @@ struct SeerahView: View {
                     Text("The **Seerah (سِيرَة)** is the biography of the Prophet Muhammad (peace be upon him): the account of his life, character, and mission, drawn from the Quran and authentic reports.")
                         .font(.body)
 
-                    Text("Studying it is not merely history—it shows how revelation was lived, and it is a means of knowing, loving, and following him.")
+                    Text("Studying it is not merely history - it shows how revelation was lived, and it is a means of knowing, loving, and following him.")
                         .font(.body)
 
                     Text("Allah (Glorified and Exalted be He) says: “There has certainly been for you in the Messenger of Allah an excellent pattern for anyone whose hope is in Allah and the Last Day and [who] remembers Allah often” (Quran 33:21).")
@@ -5191,7 +5657,7 @@ struct SeerahView: View {
                 }
 
                 Section(header: Text("THE FIRST REVELATION")) {
-                    Text("At the age of forty, while worshipping alone in the cave of **Hira (حِرَاء)** near Makkah, the angel **Jibril (جِبرِيل)** brought him the first revelation: “**Iqra (اِقرَأ)**”—“Read in the name of your Lord who created” (Quran 96:1).")
+                    Text("At the age of forty, while worshipping alone in the cave of **Hira (حِرَاء)** near Makkah, the angel **Jibril (جِبرِيل)** brought him the first revelation: “**Iqra (اِقرَأ)**” - “Read in the name of your Lord who created” (Quran 96:1).")
                         .font(.body)
 
                     Text("This began twenty-three years of the revelation of the Quran, which continued until shortly before his death.")
@@ -5199,7 +5665,7 @@ struct SeerahView: View {
                 }
 
                 Section(header: Text("THE MAKKAN PERIOD")) {
-                    Text("For about thirteen years in Makkah he called people to **Tawhid (تَوحِيد)**—the worship of Allah alone—through his **Dawah (دَعوَة)**, his call to Islam. He and the early believers met mockery, boycott, and severe persecution, yet remained patient.")
+                    Text("For about thirteen years in Makkah he called people to **Tawhid (تَوحِيد)** - the worship of Allah alone - through his **Dawah (دَعوَة)**, his call to Islam. He and the early believers met mockery, boycott, and severe persecution, yet remained patient.")
                         .font(.body)
 
                     Text("In this period he was honoured with the **Isra and Mi'raj (الإِسرَاء وَالمِعرَاج)**, the night journey to Jerusalem and the ascension through the heavens, during which the five daily prayers were made obligatory.")
@@ -5207,7 +5673,7 @@ struct SeerahView: View {
                 }
 
                 Section(header: Text("THE HIJRAH")) {
-                    Text("In 622 CE, by Allah’s command, the Prophet (peace be upon him) made the **Hijrah (هِجرَة)**—the migration from Makkah to **Madinah (المَدِينَة)**. This event was so pivotal that the Islamic (Hijri) calendar begins from it.")
+                    Text("In 622 CE, by Allah’s command, the Prophet (peace be upon him) made the **Hijrah (هِجرَة)** - the migration from Makkah to **Madinah (المَدِينَة)**. This event was so pivotal that the Islamic (Hijri) calendar begins from it.")
                         .font(.body)
                 }
 
@@ -5235,7 +5701,7 @@ struct SeerahView: View {
                         .font(.title3)
                         .foregroundColor(settings.accentColor.color)
 
-                    Text("When Aishah (may Allah be pleased with her) was asked about his character, she said that his character was the Quran—he embodied its teachings in the most complete way.")
+                    Text("When Aishah (may Allah be pleased with her) was asked about his character, she said that his character was the Quran - he embodied its teachings in the most complete way.")
                         .font(.body)
                 }
 
@@ -5258,7 +5724,7 @@ struct TafsirView: View {
         List {
             Group {
                 Section(header: Text("SUMMARY")) {
-                    Text("In short: Tafsir is the explanation of the Quran's meanings—soundest when the Quran is explained by the Quran, the Sunnah, and the understanding of the early generations.")
+                    Text("In short: Tafsir is the explanation of the Quran's meanings - soundest when the Quran is explained by the Quran, the Sunnah, and the understanding of the early generations.")
                         .font(.body)
                 }
 
@@ -5266,7 +5732,7 @@ struct TafsirView: View {
                     Text("**Tafsir (تَفسِير)** is the explanation and clarification of the meanings of the Quran: its words, rulings, and wisdoms. Its scholar is called a **Mufassir (مُفَسِّر)**.")
                         .font(.body)
 
-                    Text("Its blameworthy counterpart is **Tafsir bir-Ra'y (تَفسِير بِالرَّأي)** in the censured sense—interpreting the Quran by mere opinion, away from its established meaning and the understanding of the Salaf.")
+                    Text("Its blameworthy counterpart is **Tafsir bir-Ra'y (تَفسِير بِالرَّأي)** in the censured sense - interpreting the Quran by mere opinion, away from its established meaning and the understanding of the Salaf.")
                         .font(.body)
 
                     Text("Allah (Glorified and Exalted be He) says: “This is a blessed Book which We have revealed to you that they might reflect upon its verses” (Quran 38:29).")
@@ -5278,28 +5744,28 @@ struct TafsirView: View {
                     Text("The soundest tafsir is **bil-ma'thur (بِالمَأثُور)**, by transmission, and it proceeds in order:")
                         .font(.body)
 
-                    Text("**1. The Quran by the Quran** — a matter left general in one place is often clarified in another.")
+                    Text("**1. The Quran by the Quran** - a matter left general in one place is often clarified in another.")
                         .font(.body)
 
-                    Text("**2. The Quran by the Sunnah** — the Prophet (peace be upon him) explained what was revealed to him. “And We revealed to you the message that you may make clear to the people what was sent down to them” (Quran 16:44).")
+                    Text("**2. The Quran by the Sunnah** - the Prophet (peace be upon him) explained what was revealed to him. “And We revealed to you the message that you may make clear to the people what was sent down to them” (Quran 16:44).")
                         .font(.title3)
                         .foregroundColor(settings.accentColor.color)
 
-                    Text("**3. The statements of the Companions (Sahabah)** — they witnessed the revelation and knew its context best.")
+                    Text("**3. The statements of the Companions (Sahabah)** - they witnessed the revelation and knew its context best.")
                         .font(.body)
 
-                    Text("**4. The statements of the Successors (Tabi'un)** — the students of the Companions, followed by explanation through the Arabic language.")
+                    Text("**4. The statements of the Successors (Tabi'un)** - the students of the Companions, followed by explanation through the Arabic language.")
                         .font(.body)
                 }
 
                 Section(header: Text("KEY TERMS")) {
-                    Text("**Asbab al-Nuzul (أَسبَاب النُّزُول)** — the reasons or occasions of revelation, i.e. the events a verse was revealed about.")
+                    Text("**Asbab al-Nuzul (أَسبَاب النُّزُول)** - the reasons or occasions of revelation, i.e. the events a verse was revealed about.")
                         .font(.body)
 
-                    Text("**Muhkam (مُحكَم)** — verses clear and decisive in meaning; **Mutashabih (مُتَشَابِه)** — verses whose full meaning is not entirely apparent, referred back to the clear ones.")
+                    Text("**Muhkam (مُحكَم)** - verses clear and decisive in meaning; **Mutashabih (مُتَشَابِه)** - verses whose full meaning is not entirely apparent, referred back to the clear ones.")
                         .font(.body)
 
-                    Text("**An-Nasikh wal-Mansukh (النَّاسِخ وَالمَنسُوخ)** — the abrogating and abrogated; a later ruling that replaces an earlier one within the revelation.")
+                    Text("**An-Nasikh wal-Mansukh (النَّاسِخ وَالمَنسُوخ)** - the abrogating and abrogated; a later ruling that replaces an earlier one within the revelation.")
                         .font(.body)
                 }
 
@@ -5349,10 +5815,10 @@ struct FiqhAqeedahManhajView: View {
                 }
 
                 Section(header: Text("AQEEDAH (BELIEF)")) {
-                    Text("**Aqeedah (عَقِيدَة)** is creed—the beliefs the heart is bound to with certainty. Its core is **Tawhid (تَوحِيد)**, singling out Allah alone in worship, lordship, and His names and attributes.")
+                    Text("**Aqeedah (عَقِيدَة)** is creed - the beliefs the heart is bound to with certainty. Its core is **Tawhid (تَوحِيد)**, singling out Allah alone in worship, lordship, and His names and attributes.")
                         .font(.body)
 
-                    Text("It includes the six pillars of faith: belief in Allah, His angels, His books, His messengers, the Last Day, and **Al-Qadr (القَدَر)**, the divine decree. Aqeedah does not change with time or place and is one for all the believers.")
+                    Text("It includes the six pillars of faith: belief in Allah, His angels, His books, His messengers, the Last Day, and **Al-Qadar (القَدَر)**, the divine decree. Aqeedah does not change with time or place and is one for all the believers.")
                         .font(.body)
 
                     Text("“The Messenger has believed in what was revealed to him from his Lord, and so have the believers. All of them have believed in Allah and His angels and His books and His messengers” (Quran 2:285).")
@@ -5361,7 +5827,7 @@ struct FiqhAqeedahManhajView: View {
                 }
 
                 Section(header: Text("FIQH (JURISPRUDENCE)")) {
-                    Text("**Fiqh (فِقه)** is the understanding of the practical rulings of Islam derived from the Quran and Sunnah—the “how“ of worship, **Ibadah (عِبَادَة)**, and of dealings, **Muamalat (مُعَامَلَات)**, such as prayer, fasting, trade, and marriage.")
+                    Text("**Fiqh (فِقه)** is the understanding of the practical rulings of Islam derived from the Quran and Sunnah - the “how“ of worship, **Ibadah (عِبَادَة)**, and of dealings, **Muamalat (مُعَامَلَات)**, such as prayer, fasting, trade, and marriage.")
                         .font(.body)
 
                     Text("Because deriving detailed rulings involves **Ijtihad (اِجتِهَاد)**, qualified scholarly effort, sincere scholars sometimes differ. This is the source of the accepted schools of fiqh, and such differences are a mercy, not division in the religion.")
@@ -5369,13 +5835,13 @@ struct FiqhAqeedahManhajView: View {
                 }
 
                 Section(header: Text("MANHAJ (METHODOLOGY)")) {
-                    Text("**Manhaj (مَنهَج)** is methodology—the path by which one understands, prioritizes, and applies the religion, and deals with knowledge and people.")
+                    Text("**Manhaj (مَنهَج)** is methodology - the path by which one understands, prioritizes, and applies the religion, and deals with knowledge and people.")
                         .font(.body)
 
                     Text("The sound manhaj is to take the Quran and the authentic Sunnah upon the understanding of the **Salaf (السَّلَف)**, the first righteous generations, rather than by later opinions that contradict them.")
                         .font(.body)
 
-                    Text("“And the first forerunners among the Muhajireen and the Ansar and those who followed them with good conduct—Allah is pleased with them and they are pleased with Him” (Quran 9:100).")
+                    Text("“And the first forerunners among the Muhajireen and the Ansar and those who followed them with good conduct - Allah is pleased with them and they are pleased with Him” (Quran 9:100).")
                         .font(.title3)
                         .foregroundColor(settings.accentColor.color)
                 }
@@ -5389,7 +5855,7 @@ struct FiqhAqeedahManhajView: View {
                 }
 
                 Section(header: Text("IN SUMMARY")) {
-                    Text("United in creed, allowing valid differences in jurisprudence, and following the method of the first generations—this is the balance a Muslim strives for.")
+                    Text("United in creed, allowing valid differences in jurisprudence, and following the method of the first generations - this is the balance a Muslim strives for.")
                         .font(.body)
                 }
             }

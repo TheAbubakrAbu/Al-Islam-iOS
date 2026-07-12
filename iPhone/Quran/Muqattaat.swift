@@ -1,11 +1,11 @@
 import Foundation
 
-/// Spelled-out pronunciation data for the muqatta'at — the disconnected opening letters of 29 surahs
+/// Spelled-out pronunciation data for the muqatta'at - the disconnected opening letters of 29 surahs
 /// (e.g. الٓمٓ). The mushaf prints them joined with maddah marks, but they are recited letter by letter
 /// ("Alif Lām Mīm"), so this provides the individual letters, their fully-vocalized Arabic names, and a
 /// transliteration to display as a reading aid above the ayah.
 ///
-/// Tashkeel notes (so the names recite — and colour — correctly):
+/// Tashkeel notes (so the names recite - and colour - correctly):
 /// - Letters whose names carry a 6-count madd lāzim (نقص عسلكم → ن ق ص ع س ل ك م) are marked with the
 ///   maddah sign (U+0653) on their long vowel, exactly the way the mushaf marks الٓمٓ. That sign is what
 ///   the tajweed engine keys madd-lāzim colouring off, so the spelled-out names colour like the real ayah.
@@ -15,7 +15,7 @@ import Foundation
 ///   in الٓمٓ) is treated as madd lāzim via the maddah sign, but not shown as a shaddah.
 /// - The "no vowel" mark is the Uthmani U+06E1 (small high dotless head of khah), not the plain sukūn.
 /// - A final nūn or mīm that meets a following letter triggering a noon/meem rule (ikhfāʾ, idghām, …) is
-///   left BARE (no sukūn). The mushaf does the same, and it lets the engine colour the rule — e.g. the
+///   left BARE (no sukūn). The mushaf does the same, and it lets the engine colour the rule - e.g. the
 ///   nūn of سِين before قَاف in عٓسٓقٓ is ikhfāʾ, so it carries no sukūn. A sukūn is kept only when the
 ///   letter is final or its rule is iẓhār (clear), where the nūn/mīm really is plainly silent/clear.
 enum Muqattaat {
@@ -43,7 +43,7 @@ enum Muqattaat {
     ]
 
     /// Ordered bare letters for each muqatta'at ayah, keyed by surah then ayah. Almost always ayah 1;
-    /// Ash-Shura (42) is the exception — its muqatta'at span ayah 1 (Ḥā Mīm) and ayah 2 (ʿAyn Sīn Qāf).
+    /// Ash-Shura (42) is the exception - its muqatta'at span ayah 1 (Ḥā Mīm) and ayah 2 (ʿAyn Sīn Qāf).
     private static let lettersBySurahAyah: [Int: [Int: [Character]]] = [
         2:  [1: ["ا", "ل", "م"]],
         3:  [1: ["ا", "ل", "م"]],
@@ -84,7 +84,7 @@ enum Muqattaat {
     private static let sukoon = "\u{06E1}" // ARABIC SMALL HIGH DOTLESS HEAD OF KHAH (Uthmani "no vowel")
 
     // Fully vocalized letter names. The long vowel + maddah marks (and colours) madd lāzim; no shaddah is
-    // written. A final nūn/mīm keeps its sukūn only when it is iẓhār or word-final — when a noon/meem rule
+    // written. A final nūn/mīm keeps its sukūn only when it is iẓhār or word-final - when a noon/meem rule
     // applies it is left bare (…Bare) so the engine colours the ikhfāʾ / idghām instead.
     private static let alif    = "\u{0623}" + fatha + "\u{0644}" + kasra + "\u{0641}" + sukoon   // a-li-f (no madd)
     private static let lam     = "\u{0644}" + fatha + "\u{0627}" + maddah + "\u{0645}" + sukoon  // lā-m, iẓhār (before rā)
@@ -124,6 +124,13 @@ enum Muqattaat {
         "ن":     nun,
     ]
 
+    /// The letter names that carry the maddah sign above, and so are held for the 6-count madd lāzim: نقص عسلكم.
+    private static let maddLazimLetters: Set<Character> = ["ن", "ق", "ص", "ع", "س", "ل", "ك", "م"]
+    /// The letter names that carry a plain long vowel and are held for the ordinary 2 counts: حي طهر.
+    private static let maddNaturalLetters: Set<Character> = ["ح", "ي", "ط", "ه", "ر"]
+    /// ʿayn is a leen letter, so its name is held for 4 or 6 counts rather than a flat 6.
+    private static let leenLetter: Character = "ع"
+
     struct Pronunciation {
         let letters: [LetterName]
         /// Fully vocalized letter names, e.g. "أَلِفۡ لَآم مِيٓمۡ".
@@ -132,6 +139,25 @@ enum Muqattaat {
         var individualLetters: String { letters.map { String($0.letter) }.joined(separator: " ") }
         /// Transliteration of the letter names, e.g. "Alif Lām Mīm".
         var transliteration: String { letters.map { $0.transliteration }.joined(separator: " ") }
+
+        /// What to tell the reader about elongation, derived from the letters actually present rather than assumed.
+        ///
+        /// Only نقص عسلكم carry the maddah sign (the red squiggle) and take the 6-count madd lāzim; حي طهر carry a
+        /// plain long vowel and take 2; أَلِف has no long vowel at all. So Ṭā-Hā, which is only ط + ه, has no 6-count
+        /// madd anywhere and must not claim one. `nil` when the combination has no madd to describe.
+        var maddDescription: String? {
+            let chars = Set(letters.map(\.letter))
+            let lazim = chars.contains { Muqattaat.maddLazimLetters.contains($0) }
+            let natural = chars.contains { Muqattaat.maddNaturalLetters.contains($0) }
+            let leen = chars.contains(Muqattaat.leenLetter)
+
+            switch (lazim, natural) {
+            case (true, true):   return leen ? "Madd is 2, 4, or 6 counts" : "Madd is 2 or 6 counts"
+            case (true, false):  return leen ? "Madd is 4 or 6 counts" : "Madd is 6 counts"
+            case (false, true):  return "Madd is 2 counts"
+            case (false, false): return nil
+            }
+        }
     }
 
     /// The muqatta'at pronunciation for the given ayah, or nil if that ayah does not open with them.

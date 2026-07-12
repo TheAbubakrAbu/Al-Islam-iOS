@@ -3,7 +3,7 @@ import SwiftUI
 import WidgetKit
 import ActivityKit
 
-/// Lock Screen card + Dynamic Island for the Ramadan fasting countdown — suhoor to Fajr, iftar to Maghrib.
+/// Lock Screen card + Dynamic Island for the Ramadan fasting countdown - suhoor to Fajr, iftar to Maghrib.
 ///
 /// Every countdown uses the system's self-updating `Text(timerInterval:)` rather than a timer of our own:
 /// a Live Activity's process isn't running most of the time, so anything computed at render is frozen at that

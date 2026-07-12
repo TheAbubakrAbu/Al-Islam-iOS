@@ -26,8 +26,8 @@ struct Prayer: Identifiable, Codable, Equatable {
     var id = UUID()
 
     let nameArabic: String
-    /// The canonical name. Everything that *looks a prayer up* — notification preferences, the optional-prayer
-    /// set, the scrubber's highlight match, Siri's search keys — keys off this, so it is never user-editable.
+    /// The canonical name. Everything that *looks a prayer up* - notification preferences, the optional-prayer
+    /// set, the scrubber's highlight match, Siri's search keys - keys off this, so it is never user-editable.
     let nameTransliteration: String
     let nameEnglish: String
     let time: Date

@@ -36,7 +36,7 @@ struct PlayCustomRangeSheet: View {
     /// qiraah, but `pageGroups` is read ~12× per body evaluation; without this the all-ayahs scan ran
     /// every time and caused lag while stepping the range on long surahs. A reference box lets the
     /// computed property cache within a render (and recompute when the qiraah key changes) while
-    /// staying always-correct — unlike an @State cache, it can never be transiently empty.
+    /// staying always-correct - unlike an @State cache, it can never be transiently empty.
     private final class PageGroupsBox {
         var key: String = "\u{0}unset"
         var value: [(page: Int, firstAyah: Int, lastAyah: Int)] = []
@@ -199,7 +199,7 @@ struct PlayCustomRangeSheet: View {
         }
     }
 
-    /// Expands the current ayah range out to whole-page boundaries — used when switching into Pages mode.
+    /// Expands the current ayah range out to whole-page boundaries - used when switching into Pages mode.
     private func snapRangeToPages() {
         let groups = pageGroups
         guard !groups.isEmpty else { return }
@@ -335,7 +335,7 @@ struct PlayCustomRangeSheet: View {
 
     /// Step the START ayah by `delta`. Reads/writes the `startAyah` @State *directly* (not through a passed
     /// Binding). The old generic helper computed `value.wrappedValue + delta` through a Binding parameter,
-    /// which in this nested helper context did not reflect the current value — so every tap jumped the range
+    /// which in this nested helper context did not reflect the current value - so every tap jumped the range
     /// to the surah's last ayah. Direct @State access steps reliably by one.
     private func stepStart(_ delta: Int) {
         let newValue = min(Swift.max(1, startAyah + delta), maxAyah)
@@ -719,7 +719,7 @@ struct PlayCustomRangeSheet: View {
 
                 Spacer()
 
-                Text(pageNumber.map { "\($0)" } ?? "—")
+                Text(pageNumber.map { "\($0)" } ?? "- ")
                     .font(.title2.monospacedDigit().weight(.semibold))
                     .foregroundColor(.primary)
                     .frame(minWidth: 44, alignment: .center)
@@ -751,7 +751,7 @@ struct PlayCustomRangeSheet: View {
                 .font(.caption)
                 .foregroundColor(.secondary)
             // onTapGesture (not Button): multiple Buttons inside one List/Form row collapse into a single
-            // tap target, so tapping minus could fire plus (and vice-versa) — the "it's touching everything"
+            // tap target, so tapping minus could fire plus (and vice-versa) - the "it's touching everything"
             // bug. A scoped contentShape + onTapGesture per icon keeps each hit area separate.
             HStack(spacing: 0) {
                 Image(systemName: "minus.circle.fill")
@@ -903,6 +903,7 @@ struct PlayCustomRangeSheet: View {
 
             Text(ayah.displayArabicText(surahId: surah.id, clean: settings.cleanArabicText, qiraahOverride: settings.displayQiraahForArabic))
                 .font(.custom(settings.fontArabic, size: UIFont.preferredFont(forTextStyle: .title3).pointSize))
+                .arabicFontDesign(custom: settings.quranUsesCustomArabicFace)
                 .multilineTextAlignment(.trailing)
                 .lineLimit(2)
                 .foregroundColor(.primary)

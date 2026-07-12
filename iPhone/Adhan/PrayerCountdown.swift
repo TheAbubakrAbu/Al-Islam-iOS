@@ -76,7 +76,7 @@ struct PrayerCountdown: View {
             }
             #endif
         case .skyFooter:
-            // No `Section` — the sky card already is one, and a nested section inside a list row breaks it.
+            // No `Section` - the sky card already is one, and a nested section inside a list row breaks it.
             VStack(spacing: 2) {
                 countdownProgress(next: next)
                 timeLeftRow(next: next)
@@ -125,7 +125,7 @@ struct PrayerCountdown: View {
 
     #if os(watchOS)
     /// The watch gets its own shape. The phone's two-column "CURRENT | UPCOMING" card, with a full time under
-    /// each side, is far too much text for a 40mm screen — you end up reading it rather than glancing at it.
+    /// each side, is far too much text for a 40mm screen - you end up reading it rather than glancing at it.
     /// Here the time remaining is the biggest thing on the card, the next prayer names itself right above, and
     /// the prayer you're currently in is demoted to one quiet line underneath.
     private func watchBody(current: Prayer, next: Prayer) -> some View {
@@ -211,7 +211,7 @@ struct PrayerCountdown: View {
     @ViewBuilder
     private func countdownProgress(next: Prayer) -> some View {
         Group {
-            // A solid accent keeps the stock `ProgressView` — identical to what shipped. Only a real
+            // A solid accent keeps the stock `ProgressView` - identical to what shipped. Only a real
             // two-color accent swaps in the custom bar, which is the only way to fill with a gradient.
             if settings.accentColor.isGradient {
                 AccentGradientBar(progress: progress)
@@ -227,7 +227,7 @@ struct PrayerCountdown: View {
         #endif
     }
 
-    /// Was a plain "Time Left: 00:12:34" headline — visually a relic next to the rest of the card. Now it
+    /// Was a plain "Time Left: 00:12:34" headline - visually a relic next to the rest of the card. Now it
     /// reads as a compact meter caption: a muted label on the left, the live timer in the accent on the right.
     private func timeLeftRow(next: Prayer) -> some View {
         HStack(spacing: 6) {

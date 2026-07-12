@@ -17,6 +17,7 @@ struct AyahRow: View, Equatable {
     @State private var showCustomRangeSheet = false
     @State private var showQiraahComparisonSheet = false
     @State private var showEnglishComparisonSheet = false
+    @State private var showSelectTextSheet = false
     #endif
     #if os(watchOS)
     @State private var showWatchPlaybackDialog = false
@@ -220,7 +221,11 @@ struct AyahRow: View, Equatable {
     @ViewBuilder
     private func muqattaatPronunciationBlock() -> some View {
         if settings.showArabicText, let p = Muqattaat.pronunciation(surah: surah.id, ayah: ayah.id) {
-            let arabicFont = Font.custom(settings.fontArabic, size: settings.fontArabicSize * 0.62)
+            // "Basic" renders these names with the system face, which should stay rounded like the rest of the UI.
+            let usesCustomFace = settings.quranUsesCustomArabicFace
+            let arabicFont: Font = usesCustomFace
+                ? .custom(settings.fontArabic, size: settings.fontArabicSize * 0.62)
+                : .system(size: settings.fontArabicSize * 0.62, design: .rounded)
             VStack(alignment: .leading, spacing: 4) {
                 HStack {
                     Text("ACTUAL PRONUNCIATION")
@@ -241,17 +246,19 @@ struct AyahRow: View, Equatable {
                 if settings.showMuqattaatHelper {
                     Text(p.individualLetters)
                         .font(arabicFont)
+                        .arabicFontDesign(custom: usesCustomFace)
                         .foregroundColor(.primary)
                         .frame(maxWidth: .infinity, alignment: .trailing)
 
                     muqattaatNamesView(p, font: arabicFont)
+                        .arabicFontDesign(custom: usesCustomFace)
                         .frame(maxWidth: .infinity, alignment: .trailing)
 
                     Divider()
                         .padding(.vertical, 2)
 
-                    // Count of the disconnected letters, plus the madd rule with the elongation mark
-                    // actually written out (ـٓ) so learners can see it — madd lāzim is held for 6 counts.
+                    // The letter count, plus the elongation - but only the elongation these particular letters
+                    // actually carry. Ṭā-Hā has no maddah sign on either name, so it is 2 counts, not 6.
                     HStack(spacing: 8) {
                         Text("\(p.letters.count) \(p.letters.count == 1 ? "letter" : "letters")")
                             .font(.caption2.weight(.semibold))
@@ -259,9 +266,11 @@ struct AyahRow: View, Equatable {
 
                         Spacer()
 
-                        Text("Madd is 6 counts")
-                            .font(.caption2)
-                            .foregroundColor(.secondary)
+                        if let maddDescription = p.maddDescription {
+                            Text(maddDescription)
+                                .font(.caption2)
+                                .foregroundColor(.secondary)
+                        }
                     }
                     .frame(maxWidth: .infinity)
                 }
@@ -457,6 +466,10 @@ struct AyahRow: View, Equatable {
                             ayahNumber: ayah.id
                         )
                         .smallMediumSheetPresentation()
+                    }
+                    .sheet(isPresented: $showSelectTextSheet) {
+                        SelectAyahTextSheet(surah: surah, ayah: ayah)
+                            .smallMediumSheetPresentation()
                     }
                     .sheet(isPresented: $showQiraahComparisonSheet) {
                         AyahQiraahComparisonSheet(surahNumber: surah.id, ayahNumber: ayah.id)
@@ -683,17 +696,19 @@ struct AyahRow: View, Equatable {
             if showArabic {
                 let beginner = settings.beginnerMode || ayahBeginnerMode
                 let arabicSource = arabicDisplayText()
-                // "Basic" font (and the dots-removed mode) render with the standard Apple system font.
+                // "Basic" font (and the dots-removed mode) render with the standard Apple system font. The design is
+                // named explicitly rather than inherited, because this view opts out of the app-wide rounded design
+                // below (its ayah-number suffix always uses a bundled face, which that design would clobber).
                 let useSystemArabic = settings.removeArabicDots || settings.quranUsesSystemArabicFont
                 let arabicFont: Font = useSystemArabic
-                    ? .system(size: settings.fontArabicSize)
+                    ? .system(size: settings.fontArabicSize, design: .rounded)
                     : .custom(
                         ayahArabicFontName(for: comparisonQiraahOverride ?? settings.displayQiraahForArabic),
                         size: settings.fontArabicSize
                     )
-                let suffixFont: Font = settings.quranUsesSystemArabicFont
-                    ? .system(size: settings.fontArabicSize)
-                    : .custom(Settings.hafsUthmaniFontName, size: settings.fontArabicSize)
+                // The ayah-end marker is always the Hafs Uthmani face: that font is what renders the digits as the
+                // circled-flower ornament, so falling back to the system font here would print bare digits instead.
+                let suffixFont: Font = .custom(Settings.hafsUthmaniFontName, size: settings.fontArabicSize)
 
                 HighlightedSnippet(
                     source: arabicSource,
@@ -709,6 +724,7 @@ struct AyahRow: View, Equatable {
                     highlightAllahNames: settings.highlightAllahNames,
                     guaranteeMatch: matchedArabic
                 )
+                .arabicFontDesign(custom: true)
                 .id(tajweedAnimationKey)
                 .multilineTextAlignment(.trailing)
                 .frame(maxWidth: .infinity, alignment: .trailing)
@@ -743,7 +759,7 @@ struct AyahRow: View, Equatable {
                         highlightAllahNames: settings.highlightAllahNames,
                         guaranteeMatch: matchedSaheeh
                     )
-                    Text("— Saheeh International")
+                    Text("- Saheeh International")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
@@ -764,7 +780,7 @@ struct AyahRow: View, Equatable {
                         highlightAllahNames: settings.highlightAllahNames,
                         guaranteeMatch: matchedMustafa
                     )
-                    Text("— Clear Quran (Mustafa Khattab)")
+                    Text("- Clear Quran (Mustafa Khattab)")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
@@ -1015,6 +1031,13 @@ struct AyahRow: View, Equatable {
                 ShareAyahSheet.copyAyahToPasteboard(surahNumber: surah.id, ayahNumber: ayah.id, settings: settings, quranData: quranData)
             } label: {
                 Label("Copy Ayah", systemImage: "doc.on.doc")
+            }
+
+            Button {
+                settings.hapticFeedback()
+                showSelectTextSheet = true
+            } label: {
+                Label("Select Text", systemImage: "highlighter")
             }
 
             Button {

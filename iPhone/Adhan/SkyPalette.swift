@@ -3,8 +3,8 @@ import SwiftUI
 
 /// The two-stop gradient the sky card wears during each prayer, with the user's overrides applied.
 ///
-/// Only the six real prayers are editable. Everything else — Friday's Jumuah, the traveling-mode pairs, the
-/// optional night times — resolves to one of those six through `editableKey`, so renaming or recoloring
+/// Only the six real prayers are editable. Everything else - Friday's Jumuah, the traveling-mode pairs, the
+/// optional night times - resolves to one of those six through `editableKey`, so renaming or recoloring
 /// "Maghrib" also covers "Maghrib/Isha" without a second set of pickers to keep in sync.
 enum SkyPalette {
     /// In the order they occur through the day, which is the order the settings screen lists them.

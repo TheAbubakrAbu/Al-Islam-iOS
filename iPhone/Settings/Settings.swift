@@ -11,16 +11,16 @@ let logger = Logger(subsystem: AppIdentifiers.bundleIdentifier, category: "Setti
 /// The single source of truth for all user settings.
 ///
 /// **Why everything lives in this one file:** `@AppStorage` / `@Published` are stored property wrappers, and
-/// Swift only allows stored properties in a type's primary declaration — never in an extension. So the
+/// Swift only allows stored properties in a type's primary declaration - never in an extension. So the
 /// settings themselves can't be physically moved into separate Quran/Adhan files; the *behavior* that uses
 /// them is what's split out, into `SettingsAdhan.swift` (prayer times, notifications, location) and
 /// `SettingsQuran.swift` (reciters, bookmarks, khatm, …).
 ///
 /// The declarations below are grouped, in order, into the four buckets:
-///   1. **App Group** — `@Published`, mirrored into `appGroupUserDefaults` so widgets/extensions see them.
-///   2. **App Storage — Adhan/Prayer** — `@AppStorage` prayer state, notifications, travel, calculation.
-///   3. **App Storage — Quran** — `@AppStorage` reciter, favorites, sajdah/muqatta'at, bookmarks, khatm.
-///   4. **App Storage — Arabic/Names + appearance/misc** — fonts, themes, haptics, color scheme.
+///   1. **App Group** - `@Published`, mirrored into `appGroupUserDefaults` so widgets/extensions see them.
+///   2. **App Storage - Adhan/Prayer** - `@AppStorage` prayer state, notifications, travel, calculation.
+///   3. **App Storage - Quran** - `@AppStorage` reciter, favorites, sajdah/muqatta'at, bookmarks, khatm.
+///   4. **App Storage - Arabic/Names + appearance/misc** - fonts, themes, haptics, color scheme.
 /// Keep new settings in the matching section (and storage mechanism) so the split stays clean.
 final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     static let shared = Settings()
@@ -29,7 +29,7 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
 
     /// Decoded `prayers` cache so the `prayers` computed property doesn't re-run a full JSON decode on every
     /// read (it's read several times per `fetchPrayerTimes`, which itself runs multiple times at launch).
-    /// Main-thread only — invalidated whenever `prayersData` changes; off-main reads decode directly to avoid
+    /// Main-thread only - invalidated whenever `prayersData` changes; off-main reads decode directly to avoid
     /// racing the cache. See the `prayers` accessor below.
     private var cachedPrayers: Prayers?
     private var cachedPrayersValid = false
@@ -122,15 +122,15 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     }
 
     /// Restores every *preference* (appearance, prayer, and Quran options) to its default while keeping the
-    /// user's content. We wipe the app's standard-defaults domain — which clears all the `@AppStorage`
-    /// preferences in one shot — but first snapshot the content keys and write them back afterward, then
+    /// user's content. We wipe the app's standard-defaults domain - which clears all the `@AppStorage`
+    /// preferences in one shot - but first snapshot the content keys and write them back afterward, then
     /// reset the app-group-backed `@Published` preferences (accent, calculation, madhab, traveling, Hijri
     /// offset) to their defaults via their setters so the shared store + widgets update too. Location and
     /// other app-group content are left untouched.
     @MainActor
     func resetAllSettings(keepingContent: Bool = true) {
         // Bookmarks, favorites, khatm progress, saved reading/listening positions, and search history are
-        // content, not settings — preserved across the domain wipe unless the user asked to erase everything.
+        // content, not settings - preserved across the domain wipe unless the user asked to erase everything.
         let contentKeys = [
             "favoriteSurahsData", "bookmarkedAyahsData", "favoriteLetterData", "favoriteNameNumbersData",
             "khatmCompletedAyahsData", "favoriteReciterIDsData", "favoriteQiraahTagsData",
@@ -157,7 +157,7 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
             standard.set(value, forKey: key)
         }
 
-        // A full erase also clears the shared app-group store — the saved location, the cached prayer times,
+        // A full erase also clears the shared app-group store - the saved location, the cached prayer times,
         // the widgets' copy of everything, and the one-shot migration flags. That's what makes it equivalent to
         // deleting and reinstalling the app, rather than just to clearing this process's defaults.
         if !keepingContent {
@@ -187,11 +187,11 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
         #endif
     }
 
-    // MARK: - App group — shared with widgets / extensions
+    // MARK: - App group - shared with widgets / extensions
 
     /// True in the iPhone app and the Watch app; false in every app extension.
     ///
-    /// Extensions build a throwaway `Settings` and assign into it to render from the app group — see
+    /// Extensions build a throwaway `Settings` and assign into it to render from the app group - see
     /// `PrayersProvider.makeEntry()`. They must never write back. The old test for this was
     /// `bundleIdentifier.contains("Widget")`, which silently missed the watch complication
     /// (`…watchkitapp.complication1`), letting that process persist its *fallback defaults* over the user's
@@ -223,7 +223,7 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     /// the watch will re-mark each key the moment it applies a snapshot or the user changes it there.
     ///
     /// Clearing the sync digest makes the phone re-push its true configuration on the next WC activation,
-    /// with a fresh timestamp — which is what pulls a watch that has been broadcasting green back in line.
+    /// with a fresh timestamp - which is what pulls a watch that has been broadcasting green back in line.
     private func runWatchSyncKeyMigration() {
         #if os(iOS)
         let migrationKey = "settings.didSeedExplicitKeys"
@@ -272,7 +272,7 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
 
     @Published var prayersData: Data {
         didSet {
-            cachedPrayersValid = false   // backing bytes changed — drop the decoded cache
+            cachedPrayersValid = false   // backing bytes changed - drop the decoded cache
             guard Self.isAppProcess else { return }
             if !prayersData.isEmpty {
                 appGroupUserDefaults?.setValue(prayersData, forKey: "prayersData")
@@ -282,7 +282,7 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
 
     var prayers: Prayers? {
         get {
-            // Off the main thread (e.g. a background-refresh decode), don't touch the shared cache — just
+            // Off the main thread (e.g. a background-refresh decode), don't touch the shared cache - just
             // decode locally. On main, decode once and reuse until `prayersData` changes.
             guard Thread.isMainThread else {
                 return try? Self.decoder.decode(Prayers.self, from: prayersData)
@@ -402,7 +402,7 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
         }
     }
 
-    // MARK: - Prayer — live state & hijri (app-storage persistence)
+    // MARK: - Prayer - live state & hijri (app-storage persistence)
 
     @AppStorage("hijriDate") private var hijriDateData: String?
     var hijriDate: HijriDate? {
@@ -456,7 +456,7 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
 
             ("First Day of Ramadan", DateComponents(year: currentHijriYear, month: 9, day: 1), "Begin obligatory fast", "The month of fasting begins; all Muslims must fast from Fajr (dawn) to Maghrib (sunset)."),
             ("Last 10 Nights of Ramadan", DateComponents(year: currentHijriYear, month: 9, day: 21), "Seek Laylatul Qadr", "The most virtuous nights of the year; increase worship as these nights are beloved to Allah and contain Laylatul Qadr."),
-            ("27th Night of Ramadan", DateComponents(year: currentHijriYear, month: 9, day: 27), "Likely Laylatul Qadr", "A strong possibility for Laylatul Qadr — the Night of Decree when the Qur’an was sent down — though not confirmed."),
+            ("27th Night of Ramadan", DateComponents(year: currentHijriYear, month: 9, day: 27), "Likely Laylatul Qadr", "A strong possibility for Laylatul Qadr - the Night of Decree when the Qur’an was sent down - though not confirmed."),
             ("Eid Al-Fitr", DateComponents(year: currentHijriYear, month: 10, day: 1), "Celebration of ending the fast", "Celebration marking the end of Ramadan; fasting is prohibited on this day; encouraged to fast 6 days in Shawwal."),
 
             ("First 10 Days of Dhul-Hijjah", DateComponents(year: currentHijriYear, month: 12, day: 1), "Most beloved days", "The best days for righteous deeds; fasting the first nine days and dhikr are highly encouraged (the 10th is Eid al-Adha, on which fasting is not permitted)."),
@@ -469,7 +469,7 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
 
     @AppStorage("lastScheduledHijriYear") private var lastScheduledHijriYear: Int = 0
 
-    // MARK: - Prayer — @AppStorage (notifications, travel, calculation, alerts)
+    // MARK: - Prayer - @AppStorage (notifications, travel, calculation, alerts)
 
     @AppStorage("dateNotifications") var dateNotifications = true {
         didSet { self.fetchPrayerTimes(notification: true) }
@@ -509,7 +509,7 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     }
 
     // Whether a prayer's at-time notification plays the chosen adhan at all. Off means an ordinary
-    // notification with the system sound — a plain alert for Dhuhr at work, the full adhan for Maghrib.
+    // notification with the system sound - a plain alert for Dhuhr at work, the full adhan for Maghrib.
     // Independent of `notification*` (which silences the prayer entirely) and of `shortAdhan*` (which picks
     // the clip once you've decided you do want one).
     @AppStorage("adhanSoundFajr") var adhanSoundFajr: Bool = true {
@@ -650,15 +650,22 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     @AppStorage("travelTurnOnAutomatic") var travelTurnOnAutomatic: Bool = false
 
     /// When the traveling-mode auto-toggle last announced itself. Persisted, so the cooldown survives a relaunch
-    /// — the app is relaunched constantly in the background, and an in-memory timestamp would reset with it and
+    /// - the app is relaunched constantly in the background, and an in-memory timestamp would reset with it and
     /// let the notification through again. See `notifyTravelingModeChanged`.
     @AppStorage("lastTravelingNotificationAt") private var lastTravelingNotificationStamp: Double = 0
     var lastTravelingNotificationAt: Date? {
         get { lastTravelingNotificationStamp > 0 ? Date(timeIntervalSince1970: lastTravelingNotificationStamp) : nil }
         set { lastTravelingNotificationStamp = newValue?.timeIntervalSince1970 ?? 0 }
     }
-    /// Set by the UI when the user toggles Traveling Mode; fetchPrayerTimes skips checkIfTraveling once so we don’t override or notify.
-    var travelingModeManuallyToggled: Bool = false
+
+    /// When the automatic-calculation switch last announced itself. Persisted for the same reason as
+    /// `lastTravelingNotificationAt`: background relaunches would reset an in-memory stamp and let the
+    /// notification repeat.
+    @AppStorage("lastCalculationNotificationAt") private var lastCalculationNotificationStamp: Double = 0
+    var lastCalculationNotificationAt: Date? {
+        get { lastCalculationNotificationStamp > 0 ? Date(timeIntervalSince1970: lastCalculationNotificationStamp) : nil }
+        set { lastCalculationNotificationStamp = newValue?.timeIntervalSince1970 ?? 0 }
+    }
 
     @AppStorage("calculationAutomatic") var calculationAutomatic: Bool = true
     @AppStorage("calculationAutoChanged") var calculationAutoChanged: Bool = false
@@ -666,8 +673,6 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     @AppStorage("calculationAutoDetectedMethod") var calculationAutoDetectedMethod: String = ""
     @AppStorage("calculationAutoDetectedCountryCode") var calculationAutoDetectedCountryCode: String = ""
     @AppStorage("currentCountryCode") var currentCountryCode: String = ""
-    /// Set by the UI when the user manually picks a method while automatic mode is enabled.
-    var calculationManuallyToggled: Bool = false
 
     @AppStorage("showLocationAlert") var showLocationAlert: Bool = false {
         willSet { objectWillChange.send() }
@@ -698,7 +703,7 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     /// Names of optional/informational prayer times shown in the app, but not widgets.
     static let optionalPrayerNames: Set<String> = ["Duhaa", "Islamic Midnight", "Last Third"]
 
-    // MARK: - Quran — @AppStorage
+    // MARK: - Quran - @AppStorage
 
     /// Big vs. small in-app Now Playing player. An in-app UI preference, not shared with the widget/watch.
     @AppStorage("nowPlayingExpanded") var nowPlayingExpanded: Bool = false
@@ -821,7 +826,7 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     /// summary: bookmarked ayahs, favorite surahs, and the surah / juz browse list.
     @AppStorage("quranGridMode") var quranGridMode = false
     /// Reads a surah as swipeable mushaf pages instead of a scrolling ayah list. Toggled from the Quran tab's
-    /// toolbar, but only takes effect inside SurahView — the surah browse list itself is unchanged.
+    /// toolbar, but only takes effect inside SurahView - the surah browse list itself is unchanged.
     @AppStorage("quranPageMode") var quranPageMode = false
     /// Reading mode shrinks each mushaf page's Arabic until the whole page fits on screen, the way a printed
     /// mushaf sets it. Off, the page renders at the chosen font size and scrolls.
@@ -849,7 +854,7 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
 
     var groupBySurah: Bool { quranSortMode == .surah }
     /// In Khatm mode, the Surah/Juz toggle (which replaces the Asc/Desc control). When on, surahs are grouped
-    /// under juz headers, each surah shown once in the juz it *starts* in — so juz that no surah opens (e.g.
+    /// under juz headers, each surah shown once in the juz it *starts* in - so juz that no surah opens (e.g.
     /// juz 2, 5) appear empty.
     @AppStorage("khatmGroupByJuz") var khatmGroupByJuz: Bool = false
     @AppStorage("searchForSurahs") var searchForSurahs: Bool = true
@@ -859,7 +864,7 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     @AppStorage("lastReadAyah") var lastReadAyah: Int = 0
 
     // MARK: - Surah stats (times opened / played)
-    // A tiny [surahID: count] map JSON-encoded in one key each — at most 114 small entries, so it costs
+    // A tiny [surahID: count] map JSON-encoded in one key each - at most 114 small entries, so it costs
     // almost nothing in memory and is only decoded when a surah header is shown.
     @AppStorage("surahOpenCountsData") private var surahOpenCountsData: Data = Data()
     @AppStorage("surahPlayCountsData") private var surahPlayCountsData: Data = Data()
@@ -1042,6 +1047,15 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     /// True when the Quran Arabic font picker is set to "Basic" (the standard Apple system font).
     var quranUsesSystemArabicFont: Bool { fontArabic == Settings.systemArabicFontName }
 
+    /// True when Quran Arabic renders in a real bundled face (Uthmani / Qiraat / IndoPak) rather than the system
+    /// font. Views pass this to `arabicFontDesign(custom:)` so the app-wide rounded design skips the bundled faces
+    /// but still applies when "Basic" is selected. See the note in `Globals.swift`.
+    var quranUsesCustomArabicFace: Bool { !quranUsesSystemArabicFont }
+
+    /// Same question for the non-Quran Arabic screens (Adhkar, Duas, 99 Names, Arabic Alphabet), which gate the
+    /// Quranic face behind their own "Arabic Font" picker on top of the global font choice.
+    var islamUsesCustomArabicFace: Bool { useFontArabic && quranUsesCustomArabicFace }
+
     // MARK: - Arabic Alphabet screen size
 
     /// The Arabic Alphabet screens (ArabicView / ArabicLetterView) expose a size slider. This is its position
@@ -1049,6 +1063,10 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     /// so text only ever grows from the device size, and the custom Arabic glyphs (built with `relativeTo:`)
     /// grow along with every other label.
     @AppStorage("arabicLetterSizeIndex") var arabicLetterSizeIndex: Int = 0
+
+    /// Hides the English readings ("ba", "bi", "bu") under the tashkeel glyphs on the Arabic Alphabet screens, so
+    /// the marks can be practised from the Arabic alone rather than read off the transliteration.
+    @AppStorage("hideEnglishInArabicLetters") var hideEnglishInArabicLetters: Bool = false
 
     /// Starts at `.xSmall`, not `.large`: a floor is a *minimum*, so anchoring it at `.large` silently forced
     /// the alphabet up to the default text size for anyone whose system Dynamic Type is set smaller. The
@@ -1123,7 +1141,7 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
         // Single scalar walk: fold each Arabic scalar through the canonical map (dagger alif → alif, hamza
         // carriers → bare letters, teh marbuta → heh, …) and drop unwanted punctuation/marks in the SAME
         // pass. Replaces the old 22 sequential `replacingOccurrences` scans (each a full-string pass +
-        // allocation) plus a separate filter pass — this runs on every keystroke query and ~7×/ayah during
+        // allocation) plus a separate filter pass - this runs on every keystroke query and ~7×/ayah during
         // index build, so collapsing 23 passes into 1 is a real win. Behavior is identical: all map keys are
         // single scalars, normalization still happens before the unwanted-char filter, lowercasing after.
         var built = ""

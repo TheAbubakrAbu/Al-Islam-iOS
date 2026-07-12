@@ -81,7 +81,7 @@ enum AppPerformance {
 }
 
 /// One color per accent. `accent1` and `accent2` both resolve to it, so a screen can keep saying "this section
-/// is the second accent" while the two currently look the same — the split stays wired up without a two-color
+/// is the second accent" while the two currently look the same - the split stays wired up without a two-color
 /// accent existing to drive it.
 enum AccentColor: String, CaseIterable, Identifiable {
     var id: String { self.rawValue }
@@ -111,7 +111,7 @@ enum AccentColor: String, CaseIterable, Identifiable {
         }
     }
 
-    /// Kept so the (many) gradient/second-accent call sites still compile — it is simply the accent itself, so
+    /// Kept so the (many) gradient/second-accent call sites still compile - it is simply the accent itself, so
     /// every "gradient" collapses to a solid fill that renders exactly like the flat color.
     var secondaryColor: Color { color }
 
@@ -132,8 +132,8 @@ enum AccentColor: String, CaseIterable, Identifiable {
     // MARK: - The two accents, by name
     //
     // Sections declare which of the two they belong to (leading toolbar / location on the first, trailing
-    // toolbar / prayer times on the second). Both resolve to the selected color today — picking a color takes
-    // both — but the wiring stays, so a two-color accent can be reintroduced by changing only `secondaryColor`.
+    // toolbar / prayer times on the second). Both resolve to the selected color today - picking a color takes
+    // both - but the wiring stays, so a two-color accent can be reintroduced by changing only `secondaryColor`.
 
     /// The primary accent. Leading toolbar, location, and every "first" section.
     var accent1: Color { color }
@@ -141,13 +141,63 @@ enum AccentColor: String, CaseIterable, Identifiable {
     var accent2: Color { secondaryColor }
 }
 
-/// Preset swatches shown in Appearance. `.custom` is excluded — it's driven by the color picker instead.
+/// Preset swatches shown in Appearance. `.custom` is excluded - it's driven by the color picker instead.
 let accentColors: [AccentColor] = AccentColor.allCases.filter { $0 != .custom }
 
-// A global `.fontDesign(.rounded)` at the root is NOT usable here: `fontDesign` overrides the design of *every*
-// font in its subtree — including `.custom(...)` ones — so it silently replaced the Quranic Arabic faces
-// (Uthmani/Hafs) with a system face. With 50+ custom-font call sites there's no cheap way to opt them all back
-// out, so the app keeps the default system face.
+// MARK: - Rounded design, app-wide
+//
+// Every system font in the app renders in SF Rounded. That is set once, as `.fontDesign(.rounded)` on the root
+// view: `fontDesign` propagates down the environment, so it covers all ~2,200 `.font(.headline)`-style call sites
+// without any of them being touched.
+//
+// The catch is that `fontDesign` overrides the design of *every* font in its subtree, `.custom(...)` faces
+// included, which would silently replace the Quranic Arabic faces (Uthmani / Qiraat / IndoPak) with a system one.
+// So each view that renders Arabic must declare which face it is actually using via `arabicFontDesign(custom:)`.
+
+extension View {
+    /// Applies the app-wide rounded design. Called once, on the root view.
+    ///
+    /// `fontDesign` needs iOS 16.1, and the app deploys to 15.0, so on older systems this is a no-op and the app
+    /// keeps the default system face. That is a purely visual fallback: nothing below depends on the design.
+    @ViewBuilder
+    func appFontDesign() -> some View {
+        if #available(iOS 16.1, macOS 13.0, watchOS 9.1, *) {
+            self.fontDesign(.rounded)
+        } else {
+            self
+        }
+    }
+
+    /// Declares how Arabic text in this subtree should interact with the app-wide rounded design.
+    ///
+    /// Pass `true` when a real bundled Arabic face (Uthmani / Qiraat / IndoPak) is in play, which opts the subtree
+    /// out of the rounded design so the face renders as authored. Pass `false` when the reader picked "Basic" and
+    /// the Arabic is really the system face, which keeps it rounded like the rest of the UI.
+    ///
+    /// A view that opts out is responsible for naming `design: .rounded` on any *system* font it still draws - the
+    /// environment no longer supplies one. That case is real: an ayah keeps its Uthmani number marker even when the
+    /// body text is "Basic", so the row must opt out yet still round its body.
+    @ViewBuilder
+    func arabicFontDesign(custom: Bool) -> some View {
+        if #available(iOS 16.1, macOS 13.0, watchOS 9.1, *) {
+            self.fontDesign(custom ? nil : .rounded)
+        } else {
+            self
+        }
+    }
+}
+
+#if canImport(UIKit)
+extension UIFont {
+    /// The rounded system face. The `fontDesign` environment only reaches SwiftUI text, so the UIKit-drawn surfaces
+    /// (the mushaf page, the share-image renderer) have to ask for the design themselves to match the rest of the app.
+    static func roundedSystemFont(ofSize size: CGFloat, weight: UIFont.Weight = .regular) -> UIFont {
+        let base = UIFont.systemFont(ofSize: size, weight: weight)
+        guard let descriptor = base.fontDescriptor.withDesign(.rounded) else { return base }
+        return UIFont(descriptor: descriptor, size: size)
+    }
+}
+#endif
 
 extension Color {
     /// Creates a color from a 6-digit RGB hex string ("RRGGBB", leading "#" optional). Returns nil if invalid.
@@ -185,6 +235,37 @@ extension EnvironmentValues {
         set { self[CustomColorSchemeKey.self] = newValue }
     }
 }
+
+/// The twelve months of the Hijri year, in order.
+///
+/// One table, because three screens need it: the Hijri Calendar in the Adhan tab, the Hijri Date Converter, and
+/// the Hijri reference page in Pillars. Each had its own hardcoded list, and only one of them carried the Arabic.
+struct HijriMonth: Identifiable {
+    var id: Int { number }
+
+    /// 1...12, matching `Calendar(identifier: .islamicUmmAlQura)`'s month component.
+    let number: Int
+    let english: String
+    let arabic: String
+    /// The four sacred months (al-ashhur al-hurum), in which fighting is forbidden: Quran 9:36.
+    let isSacred: Bool
+    let note: String
+}
+
+let hijriMonths: [HijriMonth] = [
+    HijriMonth(number: 1,  english: "Muharram",       arabic: "مُحَرَّم",        isSacred: true,  note: "A sacred month. The Day of Ashura falls on the 10th."),
+    HijriMonth(number: 2,  english: "Safar",          arabic: "صَفَر",           isSacred: false, note: "No worship is tied to this month, and there is no bad omen in it."),
+    HijriMonth(number: 3,  english: "Rabi al-Awwal",  arabic: "رَبِيع الأَوَّل",  isSacred: false, note: "The month the Prophet ﷺ migrated to Madinah."),
+    HijriMonth(number: 4,  english: "Rabi al-Thani",  arabic: "رَبِيع الثَّانِي", isSacred: false, note: "The second of the two Rabi months."),
+    HijriMonth(number: 5,  english: "Jumada al-Ula",  arabic: "جُمَادَى الأُولَى", isSacred: false, note: "The first of the two Jumada months."),
+    HijriMonth(number: 6,  english: "Jumada al-Thani", arabic: "جُمَادَى الآخِرَة", isSacred: false, note: "The second of the two Jumada months."),
+    HijriMonth(number: 7,  english: "Rajab",          arabic: "رَجَب",           isSacred: true,  note: "A sacred month, standing alone between the others."),
+    HijriMonth(number: 8,  english: "Sha'ban",        arabic: "شَعبَان",         isSacred: false, note: "The Prophet ﷺ fasted more in Sha'ban than in any month but Ramadan."),
+    HijriMonth(number: 9,  english: "Ramadan",        arabic: "رَمَضَان",        isSacred: false, note: "The month of the obligatory fast, and the month the Quran was sent down."),
+    HijriMonth(number: 10, english: "Shawwal",        arabic: "شَوَّال",         isSacred: false, note: "Eid al-Fitr is on the 1st, followed by the six recommended fasts."),
+    HijriMonth(number: 11, english: "Dhul Qi'dah",    arabic: "ذُو القَعدَة",     isSacred: true,  note: "A sacred month, and one of the months of Hajj."),
+    HijriMonth(number: 12, english: "Dhul Hijjah",    arabic: "ذُو الحِجَّة",     isSacred: true,  note: "A sacred month. Hajj is performed, and Eid al-Adha is on the 10th."),
+]
 
 func arabicNumberString(from number: Int) -> String {
     let arabicNumbers = ["٠", "١", "٢", "٣", "٤", "٥", "٦", "٧", "٨", "٩"]
@@ -265,7 +346,7 @@ extension String {
 
     /// Replaces the ayah-search operator characters (`# ^ % $ & | !`) with spaces. The search parser
     /// consumes these as operators, so they must be removed before the residual text is matched against
-    /// (or highlighted within) ayah content — otherwise a query like `#الله` keeps the `#`, never matches
+    /// (or highlighted within) ayah content - otherwise a query like `#الله` keeps the `#`, never matches
     /// the source, and nothing highlights. Operators become spaces (not deleted) to preserve word breaks.
     var removingAyahSearchOperators: String {
         let operators = Set("#^%$&|!=".unicodeScalars)

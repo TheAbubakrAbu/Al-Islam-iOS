@@ -118,8 +118,8 @@ struct SettingsAdhanView: View {
             }
         }
         #endif
-        // The confirmation is raised only in response to something the USER just did here — changing the home
-        // location, or switching one of the automatic modes on — and only once the resulting refresh has
+        // The confirmation is raised only in response to something the USER just did here - changing the home
+        // location, or switching one of the automatic modes on - and only once the resulting refresh has
         // settled. It is deliberately NOT driven by an `.onChange` on the travel/calculation flags themselves:
         // watching those means the dialog fires the moment a background location update flips one, over and
         // over, whether or not this screen is on screen. The dialog's buttons clear the flags.
@@ -132,7 +132,7 @@ struct SettingsAdhanView: View {
             guard newValue else { return }
             settings.fetchPrayerTimes {
                 if settings.homeLocation == nil {
-                    withAnimation { settings.travelingMode = false }
+                    settings.setTravelingModeManually(false)
                 } else {
                     presentAutoChangeDialogIfPending()
                 }
@@ -159,7 +159,7 @@ struct SettingsAdhanView: View {
         }
     }
 
-    /// A dialog anchored only to the root list cannot present while the user is on a *pushed* sub-screen —
+    /// A dialog anchored only to the root list cannot present while the user is on a *pushed* sub-screen - 
     /// which is exactly why the Traveling Mode confirmation never appeared (the toggle lives on the pushed
     /// "Traveling Mode" screen). The binding and content are shared so the same dialog can also be attached
     /// to the sub-screens, and whichever one is actually on screen presents it.
@@ -171,7 +171,7 @@ struct SettingsAdhanView: View {
     }
 
     /// Raise the auto-change confirmation if one is pending. Deferred a beat, so the dialog doesn't try to
-    /// present while the toggle that triggered it is still animating — presenting into a mid-flight layout is
+    /// present while the toggle that triggered it is still animating - presenting into a mid-flight layout is
     /// how a confirmation ends up silently dropped.
     private func presentAutoChangeDialogIfPending() {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
@@ -272,7 +272,7 @@ struct SettingsAdhanView: View {
     }
 
     // The confirmation is attached to these pushed screens as well as the root list. The toggles that trigger
-    // it live *here*, and a dialog anchored only to the (now off-screen) root list could never present —
+    // it live *here*, and a dialog anchored only to the (now off-screen) root list could never present - 
     // which is why the Traveling Mode confirmation appeared to do nothing.
     private var prayerCalculationDestination: some View {
         adhanSettingsSubList(title: "Prayer Calculation") {
@@ -455,11 +455,7 @@ struct SettingsAdhanView: View {
         Binding(
             get: { settings.prayerCalculation },
             set: { newValue in
-                settings.calculationManuallyToggled = true
-                if settings.calculationAutomatic {
-                    settings.calculationAutomatic = false
-                }
-                settings.prayerCalculation = newValue
+                settings.setPrayerCalculationManually(newValue)
             }
         )
     }
@@ -558,8 +554,7 @@ struct SettingsAdhanView: View {
         Binding(
             get: { settings.travelingMode },
             set: {
-                settings.travelingModeManuallyToggled = true
-                settings.travelingMode = $0
+                settings.setTravelingModeManually($0)
             }
         )
     }
@@ -797,7 +792,7 @@ struct NotificationView: View {
                             }
                     }
 
-                    Text("The notification plays the adhan's first 30 seconds — iOS won't play a longer notification sound. Previewing, or having the app open when the prayer comes in, plays it in full. Prenotifications and nagging reminders still use the default sound.")
+                    Text("The notification plays the adhan's first 30 seconds - iOS won't play a longer notification sound. Previewing, or having the app open when the prayer comes in, plays it in full. Prenotifications and nagging reminders still use the default sound.")
                         .font(.caption)
                         .foregroundColor(.secondary)
                 }
@@ -1029,7 +1024,7 @@ struct NotificationView: View {
 
     #if os(iOS)
     /// Previews the full adhan rather than the 30-second notification cut, so it can run for several
-    /// minutes — hence the stop control instead of a fire-and-forget tap.
+    /// minutes - hence the stop control instead of a fire-and-forget tap.
     private func playAdhanPreview() {
         stopAdhanPreview()
 

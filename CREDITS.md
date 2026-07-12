@@ -16,19 +16,19 @@ App Store: <https://apps.apple.com/us/app/al-islam-islamic-pillars/id6449729655>
 
 ## Credits
 
-- **Adhan calculations** (fully offline, on-device) — **Batoul Apps** — <https://github.com/batoulapps/adhan-swift>
-- **Adhan sounds** — **Omar Al-Ejel** — <https://github.com/oalejel/Athan-Utility>
-- **English transliteration of the Quran** — **Risan Bagja Pradana** — <https://github.com/risan/quran-json>
-- **English Saheeh International translation** — **Global Quran** — <https://globalquran.com/download/data/>
-- **All Quranic Arabic text and all qiraat/riwayaat data** — **quran-data-kfgqpc (KFGQPC)** — <https://github.com/thetruetruth/quran-data-kfgqpc>
-- **Uthmani Quran font** — **King Fahad Complex (KFGQPC)** — <https://qul.tarteel.ai/resources/font/245>
-- **Indopak Nastaleeq Quran font** — **Ayman Siddiqui and R. Siddiqua** — <https://qul.tarteel.ai/resources/font/242>
-- **Surah (full) Quran recitations** — **MP3 Quran** — <https://mp3quran.net/eng>
-- **Ayah-by-ayah Quran recitations** — **Al Quran** — <https://alquran.cloud/cdn>
-- **English Quran translation comparison API** — **Al Quran Cloud** — <https://alquran.cloud/api>
-- **Tafsir API** — **Quran API Pages** — <https://quranapi.pages.dev/>
-- **Surah Info** — **Quran.com (Quran Foundation)** — <https://api-docs.quran.foundation/docs/content_apis_versioned/4.0.0/get-chapter-info/>
-- **99 Names of Allah** — **MyIslam** — <https://myislam.org/99-names-of-allah/>
+- **Adhan calculations** (fully offline, on-device) - **Batoul Apps** - <https://github.com/batoulapps/adhan-swift>
+- **Adhan sounds** - **Omar Al-Ejel** - <https://github.com/oalejel/Athan-Utility>
+- **English transliteration of the Quran** - **Risan Bagja Pradana** - <https://github.com/risan/quran-json>
+- **English Saheeh International translation** - **Global Quran** - <https://globalquran.com/download/data/>
+- **All Quranic Arabic text and all qiraat/riwayaat data** - **quran-data-kfgqpc (KFGQPC)** - <https://github.com/thetruetruth/quran-data-kfgqpc>
+- **Uthmani Quran font** - **King Fahad Complex (KFGQPC)** - <https://qul.tarteel.ai/resources/font/245>
+- **Indopak Nastaleeq Quran font** - **Ayman Siddiqui and R. Siddiqua** - <https://qul.tarteel.ai/resources/font/242>
+- **Surah (full) Quran recitations** - **MP3 Quran** - <https://mp3quran.net/eng>
+- **Ayah-by-ayah Quran recitations** - **Al Quran** - <https://alquran.cloud/cdn>
+- **English Quran translation comparison API** - **Al Quran Cloud** - <https://alquran.cloud/api>
+- **Tafsir API** - **Quran API Pages** - <https://quranapi.pages.dev/>
+- **Surah Info** - **Quran.com (Quran Foundation)** - <https://api-docs.quran.foundation/docs/content_apis_versioned/4.0.0/get-chapter-info/>
+- **99 Names of Allah** - **MyIslam** - <https://myislam.org/99-names-of-allah/>
 
 ## Apps by Abubakr Elmallah
 
@@ -41,4 +41,4 @@ App Store: <https://apps.apple.com/us/app/al-islam-islamic-pillars/id6449729655>
 
 ## A Note on Intent
 
-This app is offered as *sadaqah jariyah* — a contribution for the benefit of the Muslim community and anyone building tools to pray on time and learn about Islam, and access the Quran. If it helps you, please keep the chain of attribution intact and consider contributing improvements back.
+This app is offered as *sadaqah jariyah* - a contribution for the benefit of the Muslim community and anyone building tools to pray on time and learn about Islam, and access the Quran. If it helps you, please keep the chain of attribution intact and consider contributing improvements back.

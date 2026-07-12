@@ -88,7 +88,7 @@ struct JuzHeader: View {
             surahCountBadge
             infoButton
             // Khatm's Juz grouping is about tracking a full read-through, so the random "shuffle to a surah"
-            // jump doesn't belong there — hide it in khatm mode.
+            // jump doesn't belong there - hide it in khatm mode.
             if settings.quranSortMode != .khatm {
                 randomSurahLink
             }
@@ -101,7 +101,7 @@ struct JuzHeader: View {
         }
         #if os(iOS)
         .confirmationDialog(
-            "Juz \(juz.id) — \(juz.nameTransliteration)",
+            "Juz \(juz.id) - \(juz.nameTransliteration)",
             isPresented: $showInfo,
             titleVisibility: .visible
         ) {
@@ -333,6 +333,7 @@ struct HeaderRow: View {
                 beginnerMode: settings.beginnerMode || ayahBeginnerMode,
                 highlightAllahNames: settings.highlightAllahNames
             )
+            .arabicFontDesign(custom: usesCustomArabicFace)
             .multilineTextAlignment(.center)
             .frame(maxWidth: .infinity, alignment: .center)
             .padding(.vertical, 8)
@@ -405,10 +406,16 @@ struct HeaderRow: View {
         return cleanedText
     }
 
+    /// "Remove Arabic dots" forces the system face, and so does picking "Basic" in the font picker. In both cases
+    /// the bismillah / ta'awwudh is really system text, so it should stay rounded like the rest of the UI.
+    private var usesCustomArabicFace: Bool {
+        !settings.removeArabicDots && settings.quranUsesCustomArabicFace
+    }
+
     private var arabicFont: Font {
-        settings.removeArabicDots
-            ? .system(size: settings.fontArabicSize)
-            : .custom(settings.fontArabic, size: settings.fontArabicSize)
+        usesCustomArabicFace
+            ? .custom(settings.fontArabic, size: settings.fontArabicSize)
+            : .system(size: settings.fontArabicSize)
     }
 }
 

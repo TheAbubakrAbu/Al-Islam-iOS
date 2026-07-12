@@ -48,7 +48,7 @@ struct PrayersProvider: TimelineProvider {
     private let settings = Settings.shared
 
     // Placeholder (redacted skeleton) and the gallery preview show representative sample times so they never
-    // render blank when the app hasn't cached prayers yet. The real timeline still shows only real data —
+    // render blank when the app hasn't cached prayers yet. The real timeline still shows only real data - 
     // a prayer app must never display fake prayer times as if they were the user's actual schedule.
     func placeholder(in context: Context) -> PrayersEntry { sampleEntry() }
 

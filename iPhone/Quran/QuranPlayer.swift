@@ -416,7 +416,7 @@ final class QuranPlayer: ObservableObject {
         if reciter.defaultToMinshawi {
             return Reciter.minshawiAyahFallbackName
         }
-        // Mujawwad/Muallim variants with no per-ayah recording in that style play the reciter's Murattal —
+        // Mujawwad/Muallim variants with no per-ayah recording in that style play the reciter's Murattal - 
         // show that during ayah/range playback so the label matches what's actually heard.
         if let note = reciter.ayahMurattalStyleNote {
             return note
@@ -452,7 +452,7 @@ final class QuranPlayer: ObservableObject {
 
         settings.recordSurahPlayed(surahNumber)
 
-        // Synchronous @Published writes coalesce into one view update on their own — no withAnimation needed
+        // Synchronous @Published writes coalesce into one view update on their own - no withAnimation needed
         // (it would animate the whole observing List, not just the now-playing inset).
         currentSurahNumber = surahNumber
         currentAyahNumber = nil
@@ -559,7 +559,7 @@ final class QuranPlayer: ObservableObject {
                 case .failed:
                     self.presentPlaybackFailure("Unable to load this recitation. Check your internet connection and try again.", title: "Playback Unavailable")
                 default:
-                    break   // .unknown / still loading — wait for the next status change
+                    break   // .unknown / still loading - wait for the next status change
                 }
             }
         }
@@ -613,7 +613,7 @@ final class QuranPlayer: ObservableObject {
         }
     }
 
-    /// The surah that will play after the current one ends — mirrors the end-of-item branch (queue first,
+    /// The surah that will play after the current one ends - mirrors the end-of-item branch (queue first,
     /// then `reciteType`), excluding the repeat case (which replays the same surah).
     private func nextSurahDescriptor() -> (number: Int, name: String)? {
         if let queued = surahQueue.first {
@@ -1243,7 +1243,7 @@ final class QuranPlayer: ObservableObject {
         let urlStr: String
         if let folder = reciter.everyayahFolder {
             // everyayah.com uses a surah+ayah filename scheme. Used for editions whose cdn.islamic.network
-            // feed is unreliable — Minshawi Mujawwad's islamic.network ayahs are the Murattal recording for
+            // feed is unreliable - Minshawi Mujawwad's islamic.network ayahs are the Murattal recording for
             // ~1 in 5 verses (same md5), which is what audibly dropped playback to Murattal mid-surah.
             urlStr = "https://everyayah.com/data/\(folder)/\(String(format: "%03d%03d", surah.id, ayahNumber)).mp3"
         } else {

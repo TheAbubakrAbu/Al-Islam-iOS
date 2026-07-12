@@ -95,7 +95,7 @@ struct TajweedFoundationsView: View {
                 Text("Learning Tajweed might seem challenging at first, but there are many resources available today to make the process easier. Traditionally, learning Tajweed was done with a teacher who could guide you through the articulation points and characteristics of each letter.")
                     .font(.body)
 
-                Text("Now, in addition to teachers, there are online platforms, videos, and books that provide step-by-step lessons. For those starting out, focus on mastering the basic rules first and gradually build your skills over time. Practicing consistently is key—recording your recitation can help you catch mistakes and improve pronunciation.")
+                Text("Now, in addition to teachers, there are online platforms, videos, and books that provide step-by-step lessons. For those starting out, focus on mastering the basic rules first and gradually build your skills over time. Practicing consistently is key - recording your recitation can help you catch mistakes and improve pronunciation.")
                     .font(.body)
 
                 Text("Many learners find benefit in joining Tajweed classes or study groups, where they can receive feedback and support from others on the same journey.")
@@ -378,7 +378,7 @@ private struct TajweedFoundationsTopicView: View {
                     .foregroundColor(.secondary)
             }
 
-            Section("2. MIM (م) — LIP CLOSURE") {
+            Section("2. MIM (م) - LIP CLOSURE") {
                 Text("The letter mim (م) is a bilabial letter, meaning it is produced using both lips.")
                     .font(.body)
 
@@ -562,7 +562,7 @@ private struct TajweedInMushafView: View {
                 VStack(alignment: .leading, spacing: 12) {
                     TajweedRuleRow(
                         arabic: "أُمَّةٞ قَدۡ",
-                        pronunciation: "ummatun(g) qad — hidden noon with ghunnah",
+                        pronunciation: "ummatun(g) qad - hidden noon with ghunnah",
                         rule: "Special Dammatayn",
                         arabicFont: arabicFont
                     )
@@ -710,6 +710,7 @@ private struct TajweedMakharijView: View {
 
                 Text("ء هـ ع ح غ خ")
                     .font(arabicHeadlineFont)
+                    .arabicFontDesign(custom: settings.quranUsesCustomArabicFace)
                     .frame(maxWidth: .infinity, alignment: .trailing)
 
                 Text("Sub-Zones (for awareness)")
@@ -814,6 +815,7 @@ private struct TajweedMakharijView: View {
 
                 Text("ب م ف")
                     .font(arabicHeadlineFont)
+                    .arabicFontDesign(custom: settings.quranUsesCustomArabicFace)
                     .frame(maxWidth: .infinity, alignment: .trailing)
 
                 Text("How They Work")
@@ -900,6 +902,7 @@ private struct TajweedHeavyLightView: View {
 
                 Text("خ ص ض غ ط ق ظ")
                     .font(arabicHeadlineFont)
+                    .arabicFontDesign(custom: settings.quranUsesCustomArabicFace)
                     .frame(maxWidth: .infinity, alignment: .trailing)
 
                 Text("They are pronounced with:")
@@ -933,6 +936,7 @@ private struct TajweedHeavyLightView: View {
 
                 Text("ء ب ت ث ج ح د ذ ز س ش ف ك م ن هـ و ي")
                     .font(arabicHeadlineFont)
+                    .arabicFontDesign(custom: settings.quranUsesCustomArabicFace)
                     .frame(maxWidth: .infinity, alignment: .trailing)
 
                 Text("They are pronounced with:")
@@ -986,7 +990,7 @@ private struct TajweedHeavyLightView: View {
                 Text("Light Raa")
                     .font(.subheadline.weight(.semibold))
 
-                Text("Raa with kasrah (ـِ), or raa with sukoon preceded by an ORIGINAL kasrah — unless an isti'la letter with fatha/damma follows it in the same word (قِرْطَاس, مِرْصَاد), which makes it heavy again.")
+                Text("Raa with kasrah (ـِ), or raa with sukoon preceded by an ORIGINAL kasrah - unless an isti'la letter with fatha/damma follows it in the same word (قِرْطَاس, مِرْصَاد), which makes it heavy again.")
                     .font(.body)
                     .foregroundColor(.secondary)
 
@@ -997,7 +1001,7 @@ private struct TajweedHeavyLightView: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
 
-                Text("Rule of thumb: if the raa carries a vowel, look at that vowel. If the raa is sakin, look at the letter BEFORE it — and at what follows, for the isti'la exception.")
+                Text("Rule of thumb: if the raa carries a vowel, look at that vowel. If the raa is sakin, look at the letter BEFORE it - and at what follows, for the isti'la exception.")
                     .font(.body)
             }
 
@@ -1111,6 +1115,7 @@ private struct TajweedShamsQamarView: View {
 
                 Text("ا ب ج ح خ ع غ ف ق ك م هـ و ي")
                     .font(arabicHeadlineFont)
+                    .arabicFontDesign(custom: settings.quranUsesCustomArabicFace)
                     .frame(maxWidth: .infinity, alignment: .trailing)
 
                 VStack(alignment: .leading, spacing: 12) {
@@ -1152,6 +1157,7 @@ private struct TajweedShamsQamarView: View {
 
                 Text("ت ث د ذ ر ز س ش ص ض ط ظ ل ن")
                     .font(arabicHeadlineFont)
+                    .arabicFontDesign(custom: settings.quranUsesCustomArabicFace)
                     .frame(maxWidth: .infinity, alignment: .trailing)
 
                 VStack(alignment: .leading, spacing: 12) {
@@ -1316,13 +1322,13 @@ private struct TajweedMaddView: View {
             }
 
             Section("3B. MADD MUNFASIL HUKMI (RULED SEPARATED)") {
-                Text("A special, \u{201C}ruled\u{201D} (hukmi) form of Madd Munfasil. The madd letter and the hamzah are written inside one word, so it looks like Madd Muttasil — but it is recited as a separated madd.")
+                Text("A special, \u{201C}ruled\u{201D} (hukmi) form of Madd Munfasil. The madd letter and the hamzah are written inside one word, so it looks like Madd Muttasil - but it is recited as a separated madd.")
                     .font(.body)
 
                 Text("Why It Is Separated")
                     .font(.subheadline.weight(.semibold))
 
-                Text("The madd letter is actually the tail of a small joined particle — the vocative يَا (\u{201C}O \u{2026}\u{201D}) or the demonstrative هَا (\u{201C}here/these \u{2026}\u{201D}) — and the hamzah begins the word it is attached to. So in meaning it is two words, even though the script joins them.")
+                Text("The madd letter is actually the tail of a small joined particle - the vocative يَا (\u{201C}O \u{2026}\u{201D}) or the demonstrative هَا (\u{201C}here/these \u{2026}\u{201D}) - and the hamzah begins the word it is attached to. So in meaning it is two words, even though the script joins them.")
                     .font(.body)
                     .foregroundColor(.secondary)
 
@@ -1330,7 +1336,7 @@ private struct TajweedMaddView: View {
                     .font(.subheadline.weight(.semibold))
 
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("A superscript madd letter — dagger alif (\u{0670}), small waw (\u{06E5}), or small yaa (\u{06E6}) — carrying a maddah (\u{0653})")
+                    Text("A superscript madd letter - dagger alif (\u{0670}), small waw (\u{06E5}), or small yaa (\u{06E6}) - carrying a maddah (\u{0653})")
                     Text("Immediately followed by a hamzah in the SAME written word")
                     Text("The carrier is the tail of a joined يَا or هَا particle")
                 }
@@ -1338,7 +1344,7 @@ private struct TajweedMaddView: View {
                 .foregroundColor(.secondary)
                 .frame(maxWidth: .infinity, alignment: .leading)
 
-                Text("Length: 2, 4, or 5 counts (treated exactly like Madd Munfasil — be consistent)")
+                Text("Length: 2, 4, or 5 counts (treated exactly like Madd Munfasil - be consistent)")
                     .font(.body)
                     .foregroundColor(settings.accentColor.color)
 
@@ -1388,7 +1394,7 @@ private struct TajweedMaddView: View {
                 Text("Several named madds and special cases sit alongside the main five. They matter for accurate recitation and for any rule engine.")
                     .font(.body)
 
-                Text("Madd Badal — hamzah BEFORE the madd")
+                Text("Madd Badal - hamzah BEFORE the madd")
                     .font(.subheadline.weight(.semibold))
                 Text("A hamzah followed by a madd letter (the reverse of muttasil). Read 2 counts; it is not lengthened like muttasil.")
                     .font(.body)
@@ -1399,7 +1405,7 @@ private struct TajweedMaddView: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
 
-                Text("Madd \u{02BF}Iwad — tanwin fath at a stop")
+                Text("Madd \u{02BF}Iwad - tanwin fath at a stop")
                     .font(.subheadline.weight(.semibold))
                 Text("When you stop on a word ending in tanwin fath (\u{064B}), the tanwin drops and the alif is stretched 2 counts. It is not aarid lis-sukoon.")
                     .font(.body)
@@ -1410,7 +1416,7 @@ private struct TajweedMaddView: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
 
-                Text("Madd Tamkin — doubled yaa")
+                Text("Madd Tamkin - doubled yaa")
                     .font(.subheadline.weight(.semibold))
                 Text("A kasrah + shaddah yaa meeting a madd yaa. Read 2 counts, taking care not to swallow either yaa.")
                     .font(.body)
@@ -1421,9 +1427,9 @@ private struct TajweedMaddView: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
 
-                Text("Madd Silah — the pronoun haa")
+                Text("Madd Silah - the pronoun haa")
                     .font(.subheadline.weight(.semibold))
-                Text("The attached pronoun \u{0647} (\u{201C}his/its\u{201D}) between two voweled letters is given a hidden waw/yaa. Sughra (small) is 2 counts; Kubra (large) is 4\u{2013}5 counts when a hamzah follows — it then behaves like Madd Munfasil.")
+                Text("The attached pronoun \u{0647} (\u{201C}his/its\u{201D}) between two voweled letters is given a hidden waw/yaa. Sughra (small) is 2 counts; Kubra (large) is 4\u{2013}5 counts when a hamzah follows - it then behaves like Madd Munfasil.")
                     .font(.body)
                     .foregroundColor(.secondary)
                 VStack(alignment: .leading, spacing: 12) {
@@ -1434,13 +1440,13 @@ private struct TajweedMaddView: View {
 
                 Text("Dagger Alif & Tiny Madd Marks")
                     .font(.subheadline.weight(.semibold))
-                Text("Superscript madd marks — dagger alif (\u{0670}), small waw (\u{06E5}), small yaa (\u{06E6}) — are still a 2-count natural madd even though they are written tiny. When such a mark also carries a maddah (\u{0653}) and a hamzah follows, it becomes the munfasil-hukmi case above.")
+                Text("Superscript madd marks - dagger alif (\u{0670}), small waw (\u{06E5}), small yaa (\u{06E6}) - are still a 2-count natural madd even though they are written tiny. When such a mark also carries a maddah (\u{0653}) and a hamzah follows, it becomes the munfasil-hukmi case above.")
                     .font(.body)
                     .foregroundColor(.secondary)
 
                 Text("Genuine Muttasil Written With A Dagger Alif")
                     .font(.subheadline.weight(.semibold))
-                Text("Not every dagger alif + hamzah is hukmi. When both sit inside one true word (no joined يَا/هَا particle), it is ordinary Madd Muttasil — for example أُوْلَٰٓئِكَ, مَلَٰٓئِكَة, and إِسۡرَٰٓءِيل.")
+                Text("Not every dagger alif + hamzah is hukmi. When both sit inside one true word (no joined يَا/هَا particle), it is ordinary Madd Muttasil - for example أُوْلَٰٓئِكَ, مَلَٰٓئِكَة, and إِسۡرَٰٓءِيل.")
                     .font(.body)
                     .foregroundColor(.secondary)
                 VStack(alignment: .leading, spacing: 12) {
@@ -1476,6 +1482,7 @@ private struct TajweedMaddView: View {
                     Text("قُرَيۡش")
                 }
                 .font(arabicHeadlineFont)
+                .arabicFontDesign(custom: settings.quranUsesCustomArabicFace)
                 .frame(maxWidth: .infinity, alignment: .trailing)
 
                 Text("Madd Aarid lis-Sukoon")
@@ -1548,7 +1555,7 @@ private struct TajweedMaddView: View {
                     .font(.subheadline.weight(.semibold))
 
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("ألف (alone) — no madd")
+                    Text("ألف (alone) - no madd")
                 }
                 .font(.body)
                 .foregroundColor(.secondary)
@@ -1558,8 +1565,8 @@ private struct TajweedMaddView: View {
                     .font(.subheadline.weight(.semibold))
 
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("6 counts — نقص عسلكم")
-                    Text("2 counts — حي طهر")
+                    Text("6 counts - نقص عسلكم")
+                    Text("2 counts - حي طهر")
                     Text("'Ayn (ع) is a leen letter: 4 or 6 counts.")
                 }
                 .font(.body)
@@ -1568,10 +1575,12 @@ private struct TajweedMaddView: View {
 
                 Text("ن ق ص ع س ل ك م")
                     .font(arabicHeadlineFont)
+                    .arabicFontDesign(custom: settings.quranUsesCustomArabicFace)
                     .frame(maxWidth: .infinity, alignment: .trailing)
 
                 Text("ح ي ط ه ر")
                     .font(arabicHeadlineFont)
+                    .arabicFontDesign(custom: settings.quranUsesCustomArabicFace)
                     .frame(maxWidth: .infinity, alignment: .trailing)
 
                 Text("Not every opening letter is lengthened. Read the letter name.")
@@ -1623,6 +1632,7 @@ private struct TajweedQalqalahView: View {
 
                 Text("ق ط ب ج د")
                     .font(arabicHeadlineFont)
+                    .arabicFontDesign(custom: settings.quranUsesCustomArabicFace)
                     .frame(maxWidth: .infinity, alignment: .trailing)
             }
 
@@ -1790,6 +1800,7 @@ private struct TajweedIdghamIkhfaView: View {
 
                 Text("ء ه ع ح غ خ")
                     .font(arabicHeadlineFont)
+                    .arabicFontDesign(custom: settings.quranUsesCustomArabicFace)
                     .frame(maxWidth: .infinity, alignment: .trailing)
 
                 Text("Example")
@@ -1810,6 +1821,7 @@ private struct TajweedIdghamIkhfaView: View {
 
                 Text("ي ر م ل و ن")
                     .font(arabicHeadlineFont)
+                    .arabicFontDesign(custom: settings.quranUsesCustomArabicFace)
                     .frame(maxWidth: .infinity, alignment: .trailing)
 
                 Text("With Ghunnah")
@@ -1817,6 +1829,7 @@ private struct TajweedIdghamIkhfaView: View {
 
                 Text("ي ن م و")
                     .font(arabicHeadlineFont)
+                    .arabicFontDesign(custom: settings.quranUsesCustomArabicFace)
                     .frame(maxWidth: .infinity, alignment: .trailing)
 
                 Text("Without Ghunnah")
@@ -1824,6 +1837,7 @@ private struct TajweedIdghamIkhfaView: View {
 
                 Text("ل ر")
                     .font(arabicHeadlineFont)
+                    .arabicFontDesign(custom: settings.quranUsesCustomArabicFace)
                     .frame(maxWidth: .infinity, alignment: .trailing)
 
                 Text("Examples")
@@ -1859,6 +1873,7 @@ private struct TajweedIdghamIkhfaView: View {
 
                 Text("ب")
                     .font(arabicHeadlineFont)
+                    .arabicFontDesign(custom: settings.quranUsesCustomArabicFace)
                     .frame(maxWidth: .infinity, alignment: .trailing)
 
                 Text("Example")
@@ -1882,7 +1897,7 @@ private struct TajweedIdghamIkhfaView: View {
                 Text("Letters")
                     .font(.subheadline.weight(.semibold))
 
-                Text("ت ث ج د ذ ز س ش ص ض ط ظ ف ق ك — the remaining 15 letters (all except the idhaar, idghaam, and iqlaab letters)")
+                Text("ت ث ج د ذ ز س ش ص ض ط ظ ف ق ك - the remaining 15 letters (all except the idhaar, idghaam, and iqlaab letters)")
                     .font(.body)
                     .foregroundColor(.secondary)
 
@@ -1986,6 +2001,7 @@ private struct TajweedMeemSakinahView: View {
 
                 Text("أَم بِهِۦ جِنَّةٌۢ")
                     .font(.custom(settings.fontArabic, size: 24))
+                    .arabicFontDesign(custom: settings.quranUsesCustomArabicFace)
                     .frame(maxWidth: .infinity, alignment: .center)
 
                 Text("In this example, the Meem Sakinah in أَم is followed by ب in بِهِۦ, so it is read with Ikhfaa Shafawi.")
@@ -2015,6 +2031,7 @@ private struct TajweedMeemSakinahView: View {
 
                 Text("وَلَهُم مَّا يَشْتَهُونَ")
                     .font(.custom(settings.fontArabic, size: 24))
+                    .arabicFontDesign(custom: settings.quranUsesCustomArabicFace)
                     .frame(maxWidth: .infinity, alignment: .center)
 
                 Text("In this example, the Meem Sakinah at the end of لَهُم is followed by another meem in مَّا, so the two meems merge.")
@@ -2044,6 +2061,7 @@ private struct TajweedMeemSakinahView: View {
 
                 Text("وَمَا بَلَغُوا۟ مِعْشَارَ مَآ ءَاتَيْنَٰهُمْ فَكَذَّبُوا۟ رُسُلِى")
                     .font(.custom(settings.fontArabic, size: 24))
+                    .arabicFontDesign(custom: settings.quranUsesCustomArabicFace)
                     .frame(maxWidth: .infinity, alignment: .center)
 
                 Text("In this example, the Meem Sakinah in ءَاتَيْنَٰهُمْ is followed by ف, so it is read with Idhaar Shafawi.")
@@ -2128,6 +2146,7 @@ private struct TajweedAaridLisSukoonView: View {
 
                 Text("رَزَقۡنَٰهُمۡ بِٱلۡغَيۡبِ")
                     .font(.custom(settings.fontArabic, size: 24))
+                    .arabicFontDesign(custom: settings.quranUsesCustomArabicFace)
                     .frame(maxWidth: .infinity, alignment: .center)
 
                 Text("Simple rule: Pronounce the letter, but do not add a vowel after it.")
@@ -2144,6 +2163,7 @@ private struct TajweedAaridLisSukoonView: View {
 
                 Text("بِأَيۡيْدٖ")
                     .font(.custom(settings.fontArabic, size: 22))
+                    .arabicFontDesign(custom: settings.quranUsesCustomArabicFace)
                     .frame(maxWidth: .infinity, alignment: .center)
 
                 Text("Simple rule: The letter is written, but never pronounced.")
@@ -2158,10 +2178,10 @@ private struct TajweedAaridLisSukoonView: View {
                 Text("Examples:")
                     .font(.subheadline.weight(.semibold))
 
-                Text("قَوَارِيرَا۠  — stop: قَوَارِيرَا")
+                Text("قَوَارِيرَا۠ - stop: قَوَارِيرَا")
                     .font(.body)
 
-                Text("أَنَا۠ — in context: قُلۡ إِنَّمَآ أَنَا۠ بَشَرٞ مِّثۡلُكُمۡ")
+                Text("أَنَا۠ - in context: قُلۡ إِنَّمَآ أَنَا۠ بَشَرٞ مِّثۡلُكُمۡ")
                     .font(.body)
 
                 Text("Simple rule: Pronounce it when stopping, skip it when continuing.")
@@ -2176,17 +2196,17 @@ private struct TajweedAaridLisSukoonView: View {
                 Text("Examples:")
                     .font(.subheadline.weight(.semibold))
 
-                Text("يُقِيمُونَ  — madd letter example")
+                Text("يُقِيمُونَ - madd letter example")
                     .font(.body)
 
-                Text("يُنفِقُونَ  — special tajweed (ikhfāʾ) example")
+                Text("يُنفِقُونَ - special tajweed (ikhfāʾ) example")
                     .font(.body)
 
                 Text("Simple rule: No mark usually means either natural madd or a special recitation rule is happening.")
                     .font(.body)
                     .foregroundColor(.secondary)
 
-                Text("Note about the example رَزَقۡنَٰهُمۡ بِٱلۡغَيۡبِ: there is a qalqalah effect in the consonant, but there is no special visual marking for qalqalah in the Uthmani script — you must know it by rule or consult the tajweed colors in the app to see it highlighted.")
+                Text("Note about the example رَزَقۡنَٰهُمۡ بِٱلۡغَيۡبِ: there is a qalqalah effect in the consonant, but there is no special visual marking for qalqalah in the Uthmani script - you must know it by rule or consult the tajweed colors in the app to see it highlighted.")
                     .font(.caption)
                     .foregroundColor(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -2194,10 +2214,10 @@ private struct TajweedAaridLisSukoonView: View {
 
             Section("Super Simple Summary") {
                 VStack(alignment: .leading, spacing: 6) {
-                    Text("1. ـۡ Normal sukoon — Pronounce the consonant with no vowel. Example: رَزَقۡنَٰهُمۡ بِٱلۡغَيۡبِ")
-                    Text("2. Silent written letter — Skip it always. Example: كَانُواْ")
-                    Text("3. Stop-only letter — Pronounce it only when stopping. Example: أَنَا۠ / قَوَارِيرَا۠")
-                    Text("4. No mark — Either a madd letter or a special tajweed rule. Example: يُقِيمُونَ / يُنفِقُونَ")
+                    Text("1. ـۡ Normal sukoon - Pronounce the consonant with no vowel. Example: رَزَقۡنَٰهُمۡ بِٱلۡغَيۡبِ")
+                    Text("2. Silent written letter - Skip it always. Example: كَانُواْ")
+                    Text("3. Stop-only letter - Pronounce it only when stopping. Example: أَنَا۠ / قَوَارِيرَا۠")
+                    Text("4. No mark - Either a madd letter or a special tajweed rule. Example: يُقِيمُونَ / يُنفِقُونَ")
                 }
                 .font(.body)
                 .foregroundColor(.secondary)
@@ -2244,6 +2264,7 @@ private struct TajweedHamzatulWaslView: View {
                     Text("ٱئۡتُونِي")
                 }
                 .font(.custom(settings.fontArabic, size: 22))
+                .arabicFontDesign(custom: settings.quranUsesCustomArabicFace)
                 .frame(maxWidth: .infinity, alignment: .center)
 
                 Text("Key rule: If you start from the word, pronounce Hamzatul-Wasl. If you connect from the previous word, drop it.")
@@ -2260,6 +2281,7 @@ private struct TajweedHamzatulWaslView: View {
 
                 Text("ذَٰلِكَ ٱلۡكِتَٰبُ لَا رَيۡبَۛ فِيهِ")
                     .font(.custom(settings.fontArabic, size: 20))
+                    .arabicFontDesign(custom: settings.quranUsesCustomArabicFace)
                     .frame(maxWidth: .infinity, alignment: .center)
 
                 Text("When continuing: dhālika l-kitāb (you do not say al- as a separate hamzah). If you stop and then begin from the word, pronounce the Hamzatul-Wasl: al-kitāb.")
@@ -2278,6 +2300,7 @@ private struct TajweedHamzatulWaslView: View {
                     Text("ٱللَّهُ → Allāh")
                 }
                 .font(.custom(settings.fontArabic, size: 20))
+                .arabicFontDesign(custom: settings.quranUsesCustomArabicFace)
                 .frame(maxWidth: .infinity, alignment: .center)
 
                 Text("Note: alif itself is treated as a vowel/madd letter; the opening sound of ٱل is the Hamzatul-Wasl, realized as an initial “a”.")
@@ -2295,11 +2318,12 @@ private struct TajweedHamzatulWaslView: View {
                     Text("ٱبۡنَيۡ → ibnay")
                 }
                 .font(.custom(settings.fontArabic, size: 20))
+                .arabicFontDesign(custom: settings.quranUsesCustomArabicFace)
                 .frame(maxWidth: .infinity, alignment: .center)
             }
 
             Section("4. Hamzatul-Wasl in Verbs Depends on the Third Letter") {
-                Text("For verbs, examine the third letter: if it has ḍammah, begin with “u”; if it has fatḥah or kasrah, begin with “i”. Exception: when that ḍammah is incidental (ʿāriḍah), begin with kasrah instead — ٱمْشُوا، ٱقْضُوا، ٱبْنُوا، ٱمْضُوا، ٱئْتُوا are read imshu, iqdu, ibnu, imdu, i’tu, not umshu / uqdu / ubnu.")
+                Text("For verbs, examine the third letter: if it has ḍammah, begin with “u”; if it has fatḥah or kasrah, begin with “i”. Exception: when that ḍammah is incidental (ʿāriḍah), begin with kasrah instead - ٱمْشُوا، ٱقْضُوا، ٱبْنُوا، ٱمْضُوا، ٱئْتُوا are read imshu, iqdu, ibnu, imdu, i’tu, not umshu / uqdu / ubnu.")
                     .font(.body)
 
                 Text("Example (third letter ḍammah → start with 'u'):")
@@ -2307,6 +2331,7 @@ private struct TajweedHamzatulWaslView: View {
 
                 Text("ٱتۡلُ → utlu (when starting); when connected: watlu")
                     .font(.custom(settings.fontArabic, size: 20))
+                    .arabicFontDesign(custom: settings.quranUsesCustomArabicFace)
                     .frame(maxWidth: .infinity, alignment: .center)
 
                 Text("Simple rule: Third letter ḍammah → start with 'u'; otherwise start with 'i'.")
@@ -2320,6 +2345,7 @@ private struct TajweedHamzatulWaslView: View {
 
                 Text("Example: ٱئۡتُونِي → iʾtūnī when starting.")
                     .font(.custom(settings.fontArabic, size: 20))
+                    .arabicFontDesign(custom: settings.quranUsesCustomArabicFace)
                     .frame(maxWidth: .infinity, alignment: .center)
             }
 
@@ -2333,6 +2359,7 @@ private struct TajweedHamzatulWaslView: View {
 
                 Text("بِغُلَٰمٍ ٱسۡمُهُۥ → بِغُلَٰمِنِ سۡمُهُۥ")
                     .font(.custom(settings.fontArabic, size: 20))
+                    .arabicFontDesign(custom: settings.quranUsesCustomArabicFace)
                     .frame(maxWidth: .infinity, alignment: .center)
             }
 
@@ -2348,7 +2375,7 @@ private struct TajweedHamzatulWaslView: View {
             }
 
             Section("SHORT SUMMARY") {
-                Text("Hamzatul-Wasl is the connecting hamzah — pronounced only when starting from the word. Nouns usually take 'i', words with ٱل start with 'a', verbs depend on the third letter, and tanwīn before Hamzatul-Wasl connects with an 'nِ' sound.")
+                Text("Hamzatul-Wasl is the connecting hamzah - pronounced only when starting from the word. Nouns usually take 'i', words with ٱل start with 'a', verbs depend on the third letter, and tanwīn before Hamzatul-Wasl connects with an 'nِ' sound.")
                     .font(.body)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -2619,6 +2646,7 @@ private struct TajweedWaqfView: View {
 
                 Text("لَا تَقْرَبُوا الصَّلَاةَ")
                     .font(arabicHeadlineFont)
+                    .arabicFontDesign(custom: settings.quranUsesCustomArabicFace)
                     .frame(maxWidth: .infinity, alignment: .trailing)
 
                 Text("Stopping here implies \"Do not approach prayer,\" which is incorrect.")
@@ -2662,6 +2690,7 @@ private struct TajweedExampleRow: View {
         VStack(alignment: .leading, spacing: 6) {
             Text(arabic)
                 .font(arabicFont)
+                .arabicFontDesign(custom: Settings.shared.quranUsesCustomArabicFace)
                 .frame(maxWidth: .infinity, alignment: .trailing)
             Text(middle)
                 .font(.subheadline)
@@ -2687,6 +2716,7 @@ private struct TajweedPairRow: View {
 
             Text(arabic)
                 .font(arabicFont)
+                .arabicFontDesign(custom: Settings.shared.quranUsesCustomArabicFace)
                 .foregroundColor(.primary)
         }
         .padding(.vertical, 2)
@@ -2703,6 +2733,7 @@ private struct TajweedRuleRow: View {
         VStack(alignment: .leading, spacing: 6) {
             Text(arabic)
                 .font(arabicFont)
+                .arabicFontDesign(custom: Settings.shared.quranUsesCustomArabicFace)
                 .frame(maxWidth: .infinity, alignment: .trailing)
             Text(pronunciation)
                 .font(.subheadline)
@@ -2724,6 +2755,7 @@ private struct TajweedWhyRow: View {
         VStack(alignment: .leading, spacing: 6) {
             Text(arabic)
                 .font(arabicFont)
+                .arabicFontDesign(custom: Settings.shared.quranUsesCustomArabicFace)
                 .frame(maxWidth: .infinity, alignment: .trailing)
             Text(english)
                 .font(.subheadline)
