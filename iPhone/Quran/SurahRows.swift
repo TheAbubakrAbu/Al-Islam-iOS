@@ -39,6 +39,10 @@ struct SurahRow: View, Equatable {
     let searchQuery: String
     /// When true, renders the same row content wrapped as a grid card (so grid == list look).
     let grid: Bool
+    // Snapshotted at init so `==` can see them: the body reads these through `settings`, and an Equatable view
+    // that reads state its `==` ignores renders stale when that state changes.
+    let sortModeKey: String
+    let displayQiraahKey: String
 
     init(
         surah: Surah,
@@ -66,6 +70,8 @@ struct SurahRow: View, Equatable {
         self.khatmTotalAyahs = khatmTotalAyahs
         self.searchQuery = searchQuery
         self.grid = grid
+        self.sortModeKey = Settings.shared.quranSortMode.rawValue
+        self.displayQiraahKey = Settings.shared.displayQiraahForArabic ?? ""
     }
 
     private var revelationEmoji: String {
@@ -444,7 +450,9 @@ struct SurahRow: View, Equatable {
         lhs.khatmCompletedAyahs == rhs.khatmCompletedAyahs &&
         lhs.khatmTotalAyahs == rhs.khatmTotalAyahs &&
         lhs.searchQuery == rhs.searchQuery &&
-        lhs.grid == rhs.grid
+        lhs.grid == rhs.grid &&
+        lhs.sortModeKey == rhs.sortModeKey &&
+        lhs.displayQiraahKey == rhs.displayQiraahKey
     }
 }
 
@@ -1893,6 +1901,9 @@ struct AyahSearchRow: View, Equatable {
     /// When true (Quran search grouped by surah): `surah:ayah` label + same Arabic / transliteration / English visibility rules as the full row, without the top surah name line.
     var compact: Bool = false
     var disableTajweedColors: Bool = false
+    /// Folds every settings field the body reads (fonts, tajweed, translation toggles) so `==` stays correct
+    /// when the user changes appearance - see `Settings.ayahRenderSettingsSignature`.
+    var renderSettingsSignature: String = Settings.shared.ayahRenderSettingsSignature
 
     private final class NormalizedSources {
         let arabic: String
@@ -2298,7 +2309,8 @@ struct AyahSearchRow: View, Equatable {
         l.page == r.page &&
         l.juz == r.juz &&
         l.favoriteSurahs == r.favoriteSurahs &&
-        l.bookmarkedAyahs == r.bookmarkedAyahs
+        l.bookmarkedAyahs == r.bookmarkedAyahs &&
+        l.renderSettingsSignature == r.renderSettingsSignature
     }
 }
 

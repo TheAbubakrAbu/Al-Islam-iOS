@@ -478,6 +478,10 @@ final class TajweedStore {
         return c
     }()
     private var lastVisibilitySignature = ""
+    /// Guards `lastVisibilitySignature`'s check-and-clear. Most callers are main-thread renders, but the
+    /// share-image queue also calls `attributedText` - the NSCache is already thread-safe; this string was
+    /// the one unsynchronized piece of shared state.
+    private let visibilityLock = NSLock()
     private let settings = Settings.shared
 
 
@@ -523,10 +527,12 @@ final class TajweedStore {
         removeArabicDots: Bool? = nil
     ) -> AttributedString? {
         let visibilitySignature = tajweedVisibilitySignature()
+        visibilityLock.lock()
         if visibilitySignature != lastVisibilitySignature {
             attributedCache.removeAllObjects()
             lastVisibilitySignature = visibilitySignature
         }
+        visibilityLock.unlock()
 
         let shouldRemoveArabicDots = removeArabicDots ?? (cleanDisplayText && settings.removeArabicDots)
 
@@ -3773,7 +3779,10 @@ final class QuranData: ObservableObject {
         #else
         searchIndexBuildTask?.cancel()
 
-        searchIndexBuildTask = Task(priority: .utility) { [weak self] in
+        // .userInitiated, not .utility: the user is blocked on this (search shows "preparing" until it
+        // lands), and .utility is the QoS tier Low Power Mode throttles hardest - under LPM the index could
+        // take tens of seconds to appear, which read as "search is broken."
+        searchIndexBuildTask = Task(priority: .userInitiated) { [weak self] in
             guard let self else { return }
 
             // Give first render a chance to settle before building the heavier global ayah index.
@@ -4127,6 +4136,13 @@ final class QuranData: ObservableObject {
                 try await loadAttempt()
                 await MainActor.run {
                     self.loadState = .ready
+                    // The Quran-widget snapshot writer silently no-ops while `quran` is still empty, and
+                    // its other triggers (page flip, backgrounding) can all fire before the load finishes -
+                    // after which nothing retried, so the widgets sat on sample data until the next reading
+                    // session. Data just became available: write the snapshot now.
+                    if Settings.isAppProcess {
+                        Settings.shared.refreshQuranWidgets()
+                    }
                 }
                 return
             } catch {
@@ -5168,10 +5184,20 @@ final class QuranData: ObservableObject {
         #endif
     }
 
+    /// MAIN THREAD ONLY. This reads (and on a qiraah change, rewrites) the live index arrays - plain Swift
+    /// arrays and dictionaries whose writers all publish on the main actor. Reading them from another thread
+    /// races those writes: Swift's copy-on-write buffers are not thread-safe, and the crash is an
+    /// EXC_BAD_ACCESS deep in refcounting. That is exactly the ayah-search crash - and Low Power Mode made it
+    /// frequent, because it throttles the background index build and so widens the window during which a
+    /// search runs while the arrays are still being (re)assigned.
+    ///
+    /// The returned snapshot is a value type holding immutable copies, so it is safe to hand to any thread;
+    /// only the HANDOFF has to happen here, on main.
     func verseSearchSnapshot() -> VerseSearchSnapshot? {
         #if os(watchOS)
         return nil
         #else
+        assert(Thread.isMainThread, "verseSearchSnapshot() must be called on the main thread")
         guard isVerseSearchReady else { return nil }
         let currentKey = settings.displayQiraahForArabic ?? ""
         if cachedVerseIndexQiraah != currentKey {

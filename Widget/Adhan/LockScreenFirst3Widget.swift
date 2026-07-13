@@ -32,7 +32,7 @@ struct LockScreen3EntryView: View {
                         Text(prayer.time, style: .time)
                             .fontWeight(.bold)
                     }
-                    .foregroundColor((entry.currentPrayer?.nameTransliteration ?? "").contains(prayer.nameTransliteration) ? .primary : .secondary)
+                    .foregroundColor((entry.currentPrayer?.nameTransliteration ?? "") == prayer.nameTransliteration ? .primary : .secondary)
                 }
             }
         }

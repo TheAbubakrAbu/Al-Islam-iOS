@@ -41,19 +41,31 @@ struct QuranWidgetSnapshot: Codable {
     var lastListenedAyah: AyahCard?
     /// Today's deterministic Ayah of the Day. Optional so older snapshots decode.
     var ayahOfTheDay: AyahCard?
+    /// The day bucket `ayahOfTheDay` was built for. Without it, a card written days ago (app never opened
+    /// since) shadowed the widget's daily fallback rotation and the "Ayah of the Day" never changed.
+    /// Optional so older snapshots decode; nil is treated as unknown/stale by the widget.
+    var ayahOfTheDayDay: Int?
     var randomPool: [AyahCard]
+
+    /// The shared day bucket the app and the widget both key the Ayah of the Day on. UTC-based on purpose:
+    /// it only has to be *consistent* between the writer and the reader, and match `ayahOfTheDayReference`.
+    static func dayBucket(for date: Date = Date()) -> Int {
+        Int(date.timeIntervalSince1970 / 86_400)
+    }
 
     init(
         lastRead: AyahCard? = nil,
         lastListened: ListenCard? = nil,
         lastListenedAyah: AyahCard? = nil,
         ayahOfTheDay: AyahCard? = nil,
+        ayahOfTheDayDay: Int? = nil,
         randomPool: [AyahCard] = []
     ) {
         self.lastRead = lastRead
         self.lastListened = lastListened
         self.lastListenedAyah = lastListenedAyah
         self.ayahOfTheDay = ayahOfTheDay
+        self.ayahOfTheDayDay = ayahOfTheDayDay
         self.randomPool = randomPool
     }
 }

@@ -108,8 +108,15 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
         // significant-location monitoring, and a location request right there competes with first paint (and,
         // on first launch, throws the permission dialog up before the UI is even visible). The stored
         // currentLocation (decoded above) is enough for the launch fetch; this refreshes it a tick later.
-        DispatchQueue.main.async { [weak self] in
-            self?.requestLocationAuthorization()
+        if Self.isAppProcess {
+            // One-time seed of the switchHijriDateAtMaghrib mirror (see its didSet): users who enabled the
+            // toggle before the mirror existed would otherwise stay wrong in widgets until they re-toggled.
+            appGroupUserDefaults?.setValue(switchHijriDateAtMaghrib, forKey: "switchHijriDateAtMaghrib")
+
+            // Widgets read the app-group location; they must not touch CoreLocation authorization.
+            DispatchQueue.main.async { [weak self] in
+                self?.requestLocationAuthorization()
+            }
         }
     }
 
@@ -476,7 +483,15 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     }
 
     @AppStorage("switchHijriDateAtMaghrib") var switchHijriDateAtMaghrib: Bool = false {
-        didSet { self.updateDates() }
+        didSet {
+            self.updateDates()
+            // The Adhan widgets read this key from the App Group (PrayersProvider) to decide whether the
+            // hijri date advances after Maghrib, but @AppStorage persists to standard defaults - without
+            // this mirror every widget resolved it to false forever and showed the previous hijri day all
+            // evening. (init seeds the mirror for values set before this fix shipped.)
+            guard Self.isAppProcess else { return }
+            appGroupUserDefaults?.setValue(switchHijriDateAtMaghrib, forKey: "switchHijriDateAtMaghrib")
+        }
     }
 
     @AppStorage("naggingMode") var naggingMode: Bool = false {
@@ -667,6 +682,24 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
         set { lastCalculationNotificationStamp = newValue?.timeIntervalSince1970 ?? 0 }
     }
 
+    /// The angles behind the "Custom Angles" calculation method. Changing either has to invalidate the prayer
+    /// computation cache, which is keyed on the method LABEL - and the label doesn't change when only an angle
+    /// does, so without this the times would keep coming back from the cache unchanged.
+    @AppStorage("customFajrAngle") var customFajrAngle: Double = 18.0 {
+        didSet {
+            guard oldValue != customFajrAngle else { return }
+            Settings.invalidatePrayerComputationCache()
+            fetchPrayerTimes(force: true, runAutoChecks: false)
+        }
+    }
+    @AppStorage("customIshaAngle") var customIshaAngle: Double = 17.0 {
+        didSet {
+            guard oldValue != customIshaAngle else { return }
+            Settings.invalidatePrayerComputationCache()
+            fetchPrayerTimes(force: true, runAutoChecks: false)
+        }
+    }
+
     @AppStorage("calculationAutomatic") var calculationAutomatic: Bool = true
     @AppStorage("calculationAutoChanged") var calculationAutoChanged: Bool = false
     @AppStorage("calculationAutoPreviousMethod") var calculationAutoPreviousMethod: String = ""
@@ -831,6 +864,15 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     /// Reading mode shrinks each mushaf page's Arabic until the whole page fits on screen, the way a printed
     /// mushaf sets it. Off, the page renders at the chosen font size and scrolls.
     @AppStorage("mushafFitPage") var mushafFitPage = true
+
+    /// What page mode draws as each page's BODY text. "arabic" (default) is the mushaf itself; the English
+    /// options replace the page's text wholesale - same canonical page boundaries, same fit-to-page - with
+    /// the transliteration, The Clear Quran, or Saheeh International. Headings follow the page's language.
+    @AppStorage("mushafPageLanguage") var mushafPageLanguage: String = MushafPageLanguage.arabic.rawValue
+
+    var resolvedMushafPageLanguage: MushafPageLanguage {
+        MushafPageLanguage(rawValue: mushafPageLanguage) ?? .arabic
+    }
     /// Shows the spelled-out pronunciation aid above muqatta'at ayahs (e.g. أَلِفۡ لَآم مِيٓمۡ). Off by default.
     @AppStorage("showMuqattaatHelper") var showMuqattaatHelper = false
 
@@ -862,6 +904,39 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
 
     @AppStorage("lastReadSurah") var lastReadSurah: Int = 0
     @AppStorage("lastReadAyah") var lastReadAyah: Int = 0
+
+    /// Debounced last-read bookkeeping for the mushaf pager.
+    ///
+    /// Recording the last-read position used to run inline on EVERY page turn, and it is expensive twice over:
+    /// the `@AppStorage` writes fire `objectWillChange` (re-rendering every Settings-observing view, including
+    /// all mounted pages), and `refreshQuranWidgets()` does a synchronous widget-snapshot disk write plus
+    /// `WidgetCenter.reloadAllTimelines()`. None of that needs to happen mid-flip - only where the reader
+    /// *stops* matters - so page turns note the position here and the write settles once the flipping pauses.
+    /// `flushPendingLastRead()` runs on backgrounding so a quick exit can't lose the position.
+    private var pendingLastRead: (surah: Int, ayah: Int)?
+    private var pendingLastReadWorkItem: DispatchWorkItem?
+
+    func noteLastRead(surah: Int, ayah: Int) {
+        guard saveLastReadAyah else { return }
+        guard lastReadSurah != surah || lastReadAyah != ayah else { return }
+        pendingLastRead = (surah, ayah)
+
+        pendingLastReadWorkItem?.cancel()
+        let work = DispatchWorkItem { [weak self] in self?.flushPendingLastRead() }
+        pendingLastReadWorkItem = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.8, execute: work)
+    }
+
+    func flushPendingLastRead() {
+        pendingLastReadWorkItem?.cancel()
+        pendingLastReadWorkItem = nil
+        guard let pending = pendingLastRead else { return }
+        pendingLastRead = nil
+
+        lastReadSurah = pending.surah
+        lastReadAyah = pending.ayah
+        refreshQuranWidgets()
+    }
 
     // MARK: - Surah stats (times opened / played)
     // A tiny [surahID: count] map JSON-encoded in one key each - at most 114 small entries, so it costs

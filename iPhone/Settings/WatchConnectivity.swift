@@ -232,7 +232,7 @@ extension Settings {
         "useFontArabic", "THEfontArabic", "fontArabicSize", "englishFontSize",
         "showTajweedColors", "reciter", "reciterId", "reciteType", "displayQiraah",
         "showOtherQiraatReciters", "qiraatComparisonMode", "ignoreSilentLettersInQuranSearch",
-        "quranSummaryMode", "quranGridMode", "quranPageMode", "showFullSurahRow", "showMuqattaatHelper",
+        "quranSummaryMode", "quranGridMode", "quranPageMode", "mushafPageLanguage", "showFullSurahRow", "showMuqattaatHelper",
         "showPageJuzDividers", "searchForSurahs", "showBookmarks", "showFavorites",
         "saveLastReadAyah", "saveLastListenedSurah", "saveLastListenedAyah", "showAyahOfTheDay",
         // Tajweed categories
@@ -325,6 +325,12 @@ extension Settings {
             store.set(incoming, forKey: key)
             changed = true
         }
+
+        // switchHijriDateAtMaghrib lives in standard defaults but is mirrored into the App Group for the
+        // widget/complication providers; the raw store.set above bypasses its didSet, so refresh the mirror.
+        // On the watch this is the main write path for the key - the complication would never see it otherwise.
+        UserDefaults(suiteName: AppIdentifiers.appGroupSuiteName)?
+            .setValue(switchHijriDateAtMaghrib, forKey: "switchHijriDateAtMaghrib")
 
         guard changed else { return }
 

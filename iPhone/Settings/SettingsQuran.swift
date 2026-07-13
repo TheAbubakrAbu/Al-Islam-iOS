@@ -290,6 +290,28 @@ extension Settings {
         Riwayah.canonicalTag(stored)
     }
 
+    /// One string folding every Settings field that changes how an ayah row draws. Rows that conform to
+    /// `Equatable` but read these fields in their bodies include this signature in `==`, so a settings change
+    /// still re-renders them (the whole point of the user-visible appearance staying live) while unchanged
+    /// data keeps skipping body evaluation.
+    var ayahRenderSettingsSignature: String {
+        [
+            showArabicText ? "1" : "0",
+            highlightAllahNames ? "1" : "0",
+            showTajweedColors ? "1" : "0",
+            cleanArabicText ? "1" : "0",
+            removeArabicDots ? "1" : "0",
+            beginnerMode ? "1" : "0",
+            showTransliteration ? "1" : "0",
+            showEnglishSaheeh ? "1" : "0",
+            showEnglishMustafa ? "1" : "0",
+            displayQiraah,
+            fontArabic,
+            "\(fontArabicSize)",
+            "\(englishFontSize)"
+        ].joined(separator: "|")
+    }
+
     static func normalizedArabicFontName(_ fontName: String) -> String {
         fontName == qiraatUthmaniFontName ? hafsUthmaniFontName : fontName
     }
@@ -439,6 +461,20 @@ extension Settings {
                 self.khatmProgressRefreshPending = false
                 self.objectWillChange.send()
             }
+        }
+    }
+
+    /// Writes any debounced khatm marks to storage right now. The 250ms debounce means a mark made just
+    /// before the app is backgrounded (or killed by the system) would otherwise never reach disk - the
+    /// same failure `flushPendingLastRead` exists for. Call this from the scenePhase background handler.
+    func flushPendingKhatmProgress() {
+        guard khatmProgressSaveTask != nil else { return }
+        khatmProgressSaveTask?.cancel()
+        khatmProgressSaveTask = nil
+        persistKhatmProgressNow()
+        if khatmProgressRefreshPending {
+            khatmProgressRefreshPending = false
+            objectWillChange.send()
         }
     }
 
@@ -768,11 +804,15 @@ extension Settings {
         }
 
         snapshot.ayahOfTheDay = nil
+        snapshot.ayahOfTheDayDay = nil
         if showAyahOfTheDay,
            let ref = ayahOfTheDayReference(data: data),
            let surah = data.quran.first(where: { $0.id == ref.surahID }),
            let ayah = surah.ayahs.first(where: { $0.id == ref.ayahID }) {
             snapshot.ayahOfTheDay = quranWidgetAyahCard(surah: surah, ayah: ayah)
+            // Stamp which day this card is for, so the widget stops showing it once the day rolls over
+            // and falls back to its own daily rotation instead of a days-old "Ayah of the Day".
+            snapshot.ayahOfTheDayDay = QuranWidgetSnapshot.dayBucket()
         }
 
         // Rebuild the pool when it's empty or built by an older app version (cards missing the font tag),
@@ -782,7 +822,11 @@ extension Settings {
         }
 
         QuranWidgetStore.save(snapshot)
-        WidgetCenter.shared.reloadAllTimelines()
+        // Only the four Quran kinds: this runs on every settled page flip, and reloading the Adhan
+        // widgets too (reloadAllTimelines) burned their WidgetKit refresh budget on reading sessions.
+        for kind in ["LastReadSurahWidget", "LastListenedSurahWidget", "LastListenedAyahWidget", "RandomAyahWidget"] {
+            WidgetCenter.shared.reloadTimelines(ofKind: kind)
+        }
     }
 
     /// Builds a widget ayah card with the Arabic rendered per the user's display settings (clean text /

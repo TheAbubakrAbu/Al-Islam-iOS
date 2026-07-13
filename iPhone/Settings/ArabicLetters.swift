@@ -134,8 +134,10 @@ let standardArabicLetters: [LetterData] = [
         transliteration: "waaw",
         showTashkeel: true,
         sound: "w",
-        weight: .light,
-        weightRule: "Waaw is pronounced as a light letter in all positions."
+        weight: .light
+        // No `weightRule`: waaw is unconditionally light, and `ArabicView.alwaysWeightRule` now says so for
+        // every unconditional letter in one shared sentence. Spelling it out only here made waaw and yaa look
+        // like special cases.
     ),
 
     LetterData(
@@ -146,8 +148,7 @@ let standardArabicLetters: [LetterData] = [
         transliteration: "yaa",
         showTashkeel: true,
         sound: "y",
-        weight: .light,
-        weightRule: "Yaa is pronounced as a light letter in all positions."
+        weight: .light
     )
 ]
 

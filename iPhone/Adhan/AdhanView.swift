@@ -219,11 +219,13 @@ struct AdhanView: View {
     /// the compass to blow it up to the full width of the card, which is the only time it needs the room.
     private var watchPlaceCard: some View {
         VStack(spacing: 6) {
+            // When the compass is blown up it is the thing you are looking at, so the date and city step back
+            // to make room for it rather than competing with it.
             HStack(spacing: 8) {
                 VStack(alignment: .leading, spacing: 3) {
                     if let hijriDate = settings.hijriDate {
                         Text(hijriDate.english)
-                            .font(.caption2)
+                            .font(showBigQibla ? .system(size: 9) : .caption2)
                             .foregroundColor(settings.accentColor.accent1)
                             .lineLimit(1)
                             .minimumScaleFactor(0.6)
@@ -231,12 +233,12 @@ struct AdhanView: View {
 
                     HStack(spacing: 4) {
                         Image(systemName: settings.currentLocation != nil ? "location.fill" : "location.slash")
-                            .font(.caption2)
+                            .font(showBigQibla ? .system(size: 9) : .caption2)
                             .foregroundColor(settings.accentColor.accent1)
 
                         Text((settings.prayers != nil ? settings.currentLocation?.city : nil) ?? "No location")
-                            .font(.caption)
-                            .lineLimit(2)
+                            .font(showBigQibla ? .system(size: 10) : .caption)
+                            .lineLimit(showBigQibla ? 1 : 2)
                             .minimumScaleFactor(0.6)
                     }
                 }
@@ -249,6 +251,21 @@ struct AdhanView: View {
 
             if showBigQibla {
                 qiblaCompass(size: 90)
+
+                // The exact spot the bearing was computed from - useful precisely when you are questioning
+                // whether the compass is pointing where it should.
+                if let location = settings.currentLocation,
+                   location.latitude != 1000, location.longitude != 1000 {
+                    Text(formatCoordinates(
+                        latitude: location.latitude,
+                        longitude: location.longitude
+                    ))
+                    .font(.system(size: 9))
+                    .monospacedDigit()
+                    .foregroundColor(settings.accentColor.accent1)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
+                }
 
                 Text("The compass may not be accurate on Apple Watch")
                     .font(.system(size: 10))
@@ -569,6 +586,21 @@ private struct CurrentLocationRow: View {
                             } label: {
                                 Label("Copy City Name", systemImage: "doc.on.doc")
                             }
+
+                            // The coordinates were only copyable from the pill that appears when the compass is
+                            // enlarged, which is a strange place to have to go looking for them.
+                            if let location = settings.currentLocation,
+                               location.latitude != 1000, location.longitude != 1000 {
+                                Button {
+                                    settings.hapticFeedback()
+                                    UIPasteboard.general.string = formatCoordinates(
+                                        latitude: location.latitude,
+                                        longitude: location.longitude
+                                    )
+                                } label: {
+                                    Label("Copy Coordinates", systemImage: "location.circle")
+                                }
+                            }
                         }
                 }
                 .padding(12)
@@ -616,7 +648,7 @@ private struct CurrentLocationRow: View {
                     .font(.system(size: 11, weight: .semibold))
                     .foregroundStyle(settings.accentColor.color)
 
-                Text(Self.formatCoordinates(latitude: loc.latitude, longitude: loc.longitude))
+                Text(formatCoordinates(latitude: loc.latitude, longitude: loc.longitude))
                     .font(.caption2)
                     .monospacedDigit()
                     .foregroundStyle(.secondary)
@@ -642,12 +674,16 @@ private struct CurrentLocationRow: View {
         }
     }
 
-    /// Formats a coordinate pair as e.g. "21.4225° N, 39.8262° E".
-    static func formatCoordinates(latitude: Double, longitude: Double) -> String {
-        let latDir = latitude >= 0 ? "N" : "S"
-        let lonDir = longitude >= 0 ? "E" : "W"
-        return String(format: "%.4f° %@, %.4f° %@", abs(latitude), latDir, abs(longitude), lonDir)
-    }
+}
+
+/// Formats a coordinate pair as e.g. "21.4225° N, 39.8262° E".
+///
+/// Free function, not a static on `CurrentLocationRow`: that row is `private` and iOS-only, and the watch's
+/// enlarged-compass card needs this too.
+func formatCoordinates(latitude: Double, longitude: Double) -> String {
+    let latDir = latitude >= 0 ? "N" : "S"
+    let lonDir = longitude >= 0 ? "E" : "W"
+    return String(format: "%.4f° %@, %.4f° %@", abs(latitude), latDir, abs(longitude), lonDir)
 }
 
 

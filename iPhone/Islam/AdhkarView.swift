@@ -54,6 +54,10 @@ struct AdhkarRow: View {
     let translation: String
     var useQuranicFont: Bool = false
     var searchQuery: String = ""
+    /// Duas are always trailing-aligned, even a one-liner: a dua is a quoted passage of Quran, and a Quranic
+    /// line reads as Arabic prose, not as a UI label. A dhikr is a short phrase in a list of short phrases, so
+    /// it stays leading until it actually wraps (which is what `arabicWraps` decides).
+    var alwaysTrailing: Bool = false
 
     /// The rendered height of the Arabic, and the height of a single line of it. A short dhikr ("سُبحَانَ اللَّهِ")
     /// is one line and reads best leading, like every other row on the screen; a long one wraps, and a wrapped
@@ -95,7 +99,7 @@ struct AdhkarRow: View {
             guard !normalizedQuery.isEmpty else { return false }
             return field.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current).contains(normalizedQuery)
         }
-        let trailing = arabicWraps
+        let trailing = alwaysTrailing || arabicWraps
         return VStack(alignment: .leading, spacing: 10) {
             HighlightedSnippet(
                 source: arabicText,
@@ -264,7 +268,12 @@ struct AdhkarView: View {
         Section(header: Text("ETYMOLOGY")) {
             VStack(alignment: .leading, spacing: 8) {
                 Text("Arabic root: ذ ك ر (dh-k-r)")
-                    .font(.subheadline.weight(.semibold))
+                    .font(
+                        settings.islamUsesCustomArabicFace
+                            ? .custom(settings.fontArabic, size: 18, relativeTo: .subheadline)
+                            : .subheadline.weight(.semibold)
+                    )
+                    .arabicFontDesign(custom: settings.islamUsesCustomArabicFace)
                     .foregroundColor(settings.accentColor.color)
 
                 Text("Core meaning: to remember, to mention, to be mindful")

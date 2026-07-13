@@ -97,17 +97,32 @@ struct CalendarView: View {
         }
     }
 
+    private static let ummAlQuraEN: Calendar = {
+        var calendar = Calendar(identifier: .islamicUmmAlQura)
+        calendar.locale = Locale(identifier: "en")
+        return calendar
+    }()
+
     /// Which Hijri month it is right now, so the list can mark it. Reads the same Umm al-Qura calendar the rest of
     /// the screen does, and honours the user's Hijri offset.
     private var currentHijriMonthNumber: Int {
-        var calendar = Calendar(identifier: .islamicUmmAlQura)
-        calendar.locale = Locale(identifier: "en")
+        let calendar = Self.ummAlQuraEN
         let adjusted = calendar.date(byAdding: .day, value: settings.hijriOffset, to: Date()) ?? Date()
         return calendar.component(.month, from: adjusted)
     }
 
     private var eventsList: some View {
-        ScrollViewReader { proxy in
+        // Once per render, not per row: `currentHijriMonthNumber` was re-deriving the hijri month inside
+        // each of the 12 month rows, and `nextEventID` re-filtered every event row from within every event
+        // row (O(n²)). Same values either way - just computed once.
+        let currentMonthNumber = currentHijriMonthNumber
+        let todayStart = Calendar.current.startOfDay(for: Date())
+        let nextID = eventRows
+            .filter { $0.date >= todayStart }
+            .min(by: { $0.date < $1.date })?
+            .id
+
+        return ScrollViewReader { proxy in
             List {
                 Group {
                     Section(header: Text("WHAT IS HIJRI?")) {
@@ -149,7 +164,8 @@ struct CalendarView: View {
 
                     Section(header: Text("THE TWELVE MONTHS")) {
                         ForEach(hijriMonths) { month in
-                            HijriMonthRow(month: month, isCurrent: month.number == currentHijriMonthNumber)
+                            HijriMonthRow(month: month, isCurrent: month.number == currentMonthNumber)
+                                .equatable()
                         }
                     }
 
@@ -160,8 +176,8 @@ struct CalendarView: View {
                         ForEach(eventRows, id: \.id) { row in
                             HijriEventRow(
                                 row: row,
-                                isPast: isPastEvent(row),
-                                isNext: row.id == nextEventID
+                                isPast: row.date < todayStart,
+                                isNext: row.id == nextID
                             )
                             .id(row.id)
                         }
@@ -324,19 +340,6 @@ struct CalendarView: View {
         return rows.min { lhs, rhs in
             abs(lhs.date.timeIntervalSince(now)) < abs(rhs.date.timeIntervalSince(now))
         }
-    }
-
-    private func isPastEvent(_ row: HijriEventRowModel) -> Bool {
-        row.date < Calendar.current.startOfDay(for: Date())
-    }
-
-    /// The soonest event that hasn't happened yet - the one row worth calling out. Nil while browsing a past
-    /// year, where nothing is upcoming.
-    private var nextEventID: String? {
-        eventRows
-            .filter { !isPastEvent($0) }
-            .min(by: { $0.date < $1.date })?
-            .id
     }
 
     @ViewBuilder
@@ -910,23 +913,34 @@ struct HijriMonthCalendarView: View {
 
 /// One month of the Hijri year: its number, its name in English and Arabic, whether it is one of the four sacred
 /// months, and what it is known for. The month you are currently in is tinted so the list orients you at a glance.
-struct HijriMonthRow: View {
+struct HijriMonthRow: View, Equatable {
     @ObservedObject private var settings = Settings.shared
 
     let month: HijriMonth
     let isCurrent: Bool
+    // Appearance snapshotted as stored inputs so `==` compares everything the row draws with; the parent
+    // observes Settings and re-inits rows with fresh values whenever these change.
+    var accentColor: AccentColor = Settings.shared.accentColor
+    var usesCustomArabicFace: Bool = Settings.shared.islamUsesCustomArabicFace
+    var fontArabic: String = Settings.shared.fontArabic
 
-    private var usesCustomArabicFace: Bool { settings.islamUsesCustomArabicFace }
+    static func == (lhs: Self, rhs: Self) -> Bool {
+        lhs.month.number == rhs.month.number &&
+        lhs.isCurrent == rhs.isCurrent &&
+        lhs.accentColor == rhs.accentColor &&
+        lhs.usesCustomArabicFace == rhs.usesCustomArabicFace &&
+        lhs.fontArabic == rhs.fontArabic
+    }
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
             Text("\(month.number)")
                 .font(.subheadline.weight(.semibold).monospacedDigit())
-                .foregroundColor(isCurrent ? .white : settings.accentColor.color)
+                .foregroundColor(isCurrent ? .white : accentColor.color)
                 .frame(width: 28, height: 28)
                 .background(
                     Circle()
-                        .fill(isCurrent ? settings.accentColor.color : settings.accentColor.color.opacity(0.15))
+                        .fill(isCurrent ? accentColor.color : accentColor.color.opacity(0.15))
                 )
 
             VStack(alignment: .leading, spacing: 3) {
@@ -938,7 +952,7 @@ struct HijriMonthRow: View {
                     if month.isSacred {
                         Text("SACRED")
                             .font(.caption2.weight(.bold))
-                            .foregroundColor(settings.accentColor.color)
+                            .foregroundColor(accentColor.color)
                     }
 
                     Spacer(minLength: 4)
@@ -946,11 +960,11 @@ struct HijriMonthRow: View {
                     Text(month.arabic)
                         .font(
                             usesCustomArabicFace
-                                ? .custom(settings.fontArabic, size: 18, relativeTo: .subheadline)
+                                ? .custom(fontArabic, size: 18, relativeTo: .subheadline)
                                 : .subheadline
                         )
                         .arabicFontDesign(custom: usesCustomArabicFace)
-                        .foregroundColor(settings.accentColor.color)
+                        .foregroundColor(accentColor.color)
                 }
 
                 Text(month.note)

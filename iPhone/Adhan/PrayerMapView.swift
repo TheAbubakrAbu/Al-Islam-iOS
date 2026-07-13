@@ -72,6 +72,7 @@ struct PrayerTimesMapView: View {
                 showCityPicker = false
             })
             .environmentObject(settings)
+            .smallMediumSheetPresentation()
         }
         .onAppear { refreshPrayers() }
         .onChange(of: selectedDate) { _ in refreshPrayers() }
@@ -484,9 +485,16 @@ struct PrayerTimesMapView: View {
         }
     }
 
-    private func formattedTime(_ date: Date, for location: Location) -> String {
+    /// Shared instance: DateFormatter construction is heavy, and this ran once per prayer row per render.
+    /// Only the timeZone varies per call (cheap to set); main-thread-only, like the rest of this view.
+    private static let timeFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.timeStyle = .short
+        return formatter
+    }()
+
+    private func formattedTime(_ date: Date, for location: Location) -> String {
+        let formatter = Self.timeFormatter
         formatter.timeZone = showCityTime ? (timeZones[timeZoneKey(for: location)] ?? .current) : .current
         return formatter.string(from: date)
     }

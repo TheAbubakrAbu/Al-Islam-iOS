@@ -494,3 +494,25 @@ let profanityFilter = [
     "قحبة",
     "لبوة"
 ]
+
+/// Split once: single words match on token boundaries, phrases by containment.
+private let singleWordProfanity: Set<String> = Set(profanityFilter.filter { !$0.isEmpty && !$0.contains(" ") })
+private let longProfanity: [String] = singleWordProfanity.filter { $0.count >= 5 }
+private let phraseProfanity: [String] = profanityFilter.filter { $0.contains(" ") }
+
+/// Word-boundary profanity check. Bare substring matching rejected perfectly legitimate notes wholesale:
+/// "خول" is inside دخول (entrance) and مدخول, "ass" is inside "class" and "Assalam", "cum" inside
+/// "document", "anal" inside "analysis". A token must EQUAL a list entry - or, for long unambiguous
+/// entries (5+ characters, where a coincidental containment is implausible), contain it, which still
+/// catches prefixed Arabic forms like الشرموطة.
+func textContainsProfanity(_ text: String) -> Bool {
+    let folded = text.folding(options: [.diacriticInsensitive, .widthInsensitive], locale: .current).lowercased()
+
+    for rawToken in folded.split(whereSeparator: { !$0.isLetter && !$0.isNumber }) {
+        let token = String(rawToken)
+        if singleWordProfanity.contains(token) { return true }
+        if longProfanity.contains(where: { token.contains($0) }) { return true }
+    }
+
+    return phraseProfanity.contains { folded.contains($0) }
+}

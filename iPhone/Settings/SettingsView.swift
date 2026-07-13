@@ -450,6 +450,20 @@ struct SettingsView: View {
 struct SettingsAppearanceView: View {
     @ObservedObject var settings = Settings.shared
 
+    // Accent-swatch grid metrics. The watch gets fewer, smaller swatches with tighter gutters so each circle
+    // actually FITS its column (see the note on the grid below); the phone keeps the roomier original.
+    #if os(watchOS)
+    private static let swatchColumns = 4
+    private static let swatchDiameter: CGFloat = 22
+    private static let swatchSpacing: CGFloat = 6
+    private static let swatchGridVerticalPadding: CGFloat = 4
+    #else
+    private static let swatchColumns = 4
+    private static let swatchDiameter: CGFloat = 30
+    private static let swatchSpacing: CGFloat = 12
+    private static let swatchGridVerticalPadding: CGFloat = 16
+    #endif
+
     /// Reads/writes the stored custom hex; picking a color also switches the active accent to `.custom`.
     private var customAccentColorBinding: Binding<Color> {
         Binding(
@@ -540,17 +554,20 @@ struct SettingsAppearanceView: View {
         #endif
 
         VStack(alignment: .leading) {
-            LazyVGrid(columns: [
-                GridItem(.flexible(), spacing: 12),
-                GridItem(.flexible(), spacing: 12),
-                GridItem(.flexible(), spacing: 12),
-                GridItem(.flexible(), spacing: 12),
-            ], spacing: 12) {
+            // Sized per platform. A watch list row is only ~120pt wide, so four fixed-width columns with 12pt
+            // gutters gave each cell LESS room than the 30pt circle it had to hold: the swatches overflowed
+            // their cells, the grid grew its row heights to compensate, and `.padding(.vertical)` piled 32pt on
+            // top - which is the "random huge padding" on the watch. The phone has the width for the original
+            // layout, so it keeps it.
+            LazyVGrid(columns: Array(
+                repeating: GridItem(.flexible(), spacing: Self.swatchSpacing),
+                count: Self.swatchColumns
+            ), spacing: Self.swatchSpacing) {
                 ForEach(accentColors, id: \.self) { accentColor in
                     // Every preset is a single colour, so a plain circle is right here.
                     Circle()
                         .fill(accentColor.color)
-                        .frame(width: 30, height: 30)
+                        .frame(width: Self.swatchDiameter, height: Self.swatchDiameter)
                         .overlay(
                             Circle()
                                 .stroke(settings.accentColor == accentColor ? Color.primary : Color.clear, lineWidth: 2)
@@ -565,7 +582,7 @@ struct SettingsAppearanceView: View {
                         }
                 }
             }
-            .padding(.vertical)
+            .padding(.vertical, Self.swatchGridVerticalPadding)
 
             #if os(iOS)
             // One line: color well, label, then a toggle tinted with the custom color itself (not the accent).

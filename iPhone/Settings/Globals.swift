@@ -31,11 +31,18 @@ enum AppPerformance {
         ProcessInfo.processInfo.physicalMemory < 3_000_000_000
     }
 
+    /// Live, not cached: the user can flip Low Power Mode at any moment, and every gate below should follow.
+    /// LPM throttles background QoS hard, so optional work (prewarm sweeps, decorative animation) that is
+    /// merely cheap in normal conditions becomes contention against the user's actual taps.
+    static var isLowPowerMode: Bool {
+        ProcessInfo.processInfo.isLowPowerModeEnabled
+    }
+
     static var shouldAvoidBroadPrewarm: Bool {
         #if os(watchOS)
         true
         #else
-        isLowMemoryDevice
+        isLowMemoryDevice || isLowPowerMode
         #endif
     }
 
@@ -451,5 +458,35 @@ extension String {
         let start = index(startIndex, offsetBy: lower, limitedBy: endIndex) ?? endIndex
         let end = index(startIndex, offsetBy: upper, limitedBy: endIndex) ?? endIndex
         return self[start..<end]
+    }
+}
+
+/// Defers building a `NavigationLink` destination until navigation actually presents it. Constructing a view
+/// struct is usually cheap, but it is not free (stored-property and `@State` default expressions run), and a
+/// list of eager links pays that cost for every destination on every body pass.
+struct LazyDestination<Content: View>: View {
+    let build: () -> Content
+    var body: Content { build() }
+}
+
+/// What the mushaf page reader draws as a page's body text. `arabic` is the mushaf itself; the English
+/// cases swap the page's text wholesale for a Latin-script rendering (same canonical page boundaries,
+/// same fit-to-page). Raw values are persisted in `Settings.mushafPageLanguage`.
+enum MushafPageLanguage: String, CaseIterable, Identifiable {
+    case arabic
+    case transliteration
+    case clearQuran
+    case saheeh
+
+    var id: String { rawValue }
+    var isEnglish: Bool { self != .arabic }
+
+    var displayName: String {
+        switch self {
+        case .arabic:          return "Arabic"
+        case .transliteration: return "Transliteration (English)"
+        case .clearQuran:      return "The Clear Quran (English)"
+        case .saheeh:          return "Saheeh International (English)"
+        }
     }
 }

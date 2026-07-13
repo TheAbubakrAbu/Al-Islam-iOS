@@ -1,34 +1,6 @@
 import SwiftUI
 import WidgetKit
 
-/// Coordinates the "warm the main UI behind the launch screen, then reveal" hand-off.
-///
-/// The launch screen already has a quiet "hold on the logo and wait for init" phase; it now also waits for
-/// `isWarm` before it plays its finale and hands off. `MainTabView` sets `isWarm` once it has built + retained
-/// the heavy Quran tab and settled back on the Adhan landing tab - all behind the launch cover. Net effect: the
-/// reveal happens only when everything is already built and on the right tab, so there's no tab flip and no
-/// first-tap stall the user can see.
-@MainActor
-final class LaunchWarmup: ObservableObject {
-    static let shared = LaunchWarmup()
-    private init() {}
-
-    @Published private(set) var isWarm = false
-
-    func markWarm() { isWarm = true }
-
-    /// Await `isWarm`, but never block the launch longer than `maxWaitNanos` (a safety cap so a failed warm can
-    /// never strand the user on the launch screen).
-    func waitUntilWarm(maxWaitNanos: UInt64) async {
-        var waited: UInt64 = 0
-        let step: UInt64 = 20_000_000
-        while !isWarm && waited < maxWaitNanos {
-            try? await Task.sleep(nanoseconds: step)
-            waited += step
-        }
-    }
-}
-
 @main
 struct AlIslamApp: App {
     @StateObject private var settings = Settings.shared
@@ -100,7 +72,12 @@ struct AlIslamApp: App {
         .onChange(of: scenePhase) { phase in
             quranPlayer.saveLastListenedSurah()
             quranPlayer.saveLastListenedAyah()
-            settings.refreshQuranWidgets()
+            // Only when LEAVING the foreground: that's when the widgets become visible and need the fresh
+            // snapshot. Running this on every transition (including becoming active) paid a JSON encode plus
+            // a reload of every widget timeline each time, against WidgetKit's daily reload budget.
+            if phase != .active {
+                settings.refreshQuranWidgets()
+            }
             if phase == .active {
                 // Play the adhan in-app on time while open (the scheduled notification covers the closed
                 // case and can be delivered late by the system, especially on Mac/Catalyst).
@@ -121,6 +98,11 @@ struct AlIslamApp: App {
                 // its 25-second timeout with the screen off.
                 settings.endLocationRefinement()
                 settings.endForegroundLocationCadence()
+                // A page flip within the last second may still have its last-read write pending.
+                settings.flushPendingLastRead()
+                // A khatm mark made in the last 250ms is still on the debounce timer; persist it before
+                // the system can suspend or kill the process.
+                settings.flushPendingKhatmProgress()
                 // Send any just-made setting change before the app is suspended, so it can't be lost (and
                 // can't be reverted by a stale synced value on the next launch).
                 WatchConnectivityManager.shared.flushPendingSync()
@@ -220,10 +202,16 @@ private struct MainTabView: View {
         await quranData.waitUntilCoreLoaded()
         if Task.isCancelled { LaunchWarmup.shared.markWarm(); return }
 
-        // Select Quran so TabView builds + retains QuranView, give it a couple runloop turns to lay out its
-        // first screen, then return to the Adhan landing tab.
+        // Walk every tab so TabView builds + RETAINS each view tree, heaviest (Quran) first with the longest
+        // settle, then return to the Adhan landing tab. First selection of any tab later reuses the warm tree
+        // instantly. This whole dance overlaps the launch screen's finale animation (which runs ~1.4s), so
+        // warming the extra tabs costs no wall-clock time on the reveal.
         selectedTab = .quran
         try? await Task.sleep(nanoseconds: 350_000_000)
+        selectedTab = .islam
+        try? await Task.sleep(nanoseconds: 120_000_000)
+        selectedTab = .settings
+        try? await Task.sleep(nanoseconds: 80_000_000)
         selectedTab = .adhan
         // Let Adhan become the rendered tab again before we allow the reveal, so the hand-off shows Adhan.
         try? await Task.sleep(nanoseconds: 80_000_000)

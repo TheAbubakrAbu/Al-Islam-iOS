@@ -224,9 +224,13 @@ struct IslamView: View {
     private func resourceLink<Destination: View>(
         title: String,
         systemImage: String,
-        @ViewBuilder destination: () -> Destination
+        @ViewBuilder destination: @escaping () -> Destination
     ) -> some View {
-        NavigationLink(destination: destination()) {
+        // The destination is wrapped so it is built only when the row is actually pushed. The plain
+        // `NavigationLink(destination:)` initializer evaluates its destination immediately, which meant every
+        // body pass of this list constructed all nine destination views - the watch's swipe-into-this-tab
+        // hitch (iOS 16+ uses the lazy `navigationDestination(for:)` path instead and never hit this).
+        NavigationLink(destination: LazyDestination(build: destination)) {
             toolLabel(title, systemImage: systemImage)
         }
     }
@@ -282,6 +286,9 @@ struct ProphetQuote: View {
             .animation(.spring(response: 0.5, dampingFraction: 0.85), value: isCardVisible)
             .onAppear {
                 isCardVisible = true
+                // Purely decorative; in Low Power Mode two forever-animations are exactly the CPU the system
+                // is asking apps not to spend. The card renders identically, just still.
+                guard !AppPerformance.isLowPowerMode else { return }
                 withAnimation(.easeInOut(duration: 2.2).repeatForever(autoreverses: true)) {
                     animateBadge = true
                 }

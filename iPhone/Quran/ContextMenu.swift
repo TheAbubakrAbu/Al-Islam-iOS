@@ -394,7 +394,6 @@ struct AyahTafsirSheet: View {
                 }
             }
         }
-        .modifier(TafsirSheetPresentationModifier())
         .task(id: loadKey) {
             await viewModel.loadIfNeeded()
         }
@@ -995,18 +994,6 @@ private struct TafsirFindBar: View {
     }
 }
 
-private struct TafsirSheetPresentationModifier: ViewModifier {
-    func body(content: Content) -> some View {
-        if #available(iOS 16.0, *) {
-            content
-                .presentationDetents([.large])
-                .presentationDragIndicator(.visible)
-        } else {
-            content
-        }
-    }
-}
-
 struct AyahQiraahComparisonSheet: View {
     @ObservedObject var settings = Settings.shared
     @ObservedObject var quranData = QuranData.shared
@@ -1120,7 +1107,6 @@ struct AyahQiraahComparisonSheet: View {
                 }
             }
         }
-        .modifier(TafsirSheetPresentationModifier())
     }
 
     private func qiraahText(for option: QiraahDisplay) -> String? {
@@ -1458,7 +1444,6 @@ struct AyahEnglishComparisonSheet: View {
                 await viewModel.loadIfNeeded()
             }
         }
-        .modifier(TafsirSheetPresentationModifier())
     }
 
     private func inAppTranslationText(for editionID: String, ayah: Ayah? = nil) -> String {
@@ -1557,8 +1542,7 @@ struct AyahContextMenuModifier: ViewModifier {
     }
 
     func containsProfanity(_ text: String) -> Bool {
-        let t = text.folding(options: [.diacriticInsensitive, .widthInsensitive], locale: .current).lowercased()
-        return profanityFilter.contains { !$0.isEmpty && t.contains($0) }
+        textContainsProfanity(text)
     }
 
     private func isNoteAllowed(_ text: String) -> Bool {
@@ -2361,27 +2345,23 @@ struct SelectAyahTextSheet: View {
             .applyConditionalListStyle()
             .navigationTitle("\(surah.nameTransliteration) \(surah.id):\(ayah.id)")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { dismiss() }
-                }
-            }
+            .sheetDismissToolbar()
         }
     }
 
     @ViewBuilder
     private func selectableBlock(title: String, text: String, font: Font, isArabic: Bool) -> some View {
         Section {
-            Text(text)
-                .font(font)
-                .arabicFontDesign(custom: isArabic && usesCustomArabicFace)
-                .foregroundColor(.primary)
-                .multilineTextAlignment(isArabic ? .trailing : .leading)
-                .frame(maxWidth: .infinity, alignment: isArabic ? .trailing : .leading)
-                .lineSpacing(isArabic ? 8 : 2)
-                .fixedSize(horizontal: false, vertical: true)
-                .textSelection(.enabled)
-                .padding(.vertical, 4)
+            // A real (read-only) UITextView, not `Text(...).textSelection(.enabled)`. Inside a List row, that
+            // modifier loses the press-and-drag to the list's own scroll gesture, so all you ever get is a
+            // whole-block "Copy" on long press - never the partial highlight this sheet exists to provide.
+            SelectableTextView(
+                text: text,
+                font: resolvedUIFont(font, isArabic: isArabic),
+                isArabic: isArabic,
+                lineSpacing: isArabic ? 8 : 2
+            )
+            .padding(.vertical, 4)
         } header: {
             HStack {
                 Text(title)
@@ -2410,6 +2390,56 @@ struct SelectAyahTextSheet: View {
                 .textCase(nil)
             }
         }
+    }
+
+    /// The sheet's fonts are declared as SwiftUI `Font`s; the text view needs `UIFont`s. Resolved here rather
+    /// than plumbed through, so the call sites keep reading the way the rest of the app's Arabic sites do.
+    private func resolvedUIFont(_ font: Font, isArabic: Bool) -> UIFont {
+        if isArabic {
+            let size = CGFloat(settings.fontArabicSize)
+            if usesCustomArabicFace, let custom = UIFont(name: settings.fontArabic, size: size) {
+                return custom
+            }
+            return .roundedSystemFont(ofSize: size)
+        }
+        return .roundedSystemFont(ofSize: CGFloat(settings.englishFontSize))
+    }
+}
+
+/// Read-only, selectable text. `isEditable = false` with `isSelectable = true` gives exactly what is wanted
+/// here: you can drag to highlight any part of the passage and copy it, but you cannot alter a word of it.
+private struct SelectableTextView: UIViewRepresentable {
+    let text: String
+    let font: UIFont
+    let isArabic: Bool
+    let lineSpacing: CGFloat
+
+    func makeUIView(context: Context) -> UITextView {
+        let tv = UITextView()
+        tv.isEditable = false
+        tv.isSelectable = true
+        tv.isScrollEnabled = false            // let it size itself; the List scrolls
+        tv.backgroundColor = .clear
+        tv.textContainerInset = .zero
+        tv.textContainer.lineFragmentPadding = 0
+        tv.adjustsFontForContentSizeCategory = false
+        // Without this the text view reports a huge intrinsic width and the row stops wrapping.
+        tv.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+        tv.setContentHuggingPriority(.required, for: .vertical)
+        return tv
+    }
+
+    func updateUIView(_ tv: UITextView, context: Context) {
+        let paragraph = NSMutableParagraphStyle()
+        paragraph.alignment = isArabic ? .right : .natural
+        paragraph.baseWritingDirection = isArabic ? .rightToLeft : .natural
+        paragraph.lineSpacing = lineSpacing
+
+        tv.attributedText = NSAttributedString(string: text, attributes: [
+            .font: font,
+            .foregroundColor: UIColor.label,
+            .paragraphStyle: paragraph,
+        ])
     }
 }
 #endif

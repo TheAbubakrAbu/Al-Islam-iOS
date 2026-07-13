@@ -26,7 +26,10 @@ enum AdhanWidgetDateFormatting {
 
     static func hijriDate(for entry: PrayersEntry, style: DateFormatter.Style) -> String {
         let formatter = style == .full ? fullHijriFormatter : mediumHijriFormatter
-        let now = Date()
+        // entry.date, never Date(): WidgetKit archives entry views when the timeline is built, so Date()
+        // here is the build time - wrong for every pre-built future entry. entry.date is the moment the
+        // entry is actually on screen.
+        let now = entry.date
         var referenceDate = now
 
         if entry.switchHijriDateAtMaghrib,
@@ -57,12 +60,66 @@ struct PrayersProvider: TimelineProvider {
     }
 
     func getTimeline(in ctx: Context, completion: @escaping (Timeline<PrayersEntry>)->Void) {
-        let entry = makeEntry()
-        let refresh = entry.nextPrayer?.time ?? Date().addingTimeInterval(30 * 60)
-        completion(Timeline(entries: [entry], policy: .after(refresh)))
+        let entries = makeTimelineEntries()
+        // .atEnd also asks for a rebuild once the last pre-built entry is showing, so the chain never
+        // stalls; the pre-built boundary entries below are what keep the widget exact when WidgetKit
+        // defers that reload (background refresh budget, Low Power Mode).
+        completion(Timeline(entries: entries, policy: entries.count > 1 ? .atEnd : .after(Date().addingTimeInterval(30 * 60))))
     }
 
     private func makeEntry() -> PrayersEntry {
+        // The whole entry build runs on the main queue. WidgetKit calls `getTimeline` for each widget KIND on
+        // its own background thread, and every provider mutates the one `Settings.shared` singleton below -
+        // concurrent unsynchronized writes to shared state. Hopping the entire build to main both serializes
+        // the providers and puts the mutations on the same thread the rest of Settings lives on. (The
+        // extension's main thread is otherwise idle; `fetchPrayerTimes` was already hopping there anyway.)
+        if Thread.isMainThread {
+            return makeEntryOnMain()
+        }
+        return DispatchQueue.main.sync { makeEntryOnMain() }
+    }
+
+    private func makeTimelineEntries() -> [PrayersEntry] {
+        if Thread.isMainThread {
+            return makeTimelineEntriesOnMain()
+        }
+        return DispatchQueue.main.sync { makeTimelineEntriesOnMain() }
+    }
+
+    /// One entry now, plus one at every upcoming prayer boundary in the next ~30 hours with current/next
+    /// re-resolved for that moment. A single-entry timeline relied on WidgetKit granting a reload exactly at
+    /// the next prayer time; when the system deferred it, the widget kept naming the old current prayer.
+    /// Pre-built entries flip on time with no reload at all - reloads only refresh the underlying data.
+    private func makeTimelineEntriesOnMain() -> [PrayersEntry] {
+        let first = makeEntryOnMain()
+        guard !first.fullPrayers.isEmpty else { return [first] }
+
+        let now = first.date
+        let horizon = now.addingTimeInterval(30 * 60 * 60)
+        // Same merged yesterday/today/tomorrow timeline (with optional prayers) the app resolves
+        // current/next against, so the widget flips exactly when the app would.
+        let boundaries = settings.prayerBoundaryTimeline(around: now)
+
+        var entries = [first]
+        for boundary in boundaries where boundary.time > now && boundary.time <= horizon {
+            let t = boundary.time
+            guard let next = boundaries.first(where: { $0.time > t }) else { break }
+            entries.append(PrayersEntry(
+                date:                       t,
+                accentColor:                first.accentColor,
+                currentCity:                first.currentCity,
+                prayers:                    first.prayers,
+                fullPrayers:                first.fullPrayers,
+                currentPrayer:              boundary,
+                nextPrayer:                 next,
+                hijriOffset:                first.hijriOffset,
+                switchHijriDateAtMaghrib:   first.switchHijriDateAtMaghrib
+            ))
+        }
+        return entries
+    }
+
+    private func makeEntryOnMain() -> PrayersEntry {
         if let data = store?.data(forKey: "prayersData"),
            let prayers = try? Settings.decoder.decode(Prayers.self, from: data) {
             settings.prayers = prayers

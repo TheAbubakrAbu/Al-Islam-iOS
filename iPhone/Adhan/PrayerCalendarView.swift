@@ -4,8 +4,8 @@ import UIKit
 
 /// Thirteen months of prayer times - this month plus a year ahead - browsable, and exportable as PDF or CSV.
 ///
-/// Months are computed lazily as they scroll into view. A full year is ~400 days × 6 prayers, and computing
-/// that eagerly on `onAppear` stalls the push animation; `MonthModel` is built on demand and cached.
+/// Months are built incrementally, one per run-loop pass (see `buildMonthsIfNeeded`). A full year is
+/// ~400 days × 6 prayers, and computing that in one eager pass stalled the push animation.
 struct PrayerCalendarView: View {
     @ObservedObject var settings = Settings.shared
 
@@ -45,7 +45,7 @@ struct PrayerCalendarView: View {
         .navigationTitle("Prayer Calendar")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar { exportMenu }
-        .task { buildMonthsIfNeeded() }
+        .task { await buildMonthsIfNeeded() }
         .sheet(item: $shareItem) { item in
             ActivityView(activityItems: [item.url])
         }
@@ -160,9 +160,21 @@ struct PrayerCalendarView: View {
 
     // MARK: Model
 
-    private func buildMonthsIfNeeded() {
-        guard months.isEmpty, settings.currentLocation != nil else { return }
-        months = PrayerCalendarBuilder.months(count: 13, settings: settings, columns: Self.columns)
+    /// Builds the 13 months one at a time, yielding to the run loop between each. `getPrayerTimes` is
+    /// main-thread-only (its cache is main-confined), so the work can't leave the main actor - but one
+    /// month is ~30 solar solves (a few ms), and yielding between months lets the push animation and
+    /// scrolling render in the gaps instead of stalling behind ~400 days built in one blocking pass.
+    /// Resumes from wherever it left off if the `.task` was cancelled mid-build (view popped and re-pushed).
+    private func buildMonthsIfNeeded() async {
+        guard settings.currentLocation != nil else { return }
+        while months.count < 13 {
+            guard !Task.isCancelled else { return }
+            guard let month = PrayerCalendarBuilder.month(
+                offset: months.count, settings: settings, columns: Self.columns
+            ) else { return }
+            months.append(month)
+            await Task.yield()
+        }
     }
 }
 
@@ -197,39 +209,43 @@ enum PrayerCalendarBuilder {
     }()
 
     static func months(count: Int, settings: Settings, columns: [String]) -> [MonthModel] {
+        (0..<count).compactMap { month(offset: $0, settings: settings, columns: columns) }
+    }
+
+    /// One month's model, anchored to the current month plus `offset`. Split out from `months(count:)` so
+    /// the view can build incrementally, yielding to the run loop between months.
+    static func month(offset: Int, settings: Settings, columns: [String]) -> MonthModel? {
         let calendar = Calendar.current
         let today = Date()
         let thisMonth = calendar.date(from: calendar.dateComponents([.year, .month], from: today)) ?? today
 
-        return (0..<count).compactMap { offset in
-            guard let monthStart = calendar.date(byAdding: .month, value: offset, to: thisMonth),
-                  let range = calendar.range(of: .day, in: .month, for: monthStart) else { return nil }
+        guard let monthStart = calendar.date(byAdding: .month, value: offset, to: thisMonth),
+              let range = calendar.range(of: .day, in: .month, for: monthStart) else { return nil }
 
-            let days: [DayModel] = range.compactMap { dayOfMonth in
-                guard let date = calendar.date(byAdding: .day, value: dayOfMonth - 1, to: monthStart) else { return nil }
-                let prayers = settings.getPrayerTimes(for: date, fullPrayers: true) ?? []
+        let days: [DayModel] = range.compactMap { dayOfMonth in
+            guard let date = calendar.date(byAdding: .day, value: dayOfMonth - 1, to: monthStart) else { return nil }
+            let prayers = settings.getPrayerTimes(for: date, fullPrayers: true) ?? []
 
-                var times: [String: String] = [:]
-                for prayer in prayers where columns.contains(prayer.nameTransliteration) {
-                    times[prayer.nameTransliteration] = settings.formatDate(prayer.time)
-                }
-                // Friday replaces Dhuhr with Jumuah, but a calendar column is a time slot, not a name.
-                if let jumuah = prayers.first(where: { $0.nameTransliteration == "Jumuah" }) {
-                    times["Dhuhr"] = settings.formatDate(jumuah.time)
-                }
-
-                return DayModel(
-                    id: date,
-                    date: date,
-                    dayOfMonth: dayOfMonth,
-                    isToday: calendar.isDate(date, inSameDayAs: today),
-                    moon: .on(calendar.date(bySettingHour: 12, minute: 0, second: 0, of: date) ?? date),
-                    times: times
-                )
+            var times: [String: String] = [:]
+            for prayer in prayers where columns.contains(prayer.nameTransliteration) {
+                times[prayer.nameTransliteration] = settings.formatDate(prayer.time)
+            }
+            // Friday replaces Dhuhr with Jumuah, but a calendar column is a time slot, not a name.
+            if let jumuah = prayers.first(where: { $0.nameTransliteration == "Jumuah" }) {
+                times["Dhuhr"] = settings.formatDate(jumuah.time)
             }
 
-            return MonthModel(id: monthStart, title: monthTitleFormatter.string(from: monthStart), days: days)
+            return DayModel(
+                id: date,
+                date: date,
+                dayOfMonth: dayOfMonth,
+                isToday: calendar.isDate(date, inSameDayAs: today),
+                moon: .on(calendar.date(bySettingHour: 12, minute: 0, second: 0, of: date) ?? date),
+                times: times
+            )
         }
+
+        return MonthModel(id: monthStart, title: monthTitleFormatter.string(from: monthStart), days: days)
     }
 }
 #endif

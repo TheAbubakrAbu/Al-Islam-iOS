@@ -164,6 +164,10 @@ struct PrayerCountdown: View {
                     .foregroundStyle(.secondary)
             }
             .font(.caption2)
+
+            // A one-line sky: where the sun is between sunrise and sunset, and tonight's moon. The iPhone's
+            // full SkyView has no business on a wrist, but these two facts survive the shrink.
+            WatchSkyStrip()
         }
         .lineLimit(1)
         .minimumScaleFactor(0.5)
@@ -257,6 +261,10 @@ struct PrayerCountdown: View {
 
     private func refreshProgressAndPrayerState() {
         settings.updateCurrentAndNextPrayer()
+        // Cheap and self-guarded (early-returns unless the hijri day actually changed): keeps the
+        // displayed hijri date correct across Maghrib (when "switch at Maghrib" is on) and across
+        // midnight while the app stays foregrounded, without waiting for the next fetch.
+        settings.updateDates()
         updateProgress()
     }
 

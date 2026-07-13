@@ -77,8 +77,7 @@ struct AyahRow: View, Equatable {
 
 
     func containsProfanity(_ text: String) -> Bool {
-        let t = text.folding(options: [.diacriticInsensitive, .widthInsensitive], locale: .current).lowercased()
-        return profanityFilter.contains { !$0.isEmpty && t.contains($0) }
+        textContainsProfanity(text)
     }
 
     private func isNoteAllowed(_ text: String) -> Bool {
@@ -1028,16 +1027,16 @@ struct AyahRow: View, Equatable {
 
             Button {
                 settings.hapticFeedback()
-                ShareAyahSheet.copyAyahToPasteboard(surahNumber: surah.id, ayahNumber: ayah.id, settings: settings, quranData: quranData)
+                showSelectTextSheet = true
             } label: {
-                Label("Copy Ayah", systemImage: "doc.on.doc")
+                Label("Select Text", systemImage: "highlighter")
             }
 
             Button {
                 settings.hapticFeedback()
-                showSelectTextSheet = true
+                ShareAyahSheet.copyAyahToPasteboard(surahNumber: surah.id, ayahNumber: ayah.id, settings: settings, quranData: quranData)
             } label: {
-                Label("Select Text", systemImage: "highlighter")
+                Label("Copy Ayah", systemImage: "doc.on.doc")
             }
 
             Button {

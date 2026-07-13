@@ -229,9 +229,15 @@ struct QuranView: View {
         }
     }
 
+    /// Compiled once: this is reached from a computed property evaluated on every body pass, and
+    /// `NSRegularExpression` construction is not cheap enough to redo per render.
+    private static let surahCountQueryRegex = try? NSRegularExpression(
+        pattern: #"(?:^|\s)(<=|>=|==|<|>)?\s*([0-9٠-٩]+)\s*(ayah|ayahs|aayah|aayahs|ay|page|pages|pg|pgs)\b"#,
+        options: [.caseInsensitive]
+    )
+
     private func parseSurahCountQuery(from raw: String) -> SurahCountQuery? {
-        let pattern = #"(?:^|\s)(<=|>=|==|<|>)?\s*([0-9٠-٩]+)\s*(ayah|ayahs|aayah|aayahs|ay|page|pages|pg|pgs)\b"#
-        guard let regex = try? NSRegularExpression(pattern: pattern, options: [.caseInsensitive]) else { return nil }
+        guard let regex = Self.surahCountQueryRegex else { return nil }
 
         let nsRange = NSRange(raw.startIndex..<raw.endIndex, in: raw)
         let matches = regex.matches(in: raw, options: [], range: nsRange)
@@ -356,8 +362,13 @@ struct QuranView: View {
         #endif
     }
 
+    // Both fetchers split the work by thread-safety, not by cost: the snapshot HANDOFF happens on the main
+    // actor (it reads live index arrays whose writers publish on main - reading them from this Task's
+    // background thread was the search crash), and the actual scan runs detached on the snapshot's immutable
+    // copies, so typing never blocks on it.
     private func fetchHitsOffMain(query: String, limit: Int, offset: Int) async -> ([VerseIndexEntry], Bool) {
-        guard let snapshot = quranData.verseSearchSnapshot() else {
+        let quranData = self.quranData
+        guard let snapshot = await MainActor.run(body: { quranData.verseSearchSnapshot() }) else {
             return ([], false)
         }
 
@@ -369,13 +380,35 @@ struct QuranView: View {
     }
 
     private func fetchAllHitsOffMain(query: String) async -> [VerseIndexEntry] {
-        guard let snapshot = quranData.verseSearchSnapshot() else {
+        let quranData = self.quranData
+        guard let snapshot = await MainActor.run(body: { quranData.verseSearchSnapshot() }) else {
             return []
         }
 
         return await Task.detached(priority: .userInitiated) {
             snapshot.search(term: query, limit: .max, offset: 0)
         }.value
+    }
+
+    /// Folds the exact strings the result rows are about to render, off the main thread, so each row's first
+    /// body evaluation hits the highlight cache instead of paying the fold during scrolling. The strings are
+    /// resolved HERE (on main - they come from published Quran data); only the folding leaves the main thread.
+    private func prewarmHighlightCaches(for hits: [VerseIndexEntry]) {
+        var sources: [String] = []
+        sources.reserveCapacity(hits.count * 4)
+        for hit in hits {
+            guard let surah = quranData.surah(hit.surah),
+                  let ayah = quranData.ayah(surah: hit.surah, ayah: hit.ayah) else { continue }
+            sources.append(ayah.displayArabicText(surahId: hit.surah, clean: settings.cleanArabicText))
+            sources.append(ayah.textTransliteration)
+            sources.append(ayah.textEnglishSaheeh)
+            sources.append(ayah.textEnglishMustafa)
+        }
+        guard !sources.isEmpty else { return }
+        let list = sources
+        Task.detached(priority: .userInitiated) {
+            HighlightedSnippet.prewarmNormalization(of: list)
+        }
     }
 
     private func clearAyahSearchState() {
@@ -3071,6 +3104,7 @@ struct QuranView: View {
                 // animates) - that mismatch is why search felt "sometimes animated, sometimes not". Only the
                 // first page animates; `loadMoreAyahMatches` / "load all" stay un-animated on purpose so
                 // appending rows mid-scroll doesn't re-animate the whole list (see the `.id(...)` note above).
+                prewarmHighlightCaches(for: first)
                 withAnimation {
                     verseHits = first
                     hasMoreHits = more

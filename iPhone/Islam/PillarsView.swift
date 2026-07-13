@@ -7,56 +7,56 @@ struct PillarsView: View {
         List {
             Group {
                 Section(header: Text("THE BASICS")) {
-                    NavigationLink(destination: GodPillarView()) {
+                    NavigationLink(destination: LazyDestination { GodPillarView() }) {
                         Text("Does God Exist?")
                             .foregroundColor(settings.accentColor.color)
                             .font(.headline)
                     }
                     .padding(.vertical, 4)
 
-                    NavigationLink(destination: IslamPillarView()) {
+                    NavigationLink(destination: LazyDestination { IslamPillarView() }) {
                         Text("What is Islam?")
                             .foregroundColor(settings.accentColor.color)
                             .font(.headline)
                     }
                     .padding(.vertical, 4)
 
-                    NavigationLink(destination: MuslimPillarView()) {
+                    NavigationLink(destination: LazyDestination { MuslimPillarView() }) {
                         Text("What is a Muslim?")
                             .foregroundColor(settings.accentColor.color)
                             .font(.headline)
                     }
                     .padding(.vertical, 4)
 
-                    NavigationLink(destination: AllahPillarView()) {
+                    NavigationLink(destination: LazyDestination { AllahPillarView() }) {
                         Text("Who is Allah ﷻ‎?")
                             .foregroundColor(settings.accentColor.color)
                             .font(.headline)
                     }
                     .padding(.vertical, 4)
 
-                    NavigationLink(destination: QuranPillarView()) {
+                    NavigationLink(destination: LazyDestination { QuranPillarView() }) {
                         Text("What is the Quran?")
                             .foregroundColor(settings.accentColor.color)
                             .font(.headline)
                     }
                     .padding(.vertical, 4)
 
-                    NavigationLink(destination: ProphetPillarView()) {
+                    NavigationLink(destination: LazyDestination { ProphetPillarView() }) {
                         Text("Who is Prophet Muhammad ﷺ?")
                             .foregroundColor(settings.accentColor.color)
                             .font(.headline)
                     }
                     .padding(.vertical, 4)
 
-                    NavigationLink(destination: SunnahPillarView()) {
+                    NavigationLink(destination: LazyDestination { SunnahPillarView() }) {
                         Text("What is the Sunnah?")
                             .foregroundColor(settings.accentColor.color)
                             .font(.headline)
                     }
                     .padding(.vertical, 4)
 
-                    NavigationLink(destination: HadithPillarView()) {
+                    NavigationLink(destination: LazyDestination { HadithPillarView() }) {
                         Text("What are Hadiths?")
                             .foregroundColor(settings.accentColor.color)
                             .font(.headline)
@@ -114,8 +114,10 @@ struct GuidesView: View {
         .navigationTitle("How-To Guides")
     }
 
-    private func guideLink<Destination: View>(_ title: String, destination: Destination) -> some View {
-        NavigationLink(destination: destination) {
+    // @autoclosure so call sites keep reading naturally while the destination struct is only ever
+    // constructed when the row is actually pushed (see LazyDestination).
+    private func guideLink<Destination: View>(_ title: String, destination: @autoclosure @escaping () -> Destination) -> some View {
+        NavigationLink(destination: LazyDestination(build: destination)) {
             Text(title)
                 .font(.subheadline)
         }
@@ -1602,31 +1604,31 @@ struct IslamicPillarsView: View {
 
     var body: some View {
         Section(header: Text("THE 5 PILLARS OF ISLAM")) {
-            NavigationLink(destination: ShahadahView()) {
+            NavigationLink(destination: LazyDestination { ShahadahView() }) {
                 Text("Shahadah (Testimony of Faith)")
                     .font(.subheadline)
             }
             .padding(.vertical, 4)
 
-            NavigationLink(destination: SalahView()) {
+            NavigationLink(destination: LazyDestination { SalahView() }) {
                 Text("Salah (Five Daily Prayers)")
                     .font(.subheadline)
             }
             .padding(.vertical, 4)
 
-            NavigationLink(destination: SawmView()) {
+            NavigationLink(destination: LazyDestination { SawmView() }) {
                 Text("Sawm (Fasting in Ramadan)")
                     .font(.subheadline)
             }
             .padding(.vertical, 4)
 
-            NavigationLink(destination: ZakahView()) {
+            NavigationLink(destination: LazyDestination { ZakahView() }) {
                 Text("Zakah (Annual Charity)")
                     .font(.subheadline)
             }
             .padding(.vertical, 4)
 
-            NavigationLink(destination: HajjView()) {
+            NavigationLink(destination: LazyDestination { HajjView() }) {
                 Text("Hajj (Pilgrimage to Makkah)")
                     .font(.subheadline)
             }
@@ -2068,37 +2070,37 @@ struct ImanPillarsView: View {
 
     var body: some View {
         Section(header: Text("THE 6 PILLARS OF IMAN (FAITH)")) {
-            NavigationLink(destination: GodView()) {
+            NavigationLink(destination: LazyDestination { GodView() }) {
                 Text("Belief in Allah")
                     .font(.subheadline)
             }
             .padding(.vertical, 4)
 
-            NavigationLink(destination: AngelsView()) {
+            NavigationLink(destination: LazyDestination { AngelsView() }) {
                 Text("Belief in the Angels")
                     .font(.subheadline)
             }
             .padding(.vertical, 4)
 
-            NavigationLink(destination: BooksView()) {
+            NavigationLink(destination: LazyDestination { BooksView() }) {
                 Text("Belief in the Books")
                     .font(.subheadline)
             }
             .padding(.vertical, 4)
 
-            NavigationLink(destination: ProphetsView()) {
+            NavigationLink(destination: LazyDestination { ProphetsView() }) {
                 Text("Belief in the Prophets")
                     .font(.subheadline)
             }
             .padding(.vertical, 4)
 
-            NavigationLink(destination: DayView()) {
+            NavigationLink(destination: LazyDestination { DayView() }) {
                 Text("Belief in the Last Day")
                     .font(.subheadline)
             }
             .padding(.vertical, 4)
 
-            NavigationLink(destination: QadarView()) {
+            NavigationLink(destination: LazyDestination { QadarView() }) {
                 Text("Belief in Al-Qadar")
                     .font(.subheadline)
             }
@@ -2684,19 +2686,19 @@ struct MosquesView: View {
 
     var body: some View {
         Section(header: Text("THE THREE HOLY MOSQUES")) {
-            NavigationLink(destination: HaramView()) {
+            NavigationLink(destination: LazyDestination { HaramView() }) {
                 Text("Masjid Al-Haram (The Holy Mosque)")
                     .font(.subheadline)
             }
             .padding(.vertical, 4)
 
-            NavigationLink(destination: NabawiView()) {
+            NavigationLink(destination: LazyDestination { NabawiView() }) {
                 Text("Masjid An-Nabawi (The Prophet’s Mosque)")
                     .font(.subheadline)
             }
             .padding(.vertical, 4)
 
-            NavigationLink(destination: AqsaView()) {
+            NavigationLink(destination: LazyDestination { AqsaView() }) {
                 Text("Masjid Al-Aqsa (The Farthest Mosque)")
                     .font(.subheadline)
             }
@@ -3021,43 +3023,43 @@ struct BeliefsQuranView: View {
 
     var body: some View {
         Section(header: Text("QURAN & TAFSIR")) {
-            NavigationLink(destination: CompileView()) {
+            NavigationLink(destination: LazyDestination { CompileView() }) {
                 Text("Compilation of the Quran")
                     .font(.subheadline)
             }
             .padding(.vertical, 4)
 
-            NavigationLink(destination: TafsirView()) {
+            NavigationLink(destination: LazyDestination { TafsirView() }) {
                 Text("Tafsir (Exegesis)")
                     .font(.subheadline)
             }
             .padding(.vertical, 4)
 
-            NavigationLink(destination: TajweedView()) {
+            NavigationLink(destination: LazyDestination { TajweedView() }) {
                 Text("Tajweed")
                     .font(.subheadline)
             }
             .padding(.vertical, 4)
 
-            NavigationLink(destination: MuqattaatPillarView()) {
+            NavigationLink(destination: LazyDestination { MuqattaatPillarView() }) {
                 Text("Muqatta'at Letters")
                     .font(.subheadline)
             }
             .padding(.vertical, 4)
 
-            NavigationLink(destination: JuzView()) {
+            NavigationLink(destination: LazyDestination { JuzView() }) {
                 Text("The 30 Juz (Parts)")
                     .font(.subheadline)
             }
             .padding(.vertical, 4)
 
-            NavigationLink(destination: AhrufView()) {
+            NavigationLink(destination: LazyDestination { AhrufView() }) {
                 Text("The 7 Ahruf (Modes)")
                     .font(.subheadline)
             }
             .padding(.vertical, 4)
 
-            NavigationLink(destination: QiraatView()) {
+            NavigationLink(destination: LazyDestination { QiraatView() }) {
                 Text("The 10 Qiraat (Recitations)")
                     .font(.subheadline)
             }
@@ -3065,7 +3067,7 @@ struct BeliefsQuranView: View {
         }
 
         Section(header: Text("THE ISLAMIC CALENDAR")) {
-            NavigationLink(destination: HijriCalendarView()) {
+            NavigationLink(destination: LazyDestination { HijriCalendarView() }) {
                 Text("Hijri Calendar")
                     .font(.subheadline)
             }
@@ -3080,55 +3082,55 @@ struct BeliefsHistoricalView: View {
 
     var body: some View {
         Section(header: Text("HISTORICAL & BIOGRAPHICAL")) {
-            NavigationLink(destination: SeerahView()) {
+            NavigationLink(destination: LazyDestination { SeerahView() }) {
                 Text("The Seerah (Biography)")
                     .font(.subheadline)
             }
             .padding(.vertical, 4)
 
-            NavigationLink(destination: FarewellView()) {
+            NavigationLink(destination: LazyDestination { FarewellView() }) {
                 Text("The Farewell (Final) Sermon")
                     .font(.subheadline)
             }
             .padding(.vertical, 4)
 
-            NavigationLink(destination: AhlulBaytView()) {
-                Text("The Ahlul Bayt (People of the Household)")
+            NavigationLink(destination: LazyDestination { AhlulBaytView() }) {
+                Text("The Ahlul Bayt (People of the House)")
                     .font(.subheadline)
             }
             .padding(.vertical, 4)
 
-            NavigationLink(destination: WivesView()) {
+            NavigationLink(destination: LazyDestination { WivesView() }) {
                 Text("The Wives of the Prophet")
                     .font(.subheadline)
             }
             .padding(.vertical, 4)
 
-            NavigationLink(destination: SahabahView()) {
+            NavigationLink(destination: LazyDestination { SahabahView() }) {
                 Text("The Sahabah (Companions)")
                     .font(.subheadline)
             }
             .padding(.vertical, 4)
 
-            NavigationLink(destination: CaliphatesView()) {
+            NavigationLink(destination: LazyDestination { CaliphatesView() }) {
                 Text("The Caliphates")
                     .font(.subheadline)
             }
             .padding(.vertical, 4)
 
-            NavigationLink(destination: MadhabView()) {
+            NavigationLink(destination: LazyDestination { MadhabView() }) {
                 Text("The 4 Madhaahib (Schools of Thought)")
                     .font(.subheadline)
             }
             .padding(.vertical, 4)
 
-            NavigationLink(destination: AhlusSunnahView()) {
+            NavigationLink(destination: LazyDestination { AhlusSunnahView() }) {
                 Text("Ahl As-Sunnah Wal Jama'ah")
                     .font(.subheadline)
             }
             .padding(.vertical, 4)
 
-            NavigationLink(destination: FiqhAqeedahManhajView()) {
+            NavigationLink(destination: LazyDestination { FiqhAqeedahManhajView() }) {
                 Text("Fiqh, Aqeedah, and Manhaj")
                     .font(.subheadline)
             }
@@ -3237,7 +3239,7 @@ struct WudhuView: View {
                     Text("Purity is a condition of prayer and a means of erasing sins. Performed with intention and in the way the Prophet performed it, wudhu is an act of worship in itself.")
                         .font(.body)
 
-                    NavigationLink(destination: GhuslView()) {
+                    NavigationLink(destination: LazyDestination { GhuslView() }) {
                         Label("Next: How to Make Ghusl", systemImage: "drop.fill")
                             .font(.body)
                             .foregroundColor(settings.accentColor.color)
@@ -4229,7 +4231,7 @@ struct TajweedView: View {
                 }
 
                 Section(header: Text("FOR MORE DETAILS")) {
-                    NavigationLink(destination: TajweedFoundationsView()) {
+                    NavigationLink(destination: LazyDestination { TajweedFoundationsView() }) {
                         VStack(alignment: .leading, spacing: 4) {
                             Text("Tajweed Foundations")
                                 .font(.subheadline.weight(.semibold))
@@ -5496,7 +5498,7 @@ struct AhlulBaytView: View {
             }
             .themedListRowBackground()
         }
-        .navigationTitle("The Ahlul Bayt")
+        .navigationTitle("The People of the House")
         .applyConditionalListStyle()
     }
 }

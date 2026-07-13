@@ -134,8 +134,11 @@ struct ArabicView: View {
         .background(gridNavigationLink)
         .adaptiveSafeArea(edge: .bottom) {
             VStack(spacing: SafeAreaInsetVStackSpacing.standard) {
-                ArabicSizeSlider()
-
+                // No size slider here. It lives on the per-letter detail screen (`ArabicLetterView`), which is
+                // where you are actually looking at a letter big enough to want it resized. The size it sets is
+                // global (`settings.arabicLetterSizeIndex`), and these rows and tiles already honour it through
+                // `arabicLetterDynamicTypeSize`, so the alphabet list still resizes - it just doesn't carry the
+                // control, which was crowding the bottom bar alongside the font picker and the search field.
                 arabicFontPicker
 
                 HStack(spacing: 0) {
@@ -304,6 +307,7 @@ struct ArabicView: View {
                         fontArabic: settings.fontArabic,
                         onTap: { gridSelection = letter }
                     )
+                    .equatable()
                 }
             }
             .padding(.horizontal, -8)
@@ -652,6 +656,7 @@ struct TashkeelLettersView: View {
             NavigationView {
                 shaddahDetail(for: letter)
             }
+            .smallMediumSheetPresentation()
         }
         #endif
     }
@@ -875,6 +880,21 @@ struct ArabicLetterView: View {
         settings.useFontArabic && !letterData.isNonArabicScriptLetter
     }
 
+    /// The "it is always this" sentence for a letter whose weight never changes, phrased exactly like the one
+    /// waaw and yaa already carry. `nil` for `.conditional` / `.followsPrevious`, which are never "always"
+    /// anything and always supply their own rule.
+    private static func alwaysWeightRule(for weight: LetterWeight, letterData: LetterData) -> String? {
+        let name = letterData.transliteration.capitalized
+        switch weight {
+        case .light:
+            return "\(name) is always pronounced as a light letter, in every position."
+        case .heavy:
+            return "\(name) is always pronounced as a heavy letter, in every position. It is one of the letters of isti'la (elevation)."
+        case .conditional, .followsPrevious:
+            return nil
+        }
+    }
+
     private var nonArabicBaseSound: String {
         switch letterData.transliteration {
         case "pe": return "p"
@@ -940,8 +960,13 @@ struct ArabicLetterView: View {
                              : "Follows previous letter")
                             .font(.headline)
 
-                        if let weightRule = letterData.weightRule {
-                            Text(weightRule)
+                        // A plain light/heavy letter carries no rule of its own, and used to show nothing
+                        // here at all - which made the two letters that DO spell it out (waaw and yaa:
+                        // "pronounced as a light letter in all positions") look special. They aren't; they
+                        // were simply the only ones that said so. Every unconditional letter now says it, in
+                        // the same words.
+                        if let rule = letterData.weightRule ?? Self.alwaysWeightRule(for: weight, letterData: letterData) {
+                            Text(rule)
                                 .font(.body)
                                 .foregroundColor(.secondary)
                         }
@@ -1010,7 +1035,7 @@ struct ArabicLetterView: View {
                     Text("When the madd is longer than 2 counts, the mushaf tells you so: a squiggly line (ٓ) is written above the letter. That mark is the sign of one of the special mudood (مُدُود), such as Madd Muttassil, Madd Munfasil, or Madd Lazim, held for 4, 5, or 6 counts instead of 2. Without the squiggle, the madd stays at its natural 2 counts.")
                         .font(.body)
 
-                    NavigationLink(destination: TajweedFoundationsView()) {
+                    NavigationLink(destination: LazyDestination { TajweedFoundationsView() }) {
                         Label("Learn the Madd Rules", systemImage: "book")
                             .font(.body)
                             .foregroundColor(settings.accentColor.color)
@@ -1269,6 +1294,9 @@ struct TashkeelRow: View {
                 reading: reading(tk),
                 useQuranicFontForLetter: useQuranicFontForLetter
             )
+            #if os(iOS)
+            .smallMediumSheetPresentation()
+            #endif
         }
     }
 }
@@ -1385,11 +1413,7 @@ struct TashkeelDetailSheet: View {
             .navigationTitle(tashkeel.english)
             #if os(iOS)
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { dismiss() }
-                }
-            }
+            .sheetDismissToolbar()
             #endif
         }
     }
@@ -1576,6 +1600,7 @@ struct NonArabicVowelPracticeRow: View {
 
 struct ArabicLetterRow: View, Equatable {
     @ObservedObject private var settings = Settings.shared
+    let sizeIndex: Int
     let letterData: LetterData
     let isFavorite: Bool
     let accentColor: AccentColor
@@ -1597,6 +1622,9 @@ struct ArabicLetterRow: View, Equatable {
         self.useFontArabic = useFontArabic
         self.fontArabic = fontArabic
         self.searchQuery = searchQuery
+        // Snapshotted so `==` sees the size slider: the body applies `settings.arabicLetterDynamicTypeSize`,
+        // and an Equatable view must not ignore state that changes its rendering.
+        self.sizeIndex = Settings.shared.arabicLetterSizeIndex
     }
 
     /// The three Arabic `Text`s below all render in a bundled face under exactly this condition, so it is also the
@@ -1612,7 +1640,7 @@ struct ArabicLetterRow: View, Equatable {
         let query = searchQuery.lowercased()
         let matchedTransliteration = !query.isEmpty && letterData.transliteration.lowercased().contains(query)
         let matchedLetter = !query.isEmpty && letterData.letter.lowercased().contains(query)
-        return NavigationLink(destination: ArabicLetterView(letterData: letterData)) {
+        return NavigationLink(destination: LazyDestination { ArabicLetterView(letterData: letterData) }) {
             // The row carries what the grid tile carries - the letter, its Arabic name, its transliteration and
             // its three joined forms - instead of a transliteration marooned at one edge and a glyph at the
             // other. The letter leads in the glass badge the Quran and 99 Names rows put their NUMBER in; here
@@ -1720,7 +1748,8 @@ struct ArabicLetterRow: View, Equatable {
         lhs.accentColor == rhs.accentColor &&
         lhs.useFontArabic == rhs.useFontArabic &&
         lhs.fontArabic == rhs.fontArabic &&
-        lhs.searchQuery == rhs.searchQuery
+        lhs.searchQuery == rhs.searchQuery &&
+        lhs.sizeIndex == rhs.sizeIndex
     }
 }
 
@@ -1848,14 +1877,23 @@ struct StopSignInfo: Identifiable {
 }
 
 struct StopInfoRow: View {
+    @ObservedObject private var settings = Settings.shared
+
     let title: String
     let symbol: String
     let color: Color
 
     var body: some View {
         HStack(spacing: 10) {
+            // These are mushaf glyphs (۩ ۞ قلى ج صلى ...), not UI text - they belong in the Quranic face, and
+            // read wrong in SF Rounded.
             Text(symbol)
-                .font(.headline.weight(.semibold))
+                .font(
+                    settings.islamUsesCustomArabicFace
+                        ? .custom(settings.fontArabic, size: 20, relativeTo: .headline)
+                        : .headline.weight(.semibold)
+                )
+                .arabicFontDesign(custom: settings.islamUsesCustomArabicFace)
                 .foregroundStyle(color)
                 .frame(width: 42, height: 42)
                 .background(color.opacity(0.12))
@@ -1932,7 +1970,7 @@ struct QuranSignsSectionContent: View {
 #if os(iOS)
 /// A letter as a tile, mirroring `NameGridTile` on the 99 Names screen. Tapping opens the letter's detail - 
 /// the same primary action the list row has.
-struct ArabicLetterGridTile: View {
+struct ArabicLetterGridTile: View, Equatable {
     @ObservedObject private var settings = Settings.shared
 
     let letterData: LetterData
@@ -1940,6 +1978,19 @@ struct ArabicLetterGridTile: View {
     let accentColor: AccentColor
     let useFontArabic: Bool
     let fontArabic: String
+    /// Snapshot of the size slider, folded into `==` because the body scales with it.
+    var sizeIndex: Int = Settings.shared.arabicLetterSizeIndex
+
+    /// `onTap` is deliberately not compared (closures cannot be) - it is stable per call site, and every
+    /// input that changes what the tile DRAWS is compared, so skipping the body on equality is safe.
+    static func == (lhs: Self, rhs: Self) -> Bool {
+        lhs.letterData == rhs.letterData &&
+        lhs.isFavorite == rhs.isFavorite &&
+        lhs.accentColor == rhs.accentColor &&
+        lhs.useFontArabic == rhs.useFontArabic &&
+        lhs.fontArabic == rhs.fontArabic &&
+        lhs.sizeIndex == rhs.sizeIndex
+    }
 
     /// Letters from other scripts (پ, چ, ژ) aren't in the Quranic font, so they fall back to the system one.
     private var glyphFont: Font {

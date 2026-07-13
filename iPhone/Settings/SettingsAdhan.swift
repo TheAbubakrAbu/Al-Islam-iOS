@@ -88,6 +88,9 @@ extension Settings {
     /// Resolves a picker id to a bundled `.caf` resource name, or `nil` for "Default" and for any id whose
     /// clip is missing from the bundle. `variant` picks the full recording ("") or the 30-second cut.
     private func adhanSoundResource(for selection: String, variant: String) -> String? {
+        // The static cache is a plain Dictionary; every current caller is main-confined and this keeps
+        // that invariant enforced rather than remembered.
+        assert(Thread.isMainThread, "adhanSoundResource(for:variant:) must be called on the main thread")
         let resource = selection + variant
         if let cached = Self.adhanSoundResourceCache[resource] {
             return cached
@@ -280,6 +283,8 @@ extension Settings {
     }
 
     private static func ensureNetworkMonitorStarted() {
+        // Extensions (widgets) don't geocode or refetch on reconnect; a path monitor there is pure overhead.
+        guard Settings.isAppProcess else { return }
         guard !didStartNetworkMonitor else { return }
         didStartNetworkMonitor = true
 
@@ -702,77 +707,9 @@ extension Settings {
     private static let travelingNotificationId = "\(AppIdentifiers.appName).TravelingMode"
     private static let calculationNotificationId = "\(AppIdentifiers.appName).CalculationMode"
 
-    private static let countryCalculationMap: [String: String] = [
-        // North America method (mainland + US territories commonly on ISNA-style defaults)
-        "US": "North America",
-        "CA": "North America",
-        "MX": "North America",
-        "PR": "North America",
-        "VI": "North America",
-        "GU": "North America",
-        "AS": "North America",
-        "MP": "North America",
-        "UM": "North America",
-
-        // United Kingdom
-        "GB": "Britain (Moonsighting Committee)",
-        "IE": "Britain (Moonsighting Committee)",
-
-        // Saudi Arabia and nearby countries that commonly follow it
-        "SA": "Saudi Arabia (Umm Al-Qura)",
-        "BH": "Saudi Arabia (Umm Al-Qura)",
-        "OM": "Saudi Arabia (Umm Al-Qura)",
-        "YE": "Saudi Arabia (Umm Al-Qura)",
-
-        // Egyptian method and nearby region defaults
-        "EG": "Egypt",
-        "LY": "Egypt",
-        "TN": "Egypt",
-        "DZ": "Egypt",
-        "MA": "Egypt",
-        "SD": "Egypt",
-        "SS": "Egypt",
-        "DJ": "Egypt",
-        "ER": "Egypt",
-        "SO": "Egypt",
-        "JO": "Egypt",
-        "LB": "Egypt",
-        "SY": "Egypt",
-        "IQ": "Egypt",
-        "PS": "Egypt",
-
-        // Gulf country-specific methods
-        "AE": "Dubai",
-        "KW": "Kuwait",
-        "QA": "Qatar",
-
-        // Turkey
-        "TR": "Turkey",
-        "CY": "Turkey",
-        "AL": "Turkey",
-        "XK": "Turkey",
-        "BA": "Turkey",
-        "MK": "Turkey",
-
-        // Tehran
-        "IR": "Tehran",
-
-        // Karachi method (South Asia)
-        "PK": "Karachi",
-        "IN": "Karachi",
-        "BD": "Karachi",
-        "AF": "Karachi",
-        "NP": "Karachi",
-        "LK": "Karachi",
-
-        // Singapore method (Southeast Asia)
-        "SG": "Singapore",
-        "MY": "Singapore",
-        "BN": "Singapore",
-        "ID": "Singapore",
-        "TH": "Singapore",
-        "PH": "Singapore"
-    ]
+    /// Which method a country uses, derived from the catalogue so the mapping can never disagree with the
+    /// method list (and so no country can be claimed by two methods).
+    private static var countryCalculationMap: [String: String] { PrayerCalculationCatalog.byCountry }
 
     // MARK: - High latitude rule
 
@@ -823,7 +760,7 @@ extension Settings {
     }
 
     private func automaticCalculationMethod(for countryCode: String) -> String {
-        Self.countryCalculationMap[countryCode] ?? "Muslim World League"
+        Self.countryCalculationMap[countryCode] ?? PrayerCalculationCatalog.muslimWorldLeagueID
     }
 
     /// Recommended calculation-method label for an arbitrary ISO country code.
@@ -833,26 +770,14 @@ extension Settings {
         canonicalPrayerCalculationMethod(automaticCalculationMethod(for: countryCode.uppercased()))
     }
 
-    /// Maps stored or auto-detected labels to a key that exists in `calcParams` (avoids repeat auto-changes / picker fights).
-    private func canonicalPrayerCalculationMethod(_ name: String) -> String {
+    /// Resolves a stored label to a real method id: an exact catalogue hit, a legacy alias, or the global
+    /// default. Nothing else in the app should have to know that old labels ever existed.
+    func canonicalPrayerCalculationMethod(_ name: String) -> String {
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
-        if Self.calcParams[trimmed] != nil { return trimmed }
-        switch trimmed {
-        case "Saudi Arabia":
-            return "Saudi Arabia (Umm Al-Qura)"
-        case "United Kingdom":
-            return "Britain (Moonsighting Committee)"
-        default:
-            return "Muslim World League"
-        }
-    }
-
-    /// Resolves the Adhan parameters for whatever string is stored (picker label, legacy name, or unknown → MWL fallback).
-    private func calculationParameters(forStoredLabel name: String) -> CalculationParameters {
-        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
-        if let params = Self.calcParams[trimmed] { return params }
-        let canonical = canonicalPrayerCalculationMethod(trimmed)
-        return Self.calcParams[canonical] ?? Self.calcParams["Muslim World League"]!
+        if trimmed == PrayerCalculationCatalog.customID { return trimmed }
+        if PrayerCalculationCatalog.method(id: trimmed) != nil { return trimmed }
+        if let alias = PrayerCalculationCatalog.legacyAliases[trimmed] { return alias }
+        return PrayerCalculationCatalog.muslimWorldLeagueID
     }
 
     /// Returns `true` if it switched `prayerCalculation`, so the enclosing fetch recomputes the prayer list.
@@ -870,7 +795,7 @@ extension Settings {
 
         let detectedRaw = automaticCalculationMethod(for: countryCode)
         let detectedMethod = canonicalPrayerCalculationMethod(detectedRaw)
-        guard let detectedParams = Self.calcParams[detectedMethod] else { return false }
+        let detectedParams = calculationParameters(forStoredLabel: detectedMethod)
 
         let currentParams = calculationParameters(forStoredLabel: prayerCalculation)
         if detectedParams == currentParams {
@@ -1064,28 +989,27 @@ extension Settings {
         }
     }
     
-    private static let calcParams: [String: CalculationParameters] = {
-        let map: [(String, CalculationMethod)] = [
-            ("Muslim World League", .muslimWorldLeague),
-            ("Britain (Moonsighting Committee)",      .moonsightingCommittee),
-            ("Saudi Arabia (Umm Al-Qura)",        .ummAlQura),
-            ("Egypt",               .egyptian),
-            ("Dubai",               .dubai),
-            ("Kuwait",              .kuwait),
-            ("Qatar",               .qatar),
-            ("Turkey",              .turkey),
-            ("Tehran",              .tehran),
-            ("Karachi",             .karachi),
-            ("Singapore",           .singapore),
-            ("North America",       .northAmerica),
-            
-            // Legacy labels kept for backward compatibility with saved settings.
-            ("Moonsight Committee", .moonsightingCommittee),
-            ("Umm Al-Qura",         .ummAlQura)
-        ]
-        return Dictionary(uniqueKeysWithValues: map.map { ($0.0, $0.1.params) })
-    }()
-    
+    /// The parameters for a stored method label. Everything routes through `PrayerCalculationCatalog`, so a
+    /// method is data (a name plus its angles) rather than a case of the Adhan package's enum - which is what
+    /// lets the app carry regional methods the package never shipped, and the user's own angles.
+    func calculationParameters(forStoredLabel name: String) -> CalculationParameters {
+        let id = canonicalPrayerCalculationMethod(name)
+        if id == PrayerCalculationCatalog.customID {
+            return PrayerCalculationCatalog
+                .custom(fajrAngle: customFajrAngle, ishaAngle: customIshaAngle)
+                .parameters
+        }
+        guard let method = PrayerCalculationCatalog.method(id: id) else {
+            return PrayerCalculationCatalog.method(id: PrayerCalculationCatalog.muslimWorldLeagueID)!.parameters
+        }
+        return method.parameters
+    }
+
+    /// True when this method's Isha is Umm al-Qura's 90-minute interval, which stretches to 120 in Ramadan.
+    private func usesUmmAlQuraRamadanExtension(_ label: String) -> Bool {
+        canonicalPrayerCalculationMethod(label) == "Saudi Arabia (Umm Al-Qura)"
+    }
+
     private struct NotifPrefs {
         let enabled: ReferenceWritableKeyPath<Settings, Bool>
         let preMinutes: ReferenceWritableKeyPath<Settings, Int>
@@ -1182,6 +1106,10 @@ extension Settings {
     }
 
     private func _computeRawPrayers(for date: Date, at here: Location, calculationOverride: String? = nil) -> [Prayer] {
+        // `rawPrayerCache` (and its eviction) is a plain static Dictionary. All callers are main-confined
+        // today - SwiftUI bodies, @MainActor intents, and the widget provider's DispatchQueue.main.sync -
+        // and this trips in debug if a future caller breaks that instead of corrupting the cache.
+        assert(Thread.isMainThread, "_computeRawPrayers must be called on the main thread")
         guard here.latitude != 1000, here.longitude != 1000 else { return [] }
 
         let method = calculationOverride ?? prayerCalculation
@@ -1205,13 +1133,13 @@ extension Settings {
 
         let coordinates = Coordinates(latitude: here.latitude, longitude: here.longitude)
 
-        var params = Self.calcParams[method] ?? Self.calcParams["Muslim World League"]!
+        var params = calculationParameters(forStoredLabel: method)
         params.madhab = hanafiMadhab ? Madhab.hanafi : Madhab.shafi
         params.highLatitudeRule = resolvedHighLatitudeRule(at: coordinates)
 
         // Umm Al-Qura delays Isha by 30 minutes throughout Ramadan. The reference date is pushed a day forward
         // because taraweeh on the night *before* 1 Ramadan already follows the Ramadan timing.
-        if Self.calcParams[method] == CalculationMethod.ummAlQura.params {
+        if usesUmmAlQuraRamadanExtension(method) {
             let hijriMonth = Self.hijriCalendarAR.dateComponents([.month], from: date.addingTimeInterval(86_400)).month
             if hijriMonth == 9 {
                 params.adjustments.isha += 30
@@ -1469,7 +1397,7 @@ extension Settings {
             
             prayers = Prayers(
                 day: today,
-                city: currentLocation!.city,
+                city: currentLocation?.city ?? loc.city,
                 prayers: todayPrayers,
                 fullPrayers: fullPrayers,
                 setNotification: false
@@ -1517,16 +1445,15 @@ extension Settings {
         .map(\.element)
     }
     
-    func updateCurrentAndNextPrayer() {
-        guard let prayerObj = prayers, !prayerObj.prayers.isEmpty else {
-            logger.debug("No prayer list to compute current/next")
-            return
-        }
+    /// The merged, sorted prayer timeline for yesterday/today/tomorrow around `now`, including optional
+    /// prayers. This is what current/next are resolved against - shared with the widget provider, which
+    /// walks the same timeline to pre-build one entry per prayer boundary (so widgets flip at the exact
+    /// prayer time without depending on WidgetKit granting a reload on schedule).
+    func prayerBoundaryTimeline(around now: Date = Date()) -> [Prayer] {
+        guard let prayerObj = prayers, !prayerObj.prayers.isEmpty else { return [] }
 
-        let now = Date()
         let calendar = Calendar.current
-
-        let timeline = [-1, 0, 1]
+        return [-1, 0, 1]
             .compactMap { calendar.date(byAdding: .day, value: $0, to: now) }
             .flatMap { date -> [Prayer] in
                 let base = calendar.isDate(date, inSameDayAs: prayerObj.day)
@@ -1535,6 +1462,16 @@ extension Settings {
                 return prayersIncludingOptional(base, for: date)
             }
             .sorted { $0.time < $1.time }
+    }
+
+    func updateCurrentAndNextPrayer() {
+        guard prayers?.prayers.isEmpty == false else {
+            logger.debug("No prayer list to compute current/next")
+            return
+        }
+
+        let now = Date()
+        let timeline = prayerBoundaryTimeline(around: now)
 
         guard !timeline.isEmpty else {
             logger.debug("No prayer timeline to compute current/next")
@@ -1646,6 +1583,11 @@ extension Settings {
     /// true` trailing-debounces it on the main queue so the multiple `fetchPrayerTimes` calls fired during
     /// launch / setting changes collapse to one run, off the synchronous first-paint path.
     func scheduleNotifications(deferred: Bool) {
+        // Only the APP schedules notifications. A widget whose cached prayers had gone stale used to reach
+        // this through `fetchPrayerTimesCore` and schedule (or prune) the user's notifications from inside
+        // the extension - and, via `reloadWidgets`, trigger a widget reload FROM a widget. Both were saved
+        // only by the extension usually dying before the 0.35s defer fired.
+        guard Settings.isAppProcess else { return }
         pendingNotificationScheduleWorkItem?.cancel()
         pendingNotificationScheduleWorkItem = nil
         guard deferred else {
@@ -1662,6 +1604,8 @@ extension Settings {
 
     /// Reload widget timelines, coalescing the launch burst the same way as `scheduleNotifications`.
     func reloadWidgets(deferred: Bool) {
+        // See `scheduleNotifications`: a widget must not reload widget timelines - that is a self-reload loop.
+        guard Settings.isAppProcess else { return }
         pendingWidgetReloadWorkItem?.cancel()
         pendingWidgetReloadWorkItem = nil
         guard deferred else {

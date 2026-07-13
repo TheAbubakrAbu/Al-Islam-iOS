@@ -169,86 +169,105 @@ final class QuranPlayer: ObservableObject {
             let tVal = user[AVAudioSessionInterruptionTypeKey] as? UInt,
             let type = AVAudioSession.InterruptionType(rawValue: tVal)
         else { return }
-        
-        switch type {
-        case .began:
-            pause()
-            idleTimerSet(false)
-            
-        case .ended:
-            if let opts = user[AVAudioSessionInterruptionOptionKey] as? UInt,
-               AVAudioSession.InterruptionOptions(rawValue: opts).contains(.shouldResume) {
-                player?.play()
-                isPlaying = true
-                isPaused = false
-                idleTimerSet(true)
+
+        // Interruption notifications arrive on the session's own queue, not main. Everything below mutates
+        // @Published state - the same discipline the KVO observers in this file already follow.
+        DispatchQueue.main.async { [weak self] in
+            guard let self else { return }
+            switch type {
+            case .began:
+                self.pause()
+                self.idleTimerSet(false)
+
+            case .ended:
+                if let opts = user[AVAudioSessionInterruptionOptionKey] as? UInt,
+                   AVAudioSession.InterruptionOptions(rawValue: opts).contains(.shouldResume) {
+                    self.player?.play()
+                    self.isPlaying = true
+                    self.isPaused = false
+                    self.idleTimerSet(true)
+                }
+
+            @unknown default:
+                break
             }
-            
-        @unknown default:
-            break
+            self.updateNowPlayingInfo()
         }
-        updateNowPlayingInfo()
     }
     
     private func setupRemoteTransportControls() {
         let cmd = MPRemoteCommandCenter.shared()
         
+        // MPRemoteCommand handlers are invoked on a MediaPlayer queue, not main. The guards read state to
+        // decide the returned status (a benign racy read); every MUTATION of @Published state and every
+        // player call hops to main, matching the discipline the KVO observers in this file follow.
         cmd.playCommand.addTarget { [unowned self] _ in
             guard !isPlaying else { return .commandFailed }
-            player?.play()
-            isPlaying = true
-            isPaused = false
-            idleTimerSet(true)
-            updateNowPlayingInfo()
+            DispatchQueue.main.async {
+                self.player?.play()
+                self.isPlaying = true
+                self.isPaused = false
+                self.idleTimerSet(true)
+                self.updateNowPlayingInfo()
+            }
             return .success
         }
-        
+
         cmd.pauseCommand.addTarget { [unowned self] _ in
             guard isPlaying else { return .commandFailed }
-            pause()
+            DispatchQueue.main.async { self.pause() }
             return .success
         }
-        
+
         cmd.stopCommand.addTarget { [unowned self] _ in
             guard isPlaying else { return .commandFailed }
-            pause()
-            isPlaying = false
-            isPaused = false
+            DispatchQueue.main.async {
+                self.pause()
+                self.isPlaying = false
+                self.isPaused = false
+            }
             return .success
         }
-        
+
         cmd.previousTrackCommand.addTarget { [unowned self] _ in
-            skipBackwardFromRemote()
+            DispatchQueue.main.async { self.skipBackwardFromRemote() }
             return .success
         }
         cmd.nextTrackCommand.addTarget { [unowned self] _ in
-            skipForwardFromRemote()
+            DispatchQueue.main.async { self.skipForwardFromRemote() }
             return .success
         }
-        
+
         cmd.skipBackwardCommand.addTarget { [unowned self] _ in
             guard player != nil else { return .commandFailed }
-            skipBackwardFromRemote()
+            DispatchQueue.main.async { self.skipBackwardFromRemote() }
             return .success
         }
         cmd.skipForwardCommand.addTarget { [unowned self] _ in
             guard player != nil else { return .commandFailed }
-            skipForwardFromRemote()
+            DispatchQueue.main.async { self.skipForwardFromRemote() }
             return .success
         }
         cmd.skipBackwardCommand.isEnabled = false
         cmd.skipForwardCommand.isEnabled = false
         cmd.skipBackwardCommand.preferredIntervals = []
         cmd.skipForwardCommand.preferredIntervals = []
-        
+
         cmd.changePlaybackPositionCommand.addTarget { [unowned self] evt in
             guard
                 let e = evt as? MPChangePlaybackPositionCommandEvent,
                 let p = player
             else { return .commandFailed }
-            p.seek(to: CMTime(seconds: e.positionTime, preferredTimescale: 1)) { _ in
-                self.updateNowPlayingInfo()
-                self.saveLastListenedSurah()
+            // Timescale 600, not 1: a timescale of 1 rounds the target to whole seconds, which made
+            // lock-screen scrubbing land up to half a second off where the user let go.
+            let target = CMTime(seconds: e.positionTime, preferredTimescale: 600)
+            DispatchQueue.main.async {
+                p.seek(to: target) { _ in
+                    DispatchQueue.main.async {
+                        self.updateNowPlayingInfo()
+                        self.saveLastListenedSurah()
+                    }
+                }
             }
             return .success
         }
@@ -328,7 +347,8 @@ final class QuranPlayer: ObservableObject {
         }
         target = max(0, target)
         guard target.isFinite else { return }
-        p.seek(to: CMTime(seconds: target, preferredTimescale: 1)) { _ in
+        // Timescale 600, not 1: a timescale of 1 quantizes the seek to whole seconds.
+        p.seek(to: CMTime(seconds: target, preferredTimescale: 600)) { _ in
             self.updateNowPlayingInfo(); self.saveLastListenedSurah(); self.saveLastListenedAyah()
         }
     }
@@ -537,7 +557,7 @@ final class QuranPlayer: ObservableObject {
            let last = settings.lastListenedSurah,
            last.surahNumber == surahNumber,
            last.currentDuration > 1 {
-            let seekT = CMTime(seconds: last.currentDuration, preferredTimescale: 1)
+            let seekT = CMTime(seconds: last.currentDuration, preferredTimescale: 600)
             player?.seek(to: seekT) { [weak self] _ in self?.updateNowPlayingInfo() }
             didResume = true
         }
@@ -596,10 +616,25 @@ final class QuranPlayer: ObservableObject {
                 return
             }
 
+            // At the ends of the mushaf (surah 114 going forward, surah 1 going backward) there is nothing
+            // to continue to. playNext/PreviousSurah just return there, which left the player sitting at
+            // the end of the item with `isPlaying` still true - a stuck now-playing bar and a disabled idle
+            // timer. Recitation is over: stop properly.
             switch self.settings.reciteType {
-            case "Continue to Previous": self.playPreviousSurah(certainReciter: certainReciter)
-            case "End Recitation": self.stop()
-            default: self.playNextSurah(certainReciter: certainReciter)
+            case "Continue to Previous":
+                if let n = self.currentSurahNumber, n > 1 {
+                    self.playPreviousSurah(certainReciter: certainReciter)
+                } else {
+                    self.stop()
+                }
+            case "End Recitation":
+                self.stop()
+            default:
+                if let n = self.currentSurahNumber, n < 114 {
+                    self.playNextSurah(certainReciter: certainReciter)
+                } else {
+                    self.stop()
+                }
             }
         }
         notificationObservers.append(obs)
@@ -1369,7 +1404,10 @@ final class QuranPlayer: ObservableObject {
         let fullDur = CMTimeGetSeconds(p.currentItem?.duration ?? .zero)
 
         if isPlayingSurah, let sur = quranData.quran.first(where: { $0.id == num }) {
-            let endReached = currDur == fullDur
+            // Tolerance, not ==: currentTime() and the item duration are Doubles from different clocks and
+            // are almost never bit-identical, so exact equality made the "advance to the next surah" record
+            // essentially unreachable.
+            let endReached = fullDur > 0 && fullDur.isFinite && (fullDur - currDur) < 0.5
             let nextSurahNumber: Int? = endReached
                 ? (settings.reciteType == "Continue to Previous" ? (num > 1 ? num - 1 : nil)
                    : settings.reciteType == "End Recitation"     ? nil
@@ -1379,13 +1417,19 @@ final class QuranPlayer: ObservableObject {
             if let nxt = nextSurahNumber, let nSur = quranData.quran.first(where: { $0.id == nxt }) {
                 // No withAnimation: this republishes observing screens (e.g. SurahView); animating it
                 // mid-scroll causes a visible jump when playback ends.
+                //
+                // fullDuration starts at 0 (every consumer guards `> 0`) and is patched in asynchronously.
+                // It used to come from a SYNCHRONOUS `AVURLAsset.duration` on the next surah's REMOTE mp3 -
+                // blocking network I/O on the main thread, a multi-second freeze when the next surah wasn't
+                // downloaded and the connection was slow.
                 settings.lastListenedSurah = LastListenedSurah(
                     surahNumber: nxt,
                     surahName: nSur.nameTransliteration,
                     reciter: rec,
                     currentDuration: 0,
-                    fullDuration: getSurahDuration(surahNumber: nxt)
+                    fullDuration: 0
                 )
+                loadSurahDurationAsync(surahNumber: nxt, reciter: rec)
             } else {
                 settings.lastListenedSurah = LastListenedSurah(
                     surahNumber: num,
@@ -1635,20 +1679,34 @@ final class QuranPlayer: ObservableObject {
     }
 
     
-    func getSurahDuration(surahNumber: Int) -> Double {
+    /// Loads the surah's duration off-main (the asset may be a remote mp3 - loading it synchronously
+    /// blocked the main thread on the network) and patches it into the just-written "last listened" record,
+    /// but only if that record is still the one this load was started for.
+    private func loadSurahDurationAsync(surahNumber: Int, reciter: Reciter) {
         #if os(iOS)
-        guard
-            let rec = playbackReciter ?? resolvedSelectedReciter(),
-            let url = URL(string: "\(rec.surahLink)\(String(format: "%03d", surahNumber)).mp3")
-        else { return 0 }
+        guard let url = URL(string: "\(reciter.surahLink)\(String(format: "%03d", surahNumber)).mp3") else { return }
 
-        let duration = AVURLAsset(url: url).duration
-        guard duration.isValid, !duration.isIndefinite else { return 0 }
-        let seconds = CMTimeGetSeconds(duration)
-        return seconds.isFinite ? seconds : 0
-        #else
-        // The watch doesn't rely on this value, so just return 0
-        return 0
+        Task.detached(priority: .utility) {
+            let duration = (try? await AVURLAsset(url: url).load(.duration)) ?? .invalid
+            guard duration.isValid, !duration.isIndefinite else { return }
+            let seconds = CMTimeGetSeconds(duration)
+            guard seconds.isFinite, seconds > 0 else { return }
+
+            await MainActor.run {
+                let settings = Settings.shared
+                guard let current = settings.lastListenedSurah,
+                      current.surahNumber == surahNumber,
+                      current.reciter.ayahIdentifier == reciter.ayahIdentifier,
+                      current.fullDuration == 0 else { return }
+                settings.lastListenedSurah = LastListenedSurah(
+                    surahNumber: current.surahNumber,
+                    surahName: current.surahName,
+                    reciter: current.reciter,
+                    currentDuration: current.currentDuration,
+                    fullDuration: seconds
+                )
+            }
+        }
         #endif
     }
     

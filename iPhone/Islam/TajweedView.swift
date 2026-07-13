@@ -118,22 +118,22 @@ struct TajweedFoundationsView: View {
                     .font(.caption)
                     .foregroundColor(.secondary)
 
-                NavigationLink(destination: QuranPillarView()) {
+                NavigationLink(destination: LazyDestination { QuranPillarView() }) {
                     Text("What is the Quran?")
                         .foregroundColor(settings.accentColor.color)
                 }
 
-                NavigationLink(destination: TajweedView()) {
+                NavigationLink(destination: LazyDestination { TajweedView() }) {
                     Text("What is Tajweed?")
                         .foregroundColor(settings.accentColor.color)
                 }
 
-                NavigationLink(destination: AhrufView()) {
+                NavigationLink(destination: LazyDestination { AhrufView() }) {
                     Text("What are the 7 Ahruf?")
                         .foregroundColor(settings.accentColor.color)
                 }
 
-                NavigationLink(destination: QiraatView()) {
+                NavigationLink(destination: LazyDestination { QiraatView() }) {
                     Text("What are the 10 Qiraat?")
                         .foregroundColor(settings.accentColor.color)
                 }
@@ -141,7 +141,7 @@ struct TajweedFoundationsView: View {
 
             Section("TAJWEED TOPICS") {
                 ForEach(topics, id: \.self) { topic in
-                    NavigationLink(destination: destinationView(for: topic)) {
+                    NavigationLink(destination: LazyDestination { destinationView(for: topic) }) {
                         Text(topic)
                             .foregroundColor(settings.accentColor.color)
                     }

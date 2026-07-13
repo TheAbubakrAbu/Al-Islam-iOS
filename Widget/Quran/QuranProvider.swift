@@ -103,7 +103,14 @@ struct QuranWidgetProvider: TimelineProvider {
         case .lastListenedAyah:
             return makeAyahEntry(settings: settings, card: snapshot?.lastListenedAyah)
         case .ayahOfTheDay:
-            return makeAyahEntry(settings: settings, card: snapshot?.ayahOfTheDay ?? ayahOfTheDayCard(from: snapshot))
+            // The app's card only counts if it was built for today - otherwise (app not opened since
+            // yesterday, or an old snapshot without the day stamp) rotate through the pool ourselves so
+            // the "Ayah of the Day" actually changes daily.
+            let appCard: QuranWidgetSnapshot.AyahCard? = {
+                guard let snapshot, snapshot.ayahOfTheDayDay == QuranWidgetSnapshot.dayBucket() else { return nil }
+                return snapshot.ayahOfTheDay
+            }()
+            return makeAyahEntry(settings: settings, card: appCard ?? ayahOfTheDayCard(from: snapshot))
         }
     }
 

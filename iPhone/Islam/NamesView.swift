@@ -199,6 +199,11 @@ final class NamesViewModel: ObservableObject {
             }
             return name.searchTokens.contains { $0.contains(cleanedQuery) } || Int(cleanedQuery) == name.number
         }
+        // Every distinct prefix a user ever types lands here; without a bound the cache grows for the
+        // app's lifetime. Recomputing a miss is a filter over 99 names, so wholesale eviction is fine.
+        if filterCache.count >= 128 {
+            filterCache.removeAll(keepingCapacity: true)
+        }
         filterCache[cleanedQuery] = matches
         return matches
     }
@@ -365,6 +370,7 @@ struct NamesView: View {
                                 useFontArabic: settings.useFontArabic,
                                 fontArabic: settings.fontArabic
                             )
+                            .equatable()
                         }
                     }
                     .padding(.horizontal, -8)
@@ -383,6 +389,7 @@ struct NamesView: View {
                         ) {
                             handleNameTap(name: name, hasActiveSearch: hasActiveSearch, proxy: proxy)
                         }
+                        .equatable()
                         .id("favorite_name_\(name.number)")
                     }
                 }
@@ -403,6 +410,7 @@ struct NamesView: View {
                             useFontArabic: settings.useFontArabic,
                             fontArabic: settings.fontArabic
                         )
+                        .equatable()
                     }
                 }
                 .padding(.horizontal, -8)
@@ -423,6 +431,7 @@ struct NamesView: View {
                 ) {
                     handleNameTap(name: name, hasActiveSearch: hasActiveSearch, proxy: proxy)
                 }
+                .equatable()
             }
             .id("name_\(name.number)")
         }
@@ -496,8 +505,9 @@ struct NamesView: View {
 }
 
 private struct NameRow: View, Equatable {
-    @ObservedObject var settings = Settings.shared
-    
+    // Deliberately NOT observing Settings: every input this body reads is passed in and folded into `==`,
+    // so with `.equatable()` a Settings publish (favorite toggle, accent change elsewhere) skips every
+    // row whose inputs didn't change. Actions reach Settings.shared directly - they don't need observation.
     let name: NameOfAllah
     let firstFoundTarget: (surahID: Int, ayahID: Int)?
     let showDescription: Bool
@@ -538,25 +548,25 @@ private struct NameRow: View, Equatable {
         content
             .swipeActions(edge: .leading) {
                 Button {
-                    settings.hapticFeedback()
+                    Settings.shared.hapticFeedback()
                     withAnimation(.easeInOut) {
-                        settings.toggleNameFavorite(number: name.number)
+                        Settings.shared.toggleNameFavorite(number: name.number)
                     }
                 } label: {
                     Image(systemName: isFavorite ? "star.fill" : "star")
                 }
-                .tint(settings.accentColor.color)
+                .tint(accentColor.color)
             }
             .swipeActions(edge: .trailing) {
                 Button {
-                    settings.hapticFeedback()
+                    Settings.shared.hapticFeedback()
                     withAnimation(.easeInOut) {
-                        settings.toggleNameFavorite(number: name.number)
+                        Settings.shared.toggleNameFavorite(number: name.number)
                     }
                 } label: {
                     Image(systemName: isFavorite ? "star.fill" : "star")
                 }
-                .tint(settings.accentColor.color)
+                .tint(accentColor.color)
             }
         #else
         content
@@ -624,7 +634,7 @@ private struct NameRow: View, Equatable {
                 .contentShape(Rectangle())
                 .onTapGesture {
                     if !showDescription {
-                        settings.hapticFeedback()
+                        Settings.shared.hapticFeedback()
                         onTap()
                     }
                 }
@@ -667,8 +677,8 @@ private struct NameRow: View, Equatable {
             }
         }
         .onTapGesture {
-            settings.hapticFeedback()
-            settings.toggleNameFavorite(number: name.number)
+            Settings.shared.hapticFeedback()
+            Settings.shared.toggleNameFavorite(number: name.number)
         }
         .padding(.vertical, {
             if #available(iOS 26, *) { 0 } else { 8 }
@@ -779,7 +789,7 @@ private struct VerseReflectionCard: View {
     }
 }
 
-private struct NameGridTile: View {
+private struct NameGridTile: View, Equatable {
     @ObservedObject private var settings = Settings.shared
 
     let name: NameOfAllah
@@ -787,6 +797,15 @@ private struct NameGridTile: View {
     let accentColor: AccentColor
     let useFontArabic: Bool
     let fontArabic: String
+
+    /// Every appearance input is a stored value, so equality of the values means the drawn tile is identical.
+    static func == (lhs: Self, rhs: Self) -> Bool {
+        lhs.name == rhs.name &&
+        lhs.isFavorite == rhs.isFavorite &&
+        lhs.accentColor == rhs.accentColor &&
+        lhs.useFontArabic == rhs.useFontArabic &&
+        lhs.fontArabic == rhs.fontArabic
+    }
 
     var body: some View {
         VStack(spacing: 3) {

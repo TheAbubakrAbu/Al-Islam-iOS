@@ -187,7 +187,7 @@ struct PrayerList: View {
 
             if showOptionalPrayerToggles {
                 VStack(spacing: 10) {
-                    optionalPrayerToggle("Duha", isOn: $settings.showDuha)
+                    optionalPrayerToggle("Duhaa", isOn: $settings.showDuha)
                     optionalPrayerToggle("Islamic Midnight", isOn: $settings.showIslamicMidnight)
                     optionalPrayerToggle("Last Third of the Night", isOn: $settings.showLastThird)
                 }
@@ -614,6 +614,29 @@ struct PrayerList: View {
         if prayer.nameTransliteration == "Fajr" {
             return "Prophet Muhammad (peace be upon him) said: \"The time for Fajr prayer is from the appearance of dawn until the sun begins to rise\" (Sahih Muslim 612)."
         }
+
+        // The two combined (qasr) rows MUST be matched before the `contains("Dhuhr")` / `contains("Maghrib")`
+        // checks below, which would otherwise swallow them and show the plain Dhuhr / Maghrib hadith - never
+        // once naming Asr or Isha, even though those are exactly the prayers being joined into this row.
+        if prayer.nameTransliteration == "Dhuhr/Asr" {
+            return """
+            While traveling, Dhuhr and Asr are joined and each is shortened to 2 rak'ah (qasr). Pray Dhuhr first, then Asr immediately after it, in this one time slot.
+
+            Anas (may Allah be pleased with him) said: "When the Prophet (peace be upon him) set out on a journey before the sun passed its zenith, he would delay Dhuhr until the time of Asr, then he would stop and join them" (Sahih al-Bukhari 1112).
+
+            "And when you travel throughout the land, there is no blame upon you for shortening the prayer" (Quran 4:101).
+            """
+        }
+        if prayer.nameTransliteration == "Maghrib/Isha" {
+            return """
+            While traveling, Maghrib and Isha are joined. Maghrib stays 3 rak'ah (it is never shortened) and Isha is shortened to 2 rak'ah. Pray Maghrib first, then Isha immediately after it, in this one time slot.
+
+            Ibn Abbas (may Allah be pleased with him) said: "The Prophet (peace be upon him) used to join Maghrib and Isha when he was traveling" (Sahih al-Bukhari 1108).
+
+            "And when you travel throughout the land, there is no blame upon you for shortening the prayer" (Quran 4:101).
+            """
+        }
+
         if prayer.nameTransliteration.contains("Dhuhr") {
             return "Prophet Muhammad (peace be upon him) said: \"The time for Dhuhr is when the sun has passed its zenith and a person’s shadow is equal in length to his height, until the time for Asr begins\" (Muslim 612)."
         }
@@ -627,7 +650,13 @@ struct PrayerList: View {
             return "Prophet Muhammad (peace be upon him) said: \"The time for Maghrib lasts until the twilight has faded\" (Muslim 612)."
         }
         if prayer.nameTransliteration == "Isha" {
-            return "Prophet Muhammad (peace be upon him) said: \"The time for Isha lasts until the middle of the night\" (Muslim 612)."
+            return """
+            Prophet Muhammad (peace be upon him) said: "The time for Isha lasts until the middle of the night" (Muslim 612).
+
+            WITR: the night prayer is sealed with Witr, prayed any time after Isha until Fajr. The Prophet (peace and blessings be upon him) said: "Make Witr the last of your prayer at night" (Sahih al-Bukhari 998).
+
+            It is an odd number of rak'ah: one, three, five, seven, or nine. The simplest and most common are a single rak'ah, or three. How the three are prayed differs between the madhahib (three joined with one tashahhud, or two then one), and all of these are established. If you fear you will not wake, pray it before you sleep; if you expect to wake, the last third of the night is better.
+            """
         }
         if prayer.nameTransliteration == "Duhaa" {
             return """
@@ -784,12 +813,53 @@ private struct PrayerDetailBlock: View {
         Settings.optionalPrayerNames.contains(prayer.nameTransliteration)
     }
 
+    /// The two prayers a combined (traveling) row actually stands for, with the time each one would have had
+    /// on its own. The combined row carries only the FIRST prayer's time - Asr and Isha are dropped when the
+    /// list is filtered for qasr - so their times are recovered from the uncombined list for the same day.
+    private var combinedComponents: [(name: String, arabic: String, time: Date)] {
+        let members: [String]
+        switch prayer.nameTransliteration {
+        case "Dhuhr/Asr": members = ["Dhuhr", "Asr"]
+        case "Maghrib/Isha": members = ["Maghrib", "Isha"]
+        default: return []
+        }
+
+        let full = settings.getPrayerTimes(for: prayer.time, fullPrayers: true) ?? []
+        return members.compactMap { name in
+            guard let match = full.first(where: { $0.nameTransliteration == name }) else { return nil }
+            return (name: match.displayName, arabic: match.nameArabic, time: match.time)
+        }
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text(isOptionalPrayer ? prayer.nameEnglish : "\(prayer.nameEnglish) - \(prayer.nameArabic)")
                 .font(.title3)
                 .foregroundColor(settings.accentColor.accent2)
                 .lineLimit(1)
+
+            // A combined row is titled "Daytime" / "Nighttime" and never names the two prayers it stands for,
+            // so tapping it left you with no idea when Asr (or Isha) actually falls. Name them, with their
+            // own times.
+            let components = combinedComponents
+            if !components.isEmpty {
+                ForEach(components, id: \.name) { component in
+                    (
+                        Text("\(component.name) (\(component.arabic)): ")
+                            + Text(component.time, style: .time)
+                    )
+                    .foregroundColor(.primary)
+                    .font(.footnote)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+                }
+
+                Text("Both are prayed together in this one slot, starting at the first prayer's time.")
+                    .foregroundColor(.secondary)
+                    .font(.caption2)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.bottom, 2)
+            }
 
             if prayer.nameTransliteration == "Shurooq" {
                 Text("Shurooq is not a prayer, but marks the end of Fajr.")

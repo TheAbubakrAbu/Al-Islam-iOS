@@ -137,7 +137,9 @@ private struct StarFieldView: View {
 
     var body: some View {
         GeometryReader { geo in
-            TimelineView(.animation(minimumInterval: 1.0 / 6.0, paused: opacity <= 0.01)) { timeline in
+            // Paused when invisible - and in Low Power Mode, where a 6fps twinkle is pure battery.
+            TimelineView(.animation(minimumInterval: 1.0 / 6.0,
+                                    paused: opacity <= 0.01 || AppPerformance.isLowPowerMode)) { timeline in
                 Canvas { context, size in
                     let t = timeline.date.timeIntervalSinceReferenceDate
                     for star in Self.stars {
@@ -170,11 +172,17 @@ struct SkyView: View {
     @ObservedObject private var scrubber = DayScrubber.shared
     @ObservedObject private var adhanPlayer = ForegroundAdhanPlayer.shared
     @Environment(\.layoutDirection) private var layoutDirection
+    @Environment(\.scenePhase) private var scenePhase
 
     /// Ticks every second so the clock is a real live clock and the sun/solar progress advance continuously
     /// (like the countdown's progress bar) rather than jumping once a minute. The star field has its own
     /// `TimelineView` and a seeded star list, so it is unaffected by this re-render.
+    ///
+    /// The tick only *applies* while the card is on screen and the scene is active (see `onReceive`):
+    /// TabView keeps this view alive when another tab is selected, and without the gate the whole card -
+    /// gradients, arc path, moon - re-rendered every second invisibly, all day.
     @State private var now = Date()
+    @State private var isOnScreen = false
     private let tick = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
     /// Holds the prayer columns, the arc, the moon and the countdown. Trimmed again: the scrubbed-moment
@@ -306,8 +314,21 @@ struct SkyView: View {
         // made this card sit inset from every other section. Plain rows carry almost none, so without this
         // the card bleeds out past the sections above and below it.
         .listRowInsets(EdgeInsets(top: 6, leading: sideInset, bottom: 6, trailing: sideInset))
-        .onReceive(tick) { now = $0 }
-        .onAppear { now = Date() }
+        .onReceive(tick) { date in
+            // No state change → no re-render. The timer itself keeps running (cheap); the per-second
+            // body evaluation was the cost worth gating.
+            guard isOnScreen, scenePhase == .active else { return }
+            now = date
+        }
+        .onAppear {
+            isOnScreen = true
+            now = Date()
+        }
+        .onDisappear { isOnScreen = false }
+        .onChange(of: scenePhase) { phase in
+            // Snap the clock forward on return; the gate above froze it while backgrounded.
+            if phase == .active { now = Date() }
+        }
     }
 
     /// Everything drawn over the sky: the two prayer columns, the moon and clock, and the countdown.
@@ -376,10 +397,15 @@ struct SkyView: View {
             // Only the moon and its phase live in the layout - the clock is *not* shown at rest (it just added
             // height for something the status bar already says). While the sun is being scrubbed, the previewed
             // moment floats in as an overlay ABOVE, so the card's height never changes.
+            // Quantized to the hour: the moon's look doesn't change measurably within one, and a stable
+            // date lets SwiftUI diff MoonPhaseView out (instead of re-running the ephemeris trig twice
+            // per second while the card ticks).
+            let moonDate = Date(timeIntervalSinceReferenceDate:
+                (displayedDate.timeIntervalSinceReferenceDate / 3600).rounded(.down) * 3600)
             HStack(spacing: 6) {
-                MoonPhaseView(date: displayedDate, diameter: 20)
+                MoonPhaseView(date: moonDate, diameter: 20)
 
-                Text(MoonPhase.on(displayedDate).name)
+                Text(MoonPhase.on(moonDate).name)
                     .font(.caption2)
                     .foregroundStyle(.white.opacity(0.75))
             }

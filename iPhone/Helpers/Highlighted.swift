@@ -115,6 +115,10 @@ struct HighlightedSnippet: View {
     }()
 
     private func normalizeEnglishForHighlight(_ text: String, trimWhitespace: Bool) -> String {
+        Self.normalizeEnglishForHighlightText(text, trimWhitespace: trimWhitespace)
+    }
+
+    static func normalizeEnglishForHighlightText(_ text: String, trimWhitespace: Bool) -> String {
         var cleaned = String(text.unicodeScalars
             .filter { !Self.englishHighlightStripSet.contains($0) }
         ).lowercased()
@@ -126,14 +130,33 @@ struct HighlightedSnippet: View {
         return cleaned
     }
 
+    /// Populates the fold cache for `sources` - safe to call from ANY thread (NSCache is thread-safe, and the
+    /// fold reads only immutable static tables). The search pipeline calls this from its background task with
+    /// the exact strings the result rows are about to render, so each row's first body evaluation is a cache
+    /// hit instead of paying the O(source × fold) cost on the main thread.
+    static func prewarmNormalization(of sources: [String]) {
+        for source in sources where !source.isEmpty {
+            let key = source as NSString
+            guard sourceNormCache.object(forKey: key) == nil else { continue }
+            let built = normalizedSourceAndMap(for: source)
+            sourceNormCache.setObject(SourceNormEntry(built.normalized, built.map), forKey: key)
+        }
+    }
+
     private func normalizeForSearch(_ text: String, trimWhitespace: Bool) -> String {
+        Self.normalizeForSearchText(text, trimWhitespace: trimWhitespace)
+    }
+
+    /// Static so the search pipeline can run it off the main thread (see `prewarmNormalization`). Reads only
+    /// `Settings.shared.cleanSearch`, which is a pure scalar-map fold - thread-safe.
+    static func normalizeForSearchText(_ text: String, trimWhitespace: Bool) -> String {
         // Strip search operators (`# ^ % $ …`) first so a query like `#الله` or `^Allah%` highlights the
         // residual word instead of failing to match (the source text never contains these characters).
         let base = text.removingAyahSearchOperators
         if !base.containsArabicLetters {
-            return normalizeEnglishForHighlight(base, trimWhitespace: trimWhitespace)
+            return Self.normalizeEnglishForHighlightText(base, trimWhitespace: trimWhitespace)
         }
-        return settings.cleanSearch(base, whitespace: trimWhitespace)
+        return Settings.shared.cleanSearch(base, whitespace: trimWhitespace)
             .removingArabicDiacriticsAndSigns
     }
 
@@ -169,9 +192,8 @@ struct HighlightedSnippet: View {
         if let cached = Self.sourceNormCache.object(forKey: sourceKey) {
             normEntry = cached
         } else {
-            let ns = normalizeForSearch(source, trimWhitespace: false)
-            let im = normalizedIndexMap(in: source, normalizedSource: ns)
-            normEntry = SourceNormEntry(ns, im)
+            let built = Self.normalizedSourceAndMap(for: source)
+            normEntry = SourceNormEntry(built.normalized, built.map)
             Self.sourceNormCache.setObject(normEntry, forKey: sourceKey)
         }
 
@@ -646,19 +668,42 @@ struct HighlightedSnippet: View {
         #endif
     }
 
-    private func normalizedIndexMap(in source: String, normalizedSource: String) -> [String.Index] {
+    /// Builds the folded source and its index map TOGETHER, in one pass, with the same whitespace collapsing
+    /// the query's fold applies.
+    ///
+    /// They used to be built by two different code paths: the folded string by folding the whole source at
+    /// once (which collapses whitespace runs and drops leading/trailing whitespace), and the map by folding
+    /// one character at a time (which counts every whitespace character). Any source with a doubled space, a
+    /// leading space, or beginner-mode letter spacing made the two lengths disagree - and the mapper treats a
+    /// length mismatch as corruption and refuses to map, so EVERY highlight on that row silently vanished.
+    /// That was the "Arabic highlighting just doesn't work sometimes" bug. Built together, the lengths agree
+    /// by construction.
+    static func normalizedSourceAndMap(for source: String) -> (normalized: String, map: [String.Index]) {
+        var normalized = ""
         var map: [String.Index] = []
-        map.reserveCapacity(normalizedSource.count)
+        map.reserveCapacity(source.count)
+        var pendingSpace = false
 
         for idx in source.indices {
             let next = source.index(after: idx)
-            let normalizedCharacter = normalizeForSearch(String(source[idx..<next]), trimWhitespace: false)
-            for _ in normalizedCharacter {
-                map.append(idx)
+            let piece = Self.normalizeForSearchText(String(source[idx..<next]), trimWhitespace: false)
+            for ch in piece {
+                if ch.isWhitespace {
+                    // Collapse runs, and drop leading whitespace outright - exactly what the query's fold does.
+                    pendingSpace = !normalized.isEmpty
+                } else {
+                    if pendingSpace {
+                        normalized.append(" ")
+                        map.append(idx)
+                        pendingSpace = false
+                    }
+                    normalized.append(ch)
+                    map.append(idx)
+                }
             }
         }
-
-        return map
+        // Trailing whitespace was never emitted, matching the query's trim.
+        return (normalized, map)
     }
 
     private func originalRange(
@@ -681,7 +726,19 @@ struct HighlightedSnippet: View {
 
         let start = indexMap[lowerOffset]
         let lastMatched = indexMap[upperOffset - 1]
-        let end = source.index(after: lastMatched)
+        var end = source.index(after: lastMatched)
+
+        // A cluster that folds to nothing (a standalone tashkeel or Quranic sign written as its own grapheme)
+        // belongs to the word it follows. Left outside the range, the word tints in the accent while its final
+        // mark stays in the base color - the "highlight stops one mark short" artifact on Arabic. Absorb them.
+        while end < source.endIndex {
+            let next = source.index(after: end)
+            let cluster = source[end..<next]
+            guard cluster.first?.isWhitespace != true,
+                  Self.normalizeForSearchText(String(cluster), trimWhitespace: false).isEmpty else { break }
+            end = next
+        }
+
         return start..<end
     }
 

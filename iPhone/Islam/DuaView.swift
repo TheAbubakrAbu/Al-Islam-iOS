@@ -78,7 +78,12 @@ struct DuaView: View {
             Section(header: Text("ETYMOLOGY")) {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Arabic root: د ع و (d-ʿ-w)")
-                        .font(.subheadline.weight(.semibold))
+                        .font(
+                            settings.islamUsesCustomArabicFace
+                                ? .custom(settings.fontArabic, size: 18, relativeTo: .subheadline)
+                                : .subheadline.weight(.semibold)
+                        )
+                        .arabicFontDesign(custom: settings.islamUsesCustomArabicFace)
                         .foregroundColor(settings.accentColor.color)
 
                     Text("Core meaning: to call, to invite, to summon")
@@ -184,13 +189,16 @@ private struct DuaCollectionView: View {
     @ViewBuilder
     private func filteredDuaRow(_ item: DuaItem) -> some View {
         if matchesSearch(item) {
-            // Alignment is decided by the row itself, from how many lines the Arabic actually takes.
+            // Duas are always trailing, however short. They are quoted Quran, and a line of Quran should sit
+            // where Arabic prose sits - not flush left like a UI label. (Dhikr keeps the measured behavior:
+            // leading while it fits on one line, trailing once it wraps.)
             AdhkarRow(
                 arabicText: item.arabicText,
                 transliteration: item.transliteration,
                 translation: item.displayTranslation,
                 useQuranicFont: settings.useFontArabic,
-                searchQuery: searchText
+                searchQuery: searchText,
+                alwaysTrailing: true
             )
         }
     }
@@ -207,7 +215,12 @@ private struct DuaCollectionView: View {
         Section(header: Text("ETYMOLOGY")) {
             VStack(alignment: .leading, spacing: 8) {
                 Text("Arabic root: د ع و (d-ʿ-w)")
-                    .font(.subheadline.weight(.semibold))
+                    .font(
+                        settings.islamUsesCustomArabicFace
+                            ? .custom(settings.fontArabic, size: 18, relativeTo: .subheadline)
+                            : .subheadline.weight(.semibold)
+                    )
+                    .arabicFontDesign(custom: settings.islamUsesCustomArabicFace)
                     .foregroundColor(settings.accentColor.color)
 
                 Text("Core meaning: to call, to invite, to summon")

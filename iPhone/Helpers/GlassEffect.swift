@@ -101,6 +101,10 @@ struct ConditionalGlassEffect: ViewModifier {
 }
 
 #if os(iOS)
+/// The one place every sheet's size is decided. A sheet opens SMALL (about half the screen) and can be dragged
+/// up to full height if its content needs the room - so a sheet never covers the screen for a choice that
+/// takes a moment. On iPad a sheet is a centred card, where a half-height detent is meaningless, so it stays
+/// full-size.
 struct SheetPresentationModifier: ViewModifier {
     func body(content: Content) -> some View {
         if #available(iOS 16.0, *) {
@@ -116,6 +120,58 @@ struct SheetPresentationModifier: ViewModifier {
             }
         } else {
             content
+        }
+    }
+}
+
+/// The standard sheet toolbar: an X to close, and (when the sheet edits something) a checkmark to confirm.
+///
+/// This exact pair was copy-pasted into a dozen sheets, and had already drifted - one used `.subheadline`
+/// where the rest used `.body`, several dropped the accent tint, and a few sheets used a text "Done" button or
+/// had no dismiss control at all. Defining it once means every sheet dismisses the same way.
+struct SheetDismissToolbar: ViewModifier {
+    @ObservedObject private var settings = Settings.shared
+    @Environment(\.dismiss) private var dismiss
+
+    /// When non-nil, a checkmark is shown. Returning `false` keeps the sheet open (e.g. a failed validation).
+    var onConfirm: (() -> Bool)?
+
+    // Branching happens here at the VIEW level, not inside the `toolbar` builder: `ToolbarContentBuilder`'s
+    // `if` needs iOS 16, and the app deploys to 15.
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if let onConfirm {
+            content
+                .toolbar { closeItem }
+                .toolbar {
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button {
+                            settings.hapticFeedback()
+                            if onConfirm() { dismiss() }
+                        } label: {
+                            Image(systemName: "checkmark")
+                                .font(.body.weight(.semibold))
+                        }
+                        .tint(settings.accentColor.color)
+                        .accessibilityLabel("Done")
+                    }
+                }
+        } else {
+            content.toolbar { closeItem }
+        }
+    }
+
+    private var closeItem: some ToolbarContent {
+        ToolbarItem(placement: .cancellationAction) {
+            Button {
+                settings.hapticFeedback()
+                dismiss()
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.body.weight(.semibold))
+            }
+            .tint(settings.accentColor.color)
+            .accessibilityLabel("Close")
         }
     }
 }
@@ -137,6 +193,11 @@ extension View {
     #if os(iOS)
     func smallMediumSheetPresentation() -> some View {
         modifier(SheetPresentationModifier())
+    }
+
+    /// An X to close, plus an optional checkmark to confirm. See `SheetDismissToolbar`.
+    func sheetDismissToolbar(onConfirm: (() -> Bool)? = nil) -> some View {
+        modifier(SheetDismissToolbar(onConfirm: onConfirm))
     }
     #endif
 }

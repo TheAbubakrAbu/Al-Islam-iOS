@@ -386,13 +386,18 @@ struct ShareAyahSheet: View {
             [.font: font, .paragraphStyle: paragraphStyle] as [NSAttributedString.Key: Any],
             range: NSRange(location: 0, length: attributed.length)
         )
-        let labelColor = UIColor.label.resolvedColor(with: UITraitCollection.current)
+        // A FIXED trait, not `.current`: this runs on the share-image queue, where `UITraitCollection.current`
+        // is thread-local and unspecified (it read as default/light regardless of the app's appearance). The
+        // comparison only needs both sides resolved under the SAME traits to identify "label-colored" runs,
+        // so any deterministic choice is correct - and it no longer reads main-thread-only UIKit state.
+        let comparisonTraits = UITraitCollection(userInterfaceStyle: .light)
+        let labelColor = UIColor.label.resolvedColor(with: comparisonTraits)
         attributed.enumerateAttribute(NSAttributedString.Key.foregroundColor, in: NSRange(location: 0, length: attributed.length)) { value, range, _ in
             guard let color = value as? UIColor else {
                 attributed.addAttribute(NSAttributedString.Key.foregroundColor, value: textColor, range: range)
                 return
             }
-            let resolved = color.resolvedColor(with: UITraitCollection.current)
+            let resolved = color.resolvedColor(with: comparisonTraits)
             if resolved.isVisuallyEqual(to: labelColor) {
                 attributed.addAttribute(NSAttributedString.Key.foregroundColor, value: textColor, range: range)
             }
@@ -718,6 +723,8 @@ struct ShareAyahSheet: View {
             }
             .navigationTitle("Preview")
             .navigationBarTitleDisplayMode(.inline)
+            // This sheet had no dismiss control at all - you could only swipe it away or complete a share.
+            .sheetDismissToolbar()
         }
         .accentColor(settings.accentColor.color)
         .onAppear {
@@ -904,8 +911,10 @@ struct ShareAyahSheet: View {
         DispatchQueue.main.async {
             self.isGeneratingImage = true
         }
+        // UIScreen.main is main-thread-only; capture the width here (still on main) for the queue below.
+        let screenWidth = UIScreen.main.bounds.width
         Self.shareImageQueue.async { [self] in
-            let img: UIImage = autoreleasepool { self.drawImage(shareSettings: snapshot) }
+            let img: UIImage = autoreleasepool { self.drawImage(shareSettings: snapshot, screenWidth: screenWidth) }
             DispatchQueue.main.async {
                 guard self.imageGenerationID == generationID else { return }
                 withAnimation {
@@ -920,7 +929,7 @@ struct ShareAyahSheet: View {
         }
     }
 
-    private func drawImage(shareSettings: ShareSettings) -> UIImage {
+    private func drawImage(shareSettings: ShareSettings, screenWidth: CGFloat) -> UIImage {
         guard let surah = surah, let ayah = ayah else { return UIImage() }
 
         // Rounded, to match the app's system-font design (the `fontDesign` environment does not reach this
@@ -941,7 +950,7 @@ struct ShareAyahSheet: View {
         // --- Layout constants
         let padding: CGFloat = 20, spacing: CGFloat = 8, extraSpacing: CGFloat = 30
         let iPhoneCanvasCap: CGFloat = 500
-        let deviceWidth = UIScreen.main.bounds.width - 50
+        let deviceWidth = screenWidth - 50
         let maxWidth = min(deviceWidth, iPhoneCanvasCap)
 
         // Paragraph styles
@@ -1153,8 +1162,10 @@ extension ShareAyahSheet {
             let text = buildShareText(surah: surah, ayah: ayah, shareSettings: shareSettings, settings: settings, includeNote: includeNote, noteText: noteText)
             UIPasteboard.general.string = text
         case .image:
+            // UIScreen.main is main-thread-only; capture the width here (still on main) for the queue below.
+            let screenWidth = UIScreen.main.bounds.width
             DispatchQueue.global(qos: .userInitiated).async {
-                let img = buildShareImage(surah: surah, ayah: ayah, shareSettings: shareSettings, settings: settings, includeNote: includeNote, noteText: noteText)
+                let img = buildShareImage(surah: surah, ayah: ayah, shareSettings: shareSettings, settings: settings, includeNote: includeNote, noteText: noteText, screenWidth: screenWidth)
                 DispatchQueue.main.async {
                     UIPasteboard.general.image = img
                 }
@@ -1228,7 +1239,7 @@ extension ShareAyahSheet {
         return s
     }
 
-    private static func buildShareImage(surah: Surah, ayah: Ayah, shareSettings: ShareSettings, settings: Settings, includeNote: Bool, noteText: String?) -> UIImage {
+    private static func buildShareImage(surah: Surah, ayah: Ayah, shareSettings: ShareSettings, settings: Settings, includeNote: Bool, noteText: String?, screenWidth: CGFloat) -> UIImage {
         // Rounded, to match the app's system-font design (see the note in the other renderer above).
         let bodyFont = UIFont.roundedSystemFont(ofSize: UIFont.preferredFont(forTextStyle: .body).pointSize)
         let selectedArabicFontName = shareSettings.shareArabicFont.isEmpty ? settings.fontArabic : shareSettings.shareArabicFont
@@ -1243,7 +1254,7 @@ extension ShareAyahSheet {
         let accent = settings.accentColor.color.uiColor
         let padding: CGFloat = 20, spacing: CGFloat = 8, extraSpacing: CGFloat = 30
         let iPhoneCanvasCap: CGFloat = 500
-        let deviceWidth = UIScreen.main.bounds.width - 50
+        let deviceWidth = screenWidth - 50
         let maxWidth = min(deviceWidth, iPhoneCanvasCap)
         let right = NSMutableParagraphStyle(); right.alignment = .right
         let left = NSMutableParagraphStyle(); left.alignment = .left

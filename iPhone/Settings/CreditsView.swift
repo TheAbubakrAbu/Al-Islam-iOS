@@ -8,9 +8,6 @@ struct CreditsView: View {
     var body: some View {
         NavigationView {
             creditsList
-                .adaptiveSafeArea(edge: .bottom) {
-                    doneButton
-                }
         }
     }
 
@@ -26,6 +23,9 @@ struct CreditsView: View {
         }
         .applyConditionalListStyle()
         .navigationTitle("Credits")
+        // Dismisses through the same X every other sheet uses, instead of a full-width "Done" button pinned
+        // over the bottom of the content.
+        .sheetDismissToolbar()
     }
 
     private var headerSection: some View {

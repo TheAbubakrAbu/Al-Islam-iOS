@@ -307,7 +307,9 @@ struct MasjidLocatorView: View {
             } else {
                 ScrollView {
                     VStack(spacing: 0) {
-                        ForEach(Array(results.enumerated()), id: \.offset) { _, item in
+                        // Identity by object, not position: when a new search replaces `results`, rows are
+                        // replaced rather than morphing one masjid's text into another's in place.
+                        ForEach(results, id: \.self) { item in
                             HStack(alignment: .top, spacing: 10) {
                                 HStack(alignment: .top, spacing: 10) {
                                     Image(systemName: "mappin.and.ellipse")
@@ -489,99 +491,38 @@ struct MasjidLocatorView: View {
 
     private func search(for text: String) async {
         let searchRegion = region
-        let items = await performSearch(for: text, in: searchRegion)
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        // Read main-actor state (settings, region) before hopping off; the fan-out, filtering, and
+        // distance sort all run in `performMasjidSearch`, off the main actor.
+        let sortOrigin: CLLocationCoordinate2D? = {
+            guard trimmed.isEmpty else { return nil }
+            if let cur = settings.currentLocation, cur.latitude != 1000, cur.longitude != 1000 {
+                return cur.coordinate
+            }
+            if let homeCoordinate {
+                return homeCoordinate
+            }
+            return searchRegion.center
+        }()
+
+        let items = await performMasjidSearch(
+            queries: masjidQueries(for: trimmed),
+            in: searchRegion,
+            sortOrigin: sortOrigin
+        )
 
         guard !Task.isCancelled else { return }
 
-        await MainActor.run {
-            withAnimation {
-                results = items
-                isSearching = false
-                if selectedItem == nil || !items.contains(where: { isSameItem($0, selectedItem) }) {
-                    selectedItem = items.first
-                }
-                persistHomeCacheIfNeeded(items: items, query: text, region: searchRegion)
+        withAnimation {
+            results = items
+            isSearching = false
+            if selectedItem == nil || !items.contains(where: { isSameItem($0, selectedItem) }) {
+                selectedItem = items.first
             }
         }
-    }
-
-    private func performSearch(for text: String, in searchRegion: MKCoordinateRegion) async -> [MKMapItem] {
-        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-        let queries: [String] = {
-            if trimmed.isEmpty {
-                return ["mosque", "masjid", "islamic center", "muslim", "rahma"]
-            } else {
-                return Array(NSOrderedSet(array: [
-                    trimmed,
-                    "\(trimmed) mosque",
-                    "\(trimmed) masjid",
-                    "\(trimmed) islamic",
-                    "\(trimmed) islamic center",
-                    "\(trimmed) muslim",
-                    "\(trimmed) rahma"
-                ])).compactMap { $0 as? String }
-            }
-        }()
-
-        var combinedItems: [MKMapItem] = []
-
-        for query in queries {
-            guard !Task.isCancelled else { return [] }
-
-            let request = MKLocalSearch.Request()
-            request.naturalLanguageQuery = query
-            request.resultTypes = .pointOfInterest
-            request.region = searchRegion
-
-            let response = try? await MKLocalSearch(request: request).start()
-            combinedItems.append(contentsOf: response?.mapItems ?? [])
-        }
-
-        let items = combinedItems.filter { item in
-            let name = (item.name ?? "").lowercased()
-            let title = (item.placemark.title ?? "").lowercased()
-            let keywords = ["masjid", "mosque", "islam", "islamic", "muslim", "rahma"]
-            return keywords.contains { keyword in
-                name.contains(keyword) || title.contains(keyword)
-            }
-        }
-
-        var seen = Set<String>()
-        let unique = items.filter { item in
-            let key = "\(item.name ?? "")|\(item.placemark.coordinate.latitude)|\(item.placemark.coordinate.longitude)"
-            return seen.insert(key).inserted
-        }
-
-        if trimmed.isEmpty {
-            let originCoordinate: CLLocationCoordinate2D = {
-                if let cur = settings.currentLocation,
-                   cur.latitude != 1000,
-                   cur.longitude != 1000 {
-                    return cur.coordinate
-                }
-                if let homeCoordinate {
-                    return homeCoordinate
-                }
-                return searchRegion.center
-            }()
-
-            let origin = CLLocation(latitude: originCoordinate.latitude, longitude: originCoordinate.longitude)
-            let sortedByDistance = unique.sorted { lhs, rhs in
-                let lhsDistance = origin.distance(from: CLLocation(
-                    latitude: lhs.placemark.coordinate.latitude,
-                    longitude: lhs.placemark.coordinate.longitude
-                ))
-                let rhsDistance = origin.distance(from: CLLocation(
-                    latitude: rhs.placemark.coordinate.latitude,
-                    longitude: rhs.placemark.coordinate.longitude
-                ))
-                return lhsDistance < rhsDistance
-            }
-
-            return Array(sortedByDistance.prefix(12))
-        }
-
-        return Array(unique.prefix(12))
+        // The encode + UserDefaults write has no business inside an animation transaction.
+        persistHomeCacheIfNeeded(items: items, query: text, region: searchRegion)
     }
 
     private func scheduleSearch(for text: String, force: Bool) {
@@ -614,13 +555,22 @@ struct MasjidLocatorView: View {
 
     private func warmHomeCacheIfNeeded() {
         guard let home = settings.homeLocation else { return }
+        // When the map opened near home, the live search running right now covers the same area and
+        // already persists into the cache (`persistHomeCacheIfNeeded` uses the same radius) - a second
+        // identical five-query fan-out would just double the MKLocalSearch traffic. Warm only when the
+        // map opened somewhere else, so the cache is still fresh for the next open at home.
+        guard !isRegionNearHome(region) else { return }
 
         Task(priority: .utility) {
             let homeRegion = MKCoordinateRegion(
                 center: home.coordinate,
                 span: .init(latitudeDelta: 0.15, longitudeDelta: 0.15)
             )
-            let items = await performHomeCacheRefresh(for: homeRegion)
+            let items = await performMasjidSearch(
+                queries: masjidQueries(for: ""),
+                in: homeRegion,
+                sortOrigin: nil
+            )
             guard !items.isEmpty else { return }
 
             let cache = CachedMasjidHomeResults(
@@ -685,36 +635,81 @@ struct MasjidLocatorView: View {
     }
 }
 
-private func performHomeCacheRefresh(for searchRegion: MKCoordinateRegion) async -> [MKMapItem] {
-    let queries = ["mosque", "masjid", "islamic center", "muslim", "rahma"]
-    var combinedItems: [MKMapItem] = []
+private let masjidKeywords = ["masjid", "mosque", "islam", "islamic", "muslim", "rahma"]
 
-    for query in queries {
-        let request = MKLocalSearch.Request()
-        request.naturalLanguageQuery = query
-        request.resultTypes = .pointOfInterest
-        request.region = searchRegion
+private func masjidQueries(for trimmed: String) -> [String] {
+    if trimmed.isEmpty {
+        return ["mosque", "masjid", "islamic center", "muslim", "rahma"]
+    }
+    var seen = Set<String>()
+    return [
+        trimmed,
+        "\(trimmed) mosque",
+        "\(trimmed) masjid",
+        "\(trimmed) islamic",
+        "\(trimmed) islamic center",
+        "\(trimmed) muslim",
+        "\(trimmed) rahma"
+    ].filter { seen.insert($0).inserted }
+}
 
-        let response = try? await MKLocalSearch(request: request).start()
-        combinedItems.append(contentsOf: response?.mapItems ?? [])
+/// The shared search core for the live search and the home-cache warmer. Top-level (not a `View` member,
+/// which would pin it to the main actor): the queries fan out concurrently instead of serially - the
+/// wall-clock cost is one round-trip, not five to seven - and the filter/dedup/sort never touch the main
+/// thread. Result order is kept deterministic by reassembling buckets in query order.
+private func performMasjidSearch(
+    queries: [String],
+    in searchRegion: MKCoordinateRegion,
+    sortOrigin: CLLocationCoordinate2D?,
+    limit: Int = 12
+) async -> [MKMapItem] {
+    var buckets = [[MKMapItem]](repeating: [], count: queries.count)
+
+    await withTaskGroup(of: (Int, [MKMapItem]).self) { group in
+        for (index, query) in queries.enumerated() {
+            group.addTask {
+                let request = MKLocalSearch.Request()
+                request.naturalLanguageQuery = query
+                request.resultTypes = .pointOfInterest
+                request.region = searchRegion
+
+                let response = try? await MKLocalSearch(request: request).start()
+                return (index, response?.mapItems ?? [])
+            }
+        }
+        for await (index, items) in group {
+            buckets[index] = items
+        }
     }
 
-    let items = combinedItems.filter { item in
+    guard !Task.isCancelled else { return [] }
+
+    let matching = buckets.joined().filter { item in
         let name = (item.name ?? "").lowercased()
         let title = (item.placemark.title ?? "").lowercased()
-        let keywords = ["masjid", "mosque", "islam", "islamic", "muslim", "rahma"]
-        return keywords.contains { keyword in
+        return masjidKeywords.contains { keyword in
             name.contains(keyword) || title.contains(keyword)
         }
     }
 
     var seen = Set<String>()
-    let unique = items.filter { item in
+    let unique = matching.filter { item in
         let key = "\(item.name ?? "")|\(item.placemark.coordinate.latitude)|\(item.placemark.coordinate.longitude)"
         return seen.insert(key).inserted
     }
 
-    return Array(unique.prefix(12))
+    guard let sortOrigin else { return Array(unique.prefix(limit)) }
+
+    let origin = CLLocation(latitude: sortOrigin.latitude, longitude: sortOrigin.longitude)
+    let sorted = unique
+        .map { item -> (MKMapItem, CLLocationDistance) in
+            let coord = item.placemark.coordinate
+            return (item, origin.distance(from: CLLocation(latitude: coord.latitude, longitude: coord.longitude)))
+        }
+        .sorted { $0.1 < $1.1 }
+        .map { $0.0 }
+
+    return Array(sorted.prefix(limit))
 }
 
 #Preview {

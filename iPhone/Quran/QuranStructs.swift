@@ -48,6 +48,12 @@ struct BoundaryDividerModel: Codable, Equatable {
     let pageSegment: String
     let juzSegment: String?
     let style: BoundaryDividerStyle
+
+    /// Where this page falls WITHIN the surah, and how many pages the surah spans - the "(3/10)" already shown
+    /// inside `pageSegment`, kept as numbers so the floating overlay can draw a progress bar from them instead
+    /// of parsing them back out of the label. `nil` when the boundary is a juz with no page.
+    var pageInSurah: Int? = nil
+    var surahPageCount: Int? = nil
 }
 
 extension Surah {

@@ -72,7 +72,13 @@ struct QiblaView: View {
     }
 
     private var alignmentScore: Double {
-        1.0 - (min(20.0, distanceToQibla) / 20.0)
+        // Quantized to 1/24 steps. The raw score changes on every compass sample (headingFilter is .none
+        // for a smooth arrow), and each distinct value re-rasterizes GlassyQiblaRing's three blurs +
+        // shadow + compositing group - exactly while the user is aligned and watching. Snapping to steps
+        // lets SwiftUI diff the ring out between visually identical frames; only the cheap arrow rotates
+        // per sample.
+        let raw = 1.0 - (min(20.0, distanceToQibla) / 20.0)
+        return (raw * 24).rounded() / 24
     }
 
     private var arrowColor: Color {
@@ -320,36 +326,6 @@ struct QiblaArrow: View {
                 )
             )
             .shadow(color: tint.opacity(0.35), radius: max(0.6, width * 0.18), x: 0, y: 0)
-    }
-}
-
-final class LocalQiblaCompassHolder: ObservableObject {
-    @Published private(set) var inner: LocalQiblaCompass?
-    @Published var direction: Double = 0
-
-    private var cancellable: AnyCancellable?
-
-    func startIfNeeded() {
-        if let inner {
-            inner.start()
-            return
-        }
-
-        let compass = LocalQiblaCompass(locationProvider: {
-            Settings.shared.currentLocation
-        })
-
-        inner = compass
-        cancellable = compass.$direction
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] value in
-                self?.direction = value
-            }
-        compass.start()
-    }
-
-    func stop() {
-        inner?.stop()
     }
 }
 

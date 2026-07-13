@@ -275,14 +275,12 @@ struct SettingsAdhanView: View {
     // it live *here*, and a dialog anchored only to the (now off-screen) root list could never present - 
     // which is why the Traveling Mode confirmation appeared to do nothing.
     private var prayerCalculationDestination: some View {
-        adhanSettingsSubList(title: "Prayer Calculation") {
-            prayerCalculationSection
-        }
-        .confirmationDialog(dialogTitle, isPresented: autoChangeDialogBinding, titleVisibility: .visible) {
-            autoChangeDialogButtons
-        } message: {
-            autoChangeDialogMessage
-        }
+        PrayerCalculationListView()
+            .confirmationDialog(dialogTitle, isPresented: autoChangeDialogBinding, titleVisibility: .visible) {
+                autoChangeDialogButtons
+            } message: {
+                autoChangeDialogMessage
+            }
     }
 
     private var travelingModeDestination: some View {
@@ -373,10 +371,10 @@ struct SettingsAdhanView: View {
         .onChange(of: isOn.wrappedValue) { _ in settings.hapticFeedback() }
     }
 
+    /// Kept for the madhab + high-latitude controls. The method itself now has its own screen
+    /// (`PrayerCalculationListView`), which can show each method's angles and be searched.
     private var prayerCalculationSection: some View {
         Section(header: Text("PRAYER CALCULATION")) {
-            automaticCalculationToggle
-            calculationPickerGroup
             hanafiCalculationGroup
             highLatitudeRuleGroup
         }
@@ -418,46 +416,6 @@ struct SettingsAdhanView: View {
             caption += " Automatic uses \(settings.recommendedHighLatitudeRuleLabel(at: coordinates)) in \(location.city)."
         }
         return caption
-    }
-
-    private var automaticCalculationToggle: some View {
-        Toggle("Automatic Prayer Calculation", isOn: $settings.calculationAutomatic.animation(.easeInOut))
-            .font(.subheadline)
-            .tint(settings.accentColor.color)
-            .onChange(of: settings.calculationAutomatic) { _ in settings.hapticFeedback() }
-    }
-
-    private var calculationPickerGroup: some View {
-        VStack(alignment: .leading) {
-            Picker("Calculation", selection: calculationSelection.animation(.easeInOut)) {
-                Section {
-                    ForEach(calculationOptions, id: \.self) { option in
-                        Text(option).tag(option)
-                            .font(.subheadline)
-                    }
-                } header: {
-                    Text("Calculation")
-                        .foregroundStyle(.secondary)
-                }
-            }
-            .font(.subheadline)
-            .disabled(settings.calculationAutomatic)
-            .onChange(of: settings.prayerCalculation) { _ in settings.hapticFeedback() }
-
-            Text("Fajr and Isha timings vary by calculation method, as they are based on twilight. If automatic mode is on, \(AppIdentifiers.appName) picks a method based on your location (for example, North America or Turkey). If your country is not mapped, it defaults to Muslim World League.")
-                .font(.caption)
-                .foregroundColor(.secondary)
-                .padding(.vertical, 2)
-        }
-    }
-
-    private var calculationSelection: Binding<String> {
-        Binding(
-            get: { settings.prayerCalculation },
-            set: { newValue in
-                settings.setPrayerCalculationManually(newValue)
-            }
-        )
     }
 
     private var hanafiCalculationGroup: some View {
@@ -559,9 +517,12 @@ struct SettingsAdhanView: View {
         )
     }
 
+    // Not iOS-only. The whole body used to sit inside `#if os(iOS)`, but the "Manual Offsets" link that pushes
+    // it (see `adhanSettingsLink` above) was never guarded - so on the watch the link pushed a List with a
+    // title and zero rows. Both the Hijri stepper and `PrayerOffsetsView` are plain Steppers that work fine on
+    // watchOS, so the fix is to actually show them rather than to hide the link.
     @ViewBuilder
     private var prayerOffsetsSection: some View {
-        #if os(iOS)
         // The Hijri day offset used to live in its own top-level "Manual Offsets" screen; it now sits here
         // alongside the prayer-time offsets so every manual adjustment is in one place.
         Section(header: Text("HIJRI OFFSET")) {
@@ -601,7 +562,6 @@ struct SettingsAdhanView: View {
         }
 
         PrayerOffsetsView()
-        #endif
     }
 
     private var isWatch: Bool {
@@ -613,23 +573,6 @@ struct SettingsAdhanView: View {
     }
 }
 
-let calculationOptions: [String] = {
-    let preferred = "Muslim World League"
-    let rest = [
-        "Britain (Moonsighting Committee)",
-        "Saudi Arabia (Umm Al-Qura)",
-        "Egypt",
-        "Dubai",
-        "Kuwait",
-        "Qatar",
-        "Turkey",
-        "Tehran",
-        "Karachi",
-        "Singapore",
-        "North America"
-    ].sorted { $0.localizedCaseInsensitiveCompare($1) == .orderedAscending }
-    return [preferred] + rest
-}()
 
 struct PrayerOffsetsView: View {
     @ObservedObject var settings = Settings.shared

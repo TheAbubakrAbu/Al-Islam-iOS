@@ -3,7 +3,11 @@ import SwiftUI
 struct TasbihView: View {
     @ObservedObject var settings = Settings.shared
 
-    @State private var counters: [Int: Int] = Self.initialCounters
+    // Empty by default with `counters[i, default: 0]` reads everywhere, so constructing this view touches no
+    // data at all. The old `Self.initialCounters` default forced the `commonDhikrItems` global (and its
+    // per-item diacritic-folded search blobs) to initialize the moment the STRUCT was built - and on watchOS
+    // the Islam tab builds this struct eagerly for its NavigationLink on every body pass.
+    @State private var counters: [Int: Int] = [:]
     @State private var selectedDhikrIndex: Int = Self.freeDhikrIndex
 
     /// A free count for dhikr that isn't on the list. Unlike the preset counters - which are per-session
@@ -18,8 +22,10 @@ struct TasbihView: View {
     private static let freeDhikrIndex = -1
     private static let cycleChoices = [33, 99, 100, 500, 1000]
 
-    private let tasbihData = commonDhikrItems
-    private static let initialCounters = Dictionary(uniqueKeysWithValues: commonDhikrItems.indices.map { ($0, 0) })
+    /// Computed, not stored: a stored `let` would also force `commonDhikrItems` at struct-construction time.
+    private var tasbihData: [CommonDhikr] { commonDhikrItems }
+
+    private var usesCustomArabicFace: Bool { settings.islamUsesCustomArabicFace }
 
     private var isFreeDhikrSelected: Bool { selectedDhikrIndex == Self.freeDhikrIndex }
 
@@ -206,8 +212,17 @@ struct TasbihView: View {
             // The dhikr sits ABOVE the ring rather than crammed inside it - the Arabic needed room, and the
             // count is what belongs at the centre of a counter.
             VStack(spacing: 2) {
+                // The Quranic face, like every other screen that shows this same dhikr text. Only the Arabic
+                // gets it: a free-count LABEL the user typed is their own text, not Arabic, so it stays in the
+                // UI face. `usesCustomArabicFace` is false when the reader picked the Basic font, in which case
+                // the rounded system face is correct and the design opt-out must not fire.
                 Text(selectedDhikr?.arabicText ?? (freeLabel.isEmpty ? "Free Count" : freeLabel))
-                    .font(.title3.weight(.bold))
+                    .font(
+                        selectedDhikr != nil && usesCustomArabicFace
+                            ? .custom(settings.fontArabic, size: 26, relativeTo: .title3)
+                            : .title3.weight(.bold)
+                    )
+                    .arabicFontDesign(custom: selectedDhikr != nil && usesCustomArabicFace)
                     .foregroundColor(settings.accentColor.color)
                     .multilineTextAlignment(.center)
                     .lineLimit(2)
@@ -394,7 +409,12 @@ struct TasbihRow: View {
     private var textColumn: some View {
         VStack(alignment: .leading) {
             Text(tasbih.arabicText)
-                .font(.headline)
+                .font(
+                    settings.islamUsesCustomArabicFace
+                        ? .custom(settings.fontArabic, size: 20, relativeTo: .headline)
+                        : .headline
+                )
+                .arabicFontDesign(custom: settings.islamUsesCustomArabicFace)
                 .foregroundColor(settings.accentColor.color)
 
             Text(tasbih.transliteration)
