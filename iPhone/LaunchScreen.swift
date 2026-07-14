@@ -181,12 +181,12 @@ struct LaunchScreen: View {
     @MainActor
     private func runLaunchAnimation() async {
         // 1) Nothing animates yet. The initial state already shows just the Al-Islam icon on a plain background
-        //    (no gradient), so the heavy load + warm in step 2 stays perfectly smooth - there are no running
+        //    (no gradient), so the heavy load + warm in step 2 stays perfectly smooth — there are no running
         //    animations to drop frames.
         triggerHapticFeedback(.soft)
 
         // 2) Hold on the icon and wait for everything to finish initializing. Nothing is animating during this
-        //    window, so background-init contention is invisible - the screen simply rests on the icon for as
+        //    window, so background-init contention is invisible — the screen simply rests on the icon for as
         //    long as it takes. This is the "keep Al-Islam there and wait" behavior.
         async let settingsReady: Void = Settings.shared.waitUntilReady()
         async let quranReady: Void = {
@@ -200,11 +200,18 @@ struct LaunchScreen: View {
         async let namesReady: Void = NamesViewModel.shared.waitUntilLoaded()
         _ = await (settingsReady, quranReady, playerReady, namesReady)
 
-        // 3) Data is ready, so the finale starts NOW - the tab warm-up (below) overlaps it instead of
-        //    delaying it. The finale is ~1.4s of pure animation; the warm dance is a few hundred ms of view
-        //    building behind an opaque cover. Serializing them (the old order) added the entire warm time to
-        //    every cold launch for nothing - the springs animate via Core Animation and stay smooth against
-        //    the warm-up's main-thread bursts.
+        #if os(iOS)
+        // Still nothing animating: also let the main tabs build + warm behind this cover (the Quran tab is
+        // realized and retained, then we settle on Adhan). Waiting here means the finale + hand-off below run
+        // against an already-built UI, so the ending plays start-to-finish with no stall in the middle and the
+        // reveal is instant. Capped so a failed warm can never strand us on the launch screen. iPhone-only: the
+        // Watch has no such tab warm.
+        await LaunchWarmup.shared.waitUntilWarm(maxWaitNanos: 6_000_000_000)
+        #endif
+
+        // 3) Everything is ready and the CPU is free, so the finale plays smoothly on top of the resting icon:
+        //    the gradient/glow blooms in, the rings expand, the shimmer sweeps the logo, and — a beat later —
+        //    the Quran/Adhan companion apps are released outward.
         triggerHapticFeedback(.soft)
         withAnimation(.spring(response: 0.6, dampingFraction: 0.82)) {
             size = 0.94
@@ -226,12 +233,6 @@ struct LaunchScreen: View {
 
         // Let the finale breathe before handing off.
         try? await Task.sleep(nanoseconds: 900_000_000)
-
-        // The tabs must be built + settled on Adhan before the reveal (a reveal onto a half-built UI is the
-        // one thing worse than a slow launch). In practice the warm finished long ago - it had the whole
-        // finale to run in - so this wait is a no-op except on a genuinely slow cold start. Capped so a
-        // failed warm can never strand us on the launch screen.
-        await LaunchWarmup.shared.waitUntilWarm(maxWaitNanos: 6_000_000_000)
 
         // 4) Smoothly hand off to the app (revealing the already-warm Adhan tab underneath).
         triggerHapticFeedback(.soft)

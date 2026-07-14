@@ -2968,22 +2968,99 @@ final class TajweedStore {
         if hasKasraFamily(current) { return false }
         if hasHeavyOpenVowel(current) { return true }
         if hasSukoon(current) {
-            guard let previousIndex = previousPronouncedArabicLetterClusterIndex(clusters: clusters, before: index) else { return false }
-            let previous = clusters[previousIndex]
-            if hasKasraFamily(previous) { return false }
-            if hasFathaFamily(previous) || hasDammaFamily(previous) { return true }
-            if previous.primaryArabicLetter == "و" {
-                return !hasAnyTashkeel(previous)
+            switch saakinRaaVowelContext(clusters: clusters, index: index) {
+            case .none:
+                return false
+            case .startingHamzatWasl(let takesDamma):
+                return takesDamma
+            case .letter(let previous):
+                if hasKasraFamily(previous) { return false }
+                if hasFathaFamily(previous) || hasDammaFamily(previous) { return true }
+                if previous.primaryArabicLetter == "و" {
+                    return !hasAnyTashkeel(previous)
+                }
+                if previous.primaryArabicLetter == "ا" || previous.primaryArabicLetter == "ى" {
+                    return !hasAnyTashkeel(previous)
+                }
+                return false
             }
-            if previous.primaryArabicLetter == "ا" || previous.primaryArabicLetter == "ى" {
-                return !hasAnyTashkeel(previous)
-            }
-            return false
         }
         if hasShadda(current) { return true }
         guard let prev = previousCluster(in: clusters, before: index) else { return false }
         if hasKasraFamily(prev) { return true }
         if isYaaMaddLetterCluster(clusters: clusters, yaIndex: index - 1) { return true }
+        return false
+    }
+
+    /// What a saakin raa leans on for its weight.
+    private enum SaakinRaaVowelContext {
+        /// The pronounced letter before it; its vowel decides.
+        case letter(CharacterClusterInfo)
+        /// A hamzatul-wasl that actually opens the recitation, so its own assumed vowel decides.
+        case startingHamzatWasl(takesDamma: Bool)
+        case none
+    }
+
+    /// A saakin raa preceded by hamzatul-wasl (`وَٱرۡتَبۡتُمۡ` 57:14, `قَالُوا۟ ٱرۡجِعُوا۟`) has no vowel of its own to
+    /// lean on, and the wasl hamza is dropped in connected reading — so the weight is decided by whatever comes
+    /// before the hamza, reaching back across the word boundary if need be (in 57:14 that's the fatha on the
+    /// و of وَ, which makes the raa heavy; the old code stopped at the vowel-less hamza and called it light).
+    ///
+    /// Only when the hamza opens the ayah is it actually pronounced, and then it carries its own assumed vowel:
+    /// the classic rule is that it takes a damma when the word's third letter has one, and a kasra otherwise —
+    /// so damma → heavy, anything else → light.
+    private func saakinRaaVowelContext(clusters: [CharacterClusterInfo], index: Int) -> SaakinRaaVowelContext {
+        // Stops at the word boundary, so this only ever finds a hamzatul-wasl that sits in the raa's own word.
+        guard let previousIndex = previousPronouncedArabicLetterClusterIndex(clusters: clusters, before: index) else {
+            return .none
+        }
+        guard clusters[previousIndex].contains(Self.hamzatWasl) else {
+            return .letter(clusters[previousIndex])
+        }
+        if let beforeHamzaIndex = previousPronouncedArabicLetterClusterIndexCrossingWords(clusters: clusters, before: previousIndex) {
+            return .letter(clusters[beforeHamzaIndex])
+        }
+        return .startingHamzatWasl(takesDamma: hamzatWaslStartTakesDamma(clusters: clusters, hamzaIndex: previousIndex))
+    }
+
+    /// Like `previousPronouncedArabicLetterClusterIndex`, but steps over word boundaries instead of stopping at
+    /// them — needed only where a letter is dropped in connected reading and the sound carries over from the
+    /// previous word.
+    private func previousPronouncedArabicLetterClusterIndexCrossingWords(clusters: [CharacterClusterInfo], before index: Int) -> Int? {
+        var i = index - 1
+        while i >= 0 {
+            let cluster = clusters[i]
+            guard cluster.primaryArabicLetter != nil, !isAyahEndOrDecorativeCluster(cluster) else {
+                i -= 1
+                continue
+            }
+            if isSilentFinalLetter(clusters: clusters, index: i) {
+                i -= 1
+                continue
+            }
+            return i
+        }
+        return nil
+    }
+
+    /// The hamzatul-wasl "third letter" rule: counting the hamza itself as the first letter of its word, a damma
+    /// on the third letter means the hamza is started with a damma (heavy), anything else means a kasra (light).
+    private func hamzatWaslStartTakesDamma(clusters: [CharacterClusterInfo], hamzaIndex: Int) -> Bool {
+        var letterCount = 1 // the hamza
+        var i = hamzaIndex + 1
+        while i < clusters.count {
+            let cluster = clusters[i]
+            if isWhitespaceOnly(cluster) { return false } // word ended before a third letter
+            guard cluster.primaryArabicLetter != nil else {
+                i += 1
+                continue
+            }
+            letterCount += 1
+            if letterCount == 3 {
+                return hasDammaFamily(cluster)
+            }
+            i += 1
+        }
         return false
     }
 

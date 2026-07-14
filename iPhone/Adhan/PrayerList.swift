@@ -401,8 +401,8 @@ struct PrayerList: View {
         #else
         let columnCount = settings.travelingMode ? 2 : 3
         let tileSpacing: CGFloat = 8
-        let tileHorizontalPadding: CGFloat = 10
-        let tileVerticalPadding: CGFloat = 12
+        let tileHorizontalPadding: CGFloat = 8
+        let tileVerticalPadding: CGFloat = 8
         #endif
         let columns = Array(
             repeating: GridItem(.flexible(), spacing: tileSpacing),

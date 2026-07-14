@@ -268,7 +268,7 @@ private struct MainTabView: View {
                 }
 
                 Tab("Quran", systemImage: "character.book.closed.ar", value: AppTab.quran) {
-                    QuranView()
+                    QuranView(isActiveTab: selectedTab == .quran)
                 }
 
                 Tab("Islam", systemImage: "moon.stars", value: AppTab.islam) {
@@ -288,7 +288,7 @@ private struct MainTabView: View {
                     }
                     .tag(AppTab.adhan)
 
-                QuranView()
+                QuranView(isActiveTab: selectedTab == .quran)
                     .tabItem {
                         Image(systemName: "character.book.closed.ar")
                         Text("Quran")

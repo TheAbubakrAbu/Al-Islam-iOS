@@ -4,15 +4,20 @@ import SwiftUI
 struct SearchBar: View {
     @Binding var text: String
 
+    /// Bump this to put the keyboard in the search bar. A token rather than a `Bool` so the same request can be
+    /// made twice in a row (search, dismiss the keyboard, search again) and still be seen as a new one.
+    var focusRequestID: Int = 0
     var onSearchButtonClicked: (() -> Void)?
     var onFocusChanged: ((Bool) -> Void)?
 
     init(
         text: Binding<String>,
+        focusRequestID: Int = 0,
         onSearchButtonClicked: (() -> Void)? = nil,
         onFocusChanged: ((Bool) -> Void)? = nil
     ) {
         _text = text
+        self.focusRequestID = focusRequestID
         self.onSearchButtonClicked = onSearchButtonClicked
         self.onFocusChanged = onFocusChanged
     }
@@ -22,12 +27,14 @@ struct SearchBar: View {
             if #available(iOS 26.0, *) {
                 SearchBarUIKit(
                     text: $text,
+                    focusRequestID: focusRequestID,
                     onSearchButtonClicked: onSearchButtonClicked,
                     onFocusChanged: onFocusChanged
                 )
             } else {
                 SearchBarUIKit(
                     text: $text,
+                    focusRequestID: focusRequestID,
                     onSearchButtonClicked: onSearchButtonClicked,
                     onFocusChanged: onFocusChanged
                 )
@@ -46,6 +53,7 @@ struct SearchBar: View {
 struct SearchBarUIKit: UIViewRepresentable {
     @Binding var text: String
 
+    var focusRequestID: Int = 0
     var onSearchButtonClicked: (() -> Void)?
     var onFocusChanged: ((Bool) -> Void)?
 
@@ -82,6 +90,16 @@ struct SearchBarUIKit: UIViewRepresentable {
         )
         context.coordinator.onSearchButtonClicked = onSearchButtonClicked
         context.coordinator.onFocusChanged = onFocusChanged
+
+        // A new focus request (0 is "never asked"). Deferred: this runs inside a SwiftUI update, and taking
+        // first responder synchronously from there fights the in-flight navigation that usually caused the ask.
+        if focusRequestID > 0, focusRequestID != context.coordinator.lastFocusRequestID {
+            context.coordinator.lastFocusRequestID = focusRequestID
+            DispatchQueue.main.async {
+                guard !uiView.isFirstResponder else { return }
+                uiView.becomeFirstResponder()
+            }
+        }
     }
 
     private func configure(searchTextField: UITextField, coordinator: Coordinator) {
@@ -100,6 +118,8 @@ struct SearchBarUIKit: UIViewRepresentable {
 
         var onSearchButtonClicked: (() -> Void)?
         var onFocusChanged: ((Bool) -> Void)?
+        /// The last focus request honoured, so a re-render can't keep re-taking first responder.
+        var lastFocusRequestID = 0
 
         init(
             text: Binding<String>,

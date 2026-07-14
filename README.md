@@ -37,9 +37,12 @@ Al-Islam is a simply designed and feature-rich app that helps Muslims strengthen
 
 ## The Complete Quran
 - View by Surah or Juz, with Juz displaying the starting ayah.
+- Read as a scrolling ayah list or as a mushaf, page by page.
 - Read in Arabic, English transliteration, and translation.
+- Color-coded tajweed with a built-in reference for the rules.
+- Compare the qiraat (readings) side by side.
 - Bookmark, favorite, and track last read/listened ayah.
-- Powerful Quran search (e.g., `5:27`).
+- Powerful Quran search by keyword, ayah (e.g., `5:27`), page, or Juz - reachable from anywhere you are reading.
 - Remove tashkeel (diacritics) for cleaner reading.
 - Listen to recitations from 10+ reciters.
 - Random Surah mode for discovery.

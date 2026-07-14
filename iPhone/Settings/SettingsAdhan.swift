@@ -797,12 +797,20 @@ extension Settings {
         let detectedMethod = canonicalPrayerCalculationMethod(detectedRaw)
         let detectedParams = calculationParameters(forStoredLabel: detectedMethod)
 
-        let currentParams = calculationParameters(forStoredLabel: prayerCalculation)
-        if detectedParams == currentParams {
+        let previousMethod = prayerCalculation
+        // Nothing to do only when we are ALREADY on the detected method. The check used to compare the computed
+        // angles instead, which quietly stranded anyone on "Custom Angles": its defaults (18°/17°) are the same
+        // numbers Muslim World League uses, so the params matched, this returned early, and turning Automatic on
+        // appeared to do nothing at all. Identity is the question being asked here - "am I on the method this
+        // country uses?" - and Custom is never that method, whatever its angles happen to be set to.
+        //
+        // Canonicalized on both sides: a stored legacy alias IS the detected method, and treating it as a
+        // different one would switch the label and announce a change that isn't one.
+        if canonicalPrayerCalculationMethod(previousMethod) == detectedMethod {
             return false
         }
 
-        let previousMethod = prayerCalculation
+        let currentParams = calculationParameters(forStoredLabel: previousMethod)
         withAnimation {
             prayerCalculation = detectedMethod
         }
@@ -811,6 +819,11 @@ extension Settings {
         calculationAutoDetectedMethod = detectedMethod
         calculationAutoDetectedCountryCode = countryCode
         calculationAutoChanged = true
+
+        // The method switched either way, but the prayer TIMES only actually move if the angles differ. When they
+        // don't (Custom sitting on the MWL angles, or two catalogue methods that agree), skip the push
+        // notification - it would announce a change to times that are identical to the ones already on screen.
+        guard detectedParams != currentParams else { return true }
 
         #if os(iOS)
         // Same rate limit as the traveling-mode announcement: the method itself still switches; only the

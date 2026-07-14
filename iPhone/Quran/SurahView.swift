@@ -1012,7 +1012,10 @@ struct SurahView: View {
                             .transition(.opacity)
                     }
                 }
-                .padding(.bottom, 4)
+                // Same breathing room the list reader gives this bar - and here the bottom padding is also what
+                // separates it from the page-navigation footer pinned underneath, which it was crowding.
+                .padding(.top, SafeAreaInsetVStackSpacing.standard)
+                .padding(.bottom, SafeAreaInsetVStackSpacing.standard)
                 .background(Color.white.opacity(0.00001))
                 .animation(.easeInOut, value: active)
             }
@@ -2236,11 +2239,34 @@ struct SurahView: View {
         .tint(settings.accentColor.accent2)
     }
 
+    /// Hands the search off to the Quran tab, which owns the whole-Quran search (see `QuranSearchHandoff`).
+    ///
+    /// This is the mushaf's ONLY search - it has no search bar of its own and there is nowhere sensible to put
+    /// one on a fixed-size page. In the list reader it sits alongside the in-surah search bar and answers the
+    /// other question: "not in this surah - find it anywhere." Either way the hit rows navigate straight back
+    /// into the reading mode the user is already in.
+    private var searchQuranButton: some View {
+        Button {
+            settings.hapticFeedback()
+            // The list reader carries whatever is already typed into the surah search over with it; the mushaf
+            // has nothing typed, so it opens the search empty.
+            QuranSearchHandoff.shared.request(settings.quranPageMode ? "" : searchText)
+        } label: {
+            Image(systemName: "magnifyingglass")
+        }
+        .accessibilityLabel("Search the whole Quran")
+        .tint(settings.accentColor.accent1)
+    }
+
     @ViewBuilder
     private func applySurahToolbar(to base: some View) -> some View {
         base.toolbar {
             ToolbarItem(placement: .principal) {
                 surahTitlePickerButton
+            }
+
+            ToolbarItem(placement: .navigationBarTrailing) {
+                searchQuranButton
             }
 
             ToolbarItem(placement: .navigationBarTrailing) {
@@ -3213,8 +3239,18 @@ private struct MushafPageContent: View {
     /// page fitted to the very limit still can't overflow by those few points.
     private static let fitSlack: CGFloat = 8
 
-    /// The ayah a tap landed on, driving the actions sheet.
-    @State private var tappedAyah: TappedAyahRef?
+    /// The ayah the reader has marked by tapping it - it stays lit until tapped again. This is a reading aid
+    /// (keeping your place, isolating an ayah on a dense page), so it is deliberately sticky and NOT tied to
+    /// the sheet.
+    @State private var selectedAyah: SelectedAyah?
+
+    /// The ayah a long press landed on, driving the actions sheet.
+    @State private var sheetAyah: TappedAyahRef?
+
+    private struct SelectedAyah: Equatable {
+        let surahID: Int
+        let ayahID: Int
+    }
 
     private struct TappedAyahRef: Identifiable {
         let surah: Surah
@@ -3249,17 +3285,29 @@ private struct MushafPageContent: View {
         return (surahID, ayahID)
     }
 
-    /// What to tint in the page text. A tapped ayah wins while its sheet is open - that's the feedback for
-    /// "this is the one you picked", and it fades the moment the sheet is dismissed - otherwise the recited
-    /// ayah is highlighted in the accent.
+    /// The recited ayah, tinted in the accent. This is the follow-along, and it keeps working while an ayah is
+    /// marked - the mark is a separate, quieter tint (below), so marking an ayah never costs you the ability to
+    /// see where the reciter is.
     private var highlightedAyah: (surahID: Int, ayahID: Int)? {
-        if let tappedAyah { return (tappedAyah.surah.id, tappedAyah.ayah.id) }
-        return playingAyah
+        playingAyah
     }
 
-    /// Grey for the ayah you tapped (a transient selection), the accent for the one being recited.
-    private var highlightColor: Color {
-        tappedAyah != nil ? .secondary : settings.accentColor.color
+    /// The ayah the reader marked by tapping it, tinted grey. Suppressed while it IS the recited ayah, so the
+    /// two tints can't fight over the same range.
+    private var markedAyah: (surahID: Int, ayahID: Int)? {
+        guard let selectedAyah else { return nil }
+        let marked = (surahID: selectedAyah.surahID, ayahID: selectedAyah.ayahID)
+        if let playingAyah, playingAyah == marked { return nil }
+        return marked
+    }
+
+    /// Tap an ayah to mark it, tap it again to clear it. Tapping a different ayah moves the mark.
+    private func toggleHighlight(surahID: Int, ayahID: Int) {
+        settings.hapticFeedback()
+        let tapped = SelectedAyah(surahID: surahID, ayahID: ayahID)
+        withAnimation(.easeInOut(duration: 0.15)) {
+            selectedAyah = selectedAyah == tapped ? nil : tapped
+        }
     }
 
     /// A printed mushaf is a spread, and the spine rule marks the inner edge so you can tell at a glance
@@ -3270,11 +3318,16 @@ private struct MushafPageContent: View {
     var body: some View {
         GeometryReader { geo in
             let width = max(geo.size.width - Self.textPadding * 2, 1)
+            // The height the page can actually SHOW, not the height of its frame. Anything the pager hands down
+            // as a safe-area inset rather than as a smaller frame - the tajweed/qiraah bar most of all, which
+            // only exists in comparison mode - is covered by chrome: text fitted into it is text hidden behind
+            // the bar. Budgeting against the frame is what cost a comparison-mode page its last line.
+            let visibleHeight = max(geo.size.height - geo.safeAreaInsets.top - geo.safeAreaInsets.bottom, 1)
             // The height the TEXT actually gets - not the height of the region. The block sits inside vertical
             // padding, and the rendered height carries a few points of TextKit slack on top of the measurement;
             // handing the fitter the full region made it fit against a budget that didn't exist, so it settled
             // on a smaller size than the page had room for.
-            let textHeight = max(geo.size.height - Self.verticalPadding * 2 - Self.fitSlack, 1)
+            let textHeight = max(visibleHeight - Self.verticalPadding * 2 - Self.fitSlack, 1)
             // Composed + measured once per (page, size, settings) - see `MushafPageRenderCache`. Doing this
             // inline made every swipe re-fit the page on the main thread.
             let rendered = MushafPageRenderCache.rendered(page: page, width: width, height: textHeight)
@@ -3285,18 +3338,22 @@ private struct MushafPageContent: View {
                     ranges: rendered.ranges,
                     width: width,
                     highlight: highlightedAyah,
-                    highlightColor: highlightColor
+                    highlightColor: settings.accentColor.color,
+                    mark: markedAyah
                 ) { surahID, ayahID in
+                    guard ayahRef(surahID: surahID, ayahID: ayahID) != nil else { return }
+                    toggleHighlight(surahID: surahID, ayahID: ayahID)
+                } onLongPressAyah: { surahID, ayahID in
                     guard let ref = ayahRef(surahID: surahID, ayahID: ayahID) else { return }
                     settings.hapticFeedback()
-                    tappedAyah = TappedAyahRef(surah: ref.0, ayah: ref.1)
+                    sheetAyah = TappedAyahRef(surah: ref.0, ayah: ref.1)
                 }
                 .frame(width: width, height: rendered.height)
                 .padding(.horizontal, Self.textPadding)
                 .padding(.vertical, Self.verticalPadding)
-                // Fill the region so a page that fits sits centered (balanced top/bottom spacing); a page
-                // that overflows stays its natural height and scrolls.
-                .frame(maxWidth: .infinity, minHeight: geo.size.height, alignment: .center)
+                // Fill the visible region so a page that fits sits centered in what the reader can SEE (balanced
+                // top/bottom spacing); a page that overflows stays its natural height and scrolls.
+                .frame(maxWidth: .infinity, minHeight: visibleHeight, alignment: .center)
             }
         }
         .overlay(alignment: spineIsLeading ? .leading : .trailing) { spineRule }
@@ -3306,7 +3363,7 @@ private struct MushafPageContent: View {
         // A mushaf page is fixed-size: the Arabic uses absolute point sizes, and the chrome must not grow with
         // Dynamic Type either, or it would eat the space the text was fitted into.
         .dynamicTypeSize(.large)
-        .sheet(item: $tappedAyah) { ref in
+        .sheet(item: $sheetAyah) { ref in
             AyahActionsSheet(
                 surah: ref.surah,
                 ayah: ref.ayah,
@@ -3323,7 +3380,7 @@ private struct MushafPageContent: View {
     /// first is still animating away, and stacking sheets is what we're avoiding anyway - so the new sheet is
     /// queued for just after the dismissal finishes.
     private func requestSecondarySheet(_ kind: AyahSecondarySheet, for ref: TappedAyahRef) {
-        tappedAyah = nil
+        sheetAyah = nil
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
             secondarySheet = SecondarySheetRequest(kind: kind, surah: ref.surah, ayah: ref.ayah)
         }
@@ -4015,23 +4072,34 @@ struct MushafPageTextView: UIViewRepresentable {
     /// container width must be set explicitly - this is what makes the page wrap into lines at all.
     let width: CGFloat
     /// The ayah currently being recited, if it is on this page.
+    /// The ayah being recited, if it is on this page - tinted in the accent.
     var highlight: (surahID: Int, ayahID: Int)?
     var highlightColor: Color = .accentColor
+    /// The ayah the reader marked by tapping it - tinted grey, and independent of the recitation highlight so
+    /// both can be on screen at once.
+    var mark: (surahID: Int, ayahID: Int)?
     let onTapAyah: (Int, Int) -> Void
+    let onLongPressAyah: (Int, Int) -> Void
 
-    /// The highlight is painted on top of the cached, composed page rather than recomposing it - a background
+    private func range(of ayah: (surahID: Int, ayahID: Int)?) -> NSRange? {
+        guard let ayah else { return nil }
+        return ranges.first { $0.surahID == ayah.surahID && $0.ayahID == ayah.ayahID }?.range
+    }
+
+    /// The tints are painted on top of the cached, composed page rather than recomposing it - a background
     /// attribute doesn't change layout, so nothing has to be re-measured as playback moves down the page.
     private func highlighted(_ text: NSAttributedString) -> NSAttributedString {
-        guard let highlight,
-              let entry = ranges.first(where: { $0.surahID == highlight.surahID && $0.ayahID == highlight.ayahID })
-        else { return text }
+        let tints: [(NSRange, Color)] = [
+            (range(of: mark), Color.secondary),
+            (range(of: highlight), highlightColor),
+        ].compactMap { r, color in r.map { ($0, color) } }
+
+        guard !tints.isEmpty else { return text }
 
         let mutable = NSMutableAttributedString(attributedString: text)
-        mutable.addAttribute(
-            .backgroundColor,
-            value: UIColor(highlightColor).withAlphaComponent(0.22),
-            range: entry.range
-        )
+        for (range, color) in tints {
+            mutable.addAttribute(.backgroundColor, value: UIColor(color).withAlphaComponent(0.22), range: range)
+        }
         return mutable
     }
 
@@ -4054,6 +4122,16 @@ struct MushafPageTextView: UIViewRepresentable {
 
         let tap = UITapGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.handleTap(_:)))
         tv.addGestureRecognizer(tap)
+
+        // A tap only marks an ayah; the actions sheet is the deliberate gesture, so it takes a press. The tap
+        // must not also fire when the press wins, hence the dependency.
+        let press = UILongPressGestureRecognizer(
+            target: context.coordinator,
+            action: #selector(Coordinator.handleLongPress(_:))
+        )
+        tv.addGestureRecognizer(press)
+        tap.require(toFail: press)
+
         context.coordinator.textView = tv
         return tv
     }
@@ -4061,13 +4139,15 @@ struct MushafPageTextView: UIViewRepresentable {
     func updateUIView(_ tv: UITextView, context: Context) {
         context.coordinator.ranges = ranges
         context.coordinator.onTapAyah = onTapAyah
+        context.coordinator.onLongPressAyah = onLongPressAyah
 
         // Reassigning `attributedText` forces a full TextKit relayout of the page. This view's parent observes
         // the player, so during recitation EVERY tick re-runs this update for every mounted page - three page
         // relayouts per tick, competing with swipe gestures for the main thread. The composed page is a cached
         // immutable instance and the highlight is a value pair, so "did anything actually change" is an
         // identity + equality check; skip the relayout when nothing did.
-        let highlightKey = highlight.map { "\($0.surahID):\($0.ayahID)" } ?? ""
+        let key: ((surahID: Int, ayahID: Int)?) -> String = { $0.map { "\($0.surahID):\($0.ayahID)" } ?? "" }
+        let highlightKey = "\(key(highlight))|\(key(mark))"
         if context.coordinator.lastAssignedText === attributed,
            context.coordinator.lastHighlightKey == highlightKey,
            context.coordinator.lastWidth == width {
@@ -4089,6 +4169,7 @@ struct MushafPageTextView: UIViewRepresentable {
         weak var textView: UITextView?
         var ranges: [MushafAyahRange] = []
         var onTapAyah: ((Int, Int) -> Void)?
+        var onLongPressAyah: ((Int, Int) -> Void)?
 
         // What the text view currently displays, so `updateUIView` can skip the full TextKit relayout when
         // nothing visible changed (see the note there).
@@ -4097,8 +4178,20 @@ struct MushafPageTextView: UIViewRepresentable {
         var lastWidth: CGFloat = 0
 
         @objc func handleTap(_ gesture: UITapGestureRecognizer) {
-            guard let tv = textView, tv.textStorage.length > 0 else { return }
-            let point = gesture.location(in: tv)
+            guard let (surahID, ayahID) = ayah(at: gesture.location(in: textView)) else { return }
+            onTapAyah?(surahID, ayahID)
+        }
+
+        @objc func handleLongPress(_ gesture: UILongPressGestureRecognizer) {
+            // Fire once, when the press is recognized - not on every move that follows.
+            guard gesture.state == .began else { return }
+            guard let (surahID, ayahID) = ayah(at: gesture.location(in: textView)) else { return }
+            onLongPressAyah?(surahID, ayahID)
+        }
+
+        /// The ayah whose glyphs sit under `point`, in the text view's coordinates.
+        private func ayah(at point: CGPoint) -> (surahID: Int, ayahID: Int)? {
+            guard let tv = textView, tv.textStorage.length > 0 else { return nil }
             let location = CGPoint(x: point.x - tv.textContainerInset.left, y: point.y - tv.textContainerInset.top)
             var fraction: CGFloat = 0
             let index = tv.layoutManager.characterIndex(
@@ -4106,11 +4199,11 @@ struct MushafPageTextView: UIViewRepresentable {
                 in: tv.textContainer,
                 fractionOfDistanceBetweenInsertionPoints: &fraction
             )
-            guard index >= 0, index < tv.textStorage.length else { return }
+            guard index >= 0, index < tv.textStorage.length else { return nil }
             for entry in ranges where NSLocationInRange(index, entry.range) {
-                onTapAyah?(entry.surahID, entry.ayahID)
-                return
+                return (entry.surahID, entry.ayahID)
             }
+            return nil
         }
     }
 }

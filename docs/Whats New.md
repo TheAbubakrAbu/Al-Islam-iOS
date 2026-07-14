@@ -1,3 +1,25 @@
+# Version 4.6.0
+
+A better mushaf, a smarter Automatic prayer method, and a Quran search you can reach from anywhere.
+
+Al-Quran:
+- Search the whole Quran from wherever you are reading - a search button now sits in both the ayah reader and the mushaf, and carries whatever you had already typed.
+- Tap an ayah in the mushaf to highlight it and keep your place; tap it again to clear it. Press and hold to open the ayah's actions.
+- Page mode is now your reading mode: leave the Quran tab and come back, and it opens right back into the mushaf.
+- Fixed a mushaf page losing its last line while comparing qiraat, and gave the tajweed and qiraah controls room to breathe above the page selector.
+- More accurate tajweed for a raa after hamzatul wasl, which now takes its weight from the letter before the hamza.
+- Learn the Arabic alphabet by ear: the tashkeel marks and the syllables they make are now spoken aloud.
+
+Al-Adhan:
+- A full calculation method catalogue you can browse by region, with the angles each one uses shown up front.
+- Automatic now switches you to your region's method even if you were on Custom Angles - before, it could look like nothing happened.
+- Tidier prayer tiles.
+- Apple Watch shows a sky strip: how much daylight is left, and what the moon is doing tonight.
+
+Bug fixes and optimizations:
+- Performance, reliability, and polish throughout.
+
+
 # Version 4.5.3
 
 A fresh new look, powerful Quran additions, smarter prayer features, and clearer, more accurate recitations across the app.

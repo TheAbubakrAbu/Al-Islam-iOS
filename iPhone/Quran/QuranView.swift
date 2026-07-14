@@ -1,10 +1,39 @@
 import SwiftUI
 
+/// A search a reader asked the Quran tab to run on its behalf.
+///
+/// Both readers (the ayah list and the mushaf) are pushed ON TOP of the Quran tab, and the tab is where the
+/// whole-Quran search already lives - the verse index, the page/juz queries, the history chips, all of it.
+/// Rather than grow a second search engine inside the readers, a reader just hands its query up here; the tab
+/// pops back to the surah list, fills its search bar and focuses it. One search, reachable from everywhere.
+@MainActor
+final class QuranSearchHandoff: ObservableObject {
+    static let shared = QuranSearchHandoff()
+    private init() {}
+
+    /// Non-nil means "a reader asked for the Quran search". Empty string is a legitimate request - it means
+    /// "open the search with nothing typed yet".
+    @Published var pendingQuery: String?
+
+    func request(_ query: String = "") {
+        pendingQuery = query.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    func clear() { pendingQuery = nil }
+}
+
 struct QuranView: View {
     @ObservedObject var settings = Settings.shared
     @ObservedObject var quranData = QuranData.shared
     @ObservedObject var quranPlayer = QuranPlayer.shared
+    @ObservedObject private var searchHandoff = QuranSearchHandoff.shared
     @Environment(\.dismiss) private var dismiss
+
+    /// Whether the Quran tab is the one on screen. Page mode means "the Quran tab IS the mushaf", so every time
+    /// the tab is entered it should land in the mushaf again - not just the first time. Keying this on the tab
+    /// (rather than on `onAppear`) is deliberate: `onAppear` also fires when the reader pops BACK to the surah
+    /// list, and re-opening the mushaf there would trap the user in it.
+    var isActiveTab: Bool = true
 
     @State private var searchText = ""
     @State private var isQuranSearchFocused = false
@@ -332,6 +361,21 @@ struct QuranView: View {
     /// Guards the once-per-appearance auto-open of the mushaf when page mode is already on.
     @State private var didAutoOpenMushaf = false
     @State private var selectedRoute: QuranRoute?
+    /// Bumped to move the keyboard into the search bar - see `QuranSearchHandoff`.
+    @State private var searchFocusRequestID = 0
+
+    /// A reader asked for the Quran search: come back out to the surah list, carry its query into the search
+    /// bar and open the keyboard on it. From there the hit rows navigate straight back into whichever reader
+    /// the user has on (list or mushaf), so this is a round trip, not a dead end.
+    private func runHandedOffSearch(_ query: String) {
+        #if os(iOS)
+        path.removeAll()
+        selectedRoute = nil
+        #endif
+        searchText = query
+        searchFocusRequestID += 1
+        searchHandoff.clear()
+    }
 
     func push(surahID: Int, ayahID: Int? = nil) {
         #if os(iOS)
@@ -524,13 +568,27 @@ struct QuranView: View {
         .task {
             prewarmQuranDestinations()
             #if os(iOS)
-            // If the reader is already in page mode when the Quran tab opens, resume in the mushaf at the
-            // last-read ayah's page. Guarded so backing out to the list doesn't immediately re-open it.
+            // If the reader is already in page mode when the Quran tab is first built, resume in the mushaf at
+            // the last-read ayah's page. Guarded so backing out to the list doesn't immediately re-open it.
             if settings.quranPageMode, !didAutoOpenMushaf {
                 didAutoOpenMushaf = true
                 openMushafWhereLeftOff()
             }
             #endif
+        }
+        // Coming BACK to the Quran tab (from Adhan, Settings, ...) while page mode is on re-opens the mushaf -
+        // but only when the tab was left sitting on the surah list with no reader open. `openMushafWhereLeftOff`
+        // can't make that call itself: on iPad it deliberately re-points the detail column whatever is in it,
+        // which would throw an iPad user off whatever they had open every time they came back to the tab.
+        .onChange(of: isActiveTab) { active in
+            #if os(iOS)
+            guard active, settings.quranPageMode, path.isEmpty, selectedRoute == nil else { return }
+            openMushafWhereLeftOff()
+            #endif
+        }
+        .onChange(of: searchHandoff.pendingQuery) { query in
+            guard let query else { return }
+            runHandedOffSearch(query)
         }
         .onDisappear {
             ayahSearchTask?.cancel()
@@ -1170,6 +1228,7 @@ struct QuranView: View {
         #if os(iOS)
         SearchBar(
             text: $searchText.animation(.easeInOut),
+            focusRequestID: searchFocusRequestID,
             onSearchButtonClicked: {
                 self.endEditing()
             },
