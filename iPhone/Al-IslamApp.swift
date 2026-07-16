@@ -206,8 +206,12 @@ private struct MainTabView: View {
         // settle, then return to the Adhan landing tab. First selection of any tab later reuses the warm tree
         // instantly. This whole dance overlaps the launch screen's finale animation (which runs ~1.4s), so
         // warming the extra tabs costs no wall-clock time on the reveal.
+        // Page mode gets a longer settle: entering the Quran tab then auto-pushes the mushaf, whose pager
+        // (a UIPageViewController wrapping all ~604 page identities) is the single heaviest view realization
+        // in the app. 350ms was enough for the surah list but not for the pager, so the leftover work ran at
+        // the user's first REAL switch into the tab - the visible lag this hides behind the launch cover.
         selectedTab = .quran
-        try? await Task.sleep(nanoseconds: 350_000_000)
+        try? await Task.sleep(nanoseconds: settings.quranPageMode ? 900_000_000 : 350_000_000)
         selectedTab = .islam
         try? await Task.sleep(nanoseconds: 120_000_000)
         selectedTab = .settings

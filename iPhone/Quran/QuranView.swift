@@ -391,6 +391,8 @@ struct QuranView: View {
     @State private var selectedRoute: QuranRoute?
     /// Bumped to move the keyboard into the search bar - see `QuranSearchHandoff`.
     @State private var searchFocusRequestID = 0
+    /// True while the page-mode toggle is paginating in the background (the button shows a spinner).
+    @State private var isPreparingPageMode = false
 
     /// A reader asked for the Quran search: come back out to the surah list, carry its query into the search
     /// bar and open the keyboard on it. From there the hit rows navigate straight back into whichever reader
@@ -598,8 +600,12 @@ struct QuranView: View {
             #if os(iOS)
             // If the reader is already in page mode when the Quran tab is first built, resume in the mushaf at
             // the last-read ayah's page. Guarded so backing out to the list doesn't immediately re-open it.
+            // The pagination is awaited OFF-main first: this task races the launch prewarm, and whichever
+            // loses used to pay the full 6,236-ayah build synchronously inside the reader's first body -
+            // main-thread work that landed exactly on the first switch into this tab.
             if settings.quranPageMode, !didAutoOpenMushaf {
                 didAutoOpenMushaf = true
+                await MushafPagination.buildInBackground(quran: quranData.quran, qiraah: settings.displayQiraahForArabic)
                 openMushafWhereLeftOff()
             }
             #endif
@@ -901,10 +907,29 @@ struct QuranView: View {
                 Button {
                     settings.hapticFeedback()
                     let openingMushaf = !settings.quranPageMode
-                    withAnimation { settings.quranPageMode.toggle() }
-                    if openingMushaf { openMushafWhereLeftOff() }
+                    // Opening the mushaf cold paginates all ~6,236 ayahs. Doing that inline froze this very
+                    // tap; the button becomes a spinner for the beat the build takes off-main, and the mode
+                    // flips the moment the pages exist. (Launch only prewarms pagination when page mode is
+                    // already on - this is the "compute it when you touch the icon" path.)
+                    if openingMushaf, !MushafPagination.isBuilt(quran: quranData.quran, qiraah: settings.displayQiraahForArabic) {
+                        guard !isPreparingPageMode else { return }
+                        isPreparingPageMode = true
+                        Task {
+                            await MushafPagination.buildInBackground(quran: quranData.quran, qiraah: settings.displayQiraahForArabic)
+                            isPreparingPageMode = false
+                            withAnimation { settings.quranPageMode = true }
+                            openMushafWhereLeftOff()
+                        }
+                    } else {
+                        withAnimation { settings.quranPageMode.toggle() }
+                        if openingMushaf { openMushafWhereLeftOff() }
+                    }
                 } label: {
-                    Image(systemName: settings.quranPageMode ? "list.bullet.rectangle" : "book")
+                    if isPreparingPageMode {
+                        ProgressView()
+                    } else {
+                        Image(systemName: settings.quranPageMode ? "list.bullet.rectangle" : "book")
+                    }
                 }
                 .accessibilityLabel(settings.quranPageMode ? "Read surahs as a list" : "Read surahs as pages")
                 .tint(settings.accentColor.accent1)
@@ -2464,6 +2489,15 @@ struct QuranView: View {
             )
         }
         .buttonStyle(.plain)
+        // The same corner star every grid tile carries - context menus inside a grid-in-a-list-row lift the
+        // whole row, so the star is the grid's tap-to-favorite.
+        .gridFavoriteStar(
+            isFavorite: context.favoriteSurahs.contains(surah.id),
+            accent: settings.accentColor.color,
+            accessibilityName: surah.nameTransliteration
+        ) {
+            settings.toggleSurahFavorite(surah: surah.id)
+        }
         .id("surah_\(surah.id)")
         .onAppear {
             if surah.id == scrollToSurahID {

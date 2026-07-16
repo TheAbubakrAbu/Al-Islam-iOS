@@ -2073,6 +2073,13 @@ struct ArabicLetterGridTile: View, Equatable {
                 useColor: isFavorite ? 0.25 : nil,
                 customTint: isFavorite ? accentColor.color : nil
             )
+            .gridFavoriteStar(
+                isFavorite: isFavorite,
+                accent: accentColor.color,
+                accessibilityName: letterData.transliteration
+            ) {
+                settings.toggleLetterFavorite(letterData: letterData)
+            }
         }
     }
 }

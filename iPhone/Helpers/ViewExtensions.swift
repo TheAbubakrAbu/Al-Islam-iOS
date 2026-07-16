@@ -203,3 +203,31 @@ struct DismissKeyboardOnScrollModifier: ViewModifier {
         #endif
     }
 }
+
+extension View {
+    /// The corner favorite star every grid tile shares: a small overlay (never part of the tile's own
+    /// stack, so it costs no layout) tucked into the top-trailing corner with a hair of breathing room.
+    /// The visible glyph is small; the tap target is padded well past it.
+    func gridFavoriteStar(
+        isFavorite: Bool,
+        accent: Color,
+        accessibilityName: String,
+        onToggle: @escaping () -> Void
+    ) -> some View {
+        overlay(alignment: .topTrailing) {
+            Image(systemName: isFavorite ? "star.fill" : "star")
+                .font(.system(size: 10, weight: .semibold))
+                .foregroundColor(isFavorite ? accent : .secondary)
+                .padding(.top, 5)
+                .padding(.trailing, 5)
+                .contentShape(Rectangle().inset(by: -10))
+                .onTapGesture {
+                    Settings.shared.hapticFeedback()
+                    withAnimation(.easeInOut) {
+                        onToggle()
+                    }
+                }
+                .accessibilityLabel(isFavorite ? "Unfavorite \(accessibilityName)" : "Favorite \(accessibilityName)")
+        }
+    }
+}

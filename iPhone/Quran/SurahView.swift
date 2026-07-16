@@ -862,7 +862,9 @@ struct SurahView: View {
                     + Text($0).foregroundColor(juzColor)
                 } ?? Text(""))
             )
-            .font((isOverlay ? Font.caption : Font.caption).weight(.semibold))
+            // The overlay is the reader's one persistent "where am I" - it earns a real footnote size; the
+            // in-list dividers stay quieter so they don't compete with the ayahs around them.
+            .font((isOverlay ? Font.footnote : Font.caption).weight(.semibold))
             .monospacedDigit()
             .lineLimit(1)
             .minimumScaleFactor(isOverlay ? 0.5 : 0.6)
@@ -1002,31 +1004,25 @@ struct SurahView: View {
                 onPageAnchor: { surahID, ayahID in pageAnchor = (surahID, ayahID) }
             ) {
                 let active = quranPlayer.isPlaying || quranPlayer.isPaused
-                // Tajweed and qiraah comparison are Arabic-script concepts: an English page renders neither,
-                // so its legend and riwayah picker would be dead chrome eating page height. Hidden entirely -
-                // and when NOTHING is in this bar, the bar contributes no inset at all (an empty VStack still
-                // carrying its paddings was silently costing the page ~20pt).
-                let showQiraatControls = pageQiraatControlsVisible
-                if showQiraatControls || active {
-                    VStack(spacing: 0) {
-                        if showQiraatControls {
-                            qiraatAndTajweedControls
-                        }
+                VStack(spacing: 0) {
+                    // Always present in page mode: search sits dead center, with the tajweed legend and the
+                    // riwayah picker flanking it when they apply (an English page shows neither, so the bar
+                    // is just the search).
+                    pageBottomControlsBar
 
-                        if active {
-                            NowPlayingView(quranView: false)
-                                .padding(.horizontal, 24)
-                                .padding(.top, SafeAreaInsetVStackSpacing.standard)
-                                .transition(.opacity)
-                        }
+                    if active {
+                        NowPlayingView(quranView: false)
+                            .padding(.horizontal, 24)
+                            .padding(.top, SafeAreaInsetVStackSpacing.standard)
+                            .transition(.opacity)
                     }
-                    // Same breathing room the list reader gives this bar - and here the bottom padding is
-                    // also what separates it from the page-navigation footer pinned underneath.
-                    .padding(.top, SafeAreaInsetVStackSpacing.standard)
-                    .padding(.bottom, SafeAreaInsetVStackSpacing.standard)
-                    .background(Color.white.opacity(0.00001))
-                    .animation(.easeInOut, value: active)
                 }
+                // Same breathing room the list reader gives this bar - and here the bottom padding is
+                // also what separates it from the page-navigation footer pinned underneath.
+                .padding(.top, SafeAreaInsetVStackSpacing.standard)
+                .padding(.bottom, SafeAreaInsetVStackSpacing.standard)
+                .background(Color.white.opacity(0.00001))
+                .animation(.easeInOut, value: active)
             }
             // The reader seeds its starting page once (`didSetInitialPage`), so swapping the surah in
             // place must give it a fresh identity - otherwise it would stay on the old surah's page.
@@ -1862,16 +1858,11 @@ struct SurahView: View {
             SurahSectionHeader(surah: surah)
 
             if let floatingDividerModel {
-                boundaryDivider(model: floatingDividerModel, isOverlay: true)
-                    .id(boundaryDividerID(floatingDividerModel))
-                    .transition(.opacity.combined(with: .scale(scale: 0.98)))
-                    .animation(.easeInOut(duration: 0.18), value: floatingDividerAnimationKey)
-
-                // The bar makes the "(3/10)" in the label legible at a glance. It still appears only for
-                // surahs that span pages, but it fills by AYAH, not by page: the page fraction advanced in
-                // whole-page jumps (still for a page and a half of scrolling, then a lurch), while the ayah
-                // fraction tracks the actual scroll and reaches full at the surah's last ayah. The page-based
-                // fraction stays as the fallback for the paths that don't track the visible ayah.
+                // The bar makes the "(3/10)" in the label legible at a glance. It sits BETWEEN the surah
+                // header and the page/juz line - a divider in the literal sense - and it fills by AYAH, not
+                // by page: the page fraction advanced in whole-page jumps, while the ayah fraction tracks
+                // the actual scroll and reaches full at the surah's last ayah. The page-based fraction stays
+                // as the fallback for the paths that don't track the visible ayah.
                 if let position = floatingDividerModel.pageInSurah,
                    let total = floatingDividerModel.surahPageCount,
                    total > 1 {
@@ -1881,9 +1872,14 @@ struct SurahView: View {
                         color: settings.accentColor.color
                     )
                     .padding(.horizontal, 2)
-                    .padding(.bottom, 2)
+                    .padding(.vertical, 2)
                     .transition(.opacity)
                 }
+
+                boundaryDivider(model: floatingDividerModel, isOverlay: true)
+                    .id(boundaryDividerID(floatingDividerModel))
+                    .transition(.opacity.combined(with: .scale(scale: 0.98)))
+                    .animation(.easeInOut(duration: 0.18), value: floatingDividerAnimationKey)
             }
         }
         // Animate the page/juz line appearing/disappearing (it shows once the first divider scrolls off,
@@ -1907,14 +1903,44 @@ struct SurahView: View {
         }
     }
 
-    /// Whether the page reader's tajweed/qiraah bar has anything to show: the same conditions
-    /// `qiraatAndTajweedControls` renders by, minus English page text (no tajweed, no qiraat to compare).
-    private var pageQiraatControlsVisible: Bool {
-        guard !settings.resolvedMushafPageLanguage.isEnglish else { return false }
-        let tajweedCanRenderNow = settings.showTajweedColors
+    /// The page reader's bottom bar: whole-Quran search always dead center, the tajweed legend and riwayah
+    /// picker flanking it when they apply. English page text renders neither tajweed nor qiraat, so those
+    /// two hide - the ZStack keeps the search centered whatever survives around it.
+    private var pageBottomControlsBar: some View {
+        let arabicPage = !settings.resolvedMushafPageLanguage.isEnglish
+        let tajweedCanRenderNow = arabicPage
+            && settings.showTajweedColors
             && settings.showArabicText
             && settings.isHafsDisplay
-        return settings.qiraatComparisonMode || tajweedCanRenderNow
+        let comparisonVisible = arabicPage && settings.qiraatComparisonMode
+
+        return ZStack {
+            HStack(alignment: .bottom, spacing: 8) {
+                if tajweedCanRenderNow {
+                    TajweedLegendMenu()
+                }
+
+                Spacer()
+
+                if comparisonVisible {
+                    ArabicTextRiwayahPicker(selection: $settings.displayQiraah.animation(.easeInOut))
+                }
+            }
+
+            Button {
+                settings.hapticFeedback()
+                QuranSearchHandoff.shared.request("")
+            } label: {
+                Image(systemName: "magnifyingglass")
+                    .font(.body.weight(.semibold))
+                    .foregroundColor(settings.accentColor.accent1)
+                    .padding(8)
+                    .conditionalGlassEffect()
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Search the whole Quran")
+        }
+        .padding(.horizontal, 24)
     }
 
     @ViewBuilder
@@ -1923,7 +1949,10 @@ struct SurahView: View {
             && settings.showArabicText
             && settings.isHafsDisplay
 
-        if settings.qiraatComparisonMode || tajweedCanRenderNow {
+        // Same shape as the page reader's bar: legend and riwayah picker at the edges when they apply, and
+        // the whole-Quran search dead center - labeled "Global" here, because this reader has its own search
+        // bar right below, and this button is the "take what I typed THERE" escape to the whole Quran.
+        ZStack {
             HStack(alignment: .bottom, spacing: 8) {
                 if tajweedCanRenderNow {
                     TajweedLegendMenu()
@@ -1935,8 +1964,22 @@ struct SurahView: View {
                     ArabicTextRiwayahPicker(selection: $settings.displayQiraah.animation(.easeInOut))
                 }
             }
-            .padding(.horizontal, 24)
+
+            Button {
+                settings.hapticFeedback()
+                QuranSearchHandoff.shared.request(searchText)
+            } label: {
+                Label("Global", systemImage: "magnifyingglass")
+                    .font(.caption.weight(.semibold))
+                    .foregroundColor(settings.accentColor.accent1)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .conditionalGlassEffect()
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Search the whole Quran for what is typed in the search bar")
         }
+        .padding(.horizontal, 24)
     }
 
     private func playbackAndSearchControls(proxy: ScrollViewProxy) -> some View {
@@ -2280,28 +2323,11 @@ struct SurahView: View {
     /// one on a fixed-size page. In the list reader it sits alongside the in-surah search bar and answers the
     /// other question: "not in this surah - find it anywhere." Either way the hit rows navigate straight back
     /// into the reading mode the user is already in.
-    private var searchQuranButton: some View {
-        Button {
-            settings.hapticFeedback()
-            // The list reader carries whatever is already typed into the surah search over with it; the mushaf
-            // has nothing typed, so it opens the search empty.
-            QuranSearchHandoff.shared.request(settings.quranPageMode ? "" : searchText)
-        } label: {
-            Image(systemName: "magnifyingglass")
-        }
-        .accessibilityLabel("Search the whole Quran")
-        .tint(settings.accentColor.accent1)
-    }
-
     @ViewBuilder
     private func applySurahToolbar(to base: some View) -> some View {
         base.toolbar {
             ToolbarItem(placement: .principal) {
                 surahTitlePickerButton
-            }
-
-            ToolbarItem(placement: .navigationBarTrailing) {
-                searchQuranButton
             }
 
             ToolbarItem(placement: .navigationBarTrailing) {
@@ -2796,6 +2822,33 @@ enum MushafPagination {
             return hit.pages
         }
 
+        let pages = build(quran: quran, qiraah: qiraah)
+        if pageCache.count >= pageCacheLimit { pageCache.removeFirst() }
+        pageCache.append((key, pages))
+        return pages
+    }
+
+    /// Whether `pages` would be a cache hit - i.e. whether page mode can open with no pagination pause.
+    static func isBuilt(quran: [Surah], qiraah: String?) -> Bool {
+        pageCache.contains { $0.key == "\(qiraah ?? "Hafs")|\(quran.count)" }
+    }
+
+    /// Paginate off the main actor and seed the cache - so the page-mode TOGGLE can show its brief loading
+    /// state instead of freezing the tap while all ~6,236 ayahs are walked. The build reads only value-type
+    /// surah data, so it is safe anywhere; only the cache write returns to the main actor.
+    static func buildInBackground(quran: [Surah], qiraah: String?) async {
+        let key = "\(qiraah ?? "Hafs")|\(quran.count)"
+        guard !pageCache.contains(where: { $0.key == key }) else { return }
+        let pages = await Task.detached(priority: .userInitiated) {
+            build(quran: quran, qiraah: qiraah)
+        }.value
+        guard !pageCache.contains(where: { $0.key == key }) else { return }
+        if pageCache.count >= pageCacheLimit { pageCache.removeFirst() }
+        pageCache.append((key, pages))
+    }
+
+    /// The pagination pass itself: pure function of the inputs, no shared state.
+    nonisolated private static func build(quran: [Surah], qiraah: String?) -> [MushafPage] {
         var pages: [MushafPage] = []
         // Surahs and their ayahs are already in mushaf order, so a page's segments accumulate in order too:
         // extend the trailing segment when the surah repeats, else start a new one.
@@ -2817,9 +2870,6 @@ enum MushafPagination {
                 }
             }
         }
-
-        if pageCache.count >= pageCacheLimit { pageCache.removeFirst() }
-        pageCache.append((key, pages))
         return pages
     }
 
@@ -2921,8 +2971,11 @@ struct SurahPageReader<Controls: View>: View {
                     // `MushafPageContent` is a view struct, not an inline builder, so SwiftUI only evaluates
                     // a page's (expensive) Arabic body when that page is actually on screen - otherwise all
                     // ~600 pages would render up front.
-                    ForEach(Array(pages.enumerated()).reversed(), id: \.offset) { index, page in
-                        MushafPageContent(page: page)
+                    // Iterating `indices.reversed()` (a lazy range) instead of `Array(enumerated()).reversed()`
+                    // keeps this body from materializing a fresh 604-tuple array on every swipe (and on every
+                    // player tick while audio runs) just so the diff can walk it.
+                    ForEach(pages.indices.reversed(), id: \.self) { index in
+                        MushafPageContent(page: pages[index])
                             // Each page's own contents keep the app's reading direction; only the *paging* is
                             // flipped below.
                             .environment(\.layoutDirection, layoutDirection)
@@ -3289,7 +3342,9 @@ struct SurahPageReader<Controls: View>: View {
 /// One page of the mushaf. Its body is only built when the page scrolls into view.
 private struct MushafPageContent: View {
     @ObservedObject private var settings = Settings.shared
-    @ObservedObject private var quranData = QuranData.shared
+    // Deliberately NOT @ObservedObject: this page only hands quranData to its secondary sheets as an
+    // environment object. Observing it made every mounted page re-render on every QuranData publish.
+    private let quranData = QuranData.shared
     @ObservedObject private var quranPlayer = QuranPlayer.shared
 
     let page: MushafPage
@@ -3309,6 +3364,9 @@ private struct MushafPageContent: View {
 
     /// The ayah a long press landed on, driving the actions sheet.
     @State private var sheetAyah: TappedAyahRef?
+
+    /// Bumped when an async render lands so the body re-reads the cache (see `renderAsync`).
+    @State private var renderTick = 0
 
     private struct SelectedAyah: Equatable {
         let surahID: Int
@@ -3389,10 +3447,43 @@ private struct MushafPageContent: View {
             // The height the TEXT actually gets: the visible region minus its own vertical padding, nothing
             // else. The fit verifies against the real TextKit layout, so no slack is reserved on top.
             let textHeight = max(visibleHeight - Self.verticalPadding * 2, 1)
-            // Composed + measured once per (page, size, settings) - see `MushafPageRenderCache`. Doing this
-            // inline made every swipe re-fit the page on the main thread.
-            let rendered = MushafPageRenderCache.rendered(page: page, width: width, height: textHeight)
+            // Cache-only: a page that hasn't been composed yet shows a spinner for the beat its fit takes on
+            // the background queue, instead of freezing the swipe while ~30 compose/measure passes run on
+            // the main thread. `renderTick` is the re-read signal the async render fires.
+            let _ = renderTick
+            if let rendered = MushafPageRenderCache.renderedIfAvailable(page: page, width: width, height: textHeight) {
+                renderedPageBody(rendered: rendered, width: width, visibleHeight: visibleHeight)
+            } else {
+                ProgressView()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .onAppear {
+                        MushafPageRenderCache.renderAsync(page: page, width: width, height: textHeight) {
+                            renderTick &+= 1
+                        }
+                    }
+            }
+        }
+        .overlay(alignment: spineIsLeading ? .leading : .trailing) { spineRule }
+        // The same pinned surah header the list reader uses, so the two reading modes are titled identically:
+        // revelation symbol, ayah/page summary, favourite star. It names the page's TOP surah.
+        .safeAreaInset(edge: .top, spacing: 0) { topHeader }
+        // A mushaf page is fixed-size: the Arabic uses absolute point sizes, and the chrome must not grow with
+        // Dynamic Type either, or it would eat the space the text was fitted into.
+        .dynamicTypeSize(.large)
+        .sheet(item: $sheetAyah) { ref in
+            AyahActionsSheet(
+                surah: ref.surah,
+                ayah: ref.ayah,
+                onRequestSheet: { kind in requestSecondarySheet(kind, for: ref) }
+            )
+            .smallMediumSheetPresentation()
+        }
+        .sheet(item: $secondarySheet) { request in
+            secondarySheetContent(request)
+        }
+    }
 
+    private func renderedPageBody(rendered: MushafRenderedPage, width: CGFloat, visibleHeight: CGFloat) -> some View {
             ScrollView {
                 MushafPageTextView(
                     attributed: rendered.text,
@@ -3417,25 +3508,6 @@ private struct MushafPageContent: View {
                 // Fill the visible region so a page that fits sits centered in what the reader can SEE (balanced
                 // top/bottom spacing); a page that overflows stays its natural height and scrolls.
                 .frame(maxWidth: .infinity, minHeight: visibleHeight, alignment: .center)
-            }
-        }
-        .overlay(alignment: spineIsLeading ? .leading : .trailing) { spineRule }
-        // The same pinned surah header the list reader uses, so the two reading modes are titled identically:
-        // revelation symbol, ayah/page summary, favourite star. It names the page's TOP surah.
-        .safeAreaInset(edge: .top, spacing: 0) { topHeader }
-        // A mushaf page is fixed-size: the Arabic uses absolute point sizes, and the chrome must not grow with
-        // Dynamic Type either, or it would eat the space the text was fitted into.
-        .dynamicTypeSize(.large)
-        .sheet(item: $sheetAyah) { ref in
-            AyahActionsSheet(
-                surah: ref.surah,
-                ayah: ref.ayah,
-                onRequestSheet: { kind in requestSecondarySheet(kind, for: ref) }
-            )
-            .smallMediumSheetPresentation()
-        }
-        .sheet(item: $secondarySheet) { request in
-            secondarySheetContent(request)
         }
     }
 
@@ -4351,6 +4423,45 @@ enum MushafPageRenderCache {
             baselineOffset: composer.bodyBaselineOffset(size: metrics.size),
             baselineBand: composer.uniformLineFragmentBand(size: metrics.size, extraLineSpacing: metrics.extraSpacing)
         )
+    }
+
+    /// Cache-only lookup for the render path: never fits inline. The old behavior - a cache miss running the
+    /// full fit synchronously in `body` - was the swipe lurch: outrun the prewarm ring and the swipe itself
+    /// paid ~30 compose/measure passes on the main thread. A miss now returns nil and the page shows a brief
+    /// spinner while `renderAsync` does the same work on the prewarm queue.
+    static func renderedIfAvailable(page: MushafPage, width: CGFloat, height: CGFloat) -> MushafRenderedPage? {
+        lastGeometry = (width, height)
+        return cache.object(forKey: cacheKey(page: page, width: width, height: height, signature: settingsSignature))
+    }
+
+    /// In-flight async renders, keyed like the cache, each holding the completions to run when it lands -
+    /// re-evaluations of a waiting page's body pile onto the same render instead of starting another.
+    private static var pendingRenders: [NSString: [() -> Void]] = [:]
+
+    /// Fit + compose off-main, store, then tell every waiting page to re-read the cache.
+    static func renderAsync(page: MushafPage, width: CGFloat, height: CGFloat, onReady: @escaping () -> Void) {
+        let key = cacheKey(page: page, width: width, height: height, signature: settingsSignature)
+        if cache.object(forKey: key) != nil { onReady(); return }
+
+        if pendingRenders[key] != nil {
+            pendingRenders[key]?.append(onReady)
+            return
+        }
+        pendingRenders[key] = [onReady]
+
+        let config = MushafComposeConfig.current()
+        prewarmQueue.async {
+            let composer = MushafPageComposer(page: page, config: config)
+            let metrics = fitMetrics(composer: composer, width: width, height: height)
+            DispatchQueue.main.async {
+                if cache.object(forKey: key) == nil {
+                    let rendered = finalize(composer: composer, metrics: metrics, width: width)
+                    cache.setObject(rendered, forKey: key)
+                }
+                let waiters = pendingRenders.removeValue(forKey: key) ?? []
+                waiters.forEach { $0() }
+            }
+        }
     }
 
     static func rendered(page: MushafPage, width: CGFloat, height: CGFloat) -> MushafRenderedPage {

@@ -58,6 +58,26 @@ struct IslamView: View {
             case .howToGuides: return "list.bullet.rectangle"
             }
         }
+
+        /// The tile title with its line break CHOSEN, not wherever truncation lands: every grid tile is
+        /// exactly two lines, broken at the natural point, so a whole grid of tiles shares one height and
+        /// one rhythm.
+        var gridTitle: String {
+            switch self {
+            case .arabicAlphabet: return "Arabic\nAlphabet"
+            case .tajweedFoundations: return "Tajweed\nFoundations"
+            case .commonAdhkar: return "Dhikr &\nRemembrances"
+            case .commonDuas: return "Dua &\nSupplications"
+            case .tasbihCounter: return "Tasbih\nCounter"
+            case .namesOfAllah: return "99 Names\nof Allah"
+            case .hijriCalendarConverter: return "Hijri Date\nConverter"
+            case .masjidLocator: return "Masjid\nLocator"
+            case .halalFoodLocator: return "Halal Food\nLocator"
+            case .islamicWallpapers: return "Islamic\nWallpapers"
+            case .pillarsAndBasics: return "Pillars &\nBeliefs"
+            case .howToGuides: return "How-To\nGuides"
+            }
+        }
     }
 
     private var favoriteResources: [IslamDestination] {
@@ -242,13 +262,12 @@ struct IslamView: View {
 
     @available(iOS 16.0, *)
     private func resourceGridTile(_ item: IslamDestination) -> some View {
-        let isFavorite = settings.isIslamResourceFavorite(item.rawValue)
-        return VStack(spacing: 5) {
+        VStack(spacing: 5) {
             Image(systemName: item.systemImage)
                 .font(.subheadline)
                 .foregroundColor(settings.accentColor.color)
 
-            Text(item.title)
+            Text(item.gridTitle)
                 .font(.caption2.weight(.medium))
                 .foregroundColor(.primary)
                 .multilineTextAlignment(.center)
@@ -260,19 +279,12 @@ struct IslamView: View {
         .padding(.horizontal, 4)
         .contentShape(Rectangle())
         .conditionalGlassEffect(rectangle: true)
-        .overlay(alignment: .topTrailing) {
-            Image(systemName: isFavorite ? "star.fill" : "star")
-                .font(.caption2)
-                .foregroundColor(isFavorite ? settings.accentColor.color : .secondary)
-                .padding(6)
-                .contentShape(Rectangle())
-                .onTapGesture {
-                    settings.hapticFeedback()
-                    withAnimation(.easeInOut) {
-                        settings.toggleIslamResourceFavorite(item.rawValue)
-                    }
-                }
-                .accessibilityLabel(isFavorite ? "Unfavorite \(item.title)" : "Favorite \(item.title)")
+        .gridFavoriteStar(
+            isFavorite: settings.isIslamResourceFavorite(item.rawValue),
+            accent: settings.accentColor.color,
+            accessibilityName: item.title
+        ) {
+            settings.toggleIslamResourceFavorite(item.rawValue)
         }
     }
     #endif

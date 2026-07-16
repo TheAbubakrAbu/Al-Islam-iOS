@@ -837,6 +837,13 @@ private struct NameGridTile: View, Equatable {
             useColor: isFavorite ? 0.25 : nil,
             customTint: isFavorite ? accentColor.color : nil
         )
+        .gridFavoriteStar(
+            isFavorite: isFavorite,
+            accent: accentColor.color,
+            accessibilityName: name.transliteration
+        ) {
+            settings.toggleNameFavorite(number: name.number)
+        }
         .onTapGesture {
             settings.hapticFeedback()
             settings.toggleNameFavorite(number: name.number)
