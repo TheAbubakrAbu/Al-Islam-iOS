@@ -14,6 +14,8 @@ struct PrayerList: View {
 
     @State private var expandedPrayerKey: String?
     @State private var fullPrayers = false
+    /// Presents Adhan settings landed on the Traveling Mode screen - the footer's exit from Qasr mode.
+    @State private var showTravelingModeSettings = false
     @State private var animatingBellPrayerName: String?
     @State private var bellAnimationActive = false
     @State private var selectedDate = Date()
@@ -511,10 +513,26 @@ struct PrayerList: View {
                     fullPrayers.toggle()
                 }
 
+                #if os(iOS)
+                // The footer explains Qasr but gave no way OUT of it: turning traveling mode off meant
+                // finding the setting by hand. This lands directly on the Traveling Mode screen.
+                footerActionButton("Traveling Mode Settings") {
+                    showTravelingModeSettings = true
+                }
+                #endif
+
                 #if os(watchOS)
                 travelingModeDescription
                 #endif
             }
+            #if os(iOS)
+            .sheet(isPresented: $showTravelingModeSettings) {
+                NavigationView {
+                    SettingsAdhanView(showNotifications: false, presentedAsSheet: true, openTravelingMode: true)
+                }
+                .smallMediumSheetPresentation()
+            }
+            #endif
         }
     }
 

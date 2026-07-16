@@ -58,6 +58,10 @@ struct AdhkarRow: View {
     /// line reads as Arabic prose, not as a UI label. A dhikr is a short phrase in a list of short phrases, so
     /// it stays leading until it actually wraps (which is what `arabicWraps` decides).
     var alwaysTrailing: Bool = false
+    /// Shows a small "hear it" button that reads the Arabic aloud with the system's Arabic voice. There are
+    /// no recordings for adhkar and duas, so this is synthesized - the same best-effort TTS the alphabet
+    /// screens use; the button only appears when the device actually has an Arabic voice.
+    var speechEnabled: Bool = false
 
     /// The rendered height of the Arabic, and the height of a single line of it. A short dhikr ("سُبحَانَ اللَّهِ")
     /// is one line and reads best leading, like every other row on the screen; a long one wraps, and a wrapped
@@ -155,6 +159,22 @@ struct AdhkarRow: View {
                 guaranteeMatch: matches(translation)
             )
             .fixedSize(horizontal: false, vertical: true)
+
+            if speechEnabled, ArabicSpeech.shared.isAvailable {
+                Button {
+                    settings.hapticFeedback()
+                    ArabicSpeech.shared.speak(arabicText, rate: 0.4)
+                } label: {
+                    Label("Listen", systemImage: "speaker.wave.2")
+                        .font(.caption.weight(.semibold))
+                        .foregroundColor(settings.accentColor.color)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 5)
+                        .conditionalGlassEffect()
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Hear the Arabic read aloud")
+            }
         }
         // Without this the List is free to hand these rows a height that truncates the long duas to a single
         // ellipsized line; it lets each block claim the height its text actually needs.
@@ -247,7 +267,8 @@ struct AdhkarView: View {
                 transliteration: dhikr.transliteration,
                 translation: dhikr.translation,
                 useQuranicFont: settings.useFontArabic,
-                searchQuery: searchText
+                searchQuery: searchText,
+                speechEnabled: true
             )
         }
     }

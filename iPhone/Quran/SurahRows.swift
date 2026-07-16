@@ -986,6 +986,11 @@ struct SummaryAyahTile: View {
     let surah: Surah
     let ayah: Ayah
     var titleColor: Color = .secondary
+    /// Whether this tile's recents are the ones currently unfolded below the grid (flips the corner icon).
+    var isExpanded: Bool = false
+    /// When set, the tile grows a small toggle in its corner that unfolds this tile's recent history below
+    /// the summary grid - the summary-mode counterpart of the +/- the full-size rows carry on their headers.
+    var onExpand: (() -> Void)? = nil
     let onTap: () -> Void
 
     /// e.g. "Al-Fatiha 1:5"
@@ -1030,6 +1035,20 @@ struct SummaryAyahTile: View {
                             .font(.caption2.weight(.semibold))
                             .foregroundColor(titleColor)
                             .lineLimit(1)
+
+                        if let onExpand {
+                            Spacer(minLength: 0)
+
+                            Image(systemName: isExpanded ? "minus.circle" : "plus.circle")
+                                .font(.caption)
+                                .foregroundColor(settings.accentColor.color)
+                                .contentShape(Rectangle().inset(by: -8))
+                                .onTapGesture {
+                                    settings.hapticFeedback()
+                                    onExpand()
+                                }
+                                .accessibilityLabel("Show recent \(title)")
+                        }
                     }
                 }
 
@@ -1106,6 +1125,9 @@ struct SummarySurahTile: View {
     let surah: Surah
     let lastListenedSurah: LastListenedSurah
     var titleColor: Color = .secondary
+    /// See `SummaryAyahTile.isExpanded` / `.onExpand`.
+    var isExpanded: Bool = false
+    var onExpand: (() -> Void)? = nil
     let onTap: () -> Void
 
     /// e.g. "1 - Al-Fatiha"
@@ -1125,6 +1147,20 @@ struct SummarySurahTile: View {
                         .font(.caption2.weight(.semibold))
                         .foregroundColor(titleColor)
                         .lineLimit(1)
+
+                    if let onExpand {
+                        Spacer(minLength: 0)
+
+                        Image(systemName: isExpanded ? "minus.circle" : "plus.circle")
+                            .font(.caption)
+                            .foregroundColor(settings.accentColor.color)
+                            .contentShape(Rectangle().inset(by: -8))
+                            .onTapGesture {
+                                settings.hapticFeedback()
+                                onExpand()
+                            }
+                            .accessibilityLabel("Show recent \(title)")
+                    }
                 }
 
                 Text(detail)

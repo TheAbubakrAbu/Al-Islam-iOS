@@ -121,9 +121,12 @@ struct SettingsView: View {
     private func resourceLink<Destination: View>(
         title: String,
         systemImage: String,
-        @ViewBuilder destination: () -> Destination
+        @ViewBuilder destination: @escaping () -> Destination
     ) -> some View {
-        NavigationLink(destination: destination()) {
+        // LazyDestination, same as IslamView: building the destination eagerly meant every body pass of this
+        // tab constructed the full Adhan/Quran/Notification settings trees - on the watch, where TabView
+        // re-evaluates neighbouring tabs on every swipe, that WAS the tab-switch lag into Settings.
+        NavigationLink(destination: LazyDestination(build: destination)) {
             toolLabel(title, systemImage: systemImage)
         }
         .tint(settings.accentColor.color)

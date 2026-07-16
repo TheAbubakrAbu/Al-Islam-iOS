@@ -101,6 +101,7 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
         runQuranStartupMigrations()
         runAdhanSoundStartupMigrations()
         runWatchSyncKeyMigration()
+        runGridModeUnificationMigration()
         isReadyForUI = true
 
         // Defer CoreLocation + NWPathMonitor startup off the synchronous init/first-paint path. Settings.shared
@@ -247,6 +248,19 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
         appGroup.removeObject(forKey: "watchSync.lastSyncedSettingsData")
         appGroup.set(true, forKey: migrationKey)
         #endif
+    }
+
+    /// The app used to keep a separate grid/list preference per screen ("arabicDisplayMode",
+    /// "namesDisplayMode", plus the Quran tab's Bool). They're now one `gridMode`: a user who had ANY of them
+    /// on grid keeps a grid everywhere, and the retired string keys are removed so this runs once.
+    private func runGridModeUnificationMigration() {
+        let store = UserDefaults.standard
+        for legacyKey in ["arabicDisplayMode", "namesDisplayMode"] {
+            if store.string(forKey: legacyKey) == "grid" {
+                gridMode = true
+            }
+            store.removeObject(forKey: legacyKey)
+        }
     }
 
     @Published var accentColor: AccentColor {
@@ -855,9 +869,11 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
 
     @AppStorage("showBookmarks") var showBookmarks = true
     @AppStorage("showFavorites") var showFavorites = true
-    /// One master grid toggle (driven by the toolbar button) for every list on the Quran tab except the
-    /// summary: bookmarked ayahs, favorite surahs, and the surah / juz browse list.
-    @AppStorage("quranGridMode") var quranGridMode = false
+    /// THE grid toggle, app-wide: the Quran tab's lists, the Arabic alphabet, the 99 Names, and the Islam
+    /// resources all follow this one switch - flipping it anywhere flips it everywhere. (The key keeps its
+    /// historical name so existing users' Quran preference carries over; the per-screen `arabicDisplayMode` /
+    /// `namesDisplayMode` strings it replaced are migrated in `init` and then cleared.)
+    @AppStorage("quranGridMode") var gridMode = false
     /// Reads a surah as swipeable mushaf pages instead of a scrolling ayah list. Toggled from the Quran tab's
     /// toolbar, but only takes effect inside SurahView - the surah browse list itself is unchanged.
     @AppStorage("quranPageMode") var quranPageMode = false
@@ -1184,6 +1200,24 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
         favoriteLetters.contains { $0.id == letterData.id }
     }
     
+    /// Pinned Islam-tab resources, stored as the destination enum's raw values, comma-joined (a dozen short
+    /// identifiers - a Codable blob would be ceremony).
+    @AppStorage("favoriteIslamResources") private var favoriteIslamResourcesRaw = ""
+
+    func isIslamResourceFavorite(_ id: String) -> Bool {
+        favoriteIslamResourcesRaw.components(separatedBy: ",").contains(id)
+    }
+
+    func toggleIslamResourceFavorite(_ id: String) {
+        var ids = favoriteIslamResourcesRaw.components(separatedBy: ",").filter { !$0.isEmpty }
+        if let index = ids.firstIndex(of: id) {
+            ids.remove(at: index)
+        } else {
+            ids.append(id)
+        }
+        favoriteIslamResourcesRaw = ids.joined(separator: ",")
+    }
+
     @AppStorage("favoriteNameNumbersData") private var favoriteNameNumbersData = Data()
     var favoriteNameNumbers: [Int] {
         get {

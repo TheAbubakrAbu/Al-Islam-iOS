@@ -5,7 +5,6 @@ struct ArabicView: View {
     @State private var searchText = ""
     @AppStorage("arabicFilterMode") private var filterModeRaw: String = ArabicFilterMode.normal.rawValue
     /// List of rows, or a grid of tiles - the same choice the 99 Names screen offers. Watch is always a list.
-    @AppStorage("arabicDisplayMode") private var arabicDisplayMode: String = "list"
 
     private enum ArabicFilterMode: String, CaseIterable, Identifiable {
         case normal
@@ -203,10 +202,10 @@ struct ArabicView: View {
         #if os(iOS)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
-                // Same grid/list toggle as the 99 Names screen.
+                // The one app-wide grid toggle - flipping it here flips Quran, Names, and Islam too.
                 Button {
                     settings.hapticFeedback()
-                    withAnimation { arabicDisplayMode = isGridMode ? "list" : "grid" }
+                    withAnimation { settings.gridMode.toggle() }
                 } label: {
                     Image(systemName: isGridMode ? "list.bullet" : "square.grid.2x2")
                 }
@@ -262,7 +261,7 @@ struct ArabicView: View {
 
     private var isGridMode: Bool {
         #if os(iOS)
-        return arabicDisplayMode == "grid"
+        return settings.gridMode
         #else
         return false
         #endif

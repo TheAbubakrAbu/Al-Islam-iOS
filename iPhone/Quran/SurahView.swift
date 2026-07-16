@@ -1002,22 +1002,31 @@ struct SurahView: View {
                 onPageAnchor: { surahID, ayahID in pageAnchor = (surahID, ayahID) }
             ) {
                 let active = quranPlayer.isPlaying || quranPlayer.isPaused
-                VStack(spacing: 0) {
-                    qiraatAndTajweedControls
+                // Tajweed and qiraah comparison are Arabic-script concepts: an English page renders neither,
+                // so its legend and riwayah picker would be dead chrome eating page height. Hidden entirely -
+                // and when NOTHING is in this bar, the bar contributes no inset at all (an empty VStack still
+                // carrying its paddings was silently costing the page ~20pt).
+                let showQiraatControls = pageQiraatControlsVisible
+                if showQiraatControls || active {
+                    VStack(spacing: 0) {
+                        if showQiraatControls {
+                            qiraatAndTajweedControls
+                        }
 
-                    if active {
-                        NowPlayingView(quranView: false)
-                            .padding(.horizontal, 24)
-                            .padding(.top, SafeAreaInsetVStackSpacing.standard)
-                            .transition(.opacity)
+                        if active {
+                            NowPlayingView(quranView: false)
+                                .padding(.horizontal, 24)
+                                .padding(.top, SafeAreaInsetVStackSpacing.standard)
+                                .transition(.opacity)
+                        }
                     }
+                    // Same breathing room the list reader gives this bar - and here the bottom padding is
+                    // also what separates it from the page-navigation footer pinned underneath.
+                    .padding(.top, SafeAreaInsetVStackSpacing.standard)
+                    .padding(.bottom, SafeAreaInsetVStackSpacing.standard)
+                    .background(Color.white.opacity(0.00001))
+                    .animation(.easeInOut, value: active)
                 }
-                // Same breathing room the list reader gives this bar - and here the bottom padding is also what
-                // separates it from the page-navigation footer pinned underneath, which it was crowding.
-                .padding(.top, SafeAreaInsetVStackSpacing.standard)
-                .padding(.bottom, SafeAreaInsetVStackSpacing.standard)
-                .background(Color.white.opacity(0.00001))
-                .animation(.easeInOut, value: active)
             }
             // The reader seeds its starting page once (`didSetInitialPage`), so swapping the surah in
             // place must give it a fresh identity - otherwise it would stay on the old surah's page.
@@ -1323,6 +1332,18 @@ struct SurahView: View {
                 ?? ayahsForQiraah.first.flatMap { overlayDividerByAyahID[$0.id] }
         }()
         let floatingDividerAnimationKey = floatingDividerModel.map(boundaryDividerID) ?? "none"
+        // How far the top-visible ayah is through the surah. Drives the overlay's meter INSTEAD of the page
+        // fraction: pages advance in whole steps (a 6-page surah's bar sat still, then jumped a sixth), while
+        // this fills continuously as you scroll and reaches full at the last ayah. Ayah ids are the ordinals,
+        // so this is O(1) per render.
+        let floatingProgressFraction: CGFloat? = {
+            guard shouldUpdateFloatingPageJuzOverlay,
+                  let currentFloatingAyah,
+                  let firstID = ayahsForQiraah.first?.id,
+                  let lastID = ayahsForQiraah.last?.id,
+                  lastID > firstID else { return nil }
+            return CGFloat(currentFloatingAyah.id - firstID) / CGFloat(lastID - firstID)
+        }()
         let keywordDividerModels: [BoundaryDividerModel] = {
             guard let mode = dividerKeywordMode else { return [] }
             guard let boundaryModel else { return [] }
@@ -1650,7 +1671,8 @@ struct SurahView: View {
                 // (it would just duplicate what's visible); it returns once that divider scrolls away.
                 floatingHeaderOverlay(
                     floatingDividerModel: firstBoundaryDividerOnScreen ? nil : floatingDividerModel,
-                    floatingDividerAnimationKey: firstBoundaryDividerOnScreen ? "none" : floatingDividerAnimationKey
+                    floatingDividerAnimationKey: firstBoundaryDividerOnScreen ? "none" : floatingDividerAnimationKey,
+                    progressFraction: floatingProgressFraction
                 )
             }
             .safeAreaInset(edge: .bottom) {
@@ -1833,7 +1855,8 @@ struct SurahView: View {
 
     private func floatingHeaderOverlay(
         floatingDividerModel: BoundaryDividerModel?,
-        floatingDividerAnimationKey: String
+        floatingDividerAnimationKey: String,
+        progressFraction: CGFloat? = nil
     ) -> some View {
         VStack(spacing: 2) {
             SurahSectionHeader(surah: surah)
@@ -1844,14 +1867,16 @@ struct SurahView: View {
                     .transition(.opacity.combined(with: .scale(scale: 0.98)))
                     .animation(.easeInOut(duration: 0.18), value: floatingDividerAnimationKey)
 
-                // The label already says "(3/10)"; this makes that fraction legible at a glance, so you can
-                // see how far through the surah's pages you are without reading the numbers. Same meter the
-                // mushaf page footer uses, so the two reading modes agree.
+                // The bar makes the "(3/10)" in the label legible at a glance. It still appears only for
+                // surahs that span pages, but it fills by AYAH, not by page: the page fraction advanced in
+                // whole-page jumps (still for a page and a half of scrolling, then a lurch), while the ayah
+                // fraction tracks the actual scroll and reaches full at the surah's last ayah. The page-based
+                // fraction stays as the fallback for the paths that don't track the visible ayah.
                 if let position = floatingDividerModel.pageInSurah,
                    let total = floatingDividerModel.surahPageCount,
                    total > 1 {
                     TrackedBar(
-                        fraction: CGFloat(position) / CGFloat(total),
+                        fraction: progressFraction ?? (CGFloat(position) / CGFloat(total)),
                         height: 3,
                         color: settings.accentColor.color
                     )
@@ -1880,6 +1905,16 @@ struct SurahView: View {
         VStack(spacing: SafeAreaInsetVStackSpacing.standard) {
             playbackAndSearchControls(proxy: proxy)
         }
+    }
+
+    /// Whether the page reader's tajweed/qiraah bar has anything to show: the same conditions
+    /// `qiraatAndTajweedControls` renders by, minus English page text (no tajweed, no qiraat to compare).
+    private var pageQiraatControlsVisible: Bool {
+        guard !settings.resolvedMushafPageLanguage.isEnglish else { return false }
+        let tajweedCanRenderNow = settings.showTajweedColors
+            && settings.showArabicText
+            && settings.isHafsDisplay
+        return settings.qiraatComparisonMode || tajweedCanRenderNow
     }
 
     @ViewBuilder
@@ -2745,11 +2780,21 @@ struct MushafPage: Identifiable {
 enum MushafPagination {
     /// Paginating all 6,236 ayahs is not free, so do it once per (qiraah, quran-size) and reuse. Keyed by
     /// qiraah because ayahs missing from a qiraah are dropped, which changes what lands on each page.
-    private static var pageCache: (key: String, pages: [MushafPage])?
+    /// A few entries rather than one: comparison mode flips between qiraat, and a single slot re-paginated
+    /// the whole Quran on every flip. The ayah data inside a page is copy-on-write, so an entry costs
+    /// pointers, not text.
+    private static var pageCache: [(key: String, pages: [MushafPage])] = []
+    private static let pageCacheLimit = 4
 
     static func pages(quran: [Surah], qiraah: String?) -> [MushafPage] {
         let key = "\(qiraah ?? "Hafs")|\(quran.count)"
-        if let cached = pageCache, cached.key == key { return cached.pages }
+        if let index = pageCache.firstIndex(where: { $0.key == key }) {
+            // Refresh on use, so eviction sheds the least-recently-READ entry - plain FIFO would evict the
+            // default Hafs pagination (always inserted first) the moment a fifth qiraah was compared.
+            let hit = pageCache.remove(at: index)
+            pageCache.append(hit)
+            return hit.pages
+        }
 
         var pages: [MushafPage] = []
         // Surahs and their ayahs are already in mushaf order, so a page's segments accumulate in order too:
@@ -2773,13 +2818,36 @@ enum MushafPagination {
             }
         }
 
-        pageCache = (key, pages)
+        if pageCache.count >= pageCacheLimit { pageCache.removeFirst() }
+        pageCache.append((key, pages))
         return pages
     }
 
+    /// The index of the page holding this surah's ayah - or, when the ayah isn't given or found, the surah's
+    /// first page. Where every "open the mushaf at ..." lands, so the reader and the launch prewarm agree.
+    static func pageIndex(surahID: Int, ayahID: Int?, in pages: [MushafPage]) -> Int? {
+        if let ayahID,
+           let index = pages.firstIndex(where: { page in
+               page.segments.contains { $0.surah.id == surahID && $0.ayahs.contains { $0.id == ayahID } }
+           }) {
+            return index
+        }
+        return pages.firstIndex { $0.segments.contains { $0.surah.id == surahID } }
+    }
+
+    /// Memo for `juzRanges`: it sits in the page footer, which re-renders on every page turn, and walking all
+    /// ~604 pages each time added a full sweep per swipe. Keyed by the qiraah, the same thing that keys the
+    /// pagination itself - two qiraat could coincidentally paginate to the same page count and endpoints while
+    /// laying their juz starts on different page ordinals, so a shape fingerprint isn't a safe key.
+    private static var juzCache: (key: String, count: Int, ranges: [Int: (start: Int, count: Int)])?
+
     /// For each juz, the ordinal of its first page and how many pages it spans, so a page can show its
     /// position within the current juz. Pages are in mushaf order, so the first occurrence is the start.
-    static func juzRanges(_ pages: [MushafPage]) -> [Int: (start: Int, count: Int)] {
+    /// Pass the same `qiraah` the pages were built with.
+    static func juzRanges(_ pages: [MushafPage], qiraah: String?) -> [Int: (start: Int, count: Int)] {
+        let key = "\(qiraah ?? "Hafs")"
+        if let cached = juzCache, cached.key == key, cached.count == pages.count { return cached.ranges }
+
         var map: [Int: (start: Int, count: Int)] = [:]
         for (index, page) in pages.enumerated() {
             guard let juz = page.juz else { continue }
@@ -2789,6 +2857,7 @@ enum MushafPagination {
                 map[juz] = (index, 1)
             }
         }
+        juzCache = (key, pages.count, map)
         return map
     }
 }
@@ -2829,14 +2898,7 @@ struct SurahPageReader<Controls: View>: View {
         let targetAyah = initialAyah
             ?? (settings.lastReadSurah == surah.id && settings.lastReadAyah > 0 ? settings.lastReadAyah : nil)
 
-        if let targetAyah,
-           let index = pages.firstIndex(where: { page in
-               page.segments.contains { $0.surah.id == surah.id && $0.ayahs.contains { $0.id == targetAyah } }
-           }) {
-            return index
-        }
-
-        return pages.firstIndex { $0.segments.contains { $0.surah.id == surah.id } } ?? 0
+        return MushafPagination.pageIndex(surahID: surah.id, ayahID: targetAyah, in: pages) ?? 0
     }
 
     var body: some View {
@@ -2921,7 +2983,7 @@ struct SurahPageReader<Controls: View>: View {
     private func pageFooter(pages: [MushafPage]) -> some View {
         if pages.indices.contains(pageIndex) {
             let page = pages[pageIndex]
-            let ranges = MushafPagination.juzRanges(pages)
+            let ranges = MushafPagination.juzRanges(pages, qiraah: settings.displayQiraahForArabic)
             let jr = page.juz.flatMap { ranges[$0] }
             let juzPosition = jr.map { pageIndex - $0.start + 1 } ?? 0
             let juzTotal = jr?.count ?? 0
@@ -3076,7 +3138,7 @@ struct SurahPageReader<Controls: View>: View {
     /// The page and juz pickers, in place rather than as a sheet - jumping somewhere shouldn't cost a modal.
     /// Both use the same chrome; only what's being picked differs.
     private func inlinePicker(target: PickerTarget, pages: [MushafPage]) -> some View {
-        let ranges = MushafPagination.juzRanges(pages)
+        let ranges = MushafPagination.juzRanges(pages, qiraah: settings.displayQiraahForArabic)
         let juzList = ranges.keys.sorted()
 
         return VStack(spacing: 0) {
@@ -3233,11 +3295,12 @@ private struct MushafPageContent: View {
     let page: MushafPage
 
     /// Padding around the ayah block; the composer measures fit against the same text width and height.
+    /// No slack constants beyond these: the fit verifies against the real TextKit layout, so the text gets
+    /// every point the paddings don't take. Vertically almost nothing - the Quranic faces carry generous
+    /// line-box air above the first ink and below the last (room for stacked marks), which reads as the
+    /// page's visual margin on its own; real padding on top of it just shrank the font.
     private static let textPadding: CGFloat = 20
-    private static let verticalPadding: CGFloat = 16
-    /// The TextKit slack `MushafPageRenderCache` adds to the measured height, kept out of the fit budget so a
-    /// page fitted to the very limit still can't overflow by those few points.
-    private static let fitSlack: CGFloat = 8
+    private static let verticalPadding: CGFloat = 6
 
     /// The ayah the reader has marked by tapping it - it stays lit until tapped again. This is a reading aid
     /// (keeping your place, isolating an ayah on a dense page), so it is deliberately sticky and NOT tied to
@@ -3323,11 +3386,9 @@ private struct MushafPageContent: View {
             // only exists in comparison mode - is covered by chrome: text fitted into it is text hidden behind
             // the bar. Budgeting against the frame is what cost a comparison-mode page its last line.
             let visibleHeight = max(geo.size.height - geo.safeAreaInsets.top - geo.safeAreaInsets.bottom, 1)
-            // The height the TEXT actually gets - not the height of the region. The block sits inside vertical
-            // padding, and the rendered height carries a few points of TextKit slack on top of the measurement;
-            // handing the fitter the full region made it fit against a budget that didn't exist, so it settled
-            // on a smaller size than the page had room for.
-            let textHeight = max(visibleHeight - Self.verticalPadding * 2 - Self.fitSlack, 1)
+            // The height the TEXT actually gets: the visible region minus its own vertical padding, nothing
+            // else. The fit verifies against the real TextKit layout, so no slack is reserved on top.
+            let textHeight = max(visibleHeight - Self.verticalPadding * 2, 1)
             // Composed + measured once per (page, size, settings) - see `MushafPageRenderCache`. Doing this
             // inline made every swipe re-fit the page on the main thread.
             let rendered = MushafPageRenderCache.rendered(page: page, width: width, height: textHeight)
@@ -3339,7 +3400,9 @@ private struct MushafPageContent: View {
                     width: width,
                     highlight: highlightedAyah,
                     highlightColor: settings.accentColor.color,
-                    mark: markedAyah
+                    mark: markedAyah,
+                    baselineOffset: rendered.baselineOffset,
+                    baselineBand: rendered.baselineBand
                 ) { surahID, ayahID in
                     guard ayahRef(surahID: surahID, ayahID: ayahID) != nil else { return }
                     toggleHighlight(surahID: surahID, ayahID: ayahID)
@@ -3570,12 +3633,25 @@ struct MushafPageComposer {
             p.alignment = .center
         } else {
             // English pages are set natural (left-aligned): justified Latin text without hyphenation
-            // opens rivers of whitespace, the very artifact the Arabic justification rule below avoids.
-            p.alignment = usesSystemFont ? .natural : .justified
+            // opens rivers of whitespace, the very artifact the Arabic justification below avoids.
+            //
+            // Arabic pages are set RIGHT-aligned here and justified afterwards by `spaceJustified`, NOT with
+            // `.justified`: TextKit justifies Arabic by inserting kashida elongations, and when one lands in
+            // a line's final letter, that letter's tashkeel slides off the letter body onto the end of the
+            // stretched tail. Widening the word gaps ourselves reaches both margins with the marks intact.
+            p.alignment = usesSystemFont ? .natural : .right
         }
         p.baseWritingDirection = isEnglish ? .leftToRight : .rightToLeft
         p.lineSpacing = MushafPageFitter.lineSpacing(for: size, baseSize: config.fontSize)
             + extraLineSpacing
+        // Pin every line box to the BODY font's height. The inline ayah ornaments come from the Uthmani
+        // marker face, whose line metrics differ - without the pin, only the lines that happen to carry an
+        // ornament grew taller, and the page read as unevenly leaded (worst in English, where the body face
+        // is much shorter than the ornament's). Ornament ink taller than the box just draws into the line
+        // gap, which the generous lineSpacing above exists to absorb.
+        let bodyFont = usesSystemFont ? UIFont.roundedSystemFont(ofSize: size) : arabicFont(size)
+        p.minimumLineHeight = bodyFont.lineHeight
+        p.maximumLineHeight = bodyFont.lineHeight
         return p
     }
 
@@ -3741,7 +3817,7 @@ struct MushafPageComposer {
     /// `width` is the column width, needed only so a surah heading's rule can span the full page. It is
     /// optional because the measurement passes don't have a meaningful one yet and don't care.
     func attributed(size: CGFloat, colored: Bool = true, extraLineSpacing: CGFloat = 0,
-                    width: CGFloat = 0) -> (text: NSAttributedString, ranges: [MushafAyahRange]) {
+                    width: CGFloat = 0, spaceTracking: CGFloat = 0) -> (text: NSAttributedString, ranges: [MushafAyahRange]) {
         let result = NSMutableAttributedString()
         var ranges: [MushafAyahRange] = []
         let accent = config.accent
@@ -3782,7 +3858,107 @@ struct MushafPageComposer {
             }
         }
 
+        // Justify the final compose: first the page-wide loosening (`spaceTracking`, which DOES move line
+        // breaks - it was fitted against the same budget, see `balancedSpaceTracking`), then the per-line
+        // top-up to the exact margins, which only ever consumes slack inside a line and moves nothing.
+        // Tracking attributes don't shift character indices, so the ayah hit-test ranges stay valid.
+        if width > 0, !isEnglish, !usesSystemFont, !isOpeningSpread {
+            let balanced = NSMutableAttributedString(attributedString: result)
+            if spaceTracking > 0 { Self.addSpaceTracking(spaceTracking, to: balanced) }
+            return (Self.spaceJustified(balanced, width: width), ranges)
+        }
+
         return (result, ranges)
+    }
+
+    /// The TextKit-1 stack `MushafPageTextView` renders with (`lineFragmentPadding = 0`, unbounded height),
+    /// laid out and ready to query. Shared by every measurement in this type so they can't drift from each
+    /// other - or from what the text view actually draws.
+    private static func layoutStack(
+        for text: NSAttributedString,
+        width: CGFloat
+    ) -> (storage: NSTextStorage, manager: NSLayoutManager, container: NSTextContainer) {
+        let storage = NSTextStorage(attributedString: text)
+        let manager = NSLayoutManager()
+        let container = NSTextContainer(size: CGSize(width: width, height: .greatestFiniteMagnitude))
+        container.lineFragmentPadding = 0
+        manager.addTextContainer(container)
+        storage.addLayoutManager(manager)
+        manager.ensureLayout(for: container)
+        return (storage, manager, container)
+    }
+
+    /// Justifies right-aligned Arabic by distributing each line's leftover width across the word gaps (as
+    /// tracking on the spaces). This is what `.justified` would do MINUS kashida glyph elongation, which
+    /// TextKit is free to place inside a line's final letter - detaching that letter's tashkeel onto the
+    /// stretched tail, the mushaf reader's "floating haraka at the margin" artifact. Every line takes the
+    /// full measure, including a paragraph's last; only centered lines (surah headings) and lines too empty
+    /// to stretch stay as set.
+    private static func spaceJustified(_ source: NSAttributedString, width: CGFloat) -> NSAttributedString {
+        let justified = NSMutableAttributedString(attributedString: source)
+        // The whole stack stays bound: NSLayoutManager does NOT retain its NSTextStorage, so discarding the
+        // storage would tear the layout down under the queries below.
+        let stack = layoutStack(for: source, width: width)
+        let manager = stack.manager
+
+        let string = source.string as NSString
+        var glyphIndex = 0
+        while glyphIndex < manager.numberOfGlyphs {
+            var lineGlyphRange = NSRange()
+            let usedRect = manager.lineFragmentUsedRect(forGlyphAt: glyphIndex, effectiveRange: &lineGlyphRange)
+            glyphIndex = NSMaxRange(lineGlyphRange)
+
+            let charRange = manager.characterRange(forGlyphRange: lineGlyphRange, actualGlyphRange: nil)
+            guard charRange.length > 0 else { continue }
+
+            // Only the running right-aligned Arabic participates; headings and rules are centered on purpose.
+            let style = source.attribute(.paragraphStyle, at: charRange.location, effectiveRange: nil) as? NSParagraphStyle
+            guard style?.alignment == .right else { continue }
+
+            // Paragraph-final lines are stretched too - deliberately not what `.justified` would do. This is
+            // a mushaf page: a segment's short closing line ending flush against only one margin reads as a
+            // typesetting mistake, so every line takes the full measure (the sparseness cap below still lets
+            // a line too empty to stretch stay natural).
+            let lineEnd = NSMaxRange(charRange)
+
+            // Stretch every space in the line except the trailing whitespace at the break - TextKit hangs
+            // that outside the margin, and widening it would move the break itself.
+            var contentEnd = lineEnd
+            while contentEnd > charRange.location,
+                  let scalar = Unicode.Scalar(string.character(at: contentEnd - 1)),
+                  CharacterSet.whitespacesAndNewlines.contains(scalar) {
+                contentEnd -= 1
+            }
+            var spaceLocations: [Int] = []
+            for i in charRange.location..<contentEnd where string.character(at: i) == 0x20 {
+                spaceLocations.append(i)
+            }
+            guard !spaceLocations.isEmpty else { continue }
+
+            let slack = width - usedRect.width
+            guard slack > 1.5 else { continue }
+            // Fill to a fixed 1pt short of the margin, not a percentage: a proportional factor leaves a
+            // margin that shrinks with the slack (2% of a 1pt slack is nothing), and a line that lands even
+            // a rounding error past the container re-breaks - which would shift every break below it and put
+            // all the following lines' widened gaps on the wrong spaces. An absolute point of headroom is
+            // bigger than any advance-rounding difference TextKit produces at these sizes.
+            let perSpace = (slack - 1.0) / CGFloat(spaceLocations.count)
+
+            // No sparseness escape hatch: a short closing line stretches across the full measure like every
+            // other line, exactly as a printed mushaf sets it. (A single word with no gaps has nothing to
+            // stretch and stays where the alignment puts it.)
+
+            // `.tracking`, deliberately NOT `.kern`: kern participates in glyph shaping, and an attribute
+            // boundary it introduces at a space could perturb how the neighbouring cluster's marks attach -
+            // the "tashkeel drifts off the letter" artifact, worst on an ayah's final letter where the marker
+            // run already changes fonts. Tracking is applied after shaping, so it widens the space's advance
+            // and can touch nothing else.
+            for location in spaceLocations {
+                let existing = (justified.attribute(.tracking, at: location, effectiveRange: nil) as? CGFloat) ?? 0
+                justified.addAttribute(.tracking, value: existing + perSpace, range: NSRange(location: location, length: 1))
+            }
+        }
+        return justified
     }
 
     private func height(of text: NSAttributedString, width: CGFloat) -> CGFloat {
@@ -3805,26 +3981,19 @@ struct MushafPageComposer {
     /// clips anything past the height it was given - so this is what stops a dense page from silently losing
     /// its last line.
     static func layoutHeight(of text: NSAttributedString, width: CGFloat) -> CGFloat {
-        let storage = NSTextStorage(attributedString: text)
-        let container = NSTextContainer(size: CGSize(width: width, height: .greatestFiniteMagnitude))
-        container.lineFragmentPadding = 0
-        let manager = NSLayoutManager()
-        manager.addTextContainer(container)
-        storage.addLayoutManager(manager)
-        manager.ensureLayout(for: container)
-        return ceil(manager.usedRect(for: container).height)
+        // Bound as a whole: NSLayoutManager does not retain its NSTextStorage.
+        let stack = layoutStack(for: text, width: width)
+        return ceil(stack.manager.usedRect(for: stack.container).height)
     }
 
     /// How many lines the page wraps into at `size`. Needed to spread leftover height across the gaps between
     /// lines - see `MushafPageRenderCache`.
-    func lineCount(size: CGFloat, width: CGFloat) -> Int {
-        let storage = NSTextStorage(attributedString: attributed(size: size, colored: false).text)
-        let container = NSTextContainer(size: CGSize(width: width, height: .greatestFiniteMagnitude))
-        container.lineFragmentPadding = 0
-        let manager = NSLayoutManager()
-        manager.addTextContainer(container)
-        storage.addLayoutManager(manager)
-        manager.ensureLayout(for: container)
+    func lineCount(size: CGFloat, width: CGFloat, tracking: CGFloat = 0) -> Int {
+        let text = NSMutableAttributedString(attributedString: attributed(size: size, colored: false).text)
+        if tracking > 0 { Self.addSpaceTracking(tracking, to: text) }
+        // Bound as a whole: NSLayoutManager does not retain its NSTextStorage.
+        let stack = Self.layoutStack(for: text, width: width)
+        let manager = stack.manager
 
         var lines = 0
         var glyph = 0
@@ -3845,40 +4014,130 @@ struct MushafPageComposer {
     /// as it can WITHOUT overflowing - it grows into empty space as readily as it shrinks out of an overflow.
     /// (It used to search only *downwards* from the user's chosen size, so a page that had room to spare simply
     /// kept the small size and left the rest of the screen empty.) With the setting off, the chosen size stands.
+    /// Adds `t` points of advance to every word gap in the running (right-aligned) text - headings and the
+    /// centered opening spread keep their natural setting. The same targeting `spaceJustified` uses, so the
+    /// two passes compose: this one loosens the whole page, that one tops each line up to the exact margin.
+    static func addSpaceTracking(_ t: CGFloat, to text: NSMutableAttributedString) {
+        let string = text.string as NSString
+        for i in 0..<string.length where string.character(at: i) == 0x20 {
+            let style = text.attribute(.paragraphStyle, at: i, effectiveRange: nil) as? NSParagraphStyle
+            guard style?.alignment == .right else { continue }
+            let existing = (text.attribute(.tracking, at: i, effectiveRange: nil) as? CGFloat) ?? 0
+            text.addAttribute(.tracking, value: existing + t, range: NSRange(location: i, length: 1))
+        }
+    }
+
+    /// Real laid-out height of the page with `tracking` on its word gaps.
+    func balancedLayoutHeight(size: CGFloat, width: CGFloat, tracking: CGFloat, extraLineSpacing: CGFloat = 0) -> CGFloat {
+        let text = NSMutableAttributedString(
+            attributedString: attributed(size: size, colored: false, extraLineSpacing: extraLineSpacing).text
+        )
+        if tracking > 0 { Self.addSpaceTracking(tracking, to: text) }
+        return Self.layoutHeight(of: text, width: width)
+    }
+
+    /// The page-wide word-gap loosening that fills the last line the way a real mushaf does. Fitting the font
+    /// leaves the final line holding whatever words are left over - sometimes just two or three, which
+    /// per-line justification could only stretch into a few enormous gaps. A typesetter fixes that by setting
+    /// the WHOLE page a little looser, so each line carries one word fewer and the surplus cascades down into
+    /// the last line. This finds the loosest such setting that still fits the height budget: word gaps grow
+    /// uniformly, lines break earlier, the last line fills, and `spaceJustified` then tops every line up to
+    /// the exact margins - moderate, even gaps everywhere instead of a sparse orphan line.
+    func balancedSpaceTracking(size: CGFloat, width: CGFloat, budget: CGFloat) -> CGFloat {
+        guard config.fitPage, !isEnglish, !usesSystemFont, !isOpeningSpread else { return 0 }
+        // Loosening beyond this would read as broken setting, not justification; the height constraint
+        // usually binds far earlier.
+        var lo: CGFloat = 0
+        var hi = size * 0.9
+
+        guard balancedLayoutHeight(size: size, width: width, tracking: hi) > budget else { return hi }
+        for _ in 0..<8 {
+            let mid = (lo + hi) / 2
+            if balancedLayoutHeight(size: size, width: width, tracking: mid) <= budget {
+                lo = mid
+            } else {
+                hi = mid
+            }
+        }
+        return (lo * 20).rounded(.down) / 20
+    }
+
+    /// Where every line's baseline sits, measured from the top of its line fragment - the body face's own
+    /// ascent, which is exactly where TextKit puts it on lines that contain only body text. Handed to the
+    /// text view so ornament-carrying lines can't move it (see `MushafRenderedPage.baselineOffset`).
+    func bodyBaselineOffset(size: CGFloat) -> CGFloat {
+        let body = usesSystemFont ? UIFont.roundedSystemFont(ofSize: size) : arabicFont(size)
+        return ceil(body.ascender)
+    }
+
+    /// The fragment heights that count as "a running text line" - the pinned body box, alone or with the
+    /// line spacing the paragraph adds, with a little tolerance for rounding. The baseline is forced only
+    /// inside this band, so surah-heading lines (own smaller styles, natural heights) keep their own
+    /// baselines instead of having the body's - which could sit below their whole fragment - imposed on them.
+    func uniformLineFragmentBand(size: CGFloat, extraLineSpacing: CGFloat) -> ClosedRange<CGFloat> {
+        let body = usesSystemFont ? UIFont.roundedSystemFont(ofSize: size) : arabicFont(size)
+        let box = body.lineHeight
+        let spacing = MushafPageFitter.lineSpacing(for: size, baseSize: config.fontSize) + extraLineSpacing
+        return (box - 2)...(box + spacing + 2)
+    }
+
     func fittedSize(availableWidth: CGFloat, availableHeight: CGFloat) -> CGFloat {
         let base = config.fontSize
         guard config.fitPage, availableWidth > 1, availableHeight > 1 else { return base }
 
         let budget = availableHeight
 
-        // Already as big as we allow and still fitting: take the ceiling.
+        // Binary-search on the fast `boundingRect` measurement, then ACCEPT on the real TextKit stack.
+        // boundingRect and NSLayoutManager disagree by a few points on RTL text that mixes fonts, and every
+        // point of disagreement used to be paid for twice: once as a slack constant reserved on every page
+        // (shrinking pages that didn't need it - the "lost lines"), and once as clipping on the pages where
+        // the constants weren't enough. Verifying the winner against the same layout the text view runs
+        // makes the fit exact, so the slack constants are gone.
         let ceiling = fitCeiling
-        if measuredHeight(size: ceiling, width: availableWidth) <= budget { return ceiling }
+        var candidate = ceiling
 
-        // Otherwise binary-search the whole range for the biggest size that fits. The floor is a legibility
-        // limit - a page that can't fit even at 9pt keeps 9pt and scrolls.
-        //
-        // 16 iterations, and the result is floored to a HUNDREDTH of a point rather than to a half point. That
-        // sounds absurdly fine-grained, but it isn't: rounding down to the nearest 0.5pt threw away up to half a
-        // point of size on every page, and half a point across ~15 lines is a visibly smaller page. Take every
-        // fraction we're entitled to.
-        // The lower bound is a bound, not a promise: a very dense page may not fit even at 9pt. The binary
-        // search below would still return ~9 and the page would overflow its budget - so record that the fit
-        // failed, and let the caller give the page the height it actually needs instead of clipping it.
-        var low: CGFloat = 9
-        var high = ceiling
-        // 9 iterations resolve a ~30pt range to under 0.06pt - already finer than the 0.01pt rounding below
-        // can express. The previous 16 iterations bought precision no one could see, at the price of 7 more
-        // full-page compose+measure passes per cold page, on the main thread, mid-swipe.
-        for _ in 0..<9 {
-            let mid = (low + high) / 2
-            if measuredHeight(size: mid, width: availableWidth) <= budget {
-                low = mid
-            } else {
-                high = mid
+        if measuredHeight(size: ceiling, width: availableWidth) > budget {
+            // The floor is a legibility limit - a page that can't fit even at 9pt keeps 9pt and scrolls.
+            var low: CGFloat = 9
+            var high = ceiling
+            // 9 iterations resolve a ~30pt range to under 0.06pt - finer than the 0.01pt rounding below.
+            for _ in 0..<9 {
+                let mid = (low + high) / 2
+                if measuredHeight(size: mid, width: availableWidth) <= budget {
+                    low = mid
+                } else {
+                    high = mid
+                }
+            }
+            // Floored to a hundredth, not a half point: half a point of font across ~15 lines is a visibly
+            // smaller page. Take every fraction we're entitled to.
+            candidate = (low * 100).rounded(.down) / 100
+        }
+
+        // Exact acceptance: step down until the REAL layout fits. Usually zero or one step; bounded so a
+        // pathological page degrades to the floor and scrolls rather than looping.
+        while candidate > 9,
+              Self.layoutHeight(of: attributed(size: candidate, colored: false).text, width: availableWidth) > budget {
+            candidate = max(candidate - 0.5, 9)
+        }
+
+        // Then take back every fraction the coarse measurement gave away. `boundingRect` tends to
+        // OVER-estimate against pinned line heights, so the search above settles small and the page wastes
+        // its bottom - and stepping down can only ever shrink. Binary-search the REAL layout upward toward
+        // the ceiling: the page ends at the biggest size that truly fits, down to the hundredth of a point.
+        var lo = candidate
+        var hi = ceiling
+        if lo < hi {
+            for _ in 0..<10 {
+                let mid = (lo + hi) / 2
+                if Self.layoutHeight(of: attributed(size: mid, colored: false).text, width: availableWidth) <= budget {
+                    lo = mid
+                } else {
+                    hi = mid
+                }
             }
         }
-        return (low * 100).rounded(.down) / 100
+        return (lo * 100).rounded(.down) / 100
     }
 }
 
@@ -3887,14 +4146,24 @@ final class MushafRenderedPage {
     let fontSize: CGFloat
     let text: NSAttributedString
     let ranges: [MushafAyahRange]
-    /// Laid-out height, with the slack `MushafPageContent` needs so TextKit never clips the final line.
+    /// Exact laid-out height - this IS the text view's frame.
     let height: CGFloat
+    /// Distance from a line fragment's top to its baseline, derived from the BODY font. The text view forces
+    /// this on every running-text line: the paragraph style already pins the line BOX height, but TextKit
+    /// still derives the baseline's position within the box from the tallest font on the line - so lines
+    /// carrying an Uthmani ayah ornament (deep descender) sat their text visibly higher than their neighbours.
+    let baselineOffset: CGFloat
+    /// The fragment heights the forced baseline applies to - running text lines only, not headings.
+    let baselineBand: ClosedRange<CGFloat>
 
-    init(fontSize: CGFloat, text: NSAttributedString, ranges: [MushafAyahRange], height: CGFloat) {
+    init(fontSize: CGFloat, text: NSAttributedString, ranges: [MushafAyahRange], height: CGFloat,
+         baselineOffset: CGFloat, baselineBand: ClosedRange<CGFloat>) {
         self.fontSize = fontSize
         self.text = text
         self.ranges = ranges
         self.height = height
+        self.baselineOffset = baselineOffset
+        self.baselineBand = baselineBand
     }
 }
 
@@ -3906,8 +4175,9 @@ final class MushafRenderedPage {
 enum MushafPageRenderCache {
     private static let cache: NSCache<NSString, MushafRenderedPage> = {
         let c = NSCache<NSString, MushafRenderedPage>()
-        // Comfortably more than the pages held live by the pager, small enough to stay cheap in memory.
-        c.countLimit = 24
+        // Room for the live pages plus a radius-5 prewarm ring on both sides of them without self-eviction,
+        // still cheap in memory (a rendered page is one attributed string). NSCache sheds under pressure anyway.
+        c.countLimit = 48
         return c
     }()
 
@@ -3933,8 +4203,23 @@ enum MushafPageRenderCache {
     }
 
     /// The geometry the visible page was last laid out at, so neighbouring pages can be composed ahead of time
-    /// without a `GeometryReader` of their own.
-    private static var lastGeometry: (width: CGFloat, height: CGFloat)?
+    /// without a `GeometryReader` of their own. Persisted so the NEXT launch can prewarm the last-read pages
+    /// before the reader has ever been on screen - geometry only actually changes on rotation or a new device,
+    /// so the persisted value is almost always exactly what the first render will ask for (and when it isn't,
+    /// the misses were composed off-main and simply go unused).
+    private static var lastGeometry: (width: CGFloat, height: CGFloat)? {
+        didSet {
+            guard let g = lastGeometry, g != (oldValue ?? (0, 0)) else { return }
+            UserDefaults.standard.set([Double(g.width), Double(g.height)], forKey: geometryDefaultsKey)
+        }
+    }
+    private static let geometryDefaultsKey = "mushaf.lastPageGeometry"
+
+    private static var persistedGeometry: (width: CGFloat, height: CGFloat)? {
+        guard let stored = UserDefaults.standard.array(forKey: geometryDefaultsKey) as? [Double],
+              stored.count == 2, stored[0] > 1, stored[1] > 1 else { return nil }
+        return (CGFloat(stored[0]), CGFloat(stored[1]))
+    }
 
     /// The fit numbers for a page - everything the heavy passes produce. Computing these is ~12 full
     /// compose+layout passes and is PURE given a `MushafComposeConfig`, so the prewarm runs it off-main.
@@ -3942,6 +4227,8 @@ enum MushafPageRenderCache {
         let size: CGFloat
         let extraSpacing: CGFloat
         let measured: CGFloat
+        /// Page-wide word-gap loosening that fills the last line - see `balancedSpaceTracking`.
+        let spaceTracking: CGFloat
     }
 
     /// The serial queue the prewarm fits pages on. Serial on purpose: TextKit objects are safe off the main
@@ -3959,7 +4246,17 @@ enum MushafPageRenderCache {
     /// the swipe itself paid for a cold page - the page-turn lag.
     private static var prewarmGeneration = 0
 
-    static func prewarm(pages: [MushafPage], around index: Int, radius: Int = 3) {
+    /// Warm the last-read pages at app launch, before the reader has ever rendered - using the geometry
+    /// persisted from the previous session. Includes the center page itself: nothing has rendered it yet,
+    /// and it is precisely the page the reader will open on, the one cold fit the user actually feels.
+    /// A tighter ring than the in-reader prewarm: at launch the win is the landing page and its immediate
+    /// neighbours, not a deep flip run.
+    static func prewarmAtLaunch(pages: [MushafPage], around index: Int) {
+        if lastGeometry == nil { lastGeometry = persistedGeometry }
+        prewarm(pages: pages, around: index, radius: 3, includeCenter: true)
+    }
+
+    static func prewarm(pages: [MushafPage], around index: Int, radius: Int = 5, includeCenter: Bool = false) {
         guard let geometry = lastGeometry, !pages.isEmpty else { return }
         // The background fit is nearly free for the main thread, but each warmed page still costs a colored
         // compose on main - in Low Power Mode keep that to the immediate neighbours.
@@ -3971,8 +4268,8 @@ enum MushafPageRenderCache {
         let signature = settingsSignature
 
         // Nearest neighbours first (the pages a swipe reaches next), then the outer ring.
-        let ordered = (1...radius).flatMap { [index + $0, index - $0] }
-            .filter { pages.indices.contains($0) && $0 != index }
+        let ordered = ((includeCenter ? [index] : []) + (1...radius).flatMap { [index + $0, index - $0] })
+            .filter { pages.indices.contains($0) && (includeCenter || $0 != index) }
 
         for i in ordered {
             let page = pages[i]
@@ -4003,44 +4300,56 @@ enum MushafPageRenderCache {
     private nonisolated static func fitMetrics(composer: MushafPageComposer, width: CGFloat, height: CGFloat) -> FitMetrics {
         let size = composer.fittedSize(availableWidth: width, availableHeight: height)
 
-        // Sizing alone can never fill the page exactly: line wrapping is quantized, so one point more font
-        // pushes a whole extra line and overflows. The biggest size that fits therefore leaves up to a line of
-        // slack - the empty band at the top and bottom. A printed mushaf closes it by spreading the lines, so
-        // that's what we do: fit the size first, then hand the leftover height to the gaps between the lines.
-        var extraSpacing: CGFloat = 0
-        var measured = composer.measuredHeight(size: size, width: width)
+        // With the size fixed, loosen the whole page's word gaps until the leftover words cascade down and
+        // fill the last line (mushaf behavior; see `balancedSpaceTracking`). All later measurements carry it,
+        // because it moves the line breaks.
+        let tracking = composer.balancedSpaceTracking(size: size, width: width, budget: height)
 
-        if composer.config.fitPage, measured < height {
-            let lines = composer.lineCount(size: size, width: width)
+        // Real layout, not boundingRect: this number becomes the text view's frame, so it must be the height
+        // the text view actually lays out to.
+        var extraSpacing: CGFloat = 0
+        var measured = composer.balancedLayoutHeight(size: size, width: width, tracking: tracking)
+
+        // Sizing alone can never fill the page exactly: line wrapping is quantized, so one point more font
+        // pushes a whole extra line and overflows. A printed mushaf closes the leftover by spreading the
+        // lines - but only a LITTLE. The old cap (three quarters of the font size per gap!) let each page
+        // pick its own rhythm, which read as every page having different line spacing. A fifth of the font
+        // size is at most a subtle settle; whatever it can't absorb stays as the symmetric top/bottom band
+        // the centered layout already gives. English pages skip the spread entirely: prose reads on constant
+        // leading, and it was the English pages where the wandering spacing was most obvious.
+        if composer.config.fitPage, !composer.config.pageLanguage.isEnglish, measured < height {
+            let lines = composer.lineCount(size: size, width: width, tracking: tracking)
             if lines > 1 {
-                // Capped: on a page with very few lines the leftover per gap would otherwise be enormous and
-                // the lines would drift apart instead of looking set.
                 let perGap = (height - measured) / CGFloat(lines - 1)
-                extraSpacing = min(perGap, size * 0.75)
-                measured = composer.measuredHeight(size: size, width: width, extraLineSpacing: extraSpacing)
+                extraSpacing = min(perGap, size * 0.2)
+                measured = composer.balancedLayoutHeight(
+                    size: size, width: width, tracking: tracking, extraLineSpacing: extraSpacing
+                )
             }
         }
 
-        return FitMetrics(size: size, extraSpacing: extraSpacing, measured: measured)
+        return FitMetrics(size: size, extraSpacing: extraSpacing, measured: measured, spaceTracking: tracking)
     }
 
     /// The main-thread tail: the tajweed-colored compose (TajweedStore has main-confined state) and the
     /// drawn-string height check.
     private static func finalize(composer: MushafPageComposer, metrics: FitMetrics, width: CGFloat) -> MushafRenderedPage {
-        let built = composer.attributed(size: metrics.size, extraLineSpacing: metrics.extraSpacing, width: width)
+        let built = composer.attributed(size: metrics.size, extraLineSpacing: metrics.extraSpacing,
+                                        width: width, spaceTracking: metrics.spaceTracking)
 
-        // Measure the string that will ACTUALLY be drawn, with the same TextKit configuration the text view
-        // uses. `measured` above came from `boundingRect` on the uncolored string; the two disagree on
-        // justified RTL text with mixed fonts (the Uthmani marker font's line height differs from the body's),
-        // and every point of disagreement was silently clipped by the UITextView - which is how a page could
-        // lose its final line entirely with no way to scroll to it.
+        // Measure the string that will ACTUALLY be drawn - colored and justified - with the same TextKit
+        // configuration the text view uses. This height IS the text view's frame: measuring anything else
+        // (or padding the number "to be safe") either clips the last line or shrinks every page for slack
+        // it doesn't need. Exact is the only correct value.
         let laidOut = MushafPageComposer.layoutHeight(of: built.text, width: width)
 
         return MushafRenderedPage(
             fontSize: metrics.size,
             text: built.text,
             ranges: built.ranges,
-            height: max(metrics.measured, laidOut) + 6
+            height: laidOut,
+            baselineOffset: composer.bodyBaselineOffset(size: metrics.size),
+            baselineBand: composer.uniformLineFragmentBand(size: metrics.size, extraLineSpacing: metrics.extraSpacing)
         )
     }
 
@@ -4052,11 +4361,8 @@ enum MushafPageRenderCache {
 
         // Cold visible page: nothing to hand off - the caller needs the result this frame.
         let composer = MushafPageComposer(page: page, config: .current())
-        let rendered = finalize(
-            composer: composer,
-            metrics: fitMetrics(composer: composer, width: width, height: height),
-            width: width
-        )
+        let metrics = fitMetrics(composer: composer, width: width, height: height)
+        let rendered = finalize(composer: composer, metrics: metrics, width: width)
         cache.setObject(rendered, forKey: key)
         return rendered
     }
@@ -4078,6 +4384,10 @@ struct MushafPageTextView: UIViewRepresentable {
     /// The ayah the reader marked by tapping it - tinted grey, and independent of the recitation highlight so
     /// both can be on screen at once.
     var mark: (surahID: Int, ayahID: Int)?
+    /// Forced distance from each line fragment's top to its baseline - see `MushafRenderedPage.baselineOffset`.
+    var baselineOffset: CGFloat = 0
+    /// Fragment heights the forced baseline applies to (running text lines, not headings).
+    var baselineBand: ClosedRange<CGFloat> = 0...0
     let onTapAyah: (Int, Int) -> Void
     let onLongPressAyah: (Int, Int) -> Void
 
@@ -4108,6 +4418,11 @@ struct MushafPageTextView: UIViewRepresentable {
         tv.isEditable = false
         tv.isSelectable = false
         tv.isScrollEnabled = false
+        // Never scrolls (above), so it doesn't need to clip - and it must not: a justified line ends flush
+        // at the margin, and the tashkeel ink of a line's last letter routinely overhangs its glyph advance.
+        // Clipping sheared those marks at the container edge; letting them draw a few points into the page's
+        // horizontal padding is exactly what the padding is for.
+        tv.clipsToBounds = false
         tv.backgroundColor = .clear
         tv.textContainerInset = .zero
         tv.textContainer.lineFragmentPadding = 0
@@ -4118,7 +4433,10 @@ struct MushafPageTextView: UIViewRepresentable {
         tv.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
         tv.setContentHuggingPriority(.defaultLow, for: .horizontal)
         // Touch the TextKit-1 layout manager so hit-testing is consistent on iOS 16+ (which defaults to TextKit 2).
-        _ = tv.layoutManager
+        // The delegate is what holds every line's baseline at the body font's position - without it, a line
+        // carrying an Uthmani ayah ornament derives its baseline from the ornament font's deeper metrics and
+        // its text rides visibly higher than the lines around it.
+        tv.layoutManager.delegate = context.coordinator
 
         let tap = UITapGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.handleTap(_:)))
         tv.addGestureRecognizer(tap)
@@ -4140,6 +4458,9 @@ struct MushafPageTextView: UIViewRepresentable {
         context.coordinator.ranges = ranges
         context.coordinator.onTapAyah = onTapAyah
         context.coordinator.onLongPressAyah = onLongPressAyah
+        // Before any text assignment below, so the relayout it triggers already sees the new values.
+        context.coordinator.forcedBaselineOffset = baselineOffset
+        context.coordinator.baselineBand = baselineBand
 
         // Reassigning `attributedText` forces a full TextKit relayout of the page. This view's parent observes
         // the player, so during recitation EVERY tick re-runs this update for every mounted page - three page
@@ -4165,11 +4486,32 @@ struct MushafPageTextView: UIViewRepresentable {
 
     func makeCoordinator() -> Coordinator { Coordinator() }
 
-    final class Coordinator: NSObject {
+    final class Coordinator: NSObject, NSLayoutManagerDelegate {
         weak var textView: UITextView?
         var ranges: [MushafAyahRange] = []
         var onTapAyah: ((Int, Int) -> Void)?
         var onLongPressAyah: ((Int, Int) -> Void)?
+        var forcedBaselineOffset: CGFloat = 0
+        var baselineBand: ClosedRange<CGFloat> = 0...0
+
+        /// Uniform baselines: the paragraph style pins every running-text line BOX to the body font's height,
+        /// and this pins where the baseline sits inside that box. TextKit otherwise derives it per line from
+        /// the tallest font present, so the Uthmani ornament's deep descender lifted its line's text. Lines
+        /// outside the band (surah headings, with their own smaller styles) keep their natural baselines.
+        func layoutManager(
+            _ layoutManager: NSLayoutManager,
+            shouldSetLineFragmentRect lineFragmentRect: UnsafeMutablePointer<CGRect>,
+            lineFragmentUsedRect: UnsafeMutablePointer<CGRect>,
+            baselineOffset: UnsafeMutablePointer<CGFloat>,
+            in textContainer: NSTextContainer,
+            forGlyphRange glyphRange: NSRange
+        ) -> Bool {
+            guard forcedBaselineOffset > 0, baselineBand.contains(lineFragmentRect.pointee.height) else {
+                return false
+            }
+            baselineOffset.pointee = forcedBaselineOffset
+            return true
+        }
 
         // What the text view currently displays, so `updateUIView` can skip the full TextKit relayout when
         // nothing visible changed (see the note there).

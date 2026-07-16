@@ -103,7 +103,6 @@ final class WatchConnectivityManager: NSObject, WCSessionDelegate {
         let snapshot = Settings.shared.watchSyncSnapshot()
         guard let data = try? JSONSerialization.data(withJSONObject: snapshot, options: [.sortedKeys]) else { return }
         guard data != lastSyncedSettingsData else { return }   // no real change, or an echo of what we just applied
-        lastSyncedSettingsData = data
 
         // Stamp the write with the real wall clock so the newest edit always wins. If the clock hasn't
         // advanced past our last stamp (rapid successive edits, or a backward clock correction), nudge just
@@ -116,11 +115,21 @@ final class WatchConnectivityManager: NSObject, WCSessionDelegate {
 
         let payload: [String: Any] = ["timestamp": ts, "rank": deviceRank, "settings": snapshot]
 
-        do { try session.updateApplicationContext(payload) }
-        catch { logger.debug("WC updateApplicationContext error: \(error)") }
+        do {
+            try session.updateApplicationContext(payload)
+            // Recorded only AFTER the reliable channel accepted the payload. Recording before the send
+            // meant a failed write still marked the change "already synced", silently losing it until some
+            // unrelated edit happened to bump the digest; now the next trigger (settings change, background
+            // flush, reachability change, activation) simply rebuilds and retries it.
+            lastSyncedSettingsData = data
+        } catch {
+            logger.debug("WC updateApplicationContext error: \(error)")
+        }
 
         if session.isReachable {
             session.sendMessage(payload, replyHandler: nil) { err in
+                // No digest involvement here: applicationContext (above) is the reliable channel and has
+                // this payload queued; the message is only the fast path for a peer that is open right now.
                 logger.debug("WC sendMessage error: \(err.localizedDescription)")
             }
         }
@@ -186,9 +195,33 @@ final class WatchConnectivityManager: NSObject, WCSessionDelegate {
         #endif
     }
 
+    /// The peer just came within reach (its app opened, Bluetooth reconnected). Everything already synced is
+    /// a digest-guarded no-op; what this actually delivers is the retry for a change whose reliable send
+    /// failed (see the rollback in `sendSnapshotIfChanged`) - that change would otherwise wait for the next
+    /// unrelated edit.
+    func sessionReachabilityDidChange(_ session: WCSession) {
+        guard session.isReachable else { return }
+        DispatchQueue.main.async { [weak self] in
+            self?.sendSnapshotIfChanged()
+        }
+    }
+
     #if os(iOS)
     func sessionDidBecomeInactive(_ session: WCSession) {}
     func sessionDidDeactivate(_ session: WCSession) { session.activate() }
+
+    /// A watch was paired or the watch app was just installed. That watch has never seen our settings, and
+    /// the digest can't know that - it only remembers what we last handed the session. Clearing it forces a
+    /// full snapshot push so the new watch starts from the phone's config instead of its own defaults until
+    /// the user happens to change something.
+    func sessionWatchStateDidChange(_ session: WCSession) {
+        guard session.isPaired, session.isWatchAppInstalled else { return }
+        DispatchQueue.main.async { [weak self] in
+            guard let self else { return }
+            self.lastSyncedSettingsData = Data()
+            self.sendSnapshotIfChanged()
+        }
+    }
     #endif
 
     func session(_ session: WCSession, didReceiveMessage message: [String: Any]) {

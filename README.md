@@ -54,6 +54,7 @@ Al-Islam is a simply designed and feature-rich app that helps Muslims strengthen
 - Notifications for key Islamic dates.
 
 ## Essential Islamic Tools
+- Masjid Locator and Halal Food Locator for finding mosques and halal food nearby.
 - Common adhkar (remembrances) and duas (supplications).
 - Tasbih counter for dhikr tracking.
 - 99 Names of Allah with meanings and explanations.

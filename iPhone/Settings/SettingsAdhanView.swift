@@ -26,10 +26,14 @@ struct SettingsAdhanView: View {
 
     @State var showNotifications: Bool
     private let presentedAsSheet: Bool
+    /// Lands straight on the Traveling Mode screen - for the prayer list's Qasr footer, whose whole point is
+    /// "take me to where I can turn this off".
+    @State private var openTravelingMode: Bool
 
-    init(showNotifications: Bool, presentedAsSheet: Bool = false) {
+    init(showNotifications: Bool, presentedAsSheet: Bool = false, openTravelingMode: Bool = false) {
         self._showNotifications = State(initialValue: showNotifications)
         self.presentedAsSheet = presentedAsSheet
+        self._openTravelingMode = State(initialValue: openTravelingMode)
     }
 
     private var dialogTitle: String {
@@ -58,6 +62,15 @@ struct SettingsAdhanView: View {
                     adhanSettingsLink(title: "Traveling Mode", systemImage: "airplane") {
                         travelingModeDestination
                     }
+                    // The programmatic entrance to the same screen (see `openTravelingMode`). A hidden
+                    // isActive link rather than a nav-path push because this view still supports the
+                    // pre-NavigationStack containers it is presented in.
+                    .background(
+                        NavigationLink(isActive: $openTravelingMode) {
+                            travelingModeDestination
+                        } label: { EmptyView() }
+                        .hidden()
+                    )
                 }
                 Section {
                     adhanSettingsLink(title: "Optional Prayers", systemImage: "moon.stars") {

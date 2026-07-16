@@ -212,11 +212,22 @@ private struct MainTabView: View {
         try? await Task.sleep(nanoseconds: 120_000_000)
         selectedTab = .settings
         try? await Task.sleep(nanoseconds: 80_000_000)
-        selectedTab = .adhan
-        // Let Adhan become the rendered tab again before we allow the reveal, so the hand-off shows Adhan.
+        selectedTab = launchTab
+        // Let the landing tab become the rendered tab again before we allow the reveal.
         try? await Task.sleep(nanoseconds: 80_000_000)
 
         LaunchWarmup.shared.markWarm()
+    }
+
+    /// The tab the app lands on after the under-cover warm. Always Adhan for users; a DEBUG launch argument
+    /// lets UI automation land straight on a tab it wants to exercise (there is no other way to drive the
+    /// simulator's tab bar from a test harness without an XCUITest target).
+    private var launchTab: AppTab {
+        #if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("-launchTabQuran") { return .quran }
+        if ProcessInfo.processInfo.arguments.contains("-launchTabIslam") { return .islam }
+        #endif
+        return .adhan
     }
 
     /// As soon as the main UI (the Adhan tab) is on screen, warm EVERY surah's Arabic text / tajweed caches - 
@@ -246,9 +257,27 @@ private struct MainTabView: View {
             }
         }
 
-        // Skip the full sweep on memory-constrained devices (same gate the Quran tab uses) - priority warming
-        // above still ran.
+        // Skip the broad warms on memory-constrained devices (same gate the Quran tab uses) - priority
+        // warming above still ran. This gates the mushaf prewarm below too: composing a ring of pages is
+        // exactly the class of work this device can't afford at launch.
         guard !AppPerformance.shouldAvoidBroadPrewarm else { return }
+
+        // Page mode means the Quran tab opens straight into the mushaf, so also compose the last-read pages
+        // now - with the geometry persisted from the last session - instead of making the reveal pay for the
+        // first page's ~12 fit passes. The fits run on the prewarm queue; the pagination itself is the only
+        // main-actor piece, so give the runloop a turn first and keep it off the current transaction.
+        if settings.quranPageMode, settings.lastReadSurah > 0 {
+            await Task.yield()
+            let pages = MushafPagination.pages(quran: quranData.quran, qiraah: settings.displayQiraahForArabic)
+            if let index = MushafPagination.pageIndex(
+                surahID: settings.lastReadSurah,
+                ayahID: settings.lastReadAyah > 0 ? settings.lastReadAyah : nil,
+                in: pages
+            ) {
+                MushafPageRenderCache.prewarmAtLaunch(pages: pages, around: index)
+            }
+            await Task.yield()
+        }
 
         for surah in quranData.quran where seen.insert(surah.id).inserted {
             if Task.isCancelled { return }

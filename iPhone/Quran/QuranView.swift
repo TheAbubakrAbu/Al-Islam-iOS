@@ -43,6 +43,34 @@ struct QuranView: View {
     @State private var showListeningHistory = false
     @State private var showReadingHistory = false
     @State private var showAyahListeningHistory = false
+
+    #if os(iOS)
+    /// Which summary tile's recents are unfolded BELOW the tile grid. The rows can't unfold inside a
+    /// half-width grid cell, so they open as ordinary list rows under the summary - and because this is one
+    /// value rather than four booleans, opening a tile's recents closes whichever was open before.
+    @State private var summaryHistoryExpansion: SummaryHistoryKind?
+
+    enum SummaryHistoryKind: String, Identifiable {
+        case ayahOfTheDay, reading, listenedAyah, listenedSurah
+        var id: String { rawValue }
+
+        var title: String {
+            switch self {
+            case .ayahOfTheDay: return "Recent Ayahs of the Day"
+            case .reading: return "Recent Read Ayahs"
+            case .listenedAyah: return "Recent Listened Ayahs"
+            case .listenedSurah: return "Recent Listened Surahs"
+            }
+        }
+    }
+
+    /// Toggle a tile's recents: same tile collapses, a different tile takes over the one expansion slot.
+    private func toggleSummaryExpansion(_ kind: SummaryHistoryKind) {
+        withAnimation(.easeInOut) {
+            summaryHistoryExpansion = summaryHistoryExpansion == kind ? nil : kind
+        }
+    }
+    #endif
     @State private var searchTextAtFocusStart = ""
     @State private var lastSavedSearchQuery = ""
     @State private var isListMoving = false
@@ -857,7 +885,7 @@ struct QuranView: View {
                 // Grid mode (a LazyVGrid added after 4.4.4) can't scroll to off-screen tiles, so flip to list
                 // first. Otherwise this is exactly the Version 4.4.4 scroll, which felt right: one delayed,
                 // animated scrollTo - no retry loop, no settle attempts.
-                if settings.quranGridMode { settings.quranGridMode = false }
+                if settings.gridMode { settings.gridMode = false }
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                     withAnimation {
                         scrollProxy.scrollTo("surah_\(id)", anchor: .top)
@@ -885,11 +913,11 @@ struct QuranView: View {
             ToolbarItem(placement: .navigationBarLeading) {
                 Button {
                     settings.hapticFeedback()
-                    withAnimation { settings.quranGridMode.toggle() }
+                    withAnimation { settings.gridMode.toggle() }
                 } label: {
-                    Image(systemName: settings.quranGridMode ? "list.bullet" : "square.grid.2x2")
+                    Image(systemName: settings.gridMode ? "list.bullet" : "square.grid.2x2")
                 }
-                .accessibilityLabel(settings.quranGridMode ? "Show lists" : "Show grids")
+                .accessibilityLabel(settings.gridMode ? "Show lists" : "Show grids")
                 .tint(settings.accentColor.accent1)
             }
 
@@ -1454,6 +1482,96 @@ struct QuranView: View {
     }
 
     #if os(iOS)
+    /// The last five Ayahs of the Day: today first, then back through the previous days. The picker is a pure
+    /// function of the date, so "history" needs no storage - earlier days are simply recomputed.
+    private var recentAyahsOfTheDay: [(dayLabel: String, surah: Surah, ayah: Ayah)] {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        formatter.doesRelativeDateFormatting = true
+
+        return (0..<5).compactMap { daysBack in
+            guard let date = Calendar.current.date(byAdding: .day, value: -daysBack, to: Date()),
+                  let ref = settings.ayahOfTheDayReference(for: date),
+                  let surah = quranData.surah(ref.surahID),
+                  let ayah = surah.ayahs.first(where: { $0.id == ref.ayahID })
+            else { return nil }
+            return (formatter.string(from: date), surah, ayah)
+        }
+    }
+
+    /// The rows a summary tile's plus unfolds, rendered as ordinary list rows directly below the tile grid -
+    /// the summary-mode analogue of the inline expansion the full-size rows have.
+    @ViewBuilder
+    private func summaryHistoryRows(kind: SummaryHistoryKind) -> some View {
+        switch kind {
+        case .ayahOfTheDay:
+            // Keyed by the day, not the ayah: the hash can land two days on the same ayah, and
+            // duplicate ForEach ids are undefined behavior.
+            ForEach(recentAyahsOfTheDay, id: \.dayLabel) { entry in
+                summaryHistoryRow(surah: entry.surah, ayah: entry.ayah, caption: entry.dayLabel)
+            }
+        case .reading:
+            ForEach(quranPlayer.readingHistory) { item in
+                if let surah = quranData.surah(item.surahNumber),
+                   let ayah = surah.ayahs.first(where: { $0.id == max(1, item.ayahNumber) }) {
+                    summaryHistoryRow(surah: surah, ayah: ayah, caption: nil)
+                }
+            }
+        case .listenedAyah:
+            ForEach(quranPlayer.ayahListeningHistory) { item in
+                if let surah = quranData.surah(item.surahNumber),
+                   let ayah = surah.ayahs.first(where: { $0.id == item.ayahNumber }) {
+                    summaryHistoryRow(surah: surah, ayah: ayah, caption: item.reciter.displayNameWithEnglishQiraah)
+                }
+            }
+        case .listenedSurah:
+            ForEach(quranPlayer.listeningHistory) { item in
+                if let surah = quranData.surah(item.surahNumber) {
+                    Button {
+                        settings.hapticFeedback()
+                        push(surahID: surah.id, ayahID: nil)
+                    } label: {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("\(surah.id) - \(surah.nameTransliteration)")
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundColor(settings.accentColor.color)
+
+                            Text(item.reciter.displayNameWithEnglishQiraah)
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .contentShape(Rectangle())
+                        .opacity(0.75)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+    }
+
+    private func summaryHistoryRow(surah: Surah, ayah: Ayah, caption: String?) -> some View {
+        Button {
+            settings.hapticFeedback()
+            push(surahID: surah.id, ayahID: ayah.id)
+        } label: {
+            VStack(alignment: .leading, spacing: 4) {
+                if let caption {
+                    Text(caption)
+                        .font(.caption2.weight(.semibold))
+                        .foregroundColor(.secondary)
+                }
+
+                SurahAyahRow(surah: surah, ayah: ayah)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .contentShape(Rectangle())
+            // Same dimming the full-size rows give their unfolded history, so "current" reads brighter.
+            .opacity(0.75)
+        }
+        .buttonStyle(.plain)
+    }
+
     /// Compact "summary mode": all enabled history items as tappable tiles in a single section.
     /// Order: Last Read Ayah · Ayah of the Day, then Last Listened Ayah · Last Listened Surah.
     @ViewBuilder
@@ -1473,19 +1591,25 @@ struct QuranView: View {
                 spacing: 10
             ) {
                 if settings.saveLastReadAyah, let lastReadSurah, let lastReadAyah {
-                    SummaryAyahTile(title: "Last Read Ayah", icon: "book", surah: lastReadSurah, ayah: lastReadAyah, titleColor: settings.accentColor.color) {
+                    SummaryAyahTile(title: "Last Read Ayah", icon: "book", surah: lastReadSurah, ayah: lastReadAyah, titleColor: settings.accentColor.color,
+                                    isExpanded: summaryHistoryExpansion == .reading,
+                                    onExpand: quranPlayer.readingHistory.isEmpty ? nil : { toggleSummaryExpansion(.reading) }) {
                         push(surahID: lastReadSurah.id, ayahID: lastReadAyah.id)
                     }
                     .animation(.easeInOut, value: settings.lastReadSurah * 1000 + settings.lastReadAyah)
                 }
                 if showAyah, let pair = ayahOfTheDayPair {
-                    SummaryAyahTile(title: "Ayah of the Day", icon: "sparkles", surah: pair.surah, ayah: pair.ayah) {
+                    SummaryAyahTile(title: "Ayah of the Day", icon: "sparkles", surah: pair.surah, ayah: pair.ayah, titleColor: settings.accentColor.color,
+                                    isExpanded: summaryHistoryExpansion == .ayahOfTheDay,
+                                    onExpand: { toggleSummaryExpansion(.ayahOfTheDay) }) {
                         push(surahID: pair.surah.id, ayahID: pair.ayah.id)
                     }
                     .animation(.easeInOut, value: pair.surah.id * 1000 + pair.ayah.id)
                 }
                 if settings.saveLastListenedAyah, let pair = lastListenedAyahPair {
-                    SummaryAyahTile(title: "Last Listened Ayah", icon: "headphones.circle", surah: pair.surah, ayah: pair.ayah, titleColor: settings.accentColor.color) {
+                    SummaryAyahTile(title: "Last Listened Ayah", icon: "headphones.circle", surah: pair.surah, ayah: pair.ayah, titleColor: settings.accentColor.color,
+                                    isExpanded: summaryHistoryExpansion == .listenedAyah,
+                                    onExpand: quranPlayer.ayahListeningHistory.isEmpty ? nil : { toggleSummaryExpansion(.listenedAyah) }) {
                         push(surahID: pair.surah.id, ayahID: pair.ayah.id)
                     }
                     .animation(.easeInOut, value: pair.surah.id * 1000 + pair.ayah.id)
@@ -1493,13 +1617,21 @@ struct QuranView: View {
                 if settings.saveLastListenedSurah,
                    let last = settings.lastListenedSurah,
                    let surah = quranData.surah(last.surahNumber) {
-                    SummarySurahTile(title: "Last Listened Surah", icon: "headphones", surah: surah, lastListenedSurah: last, titleColor: settings.accentColor.color) {
+                    SummarySurahTile(title: "Last Listened Surah", icon: "headphones", surah: surah, lastListenedSurah: last, titleColor: settings.accentColor.color,
+                                     isExpanded: summaryHistoryExpansion == .listenedSurah,
+                                     onExpand: quranPlayer.listeningHistory.isEmpty ? nil : { toggleSummaryExpansion(.listenedSurah) }) {
                         push(surahID: surah.id, ayahID: nil)
                     }
                     .animation(.easeInOut, value: last.surahNumber)
                 }
             }
             .padding(.vertical, 4)
+
+            // The one open expansion, unfolded as plain rows right under the tiles.
+            if let kind = summaryHistoryExpansion {
+                summaryHistoryRows(kind: kind)
+                    .transition(.opacity)
+            }
         }
     }
     #endif
@@ -1512,7 +1644,7 @@ struct QuranView: View {
             }
             Section(header: bookmarkHeader(count: sortedBookmarks.count)) {
                 if settings.showBookmarks {
-                    if settings.quranGridMode {
+                    if settings.gridMode {
                         LazyVGrid(
                             columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)],
                             alignment: .leading,
@@ -1652,7 +1784,7 @@ struct QuranView: View {
             let sortedFavorites = settings.favoriteSurahs.sorted()
             Section(header: favoriteHeader(count: sortedFavorites.count)) {
                 if settings.showFavorites {
-                    if settings.quranGridMode {
+                    if settings.gridMode {
                         LazyVGrid(
                             columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)],
                             alignment: .leading,
@@ -1959,7 +2091,7 @@ struct QuranView: View {
     @ViewBuilder
     private func specialAyahCollection(_ rows: [(surah: Surah, ayah: Ayah)], context: SearchDisplayContext) -> some View {
         #if os(iOS)
-        if settings.quranGridMode {
+        if settings.gridMode {
             LazyVGrid(
                 columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)],
                 alignment: .leading,
@@ -2281,7 +2413,7 @@ struct QuranView: View {
         Section(header: surahBrowseHeader(showsRevelationOrder: showsRevelationOrder)) { }
             .padding(.bottom, -12)
 
-        if settings.quranGridMode {
+        if settings.gridMode {
             Section {
                 surahGrid(browsedSurahs, context: context)
             }
@@ -2461,7 +2593,7 @@ struct QuranView: View {
             let juz = sectionData.juz
             Section(header: JuzHeader(juz: juz)) {
                 #if os(iOS)
-                if settings.quranGridMode {
+                if settings.gridMode {
                     LazyVGrid(columns: surahGridColumns, alignment: .leading, spacing: 10) {
                         ForEach(sectionData.rows) { row in
                             juzGridTile(row: row, context: context)
@@ -2493,7 +2625,7 @@ struct QuranView: View {
             let surahs = quranData.quran.filter { ($0.firstJuz ?? $0.ayahs.first?.juz) == juz.id }
             Section(header: JuzHeader(juz: juz)) {
                 #if os(iOS)
-                if settings.quranGridMode {
+                if settings.gridMode {
                     surahGrid(surahs, context: context)
                 } else {
                     ForEach(surahs, id: \.id) { surah in

@@ -5,8 +5,13 @@ struct IslamView: View {
     @ObservedObject var namesData = NamesViewModel.shared
     #if os(iOS)
     @State private var selectedResource: IslamDestination? = .arabicAlphabet
+    /// Programmatic pushes for the grid tiles (a `NavigationLink` inside a List row drags the row chevron
+    /// into each tile; a path append does not).
+    @State private var islamPath: [IslamDestination] = []
 
-    private enum IslamDestination: Hashable {
+    /// String-backed so favorites persist by raw value, CaseIterable so the resource list, the grid, and the
+    /// favorites section all draw from one source of truth instead of three hand-maintained row lists.
+    private enum IslamDestination: String, Hashable, CaseIterable {
         case arabicAlphabet
         case tajweedFoundations
         case commonAdhkar
@@ -15,9 +20,60 @@ struct IslamView: View {
         case namesOfAllah
         case hijriCalendarConverter
         case masjidLocator
+        case halalFoodLocator
         case islamicWallpapers
         case pillarsAndBasics
         case howToGuides
+
+        var title: String {
+            switch self {
+            case .arabicAlphabet: return "Arabic Alphabet"
+            case .tajweedFoundations: return "Tajweed Foundations"
+            case .commonAdhkar: return "Dhikr & Remembrances"
+            case .commonDuas: return "Dua & Supplications"
+            case .tasbihCounter: return "Tasbih Counter"
+            case .namesOfAllah: return "99 Names of Allah"
+            case .hijriCalendarConverter: return "Hijri Date Converter"
+            case .masjidLocator: return "Masjid Locator"
+            case .halalFoodLocator: return "Halal Food Locator"
+            case .islamicWallpapers: return "Islamic Wallpapers"
+            case .pillarsAndBasics: return "Pillars & Beliefs"
+            case .howToGuides: return "How-To Guides"
+            }
+        }
+
+        var systemImage: String {
+            switch self {
+            case .arabicAlphabet: return "textformat.size.ar"
+            case .tajweedFoundations: return "waveform"
+            case .commonAdhkar: return "book.closed"
+            case .commonDuas: return "text.book.closed"
+            case .tasbihCounter: return "circles.hexagonpath.fill"
+            case .namesOfAllah: return "signature"
+            case .hijriCalendarConverter: return "calendar"
+            case .masjidLocator: return "mappin.and.ellipse"
+            case .halalFoodLocator: return "fork.knife"
+            case .islamicWallpapers: return "photo.on.rectangle"
+            case .pillarsAndBasics: return "moon.stars"
+            case .howToGuides: return "list.bullet.rectangle"
+            }
+        }
+    }
+
+    private var favoriteResources: [IslamDestination] {
+        IslamDestination.allCases.filter { settings.isIslamResourceFavorite($0.rawValue) }
+    }
+
+    private func favoriteToggleButton(_ item: IslamDestination) -> some View {
+        let isFavorite = settings.isIslamResourceFavorite(item.rawValue)
+        return Button {
+            settings.hapticFeedback()
+            withAnimation(.easeInOut) {
+                settings.toggleIslamResourceFavorite(item.rawValue)
+            }
+        } label: {
+            Label(isFavorite ? "Unfavorite" : "Favorite", systemImage: isFavorite ? "star.slash" : "star")
+        }
     }
     #endif
 
@@ -42,7 +98,7 @@ struct IslamView: View {
                     .id(selectedResource ?? .arabicAlphabet)
                 }
             } else if #available(iOS 16.0, *) {
-                NavigationStack {
+                NavigationStack(path: $islamPath) {
                     islamList
                         .navigationDestination(for: IslamDestination.self) { destination in
                             destinationView(for: destination)
@@ -65,7 +121,15 @@ struct IslamView: View {
     private var islamList: some View {
         List {
             Group {
+            #if os(iOS)
+            if #available(iOS 16.0, *) {
+                modernResourceSections
+            } else {
+                resourcesSection
+            }
+            #else
             resourcesSection
+            #endif
             ProphetQuote()
             AlIslamAppsSection()
             }
@@ -73,7 +137,145 @@ struct IslamView: View {
         }
         .applyConditionalListStyle()
         .navigationTitle("Al-Islam")
+        #if os(iOS)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                if #available(iOS 16.0, *) {
+                    Button {
+                        settings.hapticFeedback()
+                        withAnimation { settings.gridMode.toggle() }
+                    } label: {
+                        Image(systemName: settings.gridMode ? "list.bullet" : "square.grid.2x2")
+                    }
+                    .accessibilityLabel(settings.gridMode ? "Show list" : "Show grid")
+                    .tint(settings.accentColor.accent1)
+                }
+            }
+        }
+        #endif
     }
+
+    #if os(iOS)
+    /// The favorites section plus the full resource list, honoring the app-wide grid toggle. Value-based
+    /// navigation (iOS 16+): the enum IS the row, so favorites, grid tiles, and list rows all push through
+    /// the same `navigationDestination`.
+    @available(iOS 16.0, *)
+    @ViewBuilder
+    private var modernResourceSections: some View {
+        let favorites = favoriteResources
+        if !favorites.isEmpty {
+            Section(header: countedHeader("FAVORITES", count: favorites.count)) {
+                resourceItems(favorites)
+            }
+        }
+
+        Section(header: countedHeader("ISLAMIC RESOURCES", count: IslamDestination.allCases.count)) {
+            resourceItems(IslamDestination.allCases)
+        }
+    }
+
+    @available(iOS 16.0, *)
+    private func countedHeader(_ title: String, count: Int) -> some View {
+        HStack {
+            Text(title)
+
+            Spacer()
+
+            Text("\(count)")
+                .font(.caption.weight(.semibold))
+                .monospacedDigit()
+                .foregroundStyle(settings.accentColor.color)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .conditionalGlassEffect()
+                .padding(.vertical, -16)
+        }
+    }
+
+    @available(iOS 16.0, *)
+    @ViewBuilder
+    private func resourceItems(_ items: [IslamDestination]) -> some View {
+        if settings.gridMode {
+            // No contextMenu on the tiles: a context menu inside a LazyVGrid-in-a-List-row lifts the WHOLE
+            // row (every tile at once) as the preview. Favoriting lives on the star inside each tile instead,
+            // the same pattern the Arabic-letter and 99-Names grids use.
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 3), spacing: 8) {
+                ForEach(items, id: \.self) { item in
+                    Button {
+                        settings.hapticFeedback()
+                        islamPath.append(item)
+                    } label: {
+                        resourceGridTile(item)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.vertical, 4)
+        } else {
+            ForEach(items, id: \.self) { item in
+                NavigationLink(value: item) {
+                    toolLabel(item.title, systemImage: item.systemImage)
+                }
+                .contextMenu { favoriteToggleButton(item) }
+                .swipeActions(edge: .leading, allowsFullSwipe: true) {
+                    resourceSwipeFavoriteButton(item)
+                }
+                .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                    resourceSwipeFavoriteButton(item)
+                }
+            }
+        }
+    }
+
+    @available(iOS 16.0, *)
+    private func resourceSwipeFavoriteButton(_ item: IslamDestination) -> some View {
+        Button {
+            settings.hapticFeedback()
+            withAnimation(.easeInOut) {
+                settings.toggleIslamResourceFavorite(item.rawValue)
+            }
+        } label: {
+            Image(systemName: settings.isIslamResourceFavorite(item.rawValue) ? "star.fill" : "star")
+        }
+        .tint(settings.accentColor.color)
+    }
+
+    @available(iOS 16.0, *)
+    private func resourceGridTile(_ item: IslamDestination) -> some View {
+        let isFavorite = settings.isIslamResourceFavorite(item.rawValue)
+        return VStack(spacing: 5) {
+            Image(systemName: item.systemImage)
+                .font(.subheadline)
+                .foregroundColor(settings.accentColor.color)
+
+            Text(item.title)
+                .font(.caption2.weight(.medium))
+                .foregroundColor(.primary)
+                .multilineTextAlignment(.center)
+                .lineLimit(2, reservesSpace: true)
+                .minimumScaleFactor(0.8)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 8)
+        .padding(.horizontal, 4)
+        .contentShape(Rectangle())
+        .conditionalGlassEffect(rectangle: true)
+        .overlay(alignment: .topTrailing) {
+            Image(systemName: isFavorite ? "star.fill" : "star")
+                .font(.caption2)
+                .foregroundColor(isFavorite ? settings.accentColor.color : .secondary)
+                .padding(6)
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    settings.hapticFeedback()
+                    withAnimation(.easeInOut) {
+                        settings.toggleIslamResourceFavorite(item.rawValue)
+                    }
+                }
+                .accessibilityLabel(isFavorite ? "Unfavorite \(item.title)" : "Favorite \(item.title)")
+        }
+    }
+    #endif
 
     #if os(iOS)
     @available(iOS 16.0, *)
@@ -118,7 +320,9 @@ struct IslamView: View {
         case .hijriCalendarConverter:
             DateView()
         case .masjidLocator:
-            MasjidLocatorView()
+            PlaceLocatorView(profile: .masjid)
+        case .halalFoodLocator:
+            PlaceLocatorView(profile: .halalFood)
         case .islamicWallpapers:
             WallpaperView()
         case .pillarsAndBasics:
@@ -161,7 +365,11 @@ struct IslamView: View {
             }
 
             resourceLink(title: "Masjid Locator", systemImage: "mappin.and.ellipse") {
-                MasjidLocatorView()
+                PlaceLocatorView(profile: .masjid)
+            }
+
+            resourceLink(title: "Halal Food Locator", systemImage: "fork.knife") {
+                PlaceLocatorView(profile: .halalFood)
             }
             #endif
 
@@ -181,43 +389,36 @@ struct IslamView: View {
 
     #if os(iOS)
     @available(iOS 16.0, *)
+    @ViewBuilder
     private var resourcesSectionSplit: some View {
+        // The sidebar stays a list whatever the grid toggle says - a two-column grid crammed into a sidebar
+        // column reads worse than rows - but it shares the favorites and the context menu with the iPhone.
+        let favorites = favoriteResources
+        if !favorites.isEmpty {
+            Section(header: Text("FAVORITES")) {
+                ForEach(favorites, id: \.self) { splitResourceLink($0) }
+            }
+        }
+
         Section(header: Text("ISLAMIC RESOURCES")) {
-            splitResourceLink(title: "Arabic Alphabet", systemImage: "textformat.size.ar", value: .arabicAlphabet)
-            splitResourceLink(title: "Tajweed Foundations", systemImage: "waveform", value: .tajweedFoundations)
-            splitResourceLink(title: "Dhikr & Remembrances", systemImage: "book.closed", value: .commonAdhkar)
-            splitResourceLink(title: "Dua & Supplications", systemImage: "text.book.closed", value: .commonDuas)
-            splitResourceLink(title: "Tasbih Counter", systemImage: "circles.hexagonpath.fill", value: .tasbihCounter)
-            splitResourceLink(title: "99 Names of Allah", systemImage: "signature", value: .namesOfAllah)
-
-            #if os(iOS)
-            splitResourceLink(title: "Hijri Date Converter", systemImage: "calendar", value: .hijriCalendarConverter)
-            splitResourceLink(title: "Masjid Locator", systemImage: "mappin.and.ellipse", value: .masjidLocator)
-            #endif
-
-            splitResourceLink(title: "Islamic Wallpapers", systemImage: "photo.on.rectangle", value: .islamicWallpapers)
-            splitResourceLink(title: "Pillars & Beliefs", systemImage: "moon.stars", value: .pillarsAndBasics)
-            splitResourceLink(title: "How-To Guides", systemImage: "list.bullet.rectangle", value: .howToGuides)
+            ForEach(IslamDestination.allCases, id: \.self) { splitResourceLink($0) }
         }
     }
 
     @available(iOS 16.0, *)
-    private func splitResourceLink(
-        title: String,
-        systemImage: String,
-        value: IslamDestination
-    ) -> some View {
+    private func splitResourceLink(_ value: IslamDestination) -> some View {
         Button {
             settings.hapticFeedback()
             withAnimation(.easeInOut) {
                 selectedResource = value
             }
         } label: {
-            toolLabel(title, systemImage: systemImage)
+            toolLabel(value.title, systemImage: value.systemImage)
         }
         .buttonStyle(.plain)
         .contentShape(Rectangle())
         .tag(value)
+        .contextMenu { favoriteToggleButton(value) }
     }
     #endif
 
@@ -288,6 +489,12 @@ struct ProphetQuote: View {
                 isCardVisible = true
                 // Purely decorative; in Low Power Mode two forever-animations are exactly the CPU the system
                 // is asking apps not to spend. The card renders identically, just still.
+                // Never on the watch: its paging TabView fires onAppear/onDisappear on every swipe, so these
+                // forever-animations were being torn down and restarted each tab change - a steady CPU drain
+                // that read as the Quran → Islam swipe lag.
+                #if os(watchOS)
+                return
+                #else
                 guard !AppPerformance.isLowPowerMode else { return }
                 withAnimation(.easeInOut(duration: 2.2).repeatForever(autoreverses: true)) {
                     animateBadge = true
@@ -295,6 +502,7 @@ struct ProphetQuote: View {
                 withAnimation(.linear(duration: 8).repeatForever(autoreverses: false)) {
                     rotateRing = true
                 }
+                #endif
             }
             .onDisappear {
                 withAnimation {
@@ -525,6 +733,14 @@ struct AlIslamAppsSection: View {
     }
 
     private func runAppCardsPopAnimation() {
+        // The watch's paging TabView re-fires onAppear on every swipe, and this section sits on BOTH the
+        // Islam and Settings tabs - replaying a three-stage spring (plus decoding three card images) on
+        // each swipe was a real slice of the tab-switch lag. The cards just show, settled.
+        #if os(watchOS)
+        popLeft = true
+        popCenter = true
+        popRight = true
+        #else
         popLeft = false
         popCenter = false
         popRight = false
@@ -542,6 +758,7 @@ struct AlIslamAppsSection: View {
                 popRight = true
             }
         }
+        #endif
     }
 }
 

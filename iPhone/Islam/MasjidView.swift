@@ -5,18 +5,104 @@ import CoreLocation
 import UIKit
 import Contacts
 
-struct MasjidLocatorView: View {
+/// Everything that distinguishes one place locator from another - the Masjid Locator and the Halal Food
+/// Locator are the same map, search, cache, and result UI over different queries and filters.
+struct PlaceLocatorProfile {
+    let title: String
+    /// Shown next to the spinner in the results header.
+    let loadingText: String
+    /// Shown while the first search of an area is in flight.
+    let searchingText: String
+    let emptyText: String
+    /// Stands in for a result whose POI has no name.
+    let fallbackName: String
+    let contextMenuTitle: String
+    /// What an empty search bar looks for.
+    let baseQueries: [String]
+    /// How the user's own search text is expanded into queries.
+    let queries: (String) -> [String]
+    /// Post-filter on result names/titles. Empty means "trust MapKit's relevance ranking" - right for a
+    /// query like "halal", where most matching restaurants don't carry the word in their name.
+    let nameKeywords: [String]
+    /// Category filter handed to MKLocalSearch. Nil means all point-of-interest kinds.
+    let poiFilter: MKPointOfInterestFilter?
+    /// Where the home-area results are cached, so each locator remembers its own neighbourhood.
+    let homeCacheKey: String
+
+    /// Mosques have no MKPointOfInterestCategory, so the masjid profile filters by name instead - including
+    /// the Arabic spellings, which used to be dropped: a masjid named only مسجد… never matched the
+    /// Latin-only keyword list even when MapKit returned it.
+    static let masjid = PlaceLocatorProfile(
+        title: "Masjid Locator",
+        loadingText: "Loading masaajid…",
+        searchingText: "Searching nearby masaajid…",
+        emptyText: "No masaajid found in this area",
+        fallbackName: "Masjid",
+        contextMenuTitle: "Masjid Info",
+        baseQueries: ["mosque", "masjid", "islamic center", "muslim", "rahma", "مسجد"],
+        queries: { trimmed in
+            var seen = Set<String>()
+            return [
+                trimmed,
+                "\(trimmed) mosque",
+                "\(trimmed) masjid",
+                "\(trimmed) islamic",
+                "\(trimmed) islamic center",
+                "\(trimmed) muslim",
+                "\(trimmed) rahma"
+            ].filter { seen.insert($0).inserted }
+        },
+        nameKeywords: ["masjid", "mosque", "islam", "islamic", "muslim", "rahma", "مسجد", "جامع"],
+        poiFilter: nil,
+        homeCacheKey: "masjidLocatorHomeCacheData"
+    )
+
+    /// Food is the opposite shape from mosques: the category filter does the narrowing (restaurants, cafes,
+    /// markets - not hotels and gas stations), and the "halal" relevance comes from the query itself, because
+    /// most halal restaurants don't have "halal" in their NAME and a name filter would throw them away.
+    static let halalFood = PlaceLocatorProfile(
+        title: "Halal Food Locator",
+        loadingText: "Loading halal places…",
+        searchingText: "Searching nearby halal food…",
+        emptyText: "No halal places found in this area",
+        fallbackName: "Halal Place",
+        contextMenuTitle: "Place Info",
+        baseQueries: ["halal restaurant", "halal food", "halal market", "halal butcher", "حلال"],
+        queries: { trimmed in
+            var seen = Set<String>()
+            return [
+                "\(trimmed) halal",
+                "halal \(trimmed)",
+                trimmed
+            ].filter { seen.insert($0).inserted }
+        },
+        // Food categories only - `.store` let any supermarket that ranked near a "halal X" query through,
+        // and with no name filter there was nothing downstream to catch it. Halal butchers and groceries
+        // are `.foodMarket`.
+        nameKeywords: [],
+        poiFilter: MKPointOfInterestFilter(including: [.restaurant, .cafe, .bakery, .foodMarket]),
+        homeCacheKey: "halalLocatorHomeCacheData"
+    )
+}
+
+struct PlaceLocatorView: View {
     @ObservedObject private var settings = Settings.shared
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var sysScheme
 
-    @AppStorage("masjidLocatorHomeCacheData") private var homeCacheData = Data()
+    let profile: PlaceLocatorProfile
+
+    @AppStorage private var homeCacheData: Data
 
     @State private var searchText = ""
     @State private var results = [MKMapItem]()
     @State private var selectedItem: MKMapItem?
     @State private var isSearching = false
     @State private var searchTask: Task<Void, Never>?
+    /// The map opened without a fix (fresh install, or permission granted just now); when the first real
+    /// location arrives, recenter on it once and re-search - without this, a first-time user stared at the
+    /// Kaaba fallback with no nearby results and no way to know why.
+    @State private var awaitingFirstFix = false
 
     @State private var region = MKCoordinateRegion(
         center: .init(latitude: 21.422445, longitude: 39.826388),
@@ -32,7 +118,10 @@ struct MasjidLocatorView: View {
         settings.homeLocation?.coordinate
     }
 
-    init() {
+    init(profile: PlaceLocatorProfile) {
+        self.profile = profile
+        _homeCacheData = AppStorage(wrappedValue: Data(), profile.homeCacheKey)
+
         let coord: CLLocationCoordinate2D = {
             let s = Settings.shared
             if let cur = s.currentLocation, cur.latitude != 1000, cur.longitude != 1000 {
@@ -50,6 +139,11 @@ struct MasjidLocatorView: View {
         ))
     }
 
+    private var hasRealLocation: Bool {
+        if let cur = settings.currentLocation, cur.latitude != 1000, cur.longitude != 1000 { return true }
+        return false
+    }
+
     private struct MarkerItem: Identifiable {
         let id: String
         let coordinate: CLLocationCoordinate2D
@@ -57,7 +151,7 @@ struct MasjidLocatorView: View {
         let systemImage: String
     }
 
-    private struct CachedMasjidItem: Codable, Equatable {
+    private struct CachedPlaceItem: Codable, Equatable {
         let name: String?
         let latitude: Double
         let longitude: Double
@@ -101,10 +195,10 @@ struct MasjidLocatorView: View {
         }
     }
 
-    private struct CachedMasjidHomeResults: Codable, Equatable {
+    private struct CachedPlaceHomeResults: Codable, Equatable {
         let homeLocation: Location
         let savedAt: Date
-        let items: [CachedMasjidItem]
+        let items: [CachedPlaceItem]
     }
 
     private struct AnimatedMarkerBubble: View {
@@ -183,9 +277,13 @@ struct MasjidLocatorView: View {
             .adaptiveSafeArea(edge: .bottom) {
                 actionInset
             }
-            .navigationTitle("Masjid Locator")
+            .navigationTitle(profile.title)
             .navigationBarTitleDisplayMode(.inline)
             .onAppear {
+                // This screen is all about "near me", so it asks for location itself instead of assuming the
+                // prayer-times flow already did. No-op when already granted or denied.
+                settings.requestLocationAuthorization()
+                awaitingFirstFix = !hasRealLocation
                 configureInitialRegion()
                 loadCachedHomeResultsIfPossible()
                 scheduleSearch(for: "", force: true)
@@ -193,6 +291,13 @@ struct MasjidLocatorView: View {
             }
             .onChange(of: searchText) { newValue in
                 scheduleSearch(for: newValue, force: false)
+            }
+            .onReceive(settings.$currentLocation) { location in
+                guard awaitingFirstFix,
+                      let location, location.latitude != 1000, location.longitude != 1000 else { return }
+                awaitingFirstFix = false
+                updateRegion(to: location.coordinate)
+                scheduleSearch(for: searchText, force: true)
             }
             .preferredColorScheme(scheme)
             .accentColor(settings.accentColor.color)
@@ -226,7 +331,7 @@ struct MasjidLocatorView: View {
             if shouldShowResultsPanel {
                 HStack {
                     if isSearching {
-                        Text("Loading masaajid…")
+                        Text(profile.loadingText)
                     } else {
                         Text("\(results.count) match\(results.count == 1 ? "" : "es") found")
                     }
@@ -268,8 +373,15 @@ struct MasjidLocatorView: View {
 
             Button {
                 settings.hapticFeedback()
-                centerOnCurrentLocation()
-                scheduleSearch(for: searchText, force: true)
+                if hasRealLocation {
+                    centerOnCurrentLocation()
+                    scheduleSearch(for: searchText, force: true)
+                } else {
+                    // Nothing to center on: ask (again) rather than silently doing nothing, and let the
+                    // first-fix hook above finish the job when a location arrives.
+                    settings.requestLocationAuthorization()
+                    awaitingFirstFix = true
+                }
             } label: {
                 Label("Near Me", systemImage: "location.fill")
                     .frame(maxWidth: .infinity)
@@ -294,13 +406,13 @@ struct MasjidLocatorView: View {
             if isSearching && results.isEmpty {
                 HStack(spacing: 10) {
                     ProgressView()
-                    Text("Searching nearby masaajid…")
+                    Text(profile.searchingText)
                         .font(.subheadline)
                         .foregroundColor(.secondary)
                 }
                 .padding()
             } else if results.isEmpty {
-                Text("No masaajid found in this area")
+                Text(profile.emptyText)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .font(.subheadline)
                     .padding()
@@ -308,7 +420,7 @@ struct MasjidLocatorView: View {
                 ScrollView {
                     VStack(spacing: 0) {
                         // Identity by object, not position: when a new search replaces `results`, rows are
-                        // replaced rather than morphing one masjid's text into another's in place.
+                        // replaced rather than morphing one place's text into another's in place.
                         ForEach(results, id: \.self) { item in
                             HStack(alignment: .top, spacing: 10) {
                                 HStack(alignment: .top, spacing: 10) {
@@ -317,7 +429,7 @@ struct MasjidLocatorView: View {
 
                                     VStack(alignment: .leading, spacing: 3) {
                                         HighlightedSnippet(
-                                            source: item.name ?? "Masjid",
+                                            source: item.name ?? profile.fallbackName,
                                             term: searchText,
                                             font: .subheadline.weight(.semibold),
                                             accent: settings.accentColor.color,
@@ -360,12 +472,12 @@ struct MasjidLocatorView: View {
                             }
                             .padding()
                             .contextMenu {
-                                Text("Masjid Info")
+                                Text(profile.contextMenuTitle)
                                     .foregroundStyle(.secondary)
 
                                 Button {
                                     settings.hapticFeedback()
-                                    UIPasteboard.general.string = item.name ?? "Masjid"
+                                    UIPasteboard.general.string = item.name ?? profile.fallbackName
                                 } label: {
                                     Label("Copy Name", systemImage: "doc.on.doc")
                                 }
@@ -494,7 +606,7 @@ struct MasjidLocatorView: View {
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
 
         // Read main-actor state (settings, region) before hopping off; the fan-out, filtering, and
-        // distance sort all run in `performMasjidSearch`, off the main actor.
+        // distance sort all run in `performPlaceSearch`, off the main actor.
         let sortOrigin: CLLocationCoordinate2D? = {
             guard trimmed.isEmpty else { return nil }
             if let cur = settings.currentLocation, cur.latitude != 1000, cur.longitude != 1000 {
@@ -506,8 +618,10 @@ struct MasjidLocatorView: View {
             return searchRegion.center
         }()
 
-        let items = await performMasjidSearch(
-            queries: masjidQueries(for: trimmed),
+        let items = await performPlaceSearch(
+            queries: trimmed.isEmpty ? profile.baseQueries : profile.queries(trimmed),
+            nameKeywords: profile.nameKeywords,
+            poiFilter: profile.poiFilter,
             in: searchRegion,
             sortOrigin: sortOrigin
         )
@@ -561,22 +675,25 @@ struct MasjidLocatorView: View {
         // map opened somewhere else, so the cache is still fresh for the next open at home.
         guard !isRegionNearHome(region) else { return }
 
+        let profile = profile
         Task(priority: .utility) {
             let homeRegion = MKCoordinateRegion(
                 center: home.coordinate,
                 span: .init(latitudeDelta: 0.15, longitudeDelta: 0.15)
             )
-            let items = await performMasjidSearch(
-                queries: masjidQueries(for: ""),
+            let items = await performPlaceSearch(
+                queries: profile.baseQueries,
+                nameKeywords: profile.nameKeywords,
+                poiFilter: profile.poiFilter,
                 in: homeRegion,
                 sortOrigin: nil
             )
             guard !items.isEmpty else { return }
 
-            let cache = CachedMasjidHomeResults(
+            let cache = CachedPlaceHomeResults(
                 homeLocation: home,
                 savedAt: Date(),
-                items: items.map(CachedMasjidItem.init)
+                items: items.map(CachedPlaceItem.init)
             )
 
             if let data = try? Settings.encoder.encode(cache) {
@@ -587,9 +704,9 @@ struct MasjidLocatorView: View {
         }
     }
 
-    private func decodeHomeCache() -> CachedMasjidHomeResults? {
+    private func decodeHomeCache() -> CachedPlaceHomeResults? {
         guard !homeCacheData.isEmpty else { return nil }
-        return try? Settings.decoder.decode(CachedMasjidHomeResults.self, from: homeCacheData)
+        return try? Settings.decoder.decode(CachedPlaceHomeResults.self, from: homeCacheData)
     }
 
     private func persistHomeCacheIfNeeded(items: [MKMapItem], query: String, region: MKCoordinateRegion) {
@@ -597,10 +714,10 @@ struct MasjidLocatorView: View {
               let home = settings.homeLocation,
               coordinateDistance(region.center, home.coordinate) <= Self.homeRefreshRadiusMeters else { return }
 
-        let cache = CachedMasjidHomeResults(
+        let cache = CachedPlaceHomeResults(
             homeLocation: home,
             savedAt: Date(),
-            items: items.map(CachedMasjidItem.init)
+            items: items.map(CachedPlaceItem.init)
         )
 
         if let data = try? Settings.encoder.encode(cache) {
@@ -635,30 +752,14 @@ struct MasjidLocatorView: View {
     }
 }
 
-private let masjidKeywords = ["masjid", "mosque", "islam", "islamic", "muslim", "rahma"]
-
-private func masjidQueries(for trimmed: String) -> [String] {
-    if trimmed.isEmpty {
-        return ["mosque", "masjid", "islamic center", "muslim", "rahma"]
-    }
-    var seen = Set<String>()
-    return [
-        trimmed,
-        "\(trimmed) mosque",
-        "\(trimmed) masjid",
-        "\(trimmed) islamic",
-        "\(trimmed) islamic center",
-        "\(trimmed) muslim",
-        "\(trimmed) rahma"
-    ].filter { seen.insert($0).inserted }
-}
-
 /// The shared search core for the live search and the home-cache warmer. Top-level (not a `View` member,
 /// which would pin it to the main actor): the queries fan out concurrently instead of serially - the
 /// wall-clock cost is one round-trip, not five to seven - and the filter/dedup/sort never touch the main
 /// thread. Result order is kept deterministic by reassembling buckets in query order.
-private func performMasjidSearch(
+private func performPlaceSearch(
     queries: [String],
+    nameKeywords: [String],
+    poiFilter: MKPointOfInterestFilter?,
     in searchRegion: MKCoordinateRegion,
     sortOrigin: CLLocationCoordinate2D?,
     limit: Int = 12
@@ -672,6 +773,9 @@ private func performMasjidSearch(
                 request.naturalLanguageQuery = query
                 request.resultTypes = .pointOfInterest
                 request.region = searchRegion
+                if let poiFilter {
+                    request.pointOfInterestFilter = poiFilter
+                }
 
                 let response = try? await MKLocalSearch(request: request).start()
                 return (index, response?.mapItems ?? [])
@@ -685,9 +789,10 @@ private func performMasjidSearch(
     guard !Task.isCancelled else { return [] }
 
     let matching = buckets.joined().filter { item in
+        guard !nameKeywords.isEmpty else { return true }
         let name = (item.name ?? "").lowercased()
         let title = (item.placemark.title ?? "").lowercased()
-        return masjidKeywords.contains { keyword in
+        return nameKeywords.contains { keyword in
             name.contains(keyword) || title.contains(keyword)
         }
     }
@@ -714,7 +819,7 @@ private func performMasjidSearch(
 
 #Preview {
     AlIslamPreviewContainer(embedInNavigation: false) {
-        MasjidLocatorView()
+        PlaceLocatorView(profile: .masjid)
     }
 }
 #endif

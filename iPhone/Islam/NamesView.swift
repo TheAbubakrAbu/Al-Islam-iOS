@@ -216,8 +216,7 @@ struct NamesView: View {
 
     @State private var searchText = ""
     @State private var expandedNameNumbers = Set<Int>()
-    @AppStorage("namesDisplayMode") private var namesDisplayMode: String = "list"
-
+    
     /// Cached so the diacritic-stripping `clean()` only runs when the query changes - not on every `body`
     /// re-eval (expand/collapse, favorite toggles, font switches all re-run body but leave the query alone).
     @State private var cleanedSearch = ""
@@ -291,11 +290,11 @@ struct NamesView: View {
                 // Grid/list toggle lives in the toolbar (same as QuranView) rather than on a section header.
                 Button {
                     settings.hapticFeedback()
-                    withAnimation { namesDisplayMode = namesDisplayMode == "grid" ? "list" : "grid" }
+                    withAnimation { settings.gridMode.toggle() }
                 } label: {
-                    Image(systemName: namesDisplayMode == "grid" ? "list.bullet" : "square.grid.2x2")
+                    Image(systemName: settings.gridMode ? "list.bullet" : "square.grid.2x2")
                 }
-                .accessibilityLabel(namesDisplayMode == "grid" ? "Show list" : "Show grid")
+                .accessibilityLabel(settings.gridMode ? "Show list" : "Show grid")
                 .tint(settings.accentColor.accent2)
             }
         }
@@ -309,7 +308,7 @@ struct NamesView: View {
                 .foregroundColor(.secondary)
 
             // The per-row descriptions only exist in list mode, so hide the toggle in grid mode.
-            if namesDisplayMode != "grid" {
+            if !settings.gridMode {
                 Toggle("Show All Descriptions", isOn: showAllDescriptionsBinding)
                     .font(.caption)
                     .tint(settings.accentColor.color)
@@ -360,7 +359,7 @@ struct NamesView: View {
     private func favoriteNamesSection(hasActiveSearch: Bool, proxy: ScrollViewProxy) -> some View {
         if !hasActiveSearch && !favoriteNames.isEmpty {
             Section(header: Text("FAVORITE NAMES")) {
-                if namesDisplayMode == "grid" {
+                if settings.gridMode {
                     LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 3), spacing: 8) {
                         ForEach(favoriteNames, id: \.id) { name in
                             NameGridTile(
@@ -399,7 +398,7 @@ struct NamesView: View {
 
     @ViewBuilder
     private func namesSections(filteredNames: [NameOfAllah], hasActiveSearch: Bool, proxy: ScrollViewProxy) -> some View {
-        if namesDisplayMode == "grid" {
+        if settings.gridMode {
             Section {
                 LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 3), spacing: 8) {
                     ForEach(filteredNames, id: \.id) { name in
