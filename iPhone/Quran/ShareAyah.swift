@@ -26,6 +26,9 @@ struct ShareAyahSheet: View {
     @AppStorage("copyAyahEnglishMustafa") private var storedCopyEnglishMustafa = false
     @State private var actionMode: ActionMode = .image
 
+    // The sheet's own riwayah, seeded from the reading view's, so switching here never disturbs the reader.
+    @State private var shareQiraah: String = Settings.normalizeLegacyRiwayahTag(Settings.shared.displayQiraah)
+
     @State private var didInit = false
     @State private var didFinishInitialSetup = false
 
@@ -57,6 +60,9 @@ struct ShareAyahSheet: View {
 
     private var surah: Surah? { quranData.quran.first(where: { $0.id == surahNumber }) }
     private var ayah: Ayah? { surah?.ayahs.first(where: { $0.id == ayahNumber }) }
+    // Tajweed data is Hafs-only, so it keys off the sheet's riwayah, not the reader's.
+    private var isHafsShare: Bool { shareQiraah.isEmpty }
+    private var ayahExistsInShareQiraah: Bool { ayah?.existsInQiraah(shareQiraah) ?? true }
     private var effectiveCleanArabic: Bool { shareSettings.cleanArabic }
     private var effectiveHideArabicDots: Bool { shareSettings.hideArabicDots }
     private var canShowHideArabicDotsToggle: Bool {
@@ -352,22 +358,23 @@ struct ShareAyahSheet: View {
         ayah: Ayah,
         shareSettings: ShareSettings,
         settings: Settings,
+        qiraah: String,
         font: UIFont,
         paragraphStyle: NSParagraphStyle,
         textColor: UIColor
     ) -> NSAttributedString? {
         guard shareSettings.showTajweed,
-              settings.isHafsDisplay else {
+              qiraah.isEmpty else {
             return nil
         }
 
-        let rawText = ayah.displayArabicText(surahId: surah.id, clean: false, qiraahOverride: settings.displayQiraahForArabic)
+        let rawText = ayah.displayArabicText(surahId: surah.id, clean: false, qiraahOverride: qiraah)
         let displayText = Self.shareArabicText(
             surah: surah,
             ayah: ayah,
             cleanArabic: shareSettings.cleanArabic,
             hideArabicDots: shareSettings.hideArabicDots,
-            qiraahOverride: settings.displayQiraahForArabic
+            qiraahOverride: qiraah
         )
         guard let tajweed = TajweedStore.shared.attributedText(
             surah: surah.id,
@@ -435,7 +442,7 @@ struct ShareAyahSheet: View {
                 ayah: ayah,
                 cleanArabic: effectiveCleanArabic,
                 hideArabicDots: effectiveHideArabicDots,
-                qiraahOverride: settings.displayQiraahForArabic
+                qiraahOverride: shareQiraah
             )
             appendBlock(
                 label: header,
@@ -443,8 +450,8 @@ struct ShareAyahSheet: View {
             )
         }
 
-        // Transliteration (Hafs an Asim only)
-        if shareSettings.transliteration, settings.isHafsDisplay {
+        // Transliteration (always offered; the text itself follows Hafs numbering)
+        if shareSettings.transliteration {
             let trLabelName = (!shareSettings.englishSaheeh && !shareSettings.englishMustafa)
                 ? combinedName(translit: surah.nameTransliteration, english: surah.nameEnglish)
                 : surah.nameTransliteration
@@ -496,7 +503,7 @@ struct ShareAyahSheet: View {
 
         // Qiraah type (optional) - one line: Riwayah: English - Arabic
         if settings.showQiraahDetails && shareSettings.includeQiraah {
-            let labels = Self.qiraahLabels(displayQiraah: settings.displayQiraah)
+            let labels = Self.qiraahLabels(displayQiraah: shareQiraah)
             appendBlock(label: nil, text: "Riwayah: \(labels.english) – \(labels.arabic)")
         }
 
@@ -564,6 +571,29 @@ struct ShareAyahSheet: View {
 
                 ScrollView {
                     VStack(spacing: 2) {
+                        if settings.showQiraahDetails {
+                            HStack {
+                                Text("Arabic Riwayah")
+                                    .foregroundColor(.primary)
+
+                                Spacer()
+
+                                ArabicTextRiwayahPicker(selection: $shareQiraah.animation(.easeInOut))
+                            }
+                            .padding(.horizontal, 20)
+                            .padding(.vertical, 4)
+
+                            Text(ayahExistsInShareQiraah
+                                ? "Ayah numbering can differ between riwayat — no ayah is ever missing, but some are joined or split differently (for example, \"Alif Lam Meem\" and \"Dhalika al-Kitab...\" form a single ayah in most qiraat)."
+                                : "This ayah is not separate in this riwayah — its words are part of a neighboring ayah, so the Hafs text is shown.")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(.horizontal, 20)
+                                .padding(.bottom, 4)
+                        }
+
                         toggle("Arabic", persistentCopyBinding(
                             get: { storedCopyArabic },
                             set: { storedCopyArabic = $0 },
@@ -571,26 +601,24 @@ struct ShareAyahSheet: View {
                         ),
                                disabled: !shareSettings.transliteration && !shareSettings.englishSaheeh && !shareSettings.englishMustafa)
 
-                        if settings.isHafsDisplay {
-                            toggle("Transliteration", persistentCopyBinding(
-                                get: { storedCopyTransliteration },
-                                set: { storedCopyTransliteration = $0 },
-                                update: { updatedShareSettings(transliteration: $0) }
-                            ),
-                                   disabled: !shareSettings.arabic && !shareSettings.englishSaheeh && !shareSettings.englishMustafa)
-                            toggle("Translation - Saheeh International", persistentCopyBinding(
-                                get: { storedCopyEnglishSaheeh },
-                                set: { storedCopyEnglishSaheeh = $0 },
-                                update: { updatedShareSettings(englishSaheeh: $0) }
-                            ),
-                                   disabled: !shareSettings.arabic && !shareSettings.transliteration && !shareSettings.englishMustafa)
-                            toggle("Translation - Mustafa Khattab", persistentCopyBinding(
-                                get: { storedCopyEnglishMustafa },
-                                set: { storedCopyEnglishMustafa = $0 },
-                                update: { updatedShareSettings(englishMustafa: $0) }
-                            ),
-                                   disabled: !shareSettings.arabic && !shareSettings.transliteration && !shareSettings.englishSaheeh)
-                        }
+                        toggle("Transliteration", persistentCopyBinding(
+                            get: { storedCopyTransliteration },
+                            set: { storedCopyTransliteration = $0 },
+                            update: { updatedShareSettings(transliteration: $0) }
+                        ),
+                               disabled: !shareSettings.arabic && !shareSettings.englishSaheeh && !shareSettings.englishMustafa)
+                        toggle("Translation - Saheeh International", persistentCopyBinding(
+                            get: { storedCopyEnglishSaheeh },
+                            set: { storedCopyEnglishSaheeh = $0 },
+                            update: { updatedShareSettings(englishSaheeh: $0) }
+                        ),
+                               disabled: !shareSettings.arabic && !shareSettings.transliteration && !shareSettings.englishMustafa)
+                        toggle("Translation - Mustafa Khattab", persistentCopyBinding(
+                            get: { storedCopyEnglishMustafa },
+                            set: { storedCopyEnglishMustafa = $0 },
+                            update: { updatedShareSettings(englishMustafa: $0) }
+                        ),
+                               disabled: !shareSettings.arabic && !shareSettings.transliteration && !shareSettings.englishSaheeh)
 
                         if noteText != nil {
                             Toggle("Include Note", isOn: $includeNote.animation(.easeInOut))
@@ -632,7 +660,7 @@ struct ShareAyahSheet: View {
                                 .padding(.vertical, 2)
                             }
 
-                            if actionMode == .image && settings.isHafsDisplay {
+                            if actionMode == .image && isHafsShare {
                                 Toggle("Show Tajweed", isOn: Binding(
                                     get: { shareSettings.showTajweed },
                                     set: { shareSettings = updatedShareSettings(showTajweed: $0) }
@@ -721,7 +749,7 @@ struct ShareAyahSheet: View {
                     }
                 }
             }
-            .navigationTitle("Preview")
+            .navigationTitle(ayahSheetTitle(surahNumber: surahNumber, ayahNumber: ayahNumber))
             .navigationBarTitleDisplayMode(.inline)
             // This sheet had no dismiss control at all - you could only swipe it away or complete a share.
             .sheetDismissToolbar()
@@ -737,10 +765,10 @@ struct ShareAyahSheet: View {
                     storedShareArabicFont = font
                 }
                 shareSettings = ShareSettings(
-                    arabic: settings.isHafsDisplay ? storedCopyArabic : true,
-                    transliteration: settings.isHafsDisplay ? storedCopyTransliteration : false,
-                    englishSaheeh: settings.isHafsDisplay ? storedCopyEnglishSaheeh : false,
-                    englishMustafa: settings.isHafsDisplay ? storedCopyEnglishMustafa : false,
+                    arabic: storedCopyArabic,
+                    transliteration: storedCopyTransliteration,
+                    englishSaheeh: storedCopyEnglishSaheeh,
+                    englishMustafa: storedCopyEnglishMustafa,
                     includeQiraah: settings.showQiraahDetails ? shareIncludeRiwayah : false,
                     shareArabicFont: font,
                     cleanArabic: settings.cleanArabicText,
@@ -782,6 +810,10 @@ struct ShareAyahSheet: View {
             generatePreviewImage()
         }
         .onChange(of: shareIncludeRiwayah) { _ in generatePreviewImage() }
+        .onChange(of: shareQiraah) { _ in
+            if didFinishInitialSetup { settings.hapticFeedback() }
+            generatePreviewImage()
+        }
         .onChange(of: settings.showQiraahDetails) { show in
             if !show {
                 shareIncludeRiwayah = false
@@ -936,7 +968,7 @@ struct ShareAyahSheet: View {
         // UIKit-drawn image, so the design is asked for explicitly).
         let bodyFont   = UIFont.roundedSystemFont(ofSize: UIFont.preferredFont(forTextStyle: .body).pointSize)
         let selectedArabicFontName = shareSettings.shareArabicFont.isEmpty ? settings.fontArabic : shareSettings.shareArabicFont
-        let arabicFontName = Settings.quranArabicFontName(selectedFontName: selectedArabicFontName, qiraah: settings.displayQiraahForArabic)
+        let arabicFontName = Settings.quranArabicFontName(selectedFontName: selectedArabicFontName, qiraah: shareQiraah)
         let arabicFont = shareSettings.hideArabicDots
             ? bodyFont.withSize(bodyFont.pointSize * 1.15)
             : (UIFont(name: arabicFontName, size: bodyFont.pointSize * 1.15) ?? bodyFont)
@@ -983,7 +1015,7 @@ struct ShareAyahSheet: View {
                 ayah: ayah,
                 cleanArabic: effectiveCleanArabic,
                 hideArabicDots: effectiveHideArabicDots,
-                qiraahOverride: settings.displayQiraahForArabic
+                qiraahOverride: shareQiraah
             )
 
             if settings.showAyahInformation {
@@ -998,6 +1030,7 @@ struct ShareAyahSheet: View {
                 ayah: ayah,
                 shareSettings: shareSettings,
                 settings: settings,
+                qiraah: shareQiraah,
                 font: arabicFont,
                 paragraphStyle: right,
                 textColor: textColor
@@ -1014,8 +1047,8 @@ struct ShareAyahSheet: View {
             }
         }
 
-        // Transliteration (Hafs only)
-        if shareSettings.transliteration, settings.isHafsDisplay {
+        // Transliteration (always offered; the text itself follows Hafs numbering)
+        if shareSettings.transliteration {
             let trLabelName = (!shareSettings.englishSaheeh && !shareSettings.englishMustafa)
                 ? combinedName(translit: surah.nameTransliteration, english: surah.nameEnglish)
                 : surah.nameTransliteration
@@ -1031,7 +1064,7 @@ struct ShareAyahSheet: View {
         }
 
         let wantsAnyEnglish = shareSettings.englishSaheeh || shareSettings.englishMustafa
-        if wantsAnyEnglish, settings.isHafsDisplay {
+        if wantsAnyEnglish {
             let enHeaderName = (!shareSettings.transliteration)
                 ? combinedName(translit: surah.nameTransliteration, english: surah.nameEnglish)
                 : surah.nameEnglish
@@ -1071,7 +1104,7 @@ struct ShareAyahSheet: View {
 
         if shareSettings.includeQiraah {
             sepIfNeeded()
-            let labels = Self.qiraahLabels(displayQiraah: settings.displayQiraah)
+            let labels = Self.qiraahLabels(displayQiraah: shareQiraah)
             append("Riwayah: \(labels.english) – \(labels.arabic)", captionCentAttr, highlightAllah: false)
         }
         if settings.showSurahInformation {
@@ -1138,10 +1171,10 @@ extension ShareAyahSheet {
         let includeRiwayah = settings.showQiraahDetails && UserDefaults.standard.bool(forKey: shareIncludeRiwayahKey)
         let shareFont = UserDefaults.standard.string(forKey: "shareArabicFont") ?? ""
         let shareSettings = ShareSettings(
-            arabic: settings.isHafsDisplay ? settings.copyAyahArabic : true,
-            transliteration: settings.isHafsDisplay ? settings.copyAyahTransliteration : false,
-            englishSaheeh: settings.isHafsDisplay ? settings.copyAyahEnglishSaheeh : false,
-            englishMustafa: settings.isHafsDisplay ? settings.copyAyahEnglishMustafa : false,
+            arabic: settings.copyAyahArabic,
+            transliteration: settings.copyAyahTransliteration,
+            englishSaheeh: settings.copyAyahEnglishSaheeh,
+            englishMustafa: settings.copyAyahEnglishMustafa,
             includeQiraah: includeRiwayah,
             shareArabicFont: Settings.normalizedArabicFontName(shareFont.isEmpty ? settings.fontArabic : shareFont),
             cleanArabic: settings.cleanArabicText,
@@ -1207,13 +1240,13 @@ extension ShareAyahSheet {
             )
             appendBlock(label: header, text: settings.showAyahInformation ? arabicText : "\(arabicText) \(ayah.idArabic)")
         }
-        if shareSettings.transliteration, settings.isHafsDisplay {
+        if shareSettings.transliteration {
             let trLabelName = (!shareSettings.englishSaheeh && !shareSettings.englishMustafa) ? combinedName(translit: surah.nameTransliteration, english: surah.nameEnglish) : surah.nameTransliteration
             let header: String? = settings.showAyahInformation ? "[\(trLabelName) \(surah.id):\(ayah.id)]" : nil
             appendBlock(label: header, text: settings.showAyahInformation ? ayah.textTransliteration : "\(ayah.textTransliteration) (\(ayah.id))")
         }
         let wantsAnyEnglish = shareSettings.englishSaheeh || shareSettings.englishMustafa
-        if wantsAnyEnglish, settings.isHafsDisplay {
+        if wantsAnyEnglish {
             let headerName = (!shareSettings.transliteration) ? combinedName(translit: surah.nameTransliteration, english: surah.nameEnglish) : surah.nameEnglish
             sepIfNeeded()
             if settings.showAyahInformation { s += "[\(headerName) \(surah.id):\(ayah.id)]\n" }
@@ -1290,6 +1323,7 @@ extension ShareAyahSheet {
                 ayah: ayah,
                 shareSettings: shareSettings,
                 settings: settings,
+                qiraah: Settings.normalizeLegacyRiwayahTag(settings.displayQiraah),
                 font: arabicFont,
                 paragraphStyle: right,
                 textColor: textColor
@@ -1311,14 +1345,14 @@ extension ShareAyahSheet {
                 }
             }
         }
-        if shareSettings.transliteration, settings.isHafsDisplay {
+        if shareSettings.transliteration {
             let trLabelName = (!shareSettings.englishSaheeh && !shareSettings.englishMustafa) ? combinedName(translit: surah.nameTransliteration, english: surah.nameEnglish) : surah.nameTransliteration
             sepIfNeeded()
             if settings.showAyahInformation { append("[\(trLabelName) \(surah.id):\(ayah.id)]", accentAttr, highlightAllah: false); append("\n", bodyAttr, highlightAllah: false) }
             append(settings.showAyahInformation ? ayah.textTransliteration : "\(ayah.textTransliteration) (\(ayah.id))", bodyAttr)
         }
         let wantsAnyEnglish = shareSettings.englishSaheeh || shareSettings.englishMustafa
-        if wantsAnyEnglish, settings.isHafsDisplay {
+        if wantsAnyEnglish {
             let enHeaderName = (!shareSettings.transliteration) ? combinedName(translit: surah.nameTransliteration, english: surah.nameEnglish) : surah.nameEnglish
             sepIfNeeded()
             if settings.showAyahInformation { append("[\(enHeaderName) \(surah.id):\(ayah.id)]", accentAttr, highlightAllah: false); append("\n", bodyAttr, highlightAllah: false) }

@@ -1,5 +1,12 @@
 import SwiftUI
 
+/// The one format every ayah sheet titles itself with: "Surah Name S:A". Kept in a single helper so the
+/// sheets can never drift apart again ("Preview", "Qiraah Comparison", ... all used to invent their own).
+func ayahSheetTitle(surahNumber: Int, ayahNumber: Int) -> String {
+    let name = QuranData.shared.surah(surahNumber)?.nameTransliteration ?? "Surah"
+    return "\(name) \(surahNumber):\(ayahNumber)"
+}
+
 struct SurahContextMenu: View {
     @ObservedObject var settings = Settings.shared
     @ObservedObject var quranData = QuranData.shared
@@ -379,20 +386,11 @@ struct AyahTafsirSheet: View {
                     }
                 }
             }
-            .navigationTitle("\(surahName) \(surahNumber):\(ayahNumber)")
+            .navigationTitle(ayahSheetTitle(surahNumber: surahNumber, ayahNumber: ayahNumber))
             .navigationBarTitleDisplayMode(.inline)
             .searchable(text: $searchText.animation(.easeInOut), prompt: "Search tafsir")
             .dismissKeyboardOnScroll()
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button {
-                        dismiss()
-                    } label: {
-                        Image(systemName: "xmark")
-                            .font(.body.weight(.semibold))
-                    }
-                }
-            }
+            .sheetDismissToolbar()
         }
         .task(id: loadKey) {
             await viewModel.loadIfNeeded()
@@ -1002,7 +1000,8 @@ struct AyahQiraahComparisonSheet: View {
     let surahNumber: Int
     let ayahNumber: Int
     @State private var searchText = ""
-
+    // Comparing scripts is exactly when you want the text bigger; the slider only affects this sheet.
+    @State private var arabicFontSize: Double = Double(UIFont.preferredFont(forTextStyle: .title3).pointSize)
 
     private struct QiraahDisplay: Identifiable {
         let label: String
@@ -1055,58 +1054,108 @@ struct AyahQiraahComparisonSheet: View {
         }
     }
 
+    // The riwayah the reader is currently displaying - pinned above the list so every row can be compared
+    // against it without scrolling back up.
+    private var currentOption: QiraahDisplay? {
+        let tag = Settings.normalizeLegacyRiwayahTag(settings.displayQiraah)
+        return options.first { $0.tag == tag }
+    }
+
     var body: some View {
         NavigationView {
-            List {
-                Group {
-                    Section {
-                        Text("Compare this ayah across the Arabic riwayat available in the app. Some riwayat merge or omit Hafs ayah numbers, so unavailable rows are dimmed.")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                    }
+            VStack(spacing: 0) {
+                if let currentOption {
+                    currentQiraahHeader(currentOption)
 
-                    if !favoriteOptions.isEmpty {
-                        Section(header: Text("FAVORITES")) {
-                            ForEach(favoriteOptions) { option in
-                                qiraahRow(option)
-                            }
-                        }
-                    }
+                    Divider()
+                }
 
-                    ForEach(groupedOptions, id: \.teacher) { group in
-                        Section(header: Text("\(group.teacher.uppercased()) - \(group.teacherArabic)")) {
-                            ForEach(group.options) { option in
-                                qiraahRow(option)
-                            }
-                        }
-                    }
-
-                    if filteredOptions.isEmpty {
+                List {
+                    Group {
                         Section {
-                            Text("No riwayat found.")
+                            Text("Compare this ayah across the Arabic riwayat available in the app. Some riwayat merge or omit Hafs ayah numbers, so unavailable rows are dimmed. No ayah is ever missing - the same words may simply be joined or numbered differently.")
                                 .font(.subheadline)
                                 .foregroundStyle(.secondary)
                         }
+
+                        if !favoriteOptions.isEmpty {
+                            Section(header: Text("FAVORITES")) {
+                                ForEach(favoriteOptions) { option in
+                                    qiraahRow(option)
+                                }
+                            }
+                        }
+
+                        ForEach(groupedOptions, id: \.teacher) { group in
+                            Section(header: Text("\(group.teacher.uppercased()) - \(group.teacherArabic)")) {
+                                ForEach(group.options) { option in
+                                    qiraahRow(option)
+                                }
+                            }
+                        }
+
+                        if filteredOptions.isEmpty {
+                            Section {
+                                Text("No riwayat found.")
+                                    .font(.subheadline)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
                     }
+                    .themedListRowBackground()
                 }
-                .themedListRowBackground()
+                .applyConditionalListStyle()
+                .compactListSectionSpacing()
+                .searchable(text: $searchText.animation(.easeInOut), prompt: "Search riwayat")
             }
-            .applyConditionalListStyle()
-            .compactListSectionSpacing()
-            .navigationTitle("Qiraah Comparison")
+            .navigationTitle(ayahSheetTitle(surahNumber: surahNumber, ayahNumber: ayahNumber))
             .navigationBarTitleDisplayMode(.inline)
-            .searchable(text: $searchText.animation(.easeInOut), prompt: "Search riwayat")
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button {
-                        dismiss()
-                    } label: {
-                        Image(systemName: "xmark")
-                            .font(.body.weight(.semibold))
-                    }
-                }
-            }
+            .sheetDismissToolbar()
         }
+    }
+
+    private func currentQiraahHeader(_ option: QiraahDisplay) -> some View {
+        let text = qiraahText(for: option)
+
+        return VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .firstTextBaseline) {
+                Text(option.label)
+                    .font(.subheadline.weight(.semibold))
+
+                Text(option.arabicCaption)
+                    .font(.caption)
+                    .foregroundColor(settings.accentColor.color)
+
+                Spacer()
+
+                Text("CURRENT")
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(.secondary)
+            }
+
+            Text(text ?? "This ayah is not separate in this riwayah.")
+                .font(.custom(comparisonArabicFontName(for: option), size: arabicFontSize))
+                .arabicFontDesign(custom: settings.quranUsesCustomArabicFace)
+                .foregroundColor(text == nil ? .secondary : .primary)
+                .multilineTextAlignment(.trailing)
+                .lineSpacing(6)
+                .frame(maxWidth: .infinity, alignment: .trailing)
+                .textSelection(.enabled)
+
+            HStack(spacing: 12) {
+                Image(systemName: "textformat.size.smaller")
+                    .foregroundStyle(.secondary)
+
+                Slider(value: $arabicFontSize, in: 15...45, step: 1)
+                    .accessibilityLabel("Arabic font size")
+
+                Image(systemName: "textformat.size.larger")
+                    .foregroundStyle(.secondary)
+            }
+            .font(.caption)
+        }
+        .padding(.horizontal)
+        .padding(.vertical, 10)
     }
 
     private func qiraahText(for option: QiraahDisplay) -> String? {
@@ -1170,7 +1219,7 @@ struct AyahQiraahComparisonSheet: View {
                 term: searchText,
                 font: .custom(
                     comparisonArabicFontName(for: option),
-                    size: UIFont.preferredFont(forTextStyle: .title3).pointSize
+                    size: arabicFontSize
                 ),
                 accent: settings.accentColor.color,
                 fg: text == nil ? .secondary : .primary
@@ -1350,100 +1399,138 @@ struct AyahEnglishComparisonSheet: View {
             ayah.textTransliteration.localizedCaseInsensitiveContains(query)
     }
 
+    // The translation the reader is currently displaying - pinned above the list so every row can be
+    // compared against it without scrolling back up. When both in-app translations are shown in the
+    // reader, Saheeh International stands in as "current".
+    private var currentTranslationName: String {
+        (settings.showEnglishSaheeh || !settings.showEnglishMustafa) ? "Saheeh International" : "Clear Quran (Mustafa Khattab)"
+    }
+
+    private var currentTranslationText: String? {
+        guard let ayah = quranData.ayah(surah: surahNumber, ayah: ayahNumber) else { return nil }
+        return (settings.showEnglishSaheeh || !settings.showEnglishMustafa) ? ayah.textEnglishSaheeh : ayah.textEnglishMustafa
+    }
+
     var body: some View {
         NavigationView {
-            List {
-                Group {
-                    Section {
-                        Text("Compare this ayah across several English Qur'an translations. Results are loaded from alquran.cloud.")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                    }
+            VStack(spacing: 0) {
+                if let currentTranslationText {
+                    currentTranslationHeader(text: currentTranslationText)
 
-                    if shouldShowQuranText,
-                       let ayah = quranData.ayah(surah: surahNumber, ayah: ayahNumber) {
-                        Section(header: Text("QURAN TEXT")) {
-                            comparisonRow(
-                                title: nil,
-                                text: ayah.displayArabicText(surahId: surahNumber, clean: settings.cleanArabicText),
-                                isArabic: true
-                            )
-
-                            if settings.showTransliteration {
-                                comparisonRow(title: "Transliteration", text: ayah.textTransliteration)
-                            }
-                        }
-                    }
-
-                    Section(header: Text("DOWNLOADED TRANSLATIONS")) {
-                        if let ayah = quranData.ayah(surah: surahNumber, ayah: ayahNumber) {
-                            ForEach(filteredInAppEditions) { edition in
-                                comparisonRow(
-                                    title: edition.name,
-                                    text: inAppTranslationText(for: edition.id, ayah: ayah),
-                                    editionID: edition.id,
-                                    isDownloaded: true
-                                )
-                            }
-
-                            if filteredInAppEditions.isEmpty {
-                                Text("No downloaded translations found.")
-                                    .font(.subheadline)
-                                    .foregroundStyle(.secondary)
-                            }
-                        }
-                    }
-
-                    Section(header: Text("ONLINE TRANSLATIONS")) {
-                        if viewModel.isLoading && viewModel.translations.isEmpty {
-                            HStack {
-                                ProgressView()
-                                Text("Loading translations...")
-                                    .foregroundStyle(.secondary)
-                            }
-                        } else if let errorMessage = viewModel.errorMessage, viewModel.translations.isEmpty {
-                                Text(errorMessage)
-                                    .font(.subheadline)
-                                    .foregroundStyle(.secondary)
-                            } else {
-                            ForEach(filteredOnlineEditions) { edition in
-                                comparisonRow(
-                                    title: edition.name,
-                                    text: viewModel.translations[edition.id] ?? "Unavailable",
-                                    editionID: edition.id
-                                )
-                                .opacity(viewModel.translations[edition.id] == nil ? 0.55 : 1)
-                            }
-
-                            if filteredOnlineEditions.isEmpty {
-                                Text("No translations found.")
-                                    .font(.subheadline)
-                                    .foregroundStyle(.secondary)
-                            }
-                        }
-                    }
+                    Divider()
                 }
-                .themedListRowBackground()
+
+                comparisonList
             }
-            .applyConditionalListStyle()
-            .compactListSectionSpacing()
-            .navigationTitle("Translation Comparison")
+            .navigationTitle(ayahSheetTitle(surahNumber: surahNumber, ayahNumber: ayahNumber))
             .navigationBarTitleDisplayMode(.inline)
-            .searchable(text: $searchText.animation(.easeInOut), prompt: "Search translations")
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button {
-                        dismiss()
-                    } label: {
-                        Image(systemName: "xmark")
-                            .font(.body.weight(.semibold))
-                    }
-                }
-            }
+            .sheetDismissToolbar()
             .task(id: loadKey) {
                 await viewModel.loadIfNeeded()
             }
         }
+    }
+
+    private func currentTranslationHeader(text: String) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .firstTextBaseline) {
+                Text(currentTranslationName)
+                    .font(.subheadline.weight(.semibold))
+
+                Spacer()
+
+                Text("CURRENT")
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(.secondary)
+            }
+
+            Text(text)
+                .font(.subheadline)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .textSelection(.enabled)
+        }
+        .padding(.horizontal)
+        .padding(.vertical, 10)
+    }
+
+    private var comparisonList: some View {
+        List {
+            Group {
+                Section {
+                    Text("Compare this ayah across several English Qur'an translations. Results are loaded from alquran.cloud.")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+
+                if shouldShowQuranText,
+                   let ayah = quranData.ayah(surah: surahNumber, ayah: ayahNumber) {
+                    Section(header: Text("QURAN TEXT")) {
+                        comparisonRow(
+                            title: nil,
+                            text: ayah.displayArabicText(surahId: surahNumber, clean: settings.cleanArabicText),
+                            isArabic: true
+                        )
+
+                        if settings.showTransliteration {
+                            comparisonRow(title: "Transliteration", text: ayah.textTransliteration)
+                        }
+                    }
+                }
+
+                Section(header: Text("DOWNLOADED TRANSLATIONS")) {
+                    if let ayah = quranData.ayah(surah: surahNumber, ayah: ayahNumber) {
+                        ForEach(filteredInAppEditions) { edition in
+                            comparisonRow(
+                                title: edition.name,
+                                text: inAppTranslationText(for: edition.id, ayah: ayah),
+                                editionID: edition.id,
+                                isDownloaded: true
+                            )
+                        }
+
+                        if filteredInAppEditions.isEmpty {
+                            Text("No downloaded translations found.")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+
+                Section(header: Text("ONLINE TRANSLATIONS")) {
+                    if viewModel.isLoading && viewModel.translations.isEmpty {
+                        HStack {
+                            ProgressView()
+                            Text("Loading translations...")
+                                .foregroundStyle(.secondary)
+                        }
+                    } else if let errorMessage = viewModel.errorMessage, viewModel.translations.isEmpty {
+                            Text(errorMessage)
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                        } else {
+                        ForEach(filteredOnlineEditions) { edition in
+                            comparisonRow(
+                                title: edition.name,
+                                text: viewModel.translations[edition.id] ?? "Unavailable",
+                                editionID: edition.id
+                            )
+                            .opacity(viewModel.translations[edition.id] == nil ? 0.55 : 1)
+                        }
+
+                        if filteredOnlineEditions.isEmpty {
+                            Text("No translations found.")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+            }
+            .themedListRowBackground()
+        }
+        .applyConditionalListStyle()
+        .compactListSectionSpacing()
+        .searchable(text: $searchText.animation(.easeInOut), prompt: "Search translations")
     }
 
     private func inAppTranslationText(for editionID: String, ayah: Ayah? = nil) -> String {
@@ -2278,35 +2365,61 @@ struct SelectAyahTextSheet: View {
     let ayah: Ayah
 
     @State private var copiedLabel: String?
+    // The sheet's own riwayah, seeded from the reading view's, so switching here never disturbs the reader.
+    @State private var selectedQiraah: String = Settings.normalizeLegacyRiwayahTag(Settings.shared.displayQiraah)
 
     private var usesCustomArabicFace: Bool {
         !settings.removeArabicDots && settings.quranUsesCustomArabicFace
+    }
+
+    private var ayahExistsInSelectedQiraah: Bool {
+        ayah.existsInQiraah(selectedQiraah)
     }
 
     private var arabicText: String {
         ayah.displayArabicText(
             surahId: surah.id,
             clean: settings.cleanArabicText,
-            qiraahOverride: settings.displayQiraahForArabic
+            qiraahOverride: selectedQiraah
         )
+    }
+
+    private var arabicFontName: String {
+        usesCustomArabicFace ? settings.quranArabicFontName(for: selectedQiraah) : settings.fontArabic
     }
 
     var body: some View {
         NavigationView {
             List {
                 Group {
-                    if settings.showArabicText {
+                    if settings.showQiraahDetails {
+                        Section {
+                            ArabicTextRiwayahPicker(selection: $selectedQiraah.animation(.easeInOut), useSimpleIOSPicker: true)
+                        } footer: {
+                            Text("Switching the riwayah changes the Arabic text only. Ayah numbering can differ between riwayat — no ayah is ever missing, but some are joined or split differently (for example, \"Alif Lam Meem\" and \"Dhalika al-Kitab...\" form a single ayah in most qiraat), so this ayah may appear under a different number or merged with its neighbor.")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+
+                    if ayahExistsInSelectedQiraah {
                         selectableBlock(
                             title: "ARABIC",
                             text: arabicText,
                             font: usesCustomArabicFace
-                                ? .custom(settings.fontArabic, size: settings.fontArabicSize)
+                                ? .custom(arabicFontName, size: settings.fontArabicSize)
                                 : .system(size: settings.fontArabicSize, design: .rounded),
                             isArabic: true
                         )
+                    } else {
+                        Section(header: Text("ARABIC")) {
+                            Text("This ayah is not separate in this riwayah — its words are part of a neighboring ayah.")
+                                .font(.subheadline)
+                                .foregroundColor(.secondary)
+                        }
                     }
 
-                    if settings.showTransliteration, settings.isHafsDisplay, !ayah.textTransliteration.isEmpty {
+                    if !ayah.textTransliteration.isEmpty {
                         selectableBlock(
                             title: "TRANSLITERATION",
                             text: ayah.textTransliteration,
@@ -2315,7 +2428,7 @@ struct SelectAyahTextSheet: View {
                         )
                     }
 
-                    if settings.showEnglishSaheeh, settings.isHafsDisplay, !ayah.textEnglishSaheeh.isEmpty {
+                    if !ayah.textEnglishSaheeh.isEmpty {
                         selectableBlock(
                             title: "SAHEEH INTERNATIONAL",
                             text: ayah.textEnglishSaheeh,
@@ -2324,7 +2437,7 @@ struct SelectAyahTextSheet: View {
                         )
                     }
 
-                    if settings.showEnglishMustafa, settings.isHafsDisplay, !ayah.textEnglishMustafa.isEmpty {
+                    if !ayah.textEnglishMustafa.isEmpty {
                         selectableBlock(
                             title: "CLEAR QURAN (MUSTAFA KHATTAB)",
                             text: ayah.textEnglishMustafa,
@@ -2397,7 +2510,7 @@ struct SelectAyahTextSheet: View {
     private func resolvedUIFont(_ font: Font, isArabic: Bool) -> UIFont {
         if isArabic {
             let size = CGFloat(settings.fontArabicSize)
-            if usesCustomArabicFace, let custom = UIFont(name: settings.fontArabic, size: size) {
+            if usesCustomArabicFace, let custom = UIFont(name: arabicFontName, size: size) {
                 return custom
             }
             return .roundedSystemFont(ofSize: size)

@@ -1403,6 +1403,13 @@ struct SurahView: View {
                 } header: {
                     // The surah header now lives in the always-pinned top safeAreaInset, so this section
                     // header only carries the search results-count pill (trailing, visible while searching).
+                    // watchOS has no safeAreaInset header, so it keeps the header here - its removal in
+                    // 4.5.0 (when the header moved into the iOS-only inset) was a regression.
+                    #if os(watchOS)
+                    if searchText.isEmpty {
+                        SurahSectionHeader(surah: surah)
+                    }
+                    #endif
                     if !searchText.isEmpty {
                         HStack {
                             Spacer()
@@ -1663,13 +1670,25 @@ struct SurahView: View {
             // Always-pinned header (safeAreaInset, not overlay): it reserves space so list content - and
             // the search results-count pill - sits below it rather than being hidden behind it.
             .safeAreaInset(edge: .top, spacing: 0) {
-                // Drop the page/juz line from the pinned header while the surah's first divider is on screen
-                // (it would just duplicate what's visible); it returns once that divider scrolls away.
-                floatingHeaderOverlay(
-                    floatingDividerModel: firstBoundaryDividerOnScreen ? nil : floatingDividerModel,
-                    floatingDividerAnimationKey: firstBoundaryDividerOnScreen ? "none" : floatingDividerAnimationKey,
-                    progressFraction: floatingProgressFraction
-                )
+                VStack(spacing: 0) {
+                    // The ayah progress bar is attached full-width directly beneath the toolbar - not part
+                    // of the floating pill - so it reads as the screen's own progress indicator.
+                    if let barFraction = floatingProgressFraction ?? pageFallbackFraction(for: floatingDividerModel) {
+                        TrackedBar(
+                            fraction: barFraction,
+                            height: 3,
+                            color: settings.accentColor.color
+                        )
+                        .transition(.opacity)
+                    }
+
+                    // Drop the page/juz line from the pinned header while the surah's first divider is on screen
+                    // (it would just duplicate what's visible); it returns once that divider scrolls away.
+                    floatingHeaderOverlay(
+                        floatingDividerModel: firstBoundaryDividerOnScreen ? nil : floatingDividerModel,
+                        floatingDividerAnimationKey: firstBoundaryDividerOnScreen ? "none" : floatingDividerAnimationKey
+                    )
+                }
             }
             .safeAreaInset(edge: .bottom) {
                 let active = quranPlayer.isPlaying || quranPlayer.isPaused
@@ -1849,33 +1868,25 @@ struct SurahView: View {
 
 
 
+    /// The page-based fallback for the ayah progress bar, for the paths that don't track the visible ayah.
+    /// It advances in whole-page jumps, while the ayah fraction tracks the actual scroll and reaches full at
+    /// the surah's last ayah.
+    private func pageFallbackFraction(for model: BoundaryDividerModel?) -> CGFloat? {
+        guard let model,
+              let position = model.pageInSurah,
+              let total = model.surahPageCount,
+              total > 1 else { return nil }
+        return CGFloat(position) / CGFloat(total)
+    }
+
     private func floatingHeaderOverlay(
         floatingDividerModel: BoundaryDividerModel?,
-        floatingDividerAnimationKey: String,
-        progressFraction: CGFloat? = nil
+        floatingDividerAnimationKey: String
     ) -> some View {
         VStack(spacing: 2) {
             SurahSectionHeader(surah: surah)
 
             if let floatingDividerModel {
-                // The bar makes the "(3/10)" in the label legible at a glance. It sits BETWEEN the surah
-                // header and the page/juz line - a divider in the literal sense - and it fills by AYAH, not
-                // by page: the page fraction advanced in whole-page jumps, while the ayah fraction tracks
-                // the actual scroll and reaches full at the surah's last ayah. The page-based fraction stays
-                // as the fallback for the paths that don't track the visible ayah.
-                if let position = floatingDividerModel.pageInSurah,
-                   let total = floatingDividerModel.surahPageCount,
-                   total > 1 {
-                    TrackedBar(
-                        fraction: progressFraction ?? (CGFloat(position) / CGFloat(total)),
-                        height: 3,
-                        color: settings.accentColor.color
-                    )
-                    .padding(.horizontal, 2)
-                    .padding(.vertical, 2)
-                    .transition(.opacity)
-                }
-
                 boundaryDivider(model: floatingDividerModel, isOverlay: true)
                     .id(boundaryDividerID(floatingDividerModel))
                     .transition(.opacity.combined(with: .scale(scale: 0.98)))
@@ -3382,6 +3393,9 @@ private struct MushafPageContent: View {
     /// A sheet the actions sheet asked for, presented from here once the actions sheet has closed.
     @State private var secondarySheet: SecondarySheetRequest?
 
+    /// A tapped surah heading (the in-page name/basmala, or the pinned header) - drives the surah info sheet.
+    @State private var infoSurah: Surah?
+
     private struct SecondarySheetRequest: Identifiable {
         let kind: AyahSecondarySheet
         let surah: Surah
@@ -3481,6 +3495,18 @@ private struct MushafPageContent: View {
         .sheet(item: $secondarySheet) { request in
             secondarySheetContent(request)
         }
+        .sheet(item: $infoSurah) { surah in
+            SurahInfoSheet(surahName: surah.nameTransliteration, surahNumber: surah.id)
+                .environmentObject(settings)
+                .environmentObject(quranData)
+        }
+    }
+
+    /// Tap a surah's name/basmala (in the page text or the pinned header) to read about the surah.
+    private func showSurahInfo(surahID: Int) {
+        guard let surah = quranData.surah(surahID) else { return }
+        settings.hapticFeedback()
+        infoSurah = surah
     }
 
     private func renderedPageBody(rendered: MushafRenderedPage, width: CGFloat, visibleHeight: CGFloat) -> some View {
@@ -3501,6 +3527,8 @@ private struct MushafPageContent: View {
                     guard let ref = ayahRef(surahID: surahID, ayahID: ayahID) else { return }
                     settings.hapticFeedback()
                     sheetAyah = TappedAyahRef(surah: ref.0, ayah: ref.1)
+                } onTapHeading: { surahID in
+                    showSurahInfo(surahID: surahID)
                 }
                 .frame(width: width, height: rendered.height)
                 .padding(.horizontal, Self.textPadding)
@@ -3586,6 +3614,10 @@ private struct MushafPageContent: View {
                 .conditionalGlassEffect(rectangle: true)
                 .padding(.top, 4)
                 .padding(.horizontal, settings.defaultView ? 20 : 16)
+                // Tap the header to read about the surah. The star/emoji keep their own tap gestures -
+                // a child gesture wins over this one, so favoriting still works.
+                .contentShape(Rectangle())
+                .onTapGesture { showSurahInfo(surahID: surah.id) }
         }
     }
 
@@ -3610,10 +3642,14 @@ private struct MushafPageContent: View {
 // MARK: - Page mode: tappable text rendering + per-ayah actions
 
 /// A single ayah's character range within the composed page text, so a tap can be mapped back to an ayah.
+/// `ayahID == 0` is the surah HEADING (name/basmala) rather than an ayah - tapping it opens the surah info
+/// sheet instead of marking an ayah.
 struct MushafAyahRange {
     let range: NSRange
     let surahID: Int
     let ayahID: Int
+
+    var isHeading: Bool { ayahID == 0 }
 }
 
 /// Everything the composer reads, captured on the main actor in one place. The composer used to read
@@ -3900,17 +3936,31 @@ struct MushafPageComposer {
             // the basmala. A surah merely *continuing* onto the page after another one ends gets just its name -
             // and the page's own opening surah is titled by the pinned header, so it gets nothing.
             if segment.ayahs.first?.id == 1 {
+                let headingStart = result.length
                 result.append(surahOpeningHeading(segment.surah, size: size, width: width,
                                                   extraLineSpacing: extraLineSpacing, leadingBreak: i > 0))
+                // The heading (rule + name + basmala) is tappable: `ayahID: 0` marks it as a heading range so a
+                // tap opens the surah info sheet instead of trying to mark an ayah.
+                ranges.append(MushafAyahRange(
+                    range: NSRange(location: headingStart, length: result.length - headingStart),
+                    surahID: segment.surah.id,
+                    ayahID: 0
+                ))
             } else if i > 0 {
                 let name = isEnglish
                     ? "\n\(segment.surah.id). \(segment.surah.nameTransliteration)\n"
                     : "\n﴿ \(segment.surah.nameTransliteration) ﴾\n"
+                let headingStart = result.length
                 result.append(NSAttributedString(string: name, attributes: [
                     .font: UIFont.systemFont(ofSize: max(size * 0.5, 12), weight: .semibold),
                     .foregroundColor: accent,
                     .paragraphStyle: paragraph(size, extraLineSpacing: extraLineSpacing, centered: true)
                 ]))
+                ranges.append(MushafAyahRange(
+                    range: NSRange(location: headingStart, length: result.length - headingStart),
+                    surahID: segment.surah.id,
+                    ayahID: 0
+                ))
             }
 
             for ayah in segment.ayahs {
@@ -4501,6 +4551,8 @@ struct MushafPageTextView: UIViewRepresentable {
     var baselineBand: ClosedRange<CGFloat> = 0...0
     let onTapAyah: (Int, Int) -> Void
     let onLongPressAyah: (Int, Int) -> Void
+    /// A tap on a surah heading (name/basmala) - passes the surah's id.
+    var onTapHeading: ((Int) -> Void)? = nil
 
     private func range(of ayah: (surahID: Int, ayahID: Int)?) -> NSRange? {
         guard let ayah else { return nil }
@@ -4569,6 +4621,7 @@ struct MushafPageTextView: UIViewRepresentable {
         context.coordinator.ranges = ranges
         context.coordinator.onTapAyah = onTapAyah
         context.coordinator.onLongPressAyah = onLongPressAyah
+        context.coordinator.onTapHeading = onTapHeading
         // Before any text assignment below, so the relayout it triggers already sees the new values.
         context.coordinator.forcedBaselineOffset = baselineOffset
         context.coordinator.baselineBand = baselineBand
@@ -4602,6 +4655,7 @@ struct MushafPageTextView: UIViewRepresentable {
         var ranges: [MushafAyahRange] = []
         var onTapAyah: ((Int, Int) -> Void)?
         var onLongPressAyah: ((Int, Int) -> Void)?
+        var onTapHeading: ((Int) -> Void)?
         var forcedBaselineOffset: CGFloat = 0
         var baselineBand: ClosedRange<CGFloat> = 0...0
 
@@ -4632,14 +4686,23 @@ struct MushafPageTextView: UIViewRepresentable {
 
         @objc func handleTap(_ gesture: UITapGestureRecognizer) {
             guard let (surahID, ayahID) = ayah(at: gesture.location(in: textView)) else { return }
-            onTapAyah?(surahID, ayahID)
+            if ayahID == 0 {
+                onTapHeading?(surahID)
+            } else {
+                onTapAyah?(surahID, ayahID)
+            }
         }
 
         @objc func handleLongPress(_ gesture: UILongPressGestureRecognizer) {
             // Fire once, when the press is recognized - not on every move that follows.
             guard gesture.state == .began else { return }
             guard let (surahID, ayahID) = ayah(at: gesture.location(in: textView)) else { return }
-            onLongPressAyah?(surahID, ayahID)
+            // A press on a heading behaves like a tap on it - there are no per-ayah actions to offer there.
+            if ayahID == 0 {
+                onTapHeading?(surahID)
+            } else {
+                onLongPressAyah?(surahID, ayahID)
+            }
         }
 
         /// The ayah whose glyphs sit under `point`, in the text view's coordinates.
@@ -4992,20 +5055,9 @@ struct AyahActionsSheet: View {
                 .padding(.top, 8)
                 .padding(.bottom, 16)
             }
-            .navigationTitle("\(surah.nameTransliteration) \(surah.id):\(ayah.id)")
+            .navigationTitle(ayahSheetTitle(surahNumber: surah.id, ayahNumber: ayah.id))
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button {
-                        settings.hapticFeedback()
-                        dismiss()
-                    } label: {
-                        Image(systemName: "xmark")
-                            .font(.subheadline.weight(.semibold))
-                    }
-                    .tint(settings.accentColor.accent1)
-                }
-            }
+            .sheetDismissToolbar()
         }
         .confirmationDialog(Settings.bookmarkNoteRemovalDialogTitle, isPresented: $confirmRemoveNote, titleVisibility: .visible) {
             Button("Remove", role: .destructive) {
