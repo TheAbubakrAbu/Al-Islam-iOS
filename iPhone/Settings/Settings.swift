@@ -1135,6 +1135,38 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     @AppStorage("fontArabicSize") var fontArabicSize: Double = Double(UIFont.preferredFont(forTextStyle: .title1).pointSize)
     @AppStorage("useFontArabic") var useFontArabic = true
 
+    /// The Arabic face for the NON-Quran Arabic screens (Hadith, Adhkar, Duas, 99 Names, Arabic Alphabet).
+    /// Independent of the Quran's own font picker.
+    enum IslamArabicFace: String, CaseIterable {
+        case uthmani, indopak, basic
+
+        /// Outside the Quran, "Uthmani" is ALWAYS the Qiraat Uthmani face - never the Hafs Quran face,
+        /// which is reserved for the mushaf itself.
+        var fontName: String {
+            switch self {
+            case .uthmani: return Settings.qiraatUthmaniFontName
+            case .indopak: return Settings.indopakFontName
+            case .basic: return Settings.systemArabicFontName
+            }
+        }
+    }
+
+    /// Raw storage for `islamArabicFace`. Empty means "not chosen yet" - the legacy two-way
+    /// Quranic-vs-Basic toggle (`useFontArabic`) seeds the richer choice on first read.
+    @AppStorage("islamArabicFontFace") var islamArabicFaceRaw: String = ""
+
+    var islamArabicFace: IslamArabicFace {
+        get {
+            if let face = IslamArabicFace(rawValue: islamArabicFaceRaw) { return face }
+            return useFontArabic ? .uthmani : .basic
+        }
+        set {
+            islamArabicFaceRaw = newValue.rawValue
+            // Keep the legacy flag in step - the watch sync channel still speaks Quranic-vs-Basic.
+            useFontArabic = newValue != .basic
+        }
+    }
+
     /// True when the Quran Arabic font picker is set to "Basic" (the standard Apple system font).
     var quranUsesSystemArabicFont: Bool { fontArabic == Settings.systemArabicFontName }
 
@@ -1143,9 +1175,22 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     /// but still applies when "Basic" is selected. See the note in `Globals.swift`.
     var quranUsesCustomArabicFace: Bool { !quranUsesSystemArabicFont }
 
-    /// Same question for the non-Quran Arabic screens (Adhkar, Duas, 99 Names, Arabic Alphabet), which gate the
-    /// Quranic face behind their own "Arabic Font" picker on top of the global font choice.
-    var islamUsesCustomArabicFace: Bool { useFontArabic && quranUsesCustomArabicFace }
+    /// Same question for the non-Quran Arabic screens (Hadith, Adhkar, Duas, 99 Names, Arabic Alphabet):
+    /// true whenever their three-way face picker is on a real bundled face rather than "Basic".
+    var islamUsesCustomArabicFace: Bool { islamArabicFace != .basic }
+
+    /// The Arabic font for the non-Quran Arabic screens, straight from the three-way face choice:
+    /// Uthmani (the Qiraat face - never the Hafs Quran face), IndoPak, or Basic (system).
+    var nonQuranArabicFontName: String { islamArabicFace.fontName }
+
+    // MARK: - Hadith display
+
+    /// Which parts of a hadith render in the Hadith tab (both default on; hiding one gives a pure-Arabic or
+    /// pure-English reading experience).
+    @AppStorage("showHadithArabic") var showHadithArabic = true
+    @AppStorage("showHadithEnglish") var showHadithEnglish = true
+    /// Show the narrator ("It is narrated on the authority of...") line above the English text.
+    @AppStorage("showHadithNarrator") var showHadithNarrator = true
 
     // MARK: - Arabic Alphabet screen size
 

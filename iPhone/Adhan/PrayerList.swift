@@ -961,7 +961,7 @@ private struct PrayerGridTile<TrailingContent: View>: View {
                 Image(systemName: prayer.image)
                     .font(.subheadline)
                     .foregroundColor(color)
-                    .padding(.trailing, -2)
+                    .padding([.trailing, .bottom], -2)
 
                 Text(prayer.compactDisplayName)
                     .font(.subheadline)

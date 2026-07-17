@@ -7,6 +7,8 @@ struct TasbihView: View {
     // data at all. The old `Self.initialCounters` default forced the `commonDhikrItems` global (and its
     // per-item diacritic-folded search blobs) to initialize the moment the STRUCT was built - and on watchOS
     // the Islam tab builds this struct eagerly for its NavigationLink on every body pass.
+    /// Apple Music-style bar minimization: true while scrolling down.
+    @State private var barsCollapsed = false
     @State private var counters: [Int: Int] = [:]
     @State private var selectedDhikrIndex: Int = Self.freeDhikrIndex
 
@@ -51,10 +53,13 @@ struct TasbihView: View {
             .themedListRowBackground()
         }
         #if os(iOS)
+        // Apple Music-style: the tasbih card minimizes while scrolling down, restores on scroll-up.
+        .collapseBarsOnScroll($barsCollapsed)
         .adaptiveSafeArea(edge: .bottom) {
             VStack(spacing: SafeAreaInsetVStackSpacing.standard) {
                 activeTasbihCard
             }
+            .minimizedBarStyle(barsCollapsed)
             .padding(.horizontal, 24)
             .padding(.vertical, 12)
             .background(Color(UIColor.systemGroupedBackground))

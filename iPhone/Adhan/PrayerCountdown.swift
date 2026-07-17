@@ -248,6 +248,7 @@ struct PrayerCountdown: View {
         }
         .foregroundStyle(.secondary)
         .frame(maxWidth: .infinity)
+        .padding(.top, 2)
     }
 
     private func handleScenePhaseChange(_ phase: ScenePhase) {

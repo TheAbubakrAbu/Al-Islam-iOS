@@ -1,10 +1,36 @@
 import SwiftUI
 
-/// The one format every ayah sheet titles itself with: "Surah Name S:A". Kept in a single helper so the
-/// sheets can never drift apart again ("Preview", "Qiraah Comparison", ... all used to invent their own).
-func ayahSheetTitle(surahNumber: Int, ayahNumber: Int) -> String {
+/// The one format every ayah sheet titles itself with: "Surah Name S:A" (or "Surah Name S:A-B" for a sheet
+/// that covers a range, e.g. a tafsir that groups several ayahs). Kept in a single helper so the sheets can
+/// never drift apart again ("Preview", "Qiraah Comparison", ... all used to invent their own).
+func ayahSheetTitle(surahNumber: Int, ayahNumber: Int, endAyah: Int? = nil) -> String {
     let name = QuranData.shared.surah(surahNumber)?.nameTransliteration ?? "Surah"
+    if let endAyah, endAyah > ayahNumber {
+        return "\(name) \(surahNumber):\(ayahNumber)-\(endAyah)"
+    }
     return "\(name) \(surahNumber):\(ayahNumber)"
+}
+
+/// The English translation currently being shown, by name - so ayah sheets can mention it consistently.
+/// Mirrors the reader's own precedence (Saheeh unless only Mustafa is enabled).
+func currentTranslationDisplayName() -> String {
+    let settings = Settings.shared
+    return (settings.showEnglishSaheeh || !settings.showEnglishMustafa)
+        ? "Saheeh International"
+        : "Clear Quran (Mustafa Khattab)"
+}
+
+/// The ayah's text in the currently-shown English translation (same precedence as the name above), or nil
+/// when translations don't apply (non-Hafs display) or the text is empty. This is what ayah sheets show
+/// under the reference - the actual translation, not just its name.
+func currentTranslationText(for ayah: Ayah) -> String? {
+    let settings = Settings.shared
+    guard settings.isHafsDisplay else { return nil }
+    let text = (settings.showEnglishSaheeh || !settings.showEnglishMustafa)
+        ? ayah.textEnglishSaheeh
+        : ayah.textEnglishMustafa
+    let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+    return trimmed.isEmpty ? nil : trimmed
 }
 
 struct SurahContextMenu: View {
@@ -115,20 +141,50 @@ struct SurahContextMenu: View {
 
 #if os(iOS)
 private enum TafsirAuthor: String, CaseIterable, Identifiable {
+    // English (quranapi.pages.dev - all three arrive in one response).
     case ibnKathir = "Ibn Kathir"
     case maarifUlQuran = "Maarif Ul Quran"
     case tazkirulQuran = "Tazkirul Quran"
+    // Arabic (spa5k/tafsir_api via the jsDelivr CDN - one file per ayah per edition).
+    case ibnKathirArabic = "Tafsir Ibn Kathir (Arabic)"
+    case tabariArabic = "Tafsir al-Tabari (Arabic)"
+    case saadiArabic = "Tafsir as-Sa'di (Arabic)"
 
     var id: String { rawValue }
 
+    /// The spa5k edition slug for Arabic tafsirs; nil for the English bundle.
+    var arabicSlug: String? {
+        switch self {
+        case .ibnKathirArabic: return "ar-tafsir-ibn-kathir"
+        case .tabariArabic:    return "ar-tafsir-al-tabari"
+        case .saadiArabic:     return "ar-tafsir-as-saadi"
+        default:               return nil
+        }
+    }
+
+    var isArabic: Bool { arabicSlug != nil }
+
+    static var englishCases: [TafsirAuthor] { allCases.filter { !$0.isArabic } }
+    static var arabicCases: [TafsirAuthor] { allCases.filter { $0.isArabic } }
+
     var shortTitle: String {
         switch self {
-        case .ibnKathir:
-            return "Ibn Kathir"
-        case .maarifUlQuran:
-            return "Maarif"
-        case .tazkirulQuran:
-            return "Tazkirul"
+        case .ibnKathir:       return "Ibn Kathir"
+        case .maarifUlQuran:   return "Maarif"
+        case .tazkirulQuran:   return "Tazkirul"
+        case .ibnKathirArabic: return "ابن كثير"
+        case .tabariArabic:    return "الطبري"
+        case .saadiArabic:     return "السعدي"
+        }
+    }
+
+    /// The heading shown above the tafsir body.
+    var displayTitle: String {
+        switch self {
+        case .ibnKathirArabic: return "تفسير ابن كثير"
+        case .tabariArabic:    return "تفسير الطبري"
+        case .saadiArabic:     return "تفسير السعدي"
+        default:               return rawValue
         }
     }
 
@@ -142,6 +198,29 @@ private enum TafsirAuthor: String, CaseIterable, Identifiable {
             .replacingOccurrences(of: "-", with: "")
             .replacingOccurrences(of: "_", with: "")
             .replacingOccurrences(of: " ", with: "")
+    }
+}
+
+/// The standard "this content comes from the Internet" card, shared by the tafsir sheet and the online
+/// translation comparison so online-backed sheets all disclose it the same way.
+struct OnlineNoticeCard: View {
+    let text: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Label("Loaded from the Internet", systemImage: "icloud.and.arrow.down")
+                .font(.subheadline.weight(.semibold))
+
+            Text(text)
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(12)
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(Color.secondary.opacity(0.1))
+        )
     }
 }
 
@@ -160,28 +239,355 @@ private struct AyahTafsirEntry: Decodable, Identifiable {
     var id: String { author }
 }
 
+/// One spa5k per-ayah file: `tafsir/{slug}/{surah}/{ayah}.json` -> `{"text": "..."}` (plain text with
+/// blank-line paragraph breaks, which the markdown block renderer already handles).
+private struct SpaTafsirAyahResponse: Decodable {
+    let text: String
+}
+
+/// The tafsir data layer: a disk + memory cache over quranapi.pages.dev, shared by every tafsir sheet, plus
+/// the "Download All Tafsirs" sweep.
+///
+/// Before this existed, each sheet presentation owned its own StateObject and re-fetched from the network on
+/// every open - THAT was the "why is it redownloading?!" refresh. Fetched responses now persist in
+/// Application Support (excluded from iCloud backup - it's re-downloadable content), so an ayah's tafsir is
+/// fetched from the network exactly once, ever.
+@MainActor
+final class TafsirStore: ObservableObject {
+    static let shared = TafsirStore()
+    private init() {}
+
+    // Download progress, published for the settings rows. One sweep runs at a time; a sweep may cover
+    // several targets in sequence (e.g. "Download Everything").
+    @Published private(set) var isDownloading = false
+    @Published private(set) var downloadingTargetName = ""
+    @Published private(set) var downloadCompleted = 0
+    @Published private(set) var downloadTotal = 0
+    @Published private(set) var downloadBytes: Int64 = 0
+    @Published var downloadError: String?
+    /// Per-target disk usage (files, bytes), keyed by `TafsirDownloadTarget.rawValue`. Refreshed by
+    /// `refreshDiskUsage()`.
+    @Published private(set) var diskUsage: [String: (files: Int, bytes: Int64)] = [:]
+
+    private let memory: NSCache<NSString, NSData> = {
+        let cache = NSCache<NSString, NSData>()
+        cache.countLimit = 48
+        return cache
+    }()
+    private var downloadTask: Task<Void, Never>?
+
+    private nonisolated static let directory: URL = {
+        let base = (try? FileManager.default.url(
+            for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true
+        )) ?? FileManager.default.temporaryDirectory
+        var dir = base.appendingPathComponent("TafsirCache", isDirectory: true)
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        var values = URLResourceValues()
+        values.isExcludedFromBackup = true
+        try? dir.setResourceValues(values)
+        return dir
+    }()
+
+    /// English bundle responses live flat in the cache root (the original layout); each Arabic edition gets
+    /// its own subfolder so it can be sized and deleted independently.
+    private nonisolated static func fileURL(editionSlug: String?, surah: Int, ayah: Int) -> URL {
+        guard let slug = editionSlug else {
+            return directory.appendingPathComponent("\(surah)_\(ayah).json")
+        }
+        let dir = directory.appendingPathComponent(slug, isDirectory: true)
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        return dir.appendingPathComponent("\(surah)_\(ayah).json")
+    }
+
+    private nonisolated static func endpoint(editionSlug: String?, surah: Int, ayah: Int) -> URL? {
+        if let slug = editionSlug {
+            return URL(string: "https://cdn.jsdelivr.net/gh/spa5k/tafsir_api@main/tafsir/\(slug)/\(surah)/\(ayah).json")
+        }
+        return URL(string: "https://quranapi.pages.dev/api/tafsir/\(surah)_\(ayah).json")
+    }
+
+    /// Cache-first: memory, then disk, then network (writing back to both). Only the network branch can throw.
+    /// `editionSlug` nil = the English bundle; a spa5k slug = that Arabic edition's per-ayah file.
+    func data(editionSlug: String? = nil, surah: Int, ayah: Int) async throws -> Data {
+        let key = "\(editionSlug ?? "en")_\(surah)_\(ayah)" as NSString
+        if let hit = memory.object(forKey: key) {
+            return hit as Data
+        }
+
+        let file = Self.fileURL(editionSlug: editionSlug, surah: surah, ayah: ayah)
+        if let disk = await Task.detached(priority: .userInitiated, operation: { try? Data(contentsOf: file) }).value {
+            memory.setObject(disk as NSData, forKey: key)
+            return disk
+        }
+
+        guard let remote = Self.endpoint(editionSlug: editionSlug, surah: surah, ayah: ayah) else { throw URLError(.badURL) }
+        let (data, response) = try await URLSession.shared.data(from: remote)
+        if let http = response as? HTTPURLResponse, !(200...299).contains(http.statusCode) {
+            throw URLError(.badServerResponse)
+        }
+        memory.setObject(data as NSData, forKey: key)
+        Task.detached(priority: .utility) {
+            try? data.write(to: file, options: .atomic)
+        }
+        return data
+    }
+
+    /// Sweep the given targets' every-ayah files into the disk cache, one target after another. Skips files
+    /// already downloaded, fetches the rest with bounded concurrency, and is cancellable. Individual failures
+    /// are skipped (rerun to fill gaps).
+    func startDownload(targets: [TafsirDownloadTarget]) {
+        guard !isDownloading, !targets.isEmpty else { return }
+        let pairs = QuranData.shared.quran.flatMap { surah in
+            surah.ayahs.map { (surah: surah.id, ayah: $0.id) }
+        }
+        guard !pairs.isEmpty else { return }
+
+        isDownloading = true
+        downloadError = nil
+        downloadTask = Task { [weak self] in
+            var totalFailures = 0
+
+            for target in targets {
+                if Task.isCancelled { break }
+                guard let self else { return }
+
+                self.downloadingTargetName = target.displayName
+                self.downloadTotal = pairs.count
+                self.downloadCompleted = 0
+                self.downloadBytes = 0
+                let slug = target.editionSlug
+
+                // Inventory pass, off-main: what's already on disk counts as done.
+                let missing = await Task.detached(priority: .userInitiated) { () -> [(surah: Int, ayah: Int)] in
+                    var missing: [(surah: Int, ayah: Int)] = []
+                    var have = 0
+                    var bytes: Int64 = 0
+                    for pair in pairs {
+                        let file = Self.fileURL(editionSlug: slug, surah: pair.surah, ayah: pair.ayah)
+                        if let size = (try? file.resourceValues(forKeys: [.fileSizeKey]))?.fileSize {
+                            have += 1
+                            bytes += Int64(size)
+                        } else {
+                            missing.append(pair)
+                        }
+                    }
+                    let doneHave = have
+                    let doneBytes = bytes
+                    await MainActor.run {
+                        self.downloadCompleted = doneHave
+                        self.downloadBytes = doneBytes
+                    }
+                    return missing
+                }.value
+
+                // A modest window: fast enough to finish in minutes, polite enough not to hammer the CDN.
+                let windowSize = 6
+                var index = 0
+                while index < missing.count, !Task.isCancelled {
+                    let window = Array(missing[index..<min(index + windowSize, missing.count)])
+                    index += window.count
+
+                    await withTaskGroup(of: Int64?.self) { group in
+                        for pair in window {
+                            group.addTask {
+                                guard !Task.isCancelled,
+                                      let url = Self.endpoint(editionSlug: slug, surah: pair.surah, ayah: pair.ayah) else { return nil }
+                                guard let (data, response) = try? await URLSession.shared.data(from: url),
+                                      let http = response as? HTTPURLResponse, (200...299).contains(http.statusCode) else {
+                                    return nil
+                                }
+                                try? data.write(to: Self.fileURL(editionSlug: slug, surah: pair.surah, ayah: pair.ayah), options: .atomic)
+                                return Int64(data.count)
+                            }
+                        }
+                        for await bytes in group {
+                            if let bytes {
+                                self.downloadCompleted += 1
+                                self.downloadBytes += bytes
+                            } else {
+                                totalFailures += 1
+                            }
+                        }
+                    }
+                }
+            }
+
+            guard let self else { return }
+            if totalFailures > 0, !Task.isCancelled {
+                self.downloadError = "\(totalFailures) ayahs failed to download. Run the download again to retry them."
+            }
+            self.isDownloading = false
+            self.downloadingTargetName = ""
+            self.refreshDiskUsage()
+        }
+    }
+
+    func cancelDownload() {
+        downloadTask?.cancel()
+        downloadTask = nil
+        isDownloading = false
+        downloadingTargetName = ""
+    }
+
+    /// Delete one target's saved files (or all of them when `target` is nil).
+    func deleteDownloads(target: TafsirDownloadTarget? = nil) {
+        if target == nil { cancelDownload() }
+        memory.removeAllObjects()
+        Task.detached(priority: .utility) { [weak self] in
+            let fm = FileManager.default
+            if let target {
+                if let slug = target.editionSlug {
+                    try? fm.removeItem(at: Self.directory.appendingPathComponent(slug, isDirectory: true))
+                } else {
+                    // English bundle = the flat .json files in the cache root.
+                    let contents = (try? fm.contentsOfDirectory(at: Self.directory, includingPropertiesForKeys: [.isDirectoryKey])) ?? []
+                    for file in contents where (try? file.resourceValues(forKeys: [.isDirectoryKey]))?.isDirectory != true {
+                        try? fm.removeItem(at: file)
+                    }
+                }
+            } else {
+                let contents = (try? fm.contentsOfDirectory(at: Self.directory, includingPropertiesForKeys: nil)) ?? []
+                for file in contents {
+                    try? fm.removeItem(at: file)
+                }
+            }
+            await self?.refreshDiskUsage()
+        }
+    }
+
+    func refreshDiskUsage() {
+        Task.detached(priority: .utility) { [weak self] in
+            func usage(of dir: URL, filesOnly: Bool) -> (files: Int, bytes: Int64) {
+                let contents = (try? FileManager.default.contentsOfDirectory(
+                    at: dir, includingPropertiesForKeys: [.fileSizeKey, .isDirectoryKey]
+                )) ?? []
+                var files = 0
+                var bytes: Int64 = 0
+                for url in contents {
+                    let values = try? url.resourceValues(forKeys: [.fileSizeKey, .isDirectoryKey])
+                    if values?.isDirectory == true { continue }
+                    files += 1
+                    bytes += Int64(values?.fileSize ?? 0)
+                }
+                return (files, bytes)
+            }
+
+            var result: [String: (files: Int, bytes: Int64)] = [:]
+            for target in TafsirDownloadTarget.allCases {
+                if let slug = target.editionSlug {
+                    result[target.rawValue] = usage(of: Self.directory.appendingPathComponent(slug, isDirectory: true), filesOnly: true)
+                } else {
+                    result[target.rawValue] = usage(of: Self.directory, filesOnly: true)
+                }
+            }
+            let finalResult = result
+            await MainActor.run { [weak self] in
+                self?.diskUsage = finalResult
+            }
+        }
+    }
+}
+
+/// One downloadable tafsir package: the English bundle (all 3 authors arrive together from quranapi) or a
+/// single Arabic edition (spa5k, one file per ayah).
+enum TafsirDownloadTarget: String, CaseIterable, Identifiable {
+    case english
+    case ibnKathirArabic
+    case tabariArabic
+    case saadiArabic
+
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .english:         return "English (Ibn Kathir, Maarif, Tazkirul)"
+        case .ibnKathirArabic: return "Tafsir Ibn Kathir (Arabic)"
+        case .tabariArabic:    return "Tafsir al-Tabari (Arabic)"
+        case .saadiArabic:     return "Tafsir as-Sa'di (Arabic)"
+        }
+    }
+
+    /// nil = the English bundle endpoint; otherwise the spa5k edition slug.
+    var editionSlug: String? {
+        switch self {
+        case .english:         return nil
+        case .ibnKathirArabic: return "ar-tafsir-ibn-kathir"
+        case .tabariArabic:    return "ar-tafsir-al-tabari"
+        case .saadiArabic:     return "ar-tafsir-as-saadi"
+        }
+    }
+
+    var isArabic: Bool { editionSlug != nil }
+
+    /// Measured against the live sources (uncompressed on disk).
+    var estimatedMegabytes: Int {
+        switch self {
+        case .english:         return 135
+        case .ibnKathirArabic: return 90
+        case .tabariArabic:    return 105
+        case .saadiArabic:     return 15
+        }
+    }
+
+    static var englishTargets: [TafsirDownloadTarget] { allCases.filter { !$0.isArabic } }
+    static var arabicTargets: [TafsirDownloadTarget] { allCases.filter { $0.isArabic } }
+
+    static func estimatedTotal(_ targets: [TafsirDownloadTarget]) -> Int {
+        targets.reduce(0) { $0 + $1.estimatedMegabytes }
+    }
+}
+
 @MainActor
 private final class AyahTafsirViewModel: ObservableObject {
     @Published private(set) var tafsirs: [AyahTafsirEntry] = []
     @Published private(set) var isLoading = false
     @Published var errorMessage: String?
+    /// Arabic editions load one at a time, on selection - separate flags so an Arabic fetch never swaps the
+    /// whole sheet into the loading skeleton.
+    @Published private(set) var isLoadingArabic = false
+    @Published var arabicErrorMessage: String?
 
     private let surah: Int
     private let ayah: Int
     private var loadedKey: String?
-    private var loadTask: Task<Void, Never>?
+    private var loadedArabicSlugs: Set<String> = []
 
     init(surah: Int, ayah: Int) {
         self.surah = surah
         self.ayah = ayah
     }
 
-    deinit {
-        loadTask?.cancel()
-    }
-
     func loadIfNeeded() async {
         await load(surah: surah, ayah: ayah)
+    }
+
+    func hasEntry(for author: TafsirAuthor) -> Bool {
+        tafsirs.contains { author.matches($0.author) }
+    }
+
+    /// Fetch one Arabic edition's tafsir for this ayah (cache-first via TafsirStore) and append it to
+    /// `tafsirs` under the author's rawValue, so the existing selection/matching machinery just works.
+    func loadArabicIfNeeded(_ author: TafsirAuthor) async {
+        guard let slug = author.arabicSlug,
+              !loadedArabicSlugs.contains(slug),
+              !isLoadingArabic else { return }
+
+        isLoadingArabic = true
+        arabicErrorMessage = nil
+
+        do {
+            let data = try await TafsirStore.shared.data(editionSlug: slug, surah: surah, ayah: ayah)
+            let decoded = try JSONDecoder().decode(SpaTafsirAyahResponse.self, from: data)
+            let text = decoded.text.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !text.isEmpty {
+                tafsirs.append(AyahTafsirEntry(author: author.rawValue, groupVerse: nil, content: text))
+            }
+            loadedArabicSlugs.insert(slug)
+        } catch {
+            arabicErrorMessage = error.localizedDescription
+        }
+
+        isLoadingArabic = false
     }
 
     func load(surah: Int, ayah: Int) async {
@@ -193,16 +599,9 @@ private final class AyahTafsirViewModel: ObservableObject {
         errorMessage = nil
 
         do {
-            let endpoint = "https://quranapi.pages.dev/api/tafsir/\(surah)_\(ayah).json"
-            guard let url = URL(string: endpoint) else {
-                throw URLError(.badURL)
-            }
-
-            let (data, response) = try await URLSession.shared.data(from: url)
-            if let http = response as? HTTPURLResponse, !(200...299).contains(http.statusCode) {
-                throw URLError(.badServerResponse)
-            }
-
+            // Cache-first through the shared store: an ayah whose tafsir was ever fetched (or bulk-downloaded)
+            // loads instantly and offline; only a true first look hits the network.
+            let data = try await TafsirStore.shared.data(surah: surah, ayah: ayah)
             let decoded = try JSONDecoder().decode(AyahTafsirResponse.self, from: data)
             tafsirs = decoded.tafsirs
             loadedKey = key
@@ -248,12 +647,33 @@ struct AyahTafsirSheet: View {
         )
     }
 
+    /// Language toggle backing: flipping languages jumps to the counterpart author (Ibn Kathir stays Ibn
+    /// Kathir across the flip; the others land on their language's first author).
+    private var languageBinding: Binding<Bool> {
+        Binding(
+            get: { selectedAuthor.isArabic },
+            set: { wantsArabic in
+                guard wantsArabic != selectedAuthor.isArabic else { return }
+                if wantsArabic {
+                    selectedAuthor = selectedAuthor == .ibnKathir ? .ibnKathirArabic : (TafsirAuthor.arabicCases.first ?? .ibnKathirArabic)
+                } else {
+                    selectedAuthor = selectedAuthor == .ibnKathirArabic ? .ibnKathir : (TafsirAuthor.englishCases.first ?? .ibnKathir)
+                }
+            }
+        )
+    }
+
     private var loadKey: String {
         "\(surahNumber):\(ayahNumber)"
     }
 
     private var selectedTafsirEntry: AyahTafsirEntry? {
-        viewModel.tafsirs.first(where: { selectedAuthor.matches($0.author) }) ?? viewModel.tafsirs.first
+        if let match = viewModel.tafsirs.first(where: { selectedAuthor.matches($0.author) }) {
+            return match
+        }
+        // An Arabic edition that hasn't loaded yet shows its own loading row - falling back to an English
+        // entry here would flash the wrong tafsir under an Arabic heading.
+        return selectedAuthor.isArabic ? nil : viewModel.tafsirs.first
     }
 
     private var selectedTafsirText: String? {
@@ -297,9 +717,10 @@ struct AyahTafsirSheet: View {
     }
 
     private var tafsirRangeTitle: String {
-        tafsirAyahRange.lowerBound == tafsirAyahRange.upperBound
-            ? "Ayah \(tafsirAyahRange.lowerBound)"
-            : "Ayahs \(tafsirAyahRange.lowerBound)-\(tafsirAyahRange.upperBound)"
+        // Same reference format as every other ayah sheet (e.g. "Al-Baqarah 1:1-5"), so the tafsir card's
+        // heading matches the page actions sheet and the rest.
+        ayahSheetTitle(surahNumber: surahNumber, ayahNumber: tafsirAyahRange.lowerBound,
+                       endAyah: tafsirAyahRange.upperBound == tafsirAyahRange.lowerBound ? nil : tafsirAyahRange.upperBound)
     }
 
     private func parsedAyahRange(from groupVerse: String?) -> ClosedRange<Int>? {
@@ -335,8 +756,16 @@ struct AyahTafsirSheet: View {
                             noticeCard
                             arabicAyahsCard
 
+                            // Two-level author choice: language first, then the three authors of that
+                            // language - six segments in one control were unreadably cramped.
+                            Picker("Language", selection: languageBinding.animation(.easeInOut)) {
+                                Text("English").tag(false)
+                                Text("العربية").tag(true)
+                            }
+                            .pickerStyle(.segmented)
+
                             Picker("Tafsir", selection: selectedAuthorBinding.animation(.easeInOut)) {
-                                ForEach(TafsirAuthor.allCases) { author in
+                                ForEach(selectedAuthor.isArabic ? TafsirAuthor.arabicCases : TafsirAuthor.englishCases) { author in
                                     Text(author.shortTitle).tag(author)
                                 }
                             }
@@ -345,17 +774,29 @@ struct AyahTafsirSheet: View {
                             .onChange(of: selectedAuthor) { _ in settings.hapticFeedback() }
 
                             if let tafsirText = selectedTafsirText {
-                                VStack(alignment: .leading, spacing: 12) {
-                                    Text(selectedAuthor.rawValue)
+                                VStack(alignment: selectedAuthor.isArabic ? .trailing : .leading, spacing: 12) {
+                                    Text(selectedAuthor.displayTitle)
                                         .font(.headline)
+                                        .frame(maxWidth: .infinity, alignment: selectedAuthor.isArabic ? .trailing : .leading)
 
                                     tafsirContentView(for: tafsirText)
-                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                        .frame(maxWidth: .infinity, alignment: selectedAuthor.isArabic ? .trailing : .leading)
                                 }
-                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .frame(maxWidth: .infinity, alignment: selectedAuthor.isArabic ? .trailing : .leading)
+                                .environment(\.layoutDirection, selectedAuthor.isArabic ? .rightToLeft : .leftToRight)
                                 .id(selectedAuthor.rawValue)
                                 .textSelection(.enabled)
-                            } else if let errorMessage = viewModel.errorMessage {
+                            } else if selectedAuthor.isArabic, viewModel.isLoadingArabic {
+                                ProgressView("Loading tafsir...")
+                                    .frame(maxWidth: .infinity, alignment: .center)
+                                    .padding(.vertical, 12)
+                            } else if selectedAuthor.isArabic, let arabicError = viewModel.arabicErrorMessage {
+                                tafsirPlaceholder(
+                                    title: "Couldn't Load Tafsir",
+                                    systemImage: "wifi.exclamationmark",
+                                    message: arabicError
+                                )
+                            } else if let errorMessage = viewModel.errorMessage, !selectedAuthor.isArabic {
                                 tafsirPlaceholder(
                                     title: "Couldn't Load Tafsir",
                                     systemImage: "wifi.exclamationmark",
@@ -386,7 +827,9 @@ struct AyahTafsirSheet: View {
                     }
                 }
             }
-            .navigationTitle(ayahSheetTitle(surahNumber: surahNumber, ayahNumber: ayahNumber))
+            // Title reflects the tafsir's FULL range: when the selected tafsir groups several ayahs (Ibn
+            // Kathir often does) it reads e.g. "Al-Baqarah 1:1-5", not just the tapped ayah.
+            .navigationTitle(ayahSheetTitle(surahNumber: surahNumber, ayahNumber: tafsirAyahRange.lowerBound, endAyah: tafsirAyahRange.upperBound))
             .navigationBarTitleDisplayMode(.inline)
             .searchable(text: $searchText.animation(.easeInOut), prompt: "Search tafsir")
             .dismissKeyboardOnScroll()
@@ -395,32 +838,22 @@ struct AyahTafsirSheet: View {
         .task(id: loadKey) {
             await viewModel.loadIfNeeded()
         }
+        // The Arabic editions load one at a time, when selected (each is its own per-ayah file on the CDN).
+        .task(id: "\(loadKey)|\(selectedAuthorRawValue)") {
+            if selectedAuthor.isArabic {
+                await viewModel.loadArabicIfNeeded(selectedAuthor)
+            }
+        }
     }
 
     private var noticeCard: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Label("Loaded from the Internet", systemImage: "icloud.and.arrow.down")
-                .font(.subheadline.weight(.semibold))
-
-            Text("Tafsir is fetched online for the selected ayah or grouped ayahs. The app loads all 3 available tafsirs together, then you can switch between them with the picker.")
-                .font(.footnote)
-                .foregroundStyle(.secondary)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(12)
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(Color.secondary.opacity(0.1))
-        )
+        OnlineNoticeCard(text: "Tafsir is fetched online for the selected ayah or grouped ayahs, then saved on this device - an ayah you've opened before loads instantly and offline. English tafsirs load together; Arabic tafsirs (Ibn Kathir, al-Tabari, as-Sa'di) load per selection.")
     }
 
+    // The same ayah-card format as the page actions sheet: Arabic first, then the "Name S:A" reference
+    // caption, then the ayah's ACTUAL text in the active translation - not just the translation's name.
     private var arabicAyahsCard: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text(tafsirRangeTitle)
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(.secondary)
-                .textCase(.uppercase)
-
             if tafsirArabicAyahs.isEmpty {
                 Text("Arabic ayah unavailable.")
                     .font(.subheadline)
@@ -441,6 +874,26 @@ struct AyahTafsirSheet: View {
                     }
                 }
             }
+
+            VStack(alignment: .center, spacing: 3) {
+                Text(tafsirRangeTitle)
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(.secondary)
+
+                // The translation of every ayah the tafsir covers, numbered when it spans a range.
+                let translations = tafsirArabicAyahs.compactMap { ayah -> String? in
+                    guard let text = currentTranslationText(for: ayah) else { return nil }
+                    return tafsirArabicAyahs.count > 1 ? "\(ayah.id). \(text)" : text
+                }
+                if !translations.isEmpty {
+                    Text(translations.joined(separator: "\n"))
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .center)
         }
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -455,7 +908,13 @@ struct AyahTafsirSheet: View {
 
     @ViewBuilder
     private func tafsirContentView(for content: String) -> some View {
-        TafsirMarkdownView(markdown: content, searchText: searchText, accent: settings.accentColor.color, currentMatch: currentMatch)
+        TafsirMarkdownView(
+            markdown: content,
+            searchText: searchText,
+            accent: settings.accentColor.color,
+            textAlignment: selectedAuthor.isArabic ? .trailing : .leading,
+            currentMatch: currentMatch
+        )
     }
 
     private var tafsirLoadingView: some View {
@@ -802,12 +1261,27 @@ private struct TafsirMarkdownView: View {
             )
     }
 
+    /// Parsed blocks per tafsir text. `blocks` is read from `body` (and from search recomputes), which
+    /// SwiftUI re-evaluates on every keystroke of the find bar - without this cache each evaluation re-ran a
+    /// whole-document regex plus a split/trim/parse of every block, which is exactly the tafsir-sheet lag.
+    private static let blocksCache: NSCache<NSString, TafsirBlocksBox> = {
+        let cache = NSCache<NSString, TafsirBlocksBox>()
+        cache.countLimit = 12
+        return cache
+    }()
+
     static func blocks(from markdown: String) -> [TafsirMarkdownBlock] {
-        normalizedMarkdown(markdown)
+        let key = markdown as NSString
+        if let hit = blocksCache.object(forKey: key) {
+            return hit.value
+        }
+        let parsed = normalizedMarkdown(markdown)
             .components(separatedBy: "\n\n")
             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
             .filter { !$0.isEmpty }
             .map(TafsirMarkdownBlock.init(raw:))
+        blocksCache.setObject(TafsirBlocksBox(parsed), forKey: key)
+        return parsed
     }
 
     /// Document-order list of search matches, each as (render-block offset, occurrence index within block).
@@ -874,6 +1348,17 @@ private struct TafsirMarkdownView: View {
     }
 }
 
+/// Class boxes so parsed value-type results can live in an NSCache.
+private final class TafsirBlocksBox {
+    let value: [TafsirMarkdownBlock]
+    init(_ value: [TafsirMarkdownBlock]) { self.value = value }
+}
+
+private final class TafsirAttributedBox {
+    let value: AttributedString
+    init(_ value: AttributedString) { self.value = value }
+}
+
 private struct TafsirMarkdownBlock {
     enum Kind {
         case heading
@@ -882,6 +1367,9 @@ private struct TafsirMarkdownBlock {
 
     let kind: Kind
     let rawText: String
+    /// Computed once at init - this used to be a computed var running a regex on EVERY access, and it is
+    /// accessed several times per block per render.
+    let displayText: String
 
     init(raw: String) {
         let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -896,20 +1384,36 @@ private struct TafsirMarkdownBlock {
             kind = .body
             rawText = trimmed
         }
+        displayText = rawText.replacingOccurrences(of: #"\\-"#, with: "-", options: .regularExpression)
     }
 
-    var displayText: String {
-        rawText.replacingOccurrences(of: #"\\-"#, with: "-", options: .regularExpression)
-    }
+    /// The markdown parse is the expensive part (AttributedString(markdown:) on every block of a long Ibn
+    /// Kathir entry), and it doesn't depend on the search state - so parse each block once, cache it, and
+    /// apply the (cheap) search highlight to a value-copy per render.
+    private static let baseParseCache: NSCache<NSString, TafsirAttributedBox> = {
+        let cache = NSCache<NSString, TafsirAttributedBox>()
+        cache.countLimit = 400
+        return cache
+    }()
 
-    func attributedText(searchText: String, accent: Color, currentOccurrence: Int? = nil) -> AttributedString? {
+    private func baseAttributed() -> AttributedString? {
         guard kind == .body else { return nil }
+        let key = displayText as NSString
+        if let hit = Self.baseParseCache.object(forKey: key) {
+            return hit.value
+        }
         guard var attributed = try? AttributedString(markdown: displayText) else { return nil }
         for run in attributed.runs {
             if let intent = run.inlinePresentationIntent, intent.contains(.code) {
                 attributed[run.range].inlinePresentationIntent = nil
             }
         }
+        Self.baseParseCache.setObject(TafsirAttributedBox(attributed), forKey: key)
+        return attributed
+    }
+
+    func attributedText(searchText: String, accent: Color, currentOccurrence: Int? = nil) -> AttributedString? {
+        guard var attributed = baseAttributed() else { return nil }
         applySearchHighlight(to: &attributed, searchText: searchText, accent: accent, currentOccurrence: currentOccurrence)
         return attributed
     }
@@ -1457,10 +1961,12 @@ struct AyahEnglishComparisonSheet: View {
     private var comparisonList: some View {
         List {
             Group {
+                // The same prominent "online" card the tafsir sheet uses, so every online-backed sheet
+                // discloses its source identically.
                 Section {
-                    Text("Compare this ayah across several English Qur'an translations. Results are loaded from alquran.cloud.")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
+                    OnlineNoticeCard(text: "Compare this ayah across several English Qur'an translations. The online translations are fetched from alquran.cloud; the downloaded ones are built into the app.")
+                        .listRowInsets(EdgeInsets())
+                        .listRowBackground(Color.clear)
                 }
 
                 if shouldShowQuranText,
@@ -2396,7 +2902,7 @@ struct SelectAyahTextSheet: View {
                         Section {
                             ArabicTextRiwayahPicker(selection: $selectedQiraah.animation(.easeInOut), useSimpleIOSPicker: true)
                         } footer: {
-                            Text("Switching the riwayah changes the Arabic text only. Ayah numbering can differ between riwayat — no ayah is ever missing, but some are joined or split differently (for example, \"Alif Lam Meem\" and \"Dhalika al-Kitab...\" form a single ayah in most qiraat), so this ayah may appear under a different number or merged with its neighbor.")
+                            Text("Switching the riwayah changes the Arabic text only. Ayah numbering can differ between riwayat - no ayah is ever missing, but some are joined or split differently (for example, \"Alif Lam Meem\" and \"Dhalika al-Kitab...\" form a single ayah in most qiraat), so this ayah may appear under a different number or merged with its neighbor.")
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                         }
@@ -2413,7 +2919,7 @@ struct SelectAyahTextSheet: View {
                         )
                     } else {
                         Section(header: Text("ARABIC")) {
-                            Text("This ayah is not separate in this riwayah — its words are part of a neighboring ayah.")
+                            Text("This ayah is not separate in this riwayah - its words are part of a neighboring ayah.")
                                 .font(.subheadline)
                                 .foregroundColor(.secondary)
                         }
@@ -2456,7 +2962,7 @@ struct SelectAyahTextSheet: View {
                 .themedListRowBackground()
             }
             .applyConditionalListStyle()
-            .navigationTitle("\(surah.nameTransliteration) \(surah.id):\(ayah.id)")
+            .navigationTitle(ayahSheetTitle(surahNumber: surah.id, ayahNumber: ayah.id))
             .navigationBarTitleDisplayMode(.inline)
             .sheetDismissToolbar()
         }

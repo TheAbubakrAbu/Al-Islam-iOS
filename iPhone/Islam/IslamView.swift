@@ -278,7 +278,14 @@ struct IslamView: View {
         .padding(.vertical, 8)
         .padding(.horizontal, 4)
         .contentShape(Rectangle())
-        .conditionalGlassEffect(rectangle: true)
+        // Favorites are accent-tinted, everything else is clear - the same pattern as the surah, 99 Names,
+        // and Arabic letter grids, so a favorite reads the same way everywhere.
+        .conditionalGlassEffect(
+            clear: !settings.isIslamResourceFavorite(item.rawValue),
+            rectangle: true,
+            useColor: settings.isIslamResourceFavorite(item.rawValue) ? 0.25 : nil,
+            customTint: settings.isIslamResourceFavorite(item.rawValue) ? settings.accentColor.color : nil
+        )
         .gridFavoriteStar(
             isFavorite: settings.isIslamResourceFavorite(item.rawValue),
             accent: settings.accentColor.color,

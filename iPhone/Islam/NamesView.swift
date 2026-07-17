@@ -215,6 +215,8 @@ struct NamesView: View {
     @ObservedObject var namesData = NamesViewModel.shared
 
     @State private var searchText = ""
+    /// Apple Music-style bar minimization: true while scrolling down.
+    @State private var barsCollapsed = false
     @State private var expandedNameNumbers = Set<Int>()
     
     /// Cached so the diacritic-stripping `clean()` only runs when the query changes - not on every `body`
@@ -261,20 +263,22 @@ struct NamesView: View {
         #if os(watchOS)
         .searchable(text: $searchText.animation(.easeInOut))
         #else
+        // Apple Music-style: the bottom bar minimizes while scrolling down, restores on scroll-up.
+        .collapseBarsOnScroll($barsCollapsed)
         .adaptiveSafeArea(edge: .bottom) {
             VStack(spacing: SafeAreaInsetVStackSpacing.standard) {
-                Picker("Arabic Font", selection: $settings.useFontArabic.animation(.easeInOut)) {
-                    Text("Quranic Font").tag(true)
-                    Text("Basic Font").tag(false)
-                }
-                .pickerStyle(.segmented)
+                if !barsCollapsed {
+                IslamArabicFontPicker()
                 // Non-interactive glass: interactive Liquid Glass steals per-segment taps on real iOS 26 hardware.
                 .conditionalGlassEffect(interactive: false)
-                .onChange(of: settings.useFontArabic) { _ in settings.hapticFeedback() }
-                
+                .transition(.opacity)
+                }
+
                 SearchBar(text: $searchText.animation(.easeInOut))
                     .padding([.horizontal, .top], -8)
+                    .minimizedBarStyle(barsCollapsed)
             }
+            .animation(.spring(response: 0.35, dampingFraction: 0.85), value: barsCollapsed)
             .padding(.horizontal, 24)
             .padding(.bottom, 8)
             .background(Color.white.opacity(0.00001))
@@ -367,7 +371,7 @@ struct NamesView: View {
                                 isFavorite: true,
                                 accentColor: settings.accentColor,
                                 useFontArabic: settings.useFontArabic,
-                                fontArabic: settings.fontArabic
+                                fontArabic: settings.nonQuranArabicFontName
                             )
                             .equatable()
                         }
@@ -383,7 +387,7 @@ struct NamesView: View {
                             isFavorite: true,
                             accentColor: settings.accentColor,
                             useFontArabic: settings.useFontArabic,
-                            fontArabic: settings.fontArabic,
+                            fontArabic: settings.nonQuranArabicFontName,
                             searchQuery: searchText
                         ) {
                             handleNameTap(name: name, hasActiveSearch: hasActiveSearch, proxy: proxy)
@@ -407,7 +411,7 @@ struct NamesView: View {
                             isFavorite: favoriteNameNumberSet.contains(name.number),
                             accentColor: settings.accentColor,
                             useFontArabic: settings.useFontArabic,
-                            fontArabic: settings.fontArabic
+                            fontArabic: settings.nonQuranArabicFontName
                         )
                         .equatable()
                     }
@@ -425,7 +429,7 @@ struct NamesView: View {
                     isFavorite: favoriteNameNumberSet.contains(name.number),
                     accentColor: settings.accentColor,
                     useFontArabic: settings.useFontArabic,
-                    fontArabic: settings.fontArabic,
+                    fontArabic: settings.nonQuranArabicFontName,
                     searchQuery: searchText
                 ) {
                     handleNameTap(name: name, hasActiveSearch: hasActiveSearch, proxy: proxy)
@@ -526,7 +530,7 @@ private struct NameRow: View, Equatable {
         isFavorite: Bool,
         accentColor: AccentColor = Settings.shared.accentColor,
         useFontArabic: Bool = Settings.shared.useFontArabic,
-        fontArabic: String = Settings.shared.fontArabic,
+        fontArabic: String = Settings.shared.nonQuranArabicFontName,
         searchQuery: String = "",
         onTap: @escaping () -> Void
     ) {

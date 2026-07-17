@@ -300,15 +300,17 @@ extension Settings {
         if chosen.contains("highLatitudeRule") { dict["highLatitudeRule"] = highLatitudeRule }
         if chosen.contains("customPrayerNames") { dict["customPrayerNames"] = customPrayerNames }
 
-        // `travelingMode` and `prayerCalculation` are settings only while their automatic modes are OFF. With
-        // automatic ON they are *derived from this device's own location* - and location is deliberately not
-        // synced - so transmitting them made the two devices fight: the watch (often holding a stale location)
-        // would sync its conclusion over, the iPhone's next fetch would recompute the opposite from its own
-        // location, flip the value back, fire the traveling notification, re-arm the confirmation dialog, and
-        // sync its flip back to the watch... which "corrected" it again. Every flip was a genuine value change
-        // with a fresh timestamp, so the echo guard below could never stop the loop. Each device now derives
-        // these for itself, and only a manual choice (automatic OFF) travels between devices.
-        if chosen.contains("travelingMode"), !travelAutomatic { dict["travelingMode"] = travelingMode }
+        // `travelingMode` now syncs unconditionally. The historical fight this line used to guard against -
+        // both devices re-deriving the value from their own (differing) locations and correcting each other
+        // forever - is structurally impossible today: `checkIfTraveling()` requires a home location, home is
+        // settable only on iOS and never synced, so the WATCH can never re-derive travelingMode. The phone is
+        // the sole deriver/authority; a phone auto-flip propagates to the watch, a watch manual flip
+        // propagates back and is applied with `runAutoChecks: false` (see applyWatchSyncSnapshot), so each
+        // direction converges in one hop. (If the phone's automatic mode is ON, its next location fetch may
+        // recompute over a watch manual flip - the same semantics a phone-local manual flip has.)
+        if chosen.contains("travelingMode") { dict["travelingMode"] = travelingMode }
+        // `prayerCalculation` keeps the gate: BOTH devices can derive it (it needs no home location), so the
+        // two-deriving-devices loop is still real there. Only a manual choice (automatic OFF) travels.
         if chosen.contains("prayerCalculation"), !calculationAutomatic { dict["prayerCalculation"] = prayerCalculation }
 
         // @AppStorage settings - likewise only keys that have been explicitly written.

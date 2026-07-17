@@ -32,6 +32,21 @@ struct AyahRow: View, Equatable {
     @Binding var scrollDown: Int?
     @Binding var searchText: String
 
+    /// The shared attention-highlight lands on this ayah - draw a persistent (grey) tint distinct from the
+    /// player's accent tint. Set by opening to an ayah, switching reading modes, or tapping the ayah.
+    var isHighlighted: Bool = false
+    /// Tapping the row (when not searching) toggles the shared highlight.
+    var onToggleHighlight: (() -> Void)? = nil
+
+    /// Multi-select mode: the reader is picking several ayahs for a bulk action (share/copy/bookmark/note/
+    /// beginner). Taps toggle membership instead of highlighting, and a checkmark circle leads the row.
+    var isSelecting: Bool = false
+    var isSelected: Bool = false
+    /// Bulk "Beginner" action: render this ayah's Arabic letter-by-letter even though the global beginner
+    /// mode (and this row's own context-menu toggle) are off.
+    var forceBeginner: Bool = false
+    var onToggleSelection: (() -> Void)? = nil
+
     /// Fired when the ayah's actual text block (Arabic / translations) scrolls into view, not just the
     /// row's number/menu header. Drives last-read tracking and automatic khatm marking so an ayah only
     /// counts as "read" once its text is on screen.
@@ -40,12 +55,27 @@ struct AyahRow: View, Equatable {
 
     @State private var showRespectAlert = false
 
+    /// Whether any of this ayah's action sheets/dialogs is open - drives the "keep it lit until the sheet is
+    /// gone" tint. watchOS has none of these sheets, so it's always false there.
+    private var anyAyahSheetOpen: Bool {
+        #if os(iOS)
+        showingAyahSheet || showTafsirSheet || showingNoteSheet || showCustomRangeSheet
+            || showQiraahComparisonSheet || showEnglishComparisonSheet || showSelectTextSheet
+        #else
+        false
+        #endif
+    }
+
     static func == (lhs: Self, rhs: Self) -> Bool {
         lhs.surah == rhs.surah &&
         lhs.ayah == rhs.ayah &&
         lhs.comparisonQiraahOverride == rhs.comparisonQiraahOverride &&
         lhs.renderSettingsSignature == rhs.renderSettingsSignature &&
         lhs.scrollDown == rhs.scrollDown &&
+        lhs.isHighlighted == rhs.isHighlighted &&
+        lhs.isSelecting == rhs.isSelecting &&
+        lhs.isSelected == rhs.isSelected &&
+        lhs.forceBeginner == rhs.forceBeginner &&
         lhs.searchText == rhs.searchText
     }
 
@@ -123,13 +153,13 @@ struct AyahRow: View, Equatable {
     }
 
     private func spacedArabic(_ text: String) -> String {
-        (settings.beginnerMode || ayahBeginnerMode) ? text.map { String($0) }.joined(separator: " ") : text
+        (settings.beginnerMode || ayahBeginnerMode || forceBeginner) ? text.map { String($0) }.joined(separator: " ") : text
     }
 
     private func arabicDisplayText() -> String {
         let clean = settings.cleanArabicText
         let qiraahKey = comparisonQiraahOverride ?? (settings.displayQiraahForArabic ?? "Hafs")
-        let key = "\(surah.id):\(ayah.id)|\(clean ? 1 : 0)|\((settings.beginnerMode || ayahBeginnerMode) ? 1 : 0)|\(qiraahKey)"
+        let key = "\(surah.id):\(ayah.id)|\(clean ? 1 : 0)|\((settings.beginnerMode || ayahBeginnerMode || forceBeginner) ? 1 : 0)|\(qiraahKey)"
 
         if let cached = Self.arabicDisplayCache.object(forKey: key as NSString) {
             return cached as String
@@ -311,7 +341,7 @@ struct AyahRow: View, Equatable {
             settings.showTajweedColors ? "1" : "0",
             settings.highlightAllahNames ? "1" : "0",
             settings.cleanArabicText ? "1" : "0",
-            (settings.beginnerMode || ayahBeginnerMode) ? "1" : "0",
+            (settings.beginnerMode || ayahBeginnerMode || forceBeginner) ? "1" : "0",
             qiraahKey,
             categorySignature
         ].joined(separator: "|")
@@ -337,10 +367,17 @@ struct AyahRow: View, Equatable {
             : ""
         let matchSources = hasSearch ? normalizedMatchSources() : nil
 
-        let mArabic = matchSources?.arabic.contains(normalizedQuery) ?? false
         let mTranslit = matchSources?.transliteration.contains(normalizedQuery) ?? false
         let mSaheeh = matchSources?.saheeh.contains(normalizedQuery) ?? false
         let mMustafa = matchSources?.mustafa.contains(normalizedQuery) ?? false
+        // Guarantee a highlight: the LIST FILTER that put this row on screen normalizes differently than these
+        // per-field checks (it also strips silent letters), so a row can match the filter while none of the
+        // fields' exact-contains checks fire. When that happens, force the always-shown Arabic field to
+        // guarantee at least one highlighted span (HighlightedSnippet's closest-match fallback) - a searched
+        // ayah on screen must never render with nothing highlighted.
+        let rawArabicMatch = matchSources?.arabic.contains(normalizedQuery) ?? false
+        let anyFieldMatched = rawArabicMatch || mTranslit || mSaheeh || mMustafa
+        let mArabic = rawArabicMatch || (hasSearch && !anyFieldMatched)
 
         let showArabic = settings.showArabicText || mArabic
         let showTranslit = hafsOnly && (settings.showTransliteration || mTranslit)
@@ -349,13 +386,21 @@ struct AyahRow: View, Equatable {
         let highlightQuery = hasSearch ? queryForInlineHighlight(searchText) : ""
         let fontSizeEN = settings.englishFontSize
 
+        let isPlayingThis = quranPlayer.currentSurahNumber == surah.id && quranPlayer.currentAyahNumber == ayah.id
+        // The persistent attention tint (grey), separate from the accent playing tint: shown when this ayah is
+        // the shared highlight OR while one of its action sheets is open (keep the selection lit until the
+        // sheet is gone). The accent playing tint always wins when this ayah is being recited. In multi-select
+        // mode, a SELECTED row gets the accent tint instead.
+        let showSelectionTint = isSelecting && isSelected
+        let showAttentionTint = !isPlayingThis && !isSelecting && (isHighlighted || anyAyahSheetOpen)
+
         ZStack {
-            if let currentSurah = quranPlayer.currentSurahNumber, let currentAyah = quranPlayer.currentAyahNumber, currentSurah == surah.id {
+            if isPlayingThis || showAttentionTint || showSelectionTint {
                 RoundedRectangle(cornerRadius: 24)
                     .fill(
-                        currentAyah == ayah.id
+                        isPlayingThis || showSelectionTint
                         ? settings.accentColor.color.opacity(settings.defaultView ? 0.15 : 0.25)
-                        : .clear
+                        : Color.secondary.opacity(0.18)
                     )
                     .padding(.horizontal, -12)
                     .padding(.vertical, ayahHighlightBackgroundVerticalPadding)
@@ -542,13 +587,31 @@ struct AyahRow: View, Equatable {
             }
         }
         .lineLimit(nil)
+        // Multi-select: content slides right to make room for the leading checkmark circle.
+        .padding(.leading, isSelecting ? 32 : 0)
+        .overlay(alignment: .leading) {
+            if isSelecting {
+                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                    .font(.title3)
+                    .foregroundStyle(isSelected ? settings.accentColor.color : Color.secondary)
+            }
+        }
+        .animation(.easeInOut(duration: 0.15), value: isSelecting)
         .contentShape(Rectangle())
         .onTapGesture {
-            if !searchText.isEmpty {
+            if isSelecting {
+                // Multi-select mode: a tap anywhere on the row toggles its membership.
+                settings.hapticFeedback()
+                onToggleSelection?()
+            } else if !searchText.isEmpty {
                 settings.hapticFeedback()
                 withAnimation {
                     scrollDown = ayah.id
                 }
+            } else if let onToggleHighlight {
+                // Not searching: tapping an ayah marks it (and tapping the marked ayah again clears it).
+                settings.hapticFeedback()
+                onToggleHighlight()
             }
         }
         #if os(iOS)
@@ -693,7 +756,7 @@ struct AyahRow: View, Equatable {
             muqattaatPronunciationBlock()
 
             if showArabic {
-                let beginner = settings.beginnerMode || ayahBeginnerMode
+                let beginner = settings.beginnerMode || ayahBeginnerMode || forceBeginner
                 let arabicSource = arabicDisplayText()
                 // "Basic" font (and the dots-removed mode) render with the standard Apple system font. The design is
                 // named explicitly rather than inherited, because this view opts out of the app-wide rounded design

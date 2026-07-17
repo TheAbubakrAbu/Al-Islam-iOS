@@ -96,6 +96,12 @@ struct SettingsQuranView: View {
                 }
                 #if os(iOS)
                 favoritesAndBookmarksSection
+
+                Section {
+                    quranSettingsLink(title: "Tafsir", systemImage: "text.book.closed") {
+                        tafsirDestination
+                    }
+                }
                 #endif
             }
             .themedListRowBackground()
@@ -171,6 +177,12 @@ struct SettingsQuranView: View {
                 .padding(.vertical, 4)
         }
         .tint(settings.accentColor.color)
+    }
+
+    private var tafsirDestination: some View {
+        quranSettingsSubList(title: "Tafsir") {
+            TafsirDownloadSection()
+        }
     }
     #endif
 
@@ -1435,7 +1447,9 @@ struct ReciterListView: View {
 
                     if !filteredReciters(recitersMinshawi).isEmpty {
                         Section(header: Text("MUHAMMAD SIDDIQ AL-MINSHAWI")) {
-                            reciterButtons(filteredReciters(recitersMinshawi))
+                            // Prefixed ids: these same reciters also appear in their style sections below, so
+                            // the featured copies must carry distinct view identities.
+                            reciterButtons(filteredReciters(recitersMinshawi), idPrefix: "featured-minshawi")
                         }
                     }
                     
@@ -1781,10 +1795,12 @@ struct ReciterListView: View {
     }
 
     private var shouldHideDuplicateMinshawiEntries: Bool {
-        // The three Minshawi variants are always shown together in their own featured section, so they must
-        // be excluded from the Mujawwad/Muallim/Murattal style sections in every case - otherwise each shows
-        // up twice (the "two reciters" duplication). (Previously only hidden while filtering to downloads.)
-        true
+        // Minshawi is shown BOTH in his own featured section AND in the Mujawwad/Muallim/Murattal style
+        // section his variant belongs to (each variant naturally lives in exactly one style section). The
+        // featured section's rows carry a section-prefixed view id (see `reciterButtons(idPrefix:)`) so the
+        // two copies never collide in the List; selection/favorites stay keyed on the bare reciter id, so
+        // toggling either instance lights up both.
+        false
     }
     #else
     private var shouldHideDuplicateMinshawiEntries: Bool {
@@ -1792,10 +1808,19 @@ struct ReciterListView: View {
     }
     #endif
 
+    /// A reciter tagged with a section-scoped view id. Minshawi appears in his own featured section AND in
+    /// his style section, so the two copies must carry distinct SwiftUI identities (`idPrefix`) even though
+    /// they wrap the same `Reciter` (selection/favorites stay keyed on the bare `reciter.id`).
+    private struct KeyedReciterRow: Identifiable {
+        let id: String
+        let reciter: Reciter
+    }
+
     @ViewBuilder
-    private func reciterButtons(_ list: [Reciter], qiraah: Bool = false) -> some View {
-        ForEach(list) { reciter in
-            reciterRow(reciter, qiraah: qiraah)
+    private func reciterButtons(_ list: [Reciter], qiraah: Bool = false, idPrefix: String = "") -> some View {
+        ForEach(list.map { KeyedReciterRow(id: idPrefix.isEmpty ? $0.id : "\(idPrefix)|\($0.id)", reciter: $0) }) { item in
+            reciterRow(item.reciter, qiraah: qiraah)
+                .id(item.id)
         }
     }
 
@@ -1808,7 +1833,9 @@ struct ReciterListView: View {
             .id("search-qiraah-\(section.id)")
         } else {
             Section(header: Text(section.title)) {
-                reciterButtons(section.reciters)
+                // The featured Minshawi section's rows are prefixed so they never collide with the same
+                // reciters shown in their style sections.
+                reciterButtons(section.reciters, idPrefix: section.id == "minshawi" ? "featured-minshawi" : "")
             }
         }
     }
@@ -1870,7 +1897,6 @@ struct ReciterListView: View {
             }
         )
         .environmentObject(downloadManager)
-        .id(reciter.id)
         #else
         WatchReciterRow(
             reciter: reciter,
@@ -1891,7 +1917,6 @@ struct ReciterListView: View {
                 settings.toggleReciterFavorite(reciterID: reciter.id)
             }
         )
-        .id(reciter.id)
         #endif
     }
 }
@@ -1948,10 +1973,8 @@ private struct ReciterRow: View {
                             .padding(.top, 2)
                     }
 
-                    if !qiraah && reciter.defaultToMinshawi {
-                        Text("This reciter supports surahs only. Ayahs default to Minshawi (Murattal).")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
+                    if !qiraah {
+                        reciterAyahSupportNote
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -2053,11 +2076,39 @@ private struct ReciterRow: View {
 
             Button("Cancel") {}
         } message: {
-            Text("This downloads all 114 full-surah recitations for offline playback - it does not download ayah-by-ayah audio. It runs in the background and may use significant data and storage.")
+            Text(reciter.supportsAyahSegments
+                ? "This downloads all 114 full-surah recitations for offline playback. This reciter also supports ayah segments, so individual ayahs and custom ranges then play offline too, cut from the downloaded surah. It runs in the background and may use significant data and storage."
+                : "This downloads all 114 full-surah recitations for offline playback - it does not download ayah-by-ayah audio. It runs in the background and may use significant data and storage.")
         }
         .onAppear {
             downloadManager.ensureStateLoaded(for: reciter)
         }
+    }
+
+    /// The one-line caption under the reciter name explaining how it plays INDIVIDUAL ayahs (segments vs.
+    /// a substitute Murattal). Ordered most-specific first.
+    @ViewBuilder
+    private var reciterAyahSupportNote: some View {
+        if reciter.defaultToMinshawi {
+            reciterNoteText("This reciter supports surahs only. Ayahs default to Minshawi (Murattal).")
+        } else if let style = reciter.ayahMurattalStyleNote {
+            if reciter.supportsAyahSegments {
+                // Segments, but no own streamed ayahs: the whole surah must be downloaded to hear an ayah
+                // in this reciter's own voice.
+                reciterNoteText("Streamed ayahs play in \(style). Download the surah to hear ayahs in this reciter's own voice, cut as offline ayah segments.")
+            } else {
+                reciterNoteText("Individual ayahs and custom ranges play in \(style).")
+            }
+        } else if reciter.supportsAyahSegments {
+            // Own per-ayah stream AND offline segments.
+            reciterNoteText("Downloaded surahs also play ayah-by-ayah offline, cut as precise ayah segments.")
+        }
+    }
+
+    private func reciterNoteText(_ text: String) -> some View {
+        Text(text)
+            .font(.caption)
+            .foregroundColor(.secondary)
     }
 
 }
@@ -2264,6 +2315,175 @@ struct FavoritesView: View {
         case .ayah:   return "Bookmarked Ayahs"
         case .letter: return "Favorite Letters"
         case .khatm:  return "Khatm Progress"
+        }
+    }
+}
+#endif
+
+
+#if os(iOS)
+/// The Tafsir settings screen: choose which tafsir packages to keep offline - each individually, all
+/// English, all Arabic, or everything - with live progress and per-package storage management. Individual
+/// tafsirs are always cached automatically the first time they're opened; downloading just fills the cache
+/// up front.
+private struct TafsirDownloadSection: View {
+    @ObservedObject private var settings = Settings.shared
+    @ObservedObject private var store = TafsirStore.shared
+
+    /// The targets a tapped download button would fetch, pending confirmation.
+    @State private var pendingTargets: [TafsirDownloadTarget] = []
+    @State private var confirmDownload = false
+    @State private var deleteTarget: TafsirDownloadTarget?
+    @State private var confirmDelete = false
+
+    private func byteText(_ bytes: Int64) -> String {
+        ByteCountFormatter.string(fromByteCount: bytes, countStyle: .file)
+    }
+
+    private func usage(_ target: TafsirDownloadTarget) -> (files: Int, bytes: Int64) {
+        store.diskUsage[target.rawValue] ?? (0, 0)
+    }
+
+    private func requestDownload(_ targets: [TafsirDownloadTarget]) {
+        settings.hapticFeedback()
+        pendingTargets = targets
+        confirmDownload = true
+    }
+
+    var body: some View {
+        Section {
+            if store.isDownloading {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(store.downloadingTargetName)
+                        .font(.subheadline.weight(.semibold))
+
+                    ProgressView(
+                        value: Double(store.downloadCompleted),
+                        total: Double(max(store.downloadTotal, 1))
+                    )
+
+                    Text("\(store.downloadCompleted) of \(store.downloadTotal) ayahs (\(byteText(store.downloadBytes)))")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .monospacedDigit()
+
+                    Button(role: .destructive) {
+                        settings.hapticFeedback()
+                        store.cancelDownload()
+                    } label: {
+                        Text("Cancel Download")
+                            .font(.subheadline)
+                    }
+                }
+                .padding(.vertical, 4)
+            } else {
+                ForEach(TafsirDownloadTarget.allCases) { target in
+                    targetRow(target)
+                }
+            }
+
+            if let error = store.downloadError {
+                Text(error)
+                    .font(.caption)
+                    .foregroundColor(.red)
+            }
+        } header: {
+            Text("OFFLINE TAFSIR")
+        } footer: {
+            Text("Tafsir for any ayah you open is saved automatically. Downloads run while the app is open, can be cancelled, and resume where they left off - already-saved ayahs are skipped. English includes all 3 English tafsirs in one package; each Arabic tafsir downloads separately.")
+        }
+        .onAppear {
+            store.refreshDiskUsage()
+        }
+
+        if !store.isDownloading {
+            Section {
+                bulkButton("Download All English (~\(TafsirDownloadTarget.estimatedTotal(TafsirDownloadTarget.englishTargets)) MB)",
+                           targets: TafsirDownloadTarget.englishTargets)
+                bulkButton("Download All Arabic (~\(TafsirDownloadTarget.estimatedTotal(TafsirDownloadTarget.arabicTargets)) MB)",
+                           targets: TafsirDownloadTarget.arabicTargets)
+                bulkButton("Download Everything (~\(TafsirDownloadTarget.estimatedTotal(TafsirDownloadTarget.allCases)) MB)",
+                           targets: TafsirDownloadTarget.allCases)
+            }
+            .confirmationDialog("Download Tafsir?", isPresented: $confirmDownload, titleVisibility: .visible) {
+                Button("Download (~\(TafsirDownloadTarget.estimatedTotal(pendingTargets)) MB)") {
+                    settings.hapticFeedback()
+                    store.startDownload(targets: pendingTargets)
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text(pendingTargets.count == 1
+                     ? "This fetches \(pendingTargets.first?.displayName ?? "the tafsir") for all 6,236 ayahs for offline use. It may use significant data - Wi-Fi is recommended."
+                     : "This fetches \(pendingTargets.count) tafsir packages for all 6,236 ayahs each, for offline use. It may use significant data - Wi-Fi is recommended.")
+            }
+            .confirmationDialog("Delete saved tafsir?", isPresented: $confirmDelete, titleVisibility: .visible) {
+                Button("Delete \(deleteTarget?.displayName ?? "")", role: .destructive) {
+                    settings.hapticFeedback()
+                    if let deleteTarget {
+                        store.deleteDownloads(target: deleteTarget)
+                    }
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("It will be re-downloaded from the Internet as you open ayahs, or you can download it again here.")
+            }
+        }
+
+    }
+
+    @ViewBuilder
+    private func targetRow(_ target: TafsirDownloadTarget) -> some View {
+        let usage = usage(target)
+
+        HStack(spacing: 10) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(target.displayName)
+                    .font(.subheadline)
+
+                Text(usage.files > 0
+                     ? "Saved: \(usage.files) ayahs (\(byteText(usage.bytes)))"
+                     : "Not downloaded (~\(target.estimatedMegabytes) MB)")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .monospacedDigit()
+            }
+
+            Spacer()
+
+            if usage.files > 0 {
+                Button {
+                    settings.hapticFeedback()
+                    deleteTarget = target
+                    confirmDelete = true
+                } label: {
+                    Image(systemName: "trash")
+                        .font(.subheadline)
+                        .foregroundColor(.red)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Delete \(target.displayName)")
+            }
+
+            Button {
+                requestDownload([target])
+            } label: {
+                Image(systemName: "icloud.and.arrow.down")
+                    .font(.subheadline)
+                    .foregroundColor(settings.accentColor.color)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Download \(target.displayName)")
+        }
+        .padding(.vertical, 2)
+    }
+
+    private func bulkButton(_ title: String, targets: [TafsirDownloadTarget]) -> some View {
+        Button {
+            requestDownload(targets)
+        } label: {
+            Label(title, systemImage: "icloud.and.arrow.down")
+                .font(.subheadline)
+                .foregroundColor(settings.accentColor.color)
         }
     }
 }

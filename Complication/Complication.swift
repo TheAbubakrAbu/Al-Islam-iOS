@@ -1,16 +1,34 @@
 import SwiftUI
 import WidgetKit
 
+extension PrayersEntry {
+    /// How far the current prayer interval has elapsed, 0...1 - drives the corner capacity gauge. Mirrors
+    /// `PrayerCountdown.progressValue()`, including the overnight-boundary wrap, but is evaluated at the
+    /// entry's date (a gauge can't self-update, so like the battery gauge it steps at each timeline entry).
+    var dayProgress: Double {
+        guard var start = currentPrayer?.time, var end = nextPrayer?.time else { return 0 }
+        let now = date
+        if start > now { start.addTimeInterval(-86_400) }
+        if end <= start { end.addTimeInterval(86_400) }
+        let total = end.timeIntervalSince(start)
+        guard total > 0 else { return 0 }
+        let remaining = end.timeIntervalSince(now)
+        return max(0, min(1, 1 - remaining / total))
+    }
+}
+
 struct PrayersEntryView: View {
     var entry: PrayersProvider.Entry
     @Environment(\.widgetFamily) private var family
-    
+
     func accent(for prayer: Prayer) -> Color {
         prayer.nameTransliteration == "Shurooq" ? .primary : entry.accentColor.color
     }
 
     var body: some View {
         switch family {
+        case .accessoryInline:
+            inline
         case .accessoryRectangular:
             rectangular
         case .accessoryCorner:
@@ -21,13 +39,31 @@ struct PrayersEntryView: View {
     }
 
     @ViewBuilder
+    var inline: some View {
+        if let nextPrayer = entry.nextPrayer {
+            Label {
+                Text("\(nextPrayer.displayName) \(nextPrayer.time, style: .time)")
+            } icon: {
+                Image(systemName: nextPrayer.image)
+            }
+        } else {
+            Label("Open app", systemImage: "moon.stars.fill")
+        }
+    }
+
+    // Corner: the prayer icon at the tip, and a curved capacity Gauge along the bezel showing how far the
+    // day has progressed toward the next prayer - the same "progressive" arc the battery complication uses.
+    @ViewBuilder
     var corner: some View {
         if let nextPrayer = entry.nextPrayer {
             Image(systemName: nextPrayer.image)
                 .font(.title3)
                 .foregroundColor(accent(for: nextPrayer))
                 .widgetLabel {
-                    Text("\(nextPrayer.displayName) \(nextPrayer.time, style: .time)")
+                    Gauge(value: entry.dayProgress) {
+                        Text(nextPrayer.displayName)
+                    }
+                    .tint(accent(for: nextPrayer))
                 }
         } else {
             Image(systemName: "moon.stars.fill")
@@ -37,14 +73,18 @@ struct PrayersEntryView: View {
     }
 
     var circular: some View {
-        VStack(spacing: 4) {
-            if let nextPrayer = entry.nextPrayer {
-                Image(systemName: nextPrayer.image)
-                    .foregroundColor(accent(for: nextPrayer))
+        ZStack {
+            AccessoryWidgetBackground()
 
-                Text(nextPrayer.time, style: .time)
-                    .font(.caption2)
-                    .foregroundColor(accent(for: nextPrayer))
+            if let nextPrayer = entry.nextPrayer {
+                VStack(spacing: 1) {
+                    Image(systemName: nextPrayer.image)
+                        .foregroundColor(accent(for: nextPrayer))
+
+                    Text(nextPrayer.time, style: .time)
+                        .font(.caption2)
+                        .foregroundColor(accent(for: nextPrayer))
+                }
             } else {
                 Text("Open app")
                     .font(.caption2)
@@ -148,7 +188,12 @@ struct CountdownComplicationView: View {
                     .font(.title3)
                     .foregroundColor(accent(for: next))
                     .widgetLabel {
-                        Text(next.time, style: .timer)
+                        // A curved capacity Gauge (battery-style) that fills as the day advances toward the
+                        // next prayer, with the live countdown as its label.
+                        Gauge(value: entry.dayProgress) {
+                            Text(next.time, style: .timer)
+                        }
+                        .tint(accent(for: next))
                     }
             case .accessoryRectangular:
                 rectangular(next: next)
@@ -160,6 +205,8 @@ struct CountdownComplicationView: View {
             case .accessoryCorner:
                 Image(systemName: "moon.stars.fill")
                     .widgetLabel { Text("Open app") }
+            case .accessoryInline:
+                Label("Open app", systemImage: "moon.stars.fill")
             default:
                 Text("Open app")
                     .font(.caption2)

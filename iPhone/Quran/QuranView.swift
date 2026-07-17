@@ -6,6 +6,79 @@ import SwiftUI
 /// whole-Quran search already lives - the verse index, the page/juz queries, the history chips, all of it.
 /// Rather than grow a second search engine inside the readers, a reader just hands its query up here; the tab
 /// pops back to the surah list, fills its search bar and focuses it. One search, reachable from everywhere.
+#if os(iOS)
+/// The Quran tab's trailing toolbar buttons (grid toggle, khatm edit, settings gear), declared twice: on
+/// iOS 26 with `ToolbarSpacer`s so each button gets its OWN Liquid Glass capsule instead of all merging
+/// into one pill, and plain on earlier OSes (which never merged them).
+private struct QuranTrailingToolbar: ViewModifier {
+    @ObservedObject var settings = Settings.shared
+    @Binding var khatmEditMode: Bool
+    @Binding var showingSettingsSheet: Bool
+    let usesColumnNavigation: Bool
+
+    func body(content: Content) -> some View {
+        if #available(iOS 26.0, *) {
+            content.toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) { gridButton }
+                ToolbarSpacer(.fixed, placement: .navigationBarTrailing)
+                ToolbarItem(placement: .navigationBarTrailing) { khatmButton }
+                ToolbarSpacer(.fixed, placement: .navigationBarTrailing)
+                ToolbarItem(placement: .navigationBarTrailing) { gearButton }
+            }
+        } else {
+            content.toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) { gridButton }
+                ToolbarItem(placement: .navigationBarTrailing) { khatmButton }
+                ToolbarItem(placement: .navigationBarTrailing) { gearButton }
+            }
+        }
+    }
+
+    private var gridButton: some View {
+        Button {
+            settings.hapticFeedback()
+            withAnimation { settings.gridMode.toggle() }
+        } label: {
+            Image(systemName: settings.gridMode ? "list.bullet" : "square.grid.2x2")
+        }
+        .accessibilityLabel(settings.gridMode ? "Show lists" : "Show grids")
+        .tint(settings.accentColor.accent2)
+    }
+
+    @ViewBuilder
+    private var khatmButton: some View {
+        if settings.quranSortMode == .khatm {
+            Button {
+                settings.hapticFeedback()
+                withAnimation {
+                    khatmEditMode.toggle()
+                }
+            } label: {
+                Image(systemName: khatmEditMode ? "checkmark" : "square.and.pencil")
+            }
+            .accessibilityLabel(khatmEditMode ? "Done" : "Edit")
+            .tint(settings.accentColor.accent2)
+        }
+    }
+
+    @ViewBuilder
+    private var gearButton: some View {
+        // On iPad/Mac the open-surah (detail) pane provides the settings gear; avoid a duplicate gear in the
+        // sidebar list when using side-by-side column navigation. (The condition lives inside the
+        // ToolbarItem so the toolbar content stays non-optional, keeping pre-iOS 16 support.)
+        if !usesColumnNavigation {
+            Button {
+                settings.hapticFeedback()
+                showingSettingsSheet = true
+            } label: {
+                Image(systemName: "gear")
+            }
+            .tint(settings.accentColor.accent2)
+        }
+    }
+}
+#endif
+
 @MainActor
 final class QuranSearchHandoff: ObservableObject {
     static let shared = QuranSearchHandoff()
@@ -393,6 +466,34 @@ struct QuranView: View {
     @State private var searchFocusRequestID = 0
     /// True while the page-mode toggle is paginating in the background (the button shows a spinner).
     @State private var isPreparingPageMode = false
+    /// Drives the "Switch to Page/List View?" confirmation before the reading mode actually flips.
+    @State private var showReadingModeConfirm = false
+    /// Apple Music-style bar minimization: true while the user scrolls down (see `collapseBarsOnScroll`).
+    @State private var barsCollapsed = false
+
+    /// Flip between the list reader and the mushaf. Opening the mushaf cold paginates all ~6,236 ayahs, so
+    /// that runs off-main with the toolbar button showing a spinner; the mode flips the moment the pages
+    /// exist. Confirmed via `showReadingModeConfirm` before this runs.
+    private func performReadingModeToggle() {
+        #if os(iOS)
+        let openingMushaf = !settings.quranPageMode
+        if openingMushaf, !MushafPagination.isBuilt(quran: quranData.quran, qiraah: settings.displayQiraahForArabic) {
+            guard !isPreparingPageMode else { return }
+            isPreparingPageMode = true
+            Task {
+                await MushafPagination.buildInBackground(quran: quranData.quran, qiraah: settings.displayQiraahForArabic)
+                isPreparingPageMode = false
+                withAnimation { settings.quranPageMode = true }
+                openMushafWhereLeftOff()
+            }
+        } else {
+            withAnimation { settings.quranPageMode.toggle() }
+            if openingMushaf { openMushafWhereLeftOff() }
+        }
+        #else
+        withAnimation { settings.quranPageMode.toggle() }
+        #endif
+    }
 
     /// A reader asked for the Quran search: come back out to the surah list, carry its query into the search
     /// bar and open the keyboard on it. From there the hit rows navigate straight back into whichever reader
@@ -868,6 +969,8 @@ struct QuranView: View {
             .applyConditionalListStyle(disableNowPlayingInset: true)
             .compactListSectionSpacing()
             .listSectionIndexVisibilityWhenAvailable(visible: settings.quranSortMode == .juz && searchText.isEmpty)
+            // Apple Music-style: the bottom bar minimizes while scrolling down, restores on scroll-up.
+            .collapseBarsOnScroll($barsCollapsed)
             // No list-level `.animation(...)` here - it makes lazily-loaded rows stutter while scrolling
             // (SurahView has none). The sort-change transition is already animated at the toggle sites via
             // `withAnimation` in `sortModeButton` / the sort-direction picker.
@@ -906,24 +1009,9 @@ struct QuranView: View {
             ToolbarItem(placement: .navigationBarLeading) {
                 Button {
                     settings.hapticFeedback()
-                    let openingMushaf = !settings.quranPageMode
-                    // Opening the mushaf cold paginates all ~6,236 ayahs. Doing that inline froze this very
-                    // tap; the button becomes a spinner for the beat the build takes off-main, and the mode
-                    // flips the moment the pages exist. (Launch only prewarms pagination when page mode is
-                    // already on - this is the "compute it when you touch the icon" path.)
-                    if openingMushaf, !MushafPagination.isBuilt(quran: quranData.quran, qiraah: settings.displayQiraahForArabic) {
-                        guard !isPreparingPageMode else { return }
-                        isPreparingPageMode = true
-                        Task {
-                            await MushafPagination.buildInBackground(quran: quranData.quran, qiraah: settings.displayQiraahForArabic)
-                            isPreparingPageMode = false
-                            withAnimation { settings.quranPageMode = true }
-                            openMushafWhereLeftOff()
-                        }
-                    } else {
-                        withAnimation { settings.quranPageMode.toggle() }
-                        if openingMushaf { openMushafWhereLeftOff() }
-                    }
+                    // Switching reading mode is a big context change (the whole surah list becomes a mushaf
+                    // and vice-versa), so confirm first rather than flipping on an accidental tap.
+                    showReadingModeConfirm = true
                 } label: {
                     if isPreparingPageMode {
                         ProgressView()
@@ -935,46 +1023,29 @@ struct QuranView: View {
                 .tint(settings.accentColor.accent1)
             }
 
-            ToolbarItem(placement: .navigationBarLeading) {
-                Button {
-                    settings.hapticFeedback()
-                    withAnimation { settings.gridMode.toggle() }
-                } label: {
-                    Image(systemName: settings.gridMode ? "list.bullet" : "square.grid.2x2")
-                }
-                .accessibilityLabel(settings.gridMode ? "Show lists" : "Show grids")
-                .tint(settings.accentColor.accent1)
+        }
+        // The trailing buttons live in their own modifier so iOS 26 can interleave ToolbarSpacers between
+        // them - without spacers, Liquid Glass merges adjacent trailing items into ONE capsule. (A separate
+        // view-level branch because ToolbarContentBuilder can't branch on availability while the app deploys
+        // to iOS 15.)
+        .modifier(QuranTrailingToolbar(
+            khatmEditMode: $khatmEditMode,
+            showingSettingsSheet: $showingSettingsSheet,
+            usesColumnNavigation: usesColumnNavigation
+        ))
+        .confirmationDialog(
+            settings.quranPageMode ? "Switch to List View?" : "Switch to Page View?",
+            isPresented: $showReadingModeConfirm,
+            titleVisibility: .visible
+        ) {
+            Button(settings.quranPageMode ? "Read as List" : "Read as Pages") {
+                performReadingModeToggle()
             }
-
-            ToolbarItem(placement: .navigationBarTrailing) {
-                if settings.quranSortMode == .khatm {
-                    Button {
-                        settings.hapticFeedback()
-                        withAnimation {
-                            khatmEditMode.toggle()
-                        }
-                    } label: {
-                        Image(systemName: khatmEditMode ? "checkmark" : "square.and.pencil")
-                    }
-                    .accessibilityLabel(khatmEditMode ? "Done" : "Edit")
-                    .tint(settings.accentColor.accent2)
-                }
-            }
-
-            ToolbarItem(placement: .navigationBarTrailing) {
-                // On iPad/Mac the open-surah (detail) pane provides the settings gear; avoid a duplicate gear
-                // in the sidebar list when using side-by-side column navigation. (The condition lives inside
-                // the ToolbarItem so the toolbar content stays non-optional, keeping pre-iOS 16 support.)
-                if !usesColumnNavigation {
-                    Button {
-                        settings.hapticFeedback()
-                        showingSettingsSheet = true
-                    } label: {
-                        Image(systemName: "gear")
-                    }
-                    .tint(settings.accentColor.accent2)
-                }
-            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text(settings.quranPageMode
+                 ? "Surahs will be shown as a scrolling list of ayahs."
+                 : "Surahs will be shown as a mushaf, one page at a time.")
         }
         .sheet(isPresented: $showingSettingsSheet) {
             NavigationView { SettingsQuranView(presentedAsSheet: true) }
@@ -1041,6 +1112,8 @@ struct QuranView: View {
                     }
                 }
             }
+            // The mini player minimizes with the rest of the bars.
+            .minimizedBarStyle(barsCollapsed && !isQuranSearchFocused)
             .padding(.horizontal, 24)
             .padding(.bottom, active ? 8 : 0)
             .background(Color.white.opacity(0.00001))
@@ -1049,13 +1122,35 @@ struct QuranView: View {
         #endif
     }
 
+    @ViewBuilder
     private var bottomControls: some View {
         #if os(iOS)
+        // Apple Music-style: while scrolling down, the secondary rows fold away and the search row shrinks;
+        // scrolling up (or typing) brings everything back. Never minimized mid-search. The rows STAY MOUNTED
+        // and collapse via height+opacity - `if` insertion/removal snapshots their glass as hard black boxes.
+        let secondaryVisible = !barsCollapsed || isQuranSearchFocused
+        let chipsVisible = secondaryVisible && isQuranSearchFocused && !settings.quranSearchHistory.isEmpty
+
         VStack(spacing: SafeAreaInsetVStackSpacing.standard) {
             searchHistoryChips
+                .frame(height: chipsVisible ? nil : 0)
+                .clipped()
+                .opacity(chipsVisible ? 1 : 0)
+                .allowsHitTesting(chipsVisible)
+                .animation(.spring(response: 0.35, dampingFraction: 0.85), value: chipsVisible)
             sortControls
+                .frame(height: secondaryVisible ? nil : 0)
+                .clipped()
+                .opacity(secondaryVisible ? 1 : 0)
+                .allowsHitTesting(secondaryVisible)
+                .animation(.spring(response: 0.35, dampingFraction: 0.85), value: secondaryVisible)
             searchAndPlaybackRow
+                .minimizedBarStyle(barsCollapsed && !isQuranSearchFocused)
         }
+        // Value-gated spring, INSIDE the keyboard transaction-strip below (inner modifiers win): without it
+        // the strip also swallowed the collapse animation and the sort row popped in and out as a hard box.
+        // Being value-gated, it never touches the keyboard-driven position changes the strip exists for.
+        .animation(.spring(response: 0.35, dampingFraction: 0.85), value: barsCollapsed)
         .padding(.horizontal, 24)
         .padding(.bottom, 8)
         .background(Color.white.opacity(0.00001))
@@ -1070,15 +1165,15 @@ struct QuranView: View {
         #endif
     }
 
+    /// Always mounted; visibility is driven by the caller via height+opacity. An `if` insertion/removal
+    /// snapshots the glass chips as hard black boxes - Liquid Glass can't participate in view transitions.
     @ViewBuilder
     private var searchHistoryChips: some View {
         #if os(iOS)
-        if isQuranSearchFocused && !settings.quranSearchHistory.isEmpty {
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 8) {
-                    ForEach(settings.quranSearchHistory, id: \.self) { query in
-                        searchHistoryChip(query: query)
-                    }
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(settings.quranSearchHistory, id: \.self) { query in
+                    searchHistoryChip(query: query)
                 }
             }
         }
@@ -1267,8 +1362,13 @@ struct QuranView: View {
         HStack(spacing: 0) {
             quranSearchBar
 
-            playbackMenuButton
-                .padding(.bottom, 2)
+            // While the search field is focused, the playback menu slides away so the field takes the whole
+            // width - you're searching, not reaching for playback.
+            if !isQuranSearchFocused {
+                playbackMenuButton
+                    .padding(.bottom, 2)
+                    .transition(.move(edge: .trailing).combined(with: .opacity))
+            }
         }
         .padding(.leading, -8)
         .padding(.top, UIDevice.current.userInterfaceIdiom == .pad ? 0 : -8)
@@ -1870,6 +1970,15 @@ struct QuranView: View {
                 SurahRow(surah: surah, isFavorite: context.favoriteSurahs.contains(surah.id), grid: true)
             }
             .buttonStyle(.plain)
+            // The single tappable corner star, matching the main surah grid (SurahRow no longer draws its
+            // own inline star).
+            .gridFavoriteStar(
+                isFavorite: context.favoriteSurahs.contains(surah.id),
+                accent: settings.accentColor.color,
+                accessibilityName: surah.nameTransliteration
+            ) {
+                settings.toggleSurahFavorite(surah: surah.id)
+            }
             #else
             Button {
                 settings.hapticFeedback()
@@ -2485,6 +2594,7 @@ struct QuranView: View {
                 isFavorite: context.favoriteSurahs.contains(surah.id),
                 khatmCompletedAyahs: settings.quranSortMode == .khatm ? settings.khatmCompletedCount(for: surah) : nil,
                 khatmTotalAyahs: settings.quranSortMode == .khatm ? surah.numberOfAyahs : nil,
+                searchQuery: searchText,
                 grid: true
             )
         }
@@ -2524,37 +2634,58 @@ struct QuranView: View {
             Section(header: surahSectionHeader(context: context)) { }
                 .padding(.bottom, -12)
 
-            ForEach(filteredSurahs, id: \.id) { surah in
-                Section {
-                    quranNavigationLink(route: .ayahs(surahID: surah.id, ayah: nil)) {
-                        surahSearchRow(surah: surah, context: context)
+            // Surah-NAME results honor grid mode, the same as browsing. Ayah-TEXT results (searchResultSections)
+            // always stay a list - grid tiles can't show the matched ayah text.
+            #if os(iOS)
+            if settings.gridMode {
+                // No Section at all when nothing matched - an empty Section still renders as a bare
+                // rounded box under the "0 results" header.
+                if !filteredSurahs.isEmpty {
+                    Section {
+                        surahGrid(filteredSurahs, context: context)
                     }
-                    .id("surah_\(surah.id)")
-                    .onAppear {
-                        if surah.id == scrollToSurahID {
-                            scrollToSurahID = -1
-                        }
+                }
+            } else {
+                surahSearchListRows(filteredSurahs, context: context)
+            }
+            #else
+            surahSearchListRows(filteredSurahs, context: context)
+            #endif
+        }
+    }
+
+    @ViewBuilder
+    private func surahSearchListRows(_ filteredSurahs: [Surah], context: SearchDisplayContext) -> some View {
+        ForEach(filteredSurahs, id: \.id) { surah in
+            Section {
+                quranNavigationLink(route: .ayahs(surahID: surah.id, ayah: nil)) {
+                    surahSearchRow(surah: surah, context: context)
+                }
+                .id("surah_\(surah.id)")
+                .onAppear {
+                    if surah.id == scrollToSurahID {
+                        scrollToSurahID = -1
                     }
-                    .rightSwipeActions(
+                }
+                .rightSwipeActions(
+                    surahID: surah.id,
+                    surahName: surah.nameTransliteration,
+                    searchText: $searchText,
+                    scrollToSurahID: $scrollToSurahID
+                )
+                .leftSwipeActions(surah: surah.id, favoriteSurahs: context.favoriteSurahs)
+                #if os(iOS)
+                .contextMenu {
+                    SurahContextMenu(
                         surahID: surah.id,
                         surahName: surah.nameTransliteration,
+                        favoriteSurahs: context.favoriteSurahs,
                         searchText: $searchText,
                         scrollToSurahID: $scrollToSurahID
                     )
-                    .leftSwipeActions(surah: surah.id, favoriteSurahs: context.favoriteSurahs)
-                    #if os(iOS)
-                    .contextMenu {
-                        SurahContextMenu(
-                            surahID: surah.id,
-                            surahName: surah.nameTransliteration,
-                            favoriteSurahs: context.favoriteSurahs,
-                            searchText: $searchText,
-                            scrollToSurahID: $scrollToSurahID
-                        )
-                    }
-                    #endif
-                    .animation(.easeInOut, value: searchText)
                 }
+                #endif
+                .animation(.easeInOut, value: searchText)
             }
         }
     }
@@ -2689,6 +2820,14 @@ struct QuranView: View {
                 juzGridLabel(row: row, surah: surah, isFavorite: context.favoriteSurahs.contains(surah.id))
             }
             .buttonStyle(.plain)
+            // The single tappable corner star, matching the main surah grid.
+            .gridFavoriteStar(
+                isFavorite: context.favoriteSurahs.contains(surah.id),
+                accent: settings.accentColor.color,
+                accessibilityName: surah.nameTransliteration
+            ) {
+                settings.toggleSurahFavorite(surah: surah.id)
+            }
         }
     }
 

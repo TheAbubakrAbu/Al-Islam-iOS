@@ -204,20 +204,21 @@ struct SurahSectionHeader: View {
     var body: some View {
         #if os(watchOS)
         // watchOS has too little width to fit the emoji, ayah/page summary, play, and star on one line,
-        // so the controls get their own row beneath the summary.
-        VStack(spacing: 8) {
-            HStack(spacing: 6) {
+        // so the controls get their own row beneath the summary. The emoji + summary sit together as one
+        // centered group (no stretched gap between them), and the play/star row sits tight just below.
+        VStack(spacing: 3) {
+            HStack(spacing: 5) {
                 revelationSymbol
                 ayahSummary
-                    .frame(maxWidth: .infinity, alignment: .center)
             }
+            .frame(maxWidth: .infinity, alignment: .center)
 
-            HStack(spacing: 28) {
+            HStack(spacing: 22) {
                 watchPlaybackButton
                 favoriteToggle
             }
-            .frame(maxWidth: .infinity)
         }
+        .padding(.bottom, 2)
         #else
         // Revelation symbol on the left, ayah/page info centered, favorite star on the right.
         // The symbol and star share the same size so the centered text sits exactly in the middle.

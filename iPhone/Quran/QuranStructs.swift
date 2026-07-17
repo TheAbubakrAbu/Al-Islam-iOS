@@ -319,6 +319,16 @@ struct Reciter: Identifiable, Comparable, Codable, Hashable {
         everyayahFolder == nil && ayahIdentifier.contains("minshawi") && !name.contains("Minshawi")
     }
 
+    /// True when a downloaded surah can also be played ayah-by-ayah OFFLINE, by cutting each ayah out of the
+    /// full-surah file using this reciter's QDC timing table (the reciter's own voice, no network). Backed by
+    /// `qdcReciterID`.
+    var supportsAyahSegments: Bool { qdcReciterID != nil }
+
+    /// True when this reciter has NO per-ayah recitation of its own to stream - individual ayahs otherwise
+    /// play in a substitute Murattal (`defaultToMinshawi` or a named `ayahMurattalStyleNote`). Combined with
+    /// `supportsAyahSegments`, this is the "must load the whole surah to hear an ayah in this voice" case.
+    var lacksOwnStreamedAyahs: Bool { defaultToMinshawi || ayahMurattalStyleNote != nil }
+
     static func < (lhs: Reciter, rhs: Reciter) -> Bool {
         lhs.name < rhs.name
     }

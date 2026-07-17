@@ -318,9 +318,18 @@ struct ZoomableImage: View {
 struct ActivityView: UIViewControllerRepresentable {
     let activityItems: [Any]
     var applicationActivities: [UIActivity]? = nil
+    /// Called when the activity sheet finishes; `completed` is false when the user cancelled. Lets a caller
+    /// (e.g. the Share Ayah sheet) dismiss itself only after a REAL share, not on cancel.
+    var onComplete: ((_ completed: Bool) -> Void)? = nil
+
     func makeUIViewController(context: Context) -> UIActivityViewController {
         let vc = UIActivityViewController(activityItems: activityItems, applicationActivities: applicationActivities)
         vc.modalPresentationStyle = .formSheet
+        if let onComplete {
+            vc.completionWithItemsHandler = { _, completed, _, _ in
+                onComplete(completed)
+            }
+        }
         return vc
     }
     func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}

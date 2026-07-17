@@ -922,7 +922,7 @@ struct HijriMonthRow: View, Equatable {
     // observes Settings and re-inits rows with fresh values whenever these change.
     var accentColor: AccentColor = Settings.shared.accentColor
     var usesCustomArabicFace: Bool = Settings.shared.islamUsesCustomArabicFace
-    var fontArabic: String = Settings.shared.fontArabic
+    var fontArabic: String = Settings.shared.nonQuranArabicFontName
 
     static func == (lhs: Self, rhs: Self) -> Bool {
         lhs.month.number == rhs.month.number &&

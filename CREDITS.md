@@ -26,7 +26,9 @@ App Store: <https://apps.apple.com/us/app/al-islam-islamic-pillars/id6449729655>
 - **Surah (full) Quran recitations** - **MP3 Quran** - <https://mp3quran.net/eng>
 - **Ayah-by-ayah Quran recitations** - **Al Quran** - <https://alquran.cloud/cdn>
 - **English Quran translation comparison API** - **Al Quran Cloud** - <https://alquran.cloud/api>
-- **Tafsir API** - **Quran API Pages** - <https://quranapi.pages.dev/>
+- **English Tafsir API (Ibn Kathir, Maarif Ul Quran, Tazkirul Quran)** - **Quran API Pages** - <https://quranapi.pages.dev/>
+- **Arabic Tafsirs (Ibn Kathir, al-Tabari, as-Sa'di)** - **Tafsir API by spa5k (data from QUL / Tarteel)** - <https://github.com/spa5k/tafsir_api>
+- **Hadith collections (all 17 books)** - **hadith-json by Ahmed Baset** - <https://github.com/AhmedBaset/hadith-json>
 - **Surah Info** - **Quran.com (Quran Foundation)** - <https://api-docs.quran.foundation/docs/content_apis_versioned/4.0.0/get-chapter-info/>
 - **99 Names of Allah** - **MyIslam** - <https://myislam.org/99-names-of-allah/>
 

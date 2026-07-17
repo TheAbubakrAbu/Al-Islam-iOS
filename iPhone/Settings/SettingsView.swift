@@ -348,17 +348,23 @@ struct SettingsView: View {
 
     private var websiteRow: some View {
         HStack {
+            // The watch drops the "Website:" label - the 40mm screen has no room for a label column, and the
+            // URL names itself.
+            #if os(iOS)
             Text("Website: ")
                 .font(.subheadline)
                 .multilineTextAlignment(.leading)
                 .frame(width: glyphWidth)
+            #endif
 
             if let url = URL(string: "https://abubakrelmallah.com/") {
                 Link("abubakrelmallah.com", destination: url)
                     .font(.subheadline)
                     .foregroundColor(settings.accentColor.color)
                     .multilineTextAlignment(.leading)
+                    #if os(iOS)
                     .padding(.leading, -4)
+                    #endif
             }
         }
         #if os(iOS)
@@ -381,16 +387,21 @@ struct SettingsView: View {
 
     private var contactRow: some View {
         HStack {
+            // Same as the website row: no "Contact:" label on the watch, the address speaks for itself.
+            #if os(iOS)
             Text("Contact: ")
                 .font(.subheadline)
                 .multilineTextAlignment(.leading)
                 .frame(width: glyphWidth)
+            #endif
 
             Text("ammelmallah@icloud.com")
                 .font(.subheadline)
                 .foregroundColor(settings.accentColor.color)
                 .multilineTextAlignment(.leading)
+                #if os(iOS)
                 .padding(.leading, -4)
+                #endif
         }
         #if os(iOS)
         .contextMenu {

@@ -172,7 +172,7 @@ private struct MainTabView: View {
     /// True while a launch/splash screen still covers the tabs (drives the under-cover warm below).
     let isCovered: Bool
 
-    private enum AppTab: Hashable { case adhan, quran, islam, settings }
+    private enum AppTab: Hashable { case adhan, quran, hadith, islam, settings }
 
     // We land the user on Adhan, so Adhan is the initial tab and builds first. The Quran tab is realized during
     // `warmUnderCover()` - briefly selected so `TabView` builds and RETAINS its heavy view tree, then we settle
@@ -212,6 +212,8 @@ private struct MainTabView: View {
         // the user's first REAL switch into the tab - the visible lag this hides behind the launch cover.
         selectedTab = .quran
         try? await Task.sleep(nanoseconds: settings.quranPageMode ? 900_000_000 : 350_000_000)
+        selectedTab = .hadith
+        try? await Task.sleep(nanoseconds: 80_000_000)
         selectedTab = .islam
         try? await Task.sleep(nanoseconds: 120_000_000)
         selectedTab = .settings
@@ -304,6 +306,10 @@ private struct MainTabView: View {
                     QuranView(isActiveTab: selectedTab == .quran)
                 }
 
+                Tab("Hadith", systemImage: "books.vertical", value: AppTab.hadith) {
+                    HadithView()
+                }
+
                 Tab("Islam", systemImage: "moon.stars", value: AppTab.islam) {
                     IslamView()
                 }
@@ -327,6 +333,13 @@ private struct MainTabView: View {
                         Text("Quran")
                     }
                     .tag(AppTab.quran)
+
+                HadithView()
+                    .tabItem {
+                        Image(systemName: "books.vertical")
+                        Text("Hadith")
+                    }
+                    .tag(AppTab.hadith)
 
                 IslamView()
                     .tabItem {

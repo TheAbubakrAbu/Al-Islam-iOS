@@ -9,6 +9,9 @@ import SwiftUI
 /// what the moon is doing - and draws them in a single strip under the countdown.
 struct WatchSkyStrip: View {
     @ObservedObject private var settings = Settings.shared
+    /// The shared scrub model (also drives the iPhone SkyView). On the watch this is a separate process, so
+    /// there is no conflict. Dragging the arc previews a time of day; `previewPrayer` is the prayer then.
+    @ObservedObject private var scrubber = DayScrubber.shared
 
     /// Re-drawn every minute. The sun's position across a whole day moves far too slowly to justify anything
     /// faster, and the watch is the last place to spend a redraw budget on invisible motion.
@@ -21,23 +24,66 @@ struct WatchSkyStrip: View {
     @ViewBuilder
     private func content(now: Date) -> some View {
         if let sunrise = prayerTime("Shurooq", on: now), let sunset = prayerTime("Maghrib", on: now) {
-            HStack(spacing: 8) {
-                SunArc(fraction: dayFraction(now: now, sunrise: sunrise, sunset: sunset),
-                       color: settings.accentColor.accent1)
+            // Drag the arc to preview any daytime moment; otherwise it tracks the live sun.
+            let displayedDate = scrubber.scrubbedDate ?? now
+            let fraction = dayFraction(now: displayedDate, sunrise: sunrise, sunset: sunset)
+
+            VStack(spacing: 2) {
+                // Only appears while scrubbing: the prayer in effect at the previewed moment, and that time.
+                // No prayer-times table - just "which prayer, and when", exactly like the iPhone sky readout.
+                if scrubber.isScrubbing {
+                    HStack(spacing: 5) {
+                        if let name = scrubber.previewPrayer?.displayName {
+                            Text(name)
+                                .font(.system(size: 11, weight: .semibold))
+                        }
+                        Text(settings.formatDate(displayedDate))
+                            .font(.system(size: 11).monospacedDigit())
+                    }
+                    .foregroundStyle(settings.accentColor.color)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
+                    .transition(.opacity)
+                }
+
+                HStack(spacing: 8) {
+                    GeometryReader { geo in
+                        SunArc(fraction: fraction, color: settings.accentColor.accent1)
+                            .frame(height: 22)
+                            .contentShape(Rectangle())
+                            .gesture(dragGesture(width: geo.size.width, sunrise: sunrise, sunset: sunset, now: now))
+                    }
                     .frame(height: 22)
                     .frame(maxWidth: .infinity)
 
-                VStack(spacing: 1) {
-                    MoonPhaseView(date: now, diameter: 16)
+                    VStack(spacing: 1) {
+                        MoonPhaseView(date: displayedDate, diameter: 16)
 
-                    Text("\(MoonPhase.on(now).illuminationPercent)%")
-                        .font(.system(size: 8).monospacedDigit())
-                        .foregroundStyle(.secondary)
+                        Text("\(MoonPhase.on(displayedDate).illuminationPercent)%")
+                            .font(.system(size: 8).monospacedDigit())
+                            .foregroundStyle(.secondary)
+                    }
                 }
             }
             .frame(maxWidth: .infinity)
             .padding(.vertical, 2)
+            .animation(.easeInOut(duration: 0.15), value: scrubber.isScrubbing)
         }
+    }
+
+    /// Scrub the sun along the daylight arc: x → fraction → a time between sunrise and sunset. The scrubber's
+    /// `previewPrayer` then names the prayer in effect at that moment.
+    private func dragGesture(width: CGFloat, sunrise: Date, sunset: Date, now: Date) -> some Gesture {
+        DragGesture(minimumDistance: 0)
+            .onChanged { value in
+                if !scrubber.isScrubbing {
+                    settings.hapticFeedback()
+                    scrubber.begin(timeline: settings.getPrayerTimes(for: now, fullPrayers: true) ?? [])
+                }
+                let f = min(max(value.location.x / max(width, 1), 0), 1)
+                scrubber.scrub(to: sunrise.addingTimeInterval(f * sunset.timeIntervalSince(sunrise)))
+            }
+            .onEnded { _ in scrubber.end() }
     }
 
     private func prayerTime(_ name: String, on date: Date) -> Date? {

@@ -79,12 +79,12 @@ struct AdhkarRow: View {
     }
 
     private var arabicFont: Font {
-        useQuranicFont ? .custom(settings.fontArabic, size: 30) : .title2
+        useQuranicFont ? .custom(settings.nonQuranArabicFontName, size: 30) : .title2
     }
 
     /// Whether `arabicFont` resolves to a bundled face, and so must opt out of the app-wide rounded design.
     private var usesCustomArabicFace: Bool {
-        useQuranicFont && settings.quranUsesCustomArabicFace
+        useQuranicFont && settings.islamUsesCustomArabicFace
     }
 
     var body: some View {
@@ -213,6 +213,8 @@ struct AdhkarRow: View {
 struct AdhkarView: View {
     @ObservedObject var settings = Settings.shared
     @State private var searchText = ""
+    /// Apple Music-style bar minimization: true while scrolling down.
+    @State private var barsCollapsed = false
 
     var body: some View {
         List {
@@ -225,20 +227,22 @@ struct AdhkarView: View {
             .themedListRowBackground()
         }
         #if os(iOS)
+        // Apple Music-style: the bottom bar minimizes while scrolling down, restores on scroll-up.
+        .collapseBarsOnScroll($barsCollapsed)
         .adaptiveSafeArea(edge: .bottom) {
             VStack(spacing: SafeAreaInsetVStackSpacing.standard) {
-                Picker("Arabic Font", selection: $settings.useFontArabic.animation(.easeInOut)) {
-                    Text("Quranic Font").tag(true)
-                    Text("Basic Font").tag(false)
-                }
-                .pickerStyle(.segmented)
+                if !barsCollapsed {
+                IslamArabicFontPicker()
                 // Non-interactive glass: interactive Liquid Glass steals per-segment taps on real iOS 26 hardware.
                 .conditionalGlassEffect(interactive: false)
-                .onChange(of: settings.useFontArabic) { _ in settings.hapticFeedback() }
+                .transition(.opacity)
+                }
 
                 SearchBar(text: $searchText.animation(.easeInOut))
                     .padding([.horizontal, .top], -8)
+                    .minimizedBarStyle(barsCollapsed)
             }
+            .animation(.spring(response: 0.35, dampingFraction: 0.85), value: barsCollapsed)
             .padding(.horizontal, 24)
             .padding(.bottom, 8)
             .background(Color.white.opacity(0.00001))
@@ -291,7 +295,7 @@ struct AdhkarView: View {
                 Text("Arabic root: ذ ك ر (dh-k-r)")
                     .font(
                         settings.islamUsesCustomArabicFace
-                            ? .custom(settings.fontArabic, size: 18, relativeTo: .subheadline)
+                            ? .custom(settings.nonQuranArabicFontName, size: 18, relativeTo: .subheadline)
                             : .subheadline.weight(.semibold)
                     )
                     .arabicFontDesign(custom: settings.islamUsesCustomArabicFace)

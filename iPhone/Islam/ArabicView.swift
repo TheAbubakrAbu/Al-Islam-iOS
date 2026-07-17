@@ -3,6 +3,8 @@ import SwiftUI
 struct ArabicView: View {
     @ObservedObject private var settings = Settings.shared
     @State private var searchText = ""
+    /// Apple Music-style bar minimization: true while scrolling down.
+    @State private var barsCollapsed = false
     @AppStorage("arabicFilterMode") private var filterModeRaw: String = ArabicFilterMode.normal.rawValue
     /// List of rows, or a grid of tiles - the same choice the 99 Names screen offers. Watch is always a list.
 
@@ -131,6 +133,8 @@ struct ArabicView: View {
         .searchable(text: $searchText.animation(.easeInOut))
         #else
         .background(gridNavigationLink)
+        // Apple Music-style: the bottom bar minimizes while scrolling down, restores on scroll-up.
+        .collapseBarsOnScroll($barsCollapsed)
         .adaptiveSafeArea(edge: .bottom) {
             VStack(spacing: SafeAreaInsetVStackSpacing.standard) {
                 // No size slider here. It lives on the per-letter detail screen (`ArabicLetterView`), which is
@@ -138,7 +142,10 @@ struct ArabicView: View {
                 // global (`settings.arabicLetterSizeIndex`), and these rows and tiles already honour it through
                 // `arabicLetterDynamicTypeSize`, so the alphabet list still resizes - it just doesn't carry the
                 // control, which was crowding the bottom bar alongside the font picker and the search field.
-                arabicFontPicker
+                if !barsCollapsed {
+                    arabicFontPicker
+                        .transition(.opacity)
+                }
 
                 HStack(spacing: 0) {
                     SearchBar(text: $searchText.animation(.easeInOut))
@@ -191,7 +198,9 @@ struct ArabicView: View {
                     .padding(.bottom, 2)
                 }
                 .padding([.leading, .top], -8)
+                .minimizedBarStyle(barsCollapsed)
             }
+            .animation(.spring(response: 0.35, dampingFraction: 0.85), value: barsCollapsed)
             .padding(.horizontal, 24)
             .padding(.bottom, 8)
             .background(Color.white.opacity(0.00001))
@@ -247,16 +256,19 @@ struct ArabicView: View {
 
     @ViewBuilder
     private var arabicFontPicker: some View {
+        #if os(watchOS)
+        // The watch keeps the simple two-way choice; the richer three-way face picker is a phone thing.
         Picker("Arabic Font", selection: $settings.useFontArabic.animation(.easeInOut)) {
             Text("Quranic Font").tag(true)
             Text("Basic Font").tag(false)
         }
-        #if !os(watchOS)
-        .pickerStyle(.segmented)
-        #endif
-        // Non-interactive glass: interactive Liquid Glass steals per-segment taps on real iOS 26 hardware.
         .conditionalGlassEffect(interactive: false)
         .onChange(of: settings.useFontArabic) { _ in settings.hapticFeedback() }
+        #else
+        IslamArabicFontPicker()
+            // Non-interactive glass: interactive Liquid Glass steals per-segment taps on real iOS 26 hardware.
+            .conditionalGlassEffect(interactive: false)
+        #endif
     }
 
     private var isGridMode: Bool {
@@ -303,7 +315,7 @@ struct ArabicView: View {
                         isFavorite: settings.isLetterFavorite(letterData: letter),
                         accentColor: settings.accentColor,
                         useFontArabic: settings.useFontArabic,
-                        fontArabic: settings.fontArabic,
+                        fontArabic: settings.nonQuranArabicFontName,
                         onTap: { gridSelection = letter }
                     )
                     .equatable()
@@ -343,7 +355,7 @@ struct ArabicView: View {
             isFavorite: settings.isLetterFavorite(letterData: letterData),
             accentColor: settings.accentColor,
             useFontArabic: settings.useFontArabic,
-            fontArabic: settings.fontArabic,
+            fontArabic: settings.nonQuranArabicFontName,
             searchQuery: searchText
         )
         .equatable()
@@ -530,6 +542,8 @@ struct ArabicSizeSlider: View {
 /// a vowel with it, so selecting it reveals the four readings (bare, then with fatha / damma / kasra) and every
 /// letter becomes tappable to see its own three side by side.
 struct TashkeelLettersView: View {
+    /// Apple Music-style bar minimization: true while scrolling down.
+    @State private var barsCollapsed = false
     @ObservedObject private var settings = Settings.shared
 
     private static let shaddahMark = "\u{0651}"
@@ -636,18 +650,17 @@ struct TashkeelLettersView: View {
         .applyConditionalListStyle()
         .navigationTitle("Tashkeel")
         #if os(iOS)
+        // Apple Music-style: the bottom bar minimizes while scrolling down, restores on scroll-up.
+        .collapseBarsOnScroll($barsCollapsed)
         .adaptiveSafeArea(edge: .bottom) {
             VStack(spacing: SafeAreaInsetVStackSpacing.standard) {
                 ArabicSizeSlider()
 
-                // The same Quranic/Basic choice the alphabet screen offers - a harakah sits very differently on
-                // a Quranic face than on the system one, which is half of what you'd come here to see.
-                Picker("Arabic Font", selection: $settings.useFontArabic.animation(.easeInOut)) {
-                    Text("Quranic Font").tag(true)
-                    Text("Basic Font").tag(false)
-                }
-                .pickerStyle(.segmented)
+                // The same three-way face choice the alphabet screen offers - a harakah sits very differently
+                // on a Quranic face than on the system one, which is half of what you'd come here to see.
+                IslamArabicFontPicker()
             }
+            .minimizedBarStyle(barsCollapsed)
             .padding(.horizontal, 24)
             .padding(.bottom, 8)
         }
@@ -871,6 +884,8 @@ struct LetterSectionHeader: View {
 }
 
 struct ArabicLetterView: View {
+    /// Apple Music-style bar minimization: true while scrolling down.
+    @State private var barsCollapsed = false
     @ObservedObject var settings = Settings.shared
 
     let letterData: LetterData
@@ -1104,6 +1119,8 @@ struct ArabicLetterView: View {
             .themedListRowBackground()
         }
         #if !os(watchOS)
+        // Apple Music-style: the bottom bar minimizes while scrolling down, restores on scroll-up.
+        .collapseBarsOnScroll($barsCollapsed)
         .adaptiveSafeArea(edge: .bottom) {
             VStack(spacing: SafeAreaInsetVStackSpacing.standard) {
                 ArabicSizeSlider()
@@ -1115,6 +1132,7 @@ struct ArabicLetterView: View {
                     arabicFontPicker
                 }
             }
+            .minimizedBarStyle(barsCollapsed)
             .padding(.horizontal, 24)
             .padding(.bottom)
             .background(Color.white.opacity(0.00001))
@@ -1135,16 +1153,19 @@ struct ArabicLetterView: View {
 
     @ViewBuilder
     private var arabicFontPicker: some View {
+        #if os(watchOS)
+        // The watch keeps the simple two-way choice; the richer three-way face picker is a phone thing.
         Picker("Arabic Font", selection: $settings.useFontArabic.animation(.easeInOut)) {
             Text("Quranic Font").tag(true)
             Text("Basic Font").tag(false)
         }
-        #if !os(watchOS)
-        .pickerStyle(.segmented)
-        #endif
-        // Non-interactive glass: interactive Liquid Glass steals per-segment taps on real iOS 26 hardware.
         .conditionalGlassEffect(interactive: false)
         .onChange(of: settings.useFontArabic) { _ in settings.hapticFeedback() }
+        #else
+        IslamArabicFontPicker()
+            // Non-interactive glass: interactive Liquid Glass steals per-segment taps on real iOS 26 hardware.
+            .conditionalGlassEffect(interactive: false)
+        #endif
     }
 
     @ViewBuilder
@@ -1612,7 +1633,7 @@ struct ArabicLetterRow: View, Equatable {
         isFavorite: Bool? = nil,
         accentColor: AccentColor = Settings.shared.accentColor,
         useFontArabic: Bool = Settings.shared.useFontArabic,
-        fontArabic: String = Settings.shared.fontArabic,
+        fontArabic: String = Settings.shared.nonQuranArabicFontName,
         searchQuery: String = ""
     ) {
         self.letterData = letterData
@@ -1889,7 +1910,7 @@ struct StopInfoRow: View {
             Text(symbol)
                 .font(
                     settings.islamUsesCustomArabicFace
-                        ? .custom(settings.fontArabic, size: 20, relativeTo: .headline)
+                        ? .custom(settings.nonQuranArabicFontName, size: 20, relativeTo: .headline)
                         : .headline.weight(.semibold)
                 )
                 .arabicFontDesign(custom: settings.islamUsesCustomArabicFace)

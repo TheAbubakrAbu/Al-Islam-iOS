@@ -35,6 +35,8 @@ struct ShareAyahSheet: View {
     @State private var generatedImage: UIImage?
     @State private var activityItems: [Any] = []
     @State private var showingActivityView = false
+    /// Whether the last system share actually completed (vs. cancelled) - see the activity sheet below.
+    @State private var didCompleteShare = false
     @State private var includeNote: Bool = false
     @State private var isGeneratingImage = false
     @State private var isSharing = false
@@ -539,15 +541,24 @@ struct ShareAyahSheet: View {
                 ZStack {
                     if actionMode == .image {
                         if let img = generatedImage {
+                            // The PREVIOUS image stays on screen while a regeneration runs (it is never
+                            // nilled mid-flight), dimmed slightly so the swap reads as an update, not a
+                            // teardown - this is what stopped the sheet's jump-and-reflow on every toggle.
                             Image(uiImage: img)
                                 .resizable()
                                 .scaledToFit()
                                 .cornerRadius(24)
                                 .padding(.horizontal, 16)
                                 .contextMenu { copyMenu(image: img) }
-                                .transition(.opacity.combined(with: .scale(scale: 0.98)))
+                                .opacity(isGeneratingImage ? 0.6 : 1)
+                                .animation(.easeInOut(duration: 0.15), value: isGeneratingImage)
+                                .transition(.opacity)
                         } else {
-                            EmptyView()
+                            // First render only: hold the preview slot at a stable size so the controls
+                            // below don't shift when the image lands.
+                            ProgressView()
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 180)
                         }
                     } else {
                         Text(shareAttributedText)
@@ -584,8 +595,8 @@ struct ShareAyahSheet: View {
                             .padding(.vertical, 4)
 
                             Text(ayahExistsInShareQiraah
-                                ? "Ayah numbering can differ between riwayat — no ayah is ever missing, but some are joined or split differently (for example, \"Alif Lam Meem\" and \"Dhalika al-Kitab...\" form a single ayah in most qiraat)."
-                                : "This ayah is not separate in this riwayah — its words are part of a neighboring ayah, so the Hafs text is shown.")
+                                ? "Ayah numbering can differ between riwayat - no ayah is ever missing, but some are joined or split differently (for example, \"Alif Lam Meem\" and \"Dhalika al-Kitab...\" form a single ayah in most qiraat)."
+                                : "This ayah is not separate in this riwayah - its words are part of a neighboring ayah, so the Hafs text is shown.")
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                                 .fixedSize(horizontal: false, vertical: true)
@@ -741,11 +752,13 @@ struct ShareAyahSheet: View {
                 .padding(.horizontal, 16)
                 .padding(.bottom)
                 .sheet(isPresented: $showingActivityView) {
+                    // didCompleteShare gates the auto-dismiss below: cancelling the share sheet used to
+                    // dismiss ShareAyahSheet too, throwing away the user's configured preview ("it reset").
                     if #available(iOS 16.0, *) {
-                        ActivityView(activityItems: activityItems)
+                        ActivityView(activityItems: activityItems, onComplete: { didCompleteShare = $0 })
                             .presentationDetents([.medium])
                     } else {
-                        ActivityView(activityItems: activityItems)
+                        ActivityView(activityItems: activityItems, onComplete: { didCompleteShare = $0 })
                     }
                 }
             }
@@ -788,50 +801,55 @@ struct ShareAyahSheet: View {
         .onChange(of: actionMode) { newValue in
             if didFinishInitialSetup { settings.hapticFeedback() }
             storedActionModeRaw = newValue.rawValue
-            isGeneratingImage = false
             if newValue == .image && generatedImage == nil {
                 generatePreviewImage()
             }
         }
+        // Every generation trigger below is gated on didFinishInitialSetup: onAppear already renders once
+        // explicitly, and its own state seeding used to echo through these observers as a SECOND, immediately
+        // discarded render (drawn in full on the serial queue - a wasted tajweed pass on every open).
         .onChange(of: shareSettings) { _ in
-            if didFinishInitialSetup { settings.hapticFeedback() }
+            guard didFinishInitialSetup else { return }
+            settings.hapticFeedback()
             generatePreviewImage()
         }
         .onChange(of: settings.showSurahInformation) { _ in
-            if didFinishInitialSetup { settings.hapticFeedback() }
+            guard didFinishInitialSetup else { return }
+            settings.hapticFeedback()
             generatePreviewImage()
         }
         .onChange(of: settings.showAyahInformation) { _ in
-            if didFinishInitialSetup { settings.hapticFeedback() }
+            guard didFinishInitialSetup else { return }
+            settings.hapticFeedback()
             generatePreviewImage()
         }
         .onChange(of: includeNote) { _ in
-            if didFinishInitialSetup { settings.hapticFeedback() }
+            guard didFinishInitialSetup else { return }
+            settings.hapticFeedback()
             generatePreviewImage()
         }
-        .onChange(of: shareIncludeRiwayah) { _ in generatePreviewImage() }
+        // No .onChange(of: shareIncludeRiwayah): every write to it also updates shareSettings.includeQiraah,
+        // so the shareSettings observer above already regenerates - a second observer meant every riwayah
+        // toggle rendered the image twice.
         .onChange(of: shareQiraah) { _ in
-            if didFinishInitialSetup { settings.hapticFeedback() }
+            guard didFinishInitialSetup else { return }
+            settings.hapticFeedback()
             generatePreviewImage()
         }
         .onChange(of: settings.showQiraahDetails) { show in
-            if !show {
+            if !show, shareSettings.includeQiraah {
                 shareIncludeRiwayah = false
-                shareSettings = ShareSettings(
-                    arabic: shareSettings.arabic,
-                    transliteration: shareSettings.transliteration,
-                    englishSaheeh: shareSettings.englishSaheeh,
-                    englishMustafa: shareSettings.englishMustafa,
-                    includeQiraah: false,
-                    shareArabicFont: shareSettings.shareArabicFont,
-                    cleanArabic: shareSettings.cleanArabic,
-                    hideArabicDots: shareSettings.hideArabicDots,
-                    showTajweed: shareSettings.showTajweed
-                )
+                // The shareSettings observer regenerates from this write; no explicit call needed.
+                shareSettings = updatedShareSettings(includeQiraah: false)
             }
-            generatePreviewImage()
         }
-        .onChange(of: showingActivityView) { if !$0 { presentationMode.wrappedValue.dismiss() } }
+        .onChange(of: showingActivityView) { open in
+            // Close the whole sheet only after a COMPLETED share. On cancel, stay put with the configured
+            // preview intact.
+            if !open && didCompleteShare {
+                presentationMode.wrappedValue.dismiss()
+            }
+        }
     }
 
     @ViewBuilder
@@ -893,6 +911,7 @@ struct ShareAyahSheet: View {
 
     private func presentShareSheet(with items: [Any]) {
         animateShare {
+            didCompleteShare = false
             activityItems = items
             showingActivityView = true
         }
@@ -936,32 +955,54 @@ struct ShareAyahSheet: View {
     }
 
     private func generatePreviewImage(completion: @escaping (UIImage) -> Void = { _ in }) {
+        // Snapshot EVERY main-actor input on main, before hopping to the render queue: the queue must never
+        // read view state (shareSettings, shareQiraah, the note) that a later toggle could be rewriting.
         let snapshot = shareSettings
+        let qiraahSnapshot = shareQiraah
+        let includeNoteSnapshot = includeNote
+        let noteSnapshot = noteText
         let generationID = imageGenerationID + 1
         imageGenerationID = generationID
-        generatedImage = nil
-        DispatchQueue.main.async {
-            self.isGeneratingImage = true
-        }
+        // The previous image deliberately STAYS visible (dimmed via isGeneratingImage) while this render
+        // runs. Nilling it here collapsed the preview to zero height and made the whole sheet jump on
+        // every toggle - the "screen jumps back" bug.
+        isGeneratingImage = true
         // UIScreen.main is main-thread-only; capture the width here (still on main) for the queue below.
         let screenWidth = UIScreen.main.bounds.width
         Self.shareImageQueue.async { [self] in
-            let img: UIImage = autoreleasepool { self.drawImage(shareSettings: snapshot, screenWidth: screenWidth) }
+            // Superseded before we even started drawing? Skip the (expensive, tajweed-attributed) render
+            // entirely instead of drawing an image only to discard it. main.sync is deadlock-free here:
+            // nothing on the main thread ever blocks on this queue. (@State reads are live through SwiftUI's
+            // storage, so this sees the CURRENT generation, not a stale copy.)
+            let stillCurrent = DispatchQueue.main.sync { self.imageGenerationID == generationID }
+            guard stillCurrent else { return }
+
+            let img: UIImage = autoreleasepool {
+                self.drawImage(
+                    shareSettings: snapshot,
+                    qiraah: qiraahSnapshot,
+                    includeNote: includeNoteSnapshot,
+                    noteText: noteSnapshot,
+                    screenWidth: screenWidth
+                )
+            }
             DispatchQueue.main.async {
                 guard self.imageGenerationID == generationID else { return }
-                withAnimation {
+                // Scoped to the image swap only - an unscoped withAnimation here animated the entire
+                // sheet's layout, amplifying the jump.
+                withAnimation(.easeInOut(duration: 0.15)) {
                     self.generatedImage = img
                     self.isGeneratingImage = false
-                    if self.actionMode == .image {
-                        self.activityItems = [img]
-                    }
-                    completion(img)
                 }
+                if self.actionMode == .image {
+                    self.activityItems = [img]
+                }
+                completion(img)
             }
         }
     }
 
-    private func drawImage(shareSettings: ShareSettings, screenWidth: CGFloat) -> UIImage {
+    private func drawImage(shareSettings: ShareSettings, qiraah shareQiraah: String, includeNote: Bool, noteText: String?, screenWidth: CGFloat) -> UIImage {
         guard let surah = surah, let ayah = ayah else { return UIImage() }
 
         // Rounded, to match the app's system-font design (the `fontDesign` environment does not reach this

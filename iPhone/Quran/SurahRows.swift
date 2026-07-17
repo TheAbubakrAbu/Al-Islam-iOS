@@ -327,9 +327,10 @@ struct SurahRow: View, Equatable {
     /// well in a narrow 2-column grid cell.
     private var gridBody: some View {
         VStack(alignment: .leading, spacing: 2) {
-            // Arabic id ornament + name on the top row, with the favorite star pinned to the trailing end of
-            // that same row (pushed over by a Spacer) instead of sitting alone above. The id now prefixes the
-            // transliteration below (e.g. "1: Al-Fatihah").
+            // Arabic id ornament + name on the top row. The favorite star is the tappable corner overlay
+            // (`.gridFavoriteStar`) applied by the enclosing grid tile - NOT a second inline star here, which
+            // is what produced the double star on a favorited surah. The trailing Spacer leaves the corner
+            // clear for that overlay. The id now prefixes the transliteration below (e.g. "1: Al-Fatihah").
             HStack(spacing: 4) {
                 Text(surah.idArabic)
                     .font(.custom(Settings.hafsUthmaniFontName, size: UIFont.preferredFont(forTextStyle: .title3).pointSize))
@@ -346,13 +347,8 @@ struct SurahRow: View, Equatable {
                 )
                 .arabicFontDesign(custom: settings.quranUsesCustomArabicFace)
 
-                Spacer(minLength: 4)
-
-                if favoriteState {
-                    Image(systemName: "star.fill")
-                        .font(.caption2)
-                        .foregroundStyle(accentColor.color)
-                }
+                // Leaves room at the trailing edge for the corner star overlay.
+                Spacer(minLength: 20)
             }
             .lineLimit(1)
             .minimumScaleFactor(0.5)
@@ -636,6 +632,8 @@ struct SurahAyahRow: View {
 
     #if os(iOS)
     /// Custom grid tile: the same ayah information as the list row, laid out vertically for a 2-column cell.
+    /// Styled to match a favorited `SurahRow` grid tile - accent-tinted conditional glass when bookmarked -
+    /// with a tappable bookmark in the corner (the counterpart of SurahRow's corner favorite star).
     private var gridBody: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 6) {
@@ -644,18 +642,9 @@ struct SurahAyahRow: View {
                     .foregroundColor(settings.accentColor.color)
                     .lineLimit(1)
                     .minimumScaleFactor(0.5)
-                    .onTapGesture {
-                        settings.hapticFeedback()
-                        toggleBookmarkWithNoteGuard()
-                    }
 
-                Spacer(minLength: 0)
-
-                if isBookmarked {
-                    Image(systemName: "bookmark.fill")
-                        .font(.caption2)
-                        .foregroundStyle(settings.accentColor.color)
-                }
+                // Leaves the corner clear for the tappable bookmark overlay below.
+                Spacer(minLength: 20)
             }
 
             ayahContent
@@ -664,7 +653,22 @@ struct SurahAyahRow: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
         .padding(12)
-        .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Color.primary.opacity(0.06)))
+        // Always CLEAR glass, even when bookmarked - the accent-filled bookmark icon in the corner carries
+        // the state; a tinted card here read as too loud next to the surah grid.
+        .conditionalGlassEffect(clear: true, rectangle: true)
+        .overlay(alignment: .topTrailing) {
+            Image(systemName: isBookmarked ? "bookmark.fill" : "bookmark")
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundColor(isBookmarked ? settings.accentColor.color : .secondary)
+                .padding(.top, 10)
+                .padding(.trailing, 11)
+                .contentShape(Rectangle().inset(by: -10))
+                .onTapGesture {
+                    settings.hapticFeedback()
+                    withAnimation(.easeInOut) { toggleBookmarkWithNoteGuard() }
+                }
+                .accessibilityLabel(isBookmarked ? "Remove bookmark" : "Add bookmark")
+        }
         .contentShape(Rectangle())
     }
     #endif
@@ -690,6 +694,26 @@ struct SurahAyahRow: View {
             Text(Settings.bookmarkNoteRemovalDialogMessage)
         }
     }
+}
+
+/// A short "when" for a history entry, e.g. "2h ago" / "Yesterday". Shown next to each history item so the
+/// expanded list reads as a timeline.
+private let historyRelativeFormatter: RelativeDateTimeFormatter = {
+    let f = RelativeDateTimeFormatter()
+    f.unitsStyle = .abbreviated
+    return f
+}()
+
+func formatHistoryTimestamp(_ date: Date) -> String {
+    historyRelativeFormatter.localizedString(for: date, relativeTo: Date())
+}
+
+/// A small trailing timestamp caption for a history row.
+func historyTimestampLabel(_ date: Date) -> some View {
+    Text(formatHistoryTimestamp(date))
+        .font(.caption2)
+        .monospacedDigit()
+        .foregroundStyle(.secondary)
 }
 
 /// Formats a duration as H:MM:SS once it reaches an hour, otherwise MM:SS.
@@ -959,18 +983,24 @@ struct LastListenedSurahRow: View {
     }
 
     private func listeningHistoryLabel(_ item: ListeningHistoryItem) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text("Surah \(item.surahNumber): \(item.surahName)")
-                .font(.subheadline.weight(.semibold))
-                .foregroundColor(settings.accentColor.color.opacity(0.75))
-                .lineLimit(1)
-                .minimumScaleFactor(0.5)
+        HStack {
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Surah \(item.surahNumber): \(item.surahName)")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundColor(settings.accentColor.color.opacity(0.75))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.5)
 
-            Text(item.reciter.name)
-                .font(.caption2)
-                .foregroundColor(.secondary)
-                .lineLimit(1)
-                .minimumScaleFactor(0.5)
+                Text(item.reciter.name)
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.5)
+            }
+
+            Spacer(minLength: 8)
+
+            historyTimestampLabel(item.timestamp)
         }
         .padding(.vertical, 4)
     }
@@ -1064,7 +1094,9 @@ struct SummaryAyahTile: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
             .padding(12)
-            .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Color.primary.opacity(0.06)))
+            // Clear conditional glass (never accent-tinted) - these summary tiles have no favorite state, so
+            // they stay a plain glass card like the rest of the app's clear tiles.
+            .conditionalGlassEffect(clear: true, rectangle: true)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -1227,7 +1259,9 @@ struct SummarySurahTile: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
             .padding(12)
-            .background(RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Color.primary.opacity(0.06)))
+            // Clear conditional glass (never accent-tinted) - these summary tiles have no favorite state, so
+            // they stay a plain glass card like the rest of the app's clear tiles.
+            .conditionalGlassEffect(clear: true, rectangle: true)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -1280,6 +1314,18 @@ struct LastReadAyahRow: View {
             )
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+        .contentShape(Rectangle())
+    }
+
+    /// A reading-history entry: the ayah, dimmed, with a trailing "when" timestamp.
+    private func readHistoryLabel(surah: Surah, ayah: Ayah, timestamp: Date) -> some View {
+        HStack(spacing: 8) {
+            SurahAyahRow(surah: surah, ayah: ayah, note: noteText(surahID: surah.id, ayahID: ayah.id))
+                .opacity(0.6)
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+            historyTimestampLabel(timestamp)
+        }
         .contentShape(Rectangle())
     }
 
@@ -1357,27 +1403,13 @@ struct LastReadAyahRow: View {
                                     settings.hapticFeedback()
                                     onSelectAyah(surah.id, ayah.id)
                                 } label: {
-                                    SurahAyahRow(
-                                        surah: surah,
-                                        ayah: ayah,
-                                        note: noteText(surahID: surah.id, ayahID: ayah.id)
-                                    )
-                                    .opacity(0.6)
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                                    .contentShape(Rectangle())
+                                    readHistoryLabel(surah: surah, ayah: ayah, timestamp: item.timestamp)
                                 }
                                 .buttonStyle(.plain)
                                 .contentShape(Rectangle())
                             } else {
                                 NavigationLink(destination: SurahView(surah: surah, ayah: ayah.id)) {
-                                    SurahAyahRow(
-                                        surah: surah,
-                                        ayah: ayah,
-                                        note: noteText(surahID: surah.id, ayahID: ayah.id)
-                                    )
-                                    .opacity(0.6)
-                                    .frame(maxWidth: .infinity, alignment: .leading)
-                                    .contentShape(Rectangle())
+                                    readHistoryLabel(surah: surah, ayah: ayah, timestamp: item.timestamp)
                                 }
                                 .tag(surah.id)
                                 .contentShape(Rectangle())
@@ -1433,9 +1465,36 @@ struct LastListenedAyahRow: View {
     @State private var confirmDeleteForever = false
 
     private var rowContent: some View {
-        SurahAyahRow(surah: surah, ayah: ayah)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .contentShape(Rectangle())
+        HStack(spacing: 8) {
+            SurahAyahRow(surah: surah, ayah: ayah)
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+            // Resume: play from this ayah and keep going through the surah (task: "play from ayah so it keeps
+            // playing after"). A child onTapGesture (not a nested Button) so it works inside the row's
+            // navigation wrapper, the same pattern the grid favorite star uses.
+            Image(systemName: "play.circle.fill")
+                .font(.title3)
+                .foregroundStyle(settings.accentColor.color)
+                .contentShape(Rectangle().inset(by: -8))
+                .onTapGesture {
+                    settings.hapticFeedback()
+                    quranPlayer.playAyah(surahNumber: surah.id, ayahNumber: ayah.id, continueRecitation: true)
+                }
+                .accessibilityLabel("Play from this ayah")
+        }
+        .contentShape(Rectangle())
+    }
+
+    /// A history entry's row: the ayah, dimmed, with a trailing "when" timestamp.
+    private func ayahHistoryLabel(histSurah: Surah, histAyah: Ayah, timestamp: Date) -> some View {
+        HStack(spacing: 8) {
+            SurahAyahRow(surah: histSurah, ayah: histAyah)
+                .opacity(0.6)
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+            historyTimestampLabel(timestamp)
+        }
+        .contentShape(Rectangle())
     }
 
     @ViewBuilder
@@ -1448,19 +1507,13 @@ struct LastListenedAyahRow: View {
                         settings.hapticFeedback()
                         onSelectAyah(histSurah.id, histAyah.id)
                     } label: {
-                        SurahAyahRow(surah: histSurah, ayah: histAyah)
-                            .opacity(0.6)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .contentShape(Rectangle())
+                        ayahHistoryLabel(histSurah: histSurah, histAyah: histAyah, timestamp: item.timestamp)
                     }
                     .buttonStyle(.plain)
                     .contentShape(Rectangle())
                 } else {
                     NavigationLink(destination: SurahView(surah: histSurah, ayah: histAyah.id)) {
-                        SurahAyahRow(surah: histSurah, ayah: histAyah)
-                            .opacity(0.6)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .contentShape(Rectangle())
+                        ayahHistoryLabel(histSurah: histSurah, histAyah: histAyah, timestamp: item.timestamp)
                     }
                     .tag(histSurah.id)
                     .contentShape(Rectangle())
@@ -1964,6 +2017,10 @@ struct AyahSearchRow: View, Equatable {
         let showTrLine: Bool
         let showSaheehLine: Bool
         let showMustafaLine: Bool
+        /// When the verse-search index returned this ayah but none of the fields matched under THIS row's
+        /// normalization, force the Arabic line to show and guarantee at least one highlighted span - a
+        /// search result must never appear with nothing highlighted.
+        let forceArabicHighlight: Bool
     }
 
     private static let normalizedSourcesCache: NSCache<NSString, NormalizedSources> = {
@@ -2136,7 +2193,10 @@ struct AyahSearchRow: View, Equatable {
         let mTr = sourceMatchesQuery(sources.transliteration, normalizedQuery: normalizedQuery)
         let mSaheeh = sourceMatchesQuery(sources.saheeh, normalizedQuery: normalizedQuery)
         let mMustafa = sourceMatchesQuery(sources.mustafa, normalizedQuery: normalizedQuery)
-        let showArabicLine = settings.showArabicText || mArabic
+        // The index that produced this result normalizes/stems differently than sourceMatchesQuery, so a
+        // returned ayah can have no field match here. In that case force the Arabic line + a guaranteed span.
+        let forceArabicHighlight = !normalizedQuery.isEmpty && !(mArabic || mTr || mSaheeh || mMustafa)
+        let showArabicLine = settings.showArabicText || mArabic || forceArabicHighlight
         let showTrLine = settings.isHafsDisplay && (settings.showTransliteration || mTr)
 
         let showEnglishLines: (saheeh: Bool, mustafa: Bool) = {
@@ -2159,7 +2219,8 @@ struct AyahSearchRow: View, Equatable {
             showArabicLine: showArabicLine,
             showTrLine: showTrLine,
             showSaheehLine: showEnglishLines.saheeh,
-            showMustafaLine: showEnglishLines.mustafa
+            showMustafaLine: showEnglishLines.mustafa,
+            forceArabicHighlight: forceArabicHighlight
         )
     }
 
@@ -2174,13 +2235,14 @@ struct AyahSearchRow: View, Equatable {
                 if visibility.showArabicLine {
                     HighlightedSnippet(
                         source: arabicDisplayText(),
-                        term: visibility.mArabic ? query : "",
+                        term: (visibility.mArabic || visibility.forceArabicHighlight) ? query : "",
                         font: .custom(searchArabicFontName, size: UIFont.preferredFont(forTextStyle: .body).pointSize),
                         accent: settings.accentColor.color,
                         fg: .primary,
                         preStyledSource: arabicTajweedText(),
                         beginnerMode: settings.beginnerMode,
-                        lineLimit: nil
+                        lineLimit: nil,
+                        guaranteeMatch: visibility.forceArabicHighlight
                     )
                     .arabicFontDesign(custom: settings.quranUsesCustomArabicFace)
                     .frame(maxWidth: .infinity, alignment: .trailing)
@@ -2253,13 +2315,14 @@ struct AyahSearchRow: View, Equatable {
             if visibility.showArabicLine {
                 HighlightedSnippet(
                     source: arabicDisplayText(),
-                    term: visibility.mArabic ? query : "",
+                    term: (visibility.mArabic || visibility.forceArabicHighlight) ? query : "",
                     font: .custom(searchArabicFontName, size: UIFont.preferredFont(forTextStyle: .body).pointSize),
                     accent: settings.accentColor.color,
                     fg: .primary,
                     preStyledSource: arabicTajweedText(),
                     beginnerMode: settings.beginnerMode,
-                    lineLimit: nil
+                    lineLimit: nil,
+                    guaranteeMatch: visibility.forceArabicHighlight
                 )
                 .arabicFontDesign(custom: settings.quranUsesCustomArabicFace)
                 .frame(maxWidth: .infinity, alignment: .trailing)

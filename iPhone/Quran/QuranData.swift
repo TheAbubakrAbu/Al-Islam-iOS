@@ -3936,6 +3936,74 @@ final class QuranData: ObservableObject {
         #endif
     }
 
+    #if !os(watchOS)
+    /// The missed-invalidation escape hatch for `verseSearchSnapshot()`: the index's qiraah didn't match the
+    /// display qiraah and no scheduled build is in flight, so rebuild off-main from a main-thread copy of
+    /// `quran` and publish atomically - the same shape as `scheduleVerseSearchIndexBuild`, minus the
+    /// dynamic-cache save (this path is a repair, not a normal load). MUST be called on the main actor
+    /// (it snapshots `quran` there).
+    @MainActor
+    private func scheduleFallbackVerseIndexRebuild(qiraahKey: String) {
+        searchIndexBuildTask?.cancel()
+
+        // A main-thread COW handoff, like the search snapshot itself: the task reads only this immutable
+        // local copy, never the live published array.
+        let surahs = quran
+
+        searchIndexBuildTask = Task(priority: .userInitiated) { [weak self] in
+            guard let self else { return }
+
+            let displayQiraah = qiraahKey.isEmpty ? nil : qiraahKey
+            var vIndex: [VerseIndexEntry] = []
+            vIndex.reserveCapacity(surahs.reduce(0) { $0 + $1.ayahs.count })
+
+            for surah in surahs {
+                for ayah in surah.ayahs {
+                    if Task.isCancelled { return }
+                    vIndex.append(
+                        self.makeVerseIndexEntry(
+                            surahID: surah.id,
+                            ayahID: ayah.id,
+                            rawArabic: ayah.textArabic(for: displayQiraah),
+                            cleanArabic: ayah.textCleanArabic(for: displayQiraah),
+                            englishSaheeh: ayah.textEnglishSaheeh,
+                            englishMustafa: ayah.textEnglishMustafa,
+                            transliteration: ayah.textTransliteration
+                        )
+                    )
+                }
+                await Task.yield()
+            }
+
+            let arabicIndexes = self.buildArabicSearchIndexes(for: vIndex)
+            let silentArabicIndexes = self.buildSilentArabicSearchIndexes(for: vIndex)
+            if Task.isCancelled { return }
+            let englishIndexes = self.buildEnglishSearchIndexes(for: vIndex)
+            if Task.isCancelled { return }
+
+            let finalizedVerseIndex = vIndex
+            let finalizedAllVerseIndices = Array(finalizedVerseIndex.indices)
+            let currentQiraahKey = await MainActor.run { self.settings.displayQiraahForArabic ?? "" }
+            guard currentQiraahKey == qiraahKey else { return }
+
+            await MainActor.run {
+                self.verseIndex = finalizedVerseIndex
+                self.arabicTokenIndex = arabicIndexes.token
+                self.arabicPrefix2Index = arabicIndexes.prefix2
+                self.silentArabicTokenIndex = silentArabicIndexes.token
+                self.silentArabicPrefix2Index = silentArabicIndexes.prefix2
+                self.englishTokenIndex = englishIndexes.token
+                self.englishPrefix3Index = englishIndexes.prefix3
+                self.allVerseIndices = finalizedAllVerseIndices
+                self.cachedVerseIndexQiraah = qiraahKey
+                self.searchResultIndexCache.removeAll()
+                self.cachedVerseSearchSnapshot = nil
+                self.isVerseSearchReady = true
+            }
+        }
+    }
+    #endif
+
     private func startLoading() {
         guard loadTask == nil else { return }
         // `.userInitiated`: this fires at app launch (QuranData.shared is created up front) while the app
@@ -4513,36 +4581,10 @@ final class QuranData: ObservableObject {
         }
     }
 
-    private func rebuildVerseIndex() {
-        let displayQiraah = settings.displayQiraahForArabic
-        verseIndex = quran.flatMap { surah in
-            surah.ayahs.map { ayah in
-                let raw = ayah.textArabic(for: displayQiraah)
-                let clean = ayah.textCleanArabic(for: displayQiraah)
-                return makeVerseIndexEntry(
-                    surahID: surah.id,
-                    ayahID: ayah.id,
-                    rawArabic: raw,
-                    cleanArabic: clean,
-                    englishSaheeh: ayah.textEnglishSaheeh,
-                    englishMustafa: ayah.textEnglishMustafa,
-                    transliteration: ayah.textTransliteration
-                )
-            }
-        }
-        let arabicIndexes = buildArabicSearchIndexes(for: verseIndex)
-        let silentArabicIndexes = buildSilentArabicSearchIndexes(for: verseIndex)
-        let englishIndexes = buildEnglishSearchIndexes(for: verseIndex)
-        arabicTokenIndex = arabicIndexes.token
-        arabicPrefix2Index = arabicIndexes.prefix2
-        silentArabicTokenIndex = silentArabicIndexes.token
-        silentArabicPrefix2Index = silentArabicIndexes.prefix2
-        englishTokenIndex = englishIndexes.token
-        englishPrefix3Index = englishIndexes.prefix3
-        allVerseIndices = Array(verseIndex.indices)
-        searchResultIndexCache.removeAll()
-        cachedVerseSearchSnapshot = nil
-    }
+    // NOTE: There is deliberately no synchronous rebuildVerseIndex() anymore. The full 6,236-entry index
+    // build MUST run off-main (`scheduleVerseSearchIndexBuild` / `scheduleFallbackVerseIndexRebuild`):
+    // running it inline on the main thread - which the search path once did on a keystroke - froze the app
+    // long enough under Low Power Mode's CPU throttle for the watchdog to kill it.
 
     private func rebuildBoundaryModels() {
         let displayQiraah = settings.displayQiraahForArabic
@@ -5219,6 +5261,7 @@ final class QuranData: ObservableObject {
         return nil
     }
 
+    @MainActor
     func searchVerses(term raw: String, limit: Int = 10, offset: Int = 0) -> [VerseIndexEntry] {
         #if os(watchOS)
         return []
@@ -5226,9 +5269,12 @@ final class QuranData: ObservableObject {
         guard isVerseSearchReady else { return [] }
         let currentKey = settings.displayQiraahForArabic ?? ""
         if cachedVerseIndexQiraah != currentKey {
-            rebuildVerseIndex()
-            cachedVerseIndexQiraah = currentKey
-            isVerseSearchReady = true
+            // Same missed-invalidation handling as `verseSearchSnapshot()`: never run the full index rebuild
+            // synchronously on the main thread - repair off-main and report no results for this pass.
+            isVerseSearchReady = false
+            cachedVerseSearchSnapshot = nil
+            scheduleFallbackVerseIndexRebuild(qiraahKey: currentKey)
+            return []
         }
         guard !verseIndex.isEmpty else { return [] }
 
@@ -5261,26 +5307,34 @@ final class QuranData: ObservableObject {
         #endif
     }
 
-    /// MAIN THREAD ONLY. This reads (and on a qiraah change, rewrites) the live index arrays - plain Swift
-    /// arrays and dictionaries whose writers all publish on the main actor. Reading them from another thread
-    /// races those writes: Swift's copy-on-write buffers are not thread-safe, and the crash is an
-    /// EXC_BAD_ACCESS deep in refcounting. That is exactly the ayah-search crash - and Low Power Mode made it
-    /// frequent, because it throttles the background index build and so widens the window during which a
-    /// search runs while the arrays are still being (re)assigned.
+    /// MAIN ACTOR ONLY - and now compiler-enforced, not just an assert (the assert compiled out of Release
+    /// builds, which is where the crash lived). This reads the live index arrays - plain Swift arrays and
+    /// dictionaries whose writers all publish on the main actor. Reading them from another thread races
+    /// those writes: Swift's copy-on-write buffers are not thread-safe, and the crash is an EXC_BAD_ACCESS
+    /// deep in refcounting. That is exactly the ayah-search crash - and Low Power Mode made it frequent,
+    /// because it throttles the background index build and so widens the window during which a search runs
+    /// while the arrays are still being (re)assigned.
     ///
     /// The returned snapshot is a value type holding immutable copies, so it is safe to hand to any thread;
     /// only the HANDOFF has to happen here, on main.
+    @MainActor
     func verseSearchSnapshot() -> VerseSearchSnapshot? {
         #if os(watchOS)
         return nil
         #else
-        assert(Thread.isMainThread, "verseSearchSnapshot() must be called on the main thread")
         guard isVerseSearchReady else { return nil }
         let currentKey = settings.displayQiraahForArabic ?? ""
         if cachedVerseIndexQiraah != currentKey {
-            rebuildVerseIndex()
-            cachedVerseIndexQiraah = currentKey
-            isVerseSearchReady = true
+            // A missed invalidation (index built for another qiraah). This used to run the FULL 6,236-entry
+            // rebuild synchronously right here, on the main thread, on a search KEYSTROKE - under Low Power
+            // Mode's CPU throttle that is long enough for the watchdog to kill the app, which presents as
+            // "search crashed when I retyped." Rebuild off-main instead: flip to not-ready (the search UI
+            // shows its preparing state and re-runs automatically when this lands) and hand the build to the
+            // same background pipeline every other rebuild uses.
+            isVerseSearchReady = false
+            cachedVerseSearchSnapshot = nil
+            scheduleFallbackVerseIndexRebuild(qiraahKey: currentKey)
+            return nil
         }
         guard !verseIndex.isEmpty else { return nil }
 
@@ -5567,6 +5621,7 @@ final class QuranData: ObservableObject {
         }
     }
     
+    @MainActor
     func searchVersesAll(term raw: String) -> [VerseIndexEntry] {
         withAnimation {
             searchVerses(term: raw, limit: .max, offset: 0)

@@ -1,5 +1,73 @@
 import SwiftUI
 
+// MARK: - Apple Music-style bar minimization
+//
+// The system tab bar minimizes natively on iOS 26 (`tabBarMinimizeBehavior`); the app's custom glass bars
+// mimic it by watching scroll direction (iOS 18+) and shrinking while the user scrolls down, re-expanding
+// on scroll-up or at the top. Everything below no-ops on older OSes and on watchOS.
+
+/// What the collapse watcher reads from the scroll geometry each change.
+struct ScrollCollapseMetrics: Equatable {
+    let offset: CGFloat
+    let distanceFromBottom: CGFloat
+}
+
+extension View {
+    /// Watches this scroll view's direction and drives `collapsed`: true while scrolling down, false on
+    /// scroll-up or near either END of the content. Attach to the `List`/`ScrollView` whose bars should
+    /// minimize. iOS 18+; on earlier OSes `collapsed` simply never becomes true.
+    @ViewBuilder
+    func collapseBarsOnScroll(_ collapsed: Binding<Bool>) -> some View {
+        #if os(iOS)
+        if #available(iOS 18.0, *) {
+            self.onScrollGeometryChange(for: ScrollCollapseMetrics.self) { geometry in
+                ScrollCollapseMetrics(
+                    offset: geometry.contentOffset.y + geometry.contentInsets.top,
+                    distanceFromBottom: geometry.contentSize.height + geometry.contentInsets.bottom
+                        - (geometry.contentOffset.y + geometry.containerSize.height)
+                )
+            } action: { oldValue, newValue in
+                // Near the top OR the bottom the bars always expand, and no further toggling happens there.
+                // The bottom half of this matters doubly: collapsing/expanding a bar CHANGES the bottom
+                // inset, which re-fires this watcher - near the end of a surah that fed back into an
+                // oscillation of collapse/expand springs (the end-of-surah lag). Inside the end zones the
+                // early return breaks the loop.
+                if newValue.offset <= 24 || newValue.distanceFromBottom <= 140 {
+                    if collapsed.wrappedValue {
+                        withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+                            collapsed.wrappedValue = false
+                        }
+                    }
+                    return
+                }
+                let delta = newValue.offset - oldValue.offset
+                // Jitter gate: ignore sub-2pt wobble (bounce, precision) so the bars don't flicker.
+                guard abs(delta) > 2 else { return }
+                let shouldCollapse = delta > 0
+                if shouldCollapse != collapsed.wrappedValue {
+                    withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+                        collapsed.wrappedValue = shouldCollapse
+                    }
+                }
+            }
+        } else {
+            self
+        }
+        #else
+        self
+        #endif
+    }
+
+    /// The minimized look for a custom glass bar: scaled toward its bottom edge and slightly faded, the same
+    /// visual language as the iOS 26 minimized tab bar. Pair with hiding the bar's secondary rows.
+    func minimizedBarStyle(_ collapsed: Bool) -> some View {
+        self
+            .scaleEffect(collapsed ? 0.86 : 1, anchor: .bottom)
+            .opacity(collapsed ? 0.72 : 1)
+            .animation(.spring(response: 0.35, dampingFraction: 0.85), value: collapsed)
+    }
+}
+
 extension View {
     @ViewBuilder
     func adaptiveSafeArea<InsetContent: View>(edge: VerticalEdge, @ViewBuilder content: () -> InsetContent) -> some View {
@@ -216,10 +284,10 @@ extension View {
     ) -> some View {
         overlay(alignment: .topTrailing) {
             Image(systemName: isFavorite ? "star.fill" : "star")
-                .font(.system(size: 10, weight: .semibold))
+                .font(.system(size: 11, weight: .semibold))
                 .foregroundColor(isFavorite ? accent : .secondary)
-                .padding(.top, 5)
-                .padding(.trailing, 5)
+                .padding(.top, 10)
+                .padding(.trailing, 11)
                 .contentShape(Rectangle().inset(by: -10))
                 .onTapGesture {
                     Settings.shared.hapticFeedback()
@@ -231,3 +299,28 @@ extension View {
         }
     }
 }
+
+#if os(iOS)
+/// The shared three-way Arabic face picker for the non-Quran Arabic screens (Hadith, Adhkar, Duas,
+/// 99 Names, Arabic Alphabet). One control, one setting - every screen that shows standard Arabic
+/// text offers the same choice: Uthmani (the Qiraat face), IndoPak, or the system font.
+struct IslamArabicFontPicker: View {
+    @ObservedObject private var settings = Settings.shared
+
+    var body: some View {
+        Picker("Arabic Font", selection: Binding(
+            get: { settings.islamArabicFace },
+            set: { newValue in
+                guard newValue != settings.islamArabicFace else { return }
+                settings.hapticFeedback()
+                withAnimation(.easeInOut) { settings.islamArabicFace = newValue }
+            }
+        )) {
+            Text("Uthmani").tag(Settings.IslamArabicFace.uthmani)
+            Text("IndoPak").tag(Settings.IslamArabicFace.indopak)
+            Text("Basic").tag(Settings.IslamArabicFace.basic)
+        }
+        .pickerStyle(.segmented)
+    }
+}
+#endif

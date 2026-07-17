@@ -21,13 +21,13 @@ I received a **Certificate of Congressional Recognition** from U.S. Representati
 - [**Al-Quran | Beginner Quran**](https://github.com/TheAbubakrAbu/Al-Quran-iOS)
 
 ## Overview
-Al-Islam is a simply designed and feature-rich app that helps Muslims strengthen their faith and seamlessly practice Islam. Whether you’re a lifelong believer, a new convert, or simply exploring Islam, this app provides everything you need - from accurate prayer times to Quranic access and essential Islamic tools.
+Al-Islam is a simply designed and feature-rich app that helps Muslims strengthen their faith and seamlessly practice Islam. Whether you’re a lifelong believer, a new convert, or simply exploring Islam, this app provides everything you need - from accurate prayer times to the complete Quran, the major Hadith collections, tafsir, and essential Islamic tools.
 
 ## Unique Features
-- **Traveling Mode** – Automatically activates when traveling or can be manually enabled. Adjust settings like prayer calculations, Hanafi madhab, and prayer offsets.
+- **Traveling Mode** – Automatically activates when traveling or can be manually enabled, and syncs between iPhone and Apple Watch. Adjust settings like prayer calculations, Hanafi madhab, and prayer offsets.
 - **Nagging Mode** – Never miss a prayer! Receive notifications at a chosen start time before each prayer, then reminders every 15 minutes, with final alerts at 10 and 5 minutes remaining.
 - **Arabic Beginner Mode** – Spaces out Arabic letters to help beginners recognize them more easily while learning to read the Quran.
-- **Unique Ayah Sharing** – Share Quranic verses as text or images effortlessly.
+- **Unique Ayah Sharing** – Share Quranic verses as text or images effortlessly, or select multiple ayahs at once to share, copy, bookmark, or annotate together.
 
 ## Comprehensive Prayer Times
 - Accurate prayer times for any location.
@@ -38,14 +38,23 @@ Al-Islam is a simply designed and feature-rich app that helps Muslims strengthen
 ## The Complete Quran
 - View by Surah or Juz, with Juz displaying the starting ayah.
 - Read as a scrolling ayah list or as a mushaf, page by page.
-- Read in Arabic, English transliteration, and translation.
+- Read in Arabic, English transliteration, and translation (Saheeh International and Clear Quran).
 - Color-coded tajweed with a built-in reference for the rules.
-- Compare the qiraat (readings) side by side.
-- Bookmark, favorite, and track last read/listened ayah.
+- Tafsir for any ayah - Ibn Kathir, Maarif Ul Quran, and Tazkirul Quran in English, plus Ibn Kathir, al-Tabari, and as-Sa'di in Arabic - fetched once and saved for offline reading, with an option to download all tafsirs.
+- Compare the qiraat (readings) and English translations side by side.
+- Select multiple ayahs to share, copy, bookmark, note, or switch to beginner mode all at once.
+- Bookmark, favorite, add notes, and track last read/listened ayah with recent history.
 - Powerful Quran search by keyword, ayah (e.g., `5:27`), page, or Juz - reachable from anywhere you are reading.
 - Remove tashkeel (diacritics) for cleaner reading.
-- Listen to recitations from 10+ reciters.
+- Listen to recitations from over 60 reciters and qiraat, with full-Surah and verse-by-verse playback, offline downloads, and offline ayah timings for many reciters.
 - Random Surah mode for discovery.
+
+## Hadith Collections
+- All of the major Hadith books in one place: the Nine Books (Sahih al-Bukhari, Sahih Muslim, Sunan an-Nasa'i, Sunan Abi Dawud, Jami` at-Tirmidhi, Sunan Ibn Majah, Muwatta Malik, Sunan ad-Darimi, and Musnad Ahmad), the forty-Hadith collections (Nawawi's Forty, Hadith Qudsi, and Shah Waliullah's Forty), and other classics (Riyad as-Salihin, Mishkat al-Masabih, Bulugh al-Maram, Al-Adab Al-Mufrad, and Shama'il Muhammadiyah).
+- Browse by collection and chapter, in Arabic with English translation and narrator chains.
+- Search within any book by keyword across the Arabic and English text.
+- Each collection is fetched once and saved for offline reading, with an option to download every book.
+- Copy or share any Hadith with its full reference.
 
 ## Islamic Calendar and Event Notifications
 - Hijri date displayed in Arabic and English.
