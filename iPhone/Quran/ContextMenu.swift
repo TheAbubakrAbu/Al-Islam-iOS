@@ -576,7 +576,11 @@ private final class AyahTafsirViewModel: ObservableObject {
         arabicErrorMessage = nil
 
         do {
-            let data = try await TafsirStore.shared.data(editionSlug: slug, surah: surah, ayah: ayah)
+            // Unstructured Task: the page reader rebuilds its hosting view mid-flight, which cancels the
+            // sheet's `.task` - without this wrapper that cancellation reached into URLSession and every
+            // page-mode tafsir died with "Cancelled". The fetch now survives the view churn.
+            let surah = self.surah, ayah = self.ayah
+            let data = try await Task { try await TafsirStore.shared.data(editionSlug: slug, surah: surah, ayah: ayah) }.value
             let decoded = try JSONDecoder().decode(SpaTafsirAyahResponse.self, from: data)
             let text = decoded.text.trimmingCharacters(in: .whitespacesAndNewlines)
             if !text.isEmpty {
@@ -584,10 +588,20 @@ private final class AyahTafsirViewModel: ObservableObject {
             }
             loadedArabicSlugs.insert(slug)
         } catch {
-            arabicErrorMessage = error.localizedDescription
+            // Cancellation is view-lifecycle noise, not a failure - the next `.task` run retries silently.
+            if !Self.isCancellation(error) {
+                arabicErrorMessage = error.localizedDescription
+            }
         }
 
         isLoadingArabic = false
+    }
+
+    /// True for the errors a torn-down SwiftUI task produces - never worth showing to the reader.
+    static func isCancellation(_ error: Error) -> Bool {
+        if error is CancellationError { return true }
+        if let urlError = error as? URLError, urlError.code == .cancelled { return true }
+        return (error as NSError).code == NSURLErrorCancelled
     }
 
     func load(surah: Int, ayah: Int) async {
@@ -600,13 +614,16 @@ private final class AyahTafsirViewModel: ObservableObject {
 
         do {
             // Cache-first through the shared store: an ayah whose tafsir was ever fetched (or bulk-downloaded)
-            // loads instantly and offline; only a true first look hits the network.
-            let data = try await TafsirStore.shared.data(surah: surah, ayah: ayah)
+            // loads instantly and offline; only a true first look hits the network. The unstructured Task
+            // insulates the fetch from the page reader cancelling the sheet's `.task` mid-flight.
+            let data = try await Task { try await TafsirStore.shared.data(surah: surah, ayah: ayah) }.value
             let decoded = try JSONDecoder().decode(AyahTafsirResponse.self, from: data)
             tafsirs = decoded.tafsirs
             loadedKey = key
         } catch {
-            errorMessage = error.localizedDescription
+            if !Self.isCancellation(error) {
+                errorMessage = error.localizedDescription
+            }
         }
 
         isLoading = false
@@ -706,6 +723,29 @@ struct AyahTafsirSheet: View {
         withAnimation { proxy.scrollTo(tafsirBlockScrollID(match.block), anchor: .center) }
     }
 
+    /// The reader's display text for one of the card's ayahs: clean/no-dots per settings, beginner
+    /// letter spacing when on - the same string an AyahRow would show.
+    private func tafsirArabicDisplay(_ ayah: Ayah) -> String {
+        let text = ayah.displayArabicText(surahId: surahNumber, clean: settings.cleanArabicText, qiraahOverride: settings.displayQiraahForArabic)
+        return settings.beginnerMode ? text.map { String($0) }.joined(separator: " ") : text
+    }
+
+    /// Tajweed-colored attributed text for the card, when tajweed is on and the display is Hafs.
+    private func tafsirTajweedText(_ ayah: Ayah) -> AttributedString? {
+        guard settings.showTajweedColors, settings.showArabicText, settings.isHafsDisplay else { return nil }
+        let text = ayah.displayArabicText(surahId: surahNumber, clean: false)
+        let displayText = settings.cleanArabicText ? ayah.displayArabicText(surahId: surahNumber, clean: true) : text
+        let rendered = settings.beginnerMode ? displayText.map { String($0) }.joined(separator: " ") : displayText
+        return TajweedStore.shared.attributedText(
+            surah: surahNumber,
+            ayah: ayah.id,
+            text: text,
+            displayText: rendered,
+            cleanDisplayText: settings.cleanArabicText,
+            beginnerSpacing: settings.beginnerMode
+        )
+    }
+
     private var tafsirAyahRange: ClosedRange<Int> {
         parsedAyahRange(from: selectedTafsirEntry?.groupVerse) ?? ayahNumber...ayahNumber
     }
@@ -728,15 +768,33 @@ struct AyahTafsirSheet: View {
         let trimmed = groupVerse.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return nil }
 
-        let versePortion = trimmed.split(separator: ":").last.map(String.init) ?? trimmed
-        let numbers = versePortion
-            .components(separatedBy: CharacterSet.decimalDigits.inverted)
-            .compactMap { Int($0) }
+        // The API sends a full SENTENCE: "You are reading a tafsir for the group of verses 27:15 to
+        // 27:19". The old parse split on ":" and took the LAST piece - just "19" - which collapsed a
+        // five-ayah group to one and mistitled the card ("27:19" for a tap on 16). Pull every
+        // surah:ayah pair instead and span their AYAH numbers.
+        var ayahNumbers: [Int] = []
+        if let regex = try? NSRegularExpression(pattern: #"(\d{1,3})\s*:\s*(\d{1,3})"#) {
+            let matches = regex.matches(in: trimmed, range: NSRange(trimmed.startIndex..., in: trimmed))
+            for match in matches {
+                if let range = Range(match.range(at: 2), in: trimmed), let ayah = Int(trimmed[range]) {
+                    ayahNumbers.append(ayah)
+                }
+            }
+        }
+        // No S:A pairs at all (some editions send bare numbers): fall back to every number present.
+        if ayahNumbers.isEmpty {
+            ayahNumbers = trimmed
+                .components(separatedBy: CharacterSet.decimalDigits.inverted)
+                .compactMap { Int($0) }
+                .filter { $0 != surahNumber }   // a stray surah number isn't an ayah bound
+        }
+        guard var lower = ayahNumbers.min(), var upper = ayahNumbers.max() else { return nil }
 
-        guard let first = numbers.first else { return nil }
-        let second = numbers.dropFirst().first ?? first
-        let lower = min(first, second)
-        let upper = max(first, second)
+        // The tapped ayah is, by definition, part of this tafsir's group - the shown range must
+        // always contain it, whatever the sentence said.
+        lower = min(lower, ayahNumber)
+        upper = max(upper, ayahNumber)
+
         let maxAyah = quranData.surah(surahNumber)?.numberOfAyahs(for: settings.displayQiraahForArabic) ?? upper
         let clampedLower = min(max(lower, 1), maxAyah)
         let clampedUpper = min(max(upper, clampedLower), maxAyah)
@@ -860,17 +918,23 @@ struct AyahTafsirSheet: View {
                     .foregroundStyle(.secondary)
             } else {
                 VStack(alignment: .trailing, spacing: 10) {
+                    // Rendered exactly like the reader's own rows: the QURAN face, tajweed colors when
+                    // on, clean-text / no-dots choices, and beginner letter spacing.
                     ForEach(tafsirArabicAyahs) { ayah in
-                        Text(ayah.displayArabicText(surahId: surahNumber, clean: settings.cleanArabicText, qiraahOverride: settings.displayQiraahForArabic))
-                            .font(
-                                settings.useFontArabic
-                                    ? .custom(settings.fontArabic, size: UIFont.preferredFont(forTextStyle: .title3).pointSize)
-                                    : .title3
-                            )
-                            .arabicFontDesign(custom: settings.islamUsesCustomArabicFace)
-                            .multilineTextAlignment(.trailing)
-                            .lineSpacing(6)
-                            .frame(maxWidth: .infinity, alignment: .trailing)
+                        HighlightedSnippet(
+                            source: tafsirArabicDisplay(ayah),
+                            term: "",
+                            font: Font.arabic(settings.quranDisplayFontName, size: UIFont.preferredFont(forTextStyle: .title3).pointSize),
+                            accent: settings.accentColor.color,
+                            fg: .primary,
+                            preStyledSource: tafsirTajweedText(ayah),
+                            beginnerMode: settings.beginnerMode
+                        )
+                        .arabicFontDesign(custom: settings.quranDisplayUsesCustomArabicFace)
+                        .multilineTextAlignment(.trailing)
+                        .lineSpacing(6)
+                        .frame(maxWidth: .infinity, alignment: .trailing)
+                        .environment(\.layoutDirection, .rightToLeft)
                     }
                 }
             }
@@ -1639,7 +1703,7 @@ struct AyahQiraahComparisonSheet: View {
 
             Text(text ?? "This ayah is not separate in this riwayah.")
                 .font(.custom(comparisonArabicFontName(for: option), size: arabicFontSize))
-                .arabicFontDesign(custom: settings.quranUsesCustomArabicFace)
+                .arabicFontDesign(custom: settings.quranDisplayUsesCustomArabicFace)
                 .foregroundColor(text == nil ? .secondary : .primary)
                 .multilineTextAlignment(.trailing)
                 .lineSpacing(6)
@@ -1728,7 +1792,7 @@ struct AyahQiraahComparisonSheet: View {
                 accent: settings.accentColor.color,
                 fg: text == nil ? .secondary : .primary
             )
-                .arabicFontDesign(custom: settings.quranUsesCustomArabicFace)
+                .arabicFontDesign(custom: settings.quranDisplayUsesCustomArabicFace)
                 .multilineTextAlignment(.trailing)
                 .lineSpacing(6)
                 .frame(maxWidth: .infinity, alignment: .trailing)
@@ -1815,7 +1879,9 @@ private final class EnglishComparisonViewModel: ObservableObject {
                 throw URLError(.badURL)
             }
 
-            let (data, response) = try await URLSession.shared.data(from: url)
+            // Same insulation as the tafsir sheet: the page reader tears down its hosting view mid-flight,
+            // and without the wrapper the resulting task cancellation killed the fetch with "Cancelled".
+            let (data, response) = try await Task { try await URLSession.shared.data(from: url) }.value
             if let http = response as? HTTPURLResponse, !(200...299).contains(http.statusCode) {
                 throw URLError(.badServerResponse)
             }
@@ -1824,7 +1890,9 @@ private final class EnglishComparisonViewModel: ObservableObject {
             translations = Dictionary(uniqueKeysWithValues: decoded.data.map { ($0.edition.identifier, $0.text) })
             loadedReference = reference
         } catch {
-            errorMessage = error.localizedDescription
+            if !AyahTafsirViewModel.isCancellation(error) {
+                errorMessage = error.localizedDescription
+            }
         }
 
         isLoading = false
@@ -2086,7 +2154,7 @@ struct AyahEnglishComparisonSheet: View {
                 source: text,
                 term: searchText,
                 font: isArabic
-                    ? .custom(settings.fontArabic, size: UIFont.preferredFont(forTextStyle: .title3).pointSize)
+                    ? Font.arabic(settings.quranDisplayFontName, size: UIFont.preferredFont(forTextStyle: .title3).pointSize)
                     : .subheadline,
                 accent: settings.accentColor.color,
                 fg: .primary

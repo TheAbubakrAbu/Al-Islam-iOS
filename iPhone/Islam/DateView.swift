@@ -87,7 +87,7 @@ struct DateView: View {
                 Text(hijriArabicText)
                     .font(
                         settings.islamUsesCustomArabicFace
-                            ? .custom(settings.nonQuranArabicFontName, size: 20, relativeTo: .body)
+                            ? Font.arabic(settings.nonQuranArabicFontName, size: 20, relativeTo: .body)
                             : .body
                     )
                     .arabicFontDesign(custom: settings.islamUsesCustomArabicFace)

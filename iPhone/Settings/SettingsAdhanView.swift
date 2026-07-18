@@ -376,6 +376,7 @@ struct SettingsAdhanView: View {
                     Text(subtitle)
                         .font(.caption)
                         .foregroundColor(.secondary)
+                        .padding(.vertical, 2)
                 }
             }
         }
@@ -468,6 +469,7 @@ struct SettingsAdhanView: View {
                     Image(systemName: "house.fill")
                         .font(.caption)
                         .foregroundColor(settings.accentColor.color)
+                        .padding(.vertical, 2)
 
                     Text(city)
                         .font(.subheadline)
@@ -539,6 +541,30 @@ struct SettingsAdhanView: View {
         // The Hijri day offset used to live in its own top-level "Manual Offsets" screen; it now sits here
         // alongside the prayer-time offsets so every manual adjustment is in one place.
         Section(header: Text("HIJRI OFFSET")) {
+            #if os(watchOS)
+            // Watch: one short line ("+2 days") in small type - the phone's "Hijri Offset: X days" row
+            // truncated to a couple of letters on the small screen.
+            Stepper(value: $settings.hijriOffset, in: -3...3) {
+                Text("\(settings.hijriOffset >= 0 ? "+" : "")\(settings.hijriOffset) \(abs(settings.hijriOffset) == 1 ? "day" : "days")")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundColor(settings.accentColor.color)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+            }
+            .font(.footnote)
+
+            if let hijriDate = settings.hijriDate {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(hijriDate.english)
+                    Text(hijriDate.arabic)
+                }
+                .font(.caption2)
+                .foregroundColor(settings.accentColor.color)
+                .lineLimit(1)
+                .minimumScaleFactor(0.6)
+                .padding(.vertical, 2)
+            }
+            #else
             Stepper(value: $settings.hijriOffset, in: -3...3) {
                 HStack {
                     Text("Hijri Offset:")
@@ -569,6 +595,7 @@ struct SettingsAdhanView: View {
                 }
                 .font(.subheadline)
             }
+            #endif
         }
         .onAppear {
             settings.fetchPrayerTimes()
@@ -593,6 +620,24 @@ struct PrayerOffsetsView: View {
     @ViewBuilder
     private func offsetStepper(title: String, icon: String, value: Binding<Int>) -> some View {
         // Wide enough to follow a local mosque that runs well off the calculated time, not just to nudge it.
+        #if os(watchOS)
+        // Watch: prayer name over the minutes, small type - the phone's single wide row truncated badly.
+        Stepper(value: value.animation(.easeInOut), in: -190...190) {
+            VStack(alignment: .leading, spacing: 1) {
+                Label(title, systemImage: icon)
+                    .font(.caption2)
+                    .foregroundColor(.primary)
+                    .padding(.vertical, 2)
+
+                Text("\(value.wrappedValue) min")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundColor(settings.accentColor.color)
+            }
+            .lineLimit(1)
+            .minimumScaleFactor(0.7)
+        }
+        .font(.footnote)
+        #else
         Stepper(value: value.animation(.easeInOut), in: -190...190) {
             HStack {
                 Image(systemName: icon)
@@ -611,6 +656,7 @@ struct PrayerOffsetsView: View {
             .foregroundColor(settings.accentColor.color)
         }
         .font(.subheadline)
+        #endif
     }
 
     private func travelOffsetCaption(for prayerName: String) -> String? {
@@ -730,6 +776,7 @@ struct NotificationView: View {
                         Label("Notification sounds are off in iPhone Settings, so the adhan will be silent.", systemImage: "speaker.slash.fill")
                             .font(.caption)
                             .foregroundColor(.secondary)
+                            .padding(.vertical, 2)
                     }
 
                     if settings.adhanNotificationSound != "default" {
@@ -751,6 +798,13 @@ struct NotificationView: View {
                     Text("The notification plays the adhan's first 30 seconds - iOS won't play a longer notification sound. Previewing, or having the app open when the prayer comes in, plays it in full. Prenotifications and nagging reminders still use the default sound.")
                         .font(.caption)
                         .foregroundColor(.secondary)
+                        .padding(.vertical, 2)
+                }
+
+                Section(footer: Text("With this on, the adhan that plays inside the app at prayer time sounds even when the ringer switch is set to silent. Notifications outside the app still follow your system sound settings.")) {
+                    Toggle("Play In-App Adhan in Silent Mode", isOn: $settings.adhanOverridesSilentMode.animation(.easeInOut))
+                        .font(.subheadline)
+                        .onChange(of: settings.adhanOverridesSilentMode) { _ in settings.hapticFeedback() }
                 }
                 #endif
 
@@ -1046,6 +1100,7 @@ struct MoreNotificationView: View {
                 Text("Nagging mode helps those who struggle to pray on time. Once enabled, you'll get a notification at the chosen start time before each prayer, then another every 15 minutes, plus final reminders at 10 and 5 minutes remaining.")
                     .font(.caption)
                     .foregroundColor(.secondary)
+                    .padding(.vertical, 2)
 
                 Toggle("Turn on Nagging Mode", isOn: Binding(
                     get: { settings.naggingMode },

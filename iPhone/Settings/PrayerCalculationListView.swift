@@ -95,6 +95,7 @@ struct PrayerCalculationListView: View {
             Text("Picks the method customary in the country you are in. Choosing a method by hand below turns this off.")
                 .font(.caption)
                 .foregroundColor(.secondary)
+                .padding(.vertical, 2)
         }
     }
 
@@ -153,6 +154,7 @@ struct PrayerCalculationListView: View {
                 Text(region)
                     .font(.caption)
                     .foregroundColor(.secondary)
+                    .padding(.vertical, 2)
             }
         }
         .padding(.vertical, 2)
@@ -198,6 +200,7 @@ struct PrayerCalculationListView: View {
                 Text("Only set your own angles if you know the values your local mosque uses. A wrong angle means praying at the wrong time.")
                     .font(.caption)
                     .foregroundColor(.secondary)
+                    .padding(.vertical, 2)
             }
         }
     }
@@ -207,14 +210,17 @@ struct PrayerCalculationListView: View {
             Text("Fajr begins at true dawn and Isha at nightfall. Neither is a clock time: both are defined by how far the sun has sunk below the horizon, and the bodies below differ on where exactly to draw that line. A larger angle means an earlier Fajr and a later Isha.")
                 .font(.caption)
                 .foregroundColor(.secondary)
+                .padding(.vertical, 2)
 
             Text("Umm Al-Qura and Qatar use a fixed interval after Maghrib for Isha instead of an angle, because at their latitude the twilight is consistent enough for a clock to be reliable.")
                 .font(.caption)
                 .foregroundColor(.secondary)
+                .padding(.vertical, 2)
 
             Text("Use the method your local mosque uses. If you do not know it, leave this on automatic.")
                 .font(.caption)
                 .foregroundColor(.secondary)
+                .padding(.vertical, 2)
         }
     }
 }

@@ -337,6 +337,31 @@ extension Settings {
         Self.normalizedArabicFontName(fontArabic)
     }
 
+    // MARK: Quran Arabic display cleaning (Hide Tashkeel / Hide Dots, applied app-wide)
+
+    /// The reader's Hide-Tashkeel / Hide-Dots choices applied to ANY Quranic Arabic string - surah
+    /// names, the title picker, share headers - so every corner of the app matches the reading view.
+    /// Hafs-only, exactly like the reading text itself.
+    func cleanedQuranArabic(_ text: String) -> String {
+        guard isHafsDisplay else { return text }
+        var out = text
+        if cleanArabicText { out = out.removingArabicDiacriticsAndSigns }
+        if removeArabicDots { out = out.removingArabicDots }
+        return out
+    }
+
+    /// The face for Quran Arabic outside the main reader (summary tiles, bookmarks, surah names):
+    /// "Hide Arabic Dots" forces the system face, because the bundled faces carry no glyphs for the
+    /// dotless skeleton letters (U+066E ...). Mirrors what the reading view already does.
+    var quranDisplayFontName: String {
+        removeArabicDots && isHafsDisplay ? Settings.systemArabicFontName : fontArabic
+    }
+
+    /// Whether `quranDisplayFontName` resolves to a real bundled face (for `arabicFontDesign(custom:)`).
+    var quranDisplayUsesCustomArabicFace: Bool {
+        quranDisplayFontName != Settings.systemArabicFontName
+    }
+
     var usesUthmaniArabicFont: Bool {
         Self.isUthmaniArabicFont(fontArabic)
     }
@@ -754,8 +779,11 @@ extension Settings {
 
     /// Deterministic (surahID, ayahID) for the Ayah of the Day on the given day. Same input day always
     /// yields the same ayah, so the in-app card and the widget agree. Picks from the gentle-ayah pool
-    /// using a day-seeded multiplicative hash.
+    /// using a day-seeded multiplicative hash - unless the user shuffled today, in which case the
+    /// stored override wins for that day only.
     func ayahOfTheDayReference(for date: Date = Date(), data: QuranData = .shared) -> (surahID: Int, ayahID: Int)? {
+        if let override = ayahOfTheDayOverrideRef(for: date) { return override }
+
         let refs = Self.gentleAyahRefs(data)
         guard !refs.isEmpty else { return nil }
 
@@ -763,6 +791,36 @@ extension Settings {
         // Knuth multiplicative hash (UInt64 to stay valid on 32-bit Int platforms like older watchOS).
         let index = Int((day &* 2_654_435_761) % UInt64(refs.count))
         return refs[index]
+    }
+
+    /// The stored shuffle override, if it belongs to `date`'s day. Any other day's override is stale
+    /// and ignored.
+    private func ayahOfTheDayOverrideRef(for date: Date) -> (surahID: Int, ayahID: Int)? {
+        let parts = ayahOfTheDayOverride.split(separator: "|")
+        guard parts.count == 3, String(parts[0]) == Self.dayKey(date),
+              let surahID = Int(parts[1]), let ayahID = Int(parts[2]) else { return nil }
+        return (surahID, ayahID)
+    }
+
+    /// Replaces TODAY's Ayah of the Day with a fresh random pick from the same gentle pool - the shuffle
+    /// button on the daily card. Everything that reads `ayahOfTheDayReference` (the card, the summary
+    /// tile, the history's "Today" row, the widget snapshot) follows automatically.
+    func shuffleAyahOfTheDay(data: QuranData = .shared) {
+        let refs = Self.gentleAyahRefs(data)
+        guard refs.count > 1 else { return }
+
+        let current = ayahOfTheDayReference(data: data)
+        var pick = refs.randomElement()
+        // A same-as-current pick would make the button feel broken; retry a few times.
+        var attempts = 0
+        while let p = pick, let c = current, p.surahID == c.surahID, p.ayahID == c.ayahID, attempts < 8 {
+            pick = refs.randomElement()
+            attempts += 1
+        }
+        guard let pick else { return }
+
+        ayahOfTheDayOverride = "\(Self.dayKey())|\(pick.surahID)|\(pick.ayahID)"
+        refreshQuranWidgets()
     }
 
     // MARK: Quran widgets

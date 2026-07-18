@@ -397,11 +397,11 @@ private struct TajweedInMushafView: View {
     @ObservedObject var settings = Settings.shared
 
     private var arabicHeadlineFont: Font {
-        .custom(settings.fontArabic, size: UIFont.preferredFont(forTextStyle: .title1).pointSize)
+        Font.arabic(settings.fontArabic, size: UIFont.preferredFont(forTextStyle: .title1).pointSize)
     }
 
     private var arabicFont: Font {
-        .custom(settings.fontArabic, size: UIFont.preferredFont(forTextStyle: .title2).pointSize)
+        Font.arabic(settings.fontArabic, size: UIFont.preferredFont(forTextStyle: .title2).pointSize)
     }
 
     var body: some View {
@@ -631,11 +631,11 @@ private struct TajweedMakharijView: View {
     @ObservedObject var settings = Settings.shared
 
     private var arabicHeadlineFont: Font {
-        .custom(settings.fontArabic, size: UIFont.preferredFont(forTextStyle: .title1).pointSize)
+        Font.arabic(settings.fontArabic, size: UIFont.preferredFont(forTextStyle: .title1).pointSize)
     }
 
     private var arabicFont: Font {
-        .custom(settings.fontArabic, size: UIFont.preferredFont(forTextStyle: .title2).pointSize)
+        Font.arabic(settings.fontArabic, size: UIFont.preferredFont(forTextStyle: .title2).pointSize)
     }
 
     var body: some View {
@@ -875,7 +875,7 @@ private struct TajweedHeavyLightView: View {
     @ObservedObject var settings = Settings.shared
 
     private var arabicHeadlineFont: Font {
-        .custom(settings.fontArabic, size: UIFont.preferredFont(forTextStyle: .title1).pointSize)
+        Font.arabic(settings.fontArabic, size: UIFont.preferredFont(forTextStyle: .title1).pointSize)
     }
 
     var body: some View {
@@ -1073,7 +1073,7 @@ private struct TajweedShamsQamarView: View {
     @ObservedObject var settings = Settings.shared
 
     private var arabicHeadlineFont: Font {
-        .custom(settings.fontArabic, size: UIFont.preferredFont(forTextStyle: .title1).pointSize)
+        Font.arabic(settings.fontArabic, size: UIFont.preferredFont(forTextStyle: .title1).pointSize)
     }
 
     var body: some View {
@@ -1200,7 +1200,7 @@ private struct TajweedMaddView: View {
     @ObservedObject var settings = Settings.shared
 
     private var arabicHeadlineFont: Font {
-        .custom(settings.fontArabic, size: UIFont.preferredFont(forTextStyle: .title1).pointSize)
+        Font.arabic(settings.fontArabic, size: UIFont.preferredFont(forTextStyle: .title1).pointSize)
     }
 
     var body: some View {
@@ -1608,7 +1608,7 @@ private struct TajweedQalqalahView: View {
     @ObservedObject var settings = Settings.shared
 
     private var arabicHeadlineFont: Font {
-        .custom(settings.fontArabic, size: UIFont.preferredFont(forTextStyle: .title1).pointSize)
+        Font.arabic(settings.fontArabic, size: UIFont.preferredFont(forTextStyle: .title1).pointSize)
     }
 
     var body: some View {
@@ -1722,7 +1722,7 @@ private struct TajweedIdghamIkhfaView: View {
     @ObservedObject var settings = Settings.shared
 
     private var arabicHeadlineFont: Font {
-        .custom(settings.fontArabic, size: UIFont.preferredFont(forTextStyle: .title1).pointSize)
+        Font.arabic(settings.fontArabic, size: UIFont.preferredFont(forTextStyle: .title1).pointSize)
     }
 
     var body: some View {
@@ -2000,7 +2000,7 @@ private struct TajweedMeemSakinahView: View {
                     .font(.subheadline.weight(.semibold))
 
                 Text("أَم بِهِۦ جِنَّةٌۢ")
-                    .font(.custom(settings.fontArabic, size: 24))
+                    .font(Font.arabic(settings.fontArabic, size: 24))
                     .arabicFontDesign(custom: settings.quranUsesCustomArabicFace)
                     .frame(maxWidth: .infinity, alignment: .center)
 
@@ -2030,7 +2030,7 @@ private struct TajweedMeemSakinahView: View {
                     .font(.subheadline.weight(.semibold))
 
                 Text("وَلَهُم مَّا يَشْتَهُونَ")
-                    .font(.custom(settings.fontArabic, size: 24))
+                    .font(Font.arabic(settings.fontArabic, size: 24))
                     .arabicFontDesign(custom: settings.quranUsesCustomArabicFace)
                     .frame(maxWidth: .infinity, alignment: .center)
 
@@ -2060,7 +2060,7 @@ private struct TajweedMeemSakinahView: View {
                     .font(.subheadline.weight(.semibold))
 
                 Text("وَمَا بَلَغُوا۟ مِعْشَارَ مَآ ءَاتَيْنَٰهُمْ فَكَذَّبُوا۟ رُسُلِى")
-                    .font(.custom(settings.fontArabic, size: 24))
+                    .font(Font.arabic(settings.fontArabic, size: 24))
                     .arabicFontDesign(custom: settings.quranUsesCustomArabicFace)
                     .frame(maxWidth: .infinity, alignment: .center)
 
@@ -2145,7 +2145,7 @@ private struct TajweedAaridLisSukoonView: View {
                     .font(.subheadline.weight(.semibold))
 
                 Text("رَزَقۡنَٰهُمۡ بِٱلۡغَيۡبِ")
-                    .font(.custom(settings.fontArabic, size: 24))
+                    .font(Font.arabic(settings.fontArabic, size: 24))
                     .arabicFontDesign(custom: settings.quranUsesCustomArabicFace)
                     .frame(maxWidth: .infinity, alignment: .center)
 
@@ -2162,7 +2162,7 @@ private struct TajweedAaridLisSukoonView: View {
                     .font(.subheadline.weight(.semibold))
 
                 Text("بِأَيۡيْدٖ")
-                    .font(.custom(settings.fontArabic, size: 22))
+                    .font(Font.arabic(settings.fontArabic, size: 22))
                     .arabicFontDesign(custom: settings.quranUsesCustomArabicFace)
                     .frame(maxWidth: .infinity, alignment: .center)
 
@@ -2263,7 +2263,7 @@ private struct TajweedHamzatulWaslView: View {
                     Text("ٱئۡتُوا")
                     Text("ٱئۡتُونِي")
                 }
-                .font(.custom(settings.fontArabic, size: 22))
+                .font(Font.arabic(settings.fontArabic, size: 22))
                 .arabicFontDesign(custom: settings.quranUsesCustomArabicFace)
                 .frame(maxWidth: .infinity, alignment: .center)
 
@@ -2280,7 +2280,7 @@ private struct TajweedHamzatulWaslView: View {
                     .font(.subheadline.weight(.semibold))
 
                 Text("ذَٰلِكَ ٱلۡكِتَٰبُ لَا رَيۡبَۛ فِيهِ")
-                    .font(.custom(settings.fontArabic, size: 20))
+                    .font(Font.arabic(settings.fontArabic, size: 20))
                     .arabicFontDesign(custom: settings.quranUsesCustomArabicFace)
                     .frame(maxWidth: .infinity, alignment: .center)
 
@@ -2299,7 +2299,7 @@ private struct TajweedHamzatulWaslView: View {
                     Text("ٱلصَّمَدُ → aṣ-ṣamad")
                     Text("ٱللَّهُ → Allāh")
                 }
-                .font(.custom(settings.fontArabic, size: 20))
+                .font(Font.arabic(settings.fontArabic, size: 20))
                 .arabicFontDesign(custom: settings.quranUsesCustomArabicFace)
                 .frame(maxWidth: .infinity, alignment: .center)
 
@@ -2317,7 +2317,7 @@ private struct TajweedHamzatulWaslView: View {
                     Text("ٱبۡن → ibn")
                     Text("ٱبۡنَيۡ → ibnay")
                 }
-                .font(.custom(settings.fontArabic, size: 20))
+                .font(Font.arabic(settings.fontArabic, size: 20))
                 .arabicFontDesign(custom: settings.quranUsesCustomArabicFace)
                 .frame(maxWidth: .infinity, alignment: .center)
             }
@@ -2330,7 +2330,7 @@ private struct TajweedHamzatulWaslView: View {
                     .font(.subheadline.weight(.semibold))
 
                 Text("ٱتۡلُ → utlu (when starting); when connected: watlu")
-                    .font(.custom(settings.fontArabic, size: 20))
+                    .font(Font.arabic(settings.fontArabic, size: 20))
                     .arabicFontDesign(custom: settings.quranUsesCustomArabicFace)
                     .frame(maxWidth: .infinity, alignment: .center)
 
@@ -2344,7 +2344,7 @@ private struct TajweedHamzatulWaslView: View {
                     .font(.body)
 
                 Text("Example: ٱئۡتُونِي → iʾtūnī when starting.")
-                    .font(.custom(settings.fontArabic, size: 20))
+                    .font(Font.arabic(settings.fontArabic, size: 20))
                     .arabicFontDesign(custom: settings.quranUsesCustomArabicFace)
                     .frame(maxWidth: .infinity, alignment: .center)
             }
@@ -2358,7 +2358,7 @@ private struct TajweedHamzatulWaslView: View {
                     .font(.subheadline.weight(.semibold))
 
                 Text("بِغُلَٰمٍ ٱسۡمُهُۥ → بِغُلَٰمِنِ سۡمُهُۥ")
-                    .font(.custom(settings.fontArabic, size: 20))
+                    .font(Font.arabic(settings.fontArabic, size: 20))
                     .arabicFontDesign(custom: settings.quranUsesCustomArabicFace)
                     .frame(maxWidth: .infinity, alignment: .center)
             }
@@ -2392,7 +2392,7 @@ private struct TajweedWaqfView: View {
     @ObservedObject var settings = Settings.shared
 
     private var arabicHeadlineFont: Font {
-        .custom(settings.fontArabic, size: UIFont.preferredFont(forTextStyle: .title1).pointSize)
+        Font.arabic(settings.fontArabic, size: UIFont.preferredFont(forTextStyle: .title1).pointSize)
     }
 
     var body: some View {

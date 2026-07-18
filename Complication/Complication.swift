@@ -1,6 +1,25 @@
 import SwiftUI
 import WidgetKit
 
+extension View {
+    /// watchOS 10 requires every widget to declare its background via `containerBackground(for:)` -
+    /// without it, complications built against the newer SDK render as an "adopt containerBackground"
+    /// placeholder instead of their content. Accessory families stay `.clear` so the system applies its
+    /// own vibrant treatment. This wrapper is also where the app-wide rounded design reaches the
+    /// complication tree (the watch app's root modifier can't reach a widget extension).
+    @ViewBuilder
+    func complicationContainer() -> some View {
+        Group {
+            if #available(watchOS 10.0, *) {
+                self.containerBackground(.clear, for: .widget)
+            } else {
+                self
+            }
+        }
+        .appFontDesign()
+    }
+}
+
 extension PrayersEntry {
     /// How far the current prayer interval has elapsed, 0...1 - drives the corner capacity gauge. Mirrors
     /// `PrayerCountdown.progressValue()`, including the overnight-boundary wrap, but is evaluated at the
@@ -59,6 +78,8 @@ struct PrayersEntryView: View {
             Image(systemName: nextPrayer.image)
                 .font(.title3)
                 .foregroundColor(accent(for: nextPrayer))
+                // On tinted faces the icon joins the face's accent group instead of going flat gray.
+                .widgetAccentable()
                 .widgetLabel {
                     Gauge(value: entry.dayProgress) {
                         Text(nextPrayer.displayName)
@@ -79,10 +100,13 @@ struct PrayersEntryView: View {
             if let nextPrayer = entry.nextPrayer {
                 VStack(spacing: 1) {
                     Image(systemName: nextPrayer.image)
+                        .font(.system(size: 15, weight: .medium))
                         .foregroundColor(accent(for: nextPrayer))
+                        .widgetAccentable()
 
                     Text(nextPrayer.time, style: .time)
-                        .font(.caption2)
+                        .font(.caption2.weight(.semibold))
+                        .monospacedDigit()
                         .foregroundColor(accent(for: nextPrayer))
                 }
             } else {
@@ -116,7 +140,8 @@ struct PrayersEntryView: View {
                         .foregroundColor(.secondary)
                 }
                 .foregroundColor(accent(for: currentPrayer))
-                    
+                .widgetAccentable()
+
                 Text("\(nextPrayer.displayName) at \(nextPrayer.time, style: .time)")
                     .font(.subheadline)
                 
@@ -142,8 +167,10 @@ struct Complication: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: kind, provider: PrayersProvider()) { entry in
             PrayersEntryView(entry: entry)
+                .complicationContainer()
         }
         .configurationDisplayName("Next Prayer")
+        .description("The current prayer and when the next one begins.")
         .supportedFamilies([
             .accessoryInline,
             .accessoryCircular,
@@ -187,6 +214,7 @@ struct CountdownComplicationView: View {
                 Image(systemName: next.image)
                     .font(.title3)
                     .foregroundColor(accent(for: next))
+                    .widgetAccentable()
                     .widgetLabel {
                         // A curved capacity Gauge (battery-style) that fills as the day advances toward the
                         // next prayer, with the live countdown as its label.
@@ -224,9 +252,11 @@ struct CountdownComplicationView: View {
         } currentValueLabel: {
             VStack(spacing: 0) {
                 Image(systemName: next.image)
-                    .font(.system(size: 12))
+                    .font(.system(size: 12, weight: .medium))
+                    .widgetAccentable()
                 Text(next.time, style: .relative)
-                    .font(.system(size: 12, design: .rounded))
+                    .font(.system(size: 12, weight: .semibold, design: .rounded))
+                    .monospacedDigit()
                     .minimumScaleFactor(0.5)
                     .lineLimit(1)
             }
@@ -244,12 +274,14 @@ struct CountdownComplicationView: View {
                     .font(.headline)
             }
             .foregroundColor(accent(for: next))
+            .widgetAccentable()
 
             // Countdown and target time share one baseline-aligned row so the three lines no longer have
             // the loose vertical gaps they used to.
             HStack(alignment: .firstTextBaseline, spacing: 5) {
                 Text(next.time, style: .timer)
                     .font(.system(.title3, design: .rounded).bold())
+                    .monospacedDigit()
                     .foregroundColor(accent(for: next))
 
                 Text("at \(next.time, style: .time)")
@@ -269,6 +301,7 @@ struct CountdownComplication: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(kind: kind, provider: PrayersProvider()) { entry in
             CountdownComplicationView(entry: entry)
+                .complicationContainer()
         }
         .configurationDisplayName("Prayer Countdown")
         .description("Live countdown to the next prayer.")

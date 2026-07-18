@@ -142,10 +142,12 @@ struct ArabicView: View {
                 // global (`settings.arabicLetterSizeIndex`), and these rows and tiles already honour it through
                 // `arabicLetterDynamicTypeSize`, so the alphabet list still resizes - it just doesn't carry the
                 // control, which was crowding the bottom bar alongside the font picker and the search field.
-                if !barsCollapsed {
-                    arabicFontPicker
-                        .transition(.opacity)
-                }
+                // The font picker above the search bar is OFF for now (it was the row that vanished when
+                // scrolling down) - uncomment to bring it back. The picker still lives in the letter
+                // detail screens' ARABIC FONT section.
+                // arabicFontPicker
+                //     // Stays mounted while minimized (height 0) - inserting/removing glass renders black boxes.
+                //     .collapsibleBarRow(barsCollapsed)
 
                 HStack(spacing: 0) {
                     SearchBar(text: $searchText.animation(.easeInOut))
@@ -214,7 +216,7 @@ struct ArabicView: View {
                 // The one app-wide grid toggle - flipping it here flips Quran, Names, and Islam too.
                 Button {
                     settings.hapticFeedback()
-                    withAnimation { settings.gridMode.toggle() }
+                    withAnimation { settings.arabicGridMode.toggle() }
                 } label: {
                     Image(systemName: isGridMode ? "list.bullet" : "square.grid.2x2")
                 }
@@ -236,12 +238,47 @@ struct ArabicView: View {
             .conditionalGlassEffect()
     }
 
+    /// A letter section with the shared counted header. `shuffle` adds the random button (iOS only -
+    /// it pushes through the grid's hidden navigation link, which the watch list doesn't have).
+    @ViewBuilder
+    private func countedLetterSection(_ title: String, _ letters: [LetterData], shuffle: Bool = false) -> some View {
+        #if os(iOS)
+        Section(header: SectionPillHeader(
+            title: title,
+            count: letters.count,
+            onShuffle: shuffle ? { if let letter = letters.randomElement() { gridSelection = letter } } : nil
+        )) {
+            letterCollection(letters)
+        }
+        #else
+        Section(header: SectionPillHeader(title: title, count: letters.count)) {
+            letterCollection(letters)
+        }
+        #endif
+    }
+
     @ViewBuilder
     private var favoriteLettersSection: some View {
         if searchText.isEmpty, !settings.favoriteLetters.isEmpty {
-            Section("FAVORITE LETTERS") {
-                letterCollection(settings.favoriteLetters.sorted())
+            let favorites = settings.favoriteLetters.sorted()
+            #if os(iOS)
+            Section(header: SectionPillHeader(
+                title: "FAVORITE LETTERS",
+                count: favorites.count,
+                icon: "star.fill",
+                accentTitle: true,
+                isExpanded: $showFavoriteLetters,
+                onShuffle: { if let letter = favorites.randomElement() { gridSelection = letter } }
+            )) {
+                if showFavoriteLetters {
+                    letterCollection(favorites)
+                }
             }
+            #else
+            Section(header: SectionPillHeader(title: "FAVORITE LETTERS", count: favorites.count)) {
+                letterCollection(favorites)
+            }
+            #endif
         }
     }
 
@@ -273,7 +310,7 @@ struct ArabicView: View {
 
     private var isGridMode: Bool {
         #if os(iOS)
-        return settings.gridMode
+        return settings.arabicGridMode
         #else
         return false
         #endif
@@ -283,6 +320,9 @@ struct ArabicView: View {
     /// The letter a grid tile asked to open. Every grid section shares the one link below, so exactly one
     /// letter is ever pushed.
     @State private var gridSelection: LetterData?
+
+    /// Collapse state for the favorites section, same as the Quran tab's Favorite Surahs.
+    @AppStorage("showFavoriteLetters") private var showFavoriteLetters = true
 
     @ViewBuilder
     private var gridNavigationLink: some View {
@@ -387,19 +427,15 @@ struct ArabicView: View {
                 }
             }
 
-            Section("SPECIAL ARABIC LETTERS") {
-                letterCollection(otherArabicLetters)
-            }
+            countedLetterSection("SPECIAL ARABIC LETTERS", otherArabicLetters)
 
-            Section("ARABIC NUMBERS") {
+            Section(header: SectionPillHeader(title: "ARABIC NUMBERS", count: numbers.count)) {
                 numberCollection
             }
 
             tajweedSection
 
-            Section("NON-ARABIC LETTERS") {
-                letterCollection(nonArabicArabicScriptLetters)
-            }
+            countedLetterSection("NON-ARABIC LETTERS", nonArabicArabicScriptLetters)
         }
     }
 
@@ -407,37 +443,25 @@ struct ArabicView: View {
     private var standardLetterSections: some View {
         switch filterMode {
         case .normal:
-            Section("STANDARD ARABIC LETTERS") {
-                letterCollection(standardArabicLetters)
-            }
+            countedLetterSection("STANDARD ARABIC LETTERS", standardArabicLetters, shuffle: true)
         case .similarity:
             ForEach(similarityGroups.indices, id: \.self) { idx in
                 let group = similarityGroups[idx]
                 let header = idx == 0 ? "VOWEL LETTERS" : Self.similarityHeader(for: group)
-                Section(header) {
-                    letterCollection(group.compactMap { letterData(for: $0) })
-                }
+                countedLetterSection(header, group.compactMap { letterData(for: $0) })
             }
         case .heavyLight:
-            Section("FOLLOWS PREVIOUS") {
-                letterCollection(standardArabicLetters.filter { $0.weight == .followsPrevious })
-            }
-            
-            Section("CONDITIONAL") {
-                letterCollection(standardArabicLetters.filter { $0.weight == .conditional })
-            }
-            
-            Section("HEAVY LETTERS") {
-                letterCollection(standardArabicLetters.filter { $0.weight == .heavy })
-            }
+            countedLetterSection("FOLLOWS PREVIOUS", standardArabicLetters.filter { $0.weight == .followsPrevious })
 
-            Section("LIGHT LETTERS") {
-                letterCollection((standardArabicLetters + otherArabicLetters).filter {
-                    $0.weight == .light
-                        || $0.transliteration == "taa marbuuTah"
-                        || $0.transliteration.lowercased().contains("hamza")
-                })
-            }
+            countedLetterSection("CONDITIONAL", standardArabicLetters.filter { $0.weight == .conditional })
+
+            countedLetterSection("HEAVY LETTERS", standardArabicLetters.filter { $0.weight == .heavy })
+
+            countedLetterSection("LIGHT LETTERS", (standardArabicLetters + otherArabicLetters).filter {
+                $0.weight == .light
+                    || $0.transliteration == "taa marbuuTah"
+                    || $0.transliteration.lowercased().contains("hamza")
+            })
         }
     }
 
@@ -452,12 +476,7 @@ struct ArabicView: View {
 
                     Spacer()
 
-                    Text("\(filteredStandardForMode.count + filteredOther.count)")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(settings.accentColor.color)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 6)
-                        .conditionalGlassEffect()
+                    CountPill(count: filteredStandardForMode.count + filteredOther.count)
                         .opacity(searchText.isEmpty ? 0 : 1)
                 }
             }
@@ -1671,7 +1690,7 @@ struct ArabicLetterRow: View, Equatable {
                     source: letterData.letter,
                     term: searchQuery,
                     font: (useFontArabic && !letterData.isNonArabicScriptLetter)
-                        ? .custom(fontArabic, size: 24, relativeTo: .title2)
+                        ? Font.arabic(fontArabic, size: 24, relativeTo: .title2)
                         : .title2,
                     accent: accentColor.color,
                     fg: accentColor.color,
@@ -1706,7 +1725,7 @@ struct ArabicLetterRow: View, Equatable {
                     Text(letterData.name)
                         .font(
                             (useFontArabic && !letterData.isNonArabicScriptLetter)
-                                ? .custom(fontArabic, size: 16, relativeTo: .subheadline)
+                                ? Font.arabic(fontArabic, size: 16, relativeTo: .subheadline)
                                 : .subheadline
                         )
                         .arabicFontDesign(custom: usesCustomArabicFace)
@@ -1732,7 +1751,7 @@ struct ArabicLetterRow: View, Equatable {
                 Text(letterData.forms.prefix(3).reversed().joined(separator: "\u{2002}"))
                     .font(
                         (useFontArabic && !letterData.isNonArabicScriptLetter)
-                            ? .custom(fontArabic, size: 13, relativeTo: .caption)
+                            ? Font.arabic(fontArabic, size: 13, relativeTo: .caption)
                             : .caption
                     )
                     .arabicFontDesign(custom: usesCustomArabicFace)
@@ -1910,7 +1929,7 @@ struct StopInfoRow: View {
             Text(symbol)
                 .font(
                     settings.islamUsesCustomArabicFace
-                        ? .custom(settings.nonQuranArabicFontName, size: 20, relativeTo: .headline)
+                        ? Font.arabic(settings.nonQuranArabicFontName, size: 20, relativeTo: .headline)
                         : .headline.weight(.semibold)
                 )
                 .arabicFontDesign(custom: settings.islamUsesCustomArabicFace)
@@ -2015,7 +2034,7 @@ struct ArabicLetterGridTile: View, Equatable {
     /// Letters from other scripts (پ, چ, ژ) aren't in the Quranic font, so they fall back to the system one.
     private var glyphFont: Font {
         useFontArabic && !letterData.isNonArabicScriptLetter
-            ? .custom(fontArabic, size: 30, relativeTo: .title)
+            ? Font.arabic(fontArabic, size: 30, relativeTo: .title)
             : .title
     }
 
@@ -2074,7 +2093,7 @@ struct ArabicLetterGridTile: View, Equatable {
                 // per-letter detail view's left-to-right layout.
                 Text(letterData.forms.prefix(3).reversed().joined(separator: "\u{2002}"))
                     .font(useFontArabic && !letterData.isNonArabicScriptLetter
-                          ? .custom(fontArabic, size: 12, relativeTo: .caption2)
+                          ? Font.arabic(fontArabic, size: 12, relativeTo: .caption2)
                           : .caption2)
                     .arabicFontDesign(custom: usesCustomArabicFace)
                     .dynamicTypeSize(settings.arabicLetterDynamicTypeSize...)

@@ -960,7 +960,7 @@ struct HijriMonthRow: View, Equatable {
                     Text(month.arabic)
                         .font(
                             usesCustomArabicFace
-                                ? .custom(fontArabic, size: 18, relativeTo: .subheadline)
+                                ? Font.arabic(fontArabic, size: 18, relativeTo: .subheadline)
                                 : .subheadline
                         )
                         .arabicFontDesign(custom: usesCustomArabicFace)

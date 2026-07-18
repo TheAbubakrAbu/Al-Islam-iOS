@@ -104,6 +104,7 @@ struct CreditsView: View {
         Section {
             VersionNumber()
                 .font(.caption)
+                .padding(.vertical, 2)
         }
     }
 

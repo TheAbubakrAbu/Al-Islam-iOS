@@ -52,7 +52,7 @@ struct SurahRow: View, Equatable {
         hideInfo: Bool? = nil,
         accentColor: AccentColor = Settings.shared.accentColor,
         useFontArabic: Bool = Settings.shared.useFontArabic,
-        fontArabic: String = Settings.shared.fontArabic,
+        fontArabic: String = Settings.shared.quranDisplayFontName,
         khatmCompletedAyahs: Int? = nil,
         khatmTotalAyahs: Int? = nil,
         searchQuery: String = "",
@@ -212,7 +212,7 @@ struct SurahRow: View, Equatable {
                     .font(.subheadline)
                     .frame(maxWidth: .infinity, alignment: .leading)
 
-                Text("\(surah.nameArabic) - \(surah.idArabic)")
+                Text("\(Settings.shared.cleanedQuranArabic(surah.nameArabic)) - \(surah.idArabic)")
                     .font(.headline)
                     .foregroundColor(settings.accentColor.color)
                     .frame(maxWidth: .infinity, alignment: .trailing)
@@ -297,9 +297,9 @@ struct SurahRow: View, Equatable {
 
             HStack {
                 HighlightedSnippet(
-                    source: surah.nameArabic,
+                    source: Settings.shared.cleanedQuranArabic(surah.nameArabic),
                     term: searchQuery,
-                    font: .custom(fontArabic, size: UIFont.preferredFont(forTextStyle: .title3).pointSize),
+                    font: Font.arabic(fontArabic, size: UIFont.preferredFont(forTextStyle: .title3).pointSize),
                     accent: accentColor.color,
                     fg: .primary,
                     // HighlightedSnippet applies its own `.lineLimit` to the inner Text, which would otherwise
@@ -307,7 +307,7 @@ struct SurahRow: View, Equatable {
                     // names like آل عمران wrap to two lines.
                     lineLimit: 1
                 )
-                .arabicFontDesign(custom: settings.quranUsesCustomArabicFace)
+                .arabicFontDesign(custom: settings.quranDisplayUsesCustomArabicFace)
 
                 Text(surah.idArabic)
                     .font(.custom(Settings.hafsUthmaniFontName, size: UIFont.preferredFont(forTextStyle: .title1).pointSize))
@@ -338,14 +338,14 @@ struct SurahRow: View, Equatable {
                     .foregroundColor(accentColor.color)
 
                 HighlightedSnippet(
-                    source: surah.nameArabic,
+                    source: Settings.shared.cleanedQuranArabic(surah.nameArabic),
                     term: searchQuery,
-                    font: .custom(fontArabic, size: UIFont.preferredFont(forTextStyle: .title3).pointSize),
+                    font: Font.arabic(fontArabic, size: UIFont.preferredFont(forTextStyle: .title3).pointSize),
                     accent: accentColor.color,
                     fg: .primary,
                     lineLimit: 1
                 )
-                .arabicFontDesign(custom: settings.quranUsesCustomArabicFace)
+                .arabicFontDesign(custom: settings.quranDisplayUsesCustomArabicFace)
 
                 // Leaves room at the trailing edge for the corner star overlay.
                 Spacer(minLength: 20)
@@ -596,14 +596,14 @@ struct SurahAyahRow: View {
                     HighlightedSnippet(
                         source: arabicDisplayText(),
                         term: "",
-                        font: .custom(settings.fontArabic, size: UIFont.preferredFont(forTextStyle: .subheadline).pointSize * arabicScale),
+                        font: Font.arabic(settings.quranDisplayFontName, size: UIFont.preferredFont(forTextStyle: .subheadline).pointSize * arabicScale),
                         accent: settings.accentColor.color,
                         fg: .primary,
                         preStyledSource: arabicTajweedText(),
                         beginnerMode: settings.beginnerMode,
                         lineLimit: 1
                     )
-                        .arabicFontDesign(custom: settings.quranUsesCustomArabicFace)
+                        .arabicFontDesign(custom: settings.quranDisplayUsesCustomArabicFace)
                         .frame(maxWidth: .infinity, alignment: .trailing)
                 }
 
@@ -991,16 +991,72 @@ struct LastListenedSurahRow: View {
                     .lineLimit(1)
                     .minimumScaleFactor(0.5)
 
-                Text(item.reciter.name)
+                Text(item.reciter.displayNameWithEnglishQiraah)
                     .font(.caption2)
                     .foregroundColor(.secondary)
                     .lineLimit(1)
                     .minimumScaleFactor(0.5)
+
+                // Where the user stopped, when the entry knows it (entries from older builds don't).
+                if let current = item.currentDuration, let full = item.fullDuration, full > 0 {
+                    Text("\(formatMMSS(current)) / \(formatMMSS(full))")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.5)
+                }
             }
 
             Spacer(minLength: 8)
 
             historyTimestampLabel(item.timestamp)
+
+            #if os(iOS)
+            // Play controls for the history entry: from the top, or - when the stopped position is known - 
+            // picking up exactly where the user left off (the same resume path Last Listened uses).
+            Menu {
+                Text("Surah \(item.surahNumber): \(item.surahName)")
+                    .foregroundStyle(.secondary)
+
+                if let current = item.currentDuration, let full = item.fullDuration, current > 1 {
+                    Button {
+                        settings.hapticFeedback()
+                        // Resuming makes this entry the Last Listened again - with its own reciter and
+                        // position - then plays through the standard certain-reciter resume path.
+                        settings.lastListenedSurah = LastListenedSurah(
+                            surahNumber: item.surahNumber,
+                            surahName: item.surahName,
+                            reciter: item.reciter,
+                            currentDuration: current,
+                            fullDuration: full
+                        )
+                        quranPlayer.playSurah(
+                            surahNumber: item.surahNumber,
+                            surahName: item.surahName,
+                            certainReciter: true
+                        )
+                    } label: {
+                        Label("Resume from \(formatMMSS(current))", systemImage: "play.fill")
+                    }
+                }
+
+                Button {
+                    settings.hapticFeedback()
+                    quranPlayer.playSurah(
+                        surahNumber: item.surahNumber,
+                        surahName: item.surahName
+                    )
+                } label: {
+                    Label("Play from Beginning", systemImage: "memories")
+                }
+            } label: {
+                Image(systemName: "play.fill")
+                    .font(.footnote)
+                    .foregroundColor(settings.accentColor.color.opacity(0.75))
+                    .frame(width: 26, height: 26)
+                    .contentShape(Rectangle())
+            }
+            #endif
         }
         .padding(.vertical, 4)
     }
@@ -1109,14 +1165,14 @@ struct SummaryAyahTile: View {
                 HighlightedSnippet(
                     source: arabicDisplayText(),
                     term: "",
-                    font: .custom(settings.fontArabic, size: UIFont.preferredFont(forTextStyle: .subheadline).pointSize * 1.1),
+                    font: Font.arabic(settings.quranDisplayFontName, size: UIFont.preferredFont(forTextStyle: .subheadline).pointSize * 1.1),
                     accent: settings.accentColor.color,
                     fg: .primary,
                     preStyledSource: arabicTajweedText(),
                     beginnerMode: settings.beginnerMode,
                     lineLimit: 1
                 )
-                .arabicFontDesign(custom: settings.quranUsesCustomArabicFace)
+                .arabicFontDesign(custom: settings.quranDisplayUsesCustomArabicFace)
                 .multilineTextAlignment(.trailing)
                 .frame(maxWidth: .infinity, alignment: .trailing)
             }
@@ -1667,8 +1723,8 @@ struct AyahOfTheDayRow: View {
         VStack(alignment: .leading, spacing: 10) {
             if settings.showArabicText {
                 Text(ayah.displayArabicText(surahId: surah.id, clean: settings.cleanArabicText, qiraahOverride: settings.displayQiraahForArabic))
-                    .font(.custom(settings.fontArabic, size: UIFont.preferredFont(forTextStyle: .title2).pointSize))
-                    .arabicFontDesign(custom: settings.quranUsesCustomArabicFace)
+                    .font(Font.arabic(settings.quranDisplayFontName, size: UIFont.preferredFont(forTextStyle: .title2).pointSize))
+                    .arabicFontDesign(custom: settings.quranDisplayUsesCustomArabicFace)
                     .multilineTextAlignment(.trailing)
                     .frame(maxWidth: .infinity, alignment: .trailing)
                     .lineSpacing(6)
@@ -1799,14 +1855,14 @@ struct CompactAyahArabicRow: View {
                 HighlightedSnippet(
                     source: arabicDisplayText(),
                     term: "",
-                    font: .custom(settings.fontArabic, size: settings.fontArabicSize * 0.8),
+                    font: Font.arabic(settings.quranDisplayFontName, size: settings.fontArabicSize * 0.8),
                     accent: settings.accentColor.color,
                     fg: .primary,
                     preStyledSource: arabicTajweedText(),
                     beginnerMode: settings.beginnerMode,
                     lineLimit: nil
                 )
-                .arabicFontDesign(custom: settings.quranUsesCustomArabicFace)
+                .arabicFontDesign(custom: settings.quranDisplayUsesCustomArabicFace)
                 .multilineTextAlignment(.trailing)
                 .frame(maxWidth: .infinity, alignment: .trailing)
             } else {
@@ -1857,7 +1913,7 @@ struct AyahArabicSnippet: View {
             HighlightedSnippet(
                 source: arabicDisplayText(),
                 term: "",
-                font: .custom(settings.fontArabic, size: settings.fontArabicSize * scale),
+                font: Font.arabic(settings.quranDisplayFontName, size: settings.fontArabicSize * scale),
                 accent: settings.accentColor.color,
                 fg: .primary,
                 preStyledSource: arabicTajweedText(),
@@ -1865,7 +1921,7 @@ struct AyahArabicSnippet: View {
                 lineLimit: lineLimit,
                 highlightAllahNames: settings.highlightAllahNames
             )
-            .arabicFontDesign(custom: settings.quranUsesCustomArabicFace)
+            .arabicFontDesign(custom: settings.quranDisplayUsesCustomArabicFace)
             .multilineTextAlignment(.trailing)
             .frame(maxWidth: .infinity, alignment: .trailing)
         }
@@ -2244,7 +2300,7 @@ struct AyahSearchRow: View, Equatable {
                         lineLimit: nil,
                         guaranteeMatch: visibility.forceArabicHighlight
                     )
-                    .arabicFontDesign(custom: settings.quranUsesCustomArabicFace)
+                    .arabicFontDesign(custom: settings.quranDisplayUsesCustomArabicFace)
                     .frame(maxWidth: .infinity, alignment: .trailing)
                     .multilineTextAlignment(.trailing)
                     // Inside this badge+Arabic HStack SwiftUI otherwise truncates a long ayah to one line;
@@ -2324,7 +2380,7 @@ struct AyahSearchRow: View, Equatable {
                     lineLimit: nil,
                     guaranteeMatch: visibility.forceArabicHighlight
                 )
-                .arabicFontDesign(custom: settings.quranUsesCustomArabicFace)
+                .arabicFontDesign(custom: settings.quranDisplayUsesCustomArabicFace)
                 .frame(maxWidth: .infinity, alignment: .trailing)
                 .multilineTextAlignment(.trailing)
                 .fixedSize(horizontal: false, vertical: true)

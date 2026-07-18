@@ -436,7 +436,7 @@ struct ShareAyahSheet: View {
         // Arabic
         if shareSettings.arabic {
             let header: String? = settings.showAyahInformation
-                ? "[\(surah.nameArabic) \(surah.idArabic):\(ayah.idArabic)]"
+                ? "[\(Settings.shared.cleanedQuranArabic(surah.nameArabic)) \(surah.idArabic):\(ayah.idArabic)]"
                 : nil
 
             let arabicText = Self.shareArabicText(
@@ -528,6 +528,12 @@ struct ShareAyahSheet: View {
     }
 
     /// Returns (English, Arabic) display names for the given displayQiraah tag.
+    /// Whether Show Riwayah should be on for `qiraah`: any non-Hafs riwayah always shows it (the riwayah
+    /// is the point of the share then); Hafs follows the user's saved preference (off by default).
+    private func resolvedIncludeRiwayah(for qiraah: String) -> Bool {
+        Settings.isNonHafsQiraah(qiraah) ? true : shareIncludeRiwayah
+    }
+
     private static func qiraahLabels(displayQiraah: String) -> (english: String, arabic: String) {
         let option = Settings.Riwayah.option(for: displayQiraah)
         return (option.label, option.arabic)
@@ -665,6 +671,7 @@ struct ShareAyahSheet: View {
                                 ).animation(.easeInOut)) {
                                     Text("Uthmani").tag(Settings.hafsUthmaniFontName)
                                     Text("Indopak").tag(Settings.indopakFontName)
+                                    Text("Basic").tag(Settings.systemArabicFontName)
                                 }
                                 .pickerStyle(SegmentedPickerStyle())
                                 .padding(.horizontal, 16)
@@ -715,9 +722,14 @@ struct ShareAyahSheet: View {
                         if settings.showQiraahDetails {
                             Toggle(isOn: Binding(
                                 get: { shareSettings.includeQiraah },
-                                set: {
-                                    shareIncludeRiwayah = $0
-                                    shareSettings = updatedShareSettings(includeQiraah: $0)
+                                set: { newValue in
+                                    // On Hafs the flip IS the saved preference. On any other riwayah the
+                                    // flip is session-only - the next riwayah change re-resolves it, and
+                                    // the Hafs preference stays untouched.
+                                    if !Settings.isNonHafsQiraah(shareQiraah) {
+                                        shareIncludeRiwayah = newValue
+                                    }
+                                    shareSettings = updatedShareSettings(includeQiraah: newValue)
                                 }
                             )
                                 .animation(.easeInOut)) {
@@ -782,7 +794,7 @@ struct ShareAyahSheet: View {
                     transliteration: storedCopyTransliteration,
                     englishSaheeh: storedCopyEnglishSaheeh,
                     englishMustafa: storedCopyEnglishMustafa,
-                    includeQiraah: settings.showQiraahDetails ? shareIncludeRiwayah : false,
+                    includeQiraah: settings.showQiraahDetails ? resolvedIncludeRiwayah(for: shareQiraah) : false,
                     shareArabicFont: font,
                     cleanArabic: settings.cleanArabicText,
                     hideArabicDots: settings.removeArabicDots,
@@ -831,9 +843,17 @@ struct ShareAyahSheet: View {
         // No .onChange(of: shareIncludeRiwayah): every write to it also updates shareSettings.includeQiraah,
         // so the shareSettings observer above already regenerates - a second observer meant every riwayah
         // toggle rendered the image twice.
-        .onChange(of: shareQiraah) { _ in
+        .onChange(of: shareQiraah) { newQiraah in
             guard didFinishInitialSetup else { return }
             settings.hapticFeedback()
+            // Show Riwayah follows the riwayah: a non-Hafs choice turns it on (the riwayah is the whole
+            // point of the share then); back on Hafs it returns to the saved Hafs preference.
+            let resolved = settings.showQiraahDetails ? resolvedIncludeRiwayah(for: newQiraah) : false
+            if resolved != shareSettings.includeQiraah {
+                shareSettings = updatedShareSettings(includeQiraah: resolved)
+                // shareSettings' own observer regenerates; skip the duplicate below.
+                return
+            }
             generatePreviewImage()
         }
         .onChange(of: settings.showQiraahDetails) { show in
@@ -1012,7 +1032,10 @@ struct ShareAyahSheet: View {
         let arabicFontName = Settings.quranArabicFontName(selectedFontName: selectedArabicFontName, qiraah: shareQiraah)
         let arabicFont = shareSettings.hideArabicDots
             ? bodyFont.withSize(bodyFont.pointSize * 1.15)
-            : (UIFont(name: arabicFontName, size: bodyFont.pointSize * 1.15) ?? bodyFont)
+            // The "Basic" sentinel has no real UIFont - it falls back to the ROUNDED system face at the
+            // same 1.15x Arabic scale (the bare bodyFont fallback silently shrank Basic Arabic).
+            : (UIFont(name: arabicFontName, size: bodyFont.pointSize * 1.15)
+                ?? UIFont.roundedSystemFont(ofSize: bodyFont.pointSize * 1.15))
         let arabicNumberFont = UIFont(name: Settings.hafsUthmaniFontName, size: bodyFont.pointSize * 1.15) ?? arabicFont
         let captionFont = UIFont.roundedSystemFont(ofSize: UIFont.preferredFont(forTextStyle: .caption2).pointSize)
 
@@ -1060,7 +1083,7 @@ struct ShareAyahSheet: View {
             )
 
             if settings.showAyahInformation {
-                append("[\(surah.nameArabic) ", arAccent, highlightAllah: false)
+                append("[\(Settings.shared.cleanedQuranArabic(surah.nameArabic)) ", arAccent, highlightAllah: false)
                 append("\(surah.idArabic):\(ayah.idArabic)]", accentAttr, highlightAllah: false)
                 append("\n", bodyAttr, highlightAllah: false)
             } else {
@@ -1209,7 +1232,10 @@ extension ShareAyahSheet {
     static func copyAyahToPasteboard(surahNumber: Int, ayahNumber: Int, settings: Settings, quranData: QuranData) {
         guard let surah = quranData.quran.first(where: { $0.id == surahNumber }),
               let ayah = surah.ayahs.first(where: { $0.id == ayahNumber }) else { return }
-        let includeRiwayah = settings.showQiraahDetails && UserDefaults.standard.bool(forKey: shareIncludeRiwayahKey)
+        // Same rule as the sheet: a non-Hafs reading riwayah always names itself; Hafs follows the saved
+        // preference (off by default).
+        let includeRiwayah = settings.showQiraahDetails
+            && (Settings.isNonHafsQiraah(settings.displayQiraah) || UserDefaults.standard.bool(forKey: shareIncludeRiwayahKey))
         let shareFont = UserDefaults.standard.string(forKey: "shareArabicFont") ?? ""
         let shareSettings = ShareSettings(
             arabic: settings.copyAyahArabic,
@@ -1271,7 +1297,7 @@ extension ShareAyahSheet {
             s += text
         }
         if shareSettings.arabic {
-            let header: String? = settings.showAyahInformation ? "[\(surah.nameArabic) \(surah.idArabic):\(ayah.idArabic)]" : nil
+            let header: String? = settings.showAyahInformation ? "[\(Settings.shared.cleanedQuranArabic(surah.nameArabic)) \(surah.idArabic):\(ayah.idArabic)]" : nil
             let arabicText = Self.shareArabicText(
                 surah: surah,
                 ayah: ayah,
@@ -1320,7 +1346,10 @@ extension ShareAyahSheet {
         let arabicFontName = Settings.quranArabicFontName(selectedFontName: selectedArabicFontName, qiraah: settings.displayQiraahForArabic)
         let arabicFont = shareSettings.hideArabicDots
             ? bodyFont.withSize(bodyFont.pointSize * 1.15)
-            : (UIFont(name: arabicFontName, size: bodyFont.pointSize * 1.15) ?? bodyFont)
+            // The "Basic" sentinel has no real UIFont - it falls back to the ROUNDED system face at the
+            // same 1.15x Arabic scale (the bare bodyFont fallback silently shrank Basic Arabic).
+            : (UIFont(name: arabicFontName, size: bodyFont.pointSize * 1.15)
+                ?? UIFont.roundedSystemFont(ofSize: bodyFont.pointSize * 1.15))
         let arabicNumberFont = UIFont(name: Settings.hafsUthmaniFontName, size: bodyFont.pointSize * 1.15) ?? arabicFont
         let captionFont = UIFont.roundedSystemFont(ofSize: UIFont.preferredFont(forTextStyle: .caption2).pointSize)
         let textColor = UIColor.white
@@ -1370,7 +1399,7 @@ extension ShareAyahSheet {
                 textColor: textColor
             ) {
                 if settings.showAyahInformation {
-                    append("[\(surah.nameArabic) \(surah.idArabic):\(ayah.idArabic)]\n", arAttr, highlightAllah: false)
+                    append("[\(Settings.shared.cleanedQuranArabic(surah.nameArabic)) \(surah.idArabic):\(ayah.idArabic)]\n", arAttr, highlightAllah: false)
                 }
                 appendAttributed(tajweedText)
                 if !settings.showAyahInformation {
@@ -1378,7 +1407,7 @@ extension ShareAyahSheet {
                 }
             } else {
                 if settings.showAyahInformation {
-                    append("[\(surah.nameArabic) \(surah.idArabic):\(ayah.idArabic)]\n", arAttr, highlightAllah: false)
+                    append("[\(Settings.shared.cleanedQuranArabic(surah.nameArabic)) \(surah.idArabic):\(ayah.idArabic)]\n", arAttr, highlightAllah: false)
                 }
                 append(arabicText, arAttr)
                 if !settings.showAyahInformation {

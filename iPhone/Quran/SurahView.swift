@@ -33,6 +33,37 @@ struct HighlightedAyahRef: Equatable {
     let ayahID: Int
 }
 
+/// Carries the search TERM along an "open this ayah" navigation, so the destination reader renders the
+/// matched snippet in accent - the same coloring the search results list shows - until the reader
+/// touches it. Set right before pushing a text-search hit; consumed once by the arriving reader.
+@MainActor
+final class AyahArrivalTerm {
+    static let shared = AyahArrivalTerm()
+    private var term: String?
+    private var surahID: Int?
+    private var ayahID: Int?
+
+    private init() {}
+
+    func set(term: String, surahID: Int, ayahID: Int) {
+        let trimmed = term.trimmingCharacters(in: .whitespacesAndNewlines)
+        // Reference queries ("5:3", "page 22") carry no text to highlight - only real text terms travel.
+        guard !trimmed.isEmpty, trimmed.rangeOfCharacter(from: .decimalDigits) == nil else { return }
+        self.term = trimmed
+        self.surahID = surahID
+        self.ayahID = ayahID
+    }
+
+    /// The pending term if it targets exactly this ayah - cleared on read so it can't fire twice.
+    func consume(surahID: Int, ayahID: Int) -> String? {
+        guard self.surahID == surahID, self.ayahID == ayahID, let term else { return nil }
+        self.term = nil
+        self.surahID = nil
+        self.ayahID = nil
+        return term
+    }
+}
+
 struct SurahView: View {
     @ObservedObject var settings = Settings.shared
     @ObservedObject var quranData = QuranData.shared
@@ -80,6 +111,10 @@ struct SurahView: View {
     /// True while the "Go to Next Surah" button is on screen - the ONLY thing that marks the ayah
     /// progress bar 100%. Seeing the last ayah isn't finishing; reaching the end-of-surah footer is.
     @State private var nextSurahButtonVisible = false
+    /// The search term that travelled with this navigation (a tapped text-search hit): the target ayah
+    /// renders its matched snippet in ACCENT - no background tint - until the reader touches it.
+    @State private var arrivalTerm: String? = nil
+    @State private var arrivalAyahID: Int? = nil
     @State private var showingSettingsSheet = false
     @State private var showAlert = false
     @State private var showCustomRangeSheet = false
@@ -868,6 +903,14 @@ struct SurahView: View {
     /// Tap an ayah in the list to mark it (task: highlight it); tap the marked ayah again to clear it. Writes
     /// the shared highlight so the mark carries over to the page reader.
     private func toggleListHighlight(_ ayahID: Int) {
+        // The first touch on a row still showing its search-arrival snippet just clears the snippet.
+        if arrivalTerm != nil, arrivalAyahID == ayahID {
+            withAnimation(.easeInOut(duration: 0.15)) {
+                arrivalTerm = nil
+                arrivalAyahID = nil
+            }
+            return
+        }
         let tapped = HighlightedAyahRef(surahID: surah.id, ayahID: ayahID)
         withAnimation(.easeInOut(duration: 0.15)) {
             highlightedAyah = highlightedAyah == tapped ? nil : tapped
@@ -1089,14 +1132,40 @@ struct SurahView: View {
                 onSurahChange: { pageSurah = $0 },
                 onPageAnchor: { surahID, ayahID in pageAnchor = (surahID, ayahID) },
                 highlightedAyah: $highlightedAyah,
-                searchActive: $pageSearchActive
+                searchActive: $pageSearchActive,
+                arrivalHighlight: {
+                    guard let term = arrivalTerm, let target = arrivalAyahID else { return nil }
+                    return (ref: HighlightedAyahRef(surahID: surah.id, ayahID: target), term: term)
+                }(),
+                onClearArrival: {
+                    withAnimation(.easeInOut(duration: 0.15)) {
+                        arrivalTerm = nil
+                        arrivalAyahID = nil
+                    }
+                },
+                isSelecting: isSelectingAyahs,
+                selectedAyahIDs: selectedAyahIDs,
+                onToggleSelection: { ayahID in
+                    withAnimation(.easeInOut(duration: 0.1)) {
+                        if selectedAyahIDs.contains(ayahID) {
+                            selectedAyahIDs.remove(ayahID)
+                        } else {
+                            selectedAyahIDs.insert(ayahID)
+                        }
+                    }
+                }
             ) {
                 let active = quranPlayer.isPlaying || quranPlayer.isPaused
                 VStack(spacing: 0) {
+                    // Select mode swaps the search cluster for the bulk-action bar, exactly like the list.
+                    if isSelectingAyahs {
+                        selectionActionBar
+                    } else {
                     // Always present in page mode: search sits dead center, with the tajweed legend and the
                     // riwayah picker flanking it when they apply (an English page shows neither, so the bar
                     // is just the search).
                     pageBottomControlsBar
+                    }
 
                     if active {
                         NowPlayingView(quranView: false)
@@ -1136,6 +1205,17 @@ struct SurahView: View {
             if !didRecordOpen {
                 didRecordOpen = true
                 settings.recordSurahOpened(surah.id)
+            }
+            // A text-search hit travels with its query: the target ayah shows the matched snippet in
+            // accent (list and page alike) until the reader touches it.
+            if let target = ayah, let term = AyahArrivalTerm.shared.consume(surahID: surah.id, ayahID: target) {
+                arrivalTerm = term
+                arrivalAyahID = target
+            }
+            // Page mode: opening to a specific ayah SELECTS it - a bookmark or search hit can land
+            // mid-page, and the selection is what shows you where you landed. It stays until tapped.
+            if settings.quranPageMode, let target = ayah {
+                highlightedAyah = HighlightedAyahRef(surahID: surah.id, ayahID: target)
             }
         }
         .sheet(isPresented: $showingSettingsSheet) {
@@ -1659,6 +1739,7 @@ struct SurahView: View {
                                     renderSettingsSignature: ayahRowRenderSettingsSignature,
                                     scrollDown: $scrollDown,
                                     searchText: $searchText,
+                                    arrivalTerm: arrivalAyahID == ayah.id ? (arrivalTerm ?? "") : "",
                                     isHighlighted: isAyahHighlighted(ayah.id),
                                     onToggleHighlight: { toggleListHighlight(ayah.id) },
                                     isSelecting: isSelectingAyahs,
@@ -1747,9 +1828,16 @@ struct SurahView: View {
             #if os(iOS)
             .onChange(of: scrollDown) { value in
                 guard let target = value else { return }
-                // A tap on a matched row (from search): light it up so it's easy to spot once the search
-                // clears and the list scrolls to it.
-                highlightedAyah = HighlightedAyahRef(surahID: surah.id, ayahID: target)
+                // A tap on a matched row (from search): keep the row easy to spot once the search clears.
+                // A TEXT query keeps its accent-colored snippet on the row (until touched); a reference
+                // query ("5:3", "page 12") has nothing to color, so it gets the grey tint as before.
+                let trimmedQuery = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+                let isTextQuery = !trimmedQuery.isEmpty && trimmedQuery.rangeOfCharacter(from: .decimalDigits) == nil
+                if isTextQuery {
+                    arrivalTerm = trimmedQuery
+                    arrivalAyahID = target
+                }
+                // Reference queries just scroll - the landing itself is the marker in list mode.
                 if !searchText.isEmpty {
                     settings.hapticFeedback()
                     pendingScrollAfterSearchClear = target
@@ -1784,9 +1872,8 @@ struct SurahView: View {
                     if !didScrollDown {
                         didScrollDown = true
                         scrollToAyah(target, proxy: proxy)
-                        // Opened to a specific ayah (last-read, a search hit, a bookmark): light it up so it's
-                        // easy to find. It stays lit until another ayah is highlighted.
-                        highlightedAyah = HighlightedAyahRef(surahID: surah.id, ayahID: target)
+                        // No tint on a list arrival: the scroll already lands you on the ayah, so a grey
+                        // selection would be noise. A travelling search term still colors its snippet.
                     }
                 } else if firstVisibleAyahID == nil {
                     firstVisibleAyahID = ayahsForQiraah.first?.id
@@ -1825,7 +1912,11 @@ struct SurahView: View {
                 firstVisibleAyahID = target
                 didScrollDown = true
                 scrollToAyah(target, proxy: proxy)
-                highlightedAyah = HighlightedAyahRef(surahID: surah.id, ayahID: target)
+                if let term = AyahArrivalTerm.shared.consume(surahID: surah.id, ayahID: newValue) {
+                    arrivalTerm = term
+                    arrivalAyahID = target
+                }
+                // No tint on a list arrival - the scroll is the landing marker.
             }
             #if os(iOS)
             // Always-pinned header (safeAreaInset, not overlay): it reserves space so list content - and
@@ -1858,7 +1949,9 @@ struct SurahView: View {
                 // Insert/remove the bar on isPlaying||isPaused with `.animation` so SwiftUI animates BOTH the
                 // fade (the bar's `.transition`) and the height collapse natively. The bar keeps its content
                 // while fading out via `retainedContext`, and "Stop Playing" defers `stop()`, so closing works.
-                let controlsVisible = !barsCollapsed || isAyahSearchFocused
+                // Scroll-collapse is OFF: the legend/global/riwayah row stays put while scrolling.
+                // (Was: `!barsCollapsed || isAyahSearchFocused` - restore to fold it away again.)
+                let controlsVisible = true
                 VStack(spacing: 0) {
                     // Apple Music-style: the secondary legend/global/riwayah row folds away while scrolling
                     // down. The row STAYS MOUNTED and collapses via height+opacity - an `if` removal
@@ -2123,6 +2216,7 @@ struct SurahView: View {
                 } label: {
                     Text(selectedAyahIDs.count == cachedAyahsForQiraah.count ? "Deselect All" : "Select All")
                         .font(.caption.weight(.semibold))
+                        .contentShape(Rectangle())
                 }
 
                 Button {
@@ -2134,6 +2228,7 @@ struct SurahView: View {
                 } label: {
                     Text("Done")
                         .font(.subheadline.weight(.semibold))
+                        .contentShape(Rectangle())
                 }
             }
             .foregroundColor(settings.accentColor.color)
@@ -2189,6 +2284,8 @@ struct SurahView: View {
             }
             .foregroundColor(settings.accentColor.color)
             .frame(maxWidth: .infinity)
+            // The whole equal-width slot is tappable, not just the glyph's own ink.
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
     }
@@ -2245,34 +2342,46 @@ struct SurahView: View {
             && settings.isHafsDisplay
         let comparisonVisible = arabicPage && settings.qiraatComparisonMode
 
-        // The search button sits BETWEEN the legend and the riwayah picker, spaced with plain padding (no
-        // Spacers - those pinned it to the edges and let it collide with the picker). The whole cluster is
-        // centered in the bar.
-        return HStack(alignment: .bottom, spacing: 12) {
-            if tajweedCanRenderNow {
-                TajweedLegendMenu()
-            }
+        // The search button only appears alongside the tajweed legend or the riwayah picker - with
+        // neither enabled the bar shows nothing at all. It stretches to fill whatever width the flanking
+        // controls leave, at their exact height (caption text + 8pt vertical padding).
+        return Group {
+            if tajweedCanRenderNow || comparisonVisible {
+                HStack(alignment: .bottom, spacing: 12) {
+                    // The legend and the riwayah picker take exactly the space THEY need (layoutPriority +
+                    // fixed-size labels); the search stretches into whatever is left over - and when there
+                    // isn't enough, it is the one that shrinks, scaling its label down first.
+                    if tajweedCanRenderNow {
+                        TajweedLegendMenu()
+                            .layoutPriority(1)
+                    }
 
-            Button {
-                settings.hapticFeedback()
-                withAnimation(.easeInOut) { pageSearchActive = true }
-            } label: {
-                Label("Search", systemImage: "magnifyingglass")
-                    .font(.caption.weight(.semibold))
-                    .foregroundColor(settings.accentColor.accent1)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 6)
-                    .conditionalGlassEffect()
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Search this page")
+                    Button {
+                        settings.hapticFeedback()
+                        withAnimation(.easeInOut) { pageSearchActive = true }
+                    } label: {
+                        Label("Search", systemImage: "magnifyingglass")
+                            .font(.caption.weight(.semibold))
+                            .foregroundColor(settings.accentColor.accent1)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.6)
+                            .padding(.vertical, 8)
+                            .padding(.horizontal, 4)
+                            .frame(maxWidth: .infinity)
+                            .conditionalGlassEffect()
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Search this page")
 
-            if comparisonVisible {
-                ArabicTextRiwayahPicker(selection: $settings.displayQiraah.animation(.easeInOut))
+                    if comparisonVisible {
+                        ArabicTextRiwayahPicker(selection: $settings.displayQiraah.animation(.easeInOut))
+                            .layoutPriority(1)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .center)
+                .padding(.horizontal, 24)
             }
         }
-        .frame(maxWidth: .infinity, alignment: .center)
-        .padding(.horizontal, 24)
     }
 
     @ViewBuilder
@@ -2281,44 +2390,54 @@ struct SurahView: View {
             && settings.showArabicText
             && settings.isHafsDisplay
 
-        // Same shape as the page reader's bar: the legend and riwayah picker flank the whole-Quran search,
-        // spaced with plain padding (no Spacers) and centered as a cluster. Labeled "Global" because this
-        // reader has its own search bar right below, and this button is the "take what I typed THERE" escape
-        // to the whole Quran.
-        HStack(alignment: .bottom, spacing: 12) {
-            if tajweedCanRenderNow {
-                TajweedLegendMenu()
-            }
+        // Same shape as the page reader's bar: the global search only appears alongside the tajweed
+        // legend or the riwayah picker, stretches between them, and matches their height. Labeled
+        // "Global" because this reader has its own search bar right below, and this button is the "take
+        // what I typed THERE" escape to the whole Quran.
+        if tajweedCanRenderNow || settings.qiraatComparisonMode {
+            HStack(alignment: .bottom, spacing: 12) {
+                // Same rule as the page bar: the flanking controls take the space they need, the search
+                // fills the leftover and is the first to shrink when the row runs tight.
+                if tajweedCanRenderNow {
+                    TajweedLegendMenu()
+                        .layoutPriority(1)
+                }
 
-            Button {
-                settings.hapticFeedback()
-                QuranSearchHandoff.shared.request(searchText)
-            } label: {
-                Label("Global", systemImage: "magnifyingglass")
-                    .font(.caption.weight(.semibold))
-                    .foregroundColor(settings.accentColor.accent1)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 6)
-                    .conditionalGlassEffect()
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Search the whole Quran for what is typed in the search bar")
+                Button {
+                    settings.hapticFeedback()
+                    QuranSearchHandoff.shared.request(searchText)
+                } label: {
+                    Label("Global", systemImage: "magnifyingglass")
+                        .font(.caption.weight(.semibold))
+                        .foregroundColor(settings.accentColor.accent1)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.6)
+                        .padding(.vertical, 8)
+                        .padding(.horizontal, 4)
+                        .frame(maxWidth: .infinity)
+                        .conditionalGlassEffect()
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Search the whole Quran for what is typed in the search bar")
 
-            if settings.qiraatComparisonMode {
-                ArabicTextRiwayahPicker(selection: $settings.displayQiraah.animation(.easeInOut))
+                if settings.qiraatComparisonMode {
+                    ArabicTextRiwayahPicker(selection: $settings.displayQiraah.animation(.easeInOut))
+                        .layoutPriority(1)
+                }
             }
+            .frame(maxWidth: .infinity, alignment: .center)
+            .padding(.horizontal, 24)
         }
-        .frame(maxWidth: .infinity, alignment: .center)
-        .padding(.horizontal, 24)
     }
 
     private func playbackAndSearchControls(proxy: ScrollViewProxy) -> some View {
         VStack(spacing: SafeAreaInsetVStackSpacing.standard) {
             HStack(spacing: 0) {
                 SearchBar(
-                    // Animate the filtered results only when the user types (binding-scoped), so the
-                    // list transition eases without the List-level animation that breaks scroll restoration.
-                    text: $searchText.animation(.easeInOut),
+                    // NOT an animated binding (it used to be): animating the state write animated a diff
+                    // of the whole ayah list on every keystroke, which under Low Power Mode stalled the
+                    // main thread long enough to read as a crash. Filtering now applies instantly.
+                    text: $searchText,
                     onFocusChanged: { focused in
                         withAnimation {
                             isAyahSearchFocused = focused
@@ -2566,17 +2685,16 @@ struct SurahView: View {
             Divider()
 
             // Multi-select: pick several ayahs, then share/copy/bookmark/annotate them all at once.
-            // List mode only - page mode has no per-row selection surface.
-            if !settings.quranPageMode {
-                Button {
-                    settings.hapticFeedback()
-                    withAnimation(.easeInOut) {
-                        isSelectingAyahs = true
-                        selectedAyahIDs = []
-                    }
-                } label: {
-                    Label("Select Ayahs", systemImage: "checkmark.circle")
+            // Works in both readers - on the page, taps toggle ayahs of this surah while the mode is on.
+            Button {
+                settings.hapticFeedback()
+                withAnimation(.easeInOut) {
+                    if cachedAyahsForQiraah.isEmpty { rebuildQiraahCaches() }
+                    isSelectingAyahs = true
+                    selectedAyahIDs = []
                 }
+            } label: {
+                Label("Select Ayahs", systemImage: "checkmark.circle")
             }
 
             // Playback lives on the play control in the footer, not up here.
@@ -2632,8 +2750,8 @@ struct SurahView: View {
                     HStack {
                         // Arabic scales down rather than truncating: a clipped Arabic name is unreadable,
                         // where a smaller one is not.
-                        Text(surah.nameArabic)
-                            .font(.custom(settings.fontArabic, size: UIFont.preferredFont(forTextStyle: .headline).pointSize + 2))
+                        Text(settings.cleanedQuranArabic(surah.nameArabic))
+                            .font(Font.arabic(settings.quranDisplayFontName, size: UIFont.preferredFont(forTextStyle: .headline).pointSize + 2))
                             .arabicFontDesign(custom: settings.quranUsesCustomArabicFace)
                             .lineLimit(1)
 
@@ -2768,12 +2886,20 @@ struct SurahView: View {
                     settings.recordSurahOpened(anchorSurah.id)
                     swappedSurah = anchorSurah
                 }
-                firstVisibleAyahID = anchor.ayahID
-                modeSwitchAyah = anchor.ayahID
+                // An ayah SELECTED on the page wins over the page's top ayah: switching to the list
+                // scrolls to the ayah the reader marked, not merely to wherever the page began.
+                let landing: Int = {
+                    if let selected = highlightedAyah, selected.surahID == anchor.surahID {
+                        return selected.ayahID
+                    }
+                    return anchor.ayahID
+                }()
+                firstVisibleAyahID = landing
+                modeSwitchAyah = landing
                 // The list reader only performs its opening scroll once per surah; this is a fresh open.
                 didScrollDown = false
-                // Carry the highlight onto the ayah the list lands on (the page's first ayah).
-                highlightedAyah = HighlightedAyahRef(surahID: anchor.surahID, ayahID: anchor.ayahID)
+                // Carry the highlight onto the ayah the list lands on.
+                highlightedAyah = HighlightedAyahRef(surahID: anchor.surahID, ayahID: landing)
             }
             pageSurah = nil
         } else {
@@ -3046,6 +3172,7 @@ struct ArabicTextRiwayahPicker: View {
                         .font(.caption)
                         .foregroundColor(settings.accentColor.color)
                         .lineLimit(1)
+                        .fixedSize()
 
                     Image(systemName: "chevron.down")
                         .font(.caption2.weight(.semibold))
@@ -3119,6 +3246,8 @@ private struct TajweedLegendMenu: View {
                 Text("Legend")
                     .font(.caption)
                     .foregroundColor(settings.accentColor.color)
+                    .lineLimit(1)
+                    .fixedSize()
             }
             .padding(.horizontal, 10)
             .padding(.vertical, 8)
@@ -3297,6 +3426,14 @@ struct SurahPageReader<Controls: View>: View {
     @Binding var highlightedAyah: HighlightedAyahRef?
     /// Whether the in-page find bar is open (toggled by the search button in the parent's bottom bar).
     @Binding var searchActive: Bool
+    /// The search-arrival snippet: the ayah the navigation targeted plus the term that matched it. The
+    /// page colors the matched substring in accent until the reader's first touch clears it.
+    var arrivalHighlight: (ref: HighlightedAyahRef, term: String)? = nil
+    var onClearArrival: (() -> Void)? = nil
+    /// Multi-select (parent-owned): while on, taps toggle ayahs of `surah` instead of marking them.
+    var isSelecting: Bool = false
+    var selectedAyahIDs: Set<Int> = []
+    var onToggleSelection: ((Int) -> Void)? = nil
     /// The optional tajweed/qiraah controls and the mini player. The reader owns the ordering: these sit
     /// ABOVE the page-navigation footer, which is applied last so it stays pinned at the very bottom.
     @ViewBuilder var bottomControls: () -> Controls
@@ -3377,7 +3514,16 @@ struct SurahPageReader<Controls: View>: View {
                     // keeps this body from materializing a fresh 604-tuple array on every swipe (and on every
                     // player tick while audio runs) just so the diff can walk it.
                     ForEach(pages.indices.reversed(), id: \.self) { index in
-                        MushafPageContent(page: pages[index], highlightedAyah: $highlightedAyah)
+                        MushafPageContent(
+                            page: pages[index],
+                            highlightedAyah: $highlightedAyah,
+                            arrivalHighlight: arrivalHighlight,
+                            onClearArrival: onClearArrival,
+                            isSelecting: isSelecting,
+                            selectionSurahID: surah.id,
+                            selectedAyahIDs: selectedAyahIDs,
+                            onToggleSelection: onToggleSelection
+                        )
                             // Each page's own contents keep the app's reading direction; only the *paging* is
                             // flipped below.
                             .environment(\.layoutDirection, layoutDirection)
@@ -3878,6 +4024,16 @@ private struct MushafPageContent: View {
     /// switching modes sets it. It stays lit until another ayah is selected or it is tapped again - a reading
     /// aid for keeping your place, deliberately sticky and NOT tied to the actions sheet.
     @Binding var highlightedAyah: HighlightedAyahRef?
+    /// The search-arrival snippet (target ayah + matched term), colored in accent within the page text
+    /// until the reader's first touch clears it.
+    var arrivalHighlight: (ref: HighlightedAyahRef, term: String)? = nil
+    var onClearArrival: (() -> Void)? = nil
+    /// Multi-select: while on, taps toggle ayahs of `selectionSurahID` (the surah the bulk actions
+    /// operate on) instead of marking; selected ayahs carry the accent tint.
+    var isSelecting: Bool = false
+    var selectionSurahID: Int = 0
+    var selectedAyahIDs: Set<Int> = []
+    var onToggleSelection: ((Int) -> Void)? = nil
 
     /// Padding around the ayah block; the composer measures fit against the same text width and height.
     /// No slack constants beyond these: the fit verifies against the real TextKit layout, so the text gets
@@ -4037,10 +4193,32 @@ private struct MushafPageContent: View {
                     highlight: recitingAyah,
                     highlightColor: settings.accentColor.color,
                     mark: markedAyah ?? sheetAyahTint,
+                    termHighlight: arrivalHighlight.map { (surahID: $0.ref.surahID, ayahID: $0.ref.ayahID, term: $0.term) },
+                    selected: isSelecting ? selectedAyahIDs.map { (surahID: selectionSurahID, ayahID: $0) } : [],
                     baselineOffset: rendered.baselineOffset,
                     baselineBand: rendered.baselineBand
                 ) { surahID, ayahID in
                     guard ayahRef(surahID: surahID, ayahID: ayahID) != nil else { return }
+                    // Select mode: taps build the selection (this surah only - the bulk actions
+                    // operate on it) and never touch the reading mark.
+                    if isSelecting {
+                        if surahID == selectionSurahID {
+                            settings.hapticFeedback()
+                            onToggleSelection?(ayahID)
+                        }
+                        return
+                    }
+                    // The tap ladder for a search arrival: the FIRST touch clears the accent snippet
+                    // (keeping the ayah selected); the next tap toggles the selection off as usual.
+                    if let arrival = arrivalHighlight {
+                        settings.hapticFeedback()
+                        onClearArrival?()
+                        // A tap on the arrived ayah itself is consumed by clearing the snippet; a tap
+                        // elsewhere clears it AND acts on the tapped ayah.
+                        if arrival.ref.surahID == surahID, arrival.ref.ayahID == ayahID {
+                            return
+                        }
+                    }
                     toggleHighlight(surahID: surahID, ayahID: ayahID)
                 } onLongPressAyah: { surahID, ayahID in
                     guard let ref = ayahRef(surahID: surahID, ayahID: ayahID) else { return }
@@ -4917,8 +5095,9 @@ enum MushafPageRenderCache {
 
     /// Queue-confined mirror of `prewarmGeneration`: published onto the fit queue when a sweep starts, and
     /// read only there - so a queued ring fit can notice the user has swiped on BEFORE paying ~30 passes,
-    /// without a cross-thread race on the main-thread counter.
-    private static var queueGeneration = 0
+    /// without a cross-thread race on the main-thread counter. `nonisolated(unsafe)` because the safety
+    /// invariant is the QUEUE (every touch happens on `prewarmQueue`), which the compiler can't see.
+    nonisolated(unsafe) private static var queueGeneration = 0
 
     static func prewarm(pages: [MushafPage], around index: Int, radius: Int = 5, includeCenter: Bool = false) {
         guard let geometry = lastGeometry, !pages.isEmpty else { return }
@@ -4966,11 +5145,15 @@ enum MushafPageRenderCache {
         config: MushafComposeConfig,
         generation: Int?
     ) {
+        // NSString isn't Sendable; the String bridge is - it crosses the queue hops and is re-wrapped
+        // into an NSString cache key on the other side.
+        let keyString = key as String
         prewarmQueue.async {
             // A ring fit from an abandoned sweep skips the expensive fit - unless the user has since landed
             // on this very page (a waiter attached), which upgrades it to must-run.
             if let generation, queueGeneration != generation {
                 DispatchQueue.main.async {
+                    let key = keyString as NSString
                     guard let waiters = pendingRenders[key] else { return }
                     if waiters.isEmpty {
                         pendingRenders.removeValue(forKey: key)
@@ -4984,6 +5167,7 @@ enum MushafPageRenderCache {
             let composer = MushafPageComposer(page: page, config: config)
             let metrics = fitMetrics(composer: composer, width: width, height: height)
             DispatchQueue.main.async {
+                let key = keyString as NSString
                 if cache.object(forKey: key) == nil {
                     let rendered = finalize(composer: composer, metrics: metrics, width: width)
                     cache.setObject(rendered, forKey: key)
@@ -5118,6 +5302,11 @@ struct MushafPageTextView: UIViewRepresentable {
     /// The ayah the reader marked by tapping it - tinted grey, and independent of the recitation highlight so
     /// both can be on screen at once.
     var mark: (surahID: Int, ayahID: Int)?
+    /// A search-arrival term: the matched substrings WITHIN the given ayah render in the accent color -
+    /// the page-mode equivalent of the list's HighlightedSnippet coloring.
+    var termHighlight: (surahID: Int, ayahID: Int, term: String)? = nil
+    /// Multi-select: every listed ayah carries the accent selection tint.
+    var selected: [(surahID: Int, ayahID: Int)] = []
     /// Forced distance from each line fragment's top to its baseline - see `MushafRenderedPage.baselineOffset`.
     var baselineOffset: CGFloat = 0
     /// Fragment heights the forced baseline applies to (running text lines, not headings).
@@ -5135,18 +5324,77 @@ struct MushafPageTextView: UIViewRepresentable {
     /// The tints are painted on top of the cached, composed page rather than recomposing it - a background
     /// attribute doesn't change layout, so nothing has to be re-measured as playback moves down the page.
     private func highlighted(_ text: NSAttributedString) -> NSAttributedString {
-        let tints: [(NSRange, Color)] = [
+        var tints: [(NSRange, Color)] = [
             (range(of: mark), Color.secondary),
             (range(of: highlight), highlightColor),
         ].compactMap { r, color in r.map { ($0, color) } }
 
-        guard !tints.isEmpty else { return text }
+        // Multi-select: every selected ayah carries the accent tint.
+        for ayah in selected {
+            if let r = range(of: ayah) {
+                tints.append((r, highlightColor))
+            }
+        }
+
+        // The search-arrival snippet: matched substrings inside the target ayah in accent FOREGROUND -
+        // the page-mode twin of the list's HighlightedSnippet coloring. When the term can't be found in
+        // the page's script (an ENGLISH query matched the translation, but the page shows Arabic - there
+        // is no "Muhammad" to color in محمد), the whole ayah takes the accent instead: the match is the
+        // ayah, shown at the granularity this page can express.
+        let termTarget: (ayahRange: NSRange, matches: [NSRange])? = {
+            guard let termHighlight,
+                  let ayahRange = range(of: (termHighlight.surahID, termHighlight.ayahID)) else { return nil }
+            let exact = Self.matchRanges(of: termHighlight.term, in: text.string, within: ayahRange)
+            return (ayahRange, exact.isEmpty ? [ayahRange] : exact)
+        }()
+
+        guard !tints.isEmpty || termTarget != nil else { return text }
 
         let mutable = NSMutableAttributedString(attributedString: text)
         for (range, color) in tints {
             mutable.addAttribute(.backgroundColor, value: UIColor(color).withAlphaComponent(0.22), range: range)
         }
+        if let termTarget {
+            // The matched ayah drops its tajweed colors while the match is lit - exactly like the list's
+            // matched rows - otherwise the accent snippet disappears into the rainbow of rule colors.
+            mutable.addAttribute(.foregroundColor, value: UIColor.label, range: termTarget.ayahRange)
+            for range in termTarget.matches {
+                mutable.addAttribute(.foregroundColor, value: UIColor(highlightColor), range: range)
+            }
+        }
         return mutable
+    }
+
+    /// Where `term` matches inside `ayahRange` of the page's plain text, fold-insensitively: the page shows
+    /// fully vocalized text, the query is bare - so both sides fold through the SAME normalization the
+    /// search and the list's snippet highlighting use, and the match maps back through the index map.
+    static func matchRanges(of term: String, in fullText: String, within ayahRange: NSRange) -> [NSRange] {
+        let full = fullText as NSString
+        guard ayahRange.location >= 0, ayahRange.location + ayahRange.length <= full.length else { return [] }
+        let ayahText = full.substring(with: ayahRange)
+
+        let needle = HighlightedSnippet.normalizeForSearchText(term, trimWhitespace: true)
+        guard !needle.isEmpty else { return [] }
+        let built = HighlightedSnippet.normalizedSourceAndMap(for: ayahText)
+        let normalized = built.normalized
+        let map = built.map
+        guard map.count == normalized.count else { return [] }
+
+        var result: [NSRange] = []
+        var searchStart = normalized.startIndex
+        while searchStart < normalized.endIndex,
+              let match = normalized.range(of: needle, range: searchStart..<normalized.endIndex) {
+            let lo = normalized.distance(from: normalized.startIndex, to: match.lowerBound)
+            let hi = normalized.distance(from: normalized.startIndex, to: match.upperBound)
+            if lo >= 0, hi > lo, hi - 1 < map.count {
+                let start = map[lo]
+                let end = ayahText.index(after: map[hi - 1])
+                let local = NSRange(start..<end, in: ayahText)
+                result.append(NSRange(location: ayahRange.location + local.location, length: local.length))
+            }
+            searchStart = match.upperBound
+        }
+        return result
     }
 
     func makeUIView(context: Context) -> UITextView {
@@ -5205,7 +5453,9 @@ struct MushafPageTextView: UIViewRepresentable {
         // immutable instance and the highlight is a value pair, so "did anything actually change" is an
         // identity + equality check; skip the relayout when nothing did.
         let key: ((surahID: Int, ayahID: Int)?) -> String = { $0.map { "\($0.surahID):\($0.ayahID)" } ?? "" }
-        let highlightKey = "\(key(highlight))|\(key(mark))"
+        let termKey = termHighlight.map { "\($0.surahID):\($0.ayahID):\($0.term)" } ?? ""
+        let selectedKey = selected.map { "\($0.surahID):\($0.ayahID)" }.sorted().joined(separator: ",")
+        let highlightKey = "\(key(highlight))|\(key(mark))|\(termKey)|\(selectedKey)"
         if context.coordinator.lastAssignedText === attributed,
            context.coordinator.lastHighlightKey == highlightKey,
            context.coordinator.lastWidth == width {
@@ -5392,8 +5642,8 @@ struct AyahActionsSheet: View {
             }
             // Deliberately smaller than the reader's own size: this is a reminder of which ayah you tapped,
             // not a place to read from, and at full size it pushed every action off the sheet.
-            .font(.custom(settings.fontArabic, size: min(settings.fontArabicSize * 0.55, 20)))
-            .arabicFontDesign(custom: settings.quranUsesCustomArabicFace)
+            .font(Font.arabic(settings.quranDisplayFontName, size: min(settings.fontArabicSize * 0.55, 20)))
+            .arabicFontDesign(custom: settings.quranDisplayUsesCustomArabicFace)
             .multilineTextAlignment(.trailing)
             .lineSpacing(4)
             .environment(\.layoutDirection, .rightToLeft)

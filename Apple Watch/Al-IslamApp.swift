@@ -52,6 +52,9 @@ struct AlIslamApp: App {
             .environmentObject(namesData)
             .accentColor(settings.accentColor.color)
             .tint(settings.accentColor.color)
+            // The app-wide SF Rounded design, same as the iPhone root - covers every system-font Text on
+            // the watch, styled or not (watchOS 9.1+; a visual no-op earlier).
+            .appFontDesign()
             .preferredColorScheme(settings.colorScheme)
             .transition(.opacity)
             .animation(.easeInOut, value: isLaunching)

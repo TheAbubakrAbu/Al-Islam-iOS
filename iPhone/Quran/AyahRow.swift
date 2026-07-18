@@ -31,6 +31,10 @@ struct AyahRow: View, Equatable {
 
     @Binding var scrollDown: Int?
     @Binding var searchText: String
+    /// The search term that travelled with the navigation that OPENED this surah - highlights this row's
+    /// matched snippet in accent (exactly like an active search) without any filtering, until the reader
+    /// touches the row and the parent clears it. Empty for every row but the arrival target.
+    var arrivalTerm: String = ""
 
     /// The shared attention-highlight lands on this ayah - draw a persistent (grey) tint distinct from the
     /// player's accent tint. Set by opening to an ayah, switching reading modes, or tapping the ayah.
@@ -73,6 +77,7 @@ struct AyahRow: View, Equatable {
         lhs.renderSettingsSignature == rhs.renderSettingsSignature &&
         lhs.scrollDown == rhs.scrollDown &&
         lhs.isHighlighted == rhs.isHighlighted &&
+        lhs.arrivalTerm == rhs.arrivalTerm &&
         lhs.isSelecting == rhs.isSelecting &&
         lhs.isSelected == rhs.isSelected &&
         lhs.forceBeginner == rhs.forceBeginner &&
@@ -253,7 +258,7 @@ struct AyahRow: View, Equatable {
             // "Basic" renders these names with the system face, which should stay rounded like the rest of the UI.
             let usesCustomFace = settings.quranUsesCustomArabicFace
             let arabicFont: Font = usesCustomFace
-                ? .custom(settings.fontArabic, size: settings.fontArabicSize * 0.62)
+                ? Font.arabic(settings.fontArabic, size: settings.fontArabicSize * 0.62)
                 : .system(size: settings.fontArabicSize * 0.62, design: .rounded)
             VStack(alignment: .leading, spacing: 4) {
                 HStack {
@@ -361,9 +366,16 @@ struct AyahRow: View, Equatable {
         } else {
             settings.isHafsDisplay
         }
-        let hasSearch = !searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        // The active in-list search term, or - when this row is a search hit the reader just navigated
+        // to - the term that travelled with the navigation. Either colors the matched snippet in accent.
+        let activeTerm: String = {
+            let live = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !live.isEmpty { return searchText }
+            return arrivalTerm
+        }()
+        let hasSearch = !activeTerm.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         let normalizedQuery = hasSearch
-            ? settings.cleanSearch(searchText, whitespace: true).removingArabicDiacriticsAndSigns
+            ? settings.cleanSearch(activeTerm, whitespace: true).removingArabicDiacriticsAndSigns
             : ""
         let matchSources = hasSearch ? normalizedMatchSources() : nil
 
@@ -383,7 +395,7 @@ struct AyahRow: View, Equatable {
         let showTranslit = hafsOnly && (settings.showTransliteration || mTranslit)
         let showEnglishSaheeh = hafsOnly && (settings.showEnglishSaheeh || mSaheeh)
         let showEnglishMustafa = hafsOnly && (settings.showEnglishMustafa || mMustafa)
-        let highlightQuery = hasSearch ? queryForInlineHighlight(searchText) : ""
+        let highlightQuery = hasSearch ? queryForInlineHighlight(activeTerm) : ""
         let fontSizeEN = settings.englishFontSize
 
         let isPlayingThis = quranPlayer.currentSurahNumber == surah.id && quranPlayer.currentAyahNumber == ayah.id

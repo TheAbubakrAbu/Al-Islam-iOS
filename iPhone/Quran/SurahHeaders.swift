@@ -99,17 +99,6 @@ struct JuzHeader: View {
                 randomSurah = randomSurahInJuz
             }
         }
-        #if os(iOS)
-        .confirmationDialog(
-            "Juz \(juz.id) - \(juz.nameTransliteration)",
-            isPresented: $showInfo,
-            titleVisibility: .visible
-        ) {
-            Button("OK") {}
-        } message: {
-            Text(infoMessage)
-        }
-        #endif
     }
 
     private var surahsInRange: [Surah] {
@@ -158,6 +147,20 @@ struct JuzHeader: View {
         }
         .buttonStyle(.plain)
         .foregroundStyle(settings.accentColor.color)
+        // Anchored to the info button itself, so the dialog pops from where the tap happened.
+        .confirmationDialog(
+            "Juz \(juz.id) - \(juz.nameTransliteration)",
+            isPresented: $showInfo,
+            titleVisibility: .visible
+        ) {
+            Button("Copy Info") {
+                settings.hapticFeedback()
+                UIPasteboard.general.string = "Juz \(juz.id) - \(juz.nameTransliteration)\n\(infoMessage)"
+            }
+            Button("OK") {}
+        } message: {
+            Text(infoMessage)
+        }
     }
 
     private var randomSurahLink: some View {
@@ -415,7 +418,7 @@ struct HeaderRow: View {
 
     private var arabicFont: Font {
         usesCustomArabicFace
-            ? .custom(settings.fontArabic, size: settings.fontArabicSize)
+            ? Font.arabic(settings.fontArabic, size: settings.fontArabicSize)
             : .system(size: settings.fontArabicSize)
     }
 }

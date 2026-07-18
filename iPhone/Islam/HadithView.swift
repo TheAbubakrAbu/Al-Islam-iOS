@@ -45,7 +45,9 @@ struct HadithCatalogBook: Identifiable, Hashable {
 
     var id: String { slug }
 
-    /// The forties ship inside the app bundle - tiny files, always available offline, never downloaded.
+    /// The forties ship inside the app bundle as a data SOURCE: "downloading" one copies the bundled
+    /// file to the cache instead of hitting the network. They follow the same download / temporary-read /
+    /// delete flow as every other book.
     var isBundled: Bool { group == .forties }
 
     /// 1-based position in the catalog ("1: Sahih al-Bukhari" ... "10: The Forty Hadith of Imam Nawawi"),
@@ -55,7 +57,7 @@ struct HadithCatalogBook: Identifiable, Hashable {
     }
 
     static let all: [HadithCatalogBook] = [
-        // The Six Books (al-Kutub as-Sittah).
+        // The Six Books (al-Kutub as-Sittah), in chronological order of their compilers.
         HadithCatalogBook(
             slug: "bukhari", folder: "the_9_books",
             englishTitle: "Sahih al-Bukhari", arabicTitle: "صَحِيح البُخارِي",
@@ -63,7 +65,7 @@ struct HadithCatalogBook: Identifiable, Hashable {
             authorEnglish: "Imam Muhammad ibn Ismail al-Bukhari", authorArabic: "الإمام محمد بن إسماعيل البخاري",
             era: "d. 256 AH / 870 CE",
             shortDescription: "The most authentic book after the Quran, sifted from hundreds of thousands of narrations.",
-            longDescription: "Compiled over sixteen years by Imam al-Bukhari (الإمام البخاري), who selected its 7,563 hadiths (about 2,600 without repetition) from hundreds of thousands he examined, applying the strictest standards of authenticity. Muslims across every generation have regarded it as the most authentic book after the Quran itself.",
+            longDescription: "Its full title is al-Jami’ al-Musnad as-Sahih al-Mukhtasar min Umur Rasul Allah ﷺ wa Sunanihi wa Ayyamihi - “the abridged, authentically-chained collection of the affairs, practice, and times of the Messenger of Allah ﷺ.” Compiled over sixteen years by Imam al-Bukhari (الإمام البخاري), who sifted its 7,563 hadiths (about 2,600 without repetition) from hundreds of thousands he examined under the strictest standards of authenticity. Muslims across every generation have regarded it as the most authentic book after the Quran itself.",
             aliases: ["bukhari", "bukharee", "bukhary", "albukhari"]
         ),
         HadithCatalogBook(
@@ -73,18 +75,18 @@ struct HadithCatalogBook: Identifiable, Hashable {
             authorEnglish: "Imam Muslim ibn al-Hajjaj", authorArabic: "الإمام مسلم بن الحجاج",
             era: "d. 261 AH / 875 CE",
             shortDescription: "The second most authentic collection, every hadith gathered with its chains side by side.",
-            longDescription: "Compiled by Imam Muslim ibn al-Hajjaj of Naysabur (الإمام مسلم بن الحجاج النيسابوري), a student of Imam al-Bukhari. Alongside Sahih al-Bukhari it forms the \"Sahihayn,\" the two most authentic books of hadith. Scholars especially prize its arrangement: every narration of a hadith is gathered in one place with its chains compared side by side.",
+            longDescription: "Its full title is al-Musnad as-Sahih al-Mukhtasar bi-Naql al-‘Adl ‘an al-‘Adl ila Rasul Allah ﷺ. Compiled by Imam Muslim ibn al-Hajjaj of Naysabur (الإمام مسلم بن الحجاج النيسابوري), a student of Imam al-Bukhari. Alongside Sahih al-Bukhari it forms the Sahihayn, the two most authentic books of hadith - this the second of them. Scholars especially prize its arrangement: every narration of a hadith is gathered in one place with its chains compared side by side.",
             aliases: ["muslim", "sahihmuslim"]
         ),
         HadithCatalogBook(
-            slug: "nasai", folder: "the_9_books",
-            englishTitle: "Sunan an-Nasa'i", arabicTitle: "سُنَن النَسائِي",
-            group: .six, approximateMegabytes: 8,
-            authorEnglish: "Imam Ahmad ibn Shu'ayb an-Nasa'i", authorArabic: "الإمام أحمد بن شعيب النسائي",
-            era: "d. 303 AH / 915 CE",
-            shortDescription: "The strictest of the four Sunan in its conditions for accepting narrators.",
-            longDescription: "Compiled by Imam an-Nasa'i (الإمام النسائي), whose conditions for accepting narrators were the most rigorous among the authors of the four Sunan. This collection, as-Sunan as-Sughra (also called al-Mujtaba), is his refinement of a larger work, keeping the narrations he judged strongest.",
-            aliases: ["nasai", "nisai", "nasaee", "annasai", "alnasai", "annisai", "alnisai"]
+            slug: "ibnmajah", folder: "the_9_books",
+            englishTitle: "Sunan Ibn Majah", arabicTitle: "سُنَن ابن ماجَه",
+            group: .six, approximateMegabytes: 5.7,
+            authorEnglish: "Imam Muhammad ibn Yazid ibn Majah", authorArabic: "الإمام محمد بن يزيد بن ماجه",
+            era: "d. 273 AH / 887 CE",
+            shortDescription: "The sixth of the Six Books, preserving many hadiths found in none of the other five.",
+            longDescription: "Its full title is Sunan Ibn Majah. Compiled by Imam Ibn Majah of Qazwin (الإمام ابن ماجه القزويني), it completes the famous Six Books (al-Kutub as-Sittah), and its particular value is the many hadiths - the zawa’id - it preserves that appear in none of the other five.",
+            aliases: ["ibnmajah", "majah", "ibnmaja", "maja"]
         ),
         HadithCatalogBook(
             slug: "abudawud", folder: "the_9_books",
@@ -93,7 +95,7 @@ struct HadithCatalogBook: Identifiable, Hashable {
             authorEnglish: "Imam Abu Dawud as-Sijistani", authorArabic: "الإمام أبو داود السجستاني",
             era: "d. 275 AH / 889 CE",
             shortDescription: "The Sunan of legal rulings, about 4,800 hadiths chosen from 500,000.",
-            longDescription: "Imam Abu Dawud (الإمام أبو داود) selected roughly 4,800 hadiths from the 500,000 he had collected, focusing on the narrations jurists build legal rulings upon. He remarked that four hadiths of it suffice a person for their religion - among them \"Actions are by intentions.\"",
+            longDescription: "Its full title is Sunan Abi Dawud. Imam Abu Dawud (الإمام أبو داود) selected roughly 4,800 hadiths from the 500,000 he had collected - the Sunan of legal rulings, focused on the narrations jurists build upon. He remarked that four hadiths of it suffice a person for their religion, among them “Actions are by intentions.”",
             aliases: ["abudawud", "abidawud", "abudaud", "abidaud", "dawud", "daud", "dawood", "abudawood"]
         ),
         HadithCatalogBook(
@@ -103,19 +105,20 @@ struct HadithCatalogBook: Identifiable, Hashable {
             authorEnglish: "Imam Muhammad ibn Isa at-Tirmidhi", authorArabic: "الإمام محمد بن عيسى الترمذي",
             era: "d. 279 AH / 892 CE",
             shortDescription: "The graded collection, noting each hadith's strength and the jurists' positions.",
-            longDescription: "Compiled by Imam at-Tirmidhi (الإمام الترمذي), a student of Imam al-Bukhari. Its distinction is method: after most hadiths he states its grading (sahih, hasan, or otherwise) and which schools of law acted upon it - making it as much a manual of hadith science as a collection.",
+            longDescription: "Its full title is al-Jami’ al-Kabir, known everywhere as Jami’ at-Tirmidhi. Compiled by Imam at-Tirmidhi (الإمام الترمذي), a student of Imam al-Bukhari. Its distinction is method: after most hadiths he states the grading (sahih, hasan, or otherwise) and which schools of law acted upon it - as much a manual of hadith science as a collection.",
             aliases: ["tirmidhi", "tirmizi", "tirmidhee", "attirmidhi", "altirmidhi"]
         ),
         HadithCatalogBook(
-            slug: "ibnmajah", folder: "the_9_books",
-            englishTitle: "Sunan Ibn Majah", arabicTitle: "سُنَن ابن ماجَه",
-            group: .six, approximateMegabytes: 5.7,
-            authorEnglish: "Imam Muhammad ibn Yazid ibn Majah", authorArabic: "الإمام محمد بن يزيد بن ماجه",
-            era: "d. 273 AH / 887 CE",
-            shortDescription: "The sixth of the Six Books, preserving many hadiths found in none of the other five.",
-            longDescription: "Compiled by Imam Ibn Majah of Qazwin (الإمام ابن ماجه القزويني). It completes the famous \"Six Books\" (al-Kutub as-Sittah), and its particular value is the many hadiths - the zawa'id - it preserves that appear in none of the other five.",
-            aliases: ["ibnmajah", "majah", "ibnmaja", "maja"]
+            slug: "nasai", folder: "the_9_books",
+            englishTitle: "Sunan an-Nasa'i", arabicTitle: "سُنَن النَسائِي",
+            group: .six, approximateMegabytes: 8,
+            authorEnglish: "Imam Ahmad ibn Shu'ayb an-Nasa'i", authorArabic: "الإمام أحمد بن شعيب النسائي",
+            era: "d. 303 AH / 915 CE",
+            shortDescription: "The strictest of the four Sunan in its conditions for accepting narrators.",
+            longDescription: "Its full title is al-Mujtaba, also called as-Sunan as-Sughra - Imam an-Nasa’i’s (الإمام النسائي) own refinement of his larger Sunan, keeping the narrations he judged strongest. His conditions for accepting narrators were the most rigorous among the authors of the four Sunan.",
+            aliases: ["nasai", "nisai", "nasaee", "annasai", "alnasai", "annisai", "alnisai"]
         ),
+        // The early collections - all compiled before the Six Books - chronologically.
         HadithCatalogBook(
             slug: "malik", folder: "the_9_books",
             englishTitle: "Muwatta Malik", arabicTitle: "مُوَطَّأ مالِك",
@@ -123,18 +126,8 @@ struct HadithCatalogBook: Identifiable, Hashable {
             authorEnglish: "Imam Malik ibn Anas", authorArabic: "الإمام مالك بن أنس",
             era: "d. 179 AH / 795 CE",
             shortDescription: "The earliest collection of all, joining hadith with the practice of Madinah.",
-            longDescription: "The Muwatta of Imam Malik (الإمام مالك), the Imam of Madinah, is the earliest collection in this library - compiled a full century before Bukhari and Muslim. It weaves hadith together with the established practice of the people of Madinah. Imam ash-Shafi'i called it the soundest book of its time.",
+            longDescription: "Its full title is al-Muwatta - “the well-trodden path.” The Muwatta of Imam Malik (الإمام مالك), the Imam of Madinah, is the earliest collection in this library, compiled a full century before Bukhari and Muslim. It weaves hadith together with the established practice of the people of Madinah. Imam ash-Shafi’i called it the soundest book of its time.",
             aliases: ["malik", "muwatta", "muwattamalik", "almuwatta"]
-        ),
-        HadithCatalogBook(
-            slug: "darimi", folder: "the_9_books",
-            englishTitle: "Sunan ad-Darimi", arabicTitle: "سُنَن الدارِمِي",
-            group: .early, approximateMegabytes: 3,
-            authorEnglish: "Imam Abdullah ibn Abd ar-Rahman ad-Darimi", authorArabic: "الإمام عبد الله بن عبد الرحمن الدارمي",
-            era: "d. 255 AH / 869 CE",
-            shortDescription: "The early Sunan of a teacher of Muslim, Abu Dawud, and at-Tirmidhi.",
-            longDescription: "Compiled by Imam ad-Darimi (الإمام الدارمي) of Samarqand, a hadith master whose students included Imam Muslim, Abu Dawud, and at-Tirmidhi. His Sunan (also called his Musnad) opens with a celebrated introduction on the Prophet's ﷺ status and the etiquette of knowledge.",
-            aliases: ["darimi", "daremi", "addarimi", "aldarimi"]
         ),
         HadithCatalogBook(
             slug: "ahmed", folder: "the_9_books",
@@ -143,20 +136,20 @@ struct HadithCatalogBook: Identifiable, Hashable {
             authorEnglish: "Imam Ahmad ibn Hanbal", authorArabic: "الإمام أحمد بن حنبل",
             era: "d. 241 AH / 855 CE",
             shortDescription: "The great Musnad, arranged by the Companion who narrates each hadith.",
-            longDescription: "The Musnad of Imam Ahmad ibn Hanbal (الإمام أحمد بن حنبل), founder of the Hanbali school and the towering hadith scholar of his age. Unlike the Sunan books it is arranged by narrating Companion rather than by topic; the full Musnad spans over 27,000 narrations, of which this dataset carries a selection.",
+            longDescription: "Its full title is Musnad al-Imam Ahmad ibn Hanbal. The great Musnad of Imam Ahmad (الإمام أحمد بن حنبل), founder of the Hanbali school and the towering hadith scholar of his age. Unlike the Sunan books it is arranged by the narrating Companion rather than by topic; the full Musnad spans over 27,000 narrations, of which this dataset carries a selection.",
             aliases: ["ahmad", "ahmed", "musnadahmad", "musnadahmed"]
         ),
-        // The forties (bundled in the app).
         HadithCatalogBook(
-            slug: "nawawi40", folder: "forties",
-            englishTitle: "The Forty Hadith of Imam Nawawi", arabicTitle: "الأَربَعُون النَوَوِيَّة",
-            group: .forties, approximateMegabytes: 0.1,
-            authorEnglish: "Imam Yahya ibn Sharaf an-Nawawi", authorArabic: "الإمام يحيى بن شرف النووي",
-            era: "d. 676 AH / 1277 CE",
-            shortDescription: "The forty-two foundational hadiths, each an axis the religion turns upon.",
-            longDescription: "Imam an-Nawawi (الإمام النووي) gathered forty-two hadiths - mostly from Bukhari and Muslim - each chosen because scholars described it as an axis the religion turns upon. Memorized across the Muslim world for over seven centuries, it is usually the first hadith book a student ever studies.",
-            aliases: ["nawawi", "nawawi40", "arbaeen", "arbain", "arbaeennawawi", "fortynawawi"]
+            slug: "darimi", folder: "the_9_books",
+            englishTitle: "Sunan ad-Darimi", arabicTitle: "سُنَن الدارِمِي",
+            group: .early, approximateMegabytes: 3,
+            authorEnglish: "Imam Abdullah ibn Abd ar-Rahman ad-Darimi", authorArabic: "الإمام عبد الله بن عبد الرحمن الدارمي",
+            era: "d. 255 AH / 869 CE",
+            shortDescription: "The early Sunan of a teacher of Muslim, Abu Dawud, and at-Tirmidhi.",
+            longDescription: "Its full title is Musnad ad-Darimi, widely known as Sunan ad-Darimi. Compiled by Imam ad-Darimi of Samarqand (الإمام الدارمي), a hadith master whose students included Imam Muslim, Abu Dawud, and at-Tirmidhi. His Sunan opens with a celebrated introduction on the Prophet’s ﷺ status and the etiquette of knowledge.",
+            aliases: ["darimi", "daremi", "addarimi", "aldarimi"]
         ),
+        // The forties (bundled in the app as a data source; they download like everything else).
         HadithCatalogBook(
             slug: "qudsi40", folder: "forties",
             englishTitle: "Forty Hadith Qudsi", arabicTitle: "الأَحادِيث القُدسِيَّة",
@@ -164,8 +157,18 @@ struct HadithCatalogBook: Identifiable, Hashable {
             authorEnglish: "Related by the Prophet ﷺ from His Lord", authorArabic: "يرويه النبي ﷺ عن ربه",
             era: "Compiled selection",
             shortDescription: "The forty sacred hadiths, their meaning from Allah in the Prophet's ﷺ wording.",
-            longDescription: "A hadith qudsi (حديث قدسي) is a narration in which the Prophet ﷺ relates words whose meaning is from Allah, expressed in the Prophet's ﷺ own wording - distinct from the Quran, which is Allah's speech in both word and meaning. This is a well-known selection of forty such sacred hadiths.",
+            longDescription: "A hadith qudsi (حديث قدسي) is a narration in which the Prophet ﷺ relates words whose meaning is from Allah, expressed in the Prophet’s ﷺ own wording - distinct from the Quran, which is Allah’s speech in both word and meaning. This is a well-known selection of forty such sacred hadiths, drawn from the authentic collections.\n\nThis selection follows the widely-circulated compilation of Ezzedin Ibrahim and Denys Johnson-Davies (Abdul Wadud).",
             aliases: ["qudsi", "qudsi40", "hadithqudsi"]
+        ),
+        HadithCatalogBook(
+            slug: "nawawi40", folder: "forties",
+            englishTitle: "The Forty Hadith of Imam Nawawi", arabicTitle: "الأَربَعُون النَوَوِيَّة",
+            group: .forties, approximateMegabytes: 0.1,
+            authorEnglish: "Imam Yahya ibn Sharaf an-Nawawi", authorArabic: "الإمام يحيى بن شرف النووي",
+            era: "d. 676 AH / 1277 CE",
+            shortDescription: "The forty-two foundational hadiths, each an axis the religion turns upon.",
+            longDescription: "Its full title is al-Arba’un an-Nawawiyyah. Imam an-Nawawi (الإمام النووي) gathered forty-two foundational hadiths - mostly from Bukhari and Muslim - each chosen because scholars described it as an axis the religion turns upon. Memorized across the Muslim world for over seven centuries, it is usually the first hadith book a student ever studies.",
+            aliases: ["nawawi", "nawawi40", "arbaeen", "arbain", "arbaeennawawi", "fortynawawi"]
         ),
         HadithCatalogBook(
             slug: "shahwaliullah40", folder: "forties",
@@ -177,37 +180,7 @@ struct HadithCatalogBook: Identifiable, Hashable {
             longDescription: "Collected by Shah Waliullah of Delhi (شاه ولي الله الدهلوي), the reviver of hadith studies in the Indian subcontinent. He chose forty concise hadiths distinguished by their short, elevated chains of transmission - comprehensive words gathered in the briefest form.",
             aliases: ["shahwaliullah", "waliullah", "shahwaliullah40"]
         ),
-        // Other books.
-        HadithCatalogBook(
-            slug: "riyad_assalihin", folder: "other_books",
-            englishTitle: "Riyad as-Salihin", arabicTitle: "رِياض الصالِحِين",
-            group: .other, approximateMegabytes: 2.2,
-            authorEnglish: "Imam Yahya ibn Sharaf an-Nawawi", authorArabic: "الإمام يحيى بن شرف النووي",
-            era: "d. 676 AH / 1277 CE",
-            shortDescription: "The Gardens of the Righteous, the world's most-read book of the daily Sunnah.",
-            longDescription: "\"Gardens of the Righteous\" by Imam an-Nawawi (الإمام النووي): around 1,900 hadiths on worship, character, and everyday conduct, arranged under verses of the Quran. Perhaps the most widely read hadith book in the world - a practical guide to living the Sunnah day by day.",
-            aliases: ["riyad", "riyadh", "riyadassalihin", "riyadussalihin", "riyadsaliheen", "riyadhussaliheen", "salihin", "saliheen"]
-        ),
-        HadithCatalogBook(
-            slug: "mishkat_almasabih", folder: "other_books",
-            englishTitle: "Mishkat al-Masabih", arabicTitle: "مِشكاة المَصابِيح",
-            group: .other, approximateMegabytes: 5.2,
-            authorEnglish: "Imam al-Khatib at-Tabrizi", authorArabic: "الإمام الخطيب التبريزي",
-            era: "d. c. 741 AH / 1340 CE",
-            shortDescription: "The Niche of the Lamps, a comprehensive sourced survey of the whole Sunnah.",
-            longDescription: "\"The Niche of the Lamps\" by al-Khatib at-Tabrizi (الخطيب التبريزي) expands al-Baghawi's Masabih as-Sunnah: he named each hadith's source collection and added a third section to every chapter, producing one of the most comprehensive single surveys of the Sunnah ever assembled.",
-            aliases: ["mishkat", "mishkaat", "mishkatalmasabih"]
-        ),
-        HadithCatalogBook(
-            slug: "bulugh_almaram", folder: "other_books",
-            englishTitle: "Bulugh al-Maram", arabicTitle: "بُلُوغ المَرام",
-            group: .other, approximateMegabytes: 2.1,
-            authorEnglish: "Imam Ibn Hajar al-Asqalani", authorArabic: "الإمام ابن حجر العسقلاني",
-            era: "d. 852 AH / 1449 CE",
-            shortDescription: "The evidences of Islamic law, the hadiths behind the legal rulings of fiqh.",
-            longDescription: "\"Attainment of the Objective\" by Ibn Hajar al-Asqalani (ابن حجر العسقلاني), the commentator of Sahih al-Bukhari. Around 1,580 hadiths that serve as the evidences for Islamic legal rulings, each with its source noted - studied wherever fiqh is taught.",
-            aliases: ["bulugh", "buloogh", "bulughalmaram", "bulughmaram"]
-        ),
+        // Other books, chronologically.
         HadithCatalogBook(
             slug: "aladab_almufrad", folder: "other_books",
             englishTitle: "Al-Adab Al-Mufrad", arabicTitle: "الأَدَب المُفرَد",
@@ -215,7 +188,7 @@ struct HadithCatalogBook: Identifiable, Hashable {
             authorEnglish: "Imam Muhammad ibn Ismail al-Bukhari", authorArabic: "الإمام محمد بن إسماعيل البخاري",
             era: "d. 256 AH / 870 CE",
             shortDescription: "The book of manners, Imam al-Bukhari's own work on family and character.",
-            longDescription: "Imam al-Bukhari's (الإمام البخاري) dedicated book of Islamic manners: over 1,300 narrations on treating parents, neighbors, children, and guests; on speech, anger, mercy, and the everyday character the Prophet ﷺ taught - the gentler companion to his Sahih.",
+            longDescription: "Its full title is al-Adab al-Mufrad - “the singular book of manners.” Imam al-Bukhari’s (الإمام البخاري) dedicated book of Islamic manners: over 1,300 narrations on treating parents, neighbors, children, and guests; on speech, anger, mercy, and the everyday character the Prophet ﷺ taught - the gentler companion to his Sahih.",
             aliases: ["adab", "adabmufrad", "adabalmufrad", "aladabalmufrad"]
         ),
         HadithCatalogBook(
@@ -225,8 +198,38 @@ struct HadithCatalogBook: Identifiable, Hashable {
             authorEnglish: "Imam Muhammad ibn Isa at-Tirmidhi", authorArabic: "الإمام محمد بن عيسى الترمذي",
             era: "d. 279 AH / 892 CE",
             shortDescription: "The portrait of the Prophet ﷺ, his appearance, habits, and character.",
-            longDescription: "Imam at-Tirmidhi's (الإمام الترمذي) beloved portrait of the Prophet ﷺ: around 400 narrations describing his appearance, dress, food, sleep, worship, humility, and character - gathered so that those who never saw him ﷺ could almost see him.",
+            longDescription: "Its full title is ash-Shama’il al-Muhammadiyyah wa’l-Khasa’il al-Mustafawiyyah - “the noble qualities of Muhammad ﷺ and the characteristics of the Chosen One.” Imam at-Tirmidhi’s (الإمام الترمذي) beloved portrait of the Prophet ﷺ: around 400 narrations describing his appearance, dress, food, sleep, worship, humility, and character - gathered so that those who never saw him ﷺ could almost see him.",
             aliases: ["shamail", "shamaail", "shamailmuhammadiyah"]
+        ),
+        HadithCatalogBook(
+            slug: "riyad_assalihin", folder: "other_books",
+            englishTitle: "Riyad as-Salihin", arabicTitle: "رِياض الصالِحِين",
+            group: .other, approximateMegabytes: 2.2,
+            authorEnglish: "Imam Yahya ibn Sharaf an-Nawawi", authorArabic: "الإمام يحيى بن شرف النووي",
+            era: "d. 676 AH / 1277 CE",
+            shortDescription: "The Gardens of the Righteous, the world's most-read book of the daily Sunnah.",
+            longDescription: "Its full title is Riyad as-Salihin min Kalam Sayyid al-Mursalin - “Gardens of the Righteous, from the words of the Master of the Messengers.” By Imam an-Nawawi (الإمام النووي): around 1,900 hadiths on worship, character, and everyday conduct, arranged under verses of the Quran. Perhaps the most widely read hadith book in the world - a practical guide to living the Sunnah day by day.",
+            aliases: ["riyad", "riyadh", "riyadassalihin", "riyadussalihin", "riyadsaliheen", "riyadhussaliheen", "salihin", "saliheen"]
+        ),
+        HadithCatalogBook(
+            slug: "mishkat_almasabih", folder: "other_books",
+            englishTitle: "Mishkat al-Masabih", arabicTitle: "مِشكاة المَصابِيح",
+            group: .other, approximateMegabytes: 5.2,
+            authorEnglish: "Imam al-Khatib at-Tabrizi", authorArabic: "الإمام الخطيب التبريزي",
+            era: "d. c. 741 AH / 1340 CE",
+            shortDescription: "The Niche of the Lamps, a comprehensive sourced survey of the whole Sunnah.",
+            longDescription: "Its full title is Mishkat al-Masabih - “the niche of the lamps.” Al-Khatib at-Tabrizi (الخطيب التبريزي) expanded al-Baghawi’s Masabih as-Sunnah: he named each hadith’s source collection and added a third section to every chapter, producing one of the most comprehensive single surveys of the Sunnah ever assembled.",
+            aliases: ["mishkat", "mishkaat", "mishkatalmasabih"]
+        ),
+        HadithCatalogBook(
+            slug: "bulugh_almaram", folder: "other_books",
+            englishTitle: "Bulugh al-Maram", arabicTitle: "بُلُوغ المَرام",
+            group: .other, approximateMegabytes: 2.1,
+            authorEnglish: "Imam Ibn Hajar al-Asqalani", authorArabic: "الإمام ابن حجر العسقلاني",
+            era: "d. 852 AH / 1449 CE",
+            shortDescription: "The evidences of Islamic law, the hadiths behind the legal rulings of fiqh.",
+            longDescription: "Its full title is Bulugh al-Maram min Adillat al-Ahkam - “attainment of the objective from the evidences of the rulings.” By Ibn Hajar al-Asqalani (ابن حجر العسقلاني), the commentator of Sahih al-Bukhari: around 1,580 hadiths that serve as the evidences for Islamic legal rulings, each with its source noted - studied wherever fiqh is taught.",
+            aliases: ["bulugh", "buloogh", "bulughalmaram", "bulughmaram"]
         ),
     ]
 
@@ -238,8 +241,7 @@ struct HadithCatalogBook: Identifiable, Hashable {
         all.filter { $0.group == group }
     }
 
-    /// Downloadable size only - bundled books cost nothing.
-    static let totalMegabytes: Int = Int(all.filter { !$0.isBundled }.reduce(0) { $0 + $1.approximateMegabytes }.rounded())
+    static let totalMegabytes: Int = Int(all.reduce(0) { $0 + $1.approximateMegabytes }.rounded())
 }
 
 // MARK: - Models (the hadith-json shapes)
@@ -270,6 +272,34 @@ struct HadithBookData: Decodable {
         let chapterId: Int
         let arabic: String
         let english: EnglishText
+
+        init(id: Int, idInBook: Int, chapterId: Int, arabic: String, english: EnglishText) {
+            self.id = id
+            self.idInBook = idInBook
+            self.chapterId = chapterId
+            self.arabic = arabic
+            self.english = english
+        }
+
+        private enum CodingKeys: String, CodingKey {
+            case id, idInBook, chapterId, arabic, english
+        }
+
+        init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            id = try container.decode(Int.self, forKey: .id)
+            idInBook = try container.decode(Int.self, forKey: .idInBook)
+            // Shama'il Muhammadiyah's dataset carries two hadiths with `chapterId: 8.2` - a FLOAT in a
+            // field that is an integer everywhere else. A strict Int decode failed on them and took the
+            // whole book down ("the data couldn't be read..."), so fall back to truncating a Double.
+            if let whole = try? container.decode(Int.self, forKey: .chapterId) {
+                chapterId = whole
+            } else {
+                chapterId = Int(try container.decode(Double.self, forKey: .chapterId))
+            }
+            arabic = try container.decode(String.self, forKey: .arabic)
+            english = try container.decode(EnglishText.self, forKey: .english)
+        }
     }
 
     let metadata: Metadata
@@ -397,13 +427,46 @@ final class HadithStore: ObservableObject {
                     slug: book.slug,
                     idInBook: hadith.idInBook,
                     reference: "\(book.englishTitle) \(hadith.idInBook)",
-                    preview: String(preview.prefix(140))
+                    preview: String(preview.prefix(140)),
+                    chapterId: hadith.chapterId,
+                    arabicPreview: String(hadith.arabic.prefix(120)),
+                    englishPreview: String(hadith.english.text.prefix(140))
                 ),
                 at: 0
             )
         }
         if let data = try? JSONEncoder().encode(bookmarks) {
             UserDefaults.standard.set(data, forKey: Self.bookmarksKey)
+        }
+    }
+
+    // MARK: Last read
+
+    /// The most recently read hadith, Quran's Last Read Ayah counterpart. Recorded when a hadith's
+    /// detail opens or a page lands on it; persisted across launches.
+    @Published private(set) var lastRead: HadithLastRead?
+
+    private static let lastReadKey = "hadithLastRead"
+
+    func loadLastRead() {
+        guard lastRead == nil,
+              let data = UserDefaults.standard.data(forKey: Self.lastReadKey),
+              let decoded = try? JSONDecoder().decode(HadithLastRead.self, from: data) else { return }
+        lastRead = decoded
+    }
+
+    func recordLastRead(book: HadithCatalogBook, hadith: HadithBookData.Hadith) {
+        let entry = HadithLastRead(
+            slug: book.slug,
+            idInBook: hadith.idInBook,
+            reference: "\(book.englishTitle) \(hadith.idInBook)",
+            arabicPreview: String(hadith.arabic.prefix(120)),
+            englishPreview: String(hadith.english.text.prefix(140)),
+            timestamp: Date()
+        )
+        lastRead = entry
+        if let data = try? JSONEncoder().encode(entry) {
+            UserDefaults.standard.set(data, forKey: Self.lastReadKey)
         }
     }
 
@@ -429,33 +492,56 @@ final class HadithStore: ObservableObject {
         URL(string: "https://cdn.jsdelivr.net/gh/AhmedBaset/hadith-json@main/db/by_book/\(book.folder)/\(book.slug).json")
     }
 
-    /// True when this book can be read right now without the network.
-    func isAvailableOffline(_ book: HadithCatalogBook) -> Bool {
-        book.isBundled || downloadedSlugs.contains(book.slug)
+    /// The book's JSON inside the app bundle, if it ships there (loose or under JSONs/). Any book whose
+    /// file exists in the bundle is treated as ALREADY AVAILABLE - no download flow, no storage cost -
+    /// so bundling more collections (or building an all-bundled Hadith app) needs no code changes.
+    nonisolated static func bundledURL(_ slug: String) -> URL? {
+        Bundle.main.url(forResource: slug, withExtension: "json")
+            ?? Bundle.main.url(forResource: slug, withExtension: "json", subdirectory: "JSONs")
     }
 
-    /// Cache-first: memory (decoded), then the app bundle (forties), then disk, then network - decode always
-    /// runs off-main.
-    func book(_ book: HadithCatalogBook) async throws -> HadithBookData {
+    /// True when this book can be read right now without the network: downloaded, or shipped in the
+    /// app bundle itself.
+    func isAvailableOffline(_ book: HadithCatalogBook) -> Bool {
+        downloadedSlugs.contains(book.slug) || Self.bundledURL(book.slug) != nil
+    }
+
+    /// Bundled books never occupy cache storage and never show download UI.
+    nonisolated static func isBundledResource(_ book: HadithCatalogBook) -> Bool {
+        bundledURL(book.slug) != nil
+    }
+
+    /// The decoded book if it's already in the memory cache - synchronous, so an open of a recently-read
+    /// book can render instantly instead of flashing the loading screen.
+    func cachedBook(_ slug: String) -> HadithBookData? {
+        decoded.first(where: { $0.slug == slug })?.book
+    }
+
+    /// Cache-first: memory (decoded), then disk, then the app bundle (forties), then network - decode
+    /// always runs off-main. `persist: false` is the TEMPORARY read: the book is loaded into the small
+    /// memory cache for this session and nothing is written to disk - it evaporates on its own instead
+    /// of taking up storage.
+    func book(_ book: HadithCatalogBook, persist: Bool = true) async throws -> HadithBookData {
         if let hit = decoded.first(where: { $0.slug == book.slug })?.book {
             return hit
         }
 
         let data: Data
-        if book.isBundled, let bundled = Bundle.main.url(forResource: book.slug, withExtension: "json"),
+        let file = Self.fileURL(book)
+        if let bundled = Self.bundledURL(book.slug),
            let bundledData = await Task.detached(priority: .userInitiated, operation: { try? Data(contentsOf: bundled) }).value {
+            // Shipped in the app bundle: the bundle IS its storage - nothing to download, nothing to keep.
             data = bundledData
+        } else if let disk = await Task.detached(priority: .userInitiated, operation: { try? Data(contentsOf: file) }).value {
+            data = disk
         } else {
-            let file = Self.fileURL(book)
-            if let disk = await Task.detached(priority: .userInitiated, operation: { try? Data(contentsOf: file) }).value {
-                data = disk
-            } else {
-                guard let remote = Self.endpoint(book) else { throw URLError(.badURL) }
-                let (fetched, response) = try await URLSession.shared.data(from: remote)
-                if let http = response as? HTTPURLResponse, !(200...299).contains(http.statusCode) {
-                    throw URLError(.badServerResponse)
-                }
-                data = fetched
+            guard let remote = Self.endpoint(book) else { throw URLError(.badURL) }
+            let (fetched, response) = try await URLSession.shared.data(from: remote)
+            if let http = response as? HTTPURLResponse, !(200...299).contains(http.statusCode) {
+                throw URLError(.badServerResponse)
+            }
+            data = fetched
+            if persist {
                 Task.detached(priority: .utility) {
                     try? fetched.write(to: file, options: .atomic)
                 }
@@ -475,11 +561,12 @@ final class HadithStore: ObservableObject {
 
     // MARK: Bulk download
 
-    /// Fetch every non-bundled book not yet on disk, one at a time (the files are large; parallel fetches of
-    /// 13 MB JSONs just fight each other for bandwidth).
+    /// Fetch every non-bundled book not yet on disk, one at a time (the files are large; parallel
+    /// fetches of 13 MB JSONs just fight each other for bandwidth). Bundle-shipped books are already
+    /// available and skipped.
     func startDownloadAll() {
         guard !isDownloading else { return }
-        let downloadable = HadithCatalogBook.all.filter { !$0.isBundled }
+        let downloadable = HadithCatalogBook.all.filter { Self.bundledURL($0.slug) == nil }
         isDownloading = true
         downloadError = nil
         downloadTotalBooks = downloadable.count
@@ -534,7 +621,6 @@ final class HadithStore: ObservableObject {
     }
 
     func deleteDownload(_ book: HadithCatalogBook) {
-        guard !book.isBundled else { return }
         decoded.removeAll { $0.slug == book.slug }
         downloadedSlugs.remove(book.slug)
         Task.detached(priority: .utility) { [weak self] in
@@ -577,14 +663,74 @@ final class HadithStore: ObservableObject {
     }
 }
 
+/// The Hadith tab's trailing toolbar, split with iOS 26 ToolbarSpacers so Liquid Glass doesn't merge
+/// the buttons into one capsule - the same treatment the Quran tab's trailing toolbar has.
+private struct HadithTrailingToolbar: ViewModifier {
+    @ObservedObject var settings = Settings.shared
+    @Binding var hadithGridMode: Bool
+    @Binding var showHadithSettings: Bool
+
+    func body(content: Content) -> some View {
+        if #available(iOS 26.0, *) {
+            content.toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) { gridButton }
+                ToolbarSpacer(.fixed, placement: .navigationBarTrailing)
+                ToolbarItem(placement: .navigationBarTrailing) { gearButton }
+            }
+        } else {
+            content.toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) { gridButton }
+                ToolbarItem(placement: .navigationBarTrailing) { gearButton }
+            }
+        }
+    }
+
+    private var gridButton: some View {
+        Button {
+            settings.hapticFeedback()
+            withAnimation { hadithGridMode.toggle() }
+        } label: {
+            Image(systemName: hadithGridMode ? "list.bullet" : "square.grid.2x2")
+        }
+        .accessibilityLabel(hadithGridMode ? "Show list" : "Show grid")
+        .tint(settings.accentColor.accent2)
+    }
+
+    private var gearButton: some View {
+        Button {
+            settings.hapticFeedback()
+            showHadithSettings = true
+        } label: {
+            Image(systemName: "gear")
+        }
+        .accessibilityLabel("Hadith settings")
+        .tint(settings.accentColor.accent2)
+    }
+}
+
 /// A bookmarked hadith, self-contained so the bookmarks list renders without loading its (large) book.
 struct HadithBookmark: Codable, Identifiable, Equatable {
     let slug: String
     let idInBook: Int
     let reference: String
     let preview: String
+    /// One-line previews, Quran-bookmark style (Arabic + English, never the narrator). Optional so
+    /// bookmarks saved by older builds still decode; they fall back to `preview`.
+    var chapterId: Int? = nil
+    var arabicPreview: String? = nil
+    var englishPreview: String? = nil
 
     var id: String { "\(slug)-\(idInBook)" }
+}
+
+/// The most recently read hadith - enough to render its row and jump back without loading the book.
+struct HadithLastRead: Codable, Equatable {
+    let slug: String
+    let idInBook: Int
+    let reference: String
+    let arabicPreview: String
+    let englishPreview: String
+    let timestamp: Date
 }
 
 // MARK: - The tab root: collections
@@ -600,6 +746,15 @@ struct HadithView: View {
     /// Grid tiles are plain Buttons (a NavigationLink cell in a List draws a chevron); tapping one sets
     /// this, and a hidden `NavigationLink` behind the List performs the actual push.
     @State private var pushedBook: HadithCatalogBook?
+
+    /// Collapse state for the favorites/bookmarks sections, same as the Quran tab's.
+    @AppStorage("showHadithFavoriteBooks") private var showFavoriteBooks = true
+    @AppStorage("showHadithBookmarks") private var showHadithBookmarks = true
+    /// The Hadith tab's OWN grid/list choice - deliberately decoupled from the app-wide `gridMode`
+    /// switch, so flipping the hadith catalog doesn't flip the Quran, 99 Names, and Islam grids too.
+    @AppStorage("hadithGridMode") private var hadithGridMode = false
+    /// "Scroll to book" from a search result: clears the search and lands the catalog on this book.
+    @State private var pendingScrollToBookSlug: String? = nil
     /// Apple Music-style bar minimization: true while scrolling down.
     @State private var barsCollapsed = false
 
@@ -611,7 +766,16 @@ struct HadithView: View {
 
     // Hadith of the Day, drawn from the BUNDLED forties - guaranteed offline from first launch.
     @State private var dailyHadith: (book: HadithCatalogBook, hadith: HadithBookData.Hadith)?
-    @State private var dailyShuffleOffset = 0
+    /// "dayKey|slug|idInBook" - a shuffled replacement for TODAY only, exactly like the Ayah of the Day's.
+    @AppStorage("hadithOfTheDayOverride") private var dailyOverride = ""
+    /// Bumped to re-resolve the daily hadith after a shuffle.
+    @State private var dailyReloadTick = 0
+    /// Whether the daily section's history (last 5 days) is unfolded - the shuffle only shows here.
+    @State private var showDailyHistory = false
+    /// Compact "summary mode": Hadith of the Day + Last Read as tiles, like the Quran tab. On by default.
+    @AppStorage("hadithSummaryMode") private var hadithSummaryMode = true
+    /// A hidden push target (shuffled bookmark, summary tiles) - HadithReferenceView by slug+number.
+    @State private var pushedReference: HadithBookmark? = nil
 
     private func matches(_ book: HadithCatalogBook) -> Bool {
         let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -639,12 +803,18 @@ struct HadithView: View {
 
     var body: some View {
         NavigationView {
+            ScrollViewReader { scrollProxy in
             List {
                 Group {
                     aboutHadithSection
 
                     if searchText.isEmpty {
-                        hadithOfTheDaySection
+                        if hadithSummaryMode {
+                            summaryTilesSection
+                        } else {
+                            hadithOfTheDaySection
+                            lastReadSection
+                        }
                     }
 
                     if store.isDownloading {
@@ -671,7 +841,13 @@ struct HadithView: View {
 
                     let favorites = filteredFavorites
                     if !favorites.isEmpty {
-                        bookSection(title: "FAVORITE BOOKS", books: favorites)
+                        bookSection(
+                            title: "FAVORITE BOOKS",
+                            books: favorites,
+                            icon: "star.fill",
+                            accentTitle: true,
+                            isExpanded: $showFavoriteBooks
+                        )
                     }
 
                     ForEach(HadithCatalogBook.Group.allCases, id: \.self) { group in
@@ -693,6 +869,20 @@ struct HadithView: View {
                 )) {
                     if let pushedBook {
                         HadithBookView(book: pushedBook)
+                    }
+                } label: {
+                    EmptyView()
+                }
+                .opacity(0)
+            )
+            // And the one the shuffled bookmark / summary tiles / daily history push through.
+            .background(
+                NavigationLink(isActive: Binding(
+                    get: { pushedReference != nil },
+                    set: { if !$0 { pushedReference = nil } }
+                )) {
+                    if let pushedReference, let book = HadithCatalogBook.bySlug[pushedReference.slug] {
+                        HadithReferenceView(book: book, chapter: nil, hadith: pushedReference.idInBook)
                     }
                 } label: {
                     EmptyView()
@@ -739,29 +929,14 @@ struct HadithView: View {
                     .tint(settings.accentColor.accent1)
                 }
 
-                // Grid/list toggle + hadith settings on the RIGHT.
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button {
-                        settings.hapticFeedback()
-                        withAnimation { settings.gridMode.toggle() }
-                    } label: {
-                        Image(systemName: settings.gridMode ? "list.bullet" : "square.grid.2x2")
-                    }
-                    .accessibilityLabel(settings.gridMode ? "Show list" : "Show grid")
-                    .tint(settings.accentColor.accent2)
-                }
-
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button {
-                        settings.hapticFeedback()
-                        showHadithSettings = true
-                    } label: {
-                        Image(systemName: "gear")
-                    }
-                    .accessibilityLabel("Hadith settings")
-                    .tint(settings.accentColor.accent2)
-                }
             }
+            // Trailing buttons live in their own modifier so iOS 26 can interleave ToolbarSpacers
+            // between them - without spacers, Liquid Glass merges them into ONE capsule (the same
+            // treatment the Quran tab's trailing toolbar has).
+            .modifier(HadithTrailingToolbar(
+                hadithGridMode: $hadithGridMode,
+                showHadithSettings: $showHadithSettings
+            ))
             .sheet(isPresented: $showHadithSettings) {
                 HadithSettingsSheet()
                     .smallMediumSheetPresentation()
@@ -773,7 +948,7 @@ struct HadithView: View {
                 }
                 Button("Cancel", role: .cancel) {}
             } message: {
-                Text("This downloads the hadith collections for offline reading (the three forty-hadith collections are already included in the app). It may use significant data - Wi-Fi is recommended. Already-downloaded books are skipped.")
+                Text("This downloads every hadith collection for offline reading. It may use significant data - Wi-Fi is recommended. Already-downloaded books are skipped.")
             }
             .confirmationDialog("Delete all downloaded books?", isPresented: $confirmDeleteAll, titleVisibility: .visible) {
                 Button("Delete All", role: .destructive) {
@@ -782,12 +957,13 @@ struct HadithView: View {
                 }
                 Button("Cancel", role: .cancel) {}
             } message: {
-                Text("Books will be re-downloaded from the Internet as you open them. The forty-hadith collections stay - they are part of the app.")
+                Text("Books will be re-downloaded as you open them (the forty-hadith collections restore instantly from the app itself).")
             }
             .onAppear {
                 store.refreshDiskState()
+                store.loadLastRead()
             }
-            .task(id: dailyShuffleOffset) {
+            .task(id: dailyReloadTick) {
                 await loadDailyHadith()
             }
             .onChange(of: searchText) { _ in
@@ -797,24 +973,124 @@ struct HadithView: View {
                 globalResults = []
                 globalSearchRanFor = ""
             }
+            .onChange(of: pendingScrollToBookSlug) { slug in
+                guard let slug else { return }
+                pendingScrollToBookSlug = nil
+                // Clear the search first so the catalog rows exist, then land on the book.
+                withAnimation { searchText = "" }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                    withAnimation { scrollProxy.scrollTo("hadith-book-\(slug)", anchor: .top) }
+                }
+            }
+            }
         }
         .navigationViewStyle(.stack)
     }
 
     // MARK: Hadith of the Day
 
-    /// A deterministic daily pick from the ~120 bundled forty-collection hadiths - the same hadith all day,
-    /// a different one tomorrow. The shuffle button steps to another for the curious.
+    /// Words that keep a hadith out of the daily rotation - the same gentle filter the Ayah of the Day
+    /// pool uses, plus a length cap so the card never carries a page-long hadith.
+    private static let dailyBlockedWords = [
+        "kill", "killing", "fight", "fighting", "violence", "violent",
+        "murder", "slay", "slaughter", "battle", "war"
+    ]
+
+    private static func isDailyWorthy(_ hadith: HadithBookData.Hadith) -> Bool {
+        // Short enough for a card: roughly the Ayah of the Day's budget, scaled for hadith prose.
+        guard hadith.arabic.count <= 220, hadith.english.text.count <= 220, !hadith.english.text.isEmpty else { return false }
+        let combined = (hadith.english.text + " " + hadith.english.narrator).lowercased()
+        return !dailyBlockedWords.contains { combined.contains($0) }
+    }
+
+    private struct DailyHadithEntry: Codable {
+        let dayKey: String
+        let slug: String
+        let idInBook: Int
+        let reference: String
+        let arabicPreview: String
+        let englishPreview: String
+        let date: Date
+    }
+
+    private static func loadDailyHistory() -> [DailyHadithEntry] {
+        guard let data = UserDefaults.standard.data(forKey: "hadithOfTheDayHistory"),
+              let decoded = try? JSONDecoder().decode([DailyHadithEntry].self, from: data) else { return [] }
+        return decoded
+    }
+
+    private static func saveDailyHistory(_ entries: [DailyHadithEntry]) {
+        if let data = try? JSONEncoder().encode(Array(entries.prefix(5))) {
+            UserDefaults.standard.set(data, forKey: "hadithOfTheDayHistory")
+        }
+    }
+
+    private var dailyHistory: [DailyHadithEntry] { Self.loadDailyHistory() }
+
+    /// A deterministic daily pick from the short, gentle pool of the bundled forty collections - the
+    /// same hadith all day, a different one tomorrow. A shuffle stores a today-only override, exactly
+    /// like the Ayah of the Day's.
     private func loadDailyHadith() async {
+        let dayKey = Settings.dayKey()
+
+        // A shuffle override for today wins.
+        let parts = dailyOverride.split(separator: "|")
+        if parts.count == 3, String(parts[0]) == dayKey,
+           let id = Int(parts[2]),
+           let book = HadithCatalogBook.bySlug[String(parts[1])],
+           let data = try? await store.book(book, persist: false),
+           let hadith = data.hadiths.first(where: { $0.idInBook == id }) {
+            dailyHadith = (book, hadith)
+            recordDailyHistory(book: book, hadith: hadith, dayKey: dayKey)
+            return
+        }
+
         var combined: [(HadithCatalogBook, HadithBookData.Hadith)] = []
         for book in HadithCatalogBook.all where book.isBundled {
-            if let data = try? await store.book(book) {
-                combined.append(contentsOf: data.hadiths.map { (book, $0) })
+            // Temporary read: served straight from the app bundle without marking the book downloaded.
+            if let data = try? await store.book(book, persist: false) {
+                combined.append(contentsOf: data.hadiths.filter(Self.isDailyWorthy).map { (book, $0) })
             }
         }
         guard !combined.isEmpty else { return }
         let day = Calendar.current.ordinality(of: .day, in: .era, for: Date()) ?? 0
-        dailyHadith = combined[(day + dailyShuffleOffset) % combined.count]
+        let pick = combined[day % combined.count]
+        dailyHadith = pick
+        recordDailyHistory(book: pick.0, hadith: pick.1, dayKey: dayKey)
+    }
+
+    /// Keeps the last 5 days on record, one entry per day (a shuffle REPLACES today's entry).
+    private func recordDailyHistory(book: HadithCatalogBook, hadith: HadithBookData.Hadith, dayKey: String) {
+        var history = Self.loadDailyHistory()
+        let entry = DailyHadithEntry(
+            dayKey: dayKey,
+            slug: book.slug,
+            idInBook: hadith.idInBook,
+            reference: "\(book.englishTitle) \(hadith.idInBook)",
+            arabicPreview: String(hadith.arabic.prefix(120)),
+            englishPreview: String(hadith.english.text.prefix(140)),
+            date: Date()
+        )
+        if let first = history.first, first.dayKey == dayKey {
+            history[0] = entry
+        } else {
+            history.insert(entry, at: 0)
+        }
+        Self.saveDailyHistory(history)
+    }
+
+    /// A GENUINELY random hadith - from any collection available on this device (downloaded or bundled),
+    /// filtered to the same short-and-gentle pool - stored as today's override.
+    private func shuffleDailyHadith() async {
+        let available = HadithCatalogBook.all.filter { store.isAvailableOffline($0) }.shuffled()
+        for book in available {
+            guard let data = try? await store.book(book, persist: false) else { continue }
+            let worthy = data.hadiths.filter(Self.isDailyWorthy)
+            guard let pick = worthy.randomElement() else { continue }
+            dailyOverride = "\(Settings.dayKey())|\(book.slug)|\(pick.idInBook)"
+            dailyReloadTick += 1
+            return
+        }
     }
 
     @ViewBuilder
@@ -822,45 +1098,315 @@ struct HadithView: View {
         if let dailyHadith {
             Section {
                 HadithRow(book: dailyHadith.book, hadith: dailyHadith.hadith)
+
+                if showDailyHistory {
+                    // The last 5 days, timestamped and dimmed - today first. The Today row carries the
+                    // shuffle (a genuinely random pick from any collection on this device).
+                    ForEach(Array(dailyHistory.enumerated()), id: \.element.dayKey) { index, entry in
+                        dailyHistoryRow(entry, isToday: index == 0)
+                            .opacity(index == 0 ? 1 : 0.75)
+                    }
+                }
             } header: {
                 HStack {
                     Text("HADITH OF THE DAY")
 
                     Spacer()
 
-                    Image(systemName: "shuffle")
+                    Image(systemName: showDailyHistory ? "minus.circle" : "plus.circle")
                         .foregroundColor(settings.accentColor.color)
                         .padding(4)
                         .conditionalGlassEffect()
                         .onTapGesture {
                             settings.hapticFeedback()
-                            withAnimation(.easeInOut) { dailyShuffleOffset += 1 }
+                            withAnimation { showDailyHistory.toggle() }
                         }
-                        .accessibilityLabel("Show another hadith")
+                        .accessibilityLabel("Show recent hadiths of the day")
                 }
+            }
+        }
+    }
+
+    private func dailyHistoryRow(_ entry: DailyHadithEntry, isToday: Bool) -> some View {
+        HStack(spacing: 8) {
+            Button {
+                settings.hapticFeedback()
+                pushedReference = HadithBookmark(
+                    slug: entry.slug, idInBook: entry.idInBook,
+                    reference: entry.reference, preview: entry.englishPreview
+                )
+            } label: {
+                VStack(alignment: .leading, spacing: 3) {
+                    HStack {
+                        Text(entry.reference)
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(settings.accentColor.color)
+
+                        Spacer(minLength: 8)
+
+                        historyTimestampLabel(entry.date)
+                    }
+
+                    if !entry.arabicPreview.isEmpty {
+                        Text(entry.arabicPreview)
+                            .font(settings.useFontArabic
+                                  ? Font.arabic(settings.nonQuranArabicFontName, size: 15)
+                                  : .footnote)
+                            .arabicFontDesign(custom: settings.islamUsesCustomArabicFace)
+                            .lineLimit(1)
+                            .multilineTextAlignment(.trailing)
+                            .frame(maxWidth: .infinity, alignment: .trailing)
+                    }
+
+                    if !entry.englishPreview.isEmpty {
+                        Text(entry.englishPreview)
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .lineLimit(1)
+                    }
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+
+            if isToday {
+                Image(systemName: "shuffle")
+                    .font(.caption2.weight(.semibold))
+                    .foregroundColor(settings.accentColor.color)
+                    .frame(width: SectionPillHeader.pillHeight, height: SectionPillHeader.pillHeight)
+                    .conditionalGlassEffect(circle: true)
+                    .onTapGesture {
+                        settings.hapticFeedback()
+                        Task { await shuffleDailyHadith() }
+                    }
+                    .accessibilityLabel("Pick a random hadith of the day")
+            }
+        }
+        .padding(.vertical, 2)
+    }
+
+    // MARK: Summary tiles + last read
+
+    /// Compact "summary mode", the Quran tab's pattern: Hadith of the Day and Last Read as two tappable
+    /// tiles in one section. On by default; the full rows return when it's off (Hadith settings).
+    @ViewBuilder
+    private var summaryTilesSection: some View {
+        Section(header:
+            HStack(spacing: 8) {
+                Image(systemName: "sparkles")
+                    .foregroundStyle(settings.accentColor.color)
+                Text("YOUR SUMMARY")
+
+                Spacer()
+
+                Image(systemName: showDailyHistory ? "minus.circle" : "plus.circle")
+                    .foregroundColor(settings.accentColor.color)
+                    .padding(4)
+                    .conditionalGlassEffect()
+                    .onTapGesture {
+                        settings.hapticFeedback()
+                        withAnimation { showDailyHistory.toggle() }
+                    }
+            }
+        ) {
+            LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 10) {
+                if let dailyHadith {
+                    summaryTile(
+                        title: "Hadith of the Day",
+                        icon: "sparkles",
+                        reference: "\(dailyHadith.book.englishTitle) \(dailyHadith.hadith.idInBook)",
+                        arabic: String(dailyHadith.hadith.arabic.prefix(120)),
+                        english: String(dailyHadith.hadith.english.text.prefix(140))
+                    ) {
+                        pushedReference = HadithBookmark(
+                            slug: dailyHadith.book.slug, idInBook: dailyHadith.hadith.idInBook,
+                            reference: "", preview: ""
+                        )
+                    }
+                }
+
+                if let lastRead = store.lastRead {
+                    summaryTile(
+                        title: "Last Read Hadith",
+                        icon: "book",
+                        reference: lastRead.reference,
+                        arabic: lastRead.arabicPreview,
+                        english: lastRead.englishPreview
+                    ) {
+                        pushedReference = HadithBookmark(
+                            slug: lastRead.slug, idInBook: lastRead.idInBook,
+                            reference: lastRead.reference, preview: ""
+                        )
+                    }
+                }
+            }
+            .padding(.vertical, 4)
+
+            if showDailyHistory {
+                ForEach(Array(dailyHistory.enumerated()), id: \.element.dayKey) { index, entry in
+                    dailyHistoryRow(entry, isToday: index == 0)
+                        .opacity(index == 0 ? 1 : 0.75)
+                }
+            }
+        }
+    }
+
+    private func summaryTile(title: String, icon: String, reference: String, arabic: String, english: String, onTap: @escaping () -> Void) -> some View {
+        Button {
+            settings.hapticFeedback()
+            onTap()
+        } label: {
+            VStack(alignment: .leading, spacing: 6) {
+                HStack(spacing: 6) {
+                    Image(systemName: icon)
+                        .font(.caption)
+                        .foregroundColor(settings.accentColor.color)
+                    Text(title)
+                        .font(.caption2.weight(.semibold))
+                        .foregroundColor(settings.accentColor.color)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                }
+
+                Text(reference)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundColor(.primary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
+
+                if !arabic.isEmpty {
+                    Text(arabic)
+                        .font(settings.useFontArabic
+                              ? Font.arabic(settings.nonQuranArabicFontName, size: 15)
+                              : .footnote)
+                        .arabicFontDesign(custom: settings.islamUsesCustomArabicFace)
+                        .lineLimit(1)
+                        .multilineTextAlignment(.trailing)
+                        .frame(maxWidth: .infinity, alignment: .trailing)
+                }
+
+                if !english.isEmpty {
+                    Text(english)
+                        .font(.footnote)
+                        .foregroundColor(.secondary)
+                        .lineLimit(1)
+                }
+
+                Spacer(minLength: 0)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+            .padding(12)
+            .conditionalGlassEffect(clear: true, rectangle: true)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    /// Last Read Hadith, full-row form (summary mode off) - the Quran's Last Read Ayah counterpart.
+    @ViewBuilder
+    private var lastReadSection: some View {
+        if let lastRead = store.lastRead {
+            Section(header: Text("LAST READ HADITH")) {
+                Button {
+                    settings.hapticFeedback()
+                    pushedReference = HadithBookmark(
+                        slug: lastRead.slug, idInBook: lastRead.idInBook,
+                        reference: lastRead.reference, preview: ""
+                    )
+                } label: {
+                    VStack(alignment: .leading, spacing: 3) {
+                        HStack {
+                            Text(lastRead.reference)
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(settings.accentColor.color)
+
+                            Spacer(minLength: 8)
+
+                            historyTimestampLabel(lastRead.timestamp)
+                        }
+
+                        if !lastRead.arabicPreview.isEmpty {
+                            Text(lastRead.arabicPreview)
+                                .font(settings.useFontArabic
+                                      ? Font.arabic(settings.nonQuranArabicFontName, size: 15)
+                                      : .footnote)
+                                .arabicFontDesign(custom: settings.islamUsesCustomArabicFace)
+                                .lineLimit(1)
+                                .multilineTextAlignment(.trailing)
+                                .frame(maxWidth: .infinity, alignment: .trailing)
+                        }
+
+                        if !lastRead.englishPreview.isEmpty {
+                            Text(lastRead.englishPreview)
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                                .lineLimit(1)
+                        }
+                    }
+                    .padding(.vertical, 2)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
             }
         }
     }
 
     // MARK: About hadith
 
-    /// The same orientation the Pillars screen gives - and in fact the same screens: the two
-    /// Sunnah/Hadith pillar pages, pushed rather than paraphrased inline.
+    /// One polished orientation card: the two pillar screens as proper links on a glass card, with the
+    /// pointer to where the full teachings live.
     private var aboutHadithSection: some View {
         Section {
-            NavigationLink(destination: LazyDestination { SunnahPillarView() }) {
-                Text("What is the Sunnah?")
-                    .foregroundColor(settings.accentColor.color)
-                    .font(.headline)
-            }
-            .padding(.vertical, 4)
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(spacing: 8) {
+                    Image(systemName: "text.book.closed.fill")
+                        .font(.subheadline)
+                        .foregroundColor(settings.accentColor.color)
 
-            NavigationLink(destination: LazyDestination { HadithPillarView() }) {
-                Text("What are Hadiths?")
-                    .foregroundColor(settings.accentColor.color)
-                    .font(.headline)
+                    Text("About Hadith & the Sunnah")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundColor(settings.accentColor.color)
+                }
+
+                NavigationLink(destination: LazyDestination { SunnahPillarView() }) {
+                    HStack {
+                        Text("What is the Sunnah?")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundColor(.primary)
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.tertiary)
+                    }
+                    .padding(.vertical, 8)
+                    .padding(.horizontal, 12)
+                    .conditionalGlassEffect(clear: true, rectangle: true)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+
+                NavigationLink(destination: LazyDestination { HadithPillarView() }) {
+                    HStack {
+                        Text("What are Hadiths?")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundColor(.primary)
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.tertiary)
+                    }
+                    .padding(.vertical, 8)
+                    .padding(.horizontal, 12)
+                    .conditionalGlassEffect(clear: true, rectangle: true)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+
+                Text("Learn more under Al-Islam → Pillars and Beliefs.")
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
             }
-            .padding(.vertical, 4)
+            .padding(.vertical, 6)
         }
     }
 
@@ -925,7 +1471,14 @@ struct HadithView: View {
     private var globalSearchSection: some View {
         let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
         if query.count >= 3, referenceResult == nil {
-            Section(header: Text("ALL BOOKS")) {
+            let globalMatchCount = globalResults.reduce(0) { $0 + $1.hadiths.count }
+            Section(header: HStack {
+                Text("ALL BOOKS")
+                Spacer()
+                if !isGlobalSearching, globalSearchRanFor == query, globalMatchCount > 0 {
+                    CountPill(count: globalMatchCount)
+                }
+            }) {
                 if isGlobalSearching {
                     HStack(spacing: 10) {
                         ProgressView()
@@ -959,6 +1512,17 @@ struct HadithView: View {
                 Section(header: Text(result.book.englishTitle.uppercased())) {
                     ForEach(result.hadiths) { hadith in
                         HadithRow(book: result.book, hadith: hadith, searchText: searchText)
+                            // The Quran search's "scroll down to" pattern: a swipe or a long-press takes
+                            // you to the book's own row in the catalog instead of opening the hit.
+                            .swipeActions(edge: .leading, allowsFullSwipe: true) {
+                                Button {
+                                    settings.hapticFeedback()
+                                    pendingScrollToBookSlug = result.book.slug
+                                } label: {
+                                    Label("Scroll to Book", systemImage: "arrow.down.to.line")
+                                }
+                                .tint(settings.accentColor.color)
+                            }
                     }
                 }
             }
@@ -1009,39 +1573,31 @@ struct HadithView: View {
     // MARK: Bookmarks
 
     private var bookmarksSection: some View {
-        Section(header: Text("BOOKMARKED HADITHS")) {
-            ForEach(store.bookmarks) { bookmark in
-                if let book = HadithCatalogBook.bySlug[bookmark.slug] {
+        Section(header: SectionPillHeader(
+            title: "BOOKMARKED HADITHS",
+            count: store.bookmarks.count,
+            icon: "bookmark.fill",
+            accentTitle: true,
+            isExpanded: $showHadithBookmarks,
+            onShuffle: store.bookmarks.isEmpty ? nil : {
+                if let random = store.bookmarks.randomElement() {
+                    pushedReference = random
+                }
+            }
+        )) {
+            if showHadithBookmarks {
+                // The first five, Quran-bookmark style; the full list lives one push away.
+                ForEach(store.bookmarks.prefix(5)) { bookmark in
+                    HadithBookmarkRow(bookmark: bookmark)
+                }
+
+                if store.bookmarks.count > 5 {
                     NavigationLink {
-                        HadithReferenceView(book: book, chapter: nil, hadith: bookmark.idInBook)
+                        HadithBookmarksListView()
                     } label: {
-                        VStack(alignment: .leading, spacing: 3) {
-                            HStack(spacing: 6) {
-                                Image(systemName: "bookmark.fill")
-                                    .font(.caption2)
-                                    .foregroundStyle(settings.accentColor.color)
-
-                                Text(bookmark.reference)
-                                    .font(.caption.weight(.semibold))
-                                    .foregroundStyle(settings.accentColor.color)
-                            }
-
-                            Text(bookmark.preview)
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                                .lineLimit(2)
-                        }
-                        .padding(.vertical, 2)
-                    }
-                    .contextMenu {
-                        Button(role: .destructive) {
-                            settings.hapticFeedback()
-                            if let hadith = placeholderHadith(for: bookmark) {
-                                store.toggleBookmark(book: book, hadith: hadith)
-                            }
-                        } label: {
-                            Label("Remove Bookmark", systemImage: "bookmark.slash")
-                        }
+                        Label("View All (\(store.bookmarks.count))", systemImage: "bookmark")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundColor(settings.accentColor.color)
                     }
                 }
             }
@@ -1058,27 +1614,65 @@ struct HadithView: View {
 
     // MARK: Catalog sections
 
-    /// A catalog section rendered as a grid of tiles or a list of rows, per the app-wide `gridMode`.
+    /// A catalog section rendered as a grid of tiles or a list of rows, per the app-wide `gridMode`,
+    /// under the shared counted header. Pass `isExpanded` (plus the star icon and accent) for the
+    /// collapsible favorites treatment the Quran tab uses.
     @ViewBuilder
-    private func bookSection(title: String, books: [HadithCatalogBook]) -> some View {
-        if settings.gridMode {
-            Section(header: Text(title)) {
-                LazyVGrid(columns: gridColumns, alignment: .leading, spacing: 10) {
+    private func bookSection(
+        title: String,
+        books: [HadithCatalogBook],
+        icon: String? = nil,
+        accentTitle: Bool = false,
+        isExpanded: Binding<Bool>? = nil
+    ) -> some View {
+        let header = SectionPillHeader(
+            title: title,
+            count: books.count,
+            icon: icon,
+            accentTitle: accentTitle,
+            isExpanded: isExpanded
+        )
+        Section(header: header) {
+            if isExpanded?.wrappedValue ?? true {
+                if hadithGridMode {
+                    LazyVGrid(columns: gridColumns, alignment: .leading, spacing: 10) {
+                        ForEach(books) { book in
+                            bookGridTile(book)
+                        }
+                    }
+                    .padding(.vertical, 4)
+                } else {
                     ForEach(books) { book in
-                        bookGridTile(book)
+                        NavigationLink {
+                            HadithBookView(book: book)
+                        } label: {
+                            bookRow(book)
+                        }
+                        .contextMenu { bookContextMenu(book) }
+                        // The Quran surah rows' language: swipe to favorite; swipe the other way to
+                        // free a download.
+                        .swipeActions(edge: .leading, allowsFullSwipe: true) {
+                            Button {
+                                settings.hapticFeedback()
+                                withAnimation(.easeInOut) { store.toggleFavorite(book.slug) }
+                            } label: {
+                                Label(store.isFavorite(book.slug) ? "Unfavorite" : "Favorite",
+                                      systemImage: store.isFavorite(book.slug) ? "star.slash.fill" : "star.fill")
+                            }
+                            .tint(settings.accentColor.color)
+                        }
+                        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                            if store.downloadedSlugs.contains(book.slug) {
+                                Button(role: .destructive) {
+                                    settings.hapticFeedback()
+                                    store.deleteDownload(book)
+                                } label: {
+                                    Label("Delete Download", systemImage: "trash")
+                                }
+                            }
+                        }
+                        .id("hadith-book-\(book.slug)")
                     }
-                }
-                .padding(.vertical, 4)
-            }
-        } else {
-            Section(header: Text(title)) {
-                ForEach(books) { book in
-                    NavigationLink {
-                        HadithBookView(book: book)
-                    } label: {
-                        bookRow(book)
-                    }
-                    .contextMenu { bookContextMenu(book) }
                 }
             }
         }
@@ -1107,16 +1701,14 @@ struct HadithView: View {
         }
     }
 
-    /// "~3 MB" while the book still needs downloading; nil once it's on the device (the offline icon
-    /// says the rest - no "Downloaded" or "Included" labels anywhere).
-    private func bookSizeText(_ book: HadithCatalogBook) -> String? {
-        guard !store.isAvailableOffline(book) else { return nil }
-        return "~\(book.approximateMegabytes < 1 ? "0.1" : String(format: "%.0f", book.approximateMegabytes)) MB"
+    /// "~3 MB" - always shown, downloaded or not (the offline icon carries the downloaded state).
+    private func bookSizeText(_ book: HadithCatalogBook) -> String {
+        "~\(book.approximateMegabytes < 1 ? "0.1" : String(format: "%.0f", book.approximateMegabytes)) MB"
     }
 
     private func arabicTitleFont(_ style: UIFont.TextStyle, bump: CGFloat) -> Font {
         settings.useFontArabic
-            ? .custom(settings.nonQuranArabicFontName, size: UIFont.preferredFont(forTextStyle: style).pointSize + bump)
+            ? Font.arabic(settings.nonQuranArabicFontName, size: UIFont.preferredFont(forTextStyle: style).pointSize + bump)
             : Font(UIFont.preferredFont(forTextStyle: style))
     }
 
@@ -1137,12 +1729,10 @@ struct HadithView: View {
                         fg: .primary
                     )
 
-                    // The download size sits right of the title, in small type - gone once offline.
-                    if let size = bookSizeText(book) {
-                        Text(size)
-                            .font(.caption2)
-                            .foregroundColor(.secondary)
-                    }
+                    // The size sits right of the title in small type - always, downloaded or not.
+                    Text(bookSizeText(book))
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
                 }
 
                 Spacer(minLength: 8)
@@ -1168,12 +1758,6 @@ struct HadithView: View {
                         .foregroundStyle(settings.accentColor.color)
                 }
             }
-
-            // The 1-2 line orientation: who compiled it, and why it matters.
-            Text(book.shortDescription)
-                .font(.caption)
-                .foregroundColor(.secondary)
-                .lineLimit(2)
 
             Text("\(book.authorEnglish) - \(book.era)")
                 .font(.caption2)
@@ -1210,7 +1794,8 @@ struct HadithView: View {
                     accent: settings.accentColor.color,
                     fg: .primary
                 )
-                .lineLimit(1)
+                .lineLimit(2)
+                .multilineTextAlignment(.center)
                 .minimumScaleFactor(0.55)
 
                 HStack(spacing: 4) {
@@ -1218,19 +1803,22 @@ struct HadithView: View {
                         .font(.caption2.monospacedDigit())
                         .foregroundColor(.secondary)
 
-                    if let size = bookSizeText(book) {
-                        Text("• \(size)")
-                            .font(.caption2)
-                            .foregroundColor(.secondary)
-                    } else if !book.isBundled {
+                    Text("• \(bookSizeText(book))")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+
+                    if store.isAvailableOffline(book) {
                         Image(systemName: "arrow.down.circle.fill")
                             .font(.system(size: 9))
                             .foregroundStyle(settings.accentColor.color)
                     }
                 }
             }
+            .multilineTextAlignment(.center)
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 8)
+            // A fixed height so every tile in the grid lines up regardless of how its titles wrap.
+            .frame(height: 84)
+            .padding(.vertical, 4)
             .padding(.horizontal, 6)
             .contentShape(Rectangle())
         }
@@ -1248,7 +1836,8 @@ struct HadithView: View {
         ) {
             store.toggleFavorite(book.slug)
         }
-        .contextMenu { bookContextMenu(book) }
+        // No context menu on grid tiles - the long-press preview snapshot fought the tile's glass and
+        // the row form still carries the full menu.
     }
 }
 
@@ -1258,11 +1847,60 @@ struct HadithView: View {
 /// in a sheet off the Hadith tab rather than the app settings tree.
 struct HadithSettingsSheet: View {
     @ObservedObject private var settings = Settings.shared
+    @ObservedObject private var store = HadithStore.shared
+
+    /// What's on the device at a glance: every downloaded book with its size and a per-book delete.
+    @ViewBuilder
+    private var downloadedBooksSection: some View {
+        let downloaded = HadithCatalogBook.all.filter { store.downloadedSlugs.contains($0.slug) }
+        Section(
+            header: SectionPillHeader(title: "DOWNLOADED", count: downloaded.count),
+            footer: downloaded.isEmpty
+                ? Text("No books are downloaded. Open any book to download it, or read it once without keeping it.")
+                : Text("Tap the trash to remove a book from this device. It can be downloaded again anytime.")
+        ) {
+            ForEach(downloaded) { book in
+                HStack(spacing: 8) {
+                    Text(book.englishTitle)
+                        .font(.subheadline)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+
+                    Spacer()
+
+                    Text("~\(book.approximateMegabytes < 1 ? "0.1" : String(format: "%.0f", book.approximateMegabytes)) MB")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+
+                    Button {
+                        settings.hapticFeedback()
+                        withAnimation(.easeInOut) { store.deleteDownload(book) }
+                    } label: {
+                        Image(systemName: "trash")
+                            .font(.caption)
+                            .foregroundColor(.red)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+    }
 
     var body: some View {
         NavigationView {
             List {
                 Group {
+                    Section(footer: Text("Summary mode shows Hadith of the Day and your Last Read Hadith as compact tiles, like the Quran tab.")) {
+                        Toggle("Summary Mode", isOn: Binding(
+                            get: { UserDefaults.standard.object(forKey: "hadithSummaryMode") == nil ? true : UserDefaults.standard.bool(forKey: "hadithSummaryMode") },
+                            set: { newValue in
+                                settings.hapticFeedback()
+                                UserDefaults.standard.set(newValue, forKey: "hadithSummaryMode")
+                            }
+                        ).animation(.easeInOut))
+                    }
+
                     Section(header: Text("TEXT")) {
                         Toggle("Show Arabic", isOn: Binding(
                             get: { settings.showHadithArabic },
@@ -1296,8 +1934,26 @@ struct HadithSettingsSheet: View {
                     if settings.showHadithArabic {
                         Section(header: Text("ARABIC FONT"), footer: Text("Uthmani and IndoPak are classical script styles; Basic is the standard system font. This choice is shared with the other Arabic screens (Adhkar, Duas, 99 Names, Arabic Alphabet).")) {
                             IslamArabicFontPicker()
+
+                            Stepper(value: $settings.hadithArabicFontSize.animation(.easeInOut), in: 15...40, step: 1) {
+                                Text("Arabic Font Size: \(Int(settings.hadithArabicFontSize))")
+                                    .font(.subheadline)
+                            }
+                            .onChange(of: settings.hadithArabicFontSize) { _ in settings.hapticFeedback() }
                         }
                     }
+
+                    if settings.showHadithEnglish {
+                        Section(header: Text("ENGLISH FONT")) {
+                            Stepper(value: $settings.hadithEnglishFontSize.animation(.easeInOut), in: 10...32, step: 1) {
+                                Text("English Font Size: \(Int(settings.hadithEnglishFontSize))")
+                                    .font(.subheadline)
+                            }
+                            .onChange(of: settings.hadithEnglishFontSize) { _ in settings.hapticFeedback() }
+                        }
+                    }
+
+                    downloadedBooksSection
                 }
                 .themedListRowBackground()
             }
@@ -1324,17 +1980,46 @@ struct HadithBookView: View {
     /// A book that is NOT yet on this device asks before fetching (they are big); this flips on confirm.
     @State private var didConfirmDownload = false
     @State private var confirmDownload = false
+    /// "Read Without Downloading": the book loads into the session's memory cache only - full reading,
+    /// zero storage kept afterward.
+    @State private var temporaryRead = false
+    @State private var confirmDeleteDownload = false
+    /// The loading spinner waits a beat before appearing - a downloaded book decodes fast enough that
+    /// flashing a full loading screen for it read as a glitch.
+    @State private var showLoadingSpinner = false
+    /// Reading mode for the book, like the Quran's list/mushaf toggle: flipping it changes THIS screen
+    /// instead of pushing a new one.
+    @AppStorage("hadithPageMode") private var hadithPageMode = false
+    @State private var showBookFullScreen = false
     /// Apple Music-style bar minimization: true while scrolling down.
     @State private var barsCollapsed = false
 
-    /// Offline books open straight away; everything else shows the info + download prompt first.
+    init(book: HadithCatalogBook) {
+        self.book = book
+        // A book still in the session's memory cache renders instantly - no task hop, no flash.
+        _data = State(initialValue: HadithStore.shared.cachedBook(book.slug))
+    }
+
+    /// Offline books open straight away; everything else shows the info + download/temporary prompt first.
     private var needsDownloadPrompt: Bool {
-        data == nil && !store.isAvailableOffline(book) && !didConfirmDownload
+        data == nil && !store.isAvailableOffline(book) && !didConfirmDownload && !temporaryRead
     }
 
     private var hadithCountsByChapter: [Int: Int] {
         guard let data else { return [:] }
         return data.hadiths.reduce(into: [:]) { $0[$1.chapterId, default: 0] += 1 }
+    }
+
+    /// Each chapter's span of hadith numbers ("Hadiths 100-200"), from the data itself.
+    private var hadithRangesByChapter: [Int: ClosedRange<Int>] {
+        guard let data else { return [:] }
+        return data.hadiths.reduce(into: [:]) { ranges, hadith in
+            if let existing = ranges[hadith.chapterId] {
+                ranges[hadith.chapterId] = min(existing.lowerBound, hadith.idInBook)...max(existing.upperBound, hadith.idInBook)
+            } else {
+                ranges[hadith.chapterId] = hadith.idInBook...hadith.idInBook
+            }
+        }
     }
 
     private var filteredChapters: [HadithBookData.Chapter] {
@@ -1369,7 +2054,11 @@ struct HadithBookView: View {
     var body: some View {
         Group {
             if let data {
-                loadedBody(data)
+                if hadithPageMode {
+                    HadithPagedView(book: book, bookData: data, chapterIndex: 0)
+                } else {
+                    loadedBody(data)
+                }
             } else if needsDownloadPrompt {
                 downloadPrompt
             } else if let loadError {
@@ -1395,29 +2084,72 @@ struct HadithBookView: View {
                 }
                 .padding()
             } else {
-                ProgressView("Loading \(book.englishTitle)...")
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                Group {
+                    if showLoadingSpinner {
+                        ProgressView("Loading \(book.englishTitle)...")
+                    } else {
+                        Color.clear
+                    }
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .task {
+                    // Only a load that actually takes a moment earns a spinner.
+                    try? await Task.sleep(nanoseconds: 250_000_000)
+                    showLoadingSpinner = true
+                }
             }
         }
         .navigationTitle(book.englishTitle)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            ToolbarItem(placement: .navigationBarTrailing) {
-                if let data {
-                    NavigationLink {
-                        HadithPagedView(book: book, bookData: data, chapterIndex: 0)
+            ToolbarItem(placement: .navigationBarLeading) {
+                if data != nil {
+                    Button {
+                        settings.hapticFeedback()
+                        withAnimation(.easeInOut) { hadithPageMode.toggle() }
                     } label: {
-                        Image(systemName: "book")
+                        Image(systemName: hadithPageMode ? "list.bullet.rectangle" : "book")
                     }
-                    .accessibilityLabel("Read as pages")
+                    .accessibilityLabel(hadithPageMode ? "Read as a list" : "Read as pages")
                     .tint(settings.accentColor.accent1)
                 }
             }
+
+            ToolbarItem(placement: .navigationBarTrailing) {
+                if data != nil {
+                    Button {
+                        settings.hapticFeedback()
+                        showBookFullScreen = true
+                    } label: {
+                        Image(systemName: "arrow.up.left.and.arrow.down.right")
+                    }
+                    .accessibilityLabel("View full screen")
+                    .tint(settings.accentColor.accent2)
+                }
+            }
+
+            ToolbarItem(placement: .navigationBarTrailing) {
+                if data != nil {
+                    Button {
+                        settings.hapticFeedback()
+                        presentSystemShareSheet(items: [bookShareText])
+                    } label: {
+                        Image(systemName: "square.and.arrow.up")
+                    }
+                    .accessibilityLabel("Share this book")
+                    .tint(settings.accentColor.accent2)
+                }
+            }
         }
-        .task(id: "\(loadAttempt)|\(didConfirmDownload)") {
+        .fullScreenCover(isPresented: $showBookFullScreen) {
+            if let data {
+                HadithImmersiveView(title: book.englishTitle, book: book, hadiths: data.hadiths)
+            }
+        }
+        .task(id: "\(loadAttempt)|\(didConfirmDownload)|\(temporaryRead)") {
             guard data == nil, !needsDownloadPrompt else { return }
             do {
-                data = try await store.book(book)
+                data = try await store.book(book, persist: !temporaryRead)
             } catch {
                 loadError = error.localizedDescription
             }
@@ -1438,7 +2170,7 @@ struct HadithBookView: View {
 
                         Text(book.arabicTitle)
                             .font(settings.useFontArabic
-                                  ? .custom(settings.nonQuranArabicFontName, size: UIFont.preferredFont(forTextStyle: .headline).pointSize + 2)
+                                  ? Font.arabic(settings.nonQuranArabicFontName, size: UIFont.preferredFont(forTextStyle: .headline).pointSize + 2)
                                   : .headline)
                             .arabicFontDesign(custom: settings.islamUsesCustomArabicFace)
                             .foregroundColor(settings.accentColor.color)
@@ -1457,7 +2189,7 @@ struct HadithBookView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .conditionalGlassEffect(rectangle: true, useColor: 0.08)
 
-                OnlineNoticeCard(text: "This book is about \(bookSizeText) and has not been downloaded yet. Once downloaded, it is saved on this device and works fully offline.")
+                OnlineNoticeCard(text: "This book is about \(bookSizeText) and has not been downloaded yet. Download it to keep it on this device for offline reading, or read it once without keeping it.")
 
                 Button {
                     settings.hapticFeedback()
@@ -1471,22 +2203,53 @@ struct HadithBookView: View {
                         .conditionalGlassEffect(rectangle: true)
                 }
                 .buttonStyle(.plain)
+                // Anchored to the Download button, so the dialog pops from the control that asked.
+                .confirmationDialog("Download \(book.englishTitle)?", isPresented: $confirmDownload, titleVisibility: .visible) {
+                    Button("Download (\(bookSizeText))") {
+                        settings.hapticFeedback()
+                        didConfirmDownload = true
+                    }
+                    Button("Cancel", role: .cancel) {}
+                } message: {
+                    Text("This fetches the whole book for offline reading. It may use significant data - Wi-Fi is recommended.")
+                }
+
+                // The storage-saver: the whole book loads for THIS reading session only and nothing is
+                // kept on the device afterward.
+                Button {
+                    settings.hapticFeedback()
+                    temporaryRead = true
+                } label: {
+                    VStack(spacing: 3) {
+                        Label("Read Without Downloading", systemImage: "eye")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundColor(settings.accentColor.color)
+
+                        Text("Loads the full book just for now - nothing stays on your device.")
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 10)
+                    .conditionalGlassEffect(clear: true, rectangle: true)
+                }
+                .buttonStyle(.plain)
             }
             .padding()
-        }
-        .confirmationDialog("Download \(book.englishTitle)?", isPresented: $confirmDownload, titleVisibility: .visible) {
-            Button("Download (\(bookSizeText))") {
-                settings.hapticFeedback()
-                didConfirmDownload = true
-            }
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            Text("This fetches the whole book for offline reading. It may use significant data - Wi-Fi is recommended.")
         }
     }
 
     private var bookSizeText: String {
         book.approximateMegabytes < 1 ? "under 1 MB" : "\(String(format: "%.0f", book.approximateMegabytes)) MB"
+    }
+
+    /// What sharing the BOOK sends: its identity and story, not 13 MB of text.
+    private var bookShareText: String {
+        var parts = ["\(book.englishTitle) (\(book.arabicTitle))", "\(book.authorEnglish) - \(book.era)", book.longDescription]
+        if let data {
+            parts.append("\(data.hadiths.count) hadiths - \(data.chapters.count) chapters")
+        }
+        return parts.joined(separator: "\n\n")
     }
 
     private func loadedBody(_ data: HadithBookData) -> some View {
@@ -1502,7 +2265,7 @@ struct HadithBookView: View {
 
                             Text(book.arabicTitle)
                                 .font(settings.useFontArabic
-                                      ? .custom(settings.nonQuranArabicFontName, size: UIFont.preferredFont(forTextStyle: .subheadline).pointSize + 2)
+                                      ? Font.arabic(settings.nonQuranArabicFontName, size: UIFont.preferredFont(forTextStyle: .subheadline).pointSize + 2)
                                       : .subheadline)
                                 .arabicFontDesign(custom: settings.islamUsesCustomArabicFace)
                                 .foregroundColor(settings.accentColor.color)
@@ -1518,10 +2281,13 @@ struct HadithBookView: View {
                             .foregroundColor(.secondary)
                             .fixedSize(horizontal: false, vertical: true)
 
-                        Text("\(data.hadiths.count) hadiths - \(data.chapters.count) chapters")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                            .monospacedDigit()
+                        // The book's shape at a glance, in the same pill language the section headers use.
+                        HStack(spacing: 8) {
+                            statPill("\(data.hadiths.count) Hadiths")
+                            statPill("\(data.chapters.count) Chapters")
+                            statPill(bookSizeText)
+                        }
+                        .padding(.top, 2)
                     }
                     .padding(.vertical, 2)
                 }
@@ -1529,19 +2295,32 @@ struct HadithBookView: View {
                 // While searching, matched HADITHS come first - the searcher is usually hunting a text,
                 // not a chapter name.
                 if !matchingHadiths.isEmpty {
-                    Section(header: Text("MATCHING HADITHS")) {
+                    Section(header: SectionPillHeader(title: "MATCHING HADITHS", count: matchingHadiths.count)) {
                         ForEach(matchingHadiths) { hadith in
                             HadithRow(book: book, hadith: hadith, searchText: searchText)
                         }
                     }
                 }
 
-                Section(header: Text("CHAPTERS")) {
+                Section(header: SectionPillHeader(title: "CHAPTERS", count: filteredChapters.count)) {
                     ForEach(filteredChapters) { chapter in
                         NavigationLink {
                             HadithChapterView(book: book, bookData: data, chapter: chapter)
                         } label: {
                             chapterRow(chapter)
+                        }
+                        // Swipe a chapter to share its full text.
+                        .swipeActions(edge: .leading, allowsFullSwipe: false) {
+                            Button {
+                                settings.hapticFeedback()
+                                let hadiths = data.hadiths.filter { $0.chapterId == chapter.id }
+                                var parts = ["\(book.englishTitle) - \(chapter.english)"]
+                                parts.append(contentsOf: hadiths.map { HadithShareSheet.composedText(book: book, hadith: $0) })
+                                presentSystemShareSheet(items: [parts.joined(separator: "\n\n")])
+                            } label: {
+                                Label("Share", systemImage: "square.and.arrow.up")
+                            }
+                            .tint(settings.accentColor.color)
                         }
                     }
 
@@ -1549,6 +2328,30 @@ struct HadithBookView: View {
                         Text("No chapters found.")
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
+                    }
+                }
+
+                // Free the storage right from the book's own page. Bundle-shipped books occupy no
+                // cache storage, so there is nothing to delete for them.
+                if store.downloadedSlugs.contains(book.slug) {
+                    Section {
+                        Button(role: .destructive) {
+                            settings.hapticFeedback()
+                            confirmDeleteDownload = true
+                        } label: {
+                            Label("Delete Download (\(bookSizeText))", systemImage: "trash")
+                                .font(.subheadline)
+                        }
+                        // Anchored to the Delete button itself.
+                        .confirmationDialog("Delete \(book.englishTitle)?", isPresented: $confirmDeleteDownload, titleVisibility: .visible) {
+                            Button("Delete Download", role: .destructive) {
+                                settings.hapticFeedback()
+                                store.deleteDownload(book)
+                            }
+                            Button("Cancel", role: .cancel) {}
+                        } message: {
+                            Text("Frees about \(bookSizeText). You can download it again anytime\(book.isBundled ? " - it restores instantly from the app itself" : "").")
+                        }
                     }
                 }
             }
@@ -1568,6 +2371,17 @@ struct HadithBookView: View {
         }
     }
 
+    /// A small glass stat chip, in the count-pill language.
+    private func statPill(_ text: String) -> some View {
+        Text(text)
+            .font(.caption2.weight(.semibold))
+            .monospacedDigit()
+            .foregroundStyle(settings.accentColor.color)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .conditionalGlassEffect()
+    }
+
     private func chapterRow(_ chapter: HadithBookData.Chapter) -> some View {
         VStack(alignment: .leading, spacing: 3) {
             HStack(alignment: .firstTextBaseline) {
@@ -1582,11 +2396,18 @@ struct HadithBookView: View {
                 Spacer(minLength: 8)
 
                 if let count = hadithCountsByChapter[chapter.id] {
-                    Text("\(count)")
-                        .font(.caption.weight(.semibold))
-                        .monospacedDigit()
-                        .foregroundStyle(settings.accentColor.color)
+                    CountPill(count: count)
                 }
+            }
+
+            // Which hadith numbers this chapter spans - "Hadiths 100-200".
+            if let range = hadithRangesByChapter[chapter.id] {
+                Text(range.lowerBound == range.upperBound
+                     ? "Hadith \(range.lowerBound)"
+                     : "Hadiths \(range.lowerBound)-\(range.upperBound)")
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+                    .monospacedDigit()
             }
 
             if !chapter.arabic.isEmpty {
@@ -1594,12 +2415,13 @@ struct HadithBookView: View {
                     source: chapter.arabic,
                     term: searchText,
                     font: settings.useFontArabic
-                        ? .custom(settings.nonQuranArabicFontName, size: UIFont.preferredFont(forTextStyle: .caption1).pointSize + 2)
+                        ? Font.arabic(settings.nonQuranArabicFontName, size: UIFont.preferredFont(forTextStyle: .caption1).pointSize + 2)
                         : .caption,
                     accent: settings.accentColor.color,
                     fg: .secondary
                 )
                 .arabicFontDesign(custom: settings.islamUsesCustomArabicFace)
+                .multilineTextAlignment(.trailing)
                 .frame(maxWidth: .infinity, alignment: .trailing)
             }
         }
@@ -1619,9 +2441,29 @@ struct HadithChapterView: View {
     @State private var searchText = ""
     /// Apple Music-style bar minimization: true while scrolling down.
     @State private var barsCollapsed = false
+    /// In-place list/pages toggle, like the Quran reader.
+    @State private var chapterPageMode = false
+    @State private var showChapterFullScreen = false
 
     private var chapterIndex: Int {
         bookData.chapters.firstIndex(where: { $0.id == chapter.id }) ?? 0
+    }
+
+    private var allChapterHadiths: [HadithBookData.Hadith] {
+        bookData.hadiths.filter { $0.chapterId == chapter.id }
+    }
+
+    private var chapterRange: ClosedRange<Int>? {
+        let ids = allChapterHadiths.map(\.idInBook)
+        guard let low = ids.min(), let high = ids.max() else { return nil }
+        return low...high
+    }
+
+    /// Sharing a CHAPTER sends its full text - name, then every hadith.
+    private var chapterShareText: String {
+        var parts = ["\(book.englishTitle) - \(chapter.english)"]
+        parts.append(contentsOf: allChapterHadiths.map { HadithShareSheet.composedText(book: book, hadith: $0) })
+        return parts.joined(separator: "\n\n")
     }
 
     private var hadiths: [HadithBookData.Hadith] {
@@ -1637,22 +2479,135 @@ struct HadithChapterView: View {
     }
 
     var body: some View {
+        Group {
+            if chapterPageMode {
+                HadithPagedView(book: book, bookData: bookData, chapterIndex: chapterIndex)
+            } else {
+                chapterList
+            }
+        }
+        .navigationTitle(chapter.english.isEmpty ? book.englishTitle : chapter.english)
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarLeading) {
+                Button {
+                    settings.hapticFeedback()
+                    withAnimation(.easeInOut) { chapterPageMode.toggle() }
+                } label: {
+                    Image(systemName: chapterPageMode ? "list.bullet.rectangle" : "book")
+                }
+                .accessibilityLabel(chapterPageMode ? "Read as a list" : "Read as pages")
+                .tint(settings.accentColor.accent1)
+            }
+
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button {
+                    settings.hapticFeedback()
+                    showChapterFullScreen = true
+                } label: {
+                    Image(systemName: "arrow.up.left.and.arrow.down.right")
+                }
+                .accessibilityLabel("View full screen")
+                .tint(settings.accentColor.accent2)
+            }
+
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button {
+                    settings.hapticFeedback()
+                    presentSystemShareSheet(items: [chapterShareText])
+                } label: {
+                    Image(systemName: "square.and.arrow.up")
+                }
+                .accessibilityLabel("Share this chapter")
+                .tint(settings.accentColor.accent2)
+            }
+        }
+        .fullScreenCover(isPresented: $showChapterFullScreen) {
+            HadithImmersiveView(
+                title: chapter.english.isEmpty ? book.englishTitle : chapter.english,
+                book: book,
+                hadiths: allChapterHadiths
+            )
+        }
+    }
+
+    /// Bookmarks that live inside THIS chapter, matched by stored chapter id (new bookmarks) or by the
+    /// chapter's hadith-number span (older ones).
+    private var chapterBookmarks: [HadithBookmark] {
+        let range = chapterRange
+        return HadithStore.shared.bookmarks.filter { bookmark in
+            guard bookmark.slug == book.slug else { return false }
+            if let chapterId = bookmark.chapterId { return chapterId == chapter.id }
+            return range.map { $0.contains(bookmark.idInBook) } ?? false
+        }
+    }
+
+    @AppStorage("showHadithChapterBookmarks") private var showChapterBookmarks = true
+    @State private var pushedChapterBookmark: HadithBookmark? = nil
+
+    private var chapterList: some View {
         List {
             Group {
-                ForEach(hadiths) { hadith in
-                    HadithRow(book: book, hadith: hadith, searchText: searchText)
+                if !chapterBookmarks.isEmpty, searchText.isEmpty {
+                    Section(header: SectionPillHeader(
+                        title: "BOOKMARKED IN THIS CHAPTER",
+                        count: chapterBookmarks.count,
+                        icon: "bookmark.fill",
+                        accentTitle: true,
+                        isExpanded: $showChapterBookmarks,
+                        onShuffle: {
+                            if let random = chapterBookmarks.randomElement() {
+                                pushedChapterBookmark = random
+                            }
+                        }
+                    )) {
+                        if showChapterBookmarks {
+                            ForEach(chapterBookmarks.prefix(5)) { bookmark in
+                                HadithBookmarkRow(bookmark: bookmark)
+                            }
+
+                            if chapterBookmarks.count > 5 {
+                                NavigationLink {
+                                    HadithBookmarksListView()
+                                } label: {
+                                    Label("View All (\(chapterBookmarks.count))", systemImage: "bookmark")
+                                        .font(.subheadline.weight(.semibold))
+                                        .foregroundColor(settings.accentColor.color)
+                                }
+                            }
+                        }
+                    }
                 }
 
-                if hadiths.isEmpty {
-                    Text("No hadiths found.")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
+                Section(header: chapterHeader) {
+                    ForEach(hadiths) { hadith in
+                        HadithRow(book: book, hadith: hadith, searchText: searchText)
+                    }
+
+                    if hadiths.isEmpty {
+                        Text("No hadiths found.")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
                 }
             }
             .themedListRowBackground()
         }
         .applyConditionalListStyle()
         .compactListSectionSpacing()
+        .background(
+            NavigationLink(isActive: Binding(
+                get: { pushedChapterBookmark != nil },
+                set: { if !$0 { pushedChapterBookmark = nil } }
+            )) {
+                if let pushedChapterBookmark, let refBook = HadithCatalogBook.bySlug[pushedChapterBookmark.slug] {
+                    HadithReferenceView(book: refBook, chapter: nil, hadith: pushedChapterBookmark.idInBook)
+                }
+            } label: {
+                EmptyView()
+            }
+            .opacity(0)
+        )
         // Apple Music-style: the bottom search bar minimizes while scrolling down.
         .collapseBarsOnScroll($barsCollapsed)
         .adaptiveSafeArea(edge: .bottom) {
@@ -1663,28 +2618,37 @@ struct HadithChapterView: View {
                 .background(Color.white.opacity(0.00001))
                 .minimizedBarStyle(barsCollapsed)
         }
-        .navigationTitle(chapter.english.isEmpty ? book.englishTitle : chapter.english)
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .navigationBarTrailing) {
-                NavigationLink {
-                    HadithPagedView(book: book, bookData: bookData, chapterIndex: chapterIndex)
-                } label: {
-                    Image(systemName: "book")
-                }
-                .accessibilityLabel("Read this chapter as pages")
-                .tint(settings.accentColor.accent1)
+    }
+
+    /// The chapter's proper header: its name, the hadith count pill, and the span of hadith numbers.
+    private var chapterHeader: some View {
+        HStack(spacing: 8) {
+            Text("CHAPTER \(chapterIndex + 1)")
+
+            if let range = chapterRange {
+                Text(range.lowerBound == range.upperBound
+                     ? "- HADITH \(range.lowerBound)"
+                     : "- HADITHS \(range.lowerBound)-\(range.upperBound)")
+                    .monospacedDigit()
             }
+
+            Spacer()
+
+            CountPill(count: allChapterHadiths.count)
         }
     }
 }
 
-// MARK: - Page mode: one hadith per page, chapter by chapter
+// MARK: - Page mode: as many hadiths per page as fit, right-to-left, chapter by chapter
 
-/// The paged reader: swipe hadith-by-hadith through a chapter, and step between chapters with the footer
-/// arrows. Deliberately chapter-scoped - paging all ~7,500 hadiths of Bukhari through one TabView is the
-/// exact page-realization stampede the Quran mushaf had to engineer around; a chapter is at most a few
-/// hundred light pages.
+/// The paged reader, in the mushaf's manner: pages turn RIGHT-TO-LEFT, and each page carries as many
+/// whole hadiths as the current Arabic/English font sizes allow. Chapter-scoped - paging all ~7,500
+/// hadiths of Bukhari through one TabView is the page-realization stampede the Quran mushaf had to
+/// engineer around; a chapter is at most a few hundred light pages.
+///
+/// Layout rules: a chapter heading is never left as the last thing on a page (it moves to the top of
+/// the next page so its hadiths follow it), and a hadith is atomic - its reference line and its text
+/// always travel together.
 struct HadithPagedView: View {
     @ObservedObject private var settings = Settings.shared
 
@@ -1692,7 +2656,19 @@ struct HadithPagedView: View {
     let bookData: HadithBookData
 
     @State var chapterIndex: Int
-    @State private var hadithIndex = 0
+    @State private var pageIndex = 0
+
+    private enum PageElement: Identifiable {
+        case heading(HadithBookData.Chapter)
+        case hadith(HadithBookData.Hadith)
+
+        var id: String {
+            switch self {
+            case .heading(let chapter): return "heading-\(chapter.id)"
+            case .hadith(let hadith): return "hadith-\(hadith.id)"
+            }
+        }
+    }
 
     private var chapter: HadithBookData.Chapter? {
         bookData.chapters.indices.contains(chapterIndex) ? bookData.chapters[chapterIndex] : nil
@@ -1703,43 +2679,184 @@ struct HadithPagedView: View {
         return bookData.hadiths.filter { $0.chapterId == chapter.id }
     }
 
-    var body: some View {
-        let hadiths = chapterHadiths
+    // MARK: Measurement
 
-        VStack(spacing: 0) {
-            if hadiths.isEmpty {
-                Text("This chapter has no hadiths.")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else {
-                TabView(selection: $hadithIndex) {
-                    ForEach(Array(hadiths.enumerated()), id: \.offset) { index, hadith in
-                        ScrollView {
-                            HadithRow(book: book, hadith: hadith)
-                                .padding(.horizontal, 20)
-                                .padding(.vertical, 12)
-                        }
-                        .tag(index)
-                    }
-                }
-                .tabViewStyle(.page(indexDisplayMode: .never))
+    private func measuredHeight(of text: String, font: UIFont, width: CGFloat, lineSpacing: CGFloat = 0) -> CGFloat {
+        guard !text.isEmpty else { return 0 }
+        let style = NSMutableParagraphStyle()
+        style.lineSpacing = lineSpacing
+        let rect = (text as NSString).boundingRect(
+            with: CGSize(width: width, height: .greatestFiniteMagnitude),
+            options: [.usesLineFragmentOrigin, .usesFontLeading],
+            attributes: [.font: font, .paragraphStyle: style],
+            context: nil
+        )
+        return ceil(rect.height)
+    }
+
+    /// Estimated on-screen height of one hadith block, mirroring `HadithRow`'s fonts and spacings (with
+    /// a little slack - the page also scrolls, so a slight under-estimate can never hide text).
+    private func height(of hadith: HadithBookData.Hadith, width: CGFloat) -> CGFloat {
+        var total: CGFloat = 28 + 10 + 8   // number badge row + stack spacing + row padding
+
+        if settings.showHadithArabic, !hadith.arabic.isEmpty {
+            let arabicFont = UIFont(name: settings.nonQuranArabicFontName, size: settings.hadithArabicFontSize)
+                ?? .roundedSystemFont(ofSize: settings.hadithArabicFontSize)
+            total += measuredHeight(of: hadith.arabic, font: arabicFont, width: width, lineSpacing: 6) + 10
+        }
+        if settings.showHadithEnglish {
+            let englishFont = UIFont.roundedSystemFont(ofSize: settings.hadithEnglishFontSize)
+            if settings.showHadithNarrator, !hadith.english.narrator.isEmpty {
+                total += measuredHeight(of: hadith.english.narrator, font: englishFont, width: width) + 10
+            }
+            if !hadith.english.text.isEmpty {
+                total += measuredHeight(of: hadith.english.text, font: englishFont, width: width) + 10
             }
         }
-        .safeAreaInset(edge: .bottom) {
-            pagerFooter(count: hadiths.count)
+        return total * 1.06
+    }
+
+    private func headingHeight(_ chapter: HadithBookData.Chapter, width: CGFloat) -> CGFloat {
+        var total: CGFloat = 12
+        total += measuredHeight(of: chapter.english, font: .roundedSystemFont(ofSize: 15, weight: .semibold), width: width)
+        if !chapter.arabic.isEmpty {
+            let arabicFont = UIFont(name: settings.nonQuranArabicFontName, size: 15) ?? .roundedSystemFont(ofSize: 15)
+            total += measuredHeight(of: chapter.arabic, font: arabicFont, width: width) + 4
+        }
+        return total * 1.06
+    }
+
+    /// Packs the chapter into pages: fill until the height budget runs out, never orphan the heading,
+    /// keep every hadith whole. Re-runs whenever the fonts or display toggles change (it is a pure
+    /// function of its inputs), which is what makes the per-page count adapt to the font sizes.
+    private func paginate(size: CGSize) -> [[PageElement]] {
+        let width = max(size.width - 40, 1)
+        let budget = max(size.height - 24, 200)
+        let hadiths = chapterHadiths
+        guard !hadiths.isEmpty else { return [] }
+
+        var elements: [PageElement] = []
+        if let chapter { elements.append(.heading(chapter)) }
+        elements.append(contentsOf: hadiths.map { .hadith($0) })
+
+        var pages: [[PageElement]] = []
+        var current: [PageElement] = []
+        var used: CGFloat = 0
+        let spacing: CGFloat = 16
+
+        for element in elements {
+            let h: CGFloat
+            switch element {
+            case .heading(let chapter): h = headingHeight(chapter, width: width)
+            case .hadith(let hadith): h = height(of: hadith, width: width)
+            }
+
+            let needed = (current.isEmpty ? 0 : spacing) + h
+            if !current.isEmpty, used + needed > budget {
+                // Never leave a heading stranded as the page's last line - it moves with what follows.
+                if case .heading = current.last {
+                    let heading = current.removeLast()
+                    if !current.isEmpty { pages.append(current) }
+                    current = [heading]
+                    used = headingHeight(chapter!, width: width)
+                } else {
+                    pages.append(current)
+                    current = []
+                    used = 0
+                }
+                current.append(element)
+                used += h
+            } else {
+                current.append(element)
+                used += needed
+            }
+        }
+        if !current.isEmpty { pages.append(current) }
+        return pages
+    }
+
+    var body: some View {
+        GeometryReader { geo in
+            let pages = paginate(size: geo.size)
+
+            Group {
+                if pages.isEmpty {
+                    Text("This chapter has no hadiths.")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else {
+                    // Right-to-left, exactly like the mushaf: the DATA is reversed rather than the layout
+                    // direction, so page 0 sits at the far right and reading advances leftward.
+                    TabView(selection: $pageIndex) {
+                        ForEach(pages.indices.reversed(), id: \.self) { index in
+                            pageBody(pages[index])
+                                .tag(index)
+                        }
+                    }
+                    .tabViewStyle(.page(indexDisplayMode: .never))
+                }
+            }
+            .safeAreaInset(edge: .bottom) {
+                pagerFooter(pageCount: pages.count, hadithCount: chapterHadiths.count)
+            }
         }
         .navigationTitle(chapter?.english.isEmpty == false ? (chapter?.english ?? "") : book.englishTitle)
         .navigationBarTitleDisplayMode(.inline)
         .onChange(of: chapterIndex) { _ in
-            hadithIndex = 0
+            pageIndex = 0
+        }
+        .onChange(of: pageIndex) { _ in
+            recordPageLastRead()
+        }
+        .onAppear {
+            recordPageLastRead()
         }
     }
 
-    private func pagerFooter(count: Int) -> some View {
+    /// The page's first hadith becomes the Last Read - the paged equivalent of opening a detail.
+    private func recordPageLastRead() {
+        guard let first = chapterHadiths.first else { return }
+        HadithStore.shared.recordLastRead(book: book, hadith: first)
+    }
+
+    private func pageBody(_ elements: [PageElement]) -> some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 16) {
+                ForEach(elements) { element in
+                    switch element {
+                    case .heading(let chapter):
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(chapter.english)
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundColor(settings.accentColor.color)
+
+                            if !chapter.arabic.isEmpty {
+                                Text(chapter.arabic)
+                                    .font(settings.useFontArabic
+                                          ? Font.arabic(settings.nonQuranArabicFontName, size: 15)
+                                          : .subheadline)
+                                    .arabicFontDesign(custom: settings.islamUsesCustomArabicFace)
+                                    .foregroundColor(.secondary)
+                                    .multilineTextAlignment(.trailing)
+                                    .frame(maxWidth: .infinity, alignment: .trailing)
+                            }
+                        }
+
+                    case .hadith(let hadith):
+                        HadithRow(book: book, hadith: hadith, opensDetail: false)
+                    }
+                }
+            }
+            .padding(.horizontal, 20)
+            .padding(.vertical, 12)
+        }
+    }
+
+    private func pagerFooter(pageCount: Int, hadithCount: Int) -> some View {
         VStack(spacing: 6) {
             TrackedBar(
-                fraction: count > 1 ? CGFloat(hadithIndex) / CGFloat(count - 1) : 1,
+                fraction: pageCount > 1 ? CGFloat(pageIndex) / CGFloat(pageCount - 1) : 1,
                 height: 3,
                 color: settings.accentColor.color
             )
@@ -1752,6 +2869,7 @@ struct HadithPagedView: View {
                 } label: {
                     Image(systemName: "chevron.left")
                         .font(.body.weight(.semibold))
+                        .contentShape(Rectangle())
                 }
                 .disabled(chapterIndex == 0)
 
@@ -1760,7 +2878,7 @@ struct HadithPagedView: View {
                         .font(.caption.weight(.semibold))
                         .monospacedDigit()
 
-                    Text(count > 0 ? "Hadith \(hadithIndex + 1)/\(count)" : "-")
+                    Text(pageCount > 0 ? "Page \(pageIndex + 1)/\(pageCount) - \(hadithCount) hadiths" : "-")
                         .font(.caption2)
                         .monospacedDigit()
                         .foregroundStyle(.secondary)
@@ -1773,6 +2891,7 @@ struct HadithPagedView: View {
                 } label: {
                     Image(systemName: "chevron.right")
                         .font(.body.weight(.semibold))
+                        .contentShape(Rectangle())
                 }
                 .disabled(chapterIndex >= bookData.chapters.count - 1)
             }
@@ -1911,6 +3030,11 @@ struct HadithRow: View {
     let book: HadithCatalogBook
     let hadith: HadithBookData.Hadith
     var searchText: String = ""
+    /// List rows push the hadith's own detail screen; the paged reader turns this off (it IS the reading
+    /// surface, and a nav-push mid-page would be jarring).
+    var opensDetail: Bool = true
+
+    @State private var showShareSheet = false
 
     /// "Sahih al-Bukhari 1234" - the standard way a hadith is cited.
     private var reference: String {
@@ -1921,20 +3045,41 @@ struct HadithRow: View {
         store.isBookmarked(slug: book.slug, idInBook: hadith.idInBook)
     }
 
-    private var shareText: String {
-        var parts: [String] = ["[\(reference)]"]
-        if !hadith.arabic.isEmpty { parts.append(hadith.arabic) }
-        if !hadith.english.narrator.isEmpty { parts.append(hadith.english.narrator) }
-        if !hadith.english.text.isEmpty { parts.append(hadith.english.text) }
-        return parts.joined(separator: "\n\n")
+    var body: some View {
+        if opensDetail {
+            NavigationLink {
+                HadithDetailView(book: book, hadith: hadith)
+            } label: {
+                rowContent
+            }
+        } else {
+            rowContent
+        }
     }
 
-    var body: some View {
+    private var rowContent: some View {
         VStack(alignment: .leading, spacing: 10) {
-            HStack(spacing: 6) {
-                Text(reference)
+            HStack(spacing: 8) {
+                // The number badge, in the same conditional-glass language as the surah rows' numbers -
+                // tinted when the hadith is bookmarked.
+                Text("\(hadith.idInBook)")
+                    .font(.subheadline.monospacedDigit().weight(.semibold))
+                    .foregroundColor(settings.accentColor.color)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.5)
+                    .conditionalGlassEffect(
+                        useColor: isBookmarked ? 0.3 : nil,
+                        customTint: isBookmarked ? settings.accentColor.color : nil,
+                        interactive: false
+                    )
+
+                Text(book.englishTitle)
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(settings.accentColor.color)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
 
                 Spacer(minLength: 0)
 
@@ -1950,8 +3095,8 @@ struct HadithRow: View {
                     source: hadith.arabic,
                     term: searchText,
                     font: settings.useFontArabic
-                        ? .custom(settings.nonQuranArabicFontName, size: UIFont.preferredFont(forTextStyle: .body).pointSize + 4)
-                        : .body,
+                        ? Font.arabic(settings.nonQuranArabicFontName, size: settings.hadithArabicFontSize)
+                        : .system(size: settings.hadithArabicFontSize),
                     accent: settings.accentColor.color,
                     fg: .primary,
                     highlightAllahNames: settings.highlightAllahNames
@@ -1968,7 +3113,7 @@ struct HadithRow: View {
                     HighlightedSnippet(
                         source: hadith.english.narrator,
                         term: searchText,
-                        font: .system(size: settings.englishFontSize).italic(),
+                        font: .system(size: settings.hadithEnglishFontSize).italic(),
                         accent: settings.accentColor.color,
                         fg: .secondary
                     )
@@ -1978,7 +3123,7 @@ struct HadithRow: View {
                     HighlightedSnippet(
                         source: hadith.english.text,
                         term: searchText,
-                        font: .system(size: settings.englishFontSize),
+                        font: .system(size: settings.hadithEnglishFontSize),
                         accent: settings.accentColor.color,
                         fg: .primary,
                         highlightAllahNames: settings.highlightAllahNames
@@ -1987,61 +3132,437 @@ struct HadithRow: View {
             }
         }
         .padding(.vertical, 4)
-        .textSelection(.enabled)
         .contextMenu {
             Text(reference)
                 .foregroundStyle(.secondary)
 
-            Button {
-                settings.hapticFeedback()
-                withAnimation(.easeInOut) {
-                    store.toggleBookmark(book: book, hadith: hadith)
+            if isBookmarked {
+                Button(role: .destructive) {
+                    settings.hapticFeedback()
+                    withAnimation(.easeInOut) {
+                        store.toggleBookmark(book: book, hadith: hadith)
+                    }
+                } label: {
+                    Label("Remove Bookmark", systemImage: "bookmark.fill")
                 }
-            } label: {
-                Label(isBookmarked ? "Remove Bookmark" : "Bookmark Hadith",
-                      systemImage: isBookmarked ? "bookmark.slash" : "bookmark")
+            } else {
+                Button {
+                    settings.hapticFeedback()
+                    withAnimation(.easeInOut) {
+                        store.toggleBookmark(book: book, hadith: hadith)
+                    }
+                } label: {
+                    Label("Bookmark Hadith", systemImage: "bookmark")
+                }
             }
 
             Divider()
 
+            // ONE share surface and ONE copy, both driven by the same composition options - the pile of
+            // per-field copy actions collapsed into the Share Hadith sheet.
             Button {
                 settings.hapticFeedback()
-                UIPasteboard.general.string = shareText
-            } label: {
-                Label("Copy Hadith", systemImage: "doc.on.doc")
-            }
-
-            Button {
-                settings.hapticFeedback()
-                UIPasteboard.general.string = hadith.arabic
-            } label: {
-                Label("Copy Arabic", systemImage: "doc.on.doc")
-            }
-
-            Button {
-                settings.hapticFeedback()
-                UIPasteboard.general.string = [hadith.english.narrator, hadith.english.text]
-                    .filter { !$0.isEmpty }
-                    .joined(separator: "\n")
-            } label: {
-                Label("Copy English", systemImage: "doc.on.doc")
-            }
-
-            Button {
-                settings.hapticFeedback()
-                UIPasteboard.general.string = reference
-            } label: {
-                Label("Copy Reference", systemImage: "number")
-            }
-
-            Divider()
-
-            Button {
-                settings.hapticFeedback()
-                presentSystemShareSheet(items: [shareText])
+                showShareSheet = true
             } label: {
                 Label("Share Hadith", systemImage: "square.and.arrow.up")
             }
+
+            Button {
+                settings.hapticFeedback()
+                UIPasteboard.general.string = HadithShareSheet.composedText(book: book, hadith: hadith)
+            } label: {
+                Label("Copy Hadith", systemImage: "doc.on.doc")
+            }
+        }
+        .sheet(isPresented: $showShareSheet) {
+            HadithShareSheet(book: book, hadith: hadith)
+                .smallMediumSheetPresentation()
+        }
+    }
+}
+
+// MARK: - Bookmark rows (Quran-style one-line previews) + the full list
+
+/// A bookmarked hadith row in the Quran-bookmark format: reference, ONE line of Arabic (trailing), ONE
+/// line of English - never the narrator. Opens the hadith through the reference resolver.
+struct HadithBookmarkRow: View {
+    @ObservedObject private var settings = Settings.shared
+    @ObservedObject private var store = HadithStore.shared
+
+    let bookmark: HadithBookmark
+
+    var body: some View {
+        if let book = HadithCatalogBook.bySlug[bookmark.slug] {
+            NavigationLink {
+                HadithReferenceView(book: book, chapter: nil, hadith: bookmark.idInBook)
+            } label: {
+                VStack(alignment: .leading, spacing: 3) {
+                    HStack(spacing: 6) {
+                        Image(systemName: "bookmark.fill")
+                            .font(.caption2)
+                            .foregroundStyle(settings.accentColor.color)
+
+                        Text(bookmark.reference)
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(settings.accentColor.color)
+                    }
+
+                    if let arabic = bookmark.arabicPreview, !arabic.isEmpty {
+                        Text(arabic)
+                            .font(settings.useFontArabic
+                                  ? Font.arabic(settings.nonQuranArabicFontName, size: 15)
+                                  : .footnote)
+                            .arabicFontDesign(custom: settings.islamUsesCustomArabicFace)
+                            .lineLimit(1)
+                            .multilineTextAlignment(.trailing)
+                            .frame(maxWidth: .infinity, alignment: .trailing)
+                    }
+
+                    if let english = bookmark.englishPreview, !english.isEmpty {
+                        Text(english)
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .lineLimit(1)
+                    } else if bookmark.arabicPreview == nil {
+                        // A bookmark saved by an older build carries only the combined preview.
+                        Text(bookmark.preview)
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .lineLimit(1)
+                    }
+                }
+                .padding(.vertical, 2)
+            }
+            .contextMenu {
+                Button(role: .destructive) {
+                    settings.hapticFeedback()
+                    let placeholder = HadithBookData.Hadith(
+                        id: -1, idInBook: bookmark.idInBook, chapterId: bookmark.chapterId ?? -1,
+                        arabic: "", english: HadithBookData.Hadith.EnglishText(narrator: "", text: "")
+                    )
+                    store.toggleBookmark(book: book, hadith: placeholder)
+                } label: {
+                    Label("Remove Bookmark", systemImage: "bookmark.fill")
+                }
+            }
+        }
+    }
+}
+
+/// Every bookmarked hadith, pushed from the "View All" row.
+struct HadithBookmarksListView: View {
+    @ObservedObject private var settings = Settings.shared
+    @ObservedObject private var store = HadithStore.shared
+
+    var body: some View {
+        List {
+            Group {
+                Section(header: SectionPillHeader(title: "BOOKMARKED HADITHS", count: store.bookmarks.count)) {
+                    ForEach(store.bookmarks) { bookmark in
+                        HadithBookmarkRow(bookmark: bookmark)
+                    }
+
+                    if store.bookmarks.isEmpty {
+                        Text("No bookmarked hadiths yet. Press and hold any hadith to bookmark it.")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
+            .themedListRowBackground()
+        }
+        .applyConditionalListStyle()
+        .compactListSectionSpacing()
+        .navigationTitle("Bookmarked Hadiths")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+}
+
+// MARK: - Hadith detail (one hadith, full size)
+
+/// A single hadith on its own screen: full text with selection enabled, bookmark, the unified share
+/// sheet, and an immersive full-screen reading cover.
+struct HadithDetailView: View {
+    @ObservedObject private var settings = Settings.shared
+    @ObservedObject private var store = HadithStore.shared
+
+    let book: HadithCatalogBook
+    let hadith: HadithBookData.Hadith
+
+    @State private var showShareSheet = false
+    @State private var showFullScreen = false
+
+    private var isBookmarked: Bool {
+        store.isBookmarked(slug: book.slug, idInBook: hadith.idInBook)
+    }
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 14) {
+                HadithRow(book: book, hadith: hadith, opensDetail: false)
+                    .textSelection(.enabled)
+            }
+            .padding(.horizontal, 20)
+            .padding(.vertical, 12)
+        }
+        .navigationTitle("\(book.englishTitle) \(hadith.idInBook)")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button {
+                    settings.hapticFeedback()
+                    withAnimation(.easeInOut) { store.toggleBookmark(book: book, hadith: hadith) }
+                } label: {
+                    Image(systemName: isBookmarked ? "bookmark.fill" : "bookmark")
+                }
+                .tint(settings.accentColor.accent1)
+            }
+
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button {
+                    settings.hapticFeedback()
+                    showFullScreen = true
+                } label: {
+                    Image(systemName: "arrow.up.left.and.arrow.down.right")
+                }
+                .accessibilityLabel("View full screen")
+                .tint(settings.accentColor.accent2)
+            }
+
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Button {
+                    settings.hapticFeedback()
+                    showShareSheet = true
+                } label: {
+                    Image(systemName: "square.and.arrow.up")
+                }
+                .tint(settings.accentColor.accent2)
+            }
+        }
+        .sheet(isPresented: $showShareSheet) {
+            HadithShareSheet(book: book, hadith: hadith)
+                .smallMediumSheetPresentation()
+        }
+        .fullScreenCover(isPresented: $showFullScreen) {
+            HadithImmersiveView(title: "\(book.englishTitle) \(hadith.idInBook)", book: book, hadiths: [hadith])
+        }
+        .onAppear {
+            store.recordLastRead(book: book, hadith: hadith)
+        }
+    }
+}
+
+// MARK: - Immersive full-screen reading (hadith / chapter / book)
+
+/// Edge-to-edge distraction-free reading: just the hadith text on the system background, with a quiet
+/// dismiss control - the hadith counterpart of the Quran's full-screen reading.
+struct HadithImmersiveView: View {
+    @ObservedObject private var settings = Settings.shared
+    @Environment(\.dismiss) private var dismiss
+
+    let title: String
+    let book: HadithCatalogBook
+    let hadiths: [HadithBookData.Hadith]
+
+    var body: some View {
+        NavigationView {
+            ScrollView {
+                LazyVStack(alignment: .leading, spacing: 22) {
+                    ForEach(hadiths) { hadith in
+                        HadithRow(book: book, hadith: hadith, opensDetail: false)
+                            .textSelection(.enabled)
+                    }
+                }
+                .padding(.horizontal, 20)
+                .padding(.vertical, 14)
+            }
+            .navigationTitle(title)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button {
+                        settings.hapticFeedback()
+                        dismiss()
+                    } label: {
+                        Image(systemName: "arrow.down.right.and.arrow.up.left")
+                    }
+                    .accessibilityLabel("Exit full screen")
+                    .tint(settings.accentColor.color)
+                }
+            }
+        }
+        .navigationViewStyle(.stack)
+    }
+}
+
+// MARK: - Share Hadith (custom sheet, image or text - the Share Ayah counterpart)
+
+struct HadithShareSheet: View {
+    @ObservedObject private var settings = Settings.shared
+    @Environment(\.dismiss) private var dismiss
+
+    let book: HadithCatalogBook
+    let hadith: HadithBookData.Hadith
+
+    // What travels with the share - persisted, and shared with Copy Hadith so the two always agree.
+    @AppStorage("shareHadithArabic") private var includeArabic = true
+    @AppStorage("shareHadithEnglish") private var includeEnglish = true
+    @AppStorage("shareHadithNarrator") private var includeNarrator = true
+    @AppStorage("shareHadithReference") private var includeReference = true
+    @AppStorage("shareHadithAsImage") private var shareAsImage = true
+
+    private var composed: String {
+        Self.composedText(book: book, hadith: hadith)
+    }
+
+    /// The unified hadith text composition, honoring the persisted include toggles - used by this sheet
+    /// AND by the context menu's Copy Hadith, so copy and share always produce the same thing.
+    static func composedText(book: HadithCatalogBook, hadith: HadithBookData.Hadith) -> String {
+        let defaults = UserDefaults.standard
+        func flag(_ key: String) -> Bool { defaults.object(forKey: key) == nil ? true : defaults.bool(forKey: key) }
+        var parts: [String] = []
+        if flag("shareHadithReference") { parts.append("[\(book.englishTitle) \(hadith.idInBook)]") }
+        if flag("shareHadithArabic"), !hadith.arabic.isEmpty { parts.append(hadith.arabic) }
+        if flag("shareHadithNarrator"), !hadith.english.narrator.isEmpty { parts.append(hadith.english.narrator) }
+        if flag("shareHadithEnglish"), !hadith.english.text.isEmpty { parts.append(hadith.english.text) }
+        return parts.joined(separator: "\n\n")
+    }
+
+    var body: some View {
+        NavigationView {
+            List {
+                Group {
+                    Section {
+                        Picker("Share As", selection: $shareAsImage.animation(.easeInOut)) {
+                            Text("Image").tag(true)
+                            Text("Text").tag(false)
+                        }
+                        .pickerStyle(.segmented)
+                        .onChange(of: shareAsImage) { _ in settings.hapticFeedback() }
+                    }
+
+                    Section(header: Text("INCLUDE")) {
+                        Toggle("Reference", isOn: $includeReference.animation(.easeInOut))
+                        if !hadith.arabic.isEmpty {
+                            Toggle("Arabic", isOn: $includeArabic.animation(.easeInOut))
+                        }
+                        if !hadith.english.text.isEmpty {
+                            Toggle("English", isOn: $includeEnglish.animation(.easeInOut))
+                        }
+                        if !hadith.english.narrator.isEmpty {
+                            Toggle("Narrator", isOn: $includeNarrator.animation(.easeInOut))
+                        }
+                    }
+                    .tint(settings.accentColor.color)
+
+                    Section(header: Text("PREVIEW")) {
+                        if shareAsImage {
+                            if let image = renderImage() {
+                                Image(uiImage: image)
+                                    .resizable()
+                                    .scaledToFit()
+                                    .cornerRadius(16)
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 4)
+                            }
+                        } else {
+                            Text(composed)
+                                .font(.footnote)
+                                .foregroundColor(.secondary)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                    }
+
+                    Section {
+                        Button {
+                            settings.hapticFeedback()
+                            if shareAsImage, let image = renderImage() {
+                                presentSystemShareSheet(items: [image])
+                            } else {
+                                presentSystemShareSheet(items: [composed])
+                            }
+                        } label: {
+                            Label("Share Hadith", systemImage: "square.and.arrow.up")
+                                .font(.subheadline.weight(.semibold))
+                                .frame(maxWidth: .infinity, alignment: .center)
+                        }
+
+                        Button {
+                            settings.hapticFeedback()
+                            if shareAsImage, let image = renderImage() {
+                                UIPasteboard.general.image = image
+                            } else {
+                                UIPasteboard.general.string = composed
+                            }
+                        } label: {
+                            Label("Copy Hadith", systemImage: "doc.on.doc")
+                                .font(.subheadline.weight(.semibold))
+                                .frame(maxWidth: .infinity, alignment: .center)
+                        }
+                    }
+                    .foregroundColor(settings.accentColor.color)
+                }
+                .themedListRowBackground()
+            }
+            .applyConditionalListStyle()
+            .navigationTitle("Share Hadith")
+            .navigationBarTitleDisplayMode(.inline)
+            .sheetDismissToolbar()
+        }
+        .navigationViewStyle(.stack)
+    }
+
+    /// The dark rounded share card, in the Share Ayah visual language: reference caption, Arabic
+    /// trailing in the reader's face (Basic falls back to the rounded system face), narrator italic,
+    /// English body.
+    private func renderImage() -> UIImage? {
+        let width: CGFloat = 1080
+        let inset: CGFloat = 72
+        let textWidth = width - inset * 2
+
+        let baseSize: CGFloat = 40
+        let arabicFont = UIFont(name: settings.nonQuranArabicFontName, size: baseSize * 1.2)
+            ?? .roundedSystemFont(ofSize: baseSize * 1.2)
+        let englishFont = UIFont.roundedSystemFont(ofSize: baseSize)
+        let narratorFont = UIFont.italicSystemFont(ofSize: baseSize * 0.85)
+        let captionFont = UIFont.roundedSystemFont(ofSize: baseSize * 0.7, weight: .semibold)
+
+        let accent = UIColor(settings.accentColor.color)
+
+        func paragraph(_ alignment: NSTextAlignment, spacing: CGFloat = 8) -> NSParagraphStyle {
+            let p = NSMutableParagraphStyle()
+            p.alignment = alignment
+            p.lineSpacing = spacing
+            return p
+        }
+
+        let text = NSMutableAttributedString()
+        func append(_ string: String, font: UIFont, color: UIColor, alignment: NSTextAlignment) {
+            if text.length > 0 { text.append(NSAttributedString(string: "\n\n")) }
+            text.append(NSAttributedString(string: string, attributes: [
+                .font: font, .foregroundColor: color, .paragraphStyle: paragraph(alignment)
+            ]))
+        }
+
+        if includeReference { append("\(book.englishTitle) \(hadith.idInBook)", font: captionFont, color: accent, alignment: .center) }
+        if includeArabic, !hadith.arabic.isEmpty { append(hadith.arabic, font: arabicFont, color: .white, alignment: .right) }
+        if includeNarrator, !hadith.english.narrator.isEmpty { append(hadith.english.narrator, font: narratorFont, color: .lightGray, alignment: .left) }
+        if includeEnglish, !hadith.english.text.isEmpty { append(hadith.english.text, font: englishFont, color: .white, alignment: .left) }
+        guard text.length > 0 else { return nil }
+
+        let bounds = text.boundingRect(
+            with: CGSize(width: textWidth, height: .greatestFiniteMagnitude),
+            options: [.usesLineFragmentOrigin, .usesFontLeading],
+            context: nil
+        )
+        let height = ceil(bounds.height) + inset * 2
+        let canvas = CGRect(x: 0, y: 0, width: width, height: height)
+
+        return UIGraphicsImageRenderer(size: canvas.size).image { context in
+            UIColor(red: 0.07, green: 0.07, blue: 0.08, alpha: 1).setFill()
+            UIBezierPath(roundedRect: canvas, cornerRadius: 48).fill()
+            text.draw(with: CGRect(x: inset, y: inset, width: textWidth, height: ceil(bounds.height)),
+                      options: [.usesLineFragmentOrigin, .usesFontLeading], context: nil)
         }
     }
 }

@@ -194,6 +194,26 @@ extension View {
     }
 }
 
+extension Font {
+    /// The app's Arabic font resolver. A real bundled face (Uthmani / Qiraat / IndoPak) renders as
+    /// authored; the "Basic" sentinel resolves to the ROUNDED system face explicitly. A bare
+    /// `.custom(sentinel, ...)` fell back to the DEFAULT design - the `fontDesign` environment never
+    /// reaches `.custom` fonts - so Basic Arabic was the one text in the app that wasn't rounded.
+    static func arabic(_ name: String, size: CGFloat) -> Font {
+        name == Settings.systemArabicFontName
+            ? .system(size: size, design: .rounded)
+            : .custom(name, size: size)
+    }
+
+    /// `relativeTo` variant. The Basic branch keeps the fixed size (`.system(size:design:)` has no
+    /// text-style anchor) - the trade for guaranteed rounding.
+    static func arabic(_ name: String, size: CGFloat, relativeTo style: Font.TextStyle) -> Font {
+        name == Settings.systemArabicFontName
+            ? .system(size: size, design: .rounded)
+            : .custom(name, size: size, relativeTo: style)
+    }
+}
+
 #if canImport(UIKit)
 extension UIFont {
     /// The rounded system face. The `fontDesign` environment only reaches SwiftUI text, so the UIKit-drawn surfaces

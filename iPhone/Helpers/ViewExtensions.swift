@@ -59,12 +59,36 @@ extension View {
     }
 
     /// The minimized look for a custom glass bar: scaled toward its bottom edge and slightly faded, the same
-    /// visual language as the iOS 26 minimized tab bar. Pair with hiding the bar's secondary rows.
+    /// visual language as the iOS 26 minimized tab bar. Pair with `collapsibleBarRow` for the bar's
+    /// secondary rows.
+    ///
+    /// CURRENTLY OFF: the bars keep full size while scrolling. To bring the shrink back, uncomment the
+    /// three modifiers below (0.75 is the agreed minimized scale).
     func minimizedBarStyle(_ collapsed: Bool) -> some View {
         self
-            .scaleEffect(collapsed ? 0.86 : 1, anchor: .bottom)
-            .opacity(collapsed ? 0.72 : 1)
-            .animation(.spring(response: 0.35, dampingFraction: 0.85), value: collapsed)
+            // .scaleEffect(collapsed ? 0.75 : 1, anchor: .bottom)
+            // .opacity(collapsed ? 0.65 : 1)
+            // .animation(.spring(response: 0.35, dampingFraction: 0.85), value: collapsed)
+    }
+
+    /// Collapses a bar's secondary row (font pickers, sliders) without unmounting it. Liquid Glass
+    /// surfaces cannot participate in view insertion/removal transitions - mid-flight they snapshot as
+    /// black boxes, which is exactly the blocky black flash that appeared when scrolling up re-expanded
+    /// a minimized bar. So the row is never inserted or removed: it stays mounted and simply loses its
+    /// height, opacity, and hit-testing while the bar is minimized. No transition, no snapshot, no flash.
+    ///
+    /// CURRENTLY OFF alongside `minimizedBarStyle`: with the shrink disabled the secondary rows stay
+    /// visible too. Uncomment the modifiers below to restore the collapse.
+    func collapsibleBarRow(_ collapsed: Bool) -> some View {
+        self
+            // .frame(height: collapsed ? 0 : nil)
+            // .clipped()
+            // .opacity(collapsed ? 0 : 1)
+            // The row appears and disappears with NO animation of its own: the glass picker snaps in and
+            // out while the bar's scale/fade (minimizedBarStyle) provides the motion. `nil` here overrides
+            // the ambient `withAnimation` the scroll watcher wraps the state change in.
+            // .animation(nil, value: collapsed)
+            // .allowsHitTesting(!collapsed)
     }
 }
 
@@ -324,3 +348,90 @@ struct IslamArabicFontPicker: View {
     }
 }
 #endif
+
+// MARK: - Section header accessories (count pill / collapse / shuffle)
+
+/// The small numeric badge the Quran tab's section headers wear - caption-semibold, monospaced digits,
+/// on glass. One view so every counted section in the app shows the identical pill.
+struct CountPill: View {
+    let count: Int
+
+    var body: some View {
+        Text("\(count)")
+            .font(.caption.weight(.semibold))
+            .monospacedDigit()
+            .foregroundStyle(Settings.shared.accentColor.color)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .conditionalGlassEffect()
+    }
+}
+
+/// A full section header in the Quran tab's visual language: optional leading icon, the title, then on
+/// the right an optional shuffle button, the count pill, and an optional collapse chevron. Pass
+/// `isExpanded` to make the section collapsible (the same chevron.circle control Favorite Surahs and
+/// Bookmarked Ayahs use) and `onShuffle` for sections where jumping to a random item makes sense.
+struct SectionPillHeader: View {
+    @ObservedObject private var settings = Settings.shared
+
+    let title: String
+    let count: Int
+    var icon: String? = nil
+    /// Accent the icon + title (the Quran favorites style); false keeps the standard header gray.
+    var accentTitle: Bool = false
+    var isExpanded: Binding<Bool>? = nil
+    var onShuffle: (() -> Void)? = nil
+
+    /// The count pill's rendered height (caption line height + 2 x 4pt padding) - the shuffle circle
+    /// matches it so the two controls read as one family.
+    static var pillHeight: CGFloat {
+        UIFont.preferredFont(forTextStyle: .caption1).lineHeight + 8
+    }
+
+    var body: some View {
+        HStack(spacing: 8) {
+            if let icon {
+                Image(systemName: icon)
+                    .foregroundStyle(settings.accentColor.color)
+            }
+
+            if accentTitle {
+                Text(title)
+                    .foregroundStyle(settings.accentColor.color)
+            } else {
+                Text(title)
+            }
+
+            Spacer()
+
+            if let onShuffle {
+                // A circle exactly as tall as the count pill (caption line + its 4pt vertical padding),
+                // and as wide as it is tall.
+                Image(systemName: "shuffle")
+                    .font(.caption2.weight(.semibold))
+                    .foregroundColor(settings.accentColor.color)
+                    .frame(width: Self.pillHeight, height: Self.pillHeight)
+                    .conditionalGlassEffect(circle: true)
+                    .onTapGesture {
+                        settings.hapticFeedback()
+                        onShuffle()
+                    }
+                    .accessibilityLabel("Random \(title.lowercased())")
+            }
+
+            CountPill(count: count)
+
+            if let isExpanded {
+                Image(systemName: isExpanded.wrappedValue ? "chevron.down.circle" : "chevron.up.circle")
+                    .foregroundColor(settings.accentColor.color)
+                    .padding(4)
+                    .conditionalGlassEffect()
+                    .onTapGesture {
+                        settings.hapticFeedback()
+                        withAnimation { isExpanded.wrappedValue.toggle() }
+                    }
+                    .accessibilityLabel(isExpanded.wrappedValue ? "Collapse \(title.lowercased())" : "Expand \(title.lowercased())")
+            }
+        }
+    }
+}

@@ -53,16 +53,12 @@ struct TasbihView: View {
             .themedListRowBackground()
         }
         #if os(iOS)
-        // Apple Music-style: the tasbih card minimizes while scrolling down, restores on scroll-up.
-        .collapseBarsOnScroll($barsCollapsed)
+        // A plain adaptive inset (safeAreaBar on iOS 26): just the card, no wrapping stack and no solid
+        // backdrop, so it floats like every other bottom bar and never shrinks on scroll.
         .adaptiveSafeArea(edge: .bottom) {
-            VStack(spacing: SafeAreaInsetVStackSpacing.standard) {
-                activeTasbihCard
-            }
-            .minimizedBarStyle(barsCollapsed)
-            .padding(.horizontal, 24)
-            .padding(.vertical, 12)
-            .background(Color(UIColor.systemGroupedBackground))
+            activeTasbihCard
+                .padding(.horizontal, 24)
+                .padding(.vertical, 12)
         }
         #endif
         .applyConditionalListStyle()
@@ -72,7 +68,7 @@ struct TasbihView: View {
 
     /// A counter with no dhikr attached: name it whatever you're reciting, or nothing at all, and count.
     private var freeDhikrSection: some View {
-        Section(header: Text("FREE COUNT"), footer: Text("The count is kept between visits and has no limit.")) {
+        Section(header: Text("OTHER DHIKR"), footer: Text("For any other authentic dhikr you are reciting. The count is kept between visits and has no limit.")) {
             ZStack {
                 RoundedRectangle(cornerRadius: 24)
                     .fill(isFreeDhikrSelected ? settings.accentColor.color.opacity(0.15) : .clear)
@@ -85,7 +81,7 @@ struct TasbihView: View {
 
                 HStack {
                     VStack(alignment: .leading, spacing: 4) {
-                        TextField("Your own dhikr", text: $freeLabel)
+                        TextField("Other dhikr", text: $freeLabel)
                             .font(.headline)
                             .foregroundColor(settings.accentColor.color)
                             #if os(iOS)
@@ -221,15 +217,17 @@ struct TasbihView: View {
                 // gets it: a free-count LABEL the user typed is their own text, not Arabic, so it stays in the
                 // UI face. `usesCustomArabicFace` is false when the reader picked the Basic font, in which case
                 // the rounded system face is correct and the design opt-out must not fire.
-                Text(selectedDhikr?.arabicText ?? (freeLabel.isEmpty ? "Free Count" : freeLabel))
+                Text(selectedDhikr?.arabicText ?? (freeLabel.isEmpty ? "Other Dhikr" : freeLabel))
                     .font(
                         selectedDhikr != nil && usesCustomArabicFace
-                            ? .custom(settings.fontArabic, size: 26, relativeTo: .title3)
+                            ? Font.arabic(settings.fontArabic, size: 26, relativeTo: .title3)
                             : .title3.weight(.bold)
                     )
                     .arabicFontDesign(custom: selectedDhikr != nil && usesCustomArabicFace)
                     .foregroundColor(settings.accentColor.color)
-                    .multilineTextAlignment(.center)
+                    // Trailing, not centered: a wrapped Arabic line must rag on the left like Arabic
+                    // prose (a single line still sits visually centered - the text hugs its own width).
+                    .multilineTextAlignment(.trailing)
                     .lineLimit(2)
                     .minimumScaleFactor(0.6)
 
@@ -242,13 +240,13 @@ struct TasbihView: View {
             }
 
             ZStack {
-                ProgressCircleView(progress: count, cycle: cycle)
+                ProgressCircleView(progress: count, cycle: cycle, lineWidth: 10)
                     .scaledToFit()
-                    .frame(maxWidth: 170, maxHeight: 170)
+                    .frame(maxWidth: 116, maxHeight: 116)
 
                 VStack(spacing: 0) {
                     Text("\(count)")
-                        .font(.system(size: 44, weight: .semibold))
+                        .font(.system(size: 30, weight: .semibold))
                         .monospacedDigit()
                         .foregroundColor(.primary)
 
@@ -281,7 +279,7 @@ struct TasbihView: View {
                 }
             }
         }
-        .padding(.vertical, 14)
+        .padding(.vertical, 10)
         .padding(.horizontal, 16)
         .frame(maxWidth: .infinity)
         .contentShape(Rectangle())
@@ -325,6 +323,7 @@ struct ProgressCircleView: View {
     var progress: Int
     /// Counts per full turn of the ring. The count itself is never capped by this.
     var cycle: Int = 33
+    var lineWidth: CGFloat = 15
     @ObservedObject var settings = Settings.shared
 
     var body: some View {
@@ -332,14 +331,14 @@ struct ProgressCircleView: View {
         let progressFraction = CGFloat(progress % turn) / CGFloat(turn)
         return ZStack {
             Circle()
-                .stroke(lineWidth: 15)
+                .stroke(lineWidth: lineWidth)
                 .opacity(0.3)
                 .foregroundColor(settings.accentColor.color)
 
             Circle()
                 .trim(from: 0.0, to: progressFraction)
                 .stroke(settings.accentColor.angularGradient,
-                        style: StrokeStyle(lineWidth: 15, lineCap: .round, lineJoin: .round))
+                        style: StrokeStyle(lineWidth: lineWidth, lineCap: .round, lineJoin: .round))
                 .rotationEffect(Angle(degrees: -90))
                 .animation(.linear, value: progressFraction)
         }
@@ -416,11 +415,13 @@ struct TasbihRow: View {
             Text(tasbih.arabicText)
                 .font(
                     settings.islamUsesCustomArabicFace
-                        ? .custom(settings.fontArabic, size: 20, relativeTo: .headline)
+                        ? Font.arabic(settings.fontArabic, size: 20, relativeTo: .headline)
                         : .headline
                 )
                 .arabicFontDesign(custom: settings.islamUsesCustomArabicFace)
                 .foregroundColor(settings.accentColor.color)
+                // Wrapped Arabic rags on the left like Arabic prose should.
+                .multilineTextAlignment(.trailing)
 
             Text(tasbih.transliteration)
                 .font(.subheadline)
@@ -445,43 +446,62 @@ struct TasbihCounterControls: View {
     @Binding var counter: Int
 
     var body: some View {
-        VStack {
-            HStack {
-                Image(systemName: "minus.circle")
-                    .foregroundColor(counter == 0 ? .secondary : settings.accentColor.color)
-                    .padding(6)
-                    .conditionalGlassEffect()
-                    .onTapGesture {
-                        if counter > 0 {
-                            settings.hapticFeedback()
-                            withAnimation { counter -= 1 }
-                        }
-                    }
-                    .disabled(counter <= 0)
+        VStack(spacing: 8) {
+            // One capsule: minus | count | plus - a single tidy control instead of three loose pieces.
+            // The VStack hugs this capsule's width, and Reset stretches to exactly match it.
+            HStack(spacing: 0) {
+                Button {
+                    guard counter > 0 else { return }
+                    settings.hapticFeedback()
+                    withAnimation { counter -= 1 }
+                } label: {
+                    Image(systemName: "minus")
+                        .font(.footnote.weight(.semibold))
+                        .foregroundColor(counter == 0 ? .secondary : settings.accentColor.color)
+                        .frame(width: 32, height: 30)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .disabled(counter <= 0)
 
                 Text("\(counter)")
-                    .font(.subheadline)
+                    .font(.subheadline.weight(.semibold))
                     .monospacedDigit()
+                    .frame(minWidth: 34)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
 
-                Image(systemName: "plus.circle")
-                    .foregroundColor(settings.accentColor.color)
-                    .padding(6)
-                    .conditionalGlassEffect()
-                    .onTapGesture {
-                        settings.hapticFeedback()
-                        withAnimation { counter += 1 }
-                    }
-            }
-
-            Text("Reset")
-                .font(.subheadline)
-                .padding(6)
-                .conditionalGlassEffect()
-                .onTapGesture {
+                Button {
                     settings.hapticFeedback()
-                    withAnimation { counter = 0 }
+                    withAnimation { counter += 1 }
+                } label: {
+                    Image(systemName: "plus")
+                        .font(.footnote.weight(.semibold))
+                        .foregroundColor(settings.accentColor.color)
+                        .frame(width: 32, height: 30)
+                        .contentShape(Rectangle())
                 }
-                .disabled(counter <= 0)
+                .buttonStyle(.plain)
+            }
+            .conditionalGlassEffect()
+
+            // Reset spans the exact width of the capsule above it, centered - the two read as one control.
+            Button {
+                guard counter > 0 else { return }
+                settings.hapticFeedback()
+                withAnimation { counter = 0 }
+            } label: {
+                Label("Reset", systemImage: "arrow.counterclockwise")
+                    .font(.caption.weight(.semibold))
+                    .foregroundColor(counter == 0 ? .secondary : settings.accentColor.color)
+                    .padding(.vertical, 5)
+                    .frame(maxWidth: .infinity)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .conditionalGlassEffect()
+            .disabled(counter <= 0)
+            .opacity(counter == 0 ? 0.5 : 1)
         }
     }
 }

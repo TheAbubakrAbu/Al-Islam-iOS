@@ -70,18 +70,12 @@ struct SettingsQuranView: View {
                         recitationDestination
                     }
                 }
-                // The Quran Tab View options (full surah details, summary mode, last-read rows) only affect
-                // the iPhone/iPad Quran tab layout, so hide this whole section on watchOS.
-                #if os(iOS)
+                // One merged screen for how the Quran LOOKS: the tab layout options and the surah
+                // reading options live as separate sections inside it. (The tab options only affect the
+                // iPhone/iPad Quran tab, so the watch shows just the reading half.)
                 Section {
-                    quranSettingsLink(title: "Quran Tab View", systemImage: "list.bullet.rectangle") {
-                        quranTabViewDestination
-                    }
-                }
-                #endif
-                Section {
-                    quranSettingsLink(title: "Surah Reading View", systemImage: "book") {
-                        surahReadingDestination
+                    quranSettingsLink(title: "Reading View", systemImage: "book") {
+                        readingViewsDestination
                     }
                 }
                 Section {
@@ -95,13 +89,13 @@ struct SettingsQuranView: View {
                     }
                 }
                 #if os(iOS)
-                favoritesAndBookmarksSection
-
                 Section {
                     quranSettingsLink(title: "Tafsir", systemImage: "text.book.closed") {
                         tafsirDestination
                     }
                 }
+
+                favoritesAndBookmarksSection
                 #endif
             }
             .themedListRowBackground()
@@ -208,14 +202,12 @@ struct SettingsQuranView: View {
         }
     }
 
-    private var quranTabViewDestination: some View {
-        quranSettingsSubList(title: "Quran Tab View") {
+    /// The merged Quran Tab + Surah Reading screen: both keep their own sections, one push.
+    private var readingViewsDestination: some View {
+        quranSettingsSubList(title: "Reading View") {
+            #if os(iOS)
             quranTabViewSection
-        }
-    }
-
-    private var surahReadingDestination: some View {
-        quranSettingsSubList(title: "Surah Reading View") {
+            #endif
             surahReadingSection
         }
     }
@@ -302,6 +294,7 @@ struct SettingsQuranView: View {
         Text("The Quran recitations are streamed online by default. You can open Choose Reciter to download full surahs per reciter for offline playback and reduced data use.")
             .font(.caption)
             .foregroundColor(.secondary)
+            .padding(.vertical, 2)
         #endif
     }
 
@@ -525,7 +518,22 @@ struct SettingsQuranView: View {
         }
     }
 
+    @ViewBuilder
     private var cleanArabicTextGroup: some View {
+        // The clean/no-dots text exists only for the Hafs reading - the other qiraat ship as fully
+        // vocalized text and the renderer ignores these flags for them - so with another riwayah
+        // selected the toggles hide behind a short explanation instead of silently doing nothing.
+        if !settings.isHafsDisplay {
+            Text("Hide Tashkeel and Hide Dots are available for the Hafs reading only. Switch the Arabic Riwayah back to Hafs to use them.")
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .padding(.vertical, 2)
+        } else {
+            cleanArabicTextToggles
+        }
+    }
+
+    private var cleanArabicTextToggles: some View {
         VStack(alignment: .leading) {
             Toggle("Hide Arabic Tashkeel (Vowel Diacritics) and Signs", isOn: cleanArabicTextBinding.animation(.easeInOut))
                 .font(.subheadline)
@@ -710,6 +718,7 @@ struct SettingsQuranView: View {
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
                     .minimumScaleFactor(0.65)
+                    .padding(.vertical, 2)
                 Spacer(minLength: 0)
             }
         } footer: {
@@ -749,6 +758,7 @@ struct SettingsQuranView: View {
         """)
             .font(.caption)
             .foregroundColor(.primary)
+            .padding(.vertical, 2)
     }
 
     private var qiraahLinks: some View {
@@ -757,11 +767,13 @@ struct SettingsQuranView: View {
                 Text("The 7 Ahruf (Modes)")
             }
             .font(.caption)
+            .padding(.vertical, 2)
 
             NavigationLink(destination: QiraatView()) {
                 Text("The 10 Qiraat (Recitations)")
             }
             .font(.caption)
+            .padding(.vertical, 2)
         }
     }
 
@@ -770,6 +782,7 @@ struct SettingsQuranView: View {
             .font(.caption)
             .foregroundColor(.primary)
             .padding(.top, 4)
+            .padding(.vertical, 2)
     }
 
     private var comparisonModeGroup: some View {
@@ -803,6 +816,7 @@ private struct QiraahReciterSectionHeader: View {
                 .foregroundStyle(.secondary)
                 .lineLimit(2)
                 .minimumScaleFactor(0.65)
+                .padding(.vertical, 2)
             Spacer(minLength: 0)
         }
     }
@@ -819,6 +833,7 @@ private struct MurattalSectionHeader: View {
             Text(subtitle)
                 .font(.caption)
                 .foregroundStyle(.secondary)
+                .padding(.vertical, 2)
         }
         .lineLimit(1)
         .minimumScaleFactor(0.75)
@@ -854,6 +869,56 @@ struct ReciterListView: View {
         let subtitle: String
         let reciters: [Reciter]
     }
+
+    #if os(iOS)
+    @State private var showReciterTypeLegendInfo = false
+
+    /// The colored legend that replaced the per-row explanatory captions: one dot per reciter type,
+    /// with the full explanation one tap away.
+    private var reciterTypeLegend: some View {
+        // The dialog is attached to the compact dots cluster - not a full-width row - so on iPad it
+        // pops from the legend itself.
+        HStack {
+            Spacer(minLength: 0)
+
+            Button {
+                settings.hapticFeedback()
+                showReciterTypeLegendInfo = true
+            } label: {
+                HStack(spacing: 10) {
+                    reciterTypeLegendItem(.blue, "Full offline")
+                    reciterTypeLegendItem(.green, "Own voice")
+                    reciterTypeLegendItem(.orange, "Murattal")
+                    reciterTypeLegendItem(.red, "Surahs only")
+                }
+                .padding(.vertical, 2)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .confirmationDialog("Reciter Types", isPresented: $showReciterTypeLegendInfo, titleVisibility: .visible) {
+            Button("OK") {}
+        } message: {
+            Text("Blue: the highest tier - surahs and individual ayahs play in this reciter's own voice, and downloaded surahs also play ayah-by-ayah fully offline. Green: individual ayahs play in this reciter's own voice when streaming. Orange: streamed ayahs play in a Murattal style; download the surah to hear ayahs in this reciter's own voice. Red: full surahs only - individual ayahs default to Minshawi (Murattal).")
+        }
+
+            Spacer(minLength: 0)
+        }
+    }
+
+    private func reciterTypeLegendItem(_ color: Color, _ title: String) -> some View {
+        HStack(spacing: 5) {
+            Circle()
+                .fill(color)
+                .frame(width: 8, height: 8)
+
+            Text(title)
+                .font(.caption2.weight(.semibold))
+                .foregroundColor(.secondary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+        }
+    }
+    #endif
 
     private var qiraahChangeDialogTitle: String {
         pendingRequestedQiraahIsUnsupported ? "Qiraah Text Not Supported" : "Change Quran Text?"
@@ -1382,6 +1447,11 @@ struct ReciterListView: View {
         ScrollViewReader { scrollProxy in
             List {
                 Group {
+                #if os(iOS)
+                Section {
+                    reciterTypeLegend
+                }
+                #endif
                 if isSearchingReciters {
                     searchResultsBanner()
 
@@ -1416,16 +1486,19 @@ struct ReciterListView: View {
                             Text("Downloads are full-reciter packages (all 114 surahs).")
                                 .font(.caption)
                                 .foregroundColor(.primary)
+                                .padding(.vertical, 2)
 
                             Text("Ayah download is not supported, only surah download.")
                                 .font(.caption)
                                 .foregroundColor(.secondary)
+                                .padding(.vertical, 2)
                         }
 
                         let downloadedCount = uniqueDownloadedReciterCount
                         Text("Downloaded reciters: \(downloadedCount)")
                             .font(.caption)
                             .foregroundColor(.secondary)
+                            .padding(.vertical, 2)
 
                         if downloadedCount > 0 {
                             Button(role: .destructive) {
@@ -1871,6 +1944,7 @@ struct ReciterListView: View {
                 Text("A new reciter is chosen at random for every session.")
                     .font(.caption)
                     .foregroundColor(.secondary)
+                    .padding(.vertical, 2)
             }
         }
         .id(Settings.randomReciterName)
@@ -1959,22 +2033,28 @@ private struct ReciterRow: View {
                     }
 
                 VStack(alignment: .leading, spacing: 4) {
-                    HighlightedSnippet(
-                        source: reciter.name,
-                        term: searchQuery,
-                        font: .subheadline,
-                        accent: accentColor.color,
-                        fg: isSelected ? accentColor.color : .primary
-                    )
-                        .multilineTextAlignment(.leading)
+                    HStack(spacing: 6) {
+                        // The type dot the top-of-list legend explains - it replaced the caption note
+                        // each row used to carry.
+                        if !qiraah {
+                            Circle()
+                                .fill(reciterTypeDotColor)
+                                .frame(width: 8, height: 8)
+                        }
+
+                        HighlightedSnippet(
+                            source: reciter.name,
+                            term: searchQuery,
+                            font: .subheadline,
+                            accent: accentColor.color,
+                            fg: isSelected ? accentColor.color : .primary
+                        )
+                            .multilineTextAlignment(.leading)
+                    }
 
                     if isDownloading {
                         ProgressView(value: overallProgress)
                             .padding(.top, 2)
-                    }
-
-                    if !qiraah {
-                        reciterAyahSupportNote
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -2052,18 +2132,21 @@ private struct ReciterRow: View {
                 Text("Downloading surah \(downloadState.currentSurahNumber ?? max(downloadState.completedSurahs + 1, 1)) of \(downloadState.totalSurahs) (\(Int(overallProgress * 100))%)")
                     .font(.caption)
                     .foregroundColor(.secondary)
+                    .padding(.vertical, 2)
             }
 
             if hasDownloads {
                 Text("Storage used: \(downloadManager.storageText(bytes: downloadState.totalBytes))")
                     .font(.caption)
                     .foregroundColor(.secondary)
+                    .padding(.vertical, 2)
             }
 
             if let errorMessage = downloadState.errorMessage, !errorMessage.isEmpty {
                 Text("Download error: \(errorMessage)")
                     .font(.caption)
                     .foregroundColor(.red)
+                    .padding(.vertical, 2)
             }
         }
         .confirmationDialog("Download \(reciter.name)?", isPresented: $confirmDownload, titleVisibility: .visible) {
@@ -2085,8 +2168,19 @@ private struct ReciterRow: View {
         }
     }
 
+    /// The legend color for this reciter's ayah-playback type: blue = the highest tier (surahs AND
+    /// own-voice ayahs AND offline ayah segments once downloaded), green = own-voice streamed ayahs,
+    /// orange = ayahs substitute a Murattal style, red = surahs only (ayahs default to Minshawi).
+    private var reciterTypeDotColor: Color {
+        if reciter.defaultToMinshawi { return .red }
+        if reciter.ayahMurattalStyleNote != nil { return .orange }
+        if reciter.supportsAyahSegments { return .blue }
+        return .green
+    }
+
     /// The one-line caption under the reciter name explaining how it plays INDIVIDUAL ayahs (segments vs.
-    /// a substitute Murattal). Ordered most-specific first.
+    /// a substitute Murattal). Ordered most-specific first. (Replaced in the row by the legend dot;
+    /// kept for reference.)
     @ViewBuilder
     private var reciterAyahSupportNote: some View {
         if reciter.defaultToMinshawi {
@@ -2109,6 +2203,7 @@ private struct ReciterRow: View {
         Text(text)
             .font(.caption)
             .foregroundColor(.secondary)
+            .padding(.vertical, 2)
     }
 
 }
@@ -2154,6 +2249,7 @@ private struct WatchReciterRow: View {
                     Text("This reciter supports surahs only. Ayahs default to Minshawi (Murattal).")
                         .font(.caption)
                         .foregroundColor(.secondary)
+                        .padding(.vertical, 2)
                 }
             }
             .padding(.vertical, 4)
@@ -2366,6 +2462,7 @@ private struct TafsirDownloadSection: View {
                         .font(.caption)
                         .foregroundColor(.secondary)
                         .monospacedDigit()
+                        .padding(.vertical, 2)
 
                     Button(role: .destructive) {
                         settings.hapticFeedback()
@@ -2386,6 +2483,7 @@ private struct TafsirDownloadSection: View {
                 Text(error)
                     .font(.caption)
                     .foregroundColor(.red)
+                    .padding(.vertical, 2)
             }
         } header: {
             Text("OFFLINE TAFSIR")
@@ -2446,6 +2544,7 @@ private struct TafsirDownloadSection: View {
                     .font(.caption)
                     .foregroundColor(.secondary)
                     .monospacedDigit()
+                    .padding(.vertical, 2)
             }
 
             Spacer()

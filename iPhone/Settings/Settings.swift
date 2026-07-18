@@ -541,6 +541,10 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     // notification with the system sound - a plain alert for Dhuhr at work, the full adhan for Maghrib.
     // Independent of `notification*` (which silences the prayer entirely) and of `shortAdhan*` (which picks
     // the clip once you've decided you do want one).
+    /// When true, the IN-APP adhan (the foreground player) uses a playback session that sounds even with
+    /// the ringer switch on silent. Off by default: silent mode silences the in-app adhan like any app.
+    @AppStorage("adhanOverridesSilentMode") var adhanOverridesSilentMode: Bool = false
+
     @AppStorage("adhanSoundFajr") var adhanSoundFajr: Bool = true {
         didSet { self.fetchPrayerTimes(notification: true) }
     }
@@ -874,6 +878,29 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     /// historical name so existing users' Quran preference carries over; the per-screen `arabicDisplayMode` /
     /// `namesDisplayMode` strings it replaced are migrated in `init` and then cleared.)
     @AppStorage("quranGridMode") var gridMode = false
+
+    /// Per-screen grid choices (Arabic Alphabet / 99 Names / Islam tab; the Hadith tab and the Quran tab
+    /// own theirs). -1 = "not chosen yet": falls back to the app-wide `gridMode`, so existing users keep
+    /// their current look until they flip that screen's own toggle - after which each grid icon controls
+    /// only its own screen.
+    @AppStorage("gridModeArabicRaw") var gridModeArabicRaw: Int = -1
+    @AppStorage("gridModeNamesRaw") var gridModeNamesRaw: Int = -1
+    @AppStorage("gridModeIslamRaw") var gridModeIslamRaw: Int = -1
+
+    var arabicGridMode: Bool {
+        get { gridModeArabicRaw == -1 ? gridMode : gridModeArabicRaw == 1 }
+        set { gridModeArabicRaw = newValue ? 1 : 0 }
+    }
+
+    var namesGridMode: Bool {
+        get { gridModeNamesRaw == -1 ? gridMode : gridModeNamesRaw == 1 }
+        set { gridModeNamesRaw = newValue ? 1 : 0 }
+    }
+
+    var islamGridMode: Bool {
+        get { gridModeIslamRaw == -1 ? gridMode : gridModeIslamRaw == 1 }
+        set { gridModeIslamRaw = newValue ? 1 : 0 }
+    }
     /// Reads a surah as swipeable mushaf pages instead of a scrolling ayah list. Toggled from the Quran tab's
     /// toolbar, but only takes effect inside SurahView - the surah browse list itself is unchanged.
     @AppStorage("quranPageMode") var quranPageMode = false
@@ -993,6 +1020,9 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     @AppStorage("quranSummaryMode") var quranSummaryMode: Bool = true
     /// Day key (yyyy-MM-dd) for which the Ayah of the Day card has been hidden via "Hide for Today".
     @AppStorage("ayahOfTheDayHiddenDate") var ayahOfTheDayHiddenDate: String = ""
+    /// A shuffled replacement for TODAY's Ayah of the Day, as "dayKey|surahID|ayahID". Stale days no
+    /// longer match the key and are ignored, so the deterministic pick quietly resumes tomorrow.
+    @AppStorage("ayahOfTheDayOverride") var ayahOfTheDayOverride: String = ""
 
     @AppStorage("lastListenedAyahData") private var lastListenedAyahData: Data?
     var lastListenedAyah: LastListenedAyah? {
@@ -1191,6 +1221,9 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     @AppStorage("showHadithEnglish") var showHadithEnglish = true
     /// Show the narrator ("It is narrated on the authority of...") line above the English text.
     @AppStorage("showHadithNarrator") var showHadithNarrator = true
+    /// Hadith text sizes, independent of the Quran's own sliders.
+    @AppStorage("hadithArabicFontSize") var hadithArabicFontSize: Double = Double(UIFont.preferredFont(forTextStyle: .body).pointSize + 4)
+    @AppStorage("hadithEnglishFontSize") var hadithEnglishFontSize: Double = Double(UIFont.preferredFont(forTextStyle: .body).pointSize)
 
     // MARK: - Arabic Alphabet screen size
 
@@ -1218,7 +1251,7 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     /// A custom Arabic font that scales with Dynamic Type (so the Arabic Alphabet size slider affects it).
     /// `base` is the point size at the default (`.large`) content size.
     func scalableArabicFont(base: CGFloat, relativeTo style: Font.TextStyle) -> Font {
-        .custom(fontArabic, size: base, relativeTo: style)
+        Font.arabic(fontArabic, size: base, relativeTo: style)
     }
 
     @AppStorage("favoriteLetterData") private var favoriteLetterData = Data()

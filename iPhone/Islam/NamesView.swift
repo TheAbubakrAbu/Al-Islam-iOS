@@ -239,6 +239,9 @@ struct NamesView: View {
         Set(settings.favoriteNameNumbers)
     }
 
+    /// Collapse state for the favorites section, same as the Quran tab's Favorite Surahs.
+    @AppStorage("showFavoriteNames") private var showFavoriteNames = true
+
     private var favoriteNames: [NameOfAllah] {
         namesData.namesOfAllah
             .filter { favoriteNameNumberSet.contains($0.number) }
@@ -253,7 +256,7 @@ struct NamesView: View {
                 Group {
                     descriptionSection
                     favoriteNamesSection(hasActiveSearch: hasActiveSearch, proxy: proxy)
-                    namesHeaderSection(resultCount: filteredNames.count, hasActiveSearch: hasActiveSearch)
+                    namesHeaderSection(resultCount: filteredNames.count, hasActiveSearch: hasActiveSearch, proxy: proxy)
                     namesSections(filteredNames: filteredNames, hasActiveSearch: hasActiveSearch, proxy: proxy)
                     finalInvocationSection
                 }
@@ -267,12 +270,14 @@ struct NamesView: View {
         .collapseBarsOnScroll($barsCollapsed)
         .adaptiveSafeArea(edge: .bottom) {
             VStack(spacing: SafeAreaInsetVStackSpacing.standard) {
-                if !barsCollapsed {
-                IslamArabicFontPicker()
-                // Non-interactive glass: interactive Liquid Glass steals per-segment taps on real iOS 26 hardware.
-                .conditionalGlassEffect(interactive: false)
-                .transition(.opacity)
-                }
+                // The font picker above the search bar is OFF for now (it was the row that vanished when
+                // scrolling down) - uncomment to bring it back. The same three-way choice still lives in
+                // the Arabic Alphabet screen and the Hadith settings sheet.
+                // IslamArabicFontPicker()
+                // // Non-interactive glass: interactive Liquid Glass steals per-segment taps on real iOS 26 hardware.
+                // .conditionalGlassEffect(interactive: false)
+                // // Stays mounted while minimized (height 0) - inserting/removing glass renders black boxes.
+                // .collapsibleBarRow(barsCollapsed)
 
                 SearchBar(text: $searchText.animation(.easeInOut))
                     .padding([.horizontal, .top], -8)
@@ -294,11 +299,11 @@ struct NamesView: View {
                 // Grid/list toggle lives in the toolbar (same as QuranView) rather than on a section header.
                 Button {
                     settings.hapticFeedback()
-                    withAnimation { settings.gridMode.toggle() }
+                    withAnimation { settings.namesGridMode.toggle() }
                 } label: {
-                    Image(systemName: settings.gridMode ? "list.bullet" : "square.grid.2x2")
+                    Image(systemName: settings.namesGridMode ? "list.bullet" : "square.grid.2x2")
                 }
-                .accessibilityLabel(settings.gridMode ? "Show list" : "Show grid")
+                .accessibilityLabel(settings.namesGridMode ? "Show list" : "Show grid")
                 .tint(settings.accentColor.accent2)
             }
         }
@@ -312,7 +317,7 @@ struct NamesView: View {
                 .foregroundColor(.secondary)
 
             // The per-row descriptions only exist in list mode, so hide the toggle in grid mode.
-            if !settings.gridMode {
+            if !settings.namesGridMode {
                 Toggle("Show All Descriptions", isOn: showAllDescriptionsBinding)
                     .font(.caption)
                     .tint(settings.accentColor.color)
@@ -336,34 +341,38 @@ struct NamesView: View {
         )
     }
 
-    private func namesHeaderSection(resultCount: Int, hasActiveSearch: Bool) -> some View {
-        Section(header: namesHeader(resultCount: resultCount, hasActiveSearch: hasActiveSearch)) { }
+    private func namesHeaderSection(resultCount: Int, hasActiveSearch: Bool, proxy: ScrollViewProxy) -> some View {
+        Section(header: SectionPillHeader(
+            title: hasActiveSearch ? "NAME SEARCH RESULTS" : "NAMES OF ALLAH",
+            count: resultCount,
+            // Shuffle expands and scrolls to a random name - list rows only; grid tiles carry no ids.
+            onShuffle: (hasActiveSearch || settings.namesGridMode) ? nil : { shuffleToRandomName(proxy: proxy) }
+        )) { }
         .padding(.bottom, -12)
     }
 
-    private func namesHeader(resultCount: Int, hasActiveSearch: Bool) -> some View {
-        HStack {
-            Text(hasActiveSearch ? "NAME SEARCH RESULTS" : "NAMES OF ALLAH")
-
-            Spacer()
-
-            if hasActiveSearch {
-                Text(String(resultCount))
-                    .font(.caption.weight(.semibold))
-                    .monospacedDigit()
-                    .foregroundStyle(settings.accentColor.color)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 6)
-                    .conditionalGlassEffect()
-            }
+    /// Expands a random name and scrolls it to the top - the header's shuffle button.
+    private func shuffleToRandomName(proxy: ScrollViewProxy) {
+        guard let name = namesData.namesOfAllah.randomElement() else { return }
+        withAnimation {
+            expandedNameNumbers.insert(name.number)
+            proxy.scrollTo("name_\(name.number)", anchor: .top)
         }
     }
 
     @ViewBuilder
     private func favoriteNamesSection(hasActiveSearch: Bool, proxy: ScrollViewProxy) -> some View {
         if !hasActiveSearch && !favoriteNames.isEmpty {
-            Section(header: Text("FAVORITE NAMES")) {
-                if settings.gridMode {
+            Section(header: SectionPillHeader(
+                title: "FAVORITE NAMES",
+                count: favoriteNames.count,
+                icon: "star.fill",
+                accentTitle: true,
+                isExpanded: $showFavoriteNames
+            )) {
+                if !showFavoriteNames {
+                    EmptyView()
+                } else if settings.namesGridMode {
                     LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 3), spacing: 8) {
                         ForEach(favoriteNames, id: \.id) { name in
                             NameGridTile(
@@ -402,7 +411,7 @@ struct NamesView: View {
 
     @ViewBuilder
     private func namesSections(filteredNames: [NameOfAllah], hasActiveSearch: Bool, proxy: ScrollViewProxy) -> some View {
-        if settings.gridMode {
+        if settings.namesGridMode {
             Section {
                 LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 3), spacing: 8) {
                     ForEach(filteredNames, id: \.id) { name in
@@ -616,7 +625,7 @@ private struct NameRow: View, Equatable {
                         HighlightedSnippet(
                             source: displayArabicName,
                             term: searchQuery,
-                            font: useFontArabic ? .custom(fontArabic, size: 24) : .title3,
+                            font: useFontArabic ? Font.arabic(fontArabic, size: 24) : .title3,
                             accent: accentColor.color,
                             fg: .primary,
                             guaranteeMatch: fieldMatches.arabic
@@ -813,7 +822,7 @@ private struct NameGridTile: View, Equatable {
     var body: some View {
         VStack(spacing: 3) {
             Text(name.displayArabicName)
-                .font(useFontArabic ? .custom(fontArabic, size: 20) : .title3)
+                .font(useFontArabic ? Font.arabic(fontArabic, size: 20) : .title3)
                 .arabicFontDesign(custom: useFontArabic && fontArabic != Settings.systemArabicFontName)
                 .foregroundColor(accentColor.color)
                 .multilineTextAlignment(.center)

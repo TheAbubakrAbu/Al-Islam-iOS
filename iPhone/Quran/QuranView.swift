@@ -424,6 +424,19 @@ struct QuranView: View {
             return [surah]
         }
 
+        // An "X:Y" reference offers BOTH surah readings: "2:50" shows Surah 2 and Surah 50 (Y only when
+        // it is itself a valid surah number - "2:280" shows just Surah 2). The exact-ayah 2:50 row still
+        // renders separately above.
+        let referenceParts = trimmed.split(separator: ":").map { $0.trimmingCharacters(in: .whitespaces) }
+        if referenceParts.count == 2,
+           let first = Int(referenceParts[0]) ?? arabicToEnglishNumber(referenceParts[0]),
+           let second = Int(referenceParts[1]) ?? arabicToEnglishNumber(referenceParts[1]) {
+            var results: [Surah] = []
+            if (1...114).contains(first), let surah = quranData.surah(first) { results.append(surah) }
+            if (1...114).contains(second), second != first, let surah = quranData.surah(second) { results.append(surah) }
+            if !results.isEmpty { return results }
+        }
+
         return quranData.filteredSurahs(query: query)
     }
 
@@ -498,6 +511,15 @@ struct QuranView: View {
     /// A reader asked for the Quran search: come back out to the surah list, carry its query into the search
     /// bar and open the keyboard on it. From there the hit rows navigate straight back into whichever reader
     /// the user has on (list or mushaf), so this is a round trip, not a dead end.
+    #if os(iOS)
+    /// When a push targets a specific ayah while a text query is typed, hand the query to the arriving
+    /// reader (AyahArrivalTerm ignores reference queries like "5:5" itself).
+    private func stashArrivalTerm(for route: QuranRoute?) {
+        guard case let .ayahs(surahID, ayahID?) = route else { return }
+        AyahArrivalTerm.shared.set(term: searchText, surahID: surahID, ayahID: ayahID)
+    }
+    #endif
+
     private func runHandedOffSearch(_ query: String) {
         #if os(iOS)
         path.removeAll()
@@ -980,6 +1002,17 @@ struct QuranView: View {
             .onChange(of: searchText) { txt in
                 handleAyahSearchChange(txt)
             }
+            #if os(iOS)
+            // The moment an ayah push happens while a TEXT search is live, the query travels with it so
+            // the destination colors the matched snippet. Route-level, not gesture-level: a tap gesture
+            // on the row (even simultaneous) blocked the NavigationLink from firing at all.
+            .onChange(of: path) { newPath in
+                stashArrivalTerm(for: newPath.last)
+            }
+            .onChange(of: selectedRoute) { newRoute in
+                stashArrivalTerm(for: newRoute)
+            }
+            #endif
             .onChange(of: quranData.isVerseSearchReady) { isReady in
                 guard isReady else { return }
                 handleAyahSearchChange(searchText, debounce: false)
@@ -1021,6 +1054,22 @@ struct QuranView: View {
                 }
                 .accessibilityLabel(settings.quranPageMode ? "Read surahs as a list" : "Read surahs as pages")
                 .tint(settings.accentColor.accent1)
+                // Attached to the BUTTON, not the whole view, so the dialog anchors to it (iPad popover
+                // arrows point at the button instead of floating mid-screen).
+                .confirmationDialog(
+                    settings.quranPageMode ? "Switch to List View?" : "Switch to Page View?",
+                    isPresented: $showReadingModeConfirm,
+                    titleVisibility: .visible
+                ) {
+                    Button(settings.quranPageMode ? "Read as List" : "Read as Pages") {
+                        performReadingModeToggle()
+                    }
+                    Button("Cancel", role: .cancel) {}
+                } message: {
+                    Text(settings.quranPageMode
+                         ? "Surahs will be shown as a scrolling list of ayahs."
+                         : "Surahs will be shown as a mushaf, one page at a time.")
+                }
             }
 
         }
@@ -1033,20 +1082,6 @@ struct QuranView: View {
             showingSettingsSheet: $showingSettingsSheet,
             usesColumnNavigation: usesColumnNavigation
         ))
-        .confirmationDialog(
-            settings.quranPageMode ? "Switch to List View?" : "Switch to Page View?",
-            isPresented: $showReadingModeConfirm,
-            titleVisibility: .visible
-        ) {
-            Button(settings.quranPageMode ? "Read as List" : "Read as Pages") {
-                performReadingModeToggle()
-            }
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            Text(settings.quranPageMode
-                 ? "Surahs will be shown as a scrolling list of ayahs."
-                 : "Surahs will be shown as a mushaf, one page at a time.")
-        }
         .sheet(isPresented: $showingSettingsSheet) {
             NavigationView { SettingsQuranView(presentedAsSheet: true) }
                 .smallMediumSheetPresentation()
@@ -1128,7 +1163,9 @@ struct QuranView: View {
         // Apple Music-style: while scrolling down, the secondary rows fold away and the search row shrinks;
         // scrolling up (or typing) brings everything back. Never minimized mid-search. The rows STAY MOUNTED
         // and collapse via height+opacity - `if` insertion/removal snapshots their glass as hard black boxes.
-        let secondaryVisible = !barsCollapsed || isQuranSearchFocused
+        // Scroll-collapse is OFF: the sort row stays put while scrolling.
+        // (Was: `!barsCollapsed || isQuranSearchFocused` - restore to fold it away again.)
+        let secondaryVisible = true
         let chipsVisible = secondaryVisible && isQuranSearchFocused && !settings.quranSearchHistory.isEmpty
 
         VStack(spacing: SafeAreaInsetVStackSpacing.standard) {
@@ -1380,7 +1417,13 @@ struct QuranView: View {
     private var quranSearchBar: some View {
         #if os(iOS)
         SearchBar(
-            text: $searchText.animation(.easeInOut),
+            // NOT an animated binding: with `.animation()` every keystroke wrapped the state write in
+            // withAnimation, which animated a diff of the ENTIRE Quran list (114 surah rows + verse hits
+            // + highlight work) per character. Under Low Power Mode's throttled CPU those per-keystroke
+            // animated diffs stacked up until the watchdog killed the app - the type-delete-retype
+            // "search crash". Result changes still animate where they're APPLIED (handleAyahSearchChange
+            // wraps its updates in withAnimation); typing itself must be free.
+            text: $searchText,
             focusRequestID: searchFocusRequestID,
             onSearchButtonClicked: {
                 self.endEditing()
@@ -1607,14 +1650,14 @@ struct QuranView: View {
     }
 
     #if os(iOS)
-    /// The last five Ayahs of the Day: today first, then back through the previous days. The picker is a pure
+    /// The last ten Ayahs of the Day: today first, then back through the previous days. The picker is a pure
     /// function of the date, so "history" needs no storage - earlier days are simply recomputed.
     private var recentAyahsOfTheDay: [(dayLabel: String, surah: Surah, ayah: Ayah)] {
         let formatter = DateFormatter()
         formatter.dateStyle = .medium
         formatter.doesRelativeDateFormatting = true
 
-        return (0..<5).compactMap { daysBack in
+        return (0..<10).compactMap { daysBack in
             guard let date = Calendar.current.date(byAdding: .day, value: -daysBack, to: Date()),
                   let ref = settings.ayahOfTheDayReference(for: date),
                   let surah = quranData.surah(ref.surahID),
@@ -1631,9 +1674,29 @@ struct QuranView: View {
         switch kind {
         case .ayahOfTheDay:
             // Keyed by the day, not the ayah: the hash can land two days on the same ayah, and
-            // duplicate ForEach ids are undefined behavior.
-            ForEach(recentAyahsOfTheDay, id: \.dayLabel) { entry in
-                summaryHistoryRow(surah: entry.surah, ayah: entry.ayah, caption: entry.dayLabel)
+            // duplicate ForEach ids are undefined behavior. "Today" keeps full brightness - it IS the
+            // current ayah, not history.
+            ForEach(Array(recentAyahsOfTheDay.enumerated()), id: \.element.dayLabel) { index, entry in
+                if index == 0 {
+                    // The "Today" row IS the current ayah - full brightness, and it carries the shuffle
+                    // that replaces today's pick with a fresh random one.
+                    HStack(spacing: 8) {
+                        summaryHistoryRow(surah: entry.surah, ayah: entry.ayah, caption: entry.dayLabel, dimmed: false)
+
+                        Image(systemName: "shuffle")
+                            .font(.caption2.weight(.semibold))
+                            .foregroundColor(settings.accentColor.color)
+                            .frame(width: SectionPillHeader.pillHeight, height: SectionPillHeader.pillHeight)
+                            .conditionalGlassEffect(circle: true)
+                            .onTapGesture {
+                                settings.hapticFeedback()
+                                withAnimation(.easeInOut) { settings.shuffleAyahOfTheDay() }
+                            }
+                            .accessibilityLabel("Shuffle the Ayah of the Day")
+                    }
+                } else {
+                    summaryHistoryRow(surah: entry.surah, ayah: entry.ayah, caption: entry.dayLabel)
+                }
             }
         case .reading:
             ForEach(quranPlayer.readingHistory) { item in
@@ -1675,7 +1738,7 @@ struct QuranView: View {
         }
     }
 
-    private func summaryHistoryRow(surah: Surah, ayah: Ayah, caption: String?) -> some View {
+    private func summaryHistoryRow(surah: Surah, ayah: Ayah, caption: String?, dimmed: Bool = true) -> some View {
         Button {
             settings.hapticFeedback()
             push(surahID: surah.id, ayahID: ayah.id)
@@ -1692,7 +1755,8 @@ struct QuranView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .contentShape(Rectangle())
             // Same dimming the full-size rows give their unfolded history, so "current" reads brighter.
-            .opacity(0.75)
+            // (The Ayah of the Day's "Today" row passes dimmed: false - it IS the current ayah.)
+            .opacity(dimmed ? 0.75 : 1)
         }
         .buttonStyle(.plain)
     }
@@ -3253,7 +3317,7 @@ struct QuranView: View {
                 Text(latinHeader2)
                     .font(.caption)
 
-                Text(s.nameArabic)
+                Text(settings.cleanedQuranArabic(s.nameArabic))
                     .font(.caption)
             }
         } else {
@@ -3329,6 +3393,9 @@ struct QuranView: View {
             quranNavigationLink(route: .ayahs(surahID: surah.id, ayah: ayah.id)) {
                 row
             }
+            // The search term rides along via the route-change hooks on the navigation state (see
+            // `stashArrivalTerm`) - a gesture here, even a simultaneous one, swallowed the
+            // NavigationLink's own tap and made the hit rows dead.
         }
     }
 

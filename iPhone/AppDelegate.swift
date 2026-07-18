@@ -246,7 +246,9 @@ final class ForegroundAdhanPlayer: NSObject, ObservableObject {
 
         do {
             let session = AVAudioSession.sharedInstance()
-            try session.setCategory(.playback, mode: .default)
+            // .playback ignores the ringer switch; .ambient respects it. The override is an explicit
+            // opt-in ("play the adhan in the app even in Silent Mode"), off by default.
+            try session.setCategory(Settings.shared.adhanOverridesSilentMode ? .playback : .ambient, mode: .default)
             try session.setActive(true)
 
             let p = try AVAudioPlayer(contentsOf: URL(fileURLWithPath: path))

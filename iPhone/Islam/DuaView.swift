@@ -57,7 +57,8 @@ struct DuaView: View {
                     .font(.subheadline)
                     .foregroundColor(.primary)
                     .padding(.vertical, 8)
-
+            }
+                
                 Section {
                     ForEach(Self.collections) { collection in
                         NavigationLink {
@@ -94,14 +95,13 @@ struct DuaView: View {
                             .padding(.vertical, -16)
                     }
                 }
-            }
 
             Section(header: Text("ETYMOLOGY")) {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Arabic root: د ع و (d-ʿ-w)")
                         .font(
                             settings.islamUsesCustomArabicFace
-                                ? .custom(settings.nonQuranArabicFontName, size: 18, relativeTo: .subheadline)
+                                ? Font.arabic(settings.nonQuranArabicFontName, size: 18, relativeTo: .subheadline)
                                 : .subheadline.weight(.semibold)
                         )
                         .arabicFontDesign(custom: settings.islamUsesCustomArabicFace)
@@ -179,12 +179,14 @@ private struct DuaCollectionView: View {
         .collapseBarsOnScroll($barsCollapsed)
         .adaptiveSafeArea(edge: .bottom) {
             VStack(spacing: SafeAreaInsetVStackSpacing.standard) {
-                if !barsCollapsed {
-                IslamArabicFontPicker()
-                // Non-interactive glass: interactive Liquid Glass steals per-segment taps on real iOS 26 hardware.
-                .conditionalGlassEffect(interactive: false)
-                .transition(.opacity)
-                }
+                // The font picker above the search bar is OFF for now (it was the row that vanished when
+                // scrolling down) - uncomment to bring it back. The same three-way choice still lives in
+                // the Arabic Alphabet screen and the Hadith settings sheet.
+                // IslamArabicFontPicker()
+                // // Non-interactive glass: interactive Liquid Glass steals per-segment taps on real iOS 26 hardware.
+                // .conditionalGlassEffect(interactive: false)
+                // // Stays mounted while minimized (height 0) - inserting/removing glass renders black boxes.
+                // .collapsibleBarRow(barsCollapsed)
 
                 SearchBar(text: $searchText.animation(.easeInOut))
                     .padding([.horizontal, .top], -8)
@@ -220,11 +222,12 @@ private struct DuaCollectionView: View {
             AdhkarRow(
                 arabicText: item.arabicText,
                 transliteration: item.transliteration,
-                translation: item.displayTranslation,
+                translation: item.translation,
                 useQuranicFont: settings.useFontArabic,
                 searchQuery: searchText,
                 alwaysTrailing: true,
-                speechEnabled: true
+                speechEnabled: true,
+                source: item.reference
             )
         }
     }
@@ -245,7 +248,7 @@ private struct DuaCollectionView: View {
                 Text("Arabic root: د ع و (d-ʿ-w)")
                     .font(
                         settings.islamUsesCustomArabicFace
-                            ? .custom(settings.nonQuranArabicFontName, size: 18, relativeTo: .subheadline)
+                            ? Font.arabic(settings.nonQuranArabicFontName, size: 18, relativeTo: .subheadline)
                             : .subheadline.weight(.semibold)
                     )
                     .arabicFontDesign(custom: settings.islamUsesCustomArabicFace)
@@ -281,19 +284,16 @@ private struct DuaCollectionView: View {
     /// "SUPPLICATIONS" with the count pill the Quran and Arabic screens put on their section headers.
     /// While searching, the pill counts the matches instead.
     private var duasHeader: some View {
-        HStack {
+        let shown = collection.items.filter(matchesSearch)
+        return HStack(spacing: 8) {
             Text("SUPPLICATIONS")
 
             Spacer()
 
-            Text("\(collection.items.filter(matchesSearch).count)")
-                .font(.caption.weight(.semibold))
-                .monospacedDigit()
-                .foregroundStyle(settings.accentColor.color)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 6)
-                .conditionalGlassEffect()
-                .padding(.vertical, -16)
+            // Plays every dua currently shown, in order.
+            ListenAllPill(texts: shown.map(\.arabicText))
+
+            CountPill(count: shown.count)
         }
     }
 

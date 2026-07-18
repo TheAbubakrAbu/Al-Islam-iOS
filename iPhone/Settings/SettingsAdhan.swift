@@ -159,13 +159,11 @@ extension Settings {
         // from being stomped on the next launch.
         if !defaults.bool(forKey: Self.didAdoptMinshawiDefaultKey) {
             defaults.set(true, forKey: Self.didAdoptMinshawiDefaultKey)
-            // Only overwrite an explicit prior choice. A device that never set the key already resolves to
-            // Minshawi 1 through the `@AppStorage` default, and the key must stay unset so `watchSyncSnapshot`
-            // still omits it - otherwise a fresh Watch install would broadcast this default over an
-            // established iPhone's real selection.
-            if defaults.object(forKey: key) != nil {
-                defaults.set(Self.defaultAdhanSoundID, forKey: key)
-            }
+            // An explicit prior choice is NEVER overwritten. The old behavior force-adopted Minshawi 1
+            // over whatever was stored - so a user who had deliberately chosen "Default" tapped a
+            // notification, the relaunch ran this migration, and their selection silently became
+            // Minshawi 1. A device that never set the key already resolves to Minshawi 1 through the
+            // `@AppStorage` default, which is all the adoption this migration ever needed.
         }
     }
 
@@ -1873,7 +1871,7 @@ extension Settings {
     }
 
     private func isForegroundAdhanEligible(_ name: String) -> Bool {
-        guard name != "Shurooq", !Self.optionalPrayerNames.contains(name) else { return false }
+        guard Self.adhanEligiblePrayerNames.contains(name) else { return false }
         // A prayer whose adhan sound is off gets the system notification sound; playing the recording in-app
         // anyway would be the exact thing the user turned off.
         guard playsAdhanSound(forPrayer: name) else { return false }
@@ -1914,11 +1912,17 @@ extension Settings {
         }
     }
 
+    /// The five obligatory prayers (and the names that route to them) - the ONLY notifications allowed
+    /// to carry an adhan. Everything else - Shurooq, Duhaa, Islamic Midnight, Last Third, and any name
+    /// added later - falls through to the system default sound by construction, not by enumeration.
+    static let adhanEligiblePrayerNames: Set<String> = [
+        "Fajr", "Dhuhr", "Jumuah", "Dhuhr/Asr", "Asr", "Maghrib", "Maghrib/Isha", "Isha"
+    ]
+
     private func prayerNotificationSound(for prayer: Prayer, minutesBefore: Int?) -> UNNotificationSound {
-        // Shurooq and optional informational times use default sound, never full adhan.
-        if prayer.nameTransliteration == "Shurooq" || Self.optionalPrayerNames.contains(prayer.nameTransliteration) {
-            return .default
-        }
+        // Only an obligatory prayer's AT-TIME notification may play the adhan; the non-obligatory times
+        // (Shurooq, Duhaa, Islamic Midnight, Last Third) always use the default sound.
+        guard Self.adhanEligiblePrayerNames.contains(prayer.nameTransliteration) else { return .default }
         guard minutesBefore == nil else { return .default }
 
         #if os(iOS)

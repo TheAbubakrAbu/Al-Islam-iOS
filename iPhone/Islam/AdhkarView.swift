@@ -48,6 +48,7 @@ private struct ArabicLineHeightKey: PreferenceKey {
 
 struct AdhkarRow: View {
     @ObservedObject var settings = Settings.shared
+    @ObservedObject private var speech = ArabicSpeech.shared
 
     let arabicText: String
     let transliteration: String
@@ -62,6 +63,9 @@ struct AdhkarRow: View {
     /// no recordings for adhkar and duas, so this is synthesized - the same best-effort TTS the alphabet
     /// screens use; the button only appears when the device actually has an Arabic voice.
     var speechEnabled: Bool = false
+    /// The citation ("Bukhari 6306", "Quran 3:8") shown on the bottom row, leading side - with the Listen
+    /// button trailing on the same row.
+    var source: String? = nil
 
     /// The rendered height of the Arabic, and the height of a single line of it. A short dhikr ("سُبحَانَ اللَّهِ")
     /// is one line and reads best leading, like every other row on the screen; a long one wraps, and a wrapped
@@ -71,6 +75,11 @@ struct AdhkarRow: View {
     @State private var arabicHeight: CGFloat = 0
     @State private var arabicLineHeight: CGFloat = 0
 
+    /// True while THIS row's Arabic is what the voice is reading - single tap or the Listen All queue.
+    private var isBeingSpoken: Bool {
+        speech.currentText == arabicText
+    }
+
     /// True once the Arabic has wrapped at all, i.e. it occupies more than one line.
     private var arabicWraps: Bool {
         guard arabicLineHeight > 0 else { return false }
@@ -79,7 +88,7 @@ struct AdhkarRow: View {
     }
 
     private var arabicFont: Font {
-        useQuranicFont ? .custom(settings.nonQuranArabicFontName, size: 30) : .title2
+        useQuranicFont ? Font.arabic(settings.nonQuranArabicFontName, size: 30) : .title2
     }
 
     /// Whether `arabicFont` resolves to a bundled face, and so must opt out of the app-wide rounded design.
@@ -160,26 +169,59 @@ struct AdhkarRow: View {
             )
             .fixedSize(horizontal: false, vertical: true)
 
-            if speechEnabled, ArabicSpeech.shared.isAvailable {
-                Button {
-                    settings.hapticFeedback()
-                    ArabicSpeech.shared.speak(arabicText, rate: 0.4)
-                } label: {
-                    Label("Listen", systemImage: "speaker.wave.2")
-                        .font(.caption.weight(.semibold))
-                        .foregroundColor(settings.accentColor.color)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 5)
-                        .conditionalGlassEffect()
+            // The bottom row: the citation sits leading, the Listen button trailing - one row, not two.
+            if source != nil || (speechEnabled && ArabicSpeech.shared.isAvailable) {
+                HStack(spacing: 8) {
+                    if let source {
+                        HighlightedSnippet(
+                            source: source,
+                            term: searchQuery,
+                            font: .caption.weight(.semibold),
+                            accent: settings.accentColor.color,
+                            fg: .secondary,
+                            guaranteeMatch: matches(source)
+                        )
+                    }
+
+                    Spacer(minLength: 8)
+
+                    if speechEnabled, speech.isAvailable {
+                        Button {
+                            settings.hapticFeedback()
+                            if isBeingSpoken {
+                                speech.stop()
+                            } else {
+                                // speak() cuts off whatever else was playing - one voice at a time.
+                                speech.speak(arabicText, rate: 0.4)
+                            }
+                        } label: {
+                            Label(isBeingSpoken ? "Stop" : "Listen",
+                                  systemImage: isBeingSpoken ? "stop.fill" : "speaker.wave.2")
+                                .font(.caption.weight(.semibold))
+                                .foregroundColor(settings.accentColor.color)
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 5)
+                                .conditionalGlassEffect()
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel(isBeingSpoken ? "Stop the recitation" : "Hear the Arabic read aloud")
+                    }
                 }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Hear the Arabic read aloud")
             }
         }
         // Without this the List is free to hand these rows a height that truncates the long duas to a single
         // ellipsized line; it lets each block claim the height its text actually needs.
         .fixedSize(horizontal: false, vertical: true)
         .padding(.vertical, 4)
+        // The row being read aloud carries a soft accent wash; during Listen All it walks down the
+        // section one row at a time as the queue advances.
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(isBeingSpoken ? settings.accentColor.color.opacity(0.12) : .clear)
+                .padding(.horizontal, -10)
+                .padding(.vertical, -2)
+        )
+        .animation(.easeInOut(duration: 0.25), value: isBeingSpoken)
         #if os(iOS)
         .contextMenu {
             Text("Copy")
@@ -231,12 +273,14 @@ struct AdhkarView: View {
         .collapseBarsOnScroll($barsCollapsed)
         .adaptiveSafeArea(edge: .bottom) {
             VStack(spacing: SafeAreaInsetVStackSpacing.standard) {
-                if !barsCollapsed {
-                IslamArabicFontPicker()
-                // Non-interactive glass: interactive Liquid Glass steals per-segment taps on real iOS 26 hardware.
-                .conditionalGlassEffect(interactive: false)
-                .transition(.opacity)
-                }
+                // The font picker above the search bar is OFF for now (it was the row that vanished when
+                // scrolling down) - uncomment to bring it back. The same three-way choice still lives in
+                // the Arabic Alphabet screen and the Hadith settings sheet.
+                // IslamArabicFontPicker()
+                // // Non-interactive glass: interactive Liquid Glass steals per-segment taps on real iOS 26 hardware.
+                // .conditionalGlassEffect(interactive: false)
+                // // Stays mounted while minimized (height 0) - inserting/removing glass renders black boxes.
+                // .collapsibleBarRow(barsCollapsed)
 
                 SearchBar(text: $searchText.animation(.easeInOut))
                     .padding([.horizontal, .top], -8)
@@ -278,7 +322,16 @@ struct AdhkarView: View {
     }
 
     private var introductionSection: some View {
-        Section(header: Text("REMEMBRANCES OF ALLAH")) {
+        Section(header: HStack(spacing: 8) {
+            Text("REMEMBRANCES OF ALLAH")
+
+            Spacer()
+
+            // Plays every dhikr below, in order.
+            ListenAllPill(texts: commonDhikrItems.map(\.arabicText))
+
+            CountPill(count: commonDhikrItems.count)
+        }) {
              Text("Short remembrances to keep your heart connected to Allah throughout the day.")
                  .font(.subheadline)
                  .foregroundColor(.primary)
@@ -295,7 +348,7 @@ struct AdhkarView: View {
                 Text("Arabic root: ذ ك ر (dh-k-r)")
                     .font(
                         settings.islamUsesCustomArabicFace
-                            ? .custom(settings.nonQuranArabicFontName, size: 18, relativeTo: .subheadline)
+                            ? Font.arabic(settings.nonQuranArabicFontName, size: 18, relativeTo: .subheadline)
                             : .subheadline.weight(.semibold)
                     )
                     .arabicFontDesign(custom: settings.islamUsesCustomArabicFace)

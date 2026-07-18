@@ -225,6 +225,10 @@ struct ListeningHistoryItem: Identifiable, Codable {
     let surahNumber: Int
     let surahName: String
     let reciter: Reciter
+    /// Where playback stood when this entry was displaced from Last Listened - powers the history row's
+    /// "resume from here". Optional so entries saved by older builds still decode (they show no position).
+    var currentDuration: Double? = nil
+    var fullDuration: Double? = nil
     var timestamp: Date = Date()
 }
 

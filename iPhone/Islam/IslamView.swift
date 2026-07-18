@@ -80,6 +80,9 @@ struct IslamView: View {
         }
     }
 
+    /// Collapse state for the favorites section, same as the Quran tab's Favorite Surahs.
+    @AppStorage("showIslamFavorites") private var showIslamFavorites = true
+
     private var favoriteResources: [IslamDestination] {
         IslamDestination.allCases.filter { settings.isIslamResourceFavorite($0.rawValue) }
     }
@@ -163,11 +166,11 @@ struct IslamView: View {
                 if #available(iOS 16.0, *) {
                     Button {
                         settings.hapticFeedback()
-                        withAnimation { settings.gridMode.toggle() }
+                        withAnimation { settings.islamGridMode.toggle() }
                     } label: {
-                        Image(systemName: settings.gridMode ? "list.bullet" : "square.grid.2x2")
+                        Image(systemName: settings.islamGridMode ? "list.bullet" : "square.grid.2x2")
                     }
-                    .accessibilityLabel(settings.gridMode ? "Show list" : "Show grid")
+                    .accessibilityLabel(settings.islamGridMode ? "Show list" : "Show grid")
                     .tint(settings.accentColor.accent1)
                 }
             }
@@ -184,38 +187,28 @@ struct IslamView: View {
     private var modernResourceSections: some View {
         let favorites = favoriteResources
         if !favorites.isEmpty {
-            Section(header: countedHeader("FAVORITES", count: favorites.count)) {
-                resourceItems(favorites)
+            Section(header: SectionPillHeader(
+                title: "FAVORITES",
+                count: favorites.count,
+                icon: "star.fill",
+                accentTitle: true,
+                isExpanded: $showIslamFavorites
+            )) {
+                if showIslamFavorites {
+                    resourceItems(favorites)
+                }
             }
         }
 
-        Section(header: countedHeader("ISLAMIC RESOURCES", count: IslamDestination.allCases.count)) {
+        Section(header: SectionPillHeader(title: "ISLAMIC RESOURCES", count: IslamDestination.allCases.count)) {
             resourceItems(IslamDestination.allCases)
-        }
-    }
-
-    @available(iOS 16.0, *)
-    private func countedHeader(_ title: String, count: Int) -> some View {
-        HStack {
-            Text(title)
-
-            Spacer()
-
-            Text("\(count)")
-                .font(.caption.weight(.semibold))
-                .monospacedDigit()
-                .foregroundStyle(settings.accentColor.color)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 6)
-                .conditionalGlassEffect()
-                .padding(.vertical, -16)
         }
     }
 
     @available(iOS 16.0, *)
     @ViewBuilder
     private func resourceItems(_ items: [IslamDestination]) -> some View {
-        if settings.gridMode {
+        if settings.islamGridMode {
             // No contextMenu on the tiles: a context menu inside a LazyVGrid-in-a-List-row lifts the WHOLE
             // row (every tile at once) as the preview. Favoriting lives on the star inside each tile instead,
             // the same pattern the Arabic-letter and 99-Names grids use.

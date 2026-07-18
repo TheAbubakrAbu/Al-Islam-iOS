@@ -155,7 +155,7 @@ struct FocusOverlayHost: View {
     private func textHero(_ item: FocusItem) -> some View {
         VStack(spacing: 20) {
             Text(item.arabic)
-                .font(useQuranicFont ? .custom(settings.fontArabic, size: 130) : .system(size: 110))
+                .font(useQuranicFont ? Font.arabic(settings.fontArabic, size: 130) : .system(size: 110))
                 .arabicFontDesign(custom: usesCustomArabicFace)
                 .foregroundStyle(settings.accentColor.color)
                 .multilineTextAlignment(.center)
@@ -165,7 +165,7 @@ struct FocusOverlayHost: View {
 
             if let secondaryArabic = item.secondaryArabic {
                 Text(secondaryArabic)
-                    .font(useQuranicFont ? .custom(settings.fontArabic, size: 34) : .system(size: 30))
+                    .font(useQuranicFont ? Font.arabic(settings.fontArabic, size: 34) : .system(size: 30))
                     .arabicFontDesign(custom: usesCustomArabicFace)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)

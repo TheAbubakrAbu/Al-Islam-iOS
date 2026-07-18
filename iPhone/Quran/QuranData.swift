@@ -3374,7 +3374,13 @@ final class QuranData: ObservableObject {
             results.reserveCapacity(limit == .max ? 64 : min(limit, 64))
 
             var skipped = 0
+            var scanned = 0
             for index in allVerseIndices {
+                // A superseded keystroke's scan (the task is cancelled the moment the next character
+                // arrives) stops paying for the rest of the 6,236 entries - it matters most under Low
+                // Power Mode, where every wasted scan competes with the keystroke that replaced it.
+                scanned += 1
+                if scanned & 0x1FF == 0, Task.isCancelled { break }
                 guard verseIndex.indices.contains(index) else { continue }
                 let entry = verseIndex[index]
                 guard regularSearchEntryMatches(entry, cleanedQuery: cleanedQuery, silentQuery: silentQuery, useArabic: useArabic) else { continue }

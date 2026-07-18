@@ -1571,31 +1571,35 @@ final class QuranPlayer: ObservableObject {
         )
     }
 
-    /// Adds a previously listened ayah to the history (deduped by surah:ayah, newest first, capped).
+    /// Adds a previously listened ayah to the history. Deduped by surah:ayah AND reciter: replaying the
+    /// same ayah with the same reciter replaces the old entry and moves it to the top with a fresh
+    /// timestamp; a different reciter is its own entry. Newest first, capped at 10.
     func recordAyahListeningHistory(_ entry: LastListenedAyah) {
-        if ayahListeningHistory.contains(where: { $0.surahNumber == entry.surahNumber && $0.ayahNumber == entry.ayahNumber }) {
-            return
-        }
         let item = AyahListeningHistoryItem(
             surahNumber: entry.surahNumber,
             surahName: entry.surahName,
             ayahNumber: entry.ayahNumber,
             reciter: entry.reciter
         )
-        ayahListeningHistory.insert(item, at: 0)
-        ayahListeningHistory = normalizeAyahListeningHistory(ayahListeningHistory)
+        var updated = ayahListeningHistory.filter {
+            !($0.surahNumber == entry.surahNumber
+              && $0.ayahNumber == entry.ayahNumber
+              && $0.reciter.name == entry.reciter.name)
+        }
+        updated.insert(item, at: 0)
+        ayahListeningHistory = normalizeAyahListeningHistory(updated)
     }
 
     private func normalizeAyahListeningHistory(_ items: [AyahListeningHistoryItem]) -> [AyahListeningHistoryItem] {
         var seenKeys = Set<String>()
         var normalized: [AyahListeningHistoryItem] = []
         for item in items {
-            let key = "\(item.surahNumber)-\(item.ayahNumber)"
+            let key = "\(item.surahNumber)-\(item.ayahNumber)-\(item.reciter.name)"
             if seenKeys.insert(key).inserted {
                 normalized.append(item)
             }
         }
-        return Array(normalized.prefix(5))
+        return Array(normalized.prefix(10))
     }
 
     private func persistAyahListeningHistory() {
@@ -1613,36 +1617,37 @@ final class QuranPlayer: ObservableObject {
         }
     }
 
-    /// Records listening history with surah-based deduplication.
-    /// Saves only if the surah is not already present in history.
+    /// Records listening history when a new surah starts: the surah being DISPLACED from Last Listened
+    /// goes into history, carrying its real Reciter and the position where the user stopped - so each
+    /// history row can offer "resume from here" as well as "from the beginning". Deduped by surah AND
+    /// reciter: replaying the same pair replaces the old entry at the top with a fresh timestamp; a
+    /// different reciter (or surah) is its own entry. Newest first, cap 10.
     func recordListeningHistory(surahNumber: Int, surahName: String, reciter: String) {
-        // Don't save if this surah already exists anywhere in history.
-        if listeningHistory.contains(where: { $0.surahNumber == surahNumber }) {
+        guard let previous = settings.lastListenedSurah else {
+            lastSavedListeningSurahNumber = surahNumber
             return
         }
-
-        if let lastSavedListeningSurahNumber, lastSavedListeningSurahNumber == surahNumber {
-            return
-        }
-        
-        // Don't save if it matches the current last listened surah
-        if let lastListened = settings.lastListenedSurah, lastListened.surahNumber == surahNumber {
+        // Restarting the same surah with the same reciter merely refreshes Last Listened - nothing was
+        // displaced, so there is nothing to file into history.
+        if previous.surahNumber == surahNumber,
+           previous.reciter.displayNameWithEnglishQiraah == reciter {
+            lastSavedListeningSurahNumber = surahNumber
             return
         }
 
         let item = ListeningHistoryItem(
-            surahNumber: surahNumber,
-            surahName: surahName,
-            reciter: Reciter(
-                name: reciter,
-                ayahIdentifier: "",
-                ayahBitrate: "",
-                surahLink: ""
-            )
+            surahNumber: previous.surahNumber,
+            surahName: previous.surahName,
+            reciter: previous.reciter,
+            currentDuration: previous.currentDuration,
+            fullDuration: previous.fullDuration
         )
 
-        listeningHistory.insert(item, at: 0)
-        listeningHistory = normalizeListeningHistory(listeningHistory)
+        var updated = listeningHistory.filter {
+            !($0.surahNumber == previous.surahNumber && $0.reciter.name == previous.reciter.name)
+        }
+        updated.insert(item, at: 0)
+        listeningHistory = normalizeListeningHistory(updated)
 
         lastSavedListeningSurahNumber = surahNumber
     }
@@ -1653,8 +1658,13 @@ final class QuranPlayer: ObservableObject {
     func recordReadingHistory(surahNumber: Int, surahName: String, ayahNumber: Int) {
         let normalizedAyah = max(1, ayahNumber)
 
-        // Don't save duplicates already in history.
+        // A position already in history isn't a duplicate to drop - it moves to the top as the newest
+        // entry with a fresh timestamp.
         if readingHistory.contains(where: { $0.surahNumber == surahNumber && $0.ayahNumber == normalizedAyah }) {
+            var updated = readingHistory.filter { !($0.surahNumber == surahNumber && $0.ayahNumber == normalizedAyah) }
+            updated.insert(ReadingHistoryItem(surahNumber: surahNumber, surahName: surahName, ayahNumber: normalizedAyah), at: 0)
+            readingHistory = normalizeReadingHistory(updated)
+            lastSavedReadingPosition = (surahNumber, normalizedAyah)
             return
         }
         
@@ -1696,16 +1706,17 @@ final class QuranPlayer: ObservableObject {
     }
 
     private func normalizeListeningHistory(_ items: [ListeningHistoryItem]) -> [ListeningHistoryItem] {
-        var seenSurahNumbers = Set<Int>()
+        var seenKeys = Set<String>()
         var normalized: [ListeningHistoryItem] = []
 
         for item in items {
-            if seenSurahNumbers.insert(item.surahNumber).inserted {
+            let key = "\(item.surahNumber)-\(item.reciter.name)"
+            if seenKeys.insert(key).inserted {
                 normalized.append(item)
             }
         }
 
-        return Array(normalized.prefix(5))
+        return Array(normalized.prefix(10))
     }
 
     private func normalizeReadingHistory(_ items: [ReadingHistoryItem]) -> [ReadingHistoryItem] {
@@ -1719,7 +1730,7 @@ final class QuranPlayer: ObservableObject {
             }
         }
 
-        return Array(normalized.prefix(5))
+        return Array(normalized.prefix(10))
     }
 
     private func persistListeningHistory() {

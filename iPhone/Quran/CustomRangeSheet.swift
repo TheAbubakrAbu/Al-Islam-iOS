@@ -902,8 +902,8 @@ struct PlayCustomRangeSheet: View {
                 .foregroundColor(Color(.tertiaryLabel))
 
             Text(ayah.displayArabicText(surahId: surah.id, clean: settings.cleanArabicText, qiraahOverride: settings.displayQiraahForArabic))
-                .font(.custom(settings.fontArabic, size: UIFont.preferredFont(forTextStyle: .title3).pointSize))
-                .arabicFontDesign(custom: settings.quranUsesCustomArabicFace)
+                .font(Font.arabic(settings.quranDisplayFontName, size: UIFont.preferredFont(forTextStyle: .title3).pointSize))
+                .arabicFontDesign(custom: settings.quranDisplayUsesCustomArabicFace)
                 .multilineTextAlignment(.trailing)
                 .lineLimit(2)
                 .foregroundColor(.primary)

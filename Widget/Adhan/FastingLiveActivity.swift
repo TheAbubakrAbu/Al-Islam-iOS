@@ -13,6 +13,7 @@ struct FastingLiveActivity: Widget {
     var body: some WidgetConfiguration {
         ActivityConfiguration(for: FastingAttributes.self) { context in
             FastingLockScreenView(context: context)
+                .appFontDesign()
                 .activityBackgroundTint(Color.black.opacity(0.55))
                 .activitySystemActionForegroundColor(.white)
         } dynamicIsland: { context in
@@ -21,21 +22,25 @@ struct FastingLiveActivity: Widget {
                     Label(context.attributes.phase.title, systemImage: context.attributes.phase.symbol)
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(.secondary)
+                        .appFontDesign()
                 }
                 DynamicIslandExpandedRegion(.trailing) {
                     Text(context.state.endTime, style: .time)
                         .font(.caption.monospacedDigit())
                         .foregroundStyle(.secondary)
+                        .appFontDesign()
                 }
                 DynamicIslandExpandedRegion(.center) {
                     Text(timerInterval: context.state.startTime...context.state.endTime, countsDown: true)
                         .font(.title2.monospacedDigit().weight(.semibold))
                         .multilineTextAlignment(.center)
+                        .appFontDesign()
                 }
                 DynamicIslandExpandedRegion(.bottom) {
                     Text("until \(context.state.prayerName) in \(context.attributes.city)")
                         .font(.caption2)
                         .foregroundStyle(.secondary)
+                        .appFontDesign()
                 }
             } compactLeading: {
                 Image(systemName: context.attributes.phase.symbol)
@@ -43,6 +48,7 @@ struct FastingLiveActivity: Widget {
                 Text(timerInterval: context.state.startTime...context.state.endTime, countsDown: true)
                     .monospacedDigit()
                     .frame(maxWidth: 44)
+                    .appFontDesign()
             } minimal: {
                 Image(systemName: context.attributes.phase.symbol)
             }

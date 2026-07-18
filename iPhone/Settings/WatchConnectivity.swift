@@ -246,7 +246,7 @@ extension Settings {
         // Appearance & general
         "colorSchemeString", "defaultView", "hapticOn",
         // Prayer / notifications
-        "calculationAutomatic", "travelAutomatic", "switchHijriDateAtMaghrib", "dateNotifications",
+        "calculationAutomatic", "switchHijriDateAtMaghrib", "dateNotifications",
         "naggingMode", "naggingStartOffset", "adhanNotificationSound", "showPrayerInfo",
         "shortAdhanFajr", "shortAdhanDhuhr", "shortAdhanAsr", "shortAdhanMaghrib", "shortAdhanIsha",
         "adhanSoundFajr", "adhanSoundDhuhr", "adhanSoundAsr", "adhanSoundMaghrib", "adhanSoundIsha",
@@ -300,15 +300,12 @@ extension Settings {
         if chosen.contains("highLatitudeRule") { dict["highLatitudeRule"] = highLatitudeRule }
         if chosen.contains("customPrayerNames") { dict["customPrayerNames"] = customPrayerNames }
 
-        // `travelingMode` now syncs unconditionally. The historical fight this line used to guard against -
-        // both devices re-deriving the value from their own (differing) locations and correcting each other
-        // forever - is structurally impossible today: `checkIfTraveling()` requires a home location, home is
-        // settable only on iOS and never synced, so the WATCH can never re-derive travelingMode. The phone is
-        // the sole deriver/authority; a phone auto-flip propagates to the watch, a watch manual flip
-        // propagates back and is applied with `runAutoChecks: false` (see applyWatchSyncSnapshot), so each
-        // direction converges in one hop. (If the phone's automatic mode is ON, its next location fetch may
-        // recompute over a watch manual flip - the same semantics a phone-local manual flip has.)
+        // `travelingMode` syncs ONE WAY: phone -> watch, value only. The phone is the sole authority -
+        // it owns the home location and every auto-check. A watch-side flip stays on the watch (its
+        // snapshot simply never carries the key), so the watch can never overwrite the phone's state.
+        #if os(iOS)
         if chosen.contains("travelingMode") { dict["travelingMode"] = travelingMode }
+        #endif
         // `prayerCalculation` keeps the gate: BOTH devices can derive it (it needs no home location), so the
         // two-deriving-devices loop is still real there. Only a manual choice (automatic OFF) travels.
         if chosen.contains("prayerCalculation"), !calculationAutomatic { dict["prayerCalculation"] = prayerCalculation }
@@ -346,10 +343,14 @@ extension Settings {
             prayerCalculation = v
             changed = true
         }
+        // Phone -> watch only: the watch adopts the phone's travelingMode; the phone ignores the key
+        // entirely (an older watch build may still send it - it must not win).
+        #if os(watchOS)
         if let v = dict["travelingMode"] as? Bool, v != travelingMode {
             travelingMode = v
             changed = true
         }
+        #endif
 
         let store = UserDefaults.standard
         for key in Self.watchSyncedAppStorageKeys {
