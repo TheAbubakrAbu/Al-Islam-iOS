@@ -179,14 +179,11 @@ private struct DuaCollectionView: View {
         .collapseBarsOnScroll($barsCollapsed)
         .adaptiveSafeArea(edge: .bottom) {
             VStack(spacing: SafeAreaInsetVStackSpacing.standard) {
-                // The font picker above the search bar is OFF for now (it was the row that vanished when
-                // scrolling down) - uncomment to bring it back. The same three-way choice still lives in
-                // the Arabic Alphabet screen and the Hadith settings sheet.
-                // IslamArabicFontPicker()
-                // // Non-interactive glass: interactive Liquid Glass steals per-segment taps on real iOS 26 hardware.
-                // .conditionalGlassEffect(interactive: false)
-                // // Stays mounted while minimized (height 0) - inserting/removing glass renders black boxes.
-                // .collapsibleBarRow(barsCollapsed)
+                // The floating font picker, back above the search bar. It no longer folds away on
+                // scroll (`collapsibleBarRow` stays off) - it just rides with the bar.
+                IslamArabicFontPicker()
+                    // Non-interactive glass: interactive Liquid Glass steals per-segment taps on real iOS 26 hardware.
+                    .conditionalGlassEffect(interactive: false)
 
                 SearchBar(text: $searchText.animation(.easeInOut))
                     .padding([.horizontal, .top], -8)

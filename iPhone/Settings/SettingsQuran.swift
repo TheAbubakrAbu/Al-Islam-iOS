@@ -742,17 +742,40 @@ extension Settings {
         ayahOfTheDayHiddenDate == Self.dayKey()
     }
 
-    /// Words that keep an ayah out of the Ayah of the Day rotation - not because anything is wrong with
-    /// them, just to keep the daily card gentle/uplifting (matches the widget's safe-pool filter).
-    private static let ayahOfTheDayBlockedWords = [
-        "kill", "killing", "fight", "fighting", "violence", "violent",
-        "murder", "slay", "slaughter", "battle", "war"
+    /// Words that keep an ayah/hadith out of the daily rotations - not because anything is wrong with
+    /// them, just to keep the daily cards gentle/uplifting. ONE canonical list, shared with the Hadith
+    /// of the Day filter. Explicit word FORMS matched as whole tokens, never substrings: "hit" as a
+    /// substring would block every "white", "war" every "warner".
+    static let dailyCardBlockedWords: Set<String> = [
+        "kill", "killed", "killing", "kills", "killer",
+        "fight", "fights", "fighting", "fought",
+        "violence", "violent", "violently",
+        "murder", "murdered", "murderer", "murders",
+        "slay", "slays", "slain", "slaying", "slew",
+        "slaughter", "slaughtered", "slaughtering",
+        "battle", "battles", "war", "wars", "warfare",
+        "slave", "slaves", "slavery", "enslave", "enslaved", "slavegirl", "slavegirls",
+        "captive", "captives",
+        "hit", "hits", "hitting",
+        "beat", "beats", "beaten", "beating",
+        "strike", "strikes", "struck", "striking",
+        "smite", "smote", "smitten",
+        "whip", "whips", "whipped", "lash", "lashes", "lashed",
+        "stoned", "stoning", "flog", "flogged", "flogging",
+        "wounded", "bloodshed",
     ]
 
+    /// Whole-word check against `dailyCardBlockedWords` - tokens, not substrings.
+    static func containsDailyBlockedWord(_ text: String) -> Bool {
+        text.lowercased()
+            .split(whereSeparator: { !$0.isLetter })
+            .contains { dailyCardBlockedWords.contains(String($0)) }
+    }
+
     private static func isAyahGentle(_ ayah: Ayah) -> Bool {
-        let combined = [ayah.textEnglishSaheeh, ayah.textEnglishMustafa, ayah.textTransliteration]
-            .joined(separator: " ").lowercased()
-        return !ayahOfTheDayBlockedWords.contains { !$0.isEmpty && combined.contains($0) }
+        let combined = [ayah.textEnglishSaheeh, ayah.textEnglishMustafa]
+            .joined(separator: " ")
+        return !containsDailyBlockedWord(combined)
     }
 
     /// Keeps the daily card to roughly two lines by skipping long ayahs. Caps are approximate - tuned so

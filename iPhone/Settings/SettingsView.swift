@@ -17,6 +17,7 @@ struct SettingsView: View {
         case notification
         case prayerSettings
         case quranSettings
+        case hadithSettings
     }
 
     var body: some View {
@@ -72,6 +73,9 @@ struct SettingsView: View {
                 notificationSection
                 adhanSection
                 quranSection
+                #if os(iOS)
+                hadithSection
+                #endif
                 appearanceSection
                 resetSection
                 creditsSection
@@ -92,6 +96,7 @@ struct SettingsView: View {
                 notificationSectionSplit
                 adhanSectionSplit
                 quranSectionSplit
+                hadithSectionSplit
                 appearanceSection
                 resetSection
                 creditsSection
@@ -113,6 +118,8 @@ struct SettingsView: View {
                 SettingsAdhanView(showNotifications: false)
             case .quranSettings:
                 SettingsQuranView()
+            case .hadithSettings:
+                HadithSettingsSheet(presentedAsSheet: false)
             }
         }
     }
@@ -254,6 +261,16 @@ struct SettingsView: View {
             }
         }
     }
+    
+    #if os(iOS)
+    private var hadithSection: some View {
+        Section(header: Text("AL-HADITH")) {
+            resourceLink(title: "Hadith Settings", systemImage: "text.book.closed") {
+                HadithSettingsSheet(presentedAsSheet: false)
+            }
+        }
+    }
+    #endif
 
     @available(iOS 16.0, *)
     private var quranSectionSplit: some View {
@@ -261,6 +278,15 @@ struct SettingsView: View {
             splitResourceLink(title: "Quran Settings", systemImage: "character.book.closed.ar", value: .quranSettings)
         }
     }
+    
+    #if os(iOS)
+    @available(iOS 16.0, *)
+    private var hadithSectionSplit: some View {
+        Section(header: Text("AL-HADITH")) {
+            splitResourceLink(title: "Hadith Settings", systemImage: "text.book.closed", value: .hadithSettings)
+        }
+    }
+    #endif
 
     private var appearanceSection: some View {
         Section(header: Text("APPEARANCE")) {

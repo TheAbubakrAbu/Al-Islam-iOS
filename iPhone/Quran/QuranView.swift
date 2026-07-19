@@ -594,7 +594,7 @@ struct QuranView: View {
         var sources: [String] = []
         sources.reserveCapacity(hits.count * 4)
         for hit in hits {
-            guard let surah = quranData.surah(hit.surah),
+            guard quranData.surah(hit.surah) != nil,
                   let ayah = quranData.ayah(surah: hit.surah, ayah: hit.ayah) else { continue }
             sources.append(ayah.displayArabicText(surahId: hit.surah, clean: settings.cleanArabicText))
             sources.append(ayah.textTransliteration)
@@ -3219,7 +3219,7 @@ struct QuranView: View {
                         ayahHitRow(hit: hit, context: context, section: "grouped")
                     }
                 } header: {
-                    surahSearchSectionHeader(surahId: group.surahId)
+                    surahSearchSectionHeader(surahId: group.surahId, matchCount: group.hits.count)
                 }
             }
 
@@ -3305,23 +3305,32 @@ struct QuranView: View {
     }
 
     @ViewBuilder
-    private func surahSearchSectionHeader(surahId: Int) -> some View {
-        if let s = quranData.surah(surahId) {
-            let latinHeader1 = "\(s.id). \(s.nameTransliteration)".uppercased()
+    private func surahSearchSectionHeader(surahId: Int, matchCount: Int? = nil) -> some View {
+        Group {
+            if let s = quranData.surah(surahId) {
+                let latinHeader1 = "\(s.id). \(s.nameTransliteration)".uppercased()
 
-            let latinHeader2 = "(\(s.nameEnglish)) - ".uppercased()
+                let latinHeader2 = "(\(s.nameEnglish)) - ".uppercased()
 
-            HStack(spacing: 6) {
-                Text(latinHeader1)
+                HStack(spacing: 6) {
+                    Text(latinHeader1)
 
-                Text(latinHeader2)
-                    .font(.caption)
+                    Text(latinHeader2)
+                        .font(.caption)
 
-                Text(settings.cleanedQuranArabic(s.nameArabic))
-                    .font(.caption)
+                    Text(settings.cleanedQuranArabic(s.nameArabic))
+                        .font(.caption)
+
+                    // How many of the ayah matches live in THIS surah - the total pill sits up top.
+                    if let matchCount {
+                        Spacer()
+
+                        CountPill(count: matchCount)
+                    }
+                }
+            } else {
+                Text("SURAH \(surahId)")
             }
-        } else {
-            Text("SURAH \(surahId)")
         }
     }
 

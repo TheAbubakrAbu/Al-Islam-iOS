@@ -19,6 +19,8 @@ struct SurahsHeader: View {
             Spacer()
 
             goToSurah
+            // The count pill sits left of the shuffle, the section-header family's order.
+            CountPill(count: quranData.quran.count)
             randomSurahLink
             #endif
         }

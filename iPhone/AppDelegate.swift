@@ -179,9 +179,12 @@ final class ForegroundAdhanPlayer: NSObject, ObservableObject {
         guard interval > 0 else { return }
 
         let t = DispatchSource.makeTimerSource(queue: .main)
-        t.schedule(deadline: .now() + interval, leeway: .milliseconds(200))
+        // WALL deadline, not monotonic: `deadline:` stops counting while the device sleeps, so on a Mac
+        // (or an iPhone that napped) the timer fired LATE - a full adhan at some random later moment,
+        // labeled with whatever "prayer" happened to be current then (the "Last Third adhan" report).
+        t.schedule(wallDeadline: .now() + interval, leeway: .milliseconds(200))
         t.setEventHandler { [weak self] in
-            self?.fire(notificationID: next.notificationID)
+            self?.fire(target: next)
         }
         t.resume()
         timer = t
@@ -197,8 +200,16 @@ final class ForegroundAdhanPlayer: NSObject, ObservableObject {
         timer = nil
     }
 
-    private func fire(notificationID: String) {
+    private func fire(target: (date: Date, name: String, notificationID: String)) {
         timer = nil
+
+        // The adhan belongs to a MOMENT, not to whenever the timer managed to fire. If we're more than a
+        // couple of minutes past the prayer's time (a sleep/wake drift, a suspended runloop), playing the
+        // full recording now would be the "random adhan" - skip it and arm the next one instead.
+        guard abs(target.date.timeIntervalSinceNow) < 150 else {
+            reschedule()
+            return
+        }
 
         // Only the actual adhan sound files play in-app; if "Default" is selected there's no adhan audio to
         // play, so leave the system notification to handle the sound and just arm the next one. In-app
@@ -210,16 +221,18 @@ final class ForegroundAdhanPlayer: NSObject, ObservableObject {
             return
         }
 
-        guard notificationID != lastPlayedID else {
+        guard target.notificationID != lastPlayedID else {
             reschedule()
             return
         }
-        lastPlayedID = notificationID
+        lastPlayedID = target.notificationID
 
         // Drop the redundant scheduled notification so it can't double-sound late.
-        UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: [notificationID])
+        UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: [target.notificationID])
 
-        playAdhan(path: path, prayerName: settings.currentPrayer?.displayName)
+        // Named for the prayer the adhan was ARMED for - never `currentPrayer`, which can be a
+        // non-obligatory time (Last Third, Duhaa) by the moment the timer runs.
+        playAdhan(path: path, prayerName: target.name)
         reschedule()
     }
 

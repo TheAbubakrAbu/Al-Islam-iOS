@@ -25,11 +25,21 @@ struct HighlightedSnippet: View {
     /// left un-highlighted, so a query that matched only the transliteration doesn't also paint the English
     /// name and the Arabic name.
     var guaranteeMatch: Bool = false
+    /// The classical Quranic faces (Uthmani/IndoPak) map Arabic punctuation like "،" to ornament glyphs.
+    /// Set this to the text's point size to render commas and semicolons in the system face instead.
+    var basicFontForCommas: CGFloat? = nil
+
+    private static let commaCharacters: Set<Character> = ["،", "؛", ","]
+
+    private var sourceHasCommas: Bool {
+        source.contains(where: { Self.commaCharacters.contains($0) })
+    }
 
     var body: some View {
         let resolvedSearchTerm = searchTerm
         let needsSearchHighlight = !resolvedSearchTerm.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-        let needsAttributedWork = needsSearchHighlight || highlightAllahNames || preStyledSource != nil
+        let needsCommaWork = basicFontForCommas != nil && sourceHasCommas
+        let needsAttributedWork = needsSearchHighlight || highlightAllahNames || preStyledSource != nil || needsCommaWork
         let suffixText = Text(trailingSuffix)
             .font(trailingSuffixFont ?? font)
             .foregroundColor(trailingSuffixColor ?? fg)
@@ -42,12 +52,14 @@ struct HighlightedSnippet: View {
             // returns nil) and a real - even exact - match never gets colored. On a matched row the search
             // highlight takes priority over tajweed, matching how text-search results are shown elsewhere.
             let base = needsSearchHighlight ? plainSourceAttributed() : baseAttributedText()
-            let highlightedText = highlightAllahIfNeeded(
-                source: source,
-                baseAttributed: highlight(
+            let highlightedText = applyBasicFontToCommas(
+                highlightAllahIfNeeded(
                     source: source,
-                    baseAttributed: base,
-                    term: resolvedSearchTerm
+                    baseAttributed: highlight(
+                        source: source,
+                        baseAttributed: base,
+                        term: resolvedSearchTerm
+                    )
                 )
             )
 
@@ -63,6 +75,21 @@ struct HighlightedSnippet: View {
 
     private var searchTerm: String {
         beginnerMode ? term.map(String.init).joined(separator: " ") : term
+    }
+
+    /// Re-fonts every comma/semicolon run to the rounded system face - see `basicFontForCommas`.
+    private func applyBasicFontToCommas(_ attributed: AttributedString) -> AttributedString {
+        guard let size = basicFontForCommas, sourceHasCommas else { return attributed }
+        var result = attributed
+        var index = result.startIndex
+        while index < result.endIndex {
+            let next = result.characters.index(after: index)
+            if Self.commaCharacters.contains(result.characters[index]) {
+                result[index..<next].font = .system(size: size, design: .rounded)
+            }
+            index = next
+        }
+        return result
     }
 
     private static let englishHighlightStripSet: CharacterSet = {
@@ -134,7 +161,9 @@ struct HighlightedSnippet: View {
     /// fold reads only immutable static tables). The search pipeline calls this from its background task with
     /// the exact strings the result rows are about to render, so each row's first body evaluation is a cache
     /// hit instead of paying the O(source × fold) cost on the main thread.
-    static func prewarmNormalization(of sources: [String]) {
+    // nonisolated: pure string work over thread-safe NSCache, called from a detached task off-main -
+    // View statics otherwise inherit @MainActor and Swift 6 makes that call an error.
+    nonisolated static func prewarmNormalization(of sources: [String]) {
         for source in sources where !source.isEmpty {
             let key = source as NSString
             guard sourceNormCache.object(forKey: key) == nil else { continue }

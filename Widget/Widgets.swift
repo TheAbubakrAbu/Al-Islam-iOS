@@ -6,6 +6,7 @@ struct Widgets: WidgetBundle {
     var body: some Widget {
         SimpleWidget()
         CountdownWidget()
+        PrayerGradientWidget()
         Prayers2Widget()
         PrayersWidget()
         

@@ -355,9 +355,11 @@ struct IslamArabicFontPicker: View {
 /// on glass. One view so every counted section in the app shows the identical pill.
 struct CountPill: View {
     let count: Int
+    /// "5+" style - set when the count is a floor from an early-exited search, not an exact total.
+    var overflow: Bool = false
 
     var body: some View {
-        Text("\(count)")
+        Text("\(count)\(overflow ? "+" : "")")
             .font(.caption.weight(.semibold))
             .monospacedDigit()
             .foregroundStyle(Settings.shared.accentColor.color)
@@ -381,6 +383,8 @@ struct SectionPillHeader: View {
     var accentTitle: Bool = false
     var isExpanded: Binding<Bool>? = nil
     var onShuffle: (() -> Void)? = nil
+    /// "5+" style count - set when the count is a floor from an early-exited search.
+    var overflow: Bool = false
 
     /// The count pill's rendered height (caption line height + 2 x 4pt padding) - the shuffle circle
     /// matches it so the two controls read as one family.
@@ -419,7 +423,7 @@ struct SectionPillHeader: View {
                     .accessibilityLabel("Random \(title.lowercased())")
             }
 
-            CountPill(count: count)
+            CountPill(count: count, overflow: overflow)
 
             if let isExpanded {
                 Image(systemName: isExpanded.wrappedValue ? "chevron.down.circle" : "chevron.up.circle")
