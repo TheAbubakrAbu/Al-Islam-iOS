@@ -92,7 +92,11 @@ struct HighlightedSnippet: View {
         return result
     }
 
-    private static let englishHighlightStripSet: CharacterSet = {
+    // nonisolated: statics on a View struct inherit @MainActor, but the prewarm path (a detached task)
+    // reads these - the fold tables are immutable and NSCache is thread-safe, so cross-thread access is
+    // the design, not an accident. This is what silences the "main actor-isolated ... can not be
+    // referenced from a nonisolated context" warnings on every target that compiles this file.
+    nonisolated private static let englishHighlightStripSet: CharacterSet = {
         CharacterSet.punctuationCharacters.union(.symbols).union(.nonBaseCharacters)
     }()
 
@@ -115,7 +119,8 @@ struct HighlightedSnippet: View {
     }
 
     /// source → (normalizedSource, indexMap): amortises the O(n×k) per-character normalization.
-    private static let sourceNormCache: NSCache<NSString, SourceNormEntry> = {
+    /// nonisolated(unsafe): NSCache is thread-safe by contract; the prewarm fills it off-main.
+    nonisolated(unsafe) private static let sourceNormCache: NSCache<NSString, SourceNormEntry> = {
         let c = NSCache<NSString, SourceNormEntry>()
         c.countLimit = 7_000
         return c
@@ -145,7 +150,7 @@ struct HighlightedSnippet: View {
         Self.normalizeEnglishForHighlightText(text, trimWhitespace: trimWhitespace)
     }
 
-    static func normalizeEnglishForHighlightText(_ text: String, trimWhitespace: Bool) -> String {
+    nonisolated static func normalizeEnglishForHighlightText(_ text: String, trimWhitespace: Bool) -> String {
         var cleaned = String(text.unicodeScalars
             .filter { !Self.englishHighlightStripSet.contains($0) }
         ).lowercased()
@@ -178,7 +183,7 @@ struct HighlightedSnippet: View {
 
     /// Static so the search pipeline can run it off the main thread (see `prewarmNormalization`). Reads only
     /// `Settings.shared.cleanSearch`, which is a pure scalar-map fold - thread-safe.
-    static func normalizeForSearchText(_ text: String, trimWhitespace: Bool) -> String {
+    nonisolated static func normalizeForSearchText(_ text: String, trimWhitespace: Bool) -> String {
         // Strip search operators (`# ^ % $ …`) first so a query like `#الله` or `^Allah%` highlights the
         // residual word instead of failing to match (the source text never contains these characters).
         let base = text.removingAyahSearchOperators
@@ -707,7 +712,7 @@ struct HighlightedSnippet: View {
     /// length mismatch as corruption and refuses to map, so EVERY highlight on that row silently vanished.
     /// That was the "Arabic highlighting just doesn't work sometimes" bug. Built together, the lengths agree
     /// by construction.
-    static func normalizedSourceAndMap(for source: String) -> (normalized: String, map: [String.Index]) {
+    nonisolated static func normalizedSourceAndMap(for source: String) -> (normalized: String, map: [String.Index]) {
         var normalized = ""
         var map: [String.Index] = []
         map.reserveCapacity(source.count)

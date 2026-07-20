@@ -2,6 +2,7 @@ import Foundation
 import Combine
 import NaturalLanguage
 import Accelerate
+import SwiftUI
 
 #if os(iOS)
 
