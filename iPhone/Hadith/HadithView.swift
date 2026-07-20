@@ -73,6 +73,10 @@ struct HadithView: View {
     @State private var pendingScrollToBookSlug: String? = nil
     /// Apple Music-style bar minimization: true while scrolling down.
     @State private var barsCollapsed = false
+    /// True while the bottom search field has the keyboard - the recent-searches chips only show then.
+    @State private var isHadithSearchFocused = false
+    /// The last query written to the search history, so editing keystrokes don't rewrite it repeatedly.
+    @State private var lastSavedSearchQuery = ""
 
     // All-books search - automatic, the Quran search's way: books, then chapters (page of 5),
     // then hadiths (page of 5), each with Load More.
@@ -241,12 +245,33 @@ struct HadithView: View {
             // Apple Music-style: the bottom search bar minimizes while scrolling down.
             .collapseBarsOnScroll($barsCollapsed)
             .adaptiveSafeArea(edge: .bottom) {
-                SearchBar(text: $searchText)
+                // The Quran tab's exact bottom-bar grammar: recent-search chips above the field while it
+                // is focused (kept mounted, collapsed via height+opacity - glass can't transition).
+                let chipsVisible = isHadithSearchFocused && !settings.hadithSearchHistory.isEmpty
+                VStack(spacing: SafeAreaInsetVStackSpacing.standard) {
+                    searchHistoryChips
+                        .frame(height: chipsVisible ? nil : 0)
+                        .clipped()
+                        .opacity(chipsVisible ? 1 : 0)
+                        .allowsHitTesting(chipsVisible)
+                        .animation(.spring(response: 0.35, dampingFraction: 0.85), value: chipsVisible)
+                        .padding(.horizontal, 24)
+
+                    SearchBar(
+                        text: $searchText,
+                        onFocusChanged: { focused in
+                            withAnimation { isHadithSearchFocused = focused }
+                        }
+                    )
                     .padding([.horizontal, .top], -8)
                     .padding(.horizontal, 24)
                     .padding(.bottom, 8)
-                    .background(Color.white.opacity(0.00001))
-                    .minimizedBarStyle(barsCollapsed)
+                    .minimizedBarStyle(barsCollapsed && !isHadithSearchFocused)
+                }
+                .background(Color.white.opacity(0.00001))
+                // Same keyboard-transaction strip as the Quran tab's bottom bar: the keyboard supplies
+                // the motion, so the bar tracks it instead of easing on its own colliding curve.
+                .transaction { $0.animation = nil }
             }
             .navigationTitle("Hadith")
             .toolbar {
@@ -902,8 +927,69 @@ struct HadithView: View {
                 globalHasMoreHadiths = finalHadiths.count > hadithCap
                 globalSearchRanFor = query
                 isGlobalSearching = false
+                // A settled query that actually FOUND something joins the recent-searches chips - the
+                // Quran search history's rule, minus the noise of dead-end queries.
+                if !finalChapters.isEmpty || !finalHadiths.isEmpty {
+                    persistHadithSearchHistoryIfNeeded(query)
+                }
             }
         }
+    }
+
+    // MARK: Search history (the Quran tab's chips, for hadith)
+
+    private func persistHadithSearchHistoryIfNeeded(_ rawQuery: String) {
+        let trimmed = rawQuery.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.count >= 3 else { return }
+        // Avoid repeatedly writing the same query while the user is editing.
+        if lastSavedSearchQuery.caseInsensitiveCompare(trimmed) == .orderedSame { return }
+        settings.addHadithSearchHistory(trimmed)
+        lastSavedSearchQuery = trimmed
+    }
+
+    /// Always mounted; visibility is driven by the caller via height+opacity (glass chips can't
+    /// participate in view transitions) - the Quran tab's exact chips row.
+    private var searchHistoryChips: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(settings.hadithSearchHistory, id: \.self) { query in
+                    searchHistoryChip(query: query)
+                }
+            }
+        }
+    }
+
+    private func searchHistoryChip(query: String) -> some View {
+        HStack(spacing: 4) {
+            Button {
+                settings.hapticFeedback()
+                withAnimation {
+                    searchText = query
+                    settings.addHadithSearchHistory(query)
+                    self.endEditing()
+                }
+            } label: {
+                Text(query)
+                    .font(.caption)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+            }
+
+            Button {
+                settings.hapticFeedback()
+                withAnimation(.easeInOut) {
+                    settings.removeHadithSearchHistory(query)
+                }
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.caption2.bold())
+                    .padding(.trailing, 8)
+            }
+        }
+        .foregroundStyle(settings.accentColor.color)
+        .conditionalGlassEffect(useColor: 0.25)
     }
 
     // MARK: Bookmarks

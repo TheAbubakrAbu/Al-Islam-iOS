@@ -650,7 +650,7 @@ struct SurahView: View {
         }
     }
 
-    static func prewarm(surah: Surah, settings: Settings) {
+    static func prewarm(surah: Surah, settings: Settings, includeSearchBlobs: Bool = false) {
         _ = preparedCache(for: surah, settings: settings)
         AyahRow.prewarmArabicDisplay(
             surah: surah,
@@ -658,6 +658,24 @@ struct SurahView: View {
             limit: AppPerformance.prewarmArabicAyahLimit
         )
         prewarmTajweed(surah: surah, settings: settings, limit: 12)
+
+        // Priority surahs also warm their SEARCH blobs: the first search keystroke in a surah otherwise
+        // pays the whole per-ayah normalization synchronously in body - the one-time build that made the
+        // first keystroke stutter in long surahs. Off-main, into the same static cache body reads.
+        if includeSearchBlobs {
+            let qiraah = settings.displayQiraahForArabic
+            let ignoreSilent = settings.ignoreSilentLettersInQuranSearch
+            let cacheKey = "\(surah.id)|\(qiraah ?? "")|s\(ignoreSilent ? 1 : 0)" as NSString
+            if preparedSurahSearchCache.object(forKey: cacheKey) == nil {
+                let ayahs = preparedCache(for: surah, settings: settings).ayahs
+                Task.detached(priority: .utility) {
+                    let map = buildSearchBlobMap(ayahs: ayahs, displayQiraah: qiraah, ignoreSilent: ignoreSilent)
+                    await MainActor.run {
+                        preparedSurahSearchCache.setObject(PreparedSurahSearchCache(searchBlobByAyahID: map), forKey: cacheKey)
+                    }
+                }
+            }
+        }
     }
 
     /// Tajweed attributed text was the one thing the list prewarm never warmed: with tajweed colors on, each
@@ -1652,9 +1670,9 @@ struct SurahView: View {
                 }
 
                 #if !os(watchOS)
-                if let previousSurah {
+                if previousSurah != nil || nextSurah != nil {
                     Section {
-                        surahNavigationButton(title: "Go to Previous Surah", surah: previousSurah, systemImage: "chevron.up")
+                        surahNavigationButtonPair(previous: previousSurah, next: nextSurah)
                     }
                 }
                 #endif
@@ -1806,9 +1824,11 @@ struct SurahView: View {
                     }
 
                     #if !os(watchOS)
-                    if let nextSurah {
+                    if previousSurah != nil || nextSurah != nil {
                         Section {
-                            surahNavigationButton(title: "Go to Next Surah", surah: nextSurah, systemImage: "chevron.down")
+                            surahNavigationButtonPair(previous: previousSurah, next: nextSurah)
+                                // Only the BOTTOM pair marks "reached the end" - it sits below the last
+                                // ayah, so its appearance is what fills the progress bar.
                                 .onAppear { nextSurahButtonVisible = true }
                                 .onDisappear { nextSurahButtonVisible = false }
                         }
@@ -2357,7 +2377,7 @@ struct SurahView: View {
         // controls leave, at their exact height (caption text + 8pt vertical padding).
         return Group {
             if tajweedCanRenderNow || comparisonVisible {
-                HStack(alignment: .bottom, spacing: 12) {
+                HStack(alignment: .bottom, spacing: 4) {
                     // The legend and the riwayah picker take exactly the space THEY need (layoutPriority +
                     // fixed-size labels); the search stretches into whatever is left over - and when there
                     // isn't enough, it is the one that shrinks, scaling its label down first.
@@ -2405,7 +2425,7 @@ struct SurahView: View {
         // "Global" because this reader has its own search bar right below, and this button is the "take
         // what I typed THERE" escape to the whole Quran.
         if tajweedCanRenderNow || settings.qiraatComparisonMode {
-            HStack(alignment: .bottom, spacing: 12) {
+            HStack(alignment: .bottom, spacing: 4) {
                 // Same rule as the page bar: the flanking controls take the space they need, the search
                 // fills the leftover and is the first to shrink when the row runs tight.
                 if tajweedCanRenderNow {
@@ -2444,10 +2464,11 @@ struct SurahView: View {
         VStack(spacing: SafeAreaInsetVStackSpacing.standard) {
             HStack(spacing: 0) {
                 SearchBar(
-                    // NOT an animated binding (it used to be): animating the state write animated a diff
-                    // of the whole ayah list on every keystroke, which under Low Power Mode stalled the
-                    // main thread long enough to read as a crash. Filtering now applies instantly.
-                    text: $searchText,
+                    // Animated again - results sliding in/out is part of the reader's feel. Only Low
+                    // Power Mode keeps the plain binding: under its CPU throttle the whole-list animated
+                    // diff stalled long enough to read as a crash. The actual hard crash was elsewhere -
+                    // duplicate result ids in the global search's animated apply, fixed in QuranView.
+                    text: AppPerformance.isLowPowerMode ? $searchText : $searchText.animation(.easeInOut),
                     onFocusChanged: { focused in
                         withAnimation {
                             isAyahSearchFocused = focused
@@ -2954,31 +2975,54 @@ struct SurahView: View {
         }
     }
 
+    /// Previous | Next surah, side by side - shown at both the top and the bottom of the reader. Each
+    /// swaps the surah in place (`navigateToSurah`) rather than pushing a new view.
     @ViewBuilder
-    private func surahNavigationButton(title: String, surah targetSurah: Surah, systemImage: String) -> some View {
+    private func surahNavigationButtonPair(previous: Surah?, next: Surah?) -> some View {
+        HStack(spacing: 10) {
+            if let previous {
+                surahNavigationButton(title: "Previous", surah: previous, systemImage: "chevron.left", trailing: false)
+            }
+            if let next {
+                surahNavigationButton(title: "Next", surah: next, systemImage: "chevron.right", trailing: true)
+            }
+        }
+    }
+
+    private func surahNavigationButton(title: String, surah targetSurah: Surah, systemImage: String, trailing: Bool) -> some View {
         Button {
             navigateToSurah(targetSurah)
         } label: {
-            HStack(spacing: 12) {
-                Image(systemName: systemImage)
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundColor(settings.accentColor.color)
-                    .frame(width: 22)
+            HStack(spacing: 8) {
+                if !trailing {
+                    Image(systemName: systemImage)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundColor(settings.accentColor.color)
+                }
 
-                Text(title)
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundColor(.primary)
+                VStack(alignment: trailing ? .trailing : .leading, spacing: 2) {
+                    Text(title)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundColor(.primary)
 
-                Spacer()
+                    Text("\(targetSurah.id) - \(targetSurah.nameTransliteration)")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                }
+                .frame(maxWidth: .infinity, alignment: trailing ? .trailing : .leading)
 
-                Text("\(targetSurah.id) - \(targetSurah.nameTransliteration)")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.75)
+                if trailing {
+                    Image(systemName: systemImage)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundColor(settings.accentColor.color)
+                }
             }
+            .frame(maxWidth: .infinity)
             .contentShape(Rectangle())
         }
+        .buttonStyle(.plain)
     }
 }
 
@@ -3168,9 +3212,6 @@ struct ArabicTextRiwayahPicker: View {
             .onChange(of: selection) { _ in settings.hapticFeedback() }
         } else {
             Menu {
-                Text("Arabic Riwayah")
-                    .foregroundStyle(.secondary)
-
                 ForEach(Settings.Riwayah.groups) { group in
                     ForEach(group.options, id: \.tag) { option in
                         qiraahButton(option)

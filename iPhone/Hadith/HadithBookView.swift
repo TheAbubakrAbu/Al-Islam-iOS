@@ -49,6 +49,54 @@ struct HadithBookView: View {
     /// Apple Music-style bar minimization: true while scrolling down.
     @State private var barsCollapsed = false
 
+    // AI (semantic) hadith search - the Quran ayah search's AI results, for this book: on-device meaning
+    // matching over the hadith English texts, shown automatically above the keyword matches. No mode to
+    // enter; the section appears (with one-time build progress the first time) whenever it can help.
+    @ObservedObject private var semanticEngine = SemanticSearchEngine.shared
+    @State private var aiHits: [HadithBookData.Hadith] = []
+    @State private var aiSearchTask: Task<Void, Never>?
+
+    private var semanticCorpusID: String { "hadith-\(book.slug)" }
+
+    /// True when the live query is one the semantic engine can answer (English text, long enough).
+    private var aiQueryEligible: Bool {
+        let trimmed = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        return SemanticSearchEngine.isSupported
+            && trimmed.count >= 3
+            && !trimmed.containsArabicScript
+    }
+
+    private func prepareSemanticCorpus(_ data: HadithBookData) {
+        guard SemanticSearchEngine.isSupported, !semanticEngine.isReady(semanticCorpusID) else { return }
+        let texts = data.hadiths.map { "\($0.english.narrator) \($0.english.text)" }
+        semanticEngine.prepare(corpusID: semanticCorpusID, version: "v1-\(texts.count)", texts: texts)
+    }
+
+    private func runAISearch(query: String, data: HadithBookData?) {
+        aiSearchTask?.cancel()
+        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard SemanticSearchEngine.isSupported, let data,
+              trimmed.count >= 3, !trimmed.containsArabicScript else {
+            if !aiHits.isEmpty { withAnimation { aiHits = [] } }
+            return
+        }
+        prepareSemanticCorpus(data)
+        let corpusID = semanticCorpusID
+
+        aiSearchTask = Task {
+            try? await Task.sleep(nanoseconds: 300_000_000)
+            guard !Task.isCancelled else { return }
+            let results = await semanticEngine.search(corpusID: corpusID, query: trimmed, limit: 10)
+            guard !Task.isCancelled else { return }
+            await MainActor.run {
+                guard trimmed == searchText.trimmingCharacters(in: .whitespacesAndNewlines) else { return }
+                withAnimation {
+                    aiHits = results.compactMap { data.hadiths.indices.contains($0.index) ? data.hadiths[$0.index] : nil }
+                }
+            }
+        }
+    }
+
     init(book: HadithCatalogBook) {
         self.book = book
         // A book still in the session's memory cache renders instantly - no task hop, no flash.
@@ -359,11 +407,6 @@ struct HadithBookView: View {
                             .font(.footnote)
                             .foregroundColor(.secondary)
                             .fixedSize(horizontal: false, vertical: true)
-
-                        // The size lives here with the book's story; the count pills sit on the
-                        // CHAPTERS header below.
-                        statPill(bookSizeText)
-                            .padding(.top, 2)
                     }
                     .padding(.vertical, 2)
                 }
@@ -371,6 +414,10 @@ struct HadithBookView: View {
                 // While searching: chapter matches first, then hadith matches - each page-sized with
                 // load-more controls, the Quran search's way.
                 if isSearchActive {
+                    // AI matches appear AUTOMATICALLY at the very top, the Quran ayah search's exact
+                    // grammar - no mode to enter. Keyword sections always stay below.
+                    aiMatchesSection(data)
+
                     if !filteredChapters.isEmpty {
                         Section(header: SectionPillHeader(title: "MATCHING CHAPTERS", count: filteredChapters.count)) {
                             ForEach(filteredChapters.prefix(chapterMatchLimit)) { chapter in
@@ -393,16 +440,23 @@ struct HadithBookView: View {
                         }
                     }
                 } else {
-                    Section(header: chaptersSectionHeader(data)) {
-                        if hadithGridMode {
+                    // The Quran surah list's shape: the header stands alone, then each chapter is its own
+                    // Section - separate glass cards with compact spacing between them.
+                    Section(header: chaptersSectionHeader(data)) { }
+                        .padding(.bottom, -12)
+
+                    if hadithGridMode {
+                        Section {
                             LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 10) {
                                 ForEach(filteredChapters) { chapter in
                                     chapterGridTile(chapter, data: data)
                                 }
                             }
                             .padding(.vertical, 4)
-                        } else {
-                            ForEach(filteredChapters) { chapter in
+                        }
+                    } else {
+                        ForEach(filteredChapters) { chapter in
+                            Section {
                                 chapterRowLink(chapter, data: data)
                             }
                         }
@@ -453,10 +507,16 @@ struct HadithBookView: View {
             }
             .opacity(0)
         )
-        .onChange(of: searchText) { _ in
+        .onChange(of: searchText) { text in
             // A new query starts back at the first page of matches.
             chapterMatchLimit = 5
             hadithMatchLimit = 5
+            runAISearch(query: text, data: data)
+        }
+        // The one-time vector build finishing mid-query: surface the results without another keystroke.
+        .onChange(of: semanticEngine.readyCorpora) { ready in
+            guard ready.contains(semanticCorpusID) else { return }
+            runAISearch(query: searchText, data: data)
         }
         .onChange(of: pendingScrollToChapterId) { chapterId in
             guard let chapterId else { return }
@@ -482,14 +542,15 @@ struct HadithBookView: View {
         }
     }
 
-    /// The CHAPTERS header carrying the book's shape at a glance - the stat pills sit at its
-    /// trailing edge, in the same pill language the other section headers use.
+    /// The CHAPTERS header carrying the book's shape at a glance - the size and the count pills sit at
+    /// its trailing edge, in the same pill language the other section headers use.
     private func chaptersSectionHeader(_ data: HadithBookData) -> some View {
         HStack(spacing: 6) {
             Text("CHAPTERS")
 
             Spacer()
 
+            statPill(bookSizeText)
             statPill("\(data.hadiths.count) Hadiths")
             statPill("\(data.chapters.count) Chapters")
         }
@@ -506,6 +567,36 @@ struct HadithBookView: View {
             .padding(.horizontal, 8)
             .padding(.vertical, 4)
             .conditionalGlassEffect()
+    }
+
+    /// The AI (semantic) matches for the live query, shown automatically: build progress the first time,
+    /// then the ranked matches - each the standard compact hadith row, landing in its chapter scrolled
+    /// to the hadith, exactly like the keyword matches. Deliberately SILENT otherwise (Arabic query,
+    /// build failed, no semantic matches): an automatic section must never nag.
+    @ViewBuilder
+    private func aiMatchesSection(_ data: HadithBookData) -> some View {
+        if aiQueryEligible {
+            if semanticEngine.isReady(semanticCorpusID) {
+                if !aiHits.isEmpty {
+                    Section(header: SectionPillHeader(title: "AI MATCHES", count: aiHits.count, icon: "sparkles", accentTitle: true)) {
+                        ForEach(aiHits) { hadith in
+                            NavigationLink {
+                                // Land in the chapter, scrolled to the hadith - the keyword matches' arrival.
+                                if let chapter = data.chapters.first(where: { $0.id == hadith.chapterId }) {
+                                    HadithChapterView(book: book, bookData: data, chapter: chapter, scrollToHadithId: hadith.idInBook)
+                                } else {
+                                    HadithReferenceView(book: book, chapter: nil, hadith: hadith.idInBook)
+                                }
+                            } label: {
+                                HadithRow(book: book, hadith: hadith, searchText: searchText, compact: true)
+                            }
+                        }
+                    }
+                }
+            } else if !semanticEngine.failedCorpora.contains(semanticCorpusID) {
+                Section { AISearchStatusRow(progress: semanticEngine.progress(semanticCorpusID), failed: false) }
+            }
+        }
     }
 
     /// One chapter's slice of the shown match page.
@@ -885,27 +976,60 @@ struct HadithChapterView: View {
 
     let book: HadithCatalogBook
     let bookData: HadithBookData
-    let chapter: HadithBookData.Chapter
     /// A search result or reference landing here scrolls the list to this hadith, the Quran's way.
     let scrollToHadithId: Int?
-    /// Computed ONCE at init: these were computed vars filtering all of the book's hadiths - and the
-    /// progress bar read them on every row appear/disappear, an O(7,500) walk per scroll tick.
-    let chapterIndex: Int
-    let allChapterHadiths: [HadithBookData.Hadith]
-    let chapterRange: ClosedRange<Int>?
+
+    // The current chapter and its derived reading data. Held in @State so Previous/Next swaps the chapter
+    // IN PLACE (the surah reader's way) rather than pushing a new view. Each is computed once - at init and
+    // again only on a chapter swap - so the progress bar never pays an O(hadiths) walk per scroll tick.
+    @State private var chapter: HadithBookData.Chapter
+    @State private var chapterIndex: Int
+    @State private var allChapterHadiths: [HadithBookData.Hadith]
+    @State private var chapterRange: ClosedRange<Int>?
 
     init(book: HadithCatalogBook, bookData: HadithBookData, chapter: HadithBookData.Chapter, scrollToHadithId: Int? = nil) {
         self.book = book
         self.bookData = bookData
-        self.chapter = chapter
         self.scrollToHadithId = scrollToHadithId
-        self.chapterIndex = bookData.chapters.firstIndex(where: { $0.id == chapter.id }) ?? 0
+        _chapter = State(initialValue: chapter)
+        _chapterIndex = State(initialValue: bookData.chapters.firstIndex(where: { $0.id == chapter.id }) ?? 0)
         let hadiths = bookData.hadiths.filter { $0.chapterId == chapter.id }
-        self.allChapterHadiths = hadiths
+        _allChapterHadiths = State(initialValue: hadiths)
         if let low = hadiths.map(\.idInBook).min(), let high = hadiths.map(\.idInBook).max() {
-            self.chapterRange = low...high
+            _chapterRange = State(initialValue: low...high)
         } else {
-            self.chapterRange = nil
+            _chapterRange = State(initialValue: nil)
+        }
+    }
+
+    /// The book-order neighbours of the current chapter - the surah reader's Previous/Next, by chapter.
+    private var previousChapter: HadithBookData.Chapter? {
+        bookData.chapters.indices.contains(chapterIndex - 1) ? bookData.chapters[chapterIndex - 1] : nil
+    }
+    private var nextChapter: HadithBookData.Chapter? {
+        bookData.chapters.indices.contains(chapterIndex + 1) ? bookData.chapters[chapterIndex + 1] : nil
+    }
+
+    /// Swap the chapter in place - recompute its derived reading data, reset the search and visibility,
+    /// and record it as Last Read - exactly as the surah reader swaps surahs without a new push.
+    private func navigateToChapter(_ target: HadithBookData.Chapter) {
+        settings.hapticFeedback()
+        let hadiths = bookData.hadiths.filter { $0.chapterId == target.id }
+        withAnimation(.easeInOut) {
+            chapter = target
+            chapterIndex = bookData.chapters.firstIndex(where: { $0.id == target.id }) ?? 0
+            allChapterHadiths = hadiths
+            if let low = hadiths.map(\.idInBook).min(), let high = hadiths.map(\.idInBook).max() {
+                chapterRange = low...high
+            } else {
+                chapterRange = nil
+            }
+            searchText = ""
+            visibleHadithIDs = []
+            highlightedHadithID = nil
+        }
+        if let first = hadiths.first {
+            HadithStore.shared.recordLastRead(book: book, hadith: first)
         }
     }
 
@@ -913,6 +1037,9 @@ struct HadithChapterView: View {
     /// Apple Music-style bar minimization: true while scrolling down.
     @State private var barsCollapsed = false
     @State private var showChapterSettings = false
+    /// The hadith the reader marked by tapping it - the ayah list's grey attention tint, for hadiths.
+    /// Tap to mark (keep your place), tap again to clear; arriving at a searched hadith marks it too.
+    @State private var highlightedHadithID: Int? = nil
     /// The Quran search's page size: matches show 5 at a time until Load More asks for more.
     @State private var hadithMatchLimit = 5
     /// Which hadiths are on screen - drives the pinned header's progress bar, the surah reader's way.
@@ -1057,15 +1184,39 @@ struct HadithChapterView: View {
                         }
                     }
                 } else {
-                    // No in-list header - the chapter's identity is the pinned header above, the surah
-                    // reader's way. Rows report visibility for its progress bar.
-                    Section {
-                        ForEach(allChapterHadiths) { hadith in
+                    // The Quran ayah list's shape: each hadith is its own Section, with a Previous/Next
+                    // chapter pair at the top and bottom that swaps the chapter in place. The chapter's
+                    // identity is the pinned header above; rows report visibility for its progress bar.
+                    if previousChapter != nil || nextChapter != nil {
+                        Section { chapterNavButtonPair() }
+                    }
+
+                    ForEach(allChapterHadiths) { hadith in
+                        Section {
                             HadithRow(book: book, hadith: hadith, searchText: searchText)
+                                // The ayah list's tap-to-mark: a grey attention tint that keeps your
+                                // place. The row's own controls (number pill, menu) win their taps.
+                                .padding(6)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                                        .fill(Color.secondary.opacity(highlightedHadithID == hadith.idInBook ? 0.18 : 0))
+                                )
+                                .padding(-6)
+                                .contentShape(Rectangle())
+                                .onTapGesture {
+                                    settings.hapticFeedback()
+                                    withAnimation(.easeInOut(duration: 0.15)) {
+                                        highlightedHadithID = highlightedHadithID == hadith.idInBook ? nil : hadith.idInBook
+                                    }
+                                }
                                 .id("chapter-hadith-\(hadith.idInBook)")
                                 .onAppear { visibleHadithIDs.insert(hadith.idInBook) }
                                 .onDisappear { visibleHadithIDs.remove(hadith.idInBook) }
                         }
+                    }
+
+                    if previousChapter != nil || nextChapter != nil {
+                        Section { chapterNavButtonPair() }
                     }
                 }
             }
@@ -1074,8 +1225,10 @@ struct HadithChapterView: View {
         .applyConditionalListStyle()
         .compactListSectionSpacing()
         .onAppear {
-            // A search result or reference landed here: settle, then scroll to the hadith itself.
+            // A search result or reference landed here: settle, then scroll to the hadith itself - and
+            // MARK it (the Quran's arrival rule: the selection shows you where you landed; tap to clear).
             guard let target = scrollToHadithId else { return }
+            highlightedHadithID = target
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                 withAnimation { scrollProxy.scrollTo("chapter-hadith-\(target)", anchor: .top) }
             }
@@ -1100,6 +1253,13 @@ struct HadithChapterView: View {
         .onChange(of: searchText) { _ in
             // A new query starts back at the first page of matches.
             hadithMatchLimit = 5
+        }
+        .onChange(of: chapterIndex) { _ in
+            // A Previous/Next chapter swap lands at the top of the new chapter.
+            guard let first = allChapterHadiths.first?.idInBook else { return }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                withAnimation { scrollProxy.scrollTo("chapter-hadith-\(first)", anchor: .top) }
+            }
         }
         // Apple Music-style: the bottom search bar minimizes while scrolling down.
         .collapseBarsOnScroll($barsCollapsed)
@@ -1173,6 +1333,57 @@ struct HadithChapterView: View {
         .padding(.top, 4)
         .padding(.horizontal, settings.defaultView ? 20 : 16)
         .zIndex(1)
+    }
+
+    /// Previous | Next chapter, side by side - the surah reader's navigation pair, by chapter. Each
+    /// swaps the chapter in place rather than pushing a new view.
+    @ViewBuilder
+    private func chapterNavButtonPair() -> some View {
+        HStack(spacing: 10) {
+            if let previousChapter {
+                chapterNavButton(title: "Previous", chapter: previousChapter, systemImage: "chevron.left", trailing: false)
+            }
+            if let nextChapter {
+                chapterNavButton(title: "Next", chapter: nextChapter, systemImage: "chevron.right", trailing: true)
+            }
+        }
+    }
+
+    private func chapterNavButton(title: String, chapter target: HadithBookData.Chapter, systemImage: String, trailing: Bool) -> some View {
+        let ordinal = (bookData.chapters.firstIndex(where: { $0.id == target.id }) ?? 0) + 1
+        return Button {
+            navigateToChapter(target)
+        } label: {
+            HStack(spacing: 8) {
+                if !trailing {
+                    Image(systemName: systemImage)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundColor(settings.accentColor.color)
+                }
+
+                VStack(alignment: trailing ? .trailing : .leading, spacing: 2) {
+                    Text(title)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundColor(.primary)
+
+                    Text("\(ordinal). \(target.english.isEmpty ? book.englishTitle : target.english)")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                }
+                .frame(maxWidth: .infinity, alignment: trailing ? .trailing : .leading)
+
+                if trailing {
+                    Image(systemName: systemImage)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundColor(settings.accentColor.color)
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
     }
 }
 

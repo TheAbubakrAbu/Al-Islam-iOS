@@ -435,6 +435,8 @@ struct HadithBookmark: Codable, Identifiable, Equatable {
     var chapterId: Int? = nil
     var arabicPreview: String? = nil
     var englishPreview: String? = nil
+    /// A personal note, the bookmarked-ayah rule: notes live on bookmarks (optional so older data decodes).
+    var note: String? = nil
 
     var id: String { "\(slug)-\(idInBook)" }
 }

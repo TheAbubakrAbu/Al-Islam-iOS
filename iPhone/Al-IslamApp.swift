@@ -261,7 +261,9 @@ private struct MainTabView: View {
         for id in priority where seen.insert(id).inserted {
             if Task.isCancelled { return }
             if let surah = quranData.surah(id) {
-                SurahView.prewarm(surah: surah, settings: settings)
+                // Priority surahs (the ones a user actually opens first) also warm their search blobs,
+                // so the first in-surah search keystroke never pays the one-time build.
+                SurahView.prewarm(surah: surah, settings: settings, includeSearchBlobs: true)
                 await Task.yield()
             }
         }

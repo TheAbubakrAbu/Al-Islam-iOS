@@ -78,28 +78,48 @@ enum MushafPagination {
     }
 
     /// The pagination pass itself: pure function of the inputs, no shared state.
+    /// Accumulates each segment's ayahs IN PLACE and flushes at page/surah boundaries - the old pass
+    /// rebuilt the trailing segment with `ayahs + [ayah]` on every ayah, a full copy of the growing
+    /// array each time (O(n²) per page, ~135k array allocations across the book).
     nonisolated private static func build(quran: [Surah], qiraah: String?) -> [MushafPage] {
         var pages: [MushafPage] = []
-        // Surahs and their ayahs are already in mushaf order, so a page's segments accumulate in order too:
-        // extend the trailing segment when the surah repeats, else start a new one.
+        var currentPage: Int?
+        var currentSegments: [MushafPage.Segment] = []
+        var currentSurah: Surah?
+        var currentAyahs: [Ayah] = []
+
+        func flushSegment() {
+            if let surah = currentSurah, !currentAyahs.isEmpty {
+                currentSegments.append(MushafPage.Segment(surah: surah, ayahs: currentAyahs))
+            }
+            currentAyahs = []
+        }
+        func flushPage() {
+            flushSegment()
+            if let page = currentPage, !currentSegments.isEmpty {
+                pages.append(MushafPage(page: page, segments: currentSegments))
+            }
+            currentSegments = []
+        }
+
+        // Surahs and their ayahs are already in mushaf order, so a page's segments accumulate in order
+        // too: extend the current run while the page and surah repeat, flush at each boundary.
         for surah in quran {
             for ayah in surah.ayahs where ayah.existsInQiraah(qiraah) {
                 guard let page = ayah.page else { continue }
 
-                if var last = pages.last, last.page == page {
-                    var segments = last.segments
-                    if let lastSegment = segments.last, lastSegment.surah.id == surah.id {
-                        segments[segments.count - 1] = MushafPage.Segment(surah: surah, ayahs: lastSegment.ayahs + [ayah])
-                    } else {
-                        segments.append(MushafPage.Segment(surah: surah, ayahs: [ayah]))
-                    }
-                    last = MushafPage(page: page, segments: segments)
-                    pages[pages.count - 1] = last
-                } else {
-                    pages.append(MushafPage(page: page, segments: [MushafPage.Segment(surah: surah, ayahs: [ayah])]))
+                if page != currentPage {
+                    flushPage()
+                    currentPage = page
+                    currentSurah = surah
+                } else if currentSurah?.id != surah.id {
+                    flushSegment()
+                    currentSurah = surah
                 }
+                currentAyahs.append(ayah)
             }
         }
+        flushPage()
         return pages
     }
 
@@ -119,14 +139,20 @@ enum MushafPagination {
     /// ~604 pages each time added a full sweep per swipe. Keyed by the qiraah, the same thing that keys the
     /// pagination itself - two qiraat could coincidentally paginate to the same page count and endpoints while
     /// laying their juz starts on different page ordinals, so a shape fingerprint isn't a safe key.
-    private static var juzCache: (key: String, count: Int, ranges: [Int: (start: Int, count: Int)])?
+    /// The same small LRU shape as `pageCache`: a single slot re-swept all ~604 pages on EVERY footer
+    /// render while comparison mode flipped between qiraat.
+    private static var juzCache: [(key: String, count: Int, ranges: [Int: (start: Int, count: Int)])] = []
 
     /// For each juz, the ordinal of its first page and how many pages it spans, so a page can show its
     /// position within the current juz. Pages are in mushaf order, so the first occurrence is the start.
     /// Pass the same `qiraah` the pages were built with.
     static func juzRanges(_ pages: [MushafPage], qiraah: String?) -> [Int: (start: Int, count: Int)] {
         let key = "\(qiraah ?? "Hafs")"
-        if let cached = juzCache, cached.key == key, cached.count == pages.count { return cached.ranges }
+        if let index = juzCache.firstIndex(where: { $0.key == key && $0.count == pages.count }) {
+            let hit = juzCache.remove(at: index)
+            juzCache.append(hit)
+            return hit.ranges
+        }
 
         var map: [Int: (start: Int, count: Int)] = [:]
         for (index, page) in pages.enumerated() {
@@ -137,9 +163,19 @@ enum MushafPagination {
                 map[juz] = (index, 1)
             }
         }
-        juzCache = (key, pages.count, map)
+        if juzCache.count >= pageCacheLimit { juzCache.removeFirst() }
+        juzCache.append((key, pages.count, map))
         return map
     }
+}
+
+/// Single-slot memo for the in-page find fold (file-scope: `SurahPageReader` is generic, and generic
+/// types can't hold static stored state). One slot suffices - consecutive evaluations ask for the same
+/// (page, query); any change simply recomputes once.
+@MainActor
+private enum PageFindMemo {
+    static var key = ""
+    static var matches: [HighlightedAyahRef] = []
 }
 
 struct SurahPageReader<Controls: View>: View {
@@ -194,10 +230,17 @@ struct SurahPageReader<Controls: View>: View {
     /// The ayahs on the currently-visible page whose text matches the find query, in reading order. Matching
     /// is diacritic-insensitive over Arabic + transliteration + both English translations, so it finds the
     /// ayah whatever the page is showing.
+    /// Memoized by (page, folded query, qiraah): the body evaluates this on EVERY re-render while the find
+    /// bar is open (including each recitation tick - the reader observes the player), and `syncMatch` /
+    /// `goToMatch` ask again per event. The fold now runs once per page+query; every repeat is a hit.
     private func matchesOnPage(_ pages: [MushafPage]) -> [HighlightedAyahRef] {
         let query = settings.cleanSearch(pageSearchText.removingAyahSearchOperators, whitespace: true)
             .removingArabicDiacriticsAndSigns
         guard !query.isEmpty, pages.indices.contains(pageIndex) else { return [] }
+
+        let memoKey = "\(pageIndex)|\(settings.displayQiraahForArabic ?? "")|\(query)"
+        if PageFindMemo.key == memoKey { return PageFindMemo.matches }
+
         var result: [HighlightedAyahRef] = []
         for segment in pages[pageIndex].segments {
             for ayah in segment.ayahs {
@@ -215,6 +258,8 @@ struct SurahPageReader<Controls: View>: View {
                 }
             }
         }
+        PageFindMemo.key = memoKey
+        PageFindMemo.matches = result
         return result
     }
 
@@ -229,6 +274,16 @@ struct SurahPageReader<Controls: View>: View {
 
     var body: some View {
         let pages = MushafPagination.pages(quran: quranData.quran, qiraah: settings.displayQiraahForArabic)
+
+        // The live find state, computed ONCE per evaluation and shared by the find bar and the pages:
+        // every matching ayah on the page gets its matched substrings in accent, and the whole page drops
+        // its tajweed colors while the query is live (see `MushafPageTextView.searchHighlight`).
+        let liveSearch: (matches: [HighlightedAyahRef], term: String)? = {
+            guard searchActive else { return nil }
+            let term = pageSearchText.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !term.isEmpty else { return nil }
+            return (matchesOnPage(pages), term)
+        }()
 
         Group {
             if pages.isEmpty {
@@ -256,6 +311,7 @@ struct SurahPageReader<Controls: View>: View {
                             highlightedAyah: $highlightedAyah,
                             arrivalHighlight: arrivalHighlight,
                             onClearArrival: onClearArrival,
+                            searchHighlight: liveSearch,
                             isSelecting: isSelecting,
                             selectionSurahID: surah.id,
                             selectedAyahIDs: selectedAyahIDs,
@@ -277,7 +333,7 @@ struct SurahPageReader<Controls: View>: View {
         .safeAreaInset(edge: .bottom, spacing: 0) { pageFooter(pages: pages) }
         .safeAreaInset(edge: .top, spacing: 0) {
             if searchActive {
-                pageFindBar(pages: pages)
+                pageFindBar(pages: pages, matches: liveSearch?.matches ?? [])
                     .transition(.move(edge: .top).combined(with: .opacity))
             }
         }
@@ -361,8 +417,8 @@ struct SurahPageReader<Controls: View>: View {
 
     /// The in-page find bar: a text field, a match counter with up/down, a close button, and - always - an
     /// escape to the whole-Quran search (offered whether or not this page has a match).
-    private func pageFindBar(pages: [MushafPage]) -> some View {
-        let matches = matchesOnPage(pages)
+    /// `matches` comes from the body's shared `liveSearch` computation, so the fold runs once per keystroke.
+    private func pageFindBar(pages: [MushafPage], matches: [HighlightedAyahRef]) -> some View {
         let hasQuery = !pageSearchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
 
         return VStack(spacing: 8) {
@@ -657,7 +713,9 @@ struct SurahPageReader<Controls: View>: View {
                 switch target {
                 case .page:
                     Picker("Page", selection: $pagePickerSelection) {
-                        ForEach(Array(0..<max(pages.count, 1)), id: \.self) { i in
+                        // A plain range, not `Array(...)`: materializing a 604-element array on every
+                        // picker render was pure allocation waste.
+                        ForEach(0..<max(pages.count, 1), id: \.self) { i in
                             Text("Page \(pages.indices.contains(i) ? pages[i].page : i + 1)").tag(i)
                         }
                     }
@@ -780,6 +838,9 @@ private struct MushafPageContent: View {
     /// until the reader's first touch clears it.
     var arrivalHighlight: (ref: HighlightedAyahRef, term: String)? = nil
     var onClearArrival: (() -> Void)? = nil
+    /// The in-page find, while its query is live: every matching ayah's matched substrings in accent,
+    /// tajweed flattened for the whole page (see `MushafPageTextView.searchHighlight`).
+    var searchHighlight: (matches: [HighlightedAyahRef], term: String)? = nil
     /// Multi-select: while on, taps toggle ayahs of `selectionSurahID` (the surah the bulk actions
     /// operate on) instead of marking; selected ayahs carry the accent tint.
     var isSelecting: Bool = false
@@ -894,6 +955,18 @@ private struct MushafPageContent: View {
             let _ = renderTick
             if let rendered = MushafPageRenderCache.renderedIfAvailable(page: page, width: width, height: textHeight) {
                 renderedPageBody(rendered: rendered, width: width, visibleHeight: visibleHeight)
+            } else if let stale = MushafPageRenderCache.nearestRendered(page: page, width: width) {
+                // The height budget moved a few points (a bar appeared/disappeared, the mini player
+                // mounted, a transition is mid-flight): keep the last good render of THIS page on screen
+                // while the exact fit lands in the background - content over a loading flash. Same width
+                // and settings, so the text re-wraps identically; only the fitted size can be a hair off
+                // for the beat the refit takes.
+                renderedPageBody(rendered: stale, width: width, visibleHeight: visibleHeight)
+                    .task(id: "\(width)|\(textHeight)") {
+                        MushafPageRenderCache.renderAsync(page: page, width: width, height: textHeight) {
+                            renderTick &+= 1
+                        }
+                    }
             } else {
                 ProgressView()
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -952,6 +1025,9 @@ private struct MushafPageContent: View {
                     highlightColor: settings.accentColor.color,
                     mark: markedAyah ?? sheetAyahTint,
                     termHighlight: arrivalHighlight.map { (surahID: $0.ref.surahID, ayahID: $0.ref.ayahID, term: $0.term) },
+                    searchHighlight: searchHighlight.map { highlight in
+                        (matches: highlight.matches.map { (surahID: $0.surahID, ayahID: $0.ayahID) }, term: highlight.term)
+                    },
                     selected: isSelecting ? selectedAyahIDs.map { (surahID: selectionSurahID, ayahID: $0) } : [],
                     baselineOffset: rendered.baselineOffset,
                     baselineBand: rendered.baselineBand
@@ -1932,6 +2008,7 @@ enum MushafPageRenderCache {
                 if cache.object(forKey: key) == nil {
                     let rendered = finalize(composer: composer, metrics: metrics, width: width)
                     cache.setObject(rendered, forKey: key)
+                    noteLatest(page: page, width: width, rendered: rendered)
                 }
                 (pendingRenders.removeValue(forKey: key) ?? []).forEach { $0() }
             }
@@ -2004,11 +2081,38 @@ enum MushafPageRenderCache {
 
     /// Cache-only lookup for the render path: never fits inline. The old behavior - a cache miss running the
     /// full fit synchronously in `body` - was the swipe lurch: outrun the prewarm ring and the swipe itself
-    /// paid ~30 compose/measure passes on the main thread. A miss now returns nil and the page shows a brief
-    /// spinner while `renderAsync` does the same work on the prewarm queue.
+    /// paid ~30 compose/measure passes on the main thread. A miss now returns nil and the page shows its
+    /// last-known render (or, truly cold, a brief spinner) while `renderAsync` fits on the prewarm queue.
     static func renderedIfAvailable(page: MushafPage, width: CGFloat, height: CGFloat) -> MushafRenderedPage? {
         lastGeometry = (width, height)
-        return cache.object(forKey: cacheKey(page: page, width: width, height: height, signature: settingsSignature))
+        let hit = cache.object(forKey: cacheKey(page: page, width: width, height: height, signature: settingsSignature))
+        if let hit { noteLatest(page: page, width: width, rendered: hit) }
+        return hit
+    }
+
+    /// The most recent render each page produced or served, by page number. The HEIGHT budget jitters
+    /// constantly - a bar appears, the mini player mounts, a navigation transition mid-flight - and every
+    /// jitter is a new cache key. Without this, each jitter flashed the loading spinner over a page that
+    /// was JUST on screen; with it, the stale render stays up while the exact fit lands quietly.
+    private static var latestByPage: [Int: (width: CGFloat, signature: String, rendered: MushafRenderedPage)] = [:]
+
+    private static func noteLatest(page: MushafPage, width: CGFloat, rendered: MushafRenderedPage) {
+        latestByPage[page.page] = (width, settingsSignature, rendered)
+        // A bounded map: the reader only ever needs the mounted pages and their neighbours.
+        if latestByPage.count > 64 {
+            latestByPage.removeAll(keepingCapacity: true)
+            latestByPage[page.page] = (width, settingsSignature, rendered)
+        }
+    }
+
+    /// A same-page render fitted for a DIFFERENT height budget - shown in place of the spinner while the
+    /// exact fit runs. Same width and same settings only: the text re-wraps identically at the same width
+    /// (so nothing clips), while a different width or changed settings would show genuinely wrong content.
+    static func nearestRendered(page: MushafPage, width: CGFloat) -> MushafRenderedPage? {
+        guard let entry = latestByPage[page.page],
+              Int(entry.width.rounded()) == Int(width.rounded()),
+              entry.signature == settingsSignature else { return nil }
+        return entry.rendered
     }
 
     /// In-flight async renders, keyed like the cache, each holding the completions to run when it lands -
@@ -2043,6 +2147,7 @@ enum MushafPageRenderCache {
         let metrics = fitMetrics(composer: composer, width: width, height: height)
         let rendered = finalize(composer: composer, metrics: metrics, width: width)
         cache.setObject(rendered, forKey: key)
+        noteLatest(page: page, width: width, rendered: rendered)
         return rendered
     }
 }
@@ -2066,6 +2171,10 @@ struct MushafPageTextView: UIViewRepresentable {
     /// A search-arrival term: the matched substrings WITHIN the given ayah render in the accent color -
     /// the page-mode equivalent of the list's HighlightedSnippet coloring.
     var termHighlight: (surahID: Int, ayahID: Int, term: String)? = nil
+    /// The in-page find, while its query is live: EVERY matching ayah gets its matched substrings in the
+    /// accent, and the WHOLE page drops its tajweed colors so the matches are the only color on it - the
+    /// page-mode twin of how matched list rows render (accent snippet, tajweed off).
+    var searchHighlight: (matches: [(surahID: Int, ayahID: Int)], term: String)? = nil
     /// Multi-select: every listed ayah carries the accent selection tint.
     var selected: [(surahID: Int, ayahID: Int)] = []
     /// Forced distance from each line fragment's top to its baseline - see `MushafRenderedPage.baselineOffset`.
@@ -2109,11 +2218,38 @@ struct MushafPageTextView: UIViewRepresentable {
             return (ayahRange, exact.isEmpty ? [ayahRange] : exact)
         }()
 
-        guard !tints.isEmpty || termTarget != nil else { return text }
+        // The in-page find: matched substrings for EVERY matching ayah on the page. An ayah that matched
+        // through a script the page isn't showing (an English query on an Arabic page) has no substring
+        // to color, so it takes the accent whole - the match shown at the granularity the page can express.
+        let searchTerm = searchHighlight?.term.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let searchIsActive = searchHighlight != nil && !searchTerm.isEmpty
+        let searchTargets: [(ayahRange: NSRange, matches: [NSRange])] = {
+            guard searchIsActive, let searchHighlight else { return [] }
+            return searchHighlight.matches.compactMap { match in
+                guard let ayahRange = range(of: (match.surahID, match.ayahID)) else { return nil }
+                let exact = Self.matchRanges(of: searchTerm, in: text.string, within: ayahRange)
+                return (ayahRange, exact.isEmpty ? [ayahRange] : exact)
+            }
+        }()
+
+        guard !tints.isEmpty || termTarget != nil || searchIsActive else { return text }
 
         let mutable = NSMutableAttributedString(attributedString: text)
         for (range, color) in tints {
             mutable.addAttribute(.backgroundColor, value: UIColor(color).withAlphaComponent(0.22), range: range)
+        }
+        if searchIsActive {
+            // While the find query is live the WHOLE page drops its tajweed colors - flattened to the
+            // label color ayah by ayah (headings keep their own styling) - so the accent matches are the
+            // only color on the page, exactly like the list's matched rows.
+            for entry in ranges where entry.ayahID != 0 && NSMaxRange(entry.range) <= mutable.length {
+                mutable.addAttribute(.foregroundColor, value: UIColor.label, range: entry.range)
+            }
+            for target in searchTargets {
+                for range in target.matches {
+                    mutable.addAttribute(.foregroundColor, value: UIColor(highlightColor), range: range)
+                }
+            }
         }
         if let termTarget {
             // The matched ayah drops its tajweed colors while the match is lit - exactly like the list's
@@ -2216,7 +2352,8 @@ struct MushafPageTextView: UIViewRepresentable {
         let key: ((surahID: Int, ayahID: Int)?) -> String = { $0.map { "\($0.surahID):\($0.ayahID)" } ?? "" }
         let termKey = termHighlight.map { "\($0.surahID):\($0.ayahID):\($0.term)" } ?? ""
         let selectedKey = selected.map { "\($0.surahID):\($0.ayahID)" }.sorted().joined(separator: ",")
-        let highlightKey = "\(key(highlight))|\(key(mark))|\(termKey)|\(selectedKey)"
+        let searchKey = searchHighlight.map { "\($0.term)#\($0.matches.map { "\($0.surahID):\($0.ayahID)" }.joined(separator: ","))" } ?? ""
+        let highlightKey = "\(key(highlight))|\(key(mark))|\(termKey)|\(selectedKey)|\(searchKey)"
         if context.coordinator.lastAssignedText === attributed,
            context.coordinator.lastHighlightKey == highlightKey,
            context.coordinator.lastWidth == width {

@@ -1157,6 +1157,32 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
         }
     }
 
+    // The Hadith tab's recent searches - the Quran search history's exact twin (chips over the search bar).
+    @AppStorage("hadithSearchHistoryData") private var hadithSearchHistoryData = Data()
+    var hadithSearchHistory: [String] {
+        get {
+            (try? Self.decoder.decode([String].self, from: hadithSearchHistoryData)) ?? []
+        }
+        set {
+            hadithSearchHistoryData = (try? Self.encoder.encode(Array(newValue.prefix(10)))) ?? Data()
+        }
+    }
+
+    func addHadithSearchHistory(_ query: String) {
+        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+
+        var history = hadithSearchHistory.filter {
+            $0.caseInsensitiveCompare(trimmed) != .orderedSame
+        }
+        history.insert(trimmed, at: 0)
+        hadithSearchHistory = Array(history.prefix(10))
+    }
+
+    func removeHadithSearchHistory(_ query: String) {
+        hadithSearchHistory.removeAll { $0.caseInsensitiveCompare(query) == .orderedSame }
+    }
+
     @AppStorage("englishFontSize") var englishFontSize: Double = Double(UIFont.preferredFont(forTextStyle: .body).pointSize)
 
     // MARK: - Arabic letters & 99 Names

@@ -17,6 +17,16 @@ class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterD
         registerBackgroundRefreshTask()
         scheduleAppRefresh()
         UNUserNotificationCenter.current().delegate = self
+        // A time-zone change (landing after a flight, DST) invalidates every scheduled prayer trigger:
+        // the times must be recomputed and the whole schedule rebuilt for the new zone immediately, not
+        // whenever the next fetch happens to run - stale triggers are how a "Dhuhr/Asr" adhan sounds at
+        // night. The triggers are also zone-pinned (see `makePrayerNotificationRequest`), so even before
+        // this fires nothing drifts to a wrong wall-clock moment.
+        NotificationCenter.default.addObserver(
+            forName: .NSSystemTimeZoneDidChange, object: nil, queue: .main
+        ) { _ in
+            Settings.shared.fetchPrayerTimes(force: true)
+        }
         return true
     }
 
@@ -46,6 +56,15 @@ class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterD
         willPresent notification: UNNotification,
         withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
     ) {
+        // An adhan (or any prayer alert) belongs to its MOMENT. The system can deliver scheduled local
+        // notifications late while the app is open (a suspended runloop, Mac/Catalyst, a slept device) -
+        // if this delivery is well past the instant it was scheduled for, keep it silently in the list
+        // instead of blaring a full adhan at some unrelated time of day.
+        if let intended = notification.request.content.userInfo[Settings.intendedFireDateUserInfoKey] as? TimeInterval,
+           Date().timeIntervalSince1970 - intended > 180 {
+            completionHandler([.list])
+            return
+        }
         completionHandler([.banner, .list, .sound])
     }
 

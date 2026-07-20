@@ -327,7 +327,9 @@ struct ShareAyahSheet: View {
         }
     }
 
-    private static func applyAllahHighlight(to attributed: NSMutableAttributedString, source: String, enabled: Bool) {
+    // Internal (not private): HadithShareSheet applies the SAME Allah-name reddening to its share card
+    // and text preview, so the two share surfaces render the names identically.
+    static func applyAllahHighlight(to attributed: NSMutableAttributedString, source: String, enabled: Bool) {
         guard enabled, attributed.length > 0 else { return }
         for range in allahHighlightNSRanges(in: source) {
             attributed.addAttribute(.foregroundColor, value: UIColor.red, range: range)
@@ -344,7 +346,7 @@ struct ShareAyahSheet: View {
         return attributed
     }
 
-    private static func allahHighlightedSwiftUIText(_ string: String, baseColor: Color, enabled: Bool) -> AttributedString {
+    static func allahHighlightedSwiftUIText(_ string: String, baseColor: Color, enabled: Bool) -> AttributedString {
         var attributed = AttributedString(string)
         attributed.foregroundColor = baseColor
         guard enabled else { return attributed }

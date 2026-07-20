@@ -444,10 +444,13 @@ struct AyahTafsirSheet: View {
                     .environment(\.layoutDirection, .rightToLeft)
             }
 
-            VStack(alignment: .center, spacing: 3) {
+            // The reference header and the translation are English, so they read from the leading edge -
+            // the mirror image of the Arabic run above, which sits trailing.
+            VStack(alignment: .leading, spacing: 3) {
                 Text(tafsirRangeTitle)
                     .font(.caption2.weight(.semibold))
                     .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
 
                 // The translation of every ayah the tafsir covers - one flowing paragraph (numbered
                 // inline when the group spans several ayahs), matching the Arabic run above.
@@ -459,11 +462,12 @@ struct AyahTafsirSheet: View {
                     Text(translations.joined(separator: " "))
                         .font(.caption2)
                         .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
+                        .multilineTextAlignment(.leading)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }
-            .frame(maxWidth: .infinity, alignment: .center)
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)

@@ -114,8 +114,22 @@ enum AccentColor: String, CaseIterable, Identifiable {
         case .pink: return .pink
         case .brown: return .brown
         // Resolved from the user's stored hex. Views observe `settings`, so changing the hex re-renders them.
-        case .custom: return Color(hex: Settings.shared.customAccentColorHex) ?? .green
+        // Cached per hex: `.color`/`.accent1`/`.accent2` are read by nearly every row of every list, and
+        // re-parsing the hex string on each read made the custom theme measurably slower than the built-ins.
+        case .custom: return Self.cachedCustomColor(hex: Settings.shared.customAccentColorHex)
         }
+    }
+
+    private static let customColorLock = NSLock()
+    nonisolated(unsafe) private static var customColorCache: (hex: String, color: Color)?
+
+    private static func cachedCustomColor(hex: String) -> Color {
+        customColorLock.lock()
+        defer { customColorLock.unlock() }
+        if let cached = customColorCache, cached.hex == hex { return cached.color }
+        let parsed = Color(hex: hex) ?? .green
+        customColorCache = (hex, parsed)
+        return parsed
     }
 
     /// Kept so the (many) gradient/second-accent call sites still compile - it is simply the accent itself, so

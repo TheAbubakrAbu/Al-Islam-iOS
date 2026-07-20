@@ -162,6 +162,95 @@ struct QuranView: View {
     @State private var hasMoreHits = true
     private let hitPageSize = 5
 
+    #if os(iOS)
+    // AI (semantic) ayah search: on-device meaning-based results, shown automatically ABOVE the keyword
+    // sections - no mode to enter. "Patience in hardship" finds ayahs about sabr whether or not either
+    // word appears; the keyword sections below stay exhaustive.
+    @ObservedObject private var semanticEngine = SemanticSearchEngine.shared
+    @State private var aiHits: [AISearchHit] = []
+    @State private var aiSearchTask: Task<Void, Never>?
+
+    struct AISearchHit: Identifiable {
+        let surah: Int
+        let ayah: Int
+        let score: Float
+        var id: String { "\(surah)-\(ayah)" }
+    }
+
+    /// Positional (surah, ayah) map matching the semantic corpus's build order - mushaf order over the
+    /// full Hafs ayah set, independent of the display qiraah so the corpus never rebuilds on a riwayah
+    /// switch. Rebuilt cheaply each launch (the vectors themselves load from disk).
+    @MainActor private static var semanticAyahMap: [(surah: Int, ayah: Int)] = []
+
+    private var quranSemanticCorpusID: String { "quran-en" }
+
+    /// Resolve the corpus texts (both bundled translations per ayah, so either's phrasing matches) and
+    /// hand them to the engine. No-ops once ready; cheap when the vectors are already on disk.
+    private func prepareQuranSemanticCorpus() {
+        guard SemanticSearchEngine.isSupported, !quranData.quran.isEmpty else { return }
+        if Self.semanticAyahMap.isEmpty {
+            var map: [(Int, Int)] = []
+            map.reserveCapacity(6236)
+            for surah in quranData.quran {
+                for ayah in surah.ayahs {
+                    map.append((surah.id, ayah.id))
+                }
+            }
+            Self.semanticAyahMap = map
+        }
+        guard !semanticEngine.isReady(quranSemanticCorpusID) else { return }
+        var texts: [String] = []
+        texts.reserveCapacity(Self.semanticAyahMap.count)
+        for surah in quranData.quran {
+            for ayah in surah.ayahs {
+                texts.append("\(ayah.textEnglishSaheeh) \(ayah.textEnglishMustafa)")
+            }
+        }
+        semanticEngine.prepare(corpusID: quranSemanticCorpusID, version: "en1-\(texts.count)", texts: texts)
+    }
+
+    /// True when the live query is one the semantic engine can answer (English text, not a reference).
+    private var aiQueryEligible: Bool {
+        let trimmed = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        return SemanticSearchEngine.isSupported
+            && trimmed.count >= 3
+            && !trimmed.containsArabicLetters
+            && getSurahAndAyah(from: trimmed).surah == nil
+    }
+
+    /// Debounced semantic query - runs alongside (never instead of) the keyword pipeline, so AI results
+    /// sit at the top while the exhaustive keyword sections stay below them.
+    private func runAISearch(query: String) {
+        aiSearchTask?.cancel()
+        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard SemanticSearchEngine.isSupported,
+              trimmed.count >= 3, !trimmed.containsArabicLetters,
+              getSurahAndAyah(from: trimmed).surah == nil else {
+            if !aiHits.isEmpty { withAnimation { aiHits = [] } }
+            return
+        }
+        prepareQuranSemanticCorpus()
+        let corpusID = quranSemanticCorpusID
+
+        aiSearchTask = Task {
+            try? await Task.sleep(nanoseconds: 250_000_000)
+            guard !Task.isCancelled else { return }
+            let results = await semanticEngine.search(corpusID: corpusID, query: trimmed, limit: 12)
+            guard !Task.isCancelled else { return }
+            await MainActor.run {
+                guard trimmed == searchText.trimmingCharacters(in: .whitespacesAndNewlines) else { return }
+                withAnimation {
+                    aiHits = results.compactMap { result in
+                        guard Self.semanticAyahMap.indices.contains(result.index) else { return nil }
+                        let ref = Self.semanticAyahMap[result.index]
+                        return AISearchHit(surah: ref.surah, ayah: ref.ayah, score: result.score)
+                    }
+                }
+            }
+        }
+    }
+    #endif
+
     private static let arFormatter: NumberFormatter = {
         let f = NumberFormatter()
         f.locale = Locale(identifier: "ar")
@@ -225,11 +314,16 @@ struct QuranView: View {
     }
 
     /// Verse hits sorted by surah, then ayah (search results are always grouped by surah).
+    /// Deduped by entry id as the last line of defense: a duplicate id inside a `ForEach` is undefined
+    /// behavior, and during an ANIMATED List update (results apply with `withAnimation`) it hard-crashes
+    /// the diff - the ayah-search crash that survived the off-main-read fix.
     private var verseHitsGroupedBySurah: [(surahId: Int, hits: [VerseIndexEntry])] {
         var grouped = [Int: [VerseIndexEntry]]()
         var orderedSurahIDs: [Int] = []
+        var seenIDs = Set<String>()
 
         for hit in verseHits {
+            guard seenIDs.insert(hit.id).inserted else { continue }
             if grouped[hit.surah] == nil {
                 grouped[hit.surah] = []
                 orderedSurahIDs.append(hit.surah)
@@ -241,6 +335,15 @@ struct QuranView: View {
             guard let hits = grouped[sid] else { return nil }
             return (sid, hits)
         }
+    }
+
+    /// Removes duplicate entries (same id) while keeping order. Duplicates arise when offset-paginated
+    /// pages are fetched against an index that was rebuilt in between (qiraah/translation/settings
+    /// change), so page N+1 can re-contain entries already shown - and duplicate ForEach ids crash
+    /// animated List diffs. Applied at every point that writes `verseHits`.
+    private func dedupedHits(_ hits: [VerseIndexEntry]) -> [VerseIndexEntry] {
+        var seen = Set<String>()
+        return hits.filter { seen.insert($0.id).inserted }
     }
 
     private struct PageJuzQuery {
@@ -1001,7 +1104,23 @@ struct QuranView: View {
             #endif
             .onChange(of: searchText) { txt in
                 handleAyahSearchChange(txt)
+                #if os(iOS)
+                runAISearch(query: txt)
+                #endif
             }
+            #if os(iOS)
+            // Focusing the search field starts the one-time AI vector build (or its disk load) EARLY, so
+            // by the time a query is typed the semantic results usually appear with the keyword ones.
+            .onChange(of: isQuranSearchFocused) { focused in
+                if focused { prepareQuranSemanticCorpus() }
+            }
+            // The one-time vector build finishing mid-query: re-run the pending AI search so the results
+            // appear the moment the corpus is ready, without another keystroke.
+            .onChange(of: semanticEngine.readyCorpora) { ready in
+                guard ready.contains(quranSemanticCorpusID) else { return }
+                runAISearch(query: searchText)
+            }
+            #endif
             #if os(iOS)
             // The moment an ayah push happens while a TEXT search is live, the query travels with it so
             // the destination colors the matched snippet. Route-level, not gesture-level: a tap gesture
@@ -3201,6 +3320,13 @@ struct QuranView: View {
                 .padding(.vertical, 8)
             }
         } else {
+            #if os(iOS)
+            // AI results appear AUTOMATICALLY at the top - no mode to enter. The section shows the
+            // one-time build progress the first time, then ranked semantic matches; the keyword sections
+            // always remain below, so AI adds understanding without ever hiding an exact match.
+            aiResultsSection
+            #endif
+
             if !bestHits.isEmpty {
                 Section(header: bestAyahHeader(count: bestHits.count)) {
                     ForEach(bestHits) { hit in
@@ -3228,6 +3354,78 @@ struct QuranView: View {
             }
         }
     }
+
+    #if os(iOS)
+    /// The semantic results block, shown automatically for any eligible (English text) query: the
+    /// one-time build progress first, then the ranked matches - each the standard ayah search row.
+    /// Deliberately SILENT otherwise (Arabic query, build failed, no semantic matches): an automatic
+    /// section must never nag - the keyword results below always carry the search.
+    @ViewBuilder
+    private var aiResultsSection: some View {
+        if aiQueryEligible {
+            if semanticEngine.isReady(quranSemanticCorpusID) {
+                if !aiHits.isEmpty {
+                    Section(header: aiResultsHeader(count: aiHits.count)) {
+                        ForEach(aiHits) { hit in
+                            aiHitRow(hit)
+                        }
+                    }
+                }
+            } else if !semanticEngine.failedCorpora.contains(quranSemanticCorpusID) {
+                Section { AISearchStatusRow(progress: semanticEngine.progress(quranSemanticCorpusID), failed: false) }
+            }
+        }
+    }
+
+    private func aiResultsHeader(count: Int) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: "sparkles")
+            Text("AI RESULTS")
+
+            Spacer()
+
+            Text(String(count))
+                .font(.caption.weight(.semibold))
+                .monospacedDigit()
+                .foregroundStyle(settings.accentColor.color)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .conditionalGlassEffect()
+                .padding(.vertical, -16)
+        }
+    }
+
+    /// One semantic match - the standard compact ayah search row (same fonts, tajweed-off rule, arrival
+    /// term travel) so AI results read exactly like every other ayah result.
+    @ViewBuilder
+    private func aiHitRow(_ hit: AISearchHit) -> some View {
+        if let surah = quranData.surah(hit.surah),
+           let ayah = quranData.ayah(surah: hit.surah, ayah: hit.ayah) {
+            quranNavigationLink(route: .ayahs(surahID: surah.id, ayah: ayah.id)) {
+                AyahSearchRow(
+                    surahName: surah.nameTransliteration,
+                    surah: hit.surah,
+                    ayah: hit.ayah,
+                    query: searchText,
+                    arabic: ayah.displayArabicText(surahId: hit.surah, clean: settings.cleanArabicText),
+                    transliteration: ayah.textTransliteration,
+                    englishSaheeh: ayah.textEnglishSaheeh,
+                    englishMustafa: ayah.textEnglishMustafa,
+                    page: ayah.page,
+                    juz: ayah.juz,
+                    favoriteSurahs: Set(settings.favoriteSurahs),
+                    bookmarkedAyahs: Set(settings.bookmarkedAyahs.map(\.id)),
+                    searchText: $searchText,
+                    scrollToSurahID: $scrollToSurahID,
+                    qiraahRefreshKey: settings.displayQiraah,
+                    compact: true,
+                    disableTajweedColors: true
+                )
+                .id("ayah-results-ai-\(surah.id)-\(ayah.id)")
+            }
+        }
+    }
+    #endif
 
     private func bestAyahHeader(count: Int) -> some View {
         HStack {
@@ -3456,7 +3654,7 @@ struct QuranView: View {
                     guard !Task.isCancelled else { return }
                     await MainActor.run {
                         guard query == searchText.trimmingCharacters(in: .whitespacesAndNewlines) else { return }
-                        verseHits = allHits
+                        verseHits = dedupedHits(allHits)
                         hasMoreHits = false
                     }
                 }
@@ -3491,7 +3689,10 @@ struct QuranView: View {
             guard !Task.isCancelled else { return }
             await MainActor.run {
                 guard query == searchText.trimmingCharacters(in: .whitespacesAndNewlines) else { return }
-                verseHits.append(contentsOf: moreHits)
+                // Append only entries not already shown - the index can be rebuilt between pages, which
+                // shifts offsets and lets a page overlap the last one (duplicate ids crash the List diff).
+                let existing = Set(verseHits.map(\.id))
+                verseHits.append(contentsOf: moreHits.filter { !existing.contains($0.id) })
                 hasMoreHits = moreAvail
             }
         }
@@ -3546,7 +3747,7 @@ struct QuranView: View {
                 // appending rows mid-scroll doesn't re-animate the whole list (see the `.id(...)` note above).
                 prewarmHighlightCaches(for: first)
                 withAnimation {
-                    verseHits = first
+                    verseHits = dedupedHits(first)
                     hasMoreHits = more
                 }
             }

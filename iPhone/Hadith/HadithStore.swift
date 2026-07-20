@@ -129,6 +129,35 @@ final class HadithStore: ObservableObject {
                 at: 0
             )
         }
+        persistBookmarks()
+    }
+
+    // MARK: Notes (the bookmarked-ayah rule: a note lives on a bookmark)
+
+    func note(slug: String, idInBook: Int) -> String? {
+        let note = bookmarks.first { $0.slug == slug && $0.idInBook == idInBook }?.note
+        return (note?.isEmpty ?? true) ? nil : note
+    }
+
+    /// Attach/replace the note on this hadith's bookmark - bookmarking it first when needed, exactly like
+    /// notes on ayahs. An empty note clears it (the bookmark itself stays).
+    func setNote(book: HadithCatalogBook, hadith: HadithBookData.Hadith, note: String) {
+        let trimmed = note.trimmingCharacters(in: .whitespacesAndNewlines)
+        if bookmarks.firstIndex(where: { $0.slug == book.slug && $0.idInBook == hadith.idInBook }) == nil {
+            toggleBookmark(book: book, hadith: hadith)
+        }
+        guard let index = bookmarks.firstIndex(where: { $0.slug == book.slug && $0.idInBook == hadith.idInBook }) else { return }
+        bookmarks[index].note = trimmed.isEmpty ? nil : trimmed
+        persistBookmarks()
+    }
+
+    func removeNote(slug: String, idInBook: Int) {
+        guard let index = bookmarks.firstIndex(where: { $0.slug == slug && $0.idInBook == idInBook }) else { return }
+        bookmarks[index].note = nil
+        persistBookmarks()
+    }
+
+    private func persistBookmarks() {
         if let data = try? JSONEncoder().encode(bookmarks) {
             UserDefaults.standard.set(data, forKey: Self.bookmarksKey)
         }

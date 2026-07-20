@@ -87,6 +87,10 @@ enum MushafPageFitter {
             result = (low * 2).rounded(.down) / 2
         }
 
+        // Bounded, unlike before: every (page, geometry, size, font) combination lived forever, so a
+        // session that toured fonts/sizes/rotations grew the map without limit. Entries are tiny, so the
+        // cap is generous - and a full reset is cheaper than LRU bookkeeping on this hot path.
+        if cache.count > 4096 { cache.removeAll(keepingCapacity: true) }
         cache[key] = result
         return result
     }

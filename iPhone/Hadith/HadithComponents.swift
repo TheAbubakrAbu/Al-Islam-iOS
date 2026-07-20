@@ -347,6 +347,9 @@ struct HadithRow: View {
     var fontScale: CGFloat = 1
 
     @State private var showShareSheet = false
+    @State private var showNoteSheet = false
+    @State private var noteDraft = ""
+    @State private var showRespectAlert = false
 
     /// "Sahih al-Bukhari 1234" - the standard way a hadith is cited.
     private var reference: String {
@@ -355,6 +358,10 @@ struct HadithRow: View {
 
     private var isBookmarked: Bool {
         store.isBookmarked(slug: book.slug, idInBook: hadith.idInBook)
+    }
+
+    private var noteText: String? {
+        store.note(slug: book.slug, idInBook: hadith.idInBook)
     }
 
     private var arabicFontSize: CGFloat {
@@ -464,12 +471,52 @@ struct HadithRow: View {
                     .fixedSize(horizontal: false, vertical: !compact)
                 }
             }
+
+            // The bookmark's note, shown in the reading row exactly like a noted ayah - quiet, under the text.
+            if !compact, let note = noteText {
+                HStack(alignment: .top, spacing: 6) {
+                    Image(systemName: "note.text")
+                        .font(.caption2)
+                        .foregroundStyle(settings.accentColor.color)
+
+                    Text(note)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .padding(.top, 2)
+            }
         }
         .padding(.vertical, compact ? 2 : 4)
         .contextMenu { menuContent }
         .sheet(isPresented: $showShareSheet) {
             HadithShareSheet(book: book, hadith: hadith)
                 .smallMediumSheetPresentation()
+        }
+        .sheet(isPresented: $showNoteSheet) {
+            // The ayah note editor, for a hadith: same sheet, same respect check, saved onto the bookmark.
+            NoteEditorSheet(
+                title: "Note for \(reference)",
+                text: $noteDraft,
+                onAttemptSave: { text in
+                    if textContainsProfanity(text) {
+                        showRespectAlert = true
+                        return false
+                    }
+                    withAnimation(.easeInOut) {
+                        store.setNote(book: book, hadith: hadith, note: text)
+                    }
+                    return true
+                },
+                onCancel: {},
+                onSave: {}
+            )
+            .smallMediumSheetPresentation()
+        }
+        .confirmationDialog("Note not saved", isPresented: $showRespectAlert, titleVisibility: .visible) {
+            Button("OK") {}
+        } message: {
+            Text("Please keep notes Islamic and respectful.")
         }
     }
 
@@ -479,6 +526,8 @@ struct HadithRow: View {
         Text(reference)
             .foregroundStyle(.secondary)
 
+        // The AyahRow menu's exact grammar: Bookmark, then the note actions, a divider, then Copy and
+        // Share (in that order) - so the two rows read as one system.
         if isBookmarked {
             Button(role: .destructive) {
                 settings.hapticFeedback()
@@ -499,22 +548,41 @@ struct HadithRow: View {
             }
         }
 
+        Button {
+            settings.hapticFeedback()
+            noteDraft = noteText ?? ""
+            showNoteSheet = true
+        } label: {
+            Label(noteText == nil ? "Add Note" : "Edit Note", systemImage: "note.text")
+        }
+
+        if noteText != nil {
+            Button(role: .destructive) {
+                settings.hapticFeedback()
+                withAnimation(.easeInOut) {
+                    store.removeNote(slug: book.slug, idInBook: hadith.idInBook)
+                }
+            } label: {
+                Label("Remove Note", systemImage: "minus.circle")
+            }
+        }
+
         Divider()
 
         // ONE share surface and ONE copy, both driven by the same composition options - the pile of
         // per-field copy actions collapsed into the Share Hadith sheet.
         Button {
             settings.hapticFeedback()
-            showShareSheet = true
+            UIPasteboard.general.string = HadithShareSheet.composedText(book: book, hadith: hadith)
         } label: {
-            Label("Share Hadith", systemImage: "square.and.arrow.up")
+            Label("Copy Hadith", systemImage: "doc.on.doc")
         }
 
         Button {
             settings.hapticFeedback()
-            UIPasteboard.general.string = HadithShareSheet.composedText(book: book, hadith: hadith)
+            showShareSheet = true
         } label: {
-            Label("Copy Hadith", systemImage: "doc.on.doc")
+            Label("Share Hadith", systemImage: "square.and.arrow.up")
         }
     }
 }
@@ -609,6 +677,10 @@ struct HadithBookmarkRow: View {
 
     let bookmark: HadithBookmark
 
+    @State private var showNoteSheet = false
+    @State private var noteDraft = ""
+    @State private var showRespectAlert = false
+
     var body: some View {
         if let book = HadithCatalogBook.bySlug[bookmark.slug] {
             NavigationLink {
@@ -652,11 +724,46 @@ struct HadithBookmarkRow: View {
                                 .foregroundColor(.secondary)
                                 .lineLimit(1)
                         }
+
+                        // The bookmark's note - the Quran bookmark rows' quiet one-liner.
+                        if let note = bookmark.note, !note.isEmpty {
+                            HStack(alignment: .top, spacing: 4) {
+                                Image(systemName: "note.text")
+                                    .font(.caption2)
+                                    .foregroundStyle(settings.accentColor.color)
+
+                                Text(note)
+                                    .font(.caption2)
+                                    .foregroundStyle(.secondary)
+                                    .lineLimit(2)
+                            }
+                        }
                     }
                 }
                 .padding(.vertical, 2)
             }
             .contextMenu {
+                Button {
+                    settings.hapticFeedback()
+                    noteDraft = bookmark.note ?? ""
+                    showNoteSheet = true
+                } label: {
+                    Label(bookmark.note == nil ? "Add Note" : "Edit Note", systemImage: "note.text")
+                }
+
+                if bookmark.note != nil {
+                    Button(role: .destructive) {
+                        settings.hapticFeedback()
+                        withAnimation(.easeInOut) {
+                            store.removeNote(slug: bookmark.slug, idInBook: bookmark.idInBook)
+                        }
+                    } label: {
+                        Label("Remove Note", systemImage: "minus.circle")
+                    }
+                }
+
+                Divider()
+
                 Button(role: .destructive) {
                     settings.hapticFeedback()
                     let placeholder = HadithBookData.Hadith(
@@ -667,6 +774,34 @@ struct HadithBookmarkRow: View {
                 } label: {
                     Label("Remove Bookmark", systemImage: "bookmark.fill")
                 }
+            }
+            .sheet(isPresented: $showNoteSheet) {
+                NoteEditorSheet(
+                    title: "Note for \(bookmark.reference)",
+                    text: $noteDraft,
+                    onAttemptSave: { text in
+                        if textContainsProfanity(text) {
+                            showRespectAlert = true
+                            return false
+                        }
+                        let placeholder = HadithBookData.Hadith(
+                            id: -1, idInBook: bookmark.idInBook, chapterId: bookmark.chapterId ?? -1,
+                            arabic: "", english: HadithBookData.Hadith.EnglishText(narrator: "", text: "")
+                        )
+                        withAnimation(.easeInOut) {
+                            store.setNote(book: book, hadith: placeholder, note: text)
+                        }
+                        return true
+                    },
+                    onCancel: {},
+                    onSave: {}
+                )
+                .smallMediumSheetPresentation()
+            }
+            .confirmationDialog("Note not saved", isPresented: $showRespectAlert, titleVisibility: .visible) {
+                Button("OK") {}
+            } message: {
+                Text("Please keep notes Islamic and respectful.")
             }
         }
     }
@@ -858,6 +993,9 @@ struct HadithShareSheet: View {
 
     @State private var generatedImage: UIImage?
     @State private var didInit = false
+    /// ShareAyahSheet's generation guard: rapid toggle flips overlap renders, and without this the LAST
+    /// render to FINISH won - a stale frame could land over the current options' image.
+    @State private var renderGeneration = 0
 
     /// How many include-parts are on - the last one standing can't be turned off (an empty share is nothing).
     private var enabledPartCount: Int {
@@ -891,9 +1029,10 @@ struct HadithShareSheet: View {
                         }
                     } else {
                         ScrollView {
-                            Text(composed)
+                            // Same Allah-name reddening the Share Ayah text preview applies - the live
+                            // hadith rows highlight the names, so the share preview must too.
+                            Text(ShareAyahSheet.allahHighlightedSwiftUIText(composed, baseColor: .white, enabled: settings.highlightAllahNames))
                                 .font(.body)
-                                .foregroundColor(.white)
                                 .textSelection(.enabled)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                                 .padding()
@@ -1023,9 +1162,13 @@ struct HadithShareSheet: View {
 
     /// Renders off the main thread, ShareAyah's way, so toggling never hitches the sheet.
     private func generatePreviewImage() {
+        renderGeneration += 1
+        let generation = renderGeneration
         DispatchQueue.global(qos: .userInitiated).async {
             let image = renderImage()
             DispatchQueue.main.async {
+                // A newer toggle superseded this render - drop the stale frame (the newer one is coming).
+                guard generation == renderGeneration else { return }
                 withAnimation(.easeInOut(duration: 0.15)) { generatedImage = image }
             }
         }
@@ -1058,9 +1201,13 @@ struct HadithShareSheet: View {
         let text = NSMutableAttributedString()
         func append(_ string: String, font: UIFont, color: UIColor, alignment: NSTextAlignment) {
             if text.length > 0 { text.append(NSAttributedString(string: "\n\n")) }
-            text.append(NSAttributedString(string: string, attributes: [
+            let piece = NSMutableAttributedString(string: string, attributes: [
                 .font: font, .foregroundColor: color, .paragraphStyle: paragraph(alignment)
-            ]))
+            ])
+            // The Share Ayah card's Allah-name reddening, applied to every part (Arabic pattern match +
+            // English "Allah") - the live rows highlight the names, so the shared image must too.
+            ShareAyahSheet.applyAllahHighlight(to: piece, source: string, enabled: settings.highlightAllahNames)
+            text.append(piece)
         }
 
         if includeReference { append("\(book.englishTitle) \(hadith.idInBook)", font: captionFont, color: accent, alignment: .center) }

@@ -1695,12 +1695,15 @@ extension Settings {
 
         guard let date = Calendar.current.date(from: comps), date > Date() else { return nil }
 
+        // Pinned to the scheduling zone + stamped with its intended instant, same as the prayer requests.
+        comps.timeZone = Calendar.current.timeZone
         let trigger = UNCalendarNotificationTrigger(dateMatching: comps, repeats: false)
 
         let content = UNMutableNotificationContent()
         content.title = AppIdentifiers.appName
         content.body  = "Please open the app to refresh today’s prayer times and notifications."
         content.sound = .default
+        content.userInfo[Self.intendedFireDateUserInfoKey] = date.timeIntervalSince1970
         #if os(iOS)
         if #available(iOS 15.0, *) {
             content.interruptionLevel = .timeSensitive
@@ -1919,6 +1922,10 @@ extension Settings {
         "Fajr", "Dhuhr", "Jumuah", "Dhuhr/Asr", "Asr", "Maghrib", "Maghrib/Isha", "Isha"
     ]
 
+    /// userInfo key carrying the absolute instant (epoch seconds) a scheduled notification is FOR. The
+    /// foreground delegate compares it to "now" at delivery and silences anything that arrives late.
+    static let intendedFireDateUserInfoKey = "intendedFireDate"
+
     private func prayerNotificationSound(for prayer: Prayer, minutesBefore: Int?) -> UNNotificationSound {
         // Only an obligatory prayer's AT-TIME notification may play the adhan; the non-obligatory times
         // (Shurooq, Duhaa, Islamic Midnight, Last Third) always use the default sound.
@@ -1954,13 +1961,23 @@ extension Settings {
         content.title = AppIdentifiers.appName
         content.body = buildBody(prayer: prayer, minutesBefore: minutes, city: city)
         content.sound = prayerNotificationSound(for: prayer, minutesBefore: minutes)
+        // The absolute instant this notification is FOR. The foreground delegate reads it and silences
+        // any delivery that arrives well past its moment - an adhan belongs to its prayer time, never to
+        // "whenever the system got around to it".
+        content.userInfo[Self.intendedFireDateUserInfoKey] = triggerTime.timeIntervalSince1970
         #if os(iOS)
         if #available(iOS 15.0, *) {
             content.interruptionLevel = .timeSensitive
         }
         #endif
 
-        let comps = Calendar.current.dateComponents([.year, .month, .day, .hour, .minute, .second], from: triggerTime)
+        var comps = Calendar.current.dateComponents([.year, .month, .day, .hour, .minute, .second], from: triggerTime)
+        // Pin the trigger to the zone the prayer time was computed in. Without an explicit timeZone,
+        // iOS re-interprets these WALL-CLOCK components in whatever zone the device is in at delivery -
+        // fly across time zones and a "1:30 PM Dhuhr/Asr" fires when the NEW local clock reads 1:30,
+        // which can land anywhere in the day (the "Dhuhr/Asr adhan past Isha" report). Pinned, the
+        // trigger stays the absolute instant the prayer actually occurs.
+        comps.timeZone = Calendar.current.timeZone
         let trigger = UNCalendarNotificationTrigger(dateMatching: comps, repeats: false)
 
         let id = "\(prayer.nameTransliteration)-\(minutes ?? 0)-\(comps.year ?? 0)-\(comps.month ?? 0)-\(comps.day ?? 0)"
@@ -2017,7 +2034,10 @@ extension Settings {
         }
 
         guard let finalDate else { return nil }
-        let gregorianComps = gregorianCalendar.dateComponents([.year, .month, .day, .hour, .minute], from: finalDate)
+        var gregorianComps = gregorianCalendar.dateComponents([.year, .month, .day, .hour, .minute], from: finalDate)
+        // Pinned to the scheduling zone + stamped with its intended instant, same as the prayer
+        // requests - see `makePrayerNotificationRequest`.
+        gregorianComps.timeZone = gregorianCalendar.timeZone
 
         let content = UNMutableNotificationContent()
         content.title = AppIdentifiers.appName
@@ -2025,6 +2045,7 @@ extension Settings {
             ? "\(titleText) is today - \(eventSubTitle). Sent 30 minutes before Fajr."
             : "\(titleText) is today - \(eventSubTitle)."
         content.sound = .default
+        content.userInfo[Self.intendedFireDateUserInfoKey] = finalDate.timeIntervalSince1970
         #if os(iOS)
         if #available(iOS 15.0, *) {
             content.interruptionLevel = .timeSensitive
