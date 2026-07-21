@@ -102,18 +102,6 @@ struct HadithSettingsSheet: View {
         )
     }
 
-    /// "Fit Page to Screen" for the paged reader, the mushaf setting's twin: an overflowing page's text
-    /// shrinks just enough to fit; off reads at exactly the chosen sizes and scrolls.
-    private var fitPageBinding: Binding<Bool> {
-        Binding(
-            get: { UserDefaults.standard.object(forKey: "hadithFitPage") == nil ? true : UserDefaults.standard.bool(forKey: "hadithFitPage") },
-            set: { newValue in
-                settings.hapticFeedback()
-                UserDefaults.standard.set(newValue, forKey: "hadithFitPage")
-            }
-        )
-    }
-
     private var settingsList: some View {
             List {
                 Group {
@@ -140,6 +128,8 @@ struct HadithSettingsSheet: View {
                             }
                         ).animation(.easeInOut))
 
+                        // No separate narrator toggle: the narrator is part of the English text and
+                        // simply shows whenever English does - one less switch to reason about.
                         Toggle("Show English", isOn: Binding(
                             get: { settings.showHadithEnglish },
                             set: { newValue in
@@ -150,15 +140,10 @@ struct HadithSettingsSheet: View {
                                 }
                             }
                         ).animation(.easeInOut))
-
-                        if settings.showHadithEnglish {
-                            Toggle("Show Narrator Line", isOn: $settings.showHadithNarrator.animation(.easeInOut))
-                                .onChange(of: settings.showHadithNarrator) { _ in settings.hapticFeedback() }
-                        }
                     }
 
                     if settings.showHadithArabic {
-                        Section(header: Text("ARABIC FONT"), footer: Text("Uthmani and IndoPak are classical script styles; Basic is the standard system font. This choice is shared with the other Arabic screens (Adhkar, Duas, 99 Names, Arabic Alphabet).")) {
+                        Section(header: Text("ARABIC FONT"), footer: Text("Uthmani and IndoPak are classical script styles; Basic is the standard system font.")) {
                             IslamArabicFontPicker()
 
                             // The Quran settings' font controls, one for one: system-size toggle,
@@ -197,17 +182,9 @@ struct HadithSettingsSheet: View {
                         }
                     }
 
-                    Section(header: Text("PAGE VIEW")) {
-                        VStack(alignment: .leading) {
-                            Toggle("Fit Page to Screen", isOn: fitPageBinding.animation(.easeInOut))
-                                .font(.subheadline)
-
-                            Text("In page mode, shrinks an overflowing hadith's text just enough that its page fits on one screen. Never larger than your chosen font sizes. Turn this off to read at exactly the sizes above and scroll.")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                                .padding(.vertical, 2)
-                        }
-                    }
+                    // No "Fit Page" toggle: hadith pages ALWAYS fit the screen (the pagination packs
+                    // whole hadiths per page at the chosen sizes) - unlike the mushaf, where fixed text
+                    // per page makes fitting a real choice.
 
                     downloadedBooksSection
                 }
@@ -364,6 +341,25 @@ struct HadithRow: View {
         store.note(slug: book.slug, idInBook: hadith.idInBook)
     }
 
+    /// First hadith id of each chapter, memoized per (book, chapter) - the row shows the hadith's
+    /// position WITHIN its chapter ("1 -" for the first hadith of a chapter that starts at #100),
+    /// the ayah row's within-surah numbering, for hadiths.
+    @MainActor private static var chapterStartCache: [String: Int] = [:]
+
+    private var chapterHadithNumber: Int? {
+        let key = "\(book.slug)-\(hadith.chapterId)"
+        if let start = Self.chapterStartCache[key] {
+            return hadith.idInBook - start + 1
+        }
+        // Only resolvable once the book is in the session cache - daily/summary rows before the book
+        // loads simply omit the chapter position.
+        guard let data = HadithStore.shared.cachedBook(book.slug),
+              let start = data.hadiths.lazy.filter({ $0.chapterId == hadith.chapterId }).map(\.idInBook).min()
+        else { return nil }
+        Self.chapterStartCache[key] = start
+        return hadith.idInBook - start + 1
+    }
+
     private var arabicFontSize: CGFloat {
         (compact ? UIFont.preferredFont(forTextStyle: .subheadline).pointSize + 2 : settings.hadithArabicFontSize) * fontScale
     }
@@ -375,9 +371,20 @@ struct HadithRow: View {
     var body: some View {
         VStack(alignment: .leading, spacing: compact ? 5 : 10) {
             HStack(spacing: 8) {
-                // Number + book title as ONE glass capsule (the surah number pill's language), tinted
-                // when bookmarked - and tapping IT toggles the bookmark, like the surah badge favorites.
-                HStack(spacing: 6) {
+                // ONE glass capsule (the ayah row's "S:A" pill language): the hadith's position WITHIN
+                // its chapter first, then the book-wide citation - "3 - 102 Sahih al-Bukhari" is the
+                // 3rd hadith of a chapter that starts at #100. Tinted when bookmarked, and tapping it
+                // toggles the bookmark, exactly like the ayah pill.
+                HStack(spacing: 5) {
+                    if let chapterNumber = chapterHadithNumber {
+                        Text("\(chapterNumber)")
+                            .font((compact ? Font.caption2 : .subheadline).monospacedDigit().weight(.semibold))
+
+                        Text("-")
+                            .font((compact ? Font.caption2 : .caption).weight(.semibold))
+                            .opacity(0.55)
+                    }
+
                     Text("\(hadith.idInBook)")
                         .font((compact ? Font.caption2 : .subheadline).monospacedDigit().weight(.semibold))
 
@@ -388,7 +395,7 @@ struct HadithRow: View {
                 .lineLimit(1)
                 .minimumScaleFactor(0.6)
                 .padding(.horizontal, compact ? 6 : 8)
-                .padding(.vertical, compact ? 3 : 4)
+                .frame(height: compact ? 22 : 28)
                 .conditionalGlassEffect(
                     useColor: isBookmarked ? 0.3 : nil,
                     customTint: isBookmarked ? settings.accentColor.color : nil,
@@ -402,21 +409,19 @@ struct HadithRow: View {
 
                 Spacer(minLength: 0)
 
-                if isBookmarked {
-                    Image(systemName: "bookmark.fill")
-                        .font(.caption2)
-                        .foregroundStyle(settings.accentColor.color)
-                }
-
-                // The context menu, reachable without a long-press.
+                // The context menu, reachable without a long-press - the AyahRow actions button's exact
+                // sizing (icon in a glass square matching the pill's height). When bookmarked, the icon
+                // IS the bookmark, so the state and the menu share one control instead of two.
                 Menu {
                     menuContent
                 } label: {
-                    Image(systemName: "ellipsis.circle")
-                        .font(compact ? .caption : .subheadline)
-                        .foregroundStyle(settings.accentColor.color)
-                        .padding(4)
-                        .conditionalGlassEffect(circle: true)
+                    Image(systemName: isBookmarked ? "bookmark.circle.fill" : "ellipsis.circle")
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(width: compact ? 19 : 25, height: compact ? 19 : 25)
+                        .foregroundColor(settings.accentColor.color)
+                        .conditionalGlassEffect()
+                        .frame(width: compact ? 22 : 28, height: compact ? 22 : 28)
                         .contentShape(Rectangle())
                 }
             }
@@ -444,7 +449,9 @@ struct HadithRow: View {
             }
 
             if settings.showHadithEnglish {
-                if settings.showHadithNarrator, !hadith.english.narrator.isEmpty {
+                // The narrator is PART of the English text - it shows whenever English does (there is no
+                // separate toggle; a hadith without its isnad line reads incomplete).
+                if !hadith.english.narrator.isEmpty {
                     HighlightedSnippet(
                         source: hadith.english.narrator,
                         term: searchText,
@@ -587,6 +594,57 @@ struct HadithRow: View {
     }
 }
 
+/// The Quran tab's recent-searches chips, shared by the Hadith tab root AND the book view - one
+/// horizontal row of tappable glass chips over the search bar (tap to re-run, ✕ to remove). One
+/// component so every hadith search surface reads identically.
+struct HadithSearchHistoryChips: View {
+    @ObservedObject var settings = Settings.shared
+    @Binding var searchText: String
+
+    var body: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(settings.hadithSearchHistory, id: \.self) { query in
+                    chip(query: query)
+                }
+            }
+        }
+    }
+
+    private func chip(query: String) -> some View {
+        HStack(spacing: 4) {
+            Button {
+                settings.hapticFeedback()
+                withAnimation {
+                    searchText = query
+                    settings.addHadithSearchHistory(query)
+                    self.endEditing()
+                }
+            } label: {
+                Text(query)
+                    .font(.caption)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+            }
+
+            Button {
+                settings.hapticFeedback()
+                withAnimation(.easeInOut) {
+                    settings.removeHadithSearchHistory(query)
+                }
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.caption2.bold())
+                    .padding(.trailing, 8)
+            }
+        }
+        .foregroundStyle(settings.accentColor.color)
+        .conditionalGlassEffect(useColor: 0.25)
+    }
+}
+
 /// One line of hadith Arabic in the Islam face, trailing - with commas falling back to the system
 /// face (the classical faces draw "\u{060C}" as an ornament circle). Every preview row renders through
 /// this so bookmarks, Hadith of the Day, Last Read, and the summary tiles all match the reader.
@@ -684,7 +742,9 @@ struct HadithBookmarkRow: View {
     var body: some View {
         if let book = HadithCatalogBook.bySlug[bookmark.slug] {
             NavigationLink {
-                HadithReferenceView(book: book, chapter: nil, hadith: bookmark.idInBook)
+                // Books → Chapters → Hadiths: land in the book, which auto-pushes the hadith's chapter
+                // scrolled to it - backing out of the hadith always shows the chapter list.
+                HadithBookView(book: book, autoOpenHadithID: bookmark.idInBook)
             } label: {
                 HStack(spacing: 8) {
                     // The same accent-tinted glass number badge the Quran's bookmarked ayah rows lead with.
@@ -708,11 +768,13 @@ struct HadithBookmarkRow: View {
                             .lineLimit(1)
                             .minimumScaleFactor(0.7)
 
-                        if let arabic = bookmark.arabicPreview, !arabic.isEmpty {
+                        // The reading rows' exact visibility rules: Arabic and English previews follow
+                        // the same toggles the reader uses, so a bookmark looks like its hadith.
+                        if settings.showHadithArabic, let arabic = bookmark.arabicPreview, !arabic.isEmpty {
                             HadithArabicPreview(text: arabic)
                         }
 
-                        if let english = bookmark.englishPreview, !english.isEmpty {
+                        if settings.showHadithEnglish, let english = bookmark.englishPreview, !english.isEmpty {
                             Text(english)
                                 .font(.caption)
                                 .foregroundColor(.secondary)
@@ -862,7 +924,7 @@ struct HadithBookmarksListView: View {
     var body: some View {
         List {
             Group {
-                Section(header: SectionPillHeader(title: "BOOKMARKED HADITHS", count: store.bookmarks.count)) {
+                Section(header: SectionPillHeader(title: "BOOKMARKS", count: store.bookmarks.count)) {
                     ForEach(store.bookmarks) { bookmark in
                         HadithBookmarkRow(bookmark: bookmark)
                     }
@@ -878,7 +940,7 @@ struct HadithBookmarksListView: View {
         }
         .applyConditionalListStyle()
         .compactListSectionSpacing()
-        .navigationTitle("Bookmarked Hadiths")
+        .navigationTitle("Bookmarks")
         .navigationBarTitleDisplayMode(.inline)
     }
 }
@@ -973,6 +1035,23 @@ struct HadithShareSheet: View {
     @AppStorage("shareHadithNarrator") private var includeNarrator = true
     @AppStorage("shareHadithReference") private var includeReference = true
     @AppStorage("shareHadithAsImage") private var shareAsImage = true
+    // The Share Ayah sheet's applicable options, for hadith: the Arabic face, tashkeel, and the note.
+    @AppStorage("shareHadithFontFace") private var shareFontFaceRaw = ""
+    @AppStorage("shareHadithHideTashkeel") private var hideTashkeel = false
+    @AppStorage("shareHadithIncludeNote") private var includeNote = true
+
+    /// The share's Arabic face - defaults to the reading face until the user picks one here.
+    private var shareFace: Settings.IslamArabicFace {
+        Settings.IslamArabicFace(rawValue: shareFontFaceRaw) ?? settings.islamArabicFace
+    }
+
+    private var shareFaceBinding: Binding<Settings.IslamArabicFace> {
+        Binding(get: { shareFace }, set: { shareFontFaceRaw = $0.rawValue })
+    }
+
+    private var noteText: String? {
+        HadithStore.shared.note(slug: book.slug, idInBook: hadith.idInBook)
+    }
 
     private var composed: String {
         Self.composedText(book: book, hadith: hadith)
@@ -985,9 +1064,19 @@ struct HadithShareSheet: View {
         func flag(_ key: String) -> Bool { defaults.object(forKey: key) == nil ? true : defaults.bool(forKey: key) }
         var parts: [String] = []
         if flag("shareHadithReference") { parts.append("[\(book.englishTitle) \(hadith.idInBook)]") }
-        if flag("shareHadithArabic"), !hadith.arabic.isEmpty { parts.append(hadith.arabic) }
+        if flag("shareHadithArabic"), !hadith.arabic.isEmpty {
+            // Hide Tashkeel strips the diacritics for a cleaner shared text, the Share Ayah option's twin.
+            let arabic = defaults.bool(forKey: "shareHadithHideTashkeel")
+                ? hadith.arabic.removingArabicDiacriticsAndSigns
+                : hadith.arabic
+            parts.append(arabic)
+        }
         if flag("shareHadithNarrator"), !hadith.english.narrator.isEmpty { parts.append(hadith.english.narrator) }
         if flag("shareHadithEnglish"), !hadith.english.text.isEmpty { parts.append(hadith.english.text) }
+        if flag("shareHadithIncludeNote"),
+           let note = HadithStore.shared.note(slug: book.slug, idInBook: hadith.idInBook) {
+            parts.append("Note: \(note)")
+        }
         return parts.joined(separator: "\n\n")
     }
 
@@ -1054,6 +1143,12 @@ struct HadithShareSheet: View {
 
                         if !hadith.arabic.isEmpty {
                             toggle("Arabic", $includeArabic, disabled: includeArabic && enabledPartCount == 1)
+
+                            // Applicable Share Ayah options, one for one: tashkeel off for a cleaner
+                            // card, and the Arabic face choice (segmented, like the ayah sheet's).
+                            if includeArabic {
+                                toggle("Hide Tashkeel", $hideTashkeel, disabled: false)
+                            }
                         }
 
                         if !hadith.english.narrator.isEmpty {
@@ -1063,9 +1158,24 @@ struct HadithShareSheet: View {
                         if !hadith.english.text.isEmpty {
                             toggle("English", $includeEnglish, disabled: includeEnglish && enabledPartCount == 1)
                         }
+
+                        if noteText != nil {
+                            toggle("Include Note", $includeNote, disabled: false)
+                        }
                     }
                 }
                 .frame(maxHeight: 200)
+
+                if includeArabic, !hadith.arabic.isEmpty {
+                    Picker("Arabic Font", selection: shareFaceBinding.animation(.easeInOut)) {
+                        Text("Uthmani").tag(Settings.IslamArabicFace.uthmani)
+                        Text("IndoPak").tag(Settings.IslamArabicFace.indopak)
+                        Text("Basic").tag(Settings.IslamArabicFace.basic)
+                    }
+                    .pickerStyle(SegmentedPickerStyle())
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 4)
+                }
 
                 Picker("Action Mode", selection: $shareAsImage.animation(.easeInOut)) {
                     Text("Image").tag(true)
@@ -1111,6 +1221,9 @@ struct HadithShareSheet: View {
         .onChange(of: includeArabic) { _ in settings.hapticFeedback(); generatePreviewImage() }
         .onChange(of: includeNarrator) { _ in settings.hapticFeedback(); generatePreviewImage() }
         .onChange(of: includeEnglish) { _ in settings.hapticFeedback(); generatePreviewImage() }
+        .onChange(of: hideTashkeel) { _ in settings.hapticFeedback(); generatePreviewImage() }
+        .onChange(of: includeNote) { _ in settings.hapticFeedback(); generatePreviewImage() }
+        .onChange(of: shareFontFaceRaw) { _ in settings.hapticFeedback(); generatePreviewImage() }
         .onChange(of: shareAsImage) { asImage in
             settings.hapticFeedback()
             if asImage && generatedImage == nil { generatePreviewImage() }
@@ -1183,11 +1296,13 @@ struct HadithShareSheet: View {
         let textWidth = width - inset * 2
 
         let baseSize: CGFloat = 40
-        let arabicFont = UIFont(name: settings.nonQuranArabicFontName, size: baseSize * 1.2)
+        // The user's chosen share face (Uthmani / IndoPak / Basic), the Share Ayah picker's twin.
+        let arabicFont = UIFont(name: shareFace.fontName, size: baseSize * 1.2)
             ?? .roundedSystemFont(ofSize: baseSize * 1.2)
         let englishFont = UIFont.roundedSystemFont(ofSize: baseSize)
         let narratorFont = UIFont.italicSystemFont(ofSize: baseSize * 0.85)
         let captionFont = UIFont.roundedSystemFont(ofSize: baseSize * 0.7, weight: .semibold)
+        let noteFont = UIFont.italicSystemFont(ofSize: baseSize * 0.75)
 
         let accent = UIColor(settings.accentColor.color)
 
@@ -1198,8 +1313,20 @@ struct HadithShareSheet: View {
             return p
         }
 
+        // The classical faces draw "،" and "؛" as ornament circles - those runs fall back to the
+        // system face, exactly like the live rows' `basicFontForCommas`.
+        func applyBasicFontToCommas(_ piece: NSMutableAttributedString, size: CGFloat) {
+            let ns = piece.string as NSString
+            for i in 0..<ns.length {
+                let ch = ns.substring(with: NSRange(location: i, length: 1))
+                if ch == "،" || ch == "؛" || ch == "," {
+                    piece.addAttribute(.font, value: UIFont.roundedSystemFont(ofSize: size), range: NSRange(location: i, length: 1))
+                }
+            }
+        }
+
         let text = NSMutableAttributedString()
-        func append(_ string: String, font: UIFont, color: UIColor, alignment: NSTextAlignment) {
+        func append(_ string: String, font: UIFont, color: UIColor, alignment: NSTextAlignment, isArabic: Bool = false) {
             if text.length > 0 { text.append(NSAttributedString(string: "\n\n")) }
             let piece = NSMutableAttributedString(string: string, attributes: [
                 .font: font, .foregroundColor: color, .paragraphStyle: paragraph(alignment)
@@ -1207,21 +1334,41 @@ struct HadithShareSheet: View {
             // The Share Ayah card's Allah-name reddening, applied to every part (Arabic pattern match +
             // English "Allah") - the live rows highlight the names, so the shared image must too.
             ShareAyahSheet.applyAllahHighlight(to: piece, source: string, enabled: settings.highlightAllahNames)
+            if isArabic, shareFace != .basic {
+                applyBasicFontToCommas(piece, size: baseSize * 1.2)
+            }
             text.append(piece)
         }
 
+        // Hide Tashkeel, the Share Ayah option's twin: strip the diacritics for a cleaner card.
+        let arabicText = hideTashkeel ? hadith.arabic.removingArabicDiacriticsAndSigns : hadith.arabic
+
         if includeReference { append("\(book.englishTitle) \(hadith.idInBook)", font: captionFont, color: accent, alignment: .center) }
-        if includeArabic, !hadith.arabic.isEmpty { append(hadith.arabic, font: arabicFont, color: .white, alignment: .right) }
+        if includeArabic, !arabicText.isEmpty { append(arabicText, font: arabicFont, color: .white, alignment: .right, isArabic: true) }
         if includeNarrator, !hadith.english.narrator.isEmpty { append(hadith.english.narrator, font: narratorFont, color: .lightGray, alignment: .left) }
         if includeEnglish, !hadith.english.text.isEmpty { append(hadith.english.text, font: englishFont, color: .white, alignment: .left) }
+        if includeNote, let note = noteText { append("Note: \(note)", font: noteFont, color: .lightGray, alignment: .left) }
         guard text.length > 0 else { return nil }
+
+        // The Al-Islam watermark, quietly at the bottom of every shared card.
+        let watermark = NSAttributedString(string: "Al-Islam", attributes: [
+            .font: UIFont.roundedSystemFont(ofSize: baseSize * 0.55, weight: .semibold),
+            .foregroundColor: accent.withAlphaComponent(0.85),
+            .paragraphStyle: paragraph(.center, spacing: 0)
+        ])
 
         let bounds = text.boundingRect(
             with: CGSize(width: textWidth, height: .greatestFiniteMagnitude),
             options: [.usesLineFragmentOrigin, .usesFontLeading],
             context: nil
         )
-        let height = ceil(bounds.height) + inset * 2
+        let watermarkBounds = watermark.boundingRect(
+            with: CGSize(width: textWidth, height: .greatestFiniteMagnitude),
+            options: [.usesLineFragmentOrigin, .usesFontLeading],
+            context: nil
+        )
+        let watermarkGap: CGFloat = 28
+        let height = ceil(bounds.height) + inset * 2 + watermarkGap + ceil(watermarkBounds.height)
         let canvas = CGRect(x: 0, y: 0, width: width, height: height)
 
         return UIGraphicsImageRenderer(size: canvas.size).image { context in
@@ -1229,6 +1376,9 @@ struct HadithShareSheet: View {
             UIBezierPath(roundedRect: canvas, cornerRadius: 48).fill()
             text.draw(with: CGRect(x: inset, y: inset, width: textWidth, height: ceil(bounds.height)),
                       options: [.usesLineFragmentOrigin, .usesFontLeading], context: nil)
+            watermark.draw(with: CGRect(x: inset, y: inset + ceil(bounds.height) + watermarkGap,
+                                        width: textWidth, height: ceil(watermarkBounds.height)),
+                           options: [.usesLineFragmentOrigin, .usesFontLeading], context: nil)
         }
     }
 }

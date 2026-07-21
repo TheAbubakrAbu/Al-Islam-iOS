@@ -1343,15 +1343,11 @@ extension Settings {
         }
         
         if force || loc.city.contains("(") {
-            let coord = CLLocationCoordinate2D(latitude: loc.latitude, longitude: loc.longitude)
             // watchOS: attempt the geocode regardless of the path-monitor flag (it under-reports on the watch,
             // see `updateCity`). iOS: only when the network is actually reachable, otherwise defer.
-            #if os(iOS)
-            let shouldAttemptGeocode = Self.isNetworkReachable
-            #else
-            let shouldAttemptGeocode = true
-            #endif
-            if shouldAttemptGeocode {
+            // Structured as a local launch + per-platform gate (not a constant boolean) so the watch build
+            // doesn't carry a provably-dead else branch ("will never be executed").
+            func launchGeocode() {
                 Task { @MainActor in
                     await updateCity(latitude: loc.latitude, longitude: loc.longitude)
                     if Bundle.main.bundleIdentifier?.contains("Widget") != true,
@@ -1363,10 +1359,18 @@ extension Settings {
                         fetchPrayerTimes(force: true, runAutoChecks: false)
                     }
                 }
+            }
+
+            #if os(iOS)
+            if Self.isNetworkReachable {
+                launchGeocode()
             } else {
-                queueGeocodeForReconnect(coord)
+                queueGeocodeForReconnect(CLLocationCoordinate2D(latitude: loc.latitude, longitude: loc.longitude))
                 logger.debug("Skipping geocode while offline; will retry on reconnect")
             }
+            #else
+            launchGeocode()
+            #endif
         }
 
         // The automatic travel/calculation checks report whether they changed state; a change makes THIS

@@ -187,8 +187,12 @@ private struct MainTabView: View {
             .task { await warmUnderCover() }
             .task { await prewarmAllQuran() }
             // Resolve today's Hadith of the Day while the launch cover is still up, so the Hadith tab
-            // opens with the card already there instead of computing it on arrival.
-            .task { HadithStore.shared.prepareDailyHadith() }
+            // opens with the card already there instead of computing it on arrival - and pre-decode the
+            // books the user is most likely to open (last-read, favorites), so they open instantly.
+            .task {
+                HadithStore.shared.prepareDailyHadith()
+                HadithStore.shared.prewarmBooks()
+            }
     }
 
     /// Build + retain the Quran tab behind the launch cover, settle back on Adhan, then signal `LaunchWarmup`

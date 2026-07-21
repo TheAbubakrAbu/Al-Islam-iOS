@@ -102,6 +102,50 @@ struct HadithView: View {
     @State private var globalSearchRanFor = ""
     @State private var globalSearchTask: Task<Void, Never>?
 
+    // The tab-wide AI matches - the Quran ayah search's AI results, across books. Searches only the
+    // corpora ALREADY BUILT (a book you've searched before): the tab search must never kick a
+    // multi-minute vector build for every downloaded book at once.
+    @ObservedObject private var semanticEngine = SemanticSearchEngine.shared
+    @State private var globalAIResults: [GlobalHadithHit] = []
+    @State private var globalAITask: Task<Void, Never>?
+
+    private func runGlobalAISearch(query: String) {
+        globalAITask?.cancel()
+        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard SemanticSearchEngine.isSupported, trimmed.count >= 3, !trimmed.containsArabicScript,
+              HadithReferenceParser.parse(trimmed) == nil else {
+            if !globalAIResults.isEmpty { withAnimation { globalAIResults = [] } }
+            return
+        }
+        let readyBooks = HadithCatalogBook.all.filter { semanticEngine.isReady("hadith-\($0.slug)") }
+        guard !readyBooks.isEmpty else {
+            if !globalAIResults.isEmpty { withAnimation { globalAIResults = [] } }
+            return
+        }
+
+        globalAITask = Task {
+            try? await Task.sleep(nanoseconds: 350_000_000)
+            guard !Task.isCancelled else { return }
+
+            var merged: [(hit: GlobalHadithHit, score: Float)] = []
+            for book in readyBooks {
+                let results = await semanticEngine.search(corpusID: "hadith-\(book.slug)", query: trimmed, limit: 6)
+                guard !Task.isCancelled else { return }
+                guard !results.isEmpty, let data = try? await HadithStore.shared.book(book) else { continue }
+                for result in results where data.hadiths.indices.contains(result.index) {
+                    merged.append((GlobalHadithHit(book: book, data: data, hadith: data.hadiths[result.index]), result.score))
+                }
+            }
+
+            guard !Task.isCancelled else { return }
+            let top = merged.sorted { $0.score > $1.score }.prefix(8).map(\.hit)
+            await MainActor.run {
+                guard trimmed == searchText.trimmingCharacters(in: .whitespacesAndNewlines) else { return }
+                withAnimation { globalAIResults = top }
+            }
+        }
+    }
+
     /// Today's hadith lives in the STORE, resolved at app launch from the downloaded books - the tab
     /// renders it instantly.
     private var dailyHadith: (book: HadithCatalogBook, hadith: HadithBookData.Hadith)? { store.daily }
@@ -188,7 +232,7 @@ struct HadithView: View {
                         let favorites = filteredFavorites
                         if !favorites.isEmpty {
                             bookSection(
-                                title: "FAVORITE BOOKS",
+                                title: "FAVORITES",
                                 books: favorites,
                                 icon: "star.fill",
                                 accentTitle: true,
@@ -228,14 +272,16 @@ struct HadithView: View {
                 }
                 .opacity(0)
             )
-            // And the one the shuffled bookmark / summary tiles / daily history push through.
+            // And the one the shuffled bookmark / summary tiles / daily history push through - into the
+            // BOOK (chapters list), which then auto-pushes the hadith's chapter scrolled to it, so the
+            // full path is always Books → Chapters → Hadiths and back never skips a level.
             .background(
                 NavigationLink(isActive: Binding(
                     get: { pushedReference != nil },
                     set: { if !$0 { pushedReference = nil } }
                 )) {
                     if let pushedReference, let book = HadithCatalogBook.bySlug[pushedReference.slug] {
-                        HadithReferenceView(book: book, chapter: nil, hadith: pushedReference.idInBook)
+                        HadithBookView(book: book, autoOpenHadithID: pushedReference.idInBook)
                     }
                 } label: {
                     EmptyView()
@@ -249,7 +295,7 @@ struct HadithView: View {
                 // is focused (kept mounted, collapsed via height+opacity - glass can't transition).
                 let chipsVisible = isHadithSearchFocused && !settings.hadithSearchHistory.isEmpty
                 VStack(spacing: SafeAreaInsetVStackSpacing.standard) {
-                    searchHistoryChips
+                    HadithSearchHistoryChips(searchText: $searchText)
                         .frame(height: chipsVisible ? nil : 0)
                         .clipped()
                         .opacity(chipsVisible ? 1 : 0)
@@ -341,6 +387,8 @@ struct HadithView: View {
                 // Usually a no-op: the pick was resolved at app launch. This just covers day rollover
                 // while the app stays open.
                 store.prepareDailyHadith()
+                // Same no-op rule: the launch task usually already warmed the likely books.
+                store.prewarmBooks()
             }
             .onChange(of: searchText) { text in
                 // A new query invalidates the last all-books sweep and starts back at page one -
@@ -358,6 +406,13 @@ struct HadithView: View {
                 if query.count >= 3, HadithReferenceParser.parse(text) == nil {
                     runGlobalSearch(query: query)
                 }
+                // AI matches ride along automatically (already-built corpora only) - the Quran
+                // search's rule: AI adds understanding on top, keyword stays exhaustive below.
+                runGlobalAISearch(query: text)
+            }
+            // A corpus finishing its build mid-query (from a book view) surfaces here immediately.
+            .onChange(of: semanticEngine.readyCorpora) { _ in
+                runGlobalAISearch(query: searchText)
             }
             .onChange(of: pendingScrollToBookSlug) { slug in
                 guard let slug else { return }
@@ -736,6 +791,24 @@ struct HadithView: View {
     private var globalSearchSection: some View {
         let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
         if query.count >= 3, referenceResult == nil {
+            // AI matches at the very top, the Quran ayah search's grammar - ranked by meaning across
+            // every book whose vectors are already built, keyword sections below stay exhaustive.
+            if !globalAIResults.isEmpty {
+                Section(header: SectionPillHeader(title: "AI MATCHES", count: globalAIResults.count, icon: "sparkles", accentTitle: true)) {
+                    ForEach(globalAIResults) { hit in
+                        NavigationLink {
+                            if let chapter = hit.data.chapters.first(where: { $0.id == hit.hadith.chapterId }) {
+                                HadithChapterView(book: hit.book, bookData: hit.data, chapter: chapter, scrollToHadithId: hit.hadith.idInBook)
+                            } else {
+                                HadithReferenceView(book: hit.book, chapter: nil, hadith: hit.hadith.idInBook)
+                            }
+                        } label: {
+                            HadithRow(book: hit.book, hadith: hit.hadith, searchText: searchText, compact: true)
+                        }
+                    }
+                }
+            }
+
             if isGlobalSearching && globalChapterResults.isEmpty && globalHadithResults.isEmpty {
                 Section {
                     HStack(spacing: 10) {
@@ -947,56 +1020,14 @@ struct HadithView: View {
         lastSavedSearchQuery = trimmed
     }
 
-    /// Always mounted; visibility is driven by the caller via height+opacity (glass chips can't
-    /// participate in view transitions) - the Quran tab's exact chips row.
-    private var searchHistoryChips: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 8) {
-                ForEach(settings.hadithSearchHistory, id: \.self) { query in
-                    searchHistoryChip(query: query)
-                }
-            }
-        }
-    }
-
-    private func searchHistoryChip(query: String) -> some View {
-        HStack(spacing: 4) {
-            Button {
-                settings.hapticFeedback()
-                withAnimation {
-                    searchText = query
-                    settings.addHadithSearchHistory(query)
-                    self.endEditing()
-                }
-            } label: {
-                Text(query)
-                    .font(.caption)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.8)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 6)
-            }
-
-            Button {
-                settings.hapticFeedback()
-                withAnimation(.easeInOut) {
-                    settings.removeHadithSearchHistory(query)
-                }
-            } label: {
-                Image(systemName: "xmark")
-                    .font(.caption2.bold())
-                    .padding(.trailing, 8)
-            }
-        }
-        .foregroundStyle(settings.accentColor.color)
-        .conditionalGlassEffect(useColor: 0.25)
-    }
+    // (The chips row itself is the shared `HadithSearchHistoryChips` - one component for the tab root
+    // and the book view, so the two search bars read identically.)
 
     // MARK: Bookmarks
 
     private var bookmarksSection: some View {
         Section(header: SectionPillHeader(
-            title: "BOOKMARKED HADITHS",
+            title: "BOOKMARKS",
             count: store.bookmarks.count,
             icon: "bookmark.fill",
             accentTitle: true,
@@ -1073,17 +1104,24 @@ struct HadithView: View {
                 }
             } : nil
         )
-        Section(header: header) {
-            if isExpanded?.wrappedValue ?? true {
-                if hadithGridMode {
+        // The Quran surah list's shape (and the chapter list's): the header stands alone, then each
+        // book is its OWN Section - separate glass cards with compact spacing between them.
+        Section(header: header) { }
+            .padding(.bottom, -12)
+
+        if isExpanded?.wrappedValue ?? true {
+            if hadithGridMode {
+                Section {
                     LazyVGrid(columns: gridColumns, alignment: .leading, spacing: 10) {
                         ForEach(books) { book in
                             bookGridTile(book)
                         }
                     }
                     .padding(.vertical, 4)
-                } else {
-                    ForEach(books) { book in
+                }
+            } else {
+                ForEach(books) { book in
+                    Section {
                         NavigationLink {
                             HadithBookView(book: book)
                         } label: {
@@ -1184,6 +1222,14 @@ struct HadithView: View {
         book.approximateMegabytes < 1 ? "<1 MB" : "\(String(format: "%.0f", book.approximateMegabytes)) MB"
     }
 
+    /// "97 C • 7,277 H" - the book's SHAPE (chapters and hadiths), where the raw size used to sit. The
+    /// surah rows lead with ayah counts, not kilobytes; books now do the same. Size still shows in the
+    /// download flows, where storage is what matters.
+    private func bookShapeText(_ book: HadithCatalogBook) -> String {
+        guard let counts = store.counts(for: book) else { return bookSizeText(book) }
+        return "\(counts.chapters) C • \(counts.hadiths.formatted()) H"
+    }
+
     private func arabicTitleFont(_ style: UIFont.TextStyle, bump: CGFloat) -> Font {
         settings.useFontArabic
             ? Font.arabic(settings.nonQuranArabicFontName, size: UIFont.preferredFont(forTextStyle: style).pointSize + bump)
@@ -1230,9 +1276,10 @@ struct HadithView: View {
         }())
     }
 
-    /// The size as a small glass chip - the same pill language the book view's stats use.
-    private func bookSizePill(_ book: HadithCatalogBook) -> some View {
-        Text(bookSizeText(book))
+    /// The book's shape ("97 C • 7,277 H") as a small glass chip - the same pill language the book
+    /// view's stats use.
+    private func bookShapePill(_ book: HadithCatalogBook) -> some View {
+        Text(bookShapeText(book))
             .font(.caption2.weight(.semibold))
             .monospacedDigit()
             .foregroundStyle(settings.accentColor.color)
@@ -1258,7 +1305,7 @@ struct HadithView: View {
                 )
                 .minimumScaleFactor(0.7)
 
-                bookSizePill(book)
+                bookShapePill(book)
             }
             .layoutPriority(1)
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -1322,9 +1369,10 @@ struct HadithView: View {
                         .font(.caption2.monospacedDigit().weight(.bold))
                         .foregroundColor(settings.accentColor.color)
 
-                    Text("• \(bookSizeText(book))")
+                    Text("• \(bookShapeText(book))")
                         .font(.caption2)
                         .foregroundColor(.secondary)
+                        .monospacedDigit()
 
                     if store.isAvailableOffline(book) {
                         Image(systemName: "arrow.down.circle.fill")
@@ -1332,6 +1380,8 @@ struct HadithView: View {
                             .foregroundStyle(settings.accentColor.color)
                     }
                 }
+                .lineLimit(1)
+                .minimumScaleFactor(0.6)
             }
             .multilineTextAlignment(.center)
             .frame(maxWidth: .infinity)

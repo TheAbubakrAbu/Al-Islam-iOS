@@ -263,7 +263,7 @@ struct ArabicView: View {
             let favorites = settings.favoriteLetters.sorted()
             #if os(iOS)
             Section(header: SectionPillHeader(
-                title: "FAVORITE LETTERS",
+                title: "FAVORITES",
                 count: favorites.count,
                 icon: "star.fill",
                 accentTitle: true,
@@ -275,7 +275,7 @@ struct ArabicView: View {
                 }
             }
             #else
-            Section(header: SectionPillHeader(title: "FAVORITE LETTERS", count: favorites.count)) {
+            Section(header: SectionPillHeader(title: "FAVORITES", count: favorites.count)) {
                 letterCollection(favorites)
             }
             #endif

@@ -86,6 +86,22 @@ struct HadithCatalogBook: Identifiable, Hashable {
         Self.numberBySlug[slug] ?? 0
     }
 
+    /// Chapter / hadith counts per book, measured from the actual CDN data (2026-07) - so the catalog
+    /// shows a book's SHAPE ("97 C • 7,277 H", the surah rows' ayah-count language) before it is ever
+    /// downloaded. Self-healing: `HadithStore` records the live counts whenever a book decodes, and the
+    /// rows prefer those - a CDN update can never leave these numbers wrong for a downloaded book.
+    private static let countsBySlug: [String: (chapters: Int, hadiths: Int)] = [
+        "bukhari": (97, 7277), "muslim": (57, 7459), "ibnmajah": (38, 4345),
+        "abudawud": (43, 5276), "tirmidhi": (49, 4053), "nasai": (52, 5768),
+        "malik": (61, 1985), "ahmed": (8, 1374), "darimi": (24, 3406),
+        "qudsi40": (1, 40), "nawawi40": (1, 42), "shahwaliullah40": (1, 40),
+        "aladab_almufrad": (57, 1326), "shamail_muhammadiyah": (57, 402),
+        "riyad_assalihin": (20, 1896), "mishkat_almasabih": (25, 4428), "bulugh_almaram": (16, 1767)
+    ]
+
+    var chapterCount: Int? { Self.countsBySlug[slug]?.chapters }
+    var hadithCount: Int? { Self.countsBySlug[slug]?.hadiths }
+
     static let all: [HadithCatalogBook] = [
         // The Six Books (al-Kutub as-Sittah), in chronological order of their compilers.
         HadithCatalogBook(
@@ -449,6 +465,9 @@ struct HadithLastRead: Codable, Equatable {
     let arabicPreview: String
     let englishPreview: String
     let timestamp: Date
+    /// The hadith's chapter, so "jump back" can land in the chapter scrolled to it without a scan.
+    /// Optional: entries saved by older builds decode without it and resolve by idInBook instead.
+    var chapterId: Int? = nil
 }
 
 #endif

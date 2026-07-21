@@ -2607,6 +2607,11 @@ final class AyahTimingStore {
         } catch {
             return nil
         }
-        return AVPlayerItem(asset: composition)
+        // `AVPlayerItem(asset:)` is MainActor-annotated in the current SDK. This factory only runs on
+        // the playback engine's main-thread paths (item building during play), so the assumption holds -
+        // and states it to the compiler instead of leaving a per-target isolation warning.
+        return MainActor.assumeIsolated {
+            AVPlayerItem(asset: composition)
+        }
     }
 }

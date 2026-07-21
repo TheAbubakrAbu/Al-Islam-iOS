@@ -64,13 +64,16 @@ struct SettingsAdhanView: View {
                     }
                     // The programmatic entrance to the same screen (see `openTravelingMode`). A hidden
                     // isActive link rather than a nav-path push because this view still supports the
-                    // pre-NavigationStack containers it is presented in.
+                    // pre-NavigationStack containers it is presented in. iOS-only: the watch never
+                    // opens this programmatically, and `isActive:` is deprecated on watchOS 9+.
+                    #if os(iOS)
                     .background(
                         NavigationLink(isActive: $openTravelingMode) {
                             travelingModeDestination
                         } label: { EmptyView() }
                         .hidden()
                     )
+                    #endif
                 }
                 Section {
                     adhanSettingsLink(title: "Optional Prayers", systemImage: "moon.stars") {
@@ -87,6 +90,7 @@ struct SettingsAdhanView: View {
                         customPrayerNamesDestination
                     }
                 }
+                
                 #if os(iOS)
                 Section {
                     VStack(alignment: .leading) {

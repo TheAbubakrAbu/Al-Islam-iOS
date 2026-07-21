@@ -1973,33 +1973,21 @@ struct QuranView: View {
         }
     }
 
+    /// The SHARED pill header (the Hadith tab's exact control), so bookmarks read identically across
+    /// the app - with the shuffle the hadith headers carry: open a random bookmarked ayah.
     private func bookmarkHeader(count: Int) -> some View {
-        HStack(spacing: 8) {
-            Image(systemName: "bookmark.fill")
-                .foregroundStyle(settings.accentColor.color)
-
-            Text("BOOKMARKED AYAHS")
-                .foregroundStyle(settings.accentColor.color)
-
-            Spacer()
-
-            Text("\(count)")
-                .font(.caption.weight(.semibold))
-                .monospacedDigit()
-                .foregroundStyle(settings.accentColor.color)
-                .padding(.horizontal, 8)
-                .padding(.vertical, 4)
-                .conditionalGlassEffect()
-
-            Image(systemName: settings.showBookmarks ? "chevron.down.circle" : "chevron.up.circle")
-                .foregroundColor(settings.accentColor.color)
-                .padding(4)
-                .conditionalGlassEffect()
-                .onTapGesture {
-                    settings.hapticFeedback()
-                    withAnimation { settings.showBookmarks.toggle() }
+        SectionPillHeader(
+            title: "BOOKMARKS",
+            count: count,
+            icon: "bookmark.fill",
+            accentTitle: true,
+            isExpanded: $settings.showBookmarks,
+            onShuffle: {
+                if let random = settings.bookmarkedAyahs.randomElement() {
+                    push(surahID: random.surah, ayahID: random.ayah)
                 }
-        }
+            }
+        )
     }
 
     @ViewBuilder
@@ -2113,33 +2101,20 @@ struct QuranView: View {
         }
     }
 
+    /// The shared pill header, for favorites - with the shuffle: open a random favorite surah.
     private func favoriteHeader(count: Int) -> some View {
-        HStack(spacing: 8) {
-            Image(systemName: "star.fill")
-                .foregroundStyle(settings.accentColor.color)
-
-            Text("FAVORITE SURAHS")
-                .foregroundStyle(settings.accentColor.color)
-
-            Spacer()
-
-            Text("\(count)")
-                .font(.caption.weight(.semibold))
-                .monospacedDigit()
-                .foregroundStyle(settings.accentColor.color)
-                .padding(.horizontal, 8)
-                .padding(.vertical, 4)
-                .conditionalGlassEffect()
-
-            Image(systemName: settings.showFavorites ? "chevron.down.circle" : "chevron.up.circle")
-                .foregroundColor(settings.accentColor.color)
-                .padding(4)
-                .conditionalGlassEffect()
-                .onTapGesture {
-                    settings.hapticFeedback()
-                    withAnimation { settings.showFavorites.toggle() }
+        SectionPillHeader(
+            title: "FAVORITES",
+            count: count,
+            icon: "star.fill",
+            accentTitle: true,
+            isExpanded: $settings.showFavorites,
+            onShuffle: {
+                if let random = settings.favoriteSurahs.randomElement() {
+                    push(surahID: random, ayahID: nil)
                 }
-        }
+            }
+        )
     }
 
     @ViewBuilder

@@ -364,7 +364,7 @@ struct NamesView: View {
     private func favoriteNamesSection(hasActiveSearch: Bool, proxy: ScrollViewProxy) -> some View {
         if !hasActiveSearch && !favoriteNames.isEmpty {
             Section(header: SectionPillHeader(
-                title: "FAVORITE NAMES",
+                title: "FAVORITES",
                 count: favoriteNames.count,
                 icon: "star.fill",
                 accentTitle: true,

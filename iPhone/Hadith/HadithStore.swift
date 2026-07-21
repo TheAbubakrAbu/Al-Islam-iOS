@@ -105,6 +105,32 @@ final class HadithStore: ObservableObject {
         UserDefaults.standard.set(Array(favoriteChapterKeys), forKey: Self.chapterFavoritesKey)
     }
 
+    // MARK: Book shape (chapter / hadith counts)
+
+    /// Live counts recorded whenever a book decodes, persisted so the catalog rows show a book's real
+    /// shape across launches. The static catalog table seeds books never opened on this device.
+    @Published private(set) var recordedCounts: [String: [Int]] = {
+        (UserDefaults.standard.dictionary(forKey: "hadithBookCounts") as? [String: [Int]]) ?? [:]
+    }()
+
+    func recordCounts(slug: String, chapters: Int, hadiths: Int) {
+        let value = [chapters, hadiths]
+        guard recordedCounts[slug] != value else { return }
+        recordedCounts[slug] = value
+        UserDefaults.standard.set(recordedCounts, forKey: "hadithBookCounts")
+    }
+
+    /// The book's shape for display: live-recorded counts first, the catalog's measured table otherwise.
+    func counts(for book: HadithCatalogBook) -> (chapters: Int, hadiths: Int)? {
+        if let known = recordedCounts[book.slug], known.count == 2 {
+            return (known[0], known[1])
+        }
+        if let chapters = book.chapterCount, let hadiths = book.hadithCount {
+            return (chapters, hadiths)
+        }
+        return nil
+    }
+
     // MARK: Bookmarks
 
     func isBookmarked(slug: String, idInBook: Int) -> Bool {
@@ -165,17 +191,39 @@ final class HadithStore: ObservableObject {
 
     // MARK: Last read
 
-    /// The most recently read hadith, Quran's Last Read Ayah counterpart. Recorded when a hadith's
-    /// detail opens or a page lands on it; persisted across launches.
-    @Published private(set) var lastRead: HadithLastRead?
+    /// Per-BOOK last-read hadiths, persisted: every book remembers its own spot (shown at the top of
+    /// its screen), and the tab-level "Last Read" is simply the LATEST across all of them - the Quran's
+    /// Last Read Ayah counterpart, per book.
+    @Published private(set) var lastReadByBook: [String: HadithLastRead] = [:]
 
-    private static let lastReadKey = "hadithLastRead"
+    private static let lastReadKey = "hadithLastRead"              // pre-4.7 single global entry (migrated)
+    private static let lastReadByBookKey = "hadithLastReadByBook"
+
+    /// The tab's Last Read: the most recent spot across every book.
+    var lastRead: HadithLastRead? {
+        lastReadByBook.values.max(by: { $0.timestamp < $1.timestamp })
+    }
+
+    /// The book's own remembered spot.
+    func lastRead(for slug: String) -> HadithLastRead? {
+        lastReadByBook[slug]
+    }
 
     func loadLastRead() {
-        guard lastRead == nil,
-              let data = UserDefaults.standard.data(forKey: Self.lastReadKey),
-              let decoded = try? JSONDecoder().decode(HadithLastRead.self, from: data) else { return }
-        lastRead = decoded
+        guard lastReadByBook.isEmpty else { return }
+        if let data = UserDefaults.standard.data(forKey: Self.lastReadByBookKey),
+           let decoded = try? JSONDecoder().decode([String: HadithLastRead].self, from: data) {
+            lastReadByBook = decoded
+        }
+        // Migrate the old single global entry into its book's slot (once - it then lives in the dict).
+        if let data = UserDefaults.standard.data(forKey: Self.lastReadKey),
+           let legacy = try? JSONDecoder().decode(HadithLastRead.self, from: data) {
+            if lastReadByBook[legacy.slug] == nil {
+                lastReadByBook[legacy.slug] = legacy
+                persistLastRead()
+            }
+            UserDefaults.standard.removeObject(forKey: Self.lastReadKey)
+        }
     }
 
     func recordLastRead(book: HadithCatalogBook, hadith: HadithBookData.Hadith) {
@@ -185,11 +233,49 @@ final class HadithStore: ObservableObject {
             reference: "\(book.englishTitle) \(hadith.idInBook)",
             arabicPreview: String(hadith.arabic.prefix(120)),
             englishPreview: String(hadith.english.text.prefix(140)),
-            timestamp: Date()
+            timestamp: Date(),
+            chapterId: hadith.chapterId
         )
-        lastRead = entry
-        if let data = try? JSONEncoder().encode(entry) {
-            UserDefaults.standard.set(data, forKey: Self.lastReadKey)
+        lastReadByBook[book.slug] = entry
+        persistLastRead()
+    }
+
+    private func persistLastRead() {
+        if let data = try? JSONEncoder().encode(lastReadByBook) {
+            UserDefaults.standard.set(data, forKey: Self.lastReadByBookKey)
+        }
+    }
+
+    // MARK: Prewarm (instant book opens)
+
+    private var didPrewarmBooks = false
+
+    /// Decode the books the user is most likely to open - most recent last-reads first, then favorites,
+    /// then any other downloaded book - into the session cache at launch, so opening one is INSTANT
+    /// instead of paying the JSON decode behind a spinner. Off-main, one book at a time, capped at the
+    /// decoded-cache size so the prewarm can never evict itself.
+    func prewarmBooks() {
+        guard !didPrewarmBooks else { return }
+        didPrewarmBooks = true
+        loadLastRead()
+
+        var ordered: [String] = lastReadByBook.values
+            .sorted { $0.timestamp > $1.timestamp }
+            .map(\.slug)
+        ordered += favoriteSlugs.sorted()
+        ordered += downloadedSlugs.sorted()
+
+        var seen = Set<String>()
+        let targets = ordered
+            .compactMap { HadithCatalogBook.bySlug[$0] }
+            .filter { seen.insert($0.slug).inserted && isAvailableOffline($0) }
+            .prefix(3)
+        guard !targets.isEmpty else { return }
+
+        Task {
+            for book in targets where cachedBook(book.slug) == nil {
+                _ = try? await self.book(book)
+            }
         }
     }
 
@@ -284,6 +370,7 @@ final class HadithStore: ObservableObject {
             searchIndexes.removeValue(forKey: evicted.slug)
         }
         buildSearchIndex(slug: book.slug, book: parsed)
+        recordCounts(slug: book.slug, chapters: parsed.chapters.count, hadiths: parsed.hadiths.count)
         return parsed
     }
 
