@@ -2607,10 +2607,16 @@ final class AyahTimingStore {
         } catch {
             return nil
         }
-        // `AVPlayerItem(asset:)` is MainActor-annotated in the current SDK. This factory only runs on
-        // the playback engine's main-thread paths (item building during play), so the assumption holds -
-        // and states it to the compiler instead of leaving a per-target isolation warning.
-        return MainActor.assumeIsolated {
+        // `AVPlayerItem(asset:)` is MainActor-annotated in the current SDK. Every known call path is the
+        // playback engine's main thread - but `assumeIsolated` would CRASH (a release-mode dispatch
+        // precondition) if any future path ever arrived off-main, so prove the assumption safely: hop
+        // synchronously when needed instead of trapping.
+        if Thread.isMainThread {
+            return MainActor.assumeIsolated {
+                AVPlayerItem(asset: composition)
+            }
+        }
+        return DispatchQueue.main.sync {
             AVPlayerItem(asset: composition)
         }
     }

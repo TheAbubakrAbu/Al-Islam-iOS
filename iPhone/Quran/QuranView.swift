@@ -1070,24 +1070,32 @@ struct QuranView: View {
         }
     }
 
+    /// Heap-box a section subtree. `content` is ONE expression: without boxing, every section's ENTIRE
+    /// generic view value materializes together on `content.getter`'s single stack frame - which
+    /// overflowed the device main thread's 1MB stack (EXC_BAD_ACCESS code=2 at a guard-page address)
+    /// the moment the tab built under the launch cover. The simulator's 8MB main stack hid it entirely.
+    /// AnyView stores the subtree on the heap, so the frame holds pointers instead of megabyte values;
+    /// each wrapped position keeps a stable underlying type, so List diffing is unaffected.
+    private func boxed<V: View>(_ view: V) -> AnyView { AnyView(view) }
+
     var content: some View {
         ScrollViewReader { scrollProxy in
             let context = searchDisplayContext
 
             List {
                 Group {
-                    primaryHistorySections(context: context)
-                    bookmarkSection(context: context)
-                    favoriteSection(context: context)
+                    boxed(primaryHistorySections(context: context))
+                    boxed(bookmarkSection(context: context))
+                    boxed(favoriteSection(context: context))
                     // Only hoist page/juz above the surah list for EXPLICIT "page X" / "juz Y" queries
                     // (where surahContentSections is empty anyway). For a bare number, the surah match
                     // comes first and the compact page/juz results follow below (in searchResultSections).
                     if context.explicitPageOrJuzMode && context.isSearching {
-                        pageSearchSection(context: context)
-                        juzSearchSection(context: context)
+                        boxed(pageSearchSection(context: context))
+                        boxed(juzSearchSection(context: context))
                     }
-                    surahContentSections(context: context)
-                    searchResultSections(context: context)
+                    boxed(surahContentSections(context: context))
+                    boxed(searchResultSections(context: context))
                 }
                 .themedListRowBackground()
             }
@@ -1679,7 +1687,7 @@ struct QuranView: View {
         #if os(iOS)
         if settings.quranSummaryMode {
             if context.isSearching == false {
-                summaryTilesSection(context: context)
+                boxed(summaryTilesSection(context: context))
             }
         } else {
             // Order: Ayah of the Day · Last Listened Surah · Last Listened Ayah · Last Read Ayah.
@@ -2279,36 +2287,37 @@ struct QuranView: View {
             EmptyView()
         } else if context.isSearching {
             if settings.searchForSurahs {
-                surahSearchSection(context: context)
+                boxed(surahSearchSection(context: context))
             }
         } else {
+            // Every branch boxed for the same stack-size reason as `content` - see `boxed`.
             switch settings.quranSortMode {
             case .surah:
-                surahBrowseSection(context: context, showsRevelationOrder: false)
+                boxed(surahBrowseSection(context: context, showsRevelationOrder: false))
             case .ayahs:
-                surahBrowseSection(context: context, showsRevelationOrder: false)
+                boxed(surahBrowseSection(context: context, showsRevelationOrder: false))
             case .juz:
-                juzSections(context: context)
+                boxed(juzSections(context: context))
             case .page:
-                surahBrowseSection(context: context, showsRevelationOrder: false)
+                boxed(surahBrowseSection(context: context, showsRevelationOrder: false))
             case .revelation:
-                surahBrowseSection(context: context, showsRevelationOrder: true)
+                boxed(surahBrowseSection(context: context, showsRevelationOrder: true))
             case .khatm:
-                khatmProgressSection()
-                khatmExtraDetailsSection()
+                boxed(khatmProgressSection())
+                boxed(khatmExtraDetailsSection())
                 if settings.khatmGroupByJuz {
-                    khatmJuzSections(context: context)
+                    boxed(khatmJuzSections(context: context))
                 } else {
-                    surahBrowseSection(context: context, showsRevelationOrder: false)
+                    boxed(surahBrowseSection(context: context, showsRevelationOrder: false))
                 }
             case .pages:
-                pagesBrowseSection(context: context)
+                boxed(pagesBrowseSection(context: context))
             case .sajdah:
-                sajdahBrowseSection(context: context)
+                boxed(sajdahBrowseSection(context: context))
             case .muqattaat:
-                muqattaatBrowseSection(context: context)
+                boxed(muqattaatBrowseSection(context: context))
             case .words, .letters:
-                surahBrowseSection(context: context, showsRevelationOrder: false)
+                boxed(surahBrowseSection(context: context, showsRevelationOrder: false))
             }
         }
     }
@@ -3194,13 +3203,14 @@ struct QuranView: View {
         if context.isSearching {
             // Page/juz rows for explicit queries are inserted above surahContentSections. For a bare number
             // they go here, BELOW the surah match (juz before page). Each shows the range's Start/End ayah.
+            // Boxed for the same stack-size reason as `content` - see `boxed`.
             if !context.explicitPageOrJuzMode {
-                juzSearchSection(context: context)
-                pageSearchSection(context: context)
+                boxed(juzSearchSection(context: context))
+                boxed(pageSearchSection(context: context))
             }
 
             if !context.explicitPageOrJuzMode {
-                ayahSearchSection(context: context)
+                boxed(ayahSearchSection(context: context))
             }
         }
     }
@@ -3299,7 +3309,7 @@ struct QuranView: View {
             // AI results appear AUTOMATICALLY at the top - no mode to enter. The section shows the
             // one-time build progress the first time, then ranked semantic matches; the keyword sections
             // always remain below, so AI adds understanding without ever hiding an exact match.
-            aiResultsSection
+            boxed(aiResultsSection)
             #endif
 
             if !bestHits.isEmpty {

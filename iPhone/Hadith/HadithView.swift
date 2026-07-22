@@ -180,26 +180,34 @@ struct HadithView: View {
         [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)]
     }
 
+    /// Heap-box a section subtree - QuranView's stack-overflow fix, applied here preemptively: the
+    /// body's one List expression otherwise materializes every section's whole generic view value on a
+    /// single stack frame, and this tab builds under the launch cover too.
+    private func boxed<V: View>(_ view: V) -> AnyView { AnyView(view) }
+
     var body: some View {
         NavigationView {
             ScrollViewReader { scrollProxy in
             List {
                 Group {
+                    // Every big subtree heap-boxed - the one-expression List otherwise materializes all
+                    // of them on a single stack frame, which is exactly what overflowed the device main
+                    // thread's 1MB stack in QuranView (the simulator's 8MB stack hid it). See `boxed`.
                     if searchText.isEmpty {
                         // With no downloaded books there is no Hadith of the Day, and before any reading
                         // there is no Last Read either - an empty "Your Summary" header is just noise.
                         if hadithSummaryMode {
                             if dailyHadith != nil || store.lastRead != nil {
-                                summaryTilesSection
+                                boxed(summaryTilesSection)
                             }
                         } else {
-                            hadithOfTheDaySection
-                            lastReadSection
+                            boxed(hadithOfTheDaySection)
+                            boxed(lastReadSection)
                         }
                     }
 
                     if store.isDownloading {
-                        downloadProgressSection
+                        boxed(downloadProgressSection)
                     }
 
                     if let error = store.downloadError {
@@ -211,45 +219,45 @@ struct HadithView: View {
                     }
 
                     if let reference = referenceResult {
-                        referenceSection(reference)
+                        boxed(referenceSection(reference))
                     }
 
                     if !searchText.isEmpty {
                         // The Quran search's order: matching books first, then chapters, then hadiths.
                         let results = HadithCatalogBook.all.filter(matches)
                         if !results.isEmpty {
-                            bookSection(title: "MATCHING BOOKS", books: results, shuffle: false)
+                            boxed(bookSection(title: "MATCHING BOOKS", books: results, shuffle: false))
                         }
                     }
 
-                    globalSearchSection
+                    boxed(globalSearchSection)
 
                     if !store.bookmarks.isEmpty && searchText.isEmpty {
-                        bookmarksSection
+                        boxed(bookmarksSection)
                     }
 
                     if searchText.isEmpty {
                         let favorites = filteredFavorites
                         if !favorites.isEmpty {
-                            bookSection(
+                            boxed(bookSection(
                                 title: "FAVORITES",
                                 books: favorites,
                                 icon: "star.fill",
                                 accentTitle: true,
                                 isExpanded: $showFavoriteBooks
-                            )
+                            ))
                         }
 
                         ForEach(HadithCatalogBook.Group.allCases, id: \.self) { group in
                             let books = filteredBooks(in: group)
                             if !books.isEmpty {
-                                bookSection(title: group.rawValue, books: books)
+                                boxed(bookSection(title: group.rawValue, books: books))
                             }
                         }
                     }
 
                     if searchText.isEmpty {
-                        aboutHadithSection
+                        boxed(aboutHadithSection)
                     }
                 }
                 .themedListRowBackground()
