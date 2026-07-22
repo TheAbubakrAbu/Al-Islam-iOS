@@ -224,11 +224,13 @@ struct AdhanView: View {
             HStack(spacing: 8) {
                 VStack(alignment: .leading, spacing: 3) {
                     if let hijriDate = settings.hijriDate {
+                        // Two lines before any shrink: a long Hijri date used to compress to 60% on one
+                        // line, which read as unreadably tiny on the small screens.
                         Text(hijriDate.english)
                             .font(showBigQibla ? .system(size: 9) : .caption2)
                             .foregroundColor(settings.accentColor.accent1)
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.6)
+                            .lineLimit(showBigQibla ? 1 : 2)
+                            .minimumScaleFactor(0.8)
                     }
 
                     HStack(spacing: 4) {
@@ -239,7 +241,7 @@ struct AdhanView: View {
                         Text((settings.prayers != nil ? settings.currentLocation?.city : nil) ?? "No location")
                             .font(showBigQibla ? .system(size: 10) : .caption)
                             .lineLimit(showBigQibla ? 1 : 2)
-                            .minimumScaleFactor(0.6)
+                            .minimumScaleFactor(0.8)
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -274,15 +276,18 @@ struct AdhanView: View {
             }
         }
         .frame(maxWidth: .infinity)
+        // The WHOLE card toggles the big compass - the gesture used to live only on the 44pt compass
+        // image, leaving the date/city column (most of the row) dead to taps.
+        .contentShape(Rectangle())
+        .onTapGesture {
+            settings.hapticFeedback()
+            withAnimation { showBigQibla.toggle() }
+        }
         .animation(.easeInOut, value: showBigQibla)
     }
 
     private func qiblaCompass(size: CGFloat) -> some View {
         QiblaView(size: size)
-            .onTapGesture {
-                settings.hapticFeedback()
-                withAnimation { showBigQibla.toggle() }
-            }
     }
     #endif
 

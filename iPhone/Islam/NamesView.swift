@@ -257,6 +257,7 @@ struct NamesView: View {
             List {
                 Group {
                     descriptionSection
+                    allahSection(hasActiveSearch: hasActiveSearch)
                     favoriteNamesSection(favorites, hasActiveSearch: hasActiveSearch, proxy: proxy)
                     namesHeaderSection(resultCount: names.count, hasActiveSearch: hasActiveSearch, proxy: proxy)
                     namesSections(filteredNames: names, favoriteSet: favoriteSet, hasActiveSearch: hasActiveSearch, proxy: proxy)
@@ -341,6 +342,63 @@ struct NamesView: View {
                 }
             }
         )
+    }
+
+    /// The name itself, above the 99: Allah is the proper name the 99 names all describe, so it gets
+    /// its own row rather than a place in the enumerated list. Hidden while searching - it is not one
+    /// of the searchable names.
+    @ViewBuilder
+    private func allahSection(hasActiveSearch: Bool) -> some View {
+        if !hasActiveSearch {
+            Section(header: Text("ALLAH")) {
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack(alignment: .center, spacing: 12) {
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text("Allah")
+                                .font(.subheadline.weight(.semibold))
+
+                            Text("The One True God")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+
+                            Text("First Found: 1:1")
+                                .font(.caption2)
+                                .foregroundColor(.secondary)
+                        }
+
+                        Spacer(minLength: 8)
+
+                        Text("الله")
+                            .font(settings.useFontArabic ? Font.arabic(settings.nonQuranArabicFontName, size: 30) : .title)
+                            .arabicFontDesign(custom: settings.useFontArabic && settings.nonQuranArabicFontName != Settings.systemArabicFontName)
+                            .foregroundColor(settings.accentColor.color)
+                    }
+
+                    Text("Allah (الله) is the proper name of the One True God - not one of the 99 names, but the name every one of them describes. Unlike other words, it has no plural and no gender, and it was never used for anything or anyone else. It appears in the Quran more than 2,600 times, beginning with the very first ayah:")
+                        .font(.footnote)
+                        .foregroundColor(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    Text("“In the name of Allah, the Entirely Merciful, the Especially Merciful.” — Quran 1:1")
+                        .font(.footnote.italic())
+                        .foregroundColor(.primary)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    Text("View First Ayah (1:1)")
+                        .font(.caption.weight(.semibold))
+                        .foregroundColor(settings.accentColor.color)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 8)
+                        .contentShape(Rectangle())
+                        .conditionalGlassEffect(useColor: 0.2)
+                        .padding(.top, 2)
+                        .background(
+                            NavigationLink("", destination: ayahsDestination(for: (surahID: 1, ayahID: 1)))
+                                .opacity(0)
+                        )
+                }
+            }
+        }
     }
 
     private func namesHeaderSection(resultCount: Int, hasActiveSearch: Bool, proxy: ScrollViewProxy) -> some View {
@@ -428,6 +486,12 @@ struct NamesView: View {
                     }
                 }
                 .padding(.horizontal, -8)
+            }
+        } else if filteredNames.isEmpty, hasActiveSearch {
+            Section {
+                Text("No names match your search.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
             }
         } else {
         ForEach(filteredNames, id: \.id) { name in
@@ -613,7 +677,7 @@ private struct NameRow: View, Equatable {
                             fg: .secondary,
                             guaranteeMatch: fieldMatches.meaning
                         )
-                            .lineLimit(1)
+                            .fixedSize(horizontal: false, vertical: true)
 
                         Text("First Found: \(name.firstFoundShort)")
                             .font(.caption2)
@@ -726,7 +790,9 @@ private struct NameRowDetails: View {
         VStack(alignment: .leading) {
             if showDescription || isExpanded {
                 if !name.otherNames.isEmpty {
-                    HStack {
+                    // Baseline-aligned and free to wrap: a name with many alternates used to clip to
+                    // whatever fit on the label's line.
+                    HStack(alignment: .firstTextBaseline) {
                         Text("Other Names:")
                             .font(.subheadline.weight(.semibold))
                             .foregroundColor(settings.accentColor.color)
@@ -734,6 +800,7 @@ private struct NameRowDetails: View {
                         Text(name.otherNames.joined(separator: ", "))
                             .font(.subheadline)
                             .foregroundColor(.primary)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
                     .transition(.opacity)
                 }

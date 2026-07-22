@@ -140,6 +140,18 @@ struct HadithSettingsSheet: View {
                                 }
                             }
                         ).animation(.easeInOut))
+
+                        // Hadith's own copy of the Quran's toggle, so highlighting here doesn't have
+                        // to follow the mushaf's.
+                        VStack(alignment: .leading) {
+                            Toggle("Highlight Allah", isOn: $settings.highlightAllahNamesHadith.animation(.easeInOut))
+                                .onChange(of: settings.highlightAllahNamesHadith) { _ in settings.hapticFeedback() }
+
+                            Text("Colors the majestic and glorious name الله (Allah) in red throughout the hadith texts.")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                                .padding(.vertical, 2)
+                        }
                     }
 
                     if settings.showHadithArabic {
@@ -320,7 +332,9 @@ struct HadithRow: View {
     let book: HadithCatalogBook
     let hadith: HadithBookData.Hadith
     var searchText: String = ""
-    /// The Quran ayah-search rows' scale: small type and clipped lines, for search results.
+    /// The Quran ayah-search rows' scale: caption-sized type for search results. The FULL Arabic and
+    /// English always render (no line clipping, and the show-Arabic/English toggles don't apply) so the
+    /// highlighted match is visible wherever it falls in the text.
     var compact: Bool = false
     /// The paged reader's Fit Page shrink - an overflowing page passes < 1 so its text fits the screen.
     var fontScale: CGFloat = 1
@@ -363,11 +377,13 @@ struct HadithRow: View {
     }
 
     private var arabicFontSize: CGFloat {
-        (compact ? UIFont.preferredFont(forTextStyle: .subheadline).pointSize + 2 : settings.hadithArabicFontSize) * fontScale
+        // Compact rows show the full text, so the type drops to caption scale (+2 keeps the Arabic
+        // script legible at that size).
+        (compact ? UIFont.preferredFont(forTextStyle: .caption1).pointSize + 2 : settings.hadithArabicFontSize) * fontScale
     }
 
     private var englishFontSize: CGFloat {
-        (compact ? UIFont.preferredFont(forTextStyle: .caption1).pointSize : settings.hadithEnglishFontSize) * fontScale
+        (compact ? UIFont.preferredFont(forTextStyle: .caption2).pointSize : settings.hadithEnglishFontSize) * fontScale
     }
 
     var body: some View {
@@ -428,7 +444,7 @@ struct HadithRow: View {
                 }
             }
 
-            if settings.showHadithArabic, !hadith.arabic.isEmpty {
+            if compact || settings.showHadithArabic, !hadith.arabic.isEmpty {
                 HighlightedSnippet(
                     source: hadith.arabic,
                     term: searchText,
@@ -437,8 +453,7 @@ struct HadithRow: View {
                         : .system(size: arabicFontSize),
                     accent: settings.accentColor.color,
                     fg: .primary,
-                    lineLimit: compact ? 2 : nil,
-                    highlightAllahNames: settings.highlightAllahNames,
+                    highlightAllahNames: settings.highlightAllahNamesHadith,
                     // The classical faces draw "،" as an ornament circle - commas fall back to the
                     // system face.
                     basicFontForCommas: settings.useFontArabic ? arabicFontSize : nil
@@ -447,10 +462,10 @@ struct HadithRow: View {
                 .multilineTextAlignment(.trailing)
                 .lineSpacing(compact ? 0 : 6)
                 .frame(maxWidth: .infinity, alignment: .trailing)
-                .fixedSize(horizontal: false, vertical: !compact)
+                .fixedSize(horizontal: false, vertical: true)
             }
 
-            if settings.showHadithEnglish {
+            if compact || settings.showHadithEnglish {
                 // The narrator is PART of the English text - it shows whenever English does (there is no
                 // separate toggle; a hadith without its isnad line reads incomplete).
                 if !hadith.english.narrator.isEmpty {
@@ -459,11 +474,10 @@ struct HadithRow: View {
                         term: searchText,
                         font: .system(size: englishFontSize).italic(),
                         accent: settings.accentColor.color,
-                        fg: .secondary,
-                        lineLimit: compact ? 1 : nil
+                        fg: .secondary
                     )
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .fixedSize(horizontal: false, vertical: !compact)
+                    .fixedSize(horizontal: false, vertical: true)
                 }
 
                 if !hadith.english.text.isEmpty {
@@ -473,11 +487,10 @@ struct HadithRow: View {
                         font: .system(size: englishFontSize),
                         accent: settings.accentColor.color,
                         fg: .primary,
-                        lineLimit: compact ? 3 : nil,
-                        highlightAllahNames: settings.highlightAllahNames
+                        highlightAllahNames: settings.highlightAllahNamesHadith
                     )
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .fixedSize(horizontal: false, vertical: !compact)
+                    .fixedSize(horizontal: false, vertical: true)
                 }
             }
 
@@ -1123,7 +1136,7 @@ struct HadithShareSheet: View {
                         ScrollView {
                             // Same Allah-name reddening the Share Ayah text preview applies - the live
                             // hadith rows highlight the names, so the share preview must too.
-                            Text(ShareAyahSheet.allahHighlightedSwiftUIText(composed, baseColor: .white, enabled: settings.highlightAllahNames))
+                            Text(ShareAyahSheet.allahHighlightedSwiftUIText(composed, baseColor: .white, enabled: settings.highlightAllahNamesHadith))
                                 .font(.body)
                                 .textSelection(.enabled)
                                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -1336,7 +1349,7 @@ struct HadithShareSheet: View {
             ])
             // The Share Ayah card's Allah-name reddening, applied to every part (Arabic pattern match +
             // English "Allah") - the live rows highlight the names, so the shared image must too.
-            ShareAyahSheet.applyAllahHighlight(to: piece, source: string, enabled: settings.highlightAllahNames)
+            ShareAyahSheet.applyAllahHighlight(to: piece, source: string, enabled: settings.highlightAllahNamesHadith)
             if isArabic, shareFace != .basic {
                 applyBasicFontToCommas(piece, size: baseSize * 1.2)
             }

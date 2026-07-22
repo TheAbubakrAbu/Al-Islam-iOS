@@ -393,6 +393,15 @@ struct AdhkarView: View {
         ForEach(commonDhikrItems) { dhikr in
             filteredAdhkarRow(dhikr)
         }
+
+        // The rows above vanish one by one as the query narrows; when they've ALL gone, say so
+        // instead of leaving a silent gap.
+        if !searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+           !commonDhikrItems.contains(where: { matchesSearch($0) }) {
+            Text("No remembrances match your search.")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+        }
     }
 
     private var virtuesSection: some View {

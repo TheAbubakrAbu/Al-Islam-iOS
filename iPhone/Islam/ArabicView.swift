@@ -472,7 +472,13 @@ struct ArabicView: View {
             // as two separate accesses each computed property re-filtered every letter per keystroke.
             let results = filteredStandardForMode + filteredOther
             Section {
-                letterCollection(results)
+                if results.isEmpty {
+                    Text("No letters match your search.")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                } else {
+                    letterCollection(results)
+                }
             } header: {
                 HStack {
                     Text("ARABIC SEARCH RESULTS")

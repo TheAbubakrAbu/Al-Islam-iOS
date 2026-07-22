@@ -83,14 +83,11 @@ struct DateView: View {
                     .foregroundColor(settings.accentColor.color)
 
                 // The Hijri month has an Arabic name, and this screen only ever showed the English
-                // transliteration of it.
+                // transliteration of it. Dates always render in the basic system face - the classical
+                // Quranic faces are for scripture, and their ornamental digits make dates hard to read.
                 Text(hijriArabicText)
-                    .font(
-                        settings.islamUsesCustomArabicFace
-                            ? Font.arabic(settings.nonQuranArabicFontName, size: 20, relativeTo: .body)
-                            : .body
-                    )
-                    .arabicFontDesign(custom: settings.islamUsesCustomArabicFace)
+                    .font(.body)
+                    .arabicFontDesign(custom: false)
                     .foregroundColor(.secondary)
             }
             #if os(iOS)

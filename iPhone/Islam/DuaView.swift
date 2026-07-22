@@ -97,6 +97,12 @@ struct DuaView: View {
             }
 
                 Section {
+                    if shownCollections.isEmpty, matching.isEmpty {
+                        Text("No duas match your search.")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+
                     ForEach(shownCollections) { collection in
                         NavigationLink {
                             DuaCollectionView(collection: collection)

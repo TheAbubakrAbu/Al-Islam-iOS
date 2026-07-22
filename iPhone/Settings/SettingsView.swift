@@ -9,6 +9,7 @@ struct SettingsView: View {
     @State private var hasSetDefaultSelection = false
     @State private var showResetConfirmation = false
     @State private var confirmEraseEverything = false
+    @State private var settingsSearchText = ""
 
     /// The destination shown when nothing is explicitly selected (single source of truth).
     private static let defaultDestination: SettingsDestination = .quranSettings
@@ -70,22 +71,36 @@ struct SettingsView: View {
     private var settingsList: some View {
         List {
             Group {
-                notificationSection
-                adhanSection
-                quranSection
                 #if os(iOS)
-                hadithSection
+                settingsSearchBarSection
+                if !settingsSearchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    settingsSearchResultsSection
+                } else {
+                    standardSettingsSections
+                }
+                #else
+                standardSettingsSections
                 #endif
-                appearanceSection
-                resetSection
-                creditsSection
-
-                AlIslamAppsSection()
             }
             .themedListRowBackground()
         }
         .navigationTitle("Settings")
         .applyConditionalListStyle()
+    }
+
+    @ViewBuilder
+    private var standardSettingsSections: some View {
+        notificationSection
+        adhanSection
+        quranSection
+        #if os(iOS)
+        hadithSection
+        #endif
+        appearanceSection
+        resetSection
+        creditsSection
+
+        AlIslamAppsSection()
     }
 
     #if os(iOS)
@@ -120,6 +135,144 @@ struct SettingsView: View {
                 SettingsQuranView()
             case .hadithSettings:
                 HadithSettingsSheet(presentedAsSheet: false)
+            }
+        }
+    }
+    #endif
+
+    #if os(iOS)
+    // MARK: - Settings search
+    //
+    // A hand-maintained index over every settings screen and its notable individual settings.
+    // Each entry deep-links to the SCREEN that owns the setting; the path caption shows where the
+    // row will land, so "highlight allah" finds both the Quran and the Hadith toggles.
+
+    private struct SettingsSearchEntry: Identifiable {
+        let title: String
+        let path: String
+        let keywords: String
+        let destination: Destination
+
+        var id: String { path + title }
+
+        enum Destination {
+            case notifications
+            case notificationReminders
+            case prayerSettings
+            case travelingMode
+            case prayerCalculation
+            case skyColors
+            case quranSettings
+            case reciters
+            case hadithSettings
+            case credits
+        }
+    }
+
+    private static let settingsSearchIndex: [SettingsSearchEntry] = [
+        // Notifications
+        .init(title: "Notification Settings", path: "Notifications", keywords: "alerts permission bell", destination: .notifications),
+        .init(title: "Adhan Sound", path: "Notifications", keywords: "athan azan sound mecca madinah silent mode ringer", destination: .notifications),
+        .init(title: "Hijri Calendar Notifications", path: "Notifications", keywords: "islamic events eid ramadan reminders", destination: .notifications),
+        .init(title: "Prayer Reminders & Pre-Notifications", path: "Notifications → Prayer Reminders", keywords: "before minutes early alert per prayer fajr dhuhr asr maghrib isha", destination: .notificationReminders),
+        .init(title: "Nagging Mode", path: "Notifications → Prayer Reminders", keywords: "nag repeat reminders pray on time cascade did you pray tracker", destination: .notificationReminders),
+
+        // Prayer / Adhan
+        .init(title: "Prayer Settings", path: "Al-Adhan", keywords: "salah salat times adhan", destination: .prayerSettings),
+        .init(title: "Prayer Calculation Method", path: "Prayer Settings → Prayer Calculation", keywords: "method angles isna mwl muslim world league egypt karachi umm al-qura makkah moonsighting jakim malaysia singapore indonesia turkey diyanet automatic country", destination: .prayerCalculation),
+        .init(title: "Custom Calculation Angles", path: "Prayer Settings → Prayer Calculation", keywords: "fajr angle isha angle degrees custom", destination: .prayerCalculation),
+        .init(title: "High Latitude Rule", path: "Prayer Settings", keywords: "midnight seventh night twilight northern latitude", destination: .prayerSettings),
+        .init(title: "Hanafi Madhab (Asr Time)", path: "Prayer Settings", keywords: "asr later shadow madhhab school shafi", destination: .prayerSettings),
+        .init(title: "Traveling Mode (Qasr)", path: "Prayer Settings → Traveling Mode", keywords: "travel shorten combine journey safar 48 miles automatic", destination: .travelingMode),
+        .init(title: "Optional Prayer Times", path: "Prayer Settings", keywords: "duha duhaa islamic midnight last third night tahajjud suhoor", destination: .prayerSettings),
+        .init(title: "Manual Prayer Offsets", path: "Prayer Settings", keywords: "adjust minutes plus minus tune offset", destination: .prayerSettings),
+        .init(title: "Custom Prayer Names", path: "Prayer Settings", keywords: "rename spelling fadjr salah names", destination: .prayerSettings),
+        .init(title: "Hijri Date Offset", path: "Prayer Settings", keywords: "hijri adjust day moon date calendar", destination: .prayerSettings),
+        .init(title: "Sky View & Colors", path: "Prayer Settings → Sky Colors", keywords: "background gradient sunrise sunset theme sky", destination: .skyColors),
+
+        // Quran
+        .init(title: "Quran Settings", path: "Al-Quran", keywords: "mushaf reading", destination: .quranSettings),
+        .init(title: "Reciter", path: "Quran Settings → Recitation", keywords: "reciters audio download favorite minshawi husary sudais qari listen", destination: .reciters),
+        .init(title: "Recitation Type & Random Reciter", path: "Quran Settings", keywords: "murattal mujawwad muallim random ayah recitation", destination: .quranSettings),
+        .init(title: "Arabic Text (Quran)", path: "Quran Settings → Arabic Text", keywords: "font size uthmani indopak script clean dots beginner mode spacing", destination: .quranSettings),
+        .init(title: "Tajweed Colors", path: "Quran Settings → Arabic Text", keywords: "tajwid rules colors ghunnah qalqalah madd legend", destination: .quranSettings),
+        .init(title: "Highlight Allah (Quran)", path: "Quran Settings → Arabic Text", keywords: "highlight name of allah red color quran", destination: .quranSettings),
+        .init(title: "Riwayah & Qiraat", path: "Quran Settings → Arabic Text", keywords: "hafs warsh qaloon riwayah qiraat ahruf readings", destination: .quranSettings),
+        .init(title: "Transliteration & English Translations", path: "Quran Settings → English Text", keywords: "saheeh international mustafa khattab translation english transliteration", destination: .quranSettings),
+        .init(title: "Quran Search Options", path: "Quran Settings → Search", keywords: "silent letters search surahs ai semantic", destination: .quranSettings),
+        .init(title: "Reading Mode (List / Page)", path: "Quran Settings → Reading", keywords: "page mode mushaf list mode grid summary last read", destination: .quranSettings),
+
+        // Hadith
+        .init(title: "Hadith Settings", path: "Al-Hadith", keywords: "bukhari muslim books", destination: .hadithSettings),
+        .init(title: "Show Hadith Arabic / English", path: "Hadith Settings", keywords: "hadith text toggles narrator display", destination: .hadithSettings),
+        .init(title: "Hadith Font Sizes", path: "Hadith Settings", keywords: "hadith arabic english font size", destination: .hadithSettings),
+        .init(title: "Highlight Allah (Hadith)", path: "Hadith Settings", keywords: "highlight name of allah red color hadith", destination: .hadithSettings),
+        .init(title: "Hadith Summary Mode", path: "Hadith Settings", keywords: "hadith of the day last read tiles summary", destination: .hadithSettings),
+
+        // About
+        .init(title: "Credits & Contact", path: "Credits", keywords: "about version website email review", destination: .credits)
+    ]
+
+    @ViewBuilder
+    private func searchDestinationView(_ destination: SettingsSearchEntry.Destination) -> some View {
+        switch destination {
+        case .notifications: NotificationView()
+        case .notificationReminders: MoreNotificationView()
+        case .prayerSettings: SettingsAdhanView(showNotifications: false)
+        case .travelingMode: SettingsAdhanView(showNotifications: false, openTravelingMode: true)
+        case .prayerCalculation: PrayerCalculationListView()
+        case .skyColors: SkyColorsView()
+        case .quranSettings: SettingsQuranView()
+        case .reciters: ReciterListView()
+        case .hadithSettings: HadithSettingsSheet(presentedAsSheet: false)
+        case .credits: CreditsView()
+        }
+    }
+
+    private var settingsSearchResults: [SettingsSearchEntry] {
+        let query = settingsSearchText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        guard !query.isEmpty else { return [] }
+        let terms = query.split(separator: " ").map(String.init)
+        return Self.settingsSearchIndex.filter { entry in
+            let blob = "\(entry.title) \(entry.path) \(entry.keywords)".lowercased()
+            return terms.allSatisfy { blob.contains($0) }
+        }
+    }
+
+    private var settingsSearchBarSection: some View {
+        Section {
+            SearchBar(text: $settingsSearchText.animation(.easeInOut))
+                .padding(.horizontal, -8)
+        }
+    }
+
+    @ViewBuilder
+    private var settingsSearchResultsSection: some View {
+        let results = settingsSearchResults
+        Section(header: SectionPillHeader(title: "SETTING RESULTS", count: results.count)) {
+            if results.isEmpty {
+                Text("No settings match your search.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+
+            ForEach(results) { entry in
+                NavigationLink(destination: LazyDestination { searchDestinationView(entry.destination) }) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        HighlightedSnippet(
+                            source: entry.title,
+                            term: settingsSearchText,
+                            font: .subheadline,
+                            accent: settings.accentColor.color,
+                            fg: .primary
+                        )
+
+                        Text(entry.path)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(.vertical, 2)
+                }
             }
         }
     }

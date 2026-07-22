@@ -942,6 +942,40 @@ struct SurahView: View {
         ids.min(by: { abs($0 - requested) < abs($1 - requested) })
     }
 
+    /// Stable ids for the rows ABOVE the first ayah, so a Previous/Next swap can land at the list's
+    /// literal top instead of at ayah 1 with everything above it (nav buttons, bismillah, khatm bar)
+    /// already scrolled out of view.
+    static let khatmTopAnchorID = "surah-list-khatm-top"
+    static let qiraahTopAnchorID = "surah-list-qiraah-top"
+    static let navTopAnchorID = "surah-list-nav-top"
+    static let headerRowAnchorID = "surah-list-header-row"
+
+    /// The topmost row the list is currently rendering - the conditions mirror, in order, the sections
+    /// laid out at the top of `ayahListScreen`.
+    private var surahListTopTargetID: String {
+        if shouldShowKhatmProgress { return Self.khatmTopAnchorID }
+        if !settings.isHafsDisplay { return Self.qiraahTopAnchorID }
+        #if !os(watchOS)
+        if neighboringSurah(before: surah.id) != nil || neighboringSurah(after: surah.id) != nil {
+            return Self.navTopAnchorID
+        }
+        #endif
+        return Self.headerRowAnchorID
+    }
+
+    /// Scrolls the reading list to its very top (same retry discipline as `scrollToAyah`).
+    private func scrollToListTop(proxy: ScrollViewProxy) {
+        let targetID = surahListTopTargetID
+        func attempt(_ remaining: Int) {
+            proxy.scrollTo(targetID, anchor: .top)
+            guard remaining > 0 else { return }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                attempt(remaining - 1)
+            }
+        }
+        DispatchQueue.main.async { attempt(2) }
+    }
+
     private func scrollToAyah(_ ayahID: Int, proxy: ScrollViewProxy, animated: Bool = false) {
         // Lazy list cells for the target may not exist on the first pass (especially right after the view
         // appears or is reconfigured), so a single scrollTo can silently miss and leave the old position.
@@ -1284,9 +1318,10 @@ struct SurahView: View {
                 arrivalTerm = term
                 arrivalAyahID = target
             }
-            // Page mode: opening to a specific ayah SELECTS it - a bookmark or search hit can land
-            // mid-page, and the selection is what shows you where you landed. It stays until tapped.
-            if settings.quranPageMode, let target = ayah {
+            // Opening to a specific ayah SELECTS it, in page AND list mode alike - a bookmark, a
+            // "5:6"-style search, or a widget can land mid-surah, and the selection is what shows you
+            // where you landed. It stays until tapped.
+            if let target = ayah {
                 highlightedAyah = HighlightedAyahRef(surahID: surah.id, ayahID: target)
             }
         }
@@ -1425,7 +1460,10 @@ struct SurahView: View {
         }
         .onChange(of: quranPlayer.showInternetAlert) { if $0 { showAlert = true; quranPlayer.showInternetAlert = false } }
         .confirmationDialog(quranPlayer.playbackAlertTitle, isPresented: $showAlert, titleVisibility: .visible) {
-            Button("OK") { }
+            if let offer = quranPlayer.offlineReciterSwitch {
+                Button("Play \(offer.suggested.name)") { quranPlayer.acceptOfflineReciterSwitch() }
+            }
+            Button("OK") { quranPlayer.offlineReciterSwitch = nil }
         } message: {
             Text(quranPlayer.playbackAlertMessage)
         }
@@ -1684,6 +1722,7 @@ struct SurahView: View {
                     Section {
                         surahNavigationButtonPair(previous: previousSurah, next: nextSurah)
                     }
+                    .id(Self.navTopAnchorID)
                 }
                 #endif
 
@@ -1706,6 +1745,7 @@ struct SurahView: View {
                         }
                     }
                 }
+                .id(Self.headerRowAnchorID)
 
                 if isDividerKeywordSearch {
                     ForEach(Array(keywordDividerModels.enumerated()), id: \.offset) { _, dividerModel in
@@ -1869,9 +1909,10 @@ struct SurahView: View {
                 if isTextQuery {
                     arrivalTerm = trimmedQuery
                     arrivalAyahID = target
-                    highlightedAyah = HighlightedAyahRef(surahID: surah.id, ayahID: target)
                 }
-                // Reference queries just scroll - the landing itself is the marker in list mode.
+                // Reference queries ("5:3") get the selection tint too - the landing alone is easy to
+                // lose once the list settles, so mark it like any other search arrival.
+                highlightedAyah = HighlightedAyahRef(surahID: surah.id, ayahID: target)
                 if !searchText.isEmpty {
                     settings.hapticFeedback()
                     pendingScrollAfterSearchClear = target
@@ -1906,11 +1947,10 @@ struct SurahView: View {
                     if !didScrollDown {
                         didScrollDown = true
                         scrollToAyah(target, proxy: proxy)
-                        // A search arrival marks its ayah TOO: the accent snippet shows the match, the
-                        // selection shows the landing - one tap clears both together.
-                        if arrivalTerm != nil, arrivalAyahID == target {
-                            highlightedAyah = HighlightedAyahRef(surahID: surah.id, ayahID: target)
-                        }
+                        // Any targeted arrival selects its ayah - for a text search the accent snippet
+                        // shows the match and the selection shows the landing; a "5:6" reference has only
+                        // the selection. One tap clears it.
+                        highlightedAyah = HighlightedAyahRef(surahID: surah.id, ayahID: target)
                     }
                 } else if visibility.firstVisibleAyahID == nil {
                     visibility.setAnchor(ayahsForQiraah.first?.id)
@@ -1938,7 +1978,9 @@ struct SurahView: View {
                     scrollToAyah(target, proxy: proxy)
                 } else if let top = prepared.ayahs.first?.id {
                     visibility.setAnchor(top)
-                    scrollToAyah(top, proxy: proxy)
+                    // Previous/Next lands at the LITERAL top - nav buttons and surah header included -
+                    // not at ayah 1 with everything above it hidden.
+                    scrollToListTop(proxy: proxy)
                 }
             }
             .onChange(of: ayah) { newValue in
@@ -1950,6 +1992,10 @@ struct SurahView: View {
                 if let term = AyahArrivalTerm.shared.consume(surahID: surah.id, ayahID: newValue) {
                     arrivalTerm = term
                     arrivalAyahID = target
+                }
+                // A route re-target (another search hit while this surah is open) selects its ayah; a
+                // list ↔ page mode switch does not - that would mark an ayah the user never chose.
+                if modeSwitchAyah == nil {
                     highlightedAyah = HighlightedAyahRef(surahID: surah.id, ayahID: target)
                 }
             }
@@ -2131,6 +2177,7 @@ struct SurahView: View {
                 Text("KHATM PROGRESS")
             }
             .onReceive(settings.objectWillChange) { _ in computeKhatmOverviewIfNeeded(force: false) }
+            .id(Self.khatmTopAnchorID)
         }
     }
 
@@ -2190,6 +2237,7 @@ struct SurahView: View {
                 }
                 .padding(.vertical, 6)
             }
+            .id(Self.qiraahTopAnchorID)
         }
     }
 

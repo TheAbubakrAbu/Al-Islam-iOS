@@ -184,6 +184,29 @@ private struct MainTabView: View {
 
     var body: some View {
         tabs
+            // Tapping a nagging notification lands here with the question pending - asked at the TAB
+            // level so it appears whichever tab the app reopens on.
+            .confirmationDialog(
+                "Did you pray \(settings.pendingNagQuestion?.prayerName ?? "this prayer")?",
+                isPresented: Binding(
+                    get: { settings.pendingNagQuestion != nil },
+                    set: { if !$0 { settings.pendingNagQuestion = nil } }
+                ),
+                titleVisibility: .visible
+            ) {
+                Button("Yes, I prayed it") {
+                    if let question = settings.pendingNagQuestion {
+                        settings.markPrayerPrayedFromNag(
+                            asked: question.prayerName,
+                            cascadePrayerName: question.cascadePrayerName
+                        )
+                    }
+                    settings.pendingNagQuestion = nil
+                }
+                Button("Not yet", role: .cancel) { settings.pendingNagQuestion = nil }
+            } message: {
+                Text("Answering yes marks it in the prayer tracker and stops the remaining reminders.")
+            }
             .task { await warmUnderCover() }
             .task { await prewarmAllQuran() }
             // Resolve today's Hadith of the Day while the launch cover is still up, so the Hadith tab

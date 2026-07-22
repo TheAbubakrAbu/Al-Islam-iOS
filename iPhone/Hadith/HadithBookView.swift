@@ -1629,6 +1629,7 @@ struct HadithChapterView: View {
                     // identity is the pinned header above; rows report visibility for its progress bar.
                     if previousChapter != nil || nextChapter != nil {
                         Section { chapterNavButtonPair() }
+                            .id("chapter-top-nav")
                     }
 
                     ForEach(allChapterHadiths) { hadith in
@@ -1691,10 +1692,18 @@ struct HadithChapterView: View {
         }
         // (The pinned chapter header + progress bar live at the BODY level now, shared with page mode.)
         .onChange(of: chapterIndex) { _ in
-            // A Previous/Next chapter swap lands at the top of the new chapter.
-            guard let first = allChapterHadiths.first?.idInBook else { return }
+            // A Previous/Next chapter swap lands at the LITERAL top of the new chapter - the nav
+            // buttons above the first hadith included - not at hadith 1 with them scrolled away.
+            let target: String
+            if previousChapter != nil || nextChapter != nil {
+                target = "chapter-top-nav"
+            } else if let first = allChapterHadiths.first?.idInBook {
+                target = "chapter-hadith-\(first)"
+            } else {
+                return
+            }
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
-                withAnimation { scrollProxy.scrollTo("chapter-hadith-\(first)", anchor: .top) }
+                withAnimation { scrollProxy.scrollTo(target, anchor: .top) }
             }
         }
         // Apple Music-style: the bottom search bar minimizes while scrolling down. Select mode swaps
@@ -2030,10 +2039,8 @@ struct HadithPagedView: View {
     /// sync - the pager no longer keeps a private copy that could drift.
     @Binding var chapterIndex: Int
     @State private var pageIndex = 0
-    /// Pages fill LINE BY LINE at the chosen font sizes - the mushaf's way. A hadith is no longer
-    /// atomic: its blocks (header capsule, Arabic, narrator, English) flow onto the page until the
-    /// height runs out, and the REST continues on the next page. The font NEVER shrinks; the one page
-    /// shape that can still scroll is a single block taller than the whole screen.
+    /// ONE hadith per page, rendered at the user's exact hadith font sizes - no fit-to-page shrinking
+    /// and no mid-hadith splitting. A hadith taller than the screen simply scrolls within its page.
     private struct BuiltPage {
         let elements: [PageElement]
     }
@@ -2042,10 +2049,15 @@ struct HadithPagedView: View {
     /// in this chapter), then never yanks the user again.
     @State private var didSeedPage = false
 
-    /// One flowable block. The header capsule and the chapter heading are "keep with next": they are
-    /// never stranded as the last thing on a page.
+    /// Which inline wheel is open above the footer - the mushaf reader's page/juz picker, reshaped
+    /// for hadiths and chapters.
+    private enum PickerTarget { case hadith, chapter }
+    @State private var activePicker: PickerTarget?
+    @State private var hadithPickerSelection = 0
+    @State private var chapterPickerSelection = 0
+
+    /// One renderable part of a hadith's page (header capsule, Arabic, narrator, English).
     private enum PageElement: Identifiable {
-        case heading(HadithBookData.Chapter, ordinal: Int)
         case hadithHeader(HadithBookData.Hadith)
         case arabic(HadithBookData.Hadith)
         case narrator(HadithBookData.Hadith)
@@ -2053,7 +2065,6 @@ struct HadithPagedView: View {
 
         var id: String {
             switch self {
-            case .heading(let chapter, _): return "heading-\(chapter.id)"
             case .hadithHeader(let hadith): return "hdr-\(hadith.id)"
             case .arabic(let hadith): return "ar-\(hadith.id)"
             case .narrator(let hadith): return "narr-\(hadith.id)"
@@ -2061,27 +2072,13 @@ struct HadithPagedView: View {
             }
         }
 
-        var isKeepWithNext: Bool {
-            switch self {
-            case .heading, .hadithHeader: return true
-            case .arabic, .narrator, .english: return false
-            }
-        }
-
         var hadith: HadithBookData.Hadith? {
             switch self {
-            case .heading: return nil
             case .hadithHeader(let hadith), .arabic(let hadith),
                  .narrator(let hadith), .english(let hadith):
                 return hadith
             }
         }
-    }
-
-    /// Arabic-Indic digits for the heading's Arabic side ("٣" for chapter 3).
-    private static func arabicDigits(_ value: Int) -> String {
-        let map: [Character] = ["٠", "١", "٢", "٣", "٤", "٥", "٦", "٧", "٨", "٩"]
-        return String(String(value).compactMap { $0.wholeNumberValue.map { map[$0] } })
     }
 
     private var chapter: HadithBookData.Chapter? {
@@ -2103,66 +2100,12 @@ struct HadithPagedView: View {
         return hadiths
     }
 
-    // MARK: Measurement
-
-    private func measuredHeight(of text: String, font: UIFont, width: CGFloat, lineSpacing: CGFloat = 0) -> CGFloat {
-        guard !text.isEmpty else { return 0 }
-        let style = NSMutableParagraphStyle()
-        style.lineSpacing = lineSpacing
-        let rect = (text as NSString).boundingRect(
-            with: CGSize(width: width, height: .greatestFiniteMagnitude),
-            options: [.usesLineFragmentOrigin, .usesFontLeading],
-            attributes: [.font: font, .paragraphStyle: style],
-            context: nil
-        )
-        return ceil(rect.height)
-    }
-
-    /// Height of ONE block at the exact fonts it renders with (a little slack; a slight over-estimate
-    /// just moves a block to the next page, never hides text).
-    private func blockHeight(_ element: PageElement, width: CGFloat) -> CGFloat {
-        switch element {
-        case .heading(let chapter, let ordinal):
-            var total: CGFloat = 8
-            total += measuredHeight(of: "\(ordinal). \(chapter.english)",
-                                    font: .roundedSystemFont(ofSize: 15, weight: .semibold), width: width)
-            if !chapter.arabic.isEmpty {
-                let arabicFont = UIFont(name: settings.nonQuranArabicFontName, size: 15) ?? .roundedSystemFont(ofSize: 15)
-                total += measuredHeight(of: chapter.arabic, font: arabicFont, width: width) + 4
-            }
-            return total * 1.06
-
-        case .hadithHeader:
-            return 30
-
-        case .arabic(let hadith):
-            let arabicFont = UIFont(name: settings.nonQuranArabicFontName, size: settings.hadithArabicFontSize)
-                ?? .roundedSystemFont(ofSize: settings.hadithArabicFontSize)
-            return measuredHeight(of: hadith.arabic, font: arabicFont, width: width, lineSpacing: 6) * 1.08
-
-        case .narrator(let hadith):
-            let englishFont = UIFont.roundedSystemFont(ofSize: settings.hadithEnglishFontSize)
-            return measuredHeight(of: hadith.english.narrator, font: englishFont, width: width) * 1.06
-
-        case .english(let hadith):
-            let englishFont = UIFont.roundedSystemFont(ofSize: settings.hadithEnglishFontSize)
-            return measuredHeight(of: hadith.english.text, font: englishFont, width: width) * 1.06
-        }
-    }
-
-    /// Packs the chapter into pages LINE BY LINE, the mushaf's way: blocks flow until the height runs
-    /// out and the rest continues on the next page - a hadith is no longer atomic, and the font NEVER
-    /// shrinks. Keep-with-next blocks (chapter heading, hadith header capsule) are never stranded last.
-    private func paginate(size: CGSize) -> [BuiltPage] {
-        let width = max(size.width - 40, 1)
-        let budget = max(size.height - 24, 200)
-        let hadiths = chapterHadiths
-        guard !hadiths.isEmpty else { return [] }
-
-        var elements: [PageElement] = []
-        if let chapter { elements.append(.heading(chapter, ordinal: chapterIndex + 1)) }
-        for hadith in hadiths {
-            elements.append(.hadithHeader(hadith))
+    /// One page per hadith: the header capsule plus whichever parts the display toggles allow. Cheap
+    /// enough to rebuild on every body pass - `chapterHadiths` is memoized and this is a plain map,
+    /// so no TextKit measurement or page memo is needed anymore.
+    private func builtPages() -> [BuiltPage] {
+        chapterHadiths.map { hadith in
+            var elements: [PageElement] = [.hadithHeader(hadith)]
             if settings.showHadithArabic, !hadith.arabic.isEmpty {
                 elements.append(.arabic(hadith))
             }
@@ -2170,106 +2113,52 @@ struct HadithPagedView: View {
                 if !hadith.english.narrator.isEmpty { elements.append(.narrator(hadith)) }
                 if !hadith.english.text.isEmpty { elements.append(.english(hadith)) }
             }
+            return BuiltPage(elements: elements)
         }
-
-        var pages: [BuiltPage] = []
-        var current: [PageElement] = []
-        var used: CGFloat = 0
-        let spacing: CGFloat = 12
-
-        func closePage() {
-            // Keep-with-next blocks move forward rather than dangle at a page's bottom.
-            var carried: [PageElement] = []
-            while let last = current.last, last.isKeepWithNext {
-                carried.insert(current.removeLast(), at: 0)
-            }
-            if !current.isEmpty { pages.append(BuiltPage(elements: current)) }
-            current = carried
-            used = carried.reduce(0) { $0 + blockHeight($1, width: width) + spacing }
-        }
-
-        for element in elements {
-            let h = blockHeight(element, width: width)
-            let needed = (current.isEmpty ? 0 : spacing) + h
-            if !current.isEmpty, used + needed > budget {
-                closePage()
-                current.append(element)
-                used += (current.count > 1 ? spacing : 0) + h
-            } else {
-                current.append(element)
-                used += needed
-            }
-        }
-        if !current.isEmpty { pages.append(BuiltPage(elements: current)) }
-        return pages
-    }
-
-    /// Memoized pagination. `paginate` measures EVERY hadith of the chapter with TextKit, and the body
-    /// used to call it on every evaluation - every swipe re-measured the whole chapter, which is exactly
-    /// why page mode felt all over the place. A swipe is now a dictionary hit; only a real input change
-    /// (size, fonts, toggles, Fit Page, notes) re-measures.
-    @MainActor private static var pageMemo: [String: [BuiltPage]] = [:]
-
-    private func builtPages(size: CGSize) -> [BuiltPage] {
-        let key = [
-            book.slug, "\(chapter?.id ?? -1)",
-            "\(Int(size.width.rounded()))x\(Int(size.height.rounded()))",
-            settings.nonQuranArabicFontName,
-            "\(Int(settings.hadithArabicFontSize))", "\(Int(settings.hadithEnglishFontSize))",
-            settings.showHadithArabic ? "a" : "-", settings.showHadithEnglish ? "e" : "-",
-            settings.useFontArabic ? "f" : "-"
-        ].joined(separator: "|")
-
-        if let cached = Self.pageMemo[key] { return cached }
-        let pages = paginate(size: size)
-        if Self.pageMemo.count > 16 { Self.pageMemo.removeAll(keepingCapacity: true) }
-        Self.pageMemo[key] = pages
-        return pages
     }
 
     var body: some View {
-        GeometryReader { geo in
-            let pages = builtPages(size: geo.size)
+        let pages = builtPages()
 
-            Group {
-                if pages.isEmpty {
-                    Text("This chapter has no hadiths.")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                } else {
-                    // Right-to-left, exactly like the mushaf: the DATA is reversed rather than the layout
-                    // direction, so page 0 sits at the far right and reading advances leftward.
-                    TabView(selection: $pageIndex) {
-                        ForEach(pages.indices.reversed(), id: \.self) { index in
-                            pageBody(pages[index].elements)
-                                .tag(index)
-                        }
+        Group {
+            if pages.isEmpty {
+                Text("This chapter has no hadiths.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                // Right-to-left, exactly like the mushaf: the DATA is reversed rather than the layout
+                // direction, so page 0 sits at the far right and reading advances leftward.
+                TabView(selection: $pageIndex) {
+                    ForEach(pages.indices.reversed(), id: \.self) { index in
+                        pageBody(pages[index].elements)
+                            .tag(index)
                     }
-                    .tabViewStyle(.page(indexDisplayMode: .never))
                 }
+                .tabViewStyle(.page(indexDisplayMode: .never))
             }
-            .safeAreaInset(edge: .bottom) {
-                pagerFooter(pageCount: pages.count, hadithCount: chapterHadiths.count)
-            }
-            .onAppear {
-                // Open on the page holding this book's LAST-READ hadith when it lives in this chapter -
-                // the mushaf's "open where you stopped", then record that page as the new last read.
-                let seeded = seedPageIfNeeded(pages)
-                recordPageLastRead(pages: pages, at: seeded ?? pageIndex)
-            }
-            .onChange(of: pageIndex) { index in
-                recordPageLastRead(pages: pages, at: index)
-            }
-            .onChange(of: chapterIndex) { _ in
-                // A chapter swap re-arms the last-read seed: when the book's last read lives in the
-                // NEW chapter (the page-mode entry jump), land on its exact page - otherwise page 1.
-                didSeedPage = false
-                if let seeded = seedPageIfNeeded(pages) {
-                    recordPageLastRead(pages: pages, at: seeded)
-                } else {
-                    pageIndex = 0
-                }
+        }
+        .safeAreaInset(edge: .bottom) {
+            pagerFooter(pageCount: pages.count)
+        }
+        .onAppear {
+            // Open on the page holding this book's LAST-READ hadith when it lives in this chapter -
+            // the mushaf's "open where you stopped", then record that page as the new last read.
+            let seeded = seedPageIfNeeded(pages)
+            recordPageLastRead(pages: pages, at: seeded ?? pageIndex)
+        }
+        .onChange(of: pageIndex) { index in
+            recordPageLastRead(pages: pages, at: index)
+        }
+        .onChange(of: chapterIndex) { _ in
+            // A chapter swap re-arms the last-read seed: when the book's last read lives in the
+            // NEW chapter (the page-mode entry jump), land on its exact page - otherwise hadith 1.
+            didSeedPage = false
+            activePicker = nil
+            if let seeded = seedPageIfNeeded(pages) {
+                recordPageLastRead(pages: pages, at: seeded)
+            } else {
+                pageIndex = 0
             }
         }
         // No title of its own: the parent chapter view's principal title-menu button owns the bar.
@@ -2329,30 +2218,6 @@ struct HadithPagedView: View {
     @ViewBuilder
     private func blockView(_ element: PageElement) -> some View {
         switch element {
-        case .heading(let chapter, let ordinal):
-            VStack(alignment: .leading, spacing: 4) {
-                // Numbered in BOTH scripts: "1. The Book of Purification" over "١ - كتاب الطهارة".
-                Text("\(ordinal). \(chapter.english)")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundColor(settings.accentColor.color)
-
-                if !chapter.arabic.isEmpty {
-                    HighlightedSnippet(
-                        source: "\(Self.arabicDigits(ordinal)) - \(chapter.arabic)",
-                        term: "",
-                        font: settings.useFontArabic
-                            ? Font.arabic(settings.nonQuranArabicFontName, size: 15)
-                            : .subheadline,
-                        accent: settings.accentColor.color,
-                        fg: .secondary,
-                        basicFontForCommas: settings.useFontArabic ? 15 : nil
-                    )
-                    .arabicFontDesign(custom: settings.islamUsesCustomArabicFace)
-                    .multilineTextAlignment(.trailing)
-                    .frame(maxWidth: .infinity, alignment: .trailing)
-                }
-            }
-
         case .hadithHeader(let hadith):
             HStack(spacing: 8) {
                 HStack(spacing: 5) {
@@ -2417,7 +2282,7 @@ struct HadithPagedView: View {
                     : .system(size: settings.hadithArabicFontSize),
                 accent: settings.accentColor.color,
                 fg: .primary,
-                highlightAllahNames: settings.highlightAllahNames,
+                highlightAllahNames: settings.highlightAllahNamesHadith,
                 basicFontForCommas: settings.useFontArabic ? settings.hadithArabicFontSize : nil
             )
             .arabicFontDesign(custom: settings.islamUsesCustomArabicFace)
@@ -2442,7 +2307,7 @@ struct HadithPagedView: View {
                 font: .system(size: settings.hadithEnglishFontSize),
                 accent: settings.accentColor.color,
                 fg: .primary,
-                highlightAllahNames: settings.highlightAllahNames
+                highlightAllahNames: settings.highlightAllahNamesHadith
             )
             .frame(maxWidth: .infinity, alignment: .leading)
             .fixedSize(horizontal: false, vertical: true)
@@ -2450,7 +2315,7 @@ struct HadithPagedView: View {
         }
     }
 
-    private func pagerFooter(pageCount: Int, hadithCount: Int) -> some View {
+    private func pagerFooter(pageCount: Int) -> some View {
         VStack(spacing: 6) {
             TrackedBar(
                 fraction: pageCount > 1 ? CGFloat(pageIndex) / CGFloat(pageCount - 1) : 1,
@@ -2459,50 +2324,144 @@ struct HadithPagedView: View {
             )
             .padding(.horizontal, 2)
 
-            // The surah reader's button grammar: LEFT chevron is Previous, RIGHT is Next - only the
-            // pages themselves turn right-to-left.
-            HStack(spacing: 12) {
-                Button {
-                    settings.hapticFeedback()
-                    withAnimation(.easeInOut) { chapterIndex = max(0, chapterIndex - 1) }
-                } label: {
-                    Image(systemName: "chevron.left")
-                        .font(.body.weight(.semibold))
-                        .contentShape(Rectangle())
-                }
-                .disabled(chapterIndex == 0)
-                .accessibilityLabel("Previous chapter")
-
-                VStack(spacing: 1) {
-                    Text("Chapter \(chapterIndex + 1)/\(bookData.chapters.count)")
-                        .font(.caption.weight(.semibold))
-                        .monospacedDigit()
-
-                    Text(pageCount > 0 ? "Page \(pageIndex + 1)/\(pageCount) - \(hadithCount) hadiths" : "-")
-                        .font(.caption2)
-                        .monospacedDigit()
-                        .foregroundStyle(.secondary)
-                }
-                .frame(maxWidth: .infinity)
-
-                Button {
-                    settings.hapticFeedback()
-                    withAnimation(.easeInOut) { chapterIndex = min(bookData.chapters.count - 1, chapterIndex + 1) }
-                } label: {
-                    Image(systemName: "chevron.right")
-                        .font(.body.weight(.semibold))
-                        .contentShape(Rectangle())
-                }
-                .disabled(chapterIndex >= bookData.chapters.count - 1)
-                .accessibilityLabel("Next chapter")
+            if activePicker != nil {
+                inlinePicker(pageCount: pageCount)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
             }
-            .foregroundColor(settings.accentColor.color)
+
+            // The mushaf footer's grammar: the readouts ARE the buttons that open their pickers -
+            // "Hadith X / Y" and "Chapter A / B" each unfold an inline wheel, no chevron-stepping.
+            HStack(spacing: 10) {
+                jumpButton(
+                    title: pageCount > 0 ? "Hadith \(pageIndex + 1) / \(pageCount)" : "Hadith - / -",
+                    target: .hadith
+                ) {
+                    hadithPickerSelection = pageIndex
+                }
+
+                jumpButton(
+                    title: "Chapter \(chapterIndex + 1) / \(bookData.chapters.count)",
+                    target: .chapter
+                ) {
+                    chapterPickerSelection = chapterIndex
+                }
+            }
+            .frame(maxWidth: .infinity)
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 8)
         .conditionalGlassEffect(rectangle: true)
         .padding(.horizontal, 16)
         .padding(.bottom, 6)
+    }
+
+    /// The readouts double as the buttons that open their picker. `seed` sets the wheel to where you
+    /// currently are, so opening it and confirming without touching it is a no-op.
+    private func jumpButton(title: String, target: PickerTarget, seed: @escaping () -> Void) -> some View {
+        let isOpen = activePicker == target
+
+        return Button {
+            settings.hapticFeedback()
+            if !isOpen { seed() }
+            withAnimation(.easeInOut) {
+                activePicker = isOpen ? nil : target
+            }
+        } label: {
+            HStack(spacing: 3) {
+                Text(title)
+                Image(systemName: isOpen ? "chevron.down" : "chevron.up.chevron.down")
+                    .font(.system(size: 7))
+            }
+            .font(.caption.weight(.semibold))
+            .monospacedDigit()
+            .lineLimit(1)
+            .minimumScaleFactor(0.7)
+            .foregroundStyle(settings.accentColor.color)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 3)
+            .background(
+                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                    .fill(settings.accentColor.color.opacity(isOpen ? 0.22 : 0.12))
+            )
+            .contentShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+        }
+        .accessibilityLabel("\(title). Jump to")
+    }
+
+    /// The hadith and chapter pickers, in place rather than as a sheet - the mushaf's page/juz picker
+    /// chrome (xmark / title / checkmark over a wheel), reshaped for this reader.
+    private func inlinePicker(pageCount: Int) -> some View {
+        VStack(spacing: 0) {
+            HStack {
+                Button {
+                    settings.hapticFeedback()
+                    withAnimation(.easeInOut) { activePicker = nil }
+                } label: {
+                    Image(systemName: "xmark")
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                }
+
+                Spacer()
+
+                Text(activePicker == .hadith ? "Go to Hadith" : "Go to Chapter")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+
+                Spacer()
+
+                Button {
+                    settings.hapticFeedback()
+                    switch activePicker {
+                    case .hadith:
+                        // Clamped: the selection was seeded against the page list it was opened with.
+                        pageIndex = min(max(hadithPickerSelection, 0), max(pageCount - 1, 0))
+                    case .chapter:
+                        let target = min(max(chapterPickerSelection, 0), max(bookData.chapters.count - 1, 0))
+                        if target != chapterIndex {
+                            withAnimation(.easeInOut) { chapterIndex = target }
+                        }
+                    case nil:
+                        break
+                    }
+                    withAnimation(.easeInOut) { activePicker = nil }
+                } label: {
+                    Image(systemName: "checkmark")
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(settings.accentColor.accent2)
+                }
+            }
+            .padding(.horizontal, 14)
+            .padding(.top, 8)
+
+            Group {
+                if activePicker == .hadith {
+                    Picker("Hadith", selection: $hadithPickerSelection) {
+                        ForEach(0..<max(pageCount, 1), id: \.self) { i in
+                            // Within-chapter position plus the book-wide citation number.
+                            if chapterHadiths.indices.contains(i) {
+                                Text("Hadith \(i + 1)  (#\(chapterHadiths[i].idInBook))").tag(i)
+                            } else {
+                                Text("Hadith \(i + 1)").tag(i)
+                            }
+                        }
+                    }
+                } else {
+                    Picker("Chapter", selection: $chapterPickerSelection) {
+                        ForEach(0..<max(bookData.chapters.count, 1), id: \.self) { i in
+                            if bookData.chapters.indices.contains(i) {
+                                Text("\(i + 1). \(bookData.chapters[i].english)").tag(i)
+                            } else {
+                                Text("Chapter \(i + 1)").tag(i)
+                            }
+                        }
+                    }
+                }
+            }
+            .labelsHidden()
+            .pickerStyle(.wheel)
+            .frame(height: 110)
+        }
     }
 }
 

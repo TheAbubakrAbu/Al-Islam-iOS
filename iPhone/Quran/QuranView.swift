@@ -269,6 +269,14 @@ struct QuranView: View {
                     sources.append(.init(reference: reference, text: ayah.textEnglishSaheeh))
                 }
             }
+            // A "5:6"-style reference has no text hits, but it names its passage outright - asking
+            // about it grounds the answer on that exact ayah.
+            if sources.isEmpty {
+                let exact = getSurahAndAyah(from: trimmed)
+                if let surah = exact.surah, let ayah = exact.ayah {
+                    sources.append(.init(reference: "\(surah.id):\(ayah.id)", text: ayah.textEnglishSaheeh))
+                }
+            }
             guard !sources.isEmpty else {
                 withAnimation { askAnswer = ""; askIsStreaming = false; askRanForQuery = "" }
                 return
@@ -314,20 +322,52 @@ struct QuranView: View {
         return cited
     }
 
-    private func askCitedHeader(count: Int) -> some View {
-        HStack {
-            Text("CITED AYAHS")
+    /// "ASK AI" with the sparkles glyph; the pill counts the answer's cited ayahs once they exist.
+    private func askAIHeader(citedCount: Int) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: "sparkles")
+            
+            Text("ASK AI")
 
             Spacer()
 
-            Text(String(count))
-                .font(.caption.weight(.semibold))
-                .monospacedDigit()
-                .foregroundStyle(settings.accentColor.color)
-                .padding(.horizontal, 12)
-                .padding(.vertical, 6)
-                .conditionalGlassEffect()
-                .padding(.vertical, -16)
+            if citedCount > 0 {
+                Text(String(citedCount))
+                    .font(.caption.weight(.semibold))
+                    .monospacedDigit()
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .conditionalGlassEffect()
+                    .padding(.vertical, -16)
+            }
+        }
+        .foregroundStyle(settings.accentColor.color)
+    }
+
+    /// The grounded Ask experience as ONE section pinned ABOVE the surah results: the one-tap prompt
+    /// row before it runs, the streamed answer WITH its cited ayahs (real tappable rows) after - the
+    /// citations are the answer's receipts, so they live in the same section, not a separate one.
+    /// ALWAYS present while searching (even for "5:6" references and zero-result queries) - the ask is
+    /// an invitation, not a result.
+    @ViewBuilder
+    private func askAISection(context: SearchDisplayContext) -> some View {
+        if context.isSearching,
+           quranData.isVerseSearchReady,
+           OnDeviceAsk.isAvailable {
+            if !askRanForQuery.isEmpty {
+                let cited = askCitedAyahs
+                Section(header: askAIHeader(citedCount: cited.count)) {
+                    AskAnswerCard(answer: askAnswer, isStreaming: askIsStreaming)
+
+                    ForEach(Array(cited.enumerated()), id: \.offset) { _, item in
+                        pageJuzAyahRow(item: item)
+                    }
+                }
+            } else {
+                Section(header: askAIHeader(citedCount: 0)) {
+                    askPromptRow
+                }
+            }
         }
     }
 
@@ -873,8 +913,6 @@ struct QuranView: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text("• Surah: number, Arabic, English, transliteration, or 'surah X'")
                 Text("• Ayah: X:Y or text (Arabic/English/transliteration)")
-                Text("• AI: meaning search - 'patience in hardship'")
-                Text("• Ask: questions get an on-device AI answer")
                 Text("• Page/Juz: 'page X', 'juz X', or plain numbers")
                 Text("• From the end with '-': '-1' is the last surah, page, and juz 30")
                 Text("• Works after a keyword too: 'surah -1', 'page -1', 'juz -1'")
@@ -896,20 +934,24 @@ struct QuranView: View {
             .buttonStyle(.plain)
 
             if showAyahSearchLearnMore {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("AI: English meaning search, fully on-device and offline - prepared once, instant after")
-                    Text("Ask: questions get a short cited answer from the matching ayahs only - never a ruling")
-                    Text("Plain text matches anywhere (substring): 'رب' also finds 'ربهم'")
-                    Text("Use =term for whole words / a phrase: '=رب' finds the word رب, not ربهم")
-                    Text("Use #term for an exact substring (case- and tashkeel-sensitive)")
-                    Text("Use ^term for starts-with and term% for ends-with")
-                    Text("Boolean operators: & (AND), | (OR), ! (NOT)")
-                    Text("Count filters: 'X ayahs/pages', '<X', '>X', '<=X', '>=X', '==X'")
-                    Text("Juz names work too: Arabic or transliteration")
-                    Text("Example: =Allah & mercy%")
+                // Scrollable and capped: the full guide is taller than what's left of the screen under
+                // the search bar, so the expanded part scrolls within the card instead of clipping.
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text("Plain text matches anywhere (substring): 'رب' also finds 'ربهم'")
+                        Text("Use =term for whole words / a phrase: '=رب' finds the word رب, not ربهم")
+                        Text("Use #term for an exact substring (case- and tashkeel-sensitive)")
+                        Text("Use ^term for starts-with and term% for ends-with")
+                        Text("Boolean operators: & (AND), | (OR), ! (NOT)")
+                        Text("Count filters: 'X ayahs/pages', '<X', '>X', '<=X', '>=X', '==X'")
+                        Text("Juz names work too: Arabic or transliteration")
+                        Text("Example: =Allah & mercy%")
+                    }
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
-                .font(.caption2)
-                .foregroundStyle(.secondary)
+                .frame(maxHeight: 180)
             }
         }
         .padding(14)
@@ -935,7 +977,12 @@ struct QuranView: View {
             quranPlayer.playbackAlertTitle,
             isPresented: $quranPlayer.showInternetAlert,
             titleVisibility: .visible
-        ) { Button("OK") { } } message: {
+        ) {
+            if let offer = quranPlayer.offlineReciterSwitch {
+                Button("Play \(offer.suggested.name)") { quranPlayer.acceptOfflineReciterSwitch() }
+            }
+            Button("OK") { quranPlayer.offlineReciterSwitch = nil }
+        } message: {
             Text(quranPlayer.playbackAlertMessage)
         }
         .task {
@@ -1228,6 +1275,11 @@ struct QuranView: View {
                         boxed(pageSearchSection(context: context))
                         boxed(juzSearchSection(context: context))
                     }
+                    // Ask AI sits ABOVE the surah results: the question (and its answer + cited ayahs)
+                    // is the most deliberate thing on the page when it's there at all.
+                    #if os(iOS)
+                    boxed(askAISection(context: context))
+                    #endif
                     // Surah matches first, ayah results below - always the same order, so the eye
                     // never has to re-learn the page.
                     boxed(surahContentSections(context: context))
@@ -2937,8 +2989,6 @@ struct QuranView: View {
             // always stay a list - grid tiles can't show the matched ayah text.
             #if os(iOS)
             if settings.gridMode {
-                // No Section at all when nothing matched - an empty Section still renders as a bare
-                // rounded box under the "0 results" header.
                 if !filteredSurahs.isEmpty {
                     Section {
                         surahGrid(filteredSurahs, context: context)
@@ -2950,6 +3000,15 @@ struct QuranView: View {
             #else
             surahSearchListRows(filteredSurahs, context: context)
             #endif
+
+            // A bare "0" pill reads as broken; say it outright.
+            if filteredSurahs.isEmpty, context.isSearching {
+                Section {
+                    Text("No surahs match your search.")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+            }
         }
     }
 
@@ -3436,31 +3495,8 @@ struct QuranView: View {
             }
         } else {
             #if os(iOS)
-            // Question-shaped queries stream a grounded on-device answer automatically; any OTHER query
-            // gets a one-tap "Ask AI" row instead - press it and the same grounded answer runs for what
-            // you typed. Always drawn only from the retrieved ayahs, cited, never invented.
-            if OnDeviceAsk.isAvailable {
-                if !askRanForQuery.isEmpty {
-                    Section {
-                        AskAnswerCard(answer: askAnswer, isStreaming: askIsStreaming)
-                    }
-
-                    // The verses the answer cited, as REAL tappable rows right under the explanation -
-                    // the answer names them, these open them.
-                    let cited = askCitedAyahs
-                    if !cited.isEmpty {
-                        Section(header: askCitedHeader(count: cited.count)) {
-                            ForEach(Array(cited.enumerated()), id: \.offset) { _, item in
-                                pageJuzAyahRow(item: item)
-                            }
-                        }
-                    }
-                } else if !aiHits.isEmpty || !verseHits.isEmpty {
-                    Section {
-                        askPromptRow
-                    }
-                }
-            }
+            // (The Ask AI block - prompt row, streamed answer, cited ayahs - now renders in
+            // `askAISection`, hoisted ABOVE the surah results in `content`.)
 
             // Both result kinds landed: ONE segmented switch decides which list fills the page - the
             // AI's ranked meaning matches or the exhaustive keyword lists - never both stacked. With
@@ -3507,6 +3543,14 @@ struct QuranView: View {
 
                 Section(header: ayahSearchHeader(context: context)) {
                     ayahExactMatchRows(context: context)
+
+                    // Nothing exact and nothing from the keyword sweep: say so instead of a bare header.
+                    if context.exactMatch.surah == nil || context.exactMatch.ayah == nil,
+                       verseHitsGroupedBySurah.isEmpty {
+                        Text("No ayahs match your search.")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
                 }
 
                 ForEach(verseHitsGroupedBySurah, id: \.surahId) { group in

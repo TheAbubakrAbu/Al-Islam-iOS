@@ -140,29 +140,38 @@ struct CalendarView: View {
                                 mode = .calendar
                             }
                         } label: {
-                            Label("Open Hijri Calendar", systemImage: "calendar")
-                                .font(.caption.weight(.semibold))
-                                .foregroundColor(settings.accentColor.color)
+                            HStack(spacing: 8) {
+                                Image(systemName: "calendar")
+                                Text("Open Hijri Calendar")
+                            }
+                            .font(.caption.weight(.semibold))
+                            .foregroundColor(settings.accentColor.color)
                         }
 
                         NavigationLink {
                             HijriCalendarView()
                         } label: {
-                            Label("Learn About the Hijri Calendar", systemImage: "book.pages")
-                                .font(.caption.weight(.semibold))
-                                .foregroundColor(settings.accentColor.color)
+                            HStack(spacing: 8) {
+                                Image(systemName: "book.pages")
+                                Text("Learn About the Hijri Calendar")
+                            }
+                            .font(.caption.weight(.semibold))
+                            .foregroundColor(settings.accentColor.color)
                         }
 
                         NavigationLink {
                             DateView()
                         } label: {
-                            Label("Open Hijri Date Converter", systemImage: "calendar.badge.clock")
-                                .font(.caption.weight(.semibold))
-                                .foregroundColor(settings.accentColor.color)
+                            HStack(spacing: 8) {
+                                Image(systemName: "calendar.badge.clock")
+                                Text("Open Hijri Date Converter")
+                            }
+                            .font(.caption.weight(.semibold))
+                            .foregroundColor(settings.accentColor.color)
                         }
                     }
 
-                    Section(header: Text("THE TWELVE MONTHS")) {
+                    Section(header: Text("THE TWELVE ISLAMIC AND HIJRI MONTHS")) {
                         ForEach(hijriMonths) { month in
                             HijriMonthRow(month: month, isCurrent: month.number == currentMonthNumber)
                                 .equatable()
@@ -957,13 +966,11 @@ struct HijriMonthRow: View, Equatable {
 
                     Spacer(minLength: 4)
 
+                    // Hijri month names in the calendar always use the basic face - dates and their
+                    // labels stay in the system font; the Quranic faces are for scripture.
                     Text(month.arabic)
-                        .font(
-                            usesCustomArabicFace
-                                ? Font.arabic(fontArabic, size: 18, relativeTo: .subheadline)
-                                : .subheadline
-                        )
-                        .arabicFontDesign(custom: usesCustomArabicFace)
+                        .font(.subheadline)
+                        .arabicFontDesign(custom: false)
                         .foregroundColor(accentColor.color)
                 }
 

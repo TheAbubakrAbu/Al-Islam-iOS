@@ -190,13 +190,33 @@ extension Settings {
     private static var isRefiningLocation = false
     private static var refinementStartedAt: Date?
     private static var refinementTimeout: DispatchWorkItem?
-    private static var lastLocationCommitAt: Date?
     private static var lastFixAccuracy: CLLocationDistance?
+
+    private static let lastFixAtKey = "lastLocationFixAt"
+    /// When the last location fix was committed. Persisted (app group), so a cold launch in airplane
+    /// mode knows how old the saved city label really is instead of assuming it's current.
+    private static var lastLocationCommitAt: Date? {
+        get { anchorStore?.object(forKey: lastFixAtKey) as? Date }
+        set {
+            guard let store = anchorStore else { return }
+            if let newValue {
+                store.set(newValue, forKey: lastFixAtKey)
+            } else {
+                store.removeObject(forKey: lastFixAtKey)
+            }
+        }
+    }
 
     /// Stop the high-accuracy burst once a fix this good arrives.
     private static let refinementTargetAccuracy: CLLocationDistance = 12   // m
     /// Hard cap on how long the burst runs, in case a good fix never arrives.
     private static let refinementMaxDuration: TimeInterval = 25            // s
+    /// The cap actually in force for the current burst (offline acquisition uses a longer one).
+    private static var activeRefinementMaxDuration: TimeInterval = refinementMaxDuration
+    /// Offline (airplane-mode) GPS acquisition burst cap. A one-shot `requestLocation` almost never
+    /// locks without network assistance data - unassisted GPS needs continuous acquisition time, and a
+    /// cold start can take a minute. This is why a whole flight used to pass with zero fixes.
+    private static let offlineAcquisitionMaxDuration: TimeInterval = 90    // s
     /// Ignore sub-jitter coordinate changes when refining in place.
     private static let refineMinMove: CLLocationDistance = 8               // m
     /// While moving, don't recompute more often than this even past the distance threshold.
@@ -369,7 +389,7 @@ extension Settings {
         if Self.isRefiningLocation {
             commitLocation(loc, refining: true)
             let elapsed = Date().timeIntervalSince(Self.refinementStartedAt ?? Date())
-            if loc.horizontalAccuracy <= Self.refinementTargetAccuracy || elapsed >= Self.refinementMaxDuration {
+            if loc.horizontalAccuracy <= Self.refinementTargetAccuracy || elapsed >= Self.activeRefinementMaxDuration {
                 endLocationRefinement()
             }
         } else {
@@ -453,7 +473,7 @@ extension Settings {
     /// Briefly switch to high-accuracy continuous updates to lock in a precise fix, then auto-stop.
     /// Call when an accuracy-sensitive view appears (Qibla / prayer times). Bounded by accuracy target
     /// and a hard timeout so it never drains battery; coarse significant-change monitoring keeps running.
-    func beginLocationRefinement() {
+    func beginLocationRefinement(maxDuration: TimeInterval = Settings.refinementMaxDuration) {
         #if os(iOS)
         let status = Self.locationManager.authorizationStatus
         guard status == .authorizedAlways || status == .authorizedWhenInUse else { return }
@@ -461,13 +481,14 @@ extension Settings {
 
         Self.isRefiningLocation = true
         Self.refinementStartedAt = Date()
+        Self.activeRefinementMaxDuration = maxDuration
         Self.locationManager.desiredAccuracy = kCLLocationAccuracyBest
         Self.locationManager.distanceFilter = kCLDistanceFilterNone
         Self.locationManager.startUpdatingLocation()
 
         let timeout = DispatchWorkItem { [weak self] in self?.endLocationRefinement() }
         Self.refinementTimeout = timeout
-        DispatchQueue.main.asyncAfter(deadline: .now() + Self.refinementMaxDuration, execute: timeout)
+        DispatchQueue.main.asyncAfter(deadline: .now() + maxDuration, execute: timeout)
         #endif
     }
 
@@ -499,17 +520,65 @@ extension Settings {
     private static let foregroundLocationMaxAge: TimeInterval = 5 * 60
     private static var foregroundLocationTimer: Timer?
 
-    /// Requests a single fresh fix if the last committed one is older than `maxAge` (or none exists).
-    /// One `requestLocation()` - cheap, self-terminating, and rate-limited by the staleness check itself.
+    /// Requests a fresh fix if the last committed one is older than `maxAge` (or none exists).
+    /// Online, one cheap self-terminating `requestLocation()` suffices (assisted GPS locks fast).
+    /// Offline it does NOT: without assistance data a one-shot never acquires, which is how a whole
+    /// flight used to pass with zero fixes and a frozen departure-city label - so offline runs a
+    /// bounded continuous-GPS burst instead, and separately degrades a too-stale city label to
+    /// honest coordinates.
     func refreshLocationIfStale(olderThan maxAge: TimeInterval = Settings.foregroundLocationMaxAge) {
         let status = Self.locationManager.authorizationStatus
         guard status == .authorizedAlways || status == .authorizedWhenInUse else { return }
+
+        #if os(iOS)
+        // Runs regardless of any in-flight burst: it depends only on how old the last fix is.
+        degradeCityLabelIfFixTooStale()
+        #endif
+
         // A refinement burst is already streaming fresh fixes; a one-shot request on top is redundant (and
         // mixing `requestLocation` with `startUpdatingLocation` is discouraged).
         guard !Self.isRefiningLocation else { return }
         if let last = Self.lastLocationCommitAt, Date().timeIntervalSince(last) < maxAge { return }
+
+        #if os(iOS)
+        if !Self.isNetworkReachable {
+            beginLocationRefinement(maxDuration: Self.offlineAcquisitionMaxDuration)
+            return
+        }
+        #endif
         Self.locationManager.requestLocation()
     }
+
+    #if os(iOS)
+    /// How long the app tolerates having NO fix at all while offline before it stops vouching for the
+    /// saved city name. Long enough that a stationary signal-less phone whose occasional GPS fixes keep
+    /// landing never trips it; short enough that a flight shows coordinates well before landing.
+    private static let staleCityMaxAge: TimeInterval = 30 * 60
+
+    /// The offline honesty backstop for when even the GPS bursts can't get a lock (window seats get real
+    /// coordinate updates; aisle seats get this): once no fix has been committed for `staleCityMaxAge`
+    /// with no network, the saved city may be long gone, so show the last fix's raw coordinates instead.
+    /// The label heals automatically - the reconnect handler re-geocodes as soon as network returns, and
+    /// any successful offline fix goes through `applyLabelWithoutGeocode` as usual.
+    /// (iOS-only: the watch's reachability flag is unreliable - see `updateCity`.)
+    private func degradeCityLabelIfFixTooStale() {
+        guard !Self.isNetworkReachable else { return }
+        guard let cur = currentLocation, !cur.city.contains("(") else { return }
+        guard let last = Self.lastLocationCommitAt,
+              Date().timeIntervalSince(last) >= Self.staleCityMaxAge else { return }
+
+        withAnimation {
+            currentLocation = Location(
+                city: "(\(cur.latitude.stringRepresentation), \(cur.longitude.stringRepresentation))",
+                latitude: cur.latitude,
+                longitude: cur.longitude
+            )
+            currentCountryCode = ""
+            Self.cityAnchor = nil
+            WidgetCenter.shared.reloadAllTimelines()
+        }
+    }
+    #endif
 
     /// While the app is frontmost, checks staleness every 5 minutes. Deliberately infrequent: the point is
     /// "the times update over a long flight with the app open", not live tracking. Stopped on backgrounding.
@@ -1926,6 +1995,159 @@ extension Settings {
         "Fajr", "Dhuhr", "Jumuah", "Dhuhr/Asr", "Asr", "Maghrib", "Maghrib/Isha", "Isha"
     ]
 
+    // MARK: - Prayer tracker
+
+    /// The prayers the tracker records: the obligatory ones (including the traveling-mode combined
+    /// names) - the same set that may carry an adhan.
+    static var trackablePrayerNames: Set<String> { adhanEligiblePrayerNames }
+
+    /// Prayer names that can OWN a nag cascade (have a nagging preference): the next one of these
+    /// after a prayer is where that prayer's nags are scheduled.
+    private static let nagCascadeOwnerNames: Set<String> = [
+        "Fajr", "Shurooq", "Dhuhr", "Dhuhr/Asr", "Jumuah", "Asr", "Maghrib", "Maghrib/Isha", "Isha"
+    ]
+
+    static let nagCategoryIdentifier = "PRAYER_NAG"
+    static let nagActionMarkPrayedIdentifier = "PRAYER_NAG_MARK_PRAYED"
+    static let nagPrayerNameUserInfoKey = "nagPrayerName"
+
+    private static let prayerTrackerDayFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "yyyy-MM-dd"
+        return formatter
+    }()
+
+    /// Decoded tracker, cached - rows read this on every render and the underlying data only changes
+    /// through `savePrayerTracker`.
+    private static var prayerTrackerCache: [String: Set<String>]?
+
+    private func prayerTrackerKey(for date: Date) -> String {
+        Self.prayerTrackerDayFormatter.string(from: date)
+    }
+
+    private func loadPrayerTracker() -> [String: Set<String>] {
+        if let cached = Self.prayerTrackerCache { return cached }
+        let decoded = (try? JSONDecoder().decode([String: [String]].self, from: prayerTrackerData)) ?? [:]
+        let tracker = decoded.mapValues(Set.init)
+        Self.prayerTrackerCache = tracker
+        return tracker
+    }
+
+    private func savePrayerTracker(_ tracker: [String: Set<String>]) {
+        var pruned = tracker
+        // "yyyy-MM-dd" sorts lexicographically, so pruning a year back is a string compare.
+        if let cutoffDate = Calendar.current.date(byAdding: .day, value: -400, to: Date()) {
+            let cutoff = prayerTrackerKey(for: cutoffDate)
+            pruned = pruned.filter { $0.key >= cutoff }
+        }
+        Self.prayerTrackerCache = pruned
+        prayerTrackerData = (try? JSONEncoder().encode(pruned.mapValues { Array($0).sorted() })) ?? Data()
+    }
+
+    func isPrayerMarkedPrayed(_ prayerName: String, on date: Date = Date()) -> Bool {
+        loadPrayerTracker()[prayerTrackerKey(for: date)]?.contains(prayerName) ?? false
+    }
+
+    /// How many of `prayerNames` are marked prayed on `date` (the tracker row's "3/5").
+    func trackedPrayerCount(_ prayerNames: [String], on date: Date = Date()) -> Int {
+        let day = loadPrayerTracker()[prayerTrackerKey(for: date)] ?? []
+        return prayerNames.filter { day.contains($0) }.count
+    }
+
+    func setPrayerPrayed(_ prayerName: String, on date: Date = Date(), prayed: Bool) {
+        var tracker = loadPrayerTracker()
+        let key = prayerTrackerKey(for: date)
+        var day = tracker[key] ?? []
+        if prayed { day.insert(prayerName) } else { day.remove(prayerName) }
+        tracker[key] = day.isEmpty ? nil : day
+        savePrayerTracker(tracker)
+
+        // Marking a prayer prayed TODAY also silences its remaining nags (they live under the NEXT
+        // prayer's identifier).
+        if prayed, Calendar.current.isDateInToday(date) {
+            cancelNagsAboutPrayer(prayerName)
+        }
+    }
+
+    /// The prayer a nag BEFORE `cascadePrayerName` is actually about: the trackable prayer whose
+    /// window ends when it arrives - i.e. the previous obligatory prayer of the day. A pre-Fajr nag
+    /// is about Isha (the night prayer, begun the previous civil day).
+    func naggedPrayerName(forCascade cascadePrayerName: String) -> String {
+        guard let ordered = prayers?.prayers.sorted(by: { $0.time < $1.time }),
+              let cascadeIndex = ordered.firstIndex(where: { $0.nameTransliteration == cascadePrayerName })
+        else { return cascadePrayerName }
+
+        let cascadeTime = ordered[cascadeIndex].time
+        if let previous = ordered.last(where: {
+            $0.time < cascadeTime && Self.trackablePrayerNames.contains($0.nameTransliteration)
+                && $0.nameTransliteration != cascadePrayerName
+        }) {
+            return previous.nameTransliteration
+        }
+        return "Isha"
+    }
+
+    /// The civil day a "\(prayerName) prayed just now" belongs to: if today's instance hasn't started
+    /// yet (answering a pre-Fajr nag about Isha in the small hours), the prayed instance was
+    /// yesterday's.
+    func trackerDate(forMarking prayerName: String, at now: Date = Date()) -> Date {
+        if let time = prayers?.prayers.first(where: { $0.nameTransliteration == prayerName })?.time,
+           time > now {
+            return Calendar.current.date(byAdding: .day, value: -1, to: now) ?? now
+        }
+        return now
+    }
+
+    /// The full "Yes, I prayed it" handling shared by the notification action and the in-app dialog.
+    func markPrayerPrayedFromNag(asked prayerName: String, cascadePrayerName: String) {
+        setPrayerPrayed(prayerName, on: trackerDate(forMarking: prayerName), prayed: true)
+        cancelPendingNags(cascadePrayerName: cascadePrayerName)
+    }
+
+    /// Removes today's still-pending nag notifications scheduled under `cascadePrayerName`. Only the
+    /// nag-cascade offsets go - the at-time adhan (minutes 0) and the user's own single
+    /// pre-notification minute survive, since those announce the NEXT prayer, which is still coming.
+    func cancelPendingNags(cascadePrayerName: String, on date: Date = Date()) {
+        let comps = Calendar.current.dateComponents([.year, .month, .day], from: date)
+        guard let y = comps.year, let m = comps.month, let d = comps.day else { return }
+        let suffix = "-\(y)-\(m)-\(d)"
+        let prefix = "\(cascadePrayerName)-"
+
+        var cancellableMinutes = naggingCascade(start: naggingStartOffset)
+        if let prefs = Self.notifTable[cascadePrayerName] {
+            cancellableMinutes.remove(self[keyPath: prefs.preMinutes])
+        }
+        cancellableMinutes.remove(0)
+        guard !cancellableMinutes.isEmpty else { return }
+
+        let center = UNUserNotificationCenter.current()
+        center.getPendingNotificationRequests { requests in
+            let ids = requests.map(\.identifier).filter { id in
+                guard id.hasPrefix(prefix), id.hasSuffix(suffix) else { return false }
+                // "Name-minutes-y-m-d": the name never contains "-", so minutes is the 2nd field.
+                let fields = id.split(separator: "-")
+                guard fields.count >= 2, let minutes = Int(fields[1]) else { return false }
+                return cancellableMinutes.contains(minutes)
+            }
+            if !ids.isEmpty {
+                center.removePendingNotificationRequests(withIdentifiers: ids)
+            }
+        }
+    }
+
+    /// Silences today's remaining nags ABOUT `prayerName` - they are scheduled under the next
+    /// nag-owning prayer's identifier, so resolve that successor and cancel its cascade.
+    private func cancelNagsAboutPrayer(_ prayerName: String) {
+        guard let ordered = prayers?.prayers.sorted(by: { $0.time < $1.time }),
+              let index = ordered.firstIndex(where: { $0.nameTransliteration == prayerName })
+        else { return }
+        guard let successor = ordered.dropFirst(index + 1).first(where: {
+            Self.nagCascadeOwnerNames.contains($0.nameTransliteration)
+        }) else { return }
+        cancelPendingNags(cascadePrayerName: successor.nameTransliteration)
+    }
+
     /// userInfo key carrying the absolute instant (epoch seconds) a scheduled notification is FOR. The
     /// foreground delegate compares it to "now" at delivery and silences anything that arrives late.
     static let intendedFireDateUserInfoKey = "intendedFireDate"
@@ -1972,6 +2194,17 @@ extension Settings {
         #if os(iOS)
         if #available(iOS 15.0, *) {
             content.interruptionLevel = .timeSensitive
+        }
+
+        // Nag-cascade deliveries carry the "Did you pray?" category: the notification gains a
+        // "Yes, I prayed it" action, and tapping it in asks the same question in-app. Only actual
+        // cascade offsets - the plain pre-notification and the at-time adhan stay plain.
+        if let m = minutes, m != 0, naggingMode,
+           let prefs = Self.notifTable[prayer.nameTransliteration],
+           self[keyPath: prefs.nagging],
+           naggingCascade(start: naggingStartOffset).contains(m) {
+            content.categoryIdentifier = Self.nagCategoryIdentifier
+            content.userInfo[Self.nagPrayerNameUserInfoKey] = prayer.nameTransliteration
         }
         #endif
 

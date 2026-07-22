@@ -102,6 +102,13 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
         runAdhanSoundStartupMigrations()
         runWatchSyncKeyMigration()
         runGridModeUnificationMigration()
+
+        // Hadith Allah-highlighting used to follow the Quran toggle; when the setting split in two,
+        // seed the new key from the old one so nothing visibly changes until the user flips it.
+        if UserDefaults.standard.object(forKey: "highlightAllahNamesHadith") == nil {
+            UserDefaults.standard.set(UserDefaults.standard.bool(forKey: "highlightAllahNames"),
+                                      forKey: "highlightAllahNamesHadith")
+        }
         isReadyForUI = true
 
         // Defer CoreLocation + NWPathMonitor startup off the synchronous init/first-paint path. Settings.shared
@@ -422,6 +429,23 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
             markExplicitlySet("customPrayerNames")
         }
     }
+
+    // MARK: - Prayer tracker
+
+    /// Which prayers were marked prayed, per civil day: encoded `[String: [String]]` keyed by
+    /// "yyyy-MM-dd", values are prayer transliterations. Helpers live in SettingsAdhan.swift.
+    @AppStorage("prayerTrackerData") var prayerTrackerData: Data = Data()
+
+    /// Set when a nagging notification is tapped: the prayer tab asks "Did you pray X?" and a yes
+    /// marks the tracker and silences the rest of that cascade.
+    struct PendingNagQuestion: Identifiable, Equatable {
+        let id = UUID()
+        /// The prayer being asked about (the one whose window is ending).
+        let prayerName: String
+        /// The upcoming prayer whose identifier the nag cascade is scheduled under.
+        let cascadePrayerName: String
+    }
+    @Published var pendingNagQuestion: PendingNagQuestion?
 
     // MARK: - Prayer - live state & hijri (app-storage persistence)
 
@@ -1245,6 +1269,10 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     /// pure-English reading experience).
     @AppStorage("showHadithArabic") var showHadithArabic = true
     @AppStorage("showHadithEnglish") var showHadithEnglish = true
+    /// Hadith's own "Highlight Allah" toggle, split from the Quran's `highlightAllahNames` so the two
+    /// readers can differ. Seeded from the Quran toggle once in `init` so the split changes nothing
+    /// until the user actually flips it.
+    @AppStorage("highlightAllahNamesHadith") var highlightAllahNamesHadith: Bool = false
     /// Show the narrator ("It is narrated on the authority of...") line above the English text.
     @AppStorage("showHadithNarrator") var showHadithNarrator = true
     /// Hadith text sizes, independent of the Quran's own sliders.

@@ -17,6 +17,21 @@ class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterD
         registerBackgroundRefreshTask()
         scheduleAppRefresh()
         UNUserNotificationCenter.current().delegate = self
+
+        // The nag cascade's "Did you pray?" action. No .foreground option: answering from the lock
+        // screen marks the tracker and silences the remaining nags without ever opening the app.
+        let markPrayed = UNNotificationAction(
+            identifier: Settings.nagActionMarkPrayedIdentifier,
+            title: "Yes, I prayed it",
+            options: []
+        )
+        let nagCategory = UNNotificationCategory(
+            identifier: Settings.nagCategoryIdentifier,
+            actions: [markPrayed],
+            intentIdentifiers: [],
+            options: []
+        )
+        UNUserNotificationCenter.current().setNotificationCategories([nagCategory])
         // A time-zone change (landing after a flight, DST) invalidates every scheduled prayer trigger:
         // the times must be recomputed and the whole schedule rebuilt for the new zone immediately, not
         // whenever the next fetch happens to run - stale triggers are how a "Dhuhr/Asr" adhan sounds at
@@ -66,6 +81,37 @@ class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterD
             return
         }
         completionHandler([.banner, .list, .sound])
+    }
+
+    // Handles nag-notification responses: the "Yes, I prayed it" action marks the tracker and cancels
+    // the rest of that cascade directly; a plain tap opens the app and raises the same question as an
+    // in-app dialog (see AdhanView).
+    func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        didReceive response: UNNotificationResponse,
+        withCompletionHandler completionHandler: @escaping () -> Void
+    ) {
+        let content = response.notification.request.content
+        guard content.categoryIdentifier == Settings.nagCategoryIdentifier,
+              let cascadeName = content.userInfo[Settings.nagPrayerNameUserInfoKey] as? String else {
+            completionHandler()
+            return
+        }
+
+        let actionIdentifier = response.actionIdentifier
+        DispatchQueue.main.async {
+            let settings = Settings.shared
+            let asked = settings.naggedPrayerName(forCascade: cascadeName)
+            switch actionIdentifier {
+            case Settings.nagActionMarkPrayedIdentifier:
+                settings.markPrayerPrayedFromNag(asked: asked, cascadePrayerName: cascadeName)
+            case UNNotificationDefaultActionIdentifier:
+                settings.pendingNagQuestion = .init(prayerName: asked, cascadePrayerName: cascadeName)
+            default:
+                break
+            }
+            completionHandler()
+        }
     }
 
     // Registers the BGTask handler that refreshes prayer times in the background.

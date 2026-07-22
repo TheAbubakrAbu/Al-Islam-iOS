@@ -3,6 +3,7 @@ import AVFoundation
 import MediaPlayer
 import Foundation
 import CryptoKit
+import Network
 
 struct SurahQueueItem: Identifiable, Equatable {
     let id = UUID()
@@ -31,6 +32,16 @@ final class QuranPlayer: ObservableObject {
     @Published var showInternetAlert = false
     @Published var playbackAlertTitle = "Playback Error"
     @Published var playbackAlertMessage = "Unable to load this recitation right now. Please try again."
+
+    /// Offered alongside the playback alert when streaming is impossible but other reciters have this
+    /// surah on disk: the dialog gains a "switch and play" button for `suggested`.
+    struct OfflineReciterSwitch: Equatable {
+        let surahNumber: Int
+        let surahName: String
+        let downloadedReciters: [Reciter]
+        let suggested: Reciter
+    }
+    @Published var offlineReciterSwitch: OfflineReciterSwitch?
     @Published private(set) var surahQueue: [SurahQueueItem] = []
 
     @Published private(set) var customRangeStartAyah: Int?
@@ -95,8 +106,19 @@ final class QuranPlayer: ObservableObject {
     private let localSurahStartupBuffer: TimeInterval = 0.03
     private let remoteSurahStartupBuffer: TimeInterval = 0.75
     private let ayahStartupBuffer: TimeInterval = 0.6
-    
+
+    /// Tracks reachability so an offline tap on a non-downloaded reciter can offer the downloaded ones
+    /// immediately, instead of spinning until the AVPlayerItem times out into a generic failure.
+    private static let networkMonitor = NWPathMonitor()
+    private static let networkMonitorQueue = DispatchQueue(label: "\(AppIdentifiers.appName).QuranPlayerNetworkMonitor")
+    private static var isNetworkReachable = true
+
     private init() {
+        Self.networkMonitor.pathUpdateHandler = { path in
+            let reachable = (path.status == .satisfied)
+            DispatchQueue.main.async { Self.isNetworkReachable = reachable }
+        }
+        Self.networkMonitor.start(queue: Self.networkMonitorQueue)
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(handleInterruption),
@@ -216,16 +238,61 @@ final class QuranPlayer: ObservableObject {
         player.currentItem?.preferredForwardBufferDuration = bufferDuration
     }
 
-    private func presentPlaybackFailure(_ message: String, title: String = "Playback Error") {
+    private func presentPlaybackFailure(_ message: String, title: String = "Playback Error", offlineSwitch: OfflineReciterSwitch? = nil) {
         DispatchQueue.main.async {
             self.isLoading = false
             self.isPlaying = false
             self.isPaused = false
             self.playbackAlertTitle = title
             self.playbackAlertMessage = message
+            self.offlineReciterSwitch = offlineSwitch
             self.showInternetAlert = true
             self.idleTimerSet(false)
         }
+    }
+
+    /// Downloaded reciters that carry `surahNumber`, favorites first, alphabetical within each tier
+    /// (the global `reciters` list is already name-sorted, so filtering preserves that order).
+    private func downloadedRecitersForSurah(_ surahNumber: Int, excluding excluded: Reciter) -> [Reciter] {
+        let downloaded = reciters.filter {
+            $0.id != excluded.id &&
+            reciterDownloadManager.localSurahURL(reciter: $0, surahNumber: surahNumber) != nil
+        }
+        let favorites = downloaded.filter { settings.isReciterFavorite(reciterID: $0.id) }
+        let rest = downloaded.filter { !settings.isReciterFavorite(reciterID: $0.id) }
+        return favorites + rest
+    }
+
+    /// When a surah can't be streamed, offer the reciters that DO have it on disk. Returns false when
+    /// there's nothing to offer (caller falls back to the generic failure alert).
+    private func presentOfflineReciterOptions(surahNumber: Int, surahName: String, failedReciter: Reciter) -> Bool {
+        let downloaded = downloadedRecitersForSurah(surahNumber, excluding: failedReciter)
+        guard let suggested = downloaded.first else { return false }
+
+        let names = downloaded.map { $0.name }.joined(separator: ", ")
+        let countText = downloaded.count == 1
+            ? "1 reciter downloaded"
+            : "\(downloaded.count) reciters downloaded"
+        presentPlaybackFailure(
+            "\(failedReciter.name) isn't downloaded and can't be streamed without internet. You have \(countText): \(names).",
+            title: "Reciter Not Downloaded",
+            offlineSwitch: OfflineReciterSwitch(
+                surahNumber: surahNumber,
+                surahName: surahName,
+                downloadedReciters: downloaded,
+                suggested: suggested
+            )
+        )
+        return true
+    }
+
+    /// Accepts the offer above: switches the selected reciter and replays the surah from it.
+    func acceptOfflineReciterSwitch() {
+        guard let offer = offlineReciterSwitch else { return }
+        offlineReciterSwitch = nil
+        showInternetAlert = false
+        settings.setSelectedReciter(offer.suggested)
+        playSurah(surahNumber: offer.surahNumber, surahName: offer.surahName)
     }
     
     @objc private func handleInterruption(notification: Notification) {
@@ -582,6 +649,15 @@ final class QuranPlayer: ObservableObject {
         let localURL = reciterDownloadManager.localSurahURL(reciter: reciter, surahNumber: surahNumber)
         let url = localURL ?? remoteURL
 
+        // Offline with nothing on disk for this reciter: streaming can only end in the generic timeout
+        // alert, so short-circuit to the "switch to a downloaded reciter" offer when one exists. If none
+        // exists the stream is still attempted - reachability can be stale, and the reactive .failed
+        // path below catches the honest outcome.
+        if localURL == nil, !Self.isNetworkReachable,
+           presentOfflineReciterOptions(surahNumber: surahNumber, surahName: surahName, failedReciter: reciter) {
+            return
+        }
+
         setupAudioSession()
         isLoading = true
         player?.pause(); removeAllObservers()
@@ -610,7 +686,8 @@ final class QuranPlayer: ObservableObject {
             surahName: surahName,
             reciter: reciter,
             certainReciter: certainReciter,
-            skipSurah: skipSurah
+            skipSurah: skipSurah,
+            wasLocal: localURL != nil
         )
     }
 
@@ -652,7 +729,7 @@ final class QuranPlayer: ObservableObject {
 
     /// Wires the status observer (+ already-ready fast path), end-of-item handler, and the prewarm timer for
     /// a surah player. Shared by fresh playback and prewarm adoption so behavior never diverges.
-    private func wireSurahPlayback(item: AVPlayerItem, surahNumber: Int, surahName: String, reciter: Reciter, certainReciter: Bool, skipSurah: Bool) {
+    private func wireSurahPlayback(item: AVPlayerItem, surahNumber: Int, surahName: String, reciter: Reciter, certainReciter: Bool, skipSurah: Bool, wasLocal: Bool = false) {
         statusObserver = item.observe(\.status) { [weak self] itm, _ in
             guard let self = self else { return }
             DispatchQueue.main.async {
@@ -660,7 +737,11 @@ final class QuranPlayer: ObservableObject {
                 case .readyToPlay:
                     self.onSurahItemReady(surahNumber: surahNumber, surahName: surahName, reciter: reciter, certainReciter: certainReciter, skipSurah: skipSurah)
                 case .failed:
-                    self.presentPlaybackFailure("Unable to load this recitation. Check your internet connection and try again.", title: "Playback Unavailable")
+                    // A failed STREAM (not a corrupt local file) is the reactive offline signal - the
+                    // reachability flag can miss captive/portal states, so offer downloaded reciters here too.
+                    if wasLocal || !self.presentOfflineReciterOptions(surahNumber: surahNumber, surahName: surahName, failedReciter: reciter) {
+                        self.presentPlaybackFailure("Unable to load this recitation. Check your internet connection and try again.", title: "Playback Unavailable")
+                    }
                 default:
                     break   // .unknown / still loading - wait for the next status change
                 }

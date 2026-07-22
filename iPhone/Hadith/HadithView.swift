@@ -110,6 +110,17 @@ struct HadithView: View {
     // hadiths at once, which is what a tab-level search means 9 times out of 10.
     @ObservedObject private var semanticEngine = SemanticSearchEngine.shared
     @State private var globalAIResults: [GlobalHadithHit] = []
+
+    // Ask (the on-device LLM, grounded RAG) - the Quran search's Ask, for hadiths: auto-runs for
+    // question-shaped queries, one tap for everything else, always drawn only from the retrieved
+    // hadiths and cited. Exists only on Apple Intelligence devices (`OnDeviceAsk.isAvailable`).
+    @State private var hadithAskAnswer = ""
+    @State private var hadithAskIsStreaming = false
+    @State private var hadithAskRanForQuery = ""
+    @State private var hadithAskTask: Task<Void, Never>?
+    /// The hadiths the running answer was grounded on - the pool citations are resolved from, so a
+    /// cited row can never point at a hadith the model wasn't shown.
+    @State private var hadithAskSourceHits: [GlobalHadithHit] = []
     @State private var globalAITask: Task<Void, Never>?
     /// True while the slow path (decoding every downloaded book to gather texts) runs, pre-embedding.
     @State private var isGatheringAllBooks = false
@@ -201,6 +212,86 @@ struct HadithView: View {
                 withAnimation { globalAIResults = top }
             }
         }
+    }
+
+    /// The Quran search's `runAsk`, for hadiths: grounded strictly on the retrieved hadiths (AI
+    /// matches first, then keyword matches), streaming the answer card in `globalSearchSection`.
+    private func runHadithAsk(query: String, manual: Bool) {
+        hadithAskTask?.cancel()
+        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard OnDeviceAsk.isAvailable, trimmed.count >= 3,
+              manual || OnDeviceAsk.looksLikeQuestion(trimmed) else {
+            if !hadithAskRanForQuery.isEmpty {
+                withAnimation { hadithAskAnswer = ""; hadithAskIsStreaming = false; hadithAskRanForQuery = ""; hadithAskSourceHits = [] }
+            }
+            return
+        }
+
+        hadithAskTask = Task {
+            // Auto waits out the search debounces so the retrieval this answer is GROUNDED on has
+            // settled; a manual tap means the results are already on screen - go immediately.
+            try? await Task.sleep(nanoseconds: manual ? 100_000_000 : 900_000_000)
+            guard !Task.isCancelled else { return }
+
+            var sources: [OnDeviceAsk.Source] = []
+            var sourceHits: [GlobalHadithHit] = []
+            var seen = Set<String>()
+            for hit in globalAIResults.prefix(5) {
+                let reference = "\(hit.book.englishTitle) \(hit.hadith.idInBook)"
+                if seen.insert(reference).inserted, !hit.hadith.english.text.isEmpty {
+                    sources.append(.init(reference: reference, text: hit.hadith.english.text))
+                    sourceHits.append(hit)
+                }
+            }
+            for hit in globalHadithResults.prefix(5) {
+                let reference = "\(hit.book.englishTitle) \(hit.hadith.idInBook)"
+                if seen.insert(reference).inserted, !hit.hadith.english.text.isEmpty {
+                    sources.append(.init(reference: reference, text: hit.hadith.english.text))
+                    sourceHits.append(hit)
+                }
+            }
+            guard !sources.isEmpty else {
+                withAnimation { hadithAskAnswer = ""; hadithAskIsStreaming = false; hadithAskRanForQuery = ""; hadithAskSourceHits = [] }
+                return
+            }
+
+            withAnimation {
+                hadithAskAnswer = ""
+                hadithAskIsStreaming = true
+                hadithAskRanForQuery = trimmed
+                hadithAskSourceHits = sourceHits
+            }
+            guard #available(iOS 26.0, *) else { return }
+            do {
+                for try await text in OnDeviceAsk.streamAnswer(question: trimmed, sources: sources) {
+                    guard !Task.isCancelled else { return }
+                    hadithAskAnswer = text
+                }
+                guard !Task.isCancelled else { return }
+                withAnimation { hadithAskIsStreaming = false }
+            } catch {
+                // Declined or errored: the card simply goes away - AI and keyword results still stand.
+                guard !Task.isCancelled else { return }
+                withAnimation { hadithAskAnswer = ""; hadithAskIsStreaming = false; hadithAskRanForQuery = ""; hadithAskSourceHits = [] }
+            }
+        }
+    }
+
+    /// The hadiths the streamed answer actually cited, in citation order - the Quran's `askCitedAyahs`,
+    /// for hadiths. Citations are matched against the exact source references the model was given
+    /// ("Sahih al-Bukhari 6114"), so every resolved row is guaranteed to open a real hadith. The
+    /// digit-boundary check keeps "…6114" from also matching a claimed "611".
+    private var hadithAskCitedResults: [GlobalHadithHit] {
+        guard !hadithAskAnswer.isEmpty else { return [] }
+        let answer = hadithAskAnswer.lowercased()
+        var cited: [(position: Int, hit: GlobalHadithHit)] = []
+        for hit in hadithAskSourceHits {
+            let reference = "\(hit.book.englishTitle) \(hit.hadith.idInBook)".lowercased()
+            guard let range = answer.range(of: reference) else { continue }
+            if range.upperBound < answer.endIndex, answer[range.upperBound].isNumber { continue }
+            cited.append((answer.distance(from: answer.startIndex, to: range.lowerBound), hit))
+        }
+        return cited.sorted { $0.position < $1.position }.prefix(10).map(\.hit)
     }
 
     /// Today's hadith lives in the STORE, resolved at app launch from the downloaded books - the tab
@@ -313,6 +404,14 @@ struct HadithView: View {
                         let results = HadithCatalogBook.all.filter(matches)
                         if !results.isEmpty {
                             boxed(bookSection(title: "MATCHING BOOKS", books: results, shuffle: false))
+                        } else if referenceResult == nil {
+                            boxed(
+                                Section(header: SectionPillHeader(title: "MATCHING BOOKS", count: 0)) {
+                                    Text("No books match your search.")
+                                        .font(.subheadline)
+                                        .foregroundStyle(.secondary)
+                                }
+                            )
                         }
                     }
 
@@ -511,6 +610,9 @@ struct HadithView: View {
                 // AI matches ride along automatically (already-built corpora only) - the Quran
                 // search's rule: AI adds understanding on top, keyword stays exhaustive below.
                 runGlobalAISearch(query: text)
+                // Question-shaped queries stream a grounded answer automatically; anything else keeps
+                // the one-tap Ask row (and this call clears a previous answer).
+                runHadithAsk(query: text, manual: false)
             }
             // A corpus finishing its build mid-query (from a book view) surfaces here immediately.
             .onChange(of: semanticEngine.readyCorpora) { _ in
@@ -893,6 +995,34 @@ struct HadithView: View {
     private var globalSearchSection: some View {
         let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
         if query.count >= 3, referenceResult == nil {
+            // Ask AI first, ALWAYS - the prompt row before it runs, the streamed grounded answer
+            // WITH its cited hadiths (real tappable rows) after; the citations are the answer's
+            // receipts, so they live in the same section - the Quran search's exact grammar.
+            if OnDeviceAsk.isAvailable {
+                if !hadithAskRanForQuery.isEmpty {
+                    let cited = hadithAskCitedResults
+                    Section(header: hadithAskAIHeader(citedCount: cited.count)) {
+                        AskAnswerCard(answer: hadithAskAnswer, isStreaming: hadithAskIsStreaming)
+
+                        ForEach(cited) { hit in
+                            NavigationLink {
+                                if let chapter = hit.data.chapters.first(where: { $0.id == hit.hadith.chapterId }) {
+                                    HadithChapterView(book: hit.book, bookData: hit.data, chapter: chapter, scrollToHadithId: hit.hadith.idInBook)
+                                } else {
+                                    HadithReferenceView(book: hit.book, chapter: nil, hadith: hit.hadith.idInBook)
+                                }
+                            } label: {
+                                HadithRow(book: hit.book, hadith: hit.hadith, searchText: searchText, compact: true)
+                            }
+                        }
+                    }
+                } else {
+                    Section(header: hadithAskAIHeader(citedCount: 0)) {
+                        hadithAskPromptRow
+                    }
+                }
+            }
+
             // AI matches at the very top, the Quran ayah search's grammar - ranked by meaning across
             // EVERY downloaded book, keyword sections below stay exhaustive. While the one-time
             // all-books index builds, the standard progress row shows in its place.
@@ -950,20 +1080,31 @@ struct HadithView: View {
             }
 
             if !globalHadithResults.isEmpty {
+                // The Quran search's grammar: the TOTAL pill up top, then one section per book with its
+                // own count - so results from different books never read as one undifferentiated list.
                 Section(header: SectionPillHeader(title: "MATCHING HADITHS", count: globalHadithResults.count, overflow: globalHasMoreHadiths)) {
-                    ForEach(globalHadithResults) { hit in
-                        NavigationLink {
-                            // Land in the chapter, scrolled to the hadith - the Quran search's arrival.
-                            if let chapter = hit.data.chapters.first(where: { $0.id == hit.hadith.chapterId }) {
-                                HadithChapterView(book: hit.book, bookData: hit.data, chapter: chapter, scrollToHadithId: hit.hadith.idInBook)
-                            } else {
-                                HadithReferenceView(book: hit.book, chapter: nil, hadith: hit.hadith.idInBook)
+                    EmptyView()
+                }
+                .padding(.bottom, -12)
+
+                ForEach(globalHadithResultsGroupedByBook, id: \.book.slug) { group in
+                    Section(header: bookSearchSectionHeader(book: group.book, matchCount: group.hits.count)) {
+                        ForEach(group.hits) { hit in
+                            NavigationLink {
+                                // Land in the chapter, scrolled to the hadith - the Quran search's arrival.
+                                if let chapter = hit.data.chapters.first(where: { $0.id == hit.hadith.chapterId }) {
+                                    HadithChapterView(book: hit.book, bookData: hit.data, chapter: chapter, scrollToHadithId: hit.hadith.idInBook)
+                                } else {
+                                    HadithReferenceView(book: hit.book, chapter: nil, hadith: hit.hadith.idInBook)
+                                }
+                            } label: {
+                                HadithRow(book: hit.book, hadith: hit.hadith, searchText: searchText, compact: true)
                             }
-                        } label: {
-                            HadithRow(book: hit.book, hadith: hit.hadith, searchText: searchText, compact: true)
                         }
                     }
+                }
 
+                Section {
                     HadithLoadMoreControls(label: "hadith matches", hasMore: globalHasMoreHadiths, limit: Binding(
                         get: { globalHadithLimit },
                         set: { newValue in
@@ -982,6 +1123,89 @@ struct HadithView: View {
                         .foregroundStyle(.secondary)
                 }
             }
+        }
+    }
+
+    /// "ASK AI" with the sparkles glyph; the pill counts the answer's cited hadiths once they exist -
+    /// the Quran search's `askAIHeader`, verbatim.
+    private func hadithAskAIHeader(citedCount: Int) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: "sparkles")
+            Text("ASK AI")
+
+            Spacer()
+
+            if citedCount > 0 {
+                Text(String(citedCount))
+                    .font(.caption.weight(.semibold))
+                    .monospacedDigit()
+                    .foregroundStyle(settings.accentColor.color)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .conditionalGlassEffect()
+                    .padding(.vertical, -16)
+            }
+        }
+    }
+
+    /// The one-tap Ask entry for non-question queries: press to run the grounded on-device answer for
+    /// exactly what's typed - the Quran search's row, verbatim.
+    private var hadithAskPromptRow: some View {
+        Button {
+            settings.hapticFeedback()
+            runHadithAsk(query: searchText, manual: true)
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: "sparkles")
+                    .font(.caption)
+
+                Text("Ask AI about \u{201C}\(searchText.trimmingCharacters(in: .whitespacesAndNewlines))\u{201D}")
+                    .font(.caption.weight(.semibold))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+
+                Spacer()
+
+                Image(systemName: "chevron.right")
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(.secondary)
+            }
+            .foregroundColor(settings.accentColor.color)
+            .padding(.vertical, 8)
+            .padding(.horizontal, 12)
+            .conditionalGlassEffect(clear: true, rectangle: true)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    /// Hadith matches bucketed per book, preserving the result order - the Quran search's
+    /// `verseHitsGroupedBySurah`, for books.
+    private var globalHadithResultsGroupedByBook: [(book: HadithCatalogBook, hits: [GlobalHadithHit])] {
+        var order: [String] = []
+        var byBook: [String: [GlobalHadithHit]] = [:]
+        for hit in globalHadithResults {
+            if byBook[hit.book.slug] == nil { order.append(hit.book.slug) }
+            byBook[hit.book.slug, default: []].append(hit)
+        }
+        return order.compactMap { slug in
+            guard let hits = byBook[slug], let book = hits.first?.book else { return nil }
+            return (book, hits)
+        }
+    }
+
+    /// "SAHIH AL-BUKHARI - <arabic>  [count]" - the Quran's per-surah search header, for a book.
+    private func bookSearchSectionHeader(book: HadithCatalogBook, matchCount: Int) -> some View {
+        HStack(spacing: 6) {
+            Text(book.englishTitle.uppercased())
+
+            Text(book.arabicTitle)
+                .font(.caption)
+
+            Spacer()
+
+            // How many of the hadith matches live in THIS book - the total pill sits up top.
+            CountPill(count: matchCount)
         }
     }
 

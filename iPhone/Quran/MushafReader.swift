@@ -218,6 +218,12 @@ struct SurahPageReader<Controls: View>: View {
 
     @State private var pageIndex = 0
     @State private var didSetInitialPage = false
+    /// Set when `pageIndex` is about to be moved PROGRAMMATICALLY (initial seed, in-place surah swap),
+    /// consumed by the next `.onChange(of: pageIndex)`. The `didSetInitialPage` flag alone can't tell the
+    /// seed from a real page turn - `.onAppear` finishes (flag already true) before the seed's `onChange`
+    /// is delivered, so the seed used to be treated as a turn and wiped the arrival highlight (the reason
+    /// opening "5:6" in page mode showed no selection).
+    @State private var suppressNextPageTurnClear = false
     @State private var activePicker: PickerTarget?
     @State private var pagePickerSelection = 0
     @State private var juzPickerSelection = 1
@@ -342,7 +348,11 @@ struct SurahPageReader<Controls: View>: View {
             // reader back to the page it was opened at.
             guard !didSetInitialPage else { return }
             didSetInitialPage = true
-            pageIndex = startingPageIndex(in: pages)
+            let target = startingPageIndex(in: pages)
+            // Only latch when the index actually changes - an unfired onChange would leave the latch
+            // armed and silently swallow the first REAL page turn's clear.
+            if target != pageIndex { suppressNextPageTurnClear = true }
+            pageIndex = target
             reportSurah(on: pageIndex, in: pages)
             reportAnchor(on: pageIndex, in: pages)
             MushafPageRenderCache.prewarm(pages: pages, around: pageIndex)
@@ -353,6 +363,9 @@ struct SurahPageReader<Controls: View>: View {
             // the main thread. Re-seeding the index in the LIVE pager is the cheap equivalent.
             let target = startingPageIndex(in: pages)
             if target != pageIndex {
+                // A swap that arrives WITH a target ayah (search hit, picker) sets its own highlight in
+                // SurahView - the re-seed must not count as a page turn and wipe it.
+                suppressNextPageTurnClear = true
                 pageIndex = target
                 // `.onChange(of: pageIndex)` below reports + prewarms + saves.
             } else {
@@ -365,8 +378,11 @@ struct SurahPageReader<Controls: View>: View {
             reportAnchor(on: index, in: pages)
             MushafPageRenderCache.prewarm(pages: pages, around: index)
             // Turning the page clears every selection: the tap-mark, the multi-select set, and any
-            // search-arrival snippet - a new page is a fresh start. (The initial seed isn't a "turn".)
-            if didSetInitialPage {
+            // search-arrival snippet - a new page is a fresh start. Programmatic seeds (initial open,
+            // in-place surah swap) are NOT turns - they consume the latch instead of clearing.
+            if suppressNextPageTurnClear {
+                suppressNextPageTurnClear = false
+            } else if didSetInitialPage {
                 highlightedAyah = nil
                 onPageTurned?()
             }
