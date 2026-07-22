@@ -542,7 +542,11 @@ enum TafsirDownloadTarget: String, CaseIterable, Identifiable {
 struct AyahContextMenuModifier: ViewModifier {
     @ObservedObject var settings = Settings.shared
     @ObservedObject var quranData = QuranData.shared
-    @ObservedObject var quranPlayer = QuranPlayer.shared
+    /// NOT @ObservedObject: the player is only ever touched inside button-action closures here, never
+    /// in the render path - but observing it re-ran this modifier's body on every visible ayah row
+    /// each time the player published (it publishes `currentAyahNumber` once per ayah while a surah
+    /// plays). Observation invalidates whether or not the body reads the object.
+    private var quranPlayer: QuranPlayer { .shared }
 
     let surah: Int
     let ayah: Int
@@ -654,9 +658,9 @@ struct AyahContextMenuModifier: ViewModifier {
 
     @ViewBuilder
     func body(content: Content) -> some View {
-        // O(1) dictionary lookup, not an O(114) linear scan. This `body` re-evaluates whenever `settings`/
-        // `quranPlayer` publish (constant during playback), and the modifier sits on every history/bookmark/
-        // favorite row - the linear scan added up across all visible rows.
+        // O(1) dictionary lookup, not an O(114) linear scan. This `body` re-evaluates whenever
+        // `settings` publishes, and the modifier sits on every history/bookmark/favorite row - the
+        // linear scan added up across all visible rows.
         let surahObj = quranData.surah(surah)
 
         #if os(iOS)
@@ -1031,7 +1035,9 @@ public extension View {
 
 struct RightSwipeActions: ViewModifier {
     @ObservedObject private var settings = Settings.shared
-    @ObservedObject private var quranPlayer = QuranPlayer.shared
+    /// NOT @ObservedObject - action-closure use only; see AyahContextMenuModifier's note. This
+    /// modifier also sits on every row, so player publishes fanned out across the whole list.
+    private var quranPlayer: QuranPlayer { .shared }
 
     let surahID: Int
     let surahName: String
@@ -1311,8 +1317,15 @@ struct SelectAyahTextSheet: View {
     // The sheet's own riwayah, seeded from the reading view's, so switching here never disturbs the reader.
     @State private var selectedQiraah: String = Settings.normalizeLegacyRiwayahTag(Settings.shared.displayQiraah)
 
+    // The sheet's own cleanup switches - the reading view's exact Hide Tashkeel / Hide Dots options,
+    // seeded from its settings but scoped to the text you are selecting here.
+    @State private var hideTashkeel = Settings.shared.cleanArabicText
+    @State private var hideDots = Settings.shared.removeArabicDots
+
     private var usesCustomArabicFace: Bool {
-        !settings.removeArabicDots && settings.quranUsesCustomArabicFace
+        // The bundled faces carry no glyphs for the dotless skeleton letters, so hiding dots
+        // falls back to the system face - the reading view's own rule.
+        !hideDots && settings.quranUsesCustomArabicFace
     }
 
     private var ayahExistsInSelectedQiraah: Bool {
@@ -1320,11 +1333,13 @@ struct SelectAyahTextSheet: View {
     }
 
     private var arabicText: String {
-        ayah.displayArabicText(
+        var text = ayah.displayArabicText(
             surahId: surah.id,
-            clean: settings.cleanArabicText,
+            clean: hideTashkeel,
             qiraahOverride: selectedQiraah
         )
+        if hideDots { text = text.removingArabicDots }
+        return text
     }
 
     private var arabicFontName: String {
@@ -1343,6 +1358,22 @@ struct SelectAyahTextSheet: View {
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                         }
+                    }
+
+                    Section {
+                        Toggle("Hide Tashkeel (Vowel Diacritics) and Signs", isOn: $hideTashkeel.animation(.easeInOut))
+                            .font(.subheadline)
+                            .onChange(of: hideTashkeel) { _ in settings.hapticFeedback() }
+
+                        if hideTashkeel || hideDots {
+                            Toggle("Hide Arabic Dots", isOn: $hideDots.animation(.easeInOut))
+                                .font(.subheadline)
+                                .onChange(of: hideDots) { _ in settings.hapticFeedback() }
+                        }
+                    } footer: {
+                        Text("Shapes only the Arabic text below - the reading view keeps its own settings.")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
                     }
 
                     if ayahExistsInSelectedQiraah {

@@ -161,6 +161,10 @@ struct QuranView: View {
     @State private var verseHits: [VerseIndexEntry] = []
     @State private var hasMoreHits = true
     private let hitPageSize = 5
+    /// When AI results land, the exhaustive keyword sections collapse behind one "Show keyword matches"
+    /// row (three stacked long lists read as noise under good AI hits). Reset per query. Declared in
+    /// SHARED scope: the collapse branch is shared code (the flag is simply never true on watchOS).
+    @State private var showKeywordResults = false
 
     #if os(iOS)
     // AI (semantic) ayah search: on-device meaning-based results, shown automatically ABOVE the keyword
@@ -206,7 +210,7 @@ struct QuranView: View {
                 texts.append("\(ayah.textEnglishSaheeh) \(ayah.textEnglishMustafa)")
             }
         }
-        semanticEngine.prepare(corpusID: quranSemanticCorpusID, version: "en1-\(texts.count)", texts: texts)
+        semanticEngine.prepare(corpusID: quranSemanticCorpusID, version: "en2-\(texts.count)", texts: texts)
     }
 
     /// True when the live query is one the semantic engine can answer (English text, not a reference).
@@ -216,6 +220,115 @@ struct QuranView: View {
             && trimmed.count >= 3
             && !trimmed.containsArabicLetters
             && getSurahAndAyah(from: trimmed).surah == nil
+    }
+
+    // Ask (the on-device LLM, grounded RAG): auto-runs for QUESTION-shaped queries only, streaming an
+    // answer card above the AI results - drawn strictly from the retrieved ayahs, cited, never invented.
+    // Exists only on Apple Intelligence devices (`OnDeviceAsk.isAvailable`); elsewhere nothing renders.
+    @State private var askAnswer = ""
+    @State private var askIsStreaming = false
+    @State private var askRanForQuery = ""
+    @State private var askTask: Task<Void, Never>?
+
+    private func runAskIfNeeded(query: String) {
+        runAsk(query: query, manual: false)
+    }
+
+    /// Auto mode runs only for QUESTION-shaped queries; `manual` (the tapped "Ask AI" row) runs for
+    /// anything - the user explicitly asked, so the query IS the question.
+    private func runAsk(query: String, manual: Bool) {
+        askTask?.cancel()
+        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard OnDeviceAsk.isAvailable, trimmed.count >= 3,
+              manual || OnDeviceAsk.looksLikeQuestion(trimmed) else {
+            if !askRanForQuery.isEmpty {
+                withAnimation { askAnswer = ""; askIsStreaming = false; askRanForQuery = "" }
+            }
+            return
+        }
+
+        askTask = Task {
+            // Auto waits out the search debounces so the retrieval this answer is GROUNDED on has
+            // settled; a manual tap means the results are already on screen - go immediately.
+            try? await Task.sleep(nanoseconds: manual ? 100_000_000 : 900_000_000)
+            guard !Task.isCancelled else { return }
+
+            var sources: [OnDeviceAsk.Source] = []
+            var seen = Set<String>()
+            for hit in aiHits.prefix(6) {
+                let reference = "\(hit.surah):\(hit.ayah)"
+                if seen.insert(reference).inserted,
+                   let ayah = quranData.ayah(surah: hit.surah, ayah: hit.ayah) {
+                    sources.append(.init(reference: reference, text: ayah.textEnglishSaheeh))
+                }
+            }
+            for hit in verseHits.prefix(6) {
+                let reference = "\(hit.surah):\(hit.ayah)"
+                if seen.insert(reference).inserted,
+                   let ayah = quranData.ayah(surah: hit.surah, ayah: hit.ayah) {
+                    sources.append(.init(reference: reference, text: ayah.textEnglishSaheeh))
+                }
+            }
+            guard !sources.isEmpty else {
+                withAnimation { askAnswer = ""; askIsStreaming = false; askRanForQuery = "" }
+                return
+            }
+
+            withAnimation { askAnswer = ""; askIsStreaming = true; askRanForQuery = trimmed }
+            guard #available(iOS 26.0, *) else { return }
+            do {
+                for try await text in OnDeviceAsk.streamAnswer(question: trimmed, sources: sources) {
+                    guard !Task.isCancelled else { return }
+                    askAnswer = text
+                }
+                guard !Task.isCancelled else { return }
+                withAnimation { askIsStreaming = false }
+            } catch {
+                // Declined or errored: the card simply goes away - keyword and AI results still stand.
+                guard !Task.isCancelled else { return }
+                withAnimation { askAnswer = ""; askIsStreaming = false; askRanForQuery = "" }
+            }
+        }
+    }
+
+    /// "(46:15)"-style references parsed out of the streamed answer, resolved against the Quran and
+    /// deduped in citation order - the model names the verses, these rows OPEN them. Parsing the live
+    /// text keeps the rows in lockstep with whatever the answer actually cites.
+    private static let askCitationRegex = try! NSRegularExpression(pattern: #"\b(\d{1,3}):(\d{1,3})\b"#)
+
+    private var askCitedAyahs: [(surah: Surah, ayah: Ayah)] {
+        guard !askAnswer.isEmpty else { return [] }
+        let text = askAnswer as NSString
+        var seen = Set<Int>()
+        var cited: [(surah: Surah, ayah: Ayah)] = []
+        for match in Self.askCitationRegex.matches(in: askAnswer, range: NSRange(location: 0, length: text.length)) {
+            guard let surahID = Int(text.substring(with: match.range(at: 1))),
+                  let ayahID = Int(text.substring(with: match.range(at: 2))),
+                  seen.insert(surahID * 1000 + ayahID).inserted,
+                  let surah = quranData.surah(surahID),
+                  let ayah = quranData.ayah(surah: surahID, ayah: ayahID)
+            else { continue }
+            cited.append((surah, ayah))
+            if cited.count == 10 { break }
+        }
+        return cited
+    }
+
+    private func askCitedHeader(count: Int) -> some View {
+        HStack {
+            Text("CITED AYAHS")
+
+            Spacer()
+
+            Text(String(count))
+                .font(.caption.weight(.semibold))
+                .monospacedDigit()
+                .foregroundStyle(settings.accentColor.color)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .conditionalGlassEffect()
+                .padding(.vertical, -16)
+        }
     }
 
     /// Debounced semantic query - runs alongside (never instead of) the keyword pipeline, so AI results
@@ -760,6 +873,8 @@ struct QuranView: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text("• Surah: number, Arabic, English, transliteration, or 'surah X'")
                 Text("• Ayah: X:Y or text (Arabic/English/transliteration)")
+                Text("• AI: meaning search - 'patience in hardship'")
+                Text("• Ask: questions get an on-device AI answer")
                 Text("• Page/Juz: 'page X', 'juz X', or plain numbers")
                 Text("• From the end with '-': '-1' is the last surah, page, and juz 30")
                 Text("• Works after a keyword too: 'surah -1', 'page -1', 'juz -1'")
@@ -782,6 +897,8 @@ struct QuranView: View {
 
             if showAyahSearchLearnMore {
                 VStack(alignment: .leading, spacing: 6) {
+                    Text("AI: English meaning search, fully on-device and offline - prepared once, instant after")
+                    Text("Ask: questions get a short cited answer from the matching ayahs only - never a ruling")
                     Text("Plain text matches anywhere (substring): 'رب' also finds 'ربهم'")
                     Text("Use =term for whole words / a phrase: '=رب' finds the word رب, not ربهم")
                     Text("Use #term for an exact substring (case- and tashkeel-sensitive)")
@@ -823,6 +940,14 @@ struct QuranView: View {
         }
         .task {
             prewarmQuranDestinations()
+            #if os(iOS)
+            // Build (or disk-load) the AI search index AHEAD of the first search - by the time anyone
+            // types, it's ready and the "Preparing" row never shows.
+            Task {
+                await quranData.waitUntilCoreLoaded()
+                prepareQuranSemanticCorpus()
+            }
+            #endif
             #if os(iOS)
             // If the reader is already in page mode when the Quran tab is first built, resume in the mushaf at
             // the last-read ayah's page. Guarded so backing out to the list doesn't immediately re-open it.
@@ -986,11 +1111,20 @@ struct QuranView: View {
         return .ayahs(surahID: 1, ayah: nil)
     }
 
+    /// UNIVERSAL now, not column-only: on iPhone this pushes through the same `push` every other row
+    /// uses. It used to return nil there, which dropped rows into their internal legacy
+    /// `NavigationLink(destination:)` fallback - dead inside this NavigationStack container, which is
+    /// exactly why the one-verse exact match "wouldn't open".
     private var columnAyahSelectionHandler: ((Int, Int) -> Void)? {
         #if os(iOS)
-        return usesColumnNavigation ? { surahID, ayahID in
-            selectedRoute = .ayahs(surahID: surahID, ayah: ayahID)
-        } : nil
+        if usesColumnNavigation {
+            return { surahID, ayahID in
+                selectedRoute = .ayahs(surahID: surahID, ayah: ayahID)
+            }
+        }
+        return { surahID, ayahID in
+            push(surahID: surahID, ayahID: ayahID)
+        }
         #else
         return nil
         #endif
@@ -1094,6 +1228,8 @@ struct QuranView: View {
                         boxed(pageSearchSection(context: context))
                         boxed(juzSearchSection(context: context))
                     }
+                    // Surah matches first, ayah results below - always the same order, so the eye
+                    // never has to re-learn the page.
                     boxed(surahContentSections(context: context))
                     boxed(searchResultSections(context: context))
                 }
@@ -1114,6 +1250,7 @@ struct QuranView: View {
                 handleAyahSearchChange(txt)
                 #if os(iOS)
                 runAISearch(query: txt)
+                runAskIfNeeded(query: txt)
                 #endif
             }
             #if os(iOS)
@@ -2525,15 +2662,10 @@ struct QuranView: View {
                     let completedJuz = khatmJuzStats.values.reduce(0) { $0 + ($1.completed == $1.total ? 1 : 0) }
                     let juzPercent = totalJuz > 0 ? Int((Double(completedJuz) / Double(totalJuz) * 100).rounded()) : 0
 
-                    // Use the actual mushaf page range (max page present in data) if available,
-                    // otherwise fall back to the canonical 604 pages.
-                    let totalPages: Int = {
-                        let maxPage = quranData.quran
-                            .flatMap { $0.ayahs }
-                            .compactMap { $0.page }
-                            .max()
-                        return maxPage ?? 604
-                    }()
+                    // The actual mushaf page range: the last surah's end page IS the max page in
+                    // mushaf order (canonical 604 fallback) - O(1), where this used to flatMap all
+                    // 6,236 ayahs on every render of the khatm section.
+                    let totalPages = totalMushafPages
                     let completedPages = khatmPageStats.keys.filter { page in
                         if let stats = khatmPageStats[page] { return stats.completed == stats.total }
                         return false
@@ -3287,8 +3419,6 @@ struct QuranView: View {
 
     @ViewBuilder
     private func ayahSearchSection(context: SearchDisplayContext) -> some View {
-        let bestHits = bestAyahHitsForCurrentQuery()
-
         if context.isExactAyahReference {
             Section(header: ayahSearchHeader(context: context)) {
                 ayahExactMatchRows(context: context)
@@ -3306,36 +3436,92 @@ struct QuranView: View {
             }
         } else {
             #if os(iOS)
-            // AI results appear AUTOMATICALLY at the top - no mode to enter. The section shows the
-            // one-time build progress the first time, then ranked semantic matches; the keyword sections
-            // always remain below, so AI adds understanding without ever hiding an exact match.
-            boxed(aiResultsSection)
+            // Question-shaped queries stream a grounded on-device answer automatically; any OTHER query
+            // gets a one-tap "Ask AI" row instead - press it and the same grounded answer runs for what
+            // you typed. Always drawn only from the retrieved ayahs, cited, never invented.
+            if OnDeviceAsk.isAvailable {
+                if !askRanForQuery.isEmpty {
+                    Section {
+                        AskAnswerCard(answer: askAnswer, isStreaming: askIsStreaming)
+                    }
+
+                    // The verses the answer cited, as REAL tappable rows right under the explanation -
+                    // the answer names them, these open them.
+                    let cited = askCitedAyahs
+                    if !cited.isEmpty {
+                        Section(header: askCitedHeader(count: cited.count)) {
+                            ForEach(Array(cited.enumerated()), id: \.offset) { _, item in
+                                pageJuzAyahRow(item: item)
+                            }
+                        }
+                    }
+                } else if !aiHits.isEmpty || !verseHits.isEmpty {
+                    Section {
+                        askPromptRow
+                    }
+                }
+            }
+
+            // Both result kinds landed: ONE segmented switch decides which list fills the page - the
+            // AI's ranked meaning matches or the exhaustive keyword lists - never both stacked. With
+            // only one kind present there is nothing to choose, so no picker: it just shows.
+            let showResultsPicker = !aiHits.isEmpty && !verseHits.isEmpty
+            if showResultsPicker {
+                Section {
+                    Picker("Results", selection: $showKeywordResults.animation(.easeInOut)) {
+                        Text("AI Results").tag(false)
+                        Text("Keyword Results").tag(true)
+                    }
+                    .pickerStyle(.segmented)
+                }
+            }
+
+            if !showResultsPicker || !showKeywordResults {
+                // AI results appear AUTOMATICALLY at the top - no mode to enter. The section shows the
+                // one-time build progress the first time, then the ranked semantic matches.
+                boxed(aiResultsSection)
+            }
+
+            let keywordVisible = !showResultsPicker || showKeywordResults
+            #else
+            let keywordVisible = true
             #endif
 
-            if !bestHits.isEmpty {
-                Section(header: bestAyahHeader(count: bestHits.count)) {
-                    ForEach(bestHits) { hit in
-                        ayahHitRow(hit: hit, context: context, section: "best")
+            if keywordVisible {
+                // Computed HERE, not at the top of the section: the filter+sort over every verse hit
+                // is dead weight on the exact-reference path and while the AI list is on screen.
+                let bestHits = bestAyahHitsForCurrentQuery()
+                // "Top" picks only matter when the AI list isn't the one on screen.
+                #if os(iOS)
+                let showBest = !bestHits.isEmpty && (aiHits.isEmpty || showKeywordResults)
+                #else
+                let showBest = !bestHits.isEmpty
+                #endif
+                if showBest {
+                    Section(header: bestAyahHeader(count: bestHits.count)) {
+                        ForEach(bestHits) { hit in
+                            ayahHitRow(hit: hit, context: context, section: "best")
+                        }
                     }
                 }
-            }
 
-            Section(header: ayahSearchHeader(context: context)) {
-                ayahExactMatchRows(context: context)
-            }
+                Section(header: ayahSearchHeader(context: context)) {
+                    ayahExactMatchRows(context: context)
+                }
 
-            ForEach(verseHitsGroupedBySurah, id: \.surahId) { group in
+                ForEach(verseHitsGroupedBySurah, id: \.surahId) { group in
+                    Section {
+                        ForEach(group.hits) { hit in
+                            ayahHitRow(hit: hit, context: context, section: "grouped")
+                        }
+                    } header: {
+                        surahSearchSectionHeader(surahId: group.surahId, matchCount: group.hits.count)
+                    }
+                }
+
                 Section {
-                    ForEach(group.hits) { hit in
-                        ayahHitRow(hit: hit, context: context, section: "grouped")
-                    }
-                } header: {
-                    surahSearchSectionHeader(surahId: group.surahId, matchCount: group.hits.count)
+                    ayahLoadMoreControls(context: context)
                 }
-            }
-
-            Section {
-                ayahLoadMoreControls(context: context)
             }
         }
     }
@@ -3360,6 +3546,37 @@ struct QuranView: View {
                 Section { AISearchStatusRow(progress: semanticEngine.progress(quranSemanticCorpusID), failed: false) }
             }
         }
+    }
+
+    /// The one-tap Ask entry for non-question queries: press to run the grounded on-device answer for
+    /// exactly what's typed.
+    private var askPromptRow: some View {
+        Button {
+            settings.hapticFeedback()
+            runAsk(query: searchText, manual: true)
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: "sparkles")
+                    .font(.caption)
+
+                Text("Ask AI about \u{201C}\(searchText.trimmingCharacters(in: .whitespacesAndNewlines))\u{201D}")
+                    .font(.caption.weight(.semibold))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+
+                Spacer()
+
+                Image(systemName: "chevron.right")
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(.secondary)
+            }
+            .foregroundColor(settings.accentColor.color)
+            .padding(.vertical, 8)
+            .padding(.horizontal, 12)
+            .conditionalGlassEffect(clear: true, rectangle: true)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
     }
 
     private func aiResultsHeader(count: Int) -> some View {
@@ -3685,6 +3902,10 @@ struct QuranView: View {
 
     private func handleAyahSearchChange(_ txt: String, debounce: Bool) {
         ayahSearchTask?.cancel()
+        #if os(iOS)
+        // Every new query starts with the keyword lists collapsed again (when AI results are present).
+        showKeywordResults = false
+        #endif
 
         let query = txt.trimmingCharacters(in: .whitespacesAndNewlines)
 

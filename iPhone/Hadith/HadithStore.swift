@@ -5,13 +5,18 @@ import SwiftUI
 
 #if os(iOS)
 
-// MARK: - Store
+// MARK: - User collections (favorites, bookmarks, notes)
 
-/// Disk + memory cache over the hadith-json CDN (with the forties served straight from the app bundle),
-/// plus bulk download, favorite books, and per-hadith bookmarks.
+/// The reader's own marks - favorite books/chapters, bookmarks, and their notes - split OUT of
+/// HadithStore's `objectWillChange`: the store publishes constantly during bulk downloads and the
+/// launch prewarm (per-book decode ticks), and every row observing it just for bookmark state
+/// re-rendered on each tick. This object publishes only on actual user edits, so the rows that
+/// render marks observe THIS instead. HadithStore forwards its old accessor API here, which keeps
+/// call sites unchanged - but note the forwards do NOT publish: any view that RENDERS this state
+/// must observe `HadithUserData.shared` itself.
 @MainActor
-final class HadithStore: ObservableObject {
-    static let shared = HadithStore()
+final class HadithUserData: ObservableObject {
+    static let shared = HadithUserData()
 
     private static let favoritesKey = "hadithFavoriteBooks"
     private static let chapterFavoritesKey = "hadithFavoriteChapters"
@@ -23,8 +28,131 @@ final class HadithStore: ObservableObject {
         if let data = UserDefaults.standard.data(forKey: Self.bookmarksKey),
            let decoded = try? JSONDecoder().decode([HadithBookmark].self, from: data) {
             bookmarks = decoded
+            // didSet does not fire inside init - seed the lookup index by hand.
+            bookmarksByKey = Dictionary(
+                decoded.map { ("\($0.slug)|\($0.idInBook)", $0) },
+                uniquingKeysWith: { first, _ in first }
+            )
         }
     }
+
+    /// Favorited book slugs, pinned to the top of the catalog. Persisted in UserDefaults.
+    @Published private(set) var favoriteSlugs: Set<String> = []
+
+    /// Favorited chapters, keyed "slug|chapterId" - the chapter rows' counterpart to book favorites.
+    @Published private(set) var favoriteChapterKeys: Set<String> = []
+
+    /// Bookmarked individual hadiths, newest first. Each carries enough text to render its row without
+    /// loading the (large) book it came from. Persisted in UserDefaults.
+    @Published private(set) var bookmarks: [HadithBookmark] = [] {
+        didSet {
+            bookmarksByKey = Dictionary(
+                bookmarks.map { ("\($0.slug)|\($0.idInBook)", $0) },
+                uniquingKeysWith: { first, _ in first }
+            )
+        }
+    }
+
+    /// O(1) bookmark/note lookups. `isBookmarked`/`note` run per visible row per body pass (and 4x in
+    /// the paged reader's header), so linear scans over `bookmarks` degraded with every saved
+    /// bookmark. Rebuilt on the rare mutations instead.
+    private var bookmarksByKey: [String: HadithBookmark] = [:]
+
+    // MARK: Favorites
+
+    func isFavorite(_ slug: String) -> Bool { favoriteSlugs.contains(slug) }
+
+    func toggleFavorite(_ slug: String) {
+        if favoriteSlugs.contains(slug) {
+            favoriteSlugs.remove(slug)
+        } else {
+            favoriteSlugs.insert(slug)
+        }
+        UserDefaults.standard.set(Array(favoriteSlugs), forKey: Self.favoritesKey)
+    }
+
+    func isChapterFavorite(slug: String, chapterId: Int) -> Bool {
+        favoriteChapterKeys.contains("\(slug)|\(chapterId)")
+    }
+
+    func toggleChapterFavorite(slug: String, chapterId: Int) {
+        let key = "\(slug)|\(chapterId)"
+        if favoriteChapterKeys.contains(key) {
+            favoriteChapterKeys.remove(key)
+        } else {
+            favoriteChapterKeys.insert(key)
+        }
+        UserDefaults.standard.set(Array(favoriteChapterKeys), forKey: Self.chapterFavoritesKey)
+    }
+
+    // MARK: Bookmarks
+
+    func isBookmarked(slug: String, idInBook: Int) -> Bool {
+        bookmarksByKey["\(slug)|\(idInBook)"] != nil
+    }
+
+    func toggleBookmark(book: HadithCatalogBook, hadith: HadithBookData.Hadith) {
+        if let index = bookmarks.firstIndex(where: { $0.slug == book.slug && $0.idInBook == hadith.idInBook }) {
+            bookmarks.remove(at: index)
+        } else {
+            let preview = hadith.english.text.isEmpty ? hadith.arabic : hadith.english.text
+            bookmarks.insert(
+                HadithBookmark(
+                    slug: book.slug,
+                    idInBook: hadith.idInBook,
+                    reference: "\(book.englishTitle) \(hadith.idInBook)",
+                    preview: String(preview.prefix(140)),
+                    chapterId: hadith.chapterId,
+                    arabicPreview: String(hadith.arabic.prefix(120)),
+                    englishPreview: String(hadith.english.text.prefix(140))
+                ),
+                at: 0
+            )
+        }
+        persistBookmarks()
+    }
+
+    // MARK: Notes (the bookmarked-ayah rule: a note lives on a bookmark)
+
+    func note(slug: String, idInBook: Int) -> String? {
+        let note = bookmarksByKey["\(slug)|\(idInBook)"]?.note
+        return (note?.isEmpty ?? true) ? nil : note
+    }
+
+    /// Attach/replace the note on this hadith's bookmark - bookmarking it first when needed, exactly like
+    /// notes on ayahs. An empty note clears it (the bookmark itself stays).
+    func setNote(book: HadithCatalogBook, hadith: HadithBookData.Hadith, note: String) {
+        let trimmed = note.trimmingCharacters(in: .whitespacesAndNewlines)
+        if bookmarks.firstIndex(where: { $0.slug == book.slug && $0.idInBook == hadith.idInBook }) == nil {
+            toggleBookmark(book: book, hadith: hadith)
+        }
+        guard let index = bookmarks.firstIndex(where: { $0.slug == book.slug && $0.idInBook == hadith.idInBook }) else { return }
+        bookmarks[index].note = trimmed.isEmpty ? nil : trimmed
+        persistBookmarks()
+    }
+
+    func removeNote(slug: String, idInBook: Int) {
+        guard let index = bookmarks.firstIndex(where: { $0.slug == slug && $0.idInBook == idInBook }) else { return }
+        bookmarks[index].note = nil
+        persistBookmarks()
+    }
+
+    private func persistBookmarks() {
+        if let data = try? JSONEncoder().encode(bookmarks) {
+            UserDefaults.standard.set(data, forKey: Self.bookmarksKey)
+        }
+    }
+}
+
+// MARK: - Store
+
+/// Disk + memory cache over the hadith-json CDN (with the forties served straight from the app bundle),
+/// plus bulk download, favorite books, and per-hadith bookmarks.
+@MainActor
+final class HadithStore: ObservableObject {
+    static let shared = HadithStore()
+
+    private init() {}
 
     // Download progress, published for the catalog UI.
     @Published private(set) var isDownloading = false
@@ -35,16 +163,6 @@ final class HadithStore: ObservableObject {
     /// Slugs with a file on disk, so rows can show their downloaded state (bundled books are always offline).
     @Published private(set) var downloadedSlugs: Set<String> = []
     @Published private(set) var diskUsageBytes: Int64 = 0
-
-    /// Favorited book slugs, pinned to the top of the catalog. Persisted in UserDefaults.
-    @Published private(set) var favoriteSlugs: Set<String> = []
-
-    /// Favorited chapters, keyed "slug|chapterId" - the chapter rows' counterpart to book favorites.
-    @Published private(set) var favoriteChapterKeys: Set<String> = []
-
-    /// Bookmarked individual hadiths, newest first. Each carries enough text to render its row without
-    /// loading the (large) book it came from. Persisted in UserDefaults.
-    @Published private(set) var bookmarks: [HadithBookmark] = []
 
     /// Decoded books kept in memory, newest last (tiny LRU - Bukhari decoded is large).
     private var decoded: [(slug: String, book: HadithBookData)] = []
@@ -78,31 +196,45 @@ final class HadithStore: ObservableObject {
     }
     private var downloadTask: Task<Void, Never>?
 
-    // MARK: Favorites
+    // MARK: User collections (forwarded to HadithUserData)
 
-    func isFavorite(_ slug: String) -> Bool { favoriteSlugs.contains(slug) }
+    // Favorites/bookmarks/notes live in `HadithUserData` - their own publisher, so download/prewarm
+    // ticks here no longer re-render every mark-showing row. These forwards keep the store's old API
+    // for call sites; they read live data but do NOT publish - a view that RENDERS this state must
+    // observe `HadithUserData.shared` itself.
 
-    func toggleFavorite(_ slug: String) {
-        if favoriteSlugs.contains(slug) {
-            favoriteSlugs.remove(slug)
-        } else {
-            favoriteSlugs.insert(slug)
-        }
-        UserDefaults.standard.set(Array(favoriteSlugs), forKey: Self.favoritesKey)
-    }
+    var bookmarks: [HadithBookmark] { HadithUserData.shared.bookmarks }
+
+    func isFavorite(_ slug: String) -> Bool { HadithUserData.shared.isFavorite(slug) }
+
+    func toggleFavorite(_ slug: String) { HadithUserData.shared.toggleFavorite(slug) }
 
     func isChapterFavorite(slug: String, chapterId: Int) -> Bool {
-        favoriteChapterKeys.contains("\(slug)|\(chapterId)")
+        HadithUserData.shared.isChapterFavorite(slug: slug, chapterId: chapterId)
     }
 
     func toggleChapterFavorite(slug: String, chapterId: Int) {
-        let key = "\(slug)|\(chapterId)"
-        if favoriteChapterKeys.contains(key) {
-            favoriteChapterKeys.remove(key)
-        } else {
-            favoriteChapterKeys.insert(key)
-        }
-        UserDefaults.standard.set(Array(favoriteChapterKeys), forKey: Self.chapterFavoritesKey)
+        HadithUserData.shared.toggleChapterFavorite(slug: slug, chapterId: chapterId)
+    }
+
+    func isBookmarked(slug: String, idInBook: Int) -> Bool {
+        HadithUserData.shared.isBookmarked(slug: slug, idInBook: idInBook)
+    }
+
+    func toggleBookmark(book: HadithCatalogBook, hadith: HadithBookData.Hadith) {
+        HadithUserData.shared.toggleBookmark(book: book, hadith: hadith)
+    }
+
+    func note(slug: String, idInBook: Int) -> String? {
+        HadithUserData.shared.note(slug: slug, idInBook: idInBook)
+    }
+
+    func setNote(book: HadithCatalogBook, hadith: HadithBookData.Hadith, note: String) {
+        HadithUserData.shared.setNote(book: book, hadith: hadith, note: note)
+    }
+
+    func removeNote(slug: String, idInBook: Int) {
+        HadithUserData.shared.removeNote(slug: slug, idInBook: idInBook)
     }
 
     // MARK: Book shape (chapter / hadith counts)
@@ -129,64 +261,6 @@ final class HadithStore: ObservableObject {
             return (chapters, hadiths)
         }
         return nil
-    }
-
-    // MARK: Bookmarks
-
-    func isBookmarked(slug: String, idInBook: Int) -> Bool {
-        bookmarks.contains { $0.slug == slug && $0.idInBook == idInBook }
-    }
-
-    func toggleBookmark(book: HadithCatalogBook, hadith: HadithBookData.Hadith) {
-        if let index = bookmarks.firstIndex(where: { $0.slug == book.slug && $0.idInBook == hadith.idInBook }) {
-            bookmarks.remove(at: index)
-        } else {
-            let preview = hadith.english.text.isEmpty ? hadith.arabic : hadith.english.text
-            bookmarks.insert(
-                HadithBookmark(
-                    slug: book.slug,
-                    idInBook: hadith.idInBook,
-                    reference: "\(book.englishTitle) \(hadith.idInBook)",
-                    preview: String(preview.prefix(140)),
-                    chapterId: hadith.chapterId,
-                    arabicPreview: String(hadith.arabic.prefix(120)),
-                    englishPreview: String(hadith.english.text.prefix(140))
-                ),
-                at: 0
-            )
-        }
-        persistBookmarks()
-    }
-
-    // MARK: Notes (the bookmarked-ayah rule: a note lives on a bookmark)
-
-    func note(slug: String, idInBook: Int) -> String? {
-        let note = bookmarks.first { $0.slug == slug && $0.idInBook == idInBook }?.note
-        return (note?.isEmpty ?? true) ? nil : note
-    }
-
-    /// Attach/replace the note on this hadith's bookmark - bookmarking it first when needed, exactly like
-    /// notes on ayahs. An empty note clears it (the bookmark itself stays).
-    func setNote(book: HadithCatalogBook, hadith: HadithBookData.Hadith, note: String) {
-        let trimmed = note.trimmingCharacters(in: .whitespacesAndNewlines)
-        if bookmarks.firstIndex(where: { $0.slug == book.slug && $0.idInBook == hadith.idInBook }) == nil {
-            toggleBookmark(book: book, hadith: hadith)
-        }
-        guard let index = bookmarks.firstIndex(where: { $0.slug == book.slug && $0.idInBook == hadith.idInBook }) else { return }
-        bookmarks[index].note = trimmed.isEmpty ? nil : trimmed
-        persistBookmarks()
-    }
-
-    func removeNote(slug: String, idInBook: Int) {
-        guard let index = bookmarks.firstIndex(where: { $0.slug == slug && $0.idInBook == idInBook }) else { return }
-        bookmarks[index].note = nil
-        persistBookmarks()
-    }
-
-    private func persistBookmarks() {
-        if let data = try? JSONEncoder().encode(bookmarks) {
-            UserDefaults.standard.set(data, forKey: Self.bookmarksKey)
-        }
     }
 
     // MARK: Last read
@@ -250,10 +324,10 @@ final class HadithStore: ObservableObject {
 
     private var didPrewarmBooks = false
 
-    /// Decode the books the user is most likely to open - most recent last-reads first, then favorites,
-    /// then any other downloaded book - into the session cache at launch, so opening one is INSTANT
-    /// instead of paying the JSON decode behind a spinner. Off-main, one book at a time, capped at the
-    /// decoded-cache size so the prewarm can never evict itself.
+    /// Decode EVERY book available offline - most recent last-reads first, then favorites, then the
+    /// rest of the shelf (downloaded and bundled) - into the session cache at launch, so opening ANY
+    /// of them is INSTANT instead of paying the JSON decode behind a spinner. Off-main, one book at a
+    /// time in likelihood order, so the books you actually open first warm up first.
     func prewarmBooks() {
         guard !didPrewarmBooks else { return }
         didPrewarmBooks = true
@@ -262,14 +336,13 @@ final class HadithStore: ObservableObject {
         var ordered: [String] = lastReadByBook.values
             .sorted { $0.timestamp > $1.timestamp }
             .map(\.slug)
-        ordered += favoriteSlugs.sorted()
-        ordered += downloadedSlugs.sorted()
+        ordered += HadithUserData.shared.favoriteSlugs.sorted()
+        ordered += HadithCatalogBook.all.map(\.slug)
 
         var seen = Set<String>()
         let targets = ordered
             .compactMap { HadithCatalogBook.bySlug[$0] }
             .filter { seen.insert($0.slug).inserted && isAvailableOffline($0) }
-            .prefix(3)
         guard !targets.isEmpty else { return }
 
         Task {
@@ -305,6 +378,23 @@ final class HadithStore: ObservableObject {
     /// file exists in the bundle is treated as ALREADY AVAILABLE - no download flow, no storage cost -
     /// so bundling more collections (or building an all-bundled Hadith app) needs no code changes.
     nonisolated static func bundledURL(_ slug: String) -> URL? {
+        // Catalog slugs come from the one-time probe table (hits AND misses - a not-bundled book must
+        // not fall through to a live probe on every call). Bundle contents can't change at runtime.
+        if let cached = bundledURLBySlug[slug] { return cached }
+        return probeBundledURL(slug)
+    }
+
+    /// Every catalog slug probed ONCE. `Bundle.main.url` is a resource lookup (two of them per miss),
+    /// and `isAvailableOffline` runs from body paths - per row in the catalog list.
+    nonisolated private static let bundledURLBySlug: [String: URL?] = {
+        var map: [String: URL?] = [:]
+        for book in HadithCatalogBook.all {
+            map[book.slug] = probeBundledURL(book.slug)
+        }
+        return map
+    }()
+
+    nonisolated private static func probeBundledURL(_ slug: String) -> URL? {
         Bundle.main.url(forResource: slug, withExtension: "json")
             ?? Bundle.main.url(forResource: slug, withExtension: "json", subdirectory: "JSONs")
     }
@@ -364,7 +454,10 @@ final class HadithStore: ObservableObject {
 
         decoded.removeAll { $0.slug == book.slug }
         decoded.append((book.slug, parsed))
-        if decoded.count > 3 {
+        // The cache holds the WHOLE offline shelf (prewarm decodes every available book so any open
+        // is instant); the floor of 4 only matters for online-only reads on an empty shelf.
+        let cacheCap = max(4, HadithCatalogBook.all.filter { isAvailableOffline($0) }.count)
+        if decoded.count > cacheCap {
             let evicted = decoded.removeFirst()
             // The index rides with the decoded book - keep the two caches aligned.
             searchIndexes.removeValue(forKey: evicted.slug)
@@ -487,14 +580,26 @@ final class HadithStore: ObservableObject {
         let date: Date
     }
 
+    /// Memoized decode: the Hadith tab reads the history from body paths (2-3 accesses per body
+    /// pass), and the store's frequent publishes during launch prewarm/downloads re-run those bodies
+    /// - without this cache each access was a fresh UserDefaults read + JSONDecoder pass on main.
+    private static var dailyHistoryCache: [DailyHadithEntry]?
+
     static func loadDailyHistory() -> [DailyHadithEntry] {
+        if let cached = dailyHistoryCache { return cached }
         guard let data = UserDefaults.standard.data(forKey: "hadithOfTheDayHistory"),
-              let decoded = try? JSONDecoder().decode([DailyHadithEntry].self, from: data) else { return [] }
+              let decoded = try? JSONDecoder().decode([DailyHadithEntry].self, from: data) else {
+            dailyHistoryCache = []
+            return []
+        }
+        dailyHistoryCache = decoded
         return decoded
     }
 
     private static func saveDailyHistory(_ entries: [DailyHadithEntry]) {
-        if let data = try? JSONEncoder().encode(Array(entries.prefix(5))) {
+        let trimmed = Array(entries.prefix(5))
+        dailyHistoryCache = trimmed
+        if let data = try? JSONEncoder().encode(trimmed) {
             UserDefaults.standard.set(data, forKey: "hadithOfTheDayHistory")
         }
     }

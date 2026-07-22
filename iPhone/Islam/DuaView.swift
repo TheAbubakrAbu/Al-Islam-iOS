@@ -36,6 +36,10 @@ private struct DuaCollection: Identifiable {
 struct DuaView: View {
     @ObservedObject var settings = Settings.shared
 
+    @State private var searchText = ""
+    /// Apple Music-style bar minimization: true while scrolling down.
+    @State private var barsCollapsed = false
+
     private static let collections: [DuaCollection] = [
         DuaCollections.common,
         DuaCollections.morningEvening,
@@ -48,19 +52,52 @@ struct DuaView: View {
         DuaCollections.prophets,
         DuaCollections.rabbana
     ]
-    
+
+    private var normalizedQuery: String {
+        searchText
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
+    }
+
+    /// Collection rows filter IN PLACE while searching, the reading lists' rule.
+    private func filteredCollections(for normalizedQuery: String) -> [DuaCollection] {
+        guard !normalizedQuery.isEmpty else { return Self.collections }
+        return Self.collections.filter {
+            $0.title.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current).contains(normalizedQuery)
+                || $0.subtitle.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current).contains(normalizedQuery)
+        }
+    }
+
+    /// Every dua in EVERY collection matching the query - so a search here finds the supplication
+    /// itself, not just the folder it lives in.
+    private func matchingDuas(for normalizedQuery: String) -> [DuaItem] {
+        guard !normalizedQuery.isEmpty else { return [] }
+        return Self.collections.flatMap { collection in
+            collection.items.filter { $0.searchBlob.contains(normalizedQuery) }
+        }
+    }
+
     var body: some View {
-        List {
+        // One scan per body pass. As computed properties these were re-evaluated at every access
+        // site (the section gate, the ForEach, the listen-all pill, and the count pill) - four full
+        // walks over every dua in every collection on each search keystroke.
+        let query = normalizedQuery
+        let shownCollections = filteredCollections(for: query)
+        let matching = matchingDuas(for: query)
+
+        return List {
             Group {
+            if query.isEmpty {
             Section(header: Text("SUPPLICATIONS TO ALLAH")) {
                 Text("Short, daily supplications that keep your heart connected to Allah in every situation. \"Call upon Me; I will respond to you.\" (Quran 40:60)")
                     .font(.subheadline)
                     .foregroundColor(.primary)
                     .padding(.vertical, 8)
             }
-                
+            }
+
                 Section {
-                    ForEach(Self.collections) { collection in
+                    ForEach(shownCollections) { collection in
                         NavigationLink {
                             DuaCollectionView(collection: collection)
                         } label: {
@@ -85,7 +122,7 @@ struct DuaView: View {
 
                         Spacer()
 
-                        Text("\(Self.collections.count)")
+                        Text("\(shownCollections.count)")
                             .font(.caption.weight(.semibold))
                             .monospacedDigit()
                             .foregroundStyle(settings.accentColor.color)
@@ -96,6 +133,34 @@ struct DuaView: View {
                     }
                 }
 
+            if !matching.isEmpty {
+                Section {
+                    ForEach(Array(matching.enumerated()), id: \.offset) { _, item in
+                        AdhkarRow(
+                            arabicText: item.arabicText,
+                            transliteration: item.transliteration,
+                            translation: item.translation,
+                            useQuranicFont: settings.useFontArabic,
+                            searchQuery: searchText,
+                            alwaysTrailing: true,
+                            speechEnabled: true,
+                            source: item.reference
+                        )
+                    }
+                } header: {
+                    HStack(spacing: 8) {
+                        Text("MATCHING DUAS")
+
+                        Spacer()
+
+                        ListenAllPill(texts: matching.map(\.arabicText))
+
+                        CountPill(count: matching.count)
+                    }
+                }
+            }
+
+            if query.isEmpty {
             Section(header: Text("ETYMOLOGY")) {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Arabic root: د ع و (d-ʿ-w)")
@@ -151,9 +216,28 @@ struct DuaView: View {
                 )
             }
             }
+            }
             .themedListRowBackground()
         }
+        #if os(iOS)
+        // Apple Music-style: the bottom bar minimizes while scrolling down, restores on scroll-up.
+        .collapseBarsOnScroll($barsCollapsed)
+        .adaptiveSafeArea(edge: .bottom) {
+            VStack(spacing: SafeAreaInsetVStackSpacing.standard) {
+                SearchBar(text: $searchText.animation(.easeInOut))
+                    .padding([.horizontal, .top], -8)
+                    .minimizedBarStyle(barsCollapsed)
+            }
+            .animation(.spring(response: 0.35, dampingFraction: 0.85), value: barsCollapsed)
+            .padding(.horizontal, 24)
+            .padding(.bottom, 8)
+            .background(Color.white.opacity(0.00001))
+        }
+        #else
+        .searchable(text: $searchText.animation(.easeInOut))
+        #endif
         .applyConditionalListStyle()
+        .compactListSectionSpacing()
         .navigationTitle("Dua & Supplications")
     }
 }
@@ -167,10 +251,20 @@ private struct DuaCollectionView: View {
     let collection: DuaCollection
 
     var body: some View {
-        List {
+        // Fold the query and filter ONCE per body pass: matching used to be re-decided per item at
+        // two sites (the rows and the header's count/listen pills), re-folding the query inside
+        // every single per-item check.
+        let query = searchText
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
+        let shown = query.isEmpty
+            ? collection.items
+            : collection.items.filter { $0.searchBlob.contains(query) }
+
+        return List {
             Group {
             introductionSection
-            duaRows
+            duaRows(shown)
             }
             .themedListRowBackground()
         }
@@ -202,33 +296,6 @@ private struct DuaCollectionView: View {
         .navigationTitle(collection.title)
     }
 
-    private func matchesSearch(_ item: DuaItem) -> Bool {
-        let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !query.isEmpty else { return true }
-
-        let normalizedQuery = query.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
-        return item.searchBlob.contains(normalizedQuery)
-    }
-
-    @ViewBuilder
-    private func filteredDuaRow(_ item: DuaItem) -> some View {
-        if matchesSearch(item) {
-            // Duas are always trailing, however short. They are quoted Quran, and a line of Quran should sit
-            // where Arabic prose sits - not flush left like a UI label. (Dhikr keeps the measured behavior:
-            // leading while it fits on one line, trailing once it wraps.)
-            AdhkarRow(
-                arabicText: item.arabicText,
-                transliteration: item.transliteration,
-                translation: item.translation,
-                useQuranicFont: settings.useFontArabic,
-                searchQuery: searchText,
-                alwaysTrailing: true,
-                speechEnabled: true,
-                source: item.reference
-            )
-        }
-    }
-
     private var introductionSection: some View {
         // "ABOUT", not the collection's own name again - the navigation title directly above already says
         // "Sleep & Waking"; a header shouting "SLEEP & WAKING DUAS" right under it was saying it twice.
@@ -239,50 +306,30 @@ private struct DuaCollectionView: View {
         }
     }
 
-    private var etymologySection: some View {
-        Section(header: Text("ETYMOLOGY")) {
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Arabic root: د ع و (d-ʿ-w)")
-                    .font(
-                        settings.islamUsesCustomArabicFace
-                            ? Font.arabic(settings.nonQuranArabicFontName, size: 18, relativeTo: .subheadline)
-                            : .subheadline.weight(.semibold)
-                    )
-                    .arabicFontDesign(custom: settings.islamUsesCustomArabicFace)
-                    .foregroundColor(settings.accentColor.color)
-
-                Text("Core meaning: to call, to invite, to summon")
-                    .font(.subheadline)
-                    .foregroundColor(.primary)
-
-                Text("Dua literally means calling out, especially calling upon Allah. In Islam it is not just asking for things; it is an act of worship, turning to Him with need, hope, fear, and love.")
-                    .font(.footnote)
-                    .foregroundColor(.secondary)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding()
-            .background(
-                RoundedRectangle(cornerRadius: 24)
-                    .fill(Color.secondary.opacity(0.1))
-            )
-            .padding(-4)
-        }
-    }
-
-    @ViewBuilder
-    private var duaRows: some View {
-        Section(header: duasHeader) {
-            ForEach(collection.items) { item in
-                filteredDuaRow(item)
+    private func duaRows(_ shown: [DuaItem]) -> some View {
+        Section(header: duasHeader(shown)) {
+            ForEach(shown) { item in
+                // Duas are always trailing, however short. They are quoted Quran, and a line of Quran
+                // should sit where Arabic prose sits - not flush left like a UI label. (Dhikr keeps the
+                // measured behavior: leading while it fits on one line, trailing once it wraps.)
+                AdhkarRow(
+                    arabicText: item.arabicText,
+                    transliteration: item.transliteration,
+                    translation: item.translation,
+                    useQuranicFont: settings.useFontArabic,
+                    searchQuery: searchText,
+                    alwaysTrailing: true,
+                    speechEnabled: true,
+                    source: item.reference
+                )
             }
         }
     }
 
     /// "SUPPLICATIONS" with the count pill the Quran and Arabic screens put on their section headers.
     /// While searching, the pill counts the matches instead.
-    private var duasHeader: some View {
-        let shown = collection.items.filter(matchesSearch)
-        return HStack(spacing: 8) {
+    private func duasHeader(_ shown: [DuaItem]) -> some View {
+        HStack(spacing: 8) {
             Text("SUPPLICATIONS")
 
             Spacer()
@@ -294,39 +341,8 @@ private struct DuaCollectionView: View {
         }
     }
 
-    private var virtuesSection: some View {
-        Section(header: Text("VIRTUES OF DUA")) {
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Dua is an act of worship and a direct connection with Allah. No sincere call is lost: it is answered now, delayed for wisdom, or stored as reward.")
-                    .font(.subheadline)
-                    .foregroundColor(.primary)
-            }
-
-            DuaReflectionCard(
-                title: "Quranic Promise",
-                lines: [
-                    "And your Lord says, \"Call upon Me; I will respond to you.\" Indeed, those who disdain My worship will enter Hell rendered contemptible. (Quran 40:60)",
-                    "And when My servants ask you concerning Me, indeed I am near. I respond to the invocation of the supplicant when he calls upon Me. So let them respond to Me and believe in Me that they may be rightly guided. (Quran 2:186)",
-                    "Is He not best who responds to the desperate one when he calls upon Him and removes evil and makes you inheritors of the earth? Is there a deity with Allah? Little do you remember. (Quran 27:62)"
-                ],
-                accent: settings.accentColor.color
-            )
-
-            DuaReflectionCard(
-                title: "Prophetic Guidance",
-                lines: [
-                    "Dua is worship. (Abu Dawud 1479; Tirmidhi 3247 - sahih)",
-                    "There is nothing more noble to Allah than dua. (Tirmidhi 3370; Ibn Majah 3829 - hasan)",
-                    "No Muslim supplicates - so long as it is not for sin or for severing kinship - but Allah gives him one of three: the answer is hastened, it is stored for him in the Hereafter, or an equivalent evil is turned away from him. (Musnad Ahmad 11133 - hasan)"
-                ],
-                accent: settings.accentColor.color
-            )
-
-            Text("Keep making dua in ease and hardship, in private and public, with certainty and patience. The One you call is always near.")
-                .font(.subheadline)
-                .foregroundColor(.primary)
-        }
-    }
+    // (The tab-level DuaView carries the ETYMOLOGY and VIRTUES sections; per-collection copies were
+    // never referenced from this view's body and were removed as dead code.)
 }
 
 private enum DuaCollections {

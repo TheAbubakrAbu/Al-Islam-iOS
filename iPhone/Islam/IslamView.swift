@@ -2,7 +2,8 @@ import SwiftUI
 
 struct IslamView: View {
     @ObservedObject var settings = Settings.shared
-    @ObservedObject var namesData = NamesViewModel.shared
+    // No NamesViewModel observation: this body renders nothing from it, and observing it re-ran the
+    // whole tab root when the 99 Names JSON finished its background load. NamesView observes it itself.
     #if os(iOS)
     @State private var selectedResource: IslamDestination? = .arabicAlphabet
     /// Programmatic pushes for the grid tiles (a `NavigationLink` inside a List row drags the row chevron

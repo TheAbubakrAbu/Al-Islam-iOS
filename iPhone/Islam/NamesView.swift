@@ -235,29 +235,31 @@ struct NamesView: View {
         namesData.filteredNames(cleanedQuery: cleanedSearch)
     }
 
-    private var favoriteNameNumberSet: Set<Int> {
-        Set(settings.favoriteNameNumbers)
-    }
-
     /// Collapse state for the favorites section, same as the Quran tab's Favorite Surahs.
     @AppStorage("showFavoriteNames") private var showFavoriteNames = true
 
-    private var favoriteNames: [NameOfAllah] {
+    private func favoriteNames(in favoriteSet: Set<Int>) -> [NameOfAllah] {
         namesData.namesOfAllah
-            .filter { favoriteNameNumberSet.contains($0.number) }
+            .filter { favoriteSet.contains($0.number) }
             .sorted { $0.number < $1.number }
     }
 
     var body: some View {
         let hasActiveSearch = !searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        // One pass per render: the favorite set used to be rebuilt (`Set(...)`) at every row's
+        // contains-check - ~100 allocations per body pass - and the favorites list was
+        // filtered+sorted three times (gate, count, ForEach).
+        let favoriteSet = Set(settings.favoriteNameNumbers)
+        let favorites = favoriteNames(in: favoriteSet)
+        let names = filteredNames
 
         ScrollViewReader { proxy in
             List {
                 Group {
                     descriptionSection
-                    favoriteNamesSection(hasActiveSearch: hasActiveSearch, proxy: proxy)
-                    namesHeaderSection(resultCount: filteredNames.count, hasActiveSearch: hasActiveSearch, proxy: proxy)
-                    namesSections(filteredNames: filteredNames, hasActiveSearch: hasActiveSearch, proxy: proxy)
+                    favoriteNamesSection(favorites, hasActiveSearch: hasActiveSearch, proxy: proxy)
+                    namesHeaderSection(resultCount: names.count, hasActiveSearch: hasActiveSearch, proxy: proxy)
+                    namesSections(filteredNames: names, favoriteSet: favoriteSet, hasActiveSearch: hasActiveSearch, proxy: proxy)
                     finalInvocationSection
                 }
                 .themedListRowBackground()
@@ -361,11 +363,11 @@ struct NamesView: View {
     }
 
     @ViewBuilder
-    private func favoriteNamesSection(hasActiveSearch: Bool, proxy: ScrollViewProxy) -> some View {
-        if !hasActiveSearch && !favoriteNames.isEmpty {
+    private func favoriteNamesSection(_ favorites: [NameOfAllah], hasActiveSearch: Bool, proxy: ScrollViewProxy) -> some View {
+        if !hasActiveSearch && !favorites.isEmpty {
             Section(header: SectionPillHeader(
                 title: "FAVORITES",
-                count: favoriteNames.count,
+                count: favorites.count,
                 icon: "star.fill",
                 accentTitle: true,
                 isExpanded: $showFavoriteNames
@@ -374,7 +376,7 @@ struct NamesView: View {
                     EmptyView()
                 } else if settings.namesGridMode {
                     LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 3), spacing: 8) {
-                        ForEach(favoriteNames, id: \.id) { name in
+                        ForEach(favorites, id: \.id) { name in
                             NameGridTile(
                                 name: name,
                                 isFavorite: true,
@@ -387,7 +389,7 @@ struct NamesView: View {
                     }
                     .padding(.horizontal, -8)
                 } else {
-                    ForEach(favoriteNames, id: \.id) { name in
+                    ForEach(favorites, id: \.id) { name in
                         NameRow(
                             name: name,
                             firstFoundTarget: namesData.firstFoundTargetsByNameNumber[name.number],
@@ -410,14 +412,14 @@ struct NamesView: View {
     }
 
     @ViewBuilder
-    private func namesSections(filteredNames: [NameOfAllah], hasActiveSearch: Bool, proxy: ScrollViewProxy) -> some View {
+    private func namesSections(filteredNames: [NameOfAllah], favoriteSet: Set<Int>, hasActiveSearch: Bool, proxy: ScrollViewProxy) -> some View {
         if settings.namesGridMode {
             Section {
                 LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 3), spacing: 8) {
                     ForEach(filteredNames, id: \.id) { name in
                         NameGridTile(
                             name: name,
-                            isFavorite: favoriteNameNumberSet.contains(name.number),
+                            isFavorite: favoriteSet.contains(name.number),
                             accentColor: settings.accentColor,
                             useFontArabic: settings.useFontArabic,
                             fontArabic: settings.nonQuranArabicFontName
@@ -435,7 +437,7 @@ struct NamesView: View {
                     firstFoundTarget: namesData.firstFoundTargetsByNameNumber[name.number],
                     showDescription: settings.showDescription,
                     isExpanded: expandedNameNumbers.contains(name.number),
-                    isFavorite: favoriteNameNumberSet.contains(name.number),
+                    isFavorite: favoriteSet.contains(name.number),
                     accentColor: settings.accentColor,
                     useFontArabic: settings.useFontArabic,
                     fontArabic: settings.nonQuranArabicFontName,

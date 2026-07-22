@@ -313,7 +313,9 @@ struct HadithReferenceView: View {
 
 struct HadithRow: View {
     @ObservedObject private var settings = Settings.shared
-    @ObservedObject private var store = HadithStore.shared
+    /// The row renders ONLY bookmark/note state, so it observes the user-data object - not HadithStore,
+    /// whose download/prewarm publishes used to re-render every visible row on every tick.
+    @ObservedObject private var userData = HadithUserData.shared
 
     let book: HadithCatalogBook
     let hadith: HadithBookData.Hadith
@@ -334,11 +336,11 @@ struct HadithRow: View {
     }
 
     private var isBookmarked: Bool {
-        store.isBookmarked(slug: book.slug, idInBook: hadith.idInBook)
+        userData.isBookmarked(slug: book.slug, idInBook: hadith.idInBook)
     }
 
     private var noteText: String? {
-        store.note(slug: book.slug, idInBook: hadith.idInBook)
+        userData.note(slug: book.slug, idInBook: hadith.idInBook)
     }
 
     /// First hadith id of each chapter, memoized per (book, chapter) - the row shows the hadith's
@@ -404,7 +406,7 @@ struct HadithRow: View {
                 .contentShape(Rectangle())
                 .onTapGesture {
                     settings.hapticFeedback()
-                    withAnimation(.easeInOut) { store.toggleBookmark(book: book, hadith: hadith) }
+                    withAnimation(.easeInOut) { userData.toggleBookmark(book: book, hadith: hadith) }
                 }
 
                 Spacer(minLength: 0)
@@ -511,7 +513,7 @@ struct HadithRow: View {
                         return false
                     }
                     withAnimation(.easeInOut) {
-                        store.setNote(book: book, hadith: hadith, note: text)
+                        userData.setNote(book: book, hadith: hadith, note: text)
                     }
                     return true
                 },
@@ -539,7 +541,7 @@ struct HadithRow: View {
             Button(role: .destructive) {
                 settings.hapticFeedback()
                 withAnimation(.easeInOut) {
-                    store.toggleBookmark(book: book, hadith: hadith)
+                    userData.toggleBookmark(book: book, hadith: hadith)
                 }
             } label: {
                 Label("Remove Bookmark", systemImage: "bookmark.fill")
@@ -548,7 +550,7 @@ struct HadithRow: View {
             Button {
                 settings.hapticFeedback()
                 withAnimation(.easeInOut) {
-                    store.toggleBookmark(book: book, hadith: hadith)
+                    userData.toggleBookmark(book: book, hadith: hadith)
                 }
             } label: {
                 Label("Bookmark Hadith", systemImage: "bookmark")
@@ -567,7 +569,7 @@ struct HadithRow: View {
             Button(role: .destructive) {
                 settings.hapticFeedback()
                 withAnimation(.easeInOut) {
-                    store.removeNote(slug: book.slug, idInBook: hadith.idInBook)
+                    userData.removeNote(slug: book.slug, idInBook: hadith.idInBook)
                 }
             } label: {
                 Label("Remove Note", systemImage: "minus.circle")
@@ -731,7 +733,8 @@ struct HadithLoadMoreControls: View {
 /// line of English - never the narrator. Opens the hadith through the reference resolver.
 struct HadithBookmarkRow: View {
     @ObservedObject private var settings = Settings.shared
-    @ObservedObject private var store = HadithStore.shared
+    /// Bookmark rows render only user marks - observe the user-data object, not the whole store.
+    @ObservedObject private var userData = HadithUserData.shared
 
     let bookmark: HadithBookmark
 
@@ -817,7 +820,7 @@ struct HadithBookmarkRow: View {
                     Button(role: .destructive) {
                         settings.hapticFeedback()
                         withAnimation(.easeInOut) {
-                            store.removeNote(slug: bookmark.slug, idInBook: bookmark.idInBook)
+                            userData.removeNote(slug: bookmark.slug, idInBook: bookmark.idInBook)
                         }
                     } label: {
                         Label("Remove Note", systemImage: "minus.circle")
@@ -832,7 +835,7 @@ struct HadithBookmarkRow: View {
                         id: -1, idInBook: bookmark.idInBook, chapterId: bookmark.chapterId ?? -1,
                         arabic: "", english: HadithBookData.Hadith.EnglishText(narrator: "", text: "")
                     )
-                    store.toggleBookmark(book: book, hadith: placeholder)
+                    userData.toggleBookmark(book: book, hadith: placeholder)
                 } label: {
                     Label("Remove Bookmark", systemImage: "bookmark.fill")
                 }
@@ -851,7 +854,7 @@ struct HadithBookmarkRow: View {
                             arabic: "", english: HadithBookData.Hadith.EnglishText(narrator: "", text: "")
                         )
                         withAnimation(.easeInOut) {
-                            store.setNote(book: book, hadith: placeholder, note: text)
+                            userData.setNote(book: book, hadith: placeholder, note: text)
                         }
                         return true
                     },
@@ -903,11 +906,10 @@ struct HadithBookmarkGridTile: View {
                     .font(.caption2)
                     .foregroundColor(.secondary)
                     .lineLimit(2)
-
-                Spacer(minLength: 0)
             }
+            // Hug the content - the old fixed 78pt frame left a band of dead space whenever the
+            // preview ran short.
             .frame(maxWidth: .infinity, alignment: .leading)
-            .frame(height: 78)
             .padding(10)
             .conditionalGlassEffect(clear: true, rectangle: true)
             .contentShape(Rectangle())
@@ -919,17 +921,18 @@ struct HadithBookmarkGridTile: View {
 /// Every bookmarked hadith, pushed from the "View All" row.
 struct HadithBookmarksListView: View {
     @ObservedObject private var settings = Settings.shared
-    @ObservedObject private var store = HadithStore.shared
+    /// Renders only the bookmark list - observe the user-data object, not the whole store.
+    @ObservedObject private var userData = HadithUserData.shared
 
     var body: some View {
         List {
             Group {
-                Section(header: SectionPillHeader(title: "BOOKMARKS", count: store.bookmarks.count)) {
-                    ForEach(store.bookmarks) { bookmark in
+                Section(header: SectionPillHeader(title: "BOOKMARKS", count: userData.bookmarks.count)) {
+                    ForEach(userData.bookmarks) { bookmark in
                         HadithBookmarkRow(bookmark: bookmark)
                     }
 
-                    if store.bookmarks.isEmpty {
+                    if userData.bookmarks.isEmpty {
                         Text("No bookmarked hadiths yet. Press and hold any hadith to bookmark it.")
                             .font(.subheadline)
                             .foregroundStyle(.secondary)

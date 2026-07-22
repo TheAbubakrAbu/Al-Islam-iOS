@@ -31,8 +31,21 @@ struct HighlightedSnippet: View {
 
     private static let commaCharacters: Set<Character> = ["،", "؛", ","]
 
+    /// source → contains-a-comma, memoized: this gate runs in `body` for every Arabic snippet that
+    /// passes `basicFontForCommas`, and the O(n) character scan repeated on every re-render of every
+    /// visible row. A string's comma content never changes, so it is a perfect cache key.
+    private static let commaPresenceCache: NSCache<NSString, NSNumber> = {
+        let c = NSCache<NSString, NSNumber>()
+        c.countLimit = 10_000
+        return c
+    }()
+
     private var sourceHasCommas: Bool {
-        source.contains(where: { Self.commaCharacters.contains($0) })
+        let key = source as NSString
+        if let cached = Self.commaPresenceCache.object(forKey: key) { return cached.boolValue }
+        let has = source.contains(where: { Self.commaCharacters.contains($0) })
+        Self.commaPresenceCache.setObject(NSNumber(value: has), forKey: key)
+        return has
     }
 
     var body: some View {

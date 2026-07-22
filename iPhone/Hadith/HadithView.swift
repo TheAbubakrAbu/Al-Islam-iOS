@@ -54,6 +54,9 @@ struct HadithTrailingToolbar: ViewModifier {
 struct HadithView: View {
     @ObservedObject private var settings = Settings.shared
     @ObservedObject private var store = HadithStore.shared
+    /// The favorites and bookmark sections render user marks, which the store only FORWARDS (they
+    /// live in HadithUserData, their own publisher) - observing it here is what re-renders them.
+    @ObservedObject private var userData = HadithUserData.shared
 
     @State private var searchText = ""
     @State private var confirmDownloadAll = false
@@ -102,12 +105,60 @@ struct HadithView: View {
     @State private var globalSearchRanFor = ""
     @State private var globalSearchTask: Task<Void, Never>?
 
-    // The tab-wide AI matches - the Quran ayah search's AI results, across books. Searches only the
-    // corpora ALREADY BUILT (a book you've searched before): the tab search must never kick a
-    // multi-minute vector build for every downloaded book at once.
+    // The tab-wide AI matches: ONE combined corpus over EVERY downloaded book (built once, persisted,
+    // rebuilt only when the set of downloaded books changes) - so "controlling anger" searches all
+    // hadiths at once, which is what a tab-level search means 9 times out of 10.
     @ObservedObject private var semanticEngine = SemanticSearchEngine.shared
     @State private var globalAIResults: [GlobalHadithHit] = []
     @State private var globalAITask: Task<Void, Never>?
+    /// True while the slow path (decoding every downloaded book to gather texts) runs, pre-embedding.
+    @State private var isGatheringAllBooks = false
+
+    private var allBooksCorpusID: String { "hadith-all" }
+
+    /// Version keyed to exactly which books are downloaded - deterministic (never hashValue, which is
+    /// seeded per launch), so yesterday's build loads from disk today.
+    private var allBooksCorpusVersion: String {
+        "all3-" + HadithCatalogBook.all
+            .filter { store.isAvailableOffline($0) }
+            .map(\.slug)
+            .sorted()
+            .joined(separator: ".")
+    }
+
+    /// Load-or-build the all-books corpus. The disk hit is instant; the cold build decodes each
+    /// downloaded book once (off the visible path) and then embeds a SHARED vocabulary - the books
+    /// overlap heavily in words, so all-of-them costs little more than Bukhari alone.
+    private func prepareAllBooksCorpus() {
+        guard SemanticSearchEngine.isSupported,
+              !semanticEngine.isReady(allBooksCorpusID),
+              !semanticEngine.isBuilding(allBooksCorpusID),
+              !isGatheringAllBooks else { return }
+        let books = HadithCatalogBook.all.filter { store.isAvailableOffline($0) }
+        guard !books.isEmpty else { return }
+
+        // Disk-first probe: `texts` is an autoclosure evaluated only past the disk check, so this
+        // costs nothing when a persisted build exists.
+        semanticEngine.prepare(corpusID: allBooksCorpusID, version: allBooksCorpusVersion, texts: [])
+        guard !semanticEngine.isReady(allBooksCorpusID) else { return }
+
+        isGatheringAllBooks = true
+        Task {
+            var texts: [String] = []
+            var keys: [String] = []
+            for book in books {
+                guard let data = try? await store.book(book) else { continue }
+                for hadith in data.hadiths {
+                    texts.append("\(hadith.english.narrator) \(hadith.english.text)")
+                    keys.append("\(book.slug)|\(hadith.idInBook)")
+                }
+            }
+            semanticEngine.prepare(corpusID: allBooksCorpusID, version: allBooksCorpusVersion,
+                                   texts: texts, keys: keys)
+            isGatheringAllBooks = false
+            runGlobalAISearch(query: searchText)
+        }
+    }
 
     private func runGlobalAISearch(query: String) {
         globalAITask?.cancel()
@@ -117,28 +168,34 @@ struct HadithView: View {
             if !globalAIResults.isEmpty { withAnimation { globalAIResults = [] } }
             return
         }
-        let readyBooks = HadithCatalogBook.all.filter { semanticEngine.isReady("hadith-\($0.slug)") }
-        guard !readyBooks.isEmpty else {
-            if !globalAIResults.isEmpty { withAnimation { globalAIResults = [] } }
-            return
-        }
+        prepareAllBooksCorpus()
 
         globalAITask = Task {
             try? await Task.sleep(nanoseconds: 350_000_000)
             guard !Task.isCancelled else { return }
 
-            var merged: [(hit: GlobalHadithHit, score: Float)] = []
-            for book in readyBooks {
-                let results = await semanticEngine.search(corpusID: "hadith-\(book.slug)", query: trimmed, limit: 6)
-                guard !Task.isCancelled else { return }
-                guard !results.isEmpty, let data = try? await HadithStore.shared.book(book) else { continue }
-                for result in results where data.hadiths.indices.contains(result.index) {
-                    merged.append((GlobalHadithHit(book: book, data: data, hadith: data.hadiths[result.index]), result.score))
+            let results = await semanticEngine.search(corpusID: allBooksCorpusID, query: trimmed, limit: 10)
+            guard !Task.isCancelled else { return }
+            guard let keys = semanticEngine.corpus(allBooksCorpusID)?.itemKeys else {
+                if !globalAIResults.isEmpty {
+                    await MainActor.run { withAnimation { globalAIResults = [] } }
                 }
+                return
             }
 
-            guard !Task.isCancelled else { return }
-            let top = merged.sorted { $0.score > $1.score }.prefix(8).map(\.hit)
+            var hits: [GlobalHadithHit] = []
+            for result in results {
+                guard keys.indices.contains(result.index) else { continue }
+                let parts = keys[result.index].split(separator: "|")
+                guard parts.count >= 2, let idInBook = Int(parts[1]),
+                      let book = HadithCatalogBook.bySlug[String(parts[0])],
+                      let data = try? await store.book(book),
+                      let hadith = data.hadiths.first(where: { $0.idInBook == idInBook }) else { continue }
+                hits.append(GlobalHadithHit(book: book, data: data, hadith: hadith))
+                if Task.isCancelled { return }
+            }
+
+            let top = hits
             await MainActor.run {
                 guard trimmed == searchText.trimmingCharacters(in: .whitespacesAndNewlines) else { return }
                 withAnimation { globalAIResults = top }
@@ -184,6 +241,35 @@ struct HadithView: View {
     /// body's one List expression otherwise materializes every section's whole generic view value on a
     /// single stack frame, and this tab builds under the launch cover too.
     private func boxed<V: View>(_ view: V) -> AnyView { AnyView(view) }
+
+    /// The Quran tab's Quick Search Help, for hadith - shown while the search field is focused and
+    /// empty. Deliberately terse.
+    @ViewBuilder
+    private var searchHelpOverlay: some View {
+        if isHadithSearchFocused, searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            VStack(alignment: .leading, spacing: 10) {
+                Text("Quick Search Help")
+                    .font(.subheadline.bold())
+                    .foregroundStyle(settings.accentColor.color)
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("• Books, chapters & hadith text - English or Arabic")
+                    Text("• Reference: 'bukhari 5103' or 'muslim 3:12'")
+                    Text("• AI: meaning search - 'controlling anger'")
+                    Text("• Ask: questions get an on-device AI answer")
+                    Text("• Text and AI search cover downloaded books")
+                }
+                .font(.caption)
+                .foregroundStyle(.primary)
+            }
+            .padding(14)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .conditionalGlassEffect(rectangle: true)
+            .padding(.horizontal, 16)
+            .padding(.top, 8)
+            .transition(.move(edge: .top).combined(with: .opacity))
+        }
+    }
 
     var body: some View {
         NavigationView {
@@ -296,6 +382,11 @@ struct HadithView: View {
                 }
                 .opacity(0)
             )
+            // The search help floats over the list top while the field is focused and empty.
+            .overlay(alignment: .top) {
+                searchHelpOverlay
+                    .animation(.easeInOut, value: isHadithSearchFocused)
+            }
             // Apple Music-style: the bottom search bar minimizes while scrolling down.
             .collapseBarsOnScroll($barsCollapsed)
             .adaptiveSafeArea(edge: .bottom) {
@@ -315,6 +406,9 @@ struct HadithView: View {
                         text: $searchText,
                         onFocusChanged: { focused in
                             withAnimation { isHadithSearchFocused = focused }
+                            // Start the one-time all-books AI index (or its instant disk load) the
+                            // moment the field is focused - usually ready before the first query.
+                            if focused { prepareAllBooksCorpus() }
                         }
                     )
                     .padding([.horizontal, .top], -8)
@@ -614,7 +708,7 @@ struct HadithView: View {
 
                 Text(reference)
                     .font(.subheadline.weight(.semibold))
-                    .foregroundColor(.primary)
+                    .foregroundColor(settings.accentColor.color)
                     .lineLimit(1)
                     .minimumScaleFactor(0.6)
 
@@ -628,10 +722,10 @@ struct HadithView: View {
                         .foregroundColor(.secondary)
                         .lineLimit(1)
                 }
-
-                Spacer(minLength: 0)
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+            // Hug the content - stretching to fill the row's height (maxHeight + a Spacer) parked
+            // all the slack as dead space under the English line.
+            .frame(maxWidth: .infinity, alignment: .leading)
             .padding(12)
             .conditionalGlassEffect(clear: true, rectangle: true)
             .contentShape(Rectangle())
@@ -800,7 +894,14 @@ struct HadithView: View {
         let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
         if query.count >= 3, referenceResult == nil {
             // AI matches at the very top, the Quran ayah search's grammar - ranked by meaning across
-            // every book whose vectors are already built, keyword sections below stay exhaustive.
+            // EVERY downloaded book, keyword sections below stay exhaustive. While the one-time
+            // all-books index builds, the standard progress row shows in its place.
+            if SemanticSearchEngine.isSupported, !query.containsArabicScript,
+               !semanticEngine.isReady(allBooksCorpusID),
+               isGatheringAllBooks || semanticEngine.isBuilding(allBooksCorpusID) {
+                Section { AISearchStatusRow(progress: semanticEngine.progress(allBooksCorpusID), failed: false) }
+            }
+
             if !globalAIResults.isEmpty {
                 Section(header: SectionPillHeader(title: "AI MATCHES", count: globalAIResults.count, icon: "sparkles", accentTitle: true)) {
                     ForEach(globalAIResults) { hit in
@@ -1230,12 +1331,24 @@ struct HadithView: View {
         book.approximateMegabytes < 1 ? "<1 MB" : "\(String(format: "%.0f", book.approximateMegabytes)) MB"
     }
 
-    /// "97 C • 7,277 H" - the book's SHAPE (chapters and hadiths), where the raw size used to sit. The
+    /// "97 Ch • 7,277 Ha" - the book's SHAPE (chapters and hadiths), where the raw size used to sit. The
     /// surah rows lead with ayah counts, not kilobytes; books now do the same. Size still shows in the
-    /// download flows, where storage is what matters.
+    /// download flows, where storage is what matters. Always chapters, then hadiths, then size - the
+    /// one order every hadith surface uses.
     private func bookShapeText(_ book: HadithCatalogBook) -> String {
         guard let counts = store.counts(for: book) else { return bookSizeText(book) }
-        return "\(counts.chapters) C • \(counts.hadiths.formatted()) H"
+        return "\(counts.chapters) Ch • \(counts.hadiths.formatted()) Ha"
+    }
+
+    /// One small glass chip in the shared stat-pill language.
+    private func statChip(_ text: String) -> some View {
+        Text(text)
+            .font(.caption2.weight(.semibold))
+            .monospacedDigit()
+            .foregroundStyle(settings.accentColor.color)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .conditionalGlassEffect()
     }
 
     private func arabicTitleFont(_ style: UIFont.TextStyle, bump: CGFloat) -> Font {
@@ -1284,18 +1397,6 @@ struct HadithView: View {
         }())
     }
 
-    /// The book's shape ("97 C • 7,277 H") as a small glass chip - the same pill language the book
-    /// view's stats use.
-    private func bookShapePill(_ book: HadithCatalogBook) -> some View {
-        Text(bookShapeText(book))
-            .font(.caption2.weight(.semibold))
-            .monospacedDigit()
-            .foregroundStyle(settings.accentColor.color)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
-            .conditionalGlassEffect()
-    }
-
     private func bookRow(_ book: HadithCatalogBook) -> some View {
         HStack(alignment: .center) {
             bookNumberPill(book)
@@ -1313,7 +1414,16 @@ struct HadithView: View {
                 )
                 .minimumScaleFactor(0.7)
 
-                bookShapePill(book)
+                // THREE separate chips - hadiths, chapters, size - one stat per pill.
+                HStack(spacing: 5) {
+                    if let counts = store.counts(for: book) {
+                        statChip("\(counts.chapters) Ch")
+                        statChip("\(counts.hadiths.formatted()) Ha")
+                    }
+                    statChip(bookSizeText(book))
+                }
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
             }
             .layoutPriority(1)
             .frame(maxWidth: .infinity, alignment: .leading)

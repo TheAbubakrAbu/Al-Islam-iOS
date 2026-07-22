@@ -1,45 +1,63 @@
 import SwiftUI
 
+/// Every tasbih count, held OUTSIDE the view tree. TasbihView deliberately does NOT observe this
+/// object: only the views that actually render a count (the active card and each row's controls)
+/// subscribe, so a count tap - the highest-frequency interaction on the screen - re-renders those
+/// small views instead of re-running the whole TasbihView List (which is what happened when the
+/// counts lived in TasbihView's own @State/@AppStorage).
+@MainActor
+final class TasbihCounters: ObservableObject {
+    static let shared = TasbihCounters()
+
+    /// Sentinel for "the free counter" rather than a row of `commonDhikrItems`.
+    static let freeIndex = -1
+
+    /// Per-app-session scratch counts for the preset dhikr rows, keyed by row index.
+    @Published private var presetCounts: [Int: Int] = [:]
+
+    /// The free count persists (same key the old `@AppStorage("tasbihFreeCount")` used), because it's
+    /// meant to be carried across sittings and run up as high as the user likes.
+    @Published private var freeCount: Int {
+        didSet { UserDefaults.standard.set(freeCount, forKey: "tasbihFreeCount") }
+    }
+
+    private init() {
+        freeCount = UserDefaults.standard.integer(forKey: "tasbihFreeCount")
+    }
+
+    func binding(for index: Int) -> Binding<Int> {
+        if index == Self.freeIndex {
+            return Binding(
+                get: { self.freeCount },
+                set: { self.freeCount = max(0, $0) }
+            )
+        }
+        return Binding(
+            get: { self.presetCounts[index, default: 0] },
+            set: { self.presetCounts[index] = $0 }
+        )
+    }
+}
+
 struct TasbihView: View {
     @ObservedObject var settings = Settings.shared
 
-    // Empty by default with `counters[i, default: 0]` reads everywhere, so constructing this view touches no
-    // data at all. The old `Self.initialCounters` default forced the `commonDhikrItems` global (and its
-    // per-item diacritic-folded search blobs) to initialize the moment the STRUCT was built - and on watchOS
-    // the Islam tab builds this struct eagerly for its NavigationLink on every body pass.
     /// Apple Music-style bar minimization: true while scrolling down.
     @State private var barsCollapsed = false
-    @State private var counters: [Int: Int] = [:]
-    @State private var selectedDhikrIndex: Int = Self.freeDhikrIndex
+    @State private var selectedDhikrIndex: Int = TasbihCounters.freeIndex
 
-    /// A free count for dhikr that isn't on the list. Unlike the preset counters - which are per-session
-    /// scratch - this one persists, because it's meant to be carried across sittings and run up as high as
-    /// the user likes.
-    @AppStorage("tasbihFreeCount") private var freeCount = 0
     @AppStorage("tasbihFreeLabel") private var freeLabel = ""
     /// How many counts complete one turn of the ring. Purely cosmetic; the count itself never wraps.
     @AppStorage("tasbihFreeCycle") private var freeCycle = 33
 
-    /// Sentinel for "the free counter is selected" rather than a row of `tasbihData`.
-    private static let freeDhikrIndex = -1
     private static let cycleChoices = [33, 99, 100, 500, 1000]
 
-    /// Computed, not stored: a stored `let` would also force `commonDhikrItems` at struct-construction time.
+    /// Computed, not stored: a stored `let` would force `commonDhikrItems` (and its per-item
+    /// diacritic-folded search blobs) to initialize the moment the STRUCT was built - and on watchOS
+    /// the Islam tab builds this struct eagerly for its NavigationLink on every body pass.
     private var tasbihData: [CommonDhikr] { commonDhikrItems }
 
-    private var usesCustomArabicFace: Bool { settings.islamUsesCustomArabicFace }
-
-    private var isFreeDhikrSelected: Bool { selectedDhikrIndex == Self.freeDhikrIndex }
-
-    private func binding(for index: Int) -> Binding<Int> {
-        if index == Self.freeDhikrIndex {
-            return Binding(get: { freeCount }, set: { freeCount = max(0, $0) })
-        }
-        return Binding(
-            get: { counters[index, default: 0] },
-            set: { counters[index] = $0 }
-        )
-    }
+    private var isFreeDhikrSelected: Bool { selectedDhikrIndex == TasbihCounters.freeIndex }
 
     var body: some View {
         List {
@@ -94,7 +112,7 @@ struct TasbihView: View {
 
                     Spacer()
 
-                    TasbihCounterControls(counter: binding(for: Self.freeDhikrIndex))
+                    TasbihCounterControls(counterIndex: TasbihCounters.freeIndex)
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -103,7 +121,7 @@ struct TasbihView: View {
                 guard !isFreeDhikrSelected else { return }
                 withAnimation {
                     settings.hapticFeedback()
-                    selectedDhikrIndex = Self.freeDhikrIndex
+                    selectedDhikrIndex = TasbihCounters.freeIndex
                 }
             }
         }
@@ -167,7 +185,7 @@ struct TasbihView: View {
                 .padding(-7)
                 #endif
 
-            TasbihRow(tasbih: tasbihData[index], counter: binding(for: index))
+            TasbihRow(tasbih: tasbihData[index], counterIndex: index)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .contentShape(Rectangle())
@@ -199,10 +217,36 @@ struct TasbihView: View {
         }
     }
 
-    private var activeTasbihCard: some View {
+    /// Thin constructor only - the card itself is a standalone View (see `ActiveTasbihCard`) because its
+    /// input (the live count) changes on every tap, far more often than anything else on this screen.
+    private var activeTasbihCard: ActiveTasbihCard {
         // `selectedDhikrIndex` is the free-count sentinel or a real row; never an out-of-range index.
-        let selectedDhikr = tasbihData.indices.contains(selectedDhikrIndex) ? tasbihData[selectedDhikrIndex] : nil
-        let counterBinding = binding(for: selectedDhikrIndex)
+        ActiveTasbihCard(
+            selectedDhikr: tasbihData.indices.contains(selectedDhikrIndex) ? tasbihData[selectedDhikrIndex] : nil,
+            counterIndex: selectedDhikrIndex,
+            freeLabel: freeLabel,
+            freeCycle: freeCycle
+        )
+    }
+}
+
+/// The active-counter card, extracted into its own View as a real invalidation boundary: it is (with
+/// the row controls) the only view observing `TasbihCounters`, so each count tap re-renders just this
+/// card - TasbihView itself no longer owns the count and its List is skipped entirely.
+struct ActiveTasbihCard: View {
+    @ObservedObject var settings = Settings.shared
+    @ObservedObject private var counts = TasbihCounters.shared
+
+    /// nil means the free counter is active.
+    let selectedDhikr: CommonDhikr?
+    let counterIndex: Int
+    let freeLabel: String
+    let freeCycle: Int
+
+    private var usesCustomArabicFace: Bool { settings.islamUsesCustomArabicFace }
+
+    var body: some View {
+        let counterBinding = counts.binding(for: counterIndex)
         let cycle = selectedDhikr == nil ? freeCycle : 33
         let count = counterBinding.wrappedValue
         // Which turn of the ring you're on, and how far round it. The count itself never wraps.
@@ -370,7 +414,9 @@ struct TasbihRow: View {
     @ObservedObject var settings = Settings.shared
 
     let tasbih: CommonDhikr
-    @Binding var counter: Int
+    /// An index into `TasbihCounters`, not a Binding: a Binding made fresh each parent pass holds new
+    /// closures, which SwiftUI can never prove unchanged - an Int compares, so the row can be skipped.
+    let counterIndex: Int
 
     var body: some View {
         HStack {
@@ -413,15 +459,19 @@ struct TasbihRow: View {
     private var textColumn: some View {
         VStack(alignment: .leading) {
             Text(tasbih.arabicText)
+                // The ISLAM-tab Arabic face, not the Quran glyph font: the Quran faces carry a huge
+                // line box (phantom padding above and below) and shape into runs that truncate
+                // instead of wrapping in a narrow column.
                 .font(
                     settings.islamUsesCustomArabicFace
-                        ? Font.arabic(settings.fontArabic, size: 20, relativeTo: .headline)
+                        ? Font.arabic(settings.nonQuranArabicFontName, size: 20, relativeTo: .headline)
                         : .headline
                 )
                 .arabicFontDesign(custom: settings.islamUsesCustomArabicFace)
                 .foregroundColor(settings.accentColor.color)
-                // Wrapped Arabic rags on the left like Arabic prose should.
+                // Wrapped Arabic rags on the left like Arabic prose should - never one clipped line.
                 .multilineTextAlignment(.trailing)
+                .fixedSize(horizontal: false, vertical: true)
 
             Text(tasbih.transliteration)
                 .font(.subheadline)
@@ -434,37 +484,42 @@ struct TasbihRow: View {
     }
 
     private var counterControls: some View {
-        TasbihCounterControls(counter: $counter)
+        TasbihCounterControls(counterIndex: counterIndex)
     }
 }
 
 /// The minus / count / plus / reset stack. Shared by the preset dhikr rows and the free-count row so the two
-/// can't drift apart on what a tap does.
+/// can't drift apart on what a tap does. Observes `TasbihCounters` itself (rather than taking a Binding) so
+/// a count tap re-renders only this small stack and the active card - never the enclosing List.
 struct TasbihCounterControls: View {
     @ObservedObject var settings = Settings.shared
+    @ObservedObject private var counts = TasbihCounters.shared
 
-    @Binding var counter: Int
+    let counterIndex: Int
 
     var body: some View {
-        VStack(spacing: 8) {
-            // One capsule: minus | count | plus - a single tidy control instead of three loose pieces.
-            // The VStack hugs this capsule's width, and Reset stretches to exactly match it.
+        let counter = counts.binding(for: counterIndex)
+        let count = counter.wrappedValue
+
+        // The minus | count | plus capsule with a SMALL reset chip centered underneath - never
+        // stretched to the capsule's width, never beside it stealing the text column's room.
+        return VStack(spacing: 5) {
             HStack(spacing: 0) {
                 Button {
-                    guard counter > 0 else { return }
+                    guard count > 0 else { return }
                     settings.hapticFeedback()
-                    withAnimation { counter -= 1 }
+                    withAnimation { counter.wrappedValue = count - 1 }
                 } label: {
                     Image(systemName: "minus")
                         .font(.footnote.weight(.semibold))
-                        .foregroundColor(counter == 0 ? .secondary : settings.accentColor.color)
+                        .foregroundColor(count == 0 ? .secondary : settings.accentColor.color)
                         .frame(width: 32, height: 30)
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
-                .disabled(counter <= 0)
+                .disabled(count <= 0)
 
-                Text("\(counter)")
+                Text("\(count)")
                     .font(.subheadline.weight(.semibold))
                     .monospacedDigit()
                     .frame(minWidth: 34)
@@ -473,7 +528,7 @@ struct TasbihCounterControls: View {
 
                 Button {
                     settings.hapticFeedback()
-                    withAnimation { counter += 1 }
+                    withAnimation { counter.wrappedValue = count + 1 }
                 } label: {
                     Image(systemName: "plus")
                         .font(.footnote.weight(.semibold))
@@ -485,23 +540,22 @@ struct TasbihCounterControls: View {
             }
             .conditionalGlassEffect()
 
-            // Reset spans the exact width of the capsule above it, centered - the two read as one control.
             Button {
-                guard counter > 0 else { return }
+                guard count > 0 else { return }
                 settings.hapticFeedback()
-                withAnimation { counter = 0 }
+                withAnimation { counter.wrappedValue = 0 }
             } label: {
-                Label("Reset", systemImage: "arrow.counterclockwise")
-                    .font(.caption.weight(.semibold))
-                    .foregroundColor(counter == 0 ? .secondary : settings.accentColor.color)
-                    .padding(.vertical, 5)
-                    .frame(maxWidth: .infinity)
+                Image(systemName: "arrow.counterclockwise")
+                    .font(.caption2.weight(.semibold))
+                    .foregroundColor(count == 0 ? .secondary : settings.accentColor.color)
+                    .frame(width: 40, height: 22)
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             .conditionalGlassEffect()
-            .disabled(counter <= 0)
-            .opacity(counter == 0 ? 0.5 : 1)
+            .disabled(count <= 0)
+            .opacity(count == 0 ? 0.5 : 1)
+            .accessibilityLabel("Reset count")
         }
     }
 }

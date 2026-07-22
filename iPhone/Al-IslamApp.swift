@@ -238,6 +238,7 @@ private struct MainTabView: View {
     private var launchTab: AppTab {
         #if DEBUG
         if ProcessInfo.processInfo.arguments.contains("-launchTabQuran") { return .quran }
+        if ProcessInfo.processInfo.arguments.contains("-launchTabHadith") { return .hadith }
         if ProcessInfo.processInfo.arguments.contains("-launchTabIslam") { return .islam }
         #endif
         return .adhan

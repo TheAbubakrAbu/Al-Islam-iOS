@@ -46,9 +46,57 @@ private struct ArabicLineHeightKey: PreferenceKey {
     static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = max(value, nextValue()) }
 }
 
-struct AdhkarRow: View {
+/// The soft accent wash behind the row being read aloud. Its OWN view because it is the only per-row
+/// piece that tracks the speech queue: when AdhkarRow itself observed `ArabicSpeech`, every queue
+/// advance during Listen All re-ran every row's body (re-folding all its highlight fields). Now a
+/// queue advance re-renders just these washes and the Listen buttons.
+private struct SpokenRowWash: View {
+    @ObservedObject private var speech = ArabicSpeech.shared
+    let text: String
+    let color: Color
+
+    var body: some View {
+        let active = speech.currentText == text
+        RoundedRectangle(cornerRadius: 12)
+            .fill(active ? color.opacity(0.12) : .clear)
+            .padding(.horizontal, -10)
+            .padding(.vertical, -2)
+            .animation(.easeInOut(duration: 0.25), value: active)
+    }
+}
+
+/// The Listen/Stop control - the other speech-reactive piece, split out for the same reason.
+private struct AdhkarListenButton: View {
     @ObservedObject var settings = Settings.shared
     @ObservedObject private var speech = ArabicSpeech.shared
+    let text: String
+
+    var body: some View {
+        let isBeingSpoken = speech.currentText == text
+        Button {
+            settings.hapticFeedback()
+            if isBeingSpoken {
+                speech.stop()
+            } else {
+                // speak() cuts off whatever else was playing - one voice at a time.
+                speech.speak(text, rate: 0.4)
+            }
+        } label: {
+            Label(isBeingSpoken ? "Stop" : "Listen",
+                  systemImage: isBeingSpoken ? "stop.fill" : "speaker.wave.2")
+                .font(.caption.weight(.semibold))
+                .foregroundColor(settings.accentColor.color)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 5)
+                .conditionalGlassEffect()
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(isBeingSpoken ? "Stop the recitation" : "Hear the Arabic read aloud")
+    }
+}
+
+struct AdhkarRow: View {
+    @ObservedObject var settings = Settings.shared
 
     let arabicText: String
     let transliteration: String
@@ -74,11 +122,6 @@ struct AdhkarRow: View {
     /// the device, and Dynamic Type, and no hardcoded flag can know that.
     @State private var arabicHeight: CGFloat = 0
     @State private var arabicLineHeight: CGFloat = 0
-
-    /// True while THIS row's Arabic is what the voice is reading - single tap or the Listen All queue.
-    private var isBeingSpoken: Bool {
-        speech.currentText == arabicText
-    }
 
     /// True once the Arabic has wrapped at all, i.e. it occupies more than one line.
     private var arabicWraps: Bool {
@@ -185,26 +228,8 @@ struct AdhkarRow: View {
 
                     Spacer(minLength: 8)
 
-                    if speechEnabled, speech.isAvailable {
-                        Button {
-                            settings.hapticFeedback()
-                            if isBeingSpoken {
-                                speech.stop()
-                            } else {
-                                // speak() cuts off whatever else was playing - one voice at a time.
-                                speech.speak(arabicText, rate: 0.4)
-                            }
-                        } label: {
-                            Label(isBeingSpoken ? "Stop" : "Listen",
-                                  systemImage: isBeingSpoken ? "stop.fill" : "speaker.wave.2")
-                                .font(.caption.weight(.semibold))
-                                .foregroundColor(settings.accentColor.color)
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 5)
-                                .conditionalGlassEffect()
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityLabel(isBeingSpoken ? "Stop the recitation" : "Hear the Arabic read aloud")
+                    if speechEnabled, ArabicSpeech.shared.isAvailable {
+                        AdhkarListenButton(text: arabicText)
                     }
                 }
             }
@@ -214,14 +239,8 @@ struct AdhkarRow: View {
         .fixedSize(horizontal: false, vertical: true)
         .padding(.vertical, 4)
         // The row being read aloud carries a soft accent wash; during Listen All it walks down the
-        // section one row at a time as the queue advances.
-        .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(isBeingSpoken ? settings.accentColor.color.opacity(0.12) : .clear)
-                .padding(.horizontal, -10)
-                .padding(.vertical, -2)
-        )
-        .animation(.easeInOut(duration: 0.25), value: isBeingSpoken)
+        // section one row at a time as the queue advances. (Its own observing view - see SpokenRowWash.)
+        .background(SpokenRowWash(text: arabicText, color: settings.accentColor.color))
         #if os(iOS)
         .contextMenu {
             Text("Copy")

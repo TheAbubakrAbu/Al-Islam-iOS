@@ -219,6 +219,7 @@
 		72CCAEA62D42DF5700871A6A /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72CCAE9F2D42DF5700871A6A /* AppDelegate.swift */; };
 		72CCAEA72D42DF5700871A6A /* SearchBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72CCAEA22D42DF5700871A6A /* SearchBar.swift */; };
 		72AE0003AE5F4C7D00000003 /* SemanticSearch.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72AE0001AE5F4C7D00000001 /* SemanticSearch.swift */; };
+		72AE0005AE5F4C7D00000005 /* OnDeviceAsk.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72AE0004AE5F4C7D00000004 /* OnDeviceAsk.swift */; };
 		72CCAEA92D42DF9D00871A6A /* MapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72CCAEA82D42DF9D00871A6A /* MapView.swift */; };
 		72D0000E2F78807000AAF60E /* abdulbaset.caf in Resources */ = {isa = PBXBuildFile; fileRef = 72D000012F78807000AAF601 /* abdulbaset.caf */; };
 		72D0000F2F78807000AAF60F /* abdulghaffar.caf in Resources */ = {isa = PBXBuildFile; fileRef = 72D000022F78807000AAF602 /* abdulghaffar.caf */; };
@@ -515,6 +516,7 @@
 		72CCAEA12D42DF5700871A6A /* ViewExtensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewExtensions.swift; sourceTree = "<group>"; };
 		72CCAEA22D42DF5700871A6A /* SearchBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchBar.swift; sourceTree = "<group>"; };
 		72AE0001AE5F4C7D00000001 /* SemanticSearch.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SemanticSearch.swift; sourceTree = "<group>"; };
+		72AE0004AE5F4C7D00000004 /* OnDeviceAsk.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnDeviceAsk.swift; sourceTree = "<group>"; };
 		72CCAEA82D42DF9D00871A6A /* MapView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapView.swift; sourceTree = "<group>"; };
 		72CCAEB62D42E4ED00871A6A /* adhan-swift-main */ = {isa = PBXFileReference; lastKnownFileType = wrapper; path = "adhan-swift-main"; sourceTree = "<group>"; };
 		72D000012F78807000AAF601 /* abdulbaset.caf */ = {isa = PBXFileReference; lastKnownFileType = file; path = abdulbaset.caf; sourceTree = "<group>"; };
@@ -887,6 +889,7 @@
 				72CCAEA12D42DF5700871A6A /* ViewExtensions.swift */,
 				72CCAEA22D42DF5700871A6A /* SearchBar.swift */,
 				72AE0001AE5F4C7D00000001 /* SemanticSearch.swift */,
+				72AE0004AE5F4C7D00000004 /* OnDeviceAsk.swift */,
 				72E13AEF2E90DC8D000933B0 /* GlassEffect.swift */,
 				720CCE0D2E394375002DD82E /* Highlighted.swift */,
 				72E100012F79000000AAF700 /* FocusOverlay.swift */,
@@ -1316,6 +1319,7 @@
 				72CCAEA62D42DF5700871A6A /* AppDelegate.swift in Sources */,
 				72CCAEA72D42DF5700871A6A /* SearchBar.swift in Sources */,
 				72AE0003AE5F4C7D00000003 /* SemanticSearch.swift in Sources */,
+				72AE0005AE5F4C7D00000005 /* OnDeviceAsk.swift in Sources */,
 				72E832A62F6F52BA0013428B /* AdhkarView.swift in Sources */,
 				72E832A82F6F52BA0013428B /* DateView.swift in Sources */,
 				72EF01C42F775A5600B273F7 /* PreviewSupport.swift in Sources */,

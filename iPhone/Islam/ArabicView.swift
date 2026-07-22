@@ -468,15 +468,18 @@ struct ArabicView: View {
     @ViewBuilder
     private var searchResultsSection: some View {
         if !searchText.isEmpty {
+            // ONE scan per pass: the rows and the count pill share the same merged result list -
+            // as two separate accesses each computed property re-filtered every letter per keystroke.
+            let results = filteredStandardForMode + filteredOther
             Section {
-                letterCollection(filteredStandardForMode + filteredOther)
+                letterCollection(results)
             } header: {
                 HStack {
                     Text("ARABIC SEARCH RESULTS")
 
                     Spacer()
 
-                    CountPill(count: filteredStandardForMode.count + filteredOther.count)
+                    CountPill(count: results.count)
                         .opacity(searchText.isEmpty ? 0 : 1)
                 }
             }

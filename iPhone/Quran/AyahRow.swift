@@ -4,7 +4,12 @@ import Foundation
 struct AyahRow: View, Equatable {
     @ObservedObject var settings = Settings.shared
     @ObservedObject var quranData = QuranData.shared
-    @ObservedObject var quranPlayer = QuranPlayer.shared
+    /// NOT @ObservedObject: the player is used only inside action closures plus the one
+    /// `isPlayingThis` input below. Observing it re-ran EVERY visible row's body once per ayah while
+    /// a surah played (`currentAyahNumber` publishes each advance), bypassing `.equatable()` -
+    /// observation invalidates independently of input comparison. The parent passes `isPlayingThis`
+    /// instead, so an ayah advance re-renders exactly the two rows whose tint changes.
+    private var quranPlayer: QuranPlayer { .shared }
 
     @State private var ayahBeginnerMode = false
 
@@ -57,6 +62,10 @@ struct AyahRow: View, Equatable {
     var onAyahTextAppear: (() -> Void)? = nil
     var onAyahTextDisappear: (() -> Void)? = nil
 
+    /// True when the player is currently on this exact ayah - drives the accent playing tint. Passed
+    /// in (and compared in `==`) rather than read from an observed player; see the note on `quranPlayer`.
+    var isPlayingThis: Bool = false
+
     @State private var showRespectAlert = false
 
     /// Whether any of this ayah's action sheets/dialogs is open - drives the "keep it lit until the sheet is
@@ -77,6 +86,7 @@ struct AyahRow: View, Equatable {
         lhs.renderSettingsSignature == rhs.renderSettingsSignature &&
         lhs.scrollDown == rhs.scrollDown &&
         lhs.isHighlighted == rhs.isHighlighted &&
+        lhs.isPlayingThis == rhs.isPlayingThis &&
         lhs.arrivalTerm == rhs.arrivalTerm &&
         lhs.isSelecting == rhs.isSelecting &&
         lhs.isSelected == rhs.isSelected &&
@@ -398,7 +408,7 @@ struct AyahRow: View, Equatable {
         let highlightQuery = hasSearch ? queryForInlineHighlight(activeTerm) : ""
         let fontSizeEN = settings.englishFontSize
 
-        let isPlayingThis = quranPlayer.currentSurahNumber == surah.id && quranPlayer.currentAyahNumber == ayah.id
+        // `isPlayingThis` is the input property - see its declaration.
         // The persistent attention tint (grey), separate from the accent playing tint: shown when this ayah is
         // the shared highlight OR while one of its action sheets is open (keep the selection lit until the
         // sheet is gone). The accent playing tint always wins when this ayah is being recited. In multi-select

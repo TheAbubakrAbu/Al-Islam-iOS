@@ -64,6 +64,58 @@ final class AyahArrivalTerm {
     }
 }
 
+/// Which ayahs (and boundary dividers) are on screen, held OUTSIDE SurahView's own state - the same
+/// isolation HadithChapterView carries, applied to its original home. Rows report in on every
+/// viewport crossing while scrolling; as `@State` sets on SurahView, each crossing re-ran the whole
+/// ~3,300-line reader body just to feed a 3pt progress bar and the pinned page/juz line. The raw
+/// sets are deliberately NOT published - only the derived anchor and end-of-surah flags publish,
+/// and only when they actually change - and `ReaderPinnedHeader` is their only observer.
+@MainActor
+final class AyahVisibilityModel: ObservableObject {
+    var visibleAyahIDs = Set<Int>() { didSet { syncDerived() } }
+    var visibleBoundaryAyahIDs = Set<Int>() { didSet { syncDerived() } }
+    /// The active qiraah's last ayah id (set by the cache rebuild), so `isLastAyahVisible` derives here.
+    var lastAyahID: Int? { didSet { syncDerived() } }
+
+    /// The top-visible ayah. The original anchor rule, verbatim: it follows the SMALLEST visible id
+    /// and never clears when the sets momentarily empty mid-scroll.
+    @Published private(set) var firstVisibleAyahID: Int? = nil
+    @Published private(set) var isLastAyahVisible = false
+    /// True while the "Go to Next Surah" footer is on screen - the ONLY thing that marks the ayah
+    /// progress bar 100%. Seeing the last ayah isn't finishing; reaching the footer is.
+    @Published var nextSurahButtonVisible = false
+
+    private func syncDerived() {
+        if let next = visibleAyahIDs.union(visibleBoundaryAyahIDs).min(), next != firstVisibleAyahID {
+            firstVisibleAyahID = next
+        }
+        let lastVisible = lastAyahID.map(visibleAyahIDs.contains) ?? false
+        if lastVisible != isLastAyahVisible { isLastAyahVisible = lastVisible }
+    }
+
+    /// Direct anchor writes - open-at-ayah targets and qiraah-rebuild fallbacks.
+    func setAnchor(_ id: Int?) {
+        if firstVisibleAyahID != id { firstVisibleAyahID = id }
+    }
+
+    func resetScrollTracking() {
+        visibleAyahIDs.removeAll()
+        visibleBoundaryAyahIDs.removeAll()
+    }
+}
+
+/// The pinned reader header strip - the ONLY observer of `AyahVisibilityModel`, so a scroll tick
+/// re-renders this small strip instead of the whole reader. The drawing itself is handed back to
+/// SurahView through `content`, called with the freshly-derived anchor state.
+private struct ReaderPinnedHeader<Content: View>: View {
+    @ObservedObject var visibility: AyahVisibilityModel
+    @ViewBuilder let content: (_ anchorAyahID: Int?, _ isLastAyahVisible: Bool, _ nextSurahButtonVisible: Bool) -> Content
+
+    var body: some View {
+        content(visibility.firstVisibleAyahID, visibility.isLastAyahVisible, visibility.nextSurahButtonVisible)
+    }
+}
+
 struct SurahView: View {
     @ObservedObject var settings = Settings.shared
     @ObservedObject var quranData = QuranData.shared
@@ -72,7 +124,8 @@ struct SurahView: View {
     @Environment(\.scenePhase) private var scenePhase
 
     @State private var searchText = ""
-    @State private var firstVisibleAyahID: Int? = nil
+    /// Scroll-visibility tracking, deliberately NOT observed by this view - see `AyahVisibilityModel`.
+    @State private var visibility = AyahVisibilityModel()
     /// The ayah the app is drawing attention to, shared by BOTH readers so a highlight survives a switch
     /// between list and page mode. Set when opening to an ayah (last-read / search hit), when switching
     /// reading modes, and when tapping an ayah; cleared by tapping it again or highlighting another.
@@ -94,8 +147,6 @@ struct SurahView: View {
     @State private var bulkNoteDraft = ""
     @State private var showBulkRespectAlert = false
     @State private var confirmBulkUnbookmark = false
-    @State private var visibleAyahIDs = Set<Int>()
-    @State private var visibleBoundaryAyahIDs = Set<Int>()
     @State private var cachedAyahsForQiraah: [Ayah] = []
     @State private var cachedAyahByID: [Int: Ayah] = [:]
     @State private var cachedSearchBlobByAyahID: [Int: String] = [:]
@@ -106,11 +157,6 @@ struct SurahView: View {
     @State private var scrollDown: Int? = nil
     @State private var pendingScrollAfterSearchClear: Int? = nil
     @State private var didScrollDown = false
-    /// True while the surah's first page/juz divider is on screen. The pinned floating header then drops
-    /// its page/juz line (redundant with the visible divider) and shows it only once that divider scrolls off.
-    /// True while the "Go to Next Surah" button is on screen - the ONLY thing that marks the ayah
-    /// progress bar 100%. Seeing the last ayah isn't finishing; reaching the end-of-surah footer is.
-    @State private var nextSurahButtonVisible = false
     /// The search term that travelled with this navigation (a tapped text-search hit): the target ayah
     /// renders its matched snippet in ACCENT - no background tint - until the reader touches it.
     @State private var arrivalTerm: String? = nil
@@ -807,12 +853,13 @@ struct SurahView: View {
         qiraahCacheSurahID = surah.id
 
         let fallbackID = ayahs.first?.id
-        if let firstVisibleAyahID {
-            if cachedAyahByID[firstVisibleAyahID] == nil {
-                self.firstVisibleAyahID = fallbackID
+        visibility.lastAyahID = ayahs.last?.id
+        if let anchor = visibility.firstVisibleAyahID {
+            if cachedAyahByID[anchor] == nil {
+                visibility.setAnchor(fallbackID)
             }
         } else {
-            self.firstVisibleAyahID = fallbackID
+            visibility.setAnchor(fallbackID)
         }
 
         prewarmSearchBlobs()
@@ -1548,40 +1595,9 @@ struct SurahView: View {
         // separate opt-in setting for it anymore.
         let shouldShowFloatingPageJuzOverlay = showBoundaryDividers && searchText.isEmpty
         let shouldUpdateFloatingPageJuzOverlay = shouldShowFloatingPageJuzOverlay && surah.pageOrJuzChangesWithinSurah
-        let currentFloatingAyah = shouldUpdateFloatingPageJuzOverlay
-            ? (firstVisibleAyahID
-                .flatMap { visibleID in ayahByID[visibleID] }
-                ?? ayahsForQiraah.first)
-            : ayahsForQiraah.first
-        let floatingDividerModel: BoundaryDividerModel? = {
-            guard shouldShowFloatingPageJuzOverlay else { return nil }
-            guard let currentFloatingAyah else { return nil }
-            return overlayDividerByAyahID[currentFloatingAyah.id]
-                ?? ayahsForQiraah.first.flatMap { overlayDividerByAyahID[$0.id] }
-        }()
-        let floatingDividerAnimationKey = floatingDividerModel.map(boundaryDividerID) ?? "none"
-        // How far the top-visible ayah is through the surah. Drives the overlay's meter INSTEAD of the page
-        // fraction: pages advance in whole steps (a 6-page surah's bar sat still, then jumped a sixth), while
-        // this fills continuously as you scroll and reaches full at the last ayah. Ayah ids are the ordinals,
-        // so this is O(1) per render.
-        // The top progress bar's fraction, purely by AYAH so it works for EVERY surah - including ones that
-        // fit within a single page (where there is no page/juz divider to fall back on). `firstVisibleAyahID`
-        // is tracked on every ayah's appear/disappear regardless of the page overlay, so this fills as you
-        // scroll and reaches full at the last ayah.
-        let ayahProgressFraction: CGFloat? = {
-            guard searchText.isEmpty,
-                  let firstID = ayahsForQiraah.first?.id,
-                  let lastID = ayahsForQiraah.last?.id,
-                  lastID > firstID else { return nil }
-            // Full ONLY once the "Go to Next Surah" button scrolls into view - the last ayah merely being
-            // visible isn't the end of the surah, the footer is. Surah 114 has no next-surah button, so
-            // there the last ayah on screen is the finish line.
-            if nextSurahButtonVisible { return 1 }
-            if nextSurah == nil, visibleAyahIDs.contains(lastID) { return 1 }
-            let currentID = firstVisibleAyahID.flatMap { ayahByID[$0] }?.id ?? firstID
-            // Never quite full while scrolling: cap below 1 so 100% is reserved for the footer.
-            return min(CGFloat(currentID - firstID) / CGFloat(lastID - firstID), 0.97)
-        }()
+        // (The floating page/juz model and the ayah progress fraction are derived INSIDE the pinned
+        // header's `ReaderPinnedHeader` closure now - they read the scroll anchor, and deriving them
+        // here would re-run this whole body on every scroll tick.)
         let keywordDividerModels: [BoundaryDividerModel] = {
             guard let mode = dividerKeywordMode else { return [] }
             guard let boundaryModel else { return [] }
@@ -1620,14 +1636,8 @@ struct SurahView: View {
             }
         }()
         let searchCount = isDividerKeywordSearch ? keywordDividerModels.count : filteredAyahs.count
-        let syncVisibleAyahAnchor: () -> Void = {
-            guard let nextVisibleAyahID = (visibleAyahIDs.union(visibleBoundaryAyahIDs)).min() else {
-                return
-            }
-
-            guard nextVisibleAyahID != firstVisibleAyahID else { return }
-            firstVisibleAyahID = nextVisibleAyahID
-        }
+        // (Anchor syncing lives in AyahVisibilityModel.syncDerived now - a set mutation derives and
+        // publishes it there, without touching this view's state.)
 
         return
             List {
@@ -1722,14 +1732,12 @@ struct SurahView: View {
                         }
                         .onAppear {
                             if shouldUpdateFloatingPageJuzOverlay, let nextID = filteredAyahs.first?.id {
-                                visibleBoundaryAyahIDs.insert(nextID)
-                                syncVisibleAyahAnchor()
+                                visibility.visibleBoundaryAyahIDs.insert(nextID)
                             }
                         }
                         .onDisappear {
                             if shouldUpdateFloatingPageJuzOverlay, let nextID = filteredAyahs.first?.id {
-                                visibleBoundaryAyahIDs.remove(nextID)
-                                syncVisibleAyahAnchor()
+                                visibility.visibleBoundaryAyahIDs.remove(nextID)
                             }
                         }
                     }
@@ -1743,14 +1751,12 @@ struct SurahView: View {
                             }
                             .onAppear {
                                 if shouldUpdateFloatingPageJuzOverlay {
-                                    visibleBoundaryAyahIDs.insert(ayah.id)
-                                    syncVisibleAyahAnchor()
+                                    visibility.visibleBoundaryAyahIDs.insert(ayah.id)
                                 }
                             }
                             .onDisappear {
                                 if shouldUpdateFloatingPageJuzOverlay {
-                                    visibleBoundaryAyahIDs.remove(ayah.id)
-                                    syncVisibleAyahAnchor()
+                                    visibility.visibleBoundaryAyahIDs.remove(ayah.id)
                                 }
                             }
                         }
@@ -1778,14 +1784,14 @@ struct SurahView: View {
                                         }
                                     },
                                     onAyahTextAppear: {
-                                        visibleAyahIDs.insert(ayah.id)
+                                        visibility.visibleAyahIDs.insert(ayah.id)
                                         markKhatmViewedIfNeeded(ayah.id)
-                                        syncVisibleAyahAnchor()
                                     },
                                     onAyahTextDisappear: {
-                                        visibleAyahIDs.remove(ayah.id)
-                                        syncVisibleAyahAnchor()
-                                    }
+                                        visibility.visibleAyahIDs.remove(ayah.id)
+                                    },
+                                    isPlayingThis: quranPlayer.currentSurahNumber == surah.id
+                                        && quranPlayer.currentAyahNumber == ayah.id
                                 )
                                 .equatable()
                             }
@@ -1799,14 +1805,14 @@ struct SurahView: View {
                                 isHighlighted: isAyahHighlighted(ayah.id),
                                 onToggleHighlight: { toggleListHighlight(ayah.id) },
                                 onAyahTextAppear: {
-                                    visibleAyahIDs.insert(ayah.id)
+                                    visibility.visibleAyahIDs.insert(ayah.id)
                                     markKhatmViewedIfNeeded(ayah.id)
-                                    syncVisibleAyahAnchor()
                                 },
                                 onAyahTextDisappear: {
-                                    visibleAyahIDs.remove(ayah.id)
-                                    syncVisibleAyahAnchor()
-                                }
+                                    visibility.visibleAyahIDs.remove(ayah.id)
+                                },
+                                isPlayingThis: quranPlayer.currentSurahNumber == surah.id
+                                    && quranPlayer.currentAyahNumber == ayah.id
                             )
                             .equatable()
                             #endif
@@ -1829,8 +1835,8 @@ struct SurahView: View {
                             surahNavigationButtonPair(previous: previousSurah, next: nextSurah)
                                 // Only the BOTTOM pair marks "reached the end" - it sits below the last
                                 // ayah, so its appearance is what fills the progress bar.
-                                .onAppear { nextSurahButtonVisible = true }
-                                .onDisappear { nextSurahButtonVisible = false }
+                                .onAppear { visibility.nextSurahButtonVisible = true }
+                                .onDisappear { visibility.nextSurahButtonVisible = false }
                         }
                     }
                     #endif
@@ -1896,7 +1902,7 @@ struct SurahView: View {
                 // scrolled on a previous visit.
                 let target = ayah.flatMap { nearestExistingAyahID($0, in: ayahsForQiraah.map { $0.id }) }
                 if let target {
-                    firstVisibleAyahID = target
+                    visibility.setAnchor(target)
                     if !didScrollDown {
                         didScrollDown = true
                         scrollToAyah(target, proxy: proxy)
@@ -1906,8 +1912,8 @@ struct SurahView: View {
                             highlightedAyah = HighlightedAyahRef(surahID: surah.id, ayahID: target)
                         }
                     }
-                } else if firstVisibleAyahID == nil {
-                    firstVisibleAyahID = ayahsForQiraah.first?.id
+                } else if visibility.firstVisibleAyahID == nil {
+                    visibility.setAnchor(ayahsForQiraah.first?.id)
                 }
             }
             .onChange(of: quranPlayer.currentAyahNumber) { newVal in
@@ -1919,28 +1925,26 @@ struct SurahView: View {
                 cacheQiraahKey = ""
                 qiraahCacheSurahID = nil
                 rebuildQiraahCaches()
-                visibleAyahIDs.removeAll()
-                visibleBoundaryAyahIDs.removeAll()
+                visibility.resetScrollTracking()
             }
             .onChange(of: surah.id) { _ in
                 rebuildQiraahCaches()
-                visibleAyahIDs.removeAll()
-                visibleBoundaryAyahIDs.removeAll()
+                visibility.resetScrollTracking()
                 didScrollDown = false
-                nextSurahButtonVisible = false
+                visibility.nextSurahButtonVisible = false
                 let prepared = Self.preparedCache(for: surah, settings: settings)
                 if let sel = ayah, let target = nearestExistingAyahID(sel, in: prepared.ayahs.map { $0.id }) {
-                    firstVisibleAyahID = target
+                    visibility.setAnchor(target)
                     scrollToAyah(target, proxy: proxy)
                 } else if let top = prepared.ayahs.first?.id {
-                    firstVisibleAyahID = top
+                    visibility.setAnchor(top)
                     scrollToAyah(top, proxy: proxy)
                 }
             }
             .onChange(of: ayah) { newValue in
                 guard let newValue,
                       let target = nearestExistingAyahID(newValue, in: cachedAyahsForQiraah.map { $0.id }) else { return }
-                firstVisibleAyahID = target
+                visibility.setAnchor(target)
                 didScrollDown = true
                 scrollToAyah(target, proxy: proxy)
                 if let term = AyahArrivalTerm.shared.consume(surahID: surah.id, ayahID: newValue) {
@@ -1953,26 +1957,54 @@ struct SurahView: View {
             // Always-pinned header (safeAreaInset, not overlay): it reserves space so list content - and
             // the search results-count pill - sits below it rather than being hidden behind it.
             .safeAreaInset(edge: .top, spacing: 0) {
-                VStack(spacing: 0) {
-                    // The ayah progress bar is attached full-width directly beneath the toolbar - not part
-                    // of the floating pill - so it reads as the screen's own progress indicator. It fills by
-                    // AYAH (not page), so it shows for every surah, including single-page ones.
-                    if let barFraction = ayahProgressFraction {
-                        TrackedBar(
-                            fraction: barFraction,
-                            height: 3,
-                            color: settings.accentColor.color
-                        )
-                        .transition(.opacity)
-                    }
+                // The ONLY observer of the scroll-visibility model: a viewport crossing re-renders
+                // this strip, never the reader body. The captured locals (ayah caches, divider maps,
+                // neighbors) refresh whenever the reader body legitimately re-runs.
+                ReaderPinnedHeader(visibility: visibility) { anchorID, lastAyahVisible, footerVisible in
+                    VStack(spacing: 0) {
+                        // The ayah progress bar is attached full-width directly beneath the toolbar - not
+                        // part of the floating pill - so it reads as the screen's own progress indicator.
+                        // It fills by AYAH (not page), so it shows for every surah, including single-page
+                        // ones. Full ONLY once the "Go to Next Surah" footer scrolls into view - the last
+                        // ayah merely being visible isn't the end of the surah, the footer is. Surah 114
+                        // has no next-surah button, so there the last ayah on screen is the finish line.
+                        let barFraction: CGFloat? = {
+                            guard searchText.isEmpty,
+                                  let firstID = ayahsForQiraah.first?.id,
+                                  let lastID = ayahsForQiraah.last?.id,
+                                  lastID > firstID else { return nil }
+                            if footerVisible { return 1 }
+                            if nextSurah == nil, lastAyahVisible { return 1 }
+                            let currentID = anchorID.flatMap { ayahByID[$0] }?.id ?? firstID
+                            // Never quite full while scrolling: 100% is reserved for the footer.
+                            return min(CGFloat(currentID - firstID) / CGFloat(lastID - firstID), 0.97)
+                        }()
+                        if let barFraction {
+                            TrackedBar(
+                                fraction: barFraction,
+                                height: 3,
+                                color: settings.accentColor.color
+                            )
+                            .transition(.opacity)
+                        }
 
-                    // The page/juz line is ALWAYS part of the pinned header (when dividers are on). It used
-                    // to hide while the surah's first inline divider was on screen - but on short surahs that
-                    // divider never leaves the screen, so the floating overlay never appeared at all.
-                    floatingHeaderOverlay(
-                        floatingDividerModel: floatingDividerModel,
-                        floatingDividerAnimationKey: floatingDividerAnimationKey
-                    )
+                        // The page/juz line is ALWAYS part of the pinned header (when dividers are on). It
+                        // used to hide while the surah's first inline divider was on screen - but on short
+                        // surahs that divider never leaves the screen, so the overlay never appeared at all.
+                        let currentFloatingAyah = shouldUpdateFloatingPageJuzOverlay
+                            ? (anchorID.flatMap { ayahByID[$0] } ?? ayahsForQiraah.first)
+                            : ayahsForQiraah.first
+                        let floatingDividerModel: BoundaryDividerModel? = {
+                            guard shouldShowFloatingPageJuzOverlay else { return nil }
+                            guard let currentFloatingAyah else { return nil }
+                            return overlayDividerByAyahID[currentFloatingAyah.id]
+                                ?? ayahsForQiraah.first.flatMap { overlayDividerByAyahID[$0.id] }
+                        }()
+                        floatingHeaderOverlay(
+                            floatingDividerModel: floatingDividerModel,
+                            floatingDividerAnimationKey: floatingDividerModel.map(boundaryDividerID) ?? "none"
+                        )
+                    }
                 }
             }
             .safeAreaInset(edge: .bottom) {
@@ -2854,8 +2886,8 @@ struct SurahView: View {
 
     /// The ayah currently anchored at the top of the screen (falling back through the last known anchor).
     private func currentReadingAyahID() -> Int? {
-        visibleAyahIDs.min()
-            ?? firstVisibleAyahID
+        visibility.visibleAyahIDs.min()
+            ?? visibility.firstVisibleAyahID
             ?? ayah
             ?? cachedAyahsForQiraah.first?.id
     }
@@ -2912,8 +2944,7 @@ struct SurahView: View {
                     searchText = ""
                     pendingScrollAfterSearchClear = nil
                     scrollDown = nil
-                    visibleAyahIDs.removeAll()
-                    visibleBoundaryAyahIDs.removeAll()
+                    visibility.resetScrollTracking()
                     settings.recordSurahOpened(anchorSurah.id)
                     swappedSurah = anchorSurah
                 }
@@ -2925,7 +2956,7 @@ struct SurahView: View {
                     }
                     return anchor.ayahID
                 }()
-                firstVisibleAyahID = landing
+                visibility.setAnchor(landing)
                 modeSwitchAyah = landing
                 // The list reader only performs its opening scroll once per surah; this is a fresh open.
                 didScrollDown = false
@@ -2956,9 +2987,8 @@ struct SurahView: View {
         searchText = ""
         pendingScrollAfterSearchClear = nil
         scrollDown = nil
-        visibleAyahIDs.removeAll()
-        visibleBoundaryAyahIDs.removeAll()
-        firstVisibleAyahID = nil
+        visibility.resetScrollTracking()
+        visibility.setAnchor(nil)
         // A surah swap opens at its own target (the top), so a stale mode-switch anchor must not win.
         modeSwitchAyah = nil
 
