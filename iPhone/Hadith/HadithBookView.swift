@@ -102,7 +102,7 @@ struct HadithBookView: View {
     private func runAsk(query: String, data: HadithBookData?, manual: Bool) {
         askTask?.cancel()
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard OnDeviceAsk.isAvailable, trimmed.count >= 3, let data,
+        guard OnDeviceAsk.isAvailable, trimmed.count >= 3, data != nil,
               manual || OnDeviceAsk.looksLikeQuestion(trimmed) else {
             if !askRanForQuery.isEmpty {
                 withAnimation { askAnswer = ""; askIsStreaming = false; askRanForQuery = "" }
@@ -441,7 +441,7 @@ struct HadithBookView: View {
             showHadithSettings: $showHadithSettings
         ))
         .sheet(isPresented: $showHadithSettings) {
-            HadithSettingsSheet()
+            SettingsHadithView()
                 .smallMediumSheetPresentation()
         }
         .task(id: "\(loadAttempt)|\(didConfirmDownload)|\(temporaryRead)") {
@@ -1571,7 +1571,7 @@ struct HadithChapterView: View {
             }
         }
         .sheet(isPresented: $showChapterSettings) {
-            HadithSettingsSheet()
+            SettingsHadithView()
                 .smallMediumSheetPresentation()
         }
         .sheet(isPresented: $showChapterPicker) {

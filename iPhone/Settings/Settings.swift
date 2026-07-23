@@ -1052,7 +1052,9 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     /// juz 2, 5) appear empty.
     @AppStorage("khatmGroupByJuz") var khatmGroupByJuz: Bool = false
     @AppStorage("searchForSurahs") var searchForSurahs: Bool = true
-    @AppStorage("ignoreSilentLettersInQuranSearch") var ignoreSilentLettersInQuranSearch: Bool = true
+    // Silent-letter-insensitive Arabic ayah search is ALWAYS on (was `ignoreSilentLettersInQuranSearch`,
+    // a toggle removed by request - the recitation-style fold is strictly additive, so there is no
+    // reason to turn it off). The old UserDefaults key is simply orphaned.
 
     @AppStorage("lastReadSurah") var lastReadSurah: Int = 0
     @AppStorage("lastReadAyah") var lastReadAyah: Int = 0

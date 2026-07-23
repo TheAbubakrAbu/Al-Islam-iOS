@@ -1,5 +1,38 @@
 import SwiftUI
 
+#if os(iOS)
+/// One row of the Settings tab's search index. Each entry deep-links to the SCREEN that owns the
+/// setting; the path caption shows where the row will land, so "highlight allah" finds both the Quran
+/// and the Hadith toggles.
+///
+/// The index is COMPOSED from per-screen entry lists declared as extensions of this type AT THE BOTTOM
+/// OF THE FILE THAT OWNS EACH SCREEN (`quranEntries` in SettingsQuranView.swift, `hadithEntries` in
+/// SettingsHadithView.swift, `adhanEntries`/`notificationEntries`/`prayerCalculationEntries` in
+/// SettingsAdhanView.swift). Adding or removing a setting means editing the list in the SAME file as
+/// the control - there is no central registry to remember.
+struct SettingsSearchEntry: Identifiable {
+    let title: String
+    let path: String
+    let keywords: String
+    let destination: Destination
+
+    var id: String { path + title }
+
+    enum Destination {
+        case notifications
+        case notificationReminders
+        case prayerSettings
+        case travelingMode
+        case prayerCalculation
+        case skyColors
+        case quranSettings
+        case reciters
+        case hadithSettings
+        case credits
+    }
+}
+#endif
+
 struct SettingsView: View {
     @ObservedObject var settings = Settings.shared
     @ObservedObject var quranData = QuranData.shared
@@ -151,7 +184,7 @@ struct SettingsView: View {
             case .quranSettings:
                 SettingsQuranView()
             case .hadithSettings:
-                HadithSettingsSheet(presentedAsSheet: false)
+                SettingsHadithView(presentedAsSheet: false)
             }
         }
     }
@@ -160,75 +193,20 @@ struct SettingsView: View {
     #if os(iOS)
     // MARK: - Settings search
     //
-    // A hand-maintained index over every settings screen and its notable individual settings.
-    // Each entry deep-links to the SCREEN that owns the setting; the path caption shows where the
-    // row will land, so "highlight allah" finds both the Quran and the Hadith toggles.
+    // The index is COMPOSED from per-screen entry lists that live NEXT TO the screens they describe
+    // (see `SettingsSearchEntry`) - this file only concatenates them. To add/remove a setting's entry,
+    // edit the `SettingsSearchEntry` extension at the bottom of the file that owns the control.
 
-    private struct SettingsSearchEntry: Identifiable {
-        let title: String
-        let path: String
-        let keywords: String
-        let destination: Destination
-
-        var id: String { path + title }
-
-        enum Destination {
-            case notifications
-            case notificationReminders
-            case prayerSettings
-            case travelingMode
-            case prayerCalculation
-            case skyColors
-            case quranSettings
-            case reciters
-            case hadithSettings
-            case credits
-        }
-    }
-
-    private static let settingsSearchIndex: [SettingsSearchEntry] = [
-        // Notifications
-        .init(title: "Notification Settings", path: "Notifications", keywords: "alerts permission bell", destination: .notifications),
-        .init(title: "Adhan Sound", path: "Notifications", keywords: "athan azan sound mecca madinah silent mode ringer", destination: .notifications),
-        .init(title: "Hijri Calendar Notifications", path: "Notifications", keywords: "islamic events eid ramadan reminders", destination: .notifications),
-        .init(title: "Prayer Reminders & Pre-Notifications", path: "Notifications → Prayer Reminders", keywords: "before minutes early alert per prayer fajr dhuhr asr maghrib isha", destination: .notificationReminders),
-        .init(title: "Nagging Mode", path: "Notifications → Prayer Reminders", keywords: "nag repeat reminders pray on time cascade did you pray tracker", destination: .notificationReminders),
-
-        // Prayer / Adhan
-        .init(title: "Prayer Settings", path: "Al-Adhan", keywords: "salah salat times adhan", destination: .prayerSettings),
-        .init(title: "Prayer Calculation Method", path: "Prayer Settings → Prayer Calculation", keywords: "method angles isna mwl muslim world league egypt karachi umm al-qura makkah moonsighting jakim malaysia singapore indonesia turkey diyanet automatic country", destination: .prayerCalculation),
-        .init(title: "Custom Calculation Angles", path: "Prayer Settings → Prayer Calculation", keywords: "fajr angle isha angle degrees custom", destination: .prayerCalculation),
-        .init(title: "High Latitude Rule", path: "Prayer Settings → Prayer Calculation", keywords: "midnight seventh night twilight northern latitude", destination: .prayerCalculation),
-        .init(title: "Hanafi Madhab (Asr Time)", path: "Prayer Settings → Prayer Calculation", keywords: "asr later shadow madhhab school shafi", destination: .prayerCalculation),
-        .init(title: "Traveling Mode (Qasr)", path: "Prayer Settings → Traveling Mode", keywords: "travel shorten combine journey safar 48 miles automatic", destination: .travelingMode),
-        .init(title: "Optional Prayer Times", path: "Prayer Settings", keywords: "duha duhaa islamic midnight last third night tahajjud suhoor", destination: .prayerSettings),
-        .init(title: "Manual Prayer Offsets", path: "Prayer Settings", keywords: "adjust minutes plus minus tune offset", destination: .prayerSettings),
-        .init(title: "Custom Prayer Names", path: "Prayer Settings", keywords: "rename spelling fadjr salah names", destination: .prayerSettings),
-        .init(title: "Hijri Date Offset", path: "Prayer Settings", keywords: "hijri adjust day moon date calendar", destination: .prayerSettings),
-        .init(title: "Sky View & Colors", path: "Prayer Settings → Sky Colors", keywords: "background gradient sunrise sunset theme sky", destination: .skyColors),
-
-        // Quran
-        .init(title: "Quran Settings", path: "Al-Quran", keywords: "mushaf reading", destination: .quranSettings),
-        .init(title: "Reciter", path: "Quran Settings → Recitation", keywords: "reciters audio download favorite minshawi husary sudais qari listen", destination: .reciters),
-        .init(title: "Recitation Type & Random Reciter", path: "Quran Settings", keywords: "murattal mujawwad muallim random ayah recitation", destination: .quranSettings),
-        .init(title: "Arabic Text (Quran)", path: "Quran Settings → Arabic Text", keywords: "font size uthmani indopak script clean dots beginner mode spacing", destination: .quranSettings),
-        .init(title: "Tajweed Colors", path: "Quran Settings → Arabic Text", keywords: "tajwid rules colors ghunnah qalqalah madd legend", destination: .quranSettings),
-        .init(title: "Highlight Allah (Quran)", path: "Quran Settings → Arabic Text", keywords: "highlight name of allah red color quran", destination: .quranSettings),
-        .init(title: "Riwayah & Qiraat", path: "Quran Settings → Arabic Text", keywords: "hafs warsh qaloon riwayah qiraat ahruf readings", destination: .quranSettings),
-        .init(title: "Transliteration & English Translations", path: "Quran Settings → English Text", keywords: "saheeh international mustafa khattab translation english transliteration", destination: .quranSettings),
-        .init(title: "Quran Search Options", path: "Quran Settings", keywords: "silent letters search surahs ai semantic", destination: .quranSettings),
-        .init(title: "Reading Mode (List / Page)", path: "Quran Settings → Reading", keywords: "page mode mushaf list mode grid summary last read", destination: .quranSettings),
-
-        // Hadith
-        .init(title: "Hadith Settings", path: "Al-Hadith", keywords: "bukhari muslim books", destination: .hadithSettings),
-        .init(title: "Show Hadith Arabic / English", path: "Hadith Settings", keywords: "hadith text toggles narrator display", destination: .hadithSettings),
-        .init(title: "Hadith Font Sizes", path: "Hadith Settings", keywords: "hadith arabic english font size", destination: .hadithSettings),
-        .init(title: "Highlight Allah (Hadith)", path: "Hadith Settings", keywords: "highlight name of allah red color hadith", destination: .hadithSettings),
-        .init(title: "Hadith Summary Mode", path: "Hadith Settings", keywords: "hadith of the day last read tiles summary", destination: .hadithSettings),
-
-        // About
-        .init(title: "Credits & Contact", path: "Credits", keywords: "about version website email review", destination: .credits)
-    ]
+    private static let settingsSearchIndex: [SettingsSearchEntry] =
+        SettingsSearchEntry.notificationEntries
+        + SettingsSearchEntry.adhanEntries
+        + SettingsSearchEntry.prayerCalculationEntries
+        + SettingsSearchEntry.quranEntries
+        + SettingsSearchEntry.hadithEntries
+        + [
+            // About (owned by this file's credits link).
+            .init(title: "Credits & Contact", path: "Credits", keywords: "about version website email review", destination: .credits)
+        ]
 
     @ViewBuilder
     private func searchDestinationView(_ destination: SettingsSearchEntry.Destination) -> some View {
@@ -241,7 +219,7 @@ struct SettingsView: View {
         case .skyColors: SkyColorsView()
         case .quranSettings: SettingsQuranView()
         case .reciters: ReciterListView()
-        case .hadithSettings: HadithSettingsSheet(presentedAsSheet: false)
+        case .hadithSettings: SettingsHadithView(presentedAsSheet: false)
         case .credits: CreditsView()
         }
     }
@@ -429,7 +407,7 @@ struct SettingsView: View {
     private var hadithSection: some View {
         Section(header: Text("AL-HADITH")) {
             resourceLink(title: "Hadith Settings", systemImage: "text.book.closed") {
-                HadithSettingsSheet(presentedAsSheet: false)
+                SettingsHadithView(presentedAsSheet: false)
             }
         }
     }

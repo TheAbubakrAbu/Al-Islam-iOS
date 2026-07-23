@@ -713,12 +713,11 @@ struct SurahView: View {
         // first keystroke stutter in long surahs. Off-main, into the same static cache body reads.
         if includeSearchBlobs {
             let qiraah = settings.displayQiraahForArabic
-            let ignoreSilent = settings.ignoreSilentLettersInQuranSearch
-            let cacheKey = "\(surah.id)|\(qiraah ?? "")|s\(ignoreSilent ? 1 : 0)" as NSString
+            let cacheKey = "\(surah.id)|\(qiraah ?? "")|s1" as NSString
             if preparedSurahSearchCache.object(forKey: cacheKey) == nil {
                 let ayahs = preparedCache(for: surah, settings: settings).ayahs
                 Task.detached(priority: .utility) {
-                    let map = buildSearchBlobMap(ayahs: ayahs, displayQiraah: qiraah, ignoreSilent: ignoreSilent)
+                    let map = buildSearchBlobMap(ayahs: ayahs, displayQiraah: qiraah)
                     await MainActor.run {
                         preparedSurahSearchCache.setObject(PreparedSurahSearchCache(searchBlobByAyahID: map), forKey: cacheKey)
                     }
@@ -813,13 +812,12 @@ struct SurahView: View {
         ayahs: [Ayah]
     ) -> PreparedSurahSearchCache {
         let qiraahKey = settings.displayQiraahForArabic ?? ""
-        let ignoreSilent = settings.ignoreSilentLettersInQuranSearch
-        let cacheKey = "\(surah.id)|\(qiraahKey)|s\(ignoreSilent ? 1 : 0)" as NSString
+        let cacheKey = "\(surah.id)|\(qiraahKey)|s1" as NSString
         if let cached = preparedSurahSearchCache.object(forKey: cacheKey) {
             return cached
         }
 
-        let searchBlobMap = buildSearchBlobMap(ayahs: ayahs, displayQiraah: settings.displayQiraahForArabic, ignoreSilent: ignoreSilent)
+        let searchBlobMap = buildSearchBlobMap(ayahs: ayahs, displayQiraah: settings.displayQiraahForArabic)
         let prepared = PreparedSurahSearchCache(searchBlobByAyahID: searchBlobMap)
         preparedSurahSearchCache.setObject(prepared, forKey: cacheKey)
         return prepared
@@ -874,8 +872,7 @@ struct SurahView: View {
     /// never has to build the blob map synchronously while the user is typing.
     private func prewarmSearchBlobs() {
         let qiraahKey = settings.displayQiraahForArabic ?? ""
-        let ignoreSilent = settings.ignoreSilentLettersInQuranSearch
-        let key = "\(surah.id)|\(qiraahKey)|s\(ignoreSilent ? 1 : 0)"
+        let key = "\(surah.id)|\(qiraahKey)|s1"
         if searchBlobPrewarmKey == key, !cachedSearchBlobByAyahID.isEmpty { return }
 
         let surah = self.surah
@@ -886,10 +883,10 @@ struct SurahView: View {
             : cachedAyahsForQiraah
 
         Task.detached(priority: .utility) {
-            let blobMap = Self.buildSearchBlobMap(ayahs: ayahs, displayQiraah: displayQiraah, ignoreSilent: ignoreSilent)
+            let blobMap = Self.buildSearchBlobMap(ayahs: ayahs, displayQiraah: displayQiraah)
             await MainActor.run {
-                // Discard if the user moved to another surah/qiraah, or toggled silent search, mid-build.
-                let currentKey = "\(self.surah.id)|\(self.settings.displayQiraahForArabic ?? "")|s\(self.settings.ignoreSilentLettersInQuranSearch ? 1 : 0)"
+                // Discard if the user moved to another surah/qiraah mid-build.
+                let currentKey = "\(self.surah.id)|\(self.settings.displayQiraahForArabic ?? "")|s1"
                 guard currentKey == key else { return }
                 self.cachedSearchBlobByAyahID = blobMap
                 self.searchBlobPrewarmKey = key
@@ -900,7 +897,7 @@ struct SurahView: View {
     /// Pure, actor-agnostic builder for the per-ayah search-blob map. Marked `nonisolated` so it can run
     /// on a background task without hopping back to the main actor (SurahView, being a `View`, is otherwise
     /// `@MainActor`-isolated). It only touches `Settings.shared` config and immutable ayah text.
-    nonisolated private static func buildSearchBlobMap(ayahs: [Ayah], displayQiraah: String?, ignoreSilent: Bool) -> [Int: String] {
+    nonisolated private static func buildSearchBlobMap(ayahs: [Ayah], displayQiraah: String?) -> [Int: String] {
         let settings = Settings.shared
         var searchBlobMap: [Int: String] = [:]
         searchBlobMap.reserveCapacity(ayahs.count)
@@ -916,13 +913,11 @@ struct SurahView: View {
             ]
             .map { settings.cleanSearch($0) }
 
-            if ignoreSilent {
-                // Mirror QuranView's silent-letter search: also index the silent-letter-stripped Arabic so a
-                // query that omits silent letters still matches. Gated by the setting (and the cache key) so
-                // it doesn't loosen matching when the user has the option off.
-                parts.append(settings.cleanSearchIgnoringSilentArabicLetters(ayah.textArabic(for: displayQiraah)))
-                parts.append(settings.cleanSearchIgnoringSilentArabicLetters(ayah.textCleanArabic(for: displayQiraah)))
-            }
+            // Mirror QuranView's silent-letter search: also index the silent-letter-stripped Arabic so a
+            // query that omits silent letters still matches. Always on - the fold is strictly additive
+            // (the "s1" in the cache keys is the fossil of the old toggle).
+            parts.append(settings.cleanSearchIgnoringSilentArabicLetters(ayah.textArabic(for: displayQiraah)))
+            parts.append(settings.cleanSearchIgnoringSilentArabicLetters(ayah.textCleanArabic(for: displayQiraah)))
 
             searchBlobMap[ayah.id] = parts.joined(separator: " ")
         }
@@ -1495,9 +1490,9 @@ struct SurahView: View {
 
     private func ayahListScreen(proxy: ScrollViewProxy) -> some View {
         let cleanQuery = settings.cleanSearch(searchText, whitespace: true)
-        // Mirror QuranView: when the option is on and the query is Arabic, also match the silent-letter
-        // stripped form (the matching silent forms are folded into the search blob above).
-        let silentQuery: String? = (settings.ignoreSilentLettersInQuranSearch && searchText.containsArabicLetters)
+        // Mirror QuranView: an Arabic query also matches the silent-letter stripped form (the matching
+        // silent forms are folded into the search blob above). Always on - the fold is strictly additive.
+        let silentQuery: String? = searchText.containsArabicLetters
             ? settings.cleanSearchIgnoringSilentArabicLetters(searchText, whitespace: true)
             : nil
         let booleanGroups = booleanAyahSearchGroups(from: searchText)

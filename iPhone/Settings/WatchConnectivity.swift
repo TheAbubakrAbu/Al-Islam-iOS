@@ -268,7 +268,7 @@ extension Settings {
         "cleanArabicText", "removeArabicDots", "beginnerMode", "highlightAllahNames",
         "useFontArabic", "THEfontArabic", "fontArabicSize", "englishFontSize",
         "showTajweedColors", "reciter", "reciterId", "reciteType", "displayQiraah",
-        "showOtherQiraatReciters", "qiraatComparisonMode", "ignoreSilentLettersInQuranSearch",
+        "showOtherQiraatReciters", "qiraatComparisonMode",
         "quranSummaryMode", "quranGridMode", "quranPageMode", "mushafPageLanguage", "showFullSurahRow", "showMuqattaatHelper",
         "showPageJuzDividers", "searchForSurahs", "showBookmarks", "showFavorites",
         "saveLastReadAyah", "saveLastListenedSurah", "saveLastListenedAyah", "showAyahOfTheDay",

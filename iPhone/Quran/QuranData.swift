@@ -3334,7 +3334,7 @@ final class QuranData: ObservableObject {
                 return filtered
             }
 
-            let silentQuery = useArabic && Settings.shared.ignoreSilentLettersInQuranSearch
+            let silentQuery = useArabic
                 ? Settings.shared.cleanSearchIgnoringSilentArabicLetters(raw, whitespace: true)
                 : nil
             return regularSearchResults(

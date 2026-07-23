@@ -575,7 +575,7 @@ struct HadithView: View {
                 showHadithSettings: $showHadithSettings
             ))
             .sheet(isPresented: $showHadithSettings) {
-                HadithSettingsSheet()
+                SettingsHadithView()
                     .smallMediumSheetPresentation()
             }
             .confirmationDialog("Download All Books?", isPresented: $confirmDownloadAll, titleVisibility: .visible) {
