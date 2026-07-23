@@ -45,6 +45,9 @@ struct HadithBookView: View {
     /// The Quran search's page size: matches show 5 at a time until Load More asks for more.
     @State private var chapterMatchLimit = 5
     @State private var hadithMatchLimit = 5
+    /// The in-book keyword results, filled by `runInBookSearch` (debounced + off-main).
+    @State private var inBookMatches: (shown: [HadithBookData.Hadith], hasMore: Bool) = ([], false)
+    @State private var inBookSearchTask: Task<Void, Never>?
 
     private var isSearchActive: Bool {
         !searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
@@ -76,7 +79,11 @@ struct HadithBookView: View {
     private func prepareSemanticCorpus(_ data: HadithBookData) {
         guard SemanticSearchEngine.isSupported, !semanticEngine.isReady(semanticCorpusID) else { return }
         let texts = data.hadiths.map { "\($0.english.narrator) \($0.english.text)" }
-        semanticEngine.prepare(corpusID: semanticCorpusID, version: "v2-\(texts.count)", texts: texts)
+        // Keyed by idInBook (the all-books corpus's rule): positional `data.hadiths[$0.index]` mapping
+        // meant a CDN update that REORDERS hadiths without changing the count served persisted vectors
+        // for the wrong hadith. v3 bumps past existing positional caches.
+        let keys = data.hadiths.map { String($0.idInBook) }
+        semanticEngine.prepare(corpusID: semanticCorpusID, version: "v3-\(texts.count)", texts: texts, keys: keys)
     }
 
     // Ask (the on-device LLM, grounded RAG): question-shaped queries stream an answer card above the
@@ -114,7 +121,9 @@ struct HadithBookView: View {
                 sources.append(.init(reference: "\(book.englishTitle) \(hadith.idInBook)",
                                      text: hadith.english.text.isEmpty ? hadith.english.narrator : hadith.english.text))
             }
-            for hadith in matchingHadiths(data).shown.prefix(6) where seen.insert(hadith.idInBook).inserted {
+            // From the already-settled STATE (the 200ms scan finishes well inside this 900ms wait),
+            // not the synchronous full-book scan - Ask's auto path is not a user gesture.
+            for hadith in inBookMatches.shown.prefix(6) where seen.insert(hadith.idInBook).inserted {
                 sources.append(.init(reference: "\(book.englishTitle) \(hadith.idInBook)",
                                      text: hadith.english.text.isEmpty ? hadith.english.narrator : hadith.english.text))
             }
@@ -155,10 +164,18 @@ struct HadithBookView: View {
             guard !Task.isCancelled else { return }
             let results = await semanticEngine.search(corpusID: corpusID, query: trimmed, limit: 10)
             guard !Task.isCancelled else { return }
+            // Resolve through the corpus KEYS (idInBook), falling back to position only for a corpus
+            // persisted before keys existed - position is wrong the moment the source reorders.
+            let keys = await MainActor.run { semanticEngine.corpus(corpusID)?.itemKeys }
             await MainActor.run {
                 guard trimmed == searchText.trimmingCharacters(in: .whitespacesAndNewlines) else { return }
                 withAnimation {
-                    aiHits = results.compactMap { data.hadiths.indices.contains($0.index) ? data.hadiths[$0.index] : nil }
+                    aiHits = results.compactMap { result in
+                        if let keys, keys.indices.contains(result.index), let idInBook = Int(keys[result.index]) {
+                            return data.hadiths.first(where: { $0.idInBook == idInBook })
+                        }
+                        return data.hadiths.indices.contains(result.index) ? data.hadiths[result.index] : nil
+                    }
                 }
             }
         }
@@ -234,6 +251,75 @@ struct HadithBookView: View {
     /// Book-wide hadith search (English text/narrator + diacritic-insensitive Arabic), the Quran
     /// search's way: scan only until one PAST the shown page, so finding page one of a common word
     /// in Bukhari never walks all 7,500 hadiths. `hasMore` renders the count pill as "5+".
+    /// The debounced, off-main scan feeding `inBookMatches` - the body reads state, never scans.
+    private func runInBookSearch(_ data: HadithBookData) {
+        inBookSearchTask?.cancel()
+        let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard query.count >= 3 else {
+            if !inBookMatches.shown.isEmpty || inBookMatches.hasMore { inBookMatches = ([], false) }
+            return
+        }
+        let arabicQuery = query.containsArabicScript
+        let cleanQuery = arabicQuery ? settings.cleanSearch(query, whitespace: true).removingArabicDiacriticsAndSigns : ""
+        let lowerQuery = HighlightedSnippet.foldedEnglishForSearch(query)
+        let index = store.searchIndexes[book.slug]
+        let limit = hadithMatchLimit
+
+        inBookSearchTask = Task {
+            // Debounce so typing pays once per settled query; the scan itself runs detached, with
+            // cancellation bridged in (detached tasks don't inherit it).
+            try? await Task.sleep(nanoseconds: 200_000_000)
+            guard !Task.isCancelled else { return }
+            let scan = Task.detached(priority: .userInitiated) { () -> (shown: [HadithBookData.Hadith], hasMore: Bool) in
+                var results: [HadithBookData.Hadith] = []
+                for hadith in data.hadiths {
+                    if Task.isCancelled { return (results, false) }
+                    let matches: Bool
+                    if arabicQuery {
+                        let source = index?.arabicByID[hadith.id]
+                            ?? Settings.shared.cleanSearch(hadith.arabic, whitespace: true).removingArabicDiacriticsAndSigns
+                        matches = source.contains(cleanQuery)
+                    } else if let english = index?.englishByID[hadith.id] {
+                        matches = english.contains(lowerQuery)
+                    } else {
+                        matches = hadith.english.text.localizedCaseInsensitiveContains(query)
+                            || hadith.english.narrator.localizedCaseInsensitiveContains(query)
+                    }
+                    if matches {
+                        results.append(hadith)
+                        if results.count > limit { return (Array(results.prefix(limit)), true) }
+                    }
+                }
+                return (results, false)
+            }
+            let result = await withTaskCancellationHandler {
+                await scan.value
+            } onCancel: {
+                scan.cancel()
+            }
+            guard !Task.isCancelled else { return }
+            await MainActor.run {
+                guard query == searchText.trimmingCharacters(in: .whitespacesAndNewlines) else { return }
+                withAnimation(.easeInOut) { inBookMatches = result }
+            }
+            // First render of each result row hits the highlight cache instead of paying the fold.
+            // Detached: this task inherits the view's @MainActor.
+            var sources: [String] = []
+            sources.reserveCapacity(result.shown.count * 3)
+            for hadith in result.shown {
+                sources.append(hadith.arabic)
+                sources.append(hadith.english.text)
+                sources.append(hadith.english.narrator)
+            }
+            let prewarm = sources
+            Task.detached(priority: .utility) {
+                HighlightedSnippet.prewarmNormalization(of: prewarm)
+            }
+        }
+    }
+
+    /// Synchronous variant, kept ONLY for user-gesture paths (Ask's context gather, the focus-loss
+    /// history check) - never called per keystroke or from body.
     private func matchingHadiths(_ data: HadithBookData) -> (shown: [HadithBookData.Hadith], hasMore: Bool) {
         let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard query.count >= 3 else { return ([], false) }
@@ -243,7 +329,7 @@ struct HadithBookView: View {
         // path only runs in the moment before the index lands.
         let arabicQuery = query.containsArabicScript
         let cleanQuery = arabicQuery ? settings.cleanSearch(query, whitespace: true).removingArabicDiacriticsAndSigns : ""
-        let lowerQuery = query.lowercased()
+        let lowerQuery = HighlightedSnippet.foldedEnglishForSearch(query)
         let index = store.searchIndexes[book.slug]
 
         var results: [HadithBookData.Hadith] = []
@@ -461,11 +547,12 @@ struct HadithBookView: View {
     }
 
     private func loadedBody(_ data: HadithBookData) -> some View {
-        // One scan per body pass: as direct calls these ran 3x (matchingHadiths - up to the whole
-        // book) and 5x (filteredChapters) per keystroke, once for every section gate/count/ForEach
-        // that asked again.
+        // Matches come from STATE, filled by `runInBookSearch`'s debounced, off-main scan. Computing
+        // them here walked up to the whole book (Bukhari ~7,500 hadiths of `.contains`) synchronously
+        // on the main thread on every keystroke - the one search path that never got the global
+        // sweep's detached treatment.
         let matches = isSearchActive
-            ? matchingHadiths(data)
+            ? inBookMatches
             : (shown: [HadithBookData.Hadith](), hasMore: false)
         let shownChapters = filteredChapters
 
@@ -721,8 +808,20 @@ struct HadithBookView: View {
             // A new query starts back at the first page of matches.
             chapterMatchLimit = 5
             hadithMatchLimit = 5
+            runInBookSearch(data)
             runAISearch(query: text, data: data)
             runAskIfNeeded(query: text, data: data)
+        }
+        // Load-more bumps the limit; re-run the (debounced, off-main) scan for the bigger page.
+        .onChange(of: hadithMatchLimit) { _ in
+            runInBookSearch(data)
+        }
+        // The folded index landing mid-query (Bukhari's first-open fold takes seconds): re-run so the
+        // raw-text fallback's results upgrade to the index's - the state-driven search lost the
+        // implicit re-render the old body-computed matches got from observing the store.
+        .onReceive(HadithStore.shared.$searchIndexes) { _ in
+            guard isSearchActive, !searchText.isEmpty else { return }
+            runInBookSearch(data)
         }
         // The one-time vector build finishing mid-query: surface the results without another keystroke.
         .onChange(of: semanticEngine.readyCorpora) { ready in
@@ -755,7 +854,9 @@ struct HadithBookView: View {
                     .padding(.horizontal, 24)
 
                 SearchBar(
-                    text: $searchText,
+                    // Animated with the app-wide gate; the in-book hadith matches already animate at
+                    // their debounced apply site, so this covers the chapter-filter diff while typing.
+                    text: AppPerformance.shouldReduceAnimations ? $searchText : $searchText.animation(.easeInOut),
                     onFocusChanged: { focused in
                         withAnimation { isBookSearchFocused = focused }
                         // Leaving the field with a query that found something joins the shared
@@ -832,7 +933,7 @@ struct HadithBookView: View {
                                     HadithReferenceView(book: book, chapter: nil, hadith: hadith.idInBook)
                                 }
                             } label: {
-                                HadithRow(book: book, hadith: hadith, searchText: searchText, compact: true)
+                                HadithRow(book: book, hadith: hadith, searchText: searchText, compact: true).equatable()
                             }
                         }
                     }
@@ -898,7 +999,7 @@ struct HadithBookView: View {
                                 scrollToHadithId: hadith.idInBook
                             )
                         } label: {
-                            HadithRow(book: book, hadith: hadith, searchText: searchText, compact: true)
+                            HadithRow(book: book, hadith: hadith, searchText: searchText, compact: true).equatable()
                         }
                     }
 
@@ -1255,14 +1356,37 @@ struct ChapterProgressBar: View {
     }
 }
 
+/// The ONE debounce slot for hadith last-read records, shared by the chapter list and the pager (view
+/// structs are recreated per body pass, so instance state can't own it; one reading surface is on screen
+/// at a time, so a single slot is enough). 1.0s trailing: always past the push-transition window whose
+/// mid-flight store publish used to pop the deep-linked screen, and last-record-wins by construction.
+@MainActor
+enum HadithLastReadDebounce {
+    private static var pending: DispatchWorkItem?
+
+    static func schedule(_ record: @escaping () -> Void) {
+        pending?.cancel()
+        let work = DispatchWorkItem(block: record)
+        pending = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0, execute: work)
+    }
+}
+
 struct HadithChapterView: View {
     @ObservedObject private var settings = Settings.shared
-    @ObservedObject private var store = HadithStore.shared
+    /// NOT `@ObservedObject`: this view's render tree never reads a published store property (the three
+    /// `store.` uses are inside onChange/button handlers). Observing it re-ran the whole reading body -
+    /// List, sections, every row - on every launch-prewarm decode tick and download progress publish.
+    private var store: HadithStore { HadithStore.shared }
 
     let book: HadithCatalogBook
     let bookData: HadithBookData
     /// A search result or reference landing here scrolls the list to this hadith, the Quran's way.
     let scrollToHadithId: Int?
+
+    /// Bumped when a search index lands mid-query - a @State change is what re-renders this view now
+    /// that it no longer observes the store (the value itself is never read).
+    @State private var indexRefreshToken = 0
 
     // The current chapter and its derived reading data. Held in @State so Previous/Next swaps the chapter
     // IN PLACE (the surah reader's way) rather than pushing a new view. Each is computed once - at init and
@@ -1316,7 +1440,13 @@ struct HadithChapterView: View {
             highlightedHadithID = nil
         }
         if recordLastRead, let first = hadiths.first {
-            HadithStore.shared.recordLastRead(book: book, hadith: first)
+            // Through the shared debounce slot, like every other last-read record: an immediate store
+            // publish mid-transition re-renders the observing book screen - the pop hazard - and in
+            // page mode the pager's own record follows anyway (single slot: last record wins).
+            let book = book
+            HadithLastReadDebounce.schedule {
+                HadithStore.shared.recordLastRead(book: book, hadith: first)
+            }
         }
     }
 
@@ -1355,7 +1485,9 @@ struct HadithChapterView: View {
         // preprocessed index whenever it's ready.
         let arabicQuery = query.containsArabicScript
         let cleanQuery = arabicQuery ? settings.cleanSearch(query, whitespace: true).removingArabicDiacriticsAndSigns : ""
-        let lowerQuery = query.lowercased()
+        // The highlighter's fold, matching the index build - the THIRD consumer of englishByID; plain
+        // `lowercased()` here stopped matching "Allah's"/"A'ishah" the moment the folded index landed.
+        let lowerQuery = HighlightedSnippet.foldedEnglishForSearch(query)
         let index = HadithStore.shared.searchIndexes[book.slug]
 
         return allChapterHadiths.filter { hadith in
@@ -1392,9 +1524,11 @@ struct HadithChapterView: View {
 
     var body: some View {
         Group {
-            // A scroll target always lands in the list - a paged reader can't scroll to one hadith.
-            if hadithPageMode && scrollToHadithId == nil {
-                HadithPagedView(book: book, bookData: bookData, chapterIndex: $chapterIndex)
+            // Page mode is the user's reading mode, deep link or not: a target hadith opens the PAGER
+            // seeded to its page (the mushaf's way). It used to force the list - "open last read" while
+            // in page mode dumped you into list mode, the reported bug.
+            if hadithPageMode {
+                HadithPagedView(book: book, bookData: bookData, chapterIndex: $chapterIndex, seedHadithID: scrollToHadithId)
             } else {
                 chapterList
             }
@@ -1403,7 +1537,7 @@ struct HadithChapterView: View {
         // book + chapter number, so nothing repeats). The list's progress bar rides on top of it.
         .safeAreaInset(edge: .top, spacing: 0) {
             VStack(spacing: 0) {
-                if !(hadithPageMode && scrollToHadithId == nil) {
+                if !hadithPageMode {
                     ChapterProgressBar(
                         visibility: visibility,
                         firstID: allChapterHadiths.first?.idInBook,
@@ -1451,11 +1585,21 @@ struct HadithChapterView: View {
             .smallMediumSheetPresentation()
         }
         .onAppear {
-            // The chapter IS the reading surface now, so it owns the Last Read record.
+            // In LIST mode the chapter is the reading surface, so it owns the Last Read record - routed
+            // through the ONE shared debounce slot, deferred past the push transition (`recordLastRead`
+            // publishes through the store the PARENT book screen observes and renders, and re-diffing
+            // the List hosting the auto-open NavigationLink mid-push is what spuriously popped a
+            // deep-linked chapter back to the chapter list). In PAGE mode the pager owns the record -
+            // a chapter-level record here raced the pager's and could reset a mid-chapter last-read
+            // back to the chapter's first hadith, depending on onAppear ordering.
+            guard !hadithPageMode else { return }
             let target = scrollToHadithId.flatMap { id in allChapterHadiths.first { $0.idInBook == id } }
                 ?? allChapterHadiths.first
             if let target {
-                HadithStore.shared.recordLastRead(book: book, hadith: target)
+                let book = book
+                HadithLastReadDebounce.schedule {
+                    HadithStore.shared.recordLastRead(book: book, hadith: target)
+                }
             }
         }
         // The paged footer's Previous/Next drives `chapterIndex` directly (it's a Binding into this
@@ -1472,6 +1616,14 @@ struct HadithChapterView: View {
                 ?? bookData.chapters.first
             guard let target, target.id != chapter.id else { return }
             navigateToChapter(target, recordLastRead: false)
+        }
+        // Dropping the whole-store observation (correct - the render tree reads no published state)
+        // also dropped the ONE publish this screen did care about: the search index landing mid-query.
+        // Without this nudge, in-chapter results computed on the raw-text fallback didn't refresh
+        // against the arrived index until the next keystroke.
+        .onReceive(HadithStore.shared.$searchIndexes) { _ in
+            guard !searchText.isEmpty else { return }
+            indexRefreshToken &+= 1
         }
     }
 
@@ -1610,7 +1762,7 @@ struct HadithChapterView: View {
 
                     ForEach(matches) { hadith in
                         Section {
-                            HadithRow(book: book, hadith: hadith, searchText: searchText)
+                            HadithRow(book: book, hadith: hadith, searchText: searchText).equatable()
                                 .contentShape(Rectangle())
                                 .onTapGesture {
                                     settings.hapticFeedback()
@@ -1635,7 +1787,7 @@ struct HadithChapterView: View {
                     ForEach(allChapterHadiths) { hadith in
                         Section {
                             let isSelected = selectedHadithIDs.contains(hadith.idInBook)
-                            HadithRow(book: book, hadith: hadith, searchText: searchText)
+                            HadithRow(book: book, hadith: hadith, searchText: searchText).equatable()
                                 // The ayah list's tap grammar: selecting mode builds the selection
                                 // (accent tint); otherwise tap-to-mark (grey attention tint). The row's
                                 // own controls (number pill, menu) win their taps either way.
@@ -1716,7 +1868,7 @@ struct HadithChapterView: View {
                     .padding(.bottom, 8)
                     .background(Color.white.opacity(0.00001))
             } else {
-                SearchBar(text: $searchText)
+                SearchBar(text: AppPerformance.shouldReduceAnimations ? $searchText : $searchText.animation(.easeInOut))
                     .padding([.horizontal, .top], -8)
                     .padding(.horizontal, 24)
                     .padding(.bottom, 8)
@@ -2038,6 +2190,9 @@ struct HadithPagedView: View {
     /// Bound to the parent chapter view, so Choose Chapter, Previous/Next, and the title all stay in
     /// sync - the pager no longer keeps a private copy that could drift.
     @Binding var chapterIndex: Int
+    /// A deep-link target (last read, bookmark, search result): the pager opens on ITS page instead of
+    /// the book's last-read seed. Nil for a plain chapter open.
+    var seedHadithID: Int? = nil
     @State private var pageIndex = 0
     /// ONE hadith per page, rendered at the user's exact hadith font sizes - no fit-to-page shrinking
     /// and no mid-hadith splitting. A hadith taller than the screen simply scrolls within its page.
@@ -2048,6 +2203,9 @@ struct HadithPagedView: View {
     /// Seed-once guard: the reader opens on the page holding this book's last-read hadith (when it is
     /// in this chapter), then never yanks the user again.
     @State private var didSeedPage = false
+    /// The deep-link target is honored on the FIRST seed only; re-arms (chapter swaps) follow the live
+    /// last read instead.
+    @State private var didConsumeDeepLinkSeed = false
 
     /// Which inline wheel is open above the footer - the mushaf reader's page/juz picker, reshaped
     /// for hadiths and chapters.
@@ -2100,11 +2258,26 @@ struct HadithPagedView: View {
         return hadiths
     }
 
-    /// One page per hadith: the header capsule plus whichever parts the display toggles allow. Cheap
-    /// enough to rebuild on every body pass - `chapterHadiths` is memoized and this is a plain map,
-    /// so no TextKit measurement or page memo is needed anymore.
+    /// Drops every derived static cache (built pages, chapter hadith lists, ordinals). These retain
+    /// whole chapters of text, so the store's memory-pressure trim and book deletion both call this -
+    /// otherwise the trim's savings were partially pinned here, and a re-downloaded book with changed
+    /// content could serve stale pages for chapters cached earlier in the session.
+    static func clearDerivedCaches() {
+        builtPagesCache.removeAll(keepingCapacity: false)
+        chapterHadithsCache.removeAll(keepingCapacity: false)
+        ordinalCache.removeAll(keepingCapacity: false)
+    }
+
+    /// Built pages, memoized on the only inputs that change them: the chapter and the two display
+    /// toggles. `body` runs on every page turn and every settings publish (a font-size slider drag
+    /// publishes per step), and this map used to re-allocate O(chapter) arrays each time.
+    private static var builtPagesCache: [String: [BuiltPage]] = [:]
+
     private func builtPages() -> [BuiltPage] {
-        chapterHadiths.map { hadith in
+        let key = "\(book.slug)-\(chapter?.id ?? -1)-\(settings.showHadithArabic ? 1 : 0)\(settings.showHadithEnglish ? 1 : 0)"
+        if let cached = Self.builtPagesCache[key] { return cached }
+
+        let pages = chapterHadiths.map { hadith in
             var elements: [PageElement] = [.hadithHeader(hadith)]
             if settings.showHadithArabic, !hadith.arabic.isEmpty {
                 elements.append(.arabic(hadith))
@@ -2115,6 +2288,9 @@ struct HadithPagedView: View {
             }
             return BuiltPage(elements: elements)
         }
+        if Self.builtPagesCache.count > 24 { Self.builtPagesCache.removeAll(keepingCapacity: true) }
+        Self.builtPagesCache[key] = pages
+        return pages
     }
 
     var body: some View {
@@ -2142,13 +2318,14 @@ struct HadithPagedView: View {
             pagerFooter(pageCount: pages.count)
         }
         .onAppear {
-            // Open on the page holding this book's LAST-READ hadith when it lives in this chapter -
-            // the mushaf's "open where you stopped", then record that page as the new last read.
+            // Open on the page holding the deep-link target (or this book's last-read hadith) - the
+            // mushaf's "open where you stopped" - then record that page as the new last read via the
+            // ONE debounced recorder below.
             let seeded = seedPageIfNeeded(pages)
-            recordPageLastRead(pages: pages, at: seeded ?? pageIndex)
+            scheduleRecordLastRead(pages: pages, at: seeded ?? pageIndex)
         }
         .onChange(of: pageIndex) { index in
-            recordPageLastRead(pages: pages, at: index)
+            scheduleRecordLastRead(pages: pages, at: index)
         }
         .onChange(of: chapterIndex) { _ in
             // A chapter swap re-arms the last-read seed: when the book's last read lives in the
@@ -2156,26 +2333,57 @@ struct HadithPagedView: View {
             didSeedPage = false
             activePicker = nil
             if let seeded = seedPageIfNeeded(pages) {
-                recordPageLastRead(pages: pages, at: seeded)
+                scheduleRecordLastRead(pages: pages, at: seeded)
             } else {
+                // Record page 1 EXPLICITLY: when `pageIndex` was already 0 (jumping chapters from the
+                // wheel while on a chapter's first page), the assignment below fires no `.onChange`,
+                // and the newly-opened chapter never became the last read.
                 pageIndex = 0
+                scheduleRecordLastRead(pages: pages, at: 0)
             }
         }
         // No title of its own: the parent chapter view's principal title-menu button owns the bar.
     }
 
-    /// Land on the last-read hadith's page, once per open. Returns the seeded index when it moved.
+    /// The ONE path a page becomes the last read, trailing-debounced 1.0s through the shared slot. This
+    /// closes two holes the separate immediate/deferred records had: the onAppear SEED sets `pageIndex`,
+    /// whose `.onChange` used to record immediately - a store publish mid-push that re-rendered the
+    /// ancestor book screen (which observes the store) and could pop this very view; and a page turn
+    /// inside the first second recorded instantly, only to be overwritten by the stale deferred landing
+    /// record. A single debounce slot means the LAST record standing wins, always past the transition.
+    private func scheduleRecordLastRead(pages: [BuiltPage], at index: Int) {
+        HadithLastReadDebounce.schedule {
+            recordPageLastRead(pages: pages, at: index)
+        }
+    }
+
+    /// Land on the target hadith's page, once per open: the explicit deep-link target when there is
+    /// one, this book's last-read hadith otherwise. Returns the seeded index when it resolved.
     private func seedPageIfNeeded(_ pages: [BuiltPage]) -> Int? {
         guard !didSeedPage else { return nil }
         didSeedPage = true
-        guard let chapter,
-              let lastRead = HadithStore.shared.lastRead(for: book.slug),
-              lastRead.chapterId == chapter.id
-                || chapterHadiths.contains(where: { $0.idInBook == lastRead.idInBook })
-        else { return nil }
 
-        guard let index = pages.firstIndex(where: { page in
-            page.elements.contains { $0.hadith?.idInBook == lastRead.idInBook }
+        // The deep-link target seeds exactly ONCE. It used to win every re-arm (chapter swap and
+        // back), yanking the pager - and the follow-up record - BACK to the original target after the
+        // user had read past it, regressing their last read to a position they'd already left.
+        let deepLinkTarget: Int?
+        if let seedHadithID, !didConsumeDeepLinkSeed {
+            didConsumeDeepLinkSeed = true
+            deepLinkTarget = seedHadithID
+        } else {
+            deepLinkTarget = nil
+        }
+        let targetID: Int? = deepLinkTarget ?? {
+            guard let chapter,
+                  let lastRead = HadithStore.shared.lastRead(for: book.slug),
+                  lastRead.chapterId == chapter.id
+                    || chapterHadiths.contains(where: { $0.idInBook == lastRead.idInBook })
+            else { return nil }
+            return lastRead.idInBook
+        }()
+
+        guard let targetID, let index = pages.firstIndex(where: { page in
+            page.elements.contains { $0.hadith?.idInBook == targetID }
         }) else { return nil }
         // Report the landing page even when it's the one already showing - callers treat nil as
         // "nothing to seed" and reset to page 1.
@@ -2195,10 +2403,22 @@ struct HadithPagedView: View {
         }
     }
 
+    /// 1-based ordinals by `idInBook`, memoized per chapter. The old arithmetic
+    /// (`idInBook - first.idInBook + 1`) assumed a chapter's ids are gapless - any gap in the source
+    /// data displayed a wrong (even out-of-range) position. Position IS the ordinal; derive it from it.
+    private static var ordinalCache: [String: [Int: Int]] = [:]
+
     /// The hadith's position within this chapter, for the header capsule ("3 - 102 Book").
     private func chapterHadithNumber(_ hadith: HadithBookData.Hadith) -> Int? {
-        guard let start = chapterHadiths.first?.idInBook else { return nil }
-        return hadith.idInBook - start + 1
+        let key = "\(book.slug)-\(chapter?.id ?? -1)"
+        if let map = Self.ordinalCache[key] { return map[hadith.idInBook] }
+        // `uniquingKeysWith`: the whole point of this rewrite is that CDN ids are imperfect - a
+        // duplicate idInBook within a chapter must show the first position, not trap the app.
+        let map = Dictionary(chapterHadiths.enumerated().map { ($1.idInBook, $0 + 1) },
+                             uniquingKeysWith: { first, _ in first })
+        if Self.ordinalCache.count > 48 { Self.ordinalCache.removeAll(keepingCapacity: true) }
+        Self.ordinalCache[key] = map
+        return map[hadith.idInBook]
     }
 
     private func pageBody(_ elements: [PageElement]) -> some View {

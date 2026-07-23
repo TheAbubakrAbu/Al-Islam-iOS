@@ -139,7 +139,7 @@ private struct StarFieldView: View {
         GeometryReader { geo in
             // Paused when invisible - and in Low Power Mode, where a 6fps twinkle is pure battery.
             TimelineView(.animation(minimumInterval: 1.0 / 6.0,
-                                    paused: opacity <= 0.01 || AppPerformance.isLowPowerMode)) { timeline in
+                                    paused: opacity <= 0.01 || AppPerformance.shouldReduceAnimations)) { timeline in
                 Canvas { context, size in
                     let t = timeline.date.timeIntervalSinceReferenceDate
                     for star in Self.stars {
@@ -223,30 +223,8 @@ struct SkyView: View {
         return settings.prayersIncludingOptional(displayed, for: now)
     }
 
-    private var sunrise: Date? { todaysPrayers.first { $0.nameTransliteration == "Shurooq" }?.time }
-    private var sunset: Date? { todaysPrayers.first { $0.nameTransliteration == "Maghrib" }?.time }
-
-    private var window: SolarWindow {
-        SolarWindow(
-            sunrise: sunrise,
-            sunset: sunset,
-            fallbackDayStart: fallbackDayStart,
-            fallbackDayLength: fallbackDayLength
-        )
-    }
-
-    private var curve: SolarCurve {
-        let window = self.window
-        return SolarCurve(
-            sunriseFractionOfWindow: sunrise.map(window.fraction(of:)),
-            sunsetFractionOfWindow: sunset.map(window.fraction(of:))
-        )
-    }
-
     /// The moment the whole card is describing: the dragged one, or now.
     private var displayedDate: Date { scrubber.scrubbedDate ?? now }
-
-    private var displayedFraction: Double { window.fraction(of: displayedDate) }
 
     private var displayedPrayer: Prayer? {
         scrubber.previewPrayer ?? settings.currentPrayer
@@ -267,6 +245,24 @@ struct SkyView: View {
     // MARK: Body
 
     var body: some View {
+        // ONE prayer-time resolution per render. `sunrise`/`sunset`/`window`/`curve` used to be computed
+        // properties re-derived at every use site (the arc shape, the horizon line, the sun's height,
+        // color and fraction) - ~20-30 cached `getPrayerTimes` lookups per second while the clock ticks.
+        // The solar geometry is built once here and passed down.
+        let prayers = todaysPrayers
+        let sunrise = prayers.first { $0.nameTransliteration == "Shurooq" }?.time
+        let sunset = prayers.first { $0.nameTransliteration == "Maghrib" }?.time
+        let window = SolarWindow(
+            sunrise: sunrise,
+            sunset: sunset,
+            fallbackDayStart: fallbackDayStart,
+            fallbackDayLength: fallbackDayLength
+        )
+        let curve = SolarCurve(
+            sunriseFractionOfWindow: sunrise.map(window.fraction(of:)),
+            sunsetFractionOfWindow: sunset.map(window.fraction(of:))
+        )
+
         ZStack {
             LinearGradient(
                 colors: settings.skyGradientColors(forPrayer: displayedPrayer?.nameTransliteration),
@@ -280,7 +276,7 @@ struct SkyView: View {
             StarFieldView(opacity: starOpacity)
                 .animation(.easeInOut(duration: 0.6), value: starOpacity)
 
-            arc
+            arc(curve: curve, window: window)
 
             // Legibility scrim, weighted to the two text bands. A soft gradient rather than a hard seam: it
             // reads as dusk gathering at the horizon, and it keeps white text readable over whichever two
@@ -318,6 +314,10 @@ struct SkyView: View {
             // No state change → no re-render. The timer itself keeps running (cheap); the per-second
             // body evaluation was the cost worth gating.
             guard isOnScreen, scenePhase == .active else { return }
+            // Reduce Motion: the continuously-creeping sun is decorative. A minute-granularity update
+            // keeps the card truthful without perpetual movement.
+            if AppPerformance.isReduceMotionEnabled,
+               Calendar.current.component(.second, from: date) != 0 { return }
             now = date
         }
         .onAppear {
@@ -335,9 +335,23 @@ struct SkyView: View {
     private var content: some View {
         VStack(spacing: 0) {
             HStack(alignment: .top, spacing: 8) {
-                prayerColumn(title: "CURRENT", prayer: settings.currentPrayer, alignment: .leading)
+                SkyPrayerColumn(
+                    title: "CURRENT",
+                    displayName: settings.currentPrayer?.displayName,
+                    image: settings.currentPrayer?.image,
+                    timeText: settings.currentPrayer.map { settings.formatDate($0.time) },
+                    trailing: false
+                )
+                .equatable()
                 Spacer(minLength: 0)
-                prayerColumn(title: "UPCOMING", prayer: settings.nextPrayer, alignment: .trailing)
+                SkyPrayerColumn(
+                    title: "UPCOMING",
+                    displayName: settings.nextPrayer?.displayName,
+                    image: settings.nextPrayer?.image,
+                    timeText: settings.nextPrayer.map { settings.formatDate($0.time) },
+                    trailing: true
+                )
+                .equatable()
             }
 
             Spacer(minLength: 0)
@@ -348,7 +362,10 @@ struct SkyView: View {
                 .padding(.bottom, 10)
 
             if settings.prayers != nil {
+                // Equatable-gated: the countdown's real updates come from its own timer state and its own
+                // Settings observation, so this card's per-second re-render has nothing new to tell it.
                 PrayerCountdown(presentation: .skyFooter)
+                    .equatable()
                     .padding(.top, 4)
             }
         }
@@ -360,29 +377,41 @@ struct SkyView: View {
 
     /// One side of the header: the label, the prayer's symbol and name, and when it started or starts.
     /// No Arabic or English subtitle - the prayer list below carries those.
-    @ViewBuilder
-    private func prayerColumn(title: String, prayer: Prayer?, alignment: HorizontalAlignment) -> some View {
-        let trailing = alignment == .trailing
-        VStack(alignment: alignment, spacing: 3) {
-            Text(title)
-                .font(.caption2.weight(.semibold))
-                .foregroundStyle(.white.opacity(0.6))
+    ///
+    /// An Equatable leaf rather than a computed section of `SkyView`: the card re-runs its body every
+    /// second to move the sun, but a column's strings change only when the prayer rolls over (or the
+    /// user edits the time format - which flows through `timeText`, so `==` catches it). Comparing five
+    /// values lets SwiftUI skip both columns' subtrees on every tick in between. All inputs are plain
+    /// values formatted by the parent - the column itself observes nothing.
+    private struct SkyPrayerColumn: View, Equatable {
+        let title: String
+        let displayName: String?
+        let image: String?
+        let timeText: String?
+        let trailing: Bool
 
-            if let prayer {
-                HStack(spacing: 6) {
-                    if trailing { Text(prayer.displayName).font(.title3.weight(.semibold)) }
-                    Image(systemName: prayer.image)
-                    if !trailing { Text(prayer.displayName).font(.title3.weight(.semibold)) }
-                }
-                .foregroundStyle(.white)
-                .lineLimit(1)
-                .minimumScaleFactor(0.6)
+        var body: some View {
+            VStack(alignment: trailing ? .trailing : .leading, spacing: 3) {
+                Text(title)
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(.white.opacity(0.6))
 
-                Text("\(trailing ? "Starts at" : "Started at") \(settings.formatDate(prayer.time))")
-                    .font(.caption.monospacedDigit())
-                    .foregroundStyle(.white.opacity(0.75))
+                if let displayName, let image, let timeText {
+                    HStack(spacing: 6) {
+                        if trailing { Text(displayName).font(.title3.weight(.semibold)) }
+                        Image(systemName: image)
+                        if !trailing { Text(displayName).font(.title3.weight(.semibold)) }
+                    }
+                    .foregroundStyle(.white)
                     .lineLimit(1)
-                    .minimumScaleFactor(0.7)
+                    .minimumScaleFactor(0.6)
+
+                    Text("\(trailing ? "Starts at" : "Started at") \(timeText)")
+                        .font(.caption.monospacedDigit())
+                        .foregroundStyle(.white.opacity(0.75))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                }
             }
         }
     }
@@ -444,9 +473,10 @@ struct SkyView: View {
 
 
 
-    private var arc: some View {
+    private func arc(curve: SolarCurve, window: SolarWindow) -> some View {
         GeometryReader { geo in
             let rect = CGRect(origin: .zero, size: geo.size)
+            let displayedFraction = window.fraction(of: displayedDate)
             let shape = SolarArcShape(curve: curve, inset: inset)
             let horizonY = shape.yPosition(of: curve.horizon, in: rect)
             let sunHeight = curve.height(at: displayedFraction)
@@ -480,15 +510,16 @@ struct SkyView: View {
                     .stroke(Color.white.opacity(0.35), style: StrokeStyle(lineWidth: 1, dash: [2, 3]))
                 }
 
+                let sunFill = sunColor(height: sunHeight, horizon: curve.horizon)
                 Circle()
-                    .fill(sunColor(height: sunHeight))
+                    .fill(sunFill)
                     .frame(width: 20, height: 20)
-                    .shadow(color: sunColor(height: sunHeight).opacity(isUp ? 0.9 : 0), radius: isUp ? 12 : 0)
+                    .shadow(color: sunFill.opacity(isUp ? 0.9 : 0), radius: isUp ? 12 : 0)
                     .position(sunPoint)
                     .opacity(isUp ? 1 : 0.45)
             }
             .contentShape(Rectangle())
-            .gesture(dragGesture(in: rect))
+            .gesture(dragGesture(in: rect, window: window))
         }
     }
 
@@ -518,7 +549,7 @@ struct SkyView: View {
 
     // MARK: Interaction
 
-    private func dragGesture(in rect: CGRect) -> some Gesture {
+    private func dragGesture(in rect: CGRect, window: SolarWindow) -> some Gesture {
         DragGesture(minimumDistance: 0)
             .onChanged { value in
                 if !scrubber.isScrubbing {
@@ -546,8 +577,7 @@ struct SkyView: View {
     }
 
     /// Warm and huge near the horizon, small and white overhead, dim below.
-    private func sunColor(height: Double) -> Color {
-        let horizon = curve.horizon
+    private func sunColor(height: Double, horizon: Double) -> Color {
         guard height > horizon else { return Color(white: 0.75) }
         // 0 at the horizon, 1 at solar noon.
         let elevation = (height - horizon) / max(1 - horizon, 0.0001)

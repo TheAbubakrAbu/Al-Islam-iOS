@@ -152,7 +152,35 @@ final class HadithUserData: ObservableObject {
 final class HadithStore: ObservableObject {
     static let shared = HadithStore()
 
-    private init() {}
+    private init() {
+        #if os(iOS)
+        // The shelf cache deliberately holds every offline book for instant opens (see `book()`), which
+        // on a full 17-book shelf is a lot of resident text. Under actual memory pressure, that comfort
+        // is what jetsam kills the app over - so trim to the books most recently read and let the rest
+        // re-decode (off-main, cache-first) on their next open.
+        NotificationCenter.default.addObserver(
+            forName: UIApplication.didReceiveMemoryWarningNotification, object: nil, queue: .main
+        ) { _ in
+            MainActor.assumeIsolated {
+                HadithStore.shared.trimCachesForMemoryPressure()
+            }
+        }
+        #endif
+    }
+
+    /// Drops all but the most recently used decoded books (and their search indexes). `decoded` is
+    /// MRU-ordered, newest last.
+    private func trimCachesForMemoryPressure() {
+        // The pager's derived caches retain whole chapters of text independent of `decoded`.
+        HadithPagedView.clearDerivedCaches()
+        let keep = 2
+        guard decoded.count > keep else { return }
+        let removed = decoded.prefix(decoded.count - keep).map(\.slug)
+        decoded.removeFirst(decoded.count - keep)
+        for slug in removed {
+            searchIndexes.removeValue(forKey: slug)
+        }
+    }
 
     // Download progress, published for the catalog UI.
     @Published private(set) var isDownloading = false
@@ -188,7 +216,9 @@ final class HadithStore: ObservableObject {
             var english: [Int: String] = Dictionary(minimumCapacity: parsed.hadiths.count)
             for hadith in parsed.hadiths {
                 arabic[hadith.id] = Settings.shared.cleanSearch(hadith.arabic, whitespace: true).removingArabicDiacriticsAndSigns
-                english[hadith.id] = (hadith.english.text + "\n" + hadith.english.narrator).lowercased()
+                // The highlighter's fold, not plain `lowercased()`: queries fold the same way, so
+                // apostrophe/diacritic narrator names ("'A'ishah", "Mu'adh") match their plain typings.
+                english[hadith.id] = HighlightedSnippet.foldedEnglishForSearch(hadith.english.text + "\n" + hadith.english.narrator)
             }
             let index = HadithSearchIndex(arabicByID: arabic, englishByID: english)
             await MainActor.run { self.searchIndexes[slug] = index }
@@ -421,8 +451,12 @@ final class HadithStore: ObservableObject {
     /// memory cache for this session and nothing is written to disk - it evaporates on its own instead
     /// of taking up storage.
     func book(_ book: HadithCatalogBook, persist: Bool = true) async throws -> HadithBookData {
-        if let hit = decoded.first(where: { $0.slug == book.slug })?.book {
-            return hit
+        if let index = decoded.firstIndex(where: { $0.slug == book.slug }) {
+            // MRU touch: move the hit to the end so a memory-pressure trim keeps the books actually
+            // being read, not just the ones decoded most recently.
+            let hit = decoded.remove(at: index)
+            decoded.append(hit)
+            return hit.book
         }
 
         let data: Data
@@ -531,6 +565,11 @@ final class HadithStore: ObservableObject {
     func deleteDownload(_ book: HadithCatalogBook) {
         decoded.removeAll { $0.slug == book.slug }
         downloadedSlugs.remove(book.slug)
+        searchIndexes.removeValue(forKey: book.slug)
+        // A re-download may carry changed content - the pager's derived caches must not outlive it,
+        // and neither may the rows' chapter-start numbering.
+        HadithPagedView.clearDerivedCaches()
+        HadithRow.clearChapterStartCache()
         Task.detached(priority: .utility) { [weak self] in
             try? FileManager.default.removeItem(at: Self.fileURL(book))
             await self?.refreshDiskState()
@@ -541,6 +580,9 @@ final class HadithStore: ObservableObject {
         cancelDownload()
         decoded.removeAll()
         downloadedSlugs = []
+        searchIndexes.removeAll()
+        HadithPagedView.clearDerivedCaches()
+        HadithRow.clearChapterStartCache()
         Task.detached(priority: .utility) { [weak self] in
             let contents = (try? FileManager.default.contentsOfDirectory(at: Self.directory, includingPropertiesForKeys: nil)) ?? []
             for file in contents {

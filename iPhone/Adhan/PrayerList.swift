@@ -6,7 +6,10 @@ import SwiftUI
 struct PrayerList: View {
     @ObservedObject private var settings = Settings.shared
     @Environment(\.scenePhase) private var scenePhase
-    @ObservedObject private var scrubber = DayScrubber.shared
+    // The HIGHLIGHT slice of the scrubber, not the scrubber itself: `ScrubHighlight` publishes only when
+    // the prayer under the thumb changes (a handful of times per drag). Observing `DayScrubber` here made
+    // every touch-move of the sun rebuild this whole section - list, sorts and all - ~60×/second.
+    @ObservedObject private var scrubHighlight = ScrubHighlight.shared
 
     // The calendar day this view last considered "today". Used to detect a rollover that happened while the
     // app was suspended so a stale `selectedDate` doesn't spuriously trigger the TODAY comparison on reopen.
@@ -149,6 +152,12 @@ struct PrayerList: View {
                 compareToday = true
             }
         }
+        // The stored `prayers` object still carries YESTERDAY's date (and times). `currentPrayer` heals
+        // itself via the countdown's boundary timeline, but the displayed list served `settings.prayers`
+        // as "today" until the app was next backgrounded and reopened - an app left foregrounded past
+        // midnight showed yesterday's times all night. The fetch's own `staleDate` check makes this a
+        // no-op whenever the stored day is somehow already correct.
+        settings.fetchPrayerTimes()
     }
 
     @ViewBuilder
@@ -164,65 +173,10 @@ struct PrayerList: View {
         // The selected day only highlights a "current" prayer when it is actually today; on any other
         // day the concept doesn't apply, so render its prayers in the neutral primary color.
         prayerModeContent(prayers: displayedPrayers, highlightsCurrent: !isShowingDifferentDay)
-        #if os(iOS)
-        prayerTrackerRow
-        #endif
         travelModeFooter
         optionalPrayersFooter
         dateSelectionFooter
     }
-
-    #if os(iOS)
-    /// The prayer tracker: one tap-to-toggle circle per obligatory prayer of the shown day. Marking a
-    /// prayer prayed today also silences its remaining nagging reminders (see `setPrayerPrayed`).
-    @ViewBuilder
-    private var prayerTrackerRow: some View {
-        let trackable = displayedPrayers.filter { Settings.trackablePrayerNames.contains($0.nameTransliteration) }
-        if !trackable.isEmpty {
-            VStack(spacing: 10) {
-                HStack {
-                    Text("PRAYER TRACKER")
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(.secondary)
-
-                    Spacer()
-
-                    Text("\(settings.trackedPrayerCount(trackable.map(\.nameTransliteration), on: selectedDate))/\(trackable.count) prayed")
-                        .font(.caption.monospacedDigit().weight(.semibold))
-                        .foregroundStyle(settings.accentColor.color)
-                }
-
-                HStack(spacing: 0) {
-                    ForEach(trackable, id: \.stableDisplayID) { prayer in
-                        let prayed = settings.isPrayerMarkedPrayed(prayer.nameTransliteration, on: selectedDate)
-                        Button {
-                            settings.hapticFeedback()
-                            withAnimation(.easeInOut(duration: 0.15)) {
-                                settings.setPrayerPrayed(prayer.nameTransliteration, on: selectedDate, prayed: !prayed)
-                            }
-                        } label: {
-                            VStack(spacing: 4) {
-                                Image(systemName: prayed ? "checkmark.circle.fill" : "circle")
-                                    .font(.title3)
-
-                                Text(prayer.compactDisplayName)
-                                    .font(.caption2)
-                                    .lineLimit(1)
-                                    .minimumScaleFactor(0.6)
-                            }
-                            .foregroundStyle(prayed ? settings.accentColor.color : Color.secondary)
-                            .frame(maxWidth: .infinity)
-                            .contentShape(Rectangle())
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityLabel("\(prayer.displayName): \(prayed ? "prayed" : "not marked")")
-                    }
-                }
-            }
-            .padding(.vertical, 6)
-        }
-    }
-    #endif
 
     /// Lets the optional/extra prayers (Duha, Islamic Midnight, Last Third) be shown or hidden right from
     /// the prayer page, so toggling them no longer means a trip into Settings. These bind to the same
@@ -644,7 +598,7 @@ struct PrayerList: View {
     /// While the sun is being dragged along `SkyView`'s arc, the highlight follows the dragged moment rather
     /// than the live one, so scrubbing the day walks it down the rows.
     private func isCurrentPrayer(_ prayer: Prayer) -> Bool {
-        let reference = scrubber.previewPrayer ?? settings.currentPrayer
+        let reference = scrubHighlight.previewPrayer ?? settings.currentPrayer
         return reference?.nameTransliteration.contains(prayer.nameTransliteration) ?? false
     }
 

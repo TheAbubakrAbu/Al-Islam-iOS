@@ -2,6 +2,9 @@ import SwiftUI
 #if canImport(UIKit)
 import UIKit
 #endif
+#if os(watchOS)
+import WatchKit
+#endif
 
 // MARK: - App identifiers
 /// Central place for reverse-DNS strings and the App Group name.
@@ -44,6 +47,25 @@ enum AppPerformance {
         #else
         isLowMemoryDevice || isLowPowerMode
         #endif
+    }
+
+    /// The OS accessibility setting. Live like `isLowPowerMode` - the user can flip it any time.
+    static var isReduceMotionEnabled: Bool {
+        #if os(iOS)
+        UIAccessibility.isReduceMotionEnabled
+        #elseif os(watchOS)
+        WKAccessibilityIsReduceMotionEnabled()
+        #else
+        false
+        #endif
+    }
+
+    /// The one gate for DECORATIVE animation (starfield twinkle, forever pulses, spinners, launch
+    /// springs): off under Low Power Mode (contention) and under Reduce Motion (accessibility).
+    /// Functional state transitions (a row appearing, a toggle) stay animated - Reduce Motion asks for
+    /// less MOTION, not a frozen UI.
+    static var shouldReduceAnimations: Bool {
+        isLowPowerMode || isReduceMotionEnabled
     }
 
     static var ayahRowCacheLimit: Int {

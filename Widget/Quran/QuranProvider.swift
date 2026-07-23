@@ -56,7 +56,22 @@ struct QuranWidgetProvider: TimelineProvider {
 
     func getTimeline(in context: Context, completion: @escaping (Timeline<QuranWidgetEntry>) -> Void) {
         let entry = makeEntry()
-        completion(Timeline(entries: [entry], policy: .after(Date().addingTimeInterval(30 * 60))))
+        // Refresh policy by what actually changes the content. The last-read/listened kinds only change
+        // on user actions, and every such action already fires a targeted `reloadTimelines(ofKind:)` from
+        // the app - a 30-minute self-refresh recomputed identical output ~48×/day against WidgetKit's
+        // budget. Ayah of the Day changes exactly at midnight, so ask for exactly that.
+        let policy: TimelineReloadPolicy
+        switch kind {
+        case .ayahOfTheDay:
+            // Via the calendar, not +86,400s: DST transition days are 23 or 25 hours long.
+            let todayStart = Calendar.current.startOfDay(for: Date())
+            let nextMidnight = Calendar.current.date(byAdding: .day, value: 1, to: todayStart)
+                ?? Date().addingTimeInterval(86_400)
+            policy = .after(nextMidnight)
+        case .lastReadAyah, .lastListenedSurah, .lastListenedAyah:
+            policy = .never
+        }
+        completion(Timeline(entries: [entry], policy: policy))
     }
 
     /// Representative fake data (Al-Fātiḥah 1:1) used wherever there is nothing real to show: the gallery

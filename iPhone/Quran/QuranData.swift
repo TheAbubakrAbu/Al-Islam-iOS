@@ -448,6 +448,13 @@ final class TajweedStore {
     }
 
 
+    /// Forces the lazy rule-tree decode (a multi-MB JSON read) to happen on the caller's thread - the
+    /// background Quran load calls this so the first tajweed-colored ayah doesn't hitch the main thread
+    /// with it. Safe from any thread: `static let` initialization is once-only and thread-safe.
+    static func prewarmRuleTrees() {
+        _ = tajweedRuleTreesByAyah.isEmpty
+    }
+
     private static let tajweedRuleTreesByAyah: [TajweedAyahKey: [TajweedRuleAnnotation]] = {
         guard let url = tajweedRulesResourceURL() else { return [:] }
         guard let data = try? Data(contentsOf: url) else { return [:] }
@@ -3198,19 +3205,16 @@ final class QuranData: ObservableObject {
     }
 
     private struct QuranDynamicCache: Codable {
-        // v3: cross-surah boundary dividers no longer carry a surah-relative "(N)" page annotation.
-        static let version = 3
+        // v4: the six token/prefix candidate-narrowing indexes are GONE - they were built, cached,
+        // decoded at launch, and carried in every snapshot, but the substring scan never read them
+        // (gating on them made plain search miss mid-word matches). Dropping them shrinks the cache,
+        // the launch decode, and several MB of resident memory.
+        static let version = 4
 
         let version: Int
         let resourceSignature: String
         let qiraahKey: String
         let verseIndex: [VerseIndexEntry]
-        let arabicTokenIndex: [String: [Int]]
-        let arabicPrefix2Index: [String: [Int]]
-        let silentArabicTokenIndex: [String: [Int]]
-        let silentArabicPrefix2Index: [String: [Int]]
-        let englishTokenIndex: [String: [Int]]
-        let englishPrefix3Index: [String: [Int]]
         let allVerseIndices: [Int]
         let surahBoundaryModels: [Int: SurahBoundaryModel]
         let firstAyahByPage: [Int: CachedAyahLocation]
@@ -3249,17 +3253,8 @@ final class QuranData: ObservableObject {
     private var surahBoundaryModels = [Int: SurahBoundaryModel]()
     private var firstAyahByPage = [Int: (surah: Int, ayah: Int)]()
     private var firstAyahByJuz = [Int: (surah: Int, ayah: Int)]()
-    /// Preprocessed Arabic indexes to reduce scoring to a small candidate set.
-    private var arabicTokenIndex = [String: [Int]]()
-    private var arabicPrefix2Index = [String: [Int]]()
-    /// Preprocessed English indexes to reduce scoring to a small candidate set.
-    private var englishTokenIndex = [String: [Int]]()
-    private var englishPrefix3Index = [String: [Int]]()
-    private var silentArabicTokenIndex = [String: [Int]]()
-    private var silentArabicPrefix2Index = [String: [Int]]()
     /// Cached contiguous index list to avoid reallocating Array(verseIndex.indices) on every query.
     private var allVerseIndices: [Int] = []
-    private var searchResultIndexCache = [SearchResultCacheKey: [Int]]()
     /// The immutable per-keystroke search snapshot, reused until the index is (re)built. Built/read only on
     /// the main actor (`verseSearchSnapshot()` is called from a View before its detached search task), and
     /// nil'd wherever the underlying index arrays change. Avoids reconstructing the 9-field struct each keystroke.
@@ -3284,23 +3279,9 @@ final class QuranData: ObservableObject {
         return f
     }()
 
-    private struct SearchResultCacheKey: Hashable {
-        let qiraahKey: String
-        let cleanedQuery: String
-        let silentQuery: String?
-        let useArabic: Bool
-        let ignoreSilentLetters: Bool
-    }
-
     struct VerseSearchSnapshot {
         let qiraahKey: String
         let verseIndex: [VerseIndexEntry]
-        let arabicTokenIndex: [String: [Int]]
-        let arabicPrefix2Index: [String: [Int]]
-        let silentArabicTokenIndex: [String: [Int]]
-        let silentArabicPrefix2Index: [String: [Int]]
-        let englishTokenIndex: [String: [Int]]
-        let englishPrefix3Index: [String: [Int]]
         let allVerseIndices: [Int]
 
         private struct BooleanAyahTerm {
@@ -3338,7 +3319,13 @@ final class QuranData: ObservableObject {
                 filtered.reserveCapacity(limit == .max ? 64 : min(limit, 64))
 
                 var skipped = 0
+                var scanned = 0
                 for entry in verseIndex {
+                    // Same abandoned-keystroke early-out as the regular branch below - operator queries
+                    // use the heavier per-term matcher and never break at `limit` on rare matches, so
+                    // they were the slowest AND the only uninterruptible scan.
+                    scanned += 1
+                    if scanned & 0x1FF == 0, Task.isCancelled { break }
                     guard matchesBooleanAyahSearch(entry: entry, useArabic: useArabic, groups: booleanGroups) else { continue }
                     if skipped < offset { skipped += 1; continue }
                     filtered.append(entry)
@@ -3748,12 +3735,6 @@ final class QuranData: ObservableObject {
         resourceSignature: String,
         qiraahKey: String,
         verseIndex: [VerseIndexEntry],
-        arabicTokenIndex: [String: [Int]],
-        arabicPrefix2Index: [String: [Int]],
-        silentArabicTokenIndex: [String: [Int]],
-        silentArabicPrefix2Index: [String: [Int]],
-        englishTokenIndex: [String: [Int]],
-        englishPrefix3Index: [String: [Int]],
         allVerseIndices: [Int],
         surahBoundaryModels: [Int: SurahBoundaryModel],
         firstAyahByPage: [Int: (surah: Int, ayah: Int)],
@@ -3766,12 +3747,6 @@ final class QuranData: ObservableObject {
             resourceSignature: resourceSignature,
             qiraahKey: qiraahKey,
             verseIndex: verseIndex,
-            arabicTokenIndex: arabicTokenIndex,
-            arabicPrefix2Index: arabicPrefix2Index,
-            silentArabicTokenIndex: silentArabicTokenIndex,
-            silentArabicPrefix2Index: silentArabicPrefix2Index,
-            englishTokenIndex: englishTokenIndex,
-            englishPrefix3Index: englishPrefix3Index,
             allVerseIndices: allVerseIndices,
             surahBoundaryModels: surahBoundaryModels,
             firstAyahByPage: firstAyahByPage.mapValues { CachedAyahLocation(surah: $0.surah, ayah: $0.ayah) },
@@ -3830,12 +3805,6 @@ final class QuranData: ObservableObject {
     @MainActor
     private func applyDynamicCache(_ cache: QuranDynamicCache) {
         self.verseIndex = cache.verseIndex
-        self.arabicTokenIndex = cache.arabicTokenIndex
-        self.arabicPrefix2Index = cache.arabicPrefix2Index
-        self.silentArabicTokenIndex = cache.silentArabicTokenIndex
-        self.silentArabicPrefix2Index = cache.silentArabicPrefix2Index
-        self.englishTokenIndex = cache.englishTokenIndex
-        self.englishPrefix3Index = cache.englishPrefix3Index
         self.allVerseIndices = cache.allVerseIndices
         self.surahBoundaryModels = cache.surahBoundaryModels
         self.firstAyahByPage = cache.firstAyahByPage.mapValues { (value) in (surah: value.surah, ayah: value.ayah) }
@@ -3843,7 +3812,6 @@ final class QuranData: ObservableObject {
         self.cachedVerseIndexQiraah = cache.qiraahKey
         self.cachedBoundaryQiraah = cache.qiraahKey
         self.cachedFirstAyahLookupQiraah = cache.qiraahKey
-        self.searchResultIndexCache.removeAll()
         self.cachedVerseSearchSnapshot = nil
         self.isVerseSearchReady = true
         self.loadState = .ready
@@ -3897,10 +3865,6 @@ final class QuranData: ObservableObject {
                 await Task.yield()
             }
 
-            let arabicIndexes = self.buildArabicSearchIndexes(for: vIndex)
-            let silentArabicIndexes = self.buildSilentArabicSearchIndexes(for: vIndex)
-            if Task.isCancelled { return }
-            let englishIndexes = self.buildEnglishSearchIndexes(for: vIndex)
             if Task.isCancelled { return }
 
             let finalizedVerseIndex = vIndex
@@ -3910,15 +3874,8 @@ final class QuranData: ObservableObject {
 
             await MainActor.run {
                 self.verseIndex = finalizedVerseIndex
-                self.arabicTokenIndex = arabicIndexes.token
-                self.arabicPrefix2Index = arabicIndexes.prefix2
-                self.silentArabicTokenIndex = silentArabicIndexes.token
-                self.silentArabicPrefix2Index = silentArabicIndexes.prefix2
-                self.englishTokenIndex = englishIndexes.token
-                self.englishPrefix3Index = englishIndexes.prefix3
                 self.allVerseIndices = finalizedAllVerseIndices
                 self.cachedVerseIndexQiraah = qiraahKey
-                self.searchResultIndexCache.removeAll()
                 self.cachedVerseSearchSnapshot = nil
                 self.isVerseSearchReady = true
             }
@@ -3927,12 +3884,6 @@ final class QuranData: ObservableObject {
                 resourceSignature: resourceSignature,
                 qiraahKey: qiraahKey,
                 verseIndex: finalizedVerseIndex,
-                arabicTokenIndex: arabicIndexes.token,
-                arabicPrefix2Index: arabicIndexes.prefix2,
-                silentArabicTokenIndex: silentArabicIndexes.token,
-                silentArabicPrefix2Index: silentArabicIndexes.prefix2,
-                englishTokenIndex: englishIndexes.token,
-                englishPrefix3Index: englishIndexes.prefix3,
                 allVerseIndices: finalizedAllVerseIndices,
                 surahBoundaryModels: boundaryModels,
                 firstAyahByPage: firstAyahByPage,
@@ -3981,10 +3932,6 @@ final class QuranData: ObservableObject {
                 await Task.yield()
             }
 
-            let arabicIndexes = self.buildArabicSearchIndexes(for: vIndex)
-            let silentArabicIndexes = self.buildSilentArabicSearchIndexes(for: vIndex)
-            if Task.isCancelled { return }
-            let englishIndexes = self.buildEnglishSearchIndexes(for: vIndex)
             if Task.isCancelled { return }
 
             let finalizedVerseIndex = vIndex
@@ -3994,15 +3941,8 @@ final class QuranData: ObservableObject {
 
             await MainActor.run {
                 self.verseIndex = finalizedVerseIndex
-                self.arabicTokenIndex = arabicIndexes.token
-                self.arabicPrefix2Index = arabicIndexes.prefix2
-                self.silentArabicTokenIndex = silentArabicIndexes.token
-                self.silentArabicPrefix2Index = silentArabicIndexes.prefix2
-                self.englishTokenIndex = englishIndexes.token
-                self.englishPrefix3Index = englishIndexes.prefix3
                 self.allVerseIndices = finalizedAllVerseIndices
                 self.cachedVerseIndexQiraah = qiraahKey
-                self.searchResultIndexCache.removeAll()
                 self.cachedVerseSearchSnapshot = nil
                 self.isVerseSearchReady = true
             }
@@ -4041,6 +3981,7 @@ final class QuranData: ObservableObject {
         cachedSajdahAyahResults = nil
         cachedMuqattaatAyahResults = nil
         cachedPageAyahResults = nil
+        invalidatePageJuzResultMemos()
     }
 
     private func searchTokens(from cleanedText: String) -> [String] {
@@ -4106,81 +4047,6 @@ final class QuranData: ObservableObject {
             silentArabicTokens: silentArabicTokens,
             englishTokens: englishTokens
         )
-    }
-
-    private func buildEnglishSearchIndexes(for entries: [VerseIndexEntry]) -> (
-        token: [String: [Int]],
-        prefix3: [String: [Int]]
-    ) {
-        var tokenIndex = [String: [Int]]()
-        var prefix3Index = [String: [Int]]()
-        tokenIndex.reserveCapacity(12000)
-        prefix3Index.reserveCapacity(4000)
-
-        for (idx, entry) in entries.enumerated() {
-            let uniqueTokens = Set(entry.englishTokens)
-            for token in uniqueTokens {
-                guard !token.isEmpty else { continue }
-                tokenIndex[token, default: []].append(idx)
-            }
-
-            var uniquePrefixes = Set<String>()
-            uniquePrefixes.reserveCapacity(uniqueTokens.count)
-            for token in uniqueTokens where token.count >= 3 {
-                uniquePrefixes.insert(String(token.prefix(3)))
-            }
-            for prefix in uniquePrefixes {
-                prefix3Index[prefix, default: []].append(idx)
-            }
-        }
-
-        return (token: tokenIndex, prefix3: prefix3Index)
-    }
-
-    private func buildArabicSearchIndexes(for entries: [VerseIndexEntry]) -> (
-        token: [String: [Int]],
-        prefix2: [String: [Int]]
-    ) {
-        buildArabicSearchIndexes(for: entries, tokenProvider: \.arabicTokens)
-    }
-
-    private func buildSilentArabicSearchIndexes(for entries: [VerseIndexEntry]) -> (
-        token: [String: [Int]],
-        prefix2: [String: [Int]]
-    ) {
-        buildArabicSearchIndexes(for: entries, tokenProvider: \.silentArabicTokens)
-    }
-
-    private func buildArabicSearchIndexes(
-        for entries: [VerseIndexEntry],
-        tokenProvider: KeyPath<VerseIndexEntry, [String]>
-    ) -> (
-        token: [String: [Int]],
-        prefix2: [String: [Int]]
-    ) {
-        var tokenIndex = [String: [Int]]()
-        var prefix2Index = [String: [Int]]()
-        tokenIndex.reserveCapacity(9000)
-        prefix2Index.reserveCapacity(3000)
-
-        for (idx, entry) in entries.enumerated() {
-            let uniqueTokens = Set(entry[keyPath: tokenProvider])
-            for token in uniqueTokens {
-                guard !token.isEmpty else { continue }
-                tokenIndex[token, default: []].append(idx)
-            }
-
-            var uniquePrefixes = Set<String>()
-            uniquePrefixes.reserveCapacity(uniqueTokens.count)
-            for token in uniqueTokens where token.count >= 2 {
-                uniquePrefixes.insert(String(token.prefix(2)))
-            }
-            for prefix in uniquePrefixes {
-                prefix2Index[prefix, default: []].append(idx)
-            }
-        }
-
-        return (token: tokenIndex, prefix2: prefix2Index)
     }
 
     func waitUntilLoaded() async {
@@ -4275,6 +4141,14 @@ final class QuranData: ObservableObject {
             self.isVerseSearchReady = false
         }
 
+        // While the core load already owns a background context: pay the tajweed rule-tree decode now
+        // if coloring is on, so the first colored ayah doesn't hitch the main thread with it.
+        // (The AI-search NLEmbedding probe is prewarmed similarly, from the app root - see Al-IslamApp;
+        // SemanticSearch.swift isn't compiled into every target this file is.)
+        if await MainActor.run(body: { Settings.shared.showTajweedColors }) {
+            TajweedStore.prewarmRuleTrees()
+        }
+
         defer {
             Task { @MainActor in
                 self.loadTask = nil
@@ -4367,12 +4241,6 @@ final class QuranData: ObservableObject {
 
             await MainActor.run {
                 self.verseIndex = []
-                self.arabicTokenIndex = [:]
-                self.arabicPrefix2Index = [:]
-                self.silentArabicTokenIndex = [:]
-                self.silentArabicPrefix2Index = [:]
-                self.englishTokenIndex = [:]
-                self.englishPrefix3Index = [:]
                 self.allVerseIndices = []
                 self.cachedVerseIndexQiraah = finalizedQiraahKey
                 self.surahBoundaryModels = boundaryModels
@@ -4495,12 +4363,6 @@ final class QuranData: ObservableObject {
 
         await MainActor.run {
             self.verseIndex = []
-            self.arabicTokenIndex = [:]
-            self.arabicPrefix2Index = [:]
-            self.silentArabicTokenIndex = [:]
-            self.silentArabicPrefix2Index = [:]
-            self.englishTokenIndex = [:]
-            self.englishPrefix3Index = [:]
             self.allVerseIndices = []
             self.cachedVerseIndexQiraah = finalizedQiraahKey
             self.surahBoundaryModels = boundaryModels
@@ -4854,6 +4716,20 @@ final class QuranData: ObservableObject {
             }
         }
 
+        #if DEBUG
+        // Data-regression tripwire. Everything downstream trusts `ayah.page`/`ayah.juz` from the JSON,
+        // and a gap fails SILENTLY at runtime (a page query just returns nothing, the Pages list skips
+        // the page with no indication). Only meaningful for the full corpus - a partial build or an
+        // in-flight qiraah merge legitimately has holes.
+        if !surahs.isEmpty, surahs.count == 114 {
+            let expectedLastPage = surahs.last?.pageEnd ?? 604
+            let missingPages = (1...expectedLastPage).filter { pageLookup[$0] == nil }
+            let missingJuz = (1...30).filter { juzLookup[$0] == nil }
+            if !missingPages.isEmpty { logger.debug("Mushaf page map has gaps: \(missingPages)") }
+            if !missingJuz.isEmpty { logger.debug("Juz map has gaps: \(missingJuz)") }
+        }
+        #endif
+
         return (page: pageLookup, juz: juzLookup)
     }
 
@@ -5154,22 +5030,55 @@ final class QuranData: ObservableObject {
         return results
     }
 
-    /// Every ayah on a given mushaf page, in order - used by page search results.
-    func ayahs(onPage page: Int) -> [(surah: Surah, ayah: Ayah)] {
-        quran.flatMap { surah in
-            surah.ayahs.compactMap { ayah in
-                ayah.page == page ? (surah: surah, ayah: ayah) : nil
-            }
-        }
+    /// One-entry memos for the page/juz search results: the search sections re-evaluate these on every
+    /// body pass while a "page N" / "juz N" query is active, and the unmemoized version flatMapped all
+    /// 6,236 ayahs per render. Invalidated alongside the other derived caches when `quran` reloads.
+    private var cachedAyahsOnPage: (page: Int, results: [(surah: Surah, ayah: Ayah)])?
+    private var cachedAyahsInJuz: (juz: Int, results: [(surah: Surah, ayah: Ayah)])?
+
+    func invalidatePageJuzResultMemos() {
+        cachedAyahsOnPage = nil
+        cachedAyahsInJuz = nil
     }
 
-    /// Every ayah in a given juz, in order - used by juz search results.
-    func ayahs(inJuz juz: Int) -> [(surah: Surah, ayah: Ayah)] {
-        quran.flatMap { surah in
-            surah.ayahs.compactMap { ayah in
-                ayah.juz == juz ? (surah: surah, ayah: ayah) : nil
+    /// Every ayah on a given mushaf page, in order - used by page search results. Page numbers ascend
+    /// monotonically through the mushaf, so the scan skips whole surahs before the page and stops at
+    /// the first ayah past it.
+    func ayahs(onPage page: Int) -> [(surah: Surah, ayah: Ayah)] {
+        if let cached = cachedAyahsOnPage, cached.page == page { return cached.results }
+        var results: [(surah: Surah, ayah: Ayah)] = []
+        outer: for surah in quran {
+            if let end = surah.pageEnd, end < page { continue }
+            for ayah in surah.ayahs {
+                guard let p = ayah.page else { continue }
+                if p == page {
+                    results.append((surah: surah, ayah: ayah))
+                } else if p > page {
+                    break outer
+                }
             }
         }
+        cachedAyahsOnPage = (page, results)
+        return results
+    }
+
+    /// Every ayah in a given juz, in order - used by juz search results. Juz numbers ascend through the
+    /// corpus the same way pages do.
+    func ayahs(inJuz juz: Int) -> [(surah: Surah, ayah: Ayah)] {
+        if let cached = cachedAyahsInJuz, cached.juz == juz { return cached.results }
+        var results: [(surah: Surah, ayah: Ayah)] = []
+        outer: for surah in quran {
+            for ayah in surah.ayahs {
+                guard let j = ayah.juz else { continue }
+                if j == juz {
+                    results.append((surah: surah, ayah: ayah))
+                } else if j > juz {
+                    break outer
+                }
+            }
+        }
+        cachedAyahsInJuz = (juz, results)
+        return results
     }
 
     func filteredSurahs(query rawQuery: String) -> [Surah] {
@@ -5268,62 +5177,6 @@ final class QuranData: ObservableObject {
     }
 
     @MainActor
-    func searchVerses(term raw: String, limit: Int = 10, offset: Int = 0) -> [VerseIndexEntry] {
-        #if os(watchOS)
-        return []
-        #else
-        guard isVerseSearchReady else { return [] }
-        let currentKey = settings.displayQiraahForArabic ?? ""
-        if cachedVerseIndexQiraah != currentKey {
-            // Same missed-invalidation handling as `verseSearchSnapshot()`: never run the full index rebuild
-            // synchronously on the main thread - repair off-main and report no results for this pass.
-            isVerseSearchReady = false
-            cachedVerseSearchSnapshot = nil
-            scheduleFallbackVerseIndexRebuild(qiraahKey: currentKey)
-            return []
-        }
-        guard !verseIndex.isEmpty else { return [] }
-
-        let q = settings.cleanSearch(raw, whitespace: true)
-        guard !q.isEmpty else { return [] }
-        if q.rangeOfCharacter(from: .decimalDigits) != nil { return [] }
-        let booleanGroups = booleanAyahSearchGroups(from: raw)
-        if let booleanGroups, booleanGroups.isEmpty { return [] }
-
-        let useArabic = raw.containsArabicLetters
-
-        if let booleanGroups {
-            var filtered: [VerseIndexEntry] = []
-            filtered.reserveCapacity(limit == .max ? 64 : min(limit, 64))
-
-            var skipped = 0
-            for entry in verseIndex {
-                guard matchesBooleanAyahSearch(entry: entry, useArabic: useArabic, groups: booleanGroups) else { continue }
-                if skipped < offset { skipped += 1; continue }
-                filtered.append(entry)
-                if limit != .max, filtered.count >= limit { break }
-            }
-            return filtered
-        }
-
-        let silentQuery = useArabic && settings.ignoreSilentLettersInQuranSearch
-            ? settings.cleanSearchIgnoringSilentArabicLetters(raw, whitespace: true)
-            : nil
-        return regularSearchResults(for: q, silentQuery: silentQuery, useArabic: useArabic, qiraahKey: currentKey, limit: limit, offset: offset)
-        #endif
-    }
-
-    /// MAIN ACTOR ONLY - and now compiler-enforced, not just an assert (the assert compiled out of Release
-    /// builds, which is where the crash lived). This reads the live index arrays - plain Swift arrays and
-    /// dictionaries whose writers all publish on the main actor. Reading them from another thread races
-    /// those writes: Swift's copy-on-write buffers are not thread-safe, and the crash is an EXC_BAD_ACCESS
-    /// deep in refcounting. That is exactly the ayah-search crash - and Low Power Mode made it frequent,
-    /// because it throttles the background index build and so widens the window during which a search runs
-    /// while the arrays are still being (re)assigned.
-    ///
-    /// The returned snapshot is a value type holding immutable copies, so it is safe to hand to any thread;
-    /// only the HANDOFF has to happen here, on main.
-    @MainActor
     func verseSearchSnapshot() -> VerseSearchSnapshot? {
         #if os(watchOS)
         return nil
@@ -5353,148 +5206,11 @@ final class QuranData: ObservableObject {
         let snapshot = VerseSearchSnapshot(
             qiraahKey: currentKey,
             verseIndex: verseIndex,
-            arabicTokenIndex: arabicTokenIndex,
-            arabicPrefix2Index: arabicPrefix2Index,
-            silentArabicTokenIndex: silentArabicTokenIndex,
-            silentArabicPrefix2Index: silentArabicPrefix2Index,
-            englishTokenIndex: englishTokenIndex,
-            englishPrefix3Index: englishPrefix3Index,
             allVerseIndices: allVerseIndices
         )
         cachedVerseSearchSnapshot = snapshot
         return snapshot
         #endif
-    }
-
-    private func regularSearchResults(
-        for cleanedQuery: String,
-        silentQuery: String?,
-        useArabic: Bool,
-        qiraahKey: String,
-        limit: Int,
-        offset: Int
-    ) -> [VerseIndexEntry] {
-        let cacheKey = SearchResultCacheKey(
-            qiraahKey: qiraahKey,
-            cleanedQuery: cleanedQuery,
-            silentQuery: silentQuery,
-            useArabic: useArabic,
-            ignoreSilentLetters: useArabic && settings.ignoreSilentLettersInQuranSearch
-        )
-
-        if let cached = searchResultIndexCache[cacheKey] {
-            var results: [VerseIndexEntry] = []
-            results.reserveCapacity(limit == .max ? 64 : min(limit, 64))
-            var skipped = 0
-
-            for index in cached {
-                guard verseIndex.indices.contains(index) else { continue }
-                if skipped < offset {
-                    skipped += 1
-                    continue
-                }
-                results.append(verseIndex[index])
-                if limit != .max, results.count >= limit { break }
-            }
-            return results
-        }
-
-        var results: [VerseIndexEntry] = []
-        results.reserveCapacity(limit == .max ? 64 : min(limit, 64))
-
-        var skipped = 0
-        var matchingIndices: [Int] = []
-        if limit == .max {
-            matchingIndices.reserveCapacity(64)
-        }
-
-        // Scan every verse - see the note in the snapshot's regularSearchResults: the word/prefix index
-        // can't represent mid-word substring hits, so gating on it made plain search miss them and behave
-        // like a whole-word/exact match. The full match list is cached below for paginated reuse.
-        for index in allVerseIndices {
-            guard verseIndex.indices.contains(index) else { continue }
-            let entry = verseIndex[index]
-            guard regularSearchEntryMatches(entry, cleanedQuery: cleanedQuery, silentQuery: silentQuery, useArabic: useArabic) else { continue }
-
-            if limit == .max {
-                matchingIndices.append(index)
-            }
-
-            if skipped < offset {
-                skipped += 1
-                continue
-            }
-
-            results.append(entry)
-            if limit != .max, results.count >= limit { break }
-        }
-
-        if limit == .max {
-            if searchResultIndexCache.count > 64 {
-                searchResultIndexCache.removeAll(keepingCapacity: true)
-            }
-            searchResultIndexCache[cacheKey] = matchingIndices
-        }
-
-        return results
-    }
-
-    private func regularSearchEntryMatches(
-        _ entry: VerseIndexEntry,
-        cleanedQuery: String,
-        silentQuery: String?,
-        useArabic: Bool
-    ) -> Bool {
-        if useArabic {
-            if entry.arabicBlob.contains(cleanedQuery) || phrasePrefixMatch(entry.arabicTokens, query: searchTokens(from: cleanedQuery)) {
-                return true
-            }
-            guard let silentQuery, !silentQuery.isEmpty else { return false }
-            return entry.silentArabicBlob.contains(silentQuery)
-                || phrasePrefixMatch(entry.silentArabicTokens, query: searchTokens(from: silentQuery))
-        }
-
-        return entry.englishBlob.contains(cleanedQuery)
-            || phrasePrefixMatch(entry.englishTokens, query: searchTokens(from: cleanedQuery))
-    }
-
-    private func phrasePrefixMatch(_ haystack: [String], query: [String]) -> Bool {
-        guard !query.isEmpty, haystack.count >= query.count else { return false }
-
-        for start in 0...(haystack.count - query.count) {
-            var matched = true
-            for offset in query.indices {
-                let word = haystack[start + offset]
-                let term = query[offset]
-                if offset == query.count - 1 {
-                    if !word.hasPrefix(term) { matched = false; break }
-                } else if word != term {
-                    matched = false
-                    break
-                }
-            }
-            if matched { return true }
-        }
-
-        return false
-    }
-
-
-    private struct BooleanAyahTerm {
-        enum MatchMode {
-            case contains
-            case startsWith
-            case endsWith
-            case exact
-        }
-
-        let value: String
-        let isNegated: Bool
-        let matchMode: MatchMode
-        let requiresTashkeelMatch: Bool
-        let tashkeelPattern: String
-        let requiresExactEnglishMatch: Bool
-        let exactEnglishPhrase: String
     }
 
     func boundaryModel(forSurah surahID: Int) -> SurahBoundaryModel? {
@@ -5505,135 +5221,6 @@ final class QuranData: ObservableObject {
         return surahBoundaryModels[surahID]
     }
 
-    private func booleanAyahSearchGroups(from rawQuery: String) -> [[BooleanAyahTerm]]? {
-        let normalized = rawQuery
-            .replacingOccurrences(of: "&&", with: "&")
-            .replacingOccurrences(of: "||", with: "|")
-
-        guard normalized.contains("&") || normalized.contains("|") || normalized.contains("!") || normalized.contains("#") || normalized.contains("^") || normalized.contains("%") || normalized.contains("$") else {
-            return nil
-        }
-
-        return normalized
-            .split(separator: "|", omittingEmptySubsequences: false)
-            .map { part in
-                part
-                    .split(separator: "&", omittingEmptySubsequences: false)
-                    .map { String($0).trimmingCharacters(in: .whitespacesAndNewlines) }
-                    .compactMap(booleanAyahSearchTerm(from:))
-            }
-            .filter { !$0.isEmpty }
-    }
-
-    private func booleanAyahSearchTerm(from rawTerm: String) -> BooleanAyahTerm? {
-        var term = rawTerm.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !term.isEmpty else { return nil }
-
-        var isNegated = false
-        while term.hasPrefix("!") {
-            isNegated.toggle()
-            term.removeFirst()
-            term = term.trimmingCharacters(in: .whitespacesAndNewlines)
-        }
-
-        var requiresTashkeelMatch = false
-        while term.hasPrefix("#") {
-            requiresTashkeelMatch = true
-            term.removeFirst()
-            term = term.trimmingCharacters(in: .whitespacesAndNewlines)
-        }
-
-        var startsWithMatch = false
-        if term.hasPrefix("^") {
-            startsWithMatch = true
-            term.removeFirst()
-            term = term.trimmingCharacters(in: .whitespacesAndNewlines)
-        }
-
-        var endsWithMatch = false
-        if term.hasSuffix("%") || term.hasSuffix("$") {
-            endsWithMatch = true
-            term.removeLast()
-            term = term.trimmingCharacters(in: .whitespacesAndNewlines)
-        }
-
-        guard !term.isEmpty else { return nil }
-        let cleaned = settings.cleanSearch(term, whitespace: true)
-        guard !cleaned.isEmpty else { return nil }
-
-        let matchMode: BooleanAyahTerm.MatchMode
-        if startsWithMatch && endsWithMatch {
-            matchMode = .exact
-        } else if startsWithMatch {
-            matchMode = .startsWith
-        } else if endsWithMatch {
-            matchMode = .endsWith
-        } else {
-            matchMode = .contains
-        }
-
-        return BooleanAyahTerm(
-            value: cleaned,
-            isNegated: isNegated,
-            matchMode: matchMode,
-            requiresTashkeelMatch: requiresTashkeelMatch && term.containsArabicLetters,
-            tashkeelPattern: arabicTashkeelBlob(term),
-            requiresExactEnglishMatch: requiresTashkeelMatch && !term.containsArabicLetters,
-            exactEnglishPhrase: exactPhraseBlob(term)
-        )
-    }
-
-    private func ayahTermMatch(haystack: String, tokens: [String], term: String, mode: BooleanAyahTerm.MatchMode) -> Bool {
-        switch mode {
-        case .contains:
-            return haystack.contains(term)
-        case .startsWith:
-            return haystack.hasPrefix(term) || tokens.contains(where: { $0.hasPrefix(term) })
-        case .endsWith:
-            return haystack.hasSuffix(term) || tokens.contains(where: { $0.hasSuffix(term) })
-        case .exact:
-            return haystack == term || tokens.contains(term)
-        }
-    }
-
-    private func matchesBooleanAyahSearch(entry: VerseIndexEntry, useArabic: Bool, groups: [[BooleanAyahTerm]]) -> Bool {
-        groups.contains { andTerms in
-            andTerms.allSatisfy { term in
-                let containsTerm: Bool
-                if useArabic, term.requiresTashkeelMatch {
-                    let lettersMatch = ayahTermMatch(
-                        haystack: entry.arabicBlob,
-                        tokens: entry.arabicTokens,
-                        term: term.value,
-                        mode: term.matchMode
-                    )
-                    let tashkeelMatch = term.tashkeelPattern.isEmpty || entry.arabicTashkeelBlob.contains(term.tashkeelPattern)
-                    containsTerm = lettersMatch && tashkeelMatch
-                } else if !useArabic, term.requiresExactEnglishMatch {
-                    let exactTokens = searchTokens(from: term.exactEnglishPhrase)
-                    containsTerm = !term.exactEnglishPhrase.isEmpty && ayahTermMatch(
-                        haystack: entry.englishExactBlob,
-                        tokens: exactTokens,
-                        term: term.exactEnglishPhrase,
-                        mode: term.matchMode
-                    )
-                } else {
-                    let haystack = useArabic ? entry.arabicBlob : entry.englishBlob
-                    let tokens = useArabic ? entry.arabicTokens : entry.englishTokens
-                    containsTerm = ayahTermMatch(haystack: haystack, tokens: tokens, term: term.value, mode: term.matchMode)
-                }
-                return term.isNegated ? !containsTerm : containsTerm
-            }
-        }
-    }
-    
-    @MainActor
-    func searchVersesAll(term raw: String) -> [VerseIndexEntry] {
-        withAnimation {
-            searchVerses(term: raw, limit: .max, offset: 0)
-        }
-    }
-    
     static let juzList: [Juz] = [
         Juz(id: 1,
             nameArabic: "الم",

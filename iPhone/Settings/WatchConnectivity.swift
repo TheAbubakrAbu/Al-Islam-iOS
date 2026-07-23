@@ -185,11 +185,15 @@ final class WatchConnectivityManager: NSObject, WCSessionDelegate {
         }
 
         #if os(watchOS)
-        // Now that we know whether the iPhone app is installed, (re)schedule prayer notifications
-        // on the watch if it needs to handle them itself.
+        // Now that we know whether the iPhone app is installed, (re)schedule prayer notifications on
+        // the watch if it needs to handle them itself. `notification: true` is load-bearing: the launch
+        // fetch usually ran (and was dropped by the ownership guard) BEFORE activation resolved, so by
+        // now the prayers are fresh and a plain fetch would find nothing to do - `needsFetch == false`,
+        // no scheduling pass, and a standalone watch got ZERO adhans until the next day-rollover fetch.
+        // The forced notification pass also re-runs the paired-watch stale-schedule wipe.
         if activationState == .activated {
             Task { @MainActor in
-                Settings.shared.fetchPrayerTimes()
+                Settings.shared.fetchPrayerTimes(notification: true)
             }
         }
         #endif

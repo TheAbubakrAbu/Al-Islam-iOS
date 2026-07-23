@@ -158,25 +158,39 @@ struct GlanceCard: View {
         return "\(phase.name)\n\(phase.illuminationPercent)% illuminated"
     }
 
+    /// The winning (event, date) pair, resolved once per civil day + hijri year. Walking
+    /// `specialEvents` costs an Umm-al-Qura `date(from:)` conversion per event (~24 with the year
+    /// roll-over retries), and this card rebuilds on every Settings publish - the answer only changes
+    /// when the day (or the hijri reference year, at Maghrib near a year boundary) does.
+    private static var nextEventCache: (day: Date, hijriYear: Int, best: (name: String, date: Date)?)?
+
     /// The soonest upcoming entry from the app's Islamic-date list, rolled into next Hijri year if this
     /// year's occurrence has already passed.
     private var nextEventSummary: String? {
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: Date())
         let hijri = settings.hijriCalendar
+        let hijriYear = hijri.component(.year, from: settings.effectiveHijriReferenceDate())
 
-        var best: (name: String, date: Date)?
-        for (name, components, _, _) in settings.specialEvents {
-            var components = components
-            for _ in 0...1 {
-                guard let date = hijri.date(from: components) else { break }
-                let day = calendar.startOfDay(for: date)
-                if day >= today {
-                    if best == nil || day < best!.date { best = (name, day) }
-                    break
+        let best: (name: String, date: Date)?
+        if let cached = Self.nextEventCache, cached.day == today, cached.hijriYear == hijriYear {
+            best = cached.best
+        } else {
+            var found: (name: String, date: Date)?
+            for (name, components, _, _) in settings.specialEvents {
+                var components = components
+                for _ in 0...1 {
+                    guard let date = hijri.date(from: components) else { break }
+                    let day = calendar.startOfDay(for: date)
+                    if day >= today {
+                        if found == nil || day < found!.date { found = (name, day) }
+                        break
+                    }
+                    components.year = (components.year ?? hijriYear) + 1
                 }
-                components.year = (components.year ?? hijri.component(.year, from: today)) + 1
             }
+            Self.nextEventCache = (today, hijriYear, found)
+            best = found
         }
 
         guard let best else { return nil }

@@ -201,7 +201,11 @@ struct PageHeader: View {
 
 struct SurahSectionHeader: View {
     @ObservedObject var settings = Settings.shared
+    // Player state is only READ on watchOS (the wrist playback button). Observing it on iOS re-rendered
+    // this header on every play/pause/ayah-advance publish for a body that never looks at it.
+    #if os(watchOS)
     @ObservedObject var quranPlayer = QuranPlayer.shared
+    #endif
 
     var surah: Surah
     var compact: Bool = false

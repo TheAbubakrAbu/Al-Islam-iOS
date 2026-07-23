@@ -6,6 +6,9 @@ private struct AppReviewPromptModifier: ViewModifier {
     @Environment(\.scenePhase) private var scenePhase
     @AppStorage("timeSpent") private var timeSpent: Double = 0
     @AppStorage("shouldShowRateAlert") private var shouldShowRateAlert: Bool = true
+    /// Foreground sessions seen. The prompt waits for a RETURN visit: asking a first-time user to rate
+    /// the app three minutes into their first session is the wrong moment by definition.
+    @AppStorage("appReviewSessionCount") private var sessionCount: Int = 0
 
     @State private var startTime: Date?
     @State private var reviewTask: Task<Void, Never>?
@@ -16,6 +19,7 @@ private struct AppReviewPromptModifier: ViewModifier {
     func body(content: Content) -> some View {
         content
             .onAppear {
+                sessionCount += 1
                 guard shouldShowRateAlert else { return }
                 startTracking()
             }
@@ -73,6 +77,23 @@ private struct AppReviewPromptModifier: ViewModifier {
     // Presents Apple's in-app review sheet once and then disables future prompts.
     private func requestReview() {
         guard shouldShowRateAlert else { return }
+        // Not during the first session - the banked time makes them eligible on their return visit.
+        guard sessionCount >= 2 else { return }
+        // Never while the launch/splash cover is still up (a returning user with 3+ minutes banked used
+        // to be eligible the instant the app became active - mid-launch animation). Retry shortly;
+        // eligibility is already banked. Read the LIVE `AppReveal` mirror, NOT `@Environment(\.appRevealed)`:
+        // this runs inside an escaping Task whose captured copy of `self` froze the environment value at
+        // capture time - since every capture chain starts while the cover is still up, the old gate re-read
+        // a stale `false` on every retry and silently suppressed the prompt for the whole session.
+        guard AppReveal.revealed else {
+            reviewTask?.cancel()
+            reviewTask = Task {
+                try? await Task.sleep(nanoseconds: 5_000_000_000)
+                guard !Task.isCancelled else { return }
+                await MainActor.run { requestReview() }
+            }
+            return
+        }
         guard let windowScene = activeWindowScene else { return }
 
         SKStoreReviewController.requestReview(in: windowScene)

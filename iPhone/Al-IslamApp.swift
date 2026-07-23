@@ -51,20 +51,23 @@ struct AlIslamApp: App {
                 .tint(settings.accentColor.color)
                 .preferredColorScheme(settings.colorScheme)
                 .appReviewPrompt()
+                // Set ABOVE (outside) `.appReviewPrompt()` too, or its `@Environment(\.appRevealed)`
+                // reads the key's default (true): the copy inside `rootContent` sits BELOW the review
+                // modifier in the tree, and environment only flows down - the launch-cover gate on the
+                // review sheet was silently inert without this.
+                .environment(\.appRevealed, rootStage == .main)
                 .onAppear { settings.fetchPrayerTimes() }
                 //.statusBarHidden()
         }
         .onChange(of: settings.accentColor) { _ in
             WidgetCenter.shared.reloadAllTimelines()
         }
-        // No `.onChange` refresh for `prayerCalculation` or `travelingMode`: every path that writes them
-        // (the manual setters, the dialog overrides, the auto-checks inside a fetch, a synced snapshot)
-        // already performs its own recompute, with auto-checks suppressed where the change was a choice.
-        // A blanket refresh here would re-run the automatic detection with checks ON right after a manual
-        // change - the exact override/spam bug the old one-shot flags existed to paper over.
-        .onChange(of: settings.hanafiMadhab) { _ in
-            settings.fetchPrayerTimes(force: true)
-        }
+        // No `.onChange` refresh for `prayerCalculation`, `travelingMode`, or `hanafiMadhab`: every path
+        // that writes them (the manual setters, the dialog overrides, the auto-checks inside a fetch, a
+        // synced snapshot - and for the madhab, its own didSet with auto-checks suppressed) already
+        // performs its own recompute. A blanket refresh here would run a SECOND full forced fetch per
+        // flip and re-run the automatic detection with checks ON right after the change - the exact
+        // override/spam bug the old one-shot flags existed to paper over.
         .onChange(of: settings.hijriOffset) { _ in
             settings.updateDates()
             WidgetCenter.shared.reloadAllTimelines()
@@ -86,6 +89,10 @@ struct AlIslamApp: App {
                 // can start the fasting countdown. It no-ops outside Ramadan, and outside the hour before
                 // Fajr (suhoor) or Maghrib (iftar).
                 FastingActivityController.refresh()
+                // Re-resolve Hadith of the Day: `.task` fires only when the view tree is rebuilt, so an
+                // app foregrounded across midnight (never cold-launched) kept showing yesterday's card.
+                // No-ops within the same day.
+                HadithStore.shared.prepareDailyHadith()
                 // Coming back to a stale fix (landed, drove, flew) gets one immediate refresh; the cadence
                 // then keeps it loosely current (every ~5 min) for as long as the app stays frontmost -
                 // significant-change monitoring can't do this without cell coverage, e.g. on a plane.
@@ -151,7 +158,13 @@ struct AlIslamApp: App {
         // The tabs are mounted (and side-effecting views like AdhanView build) before the cover lifts; let them
         // hold user-facing prompts until we're actually on screen.
         .environment(\.appRevealed, rootStage == .main)
+        // Seed the LIVE mirror at mount: `onChange` below only fires on transitions, and the mirror
+        // defaults to `true` - without this, the launch window would read as revealed.
+        .onAppear { AppReveal.revealed = (rootStage == .main) }
         .onChange(of: rootStage) { stage in
+            // Keep the LIVE mirror in sync for escaping tasks (see `AppReveal`) - the environment value
+            // above only reaches view bodies, and a frozen captured copy is what broke the review prompt.
+            AppReveal.revealed = (stage == .main)
             if stage == .splash {
                 splashPresented = true
             } else if splashPresented {
@@ -209,6 +222,9 @@ private struct MainTabView: View {
             }
             .task { await warmUnderCover() }
             .task { await prewarmAllQuran() }
+            // The AI-search capability probe loads a disk-backed NLEmbedding model; its first touch used
+            // to land on the MAIN thread mid-launch (aiQueryEligible / corpus prep). Pay it here, off-main.
+            .task { Task.detached(priority: .utility) { SemanticSearchEngine.prewarmOffMain() } }
             // Resolve today's Hadith of the Day while the launch cover is still up, so the Hadith tab
             // opens with the card already there instead of computing it on arrival - and pre-decode the
             // books the user is most likely to open (last-read, favorites), so they open instantly.

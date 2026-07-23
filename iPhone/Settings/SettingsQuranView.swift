@@ -88,6 +88,10 @@ struct SettingsQuranView: View {
                         englishTextDestination
                     }
                 }
+                // Inline, not behind a link: one toggle doesn't earn a push, and this section had
+                // silently fallen out of the body in a refactor - the silent-letters search option was
+                // unreachable anywhere in the app while settings search still deep-linked to it.
+                searchSection
                 #if os(iOS)
                 Section {
                     quranSettingsLink(title: "Tafsir", systemImage: "text.book.closed") {
@@ -849,6 +853,7 @@ struct FavoritesView: View {
                         if let surah = quranData.quran.first(where: { $0.id == bookmarkedAyah.surah }),
                            let ayah = surah.ayahs.first(where: { $0.id == bookmarkedAyah.ayah }) {
                             SurahAyahRow(surah: surah, ayah: ayah)
+                                .equatable()
                         }
                     }
                     .onDelete(perform: removeAyahs)

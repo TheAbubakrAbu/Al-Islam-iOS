@@ -1,4 +1,5 @@
 import SwiftUI
+import Adhan
 
 /// The calculation-method picker: a searchable list, one row per method, each showing the angles it actually
 /// uses. Built like `ReciterListView` on purpose - it is the same shape of problem (a long list of named
@@ -65,6 +66,7 @@ struct PrayerCalculationListView: View {
                     }
 
                     customSection
+                    madhabAndHighLatitudeSection
                     explanationSection
                 }
             }
@@ -203,6 +205,59 @@ struct PrayerCalculationListView: View {
                     .padding(.vertical, 2)
             }
         }
+    }
+
+    /// The madhab + high-latitude controls. They lived inline on the PARENT settings screen (twice
+    /// orphaned in refactors); they belong here with the rest of the calculation choices - and the
+    /// settings-search index deep-links "hanafi"/"high latitude" to this screen.
+    private var madhabAndHighLatitudeSection: some View {
+        Section(header: Text("MADHAB & HIGH LATITUDE")) {
+            VStack(alignment: .leading) {
+                Toggle("Hanafi Calculation for Asr", isOn: $settings.hanafiMadhab.animation(.easeInOut))
+                    .font(.subheadline)
+                    .tint(settings.accentColor.color)
+                    .onChange(of: settings.hanafiMadhab) { _ in settings.hapticFeedback() }
+
+                Text("The Hanafi madhab uses the shadow ratio of 2 to 1 for Asr, while many other schools use 1 to 1. Enable this only if you follow the Hanafi method.")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .padding(.vertical, 2)
+            }
+
+            VStack(alignment: .leading) {
+                Picker("High Latitude Rule", selection: $settings.highLatitudeRule.animation(.easeInOut)) {
+                    Section {
+                        ForEach(Settings.highLatitudeRuleOptions, id: \.self) { option in
+                            Text(option).tag(option)
+                                .font(.subheadline)
+                        }
+                    } header: {
+                        Text("High Latitude Rule")
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .font(.subheadline)
+                .onChange(of: settings.highLatitudeRule) { _ in settings.hapticFeedback() }
+
+                Text(highLatitudeRuleCaption)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .padding(.vertical, 2)
+            }
+        }
+    }
+
+    private var highLatitudeRuleCaption: String {
+        // Not merely a high-latitude concern: on a short summer night the rule can shift Fajr and Isha as far
+        // south as Cairo (~30°N). Only in winter, or near the equator, does the choice make no difference.
+        var caption = "When the night is short, the sun never sinks low enough for the twilight that defines "
+            + "Fajr and Isha, so they are estimated. This matters most far from the equator, but can shift "
+            + "summer times at any latitude."
+        if let location = settings.currentLocation, location.latitude != 1000, location.longitude != 1000 {
+            let coordinates = Coordinates(latitude: location.latitude, longitude: location.longitude)
+            caption += " Automatic uses \(settings.recommendedHighLatitudeRuleLabel(at: coordinates)) in \(location.city)."
+        }
+        return caption
     }
 
     private var explanationSection: some View {

@@ -44,13 +44,37 @@ enum SkyPalette {
 }
 
 extension Settings {
+    /// Decoded-overrides memo, keyed by the exact JSON it was decoded from. SkyView reads the gradient
+    /// once per second while its clock ticks; without this every read re-ran `JSONDecoder` on a string
+    /// that changes only when the user edits colors. The string compare is a few bytes.
+    private static var skyGradientOverridesCache: (json: String, decoded: [String: [String]])?
+
+    private static let skyGradientSharedSuite = UserDefaults(suiteName: AppIdentifiers.appGroupSuiteName)
+
+    /// The palette JSON as THIS process can see it: the app reads its own `@AppStorage`; a widget or
+    /// other extension reads the app-group mirror (its standard defaults are its own, always empty),
+    /// which is what lets the gradient widget wear the user's custom colors.
+    private var resolvedSkyGradientsJSON: String {
+        if Self.isAppProcess { return skyGradientsJSON }
+        return Self.skyGradientSharedSuite?.string(forKey: "skyGradients") ?? skyGradientsJSON
+    }
+
     /// Stored as JSON in `@AppStorage` because `@AppStorage` can't hold a dictionary. Absent keys fall back to
     /// the defaults, so a partially-customized palette is fine and a future seventh slot needs no migration.
     private var skyGradientOverrides: [String: [String]] {
         get {
-            guard let data = skyGradientsJSON.data(using: .utf8),
-                  let decoded = try? JSONDecoder().decode([String: [String]].self, from: data)
-            else { return [:] }
+            let json = resolvedSkyGradientsJSON
+            if let cached = Self.skyGradientOverridesCache, cached.json == json {
+                return cached.decoded
+            }
+            let decoded: [String: [String]]
+            if let data = json.data(using: .utf8),
+               let parsed = try? JSONDecoder().decode([String: [String]].self, from: data) {
+                decoded = parsed
+            } else {
+                decoded = [:]
+            }
+            Self.skyGradientOverridesCache = (json, decoded)
             return decoded
         }
         set {

@@ -508,7 +508,7 @@ struct ProphetQuote: View {
                 #if os(watchOS)
                 return
                 #else
-                guard !AppPerformance.isLowPowerMode else { return }
+                guard !AppPerformance.shouldReduceAnimations else { return }
                 withAnimation(.easeInOut(duration: 2.2).repeatForever(autoreverses: true)) {
                     animateBadge = true
                 }

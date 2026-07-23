@@ -12,8 +12,15 @@ final class TasbihCounters: ObservableObject {
     /// Sentinel for "the free counter" rather than a row of `commonDhikrItems`.
     static let freeIndex = -1
 
-    /// Per-app-session scratch counts for the preset dhikr rows, keyed by row index.
-    @Published private var presetCounts: [Int: Int] = [:]
+    /// Counts for the preset dhikr rows, keyed by row index. Persisted like the free counter: these
+    /// used to be session-only "scratch" state, which meant a background jetsam mid-count silently
+    /// zeroed a dhikr the user was 80 taps into - the one loss a tally counter must never have.
+    @Published private var presetCounts: [Int: Int] {
+        didSet {
+            let stored = Dictionary(uniqueKeysWithValues: presetCounts.map { (String($0.key), $0.value) })
+            UserDefaults.standard.set(stored, forKey: "tasbihPresetCounts")
+        }
+    }
 
     /// The free count persists (same key the old `@AppStorage("tasbihFreeCount")` used), because it's
     /// meant to be carried across sittings and run up as high as the user likes.
@@ -23,6 +30,10 @@ final class TasbihCounters: ObservableObject {
 
     private init() {
         freeCount = UserDefaults.standard.integer(forKey: "tasbihFreeCount")
+        let stored = UserDefaults.standard.dictionary(forKey: "tasbihPresetCounts") as? [String: Int] ?? [:]
+        presetCounts = Dictionary(uniqueKeysWithValues: stored.compactMap { key, value in
+            Int(key).map { ($0, value) }
+        })
     }
 
     func binding(for index: Int) -> Binding<Int> {
@@ -333,9 +344,9 @@ struct ActiveTasbihCard: View {
         // The whole card is still the counter - the buttons are for correcting, not for the counting itself.
         .onTapGesture {
             settings.hapticFeedback()
-            withAnimation(.easeOut(duration: 0.15)) {
-                counterBinding.wrappedValue += 1
-            }
+            // No per-tap transaction: the ring animates via its own scoped .animation(value:), and a
+            // withAnimation per tap queued overlapping transactions under rapid dhikr tapping.
+            counterBinding.wrappedValue += 1
         }
     }
 
@@ -508,7 +519,7 @@ struct TasbihCounterControls: View {
                 Button {
                     guard count > 0 else { return }
                     settings.hapticFeedback()
-                    withAnimation { counter.wrappedValue = count - 1 }
+                    counter.wrappedValue = count - 1
                 } label: {
                     Image(systemName: "minus")
                         .font(.footnote.weight(.semibold))
@@ -528,7 +539,7 @@ struct TasbihCounterControls: View {
 
                 Button {
                     settings.hapticFeedback()
-                    withAnimation { counter.wrappedValue = count + 1 }
+                    counter.wrappedValue = count + 1
                 } label: {
                     Image(systemName: "plus")
                         .font(.footnote.weight(.semibold))

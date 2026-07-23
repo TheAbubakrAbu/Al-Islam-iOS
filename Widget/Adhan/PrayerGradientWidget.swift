@@ -110,10 +110,15 @@ struct PrayerGradientEntryView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
-    private func shortTime(_ date: Date) -> String {
+    // Static: this was the one per-render DateFormatter allocation in the widget set.
+    private static let shortTimeFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.timeStyle = .short
-        return formatter.string(from: date)
+        return formatter
+    }()
+
+    private func shortTime(_ date: Date) -> String {
+        Self.shortTimeFormatter.string(from: date)
     }
 }
 

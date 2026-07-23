@@ -252,6 +252,7 @@ struct HadithReferenceView: View {
                         List {
                             Section {
                                 HadithRow(book: book, hadith: resolved)
+                                    .equatable()
                             }
                             .themedListRowBackground()
                         }
@@ -323,7 +324,26 @@ struct HadithReferenceView: View {
 
 // MARK: - One hadith
 
-struct HadithRow: View {
+extension Settings {
+    /// One string folding every Settings field a hadith row's body reads - the hadith counterpart of
+    /// `ayahRenderSettingsSignature`. Equatable hadith rows compare it so an appearance change still
+    /// re-renders them, while an unrelated invalidation of their parent skips the long-text body.
+    var hadithRenderSettingsSignature: String {
+        [
+            showHadithArabic ? "1" : "0",
+            showHadithEnglish ? "1" : "0",
+            highlightAllahNamesHadith ? "1" : "0",
+            useFontArabic ? "1" : "0",
+            nonQuranArabicFontName,
+            "\(hadithArabicFontSize)",
+            "\(hadithEnglishFontSize)",
+            accentColor.rawValue,
+            customAccentColorHex
+        ].joined(separator: "|")
+    }
+}
+
+struct HadithRow: View, Equatable {
     @ObservedObject private var settings = Settings.shared
     /// The row renders ONLY bookmark/note state, so it observes the user-data object - not HadithStore,
     /// whose download/prewarm publishes used to re-render every visible row on every tick.
@@ -338,6 +358,23 @@ struct HadithRow: View {
     var compact: Bool = false
     /// The paged reader's Fit Page shrink - an overflowing page passes < 1 so its text fits the screen.
     var fontScale: CGFloat = 1
+    /// Captured at construction so a parent re-render on an appearance change delivers a fresh value and
+    /// fails `==` - see `Settings.hadithRenderSettingsSignature`.
+    var renderSettingsSignature: String = Settings.shared.hadithRenderSettingsSignature
+
+    /// The body lays out the hadith's FULL Arabic and English - the most expensive row in the tab - and
+    /// its parents re-render on every publish of objects the row doesn't care about (the last-read save
+    /// while reading, downloads, any Settings write). Bookmark/note state is deliberately NOT compared:
+    /// it lives in observed `HadithUserData`, whose publish invalidates the row directly, bypassing `==`.
+    static func == (l: Self, r: Self) -> Bool {
+        l.book.slug == r.book.slug &&
+        l.hadith.idInBook == r.hadith.idInBook &&
+        l.hadith.chapterId == r.hadith.chapterId &&
+        l.searchText == r.searchText &&
+        l.compact == r.compact &&
+        l.fontScale == r.fontScale &&
+        l.renderSettingsSignature == r.renderSettingsSignature
+    }
 
     @State private var showShareSheet = false
     @State private var showNoteSheet = false
@@ -361,6 +398,12 @@ struct HadithRow: View {
     /// position WITHIN its chapter ("1 -" for the first hadith of a chapter that starts at #100),
     /// the ayah row's within-surah numbering, for hadiths.
     @MainActor private static var chapterStartCache: [String: Int] = [:]
+
+    /// Called from the store's delete paths: a re-download may carry corrected chapter boundaries, and
+    /// this cache would otherwise serve stale within-chapter numbers for the rest of the process.
+    @MainActor static func clearChapterStartCache() {
+        chapterStartCache.removeAll()
+    }
 
     private var chapterHadithNumber: Int? {
         let key = "\(book.slug)-\(hadith.chapterId)"
@@ -744,12 +787,21 @@ struct HadithLoadMoreControls: View {
 
 /// A bookmarked hadith row in the Quran-bookmark format: reference, ONE line of Arabic (trailing), ONE
 /// line of English - never the narrator. Opens the hadith through the reference resolver.
-struct HadithBookmarkRow: View {
+struct HadithBookmarkRow: View, Equatable {
     @ObservedObject private var settings = Settings.shared
     /// Bookmark rows render only user marks - observe the user-data object, not the whole store.
     @ObservedObject private var userData = HadithUserData.shared
 
     let bookmark: HadithBookmark
+    /// See `Settings.hadithRenderSettingsSignature` - compared so appearance changes re-render the row.
+    var renderSettingsSignature: String = Settings.shared.hadithRenderSettingsSignature
+
+    /// These rows sit on the tab root, which stays alive under pushed screens - so while the user reads
+    /// a book, every last-read save republishes the store and re-ran these long-text bodies for nothing.
+    /// Note edits arrive through observed `HadithUserData` (bypasses `==`) AND through `bookmark` itself.
+    static func == (l: Self, r: Self) -> Bool {
+        l.bookmark == r.bookmark && l.renderSettingsSignature == r.renderSettingsSignature
+    }
 
     @State private var showNoteSheet = false
     @State private var noteDraft = ""
@@ -887,11 +939,19 @@ struct HadithBookmarkRow: View {
 
 /// The grid form of a bookmarked hadith - the Quran's bookmark grid tile shape: reference on top,
 /// one-line Arabic, one-line English, on clear glass.
-struct HadithBookmarkGridTile: View {
+struct HadithBookmarkGridTile: View, Equatable {
     @ObservedObject private var settings = Settings.shared
 
     let bookmark: HadithBookmark
     let onTap: () -> Void
+    /// See `Settings.hadithRenderSettingsSignature` - compared so appearance changes re-render the tile.
+    var renderSettingsSignature: String = Settings.shared.hadithRenderSettingsSignature
+
+    /// `onTap` is excluded from `==`: the call site only assigns the bookmark into parent state through
+    /// a binding, which stays valid however stale the captured closure is.
+    static func == (l: Self, r: Self) -> Bool {
+        l.bookmark == r.bookmark && l.renderSettingsSignature == r.renderSettingsSignature
+    }
 
     var body: some View {
         Button {
@@ -943,6 +1003,7 @@ struct HadithBookmarksListView: View {
                 Section(header: SectionPillHeader(title: "BOOKMARKS", count: userData.bookmarks.count)) {
                     ForEach(userData.bookmarks) { bookmark in
                         HadithBookmarkRow(bookmark: bookmark)
+                            .equatable()
                     }
 
                     if userData.bookmarks.isEmpty {
@@ -979,6 +1040,7 @@ struct HadithImmersiveView: View {
                 LazyVStack(alignment: .leading, spacing: 22) {
                     ForEach(hadiths) { hadith in
                         HadithRow(book: book, hadith: hadith)
+                            .equatable()
                             .textSelection(.enabled)
                     }
                 }

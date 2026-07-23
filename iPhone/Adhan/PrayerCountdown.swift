@@ -328,6 +328,17 @@ struct PrayerCountdown: View {
     }
 }
 
+extension PrayerCountdown: Equatable {
+    /// Everything this view draws comes from observed `Settings` state or its own timer-driven
+    /// `progress` - both of which invalidate the view directly, bypassing this comparison. A
+    /// parent-driven re-evaluation therefore never carries new information, and `presentation` is
+    /// the only stored input. Gating on it matters for `.skyFooter`: `SkyView` re-runs its body
+    /// every second to move the sun and would otherwise drag the whole countdown subtree with it.
+    static func == (lhs: PrayerCountdown, rhs: PrayerCountdown) -> Bool {
+        lhs.presentation == rhs.presentation
+    }
+}
+
 private struct CurrentPrayerCell: View {
     @ObservedObject private var settings = Settings.shared
 

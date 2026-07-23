@@ -91,16 +91,32 @@ struct HighlightedSnippet: View {
     }
 
     /// Re-fonts every comma/semicolon run to the rounded system face - see `basicFontForCommas`.
+    ///
+    /// Two-phase on purpose: the old single pass kept walking with indices captured BEFORE each attribute
+    /// write, and AttributedString documents its indices as invalidated by ANY mutation (attribute-only
+    /// included). Collecting character offsets first, then re-deriving fresh indices from the current
+    /// string per write, never uses an index across a mutation. Comma counts are tiny, so the
+    /// offset-walk cost is noise. Scans the attributed string itself (not `source`) because a
+    /// `preStyledSource` base can have a different character layout than `source`.
     private func applyBasicFontToCommas(_ attributed: AttributedString) -> AttributedString {
         guard let size = basicFontForCommas, sourceHasCommas else { return attributed }
         var result = attributed
+
+        var commaOffsets: [Int] = []
         var index = result.startIndex
+        var offset = 0
         while index < result.endIndex {
-            let next = result.characters.index(after: index)
             if Self.commaCharacters.contains(result.characters[index]) {
-                result[index..<next].font = .system(size: size, design: .rounded)
+                commaOffsets.append(offset)
             }
-            index = next
+            index = result.characters.index(after: index)
+            offset += 1
+        }
+
+        for commaOffset in commaOffsets {
+            let start = result.characters.index(result.startIndex, offsetBy: commaOffset)
+            let end = result.characters.index(after: start)
+            result[start..<end].font = .system(size: size, design: .rounded)
         }
         return result
     }
@@ -117,21 +133,68 @@ struct HighlightedSnippet: View {
 
     private final class SourceNormEntry: NSObject {
         let normalizedSource: String
-        let indexMap: [String.Index]
-        init(_ n: String, _ i: [String.Index]) { normalizedSource = n; indexMap = i }
+        /// UTF-16 offsets, NOT `String.Index`: cache entries are keyed by string CONTENT, so a hit can
+        /// serve an equal-content instance different from the one the entry was built on - and indices
+        /// are only defined for their own instance. Offsets are instance-free; `indices(atUTF16Offsets:in:)`
+        /// rebuilds real indices for the exact string being rendered.
+        let mapUTF16: [Int]
+        init(_ n: String, _ m: [Int]) { normalizedSource = n; mapUTF16 = m }
     }
 
     private final class RangeEntry: NSObject {
-        let ranges: [Range<String.Index>]
-        init(_ r: [Range<String.Index>]) { ranges = r }
+        /// (lower, upper) UTF-16 offset pairs - instance-free, same reason as `SourceNormEntry.mapUTF16`.
+        let spans: [(Int, Int)]
+        init(_ s: [(Int, Int)]) { spans = s }
     }
 
-    private final class NSRangeEntry: NSObject {
-        let ranges: [NSRange]
-        init(_ r: [NSRange]) { ranges = r }
+    /// Rebuilds `String.Index` values for THIS `source` instance from stored UTF-16 offsets
+    /// (non-decreasing; duplicates allowed - a collapsed space maps to the same character as the letter
+    /// after it). One O(n) walk. Returns nil if any offset fails to land on a character boundary of this
+    /// instance - impossible for equal content, but callers treat nil as a cache miss and recompute
+    /// rather than trust the entry.
+    nonisolated private static func indices(atUTF16Offsets offsets: [Int], in source: String) -> [String.Index]? {
+        var result: [String.Index] = []
+        result.reserveCapacity(offsets.count)
+        var i = 0
+        var utf16Pos = 0
+        var idx = source.startIndex
+        while i < offsets.count {
+            if offsets[i] == utf16Pos {
+                result.append(idx)
+                i += 1
+                continue
+            }
+            guard offsets[i] > utf16Pos, idx < source.endIndex else { return nil }
+            let next = source.index(after: idx)
+            utf16Pos += source.utf16.distance(from: idx, to: next)
+            idx = next
+        }
+        return result
     }
 
-    /// source → (normalizedSource, indexMap): amortises the O(n×k) per-character normalization.
+    /// The stored-span twin: materializes `Range<String.Index>` values for THIS instance. Nil means an
+    /// offset didn't line up (callers recompute fresh).
+    nonisolated private static func ranges(fromUTF16Spans spans: [(Int, Int)], in source: String) -> [Range<String.Index>]? {
+        guard !spans.isEmpty else { return [] }
+        let wanted = Set(spans.flatMap { [$0.0, $0.1] }).sorted()
+        guard let landed = indices(atUTF16Offsets: wanted, in: source) else { return nil }
+        let lookup = Dictionary(uniqueKeysWithValues: zip(wanted, landed))
+        var out: [Range<String.Index>] = []
+        out.reserveCapacity(spans.count)
+        for (lo, hi) in spans {
+            guard let l = lookup[lo], let h = lookup[hi], l < h else { return nil }
+            out.append(l..<h)
+        }
+        return out
+    }
+
+    /// Converts a range on THIS instance into instance-free UTF-16 offsets for storage.
+    nonisolated private static func utf16Span(of range: Range<String.Index>, in source: String) -> (Int, Int) {
+        (source.utf16.distance(from: source.startIndex, to: range.lowerBound),
+         source.utf16.distance(from: source.startIndex, to: range.upperBound))
+    }
+
+    /// source → (normalizedSource, mapUTF16): amortises the O(n×k) per-character normalization.
     /// nonisolated(unsafe): NSCache is thread-safe by contract; the prewarm fills it off-main.
     nonisolated(unsafe) private static let sourceNormCache: NSCache<NSString, SourceNormEntry> = {
         let c = NSCache<NSString, SourceNormEntry>()
@@ -153,14 +216,16 @@ struct HighlightedSnippet: View {
         return c
     }()
 
-    private static let allahNSRangeCache: NSCache<NSString, NSRangeEntry> = {
-        let c = NSCache<NSString, NSRangeEntry>()
-        c.countLimit = 7_000
-        return c
-    }()
-
     private func normalizeEnglishForHighlight(_ text: String, trimWhitespace: Bool) -> String {
         Self.normalizeEnglishForHighlightText(text, trimWhitespace: trimWhitespace)
+    }
+
+    /// The SEARCH-side twin of the highlight normalization: same punctuation/symbol strip + lowercase.
+    /// Hadith search folds BOTH its index and its queries through this, so "aishah" matches "'A'ishah"
+    /// exactly where the highlighter would color it - the matcher used to be stricter than the
+    /// highlighter (plain `lowercased()`), silently missing apostrophe/diacritic narrator names.
+    nonisolated static func foldedEnglishForSearch(_ text: String) -> String {
+        normalizeEnglishForHighlightText(text, trimWhitespace: false)
     }
 
     nonisolated static func normalizeEnglishForHighlightText(_ text: String, trimWhitespace: Bool) -> String {
@@ -186,7 +251,7 @@ struct HighlightedSnippet: View {
             let key = source as NSString
             guard sourceNormCache.object(forKey: key) == nil else { continue }
             let built = normalizedSourceAndMap(for: source)
-            sourceNormCache.setObject(SourceNormEntry(built.normalized, built.map), forKey: key)
+            sourceNormCache.setObject(SourceNormEntry(built.normalized, built.mapUTF16), forKey: key)
         }
     }
 
@@ -233,34 +298,51 @@ struct HighlightedSnippet: View {
         let normalizedTerm = normalizeForSearch(term, trimWhitespace: true)
         guard !normalizedTerm.isEmpty else { return attributed }
 
-        // --- Step 1: normalizedSource + indexMap, cached per source string ---
+        // --- Step 1: normalizedSource + UTF-16 map, cached per source CONTENT ---
         let sourceKey = source as NSString
         let normEntry: SourceNormEntry
         if let cached = Self.sourceNormCache.object(forKey: sourceKey) {
             normEntry = cached
         } else {
             let built = Self.normalizedSourceAndMap(for: source)
-            normEntry = SourceNormEntry(built.normalized, built.map)
+            normEntry = SourceNormEntry(built.normalized, built.mapUTF16)
             Self.sourceNormCache.setObject(normEntry, forKey: sourceKey)
         }
 
         // --- Step 2: matched ranges in original source, cached per (source, normalizedTerm, guarantee) ---
         // `guaranteeMatch` changes which fallbacks run, so it must be part of the key - otherwise the same
         // source+term shown once as a matched ayah field and once as a non-matching sibling would collide.
+        // Cached as UTF-16 spans and materialized for THIS instance; a nil materialization (offsets that
+        // don't land on this instance's character boundaries - impossible for equal content) falls through
+        // to a fresh compute instead of being trusted.
         let matchKey = "\(guaranteeMatch ? "1" : "0")\u{0000}\(source)\u{0000}\(normalizedTerm)" as NSString
-        let matchedRanges: [Range<String.Index>]
+        var matchedRanges: [Range<String.Index>]? = nil
         if let cached = Self.matchRangeCache.object(forKey: matchKey) {
-            matchedRanges = cached.ranges
-        } else {
+            matchedRanges = Self.ranges(fromUTF16Spans: cached.spans, in: source)
+        }
+        if matchedRanges == nil {
+            // Instance-true indices for the cached fold; if the entry somehow doesn't fit this instance,
+            // rebuild the fold fresh - the fresh offsets fit by construction.
+            let normalizedSource: String
+            let indexMap: [String.Index]
+            if let materialized = Self.indices(atUTF16Offsets: normEntry.mapUTF16, in: source) {
+                normalizedSource = normEntry.normalizedSource
+                indexMap = materialized
+            } else {
+                let built = Self.normalizedSourceAndMap(for: source)
+                normalizedSource = built.normalized
+                indexMap = Self.indices(atUTF16Offsets: built.mapUTF16, in: source) ?? []
+            }
+
             var ranges: [Range<String.Index>] = []
-            var searchStart = normEntry.normalizedSource.startIndex
-            while searchStart < normEntry.normalizedSource.endIndex,
-                  let matchRange = normEntry.normalizedSource.range(of: normalizedTerm, range: searchStart..<normEntry.normalizedSource.endIndex) {
+            var searchStart = normalizedSource.startIndex
+            while searchStart < normalizedSource.endIndex,
+                  let matchRange = normalizedSource.range(of: normalizedTerm, range: searchStart..<normalizedSource.endIndex) {
                 if let orig = originalRange(
                     in: source,
-                    normalizedSource: normEntry.normalizedSource,
+                    normalizedSource: normalizedSource,
                     matchRange: matchRange,
-                    indexMap: normEntry.indexMap
+                    indexMap: indexMap
                 ) {
                     ranges.append(orig)
                 }
@@ -272,8 +354,8 @@ struct HighlightedSnippet: View {
             if ranges.isEmpty, source.containsArabicLetters {
                 ranges = arabicLooseRanges(
                     source: source,
-                    normalizedSource: normEntry.normalizedSource,
-                    indexMap: normEntry.indexMap,
+                    normalizedSource: normalizedSource,
+                    indexMap: indexMap,
                     normalizedTerm: normalizedTerm
                 )
             }
@@ -284,9 +366,9 @@ struct HighlightedSnippet: View {
             if ranges.isEmpty {
                 ranges = phrasePrefixRanges(
                     in: source,
-                    normalizedSource: normEntry.normalizedSource,
+                    normalizedSource: normalizedSource,
                     normalizedTerm: normalizedTerm,
-                    indexMap: normEntry.indexMap
+                    indexMap: indexMap
                 )
             }
             // Final safety net - ONLY when this field is expected to contain the match (`guaranteeMatch`,
@@ -299,12 +381,15 @@ struct HighlightedSnippet: View {
             if ranges.isEmpty, guaranteeMatch {
                 ranges = closestMatchRanges(in: source, normalizedTerm: normalizedTerm)
             }
-            Self.matchRangeCache.setObject(RangeEntry(ranges), forKey: matchKey)
+            Self.matchRangeCache.setObject(
+                RangeEntry(ranges.map { Self.utf16Span(of: $0, in: source) }),
+                forKey: matchKey
+            )
             matchedRanges = ranges
         }
 
         // --- Step 3: apply accent colour to each matched range ---
-        for range in matchedRanges {
+        for range in matchedRanges ?? [] {
             if let start = AttributedString.Index(range.lowerBound, within: attributed),
                let end = AttributedString.Index(range.upperBound, within: attributed) {
                 attributed[start..<end].foregroundColor = accent
@@ -579,8 +664,11 @@ struct HighlightedSnippet: View {
     private func highlightArabicAllah(source: String, attributed: inout AttributedString) {
         let cacheKey = source as NSString
         let ranges: [Range<String.Index>]
-        if let cached = Self.allahRangeCache.object(forKey: cacheKey) {
-            ranges = cached.ranges
+        // Cached as instance-free UTF-16 spans; a nil materialization (can't happen for equal content)
+        // falls through to a fresh scan rather than being trusted.
+        if let cached = Self.allahRangeCache.object(forKey: cacheKey),
+           let materialized = Self.ranges(fromUTF16Spans: cached.spans, in: source) {
+            ranges = materialized
         } else {
             var found: [Range<String.Index>] = []
             for start in source.indices {
@@ -588,7 +676,10 @@ struct HighlightedSnippet: View {
                     found.append(range)
                 }
             }
-            Self.allahRangeCache.setObject(RangeEntry(found), forKey: cacheKey)
+            Self.allahRangeCache.setObject(
+                RangeEntry(found.map { Self.utf16Span(of: $0, in: source) }),
+                forKey: cacheKey
+            )
             ranges = found
         }
 
@@ -620,53 +711,6 @@ struct HighlightedSnippet: View {
         }
 
         return nil
-    }
-
-    private func arabicAllahNSRange(startingAt start: String.Index, in source: String) -> NSRange? {
-        if source[start].allahBase?.isAllahAlif == true,
-           let afterAlif = nextNonMarkIndex(after: start, in: source),
-           source[afterAlif].allahBase == "ل",
-           let secondLam = nextNonMarkIndex(after: afterAlif, in: source),
-           source[secondLam].allahBase == "ل",
-           let heh = nextNonMarkIndex(after: secondLam, in: source),
-           source[heh].allahBase == "ه" {
-            return allahNSRange(from: start, throughHehAt: heh, in: source)
-        }
-
-        if source[start].allahBase == "ل",
-           let secondLam = nextNonMarkIndex(after: start, in: source),
-           source[secondLam].allahBase == "ل",
-           let heh = nextNonMarkIndex(after: secondLam, in: source),
-           source[heh].allahBase == "ه" {
-            return allahNSRange(from: start, throughHehAt: heh, in: source)
-        }
-
-        return nil
-    }
-
-    private func allahNSRange(from start: String.Index, throughHehAt heh: String.Index, in source: String) -> NSRange? {
-        guard var scalarCursor = heh.samePosition(in: source.unicodeScalars) else { return nil }
-
-        let lower = source.utf16.distance(from: source.startIndex, to: start)
-        var upper = source.utf16.distance(from: source.startIndex, to: heh)
-        var foundHeh = false
-
-        while scalarCursor < source.unicodeScalars.endIndex {
-            let scalar = source.unicodeScalars[scalarCursor]
-            if !foundHeh {
-                guard scalar.value == 0x0647 else { break }
-                foundHeh = true
-                upper += scalar.utf16.count
-                scalarCursor = source.unicodeScalars.index(after: scalarCursor)
-                continue
-            }
-            guard scalar.isArabicAllahHighlightMarkScalar else { break }
-            upper += scalar.utf16.count
-            scalarCursor = source.unicodeScalars.index(after: scalarCursor)
-        }
-
-        guard upper > lower else { return nil }
-        return NSRange(location: lower, length: upper - lower)
     }
 
     private func nextNonMarkIndex(after index: String.Index, in source: String) -> String.Index? {
@@ -705,16 +749,6 @@ struct HighlightedSnippet: View {
         return scalarCursor.samePosition(in: source) ?? source.index(after: index)
     }
 
-    private func platformRedColor() -> Any {
-        #if canImport(UIKit)
-        return UIColor(Color.red)
-        #elseif canImport(AppKit)
-        return NSColor(Color.red)
-        #else
-        return Color.red
-        #endif
-    }
-
     /// Builds the folded source and its index map TOGETHER, in one pass, with the same whitespace collapsing
     /// the query's fold applies.
     ///
@@ -725,11 +759,12 @@ struct HighlightedSnippet: View {
     /// length mismatch as corruption and refuses to map, so EVERY highlight on that row silently vanished.
     /// That was the "Arabic highlighting just doesn't work sometimes" bug. Built together, the lengths agree
     /// by construction.
-    nonisolated static func normalizedSourceAndMap(for source: String) -> (normalized: String, map: [String.Index]) {
+    nonisolated static func normalizedSourceAndMap(for source: String) -> (normalized: String, mapUTF16: [Int]) {
         var normalized = ""
-        var map: [String.Index] = []
+        var map: [Int] = []
         map.reserveCapacity(source.count)
         var pendingSpace = false
+        var utf16Pos = 0
 
         for idx in source.indices {
             let next = source.index(after: idx)
@@ -741,13 +776,14 @@ struct HighlightedSnippet: View {
                 } else {
                     if pendingSpace {
                         normalized.append(" ")
-                        map.append(idx)
+                        map.append(utf16Pos)
                         pendingSpace = false
                     }
                     normalized.append(ch)
-                    map.append(idx)
+                    map.append(utf16Pos)
                 }
             }
+            utf16Pos += source.utf16.distance(from: idx, to: next)
         }
         // Trailing whitespace was never emitted, matching the query's trim.
         return (normalized, map)

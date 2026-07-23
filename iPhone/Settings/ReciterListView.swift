@@ -523,7 +523,7 @@ struct ReciterListView: View {
 
     private var reciterSearchControlsInset: some View {
         #if os(iOS)
-        SearchBar(text: $searchText.animation(.easeInOut))
+        SearchBar(text: (AppPerformance.shouldReduceAnimations ? $searchText : $searchText.animation(.easeInOut)))
         .padding([.leading, .top], -8)
         #else
         EmptyView()
@@ -930,7 +930,7 @@ struct ReciterListView: View {
                     .background(Color.white.opacity(0.00001))
             }
             #elseif os(watchOS)
-            .searchable(text: $searchText.animation(.easeInOut))
+            .searchable(text: (AppPerformance.shouldReduceAnimations ? $searchText : $searchText.animation(.easeInOut)))
             #endif
             .applyConditionalListStyle()
             .confirmationDialog(qiraahChangeDialogTitle, isPresented: Binding(
@@ -1170,7 +1170,7 @@ struct ReciterListView: View {
                 requestScrollToReciter(reciter)
             }
         )
-        .environmentObject(downloadManager)
+        .equatable()
         #else
         WatchReciterRow(
             reciter: reciter,
@@ -1196,9 +1196,13 @@ struct ReciterListView: View {
 }
 
 #if os(iOS)
-private struct ReciterRow: View {
-    @ObservedObject private var settings = Settings.shared
-    @ObservedObject private var downloadManager = ReciterDownloadManager.shared
+private struct ReciterRow: View, Equatable {
+    // Plain references, NOT @ObservedObject: every value this row RENDERS arrives as an input (the
+    // `downloadState` snapshot included), and the manager/settings are only touched from tap actions.
+    // Observing the manager here meant every progress byte-tick re-rendered every visible row - the
+    // Equatable snapshot the parent already passes couldn't skip anything.
+    private var settings: Settings { .shared }
+    private var downloadManager: ReciterDownloadManager { .shared }
 
     let reciter: Reciter
     let qiraah: Bool
@@ -1206,11 +1210,28 @@ private struct ReciterRow: View {
     let isSelected: Bool
     let downloadState: ReciterDownloadManager.DownloadState
     let accentColor: AccentColor
+    /// Compared alongside `accentColor`: for the `.custom` accent, `.color` resolves through this hex,
+    /// so an edit to it must fail `==` - this row observes nothing, and comparing only the enum case
+    /// left visible rows on the old tint until they scrolled off.
+    var customAccentHex: String = Settings.shared.customAccentColorHex
     let searchQuery: String
     let onSelect: () -> Void
     let onScrollToReciter: () -> Void
 
     @State private var confirmDownload = false
+
+    /// The closures are recreated per parent pass; identity lives in the value inputs. This is what
+    /// lets the one row whose snapshot changed re-render while the rest skip their bodies.
+    static func == (lhs: ReciterRow, rhs: ReciterRow) -> Bool {
+        lhs.reciter.id == rhs.reciter.id
+            && lhs.qiraah == rhs.qiraah
+            && lhs.isFavorite == rhs.isFavorite
+            && lhs.isSelected == rhs.isSelected
+            && lhs.downloadState == rhs.downloadState
+            && lhs.accentColor == rhs.accentColor
+            && lhs.customAccentHex == rhs.customAccentHex
+            && lhs.searchQuery == rhs.searchQuery
+    }
 
     var body: some View {
         let hasDownloads = downloadState.completedSurahs > 0
@@ -1350,7 +1371,7 @@ private struct ReciterRow: View {
             }
         }
         .confirmationDialog("Download \(reciter.name)?", isPresented: $confirmDownload, titleVisibility: .visible) {
-            Button("Download All 114 Surahs") {
+            Button("Download All \(reciter.carriedSurahCount) Surahs") {
                 settings.hapticFeedback()
                 withAnimation {
                     downloadManager.beginDownloadAll(for: reciter)
@@ -1360,8 +1381,8 @@ private struct ReciterRow: View {
             Button("Cancel") {}
         } message: {
             Text(reciter.supportsAyahSegments
-                ? "This downloads all 114 full-surah recitations for offline playback. This reciter also supports ayah segments, so individual ayahs and custom ranges then play offline too, cut from the downloaded surah. It runs in the background and may use significant data and storage."
-                : "This downloads all 114 full-surah recitations for offline playback - it does not download ayah-by-ayah audio. It runs in the background and may use significant data and storage.")
+                ? "This downloads all \(reciter.carriedSurahCount) full-surah recitations for offline playback. This reciter also supports ayah segments, so individual ayahs and custom ranges then play offline too, cut from the downloaded surah. It runs in the background and may use significant data and storage."
+                : "This downloads all \(reciter.carriedSurahCount) full-surah recitations for offline playback - it does not download ayah-by-ayah audio. It runs in the background and may use significant data and storage.")
         }
         .onAppear {
             downloadManager.ensureStateLoaded(for: reciter)

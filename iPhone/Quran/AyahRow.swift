@@ -348,9 +348,7 @@ struct AyahRow: View, Equatable {
     }
 
     private var tajweedAnimationKey: String {
-        let categorySignature = TajweedLegendCategory.allCases
-            .map { settings.isTajweedCategoryVisible($0) ? "1" : "0" }
-            .joined()
+        let categorySignature = settings.tajweedCategoryVisibilitySignature
         let qiraahKey = comparisonQiraahOverride ?? settings.displayQiraah
         return [
             settings.showTajweedColors ? "1" : "0",

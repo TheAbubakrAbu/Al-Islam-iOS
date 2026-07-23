@@ -100,17 +100,46 @@ struct PrayersProvider: TimelineProvider {
         // current/next against, so the widget flips exactly when the app would.
         let boundaries = settings.prayerBoundaryTimeline(around: now)
 
+        // The entry-flip instants: every prayer boundary, PLUS civil midnight. Nothing else spans the
+        // Isha → next-Fajr gap, so without a midnight entry the on-screen entry (and the hijri/date
+        // string formatted from `entry.date`) stayed on the PREVIOUS day all night for everyone with
+        // the maghrib-switch off - the default.
+        var flipTimes = boundaries.filter { $0.time > now && $0.time <= horizon }.map(\.time)
+        var midnight = Calendar.current.startOfDay(for: now)
+        while midnight <= horizon {
+            if midnight > now { flipTimes.append(midnight) }
+            guard let next = Calendar.current.date(byAdding: .day, value: 1, to: midnight) else { break }
+            midnight = next
+        }
+
+        // Per-day prayer tables, so an entry that is on screen TOMORROW morning lists tomorrow's clock
+        // times in the grid/split layouts - copying today's table drifted them by a minute or two.
+        var tablesByDay: [Date: (normal: [Prayer], full: [Prayer])] = [:]
+        func tables(for date: Date) -> (normal: [Prayer], full: [Prayer]) {
+            let day = Calendar.current.startOfDay(for: date)
+            if let cached = tablesByDay[day] { return cached }
+            let result: (normal: [Prayer], full: [Prayer])
+            if Calendar.current.isDate(date, inSameDayAs: now) {
+                result = (first.prayers, first.fullPrayers)
+            } else {
+                result = settings.getPrayerTimesNormalAndFull(for: date) ?? (first.prayers, first.fullPrayers)
+            }
+            tablesByDay[day] = result
+            return result
+        }
+
         var entries = [first]
-        for boundary in boundaries where boundary.time > now && boundary.time <= horizon {
-            let t = boundary.time
-            guard let next = boundaries.first(where: { $0.time > t }) else { break }
+        for t in Set(flipTimes).sorted() {
+            guard let current = boundaries.last(where: { $0.time <= t }),
+                  let next = boundaries.first(where: { $0.time > t }) else { continue }
+            let table = tables(for: t)
             entries.append(PrayersEntry(
                 date:                       t,
                 accentColor:                first.accentColor,
                 currentCity:                first.currentCity,
-                prayers:                    first.prayers,
-                fullPrayers:                first.fullPrayers,
-                currentPrayer:              boundary,
+                prayers:                    table.normal,
+                fullPrayers:                table.full,
+                currentPrayer:              current,
                 nextPrayer:                 next,
                 hijriOffset:                first.hijriOffset,
                 switchHijriDateAtMaghrib:   first.switchHijriDateAtMaghrib

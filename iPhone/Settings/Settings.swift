@@ -24,7 +24,9 @@ let logger = Logger(subsystem: AppIdentifiers.bundleIdentifier, category: "Setti
 /// Keep new settings in the matching section (and storage mechanism) so the split stays clean.
 final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     static let shared = Settings()
-    private let appGroupUserDefaults = UserDefaults(suiteName: AppIdentifiers.appGroupSuiteName)
+    // Internal (not private): the per-domain extension files (SettingsQuran and friends) mirror their
+    // typed accessors into the App Group suite for widgets/Siri, same as the members below do.
+    let appGroupUserDefaults = UserDefaults(suiteName: AppIdentifiers.appGroupSuiteName)
     @Published private(set) var isReadyForUI = false
 
     /// Decoded `prayers` cache so the `prayers` computed property doesn't re-run a full JSON decode on every
@@ -120,6 +122,9 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
             // One-time seed of the switchHijriDateAtMaghrib mirror (see its didSet): users who enabled the
             // toggle before the mirror existed would otherwise stay wrong in widgets until they re-toggled.
             appGroupUserDefaults?.setValue(switchHijriDateAtMaghrib, forKey: "switchHijriDateAtMaghrib")
+            // Same seed for the sky palette (see skyGradientsJSON's didSet): palettes customized before
+            // the mirror existed would otherwise never reach the gradient widget until re-edited.
+            appGroupUserDefaults?.setValue(skyGradientsJSON, forKey: "skyGradients")
 
             // Widgets read the app-group location; they must not touch CoreLocation authorization.
             DispatchQueue.main.async { [weak self] in
@@ -152,6 +157,14 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
             "favoriteEnglishTranslationIDsData", "savedSajdahAyahIDsData", "savedBrokenLetterAyahIDsData",
             "lastReadSurah", "lastReadAyah", "lastListenedAyahData", "lastListenedSurahData",
             "quranSearchHistoryData",
+            // The prayer tracker and menses-pause record: months of marks and exempt days - the most
+            // clearly "the user's, not a preference" data in the app.
+            "prayerTrackerData", "prayerTrackerExemptDaysData", "mensesPauseActive", "mensesPauseStartStamp",
+            // Hadith content: marks, favorites, reading positions, search history, daily-hadith history.
+            "hadithFavoriteBooks", "hadithFavoriteChapters", "hadithBookmarks",
+            "hadithLastReadByBook", "hadithSearchHistoryData", "hadithOfTheDayHistory", "hadithBookCounts",
+            // Tally counts (and the free counter's custom label, which is the user's own text).
+            "tasbihFreeCount", "tasbihPresetCounts", "tasbihFreeLabel",
             // Only wiped by a full erase: these are stats/history rather than saved items, but they're still
             // the user's, not preferences.
             "surahOpenCountsData", "surahPlayCountsData",
@@ -193,6 +206,15 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
         hanafiMadhab = false
         prayerCalculation = "Muslim World League"
         hijriOffset = 0
+        customPrayerNames = [:]
+        highLatitudeRule = "Automatic"
+
+        // The domain wipe changed the data underneath every in-memory cache. The memo-style caches
+        // (favorites, bookmarks, sky palette) self-heal because they key on the stored bytes; these
+        // presence-checked ones kept serving the erased values until a cold launch.
+        loadKhatmProgressCacheFromStorage()
+        Self.invalidateTrackerCaches()
+        Self.invalidatePrayerComputationCache()
 
         objectWillChange.send()
         updateDates()
@@ -385,6 +407,13 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
         didSet {
             guard Self.isAppProcess else { return }
             appGroupUserDefaults?.setValue(hanafiMadhab, forKey: "hanafiMadhab")
+            // The madhab changes Asr's TIME (it's part of the computation cache key), so a flip must
+            // recompute now - without this, times/notifications/widgets kept the old Asr until the next
+            // unrelated fetch. `runAutoChecks: false` because this didSet also fires inside the
+            // watch-sync APPLY (which assigns through real setters and is engineered to do exactly one
+            // recompute with auto-checks off at the end) - letting auto-detection run mid-apply could
+            // flip the calculation/traveling settings the snapshot is in the middle of delivering.
+            fetchPrayerTimes(force: true, runAutoChecks: false)
             markExplicitlySet("hanafiMadhab")
         }
     }
@@ -435,6 +464,17 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     /// Which prayers were marked prayed, per civil day: encoded `[String: [String]]` keyed by
     /// "yyyy-MM-dd", values are prayer transliterations. Helpers live in SettingsAdhan.swift.
     @AppStorage("prayerTrackerData") var prayerTrackerData: Data = Data()
+
+    /// Days the tracker treats as EXEMPT (menstruation/postnatal): encoded `[String]` of "yyyy-MM-dd"
+    /// keys. Exempt days don't count against streaks or completion - prayer is not obligatory then and
+    /// is not made up later. Helpers live in SettingsAdhan.swift.
+    @AppStorage("prayerTrackerExemptDaysData") var trackerExemptDaysData: Data = Data()
+
+    /// The menses pause switch. While on, every day (from `mensesPauseStartStamp` forward) is exempt and
+    /// nagging reminders stay silent; turning it off writes the finished range into the exempt-days set.
+    /// Set through `setMensesPause` so the range bookkeeping and notification rebuild always happen.
+    @AppStorage("mensesPauseActive") var mensesPauseActive: Bool = false
+    @AppStorage("mensesPauseStartStamp") var mensesPauseStartStamp: Double = 0
 
     /// Set when a nagging notification is tapped: the prayer tab asks "Did you pray X?" and a yes
     /// marks the tracker and silences the rest of that cascade.
@@ -590,9 +630,16 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     @AppStorage("showSkyView") var showSkyView: Bool = true
 
     /// JSON map of prayer → `[topHex, bottomHex]` for the Adhan tab's sky card. Empty means "all defaults".
-    /// Read and written through the helpers in `SkyPalette.swift`; no `didSet` because it changes nothing
-    /// but pixels.
-    @AppStorage("skyGradients") var skyGradientsJSON: String = ""
+    /// Read and written through the helpers in `SkyPalette.swift`. Mirrored to the app group because the
+    /// gradient WIDGET renders through the same helpers - in the widget process, standard defaults are
+    /// the widget's own (empty), so without the mirror a custom palette never reached the widget at all.
+    /// (`resolvedSkyGradientsJSON` in SkyPalette.swift is the widget-side read.)
+    @AppStorage("skyGradients") var skyGradientsJSON: String = "" {
+        didSet {
+            guard Self.isAppProcess else { return }
+            appGroupUserDefaults?.setValue(skyGradientsJSON, forKey: "skyGradients")
+        }
+    }
 
     @AppStorage("preNotificationFajr") var preNotificationFajr: Int = 0 {
         didSet { self.fetchPrayerTimes(notification: true) }
@@ -789,27 +836,45 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     @AppStorage("reciterId") var reciterId: String = ""
 
     @AppStorage("favoriteReciterIDsData") private var favoriteReciterIDsData = Data()
+    /// Memoized like `favoriteSurahs`: `isReciterFavorite` runs inside a `.filter` over the whole
+    /// reciter list per body pass, which used to be a full JSON decode per element.
+    private static var favoriteReciterIDsCache: (data: Data, value: [String])?
     var favoriteReciterIDs: [String] {
         get {
-            (try? Self.decoder.decode([String].self, from: favoriteReciterIDsData)) ?? []
+            if let cached = Self.favoriteReciterIDsCache, cached.data == favoriteReciterIDsData {
+                return cached.value
+            }
+            let decoded = (try? Self.decoder.decode([String].self, from: favoriteReciterIDsData)) ?? []
+            Self.favoriteReciterIDsCache = (favoriteReciterIDsData, decoded)
+            return decoded
         }
         set {
             let normalized = Array(NSOrderedSet(array: newValue.compactMap {
                 let trimmed = $0.trimmingCharacters(in: .whitespacesAndNewlines)
                 return trimmed.isEmpty ? nil : trimmed
             })) as? [String] ?? []
-            favoriteReciterIDsData = (try? Self.encoder.encode(normalized)) ?? Data()
+            let encoded = (try? Self.encoder.encode(normalized)) ?? Data()
+            Self.favoriteReciterIDsCache = (encoded, normalized)
+            favoriteReciterIDsData = encoded
         }
     }
 
     @AppStorage("favoriteQiraahTagsData") private var favoriteQiraahTagsData = Data()
+    private static var favoriteQiraahTagsCache: (data: Data, value: [String])?
     var favoriteQiraahTags: [String] {
         get {
-            (try? Self.decoder.decode([String].self, from: favoriteQiraahTagsData)) ?? []
+            if let cached = Self.favoriteQiraahTagsCache, cached.data == favoriteQiraahTagsData {
+                return cached.value
+            }
+            let decoded = (try? Self.decoder.decode([String].self, from: favoriteQiraahTagsData)) ?? []
+            Self.favoriteQiraahTagsCache = (favoriteQiraahTagsData, decoded)
+            return decoded
         }
         set {
             let normalized = Array(NSOrderedSet(array: newValue.map(Self.normalizeLegacyRiwayahTag))) as? [String] ?? []
-            favoriteQiraahTagsData = (try? Self.encoder.encode(normalized)) ?? Data()
+            let encoded = (try? Self.encoder.encode(normalized)) ?? Data()
+            Self.favoriteQiraahTagsCache = (encoded, normalized)
+            favoriteQiraahTagsData = encoded
         }
     }
 
@@ -855,12 +920,23 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     @AppStorage("reciteType") var reciteType: String = "Continue to Next"
 
     @AppStorage("favoriteSurahsData") private var favoriteSurahsData = Data()
+    /// Decoded-favorites memo. These getters are read from every surah row's body and from
+    /// `QuranView.searchDisplayContext` on every render - without the memo each read re-ran a full
+    /// JSONDecoder pass, so scrolling the list decoded the same bytes once per visible row per frame.
+    private static var favoriteSurahsCache: (data: Data, value: [Int])?
     var favoriteSurahs: [Int] {
         get {
-            (try? Self.decoder.decode([Int].self, from: favoriteSurahsData)) ?? []
+            if let cached = Self.favoriteSurahsCache, cached.data == favoriteSurahsData {
+                return cached.value
+            }
+            let decoded = (try? Self.decoder.decode([Int].self, from: favoriteSurahsData)) ?? []
+            Self.favoriteSurahsCache = (favoriteSurahsData, decoded)
+            return decoded
         }
         set {
-            favoriteSurahsData = (try? Self.encoder.encode(newValue)) ?? Data()
+            let encoded = (try? Self.encoder.encode(newValue)) ?? Data()
+            Self.favoriteSurahsCache = (encoded, newValue)
+            favoriteSurahsData = encoded
         }
     }
 
@@ -886,12 +962,21 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     }
 
     @AppStorage("bookmarkedAyahsData") private var bookmarkedAyahsData = Data()
+    /// Same memo shape as `favoriteSurahs` - `SurahAyahRow.isBookmarked` reads this per row body.
+    private static var bookmarkedAyahsCache: (data: Data, value: [BookmarkedAyah])?
     var bookmarkedAyahs: [BookmarkedAyah] {
         get {
-            (try? Self.decoder.decode([BookmarkedAyah].self, from: bookmarkedAyahsData)) ?? []
+            if let cached = Self.bookmarkedAyahsCache, cached.data == bookmarkedAyahsData {
+                return cached.value
+            }
+            let decoded = (try? Self.decoder.decode([BookmarkedAyah].self, from: bookmarkedAyahsData)) ?? []
+            Self.bookmarkedAyahsCache = (bookmarkedAyahsData, decoded)
+            return decoded
         }
         set {
-            bookmarkedAyahsData = (try? Self.encoder.encode(newValue)) ?? Data()
+            let encoded = (try? Self.encoder.encode(newValue)) ?? Data()
+            Self.bookmarkedAyahsCache = (encoded, newValue)
+            bookmarkedAyahsData = encoded
         }
     }
 
@@ -1048,63 +1133,12 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     /// longer match the key and are ignored, so the deterministic pick quietly resumes tomorrow.
     @AppStorage("ayahOfTheDayOverride") var ayahOfTheDayOverride: String = ""
 
-    @AppStorage("lastListenedAyahData") private var lastListenedAyahData: Data?
-    var lastListenedAyah: LastListenedAyah? {
-        get {
-            // Fall back to the App Group suite so Siri/AppIntents can resolve this even when they run
-            // outside the main app's standard UserDefaults domain (which caused "no last listened").
-            guard let data = lastListenedAyahData ?? appGroupUserDefaults?.data(forKey: "lastListenedAyahData") else { return nil }
-            do {
-                return try Self.decoder.decode(LastListenedAyah.self, from: data)
-            } catch {
-                logger.debug("Failed to decode last listened ayah: \(error)")
-                return nil
-            }
-        }
-        set {
-            if let newValue = newValue {
-                do {
-                    let encoded = try Self.encoder.encode(newValue)
-                    lastListenedAyahData = encoded
-                    appGroupUserDefaults?.set(encoded, forKey: "lastListenedAyahData")
-                } catch {
-                    logger.debug("Failed to encode last listened ayah: \(error)")
-                }
-            } else {
-                lastListenedAyahData = nil
-                appGroupUserDefaults?.removeObject(forKey: "lastListenedAyahData")
-            }
-        }
-    }
-
-    @AppStorage("lastListenedSurahData") private var lastListenedSurahData: Data?
-    var lastListenedSurah: LastListenedSurah? {
-        get {
-            // Fall back to the App Group suite so Siri/AppIntents can resolve this even when they run
-            // outside the main app's standard UserDefaults domain (which caused "no last listened").
-            guard let data = lastListenedSurahData ?? appGroupUserDefaults?.data(forKey: "lastListenedSurahData") else { return nil }
-            do {
-                return try Self.decoder.decode(LastListenedSurah.self, from: data)
-            } catch {
-                logger.debug("Failed to decode last listened surah: \(error)")
-                return nil
-            }
-        }
-        set {
-            if let newValue = newValue {
-                do {
-                    let encoded = try Self.encoder.encode(newValue)
-                    lastListenedSurahData = encoded
-                    appGroupUserDefaults?.set(encoded, forKey: "lastListenedSurahData")
-                } catch {
-                    logger.debug("Failed to encode last listened surah: \(error)")
-                }
-            } else {
-                lastListenedSurahData = nil
-                appGroupUserDefaults?.removeObject(forKey: "lastListenedSurahData")
-            }
-        }
-    }
+    // The TYPED accessors over these two stores (`lastListenedAyah` / `lastListenedSurah`) live in
+    // SettingsQuran.swift: they name Quran model types, and this core file stays free of every domain's
+    // types except the prayer engine it structurally contains. Only the raw `Data` storage lives here
+    // (stored properties can't move to extensions); internal so the extension can reach it.
+    @AppStorage("lastListenedAyahData") var lastListenedAyahData: Data?
+    @AppStorage("lastListenedSurahData") var lastListenedSurahData: Data?
 
     /// Which qiraah/riwayah to show for Arabic text. Empty or "Hafs" = Hafs an Asim (default). Transliteration and translations only apply to Hafs.
     @AppStorage("displayQiraah") var displayQiraah: String = ""
@@ -1172,23 +1206,43 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     @AppStorage("showFullSurahRow") var showFullSurahRow: Bool = false
 
     @AppStorage("quranSearchHistoryData") private var quranSearchHistoryData = Data()
+    /// Memoized: the Quran search bar reads this per render while focused (per keystroke).
+    private static var quranSearchHistoryCache: (data: Data, value: [String])?
     var quranSearchHistory: [String] {
         get {
-            (try? Self.decoder.decode([String].self, from: quranSearchHistoryData)) ?? []
+            if let cached = Self.quranSearchHistoryCache, cached.data == quranSearchHistoryData {
+                return cached.value
+            }
+            let decoded = (try? Self.decoder.decode([String].self, from: quranSearchHistoryData)) ?? []
+            Self.quranSearchHistoryCache = (quranSearchHistoryData, decoded)
+            return decoded
         }
         set {
-            quranSearchHistoryData = (try? Self.encoder.encode(Array(newValue.prefix(10)))) ?? Data()
+            let capped = Array(newValue.prefix(10))
+            let encoded = (try? Self.encoder.encode(capped)) ?? Data()
+            Self.quranSearchHistoryCache = (encoded, capped)
+            quranSearchHistoryData = encoded
         }
     }
 
     // The Hadith tab's recent searches - the Quran search history's exact twin (chips over the search bar).
     @AppStorage("hadithSearchHistoryData") private var hadithSearchHistoryData = Data()
+    /// Memoized like `favoriteSurahs`: the chips row stays mounted and reads this on every render pass.
+    private static var hadithSearchHistoryCache: (data: Data, value: [String])?
     var hadithSearchHistory: [String] {
         get {
-            (try? Self.decoder.decode([String].self, from: hadithSearchHistoryData)) ?? []
+            if let cached = Self.hadithSearchHistoryCache, cached.data == hadithSearchHistoryData {
+                return cached.value
+            }
+            let decoded = (try? Self.decoder.decode([String].self, from: hadithSearchHistoryData)) ?? []
+            Self.hadithSearchHistoryCache = (hadithSearchHistoryData, decoded)
+            return decoded
         }
         set {
-            hadithSearchHistoryData = (try? Self.encoder.encode(Array(newValue.prefix(10)))) ?? Data()
+            let capped = Array(newValue.prefix(10))
+            let encoded = (try? Self.encoder.encode(capped)) ?? Data()
+            Self.hadithSearchHistoryCache = (encoded, capped)
+            hadithSearchHistoryData = encoded
         }
     }
 
@@ -1309,12 +1363,21 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     }
 
     @AppStorage("favoriteLetterData") private var favoriteLetterData = Data()
+    /// Memoized: the alphabet rows call `isLetterFavorite` per row per render.
+    private static var favoriteLettersCache: (data: Data, value: [LetterData])?
     var favoriteLetters: [LetterData] {
         get {
-            (try? Self.decoder.decode([LetterData].self, from: favoriteLetterData)) ?? []
+            if let cached = Self.favoriteLettersCache, cached.data == favoriteLetterData {
+                return cached.value
+            }
+            let decoded = (try? Self.decoder.decode([LetterData].self, from: favoriteLetterData)) ?? []
+            Self.favoriteLettersCache = (favoriteLetterData, decoded)
+            return decoded
         }
         set {
-            favoriteLetterData = (try? Self.encoder.encode(newValue)) ?? Data()
+            let encoded = (try? Self.encoder.encode(newValue)) ?? Data()
+            Self.favoriteLettersCache = (encoded, newValue)
+            favoriteLetterData = encoded
         }
     }
     
@@ -1491,9 +1554,19 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
 
     // MARK: - Global helpers (not Quran- or Adhan-specific)
 
+    #if os(iOS)
+    /// One reused, prepared generator: allocating a fresh `UIImpactFeedbackGenerator` per tap added
+    /// latency/jitter on the highest-frequency taps in the app (the tasbih counter). Re-preparing after
+    /// each impact keeps the Taptic Engine warm for the next one.
+    private static let impactGenerator = UIImpactFeedbackGenerator(style: .light)
+    #endif
+
     func hapticFeedback() {
         #if os(iOS)
-        if hapticOn { UIImpactFeedbackGenerator(style: .light).impactOccurred() }
+        if hapticOn {
+            Self.impactGenerator.impactOccurred()
+            Self.impactGenerator.prepare()
+        }
         #endif
 
         #if os(watchOS)

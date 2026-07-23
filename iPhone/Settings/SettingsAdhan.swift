@@ -239,12 +239,18 @@ extension Settings {
     }
 
     private static var rawPrayerCache: [RawPrayerCacheKey: [Prayer]] = [:]
-    private static let rawPrayerCacheLimit = 10
+    /// Insertion order for LRU eviction. Room for a couple of rendered calendar months plus the
+    /// countdown/widget days: a `[Prayer]` is a handful of tiny structs, so 96 entries is a few KB.
+    /// Eviction drops only the OLDEST entry - the old cap-10 `removeAll` wipe meant a month calendar
+    /// render thrashed the cache to zero hits and even evicted *today* out from under the countdown.
+    private static var rawPrayerCacheOrder: [RawPrayerCacheKey] = []
+    private static let rawPrayerCacheLimit = 96
 
     /// Drops memoized prayer times. Needed when something that is *baked into* a cached `Prayer` changes but
     /// isn't part of the cache key - custom prayer names, which alter the struct without altering the times.
     static func invalidatePrayerComputationCache() {
         rawPrayerCache.removeAll(keepingCapacity: true)
+        rawPrayerCacheOrder.removeAll(keepingCapacity: true)
     }
     private static let geocodeActor = GeocodeActor()
     private static let networkMonitor = NWPathMonitor()
@@ -1282,10 +1288,12 @@ extension Settings {
             .sorted { ($0.element.time, $0.offset) < ($1.element.time, $1.offset) }
             .map(\.element)
 
-        if Self.rawPrayerCache.count > Self.rawPrayerCacheLimit {
-            Self.rawPrayerCache.removeAll(keepingCapacity: true)
+        while Self.rawPrayerCache.count >= Self.rawPrayerCacheLimit, let oldest = Self.rawPrayerCacheOrder.first {
+            Self.rawPrayerCacheOrder.removeFirst()
+            Self.rawPrayerCache.removeValue(forKey: oldest)
         }
         Self.rawPrayerCache[cacheKey] = list
+        Self.rawPrayerCacheOrder.append(cacheKey)
         return list
     }
 
@@ -1598,6 +1606,20 @@ extension Settings {
         #endif
     }
 
+    /// Whether the standalone-vs-companion question can even be ANSWERED yet. WCSession activation is
+    /// async, and before it completes `activationState` reads `.notActivated` - which made the launch
+    /// scheduling pass conclude "no phone → I'm standalone" and schedule local adhans on a paired watch.
+    /// If the wrist dropped before activation resolved (the normal raise-and-drop interaction), those
+    /// survived and the user heard every adhan TWICE. Until this is true, a scheduling pass must neither
+    /// schedule nor wipe - `activationDidCompleteWith` reschedules the moment the answer exists.
+    var watchNotificationOwnershipResolved: Bool {
+        #if os(watchOS)
+        return WCSession.default.activationState == .activated
+        #else
+        return true
+        #endif
+    }
+
     @MainActor
     func requestNotificationAuthorization() async -> Bool {
         #if os(watchOS)
@@ -1724,7 +1746,11 @@ extension Settings {
     /// The distinct minutes-before offsets a prayer should fire at. Deduplicated: a prenotification of 15
     /// minutes and a nagging step at 15 minutes describe the same notification, and every offset consumes one
     /// slot of iOS's 64-request budget - a duplicate would silently cost a *later* prayer its adhan.
-    private func offsets(for prefs: NotifPrefs) -> [Int] {
+    ///
+    /// `includeNags` is the per-prayer, per-day verdict from `nagCascadeIsAnswered`: a cascade whose
+    /// question is already answered ("yes, I prayed it" - or tracking is paused) is never scheduled at
+    /// all, instead of being scheduled and then cancelled.
+    private func offsets(for prefs: NotifPrefs, includeNags: Bool = true) -> [Int] {
         var result: Set<Int> = []
 
         if self[keyPath: prefs.enabled] { result.insert(0) }
@@ -1734,10 +1760,29 @@ extension Settings {
             result.insert(minutes)
         }
 
-        if naggingMode && self[keyPath: prefs.nagging] {
+        if includeNags && naggingMode && self[keyPath: prefs.nagging] {
             result.formUnion(naggingCascade(start: naggingStartOffset))
         }
         return result.sorted(by: >)
+    }
+
+    /// True when the nag cascade leading up to `prayer` on `day` already has its answer, so scheduling
+    /// it would only nag about a prayer that is already prayed. The cascade before a prayer asks about
+    /// the PREVIOUS trackable prayer of that day; the cascade before the day's first (Fajr) asks about
+    /// the night prayer begun the previous civil day (Isha). Menses pause silences every cascade.
+    private func nagCascadeIsAnswered(for prayer: Prayer, in dayList: [Prayer], on day: Date) -> Bool {
+        if isTrackerExempt(on: day) || isTrackerExempt(on: Date()) { return true }
+
+        if let previous = dayList
+            .filter({ $0.time < prayer.time
+                && $0.nameTransliteration != prayer.nameTransliteration
+                && Self.trackablePrayerNames.contains($0.nameTransliteration) })
+            .max(by: { $0.time < $1.time }) {
+            return isPrayerMarkedPrayed(previous.nameTransliteration, on: day)
+        }
+
+        guard let previousDay = Calendar.current.date(byAdding: .day, value: -1, to: day) else { return false }
+        return isPrayerMarkedPrayed("Isha", on: previousDay)
     }
 
     /// The reminder cascade leading up to a prayer: 30, 15, 10, 5 minutes before, by default.
@@ -1793,6 +1838,10 @@ extension Settings {
 
     func schedulePrayerTimeNotifications() {
         #if os(watchOS)
+        // Activation still pending: standalone-vs-companion is UNKNOWN. Scheduling would double-alert a
+        // paired user; wiping would strand a truly standalone watch that suspends before activation.
+        // Do neither - `activationDidCompleteWith` reschedules as soon as the answer exists.
+        guard watchNotificationOwnershipResolved else { return }
         guard shouldScheduleNotificationsLocally else {
             // A companion iPhone now owns notifications - clear anything this Watch scheduled while it was
             // standalone so the two devices can't double-alert for the same prayer.
@@ -1827,9 +1876,11 @@ extension Settings {
                 }
             }
 
-            for prayer in prayersIncludingOptional(prayerObj.prayers, for: prayerObj.day) {
+            let todayList = prayersIncludingOptional(prayerObj.prayers, for: prayerObj.day)
+            for prayer in todayList {
                 guard let prefs = Self.notifTable[prayer.nameTransliteration] else { continue }
-                for minutes in offsets(for: prefs) {
+                let includeNags = !nagCascadeIsAnswered(for: prayer, in: todayList, on: prayerObj.day)
+                for minutes in offsets(for: prefs, includeNags: includeNags) {
                     collectPrayer(prayer, minutes == 0 ? nil : minutes)
                 }
             }
@@ -1839,9 +1890,11 @@ extension Settings {
                 for dayOffset in 1...futureDays {
                     let date = Calendar.current.date(byAdding: .day, value: dayOffset, to: prayerObj.day) ?? Date()
                     guard let list = getPrayerTimes(for: date) else { continue }
-                    for prayer in prayersIncludingOptional(list, for: date) {
+                    let dayList = prayersIncludingOptional(list, for: date)
+                    for prayer in dayList {
                         guard let prefs = Self.notifTable[prayer.nameTransliteration] else { continue }
-                        for minutes in offsets(for: prefs) {
+                        let includeNags = !nagCascadeIsAnswered(for: prayer, in: dayList, on: date)
+                        for minutes in offsets(for: prefs, includeNags: includeNags) {
                             collectPrayer(prayer, minutes == 0 ? nil : minutes)
                         }
                     }
@@ -2001,6 +2054,34 @@ extension Settings {
     /// names) - the same set that may carry an adhan.
     static var trackablePrayerNames: Set<String> { adhanEligiblePrayerNames }
 
+    /// The five obligatory prayers in day order. Every tracker statistic is computed against these
+    /// canonical names, whatever name a prayer was *recorded* under.
+    static let canonicalObligatoryPrayers = ["Fajr", "Dhuhr", "Asr", "Maghrib", "Isha"]
+
+    /// Which of the five obligatory prayers a recorded (or displayed) name stands for. This is what makes
+    /// a traveling-mode "Dhuhr/Asr" count as BOTH Dhuhr and Asr, "Maghrib/Isha" count as both, and a
+    /// Friday "Jumuah" count as Dhuhr - in the tracker row, the history views, and every statistic.
+    static func canonicalCoverage(of prayerName: String) -> Set<String> {
+        switch prayerName {
+        case "Dhuhr/Asr":    return ["Dhuhr", "Asr"]
+        case "Maghrib/Isha": return ["Maghrib", "Isha"]
+        case "Jumuah":       return ["Dhuhr"]
+        default:             return canonicalObligatoryPrayers.contains(prayerName) ? [prayerName] : []
+        }
+    }
+
+    /// The canonical prayers marked prayed on `date`, resolved through `canonicalCoverage` - so a day
+    /// recorded while traveling ("Dhuhr/Asr") reads correctly after traveling mode turns off, and vice
+    /// versa.
+    func coveredCanonicalPrayers(on date: Date) -> Set<String> {
+        coveredCanonicalPrayers(forDayKey: prayerTrackerKey(for: date))
+    }
+
+    func coveredCanonicalPrayers(forDayKey key: String) -> Set<String> {
+        guard let day = loadPrayerTracker()[key] else { return [] }
+        return day.reduce(into: Set<String>()) { $0.formUnion(Self.canonicalCoverage(of: $1)) }
+    }
+
     /// Prayer names that can OWN a nag cascade (have a nagging preference): the next one of these
     /// after a prayer is where that prayer's nags are scheduled.
     private static let nagCascadeOwnerNames: Set<String> = [
@@ -2036,8 +2117,9 @@ extension Settings {
 
     private func savePrayerTracker(_ tracker: [String: Set<String>]) {
         var pruned = tracker
-        // "yyyy-MM-dd" sorts lexicographically, so pruning a year back is a string compare.
-        if let cutoffDate = Calendar.current.date(byAdding: .day, value: -400, to: Date()) {
+        // "yyyy-MM-dd" sorts lexicographically, so pruning is a string compare. Five years of history:
+        // the year-by-year tracker views need real history, and a full year of marks is only a few KB.
+        if let cutoffDate = Calendar.current.date(byAdding: .day, value: -1850, to: Date()) {
             let cutoff = prayerTrackerKey(for: cutoffDate)
             pruned = pruned.filter { $0.key >= cutoff }
         }
@@ -2045,28 +2127,195 @@ extension Settings {
         prayerTrackerData = (try? JSONEncoder().encode(pruned.mapValues { Array($0).sorted() })) ?? Data()
     }
 
+    /// True when everything `prayerName` stands for is covered on `date`: a combined "Dhuhr/Asr" row
+    /// reads prayed only when BOTH are covered; a "Dhuhr" row reads prayed if the day recorded "Dhuhr",
+    /// "Jumuah", or a combined "Dhuhr/Asr".
     func isPrayerMarkedPrayed(_ prayerName: String, on date: Date = Date()) -> Bool {
-        loadPrayerTracker()[prayerTrackerKey(for: date)]?.contains(prayerName) ?? false
+        let target = Self.canonicalCoverage(of: prayerName)
+        guard !target.isEmpty else {
+            return loadPrayerTracker()[prayerTrackerKey(for: date)]?.contains(prayerName) ?? false
+        }
+        return target.isSubset(of: coveredCanonicalPrayers(on: date))
     }
 
     /// How many of `prayerNames` are marked prayed on `date` (the tracker row's "3/5").
     func trackedPrayerCount(_ prayerNames: [String], on date: Date = Date()) -> Int {
-        let day = loadPrayerTracker()[prayerTrackerKey(for: date)] ?? []
-        return prayerNames.filter { day.contains($0) }.count
+        let covered = coveredCanonicalPrayers(on: date)
+        return prayerNames.filter { name in
+            let target = Self.canonicalCoverage(of: name)
+            return !target.isEmpty && target.isSubset(of: covered)
+        }.count
     }
 
     func setPrayerPrayed(_ prayerName: String, on date: Date = Date(), prayed: Bool) {
         var tracker = loadPrayerTracker()
         let key = prayerTrackerKey(for: date)
         var day = tracker[key] ?? []
-        if prayed { day.insert(prayerName) } else { day.remove(prayerName) }
+
+        let target = Self.canonicalCoverage(of: prayerName)
+        if prayed {
+            // Combined rows are stored as their canonical members, so the record stays meaningful in
+            // whatever mode it is later read. Jumuah is kept as itself - "prayed Jumuah" is worth
+            // remembering, and its coverage makes it count as Dhuhr everywhere.
+            if prayerName == "Jumuah" || target.isEmpty {
+                day.insert(prayerName)
+            } else {
+                day.formUnion(target)
+            }
+        } else if target.isEmpty {
+            day.remove(prayerName)
+        } else {
+            // Unmarking removes exactly the canonical prayers this name stands for. A stored entry that
+            // covers MORE than that (unmarking "Dhuhr" on a day recorded as "Dhuhr/Asr") is replaced by
+            // its residual coverage, so the other half stays prayed.
+            for stored in day where !Self.canonicalCoverage(of: stored).isDisjoint(with: target) {
+                day.remove(stored)
+                day.formUnion(Self.canonicalCoverage(of: stored).subtracting(target))
+            }
+        }
         tracker[key] = day.isEmpty ? nil : day
         savePrayerTracker(tracker)
 
-        // Marking a prayer prayed TODAY also silences its remaining nags (they live under the NEXT
-        // prayer's identifier).
-        if prayed, Calendar.current.isDateInToday(date) {
-            cancelNagsAboutPrayer(prayerName)
+        // Yesterday's Isha still has live nags: they fire before TODAY's Fajr, under today's identifier
+        // (marking Isha in the small hours records it on the previous civil day - see `trackerDate`).
+        let affectsLiveNags = Calendar.current.isDateInToday(date)
+            || (Calendar.current.isDateInYesterday(date) && target.contains("Isha"))
+
+        if prayed {
+            if Calendar.current.isDateInToday(date) {
+                // Marking a prayer prayed TODAY also silences its remaining nags (they live under the
+                // NEXT prayer's identifier).
+                cancelNagsAboutPrayer(prayerName)
+            } else if affectsLiveNags {
+                cancelPendingNags(cascadePrayerName: "Fajr", on: Date())
+            }
+        } else if naggingMode, affectsLiveNags {
+            // Unmarking re-arms them: the schedule is rebuilt, and the builder re-adds any nag
+            // cascade that is no longer answered (see `nagCascadeIsAnswered`).
+            fetchPrayerTimes(notification: true)
+        }
+    }
+
+    // MARK: - Prayer tracker: exempt days (menses pause)
+
+    /// Decoded exempt-day set, cached for the same reason as the tracker cache.
+    private static var exemptDaysCache: Set<String>?
+
+    private func loadExemptDays() -> Set<String> {
+        if let cached = Self.exemptDaysCache { return cached }
+        let decoded = (try? JSONDecoder().decode([String].self, from: trackerExemptDaysData)) ?? []
+        let days = Set(decoded)
+        Self.exemptDaysCache = days
+        return days
+    }
+
+    private func saveExemptDays(_ days: Set<String>) {
+        var pruned = days
+        if let cutoffDate = Calendar.current.date(byAdding: .day, value: -1850, to: Date()) {
+            let cutoff = prayerTrackerKey(for: cutoffDate)
+            pruned = pruned.filter { $0 >= cutoff }
+        }
+        Self.exemptDaysCache = pruned
+        trackerExemptDaysData = (try? JSONEncoder().encode(Array(pruned).sorted())) ?? Data()
+    }
+
+    var mensesPauseStartDate: Date? {
+        mensesPauseStartStamp > 0 ? Date(timeIntervalSince1970: mensesPauseStartStamp) : nil
+    }
+
+    /// True when `date` is exempt from tracking: a recorded exempt day, or any day covered by the
+    /// currently-active menses pause (its start through today, and every future day while it stays on).
+    func isTrackerExempt(on date: Date) -> Bool {
+        if isTrackerExempt(forDayKey: prayerTrackerKey(for: date)) { return true }
+        if mensesPauseActive {
+            let day = Calendar.current.startOfDay(for: date)
+            let start = Calendar.current.startOfDay(for: mensesPauseStartDate ?? Date())
+            return day >= start
+        }
+        return false
+    }
+
+    func isTrackerExempt(forDayKey key: String) -> Bool {
+        if loadExemptDays().contains(key) { return true }
+        guard mensesPauseActive, let start = mensesPauseStartDate else { return false }
+        return key >= prayerTrackerKey(for: start)
+    }
+
+    /// Starts or ends the menses pause. Ending it writes every day of the finished range into the
+    /// exempt-days set, so the pause is remembered by the history views after it is over. Both
+    /// directions rebuild notifications, because the pause silences nagging reminders.
+    func setMensesPause(_ active: Bool) {
+        guard active != mensesPauseActive else { return }
+        if active {
+            mensesPauseStartStamp = Calendar.current.startOfDay(for: Date()).timeIntervalSince1970
+            mensesPauseActive = true
+        } else {
+            var days = loadExemptDays()
+            var day = Calendar.current.startOfDay(for: mensesPauseStartDate ?? Date())
+            let today = Calendar.current.startOfDay(for: Date())
+            while day <= today {
+                days.insert(prayerTrackerKey(for: day))
+                guard let next = Calendar.current.date(byAdding: .day, value: 1, to: day) else { break }
+                day = next
+            }
+            saveExemptDays(days)
+            mensesPauseActive = false
+            mensesPauseStartStamp = 0
+        }
+        fetchPrayerTimes(notification: true)
+    }
+
+    /// Manual per-day correction from the history views. Days inside the ACTIVE pause range can't be
+    /// individually un-exempted (end the pause instead) - the range is a single fact, not per-day marks.
+    func setTrackerExempt(_ exempt: Bool, on date: Date) {
+        let key = prayerTrackerKey(for: date)
+        var days = loadExemptDays()
+        if exempt { days.insert(key) } else { days.remove(key) }
+        saveExemptDays(days)
+        if Calendar.current.isDateInToday(date) || date > Date() {
+            fetchPrayerTimes(notification: true)
+        }
+    }
+
+    /// Whether the exempt state of `date` may be edited directly: false only for days covered by the
+    /// live pause (turn the pause off to end it).
+    func canEditExemption(on date: Date) -> Bool {
+        guard mensesPauseActive, let start = mensesPauseStartDate else { return true }
+        let day = Calendar.current.startOfDay(for: date)
+        return day < Calendar.current.startOfDay(for: start)
+    }
+
+    // MARK: - Prayer tracker: statistics support
+
+    /// The tracker's day key for `date` - public counterpart of `prayerTrackerKey` for the stats engine.
+    func trackerDayKey(for date: Date) -> String {
+        prayerTrackerKey(for: date)
+    }
+
+    /// One consistent snapshot of everything the statistics are computed from. Handing the decoded
+    /// dictionaries out once lets the stats engine walk a whole year without a lookup-per-day through
+    /// the accessor methods.
+    func trackerSnapshot() -> (marks: [String: Set<String>], exemptDays: Set<String>, activePauseStartKey: String?) {
+        let startKey = (mensesPauseActive && mensesPauseStartDate != nil)
+            ? prayerTrackerKey(for: mensesPauseStartDate!) : nil
+        return (loadPrayerTracker(), loadExemptDays(), startKey)
+    }
+
+    /// Drops the presence-checked tracker caches so the next read re-decodes from storage. Needed by the
+    /// reset flows: after a defaults-domain wipe these caches kept serving the erased marks and exempt
+    /// days until a cold launch (they don't key on the underlying data like the memo-style caches do).
+    static func invalidateTrackerCaches() {
+        prayerTrackerCache = nil
+        exemptDaysCache = nil
+    }
+
+    /// The first day that has any mark or exemption - "tracking since". Nil until something is recorded.
+    func trackerEarliestDayKey() -> String? {
+        let marks = loadPrayerTracker().keys.min()
+        let exempt = loadExemptDays().min()
+        switch (marks, exempt) {
+        case let (m?, e?): return min(m, e)
+        default: return marks ?? exempt
         }
     }
 
@@ -2138,14 +2387,25 @@ extension Settings {
 
     /// Silences today's remaining nags ABOUT `prayerName` - they are scheduled under the next
     /// nag-owning prayer's identifier, so resolve that successor and cancel its cascade.
+    ///
+    /// Matched by canonical coverage, not name equality, so marking "Dhuhr" from the history view still
+    /// finds the traveling-mode "Dhuhr/Asr" row (and vice versa). When there is no successor left today
+    /// (Isha, or the combined Maghrib/Isha), the nags about it live under TOMORROW's Fajr - cancel there.
     private func cancelNagsAboutPrayer(_ prayerName: String) {
-        guard let ordered = prayers?.prayers.sorted(by: { $0.time < $1.time }),
-              let index = ordered.firstIndex(where: { $0.nameTransliteration == prayerName })
-        else { return }
-        guard let successor = ordered.dropFirst(index + 1).first(where: {
-            Self.nagCascadeOwnerNames.contains($0.nameTransliteration)
+        guard let ordered = prayers?.prayers.sorted(by: { $0.time < $1.time }) else { return }
+        let target = Self.canonicalCoverage(of: prayerName)
+        guard let index = ordered.firstIndex(where: {
+            $0.nameTransliteration == prayerName
+                || !Self.canonicalCoverage(of: $0.nameTransliteration).isDisjoint(with: target)
         }) else { return }
-        cancelPendingNags(cascadePrayerName: successor.nameTransliteration)
+
+        if let successor = ordered.dropFirst(index + 1).first(where: {
+            Self.nagCascadeOwnerNames.contains($0.nameTransliteration)
+        }) {
+            cancelPendingNags(cascadePrayerName: successor.nameTransliteration)
+        } else if let tomorrow = Calendar.current.date(byAdding: .day, value: 1, to: Date()) {
+            cancelPendingNags(cascadePrayerName: "Fajr", on: tomorrow)
+        }
     }
 
     /// userInfo key carrying the absolute instant (epoch seconds) a scheduled notification is FOR. The

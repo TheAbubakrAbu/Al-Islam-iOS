@@ -141,7 +141,9 @@ struct DuaView: View {
 
             if !matching.isEmpty {
                 Section {
-                    ForEach(Array(matching.enumerated()), id: \.offset) { _, item in
+                    // Keyed by the dua's own id, not position: positional identity meant a narrowing
+                    // query reused row N's measured Arabic height for a DIFFERENT dua for a frame.
+                    ForEach(matching, id: \.id) { item in
                         AdhkarRow(
                             arabicText: item.arabicText,
                             transliteration: item.transliteration,
@@ -152,6 +154,7 @@ struct DuaView: View {
                             speechEnabled: true,
                             source: item.reference
                         )
+                        .equatable()
                     }
                 } header: {
                     HStack(spacing: 8) {
@@ -221,6 +224,10 @@ struct DuaView: View {
                     accent: settings.accentColor.color
                 )
             }
+
+                Section {
+                    SpeechQualityHint()
+                }
             }
             }
             .themedListRowBackground()
@@ -230,7 +237,7 @@ struct DuaView: View {
         .collapseBarsOnScroll($barsCollapsed)
         .adaptiveSafeArea(edge: .bottom) {
             VStack(spacing: SafeAreaInsetVStackSpacing.standard) {
-                SearchBar(text: $searchText.animation(.easeInOut))
+                SearchBar(text: (AppPerformance.shouldReduceAnimations ? $searchText : $searchText.animation(.easeInOut)))
                     .padding([.horizontal, .top], -8)
                     .minimizedBarStyle(barsCollapsed)
             }
@@ -240,11 +247,12 @@ struct DuaView: View {
             .background(Color.white.opacity(0.00001))
         }
         #else
-        .searchable(text: $searchText.animation(.easeInOut))
+        .searchable(text: (AppPerformance.shouldReduceAnimations ? $searchText : $searchText.animation(.easeInOut)))
         #endif
         .applyConditionalListStyle()
         .compactListSectionSpacing()
         .navigationTitle("Dua & Supplications")
+        .onDisappear { ArabicSpeech.shared.stop() }
     }
 }
 
@@ -285,7 +293,7 @@ private struct DuaCollectionView: View {
                     // Non-interactive glass: interactive Liquid Glass steals per-segment taps on real iOS 26 hardware.
                     .conditionalGlassEffect(interactive: false)
 
-                SearchBar(text: $searchText.animation(.easeInOut))
+                SearchBar(text: (AppPerformance.shouldReduceAnimations ? $searchText : $searchText.animation(.easeInOut)))
                     .padding([.horizontal, .top], -8)
                     .minimizedBarStyle(barsCollapsed)
             }
@@ -295,11 +303,12 @@ private struct DuaCollectionView: View {
             .background(Color.white.opacity(0.00001))
         }
         #else
-        .searchable(text: $searchText.animation(.easeInOut))
+        .searchable(text: (AppPerformance.shouldReduceAnimations ? $searchText : $searchText.animation(.easeInOut)))
         #endif
         .applyConditionalListStyle()
         .compactListSectionSpacing()
         .navigationTitle(collection.title)
+        .onDisappear { ArabicSpeech.shared.stop() }
     }
 
     private var introductionSection: some View {
@@ -328,6 +337,7 @@ private struct DuaCollectionView: View {
                     speechEnabled: true,
                     source: item.reference
                 )
+                .equatable()
             }
         }
     }

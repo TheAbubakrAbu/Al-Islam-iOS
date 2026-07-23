@@ -218,6 +218,8 @@ struct SurahPageReader<Controls: View>: View {
 
     @State private var pageIndex = 0
     @State private var didSetInitialPage = false
+    /// The first (surah, ayah) of the page on screen - the reading position a repagination re-seeds to.
+    @State private var currentAnchor: (surahID: Int, ayahID: Int)?
     /// Set when `pageIndex` is about to be moved PROGRAMMATICALLY (initial seed, in-place surah swap),
     /// consumed by the next `.onChange(of: pageIndex)`. The `didSetInitialPage` flag alone can't tell the
     /// seed from a real page turn - `.onAppear` finishes (flag already true) before the seed's `onChange`
@@ -394,12 +396,43 @@ struct SurahPageReader<Controls: View>: View {
             saveLastRead(surahID: surah.id, ayahID: ayah.id)
         }
         .onChange(of: pageSearchText) { _ in syncMatch(pages: pages, resetIndex: true) }
-        // A qiraah switch can re-paginate to a different page count; an index past the new end would leave
-        // the TabView with no selected tag - a blank pager. Clamp back inside the book.
-        .onChange(of: pages.count) { count in
-            if pageIndex >= count, count > 0 {
-                pageIndex = count - 1
+        // Follow the recitation ACROSS page boundaries - the list reader's rule (SurahView scrolls on
+        // every ayah advance). Without this the accent follow-along vanished the moment recitation
+        // crossed onto the next page, and the reader had to be swiped by hand.
+        .onChange(of: quranPlayer.currentAyahNumber) { ayahID in
+            guard didSetInitialPage,
+                  let ayahID,
+                  let surahID = quranPlayer.currentSurahNumber,
+                  pages.indices.contains(pageIndex) else { return }
+            func contains(_ page: MushafPage) -> Bool {
+                page.segments.contains { segment in
+                    segment.surah.id == surahID && segment.ayahs.contains { $0.id == ayahID }
+                }
             }
+            guard !contains(pages[pageIndex]) else { return }
+            guard let target = pages.firstIndex(where: contains), target != pageIndex else { return }
+            // Only follow a NATURAL progression: the next/previous physical page, or a jump within a
+            // surah this page already shows. Listening to some unrelated far-away surah from the mini
+            // player must not yank the reader across the book.
+            let showsPlayingSurah = pages[pageIndex].segments.contains { $0.surah.id == surahID }
+            guard abs(target - pageIndex) == 1 || showsPlayingSurah else { return }
+            // A follow is not a user page turn - it must not wipe the mark/selections.
+            suppressNextPageTurnClear = true
+            withAnimation { pageIndex = target }
+        }
+        // A qiraah switch re-paginates the book. Keyed on the QIRAAH, not `pages.count`: dropping ayahs
+        // absent from a qiraah never changes the page COUNT (page numbers are per-ayah metadata), so a
+        // count-based onChange usually never fired - leaving the prewarm ring and its stored context on
+        // the OLD qiraah's pages, which a later geometry change would then compose and cache under the
+        // NEW qiraah's signature (wrong page content served from cache).
+        .onChange(of: settings.displayQiraahForArabic) { _ in
+            reseedAfterRepagination(pages)
+        }
+        // Kept as a safety net for any other source of a count change (an index past the new end leaves
+        // the TabView with no selected tag - a blank pager).
+        .onChange(of: pages.count) { count in
+            guard count > 0 else { return }
+            reseedAfterRepagination(pages)
         }
         .onChange(of: searchActive) { active in
             if active {
@@ -408,6 +441,26 @@ struct SurahPageReader<Controls: View>: View {
                 pageSearchText = ""
                 pageSearchFocused = false
             }
+        }
+    }
+
+    /// After a repagination (qiraah switch): keep the READING POSITION - re-resolve the page holding the
+    /// current anchor ayah in the NEW pages - clamp if it can't be resolved, and re-prewarm so the ring
+    /// (and its stored context) is composed from the new pages under the new settings signature.
+    private func reseedAfterRepagination(_ pages: [MushafPage]) {
+        guard !pages.isEmpty else { return }
+        if let anchor = currentAnchor,
+           let target = MushafPagination.pageIndex(surahID: anchor.surahID, ayahID: anchor.ayahID, in: pages),
+           pages.indices.contains(target), target != pageIndex {
+            // A re-seed is not a user page turn - don't wipe the mark/selections. The pageIndex change
+            // reports + prewarms via its own onChange.
+            suppressNextPageTurnClear = true
+            pageIndex = target
+        } else {
+            if pageIndex >= pages.count { pageIndex = pages.count - 1 }
+            // Index unchanged (the common case - page boundaries rarely shift): still refresh the ring
+            // and its context against the NEW pages.
+            MushafPageRenderCache.prewarm(pages: pages, around: pageIndex)
         }
     }
 
@@ -510,6 +563,7 @@ struct SurahPageReader<Controls: View>: View {
         guard pages.indices.contains(index),
               let surah = pages[index].firstSurah,
               let ayah = pages[index].firstAyah else { return }
+        currentAnchor = (surah.id, ayah.id)
         onPageAnchor?(surah.id, ayah.id)
     }
 
@@ -1875,9 +1929,14 @@ enum MushafPageRenderCache {
         let s = Settings.shared
         return [
             s.fontArabic,
-            String(Int(s.fontArabicSize)),
+            // Full precision, matching the CGFloat the composer actually fits with (and the list-mode
+            // signature). Truncating to Int would collide two fractional sizes onto one cache key.
+            "\(s.fontArabicSize)",
             s.displayQiraahForArabic ?? "Hafs",
             s.showTajweedColors ? "t" : "-",
+            // Per-category tajweed visibility. The master switch alone meant toggling a single legend
+            // category kept serving already-composed pages with the old colors until cache eviction.
+            s.tajweedCategoryVisibilitySignature,
             s.showArabicText ? "a" : "-",
             s.cleanArabicText ? "c" : "-",
             // Was missing: toggling "Hide Arabic Dots" did not change the key, so every already-composed page
@@ -1900,8 +1959,21 @@ enum MushafPageRenderCache {
         didSet {
             guard let g = lastGeometry, g != (oldValue ?? (0, 0)) else { return }
             UserDefaults.standard.set([Double(g.width), Double(g.height)], forKey: geometryDefaultsKey)
+            // Rotation / iPad split-resize: every page in the prewarm ring was fitted for the OLD
+            // geometry, so the first swipe in each direction landed on a cold spinner. Re-warm the ring
+            // for the new geometry (async - this setter runs during view-body evaluation). Intermediate
+            // live-resize values just bump the generation; stale unstarted fits skip themselves cheaply.
+            if oldValue != nil {
+                DispatchQueue.main.async {
+                    guard let context = lastPrewarmContext else { return }
+                    prewarm(pages: context.pages, around: context.index)
+                }
+            }
         }
     }
+
+    /// What the most recent prewarm sweep covered, so a geometry change can re-run it unprompted.
+    private static var lastPrewarmContext: (pages: [MushafPage], index: Int)?
     private static let geometryDefaultsKey = "mushaf.lastPageGeometry"
 
     private static var persistedGeometry: (width: CGFloat, height: CGFloat)? {
@@ -1954,6 +2026,7 @@ enum MushafPageRenderCache {
     static func prewarm(pages: [MushafPage], around index: Int, radius: Int = 5, includeCenter: Bool = false) {
         // `(1...radius)` below traps on a non-positive radius - guard it rather than trusting every caller.
         guard let geometry = lastGeometry, !pages.isEmpty, radius >= 1 else { return }
+        lastPrewarmContext = (pages, index)
         // The background fit is nearly free for the main thread, but each warmed page still costs a colored
         // compose on main - in Low Power Mode keep that to the immediate neighbours.
         let radius = AppPerformance.isLowPowerMode ? min(radius, 1) : radius
@@ -2101,23 +2174,37 @@ enum MushafPageRenderCache {
     /// last-known render (or, truly cold, a brief spinner) while `renderAsync` fits on the prewarm queue.
     static func renderedIfAvailable(page: MushafPage, width: CGFloat, height: CGFloat) -> MushafRenderedPage? {
         lastGeometry = (width, height)
-        let hit = cache.object(forKey: cacheKey(page: page, width: width, height: height, signature: settingsSignature))
-        if let hit { noteLatest(page: page, width: width, rendered: hit) }
+        // One signature build per call: this runs per mounted page per body pass (and the pager re-evals
+        // on every playback tick), and it used to be rebuilt again inside noteLatest.
+        let signature = settingsSignature
+        let hit = cache.object(forKey: cacheKey(page: page, width: width, height: height, signature: signature))
+        if let hit { noteLatest(page: page, width: width, rendered: hit, signature: signature) }
         return hit
     }
 
     /// The most recent render each page produced or served, by page number. The HEIGHT budget jitters
-    /// constantly - a bar appears, the mini player mounts, a navigation transition mid-flight - and every
-    /// jitter is a new cache key. Without this, each jitter flashed the loading spinner over a page that
-    /// was JUST on screen; with it, the stale render stays up while the exact fit lands quietly.
+    /// constantly (a bar appears, the mini player mounts, a transition mid-flight), and every jitter is
+    /// a new cache key; without this map each jitter flashed the loading spinner over a page that was
+    /// JUST on screen. Held STRONGLY but tightly bounded at 12 - the mounted pages plus their immediate
+    /// ring, which is all the fallback exists for. (Weak references were tried and reverted: NSCache
+    /// count-limit churn during an ordinary flip run evicted a mounted page's older-height render while
+    /// it was still the only fallback for the next jitter - the spinner came back. Twelve attributed
+    /// pages is small; the old bound of 64 was what undercut memory-pressure eviction.)
     private static var latestByPage: [Int: (width: CGFloat, signature: String, rendered: MushafRenderedPage)] = [:]
+    /// Insertion order for eviction, oldest first.
+    private static var latestOrder: [Int] = []
+    private static let latestLimit = 12
 
-    private static func noteLatest(page: MushafPage, width: CGFloat, rendered: MushafRenderedPage) {
-        latestByPage[page.page] = (width, settingsSignature, rendered)
-        // A bounded map: the reader only ever needs the mounted pages and their neighbours.
-        if latestByPage.count > 64 {
-            latestByPage.removeAll(keepingCapacity: true)
-            latestByPage[page.page] = (width, settingsSignature, rendered)
+    private static func noteLatest(page: MushafPage, width: CGFloat, rendered: MushafRenderedPage, signature: String? = nil) {
+        let signature = signature ?? settingsSignature
+        if latestByPage[page.page] != nil {
+            latestOrder.removeAll { $0 == page.page }
+        }
+        latestByPage[page.page] = (width, signature, rendered)
+        latestOrder.append(page.page)
+        while latestOrder.count > latestLimit {
+            let evicted = latestOrder.removeFirst()
+            latestByPage.removeValue(forKey: evicted)
         }
     }
 
@@ -2290,7 +2377,10 @@ struct MushafPageTextView: UIViewRepresentable {
         guard !needle.isEmpty else { return [] }
         let built = HighlightedSnippet.normalizedSourceAndMap(for: ayahText)
         let normalized = built.normalized
-        let map = built.map
+        // The map now carries instance-free UTF-16 offsets (see `SourceNormEntry.mapUTF16`); here the
+        // build is fresh for this exact `ayahText`, so they land on character boundaries by construction.
+        // The bounds guards keep the `String.Index(utf16Offset:in:)` inits safe even so.
+        let map = built.mapUTF16
         guard map.count == normalized.count else { return [] }
 
         var result: [NSRange] = []
@@ -2299,9 +2389,10 @@ struct MushafPageTextView: UIViewRepresentable {
               let match = normalized.range(of: needle, range: searchStart..<normalized.endIndex) {
             let lo = normalized.distance(from: normalized.startIndex, to: match.lowerBound)
             let hi = normalized.distance(from: normalized.startIndex, to: match.upperBound)
-            if lo >= 0, hi > lo, hi - 1 < map.count {
-                let start = map[lo]
-                let end = ayahText.index(after: map[hi - 1])
+            if lo >= 0, hi > lo, hi - 1 < map.count,
+               map[lo] < ayahText.utf16.count, map[hi - 1] < ayahText.utf16.count {
+                let start = String.Index(utf16Offset: map[lo], in: ayahText)
+                let end = ayahText.index(after: String.Index(utf16Offset: map[hi - 1], in: ayahText))
                 let local = NSRange(start..<end, in: ayahText)
                 result.append(NSRange(location: ayahRange.location + local.location, length: local.length))
             }

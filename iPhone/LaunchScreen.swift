@@ -200,39 +200,57 @@ struct LaunchScreen: View {
         async let namesReady: Void = NamesViewModel.shared.waitUntilLoaded()
         _ = await (settingsReady, quranReady, playerReady, namesReady)
 
-        #if os(iOS)
-        // Still nothing animating: also let the main tabs build + warm behind this cover (the Quran tab is
-        // realized and retained, then we settle on Adhan). Waiting here means the finale + hand-off below run
-        // against an already-built UI, so the ending plays start-to-finish with no stall in the middle and the
-        // reveal is instant. Capped so a failed warm can never strand us on the launch screen. iPhone-only: the
-        // Watch has no such tab warm.
-        await LaunchWarmup.shared.waitUntilWarm(maxWaitNanos: 6_000_000_000)
-        #endif
-
-        // 3) Everything is ready and the CPU is free, so the finale plays smoothly on top of the resting icon:
-        //    the gradient/glow blooms in, the rings expand, the shimmer sweeps the logo, and — a beat later —
-        //    the Quran/Adhan companion apps are released outward.
+        // 3) The data is ready, so the finale plays on top of the resting icon: the gradient/glow blooms
+        //    in, the rings expand, the shimmer sweeps the logo, and — a beat later — the Quran/Adhan
+        //    companion apps are released outward. The tab warm-under-cover runs CONCURRENTLY with this
+        //    ~1.4s of animation (it used to be awaited first, in series, which held the static icon an
+        //    extra ~0.7-1.3s for no reason: the springs are committed to the render server, and the warm
+        //    walk's own settles yield the main thread between tab flips). The warm is still awaited
+        //    below, BEFORE the reveal - the hand-off always lands on a fully-built Adhan tab.
         triggerHapticFeedback(.soft)
-        withAnimation(.spring(response: 0.6, dampingFraction: 0.82)) {
-            size = 0.94
-            gradientSize = 3.4
-            glowOpacity = 1.0
-            ringScale = 1.08
-            ringOpacity = 1.0
-        }
-        withAnimation(.easeInOut(duration: 0.85)) {
-            shimmerOffset = 220
-        }
-        withAnimation(.spring(response: 0.55, dampingFraction: 0.82).delay(0.08)) {
-            glassFloat = -10
-            glassTilt = 7
-            glassOpacity = 1.0
-            leftGlassOffset = -34
-            rightGlassOffset = 34
+        if AppPerformance.isReduceMotionEnabled {
+            // Reduce Motion: the springs, the shimmer sweep, and the flying companions ARE the motion.
+            // Cross-fade straight to the finished composition instead.
+            withAnimation(.easeInOut(duration: 0.25)) {
+                size = 0.94
+                gradientSize = 3.4
+                glowOpacity = 1.0
+                ringScale = 1.08
+                ringOpacity = 1.0
+                glassFloat = -10
+                glassTilt = 7
+                glassOpacity = 1.0
+                leftGlassOffset = -34
+                rightGlassOffset = 34
+            }
+        } else {
+            withAnimation(.spring(response: 0.6, dampingFraction: 0.82)) {
+                size = 0.94
+                gradientSize = 3.4
+                glowOpacity = 1.0
+                ringScale = 1.08
+                ringOpacity = 1.0
+            }
+            withAnimation(.easeInOut(duration: 0.85)) {
+                shimmerOffset = 220
+            }
+            withAnimation(.spring(response: 0.55, dampingFraction: 0.82).delay(0.08)) {
+                glassFloat = -10
+                glassTilt = 7
+                glassOpacity = 1.0
+                leftGlassOffset = -34
+                rightGlassOffset = 34
+            }
         }
 
         // Let the finale breathe before handing off.
         try? await Task.sleep(nanoseconds: 900_000_000)
+
+        #if os(iOS)
+        // Capped so a failed warm can never strand us on the launch screen; usually already complete by
+        // now, having run under the finale. iPhone-only: the Watch has no tab warm.
+        await LaunchWarmup.shared.waitUntilWarm(maxWaitNanos: 6_000_000_000)
+        #endif
 
         // 4) Smoothly hand off to the app (revealing the already-warm Adhan tab underneath).
         triggerHapticFeedback(.soft)

@@ -25,7 +25,19 @@ struct MoonPhase: Equatable {
 
     var illuminationPercent: Int { Int((illumination * 100).rounded()) }
 
+    /// One-entry memo. Callers pass hourly-quantized dates (see SkyView's `moonDate`), so the tab's
+    /// per-second tick hits this instead of re-running the full ephemeris trig for an identical result.
+    /// Main-thread only, like every caller.
+    private static var lastComputed: (date: Date, phase: MoonPhase)?
+
     static func on(_ date: Date) -> MoonPhase {
+        if let cached = lastComputed, cached.date == date { return cached.phase }
+        let phase = compute(date)
+        lastComputed = (date, phase)
+        return phase
+    }
+
+    private static func compute(_ date: Date) -> MoonPhase {
         let rad = Double.pi / 180
         // Obliquity of the ecliptic.
         let e = rad * 23.4397

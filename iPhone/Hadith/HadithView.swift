@@ -307,10 +307,22 @@ struct HadithView: View {
     private func matches(_ book: HadithCatalogBook) -> Bool {
         let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !query.isEmpty else { return true }
-        return book.englishTitle.localizedCaseInsensitiveContains(query) ||
-            book.arabicTitle.localizedCaseInsensitiveContains(query) ||
-            settings.cleanSearch(book.arabicTitle, whitespace: true).localizedCaseInsensitiveContains(settings.cleanSearch(query, whitespace: true))
+        if book.englishTitle.localizedCaseInsensitiveContains(query) ||
+            book.arabicTitle.localizedCaseInsensitiveContains(query) {
+            return true
+        }
+        // The cleaned QUERY is identical for all 17 books - normalize it once per filter pass, not per book.
+        let cleanedQuery = Self.cleanedQueryCache.query == query
+            ? Self.cleanedQueryCache.cleaned
+            : {
+                let cleaned = settings.cleanSearch(query, whitespace: true)
+                Self.cleanedQueryCache = (query, cleaned)
+                return cleaned
+            }()
+        return settings.cleanSearch(book.arabicTitle, whitespace: true).localizedCaseInsensitiveContains(cleanedQuery)
     }
+
+    private static var cleanedQueryCache: (query: String, cleaned: String) = ("", "")
 
     private func filteredBooks(in group: HadithCatalogBook.Group) -> [HadithCatalogBook] {
         HadithCatalogBook.books(in: group).filter(matches)
@@ -502,7 +514,11 @@ struct HadithView: View {
                         .padding(.horizontal, 24)
 
                     SearchBar(
-                        text: $searchText,
+                        // Animated like the Quran tab's bar, same gate: Low Power Mode / Reduce Motion
+                        // keep typing free of animated whole-list diffs. The synchronous per-keystroke
+                        // part here is only the ~20-book catalog filter; the async sweep results animate
+                        // at their apply site.
+                        text: AppPerformance.shouldReduceAnimations ? $searchText : $searchText.animation(.easeInOut),
                         onFocusChanged: { focused in
                             withAnimation { isHadithSearchFocused = focused }
                             // Start the one-time all-books AI index (or its instant disk load) the
@@ -614,6 +630,13 @@ struct HadithView: View {
                 // the one-tap Ask row (and this call clears a previous answer).
                 runHadithAsk(query: text, manual: false)
             }
+            // A book finishing its download (or being deleted) while a query is on screen: the sweep
+            // only re-ran on keystrokes, so results silently ignored the shelf change until typing.
+            .onChange(of: store.downloadedSlugs) { _ in
+                let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard query.count >= 3, HadithReferenceParser.parse(searchText) == nil else { return }
+                runGlobalSearch(query: query)
+            }
             // A corpus finishing its build mid-query (from a book view) surfaces here immediately.
             .onChange(of: semanticEngine.readyCorpora) { _ in
                 runGlobalAISearch(query: searchText)
@@ -643,6 +666,7 @@ struct HadithView: View {
         if let dailyHadith {
             Section {
                 HadithRow(book: dailyHadith.book, hadith: dailyHadith.hadith)
+                    .equatable()
 
                 if showDailyHistory {
                     // The last 5 days, timestamped and dimmed - today first. The Today row carries the
@@ -1012,7 +1036,7 @@ struct HadithView: View {
                                     HadithReferenceView(book: hit.book, chapter: nil, hadith: hit.hadith.idInBook)
                                 }
                             } label: {
-                                HadithRow(book: hit.book, hadith: hit.hadith, searchText: searchText, compact: true)
+                                HadithRow(book: hit.book, hadith: hit.hadith, searchText: searchText, compact: true).equatable()
                             }
                         }
                     }
@@ -1042,7 +1066,7 @@ struct HadithView: View {
                                 HadithReferenceView(book: hit.book, chapter: nil, hadith: hit.hadith.idInBook)
                             }
                         } label: {
-                            HadithRow(book: hit.book, hadith: hit.hadith, searchText: searchText, compact: true)
+                            HadithRow(book: hit.book, hadith: hit.hadith, searchText: searchText, compact: true).equatable()
                         }
                     }
                 }
@@ -1098,7 +1122,7 @@ struct HadithView: View {
                                     HadithReferenceView(book: hit.book, chapter: nil, hadith: hit.hadith.idInBook)
                                 }
                             } label: {
-                                HadithRow(book: hit.book, hadith: hit.hadith, searchText: searchText, compact: true)
+                                HadithRow(book: hit.book, hadith: hit.hadith, searchText: searchText, compact: true).equatable()
                             }
                         }
                     }
@@ -1261,7 +1285,8 @@ struct HadithView: View {
         let hadithCap = globalHadithLimit
         let arabicQuery = query.containsArabicScript
         let cleanQuery = arabicQuery ? settings.cleanSearch(query, whitespace: true).removingArabicDiacriticsAndSigns : ""
-        let lowerQuery = query.lowercased()
+        // Folded like the index (punctuation stripped), so "aishah" finds "'A'ishah".
+        let lowerQuery = HighlightedSnippet.foldedEnglishForSearch(query)
 
         globalSearchTask = Task {
             // Debounce: typing restarts this task, so only a settled query pays for the sweep.
@@ -1276,28 +1301,39 @@ struct HadithView: View {
                 if chapterHits.count > chapterCap, hadithHits.count > hadithCap { break }
                 guard let data = try? await HadithStore.shared.book(book) else { continue }
 
-                if chapterHits.count <= chapterCap {
-                    for chapter in data.chapters {
-                        let matched: Bool
-                        if arabicQuery {
-                            matched = settings.cleanSearch(chapter.arabic, whitespace: true).removingArabicDiacriticsAndSigns.contains(cleanQuery)
-                        } else {
-                            matched = chapter.english.localizedCaseInsensitiveContains(query)
-                        }
-                        if matched {
-                            chapterHits.append(GlobalChapterHit(book: book, data: data, chapter: chapter))
-                            if chapterHits.count > chapterCap { break }
+                // ONE detached scan per book covering chapters AND hadiths. The chapter fold used to
+                // run on the main actor per remaining book (chapter matches are sparse, so the loop
+                // rarely breaks early) - with a full shelf and an Arabic query that was a per-chapter
+                // Arabic normalization across every downloaded book, on main. Cancellation is bridged
+                // in explicitly: detached tasks don't inherit it.
+                let needChapters = chapterHits.count <= chapterCap
+                let needHadiths = hadithHits.count <= hadithCap
+                let index = HadithStore.shared.searchIndexes[book.slug]
+                let chapterNeeded = chapterCap + 1 - chapterHits.count
+                let hadithNeeded = hadithCap + 1 - hadithHits.count
+
+                let scan = Task.detached(priority: .userInitiated) { () -> (chapters: [HadithBookData.Chapter], hadiths: [HadithBookData.Hadith]) in
+                    var chapters: [HadithBookData.Chapter] = []
+                    if needChapters {
+                        for chapter in data.chapters {
+                            if Task.isCancelled { break }
+                            let matched: Bool
+                            if arabicQuery {
+                                matched = Settings.shared.cleanSearch(chapter.arabic, whitespace: true).removingArabicDiacriticsAndSigns.contains(cleanQuery)
+                            } else {
+                                matched = chapter.english.localizedCaseInsensitiveContains(query)
+                            }
+                            if matched {
+                                chapters.append(chapter)
+                                if chapters.count >= chapterNeeded { break }
+                            }
                         }
                     }
-                }
 
-                if hadithHits.count <= hadithCap {
-                    let index = HadithStore.shared.searchIndexes[book.slug]
-                    let needed = hadithCap + 1 - hadithHits.count
-                    // Scan off-main: Bukhari alone is ~7,500 hadiths of long text.
-                    let matched = await Task.detached(priority: .userInitiated) { () -> [HadithBookData.Hadith] in
-                        var found: [HadithBookData.Hadith] = []
+                    var hadiths: [HadithBookData.Hadith] = []
+                    if needHadiths {
                         for hadith in data.hadiths {
+                            if Task.isCancelled { break }
                             let matches: Bool
                             if arabicQuery {
                                 let source = index?.arabicByID[hadith.id]
@@ -1310,29 +1346,57 @@ struct HadithView: View {
                                     || hadith.english.narrator.localizedCaseInsensitiveContains(query)
                             }
                             if matches {
-                                found.append(hadith)
-                                if found.count >= needed { break }
+                                hadiths.append(hadith)
+                                if hadiths.count >= hadithNeeded { break }
                             }
                         }
-                        return found
-                    }.value
-                    for hadith in matched {
-                        hadithHits.append(GlobalHadithHit(book: book, data: data, hadith: hadith))
                     }
+                    return (chapters, hadiths)
+                }
+                let found = await withTaskCancellationHandler {
+                    await scan.value
+                } onCancel: {
+                    scan.cancel()
+                }
+
+                for chapter in found.chapters {
+                    chapterHits.append(GlobalChapterHit(book: book, data: data, chapter: chapter))
+                }
+                for hadith in found.hadiths {
+                    hadithHits.append(GlobalHadithHit(book: book, data: data, hadith: hadith))
                 }
             }
 
             guard !Task.isCancelled else { return }
             let finalChapters = chapterHits
             let finalHadiths = hadithHits
+            // Fold the shown hits' texts into the highlight caches OFF-main, so each result row's
+            // first render is a cache hit instead of paying the normalization during scrolling.
+            // Task.detached, because THIS task inherits the view's @MainActor - `nonisolated` on the
+            // prewarm makes the call legal, not off-main.
+            var prewarmSources: [String] = []
+            prewarmSources.reserveCapacity(min(finalHadiths.count, hadithCap) * 3)
+            for hit in finalHadiths.prefix(hadithCap) {
+                prewarmSources.append(hit.hadith.arabic)
+                prewarmSources.append(hit.hadith.english.text)
+                prewarmSources.append(hit.hadith.english.narrator)
+            }
+            let sources = prewarmSources
+            Task.detached(priority: .utility) {
+                HighlightedSnippet.prewarmNormalization(of: sources)
+            }
             await MainActor.run {
                 guard query == searchText.trimmingCharacters(in: .whitespacesAndNewlines) else { return }
-                globalChapterResults = Array(finalChapters.prefix(chapterCap))
-                globalHadithResults = Array(finalHadiths.prefix(hadithCap))
-                globalHasMoreChapters = finalChapters.count > chapterCap
-                globalHasMoreHadiths = finalHadiths.count > hadithCap
-                globalSearchRanFor = query
-                isGlobalSearching = false
+                // Animated apply (nil under the reduce gate): result ids are unique by construction
+                // (one linear scan per book, "slug-id"), which an animated List diff requires.
+                withAnimation(AppPerformance.shouldReduceAnimations ? nil : .easeInOut) {
+                    globalChapterResults = Array(finalChapters.prefix(chapterCap))
+                    globalHadithResults = Array(finalHadiths.prefix(hadithCap))
+                    globalHasMoreChapters = finalChapters.count > chapterCap
+                    globalHasMoreHadiths = finalHadiths.count > hadithCap
+                    globalSearchRanFor = query
+                    isGlobalSearching = false
+                }
                 // A settled query that actually FOUND something joins the recent-searches chips - the
                 // Quran search history's rule, minus the noise of dead-end queries.
                 if !finalChapters.isEmpty || !finalHadiths.isEmpty {
@@ -1380,12 +1444,14 @@ struct HadithView: View {
                             HadithBookmarkGridTile(bookmark: bookmark) {
                                 pushedReference = bookmark
                             }
+                            .equatable()
                         }
                     }
                     .padding(.vertical, 4)
                 } else {
                     ForEach(store.bookmarks.prefix(5)) { bookmark in
                         HadithBookmarkRow(bookmark: bookmark)
+                            .equatable()
                     }
                 }
 

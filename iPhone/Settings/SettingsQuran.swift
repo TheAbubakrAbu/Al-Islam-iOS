@@ -308,8 +308,83 @@ extension Settings {
             displayQiraah,
             fontArabic,
             "\(fontArabicSize)",
-            "\(englishFontSize)"
+            "\(englishFontSize)",
+            // Was missing: per-category tajweed visibility and the accent color. Equatable rows skipped
+            // their bodies when these changed, so toggling one legend category (or the app accent) left
+            // every VISIBLE row on its old colors until it scrolled off screen and back.
+            tajweedCategoryVisibilitySignature,
+            accentColor.rawValue,
+            customAccentColorHex
         ].joined(separator: "|")
+    }
+
+    /// One character per legend category, "1"/"0" for visible/hidden - the per-category slice of the
+    /// tajweed configuration, shared by every render-invalidation signature that bakes colors in.
+    var tajweedCategoryVisibilitySignature: String {
+        TajweedLegendCategory.allCases
+            .map { isTajweedCategoryVisible($0) ? "1" : "0" }
+            .joined()
+    }
+
+    // MARK: - Last listened (typed accessors)
+    // Moved here from Settings.swift: they name Quran model types, and the core file stays free of
+    // Quran types so it ports to sibling apps without the Quran module. The raw `Data` @AppStorage
+    // backing remains in the class body (stored properties can't live in extensions).
+
+    var lastListenedAyah: LastListenedAyah? {
+        get {
+            // Fall back to the App Group suite so Siri/AppIntents can resolve this even when they run
+            // outside the main app's standard UserDefaults domain (which caused "no last listened").
+            guard let data = lastListenedAyahData ?? appGroupUserDefaults?.data(forKey: "lastListenedAyahData") else { return nil }
+            do {
+                return try Self.decoder.decode(LastListenedAyah.self, from: data)
+            } catch {
+                logger.debug("Failed to decode last listened ayah: \(error)")
+                return nil
+            }
+        }
+        set {
+            if let newValue = newValue {
+                do {
+                    let encoded = try Self.encoder.encode(newValue)
+                    lastListenedAyahData = encoded
+                    appGroupUserDefaults?.set(encoded, forKey: "lastListenedAyahData")
+                } catch {
+                    logger.debug("Failed to encode last listened ayah: \(error)")
+                }
+            } else {
+                lastListenedAyahData = nil
+                appGroupUserDefaults?.removeObject(forKey: "lastListenedAyahData")
+            }
+        }
+    }
+
+    var lastListenedSurah: LastListenedSurah? {
+        get {
+            // Fall back to the App Group suite so Siri/AppIntents can resolve this even when they run
+            // outside the main app's standard UserDefaults domain (which caused "no last listened").
+            guard let data = lastListenedSurahData ?? appGroupUserDefaults?.data(forKey: "lastListenedSurahData") else { return nil }
+            do {
+                return try Self.decoder.decode(LastListenedSurah.self, from: data)
+            } catch {
+                logger.debug("Failed to decode last listened surah: \(error)")
+                return nil
+            }
+        }
+        set {
+            if let newValue = newValue {
+                do {
+                    let encoded = try Self.encoder.encode(newValue)
+                    lastListenedSurahData = encoded
+                    appGroupUserDefaults?.set(encoded, forKey: "lastListenedSurahData")
+                } catch {
+                    logger.debug("Failed to encode last listened surah: \(error)")
+                }
+            } else {
+                lastListenedSurahData = nil
+                appGroupUserDefaults?.removeObject(forKey: "lastListenedSurahData")
+            }
+        }
     }
 
     static func normalizedArabicFontName(_ fontName: String) -> String {

@@ -106,7 +106,11 @@ class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterD
             case Settings.nagActionMarkPrayedIdentifier:
                 settings.markPrayerPrayedFromNag(asked: asked, cascadePrayerName: cascadeName)
             case UNNotificationDefaultActionIdentifier:
-                settings.pendingNagQuestion = .init(prayerName: asked, cascadePrayerName: cascadeName)
+                // Already marked (from the tracker, or an earlier nag in the cascade) - asking "did you
+                // pray it?" again would be exactly the nagging the mark was supposed to end.
+                if !settings.isPrayerMarkedPrayed(asked, on: settings.trackerDate(forMarking: asked)) {
+                    settings.pendingNagQuestion = .init(prayerName: asked, cascadePrayerName: cascadeName)
+                }
             default:
                 break
             }

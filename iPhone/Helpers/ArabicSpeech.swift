@@ -23,19 +23,52 @@ final class ArabicSpeech: NSObject, ObservableObject {
     /// it advances item by item as the queue moves.
     @Published private(set) var currentText: String?
 
-    /// Arabic voices are identified by an `ar-SA` language code. Resolved once: enumerating every installed voice
-    /// on each tap is needless work on a screen where taps come in bursts.
-    private lazy var arabicVoice: AVSpeechSynthesisVoice? = {
-        AVSpeechSynthesisVoice(language: "ar-SA")
-            ?? AVSpeechSynthesisVoice.speechVoices().first { $0.language.hasPrefix("ar") }
-    }()
+    /// The BEST Arabic voice installed right now - premium beats enhanced beats the compact default,
+    /// and within a tier ar-SA (the register closest to recitation) beats other Arabic locales.
+    /// `AVSpeechSynthesisVoice(language: "ar-SA")` returned whatever quality the system defaulted to -
+    /// the robotic compact voice - even when the user had downloaded a vastly better Enhanced/Premium
+    /// voice. Cached per resolution, re-resolved on each queue START (not per phrase): the user can
+    /// download a better voice in Settings mid-session, and the next tap should get it.
+    private var arabicVoice: AVSpeechSynthesisVoice?
+
+    private static func bestArabicVoice() -> AVSpeechSynthesisVoice? {
+        let arabic = AVSpeechSynthesisVoice.speechVoices().filter { $0.language.hasPrefix("ar") }
+        guard !arabic.isEmpty else { return nil }
+
+        func qualityRank(_ voice: AVSpeechSynthesisVoice) -> Int {
+            if #available(iOS 16.0, watchOS 9.0, *), voice.quality == .premium { return 2 }
+            return voice.quality == .enhanced ? 1 : 0
+        }
+        func localeRank(_ voice: AVSpeechSynthesisVoice) -> Int {
+            voice.language == "ar-SA" ? 1 : 0
+        }
+        return arabic.max { a, b in
+            (qualityRank(a), localeRank(a)) < (qualityRank(b), localeRank(b))
+        }
+    }
+
+    @discardableResult
+    private func resolveVoice() -> AVSpeechSynthesisVoice? {
+        arabicVoice = Self.bestArabicVoice()
+        return arabicVoice
+    }
 
     override private init() {
         super.init()
         synthesizer.delegate = self
+        arabicVoice = Self.bestArabicVoice()
     }
 
     var isAvailable: Bool { arabicVoice != nil }
+
+    /// True when the only installed Arabic voice is the compact default - drives the one-line
+    /// "download a better voice" hint on the dua/adhkar screens. Enhanced/Premium voices are a
+    /// dramatic quality jump and most users don't know they exist.
+    var onlyCompactVoiceAvailable: Bool {
+        guard let arabicVoice else { return false }
+        if #available(iOS 16.0, watchOS 9.0, *), arabicVoice.quality == .premium { return false }
+        return arabicVoice.quality != .enhanced
+    }
 
     private func activateSession() {
         #if os(iOS)
@@ -54,47 +87,151 @@ final class ArabicSpeech: NSObject, ObservableObject {
         return utterance
     }
 
+    /// Which full row text each queued phrase-utterance belongs to. Long texts are split into
+    /// breath-sized phrases (below), but the row highlight compares against the ROW's full text - the
+    /// delegate resolves a phrase back to its owner through this. Cleared on stop and on queue drain
+    /// (queued utterances removed by `stopSpeaking` fire no delegate callback).
+    private var utteranceOwners: [AVSpeechUtterance: String] = [:]
+
+    // MARK: TTS pronunciation normalization
+
+    /// The system voice reads DISPLAY orthography, and a few Quranic writing conventions defeat it.
+    /// This is applied to the SPOKEN string only - the display text and the row-highlight owner keep
+    /// the original.
+    /// - NFC canonical ordering: sources author shaddah/vowel marks in varying orders, and
+    ///   non-canonical sequences are what made shaddahs sound wrong.
+    /// - Alef wasla (`ٱ` U+0671, hamzatul wasl): the engine doesn't know the dedicated character -
+    ///   a plain alef reads correctly.
+    /// - Dagger alif (U+0670): ignored by the engine (رَحمَٰن read short) - spell the long vowel out
+    ///   as a real alef, which IS its pronunciation.
+    /// - Tatweel: decorative, occasionally spelled out loud.
+    /// - Targeted respellings for words the voice mis-stresses even when well-formed.
+    nonisolated private static func normalizedForSpeech(_ text: String) -> String {
+        var s = text.precomposedStringWithCanonicalMapping
+        s = s.replacingOccurrences(of: "\u{0671}", with: "\u{0627}")   // ٱ → ا
+        s = s.replacingOccurrences(of: "\u{0670}", with: "\u{0627}")   // dagger alif → full alef
+        s = s.replacingOccurrences(of: "\u{0640}", with: "")           // tatweel
+        for (written, spoken) in Self.pronunciationFixes {
+            s = s.replacingOccurrences(of: written.precomposedStringWithCanonicalMapping, with: spoken)
+        }
+        return s
+    }
+
+    /// Words the voice mangles even in canonical form, replaced with phonetic respellings that make it
+    /// say them right. Matched AFTER the wasla/dagger folds above, so one plain-alef key covers every
+    /// written variant. Tune here as more offenders are reported.
+    nonisolated private static let pronunciationFixes: [(written: String, spoken: String)] = [
+        // The vocative lafz al-jalalah: the compressed spelling's implicit long vowel gets dropped or
+        // mis-stressed ("alla-huma"). The explicit long-alif respelling reads "Allaahumma".
+        ("اللَّهُمَّ", "اَللَّاهُمَّ"),
+    ]
+
+    /// Breath-sized phrases, split on Arabic/Latin phrase punctuation. One giant utterance is most of
+    /// why long duas sounded bad: the synthesizer flattens prosody across it and never pauses. Phrase
+    /// utterances with a short post-utterance breath read far more naturally - and the diacritized
+    /// Arabic the app already ships gives the voice its best shot at each one.
+    private static let phraseSeparators = CharacterSet(charactersIn: "،؛.…!؟?\n·")
+
+    private static func phrases(of text: String) -> [String] {
+        let parts = text.components(separatedBy: phraseSeparators)
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+        return parts.isEmpty ? [text] : parts
+    }
+
+    /// Enqueues one full text as its phrase utterances, all owned by `text` for highlight purposes.
+    /// `trailingDelay` is the breath after the LAST phrase (the between-items gap in Listen All).
+    /// The SPOKEN string is pronunciation-normalized; `text` (the display original) stays the owner.
+    private func enqueue(_ text: String, rate: Float, trailingDelay: TimeInterval) {
+        let phrases = Self.phrases(of: Self.normalizedForSpeech(text))
+        for (index, phrase) in phrases.enumerated() {
+            let item = utterance(for: phrase, rate: rate)
+            item.postUtteranceDelay = index == phrases.count - 1 ? trailingDelay : 0.25
+            utteranceOwners[item] = text
+            synthesizer.speak(item)
+        }
+    }
+
     /// Speaks `text` in Arabic, cutting off whatever was already being spoken. Tapping through the marks quickly
     /// should say the mark you last tapped, not queue up a backlog of every one you passed.
     func speak(_ text: String, rate: Float = 0.35) {
-        guard arabicVoice != nil, !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+        guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+        guard resolveVoice() != nil else { return }
 
         stop()
         activateSession()
         currentText = text
-        synthesizer.speak(utterance(for: text, rate: rate))
+        enqueue(text, rate: rate, trailingDelay: 0)
     }
 
     /// Speaks every text in order - the "Listen All" button on the adhkar and dua sections. The synthesizer
-    /// queues utterances natively, so each item is its own utterance with a breath between them.
+    /// queues utterances natively, so each item is its own phrase run with a longer breath between items.
     func speakAll(_ texts: [String], rate: Float = 0.4) {
         let cleaned = texts.filter { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
-        guard arabicVoice != nil, !cleaned.isEmpty else { return }
+        guard !cleaned.isEmpty, resolveVoice() != nil else { return }
 
         stop()
         activateSession()
         isSpeakingQueue = true
         currentText = cleaned.first
         for text in cleaned {
-            let item = utterance(for: text, rate: rate)
-            item.postUtteranceDelay = 0.7
-            synthesizer.speak(item)
+            enqueue(text, rate: rate, trailingDelay: 0.7)
         }
     }
 
     func stop() {
         isSpeakingQueue = false
         currentText = nil
+        utteranceOwners.removeAll()
         guard synthesizer.isSpeaking else { return }
         synthesizer.stopSpeaking(at: .immediate)
     }
 
-    /// The delegate's cue that the queue drained on its own (stop() already clears the flags for manual stops).
+    /// The delegate's cue that the queue drained on its own (stop() already clears the flags for manual
+    /// stops - its stopSpeaking lands here too, via didCancel, so the session release below covers both).
     fileprivate func refreshQueueState() {
         if !synthesizer.isSpeaking {
             isSpeakingQueue = false
             currentText = nil
+            utteranceOwners.removeAll()
+            releaseSessionIfIdle()
         }
+    }
+
+    /// Resolves a finished/started phrase back to the full row text it belongs to.
+    fileprivate func ownerText(of utterance: AVSpeechUtterance) -> String {
+        utteranceOwners[utterance] ?? utterance.speechString
+    }
+
+    fileprivate func forgetUtterance(_ utterance: AVSpeechUtterance) {
+        utteranceOwners.removeValue(forKey: utterance)
+    }
+
+    /// App-installed probe: does long-form playback (the Quran player) still own the shared audio
+    /// session when speech goes idle? A HOOK rather than a direct `QuranPlayer` reference so this file
+    /// compiles in sibling apps without the Quran module (Al-Adhan, Al-Hadith). `QuranPlayer.init`
+    /// installs it; nil (no player in this app, or player never started) means nobody owns the session
+    /// and it simply deactivates. Installed once at player startup, read on the main thread.
+    nonisolated(unsafe) static var recitationOwnsSession: (() -> Bool)? = nil
+
+    /// Hands the ONE shared audio session back when speech ends. Without this, the `.duckOthers`
+    /// activation outlived the speech: a single letter tap left every other app's audio ducked
+    /// indefinitely, and the category stayed `.spokenAudio` underneath the Quran player's long-form
+    /// playback session.
+    private func releaseSessionIfIdle() {
+        #if os(iOS)
+        guard !synthesizer.isSpeaking else { return }
+        if Self.recitationOwnsSession?() == true {
+            // This app's recitation still owns audio - restore its category rather than deactivating
+            // the session out from under it.
+            try? AVAudioSession.sharedInstance().setCategory(.playback)
+        } else {
+            // Deactivation can block briefly; keep it off the main thread (QuranPlayer.stop's rule).
+            DispatchQueue.global(qos: .utility).async {
+                try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+            }
+        }
+        #endif
     }
 
     /// The delegate's cue that the next queued utterance began - moves the highlight to it.
@@ -107,21 +244,43 @@ final class ArabicSpeech: NSObject, ObservableObject {
 
 extension ArabicSpeech: AVSpeechSynthesizerDelegate {
     nonisolated func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didStart utterance: AVSpeechUtterance) {
-        let text = utterance.speechString
         Task { @MainActor in
-            ArabicSpeech.shared.markSpeaking(text)
+            // The OWNER text, not the phrase: rows highlight by comparing their full text.
+            ArabicSpeech.shared.markSpeaking(ArabicSpeech.shared.ownerText(of: utterance))
         }
     }
 
     nonisolated func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didFinish utterance: AVSpeechUtterance) {
         Task { @MainActor in
+            ArabicSpeech.shared.forgetUtterance(utterance)
             ArabicSpeech.shared.refreshQueueState()
         }
     }
 
     nonisolated func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didCancel utterance: AVSpeechUtterance) {
         Task { @MainActor in
+            ArabicSpeech.shared.forgetUtterance(utterance)
             ArabicSpeech.shared.refreshQueueState()
+        }
+    }
+}
+
+/// One-line hint shown on the dua/adhkar screens when only the compact (robotic) Arabic voice is
+/// installed: the Enhanced/Premium voices are a dramatic quality jump, and almost nobody knows the
+/// download exists. Renders nothing once a better voice is installed - or when no Arabic voice exists
+/// at all (the Listen buttons are hidden then anyway).
+struct SpeechQualityHint: View {
+    @ObservedObject private var speech = ArabicSpeech.shared
+
+    var body: some View {
+        if speech.isAvailable, speech.onlyCompactVoiceAvailable {
+            Label {
+                Text("For a much better voice, download an Enhanced Arabic voice in Settings → Accessibility → Spoken Content → Voices → Arabic.")
+            } icon: {
+                Image(systemName: "waveform.badge.plus")
+            }
+            .font(.caption2)
+            .foregroundStyle(.secondary)
         }
     }
 }

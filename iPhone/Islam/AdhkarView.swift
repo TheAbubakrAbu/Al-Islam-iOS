@@ -95,7 +95,20 @@ private struct AdhkarListenButton: View {
     }
 }
 
-struct AdhkarRow: View {
+extension Settings {
+    /// Every Settings field `AdhkarRow`'s body reads, folded into one compared input - the Islam-tab
+    /// counterpart of `ayahRenderSettingsSignature`/`hadithRenderSettingsSignature`.
+    var adhkarRenderSettingsSignature: String {
+        [
+            nonQuranArabicFontName,
+            islamUsesCustomArabicFace ? "1" : "0",
+            accentColor.rawValue,
+            customAccentColorHex
+        ].joined(separator: "|")
+    }
+}
+
+struct AdhkarRow: View, Equatable {
     @ObservedObject var settings = Settings.shared
 
     let arabicText: String
@@ -114,6 +127,25 @@ struct AdhkarRow: View {
     /// The citation ("Bukhari 6306", "Quran 3:8") shown on the bottom row, leading side - with the Listen
     /// button trailing on the same row.
     var source: String? = nil
+    /// Captured at construction; see `Settings.adhkarRenderSettingsSignature`.
+    var renderSettingsSignature: String = Settings.shared.adhkarRenderSettingsSignature
+
+    /// The body lays out a full dhikr/dua (Arabic + transliteration + translation) and re-measures the
+    /// Arabic's wrap - the expensive rows of the Adhkar and Dua screens, whose parents re-render on every
+    /// Settings publish. The spoken-row wash and Listen button are child structs with their OWN speech
+    /// subscriptions, so they keep updating during playback even while this body is skipped; the measured
+    /// wrap heights are `@State`, which also bypasses `==`.
+    static func == (l: Self, r: Self) -> Bool {
+        l.arabicText == r.arabicText &&
+        l.transliteration == r.transliteration &&
+        l.translation == r.translation &&
+        l.useQuranicFont == r.useQuranicFont &&
+        l.searchQuery == r.searchQuery &&
+        l.alwaysTrailing == r.alwaysTrailing &&
+        l.speechEnabled == r.speechEnabled &&
+        l.source == r.source &&
+        l.renderSettingsSignature == r.renderSettingsSignature
+    }
 
     /// The rendered height of the Arabic, and the height of a single line of it. A short dhikr ("سُبحَانَ اللَّهِ")
     /// is one line and reads best leading, like every other row on the screen; a long one wraps, and a wrapped
@@ -145,6 +177,18 @@ struct AdhkarRow: View {
         }
     }
 
+    /// Folded copies of the row fields, cached by source string. `matches` used to fold each FULL field
+    /// (a dua can be a paragraph) on every body pass while a search was active - four fresh folds per
+    /// visible row per keystroke. The fields are immutable content, so the fold is computed once ever.
+    private static let foldedFieldCache = NSCache<NSString, NSString>()
+
+    private static func folded(_ field: String) -> String {
+        if let cached = foldedFieldCache.object(forKey: field as NSString) { return cached as String }
+        let folded = field.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
+        foldedFieldCache.setObject(folded as NSString, forKey: field as NSString)
+        return folded
+    }
+
     private var rowContent: some View {
         // Guarantee a highlight only on the field(s) that actually contain the query (folded the same way the
         // dhikr search itself matches), so a match in one field doesn't force-color the other two.
@@ -153,7 +197,7 @@ struct AdhkarRow: View {
             .folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
         func matches(_ field: String) -> Bool {
             guard !normalizedQuery.isEmpty else { return false }
-            return field.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current).contains(normalizedQuery)
+            return Self.folded(field).contains(normalizedQuery)
         }
         let trailing = alwaysTrailing || arabicWraps
         return VStack(alignment: .leading, spacing: 10) {
@@ -284,6 +328,10 @@ struct AdhkarView: View {
                 adhkarRows
                 etymologySection
                 virtuesSection
+
+                Section {
+                    SpeechQualityHint()
+                }
             }
             .themedListRowBackground()
         }
@@ -298,7 +346,7 @@ struct AdhkarView: View {
                     // Non-interactive glass: interactive Liquid Glass steals per-segment taps on real iOS 26 hardware.
                     .conditionalGlassEffect(interactive: false)
 
-                SearchBar(text: $searchText.animation(.easeInOut))
+                SearchBar(text: (AppPerformance.shouldReduceAnimations ? $searchText : $searchText.animation(.easeInOut)))
                     .padding([.horizontal, .top], -8)
                     .minimizedBarStyle(barsCollapsed)
             }
@@ -308,11 +356,14 @@ struct AdhkarView: View {
             .background(Color.white.opacity(0.00001))
         }
         #elseif os(watchOS)
-        .searchable(text: $searchText.animation(.easeInOut))
+        .searchable(text: (AppPerformance.shouldReduceAnimations ? $searchText : $searchText.animation(.easeInOut)))
         #endif
         .applyConditionalListStyle()
         .compactListSectionSpacing()
         .navigationTitle("Dhikr & Remembrances")
+        // A running "Listen All" queue must not follow the user out of this screen (it kept speaking -
+        // and kept the ducking audio session alive - after navigating away).
+        .onDisappear { ArabicSpeech.shared.stop() }
     }
 
     private func matchesSearch(_ dhikr: CommonDhikr) -> Bool {
@@ -334,6 +385,7 @@ struct AdhkarView: View {
                 searchQuery: searchText,
                 speechEnabled: true
             )
+            .equatable()
         }
     }
 

@@ -1,5 +1,22 @@
 import SwiftUI
 
+/// Measured widths for the fixed-format number badges ("100", "10:100"), keyed by template + text style
+/// + the resolved font's point size (which tracks Dynamic Type). The measurement - `UIFont.preferredFont`
+/// plus an `NSString.size` layout pass - used to run in every row body; the answer only changes when the
+/// user's text size does. Main-thread only, like every row body that reads it.
+enum BadgeWidthCache {
+    private static var cache: [String: CGFloat] = [:]
+
+    static func width(template: String, style: UIFont.TextStyle = .headline) -> CGFloat {
+        let font = UIFont.preferredFont(forTextStyle: style)
+        let key = "\(template)|\(style.rawValue)|\(font.pointSize)"
+        if let cached = cache[key] { return cached }
+        let width = (template as NSString).size(withAttributes: [.font: font]).width + 8
+        cache[key] = width
+        return width
+    }
+}
+
 /// A slim, unobtrusive progress bar used under the last-read / last-listened rows.
 struct TinyProgressBar: View {
     let fraction: Double
@@ -126,10 +143,7 @@ struct SurahRow: View, Equatable {
     }
 
     private var badgeWidth: CGFloat {
-        let font = UIFont.preferredFont(forTextStyle: .headline)
-        let text = "100" as NSString
-        let size = text.size(withAttributes: [.font: font])
-        return size.width + 8
+        BadgeWidthCache.width(template: "100")
     }
 
     private var isKhatmComplete: Bool {
@@ -452,10 +466,10 @@ struct SurahRow: View, Equatable {
     }
 }
 
-struct SurahAyahRow: View {
+struct SurahAyahRow: View, Equatable {
     @ObservedObject var settings = Settings.shared
     @State private var confirmRemoveNote = false
-    
+
     var surah: Surah
     var ayah: Ayah
     var note: String? = nil
@@ -465,6 +479,23 @@ struct SurahAyahRow: View {
     /// Multiplier on the Arabic line's font size (default matches the normal row). Pass a smaller value
     /// for compact contexts such as the page/juz starting-ayah lists.
     var arabicScale: CGFloat = 1.1
+    /// Folds every settings field the body reads (fonts, tajweed, translation toggles) so `==` stays correct
+    /// when the user changes appearance - see `Settings.ayahRenderSettingsSignature`. Captured at
+    /// construction, so the parent re-rendering on a settings change delivers a fresh signature.
+    var renderSettingsSignature: String = Settings.shared.ayahRenderSettingsSignature
+
+    /// This row builds tajweed AttributedStrings and beginner-mode spaced Arabic in its body, and it sits
+    /// in lists (last read, bookmarks, histories) whose parents re-render on every playback tick. The
+    /// bookmark state is deliberately NOT compared: it lives in observed `Settings`, whose publish
+    /// invalidates this row directly - bypassing `==` - so a toggle always redraws.
+    static func == (l: Self, r: Self) -> Bool {
+        l.surah.id == r.surah.id && l.ayah.id == r.ayah.id &&
+        l.note == r.note &&
+        l.disableTajweedColors == r.disableTajweedColors &&
+        l.grid == r.grid &&
+        l.arabicScale == r.arabicScale &&
+        l.renderSettingsSignature == r.renderSettingsSignature
+    }
 
     private var isBookmarked: Bool {
         settings.bookmarkedAyahs.contains { $0.surah == surah.id && $0.ayah == ayah.id }
@@ -518,12 +549,9 @@ struct SurahAyahRow: View {
     }
     
     private var badgeWidth: CGFloat {
-        let font = UIFont.preferredFont(forTextStyle: .headline)
-        let text = "10:100" as NSString
-        let size = text.size(withAttributes: [.font: font])
-        return size.width + 8
+        BadgeWidthCache.width(template: "10:100")
     }
-    
+
     private var listBody: some View {
         HStack {
             VStack {
@@ -660,13 +688,17 @@ struct SurahAyahRow: View {
             Image(systemName: isBookmarked ? "bookmark.fill" : "bookmark")
                 .font(.system(size: 11, weight: .semibold))
                 .foregroundColor(isBookmarked ? settings.accentColor.color : .secondary)
-                .padding(.top, 10)
-                .padding(.trailing, 11)
-                .contentShape(Rectangle().inset(by: -10))
+                // Same fix as `gridFavoriteStar`: the target is a 30pt square centered on the GLYPH.
+                // The old shape came after the corner paddings and inflated by 10 more, hit-testing a
+                // ~40pt+ zone that swallowed the tile's right side (taps opened the bookmark, not the ayah).
+                .frame(width: 30, height: 30)
+                .contentShape(Rectangle())
                 .onTapGesture {
                     settings.hapticFeedback()
                     withAnimation(.easeInOut) { toggleBookmarkWithNoteGuard() }
                 }
+                .padding(.top, 1)
+                .padding(.trailing, 2)
                 .accessibilityLabel(isBookmarked ? "Remove bookmark" : "Add bookmark")
         }
         .contentShape(Rectangle())
@@ -696,87 +728,28 @@ struct SurahAyahRow: View {
     }
 }
 
-struct CompactAyahArabicRow: View {
-    @ObservedObject var settings = Settings.shared
-
-    let surah: Surah
-    let ayah: Ayah
-    var leadingLabel: String? = nil
-
-    private var shouldShowTajweedColors: Bool {
-        settings.showTajweedColors && settings.showArabicText && settings.isHafsDisplay
-    }
-
-    private func arabicDisplayText() -> String {
-        let text = ayah.displayArabicText(surahId: surah.id, clean: settings.cleanArabicText)
-        return settings.beginnerMode ? text.map { String($0) }.joined(separator: " ") : text
-    }
-
-    private func arabicTajweedText() -> AttributedString? {
-        guard shouldShowTajweedColors else { return nil }
-        let text = ayah.displayArabicText(surahId: surah.id, clean: false)
-        let displayText = settings.cleanArabicText ? ayah.displayArabicText(surahId: surah.id, clean: true) : text
-        let renderedDisplayText = settings.beginnerMode ? displayText.map { String($0) }.joined(separator: " ") : displayText
-        return TajweedStore.shared.attributedText(
-            surah: surah.id,
-            ayah: ayah.id,
-            text: text,
-            displayText: renderedDisplayText,
-            cleanDisplayText: settings.cleanArabicText,
-            beginnerSpacing: settings.beginnerMode
-        )
-    }
-
-    var body: some View {
-        HStack(alignment: .center, spacing: 10) {
-            VStack(alignment: .leading, spacing: 2) {
-                if let leadingLabel {
-                    Text(leadingLabel)
-                        .font(.caption2.weight(.semibold))
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.6)
-                }
-                Text("\(surah.id):\(ayah.id)")
-                    .font(.caption.monospacedDigit().weight(.semibold))
-                    .foregroundColor(settings.accentColor.color)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.6)
-            }
-            .frame(width: 64, alignment: .leading)
-
-            if settings.showArabicText {
-                HighlightedSnippet(
-                    source: arabicDisplayText(),
-                    term: "",
-                    font: Font.arabic(settings.quranDisplayFontName, size: settings.fontArabicSize * 0.8),
-                    accent: settings.accentColor.color,
-                    fg: .primary,
-                    preStyledSource: arabicTajweedText(),
-                    beginnerMode: settings.beginnerMode,
-                    lineLimit: nil
-                )
-                .arabicFontDesign(custom: settings.quranDisplayUsesCustomArabicFace)
-                .multilineTextAlignment(.trailing)
-                .frame(maxWidth: .infinity, alignment: .trailing)
-            } else {
-                Spacer(minLength: 0)
-            }
-        }
-        .padding(.vertical, 2)
-    }
-}
-
 /// Just the Arabic text of an ayah, rendered through the same pipeline as the reading view - same font,
 /// tajweed colors, beginner-mode spacing, and Allah highlighting - sized by `scale`. Used for compact
 /// previews such as the page/juz dividers in SurahView.
-struct AyahArabicSnippet: View {
+struct AyahArabicSnippet: View, Equatable {
     @ObservedObject var settings = Settings.shared
 
     let surah: Surah
     let ayah: Ayah
     var scale: CGFloat = 0.8
     var lineLimit: Int? = 1
+    /// Same idiom as `SurahAyahRow`: every settings field the body reads, folded into one compared input
+    /// captured at construction, so appearance changes fail `==` while unchanged data skips the
+    /// tajweed-AttributedString rebuild. Matters in `SurahView`'s page/juz dividers, which re-render with
+    /// the reader on every playback tick.
+    var renderSettingsSignature: String = Settings.shared.ayahRenderSettingsSignature
+
+    static func == (l: Self, r: Self) -> Bool {
+        l.surah.id == r.surah.id && l.ayah.id == r.ayah.id &&
+        l.scale == r.scale &&
+        l.lineLimit == r.lineLimit &&
+        l.renderSettingsSignature == r.renderSettingsSignature
+    }
 
     private var shouldShowTajweedColors: Bool {
         settings.showTajweedColors && settings.showArabicText && settings.isHafsDisplay
@@ -858,6 +831,7 @@ struct AyahSearchResultRow: View {
     var body: some View {
         let row = VStack(alignment: .leading, spacing: 4) {
             SurahAyahRow(surah: surah, ayah: ayah, disableTajweedColors: disableTajweedColors, arabicScale: compactArabic ? 0.8 : 1.1)
+                .equatable()
 
             if settings.showFullSurahRow, let pageJuzLine {
                 Label(pageJuzLine, systemImage: "map")
@@ -984,10 +958,7 @@ struct AyahSearchRow: View, Equatable {
     }
     
     private var badgeWidth: CGFloat {
-        let font = UIFont.preferredFont(forTextStyle: .headline)
-        let text = "10:100" as NSString
-        let size = text.size(withAttributes: [.font: font])
-        return size.width + 8
+        BadgeWidthCache.width(template: "10:100")
     }
 
     private var pageJuzLine: String? {

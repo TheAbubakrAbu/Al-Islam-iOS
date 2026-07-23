@@ -389,66 +389,9 @@ struct SettingsAdhanView: View {
         .onChange(of: isOn.wrappedValue) { _ in settings.hapticFeedback() }
     }
 
-    /// Kept for the madhab + high-latitude controls. The method itself now has its own screen
-    /// (`PrayerCalculationListView`), which can show each method's angles and be searched.
-    private var prayerCalculationSection: some View {
-        Section(header: Text("PRAYER CALCULATION")) {
-            hanafiCalculationGroup
-            highLatitudeRuleGroup
-        }
-    }
-
-    /// Above roughly 48° the sun never dips far enough below the horizon for the twilight angles that define
-    /// Fajr and Isha, so those two have to be approximated. Below that latitude the rule changes nothing.
-    private var highLatitudeRuleGroup: some View {
-        VStack(alignment: .leading) {
-            Picker("High Latitude Rule", selection: $settings.highLatitudeRule.animation(.easeInOut)) {
-                Section {
-                    ForEach(Settings.highLatitudeRuleOptions, id: \.self) { option in
-                        Text(option).tag(option)
-                            .font(.subheadline)
-                    }
-                } header: {
-                    Text("High Latitude Rule")
-                        .foregroundStyle(.secondary)
-                }
-            }
-            .font(.subheadline)
-            .onChange(of: settings.highLatitudeRule) { _ in settings.hapticFeedback() }
-
-            Text(highLatitudeRuleCaption)
-                .font(.caption)
-                .foregroundColor(.secondary)
-                .padding(.vertical, 2)
-        }
-    }
-
-    private var highLatitudeRuleCaption: String {
-        // Not merely a high-latitude concern: on a short summer night the rule can shift Fajr and Isha as far
-        // south as Cairo (~30°N). Only in winter, or near the equator, does the choice make no difference.
-        var caption = "When the night is short, the sun never sinks low enough for the twilight that defines "
-            + "Fajr and Isha, so they are estimated. This matters most far from the equator, but can shift "
-            + "summer times at any latitude."
-        if let location = settings.currentLocation, location.latitude != 1000, location.longitude != 1000 {
-            let coordinates = Coordinates(latitude: location.latitude, longitude: location.longitude)
-            caption += " Automatic uses \(settings.recommendedHighLatitudeRuleLabel(at: coordinates)) in \(location.city)."
-        }
-        return caption
-    }
-
-    private var hanafiCalculationGroup: some View {
-        VStack(alignment: .leading) {
-            Toggle("Hanafi Calculation for Asr", isOn: $settings.hanafiMadhab.animation(.easeInOut))
-                .font(.subheadline)
-                .tint(settings.accentColor.color)
-                .onChange(of: settings.hanafiMadhab) { _ in settings.hapticFeedback() }
-
-            Text("The Hanafi madhab uses the shadow ratio of 2 to 1 for Asr, while many other schools use 1 to 1. Enable this only if you follow the Hanafi method.")
-                .font(.caption)
-                .foregroundColor(.secondary)
-                .padding(.vertical, 2)
-        }
-    }
+    // The madhab + high-latitude controls moved INTO PrayerCalculationListView (they are calculation
+    // choices; inline on this root they read as a stray orphan section). Kept nowhere else - the
+    // settings-search index deep-links both to that screen.
 
     private var travelingModeSection: some View {
         Section(header: Text("TRAVELING MODE")) {

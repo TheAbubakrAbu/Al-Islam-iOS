@@ -666,6 +666,7 @@ struct LastReadAyahRow: View {
     private var lastReadRowContent: some View {
         VStack(alignment: .leading, spacing: 6) {
             SurahAyahRow(surah: surah, ayah: ayah, note: noteToShow)
+                .equatable()
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
 
             TinyProgressBar(
@@ -681,6 +682,7 @@ struct LastReadAyahRow: View {
     private func readHistoryLabel(surah: Surah, ayah: Ayah, timestamp: Date) -> some View {
         HStack(spacing: 8) {
             SurahAyahRow(surah: surah, ayah: ayah, note: noteText(surahID: surah.id, ayahID: ayah.id))
+                .equatable()
                 .opacity(0.6)
                 .frame(maxWidth: .infinity, alignment: .leading)
 
@@ -827,6 +829,7 @@ struct LastListenedAyahRow: View {
     private var rowContent: some View {
         HStack(spacing: 8) {
             SurahAyahRow(surah: surah, ayah: ayah)
+                .equatable()
                 .frame(maxWidth: .infinity, alignment: .leading)
 
             // Resume: play from this ayah and keep going through the surah (task: "play from ayah so it keeps
@@ -849,6 +852,7 @@ struct LastListenedAyahRow: View {
     private func ayahHistoryLabel(histSurah: Surah, histAyah: Ayah, timestamp: Date) -> some View {
         HStack(spacing: 8) {
             SurahAyahRow(surah: histSurah, ayah: histAyah)
+                .equatable()
                 .opacity(0.6)
                 .frame(maxWidth: .infinity, alignment: .leading)
 

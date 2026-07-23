@@ -188,6 +188,19 @@ struct QuranView: View {
 
     private var quranSemanticCorpusID: String { "quran-en" }
 
+    /// Fingerprint of the bundled Quran source (size + mtime), folded into the corpus version. The
+    /// version used to be effectively constant ("en2-6236"), so a translation text CORRECTION shipped
+    /// in an app update never invalidated the on-disk vectors - the corrected verse kept its stale
+    /// embedding forever. The bundle's file stamp changes exactly when the source does.
+    private static let quranSourceStamp: String = {
+        guard let url = Bundle.main.url(forResource: "Quran", withExtension: "json")
+                ?? Bundle.main.url(forResource: "Quran", withExtension: "json", subdirectory: "JSONs"),
+              let attrs = try? FileManager.default.attributesOfItem(atPath: url.path),
+              let size = attrs[.size] as? UInt64 else { return "0" }
+        let mtime = (attrs[.modificationDate] as? Date)?.timeIntervalSince1970 ?? 0
+        return "\(size).\(Int(mtime))"
+    }()
+
     /// Resolve the corpus texts (both bundled translations per ayah, so either's phrasing matches) and
     /// hand them to the engine. No-ops once ready; cheap when the vectors are already on disk.
     private func prepareQuranSemanticCorpus() {
@@ -210,7 +223,7 @@ struct QuranView: View {
                 texts.append("\(ayah.textEnglishSaheeh) \(ayah.textEnglishMustafa)")
             }
         }
-        semanticEngine.prepare(corpusID: quranSemanticCorpusID, version: "en2-\(texts.count)", texts: texts)
+        semanticEngine.prepare(corpusID: quranSemanticCorpusID, version: "en2-\(texts.count)-\(Self.quranSourceStamp)", texts: texts)
     }
 
     /// True when the live query is one the semantic engine can answer (English text, not a reference).
@@ -825,11 +838,20 @@ struct QuranView: View {
             return ([], false)
         }
 
-        return await Task.detached(priority: .userInitiated) {
+        // Bridge cancellation into the DETACHED scan: detached tasks don't inherit it, so the scan's
+        // own `Task.isCancelled` early-out never fired - cancelling `ayahSearchTask` on the next
+        // keystroke left every abandoned full-corpus scan running to completion (and fast typing piled
+        // them up concurrently, the exact Low-Power-Mode burn the guard was written to prevent).
+        let scan = Task.detached(priority: .userInitiated) {
             let page = snapshot.search(term: query, limit: limit + 1, offset: offset)
             let more = page.count > limit
             return (Array(page.prefix(limit)), more)
-        }.value
+        }
+        return await withTaskCancellationHandler {
+            await scan.value
+        } onCancel: {
+            scan.cancel()
+        }
     }
 
     private func fetchAllHitsOffMain(query: String) async -> [VerseIndexEntry] {
@@ -838,9 +860,14 @@ struct QuranView: View {
             return []
         }
 
-        return await Task.detached(priority: .userInitiated) {
+        let scan = Task.detached(priority: .userInitiated) {
             snapshot.search(term: query, limit: .max, offset: 0)
-        }.value
+        }
+        return await withTaskCancellationHandler {
+            await scan.value
+        } onCancel: {
+            scan.cancel()
+        }
     }
 
     /// Folds the exact strings the result rows are about to render, off the main thread, so each row's first
@@ -1733,13 +1760,13 @@ struct QuranView: View {
     private var quranSearchBar: some View {
         #if os(iOS)
         SearchBar(
-            // NOT an animated binding: with `.animation()` every keystroke wrapped the state write in
-            // withAnimation, which animated a diff of the ENTIRE Quran list (114 surah rows + verse hits
-            // + highlight work) per character. Under Low Power Mode's throttled CPU those per-keystroke
-            // animated diffs stacked up until the watchdog killed the app - the type-delete-retype
-            // "search crash". Result changes still animate where they're APPLIED (handleAyahSearchChange
-            // wraps its updates in withAnimation); typing itself must be free.
-            text: $searchText,
+            // Animated again, with the two crash preconditions closed. The original watchdog kill was
+            // Low Power Mode's throttled CPU stacking whole-list animated diffs per keystroke - the
+            // `shouldReduceAnimations` gate keeps the plain binding exactly there (and under Reduce
+            // Motion). The hard diff crash was duplicate result ids - now deduped at every `verseHits`
+            // write AND in `verseHitsGroupedBySurah`. The surah/ayah rows are Equatable, so the animated
+            // diff moves rows without re-running their bodies.
+            text: AppPerformance.shouldReduceAnimations ? $searchText : $searchText.animation(.easeInOut),
             focusRequestID: searchFocusRequestID,
             onSearchButtonClicked: {
                 self.endEditing()
@@ -2067,6 +2094,7 @@ struct QuranView: View {
                 }
 
                 SurahAyahRow(surah: surah, ayah: ayah)
+                    .equatable()
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .contentShape(Rectangle())
@@ -2199,6 +2227,7 @@ struct QuranView: View {
                 push(surahID: surah.id, ayahID: ayah.id)
             } label: {
                 SurahAyahRow(surah: surah, ayah: ayah, note: noteToShow, grid: true)
+                    .equatable()
             }
             .buttonStyle(.plain)
             #else
@@ -2244,6 +2273,7 @@ struct QuranView: View {
 
             quranNavigationLink(route: .ayahs(surahID: surah.id, ayah: ayah.id)) {
                 SurahAyahRow(surah: surah, ayah: ayah, note: noteToShow)
+                    .equatable()
             }
             .tag(surah.id)
             .rightSwipeActions(
@@ -2610,6 +2640,7 @@ struct QuranView: View {
             push(surahID: item.surah.id, ayahID: item.ayah.id)
         } label: {
             SurahAyahRow(surah: item.surah, ayah: item.ayah, grid: true)
+                .equatable()
         }
         .buttonStyle(.plain)
     }
@@ -3043,7 +3074,10 @@ struct QuranView: View {
                     )
                 }
                 #endif
-                .animation(.easeInOut, value: searchText)
+                // No `.animation(value: searchText)` here: it opened an animation transaction on every
+                // visible result row on every KEYSTROKE. Row insertion/reordering already animates where
+                // the results are APPLIED (handleAyahSearchChange wraps its updates in withAnimation);
+                // the row's own content has nothing to animate while typing.
             }
         }
     }
@@ -3062,10 +3096,7 @@ struct QuranView: View {
     }
 
     private var revelationBadgeWidth: CGFloat {
-        let font = UIFont.preferredFont(forTextStyle: .caption1)
-        let text = "#114" as NSString
-        let size = text.size(withAttributes: [.font: font])
-        return size.width + 8
+        BadgeWidthCache.width(template: "#114", style: .caption1)
     }
 
     private func revelationOrderBadge(_ order: Int) -> some View {
@@ -3455,6 +3486,7 @@ struct QuranView: View {
                 // Full ayah row (same font/tajweed/beginner mode/highlight as the reading view); already
                 // single-line internally.
                 SurahAyahRow(surah: item.surah, ayah: item.ayah)
+                    .equatable()
             }
         }
     }
@@ -3545,11 +3577,19 @@ struct QuranView: View {
                     ayahExactMatchRows(context: context)
 
                     // Nothing exact and nothing from the keyword sweep: say so instead of a bare header.
+                    // Scoped to KEYWORD when AI found matches (iOS only - the watch has no AI search):
+                    // "No ayahs match" directly under a populated AI RESULTS section read as a contradiction.
                     if context.exactMatch.surah == nil || context.exactMatch.ayah == nil,
                        verseHitsGroupedBySurah.isEmpty {
+                        #if os(iOS)
+                        Text(aiHits.isEmpty ? "No ayahs match your search." : "No keyword matches - see the AI results above.")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                        #else
                         Text("No ayahs match your search.")
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
+                        #endif
                     }
                 }
 
@@ -3938,8 +3978,12 @@ struct QuranView: View {
                 // Append only entries not already shown - the index can be rebuilt between pages, which
                 // shifts offsets and lets a page overlap the last one (duplicate ids crash the List diff).
                 let existing = Set(verseHits.map(\.id))
-                verseHits.append(contentsOf: moreHits.filter { !existing.contains($0.id) })
+                let fresh = moreHits.filter { !existing.contains($0.id) }
+                verseHits.append(contentsOf: fresh)
                 hasMoreHits = moreAvail
+                // Only the FIRST page prewarmed its highlight folds; later pages paid the fold during
+                // scrolling, on first render of each new row.
+                prewarmHighlightCaches(for: fresh)
             }
         }
     }

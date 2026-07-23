@@ -21,6 +21,11 @@ final class DayScrubber: ObservableObject {
     var isScrubbing: Bool { scrubbedDate != nil }
 
     /// The prayer in effect at the previewed moment, or `nil` when live.
+    ///
+    /// Views that need per-move updates anyway (SkyView, the watch strip) read this directly. Views that
+    /// only care about the highlighted PRAYER - which changes a handful of times per drag, not per
+    /// touch-move - observe `ScrubHighlight.shared` instead, so ~60 `scrubbedDate` writes/second don't
+    /// rebuild them (dragging used to rebuild the entire `PrayerList` section every touch-move).
     var previewPrayer: Prayer? {
         guard let scrubbedDate else { return nil }
         // Between midnight and Fajr no prayer has begun *today*, but the prayer in effect is the one that
@@ -34,12 +39,32 @@ final class DayScrubber: ObservableObject {
 
     func scrub(to date: Date) {
         scrubbedDate = date
+        ScrubHighlight.shared.update(previewPrayer)
     }
 
     func end() {
         timeline = []
         withAnimation(.easeOut(duration: 0.25)) {
             scrubbedDate = nil
+        }
+        ScrubHighlight.shared.update(nil)
+    }
+}
+
+/// The row-highlight slice of the scrubber: publishes only when the prayer under the thumb actually
+/// CHANGES. `PrayerList` observes this (not `DayScrubber`), so its section rebuilds a handful of times
+/// per drag instead of on every touch-move.
+@MainActor
+final class ScrubHighlight: ObservableObject {
+    static let shared = ScrubHighlight()
+    private init() {}
+
+    @Published private(set) var previewPrayer: Prayer?
+
+    func update(_ prayer: Prayer?) {
+        guard prayer?.nameTransliteration != previewPrayer?.nameTransliteration else { return }
+        withAnimation(.easeInOut(duration: 0.2)) {
+            previewPrayer = prayer
         }
     }
 }

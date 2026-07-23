@@ -14,6 +14,15 @@ extension EnvironmentValues {
     }
 }
 
+/// Live mirror of the reveal state for code that checks it from ESCAPING tasks. A value-type modifier's
+/// captured `@Environment(\.appRevealed)` snapshot freezes at capture time - the review prompt's retry
+/// loop, whose capture chain starts before the launch cover lifts, read a stale `false` forever and
+/// silently suppressed the prompt for the whole session. Defaults to `true` for the same reason as the
+/// environment key (Watch app, previews); only the iPhone app root writes it.
+@MainActor enum AppReveal {
+    static var revealed = true
+}
+
 struct AdhanView: View {
     @ObservedObject var settings = Settings.shared
 
@@ -115,6 +124,11 @@ struct AdhanView: View {
 
                 prayersSection
 
+                // The tracker is its own section directly beneath the times: marking prayers is a
+                // different activity from reading them, and it carries its own header, streak and
+                // history entry point (see PrayerTrackerView.swift).
+                PrayerTrackerSection()
+
                 Section(header: Text("AT A GLANCE")) {
                     GlanceCard()
                 }
@@ -202,7 +216,10 @@ struct AdhanView: View {
             // With the sky on, the countdown rides inside its card (see `SkyView.countdownStrip`). With the
             // sky off, it returns to being its own section - nothing is lost by turning the drawing off.
             if !settings.showSkyView {
+                // Equatable-gated: the countdown invalidates itself via its own timer and Settings
+                // observation, so re-runs of this body (sheet flags, scroll state) can skip it.
                 PrayerCountdown()
+                    .equatable()
             }
             PrayerList()
         }
@@ -210,6 +227,7 @@ struct AdhanView: View {
         if settings.prayers != nil {
             PrayerList()
             PrayerCountdown()
+                .equatable()
         }
         #endif
     }

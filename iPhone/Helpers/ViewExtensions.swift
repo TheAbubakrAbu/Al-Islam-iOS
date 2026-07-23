@@ -170,9 +170,36 @@ enum SafeAreaInsetVStackSpacing {
     }
 }
 
+/// The now-playing bar's narrow seam between shared chrome and whichever module owns playback.
+///
+/// Lives in HELPERS - not next to QuranPlayer - so shared files never name a Quran type: this is what
+/// lets the Adhan/Hadith/Islam folders plus Helpers compile in sibling apps (Al-Adhan, Al-Hadith) that
+/// don't ship the Quran module at all. Apps WITH recitation wire it up from their player: QuranPlayer's
+/// `isPlaying`/`isPaused` didSets call `update(showsBar:)`, and `QuranPlayer.init` installs `barContent`.
+/// Apps without simply never touch it - the flag stays false, the closure stays nil, everything compiles.
+///
+/// Publishes only when the bar actually appears or disappears (the narrow slice, NOT the whole player:
+/// this wraps every list in the app, and observing `QuranPlayer` re-rendered all of them on every
+/// per-ayah publish during recitation). Main-thread by the same convention as the player's publishes.
+final class PlaybackVisibility: ObservableObject {
+    static let shared = PlaybackVisibility()
+    private init() {}
+
+    @Published private(set) var showsNowPlaying = false
+
+    /// The bar view itself, installed once by the module that owns it (`QuranPlayer.init` returns
+    /// `AnyView(NowPlayingView())`). Nil means this app has no bar.
+    var barContent: (() -> AnyView)? = nil
+
+    func update(showsBar: Bool) {
+        guard showsBar != showsNowPlaying else { return }
+        showsNowPlaying = showsBar
+    }
+}
+
 struct ConditionalListStyle: ViewModifier {
     @ObservedObject private var settings = Settings.shared
-    @ObservedObject private var quranPlayer = QuranPlayer.shared
+    @ObservedObject private var playback = PlaybackVisibility.shared
     @Environment(\.colorScheme) private var systemColorScheme
     @Environment(\.customColorScheme) private var customColorScheme
 
@@ -184,7 +211,7 @@ struct ConditionalListStyle: ViewModifier {
     }
 
     private var shouldShowNowPlaying: Bool {
-        quranPlayer.isPlaying || quranPlayer.isPaused
+        playback.showsNowPlaying
     }
 
     func body(content: Content) -> some View {
@@ -205,9 +232,9 @@ struct ConditionalListStyle: ViewModifier {
         .preferredColorScheme(settings.colorScheme)
         #if os(iOS)
         .safeAreaInset(edge: .bottom) {
-            if !disableNowPlayingInset && shouldShowNowPlaying {
+            if !disableNowPlayingInset && shouldShowNowPlaying, let bar = playback.barContent {
                 VStack(spacing: SafeAreaInsetVStackSpacing.standard) {
-                    NowPlayingView()
+                    bar()
                 }
                 .padding(.horizontal, 24)
                 .padding(.bottom, 8)
@@ -310,15 +337,21 @@ extension View {
             Image(systemName: isFavorite ? "star.fill" : "star")
                 .font(.system(size: 11, weight: .semibold))
                 .foregroundColor(isFavorite ? accent : .secondary)
-                .padding(.top, 10)
-                .padding(.trailing, 11)
-                .contentShape(Rectangle().inset(by: -10))
+                // The tap target is a 30pt square CENTERED ON THE GLYPH - sized before the corner
+                // positioning, not after. The old shape came after the 10/11pt paddings and then
+                // inflated by another 10 (`inset(by: -10)`), hit-testing a ~40pt+ zone anchored at the
+                // corner: on a small grid tile, tapping anywhere on the right side toggled the star
+                // instead of opening the tile.
+                .frame(width: 30, height: 30)
+                .contentShape(Rectangle())
                 .onTapGesture {
                     Settings.shared.hapticFeedback()
                     withAnimation(.easeInOut) {
                         onToggle()
                     }
                 }
+                .padding(.top, 1)
+                .padding(.trailing, 2)
                 .accessibilityLabel(isFavorite ? "Unfavorite \(accessibilityName)" : "Favorite \(accessibilityName)")
         }
     }

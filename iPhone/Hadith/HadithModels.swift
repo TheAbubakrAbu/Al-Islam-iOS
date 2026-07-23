@@ -279,9 +279,11 @@ struct HadithCatalogBook: Identifiable, Hashable {
         ),
     ]
 
-    static var bySlug: [String: HadithCatalogBook] {
+    // `let`, not a computed var: each book struct carries paragraphs of description text, and the
+    // computed form rebuilt (and copied) the whole 17-entry dictionary on every access - including once
+    // per element inside prewarm's compactMap and inside render bodies.
+    static let bySlug: [String: HadithCatalogBook] =
         Dictionary(uniqueKeysWithValues: all.map { ($0.slug, $0) })
-    }
 
     static func books(in group: Group) -> [HadithCatalogBook] {
         all.filter { $0.group == group }
@@ -410,15 +412,19 @@ enum HadithReferenceParser {
         let hadith: Int
     }
 
+    /// Compiled once: `parse` runs on the main thread per keystroke and several times per body pass,
+    /// and it used to compile this same pattern twice per call (once via `range(of:)`, once here).
+    // Five digits on BOTH numbers: every current book is < 10,000 hadiths, but a fuller collection
+    // (Musnad Ahmad) would make "ahmad 12345" silently fall through to keyword search at {1,4}.
+    private static let referenceRegex = try? NSRegularExpression(
+        pattern: #"^(.+?)\s+(\d{1,5})(?:\s*[:.\-]\s*(\d{1,5}))?$"#
+    )
+
     /// Parse "bukhari 5" or "muslim 3:12" (also "3.12" / "3-12"). Returns nil when the text before the
     /// numbers doesn't resolve to a known book alias.
     static func parse(_ query: String) -> Reference? {
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard let match = trimmed.range(of: #"^(.+?)\s+(\d{1,4})(?:\s*[:.\-]\s*(\d{1,5}))?$"#, options: .regularExpression) else { return nil }
-        _ = match
-
-        // Re-extract with NSRegularExpression for capture groups (String.range(of:) can't give them).
-        guard let regex = try? NSRegularExpression(pattern: #"^(.+?)\s+(\d{1,4})(?:\s*[:.\-]\s*(\d{1,5}))?$"#),
+        guard let regex = referenceRegex,
               let result = regex.firstMatch(in: trimmed, range: NSRange(trimmed.startIndex..., in: trimmed)) else { return nil }
 
         func group(_ index: Int) -> String? {

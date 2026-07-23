@@ -16,18 +16,26 @@ struct SurahEntity: AppEntity, Identifiable {
 struct SurahEntityQuery: EntityQuery, EntityStringQuery {
     private func entity(_ surah: Surah) -> SurahEntity { SurahEntity(id: surah.id, name: surah.nameTransliteration) }
 
+    /// Siri can invoke these on a COLD launch, before the background Quran load has populated
+    /// `quran` - resolving against the empty array made the spoken surah "not found". Wait for the
+    /// core load (it has its own escape hatches, and Siri's own timeout bounds the worst case).
+    private func loadedSurahs() async -> [Surah] {
+        await QuranData.shared.waitUntilCoreLoaded()
+        return await MainActor.run { QuranData.shared.quran }
+    }
+
     func entities(for identifiers: [Int]) async throws -> [SurahEntity] {
-        QuranData.shared.quran.filter { identifiers.contains($0.id) }.map(entity)
+        await loadedSurahs().filter { identifiers.contains($0.id) }.map(entity)
     }
 
     func suggestedEntities() async throws -> [SurahEntity] {
-        QuranData.shared.quran.map(entity)
+        await loadedSurahs().map(entity)
     }
 
     /// Resolves a spoken/typed string (a name, alias, or number) to matching surahs.
     func entities(matching string: String) async throws -> [SurahEntity] {
         let normalized = string.normalizedSurahIntentQuery
-        let all = QuranData.shared.quran
+        let all = await loadedSurahs()
         guard !normalized.isEmpty else { return all.map(entity) }
 
         if let number = Int(normalized), (1...114).contains(number) {
@@ -105,7 +113,7 @@ enum QuranPlaybackRouter {
     @MainActor
     private static func confirmStart(
         surahID: Int,
-        timeout: UInt64 = 2_000_000_000,
+        timeout: UInt64 = 4_000_000_000,
         interval: UInt64 = 100_000_000
     ) async -> Bool {
         if player.isPlaying, player.currentSurahNumber == surahID {
@@ -126,7 +134,10 @@ enum QuranPlaybackRouter {
             }
         }
 
-        return false
+        // Timed out without a PRESENTED failure: a cold launch + network stream routinely outlasts
+        // this window, and Siri saying "there was a problem" while the surah starts moments later is
+        // a false failure. Only an actual surfaced playback error reports as one.
+        return !player.showInternetAlert
     }
 
     @MainActor

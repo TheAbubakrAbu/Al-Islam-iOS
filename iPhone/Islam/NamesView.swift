@@ -85,8 +85,20 @@ struct NameOfAllah: Decodable, Identifiable, Equatable {
     /// displayed field does match, its flag drives `guaranteeMatch` so that field always shows at least one
     /// highlight even if the highlighter's normalization differs from this search's (e.g. `ḥ` vs `h`).
     /// Indices mirror `searchTokens`: [0] = Arabic name, [1] = transliteration, [2] = meaning.
+    /// One-entry memo for the cleaned query: during a search, every visible row cleans the SAME raw
+    /// query per keystroke - up to ~99 identical diacritic-strips per character typed. Main-thread only,
+    /// like the row bodies that call it.
+    private static var cleanedQueryMemo: (raw: String, cleaned: String) = ("", "")
+
+    private static func cleanedQuery(_ raw: String) -> String {
+        if cleanedQueryMemo.raw == raw { return cleanedQueryMemo.cleaned }
+        let cleaned = clean(raw)
+        cleanedQueryMemo = (raw, cleaned)
+        return cleaned
+    }
+
     func displayedFieldMatches(query rawQuery: String) -> (arabic: Bool, transliteration: Bool, meaning: Bool) {
-        let q = Self.clean(rawQuery)
+        let q = Self.cleanedQuery(rawQuery)
         guard !q.isEmpty, searchTokens.count >= 3 else { return (false, false, false) }
         return (
             arabic: searchTokens[0].contains(q),
@@ -131,8 +143,12 @@ final class NamesViewModel: ObservableObject {
         loadState == .ready
     }
 
+    /// Wall-clock capped: this gates the LAUNCH SCREEN reveal (LaunchScreen awaits it with no cap of
+    /// its own), and the uncapped loop had no escape if the load task never ran or wedged before
+    /// setting `.ready`/`.failed` - a permanently stranded launch. Eight seconds is far beyond any
+    /// real parse of a 100-entry JSON; past it, launching with the names still loading beats a hang.
     func waitUntilLoaded() async {
-        while true {
+        for _ in 0..<320 {
             let state = await MainActor.run { self.loadState }
             if state == .ready || state == .failed {
                 return
@@ -267,7 +283,7 @@ struct NamesView: View {
             }
         }
         #if os(watchOS)
-        .searchable(text: $searchText.animation(.easeInOut))
+        .searchable(text: (AppPerformance.shouldReduceAnimations ? $searchText : $searchText.animation(.easeInOut)))
         #else
         // Apple Music-style: the bottom bar minimizes while scrolling down, restores on scroll-up.
         .collapseBarsOnScroll($barsCollapsed)
@@ -282,7 +298,7 @@ struct NamesView: View {
                 // // Stays mounted while minimized (height 0) - inserting/removing glass renders black boxes.
                 // .collapsibleBarRow(barsCollapsed)
 
-                SearchBar(text: $searchText.animation(.easeInOut))
+                SearchBar(text: (AppPerformance.shouldReduceAnimations ? $searchText : $searchText.animation(.easeInOut)))
                     .padding([.horizontal, .top], -8)
                     .minimizedBarStyle(barsCollapsed)
             }

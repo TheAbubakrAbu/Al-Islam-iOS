@@ -22,6 +22,30 @@ import SwiftUI
 final class SemanticSearchEngine: ObservableObject {
     static let shared = SemanticSearchEngine()
 
+    private init() {
+        #if os(iOS)
+        // Up to 3 resident corpora × ~10-25MB of vectors is the app's largest droppable allocation.
+        // Under a real memory warning, shed everything but the most recently used corpus - the evicted
+        // ones reload from disk in one read on their next search (a latency blip, not a rebuild).
+        NotificationCenter.default.addObserver(
+            forName: UIApplication.didReceiveMemoryWarningNotification, object: nil, queue: .main
+        ) { _ in
+            MainActor.assumeIsolated {
+                SemanticSearchEngine.shared.trimForMemoryPressure()
+            }
+        }
+        #endif
+    }
+
+    private func trimForMemoryPressure() {
+        while lruOrder.count > 1, let oldest = lruOrder.first {
+            lruOrder.removeFirst()
+            corpora.removeValue(forKey: oldest)
+            readyCorpora.remove(oldest)
+            buildProgress[oldest] = nil
+        }
+    }
+
     /// Corpus build state, published for the UI's progress row. 1.0 == ready.
     @Published private(set) var buildProgress: [String: Double] = [:]
     /// Ids whose vectors are loaded in memory and queryable right now.
@@ -31,7 +55,30 @@ final class SemanticSearchEngine: ObservableObject {
 
     /// Whether this device can embed English words at all (the word embedding ships with the OS; on the
     /// rare configuration without it, AI search hides itself instead of showing a dead section).
-    static let isSupported: Bool = NLEmbedding.wordEmbedding(for: .english) != nil
+    ///
+    /// Resolved through `embedQueue`, REUSING the one shared embedder - the old `static let` loaded the
+    /// model a second time just to discard it, and its first touch happened on the MAIN thread (from
+    /// `aiQueryEligible` / corpus prep during the launch window): a disk-backed model load as a body
+    /// side-effect. `prewarmOffMain()` pays it on the serial lane at startup; after that this is a
+    /// lock-free Bool read (the unsynchronized fast path is a set-once word-sized value - the same
+    /// `nonisolated(unsafe)` discipline as `embedder`, whose safety invariant is the queue).
+    nonisolated(unsafe) private static var supportedResolved: Bool?
+    nonisolated static var isSupported: Bool {
+        if let resolved = supportedResolved { return resolved }
+        return embedQueue.sync {
+            if let resolved = supportedResolved { return resolved }
+            if embedder == nil { embedder = NLEmbedding.wordEmbedding(for: .english) }
+            let supported = embedder != nil
+            supportedResolved = supported
+            return supported
+        }
+    }
+
+    /// Forces the `isSupported` model load onto the serial lane from a background context. Called from
+    /// the Quran data load, so the first body that reads `isSupported` gets a cached Bool, not a model load.
+    nonisolated static func prewarmOffMain() {
+        _ = isSupported
+    }
 
     private var corpora: [String: SemanticCorpus] = [:]
     private var buildsInFlight: Set<String> = []
@@ -229,11 +276,20 @@ final class SemanticSearchEngine: ObservableObject {
         let queryTokens = Self.tokens(of: query)
         guard !queryTokens.isEmpty else { return [] }
 
-        return await Task.detached(priority: .userInitiated) {
+        // Bridge cancellation into the DETACHED scan (same fix as the keyword scans in QuranView):
+        // detached tasks don't inherit it, so `topMatches`' Task.isCancelled poll never fired and an
+        // abandoned query's scan always ran to completion - proportionally worst for the
+        // tens-of-thousands-item all-books hadith corpus.
+        let scan = Task.detached(priority: .userInitiated) {
             let queryVectors = queryTokens.compactMap { Self.wordVector($0) }
-            guard !queryVectors.isEmpty else { return [] }
+            guard !queryVectors.isEmpty else { return [(index: Int, score: Float)]() }
             return corpus.topMatches(queryVectors: queryVectors, limit: limit)
-        }.value
+        }
+        return await withTaskCancellationHandler {
+            await scan.value
+        } onCancel: {
+            scan.cancel()
+        }
     }
 }
 
@@ -290,6 +346,9 @@ final class SemanticCorpus: @unchecked Sendable {
         scored.reserveCapacity(min(limit * 4, itemWordIndices.count))
         var best: Float = 0
         for (index, wordRows) in itemWordIndices.enumerated() {
+            // Abandoned query (the debounce task was cancelled after this scan started): stop burning
+            // CPU. Cheap flag check, meaningful for the tens-of-thousands-item all-books hadith corpus.
+            if index & 0x3FF == 0, Task.isCancelled { return [] }
             guard !wordRows.isEmpty else { continue }
             var total: Float = 0
             for table in similarityTables {

@@ -11,6 +11,10 @@ struct SurahQueueItem: Identifiable, Equatable {
     let surahName: String
 }
 
+// `PlaybackVisibility` (the bar-visibility slice every list observes) lives in Helpers/ViewExtensions -
+// NOT here - so shared chrome compiles in sibling apps without the Quran module. This player feeds it
+// from the `isPlaying`/`isPaused` didSets and installs its bar content + the speech session hook in
+// `init` below; that self-registration is the Quran module's entire wiring into shared code.
 final class QuranPlayer: ObservableObject {
     static let shared = QuranPlayer()
     private static let listeningHistoryKey = "quranListeningHistoryData"
@@ -22,8 +26,12 @@ final class QuranPlayer: ObservableObject {
     
     @Published var isLoading = false
     @Published private(set) var isReadyForUI = false
-    @Published private(set) var isPlaying = false
-    @Published private(set) var isPaused = false
+    @Published private(set) var isPlaying = false {
+        didSet { PlaybackVisibility.shared.update(showsBar: isPlaying || isPaused) }
+    }
+    @Published private(set) var isPaused = false {
+        didSet { PlaybackVisibility.shared.update(showsBar: isPlaying || isPaused) }
+    }
     
     @Published var currentSurahNumber: Int?
     @Published var currentAyahNumber: Int?
@@ -114,6 +122,13 @@ final class QuranPlayer: ObservableObject {
     private static var isNetworkReachable = true
 
     private init() {
+        // Self-registration into shared chrome (see the note above the class): the bar the now-playing
+        // inset renders, and the speech engine's "does recitation still own the audio session?" probe.
+        // Both closures resolve `.shared` lazily at CALL time - never during this init - and both stay
+        // nil in sibling apps that don't compile this module.
+        PlaybackVisibility.shared.barContent = { AnyView(NowPlayingView()) }
+        ArabicSpeech.recitationOwnsSession = { QuranPlayer.shared.isPlaying || QuranPlayer.shared.isPaused }
+
         Self.networkMonitor.pathUpdateHandler = { path in
             let reachable = (path.status == .satisfied)
             DispatchQueue.main.async { Self.isNetworkReachable = reachable }
@@ -123,6 +138,23 @@ final class QuranPlayer: ObservableObject {
             self,
             selector: #selector(handleInterruption),
             name: AVAudioSession.interruptionNotification,
+            object: AVAudioSession.sharedInstance()
+        )
+        // Unplugging headphones (or a Bluetooth device dropping) must PAUSE, not continue out of the
+        // speaker - with a `.playback` session iOS does not do this for us, and recitation suddenly
+        // blasting from the phone in public is exactly what the standard media-app convention prevents.
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleRouteChange),
+            name: AVAudioSession.routeChangeNotification,
+            object: AVAudioSession.sharedInstance()
+        )
+        // If the media server itself restarts, every AVPlayer and the session are dead objects; playing
+        // into them produces silent, stuck UI. Reset to a clean stopped state instead.
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleMediaServicesReset),
+            name: AVAudioSession.mediaServicesWereResetNotification,
             object: AVAudioSession.sharedInstance()
         )
         loadHistoryFromDefaults()
@@ -334,6 +366,39 @@ final class QuranPlayer: ObservableObject {
         }
     }
     
+    /// Pauses when the current output route disappears (wired headphones unplugged, Bluetooth device
+    /// off). Other route changes - a new device connecting, category renegotiation - are left alone.
+    @objc private func handleRouteChange(notification: Notification) {
+        guard
+            let info = notification.userInfo,
+            let reasonValue = info[AVAudioSessionRouteChangeReasonKey] as? UInt,
+            let reason = AVAudioSession.RouteChangeReason(rawValue: reasonValue),
+            reason == .oldDeviceUnavailable
+        else { return }
+
+        // Route notifications arrive on the session's queue; @Published mutations hop to main, same as
+        // the interruption handler above.
+        DispatchQueue.main.async { [weak self] in
+            guard let self, self.isPlaying else { return }
+            self.pause()
+            self.updateNowPlayingInfo()
+        }
+    }
+
+    /// The audio server restarted (rare, but real): the session and every player object are invalid.
+    /// Tear down to a clean stopped state so the next tap starts fresh instead of playing into a corpse.
+    @objc private func handleMediaServicesReset(notification: Notification) {
+        DispatchQueue.main.async { [weak self] in
+            guard let self else { return }
+            #if os(watchOS)
+            self.audioSessionActivated = false
+            #endif
+            if self.isPlaying || self.isPaused || self.isLoading {
+                self.stop()
+            }
+        }
+    }
+
     private func setupRemoteTransportControls() {
         let cmd = MPRemoteCommandCenter.shared()
         
@@ -1963,7 +2028,9 @@ final class ReciterDownloadManager: NSObject, ObservableObject, URLSessionDownlo
         return DownloadState(
             isDownloading: false,
             completedSurahs: count,
-            totalSurahs: 114,
+            // The reciter's CARRIED count, not 114: a partial-mushaf reciter's finished download
+            // otherwise reads ~96% forever ("109 of 114").
+            totalSurahs: reciter.carriedSurahCount,
             totalBytes: bytes,
             errorMessage: nil
         )
@@ -1975,7 +2042,7 @@ final class ReciterDownloadManager: NSObject, ObservableObject, URLSessionDownlo
         statesByReciterID[reciter.id] = DownloadState(
             isDownloading: false,
             completedSurahs: count,
-            totalSurahs: 114,
+            totalSurahs: reciter.carriedSurahCount,
             totalBytes: bytes,
             errorMessage: nil
         )
@@ -2048,7 +2115,9 @@ final class ReciterDownloadManager: NSObject, ObservableObject, URLSessionDownlo
             statesByReciterID[reciter.id] = state
         }
 
-        statesByReciterID[reciter.id] = DownloadState()
+        // Fresh state must keep the CARRIED denominator - `DownloadState()` defaults to 114, which
+        // resurrected the forever-96% bar on a partial-mushaf reciter's delete-then-redownload.
+        statesByReciterID[reciter.id] = DownloadState(totalSurahs: reciter.carriedSurahCount)
     }
 
     func deleteAllDownloads() {
@@ -2082,7 +2151,10 @@ final class ReciterDownloadManager: NSObject, ObservableObject, URLSessionDownlo
                     if self.activeTasks[reciter.id] != nil { continue }
                     if self.statesByReciterID[reciter.id]?.isDownloading == true { continue }
                     let (count, _) = self.downloadedStats(for: reciter)
-                    if count > 0 && count < 114 {
+                    // Against the surahs the reciter CARRIES, never a flat 114: a complete download of
+                    // a partial-mushaf reciter (Islam Sobhi carries 109) satisfied `count < 114` and
+                    // was silently deleted here on every reciter-list appearance.
+                    if count > 0 && count < reciter.carriedSurahCount {
                         self.deleteDownloads(for: reciter)
                     }
                 }
@@ -2307,9 +2379,18 @@ final class ReciterDownloadManager: NSObject, ObservableObject, URLSessionDownlo
                 AyahTimingStore.shared.fetchTimingsIfNeeded(reciter: reciter, surahNumber: surahNumber)
             }
         } catch {
+            // Remember the failed INSTALL (disk full, move failure): the task itself "succeeded", so
+            // `didCompleteWithError` arrives with error == nil and would otherwise overwrite this
+            // error and schedule the SAME surah again - a silent re-download loop on a full disk.
+            // Delegate callbacks share one serial queue, so the plain Set is safe here.
+            installFailedReciterIDs.insert(context.reciter.id)
             finishWithError(for: context.reciter.id, message: error.localizedDescription)
         }
     }
+
+    /// Reciters whose last finished task failed to INSTALL its file. Touched only on the session's
+    /// serial delegate queue.
+    private var installFailedReciterIDs: Set<String> = []
 
     func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
         guard let context = taskContext(for: task) else { return }
@@ -2325,6 +2406,10 @@ final class ReciterDownloadManager: NSObject, ObservableObject, URLSessionDownlo
             }
             return
         }
+
+        // A failed install already surfaced its error; scheduling the next download would pick the
+        // still-missing surah again, forever. Stop the chain - the user retries explicitly.
+        if installFailedReciterIDs.remove(context.reciter.id) != nil { return }
 
         refreshState(for: context.reciter)
         scheduleNextDownload(for: context.reciter)

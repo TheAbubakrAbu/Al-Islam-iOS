@@ -226,7 +226,11 @@ struct NowPlayingView: View {
     /// same line as the controls (saves vertical space vs. a separate progress block). Polls on a timeline.
     @ViewBuilder
     private func transportRowWithProgress(isPlaying: Bool) -> some View {
-        TimelineView(.periodic(from: .now, by: 0.5)) { _ in
+        // Half-second cadence only while audio actually advances. The card persists across pause, and
+        // the periodic timeline kept redrawing this subtree twice a second over a frozen progress bar;
+        // paused, one lazy tick keeps it alive, and the play/pause @Published change re-renders (and
+        // re-schedules) immediately on resume.
+        TimelineView(.periodic(from: .now, by: isPlaying ? 0.5 : 3600)) { _ in
             let elapsed = CMTimeGetSeconds(quranPlayer.player?.currentTime() ?? .zero)
             let rawTotal = CMTimeGetSeconds(quranPlayer.player?.currentItem?.duration ?? .zero)
             let total = (rawTotal.isFinite && rawTotal > 0) ? rawTotal : 0

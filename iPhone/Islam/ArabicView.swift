@@ -130,7 +130,7 @@ struct ArabicView: View {
             .themedListRowBackground()
         }
         #if os(watchOS)
-        .searchable(text: $searchText.animation(.easeInOut))
+        .searchable(text: (AppPerformance.shouldReduceAnimations ? $searchText : $searchText.animation(.easeInOut)))
         #else
         .background(gridNavigationLink)
         // Apple Music-style: the bottom bar minimizes while scrolling down, restores on scroll-up.
@@ -150,7 +150,7 @@ struct ArabicView: View {
                 //     .collapsibleBarRow(barsCollapsed)
 
                 HStack(spacing: 0) {
-                    SearchBar(text: $searchText.animation(.easeInOut))
+                    SearchBar(text: (AppPerformance.shouldReduceAnimations ? $searchText : $searchText.animation(.easeInOut)))
 
                     Menu {
                         Text("Arabic Sort")
@@ -210,6 +210,7 @@ struct ArabicView: View {
         #endif
         .applyConditionalListStyle()
         .navigationTitle("Arabic Alphabet")
+        .onDisappear { ArabicSpeech.shared.stop() }
         #if os(iOS)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {

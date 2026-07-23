@@ -292,6 +292,9 @@ struct PlaceLocatorView: View {
             .onChange(of: searchText) { newValue in
                 scheduleSearch(for: newValue, force: false)
             }
+            // A fan-out of ~6 concurrent MKLocalSearch requests started just before leaving would run to
+            // completion for a screen nobody is looking at - cancel it with the screen.
+            .onDisappear { searchTask?.cancel() }
             .onReceive(settings.$currentLocation) { location in
                 guard awaitingFirstFix,
                       let location, location.latitude != 1000, location.longitude != 1000 else { return }

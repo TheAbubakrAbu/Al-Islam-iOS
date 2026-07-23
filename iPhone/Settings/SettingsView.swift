@@ -10,6 +10,8 @@ struct SettingsView: View {
     @State private var showResetConfirmation = false
     @State private var confirmEraseEverything = false
     @State private var settingsSearchText = ""
+    /// Apple Music-style: true while scrolling down, minimizing the floating search bar.
+    @State private var barsCollapsed = false
 
     /// The destination shown when nothing is explicitly selected (single source of truth).
     private static let defaultDestination: SettingsDestination = .quranSettings
@@ -72,7 +74,6 @@ struct SettingsView: View {
         List {
             Group {
                 #if os(iOS)
-                settingsSearchBarSection
                 if !settingsSearchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                     settingsSearchResultsSection
                 } else {
@@ -84,6 +85,22 @@ struct SettingsView: View {
             }
             .themedListRowBackground()
         }
+        #if os(iOS)
+        // The search bar floats at the bottom, exactly like every other searchable screen: Apple
+        // Music-style minimize on scroll-down, restore on scroll-up (or while typing).
+        .collapseBarsOnScroll($barsCollapsed)
+        .adaptiveSafeArea(edge: .bottom) {
+            VStack(spacing: SafeAreaInsetVStackSpacing.standard) {
+                SearchBar(text: $settingsSearchText.animation(.easeInOut))
+                    .padding([.horizontal, .top], -8)
+                    .minimizedBarStyle(barsCollapsed)
+            }
+            .animation(.spring(response: 0.35, dampingFraction: 0.85), value: barsCollapsed)
+            .padding(.horizontal, 24)
+            .padding(.bottom, 8)
+            .background(Color.white.opacity(0.00001))
+        }
+        #endif
         .navigationTitle("Settings")
         .applyConditionalListStyle()
     }
@@ -181,8 +198,8 @@ struct SettingsView: View {
         .init(title: "Prayer Settings", path: "Al-Adhan", keywords: "salah salat times adhan", destination: .prayerSettings),
         .init(title: "Prayer Calculation Method", path: "Prayer Settings → Prayer Calculation", keywords: "method angles isna mwl muslim world league egypt karachi umm al-qura makkah moonsighting jakim malaysia singapore indonesia turkey diyanet automatic country", destination: .prayerCalculation),
         .init(title: "Custom Calculation Angles", path: "Prayer Settings → Prayer Calculation", keywords: "fajr angle isha angle degrees custom", destination: .prayerCalculation),
-        .init(title: "High Latitude Rule", path: "Prayer Settings", keywords: "midnight seventh night twilight northern latitude", destination: .prayerSettings),
-        .init(title: "Hanafi Madhab (Asr Time)", path: "Prayer Settings", keywords: "asr later shadow madhhab school shafi", destination: .prayerSettings),
+        .init(title: "High Latitude Rule", path: "Prayer Settings → Prayer Calculation", keywords: "midnight seventh night twilight northern latitude", destination: .prayerCalculation),
+        .init(title: "Hanafi Madhab (Asr Time)", path: "Prayer Settings → Prayer Calculation", keywords: "asr later shadow madhhab school shafi", destination: .prayerCalculation),
         .init(title: "Traveling Mode (Qasr)", path: "Prayer Settings → Traveling Mode", keywords: "travel shorten combine journey safar 48 miles automatic", destination: .travelingMode),
         .init(title: "Optional Prayer Times", path: "Prayer Settings", keywords: "duha duhaa islamic midnight last third night tahajjud suhoor", destination: .prayerSettings),
         .init(title: "Manual Prayer Offsets", path: "Prayer Settings", keywords: "adjust minutes plus minus tune offset", destination: .prayerSettings),
@@ -199,7 +216,7 @@ struct SettingsView: View {
         .init(title: "Highlight Allah (Quran)", path: "Quran Settings → Arabic Text", keywords: "highlight name of allah red color quran", destination: .quranSettings),
         .init(title: "Riwayah & Qiraat", path: "Quran Settings → Arabic Text", keywords: "hafs warsh qaloon riwayah qiraat ahruf readings", destination: .quranSettings),
         .init(title: "Transliteration & English Translations", path: "Quran Settings → English Text", keywords: "saheeh international mustafa khattab translation english transliteration", destination: .quranSettings),
-        .init(title: "Quran Search Options", path: "Quran Settings → Search", keywords: "silent letters search surahs ai semantic", destination: .quranSettings),
+        .init(title: "Quran Search Options", path: "Quran Settings", keywords: "silent letters search surahs ai semantic", destination: .quranSettings),
         .init(title: "Reading Mode (List / Page)", path: "Quran Settings → Reading", keywords: "page mode mushaf list mode grid summary last read", destination: .quranSettings),
 
         // Hadith
@@ -236,13 +253,6 @@ struct SettingsView: View {
         return Self.settingsSearchIndex.filter { entry in
             let blob = "\(entry.title) \(entry.path) \(entry.keywords)".lowercased()
             return terms.allSatisfy { blob.contains($0) }
-        }
-    }
-
-    private var settingsSearchBarSection: some View {
-        Section {
-            SearchBar(text: $settingsSearchText.animation(.easeInOut))
-                .padding(.horizontal, -8)
         }
     }
 
@@ -604,7 +614,9 @@ struct SettingsView: View {
     private func leaveReview() {
         settings.hapticFeedback()
 
-        withAnimation(.smooth()) {
+        // No withAnimation: opening a URL animates nothing, and the empty transaction leaked a
+        // .smooth() curve onto any incidental state change on the same runloop tick.
+        do {
             if let url = URL(string: "itms-apps://itunes.apple.com/app/id6449729655?action=write-review") {
                 UIApplication.shared.open(url)
             }
@@ -614,7 +626,7 @@ struct SettingsView: View {
     private func openAppSettings() {
         settings.hapticFeedback()
 
-        withAnimation(.smooth()) {
+        do {
             if let url = URL(string: UIApplication.openSettingsURLString) {
                 UIApplication.shared.open(url, options: [:], completionHandler: nil)
             }

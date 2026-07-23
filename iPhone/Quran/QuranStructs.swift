@@ -299,6 +299,14 @@ struct Reciter: Identifiable, Comparable, Codable, Hashable {
         !(missingSurahs?.contains(surahNumber) ?? false)
     }
 
+    /// How many surahs this reciter actually offers. THE completion denominator: comparing download
+    /// counts against a flat 114 made a fully-downloaded partial-mushaf reciter (Islam Sobhi carries
+    /// 109) read as forever-incomplete - and the incomplete-download purge then DELETED the finished
+    /// download every time the reciter list appeared.
+    var carriedSurahCount: Int {
+        114 - (missingSurahs?.count ?? 0)
+    }
+
     /// Settings / lists: append English riwayah when this row is a non-Hafs surah feed.
     var displayNameWithEnglishQiraah: String {
         if let q = qiraah, !q.isEmpty { return "\(name) (\(q))" }

@@ -117,6 +117,7 @@
 		7260F9702A87168600E8FF87 /* Settings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7260F9162A8715D600E8FF87 /* Settings.swift */; };
 		7260F9722A87168700E8FF87 /* Settings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7260F9162A8715D600E8FF87 /* Settings.swift */; };
 		726100022F81000000AAFF00 /* GlanceCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 726100012F81000000AAFF00 /* GlanceCard.swift */; };
+		72A7C0022FB1000000AA1002 /* PrayerTrackerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72A7C0012FB1000000AA1001 /* PrayerTrackerView.swift */; };
 		726200022F82000000AAFF00 /* MushafPageFitter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 726200012F82000000AAFF00 /* MushafPageFitter.swift */; };
 		7274865E2F3D8219001240F8 /* QiraahQaloon.json in Resources */ = {isa = PBXBuildFile; fileRef = 7274865D2F3D8219001240F8 /* QiraahQaloon.json */; };
 		7274865F2F3D8219001240F8 /* QiraahQaloon.json in Resources */ = {isa = PBXBuildFile; fileRef = 7274865D2F3D8219001240F8 /* QiraahQaloon.json */; };
@@ -464,6 +465,7 @@
 		7260F9332A8715D600E8FF87 /* Al-IslamApp.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = "Al-IslamApp.swift"; sourceTree = "<group>"; };
 		7260F9342A8715D600E8FF87 /* LaunchScreen.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = LaunchScreen.swift; sourceTree = "<group>"; };
 		726100012F81000000AAFF00 /* GlanceCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlanceCard.swift; sourceTree = "<group>"; };
+		72A7C0012FB1000000AA1001 /* PrayerTrackerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrayerTrackerView.swift; sourceTree = "<group>"; };
 		72616D802D52F7B000A66C86 /* Info-Main.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "Info-Main.plist"; sourceTree = "<group>"; };
 		72616D812D52F7BD00A66C86 /* Info-Widget.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "Info-Widget.plist"; sourceTree = "<group>"; };
 		726200012F82000000AAFF00 /* MushafPageFitter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MushafPageFitter.swift; sourceTree = "<group>"; };
@@ -525,7 +527,7 @@
 		72D0000B2F78807000AAF60B /* zakariya.caf */ = {isa = PBXFileReference; lastKnownFileType = file; path = zakariya.caf; sourceTree = "<group>"; };
 		72D0000C2F78807000AAF60C /* minshawi-1-30.caf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "minshawi-1-30.caf"; sourceTree = "<group>"; };
 		72D0000D2F78807000AAF60D /* minshawi-2-30.caf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "minshawi-2-30.caf"; sourceTree = "<group>"; };
-		72D04E19301170E2000BB3F4 /* Logo.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = Logo.png; sourceTree = "<group>"; };
+		72D04E1B301172F8000BB3F4 /* Logo.jpg */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; path = Logo.jpg; sourceTree = "<group>"; };
 		72D0BCC82D7AE45300B7E4F5 /* PrayersGridWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrayersGridWidget.swift; sourceTree = "<group>"; };
 		72DC16A92D7B0819000760BC /* Entitlements-Widget.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "Entitlements-Widget.entitlements"; sourceTree = "<group>"; };
 		72DD9A112F900000AAC101 /* WatchSkyStrip.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WatchSkyStrip.swift; sourceTree = "<group>"; };
@@ -711,7 +713,7 @@
 			children = (
 				7287AB0E2D42E55D00C3D776 /* README.md */,
 				72C882832FEF3791008FE6C8 /* CREDITS.md */,
-				72D04E19301170E2000BB3F4 /* Logo.png */,
+				72D04E1B301172F8000BB3F4 /* Logo.jpg */,
 				7230F8A32D42119D0017DAE3 /* Resources */,
 				7260F9132A8715D600E8FF87 /* iPhone */,
 				72B531A32A22DCFE007FA002 /* Apple Watch */,
@@ -784,6 +786,7 @@
 				72AC00032F7E000000AAFC00 /* FastingActivityController.swift */,
 				72CB00012F7F000000AAFD00 /* SkyPalette.swift */,
 				726100012F81000000AAFF00 /* GlanceCard.swift */,
+				72A7C0012FB1000000AA1001 /* PrayerTrackerView.swift */,
 			);
 			path = Adhan;
 			sourceTree = "<group>";
@@ -1379,6 +1382,7 @@
 				72CB00032F7F000000AAFD00 /* SkyPalette.swift in Sources */,
 				72CB00042F7F000000AAFD00 /* SkyColorsView.swift in Sources */,
 				726100022F81000000AAFF00 /* GlanceCard.swift in Sources */,
+				72A7C0022FB1000000AA1002 /* PrayerTrackerView.swift in Sources */,
 				726200022F82000000AAFF00 /* MushafPageFitter.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

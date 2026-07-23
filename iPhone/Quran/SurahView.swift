@@ -468,7 +468,10 @@ struct SurahView: View {
         if lowered.hasPrefix("page ") {
             let valueText = String(trimmed.dropFirst(5)).trimmingCharacters(in: .whitespacesAndNewlines)
             let n = Int(valueText) ?? arabicToEnglishNumber(valueText)
-            if let n, (1...630).contains(n) { return PageJuzQuery(page: n, juz: nil) }
+            // Derived from the data like QuranView's `totalMushafPages`, not the old hardcoded 630:
+            // "page 620" silently matched nothing, and a hardcoded bound drifts if the mushaf changes.
+            let lastPage = quranData.surah(114)?.pageEnd ?? 604
+            if let n, (1...lastPage).contains(n) { return PageJuzQuery(page: n, juz: nil) }
             return PageJuzQuery(page: nil, juz: nil)
         }
 
@@ -1144,6 +1147,7 @@ struct SurahView: View {
                     if showAyahPreview, settings.showArabicText,
                        let previewAyah = surah.ayahs.first(where: { $0.id == ayahID }) {
                         AyahArabicSnippet(surah: surah, ayah: previewAyah, scale: 0.7, lineLimit: 1)
+                            .equatable()
                     }
                 }
                 return AnyView(
@@ -2544,11 +2548,12 @@ struct SurahView: View {
         VStack(spacing: SafeAreaInsetVStackSpacing.standard) {
             HStack(spacing: 0) {
                 SearchBar(
-                    // Animated again - results sliding in/out is part of the reader's feel. Only Low
-                    // Power Mode keeps the plain binding: under its CPU throttle the whole-list animated
-                    // diff stalled long enough to read as a crash. The actual hard crash was elsewhere -
-                    // duplicate result ids in the global search's animated apply, fixed in QuranView.
-                    text: AppPerformance.isLowPowerMode ? $searchText : $searchText.animation(.easeInOut),
+                    // Animated again - results sliding in/out is part of the reader's feel. Low Power
+                    // Mode keeps the plain binding (under its CPU throttle the whole-list animated diff
+                    // stalled long enough to read as a crash), and Reduce Motion joins it via the shared
+                    // gate. The actual hard crash was elsewhere - duplicate result ids in the global
+                    // search's animated apply, fixed in QuranView.
+                    text: AppPerformance.shouldReduceAnimations ? $searchText : $searchText.animation(.easeInOut),
                     onFocusChanged: { focused in
                         withAnimation {
                             isAyahSearchFocused = focused
@@ -3118,7 +3123,7 @@ struct RotatingGearView: View {
             .rotationEffect(.degrees(rotation))
             .onAppear {
                 // Decorative spinner: skipped in Low Power Mode (renders as a static glyph).
-                guard !AppPerformance.isLowPowerMode else { return }
+                guard !AppPerformance.shouldReduceAnimations else { return }
                 withAnimation(.linear(duration: 2).repeatForever(autoreverses: false)) {
                     rotation = 360
                 }

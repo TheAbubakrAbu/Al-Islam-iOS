@@ -99,10 +99,15 @@ struct AyahActionsSheet: View {
             // not a place to read from, and at full size it pushed every action off the sheet.
             .font(Font.arabic(settings.quranDisplayFontName, size: min(settings.fontArabicSize * 0.55, 20)))
             .arabicFontDesign(custom: settings.quranDisplayUsesCustomArabicFace)
+            // NO `.environment(\.layoutDirection, .rightToLeft)` here - in an RTL context `.trailing`
+            // resolves to the LEFT edge, so that override made this exact modifier left-align wrapped
+            // Arabic (the "still not trailing" bug). The bidi algorithm already lays the Arabic out
+            // right-to-left from the characters themselves; what we want is the visual right edge, which
+            // in the app's LTR layout is `.trailing` - on both the wrapped lines AND the frame (a
+            // max-width frame with no alignment CENTERS a short single-line ayah).
             .multilineTextAlignment(.trailing)
             .lineSpacing(4)
-            .environment(\.layoutDirection, .rightToLeft)
-            .frame(maxWidth: .infinity)
+            .frame(maxWidth: .infinity, alignment: .trailing)
 
             // The same reference format every ayah sheet uses, plus the ayah's ACTUAL text in the active
             // translation (not just the translation's name).
@@ -118,6 +123,30 @@ struct AyahActionsSheet: View {
                         .multilineTextAlignment(.center)
                         .fixedSize(horizontal: false, vertical: true)
                 }
+            }
+
+            // The bookmark note, right under the ayah it belongs to - it existed only behind "Edit Note",
+            // so the one place you tapped the ayah never showed you what you'd written about it.
+            if !currentNote.isEmpty {
+                HStack(alignment: .top, spacing: 6) {
+                    Image(systemName: "note.text")
+                        .font(.caption2)
+                        .foregroundStyle(settings.accentColor.accent1)
+                        .padding(.top, 1)
+
+                    Text(currentNote)
+                        .font(.caption)
+                        .foregroundStyle(.primary)
+                        .multilineTextAlignment(.leading)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .padding(.horizontal, 10)
+                .padding(.vertical, 8)
+                .background(
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .fill(settings.accentColor.accent1.opacity(0.08))
+                )
             }
         }
         .padding(.vertical, 2)
