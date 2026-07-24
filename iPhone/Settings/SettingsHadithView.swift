@@ -157,6 +157,20 @@ struct SettingsHadithView: View {
                         }
                     ).animation(.easeInOut))
                 }
+
+                // In Reading View - not under Arabic Text - because it colors the name in BOTH scripts:
+                // the Arabic الله and "Allah" in the English translation and narrator lines, like the Quran.
+                Section {
+                    VStack(alignment: .leading) {
+                        Toggle("Highlight Allah", isOn: $settings.highlightAllahNamesHadith.animation(.easeInOut))
+                            .onChange(of: settings.highlightAllahNamesHadith) { _ in settings.hapticFeedback() }
+
+                        Text("Colors the majestic and glorious name الله (Allah) in red throughout the hadith texts, in both Arabic and English.")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .padding(.vertical, 2)
+                    }
+                }
             }
             .themedListRowBackground()
         }
@@ -180,17 +194,6 @@ struct SettingsHadithView: View {
                         }
                     ).animation(.easeInOut))
 
-                    // Hadith's own copy of the Quran's toggle, so highlighting here doesn't have
-                    // to follow the mushaf's.
-                    VStack(alignment: .leading) {
-                        Toggle("Highlight Allah", isOn: $settings.highlightAllahNamesHadith.animation(.easeInOut))
-                            .onChange(of: settings.highlightAllahNamesHadith) { _ in settings.hapticFeedback() }
-
-                        Text("Colors the majestic and glorious name الله (Allah) in red throughout the hadith texts.")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                            .padding(.vertical, 2)
-                    }
                 }
 
                 if settings.showHadithArabic {
@@ -285,7 +288,7 @@ extension SettingsSearchEntry {
         .init(title: "Hadith Settings", path: "Al-Hadith", keywords: "bukhari muslim books", destination: .hadithSettings),
         .init(title: "Show Hadith Arabic / English", path: "Hadith Settings → Arabic / English Text", keywords: "hadith text toggles narrator display", destination: .hadithSettings),
         .init(title: "Hadith Font Sizes", path: "Hadith Settings → Arabic / English Text", keywords: "hadith arabic english font size", destination: .hadithSettings),
-        .init(title: "Highlight Allah (Hadith)", path: "Hadith Settings → Arabic Text", keywords: "highlight name of allah red color hadith", destination: .hadithSettings),
+        .init(title: "Highlight Allah (Hadith)", path: "Hadith Settings → Reading View", keywords: "highlight name of allah red color hadith arabic english", destination: .hadithSettings),
         .init(title: "Hadith Summary Mode", path: "Hadith Settings → Reading View", keywords: "hadith of the day last read tiles summary", destination: .hadithSettings),
         .init(title: "Hadith Downloads", path: "Hadith Settings → Downloads", keywords: "delete books storage size downloaded remove megabytes", destination: .hadithSettings),
     ]

@@ -25,6 +25,8 @@ App Store: <https://apps.apple.com/us/app/al-islam-islamic-pillars/id6449729655>
 - **Indopak Nastaleeq Quran font** - **Ayman Siddiqui and R. Siddiqua** - <https://qul.tarteel.ai/resources/font/242>
 - **Surah (full) Quran recitations** - **MP3 Quran** - <https://mp3quran.net/eng>
 - **Ayah-by-ayah Quran recitations** - **Al Quran** - <https://alquran.cloud/cdn>
+- **Additional ayah-by-ayah Quran recitations** - **EveryAyah** - <https://everyayah.com/>
+- **Ayah audio timings (offline ayah playback)** - **QDC audio API by Quran.com (Quran Foundation)** - <https://api-docs.quran.foundation/>
 - **English Quran translation comparison API** - **Al Quran Cloud** - <https://alquran.cloud/api>
 - **English Tafsir API (Ibn Kathir, Maarif Ul Quran, Tazkirul Quran)** - **Quran API Pages** - <https://quranapi.pages.dev/>
 - **Arabic Tafsirs (Ibn Kathir, al-Tabari, as-Sa'di)** - **Tafsir API by spa5k (data from QUL / Tarteel)** - <https://github.com/spa5k/tafsir_api>

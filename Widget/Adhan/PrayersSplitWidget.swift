@@ -5,22 +5,39 @@ struct PrayersEntryView: View {
     @Environment(\.widgetFamily) var widgetFamily
 
     var entry: PrayersProvider.Entry
+    /// true = this layout is rendered inside a sky-gradient widget: everything recolors to white tiers
+    /// (accent-on-gradient was unreadable), past prayers dimmest, the current prayer brightest. Layout
+    /// is untouched.
+    var skyStyle: Bool = false
+
+    private var accent: Color {
+        skyStyle ? .white : entry.accentColor.color
+    }
+
+    private var dividerTint: Color {
+        skyStyle ? .white.opacity(0.7) : entry.accentColor.color
+    }
+
+    private func prayerTint(_ prayer: Prayer) -> Color {
+        if skyStyle { return .white }
+        return prayer.nameTransliteration == "Shurooq" ? .primary : entry.accentColor.color
+    }
 
     func getPrayerColor(for prayer: Prayer, in prayers: [Prayer]) -> Color {
         guard let currentIndex = prayers.firstIndex(where: { $0.id == prayer.id }) else {
-            return .secondary
+            return skyStyle ? .white.opacity(0.45) : .secondary
         }
 
         guard let currentPrayerIndex = prayers.firstIndex(where: { $0.nameTransliteration == entry.currentPrayer?.nameTransliteration }) else {
-            return .secondary
+            return skyStyle ? .white.opacity(0.45) : .secondary
         }
 
         if currentIndex < currentPrayerIndex {
-            return .secondary
+            return skyStyle ? .white.opacity(0.45) : .secondary
         } else if currentIndex == currentPrayerIndex {
-            return entry.accentColor.color
+            return accent
         } else {
-            return .primary
+            return skyStyle ? .white.opacity(0.8) : .primary
         }
     }
     
@@ -32,18 +49,18 @@ struct PrayersEntryView: View {
         VStack {
             if entry.prayers.isEmpty {
                 Text("Open app to get prayer times")
-                    .foregroundColor(entry.accentColor.color)
+                    .foregroundColor(accent)
             } else {
                 if widgetFamily == .systemLarge {
                     Text(hijriDate)
-                        .foregroundColor(entry.accentColor.color)
+                        .foregroundColor(accent)
                         .font(.caption)
                         .padding(.vertical, 4)
                     
                     Spacer()
                     
                     Divider()
-                        .background(entry.accentColor.color)
+                        .background(dividerTint)
                         .padding(.horizontal, 4)
                         .padding(.vertical, 2)
                 }
@@ -109,7 +126,7 @@ struct PrayersEntryView: View {
                 
                 if widgetFamily == .systemLarge {
                     Divider()
-                        .background(entry.accentColor.color)
+                        .background(dividerTint)
                         .padding(.horizontal, 4)
                         .padding(.vertical, 2)
                     
@@ -123,11 +140,11 @@ struct PrayersEntryView: View {
                                         .resizable()
                                         .aspectRatio(contentMode: .fit)
                                         .frame(width: 22, height: 22)
-                                        .foregroundColor(currentPrayer.nameTransliteration == "Shurooq" ? .primary : entry.accentColor.color)
+                                        .foregroundColor(prayerTint(currentPrayer))
                                     
                                     Text(currentPrayer.displayName)
                                         .font(.title3)
-                                        .foregroundColor(currentPrayer.nameTransliteration == "Shurooq" ? .primary : entry.accentColor.color)
+                                        .foregroundColor(prayerTint(currentPrayer))
                                     
                                     Spacer()
                                     
@@ -145,13 +162,13 @@ struct PrayersEntryView: View {
                                     
                                     Text(nextPrayer.displayName)
                                         .font(.title3)
-                                        .foregroundColor(nextPrayer.nameTransliteration == "Shurooq" ? .primary : entry.accentColor.color)
+                                        .foregroundColor(prayerTint(nextPrayer))
                                     
                                     Image(systemName: nextPrayer.image)
                                         .resizable()
                                         .aspectRatio(contentMode: .fit)
                                         .frame(width: 22, height: 22)
-                                        .foregroundColor(nextPrayer.nameTransliteration == "Shurooq" ? .primary : entry.accentColor.color)
+                                        .foregroundColor(prayerTint(nextPrayer))
                                 }
                                 .padding(.top, -8)
                             }
@@ -163,7 +180,7 @@ struct PrayersEntryView: View {
                     Spacer()
                     
                     Divider()
-                        .background(entry.accentColor.color)
+                        .background(dividerTint)
                         .padding(.bottom, 2)
                         .padding(.horizontal, 4)
                     
@@ -173,7 +190,7 @@ struct PrayersEntryView: View {
                                 .resizable()
                                 .aspectRatio(contentMode: .fit)
                                 .frame(width: 15, height: 15)
-                                .foregroundColor(entry.accentColor.color)
+                                .foregroundColor(accent)
                                 .padding(.horizontal, 3)
                             
                             Text(entry.currentCity)

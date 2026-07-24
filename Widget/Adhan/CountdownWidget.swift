@@ -5,11 +5,27 @@ struct CountdownEntryView: View {
     @Environment(\.widgetFamily) var widgetFamily
 
     var entry: PrayersProvider.Entry
-    
+    /// true = this layout is rendered inside a sky-gradient widget: accent-colored elements go white
+    /// (the gradient IS the accent there, and accent-on-gradient was unreadable). Layout is untouched.
+    var skyStyle: Bool = false
+
+    private var accent: Color {
+        skyStyle ? .white : entry.accentColor.color
+    }
+
+    private var dividerTint: Color {
+        skyStyle ? .white.opacity(0.7) : entry.accentColor.color
+    }
+
+    private func prayerTint(_ prayer: Prayer) -> Color {
+        if skyStyle { return .white }
+        return prayer.nameTransliteration == "Shurooq" ? .primary : entry.accentColor.color
+    }
+
     var hijriDate1: String {
         AdhanWidgetDateFormatting.hijriDate(for: entry, style: .medium)
     }
-    
+
     var hijriDate2: String {
         AdhanWidgetDateFormatting.hijriDate(for: entry, style: .full)
     }
@@ -18,20 +34,20 @@ struct CountdownEntryView: View {
         VStack {
             if entry.prayers.isEmpty {
                 Text("Open app to get prayer times")
-                    .foregroundColor(entry.accentColor.color)
+                    .foregroundColor(accent)
             } else {
                 if let currentPrayer = entry.currentPrayer, let nextPrayer = entry.nextPrayer {
                     if widgetFamily == .systemMedium {
                         Spacer()
                         
                         Text(hijriDate2)
-                            .foregroundColor(entry.accentColor.color)
+                            .foregroundColor(accent)
                             .font(.caption)
                         
                         Spacer()
                         
                         Divider()
-                            .background(entry.accentColor.color)
+                            .background(dividerTint)
                             .padding(.horizontal, 4)
                             .padding(.vertical, 2)
                         
@@ -41,11 +57,11 @@ struct CountdownEntryView: View {
                             HStack {
                                 Image(systemName: currentPrayer.image)
                                     .font(.subheadline)
-                                    .foregroundColor(currentPrayer.nameTransliteration == "Shurooq" ? .primary : entry.accentColor.color)
+                                    .foregroundColor(prayerTint(currentPrayer))
                                 
                                 Text(currentPrayer.displayName)
                                     .font(.headline)
-                                    .foregroundColor(currentPrayer.nameTransliteration == "Shurooq" ? .primary : entry.accentColor.color)
+                                    .foregroundColor(prayerTint(currentPrayer))
                                 
                                 Spacer()
                                 
@@ -63,14 +79,14 @@ struct CountdownEntryView: View {
                     if widgetFamily == .systemSmall {
                         VStack(alignment: .leading, spacing: 0) {
                             Text(hijriDate1)
-                                .foregroundColor(entry.accentColor.color)
+                                .foregroundColor(accent)
                                 .font(.caption2)
                                 .frame(maxWidth: .infinity, alignment: .center)
                             
                             Spacer()
                             
                             Divider()
-                                .background(entry.accentColor.color)
+                                .background(dividerTint)
                             
                             Spacer()
                             
@@ -82,7 +98,7 @@ struct CountdownEntryView: View {
                                     .font(.headline)
                                     .padding(.leading, -2)
                             }
-                            .foregroundColor(currentPrayer.nameTransliteration == "Shurooq" ? .primary : entry.accentColor.color)
+                            .foregroundColor(prayerTint(currentPrayer))
                             .padding(.bottom, -4)
                             
                             Spacer()
@@ -96,7 +112,7 @@ struct CountdownEntryView: View {
                                 Text(nextPrayer.displayName)
                             }
                             .font(.caption2)
-                            .foregroundColor(nextPrayer.nameTransliteration == "Shurooq" ? .primary : entry.accentColor.color)
+                            .foregroundColor(prayerTint(nextPrayer))
                             
                             Text("Starts at \(nextPrayer.time, style: .time)")
                                 .font(.caption2)
@@ -108,14 +124,14 @@ struct CountdownEntryView: View {
                             
                             if !entry.currentCity.isEmpty && !entry.currentCity.isEmpty {
                                 Divider()
-                                    .background(entry.accentColor.color)
+                                    .background(dividerTint)
                                 
                                 Spacer()
                             
                                 HStack {
                                     Image(systemName: "location.fill")
                                         .font(.caption)
-                                        .foregroundColor(entry.accentColor.color)
+                                        .foregroundColor(accent)
                                     
                                     Text(entry.currentCity)
                                         .font(.caption)
@@ -130,11 +146,11 @@ struct CountdownEntryView: View {
                                 
                                 Text(nextPrayer.displayName)
                                     .font(.headline)
-                                    .foregroundColor(nextPrayer.nameTransliteration == "Shurooq" ? .primary : entry.accentColor.color)
+                                    .foregroundColor(prayerTint(nextPrayer))
                                 
                                 Image(systemName: nextPrayer.image)
                                     .font(.subheadline)
-                                    .foregroundColor(nextPrayer.nameTransliteration == "Shurooq" ? .primary : entry.accentColor.color)
+                                    .foregroundColor(prayerTint(nextPrayer))
                             }
                         }
                         .frame(maxWidth: .infinity, alignment: .trailing)
@@ -143,7 +159,7 @@ struct CountdownEntryView: View {
                         Spacer()
                         
                         Divider()
-                            .background(entry.accentColor.color)
+                            .background(dividerTint)
                             .padding(.horizontal, 4)
                             .padding(.vertical, 2)
                         
@@ -153,7 +169,7 @@ struct CountdownEntryView: View {
                             if !entry.currentCity.isEmpty && !entry.currentCity.isEmpty {
                                 Image(systemName: "location.fill")
                                     .font(.caption)
-                                    .foregroundColor(entry.accentColor.color)
+                                    .foregroundColor(accent)
                                     .padding(.horizontal, 3)
                                 
                                 Text(entry.currentCity)

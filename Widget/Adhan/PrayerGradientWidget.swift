@@ -4,18 +4,27 @@ import WidgetKit
 // Home-screen widgets wearing the sky card's prayer gradient: the current prayer and the live
 // countdown over the SAME two-stop gradient the in-app solar countdown paints for that prayer -
 // user-customized palettes included, since both read the shared SkyPalette overrides.
+//
+// Three widgets wear the sky (this one plus sky twins of Prayer Countdown and Prayer Times, below),
+// and the layout here is also offered on the standard widget background as "Prayer Glance".
 
 struct PrayerGradientEntryView: View {
     @Environment(\.widgetFamily) var widgetFamily
 
     var entry: PrayersProvider.Entry
-
-    private var gradientColors: [Color] {
-        Settings.shared.skyGradientColors(forPrayer: entry.currentPrayer?.nameTransliteration)
-    }
+    /// false = the identical layout on the standard widget background with accent coloring ("Prayer Glance").
+    var showsSky: Bool = true
 
     private var hijriDate: String {
         AdhanWidgetDateFormatting.hijriDate(for: entry, style: .medium)
+    }
+
+    /// The header color for the current prayer's icon and name. Over the sky everything stays white;
+    /// on the standard background it takes the accent, matching the other prayer widgets (Shurooq keeps
+    /// primary there, exactly as they do).
+    private func headerColor(_ prayer: Prayer) -> Color {
+        if showsSky { return .white }
+        return prayer.nameTransliteration == "Shurooq" ? .primary : entry.accentColor.color
     }
 
     var body: some View {
@@ -29,11 +38,11 @@ struct PrayerGradientEntryView: View {
             } else {
                 Text("Open app to get prayer times")
                     .font(.caption)
-                    .foregroundColor(.white.opacity(0.9))
+                    .foregroundColor(showsSky ? .white.opacity(0.9) : entry.accentColor.color)
                     .multilineTextAlignment(.center)
             }
         }
-        .modifier(PrayerGradientBackground(colors: gradientColors))
+        .modifier(PrayerSkyChrome(entry: entry, showsSky: showsSky))
     }
 
     private func smallBody(current: Prayer, next: Prayer) -> some View {
@@ -47,6 +56,7 @@ struct PrayerGradientEntryView: View {
                     .lineLimit(1)
                     .minimumScaleFactor(0.6)
             }
+            .foregroundColor(headerColor(current))
 
             Spacer(minLength: 0)
 
@@ -82,6 +92,7 @@ struct PrayerGradientEntryView: View {
                         .lineLimit(1)
                         .minimumScaleFactor(0.6)
                 }
+                .foregroundColor(headerColor(current))
 
                 Text(next.time, style: .timer)
                     .font(.title.weight(.semibold).monospacedDigit())
@@ -122,32 +133,62 @@ struct PrayerGradientEntryView: View {
     }
 }
 
+// MARK: - Shared sky treatment
+
+/// One switch for both looks: the sky gradient with white content, or the standard widget background.
+/// Kept as a modifier so every sky widget resolves its gradient the same way (from the entry's current
+/// prayer, through the user's SkyPalette overrides).
+struct PrayerSkyChrome: ViewModifier {
+    let entry: PrayersProvider.Entry
+    var showsSky: Bool = true
+
+    func body(content: Content) -> some View {
+        if showsSky {
+            content.modifier(PrayerSkyBackground(
+                colors: Settings.shared.skyGradientColors(forPrayer: entry.currentPrayer?.nameTransliteration)
+            ))
+        } else {
+            content.widgetContainerBackground(legacyPadding: true)
+        }
+    }
+}
+
 /// The gradient as the widget's container background (iOS 17's requirement), with white content and a
-/// soft legibility shadow - the sky card's own treatment.
-private struct PrayerGradientBackground: ViewModifier {
+/// legibility treatment: a soft bottom-weighted scrim under the content plus a slightly stronger text
+/// shadow - the sky keeps its colors, but white text no longer washes out against the bright daytime stops.
+struct PrayerSkyBackground: ViewModifier {
     let colors: [Color]
 
-    private var gradient: LinearGradient {
+    private var background: some View {
         LinearGradient(colors: colors, startPoint: .top, endPoint: .bottom)
+            .overlay(
+                LinearGradient(
+                    colors: [.black.opacity(0.10), .black.opacity(0.28)],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+            )
     }
 
     func body(content: Content) -> some View {
         Group {
             if #available(iOS 17.0, *) {
                 content
-                    .containerBackground(for: .widget) { gradient }
+                    .containerBackground(for: .widget) { background }
             } else {
                 ZStack {
-                    gradient
+                    background
                     content.padding()
                 }
             }
         }
         .foregroundColor(.white)
-        .shadow(color: .black.opacity(0.25), radius: 1, x: 0, y: 1)
+        .shadow(color: .black.opacity(0.35), radius: 1.5, x: 0, y: 1)
         .appFontDesign()
     }
 }
+
+// MARK: - The three sky widgets + the normal-background twin
 
 struct PrayerGradientWidget: Widget {
     let kind: String = "PrayerGradientWidget"
@@ -159,5 +200,50 @@ struct PrayerGradientWidget: Widget {
         .configurationDisplayName("Prayer Sky")
         .description("The current prayer and time remaining, over that prayer's sky gradient - the same colors as the app's solar countdown.")
         .supportedFamilies([.systemSmall, .systemMedium])
+    }
+}
+
+/// The Prayer Sky layout on the standard widget background - for anyone who loves the layout but wants
+/// it to match the rest of their home screen.
+struct PrayerGlanceWidget: Widget {
+    let kind: String = "PrayerGlanceWidget"
+
+    var body: some WidgetConfiguration {
+        StaticConfiguration(kind: kind, provider: PrayersProvider()) { entry in
+            PrayerGradientEntryView(entry: entry, showsSky: false)
+        }
+        .configurationDisplayName("Prayer Glance")
+        .description("The current prayer and time remaining - the Prayer Sky layout on the standard widget background.")
+        .supportedFamilies([.systemSmall, .systemMedium])
+    }
+}
+
+/// The Prayer Countdown widget, unchanged, over the current prayer's sky gradient.
+struct CountdownSkyWidget: Widget {
+    let kind: String = "CountdownSkyWidget"
+
+    var body: some WidgetConfiguration {
+        StaticConfiguration(kind: kind, provider: PrayersProvider()) { entry in
+            CountdownEntryView(entry: entry, skyStyle: true)
+                .modifier(PrayerSkyChrome(entry: entry))
+        }
+        .configurationDisplayName("Prayer Countdown Sky")
+        .description("The upcoming prayer time, over the current prayer's sky gradient.")
+        .supportedFamilies([.systemSmall, .systemMedium])
+    }
+}
+
+/// The Prayer Times widget, unchanged, over the current prayer's sky gradient.
+struct PrayersSkyWidget: Widget {
+    let kind: String = "PrayersSkyWidget"
+
+    var body: some WidgetConfiguration {
+        StaticConfiguration(kind: kind, provider: PrayersProvider()) { entry in
+            PrayersEntryView(entry: entry, skyStyle: true)
+                .modifier(PrayerSkyChrome(entry: entry))
+        }
+        .configurationDisplayName("Prayer Times Sky")
+        .description("All of today's prayer times, over the current prayer's sky gradient.")
+        .supportedFamilies([.systemMedium, .systemLarge])
     }
 }

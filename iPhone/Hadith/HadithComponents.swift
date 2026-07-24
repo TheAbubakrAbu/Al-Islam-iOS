@@ -316,7 +316,10 @@ struct HadithRow: View, Equatable {
                         term: searchText,
                         font: .system(size: englishFontSize).italic(),
                         accent: settings.accentColor.color,
-                        fg: .secondary
+                        fg: .secondary,
+                        // The narrator line is English text like any other - "Allah's Messenger" in an
+                        // isnad gets the same red as the body, both scripts, like the Quran.
+                        highlightAllahNames: settings.highlightAllahNamesHadith
                     )
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .fixedSize(horizontal: false, vertical: true)

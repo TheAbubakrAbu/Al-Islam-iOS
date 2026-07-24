@@ -493,6 +493,22 @@ extension Settings {
         "\(surah):\(ayah)"
     }
 
+    /// The Int mirror's key: surah * 1000 + ayah (max ayah 286, so no collisions).
+    private static func khatmIntKey(surah: Int, ayah: Int) -> Int {
+        surah &* 1000 &+ ayah
+    }
+
+    private static func khatmIntKeys(from keys: Set<String>) -> Set<Int> {
+        var result = Set<Int>(minimumCapacity: keys.count)
+        for key in keys {
+            guard let separator = key.firstIndex(of: ":"),
+                  let surah = Int(key[..<separator]),
+                  let ayah = Int(key[key.index(after: separator)...]) else { continue }
+            result.insert(khatmIntKey(surah: surah, ayah: ayah))
+        }
+        return result
+    }
+
     func loadKhatmProgressCacheFromStorage() {
         let savedKeys = (try? Self.decoder.decode([String].self, from: khatmCompletedAyahsData)) ?? []
         applyKhatmCompletedAyahKeys(savedKeys, persistImmediately: false)
@@ -503,6 +519,7 @@ extension Settings {
         khatmProgressSaveTask = nil
         khatmProgressRefreshPending = false
         khatmCompletedAyahSetCache = Set(keys)
+        khatmCompletedAyahIntCache = Self.khatmIntKeys(from: khatmCompletedAyahSetCache)
         khatmCompletedSurahCountsCache = Self.khatmSurahCounts(from: khatmCompletedAyahSetCache)
 
         if persistImmediately {
@@ -580,7 +597,7 @@ extension Settings {
 
     func isKhatmAyahComplete(surah: Int, ayah: Int) -> Bool {
         guard isHafsDisplay else { return false }
-        return khatmCompletedAyahSetCache.contains(khatmKey(surah: surah, ayah: ayah))
+        return khatmCompletedAyahIntCache.contains(Self.khatmIntKey(surah: surah, ayah: ayah))
     }
 
     /// - Parameter immediate: pass `true` for a deliberate user tap so the checkmark appears at once;
@@ -590,6 +607,7 @@ extension Settings {
         guard isHafsDisplay else { return }
         let key = khatmKey(surah: surah, ayah: ayah)
         guard khatmCompletedAyahSetCache.insert(key).inserted else { return }
+        khatmCompletedAyahIntCache.insert(Self.khatmIntKey(surah: surah, ayah: ayah))
         khatmCompletedSurahCountsCache[surah, default: 0] += 1
         if immediate { objectWillChange.send() }
         scheduleKhatmProgressSaveAndRefresh(refresh: !immediate)
@@ -603,6 +621,7 @@ extension Settings {
     func resetKhatmProgress(for surah: Surah) {
         let keys = Set(surah.ayahs.map { khatmKey(surah: surah.id, ayah: $0.id) })
         khatmCompletedAyahSetCache.subtract(keys)
+        khatmCompletedAyahIntCache.subtract(surah.ayahs.map { Self.khatmIntKey(surah: surah.id, ayah: $0.id) })
         khatmCompletedSurahCountsCache[surah.id] = nil
         persistKhatmProgressNow()
         objectWillChange.send()
@@ -610,6 +629,7 @@ extension Settings {
 
     func resetAllKhatmProgress() {
         khatmCompletedAyahSetCache.removeAll(keepingCapacity: true)
+        khatmCompletedAyahIntCache.removeAll(keepingCapacity: true)
         khatmCompletedSurahCountsCache.removeAll(keepingCapacity: true)
         persistKhatmProgressNow()
         objectWillChange.send()

@@ -20,10 +20,10 @@ Keep this in sync whenever a major feature ships (e.g. Hadith, Tafsir).
 ## Recommended keyword field (primary)
 
 ```
-quran,tafsir,hadith,sunnah,bukhari,prayer,salah,adhan,namaz,qibla,masjid,dua,dhikr,ramadan,muslim
+quran,tafsir,hadith,sunnah,bukhari,prayer,tracker,salah,adhan,namaz,qibla,dua,dhikr,ramadan,muslim
 ```
 
-**97 / 100 characters.** Covers the app's five biggest search surfaces - Quran, Tafsir, Hadith, prayer/adhan, and the everyday-tools terms - while avoiding the name/subtitle words.
+**98 / 100 characters.** Covers the app's five biggest search surfaces - Quran, Tafsir, Hadith, prayer/adhan/tracker, and the everyday-tools terms - while avoiding the name/subtitle words. (4.6.0: `tracker` replaced `masjid` - `prayer` + `tracker` auto-combine to rank for "prayer tracker," the new headline feature, while the Masjid Locator remains a secondary feature covered by the description.)
 
 ### Why each term
 
@@ -35,11 +35,11 @@ quran,tafsir,hadith,sunnah,bukhari,prayer,salah,adhan,namaz,qibla,masjid,dua,dhi
 | `sunnah` | Pairs with Hadith intent; searched by users looking for authenticated narrations. |
 | `bukhari` | The single most-searched Hadith collection name; stands in for the whole Nine Books. |
 | `prayer` | Auto-combines to "prayer times," "prayer app." Highest-volume prayer term in English. |
+| `tracker` | New in 4.6.0 (Prayer Tracker); auto-combines with `prayer` for "prayer tracker" - a high-intent, fast-growing search. |
 | `salah` | The Arabic-transliteration prayer term; distinct search from "prayer." |
 | `adhan` | The call to prayer; the app's Adhan tab and notification sounds. |
 | `namaz` | Urdu/Persian/Turkish word for prayer - large South-Asian and Turkish audience. |
 | `qibla` | Qibla compass feature; high-intent, moderate competition. |
-| `masjid` | Masjid Locator; distinct from "mosque" (see alternates). |
 | `dua` | Dua collections; very high volume, stems toward "duas." |
 | `dhikr` | Adhkar + Tasbih counter. |
 | `ramadan` | Seasonal spike; worth holding year-round for the ranking runway before Ramadan. |
@@ -79,13 +79,16 @@ Ranked roughly by value to this app. Bold = currently in the primary field.
 **hadith**, **sunnah**, **bukhari**, muslim (Sahih Muslim), nawawi, tirmidhi, riyad, hadith qudsi, narrations, prophet, muhammad
 
 ### Prayer
-**prayer**, **salah**, **adhan**, **namaz**, **qibla**, salat, salaat, azan, athan, iqama, prayer times, prayer reminder, prayer tracker, fajr, dhuhr, asr, maghrib, isha
+**prayer**, **tracker**, **salah**, **adhan**, **namaz**, **qibla**, salat, salaat, azan, athan, iqama, prayer times, prayer reminder, prayer tracker, fajr, dhuhr, asr, maghrib, isha
 
 ### Places
-**masjid**, mosque, kaaba, mecca, madinah, halal, halal food
+masjid, mosque, kaaba, mecca, madinah, halal, halal food
 
 ### Daily worship / tools
 **dua**, **dhikr**, **ramadan**, tasbih, zikr, adhkar, supplication, misbaha, tasbeeh, fasting, iftar, suhoor, eid, hijri, calendar
+
+### AI features (4.6.0)
+ai (very short, only worth testing in an alternate field - AI Search and Ask AI are described in the description, which is not a ranking input, so `ai` competes on its own)
 
 ### Identity / audience
 **muslim**, deen, iman, faith, sunni, worship, allah, revert, convert

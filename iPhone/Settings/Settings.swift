@@ -153,7 +153,7 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
         // content, not settings - preserved across the domain wipe unless the user asked to erase everything.
         let contentKeys = [
             "favoriteSurahsData", "bookmarkedAyahsData", "favoriteLetterData", "favoriteNameNumbersData",
-            "khatmCompletedAyahsData", "favoriteReciterIDsData", "favoriteQiraahTagsData",
+            "khatmCompletedAyahsData", "quranPlanData", "favoriteReciterIDsData", "favoriteQiraahTagsData",
             "favoriteEnglishTranslationIDsData", "savedSajdahAyahIDsData", "savedBrokenLetterAyahIDsData",
             "lastReadSurah", "lastReadAyah", "lastListenedAyahData", "lastListenedSurahData",
             "quranSearchHistoryData",
@@ -942,7 +942,15 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
 
     @AppStorage("khatmCompletedAyahsData") var khatmCompletedAyahsData = Data()
     @AppStorage("automaticKhatmCompletion") var automaticKhatmCompletion = true
+    /// The Quran Planner's plan (goal + per-day bookkeeping), iOS-only UI in QuranPlannerView.swift.
+    /// Declared here because extensions can't add stored properties; harmless on the other targets.
+    @AppStorage("quranPlanData") var quranPlanData = Data()
     var khatmCompletedAyahSetCache: Set<String> = []
+    /// Int-keyed mirror of `khatmCompletedAyahSetCache` (surah * 1000 + ayah). `isKhatmAyahComplete`
+    /// runs per ayah row per render while scrolling in khatm mode - the mirror answers it without
+    /// building and hashing a "surah:ayah" String each call. Maintained by every mutation site in
+    /// SettingsQuran.swift; the String set stays authoritative for persistence.
+    var khatmCompletedAyahIntCache: Set<Int> = []
     var khatmCompletedSurahCountsCache: [Int: Int] = [:]
     var khatmProgressSaveTask: Task<Void, Never>?
     /// Bumped on every khatm mark. The single debounce task re-arms itself while this keeps changing, so a

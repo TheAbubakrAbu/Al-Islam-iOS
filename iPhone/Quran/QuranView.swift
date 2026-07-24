@@ -1286,6 +1286,17 @@ struct QuranView: View {
     /// each wrapped position keeps a stable underlying type, so List diffing is unaffected.
     private func boxed<V: View>(_ view: V) -> AnyView { AnyView(view) }
 
+    #if os(iOS)
+    @ViewBuilder
+    private func quranPlannerSection(context: SearchDisplayContext) -> some View {
+        if !context.isSearching {
+            QuranPlannerSection(openReader: { surahID, ayahID in
+                push(surahID: surahID, ayahID: ayahID)
+            })
+        }
+    }
+    #endif
+
     var content: some View {
         ScrollViewReader { scrollProxy in
             let context = searchDisplayContext
@@ -1293,6 +1304,11 @@ struct QuranView: View {
             List {
                 Group {
                     boxed(primaryHistorySections(context: context))
+                    #if os(iOS)
+                    // The Quran Planner card: today's reading amount and where to pick up. Hidden while
+                    // searching, like every other pinned section.
+                    boxed(quranPlannerSection(context: context))
+                    #endif
                     boxed(bookmarkSection(context: context))
                     boxed(favoriteSection(context: context))
                     // Only hoist page/juz above the surah list for EXPLICIT "page X" / "juz Y" queries
@@ -1415,6 +1431,15 @@ struct QuranView: View {
                 }
             }
 
+            // The Quran Planner, one tap from anywhere on the tab (the card version scrolls with the
+            // list). Hafs-only, matching the khatm store it rides on.
+            ToolbarItem(placement: .navigationBarLeading) {
+                if settings.isHafsDisplay {
+                    QuranPlannerToolbarButton(openReader: { surahID, ayahID in
+                        push(surahID: surahID, ayahID: ayahID)
+                    })
+                }
+            }
         }
         // The trailing buttons live in their own modifier so iOS 26 can interleave ToolbarSpacers between
         // them - without spacers, Liquid Glass merges adjacent trailing items into ONE capsule. (A separate

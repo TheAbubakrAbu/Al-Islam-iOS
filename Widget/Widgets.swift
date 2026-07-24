@@ -7,6 +7,9 @@ struct Widgets: WidgetBundle {
         SimpleWidget()
         CountdownWidget()
         PrayerGradientWidget()
+        PrayerGlanceWidget()
+        CountdownSkyWidget()
+        PrayersSkyWidget()
         Prayers2Widget()
         PrayersWidget()
         

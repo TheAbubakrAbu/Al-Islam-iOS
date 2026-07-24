@@ -1,6 +1,15 @@
 # Version 4.6.0
 
-The major Hadith collections, tafsir in Arabic and English, a better mushaf, full-surah recitation on Apple Watch, and a Quran search you can reach from anywhere.
+The major Hadith collections, on-device AI search, a prayer tracker, tafsir in Arabic and English, a better mushaf, and a living sky over your prayer times.
+
+AI Search:
+- Search the Quran and Hadith by meaning, not just keywords - "patience in hardship" finds ayahs about sabr even when neither word appears. Built with Apple's on-device language frameworks: private, offline, and free.
+- On iPhones with Apple Intelligence, Ask AI answers your question in a few sentences drawn only from the ayahs and hadiths it cites right below the answer - and it never gives religious rulings.
+
+Prayer Tracker:
+- Mark each prayer with a tap right on the Adhan tab, then watch your streaks, perfect days, and totals grow in History & Insights - a calendar heatmap by day, week, month, and year.
+- Travel-aware and Friday-aware: Jumuah counts as Dhuhr, and combined traveling prayers count as both. A menstruation and postpartum pause keeps exempt days from ever breaking a streak.
+- Nagging Mode now works with the tracker: answer "Yes, I prayed it" right from the notification to mark the prayer and stop the remaining reminders.
 
 Hadith:
 - A new Hadith tab with all the major collections: the Six Books (Bukhari, Muslim, an-Nasa'i, Abu Dawud, at-Tirmidhi, and Ibn Majah), the early collections (Muwatta Malik, ad-Darimi, and Musnad Ahmad), the forty-Hadith collections, and classics like Riyad as-Salihin, Mishkat al-Masabih, and Bulugh al-Maram.
@@ -8,37 +17,29 @@ Hadith:
 - Search within any book, or across every downloaded book at once. Each collection saves for offline reading.
 
 Al-Quran:
-- Tafsir for any ayah: Ibn Kathir, Maarif Ul Quran, and Tazkirul Quran in English, plus Ibn Kathir, al-Tabari, and as-Sa'di in Arabic - saved for offline reading the first time you open it.
-- Select multiple ayahs at once, then share, copy, bookmark, add a note, or switch them all to beginner mode together.
-- Search the whole Quran from wherever you are reading - a search button now sits in both the ayah reader and the mushaf, and carries whatever you had already typed.
-- Three new reciters: Islam Sobhi, Mohamed Al-Tablawi, and Khalifa Al-Tunaiji.
-- Offline ayah playback in the reciter's own voice: for a dozen reciters, downloading their surahs now also fetches precise ayah timings, so single ayahs and ranges play from the file.
-- Every summary tile can now unfold to show its recent history - the last five Ayahs of the Day, and your recent reads and listens.
-- Tap an ayah in the mushaf to highlight it and keep your place; press and hold to open the ayah's actions.
-- Page mode is now your reading mode, and it stays selected when you leave the Quran tab and come back.
+- Quran Planner: pick a finish date and get a daily amount that adjusts itself when you miss a day.
+- Tafsir for any ayah: Ibn Kathir, Maarif Ul Quran, and Tazkirul Quran in English, plus Ibn Kathir, al-Tabari, and as-Sa'di in Arabic - saved for offline reading.
+- Search the whole Quran from wherever you are reading, and use Siri too: play any surah, resume your last listen, or ask "When is Maghrib?" - in English and Arabic.
+- Offline ayah playback in the reciter's own voice: for a dozen reciters, downloading their surahs also fetches precise ayah timings, so single ayahs and ranges play from the file.
 - A faster, retypeset mushaf: pages open and flip quicker, every line fills the full width, and spacing is even in Arabic and English alike.
-- The reading progress bar now fills smoothly as you scroll instead of jumping a page at a time.
-- More accurate tajweed for raa after hamzatul wasl, and tashkeel marks are now spoken aloud in the Arabic alphabet.
-- Adhkar, Duas, and the 99 Names now offer three Arabic script styles - Uthmani, IndoPak, and Basic.
+
+Al-Adhan:
+- A living sky over your prayer times: the sun rides its true arc, stars come out at night, and the moon shows its real phase. Drag across the day to preview any moment, and pick your own sky colors for every prayer.
+- A new At a Glance board: Qibla direction, distance to Makkah, daylight, fasting window, moon, and more.
+- A new Prayer Sky widget shows the current prayer and countdown over that prayer's colors, and the Ayah of the Day widget now changes at midnight on its own.
+- A full calculation method catalogue you can browse by region, with the angles each one uses shown up front.
 
 Apple Watch:
 - Full-surah recitation now plays on the watch - connect AirPods (or pick a route when asked) and every reciter works in their own voice.
-- Traveling Mode now syncs between your iPhone and Apple Watch.
-- An interactive sky strip: drag across the day to preview the sun's position and the prayer at that moment, and see how much daylight is left and what the moon is doing tonight.
-- Settings sync between iPhone and watch more reliably, including right after pairing a new watch.
-
-Al-Adhan:
-- A full calculation method catalogue you can browse by region, with the angles each one uses shown up front.
-- Automatic now switches you to your region's method even if you were on Custom Angles.
-- The Qasr footer now has a Traveling Mode Settings button that lands directly on the screen where traveling mode is configured or turned off.
+- Traveling Mode and settings now sync more reliably between iPhone and Apple Watch, including right after pairing a new watch.
 
 Islamic Tools:
-- New Halal Food Locator beside the Masjid Locator. Both now center on you as soon as your location arrives, and the masjid search recognizes Arabic-named masaajid.
-- Eight new dua collections - Morning & Evening, Sleep & Waking, Distress & Anxiety, Travel, Home & Mosque, Food & Drink, Forgiveness & Repentance, and Duas of the Prophets - each supplication authenticated with its exact source, and a Listen button that reads the Arabic aloud.
-- The Islam tab can now show its resources as a grid with favorites pinned to the top. One grid switch drives the whole app: Quran, Hadith, Arabic Alphabet, 99 Names, and Islam resources flip together.
+- New Halal Food Locator beside the Masjid Locator - both center on you as soon as your location arrives.
+- Eight new dua collections, each supplication authenticated with its exact source, and Listen buttons that read the Arabic aloud across duas, adhkar, and the Arabic alphabet.
+- Settings reorganized into dedicated Adhan, Quran, and Hadith screens, with a search that jumps straight to any setting.
 
 Bug fixes and optimizations:
-- Fixed a rare crash while searching the Quran in Low Power Mode, plus performance, reliability, and polish throughout.
+- Performance, reliability, and polish throughout.
 
 
 # Version 4.5.3

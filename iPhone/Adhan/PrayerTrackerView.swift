@@ -180,6 +180,16 @@ private struct TrackerPrayerToggle: View {
             withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
                 settings.setPrayerPrayed(prayer.nameTransliteration, on: date, prayed: !prayed)
             }
+
+            // Marking the day's last unprayed slot is the app's clearest moment of delight - the one
+            // point where asking for a rating lands on a "win". Every gate (cooldown, session and usage
+            // minimums, yearly quota) re-checks inside the manager, so this is safe to call every time.
+            if !prayed, Calendar.current.isDateInToday(date) {
+                let slots = settings.trackableSlots(for: date)
+                if !slots.isEmpty, settings.trackedPrayerCount(slots.map(\.nameTransliteration)) == slots.count {
+                    AppReviewManager.shared.requestAtMomentOfDelight()
+                }
+            }
         } label: {
             VStack(spacing: 6) {
                 ZStack {

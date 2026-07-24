@@ -2513,12 +2513,19 @@ struct HadithPagedView: View {
             .textSelection(.enabled)
 
         case .narrator(let hadith):
-            Text(hadith.english.narrator)
-                .font(.system(size: settings.hadithEnglishFontSize).italic())
-                .foregroundStyle(.secondary)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .fixedSize(horizontal: false, vertical: true)
-                .textSelection(.enabled)
+            // HighlightedSnippet (not a plain Text) so the narrator line gets the Allah highlight in
+            // page mode too - it's English text like the body, and the list rows already color it.
+            HighlightedSnippet(
+                source: hadith.english.narrator,
+                term: "",
+                font: .system(size: settings.hadithEnglishFontSize).italic(),
+                accent: settings.accentColor.color,
+                fg: .secondary,
+                highlightAllahNames: settings.highlightAllahNamesHadith
+            )
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .fixedSize(horizontal: false, vertical: true)
+            .textSelection(.enabled)
 
         case .english(let hadith):
             HighlightedSnippet(
