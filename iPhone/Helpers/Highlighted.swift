@@ -334,53 +334,13 @@ struct HighlightedSnippet: View {
                 indexMap = Self.indices(atUTF16Offsets: built.mapUTF16, in: source) ?? []
             }
 
-            var ranges: [Range<String.Index>] = []
-            var searchStart = normalizedSource.startIndex
-            while searchStart < normalizedSource.endIndex,
-                  let matchRange = normalizedSource.range(of: normalizedTerm, range: searchStart..<normalizedSource.endIndex) {
-                if let orig = originalRange(
-                    in: source,
-                    normalizedSource: normalizedSource,
-                    matchRange: matchRange,
-                    indexMap: indexMap
-                ) {
-                    ranges.append(orig)
-                }
-                searchStart = matchRange.upperBound
-            }
-            // Arabic fallback: an alef-insensitive match (so الرحمن / الرحمان / الرحمٰن all match), with a
-            // longest-prefix partial match so something is always highlighted even when the exact phrase
-            // isn't present. This is why exact substring matching alone was missing most Arabic terms.
-            if ranges.isEmpty, source.containsArabicLetters {
-                ranges = arabicLooseRanges(
-                    source: source,
-                    normalizedSource: normalizedSource,
-                    indexMap: indexMap,
-                    normalizedTerm: normalizedTerm
-                )
-            }
-            // Phrase-prefix fallback for BOTH scripts: highlights consecutive words where the leading words
-            // match and the final word is a prefix (e.g. "those who believ" → "those who believe"). This is
-            // the same "close match" rule the verse search itself uses, so English close matches - which
-            // previously highlighted nothing - now get colored like the Arabic ones.
-            if ranges.isEmpty {
-                ranges = phrasePrefixRanges(
-                    in: source,
-                    normalizedSource: normalizedSource,
-                    normalizedTerm: normalizedTerm,
-                    indexMap: indexMap
-                )
-            }
-            // Final safety net - ONLY when this field is expected to contain the match (`guaranteeMatch`,
-            // i.e. ayah search on the field that actually matched). If nothing matched yet, highlight the
-            // closest word(s) in THIS field so the user always sees at least one thing for their query. It
-            // works on the original words normalized individually, so it doesn't depend on the whole-string
-            // index alignment the paths above need - which can silently fail on heavily-marked Arabic and
-            // leave a real match un-highlighted. Skipped by default so a query that matched a sibling field
-            // doesn't force a spurious highlight here.
-            if ranges.isEmpty, guaranteeMatch {
-                ranges = closestMatchRanges(in: source, normalizedTerm: normalizedTerm)
-            }
+            let ranges = Self.matchRanges(
+                in: source,
+                normalizedSource: normalizedSource,
+                indexMap: indexMap,
+                normalizedTerm: normalizedTerm,
+                guaranteeMatch: guaranteeMatch
+            )
             Self.matchRangeCache.setObject(
                 RangeEntry(ranges.map { Self.utf16Span(of: $0, in: source) }),
                 forKey: matchKey
@@ -399,7 +359,91 @@ struct HighlightedSnippet: View {
         return attributed
     }
 
-    private func phrasePrefixRanges(
+    /// The canonical match-range ladder, shared by the list snippet (`highlight`, via its caches) and the
+    /// mushaf page reader so BOTH surfaces color the same substrings for the same query: exact normalized
+    /// substring → Arabic alef-insensitive skeleton → phrase-prefix → (only with `guaranteeMatch`) the
+    /// closest-word safety net. The caller supplies the already-folded source + index map so a cached fold
+    /// is reused rather than recomputed.
+    nonisolated static func matchRanges(
+        in source: String,
+        normalizedSource: String,
+        indexMap: [String.Index],
+        normalizedTerm: String,
+        guaranteeMatch: Bool
+    ) -> [Range<String.Index>] {
+        var ranges: [Range<String.Index>] = []
+        var searchStart = normalizedSource.startIndex
+        while searchStart < normalizedSource.endIndex,
+              let matchRange = normalizedSource.range(of: normalizedTerm, range: searchStart..<normalizedSource.endIndex) {
+            if let orig = originalRange(
+                in: source,
+                normalizedSource: normalizedSource,
+                matchRange: matchRange,
+                indexMap: indexMap
+            ) {
+                ranges.append(orig)
+            }
+            searchStart = matchRange.upperBound
+        }
+        // Arabic fallback: an alef-insensitive match (so الرحمن / الرحمان / الرحمٰن all match), with a
+        // longest-prefix partial match so something is always highlighted even when the exact phrase
+        // isn't present. This is why exact substring matching alone was missing most Arabic terms.
+        if ranges.isEmpty, source.containsArabicLetters {
+            ranges = arabicLooseRanges(
+                source: source,
+                normalizedSource: normalizedSource,
+                indexMap: indexMap,
+                normalizedTerm: normalizedTerm,
+                guaranteeMatch: guaranteeMatch
+            )
+        }
+        // Phrase-prefix fallback for BOTH scripts: highlights consecutive words where the leading words
+        // match and the final word is a prefix (e.g. "those who believ" → "those who believe"). This is
+        // the same "close match" rule the verse search itself uses, so English close matches - which
+        // previously highlighted nothing - now get colored like the Arabic ones.
+        if ranges.isEmpty {
+            ranges = phrasePrefixRanges(
+                in: source,
+                normalizedSource: normalizedSource,
+                normalizedTerm: normalizedTerm,
+                indexMap: indexMap
+            )
+        }
+        // Final safety net - ONLY when this field is expected to contain the match (`guaranteeMatch`, i.e.
+        // ayah search on the field that actually matched). If nothing matched yet, highlight the closest
+        // word(s) in THIS field so the user always sees at least one thing for their query. It works on the
+        // original words normalized individually, so it doesn't depend on the whole-string index alignment
+        // the paths above need - which can silently fail on heavily-marked Arabic and leave a real match
+        // un-highlighted. Skipped by default so a query that matched a sibling field doesn't force a
+        // spurious highlight here.
+        if ranges.isEmpty, guaranteeMatch {
+            ranges = closestMatchRanges(in: source, normalizedTerm: normalizedTerm)
+        }
+        return ranges
+    }
+
+    /// Convenience for callers without a cached fold (the mushaf page reader): folds `source` fresh, then
+    /// runs the shared ladder. Returns ranges into `source`, empty when the term genuinely isn't present
+    /// (so an English query on an Arabic page highlights nothing rather than washing the whole ayah).
+    nonisolated static func matchRanges(
+        of term: String,
+        in source: String,
+        guaranteeMatch: Bool = false
+    ) -> [Range<String.Index>] {
+        let normalizedTerm = normalizeForSearchText(term, trimWhitespace: true)
+        guard !normalizedTerm.isEmpty else { return [] }
+        let built = normalizedSourceAndMap(for: source)
+        guard let indexMap = indices(atUTF16Offsets: built.mapUTF16, in: source) else { return [] }
+        return matchRanges(
+            in: source,
+            normalizedSource: built.normalized,
+            indexMap: indexMap,
+            normalizedTerm: normalizedTerm,
+            guaranteeMatch: guaranteeMatch
+        )
+    }
+
+    nonisolated private static func phrasePrefixRanges(
         in source: String,
         normalizedSource: String,
         normalizedTerm: String,
@@ -467,11 +511,12 @@ struct HighlightedSnippet: View {
     /// If the whole term skeleton isn't found, the longest leading chunk (≥ 2 letters) is highlighted - but
     /// only when `guaranteeMatch` is set, so this "always sees *something*" fuzziness is limited to fields
     /// that are meant to contain the match (ayah search) and doesn't leak onto side-by-side sibling fields.
-    private func arabicLooseRanges(
+    nonisolated private static func arabicLooseRanges(
         source: String,
         normalizedSource: String,
         indexMap: [String.Index],
-        normalizedTerm: String
+        normalizedTerm: String,
+        guaranteeMatch: Bool
     ) -> [Range<String.Index>] {
         guard indexMap.count == normalizedSource.count else { return [] }
 
@@ -501,7 +546,7 @@ struct HighlightedSnippet: View {
             // Pull a directly-preceding alef (e.g. the ا of الـ) into the highlight so it reads naturally.
             if start > source.startIndex {
                 let prev = source.index(before: start)
-                if normalizeForSearch(String(source[prev]), trimWhitespace: false) == "ا" { start = prev }
+                if Self.normalizeForSearchText(String(source[prev]), trimWhitespace: false) == "ا" { start = prev }
             }
             return start..<end
         }
@@ -536,7 +581,7 @@ struct HighlightedSnippet: View {
     /// no fragile whole-string alignment), scores them against the query, and returns every word that
     /// contains the query - or, if none do, the single closest word. This is the "something is always
     /// highlighted, the closest match" behavior.
-    private func closestMatchRanges(in source: String, normalizedTerm: String) -> [Range<String.Index>] {
+    nonisolated private static func closestMatchRanges(in source: String, normalizedTerm: String) -> [Range<String.Index>] {
         // Match against the most specific (longest) query word.
         guard let primaryQuery = normalizedTerm
             .split(separator: " ")
@@ -554,7 +599,7 @@ struct HighlightedSnippet: View {
             while cursor < source.endIndex, !source[cursor].isWhitespace { cursor = source.index(after: cursor) }
             let tokenRange = start..<cursor
 
-            let normToken = normalizeForSearch(String(source[tokenRange]), trimWhitespace: true)
+            let normToken = Self.normalizeForSearchText(String(source[tokenRange]), trimWhitespace: true)
             guard !normToken.isEmpty else { continue }
             let score = wordMatchScore(word: normToken, query: primaryQuery)
             if score > 0 { scored.append((tokenRange, score)) }
@@ -574,7 +619,7 @@ struct HighlightedSnippet: View {
     }
 
     /// The range of the longest whitespace-delimited word in `source` (the guaranteed-something fallback).
-    private func longestWordRange(in source: String) -> Range<String.Index>? {
+    nonisolated private static func longestWordRange(in source: String) -> Range<String.Index>? {
         var best: Range<String.Index>? = nil
         var bestLen = 0
         var cursor = source.startIndex
@@ -589,7 +634,7 @@ struct HighlightedSnippet: View {
         return best
     }
 
-    private func wordMatchScore(word: String, query: String) -> Int {
+    nonisolated private static func wordMatchScore(word: String, query: String) -> Int {
         if word == query { return 100 }
         if word.contains(query) { return 70 }
         if query.contains(word) { return 60 }
@@ -597,7 +642,7 @@ struct HighlightedSnippet: View {
         return lcp >= 2 ? lcp : 0
     }
 
-    private func commonPrefixLength(_ a: String, _ b: String) -> Int {
+    nonisolated private static func commonPrefixLength(_ a: String, _ b: String) -> Int {
         var count = 0
         var i = a.startIndex
         var j = b.startIndex
@@ -609,7 +654,7 @@ struct HighlightedSnippet: View {
         return count
     }
 
-    private func normalizedTokenRanges(in text: String) -> [Range<String.Index>] {
+    nonisolated private static func normalizedTokenRanges(in text: String) -> [Range<String.Index>] {
         var ranges: [Range<String.Index>] = []
         var cursor = text.startIndex
 
@@ -789,7 +834,7 @@ struct HighlightedSnippet: View {
         return (normalized, map)
     }
 
-    private func originalRange(
+    nonisolated private static func originalRange(
         in source: String,
         normalizedSource: String,
         matchRange: Range<String.Index>,

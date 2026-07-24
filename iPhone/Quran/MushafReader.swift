@@ -187,6 +187,10 @@ struct SurahPageReader<Controls: View>: View {
     /// Together they decide the starting page; after that the reader is no longer bound to this surah.
     let surah: Surah
     var initialAyah: Int?
+    /// Bumped by the parent on every in-place surah navigation. The `surah.id` onChange alone can't
+    /// re-seed when the picked surah EQUALS the prop (after the reader paged away from it) - the token
+    /// change is what forces the jump then.
+    var jumpToken: Int = 0
     /// Fires whenever the visible page belongs to a different surah, so the navigation title can follow the
     /// reader across surah boundaries instead of naming the surah it was opened from forever.
     var onSurahChange: ((Surah) -> Void)?
@@ -207,6 +211,9 @@ struct SurahPageReader<Controls: View>: View {
     var onToggleSelection: ((Int) -> Void)? = nil
     /// Fires on a real page turn (not the initial seed) - the parent clears its selections and snippet.
     var onPageTurned: (() -> Void)? = nil
+    /// Opens the reciter picker (the parent owns the sheet). Page mode had no way to change reciter
+    /// without leaving to list mode; the footer play menu offers it through this hook.
+    var onChooseReciter: (() -> Void)? = nil
     /// The optional tajweed/qiraah controls and the mini player. The reader owns the ordering: these sit
     /// ABOVE the page-navigation footer, which is applied last so it stays pinned at the very bottom.
     @ViewBuilder var bottomControls: () -> Controls
@@ -363,17 +370,13 @@ struct SurahPageReader<Controls: View>: View {
             // The surah was swapped in place (surah picker, next-surah, a search hit). The reader used to be
             // torn down and recreated via `.id(surah.id)` for this - a full rebuild of the 604-page pager on
             // the main thread. Re-seeding the index in the LIVE pager is the cheap equivalent.
-            let target = startingPageIndex(in: pages)
-            if target != pageIndex {
-                // A swap that arrives WITH a target ayah (search hit, picker) sets its own highlight in
-                // SurahView - the re-seed must not count as a page turn and wipe it.
-                suppressNextPageTurnClear = true
-                pageIndex = target
-                // `.onChange(of: pageIndex)` below reports + prewarms + saves.
-            } else {
-                reportSurah(on: target, in: pages)
-                reportAnchor(on: target, in: pages)
-            }
+            reseedToStartingPage(in: pages)
+        }
+        // The picked surah can equal the `surah` prop after the reader paged away from it - no id change,
+        // no onChange above. The parent bumps the token on EVERY navigation, so this one always fires
+        // (re-seeding twice in one update is a harmless no-op: the second sees target == pageIndex).
+        .onChange(of: jumpToken) { _ in
+            reseedToStartingPage(in: pages)
         }
         .onChange(of: pageIndex) { index in
             reportSurah(on: index, in: pages)
@@ -441,6 +444,22 @@ struct SurahPageReader<Controls: View>: View {
                 pageSearchText = ""
                 pageSearchFocused = false
             }
+        }
+    }
+
+    /// Jump the live pager to this `surah`'s starting page (shared by the `surah.id` and `jumpToken`
+    /// onChange handlers - an in-place surah swap from the picker, next-surah, or a search hit).
+    private func reseedToStartingPage(in pages: [MushafPage]) {
+        let target = startingPageIndex(in: pages)
+        if target != pageIndex {
+            // A swap that arrives WITH a target ayah (search hit, picker) sets its own highlight in
+            // SurahView - the re-seed must not count as a page turn and wipe it.
+            suppressNextPageTurnClear = true
+            pageIndex = target
+            // `.onChange(of: pageIndex)` reports + prewarms + saves.
+        } else {
+            reportSurah(on: target, in: pages)
+            reportAnchor(on: target, in: pages)
         }
     }
 
@@ -815,6 +834,19 @@ struct SurahPageReader<Controls: View>: View {
         return Group {
             if idle {
                 Menu {
+                    // Reciter picker pinned to the very top, with a divider under it - the same placement
+                    // as the list reader's play menu, so all the play menus read identically.
+                    if let onChooseReciter {
+                        Button {
+                            settings.hapticFeedback()
+                            onChooseReciter()
+                        } label: {
+                            Label("Choose Reciter", systemImage: "headphones")
+                        }
+
+                        Divider()
+                    }
+
                     Text("Surah Playback")
                         .foregroundStyle(.secondary)
 
@@ -1093,6 +1125,7 @@ private struct MushafPageContent: View {
                     width: width,
                     highlight: recitingAyah,
                     highlightColor: settings.accentColor.color,
+                    playingSurahID: quranPlayer.currentSurahNumber,
                     mark: markedAyah ?? sheetAyahTint,
                     termHighlight: arrivalHighlight.map { (surahID: $0.ref.surahID, ayahID: $0.ref.ayahID, term: $0.term) },
                     searchHighlight: searchHighlight.map { highlight in
@@ -1214,10 +1247,15 @@ private struct MushafPageContent: View {
                 .padding(.horizontal)
                 .padding(.vertical, 4)
                 // Keep the tapped header lit while its info sheet is open (task: highlight the selection until
-                // the sheet is gone).
+                // the sheet is gone). While this surah is loaded in the player, the header carries the accent
+                // tint instead - the page-top twin of the in-page name highlight.
                 .background(
                     RoundedRectangle(cornerRadius: 18, style: .continuous)
-                        .fill(infoSurah?.id == surah.id ? Color.secondary.opacity(0.18) : .clear)
+                        .fill(infoSurah?.id == surah.id
+                              ? Color.secondary.opacity(0.18)
+                              : quranPlayer.currentSurahNumber == surah.id
+                                ? settings.accentColor.color.opacity(0.18)
+                                : .clear)
                 )
                 .shadow(color: .black.opacity(0.15), radius: 2, x: 0, y: 0)
                 .conditionalGlassEffect(rectangle: true)
@@ -1253,8 +1291,16 @@ private struct MushafPageContent: View {
 
 /// A single ayah's character range within the composed page text, so a tap can be mapped back to an ayah.
 /// `ayahID == 0` is the surah HEADING (name/basmala) rather than an ayah - tapping it opens the surah info
-/// sheet instead of marking an ayah.
+/// sheet instead of marking an ayah. `ayahID == surahNameID` is the NAME subrange inside a heading (no
+/// bismillah), recorded after its heading range so hit-testing never resolves to it - it exists only so
+/// playback can tint the playing surah's name.
 struct MushafAyahRange {
+    /// Sentinel `ayahID` for a heading's name-only subrange.
+    static let surahNameID = -1
+    /// Sentinel `ayahID` for an ayah's number-ornament subrange (kept accent while a search flattens
+    /// the rest of the page to the label color).
+    static let ayahMarkerID = -2
+
     let range: NSRange
     let surahID: Int
     let ayahID: Int
@@ -1446,7 +1492,7 @@ struct MushafPageComposer {
     }
 
     private func surahOpeningHeading(_ surah: Surah, size: CGFloat, width: CGFloat,
-                                     extraLineSpacing: CGFloat, leadingBreak: Bool) -> NSAttributedString {
+                                     extraLineSpacing: CGFloat, leadingBreak: Bool) -> (text: NSAttributedString, nameRange: NSRange) {
         let accent = config.accent
         let heading = NSMutableAttributedString()
 
@@ -1463,9 +1509,10 @@ struct MushafPageComposer {
         tight.baseWritingDirection = isEnglish ? .leftToRight : .rightToLeft
         tight.lineSpacing = 1
 
-        // One rule, spanning the full column, ABOVE the name only. Two short rules (above and below) cost two
-        // extra line boxes on a page whose whole job is to fit - and a surah opening reads perfectly well as a
-        // line drawn across the page with the name beneath it.
+        // Full-column rules frame the heading: one above the name and one below it, so the surah opening
+        // reads as a closed block - the bottom rule is also what separates the previous surah's last ayah
+        // from this one's name. The fitter measures the same composed string, so the extra line box is
+        // budgeted for automatically.
         let ruleSize = max(size * 0.3, 8)
         let rule = ruleString(width: width, ruleSize: ruleSize)
         let ruleAttributes: [NSAttributedString.Key: Any] = [
@@ -1484,6 +1531,10 @@ struct MushafPageComposer {
             .paragraphStyle: tight,
         ]
 
+        // The name run's bounds within the heading (brackets + number + name, but NOT the bismillah) - the
+        // composer records it as its own range so playback can tint just the name.
+        let nameStart = heading.length
+
         if isEnglish {
             // English headings: number, transliterated name, and its meaning. No ornate brackets - those are
             // Arabic typography and read as debris around Latin text.
@@ -1500,15 +1551,18 @@ struct MushafPageComposer {
             heading.append(NSAttributedString(string: "\u{FD3F} ", attributes: arabicAttributes))
 
             // The Arabic-Indic numeral in the SYSTEM face, not the Quranic one: the Quranic fonts draw their
-            // digits as ayah-marker ornaments, which is the wrong thing entirely for a surah number.
+            // digits as ayah-marker ornaments, which is the wrong thing entirely for a surah number. Light
+            // weight: next to the calligraphic name a semibold numeral read far too heavy.
             heading.append(NSAttributedString(string: surah.idArabic, attributes: [
-                .font: UIFont.systemFont(ofSize: nameSize * 0.8, weight: .semibold),
+                .font: UIFont.systemFont(ofSize: nameSize * 0.8, weight: .light),
                 .foregroundColor: accent,
                 .paragraphStyle: tight,
             ]))
 
             heading.append(NSAttributedString(string: " \(surah.nameArabic) \u{FD3E}", attributes: arabicAttributes))
         }
+
+        let nameRange = NSRange(location: nameStart, length: heading.length - nameStart)
 
         if surah.id != 1, surah.id != 9 {
             // On the SAME line as the name. Em quads (not spaces): a run of ordinary spaces between two Arabic
@@ -1524,8 +1578,9 @@ struct MushafPageComposer {
             ))
         }
 
-        heading.append(NSAttributedString(string: "\n", attributes: ruleAttributes))
-        return heading
+        // The closing rule under the heading line.
+        heading.append(NSAttributedString(string: "\n" + rule + "\n", attributes: ruleAttributes))
+        return (heading, nameRange)
     }
 
     /// Fallback only - used if `QuranCommon` isn't installed and the ornament can't be drawn.
@@ -1547,8 +1602,9 @@ struct MushafPageComposer {
             // and the page's own opening surah is titled by the pinned header, so it gets nothing.
             if segment.ayahs.first?.id == 1 {
                 let headingStart = result.length
-                result.append(surahOpeningHeading(segment.surah, size: size, width: width,
-                                                  extraLineSpacing: extraLineSpacing, leadingBreak: i > 0))
+                let heading = surahOpeningHeading(segment.surah, size: size, width: width,
+                                                  extraLineSpacing: extraLineSpacing, leadingBreak: i > 0)
+                result.append(heading.text)
                 // The heading (rule + name + basmala) is tappable: `ayahID: 0` marks it as a heading range so a
                 // tap opens the surah info sheet instead of trying to mark an ayah.
                 ranges.append(MushafAyahRange(
@@ -1556,6 +1612,16 @@ struct MushafPageComposer {
                     surahID: segment.surah.id,
                     ayahID: 0
                 ))
+                // The NAME subrange, recorded AFTER the heading range (hit-testing takes the first hit, so
+                // taps keep resolving to the heading) - it lets playback tint the name and only the name.
+                if heading.nameRange.length > 0 {
+                    ranges.append(MushafAyahRange(
+                        range: NSRange(location: headingStart + heading.nameRange.location,
+                                       length: heading.nameRange.length),
+                        surahID: segment.surah.id,
+                        ayahID: MushafAyahRange.surahNameID
+                    ))
+                }
             } else if i > 0 {
                 let name = isEnglish
                     ? "\n\(segment.surah.id). \(segment.surah.nameTransliteration)\n"
@@ -1571,12 +1637,19 @@ struct MushafPageComposer {
                     surahID: segment.surah.id,
                     ayahID: 0
                 ))
+                // The continuing name is all name - same playback tint hook as the opening heading.
+                ranges.append(MushafAyahRange(
+                    range: NSRange(location: headingStart, length: result.length - headingStart),
+                    surahID: segment.surah.id,
+                    ayahID: MushafAyahRange.surahNameID
+                ))
             }
 
             for ayah in segment.ayahs {
                 let start = result.length
                 result.append(ayahText(ayah, surah: segment.surah, size: size, colored: colored,
                                        extraLineSpacing: extraLineSpacing))
+                let markerStart = result.length
                 result.append(NSAttributedString(string: " \(ayah.idArabic) ", attributes: [
                     .font: markerFont(size),
                     .foregroundColor: accent,
@@ -1586,6 +1659,14 @@ struct MushafPageComposer {
                     range: NSRange(location: start, length: result.length - start),
                     surahID: segment.surah.id,
                     ayahID: ayah.id
+                ))
+                // The ayah-number ornament's own range, recorded AFTER the ayah range (so a tap still
+                // resolves to the ayah) - it lets the search flatten keep the number accent-colored, the
+                // way the list rows always show it, instead of graying it out with the rest of the ayah.
+                ranges.append(MushafAyahRange(
+                    range: NSRange(location: markerStart, length: result.length - markerStart),
+                    surahID: segment.surah.id,
+                    ayahID: MushafAyahRange.ayahMarkerID
                 ))
             }
         }
@@ -2268,6 +2349,9 @@ struct MushafPageTextView: UIViewRepresentable {
     /// The ayah being recited, if it is on this page - tinted in the accent.
     var highlight: (surahID: Int, ayahID: Int)?
     var highlightColor: Color = .accentColor
+    /// The surah currently loaded in the player, if any: its heading NAME (not the bismillah) carries the
+    /// accent tint while it plays, so the page shows which surah the recitation belongs to.
+    var playingSurahID: Int? = nil
     /// The ayah the reader marked by tapping it - tinted grey, and independent of the recitation highlight so
     /// both can be on screen at once.
     var mark: (surahID: Int, ayahID: Int)?
@@ -2309,21 +2393,32 @@ struct MushafPageTextView: UIViewRepresentable {
             }
         }
 
-        // The search-arrival snippet: matched substrings inside the target ayah in accent FOREGROUND -
-        // the page-mode twin of the list's HighlightedSnippet coloring. When the term can't be found in
-        // the page's script (an ENGLISH query matched the translation, but the page shows Arabic - there
-        // is no "Muhammad" to color in محمد), the whole ayah takes the accent instead: the match is the
-        // ayah, shown at the granularity this page can express.
+        // The playing surah's heading NAME (never the bismillah - the composer records the name as its own
+        // subrange) lights up while that surah is loaded in the player.
+        if let playingSurahID, let nameRange = range(of: (playingSurahID, MushafAyahRange.surahNameID)) {
+            tints.append((nameRange, highlightColor))
+        }
+
+        // The search-arrival snippet: the matched substrings inside the target ayah, in accent FOREGROUND -
+        // the page-mode twin of the list's HighlightedSnippet coloring. ONLY a substring that is actually
+        // present in the text THIS page shows gets colored. When the term matched through something the
+        // page isn't showing (an English query that hit the translation while the page shows Arabic, or a
+        // DIFFERENT English translation than the one on the page), there is nothing here to color - so we
+        // color nothing. Painting the whole ayah in that case was the "it highlights the whole ayah instead
+        // of just the word" bug; the arrival already grey-marks the ayah, so the reader still sees where
+        // they landed.
         let termTarget: (ayahRange: NSRange, matches: [NSRange])? = {
             guard let termHighlight,
                   let ayahRange = range(of: (termHighlight.surahID, termHighlight.ayahID)) else { return nil }
             let exact = Self.matchRanges(of: termHighlight.term, in: text.string, within: ayahRange)
-            return (ayahRange, exact.isEmpty ? [ayahRange] : exact)
+            guard !exact.isEmpty else { return nil }
+            return (ayahRange, exact)
         }()
 
-        // The in-page find: matched substrings for EVERY matching ayah on the page. An ayah that matched
-        // through a script the page isn't showing (an English query on an Arabic page) has no substring
-        // to color, so it takes the accent whole - the match shown at the granularity the page can express.
+        // The in-page find: the matched substrings for every matching ayah whose match is ON this page.
+        // Same rule as the arrival term - an ayah that matched through a script/translation the page isn't
+        // showing has no substring here, so it is dropped rather than washed whole (its current-match
+        // position is grey-marked separately via `highlightedAyah`).
         let searchTerm = searchHighlight?.term.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         let searchIsActive = searchHighlight != nil && !searchTerm.isEmpty
         let searchTargets: [(ayahRange: NSRange, matches: [NSRange])] = {
@@ -2331,7 +2426,8 @@ struct MushafPageTextView: UIViewRepresentable {
             return searchHighlight.matches.compactMap { match in
                 guard let ayahRange = range(of: (match.surahID, match.ayahID)) else { return nil }
                 let exact = Self.matchRanges(of: searchTerm, in: text.string, within: ayahRange)
-                return (ayahRange, exact.isEmpty ? [ayahRange] : exact)
+                guard !exact.isEmpty else { return nil }
+                return (ayahRange, exact)
             }
         }()
 
@@ -2341,11 +2437,13 @@ struct MushafPageTextView: UIViewRepresentable {
         for (range, color) in tints {
             mutable.addAttribute(.backgroundColor, value: UIColor(color).withAlphaComponent(0.22), range: range)
         }
-        if searchIsActive {
-            // While the find query is live the WHOLE page drops its tajweed colors - flattened to the
-            // label color ayah by ayah (headings keep their own styling) - so the accent matches are the
-            // only color on the page, exactly like the list's matched rows.
-            for entry in ranges where entry.ayahID != 0 && NSMaxRange(entry.range) <= mutable.length {
+        // Only when at least one match is actually located ON this page: flatten the page's tajweed to the
+        // label color (headings keep their own styling; `> 0` skips the name-only subranges so the heading
+        // accent survives) so the accent matches are the only color, exactly like the list's matched rows.
+        // If nothing on this page matches (the query hit a script/translation the page isn't showing), the
+        // page is left untouched rather than flattened to a plain grey slab with nothing lit.
+        if searchIsActive, !searchTargets.isEmpty {
+            for entry in ranges where entry.ayahID > 0 && NSMaxRange(entry.range) <= mutable.length {
                 mutable.addAttribute(.foregroundColor, value: UIColor.label, range: entry.range)
             }
             for target in searchTargets {
@@ -2357,48 +2455,43 @@ struct MushafPageTextView: UIViewRepresentable {
         if let termTarget {
             // The matched ayah drops its tajweed colors while the match is lit - exactly like the list's
             // matched rows - otherwise the accent snippet disappears into the rainbow of rule colors.
+            // `termTarget` only exists when a substring was actually located, so this never fires on a
+            // cross-translation miss.
             mutable.addAttribute(.foregroundColor, value: UIColor.label, range: termTarget.ayahRange)
             for range in termTarget.matches {
                 mutable.addAttribute(.foregroundColor, value: UIColor(highlightColor), range: range)
             }
         }
+        // Whatever a flatten just grayed out, the ayah-number ornaments stay accent - the list rows always
+        // show them colored. `UIColor(highlightColor)` is the exact color the composer painted them
+        // (`config.accent`), so this restores, not recolors; it's a no-op for markers never flattened.
+        if (searchIsActive && !searchTargets.isEmpty) || termTarget != nil {
+            for entry in ranges where entry.ayahID == MushafAyahRange.ayahMarkerID
+                && NSMaxRange(entry.range) <= mutable.length {
+                mutable.addAttribute(.foregroundColor, value: UIColor(highlightColor), range: entry.range)
+            }
+        }
         return mutable
     }
 
-    /// Where `term` matches inside `ayahRange` of the page's plain text, fold-insensitively: the page shows
-    /// fully vocalized text, the query is bare - so both sides fold through the SAME normalization the
-    /// search and the list's snippet highlighting use, and the match maps back through the index map.
+    /// Where `term` matches inside `ayahRange` of the page's plain text - using the EXACT SAME range ladder
+    /// the list snippet uses (`HighlightedSnippet.matchRanges`: exact normalized substring → Arabic
+    /// alef-insensitive skeleton → phrase-prefix), so a real match colors its word in page mode exactly as
+    /// it does in the list. `guaranteeMatch` is deliberately OFF: a term that genuinely isn't on the text
+    /// this page shows (an English query while the page shows Arabic, or a different translation) yields
+    /// no ranges - the caller then leaves the ayah un-painted (just the arrival mark), instead of the old
+    /// whole-ayah wash.
     static func matchRanges(of term: String, in fullText: String, within ayahRange: NSRange) -> [NSRange] {
         let full = fullText as NSString
         guard ayahRange.location >= 0, ayahRange.location + ayahRange.length <= full.length else { return [] }
         let ayahText = full.substring(with: ayahRange)
 
-        let needle = HighlightedSnippet.normalizeForSearchText(term, trimWhitespace: true)
-        guard !needle.isEmpty else { return [] }
-        let built = HighlightedSnippet.normalizedSourceAndMap(for: ayahText)
-        let normalized = built.normalized
-        // The map now carries instance-free UTF-16 offsets (see `SourceNormEntry.mapUTF16`); here the
-        // build is fresh for this exact `ayahText`, so they land on character boundaries by construction.
-        // The bounds guards keep the `String.Index(utf16Offset:in:)` inits safe even so.
-        let map = built.mapUTF16
-        guard map.count == normalized.count else { return [] }
-
-        var result: [NSRange] = []
-        var searchStart = normalized.startIndex
-        while searchStart < normalized.endIndex,
-              let match = normalized.range(of: needle, range: searchStart..<normalized.endIndex) {
-            let lo = normalized.distance(from: normalized.startIndex, to: match.lowerBound)
-            let hi = normalized.distance(from: normalized.startIndex, to: match.upperBound)
-            if lo >= 0, hi > lo, hi - 1 < map.count,
-               map[lo] < ayahText.utf16.count, map[hi - 1] < ayahText.utf16.count {
-                let start = String.Index(utf16Offset: map[lo], in: ayahText)
-                let end = ayahText.index(after: String.Index(utf16Offset: map[hi - 1], in: ayahText))
-                let local = NSRange(start..<end, in: ayahText)
-                result.append(NSRange(location: ayahRange.location + local.location, length: local.length))
-            }
-            searchStart = match.upperBound
+        return HighlightedSnippet.matchRanges(of: term, in: ayahText).map { range in
+            // `range` is into `ayahText`; convert to a UTF-16 NSRange there, then shift by the ayah's
+            // offset within the whole page (both are UTF-16 offsets, so the shift is exact).
+            let local = NSRange(range, in: ayahText)
+            return NSRange(location: ayahRange.location + local.location, length: local.length)
         }
-        return result
     }
 
     func makeUIView(context: Context) -> UITextView {
@@ -2460,7 +2553,7 @@ struct MushafPageTextView: UIViewRepresentable {
         let termKey = termHighlight.map { "\($0.surahID):\($0.ayahID):\($0.term)" } ?? ""
         let selectedKey = selected.map { "\($0.surahID):\($0.ayahID)" }.sorted().joined(separator: ",")
         let searchKey = searchHighlight.map { "\($0.term)#\($0.matches.map { "\($0.surahID):\($0.ayahID)" }.joined(separator: ","))" } ?? ""
-        let highlightKey = "\(key(highlight))|\(key(mark))|\(termKey)|\(selectedKey)|\(searchKey)"
+        let highlightKey = "\(key(highlight))|\(playingSurahID.map(String.init) ?? "")|\(key(mark))|\(termKey)|\(selectedKey)|\(searchKey)"
         if context.coordinator.lastAssignedText === attributed,
            context.coordinator.lastHighlightKey == highlightKey,
            context.coordinator.lastWidth == width {
@@ -2514,7 +2607,8 @@ struct MushafPageTextView: UIViewRepresentable {
 
         @objc func handleTap(_ gesture: UITapGestureRecognizer) {
             guard let (surahID, ayahID) = ayah(at: gesture.location(in: textView)) else { return }
-            if ayahID == 0 {
+            // `<= 0` also covers the name-only subrange sentinel, should a hit ever resolve to it.
+            if ayahID <= 0 {
                 onTapHeading?(surahID)
             } else {
                 onTapAyah?(surahID, ayahID)
@@ -2526,7 +2620,7 @@ struct MushafPageTextView: UIViewRepresentable {
             guard gesture.state == .began else { return }
             guard let (surahID, ayahID) = ayah(at: gesture.location(in: textView)) else { return }
             // A press on a heading behaves like a tap on it - there are no per-ayah actions to offer there.
-            if ayahID == 0 {
+            if ayahID <= 0 {
                 onTapHeading?(surahID)
             } else {
                 onLongPressAyah?(surahID, ayahID)

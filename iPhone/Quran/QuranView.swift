@@ -77,6 +77,75 @@ private struct QuranTrailingToolbar: ViewModifier {
         }
     }
 }
+
+/// The leading pair - reading-mode toggle and the Quran Planner - split out for the same reason as
+/// `QuranTrailingToolbar`: iOS 26 wants a ToolbarSpacer between adjacent items (Liquid Glass merges
+/// them into one capsule otherwise), and ToolbarContentBuilder can't branch on availability inline.
+private struct QuranLeadingToolbar: ViewModifier {
+    @ObservedObject var settings = Settings.shared
+    @Binding var showReadingModeConfirm: Bool
+    let isPreparingPageMode: Bool
+    let performReadingModeToggle: () -> Void
+    let push: (Int, Int?) -> Void
+
+    func body(content: Content) -> some View {
+        if #available(iOS 26.0, *) {
+            content.toolbar {
+                ToolbarItem(placement: .navigationBarLeading) { readingModeButton }
+                ToolbarSpacer(.fixed, placement: .navigationBarLeading)
+                ToolbarItem(placement: .navigationBarLeading) { plannerButton }
+            }
+        } else {
+            content.toolbar {
+                ToolbarItem(placement: .navigationBarLeading) { readingModeButton }
+                ToolbarItem(placement: .navigationBarLeading) { plannerButton }
+            }
+        }
+    }
+
+    private var readingModeButton: some View {
+        Button {
+            settings.hapticFeedback()
+            // Switching reading mode is a big context change (the whole surah list becomes a mushaf
+            // and vice-versa), so confirm first rather than flipping on an accidental tap.
+            showReadingModeConfirm = true
+        } label: {
+            if isPreparingPageMode {
+                ProgressView()
+            } else {
+                Image(systemName: settings.quranPageMode ? "list.bullet.rectangle" : "book")
+            }
+        }
+        .accessibilityLabel(settings.quranPageMode ? "Read surahs as a list" : "Read surahs as pages")
+        .tint(settings.accentColor.accent1)
+        // Attached to the BUTTON, not the whole view, so the dialog anchors to it (iPad popover
+        // arrows point at the button instead of floating mid-screen).
+        .confirmationDialog(
+            settings.quranPageMode ? "Switch to List View?" : "Switch to Page View?",
+            isPresented: $showReadingModeConfirm,
+            titleVisibility: .visible
+        ) {
+            Button(settings.quranPageMode ? "Read as List" : "Read as Pages") {
+                performReadingModeToggle()
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text(settings.quranPageMode
+                 ? "Surahs will be shown as a scrolling list of ayahs."
+                 : "Surahs will be shown as a mushaf, one page at a time.")
+        }
+    }
+
+    @ViewBuilder
+    private var plannerButton: some View {
+        // Hafs-only, matching the khatm store the planner rides on.
+        if settings.isHafsDisplay {
+            QuranPlannerToolbarButton(openReader: { surahID, ayahID in
+                push(surahID, ayahID)
+            })
+        }
+    }
+}
 #endif
 
 @MainActor
@@ -241,6 +310,10 @@ struct QuranView: View {
     @State private var askAnswer = ""
     @State private var askIsStreaming = false
     @State private var askRanForQuery = ""
+    /// A MANUAL ask that found nothing to ground on (gibberish like "taka") or errored. The tapped row
+    /// must answer with SOMETHING - silently tearing the card down left the prompt sitting there as if
+    /// the tap never happened.
+    @State private var askNoAnswer = false
     @State private var askTask: Task<Void, Never>?
 
     private func runAskIfNeeded(query: String) {
@@ -252,10 +325,14 @@ struct QuranView: View {
     private func runAsk(query: String, manual: Bool) {
         askTask?.cancel()
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        // Any new run (or keystroke) clears a previous dead-end notice.
+        askNoAnswer = false
         guard OnDeviceAsk.isAvailable, trimmed.count >= 3,
               manual || OnDeviceAsk.looksLikeQuestion(trimmed) else {
             if !askRanForQuery.isEmpty {
-                withAnimation { askAnswer = ""; askIsStreaming = false; askRanForQuery = "" }
+                // Plain writes here and below: the Ask card is a List section, and animated section
+                // churn during typing is the collection-view assertion (see the SearchBar binding note).
+                askAnswer = ""; askIsStreaming = false; askRanForQuery = ""
             }
             return
         }
@@ -291,11 +368,14 @@ struct QuranView: View {
                 }
             }
             guard !sources.isEmpty else {
-                withAnimation { askAnswer = ""; askIsStreaming = false; askRanForQuery = "" }
+                askAnswer = ""; askIsStreaming = false; askRanForQuery = ""
+                // A tapped ask MUST respond: with nothing retrieved to ground on, say so instead of
+                // silently putting the prompt row back (which read as "the button does nothing").
+                if manual { askNoAnswer = true }
                 return
             }
 
-            withAnimation { askAnswer = ""; askIsStreaming = true; askRanForQuery = trimmed }
+            askAnswer = ""; askIsStreaming = true; askRanForQuery = trimmed
             guard #available(iOS 26.0, *) else { return }
             do {
                 for try await text in OnDeviceAsk.streamAnswer(question: trimmed, sources: sources) {
@@ -303,11 +383,13 @@ struct QuranView: View {
                     askAnswer = text
                 }
                 guard !Task.isCancelled else { return }
-                withAnimation { askIsStreaming = false }
+                askIsStreaming = false
             } catch {
-                // Declined or errored: the card simply goes away - keyword and AI results still stand.
+                // Declined or errored: the card goes away - keyword and AI results still stand. But a
+                // MANUAL ask still owes a response (see the empty-sources guard).
                 guard !Task.isCancelled else { return }
-                withAnimation { askAnswer = ""; askIsStreaming = false; askRanForQuery = "" }
+                askAnswer = ""; askIsStreaming = false; askRanForQuery = ""
+                if manual { askNoAnswer = true }
             }
         }
     }
@@ -367,7 +449,13 @@ struct QuranView: View {
         if context.isSearching,
            quranData.isVerseSearchReady,
            OnDeviceAsk.isAvailable {
-            if !askRanForQuery.isEmpty {
+            if askNoAnswer {
+                // The tapped ask found nothing to ground on (or the model declined): answer with a
+                // clear dead-end instead of silently restoring the prompt row.
+                Section(header: askAIHeader(citedCount: 0)) {
+                    askNoAnswerRow
+                }
+            } else if !askRanForQuery.isEmpty {
                 let cited = askCitedAyahs
                 Section(header: askAIHeader(citedCount: cited.count)) {
                     AskAnswerCard(answer: askAnswer, isStreaming: askIsStreaming)
@@ -384,6 +472,25 @@ struct QuranView: View {
         }
     }
 
+    /// Shown when a manual ask dead-ends: nothing retrieved matched the query, so there was nothing to
+    /// answer from. Editing the query clears it (`runAsk` resets `askNoAnswer` on every run).
+    private var askNoAnswerRow: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "questionmark.circle")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+
+            Text("AI couldn't find anything in the Quran matching \u{201C}\(searchText.trimmingCharacters(in: .whitespacesAndNewlines))\u{201D}. Try different wording.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+
+            Spacer(minLength: 0)
+        }
+        .padding(.vertical, 8)
+        .padding(.horizontal, 12)
+        .conditionalGlassEffect(clear: true, rectangle: true)
+    }
+
     /// Debounced semantic query - runs alongside (never instead of) the keyword pipeline, so AI results
     /// sit at the top while the exhaustive keyword sections stay below them.
     private func runAISearch(query: String) {
@@ -392,7 +499,7 @@ struct QuranView: View {
         guard SemanticSearchEngine.isSupported,
               trimmed.count >= 3, !trimmed.containsArabicLetters,
               getSurahAndAyah(from: trimmed).surah == nil else {
-            if !aiHits.isEmpty { withAnimation { aiHits = [] } }
+            if !aiHits.isEmpty { aiHits = [] }
             return
         }
         prepareQuranSemanticCorpus()
@@ -405,12 +512,11 @@ struct QuranView: View {
             guard !Task.isCancelled else { return }
             await MainActor.run {
                 guard trimmed == searchText.trimmingCharacters(in: .whitespacesAndNewlines) else { return }
-                withAnimation {
-                    aiHits = results.compactMap { result in
-                        guard Self.semanticAyahMap.indices.contains(result.index) else { return nil }
-                        let ref = Self.semanticAyahMap[result.index]
-                        return AISearchHit(surah: ref.surah, ayah: ref.ayah, score: result.score)
-                    }
+                // Not animated - see the SearchBar binding note (collection-view assertion).
+                aiHits = results.compactMap { result in
+                    guard Self.semanticAyahMap.indices.contains(result.index) else { return nil }
+                    let ref = Self.semanticAyahMap[result.index]
+                    return AISearchHit(surah: ref.surah, ayah: ref.ayah, score: result.score)
                 }
             }
         }
@@ -892,10 +998,10 @@ struct QuranView: View {
     }
 
     private func clearAyahSearchState() {
-        withAnimation {
-            verseHits = []
-            hasMoreHits = false
-        }
+        // Not animated: search-driven List mutations stay transactionless (see the SearchBar binding
+        // note) - an animated clear racing an in-flight result apply is the collection-view assertion.
+        verseHits = []
+        hasMoreHits = false
     }
 
     private var shouldShowSearchHelpOverlay: Bool {
@@ -1286,17 +1392,6 @@ struct QuranView: View {
     /// each wrapped position keeps a stable underlying type, so List diffing is unaffected.
     private func boxed<V: View>(_ view: V) -> AnyView { AnyView(view) }
 
-    #if os(iOS)
-    @ViewBuilder
-    private func quranPlannerSection(context: SearchDisplayContext) -> some View {
-        if !context.isSearching {
-            QuranPlannerSection(openReader: { surahID, ayahID in
-                push(surahID: surahID, ayahID: ayahID)
-            })
-        }
-    }
-    #endif
-
     var content: some View {
         ScrollViewReader { scrollProxy in
             let context = searchDisplayContext
@@ -1304,11 +1399,6 @@ struct QuranView: View {
             List {
                 Group {
                     boxed(primaryHistorySections(context: context))
-                    #if os(iOS)
-                    // The Quran Planner card: today's reading amount and where to pick up. Hidden while
-                    // searching, like every other pinned section.
-                    boxed(quranPlannerSection(context: context))
-                    #endif
                     boxed(bookmarkSection(context: context))
                     boxed(favoriteSection(context: context))
                     // Only hoist page/juz above the surah list for EXPLICIT "page X" / "juz Y" queries
@@ -1397,50 +1487,15 @@ struct QuranView: View {
         }
         .navigationTitle("Al-Quran")
         #if os(iOS)
-        .toolbar {
-            ToolbarItem(placement: .navigationBarLeading) {
-                Button {
-                    settings.hapticFeedback()
-                    // Switching reading mode is a big context change (the whole surah list becomes a mushaf
-                    // and vice-versa), so confirm first rather than flipping on an accidental tap.
-                    showReadingModeConfirm = true
-                } label: {
-                    if isPreparingPageMode {
-                        ProgressView()
-                    } else {
-                        Image(systemName: settings.quranPageMode ? "list.bullet.rectangle" : "book")
-                    }
-                }
-                .accessibilityLabel(settings.quranPageMode ? "Read surahs as a list" : "Read surahs as pages")
-                .tint(settings.accentColor.accent1)
-                // Attached to the BUTTON, not the whole view, so the dialog anchors to it (iPad popover
-                // arrows point at the button instead of floating mid-screen).
-                .confirmationDialog(
-                    settings.quranPageMode ? "Switch to List View?" : "Switch to Page View?",
-                    isPresented: $showReadingModeConfirm,
-                    titleVisibility: .visible
-                ) {
-                    Button(settings.quranPageMode ? "Read as List" : "Read as Pages") {
-                        performReadingModeToggle()
-                    }
-                    Button("Cancel", role: .cancel) {}
-                } message: {
-                    Text(settings.quranPageMode
-                         ? "Surahs will be shown as a scrolling list of ayahs."
-                         : "Surahs will be shown as a mushaf, one page at a time.")
-                }
-            }
-
-            // The Quran Planner, one tap from anywhere on the tab (the card version scrolls with the
-            // list). Hafs-only, matching the khatm store it rides on.
-            ToolbarItem(placement: .navigationBarLeading) {
-                if settings.isHafsDisplay {
-                    QuranPlannerToolbarButton(openReader: { surahID, ayahID in
-                        push(surahID: surahID, ayahID: ayahID)
-                    })
-                }
-            }
-        }
+        // Reading-mode toggle + Quran Planner. Separate modifier for the same reason as the trailing
+        // toolbar: iOS 26 needs a ToolbarSpacer between the items so Liquid Glass doesn't merge them
+        // into one capsule, and ToolbarContentBuilder can't branch on availability inline.
+        .modifier(QuranLeadingToolbar(
+            showReadingModeConfirm: $showReadingModeConfirm,
+            isPreparingPageMode: isPreparingPageMode,
+            performReadingModeToggle: performReadingModeToggle,
+            push: { surahID, ayahID in push(surahID: surahID, ayahID: ayahID) }
+        ))
         // The trailing buttons live in their own modifier so iOS 26 can interleave ToolbarSpacers between
         // them - without spacers, Liquid Glass merges adjacent trailing items into ONE capsule. (A separate
         // view-level branch because ToolbarContentBuilder can't branch on availability while the app deploys
@@ -1589,11 +1644,9 @@ struct QuranView: View {
         HStack(spacing: 4) {
             Button {
                 settings.hapticFeedback()
-                withAnimation {
-                    searchText = query
-                    settings.addQuranSearchHistory(query)
-                    self.endEditing()
-                }
+                searchText = query
+                settings.addQuranSearchHistory(query)
+                self.endEditing()
             } label: {
                 Text(query)
                     .font(.caption)
@@ -1785,13 +1838,14 @@ struct QuranView: View {
     private var quranSearchBar: some View {
         #if os(iOS)
         SearchBar(
-            // Animated again, with the two crash preconditions closed. The original watchdog kill was
-            // Low Power Mode's throttled CPU stacking whole-list animated diffs per keystroke - the
-            // `shouldReduceAnimations` gate keeps the plain binding exactly there (and under Reduce
-            // Motion). The hard diff crash was duplicate result ids - now deduped at every `verseHits`
-            // write AND in `verseHitsGroupedBySurah`. The surah/ayah rows are Equatable, so the animated
-            // diff moves rows without re-running their bodies.
-            text: AppPerformance.shouldReduceAnimations ? $searchText : $searchText.animation(.easeInOut),
+            // PLAIN binding, permanently. The animated binding came back once the duplicate-id crash was
+            // closed - and the search still crashed: UICollectionView's update assertion fires when an
+            // animated structural diff (sections appearing/disappearing per keystroke) interleaves with
+            // the in-flight diffs of the async result pipelines (keyword at 150ms, AI at 250ms, Ask at
+            // 900ms - each landing in its own transaction). See the crash log's recursive
+            // `_updateVisibleCellsNow` → `_invalidateLayoutWithContext` → assertion. Every searchText-
+            // driven List mutation is now transactionless; the type/delete/type crash dies with it.
+            text: $searchText,
             focusRequestID: searchFocusRequestID,
             onSearchButtonClicked: {
                 self.endEditing()
@@ -1873,6 +1927,17 @@ struct QuranView: View {
     @ViewBuilder
     private var playbackMenuContent: some View {
         #if os(iOS)
+        // Reciter picker pinned to the very top, with a divider under it - the placement wanted for the
+        // page-mode play menu, mirrored here so the reciter is the first thing every play menu offers.
+        Button {
+            settings.hapticFeedback()
+            showReciterPickerSheet = true
+        } label: {
+            Label("Choose Reciter", systemImage: "headphones")
+        }
+
+        Divider()
+
         if let last = settings.lastListenedSurah,
               let surah = quranData.surah(last.surahNumber) {
             Button {
@@ -1913,13 +1978,7 @@ struct QuranView: View {
         } label: {
             Label("Play Random Ayah", systemImage: "shuffle.circle")
         }
-
-        Button {
-            settings.hapticFeedback()
-            showReciterPickerSheet = true
-        } label: {
-            Label("Choose Reciter", systemImage: "headphones")
-        }
+        // (Choose Reciter now lives at the TOP of this menu.)
         #endif
     }
 
@@ -3561,7 +3620,9 @@ struct QuranView: View {
             let showResultsPicker = !aiHits.isEmpty && !verseHits.isEmpty
             if showResultsPicker {
                 Section {
-                    Picker("Results", selection: $showKeywordResults.animation(.easeInOut)) {
+                    // Plain binding: flipping this swaps whole section groups, and animating that swap
+                    // is the same collection-view assertion risk as the typing path.
+                    Picker("Results", selection: $showKeywordResults) {
                         Text("AI Results").tag(false)
                         Text("Keyword Results").tag(true)
                     }
@@ -4060,15 +4121,12 @@ struct QuranView: View {
             guard !Task.isCancelled else { return }
             await MainActor.run {
                 guard query == searchText.trimmingCharacters(in: .whitespacesAndNewlines) else { return }
-                // Animate the initial appearance of results so it matches `clearAyahSearchState()` (which
-                // animates) - that mismatch is why search felt "sometimes animated, sometimes not". Only the
-                // first page animates; `loadMoreAyahMatches` / "load all" stay un-animated on purpose so
-                // appending rows mid-scroll doesn't re-animate the whole list (see the `.id(...)` note above).
+                // NOT animated - like every other searchText-driven List mutation (see the SearchBar
+                // binding note): the keyword and AI pipelines land in separate passes, and an animated
+                // apply racing another in-flight animated diff is the collection-view assertion crash.
                 prewarmHighlightCaches(for: first)
-                withAnimation {
-                    verseHits = dedupedHits(first)
-                    hasMoreHits = more
-                }
+                verseHits = dedupedHits(first)
+                hasMoreHits = more
             }
         }
     }

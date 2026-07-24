@@ -260,6 +260,273 @@ struct NamesView: View {
             .sorted { $0.number < $1.number }
     }
 
+    #if os(iOS)
+    // AI (semantic) name search - the hadith book search's exact grammar, over the 99 names:
+    // on-device meaning matching over the transliteration/meaning/description, shown automatically
+    // above the keyword matches. No mode to enter; the section appears (with one-time build
+    // progress the first time) whenever it can help.
+    @ObservedObject private var semanticEngine = SemanticSearchEngine.shared
+    @State private var aiHits: [NameOfAllah] = []
+    @State private var aiSearchTask: Task<Void, Never>?
+
+    private static let semanticCorpusID = "names-en"
+
+    /// True when the live query is one the semantic engine can answer (English text, long enough).
+    private var aiQueryEligible: Bool {
+        let trimmed = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        return SemanticSearchEngine.isSupported
+            && trimmed.count >= 3
+            && !trimmed.containsArabicScript
+    }
+
+    private func prepareSemanticCorpus() {
+        guard SemanticSearchEngine.isSupported, !semanticEngine.isReady(Self.semanticCorpusID) else { return }
+        let names = namesData.namesOfAllah
+        guard !names.isEmpty else { return }
+        // Every English-meaning field per name; a tiny corpus, so this is cheap to hand over.
+        let texts = names.map { "\($0.transliteration) \($0.meaning) \($0.otherNames.joined(separator: " ")) \($0.desc)" }
+        // Keyed by the name's number, so index -> name resolution survives any reorder of the source.
+        let keys = names.map { String($0.number) }
+        semanticEngine.prepare(corpusID: Self.semanticCorpusID, version: "v1-\(texts.count)", texts: texts, keys: keys)
+    }
+
+    private func runAISearch(query: String) {
+        aiSearchTask?.cancel()
+        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard SemanticSearchEngine.isSupported, trimmed.count >= 3, !trimmed.containsArabicScript,
+              !namesData.namesOfAllah.isEmpty else {
+            if !aiHits.isEmpty { aiHits = [] }
+            return
+        }
+        prepareSemanticCorpus()
+
+        aiSearchTask = Task {
+            try? await Task.sleep(nanoseconds: 300_000_000)
+            guard !Task.isCancelled else { return }
+            let results = await semanticEngine.search(corpusID: Self.semanticCorpusID, query: trimmed, limit: 10)
+            guard !Task.isCancelled else { return }
+            // Resolve through the corpus KEYS (the name's number), falling back to position only
+            // for a corpus persisted before keys existed.
+            let keys = await MainActor.run { semanticEngine.corpus(Self.semanticCorpusID)?.itemKeys }
+            await MainActor.run {
+                guard trimmed == searchText.trimmingCharacters(in: .whitespacesAndNewlines) else { return }
+                let names = namesData.namesOfAllah
+                // Plain apply: an animated section insert racing another async apply is the
+                // collection-view assertion crash the Quran search hit.
+                aiHits = results.compactMap { result in
+                    if let keys, keys.indices.contains(result.index), let number = Int(keys[result.index]) {
+                        return names.first(where: { $0.number == number })
+                    }
+                    return names.indices.contains(result.index) ? names[result.index] : nil
+                }
+            }
+        }
+    }
+
+    // Ask (the on-device LLM, grounded RAG): question-shaped queries stream an answer card above
+    // the matches, drawn strictly from the retrieved names - the hadith book search's exact feature.
+    @State private var askAnswer = ""
+    @State private var askIsStreaming = false
+    @State private var askRanForQuery = ""
+    /// A MANUAL ask that found nothing to ground on or errored - the tapped row must answer with
+    /// SOMETHING instead of silently restoring the prompt.
+    @State private var askNoAnswer = false
+    /// The AI-vs-keyword segmented switch, shown only when BOTH result kinds exist. Reset to the
+    /// AI list on every new query.
+    @State private var showKeywordResults = false
+    @State private var askTask: Task<Void, Never>?
+
+    /// Auto mode runs only for QUESTION-shaped queries; `manual` (the tapped "Ask AI" row) runs
+    /// for anything - the user explicitly asked.
+    private func runAsk(query: String, manual: Bool) {
+        askTask?.cancel()
+        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        // Any new run (or keystroke) clears a previous dead-end notice. Plain writes throughout:
+        // the Ask card is a List section, and animated section churn racing the async result
+        // applies is the collection-view assertion crash the Quran search hit.
+        askNoAnswer = false
+        guard OnDeviceAsk.isAvailable, trimmed.count >= 3,
+              manual || OnDeviceAsk.looksLikeQuestion(trimmed) else {
+            if !askRanForQuery.isEmpty {
+                askAnswer = ""; askIsStreaming = false; askRanForQuery = ""
+            }
+            return
+        }
+
+        askTask = Task {
+            // Auto waits out the search debounce; a manual tap goes immediately.
+            try? await Task.sleep(nanoseconds: manual ? 100_000_000 : 900_000_000)
+            guard !Task.isCancelled else { return }
+
+            var sources: [OnDeviceAsk.Source] = []
+            var seen = Set<Int>()
+            for name in aiHits.prefix(6) where seen.insert(name.number).inserted {
+                sources.append(.init(reference: name.transliteration, text: "\(name.meaning). \(name.desc)"))
+            }
+            for name in filteredNames.prefix(6) where seen.insert(name.number).inserted {
+                sources.append(.init(reference: name.transliteration, text: "\(name.meaning). \(name.desc)"))
+            }
+            guard !sources.isEmpty else {
+                askAnswer = ""; askIsStreaming = false; askRanForQuery = ""
+                // A tapped ask MUST respond: with nothing retrieved to ground on, say so instead
+                // of silently restoring the prompt row.
+                if manual { askNoAnswer = true }
+                return
+            }
+
+            askAnswer = ""; askIsStreaming = true; askRanForQuery = trimmed
+            guard #available(iOS 26.0, *) else { return }
+            do {
+                for try await text in OnDeviceAsk.streamAnswer(question: trimmed, sources: sources) {
+                    guard !Task.isCancelled else { return }
+                    askAnswer = text
+                }
+                guard !Task.isCancelled else { return }
+                askIsStreaming = false
+            } catch {
+                guard !Task.isCancelled else { return }
+                askAnswer = ""; askIsStreaming = false; askRanForQuery = ""
+                if manual { askNoAnswer = true }
+            }
+        }
+    }
+
+    /// "ASK AI" with the sparkles glyph, accent-tinted - the Quran search's `askAIHeader`.
+    private var askAIHeader: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "sparkles")
+            Text("ASK AI")
+
+            Spacer()
+        }
+        .foregroundStyle(settings.accentColor.color)
+    }
+
+    /// Shown when a manual ask dead-ends: nothing retrieved matched the query, so there was
+    /// nothing to answer from. Editing the query clears it (`runAsk` resets the flag on every run).
+    private var askNoAnswerRow: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "questionmark.circle")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+
+            Text("AI couldn't find anything matching \u{201C}\(searchText.trimmingCharacters(in: .whitespacesAndNewlines))\u{201D}. Try different wording.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+
+            Spacer(minLength: 0)
+        }
+        .padding(.vertical, 8)
+        .padding(.horizontal, 12)
+        .conditionalGlassEffect(clear: true, rectangle: true)
+    }
+
+    private var askPromptRow: some View {
+        Button {
+            settings.hapticFeedback()
+            runAsk(query: searchText, manual: true)
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: "sparkles")
+                    .font(.caption)
+
+                Text("Ask AI about \u{201C}\(searchText.trimmingCharacters(in: .whitespacesAndNewlines))\u{201D}")
+                    .font(.caption.weight(.semibold))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+
+                Spacer()
+
+                Image(systemName: "chevron.right")
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(.secondary)
+            }
+            .foregroundColor(settings.accentColor.color)
+            .padding(.vertical, 8)
+            .padding(.horizontal, 12)
+            .conditionalGlassEffect(clear: true, rectangle: true)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    /// The ASK AI section: the dead-end notice, the streaming answer card, or the one-tap prompt -
+    /// the hadith book search's exact grammar. The prompt row shows only once there are results
+    /// to ground an answer on.
+    @ViewBuilder
+    private func askAISection(hasResults: Bool) -> some View {
+        if OnDeviceAsk.isAvailable {
+            if askNoAnswer {
+                Section(header: askAIHeader) { askNoAnswerRow }
+            } else if !askRanForQuery.isEmpty {
+                Section(header: askAIHeader) { AskAnswerCard(answer: askAnswer, isStreaming: askIsStreaming) }
+            } else if hasResults {
+                Section(header: askAIHeader) { askPromptRow }
+            }
+        }
+    }
+
+    private var resultsPickerSection: some View {
+        Section {
+            Picker("Results", selection: $showKeywordResults) {
+                Text("AI Results").tag(false)
+                Text("Keyword Results").tag(true)
+            }
+            .pickerStyle(.segmented)
+        }
+    }
+
+    /// The AI (semantic) matches for the live query, shown automatically: build progress the first
+    /// time, then the ranked matches - the same rows/tiles the keyword results use. Deliberately
+    /// SILENT otherwise (Arabic query, build failed, no semantic matches): an automatic section
+    /// must never nag.
+    @ViewBuilder
+    private func aiMatchesSection(favoriteSet: Set<Int>, hasActiveSearch: Bool, proxy: ScrollViewProxy) -> some View {
+        if aiQueryEligible {
+            if semanticEngine.isReady(Self.semanticCorpusID) {
+                if !aiHits.isEmpty {
+                    Section(header: SectionPillHeader(title: "AI MATCHES", count: aiHits.count, icon: "sparkles", accentTitle: true)) {
+                        if settings.namesGridMode {
+                            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 3), spacing: 8) {
+                                ForEach(aiHits, id: \.id) { name in
+                                    NameGridTile(
+                                        name: name,
+                                        isFavorite: favoriteSet.contains(name.number),
+                                        accentColor: settings.accentColor,
+                                        useFontArabic: settings.useFontArabic,
+                                        fontArabic: settings.nonQuranArabicFontName
+                                    )
+                                    .equatable()
+                                }
+                            }
+                            .padding(.horizontal, -8)
+                        } else {
+                            ForEach(aiHits, id: \.id) { name in
+                                NameRow(
+                                    name: name,
+                                    firstFoundTarget: namesData.firstFoundTargetsByNameNumber[name.number],
+                                    showDescription: settings.showDescription,
+                                    isExpanded: expandedNameNumbers.contains(name.number),
+                                    isFavorite: favoriteSet.contains(name.number),
+                                    accentColor: settings.accentColor,
+                                    useFontArabic: settings.useFontArabic,
+                                    fontArabic: settings.nonQuranArabicFontName,
+                                    searchQuery: searchText
+                                ) {
+                                    handleNameTap(name: name, hasActiveSearch: hasActiveSearch, proxy: proxy)
+                                }
+                                .equatable()
+                            }
+                        }
+                    }
+                }
+            } else if !semanticEngine.failedCorpora.contains(Self.semanticCorpusID) {
+                Section { AISearchStatusRow(progress: semanticEngine.progress(Self.semanticCorpusID), failed: false) }
+            }
+        }
+    }
+    #endif
+
     var body: some View {
         let hasActiveSearch = !searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         // One pass per render: the favorite set used to be rebuilt (`Set(...)`) at every row's
@@ -269,14 +536,35 @@ struct NamesView: View {
         let favorites = favoriteNames(in: favoriteSet)
         let names = filteredNames
 
+        // Both result kinds landed: ONE segmented switch decides which list fills the page (the
+        // hadith book search's rule). With only one kind present, no picker - it just shows.
+        #if os(iOS)
+        let showResultsPicker = hasActiveSearch && !aiHits.isEmpty && !names.isEmpty
+        let keywordVisible = !showResultsPicker || showKeywordResults
+        #else
+        let keywordVisible = true
+        #endif
+
         ScrollViewReader { proxy in
             List {
                 Group {
                     descriptionSection
                     allahSection(hasActiveSearch: hasActiveSearch)
                     favoriteNamesSection(favorites, hasActiveSearch: hasActiveSearch, proxy: proxy)
-                    namesHeaderSection(resultCount: names.count, hasActiveSearch: hasActiveSearch, proxy: proxy)
-                    namesSections(filteredNames: names, favoriteSet: favoriteSet, hasActiveSearch: hasActiveSearch, proxy: proxy)
+                    #if os(iOS)
+                    if hasActiveSearch {
+                        askAISection(hasResults: !aiHits.isEmpty || !names.isEmpty)
+                        if showResultsPicker { resultsPickerSection }
+                        // AI matches appear AUTOMATICALLY above the keyword results - no mode to enter.
+                        if !showResultsPicker || !showKeywordResults {
+                            aiMatchesSection(favoriteSet: favoriteSet, hasActiveSearch: hasActiveSearch, proxy: proxy)
+                        }
+                    }
+                    #endif
+                    if keywordVisible {
+                        namesHeaderSection(resultCount: names.count, hasActiveSearch: hasActiveSearch, proxy: proxy)
+                        namesSections(filteredNames: names, favoriteSet: favoriteSet, hasActiveSearch: hasActiveSearch, proxy: proxy)
+                    }
                     finalInvocationSection
                 }
                 .themedListRowBackground()
@@ -311,8 +599,22 @@ struct NamesView: View {
         .applyConditionalListStyle()
         .compactListSectionSpacing()
         .navigationTitle("99 Names of Allah")
-        .onChange(of: searchText) { newValue in cleanedSearch = Self.clean(newValue) }
+        .onChange(of: searchText) { newValue in
+            cleanedSearch = Self.clean(newValue)
+            #if os(iOS)
+            // A new query starts back on the AI list, with any dead-end ask notice cleared.
+            showKeywordResults = false
+            askNoAnswer = false
+            runAISearch(query: newValue)
+            runAsk(query: newValue, manual: false)
+            #endif
+        }
         #if os(iOS)
+        // The one-time vector build finishing mid-query: surface the results without another keystroke.
+        .onChange(of: semanticEngine.readyCorpora) { ready in
+            guard ready.contains(Self.semanticCorpusID) else { return }
+            runAISearch(query: searchText)
+        }
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 // Grid/list toggle lives in the toolbar (same as QuranView) rather than on a section header.
@@ -505,9 +807,17 @@ struct NamesView: View {
             }
         } else if filteredNames.isEmpty, hasActiveSearch {
             Section {
+                #if os(iOS)
+                Text(aiHits.isEmpty
+                     ? "No names match your search."
+                     : "No keyword matches - see the AI results above.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                #else
                 Text("No names match your search.")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
+                #endif
             }
         } else {
         ForEach(filteredNames, id: \.id) { name in

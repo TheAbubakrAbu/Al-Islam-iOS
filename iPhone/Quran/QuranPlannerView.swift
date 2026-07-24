@@ -5,7 +5,7 @@ import SwiftUI
 // recomputes every day from what is ACTUALLY left - miss a day and tomorrow's amount grows to absorb
 // it, read ahead and it shrinks. Progress is the khatm store itself: ayahs auto-mark as you read in
 // the app (or can be marked in bulk here for reading done outside the app), so the plan advances
-// without any separate check-in.
+// without any separate check-in. Lives behind the calendar button in the Quran tab's leading toolbar.
 
 // MARK: - Model
 
@@ -45,6 +45,13 @@ struct QuranPlan: Codable, Equatable {
     }()
 }
 
+/// A "continue reading here" request captured while the planner sheet is up, honored after it
+/// dismisses (pushing the reader mid-dismissal drops the navigation).
+struct QuranPlannerPendingRead: Equatable {
+    let surah: Int
+    let ayah: Int
+}
+
 // MARK: - Persistence (khatm-style: one @AppStorage Data blob + memoized Codable value)
 
 extension Settings {
@@ -75,8 +82,8 @@ extension Settings {
         let todayKey = QuranPlan.dayKey(for: Date())
         if plan.dayKey != todayKey {
             // Bank the outgoing day into history before rolling. (Reading done after midnight but before
-            // this settle runs lands on the old day - the tab's onAppear and the midnight notification
-            // both call settle, so in practice the skew is at most one uninterrupted overnight session.)
+            // this settle runs lands on the old day - the toolbar button's onAppear and the midnight
+            // notification both call settle, so the skew is at most one uninterrupted overnight session.)
             var history = plan.history ?? [:]
             history[plan.dayKey] = max(0, totalCompleted - plan.dayStartCompleted)
             if history.count > 30 {
@@ -118,33 +125,6 @@ enum QuranPlannerMath {
         let total = quran.reduce(0) { $0 + $1.ayahs.count }
         totalAyahsCache = (quran.count, total)
         return total
-    }
-
-    /// Consecutive days with any reading, counting back from today (or yesterday, so an unread morning
-    /// doesn't zero an unbroken run).
-    static func streak(plan: QuranPlan, doneToday: Int) -> Int {
-        let history = plan.history ?? [:]
-        var streak = doneToday > 0 ? 1 : 0
-        var daysAgo = 1
-        while daysAgo <= 30, (history[QuranPlan.dayKey(daysAgo: daysAgo)] ?? 0) > 0 {
-            streak += 1
-            daysAgo += 1
-        }
-        return streak
-    }
-
-    /// The last 7 days' read counts, oldest first, today (live) last.
-    static func lastSevenDays(plan: QuranPlan, doneToday: Int) -> [(label: String, count: Int, isToday: Bool)] {
-        let history = plan.history ?? [:]
-        let calendar = Calendar.current
-        let symbols = calendar.veryShortWeekdaySymbols
-
-        return (0...6).reversed().map { daysAgo in
-            let date = calendar.date(byAdding: .day, value: -daysAgo, to: Date()) ?? Date()
-            let label = symbols[calendar.component(.weekday, from: date) - 1]
-            let count = daysAgo == 0 ? doneToday : (history[QuranPlan.dayKey(for: date)] ?? 0)
-            return (label, count, daysAgo == 0)
-        }
     }
 
     /// Days from today through `end`, inclusive, never below 1 - the denominator that redistributes
@@ -199,6 +179,33 @@ enum QuranPlannerMath {
         return Calendar.current.date(byAdding: .day, value: max(0, days - 1), to: Calendar.current.startOfDay(for: Date()))
     }
 
+    /// Consecutive days with any reading, counting back from today (or yesterday, so an unread morning
+    /// doesn't zero an unbroken run).
+    static func streak(plan: QuranPlan, doneToday: Int) -> Int {
+        let history = plan.history ?? [:]
+        var streak = doneToday > 0 ? 1 : 0
+        var daysAgo = 1
+        while daysAgo <= 30, (history[QuranPlan.dayKey(daysAgo: daysAgo)] ?? 0) > 0 {
+            streak += 1
+            daysAgo += 1
+        }
+        return streak
+    }
+
+    /// The last 7 days' read counts, oldest first, today (live) last.
+    static func lastSevenDays(plan: QuranPlan, doneToday: Int) -> [(label: String, count: Int, isToday: Bool)] {
+        let history = plan.history ?? [:]
+        let calendar = Calendar.current
+        let symbols = calendar.veryShortWeekdaySymbols
+
+        return (0...6).reversed().map { daysAgo in
+            let date = calendar.date(byAdding: .day, value: -daysAgo, to: Date()) ?? Date()
+            let label = symbols[calendar.component(.weekday, from: date) - 1]
+            let count = daysAgo == 0 ? doneToday : (history[QuranPlan.dayKey(for: date)] ?? 0)
+            return (label, count, daysAgo == 0)
+        }
+    }
+
     // MARK: Today's reading span
 
     struct TodaySpan {
@@ -214,7 +221,7 @@ enum QuranPlannerMath {
     private static var spanCache: (khatmCount: Int, count: Int, span: TodaySpan?)?
 
     /// The next `count` unread ayahs in mushaf order, starting at the first gap in khatm progress.
-    /// Memoized on (khatm total, count): the walk is ~6k set lookups and QuranView re-renders often.
+    /// Memoized on (khatm total, count): the walk is ~6k set lookups and callers render often.
     static func todaySpan(quran: [Surah], settings: Settings, count: Int) -> TodaySpan? {
         let khatmCount = settings.khatmCompletedAyahSetCache.count
         if let cached = spanCache, cached.khatmCount == khatmCount, cached.count == count {
@@ -267,19 +274,32 @@ enum QuranPlannerMath {
         }
         spanCache = nil
     }
+
+    static func spanLabel(_ span: TodaySpan) -> String {
+        var label = "\(span.startSurahName) \(span.startAyah) to \(span.endSurahName) \(span.endAyah)"
+        if let startPage = span.startPage, let endPage = span.endPage {
+            label += startPage == endPage ? " · page \(startPage)" : " · pages \(startPage)-\(endPage)"
+        }
+        return label
+    }
 }
 
 // MARK: - Toolbar entry point
 
-/// The planner in the Quran tab's leading toolbar - always one tap away, even when the card is
-/// scrolled off-screen. Owns its own sheet so QuranView needs no extra state.
+/// The planner's only entry point: the calendar button in the Quran tab's leading toolbar. Owns the
+/// sheet and - since it is always mounted while the tab is up - the plan's day-rollover lifecycle.
 struct QuranPlannerToolbarButton: View {
     @ObservedObject private var settings = Settings.shared
+    @ObservedObject private var quranData = QuranData.shared
 
     let openReader: (Int, Int) -> Void
 
     @State private var showingPlanner = false
-    @State private var pendingRead: QuranPlannerSection.PendingRead?
+    @State private var pendingRead: QuranPlannerPendingRead?
+
+    private var totalAyahs: Int {
+        QuranPlannerMath.totalAyahs(quran: quranData.quran)
+    }
 
     var body: some View {
         Button {
@@ -290,248 +310,68 @@ struct QuranPlannerToolbarButton: View {
         }
         .accessibilityLabel("Quran Planner")
         .tint(settings.accentColor.accent1)
+        .onAppear {
+            settings.settleQuranPlan(totalCompleted: settings.khatmCompletedAyahSetCache.count, totalAyahs: totalAyahs)
+        }
+        // Midnight rollover while the app stays open: the system posts a significant-time-change at
+        // day boundaries, so "today" resets without waiting for the next onAppear.
+        .onReceive(NotificationCenter.default.publisher(for: UIApplication.significantTimeChangeNotification)) { _ in
+            settings.settleQuranPlan(totalCompleted: settings.khatmCompletedAyahSetCache.count, totalAyahs: totalAyahs)
+        }
+        // Completion stamping right when the final ayah is marked (settle no-ops otherwise). Async
+        // hop: settle may write settings, which must not publish from inside a view update.
+        .onReceive(settings.objectWillChange) { _ in
+            DispatchQueue.main.async {
+                settings.settleQuranPlan(totalCompleted: settings.khatmCompletedAyahSetCache.count, totalAyahs: totalAyahs)
+            }
+        }
         .sheet(isPresented: $showingPlanner, onDismiss: {
             guard let pending = pendingRead else { return }
             pendingRead = nil
             openReader(pending.surah, pending.ayah)
         }) {
             QuranPlannerView(pendingRead: $pendingRead)
+                .smallMediumSheetPresentation()
         }
     }
 }
 
-// MARK: - QuranView section
+// MARK: - Ring
 
-/// The planner's card on the Quran tab. Standalone struct on purpose - a new QuranView section must
-/// never be an inline closure of an already-deep view tree (see `boxed` in QuranView).
-struct QuranPlannerSection: View {
-    @ObservedObject private var settings = Settings.shared
-    @ObservedObject private var quranData = QuranData.shared
-
-    /// Pushes the reader at (surah, ayah) - wired to QuranView's `push`.
-    let openReader: (Int, Int) -> Void
-
-    @State private var showingPlanner = false
-    @State private var pendingRead: PendingRead?
-
-    struct PendingRead: Equatable {
-        let surah: Int
-        let ayah: Int
-    }
-
-    private var totalAyahs: Int {
-        QuranPlannerMath.totalAyahs(quran: quranData.quran)
-    }
-
-    private var totalCompleted: Int {
-        settings.khatmCompletedAyahSetCache.count
-    }
-
-    var body: some View {
-        // Khatm marking is Hafs-only; without it the planner has no progress source. Stay out of the
-        // way entirely (the khatm section already explains the riwayah limitation).
-        if settings.isHafsDisplay, totalAyahs > 0 {
-            Section(header: sectionHeader) {
-                if let plan = settings.quranPlan {
-                    activeCard(plan: plan)
-                } else {
-                    setupRow
-                }
-            }
-            .onAppear {
-                settings.settleQuranPlan(totalCompleted: totalCompleted, totalAyahs: totalAyahs)
-            }
-            // Midnight rollover while the app stays open: the system posts a significant-time-change at
-            // day boundaries, so "today" resets without waiting for the next onAppear.
-            .onReceive(NotificationCenter.default.publisher(for: UIApplication.significantTimeChangeNotification)) { _ in
-                settings.settleQuranPlan(totalCompleted: totalCompleted, totalAyahs: totalAyahs)
-            }
-            // Completion stamping right when the final ayah is marked (settle no-ops otherwise). Async
-            // hop: settle may write settings, which must not publish from inside a view update.
-            .onReceive(settings.objectWillChange) { _ in
-                DispatchQueue.main.async {
-                    settings.settleQuranPlan(totalCompleted: totalCompleted, totalAyahs: totalAyahs)
-                }
-            }
-            .sheet(isPresented: $showingPlanner, onDismiss: handleSheetDismiss) {
-                QuranPlannerView(pendingRead: $pendingRead)
-            }
-        }
-    }
-
-    private var sectionHeader: some View {
-        HStack {
-            Text("QURAN PLANNER")
-
-            Spacer()
-
-            if let plan = settings.quranPlan {
-                let todayKey = QuranPlan.dayKey(for: Date())
-                let dayStart = plan.dayKey == todayKey ? min(plan.dayStartCompleted, totalCompleted) : totalCompleted
-                let streak = QuranPlannerMath.streak(plan: plan, doneToday: max(0, totalCompleted - dayStart))
-                if streak > 0 {
-                    HStack(spacing: 3) {
-                        Image(systemName: "flame.fill")
-                        Text("\(streak) day\(streak == 1 ? "" : "s")")
-                            .monospacedDigit()
-                    }
-                    .font(.caption2.weight(.semibold))
-                    .foregroundColor(settings.accentColor.accent2)
-                }
-            }
-        }
-    }
-
-    private func handleSheetDismiss() {
-        guard let pending = pendingRead else { return }
-        pendingRead = nil
-        openReader(pending.surah, pending.ayah)
-    }
-
-    private var setupRow: some View {
-        Button {
-            settings.hapticFeedback()
-            showingPlanner = true
-        } label: {
-            HStack(spacing: 12) {
-                Image(systemName: "calendar.badge.clock")
-                    .font(.title3)
-                    .foregroundColor(settings.accentColor.color)
-                    .frame(width: 32)
-
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Set a Reading Goal")
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundColor(.primary)
-
-                    Text("Finish the Quran by a date - get a daily amount that adjusts if you miss a day.")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-
-                Spacer()
-
-                Image(systemName: "chevron.right")
-                    .font(.caption.weight(.semibold))
-                    .foregroundColor(.secondary)
-            }
-            .padding(.vertical, 4)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-    }
-
-    @ViewBuilder
-    private func activeCard(plan: QuranPlan) -> some View {
-        let todayKey = QuranPlan.dayKey(for: Date())
-        // Stale dayKey (first render after midnight, before settle lands): treat the day as fresh.
-        let dayStart = plan.dayKey == todayKey ? min(plan.dayStartCompleted, totalCompleted) : totalCompleted
-        let target = QuranPlannerMath.todayTarget(plan: plan, totalAyahs: totalAyahs, dayStartCompleted: dayStart)
-        let doneToday = max(0, totalCompleted - dayStart)
-        let finished = plan.completedDate != nil || totalCompleted >= totalAyahs
-        // One walk serves both the card label and the Continue button (same frontier) - two different
-        // `count` values would thrash the single-entry span memo on every render.
-        let span = finished ? nil : QuranPlannerMath.todaySpan(quran: quranData.quran, settings: settings, count: max(1, target - doneToday))
-
-        Button {
-            settings.hapticFeedback()
-            showingPlanner = true
-        } label: {
-            HStack(spacing: 14) {
-                PlannerRing(
-                    progress: finished ? 1 : (target > 0 ? min(1, Double(doneToday) / Double(target)) : 1),
-                    accent: settings.accentColor.color
-                )
-                .frame(width: 44, height: 44)
-
-                VStack(alignment: .leading, spacing: 3) {
-                    if finished {
-                        Text("Khatm complete")
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundColor(.primary)
-
-                        Text("Alhamdulillah - may Allah accept it.")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    } else if doneToday >= target {
-                        Text("Done for today")
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundColor(.primary)
-
-                        Text("\(doneToday) ayah\(doneToday == 1 ? "" : "s") read - keep going or rest.")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    } else {
-                        Text("Today: \(doneToday) of \(target) ayahs")
-                            .font(.subheadline.weight(.semibold))
-                            .monospacedDigit()
-                            .foregroundColor(.primary)
-
-                        if let span {
-                            Text(spanLabel(span))
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                                .lineLimit(2)
-                        }
-                    }
-                }
-
-                Spacer(minLength: 0)
-
-                Image(systemName: "chevron.right")
-                    .font(.caption.weight(.semibold))
-                    .foregroundColor(.secondary)
-            }
-            .padding(.vertical, 6)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-
-        if !finished, doneToday < target, let span {
-            Button {
-                settings.hapticFeedback()
-                openReader(span.startSurahID, span.startAyah)
-            } label: {
-                Label("Continue Reading", systemImage: "book.fill")
-                    .font(.subheadline)
-                    .foregroundColor(settings.accentColor.accent2)
-            }
-        }
-    }
-
-    private func spanLabel(_ span: QuranPlannerMath.TodaySpan) -> String {
-        var label = "\(span.startSurahName) \(span.startAyah) to \(span.endSurahName) \(span.endAyah)"
-        if let startPage = span.startPage, let endPage = span.endPage {
-            label += startPage == endPage ? " - page \(startPage)" : " - pages \(startPage)-\(endPage)"
-        }
-        return label
-    }
-}
-
-/// Small determinate ring, checkmark at full.
+/// Determinate progress ring with a two-tone gradient sweep; checkmark at full.
 struct PlannerRing: View {
     let progress: Double
-    let accent: Color
+    let accent1: Color
+    let accent2: Color
+    var lineWidth: CGFloat = 6
 
     var body: some View {
         ZStack {
             Circle()
-                .stroke(accent.opacity(0.18), lineWidth: 5)
+                .stroke(accent1.opacity(0.15), lineWidth: lineWidth)
 
             Circle()
-                .trim(from: 0, to: max(0.001, min(1, progress)))
-                .stroke(accent, style: StrokeStyle(lineWidth: 5, lineCap: .round))
+                .trim(from: 0, to: max(0.003, min(1, progress)))
+                .stroke(
+                    AngularGradient(
+                        gradient: Gradient(colors: [accent1, accent2, accent1]),
+                        center: .center,
+                        startAngle: .degrees(0),
+                        endAngle: .degrees(360)
+                    ),
+                    style: StrokeStyle(lineWidth: lineWidth, lineCap: .round)
+                )
                 .rotationEffect(.degrees(-90))
 
             if progress >= 1 {
                 Image(systemName: "checkmark")
-                    .font(.subheadline.weight(.bold))
-                    .foregroundColor(accent)
+                    .font(.headline.weight(.bold))
+                    .foregroundColor(accent1)
             } else {
                 Text("\(Int((progress * 100).rounded()))%")
-                    .font(.system(size: 11, weight: .semibold).monospacedDigit())
-                    .foregroundColor(accent)
+                    .font(.footnote.weight(.bold).monospacedDigit())
+                    .foregroundColor(accent1)
+                    .minimumScaleFactor(0.6)
             }
         }
         .animation(.easeInOut(duration: 0.25), value: progress)
@@ -546,7 +386,7 @@ struct QuranPlannerView: View {
     @Environment(\.presentationMode) private var presentationMode
 
     /// Set (instead of navigating directly) so the reader push happens AFTER the sheet dismisses.
-    @Binding var pendingRead: QuranPlannerSection.PendingRead?
+    @Binding var pendingRead: QuranPlannerPendingRead?
 
     @State private var editingGoal = false
 
@@ -571,6 +411,9 @@ struct QuranPlannerView: View {
     private var totalCompleted: Int {
         settings.khatmCompletedAyahSetCache.count
     }
+
+    private var accent: Color { settings.accentColor.color }
+    private var accent2: Color { settings.accentColor.accent2 }
 
     /// Rough mushaf-page equivalent for an ayah count (604 pages / 6236 ayahs).
     private func pagesEquivalent(_ ayahs: Int) -> Int {
@@ -611,7 +454,7 @@ struct QuranPlannerView: View {
             HStack(alignment: .firstTextBaseline, spacing: 10) {
                 Image(systemName: "info.circle.fill")
                     .font(.subheadline)
-                    .foregroundStyle(settings.accentColor.color)
+                    .foregroundStyle(accent)
 
                 Text("The planner tracks progress through khatm marking, which is only available on Hafs an Asim. Switch back to the default riwayah in Quran settings to use it.")
                     .font(.subheadline)
@@ -620,6 +463,7 @@ struct QuranPlannerView: View {
             }
             .padding(.vertical, 2)
         }
+        .themedListRowBackground()
     }
 
     // MARK: Setup
@@ -637,12 +481,36 @@ struct QuranPlannerView: View {
     @ViewBuilder
     private var setupSections: some View {
         Section {
+            VStack(spacing: 10) {
+                Image(systemName: "calendar.badge.clock")
+                    .font(.system(size: 30))
+                    .foregroundColor(accent)
+                    .frame(width: 64, height: 64)
+                    .conditionalGlassEffect(circle: true)
+
+                Text(editingGoal ? "Adjust Your Goal" : "Plan Your Khatm")
+                    .font(.title3.weight(.semibold))
+
+                Text("Pick a goal and get a daily reading amount that adjusts itself whenever you miss a day - you still finish on time.")
+                    .font(.footnote)
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 8)
+            .listRowSeparator(.hidden)
+        }
+        .themedListRowBackground()
+
+        Section {
             Picker("Goal", selection: $goalMode.animation(.easeInOut)) {
                 ForEach(GoalMode.allCases) { mode in
                     Text(mode.rawValue).tag(mode)
                 }
             }
             .pickerStyle(.segmented)
+            .listRowSeparator(.hidden)
 
             if goalMode == .byDate {
                 HStack(spacing: 8) {
@@ -651,6 +519,7 @@ struct QuranPlannerView: View {
                     presetButton("3 Months", days: 90)
                 }
                 .padding(.vertical, 2)
+                .listRowSeparator(.hidden)
 
                 DatePicker(
                     "Finish by",
@@ -659,12 +528,11 @@ struct QuranPlannerView: View {
                     displayedComponents: .date
                 )
                 .font(.subheadline)
+                .listRowSeparator(.hidden)
 
                 let remaining = max(1, totalAyahs - totalCompleted)
                 let perDay = Int((Double(remaining) / Double(QuranPlannerMath.daysLeft(until: targetDate))).rounded(.up))
-                Text("About \(perDay) ayahs (~\(pagesEquivalent(perDay)) pages) a day to finish by \(Self.mediumDate.string(from: targetDate)).")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+                summaryLine("About \(perDay) ayahs (~\(pagesEquivalent(perDay)) pages) a day to finish by \(Self.mediumDate.string(from: targetDate)).")
             } else {
                 Stepper(value: $ayahsPerDay, in: 5...600, step: 5) {
                     VStack(alignment: .leading, spacing: 2) {
@@ -677,24 +545,24 @@ struct QuranPlannerView: View {
                             .foregroundColor(.secondary)
                     }
                 }
+                .listRowSeparator(.hidden)
 
                 let remaining = max(1, totalAyahs - totalCompleted)
                 let days = Int((Double(remaining) / Double(max(1, ayahsPerDay))).rounded(.up))
-                Text("Finishes in about \(days) day\(days == 1 ? "" : "s").")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
+                summaryLine("Finishes in about \(days) day\(days == 1 ? "" : "s").")
             }
         } header: {
-            Text(editingGoal ? "ADJUST GOAL" : "SET A GOAL")
+            Text("GOAL")
         } footer: {
             VStack(alignment: .leading, spacing: 6) {
                 if totalCompleted > 0 {
                     Text("Your existing khatm progress (\(totalCompleted) ayahs) counts toward the finish.")
                 }
-                Text("Ayahs are marked as read automatically while you read in the app. Miss a day and the daily amount adjusts so you still finish on time.")
+                Text("Ayahs are marked as read automatically while you read in the app.")
             }
             .font(.caption)
         }
+        .themedListRowBackground()
 
         Section {
             Button {
@@ -703,9 +571,13 @@ struct QuranPlannerView: View {
             } label: {
                 Text(editingGoal ? "Save Goal" : "Start Plan")
                     .font(.headline)
+                    .foregroundColor(.primary)
                     .frame(maxWidth: .infinity, alignment: .center)
+                    .padding(.vertical, 12)
             }
-            .foregroundColor(settings.accentColor.color)
+            .buttonStyle(.plain)
+            .conditionalGlassEffect(useColor: 0.25)
+            .listRowSeparator(.hidden)
 
             if editingGoal {
                 Button {
@@ -717,8 +589,25 @@ struct QuranPlannerView: View {
                         .frame(maxWidth: .infinity, alignment: .center)
                         .foregroundColor(.secondary)
                 }
+                .buttonStyle(.plain)
+                .listRowSeparator(.hidden)
             }
         }
+        .themedListRowBackground()
+    }
+
+    private func summaryLine(_ text: String) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 8) {
+            Image(systemName: "sparkles")
+                .font(.caption)
+                .foregroundColor(accent2)
+
+            Text(text)
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .listRowSeparator(.hidden)
     }
 
     private func presetButton(_ label: String, days: Int) -> some View {
@@ -731,7 +620,7 @@ struct QuranPlannerView: View {
                 .frame(maxWidth: .infinity)
         }
         .buttonStyle(.bordered)
-        .tint(settings.accentColor.color)
+        .tint(accent)
     }
 
     private func startPlan() {
@@ -746,15 +635,18 @@ struct QuranPlannerView: View {
             return
         }
 
-        settings.quranPlan = QuranPlan(
-            startDate: Date(),
-            endDate: goalMode == .byDate ? targetDate : nil,
-            ayahsPerDay: goalMode == .fixedPace ? ayahsPerDay : nil,
-            dayKey: todayKey,
-            dayStartCompleted: totalCompleted,
-            startCompleted: totalCompleted,
-            completedDate: nil
-        )
+        withAnimation {
+            settings.quranPlan = QuranPlan(
+                startDate: Date(),
+                endDate: goalMode == .byDate ? targetDate : nil,
+                ayahsPerDay: goalMode == .fixedPace ? ayahsPerDay : nil,
+                dayKey: todayKey,
+                dayStartCompleted: totalCompleted,
+                startCompleted: totalCompleted,
+                completedDate: nil,
+                history: [:]
+            )
+        }
     }
 
     // MARK: Dashboard
@@ -762,140 +654,266 @@ struct QuranPlannerView: View {
     @ViewBuilder
     private func dashboardSections(plan: QuranPlan) -> some View {
         let todayKey = QuranPlan.dayKey(for: Date())
+        // Stale dayKey (first render after midnight, before settle lands): treat the day as fresh.
         let dayStart = plan.dayKey == todayKey ? min(plan.dayStartCompleted, totalCompleted) : totalCompleted
         let target = QuranPlannerMath.todayTarget(plan: plan, totalAyahs: totalAyahs, dayStartCompleted: dayStart)
         let doneToday = max(0, totalCompleted - dayStart)
         let leftToday = max(0, target - doneToday)
+        // One walk serves the label and both buttons (same frontier) - different `count` values would
+        // thrash the single-entry span memo on every render.
         let span = leftToday > 0 ? QuranPlannerMath.todaySpan(quran: quranData.quran, settings: settings, count: leftToday) : nil
 
         Section(header: Text("TODAY")) {
-            HStack(spacing: 16) {
-                PlannerRing(
-                    progress: target > 0 ? min(1, Double(doneToday) / Double(target)) : 1,
-                    accent: settings.accentColor.color
-                )
-                .frame(width: 56, height: 56)
+            VStack(spacing: 14) {
+                HStack(spacing: 16) {
+                    PlannerRing(
+                        progress: target > 0 ? min(1, Double(doneToday) / Double(target)) : 1,
+                        accent1: accent,
+                        accent2: accent2
+                    )
+                    .frame(width: 64, height: 64)
 
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(doneToday >= target ? "Done for today" : "\(doneToday) of \(target) ayahs")
-                        .font(.headline)
-                        .monospacedDigit()
+                    VStack(alignment: .leading, spacing: 3) {
+                        if doneToday >= target {
+                            Text("Done for today")
+                                .font(.title3.weight(.bold))
 
-                    if doneToday >= target {
-                        Text("\(doneToday) read - anything more is a head start on tomorrow.")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                            .fixedSize(horizontal: false, vertical: true)
-                    } else if let span {
-                        Text(fullSpanLabel(span))
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                            .fixedSize(horizontal: false, vertical: true)
+                            Text("\(doneToday) read - anything more is a head start on tomorrow.")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        } else {
+                            HStack(alignment: .firstTextBaseline, spacing: 5) {
+                                Text("\(doneToday)")
+                                    .font(.title.weight(.bold).monospacedDigit())
+                                    .foregroundColor(accent)
+
+                                Text("of \(target) ayahs")
+                                    .font(.subheadline.weight(.semibold))
+                                    .foregroundColor(.secondary)
+                            }
+
+                            if let span {
+                                Text(QuranPlannerMath.spanLabel(span))
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                        }
                     }
+
+                    Spacer(minLength: 0)
                 }
 
-                Spacer(minLength: 0)
+                weekStrip(plan: plan, doneToday: doneToday)
             }
-            .padding(.vertical, 4)
-
-            weekStrip(plan: plan, doneToday: doneToday)
+            .padding(.vertical, 8)
+            .listRowSeparator(.hidden)
 
             if leftToday > 0, let span {
-                Button {
-                    settings.hapticFeedback()
-                    pendingRead = .init(surah: span.startSurahID, ayah: span.startAyah)
-                    presentationMode.wrappedValue.dismiss()
-                } label: {
-                    Label("Continue Reading", systemImage: "book.fill")
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundColor(settings.accentColor.color)
-                }
-
-                Button {
-                    settings.hapticFeedback()
-                    withAnimation {
-                        QuranPlannerMath.markNextUnreadAyahs(quran: quranData.quran, settings: settings, count: leftToday)
+                HStack(spacing: 10) {
+                    actionTile(
+                        title: "Continue Reading",
+                        subtitle: "from \(span.startSurahName) \(span.startAyah)",
+                        symbol: "book.fill"
+                    ) {
+                        pendingRead = QuranPlannerPendingRead(surah: span.startSurahID, ayah: span.startAyah)
+                        presentationMode.wrappedValue.dismiss()
                     }
-                } label: {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Label("Mark Today as Read", systemImage: "checkmark.circle")
-                            .font(.subheadline)
-                            .foregroundColor(settings.accentColor.accent2)
 
-                        Text("For reading done outside the app - marks the next \(leftToday) ayah\(leftToday == 1 ? "" : "s").")
-                            .font(.caption2)
-                            .foregroundColor(.secondary)
+                    actionTile(
+                        title: "Mark as Read",
+                        subtitle: "read outside the app",
+                        symbol: "checkmark.circle.fill"
+                    ) {
+                        withAnimation {
+                            QuranPlannerMath.markNextUnreadAyahs(quran: quranData.quran, settings: settings, count: leftToday)
+                        }
                     }
                 }
+                .padding(.vertical, 2)
+                .listRowSeparator(.hidden)
             }
         }
+        .themedListRowBackground()
 
         Section(header: Text("PLAN")) {
+            if let end = plan.endDate, Calendar.current.startOfDay(for: end) < Calendar.current.startOfDay(for: Date()) {
+                HStack(alignment: .firstTextBaseline, spacing: 10) {
+                    Image(systemName: "exclamationmark.triangle.fill")
+                        .font(.subheadline)
+                        .foregroundStyle(.orange)
+
+                    Text("Your finish date has passed. Adjust the goal to spread what's left over more days.")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .padding(.vertical, 2)
+                .listRowSeparator(.hidden)
+            }
+
+            statsGrid(plan: plan, doneToday: doneToday)
+                .padding(.vertical, 6)
+                .listRowSeparator(.hidden)
+
             VStack(spacing: 6) {
                 HStack(alignment: .firstTextBaseline) {
                     let percent = totalAyahs > 0 ? Int((Double(totalCompleted) / Double(totalAyahs) * 100).rounded()) : 0
                     Text("\(percent)% of the Quran")
-                        .font(.headline)
-                        .foregroundStyle(settings.accentColor.color)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(accent)
 
                     Spacer()
 
-                    Text("\(totalCompleted)/\(totalAyahs) ayahs")
-                        .font(.subheadline.monospacedDigit().weight(.semibold))
+                    Text("\(totalCompleted)/\(totalAyahs)")
+                        .font(.caption.monospacedDigit().weight(.semibold))
                         .foregroundStyle(.secondary)
                 }
 
                 ProgressView(value: Double(totalCompleted), total: Double(max(totalAyahs, 1)))
-                    .tint(settings.accentColor.color)
+                    .tint(accent)
+
+                let elapsed = QuranPlannerMath.daysElapsed(since: plan.startDate) + 1
+                let readSinceStart = max(0, totalCompleted - plan.startCompleted)
+                Text("\(readSinceStart) ayahs since \(Self.mediumDate.string(from: plan.startDate)) · \(elapsed) day\(elapsed == 1 ? "" : "s")")
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .padding(.top, 2)
             }
-            .padding(.vertical, 2)
-
-            if let end = plan.endDate {
-                if Calendar.current.startOfDay(for: end) < Calendar.current.startOfDay(for: Date()) {
-                    HStack(alignment: .firstTextBaseline, spacing: 10) {
-                        Image(systemName: "exclamationmark.triangle.fill")
-                            .font(.subheadline)
-                            .foregroundStyle(.orange)
-
-                        Text("Your finish date has passed. Adjust the goal to spread what's left over more days.")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                    .padding(.vertical, 2)
-                }
-
-                plannerStatRow("Finish by", value: Self.mediumDate.string(from: end))
-                plannerStatRow("Days left", value: "\(QuranPlannerMath.daysLeft(until: end))")
-
-                if let delta = QuranPlannerMath.paceDelta(plan: plan, totalAyahs: totalAyahs, totalCompleted: totalCompleted) {
-                    if delta >= -5 && delta <= 5 {
-                        plannerStatRow("Pace", value: "On track")
-                    } else if delta > 0 {
-                        plannerStatRow("Pace", value: "\(delta) ayahs ahead")
-                    } else {
-                        plannerStatRow("Pace", value: "\(-delta) ayahs behind - today's amount absorbs it")
-                    }
-                }
-            } else if let perDay = plan.ayahsPerDay {
-                plannerStatRow("Daily amount", value: "\(perDay) ayahs (~\(pagesEquivalent(perDay)) pages)")
-
-                if let projected = QuranPlannerMath.projectedFinish(plan: plan, remaining: max(0, totalAyahs - totalCompleted)) {
-                    plannerStatRow("Projected finish", value: Self.mediumDate.string(from: projected))
-                }
-            }
-
-            let elapsed = QuranPlannerMath.daysElapsed(since: plan.startDate) + 1
-            let readSinceStart = max(0, totalCompleted - plan.startCompleted)
-            plannerStatRow("Since \(Self.mediumDate.string(from: plan.startDate))", value: "\(readSinceStart) ayahs in \(elapsed) day\(elapsed == 1 ? "" : "s")")
-
-            let streak = QuranPlannerMath.streak(plan: plan, doneToday: doneToday)
-            if streak > 1 {
-                plannerStatRow("Reading streak", value: "\(streak) days")
-            }
+            .padding(.vertical, 4)
+            .listRowSeparator(.hidden)
         }
+        .themedListRowBackground()
 
         manageSection
+    }
+
+    /// Four stat tiles in the Prayer Tracker's visual language - the two features should feel like
+    /// siblings.
+    private func statsGrid(plan: QuranPlan, doneToday: Int) -> some View {
+        let streak = QuranPlannerMath.streak(plan: plan, doneToday: doneToday)
+
+        return LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 10) {
+            if let end = plan.endDate {
+                let daysLeft = QuranPlannerMath.daysLeft(until: end)
+                statTile(value: "\(daysLeft)", unit: daysLeft == 1 ? "day" : "days",
+                         label: "Days Left", symbol: "calendar")
+                statTile(value: Self.shortDate.string(from: end), unit: "",
+                         label: "Finish By", symbol: "flag.checkered")
+            } else if let perDay = plan.ayahsPerDay {
+                statTile(value: "\(perDay)", unit: "ayahs",
+                         label: "Daily Amount", symbol: "book")
+                statTile(
+                    value: QuranPlannerMath.projectedFinish(plan: plan, remaining: max(0, totalAyahs - totalCompleted))
+                        .map { Self.shortDate.string(from: $0) } ?? "-",
+                    unit: "",
+                    label: "Projected", symbol: "flag.checkered"
+                )
+            }
+
+            statTile(value: "\(streak)", unit: streak == 1 ? "day" : "days",
+                     label: "Streak", symbol: "flame.fill")
+
+            if let delta = QuranPlannerMath.paceDelta(plan: plan, totalAyahs: totalAyahs, totalCompleted: totalCompleted) {
+                if delta >= -5 && delta <= 5 {
+                    statTile(value: "On track", unit: "", label: "Pace", symbol: "checkmark.circle.fill")
+                } else if delta > 0 {
+                    statTile(value: "+\(delta)", unit: "ayahs", label: "Ahead", symbol: "hare.fill")
+                } else {
+                    statTile(value: "\(delta)", unit: "ayahs", label: "Behind", symbol: "tortoise.fill")
+                }
+            } else {
+                statTile(value: "\(doneToday)", unit: "ayahs", label: "Read Today", symbol: "text.book.closed.fill")
+            }
+        }
+    }
+
+    private func statTile(value: String, unit: String, label: String, symbol: String) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 5) {
+                Image(systemName: symbol)
+                    .font(.caption)
+                    .foregroundColor(accent2)
+
+                Text(label.uppercased())
+                    .font(.caption2.weight(.semibold))
+                    .foregroundColor(.secondary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+            }
+
+            HStack(alignment: .firstTextBaseline, spacing: 4) {
+                Text(value)
+                    .font(.title3.weight(.bold).monospacedDigit())
+                    .foregroundColor(.primary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
+
+                if !unit.isEmpty {
+                    Text(unit)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(12)
+        .conditionalGlassEffect(rectangle: true)
+    }
+
+    private func actionTile(title: String, subtitle: String, symbol: String, action: @escaping () -> Void) -> some View {
+        Button {
+            settings.hapticFeedback()
+            action()
+        } label: {
+            VStack(alignment: .leading, spacing: 6) {
+                Image(systemName: symbol)
+                    .font(.title3)
+                    .foregroundColor(accent)
+
+                Text(title)
+                    .font(.footnote.weight(.semibold))
+                    .foregroundColor(.primary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
+
+                Text(subtitle)
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(12)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .conditionalGlassEffect(rectangle: true)
+    }
+
+    /// The last 7 days as mini bars - a glanceable "did I keep up this week".
+    private func weekStrip(plan: QuranPlan, doneToday: Int) -> some View {
+        let days = QuranPlannerMath.lastSevenDays(plan: plan, doneToday: doneToday)
+        let peak = max(1, days.map(\.count).max() ?? 1)
+
+        return HStack(alignment: .bottom, spacing: 10) {
+            ForEach(Array(days.enumerated()), id: \.offset) { _, day in
+                VStack(spacing: 4) {
+                    RoundedRectangle(cornerRadius: 2)
+                        .fill(day.count > 0 ? accent.opacity(day.isToday ? 1 : 0.6) : Color.secondary.opacity(0.16))
+                        .frame(height: day.count > 0 ? max(6, 28 * CGFloat(day.count) / CGFloat(peak)) : 4)
+                        .frame(maxWidth: .infinity)
+
+                    Text(day.label)
+                        .font(.system(size: 9, weight: day.isToday ? .bold : .regular))
+                        .foregroundColor(day.isToday ? accent : .secondary)
+                }
+                .accessibilityLabel("\(day.label): \(day.count) ayahs")
+            }
+        }
+        .frame(height: 44, alignment: .bottom)
     }
 
     private var manageSection: some View {
@@ -907,7 +925,7 @@ struct QuranPlannerView: View {
             } label: {
                 Label("Adjust Goal", systemImage: "slider.horizontal.3")
                     .font(.subheadline)
-                    .foregroundColor(settings.accentColor.color)
+                    .foregroundColor(accent)
             }
 
             Button(role: .destructive) {
@@ -932,45 +950,7 @@ struct QuranPlannerView: View {
             Text("Progress comes from khatm marking: ayahs are marked as you read in the app, and you can review or reset them in Khatm mode on the Quran tab.")
                 .font(.caption)
         }
-    }
-
-    /// The last 7 days as mini bars - a glanceable "did I keep up this week".
-    private func weekStrip(plan: QuranPlan, doneToday: Int) -> some View {
-        let days = QuranPlannerMath.lastSevenDays(plan: plan, doneToday: doneToday)
-        let peak = max(1, days.map(\.count).max() ?? 1)
-
-        return HStack(alignment: .bottom, spacing: 10) {
-            ForEach(Array(days.enumerated()), id: \.offset) { _, day in
-                VStack(spacing: 4) {
-                    RoundedRectangle(cornerRadius: 2)
-                        .fill(day.count > 0 ? settings.accentColor.color.opacity(day.isToday ? 1 : 0.65) : Color.secondary.opacity(0.18))
-                        .frame(height: day.count > 0 ? max(6, 28 * CGFloat(day.count) / CGFloat(peak)) : 4)
-                        .frame(maxWidth: .infinity)
-
-                    Text(day.label)
-                        .font(.system(size: 9, weight: day.isToday ? .bold : .regular))
-                        .foregroundColor(day.isToday ? settings.accentColor.color : .secondary)
-                }
-                .accessibilityLabel("\(day.label): \(day.count) ayahs")
-            }
-        }
-        .frame(height: 44, alignment: .bottom)
-        .padding(.vertical, 4)
-    }
-
-    private func plannerStatRow(_ title: String, value: String) -> some View {
-        HStack(alignment: .firstTextBaseline) {
-            Text(title)
-                .font(.subheadline)
-                .foregroundColor(.secondary)
-
-            Spacer()
-
-            Text(value)
-                .font(.subheadline.weight(.semibold))
-                .monospacedDigit()
-                .multilineTextAlignment(.trailing)
-        }
+        .themedListRowBackground()
     }
 
     // MARK: Completed
@@ -980,21 +960,28 @@ struct QuranPlannerView: View {
         Section {
             VStack(spacing: 10) {
                 Image(systemName: "checkmark.seal.fill")
-                    .font(.system(size: 44))
-                    .foregroundColor(settings.accentColor.color)
+                    .font(.system(size: 40))
+                    .foregroundStyle(
+                        LinearGradient(colors: [accent, accent2], startPoint: .topLeading, endPoint: .bottomTrailing)
+                    )
+                    .frame(width: 76, height: 76)
+                    .conditionalGlassEffect(circle: true)
 
                 Text("Khatm Complete")
-                    .font(.title3.weight(.semibold))
+                    .font(.title2.weight(.bold))
 
                 let days = QuranPlannerMath.daysElapsed(since: plan.startDate) + 1
-                Text("Alhamdulillah - you finished the Quran\(plan.startCompleted == 0 ? "" : " from where you began") over \(days) day\(days == 1 ? "" : "s"). May Allah accept it and make it a witness for you.")
+                Text("Alhamdulillah - you finished the Quran over \(days) day\(days == 1 ? "" : "s"). May Allah accept it and make it a witness for you.")
                     .font(.subheadline)
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
             }
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 10)
+            .padding(.vertical, 12)
+            .listRowSeparator(.hidden)
         }
+        .themedListRowBackground()
 
         Section {
             Button {
@@ -1003,7 +990,7 @@ struct QuranPlannerView: View {
             } label: {
                 Label("Start a New Khatm", systemImage: "arrow.counterclockwise")
                     .font(.subheadline.weight(.semibold))
-                    .foregroundColor(settings.accentColor.color)
+                    .foregroundColor(accent)
             }
             .confirmationDialog(
                 "Start a new khatm?",
@@ -1032,19 +1019,18 @@ struct QuranPlannerView: View {
             Text("Ending the plan keeps your completed khatm progress.")
                 .font(.caption)
         }
-    }
-
-    private func fullSpanLabel(_ span: QuranPlannerMath.TodaySpan) -> String {
-        var label = "\(span.startSurahName) \(span.startAyah) to \(span.endSurahName) \(span.endAyah)"
-        if let startPage = span.startPage, let endPage = span.endPage {
-            label += startPage == endPage ? " (page \(startPage))" : " (pages \(startPage)-\(endPage))"
-        }
-        return label
+        .themedListRowBackground()
     }
 
     private static let mediumDate: DateFormatter = {
         let formatter = DateFormatter()
         formatter.dateStyle = .medium
+        return formatter
+    }()
+
+    private static let shortDate: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.setLocalizedDateFormatFromTemplate("MMM d")
         return formatter
     }()
 }

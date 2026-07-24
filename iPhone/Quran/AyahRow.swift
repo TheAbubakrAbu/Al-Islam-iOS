@@ -638,6 +638,21 @@ struct AyahRow: View, Equatable {
         .contextMenu {
             menuBlock(isBookmarked: isBookmarked, includePlaybackOptions: true)
         }
+        // The tap-to-scroll jump, as a swipe too: while searching, swipe the result row to scroll down
+        // to that ayah in the full list.
+        .swipeActions(edge: .leading, allowsFullSwipe: true) {
+            if !searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                Button {
+                    settings.hapticFeedback()
+                    withAnimation {
+                        scrollDown = ayah.id
+                    }
+                } label: {
+                    Label("Scroll Down", systemImage: "arrow.down.to.line")
+                }
+                .tint(settings.accentColor.color)
+            }
+        }
         #endif
         .confirmationDialog("Note not saved", isPresented: $showRespectAlert, titleVisibility: .visible) {
             Button("OK") { }
@@ -1041,6 +1056,21 @@ struct AyahRow: View, Equatable {
         }()
 
         VStack(alignment: .leading) {
+            // While searching within the surah, the row's TAP scrolls down to the ayah in the full list -
+            // the same jump offered here for discoverability (and as a swipe action on the row).
+            if !searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                Button {
+                    settings.hapticFeedback()
+                    withAnimation {
+                        scrollDown = ayah.id
+                    }
+                } label: {
+                    Label("Scroll Down to Ayah", systemImage: "arrow.down.to.line")
+                }
+
+                Divider()
+            }
+
             Button(role: isBookmarked ? .destructive : nil) {
                 settings.hapticFeedback()
                 toggleBookmarkWithNoteGuard()

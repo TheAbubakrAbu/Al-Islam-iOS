@@ -639,6 +639,14 @@ struct SurahInfoSheet: View {
                             noticeCard
                             surahHeaderCard
 
+                            // Listen from here: the page-mode header opens this sheet, so "play this
+                            // surah" (once or on repeat) belongs right under the surah's own card.
+                            #if os(iOS)
+                            if settings.isHafsDisplay {
+                                SurahInfoPlaybackCard(surahNumber: surahNumber, surahName: surahName)
+                            }
+                            #endif
+
                             if sources.count > 1 {
                                 Picker("Source", selection: selectedSourceBinding.animation(.easeInOut)) {
                                     ForEach(sources) { source in
@@ -794,6 +802,68 @@ struct SurahInfoSheet: View {
         .padding(.vertical, 32)
     }
 }
+
+#if os(iOS)
+/// The surah info sheet's playback card: play the surah once, or a chosen number of times. A separate
+/// struct so the player's per-ayah ticks only re-render this card, not the whole markdown sheet.
+private struct SurahInfoPlaybackCard: View {
+    @ObservedObject private var settings = Settings.shared
+    @ObservedObject private var quranPlayer = QuranPlayer.shared
+
+    let surahNumber: Int
+    let surahName: String
+
+    private var isPlayingThisSurah: Bool {
+        (quranPlayer.isPlaying || quranPlayer.isPaused) && quranPlayer.currentSurahNumber == surahNumber
+    }
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Button {
+                settings.hapticFeedback()
+                if isPlayingThisSurah {
+                    quranPlayer.stop()
+                } else {
+                    quranPlayer.playSurah(surahNumber: surahNumber, surahName: surahName)
+                }
+            } label: {
+                Label(isPlayingThisSurah ? "Stop Playing" : "Play Surah",
+                      systemImage: isPlayingThisSurah ? "stop.fill" : "play.fill")
+                    .font(.subheadline.weight(.semibold))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 10)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .foregroundColor(settings.accentColor.color)
+            .conditionalGlassEffect(rectangle: true, useColor: 0.12)
+
+            Menu {
+                Text("Play the surah this many times")
+                    .foregroundStyle(.secondary)
+
+                ForEach([2, 3, 5, 10, 15, 20], id: \.self) { n in
+                    Button {
+                        settings.hapticFeedback()
+                        quranPlayer.playSurah(surahNumber: surahNumber, surahName: surahName, repeatCount: n)
+                    } label: {
+                        Label("Play \(n)×", systemImage: "\(n).circle")
+                    }
+                }
+            } label: {
+                Label("Repeat", systemImage: "repeat")
+                    .font(.subheadline.weight(.semibold))
+                    .padding(.vertical, 10)
+                    .padding(.horizontal, 14)
+                    .contentShape(Rectangle())
+            }
+            .foregroundColor(settings.accentColor.color)
+            .conditionalGlassEffect(rectangle: true, useColor: 0.12)
+        }
+        .animation(.easeInOut(duration: 0.15), value: isPlayingThisSurah)
+    }
+}
+#endif
 
 /// Stable scroll id for the Nth render block of a `TafsirMarkdownView` (used by find-in-page navigation).
 private func tafsirBlockScrollID(_ offset: Int) -> String { "tafsir-block-\(offset)" }

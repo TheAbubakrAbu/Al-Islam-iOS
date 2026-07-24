@@ -117,6 +117,12 @@ struct HadithView: View {
     @State private var hadithAskAnswer = ""
     @State private var hadithAskIsStreaming = false
     @State private var hadithAskRanForQuery = ""
+    /// A MANUAL ask that found nothing to ground on or errored - the tapped row must answer with
+    /// SOMETHING instead of silently restoring the prompt (the Quran search's `askNoAnswer`).
+    @State private var hadithAskNoAnswer = false
+    /// The AI-vs-keyword segmented switch, shown only when BOTH result kinds exist (the Quran search's
+    /// `showKeywordResults`). Reset to the AI list on every new query.
+    @State private var showHadithKeywordResults = false
     @State private var hadithAskTask: Task<Void, Never>?
     /// The hadiths the running answer was grounded on - the pool citations are resolved from, so a
     /// cited row can never point at a hadith the model wasn't shown.
@@ -176,7 +182,7 @@ struct HadithView: View {
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard SemanticSearchEngine.isSupported, trimmed.count >= 3, !trimmed.containsArabicScript,
               HadithReferenceParser.parse(trimmed) == nil else {
-            if !globalAIResults.isEmpty { withAnimation { globalAIResults = [] } }
+            if !globalAIResults.isEmpty { globalAIResults = [] }
             return
         }
         prepareAllBooksCorpus()
@@ -189,7 +195,7 @@ struct HadithView: View {
             guard !Task.isCancelled else { return }
             guard let keys = semanticEngine.corpus(allBooksCorpusID)?.itemKeys else {
                 if !globalAIResults.isEmpty {
-                    await MainActor.run { withAnimation { globalAIResults = [] } }
+                    await MainActor.run { globalAIResults = [] }
                 }
                 return
             }
@@ -209,7 +215,9 @@ struct HadithView: View {
             let top = hits
             await MainActor.run {
                 guard trimmed == searchText.trimmingCharacters(in: .whitespacesAndNewlines) else { return }
-                withAnimation { globalAIResults = top }
+                // Plain apply: an animated section insert racing the keyword sweep's own apply is the
+                // collection-view assertion crash the Quran search hit.
+                globalAIResults = top
             }
         }
     }
@@ -219,10 +227,14 @@ struct HadithView: View {
     private func runHadithAsk(query: String, manual: Bool) {
         hadithAskTask?.cancel()
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        // Any new run (or keystroke) clears a previous dead-end notice. Plain writes throughout: the
+        // Ask card is a List section, and animated section churn racing the async result applies is
+        // the collection-view assertion crash the Quran search hit.
+        hadithAskNoAnswer = false
         guard OnDeviceAsk.isAvailable, trimmed.count >= 3,
               manual || OnDeviceAsk.looksLikeQuestion(trimmed) else {
             if !hadithAskRanForQuery.isEmpty {
-                withAnimation { hadithAskAnswer = ""; hadithAskIsStreaming = false; hadithAskRanForQuery = ""; hadithAskSourceHits = [] }
+                hadithAskAnswer = ""; hadithAskIsStreaming = false; hadithAskRanForQuery = ""; hadithAskSourceHits = []
             }
             return
         }
@@ -251,16 +263,17 @@ struct HadithView: View {
                 }
             }
             guard !sources.isEmpty else {
-                withAnimation { hadithAskAnswer = ""; hadithAskIsStreaming = false; hadithAskRanForQuery = ""; hadithAskSourceHits = [] }
+                hadithAskAnswer = ""; hadithAskIsStreaming = false; hadithAskRanForQuery = ""; hadithAskSourceHits = []
+                // A tapped ask MUST respond: with nothing retrieved to ground on, say so instead of
+                // silently restoring the prompt row (which read as "the button does nothing").
+                if manual { hadithAskNoAnswer = true }
                 return
             }
 
-            withAnimation {
-                hadithAskAnswer = ""
-                hadithAskIsStreaming = true
-                hadithAskRanForQuery = trimmed
-                hadithAskSourceHits = sourceHits
-            }
+            hadithAskAnswer = ""
+            hadithAskIsStreaming = true
+            hadithAskRanForQuery = trimmed
+            hadithAskSourceHits = sourceHits
             guard #available(iOS 26.0, *) else { return }
             do {
                 for try await text in OnDeviceAsk.streamAnswer(question: trimmed, sources: sources) {
@@ -268,11 +281,13 @@ struct HadithView: View {
                     hadithAskAnswer = text
                 }
                 guard !Task.isCancelled else { return }
-                withAnimation { hadithAskIsStreaming = false }
+                hadithAskIsStreaming = false
             } catch {
-                // Declined or errored: the card simply goes away - AI and keyword results still stand.
+                // Declined or errored: the card goes away - AI and keyword results still stand. But a
+                // MANUAL ask still owes a response (see the empty-sources guard).
                 guard !Task.isCancelled else { return }
-                withAnimation { hadithAskAnswer = ""; hadithAskIsStreaming = false; hadithAskRanForQuery = ""; hadithAskSourceHits = [] }
+                hadithAskAnswer = ""; hadithAskIsStreaming = false; hadithAskRanForQuery = ""; hadithAskSourceHits = []
+                if manual { hadithAskNoAnswer = true }
             }
         }
     }
@@ -619,6 +634,9 @@ struct HadithView: View {
                 globalChapterLimit = 5
                 globalHadithLimit = 5
                 globalSearchRanFor = ""
+                // Every new query starts back on the AI list, with any dead-end ask notice cleared.
+                showHadithKeywordResults = false
+                hadithAskNoAnswer = false
                 let query = text.trimmingCharacters(in: .whitespacesAndNewlines)
                 if query.count >= 3, HadithReferenceParser.parse(text) == nil {
                     runGlobalSearch(query: query)
@@ -1019,11 +1037,17 @@ struct HadithView: View {
     private var globalSearchSection: some View {
         let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
         if query.count >= 3, referenceResult == nil {
-            // Ask AI first, ALWAYS - the prompt row before it runs, the streamed grounded answer
-            // WITH its cited hadiths (real tappable rows) after; the citations are the answer's
-            // receipts, so they live in the same section - the Quran search's exact grammar.
+            // Ask AI first - the streamed grounded answer WITH its cited hadiths (real tappable rows);
+            // the citations are the answer's receipts, so they live in the same section - the Quran
+            // search's exact grammar. The one-tap prompt row shows only once there are results to
+            // ground an answer on: while the sweep is still running a tap had nothing to retrieve
+            // against and silently did nothing.
             if OnDeviceAsk.isAvailable {
-                if !hadithAskRanForQuery.isEmpty {
+                if hadithAskNoAnswer {
+                    Section(header: hadithAskAIHeader(citedCount: 0)) {
+                        hadithAskNoAnswerRow
+                    }
+                } else if !hadithAskRanForQuery.isEmpty {
                     let cited = hadithAskCitedResults
                     Section(header: hadithAskAIHeader(citedCount: cited.count)) {
                         AskAnswerCard(answer: hadithAskAnswer, isStreaming: hadithAskIsStreaming)
@@ -1040,23 +1064,37 @@ struct HadithView: View {
                             }
                         }
                     }
-                } else {
+                } else if !globalAIResults.isEmpty || !globalHadithResults.isEmpty || !globalChapterResults.isEmpty {
                     Section(header: hadithAskAIHeader(citedCount: 0)) {
                         hadithAskPromptRow
                     }
                 }
             }
 
-            // AI matches at the very top, the Quran ayah search's grammar - ranked by meaning across
-            // EVERY downloaded book, keyword sections below stay exhaustive. While the one-time
-            // all-books index builds, the standard progress row shows in its place.
+            // While the one-time all-books index builds, the standard progress row shows in its place.
             if SemanticSearchEngine.isSupported, !query.containsArabicScript,
                !semanticEngine.isReady(allBooksCorpusID),
                isGatheringAllBooks || semanticEngine.isBuilding(allBooksCorpusID) {
                 Section { AISearchStatusRow(progress: semanticEngine.progress(allBooksCorpusID), failed: false) }
             }
 
-            if !globalAIResults.isEmpty {
+            // Both result kinds landed: ONE segmented switch decides which list fills the page - the
+            // AI's ranked meaning matches or the exhaustive keyword lists - never both stacked. With
+            // only one kind present there is nothing to choose, so no picker (the Quran search's rule).
+            let showResultsPicker = !globalAIResults.isEmpty
+                && (!globalHadithResults.isEmpty || !globalChapterResults.isEmpty)
+            if showResultsPicker {
+                Section {
+                    Picker("Results", selection: $showHadithKeywordResults) {
+                        Text("AI Results").tag(false)
+                        Text("Keyword Results").tag(true)
+                    }
+                    .pickerStyle(.segmented)
+                }
+            }
+            let keywordVisible = !showResultsPicker || showHadithKeywordResults
+
+            if !globalAIResults.isEmpty, !showResultsPicker || !showHadithKeywordResults {
                 Section(header: SectionPillHeader(title: "AI MATCHES", count: globalAIResults.count, icon: "sparkles", accentTitle: true)) {
                     ForEach(globalAIResults) { hit in
                         NavigationLink {
@@ -1083,7 +1121,7 @@ struct HadithView: View {
                 }
             }
 
-            if !globalChapterResults.isEmpty {
+            if keywordVisible, !globalChapterResults.isEmpty {
                 Section(header: SectionPillHeader(title: "MATCHING CHAPTERS", count: globalChapterResults.count, overflow: globalHasMoreChapters)) {
                     ForEach(globalChapterResults) { hit in
                         NavigationLink {
@@ -1103,7 +1141,7 @@ struct HadithView: View {
                 }
             }
 
-            if !globalHadithResults.isEmpty {
+            if keywordVisible, !globalHadithResults.isEmpty {
                 // The Quran search's grammar: the TOTAL pill up top, then one section per book with its
                 // own count - so results from different books never read as one undifferentiated list.
                 Section(header: SectionPillHeader(title: "MATCHING HADITHS", count: globalHadithResults.count, overflow: globalHasMoreHadiths)) {
@@ -1151,7 +1189,7 @@ struct HadithView: View {
     }
 
     /// "ASK AI" with the sparkles glyph; the pill counts the answer's cited hadiths once they exist -
-    /// the Quran search's `askAIHeader`, verbatim.
+    /// the Quran search's `askAIHeader`, verbatim (accent tint on the whole header included).
     private func hadithAskAIHeader(citedCount: Int) -> some View {
         HStack(spacing: 6) {
             Image(systemName: "sparkles")
@@ -1163,13 +1201,32 @@ struct HadithView: View {
                 Text(String(citedCount))
                     .font(.caption.weight(.semibold))
                     .monospacedDigit()
-                    .foregroundStyle(settings.accentColor.color)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 6)
                     .conditionalGlassEffect()
                     .padding(.vertical, -16)
             }
         }
+        .foregroundStyle(settings.accentColor.color)
+    }
+
+    /// Shown when a manual ask dead-ends: nothing retrieved matched the query, so there was nothing to
+    /// answer from. Editing the query clears it (`runHadithAsk` resets the flag on every run).
+    private var hadithAskNoAnswerRow: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "questionmark.circle")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+
+            Text("AI couldn't find anything in the downloaded books matching \u{201C}\(searchText.trimmingCharacters(in: .whitespacesAndNewlines))\u{201D}. Try different wording.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+
+            Spacer(minLength: 0)
+        }
+        .padding(.vertical, 8)
+        .padding(.horizontal, 12)
+        .conditionalGlassEffect(clear: true, rectangle: true)
     }
 
     /// The one-tap Ask entry for non-question queries: press to run the grounded on-device answer for
@@ -1281,8 +1338,10 @@ struct HadithView: View {
         globalSearchTask?.cancel()
         isGlobalSearching = true
 
-        let chapterCap = globalChapterLimit
-        let hadithCap = globalHadithLimit
+        // "Load all" sets a limit to Int.max - clamped here so the one-past-the-cap arithmetic below
+        // (`cap + 1`) can't overflow and trap.
+        let chapterCap = min(globalChapterLimit, Int.max - 1)
+        let hadithCap = min(globalHadithLimit, Int.max - 1)
         let arabicQuery = query.containsArabicScript
         let cleanQuery = arabicQuery ? settings.cleanSearch(query, whitespace: true).removingArabicDiacriticsAndSigns : ""
         // Folded like the index (punctuation stripped), so "aishah" finds "'A'ishah".
@@ -1387,16 +1446,15 @@ struct HadithView: View {
             }
             await MainActor.run {
                 guard query == searchText.trimmingCharacters(in: .whitespacesAndNewlines) else { return }
-                // Animated apply (nil under the reduce gate): result ids are unique by construction
-                // (one linear scan per book, "slug-id"), which an animated List diff requires.
-                withAnimation(AppPerformance.shouldReduceAnimations ? nil : .easeInOut) {
-                    globalChapterResults = Array(finalChapters.prefix(chapterCap))
-                    globalHadithResults = Array(finalHadiths.prefix(hadithCap))
-                    globalHasMoreChapters = finalChapters.count > chapterCap
-                    globalHasMoreHadiths = finalHadiths.count > hadithCap
-                    globalSearchRanFor = query
-                    isGlobalSearching = false
-                }
+                // Plain apply: the AI pipeline and this sweep land in separate passes, and an animated
+                // structural diff racing another is the collection-view assertion crash the Quran
+                // search hit (type/delete/type).
+                globalChapterResults = Array(finalChapters.prefix(chapterCap))
+                globalHadithResults = Array(finalHadiths.prefix(hadithCap))
+                globalHasMoreChapters = finalChapters.count > chapterCap
+                globalHasMoreHadiths = finalHadiths.count > hadithCap
+                globalSearchRanFor = query
+                isGlobalSearching = false
                 // A settled query that actually FOUND something joins the recent-searches chips - the
                 // Quran search history's rule, minus the noise of dead-end queries.
                 if !finalChapters.isEmpty || !finalHadiths.isEmpty {

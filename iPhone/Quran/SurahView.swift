@@ -168,6 +168,9 @@ struct SurahView: View {
     /// surah this view was opened with. `nil` in list mode, where `surah` never changes.
     @State private var pageSurah: Surah?
     private var displayedSurah: Surah { pageSurah ?? surah }
+    /// Bumped on every in-place surah navigation so the page reader re-seeds even when the target
+    /// EQUALS the `surah` prop (whose `.onChange` then never fires) - the page-mode "Choose Surah" fix.
+    @State private var pageJumpToken = 0
 
     @State private var showSurahInfoSheet = false
     @State private var showReciterPickerSheet = false
@@ -1229,6 +1232,7 @@ struct SurahView: View {
             SurahPageReader(
                 surah: surah,
                 initialAyah: ayah,
+                jumpToken: pageJumpToken,
                 onSurahChange: { pageSurah = $0 },
                 onPageAnchor: { surahID, ayahID in pageAnchor = (surahID, ayahID) },
                 highlightedAyah: $highlightedAyah,
@@ -1258,6 +1262,9 @@ struct SurahView: View {
                     selectedAyahIDs = []
                     arrivalTerm = nil
                     arrivalAyahID = nil
+                },
+                onChooseReciter: {
+                    showReciterPickerSheet = true
                 }
             ) {
                 let active = quranPlayer.isPlaying || quranPlayer.isPaused
@@ -1372,11 +1379,15 @@ struct SurahView: View {
             Text("Please keep notes Islamic and respectful.")
         }
         .sheet(isPresented: $showSurahPickerSheet) {
-            SurahPickerSheet(currentSurahID: surah.id) { selectedSurah in
+            // `displayedSurah`, not `surah`: in page mode the reader roams freely, so the surah on
+            // SCREEN (pageSurah) is the one the picker must treat as current - comparing against the
+            // surah the reader was merely opened from made "Choose Surah" a silent no-op whenever the
+            // pick matched it (most commonly: paging away and picking the starting surah to go back).
+            SurahPickerSheet(currentSurahID: displayedSurah.id) { selectedSurah in
                 settings.hapticFeedback()
                 showSurahPickerSheet = false
 
-                guard selectedSurah.id != surah.id else { return }
+                guard selectedSurah.id != displayedSurah.id else { return }
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
                     navigateToSurah(selectedSurah)
                 }
@@ -2611,6 +2622,17 @@ struct SurahView: View {
 
         if playerIdle {
             Menu {
+                // Reciter picker pinned to the very top, with a divider under it - the page-mode play
+                // menu's placement, mirrored here so the reciter is the first thing the menu offers.
+                Button {
+                    settings.hapticFeedback()
+                    showReciterPickerSheet = true
+                } label: {
+                    Label("Choose Reciter", systemImage: "headphones")
+                }
+
+                Divider()
+
                 Text("Surah Playback")
                     .foregroundStyle(.secondary)
 
@@ -2647,13 +2669,7 @@ struct SurahView: View {
                 } label: {
                     Label("Play Ayah by Ayah", systemImage: "list.number")
                 }
-
-                Button {
-                    settings.hapticFeedback()
-                    showReciterPickerSheet = true
-                } label: {
-                    Label("Choose Reciter", systemImage: "headphones")
-                }
+                // (Choose Reciter now lives at the TOP of this menu.)
 
                 Menu {
                     Text("More Playback")
@@ -3026,7 +3042,9 @@ struct SurahView: View {
     }
 
     private func navigateToSurah(_ targetSurah: Surah) {
-        guard targetSurah.id != surah.id else { return }
+        // Compare against what's on SCREEN (in page mode the reader may be pages away from `surah`),
+        // not the surah this view was opened from - see the picker-sheet note.
+        guard targetSurah.id != displayedSurah.id else { return }
         settings.hapticFeedback()
 
         // Reset the per-surah reading state either way.
@@ -3050,6 +3068,10 @@ struct SurahView: View {
             withAnimation(.easeInOut) {
                 swappedSurah = targetSurah
             }
+            // The page reader re-seeds on `surah.id` changes - but after paging away, the picked surah
+            // can EQUAL the prop (picking the surah the reader was opened from), so the id never
+            // changes and no re-seed fires. The token forces one on every navigation.
+            pageJumpToken += 1
         }
     }
 
