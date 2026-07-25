@@ -97,6 +97,13 @@ struct HadithView: View {
     }
     @State private var globalChapterResults: [GlobalChapterHit] = []
     @State private var globalHadithResults: [GlobalHadithHit] = []
+    // Bare-number search ("10"): chapter N + hadith N across every downloaded book (distinct from the
+    // "bukhari 10" reference card, which resolves one exact hadith). Reuses the chapter/hadith hit shapes.
+    @State private var globalNumberChapters: [GlobalChapterHit] = []
+    @State private var globalNumberHadiths: [GlobalHadithHit] = []
+    @State private var numberSearchRanFor: Int? = nil
+    @State private var isNumberSearching = false
+    @State private var globalNumberTask: Task<Void, Never>?
     @State private var globalHasMoreChapters = false
     @State private var globalHasMoreHadiths = false
     @State private var globalChapterLimit = 5
@@ -351,6 +358,15 @@ struct HadithView: View {
         HadithReferenceParser.parse(searchText)
     }
 
+    /// A bare-number query ("10") - drives the reference-number sweep (chapter N + hadith N across every
+    /// downloaded book). Distinct from `referenceResult` ("bukhari 10"), which names a book and resolves one
+    /// exact hadith. Capped at 5 digits to match the reference parser's number bound.
+    private var numberQuery: Int? {
+        let trimmed = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard (1...5).contains(trimmed.count), let n = Int(trimmed), n > 0 else { return nil }
+        return n
+    }
+
     private var gridColumns: [GridItem] {
         [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)]
     }
@@ -431,7 +447,9 @@ struct HadithView: View {
                         let results = HadithCatalogBook.all.filter(matches)
                         if !results.isEmpty {
                             boxed(bookSection(title: "MATCHING BOOKS", books: results, shuffle: false))
-                        } else if referenceResult == nil {
+                        } else if referenceResult == nil, numberQuery == nil {
+                            // A bare number never matches a book title - the numbered chapter/hadith
+                            // sections below are the answer, so skip the "no books" noise for it.
                             boxed(
                                 Section(header: SectionPillHeader(title: "MATCHING BOOKS", count: 0)) {
                                     Text("No books match your search.")
@@ -441,6 +459,8 @@ struct HadithView: View {
                             )
                         }
                     }
+
+                    boxed(globalNumberSection)
 
                     boxed(globalSearchSection)
 
@@ -637,20 +657,33 @@ struct HadithView: View {
                 // Every new query starts back on the AI list, with any dead-end ask notice cleared.
                 showHadithKeywordResults = false
                 hadithAskNoAnswer = false
+                // Reset the bare-number sweep too.
+                globalNumberTask?.cancel()
+                isNumberSearching = false
+                globalNumberChapters = []
+                globalNumberHadiths = []
+                numberSearchRanFor = nil
                 let query = text.trimmingCharacters(in: .whitespacesAndNewlines)
-                if query.count >= 3, HadithReferenceParser.parse(text) == nil {
-                    runGlobalSearch(query: query)
+                if let number = numberQuery {
+                    // A bare number: only the numbered chapter/hadith sweep - the text sweep, AI, and Ask
+                    // are all meaningless for "10".
+                    runGlobalNumberSearch(number)
+                } else {
+                    if query.count >= 3, HadithReferenceParser.parse(text) == nil {
+                        runGlobalSearch(query: query)
+                    }
+                    // AI matches ride along automatically (already-built corpora only) - the Quran
+                    // search's rule: AI adds understanding on top, keyword stays exhaustive below.
+                    runGlobalAISearch(query: text)
+                    // Question-shaped queries stream a grounded answer automatically; anything else keeps
+                    // the one-tap Ask row (and this call clears a previous answer).
+                    runHadithAsk(query: text, manual: false)
                 }
-                // AI matches ride along automatically (already-built corpora only) - the Quran
-                // search's rule: AI adds understanding on top, keyword stays exhaustive below.
-                runGlobalAISearch(query: text)
-                // Question-shaped queries stream a grounded answer automatically; anything else keeps
-                // the one-tap Ask row (and this call clears a previous answer).
-                runHadithAsk(query: text, manual: false)
             }
             // A book finishing its download (or being deleted) while a query is on screen: the sweep
             // only re-ran on keystrokes, so results silently ignored the shelf change until typing.
             .onChange(of: store.downloadedSlugs) { _ in
+                if let number = numberQuery { runGlobalNumberSearch(number); return }
                 let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
                 guard query.count >= 3, HadithReferenceParser.parse(searchText) == nil else { return }
                 runGlobalSearch(query: query)
@@ -1033,10 +1066,69 @@ struct HadithView: View {
 
     // MARK: All-books search
 
+    /// A bare number ("10") lists the chapter numbered 10 and the hadith numbered 10 (Bukhari 10, Muslim
+    /// 10, …) from every downloaded book, in two sections reusing the keyword-search layout. The text
+    /// sweep is suppressed for a number query - the numbered chapter/hadith is what "10" means.
+    @ViewBuilder
+    private var globalNumberSection: some View {
+        if let number = numberQuery {
+            // Chapters numbered N - one flat section (each `globalChapterRow` names its own book).
+            if !globalNumberChapters.isEmpty {
+                Section(header: SectionPillHeader(title: "CHAPTER \(number)", count: globalNumberChapters.count, icon: "book.closed")) {
+                    ForEach(globalNumberChapters) { hit in
+                        NavigationLink {
+                            HadithChapterView(book: hit.book, bookData: hit.data, chapter: hit.chapter)
+                        } label: {
+                            globalChapterRow(hit)
+                        }
+                    }
+                }
+            }
+
+            // Hadiths numbered N - one flat section; each compact `HadithRow` shows its own "10 <book>"
+            // citation, so no per-book grouping is needed.
+            if !globalNumberHadiths.isEmpty {
+                Section(header: SectionPillHeader(title: "HADITH \(number)", count: globalNumberHadiths.count, icon: "number")) {
+                    ForEach(globalNumberHadiths) { hit in
+                        NavigationLink {
+                            if let chapter = hit.data.chapters.first(where: { $0.id == hit.hadith.chapterId }) {
+                                HadithChapterView(book: hit.book, bookData: hit.data, chapter: chapter, scrollToHadithId: hit.hadith.idInBook)
+                            } else {
+                                HadithReferenceView(book: hit.book, chapter: nil, hadith: hit.hadith.idInBook)
+                            }
+                        } label: {
+                            HadithRow(book: hit.book, hadith: hit.hadith, searchText: searchText, compact: true).equatable()
+                        }
+                    }
+                }
+            }
+
+            if isNumberSearching, globalNumberChapters.isEmpty, globalNumberHadiths.isEmpty {
+                Section {
+                    HStack(spacing: 10) {
+                        ProgressView()
+                        Text("Searching downloaded books...")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
+
+            if !isNumberSearching, numberSearchRanFor == number,
+               globalNumberChapters.isEmpty, globalNumberHadiths.isEmpty {
+                Section(footer: Text("Searches every downloaded book. Books not downloaded yet are skipped.")) {
+                    Text("No chapter or hadith numbered \(number) in the downloaded books.")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+            }
+        }
+    }
+
     @ViewBuilder
     private var globalSearchSection: some View {
         let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
-        if query.count >= 3, referenceResult == nil {
+        if query.count >= 3, referenceResult == nil, numberQuery == nil {
             // Ask AI first - the streamed grounded answer WITH its cited hadiths (real tappable rows);
             // the citations are the answer's receipts, so they live in the same section - the Quran
             // search's exact grammar. The one-tap prompt row shows only once there are results to
@@ -1330,6 +1422,47 @@ struct HadithView: View {
             }
         }
         .padding(.vertical, 2)
+    }
+
+    /// The bare-number sweep: gather the chapter numbered N and the hadith numbered N (idInBook) from
+    /// every downloaded book. Each is at most one per book, so the filter is trivial - the only cost is
+    /// loading the book data (mirrors `runGlobalSearch`'s off-main book loop + staleness-guarded apply).
+    private func runGlobalNumberSearch(_ number: Int) {
+        globalNumberTask?.cancel()
+        isNumberSearching = true
+
+        globalNumberTask = Task {
+            // Small debounce so holding a multi-digit number doesn't sweep on every intermediate value.
+            try? await Task.sleep(nanoseconds: 200_000_000)
+            guard !Task.isCancelled else { return }
+
+            var chapterHits: [GlobalChapterHit] = []
+            var hadithHits: [GlobalHadithHit] = []
+
+            for book in HadithCatalogBook.all where HadithStore.shared.isAvailableOffline(book) {
+                if Task.isCancelled { return }
+                guard let data = try? await HadithStore.shared.book(book) else { continue }
+                // Chapter.id IS the chapter number; Hadith.idInBook IS the "Bukhari 10" reference number.
+                if let chapter = data.chapters.first(where: { $0.id == number }) {
+                    chapterHits.append(GlobalChapterHit(book: book, data: data, chapter: chapter))
+                }
+                if let hadith = data.hadiths.first(where: { $0.idInBook == number }) {
+                    hadithHits.append(GlobalHadithHit(book: book, data: data, hadith: hadith))
+                }
+            }
+
+            guard !Task.isCancelled else { return }
+            let finalChapters = chapterHits
+            let finalHadiths = hadithHits
+            await MainActor.run {
+                // Still the same number on screen? (Plain apply - the search-race crash rule.)
+                guard numberQuery == number else { return }
+                globalNumberChapters = finalChapters
+                globalNumberHadiths = finalHadiths
+                numberSearchRanFor = number
+                isNumberSearching = false
+            }
+        }
     }
 
     /// The automatic all-books sweep: debounced, script-aware, early-exiting at one past each page,

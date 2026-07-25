@@ -8,11 +8,8 @@ import SwiftUI
 // MARK: - Catalog
 
 extension String {
-    /// Whether the text carries any Arabic-script characters - drives script-aware search (an Arabic
-    /// query is only ever found in the Arabic field, a Latin one only in the English).
-    var containsArabicScript: Bool {
-        unicodeScalars.contains { (0x0600...0x06FF).contains($0.value) || (0x0750...0x077F).contains($0.value) || (0x08A0...0x08FF).contains($0.value) }
-    }
+    // `containsArabicScript` now lives in Globals.swift's String extension (shared app-wide by every
+    // searchable screen), alongside the other Arabic string utilities.
 
     /// Dataset hygiene, applied once at decode: the source JSONs carry hard-wrapped lines (a newline +
     /// leading spaces mid-sentence - Bukhari 1 is the poster child), doubled spaces, tabs, and no-break

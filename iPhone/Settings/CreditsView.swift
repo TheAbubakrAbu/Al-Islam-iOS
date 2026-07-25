@@ -111,18 +111,19 @@ struct CreditsView: View {
     private var creditsLinksSection: some View {
         Section(header: Text("CREDITS")) {
             Group {
+                // Al-Adhan
                 creditLink("Credit for the Adhan calculations, which does everything offline on the device, goes to Batoul Apps", url: "https://github.com/batoulapps/adhan-swift")
                 
                 creditLink("Credit for the Adhan sounds goes to Omar Al-Ejel", url: "https://github.com/oalejel/Athan-Utility")
+                
+                // Al-Quran
                 
                 creditLink("Credit for the English transliteration of the Quran data goes to Risan Bagja Pradana", url: "https://github.com/risan/quran-json")
                 
                 creditLink("Credit for the English Saheeh International translation of the Quran data goes to Global Quran", url: "https://globalquran.com/download/data/")
                 
                 creditLink("Credit for all the Quranic Arabic text and all qiraat/riwayaat data goes to quran-data-kfgqpc (KFGQPC)", url: "https://github.com/thetruetruth/quran-data-kfgqpc")
-                
-                // https://qul.tarteel.ai/resources/font/458 SURAH HEADER FULL LINE
-                
+                                
                 creditLink("Credit for the Uthmani Quran font goes to King Fahad Complex (KFGQPC)", url: "https://qul.tarteel.ai/resources/font/245")
                 
                 creditLink("Credit for the Indopak Nastaleeq Quran font goes to Ayman Siddiqui and R. Siddiqua", url: "https://qul.tarteel.ai/resources/font/242")
@@ -141,10 +142,12 @@ struct CreditsView: View {
 
                 creditLink("Credit for the Arabic Tafsirs (Ibn Kathir, al-Tabari, as-Sa'di) goes to the Tafsir API by spa5k, built from QUL (Tarteel) data", url: "https://github.com/spa5k/tafsir_api")
 
+                creditLink("Credit for the Surah Info goes to Quran.com (Quran Foundation)", url: "https://api-docs.quran.foundation/docs/content_apis_versioned/4.0.0/get-chapter-info/#get-chapter-info")
+                
+                // Al-Hadith
                 creditLink("Credit for the Hadith collections goes to hadith-json by Ahmed Baset", url: "https://github.com/AhmedBaset/hadith-json")
 
-                creditLink("Credit for the Surah Info goes to Quran.com (Quran Foundation)", url: "https://api-docs.quran.foundation/docs/content_apis_versioned/4.0.0/get-chapter-info/#get-chapter-info")
-
+                // All Apps
                 creditLink("Credit for the 99 Names of Allah goes to MyIslam", url: "https://myislam.org/99-names-of-allah/")
             }
             .foregroundColor(settings.accentColor.color)

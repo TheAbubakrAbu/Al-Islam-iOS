@@ -356,6 +356,14 @@ private let quranStripScalars: Set<UnicodeScalar> = {
 }()
 
 extension String {
+    /// Whether the text carries any Arabic-script characters - drives script-aware search across the app
+    /// (an Arabic query is only ever found in an Arabic field, a Latin one only in the English). Lives here
+    /// with the other Arabic string utilities so every screen that searches (Quran, Hadith, Letters, 99
+    /// Names, Duas, Adhkar) shares one definition.
+    var containsArabicScript: Bool {
+        unicodeScalars.contains { (0x0600...0x06FF).contains($0.value) || (0x0750...0x077F).contains($0.value) || (0x08A0...0x08FF).contains($0.value) }
+    }
+
     var normalizingArabicIndicDigitsToWestern: String {
         let arabicIndicZero: UInt32 = 0x0660
         let easternArabicIndicZero: UInt32 = 0x06F0
@@ -545,4 +553,26 @@ enum MushafPageLanguage: String, CaseIterable, Identifiable {
         case .saheeh:          return "Saheeh International (English)"
         }
     }
+}
+
+/// True once the launch/splash cover has been lifted and the tabs are actually on screen. Views that fire
+/// user-facing side effects on appear (e.g. AdhanView's prayer-calculation confirmation dialogs) read this so
+/// they don't present while they're only being built behind the launch screen. Defaults to `true`, so anywhere
+/// it isn't explicitly set (the Watch app, previews) behaves normally. Defined here because this file is shared
+/// by both the iPhone and Watch targets; it's only *set* by the iPhone app root.
+struct AppRevealedKey: EnvironmentKey { static let defaultValue = true }
+extension EnvironmentValues {
+    var appRevealed: Bool {
+        get { self[AppRevealedKey.self] }
+        set { self[AppRevealedKey.self] = newValue }
+    }
+}
+
+/// Live mirror of the reveal state for code that checks it from ESCAPING tasks. A value-type modifier's
+/// captured `@Environment(\.appRevealed)` snapshot freezes at capture time - the review prompt's retry
+/// loop, whose capture chain starts before the launch cover lifts, read a stale `false` forever and
+/// silently suppressed the prompt for the whole session. Defaults to `true` for the same reason as the
+/// environment key (Watch app, previews); only the iPhone app root writes it.
+@MainActor enum AppReveal {
+    static var revealed = true
 }

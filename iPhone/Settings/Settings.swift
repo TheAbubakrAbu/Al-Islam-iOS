@@ -103,7 +103,6 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
         runQuranStartupMigrations()
         runAdhanSoundStartupMigrations()
         runWatchSyncKeyMigration()
-        runGridModeUnificationMigration()
 
         // Hadith Allah-highlighting used to follow the Quran toggle; when the setting split in two,
         // seed the new key from the old one so nothing visibly changes until the user flips it.
@@ -277,19 +276,6 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
         appGroup.removeObject(forKey: "watchSync.lastSyncedSettingsData")
         appGroup.set(true, forKey: migrationKey)
         #endif
-    }
-
-    /// The app used to keep a separate grid/list preference per screen ("arabicDisplayMode",
-    /// "namesDisplayMode", plus the Quran tab's Bool). They're now one `gridMode`: a user who had ANY of them
-    /// on grid keeps a grid everywhere, and the retired string keys are removed so this runs once.
-    private func runGridModeUnificationMigration() {
-        let store = UserDefaults.standard
-        for legacyKey in ["arabicDisplayMode", "namesDisplayMode"] {
-            if store.string(forKey: legacyKey) == "grid" {
-                gridMode = true
-            }
-            store.removeObject(forKey: legacyKey)
-        }
     }
 
     @Published var accentColor: AccentColor {
@@ -969,55 +955,14 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
         }
     }
 
-    @AppStorage("bookmarkedAyahsData") private var bookmarkedAyahsData = Data()
-    /// Same memo shape as `favoriteSurahs` - `SurahAyahRow.isBookmarked` reads this per row body.
-    private static var bookmarkedAyahsCache: (data: Data, value: [BookmarkedAyah])?
-    var bookmarkedAyahs: [BookmarkedAyah] {
-        get {
-            if let cached = Self.bookmarkedAyahsCache, cached.data == bookmarkedAyahsData {
-                return cached.value
-            }
-            let decoded = (try? Self.decoder.decode([BookmarkedAyah].self, from: bookmarkedAyahsData)) ?? []
-            Self.bookmarkedAyahsCache = (bookmarkedAyahsData, decoded)
-            return decoded
-        }
-        set {
-            let encoded = (try? Self.encoder.encode(newValue)) ?? Data()
-            Self.bookmarkedAyahsCache = (encoded, newValue)
-            bookmarkedAyahsData = encoded
-        }
-    }
+    // Raw storage only; the typed `bookmarkedAyahs: [BookmarkedAyah]` accessor lives in SettingsQuran.swift
+    // so this core file names no Quran model type (ports to sibling apps without the Quran module). Not
+    // `private` so that extension can reach it.
+    @AppStorage("bookmarkedAyahsData") var bookmarkedAyahsData = Data()
 
     @AppStorage("showBookmarks") var showBookmarks = true
     @AppStorage("showFavorites") var showFavorites = true
-    /// THE grid toggle, app-wide: the Quran tab's lists, the Arabic alphabet, the 99 Names, and the Islam
-    /// resources all follow this one switch - flipping it anywhere flips it everywhere. (The key keeps its
-    /// historical name so existing users' Quran preference carries over; the per-screen `arabicDisplayMode` /
-    /// `namesDisplayMode` strings it replaced are migrated in `init` and then cleared.)
-    @AppStorage("quranGridMode") var gridMode = false
 
-    /// Per-screen grid choices (Arabic Alphabet / 99 Names / Islam tab; the Hadith tab and the Quran tab
-    /// own theirs). -1 = "not chosen yet": falls back to the app-wide `gridMode`, so existing users keep
-    /// their current look until they flip that screen's own toggle - after which each grid icon controls
-    /// only its own screen.
-    @AppStorage("gridModeArabicRaw") var gridModeArabicRaw: Int = -1
-    @AppStorage("gridModeNamesRaw") var gridModeNamesRaw: Int = -1
-    @AppStorage("gridModeIslamRaw") var gridModeIslamRaw: Int = -1
-
-    var arabicGridMode: Bool {
-        get { gridModeArabicRaw == -1 ? gridMode : gridModeArabicRaw == 1 }
-        set { gridModeArabicRaw = newValue ? 1 : 0 }
-    }
-
-    var namesGridMode: Bool {
-        get { gridModeNamesRaw == -1 ? gridMode : gridModeNamesRaw == 1 }
-        set { gridModeNamesRaw = newValue ? 1 : 0 }
-    }
-
-    var islamGridMode: Bool {
-        get { gridModeIslamRaw == -1 ? gridMode : gridModeIslamRaw == 1 }
-        set { gridModeIslamRaw = newValue ? 1 : 0 }
-    }
     /// Reads a surah as swipeable mushaf pages instead of a scrolling ayah list. Toggled from the Quran tab's
     /// toolbar, but only takes effect inside SurahView - the surah browse list itself is unchanged.
     @AppStorage("quranPageMode") var quranPageMode = false
@@ -1041,20 +986,12 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
 
     @AppStorage("beginnerMode") var beginnerMode: Bool = false
 
-    @AppStorage("quranSortMode") var quranSortModeRaw: String = QuranSortMode.surah.rawValue
-    @AppStorage("quranSortDirection") var quranSortDirectionRaw: String = QuranSortDirection.ascending.rawValue
-
-    var quranSortMode: QuranSortMode {
-        get { QuranSortMode(rawValue: quranSortModeRaw) ?? .surah }
-        set { quranSortModeRaw = newValue.rawValue }
-    }
-
-    var quranSortDirection: QuranSortDirection {
-        get { QuranSortDirection(rawValue: quranSortDirectionRaw) ?? .ascending }
-        set { quranSortDirectionRaw = newValue.rawValue }
-    }
-
-    var groupBySurah: Bool { quranSortMode == .surah }
+    // Raw storage only; the typed `quranSortMode`/`quranSortDirection` accessors (and `groupBySurah`) live
+    // in SettingsQuran.swift so this core file names no Quran sort enum. The defaults are the enum cases'
+    // raw values written as literals (QuranSortMode.surah / QuranSortDirection.ascending) - a rawValue
+    // change to either case must be mirrored here.
+    @AppStorage("quranSortMode") var quranSortModeRaw: String = "surah"
+    @AppStorage("quranSortDirection") var quranSortDirectionRaw: String = "ascending"
     /// In Khatm mode, the Surah/Juz toggle (which replaces the Asc/Desc control). When on, surahs are grouped
     /// under juz headers, each surah shown once in the juz it *starts* in - so juz that no surah opens (e.g.
     /// juz 2, 5) appear empty.
@@ -1272,8 +1209,54 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     }
 
     @AppStorage("englishFontSize") var englishFontSize: Double = Double(UIFont.preferredFont(forTextStyle: .body).pointSize)
+    
+    // MARK: - Hadith display
+
+    /// Which parts of a hadith render in the Hadith tab (both default on; hiding one gives a pure-Arabic or
+    /// pure-English reading experience).
+    @AppStorage("showHadithArabic") var showHadithArabic = true
+    @AppStorage("showHadithEnglish") var showHadithEnglish = true
+    /// Hadith's own "Highlight Allah" toggle, split from the Quran's `highlightAllahNames` so the two
+    /// readers can differ. Seeded from the Quran toggle once in `init` so the split changes nothing
+    /// until the user actually flips it.
+    @AppStorage("highlightAllahNamesHadith") var highlightAllahNamesHadith: Bool = false
+    /// Show the narrator ("It is narrated on the authority of...") line above the English text.
+    @AppStorage("showHadithNarrator") var showHadithNarrator = true
+    /// Hadith text sizes, independent of the Quran's own sliders.
+    @AppStorage("hadithArabicFontSize") var hadithArabicFontSize: Double = Double(UIFont.preferredFont(forTextStyle: .body).pointSize + 4)
+    @AppStorage("hadithEnglishFontSize") var hadithEnglishFontSize: Double = Double(UIFont.preferredFont(forTextStyle: .body).pointSize)
 
     // MARK: - Arabic letters & 99 Names
+    
+    /// THE grid toggle, app-wide: the Quran tab's lists, the Arabic alphabet, the 99 Names, and the Islam
+    /// resources all follow this one switch - flipping it anywhere flips it everywhere. (The key keeps its
+    /// historical name so existing users' Quran preference carries over. The retired per-screen
+    /// `arabicDisplayMode` / `namesDisplayMode` strings are no longer migrated - those screens default to
+    /// list until re-toggled.)
+    @AppStorage("quranGridMode") var gridMode = false
+    
+    /// Per-screen grid choices (Arabic Alphabet / 99 Names / Islam tab; the Hadith tab and the Quran tab
+    /// own theirs). -1 = "not chosen yet": falls back to the app-wide `gridMode`, so existing users keep
+    /// their current look until they flip that screen's own toggle - after which each grid icon controls
+    /// only its own screen.
+    @AppStorage("gridModeArabicRaw") var gridModeArabicRaw: Int = -1
+    @AppStorage("gridModeNamesRaw") var gridModeNamesRaw: Int = -1
+    @AppStorage("gridModeIslamRaw") var gridModeIslamRaw: Int = -1
+
+    var arabicGridMode: Bool {
+        get { gridModeArabicRaw == -1 ? gridMode : gridModeArabicRaw == 1 }
+        set { gridModeArabicRaw = newValue ? 1 : 0 }
+    }
+
+    var namesGridMode: Bool {
+        get { gridModeNamesRaw == -1 ? gridMode : gridModeNamesRaw == 1 }
+        set { gridModeNamesRaw = newValue ? 1 : 0 }
+    }
+
+    var islamGridMode: Bool {
+        get { gridModeIslamRaw == -1 ? gridMode : gridModeIslamRaw == 1 }
+        set { gridModeIslamRaw = newValue ? 1 : 0 }
+    }
     
     @AppStorage("THEfontArabic") var fontArabic: String = "KFGQPCHAFSUthmanicScript-Regula"
     @AppStorage("fontArabicSize") var fontArabicSize: Double = Double(UIFont.preferredFont(forTextStyle: .title1).pointSize)
@@ -1327,23 +1310,15 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     /// Uthmani (the Qiraat face - never the Hafs Quran face), IndoPak, or Basic (system).
     var nonQuranArabicFontName: String { islamArabicFace.fontName }
 
-    // MARK: - Hadith display
-
-    /// Which parts of a hadith render in the Hadith tab (both default on; hiding one gives a pure-Arabic or
-    /// pure-English reading experience).
-    @AppStorage("showHadithArabic") var showHadithArabic = true
-    @AppStorage("showHadithEnglish") var showHadithEnglish = true
-    /// Hadith's own "Highlight Allah" toggle, split from the Quran's `highlightAllahNames` so the two
-    /// readers can differ. Seeded from the Quran toggle once in `init` so the split changes nothing
-    /// until the user actually flips it.
-    @AppStorage("highlightAllahNamesHadith") var highlightAllahNamesHadith: Bool = false
-    /// Show the narrator ("It is narrated on the authority of...") line above the English text.
-    @AppStorage("showHadithNarrator") var showHadithNarrator = true
-    /// Hadith text sizes, independent of the Quran's own sliders.
-    @AppStorage("hadithArabicFontSize") var hadithArabicFontSize: Double = Double(UIFont.preferredFont(forTextStyle: .body).pointSize + 4)
-    @AppStorage("hadithEnglishFontSize") var hadithEnglishFontSize: Double = Double(UIFont.preferredFont(forTextStyle: .body).pointSize)
-
     // MARK: - Arabic Alphabet screen size
+    
+    static let randomReciterName = "Random Reciter"
+    static let hafsUthmaniFontName = "KFGQPCHAFSUthmanicScript-Regula"
+    static let qiraatUthmaniFontName = "KFGQPCQUMBULUthmanicScript-Regu"
+    static let indopakFontName = "Al_Mushaf"
+    /// Sentinel `fontArabic` value meaning "use the standard Apple system font" for Quran Arabic. It is not a
+    /// real installed font, so any stray `.custom(_)` with it falls back to the system font anyway.
+    static let systemArabicFontName = "AlIslamSystemArabicFont"
 
     /// The Arabic Alphabet screens (ArabicView / ArabicLetterView) expose a size slider. This is its position
     /// as an index into `arabicLetterDynamicTypeSizes`. The views apply the result as a Dynamic-Type *floor*
@@ -1372,39 +1347,11 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
         Font.arabic(fontArabic, size: base, relativeTo: style)
     }
 
-    @AppStorage("favoriteLetterData") private var favoriteLetterData = Data()
-    /// Memoized: the alphabet rows call `isLetterFavorite` per row per render.
-    private static var favoriteLettersCache: (data: Data, value: [LetterData])?
-    var favoriteLetters: [LetterData] {
-        get {
-            if let cached = Self.favoriteLettersCache, cached.data == favoriteLetterData {
-                return cached.value
-            }
-            let decoded = (try? Self.decoder.decode([LetterData].self, from: favoriteLetterData)) ?? []
-            Self.favoriteLettersCache = (favoriteLetterData, decoded)
-            return decoded
-        }
-        set {
-            let encoded = (try? Self.encoder.encode(newValue)) ?? Data()
-            Self.favoriteLettersCache = (encoded, newValue)
-            favoriteLetterData = encoded
-        }
-    }
-    
-    func toggleLetterFavorite(letterData: LetterData) {
-        withAnimation {
-            if isLetterFavorite(letterData: letterData) {
-                favoriteLetters.removeAll(where: { $0.id == letterData.id })
-            } else {
-                favoriteLetters.append(letterData)
-            }
-        }
-    }
+    // Raw storage only; the typed `favoriteLetters: [LetterData]` accessor + toggles live next to the
+    // `LetterData` type in ArabicLetters.swift, so this core file names no letter model type. Not `private`
+    // so that extension can reach it.
+    @AppStorage("favoriteLetterData") var favoriteLetterData = Data()
 
-    func isLetterFavorite(letterData: LetterData) -> Bool {
-        favoriteLetters.contains { $0.id == letterData.id }
-    }
-    
     /// Pinned Islam-tab resources, stored as the destination enum's raw values, comma-joined (a dozen short
     /// identifiers - a Codable blob would be ceremony).
     @AppStorage("favoriteIslamResources") private var favoriteIslamResourcesRaw = ""

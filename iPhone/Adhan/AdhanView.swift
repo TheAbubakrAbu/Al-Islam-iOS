@@ -1,28 +1,6 @@
 import SwiftUI
 import CoreLocation
 
-/// True once the launch/splash cover has been lifted and the tabs are actually on screen. Views that fire
-/// user-facing side effects on appear (e.g. AdhanView's prayer-calculation confirmation dialogs) read this so
-/// they don't present while they're only being built behind the launch screen. Defaults to `true`, so anywhere
-/// it isn't explicitly set (the Watch app, previews) behaves normally. Defined here because this file is shared
-/// by both the iPhone and Watch targets; it's only *set* by the iPhone app root.
-struct AppRevealedKey: EnvironmentKey { static let defaultValue = true }
-extension EnvironmentValues {
-    var appRevealed: Bool {
-        get { self[AppRevealedKey.self] }
-        set { self[AppRevealedKey.self] = newValue }
-    }
-}
-
-/// Live mirror of the reveal state for code that checks it from ESCAPING tasks. A value-type modifier's
-/// captured `@Environment(\.appRevealed)` snapshot freezes at capture time - the review prompt's retry
-/// loop, whose capture chain starts before the launch cover lifts, read a stale `false` forever and
-/// silently suppressed the prompt for the whole session. Defaults to `true` for the same reason as the
-/// environment key (Watch app, previews); only the iPhone app root writes it.
-@MainActor enum AppReveal {
-    static var revealed = true
-}
-
 struct AdhanView: View {
     @ObservedObject var settings = Settings.shared
 

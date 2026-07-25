@@ -353,3 +353,40 @@ let tashkeels: [Tashkeel] = [
         length: nil
     )
 ]
+
+// The favorite-letters accessor lives next to `LetterData` (not in Settings.swift) so the core settings
+// file names no letter model type - it keeps only the raw `Data` @AppStorage backing. Same seam as the
+// Quran accessors in SettingsQuran.swift.
+extension Settings {
+    /// Memoized: the alphabet rows call `isLetterFavorite` per row per render.
+    private static var favoriteLettersCache: (data: Data, value: [LetterData])?
+    var favoriteLetters: [LetterData] {
+        get {
+            if let cached = Self.favoriteLettersCache, cached.data == favoriteLetterData {
+                return cached.value
+            }
+            let decoded = (try? Self.decoder.decode([LetterData].self, from: favoriteLetterData)) ?? []
+            Self.favoriteLettersCache = (favoriteLetterData, decoded)
+            return decoded
+        }
+        set {
+            let encoded = (try? Self.encoder.encode(newValue)) ?? Data()
+            Self.favoriteLettersCache = (encoded, newValue)
+            favoriteLetterData = encoded
+        }
+    }
+
+    func toggleLetterFavorite(letterData: LetterData) {
+        withAnimation {
+            if isLetterFavorite(letterData: letterData) {
+                favoriteLetters.removeAll(where: { $0.id == letterData.id })
+            } else {
+                favoriteLetters.append(letterData)
+            }
+        }
+    }
+
+    func isLetterFavorite(letterData: LetterData) -> Bool {
+        favoriteLetters.contains { $0.id == letterData.id }
+    }
+}

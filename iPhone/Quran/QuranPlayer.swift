@@ -128,6 +128,16 @@ final class QuranPlayer: ObservableObject {
         // nil in sibling apps that don't compile this module.
         PlaybackVisibility.shared.barContent = { AnyView(NowPlayingView()) }
         ArabicSpeech.recitationOwnsSession = { QuranPlayer.shared.isPlaying || QuranPlayer.shared.isPaused }
+        #if os(iOS)
+        // The foreground adhan pauses recitation while it plays; installed here (same seam) so its file in
+        // the Adhan module names no Quran type. iOS only - the watch has no foreground adhan player.
+        ForegroundAdhanPlayer.pauseRecitationIfPlaying = {
+            guard QuranPlayer.shared.isPlaying else { return false }
+            QuranPlayer.shared.pause(saveInfo: false)
+            return true
+        }
+        ForegroundAdhanPlayer.resumeRecitation = { QuranPlayer.shared.resume() }
+        #endif
 
         Self.networkMonitor.pathUpdateHandler = { path in
             let reachable = (path.status == .satisfied)

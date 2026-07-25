@@ -221,7 +221,7 @@ private struct MainTabView: View {
                 Text("Answering yes marks it in the prayer tracker and stops the remaining reminders.")
             }
             .task { await warmUnderCover() }
-            .task { await prewarmAllQuran() }
+            .task { await QuranLaunchWarmup.prewarmAll() }
             // The AI-search capability probe loads a disk-backed NLEmbedding model; its first touch used
             // to land on the MAIN thread mid-launch (aiQueryEligible / corpus prep). Pay it here, off-main.
             .task { Task.detached(priority: .utility) { SemanticSearchEngine.prewarmOffMain() } }
@@ -283,65 +283,8 @@ private struct MainTabView: View {
         return .adhan
     }
 
-    /// As soon as the main UI (the Adhan tab) is on screen, warm EVERY surah's Arabic text / tajweed caches - 
-    /// and with them the shared Arabic font's CoreText glyph cache - in the background, so the first switch to
-    /// the Quran tab is already fully warm. Runs on the main actor (it reads `settings`) but yields + sleeps
-    /// between surahs so the Adhan tab stays responsive while it fills in. Runs once per session (shared flag).
-    @MainActor
-    private func prewarmAllQuran() async {
-        await quranData.waitUntilCoreLoaded()
-        if Task.isCancelled || QuranData.didBroadPrewarm { return }
-
-        // Warm the most-likely-first surahs (reading position, a bookmark, a favorite, al-Fatihah/al-Baqarah)
-        // before the rest, so the surah a user is most likely to open is ready first.
-        let priority = [
-            settings.lastReadSurah > 0 ? settings.lastReadSurah : 1,
-            settings.bookmarkedAyahs.first?.surah,
-            settings.favoriteSurahs.first,
-            1, 2
-        ].compactMap { $0 }
-
-        var seen = Set<Int>()
-        for id in priority where seen.insert(id).inserted {
-            if Task.isCancelled { return }
-            if let surah = quranData.surah(id) {
-                // Priority surahs (the ones a user actually opens first) also warm their search blobs,
-                // so the first in-surah search keystroke never pays the one-time build.
-                SurahView.prewarm(surah: surah, settings: settings, includeSearchBlobs: true)
-                await Task.yield()
-            }
-        }
-
-        // Skip the broad warms on memory-constrained devices (same gate the Quran tab uses) - priority
-        // warming above still ran. This gates the mushaf prewarm below too: composing a ring of pages is
-        // exactly the class of work this device can't afford at launch.
-        guard !AppPerformance.shouldAvoidBroadPrewarm else { return }
-
-        // Page mode means the Quran tab opens straight into the mushaf, so also compose the last-read pages
-        // now - with the geometry persisted from the last session - instead of making the reveal pay for the
-        // first page's ~12 fit passes. The fits run on the prewarm queue; the pagination itself is the only
-        // main-actor piece, so give the runloop a turn first and keep it off the current transaction.
-        if settings.quranPageMode, settings.lastReadSurah > 0 {
-            await Task.yield()
-            let pages = MushafPagination.pages(quran: quranData.quran, qiraah: settings.displayQiraahForArabic)
-            if let index = MushafPagination.pageIndex(
-                surahID: settings.lastReadSurah,
-                ayahID: settings.lastReadAyah > 0 ? settings.lastReadAyah : nil,
-                in: pages
-            ) {
-                MushafPageRenderCache.prewarmAtLaunch(pages: pages, around: index)
-            }
-            await Task.yield()
-        }
-
-        for surah in quranData.quran where seen.insert(surah.id).inserted {
-            if Task.isCancelled { return }
-            SurahView.prewarm(surah: surah, settings: settings)
-            await Task.yield()
-            try? await Task.sleep(nanoseconds: 12_000_000)   // throttle: keep the Adhan tab responsive
-        }
-        QuranData.didBroadPrewarm = true
-    }
+    // The broad Quran warm moved to `QuranLaunchWarmup.prewarmAll()` in the Quran module (MushafReader.swift);
+    // the `.task` above calls it directly.
 
     @ViewBuilder
     private var tabs: some View {

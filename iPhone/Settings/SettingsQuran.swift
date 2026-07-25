@@ -3,16 +3,6 @@ import Combine
 import WidgetKit
 
 extension Settings {
-    // MARK: - Quran types and constants
-
-    static let randomReciterName = "Random Reciter"
-    static let hafsUthmaniFontName = "KFGQPCHAFSUthmanicScript-Regula"
-    static let qiraatUthmaniFontName = "KFGQPCQUMBULUthmanicScript-Regu"
-    static let indopakFontName = "Al_Mushaf"
-    /// Sentinel `fontArabic` value meaning "use the standard Apple system font" for Quran Arabic. It is not a
-    /// real installed font, so any stray `.custom(_)` with it falls back to the system font anyway.
-    static let systemArabicFontName = "AlIslamSystemArabicFont"
-
     enum QuranSortMode: String, CaseIterable, Identifiable {
         case surah
         case juz
@@ -384,6 +374,42 @@ extension Settings {
                 lastListenedSurahData = nil
                 appGroupUserDefaults?.removeObject(forKey: "lastListenedSurahData")
             }
+        }
+    }
+
+    // MARK: - Quran sort + bookmarks (typed accessors)
+    // Moved here from Settings.swift for the same reason as the last-listened accessors above: they name
+    // Quran-only types (the sort enums, `BookmarkedAyah`), and the core file stays free of Quran types so it
+    // ports to sibling apps without the Quran module. The raw `String`/`Data` @AppStorage backing stays in
+    // the class body (stored properties can't live in extensions).
+
+    var quranSortMode: QuranSortMode {
+        get { QuranSortMode(rawValue: quranSortModeRaw) ?? .surah }
+        set { quranSortModeRaw = newValue.rawValue }
+    }
+
+    var quranSortDirection: QuranSortDirection {
+        get { QuranSortDirection(rawValue: quranSortDirectionRaw) ?? .ascending }
+        set { quranSortDirectionRaw = newValue.rawValue }
+    }
+
+    var groupBySurah: Bool { quranSortMode == .surah }
+
+    /// Same memo shape as `favoriteSurahs` - `SurahAyahRow.isBookmarked` reads this per row body.
+    private static var bookmarkedAyahsCache: (data: Data, value: [BookmarkedAyah])?
+    var bookmarkedAyahs: [BookmarkedAyah] {
+        get {
+            if let cached = Self.bookmarkedAyahsCache, cached.data == bookmarkedAyahsData {
+                return cached.value
+            }
+            let decoded = (try? Self.decoder.decode([BookmarkedAyah].self, from: bookmarkedAyahsData)) ?? []
+            Self.bookmarkedAyahsCache = (bookmarkedAyahsData, decoded)
+            return decoded
+        }
+        set {
+            let encoded = (try? Self.encoder.encode(newValue)) ?? Data()
+            Self.bookmarkedAyahsCache = (encoded, newValue)
+            bookmarkedAyahsData = encoded
         }
     }
 
