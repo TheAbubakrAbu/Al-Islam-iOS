@@ -514,6 +514,12 @@ struct DuaView: View {
         .collapseBarsOnScroll($barsCollapsed)
         .adaptiveSafeArea(edge: .bottom) {
             VStack(spacing: SafeAreaInsetVStackSpacing.standard) {
+                // The same picker each collection screen carries - this tab root shows dua rows of its own
+                // (the featured duas, and the search results), so it must offer the face choice too.
+                IslamArabicFontPicker()
+                    // Non-interactive glass: interactive Liquid Glass steals per-segment taps on real iOS 26 hardware.
+                    .conditionalGlassEffect(interactive: false)
+
                 SearchBar(text: (AppPerformance.shouldReduceAnimations ? $searchText : $searchText.animation(.easeInOut)))
                     .padding([.horizontal, .top], -8)
                     .minimizedBarStyle(barsCollapsed)

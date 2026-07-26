@@ -345,7 +345,13 @@ struct AyahTafsirSheet: View {
                                         .frame(maxWidth: .infinity, alignment: selectedAuthor.isArabic ? .trailing : .leading)
                                 }
                                 .frame(maxWidth: .infinity, alignment: selectedAuthor.isArabic ? .trailing : .leading)
-                                .environment(\.layoutDirection, selectedAuthor.isArabic ? .rightToLeft : .leftToRight)
+                                // Same trap as the ayah card above, on the tafsir PROSE: the Arabic branch
+                                // asked for `.trailing` and then set an RTL environment, which resolves
+                                // `.trailing` to the LEFT edge - so an Arabic tafsir (Ibn Kathir, al-Tabari,
+                                // as-Sa'di) rendered leading. Pinned left-to-right so `.trailing` is the
+                                // right edge and `.leading` the left, matching how `TafsirMarkdownView`'s
+                                // `textAlignment` is read on the Surah Info sheet, which sets no override.
+                                .environment(\.layoutDirection, .leftToRight)
                                 .id(selectedAuthor.rawValue)
                                 .textSelection(.enabled)
                             } else if selectedAuthor.isArabic, viewModel.isLoadingArabic {
@@ -438,10 +444,15 @@ struct AyahTafsirSheet: View {
                 combinedArabicRun
                     .font(Font.arabic(settings.quranDisplayFontName, size: UIFont.preferredFont(forTextStyle: .title3).pointSize))
                     .arabicFontDesign(custom: settings.quranDisplayUsesCustomArabicFace)
+                    // NO `.environment(\.layoutDirection, .rightToLeft)` here - see the same note on
+                    // `AyahActionsSheet.ayahPreview`. `.trailing` means "the END edge", not "the right edge",
+                    // so an RTL override resolves BOTH modifiers above to the LEFT and the ayah renders
+                    // leading - which is exactly what it was doing. The bidi algorithm already lays the
+                    // Arabic out right-to-left from the characters themselves; the visual right edge is
+                    // `.trailing` in the app's left-to-right layout.
                     .multilineTextAlignment(.trailing)
                     .lineSpacing(6)
                     .frame(maxWidth: .infinity, alignment: .trailing)
-                    .environment(\.layoutDirection, .rightToLeft)
             }
 
             // The reference header and the translation are English, so they read from the leading edge -

@@ -124,11 +124,32 @@ struct SettingsHadithView: View {
                         downloadsDestination
                     }
                 }
+
+                readingModeSection
             }
             .themedListRowBackground()
         }
         .applyConditionalListStyle()
         .compactListSectionSpacing()
+    }
+
+    /// The same list-vs-pages choice the book screen's toolbar book button makes, surfaced here so it can be
+    /// found without knowing that button exists. Reads the `hadithPageMode` key directly - the same
+    /// `@AppStorage` key (and the same `true` default) the reader declares - so the two controls are one
+    /// setting, not two. No confirmation dialog: the toolbar asks first because it's one tap away from a
+    /// whole-screen change you might not have meant, whereas coming to Settings and moving a segmented
+    /// control IS the deliberate act the dialog was guarding.
+    @AppStorage("hadithPageMode") private var hadithPageMode = true
+
+    private var readingModeSection: some View {
+        Section(footer: Text("List opens a chapter as a scrolling list of hadiths. Pages opens it as a right-to-left paged reader, fitting as many hadiths per page as your font sizes allow.")) {
+            Picker("Reading View", selection: $hadithPageMode.animation(.easeInOut)) {
+                Text("List").tag(false)
+                Text("Pages").tag(true)
+            }
+            .pickerStyle(.segmented)
+            .onChange(of: hadithPageMode) { _ in settings.hapticFeedback() }
+        }
     }
 
     private func hadithSettingsLink<Destination: View>(

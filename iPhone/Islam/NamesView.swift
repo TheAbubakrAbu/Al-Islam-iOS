@@ -577,14 +577,12 @@ struct NamesView: View {
         .collapseBarsOnScroll($barsCollapsed)
         .adaptiveSafeArea(edge: .bottom) {
             VStack(spacing: SafeAreaInsetVStackSpacing.standard) {
-                // The font picker above the search bar is OFF for now (it was the row that vanished when
-                // scrolling down) - uncomment to bring it back. The same three-way choice still lives in
-                // the Arabic Alphabet screen and the Hadith settings sheet.
-                // IslamArabicFontPicker()
-                // // Non-interactive glass: interactive Liquid Glass steals per-segment taps on real iOS 26 hardware.
-                // .conditionalGlassEffect(interactive: false)
-                // // Stays mounted while minimized (height 0) - inserting/removing glass renders black boxes.
-                // .collapsibleBarRow(barsCollapsed)
+                // The one Islam-tab Arabic face picker, above the search bar - identical control and setting
+                // on Duas, Dhikr, the Arabic Alphabet and the letter detail screens. It does not fold away
+                // on scroll (`collapsibleBarRow` stays off), which is what made it look like a vanishing row.
+                IslamArabicFontPicker()
+                    // Non-interactive glass: interactive Liquid Glass steals per-segment taps on real iOS 26 hardware.
+                    .conditionalGlassEffect(interactive: false)
 
                 SearchBar(text: (AppPerformance.shouldReduceAnimations ? $searchText : $searchText.animation(.easeInOut)))
                     .padding([.horizontal, .top], -8)
@@ -679,20 +677,22 @@ struct NamesView: View {
                                 .font(.caption)
                                 .foregroundColor(.secondary)
 
-                            Text("First Found: 1:1")
-                                .font(.caption2)
-                                .foregroundColor(.secondary)
+                            // No "First Found" line here, unlike the 99 name rows: the paragraph below says
+                            // this name opens the Quran and the button under it goes straight to 1:1, so the
+                            // header was stating the same reference a third time.
                         }
 
                         Spacer(minLength: 8)
 
-                        Text("الله")
+                        // Vowelled, and with no case ending on the final haa - the same treatment every one of
+                        // the 99 names gets (`displayArabicName` strips only the last letter's diacritic).
+                        Text("اللَّه")
                             .font(settings.useFontArabic ? Font.arabic(settings.nonQuranArabicFontName, size: 30) : .title)
                             .arabicFontDesign(custom: settings.useFontArabic && settings.nonQuranArabicFontName != Settings.systemArabicFontName)
                             .foregroundColor(settings.accentColor.color)
                     }
 
-                    Text("Allah (الله) is the proper name of the One True God - not one of the 99 names, but the name every one of them describes. Unlike other words, it has no plural and no gender, and it was never used for anything or anyone else. It appears in the Quran more than 2,600 times, beginning with the very first ayah:")
+                    Text("Allah (اللَّه) is the proper name of the One True God - not one of the 99 names, but the name every one of them describes. Unlike other words, it has no plural and no gender, and it was never used for anything or anyone else. It appears in the Quran more than 2,600 times, beginning with the very first ayah:")
                         .font(.footnote)
                         .foregroundColor(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
@@ -950,6 +950,35 @@ private struct NameRow: View, Equatable {
     var body: some View {
         #if os(iOS)
         content
+            // LIST ROWS ONLY. `NameGridTile` deliberately has no menu: the grid is a LazyVGrid inside a single
+            // List row, so a context menu there lifts the WHOLE row - every tile at once - as its preview.
+            // Favoriting lives on the tile's own star instead (same rule as the Islam tab's resource grid).
+            .contextMenu {
+                Text("Name Actions")
+                    .foregroundStyle(.secondary)
+
+                Button {
+                    Settings.shared.hapticFeedback()
+                    FocusOverlayPresenter.shared.present(.name(name))
+                } label: {
+                    Label("View Fullscreen", systemImage: "arrow.up.left.and.arrow.down.right")
+                }
+
+                Button {
+                    Settings.shared.hapticFeedback()
+                    presentSystemShareSheet(items: [FocusItem.name(name).shareText])
+                } label: {
+                    Label("Share Name", systemImage: "square.and.arrow.up")
+                }
+
+                Divider()
+
+                favoriteMenuItem
+
+                Divider()
+
+                copyMenu
+            }
             .swipeActions(edge: .leading) {
                 Button {
                     Settings.shared.hapticFeedback()
@@ -1058,6 +1087,49 @@ private struct NameRow: View, Equatable {
     private var displayArabicName: String {
         name.displayArabicName
     }
+
+    #if os(iOS)
+    // The menu's actions reach `Settings.shared` directly rather than through an `@ObservedObject`: this row
+    // deliberately doesn't observe Settings (see the note at the top of the struct), and a menu that only
+    // *acts* on Settings needs no subscription - `isFavorite` is already a folded input.
+    @ViewBuilder
+    private var favoriteMenuItem: some View {
+        Button(role: isFavorite ? .destructive : nil) {
+            Settings.shared.hapticFeedback()
+            withAnimation(.easeInOut) {
+                Settings.shared.toggleNameFavorite(number: name.number)
+            }
+        } label: {
+            Label(isFavorite ? "Unfavorite" : "Favorite", systemImage: isFavorite ? "star.fill" : "star")
+        }
+    }
+
+    private var copyMenu: some View {
+        Group {
+            menuItem("Copy All", text: """
+            Arabic: \(name.name.removeDiacriticsFromLastLetter())
+            Transliteration: \(name.transliteration)
+            Translation: \(name.meaning)
+            First Found: \(name.firstFoundShort)
+            Description: \(name.desc)
+            """)
+            menuItem("Copy Arabic", text: name.name.removeDiacriticsFromLastLetter())
+            menuItem("Copy Transliteration", text: name.transliteration)
+            menuItem("Copy Translation", text: name.meaning)
+            menuItem("Copy First Found", text: name.firstFoundShort)
+            menuItem("Copy Description", text: name.desc)
+        }
+    }
+
+    private func menuItem(_ label: String, text: String) -> some View {
+        Button {
+            Settings.shared.hapticFeedback()
+            UIPasteboard.general.string = text
+        } label: {
+            Label(label, systemImage: "doc.on.doc")
+        }
+    }
+    #endif
 
     @ViewBuilder
     private var numberPill: some View {
@@ -1196,6 +1268,8 @@ private struct VerseReflectionCard: View {
     }
 }
 
+/// No `contextMenu` here, deliberately - see the note on `NameRow`'s: the whole grid is one List row, so a
+/// menu on a tile lifts every tile at once as its preview. The tile's star is the favorite action instead.
 private struct NameGridTile: View, Equatable {
     @ObservedObject private var settings = Settings.shared
 

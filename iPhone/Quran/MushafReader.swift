@@ -352,6 +352,15 @@ struct SurahPageReader<Controls: View>: View {
                     .transition(.move(edge: .top).combined(with: .opacity))
             }
         }
+        // The keyboard OVERLAYS the page - it must never resize it. A mushaf page is typeset to the height it
+        // is given (`MushafPageContent` measures `geo.size.height` and fits the whole page's Arabic into it),
+        // so the default keyboard avoidance handed it a half-height box and it re-fit the entire page to that:
+        // raising the keyboard visibly shrank the text, and dismissing it grew it back. Ignoring the keyboard
+        // inset keeps the page at its real height and lets the keyboard cover the bottom of it instead.
+        //
+        // Safe because the only text field in page mode is in the find bar, which is a TOP inset - it stays
+        // above the keyboard on its own. The bottom controls being covered while typing is the intent.
+        .ignoresSafeArea(.keyboard, edges: .bottom)
         .onAppear {
             // Seed the index once. Re-deriving it on every render (font change, qiraah switch) would yank the
             // reader back to the page it was opened at.

@@ -1341,10 +1341,16 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
         return sizes[min(max(arabicLetterSizeIndex, 0), sizes.count - 1)]
     }
 
-    /// A custom Arabic font that scales with Dynamic Type (so the Arabic Alphabet size slider affects it).
-    /// `base` is the point size at the default (`.large`) content size.
-    func scalableArabicFont(base: CGFloat, relativeTo style: Font.TextStyle) -> Font {
-        Font.arabic(fontArabic, size: base, relativeTo: style)
+    /// The Islam tab's Arabic face (`nonQuranArabicFontName`), scaling with Dynamic Type so the Arabic
+    /// Alphabet size slider affects it. `base` is the point size at the default (`.large`) content size.
+    ///
+    /// Deliberately the NON-Quran face: every Islam-tab surface that shows standard Arabic - dua, dhikr,
+    /// the 99 Names, the alphabet and its letter detail - answers to the one `IslamArabicFontPicker`, so
+    /// this must read the same setting the rows beside it do. It used to read `fontArabic` (the *Quran*
+    /// picker's face), which is why flipping the alphabet's own picker to IndoPak restyled the letter rows
+    /// but left the big glyph on the detail screen in the mushaf face.
+    func scalableIslamArabicFont(base: CGFloat, relativeTo style: Font.TextStyle) -> Font {
+        Font.arabic(nonQuranArabicFontName, size: base, relativeTo: style)
     }
 
     // Raw storage only; the typed `favoriteLetters: [LetterData]` accessor + toggles live next to the

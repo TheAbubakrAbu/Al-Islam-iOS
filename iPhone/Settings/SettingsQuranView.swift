@@ -94,6 +94,8 @@ struct SettingsQuranView: View {
                 }
 
                 favoritesAndBookmarksSection
+
+                readingModeSection
                 #endif
             }
             .themedListRowBackground()
@@ -118,6 +120,23 @@ struct SettingsQuranView: View {
         }
         #endif
     }
+
+    #if os(iOS)
+    /// The same list-vs-pages choice the Quran tab's toolbar book button makes, surfaced here so it can be
+    /// found without knowing that button exists. No confirmation dialog on this one: the toolbar asks first
+    /// because it's one tap away from a whole-screen change you might not have meant, whereas coming to
+    /// Settings and moving a segmented control IS the deliberate act the dialog was guarding.
+    private var readingModeSection: some View {
+        Section(footer: Text("List shows a surah as a scrolling list of ayahs. Pages shows it as a mushaf, one page at a time.")) {
+            Picker("Reading View", selection: $settings.quranPageMode.animation(.easeInOut)) {
+                Text("List").tag(false)
+                Text("Pages").tag(true)
+            }
+            .pickerStyle(.segmented)
+            .onChange(of: settings.quranPageMode) { _ in settings.hapticFeedback() }
+        }
+    }
+    #endif
 
     private func quranSettingsLink<Destination: View>(
         title: String,

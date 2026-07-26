@@ -1567,8 +1567,11 @@ struct JuzView: View {
 
                             Text(juz.nameArabic)
                                 .font(
+                                    // The Islam face, matching the flag on the line below it - this read the
+                                    // Quran picker's font, so "Basic" there rendered these names in a bundled
+                                    // face the reader had switched away from (and vice versa).
                                     settings.islamUsesCustomArabicFace
-                                        ? Font.arabic(settings.fontArabic, size: 20, relativeTo: .subheadline)
+                                        ? Font.arabic(settings.nonQuranArabicFontName, size: 20, relativeTo: .subheadline)
                                         : .title3
                                 )
                                 .arabicFontDesign(custom: settings.islamUsesCustomArabicFace)

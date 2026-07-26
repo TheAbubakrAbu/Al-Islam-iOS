@@ -31,12 +31,19 @@ extension Settings {
         .init(id: "abdulbaset", title: "Abdul Baset"),
         .init(id: "abdulghaffar", title: "Abdul Ghaffar"),
         .init(id: "al-qatami", title: "Al-Qatami"),
-        .init(id: "minshawi-1", title: "Minshawi 1"),
-        .init(id: "minshawi-2", title: "Minshawi 2"),
+        // The two Minshawi recordings are SWAPPED relative to their clip names: the one bundled as
+        // `minshawi-2.caf` is the one titled "Minshawi 1", and vice versa. The titles moved, the ids did
+        // not - an id is what a selection is stored as, so renaming the ids (or the .caf files) would have
+        // silently handed every existing listener the other recording. Listed in title order so the picker
+        // still reads 1 then 2.
+        .init(id: "minshawi-2", title: "Minshawi 1"),
+        .init(id: "minshawi-1", title: "Minshawi 2"),
         .init(id: "zakariya", title: "Zakariya")
     ]
 
-    static let defaultAdhanSoundID = "minshawi-1"
+    /// The adhan a fresh install gets: whichever clip is *titled* "Minshawi 1", which after the swap above
+    /// is the one bundled as `minshawi-2`.
+    static let defaultAdhanSoundID = "minshawi-2"
     static let adhanNotificationClipSuffix = "-30"
     static let adhanShortClipSuffix = "-short"
 
@@ -162,8 +169,12 @@ extension Settings {
             // An explicit prior choice is NEVER overwritten. The old behavior force-adopted Minshawi 1
             // over whatever was stored - so a user who had deliberately chosen "Default" tapped a
             // notification, the relaunch ran this migration, and their selection silently became
-            // Minshawi 1. A device that never set the key already resolves to Minshawi 1 through the
-            // `@AppStorage` default, which is all the adoption this migration ever needed.
+            // Minshawi 1. A device that never set the key already resolves to `defaultAdhanSoundID`
+            // through the `@AppStorage` default, which is all the adoption this migration ever needed.
+            //
+            // Nor is there a migration for the title swap above: anyone already listening to a Minshawi
+            // adhan keeps the exact recording they picked (the ids never moved). It is now labelled with
+            // the other number in the picker, which is the point of the swap.
         }
     }
 

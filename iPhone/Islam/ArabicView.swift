@@ -411,12 +411,11 @@ struct ArabicView: View {
                 // global (`settings.arabicLetterSizeIndex`), and these rows and tiles already honour it through
                 // `arabicLetterDynamicTypeSize`, so the alphabet list still resizes - it just doesn't carry the
                 // control, which was crowding the bottom bar alongside the font picker and the search field.
-                // The font picker above the search bar is OFF for now (it was the row that vanished when
-                // scrolling down) - uncomment to bring it back. The picker still lives in the letter
-                // detail screens' ARABIC FONT section.
-                // arabicFontPicker
-                //     // Stays mounted while minimized (height 0) - inserting/removing glass renders black boxes.
-                //     .collapsibleBarRow(barsCollapsed)
+                // The one Islam-tab Arabic face picker, back above the search bar - the same control, on the
+                // same setting, that Duas, Dhikr, the 99 Names and the letter detail screens carry. It does
+                // NOT fold away on scroll (`collapsibleBarRow` stays off, as on Duas and Dhikr): that was
+                // what made it look like a row vanishing mid-scroll. It just rides with the bar.
+                arabicFontPicker
 
                 HStack(spacing: 0) {
                     SearchBar(text: (AppPerformance.shouldReduceAnimations ? $searchText : $searchText.animation(.easeInOut)))

@@ -763,6 +763,35 @@ struct PrayerList: View {
                 triggerBellAnimation(for: prayer)
                 settings.cycleNotificationMode(for: prayer)
             }
+            #if os(iOS)
+            // Tapping cycles the three modes; long-pressing jumps straight to one. Without this the only way
+            // to reach "prenotification" from off was two taps through a mode you didn't want.
+            .contextMenu {
+                Text("Notifications")
+                    .foregroundStyle(.secondary)
+
+                Button {
+                    settings.hapticFeedback()
+                    settings.setNotificationMode(.preNotification, for: prayer)
+                } label: {
+                    Label("Prenotification", systemImage: Settings.PrayerNotificationMode.preNotification.symbolName)
+                }
+
+                Button {
+                    settings.hapticFeedback()
+                    settings.setNotificationMode(.atTime, for: prayer)
+                } label: {
+                    Label("Notification", systemImage: Settings.PrayerNotificationMode.atTime.symbolName)
+                }
+
+                Button {
+                    settings.hapticFeedback()
+                    settings.setNotificationMode(.off, for: prayer)
+                } label: {
+                    Label("No Notification", systemImage: Settings.PrayerNotificationMode.off.symbolName)
+                }
+            }
+            #endif
             .padding(.leading, 6)
     }
 }

@@ -268,14 +268,15 @@ struct ActiveTasbihCard: View {
             // The dhikr sits ABOVE the ring rather than crammed inside it - the Arabic needed room, and the
             // count is what belongs at the centre of a counter.
             VStack(spacing: 2) {
-                // The Quranic face, like every other screen that shows this same dhikr text. Only the Arabic
-                // gets it: a free-count LABEL the user typed is their own text, not Arabic, so it stays in the
-                // UI face. `usesCustomArabicFace` is false when the reader picked the Basic font, in which case
-                // the rounded system face is correct and the design opt-out must not fire.
+                // The Islam tab's Arabic face, like every other screen that shows this same dhikr text - the
+                // one `IslamArabicFontPicker` setting, not the Quran's own font. Only the Arabic gets it: a
+                // free-count LABEL the user typed is their own text, not Arabic, so it stays in the UI face.
+                // `usesCustomArabicFace` is false when the reader picked the Basic font, in which case the
+                // rounded system face is correct and the design opt-out must not fire.
                 Text(selectedDhikr?.arabicText ?? (freeLabel.isEmpty ? "Other Dhikr" : freeLabel))
                     .font(
                         selectedDhikr != nil && usesCustomArabicFace
-                            ? Font.arabic(settings.fontArabic, size: 26, relativeTo: .title3)
+                            ? Font.arabic(settings.nonQuranArabicFontName, size: 26, relativeTo: .title3)
                             : .title3.weight(.bold)
                     )
                     .arabicFontDesign(custom: selectedDhikr != nil && usesCustomArabicFace)
