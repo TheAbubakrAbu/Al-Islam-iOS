@@ -190,6 +190,20 @@ extension View {
         modifier(ConditionalGlassEffect(clear: clear, rectangle: rectangle, circle: circle, useColor: useColor, customTint: customTint, interactive: interactive, themeTint: themeTint))
     }
 
+    /// Presents a `Menu`'s items in DECLARED order, top to bottom, wherever the menu pops up from.
+    /// iOS's automatic ordering reverses a menu that opens UPWARD (e.g. from a play button at the bottom
+    /// of the screen) so the first-declared item lands nearest the finger - which visually dumped
+    /// "Choose Reciter" to the BOTTOM of every play menu that deliberately declares it first. No-op below
+    /// iOS 16, where the modifier doesn't exist and menus keep the system behavior.
+    @ViewBuilder
+    func fixedMenuOrder() -> some View {
+        if #available(iOS 16.0, watchOS 9.0, *) {
+            self.menuOrder(.fixed)
+        } else {
+            self
+        }
+    }
+
     #if os(iOS)
     func smallMediumSheetPresentation() -> some View {
         modifier(SheetPresentationModifier())

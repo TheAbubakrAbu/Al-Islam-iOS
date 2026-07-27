@@ -937,11 +937,44 @@ extension Settings {
     // caller that asked for it. Whether a manual change suppresses this check is carried by the
     // `runAutoChecks` parameter, not by mutable state.
     //
+    /// Whether THIS device may auto-toggle `travelingMode`.
+    ///
+    /// The iPhone always may - it is the sole authority for traveling mode and syncs the verdict to the
+    /// watch (one-way; see `watchSyncSnapshot`). A **paired** watch must NOT run its own check: it senses
+    /// its own location against its own independently-seeded home (`seedHomeLocationIfNeeded` runs on the
+    /// watch too), so its verdict can disagree with the phone's and silently flip the just-synced value
+    /// right back - the "traveling mode works on the phone but keeps reverting on the watch" bug. And since
+    /// the key syncs one way, the phone never learns about the flip, so the two devices disagree forever.
+    /// A **standalone** watch (no companion iPhone app) has no phone to defer to and keeps the check.
+    /// Before WCSession activation resolves the answer isn't known yet - treat that as "not mine": skipping
+    /// one early check is harmless (the next fetch re-runs it), flipping a paired watch's mode is not.
+    var ownsTravelingModeAutoCheck: Bool {
+        #if os(watchOS)
+        // Query WCSession directly (rather than via WatchConnectivityManager) so this also compiles in
+        // targets that don't include the manager source, e.g. the watch Complication extension.
+        let session = WCSession.default
+        return session.activationState == .activated && !session.isCompanionAppInstalled
+        #else
+        return true
+        #endif
+    }
+
     /// Returns `true` if it changed `travelingMode`, so the enclosing fetch recomputes the prayer list.
     @discardableResult
     func checkIfTraveling() -> Bool {
-        guard Bundle.main.bundleIdentifier?.contains("Widget") != true,
-              travelAutomatic,
+        guard Bundle.main.bundleIdentifier?.contains("Widget") != true else { return false }
+
+        guard ownsTravelingModeAutoCheck else {
+            // A paired watch defers to the phone. Any standing auto-change flag here is a leftover from a
+            // build where the watch still ran this check itself (or from before pairing): presenting its
+            // dialog would offer override buttons that flip the just-synced value right back - the "watch
+            // randomly says traveling mode turned on" bug - so retire the flags instead of showing them.
+            if travelTurnOnAutomatic { travelTurnOnAutomatic = false }
+            if travelTurnOffAutomatic { travelTurnOffAutomatic = false }
+            return false
+        }
+
+        guard travelAutomatic,
               let currentLocation = currentLocation,
               let homeLocation = homeLocation,
               currentLocation.latitude != 1000,
@@ -1467,7 +1500,10 @@ extension Settings {
         let isWidget = Bundle.main.bundleIdentifier?.contains("Widget") == true
         var autoStateChanged = false
         if !isWidget, runAutoChecks {
-            if travelAutomatic, homeLocation != nil, checkIfTraveling() {
+            // No `travelAutomatic`/`homeLocation` preconditions here: `checkIfTraveling` re-guards both
+            // itself, and on a paired watch its non-owner path also retires stale auto-change flags - it
+            // must run even when those preconditions are false.
+            if checkIfTraveling() {
                 autoStateChanged = true
             }
             // Coordinate placeholder city means ISO country may still be wrong or empty; geocode runs

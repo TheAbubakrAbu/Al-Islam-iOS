@@ -302,11 +302,15 @@ struct AdhanView: View {
 
     // Keep alert selection in one place so refresh behavior is easy to follow.
     private var nextAlertToPresent: AlertType? {
-        if settings.travelTurnOnAutomatic {
-            return .travelTurnOnAutomatic
-        }
-        if settings.travelTurnOffAutomatic {
-            return .travelTurnOffAutomatic
+        // Travel dialogs only on the device that owns the auto-check - never on a paired watch, where
+        // the phone decides and these buttons would flip the just-synced value straight back.
+        if settings.ownsTravelingModeAutoCheck {
+            if settings.travelTurnOnAutomatic {
+                return .travelTurnOnAutomatic
+            }
+            if settings.travelTurnOffAutomatic {
+                return .travelTurnOffAutomatic
+            }
         }
         if settings.calculationAutoChanged {
             return .calculationAutomaticChanged

@@ -73,10 +73,14 @@ enum OnDeviceAsk {
         AsyncThrowingStream { continuation in
             let task = Task {
                 do {
-                    // A passage block the small context window can always hold: at most 8 sources,
-                    // each clipped - retrieval already ranked them, so the head is the signal.
-                    let passages = sources.prefix(8).map { source in
-                        "[\(source.reference)] \(String(source.text.prefix(320)))"
+                    // A passage block the small context window can always hold: at most 12 sources
+                    // (every surface feeds semantic hits first, then string-match hits, deduped - both
+                    // retrieval modes get a voice), each clipped at 500 characters. That is ~1.5k tokens
+                    // worst case against the model's ~4k window - room to spare with the instructions,
+                    // question, and answer - and 500 keeps whole hadiths intact far more often than the
+                    // old 320, which could clip the very sentence that answered the question.
+                    let passages = sources.prefix(12).map { source in
+                        "[\(source.reference)] \(String(source.text.prefix(500)))"
                     }.joined(separator: "\n")
 
                     let prompt = """

@@ -96,6 +96,7 @@
 		725B422C2AA00660009C8C91 /* PrayersProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 725B42172AA00639009C8C91 /* PrayersProvider.swift */; };
 		725B422E2AA0066D009C8C91 /* Settings.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7260F9162A8715D600E8FF87 /* Settings.swift */; };
 		725B42312AA006A6009C8C91 /* PrayersProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 725B42172AA00639009C8C91 /* PrayersProvider.swift */; };
+		725BC7AF301757CE00FB1536 /* SkyColorsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72CB00022F7F000000AAFD00 /* SkyColorsView.swift */; };
 		725C5F093013B88400DFEC8B /* CustomPrayerNames.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72FB00012F7B000000AAF900 /* CustomPrayerNames.swift */; };
 		725C5F0A3013B88700DFEC8B /* CustomPrayerNames.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72FB00012F7B000000AAF900 /* CustomPrayerNames.swift */; };
 		725C5F243013C04000DFEC8B /* OnDeviceAsk.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72AE0004AE5F4C7D00000004 /* OnDeviceAsk.swift */; };
@@ -1439,6 +1440,7 @@
 				725C5FC33014308900DFEC8B /* QuranPlannerView.swift in Sources */,
 				72EF01C32F775A5600B273F7 /* PreviewSupport.swift in Sources */,
 				7260F9602A87163A00E8FF87 /* AdhanView.swift in Sources */,
+				725BC7AF301757CE00FB1536 /* SkyColorsView.swift in Sources */,
 				72E832C12F6F53760013428B /* ArabicView.swift in Sources */,
 				7ADD181D00000000AA0018 /* ArabicLetterViews.swift in Sources */,
 				72AB5PE32F900000AAA003 /* ArabicSpeech.swift in Sources */,

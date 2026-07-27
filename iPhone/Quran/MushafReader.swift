@@ -236,6 +236,15 @@ struct SurahPageReader<Controls: View>: View {
     @State private var activePicker: PickerTarget?
     @State private var pagePickerSelection = 0
     @State private var juzPickerSelection = 1
+    /// The typed-number fast path: an alert with a number pad, for jumping without scrolling the wheel.
+    /// An alert (not an inline field) because the whole reader ignores the keyboard inset by design - the
+    /// page must never resize - so an inline field at the bottom would be covered by the keyboard it raises.
+    @State private var showTypedJump = false
+    @State private var typedJumpText = ""
+    /// The page geometry captured as the jump picker OPENS - before its inset shrinks the live one. The
+    /// wheel's predictive warms compose at THIS geometry, because it is what the page returns to the
+    /// moment the picker closes and the jump lands; fits at the picker-shrunken height would all near-miss.
+    @State private var pickerBaseGeometry: (width: CGFloat, height: CGFloat)?
 
     // In-page find: the query, and which of the current page's matches is active.
     @State private var pageSearchText = ""
@@ -373,7 +382,7 @@ struct SurahPageReader<Controls: View>: View {
             pageIndex = target
             reportSurah(on: pageIndex, in: pages)
             reportAnchor(on: pageIndex, in: pages)
-            MushafPageRenderCache.prewarm(pages: pages, around: pageIndex)
+            MushafPageRenderCache.prewarm(pages: pages, around: pageIndex, includeCenter: true)
         }
         .onChange(of: surah.id) { _ in
             // The surah was swapped in place (surah picker, next-surah, a search hit). The reader used to be
@@ -390,7 +399,12 @@ struct SurahPageReader<Controls: View>: View {
         .onChange(of: pageIndex) { index in
             reportSurah(on: index, in: pages)
             reportAnchor(on: index, in: pages)
-            MushafPageRenderCache.prewarm(pages: pages, around: index)
+            // `includeCenter` is load-bearing for far jumps (page/juz/surah picker): this onChange runs
+            // BEFORE the landing page's body, so without the center the ring's 10 fits were enqueued
+            // first on the serial fit queue and the landing page's own fit ran LAST behind all of them -
+            // a 5-10 second wait to see the picked page. Center-first makes the landing page the first
+            // fit; an ordinary swipe is unaffected (its center is already cached and skips instantly).
+            MushafPageRenderCache.prewarm(pages: pages, around: index, includeCenter: true)
             // Turning the page clears every selection: the tap-mark, the multi-select set, and any
             // search-arrival snippet - a new page is a fresh start. Programmatic seeds (initial open,
             // in-place surah swap) are NOT turns - they consume the latch instead of clearing.
@@ -454,6 +468,30 @@ struct SurahPageReader<Controls: View>: View {
                 pageSearchFocused = false
             }
         }
+        // Warm the wheel's CANDIDATE while the user is still scrolling it: by the time they tap the
+        // checkmark, the page they settled on is usually already composed and the jump lands instantly.
+        // Radius 1 keeps each detent to the candidate and its neighbours, and the generation bump inside
+        // `prewarm` retires the previous detent's unstarted fits - spinning the wheel fast stays cheap.
+        .onChange(of: pagePickerSelection) { candidate in
+            guard activePicker == .page, pages.indices.contains(candidate) else { return }
+            MushafPageRenderCache.prewarm(pages: pages, around: candidate, radius: 1, includeCenter: true,
+                                          at: pickerBaseGeometry)
+        }
+        .onChange(of: juzPickerSelection) { candidate in
+            guard activePicker == .juz,
+                  let start = MushafPagination.juzRanges(pages, qiraah: settings.displayQiraahForArabic)[candidate]?.start,
+                  pages.indices.contains(start) else { return }
+            MushafPageRenderCache.prewarm(pages: pages, around: start, radius: 1, includeCenter: true,
+                                          at: pickerBaseGeometry)
+        }
+        .onChange(of: activePicker) { picker in
+            // Picker closed (jump or cancel): re-point the prewarm context at the page on screen.
+            // Wheel-browsing moved it to the last CANDIDATE, and a later geometry change re-warms around
+            // the stored context - a ring around a page the user never went to, while the real
+            // neighbourhood stayed cold. Everything already composed is a cache hit, so this is ~free.
+            guard picker == nil else { return }
+            MushafPageRenderCache.prewarm(pages: pages, around: pageIndex, includeCenter: true)
+        }
     }
 
     /// Jump the live pager to this `surah`'s starting page (shared by the `surah.id` and `jumpToken`
@@ -487,8 +525,9 @@ struct SurahPageReader<Controls: View>: View {
         } else {
             if pageIndex >= pages.count { pageIndex = pages.count - 1 }
             // Index unchanged (the common case - page boundaries rarely shift): still refresh the ring
-            // and its context against the NEW pages.
-            MushafPageRenderCache.prewarm(pages: pages, around: pageIndex)
+            // and its context against the NEW pages. Center included: the new settings signature made the
+            // VISIBLE page cold too, and without the center its refit would queue behind the whole ring.
+            MushafPageRenderCache.prewarm(pages: pages, around: pageIndex, includeCenter: true)
         }
     }
 
@@ -671,14 +710,20 @@ struct SurahPageReader<Controls: View>: View {
                         title: "Page \(page.page) / \(pages.count)  \(percent(page.page, of: pages.count))",
                         target: .page,
                         color: settings.accentColor.accent1,
-                        seed: { pagePickerSelection = pageIndex }
+                        seed: {
+                            pagePickerSelection = pageIndex
+                            pickerBaseGeometry = MushafPageRenderCache.currentGeometry
+                        }
                     )
 
                     jumpButton(
                         title: "Juz \(page.juz ?? 1) / 30  \(percent(page.juz ?? 1, of: 30))",
                         target: .juz,
                         color: settings.accentColor.accent2,
-                        seed: { juzPickerSelection = page.juz ?? 1 }
+                        seed: {
+                            juzPickerSelection = page.juz ?? 1
+                            pickerBaseGeometry = MushafPageRenderCache.currentGeometry
+                        }
                     )
                 }
             }
@@ -785,6 +830,20 @@ struct SurahPageReader<Controls: View>: View {
 
                 Spacer()
 
+                if #available(iOS 16.0, *) {
+                    Button {
+                        settings.hapticFeedback()
+                        typedJumpText = ""
+                        showTypedJump = true
+                    } label: {
+                        Image(systemName: "keyboard")
+                            .font(.footnote.weight(.semibold))
+                            .foregroundStyle(settings.accentColor.accent2)
+                    }
+                    .padding(.trailing, 14)
+                    .accessibilityLabel(target == .page ? "Type a page number" : "Type a juz number")
+                }
+
                 Button {
                     settings.hapticFeedback()
                     switch target {
@@ -833,6 +892,35 @@ struct SurahPageReader<Controls: View>: View {
         .frame(maxWidth: .infinity)
         .conditionalGlassEffect(rectangle: true)
         .transition(.move(edge: .bottom).combined(with: .opacity))
+        // The typed-number fast path. An alert so the number pad can't cover the input (the reader
+        // deliberately ignores the keyboard inset - see the note on `showTypedJump`). The TextField only
+        // renders inside alerts on iOS 16+, which is why the keyboard button that raises this is gated.
+        .alert(target == .page ? "Go to Page" : "Go to Juz", isPresented: $showTypedJump) {
+            TextField(target == .page ? "1 – \(pages.last?.page ?? pages.count)" : "1 – 30", text: $typedJumpText)
+                .keyboardType(.numberPad)
+            Button("Go") { commitTypedJump(target: target, pages: pages) }
+            Button("Cancel", role: .cancel) {}
+        }
+    }
+
+    /// Jump from a typed number. Page numbers are what the footer displays (`pages[i].page`), not indices;
+    /// out-of-range input clamps to the nearest end rather than being dropped.
+    private func commitTypedJump(target: PickerTarget, pages: [MushafPage]) {
+        guard let n = Int(typedJumpText.trimmingCharacters(in: .whitespaces)), !pages.isEmpty else { return }
+        switch target {
+        case .page:
+            pageIndex = pages.firstIndex { $0.page == n } ?? min(max(n - 1, 0), pages.count - 1)
+        case .juz:
+            let ranges = MushafPagination.juzRanges(pages, qiraah: settings.displayQiraahForArabic)
+            let clamped = min(max(n, 1), 30)
+            if let start = ranges[clamped]?.start {
+                pageIndex = start
+            } else if let nearest = ranges.keys.sorted().min(by: { abs($0 - clamped) < abs($1 - clamped) }),
+                      let start = ranges[nearest]?.start {
+                pageIndex = start
+            }
+        }
+        withAnimation(.easeInOut) { activePicker = nil }
     }
 
     /// The same playback menu the list reader offers - play the surah, play it ayah by ayah, repeat it, pick a
@@ -895,6 +983,9 @@ struct SurahPageReader<Controls: View>: View {
                 } label: {
                     playControlLabel
                 }
+                // Without this, a menu popping UPWARD from this bottom-anchored footer renders reversed,
+                // dumping Choose Reciter (declared first, wanted on top) to the bottom.
+                .fixedMenuOrder()
             } else {
                 Button {
                     settings.hapticFeedback()
@@ -1066,7 +1157,7 @@ private struct MushafPageContent: View {
             let _ = renderTick
             if let rendered = MushafPageRenderCache.renderedIfAvailable(page: page, width: width, height: textHeight) {
                 renderedPageBody(rendered: rendered, width: width, visibleHeight: visibleHeight)
-            } else if let stale = MushafPageRenderCache.nearestRendered(page: page, width: width) {
+            } else if let stale = MushafPageRenderCache.nearestRendered(page: page, width: width, height: textHeight) {
                 // The height budget moved a few points (a bar appeared/disappeared, the mini player
                 // mounted, a transition is mid-flight): keep the last good render of THIS page on screen
                 // while the exact fit lands in the background - content over a loading flash. Same width
@@ -2056,7 +2147,9 @@ enum MushafPageRenderCache {
             if oldValue != nil {
                 DispatchQueue.main.async {
                     guard let context = lastPrewarmContext else { return }
-                    prewarm(pages: context.pages, around: context.index)
+                    // Center included: a geometry change makes the VISIBLE page cold too, and its refit
+                    // must lead the ring, not trail it.
+                    prewarm(pages: context.pages, around: context.index, includeCenter: true)
                 }
             }
         }
@@ -2064,6 +2157,11 @@ enum MushafPageRenderCache {
 
     /// What the most recent prewarm sweep covered, so a geometry change can re-run it unprompted.
     private static var lastPrewarmContext: (pages: [MushafPage], index: Int)?
+
+    /// The geometry the next render will ask for. Callers composing PREDICTIVE fits snapshot this before
+    /// transient chrome (the jump picker) shrinks the live geometry - the fits must match the height the
+    /// page returns to once that chrome closes, or every predictive warm lands one refit short.
+    static var currentGeometry: (width: CGFloat, height: CGFloat)? { lastGeometry }
     private static let geometryDefaultsKey = "mushaf.lastPageGeometry"
 
     private static var persistedGeometry: (width: CGFloat, height: CGFloat)? {
@@ -2082,10 +2180,140 @@ enum MushafPageRenderCache {
         let spaceTracking: CGFloat
     }
 
+    // MARK: Persistent fit metrics
+    //
+    // The fit numbers are a PURE function of (page, geometry, settings signature) - ~25-30 compose/measure
+    // passes whose entire output is four floats - so a result computed on ANY previous launch is exactly
+    // the result this launch would recompute. Persisting them turns every previously-fitted page's cold
+    // path into just its final colored compose: cross-launch, the whole binary-search cost is paid once
+    // per (page, geometry, settings) EVER instead of once per session.
+    //
+    // Keys are the render cache's own keys (they already encode all three inputs); the file additionally
+    // carries a salt of app build + OS version, because a font, fitter-code, or TextKit change across
+    // either could legitimately move the numbers - a stale file then misses wholesale instead of
+    // mis-fitting pages. Lives in Caches (purgeable: losing it only costs recompute). Both fit lanes read
+    // and record, so state is lock-guarded; saves are debounced onto a utility queue, one per burst.
+
+    nonisolated(unsafe) private static var persistedMetricsEntries: [String: [Double]] = [:]
+    nonisolated(unsafe) private static var persistedMetricsLoaded = false
+    nonisolated(unsafe) private static var persistedMetricsDirty = false
+    // `nonisolated` on the constants: the file builds under default MainActor isolation, and these are
+    // read from the fit lanes - immutable Sendable values, so plain nonisolated (no `unsafe`) is exact.
+    nonisolated private static let persistedMetricsLock = NSLock()
+    nonisolated private static let persistedMetricsSaveQueue = DispatchQueue(label: "mushaf.fitmetrics.save", qos: .utility)
+    /// Well past 604 pages × a handful of live signatures. A store this full is mostly dead signatures
+    /// (old font sizes, old geometries); entries are so cheap to remake that starting over beats
+    /// bookkeeping an eviction order.
+    nonisolated private static let persistedMetricsLimit = 6000
+
+    nonisolated private static var persistedMetricsURL: URL? {
+        FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first?
+            .appendingPathComponent("mushaf-fit-metrics.plist")
+    }
+
+    nonisolated private static let persistedMetricsSalt: String = {
+        let os = ProcessInfo.processInfo.operatingSystemVersion
+        let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "0"
+        return "\(build)|\(os.majorVersion).\(os.minorVersion).\(os.patchVersion)"
+    }()
+
+    /// Callers hold `persistedMetricsLock`.
+    nonisolated private static func loadPersistedMetricsIfNeeded_locked() {
+        guard !persistedMetricsLoaded else { return }
+        persistedMetricsLoaded = true
+        guard let url = persistedMetricsURL,
+              let data = try? Data(contentsOf: url),
+              let raw = (try? PropertyListSerialization.propertyList(from: data, options: [], format: nil)) as? [String: Any],
+              raw["salt"] as? String == persistedMetricsSalt,
+              let stored = raw["entries"] as? [String: [Double]] else { return }
+        persistedMetricsEntries = stored
+    }
+
+    nonisolated private static func persistedMetrics(for key: String) -> FitMetrics? {
+        persistedMetricsLock.lock()
+        defer { persistedMetricsLock.unlock() }
+        loadPersistedMetricsIfNeeded_locked()
+        guard let v = persistedMetricsEntries[key], v.count == 4 else { return nil }
+        return FitMetrics(size: CGFloat(v[0]), extraSpacing: CGFloat(v[1]),
+                          measured: CGFloat(v[2]), spaceTracking: CGFloat(v[3]))
+    }
+
+    nonisolated private static func recordPersistedMetrics(_ metrics: FitMetrics, for key: String) {
+        persistedMetricsLock.lock()
+        loadPersistedMetricsIfNeeded_locked()
+        if persistedMetricsEntries.count >= persistedMetricsLimit {
+            persistedMetricsEntries.removeAll(keepingCapacity: false)
+        }
+        persistedMetricsEntries[key] = [Double(metrics.size), Double(metrics.extraSpacing),
+                                        Double(metrics.measured), Double(metrics.spaceTracking)]
+        let firstInBurst = !persistedMetricsDirty
+        persistedMetricsDirty = true
+        persistedMetricsLock.unlock()
+        guard firstInBurst else { return }
+        persistedMetricsSaveQueue.asyncAfter(deadline: .now() + 2) { savePersistedMetrics() }
+    }
+
+    nonisolated private static func savePersistedMetrics() {
+        persistedMetricsLock.lock()
+        persistedMetricsDirty = false
+        let snapshot = persistedMetricsEntries
+        persistedMetricsLock.unlock()
+        guard let url = persistedMetricsURL,
+              let data = try? PropertyListSerialization.data(
+                fromPropertyList: ["salt": persistedMetricsSalt, "entries": snapshot],
+                format: .binary, options: 0
+              ) else { return }
+        try? data.write(to: url, options: .atomic)
+    }
+
+    /// The persisted-metrics key: geometry plus ONLY the config that moves layout. Deliberately NOT the
+    /// render cache key: that one also carries the colors (accent, tajweed painting), which repaint glyphs
+    /// without moving them - the fit already banks on that, searching sizes on the UNCOLORED compose and
+    /// rendering colored - so keying metrics per tint would discard every persisted fit on a retheme and
+    /// fill the store with duplicate entries holding identical numbers. Complete by construction: the
+    /// composer reads nothing but (page, config), so every layout input is a field here.
+    /// Built from the immutable config snapshot, never Settings, so it is safe on the fit lanes.
+    nonisolated private static func metricsKey(
+        page: MushafPage, width: CGFloat, height: CGFloat, config: MushafComposeConfig
+    ) -> String {
+        [
+            "\(page.page)", "\(Int(width.rounded()))", "\(Int(height.rounded()))",
+            String(describing: config.pageLanguage),
+            config.removeArabicDots ? "d" : "-",
+            config.quranUsesSystemArabicFont ? "s" : "-",
+            config.arabicFontName,
+            config.displayQiraah ?? "Hafs",
+            config.cleanArabicText ? "c" : "-",
+            config.beginnerMode ? "b" : "-",
+            "\(config.fontSize)",
+            config.fitPage ? "f" : "-",
+        ].joined(separator: "|")
+    }
+
+    /// The fit for this (page, geometry, config): the persisted numbers when any previous launch (or this
+    /// one) already searched them out, else the full search - recorded so no launch pays for it again.
+    nonisolated private static func fitMetricsUsingStore(
+        composer: MushafPageComposer, width: CGFloat, height: CGFloat
+    ) -> FitMetrics {
+        let key = metricsKey(page: composer.page, width: width, height: height, config: composer.config)
+        if let stored = persistedMetrics(for: key) { return stored }
+        let metrics = fitMetrics(composer: composer, width: width, height: height)
+        recordPersistedMetrics(metrics, for: key)
+        return metrics
+    }
+
     /// The serial queue the prewarm fits pages on. Serial on purpose: TextKit objects are safe off the main
     /// thread only when confined to one thread at a time, and a single lane keeps the background CPU cost
     /// bounded no matter how fast the user flips.
     private static let prewarmQueue = DispatchQueue(label: "mushaf.page.prewarm", qos: .userInitiated)
+
+    /// The lane for the page the user is LOOKING AT. Its fit must never wait behind the ring: a cold jump,
+    /// or a geometry settle right after the reader opens, used to enqueue the visible page's must-run fit
+    /// LAST behind up to ten same-generation ring fits on the single serial queue - a many-second wait to
+    /// see the page you're on (the "opens at half size, fixes itself ten seconds later" bug). Safe as a
+    /// second lane: every fit builds its own TextKit stack inside its own block (nothing is shared between
+    /// lanes), and `pendingRenders` - main-confined - already guarantees one fit per key ever runs.
+    private static let visibleFitQueue = DispatchQueue(label: "mushaf.page.visiblefit", qos: .userInitiated)
 
     /// Compose the pages on either side of `index` before they're swiped to, so a page turn is a cache hit
     /// even the first time you reach it.
@@ -2113,9 +2341,10 @@ enum MushafPageRenderCache {
     /// invariant is the QUEUE (every touch happens on `prewarmQueue`), which the compiler can't see.
     nonisolated(unsafe) private static var queueGeneration = 0
 
-    static func prewarm(pages: [MushafPage], around index: Int, radius: Int = 5, includeCenter: Bool = false) {
+    static func prewarm(pages: [MushafPage], around index: Int, radius: Int = 5, includeCenter: Bool = false,
+                        at geometryOverride: (width: CGFloat, height: CGFloat)? = nil) {
         // `(1...radius)` below traps on a non-positive radius - guard it rather than trusting every caller.
-        guard let geometry = lastGeometry, !pages.isEmpty, radius >= 1 else { return }
+        guard let geometry = geometryOverride ?? lastGeometry, !pages.isEmpty, radius >= 1 else { return }
         lastPrewarmContext = (pages, index)
         // The background fit is nearly free for the main thread, but each warmed page still costs a colored
         // compose on main - in Low Power Mode keep that to the immediate neighbours.
@@ -2164,7 +2393,11 @@ enum MushafPageRenderCache {
         // NSString isn't Sendable; the String bridge is - it crosses the queue hops and is re-wrapped
         // into an NSString cache key on the other side.
         let keyString = key as String
-        prewarmQueue.async {
+        // Must-run fits (generation nil - the user is looking at this page, or a waiter upgraded it) take
+        // the visible lane; ring fits keep the prewarm lane. The generation-skip branch below only runs
+        // for ring fits, so `queueGeneration`'s prewarm-queue confinement is preserved.
+        let lane = generation == nil ? visibleFitQueue : prewarmQueue
+        lane.async {
             // A ring fit from an abandoned sweep skips the expensive fit - unless the user has since landed
             // on this very page (a waiter attached), which upgrades it to must-run.
             if let generation, queueGeneration != generation {
@@ -2181,13 +2414,13 @@ enum MushafPageRenderCache {
             }
 
             let composer = MushafPageComposer(page: page, config: config)
-            let metrics = fitMetrics(composer: composer, width: width, height: height)
+            let metrics = fitMetricsUsingStore(composer: composer, width: width, height: height)
             DispatchQueue.main.async {
                 let key = keyString as NSString
                 if cache.object(forKey: key) == nil {
                     let rendered = finalize(composer: composer, metrics: metrics, width: width)
                     cache.setObject(rendered, forKey: key)
-                    noteLatest(page: page, width: width, rendered: rendered)
+                    noteLatest(page: page, width: width, budget: height, rendered: rendered)
                 }
                 (pendingRenders.removeValue(forKey: key) ?? []).forEach { $0() }
             }
@@ -2268,7 +2501,7 @@ enum MushafPageRenderCache {
         // on every playback tick), and it used to be rebuilt again inside noteLatest.
         let signature = settingsSignature
         let hit = cache.object(forKey: cacheKey(page: page, width: width, height: height, signature: signature))
-        if let hit { noteLatest(page: page, width: width, rendered: hit, signature: signature) }
+        if let hit { noteLatest(page: page, width: width, budget: height, rendered: hit, signature: signature) }
         return hit
     }
 
@@ -2280,17 +2513,17 @@ enum MushafPageRenderCache {
     /// count-limit churn during an ordinary flip run evicted a mounted page's older-height render while
     /// it was still the only fallback for the next jitter - the spinner came back. Twelve attributed
     /// pages is small; the old bound of 64 was what undercut memory-pressure eviction.)
-    private static var latestByPage: [Int: (width: CGFloat, signature: String, rendered: MushafRenderedPage)] = [:]
+    private static var latestByPage: [Int: (width: CGFloat, budget: CGFloat, signature: String, rendered: MushafRenderedPage)] = [:]
     /// Insertion order for eviction, oldest first.
     private static var latestOrder: [Int] = []
     private static let latestLimit = 12
 
-    private static func noteLatest(page: MushafPage, width: CGFloat, rendered: MushafRenderedPage, signature: String? = nil) {
+    private static func noteLatest(page: MushafPage, width: CGFloat, budget: CGFloat, rendered: MushafRenderedPage, signature: String? = nil) {
         let signature = signature ?? settingsSignature
         if latestByPage[page.page] != nil {
             latestOrder.removeAll { $0 == page.page }
         }
-        latestByPage[page.page] = (width, signature, rendered)
+        latestByPage[page.page] = (width, budget, signature, rendered)
         latestOrder.append(page.page)
         while latestOrder.count > latestLimit {
             let evicted = latestOrder.removeFirst()
@@ -2301,10 +2534,17 @@ enum MushafPageRenderCache {
     /// A same-page render fitted for a DIFFERENT height budget - shown in place of the spinner while the
     /// exact fit runs. Same width and same settings only: the text re-wraps identically at the same width
     /// (so nothing clips), while a different width or changed settings would show genuinely wrong content.
-    static func nearestRendered(page: MushafPage, width: CGFloat) -> MushafRenderedPage? {
+    ///
+    /// Close-enough budgets only. The fallback exists for the small jitters (a bar mounting, the mini
+    /// player appearing - ~10-15% of the page). The reader's FIRST layout pass mid-launch can report
+    /// around half the final height; serving that fit as the fallback showed a visibly shrunken page
+    /// squatting in half the screen until the exact refit landed. A budget that far off gets the honest
+    /// spinner instead - and the refit itself is fast now (see `visibleFitQueue`).
+    static func nearestRendered(page: MushafPage, width: CGFloat, height: CGFloat) -> MushafRenderedPage? {
         guard let entry = latestByPage[page.page],
               Int(entry.width.rounded()) == Int(width.rounded()),
-              entry.signature == settingsSignature else { return nil }
+              entry.signature == settingsSignature,
+              abs(entry.budget - height) <= height * 0.3 else { return nil }
         return entry.rendered
     }
 
@@ -2329,20 +2569,9 @@ enum MushafPageRenderCache {
                    key: key, config: MushafComposeConfig.current(), generation: nil)
     }
 
-    static func rendered(page: MushafPage, width: CGFloat, height: CGFloat) -> MushafRenderedPage {
-        lastGeometry = (width, height)
-
-        let key = cacheKey(page: page, width: width, height: height, signature: settingsSignature)
-        if let hit = cache.object(forKey: key) { return hit }
-
-        // Cold visible page: nothing to hand off - the caller needs the result this frame.
-        let composer = MushafPageComposer(page: page, config: .current())
-        let metrics = fitMetrics(composer: composer, width: width, height: height)
-        let rendered = finalize(composer: composer, metrics: metrics, width: width)
-        cache.setObject(rendered, forKey: key)
-        noteLatest(page: page, width: width, rendered: rendered)
-        return rendered
-    }
+    // (The old synchronous `rendered(page:width:height:)` - a cold visible page paying the full fit inline
+    // on the main thread - is gone: every render path now goes through `renderedIfAvailable`/`renderAsync`,
+    // and keeping an unused main-thread full-fit entry point around invites exactly the freeze it caused.)
 }
 
 /// The composed page in a non-scrolling `UITextView`. A merged SwiftUI `Text` can't hit-test an individual

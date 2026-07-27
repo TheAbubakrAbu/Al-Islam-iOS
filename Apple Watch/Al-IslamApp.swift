@@ -63,14 +63,12 @@ struct AlIslamApp: App {
         .onChange(of: settings.accentColor) { _ in
             WidgetCenter.shared.reloadAllTimelines()
         }
-        // No `.onChange` refresh for `prayerCalculation` or `travelingMode`: every path that writes them
-        // (the manual setters, the dialog overrides, the auto-checks inside a fetch, a synced snapshot)
-        // already performs its own recompute, with auto-checks suppressed where the change was a choice.
-        // A blanket refresh here would re-run the automatic detection with checks ON right after a manual
-        // change - the exact override/spam bug the old one-shot flags existed to paper over.
-        .onChange(of: settings.hanafiMadhab) { _ in
-            settings.fetchPrayerTimes(force: true)
-        }
+        // No `.onChange` refresh for `prayerCalculation`, `travelingMode`, or `hanafiMadhab`: every path
+        // that writes them (the manual setters, the dialog overrides, the auto-checks inside a fetch, a
+        // synced snapshot - and for the madhab, its own didSet with auto-checks suppressed) already
+        // performs its own recompute. A blanket refresh here would run a SECOND full forced fetch per
+        // flip and re-run the automatic detection with checks ON right after the change - the exact
+        // override/spam bug the old one-shot flags existed to paper over.
         .onChange(of: settings.hijriOffset) { _ in
             settings.updateDates()
             WidgetCenter.shared.reloadAllTimelines()

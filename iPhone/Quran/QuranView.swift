@@ -1906,6 +1906,9 @@ struct QuranView: View {
                             .transition(.opacity)
                     }
                 }
+                // Without this, a menu popping UPWARD from this bottom-anchored button renders reversed,
+                // dumping Choose Reciter (declared first, wanted on top) to the bottom.
+                .fixedMenuOrder()
             }
         }
         #else

@@ -193,9 +193,11 @@ struct SettingsAdhanView: View {
     private func presentAutoChangeDialogIfPending() {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
             guard showAlert == nil else { return }
-            if settings.travelTurnOnAutomatic {
+            // Travel dialogs only on the device that owns the auto-check - never on a paired watch, where
+            // the phone decides and these buttons would flip the just-synced value straight back.
+            if settings.ownsTravelingModeAutoCheck, settings.travelTurnOnAutomatic {
                 showAlert = .travelTurnOnAutomatic
-            } else if settings.travelTurnOffAutomatic {
+            } else if settings.ownsTravelingModeAutoCheck, settings.travelTurnOffAutomatic {
                 showAlert = .travelTurnOffAutomatic
             } else if settings.calculationAutoChanged {
                 showAlert = .calculationAutomaticChanged

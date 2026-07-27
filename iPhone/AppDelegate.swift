@@ -6,6 +6,20 @@ import UserNotifications
 class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterDelegate {
     private let taskID = AppIdentifiers.backgroundFetchPrayerTimesTaskIdentifier
     private let reciterDownloadsSessionID = AppIdentifiers.reciterDownloadsBackgroundSessionIdentifier
+    
+    // Connects iOS background URL session wakeups to the reciter download manager.
+    func application(
+        _ application: UIApplication,
+        handleEventsForBackgroundURLSession identifier: String,
+        completionHandler: @escaping () -> Void
+    ) {
+        guard identifier == reciterDownloadsSessionID else {
+            completionHandler()
+            return
+        }
+
+        ReciterDownloadManager.shared.backgroundSessionCompletionHandler(completionHandler)
+    }
 
     // Performs startup setup: registers background refresh, schedules first refresh, and notification delegate.
     func application(
@@ -46,20 +60,6 @@ class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterD
     // Re-schedules the background refresh whenever the app moves to background.
     func applicationDidEnterBackground(_ application: UIApplication) {
         scheduleAppRefresh()
-    }
-
-    // Connects iOS background URL session wakeups to the reciter download manager.
-    func application(
-        _ application: UIApplication,
-        handleEventsForBackgroundURLSession identifier: String,
-        completionHandler: @escaping () -> Void
-    ) {
-        guard identifier == reciterDownloadsSessionID else {
-            completionHandler()
-            return
-        }
-
-        ReciterDownloadManager.shared.backgroundSessionCompletionHandler(completionHandler)
     }
 
     // Shows in-app notifications as banner + sound when a notification arrives in foreground, and keeps

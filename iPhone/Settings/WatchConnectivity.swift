@@ -5,23 +5,43 @@ import WidgetKit
 
 /// Two-way settings sync between iPhone and Apple Watch.
 ///
-/// Designed to avoid the failure modes the previous version had:
-/// - **Never transmits a default.** A snapshot carries *only* settings this device has actually set, and the
-///   receiver only writes keys that are present. So a payload can never reset an unmentioned (or freshly
-///   installed) setting to its default - the cause of settings randomly flipping on/off or "all resetting."
-/// - **Wall-clock recency + device tiebreak.** Each payload carries the real timestamp of the write plus
-///   the originating device's rank (iPhone outranks the watch). A device applies an incoming payload only
-///   if it is *newer* than everything it has already sent or applied - strictly later in time, or, only
-///   when two writes share the exact same instant, made by the higher-ranked device. So the literally
-///   newest edit always wins and iPhone wins ties, instead of a logical counter letting a stale-but-busier
-///   device clobber a newer one (which looked like settings randomly "resetting").
-/// - **Echo suppression.** After applying a remote snapshot we remember its serialized form, so the local
-///   change it triggers doesn't get sent straight back.
-/// - **Reliable channel.** Uses `updateApplicationContext` (always delivered, latest-state-wins) plus an
-///   immediate `sendMessage` when reachable; duplicates are harmless because of the recency check.
+/// The protocol is a **per-key last-writer-wins merge** (an LWW map). Every synced setting travels with
+/// its own `(timestamp, deviceRank)` stamp, and a device applies an incoming key only when that key's
+/// stamp is newer than the one it already holds (strictly later wall-clock time; the higher-ranked
+/// device — iPhone — wins only an exact-same-instant tie).
 ///
-/// All sync bookkeeping is read and mutated only on the main queue, so the WCSession delegate callbacks
-/// (which arrive on a background queue) and the debounced sender never race.
+/// Why per-key and not whole-snapshot: the previous protocol stamped the *entire* snapshot with one
+/// timestamp per send. Any send from a device holding one stale value re-asserted that stale value as
+/// "just written," so a watch that hadn't yet received a phone edit could revert it merely by syncing an
+/// unrelated change — the "Hanafi calculation keeps reverting" bug — and the phone's still-queued edit
+/// then looked old to the watch and was rejected, which presented as sync being broken entirely. With
+/// per-key stamps a device only fresh-stamps keys whose value it actually changed, so a stale peer loses
+/// exactly the keys it is stale on and nothing else.
+///
+/// Other invariants, kept from (or hardened over) the previous design:
+/// - **Never transmits a default.** A payload carries only settings this device actually holds (see
+///   `Settings.watchSyncSnapshot()`), and the receiver only writes keys that are present, so a freshly
+///   installed device cannot reset its peer.
+/// - **Bookkeeping commits only after the apply.** Stamps and echo-guard state for received keys are
+///   persisted in the same main-actor pass that applies them, so a suspension can never leave a device
+///   believing it holds a value it never wrote (and then re-broadcasting its stale one).
+/// - **Echo suppression by convergence.** `lastPushedFields` records what the reliable channel already
+///   holds; after applying a peer's keys we mark them pushed, so the local didSets an apply fires never
+///   echo identical state back. Each side compares only against its *own* payload form, so structural
+///   asymmetries (the watch never sends `travelingMode`) can't cause endless re-send ping-pong.
+/// - **Reliable channel.** `updateApplicationContext` (always delivered, latest-state-wins — safe here
+///   because every payload carries the full field map) plus an immediate `sendMessage` fast path when
+///   reachable; duplicates are harmless because of the per-key recency check.
+/// - **Clock-skew fencing.** A field stamped absurdly far in our future (mis-set peer clock) is skipped,
+///   and local stamps are derived from `max(now, held stamp.nextUp)` with a clamped seed, so timestamps
+///   can never run away into the future and freeze out legitimate edits.
+/// - **Legacy interop.** A payload from a peer still on the whole-snapshot build (its single timestamp
+///   applied to every key) merges through the same per-key gate, seeded from the old protocol's persisted
+///   recency watermark — so a stale legacy peer is rejected exactly as it was before. Outgoing payloads
+///   still mirror the legacy fields so an un-updated peer keeps receiving.
+///
+/// All sync bookkeeping is read and mutated only on the main thread (main queue hops + `@MainActor`
+/// tasks), so the WCSession delegate callbacks (background queue) and the debounced sender never race.
 final class WatchConnectivityManager: NSObject, WCSessionDelegate {
     static let shared = WatchConnectivityManager()
 
@@ -29,64 +49,152 @@ final class WatchConnectivityManager: NSObject, WCSessionDelegate {
     private var cancellables = Set<AnyCancellable>()
 
     /// Local persistent store (per-device; app groups don't sync across devices). Persisting the sync
-    /// bookkeeping is what prevents a stale `applicationContext` from being re-applied over a newer local
-    /// change on relaunch - the "change a setting, reopen, it reverts" bug.
+    /// bookkeeping is what prevents a stale `receivedApplicationContext` from being re-applied over a
+    /// newer local change on relaunch - the "change a setting, reopen, it reverts" bug.
     private let store: UserDefaults
-    private static let timestampKey = "watchSync.knownTimestamp"
-    private static let rankKey = "watchSync.knownRank"
-    private static let lastSyncedKey = "watchSync.lastSyncedSettingsData"
+    private static let fieldsKey = "watchSync.fieldStamps"
+    private static let pushedKey = "watchSync.pushedFieldStamps"
+    // Previous protocol's persisted watermark - read once to seed the per-key stamps, so a not-yet-updated
+    // peer's whole-snapshot payloads face the same recency gate they always did.
+    private static let legacyTimestampKey = "watchSync.knownTimestamp"
+    private static let legacyRankKey = "watchSync.knownRank"
 
-    /// How far ahead of our own clock an incoming timestamp may be before we treat it as a bogus
-    /// (mis-set) peer clock and ignore it. Paired devices stay within seconds of each other; a full hour
-    /// of slack never trips in practice but stops a wildly-wrong clock from pinning sync into the future
-    /// and freezing out our legitimately-newer edits.
+    /// How far ahead of our own clock an incoming stamp may be before we treat it as a bogus (mis-set)
+    /// peer clock and skip that field. Paired devices stay within seconds of each other; a full hour of
+    /// slack never trips in practice but stops a wildly-wrong clock from pinning a key into the future.
     private static let maxClockSkew: TimeInterval = 60 * 60
 
-    /// Serialized form of the settings dict we last sent or applied - used to skip no-op/echo sends.
-    private var lastSyncedSettingsData: Data {
-        didSet { store.set(lastSyncedSettingsData, forKey: Self.lastSyncedKey) }
-    }
-    /// Wall-clock recency (seconds since 1970) of the newest write we've sent or applied, with the
-    /// originating device's rank as the tiebreak. Together they resolve conflicts: the literally newest
-    /// write wins, and iPhone outranks the watch only when two writes share the exact same timestamp.
-    /// Persisted so a relaunch doesn't forget and re-accept an already-superseded payload.
-    ///
-    /// (Kept as a Double rather than packed into one Int because `Int` is 32-bit on some watchOS targets,
-    /// where a millisecond timestamp would overflow.)
-    private var knownTimestamp: Double {
-        didSet { store.set(knownTimestamp, forKey: Self.timestampKey) }
-    }
-    private var knownRank: Int {
-        didSet { store.set(knownRank, forKey: Self.rankKey) }
+    /// One synced setting's state: the newest write we know of for that key.
+    /// `t` is wall-clock seconds since 1970; `r` is the originating device's rank (iPhone 1, watch 0),
+    /// used only to break an exact-same-instant tie. Kept as a Double because `Int` is 32-bit on some
+    /// watchOS targets, where a millisecond timestamp would overflow.
+    private struct Field {
+        var t: Double
+        var r: Int
+        var v: Any
+
+        var plist: [String: Any] { ["t": t, "r": r, "v": v] }
+
+        init(t: Double, r: Int, v: Any) {
+            self.t = t
+            self.r = r
+            self.v = v
+        }
+
+        init?(plist: Any) {
+            guard let dict = plist as? [String: Any],
+                  let t = (dict["t"] as? NSNumber)?.doubleValue, t.isFinite,
+                  let r = (dict["r"] as? NSNumber)?.intValue,
+                  let v = dict["v"] else { return nil }
+            self.t = t
+            self.r = r
+            self.v = v
+        }
+
+        func isNewer(than other: Field?) -> Bool {
+            guard let other else { return true }
+            return t > other.t || (t == other.t && r > other.r)
+        }
     }
 
+    /// The newest stamp+value we know for each synced key, whether it originated here or on the peer.
+    /// This is the merge state of the LWW map; persisted so a relaunch can't forget and re-accept an
+    /// already-superseded payload, or fresh-stamp a value the peer legitimately overwrote.
+    private var fields: [String: Field]
+
+    /// What the reliable channel (or a converged apply) already holds, in *this device's own payload
+    /// form*. The no-op guard compares the next candidate payload against this - never against the
+    /// peer's differently-shaped payload - which is what keeps structural asymmetries from re-triggering
+    /// sends forever.
+    private var lastPushedFields: [String: Field]
+
     #if os(iOS)
-    private let deviceRank = 1   // iPhone wins ties
+    private let deviceRank = 1   // iPhone wins exact-tie stamps
     #else
     private let deviceRank = 0
     #endif
 
     private override init() {
-        // Let `Settings` run its startup migrations first. One of them clears the sync digest to force a
-        // re-push; snapshotting the digest before that runs would resurrect the stale value.
+        // Let `Settings` run its startup migrations first; the seed snapshot below must see their results.
         _ = Settings.shared.isReadyForUI
 
         let store = UserDefaults(suiteName: AppIdentifiers.appGroupSuiteName) ?? .standard
         self.store = store
-        self.knownTimestamp = store.double(forKey: Self.timestampKey)
-        self.knownRank = store.integer(forKey: Self.rankKey)
-        self.lastSyncedSettingsData = store.data(forKey: Self.lastSyncedKey) ?? Data()
+
+        if let data = store.data(forKey: Self.fieldsKey), let saved = Self.decodeFields(data) {
+            self.fields = saved
+            self.lastPushedFields = store.data(forKey: Self.pushedKey).flatMap(Self.decodeFields) ?? [:]
+        } else {
+            // First run on the per-key protocol (fresh install, or migration from the whole-snapshot
+            // build): stamp every currently-held setting at the old protocol's recency watermark - clamped
+            // to now so a watermark a past bug pinned into the future can't poison every seed - falling
+            // back to 0 with this device's rank, so any real edit made after this moment outranks the seed
+            // and the iPhone's rank resolves a fresh-install seed-vs-seed tie.
+            let legacyT = min(store.double(forKey: Self.legacyTimestampKey), Date().timeIntervalSince1970)
+            let seedT = max(legacyT, 0)
+            #if os(iOS)
+            let seedR = seedT > 0 ? store.integer(forKey: Self.legacyRankKey) : 1
+            #else
+            let seedR = seedT > 0 ? store.integer(forKey: Self.legacyRankKey) : 0
+            #endif
+            var seeded: [String: Field] = [:]
+            for (key, value) in Settings.shared.watchSyncSnapshot() {
+                seeded[key] = Field(t: seedT, r: seedR, v: value)
+            }
+            self.fields = seeded
+            // Empty on purpose: the first activation compares the candidate payload against nothing and
+            // pushes the full field map, so a peer that has never heard from this build gets everything.
+            self.lastPushedFields = [:]
+        }
+
         super.init()
+        persistState()
         guard WCSession.isSupported() else { return }
 
         session.delegate = self
         session.activate()
 
-        // Push a fresh full snapshot shortly after any settings change (debounced to batch rapid edits).
+        // Push any pending local change shortly after a settings edit (debounced to batch rapid edits).
         Settings.shared.objectWillChange
             .debounce(for: .milliseconds(400), scheduler: DispatchQueue.main)
             .sink { [weak self] in self?.sendSnapshotIfChanged() }
             .store(in: &cancellables)
+    }
+
+    // MARK: - Persistence
+
+    private func persistState() {
+        store.set(Self.encodeFields(fields), forKey: Self.fieldsKey)
+        store.set(Self.encodeFields(lastPushedFields), forKey: Self.pushedKey)
+    }
+
+    private static func encodeFields(_ map: [String: Field]) -> Data {
+        let plist = map.mapValues { $0.plist }
+        return (try? PropertyListSerialization.data(fromPropertyList: plist, format: .binary, options: 0)) ?? Data()
+    }
+
+    private static func decodeFields(_ data: Data) -> [String: Field]? {
+        guard !data.isEmpty,
+              let raw = (try? PropertyListSerialization.propertyList(from: data, options: [], format: nil)) as? [String: Any]
+        else { return nil }
+        var out: [String: Field] = [:]
+        for (key, value) in raw {
+            if let field = Field(plist: value) { out[key] = field }
+        }
+        return out
+    }
+
+    /// Plist-value equality (numbers, strings, bools, arrays, dicts - everything a snapshot can carry).
+    private static func plistEqual(_ a: Any, _ b: Any) -> Bool {
+        (a as? NSObject)?.isEqual(b) ?? false
+    }
+
+    private static func fieldMapsEqual(_ a: [String: Field], _ b: [String: Field]) -> Bool {
+        guard a.count == b.count else { return false }
+        for (key, fa) in a {
+            guard let fb = b[key], fa.t == fb.t, fa.r == fb.r, plistEqual(fa.v, fb.v) else { return false }
+        }
+        return true
     }
 
     // MARK: - Sending
@@ -97,38 +205,66 @@ final class WatchConnectivityManager: NSObject, WCSessionDelegate {
         sendSnapshotIfChanged()
     }
 
+    /// Main thread only (all callers hop there). Fresh-stamps exactly the keys whose value changed since
+    /// the last send/apply, then pushes the full field map if it differs from what the channel holds.
     private func sendSnapshotIfChanged() {
         guard session.activationState == .activated else { return }
 
         let snapshot = Settings.shared.watchSyncSnapshot()
-        guard let data = try? JSONSerialization.data(withJSONObject: snapshot, options: [.sortedKeys]) else { return }
-        guard data != lastSyncedSettingsData else { return }   // no real change, or an echo of what we just applied
+        let now = Date().timeIntervalSince1970
 
-        // Stamp the write with the real wall clock so the newest edit always wins. If the clock hasn't
-        // advanced past our last stamp (rapid successive edits, or a backward clock correction), nudge just
-        // past it so this brand-new change is still strictly newer than anything we've already sent. The
-        // rank tiebreak only matters when two devices write at the exact same instant.
-        var ts = Date().timeIntervalSince1970
-        if ts <= knownTimestamp { ts = knownTimestamp.nextUp }
-        knownTimestamp = ts
-        knownRank = deviceRank
+        // A key whose value still matches the merge state keeps its existing stamp - possibly the peer's.
+        // Only a genuinely new local value gets a fresh stamp, nudged past the held one if the clock
+        // hasn't advanced (rapid successive edits, or a backward clock correction), so the new value is
+        // strictly newer than anything either device has seen for that key.
+        for (key, value) in snapshot {
+            if let held = fields[key], Self.plistEqual(held.v, value) { continue }
+            let base = fields[key]?.t ?? 0
+            fields[key] = Field(t: max(now, base.nextUp), r: deviceRank, v: value)
+        }
 
-        let payload: [String: Any] = ["timestamp": ts, "rank": deviceRank, "settings": snapshot]
+        // The payload carries only keys present in this device's snapshot: a key this device doesn't hold
+        // (or deliberately excludes, like `travelingMode` on the watch) is "no opinion", never a delete.
+        var candidate: [String: Field] = [:]
+        for key in snapshot.keys {
+            if let field = fields[key] { candidate[key] = field }
+        }
+
+        // Nothing to push and nothing to persist: a fresh stamp always makes the candidate differ from
+        // what was last pushed, so reaching here means the stamping loop touched nothing - this is the
+        // common no-op path (every debounced `objectWillChange`, e.g. a routine prayer fetch) and must
+        // stay free of UserDefaults writes.
+        guard !Self.fieldMapsEqual(candidate, lastPushedFields) else { return }
+
+        var outFields: [String: Any] = [:]
+        var legacySettings: [String: Any] = [:]
+        var maxT = 0.0
+        for (key, field) in candidate {
+            outFields[key] = field.plist
+            legacySettings[key] = field.v
+            maxT = max(maxT, field.t)
+        }
+        let payload: [String: Any] = [
+            "fields": outFields,
+            // Legacy mirror so a peer still on the whole-snapshot build keeps receiving; it applies these
+            // with its old single-timestamp gate.
+            "timestamp": maxT, "rank": deviceRank, "settings": legacySettings,
+        ]
 
         do {
             try session.updateApplicationContext(payload)
-            // Recorded only AFTER the reliable channel accepted the payload. Recording before the send
-            // meant a failed write still marked the change "already synced", silently losing it until some
-            // unrelated edit happened to bump the digest; now the next trigger (settings change, background
-            // flush, reachability change, activation) simply rebuilds and retries it.
-            lastSyncedSettingsData = data
+            // Recorded only AFTER the reliable channel accepted the payload; a failed write leaves the
+            // candidate ≠ lastPushed, so the next trigger (settings change, background flush, reachability
+            // change, activation) simply rebuilds and retries it.
+            lastPushedFields = candidate
         } catch {
             logger.debug("WC updateApplicationContext error: \(error)")
         }
+        persistState()
 
         if session.isReachable {
             session.sendMessage(payload, replyHandler: nil) { err in
-                // No digest involvement here: applicationContext (above) is the reliable channel and has
+                // No bookkeeping involvement: applicationContext (above) is the reliable channel and has
                 // this payload queued; the message is only the fast path for a peer that is open right now.
                 logger.debug("WC sendMessage error: \(err.localizedDescription)")
             }
@@ -137,31 +273,62 @@ final class WatchConnectivityManager: NSObject, WCSessionDelegate {
 
     // MARK: - Receiving
 
-    private func receive(_ payload: [String: Any]) {
-        guard let ts = payload["timestamp"] as? Double,
-              let rank = payload["rank"] as? Int,
-              let settings = payload["settings"] as? [String: Any] else { return }
-        // Ignore a timestamp absurdly far in our future - a peer with a badly mis-set clock - so it can't
-        // pin our sync ahead and freeze out our own legitimately-newer edits.
-        guard ts <= Date().timeIntervalSince1970 + Self.maxClockSkew else { return }
-        // Accept only writes newer than anything we've sent or applied: a strictly later wall-clock time,
-        // or - only as a tiebreak for the exact same instant - a higher-ranked device (iPhone > watch).
-        let isNewer = ts > knownTimestamp || (ts == knownTimestamp && rank > knownRank)
-        guard isNewer else { return }
-        knownTimestamp = ts
-        knownRank = rank
+    /// Main thread only (all callers hop there). Merges an incoming payload key-by-key, applies the keys
+    /// that won their recency check, and only then - in the same main-actor pass - commits the stamps and
+    /// echo-guard state, so an interrupted apply can never strand bookkeeping ahead of reality.
+    private func processIncoming(_ payload: [String: Any], thenPushLocal: Bool = false) {
+        var incoming: [String: Field] = [:]
+        if let rawFields = payload["fields"] as? [String: Any] {
+            for (key, raw) in rawFields {
+                if let field = Field(plist: raw) { incoming[key] = field }
+            }
+        } else if let ts = (payload["timestamp"] as? NSNumber)?.doubleValue, ts.isFinite,
+                  let rank = (payload["rank"] as? NSNumber)?.intValue,
+                  let legacy = payload["settings"] as? [String: Any] {
+            // Peer still on the whole-snapshot protocol: every key shares the payload's single stamp.
+            for (key, value) in legacy { incoming[key] = Field(t: ts, r: rank, v: value) }
+        }
 
-        // A newer-stamped payload whose *content* matches what we last sent or applied changes nothing -
-        // record the recency and stop. Applying it anyway used to run the full force-fetch tail on every
-        // such delivery.
-        if let data = try? JSONSerialization.data(withJSONObject: settings, options: [.sortedKeys]) {
-            guard data != lastSyncedSettingsData else { return }
-            // Remember the applied content so the change it triggers locally isn't echoed back.
-            lastSyncedSettingsData = data
+        guard !incoming.isEmpty else {
+            if thenPushLocal { sendSnapshotIfChanged() }
+            return
         }
 
         Task { @MainActor in
-            Settings.shared.applyWatchSyncSnapshot(settings)
+            let horizon = Date().timeIntervalSince1970 + Self.maxClockSkew
+            var accepted: [String: Field] = [:]
+            var winners: [String: Any] = [:]
+            for (key, field) in incoming {
+                #if os(iOS)
+                // `travelingMode` syncs ONE WAY (phone -> watch). Drop the key at the merge layer - not
+                // even its stamp is adopted - so a peer that still sends it (an older watch build, or a
+                // watch-side manual flip) can never influence the phone's state or its recency record.
+                if key == "travelingMode" { continue }
+                #endif
+                // Skip a stamp absurdly far in our future (mis-set peer clock) so it can't pin this key
+                // ahead and freeze out our own legitimately-newer edits.
+                guard field.t <= horizon else { continue }
+                guard field.isNewer(than: self.fields[key]) else { continue }
+                accepted[key] = field
+                winners[key] = field.v
+            }
+
+            if !accepted.isEmpty {
+                Settings.shared.applyWatchSyncSnapshot(winners)
+
+                // Commit bookkeeping from what actually stuck: value from our own post-apply snapshot
+                // (so a key the apply rejected can't be resurrected under the peer's stamp), and the
+                // echo guard only for keys our own payload form carries.
+                let post = Settings.shared.watchSyncSnapshot()
+                for (key, var field) in accepted {
+                    if let actual = post[key] { field.v = actual }
+                    self.fields[key] = field
+                    if post[key] != nil { self.lastPushedFields[key] = field }
+                }
+                self.persistState()
+            }
+
+            if thenPushLocal { self.sendSnapshotIfChanged() }
         }
     }
 
@@ -171,16 +338,20 @@ final class WatchConnectivityManager: NSObject, WCSessionDelegate {
         if let error { logger.debug("WC activation failed: \(error)") }
         logger.debug("WC activation → \(activationState.rawValue)")
 
-        // Apply any context that arrived while we were inactive (rejected if not strictly newer than what
-        // we already know), then push any local change that wasn't sent before - between them, the latest
-        // value always wins and both devices converge regardless of who was open when. Hop to main first:
-        // this delegate runs on a background queue, and all sync bookkeeping must be touched only there.
+        // Merge any context that arrived while we were inactive (each key rejected unless strictly newer
+        // than what we already hold), then push any local change that wasn't sent before - between them,
+        // the latest value of every individual setting wins and both devices converge regardless of who
+        // was open when. Hop to main first: this delegate runs on a background queue, and all sync
+        // bookkeeping must be touched only there.
         if activationState == .activated {
             let pending = session.receivedApplicationContext
             DispatchQueue.main.async { [weak self] in
                 guard let self else { return }
-                if !pending.isEmpty { self.receive(pending) }
-                self.sendSnapshotIfChanged()
+                if pending.isEmpty {
+                    self.sendSnapshotIfChanged()
+                } else {
+                    self.processIncoming(pending, thenPushLocal: true)
+                }
             }
         }
 
@@ -199,9 +370,9 @@ final class WatchConnectivityManager: NSObject, WCSessionDelegate {
         #endif
     }
 
-    /// The peer just came within reach (its app opened, Bluetooth reconnected). Everything already synced is
-    /// a digest-guarded no-op; what this actually delivers is the retry for a change whose reliable send
-    /// failed (see the rollback in `sendSnapshotIfChanged`) - that change would otherwise wait for the next
+    /// The peer just came within reach (its app opened, Bluetooth reconnected). Everything already synced
+    /// is a guarded no-op; what this actually delivers is the retry for a change whose reliable send failed
+    /// (see the rollback in `sendSnapshotIfChanged`) - that change would otherwise wait for the next
     /// unrelated edit.
     func sessionReachabilityDidChange(_ session: WCSession) {
         guard session.isReachable else { return }
@@ -215,25 +386,29 @@ final class WatchConnectivityManager: NSObject, WCSessionDelegate {
     func sessionDidDeactivate(_ session: WCSession) { session.activate() }
 
     /// A watch was paired or the watch app was just installed. That watch has never seen our settings, and
-    /// the digest can't know that - it only remembers what we last handed the session. Clearing it forces a
-    /// full snapshot push so the new watch starts from the phone's config instead of its own defaults until
-    /// the user happens to change something.
+    /// the push guard can't know that - it only remembers what we last handed the session. Clearing it
+    /// forces a full field-map push (with the *existing* stamps - nothing was edited, so nothing is
+    /// re-stamped) so the new watch starts from the phone's config instead of its own defaults.
     func sessionWatchStateDidChange(_ session: WCSession) {
         guard session.isPaired, session.isWatchAppInstalled else { return }
         DispatchQueue.main.async { [weak self] in
             guard let self else { return }
-            self.lastSyncedSettingsData = Data()
+            self.lastPushedFields = [:]
+            // Persist the cleared guard NOW: if the send below can't run (session mid-reactivation for the
+            // new watch) and the app dies before the next successful push, a stale persisted guard would
+            // otherwise suppress the full push the new watch is owed.
+            self.persistState()
             self.sendSnapshotIfChanged()
         }
     }
     #endif
 
     func session(_ session: WCSession, didReceiveMessage message: [String: Any]) {
-        DispatchQueue.main.async { self.receive(message) }
+        DispatchQueue.main.async { self.processIncoming(message) }
     }
 
     func session(_ session: WCSession, didReceiveApplicationContext applicationContext: [String: Any]) {
-        DispatchQueue.main.async { self.receive(applicationContext) }
+        DispatchQueue.main.async { self.processIncoming(applicationContext) }
     }
 }
 
@@ -322,12 +497,12 @@ extension Settings {
         return dict
     }
 
-    /// Apply a snapshot received from the paired device. Only keys actually present are written, via the
-    /// real setters (so persistence + side effects fire correctly), then a single recompute/refresh - and
-    /// only if something actually changed. A payload that changes nothing must be a complete no-op: the
-    /// force-fetch it used to run unconditionally rescheduled notifications and re-ran the travel/calculation
-    /// auto-checks every time the watch was merely opened, which is where the phantom phone notifications
-    /// came from.
+    /// Apply settings received from the paired device - the manager passes only the keys that won their
+    /// per-key recency check. Only keys actually present are written, via the real setters (so persistence
+    /// + side effects fire correctly), then a single recompute/refresh - and only if something actually
+    /// changed. A payload that changes nothing must be a complete no-op: the force-fetch it used to run
+    /// unconditionally rescheduled notifications and re-ran the travel/calculation auto-checks every time
+    /// the watch was merely opened, which is where the phantom phone notifications came from.
     @MainActor
     func applyWatchSyncSnapshot(_ dict: [String: Any]) {
         var changed = false
