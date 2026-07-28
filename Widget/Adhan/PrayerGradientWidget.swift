@@ -65,6 +65,16 @@ struct PrayerGradientEntryView: View {
                 .lineLimit(1)
                 .minimumScaleFactor(0.5)
 
+            // The current prayer's window filling live beneath the countdown. White over the sky
+            // (accent-on-gradient is unreadable there), accent on the standard background.
+            PrayerIntervalProgressBar(
+                current: current,
+                next: next,
+                entryDate: entry.date,
+                tint: showsSky ? .white : entry.accentColor.color
+            )
+            .padding(.vertical, 1)
+
             Text("\(next.displayName) \(shortTime(next.time))")
                 .font(.caption)
                 .opacity(0.9)
@@ -98,6 +108,14 @@ struct PrayerGradientEntryView: View {
                     .font(.title.weight(.semibold).monospacedDigit())
                     .lineLimit(1)
                     .minimumScaleFactor(0.5)
+
+                PrayerIntervalProgressBar(
+                    current: current,
+                    next: next,
+                    entryDate: entry.date,
+                    tint: showsSky ? .white : entry.accentColor.color
+                )
+                .padding(.top, 2)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
 

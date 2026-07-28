@@ -18,6 +18,9 @@ struct IslamView: View {
         case commonAdhkar
         case commonDuas
         case tasbihCounter
+        // Zakah Calculator is built (ZakahView.swift) but hidden for now - uncomment this case and its
+        // title/systemImage/gridTitle/destination/resourceLink entries below to ship it.
+        // case zakahCalculator
         case namesOfAllah
         case hijriCalendarConverter
         case masjidLocator
@@ -33,6 +36,7 @@ struct IslamView: View {
             case .commonAdhkar: return "Dhikr & Remembrances"
             case .commonDuas: return "Dua & Supplications"
             case .tasbihCounter: return "Tasbih Counter"
+            // case .zakahCalculator: return "Zakah Calculator"
             case .namesOfAllah: return "99 Names of Allah"
             case .hijriCalendarConverter: return "Hijri Date Converter"
             case .masjidLocator: return "Masjid Locator"
@@ -50,6 +54,7 @@ struct IslamView: View {
             case .commonAdhkar: return "book.closed"
             case .commonDuas: return "text.book.closed"
             case .tasbihCounter: return "circles.hexagonpath.fill"
+            // case .zakahCalculator: return "percent"
             case .namesOfAllah: return "signature"
             case .hijriCalendarConverter: return "calendar"
             case .masjidLocator: return "mappin.and.ellipse"
@@ -70,6 +75,7 @@ struct IslamView: View {
             case .commonAdhkar: return "Dhikr &\nRemembrances"
             case .commonDuas: return "Dua &\nSupplications"
             case .tasbihCounter: return "Tasbih\nCounter"
+            // case .zakahCalculator: return "Zakah\nCalculator"
             case .namesOfAllah: return "99 Names\nof Allah"
             case .hijriCalendarConverter: return "Hijri Date\nConverter"
             case .masjidLocator: return "Masjid\nLocator"
@@ -96,7 +102,7 @@ struct IslamView: View {
                 settings.toggleIslamResourceFavorite(item.rawValue)
             }
         } label: {
-            Label(isFavorite ? "Unfavorite" : "Favorite", systemImage: isFavorite ? "star.slash" : "star")
+            Label(isFavorite ? "Unfavorite" : "Favorite", systemImage: isFavorite ? "star.fill" : "star")
         }
     }
     #endif
@@ -328,6 +334,8 @@ struct IslamView: View {
             DuaView()
         case .tasbihCounter:
             TasbihView()
+        // case .zakahCalculator:
+        //     ZakahCalculatorView()
         case .namesOfAllah:
             NamesView()
         case .hijriCalendarConverter:
@@ -367,6 +375,12 @@ struct IslamView: View {
             resourceLink(title: "Tasbih Counter", systemImage: "circles.hexagonpath.fill") {
                 TasbihView()
             }
+
+            // #if os(iOS)
+            // resourceLink(title: "Zakah Calculator", systemImage: "percent") {
+            //     ZakahCalculatorView()
+            // }
+            // #endif
 
             resourceLink(title: "99 Names of Allah", systemImage: "signature") {
                 NamesView()

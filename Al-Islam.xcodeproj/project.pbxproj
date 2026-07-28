@@ -294,6 +294,8 @@
 		72F7DB762F0431740037B059 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 72F7DB742F0431740037B059 /* Assets.xcassets */; };
 		72F7DB772F0431740037B059 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 72F7DB742F0431740037B059 /* Assets.xcassets */; };
 		72F7DB782F0431740037B059 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 72F7DB742F0431740037B059 /* Assets.xcassets */; };
+		72FA0002AB5F4C7D00000002 /* ZakahView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72FA0001AB5F4C7D00000001 /* ZakahView.swift */; };
+		72FA0004AB5F4C7D00000004 /* PrayerProgressWidgets.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72FA0003AB5F4C7D00000003 /* PrayerProgressWidgets.swift */; };
 		72FA10042FF0A00100AA0004 /* QuranCommon.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 72FA10022FF0A00100AA0002 /* QuranCommon.ttf */; };
 		72FA10062FF0A00100AA0006 /* QuranCommon.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 72FA10022FF0A00100AA0002 /* QuranCommon.ttf */; };
 		72FA10082FF0A00100AA0008 /* QuranCommon.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 72FA10022FF0A00100AA0002 /* QuranCommon.ttf */; };
@@ -565,6 +567,8 @@
 		72F7DB6C2F030A630037B059 /* AdhanStructs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdhanStructs.swift; sourceTree = "<group>"; };
 		72F7DB712F03FEE50037B059 /* AppReview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppReview.swift; sourceTree = "<group>"; };
 		72F7DB742F0431740037B059 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		72FA0001AB5F4C7D00000001 /* ZakahView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ZakahView.swift; sourceTree = "<group>"; };
+		72FA0003AB5F4C7D00000003 /* PrayerProgressWidgets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrayerProgressWidgets.swift; sourceTree = "<group>"; };
 		72FA10022FF0A00100AA0002 /* QuranCommon.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = QuranCommon.ttf; sourceTree = "<group>"; };
 		72FA10092FF0A00100AA0009 /* QuranGlyphFonts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuranGlyphFonts.swift; sourceTree = "<group>"; };
 		72FB00012F7B000000AAF900 /* CustomPrayerNames.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomPrayerNames.swift; sourceTree = "<group>"; };
@@ -681,6 +685,7 @@
 				72C7DD752D79A59B00FC6058 /* CountdownSimpleWidget.swift */,
 				725B42162AA00639009C8C91 /* CountdownWidget.swift */,
 				72CB00052F7F000000AA0020 /* PrayerGradientWidget.swift */,
+				72FA0003AB5F4C7D00000003 /* PrayerProgressWidgets.swift */,
 				725B42112AA00639009C8C91 /* PrayersSplitWidget.swift */,
 				72D0BCC82D7AE45300B7E4F5 /* PrayersGridWidget.swift */,
 				725B42152AA00639009C8C91 /* LockScreenNextWidget.swift */,
@@ -876,6 +881,7 @@
 				72E8329C2F6F52BA0013428B /* DuaView.swift */,
 				72E832A32F6F52BA0013428B /* TasbihView.swift */,
 				72E832A02F6F52BA0013428B /* NamesView.swift */,
+				72FA0001AB5F4C7D00000001 /* ZakahView.swift */,
 				72E8329B2F6F52BA0013428B /* DateView.swift */,
 				72E8329E2F6F52BA0013428B /* MasjidView.swift */,
 				72E832A52F6F52BA0013428B /* WallpaperView.swift */,
@@ -1270,6 +1276,7 @@
 				73A100112F90000100ABCDE1 /* QuranProvider.swift in Sources */,
 				725B422A2AA00660009C8C91 /* CountdownWidget.swift in Sources */,
 				72CB00062F7F000000AA0021 /* PrayerGradientWidget.swift in Sources */,
+				72FA0004AB5F4C7D00000004 /* PrayerProgressWidgets.swift in Sources */,
 				72CB00042F7F000000AA0019 /* SkyPalette.swift in Sources */,
 				725B42292AA00660009C8C91 /* PrayersSplitWidget.swift in Sources */,
 				728E2EE32E6E017E00F2C24C /* SettingsAdhan.swift in Sources */,
@@ -1344,6 +1351,7 @@
 				7ADD181A00000000AA0018 /* TajweedTopics.swift in Sources */,
 				72E832AE2F6F52BA0013428B /* DuaView.swift in Sources */,
 				72E832B02F6F52BA0013428B /* TasbihView.swift in Sources */,
+				72FA0002AB5F4C7D00000002 /* ZakahView.swift in Sources */,
 				72E832B12F6F52BA0013428B /* NamesView.swift in Sources */,
 				72E832B22F6F52BA0013428B /* PillarsView.swift in Sources */,
 				7ADD181700000000AA0018 /* BeliefsViews.swift in Sources */,

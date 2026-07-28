@@ -4,19 +4,31 @@ import WidgetKit
 @main
 struct Widgets: WidgetBundle {
     var body: some Widget {
-        SimpleWidget()
-        CountdownWidget()
+        // Home screen, in gallery order: the sky family leads (the app's signature look), then the
+        // at-a-glance boards, then the countdowns, then the full-schedule layouts, then fasting.
         PrayerGradientWidget()
         PrayerGlanceWidget()
         CountdownSkyWidget()
         PrayersSkyWidget()
-        Prayers2Widget()
+        NextPrayerBoardWidget()
+        PrayerDayWidget()
+        CountdownWidget()
+        SimpleWidget()
+        PrayerListSmallWidget()
         PrayersWidget()
-        
+        Prayers2Widget()
+        FastingCountdownWidget()
+
         #if os(iOS)
+        // Lock screen: the two circulars, then the rectangulars from richest to plainest.
         if #available(iOS 16.1, *) {
+            PrayerProgressRingWidget()
+            PrayerCountdownCircularWidget()
             LockScreen1Widget()
+            PrayerWaveWidget()
             LockScreen2Widget()
+            NextPrayerProgressWidget()
+            PrayerRowLockWidget()
             LockScreen3Widget()
             LockScreen4Widget()
         }

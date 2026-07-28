@@ -31,8 +31,7 @@ struct Prayers2EntryView: View {
     var body: some View {
         VStack {
             if entry.prayers.isEmpty {
-                Text("Open app to get prayer times")
-                    .foregroundColor(entry.accentColor.color)
+                PrayerWidgetEmptyState(tint: entry.accentColor.color)
             } else {
                 if let currentPrayer = entry.currentPrayer, let nextPrayer = entry.nextPrayer {
                     HStack {
@@ -49,7 +48,7 @@ struct Prayers2EntryView: View {
                             Spacer()
                             
                             Text("Time left: \(nextPrayer.time, style: .timer)")
-                                .font(.subheadline)
+                                .font(.subheadline.monospacedDigit())
                                 .frame(alignment: .trailing)
                                 .multilineTextAlignment(.trailing)
                                 .frame(maxWidth: .infinity, alignment: .trailing)
@@ -57,6 +56,14 @@ struct Prayers2EntryView: View {
                     }
                     .font(.headline)
                     .padding(.vertical, 4)
+
+                    PrayerIntervalProgressBar(
+                        current: currentPrayer,
+                        next: nextPrayer,
+                        entryDate: entry.date,
+                        tint: entry.accentColor.color
+                    )
+                    .padding(.bottom, 2)
                 }
                 
                 Spacer()
@@ -81,6 +88,7 @@ struct Prayers2EntryView: View {
                                 Spacer()
                                 
                                 Text(prayer.time, style: .time)
+                                    .monospacedDigit()
                                     .fontWeight(.bold)
                             }
                             .foregroundColor(getPrayerColor(for: prayer, in: entry.prayers))
@@ -112,6 +120,7 @@ struct Prayers2EntryView: View {
                                 Spacer()
                                 
                                 Text(prayer.time, style: .time)
+                                    .monospacedDigit()
                                     .fontWeight(.bold)
                             }
                             .foregroundColor(getPrayerColor(for: prayer, in: entry.prayers))
@@ -124,7 +133,7 @@ struct Prayers2EntryView: View {
                 Spacer()
                 
                 HStack {
-                    if !entry.currentCity.isEmpty && !entry.currentCity.isEmpty {
+                    if !entry.currentCity.isEmpty {
                         Image(systemName: "location.fill")
                             .font(.caption2)
                             .foregroundColor(entry.accentColor.color)
@@ -158,7 +167,7 @@ struct Prayers2Widget: Widget {
                 .widgetContainerBackground(legacyPadding: true)
         }
         .supportedFamilies([.systemMedium])
-        .configurationDisplayName("Prayer Times")
-        .description("This widget displays the prayer times")
+        .configurationDisplayName("Prayer Split")
+        .description("Today's prayer times in two columns, with the current prayer's live countdown")
     }
 }

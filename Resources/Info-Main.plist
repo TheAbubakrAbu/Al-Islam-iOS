@@ -5,6 +5,7 @@
 	<key>BGTaskSchedulerPermittedIdentifiers</key>
 	<array>
 		<string>com.Quran.Elmallah.Islamic-Pillars.fetchPrayerTimes</string>
+		<string>com.Quran.Elmallah.Islamic-Pillars.processingRefresh</string>
 	</array>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>

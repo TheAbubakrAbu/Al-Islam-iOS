@@ -33,8 +33,7 @@ struct CountdownEntryView: View {
     var body: some View {
         VStack {
             if entry.prayers.isEmpty {
-                Text("Open app to get prayer times")
-                    .foregroundColor(accent)
+                PrayerWidgetEmptyState(tint: accent)
             } else {
                 if let currentPrayer = entry.currentPrayer, let nextPrayer = entry.nextPrayer {
                     if widgetFamily == .systemMedium {
@@ -66,13 +65,24 @@ struct CountdownEntryView: View {
                                 Spacer()
                                 
                                 Text("Time left: \(nextPrayer.time, style: .timer)")
-                                    .font(.caption)
+                                    .font(.caption.monospacedDigit())
                             }
                             .padding(.leading, 6)
+
+                            // Fills live across the current prayer's window (its start → the next
+                            // prayer), matching the countdown above it.
+                            PrayerIntervalProgressBar(
+                                current: currentPrayer,
+                                next: nextPrayer,
+                                entryDate: entry.date,
+                                tint: accent
+                            )
+                            .padding(.leading, 6)
+                            .padding(.top, 2)
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(.horizontal, 4)
-                        
+
                         Spacer()
                     }
                     
@@ -116,13 +126,21 @@ struct CountdownEntryView: View {
                             
                             Text("Starts at \(nextPrayer.time, style: .time)")
                                 .font(.caption2)
-                            
+
                             Text("Time left: \(nextPrayer.time, style: .timer)")
-                                .font(.caption2)
-                            
+                                .font(.caption2.monospacedDigit())
+
+                            PrayerIntervalProgressBar(
+                                current: currentPrayer,
+                                next: nextPrayer,
+                                entryDate: entry.date,
+                                tint: accent
+                            )
+                            .padding(.top, 2)
+
                             Spacer()
-                            
-                            if !entry.currentCity.isEmpty && !entry.currentCity.isEmpty {
+
+                            if !entry.currentCity.isEmpty {
                                 Divider()
                                     .background(dividerTint)
                                 
@@ -166,7 +184,7 @@ struct CountdownEntryView: View {
                         Spacer()
                         
                         HStack {
-                            if !entry.currentCity.isEmpty && !entry.currentCity.isEmpty {
+                            if !entry.currentCity.isEmpty {
                                 Image(systemName: "location.fill")
                                     .font(.caption)
                                     .foregroundColor(accent)
@@ -206,6 +224,6 @@ struct CountdownWidget: Widget {
         }
         .supportedFamilies([.systemSmall, .systemMedium])
         .configurationDisplayName("Prayer Countdown")
-        .description("This widget displays the upcoming prayer time")
+        .description("The current prayer, its live countdown and progress, and today's Hijri date")
     }
 }

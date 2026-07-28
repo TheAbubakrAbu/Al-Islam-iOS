@@ -22,7 +22,9 @@ struct PrayerList: View {
     @State private var animatingBellPrayerName: String?
     @State private var bellAnimationActive = false
     @State private var selectedDate = Date()
-    @State private var compareToday = true
+    // Off by default: the TODAY comparison doubles the section's height, so it is opt-in per viewing
+    // via the footer button rather than something every date change re-imposes.
+    @State private var compareToday = false
     @State private var showOptionalPrayerToggles = false
 
     // New storage key (V2) so every existing user is reset to the new Tiles default, regardless of what
@@ -149,7 +151,7 @@ struct PrayerList: View {
         if isShowingDifferentDay {
             withAnimation {
                 selectedDate = Date()
-                compareToday = true
+                compareToday = false
             }
         }
         // The stored `prayers` object still carries YESTERDAY's date (and times). `currentPrayer` heals
@@ -307,7 +309,7 @@ struct PrayerList: View {
             )
 
             if isExpanded {
-                expandedPrayerDetailContent(for: prayer)
+                expandedPrayerDetailContent(for: prayer, in: prayers)
                     .contentShape(Rectangle())
             }
         }
@@ -491,16 +493,20 @@ struct PrayerList: View {
     @ViewBuilder
     private func expandedPrayerDetail(for prayers: [Prayer]) -> some View {
         if let prayer = prayers.first(where: { expansionKey(for: $0) == expandedPrayerKey }) {
-            expandedPrayerDetailContent(for: prayer)
+            expandedPrayerDetailContent(for: prayer, in: prayers)
             .id(prayer.stableDisplayID)
             .contentShape(Rectangle())
         }
     }
 
-    private func expandedPrayerDetailContent(for prayer: Prayer) -> some View {
+    private func expandedPrayerDetailContent(for prayer: Prayer, in prayers: [Prayer]) -> some View {
         HStack(alignment: .top, spacing: 10) {
-            PrayerDetailBlock(prayer: prayer, referenceText: prayerReferenceText(for: prayer))
-                .frame(maxWidth: .infinity, alignment: .leading)
+            PrayerDetailBlock(
+                prayer: prayer,
+                timeWindowText: timeWindowText(for: prayer, in: prayers),
+                referenceText: prayerReferenceText(for: prayer)
+            )
+            .frame(maxWidth: .infinity, alignment: .leading)
 
             #if os(iOS)
             if prayerDisplayMode != .list && prayerDisplayMode != .tiles {
@@ -549,9 +555,20 @@ struct PrayerList: View {
     private var dateSelectionFooter: some View {
         #if os(iOS)
         VStack {
-            DatePicker("Showing prayers for", selection: $selectedDate.animation(.easeInOut), displayedComponents: .date)
-                .datePickerStyle(DefaultDatePickerStyle())
-                .padding(4)
+            HStack(spacing: 8) {
+                Text("Showing prayers for")
+
+                Spacer(minLength: 4)
+
+                dayStepButton(systemName: "chevron.backward", byDays: -1)
+
+                DatePicker("Showing prayers for", selection: $selectedDate.animation(.easeInOut), displayedComponents: .date)
+                    .datePickerStyle(DefaultDatePickerStyle())
+                    .labelsHidden()
+
+                dayStepButton(systemName: "chevron.forward", byDays: 1)
+            }
+            .padding(4)
 
             if isShowingDifferentDay {
                 footerActionButton(compareToday ? "Hide Today Comparison" : "Compare With Today") {
@@ -565,10 +582,6 @@ struct PrayerList: View {
         }
         .onChange(of: selectedDate) { _ in
             settings.hapticFeedback()
-            // Re-show the today comparison by default whenever a different day is picked.
-            if isShowingDifferentDay {
-                compareToday = true
-            }
         }
         #endif
     }
@@ -580,6 +593,26 @@ struct PrayerList: View {
             .multilineTextAlignment(.leading)
             .frame(maxWidth: .infinity, alignment: .leading)
     }
+
+    #if os(iOS)
+    /// One of the two chevrons flanking the date picker: steps the shown day backward or forward.
+    private func dayStepButton(systemName: String, byDays days: Int) -> some View {
+        Button {
+            if let stepped = Calendar.current.date(byAdding: .day, value: days, to: selectedDate) {
+                withAnimation(.easeInOut) {
+                    selectedDate = stepped
+                }
+            }
+        } label: {
+            Image(systemName: systemName)
+                .font(.subheadline.weight(.semibold))
+                .foregroundColor(settings.accentColor.accent2)
+                .frame(width: 32, height: 32)
+                .conditionalGlassEffect()
+        }
+        .buttonStyle(.plain)
+    }
+    #endif
 
     private func footerActionButton(_ title: String, action: @escaping () -> Void) -> some View {
         Text(title)
@@ -635,6 +668,32 @@ struct PrayerList: View {
         }
 
         return prayerIndex < currentPrayerIndex ? .secondary : .primary
+    }
+
+    /// "Until Asr at 4:52 PM (3h 38m)" - the span from THIS prayer's time to the next one in the displayed
+    /// timeline, not from now. The last entry of the day rolls over to the next day's Fajr.
+    private func timeWindowText(for prayer: Prayer, in prayers: [Prayer]) -> String? {
+        let sorted = prayers.sorted { $0.time < $1.time }
+
+        var next: Prayer?
+        if let index = sorted.firstIndex(where: { $0.stableDisplayID == prayer.stableDisplayID }),
+           index + 1 < sorted.count {
+            next = sorted[index + 1]
+        } else if let tomorrow = Calendar.current.date(byAdding: .day, value: 1, to: prayer.time) {
+            next = settings.getPrayerTimes(for: tomorrow)?.first { $0.nameTransliteration == "Fajr" }
+        }
+
+        guard let next, next.time > prayer.time else { return nil }
+
+        let minutes = Int(next.time.timeIntervalSince(prayer.time) / 60)
+        let duration: String
+        switch (minutes / 60, minutes % 60) {
+        case (0, let m):        duration = "\(m)m"
+        case (let h, 0):        duration = "\(h)h"
+        case (let h, let m):    duration = "\(h)h \(m)m"
+        }
+
+        return "Until \(next.displayName) at \(settings.formatDate(next.time)) (\(duration))"
     }
 
     private func prayerReferenceText(for prayer: Prayer) -> String? {
@@ -863,6 +922,7 @@ private struct PrayerDetailBlock: View {
     @ObservedObject private var settings = Settings.shared
 
     let prayer: Prayer
+    let timeWindowText: String?
     let referenceText: String?
 
     private var isOptionalPrayer: Bool {
@@ -893,6 +953,16 @@ private struct PrayerDetailBlock: View {
                 .font(.title3)
                 .foregroundColor(settings.accentColor.accent2)
                 .lineLimit(1)
+
+            // The window this time slot spans - from this prayer's own start to the next one, so it reads
+            // the same whether the row is expanded before, during or after the prayer.
+            if let timeWindowText {
+                Text(timeWindowText)
+                    .foregroundColor(.primary)
+                    .font(.footnote)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+            }
 
             // A combined row is titled "Daytime" / "Nighttime" and never names the two prayers it stands for,
             // so tapping it left you with no idea when Asr (or Isha) actually falls. Name them, with their

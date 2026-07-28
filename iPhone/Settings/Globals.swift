@@ -24,6 +24,10 @@ enum AppIdentifiers {
     static let bundleIdentifier = "com.Quran.Elmallah.Islamic-Pillars"
 
     static let backgroundFetchPrayerTimesTaskIdentifier = "\(bundleIdentifier).fetchPrayerTimes"
+    /// The overnight BGProcessingTask twin of the refresh above. Processing tasks get the system's
+    /// nightly maintenance windows (typically while charging) - the slot that actually lines up with
+    /// refreshing before Fajr.
+    static let backgroundProcessingRefreshTaskIdentifier = "\(bundleIdentifier).processingRefresh"
     static let reciterDownloadsBackgroundSessionIdentifier = "\(bundleIdentifier).reciter-downloads"
     static let networkMonitorQueueLabel = "\(bundleIdentifier).NetworkMonitor"
     static let reciterDownloadDedupeQueueLabel = "\(bundleIdentifier).reciter-dedupe"

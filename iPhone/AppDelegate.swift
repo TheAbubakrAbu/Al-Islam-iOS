@@ -1,5 +1,6 @@
 #if os(iOS)
 import BackgroundTasks
+import CoreLocation
 import UIKit
 import UserNotifications
 
@@ -27,8 +28,19 @@ class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterD
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
     ) -> Bool {
         registerBackgroundRefreshTask()
-        scheduleAppRefresh()
+        scheduleBackgroundRefreshes()
         UNUserNotificationCenter.current().delegate = self
+
+        // Re-arm the background refreshes every time the app is backgrounded - via the NOTIFICATION,
+        // not the legacy `applicationDidEnterBackground` delegate method: this is a scene-based
+        // (SwiftUI-lifecycle) app, so UIKit never calls that method and the old re-arm was dead code.
+        // Launch-time scheduling alone left a single far-future request that the system routinely
+        // dropped - the "background refresh never runs" bug.
+        NotificationCenter.default.addObserver(
+            forName: UIApplication.didEnterBackgroundNotification, object: nil, queue: .main
+        ) { _ in
+            self.scheduleBackgroundRefreshes()
+        }
 
         // The nag cascade's "Did you pray?" action. No .foreground option: answering from the lock
         // screen marks the tracker and silences the remaining nags without ever opening the app.
@@ -57,10 +69,6 @@ class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterD
         return true
     }
 
-    // Re-schedules the background refresh whenever the app moves to background.
-    func applicationDidEnterBackground(_ application: UIApplication) {
-        scheduleAppRefresh()
-    }
 
     // Shows in-app notifications as banner + sound when a notification arrives in foreground, and keeps
     // them in Notification Center (.list) so a missed banner isn't lost.
@@ -116,31 +124,51 @@ class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterD
         }
     }
 
-    // Registers the BGTask handler that refreshes prayer times in the background.
+    // Registers both background task handlers: the opportunistic app refresh and its overnight
+    // BGProcessingTask twin. Both run the same refresh; they differ only in when the system grants them
+    // time (short daytime windows vs. the nightly maintenance window that lines up with pre-Fajr).
     private func registerBackgroundRefreshTask() {
         BGTaskScheduler.shared.register(forTaskWithIdentifier: taskID, using: nil) { task in
-            guard let refreshTask = task as? BGAppRefreshTask else {
-                task.setTaskCompleted(success: false)
-                return
-            }
-            self.handleAppRefresh(task: refreshTask)
+            self.handleAppRefresh(task: task)
+        }
+        BGTaskScheduler.shared.register(
+            forTaskWithIdentifier: AppIdentifiers.backgroundProcessingRefreshTaskIdentifier, using: nil
+        ) { task in
+            self.handleAppRefresh(task: task)
         }
     }
 
-    // Submits the next background refresh request using the computed target run date.
-    private func scheduleAppRefresh() {
-        let request = BGAppRefreshTaskRequest(identifier: taskID)
-        request.earliestBeginDate = nextRunDate()
+    // Submits both pending requests. Safe to call repeatedly - a submit replaces any pending request
+    // with the same identifier.
+    private func scheduleBackgroundRefreshes() {
+        // The app refresh asks for the pre-Fajr target but never more than 4 hours out: iOS routinely
+        // drops a lone request ~20 hours in the future, and each run re-arms the next one anyway - so
+        // through the day this yields a few opportunistic refreshes (fresh widgets, the traveling-mode
+        // check) and the last one lands near Fajr.
+        let refresh = BGAppRefreshTaskRequest(identifier: taskID)
+        refresh.earliestBeginDate = min(nextRunDate(), Date().addingTimeInterval(4 * 60 * 60))
+        submit(refresh, label: "BGAppRefresh")
 
+        // The processing request keeps the true pre-Fajr target: processing tasks run in the system's
+        // nightly maintenance window, which is the slot that actually matches it. Network required -
+        // the refresh geocodes and fetches.
+        let processing = BGProcessingTaskRequest(identifier: AppIdentifiers.backgroundProcessingRefreshTaskIdentifier)
+        processing.earliestBeginDate = nextRunDate()
+        processing.requiresNetworkConnectivity = true
+        processing.requiresExternalPower = false
+        submit(processing, label: "BGProcessing")
+    }
+
+    private func submit(_ request: BGTaskRequest, label: String) {
         if let date = request.earliestBeginDate {
-            logger.debug("🔧 Scheduling BGAppRefresh – earliestBeginDate: \(date.formatted())")
+            logger.debug("🔧 Scheduling \(label) – earliestBeginDate: \(date.formatted())")
         }
-
         do {
             try BGTaskScheduler.shared.submit(request)
-            logger.debug("✅ BGAppRefresh submitted")
+            logger.debug("✅ \(label) submitted")
         } catch {
-            logger.error("❌ BG submit failed: \(error.localizedDescription)")
+            // Expected on the Simulator (background tasks are unsupported there) - harmless.
+            logger.error("❌ \(label) submit failed: \(error.localizedDescription)")
         }
     }
 
@@ -173,10 +201,11 @@ class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterD
             .time
     }
 
-    // Executes when BG refresh fires: re-schedules, handles expiration, and refreshes prayer times.
-    private func handleAppRefresh(task: BGAppRefreshTask) {
-        logger.debug("🚀 BGAppRefresh fired")
-        scheduleAppRefresh()
+    // Executes when either background task fires: re-schedules both, handles expiration, and refreshes
+    // prayer times (with a fresh location fix when authorized - see below).
+    private func handleAppRefresh(task: BGTask) {
+        logger.debug("🚀 Background refresh fired (\(task.identifier))")
+        scheduleBackgroundRefreshes()
 
         // `setTaskCompleted` must be called exactly once. The expiration handler and the fetch completion
         // can race (e.g. the fetch finishes just as the task expires), so gate it behind a lock + flag.
@@ -195,11 +224,29 @@ class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterD
             complete(false)
         }
 
+        // A refresh computed against the stored location faithfully rebuilds widgets for the city you LEFT
+        // and feeds the traveling-mode check coordinates from before the trip. Ask for one fresh fix first:
+        // its delegate callback commits the move, and that commit re-fetches prayer times, reschedules
+        // notifications and reloads widgets on its own. The fetch below still runs immediately with the
+        // stored location, so the task succeeds even when no fix arrives.
+        let requestedLocationFix = Settings.locationManager.authorizationStatus == .authorizedAlways
+        if requestedLocationFix {
+            Settings.locationManager.requestLocation()
+        }
+
         Settings.shared.fetchPrayerTimes {
             logger.debug("🎉 BG task completed – prayer times refreshed")
-            complete(true)
+            guard requestedLocationFix else {
+                complete(true)
+                return
+            }
+            // Hold the task open a beat so the one-shot fix - and the commit/fetch/reload chain it
+            // triggers - can land before iOS suspends the process. BGAppRefresh allows ~30 s; the
+            // expiration handler still completes us if the system calls time first.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 12) {
+                complete(true)
+            }
         }
     }
 }
-
 #endif

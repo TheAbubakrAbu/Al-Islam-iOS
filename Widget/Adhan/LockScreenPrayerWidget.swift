@@ -5,7 +5,7 @@ struct LockScreen2EntryView: View {
     var entry: PrayersProvider.Entry
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: 3) {
             if entry.prayers.isEmpty {
                 Text("Open app to get prayer times")
                     .font(.caption)
@@ -16,22 +16,31 @@ struct LockScreen2EntryView: View {
                             .font(.caption)
                             .padding(.trailing, -4)
                     }
-                    
+
                     Text(currentPrayer.displayName)
                         .font(.headline)
-                    
+
                     Text("\(nextPrayer.time, style: .timer)")
                         .foregroundColor(.secondary)
-                        .font(.footnote)
+                        .font(.footnote.monospacedDigit())
                 }
-                
+
                 Text("\(nextPrayer.displayName) at \(nextPrayer.time, style: .time)")
                     .font(.caption)
-                
+
+                // How far through the current prayer's window we are, filling live from its start to
+                // the next prayer's time.
+                PrayerIntervalProgressBar(
+                    current: currentPrayer,
+                    next: nextPrayer,
+                    entryDate: entry.date,
+                    tint: .primary
+                )
+
                 HStack {
                     Image(systemName: "location.fill")
                         .padding(.trailing, -4)
-                    
+
                     Text(entry.currentCity)
                 }
                 .font(.footnote)
@@ -54,15 +63,15 @@ struct LockScreen2Widget: Widget {
                     .widgetContainerBackground(accessory: true)
             }
             .supportedFamilies([.accessoryRectangular])
-            .configurationDisplayName("Prayer Times")
-            .description("Shows the current prayer and the time remaining until the next prayer")
+            .configurationDisplayName("Current & Next Prayer")
+            .description("The current prayer with its progress, what comes next, and your city")
         } else {
             return StaticConfiguration(kind: kind, provider: PrayersProvider()) { entry in
                 LockScreen2EntryView(entry: entry)
             }
             .supportedFamilies([.systemSmall])
-            .configurationDisplayName("Prayer Times")
-            .description("Shows the current prayer and the time remaining until the next prayer")
+            .configurationDisplayName("Current & Next Prayer")
+            .description("The current prayer with its progress, what comes next, and your city")
         }
         #endif
     }

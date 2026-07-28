@@ -4,8 +4,10 @@
 <dict>
 	<key>UIAppFonts</key>
 	<array>
+		<string>Qiraat.ttf</string>
 		<string>Uthmani.ttf</string>
 		<string>Indopak.ttf</string>
+		<string>QuranCommon.ttf</string>
 	</array>
 	<key>NSExtension</key>
 	<dict>

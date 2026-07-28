@@ -628,6 +628,14 @@ extension Settings {
             Self.locationManager.requestAlwaysAuthorization()
         case .authorizedAlways, .authorizedWhenInUse:
             #if os(iOS)
+            // While-Using is enough with the app open, but the background significant-change events -
+            // what keep widgets and the automatic traveling check current WITHOUT opening the app - are
+            // only delivered with Always. iOS grants exactly one in-use → Always upgrade prompt per
+            // install; asking when we're stuck at While-Using is how that prompt ever appears (repeat
+            // calls are silent no-ops, so this can safely run every launch).
+            if Self.locationManager.authorizationStatus == .authorizedWhenInUse {
+                Self.locationManager.requestAlwaysAuthorization()
+            }
             Self.locationManager.startMonitoringSignificantLocationChanges()
             #else
             Self.locationManager.startUpdatingLocation()

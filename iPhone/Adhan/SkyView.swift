@@ -223,6 +223,14 @@ struct SkyView: View {
         return settings.prayersIncludingOptional(displayed, for: now)
     }
 
+    /// The mandatory prayers marked as dots on the arc: the five obligatory ones as the list actually shows
+    /// them - Jumuah on Friday, the combined pairs in traveling mode - and nothing optional. Reuses the
+    /// adhan-eligible set, which is exactly "the obligatory prayers and the names that route to them".
+    private var dotPrayers: [Prayer] {
+        let displayed = settings.prayers?.prayers ?? todaysPrayers
+        return displayed.filter { Settings.adhanEligiblePrayerNames.contains($0.nameTransliteration) }
+    }
+
     /// The moment the whole card is describing: the dragged one, or now.
     private var displayedDate: Date { scrubber.scrubbedDate ?? now }
 
@@ -500,6 +508,20 @@ struct SkyView: View {
                     path.addLine(to: CGPoint(x: rect.maxX, y: horizonY))
                 }
                 .stroke(Color.white.opacity(0.45), lineWidth: 1)
+
+                // A dot on the arc for each mandatory prayer (Jumuah and the traveling combined pairs
+                // included), so the day's structure is readable off the curve itself - and scrubbing to a
+                // dot lines the sun up with that prayer's start.
+                ForEach(dotPrayers, id: \.nameTransliteration) { prayer in
+                    let fraction = window.fraction(of: prayer.time)
+                    Circle()
+                        .fill(Color.white.opacity(0.9))
+                        .frame(width: 5, height: 5)
+                        .position(CGPoint(
+                            x: xPosition(forFraction: fraction, in: rect),
+                            y: shape.yPosition(of: curve.height(at: fraction), in: rect)
+                        ))
+                }
 
                 // A drop-line to the horizon while dragging, so the sun's height reads as a position.
                 if scrubber.isScrubbing {

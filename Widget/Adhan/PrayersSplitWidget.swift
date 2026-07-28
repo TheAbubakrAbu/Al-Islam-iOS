@@ -48,8 +48,13 @@ struct PrayersEntryView: View {
     var body: some View {
         VStack {
             if entry.prayers.isEmpty {
-                Text("Open app to get prayer times")
-                    .foregroundColor(accent)
+                if skyStyle {
+                    Text("Open app to get prayer times")
+                        .font(.caption)
+                        .foregroundColor(.white.opacity(0.9))
+                } else {
+                    PrayerWidgetEmptyState(tint: accent)
+                }
             } else {
                 if widgetFamily == .systemLarge {
                     Text(hijriDate)
@@ -88,7 +93,7 @@ struct PrayersEntryView: View {
                                 }
                                 
                                 Text(prayer.time, style: .time)
-                                    .font(.subheadline)
+                                    .font(.subheadline.monospacedDigit())
                                     .foregroundColor(getPrayerColor(for: prayer, in: entry.prayers))
                             }
                         }
@@ -114,7 +119,7 @@ struct PrayersEntryView: View {
                                 }
                                 
                                 Text(prayer.time, style: .time)
-                                    .font(.subheadline)
+                                    .font(.subheadline.monospacedDigit())
                                     .foregroundColor(getPrayerColor(for: prayer, in: entry.prayers))
                             }
                         }
@@ -149,12 +154,23 @@ struct PrayersEntryView: View {
                                     Spacer()
                                     
                                     Text("Time left: \(nextPrayer.time, style: .timer)")
-                                        .font(.caption)
+                                        .font(.caption.monospacedDigit())
                                         .padding(.trailing, 2)
                                 }
                                 .padding(.leading, 4)
+
+                                // The current prayer's window filling live, bridging the current row
+                                // above and the next row below.
+                                PrayerIntervalProgressBar(
+                                    current: currentPrayer,
+                                    next: nextPrayer,
+                                    entryDate: entry.date,
+                                    tint: skyStyle ? .white : entry.accentColor.color
+                                )
+                                .padding(.horizontal, 4)
+                                .padding(.vertical, 2)
                             }
-                            
+
                             VStack(alignment: .trailing) {
                                 HStack {
                                     Text("Starts at \(nextPrayer.time, style: .time)")
@@ -185,7 +201,7 @@ struct PrayersEntryView: View {
                         .padding(.horizontal, 4)
                     
                     HStack {
-                        if !entry.currentCity.isEmpty && !entry.currentCity.isEmpty {
+                        if !entry.currentCity.isEmpty {
                             Image(systemName: "location.fill")
                                 .resizable()
                                 .aspectRatio(contentMode: .fit)
@@ -223,7 +239,7 @@ struct PrayersWidget: Widget {
                 .widgetContainerBackground(legacyPadding: true)
         }
         .supportedFamilies([.systemMedium, .systemLarge])
-        .configurationDisplayName("Prayer Times")
-        .description("This widget displays the prayer times")
+        .configurationDisplayName("Prayer Grid")
+        .description("All of today's prayer times in a grid; the large size adds the current and next prayer")
     }
 }
