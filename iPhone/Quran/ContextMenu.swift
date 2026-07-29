@@ -1354,7 +1354,7 @@ struct SelectAyahTextSheet: View {
                         Section {
                             ArabicTextRiwayahPicker(selection: $selectedQiraah.animation(.easeInOut), useSimpleIOSPicker: true)
                         } footer: {
-                            Text("Switching the riwayah changes the Arabic text only. Ayah numbering can differ between riwayat - no ayah is ever missing, but some are joined or split differently (for example, \"Alif Lam Meem\" and \"Dhalika al-Kitab...\" form a single ayah in most qiraat), so this ayah may appear under a different number or merged with its neighbor.")
+                            Text("Switching the riwayah changes the Arabic text only. Ayah numbering can differ between riwayat: no ayah is ever missing, but some are joined or split differently (for example, \"Alif Lam Meem\" and \"Dhalika al-Kitab...\" form a single ayah in most qiraat), so this ayah may appear under a different number or merged with its neighbor.")
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                         }
@@ -1371,7 +1371,7 @@ struct SelectAyahTextSheet: View {
                                 .onChange(of: hideDots) { _ in settings.hapticFeedback() }
                         }
                     } footer: {
-                        Text("Shapes only the Arabic text below - the reading view keeps its own settings.")
+                        Text("Shapes only the Arabic text below; the reading view keeps its own settings.")
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
@@ -1387,7 +1387,7 @@ struct SelectAyahTextSheet: View {
                         )
                     } else {
                         Section(header: Text("ARABIC")) {
-                            Text("This ayah is not separate in this riwayah - its words are part of a neighboring ayah.")
+                            Text("This ayah is not separate in this riwayah; its words are part of a neighboring ayah.")
                                 .font(.subheadline)
                                 .foregroundColor(.secondary)
                         }

@@ -692,7 +692,7 @@ struct NamesView: View {
                             .foregroundColor(settings.accentColor.color)
                     }
 
-                    Text("Allah (اللَّه) is the proper name of the One True God - not one of the 99 names, but the name every one of them describes. Unlike other words, it has no plural and no gender, and it was never used for anything or anyone else. It appears in the Quran more than 2,600 times, beginning with the very first ayah:")
+                    Text("Allah (اللَّه) is the proper name of the One True God, not one of the 99 names, but the name every one of them describes. Unlike other words, it has no plural and no gender, and it was never used for anything or anyone else. It appears in the Quran more than 2,600 times, beginning with the very first ayah:")
                         .font(.footnote)
                         .foregroundColor(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
@@ -810,7 +810,7 @@ struct NamesView: View {
                 #if os(iOS)
                 Text(aiHits.isEmpty
                      ? "No names match your search."
-                     : "No keyword matches - see the AI results above.")
+                     : "No keyword matches; see the AI results above.")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                 #else

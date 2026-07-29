@@ -491,7 +491,7 @@ struct QuranPlannerView: View {
                 Text(editingGoal ? "Adjust Your Goal" : "Plan Your Khatm")
                     .font(.title3.weight(.semibold))
 
-                Text("Pick a goal and get a daily reading amount that adjusts itself whenever you miss a day - you still finish on time.")
+                Text("Pick a goal and get a daily reading amount that adjusts itself whenever you miss a day; you still finish on time.")
                     .font(.footnote)
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)
@@ -678,7 +678,7 @@ struct QuranPlannerView: View {
                             Text("Done for today")
                                 .font(.title3.weight(.bold))
 
-                            Text("\(doneToday) read - anything more is a head start on tomorrow.")
+                            Text("\(doneToday) read; anything more is a head start on tomorrow.")
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                                 .fixedSize(horizontal: false, vertical: true)
@@ -944,7 +944,7 @@ struct QuranPlannerView: View {
                     withAnimation { settings.quranPlan = nil }
                 }
             } message: {
-                Text("Your khatm progress is kept - only the goal and daily amounts are removed.")
+                Text("Your khatm progress is kept; only the goal and daily amounts are removed.")
             }
         } footer: {
             Text("Progress comes from khatm marking: ayahs are marked as you read in the app, and you can review or reset them in Khatm mode on the Quran tab.")
@@ -971,7 +971,7 @@ struct QuranPlannerView: View {
                     .font(.title2.weight(.bold))
 
                 let days = QuranPlannerMath.daysElapsed(since: plan.startDate) + 1
-                Text("Alhamdulillah - you finished the Quran over \(days) day\(days == 1 ? "" : "s"). May Allah accept it and make it a witness for you.")
+                Text("Alhamdulillah, you finished the Quran over \(days) day\(days == 1 ? "" : "s"). May Allah accept it and make it a witness for you.")
                     .font(.subheadline)
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)

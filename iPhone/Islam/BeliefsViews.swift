@@ -33,7 +33,7 @@ struct HaramView: View {
         List {
             Group {
                 Section(header: Text("SUMMARY")) {
-                    Text("In short: Masjid al-Haram in Makkah is the holiest mosque in Islam. It surrounds the Kaaba - the House of Allah and the Qiblah toward which all Muslims pray.")
+                    Text("In short: Masjid al-Haram in Makkah is the holiest mosque in Islam. It surrounds the Kaaba, the House of Allah and the Qiblah toward which all Muslims pray.")
                         .font(.body)
                 }
 
@@ -263,7 +263,7 @@ struct AqsaView: View {
                     Text("Prayer in the three sacred mosques carries immense reward. What is established is the authentic narration in which the Prophet Muhammad (peace and blessings be upon him) said:").font(.body)
                     ScriptureQuote(text: "“A prayer in this mosque of mine is better than a thousand prayers elsewhere, except for Al-Masjid Al-Haram” (Sahih al-Bukhari 1190).", dimmed: true)
 
-                    Text("A report giving a specific figure for Masjid Al-Aqsa (fifty thousand prayers) is narrated in Sunan Ibn Majah 1413, but its chain is weak (da'if) - and its figure for Masjid An-Nabawi contradicts the authentic hadith above - so it is not relied upon.").font(.body)
+                    Text("A report giving a specific figure for Masjid Al-Aqsa (fifty thousand prayers) is narrated in Sunan Ibn Majah 1413, but its chain is weak (da'if), and its figure for Masjid An-Nabawi contradicts the authentic hadith above, so it is not relied upon.").font(.body)
                 }
 
                 Section(header: Text("STRUCTURE AND FEATURES")) {
@@ -653,7 +653,7 @@ struct JumuahView: View {
         List {
             Group {
                 Section(header: Text("SUMMARY")) {
-                    Text("In short: Jumuah is the Friday congregational prayer that replaces Dhuhr - a sermon followed by two rak'ah, obligatory on Muslim men who are able.")
+                    Text("In short: Jumuah is the Friday congregational prayer that replaces Dhuhr: a sermon followed by two rak'ah, obligatory on Muslim men who are able.")
                         .font(.body)
                 }
 
@@ -666,7 +666,7 @@ struct JumuahView: View {
 
                     ScriptureQuote(text: "“O you who have believed, when [the adhan] is called for the prayer on the day of Jumu’ah [Friday], then proceed to the remembrance of Allah and leave trade. That is better for you, if you only knew” (Quran 62:9).")
 
-                    Text("Jumuah prayer consists of a sermon (**Khutbah - خُطبَة**) followed by a two-rak’ah Salah led by the Imam. It is obligatory for Muslim men who can attend, though it is not obligatory for women.")
+                    Text("Jumuah prayer consists of a sermon (**Khutbah, خُطبَة**) followed by a two-rak’ah Salah led by the Imam. It is obligatory for Muslim men who can attend, though it is not obligatory for women.")
                         .font(.body)
 
                     Text("If Jumuah is missed at the mosque, one performs the full Dhuhr prayer (4 rak’ahs).")
@@ -883,7 +883,7 @@ struct IqamahView: View {
                 }
 
                 Section(header: Text("OVERVIEW")) {
-                    Text("The Iqamah (إِقَامَة) - from the root **q-w-m (ق و م)**, to stand or establish - is the second call to prayer, given right before the congregational Salah begins.")
+                    Text("The Iqamah (إِقَامَة), from the root **q-w-m (ق و م)**, to stand or establish, is the second call to prayer, given right before the congregational Salah begins.")
                         .font(.body)
 
                     Text("It is generally shorter than the Adhan and serves as a prompt for the congregation to stand and line up for prayer.")
@@ -1066,10 +1066,10 @@ struct TakbiratView: View {
                     Text("In Islam, there are two major annual celebrations known as Eid:")
                         .font(.body)
 
-                    Text("1. **Eid al-Fitr (عيد الفطر):** Celebrated at the end of Ramadan (the month of fasting). It is a time of joy, gratitude to Allah (Glorified and Exalted be He), and giving to the needy (Zakat al-Fitr).")
+                    Text("1. **Eid al-Fitr (عِيد الفِطر):** Celebrated at the end of Ramadan (the month of fasting). It is a time of joy, gratitude to Allah (Glorified and Exalted be He), and giving to the needy (Zakat al-Fitr).")
                         .font(.body)
 
-                    Text("2. **Eid al-Adha (عيد الأضحى):** Celebrated on the 10th day of Dhu al-Hijjah. It commemorates the willingness of Prophet Ibrahim (peace be upon him) to sacrifice his son Isma'il (peace be upon him). Muslims who are able to do so perform the sacrifice (Qurbani) and distribute the meat to the poor. This Eid coincides with Hajj, the annual pilgrimage to Makkah.")
+                    Text("2. **Eid al-Adha (عِيد الأَضحَى):** Celebrated on the 10th day of Dhu al-Hijjah. It commemorates the willingness of Prophet Ibrahim (peace be upon him) to sacrifice his son Isma'il (peace be upon him). Muslims who are able to do so perform the sacrifice (Qurbani) and distribute the meat to the poor. This Eid coincides with Hajj, the annual pilgrimage to Makkah.")
                         .font(.body)
                 }
 
@@ -1151,7 +1151,7 @@ struct TakbiratView: View {
                 }
 
                 Section(header: Text("IN SUMMARY")) {
-                    Text("By glorifying Allah on the days of Eid, Muslims complete their worship with gratitude - after Ramadan for Eid al-Fitr, and around the days of Hajj for Eid al-Adha.")
+                    Text("By glorifying Allah on the days of Eid, Muslims complete their worship with gratitude: after Ramadan for Eid al-Fitr, and around the days of Hajj for Eid al-Adha.")
                         .font(.body)
                 }
 
@@ -1182,7 +1182,7 @@ struct HijriCalendarView: View {
                     Text("The Hijri calendar, also known as the Islamic or Lunar Hijri calendar, consists of 12 lunar months in a year of 354 or 355 days.")
                         .font(.body)
 
-                    Text("It is used to determine key Islamic dates such as Ramadan, Hajj, and the two Eid festivals. The reference point (epoch) of the calendar is the Hijrah - the migration of Prophet Muhammad (peace and blessings be upon him) from Makkah to Madinah in 622 CE.")
+                    Text("It is used to determine key Islamic dates such as Ramadan, Hajj, and the two Eid festivals. The reference point (epoch) of the calendar is the Hijrah, the migration of Prophet Muhammad (peace and blessings be upon him) from Makkah to Madinah in 622 CE.")
                         .font(.body)
 
                     Text("Allah (Glorified and Exalted be He) says in the Quran:")
@@ -1194,18 +1194,18 @@ struct HijriCalendarView: View {
                 Section(header: Text("DETAILS")) {
                     Text("""
                          Each Hijri month begins with the sighting of the new moon. The 12 months are as follows:
-                         1. **Muharram (مُحَرَّم)** – One of the sacred months
+                         1. **Muharram (مُحَرَّم)**: One of the sacred months
                          2. **Safar (صَفَر)** 
                          3. **Rabi al-Awwal (رَبِيع ٱلأَوَّل)**
                          4. **Rabi al-Thani (رَبِيع ٱلثَّانِي)** 
                          5. **Jumada al-Awwal (جُمَادَىٰ ٱلأَوَّل)** 
                          6. **Jumada al-Thani (جُمَادَىٰ ٱلثَّانِي)** 
-                         7. **Rajab (رَجَب)** – A sacred month
-                         8. **Shaaban (شَعبَان)** – The month preceding Ramadan
-                         9. **Ramadan (رَمَضَان)** – The month of fasting
-                         10. **Shawwal (شَوَّال)** – The month following Ramadan
-                         11. **Dhul-Qadah (ذُو ٱلقَعدَة)** – A sacred month
-                         12. **Dhul-Hijjah (ذُو ٱلحِجَّة)** – A sacred month, the month of Hajj and Eid al-Adha
+                         7. **Rajab (رَجَب)**: A sacred month
+                         8. **Shaaban (شَعبَان)**: The month preceding Ramadan
+                         9. **Ramadan (رَمَضَان)**: The month of fasting
+                         10. **Shawwal (شَوَّال)**: The month following Ramadan
+                         11. **Dhul-Qadah (ذُو ٱلقَعدَة)**: A sacred month
+                         12. **Dhul-Hijjah (ذُو ٱلحِجَّة)**: A sacred month, the month of Hajj and Eid al-Adha
                          """)
                     .font(.body)
 
@@ -1299,7 +1299,7 @@ struct CompileView: View {
                 }
 
                 Section(header: Text("CONSENSUS OF THE COMPANIONS")) {
-                    Text("The Companions - foremost memorizers and teachers - were unanimous in accepting the compilation and the Uthmanic copies. It is widely reported that Abu Bakr, Umar, Uthman, and Ali were among the foremost memorizers and teachers of the Quran, and none objected to the standardized mushaf.")
+                    Text("The Companions, foremost memorizers and teachers, were unanimous in accepting the compilation and the Uthmanic copies. It is widely reported that Abu Bakr, Umar, Uthman, and Ali were among the foremost memorizers and teachers of the Quran, and none objected to the standardized mushaf.")
                         .font(.body)
 
                     Text("Zayd ibn Thabit led the technical work in both Abu Bakr’s and Uthman’s projects, bringing rigorous verification. Senior scholars, including Quraysh experts, reviewed and approved the copies.")
@@ -1319,7 +1319,7 @@ struct CompileView: View {
                     Text("Prophet Muhammad (peace and blessings be upon him) taught that the Quran was revealed in seven Ahruf (modes) for ease. The Quran was first compiled into one manuscript under Abu Bakr (may Allah be pleased with him), around one year after the Prophet’s death. Later, the Uthmanic rasm allowed what remained of those modes to be read and transmitted through canonical Qiraat verified by chains. The 10 Qiraat (with their 20 Riwayaat) are mutawatir and reflect how the prophetic recitation was preserved in writing and oral teaching.")
                         .font(.body)
 
-                    Text("Thus, standardization did not limit revelation; it safeguarded it - preventing private notes and unverified materials from being mistaken for the Quran - while preserving the legitimate readings taught by Prophet Muhammad (peace and blessings be upon him).")
+                    Text("Thus, standardization did not limit revelation; it safeguarded it, preventing private notes and unverified materials from being mistaken for the Quran, while preserving the legitimate readings taught by Prophet Muhammad (peace and blessings be upon him).")
                         .font(.body)
                 }
 
@@ -1346,7 +1346,7 @@ struct CompileView: View {
                 }
 
                 Section(header: Text("WHY WERE PRIVATE MATERIALS RETIRED?")) {
-                    Text("Some Companions wrote personal notes - duas, explanations, or hadith - near Quranic passages. To prevent confusion between private annotations and the Quran, and to avoid unchecked variants, Uthman ordered that only the verified official copies be used for public recitation and that other materials be retired.")
+                    Text("Some Companions wrote personal notes (duas, explanations, or hadith) near Quranic passages. To prevent confusion between private annotations and the Quran, and to avoid unchecked variants, Uthman ordered that only the verified official copies be used for public recitation and that other materials be retired.")
                         .font(.body)
 
                     Text("No Companion rejected the standardized mushaf. The community recited, taught, and transmitted the same Quran by memorization and writing through every generation.")
@@ -1354,7 +1354,7 @@ struct CompileView: View {
                 }
 
                 Section(header: Text("CONTINUITY UNTIL TODAY")) {
-                    Text("The Quran we hold today is the same revelation taught by Prophet Muhammad (peace and blessings be upon him), preserved through the consensus of the Companions, the Uthmanic rasm, the living tradition of memorization, and the mutawatir Qiraat. Around the world, millions memorize the entire Quran - letter for letter - continuing an unbroken chain of transmission.")
+                    Text("The Quran we hold today is the same revelation taught by Prophet Muhammad (peace and blessings be upon him), preserved through the consensus of the Companions, the Uthmanic rasm, the living tradition of memorization, and the mutawatir Qiraat. Around the world, millions memorize the entire Quran, letter for letter, continuing an unbroken chain of transmission.")
                         .font(.body)
 
                     Text("Public recitation, prayer, and education remain bound to the verified text. The Ummah’s practice fulfills Allah's (Glorified and Exalted be He) promise: its preservation is both textual and living.")
@@ -1375,7 +1375,7 @@ struct CompileView: View {
                 }
 
                 Section(header: Text("IN SUMMARY")) {
-                    Text("Through unbroken memorization and a verified written text, the Quran remains today exactly as it was revealed - fulfilling Allah's promise to preserve it.")
+                    Text("Through unbroken memorization and a verified written text, the Quran remains today exactly as it was revealed, fulfilling Allah's promise to preserve it.")
                         .font(.body)
                 }
             }
@@ -1394,7 +1394,7 @@ struct TajweedView: View {
         List {
             Group {
                 Section(header: Text("SUMMARY")) {
-                    Text("In short: Tajweed is the science of reciting the Quran correctly - giving each letter its proper articulation and every rule its due.")
+                    Text("In short: Tajweed is the science of reciting the Quran correctly: giving each letter its proper articulation and every rule its due.")
                         .font(.body)
                 }
 
@@ -1429,7 +1429,7 @@ struct TajweedView: View {
                 }
 
                 Section(header: Text("IMPORTANCE")) {
-                    Text("Tajweed ensures the Quran is recited in the most accurate and beautiful way possible, exactly as it was revealed to the Prophet ﷺ. Reciting with Tajweed is not just about making recitation sound pleasant - it is about preserving the integrity of the Quran itself.")
+                    Text("Tajweed ensures the Quran is recited in the most accurate and beautiful way possible, exactly as it was revealed to the Prophet ﷺ. Reciting with Tajweed is not just about making recitation sound pleasant; it is about preserving the integrity of the Quran itself.")
                         .font(.body)
 
                     Text("The Quran was revealed in Arabic, and every word, letter, and sound has a specific meaning and weight. A slight mispronunciation could change the meaning of a verse. Tajweed helps safeguard against these errors and honors the sacred text with the care and precision it deserves.")
@@ -1506,7 +1506,7 @@ struct JuzView: View {
         List {
             Group {
                 Section(header: Text("SUMMARY")) {
-                    Text("In short: the Quran is divided into thirty roughly equal parts called Juz, making it easy to read over a month - especially in Ramadan.")
+                    Text("In short: the Quran is divided into thirty roughly equal parts called Juz, making it easy to read over a month, especially in Ramadan.")
                         .font(.body)
                 }
 
@@ -1602,18 +1602,18 @@ struct AhrufView: View {
         List {
             Group {
                 Section(header: Text("SUMMARY")) {
-                    Text("In short: the Quran was revealed in seven ahruf - modes of recitation - as a mercy easing its recitation for the different Arab tribes.")
+                    Text("In short: the Quran was revealed in seven ahruf (modes of recitation) as a mercy easing its recitation for the different Arab tribes.")
                         .font(.body)
                 }
 
                 Section(header: Text("OVERVIEW")) {
-                    Text("The Quran was revealed by Allah (Glorified and Exalted be He) in seven Ahruf (أَحرُف) - the plural of Harf (حَرف). The word Harf comes from the Arabic root H–r–f (ح ر ف), meaning “edge, border, side, or angle,” referring to a particular “way” or “mode.” Islamically and Quranically, Ahruf refers to the divinely revealed modes of recitation.")
+                    Text("The Quran was revealed by Allah (Glorified and Exalted be He) in seven Ahruf (أَحرُف), the plural of Harf (حَرف). The word Harf comes from the Arabic root H–r–f (ح ر ف), meaning “edge, border, side, or angle,” referring to a particular “way” or “mode.” Islamically and Quranically, Ahruf refers to the divinely revealed modes of recitation.")
                         .font(.body)
 
-                    Text("A Harf (حَرف) - literally meaning “edge/side/aspect,” and in this context “a mode/way of reciting” - refers to a divinely revealed manner of recitation that includes slight differences in pronunciation, vowel patterns, pausing/connection, or permitted word-forms, while preserving the exact same meaning and guidance.")
+                    Text("A Harf (حَرف), literally meaning “edge/side/aspect,” and in this context “a mode/way of reciting,” refers to a divinely revealed manner of recitation that includes slight differences in pronunciation, vowel patterns, pausing/connection, or permitted word-forms, while preserving the exact same meaning and guidance.")
                         .font(.body)
 
-                    Text("All seven Ahruf are revelation from Allah (Glorified and Exalted be He). They are not scholarly opinions nor later inventions - they are part of the Quran that Allah (Glorified and Exalted be He) sent down to Prophet Muhammad (peace and blessings be upon him).")
+                    Text("All seven Ahruf are revelation from Allah (Glorified and Exalted be He). They are not scholarly opinions nor later inventions; they are part of the Quran that Allah (Glorified and Exalted be He) sent down to Prophet Muhammad (peace and blessings be upon him).")
                         .font(.body)
                 }
 
@@ -1621,7 +1621,7 @@ struct AhrufView: View {
                     Text("The Arabs at the time of revelation had many dialects (Quraysh, Hudhayl, Tamim, Hawazin, etc.). Allah (Glorified and Exalted be He), in His mercy, revealed the Quran in seven modes so that every tribe could recite the Quran easily without difficulty or burden.")
                         .font(.body)
 
-                    Text("Allah (Glorified and Exalted be He) did not reveal seven different Qurans - rather, one Quran with divinely allowed flexibility, making memorization and recitation easier.")
+                    Text("Allah (Glorified and Exalted be He) did not reveal seven different Qurans; rather, one Quran with divinely allowed flexibility, making memorization and recitation easier.")
                         .font(.body)
                 }
 
@@ -1636,13 +1636,13 @@ struct AhrufView: View {
 
                     ScriptureQuote(text: "“Jibril recited to me in one harf. I asked him to increase it… until he ended with seven Ahruf.”\n- Sahih Muslim", dimmed: true)
 
-                    Text("In the famous incident of Umar and Hisham ibn Hakim - both of them recited differently, and Prophet Muhammad (peace and blessings be upon him) said that both were revealed, proving that the variations are not mistakes but revelation.")
+                    Text("In the famous incident of Umar and Hisham ibn Hakim: both of them recited differently, and Prophet Muhammad (peace and blessings be upon him) said that both were revealed, proving that the variations are not mistakes but revelation.")
                         .font(.title3)
                         .foregroundColor(settings.accentColor.color.opacity(0.85))
                 }
 
                 Section(header: Text("DO THE AHRUF AFFECT PRESERVATION?")) {
-                    Text("No. The Quran remains perfectly preserved - letter for letter, word for word, in every revealed mode. The Ahruf are part of that preservation, not a contradiction to it.")
+                    Text("No. The Quran remains perfectly preserved: letter for letter, word for word, in every revealed mode. The Ahruf are part of that preservation, not a contradiction to it.")
                         .font(.body)
 
                     Text("Allah (Glorified and Exalted be He) promised:")
@@ -1650,10 +1650,10 @@ struct AhrufView: View {
 
                     ScriptureQuote(text: "“Indeed, it is We who sent down the Qur'an and indeed, We will be its guardian.” (Quran 15:9)")
 
-                    Text("The variations in Ahruf do not alter meanings, beliefs, or rulings. Rather, they highlight precision and perfection - the Ummah memorized and transmitted every letter exactly as revealed.")
+                    Text("The variations in Ahruf do not alter meanings, beliefs, or rulings. Rather, they highlight precision and perfection: the Ummah memorized and transmitted every letter exactly as revealed.")
                         .font(.body)
 
-                    Text("Each harf is revealed, preserved, and protected by Allah (Glorified and Exalted be He). Muslims do not choose or invent a harf - we only recite what Allah (Glorified and Exalted be He) revealed through His Messenger, Prophet Muhammad (peace and blessings be upon him).")
+                    Text("Each harf is revealed, preserved, and protected by Allah (Glorified and Exalted be He). Muslims do not choose or invent a harf; we only recite what Allah (Glorified and Exalted be He) revealed through His Messenger, Prophet Muhammad (peace and blessings be upon him).")
                         .font(.body)
                 }
 
@@ -1661,7 +1661,7 @@ struct AhrufView: View {
                     Text("• Prophet Muhammad (peace and blessings be upon him) taught the Companions each harf personally.\n• Jibril reviewed the Quran with Prophet Muhammad (peace and blessings be upon him) every year in Ramadan.\n• In the year Prophet Muhammad (peace and blessings be upon him) passed away, Jibril reviewed it twice (al-Ardah al-Akhirah).")
                         .font(.body)
 
-                    Text("About one year after the Prophet’s passing, Abu Bakr (may Allah be pleased with him) commissioned the first complete compilation of the Quran into one manuscript. During the caliphate of Uthman (may Allah be pleased with him), the Ummah was then unified upon official copies from that preserved compilation, written in the Uthmanic rasm, which preserved what the Ummah recited - containing what remained from the seven Ahruf in the rasm.")
+                    Text("About one year after the Prophet’s passing, Abu Bakr (may Allah be pleased with him) commissioned the first complete compilation of the Quran into one manuscript. During the caliphate of Uthman (may Allah be pleased with him), the Ummah was then unified upon official copies from that preserved compilation, written in the Uthmanic rasm, which preserved what the Ummah recited, containing what remained from the seven Ahruf in the rasm.")
                         .font(.body)
 
                     Text("The Ahruf are preserved through oral transmission, ijazahs, and chains of narration (isnad).")
@@ -1710,25 +1710,25 @@ struct QiraatView: View {
                 }
 
                 Section(header: Text("OVERVIEW")) {
-                    Text("The 10 Qiraat (قِرَاءَات) - from the root q–r–a (قرأ) meaning “to read/recite” - literally means “readings/recitations.” Islamically and Quranically, a Qiraah (قِرَاءَة) is a specific, verified method of reciting the Quran. The 10 Qiraat are the preserved, mass-transmitted (mutawatir - مُتَوَاتِر) recitations of the Quran - each a precise method taught by Prophet Muhammad (peace and blessings be upon him) and transmitted through authentic chains of narrators (isnad إِسنَاد). They do not represent different Qurans, but different prophetic ways of reciting the same revelation.")
+                    Text("The 10 Qiraat (قِرَاءَات), from the root q–r–a (قرأ) meaning “to read/recite,” literally means “readings/recitations.” Islamically and Quranically, a Qiraah (قِرَاءَة) is a specific, verified method of reciting the Quran. The 10 Qiraat are the preserved, mass-transmitted (mutawatir, مُتَوَاتِر) recitations of the Quran, each a precise method taught by Prophet Muhammad (peace and blessings be upon him) and transmitted through authentic chains of narrators (isnad إِسنَاد). They do not represent different Qurans, but different prophetic ways of reciting the same revelation.")
                         .font(.body)
 
-                    Text("As covered in the previous section, the Quran was revealed by Allah (Glorified and Exalted be He) in seven Ahruf (أَحرُف) - modes of recitation for ease. Jibril (Gabriel) brought these modes to Prophet Muhammad (peace and blessings be upon him), who taught them to the Ummah. Around one year after the Prophet’s passing, Abu Bakr (may Allah be pleased with him) commissioned the first complete compilation of the Quran into one manuscript, and later Uthman (may Allah be pleased with him) unified public recitation upon official copies from that preserved text. The Qiraat show how those Ahruf were preserved in practice through the Uthmanic rasm (الرَّسم العُثمَانِي) - the consonantal skeleton of the mushaf (مُصحَف).")
+                    Text("As covered in the previous section, the Quran was revealed by Allah (Glorified and Exalted be He) in seven Ahruf (أَحرُف), modes of recitation for ease. Jibril (Gabriel) brought these modes to Prophet Muhammad (peace and blessings be upon him), who taught them to the Ummah. Around one year after the Prophet’s passing, Abu Bakr (may Allah be pleased with him) commissioned the first complete compilation of the Quran into one manuscript, and later Uthman (may Allah be pleased with him) unified public recitation upon official copies from that preserved text. The Qiraat show how those Ahruf were preserved in practice through the Uthmanic rasm (الرَّسم العُثمَانِي), the consonantal skeleton of the mushaf (مُصحَف).")
                         .font(.body)
                 }
 
                 Section(header: Text("WHAT IS A QIRAAH?")) {
-                    Text("A Qiraah (قراءة) is a canonical, authenticated way of reciting the Quran that meets three criteria: (1) agreement with the Uthmanic rasm (الرسم العثماني), (2) sound Arabic language, and (3) authentic, widespread transmission (tawatur تواتر).")
+                    Text("A Qiraah (قِرَاءَة) is a canonical, authenticated way of reciting the Quran that meets three criteria: (1) agreement with the Uthmanic rasm (الرَّسم العُثمَانِي), (2) sound Arabic language, and (3) authentic, widespread transmission (tawatur تَوَاتُر).")
                         .font(.body)
 
                     Text("All 10 Qiraat return to Prophet Muhammad (peace and blessings be upon him). Every reciter has an unbroken chain of students → teachers → Companions → Prophet Muhammad (peace and blessings be upon him).")
                         .font(.body)
                         .foregroundColor(settings.accentColor.color)
 
-                    Text("Most differences are within established rules of tajwid (تجويد), allowable word-forms and vowels, elongation (madd مد), assimilation (idgham إدغام), imalah (إمالة), and stopping/continuation - while preserving the same meanings and guidance.")
+                    Text("Most differences are within established rules of tajwid (تَجوِيد), allowable word-forms and vowels, elongation (madd مَدّ), assimilation (idgham إِدغَام), imalah (إِمَالَة), and stopping/continuation, while preserving the same meanings and guidance.")
                         .font(.body)
 
-                    Text("Important: The Qiraat are not arbitrary. They reflect how the seven Ahruf were preserved through both writing and oral transmission - essentially a “mix and preserve” of the revealed modes into rigorously taught, verifiable recitational methods.")
+                    Text("Important: The Qiraat are not arbitrary. They reflect how the seven Ahruf were preserved through both writing and oral transmission, essentially a “mix and preserve” of the revealed modes into rigorously taught, verifiable recitational methods.")
                         .font(.body)
                 }
 
@@ -1738,7 +1738,7 @@ struct QiraatView: View {
                     Text("• Riwayah: the narration/transmission of that Qiraah by a primary rawi (narrator). Each Qiraah has two principal riwayaat (plural of riwayah).")
                         .font(.body)
 
-                    Text("Example: “Hafs an Asim” means the riwayah (narration) of Hafs (حفص) from the Qiraah (recitation) of Asim (عاصم). “Warsh an Nafi” means the riwayah of Warsh (ورش) from the Qiraah of Nafi (نافع).")
+                    Text("Example: “Hafs an Asim” means the riwayah (narration) of Hafs (حَفص) from the Qiraah (recitation) of Asim (عَاصِم). “Warsh an Nafi” means the riwayah of Warsh (وَرش) from the Qiraah of Nafi (نَافِع).")
                         .font(.body)
 
                     Text("Hafs an Asim is the most widespread globally today; that does not mean it is the only right one. All 10 Qiraat (and their 20 Riwayaat) are valid, mutawatir, and from Prophet Muhammad (peace and blessings be upon him).")
@@ -1762,12 +1762,12 @@ struct QiraatView: View {
                 }
 
                 Section(header: Text("AUTHENTICITY & PRESERVATION")) {
-                    Text("The 10 Qiraat are mutawatir - mass attested by many independent chains. They are part of the precise preservation Allah (Glorified and Exalted be He) promised for His Book.")
+                    Text("The 10 Qiraat are mutawatir, mass attested by many independent chains. They are part of the precise preservation Allah (Glorified and Exalted be He) promised for His Book.")
                         .font(.body)
 
                     ScriptureQuote(text: "“Indeed, it is We who sent down the Qur'an and indeed, We will be its guardian.” (Quran 15:9)")
 
-                    Text("They do not affect preservation; rather, they manifest it: letter for letter, word for word - in all the ways Prophet Muhammad (peace and blessings be upon him) taught.")
+                    Text("They do not affect preservation; rather, they manifest it: letter for letter, word for word, in all the ways Prophet Muhammad (peace and blessings be upon him) taught.")
                         .font(.body)
                 }
 
@@ -1852,25 +1852,25 @@ struct QiraatView: View {
                         .font(.body)
 
                     Group {
-                        Text("**Nafi (Qari of Madinah)** - narrated by Warsh and Qalun. Transmitted from Umar ibn al-Khattab, Zayd ibn Thabit, Ubayy ibn Ka‘b, Abdullah ibn Abbas, Abdullah ibn Ayyash, and Abu Hurayrah (may Allah be pleased with them).")
+                        Text("**Nafi (Qari of Madinah)**: narrated by Warsh and Qalun. Transmitted from Umar ibn al-Khattab, Zayd ibn Thabit, Ubayy ibn Ka‘b, Abdullah ibn Abbas, Abdullah ibn Ayyash, and Abu Hurayrah (may Allah be pleased with them).")
 
-                        Text("**Ibn Kathir (Qari of Makkah)** - narrated by al-Bazzi and Qunbul. Transmitted from Umar ibn al-Khattab, Zayd ibn Thabit, Ubayy ibn Ka‘b, Abdullah ibn Abbas, and Abdullah ibn as-Sa’ib (may Allah be pleased with them).")
+                        Text("**Ibn Kathir (Qari of Makkah)**: narrated by al-Bazzi and Qunbul. Transmitted from Umar ibn al-Khattab, Zayd ibn Thabit, Ubayy ibn Ka‘b, Abdullah ibn Abbas, and Abdullah ibn as-Sa’ib (may Allah be pleased with them).")
 
-                        Text("**Abu Amr al-Basri (Qari of Basrah)** - narrated by ad-Duri and as-Susi. Transmitted from Umar ibn al-Khattab, Uthman ibn Affan, Ali ibn Abi Talib, Abdullah ibn Mas‘ud, Abu Musa al-Ash‘ari, Abdullah ibn Abbas, Abdullah ibn Ayyash, Abdullah ibn as-Sa’ib, Ubayy ibn Ka‘b, Zayd ibn Thabit, and Abu Hurayrah (may Allah be pleased with them).")
+                        Text("**Abu Amr al-Basri (Qari of Basrah)**: narrated by ad-Duri and as-Susi. Transmitted from Umar ibn al-Khattab, Uthman ibn Affan, Ali ibn Abi Talib, Abdullah ibn Mas‘ud, Abu Musa al-Ash‘ari, Abdullah ibn Abbas, Abdullah ibn Ayyash, Abdullah ibn as-Sa’ib, Ubayy ibn Ka‘b, Zayd ibn Thabit, and Abu Hurayrah (may Allah be pleased with them).")
 
-                        Text("**Ibn Amir (Qari of Sham)** - narrated by Hisham and Ibn Dhakwan. Transmitted from Uthman ibn Affan and Abu ad-Darda (may Allah be pleased with them).")
+                        Text("**Ibn Amir (Qari of Sham)**: narrated by Hisham and Ibn Dhakwan. Transmitted from Uthman ibn Affan and Abu ad-Darda (may Allah be pleased with them).")
 
-                        Text("**Asim ibn Abi an-Najud (Qari of Kufah)** - narrated by Shu‘bah and Hafs. Most Muslims today recite via Hafs from Asim. Transmitted from Uthman ibn Affan, Ali ibn Abi Talib, Abdullah ibn Mas‘ud, Zayd ibn Thabit, and Ubayy ibn Ka‘b (may Allah be pleased with them).")
+                        Text("**Asim ibn Abi an-Najud (Qari of Kufah)**: narrated by Shu‘bah and Hafs. Most Muslims today recite via Hafs from Asim. Transmitted from Uthman ibn Affan, Ali ibn Abi Talib, Abdullah ibn Mas‘ud, Zayd ibn Thabit, and Ubayy ibn Ka‘b (may Allah be pleased with them).")
 
-                        Text("**Hamzah az-Zayyat** - narrated by Khalaf and Khallad. Transmitted from Uthman ibn Affan, Ali ibn Abi Talib, Ubayy ibn Ka‘b, Zayd ibn Thabit, Abdullah ibn Mas‘ud, and Husayn ibn Ali ibn Abi Talib (may Allah be pleased with them).")
+                        Text("**Hamzah az-Zayyat**: narrated by Khalaf and Khallad. Transmitted from Uthman ibn Affan, Ali ibn Abi Talib, Ubayy ibn Ka‘b, Zayd ibn Thabit, Abdullah ibn Mas‘ud, and Husayn ibn Ali ibn Abi Talib (may Allah be pleased with them).")
 
-                        Text("**Ali ibn Hamzah al-Kisai** - narrated by Abu al-Harith and ad-Duri. Transmitted from Umar ibn al-Khattab, Uthman ibn Affan, Ali ibn Abi Talib, Ubayy ibn Ka‘b, Zayd ibn Thabit, Abdullah ibn Mas‘ud, Abdullah ibn Abbas, Abdullah ibn Ayyash, Abu Hurayrah, and Husayn ibn Ali ibn Abi Talib (may Allah be pleased with them).")
+                        Text("**Ali ibn Hamzah al-Kisai**: narrated by Abu al-Harith and ad-Duri. Transmitted from Umar ibn al-Khattab, Uthman ibn Affan, Ali ibn Abi Talib, Ubayy ibn Ka‘b, Zayd ibn Thabit, Abdullah ibn Mas‘ud, Abdullah ibn Abbas, Abdullah ibn Ayyash, Abu Hurayrah, and Husayn ibn Ali ibn Abi Talib (may Allah be pleased with them).")
 
-                        Text("**Ya‘qub al-Hadrami** - narrated by Ruways and Rawh. Transmitted from Umar ibn al-Khattab, Uthman ibn Affan, Ali ibn Abi Talib, Ubayy ibn Ka‘b, Zayd ibn Thabit, Abdullah ibn Mas‘ud, Abu Musa al-Ash‘ari, Abdullah ibn Abbas, Abdullah ibn Ayyash, Abdullah ibn as-Sa’ib, and Abu Hurayrah (may Allah be pleased with them).")
+                        Text("**Ya‘qub al-Hadrami**: narrated by Ruways and Rawh. Transmitted from Umar ibn al-Khattab, Uthman ibn Affan, Ali ibn Abi Talib, Ubayy ibn Ka‘b, Zayd ibn Thabit, Abdullah ibn Mas‘ud, Abu Musa al-Ash‘ari, Abdullah ibn Abbas, Abdullah ibn Ayyash, Abdullah ibn as-Sa’ib, and Abu Hurayrah (may Allah be pleased with them).")
 
-                        Text("**Khalaf al-Bazzar** - narrated by Idris and Ishaq. Transmitted from Uthman ibn Affan, Ali ibn Abi Talib, Abdullah ibn Mas‘ud, Zayd ibn Thabit, Ubayy ibn Ka‘b, and Husayn ibn Ali ibn Abi Talib (may Allah be pleased with them).")
+                        Text("**Khalaf al-Bazzar**: narrated by Idris and Ishaq. Transmitted from Uthman ibn Affan, Ali ibn Abi Talib, Abdullah ibn Mas‘ud, Zayd ibn Thabit, Ubayy ibn Ka‘b, and Husayn ibn Ali ibn Abi Talib (may Allah be pleased with them).")
 
-                        Text("**Abu Ja‘far al-Madani** - narrated by Ibn Wardan and Ibn Jammaz. Transmitted from Zayd ibn Thabit, Ubayy ibn Ka‘b, Abdullah ibn Abbas, Abdullah ibn Ayyash, and Abu Hurayrah (may Allah be pleased with them).")
+                        Text("**Abu Ja‘far al-Madani**: narrated by Ibn Wardan and Ibn Jammaz. Transmitted from Zayd ibn Thabit, Ubayy ibn Ka‘b, Abdullah ibn Abbas, Abdullah ibn Ayyash, and Abu Hurayrah (may Allah be pleased with them).")
                     }
                     .font(.body)
                 }
@@ -1879,7 +1879,7 @@ struct QiraatView: View {
                     Text("We begin with what Prophet Muhammad (peace and blessings be upon him) began with: the Book of Allah (Glorified and Exalted be He). It is well established that the Quran has reached us by mass transmission (tawatur) through the chains of Ahl as-Sunnah wal-Jama‘ah.")
                         .font(.body)
 
-                    Text("Every one of these narrators of the noble Quran received it, through the chains above, from the Messenger of Allah (peace and blessings be upon him) by way of his Companions (may Allah be pleased with them) - the first to learn, gather, preserve, and transmit it.")
+                    Text("Every one of these narrators of the noble Quran received it, through the chains above, from the Messenger of Allah (peace and blessings be upon him) by way of his Companions (may Allah be pleased with them), the first to learn, gather, preserve, and transmit it.")
                         .font(.body)
 
                     Text("Not a single Ithna Ashari (Twelver) Shia is found among these transmitters. This is part of the Quran’s preservation: Allah (Glorified and Exalted be He) did not place in the transmission of His Book anyone who slanders the Companions of His Prophet (peace and blessings be upon him).")
@@ -1893,15 +1893,15 @@ struct QiraatView: View {
                 }
 
                 Section(header: Text("OTHER REPORTED QIRAAT")) {
-                    Text("There are other reported qiraat besides these Ten. Unlike the 10 Qiraat, which are mutawatir and mass attested, those others do not reach mutawatir status. That does not automatically make them inauthentic - some have isnad to Prophet Muhammad (peace and blessings be upon him) - but because they are not mass attested, we avoid them in public recitation and worship.")
+                    Text("There are other reported qiraat besides these Ten. Unlike the 10 Qiraat, which are mutawatir and mass attested, those others do not reach mutawatir status. That does not automatically make them inauthentic; some have isnad to Prophet Muhammad (peace and blessings be upon him), but because they are not mass attested, we avoid them in public recitation and worship.")
                         .font(.body)
 
-                    Text("We recite what is known with certainty (yaqin يقين) to be from Prophet Muhammad (peace and blessings be upon him) - the 10 Qiraat and their 20 Riwayaat. This unites the Ummah upon what is rigorously established.")
+                    Text("We recite what is known with certainty (yaqin يَقِين) to be from Prophet Muhammad (peace and blessings be upon him): the 10 Qiraat and their 20 Riwayaat. This unites the Ummah upon what is rigorously established.")
                         .font(.body)
                 }
 
                 Section(header: Text("PRACTICAL STUDY & ADVICE")) {
-                    Text("• Learn with a qualified teacher who has ijazah (إجازة) and isnad (إسناد). Do not self-invent pronunciations or rely only on apps without verification.")
+                    Text("• Learn with a qualified teacher who has ijazah (إِجَازَة) and isnad (إِسنَاد). Do not self-invent pronunciations or rely only on apps without verification.")
                         .font(.body)
                     Text("• Begin with one riwayah (commonly Hafs an Asim), then explore others (e.g., Warsh an Nafi) as you progress.")
                         .font(.body)
@@ -1915,7 +1915,7 @@ struct QiraatView: View {
                 }
 
                 Section(header: Text("RECAP")) {
-                    Text("“The 10 Qiraat are the preserved, mass-transmitted (mutawatir) recitations taught by Prophet Muhammad (peace and blessings be upon him), passed down through authentic chains. Each Qiraah is a specific, verified method of reciting the Quran - not a different text. They reflect how the Ahruf were preserved in writing and oral transmission. All 10 Qiraat (and their 20 Riwayaat) return to Prophet Muhammad (peace and blessings be upon him).”")
+                    Text("“The 10 Qiraat are the preserved, mass-transmitted (mutawatir) recitations taught by Prophet Muhammad (peace and blessings be upon him), passed down through authentic chains. Each Qiraah is a specific, verified method of reciting the Quran, not a different text. They reflect how the Ahruf were preserved in writing and oral transmission. All 10 Qiraat (and their 20 Riwayaat) return to Prophet Muhammad (peace and blessings be upon him).”")
                         .font(.body)
                         .foregroundColor(settings.accentColor.color)
                 }
@@ -1969,7 +1969,7 @@ struct QiraatView: View {
                 }
 
                 Section(header: Text("IN SUMMARY")) {
-                    Text("The differences among the Qiraat are all revelation and add richness of meaning - none contradicts another, and all are recited today.")
+                    Text("The differences among the Qiraat are all revelation and add richness of meaning; none contradicts another, and all are recited today.")
                         .font(.body)
                 }
             }
@@ -2031,7 +2031,7 @@ struct FarewellView: View {
 
                          You have rights over your women, and they have rights over you. Treat them with kindness, for they are your partners. Provide for them with goodness. Worship Allah, pray your five daily prayers, fast during Ramadan, give Zakat, and perform Hajj if able. 
 
-                         All mankind is from Adam and Eve. No Arab is superior to a non-Arab, nor is a non-Arab superior to an Arab; no white is superior to a black, nor is a black superior to a white - except in piety and good deeds. Every Muslim is a brother to every other Muslim. Do not commit injustices.
+                         All mankind is from Adam and Eve. No Arab is superior to a non-Arab, nor is a non-Arab superior to an Arab; no white is superior to a black, nor is a black superior to a white, except in piety and good deeds. Every Muslim is a brother to every other Muslim. Do not commit injustices.
 
                          After me, no prophet will come, and no new religion will be born. I leave behind the Quran and the Sunnah; if you adhere to them, you will never go astray. Be my witness, O Allah, that I have conveyed Your message.
                          """)
@@ -2050,7 +2050,7 @@ struct FarewellView: View {
                 }
 
                 Section(header: Text("IN SUMMARY")) {
-                    Text("In it the Prophet affirmed the sanctity of life and property, the equality of all people, the rights of women, and clinging to the Quran and Sunnah - delivered as his religion was perfected.")
+                    Text("In it the Prophet affirmed the sanctity of life and property, the equality of all people, the rights of women, and clinging to the Quran and Sunnah, delivered as his religion was perfected.")
                         .font(.body)
                 }
             }
@@ -2068,12 +2068,12 @@ struct SahabahView: View {
         List {
             Group {
                 Section(header: Text("SUMMARY")) {
-                    Text("In short: the Sahabah are the Companions who accompanied the Prophet, believed in him, and carried Islam to the world - the best generation of this Ummah.")
+                    Text("In short: the Sahabah are the Companions who accompanied the Prophet, believed in him, and carried Islam to the world, the best generation of this Ummah.")
                         .font(.body)
                 }
 
                 Section(header: Text("OVERVIEW")) {
-                    Text("The **Sahabah (الصَّحَابَة)** - from the root **s-h-b (ص ح ب)**, companionship - are the companions of Prophet Muhammad (peace be upon him).")
+                    Text("The **Sahabah (الصَّحَابَة)**, from the root **s-h-b (ص ح ب)**, companionship, are the companions of Prophet Muhammad (peace be upon him).")
                         .font(.body)
 
                     Text("They supported him in his mission, witnessed the revelation of the Quran, and preserved the teachings of Islam through word and action.")
@@ -2187,7 +2187,7 @@ struct WivesView: View {
 
                     ScriptureQuote(text: "“The Prophet is more worthy of the believers than themselves, and his wives are [in the position of] their mothers” (Quran 33:6).")
 
-                    Text("Prophet Muhammad (peace be upon him) married a total of **11 women** throughout his lifetime. At one time, he was married to a maximum of **9 wives** simultaneously - an exception granted to him as a Prophet. This exception was not unique to him; it was also granted to previous prophets due to their elevated responsibilities and status. For example, Prophet Solomon (peace be upon him) is known to have had a large number of wives, traditionally said to be 100 or more.")
+                    Text("Prophet Muhammad (peace be upon him) married a total of **11 women** throughout his lifetime. At one time, he was married to a maximum of **9 wives** simultaneously, an exception granted to him as a Prophet. This exception was not unique to him; it was also granted to previous prophets due to their elevated responsibilities and status. For example, Prophet Solomon (peace be upon him) is known to have had a large number of wives, traditionally said to be 100 or more.")
                         .font(.body)
                 }
 
@@ -2212,7 +2212,7 @@ struct WivesView: View {
                     Text("She said: “Never! By Allah, Allah will never disgrace you. You maintain family ties, speak the truth, support the needy, host guests, and assist those afflicted by calamity” (Sahih al-Bukhari 3).")
                         .font(.body)
 
-                    Text("Allah (Glorified and Exalted be He) affirmed the beginning of the Prophet’s (peace be upon him) mission in **Surah Al-Muzzammil (73:1)** and **Surah Al-Muddaththir (74:1)** - moments when Khadijah (may Allah be pleased with her) lovingly wrapped and comforted him.")
+                    Text("Allah (Glorified and Exalted be He) affirmed the beginning of the Prophet’s (peace be upon him) mission in **Surah Al-Muzzammil (73:1)** and **Surah Al-Muddaththir (74:1)**, moments when Khadijah (may Allah be pleased with her) lovingly wrapped and comforted him.")
                         .font(.body)
                         .foregroundColor(settings.accentColor.color)
 
@@ -2301,7 +2301,7 @@ struct WivesView: View {
                 }
 
                 Section(header: Text("IN SUMMARY")) {
-                    Text("Through the Prophet's wives - especially Aisha - much of the Sunnah of the home and worship reached the Ummah; loving and respecting them is part of the religion.")
+                    Text("Through the Prophet's wives, especially Aisha, much of the Sunnah of the home and worship reached the Ummah; loving and respecting them is part of the religion.")
                         .font(.body)
                 }
             }
@@ -2324,17 +2324,17 @@ struct CaliphatesView: View {
                 }
 
                 Section(header: Text("OVERVIEW")) {
-                    Text("The **Caliphate (الخِلَافَة)** - from the root **kh-l-f (خ ل ف)**, meaning succession - refers to the divinely guided system of governance established after the death of Prophet Muhammad (peace be upon him). It aimed to continue his mission of upholding justice, spreading Islam, and preserving the unity of the Ummah.")
+                    Text("The **Caliphate (الخِلَافَة)**, from the root **kh-l-f (خ ل ف)**, meaning succession, refers to the divinely guided system of governance established after the death of Prophet Muhammad (peace be upon him). It aimed to continue his mission of upholding justice, spreading Islam, and preserving the unity of the Ummah.")
                         .font(.body)
 
-                    Text("The Caliph (خَلِيفَة), literally “successor“ - was entrusted with political, military, judicial, and spiritual leadership, guided by the Quran and Sunnah. The first four caliphs, known as the **Rightly Guided Caliphs (ٱلخُلَفَاء ٱلرَّاشِدُون)**, are regarded as models of righteous rule.")
+                    Text("The Caliph (خَلِيفَة), literally “successor,“ was entrusted with political, military, judicial, and spiritual leadership, guided by the Quran and Sunnah. The first four caliphs, known as the **Rightly Guided Caliphs (ٱلخُلَفَاء ٱلرَّاشِدُون)**, are regarded as models of righteous rule.")
                         .font(.body)
 
                     Text("The Prophet (peace be upon him) said: “The Caliphate will remain among you for thirty years, then Allah will give the kingdom to whomever He wills” (Sunan Abi Dawud 4646).")
                         .font(.title3)
                         .foregroundColor(settings.accentColor.color.opacity(0.85))
 
-                    Text("These thirty years - known as the **Rashidun Caliphate** - represented the ideal Islamic system. The caliphs were chosen by **consultation (شُورَىٰ)** and the pledge of allegiance (**bay'ah, بَيعَة**) of the community: Abu Bakr at Saqifah and then in the mosque, and Uthman after Abd al-Rahman ibn Awf canvassed the people of Madinah house by house - men and women alike - for three nights (Sahih al-Bukhari 7207). This model emphasized justice, humility, accountability, and service to the people.")
+                    Text("These thirty years, known as the **Rashidun Caliphate**, represented the ideal Islamic system. The caliphs were chosen by **consultation (شُورَىٰ)** and the pledge of allegiance (**bay'ah, بَيعَة**) of the community: Abu Bakr at Saqifah and then in the mosque, and Uthman after Abd al-Rahman ibn Awf canvassed the people of Madinah house by house, men and women alike, for three nights (Sahih al-Bukhari 7207). This model emphasized justice, humility, accountability, and service to the people.")
                         .font(.body)
                 }
 
@@ -2369,7 +2369,7 @@ struct CaliphatesView: View {
                 }
 
                 Section(header: Text("UTHMAN IBN AFFAN (644–656 CE)")) {
-                    Text("Uthman (may Allah be pleased with him) was chosen through a **council of six** appointed by Umar. Known for his generosity and modesty, he married two daughters of the Prophet Muhammad (peace be upon him) and was called **Dhu al-Nurayn** (ذُو ٱلنُّورَين – the Possessor of Two Lights).")
+                    Text("Uthman (may Allah be pleased with him) was chosen through a **council of six** appointed by Umar. Known for his generosity and modesty, he married two daughters of the Prophet Muhammad (peace be upon him) and was called **Dhu al-Nurayn** (ذُو ٱلنُّورَين, the Possessor of Two Lights).")
                         .font(.body)
 
                     Text("He **standardized official copies of the Quran** from the already compiled manuscript preserved from Abu Bakr’s time, unifying public recitation and preventing disputes over unverified personal materials. He sent official copies to major cities and retired non-verified personal codices used outside official transmission.")
@@ -2428,7 +2428,7 @@ struct CaliphatesView: View {
                     Text("The Abbasids overthrew the Umayyads and moved the capital to **Baghdad (بَغدَاد)**, initiating the **Golden Age of Islam**.")
                         .font(.body)
 
-                    Text("They supported **translation**, **science**, **mathematics**, **medicine**, and **philosophy**, and established the renowned **Bayt al-Hikmah (بَيت ٱلحِكمَة – House of Wisdom)**.")
+                    Text("They supported **translation**, **science**, **mathematics**, **medicine**, and **philosophy**, and established the renowned **Bayt al-Hikmah (بَيت ٱلحِكمَة, House of Wisdom)**.")
                         .font(.body)
 
                     Text("Although internal divisions weakened the state, their intellectual contributions influenced both the Muslim world and Europe. The empire fell to the Mongols in 1258 CE.")
@@ -2447,7 +2447,7 @@ struct CaliphatesView: View {
                 }
 
                 Section(header: Text("IN SUMMARY")) {
-                    Text("The Rightly Guided Caliphs are the model of just Islamic governance - preserving the Quran, spreading the faith, and upholding the unity of the Ummah.")
+                    Text("The Rightly Guided Caliphs are the model of just Islamic governance: preserving the Quran, spreading the faith, and upholding the unity of the Ummah.")
                         .font(.body)
                 }
             }
@@ -2465,7 +2465,7 @@ struct MadhabView: View {
         List {
             Group {
                 Section(header: Text("SUMMARY")) {
-                    Text("In short: the four madhahib - Hanafi, Maliki, Shafi'i, and Hanbali - are the accepted schools of Islamic jurisprudence, differing in fiqh but united in creed.")
+                    Text("In short: the four madhahib (Hanafi, Maliki, Shafi'i, and Hanbali) are the accepted schools of Islamic jurisprudence, differing in fiqh but united in creed.")
                         .font(.body)
                 }
 
@@ -2476,7 +2476,7 @@ struct MadhabView: View {
                     Text("Madhahib developed as scholars preserved and codified fiqh (فِقه), or Islamic legal reasoning/jurisprudence, to help Muslims navigate daily life, worship, transactions, and society with clarity and consistency.")
                         .font(.body)
 
-                    Text("Following a madhhab ensures one is following a valid, peer-reviewed methodology developed by righteous scholars deeply rooted in the Quran, Sunnah, consensus (إِجمَاع), and analogy (قِيَاس). It is not blind following - it is trust in generations of qualified scholarship.")
+                    Text("Following a madhhab ensures one is following a valid, peer-reviewed methodology developed by righteous scholars deeply rooted in the Quran, Sunnah, consensus (إِجمَاع), and analogy (قِيَاس). It is not blind following; it is trust in generations of qualified scholarship.")
                         .font(.body)
 
                     Text("The Prophet Muhammad (peace be upon him) said: “Scholars are the inheritors of the prophets” (Sunan Abi Dawud 3641).")
@@ -2533,7 +2533,7 @@ struct MadhabView: View {
                     Text("None of the four imams formally founded an institution. Each taught a methodology that his students preserved and systematized into a school over the generations, so historians distinguish between the life of the imam and the emergence of the madhhab.")
                         .font(.body)
 
-                    Text("The Hanafi school began in Kufa during Abu Hanifa’s lifetime and was firmly established by his students Abu Yusuf (d. 182 AH) and Muhammad al-Shaybani (d. 189 AH). The Maliki school developed in Madinah through Imam Malik’s teaching circle and Al-Muwatta. The Shafi‘i school crystallized in Egypt in Imam al-Shafi‘i’s final years - his “new” madhhab - and spread after him through students like al-Muzani and al-Buwayti. The Hanbali school was collected and systematized after Imam Ahmad’s death by his sons and students such as al-Khallal.")
+                    Text("The Hanafi school began in Kufa during Abu Hanifa’s lifetime and was firmly established by his students Abu Yusuf (d. 182 AH) and Muhammad al-Shaybani (d. 189 AH). The Maliki school developed in Madinah through Imam Malik’s teaching circle and Al-Muwatta. The Shafi‘i school crystallized in Egypt in Imam al-Shafi‘i’s final years (his “new” madhhab) and spread after him through students like al-Muzani and al-Buwayti. The Hanbali school was collected and systematized after Imam Ahmad’s death by his sons and students such as al-Khallal.")
                         .font(.body)
 
                     Text("The four imams form an unbroken chain of teacher and student: Imam Malik taught al-Shafi‘i, who in turn taught Ahmad ibn Hanbal. Imam Malik was also a contemporary of Abu Hanifa, and al-Shafi‘i was born in the very year Abu Hanifa passed away (150 AH).")
@@ -2541,16 +2541,16 @@ struct MadhabView: View {
                 }
 
                 Section(header: Text("UNITY THROUGH DIVERSITY")) {
-                    Text("All four madhahib are valid and respected paths within Ahl al-Sunnah wa al-Jama‘ah (أَهل السُّنَّة وَالجَمَاعَة). Though they may differ in legal rulings, they are united in the same ‘aqeedah (عَقِيدَة) - the core beliefs regarding Allah, His names and attributes, prophethood, the Quran, the unseen, and the Afterlife.")
+                    Text("All four madhahib are valid and respected paths within Ahl al-Sunnah wa al-Jama‘ah (أَهل السُّنَّة وَالجَمَاعَة). Though they may differ in legal rulings, they are united in the same ‘aqeedah (عَقِيدَة), the core beliefs regarding Allah, His names and attributes, prophethood, the Quran, the unseen, and the Afterlife.")
                         .font(.body)
 
                     Text("This shared creed is why they are all considered part of Ahl al-Sunnah wa al-Jama‘ah. The differences among them are in jurisprudence (fiqh), not faith (‘aqeedah), and reflect the depth and mercy of Islamic legal tradition.")
                         .font(.body)
 
-                    Text("No single school is “more Islamic“ - each preserved knowledge and served the Ummah according to its time and place. Following any of them keeps one on the path of the Prophet (peace be upon him) and his companions.")
+                    Text("No single school is “more Islamic“; each preserved knowledge and served the Ummah according to its time and place. Following any of them keeps one on the path of the Prophet (peace be upon him) and his companions.")
                         .font(.body)
 
-                    Text("Imam Malik ibn Anas (may Allah have mercy on him) said: “Everyone's statement may be taken from or rejected, except the one in this grave” - pointing to the grave of the Prophet (peace be upon him).")
+                    Text("Imam Malik ibn Anas (may Allah have mercy on him) said: “Everyone's statement may be taken from or rejected, except the one in this grave,” pointing to the grave of the Prophet (peace be upon him).")
                         .font(.body)
                 }
 
@@ -2577,7 +2577,7 @@ struct MadhabView: View {
     /// short description.
     private func imamEntry(number: Int, name: String, arabic: String, meta: String, description: String) -> some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text("**\(number). \(name)** - \(arabic)")
+            Text("**\(number). \(name)**, \(arabic)")
                 .font(.body)
 
             Text(meta)
@@ -2598,12 +2598,12 @@ struct AhlulBaytView: View {
         List {
             Group {
                 Section(header: Text("SUMMARY")) {
-                    Text("In short: the Ahlul Bayt are the family of the Prophet - loving, honoring, and upholding their rights is part of the religion.")
+                    Text("In short: the Ahlul Bayt are the family of the Prophet; loving, honoring, and upholding their rights is part of the religion.")
                         .font(.body)
                 }
 
                 Section(header: Text("OVERVIEW")) {
-                    Text("The **Ahlul Bayt (أَهلُ البَيت)** - literally “the People of the House“ - are the family of Prophet Muhammad (peace be upon him). Loving them, honoring them, and upholding their rights is part of the religion, and hating them or belittling them is a grave sin.")
+                    Text("The **Ahlul Bayt (أَهلُ البَيت)**, literally “the People of the House,“ are the family of Prophet Muhammad (peace be upon him). Loving them, honoring them, and upholding their rights is part of the religion, and hating them or belittling them is a grave sin.")
                         .font(.body)
 
                     Text("The Quran uses the term directly when addressing the Prophet’s household:")
@@ -2625,7 +2625,7 @@ struct AhlulBaytView: View {
 
                     ScriptureQuote(text: "“And remember what is recited in your houses of the verses of Allah and wisdom. Indeed, Allah is ever Subtle and Acquainted [with all things]” (Quran 33:34).")
 
-                    Text("The phrase “O people of the household“ is therefore addressed, first and foremost, to the wives of the Prophet (peace be upon him) - the **Mothers of the Believers (أُمَّهَاتُ المُؤمِنِين)**, whom Allah placed in the position of mothers to every believer (Quran 33:6).")
+                    Text("The phrase “O people of the household“ is therefore addressed, first and foremost, to the wives of the Prophet (peace be upon him), the **Mothers of the Believers (أُمَّهَاتُ المُؤمِنِين)**, whom Allah placed in the position of mothers to every believer (Quran 33:6).")
                         .font(.body)
 
                     Text("Allah also called the wife of Ibrahim (peace be upon him) part of the “people of the house“ using the very same expression:")
@@ -2645,7 +2645,7 @@ struct AhlulBaytView: View {
                         .font(.title3)
                         .foregroundColor(settings.accentColor.color.opacity(0.85))
 
-                    Text("Including these four does not exclude the wives - the Prophet (peace be upon him) was gathering additional members of his household under the cloak, within a passage whose context is already addressing his wives. The two are complementary, not contradictory.")
+                    Text("Including these four does not exclude the wives; the Prophet (peace be upon him) was gathering additional members of his household under the cloak, within a passage whose context is already addressing his wives. The two are complementary, not contradictory.")
                         .font(.body)
 
                     Text("The Prophet (peace be upon him) said of his grandsons: “Al-Hasan and al-Husayn are the two masters of the youth of Paradise” (Sunan al-Tirmidhi 3768).")
@@ -2680,7 +2680,7 @@ struct AhlulBaytView: View {
                     Text("Every believer sends blessings upon them in each prayer: “O Allah, send prayers upon Muhammad and upon the family of Muhammad, as You sent prayers upon Ibrahim and upon the family of Ibrahim” (Sahih al-Bukhari 3370).")
                         .font(.body)
 
-                    Text("Loving the Ahlul Bayt is a sign of faith. It is never in tension with loving the Companions (may Allah be pleased with them) - Ali, al-Hasan, al-Husayn, and the Prophet’s wives were themselves among the Companions.")
+                    Text("Loving the Ahlul Bayt is a sign of faith. It is never in tension with loving the Companions (may Allah be pleased with them): Ali, al-Hasan, al-Husayn, and the Prophet’s wives were themselves among the Companions.")
                         .font(.body)
                 }
 
@@ -2698,7 +2698,7 @@ struct AhlulBaytView: View {
                 }
 
                 Section(header: Text("IN SUMMARY")) {
-                    Text("Balanced love for the Prophet's household, without exaggeration or neglect, is the way of the believers - joined with love for all his Companions.")
+                    Text("Balanced love for the Prophet's household, without exaggeration or neglect, is the way of the believers, joined with love for all his Companions.")
                         .font(.body)
                 }
             }
@@ -2724,7 +2724,7 @@ struct AhlusSunnahView: View {
                     Text("**Ahl as-Sunnah wal-Jama‘ah (أَهلُ السُّنَّةِ وَالجَمَاعَة)** means “the People of the Sunnah and the Community.“ They are those who hold to the Sunnah of the Prophet Muhammad (peace be upon him) and remain united upon the understanding of his Companions (may Allah be pleased with them).")
                         .font(.body)
 
-                    Text("**Sunnah** here means the Prophet’s way - his beliefs, statements, actions, and approvals. **Jama‘ah** means the united body of the believers, and specifically the way of the Companions and those who followed them in goodness.")
+                    Text("**Sunnah** here means the Prophet’s way: his beliefs, statements, actions, and approvals. **Jama‘ah** means the united body of the believers, and specifically the way of the Companions and those who followed them in goodness.")
                         .font(.body)
 
                     Text("Allah (Glorified and Exalted be He) says:")
@@ -2737,13 +2737,13 @@ struct AhlusSunnahView: View {
                 }
 
                 Section(header: Text("THE THREE FOUNDATIONS")) {
-                    Text("**1. The Quran** - taken as it is, without distortion, denial, or asking “how.“")
+                    Text("**1. The Quran**: taken as it is, without distortion, denial, or asking “how.“")
                         .font(.body)
 
-                    Text("**2. The authentic Sunnah** - accepted as binding revelation alongside the Quran, whether the report is mutawatir or an authentic single narration (ahad).")
+                    Text("**2. The authentic Sunnah**: accepted as binding revelation alongside the Quran, whether the report is mutawatir or an authentic single narration (ahad).")
                         .font(.body)
 
-                    Text("**3. The understanding of the Salaf** - the Quran and Sunnah are understood the way the first three generations understood them, not according to later opinions or personal reasoning that contradicts them.")
+                    Text("**3. The understanding of the Salaf**: the Quran and Sunnah are understood the way the first three generations understood them, not according to later opinions or personal reasoning that contradicts them.")
                         .font(.body)
 
                     Text("Allah (Glorified and Exalted be He) says: “And the first forerunners among the Muhajireen and the Ansar and those who followed them with good conduct - Allah is pleased with them and they are pleased with Him” (Quran 9:100).")
@@ -2812,7 +2812,7 @@ struct AhlusSunnahView: View {
                 }
 
                 Section(header: Text("IN SUMMARY")) {
-                    Text("Not a sect but the original, undivided Islam - taking the Quran and Sunnah as the Companions did, and loving the Prophet's family and Companions together.")
+                    Text("Not a sect but the original, undivided Islam: taking the Quran and Sunnah as the Companions did, and loving the Prophet's family and Companions together.")
                         .font(.body)
                 }
             }
@@ -2830,7 +2830,7 @@ struct SeerahView: View {
         List {
             Group {
                 Section(header: Text("SUMMARY")) {
-                    Text("In short: the Seerah is the life story of Prophet Muhammad - his character, mission, and example - drawn from the Quran and authentic reports.")
+                    Text("In short: the Seerah is the life story of Prophet Muhammad: his character, mission, and example, drawn from the Quran and authentic reports.")
                         .font(.body)
                 }
 
@@ -2838,7 +2838,7 @@ struct SeerahView: View {
                     Text("The **Seerah (سِيرَة)** is the biography of the Prophet Muhammad (peace be upon him): the account of his life, character, and mission, drawn from the Quran and authentic reports.")
                         .font(.body)
 
-                    Text("Studying it is not merely history - it shows how revelation was lived, and it is a means of knowing, loving, and following him.")
+                    Text("Studying it is not merely history; it shows how revelation was lived, and it is a means of knowing, loving, and following him.")
                         .font(.body)
 
                     Text("Allah (Glorified and Exalted be He) says: “There has certainly been for you in the Messenger of Allah an excellent pattern for anyone whose hope is in Allah and the Last Day and [who] remembers Allah often” (Quran 33:21).")
@@ -2855,7 +2855,7 @@ struct SeerahView: View {
                 }
 
                 Section(header: Text("THE FIRST REVELATION")) {
-                    Text("At the age of forty, while worshipping alone in the cave of **Hira (حِرَاء)** near Makkah, the angel **Jibril (جِبرِيل)** brought him the first revelation: “**Iqra (اِقرَأ)**” - “Read in the name of your Lord who created” (Quran 96:1).")
+                    Text("At the age of forty, while worshipping alone in the cave of **Hira (حِرَاء)** near Makkah, the angel **Jibril (جِبرِيل)** brought him the first revelation: “**Iqra (اِقرَأ)**,” “Read in the name of your Lord who created” (Quran 96:1).")
                         .font(.body)
 
                     Text("This began twenty-three years of the revelation of the Quran, which continued until shortly before his death.")
@@ -2863,7 +2863,7 @@ struct SeerahView: View {
                 }
 
                 Section(header: Text("THE MAKKAN PERIOD")) {
-                    Text("For about thirteen years in Makkah he called people to **Tawhid (تَوحِيد)** - the worship of Allah alone - through his **Dawah (دَعوَة)**, his call to Islam. He and the early believers met mockery, boycott, and severe persecution, yet remained patient.")
+                    Text("For about thirteen years in Makkah he called people to **Tawhid (تَوحِيد)**, the worship of Allah alone, through his **Dawah (دَعوَة)**, his call to Islam. He and the early believers met mockery, boycott, and severe persecution, yet remained patient.")
                         .font(.body)
 
                     Text("In this period he was honoured with the **Isra and Mi'raj (الإِسرَاء وَالمِعرَاج)**, the night journey to Jerusalem and the ascension through the heavens, during which the five daily prayers were made obligatory.")
@@ -2871,7 +2871,7 @@ struct SeerahView: View {
                 }
 
                 Section(header: Text("THE HIJRAH")) {
-                    Text("In 622 CE, by Allah’s command, the Prophet (peace be upon him) made the **Hijrah (هِجرَة)** - the migration from Makkah to **Madinah (المَدِينَة)**. This event was so pivotal that the Islamic (Hijri) calendar begins from it.")
+                    Text("In 622 CE, by Allah’s command, the Prophet (peace be upon him) made the **Hijrah (هِجرَة)**, the migration from Makkah to **Madinah (المَدِينَة)**. This event was so pivotal that the Islamic (Hijri) calendar begins from it.")
                         .font(.body)
                 }
 
@@ -2897,7 +2897,7 @@ struct SeerahView: View {
 
                     ScriptureQuote(text: "“And We have not sent you except as a mercy to the worlds” (Quran 21:107).")
 
-                    Text("When Aishah (may Allah be pleased with her) was asked about his character, she said that his character was the Quran - he embodied its teachings in the most complete way.")
+                    Text("When Aishah (may Allah be pleased with her) was asked about his character, she said that his character was the Quran: he embodied its teachings in the most complete way.")
                         .font(.body)
                 }
 
@@ -2920,7 +2920,7 @@ struct TafsirView: View {
         List {
             Group {
                 Section(header: Text("SUMMARY")) {
-                    Text("In short: Tafsir is the explanation of the Quran's meanings - soundest when the Quran is explained by the Quran, the Sunnah, and the understanding of the early generations.")
+                    Text("In short: Tafsir is the explanation of the Quran's meanings, soundest when the Quran is explained by the Quran, the Sunnah, and the understanding of the early generations.")
                         .font(.body)
                 }
 
@@ -2928,7 +2928,7 @@ struct TafsirView: View {
                     Text("**Tafsir (تَفسِير)** is the explanation and clarification of the meanings of the Quran: its words, rulings, and wisdoms. Its scholar is called a **Mufassir (مُفَسِّر)**.")
                         .font(.body)
 
-                    Text("Its blameworthy counterpart is **Tafsir bir-Ra'y (تَفسِير بِالرَّأي)** in the censured sense - interpreting the Quran by mere opinion, away from its established meaning and the understanding of the Salaf.")
+                    Text("Its blameworthy counterpart is **Tafsir bir-Ra'y (تَفسِير بِالرَّأي)** in the censured sense: interpreting the Quran by mere opinion, away from its established meaning and the understanding of the Salaf.")
                         .font(.body)
 
                     Text("Allah (Glorified and Exalted be He) says: “This is a blessed Book which We have revealed to you that they might reflect upon its verses” (Quran 38:29).")
@@ -2940,28 +2940,28 @@ struct TafsirView: View {
                     Text("The soundest tafsir is **bil-ma'thur (بِالمَأثُور)**, by transmission, and it proceeds in order:")
                         .font(.body)
 
-                    Text("**1. The Quran by the Quran** - a matter left general in one place is often clarified in another.")
+                    Text("**1. The Quran by the Quran**: a matter left general in one place is often clarified in another.")
                         .font(.body)
 
-                    Text("**2. The Quran by the Sunnah** - the Prophet (peace be upon him) explained what was revealed to him. “And We revealed to you the message that you may make clear to the people what was sent down to them” (Quran 16:44).")
+                    Text("**2. The Quran by the Sunnah**: the Prophet (peace be upon him) explained what was revealed to him. “And We revealed to you the message that you may make clear to the people what was sent down to them” (Quran 16:44).")
                         .font(.title3)
                         .foregroundColor(settings.accentColor.color)
 
-                    Text("**3. The statements of the Companions (Sahabah)** - they witnessed the revelation and knew its context best.")
+                    Text("**3. The statements of the Companions (Sahabah)**: they witnessed the revelation and knew its context best.")
                         .font(.body)
 
-                    Text("**4. The statements of the Successors (Tabi'un)** - the students of the Companions, followed by explanation through the Arabic language.")
+                    Text("**4. The statements of the Successors (Tabi'un)**: the students of the Companions, followed by explanation through the Arabic language.")
                         .font(.body)
                 }
 
                 Section(header: Text("KEY TERMS")) {
-                    Text("**Asbab al-Nuzul (أَسبَاب النُّزُول)** - the reasons or occasions of revelation, i.e. the events a verse was revealed about.")
+                    Text("**Asbab al-Nuzul (أَسبَاب النُّزُول)**: the reasons or occasions of revelation, i.e. the events a verse was revealed about.")
                         .font(.body)
 
-                    Text("**Muhkam (مُحكَم)** - verses clear and decisive in meaning; **Mutashabih (مُتَشَابِه)** - verses whose full meaning is not entirely apparent, referred back to the clear ones.")
+                    Text("**Muhkam (مُحكَم)**: verses clear and decisive in meaning; **Mutashabih (مُتَشَابِه)**: verses whose full meaning is not entirely apparent, referred back to the clear ones.")
                         .font(.body)
 
-                    Text("**An-Nasikh wal-Mansukh (النَّاسِخ وَالمَنسُوخ)** - the abrogating and abrogated; a later ruling that replaces an earlier one within the revelation.")
+                    Text("**An-Nasikh wal-Mansukh (النَّاسِخ وَالمَنسُوخ)**: the abrogating and abrogated; a later ruling that replaces an earlier one within the revelation.")
                         .font(.body)
                 }
 
@@ -3011,7 +3011,7 @@ struct FiqhAqeedahManhajView: View {
                 }
 
                 Section(header: Text("AQEEDAH (BELIEF)")) {
-                    Text("**Aqeedah (عَقِيدَة)** is creed - the beliefs the heart is bound to with certainty. Its core is **Tawhid (تَوحِيد)**, singling out Allah alone in worship, lordship, and His names and attributes.")
+                    Text("**Aqeedah (عَقِيدَة)** is creed: the beliefs the heart is bound to with certainty. Its core is **Tawhid (تَوحِيد)**, singling out Allah alone in worship, lordship, and His names and attributes.")
                         .font(.body)
 
                     Text("It includes the six pillars of faith: belief in Allah, His angels, His books, His messengers, the Last Day, and **Al-Qadar (القَدَر)**, the divine decree. Aqeedah does not change with time or place and is one for all the believers.")
@@ -3021,7 +3021,7 @@ struct FiqhAqeedahManhajView: View {
                 }
 
                 Section(header: Text("FIQH (JURISPRUDENCE)")) {
-                    Text("**Fiqh (فِقه)** is the understanding of the practical rulings of Islam derived from the Quran and Sunnah - the “how“ of worship, **Ibadah (عِبَادَة)**, and of dealings, **Muamalat (مُعَامَلَات)**, such as prayer, fasting, trade, and marriage.")
+                    Text("**Fiqh (فِقه)** is the understanding of the practical rulings of Islam derived from the Quran and Sunnah: the “how“ of worship, **Ibadah (عِبَادَة)**, and of dealings, **Muamalat (مُعَامَلَات)**, such as prayer, fasting, trade, and marriage.")
                         .font(.body)
 
                     Text("Because deriving detailed rulings involves **Ijtihad (اِجتِهَاد)**, qualified scholarly effort, sincere scholars sometimes differ. This is the source of the accepted schools of fiqh, and such differences are a mercy, not division in the religion.")
@@ -3029,7 +3029,7 @@ struct FiqhAqeedahManhajView: View {
                 }
 
                 Section(header: Text("MANHAJ (METHODOLOGY)")) {
-                    Text("**Manhaj (مَنهَج)** is methodology - the path by which one understands, prioritizes, and applies the religion, and deals with knowledge and people.")
+                    Text("**Manhaj (مَنهَج)** is methodology: the path by which one understands, prioritizes, and applies the religion, and deals with knowledge and people.")
                         .font(.body)
 
                     Text("The sound manhaj is to take the Quran and the authentic Sunnah upon the understanding of the **Salaf (السَّلَف)**, the first righteous generations, rather than by later opinions that contradict them.")
@@ -3047,7 +3047,7 @@ struct FiqhAqeedahManhajView: View {
                 }
 
                 Section(header: Text("IN SUMMARY")) {
-                    Text("United in creed, allowing valid differences in jurisprudence, and following the method of the first generations - this is the balance a Muslim strives for.")
+                    Text("United in creed, allowing valid differences in jurisprudence, and following the method of the first generations: this is the balance a Muslim strives for.")
                         .font(.body)
                 }
             }

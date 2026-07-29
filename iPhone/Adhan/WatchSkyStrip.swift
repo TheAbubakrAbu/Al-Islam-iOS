@@ -27,6 +27,7 @@ struct WatchSkyStrip: View {
             // Drag the arc to preview any daytime moment; otherwise it tracks the live sun.
             let displayedDate = scrubber.scrubbedDate ?? now
             let fraction = dayFraction(now: displayedDate, sunrise: sunrise, sunset: sunset)
+            let prayerDots = mandatoryPrayerFractions(on: now, sunrise: sunrise, sunset: sunset)
 
             VStack(spacing: 2) {
                 // Only appears while scrubbing: the prayer in effect at the previewed moment, and that time.
@@ -48,7 +49,7 @@ struct WatchSkyStrip: View {
 
                 HStack(spacing: 8) {
                     GeometryReader { geo in
-                        SunArc(fraction: fraction, color: settings.accentColor.accent1)
+                        SunArc(fraction: fraction, color: settings.accentColor.accent1, dotFractions: prayerDots)
                             .frame(height: 22)
                             .contentShape(Rectangle())
                             .gesture(dragGesture(width: geo.size.width, sunrise: sunrise, sunset: sunset, now: now))
@@ -93,6 +94,19 @@ struct WatchSkyStrip: View {
             .time
     }
 
+    /// The mandatory prayers as fractions along the sunrise→sunset arc - the same dots the lock-screen
+    /// Prayer Wave widget draws. Only those inside the daylight span appear: Fajr and Isha fall while the
+    /// sun is below the horizon, and clamping them onto the arc's ends would overlap Maghrib and lie about
+    /// when they are. Dhuhr (or Jumuah), Asr, and Maghrib (at the sunset end) are the ones that land here.
+    private func mandatoryPrayerFractions(on date: Date, sunrise: Date, sunset: Date) -> [Double] {
+        let span = sunset.timeIntervalSince(sunrise)
+        guard span > 0, let timeline = settings.getPrayerTimes(for: date, fullPrayers: true) else { return [] }
+        return timeline
+            .filter { Settings.adhanEligiblePrayerNames.contains($0.nameTransliteration) }
+            .map { $0.time.timeIntervalSince(sunrise) / span }
+            .filter { $0 >= 0 && $0 <= 1 }
+    }
+
     /// 0 at sunrise, 1 at sunset. Clamped, so before dawn and after dusk the sun rests at the horizon rather
     /// than flying off the ends of the arc.
     private func dayFraction(now: Date, sunrise: Date, sunset: Date) -> Double {
@@ -103,42 +117,64 @@ struct WatchSkyStrip: View {
 }
 
 /// A dashed half-arc from sunrise to sunset with the sun sitting on it, plus the horizon line beneath.
+/// The sun is colored like the iPhone sky's (warm at the horizon, near-white overhead), and each mandatory
+/// prayer inside the daylight span gets a small accent dot on the arc, mirroring the Prayer Wave widget.
 private struct SunArc: View {
     let fraction: Double
     let color: Color
+    let dotFractions: [Double]
 
     var body: some View {
         GeometryReader { geo in
-            let w = geo.size.width
-            let h = geo.size.height
+            let size = CGSize(width: geo.size.width, height: geo.size.height)
             let sunSize: CGFloat = 6
 
             ZStack(alignment: .topLeading) {
                 Path { path in
-                    path.move(to: CGPoint(x: 0, y: h))
+                    path.move(to: CGPoint(x: 0, y: size.height))
                     path.addQuadCurve(
-                        to: CGPoint(x: w, y: h),
-                        control: CGPoint(x: w / 2, y: -h * 0.6)
+                        to: CGPoint(x: size.width, y: size.height),
+                        control: CGPoint(x: size.width / 2, y: -size.height * 0.6)
                     )
                 }
                 .stroke(color.opacity(0.35), style: StrokeStyle(lineWidth: 1, dash: [2, 2]))
 
                 Path { path in
-                    path.move(to: CGPoint(x: 0, y: h))
-                    path.addLine(to: CGPoint(x: w, y: h))
+                    path.move(to: CGPoint(x: 0, y: size.height))
+                    path.addLine(to: CGPoint(x: size.width, y: size.height))
                 }
                 .stroke(color.opacity(0.25), lineWidth: 0.5)
 
+                // Dots under the sun in draw order, so when the sun reaches a prayer it covers its dot.
+                ForEach(dotFractions.indices, id: \.self) { idx in
+                    Circle()
+                        .fill(color.opacity(0.9))
+                        .frame(width: 3.5, height: 3.5)
+                        .position(point(at: dotFractions[idx], in: size))
+                }
+
                 Circle()
-                    .fill(color)
+                    .fill(sunColor)
                     .frame(width: sunSize, height: sunSize)
-                    .position(sunPoint(in: CGSize(width: w, height: h)))
+                    .position(point(at: fraction, in: size))
             }
         }
     }
 
-    /// The point on the quadratic Bézier at `fraction`, so the sun sits ON the arc rather than near it.
-    private func sunPoint(in size: CGSize) -> CGPoint {
+    /// `SkyView.sunColor`'s formula on the arc's own elevation: 4t(1-t) is 0 at both horizon ends and 1 at
+    /// the peak, so the sun rises orange, whitens toward midday, and warms again into sunset.
+    private var sunColor: Color {
+        let t = min(max(fraction, 0), 1)
+        let elevation = 4 * t * (1 - t)
+        return Color(
+            red: 1.0,
+            green: 0.62 + 0.30 * elevation,
+            blue: 0.25 + 0.60 * elevation
+        )
+    }
+
+    /// The point on the quadratic Bézier at a fraction, so the sun and dots sit ON the arc rather than near it.
+    private func point(at fraction: Double, in size: CGSize) -> CGPoint {
         let t = min(max(fraction, 0), 1)
         let start = CGPoint(x: 0, y: size.height)
         let control = CGPoint(x: size.width / 2, y: -size.height * 0.6)

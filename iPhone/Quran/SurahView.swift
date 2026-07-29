@@ -137,6 +137,10 @@ struct SurahView: View {
     /// deliberately exempt - its bottom inset height feeds the page-fit geometry, and a shrinking bar there
     /// would re-fit every cached page mid-scroll.
     @State private var barsCollapsed = false
+    /// True while the reader's finger is on the list (or a flick is still coasting) - see
+    /// `trackUserScrollTouch`. Playback's follow-scroll defers to it: holding an ayah to read it must
+    /// not be yanked away when the reciter moves on.
+    @State private var userTouchingReader = false
 
     // Multi-select mode (list reader): pick several ayahs, then act on all of them at once.
     @State private var isSelectingAyahs = false
@@ -1907,6 +1911,7 @@ struct SurahView: View {
             .applyConditionalListStyle(disableNowPlayingInset: true, topContentMargin: 11)
             // Apple Music-style: the bottom bars minimize while scrolling down, restore on scroll-up.
             .collapseBarsOnScroll($barsCollapsed)
+            .trackUserScrollTouch($userTouchingReader)
             .compactListSectionSpacing()
             #if os(iOS)
             .onChange(of: scrollDown) { value in
@@ -1967,7 +1972,10 @@ struct SurahView: View {
                 }
             }
             .onChange(of: quranPlayer.currentAyahNumber) { newVal in
-                if let id = newVal, surah.id == quranPlayer.currentSurahNumber {
+                // Follow the reciter - unless the reader's finger is on the list (holding an ayah to
+                // read along, or mid-scroll). Their touch wins; following resumes on the next ayah
+                // after they let go.
+                if let id = newVal, surah.id == quranPlayer.currentSurahNumber, !userTouchingReader {
                     withAnimation { proxy.scrollTo(id, anchor: .top) }
                 }
             }

@@ -733,7 +733,7 @@ struct AdhkarView: View {
             #if os(iOS)
             Text(aiHits.isEmpty
                  ? "No remembrances match your search."
-                 : "No keyword matches - see the AI results above.")
+                 : "No keyword matches; see the AI results above.")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
             #else
@@ -758,7 +758,7 @@ struct AdhkarView: View {
                     "So remember Me; I will remember you. And be grateful to Me and do not deny Me. (Quran 2:152)",
                     "Unquestionably, by the remembrance of Allah hearts are assured. (Quran 13:28)",
                     "O you who have believed, remember Allah with much remembrance. (Quran 33:41)",
-                    "Indeed, the Muslim men and Muslim women, the believing men and believing women, the obedient men and obedient women, the truthful men and truthful women, the patient men and patient women, the humble men and humble women, the charitable men and charitable women, the fasting men and fasting women, the men who guard their private parts and the women who do so, and the men who remember Allah often and the women who do so - for them Allah has prepared forgiveness and a great reward. (Quran 33:35)"
+                    "Indeed, the Muslim men and Muslim women, the believing men and believing women, the obedient men and obedient women, the truthful men and truthful women, the patient men and patient women, the humble men and humble women, the charitable men and charitable women, the fasting men and fasting women, the men who guard their private parts and the women who do so, and the men who remember Allah often and the women who do so: for them Allah has prepared forgiveness and a great reward. (Quran 33:35)"
                 ],
                 accent: settings.accentColor.color
             )
@@ -766,9 +766,9 @@ struct AdhkarView: View {
             ReflectionCard(
                 title: "Prophetic Encouragement",
                 lines: [
-                    "The best of your deeds, and the purest with your Master, is the remembrance of Allah. (Tirmidhi 3377 - sahih)",
+                    "The best of your deeds, and the purest with your Master, is the remembrance of Allah. (Tirmidhi 3377, sahih)",
                     "Two words are light on the tongue, heavy on the Scale, and beloved to the Most Merciful: SubhanAllahi wa bihamdihi, SubhanAllahil Adheem. (Bukhari 6682; Muslim 2694)",
-                    "Keep your tongue moist with the remembrance of Allah. (Tirmidhi 3375 - hasan)"
+                    "Keep your tongue moist with the remembrance of Allah. (Tirmidhi 3375, hasan)"
                 ],
                 accent: settings.accentColor.color
             )

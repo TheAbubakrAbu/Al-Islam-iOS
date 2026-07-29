@@ -392,6 +392,13 @@ struct ArabicLetterView: View {
         settings.useFontArabic && !letterData.isNonArabicScriptLetter
     }
 
+    /// Whether this page shows any English readings the eye toggle can hide - the harakaat/hamza practice
+    /// tables or the non-Arabic vowel row. Letters without them (taa marbuuTah, the hamza forms) have
+    /// nothing for the toggle to do, so it isn't offered and the name label ignores the flag.
+    private var hasHideableEnglish: Bool {
+        letterData.showTashkeel || letterData.isNonArabicScriptLetter
+    }
+
     /// The "it is always this" sentence for a letter whose weight never changes, phrased exactly like the one
     /// waaw and yaa already carry. `nil` for `.conditional` / `.followsPrevious`, which are never "always"
     /// anything and always supply their own rule.
@@ -433,7 +440,7 @@ struct ArabicLetterView: View {
                     HStack(alignment: .center) {
                         // The transliteration is the ANSWER to the glyph beside it, so it goes with the rest of
                         // the English when the reader is practising from the Arabic alone.
-                        if !settings.hideEnglishInArabicLetters {
+                        if !settings.hideEnglishInArabicLetters || !hasHideableEnglish {
                             Text(letterData.transliteration)
                                 .font(.subheadline)
                         }
@@ -536,12 +543,12 @@ struct ArabicLetterView: View {
                     }
 
                     if letterData.transliteration == "waaw" {
-                        Text("- **Waw (و)**: As a **vowel** it is the long \"uu\" (also written \"oo\", and shortened to \"u\"), used after a letter with a damma, like in رَسُول (rasool - messenger). As a **consonant** it makes the \"w\" sound, like in وَقَفَ (waqafa - stood).")
+                        Text("- **Waw (و)**: As a **vowel** it is the long \"uu\" (also written \"oo\", and shortened to \"u\"), used after a letter with a damma, like in رَسُول (rasool, messenger). As a **consonant** it makes the \"w\" sound, like in وَقَفَ (waqafa, stood).")
                             .font(.body)
                     }
 
                     if letterData.transliteration == "yaa" {
-                        Text("- **Yaa (ي)**: As a **vowel** it is the long \"ee\" (also written \"ii\", and shortened to \"i\"), used after a letter with a kasra, like in كِتَابِي (kitaabi - my book). As a **consonant** it makes the \"y\" sound, like in يَد (yad - hand).")
+                        Text("- **Yaa (ي)**: As a **vowel** it is the long \"ee\" (also written \"ii\", and shortened to \"i\"), used after a letter with a kasra, like in كِتَابِي (kitaabi, my book). As a **consonant** it makes the \"y\" sound, like in يَد (yad, hand).")
                             .font(.body)
                     }
 
@@ -613,7 +620,7 @@ struct ArabicLetterView: View {
                     Text("In modern Arabic outside of the Quran, Alif Madd usually does not mean a 4, 5, or 6 count Tajweed elongation by itself. It normally represents ءا, so آ is a shortened spelling of ءا.")
                         .font(.body)
 
-                    Text("For example, قرءان is how it is spelled in the Quran, while outside the Quran it is commonly shortened to قرآن. Likewise, ءامين is commonly written آمين.")
+                    Text("For example, قُرءَان is how it is spelled in the Quran, while outside the Quran it is commonly shortened to قُرآن. Likewise, ءَامِين is commonly written آمِين.")
                         .font(.body)
                 }
             }
@@ -645,10 +652,15 @@ struct ArabicLetterView: View {
         #if os(iOS)
         // Every reading on this screen (the transliteration above, the harakaat table, the hamza and
         // non-Arabic practice rows) is spelled out in English - this hides them all so the letter can be
-        // practised from the Arabic alone. Same flag as the alphabet screen's menu item.
+        // practised from the Arabic alone. Same flag as the alphabet screen's menu item. Offered only on
+        // pages that actually have readings to hide.
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
-                HideEnglishToolbarButton()
+                // The condition lives INSIDE the item (not around it): ToolbarContentBuilder has no
+                // buildIf on the iOS 15 target, but an empty ViewBuilder item renders nothing.
+                if hasHideableEnglish {
+                    HideEnglishToolbarButton()
+                }
             }
         }
         #endif
@@ -695,9 +707,11 @@ struct ArabicLetterView: View {
                     .font(.body)
             case "taa marbuuTah":
                 Group {
-                    Text("\"Taa marbuuTah\" means \"tied/knotted taa\" and is used to indicate the feminine gender in Arabic.")
-                    Text("It is typically added to the end of a noun to show that the noun is feminine. For example, the Arabic word for teacher is \"معلم\" (mu'allim) for a male and \"معلمة\" (mu'allima) for a female.")
-                    Text("Taa marbuuTah is pronounced as a \"t\" sound in certain cases, such as when the word is in the construct state or has a suffix. Otherwise, it is often silent but affects the preceding vowel, usually creating a short \"ah\" sound, similar to 'ه' (as in \"mu'allimah\").")
+                    Text("\"Taa marbuuTah\" means \"tied/knotted taa.\" It is written as a haa (ه) with the two dots of taa (ت) above it, and it is used to indicate the feminine gender in Arabic.")
+                    Text("It is typically added to the end of a noun to show that the noun is feminine. For example, the Arabic word for teacher is \"مُعَلِّم\" (mu'allim) for a male and \"مُعَلِّمَة\" (mu'allimah) for a female.")
+                    Text("Its pronunciation depends on whether you stop or keep going: if you continue reading past the word, it is pronounced as a taa (\"t\"), as in \"مُعَلِّمَةُ الفَصلِ\" (mu'allimatul-faSl). If you stop on the word, it is pronounced as a haa (\"h\"), as in \"mu'allimah.\"")
+                    Text("When a singular feminine word is made plural, the taa marbuuTah is unknotted: it is removed and an alif and a regular taa (ـات) are added in its place. For example, \"مُعَلِّمَة\" (mu'allimah) becomes \"مُعَلِّمَات\" (mu'allimaat).")
+                    Text("If the feminine word ends in a hamza instead, like \"سَمَاء\" (samaa', sky), the plural is formed by adding a waaw, then an alif and a taa: \"سَمَاء\" becomes \"سَمَاوَات\" (samaawaat).")
                 }
                 .font(.body)
             case "hamzatul waSl":
@@ -725,13 +739,13 @@ struct ArabicLetterView: View {
                         Text("The wavy line above a vowel letter is called \"Madd.\" In Arabic, Madd (مَدّ) means stretching or elongation. In Quranic recitation, it marks a measured elongation, not just a decorative spelling mark.")
                         Text("In the Quran, this Madd can fall under 3 main long-Madd cases from Tajweed: Madd Muttassil, Madd Munfasil, and Madd Lazim.")
                         Text("Madd Muttassil (مَدّ مُتَّصِل) means \"connected Madd.\" Muttassil means connected because the Madd letter is followed by a hamzah in the same word, so it is lengthened 4 or 5 counts.")
-                        Text("Madd Munfasil (مَدّ مُنْفَصِل) means \"separated Madd.\" Munfasil means separated because the Madd letter comes at the end of one word and the next word begins with hamzah, so it may be read 2, 4, or 5 counts depending on the recitation style.")
+                        Text("Madd Munfasil (مَدّ مُنفَصِل) means \"separated Madd.\" Munfasil means separated because the Madd letter comes at the end of one word and the next word begins with hamzah, so it may be read 2, 4, or 5 counts depending on the recitation style.")
                         Text("Madd Lazim (مَدّ لَازِم) means \"necessary Madd.\" Lazim means necessary or required because the Madd letter is followed by a permanent sukoon or shaddah, so it is lengthened 6 counts.")
                         Text("These are special mudood (مُدُود), the plural of Madd. They happen when natural Madd is no longer just 2 counts because hamzah, sukoon, or shaddah changes the rule.")
                     }
                     .font(.body)
                 } else if data.transliteration == "alif maqSoorah" {
-                    Text("Alif maqSoorah resembles a Yaa without dots and usually replaces a regular Alif at the end of a word. It is used in certain cases, including some Quranic words and non-Arabic proper nouns. It is the exact same and sounds the same as alif.")
+                    Text("Alif maqSoorah resembles a Yaa without dots and usually replaces a regular Alif at the end of a word. It appears in certain cases, including some Quranic words and non-Arabic proper nouns. It is pronounced exactly the same as a regular Alif.")
                         .font(.body)
                 } else if data.transliteration == "laa" {
                     Text("The combination of ل and ا forms a unique shape: لا.")

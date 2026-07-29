@@ -173,7 +173,7 @@ struct PrayerTimesMapView: View {
                         .foregroundStyle(settings.accentColor.color)
                 }
             }
-            Text("View-only - this never changes your real prayer times, notifications, or widgets.")
+            Text("View-only: this never changes your real prayer times, notifications, or widgets.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .padding(.vertical, 2)
@@ -273,7 +273,7 @@ struct PrayerTimesMapView: View {
 
     private var timeZoneCaption: String {
         let city = selectedLocation.map(shortCity) ?? "the city"
-        return "“City Time” shows each prayer on \(city)’s local clock - the time you’d see if you were there. “My Time” converts those same moments to your current time zone."
+        return "“City Time” shows each prayer on \(city)’s local clock, the time you’d see if you were there. “My Time” converts those same moments to your current time zone."
     }
 
     private var methodCaption: String {

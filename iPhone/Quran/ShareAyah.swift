@@ -603,8 +603,8 @@ struct ShareAyahSheet: View {
                             .padding(.vertical, 4)
 
                             Text(ayahExistsInShareQiraah
-                                ? "Ayah numbering can differ between riwayat - no ayah is ever missing, but some are joined or split differently (for example, \"Alif Lam Meem\" and \"Dhalika al-Kitab...\" form a single ayah in most qiraat)."
-                                : "This ayah is not separate in this riwayah - its words are part of a neighboring ayah, so the Hafs text is shown.")
+                                ? "Ayah numbering can differ between riwayat: no ayah is ever missing, but some are joined or split differently (for example, \"Alif Lam Meem\" and \"Dhalika al-Kitab...\" form a single ayah in most qiraat)."
+                                : "This ayah is not separate in this riwayah; its words are part of a neighboring ayah, so the Hafs text is shown.")
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                                 .fixedSize(horizontal: false, vertical: true)

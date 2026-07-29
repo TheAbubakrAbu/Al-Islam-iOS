@@ -744,7 +744,7 @@ struct NotificationView: View {
                             }
                     }
 
-                    Text("The notification plays the adhan's first 30 seconds - iOS won't play a longer notification sound. Previewing, or having the app open when the prayer comes in, plays it in full. Prenotifications and nagging reminders still use the default sound.")
+                    Text("The notification plays the adhan's first 30 seconds; iOS won't play a longer notification sound. Previewing, or having the app open when the prayer comes in, plays it in full. Prenotifications and nagging reminders still use the default sound.")
                         .font(.caption)
                         .foregroundColor(.secondary)
                         .padding(.vertical, 2)

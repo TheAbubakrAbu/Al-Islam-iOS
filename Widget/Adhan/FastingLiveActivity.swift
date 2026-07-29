@@ -85,6 +85,10 @@ private struct FastingLockScreenView: View {
                 EmptyView()
             }
             .tint(context.state.isFinalStretch ? .red : tint)
+            // Same slim-bar treatment as the widgets: squash the system bar (a custom style's fraction
+            // wouldn't live-animate) and cap away the phantom space reserved for the (empty) labels.
+            .scaleEffect(x: 1, y: 0.5, anchor: .center)
+            .frame(height: 4)
 
             if !context.attributes.city.isEmpty {
                 Text(context.attributes.city)

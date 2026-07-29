@@ -1402,7 +1402,7 @@ extension Settings {
 
             if showIslamicMidnight {
                 result.append(Prayer(
-                    nameArabic: "نِصْفُ اللَّيْلِ الشَّرْعِيُّ",
+                    nameArabic: "نِصفُ اللَّيلِ الشَّرعِيُّ",
                     nameTransliteration: "Islamic Midnight",
                     nameEnglish: "Islamic Middle of Night",
                     time: maghrib.addingTimeInterval(nightDuration / 2),
@@ -1415,7 +1415,7 @@ extension Settings {
 
             if showLastThird {
                 result.append(Prayer(
-                    nameArabic: "الثُّلُثُ الْأَخِيرُ مِنَ اللَّيْلِ",
+                    nameArabic: "الثُّلُثُ الأَخِيرُ مِنَ اللَّيلِ",
                     nameTransliteration: "Last Third",
                     nameEnglish: "Last Third of Night",
                     time: fajrNext.addingTimeInterval(-nightDuration / 3),
@@ -2594,8 +2594,8 @@ extension Settings {
         let content = UNMutableNotificationContent()
         content.title = AppIdentifiers.appName
         content.body = beforeFajr
-            ? "\(titleText) is today - \(eventSubTitle). Sent 30 minutes before Fajr."
-            : "\(titleText) is today - \(eventSubTitle)."
+            ? "\(titleText) is today: \(eventSubTitle). Sent 30 minutes before Fajr."
+            : "\(titleText) is today: \(eventSubTitle)."
         content.sound = .default
         content.userInfo[Self.intendedFireDateUserInfoKey] = finalDate.timeIntervalSince1970
         #if os(iOS)

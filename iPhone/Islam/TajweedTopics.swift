@@ -126,13 +126,13 @@ struct TajweedMaddView: View {
             }
 
             Section("3B. MADD MUNFASIL HUKMI (RULED SEPARATED)") {
-                Text("A special, \u{201C}ruled\u{201D} (hukmi) form of Madd Munfasil. The madd letter and the hamzah are written inside one word, so it looks like Madd Muttasil - but it is recited as a separated madd.")
+                Text("A special, \u{201C}ruled\u{201D} (hukmi) form of Madd Munfasil. The madd letter and the hamzah are written inside one word, so it looks like Madd Muttasil, but it is recited as a separated madd.")
                     .font(.body)
 
                 Text("Why It Is Separated")
                     .font(.subheadline.weight(.semibold))
 
-                Text("The madd letter is actually the tail of a small joined particle - the vocative يَا (\u{201C}O \u{2026}\u{201D}) or the demonstrative هَا (\u{201C}here/these \u{2026}\u{201D}) - and the hamzah begins the word it is attached to. So in meaning it is two words, even though the script joins them.")
+                Text("The madd letter is actually the tail of a small joined particle, the vocative يَا (\u{201C}O \u{2026}\u{201D}) or the demonstrative هَا (\u{201C}here/these \u{2026}\u{201D}), and the hamzah begins the word it is attached to. So in meaning it is two words, even though the script joins them.")
                     .font(.body)
                     .foregroundColor(.secondary)
 
@@ -140,7 +140,7 @@ struct TajweedMaddView: View {
                     .font(.subheadline.weight(.semibold))
 
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("A superscript madd letter - dagger alif (\u{0670}), small waw (\u{06E5}), or small yaa (\u{06E6}) - carrying a maddah (\u{0653})")
+                    Text("A superscript madd letter, dagger alif (\u{0670}), small waw (\u{06E5}), or small yaa (\u{06E6}), carrying a maddah (\u{0653})")
                     Text("Immediately followed by a hamzah in the SAME written word")
                     Text("The carrier is the tail of a joined يَا or هَا particle")
                 }
@@ -148,7 +148,7 @@ struct TajweedMaddView: View {
                 .foregroundColor(.secondary)
                 .frame(maxWidth: .infinity, alignment: .leading)
 
-                Text("Length: 2, 4, or 5 counts (treated exactly like Madd Munfasil - be consistent)")
+                Text("Length: 2, 4, or 5 counts (treated exactly like Madd Munfasil; be consistent)")
                     .font(.body)
                     .foregroundColor(settings.accentColor.color)
 
@@ -198,7 +198,7 @@ struct TajweedMaddView: View {
                 Text("Several named madds and special cases sit alongside the main five. They matter for accurate recitation and for any rule engine.")
                     .font(.body)
 
-                Text("Madd Badal - hamzah BEFORE the madd")
+                Text("Madd Badal: hamzah BEFORE the madd")
                     .font(.subheadline.weight(.semibold))
                 Text("A hamzah followed by a madd letter (the reverse of muttasil). Read 2 counts; it is not lengthened like muttasil.")
                     .font(.body)
@@ -209,7 +209,7 @@ struct TajweedMaddView: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
 
-                Text("Madd \u{02BF}Iwad - tanwin fath at a stop")
+                Text("Madd \u{02BF}Iwad: tanwin fath at a stop")
                     .font(.subheadline.weight(.semibold))
                 Text("When you stop on a word ending in tanwin fath (\u{064B}), the tanwin drops and the alif is stretched 2 counts. It is not aarid lis-sukoon.")
                     .font(.body)
@@ -220,7 +220,7 @@ struct TajweedMaddView: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
 
-                Text("Madd Tamkin - doubled yaa")
+                Text("Madd Tamkin: doubled yaa")
                     .font(.subheadline.weight(.semibold))
                 Text("A kasrah + shaddah yaa meeting a madd yaa. Read 2 counts, taking care not to swallow either yaa.")
                     .font(.body)
@@ -231,9 +231,9 @@ struct TajweedMaddView: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
 
-                Text("Madd Silah - the pronoun haa")
+                Text("Madd Silah: the pronoun haa")
                     .font(.subheadline.weight(.semibold))
-                Text("The attached pronoun \u{0647} (\u{201C}his/its\u{201D}) between two voweled letters is given a hidden waw/yaa. Sughra (small) is 2 counts; Kubra (large) is 4\u{2013}5 counts when a hamzah follows - it then behaves like Madd Munfasil.")
+                Text("The attached pronoun \u{0647} (\u{201C}his/its\u{201D}) between two voweled letters is given a hidden waw/yaa. Sughra (small) is 2 counts; Kubra (large) is 4\u{2013}5 counts when a hamzah follows; it then behaves like Madd Munfasil.")
                     .font(.body)
                     .foregroundColor(.secondary)
                 VStack(alignment: .leading, spacing: 12) {
@@ -244,13 +244,13 @@ struct TajweedMaddView: View {
 
                 Text("Dagger Alif & Tiny Madd Marks")
                     .font(.subheadline.weight(.semibold))
-                Text("Superscript madd marks - dagger alif (\u{0670}), small waw (\u{06E5}), small yaa (\u{06E6}) - are still a 2-count natural madd even though they are written tiny. When such a mark also carries a maddah (\u{0653}) and a hamzah follows, it becomes the munfasil-hukmi case above.")
+                Text("Superscript madd marks, dagger alif (\u{0670}), small waw (\u{06E5}), small yaa (\u{06E6}), are still a 2-count natural madd even though they are written tiny. When such a mark also carries a maddah (\u{0653}) and a hamzah follows, it becomes the munfasil-hukmi case above.")
                     .font(.body)
                     .foregroundColor(.secondary)
 
                 Text("Genuine Muttasil Written With A Dagger Alif")
                     .font(.subheadline.weight(.semibold))
-                Text("Not every dagger alif + hamzah is hukmi. When both sit inside one true word (no joined يَا/هَا particle), it is ordinary Madd Muttasil - for example أُوْلَٰٓئِكَ, مَلَٰٓئِكَة, and إِسۡرَٰٓءِيل.")
+                Text("Not every dagger alif + hamzah is hukmi. When both sit inside one true word (no joined يَا/هَا particle), it is ordinary Madd Muttasil, for example أُوْلَٰٓئِكَ, مَلَٰٓئِكَة, and إِسۡرَٰٓءِيل.")
                     .font(.body)
                     .foregroundColor(.secondary)
                 VStack(alignment: .leading, spacing: 12) {
@@ -359,7 +359,7 @@ struct TajweedMaddView: View {
                     .font(.subheadline.weight(.semibold))
 
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("ألف (alone) - no madd")
+                    Text("ألف (alone): no madd")
                 }
                 .font(.body)
                 .foregroundColor(.secondary)
@@ -369,8 +369,8 @@ struct TajweedMaddView: View {
                     .font(.subheadline.weight(.semibold))
 
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("6 counts - نقص عسلكم")
-                    Text("2 counts - حي طهر")
+                    Text("6 counts: نقص عسلكم")
+                    Text("2 counts: حي طهر")
                     Text("'Ayn (ع) is a leen letter: 4 or 6 counts.")
                 }
                 .font(.body)
@@ -701,7 +701,7 @@ struct TajweedIdghamIkhfaView: View {
                 Text("Letters")
                     .font(.subheadline.weight(.semibold))
 
-                Text("ت ث ج د ذ ز س ش ص ض ط ظ ف ق ك - the remaining 15 letters (all except the idhaar, idghaam, and iqlaab letters)")
+                Text("ت ث ج د ذ ز س ش ص ض ط ظ ف ق ك, the remaining 15 letters (all except the idhaar, idghaam, and iqlaab letters)")
                     .font(.body)
                     .foregroundColor(.secondary)
 
@@ -982,10 +982,10 @@ struct TajweedAaridLisSukoonView: View {
                 Text("Examples:")
                     .font(.subheadline.weight(.semibold))
 
-                Text("قَوَارِيرَا۠ - stop: قَوَارِيرَا")
+                Text("قَوَارِيرَا۠ (stop: قَوَارِيرَا)")
                     .font(.body)
 
-                Text("أَنَا۠ - in context: قُلۡ إِنَّمَآ أَنَا۠ بَشَرٞ مِّثۡلُكُمۡ")
+                Text("أَنَا۠ (in context: قُلۡ إِنَّمَآ أَنَا۠ بَشَرٞ مِّثۡلُكُمۡ)")
                     .font(.body)
 
                 Text("Simple rule: Pronounce it when stopping, skip it when continuing.")
@@ -1000,17 +1000,17 @@ struct TajweedAaridLisSukoonView: View {
                 Text("Examples:")
                     .font(.subheadline.weight(.semibold))
 
-                Text("يُقِيمُونَ - madd letter example")
+                Text("يُقِيمُونَ: madd letter example")
                     .font(.body)
 
-                Text("يُنفِقُونَ - special tajweed (ikhfāʾ) example")
+                Text("يُنفِقُونَ: special tajweed (ikhfāʾ) example")
                     .font(.body)
 
                 Text("Simple rule: No mark usually means either natural madd or a special recitation rule is happening.")
                     .font(.body)
                     .foregroundColor(.secondary)
 
-                Text("Note about the example رَزَقۡنَٰهُمۡ بِٱلۡغَيۡبِ: there is a qalqalah effect in the consonant, but there is no special visual marking for qalqalah in the Uthmani script - you must know it by rule or consult the tajweed colors in the app to see it highlighted.")
+                Text("Note about the example رَزَقۡنَٰهُمۡ بِٱلۡغَيۡبِ: there is a qalqalah effect in the consonant, but there is no special visual marking for qalqalah in the Uthmani script; you must know it by rule or consult the tajweed colors in the app to see it highlighted.")
                     .font(.caption)
                     .foregroundColor(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
@@ -1018,10 +1018,10 @@ struct TajweedAaridLisSukoonView: View {
 
             Section("Super Simple Summary") {
                 VStack(alignment: .leading, spacing: 6) {
-                    Text("1. ـۡ Normal sukoon - Pronounce the consonant with no vowel. Example: رَزَقۡنَٰهُمۡ بِٱلۡغَيۡبِ")
-                    Text("2. Silent written letter - Skip it always. Example: كَانُواْ")
-                    Text("3. Stop-only letter - Pronounce it only when stopping. Example: أَنَا۠ / قَوَارِيرَا۠")
-                    Text("4. No mark - Either a madd letter or a special tajweed rule. Example: يُقِيمُونَ / يُنفِقُونَ")
+                    Text("1. ـۡ Normal sukoon: Pronounce the consonant with no vowel. Example: رَزَقۡنَٰهُمۡ بِٱلۡغَيۡبِ")
+                    Text("2. Silent written letter: Skip it always. Example: كَانُواْ")
+                    Text("3. Stop-only letter: Pronounce it only when stopping. Example: أَنَا۠ / قَوَارِيرَا۠")
+                    Text("4. No mark: Either a madd letter or a special tajweed rule. Example: يُقِيمُونَ / يُنفِقُونَ")
                 }
                 .font(.body)
                 .foregroundColor(.secondary)
@@ -1127,7 +1127,7 @@ struct TajweedHamzatulWaslView: View {
             }
 
             Section("4. Hamzatul-Wasl in Verbs Depends on the Third Letter") {
-                Text("For verbs, examine the third letter: if it has ḍammah, begin with “u”; if it has fatḥah or kasrah, begin with “i”. Exception: when that ḍammah is incidental (ʿāriḍah), begin with kasrah instead - ٱمْشُوا، ٱقْضُوا، ٱبْنُوا، ٱمْضُوا، ٱئْتُوا are read imshu, iqdu, ibnu, imdu, i’tu, not umshu / uqdu / ubnu.")
+                Text("For verbs, examine the third letter: if it has ḍammah, begin with “u”; if it has fatḥah or kasrah, begin with “i”. Exception: when that ḍammah is incidental (ʿāriḍah), begin with kasrah instead: ٱمْشُوا، ٱقْضُوا، ٱبْنُوا، ٱمْضُوا، ٱئْتُوا are read imshu, iqdu, ibnu, imdu, i’tu, not umshu / uqdu / ubnu.")
                     .font(.body)
 
                 Text("Example (third letter ḍammah → start with 'u'):")
@@ -1179,7 +1179,7 @@ struct TajweedHamzatulWaslView: View {
             }
 
             Section("SHORT SUMMARY") {
-                Text("Hamzatul-Wasl is the connecting hamzah - pronounced only when starting from the word. Nouns usually take 'i', words with ٱل start with 'a', verbs depend on the third letter, and tanwīn before Hamzatul-Wasl connects with an 'nِ' sound.")
+                Text("Hamzatul-Wasl is the connecting hamzah, pronounced only when starting from the word. Nouns usually take 'i', words with ٱل start with 'a', verbs depend on the third letter, and tanwīn before Hamzatul-Wasl connects with an 'nِ' sound.")
                     .font(.body)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -1211,7 +1211,7 @@ struct TajweedWaqfView: View {
                     .font(.headline)
                     .foregroundColor(settings.accentColor.color)
 
-                Text("Waqf (وَقْف) means to stop or pause while reciting the Quran, with the intention of resuming the recitation correctly afterward.")
+                Text("Waqf (وَقف) means to stop or pause while reciting the Quran, with the intention of resuming the recitation correctly afterward.")
                     .font(.body)
 
                 Text("The word comes from the Arabic root و ق ف, meaning to stop, stand, or halt. In tajweed, it refers specifically to stopping at the end of a word while preserving the meaning, pronunciation, and beauty of the Quran.")

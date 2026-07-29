@@ -12,13 +12,13 @@ struct GodPillarView: View {
                 }
 
                 Section(header: Text("OVERVIEW")) {
-                    Text("The question of God's existence is the most important inquiry a person can make. It is the foundation of all meaning, morality, purpose, and accountability. If God exists, then life has objective direction and responsibility. If He does not, then everything - good and evil, justice and injustice, purpose and identity - becomes subjective and ultimately meaningless. Therefore, it is essential to examine this question through reason, evidence, and rational thought.")
+                    Text("The question of God's existence is the most important inquiry a person can make. It is the foundation of all meaning, morality, purpose, and accountability. If God exists, then life has objective direction and responsibility. If He does not, then everything (good and evil, justice and injustice, purpose and identity) becomes subjective and ultimately meaningless. Therefore, it is essential to examine this question through reason, evidence, and rational thought.")
                         .font(.body)
                 }
 
                 Section(header: Text("THE DOMINO EFFECT FRAMEWORK")) {
                     VStack(alignment: .leading, spacing: 6) {
-                        Text("The most honest way to approach truth is through a step-by-step method - what can be called the Domino Effect. Each answer leads logically to the next, and no step may be skipped:")
+                        Text("The most honest way to approach truth is through a step-by-step method, what can be called the Domino Effect. Each answer leads logically to the next, and no step may be skipped:")
                             .font(.body)
                         Group {
                             Text("• Does a higher power exist at all: something beyond the universe that brought it into being? This comes first. To ask whether God exists is already to assume a great deal about what that power is like.")
@@ -41,7 +41,7 @@ struct GodPillarView: View {
                         Text("While Christianity asserts universality, it contains internal contradictions and historical issues:")
                             .font(.body)
                         Group {
-                            Text("• The Trinity violates pure monotheism by making God three persons in one essence - an idea that even many Christian scholars admit is a mystery, not a rational doctrine.")
+                            Text("• The Trinity violates pure monotheism by making God three persons in one essence, an idea that even many Christian scholars admit is a mystery, not a rational doctrine.")
                             Text("• The Bible is not preserved in its original language or form. It is a compilation of human writings over centuries with known alterations.")
                             Text("• Christianity does not offer a consistent position on salvation, works, and belief.")
                         }
@@ -49,7 +49,7 @@ struct GodPillarView: View {
                             .font(.body)
                         Group {
                             Text("• Affirms absolute monotheism, **Tawhid (تَوحِيد)**, with no partners, no intermediaries, and no confusion.")
-                            Text("• Preserves the Quran exactly as it was revealed - verbatim, letter for letter, sound for sound, in its original Arabic.")
+                            Text("• Preserves the Quran exactly as it was revealed: verbatim, letter for letter, sound for sound, in its original Arabic.")
                             Text("• Welcomes all of humanity, regardless of ethnicity, race, gender, or background.")
                             Text("• Is the only universal, unambiguous, monotheistic religion with an intellectually sound and preserved foundation.")
                         }
@@ -65,25 +65,25 @@ struct GodPillarView: View {
                     Text("“And the heaven We constructed with strength, and indeed, We are its expander” (Quran 51:47).")
                         .foregroundColor(settings.accentColor.color)
                         .font(.title3)
-                    Text("The existence of anything - matter, time, space - requires an uncaused, necessary being beyond the system: Allah (Glorified and Exalted be He).")
+                    Text("The existence of anything (matter, time, space) requires an uncaused, necessary being beyond the system: Allah (Glorified and Exalted be He).")
                         .font(.body)
                 }
 
-                Section(header: Text("ABIOGENESIS – LIFE FROM NON-LIFE?")) {
+                Section(header: Text("ABIOGENESIS: LIFE FROM NON-LIFE?")) {
                     VStack(alignment: .leading, spacing: 6) {
                         Text("Modern science teaches that the first life (a prokaryotic cell) emerged from non-living chemicals. But this raises serious questions:")
                             .font(.body)
                         Group {
                             Text("• How did non-living matter suddenly become alive?")
                             Text("• How did a cell, containing instructions (DNA), copy itself?")
-                            Text("• A single strand of DNA contains more information than any supercomputer - where did this information come from?")
+                            Text("• A single strand of DNA contains more information than any supercomputer. Where did this information come from?")
                         }
                         Text("Scientists admit: “We don’t know.” But nothing in our experience tells us that complex, coded systems arise without a mind. The most rational explanation is that life was created intentionally, not randomly.")
                             .font(.body)
                     }
                 }
 
-                Section(header: Text("HUMAN INTELLIGENCE – BEYOND EVOLUTION")) {
+                Section(header: Text("HUMAN INTELLIGENCE: BEYOND EVOLUTION")) {
                     Text("Human beings are orders of magnitude more intelligent than any other creature. Humans build cities, fly planes, write poetry, and explore the universe. They possess self-awareness, language, morality, free will, and the capacity for worship. If evolution alone explains the human brain, why don't other species come close? Why the quantum leap in ability? Human exceptionalism points to a Creator who endowed humanity with reason, **Aql (عَقل)**, a faculty Allah (Glorified and Exalted be He) gave only to humans.")
                         .font(.body)
                     Text("“We have certainly created man in the best of stature” (Quran 95:4).")
@@ -92,17 +92,17 @@ struct GodPillarView: View {
                 }
 
                 Section(header: Text("THE FINE-TUNING OF THE UNIVERSE")) {
-                    Text("Gravity, electromagnetism, the strong and weak nuclear forces - all must be precisely balanced. If any were off by even a tiny fraction, life could not exist. This is not randomness. It is deliberate fine-tuning. Even atheists like Stephen Hawking acknowledge this astonishing precision. The question is: Who fine-tuned it?")
+                    Text("Gravity, electromagnetism, the strong and weak nuclear forces: all must be precisely balanced. If any were off by even a tiny fraction, life could not exist. This is not randomness. It is deliberate fine-tuning. Even atheists like Stephen Hawking acknowledge this astonishing precision. The question is: Who fine-tuned it?")
                         .font(.body)
                 }
 
                 Section(header: Text("THE MORAL ARGUMENT")) {
-                    Text("Every human being knows certain things are wrong - murder, rape, lying, oppression. But if humans are just chemical accidents, who decides what's right or wrong? Evolution can explain instincts, not moral obligations. The existence of objective morality points to a Moral Lawgiver - someone who defines justice, goodness, and evil: Allah (Glorified and Exalted be He).")
+                    Text("Every human being knows certain things are wrong: murder, rape, lying, oppression. But if humans are just chemical accidents, who decides what's right or wrong? Evolution can explain instincts, not moral obligations. The existence of objective morality points to a Moral Lawgiver, someone who defines justice, goodness, and evil: Allah (Glorified and Exalted be He).")
                         .font(.body)
                 }
 
                 Section(header: Text("ARGUMENT FROM BEAUTY, ORDER, AND DESIGN")) {
-                    Text("Look at the trees, stars, animals, oceans. Look at the symmetry of flowers and the precision of ecosystems. Human creation - skyscrapers, smartphones, aircraft - demonstrates purposeful design. Just as buildings imply builders, the cosmos implies a Creator.")
+                    Text("Look at the trees, stars, animals, oceans. Look at the symmetry of flowers and the precision of ecosystems. Human creation (skyscrapers, smartphones, aircraft) demonstrates purposeful design. Just as buildings imply builders, the cosmos implies a Creator.")
                         .font(.body)
                     Text("“Or were they created by nothing, or were they the creators of themselves? Or did they create the heavens and the earth? Rather, they are not certain” (Quran 52:35–36).")
                         .foregroundColor(settings.accentColor.color)
@@ -114,7 +114,7 @@ struct GodPillarView: View {
                         Text("When choosing a religion, one must not follow emotions, culture, or dreams. The correct belief system should be based on logic, objective evidence, and sound reasoning.")
                             .font(.body)
                         Group {
-                            Text("• Subjective experiences - such as dreams, visions, or personal feelings - may be meaningful, but they are not reliable indicators of truth.")
+                            Text("• Subjective experiences (such as dreams, visions, or personal feelings) may be meaningful, but they are not reliable indicators of truth.")
                             Text("• Anyone from any religion can claim such experiences.")
                             Text("• Truth must be verifiable, logical, and universally applicable.")
                         }
@@ -127,7 +127,7 @@ struct GodPillarView: View {
                 }
 
                 Section(header: Text("FINAL REFLECTION")) {
-                    Text("Belief in God is not blind faith - it is the most rational and coherent explanation for existence, morality, consciousness, and design. Every human is born upon the **Fitrah (فِطرَة)** - the natural disposition to believe in one Creator. However, ego, society, and culture often obscure this truth. Islam calls humanity back to this original clarity.")
+                    Text("Belief in God is not blind faith; it is the most rational and coherent explanation for existence, morality, consciousness, and design. Every human is born upon the **Fitrah (فِطرَة)**, the natural disposition to believe in one Creator. However, ego, society, and culture often obscure this truth. Islam calls humanity back to this original clarity.")
                         .font(.body)
                     Text("“And do not pursue that of which you have no knowledge. Indeed, the hearing, the sight and the heart - about all those [one] will be questioned” (Quran 17:36).")
                         .foregroundColor(settings.accentColor.color)
@@ -173,7 +173,7 @@ struct IslamPillarView: View {
 
 
                 Section(header: Text("OVERVIEW")) {
-                    Text("**Islam (إِسلَام)** comes from the Arabic root **s-l-m (س ل م)**, meaning “submission,” “safety,” and “peace”: it is a complete way of life built on the worship of Allah (Glorified and Exalted be He) alone. The Quran, revealed to Prophet Muhammad (peace and blessings be upon him) over 23 years through the angel **Jibril (جِبرِيل)** (Gabriel), is the divine word of Allah - a comprehensive guide to belief, morality, and law.")
+                    Text("**Islam (إِسلَام)** comes from the Arabic root **s-l-m (س ل م)**, meaning “submission,” “safety,” and “peace”: it is a complete way of life built on the worship of Allah (Glorified and Exalted be He) alone. The Quran, revealed to Prophet Muhammad (peace and blessings be upon him) over 23 years through the angel **Jibril (جِبرِيل)** (Gabriel), is the divine word of Allah: a comprehensive guide to belief, morality, and law.")
                         .font(.body)
 
                     Text("The essence of Islam is **Tawhid (تَوحِيد)**, absolute monotheism: there is no deity worthy of worship except Allah. Allah says in the Quran:").font(.body)
@@ -192,15 +192,15 @@ struct IslamPillarView: View {
                     ScriptureQuote(text: "“Verily, Islam is founded on five (pillars): testifying the fact that there is no god but Allah (Shahadah), establishment of prayer (Salah), payment of charity (Zakah), fast of Ramadan, and Pilgrimage to the House (Hajj)” (Sahih Muslim 16d).", dimmed: true)
 
                     Text("The Five Pillars are:").font(.body)
-                    Text("1. **Shahadah (شَهَادَة)**, from the root **sh-h-d (ش ه د)**, to witness or testify: the testimony of faith - “There is no god but Allah, and Muhammad is His Messenger.” You are not reporting an opinion; you are bearing witness. It is the foundation of a Muslim's faith.")
+                    Text("1. **Shahadah (شَهَادَة)**, from the root **sh-h-d (ش ه د)**, to witness or testify: the testimony of faith, “There is no god but Allah, and Muhammad is His Messenger.” You are not reporting an opinion; you are bearing witness. It is the foundation of a Muslim's faith.")
                     Text("2. **Salah (صَلَاة)**, from the root **s-l-w (ص ل و)**, to supplicate and to draw near: praying five times a day at prescribed times, a direct link between the believer and Allah.")
-                    Text("3. **Zakah (زَكَاة)**, from the root **z-k-w (ز ك و)**, to purify and to grow: giving a portion of wealth to the needy (typically 2.5% of yearly savings). The word carries both meanings at once - wealth is purified by giving it away, and it grows by being purified.")
+                    Text("3. **Zakah (زَكَاة)**, from the root **z-k-w (ز ك و)**, to purify and to grow: giving a portion of wealth to the needy (typically 2.5% of yearly savings). The word carries both meanings at once: wealth is purified by giving it away, and it grows by being purified.")
                     Text("4. **Sawm (صَوم)**, from the root **s-w-m (ص و م)**, to abstain or hold back: fasting the month of **Ramadan (رَمَضَان)**, abstaining from food, drink, and sinful behavior from dawn to sunset, as spiritual reflection and self-discipline.")
                     Text("5. **Hajj (حَجّ)**, from the root **h-j-j (ح ج ج)**, to set out with purpose toward something: pilgrimage to Makkah, a once-in-a-lifetime obligation for those physically and financially able, symbolizing unity and submission to Allah.")
                 }
 
                 Section(header: Text("THE SIX PILLARS OF IMAN")) {
-                    Text("The Six Pillars of **Iman (إِيمَان)** - from the root **a-m-n (أ م ن)**, meaning faith, trust, and security - are the core beliefs every Muslim must hold. These are based on the Quran and the teachings of Prophet Muhammad (peace and blessings be upon him). Allah says in the Quran:")
+                    Text("The Six Pillars of **Iman (إِيمَان)**, from the root **a-m-n (أ م ن)**, meaning faith, trust, and security, are the core beliefs every Muslim must hold. These are based on the Quran and the teachings of Prophet Muhammad (peace and blessings be upon him). Allah says in the Quran:")
                         .font(.body)
                     ScriptureQuote(text: "“The Messenger has believed in what was revealed to him from his Lord, and [so have] the believers. All of them have believed in Allah, His angels, His books, His messengers, and the Last Day. And they say, ‘We hear and we obey. [We seek] Your forgiveness, our Lord, and to You is the [final] destination.’” (Quran 2:285)")
 
@@ -283,12 +283,12 @@ struct MuslimPillarView: View {
         List {
             Group {
                 Section(header: Text("SUMMARY")) {
-                    Text("In short: a Muslim is one who submits to Allah alone - following the Quran and the Sunnah of Prophet Muhammad (peace and blessings be upon him) as understood by his Companions, his family, and the first righteous generations.")
+                    Text("In short: a Muslim is one who submits to Allah alone, following the Quran and the Sunnah of Prophet Muhammad (peace and blessings be upon him) as understood by his Companions, his family, and the first righteous generations.")
                         .font(.body)
                 }
 
                 Section(header: Text("OVERVIEW")) {
-                    Text("A **Muslim (مُسلِم)** is “one who submits.” The word shares the root **s-l-m (س ل م)** with **Islam (إِسلَام)** - a root carrying the meanings of submission, safety, and peace. A Muslim is therefore someone who surrenders to Allah rather than to his own desires or the passing things of this world, turning instead to the One who created him and knows him best.")
+                    Text("A **Muslim (مُسلِم)** is “one who submits.” The word shares the root **s-l-m (س ل م)** with **Islam (إِسلَام)**, a root carrying the meanings of submission, safety, and peace. A Muslim is therefore someone who surrenders to Allah rather than to his own desires or the passing things of this world, turning instead to the One who created him and knows him best.")
                         .font(.body)
                 }
 
@@ -296,7 +296,7 @@ struct MuslimPillarView: View {
                     Text("Before He calls us to worship Him, Allah reminds us that He created us, knows us completely, and is nearer to us than we imagine:")
                         .font(.body)
                     ScriptureQuote(text: "“And We have already created man and know what his soul whispers to him, and We are closer to him than his jugular vein” (Quran 50:16).")
-                    Text("Submission, then, is not to a stranger - it is to the Lord who made us and knows us better than we know ourselves.")
+                    Text("Submission, then, is not to a stranger; it is to the Lord who made us and knows us better than we know ourselves.")
                         .font(.body)
                 }
 
@@ -304,7 +304,7 @@ struct MuslimPillarView: View {
                     Text("To be a Muslim is to answer Allah's call as Ibrahim (Abraham, peace be upon him) did:")
                         .font(.body)
                     ScriptureQuote(text: "“When his Lord said to him, ‘Submit,’ he said, ‘I have submitted [in Islam] to the Lord of the worlds’” (Quran 2:131).")
-                    Text("Ibrahim was neither a Jew nor a Christian, but a Muslim in the truest sense - devoted to the worship of the one God:")
+                    Text("Ibrahim was neither a Jew nor a Christian, but a Muslim in the truest sense, devoted to the worship of the one God:")
                         .font(.body)
                     ScriptureQuote(text: "“Abraham was neither a Jew nor a Christian, but he was one inclining toward truth, a Muslim [submitting to Allah]. And he was not of the polytheists” (Quran 3:67).")
                 }
@@ -337,7 +337,7 @@ struct MuslimPillarView: View {
                 }
 
                 Section(header: Text("IN SUMMARY")) {
-                    Text("A Muslim submits to Allah alone - the One who created and knows us best - by holding to the Quran and the Sunnah upon the understanding of the Companions, the Prophet's family, and the Salaf, joined with all the believers as one brotherhood.")
+                    Text("A Muslim submits to Allah alone, the One who created and knows us best, by holding to the Quran and the Sunnah upon the understanding of the Companions, the Prophet's family, and the Salaf, joined with all the believers as one brotherhood.")
                         .font(.body)
                 }
             }
@@ -355,13 +355,13 @@ struct AllahPillarView: View {
         List {
             Group {
                 Section(header: Text("SUMMARY")) {
-                    Text("In short: Allah is the one true God - the sole Creator and Sustainer of all that exists, without partner or equal, known by His Most Beautiful Names and perfect attributes.")
+                    Text("In short: Allah is the one true God: the sole Creator and Sustainer of all that exists, without partner or equal, known by His Most Beautiful Names and perfect attributes.")
                         .font(.body)
                 }
 
 
                 Section(header: Text("OVERVIEW")) {
-                    Text("**Allah (اللَّه)** is the name of the one true God. It comes from **Al-Ilah (الإِلَٰه)**, “The God.” In Islam He (Glorified and Exalted be He) is the unique Creator, Sustainer, and Maintainer of all that exists - without partner, associate, or equal, and absolutely One.")
+                    Text("**Allah (اللَّه)** is the name of the one true God. It comes from **Al-Ilah (الإِلَٰه)**, “The God.” In Islam He (Glorified and Exalted be He) is the unique Creator, Sustainer, and Maintainer of all that exists, without partner, associate, or equal, and absolutely One.")
                         .font(.body)
 
                     Text("The Quran mentions Allah's 99 Names, **Al-Asma al-Husna (الأَسمَاء الحُسنَى)**, the Most Beautiful Names, such as the Most Gracious, the Most Merciful, the All-Knowing, and the King. These Names describe His perfect qualities and emphasize His absolute transcendence. Allah is beyond human comprehension and far above any need, limitation, or resemblance to His creation.")
@@ -521,7 +521,7 @@ struct QuranPillarView: View {
 
 
                 Section(header: Text("IN SUMMARY")) {
-                    Text("Unmatched in eloquence yet easy to memorize and understand, the Quran is Allah's protected, universal guidance - relevant to every people and every age.")
+                    Text("Unmatched in eloquence yet easy to memorize and understand, the Quran is Allah's protected, universal guidance, relevant to every people and every age.")
                         .font(.body)
                 }
             }
@@ -586,7 +586,7 @@ struct MuqattaatPillarView: View {
         List {
             Group {
                 Section(header: Text("SUMMARY")) {
-                    Text("In short: the Muqatta'at are the disconnected letters (like Alif-Lam-Mim) that open twenty-nine surahs - recited letter by letter.")
+                    Text("In short: the Muqatta'at are the disconnected letters (like Alif-Lam-Mim) that open twenty-nine surahs, recited letter by letter.")
                         .font(.body)
                 }
 
@@ -722,7 +722,7 @@ struct ProphetPillarView: View {
                     ScriptureQuote(text: "“Be calm, for I am not a king. Verily, I am only the son of a woman who ate dried meat” (Sunan Ibn Majah 3312).", dimmed: true)
 
                     Text("He also said:").font(.body)
-                    ScriptureQuote(text: "“I am only a servant. I eat as the servant eats, and I sit as the servant sits” (as-Silsilah as-Sahihah 544 - graded hasan).", dimmed: true)
+                    ScriptureQuote(text: "“I am only a servant. I eat as the servant eats, and I sit as the servant sits” (as-Silsilah as-Sahihah 544, graded hasan).", dimmed: true)
 
                     Text("Similarly, the Prophet (peace and blessings be upon him) warned against excessive praise, saying:").font(.body)
                     ScriptureQuote(text: "“Do not exaggerate in praising me as the Christians praised the son of Mary (Jesus), for I am only a Slave. So, call me the Slave of Allah and His Messenger” (Sahih al-Bukhari 3445).", dimmed: true)
@@ -759,7 +759,7 @@ struct ProphetPillarView: View {
 
 
                 Section(header: Text("IN SUMMARY")) {
-                    Text("As the seal of the prophets and the finest example for humanity, he is deeply loved and followed - yet he is never worshipped, for worship belongs to Allah alone.")
+                    Text("As the seal of the prophets and the finest example for humanity, he is deeply loved and followed, yet he is never worshipped, for worship belongs to Allah alone.")
                         .font(.body)
                 }
             }
@@ -777,13 +777,13 @@ struct SunnahPillarView: View {
         List {
             Group {
                 Section(header: Text("SUMMARY")) {
-                    Text("In short: the Sunnah is the way of Prophet Muhammad (peace and blessings be upon him) - his words, actions, and approvals. It explains the Quran and is the second source of Islam.")
+                    Text("In short: the Sunnah is the way of Prophet Muhammad (peace and blessings be upon him): his words, actions, and approvals. It explains the Quran and is the second source of Islam.")
                         .font(.body)
                 }
 
 
                 Section(header: Text("OVERVIEW")) {
-                    Text("The **Sunnah (سُنَّة)** - an Arabic word meaning “way,” “path,” or “tradition” - is the teachings, actions, and approvals of Prophet Muhammad (peace and blessings be upon him): his habits, moral conduct, and guidance on worship and dealings. It explains and complements the Quran and is the second source of Islamic knowledge.")
+                    Text("The **Sunnah (سُنَّة)**, an Arabic word meaning “way,” “path,” or “tradition,” is the teachings, actions, and approvals of Prophet Muhammad (peace and blessings be upon him): his habits, moral conduct, and guidance on worship and dealings. It explains and complements the Quran and is the second source of Islamic knowledge.")
                         .font(.body)
 
                     Text("Allah says in the Quran:").font(.body)
@@ -861,7 +861,7 @@ struct HadithPillarView: View {
 
 
                 Section(header: Text("OVERVIEW")) {
-                    Text("A **Hadith (حَدِيث)** - an Arabic word meaning “speech,” “narration,” or “report” - is a recorded saying, action, or approval of Prophet Muhammad (peace and blessings be upon him). Hadiths preserve the Sunnah and are an essential source of Islamic knowledge, and scholars verified them meticulously to ensure their authenticity.")
+                    Text("A **Hadith (حَدِيث)**, an Arabic word meaning “speech,” “narration,” or “report,” is a recorded saying, action, or approval of Prophet Muhammad (peace and blessings be upon him). Hadiths preserve the Sunnah and are an essential source of Islamic knowledge, and scholars verified them meticulously to ensure their authenticity.")
                         .font(.body)
 
                     Text("Allah (Glorified and Exalted be He) commands in the Quran:").font(.body)
@@ -1057,7 +1057,7 @@ struct ShahadahView: View {
                 }
 
                 Section(header: Text("IN SUMMARY")) {
-                    Text("Said with sincere conviction and lived by, the Shahadah affirms pure monotheism and acceptance of the Prophet's guidance - renewed in every prayer a Muslim offers.")
+                    Text("Said with sincere conviction and lived by, the Shahadah affirms pure monotheism and acceptance of the Prophet's guidance, renewed in every prayer a Muslim offers.")
                         .font(.body)
                 }
             }
@@ -1075,7 +1075,7 @@ struct SalahView: View {
         List {
             Group {
                 Section(header: Text("SUMMARY")) {
-                    Text("In short: Salah is the five daily prayers - a direct connection between the servant and Allah, and the first deed a person will be asked about on the Day of Judgment.")
+                    Text("In short: Salah is the five daily prayers: a direct connection between the servant and Allah, and the first deed a person will be asked about on the Day of Judgment.")
                         .font(.body)
                 }
 
@@ -1111,12 +1111,12 @@ struct SalahView: View {
                 Section(header: Text("HOW TO PRAY")) {
                     Text("The Prophet (peace and blessings be upon him) instructed:").font(.body)
                     ScriptureQuote(text: "“Pray as you have seen me praying” (Sahih al-Bukhari 631).", dimmed: true)
-                    Text("Facing the Qibla, with the **Niyyah (نِيَّة)** - the intention - settled in the heart, each rak'ah proceeds as follows:").font(.body)
+                    Text("Facing the Qibla, with the **Niyyah (نِيَّة)**, the intention, settled in the heart, each rak'ah proceeds as follows:").font(.body)
                     Text("1. **Takbir (تَكبِير)**: raise the hands and say “Allahu Akbar” (Allah is the Greatest), then place the right hand over the left upon the chest.").font(.body)
-                    Text("2. **Recitation**: recite the opening supplication, then Surah **Al-Fatiha (الفَاتِحَة)** - obligatory in every rak'ah - followed by another passage of the Quran in the first two rak'ah.").font(.body)
+                    Text("2. **Recitation**: recite the opening supplication, then Surah **Al-Fatiha (الفَاتِحَة)**, obligatory in every rak'ah, followed by another passage of the Quran in the first two rak'ah.").font(.body)
                     Text("3. **Ruku (رُكُوع)**: say “Allahu Akbar” and bow with a straight back, hands on the knees, saying “Subhana Rabbi al-Adheem” (Glory to my Lord the Most Great) three times.").font(.body)
                     Text("4. **Rising (I'tidal)**: rise saying “Sami'a Allahu liman hamidah” (Allah hears whoever praises Him), then, standing, “Rabbana wa laka al-hamd” (Our Lord, to You is all praise).").font(.body)
-                    Text("5. **Sujud (سُجُود)**: say “Allahu Akbar” and prostrate on seven parts - the forehead and nose, both palms, both knees, and the toes of both feet - saying “Subhana Rabbi al-A'la” (Glory to my Lord the Most High) three times.").font(.body)
+                    Text("5. **Sujud (سُجُود)**: say “Allahu Akbar” and prostrate on seven parts (the forehead and nose, both palms, both knees, and the toes of both feet), saying “Subhana Rabbi al-A'la” (Glory to my Lord the Most High) three times.").font(.body)
                     Text("6. **Sitting**: say “Allahu Akbar,” sit, and say “Rabbi ighfir li” (My Lord, forgive me); then perform a second Sujud in the same way. This completes one rak'ah.").font(.body)
                     Text("7. **Tashahhud (تَشَهُّد)**: after each two rak'ah, sit and recite the tashahhud (“At-tahiyyatu lillah…”). In the final sitting, add the prayers upon the Prophet (peace and blessings be upon him) and supplication.").font(.body)
                     Text("8. **Taslim (تَسلِيم)**: end the prayer by turning the face to the right and then to the left, saying each time “As-salamu alaykum wa rahmatullah” (peace and the mercy of Allah be upon you).").font(.body)
@@ -1162,7 +1162,7 @@ struct SawmView: View {
         List {
             Group {
                 Section(header: Text("SUMMARY")) {
-                    Text("In short: Sawm is fasting from dawn to sunset - especially in Ramadan - abstaining from food, drink, and desires to draw nearer to Allah and attain God-consciousness.")
+                    Text("In short: Sawm is fasting from dawn to sunset, especially in Ramadan, abstaining from food, drink, and desires to draw nearer to Allah and attain God-consciousness.")
                         .font(.body)
                 }
 
@@ -1243,7 +1243,7 @@ struct ZakahView: View {
         List {
             Group {
                 Section(header: Text("SUMMARY")) {
-                    Text("In short: Zakah is an obligatory charity - 2.5% of qualifying wealth held for a lunar year - that purifies wealth and supports those in need.")
+                    Text("In short: Zakah is an obligatory charity (2.5% of qualifying wealth held for a lunar year) that purifies wealth and supports those in need.")
                         .font(.body)
                 }
 
@@ -1307,12 +1307,12 @@ struct HajjView: View {
         List {
             Group {
                 Section(header: Text("SUMMARY")) {
-                    Text("In short: Hajj is the pilgrimage to the Kaaba in Makkah, obligatory once in a lifetime for those able - a journey of submission, forgiveness, and unity.")
+                    Text("In short: Hajj is the pilgrimage to the Kaaba in Makkah, obligatory once in a lifetime for those able: a journey of submission, forgiveness, and unity.")
                         .font(.body)
                 }
 
                 Section(header: Text("OVERVIEW")) {
-                    Text("**Hajj (حَجّ)**, from the root **h-j-j (ح ج ج)** meaning “to intend” or “to set out for” a great destination, is the fifth and final pillar of Islam. It is the pilgrimage to the **Kaaba (الكَعبَة)** in Makkah - the **Qibla (قِبلَة)**, the direction of prayer, for Muslims worldwide - performed annually in the month of **Dhul-Hijjah (ذُو الحِجَّة)** as a profound act of worship and submission to Allah (Glorified and Exalted be He).")
+                    Text("**Hajj (حَجّ)**, from the root **h-j-j (ح ج ج)** meaning “to intend” or “to set out for” a great destination, is the fifth and final pillar of Islam. It is the pilgrimage to the **Kaaba (الكَعبَة)** in Makkah (the **Qibla (قِبلَة)**, the direction of prayer, for Muslims worldwide), performed annually in the month of **Dhul-Hijjah (ذُو الحِجَّة)** as a profound act of worship and submission to Allah (Glorified and Exalted be He).")
                         .font(.body)
 
                     Text("Hajj is a journey of spiritual renewal, forgiveness, and unity among Muslims, symbolizing submission to Allah and the equality of all believers.")
@@ -1440,7 +1440,7 @@ struct GodView: View {
         List {
             Group {
                 Section(header: Text("SUMMARY")) {
-                    Text("In short: the first pillar of faith is to believe in Allah alone - His Lordship, His sole right to worship, and His perfect Names and attributes.")
+                    Text("In short: the first pillar of faith is to believe in Allah alone: His Lordship, His sole right to worship, and His perfect Names and attributes.")
                         .font(.body)
                 }
 
@@ -1458,11 +1458,11 @@ struct GodView: View {
                 Section(header: Text("MEANING OF BELIEF IN ALLAH")) {
                     Text("Belief in Allah, **al-Iman billah (الإِيمَان بِاللَّه)**, involves affirming His Oneness, **Tawhid (تَوحِيد)**, and understanding His divine attributes. It consists of three core aspects:")
                         .font(.body)
-                    Text("1. **Tawhid al-Rububiyyah (تَوحِيد الرُّبُوبِيَّة)** - Oneness of Lordship: Believing that Allah alone is the Creator, Sustainer, and Manager of all that exists.")
+                    Text("1. **Tawhid al-Rububiyyah (تَوحِيد الرُّبُوبِيَّة)**, Oneness of Lordship: Believing that Allah alone is the Creator, Sustainer, and Manager of all that exists.")
                         .font(.body)
-                    Text("2. **Tawhid al-Uluhiyyah (تَوحِيد الأُلُوهِيَّة)** - Oneness of Worship: Worshiping Allah alone without associating partners with Him.")
+                    Text("2. **Tawhid al-Uluhiyyah (تَوحِيد الأُلُوهِيَّة)**, Oneness of Worship: Worshiping Allah alone without associating partners with Him.")
                         .font(.body)
-                    Text("3. **Tawhid al-Asma wa al-Sifat (تَوحِيد الأَسمَاء وَالصِّفَات)** - Oneness of Names and Attributes: Affirming Allah’s names and attributes as mentioned in the Quran and Sunnah, without distortion or anthropomorphism.")
+                    Text("3. **Tawhid al-Asma wa al-Sifat (تَوحِيد الأَسمَاء وَالصِّفَات)**, Oneness of Names and Attributes: Affirming Allah’s names and attributes as mentioned in the Quran and Sunnah, without distortion or anthropomorphism.")
                         .font(.body)
                 }
 
@@ -1490,7 +1490,7 @@ struct GodView: View {
                     Text("Belief in Allah is the foundation of a Muslim’s faith and actions. It shapes a person’s worldview, guiding them to trust Allah, obey His commands, and rely on His mercy and justice.")
                         .font(.body)
 
-                    Text("This belief inspires **Taqwa (تَقوَى)**, God-consciousness,, motivating Muslims to live righteously and strive for Allah’s pleasure in every aspect of their lives.")
+                    Text("This belief inspires **Taqwa (تَقوَى)**, God-consciousness, motivating Muslims to live righteously and strive for Allah’s pleasure in every aspect of their lives.")
                         .font(.body)
                 }
 
@@ -1518,7 +1518,7 @@ struct AngelsView: View {
                 }
 
                 Section(header: Text("OVERVIEW")) {
-                    Text("Belief in the angels - **Malaikah (مَلَائِكَة)** - is a fundamental pillar of Islamic faith, **Iman (إِيمَان)**. Angels are unseen beings created by Allah (Glorified and Exalted be He) from light. They are sinless, do not have free will, and continuously obey Allah’s commands. Their roles include delivering revelations, recording deeds, and carrying out Allah’s orders in the universe. Allah, however, does not need angels or anything else, as He is completely self-sufficient, **Al-Ghaniyy (الغَنِيّ)**, and sustains all existence, **Al-Qayyum (القَيُّوم)**. The creation of angels reflects Allah’s wisdom and His divine plan.")
+                    Text("Belief in the angels, **Malaikah (مَلَائِكَة)**, is a fundamental pillar of Islamic faith, **Iman (إِيمَان)**. Angels are unseen beings created by Allah (Glorified and Exalted be He) from light. They are sinless, do not have free will, and continuously obey Allah’s commands. Their roles include delivering revelations, recording deeds, and carrying out Allah’s orders in the universe. Allah, however, does not need angels or anything else, as He is completely self-sufficient, **Al-Ghaniyy (الغَنِيّ)**, and sustains all existence, **Al-Qayyum (القَيُّوم)**. The creation of angels reflects Allah’s wisdom and His divine plan.")
                         .font(.body)
 
                     Text("The Prophet Muhammad (peace and blessings be upon him) said:").font(.body)
@@ -1552,7 +1552,7 @@ struct AngelsView: View {
                         .foregroundColor(settings.accentColor.color)
                         .font(.title3)
 
-                    Text("2. **Mikail (مِيكَائِيل)** - Michael: Responsible for provisions, including rain and sustenance.")
+                    Text("2. **Mikail (مِيكَائِيل)**, Michael: Responsible for provisions, including rain and sustenance.")
                         .font(.body)
 
                     Text("3. **Israfil (إِسرَافِيل)**: The angel who will blow the trumpet to signal the Day of Judgment.")
@@ -1618,7 +1618,7 @@ struct BooksView: View {
         List {
             Group {
                 Section(header: Text("SUMMARY")) {
-                    Text("In short: Allah revealed scriptures to His prophets - including the Torah, Psalms, and Gospel - culminating in the Quran, the final and preserved revelation.")
+                    Text("In short: Allah revealed scriptures to His prophets (including the Torah, Psalms, and Gospel), culminating in the Quran, the final and preserved revelation.")
                         .font(.body)
                 }
 
@@ -1643,16 +1643,16 @@ struct BooksView: View {
                 }
 
                 Section(header: Text("PREVIOUS SCRIPTURES")) {
-                    Text("1. **Tawrah (التَّورَاة)** - the Torah: Revealed to Musa (Moses, peace be upon him), it contained laws and guidance for the Children of Israel. Over time, the original text was altered, and its authenticity was compromised.")
+                    Text("1. **Tawrah (التَّورَاة)**, the Torah: Revealed to Musa (Moses, peace be upon him), it contained laws and guidance for the Children of Israel. Over time, the original text was altered, and its authenticity was compromised.")
                         .font(.body)
 
-                    Text("2. **Zabur (الزَّبُور)** - the Psalms: Revealed to Dawud (David, peace be upon him), it was a collection of hymns and praises dedicated to Allah.")
+                    Text("2. **Zabur (الزَّبُور)**, the Psalms: Revealed to Dawud (David, peace be upon him), it was a collection of hymns and praises dedicated to Allah.")
                         .font(.body)
 
-                    Text("3. **Injil (الإِنجِيل)** - the Gospel: Revealed to Isa (Jesus, peace be upon him), it confirmed the Torah and brought new guidance. However, the original Gospel has been lost, and what exists today are interpretations and altered accounts.")
+                    Text("3. **Injil (الإِنجِيل)**, the Gospel: Revealed to Isa (Jesus, peace be upon him), it confirmed the Torah and brought new guidance. However, the original Gospel has been lost, and what exists today are interpretations and altered accounts.")
                         .font(.body)
 
-                    Text("4. **Suhuf (صُحُف)** - the Scrolls: Revealed to Ibrahim (Abraham, peace be upon him) and Musa (Moses, peace be upon him), these contained foundational teachings and guidance. They are mentioned in the Quran but no longer exist.")
+                    Text("4. **Suhuf (صُحُف)**, the Scrolls: Revealed to Ibrahim (Abraham, peace be upon him) and Musa (Moses, peace be upon him), these contained foundational teachings and guidance. They are mentioned in the Quran but no longer exist.")
                         .font(.body)
 
                     Text("Allah (Glorified and Exalted be He) says:").font(.body)
@@ -1704,31 +1704,31 @@ struct ProphetsView: View {
                 Section(header: Text("OVERVIEW")) {
                     Text("""
                     Allah sent prophets to every nation, and a Muslim believes in every one of them. Prophets were chosen by Allah to guide their communities to monotheism and righteous living. The Quran mentions 25 prophets by name:
-                    - Adam - آدَم
-                    - Idris (Enoch) - إِدرِيس
-                    - Nuh (Noah) - نُوح
-                    - Hud (Heber) - هُود
-                    - Saleh - صَالِح
-                    - Lut (Lot) - لُوط
-                    - Ibrahim (Abraham) - إِبرَاهِيم
-                    - Ismail (Ishmael) - إِسمَاعِيل
-                    - Ishaq (Isaac) - إِسحَاق
-                    - Yaqub (Jacob) - يَعقُوب
-                    - Yusuf (Joseph) - يُوسُف
-                    - Shu’aib (Jethro) - شُعَيب
-                    - Ayyub (Job) - أَيُّوب
-                    - Dhul-Kifl - ذُو الكِفل
-                    - Musa (Moses) - مُوسَى
-                    - Harun (Aaron) - هَارُون
-                    - Dawud (David) - دَاوُود
-                    - Sulayman (Solomon) - سُلَيمَان
-                    - Ilyas (Elias) - إِليَاس
-                    - Alyasa (Elisha) - اليَسَع
-                    - Yunus (Jonah) - يُونُس
-                    - Zakariya (Zachariah) - زَكَرِيَّا
-                    - Yahya (John the Baptist) - يَحيَى
-                    - Isa (Jesus) - عِيسَى
-                    - Muhammad - مُحَمَّد
+                    - Adam: آدَم
+                    - Idris (Enoch): إِدرِيس
+                    - Nuh (Noah): نُوح
+                    - Hud (Heber): هُود
+                    - Saleh: صَالِح
+                    - Lut (Lot): لُوط
+                    - Ibrahim (Abraham): إِبرَاهِيم
+                    - Ismail (Ishmael): إِسمَاعِيل
+                    - Ishaq (Isaac): إِسحَاق
+                    - Yaqub (Jacob): يَعقُوب
+                    - Yusuf (Joseph): يُوسُف
+                    - Shu’aib (Jethro): شُعَيب
+                    - Ayyub (Job): أَيُّوب
+                    - Dhul-Kifl: ذُو الكِفل
+                    - Musa (Moses): مُوسَى
+                    - Harun (Aaron): هَارُون
+                    - Dawud (David): دَاوُود
+                    - Sulayman (Solomon): سُلَيمَان
+                    - Ilyas (Elias): إِليَاس
+                    - Alyasa (Elisha): اليَسَع
+                    - Yunus (Jonah): يُونُس
+                    - Zakariya (Zachariah): زَكَرِيَّا
+                    - Yahya (John the Baptist): يَحيَى
+                    - Isa (Jesus): عِيسَى
+                    - Muhammad: مُحَمَّد
                     """)
                     .font(.body)
 
@@ -1795,7 +1795,7 @@ struct ProphetsView: View {
                 }
 
                 Section(header: Text("IN SUMMARY")) {
-                    Text("The prophets all brought one message - worship of Allah alone - and Muhammad sealed and completed that guidance for all humanity.")
+                    Text("The prophets all brought one message (worship of Allah alone), and Muhammad sealed and completed that guidance for all humanity.")
                         .font(.body)
                 }
             }
@@ -1818,7 +1818,7 @@ struct DayView: View {
                 }
 
                 Section(header: Text("OVERVIEW")) {
-                    Text("Belief in the Last Day - **Yawm al-Qiyamah (يَوم القِيَامَة)**, the Day of Resurrection - is a cornerstone of Islam and the fifth pillar of **Iman (إِيمَان)**, faith. It is the day when Allah (Glorified and Exalted be He) will resurrect all of creation to hold them accountable for their deeds. This belief is essential for understanding the purpose of life and the consequences of human actions.")
+                    Text("Belief in the Last Day, **Yawm al-Qiyamah (يَوم القِيَامَة)**, the Day of Resurrection, is a cornerstone of Islam and the fifth pillar of **Iman (إِيمَان)**, faith. It is the day when Allah (Glorified and Exalted be He) will resurrect all of creation to hold them accountable for their deeds. This belief is essential for understanding the purpose of life and the consequences of human actions.")
                         .font(.body)
 
                     Text("Allah (Glorified and Exalted be He) says in the Quran:").font(.body)
@@ -1828,7 +1828,7 @@ struct DayView: View {
                 Section(header: Text("EVENTS OF THE DAY")) {
                     Text("The Day of Judgment will unfold in stages, including:").font(.body)
 
-                    Text("1. **The Blowing of the Trumpet**: The angel Israfil will blow the trumpet twice - first to end all life and then to resurrect everyone. Allah says:").font(.body)
+                    Text("1. **The Blowing of the Trumpet**: The angel Israfil will blow the trumpet twice: first to end all life and then to resurrect everyone. Allah says:").font(.body)
                     ScriptureQuote(text: "“And the Horn will be blown, and whoever is in the heavens and whoever is on the earth will fall dead except whom Allah wills. Then it will be blown again, and at once they will be standing, looking on” (Quran 39:68).")
 
                     Text("2. **Resurrection**: All people will rise from their graves to face their Lord. Allah says:").font(.body)
@@ -1887,12 +1887,12 @@ struct QadarView: View {
         List {
             Group {
                 Section(header: Text("SUMMARY")) {
-                    Text("In short: Al-Qadar means everything happens by Allah's knowledge, writing, will, and creation - while people still choose and are accountable.")
+                    Text("In short: Al-Qadar means everything happens by Allah's knowledge, writing, will, and creation, while people still choose and are accountable.")
                         .font(.body)
                 }
 
                 Section(header: Text("OVERVIEW")) {
-                    Text("Belief in **Qadar (قَدَر)** - from the root **q-d-r (ق د ر)**, to measure out or decree - or divine decree, is the sixth pillar of **Iman (إِيمَان)**, faith. It is the belief that everything occurs by the will, knowledge, and command of Allah (Glorified and Exalted be He). This includes both the good and the bad, as Allah’s wisdom is perfect, and His plans are flawless.")
+                    Text("Belief in **Qadar (قَدَر)** (from the root **q-d-r (ق د ر)**, to measure out or decree), or divine decree, is the sixth pillar of **Iman (إِيمَان)**, faith. It is the belief that everything occurs by the will, knowledge, and command of Allah (Glorified and Exalted be He). This includes both the good and the bad, as Allah’s wisdom is perfect, and His plans are flawless.")
                         .font(.body)
 
                     Text("Allah (Glorified and Exalted be He) says in the Quran:").font(.body)
@@ -1905,16 +1905,16 @@ struct QadarView: View {
                 Section(header: Text("COMPONENTS OF QADR")) {
                     Text("Scholars identify four essential components of Qadar:").font(.body)
 
-                    Text("1. **Allah’s Knowledge - Ilm (عِلم)**: Allah’s knowledge is infinite and perfect. He knows everything that has happened, is happening, and will happen. Allah says:").font(.body)
+                    Text("1. **Allah’s Knowledge, Ilm (عِلم)**: Allah’s knowledge is infinite and perfect. He knows everything that has happened, is happening, and will happen. Allah says:").font(.body)
                     ScriptureQuote(text: "“And with Him are the keys of the unseen; none knows them except Him. And He knows what is on the land and in the sea. Not a leaf falls but that He knows it” (Quran 6:59).")
 
-                    Text("2. **Allah’s Writing - Kitabah (كِتَابَة)**: All things are written in **Al-Lawh Al-Mahfuz (اللَّوح المَحفُوظ)**, the Preserved Tablet,, where every event, action, and outcome is recorded. Allah says:").font(.body)
+                    Text("2. **Allah’s Writing, Kitabah (كِتَابَة)**: All things are written in **Al-Lawh Al-Mahfuz (اللَّوح المَحفُوظ)**, the Preserved Tablet, where every event, action, and outcome is recorded. Allah says:").font(.body)
                     ScriptureQuote(text: "“Do you not know that Allah knows what is in the heaven and earth? Indeed, it is all in a record. Indeed that, for Allah, is easy” (Quran 22:70).")
 
-                    Text("3. **Allah’s Will - Mashiah (مَشِيئَة)**: Whatever Allah wills happens, and whatever He does not will does not happen. Allah says:").font(.body)
+                    Text("3. **Allah’s Will, Mashiah (مَشِيئَة)**: Whatever Allah wills happens, and whatever He does not will does not happen. Allah says:").font(.body)
                     ScriptureQuote(text: "“And they [i.e., the disbelievers] planned, but Allah planned. And Allah is the best of planners” (Quran 3:54).")
 
-                    Text("4. **Allah’s Creation - Khalq (خَلق)**: Allah is the Creator of all things, including actions, circumstances, and outcomes. Allah says:").font(.body)
+                    Text("4. **Allah’s Creation, Khalq (خَلق)**: Allah is the Creator of all things, including actions, circumstances, and outcomes. Allah says:").font(.body)
                     ScriptureQuote(text: "“Allah is the Creator of all things, and He is, over all things, Disposer of affairs” (Quran 39:62).")
                 }
 

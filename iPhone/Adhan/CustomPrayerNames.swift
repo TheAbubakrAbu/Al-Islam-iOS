@@ -23,7 +23,7 @@ struct CustomPrayerNamesSection: View {
                 row(for: prayer)
             }
 
-            Text("Renaming a prayer only changes how it is displayed - in the app, its notifications, the widgets and on your Apple Watch. Leave a field blank to use the default spelling.")
+            Text("Renaming a prayer only changes how it is displayed: in the app, its notifications, the widgets and on your Apple Watch. Leave a field blank to use the default spelling.")
                 .font(.caption)
                 .foregroundColor(.secondary)
                 .padding(.vertical, 2)

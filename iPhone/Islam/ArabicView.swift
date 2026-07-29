@@ -757,7 +757,7 @@ struct ArabicView: View {
                     #if os(iOS)
                     Text(aiHits.isEmpty
                          ? "No letters match your search."
-                         : "No keyword matches - see the AI results above.")
+                         : "No keyword matches. See the AI results above.")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                     #else

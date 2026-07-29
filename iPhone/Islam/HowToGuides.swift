@@ -86,7 +86,7 @@ struct GuideSourcesSection: View {
         } header: {
             Text("SOURCES & FURTHER READING")
         } footer: {
-            Text("Every ruling above traces back to the Quran and the authentic Sunnah. These links open the sources themselves - read them, and ask a qualified scholar about anything specific to your situation.")
+            Text("Every ruling above traces back to the Quran and the authentic Sunnah. These links open the sources themselves. Read them, and ask a qualified scholar about anything specific to your situation.")
         }
     }
 }
@@ -98,16 +98,16 @@ struct HowToPrayView: View {
         List {
             Group {
                 Section(header: Text("SUMMARY")) {
-                    Text("In short: prayer (**Salah, صَلَاة**) is performed facing the Qibla after purifying yourself, moving through standing, bowing, and prostrating while reciting the Quran and remembering Allah - praying as the Prophet (peace and blessings be upon him) prayed.")
+                    Text("In short: prayer (**Salah, صَلَاة**) is performed facing the Qibla after purifying yourself, moving through standing, bowing, and prostrating while reciting the Quran and remembering Allah, praying as the Prophet (peace and blessings be upon him) prayed.")
                         .font(.body)
                 }
 
                 Section(header: Text("BEFORE YOU PRAY")) {
-                    Text("1. **Purity (Taharah, طَهَارَة)**: have valid **Wudhu (وُضُوء)** - or Ghusl if required - with a clean body, clothes, and place of prayer.").font(.body)
+                    Text("1. **Purity (Taharah, طَهَارَة)**: have valid **Wudhu (وُضُوء)**, or Ghusl if required, with a clean body, clothes, and place of prayer.").font(.body)
                     Text("2. **Cover the Awrah (عَورَة)**: men from the navel to the knee at least; women cover everything except the face and hands.").font(.body)
                     Text("3. **Face the Qibla (قِبلَة)**: the direction of the Kaaba in Makkah.").font(.body)
-                    Text("4. **Correct time**: each prayer has its own window - Fajr, Dhuhr, Asr, Maghrib, and Isha.").font(.body)
-                    Text("5. **Intention (Niyyah, نِيَّة)**: intend the specific prayer in the heart - it is not spoken aloud.").font(.body)
+                    Text("4. **Correct time**: each prayer has its own window: Fajr, Dhuhr, Asr, Maghrib, and Isha.").font(.body)
+                    Text("5. **Intention (Niyyah, نِيَّة)**: intend the specific prayer in the heart; it is not spoken aloud.").font(.body)
                 }
 
                 Section(header: Text("NUMBER OF UNITS (RAKAH)")) {
@@ -119,11 +119,11 @@ struct HowToPrayView: View {
                     Text("The Prophet (peace and blessings be upon him) said:").font(.body)
                     ScriptureQuote(text: "“Pray as you have seen me praying” (Sahih al-Bukhari 631).", dimmed: true)
                     Text("1. **Takbir (تَكبِير)**: raise the hands and say “Allahu Akbar,” then place the right hand over the left upon the chest.").font(.body)
-                    Text("2. **Recitation**: say the opening supplication, then recite Surah **Al-Fatiha (الفَاتِحَة)** - required in every rak'ah - followed by another passage of the Quran in the first two rak'ah.").font(.body)
+                    Text("2. **Recitation**: say the opening supplication, then recite Surah **Al-Fatiha (الفَاتِحَة)**, required in every rak'ah, followed by another passage of the Quran in the first two rak'ah.").font(.body)
                     Text("3. **Ruku (رُكُوع)**: bow with a straight back, hands on the knees, saying “Subhana Rabbi al-Adheem” three times.").font(.body)
                     Text("4. **Rising (I'tidal)**: rise saying “Sami'a Allahu liman hamidah,” then, standing, “Rabbana wa laka al-hamd.”").font(.body)
-                    Text("5. **Sujud (سُجُود)**: prostrate on seven parts - the forehead and nose, both palms, both knees, and the toes - saying “Subhana Rabbi al-A'la” three times.").font(.body)
-                    Text("6. **Sit** and say “Rabbi ighfir li,” then make a second **Sujud** the same way. This completes one rak'ah - stand for the next.").font(.body)
+                    Text("5. **Sujud (سُجُود)**: prostrate on seven parts (the forehead and nose, both palms, both knees, and the toes), saying “Subhana Rabbi al-A'la” three times.").font(.body)
+                    Text("6. **Sit** and say “Rabbi ighfir li,” then make a second **Sujud** the same way. This completes one rak'ah; stand for the next.").font(.body)
                     Text("7. **Tashahhud (تَشَهُّد)**: after every two rak'ah, sit and recite the tashahhud; in the final sitting add the prayers upon the Prophet (peace and blessings be upon him) and supplication.").font(.body)
                     Text("8. **Taslim (تَسلِيم)**: end the prayer by turning the face to the right, then the left, saying each time “As-salamu alaykum wa rahmatullah.”").font(.body)
                 }
@@ -162,7 +162,7 @@ struct HowToPrayView: View {
                 }
 
                 Section(header: Text("IN SUMMARY")) {
-                    Text("Purify yourself, face the Qibla, and pray with presence of heart - Takbir, Fatiha, Ruku, Sujud, Tashahhud, and Taslim - exactly as the Prophet (peace and blessings be upon him) taught.")
+                    Text("Purify yourself, face the Qibla, and pray with presence of heart (Takbir, Fatiha, Ruku, Sujud, Tashahhud, and Taslim), exactly as the Prophet (peace and blessings be upon him) taught.")
                         .font(.body)
                 }
 
@@ -184,7 +184,7 @@ struct HowToFastView: View {
         List {
             Group {
                 Section(header: Text("SUMMARY")) {
-                    Text("In short: to fast (**Sawm, صَوم**) is to abstain from food, drink, and intimacy from dawn (**Fajr**) to sunset (**Maghrib**) with the intention of seeking Allah's pleasure - especially in Ramadan.")
+                    Text("In short: to fast (**Sawm, صَوم**) is to abstain from food, drink, and intimacy from dawn (**Fajr**) to sunset (**Maghrib**) with the intention of seeking Allah's pleasure, especially in Ramadan.")
                         .font(.body)
                 }
 
@@ -206,12 +206,12 @@ struct HowToFastView: View {
                 }
 
                 Section(header: Text("4. BREAK THE FAST AT MAGHRIB")) {
-                    Text("Break the fast (**Iftar, إِفطَار**) as soon as the sun sets, hastening it as the Sunnah - traditionally with fresh or dried dates and water, then supplicate, for the fasting person's dua at Iftar is answered.")
+                    Text("Break the fast (**Iftar, إِفطَار**) as soon as the sun sets, hastening it as the Sunnah, traditionally with fresh or dried dates and water, then supplicate, for the fasting person's dua at Iftar is answered.")
                         .font(.body)
                 }
 
                 Section(header: Text("WHAT INVALIDATES THE FAST")) {
-                    Text("Deliberately eating or drinking, intentional intimacy, and the onset of menstruation or postpartum bleeding break the fast. Eating or drinking by genuine forgetfulness does not - one simply continues fasting.")
+                    Text("Deliberately eating or drinking, intentional intimacy, and the onset of menstruation or postpartum bleeding break the fast. Eating or drinking by genuine forgetfulness does not; one simply continues fasting.")
                         .font(.body)
                 }
 
@@ -221,7 +221,7 @@ struct HowToFastView: View {
                 }
 
                 Section(header: Text("IN SUMMARY")) {
-                    Text("Intend the fast, take Suhoor, abstain from dawn to sunset while guarding your character, then hasten to break the fast at Maghrib - turning the whole day into worship and gratitude.")
+                    Text("Intend the fast, take Suhoor, abstain from dawn to sunset while guarding your character, then hasten to break the fast at Maghrib, turning the whole day into worship and gratitude.")
                         .font(.body)
                 }
 
@@ -262,12 +262,12 @@ struct HowToZakahView: View {
                 }
 
                 Section(header: Text("1. CHECK IF YOU MUST PAY")) {
-                    Text("Zakah is due on a Muslim whose zakatable wealth reaches the **Nisab (نِصَاب)** - the minimum threshold, equal to about **85 grams of gold** or **595 grams of silver** - and has been held for one full lunar (Hijri) year (**Hawl, حَول**).")
+                    Text("Zakah is due on a Muslim whose zakatable wealth reaches the **Nisab (نِصَاب)**, the minimum threshold (equal to about **85 grams of gold** or **595 grams of silver**), and has been held for one full lunar (Hijri) year (**Hawl, حَول**).")
                         .font(.body)
                 }
 
                 Section(header: Text("2. TOTAL YOUR ZAKATABLE WEALTH")) {
-                    Text("Include cash and savings, gold and silver, money owed to you that you expect back, business merchandise, and investments held for gain. Personal items - your home, car, and everyday belongings - are not counted.")
+                    Text("Include cash and savings, gold and silver, money owed to you that you expect back, business merchandise, and investments held for gain. Personal items (your home, car, and everyday belongings) are not counted.")
                         .font(.body)
                 }
 
@@ -282,7 +282,7 @@ struct HowToZakahView: View {
                 }
 
                 Section(header: Text("IN SUMMARY")) {
-                    Text("Once your wealth reaches the Nisab and a lunar year passes, give 2.5% of it to the deserving - purifying your wealth, helping the needy, and fulfilling a pillar of Islam.")
+                    Text("Once your wealth reaches the Nisab and a lunar year passes, give 2.5% of it to the deserving, purifying your wealth, helping the needy, and fulfilling a pillar of Islam.")
                         .font(.body)
                 }
 
@@ -319,7 +319,7 @@ struct HowToHajjView: View {
         List {
             Group {
                 Section(header: Text("SUMMARY")) {
-                    Text("In short: **Hajj (حَجّ)** is the pilgrimage to Makkah performed once in a lifetime by those able, over the days of **Dhul-Hijjah** - entering Ihram, standing at Arafah, and completing the rites the Prophet (peace and blessings be upon him) taught.")
+                    Text("In short: **Hajj (حَجّ)** is the pilgrimage to Makkah performed once in a lifetime by those able, over the days of **Dhul-Hijjah**: entering Ihram, standing at Arafah, and completing the rites the Prophet (peace and blessings be upon him) taught.")
                         .font(.body)
                 }
 
@@ -333,23 +333,23 @@ struct HowToHajjView: View {
                         .font(.body)
                 }
 
-                Section(header: Text("2. DAY 8 - MINA")) {
+                Section(header: Text("2. DAY 8: MINA")) {
                     Text("Travel to **Mina (مِنَى)** and pray Dhuhr, Asr, Maghrib, Isha, and Fajr there, each at its time (the four-unit prayers shortened to two).")
                         .font(.body)
                 }
 
-                Section(header: Text("3. DAY 9 - ARAFAH")) {
-                    Text("After sunrise proceed to **Arafah (عَرَفَة)** and stand there in supplication until sunset - this standing (**Wuquf**) is the essence of Hajj. Dhuhr and Asr are combined and shortened. The Prophet (peace and blessings be upon him) said:").font(.body)
+                Section(header: Text("3. DAY 9: ARAFAH")) {
+                    Text("After sunrise proceed to **Arafah (عَرَفَة)** and stand there in supplication until sunset; this standing (**Wuquf**) is the essence of Hajj. Dhuhr and Asr are combined and shortened. The Prophet (peace and blessings be upon him) said:").font(.body)
                     ScriptureQuote(text: "“Hajj is Arafah” (Sunan al-Tirmidhi 889).", dimmed: true)
                     Text("After sunset, move to **Muzdalifah (مُزدَلِفَة)**, combine Maghrib and Isha, rest for the night, and gather pebbles.").font(.body)
                 }
 
-                Section(header: Text("4. DAY 10 - EID (YAWM AN-NAHR)")) {
+                Section(header: Text("4. DAY 10: EID (YAWM AN-NAHR)")) {
                     Text("Stone the large pillar (**Jamrat al-Aqabah**) with seven pebbles, offer the sacrifice (**Hady/Qurbani, قُربَان**), shave or trim the hair, then perform **Tawaf al-Ifadah** around the Kaaba and **Sa'i (سَعي)** between Safa and Marwah. With this the pilgrim exits Ihram.")
                         .font(.body)
                 }
 
-                Section(header: Text("5. DAYS 11–13 - TASHREEQ")) {
+                Section(header: Text("5. DAYS 11–13: TASHREEQ")) {
                     Text("Stay in Mina and stone the three pillars (**Jamarat**) each afternoon. A pilgrim may leave after the 12th if he departs before sunset, otherwise he completes the 13th.")
                         .font(.body)
                 }
@@ -360,7 +360,7 @@ struct HowToHajjView: View {
                 }
 
                 Section(header: Text("IN SUMMARY")) {
-                    Text("Enter Ihram at the Miqat, stand at Arafah, spend the night at Muzdalifah, then on Eid stone, sacrifice, shave, and perform Tawaf and Sa'i - completing the days of Mina and a farewell Tawaf, returning cleansed of sin.")
+                    Text("Enter Ihram at the Miqat, stand at Arafah, spend the night at Muzdalifah, then on Eid stone, sacrifice, shave, and perform Tawaf and Sa'i, completing the days of Mina and a farewell Tawaf, returning cleansed of sin.")
                         .font(.body)
                 }
 
@@ -382,7 +382,7 @@ struct HowToUmrahView: View {
         List {
             Group {
                 Section(header: Text("SUMMARY")) {
-                    Text("In short: **Umrah (عُمرَة)** - the “lesser pilgrimage,” which may be done at any time of year - is Ihram, Tawaf around the Kaaba, Sa'i between Safa and Marwah, and shaving or trimming the hair.")
+                    Text("In short: **Umrah (عُمرَة)**, the “lesser pilgrimage,” which may be done at any time of year, is Ihram, Tawaf around the Kaaba, Sa'i between Safa and Marwah, and shaving or trimming the hair.")
                         .font(.body)
                 }
 
@@ -397,7 +397,7 @@ struct HowToUmrahView: View {
                 }
 
                 Section(header: Text("3. SA'I")) {
-                    Text("Walk seven times between the hills of **Safa (الصَّفَا)** and **Marwah (المَروَة)** (**Sa'i, سَعي**), starting at Safa and ending at Marwah, remembering Allah and supplicating - as **Hajar** (may Allah be pleased with her) once searched there for water.")
+                    Text("Walk seven times between the hills of **Safa (الصَّفَا)** and **Marwah (المَروَة)** (**Sa'i, سَعي**), starting at Safa and ending at Marwah, remembering Allah and supplicating, as **Hajar** (may Allah be pleased with her) once searched there for water.")
                         .font(.body)
                 }
 
@@ -407,7 +407,7 @@ struct HowToUmrahView: View {
                 }
 
                 Section(header: Text("IN SUMMARY")) {
-                    Text("Enter Ihram at the Miqat, perform Tawaf around the Kaaba, make Sa'i between Safa and Marwah, and shave or trim - a complete Umrah that may be done any time of the year.")
+                    Text("Enter Ihram at the Miqat, perform Tawaf around the Kaaba, make Sa'i between Safa and Marwah, and shave or trim, a complete Umrah that may be done any time of the year.")
                         .font(.body)
                 }
 

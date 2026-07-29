@@ -323,7 +323,7 @@ struct SettingsQuranView: View {
                     .font(.subheadline)
                     .onChange(of: settings.showFullSurahRow) { _ in settings.hapticFeedback() }
 
-                Text("Adds extra details - revelation type, ayah count, page count, and more - beneath each surah in the main Quran list, the screen where all the surahs are shown.")
+                Text("Adds extra details (revelation type, ayah count, page count, and more) beneath each surah in the main Quran list, the screen where all the surahs are shown.")
                     .font(.caption)
                     .foregroundColor(.secondary)
                     .padding(.vertical, 2)
@@ -334,7 +334,7 @@ struct SettingsQuranView: View {
                     .font(.subheadline)
                     .onChange(of: settings.quranSummaryMode) { _ in settings.hapticFeedback() }
 
-                Text("Bundles Ayah of the Day, Last Listened, and Last Read into one compact \"Your Summary\" section of tiles at the top of the Quran tab - it's all one thing. Turn it off to show each as its own full-width section instead, which is clearer but takes up a lot more space. (Summary is separate from the grid button, so you can keep this on while everything else stays a list.)")
+                Text("Bundles Ayah of the Day, Last Listened, and Last Read into one compact \"Your Summary\" section of tiles at the top of the Quran tab; it's all one thing. Turn it off to show each as its own full-width section instead, which is clearer but takes up a lot more space. (Summary is separate from the grid button, so you can keep this on while everything else stays a list.)")
                     .font(.caption)
                     .foregroundColor(.secondary)
                     .padding(.vertical, 2)
@@ -1033,7 +1033,7 @@ private struct TafsirDownloadSection: View {
         } header: {
             Text("OFFLINE TAFSIR")
         } footer: {
-            Text("Tafsir for any ayah you open is saved automatically. Downloads run while the app is open, can be cancelled, and resume where they left off - already-saved ayahs are skipped. English includes all 3 English tafsirs in one package; each Arabic tafsir downloads separately.")
+            Text("Tafsir for any ayah you open is saved automatically. Downloads run while the app is open, can be cancelled, and resume where they left off; already-saved ayahs are skipped. English includes all 3 English tafsirs in one package; each Arabic tafsir downloads separately.")
         }
         .onAppear {
             store.refreshDiskUsage()
@@ -1056,8 +1056,8 @@ private struct TafsirDownloadSection: View {
                 Button("Cancel", role: .cancel) {}
             } message: {
                 Text(pendingTargets.count == 1
-                     ? "This fetches \(pendingTargets.first?.displayName ?? "the tafsir") for all 6,236 ayahs for offline use. It may use significant data - Wi-Fi is recommended."
-                     : "This fetches \(pendingTargets.count) tafsir packages for all 6,236 ayahs each, for offline use. It may use significant data - Wi-Fi is recommended.")
+                     ? "This fetches \(pendingTargets.first?.displayName ?? "the tafsir") for all 6,236 ayahs for offline use. It may use significant data; Wi-Fi is recommended."
+                     : "This fetches \(pendingTargets.count) tafsir packages for all 6,236 ayahs each, for offline use. It may use significant data; Wi-Fi is recommended.")
             }
             .confirmationDialog("Delete saved tafsir?", isPresented: $confirmDelete, titleVisibility: .visible) {
                 Button("Delete \(deleteTarget?.displayName ?? "")", role: .destructive) {
@@ -1251,7 +1251,7 @@ struct ReciterListView: View {
             .confirmationDialog("Reciter Types", isPresented: $showReciterTypeLegendInfo, titleVisibility: .visible) {
             Button("OK") {}
         } message: {
-            Text("Blue: the highest tier - surahs and individual ayahs play in this reciter's own voice, and downloaded surahs also play ayah-by-ayah fully offline. Green: individual ayahs play in this reciter's own voice when streaming. Orange: streamed ayahs play in a Murattal style; download the surah to hear ayahs in this reciter's own voice. Red: full surahs only - individual ayahs default to Minshawi (Murattal).")
+            Text("Blue: the highest tier; surahs and individual ayahs play in this reciter's own voice, and downloaded surahs also play ayah-by-ayah fully offline. Green: individual ayahs play in this reciter's own voice when streaming. Orange: streamed ayahs play in a Murattal style; download the surah to hear ayahs in this reciter's own voice. Red: full surahs only; individual ayahs default to Minshawi (Murattal).")
         }
 
             Spacer(minLength: 0)
@@ -2535,7 +2535,7 @@ private struct ReciterRow: View, Equatable {
         } message: {
             Text(reciter.supportsAyahSegments
                 ? "This downloads all \(reciter.carriedSurahCount) full-surah recitations for offline playback. This reciter also supports ayah segments, so individual ayahs and custom ranges then play offline too, cut from the downloaded surah. It runs in the background and may use significant data and storage."
-                : "This downloads all \(reciter.carriedSurahCount) full-surah recitations for offline playback - it does not download ayah-by-ayah audio. It runs in the background and may use significant data and storage.")
+                : "This downloads all \(reciter.carriedSurahCount) full-surah recitations for offline playback; it does not download ayah-by-ayah audio. It runs in the background and may use significant data and storage.")
         }
         .onAppear {
             downloadManager.ensureStateLoaded(for: reciter)

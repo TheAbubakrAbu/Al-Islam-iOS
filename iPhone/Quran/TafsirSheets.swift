@@ -426,7 +426,7 @@ struct AyahTafsirSheet: View {
     }
 
     private var noticeCard: some View {
-        OnlineNoticeCard(text: "Tafsir is fetched online for the selected ayah or grouped ayahs, then saved on this device - an ayah you've opened before loads instantly and offline. English tafsirs load together; Arabic tafsirs (Ibn Kathir, al-Tabari, as-Sa'di) load per selection.")
+        OnlineNoticeCard(text: "Tafsir is fetched online for the selected ayah or grouped ayahs, then saved on this device; an ayah you've opened before loads instantly and offline. English tafsirs load together; Arabic tafsirs (Ibn Kathir, al-Tabari, as-Sa'di) load per selection.")
     }
 
     // The same ayah-card format as the page actions sheet: Arabic first, then the "Name S:A" reference
@@ -730,7 +730,7 @@ struct SurahInfoSheet: View {
             Label("About this Surah", systemImage: "book.closed")
                 .font(.subheadline.weight(.semibold))
 
-            Text("Background on this surah - its name, period of revelation, and themes. Switch between sources with the picker.")
+            Text("Background on this surah: its name, period of revelation, and themes. Switch between sources with the picker.")
                 .font(.footnote)
                 .foregroundStyle(.secondary)
         }

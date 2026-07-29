@@ -293,8 +293,8 @@ struct PrayerTrackerSection: View {
                         .font(.subheadline.weight(.semibold))
 
                     Text(prayed == slots.count && !slots.isEmpty
-                         ? "Alhamdulillah - every prayer prayed."
-                         : "\(prayed) of \(slots.count) prayed - tap a prayer to mark it.")
+                         ? "Alhamdulillah, every prayer prayed."
+                         : "\(prayed) of \(slots.count) prayed. Tap a prayer to mark it.")
                         .font(.caption)
                         .foregroundColor(.secondary)
                         .lineLimit(2)
@@ -564,8 +564,8 @@ struct PrayerTrackerView: View {
         } else if exempt {
             trackerNote(
                 settings.canEditExemption(on: day)
-                    ? "Exempt day - prayers were not obligatory and don't count against your record."
-                    : "Exempt day - the menses pause is on. End it below when the period is over.",
+                    ? "Exempt day: prayers were not obligatory and don't count against your record."
+                    : "Exempt day: the menses pause is on. End it below when the period is over.",
                 symbol: "moon.zzz.fill"
             )
         } else {
@@ -579,7 +579,7 @@ struct PrayerTrackerView: View {
 
                 let prayed = settings.trackedPrayerCount(slots.map(\.nameTransliteration), on: day)
                 Text(prayed == slots.count
-                     ? "All prayers prayed - a perfect day."
+                     ? "All prayers prayed, a perfect day."
                      : "\(prayed) of \(slots.count) prayed")
                     .font(.caption)
                     .foregroundColor(prayed == slots.count ? settings.accentColor.accent2 : .secondary)
@@ -1023,7 +1023,7 @@ struct PrayerTrackerView: View {
     private var mensesSection: some View {
         Section(
             header: Text("MENSTRUATION & POSTPARTUM"),
-            footer: Text("During menstruation or postpartum bleeding, the five daily prayers are not obligatory and are not made up afterward - this is Allah's mercy, not a shortfall. While paused, days are marked exempt: they never break a streak or count in any statistic, and \"Did you pray?\" reminders stay silent. Prayer time notifications continue as usual. Past days can be corrected with the exempt toggle in the Day view.")
+            footer: Text("During menstruation or postpartum bleeding, the five daily prayers are not obligatory and are not made up afterward; this is Allah's mercy, not a shortfall. While paused, days are marked exempt: they never break a streak or count in any statistic, and \"Did you pray?\" reminders stay silent. Prayer time notifications continue as usual. Past days can be corrected with the exempt toggle in the Day view.")
                 .font(.caption2)
         ) {
             Toggle(isOn: Binding(
@@ -1056,16 +1056,16 @@ struct PrayerTrackerView: View {
         Section(header: Text("GOOD TO KNOW")) {
             VStack(alignment: .leading, spacing: 12) {
                 guidanceRow(symbol: "person.3",
-                            text: "Jumuah (Friday prayer) counts as Dhuhr - marking either one covers that day's noon prayer.")
+                            text: "Jumuah (Friday prayer) counts as Dhuhr; marking either one covers that day's noon prayer.")
 
                 guidanceRow(symbol: "airplane",
                             text: "While traveling, the combined Dhuhr/Asr and Maghrib/Isha each count as both of their prayers.")
 
                 guidanceRow(symbol: "clock.arrow.circlepath",
-                            text: "Missed a prayer? Pray it as soon as you remember - the Prophet ﷺ said: \"Whoever forgets a prayer, let him pray it when he remembers it\" (Bukhari 597). Then mark it here.")
+                            text: "Missed a prayer? Pray it as soon as you remember. The Prophet ﷺ said: \"Whoever forgets a prayer, let him pray it when he remembers it\" (Bukhari 597). Then mark it here.")
 
                 guidanceRow(symbol: "flame",
-                            text: "A streak is a day where all five prayers were prayed. Exempt days never break a streak - it continues right through them.")
+                            text: "A streak is a day where all five prayers were prayed. Exempt days never break a streak; it continues right through them.")
             }
             .padding(.vertical, 8)
         }

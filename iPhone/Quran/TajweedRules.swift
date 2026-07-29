@@ -32,10 +32,10 @@ enum TajweedLegendCategory: String, CaseIterable, Identifiable {
 
         var title: String {
             switch self {
-            case .silents: return "Sukn - Silent"
-            case .ghunnah: return "Ghunnah - Nasal"
-            case .sifaat: return "Sifaat - Articulation"
-            case .madd: return "Madd - Elongation"
+            case .silents: return "Sukn (Silent)"
+            case .ghunnah: return "Ghunnah (Nasal)"
+            case .sifaat: return "Sifaat (Articulation)"
+            case .madd: return "Madd (Elongation)"
             }
         }
     }
@@ -79,8 +79,8 @@ enum TajweedLegendCategory: String, CaseIterable, Identifiable {
             
         case .idghamGhunnah: return "إِدغَامٌ بِغُنَّةٍ"
         case .generalGhunnah: return "غُنَّة عَامَّة"
-        case .ikhfaaLight: return "إِخْفَاء مُرَقَّق"
-        case .ikhfaaHeavy: return "إِخْفَاء مُفَخَّم"
+        case .ikhfaaLight: return "إِخفَاء مُرَقَّق"
+        case .ikhfaaHeavy: return "إِخفَاء مُفَخَّم"
         case .iqlaab: return "إِقلَاب"
             
         case .qalqalah: return "قَلقَلَة"
@@ -88,7 +88,7 @@ enum TajweedLegendCategory: String, CaseIterable, Identifiable {
             
         case .maddNatural: return "مَدٌّ طَبِيعِي"
         case .maddNaturalMiniature: return "مَدٌّ طَبِيعِي صَغِير"
-        case .maddSukoon: return "مَدّ الوَقْف"
+        case .maddSukoon: return "مَدّ الوَقف"
         case .maddSeparated: return "مَدٌّ مُنفَصِل"
         case .maddConnected: return "مَدٌّ مُتَّصِل"
         case .maddNecessary: return "مَدٌّ لَازِم"
@@ -399,9 +399,9 @@ enum TajweedLegendCategory: String, CaseIterable, Identifiable {
         case .maddSukoon:
             return "The key condition is pausing at the word ending. This includes madd aarid lis-sukoon, where the final letter becomes temporarily sakin after a normal madd letter, and madd leen, where a sakin waaw or yaa follows a fathah and is stretched softly when stopping. Use 2, 4, or 6 counts consistently, and keep madd leen no longer than the madd aarid length chosen in the same recitation."
         case .maddSeparated:
-            return "Because the hamzah is in the following word, scholars classify this separately from muttasil. Allowed lengths vary by riwayah, so learners should follow one taught pattern and avoid switching counts randomly in the same recitation. This color also marks Madd Munfasil Hukmi (\"ruled\" separated): a handful of words - the vocative يَٰٓ (\"O…\") and demonstrative هَٰٓ (\"these…\") particles written joined to a following hamzah, such as يَٰٓأَيُّهَا and هَٰٓؤُلَآءِ - where only that superscript-particle sequence is treated as separated even though it sits inside one written word."
+            return "Because the hamzah is in the following word, scholars classify this separately from muttasil. Allowed lengths vary by riwayah, so learners should follow one taught pattern and avoid switching counts randomly in the same recitation. This color also marks Madd Munfasil Hukmi (\"ruled\" separated). In a handful of words, the vocative يَٰٓ (\"O…\") and demonstrative هَٰٓ (\"these…\") particles are written joined to a following hamzah, such as يَٰٓأَيُّهَا and هَٰٓؤُلَآءِ; there, only that superscript-particle sequence is treated as separated even though it sits inside one written word."
         case .maddConnected:
-            return "Since both elements occur inside one word, this is treated as a stronger extension than natural madd. Keep the elongation measured and stable according to your riwayah so the hamzah after it remains clear and not swallowed. Note one exception: in the يَٰٓ/هَٰٓ particle words (e.g. يَٰٓأَيُّهَا, هَٰٓؤُلَآءِ) the superscript madd before the hamzah is recited as Madd Munfasil Hukmi instead - but any real madd letter + hamzah elsewhere in those same words (e.g. لَآءِ in هَٰٓؤُلَآءِ) stays muttasil."
+            return "Since both elements occur inside one word, this is treated as a stronger extension than natural madd. Keep the elongation measured and stable according to your riwayah so the hamzah after it remains clear and not swallowed. Note one exception: in the يَٰٓ/هَٰٓ particle words (e.g. يَٰٓأَيُّهَا, هَٰٓؤُلَآءِ) the superscript madd before the hamzah is recited as Madd Munfasil Hukmi instead, but any real madd letter + hamzah elsewhere in those same words (e.g. لَآءِ in هَٰٓؤُلَآءِ) stays muttasil."
         case .maddNecessary:
             return "This category is fixed and not flexible like optional madd forms, so it should be given its full required length whenever encountered. Its consistency is one of the easiest ways to stabilize rhythm and accuracy in longer passages."
             

@@ -39,6 +39,13 @@ struct PrayerIntervalProgressBar: View {
             }
             .progressViewStyle(.linear)
             .tint(tint)
+            // Two height problems, two fixes. The system draws this bar THICK (especially the lock
+            // screen's vibrant rendering), and WidgetKit won't live-animate a custom style's fraction -
+            // so the drawn bar is squashed to half thickness instead, keeping the live fill. Then the
+            // frame cap trims the phantom space `ProgressView(timerInterval:)` reserves for its (empty)
+            // labels, which was what squeezed the text rows around it on the ~72pt rectangulars.
+            .scaleEffect(x: 1, y: 0.5, anchor: .center)
+            .frame(height: 4)
         }
     }
 }
@@ -466,6 +473,9 @@ struct FastingCountdownView: View {
                 }
                 .progressViewStyle(.linear)
                 .tint(entry.accentColor.color)
+                // Same half-thickness squash + phantom-label-space trim as `PrayerIntervalProgressBar`.
+                .scaleEffect(x: 1, y: 0.5, anchor: .center)
+                .frame(height: 4)
 
                 HStack {
                     if !entry.currentCity.isEmpty {

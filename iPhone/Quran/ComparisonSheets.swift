@@ -83,7 +83,7 @@ struct AyahQiraahComparisonSheet: View {
                 List {
                     Group {
                         Section {
-                            Text("Compare this ayah across the Arabic riwayat available in the app. Some riwayat merge or omit Hafs ayah numbers, so unavailable rows are dimmed. No ayah is ever missing - the same words may simply be joined or numbered differently.")
+                            Text("Compare this ayah across the Arabic riwayat available in the app. Some riwayat merge or omit Hafs ayah numbers, so unavailable rows are dimmed. No ayah is ever missing; the same words may simply be joined or numbered differently.")
                                 .font(.subheadline)
                                 .foregroundStyle(.secondary)
                         }

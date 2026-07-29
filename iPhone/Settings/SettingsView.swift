@@ -374,7 +374,7 @@ struct SettingsView: View {
                 }
                 Button("Cancel", role: .cancel) {}
             } message: {
-                Text("This deletes your bookmarks, favorite surahs, letters and names, khatm progress, reading and listening positions, search history, and saved locations - leaving the app exactly as it was on a fresh install. This cannot be undone.")
+                Text("This deletes your bookmarks, favorite surahs, letters and names, khatm progress, reading and listening positions, search history, and saved locations, leaving the app exactly as it was on a fresh install. This cannot be undone.")
             }
         }
         #endif

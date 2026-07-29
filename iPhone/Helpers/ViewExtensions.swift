@@ -58,6 +58,32 @@ extension View {
         #endif
     }
 
+    /// Drives `active` true while the user's finger is on this scroll view (including a still hold that
+    /// hasn't moved it - `.tracking`) or while their flick is still coasting (`.decelerating`). Programmatic
+    /// scrolls (`.animating`) don't count: they're ours, not the user's. iOS 18+, same pattern as
+    /// `collapseBarsOnScroll`; on earlier OSes `active` simply never becomes true.
+    @ViewBuilder
+    func trackUserScrollTouch(_ active: Binding<Bool>) -> some View {
+        #if os(iOS)
+        if #available(iOS 18.0, *) {
+            self.onScrollPhaseChange { _, newPhase in
+                let touching: Bool
+                switch newPhase {
+                case .tracking, .interacting, .decelerating: touching = true
+                default: touching = false
+                }
+                if active.wrappedValue != touching {
+                    active.wrappedValue = touching
+                }
+            }
+        } else {
+            self
+        }
+        #else
+        self
+        #endif
+    }
+
     /// The minimized look for a custom glass bar: scaled toward its bottom edge and slightly faded, the same
     /// visual language as the iOS 26 minimized tab bar. Pair with `collapsibleBarRow` for the bar's
     /// secondary rows.

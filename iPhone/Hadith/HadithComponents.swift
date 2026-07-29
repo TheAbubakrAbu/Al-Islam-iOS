@@ -101,7 +101,7 @@ struct HadithReferenceView: View {
                     }
                     Button("Cancel", role: .cancel) {}
                 } message: {
-                    Text("This fetches the whole book for offline reading. It may use significant data - Wi-Fi is recommended.")
+                    Text("This fetches the whole book for offline reading. It may use significant data; Wi-Fi is recommended.")
                 }
             } else {
                 ProgressView("Loading \(book.englishTitle)...")

@@ -387,9 +387,9 @@ struct HadithView: View {
                     .foregroundStyle(settings.accentColor.color)
 
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("• Books, chapters & hadith text - English or Arabic")
+                    Text("• Books, chapters & hadith text (English or Arabic)")
                     Text("• Reference: 'bukhari 5103' or 'muslim 3:12'")
-                    Text("• AI: meaning search - 'controlling anger'")
+                    Text("• AI: meaning search, 'controlling anger'")
                     Text("• Ask: questions get an on-device AI answer")
                     Text("• Text and AI search cover downloaded books")
                 }
@@ -620,7 +620,7 @@ struct HadithView: View {
                 }
                 Button("Cancel", role: .cancel) {}
             } message: {
-                Text("This downloads every hadith collection for offline reading. It may use significant data - Wi-Fi is recommended. Already-downloaded books are skipped.")
+                Text("This downloads every hadith collection for offline reading. It may use significant data; Wi-Fi is recommended. Already-downloaded books are skipped.")
             }
             .confirmationDialog("Delete all downloaded books?", isPresented: $confirmDeleteAll, titleVisibility: .visible) {
                 Button("Delete All", role: .destructive) {

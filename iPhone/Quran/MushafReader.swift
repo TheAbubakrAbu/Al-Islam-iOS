@@ -606,7 +606,7 @@ struct SurahPageReader<Controls: View>: View {
                 withAnimation(.easeInOut) { searchActive = false }
                 QuranSearchHandoff.shared.request(query)
             } label: {
-                Label(matches.isEmpty && hasQuery ? "No matches on this page - search the whole Quran"
+                Label(matches.isEmpty && hasQuery ? "No matches on this page. Search the whole Quran"
                                                   : "Search the whole Quran",
                       systemImage: "text.magnifyingglass")
                     .font(.caption.weight(.semibold))

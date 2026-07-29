@@ -10,7 +10,7 @@ struct TajweedFoundationsView: View {
         "Tajweed Hints in the Mushaf",
         "Makhaarij (Articulation)",
         "Heavy and Light",
-        "Shams and Qamar - Al",
+        "Shams and Qamar: Al",
         "Madd (Elongation)",
         "Qalqalah",
         "Noon Sakinah and Tanween",
@@ -95,7 +95,7 @@ struct TajweedFoundationsView: View {
                 Text("Learning Tajweed might seem challenging at first, but there are many resources available today to make the process easier. Traditionally, learning Tajweed was done with a teacher who could guide you through the articulation points and characteristics of each letter.")
                     .font(.body)
 
-                Text("Now, in addition to teachers, there are online platforms, videos, and books that provide step-by-step lessons. For those starting out, focus on mastering the basic rules first and gradually build your skills over time. Practicing consistently is key - recording your recitation can help you catch mistakes and improve pronunciation.")
+                Text("Now, in addition to teachers, there are online platforms, videos, and books that provide step-by-step lessons. For those starting out, focus on mastering the basic rules first and gradually build your skills over time. Practicing consistently is key; recording your recitation can help you catch mistakes and improve pronunciation.")
                     .font(.body)
 
                 Text("Many learners find benefit in joining Tajweed classes or study groups, where they can receive feedback and support from others on the same journey.")
@@ -175,7 +175,7 @@ struct TajweedFoundationsView: View {
             TajweedMakharijView()
         } else if topic == "Heavy and Light" {
             TajweedHeavyLightView()
-        } else if topic == "Shams and Qamar - Al" {
+        } else if topic == "Shams and Qamar: Al" {
             TajweedShamsQamarView()
         } else if topic == "Madd (Elongation)" {
             TajweedMaddView()
@@ -274,8 +274,8 @@ private struct TajweedImprovingRecitationView: View {
                     .font(.body)
 
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("Murattal - a steady, clear recitation ideal for learning")
-                    Text("Mujawwad - a slower, melodic recitation that emphasizes precision and beauty")
+                    Text("Murattal: a steady, clear recitation ideal for learning")
+                    Text("Mujawwad: a slower, melodic recitation that emphasizes precision and beauty")
                 }
                 .font(.body)
                 .foregroundColor(.secondary)
@@ -378,7 +378,7 @@ private struct TajweedFoundationsTopicView: View {
                     .foregroundColor(.secondary)
             }
 
-            Section("2. MIM (م) - LIP CLOSURE") {
+            Section("2. MIM (م): LIP CLOSURE") {
                 Text("The letter mim (م) is a bilabial letter, meaning it is produced using both lips.")
                     .font(.body)
 
@@ -562,7 +562,7 @@ private struct TajweedInMushafView: View {
                 VStack(alignment: .leading, spacing: 12) {
                     TajweedRuleRow(
                         arabic: "أُمَّةٞ قَدۡ",
-                        pronunciation: "ummatun(g) qad - hidden noon with ghunnah",
+                        pronunciation: "ummatun(g) qad (hidden noon with ghunnah)",
                         rule: "Special Dammatayn",
                         arabicFont: arabicFont
                     )
@@ -990,7 +990,7 @@ private struct TajweedHeavyLightView: View {
                 Text("Light Raa")
                     .font(.subheadline.weight(.semibold))
 
-                Text("Raa with kasrah (ـِ), or raa with sukoon preceded by an ORIGINAL kasrah - unless an isti'la letter with fatha/damma follows it in the same word (قِرْطَاس, مِرْصَاد), which makes it heavy again.")
+                Text("Raa with kasrah (ـِ), or raa with sukoon preceded by an ORIGINAL kasrah, unless an isti'la letter with fatha/damma follows it in the same word (قِرْطَاس, مِرْصَاد), which makes it heavy again.")
                     .font(.body)
                     .foregroundColor(.secondary)
 
@@ -1001,7 +1001,7 @@ private struct TajweedHeavyLightView: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
 
-                Text("Rule of thumb: if the raa carries a vowel, look at that vowel. If the raa is sakin, look at the letter BEFORE it - and at what follows, for the isti'la exception.")
+                Text("Rule of thumb: if the raa carries a vowel, look at that vowel. If the raa is sakin, look at the letter BEFORE it, and at what follows, for the isti'la exception.")
                     .font(.body)
             }
 

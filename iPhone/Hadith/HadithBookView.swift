@@ -446,7 +446,7 @@ struct HadithBookView: View {
                     } message: {
                         Text(hadithPageMode
                              ? "Chapters will open as a scrolling list of hadiths."
-                             : "Chapters will open as pages right away - a right-to-left paged reader fitting as many hadiths per page as your font sizes allow.")
+                             : "Chapters will open as pages right away: a right-to-left paged reader fitting as many hadiths per page as your font sizes allow.")
                     }
                 }
             }
@@ -529,7 +529,7 @@ struct HadithBookView: View {
                     }
                     Button("Cancel", role: .cancel) {}
                 } message: {
-                    Text("This fetches the whole book for offline reading. It may use significant data - Wi-Fi is recommended.")
+                    Text("This fetches the whole book for offline reading. It may use significant data; Wi-Fi is recommended.")
                 }
 
                 // The storage-saver: the whole book loads for THIS reading session only and nothing is
@@ -543,7 +543,7 @@ struct HadithBookView: View {
                             .font(.subheadline.weight(.semibold))
                             .foregroundColor(settings.accentColor.color)
 
-                        Text("Loads the full book just for now - nothing stays on your device.")
+                        Text("Loads the full book just for now; nothing stays on your device.")
                             .font(.caption2)
                             .foregroundColor(.secondary)
                     }
@@ -739,7 +739,7 @@ struct HadithBookView: View {
                         Section {
                             Text(aiHits.isEmpty
                                  ? "No matches found."
-                                 : "No keyword matches - see the AI results above.")
+                                 : "No keyword matches. See the AI results above.")
                                 .font(.subheadline)
                                 .foregroundStyle(.secondary)
                         }

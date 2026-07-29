@@ -216,7 +216,7 @@ struct PrayerGradientWidget: Widget {
             PrayerGradientEntryView(entry: entry)
         }
         .configurationDisplayName("Prayer Sky")
-        .description("The current prayer and time remaining, over that prayer's sky gradient - the same colors as the app's solar countdown.")
+        .description("The current prayer and time remaining, over that prayer's sky gradient, the same colors as the app's solar countdown.")
         .supportedFamilies([.systemSmall, .systemMedium])
     }
 }
@@ -231,7 +231,7 @@ struct PrayerGlanceWidget: Widget {
             PrayerGradientEntryView(entry: entry, showsSky: false)
         }
         .configurationDisplayName("Prayer Glance")
-        .description("The current prayer and time remaining - the Prayer Sky layout on the standard widget background.")
+        .description("The current prayer and time remaining, in the Prayer Sky layout on the standard widget background.")
         .supportedFamilies([.systemSmall, .systemMedium])
     }
 }

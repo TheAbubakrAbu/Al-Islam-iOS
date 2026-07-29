@@ -3671,7 +3671,7 @@ struct QuranView: View {
                     if context.exactMatch.surah == nil || context.exactMatch.ayah == nil,
                        verseHitsGroupedBySurah.isEmpty {
                         #if os(iOS)
-                        Text(aiHits.isEmpty ? "No ayahs match your search." : "No keyword matches - see the AI results above.")
+                        Text(aiHits.isEmpty ? "No ayahs match your search." : "No keyword matches. See the AI results above.")
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
                         #else
