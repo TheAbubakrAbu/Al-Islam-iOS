@@ -226,8 +226,8 @@ private struct MainTabView: View {
             // to land on the MAIN thread mid-launch (aiQueryEligible / corpus prep). Pay it here, off-main.
             .task { Task.detached(priority: .utility) { SemanticSearchEngine.prewarmOffMain() } }
             // Resolve today's Hadith of the Day while the launch cover is still up, so the Hadith tab
-            // opens with the card already there instead of computing it on arrival - and pre-decode the
-            // books the user is most likely to open (last-read, favorites), so they open instantly.
+            // opens with the card already there instead of computing it on arrival - and map every
+            // bundled collection (a few milliseconds for all 17), so any book opens instantly.
             .task {
                 HadithStore.shared.prepareDailyHadith()
                 HadithStore.shared.prewarmBooks()

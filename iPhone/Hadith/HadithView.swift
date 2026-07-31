@@ -1,7 +1,7 @@
 import SwiftUI
 
 // The Hadith tab root: summary tiles, Hadith of the Day, bookmarks, favorites, the catalog by group,
-// reference lookups, and all-books search. Every collection downloads from the hadith-json CDN on
+// reference lookups, and all-books search. Every collection ships inside the app as a pack on
 // demand (any book whose JSON is ever bundled into the app is picked up automatically instead).
 
 #if os(iOS)
@@ -53,14 +53,13 @@ struct HadithTrailingToolbar: ViewModifier {
 
 struct HadithView: View {
     @ObservedObject private var settings = Settings.shared
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @ObservedObject private var store = HadithStore.shared
     /// The favorites and bookmark sections render user marks, which the store only FORWARDS (they
     /// live in HadithUserData, their own publisher) - observing it here is what re-renders them.
     @ObservedObject private var userData = HadithUserData.shared
 
     @State private var searchText = ""
-    @State private var confirmDownloadAll = false
-    @State private var confirmDeleteAll = false
     @State private var showHadithSettings = false
     /// Grid tiles are plain Buttons (a NavigationLink cell in a List draws a chevron); tapping one sets
     /// this, and a hidden `NavigationLink` behind the List performs the actual push.
@@ -97,7 +96,7 @@ struct HadithView: View {
     }
     @State private var globalChapterResults: [GlobalChapterHit] = []
     @State private var globalHadithResults: [GlobalHadithHit] = []
-    // Bare-number search ("10"): chapter N + hadith N across every downloaded book (distinct from the
+    // Bare-number search ("10"): chapter N + hadith N across every book (distinct from the
     // "bukhari 10" reference card, which resolves one exact hadith). Reuses the chapter/hadith hit shapes.
     @State private var globalNumberChapters: [GlobalChapterHit] = []
     @State private var globalNumberHadiths: [GlobalHadithHit] = []
@@ -112,8 +111,8 @@ struct HadithView: View {
     @State private var globalSearchRanFor = ""
     @State private var globalSearchTask: Task<Void, Never>?
 
-    // The tab-wide AI matches: ONE combined corpus over EVERY downloaded book (built once, persisted,
-    // rebuilt only when the set of downloaded books changes) - so "controlling anger" searches all
+    // The tab-wide AI matches: ONE combined corpus over EVERY book (built once and persisted, and
+    // the shelf can no longer change under it) - so "controlling anger" searches all
     // hadiths at once, which is what a tab-level search means 9 times out of 10.
     @ObservedObject private var semanticEngine = SemanticSearchEngine.shared
     @State private var globalAIResults: [GlobalHadithHit] = []
@@ -135,31 +134,26 @@ struct HadithView: View {
     /// cited row can never point at a hadith the model wasn't shown.
     @State private var hadithAskSourceHits: [GlobalHadithHit] = []
     @State private var globalAITask: Task<Void, Never>?
-    /// True while the slow path (decoding every downloaded book to gather texts) runs, pre-embedding.
+    /// True while the slow path (reading every book to gather texts) runs, pre-embedding.
     @State private var isGatheringAllBooks = false
 
     private var allBooksCorpusID: String { "hadith-all" }
 
-    /// Version keyed to exactly which books are downloaded - deterministic (never hashValue, which is
-    /// seeded per launch), so yesterday's build loads from disk today.
+    /// Version keyed to the shelf itself - deterministic (never hashValue, which is seeded per
+    /// launch), so yesterday's build loads from disk today.
     private var allBooksCorpusVersion: String {
-        "all3-" + HadithCatalogBook.all
-            .filter { store.isAvailableOffline($0) }
-            .map(\.slug)
-            .sorted()
-            .joined(separator: ".")
+        "all3-" + HadithCatalogBook.all.map(\.slug).sorted().joined(separator: ".")
     }
 
-    /// Load-or-build the all-books corpus. The disk hit is instant; the cold build decodes each
-    /// downloaded book once (off the visible path) and then embeds a SHARED vocabulary - the books
-    /// overlap heavily in words, so all-of-them costs little more than Bukhari alone.
+    /// Load-or-build the all-books corpus. The disk hit is instant; the cold build reads each book
+    /// once (off the visible path) and then embeds a SHARED vocabulary - the books overlap heavily in
+    /// words, so all-of-them costs little more than Bukhari alone.
     private func prepareAllBooksCorpus() {
         guard SemanticSearchEngine.isSupported,
               !semanticEngine.isReady(allBooksCorpusID),
               !semanticEngine.isBuilding(allBooksCorpusID),
               !isGatheringAllBooks else { return }
-        let books = HadithCatalogBook.all.filter { store.isAvailableOffline($0) }
-        guard !books.isEmpty else { return }
+        let books = HadithCatalogBook.all
 
         // Disk-first probe: `texts` is an autoclosure evaluated only past the disk check, so this
         // costs nothing when a persisted build exists.
@@ -168,17 +162,24 @@ struct HadithView: View {
 
         isGatheringAllBooks = true
         Task {
-            var texts: [String] = []
-            var keys: [String] = []
-            for book in books {
-                guard let data = try? await store.book(book) else { continue }
-                for hadith in data.hadiths {
-                    texts.append("\(hadith.english.narrator) \(hadith.english.text)")
-                    keys.append("\(book.slug)|\(hadith.idInBook)")
+            // The books are opened on the main actor (that is where the store lives), but the TEXT is
+            // gathered off it: this walks all 50,884 hadiths, and over the packs that decompresses the
+            // whole library. Inline, it was a second of main thread in ~100 ms hitches.
+            let opened = books.compactMap { book in store.book(book).map { (book.slug, $0) } }
+            let built = await Task.detached(priority: .utility) { () -> (texts: [String], keys: [String]) in
+                var texts: [String] = []
+                var keys: [String] = []
+                for (slug, data) in opened {
+                    for hadith in data.hadiths {
+                        let strings = hadith.allText
+                        texts.append("\(strings.narrator) \(strings.text)")
+                        keys.append("\(slug)|\(hadith.idInBook)")
+                    }
                 }
-            }
+                return (texts, keys)
+            }.value
             semanticEngine.prepare(corpusID: allBooksCorpusID, version: allBooksCorpusVersion,
-                                   texts: texts, keys: keys)
+                                   texts: built.texts, keys: built.keys)
             isGatheringAllBooks = false
             runGlobalAISearch(query: searchText)
         }
@@ -213,7 +214,7 @@ struct HadithView: View {
                 let parts = keys[result.index].split(separator: "|")
                 guard parts.count >= 2, let idInBook = Int(parts[1]),
                       let book = HadithCatalogBook.bySlug[String(parts[0])],
-                      let data = try? await store.book(book),
+                      let data = store.book(book),
                       let hadith = data.hadiths.first(where: { $0.idInBook == idInBook }) else { continue }
                 hits.append(GlobalHadithHit(book: book, data: data, hadith: hadith))
                 if Task.isCancelled { return }
@@ -316,7 +317,7 @@ struct HadithView: View {
         return cited.sorted { $0.position < $1.position }.prefix(10).map(\.hit)
     }
 
-    /// Today's hadith lives in the STORE, resolved at app launch from the downloaded books - the tab
+    /// Today's hadith lives in the STORE, resolved at app launch - the tab
     /// renders it instantly.
     private var dailyHadith: (book: HadithCatalogBook, hadith: HadithBookData.Hadith)? { store.daily }
     /// Whether the daily section's history (last 5 days) is unfolded - the shuffle only shows here.
@@ -359,7 +360,7 @@ struct HadithView: View {
     }
 
     /// A bare-number query ("10") - drives the reference-number sweep (chapter N + hadith N across every
-    /// downloaded book). Distinct from `referenceResult` ("bukhari 10"), which names a book and resolves one
+    /// book). Distinct from `referenceResult` ("bukhari 10"), which names a book and resolves one
     /// exact hadith. Capped at 5 digits to match the reference parser's number bound.
     private var numberQuery: Int? {
         let trimmed = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -391,7 +392,7 @@ struct HadithView: View {
                     Text("• Reference: 'bukhari 5103' or 'muslim 3:12'")
                     Text("• AI: meaning search, 'controlling anger'")
                     Text("• Ask: questions get an on-device AI answer")
-                    Text("• Text and AI search cover downloaded books")
+                    Text("• Text and AI search cover all 17 collections")
                 }
                 .font(.caption)
                 .foregroundStyle(.primary)
@@ -406,16 +407,88 @@ struct HadithView: View {
     }
 
     var body: some View {
-        NavigationView {
-            ScrollViewReader { scrollProxy in
+        navigationContainer
+    }
+
+    /// iPad/Mac read the tab as TWO columns, the Quran tab's shape exactly: the catalog (and, once a book
+    /// is open, its chapter list) on the left, the chapter being read on the right. It has to live HERE,
+    /// at the tab root, rather than inside the book screen: only a real `NavigationSplitView` composes
+    /// both columns' toolbars into the one bar row beside the tab bar - a split improvised further down
+    /// leaves the reader's title squeezed into a second row under it.
+    private var usesColumnNavigation: Bool {
+        guard #available(iOS 16.0, *) else { return false }
+        guard horizontalSizeClass == .regular else { return false }
+        return UIDevice.current.userInterfaceIdiom == .pad || UIDevice.current.userInterfaceIdiom == .mac
+    }
+
+    /// One book, as a value the content column's stack can carry. Column mode navigates by VALUE, not by
+    /// destination: a legacy `NavigationLink(destination:)` inside a split view's first column is defined
+    /// to open in the DETAIL column, which would put the chapter list where the reader belongs.
+    struct BookRoute: Hashable {
+        let slug: String
+        let autoOpenHadithID: Int?
+    }
+
+    @State private var bookPath: [BookRoute] = []
+
+    @ViewBuilder
+    private var navigationContainer: some View {
+        if #available(iOS 16.0, *), usesColumnNavigation {
+            NavigationSplitView {
+                // The content column keeps its own stack: opening a book pushes its chapters HERE,
+                // replacing the catalog, while the reader stays put on the right.
+                NavigationStack(path: $bookPath) {
+                    content
+                        .navigationDestination(for: BookRoute.self) { route in
+                            if let book = HadithCatalogBook.bySlug[route.slug] {
+                                // Set ON the destination: a `navigationDestination` builds its content in
+                                // its own environment, so a value applied to the stack above never
+                                // reaches it - the book screen would silently fall back to pushing.
+                                HadithBookView(book: book, autoOpenHadithID: route.autoOpenHadithID)
+                                    .environment(\.hadithUsesColumnNavigation, true)
+                            }
+                        }
+                }
+            } detail: {
+                HadithDetailColumn()
+            }
+        } else {
+            NavigationView {
+                content
+            }
+            .navigationViewStyle(.stack)
+        }
+    }
+
+    /// One catalog row's link into a book: by value in the content column, a plain push otherwise.
+    @ViewBuilder
+    private func bookLink<Label: View>(
+        _ book: HadithCatalogBook,
+        @ViewBuilder label: () -> Label
+    ) -> some View {
+        if #available(iOS 16.0, *), usesColumnNavigation {
+            NavigationLink(value: BookRoute(slug: book.slug, autoOpenHadithID: nil)) {
+                label()
+            }
+        } else {
+            NavigationLink {
+                HadithBookView(book: book)
+            } label: {
+                label()
+            }
+        }
+    }
+
+    private var content: some View {
+        ScrollViewReader { scrollProxy in
             List {
                 Group {
                     // Every big subtree heap-boxed - the one-expression List otherwise materializes all
                     // of them on a single stack frame, which is exactly what overflowed the device main
                     // thread's 1MB stack in QuranView (the simulator's 8MB stack hid it). See `boxed`.
                     if searchText.isEmpty {
-                        // With no downloaded books there is no Hadith of the Day, and before any reading
-                        // there is no Last Read either - an empty "Your Summary" header is just noise.
+                        // Before any reading has happened there is no Last Read - and an empty
+                        // "Your Summary" header is just noise.
                         if hadithSummaryMode {
                             if dailyHadith != nil || store.lastRead != nil {
                                 boxed(summaryTilesSection)
@@ -423,18 +496,6 @@ struct HadithView: View {
                         } else {
                             boxed(hadithOfTheDaySection)
                             boxed(lastReadSection)
-                        }
-                    }
-
-                    if store.isDownloading {
-                        boxed(downloadProgressSection)
-                    }
-
-                    if let error = store.downloadError {
-                        Section {
-                            Text(error)
-                                .font(.caption)
-                                .foregroundColor(.red)
                         }
                     }
 
@@ -528,6 +589,19 @@ struct HadithView: View {
                 }
                 .opacity(0)
             )
+            // Column mode navigates by value instead: both hidden links above are legacy
+            // `destination` links, which a split view routes into the DETAIL column - the reader's
+            // place. Intercepting the two state vars here keeps every caller in the tab unchanged.
+            .onChange(of: pushedBook) { book in
+                guard usesColumnNavigation, let book else { return }
+                pushedBook = nil
+                bookPath = [BookRoute(slug: book.slug, autoOpenHadithID: nil)]
+            }
+            .onChange(of: pushedReference) { reference in
+                guard usesColumnNavigation, let reference else { return }
+                pushedReference = nil
+                bookPath = [BookRoute(slug: reference.slug, autoOpenHadithID: reference.idInBook)]
+            }
             // The search help floats over the list top while the field is focused and empty.
             .overlay(alignment: .top) {
                 searchHelpOverlay
@@ -572,36 +646,6 @@ struct HadithView: View {
                 .transaction { $0.animation = nil }
             }
             .navigationTitle("Hadith")
-            .toolbar {
-                // Download management on the LEFT.
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Menu {
-                        Text("Offline Books")
-                            .foregroundStyle(.secondary)
-
-                        Button {
-                            settings.hapticFeedback()
-                            confirmDownloadAll = true
-                        } label: {
-                            Label("Download All Books", systemImage: "icloud.and.arrow.down")
-                        }
-                        .disabled(store.isDownloading)
-
-                        if !store.downloadedSlugs.isEmpty {
-                            Button(role: .destructive) {
-                                settings.hapticFeedback()
-                                confirmDeleteAll = true
-                            } label: {
-                                Label("Delete All Downloads", systemImage: "trash")
-                            }
-                        }
-                    } label: {
-                        Image(systemName: "icloud.and.arrow.down")
-                    }
-                    .tint(settings.accentColor.accent1)
-                }
-
-            }
             // Trailing buttons live in their own modifier so iOS 26 can interleave ToolbarSpacers
             // between them - without spacers, Liquid Glass merges them into ONE capsule (the same
             // treatment the Quran tab's trailing toolbar has).
@@ -613,26 +657,7 @@ struct HadithView: View {
                 SettingsHadithView()
                     .smallMediumSheetPresentation()
             }
-            .confirmationDialog("Download All Books?", isPresented: $confirmDownloadAll, titleVisibility: .visible) {
-                Button("Download (~\(HadithCatalogBook.totalMegabytes) MB)") {
-                    settings.hapticFeedback()
-                    store.startDownloadAll()
-                }
-                Button("Cancel", role: .cancel) {}
-            } message: {
-                Text("This downloads every hadith collection for offline reading. It may use significant data; Wi-Fi is recommended. Already-downloaded books are skipped.")
-            }
-            .confirmationDialog("Delete all downloaded books?", isPresented: $confirmDeleteAll, titleVisibility: .visible) {
-                Button("Delete All", role: .destructive) {
-                    settings.hapticFeedback()
-                    store.deleteAllDownloads()
-                }
-                Button("Cancel", role: .cancel) {}
-            } message: {
-                Text("Books will be re-downloaded as you open them.")
-            }
             .onAppear {
-                store.refreshDiskState()
                 store.loadLastRead()
             }
             .task {
@@ -680,14 +705,6 @@ struct HadithView: View {
                     runHadithAsk(query: text, manual: false)
                 }
             }
-            // A book finishing its download (or being deleted) while a query is on screen: the sweep
-            // only re-ran on keystrokes, so results silently ignored the shelf change until typing.
-            .onChange(of: store.downloadedSlugs) { _ in
-                if let number = numberQuery { runGlobalNumberSearch(number); return }
-                let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
-                guard query.count >= 3, HadithReferenceParser.parse(searchText) == nil else { return }
-                runGlobalSearch(query: query)
-            }
             // A corpus finishing its build mid-query (from a book view) surfaces here immediately.
             .onChange(of: semanticEngine.readyCorpora) { _ in
                 runGlobalAISearch(query: searchText)
@@ -703,9 +720,7 @@ struct HadithView: View {
                     withAnimation { scrollProxy.scrollTo("hadith-book-\(slug)", anchor: .top) }
                 }
             }
-            }
         }
-        .navigationViewStyle(.stack)
     }
 
     // MARK: Hadith of the Day (engine lives in HadithStore; resolved before this tab opens)
@@ -1009,34 +1024,6 @@ struct HadithView: View {
         }
     }
 
-    private var downloadProgressSection: some View {
-        Section {
-            VStack(alignment: .leading, spacing: 6) {
-                Text(store.downloadingBookTitle)
-                    .font(.subheadline.weight(.semibold))
-
-                ProgressView(
-                    value: Double(store.downloadCompletedBooks),
-                    total: Double(max(store.downloadTotalBooks, 1))
-                )
-
-                Text("\(store.downloadCompletedBooks) of \(store.downloadTotalBooks) books")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                    .monospacedDigit()
-
-                Button(role: .destructive) {
-                    settings.hapticFeedback()
-                    store.cancelDownload()
-                } label: {
-                    Text("Cancel Download")
-                        .font(.subheadline)
-                }
-            }
-            .padding(.vertical, 4)
-        }
-    }
-
     // MARK: Reference lookup
 
     private func referenceSection(_ reference: HadithReferenceParser.Reference) -> some View {
@@ -1067,7 +1054,7 @@ struct HadithView: View {
     // MARK: All-books search
 
     /// A bare number ("10") lists the chapter numbered 10 and the hadith numbered 10 (Bukhari 10, Muslim
-    /// 10, …) from every downloaded book, in two sections reusing the keyword-search layout. The text
+    /// 10, …) from every book, in two sections reusing the keyword-search layout. The text
     /// sweep is suppressed for a number query - the numbered chapter/hadith is what "10" means.
     @ViewBuilder
     private var globalNumberSection: some View {
@@ -1107,7 +1094,7 @@ struct HadithView: View {
                 Section {
                     HStack(spacing: 10) {
                         ProgressView()
-                        Text("Searching downloaded books...")
+                        Text("Searching every collection...")
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
                     }
@@ -1116,8 +1103,8 @@ struct HadithView: View {
 
             if !isNumberSearching, numberSearchRanFor == number,
                globalNumberChapters.isEmpty, globalNumberHadiths.isEmpty {
-                Section(footer: Text("Searches every downloaded book. Books not downloaded yet are skipped.")) {
-                    Text("No chapter or hadith numbered \(number) in the downloaded books.")
+                Section(footer: Text("Searches every collection in the app.")) {
+                    Text("No chapter or hadith is numbered \(number) in any collection.")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 }
@@ -1206,7 +1193,7 @@ struct HadithView: View {
                 Section {
                     HStack(spacing: 10) {
                         ProgressView()
-                        Text("Searching downloaded books...")
+                        Text("Searching every collection...")
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
                     }
@@ -1271,8 +1258,8 @@ struct HadithView: View {
 
             if !isGlobalSearching, globalSearchRanFor == query,
                globalChapterResults.isEmpty, globalHadithResults.isEmpty {
-                Section(footer: Text("Searches every downloaded book. Books not downloaded yet are skipped.")) {
-                    Text("No chapter or hadith matches in the downloaded books.")
+                Section(footer: Text("Searches every collection in the app.")) {
+                    Text("No chapter or hadith matches in any collection.")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 }
@@ -1310,7 +1297,7 @@ struct HadithView: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
-            Text("AI couldn't find anything in the downloaded books matching \u{201C}\(searchText.trimmingCharacters(in: .whitespacesAndNewlines))\u{201D}. Try different wording.")
+            Text("AI couldn't find anything matching \u{201C}\(searchText.trimmingCharacters(in: .whitespacesAndNewlines))\u{201D}. Try different wording.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
@@ -1382,7 +1369,7 @@ struct HadithView: View {
         }
     }
 
-    /// A matched chapter from any downloaded book: chapter name over the book it belongs to, the
+    /// A matched chapter from any book: chapter name over the book it belongs to, the
     /// chapter rows' Arabic trailing.
     private func globalChapterRow(_ hit: GlobalChapterHit) -> some View {
         VStack(alignment: .leading, spacing: 3) {
@@ -1425,8 +1412,8 @@ struct HadithView: View {
     }
 
     /// The bare-number sweep: gather the chapter numbered N and the hadith numbered N (idInBook) from
-    /// every downloaded book. Each is at most one per book, so the filter is trivial - the only cost is
-    /// loading the book data (mirrors `runGlobalSearch`'s off-main book loop + staleness-guarded apply).
+    /// every book. Each is at most one per book, so the filter is trivial, and the books are all open
+    /// already (mirrors `runGlobalSearch`'s staleness-guarded apply).
     private func runGlobalNumberSearch(_ number: Int) {
         globalNumberTask?.cancel()
         isNumberSearching = true
@@ -1439,9 +1426,9 @@ struct HadithView: View {
             var chapterHits: [GlobalChapterHit] = []
             var hadithHits: [GlobalHadithHit] = []
 
-            for book in HadithCatalogBook.all where HadithStore.shared.isAvailableOffline(book) {
+            for book in HadithCatalogBook.all {
                 if Task.isCancelled { return }
-                guard let data = try? await HadithStore.shared.book(book) else { continue }
+                guard let data = HadithStore.shared.book(book) else { continue }
                 // Chapter.id IS the chapter number; Hadith.idInBook IS the "Bukhari 10" reference number.
                 if let chapter = data.chapters.first(where: { $0.id == number }) {
                     chapterHits.append(GlobalChapterHit(book: book, data: data, chapter: chapter))
@@ -1466,7 +1453,8 @@ struct HadithView: View {
     }
 
     /// The automatic all-books sweep: debounced, script-aware, early-exiting at one past each page,
-    /// and served from the store's preprocessed indexes wherever they're ready.
+    /// and matched against the folds built into the packs - so a keystroke is a byte search, never a
+    /// normalization pass over the library.
     private func runGlobalSearch(query: String) {
         globalSearchTask?.cancel()
         isGlobalSearching = true
@@ -1475,10 +1463,9 @@ struct HadithView: View {
         // (`cap + 1`) can't overflow and trap.
         let chapterCap = min(globalChapterLimit, Int.max - 1)
         let hadithCap = min(globalHadithLimit, Int.max - 1)
-        let arabicQuery = query.containsArabicScript
-        let cleanQuery = arabicQuery ? settings.cleanSearch(query, whitespace: true).removingArabicDiacriticsAndSigns : ""
-        // Folded like the index (punctuation stripped), so "aishah" finds "'A'ishah".
-        let lowerQuery = HighlightedSnippet.foldedEnglishForSearch(query)
+        // Folded exactly as the packs' text was folded (punctuation stripped, script-aware), so
+        // "aishah" finds "'A'ishah" - one fold of the query, then byte compares from here on.
+        let folded = HadithFold.query(query)
 
         globalSearchTask = Task {
             // Debounce: typing restarts this task, so only a settled query pays for the sweep.
@@ -1488,19 +1475,15 @@ struct HadithView: View {
             var chapterHits: [GlobalChapterHit] = []
             var hadithHits: [GlobalHadithHit] = []
 
-            for book in HadithCatalogBook.all where HadithStore.shared.isAvailableOffline(book) {
+            for book in HadithCatalogBook.all {
                 if Task.isCancelled { return }
                 if chapterHits.count > chapterCap, hadithHits.count > hadithCap { break }
-                guard let data = try? await HadithStore.shared.book(book) else { continue }
+                guard let data = HadithStore.shared.book(book) else { continue }
 
-                // ONE detached scan per book covering chapters AND hadiths. The chapter fold used to
-                // run on the main actor per remaining book (chapter matches are sparse, so the loop
-                // rarely breaks early) - with a full shelf and an Arabic query that was a per-chapter
-                // Arabic normalization across every downloaded book, on main. Cancellation is bridged
-                // in explicitly: detached tasks don't inherit it.
+                // ONE detached scan per book covering chapters AND hadiths. Cancellation is bridged in
+                // explicitly: detached tasks don't inherit it.
                 let needChapters = chapterHits.count <= chapterCap
                 let needHadiths = hadithHits.count <= hadithCap
-                let index = HadithStore.shared.searchIndexes[book.slug]
                 let chapterNeeded = chapterCap + 1 - chapterHits.count
                 let hadithNeeded = hadithCap + 1 - hadithHits.count
 
@@ -1509,13 +1492,7 @@ struct HadithView: View {
                     if needChapters {
                         for chapter in data.chapters {
                             if Task.isCancelled { break }
-                            let matched: Bool
-                            if arabicQuery {
-                                matched = Settings.shared.cleanSearch(chapter.arabic, whitespace: true).removingArabicDiacriticsAndSigns.contains(cleanQuery)
-                            } else {
-                                matched = chapter.english.localizedCaseInsensitiveContains(query)
-                            }
-                            if matched {
+                            if data.matches(chapter, folded) {
                                 chapters.append(chapter)
                                 if chapters.count >= chapterNeeded { break }
                             }
@@ -1526,18 +1503,7 @@ struct HadithView: View {
                     if needHadiths {
                         for hadith in data.hadiths {
                             if Task.isCancelled { break }
-                            let matches: Bool
-                            if arabicQuery {
-                                let source = index?.arabicByID[hadith.id]
-                                    ?? Settings.shared.cleanSearch(hadith.arabic, whitespace: true).removingArabicDiacriticsAndSigns
-                                matches = source.contains(cleanQuery)
-                            } else if let english = index?.englishByID[hadith.id] {
-                                matches = english.contains(lowerQuery)
-                            } else {
-                                matches = hadith.english.text.localizedCaseInsensitiveContains(query)
-                                    || hadith.english.narrator.localizedCaseInsensitiveContains(query)
-                            }
-                            if matches {
+                            if data.matches(hadith, folded) {
                                 hadiths.append(hadith)
                                 if hadiths.count >= hadithNeeded { break }
                             }
@@ -1569,9 +1535,10 @@ struct HadithView: View {
             var prewarmSources: [String] = []
             prewarmSources.reserveCapacity(min(finalHadiths.count, hadithCap) * 3)
             for hit in finalHadiths.prefix(hadithCap) {
-                prewarmSources.append(hit.hadith.arabic)
-                prewarmSources.append(hit.hadith.english.text)
-                prewarmSources.append(hit.hadith.english.narrator)
+                let strings = hit.hadith.allText
+                prewarmSources.append(strings.arabic)
+                prewarmSources.append(strings.text)
+                prewarmSources.append(strings.narrator)
             }
             let sources = prewarmSources
             Task.detached(priority: .utility) {
@@ -1712,14 +1679,12 @@ struct HadithView: View {
             } else {
                 ForEach(books) { book in
                     Section {
-                        NavigationLink {
-                            HadithBookView(book: book)
-                        } label: {
+                        bookLink(book) {
                             bookRow(book)
                         }
                         .contextMenu { bookContextMenu(book) }
-                        // The surah rows' swipe language: icon-only. Favorite on the leading edge;
-                        // scroll-to (and freeing a download) on the trailing edge.
+                        // The surah rows' swipe language: icon-only. Favorite on the leading edge,
+                        // scroll-to on the trailing edge.
                         .swipeActions(edge: .leading, allowsFullSwipe: true) {
                             Button {
                                 settings.hapticFeedback()
@@ -1730,15 +1695,6 @@ struct HadithView: View {
                             .tint(settings.accentColor.color)
                         }
                         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                            if store.downloadedSlugs.contains(book.slug) {
-                                Button(role: .destructive) {
-                                    settings.hapticFeedback()
-                                    store.deleteDownload(book)
-                                } label: {
-                                    Image(systemName: "trash")
-                                }
-                            }
-
                             Button {
                                 settings.hapticFeedback()
                                 pendingScrollToBookSlug = book.slug
@@ -1791,14 +1747,6 @@ struct HadithView: View {
             Image(systemName: "arrow.down.circle")
         }
 
-        if store.downloadedSlugs.contains(book.slug) {
-            Button(role: .destructive) {
-                settings.hapticFeedback()
-                store.deleteDownload(book)
-            } label: {
-                Label("Remove Download", systemImage: "trash")
-            }
-        }
     }
 
     /// Sharing a BOOK sends its identity and story, not megabytes of text.
@@ -1806,29 +1754,23 @@ struct HadithView: View {
         "\(book.englishTitle) (\(book.arabicTitle))\n\n\(book.authorEnglish) - \(book.era)\n\n\(book.longDescription)"
     }
 
-    /// "13 MB" - always shown, downloaded or not (the offline icon carries the downloaded state).
-    /// Same format as the book view's own size pill, so the two read as one system.
-    private func bookSizeText(_ book: HadithCatalogBook) -> String {
-        book.approximateMegabytes < 1 ? "<1 MB" : "\(String(format: "%.0f", book.approximateMegabytes)) MB"
-    }
-
-    /// "97 Ch • 7,277 Ha" - the book's SHAPE (chapters and hadiths), where the raw size used to sit. The
-    /// surah rows lead with ayah counts, not kilobytes; books now do the same. Size still shows in the
-    /// download flows, where storage is what matters. Always chapters, then hadiths, then size - the
-    /// one order every hadith surface uses.
+    /// "97 Ch • 7,277 Ha" - the book's SHAPE (chapters and hadiths). The surah rows lead with ayah
+    /// counts; books do the same. Chapters, then hadiths - the one order every hadith surface uses.
     private func bookShapeText(_ book: HadithCatalogBook) -> String {
-        guard let counts = store.counts(for: book) else { return bookSizeText(book) }
+        guard let counts = store.counts(for: book) else { return "" }
         return "\(counts.chapters) Ch • \(counts.hadiths.formatted()) Ha"
     }
 
     /// One small glass chip in the shared stat-pill language.
+    /// Deliberately tight: three of these share one row with the title and the Arabic name, and the pill
+    /// padding was what pushed the counts into ellipses ("7,27...") the moment the row got narrow.
     private func statChip(_ text: String) -> some View {
         Text(text)
             .font(.caption2.weight(.semibold))
             .monospacedDigit()
             .foregroundStyle(settings.accentColor.color)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 3)
             .conditionalGlassEffect()
     }
 
@@ -1895,13 +1837,14 @@ struct HadithView: View {
                 )
                 .minimumScaleFactor(0.7)
 
-                // THREE separate chips - hadiths, chapters, size - one stat per pill.
-                HStack(spacing: 5) {
+                // Separate chips - chapters, then hadiths - one stat per pill. There is no third
+                // (size) chip any more: every book ships in the app, so its download weight is not a
+                // fact the reader has to decide anything with.
+                HStack(spacing: 4) {
                     if let counts = store.counts(for: book) {
                         statChip("\(counts.chapters) Ch")
                         statChip("\(counts.hadiths.formatted()) Ha")
                     }
-                    statChip(bookSizeText(book))
                 }
                 .lineLimit(1)
                 .minimumScaleFactor(0.7)
@@ -1920,12 +1863,6 @@ struct HadithView: View {
                 )
                 .arabicFontDesign(custom: settings.islamUsesCustomArabicFace)
                 .multilineTextAlignment(.trailing)
-
-                if store.isAvailableOffline(book) {
-                    Image(systemName: "arrow.down.circle.fill")
-                        .font(.caption)
-                        .foregroundStyle(settings.accentColor.color)
-                }
             }
             .minimumScaleFactor(0.5)
             .padding(.leading, 8)
@@ -1972,12 +1909,6 @@ struct HadithView: View {
                         .font(.caption2)
                         .foregroundColor(.secondary)
                         .monospacedDigit()
-
-                    if store.isAvailableOffline(book) {
-                        Image(systemName: "arrow.down.circle.fill")
-                            .font(.system(size: 9))
-                            .foregroundStyle(settings.accentColor.color)
-                    }
                 }
                 .lineLimit(1)
                 .minimumScaleFactor(0.6)

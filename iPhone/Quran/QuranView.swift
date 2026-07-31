@@ -2132,14 +2132,19 @@ struct QuranView: View {
             ForEach(quranPlayer.readingHistory) { item in
                 if let surah = quranData.surah(item.surahNumber),
                    let ayah = surah.ayahs.first(where: { $0.id == max(1, item.ayahNumber) }) {
-                    summaryHistoryRow(surah: surah, ayah: ayah, caption: nil)
+                    summaryHistoryRow(surah: surah, ayah: ayah, caption: nil, timestamp: item.timestamp)
                 }
             }
         case .listenedAyah:
             ForEach(quranPlayer.ayahListeningHistory) { item in
                 if let surah = quranData.surah(item.surahNumber),
                    let ayah = surah.ayahs.first(where: { $0.id == item.ayahNumber }) {
-                    summaryHistoryRow(surah: surah, ayah: ayah, caption: item.reciter.displayNameWithEnglishQiraah)
+                    summaryHistoryRow(
+                        surah: surah,
+                        ayah: ayah,
+                        caption: item.reciter.displayNameWithEnglishQiraah,
+                        timestamp: item.timestamp
+                    )
                 }
             }
         case .listenedSurah:
@@ -2149,14 +2154,19 @@ struct QuranView: View {
                         settings.hapticFeedback()
                         push(surahID: surah.id, ayahID: nil)
                     } label: {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("\(surah.id) - \(surah.nameTransliteration)")
-                                .font(.subheadline.weight(.semibold))
-                                .foregroundColor(settings.accentColor.color)
+                        HStack(spacing: 8) {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("\(surah.id) - \(surah.nameTransliteration)")
+                                    .font(.subheadline.weight(.semibold))
+                                    .foregroundColor(settings.accentColor.color)
 
-                            Text(item.reciter.displayNameWithEnglishQiraah)
-                                .font(.caption)
-                                .foregroundColor(.secondary)
+                                Text(item.reciter.displayNameWithEnglishQiraah)
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
+                            .frame(maxWidth: .infinity, alignment: .leading)
+
+                            historyTimestampLabel(item.timestamp)
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .contentShape(Rectangle())
@@ -2168,20 +2178,29 @@ struct QuranView: View {
         }
     }
 
-    private func summaryHistoryRow(surah: Surah, ayah: Ayah, caption: String?, dimmed: Bool = true) -> some View {
+    private func summaryHistoryRow(surah: Surah, ayah: Ayah, caption: String?, timestamp: Date? = nil, dimmed: Bool = true) -> some View {
         Button {
             settings.hapticFeedback()
             push(surahID: surah.id, ayahID: ayah.id)
         } label: {
-            VStack(alignment: .leading, spacing: 4) {
-                if let caption {
-                    Text(caption)
-                        .font(.caption2.weight(.semibold))
-                        .foregroundColor(.secondary)
-                }
+            HStack(spacing: 8) {
+                VStack(alignment: .leading, spacing: 4) {
+                    if let caption {
+                        Text(caption)
+                            .font(.caption2.weight(.semibold))
+                            .foregroundColor(.secondary)
+                    }
 
-                SurahAyahRow(surah: surah, ayah: ayah)
-                    .equatable()
+                    SurahAyahRow(surah: surah, ayah: ayah)
+                        .equatable()
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+                // The same trailing "when" the full-size rows carry, so summary mode's unfolded history
+                // reads as a timeline too.
+                if let timestamp {
+                    historyTimestampLabel(timestamp)
+                }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .contentShape(Rectangle())

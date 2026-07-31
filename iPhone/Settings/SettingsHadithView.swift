@@ -8,49 +8,10 @@ import SwiftUI
 /// in a sheet off the Hadith tab rather than the app settings tree.
 struct SettingsHadithView: View {
     @ObservedObject private var settings = Settings.shared
-    @ObservedObject private var store = HadithStore.shared
 
     /// True when presented as a sheet (its own NavigationView + dismiss X); false when PUSHED from the
     /// Settings tab, where the surrounding navigation already provides the chrome.
     var presentedAsSheet: Bool = true
-
-    /// What's on the device at a glance: every downloaded book with its size and a per-book delete.
-    @ViewBuilder
-    private var downloadedBooksSection: some View {
-        let downloaded = HadithCatalogBook.all.filter { store.downloadedSlugs.contains($0.slug) }
-        Section(
-            header: SectionPillHeader(title: "DOWNLOADED", count: downloaded.count),
-            footer: downloaded.isEmpty
-                ? Text("No books are downloaded. Open any book to download it, or read it once without keeping it.")
-                : Text("Tap the trash to remove a book from this device. It can be downloaded again anytime.")
-        ) {
-            ForEach(downloaded) { book in
-                HStack(spacing: 8) {
-                    Text(book.englishTitle)
-                        .font(.subheadline)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.7)
-
-                    Spacer()
-
-                    Text("~\(book.approximateMegabytes < 1 ? "0.1" : String(format: "%.0f", book.approximateMegabytes)) MB")
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
-
-                    Button {
-                        settings.hapticFeedback()
-                        withAnimation(.easeInOut) { store.deleteDownload(book) }
-                    } label: {
-                        Image(systemName: "trash")
-                            .font(.caption)
-                            .foregroundColor(.red)
-                            .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-        }
-    }
 
     var body: some View {
         if presentedAsSheet {
@@ -119,12 +80,6 @@ struct SettingsHadithView: View {
                         englishTextDestination
                     }
                 }
-                Section {
-                    hadithSettingsLink(title: "Downloads", systemImage: "arrow.down.circle") {
-                        downloadsDestination
-                    }
-                }
-
                 readingModeSection
             }
             .themedListRowBackground()
@@ -135,11 +90,11 @@ struct SettingsHadithView: View {
 
     /// The same list-vs-pages choice the book screen's toolbar book button makes, surfaced here so it can be
     /// found without knowing that button exists. Reads the `hadithPageMode` key directly - the same
-    /// `@AppStorage` key (and the same `true` default) the reader declares - so the two controls are one
+    /// `@AppStorage` key (and the same `false` default) the reader declares - so the two controls are one
     /// setting, not two. No confirmation dialog: the toolbar asks first because it's one tap away from a
     /// whole-screen change you might not have meant, whereas coming to Settings and moving a segmented
     /// control IS the deliberate act the dialog was guarding.
-    @AppStorage("hadithPageMode") private var hadithPageMode = true
+    @AppStorage("hadithPageMode") private var hadithPageMode = false
 
     private var readingModeSection: some View {
         Section(footer: Text("List opens a chapter as a scrolling list of hadiths. Pages opens it as a right-to-left paged reader, fitting as many hadiths per page as your font sizes allow.")) {
@@ -291,16 +246,6 @@ struct SettingsHadithView: View {
     // whole hadiths per page at the chosen sizes) - unlike the mushaf, where fixed text per page
     // makes fitting a real choice.
 
-    private var downloadsDestination: some View {
-        List {
-            Group {
-                downloadedBooksSection
-            }
-            .themedListRowBackground()
-        }
-        .applyConditionalListStyle()
-        .navigationTitle("Downloads")
-    }
 }
 
 // MARK: - Settings-search entries (kept in THIS file, next to the screens they describe)
@@ -311,7 +256,6 @@ extension SettingsSearchEntry {
         .init(title: "Hadith Font Sizes", path: "Hadith Settings → Arabic / English Text", keywords: "hadith arabic english font size", destination: .hadithSettings),
         .init(title: "Highlight Allah (Hadith)", path: "Hadith Settings → Reading View", keywords: "highlight name of allah red color hadith arabic english", destination: .hadithSettings),
         .init(title: "Hadith Summary Mode", path: "Hadith Settings → Reading View", keywords: "hadith of the day last read tiles summary", destination: .hadithSettings),
-        .init(title: "Hadith Downloads", path: "Hadith Settings → Downloads", keywords: "delete books storage size downloaded remove megabytes", destination: .hadithSettings),
     ]
 }
 

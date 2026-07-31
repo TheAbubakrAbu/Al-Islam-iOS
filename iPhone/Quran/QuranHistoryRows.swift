@@ -1,15 +1,46 @@
 import SwiftUI
 
-/// A short "when" for a history entry, e.g. "2h ago" / "Yesterday". Shown next to each history item so the
-/// expanded list reads as a timeline.
-private let historyRelativeFormatter: RelativeDateTimeFormatter = {
-    let f = RelativeDateTimeFormatter()
-    f.unitsStyle = .abbreviated
+/// The clock time of a history entry, e.g. "5:30 PM" (locale-aware, so 24-hour locales get "17:30").
+private let historyTimeFormatter: DateFormatter = {
+    let f = DateFormatter()
+    f.setLocalizedDateFormatFromTemplate("jmm")
     return f
 }()
 
+/// The weekday for entries inside the last week, e.g. "Mon".
+private let historyWeekdayFormatter: DateFormatter = {
+    let f = DateFormatter()
+    f.setLocalizedDateFormatFromTemplate("EEE")
+    return f
+}()
+
+/// Month + day for anything older than a week, e.g. "Jul 12".
+private let historyDayFormatter: DateFormatter = {
+    let f = DateFormatter()
+    f.setLocalizedDateFormatFromTemplate("MMMd")
+    return f
+}()
+
+/// The "when" for a history entry as an actual time rather than a relative age: "Today 5:30 PM",
+/// "Yesterday 5:30 PM", "Mon 5:30 PM", "Jul 12 5:30 PM". Shown next to each history item so the
+/// expanded list reads as a timeline.
 func formatHistoryTimestamp(_ date: Date) -> String {
-    historyRelativeFormatter.localizedString(for: date, relativeTo: Date())
+    let calendar = Calendar.current
+    let time = historyTimeFormatter.string(from: date)
+
+    if calendar.isDateInToday(date) { return "Today \(time)" }
+    if calendar.isDateInYesterday(date) { return "Yesterday \(time)" }
+
+    let daysAgo = calendar.dateComponents(
+        [.day],
+        from: calendar.startOfDay(for: date),
+        to: calendar.startOfDay(for: Date())
+    ).day ?? 0
+
+    if daysAgo > 0 && daysAgo < 7 {
+        return "\(historyWeekdayFormatter.string(from: date)) \(time)"
+    }
+    return "\(historyDayFormatter.string(from: date)) \(time)"
 }
 
 /// A small trailing timestamp caption for a history row.
@@ -18,6 +49,9 @@ func historyTimestampLabel(_ date: Date) -> some View {
         .font(.caption2)
         .monospacedDigit()
         .foregroundStyle(.secondary)
+        .lineLimit(1)
+        // The label is now a date + time, so keep it whole and let the ayah beside it truncate instead.
+        .fixedSize(horizontal: true, vertical: false)
 }
 
 /// Formats a duration as H:MM:SS once it reaches an hour, otherwise MM:SS.

@@ -18,19 +18,18 @@ struct HadithReferenceView: View {
     let chapter: Int?
     let hadith: Int
 
-    @State private var data: HadithBookData?
-    @State private var loadError: String?
-    @State private var didConfirmDownload = false
-    @State private var confirmDownload = false
+    /// The book, opened straight from its bundled pack - synchronous and instant, so this screen has
+    /// no loading state and cannot fail for want of a network.
+    private var data: HadithBookData? { store.book(book) }
 
     private var resolved: HadithBookData.Hadith? {
         guard let data else { return nil }
         if let chapter {
             guard data.chapters.indices.contains(chapter - 1) else { return nil }
-            let chapterID = data.chapters[chapter - 1].id
-            let inChapter = data.hadiths.filter { $0.chapterId == chapterID }
-            guard inChapter.indices.contains(hadith - 1) else { return nil }
-            return inChapter[hadith - 1]
+            let inChapter = data.hadiths(in: data.chapters[chapter - 1])
+            let offset = inChapter.startIndex + (hadith - 1)
+            guard hadith >= 1, offset < inChapter.endIndex else { return nil }
+            return inChapter[offset]
         }
         return data.hadiths.first { $0.idInBook == hadith }
     }
@@ -71,53 +70,23 @@ struct HadithReferenceView: View {
                     }
                     .padding()
                 }
-            } else if let loadError {
-                Text(loadError)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .padding()
-            } else if !store.isAvailableOffline(book) && !didConfirmDownload {
-                // Same courtesy as opening the book itself: never silently pull a large file.
-                VStack(spacing: 12) {
-                    Text("\(book.englishTitle) has not been downloaded yet (~\(String(format: "%.0f", max(book.approximateMegabytes, 1))) MB).")
+            } else {
+                // The pack is bundled, so this only shows if its file is missing from the app itself.
+                VStack(spacing: 10) {
+                    Image(systemName: "exclamationmark.triangle")
+                        .font(.largeTitle)
+                        .foregroundStyle(.secondary)
+
+                    Text("\(book.englishTitle) could not be opened.")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
-
-                    Button {
-                        settings.hapticFeedback()
-                        confirmDownload = true
-                    } label: {
-                        Label("Download Book", systemImage: "icloud.and.arrow.down")
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundColor(settings.accentColor.color)
-                    }
                 }
                 .padding()
-                .confirmationDialog("Download \(book.englishTitle)?", isPresented: $confirmDownload, titleVisibility: .visible) {
-                    Button("Download") {
-                        settings.hapticFeedback()
-                        didConfirmDownload = true
-                    }
-                    Button("Cancel", role: .cancel) {}
-                } message: {
-                    Text("This fetches the whole book for offline reading. It may use significant data; Wi-Fi is recommended.")
-                }
-            } else {
-                ProgressView("Loading \(book.englishTitle)...")
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
         .navigationTitle(chapter.map { "\(book.englishTitle) \($0):\(hadith)" } ?? "\(book.englishTitle) \(hadith)")
         .navigationBarTitleDisplayMode(.inline)
-        .task(id: didConfirmDownload) {
-            guard data == nil, store.isAvailableOffline(book) || didConfirmDownload else { return }
-            do {
-                data = try await store.book(book)
-            } catch {
-                loadError = error.localizedDescription
-            }
-        }
     }
 }
 
@@ -163,7 +132,7 @@ struct HadithRow: View, Equatable {
 
     /// The body lays out the hadith's FULL Arabic and English - the most expensive row in the tab - and
     /// its parents re-render on every publish of objects the row doesn't care about (the last-read save
-    /// while reading, downloads, any Settings write). Bookmark/note state is deliberately NOT compared:
+    /// while reading, any Settings write). Bookmark/note state is deliberately NOT compared:
     /// it lives in observed `HadithUserData`, whose publish invalidates the row directly, bypassing `==`.
     static func == (l: Self, r: Self) -> Bool {
         l.book.slug == r.book.slug &&
@@ -193,29 +162,12 @@ struct HadithRow: View, Equatable {
         userData.note(slug: book.slug, idInBook: hadith.idInBook)
     }
 
-    /// First hadith id of each chapter, memoized per (book, chapter) - the row shows the hadith's
-    /// position WITHIN its chapter ("1 -" for the first hadith of a chapter that starts at #100),
-    /// the ayah row's within-surah numbering, for hadiths.
-    @MainActor private static var chapterStartCache: [String: Int] = [:]
-
-    /// Called from the store's delete paths: a re-download may carry corrected chapter boundaries, and
-    /// this cache would otherwise serve stale within-chapter numbers for the rest of the process.
-    @MainActor static func clearChapterStartCache() {
-        chapterStartCache.removeAll()
-    }
-
+    /// The hadith's position WITHIN its chapter ("1 -" for the first hadith of a chapter that starts
+    /// at #100), the ayah row's within-surah numbering. The chapter's first row was computed when the
+    /// pack was built, so this is arithmetic - no scan, and nothing left to memoize (it used to walk
+    /// the whole book for the chapter's lowest number, then cache the answer per chapter).
     private var chapterHadithNumber: Int? {
-        let key = "\(book.slug)-\(hadith.chapterId)"
-        if let start = Self.chapterStartCache[key] {
-            return hadith.idInBook - start + 1
-        }
-        // Only resolvable once the book is in the session cache - daily/summary rows before the book
-        // loads simply omit the chapter position.
-        guard let data = HadithStore.shared.cachedBook(book.slug),
-              let start = data.hadiths.lazy.filter({ $0.chapterId == hadith.chapterId }).map(\.idInBook).min()
-        else { return nil }
-        Self.chapterStartCache[key] = start
-        return hadith.idInBook - start + 1
+        HadithStore.shared.cachedBook(book.slug)?.positionInChapter(hadith)
     }
 
     private var arabicFontSize: CGFloat {

@@ -1,43 +1,21 @@
 import SwiftUI
 
-// The Hadith catalog and data models: the 17 collections served by AhmedBaset/hadith-json, the
-// hadith-json decoding shapes, reference parsing ("bukhari 5"), and the bookmark / last-read records.
+// The Hadith catalog and data models: the 17 collections, ALL of which ship inside the app as packs
+// (see HadithPack.swift), reference parsing ("bukhari 5"), and the bookmark / last-read records.
 
 #if os(iOS)
 
 // MARK: - Catalog
 
-extension String {
-    // `containsArabicScript` now lives in Globals.swift's String extension (shared app-wide by every
-    // searchable screen), alongside the other Arabic string utilities.
+// `containsArabicScript` lives in Globals.swift's String extension (shared app-wide by every
+// searchable screen), alongside the other Arabic string utilities.
+//
+// The dataset's whitespace hygiene - hard-wrapped lines, doubled spaces, tabs, no-break spaces - used
+// to be cleaned here on every decode on every device. It now runs ONCE, in Tools/pack-hadith.swift,
+// and the packs ship the cleaned text.
 
-    /// Dataset hygiene, applied once at decode: the source JSONs carry hard-wrapped lines (a newline +
-    /// leading spaces mid-sentence - Bukhari 1 is the poster child), doubled spaces, tabs, and no-break
-    /// spaces. Deliberate paragraph breaks (blank lines) survive as one "\n\n"; every other run of
-    /// whitespace collapses to a single space. The fast path skips strings that are already clean -
-    /// which is most of the Arabic.
-    var cleanedHadithText: String {
-        guard contains("\n") || contains("  ") || contains("\t") || contains("\r") || contains("\u{00A0}") else {
-            return self
-        }
-        var text = self
-            .replacingOccurrences(of: "\r\n", with: "\n")
-            .replacingOccurrences(of: "\r", with: "\n")
-            .replacingOccurrences(of: "\t", with: " ")
-            .replacingOccurrences(of: "\u{00A0}", with: " ")
-        // Blank-line breaks are real paragraphs: protect them, unwrap every remaining (hard-wrap)
-        // newline into a space, then restore.
-        text = text.replacingOccurrences(of: "[ ]*\\n[ ]*", with: "\n", options: .regularExpression)
-        text = text.replacingOccurrences(of: "\\n{2,}", with: "\u{2029}", options: .regularExpression)
-        text = text.replacingOccurrences(of: "\n", with: " ")
-        text = text.replacingOccurrences(of: " {2,}", with: " ", options: .regularExpression)
-        text = text.replacingOccurrences(of: " ?\u{2029} ?", with: "\n\n", options: .regularExpression)
-        return text.trimmingCharacters(in: .whitespacesAndNewlines)
-    }
-}
-
-/// One collection in the catalog: where it lives on the CDN, how it's titled, and its scholarly context.
-/// The catalog is static so the tab renders instantly with nothing downloaded.
+/// One collection in the catalog: how it's titled and its scholarly context. Every book ships in the
+/// app, so this table is purely presentational - there is no download state to describe.
 struct HadithCatalogBook: Identifiable, Hashable {
     enum Group: String, CaseIterable {
         /// Al-Kutub as-Sittah - the six canonical Sunnah collections.
@@ -50,13 +28,10 @@ struct HadithCatalogBook: Identifiable, Hashable {
     }
 
     let slug: String
-    let folder: String
     let englishTitle: String
     /// Vocalized (tashkeel) Arabic title - no sukoon marks, and each word's final letter left bare.
     let arabicTitle: String
     let group: Group
-    /// Measured raw JSON size, for the download UI.
-    let approximateMegabytes: Double
     /// "Imam al-Bukhari (الإمام البخاري)" - compiler in English with Arabic in parentheses.
     let authorEnglish: String
     let authorArabic: String
@@ -83,28 +58,12 @@ struct HadithCatalogBook: Identifiable, Hashable {
         Self.numberBySlug[slug] ?? 0
     }
 
-    /// Chapter / hadith counts per book, measured from the actual CDN data (2026-07) - so the catalog
-    /// shows a book's SHAPE ("97 C • 7,277 H", the surah rows' ayah-count language) before it is ever
-    /// downloaded. Self-healing: `HadithStore` records the live counts whenever a book decodes, and the
-    /// rows prefer those - a CDN update can never leave these numbers wrong for a downloaded book.
-    private static let countsBySlug: [String: (chapters: Int, hadiths: Int)] = [
-        "bukhari": (97, 7277), "muslim": (57, 7459), "ibnmajah": (38, 4345),
-        "abudawud": (43, 5276), "tirmidhi": (49, 4053), "nasai": (52, 5768),
-        "malik": (61, 1985), "ahmed": (8, 1374), "darimi": (24, 3406),
-        "qudsi40": (1, 40), "nawawi40": (1, 42), "shahwaliullah40": (1, 40),
-        "aladab_almufrad": (57, 1326), "shamail_muhammadiyah": (57, 402),
-        "riyad_assalihin": (20, 1896), "mishkat_almasabih": (25, 4428), "bulugh_almaram": (16, 1767)
-    ]
-
-    var chapterCount: Int? { Self.countsBySlug[slug]?.chapters }
-    var hadithCount: Int? { Self.countsBySlug[slug]?.hadiths }
-
     static let all: [HadithCatalogBook] = [
         // The Six Books (al-Kutub as-Sittah), in chronological order of their compilers.
         HadithCatalogBook(
-            slug: "bukhari", folder: "the_9_books",
+            slug: "bukhari",
             englishTitle: "Sahih al-Bukhari", arabicTitle: "صَحِيح البُخارِي",
-            group: .six, approximateMegabytes: 13,
+            group: .six,
             authorEnglish: "Imam Muhammad ibn Ismail al-Bukhari", authorArabic: "الإمام محمد بن إسماعيل البخاري",
             era: "d. 256 AH / 870 CE",
             shortDescription: "The most authentic book after the Quran, sifted from hundreds of thousands of narrations.",
@@ -112,9 +71,9 @@ struct HadithCatalogBook: Identifiable, Hashable {
             aliases: ["bukhari", "bukharee", "bukhary", "albukhari"]
         ),
         HadithCatalogBook(
-            slug: "muslim", folder: "the_9_books",
+            slug: "muslim",
             englishTitle: "Sahih Muslim", arabicTitle: "صَحِيح مُسلِم",
-            group: .six, approximateMegabytes: 11.5,
+            group: .six,
             authorEnglish: "Imam Muslim ibn al-Hajjaj", authorArabic: "الإمام مسلم بن الحجاج",
             era: "d. 261 AH / 875 CE",
             shortDescription: "The second most authentic collection, every hadith gathered with its chains side by side.",
@@ -122,9 +81,9 @@ struct HadithCatalogBook: Identifiable, Hashable {
             aliases: ["muslim", "sahihmuslim"]
         ),
         HadithCatalogBook(
-            slug: "ibnmajah", folder: "the_9_books",
+            slug: "ibnmajah",
             englishTitle: "Sunan Ibn Majah", arabicTitle: "سُنَن ابن ماجَه",
-            group: .six, approximateMegabytes: 5.7,
+            group: .six,
             authorEnglish: "Imam Muhammad ibn Yazid ibn Majah", authorArabic: "الإمام محمد بن يزيد بن ماجه",
             era: "d. 273 AH / 887 CE",
             shortDescription: "The sixth of the Six Books, preserving many hadiths found in none of the other five.",
@@ -132,9 +91,9 @@ struct HadithCatalogBook: Identifiable, Hashable {
             aliases: ["ibnmajah", "majah", "ibnmaja", "maja"]
         ),
         HadithCatalogBook(
-            slug: "abudawud", folder: "the_9_books",
+            slug: "abudawud",
             englishTitle: "Sunan Abi Dawud", arabicTitle: "سُنَن أَبِي داوُد",
-            group: .six, approximateMegabytes: 8,
+            group: .six,
             authorEnglish: "Imam Abu Dawud as-Sijistani", authorArabic: "الإمام أبو داود السجستاني",
             era: "d. 275 AH / 889 CE",
             shortDescription: "The Sunan of legal rulings, about 4,800 hadiths chosen from 500,000.",
@@ -142,9 +101,9 @@ struct HadithCatalogBook: Identifiable, Hashable {
             aliases: ["abudawud", "abidawud", "abudaud", "abidaud", "dawud", "daud", "dawood", "abudawood"]
         ),
         HadithCatalogBook(
-            slug: "tirmidhi", folder: "the_9_books",
+            slug: "tirmidhi",
             englishTitle: "Jami` at-Tirmidhi", arabicTitle: "جامِع التِرمِذِي",
-            group: .six, approximateMegabytes: 7.7,
+            group: .six,
             authorEnglish: "Imam Muhammad ibn Isa at-Tirmidhi", authorArabic: "الإمام محمد بن عيسى الترمذي",
             era: "d. 279 AH / 892 CE",
             shortDescription: "The graded collection, noting each hadith's strength and the jurists' positions.",
@@ -152,9 +111,9 @@ struct HadithCatalogBook: Identifiable, Hashable {
             aliases: ["tirmidhi", "tirmizi", "tirmidhee", "attirmidhi", "altirmidhi"]
         ),
         HadithCatalogBook(
-            slug: "nasai", folder: "the_9_books",
+            slug: "nasai",
             englishTitle: "Sunan an-Nasa'i", arabicTitle: "سُنَن النَسائِي",
-            group: .six, approximateMegabytes: 8,
+            group: .six,
             authorEnglish: "Imam Ahmad ibn Shu'ayb an-Nasa'i", authorArabic: "الإمام أحمد بن شعيب النسائي",
             era: "d. 303 AH / 915 CE",
             shortDescription: "The strictest of the four Sunan in its conditions for accepting narrators.",
@@ -163,9 +122,9 @@ struct HadithCatalogBook: Identifiable, Hashable {
         ),
         // The early collections - all compiled before the Six Books - chronologically.
         HadithCatalogBook(
-            slug: "malik", folder: "the_9_books",
+            slug: "malik",
             englishTitle: "Muwatta Malik", arabicTitle: "مُوَطَّأ مالِك",
-            group: .early, approximateMegabytes: 3.3,
+            group: .early,
             authorEnglish: "Imam Malik ibn Anas", authorArabic: "الإمام مالك بن أنس",
             era: "d. 179 AH / 795 CE",
             shortDescription: "The earliest collection of all, joining hadith with the practice of Madinah.",
@@ -173,9 +132,9 @@ struct HadithCatalogBook: Identifiable, Hashable {
             aliases: ["malik", "muwatta", "muwattamalik", "almuwatta"]
         ),
         HadithCatalogBook(
-            slug: "ahmed", folder: "the_9_books",
+            slug: "ahmed",
             englishTitle: "Musnad Ahmad", arabicTitle: "مُسنَد أَحمَد",
-            group: .early, approximateMegabytes: 2.4,
+            group: .early,
             authorEnglish: "Imam Ahmad ibn Hanbal", authorArabic: "الإمام أحمد بن حنبل",
             era: "d. 241 AH / 855 CE",
             shortDescription: "The great Musnad, arranged by the Companion who narrates each hadith.",
@@ -183,20 +142,20 @@ struct HadithCatalogBook: Identifiable, Hashable {
             aliases: ["ahmad", "ahmed", "musnadahmad", "musnadahmed"]
         ),
         HadithCatalogBook(
-            slug: "darimi", folder: "the_9_books",
+            slug: "darimi",
             englishTitle: "Sunan ad-Darimi", arabicTitle: "سُنَن الدارِمِي",
-            group: .early, approximateMegabytes: 3,
+            group: .early,
             authorEnglish: "Imam Abdullah ibn Abd ar-Rahman ad-Darimi", authorArabic: "الإمام عبد الله بن عبد الرحمن الدارمي",
             era: "d. 255 AH / 869 CE",
             shortDescription: "The early Sunan of a teacher of Muslim, Abu Dawud, and at-Tirmidhi.",
             longDescription: "Its full title is Musnad ad-Darimi, widely known as Sunan ad-Darimi. Compiled by Imam ad-Darimi of Samarqand (الإمام الدارمي), a hadith master whose students included Imam Muslim, Abu Dawud, and at-Tirmidhi.\n\nHis Sunan opens with a celebrated introduction on the Prophet’s ﷺ status and the etiquette of knowledge.",
             aliases: ["darimi", "daremi", "addarimi", "aldarimi"]
         ),
-        // The forties (bundled in the app as a data source; they download like everything else).
+        // The forties - short, foundational collections, usually the first hadith book a student studies.
         HadithCatalogBook(
-            slug: "qudsi40", folder: "forties",
+            slug: "qudsi40",
             englishTitle: "Forty Hadith Qudsi", arabicTitle: "الأَحادِيث القُدسِيَّة",
-            group: .forties, approximateMegabytes: 0.1,
+            group: .forties,
             authorEnglish: "Related by the Prophet ﷺ from His Lord", authorArabic: "يرويه النبي ﷺ عن ربه",
             era: "Compiled selection",
             shortDescription: "The forty sacred hadiths, their meaning from Allah in the Prophet's ﷺ wording.",
@@ -204,9 +163,9 @@ struct HadithCatalogBook: Identifiable, Hashable {
             aliases: ["qudsi", "qudsi40", "hadithqudsi"]
         ),
         HadithCatalogBook(
-            slug: "nawawi40", folder: "forties",
+            slug: "nawawi40",
             englishTitle: "The Forty Hadith of Imam Nawawi", arabicTitle: "الأَربَعُون النَوَوِيَّة",
-            group: .forties, approximateMegabytes: 0.1,
+            group: .forties,
             authorEnglish: "Imam Yahya ibn Sharaf an-Nawawi", authorArabic: "الإمام يحيى بن شرف النووي",
             era: "d. 676 AH / 1277 CE",
             shortDescription: "The forty-two foundational hadiths, each an axis the religion turns upon.",
@@ -214,9 +173,9 @@ struct HadithCatalogBook: Identifiable, Hashable {
             aliases: ["nawawi", "nawawi40", "arbaeen", "arbain", "arbaeennawawi", "fortynawawi"]
         ),
         HadithCatalogBook(
-            slug: "shahwaliullah40", folder: "forties",
+            slug: "shahwaliullah40",
             englishTitle: "Forty Hadith of Shah Waliullah", arabicTitle: "أَربَعُون الشاه وَلِي الله",
-            group: .forties, approximateMegabytes: 0.1,
+            group: .forties,
             authorEnglish: "Shah Waliullah ad-Dihlawi", authorArabic: "شاه ولي الله الدهلوي",
             era: "d. 1176 AH / 1762 CE",
             shortDescription: "The forty concise hadiths with the shortest, most elevated chains.",
@@ -225,9 +184,9 @@ struct HadithCatalogBook: Identifiable, Hashable {
         ),
         // Other books, chronologically.
         HadithCatalogBook(
-            slug: "aladab_almufrad", folder: "other_books",
+            slug: "aladab_almufrad",
             englishTitle: "Al-Adab Al-Mufrad", arabicTitle: "الأَدَب المُفرَد",
-            group: .other, approximateMegabytes: 1.8,
+            group: .other,
             authorEnglish: "Imam Muhammad ibn Ismail al-Bukhari", authorArabic: "الإمام محمد بن إسماعيل البخاري",
             era: "d. 256 AH / 870 CE",
             shortDescription: "The book of manners, Imam al-Bukhari's own work on family and character.",
@@ -235,9 +194,9 @@ struct HadithCatalogBook: Identifiable, Hashable {
             aliases: ["adab", "adabmufrad", "adabalmufrad", "aladabalmufrad"]
         ),
         HadithCatalogBook(
-            slug: "shamail_muhammadiyah", folder: "other_books",
+            slug: "shamail_muhammadiyah",
             englishTitle: "Shama'il Muhammadiyah", arabicTitle: "الشَمائِل المُحَمَّدِيَّة",
-            group: .other, approximateMegabytes: 0.5,
+            group: .other,
             authorEnglish: "Imam Muhammad ibn Isa at-Tirmidhi", authorArabic: "الإمام محمد بن عيسى الترمذي",
             era: "d. 279 AH / 892 CE",
             shortDescription: "The portrait of the Prophet ﷺ, his appearance, habits, and character.",
@@ -245,9 +204,9 @@ struct HadithCatalogBook: Identifiable, Hashable {
             aliases: ["shamail", "shamaail", "shamailmuhammadiyah"]
         ),
         HadithCatalogBook(
-            slug: "riyad_assalihin", folder: "other_books",
+            slug: "riyad_assalihin",
             englishTitle: "Riyad as-Salihin", arabicTitle: "رِياض الصالِحِين",
-            group: .other, approximateMegabytes: 2.2,
+            group: .other,
             authorEnglish: "Imam Yahya ibn Sharaf an-Nawawi", authorArabic: "الإمام يحيى بن شرف النووي",
             era: "d. 676 AH / 1277 CE",
             shortDescription: "The Gardens of the Righteous, the world's most-read book of the daily Sunnah.",
@@ -255,9 +214,9 @@ struct HadithCatalogBook: Identifiable, Hashable {
             aliases: ["riyad", "riyadh", "riyadassalihin", "riyadussalihin", "riyadsaliheen", "riyadhussaliheen", "salihin", "saliheen"]
         ),
         HadithCatalogBook(
-            slug: "mishkat_almasabih", folder: "other_books",
+            slug: "mishkat_almasabih",
             englishTitle: "Mishkat al-Masabih", arabicTitle: "مِشكاة المَصابِيح",
-            group: .other, approximateMegabytes: 5.2,
+            group: .other,
             authorEnglish: "Imam al-Khatib at-Tabrizi", authorArabic: "الإمام الخطيب التبريزي",
             era: "d. c. 741 AH / 1340 CE",
             shortDescription: "The Niche of the Lamps, a comprehensive sourced survey of the whole Sunnah.",
@@ -265,9 +224,9 @@ struct HadithCatalogBook: Identifiable, Hashable {
             aliases: ["mishkat", "mishkaat", "mishkatalmasabih"]
         ),
         HadithCatalogBook(
-            slug: "bulugh_almaram", folder: "other_books",
+            slug: "bulugh_almaram",
             englishTitle: "Bulugh al-Maram", arabicTitle: "بُلُوغ المَرام",
-            group: .other, approximateMegabytes: 2.1,
+            group: .other,
             authorEnglish: "Imam Ibn Hajar al-Asqalani", authorArabic: "الإمام ابن حجر العسقلاني",
             era: "d. 852 AH / 1449 CE",
             shortDescription: "The evidences of Islamic law, the hadiths behind the legal rulings of fiqh.",
@@ -285,15 +244,16 @@ struct HadithCatalogBook: Identifiable, Hashable {
     static func books(in group: Group) -> [HadithCatalogBook] {
         all.filter { $0.group == group }
     }
-
-    static let totalMegabytes: Int = Int(all.reduce(0) { $0 + $1.approximateMegabytes }.rounded())
 }
 
-// MARK: - Models (the hadith-json shapes)
+// MARK: - Models (a book, backed by its pack)
 
-struct HadithBookData: Decodable {
-    struct Metadata: Decodable {
-        struct Titles: Decodable {
+/// One open collection. It holds no text: `HadithPack` has the book memory-mapped, and every string
+/// below is fetched from it (and its block cache) at the moment a view asks for it. That is what lets
+/// all 17 books - 50,884 hadiths - be open at once for the price of their id tables.
+struct HadithBookData {
+    struct Metadata {
+        struct Titles {
             let title: String
             let author: String
         }
@@ -303,35 +263,36 @@ struct HadithBookData: Decodable {
 
     /// The dataset's ids are integers everywhere except Shama'il Muhammadiyah, which squeezes in a
     /// sub-chapter as the FLOAT id `8.2` (on the chapter AND its hadiths). Truncating it collided with
-    /// chapter 8 and a strict Int decode took the whole book down - map fractional ids to a stable
-    /// synthetic integer instead (8.2 -> 1082) so the sub-chapter keeps its own identity.
+    /// chapter 8, so fractional ids map to a stable synthetic integer instead (8.2 -> 1082) and the
+    /// sub-chapter keeps its own identity. Applied by the packer; kept here as the definition of the
+    /// rule the packer implements.
     static func normalizedChapterId(_ raw: Double) -> Int {
         raw == raw.rounded(.down) ? Int(raw) : 1000 + Int((raw * 10).rounded())
     }
 
-    struct Chapter: Decodable, Identifiable, Hashable {
+    struct Chapter: Identifiable, Hashable {
         let id: Int
         let arabic: String
         let english: String
+        /// The prebuilt search folds. Chapter names are small enough to ride in the pack's eager
+        /// section, so matching a chapter never touches a block.
+        let foldArabic: String
+        let foldEnglish: String
+        /// The chapter's run in the book's hadith array, computed when the pack was built. Opening a
+        /// chapter is a slice of `hadiths`, not a scan of all 7,000 of them.
+        let firstRow: Int
+        let rowCount: Int
 
-        private enum CodingKeys: String, CodingKey {
-            case id, arabic, english
-        }
-
-        init(from decoder: Decoder) throws {
-            let container = try decoder.container(keyedBy: CodingKeys.self)
-            if let whole = try? container.decode(Int.self, forKey: .id) {
-                id = whole
-            } else {
-                id = HadithBookData.normalizedChapterId(try container.decode(Double.self, forKey: .id))
-            }
-            arabic = try container.decode(String.self, forKey: .arabic).cleanedHadithText
-            english = try container.decode(String.self, forKey: .english).cleanedHadithText
+        /// The 1-based position of a hadith within THIS chapter (the ayah row's within-surah
+        /// numbering, for hadiths): the chapter starts at `firstRow`, so this needs no search.
+        func position(ofRow row: Int) -> Int? {
+            guard row >= firstRow, row < firstRow + rowCount else { return nil }
+            return row - firstRow + 1
         }
     }
 
-    struct Hadith: Decodable, Identifiable {
-        struct EnglishText: Decodable {
+    struct Hadith: Identifiable {
+        struct EnglishText {
             let narrator: String
             let text: String
 
@@ -339,66 +300,255 @@ struct HadithBookData: Decodable {
                 self.narrator = narrator
                 self.text = text
             }
-
-            private enum CodingKeys: String, CodingKey { case narrator, text }
-
-            init(from decoder: Decoder) throws {
-                let container = try decoder.container(keyedBy: CodingKeys.self)
-                narrator = try container.decode(String.self, forKey: .narrator).cleanedHadithText
-                text = try container.decode(String.self, forKey: .text).cleanedHadithText
-            }
         }
+
+        /// Where this hadith's text comes from. `.packed` is every real hadith - the strings are read
+        /// out of the pack on demand; `.literal` covers the placeholder rows the reference screens
+        /// build for a hadith they are still resolving.
+        fileprivate enum Storage {
+            case packed(HadithPack, Int)
+            case literal(String, EnglishText)
+        }
+
         let id: Int
         let idInBook: Int
         let chapterId: Int
-        let arabic: String
-        let english: EnglishText
+        /// Precomputed answers that would otherwise need this hadith's text - see `HadithPack.Flag`.
+        let flags: UInt8
+        fileprivate let storage: Storage
+
+        /// This hadith's position in its book, which is also its row in the pack. -1 for placeholders.
+        var row: Int {
+            if case let .packed(_, row) = storage { return row }
+            return -1
+        }
+
+        fileprivate init(pack: HadithPack, row: Int) {
+            let record = pack.rows[row]
+            id = Int(record.id)
+            idInBook = Int(record.idInBook)
+            chapterId = Int(record.chapterId)
+            flags = record.flags
+            storage = .packed(pack, row)
+        }
 
         init(id: Int, idInBook: Int, chapterId: Int, arabic: String, english: EnglishText) {
             self.id = id
             self.idInBook = idInBook
             self.chapterId = chapterId
-            self.arabic = arabic
-            self.english = english
+            self.flags = 0
+            self.storage = .literal(arabic, english)
         }
 
-        private enum CodingKeys: String, CodingKey {
-            case id, idInBook, chapterId, arabic, english
-        }
-
-        init(from decoder: Decoder) throws {
-            let container = try decoder.container(keyedBy: CodingKeys.self)
-            id = try container.decode(Int.self, forKey: .id)
-            idInBook = try container.decode(Int.self, forKey: .idInBook)
-            // Shama'il Muhammadiyah's dataset carries hadiths with `chapterId: 8.2` - a FLOAT in a
-            // field that is an integer everywhere else. Same synthetic mapping as Chapter.id, so these
-            // hadiths stay linked to their own sub-chapter.
-            if let whole = try? container.decode(Int.self, forKey: .chapterId) {
-                chapterId = whole
-            } else {
-                chapterId = HadithBookData.normalizedChapterId(try container.decode(Double.self, forKey: .chapterId))
+        var arabic: String {
+            switch storage {
+            case let .packed(pack, row): return pack.string(row: row, field: 0)
+            case let .literal(arabic, _): return arabic
             }
-            arabic = try container.decode(String.self, forKey: .arabic).cleanedHadithText
-            english = try container.decode(EnglishText.self, forKey: .english)
+        }
+
+        var english: EnglishText {
+            switch storage {
+            case let .packed(pack, row):
+                let strings = pack.strings(row: row)
+                return EnglishText(narrator: strings.narrator, text: strings.text)
+            case let .literal(_, english): return english
+            }
+        }
+
+        /// All three strings in one block lookup - for the paths that render (or copy, or share) the
+        /// whole hadith and would otherwise ask for them one at a time.
+        var allText: (arabic: String, narrator: String, text: String) {
+            switch storage {
+            case let .packed(pack, row): return pack.strings(row: row)
+            case let .literal(arabic, english): return (arabic, english.narrator, english.text)
+            }
         }
     }
 
+    let pack: HadithPack
     let metadata: Metadata
     let chapters: [Chapter]
     let hadiths: [Hadith]
+
+    init(pack: HadithPack) {
+        self.pack = pack
+        metadata = Metadata(
+            arabic: Metadata.Titles(title: pack.arabicTitle, author: pack.arabicAuthor),
+            english: Metadata.Titles(title: pack.englishTitle, author: pack.englishAuthor)
+        )
+        chapters = pack.chapters.map {
+            Chapter(id: $0.id, arabic: $0.arabic, english: $0.english,
+                    foldArabic: $0.foldArabic, foldEnglish: $0.foldEnglish,
+                    firstRow: $0.firstRow, rowCount: $0.rowCount)
+        }
+        hadiths = (0..<pack.rows.count).map { Hadith(pack: pack, row: $0) }
+        chapterIndexByID = Dictionary(
+            pack.chapters.enumerated().map { ($0.element.id, $0.offset) },
+            uniquingKeysWith: { first, _ in first }
+        )
+    }
+
+    // MARK: Chapters
+
+    /// Chapter id -> its position in `chapters`, so the "which chapter is this?" lookups the rows do
+    /// per render are a hash hit rather than a linear search.
+    private let chapterIndexByID: [Int: Int]
+
+    /// This chapter's hadiths - a SLICE of `hadiths`, in O(1). The packer proved the run is unbroken
+    /// when it built the pack, so no filter over the book is needed (and Bukhari's chapter rows used
+    /// to pay 7,277 comparisons each, every time one opened).
+    func hadiths(in chapter: Chapter) -> ArraySlice<Hadith> {
+        let upper = min(chapter.firstRow + chapter.rowCount, hadiths.count)
+        guard chapter.firstRow >= 0, chapter.firstRow <= upper else { return [] }
+        return hadiths[chapter.firstRow..<upper]
+    }
+
+    /// The chapter a hadith belongs to, by id.
+    func chapter(id: Int) -> Chapter? {
+        chapterIndexByID[id].map { chapters[$0] }
+    }
+
+    /// The chapter a hadith sits in - by ROW, so it works even for the books whose chapter ids repeat
+    /// nothing and costs one hash lookup.
+    func chapter(of hadith: Hadith) -> Chapter? {
+        chapter(id: hadith.chapterId)
+    }
+
+    /// The 1-based position of this hadith within its own chapter, or nil if it can't be placed.
+    func positionInChapter(_ hadith: Hadith) -> Int? {
+        guard hadith.row >= 0, let chapter = chapter(of: hadith) else { return nil }
+        return chapter.position(ofRow: hadith.row)
+    }
+
+    // MARK: Searching
+
+    /// A query that is nothing but digits is a hadith NUMBER, not text: "5" means "hadith 5", the way
+    /// hadiths are actually cited - and folding it into a keyword search finds only the hadiths whose
+    /// text happens to contain a "5". Returns nil for anything else, so ordinary search is untouched.
+    /// Capped at five digits, the ceiling `HadithReferenceParser` already uses for the same reason.
+    static func hadithNumber(inQuery raw: String) -> Int? {
+        let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty, trimmed.count <= 5,
+              trimmed.allSatisfy({ $0.isASCII && $0.isNumber }),
+              let number = Int(trimmed), number > 0 else { return nil }
+        return number
+    }
+
+    /// The hadith numbered `number` in this book, by `idInBook` - the number printed on the row and the
+    /// one a citation means. In most books `idInBook` is simply the row + 1, so the common case costs
+    /// one index check; the books whose numbering skips or repeats fall back to a scan.
+    func hadith(numbered number: Int) -> Hadith? {
+        let index = number - 1
+        if hadiths.indices.contains(index), hadiths[index].idInBook == number { return hadiths[index] }
+        return hadiths.first { $0.idInBook == number }
+    }
+
+    /// Whether this hadith matches the folded query. The comparison runs as a byte search inside the
+    /// pack's decompressed search block - no per-hadith normalization, no String allocated, which is
+    /// what the in-memory search index used to buy at the cost of holding the whole book folded in RAM.
+    func matches(_ hadith: Hadith, _ query: HadithFold.Query) -> Bool {
+        guard !query.isEmpty else { return false }
+        switch hadith.storage {
+        case let .packed(pack, row):
+            return pack.matches(row: row, query: query)
+        case let .literal(arabic, english):
+            let haystack = query.isArabic
+                ? HadithFold.arabic(arabic)
+                : HadithFold.english(english.text + "\n" + english.narrator)
+            return haystack.contains(query.folded)
+        }
+    }
+
+    /// Whether a chapter's name matches - Arabic queries against the Arabic name, Latin against the
+    /// English, the script-aware rule the rest of search follows.
+    func matches(_ chapter: Chapter, _ query: HadithFold.Query) -> Bool {
+        guard !query.folded.isEmpty else { return true }
+        return query.isArabic
+            ? chapter.foldArabic.contains(query.folded)
+            : chapter.foldEnglish.contains(query.folded)
+    }
 }
 
 // MARK: - Reference lookups ("bukhari 5", "muslim 3:12")
 
 enum HadithReferenceParser {
-    /// Lowercase, split into alphanumeric tokens, drop articles and generic words, join. "Sunan An-Nisa'i"
-    /// and "nisai" both normalize to "nisai"; "Al-Adab Al-Mufrad" stays distinct ("adabmufrad").
-    static func normalize(_ raw: String) -> String {
-        let dropped: Set<String> = ["al", "an", "as", "ad", "at", "the", "imam", "sahih", "sunan", "jami", "musnad", "hadith", "forty", "40", "of", "book", "collection"]
-        let tokens = raw.lowercased()
+    /// The words that name no collection on their own. Two kinds: articles, and the generic words that
+    /// appear across half the shelf - every book is a "Sahih" or a "Sunan" or a "Musnad", three of them
+    /// are a "Forty", and all 50,884 of them are a "Hadith". Dropping these is exactly what makes
+    /// "Hadith 24" resolve to nothing (as it should - it names no book) while "Qudsi 24" resolves to one.
+    private static let dropped: Set<String> = [
+        "al", "an", "as", "ad", "at", "the", "of", "imam",
+        "sahih", "sunan", "jami", "musnad", "hadith", "hadiths", "ahadith",
+        "forty", "40", "book", "books", "collection",
+    ]
+
+    /// The distinctive words of a name, lowercased: "Hadith Al-Qudsi" -> ["qudsi"], "Al-Adab
+    /// Al-Mufrad" -> ["adab", "mufrad"].
+    static func words(_ raw: String) -> [String] {
+        // Apostrophes BIND, they don't separate: "Nasa'i" is one word. Splitting on them left the
+        // single letter "i" standing as a name for Sunan an-Nasa'i (and "il" for the Shama'il).
+        // The joined `normalize` form is unaffected either way - that is why the alias tables still match.
+        var text = raw.lowercased()
+        for apostrophe in ["'", "\u{2019}", "\u{02BC}", "`"] {
+            text = text.replacingOccurrences(of: apostrophe, with: "")
+        }
+        return text
             .components(separatedBy: CharacterSet.alphanumerics.inverted)
             .filter { !$0.isEmpty && !dropped.contains($0) }
-        return tokens.joined()
+    }
+
+    /// Those words as one key. "Sunan An-Nisa'i" and "nisai" both normalize to "nisai"; "Al-Adab
+    /// Al-Mufrad" stays distinct ("adabmufrad"). This is the form the alias tables are written in.
+    static func normalize(_ raw: String) -> String {
+        words(raw).joined()
+    }
+
+    /// Per book: the whole-name keys (its aliases, plus its title normalized), and separately every
+    /// individual word that can name it. Built once - `parse` runs on the main thread per keystroke.
+    private static let keysBySlug: [String: Set<String>] = Dictionary(
+        uniqueKeysWithValues: HadithCatalogBook.all.map {
+            ($0.slug, Set($0.aliases).union([normalize($0.englishTitle)]))
+        }
+    )
+
+    private static let wordsBySlug: [String: Set<String>] = Dictionary(
+        uniqueKeysWithValues: HadithCatalogBook.all.map {
+            ($0.slug, Set(words($0.englishTitle)).union($0.aliases))
+        }
+    )
+
+    /// The collection a name refers to. Tried in three passes, each stricter about guessing than the
+    /// last, and every pass refuses a name that fits more than one book rather than picking one:
+    ///
+    ///   1. the whole name as a key      "abudawud", "riyadussalihin", "qudsi"
+    ///   2. word by word                 "Mufrad 24", "Masabih 24", "Maram 24", "Shah 24"
+    ///   3. word prefixes, 3+ characters "tirmid 24", "muhammad 24"
+    static func book(named raw: String) -> HadithCatalogBook? {
+        let queryWords = words(raw)
+        guard !queryWords.isEmpty else { return nil }
+
+        let joined = queryWords.joined()
+        if let book = HadithCatalogBook.all.first(where: { keysBySlug[$0.slug]?.contains(joined) == true }) {
+            return book
+        }
+
+        let named = HadithCatalogBook.all.filter { book in
+            let known = wordsBySlug[book.slug] ?? []
+            return queryWords.allSatisfy(known.contains)
+        }
+        if named.count == 1 { return named[0] }
+        // Fits two books: refuse it rather than pick one, and don't fall through to the looser pass.
+        if named.count > 1 { return nil }
+
+        // Shorter stubs than three characters match half the shelf and would resolve by accident.
+        let prefixed = HadithCatalogBook.all.filter { book in
+            let known = wordsBySlug[book.slug] ?? []
+            return queryWords.allSatisfy { word in
+                word.count >= 3 && known.contains { $0.hasPrefix(word) }
+            }
+        }
+        return prefixed.count == 1 ? prefixed[0] : nil
     }
 
     struct Reference {
@@ -413,12 +563,15 @@ enum HadithReferenceParser {
     /// and it used to compile this same pattern twice per call (once via `range(of:)`, once here).
     // Five digits on BOTH numbers: every current book is < 10,000 hadiths, but a fuller collection
     // (Musnad Ahmad) would make "ahmad 12345" silently fall through to keyword search at {1,4}.
+    // The name/number separator is whitespace OR punctuation, so "Qudsi 24", "Qudsi: 24", "Qudsi:24"
+    // and "Qudsi-24" are all the same reference. The name is lazy, so a book whose own name carries a
+    // hyphen ("Al-Adab Al-Mufrad 24") still backtracks to the separator before the NUMBER.
     private static let referenceRegex = try? NSRegularExpression(
-        pattern: #"^(.+?)\s+(\d{1,5})(?:\s*[:.\-]\s*(\d{1,5}))?$"#
+        pattern: #"^(.+?)[\s:.\-]+(\d{1,5})(?:\s*[:.\-]\s*(\d{1,5}))?$"#
     )
 
     /// Parse "bukhari 5" or "muslim 3:12" (also "3.12" / "3-12"). Returns nil when the text before the
-    /// numbers doesn't resolve to a known book alias.
+    /// numbers doesn't name exactly one collection.
     static func parse(_ query: String) -> Reference? {
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard let regex = referenceRegex,
@@ -432,9 +585,7 @@ enum HadithReferenceParser {
         guard let namePart = group(1), let firstNumber = group(2).flatMap({ Int($0) }) else { return nil }
         let secondNumber = group(3).flatMap { Int($0) }
 
-        let normalized = normalize(namePart)
-        guard !normalized.isEmpty,
-              let book = HadithCatalogBook.all.first(where: { $0.aliases.contains(normalized) || normalize($0.englishTitle) == normalized }) else { return nil }
+        guard let book = book(named: namePart) else { return nil }
 
         if let secondNumber {
             return Reference(book: book, chapter: firstNumber, hadith: secondNumber)

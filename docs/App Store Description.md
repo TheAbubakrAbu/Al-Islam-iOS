@@ -25,7 +25,7 @@ THE COMPLETE QURAN
 THE MAJOR HADITH COLLECTIONS
 - All the major books: the Nine (Bukhari, Muslim, an-Nasa'i, Abu Dawud, at-Tirmidhi, Ibn Majah, Muwatta Malik, ad-Darimi, Musnad Ahmad), the forty-hadith collections, and classics like Riyad as-Salihin.
 - Arabic with English translation and narrator chains, a Hadith of the Day, bookmarks, favorites, and lookups like "Bukhari 5".
-- Search within any book or across every downloaded book, and save any collection for offline reading.
+- Search within any book or across all 50,000+ hadiths at once. Every collection is built into the app: nothing to download, and it all works offline.
 
 PRAYER TIMES AND QIBLA
 - Accurate prayer times calculated privately on your device, with an Automatic method suggested for your region.
