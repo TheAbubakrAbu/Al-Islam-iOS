@@ -6,6 +6,13 @@ import os
 
 import Adhan
 
+// DOMAIN MAP FOR THE COMPANION APPS (Al-Adhan / Al-Quran / Al-Hadith): the sections of this class
+// are labelled with the app domain that owns them - see the [Al-Adhan] / [Al-Quran] / [Al-Hadith] /
+// [Islam tab] / [Shared] MARK prefixes. When this file is copied into a companion app, delete the
+// sections for domains it doesn't ship and keep every [Shared] one. The top of the class (init,
+// app-group plumbing, accent/appearance) is [Shared]. The domain-specific extensions live in their
+// own files already: SettingsAdhan.swift is wholly Al-Adhan, SettingsQuran.swift wholly Al-Quran.
+
 let logger = Logger(subsystem: AppIdentifiers.bundleIdentifier, category: "Settings")
 
 /// The single source of truth for all user settings.
@@ -124,6 +131,11 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
             // Same seed for the sky palette (see skyGradientsJSON's didSet): palettes customized before
             // the mirror existed would otherwise never reach the gradient widget until re-edited.
             appGroupUserDefaults?.setValue(skyGradientsJSON, forKey: "skyGradients")
+            // Same seed for the manual prayer offsets (see mirrorOffsetToAppGroup): offsets set before
+            // the mirror existed would otherwise stay wrong in widgets until the user re-adjusted them.
+            for key in Self.prayerOffsetKeys {
+                mirrorOffsetToAppGroup(UserDefaults.standard.integer(forKey: key), key: key)
+            }
 
             // Widgets read the app-group location; they must not touch CoreLocation authorization.
             DispatchQueue.main.async { [weak self] in
@@ -154,7 +166,7 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
             "favoriteSurahsData", "bookmarkedAyahsData", "favoriteLetterData", "favoriteNameNumbersData",
             "khatmCompletedAyahsData", "quranPlanData", "favoriteReciterIDsData", "favoriteQiraahTagsData",
             "favoriteEnglishTranslationIDsData", "savedSajdahAyahIDsData", "savedBrokenLetterAyahIDsData",
-            "lastReadSurah", "lastReadAyah", "lastListenedAyahData", "lastListenedSurahData",
+            "lastReadSurah", "lastReadAyah", "lastReadTimestamp", "lastListenedAyahData", "lastListenedSurahData",
             "quranSearchHistoryData",
             // The prayer tracker and menses-pause record: months of marks and exempt days - the most
             // clearly "the user's, not a preference" data in the app.
@@ -223,7 +235,7 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
         #endif
     }
 
-    // MARK: - App group - shared with widgets / extensions
+    // MARK: - [Shared] App group - shared with widgets / extensions
 
     /// True in the iPhone app and the Watch app; false in every app extension.
     ///
@@ -283,6 +295,11 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
             guard Self.isAppProcess else { return }
             appGroupUserDefaults?.setValue(accentColor.rawValue, forKey: "accentColor")
             markExplicitlySet("accentColor")
+            // Every widget renders in the accent, so a change must repaint them. Owned here (not an
+            // `.onChange` at the app root) so every write path - the pickers, a synced snapshot, a
+            // settings reset - repaints without each caller remembering to. Deferred so a burst of
+            // writes (reset, sync apply) coalesces into one reload against WidgetKit's daily budget.
+            reloadWidgets(deferred: true)
         }
     }
 
@@ -417,6 +434,10 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
             guard Self.isAppProcess else { return }
             appGroupUserDefaults?.setValue(hijriOffset, forKey: "hijriOffset")
             markExplicitlySet("hijriOffset")
+            // The offset shifts the displayed Hijri date everywhere it appears, so recompute it and
+            // repaint the widgets that show it. Owned here for the same reason as `accentColor`'s.
+            updateDates()
+            reloadWidgets(deferred: true)
         }
     }
 
@@ -445,7 +466,7 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
         }
     }
 
-    // MARK: - Prayer tracker
+    // MARK: - [Al-Adhan] Prayer tracker
 
     /// Which prayers were marked prayed, per civil day: encoded `[String: [String]]` keyed by
     /// "yyyy-MM-dd", values are prayer transliterations. Helpers live in SettingsAdhan.swift.
@@ -473,7 +494,7 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     }
     @Published var pendingNagQuestion: PendingNagQuestion?
 
-    // MARK: - Prayer - live state & hijri (app-storage persistence)
+    // MARK: - [Al-Adhan] Prayer - live state & hijri (app-storage persistence)
 
     @AppStorage("hijriDate") private var hijriDateData: String?
     var hijriDate: HijriDate? {
@@ -540,7 +561,7 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
 
     @AppStorage("lastScheduledHijriYear") private var lastScheduledHijriYear: Int = 0
 
-    // MARK: - Prayer - @AppStorage (notifications, travel, calculation, alerts)
+    // MARK: - [Al-Adhan] Prayer - @AppStorage (notifications, travel, calculation, alerts)
 
     @AppStorage("dateNotifications") var dateNotifications = true {
         didSet { self.fetchPrayerTimes(notification: true) }
@@ -565,6 +586,14 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
         didSet { self.fetchPrayerTimes(notification: true) }
     }
     @AppStorage("adhanNotificationSound") var adhanNotificationSound: String = Settings.defaultAdhanSoundID {
+        didSet { self.fetchPrayerTimes(notification: true) }
+    }
+
+    // The tone for notifications that TELL rather than CALL: pre-alerts, the non-obligatory times, and any
+    // prayer whose adhan is switched off. These used to be the iOS system sound, which is indistinguishable
+    // from every other app's alert. Defaults to Echo - the bundled 3.6-second chime that exists for exactly
+    // this purpose. "default" restores the old system sound for anyone who preferred it.
+    @AppStorage("alertToneSound") var alertToneSound: String = Settings.defaultAlertToneID {
         didSet { self.fetchPrayerTimes(notification: true) }
     }
 
@@ -636,8 +665,26 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     @AppStorage("naggingFajr") var naggingFajr: Bool = false {
         didSet { self.fetchPrayerTimes(notification: true) }
     }
+    /// The six manual-offset keys, in prayer order. This list is the contract between three
+    /// processes (app, widget extension, watch complication): the didSets mirror these into the
+    /// App Group, the providers read them back, and the watch sync republishes them - all from
+    /// this one list.
+    static let prayerOffsetKeys = ["offsetFajr", "offsetSunrise", "offsetDhuhr", "offsetAsr", "offsetMaghrib", "offsetIsha"]
+
+    /// The manual offsets are applied inside `_computeRawPrayers`, which the widget and complication
+    /// providers re-run in their own processes (day rollover, boundary timelines) - so every offset
+    /// must reach the App Group, or the extensions recompute with 0s and drift from the app: the
+    /// reported "widget doesn't match the app after adjusting prayer times".
+    func mirrorOffsetToAppGroup(_ value: Int, key: String) {
+        guard Self.isAppProcess else { return }
+        appGroupUserDefaults?.setValue(value, forKey: key)
+    }
+
     @AppStorage("offsetFajr") var offsetFajr: Int = 0 {
-        didSet { self.fetchPrayerTimes(force: true) }
+        didSet {
+            mirrorOffsetToAppGroup(offsetFajr, key: "offsetFajr")
+            self.fetchPrayerTimes(force: true)
+        }
     }
 
     @AppStorage("preNotificationSunrise") var preNotificationSunrise: Int = 0 {
@@ -650,7 +697,10 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
         didSet { self.fetchPrayerTimes(notification: true) }
     }
     @AppStorage("offsetSunrise") var offsetSunrise: Int = 0 {
-        didSet { self.fetchPrayerTimes(force: true) }
+        didSet {
+            mirrorOffsetToAppGroup(offsetSunrise, key: "offsetSunrise")
+            self.fetchPrayerTimes(force: true)
+        }
     }
 
     @AppStorage("preNotificationDhuhr") var preNotificationDhuhr: Int = 0 {
@@ -663,7 +713,10 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
         didSet { self.fetchPrayerTimes(notification: true) }
     }
     @AppStorage("offsetDhuhr") var offsetDhuhr: Int = 0 {
-        didSet { self.fetchPrayerTimes(force: true) }
+        didSet {
+            mirrorOffsetToAppGroup(offsetDhuhr, key: "offsetDhuhr")
+            self.fetchPrayerTimes(force: true)
+        }
     }
 
     @AppStorage("preNotificationAsr") var preNotificationAsr: Int = 0 {
@@ -676,7 +729,10 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
         didSet { self.fetchPrayerTimes(notification: true) }
     }
     @AppStorage("offsetAsr") var offsetAsr: Int = 0 {
-        didSet { self.fetchPrayerTimes(force: true) }
+        didSet {
+            mirrorOffsetToAppGroup(offsetAsr, key: "offsetAsr")
+            self.fetchPrayerTimes(force: true)
+        }
     }
 
     @AppStorage("preNotificationMaghrib") var preNotificationMaghrib: Int = 0 {
@@ -689,7 +745,10 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
         didSet { self.fetchPrayerTimes(notification: true) }
     }
     @AppStorage("offsetMaghrib") var offsetMaghrib: Int = 0 {
-        didSet { self.fetchPrayerTimes(force: true) }
+        didSet {
+            mirrorOffsetToAppGroup(offsetMaghrib, key: "offsetMaghrib")
+            self.fetchPrayerTimes(force: true)
+        }
     }
 
     @AppStorage("preNotificationIsha") var preNotificationIsha: Int = 0 {
@@ -702,7 +761,10 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
         didSet { self.fetchPrayerTimes(notification: true) }
     }
     @AppStorage("offsetIsha") var offsetIsha: Int = 0 {
-        didSet { self.fetchPrayerTimes(force: true) }
+        didSet {
+            mirrorOffsetToAppGroup(offsetIsha, key: "offsetIsha")
+            self.fetchPrayerTimes(force: true)
+        }
     }
 
     @AppStorage("preNotificationDuha") var preNotificationDuha: Int = 0 {
@@ -792,7 +854,7 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
 
     @AppStorage("showPrayerInfo") var showPrayerInfo: Bool = false
 
-    // MARK: - Optional Prayer Times (shown in app only, never in widgets)
+    // MARK: - [Al-Adhan] Optional Prayer Times (shown in app only, never in widgets)
 
     @AppStorage("showDuha") var showDuha: Bool = false {
         willSet { objectWillChange.send() }
@@ -811,7 +873,7 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     /// Names of optional/informational prayer times shown in the app, but not widgets.
     static let optionalPrayerNames: Set<String> = ["Duhaa", "Islamic Midnight", "Last Third"]
 
-    // MARK: - Quran - @AppStorage
+    // MARK: - [Al-Quran] Quran - @AppStorage
 
     /// Big vs. small in-app Now Playing player. An in-app UI preference, not shared with the widget/watch.
     @AppStorage("nowPlayingExpanded") var nowPlayingExpanded: Bool = false
@@ -1003,6 +1065,18 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
 
     @AppStorage("lastReadSurah") var lastReadSurah: Int = 0
     @AppStorage("lastReadAyah") var lastReadAyah: Int = 0
+    /// When the last-read position was recorded, for the summary tile's "Today 5:30 PM" caption.
+    /// Stamped via `stampLastRead()` at both real save paths (list reader, mushaf pager flush) -
+    /// clearing the position deliberately does not stamp. 0 = saved by a build without stamps.
+    @AppStorage("lastReadTimestamp") private var lastReadTimestampRaw: Double = 0
+
+    var lastReadDate: Date? {
+        lastReadTimestampRaw > 0 ? Date(timeIntervalSince1970: lastReadTimestampRaw) : nil
+    }
+
+    func stampLastRead() {
+        lastReadTimestampRaw = Date().timeIntervalSince1970
+    }
 
     /// Debounced last-read bookkeeping for the mushaf pager.
     ///
@@ -1034,10 +1108,11 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
 
         lastReadSurah = pending.surah
         lastReadAyah = pending.ayah
+        stampLastRead()
         refreshQuranWidgets()
     }
 
-    // MARK: - Surah stats (times opened / played)
+    // MARK: - [Al-Quran] Surah stats (times opened / played)
     // A tiny [surahID: count] map JSON-encoded in one key each - at most 114 small entries, so it costs
     // almost nothing in memory and is only decoded when a surah header is shown.
     @AppStorage("surahOpenCountsData") private var surahOpenCountsData: Data = Data()
@@ -1210,7 +1285,7 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
 
     @AppStorage("englishFontSize") var englishFontSize: Double = Double(UIFont.preferredFont(forTextStyle: .body).pointSize)
     
-    // MARK: - Hadith display
+    // MARK: - [Al-Hadith] Hadith display
 
     /// Which parts of a hadith render in the Hadith tab (both default on; hiding one gives a pure-Arabic or
     /// pure-English reading experience).
@@ -1226,7 +1301,7 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     @AppStorage("hadithArabicFontSize") var hadithArabicFontSize: Double = Double(UIFont.preferredFont(forTextStyle: .body).pointSize + 4)
     @AppStorage("hadithEnglishFontSize") var hadithEnglishFontSize: Double = Double(UIFont.preferredFont(forTextStyle: .body).pointSize)
 
-    // MARK: - Arabic letters & 99 Names
+    // MARK: - [Islam tab] Arabic letters & 99 Names
     
     /// THE grid toggle, app-wide: the Quran tab's lists, the Arabic alphabet, the 99 Names, and the Islam
     /// resources all follow this one switch - flipping it anywhere flips it everywhere. (The key keeps its
@@ -1310,7 +1385,7 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     /// Uthmani (the Qiraat face - never the Hafs Quran face), IndoPak, or Basic (system).
     var nonQuranArabicFontName: String { islamArabicFace.fontName }
 
-    // MARK: - Arabic Alphabet screen size
+    // MARK: - [Islam tab] Arabic Alphabet screen size
     
     static let randomReciterName = "Random Reciter"
     static let hafsUthmaniFontName = "KFGQPCHAFSUthmanicScript-Regula"
@@ -1402,7 +1477,7 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
         favoriteNameNumbers.contains(number)
     }
     
-    // MARK: Arabic search normalization
+    // MARK: - [Shared] Arabic search normalization
 
     func cleanSearch(_ text: String, whitespace: Bool = false) -> String {
         // Single scalar walk: fold each Arabic scalar through the canonical map (dagger alif → alif, hamza
@@ -1497,7 +1572,7 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
             .joined(separator: " ")
     }
     
-    // MARK: - App-wide appearance & misc @AppStorage
+    // MARK: - [Shared] App-wide appearance & misc @AppStorage
 
     @AppStorage("THEfirstLaunch") var firstLaunch = true
 
@@ -1515,7 +1590,7 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
         }
     }
 
-    // MARK: - Global helpers (not Quran- or Adhan-specific)
+    // MARK: - [Shared] Global helpers (not Quran- or Adhan-specific)
 
     #if os(iOS)
     /// One reused, prepared generator: allocating a fresh `UIImpactFeedbackGenerator` per tap added
@@ -1572,7 +1647,7 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
         return Color(red: clampAdj(c.r), green: clampAdj(c.g), blue: clampAdj(c.b))
     }
 
-    // MARK: - Reading themes (Sepia / Gray)
+    // MARK: - [Shared] Reading themes (Sepia / Gray)
     // These layer custom background + row colors on top of a light (Sepia) or dark (Gray) base, so the app
     // offers warm/neutral reading looks beyond plain Light / Dark / System. Light/Dark/System return nil here
     // and keep the standard system grouped colors (no behavior change for existing users).

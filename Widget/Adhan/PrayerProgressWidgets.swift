@@ -55,20 +55,36 @@ struct PrayerIntervalProgressBar: View {
 /// system's vibrant rendering does their styling.
 struct PrayerWidgetEmptyState: View {
     var tint: Color
+    /// true = rendered over a sky gradient: white styling instead of accent/secondary.
+    var skyStyle: Bool = false
 
     var body: some View {
         VStack(spacing: 6) {
             Image(systemName: "moon.stars")
                 .font(.title3)
-                .foregroundColor(tint)
+                .foregroundColor(skyStyle ? .white : tint)
 
             Text("Open app to get prayer times")
                 .font(.caption)
-                .foregroundColor(.secondary)
+                .foregroundColor(skyStyle ? .white.opacity(0.9) : .secondary)
                 .multilineTextAlignment(.center)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
+}
+
+/// The tier ladder every full-day prayer list shares: past prayers recede, the current one takes
+/// the accent (white over a sky gradient), upcoming ones stay readable. One ladder - the same
+/// three tiers used to be copied per widget, each hand-edited in lockstep.
+func prayerTierColor(for prayer: Prayer, in prayers: [Prayer], entry: PrayersProvider.Entry, skyStyle: Bool = false) -> Color {
+    guard let index = prayers.firstIndex(where: { $0.id == prayer.id }),
+          let currentIndex = prayers.firstIndex(where: {
+              $0.nameTransliteration == entry.currentPrayer?.nameTransliteration
+          }) else { return skyStyle ? .white.opacity(0.45) : .secondary }
+
+    if index < currentIndex { return skyStyle ? .white.opacity(0.45) : .secondary }
+    if index == currentIndex { return skyStyle ? .white : entry.accentColor.color }
+    return skyStyle ? .white.opacity(0.8) : .primary
 }
 
 /// Three-ish letters so a prayer name survives tiny lock-screen surfaces; combined traveling rows keep
@@ -318,13 +334,17 @@ struct PrayerWaveWidget: Widget {
 /// current one accented and underlined.
 struct PrayerDayView: View {
     var entry: PrayersProvider.Entry
+    /// true = rendered inside the sky-gradient twin: white tiers replace accent/secondary
+    /// (accent-on-gradient is unreadable). Layout is untouched.
+    var skyStyle: Bool = false
 
     private var hijriDate: String {
         AdhanWidgetDateFormatting.hijriDate(for: entry, style: .medium)
     }
 
     private func tint(_ prayer: Prayer) -> Color {
-        prayer.nameTransliteration == "Shurooq" ? .primary : entry.accentColor.color
+        if skyStyle { return .white }
+        return prayer.nameTransliteration == "Shurooq" ? .primary : entry.accentColor.color
     }
 
     private func isCurrent(_ prayer: Prayer) -> Bool {
@@ -348,7 +368,7 @@ struct PrayerDayView: View {
 
                     Text(hijriDate)
                         .font(.caption2)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(skyStyle ? .white.opacity(0.75) : .secondary)
 
                     Spacer()
 
@@ -363,11 +383,13 @@ struct PrayerDayView: View {
                     current: current,
                     next: next,
                     entryDate: entry.date,
-                    tint: entry.accentColor.color
+                    tint: skyStyle ? .white : entry.accentColor.color
                 )
 
-                HStack(alignment: .top, spacing: 4) {
-                    ForEach(entry.prayers) { prayer in
+                // Pinned to both edges: spacers only BETWEEN the columns (the tracker's rule).
+                HStack(alignment: .top, spacing: 0) {
+                    ForEach(Array(entry.prayers.enumerated()), id: \.element.id) { index, prayer in
+                        if index > 0 { Spacer(minLength: 4) }
                         VStack(spacing: 3) {
                             Text(prayer.displayName)
                                 .font(.caption2.weight(isCurrent(prayer) ? .bold : .semibold))
@@ -378,18 +400,17 @@ struct PrayerDayView: View {
                             // The underline marking the current prayer, mirrored from the row highlight
                             // the app's list uses; a clear twin under the others keeps the row heights even.
                             Capsule()
-                                .fill(isCurrent(prayer) ? entry.accentColor.color : .clear)
+                                .fill(isCurrent(prayer) ? (skyStyle ? .white : entry.accentColor.color) : .clear)
                                 .frame(width: 24, height: 2)
                         }
-                        .foregroundColor(isCurrent(prayer) ? entry.accentColor.color : .primary)
-                        .frame(maxWidth: .infinity)
+                        .foregroundColor(isCurrent(prayer) ? (skyStyle ? .white : entry.accentColor.color) : (skyStyle ? .white.opacity(0.8) : .primary))
                         .lineLimit(1)
                         .minimumScaleFactor(0.5)
                     }
                 }
             }
         } else {
-            PrayerWidgetEmptyState(tint: entry.accentColor.color)
+            PrayerWidgetEmptyState(tint: entry.accentColor.color, skyStyle: skyStyle)
         }
     }
 }
@@ -408,6 +429,21 @@ struct PrayerDayWidget: Widget {
     }
 }
 
+/// The Prayer Day widget, unchanged, over the current prayer's sky gradient.
+struct PrayerDaySkyWidget: Widget {
+    let kind: String = "PrayerDaySkyWidget"
+
+    var body: some WidgetConfiguration {
+        StaticConfiguration(kind: kind, provider: PrayersProvider()) { entry in
+            PrayerDayView(entry: entry, skyStyle: true)
+                .modifier(PrayerSkyChrome(entry: entry))
+        }
+        .supportedFamilies([.systemMedium])
+        .configurationDisplayName("Prayer Day Sky")
+        .description("Every prayer of the day, over the current prayer's sky gradient")
+    }
+}
+
 // MARK: - Home screen: fasting countdown
 
 /// Suhoor/iftar countdown for anyone fasting - Ramadan or a voluntary fast. During fasting hours
@@ -415,6 +451,12 @@ struct PrayerDayWidget: Widget {
 /// counts down to Fajr, when the next fast would begin.
 struct FastingCountdownView: View {
     var entry: PrayersProvider.Entry
+    /// true = rendered inside the sky-gradient twin: white replaces accent/secondary. Layout untouched.
+    var skyStyle: Bool = false
+
+    private var accent: Color {
+        skyStyle ? .white : entry.accentColor.color
+    }
 
     private var hijriDate: String {
         AdhanWidgetDateFormatting.hijriDate(for: entry, style: .full)
@@ -452,13 +494,13 @@ struct FastingCountdownView: View {
                         Text("\(phase.label) \(Text(phase.deadline, style: .timer))")
                             .font(.headline)
                     }
-                    .foregroundColor(entry.accentColor.color)
+                    .foregroundColor(accent)
 
                     Spacer()
 
                     Text(phase.deadline, style: .time)
                         .font(.subheadline.monospacedDigit())
-                        .foregroundColor(.secondary)
+                        .foregroundColor(skyStyle ? .white.opacity(0.75) : .secondary)
                 }
                 .lineLimit(1)
                 .minimumScaleFactor(0.6)
@@ -472,7 +514,7 @@ struct FastingCountdownView: View {
                     }
                 }
                 .progressViewStyle(.linear)
-                .tint(entry.accentColor.color)
+                .tint(accent)
                 // Same half-thickness squash + phantom-label-space trim as `PrayerIntervalProgressBar`.
                 .scaleEffect(x: 1, y: 0.5, anchor: .center)
                 .frame(height: 4)
@@ -481,7 +523,7 @@ struct FastingCountdownView: View {
                     if !entry.currentCity.isEmpty {
                         Image(systemName: "location.fill")
                             .font(.caption2)
-                            .foregroundColor(entry.accentColor.color)
+                            .foregroundColor(accent)
 
                         Text(entry.currentCity)
                             .font(.caption2)
@@ -491,13 +533,13 @@ struct FastingCountdownView: View {
 
                     Text(hijriDate)
                         .font(.caption2)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(skyStyle ? .white.opacity(0.75) : .secondary)
                 }
                 .lineLimit(1)
                 .minimumScaleFactor(0.6)
             }
         } else {
-            PrayerWidgetEmptyState(tint: entry.accentColor.color)
+            PrayerWidgetEmptyState(tint: accent, skyStyle: skyStyle)
         }
     }
 
@@ -519,6 +561,21 @@ struct FastingCountdownWidget: Widget {
         .supportedFamilies([.systemMedium])
         .configurationDisplayName("Fasting Countdown")
         .description("Counts down to iftar while fasting, and to suhoor's end overnight")
+    }
+}
+
+/// The Fasting Countdown widget, unchanged, over the current prayer's sky gradient.
+struct FastingCountdownSkyWidget: Widget {
+    let kind: String = "FastingCountdownSkyWidget"
+
+    var body: some WidgetConfiguration {
+        StaticConfiguration(kind: kind, provider: PrayersProvider()) { entry in
+            FastingCountdownView(entry: entry, skyStyle: true)
+                .modifier(PrayerSkyChrome(entry: entry))
+        }
+        .supportedFamilies([.systemMedium])
+        .configurationDisplayName("Fasting Countdown Sky")
+        .description("The suhoor and iftar countdown, over the current prayer's sky gradient")
     }
 }
 
@@ -646,21 +703,12 @@ struct NextPrayerProgressWidget: Widget {
 /// only the grid layouts existed before, and those start at medium.
 struct PrayerListSmallView: View {
     var entry: PrayersProvider.Entry
-
-    private func rowColor(for prayer: Prayer) -> Color {
-        guard let currentIndex = entry.prayers.firstIndex(where: { $0.id == prayer.id }),
-              let currentPrayerIndex = entry.prayers.firstIndex(where: {
-                  $0.nameTransliteration == entry.currentPrayer?.nameTransliteration
-              }) else { return .secondary }
-
-        if currentIndex < currentPrayerIndex { return .secondary }
-        if currentIndex == currentPrayerIndex { return entry.accentColor.color }
-        return .primary
-    }
+    /// true = rendered inside the sky-gradient twin: white tiers replace accent/secondary/primary.
+    var skyStyle: Bool = false
 
     var body: some View {
         if entry.prayers.isEmpty {
-            PrayerWidgetEmptyState(tint: entry.accentColor.color)
+            PrayerWidgetEmptyState(tint: entry.accentColor.color, skyStyle: skyStyle)
         } else {
             VStack(spacing: 4) {
                 ForEach(entry.prayers) { prayer in
@@ -677,7 +725,7 @@ struct PrayerListSmallView: View {
                         Text(prayer.time, style: .time)
                             .font(.caption.monospacedDigit())
                     }
-                    .foregroundColor(rowColor(for: prayer))
+                    .foregroundColor(prayerTierColor(for: prayer, in: entry.prayers, entry: entry, skyStyle: skyStyle))
                     .lineLimit(1)
                     .minimumScaleFactor(0.5)
                 }
@@ -700,23 +748,29 @@ struct PrayerListSmallWidget: Widget {
     }
 }
 
+/// The Prayer List widget, unchanged, over the current prayer's sky gradient.
+struct PrayerListSmallSkyWidget: Widget {
+    let kind: String = "PrayerListSmallSkyWidget"
+
+    var body: some WidgetConfiguration {
+        StaticConfiguration(kind: kind, provider: PrayersProvider()) { entry in
+            PrayerListSmallView(entry: entry, skyStyle: true)
+                .modifier(PrayerSkyChrome(entry: entry))
+        }
+        .supportedFamilies([.systemSmall])
+        .configurationDisplayName("Prayer List Sky")
+        .description("All of today's prayer times, as a compact list over the current prayer's sky gradient")
+    }
+}
+
 // MARK: - Home screen: next prayer board
 
 /// A medium split: the NEXT prayer with its clock time, a live relative countdown and the window's
 /// progress on the left; the full day's list on the right with the current prayer accented.
 struct NextPrayerBoardView: View {
     var entry: PrayersProvider.Entry
-
-    private func rowColor(for prayer: Prayer) -> Color {
-        guard let currentIndex = entry.prayers.firstIndex(where: { $0.id == prayer.id }),
-              let currentPrayerIndex = entry.prayers.firstIndex(where: {
-                  $0.nameTransliteration == entry.currentPrayer?.nameTransliteration
-              }) else { return .secondary }
-
-        if currentIndex < currentPrayerIndex { return .secondary }
-        if currentIndex == currentPrayerIndex { return entry.accentColor.color }
-        return .primary
-    }
+    /// true = rendered inside the sky-gradient twin: white tiers replace accent/secondary/primary.
+    var skyStyle: Bool = false
 
     var body: some View {
         if let current = entry.currentPrayer, let next = entry.nextPrayer {
@@ -724,7 +778,7 @@ struct NextPrayerBoardView: View {
                 VStack(alignment: .leading, spacing: 3) {
                     Text("NEXT")
                         .font(.caption2.weight(.semibold))
-                        .foregroundColor(.secondary)
+                        .foregroundColor(skyStyle ? .white.opacity(0.75) : .secondary)
 
                     HStack(spacing: 5) {
                         Image(systemName: next.image)
@@ -733,14 +787,14 @@ struct NextPrayerBoardView: View {
                         Text(next.displayName)
                             .font(.headline)
                     }
-                    .foregroundColor(next.nameTransliteration == "Shurooq" ? .primary : entry.accentColor.color)
+                    .foregroundColor(skyStyle ? .white : (next.nameTransliteration == "Shurooq" ? .primary : entry.accentColor.color))
 
                     Text(next.time, style: .time)
                         .font(.title2.weight(.semibold).monospacedDigit())
 
                     Text(next.time, style: .relative)
                         .font(.caption)
-                        .foregroundColor(.secondary)
+                        .foregroundColor(skyStyle ? .white.opacity(0.75) : .secondary)
 
                     Spacer(minLength: 4)
 
@@ -748,13 +802,13 @@ struct NextPrayerBoardView: View {
                         current: current,
                         next: next,
                         entryDate: entry.date,
-                        tint: entry.accentColor.color
+                        tint: skyStyle ? .white : entry.accentColor.color
                     )
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
 
                 Divider()
-                    .background(entry.accentColor.color)
+                    .background(skyStyle ? Color.white.opacity(0.7) : entry.accentColor.color)
 
                 VStack(spacing: 3) {
                     ForEach(entry.prayers) { prayer in
@@ -771,7 +825,7 @@ struct NextPrayerBoardView: View {
                             Text(prayer.time, style: .time)
                                 .font(.caption2.monospacedDigit())
                         }
-                        .foregroundColor(rowColor(for: prayer))
+                        .foregroundColor(prayerTierColor(for: prayer, in: entry.prayers, entry: entry, skyStyle: skyStyle))
                     }
                 }
                 .frame(maxWidth: .infinity)
@@ -779,7 +833,7 @@ struct NextPrayerBoardView: View {
             .lineLimit(1)
             .minimumScaleFactor(0.5)
         } else {
-            PrayerWidgetEmptyState(tint: entry.accentColor.color)
+            PrayerWidgetEmptyState(tint: entry.accentColor.color, skyStyle: skyStyle)
         }
     }
 }
@@ -795,5 +849,20 @@ struct NextPrayerBoardWidget: Widget {
         .supportedFamilies([.systemMedium])
         .configurationDisplayName("Next Prayer")
         .description("The next prayer with a live countdown beside the full day's times")
+    }
+}
+
+/// The Next Prayer widget, unchanged, over the current prayer's sky gradient.
+struct NextPrayerBoardSkyWidget: Widget {
+    let kind: String = "NextPrayerBoardSkyWidget"
+
+    var body: some WidgetConfiguration {
+        StaticConfiguration(kind: kind, provider: PrayersProvider()) { entry in
+            NextPrayerBoardView(entry: entry, skyStyle: true)
+                .modifier(PrayerSkyChrome(entry: entry))
+        }
+        .supportedFamilies([.systemMedium])
+        .configurationDisplayName("Next Prayer Sky")
+        .description("The next prayer beside the full day's times, over the current prayer's sky gradient")
     }
 }

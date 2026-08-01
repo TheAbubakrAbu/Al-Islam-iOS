@@ -5,24 +5,15 @@ struct Prayers2EntryView: View {
     @Environment(\.widgetFamily) var widgetFamily
 
     var entry: PrayersProvider.Entry
+    /// true = this layout is rendered inside a sky-gradient widget: everything recolors to white tiers
+    /// (accent-on-gradient was unreadable), past prayers dimmest, the current prayer brightest. Layout
+    /// is untouched.
+    var skyStyle: Bool = false
 
-    func getPrayerColor(for prayer: Prayer, in prayers: [Prayer]) -> Color {
-        guard let currentIndex = prayers.firstIndex(where: { $0.id == prayer.id }) else {
-            return .secondary
-        }
-
-        guard let currentPrayerIndex = prayers.firstIndex(where: { $0.nameTransliteration == entry.currentPrayer?.nameTransliteration }) else {
-            return .secondary
-        }
-
-        if currentIndex < currentPrayerIndex {
-            return .secondary
-        } else if currentIndex == currentPrayerIndex {
-            return entry.accentColor.color
-        } else {
-            return .primary
-        }
+    private var accent: Color {
+        skyStyle ? .white : entry.accentColor.color
     }
+
     
     var hijriDate: String {
         AdhanWidgetDateFormatting.hijriDate(for: entry, style: .full)
@@ -31,15 +22,15 @@ struct Prayers2EntryView: View {
     var body: some View {
         VStack {
             if entry.prayers.isEmpty {
-                PrayerWidgetEmptyState(tint: entry.accentColor.color)
+                PrayerWidgetEmptyState(tint: accent, skyStyle: skyStyle)
             } else {
                 if let currentPrayer = entry.currentPrayer, let nextPrayer = entry.nextPrayer {
                     HStack {
                         Image(systemName: currentPrayer.image)
-                            .foregroundColor(entry.accentColor.color)
+                            .foregroundColor(accent)
                         
                         Text(currentPrayer.displayName)
-                            .foregroundColor(entry.accentColor.color)
+                            .foregroundColor(accent)
                             .fontWeight(.bold)
                         
                         Spacer()
@@ -61,7 +52,7 @@ struct Prayers2EntryView: View {
                         current: currentPrayer,
                         next: nextPrayer,
                         entryDate: entry.date,
-                        tint: entry.accentColor.color
+                        tint: accent
                     )
                     .padding(.bottom, 2)
                 }
@@ -91,13 +82,13 @@ struct Prayers2EntryView: View {
                                     .monospacedDigit()
                                     .fontWeight(.bold)
                             }
-                            .foregroundColor(getPrayerColor(for: prayer, in: entry.prayers))
+                            .foregroundColor(prayerTierColor(for: prayer, in: entry.prayers, entry: entry, skyStyle: skyStyle))
                             .font(.caption)
                         }
                     }
                     
                     Divider()
-                        .background(entry.accentColor.color)
+                        .background(skyStyle ? Color.white.opacity(0.7) : entry.accentColor.color)
                         .frame(height: 65)
                         .padding(.horizontal, 4)
                     
@@ -123,7 +114,7 @@ struct Prayers2EntryView: View {
                                     .monospacedDigit()
                                     .fontWeight(.bold)
                             }
-                            .foregroundColor(getPrayerColor(for: prayer, in: entry.prayers))
+                            .foregroundColor(prayerTierColor(for: prayer, in: entry.prayers, entry: entry, skyStyle: skyStyle))
                             .font(.caption)
                         }
                     }
@@ -136,7 +127,7 @@ struct Prayers2EntryView: View {
                     if !entry.currentCity.isEmpty {
                         Image(systemName: "location.fill")
                             .font(.caption2)
-                            .foregroundColor(entry.accentColor.color)
+                            .foregroundColor(accent)
                             .padding(.horizontal, 3)
                         
                         Text(entry.currentCity)
@@ -169,5 +160,20 @@ struct Prayers2Widget: Widget {
         .supportedFamilies([.systemMedium])
         .configurationDisplayName("Prayer Split")
         .description("Today's prayer times in two columns, with the current prayer's live countdown")
+    }
+}
+
+/// The Prayer Split widget, unchanged, over the current prayer's sky gradient.
+struct Prayers2SkyWidget: Widget {
+    let kind: String = "Prayers2SkyWidget"
+
+    var body: some WidgetConfiguration {
+        StaticConfiguration(kind: kind, provider: PrayersProvider()) { entry in
+            Prayers2EntryView(entry: entry, skyStyle: true)
+                .modifier(PrayerSkyChrome(entry: entry))
+        }
+        .supportedFamilies([.systemMedium])
+        .configurationDisplayName("Prayer Split Sky")
+        .description("Today's prayer times in two columns, over the current prayer's sky gradient")
     }
 }

@@ -10,6 +10,9 @@ struct SplashScreen: View {
     @State private var popCenter = false
     @State private var popLeft = false
     @State private var popRight = false
+    /// One shimmer sweep across the Al-Islam card after the pop-in settles (the launch screen's
+    /// gloss, reused) - the range LaunchLogoCard expects is -220 ... 220.
+    @State private var splashShimmer: CGFloat = -220
 
     private var currentColorScheme: ColorScheme {
         settings.colorScheme ?? systemColorScheme
@@ -27,45 +30,67 @@ struct SplashScreen: View {
         NavigationView {
             GeometryReader { geo in
                 let s = LaunchScreenLayout.scale(for: geo.size)
-                VStack(spacing: 0) {
-                    ScrollView(showsIndicators: false) {
-                        VStack(alignment: .leading, spacing: 12) {
-                            Text("These are the Al-Islamic apps: Adhan, Quran, and everything in between. What more do you need?")
-                                .font(.title3)
-                                .foregroundColor(.primary)
-                                .multilineTextAlignment(.leading)
+                ZStack {
+                    splashBackdrop(scale: s)
 
-                            Text("All the apps are privacy-focused, ensuring that all data remains on your device. Enjoy an ad-free, subscription-free, and cost-free experience. Al-Quran and Al-Adhan are extensions, and Al-Islam does everything Al-Quran and Al-Adhan do combined, with additional functionalities.")
-                                .font(.body)
-                                .foregroundColor(.primary)
-                                .multilineTextAlignment(.leading)
+                    VStack(spacing: 0) {
+                        ScrollView(showsIndicators: false) {
+                            VStack(spacing: 20 * s) {
+                                VStack(spacing: 6 * s) {
+                                    Text("ٱلسَّلَامُ عَلَيْكُمْ")
+                                        .font(Font.arabic(settings.nonQuranArabicFontName, size: 38 * s))
+                                        .arabicFontDesign(custom: settings.islamUsesCustomArabicFace)
+                                        .foregroundColor(settings.accentColor.color)
 
-                            Text("Tap any app below to open it in the App Store.")
-                                .font(.subheadline)
-                                .foregroundColor(.secondary)
-                                .multilineTextAlignment(.leading)
+                                    Text("Assalamu Alaikum")
+                                        .font(.title.bold())
+                                        .foregroundColor(.primary)
+
+                                    Text("Peace be upon you - welcome to Al-Islam.")
+                                        .font(.subheadline)
+                                        .foregroundColor(.secondary)
+                                }
+                                .frame(maxWidth: .infinity)
+                                .multilineTextAlignment(.center)
+                                .padding(.top, 18 * s)
+
+                                VStack(alignment: .leading, spacing: 12 * s) {
+                                    splashFeatureRow(
+                                        icon: "lock.shield.fill",
+                                        title: "Private by design",
+                                        text: "Everything stays on your device - no accounts, no tracking, works offline."
+                                    )
+                                    splashFeatureRow(
+                                        icon: "heart.fill",
+                                        title: "Free forever",
+                                        text: "No ads, no fees, no subscriptions - offered as sadaqah jariyah."
+                                    )
+                                    splashFeatureRow(
+                                        icon: "square.grid.2x2.fill",
+                                        title: "One family of apps",
+                                        text: "Al-Islam does everything Al-Quran and Al-Adhan do combined. Tap any app below to see it on the App Store."
+                                    )
+                                }
+                                .padding(.horizontal, 22)
+                            }
                         }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.horizontal, 22)
-                        .padding(.top, 8)
+
+                        Spacer()
+
+                        appHeroStack(layoutScale: s)
+                            .padding(.bottom, 8)
+
+                        Spacer()
+
+                        actionButtons
+                            .padding(.horizontal, 20)
+                            .padding(.bottom, 28)
                     }
-
-                    Spacer()
-
-                    appHeroStack(layoutScale: s)
-                        .padding(.bottom, 8)
-
-                    Spacer()
-
-                    actionButtons
-                        .padding(.horizontal, 20)
-                        .padding(.bottom, 28)
                 }
                 .frame(width: geo.size.width, height: geo.size.height)
                 .animation(.easeInOut, value: settings.firstLaunch)
                 .transition(.opacity)
             }
-            .navigationTitle("Assalamu Alaikum")
             .navigationBarTitleDisplayMode(.inline)
             .onAppear(perform: runHeroPopAnimation)
         }
@@ -87,6 +112,11 @@ struct SplashScreen: View {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.16) {
             withAnimation(heroSpring) {
                 popRight = true
+            }
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.7) {
+            withAnimation(.easeInOut(duration: 1.1)) {
+                splashShimmer = 220
             }
         }
     }
@@ -181,9 +211,9 @@ struct SplashScreen: View {
                         title: "Al-Islam",
                         accentColor: settings.accentColor.color,
                         isDarkMode: isDarkMode,
-                        shimmerOffset: 0,
+                        shimmerOffset: splashShimmer,
                         layoutScale: s,
-                        showShimmer: false
+                        showShimmer: true
                     )
                 }
             }
@@ -195,6 +225,51 @@ struct SplashScreen: View {
             .accessibilityLabel("Al-Islam on the App Store")
         }
         .frame(height: stackHeight)
+    }
+
+    /// A quiet accent wash behind the greeting - the launch screen's glow language at whisper
+    /// volume, so the hero cards' aura below stays the loudest thing on screen.
+    private func splashBackdrop(scale s: CGFloat) -> some View {
+        VStack {
+            RadialGradient(
+                colors: [
+                    settings.accentColor.color.opacity(isDarkMode ? 0.22 : 0.14),
+                    .clear
+                ],
+                center: .top,
+                startRadius: 10 * s,
+                endRadius: 380 * s
+            )
+            .frame(height: 420 * s)
+
+            Spacer(minLength: 0)
+        }
+        .ignoresSafeArea()
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
+    }
+
+    private func splashFeatureRow(icon: String, title: String, text: String) -> some View {
+        HStack(alignment: .top, spacing: 14) {
+            Image(systemName: icon)
+                .font(.title3)
+                .foregroundColor(settings.accentColor.color)
+                .frame(width: 42, height: 42)
+                .conditionalGlassEffect()
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundColor(.primary)
+
+                Text(text)
+                    .font(.footnote)
+                    .foregroundColor(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            Spacer(minLength: 0)
+        }
     }
 
     private func bottomHeroAura(scale s: CGFloat) -> some View {
@@ -262,7 +337,7 @@ struct SplashScreen: View {
                     settings.firstLaunch = false
                 }
             } label: {
-                Text(openedAppStoreFromHero ? "Done" : "Skip for now")
+                Text(openedAppStoreFromHero ? "Done" : "Get Started")
                     .font(.headline)
                     .foregroundColor(.primary)
                     .frame(maxWidth: .infinity)
@@ -271,9 +346,9 @@ struct SplashScreen: View {
             .conditionalGlassEffect(
                 rectangle: true,
                 useColor: 0.38,
-                customTint: openedAppStoreFromHero ? AppIdentifiers.mainColor.color : .red
+                customTint: AppIdentifiers.mainColor.color
             )
-            .accessibilityLabel(openedAppStoreFromHero ? "Done" : "Skip for now")
+            .accessibilityLabel(openedAppStoreFromHero ? "Done" : "Get Started")
         }
     }
 

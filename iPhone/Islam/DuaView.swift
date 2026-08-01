@@ -86,9 +86,9 @@ struct DuaView: View {
     @State private var aiHits: [DuaItem] = []
     @State private var aiSearchTask: Task<Void, Never>?
 
-    private static let semanticCorpusID = "duas-en"
+    fileprivate static let semanticCorpusID = "duas-en"
     /// One flat list across the collections - the corpus rows, in a stable order.
-    private static let allDuaItems: [DuaItem] = collections.flatMap(\.items)
+    fileprivate static let allDuaItems: [DuaItem] = collections.flatMap(\.items)
 
     /// True when the live query is one the semantic engine can answer (English text, long enough).
     private var aiQueryEligible: Bool {
@@ -98,13 +98,17 @@ struct DuaView: View {
             && !trimmed.containsArabicScript
     }
 
-    private func prepareSemanticCorpus() {
-        guard SemanticSearchEngine.isSupported, !semanticEngine.isReady(Self.semanticCorpusID) else { return }
+    fileprivate static func prepareSemanticCorpus(_ engine: SemanticSearchEngine) {
+        guard SemanticSearchEngine.isSupported, !engine.isReady(semanticCorpusID) else { return }
         // The transliterated "title" plus the English text; the Arabic embeds to nothing anyway.
-        let texts = Self.allDuaItems.map { "\($0.transliteration) \($0.translation)" }
+        let texts = allDuaItems.map { "\($0.transliteration) \($0.translation)" }
         // Keyed by the dua's own id, so index -> dua resolution survives any reorder of the source.
-        let keys = Self.allDuaItems.map(\.id)
-        semanticEngine.prepare(corpusID: Self.semanticCorpusID, version: "v1-\(texts.count)", texts: texts, keys: keys)
+        let keys = allDuaItems.map(\.id)
+        engine.prepare(corpusID: semanticCorpusID, version: "v1-\(texts.count)", texts: texts, keys: keys)
+    }
+
+    private func prepareSemanticCorpus() {
+        Self.prepareSemanticCorpus(semanticEngine)
     }
 
     private func runAISearch(query: String) {
@@ -561,6 +565,42 @@ private struct DuaCollectionView: View {
 
     let collection: DuaCollection
 
+    #if os(iOS)
+    // The root Dua screen's AI search, scoped to this collection: same "duas-en" corpus (one vector
+    // cache), hits filtered to the collection's own items.
+    @ObservedObject private var semanticEngine = SemanticSearchEngine.shared
+    @State private var aiHits: [DuaItem] = []
+    @State private var aiSearchTask: Task<Void, Never>?
+
+    private func runAISearch(query: String) {
+        aiSearchTask?.cancel()
+        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard SemanticSearchEngine.isSupported, trimmed.count >= 3, !trimmed.containsArabicScript else {
+            if !aiHits.isEmpty { aiHits = [] }
+            return
+        }
+        DuaView.prepareSemanticCorpus(semanticEngine)
+
+        aiSearchTask = Task {
+            try? await Task.sleep(nanoseconds: 300_000_000)
+            guard !Task.isCancelled else { return }
+            let results = await semanticEngine.search(corpusID: DuaView.semanticCorpusID, query: trimmed, limit: 24)
+            guard !Task.isCancelled else { return }
+            let keys = await MainActor.run { semanticEngine.corpus(DuaView.semanticCorpusID)?.itemKeys }
+            await MainActor.run {
+                guard trimmed == searchText.trimmingCharacters(in: .whitespacesAndNewlines) else { return }
+                let byID = Dictionary(uniqueKeysWithValues: collection.items.map { ($0.id, $0) })
+                aiHits = results.compactMap { result -> DuaItem? in
+                    if let keys, keys.indices.contains(result.index) { return byID[keys[result.index]] }
+                    guard DuaView.allDuaItems.indices.contains(result.index) else { return nil }
+                    return byID[DuaView.allDuaItems[result.index].id]
+                }
+                .prefix(8).map { $0 }
+            }
+        }
+    }
+    #endif
+
     var body: some View {
         // Fold the query and filter ONCE per body pass: matching used to be re-decided per item at
         // two sites (the rows and the header's count/listen pills), re-folding the query inside
@@ -575,10 +615,26 @@ private struct DuaCollectionView: View {
         return List {
             Group {
             introductionSection
+            #if os(iOS)
+            if !query.isEmpty, !aiHits.isEmpty {
+                Section(header: SectionPillHeader(title: "AI MATCHES", count: aiHits.count, icon: "sparkles", accentTitle: true)) {
+                    duaRows(aiHits)
+                }
+            }
+            #endif
             duaRows(shown)
             }
             .themedListRowBackground()
         }
+        #if os(iOS)
+        .onChange(of: searchText) { text in
+            runAISearch(query: text)
+        }
+        .onChange(of: semanticEngine.readyCorpora) { ready in
+            guard ready.contains(DuaView.semanticCorpusID), !searchText.isEmpty else { return }
+            runAISearch(query: searchText)
+        }
+        #endif
         #if os(iOS)
         // Apple Music-style: the bottom bar minimizes while scrolling down, restores on scroll-up.
         .collapseBarsOnScroll($barsCollapsed)

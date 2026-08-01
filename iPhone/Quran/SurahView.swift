@@ -160,6 +160,55 @@ struct SurahView: View {
     @State private var qiraahCacheSurahID: Int? = nil
     @State private var scrollDown: Int? = nil
     @State private var pendingScrollAfterSearchClear: Int? = nil
+
+    #if os(iOS)
+    // In-surah AI search: the same "quran-en" corpus the Quran tab uses (one vector cache), with
+    // hits filtered to THIS surah - "patience" finds the sabr ayahs of the surah being read even
+    // when the exact word never appears in the translation.
+    @ObservedObject private var semanticEngine = SemanticSearchEngine.shared
+    @State private var surahAIHits: [(ayah: Int, score: Float)] = []
+    @State private var surahAISearchTask: Task<Void, Never>?
+
+    /// English text queries only - references ("5:3"), page/juz lookups, Arabic, and the boolean
+    /// grammar (`=`, `#`) all belong to the keyword pipeline.
+    private var surahAIQueryEligible: Bool {
+        let trimmed = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        return SemanticSearchEngine.isSupported
+            && trimmed.count >= 3
+            && !trimmed.containsArabicLetters
+            && trimmed.rangeOfCharacter(from: .decimalDigits) == nil
+            && !trimmed.contains("=") && !trimmed.contains("#")
+    }
+
+    private func runSurahAISearch(query: String) {
+        surahAISearchTask?.cancel()
+        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard surahAIQueryEligible else {
+            if !surahAIHits.isEmpty { surahAIHits = [] }
+            return
+        }
+        QuranSemanticCorpus.prepare(quranData: quranData, engine: semanticEngine)
+
+        surahAISearchTask = Task {
+            try? await Task.sleep(nanoseconds: 250_000_000)
+            guard !Task.isCancelled else { return }
+            // Over-fetch from the whole-Quran corpus, then keep this surah's rows: filtering after
+            // ranking beats a per-surah corpus (114 vector caches for the same text).
+            let results = await semanticEngine.search(corpusID: QuranSemanticCorpus.id, query: trimmed, limit: 64)
+            guard !Task.isCancelled else { return }
+            await MainActor.run {
+                guard trimmed == searchText.trimmingCharacters(in: .whitespacesAndNewlines) else { return }
+                surahAIHits = results.compactMap { result in
+                    guard QuranSemanticCorpus.ayahMap.indices.contains(result.index) else { return nil }
+                    let ref = QuranSemanticCorpus.ayahMap[result.index]
+                    guard ref.surah == surah.id else { return nil }
+                    return (ayah: ref.ayah, score: result.score)
+                }
+                .prefix(8).map { $0 }
+            }
+        }
+    }
+    #endif
     @State private var didScrollDown = false
     /// The search term that travelled with this navigation (a tapped text-search hit): the target ayah
     /// renders its matched snippet in ACCENT - no background tint - until the reader touches it.
@@ -968,6 +1017,39 @@ struct SurahView: View {
         return Self.headerRowAnchorID
     }
 
+    #if os(iOS)
+    /// One AI hit: the ayah's reference pill and a two-line translation snippet. Tapping lands on
+    /// the ayah exactly like a keyword result: highlight it, clear the search, scroll to it.
+    private func surahAIHitRow(_ ayah: Ayah) -> some View {
+        Button {
+            settings.hapticFeedback()
+            highlightedAyah = HighlightedAyahRef(surahID: surah.id, ayahID: ayah.id)
+            pendingScrollAfterSearchClear = ayah.id
+            withAnimation {
+                searchText = ""
+                self.endEditing()
+            }
+        } label: {
+            HStack(alignment: .top, spacing: 10) {
+                Text("\(surah.id):\(ayah.id)")
+                    .font(.caption.weight(.semibold).monospacedDigit())
+                    .foregroundColor(settings.accentColor.color)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .conditionalGlassEffect()
+
+                Text(settings.showEnglishMustafa && !settings.showEnglishSaheeh ? ayah.textEnglishMustafa : ayah.textEnglishSaheeh)
+                    .font(.footnote)
+                    .foregroundColor(.primary)
+                    .lineLimit(2)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+    #endif
+
     /// Scrolls the reading list to its very top (same retry discipline as `scrollToAyah`).
     private func scrollToListTop(proxy: ScrollViewProxy) {
         let targetID = surahListTopTargetID
@@ -1761,6 +1843,20 @@ struct SurahView: View {
                 }
                 .id(Self.headerRowAnchorID)
 
+                #if os(iOS)
+                if !searchText.isEmpty, !isDividerKeywordSearch, !surahAIHits.isEmpty {
+                    Section {
+                        ForEach(surahAIHits, id: \.ayah) { hit in
+                            if let ayah = ayahsForQiraah.first(where: { $0.id == hit.ayah }) {
+                                surahAIHitRow(ayah)
+                            }
+                        }
+                    } header: {
+                        SectionPillHeader(title: "AI MATCHES", count: surahAIHits.count, icon: "sparkles", accentTitle: true)
+                    }
+                }
+                #endif
+
                 if isDividerKeywordSearch {
                     ForEach(Array(keywordDividerModels.enumerated()), id: \.offset) { _, dividerModel in
                         Section {
@@ -1949,6 +2045,13 @@ struct SurahView: View {
                 DispatchQueue.main.async {
                     withAnimation { proxy.scrollTo(target, anchor: .top) }
                 }
+            }
+            .onChange(of: searchText) { newValue in
+                runSurahAISearch(query: newValue)
+            }
+            .onChange(of: semanticEngine.readyCorpora) { ready in
+                guard ready.contains(QuranSemanticCorpus.id), !searchText.isEmpty else { return }
+                runSurahAISearch(query: searchText)
             }
             #endif
             .onAppear {
@@ -2986,6 +3089,7 @@ struct SurahView: View {
 
         settings.lastReadSurah = surah.id
         settings.lastReadAyah = targetAyah
+        settings.stampLastRead()
         settings.refreshQuranWidgets()
     }
 

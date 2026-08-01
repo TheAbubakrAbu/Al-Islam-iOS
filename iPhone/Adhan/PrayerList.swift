@@ -26,6 +26,7 @@ struct PrayerList: View {
     // via the footer button rather than something every date change re-imposes.
     @State private var compareToday = false
     @State private var showOptionalPrayerToggles = false
+    @State private var showRakaahGuide = false
 
     // New storage key (V2) so every existing user is reset to the new Tiles default, regardless of what
     // they had saved under the old "prayerDisplayMode" key.
@@ -180,6 +181,112 @@ struct PrayerList: View {
         dateSelectionFooter
     }
 
+    // MARK: - Rakaah guide
+
+    /// One row of the rakaah guide: a mandatory prayer, its fard count, and its sunnah rakahs
+    /// split by emphasis - primary (mu'akkadah) vs secondary (ghayr mu'akkadah).
+    private struct RakaahGuideRow: Identifiable {
+        let name: String
+        let arabic: String
+        let fard: String
+        let primary: [String]
+        let secondary: [String]
+
+        var id: String { name }
+    }
+
+    private static let rakaahGuideRows: [RakaahGuideRow] = [
+        .init(name: "Fajr",    arabic: "الفَجر",   fard: "2", primary: ["2 before"],           secondary: []),
+        .init(name: "Dhuhr",   arabic: "الظُهر",   fard: "4", primary: ["4 before", "2 after"], secondary: []),
+        .init(name: "Jumuah",  arabic: "الجُمُعَة",  fard: "2", primary: ["2 after"],            secondary: []),
+        .init(name: "Asr",     arabic: "العَصر",   fard: "4", primary: [],                     secondary: ["4 before"]),
+        .init(name: "Maghrib", arabic: "المَغرِب",  fard: "3", primary: ["2 after"],            secondary: ["2 before"]),
+        .init(name: "Isha",    arabic: "العِشَاء",  fard: "4", primary: ["2 after"],            secondary: ["2 before"]),
+    ]
+
+    /// The expandable rakaah guide content: every mandatory prayer with its fard count and both
+    /// kinds of sunnah. Lives inside the optional-prayers footer so its button sits directly
+    /// under "Show Optional Prayer Times" with nothing between them.
+    @ViewBuilder
+    private var rakaahGuideContent: some View {
+        VStack(spacing: 0) {
+            rakaahGuideHeaderRow
+
+            ForEach(Self.rakaahGuideRows) { row in
+                Divider()
+                rakaahGuideRow(row)
+            }
+        }
+
+        VStack(alignment: .leading, spacing: 4) {
+            Text("Primary (Sunnah Mu'akkadah): prayed consistently by the Prophet ﷺ. Secondary (Ghayr Mu'akkadah): prayed at times; rewarded, with lesser emphasis.")
+            Text("Jumuah replaces Dhuhr on Fridays; pray its 2 sunnah after as 4 (2 then 2) at the masjid, or 2 at home.")
+            Text("While traveling, the sunnah prayers are left except the 2 before Fajr.")
+        }
+        .font(.caption2)
+        .foregroundColor(.secondary)
+        .fixedSize(horizontal: false, vertical: true)
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private var rakaahGuideHeaderRow: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 8) {
+            Text("Prayer")
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+            Text("Fard")
+                .frame(width: 34)
+
+            Text("Primary")
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+            Text("Secondary")
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .font(.caption2.weight(.semibold))
+        .foregroundColor(settings.accentColor.accent2)
+        .padding(.vertical, 6)
+    }
+
+    private func rakaahGuideRow(_ row: RakaahGuideRow) -> some View {
+        HStack(alignment: .center, spacing: 8) {
+            VStack(alignment: .leading, spacing: 1) {
+                Text(row.name)
+                    .font(.caption.weight(.semibold))
+
+                Text(row.arabic)
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            Text(row.fard)
+                .font(.caption.monospacedDigit())
+                .frame(width: 34)
+
+            rakaahGuideCell(row.primary)
+            rakaahGuideCell(row.secondary)
+        }
+        .padding(.vertical, 6)
+        .lineLimit(1)
+        .minimumScaleFactor(0.7)
+    }
+
+    private func rakaahGuideCell(_ lines: [String]) -> some View {
+        VStack(alignment: .leading, spacing: 1) {
+            if lines.isEmpty {
+                Text("—")
+                    .foregroundColor(.secondary.opacity(0.5))
+            } else {
+                ForEach(lines, id: \.self) { line in
+                    Text(line)
+                }
+            }
+        }
+        .font(.caption)
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
     /// Lets the optional/extra prayers (Duha, Islamic Midnight, Last Third) be shown or hidden right from
     /// the prayer page, so toggling them no longer means a trip into Settings. These bind to the same
     /// persisted settings used elsewhere - this is just a more discoverable entry point.
@@ -209,6 +316,14 @@ struct PrayerList: View {
                     .font(.caption2)
                     .foregroundColor(.secondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
+            }
+
+            footerActionButton(showRakaahGuide ? "Hide Rakaah Guide" : "Show Rakaah Guide") {
+                showRakaahGuide.toggle()
+            }
+
+            if showRakaahGuide {
+                rakaahGuideContent
             }
 
             Divider()
@@ -475,6 +590,10 @@ struct PrayerList: View {
                     useColor: isCurrent ? 0.25 : nil,
                     customTint: isCurrent ? settings.accentColor.accent2 : nil
                 )
+                // The soft accent glow lifts the current prayer's tile off the board - the tint said
+                // "different", the glow says "now".
+                .shadow(color: isCurrent ? settings.accentColor.accent2.opacity(0.35) : .clear,
+                        radius: isCurrent ? 8 : 0, x: 0, y: 2)
                 .contentShape(Rectangle())
                 .onTapGesture {
                     togglePrayerExpansion(for: prayer)
@@ -949,10 +1068,15 @@ private struct PrayerDetailBlock: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            Text(isOptionalPrayer ? prayer.nameEnglish : "\(prayer.nameEnglish) - \(prayer.nameArabic)")
-                .font(.title3)
-                .foregroundColor(settings.accentColor.accent2)
-                .lineLimit(1)
+            HStack(spacing: 10) {
+                AccentIconChip(systemImage: prayer.image, tint: settings.accentColor.accent2, size: 26)
+
+                Text(isOptionalPrayer ? prayer.nameEnglish : "\(prayer.nameEnglish) - \(prayer.nameArabic)")
+                    .font(.title3)
+                    .foregroundColor(settings.accentColor.accent2)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+            }
 
             // The window this time slot spans - from this prayer's own start to the next one, so it reads
             // the same whether the row is expanded before, during or after the prayer.
@@ -1013,6 +1137,15 @@ private struct PrayerDetailBlock: View {
                         .foregroundColor(.secondary)
                         .font(.footnote)
                 }
+            }
+
+            // The sunnah caveat rides on the Prayer value (today only Jumuah's masjid/home split), so
+            // this block needs no per-prayer name compare and new caveats need no view change.
+            if let sunnahNote = prayer.sunnahNote {
+                Text(sunnahNote)
+                    .foregroundColor(.secondary)
+                    .font(.caption2)
+                    .fixedSize(horizontal: false, vertical: true)
             }
 
             // The "other" Asr: when the user follows the Standard (majority) opinion, show the later Hanafi

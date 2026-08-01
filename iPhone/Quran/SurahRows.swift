@@ -60,6 +60,12 @@ struct SurahRow: View, Equatable {
     // that reads state its `==` ignores renders stale when that state changes.
     let sortModeKey: String
     let displayQiraahKey: String
+    /// This surah holds the last-read position - its number pill gets a book badge
+    /// (the favorite grammar, with a book instead of a star) so "continue here" reads at a glance.
+    let isLastRead: Bool
+    /// The listening twin: this surah holds the last-listened full-surah playback position, so the
+    /// pill gets a speaker badge. Star > book > speaker when a surah qualifies for more than one.
+    let isLastListened: Bool
 
     init(
         surah: Surah,
@@ -89,6 +95,8 @@ struct SurahRow: View, Equatable {
         self.grid = grid
         self.sortModeKey = Settings.shared.quranSortMode.rawValue
         self.displayQiraahKey = Settings.shared.displayQiraahForArabic ?? ""
+        self.isLastRead = Settings.shared.saveLastReadAyah && Settings.shared.lastReadSurah == surah.id
+        self.isLastListened = Settings.shared.lastListenedSurah?.surahNumber == surah.id
     }
 
     private var revelationEmoji: String {
@@ -201,10 +209,22 @@ struct SurahRow: View, Equatable {
                     settings.hapticFeedback()
                     settings.toggleSurahFavorite(surah: surah.id)
                 }
-                .accessibilityLabel("Surah \(surah.id)")
+                .accessibilityLabel("Surah \(surah.id)\(isLastRead ? ", last read" : isLastListened ? ", last listened" : "")")
 
             if favoriteState {
                 Image(systemName: "star.fill")
+                    .font(.caption2)
+                    .foregroundStyle(settings.accentColor.color)
+                    .padding(4)
+                    .offset(x: 8, y: -6)
+            } else if isLastRead {
+                Image(systemName: "book.fill")
+                    .font(.caption2)
+                    .foregroundStyle(settings.accentColor.color)
+                    .padding(4)
+                    .offset(x: 8, y: -6)
+            } else if isLastListened {
+                Image(systemName: "speaker.wave.2.fill")
                     .font(.caption2)
                     .foregroundStyle(settings.accentColor.color)
                     .padding(4)
@@ -462,7 +482,9 @@ struct SurahRow: View, Equatable {
         lhs.searchQuery == rhs.searchQuery &&
         lhs.grid == rhs.grid &&
         lhs.sortModeKey == rhs.sortModeKey &&
-        lhs.displayQiraahKey == rhs.displayQiraahKey
+        lhs.displayQiraahKey == rhs.displayQiraahKey &&
+        lhs.isLastRead == rhs.isLastRead &&
+        lhs.isLastListened == rhs.isLastListened
     }
 }
 

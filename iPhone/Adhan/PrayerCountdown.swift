@@ -586,6 +586,13 @@ private struct PrayerSunnahInfoView: View {
                     .font(.caption2)
                     .foregroundColor(.secondary)
             }
+
+            if let sunnahNote = prayer.sunnahNote {
+                Text(sunnahNote)
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
         }
         .frame(maxWidth: .infinity, alignment: alignment)
     }

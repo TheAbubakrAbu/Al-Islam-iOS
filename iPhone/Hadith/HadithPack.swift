@@ -275,12 +275,12 @@ final class HadithPack: @unchecked Sendable {
 
     // MARK: Opening
 
-    /// The pack file for a slug, wherever Xcode put it in the bundle (flat, or under the JSONs
+    /// The pack file for a slug, wherever Xcode put it in the bundle (flat, or under the Data
     /// group's folder). Probed once per slug by the store, never from a render path.
     static func bundledURL(_ slug: String) -> URL? {
         Bundle.main.url(forResource: slug, withExtension: "hpk")
             ?? Bundle.main.url(forResource: slug, withExtension: "hpk", subdirectory: "Hadith")
-            ?? Bundle.main.url(forResource: slug, withExtension: "hpk", subdirectory: "JSONs/Hadith")
+            ?? Bundle.main.url(forResource: slug, withExtension: "hpk", subdirectory: "Data/Hadith")
     }
 
     init?(slug: String, url: URL) {

@@ -2,6 +2,9 @@ import SwiftUI
 import Combine
 import WidgetKit
 
+// [Al-Quran] This entire file is the Al-Quran domain - copy it into that companion app whole,
+// and delete it from companions that do not ship this domain.
+
 extension Settings {
     enum QuranSortMode: String, CaseIterable, Identifiable {
         case surah

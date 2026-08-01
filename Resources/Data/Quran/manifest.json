@@ -1,0 +1,35 @@
+{
+  "blockTargetBytes" : 262144,
+  "formatVersion" : 1,
+  "packs" : [
+    {
+      "blocks" : 13,
+      "bytes" : 1041592,
+      "name" : "quran",
+      "records" : 114,
+      "sha256" : "441ba1695e6edea1c4e65d1ab5a91443efcb8a450d0c72adc42b9f1d20e942ba",
+      "sourceBytes" : 4645503,
+      "units" : 6236
+    },
+    {
+      "blocks" : 7,
+      "bytes" : 1398228,
+      "name" : "qiraat",
+      "records" : 7,
+      "sha256" : "4b090f9e6c7ef3c24b15dec984e1f91f12d9af9dc2ac464648ca5fab9b156c13",
+      "sourceBytes" : 10369373,
+      "units" : 43538
+    },
+    {
+      "blocks" : 114,
+      "bytes" : 678940,
+      "name" : "surahinfos",
+      "records" : 114,
+      "sha256" : "9816a3f24098df4696dc602f6b568380cf5b986d0976b8fceb7d09ad56f04acb",
+      "sourceBytes" : 1819647,
+      "units" : 342
+    }
+  ],
+  "textCodec" : "lzma",
+  "totalPackBytes" : 3118760
+}

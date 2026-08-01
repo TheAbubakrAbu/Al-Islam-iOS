@@ -23,23 +23,6 @@ struct PrayersEntryView: View {
         return prayer.nameTransliteration == "Shurooq" ? .primary : entry.accentColor.color
     }
 
-    func getPrayerColor(for prayer: Prayer, in prayers: [Prayer]) -> Color {
-        guard let currentIndex = prayers.firstIndex(where: { $0.id == prayer.id }) else {
-            return skyStyle ? .white.opacity(0.45) : .secondary
-        }
-
-        guard let currentPrayerIndex = prayers.firstIndex(where: { $0.nameTransliteration == entry.currentPrayer?.nameTransliteration }) else {
-            return skyStyle ? .white.opacity(0.45) : .secondary
-        }
-
-        if currentIndex < currentPrayerIndex {
-            return skyStyle ? .white.opacity(0.45) : .secondary
-        } else if currentIndex == currentPrayerIndex {
-            return accent
-        } else {
-            return skyStyle ? .white.opacity(0.8) : .primary
-        }
-    }
     
     var hijriDate: String {
         AdhanWidgetDateFormatting.hijriDate(for: entry, style: .full)
@@ -48,13 +31,7 @@ struct PrayersEntryView: View {
     var body: some View {
         VStack {
             if entry.prayers.isEmpty {
-                if skyStyle {
-                    Text("Open app to get prayer times")
-                        .font(.caption)
-                        .foregroundColor(.white.opacity(0.9))
-                } else {
-                    PrayerWidgetEmptyState(tint: accent)
-                }
+                PrayerWidgetEmptyState(tint: accent, skyStyle: skyStyle)
             } else {
                 if widgetFamily == .systemLarge {
                     Text(hijriDate)
@@ -83,18 +60,18 @@ struct PrayersEntryView: View {
                                 HStack {
                                     Image(systemName: prayer.image)
                                         .font(.subheadline)
-                                        .foregroundColor(getPrayerColor(for: prayer, in: entry.prayers))
+                                        .foregroundColor(prayerTierColor(for: prayer, in: entry.prayers, entry: entry, skyStyle: skyStyle))
                                         .padding(.trailing, -5)
                                     
                                     Text(prayer.displayName)
                                         .font(.subheadline)
                                         .fontWeight(.bold)
-                                        .foregroundColor(getPrayerColor(for: prayer, in: entry.prayers))
+                                        .foregroundColor(prayerTierColor(for: prayer, in: entry.prayers, entry: entry, skyStyle: skyStyle))
                                 }
                                 
                                 Text(prayer.time, style: .time)
                                     .font(.subheadline.monospacedDigit())
-                                    .foregroundColor(getPrayerColor(for: prayer, in: entry.prayers))
+                                    .foregroundColor(prayerTierColor(for: prayer, in: entry.prayers, entry: entry, skyStyle: skyStyle))
                             }
                         }
                     }
@@ -109,18 +86,18 @@ struct PrayersEntryView: View {
                                 HStack {
                                     Image(systemName: prayer.image)
                                         .font(.subheadline)
-                                        .foregroundColor(getPrayerColor(for: prayer, in: entry.prayers))
+                                        .foregroundColor(prayerTierColor(for: prayer, in: entry.prayers, entry: entry, skyStyle: skyStyle))
                                         .padding(.trailing, -5)
                                     
                                     Text(prayer.displayName)
                                         .font(.subheadline)
                                         .fontWeight(.bold)
-                                        .foregroundColor(getPrayerColor(for: prayer, in: entry.prayers))
+                                        .foregroundColor(prayerTierColor(for: prayer, in: entry.prayers, entry: entry, skyStyle: skyStyle))
                                 }
                                 
                                 Text(prayer.time, style: .time)
                                     .font(.subheadline.monospacedDigit())
-                                    .foregroundColor(getPrayerColor(for: prayer, in: entry.prayers))
+                                    .foregroundColor(prayerTierColor(for: prayer, in: entry.prayers, entry: entry, skyStyle: skyStyle))
                             }
                         }
                     }

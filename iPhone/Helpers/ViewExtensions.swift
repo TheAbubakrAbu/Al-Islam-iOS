@@ -281,13 +281,45 @@ struct ConditionalListStyle: ViewModifier {
         let base = settings.defaultView ? AnyView(content) : AnyView(content.listStyle(.plain))
 
         if #available(iOS 16.0, *) {
+            // Always hidden (not just for custom themes): `resolvedListBackground` reproduces every
+            // theme's system color exactly, and hiding the system layer is what lets the accent wash
+            // below actually show through. Still one structurally-constant chain - values only.
             base
-                .scrollContentBackground(settings.hasCustomThemeColors ? .hidden : .automatic)
-                .background(resolvedListBackground.ignoresSafeArea())
+                .scrollContentBackground(.hidden)
+                .background(washedListBackground)
         } else {
             base
-                .background(resolvedListBackground.ignoresSafeArea())
+                .background(washedListBackground)
         }
+    }
+
+    /// The list background plus the splash screen's accent wash: a quiet radial glow of the user's
+    /// accent bleeding down from the top of every list, gone by mid-screen. Zeroed for the Sepia/Gray
+    /// reading themes - their whole point is calm paper, and an accent glow would pollute it. (An
+    /// opacity of 0, not a branch: the view tree must stay structurally constant or theme flips
+    /// recreate the List and reset its scroll position.)
+    private var washedListBackground: some View {
+        ZStack(alignment: .top) {
+            resolvedListBackground
+
+            VStack(spacing: 0) {
+                RadialGradient(
+                    colors: [
+                        settings.accentColor.color.opacity(
+                            settings.hasCustomThemeColors ? 0 : (currentColorScheme == .dark ? 0.16 : 0.10)
+                        ),
+                        .clear
+                    ],
+                    center: .top,
+                    startRadius: 8,
+                    endRadius: 380
+                )
+                .frame(height: 420)
+
+                Spacer(minLength: 0)
+            }
+        }
+        .ignoresSafeArea()
     }
 
     private var resolvedListBackground: Color {
@@ -432,6 +464,35 @@ struct CountPill: View {
 /// the right an optional shuffle button, the count pill, and an optional collapse chevron. Pass
 /// `isExpanded` to make the section collapsible (the same chevron.circle control Favorite Surahs and
 /// Bookmarked Ayahs use) and `onShuffle` for sections where jumping to a random item makes sense.
+/// A small accent-gradient icon chip - the iOS Settings app's row-icon grammar, tinted the app's
+/// way. Shared by the Settings hub, settings search results, and the Islam tab's resource rows.
+struct AccentIconChip: View {
+    @ObservedObject private var settings = Settings.shared
+
+    let systemImage: String
+    var tint: Color? = nil
+    var size: CGFloat = 29
+
+    var body: some View {
+        let tint = tint ?? settings.accentColor.color
+        Image(systemName: systemImage)
+            // Scales with the chip (~footnote at the default 29pt), so mini chips stay balanced.
+            .font(.system(size: size * 0.45, weight: .semibold))
+            .foregroundColor(.white)
+            .frame(width: size, height: size)
+            .background(
+                RoundedRectangle(cornerRadius: size * 0.28, style: .continuous)
+                    .fill(
+                        LinearGradient(
+                            colors: [tint.opacity(0.95), tint.opacity(0.65)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+            )
+    }
+}
+
 struct SectionPillHeader: View {
     @ObservedObject private var settings = Settings.shared
 

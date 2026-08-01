@@ -6,6 +6,9 @@ import UserNotifications
 import WidgetKit
 import WatchConnectivity
 
+// [Al-Adhan] This entire file is the Al-Adhan domain - copy it into that companion app whole,
+// and delete it from companions that do not ship this domain.
+
 struct AdhanSoundOption: Identifiable, Equatable {
     let id: String
     let title: String
@@ -127,6 +130,31 @@ extension Settings {
         let resource = adhanSoundResource(for: selection, variant: length.suffix)
             ?? adhanSoundResource(for: selection, variant: Self.adhanNotificationClipSuffix)
         return resource.map { "\($0).caf" }
+    }
+
+    // MARK: - Alert tone
+
+    /// The tone for notifications that are TELLING rather than CALLING: a pre-alert ("Dhuhr in 15
+    /// minutes"), one of the non-obligatory times (Shurooq, Duhaa, Islamic Midnight, Last Third), or a
+    /// prayer whose adhan the user has switched off.
+    ///
+    /// All of those used to fall through to `UNNotificationSound.default` — the system tri-tone, which
+    /// is indistinguishable from every other app's alert, so a reader had no way to know a notification
+    /// came from the prayer app at all. That was the whole of the complaint, and it was never a missing
+    /// recording: `echo` has been bundled the entire time, described in `supportedAdhanSounds` as "a
+    /// 3.6-second chime, not a call to prayer — for being told without being called". Nothing consulted
+    /// it for these notifications because the guards returned `.default` first.
+    ///
+    /// Always the `-short` cut. A pre-alert that plays 30 seconds of adhan and is then followed by the
+    /// real adhan 15 minutes later is worse than the tri-tone, not better.
+    static let defaultAlertToneID = "echo"
+
+    /// Filename of the alert tone, for `UNNotificationSound`. Nil means "use the system sound", either
+    /// because the user chose Default or because the clip is missing from the bundle. Same resolver
+    /// as the adhan (short cut, -30 fallback) - only the Default escape differs.
+    func alertToneSoundFilename(for selection: String) -> String? {
+        guard selection != "default" else { return nil }
+        return adhanNotificationSoundFilename(for: selection, length: .short)
     }
 
     /// Repairs a selection stored by an older build, or pushed over by a Watch still running one: ids used
@@ -703,6 +731,11 @@ extension Settings {
     /// backed-off retries is what keeps a real city label from prematurely degrading to raw coordinates.
     @MainActor
     func updateCity(latitude: Double, longitude: Double, attempt: Int = 0, maxAttempts: Int = 5) async {
+        // App processes only: a widget/complication with a coordinate-placeholder city must not run
+        // CLGeocoder inside its short-lived extension process on every timeline refresh - the app
+        // resolves the city and republishes it via the app group. Owned here, not at the call sites,
+        // so all six of them inherit the rule (mirrors ensureNetworkMonitorStarted's guard).
+        guard Self.isAppProcess else { return }
         Self.ensureNetworkMonitorStarted()
 
         let coord = CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
@@ -756,8 +789,10 @@ extension Settings {
                 withAnimation {
                     currentLocation = Location(city: newCity, latitude: latitude, longitude: longitude)
                     currentCountryCode = detectedCountryCode
-                    WidgetCenter.shared.reloadAllTimelines()
                 }
+                // `reloadWidgets` owns the "never from an extension" guard and the coalescing; a raw
+                // WidgetKit call had no business inside a withAnimation block anyway.
+                reloadWidgets(deferred: true)
             }
 
             Self.cachedPlacemark = (coord, newCity, detectedCountryCode)
@@ -1158,13 +1193,15 @@ extension Settings {
         let ar, tr, en, img, rakah, sunnahB, sunnahA: String
     }
 
+    // Sunnah columns carry their emphasis: "primary" = mu'akkadah (the Prophet ﷺ prayed it
+    // consistently), "secondary" = ghayr mu'akkadah. Mirrors the Rakaah Guide in PrayerList.
     private static let prayerProtos: [String: Proto] = [
-        "Fajr":      .init(ar:"الفَجر",  tr:"Fajr",   en:"Dawn",     img:"sun.horizon",       rakah:"2", sunnahB:"2", sunnahA:"0"),
+        "Fajr":      .init(ar:"الفَجر",  tr:"Fajr",   en:"Dawn",     img:"sun.horizon",       rakah:"2", sunnahB:"2 (primary)", sunnahA:"0"),
         "Sunrise":   .init(ar:"الشُرُوق", tr:"Shurooq",en:"Sunrise",  img:"sunrise",  rakah:"0", sunnahB:"0", sunnahA:"0"),
-        "Dhuhr":     .init(ar:"الظُهر",  tr:"Dhuhr",  en:"Noon",     img:"sun.max",       rakah:"4", sunnahB:"2 and 2", sunnahA:"2"),
-        "Asr":       .init(ar:"العَصر",  tr:"Asr",    en:"Afternoon",img:"sun.min",       rakah:"4", sunnahB:"0", sunnahA:"0"),
-        "Maghrib":   .init(ar:"المَغرِب",tr:"Maghrib",en:"Sunset",   img:"sunset",        rakah:"3", sunnahB:"0", sunnahA:"2"),
-        "Isha":      .init(ar:"العِشَاء", tr:"Isha",   en:"Night",    img:"moon",          rakah:"4", sunnahB:"0", sunnahA:"2"),
+        "Dhuhr":     .init(ar:"الظُهر",  tr:"Dhuhr",  en:"Noon",     img:"sun.max",       rakah:"4", sunnahB:"4 (primary)", sunnahA:"2 (primary)"),
+        "Asr":       .init(ar:"العَصر",  tr:"Asr",    en:"Afternoon",img:"sun.min",       rakah:"4", sunnahB:"4 (secondary)", sunnahA:"0"),
+        "Maghrib":   .init(ar:"المَغرِب",tr:"Maghrib",en:"Sunset",   img:"sunset",        rakah:"3", sunnahB:"2 (secondary)", sunnahA:"2 (primary)"),
+        "Isha":      .init(ar:"العِشَاء", tr:"Isha",   en:"Night",    img:"moon",          rakah:"4", sunnahB:"2 (secondary)", sunnahA:"2 (primary)"),
         // grouped (travel) variants
         "Dhuhr/Asr":    .init(ar:"الظُهر وَالعَصر", tr:"Dhuhr/Asr",   en:"Daytime",   img:"sun.max", rakah:"2 and 2", sunnahB:"0", sunnahA:"0"),
         "Maghrib/Isha": .init(ar:"المَغرِب وَالعِشَاء", tr:"Maghrib/Isha", en:"Nighttime", img:"sunset", rakah:"3 and 2",sunnahB:"0", sunnahA:"0")
@@ -1319,7 +1356,8 @@ extension Settings {
                        image: "sun.max.fill",
                        rakah: "2",
                        sunnahBefore: "0",
-                       sunnahAfter: "2 and 2")
+                       sunnahAfter: "2 and 2 (masjid) or 2 (home)",
+                       sunnahNote: "Pray 4 sunnah rakahs after Jumuah - as 2 then 2 - when praying at the masjid (Sahih Muslim 881), or 2 rakahs when praying at home (Sahih al-Bukhari 937).")
             )
         } else {
             list.append(prayer(from: "Dhuhr", time: dhuhr))
@@ -1368,6 +1406,11 @@ extension Settings {
     /// Computes the enabled optional prayer times (Duhaa, Islamic Midnight, Last Third) for a given date.
     /// These are NOT stored in `prayers` (which is shared with widgets) and NOT shown in widgets.
     func getOptionalPrayers(for date: Date) -> [Prayer] {
+        // Check the toggles BEFORE computing: with all three off (every widget/complication process,
+        // and most users), the old order computed TWO days of prayer times per call - and
+        // `prayerBoundaryTimeline` makes this call three times per widget refresh, all discarded.
+        guard showDuha || showIslamicMidnight || showLastThird else { return [] }
+
         let raw = _computeRawPrayers(for: date)
         guard !raw.isEmpty else { return [] }
 
@@ -1479,7 +1522,7 @@ extension Settings {
             func launchGeocode() {
                 Task { @MainActor in
                     await updateCity(latitude: loc.latitude, longitude: loc.longitude)
-                    if Bundle.main.bundleIdentifier?.contains("Widget") != true,
+                    if Self.isAppProcess,
                        runAutoChecks,
                        calculationAutomatic,
                        checkAutomaticPrayerCalculation() {
@@ -1505,7 +1548,9 @@ extension Settings {
         // The automatic travel/calculation checks report whether they changed state; a change makes THIS
         // fetch recompute the prayer list below. (Previously a change here relied on an app-level `.onChange`
         // firing a second, later fetch to pick it up.)
-        let isWidget = Bundle.main.bundleIdentifier?.contains("Widget") == true
+        // Any .appex counts: the old bundle-id test missed the watch complication, which then ran the
+        // traveling/auto-calculation checks against its own fallback-default settings (see isAppProcess).
+        let isWidget = !Self.isAppProcess
         var autoStateChanged = false
         if !isWidget, runAutoChecks {
             // No `travelAutomatic`/`homeLocation` preconditions here: `checkIfTraveling` re-guards both
@@ -2468,20 +2513,31 @@ extension Settings {
     static let intendedFireDateUserInfoKey = "intendedFireDate"
 
     private func prayerNotificationSound(for prayer: Prayer, minutesBefore: Int?) -> UNNotificationSound {
-        // Only an obligatory prayer's AT-TIME notification may play the adhan; the non-obligatory times
-        // (Shurooq, Duhaa, Islamic Midnight, Last Third) always use the default sound.
-        guard Self.adhanEligiblePrayerNames.contains(prayer.nameTransliteration) else { return .default }
-        guard minutesBefore == nil else { return .default }
-
         #if os(iOS)
-        guard playsAdhanSound(forPrayer: prayer.nameTransliteration) else { return .default }
+        // Only an obligatory prayer's AT-TIME notification may play the adhan. Everything else - a
+        // pre-alert, one of the non-obligatory times (Shurooq, Duhaa, Islamic Midnight, Last Third), or a
+        // prayer whose adhan is switched off - is TELLING rather than CALLING, and gets the alert tone.
+        //
+        // Those three cases used to return `.default`, so they were the system tri-tone and gave no clue
+        // which app they came from. See `alertToneSoundFilename`.
+        let callsToPrayer = Self.adhanEligiblePrayerNames.contains(prayer.nameTransliteration)
+            && minutesBefore == nil
+            && playsAdhanSound(forPrayer: prayer.nameTransliteration)
 
-        let length = adhanClipLength(forPrayer: prayer.nameTransliteration)
-        guard let filename = adhanNotificationSoundFilename(for: adhanNotificationSound, length: length) else {
+        if callsToPrayer {
+            let length = adhanClipLength(forPrayer: prayer.nameTransliteration)
+            if let filename = adhanNotificationSoundFilename(for: adhanNotificationSound, length: length) {
+                return UNNotificationSound(named: UNNotificationSoundName(filename))
+            }
             return .default
         }
-        return UNNotificationSound(named: UNNotificationSoundName(filename))
+
+        if let filename = alertToneSoundFilename(for: alertToneSound) {
+            return UNNotificationSound(named: UNNotificationSoundName(filename))
+        }
+        return .default
         #else
+        // The Watch schedules its own notifications and has none of these clips bundled.
         return .default
         #endif
     }

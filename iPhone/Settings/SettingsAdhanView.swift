@@ -744,7 +744,45 @@ struct NotificationView: View {
                             }
                     }
 
-                    Text("The notification plays the adhan's first 30 seconds; iOS won't play a longer notification sound. Previewing, or having the app open when the prayer comes in, plays it in full. Prenotifications and nagging reminders still use the default sound.")
+                    Text("The notification plays the adhan's first 30 seconds; iOS won't play a longer notification sound. Previewing, or having the app open when the prayer comes in, plays it in full. Prenotifications, the optional times, and prayers with the adhan switched off use the alert tone below.")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .padding(.vertical, 2)
+                }
+
+                Section(header: Text("ALERT TONE")) {
+                    Picker("Alert Tone", selection: $settings.alertToneSound.animation(.easeInOut)) {
+                        Section {
+                            ForEach(Settings.supportedAdhanSounds) { option in
+                                Text(option.title).tag(option.id)
+                            }
+                        } header: {
+                            Text("Alert Tone")
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                    .onChange(of: settings.alertToneSound) { _ in
+                        settings.hapticFeedback()
+                        stopAdhanPreview()
+                    }
+
+                    if settings.alertToneSound != "default" {
+                        Label(isPreviewingAdhan ? "Stop Preview" : "Preview Tone",
+                              systemImage: isPreviewingAdhan ? "stop.circle.fill" : "play.circle.fill")
+                            .font(.subheadline)
+                            .foregroundColor(settings.accentColor.color)
+                            .contentShape(Rectangle())
+                            .onTapGesture {
+                                settings.hapticFeedback()
+                                if isPreviewingAdhan {
+                                    stopAdhanPreview()
+                                } else {
+                                    playAlertTonePreview()
+                                }
+                            }
+                    }
+
+                    Text("Used for prenotifications, the optional times (Shurooq, Duhaa, Islamic Midnight, Last Third), and any prayer whose adhan is switched off — so you can tell a prayer notification from every other alert on your phone. Echo is a short chime rather than a call to prayer. Choose Default to go back to the iPhone's own alert sound.")
                         .font(.caption)
                         .foregroundColor(.secondary)
                         .padding(.vertical, 2)
@@ -985,9 +1023,20 @@ struct NotificationView: View {
     /// Previews the full adhan rather than the 30-second notification cut, so it can run for several
     /// minutes - hence the stop control instead of a fire-and-forget tap.
     private func playAdhanPreview() {
+        playPreview(resource: settings.adhanFullSoundResource(for: settings.adhanNotificationSound))
+    }
+
+    /// Previews the alert tone, using the same `-short` cut a notification actually plays rather than the
+    /// full recording - the point of the preview is to hear what the notification will sound like.
+    private func playAlertTonePreview() {
+        let filename = settings.alertToneSoundFilename(for: settings.alertToneSound)
+        playPreview(resource: filename.map { String($0.dropLast(4)) })   // strip ".caf"
+    }
+
+    private func playPreview(resource: String?) {
         stopAdhanPreview()
 
-        guard let resource = settings.adhanFullSoundResource(for: settings.adhanNotificationSound),
+        guard let resource,
               let path = Bundle.main.path(forResource: resource, ofType: "caf") else { return }
 
         do {

@@ -234,7 +234,11 @@ struct LaunchScreen: View {
             rightGlassOffset = 34
         }
 
-        // Let the finale breathe before handing off.
+        // DELIBERATELY SLOW - DO NOT SPEED UP. Everything from the moment loading finishes to the
+        // hand-off below (the gradient/color bloom, the Quran/Adhan companion icons floating out,
+        // this 900ms hold, and the 0.5s dissolve) is hand-tuned pacing, not waste. It has been
+        // "optimized" faster several times and every time the finale looked rushed and hideous -
+        // the reveal needs this beat to land. Data loading above is fair game; this finale is not.
         try? await Task.sleep(nanoseconds: 900_000_000)
 
         // 4) Smoothly hand off to the app (revealing the already-warm Adhan tab underneath).

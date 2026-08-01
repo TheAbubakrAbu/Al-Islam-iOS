@@ -39,6 +39,11 @@ struct Prayer: Identifiable, Codable, Equatable {
     /// decode the shared `prayersData`. Optional, so prayer data written by an older build still decodes.
     var nameCustom: String? = nil
 
+    /// A caveat about this prayer's sunnah counts (today only Jumuah's masjid/home split), carried on
+    /// the value so every surface that shows the counts - the tile detail, the countdown card, the
+    /// Watch - explains them without hard-coding prayer names. Optional for the same decode reason.
+    var sunnahNote: String? = nil
+
     /// What a human should read. Prefer this over `nameTransliteration` at every display site.
     var displayName: String { nameCustom ?? nameTransliteration }
 

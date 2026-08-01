@@ -24,7 +24,7 @@ I received a **Certificate of Congressional Recognition** from U.S. Representati
 Al-Islam is a simply designed and feature-rich app that helps Muslims strengthen their faith and seamlessly practice Islam. Whether you’re a lifelong believer, a new convert, or simply exploring Islam, this app provides everything you need - from accurate prayer times and a prayer tracker to the complete Quran, the major Hadith collections, tafsir, on-device AI search, and essential Islamic tools.
 
 ## Unique Features
-- **On-Device AI Search** – Search the Quran and Hadith by meaning, not just keywords - "patience in hardship" finds ayahs about sabr even when neither word appears. Built entirely with Apple's on-device language frameworks: private, offline, and free. On devices with Apple Intelligence, **Ask AI** answers questions in a few sentences drawn only from the ayahs and hadiths it cites right below the answer - and it never gives religious rulings.
+- **On-Device AI Search** – Search by meaning, not just keywords - "patience in hardship" finds ayahs about sabr even when neither word appears. It works across the whole app: the Quran and Hadith, inside the very surah or hadith chapter you are reading, the 99 Names, duas, adhkar, the Arabic alphabet, and even Settings ("make text bigger" finds the font controls). Built entirely with Apple's on-device language frameworks: private, offline, and free. On devices with Apple Intelligence, **Ask AI** answers questions in a few sentences drawn only from the ayahs and hadiths it cites right below the answer - and it never gives religious rulings.
 - **Prayer Tracker** – Mark each prayer with a tap right on the Adhan tab, and watch your streaks, perfect days, and totals grow in History & Insights, a calendar heatmap by day, week, month, and year. Travel-aware and Friday-aware (Jumuah counts as Dhuhr, combined traveling prayers count as both), with a menstruation and postpartum pause that keeps exempt days from ever breaking a streak.
 - **Traveling Mode** – Automatically activates when traveling or can be manually enabled, and syncs between iPhone and Apple Watch. Adjust settings like prayer calculations, Hanafi madhab, and prayer offsets.
 - **Nagging Mode** – Never miss a prayer! Receive notifications at a chosen start time before each prayer, then reminders every 15 minutes, with final alerts at 10 and 5 minutes remaining. Answer "Yes, I prayed it" right from the notification to mark the prayer tracker and stop the remaining reminders.
@@ -39,7 +39,8 @@ Al-Islam is a simply designed and feature-rich app that helps Muslims strengthen
 - Qibla compass with built-in direction finder.
 - Prayer notifications with pre-alerts and your choice of adhan sounds.
 - View and plan daily and future prayer times.
-- Widgets for prayer times and the Quran, including a Prayer Sky widget that shows the current prayer and countdown over that prayer's sky gradient.
+- A full widget gallery: every prayer widget comes in a standard look and a Sky twin painted with the current prayer's own gradient, plus a Solar Arc widget with the sun on its true path, a Moon Phase widget showing tonight's real moon, and a large Day & Night board carrying both with the whole day's prayers.
+- A Rakaah Guide right under the prayer times: every prayer's fard count with its primary (mu'akkadah) and secondary sunnahs, including Jumuah's masjid/home difference - and each prayer's own detail shows the same counts.
 
 ## The Complete Quran
 - View by Surah or Juz, with Juz displaying the starting ayah.
@@ -61,7 +62,7 @@ Al-Islam is a simply designed and feature-rich app that helps Muslims strengthen
 - Browse by collection and chapter, in Arabic with English translation and narrator chains, as a list or page by page.
 - A Hadith of the Day, bookmarks, favorites, and reference lookups like "Bukhari 5".
 - Search within any book - or across every downloaded book at once - by keyword or by meaning (on-device AI) across the Arabic and English text.
-- Each collection is fetched once and saved for offline reading, with an option to download every book.
+- Every collection is built into the app in a compact format - nothing to download, and everything works fully offline.
 - Copy or share any Hadith with its full reference.
 
 ## Islamic Calendar and Event Notifications
@@ -88,7 +89,7 @@ Al-Islam is a simply designed and feature-rich app that helps Muslims strengthen
 
 ## Fully Customizable and User-Friendly
 - Customize Quran text size, Arabic fonts, accent colors, sky colors, and prayer settings.
-- Settings organized into dedicated Adhan, Quran, and Hadith screens, with a settings search that jumps straight to any option.
+- Settings organized into dedicated Adhan, Quran, and Hadith screens, with a settings search that jumps straight to any option - and understands meaning, so "make text bigger" finds the font controls.
 - Widgets and Apple Watch support for quick prayer time access, including full-surah recitation on the watch.
 - Simple and clean interface for effortless navigation.
 

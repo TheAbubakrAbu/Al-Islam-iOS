@@ -31,7 +31,7 @@ struct HadithReferenceView: View {
             guard hadith >= 1, offset < inChapter.endIndex else { return nil }
             return inChapter[offset]
         }
-        return data.hadiths.first { $0.idInBook == hadith }
+        return data.hadith(numbered: hadith)
     }
 
     var body: some View {
@@ -129,6 +129,27 @@ struct HadithRow: View, Equatable {
     /// Captured at construction so a parent re-render on an appearance change delivers a fresh value and
     /// fails `==` - see `Settings.hadithRenderSettingsSignature`.
     var renderSettingsSignature: String = Settings.shared.hadithRenderSettingsSignature
+    /// Snapshotted at init (the row deliberately doesn't observe HadithStore): this hadith is its
+    /// book's last-read position, so the pill gets the book badge - the Quran rows' grammar. A
+    /// parent re-render delivers a fresh value and fails `==`, same as `renderSettingsSignature`.
+    let isLastRead: Bool
+
+    init(
+        book: HadithCatalogBook,
+        hadith: HadithBookData.Hadith,
+        searchText: String = "",
+        compact: Bool = false,
+        fontScale: CGFloat = 1
+    ) {
+        self.book = book
+        self.hadith = hadith
+        self.searchText = searchText
+        self.compact = compact
+        self.fontScale = fontScale
+        self.isLastRead = MainActor.assumeIsolated {
+            HadithStore.shared.lastRead(for: book.slug)?.idInBook == hadith.idInBook
+        }
+    }
 
     /// The body lays out the hadith's FULL Arabic and English - the most expensive row in the tab - and
     /// its parents re-render on every publish of objects the row doesn't care about (the last-read save
@@ -141,7 +162,8 @@ struct HadithRow: View, Equatable {
         l.searchText == r.searchText &&
         l.compact == r.compact &&
         l.fontScale == r.fontScale &&
-        l.renderSettingsSignature == r.renderSettingsSignature
+        l.renderSettingsSignature == r.renderSettingsSignature &&
+        l.isLastRead == r.isLastRead
     }
 
     @State private var showShareSheet = false
@@ -181,6 +203,10 @@ struct HadithRow: View, Equatable {
     }
 
     var body: some View {
+        // One block-cache lookup for all three strings. `hadith.arabic`/`hadith.english` are each a
+        // full trip into the (locked) block cache; this body used to make six of those per pass,
+        // which is also lock traffic contended against any detached search sweep.
+        let text = hadith.allText
         VStack(alignment: .leading, spacing: compact ? 5 : 10) {
             HStack(spacing: 8) {
                 // ONE glass capsule (the ayah row's "S:A" pill language): the hadith's position WITHIN
@@ -218,6 +244,15 @@ struct HadithRow: View, Equatable {
                     settings.hapticFeedback()
                     withAnimation(.easeInOut) { userData.toggleBookmark(book: book, hadith: hadith) }
                 }
+                .overlay(alignment: .topTrailing) {
+                    if isLastRead {
+                        Image(systemName: "book.fill")
+                            .font(.caption2)
+                            .foregroundStyle(settings.accentColor.color)
+                            .padding(4)
+                            .offset(x: 8, y: -6)
+                    }
+                }
 
                 Spacer(minLength: 0)
 
@@ -238,9 +273,9 @@ struct HadithRow: View, Equatable {
                 }
             }
 
-            if compact || settings.showHadithArabic, !hadith.arabic.isEmpty {
+            if compact || settings.showHadithArabic, !text.arabic.isEmpty {
                 HighlightedSnippet(
-                    source: hadith.arabic,
+                    source: text.arabic,
                     term: searchText,
                     font: settings.useFontArabic
                         ? Font.arabic(settings.nonQuranArabicFontName, size: arabicFontSize)
@@ -262,9 +297,9 @@ struct HadithRow: View, Equatable {
             if compact || settings.showHadithEnglish {
                 // The narrator is PART of the English text - it shows whenever English does (there is no
                 // separate toggle; a hadith without its isnad line reads incomplete).
-                if !hadith.english.narrator.isEmpty {
+                if !text.narrator.isEmpty {
                     HighlightedSnippet(
-                        source: hadith.english.narrator,
+                        source: text.narrator,
                         term: searchText,
                         font: .system(size: englishFontSize).italic(),
                         accent: settings.accentColor.color,
@@ -277,9 +312,9 @@ struct HadithRow: View, Equatable {
                     .fixedSize(horizontal: false, vertical: true)
                 }
 
-                if !hadith.english.text.isEmpty {
+                if !text.text.isEmpty {
                     HighlightedSnippet(
-                        source: hadith.english.text,
+                        source: text.text,
                         term: searchText,
                         font: .system(size: englishFontSize),
                         accent: settings.accentColor.color,
@@ -895,16 +930,18 @@ struct HadithShareSheet: View {
         let defaults = UserDefaults.standard
         func flag(_ key: String) -> Bool { defaults.object(forKey: key) == nil ? true : defaults.bool(forKey: key) }
         var parts: [String] = []
+        // One block lookup for all three strings (this runs in a loop when sharing a whole chapter).
+        let text = hadith.allText
         if flag("shareHadithReference") { parts.append("[\(book.englishTitle) \(hadith.idInBook)]") }
-        if flag("shareHadithArabic"), !hadith.arabic.isEmpty {
+        if flag("shareHadithArabic"), !text.arabic.isEmpty {
             // Hide Tashkeel strips the diacritics for a cleaner shared text, the Share Ayah option's twin.
             let arabic = defaults.bool(forKey: "shareHadithHideTashkeel")
-                ? hadith.arabic.removingArabicDiacriticsAndSigns
-                : hadith.arabic
+                ? text.arabic.removingArabicDiacriticsAndSigns
+                : text.arabic
             parts.append(arabic)
         }
-        if flag("shareHadithNarrator"), !hadith.english.narrator.isEmpty { parts.append(hadith.english.narrator) }
-        if flag("shareHadithEnglish"), !hadith.english.text.isEmpty { parts.append(hadith.english.text) }
+        if flag("shareHadithNarrator"), !text.narrator.isEmpty { parts.append(text.narrator) }
+        if flag("shareHadithEnglish"), !text.text.isEmpty { parts.append(text.text) }
         if flag("shareHadithIncludeNote"),
            let note = HadithStore.shared.note(slug: book.slug, idInBook: hadith.idInBook) {
             parts.append("Note: \(note)")

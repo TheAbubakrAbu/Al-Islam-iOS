@@ -1,0 +1,32 @@
+{
+  "info": {
+    "author": "xcode",
+    "version": 1
+  },
+  "properties": {
+    "grid-size": "large"
+  },
+  "stickers": [
+    {
+      "filename": "Al-Islam.sticker"
+    },
+    {
+      "filename": "Al-Quran.sticker"
+    },
+    {
+      "filename": "Al-Adhan.sticker"
+    },
+    {
+      "filename": "Phone Wallpaper.sticker"
+    },
+    {
+      "filename": "Desktop Wallpaper.sticker"
+    },
+    {
+      "filename": "Laptop Wallpaper.sticker"
+    },
+    {
+      "filename": "Free Palestine.sticker"
+    }
+  ]
+}

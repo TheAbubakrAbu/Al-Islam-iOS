@@ -59,61 +59,14 @@ struct AlIslamApp: App {
                 .onAppear { settings.fetchPrayerTimes() }
                 //.statusBarHidden()
         }
-        .onChange(of: settings.accentColor) { _ in
-            WidgetCenter.shared.reloadAllTimelines()
-        }
-        // No `.onChange` refresh for `prayerCalculation`, `travelingMode`, or `hanafiMadhab`: every path
-        // that writes them (the manual setters, the dialog overrides, the auto-checks inside a fetch, a
-        // synced snapshot - and for the madhab, its own didSet with auto-checks suppressed) already
-        // performs its own recompute. A blanket refresh here would run a SECOND full forced fetch per
-        // flip and re-run the automatic detection with checks ON right after the change - the exact
-        // override/spam bug the old one-shot flags existed to paper over.
-        .onChange(of: settings.hijriOffset) { _ in
-            settings.updateDates()
-            WidgetCenter.shared.reloadAllTimelines()
-        }
+        // No `.onChange` refreshes for settings here: each setting's own didSet performs its side
+        // effects (`accentColor` and `hijriOffset` repaint widgets from Settings; `prayerCalculation`,
+        // `travelingMode`, and `hanafiMadhab` recompute on every write path already - a blanket refresh
+        // here would run a SECOND full forced fetch per flip and re-run the automatic detection with
+        // checks ON right after the change, the exact override/spam bug the old one-shot flags papered
+        // over). Phase transitions delegate to the one place that orchestrates them.
         .onChange(of: scenePhase) { phase in
-            quranPlayer.saveLastListenedSurah()
-            quranPlayer.saveLastListenedAyah()
-            // Only when LEAVING the foreground: that's when the widgets become visible and need the fresh
-            // snapshot. Running this on every transition (including becoming active) paid a JSON encode plus
-            // a reload of every widget timeline each time, against WidgetKit's daily reload budget.
-            if phase != .active {
-                settings.refreshQuranWidgets()
-            }
-            if phase == .active {
-                // Play the adhan in-app on time while open (the scheduled notification covers the closed
-                // case and can be delivered late by the system, especially on Mac/Catalyst).
-                ForegroundAdhanPlayer.shared.reschedule()
-                // A Live Activity can only be requested from the foreground, so this is the one place that
-                // can start the fasting countdown. It no-ops outside Ramadan, and outside the hour before
-                // Fajr (suhoor) or Maghrib (iftar).
-                FastingActivityController.refresh()
-                // Re-resolve Hadith of the Day: `.task` fires only when the view tree is rebuilt, so an
-                // app foregrounded across midnight (never cold-launched) kept showing yesterday's card.
-                // No-ops within the same day.
-                HadithStore.shared.prepareDailyHadith()
-                // Coming back to a stale fix (landed, drove, flew) gets one immediate refresh; the cadence
-                // then keeps it loosely current (every ~5 min) for as long as the app stays frontmost -
-                // significant-change monitoring can't do this without cell coverage, e.g. on a plane.
-                settings.refreshLocationIfStale()
-                settings.beginForegroundLocationCadence()
-            } else {
-                ForegroundAdhanPlayer.shared.stop()
-                // A high-accuracy burst pins the GPS. `AdhanView.onDisappear` ends it when you navigate away,
-                // but backgrounding the app doesn't disappear the view - without this the burst would run to
-                // its 25-second timeout with the screen off.
-                settings.endLocationRefinement()
-                settings.endForegroundLocationCadence()
-                // A page flip within the last second may still have its last-read write pending.
-                settings.flushPendingLastRead()
-                // A khatm mark made in the last 250ms is still on the debounce timer; persist it before
-                // the system can suspend or kill the process.
-                settings.flushPendingKhatmProgress()
-                // Send any just-made setting change before the app is suspended, so it can't be lost (and
-                // can't be reverted by a stale synced value on the next launch).
-                WatchConnectivityManager.shared.flushPendingSync()
-            }
+            AppLifecycle.scenePhaseChanged(to: phase)
         }
     }
 
@@ -220,14 +173,19 @@ private struct MainTabView: View {
             } message: {
                 Text("Answering yes marks it in the prayer tracker and stops the remaining reminders.")
             }
+            // Launch warmups, one .task per app domain (like AppLifecycle's sections): when this
+            // root is copied into a companion app, delete the domains it doesn't ship.
+            // Shared: the tab walk behind the launch cover.
             .task { await warmUnderCover() }
+            // Al-Quran: the reader's font/page prewarm.
             .task { await QuranLaunchWarmup.prewarmAll() }
-            // The AI-search capability probe loads a disk-backed NLEmbedding model; its first touch used
-            // to land on the MAIN thread mid-launch (aiQueryEligible / corpus prep). Pay it here, off-main.
+            // Al-Quran: the AI-search capability probe loads a disk-backed NLEmbedding model; its first
+            // touch used to land on the MAIN thread mid-launch (aiQueryEligible / corpus prep). Pay it
+            // here, off-main.
             .task { Task.detached(priority: .utility) { SemanticSearchEngine.prewarmOffMain() } }
-            // Resolve today's Hadith of the Day while the launch cover is still up, so the Hadith tab
-            // opens with the card already there instead of computing it on arrival - and map every
-            // bundled collection (a few milliseconds for all 17), so any book opens instantly.
+            // Al-Hadith: resolve today's Hadith of the Day while the launch cover is still up, so the
+            // Hadith tab opens with the card already there instead of computing it on arrival - and map
+            // every bundled collection (a few milliseconds for all 17), so any book opens instantly.
             .task {
                 HadithStore.shared.prepareDailyHadith()
                 HadithStore.shared.prewarmBooks()
@@ -279,6 +237,7 @@ private struct MainTabView: View {
         if ProcessInfo.processInfo.arguments.contains("-launchTabQuran") { return .quran }
         if ProcessInfo.processInfo.arguments.contains("-launchTabHadith") { return .hadith }
         if ProcessInfo.processInfo.arguments.contains("-launchTabIslam") { return .islam }
+        if ProcessInfo.processInfo.arguments.contains("-launchTabSettings") { return .settings }
         #endif
         return .adhan
     }

@@ -1,9 +1,10 @@
 # Version 4.6.0
 
-The major Hadith collections, on-device AI search, a prayer tracker, tafsir in Arabic and English, a better mushaf, and a living sky over your prayer times.
+The major Hadith collections, on-device AI search everywhere, a prayer tracker, tafsir in Arabic and English, a living sky over your prayer times, and a sky full of new widgets.
 
 AI Search:
-- Search the Quran and Hadith by meaning, not just keywords - "patience in hardship" finds ayahs about sabr even when neither word appears. Built with Apple's on-device language frameworks: private, offline, and free.
+- Search by meaning, not just keywords - "patience in hardship" finds ayahs about sabr even when neither word appears. Built with Apple's on-device language frameworks: private, offline, and free.
+- It works everywhere: the whole Quran or the very surah you are reading, any hadith book or chapter, the 99 Names, duas, adhkar, and even Settings - "make text bigger" finds the font controls.
 - On iPhones with Apple Intelligence, Ask AI answers your question in a few sentences drawn only from the ayahs and hadiths it cites right below the answer - and it never gives religious rulings.
 
 Prayer Tracker:
@@ -11,10 +12,15 @@ Prayer Tracker:
 - Travel-aware and Friday-aware: Jumuah counts as Dhuhr, and combined traveling prayers count as both. A menstruation and postpartum pause keeps exempt days from ever breaking a streak.
 - Nagging Mode now works with the tracker: answer "Yes, I prayed it" right from the notification to mark the prayer and stop the remaining reminders.
 
-Hadith:
+Al-Hadith:
 - A new Hadith tab with all the major collections: the Six Books (Bukhari, Muslim, an-Nasa'i, Abu Dawud, at-Tirmidhi, and Ibn Majah), the early collections (Muwatta Malik, ad-Darimi, and Musnad Ahmad), the forty-Hadith collections, and classics like Riyad as-Salihin, Mishkat al-Masabih, and Bulugh al-Maram.
 - Read in Arabic with English translation and narrator chains, as a list or page by page, with a Hadith of the Day, bookmarks, favorites, and reference lookups like "Bukhari 5".
-- Search within any book, or across every downloaded book at once. Each collection saves for offline reading.
+- Search within any book or across all of them at once. Every collection is built into the app - nothing to download, and everything works fully offline.
+
+Widgets:
+- Every prayer widget now comes in two looks: the standard background and a Sky twin painted with the current prayer's own gradient - organized side by side in the gallery.
+- New Solar Arc widget with the sun on its true path across the day, a Moon Phase widget showing tonight's real moon, and a large Day & Night board carrying both with the whole day's prayers.
+- Widgets, the lock screen, and the Apple Watch now always show the same times as the app when you use manual prayer time adjustments.
 
 Al-Quran:
 - Quran Planner: pick a finish date and get a daily amount that adjusts itself when you miss a day.
@@ -26,7 +32,7 @@ Al-Quran:
 Al-Adhan:
 - A living sky over your prayer times: the sun rides its true arc, stars come out at night, and the moon shows its real phase. Drag across the day to preview any moment, and pick your own sky colors for every prayer.
 - A new At a Glance board: Qibla direction, distance to Makkah, daylight, fasting window, moon, and more.
-- A new Prayer Sky widget shows the current prayer and countdown over that prayer's colors, and the Ayah of the Day widget now changes at midnight on its own.
+- A new Rakaah Guide under the prayer times: every prayer's fard count with its primary (mu'akkadah) and secondary sunnah rakahs, including Jumuah's masjid/home difference - and each prayer's own detail shows the same counts.
 - A full calculation method catalogue you can browse by region, with the angles each one uses shown up front.
 
 Apple Watch:
@@ -39,7 +45,8 @@ Islamic Tools:
 - Settings reorganized into dedicated Adhan, Quran, and Hadith screens, with a search that jumps straight to any setting.
 
 Bug fixes and optimizations:
-- Performance, reliability, and polish throughout.
+- A much smaller download and a dramatically faster launch: the Quran, qiraat, surah info, 99 Names, and all 17 hadith books now ship in a compact binary format.
+- Smoother hadith scrolling, lighter widget refreshes that are kinder to your battery, and polish throughout.
 
 
 # Version 4.5.3

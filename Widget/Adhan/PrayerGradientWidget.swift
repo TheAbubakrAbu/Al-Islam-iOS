@@ -36,10 +36,7 @@ struct PrayerGradientEntryView: View {
                     smallBody(current: current, next: next)
                 }
             } else {
-                Text("Open app to get prayer times")
-                    .font(.caption)
-                    .foregroundColor(showsSky ? .white.opacity(0.9) : entry.accentColor.color)
-                    .multilineTextAlignment(.center)
+                PrayerWidgetEmptyState(tint: entry.accentColor.color, skyStyle: showsSky)
             }
         }
         .modifier(PrayerSkyChrome(entry: entry, showsSky: showsSky))

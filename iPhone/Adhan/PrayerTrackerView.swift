@@ -144,7 +144,12 @@ private struct TrackerProgressRing: View {
             Circle()
                 .trim(from: 0, to: fraction)
                 .stroke(
-                    settings.accentColor.accent2,
+                    AngularGradient(
+                        colors: [settings.accentColor.accent2.opacity(0.55), settings.accentColor.accent2],
+                        center: .center,
+                        startAngle: .degrees(0),
+                        endAngle: .degrees(360 * fraction)
+                    ),
                     style: StrokeStyle(lineWidth: 5, lineCap: .round)
                 )
                 .rotationEffect(.degrees(-90))
@@ -193,18 +198,29 @@ private struct TrackerPrayerToggle: View {
         } label: {
             VStack(spacing: 6) {
                 ZStack {
-                    Circle()
-                        .fill(prayed ? settings.accentColor.accent2.opacity(0.22) : Color.secondary.opacity(0.08))
+                    if prayed {
+                        // The accent chip gradient, in circle form - marking a prayer should feel
+                        // like a win, not a change of outline.
+                        Circle()
+                            .fill(
+                                LinearGradient(
+                                    colors: [settings.accentColor.accent2.opacity(0.95), settings.accentColor.accent2.opacity(0.65)],
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                            )
+                            .shadow(color: settings.accentColor.accent2.opacity(0.4), radius: 6, x: 0, y: 2)
+                    } else {
+                        Circle()
+                            .fill(Color.secondary.opacity(0.08))
 
-                    Circle()
-                        .strokeBorder(
-                            prayed ? settings.accentColor.accent2 : Color.secondary.opacity(0.35),
-                            lineWidth: 1.5
-                        )
+                        Circle()
+                            .strokeBorder(Color.secondary.opacity(0.35), lineWidth: 1.5)
+                    }
 
                     Image(systemName: prayed ? "checkmark" : prayer.image)
                         .font(.subheadline.weight(prayed ? .bold : .regular))
-                        .foregroundColor(prayed ? settings.accentColor.accent2 : .secondary)
+                        .foregroundColor(prayed ? .white : .secondary)
                 }
                 .frame(width: 40, height: 40)
 
@@ -214,7 +230,6 @@ private struct TrackerPrayerToggle: View {
                     .lineLimit(1)
                     .minimumScaleFactor(0.55)
             }
-            .frame(maxWidth: .infinity)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -253,9 +268,14 @@ struct PrayerTrackerSection: View {
                 NavigationLink {
                     PrayerTrackerView()
                 } label: {
-                    Label("History & Insights", systemImage: "chart.bar.xaxis")
-                        .font(.subheadline)
-                        .foregroundColor(settings.accentColor.accent2)
+                    HStack(spacing: 12) {
+                        AccentIconChip(systemImage: "chart.bar.xaxis", tint: settings.accentColor.accent2, size: 26)
+
+                        Text("History & Insights")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundColor(.primary)
+                    }
+                    .padding(.vertical, 2)
                 }
             }
         }
@@ -304,8 +324,11 @@ struct PrayerTrackerSection: View {
                 Spacer(minLength: 0)
             }
 
-            HStack(spacing: 4) {
-                ForEach(slots, id: \.nameTransliteration) { prayer in
+            // Spacers BETWEEN the slots only, so the first circle starts at the row's left edge and
+            // the last ends at its right - the equal-columns layout left both floating inset.
+            HStack(spacing: 0) {
+                ForEach(Array(slots.enumerated()), id: \.element.nameTransliteration) { index, prayer in
+                    if index > 0 { Spacer(minLength: 6) }
                     TrackerPrayerToggle(prayer: prayer, date: Date())
                 }
             }
@@ -401,10 +424,8 @@ struct PrayerTrackerView: View {
 
     private func statTile(value: String, unit: String, label: String, symbol: String) -> some View {
         VStack(alignment: .leading, spacing: 6) {
-            HStack(spacing: 5) {
-                Image(systemName: symbol)
-                    .font(.caption)
-                    .foregroundColor(settings.accentColor.accent2)
+            HStack(spacing: 6) {
+                AccentIconChip(systemImage: symbol, tint: settings.accentColor.accent2, size: 20)
 
                 Text(label.uppercased())
                     .font(.caption2.weight(.semibold))

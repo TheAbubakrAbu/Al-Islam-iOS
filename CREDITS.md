@@ -18,6 +18,7 @@ App Store: <https://apps.apple.com/us/app/al-islam-islamic-pillars/id6449729655>
 
 - **Adhan calculations** (fully offline, on-device) - **Batoul Apps** - <https://github.com/batoulapps/adhan-swift>
 - **Adhan sounds** - **Omar Al-Ejel** - <https://github.com/oalejel/Athan-Utility>
+- **Moon phase algorithm** (the sky card and Moon widgets) - **SunCalc by Vladimir Agafonkin** (low-precision lunar theory from Meeus' *Astronomical Algorithms*) - <https://github.com/mourner/suncalc>
 - **English transliteration of the Quran** - **Risan Bagja Pradana** - <https://github.com/risan/quran-json>
 - **English Saheeh International translation** - **Global Quran** - <https://globalquran.com/download/data/>
 - **All Quranic Arabic text and all qiraat/riwayaat data** - **quran-data-kfgqpc (KFGQPC)** - <https://github.com/thetruetruth/quran-data-kfgqpc>

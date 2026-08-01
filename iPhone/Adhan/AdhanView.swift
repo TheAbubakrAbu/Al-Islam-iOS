@@ -478,16 +478,19 @@ private struct HijriDateRow: View {
     var body: some View {
         #if os(iOS)
         NavigationLink(destination: CalendarView()) {
-            HStack {
+            HStack(spacing: 12) {
+                AccentIconChip(systemImage: "calendar", size: 26)
+
                 Text(hijriDate.english)
-                    .multilineTextAlignment(.center)
+                    .font(.footnote.weight(.semibold))
+                    .foregroundColor(.primary)
 
                 Spacer()
 
                 Text(hijriDate.arabic)
+                    .font(.footnote)
+                    .foregroundColor(settings.accentColor.color)
             }
-            .font(.footnote)
-            .foregroundColor(settings.accentColor.color)
             .lineLimit(1)
             .minimumScaleFactor(0.5)
             .contextMenu {

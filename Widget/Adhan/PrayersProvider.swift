@@ -167,6 +167,17 @@ struct PrayersProvider: TimelineProvider {
         settings.hijriOffset = store?.integer(forKey: "hijriOffset") ?? 0
         settings.switchHijriDateAtMaghrib = store?.bool(forKey: "switchHijriDateAtMaghrib") ?? false
 
+        // The user's manual offsets, mirrored from the app. Written to this process's standard
+        // defaults (where @AppStorage reads) rather than assigned through the properties - each
+        // offset didSet forces a full recompute, and the fetch below already runs exactly once.
+        let extensionDefaults = UserDefaults.standard
+        for key in Settings.prayerOffsetKeys {
+            let mirrored = store?.integer(forKey: key) ?? 0
+            if extensionDefaults.integer(forKey: key) != mirrored {
+                extensionDefaults.set(mirrored, forKey: key)
+            }
+        }
+
         settings.fetchPrayerTimes()
 
         guard let obj = settings.prayers else {

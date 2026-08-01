@@ -95,37 +95,7 @@ struct HadithBookView: View {
     }
 
     private func prepareSemanticCorpus(_ data: HadithBookData) {
-        guard SemanticSearchEngine.isSupported,
-              !semanticEngine.isReady(semanticCorpusID),
-              !semanticEngine.isBuilding(semanticCorpusID) else { return }
-        // The count, not the texts: the version must not be what forces the whole book into memory.
-        let version = "v3-\(data.hadiths.count)"
-        // Disk-first probe with no texts at all - a corpus built in an earlier session loads in one
-        // read, and the gather below never runs. (`prepare` no-ops on an empty list past that check.)
-        semanticEngine.prepare(corpusID: semanticCorpusID, version: version, texts: [])
-        guard !semanticEngine.isReady(semanticCorpusID) else { return }
-
-        Task {
-            // OFF-MAIN: this reads every hadith in the book, which over the packs means decompressing
-            // all of it. It used to run inline here, on the main thread, a second after the book opened.
-            let built = await Task.detached(priority: .utility) { () -> (texts: [String], keys: [String]) in
-                var texts: [String] = []
-                var keys: [String] = []
-                texts.reserveCapacity(data.hadiths.count)
-                keys.reserveCapacity(data.hadiths.count)
-                for hadith in data.hadiths {
-                    let strings = hadith.allText
-                    texts.append("\(strings.narrator) \(strings.text)")
-                    // Keyed by idInBook (the all-books corpus's rule): positional mapping meant a data
-                    // update that REORDERS hadiths without changing the count served persisted vectors
-                    // for the wrong hadith. v3 bumps past existing positional caches.
-                    keys.append(String(hadith.idInBook))
-                }
-                return (texts, keys)
-            }.value
-            semanticEngine.prepare(corpusID: semanticCorpusID, version: version,
-                                   texts: built.texts, keys: built.keys)
-        }
+        prepareBookSemanticCorpus(semanticEngine, data: data, corpusID: semanticCorpusID)
     }
 
     // Ask (the on-device LLM, grounded RAG): question-shaped queries stream an answer card above the
@@ -801,9 +771,9 @@ struct HadithBookView: View {
 
                 Spacer(minLength: 8)
 
-                Text(lastRead.timestamp, style: .relative)
-                    .font(.caption2)
-                    .foregroundColor(.secondary)
+                // Same "Today 5:30 PM" form as the Quran history rows and the Hadith tab's card -
+                // this row used a bare relative age ("5 minutes") and matched neither.
+                historyTimestampLabel(lastRead.timestamp)
             }
 
             if settings.showHadithArabic, !lastRead.arabicPreview.isEmpty {
@@ -1092,6 +1062,8 @@ struct HadithBookView: View {
     @ViewBuilder
     private func chapterNumberPill(_ chapter: HadithBookData.Chapter, data: HadithBookData) -> some View {
         let favorite = store.isChapterFavorite(slug: book.slug, chapterId: chapter.id)
+        // The Quran's continue-reading grammar: a book badge (no tint) marks where you left off.
+        let isLastRead = store.lastRead(for: book.slug)?.chapterId == chapter.id
         ZStack(alignment: .topTrailing) {
             Text("\(chapterOrdinal(chapter, data: data))")
                 .font(.caption.weight(.bold))
@@ -1108,10 +1080,16 @@ struct HadithBookView: View {
                         store.toggleChapterFavorite(slug: book.slug, chapterId: chapter.id)
                     }
                 }
-                .accessibilityLabel("Chapter \(chapterOrdinal(chapter, data: data))")
+                .accessibilityLabel("Chapter \(chapterOrdinal(chapter, data: data))\(isLastRead ? ", last read" : "")")
 
             if favorite {
                 Image(systemName: "star.fill")
+                    .font(.caption2)
+                    .foregroundStyle(settings.accentColor.color)
+                    .padding(4)
+                    .offset(x: 8, y: -6)
+            } else if isLastRead {
+                Image(systemName: "book.fill")
                     .font(.caption2)
                     .foregroundStyle(settings.accentColor.color)
                     .padding(4)
@@ -1599,6 +1577,52 @@ struct HadithChapterView: View {
     }
 
     @State private var searchText = ""
+
+    #if os(iOS)
+    // Within-chapter AI search: the book's own corpus ("hadith-<slug>", one vector cache shared
+    // with the book screen), hits filtered to this chapter's rows.
+    @ObservedObject private var semanticEngine = SemanticSearchEngine.shared
+    @State private var chapterAIHits: [HadithBookData.Hadith] = []
+    @State private var chapterAISearchTask: Task<Void, Never>?
+
+    private func runChapterAISearch(query: String) {
+        chapterAISearchTask?.cancel()
+        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard SemanticSearchEngine.isSupported, trimmed.count >= 3, !trimmed.containsArabicScript,
+              HadithBookData.hadithNumber(inQuery: trimmed) == nil else {
+            if !chapterAIHits.isEmpty { chapterAIHits = [] }
+            return
+        }
+        let corpusID = "hadith-\(book.slug)"
+        prepareBookSemanticCorpus(semanticEngine, data: bookData, corpusID: corpusID)
+
+        chapterAISearchTask = Task {
+            try? await Task.sleep(nanoseconds: 300_000_000)
+            guard !Task.isCancelled else { return }
+            // Over-fetch from the whole book, keep this chapter's rows - filtering after ranking
+            // beats a per-chapter corpus.
+            let results = await semanticEngine.search(corpusID: corpusID, query: trimmed, limit: 48)
+            guard !Task.isCancelled else { return }
+            let keys = await MainActor.run { semanticEngine.corpus(corpusID)?.itemKeys }
+            await MainActor.run {
+                guard trimmed == searchText.trimmingCharacters(in: .whitespacesAndNewlines) else { return }
+                chapterAIHits = results.compactMap { result -> HadithBookData.Hadith? in
+                    let hadith: HadithBookData.Hadith?
+                    if let keys, keys.indices.contains(result.index), let number = Int(keys[result.index]) {
+                        hadith = bookData.hadith(numbered: number)
+                    } else if bookData.hadiths.indices.contains(result.index) {
+                        hadith = bookData.hadiths[result.index]
+                    } else {
+                        hadith = nil
+                    }
+                    guard let hadith, hadith.chapterId == chapter.id else { return nil }
+                    return hadith
+                }
+                .prefix(6).map { $0 }
+            }
+        }
+    }
+    #endif
     /// Apple Music-style bar minimization: true while scrolling down.
     @State private var barsCollapsed = false
     @State private var showChapterSettings = false
@@ -1763,6 +1787,15 @@ struct HadithChapterView: View {
                 .tint(settings.accentColor.accent2)
             }
         }
+        #if os(iOS)
+        .onChange(of: searchText) { text in
+            runChapterAISearch(query: text)
+        }
+        .onChange(of: semanticEngine.readyCorpora) { ready in
+            guard ready.contains("hadith-\(book.slug)"), !searchText.isEmpty else { return }
+            runChapterAISearch(query: searchText)
+        }
+        #endif
         .sheet(isPresented: $showChapterSettings) {
             SettingsHadithView()
                 .smallMediumSheetPresentation()
@@ -1891,21 +1924,24 @@ struct HadithChapterView: View {
     private var chapterTitleLabel: some View {
         VStack(spacing: 0) {
             HStack(spacing: 10) {
+                // The surah title's metrics, exactly: the Latin side never shrinks (a scaled-down
+                // title next to full-size Arabic reads as a mistake) - it truncates instead.
                 Text(book.englishTitle)
                     .font(.subheadline.bold())
                     .lineLimit(1)
-                    .minimumScaleFactor(0.7)
 
+                // Arabic at the surah title's size (headline + 2), scaling down rather than
+                // truncating - a clipped Arabic name is unreadable, a smaller one is not.
                 HighlightedSnippet(
                     source: book.arabicTitle,
                     term: "",
                     font: settings.useFontArabic
-                        ? Font.arabic(settings.nonQuranArabicFontName, size: UIFont.preferredFont(forTextStyle: .subheadline).pointSize + 2)
-                        : .subheadline,
+                        ? Font.arabic(settings.nonQuranArabicFontName, size: UIFont.preferredFont(forTextStyle: .headline).pointSize + 2)
+                        : .headline,
                     accent: settings.accentColor.color,
                     fg: settings.accentColor.color,
                     lineLimit: 1,
-                    basicFontForCommas: settings.useFontArabic ? UIFont.preferredFont(forTextStyle: .subheadline).pointSize + 2 : nil
+                    basicFontForCommas: settings.useFontArabic ? UIFont.preferredFont(forTextStyle: .headline).pointSize + 2 : nil
                 )
                 .arabicFontDesign(custom: settings.islamUsesCustomArabicFace)
                 .minimumScaleFactor(0.5)
@@ -1914,13 +1950,13 @@ struct HadithChapterView: View {
             Text("Chapter \(chapterIndex + 1) of \(bookData.chapters.count)")
                 .font(.caption2)
                 .lineLimit(1)
-                .padding(.top, -2)
+                .padding(.top, -4)
         }
         .frame(maxWidth: .infinity)
         .foregroundColor(.primary)
         .contentShape(Rectangle())
         .padding(.horizontal)
-        .padding(.vertical, 4)
+        .padding(.bottom, 6)
         .conditionalGlassEffect()
     }
 
@@ -1959,6 +1995,25 @@ struct HadithChapterView: View {
                             }
                         }
                     }
+
+                    #if os(iOS)
+                    // AI hits the keyword filter (or the number lookup) already shows would render
+                    // twice - the AI section carries only the extras, above the keyword rows.
+                    let shownRows = Set(matches.map(\.row)).union(numbered.map(\.hadith.row))
+                    let aiOnly = chapterAIHits.filter { !shownRows.contains($0.row) }
+                    if !aiOnly.isEmpty {
+                        Section(header: SectionPillHeader(title: "AI MATCHES", count: aiOnly.count, icon: "sparkles", accentTitle: true)) {}
+                            .padding(.bottom, -12)
+
+                        ForEach(aiOnly, id: \.row) { hadith in
+                            Section {
+                                HadithRow(book: book, hadith: hadith).equatable()
+                                    .contentShape(Rectangle())
+                                    .onTapGesture { openMatch(hadith, scrollProxy: scrollProxy) }
+                            }
+                        }
+                    }
+                    #endif
 
                     // "No hadiths found" would contradict the rows just above it, so the text-match
                     // section stands down entirely once a number has answered.
@@ -2286,9 +2341,10 @@ struct HadithChapterPickerSheet: View {
 
     @State private var searchText = ""
 
-    /// Hadith counts per chapter, computed once per sheet open (a single grouped pass).
+    /// Hadith counts per chapter. `Chapter.rowCount` was computed when the pack was built, so this
+    /// is O(chapters) - the old whole-book reduce re-ran per body pass of the sheet, per keystroke.
     private var countsByChapter: [Int: Int] {
-        bookData.hadiths.reduce(into: [:]) { $0[$1.chapterId, default: 0] += 1 }
+        bookData.chapters.reduce(into: [:]) { $0[$1.id] = $1.rowCount }
     }
 
     private var filteredChapters: [(offset: Int, element: HadithBookData.Chapter)] {
@@ -2296,10 +2352,10 @@ struct HadithChapterPickerSheet: View {
         let all = Array(bookData.chapters.enumerated())
         guard !query.isEmpty else { return all }
         if query.containsArabicScript {
-            let clean = settings.cleanSearch(query, whitespace: true).removingArabicDiacriticsAndSigns
-            return all.filter {
-                settings.cleanSearch($0.element.arabic, whitespace: true).removingArabicDiacriticsAndSigns.contains(clean)
-            }
+            // Compare against the fold the pack precomputed (like the chapter list's own filter does)
+            // instead of live-cleaning every chapter title on main per keystroke.
+            let folded = HadithFold.query(query)
+            return all.filter { bookData.matches($0.element, folded) }
         }
         return all.filter {
             $0.element.english.localizedCaseInsensitiveContains(query) || String($0.offset + 1) == query
@@ -2475,13 +2531,15 @@ struct HadithPagedView: View {
         if let cached = Self.builtPagesCache[key] { return cached }
 
         let pages = chapterHadiths.map { hadith in
+            // One block lookup for the emptiness checks instead of one per field.
+            let text = hadith.allText
             var elements: [PageElement] = [.hadithHeader(hadith)]
-            if settings.showHadithArabic, !hadith.arabic.isEmpty {
+            if settings.showHadithArabic, !text.arabic.isEmpty {
                 elements.append(.arabic(hadith))
             }
             if settings.showHadithEnglish {
-                if !hadith.english.narrator.isEmpty { elements.append(.narrator(hadith)) }
-                if !hadith.english.text.isEmpty { elements.append(.english(hadith)) }
+                if !text.narrator.isEmpty { elements.append(.narrator(hadith)) }
+                if !text.text.isEmpty { elements.append(.english(hadith)) }
             }
             return BuiltPage(elements: elements)
         }
@@ -2889,4 +2947,43 @@ struct HadithPagedView: View {
     }
 }
 
+#endif
+
+#if os(iOS)
+/// Builds (or disk-loads) one book's semantic corpus - shared by the book screen's search and the
+/// within-chapter search, which scope the same corpus differently.
+@MainActor
+private func prepareBookSemanticCorpus(_ engine: SemanticSearchEngine, data: HadithBookData, corpusID: String) {
+        guard SemanticSearchEngine.isSupported,
+              !engine.isReady(corpusID),
+              !engine.isBuilding(corpusID) else { return }
+        // The count, not the texts: the version must not be what forces the whole book into memory.
+        let version = "v3-\(data.hadiths.count)"
+        // Disk-first probe with no texts at all - a corpus built in an earlier session loads in one
+        // read, and the gather below never runs. (`prepare` no-ops on an empty list past that check.)
+        engine.prepare(corpusID: corpusID, version: version, texts: [])
+        guard !engine.isReady(corpusID) else { return }
+
+        Task {
+            // OFF-MAIN: this reads every hadith in the book, which over the packs means decompressing
+            // all of it. It used to run inline here, on the main thread, a second after the book opened.
+            let built = await Task.detached(priority: .utility) { () -> (texts: [String], keys: [String]) in
+                var texts: [String] = []
+                var keys: [String] = []
+                texts.reserveCapacity(data.hadiths.count)
+                keys.reserveCapacity(data.hadiths.count)
+                for hadith in data.hadiths {
+                    let strings = hadith.allText
+                    texts.append("\(strings.narrator) \(strings.text)")
+                    // Keyed by idInBook (the all-books corpus's rule): positional mapping meant a data
+                    // update that REORDERS hadiths without changing the count served persisted vectors
+                    // for the wrong hadith. v3 bumps past existing positional caches.
+                    keys.append(String(hadith.idInBook))
+                }
+                return (texts, keys)
+            }.value
+            engine.prepare(corpusID: corpusID, version: version,
+                                   texts: built.texts, keys: built.keys)
+        }
+}
 #endif

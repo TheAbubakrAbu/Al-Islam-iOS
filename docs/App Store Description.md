@@ -2,6 +2,7 @@ Al-Islam is your complete companion for practicing Islam, whether you are a life
 
 ON-DEVICE AI SEARCH
 - Search the Quran and Hadith by meaning, not just keywords: "patience in hardship" finds ayahs about sabr even when neither word appears.
+- AI search runs everywhere: the whole Quran or the surah you are reading, any hadith book or chapter, the 99 Names, duas, adhkar, and even Settings.
 - Fully on-device with Apple's language frameworks - private, offline, and free. With Apple Intelligence, Ask AI answers questions citing only the ayahs and hadiths it shows, never a religious ruling.
 
 PRAYER TRACKER
@@ -31,7 +32,8 @@ PRAYER TIMES AND QIBLA
 - Accurate prayer times calculated privately on your device, with an Automatic method suggested for your region.
 - A living sky above your prayer times, with a real sun arc, night stars, and true moon phase - drag across the day to preview any moment.
 - Qibla compass, adhan sounds, notifications with pre alerts, and an At a Glance board with distance to Makkah, daylight, and your fasting window.
-- Widgets for prayer times and the Quran, including the Prayer Sky widget, plus full Apple Watch support.
+- A full widget gallery: every prayer widget in a standard look and a Sky twin over the current prayer's colors, plus Solar Arc, Moon Phase, and a large Day & Night board - and full Apple Watch support.
+- A Rakaah Guide with every prayer's fard and sunnah counts, including Jumuah's masjid and home difference.
 
 ESSENTIAL TOOLS AND LEARNING
 - Hijri date and Islamic calendar with events like Ramadan and Eid, plus date notifications.

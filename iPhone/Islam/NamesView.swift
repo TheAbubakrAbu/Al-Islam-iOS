@@ -1,6 +1,6 @@
 import SwiftUI
 
-struct NameOfAllah: Decodable, Identifiable, Equatable {
+struct NameOfAllah: Identifiable, Equatable {
     let number: Int
     let id: String
     let name: String
@@ -15,20 +15,16 @@ struct NameOfAllah: Decodable, Identifiable, Equatable {
     let firstFoundSurah: Int?
     let firstFoundAyah: Int?
 
-    enum CodingKeys: String, CodingKey {
-        case name, transliteration, number, found, meaning, otherNames, desc
-    }
-
-    init(from decoder: Decoder) throws {
-        let c = try decoder.container(keyedBy: CodingKeys.self)
-
-        number = try c.decode(Int.self, forKey: .number)
-        name = try c.decode(String.self, forKey: .name)
-        transliteration = try c.decode(String.self, forKey: .transliteration)
-        found = try c.decode(String.self, forKey: .found)
-        meaning = try c.decode(String.self, forKey: .meaning)
-        otherNames = try c.decodeIfPresent([String].self, forKey: .otherNames) ?? []
-        desc = try c.decode(String.self, forKey: .desc)
+    /// Every stored property that isn't a raw source field is derived here, in the one init.
+    init(number: Int, name: String, transliteration: String, found: String,
+         meaning: String, otherNames: [String], desc: String) {
+        self.number = number
+        self.name = name
+        self.transliteration = transliteration
+        self.found = found
+        self.meaning = meaning
+        self.otherNames = otherNames
+        self.desc = desc
 
         id = "\(number)"
         numberArabic = arabicNumberString(from: number)
@@ -122,8 +118,6 @@ final class NamesViewModel: ObservableObject {
         return model
     }()
 
-    private static let decoder = JSONDecoder()
-
     @Published var namesOfAllah: [NameOfAllah] = []
     @Published private(set) var firstFoundTargetsByNameNumber: [Int: (surahID: Int, ayahID: Int)] = [:]
     @Published private(set) var loadState: LoadState = .idle
@@ -135,7 +129,7 @@ final class NamesViewModel: ObservableObject {
     private func startLoading() {
         guard loadTask == nil else { return }
         loadTask = Task(priority: .utility) { [weak self] in
-            await self?.loadJSON()
+            await self?.loadNames()
         }
     }
 
@@ -157,7 +151,7 @@ final class NamesViewModel: ObservableObject {
         }
     }
 
-    private func loadJSON() async {
+    private func loadNames() async {
         await MainActor.run {
             loadState = .loading
         }
@@ -168,8 +162,10 @@ final class NamesViewModel: ObservableObject {
             }
         }
 
-        guard let url = Bundle.main.url(forResource: "NamesOfAllah", withExtension: "json") else {
-            logger.debug("❌ 99 Names JSON not found.")
+        // namesofallah.qpk replaced NamesOfAllah.json (7.6 KB vs 25.9 KB; same container format as
+        // the Quran packs, verified field-for-field against the JSON it was built from).
+        guard let url = QuranPackLoader.url("namesofallah") else {
+            logger.debug("❌ namesofallah.qpk not found.")
             await MainActor.run {
                 self.loadState = .failed
             }
@@ -177,8 +173,13 @@ final class NamesViewModel: ObservableObject {
         }
 
         do {
-            let data = try Data(contentsOf: url, options: .mappedIfSafe)
-            let names = try Self.decoder.decode([NameOfAllah].self, from: data)
+            guard let pack = NamesPack(url: url) else {
+                throw NSError(domain: "NamesOfAllah", code: 1, userInfo: [NSLocalizedDescriptionKey: "namesofallah.qpk unreadable"])
+            }
+            let names = pack.records.map {
+                NameOfAllah(number: $0.number, name: $0.name, transliteration: $0.transliteration,
+                            found: $0.found, meaning: $0.meaning, otherNames: $0.otherNames, desc: $0.desc)
+            }
             var targets = [Int: (surahID: Int, ayahID: Int)]()
             targets.reserveCapacity(names.count)
             for name in names {

@@ -65,6 +65,25 @@ struct IslamView: View {
             }
         }
 
+        /// One line of what lives behind the row - the Settings hub's caption column, here.
+        var subtitle: String {
+            switch self {
+            case .arabicAlphabet: return "Letters, forms, diacritics, and signs"
+            case .tajweedFoundations: return "The rules of beautiful recitation"
+            case .commonAdhkar: return "Morning, evening, and daily remembrances"
+            case .commonDuas: return "Authenticated supplications with sources"
+            case .tasbihCounter: return "Count dhikr with a tap"
+            // case .zakahCalculator: return "Work out what you owe"
+            case .namesOfAllah: return "Asma ul-Husna with meanings"
+            case .hijriCalendarConverter: return "Convert Hijri and Gregorian dates"
+            case .masjidLocator: return "Find mosques near you"
+            case .halalFoodLocator: return "Find halal food near you"
+            case .islamicWallpapers: return "Beautiful wallpapers to save"
+            case .pillarsAndBasics: return "The Five Pillars and Six Beliefs"
+            case .howToGuides: return "Wudu, salah, Jumuah, and more"
+            }
+        }
+
         /// The tile title with its line break CHOSEN, not wherever truncation lands: every grid tile is
         /// exactly two lines, broken at the natural point, so a whole grid of tiles shares one height and
         /// one rhythm.
@@ -234,7 +253,7 @@ struct IslamView: View {
         } else {
             ForEach(items, id: \.self) { item in
                 NavigationLink(value: item) {
-                    toolLabel(item.title, systemImage: item.systemImage)
+                    toolLabel(item.title, systemImage: item.systemImage, subtitle: item.subtitle)
                 }
                 .contextMenu { favoriteToggleButton(item) }
                 .swipeActions(edge: .leading, allowsFullSwipe: true) {
@@ -262,10 +281,8 @@ struct IslamView: View {
 
     @available(iOS 16.0, *)
     private func resourceGridTile(_ item: IslamDestination) -> some View {
-        VStack(spacing: 5) {
-            Image(systemName: item.systemImage)
-                .font(.subheadline)
-                .foregroundColor(settings.accentColor.color)
+        VStack(spacing: 6) {
+            AccentIconChip(systemImage: item.systemImage, size: 32)
 
             Text(item.gridTitle)
                 .font(.caption2.weight(.medium))
@@ -463,18 +480,27 @@ struct IslamView: View {
         }
     }
 
-    private func toolLabel(_ title: String, systemImage: String) -> some View {
-        Label(
-            title: {
+    private func toolLabel(_ title: String, systemImage: String, subtitle: String? = nil) -> some View {
+        HStack(spacing: 12) {
+            AccentIconChip(systemImage: systemImage)
+
+            VStack(alignment: .leading, spacing: 1) {
                 Text(title)
                     .foregroundColor(.primary)
-            },
-            icon: {
-                Image(systemName: systemImage)
-                    .foregroundColor(settings.accentColor.color)
+
+                // The caption column is an iPhone luxury - the 40mm screen has no room for it.
+                #if os(iOS)
+                if let subtitle {
+                    Text(subtitle)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                }
+                #endif
             }
-        )
-        .padding(.vertical, 4)
+        }
+        .padding(.vertical, 3)
     }
 }
 

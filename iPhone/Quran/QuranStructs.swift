@@ -193,6 +193,9 @@ struct LastListenedSurah: Identifiable, Codable {
     let reciter: Reciter
     let currentDuration: Double
     let fullDuration: Double
+    /// When this position was recorded, shown on the summary tile ("Today 5:30 PM"). Optional so
+    /// entries saved by older builds still decode (they show no timestamp).
+    var savedAt: Date? = nil
 }
 
 /// One bundled "About this Surah" write-up (e.g. Maududi, Ibn Ashur). `contents` is lightweight markdown
@@ -204,12 +207,6 @@ struct SurahInfoSource: Codable, Identifiable, Equatable {
     var id: String { name }
 }
 
-/// One surah's entry in SurahInfos.json: the surah id plus its available info sources.
-struct SurahInfoEntry: Codable {
-    let id: Int
-    let sources: [SurahInfoSource]
-}
-
 /// The last individual ayah (single ayah or custom-range playback) the user listened to. Full-surah
 /// playback is tracked separately by `LastListenedSurah`.
 struct LastListenedAyah: Identifiable, Codable {
@@ -218,6 +215,8 @@ struct LastListenedAyah: Identifiable, Codable {
     let surahName: String
     let ayahNumber: Int
     let reciter: Reciter
+    /// See `LastListenedSurah.savedAt`.
+    var savedAt: Date? = nil
 }
 
 struct ListeningHistoryItem: Identifiable, Codable {

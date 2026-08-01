@@ -645,7 +645,7 @@ struct HadithView: View {
                 // the motion, so the bar tracks it instead of easing on its own colliding curve.
                 .transaction { $0.animation = nil }
             }
-            .navigationTitle("Hadith")
+            .navigationTitle("Al-Hadith")
             // Trailing buttons live in their own modifier so iOS 26 can interleave ToolbarSpacers
             // between them - without spacers, Liquid Glass merges them into ONE capsule (the same
             // treatment the Quran tab's trailing toolbar has).
@@ -861,7 +861,8 @@ struct HadithView: View {
                         icon: "book",
                         reference: lastRead.reference,
                         arabic: lastRead.arabicPreview,
-                        english: lastRead.englishPreview
+                        english: lastRead.englishPreview,
+                        timestamp: lastRead.timestamp
                     ) {
                         pushedReference = HadithBookmark(
                             slug: lastRead.slug, idInBook: lastRead.idInBook,
@@ -881,7 +882,7 @@ struct HadithView: View {
         }
     }
 
-    private func summaryTile(title: String, icon: String, reference: String, arabic: String, english: String, onTap: @escaping () -> Void) -> some View {
+    private func summaryTile(title: String, icon: String, reference: String, arabic: String, english: String, timestamp: Date? = nil, onTap: @escaping () -> Void) -> some View {
         Button {
             settings.hapticFeedback()
             onTap()
@@ -896,6 +897,20 @@ struct HadithView: View {
                         .foregroundColor(settings.accentColor.color)
                         .lineLimit(1)
                         .minimumScaleFactor(0.7)
+                        // The title must never lose this row: the timestamp is the flexible one.
+                        .layoutPriority(1)
+
+                    if let timestamp {
+                        Spacer(minLength: 4)
+                        // NOT historyTimestampLabel: its fixedSize refuses to shrink and crushed
+                        // the title to a sliver in this narrow tile. Here the timestamp yields.
+                        Text(formatCompactHistoryTimestamp(timestamp))
+                            .font(.caption2)
+                            .monospacedDigit()
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.6)
+                    }
                 }
 
                 Text(reference)
@@ -1791,6 +1806,8 @@ struct HadithView: View {
     @ViewBuilder
     private func bookNumberPill(_ book: HadithCatalogBook) -> some View {
         let favorite = store.isFavorite(book.slug)
+        // The Quran's continue-reading grammar: a book badge (no tint) marks where you left off.
+        let isLastRead = store.lastRead?.slug == book.slug
         ZStack(alignment: .topTrailing) {
             Text("\(book.number)")
                 .font(.caption.weight(.bold))
@@ -1805,10 +1822,16 @@ struct HadithView: View {
                     settings.hapticFeedback()
                     withAnimation(.easeInOut) { store.toggleFavorite(book.slug) }
                 }
-                .accessibilityLabel("Book \(book.number)")
+                .accessibilityLabel("Book \(book.number)\(isLastRead ? ", last read" : "")")
 
             if favorite {
                 Image(systemName: "star.fill")
+                    .font(.caption2)
+                    .foregroundStyle(settings.accentColor.color)
+                    .padding(4)
+                    .offset(x: 8, y: -6)
+            } else if isLastRead {
+                Image(systemName: "book.fill")
                     .font(.caption2)
                     .foregroundStyle(settings.accentColor.color)
                     .padding(4)

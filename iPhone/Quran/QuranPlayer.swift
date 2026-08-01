@@ -227,6 +227,14 @@ final class QuranPlayer: ObservableObject {
                     self.isLoading = false
                     self.isPlaying = false
                     self.isPaused = false
+                    // SAY WHY, or dismissing the route sheet reads as the app being broken ("it keeps
+                    // trying to go to Bluetooth"). This is Apple's watchOS rule, not ours: third-party
+                    // apps cannot play media through the watch speaker - long-form audio must route to
+                    // Bluetooth headphones, and that sheet is the system asking which ones.
+                    self.presentPlaybackFailure(
+                        "Apple only allows watch apps to play recitations through Bluetooth headphones, like AirPods - the watch speaker isn't available to apps. Connect headphones and try again, or listen on your iPhone.",
+                        title: "Headphones Needed"
+                    )
                 }
             }
         }
@@ -1686,7 +1694,8 @@ final class QuranPlayer: ObservableObject {
                     surahName: nSur.nameTransliteration,
                     reciter: rec,
                     currentDuration: 0,
-                    fullDuration: 0
+                    fullDuration: 0,
+                    savedAt: Date()
                 )
                 loadSurahDurationAsync(surahNumber: nxt, reciter: rec)
             } else {
@@ -1695,7 +1704,8 @@ final class QuranPlayer: ObservableObject {
                     surahName: sur.nameTransliteration,
                     reciter: rec,
                     currentDuration: currDur,
-                    fullDuration: fullDur
+                    fullDuration: fullDur,
+                    savedAt: Date()
                 )
             }
         }
@@ -1723,7 +1733,8 @@ final class QuranPlayer: ObservableObject {
             surahNumber: surahNum,
             surahName: surah.nameTransliteration,
             ayahNumber: ayahNum,
-            reciter: rec
+            reciter: rec,
+            savedAt: Date()
         )
     }
 
@@ -1973,7 +1984,9 @@ final class QuranPlayer: ObservableObject {
                     surahName: current.surahName,
                     reciter: current.reciter,
                     currentDuration: current.currentDuration,
-                    fullDuration: seconds
+                    fullDuration: seconds,
+                    // A duration patch, not a new listen - keep the original stamp.
+                    savedAt: current.savedAt
                 )
             }
         }

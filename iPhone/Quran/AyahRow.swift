@@ -369,6 +369,11 @@ struct AyahRow: View, Equatable {
 
     var body: some View {
         let isBookmarked = isBookmarkedHere
+        // This exact ayah is the last-listened single-ayah playback position - a speaker badge on
+        // the pill, the surah rows' listening grammar. The bookmark badge wins when both apply.
+        let isLastListened = settings.lastListenedAyah.map {
+            $0.surahNumber == surah.id && $0.ayahNumber == ayah.id
+        } ?? false
         let hafsOnly: Bool = if let override = comparisonQiraahOverride {
             override.isEmpty || override == "Hafs"
         } else {
@@ -448,6 +453,12 @@ struct AyahRow: View, Equatable {
 
                         if isBookmarked {
                             Image(systemName: "bookmark.fill")
+                                .font(.caption2)
+                                .foregroundStyle(settings.accentColor.color)
+                                .padding(4)
+                                .offset(x: 8, y: -6)
+                        } else if isLastListened {
+                            Image(systemName: "speaker.wave.2.fill")
                                 .font(.caption2)
                                 .foregroundStyle(settings.accentColor.color)
                                 .padding(4)

@@ -43,6 +43,23 @@ func formatHistoryTimestamp(_ date: Date) -> String {
     return "\(historyDayFormatter.string(from: date)) \(time)"
 }
 
+/// The tightest "when" that still means something, for the summary tiles' crowded title rows:
+/// the bare time today ("5:30 PM"), "\(n)d" inside a week ("1d", "6d"), then "Jul 12". Even
+/// "Yesterday" was too wide next to "Last Read Hadith" on a half-width tile.
+func formatCompactHistoryTimestamp(_ date: Date) -> String {
+    let calendar = Calendar.current
+    if calendar.isDateInToday(date) { return historyTimeFormatter.string(from: date) }
+
+    let daysAgo = calendar.dateComponents(
+        [.day],
+        from: calendar.startOfDay(for: date),
+        to: calendar.startOfDay(for: Date())
+    ).day ?? 0
+
+    if daysAgo > 0 && daysAgo < 7 { return "\(daysAgo)d" }
+    return historyDayFormatter.string(from: date)
+}
+
 /// A small trailing timestamp caption for a history row.
 func historyTimestampLabel(_ date: Date) -> some View {
     Text(formatHistoryTimestamp(date))
@@ -415,6 +432,8 @@ struct SummaryAyahTile: View {
     /// When set, the tile grows a small toggle in its corner that unfolds this tile's recent history below
     /// the summary grid - the summary-mode counterpart of the +/- the full-size rows carry on their headers.
     var onExpand: (() -> Void)? = nil
+    /// When set, a trailing "Today 5:30 PM" caption in the title row - when this position was saved.
+    var timestamp: Date? = nil
     let onTap: () -> Void
 
     /// e.g. "Al-Fatiha 1:5"
@@ -459,9 +478,22 @@ struct SummaryAyahTile: View {
                             .font(.caption2.weight(.semibold))
                             .foregroundColor(titleColor)
                             .lineLimit(1)
+                            .layoutPriority(1)
+
+                        if let timestamp {
+                            Spacer(minLength: 4)
+                            // Shrinkable (unlike historyTimestampLabel): in this narrow tile the
+                            // timestamp yields rather than crushing the title.
+                            Text(formatCompactHistoryTimestamp(timestamp))
+                                .font(.caption2)
+                                .monospacedDigit()
+                                .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.6)
+                        }
 
                         if let onExpand {
-                            Spacer(minLength: 0)
+                            if timestamp == nil { Spacer(minLength: 0) }
 
                             Image(systemName: isExpanded ? "minus.circle" : "plus.circle")
                                 .font(.caption)
@@ -554,6 +586,8 @@ struct SummarySurahTile: View {
     /// See `SummaryAyahTile.isExpanded` / `.onExpand`.
     var isExpanded: Bool = false
     var onExpand: (() -> Void)? = nil
+    /// See `SummaryAyahTile.timestamp`.
+    var timestamp: Date? = nil
     let onTap: () -> Void
 
     /// e.g. "1 - Al-Fatiha"
@@ -573,9 +607,22 @@ struct SummarySurahTile: View {
                         .font(.caption2.weight(.semibold))
                         .foregroundColor(titleColor)
                         .lineLimit(1)
+                        .layoutPriority(1)
+
+                    if let timestamp {
+                        Spacer(minLength: 4)
+                        // Shrinkable (unlike historyTimestampLabel): in this narrow tile the
+                        // timestamp yields rather than crushing the title.
+                        Text(formatCompactHistoryTimestamp(timestamp))
+                            .font(.caption2)
+                            .monospacedDigit()
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.6)
+                    }
 
                     if let onExpand {
-                        Spacer(minLength: 0)
+                        if timestamp == nil { Spacer(minLength: 0) }
 
                         Image(systemName: isExpanded ? "minus.circle" : "plus.circle")
                             .font(.caption)

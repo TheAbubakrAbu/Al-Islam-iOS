@@ -39,7 +39,8 @@ struct GlanceCard: View {
         items.append(.init(icon: "function", title: "Prayer Calculation", value: calculationSummary))
 
         if let qibla = qiblaSummary {
-            items.append(.init(icon: "location.north.line.fill", title: "Qibla", value: qibla))
+            items.append(.init(icon: "location.north.line.fill", title: "Qibla", value: qibla,
+                               iconRotation: qiblaBearing))
         }
         if let makkah = distanceToMakkah {
             items.append(.init(icon: "building.columns.fill", title: "Distance to Makkah", value: makkah))
@@ -54,7 +55,7 @@ struct GlanceCard: View {
             items.append(.init(icon: "moon.zzz.fill", title: "Night", value: night))
         }
 
-        items.append(.init(icon: "moon.stars.fill", title: "Moon", value: moonSummary))
+        items.append(.init(icon: "moon.stars.fill", title: "Moon", value: moonSummary, showsMoonPhase: true))
 
         if let event = nextEventSummary {
             items.append(.init(icon: "calendar", title: "Next Islamic Date", value: event))
@@ -97,6 +98,13 @@ struct GlanceCard: View {
     ///
     /// Standing on the Kaaba itself, the great-circle bearing is meaningless (the library returns whatever
     /// the degenerate case produces - 325° at the exact coordinate), so say so instead of pointing nowhere.
+    /// The raw bearing for the tile's rotating arrow - same math as `qiblaSummary`.
+    private var qiblaBearing: Double? {
+        guard let coordinate = validCoordinate, let meters = metersToKaaba, meters > Self.atKaabaRadius else { return nil }
+        return Qibla(coordinates: Coordinates(latitude: coordinate.latitude,
+                                              longitude: coordinate.longitude)).direction
+    }
+
     private var qiblaSummary: String? {
         guard let coordinate = validCoordinate, let meters = metersToKaaba else { return nil }
         guard meters > Self.atKaabaRadius else { return "You are here" }
@@ -277,6 +285,10 @@ struct GlanceItem: Identifiable {
     let icon: String
     let title: String
     let value: String
+    /// Degrees to rotate the icon (the Qibla tile points its arrow at the actual bearing).
+    var iconRotation: Double? = nil
+    /// The Moon tile draws the real lit-limb phase glyph instead of a symbol.
+    var showsMoonPhase: Bool = false
 
     var id: String { title }
 }
@@ -287,11 +299,29 @@ private struct GlanceTile: View {
     let tile: GlanceItem
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            HStack(spacing: 5) {
-                Image(systemName: tile.icon)
-                    .font(.caption2)
-                    .foregroundStyle(settings.accentColor.color)
+        // The value's FIRST line is the tile's headline; anything after is context. They used to
+        // render identically, which made "14h 5m" and "-1 min vs yesterday" fight for attention.
+        let lines = tile.value.split(separator: "\n", maxSplits: 1).map(String.init)
+        let headline = lines.first ?? tile.value
+        let detail = lines.count > 1 ? lines[1] : nil
+
+        return VStack(alignment: .leading, spacing: 5) {
+            HStack(spacing: 6) {
+                Group {
+                    if tile.showsMoonPhase {
+                        // The REAL moon, exactly as lit tonight - the same glyph the sky card draws.
+                        let phase = MoonPhase.on(Date())
+                        MoonPhaseGlyph(illumination: phase.illumination, isWaxing: phase.isWaxing)
+                            .foregroundColor(settings.accentColor.color)
+                            .frame(width: 13, height: 13)
+                    } else {
+                        Image(systemName: tile.icon)
+                            .font(.caption2)
+                            .foregroundStyle(settings.accentColor.color)
+                            // The Qibla arrow points at the actual bearing.
+                            .rotationEffect(.degrees(tile.iconRotation ?? 0))
+                    }
+                }
 
                 Text(tile.title.uppercased())
                     .font(.caption2.weight(.semibold))
@@ -300,17 +330,19 @@ private struct GlanceTile: View {
                     .minimumScaleFactor(0.8)
             }
 
-            // Two lines, reserved: every tile keeps the same height whether or not it has a second line, so
-            // the grid doesn't stagger.
+            // ONE Text carrying both styles, with two lines RESERVED for every tile: a long
+            // headline wraps into the second line, a detail renders as the second line, and a
+            // short lone headline leaves it empty - but the tile is the same height in all three
+            // cases, so the grid never staggers.
             Group {
                 if #available(iOS 16.0, *) {
-                    Text(tile.value).lineLimit(2, reservesSpace: true)
+                    styledValue(headline: headline, detail: detail)
+                        .lineLimit(2, reservesSpace: true)
                 } else {
-                    Text(tile.value).lineLimit(2)
+                    styledValue(headline: headline, detail: detail)
+                        .lineLimit(2)
                 }
             }
-            .font(.footnote.weight(.semibold))
-            .foregroundStyle(.primary)
             .multilineTextAlignment(.leading)
             .minimumScaleFactor(0.75)
         }
@@ -320,6 +352,18 @@ private struct GlanceTile: View {
         .conditionalGlassEffect(rectangle: true, useColor: 0.15)
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(tile.title). \(tile.value.replacingOccurrences(of: "\n", with: ", "))")
+    }
+
+    /// The headline in semibold primary; the detail (when present) as a caption-secondary second
+    /// line of the SAME Text, so the two-line reservation above covers both shapes.
+    private func styledValue(headline: String, detail: String?) -> Text {
+        let headlineText = Text(headline)
+            .font(.subheadline.weight(.semibold))
+            .foregroundColor(.primary)
+        guard let detail else { return headlineText }
+        return headlineText + Text("\n" + detail)
+            .font(.caption)
+            .foregroundColor(.secondary)
     }
 }
 #endif
