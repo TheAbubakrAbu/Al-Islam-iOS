@@ -51,6 +51,34 @@ final class DayScrubber: ObservableObject {
     }
 }
 
+/// The day picked in `PrayerList`'s date footer, or `nil` when the list is showing today. The moon in
+/// `SkyView` follows it, so browsing another day's prayers also previews that night's moon phase - the
+/// rest of the sky card (sun, gradient, countdown) stays live. Publishes only when the calendar DAY
+/// actually changes, so sub-day churn from the date picker can't re-render the card.
+@MainActor
+final class SelectedDayPreview: ObservableObject {
+    static let shared = SelectedDayPreview()
+    private init() {}
+
+    @Published private(set) var date: Date?
+
+    func update(_ newDate: Date?) {
+        let changed: Bool
+        switch (date, newDate) {
+        case (nil, nil):
+            changed = false
+        case let (old?, new?):
+            changed = !Calendar.current.isDate(old, inSameDayAs: new)
+        default:
+            changed = true
+        }
+        guard changed else { return }
+        withAnimation(.easeInOut(duration: 0.3)) {
+            date = newDate
+        }
+    }
+}
+
 /// The row-highlight slice of the scrubber: publishes only when the prayer under the thumb actually
 /// CHANGES. `PrayerList` observes this (not `DayScrubber`), so its section rebuilds a handful of times
 /// per drag instead of on every touch-move.

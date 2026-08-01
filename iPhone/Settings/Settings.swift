@@ -1580,6 +1580,9 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
 
     @AppStorage("defaultView") var defaultView: Bool = true
 
+    /// The soft accent-colored radial wash at the top of every list (see `washedListBackground`).
+    @AppStorage("showAccentGlow") var showAccentGlow: Bool = true
+
     @AppStorage("colorSchemeString") var colorSchemeString: String = "system"
     var colorScheme: ColorScheme? {
         get {

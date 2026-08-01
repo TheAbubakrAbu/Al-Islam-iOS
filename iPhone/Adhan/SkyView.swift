@@ -170,6 +170,8 @@ private struct StarFieldView: View {
 struct SkyView: View {
     @ObservedObject private var settings = Settings.shared
     @ObservedObject private var scrubber = DayScrubber.shared
+    // Publishes only when the picked DAY changes, so following it costs one re-render per date change.
+    @ObservedObject private var selectedDay = SelectedDayPreview.shared
     @ObservedObject private var adhanPlayer = ForegroundAdhanPlayer.shared
     @Environment(\.layoutDirection) private var layoutDirection
     @Environment(\.scenePhase) private var scenePhase
@@ -434,11 +436,15 @@ struct SkyView: View {
             // Only the moon and its phase live in the layout - the clock is *not* shown at rest (it just added
             // height for something the status bar already says). While the sun is being scrubbed, the previewed
             // moment floats in as an overlay ABOVE, so the card's height never changes.
+            // While the sun is being scrubbed the moon follows the drag; otherwise, when the prayer list
+            // is browsing another day, it previews THAT night's phase. Only the moon follows the picked
+            // day - the sun, gradient and countdown describe the live moment.
             // Quantized to the hour: the moon's look doesn't change measurably within one, and a stable
             // date lets SwiftUI diff MoonPhaseView out (instead of re-running the ephemeris trig twice
             // per second while the card ticks).
+            let moonReference = scrubber.scrubbedDate ?? selectedDay.date ?? now
             let moonDate = Date(timeIntervalSinceReferenceDate:
-                (displayedDate.timeIntervalSinceReferenceDate / 3600).rounded(.down) * 3600)
+                (moonReference.timeIntervalSinceReferenceDate / 3600).rounded(.down) * 3600)
             HStack(spacing: 6) {
                 MoonPhaseView(date: moonDate, diameter: 20)
 

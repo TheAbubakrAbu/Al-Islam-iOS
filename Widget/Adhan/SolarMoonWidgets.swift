@@ -73,13 +73,20 @@ private func widgetSunColor(height: Double, horizon: Double) -> Color {
 
 /// The dashed solar curve with the horizon line, a dot per prayer, and the glowing sun at the
 /// entry's moment. White over the sky gradient; primary-tier greys on the standard background.
-private struct SolarArcGraph: View {
+/// Internal (not private): the Next Prayer and Prayer Day boards squeeze it in as a `compact`
+/// strip - smaller sun, dots and insets so it reads at ~30pt tall.
+struct SolarArcGraph: View {
     let entry: PrayersProvider.Entry
     let skyStyle: Bool
+    var compact: Bool = false
 
     private var lineColor: Color { skyStyle ? .white.opacity(0.30) : .secondary.opacity(0.5) }
     private var horizonColor: Color { skyStyle ? .white.opacity(0.45) : .secondary.opacity(0.35) }
     private var dotColor: Color { skyStyle ? .white.opacity(0.9) : .secondary }
+
+    private var sunDiameter: CGFloat { compact ? 10 : 14 }
+    private var dotDiameter: CGFloat { compact ? 4 : 5 }
+    private var verticalInset: CGFloat { compact ? 7 : 10 }
 
     var body: some View {
         let day = WidgetSolarDay(entry: entry)
@@ -115,13 +122,13 @@ private struct SolarArcGraph: View {
                 let fraction = day.fraction(of: prayer.time)
                 Circle()
                     .fill(dotColor)
-                    .frame(width: 5, height: 5)
+                    .frame(width: dotDiameter, height: dotDiameter)
                     .position(point(at: fraction, day: day, in: rect))
             }
 
             Circle()
                 .fill(sunFill)
-                .frame(width: 14, height: 14)
+                .frame(width: sunDiameter, height: sunDiameter)
                 .shadow(color: sunFill.opacity(isUp ? 0.9 : 0), radius: isUp ? 8 : 0)
                 .position(point(at: sunFraction, day: day, in: rect))
                 .opacity(isUp ? 1 : 0.45)
@@ -135,7 +142,7 @@ private struct SolarArcGraph: View {
 
     private func yPosition(of height: Double, in rect: CGRect) -> CGFloat {
         // Vertical inset keeps the sun's glow and the midnight troughs inside the frame.
-        let inset: CGFloat = 10
+        let inset = verticalInset
         let usable = rect.height - 2 * inset
         return rect.maxY - inset - CGFloat((height + 1) / 2) * usable
     }
@@ -211,34 +218,41 @@ struct MoonEntryView: View {
         let phase = MoonPhase.on(entry.date)
 
         if widgetFamily == .systemMedium {
-            HStack(spacing: 14) {
-                moonGraphic(phase, diameter: 60)
+            VStack(spacing: 4) {
+                HStack(alignment: .top, spacing: 14) {
+                    moonGraphic(phase, diameter: 60)
 
-                VStack(alignment: .leading, spacing: 3) {
-                    Text(phase.name)
-                        .font(.headline)
-                        .foregroundColor(skyStyle ? .white : entry.accentColor.color)
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(phase.name)
+                            .font(.headline)
+                            .foregroundColor(skyStyle ? .white : entry.accentColor.color)
 
-                    Text("\(phase.illuminationPercent)% illuminated")
-                        .font(.caption)
-                        .foregroundColor(skyStyle ? .white.opacity(0.75) : .secondary)
+                        Text("\(phase.illuminationPercent)% illuminated")
+                            .font(.caption)
+                            .foregroundColor(skyStyle ? .white.opacity(0.75) : .secondary)
 
-                    Text(AdhanWidgetDateFormatting.hijriDate(for: entry, style: .medium))
-                        .font(.caption2)
-                        .foregroundColor(skyStyle ? .white.opacity(0.75) : .secondary)
+                        Text(AdhanWidgetDateFormatting.hijriDate(for: entry, style: .medium))
+                            .font(.caption2)
+                            .foregroundColor(skyStyle ? .white.opacity(0.75) : .secondary)
+                    }
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
+
+                    Spacer(minLength: 4)
 
                     if let next = entry.nextPrayer {
-                        Spacer(minLength: 2)
-
                         Text("\(next.displayName) \(Text(next.time, style: .time))")
                             .font(.caption2)
                             .foregroundColor(skyStyle ? .white.opacity(0.9) : .primary)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.6)
                     }
                 }
-                .lineLimit(1)
-                .minimumScaleFactor(0.6)
 
-                Spacer(minLength: 0)
+                // The day's solar arc along the bottom - the moon row above keeps its layout and
+                // just yields the widget's spare bottom height.
+                SolarArcGraph(entry: entry, skyStyle: skyStyle, compact: true)
+                    .frame(minHeight: 20, maxHeight: .infinity)
             }
         } else {
             VStack(spacing: 6) {

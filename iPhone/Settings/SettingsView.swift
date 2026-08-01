@@ -745,6 +745,7 @@ extension SettingsSearchEntry {
         .init(title: "Accent Color", path: "Appearance", keywords: "green color swatch tint custom hex theme", destination: .appearance),
         .init(title: "App Theme (Light / Dark / Sepia / Gray)", path: "Appearance", keywords: "dark mode light mode night reading sepia gray paper background", destination: .appearance),
         .init(title: "Custom Background Color", path: "Appearance", keywords: "custom color background hex picker theme", destination: .appearance),
+        .init(title: "Top Accent Glow", path: "Appearance", keywords: "glow wash gradient accent top background flat hide", destination: .appearance),
         .init(title: "Default List View", path: "Appearance", keywords: "list style plain grouped inset layout", destination: .appearance),
         .init(title: "Haptic Feedback", path: "Appearance", keywords: "vibration taptic buzz feedback toggle", destination: .appearance),
     ]
@@ -882,22 +883,12 @@ struct SettingsAppearanceView: View {
             // their cells, the grid grew its row heights to compensate, and `.padding(.vertical)` piled 32pt on
             // top - which is the "random huge padding" on the watch. The phone has the width for the original
             // layout, so it keeps it.
-            // Rows pinned to BOTH edges (the prayer tracker's rule): spacers only BETWEEN the
-            // swatches, so the first sits flush left and the last flush right. A partial final row
-            // keeps the full rows' column positions via invisible placeholders.
-            VStack(spacing: Self.swatchSpacing) {
-                ForEach(Array(stride(from: 0, to: accentColors.count, by: Self.swatchColumns)), id: \.self) { rowStart in
-                    let row = Array(accentColors[rowStart..<min(rowStart + Self.swatchColumns, accentColors.count)])
-                    HStack(spacing: 0) {
-                        ForEach(Array(row.enumerated()), id: \.element) { index, accentColor in
-                            if index > 0 { Spacer(minLength: Self.swatchSpacing) }
-                            accentSwatch(accentColor)
-                        }
-                        ForEach(0..<(Self.swatchColumns - row.count), id: \.self) { _ in
-                            Spacer(minLength: Self.swatchSpacing)
-                            Color.clear.frame(width: Self.swatchDiameter, height: Self.swatchDiameter)
-                        }
-                    }
+            LazyVGrid(columns: Array(
+                repeating: GridItem(.flexible(), spacing: Self.swatchSpacing),
+                count: Self.swatchColumns
+            ), spacing: Self.swatchSpacing) {
+                ForEach(accentColors, id: \.self) { accentColor in
+                    accentSwatch(accentColor)
                 }
             }
             .padding(.vertical, Self.swatchGridVerticalPadding)
@@ -932,6 +923,17 @@ struct SettingsAppearanceView: View {
         }
 
         #if os(iOS)
+        VStack(alignment: .leading) {
+            Toggle("Top Accent Glow", isOn: $settings.showAccentGlow.animation(.easeInOut))
+                .font(.subheadline)
+                .onChange(of: settings.showAccentGlow) { _ in settings.hapticFeedback() }
+
+            Text("A soft wash of your accent color at the top of each screen. Turn it off for a flat background.")
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .padding(.vertical, 2)
+        }
+
         VStack(alignment: .leading) {
             Toggle("Default List View", isOn: $settings.defaultView.animation(.easeInOut))
                 .font(.subheadline)

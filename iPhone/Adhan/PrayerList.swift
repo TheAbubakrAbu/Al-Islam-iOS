@@ -205,8 +205,8 @@ struct PrayerList: View {
     ]
 
     /// The expandable rakaah guide content: every mandatory prayer with its fard count and both
-    /// kinds of sunnah. Lives inside the optional-prayers footer so its button sits directly
-    /// under "Show Optional Prayer Times" with nothing between them.
+    /// kinds of sunnah. Lives inside the optional-prayers footer, disclosed by the "Rakaah Guide"
+    /// pill that shares a line with "Optional Times".
     @ViewBuilder
     private var rakaahGuideContent: some View {
         VStack(spacing: 0) {
@@ -301,8 +301,15 @@ struct PrayerList: View {
             // outer padding pulls them close to the neighboring rows above and below.
             Divider()
 
-            footerActionButton(showOptionalPrayerToggles ? "Hide Optional Prayer Times" : "Show Optional Prayer Times") {
-                showOptionalPrayerToggles.toggle()
+            // Both disclosures share one line - two half-width pills instead of two stacked full-width ones.
+            HStack(spacing: 10) {
+                footerActionButton("Optional Times", isExpanded: showOptionalPrayerToggles) {
+                    showOptionalPrayerToggles.toggle()
+                }
+
+                footerActionButton("Rakaah Guide", isExpanded: showRakaahGuide) {
+                    showRakaahGuide.toggle()
+                }
             }
 
             if showOptionalPrayerToggles {
@@ -316,10 +323,6 @@ struct PrayerList: View {
                     .font(.caption2)
                     .foregroundColor(.secondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
-            }
-
-            footerActionButton(showRakaahGuide ? "Hide Rakaah Guide" : "Show Rakaah Guide") {
-                showRakaahGuide.toggle()
             }
 
             if showRakaahGuide {
@@ -641,21 +644,25 @@ struct PrayerList: View {
             VStack {
                 #if os(iOS)
                 travelingModeDescription
-                #endif
 
-                footerActionButton(fullPrayers ? "View Qasr Prayers" : "View Full Prayers") {
-                    fullPrayers.toggle()
-                }
+                HStack(spacing: 10) {
+                    footerActionButton(fullPrayers ? "View Qasr Prayers" : "View Full Prayers") {
+                        fullPrayers.toggle()
+                    }
 
-                #if os(iOS)
-                // The footer explains Qasr but gave no way OUT of it: turning traveling mode off meant
-                // finding the setting by hand. This lands directly on the Traveling Mode screen.
-                footerActionButton("Traveling Mode Settings") {
-                    showTravelingModeSettings = true
+                    // The footer explains Qasr but gave no way OUT of it: turning traveling mode off meant
+                    // finding the setting by hand. This lands directly on the Traveling Mode screen.
+                    footerActionButton("Travel Settings") {
+                        showTravelingModeSettings = true
+                    }
                 }
                 #endif
 
                 #if os(watchOS)
+                footerActionButton(fullPrayers ? "View Qasr Prayers" : "View Full Prayers") {
+                    fullPrayers.toggle()
+                }
+
                 travelingModeDescription
                 #endif
             }
@@ -690,17 +697,22 @@ struct PrayerList: View {
             .padding(4)
 
             if isShowingDifferentDay {
-                footerActionButton(compareToday ? "Hide Today Comparison" : "Compare With Today") {
-                    compareToday.toggle()
-                }
+                HStack(spacing: 10) {
+                    footerActionButton(compareToday ? "Hide Comparison" : "Compare Today") {
+                        compareToday.toggle()
+                    }
 
-                footerActionButton("Show prayers for today") {
-                    selectedDate = Date()
+                    footerActionButton("Back to Today") {
+                        selectedDate = Date()
+                    }
                 }
             }
         }
-        .onChange(of: selectedDate) { _ in
+        .onChange(of: selectedDate) { newDate in
             settings.hapticFeedback()
+            // Let the sky card's moon preview the picked night's phase (nil = back to the live moon).
+            let isToday = Calendar.current.isDate(newDate, inSameDayAs: Date())
+            SelectedDayPreview.shared.update(isToday ? nil : newDate)
         }
         #endif
     }
@@ -733,18 +745,30 @@ struct PrayerList: View {
     }
     #endif
 
-    private func footerActionButton(_ title: String, action: @escaping () -> Void) -> some View {
-        Text(title)
-            .foregroundColor(settings.accentColor.accent2)
-            .frame(maxWidth: .infinity, alignment: .center)
-            .padding(8)
-            .conditionalGlassEffect()
-            .onTapGesture {
-                settings.hapticFeedback()
-                withAnimation {
-                    action()
-                }
+    /// Pass `isExpanded` for buttons that disclose content below: they get a rotating chevron, so the
+    /// title can stay short ("Rakaah Guide") instead of carrying a Show/Hide prefix.
+    private func footerActionButton(_ title: String, isExpanded: Bool? = nil, action: @escaping () -> Void) -> some View {
+        HStack(spacing: 5) {
+            Text(title)
+
+            if let isExpanded {
+                Image(systemName: "chevron.down")
+                    .font(.caption.weight(.semibold))
+                    .rotationEffect(.degrees(isExpanded ? 180 : 0))
             }
+        }
+        .lineLimit(1)
+        .minimumScaleFactor(0.8)
+        .foregroundColor(settings.accentColor.accent2)
+        .frame(maxWidth: .infinity, alignment: .center)
+        .padding(8)
+        .conditionalGlassEffect()
+        .onTapGesture {
+            settings.hapticFeedback()
+            withAnimation {
+                action()
+            }
+        }
     }
 
     /// While the sun is being dragged along `SkyView`'s arc, the highlight follows the dragged moment rather

@@ -212,14 +212,14 @@ struct PrayerGradientWidget: Widget {
         StaticConfiguration(kind: kind, provider: PrayersProvider()) { entry in
             PrayerGradientEntryView(entry: entry)
         }
-        .configurationDisplayName("Prayer Sky")
+        .configurationDisplayName("Prayer Glance Sky")
         .description("The current prayer and time remaining, over that prayer's sky gradient, the same colors as the app's solar countdown.")
         .supportedFamilies([.systemSmall, .systemMedium])
     }
 }
 
-/// The Prayer Sky layout on the standard widget background - for anyone who loves the layout but wants
-/// it to match the rest of their home screen.
+/// The Prayer Glance Sky layout on the standard widget background - for anyone who loves the layout
+/// but wants it to match the rest of their home screen.
 struct PrayerGlanceWidget: Widget {
     let kind: String = "PrayerGlanceWidget"
 
@@ -228,7 +228,7 @@ struct PrayerGlanceWidget: Widget {
             PrayerGradientEntryView(entry: entry, showsSky: false)
         }
         .configurationDisplayName("Prayer Glance")
-        .description("The current prayer and time remaining, in the Prayer Sky layout on the standard widget background.")
+        .description("The current prayer and time remaining, on the standard widget background.")
         .supportedFamilies([.systemSmall, .systemMedium])
     }
 }
@@ -248,7 +248,7 @@ struct CountdownSkyWidget: Widget {
     }
 }
 
-/// The Prayer Times widget, unchanged, over the current prayer's sky gradient.
+/// The Prayer Grid widget, unchanged, over the current prayer's sky gradient.
 struct PrayersSkyWidget: Widget {
     let kind: String = "PrayersSkyWidget"
 
@@ -257,7 +257,7 @@ struct PrayersSkyWidget: Widget {
             PrayersEntryView(entry: entry, skyStyle: true)
                 .modifier(PrayerSkyChrome(entry: entry))
         }
-        .configurationDisplayName("Prayer Times Sky")
+        .configurationDisplayName("Prayer Grid Sky")
         .description("All of today's prayer times, over the current prayer's sky gradient.")
         .supportedFamilies([.systemMedium, .systemLarge])
     }

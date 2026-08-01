@@ -306,7 +306,8 @@ struct ConditionalListStyle: ViewModifier {
                 RadialGradient(
                     colors: [
                         settings.accentColor.color.opacity(
-                            settings.hasCustomThemeColors ? 0 : (currentColorScheme == .dark ? 0.16 : 0.10)
+                            (settings.hasCustomThemeColors || !settings.showAccentGlow)
+                                ? 0 : (currentColorScheme == .dark ? 0.16 : 0.10)
                         ),
                         .clear
                     ],

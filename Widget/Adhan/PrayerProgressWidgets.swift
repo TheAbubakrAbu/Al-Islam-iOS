@@ -386,6 +386,12 @@ struct PrayerDayView: View {
                     tint: skyStyle ? .white : entry.accentColor.color
                 )
 
+                // The day's solar arc through the middle - between the countdown block above and
+                // the prayer columns below - soaking up the leftover height the centered stack
+                // used to leave as margins.
+                SolarArcGraph(entry: entry, skyStyle: skyStyle, compact: true)
+                    .frame(minHeight: 20, maxHeight: .infinity)
+
                 // Pinned to both edges: spacers only BETWEEN the columns (the tracker's rule).
                 HStack(alignment: .top, spacing: 0) {
                     ForEach(Array(entry.prayers.enumerated()), id: \.element.id) { index, prayer in
@@ -796,7 +802,11 @@ struct NextPrayerBoardView: View {
                         .font(.caption)
                         .foregroundColor(skyStyle ? .white.opacity(0.75) : .secondary)
 
-                    Spacer(minLength: 4)
+                    // The day's solar arc fills what used to be dead space between the countdown
+                    // and the progress bar - nothing below moved, the flexible gap just draws now.
+                    SolarArcGraph(entry: entry, skyStyle: skyStyle, compact: true)
+                        .frame(minHeight: 20, maxHeight: .infinity)
+                        .padding(.vertical, 1)
 
                     PrayerIntervalProgressBar(
                         current: current,
