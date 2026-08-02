@@ -32,7 +32,19 @@ struct NameOfAllah: Identifiable, Equatable {
         displayArabicName = deacriticizedName.contains(" ")
             ? deacriticizedName.split(separator: " ").joined(separator: "\n")
             : deacriticizedName
+        // No Quran references in an app without the Quran domain (`HAS_QURAN` is defined by the
+        // projects that ship it; companions define nothing and all of this compiles out): the
+        // first-found ayah would be a link to nowhere, so it is never derived - which is also what
+        // hides every "First Found" line and "View First Found" button downstream (they key off
+        // these). The found string is likewise dropped from search - "(2:255)" should match nothing
+        // in an app with no Quran to resolve it in; the empty token keeps the array's index contract.
+        #if HAS_QURAN
         let firstFound = Self.parseFirstFound(found)
+        let foundToken = Self.clean(found)
+        #else
+        let firstFound: (surah: Int, ayah: Int)? = nil
+        let foundToken = ""
+        #endif
         firstFoundSurah = firstFound?.surah
         firstFoundAyah = firstFound?.ayah
 
@@ -42,7 +54,7 @@ struct NameOfAllah: Identifiable, Equatable {
             Self.clean(meaning),
             otherNames.map(Self.clean).joined(separator: " "),
             Self.clean(desc),
-            Self.clean(found),
+            foundToken,
             "\(number)",
             numberArabic
         ]
@@ -104,6 +116,53 @@ struct NameOfAllah: Identifiable, Equatable {
     }
 }
 
+#if !HAS_QURAN
+/// The original NamesOfAllah.json shapes - the data path for apps without the Quran domain's
+/// pack reader. Handles both historical layouts: a bare array or the {code, status, data}
+/// wrapper, with the translation flat or nested under "en".
+private struct JSONNamesRoot: Decodable {
+    let code: Int
+    let status: String
+    let data: [JSONNameRecord]
+}
+
+private struct JSONNameRecord: Decodable {
+    let number: Int
+    let name: String
+    let transliteration: String
+    let found: String
+    let meaning: String
+    let desc: String
+
+    private struct Translation: Decodable {
+        let meaning: String
+        let desc: String
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case name, transliteration, number, found, meaning, desc, en
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        number = try c.decode(Int.self, forKey: .number)
+        name = try c.decode(String.self, forKey: .name)
+        transliteration = try c.decode(String.self, forKey: .transliteration)
+        found = try c.decode(String.self, forKey: .found)
+
+        if let flatMeaning = try c.decodeIfPresent(String.self, forKey: .meaning),
+           let flatDesc = try c.decodeIfPresent(String.self, forKey: .desc) {
+            meaning = flatMeaning
+            desc = flatDesc
+        } else {
+            let en = try c.decode(Translation.self, forKey: .en)
+            meaning = en.meaning
+            desc = en.desc
+        }
+    }
+}
+#endif
+
 final class NamesViewModel: ObservableObject {
     enum LoadState: Equatable {
         case idle
@@ -163,7 +222,10 @@ final class NamesViewModel: ObservableObject {
         }
 
         // namesofallah.qpk replaced NamesOfAllah.json (7.6 KB vs 25.9 KB; same container format as
-        // the Quran packs, verified field-for-field against the JSON it was built from).
+        // the Quran packs, verified field-for-field against the JSON it was built from). The pack
+        // reader lives in the Quran domain; apps without it (no `HAS_QURAN`) still bundle the
+        // original NamesOfAllah.json and decode that instead - no Quran symbol is even compiled.
+        #if HAS_QURAN
         guard let url = QuranPackLoader.url("namesofallah") else {
             logger.debug("❌ namesofallah.qpk not found.")
             await MainActor.run {
@@ -171,12 +233,43 @@ final class NamesViewModel: ObservableObject {
             }
             return
         }
+        #else
+        guard let url = Bundle.main.url(forResource: "NamesOfAllah", withExtension: "json") else {
+            logger.debug("❌ NamesOfAllah.json not found.")
+            await MainActor.run {
+                self.loadState = .failed
+            }
+            return
+        }
+        #endif
 
         do {
+            #if HAS_QURAN
             guard let pack = NamesPack(url: url) else {
                 throw NSError(domain: "NamesOfAllah", code: 1, userInfo: [NSLocalizedDescriptionKey: "namesofallah.qpk unreadable"])
             }
-            let names = pack.records.map {
+            let records = pack.records.map {
+                (number: $0.number, name: $0.name, transliteration: $0.transliteration,
+                 found: $0.found, meaning: $0.meaning, otherNames: $0.otherNames, desc: $0.desc)
+            }
+            #else
+            // Either historical JSON shape decodes: a bare array or the {code, status, data}
+            // wrapper, with translations flat or nested under "en".
+            let data = try Data(contentsOf: url, options: .mappedIfSafe)
+            let decoder = JSONDecoder()
+            let decoded: [JSONNameRecord]
+            if let array = try? decoder.decode([JSONNameRecord].self, from: data) {
+                decoded = array
+            } else {
+                decoded = try decoder.decode(JSONNamesRoot.self, from: data).data
+            }
+            let records = decoded.map {
+                (number: $0.number, name: $0.name, transliteration: $0.transliteration,
+                 found: $0.found, meaning: $0.meaning, otherNames: [String](), desc: $0.desc)
+            }
+            #endif
+
+            let names = records.map {
                 NameOfAllah(number: $0.number, name: $0.name, transliteration: $0.transliteration,
                             found: $0.found, meaning: $0.meaning, otherNames: $0.otherNames, desc: $0.desc)
             }
@@ -228,7 +321,9 @@ final class NamesViewModel: ObservableObject {
 
 struct NamesView: View {
     @ObservedObject var settings = Settings.shared
+    #if HAS_QURAN
     @ObservedObject var quranData = QuranData.shared
+    #endif
     @ObservedObject var namesData = NamesViewModel.shared
 
     @State private var searchText = ""
@@ -630,9 +725,19 @@ struct NamesView: View {
         #endif
     }
 
+    private static var namesDisclaimerText: String {
+        var text = "Prophet Muhammad ﷺ said, “Allah has 99 names, and whoever believes in their meanings and acts accordingly, will enter Paradise” (Bukhari 6410). The count is established in Bukhari and Muslim; the enumerated list below is the one narrated in Tirmidhi 3507, which scholars note is an addition by a narrator rather than the Prophet's own listing."
+        #if HAS_QURAN
+        text += " Names marked as coming from that list do not appear as names in the Quran."
+        #endif
+        return text
+    }
+
     private var descriptionSection: some View {
         Section(header: Text("DESCRIPTION")) {
-            Text("Prophet Muhammad ﷺ said, “Allah has 99 names, and whoever believes in their meanings and acts accordingly, will enter Paradise” (Bukhari 6410). The count is established in Bukhari and Muslim; the enumerated list below is the one narrated in Tirmidhi 3507, which scholars note is an addition by a narrator rather than the Prophet's own listing. Names marked as coming from that list do not appear as names in the Quran.")
+            // The closing sentence explains the "First Found" labels, which only exist in apps that
+            // ship the Quran - it goes with them.
+            Text(Self.namesDisclaimerText)
                 .font(.caption)
                 .foregroundColor(.secondary)
 
@@ -693,11 +798,14 @@ struct NamesView: View {
                             .foregroundColor(settings.accentColor.color)
                     }
 
-                    Text("Allah (اللَّه) is the proper name of the One True God, not one of the 99 names, but the name every one of them describes. Unlike other words, it has no plural and no gender, and it was never used for anything or anyone else. It appears in the Quran more than 2,600 times, beginning with the very first ayah:")
+                    // The Quran tail of the paragraph, the 1:1 quote and the link into the mushaf
+                    // only exist where the Quran does.
+                    Text(Self.allahIntroText)
                         .font(.footnote)
                         .foregroundColor(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
 
+                    #if HAS_QURAN
                     Text("“In the name of Allah, the Entirely Merciful, the Especially Merciful.” — Quran 1:1")
                         .font(.footnote.italic())
                         .foregroundColor(.primary)
@@ -715,9 +823,18 @@ struct NamesView: View {
                             NavigationLink("", destination: ayahsDestination(for: (surahID: 1, ayahID: 1)))
                                 .opacity(0)
                         )
+                    #endif
                 }
             }
         }
+    }
+
+    private static var allahIntroText: String {
+        var text = "Allah (اللَّه) is the proper name of the One True God, not one of the 99 names, but the name every one of them describes. Unlike other words, it has no plural and no gender, and it was never used for anything or anyone else."
+        #if HAS_QURAN
+        text += " It appears in the Quran more than 2,600 times, beginning with the very first ayah:"
+        #endif
+        return text
     }
 
     private func namesHeaderSection(resultCount: Int, hasActiveSearch: Bool, proxy: ScrollViewProxy) -> some View {
@@ -843,6 +960,7 @@ struct NamesView: View {
         }
     }
 
+    #if HAS_QURAN
     @ViewBuilder
     private func ayahsDestination(for target: (surahID: Int, ayahID: Int)) -> some View {
         if let surah = quranData.surah(target.surahID) {
@@ -851,6 +969,7 @@ struct NamesView: View {
             Text("Reference not found")
         }
     }
+    #endif
 
     private func handleNameTap(name: NameOfAllah, hasActiveSearch: Bool, proxy: ScrollViewProxy) {
         if hasActiveSearch {
@@ -874,7 +993,11 @@ struct NamesView: View {
         }
     }
 
+    /// Quranic content wholesale (an ayah and the four Al-Hashr reflections) - it only exists in
+    /// apps that ship the Quran.
+    @ViewBuilder
     private var finalInvocationSection: some View {
+        #if HAS_QURAN
         Section(header: Text("MOST BEAUTIFUL NAMES")) {
             VStack(alignment: .leading, spacing: 10) {
                 Text("Call upon Allah or call upon Ar-Rahman (The Entirely Merciful). Whichever Name you call, to Him belong the Most Beautiful Names.")
@@ -906,6 +1029,7 @@ struct NamesView: View {
                 contentText: "He is Allah, the Creator, the Originator, the Fashioner. To Him belong the Most Beautiful Names; all in the heavens and earth glorify Him."
             )
         }
+        #endif
     }
 }
 
@@ -1035,10 +1159,13 @@ private struct NameRow: View, Equatable {
                         )
                             .fixedSize(horizontal: false, vertical: true)
 
+                        // A Quran reference - it only exists in apps that ship the Quran.
+                        #if HAS_QURAN
                         Text("First Found: \(name.firstFoundShort)")
                             .font(.caption2)
                             .foregroundColor(.secondary)
                             .lineLimit(1)
+                        #endif
                     }
 
                     Spacer(minLength: 8)
@@ -1106,18 +1233,25 @@ private struct NameRow: View, Equatable {
     }
 
     private var copyMenu: some View {
-        Group {
+        // The First Found entries are Quran references; apps without the Quran have none.
+        #if HAS_QURAN
+        let firstFoundLine = "First Found: \(name.firstFoundShort)\n"
+        #else
+        let firstFoundLine = ""
+        #endif
+        return Group {
             menuItem("Copy All", text: """
             Arabic: \(name.name.removeDiacriticsFromLastLetter())
             Transliteration: \(name.transliteration)
             Translation: \(name.meaning)
-            First Found: \(name.firstFoundShort)
-            Description: \(name.desc)
+            \(firstFoundLine)Description: \(name.desc)
             """)
             menuItem("Copy Arabic", text: name.name.removeDiacriticsFromLastLetter())
             menuItem("Copy Transliteration", text: name.transliteration)
             menuItem("Copy Translation", text: name.meaning)
+            #if HAS_QURAN
             menuItem("Copy First Found", text: name.firstFoundShort)
+            #endif
             menuItem("Copy Description", text: name.desc)
         }
     }
@@ -1178,8 +1312,10 @@ private struct NameRow: View, Equatable {
 
 private struct NameRowDetails: View {
     @ObservedObject var settings = Settings.shared
+    #if HAS_QURAN
     @ObservedObject var quranData = QuranData.shared
-    
+    #endif
+
     let name: NameOfAllah
     let firstFoundTarget: (surahID: Int, ayahID: Int)?
     let showDescription: Bool
@@ -1210,6 +1346,7 @@ private struct NameRowDetails: View {
                     .transition(.opacity)
                     .padding(.top, 2)
 
+                #if HAS_QURAN
                 if showDescription || isExpanded, let target = firstFoundTarget {
                     Text("View First Found")
                         .font(.caption.weight(.semibold))
@@ -1224,10 +1361,12 @@ private struct NameRowDetails: View {
                                 .opacity(0)
                         )
                 }
+                #endif
             }
         }
     }
 
+    #if HAS_QURAN
     @ViewBuilder
     private func ayahsDestination(for target: (surahID: Int, ayahID: Int)) -> some View {
         if let surah = quranData.surah(target.surahID) {
@@ -1236,6 +1375,7 @@ private struct NameRowDetails: View {
             Text("Reference not found")
         }
     }
+    #endif
 }
 
 private struct VerseReflectionCard: View {

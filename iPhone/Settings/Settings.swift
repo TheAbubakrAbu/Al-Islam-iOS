@@ -161,6 +161,24 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
             try? await Task.sleep(nanoseconds: 10_000_000)
         }
     }
+    
+    /// Reload widget timelines, coalescing the launch burst the same way as `scheduleNotifications`.
+    func reloadWidgets(deferred: Bool) {
+        // See `scheduleNotifications`: a widget must not reload widget timelines - that is a self-reload loop.
+        guard Settings.isAppProcess else { return }
+        pendingWidgetReloadWorkItem?.cancel()
+        pendingWidgetReloadWorkItem = nil
+        guard deferred else {
+            WidgetCenter.shared.reloadAllTimelines()
+            return
+        }
+        let work = DispatchWorkItem { [weak self] in
+            self?.pendingWidgetReloadWorkItem = nil
+            WidgetCenter.shared.reloadAllTimelines()
+        }
+        pendingWidgetReloadWorkItem = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35, execute: work)
+    }
 
     /// Restores every *preference* (appearance, prayer, and Quran options) to its default while keeping the
     /// user's content. We wipe the app's standard-defaults domain - which clears all the `@AppStorage`

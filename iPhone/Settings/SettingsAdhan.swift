@@ -5,6 +5,7 @@ import Network
 import UserNotifications
 import WidgetKit
 import WatchConnectivity
+import os
 
 // [Al-Adhan] This entire file is the Al-Adhan domain - copy it into that companion app whole,
 // and delete it from companions that do not ship this domain.
@@ -1821,24 +1822,6 @@ extension Settings {
             self?.schedulePrayerTimeNotifications()
         }
         pendingNotificationScheduleWorkItem = work
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35, execute: work)
-    }
-
-    /// Reload widget timelines, coalescing the launch burst the same way as `scheduleNotifications`.
-    func reloadWidgets(deferred: Bool) {
-        // See `scheduleNotifications`: a widget must not reload widget timelines - that is a self-reload loop.
-        guard Settings.isAppProcess else { return }
-        pendingWidgetReloadWorkItem?.cancel()
-        pendingWidgetReloadWorkItem = nil
-        guard deferred else {
-            WidgetCenter.shared.reloadAllTimelines()
-            return
-        }
-        let work = DispatchWorkItem { [weak self] in
-            self?.pendingWidgetReloadWorkItem = nil
-            WidgetCenter.shared.reloadAllTimelines()
-        }
-        pendingWidgetReloadWorkItem = work
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.35, execute: work)
     }
 

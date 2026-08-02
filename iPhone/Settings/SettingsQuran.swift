@@ -1,6 +1,7 @@
 import SwiftUI
 import Combine
 import WidgetKit
+import os
 
 // [Al-Quran] This entire file is the Al-Quran domain - copy it into that companion app whole,
 // and delete it from companions that do not ship this domain.
