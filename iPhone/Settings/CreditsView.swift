@@ -31,7 +31,7 @@ struct CreditsView: View {
     private var headerSection: some View {
         VStack(alignment: .center, spacing: 10) {
             // The app icon as the hero, in the splash screen's card language.
-            Image("Al-Islam")
+            Image(AppIdentifiers.appName)
                 .resizable()
                 .aspectRatio(contentMode: .fit)
                 .frame(width: 76, height: 76)
@@ -43,7 +43,7 @@ struct CreditsView: View {
                 .shadow(color: settings.accentColor.color.opacity(0.35), radius: 14, x: 0, y: 6)
                 .padding(.top, 6)
 
-            Text("Al-Islam")
+            Text(AppIdentifiers.appName)
                 .font(.title2.bold())
 
             Text("Created by Abubakr Elmallah (أبوبكر الملاح), a 17-year-old high school student when the app launched on July 26, 2023.")

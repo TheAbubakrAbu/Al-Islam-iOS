@@ -753,7 +753,9 @@ struct NotificationView: View {
                 Section(header: Text("ALERT TONE")) {
                     Picker("Alert Tone", selection: $settings.alertToneSound.animation(.easeInOut)) {
                         Section {
-                            ForEach(Settings.supportedAdhanSounds) { option in
+                            // Tones only, no adhans: this sound plays exactly where the adhan was
+                            // declined (prenotifications, optional times, adhan-off prayers).
+                            ForEach(Settings.supportedAlertTones) { option in
                                 Text(option.title).tag(option.id)
                             }
                         } header: {
@@ -864,15 +866,17 @@ struct NotificationView: View {
             }
             .animation(.easeInOut(duration: 0.25), value: permissionPillText)
 
-            if let s = notifSettings {
-                VStack(spacing: 8) {
-                    infoRow("Status", statusText(s.authorizationStatus))
-                    infoRow("Alerts", notificationSettingText(s.alertSetting))
-                    infoRow("Sounds", notificationSettingText(s.soundSetting))
-                }
-                .font(.footnote)
-                .transition(.opacity.combined(with: .scale(scale: 0.98)))
+            // Always present - not gated on the async fetch - so the card renders at its final
+            // height from the FIRST frame. The rows used to appear only once the notification
+            // settings arrived, which visibly grew the card (and the sheet around it) right after
+            // opening. Redacted placeholders hold the exact space while the fetch is in flight.
+            VStack(spacing: 8) {
+                infoRow("Status", notifSettings.map { statusText($0.authorizationStatus) } ?? "Allowed")
+                infoRow("Alerts", notifSettings.map { notificationSettingText($0.alertSetting) } ?? "On")
+                infoRow("Sounds", notifSettings.map { notificationSettingText($0.soundSetting) } ?? "On")
             }
+            .font(.footnote)
+            .redacted(reason: notifSettings == nil ? .placeholder : [])
 
             HStack(spacing: 10) {
                 smallButton("Request Access", systemImage: "checkmark.seal")

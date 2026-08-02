@@ -1,3 +1,4 @@
+#if os(iOS)
 import SwiftUI
 
 /// The app's foreground/background orchestration, in one named place.
@@ -94,3 +95,4 @@ enum AppLifecycle {
         WatchConnectivityManager.shared.flushPendingSync()
     }
 }
+#endif

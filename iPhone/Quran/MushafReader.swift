@@ -1695,6 +1695,14 @@ struct MushafPageComposer {
         var ranges: [MushafAyahRange] = []
         let accent = config.accent
         let para = paragraph(size, extraLineSpacing: extraLineSpacing)
+        // Character positions just past each segment's final ayah marker - a surah completing
+        // mid-page and the page's own last line alike. `fillSurahClosingLines` first tries to FILL
+        // a sparse closing line by loosening its segment's gaps so words cascade down into it;
+        // `spaceJustified`'s sparseness cap then lets whatever stays sparse sit naturally at the
+        // right margin instead of being flung across the full measure.
+        var closingLineEnds: Set<Int> = []
+        // The same segments' full ayah-text ranges (headings excluded), for the fill pass.
+        var fillableSegments: [NSRange] = []
 
         for (i, segment) in page.segments.enumerated() {
             // A surah OPENING on this page gets the printed treatment: a full-width rule, the name line, and
@@ -1745,6 +1753,8 @@ struct MushafPageComposer {
                 ))
             }
 
+            let segmentTextStart = result.length
+
             for ayah in segment.ayahs {
                 let start = result.length
                 result.append(ayahText(ayah, surah: segment.surah, size: size, colored: colored,
@@ -1769,6 +1779,14 @@ struct MushafPageComposer {
                     ayahID: MushafAyahRange.ayahMarkerID
                 ))
             }
+
+            // EVERY segment closes a paragraph whose last line deserves the treatment: a followed
+            // segment has necessarily completed its surah (surahs are contiguous in mushaf order),
+            // and the page's last segment - surah completed or continuing overleaf - still ends in
+            // the page's own last line, which reads just as broken when it's sparse and stretched.
+            closingLineEnds.insert(result.length)
+            fillableSegments.append(NSRange(location: segmentTextStart,
+                                            length: result.length - segmentTextStart))
         }
 
         // Justify the final compose: first the page-wide loosening (`spaceTracking`, which DOES move line
@@ -1778,7 +1796,8 @@ struct MushafPageComposer {
         if width > 0, !isEnglish, !usesSystemFont, !isOpeningSpread {
             let balanced = NSMutableAttributedString(attributedString: result)
             if spaceTracking > 0 { Self.addSpaceTracking(spaceTracking, to: balanced) }
-            return (Self.spaceJustified(balanced, width: width), ranges)
+            Self.fillSurahClosingLines(balanced, width: width, segments: fillableSegments, bodySize: size)
+            return (Self.spaceJustified(balanced, width: width, closingLineEnds: closingLineEnds, bodySize: size), ranges)
         }
 
         return (result, ranges)
@@ -1805,9 +1824,11 @@ struct MushafPageComposer {
     /// tracking on the spaces). This is what `.justified` would do MINUS kashida glyph elongation, which
     /// TextKit is free to place inside a line's final letter - detaching that letter's tashkeel onto the
     /// stretched tail, the mushaf reader's "floating haraka at the margin" artifact. Every line takes the
-    /// full measure, including a paragraph's last; only centered lines (surah headings) and lines too empty
-    /// to stretch stay as set.
-    private static func spaceJustified(_ source: NSAttributedString, width: CGFloat) -> NSAttributedString {
+    /// full measure, including a paragraph's last; headings keep their own centering, and a segment's
+    /// still-sparse closing line (see `closingLineEnds`) is centered on the measure instead of
+    /// stretched or left trailing - the printed mushaf's treatment of a surah's short last line.
+    private static func spaceJustified(_ source: NSAttributedString, width: CGFloat,
+                                       closingLineEnds: Set<Int> = [], bodySize: CGFloat = 0) -> NSAttributedString {
         let justified = NSMutableAttributedString(attributedString: source)
         // The whole stack stays bound: NSLayoutManager does NOT retain its NSTextStorage, so discarding the
         // storage would tear the layout down under the queries below.
@@ -1815,6 +1836,9 @@ struct MushafPageComposer {
         let manager = stack.manager
 
         let string = source.string as NSString
+        // Paragraphs whose closing line was too sparse to justify - re-aligned centered after the
+        // walk, the way a printed mushaf centers a surah's short last line.
+        var centeredParagraphs: [NSRange] = []
         var glyphIndex = 0
         while glyphIndex < manager.numberOfGlyphs {
             var lineGlyphRange = NSRange()
@@ -1829,9 +1853,9 @@ struct MushafPageComposer {
             guard style?.alignment == .right else { continue }
 
             // Paragraph-final lines are stretched too - deliberately not what `.justified` would do. This is
-            // a mushaf page: a segment's short closing line ending flush against only one margin reads as a
-            // typesetting mistake, so every line takes the full measure (the sparseness cap below still lets
-            // a line too empty to stretch stay natural).
+            // a mushaf page: a short closing line ending flush against only one margin reads as a typesetting
+            // mistake, so every line takes the full measure. The exception is a closing line the fill pass
+            // could not fill (checked below): that one is CENTERED, never stretched or left trailing.
             let lineEnd = NSMaxRange(charRange)
 
             // Stretch every space in the line except the trailing whitespace at the break - TextKit hangs
@@ -1846,9 +1870,32 @@ struct MushafPageComposer {
             for i in charRange.location..<contentEnd where string.character(at: i) == 0x20 {
                 spaceLocations.append(i)
             }
-            guard !spaceLocations.isEmpty else { continue }
 
             let slack = width - usedRect.width
+
+            // A segment's closing line - a surah ending mid-page, or the page's own last line - gets a
+            // sparseness cap. The fill pass has already pulled down whatever words COULD come down; if
+            // justifying what remains would still widen each gap by more than half the body size (or the
+            // line is a single gapless word), a handful of words flung across the full measure reads as
+            // broken setting - so the line is centered on the measure instead, the printed mushaf's
+            // treatment of a surah's short last line. (A mid-line break inside a segment can never be
+            // sparse enough to trip this: TextKit broke it against the full measure.)
+            if slack > 1.5, closingLineEnds.contains(where: { $0 > charRange.location && $0 <= lineEnd }) {
+                // The compose's own body size, not the font at the line start - a closing line can
+                // begin mid-marker-run, and the marker face's size would skew the cap.
+                let cap = (bodySize > 0
+                    ? bodySize
+                    : (source.attribute(.font, at: charRange.location, effectiveRange: nil) as? UIFont)?.pointSize ?? 20)
+                let perSpaceIfJustified = spaceLocations.isEmpty
+                    ? CGFloat.greatestFiniteMagnitude
+                    : (slack - 1.0) / CGFloat(spaceLocations.count)
+                if perSpaceIfJustified > cap * 0.5 {
+                    centeredParagraphs.append(string.paragraphRange(for: charRange))
+                    continue
+                }
+            }
+
+            guard !spaceLocations.isEmpty else { continue }
             guard slack > 1.5 else { continue }
             // Fill to a fixed 1pt short of the margin, not a percentage: a proportional factor leaves a
             // margin that shrinks with the slack (2% of a 1pt slack is nothing), and a line that lands even
@@ -1856,10 +1903,6 @@ struct MushafPageComposer {
             // all the following lines' widened gaps on the wrong spaces. An absolute point of headroom is
             // bigger than any advance-rounding difference TextKit produces at these sizes.
             let perSpace = (slack - 1.0) / CGFloat(spaceLocations.count)
-
-            // No sparseness escape hatch: a short closing line stretches across the full measure like every
-            // other line, exactly as a printed mushaf sets it. (A single word with no gaps has nothing to
-            // stretch and stays where the alignment puts it.)
 
             // `.tracking`, deliberately NOT `.kern`: kern participates in glyph shaping, and an attribute
             // boundary it introduces at a space could perturb how the neighbouring cluster's marks attach -
@@ -1871,7 +1914,132 @@ struct MushafPageComposer {
                 justified.addAttribute(.tracking, value: existing + perSpace, range: NSRange(location: location, length: 1))
             }
         }
+
+        // Re-align the too-sparse closing lines' paragraphs centered. Alignment is a paragraph-wide
+        // attribute, but only the sparse line visibly moves: every other line of the paragraph was
+        // topped up to the full measure above, so centering shifts it by at most the 1pt of headroom.
+        // Applied after the walk so the alignment guard above kept reading the original styles.
+        for paragraph in centeredParagraphs {
+            guard let style = source.attribute(.paragraphStyle, at: paragraph.location, effectiveRange: nil) as? NSParagraphStyle,
+                  let centered = style.mutableCopy() as? NSMutableParagraphStyle else { continue }
+            centered.alignment = .center
+            justified.addAttribute(.paragraphStyle, value: centered, range: paragraph)
+        }
         return justified
+    }
+
+    /// Fills a segment's sparse closing line - a surah ending mid-page, or the page's own last line -
+    /// by loosening THAT segment's word gaps until words cascade down into it - brought down from the
+    /// lines above, instead of two words flung across the measure or a short line trailing at the
+    /// right margin. The same idea as the page-wide `balancedSpaceTracking`, scoped to one segment:
+    /// the loosest setting that adds NO line is used, so the fitted page height is untouched (the
+    /// line boxes are pinned, so same lines = same height).
+    /// `spaceJustified` then tops the now-fuller lines up to the exact margins, and its sparseness cap
+    /// remains the backstop for a closing line nothing could fill.
+    ///
+    /// Cost: runs once per cached render (`finalize` is the only width-passing compose), and each
+    /// segment is probed against ONE live TextKit stack with its gap list precomputed - a probe is a
+    /// handful of absolute attribute writes plus an incremental relayout of that segment alone, not a
+    /// fresh stack and a full string rescan.
+    private static func fillSurahClosingLines(_ text: NSMutableAttributedString, width: CGFloat,
+                                              segments: [NSRange], bodySize: CGFloat) {
+        guard width > 0, bodySize > 0 else { return }
+
+        for segment in segments where segment.length > 0 {
+            // The segment lays out alone: line breaking never crosses a paragraph boundary, so the
+            // substring's breaks are exactly the page's, and probing it is far cheaper.
+            let sub = text.attributedSubstring(from: segment)
+            let subString = sub.string as NSString
+
+            // Preprocessed once: every stretchable gap and the tracking it already carries (the
+            // page-wide loosening), so probes can SET absolute values idempotently.
+            var spaceLocations: [Int] = []
+            var baseTracking: [CGFloat] = []
+            for i in 0..<subString.length where subString.character(at: i) == 0x20 {
+                let style = sub.attribute(.paragraphStyle, at: i, effectiveRange: nil) as? NSParagraphStyle
+                guard style?.alignment == .right else { continue }
+                spaceLocations.append(i)
+                baseTracking.append((sub.attribute(.tracking, at: i, effectiveRange: nil) as? CGFloat) ?? 0)
+            }
+            guard !spaceLocations.isEmpty else { continue }
+
+            // The whole stack stays bound: NSLayoutManager does not retain its NSTextStorage.
+            let stack = layoutStack(for: sub, width: width)
+
+            func apply(_ tracking: CGFloat) {
+                stack.storage.beginEditing()
+                for (i, location) in spaceLocations.enumerated() {
+                    stack.storage.addAttribute(.tracking, value: baseTracking[i] + tracking,
+                                               range: NSRange(location: location, length: 1))
+                }
+                stack.storage.endEditing()
+                stack.manager.ensureLayout(for: stack.container)
+            }
+
+            func measure() -> (lines: Int, lastContentLength: Int, lastUsedWidth: CGFloat, lastSpaces: Int) {
+                let manager = stack.manager
+                var lines = 0
+                var lastUsedRect = CGRect.zero
+                var lastCharRange = NSRange()
+                var glyph = 0
+                while glyph < manager.numberOfGlyphs {
+                    var lineRange = NSRange()
+                    lastUsedRect = manager.lineFragmentUsedRect(forGlyphAt: glyph, effectiveRange: &lineRange)
+                    lastCharRange = manager.characterRange(forGlyphRange: lineRange, actualGlyphRange: nil)
+                    glyph = NSMaxRange(lineRange)
+                    lines += 1
+                }
+
+                var contentEnd = NSMaxRange(lastCharRange)
+                while contentEnd > lastCharRange.location,
+                      let scalar = Unicode.Scalar(subString.character(at: contentEnd - 1)),
+                      CharacterSet.whitespacesAndNewlines.contains(scalar) {
+                    contentEnd -= 1
+                }
+                let spaces = spaceLocations.reduce(into: 0) { count, i in
+                    if i >= lastCharRange.location && i < contentEnd { count += 1 }
+                }
+                return (lines, contentEnd - lastCharRange.location, lastUsedRect.width, spaces)
+            }
+
+            let base = measure()
+            // One line has nothing above to pull from; and a closing line that would justify within
+            // the sparseness cap anyway is left alone - only the lines the cap would otherwise leave
+            // trailing are worth rebalancing. The threshold is the cap's own formula, so the two
+            // passes can never disagree about which lines are sparse.
+            guard base.lines > 1 else { continue }
+            let slack = width - base.lastUsedWidth
+            let sparse = base.lastSpaces == 0 || (slack - 1.0) / CGFloat(base.lastSpaces) > bodySize * 0.5
+            guard sparse, slack > bodySize else { continue }
+
+            // Bisect the loosest tracking that keeps the segment's line count - the page-wide
+            // balancer's search, against a line-count budget instead of a height budget.
+            var lo: CGFloat = 0
+            var hi = bodySize * 0.9
+            apply(hi)
+            if measure().lines <= base.lines {
+                lo = hi
+            } else {
+                for _ in 0..<8 {
+                    let mid = (lo + hi) / 2
+                    apply(mid)
+                    if measure().lines <= base.lines { lo = mid } else { hi = mid }
+                }
+            }
+            let tracking = (lo * 20).rounded(.down) / 20
+            guard tracking > 0 else { continue }
+
+            // Apply only if words actually came down: tracking that moves nothing would just widen
+            // the sparse line's own gaps - the exact look this pass exists to avoid.
+            apply(tracking)
+            guard measure().lastContentLength > base.lastContentLength else { continue }
+
+            // Commit to the page text with the same absolute values the winning probe used.
+            for (i, location) in spaceLocations.enumerated() {
+                text.addAttribute(.tracking, value: baseTracking[i] + tracking,
+                                  range: NSRange(location: segment.location + location, length: 1))
+            }
+        }
     }
 
     private func height(of text: NSAttributedString, width: CGFloat) -> CGFloat {

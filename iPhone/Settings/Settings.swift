@@ -64,9 +64,19 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     }()
 
     private override init() {
-        self.accentColor = AccentColor(rawValue: appGroupUserDefaults?.string(forKey: "accentColor") ?? AppIdentifiers.mainColorString) ?? AppIdentifiers.mainColor
+        let storedAccent = AccentColor(rawValue: appGroupUserDefaults?.string(forKey: "accentColor") ?? AppIdentifiers.mainColorString) ?? AppIdentifiers.mainColor
+        self.accentColor = storedAccent
         self.customAccentColorHex = appGroupUserDefaults?.string(forKey: "customAccentColorHex") ?? "34C759"
         self.customBackgroundColorHex = appGroupUserDefaults?.string(forKey: "customBackgroundColorHex") ?? "1C1C1E"
+
+        // The Al-Islam glow defaults ON, but only makes sense on the DEFAULT accent. An existing
+        // install that already moved to another accent gets no accent-CHANGE event to auto-disable
+        // it (see `accentColor.didSet`), so the very first launch with no stored choice seeds it
+        // off for them - exactly what the didSet would have done had this shipped earlier.
+        if UserDefaults.standard.object(forKey: "alIslamGlow") == nil,
+           storedAccent != AppIdentifiers.mainColor {
+            UserDefaults.standard.set(false, forKey: "alIslamGlow")
+        }
 
         self.prayersData = appGroupUserDefaults?.data(forKey: "prayersData") ?? Data()
         self.travelingMode = appGroupUserDefaults?.bool(forKey: "travelingMode") ?? false
@@ -295,6 +305,14 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
             guard Self.isAppProcess else { return }
             appGroupUserDefaults?.setValue(accentColor.rawValue, forKey: "accentColor")
             markExplicitlySet("accentColor")
+            // The Al-Islam glow rides the DEFAULT accent: it's on out of the box, but the moment the
+            // user picks any other accent it switches off so the glow follows their color instead of
+            // clashing with it. One-way only - coming back to the default never re-enables it; that
+            // takes the Appearance toggle. (Compared against `AppIdentifiers.mainColor`, not a
+            // hardcoded green: companion apps ship different default accents.)
+            if oldValue == AppIdentifiers.mainColor, accentColor != AppIdentifiers.mainColor {
+                alIslamGlow = false
+            }
             // Every widget renders in the accent, so a change must repaint them. Owned here (not an
             // `.onChange` at the app root) so every write path - the pickers, a synced snapshot, a
             // settings reset - repaints without each caller remembering to. Deferred so a burst of
@@ -1582,6 +1600,12 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
 
     /// The soft accent-colored radial wash at the top of every list (see `washedListBackground`).
     @AppStorage("showAccentGlow") var showAccentGlow: Bool = true
+
+    /// Colors that wash with Al-Islam's brand yellow-and-green instead of the accent. ON by default -
+    /// it IS the app's signature look on the default accent - and auto-disabled the moment the accent
+    /// leaves the default (see `accentColor.didSet`); from there only the Appearance toggle brings it
+    /// back.
+    @AppStorage("alIslamGlow") var alIslamGlow: Bool = true
 
     @AppStorage("colorSchemeString") var colorSchemeString: String = "system"
     var colorScheme: ColorScheme? {

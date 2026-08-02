@@ -223,6 +223,57 @@ final class PlaybackVisibility: ObservableObject {
     }
 }
 
+/// The top-of-screen accent wash: a quiet radial glow bleeding down from the top, gone by mid-screen.
+/// Every list screen gets it through `ConditionalListStyle`'s background; the page-mode readers (the
+/// Quran mushaf and the Hadith pager) apply it directly, since they are not lists.
+///
+/// Structurally constant: all three gradients are always in the tree, and the settings only drive
+/// their opacities - the accent one for the normal glow, the yellow (leading) + green (trailing)
+/// pair for the Al-Islam glow, the app icon's palette split across the top corners. Everything
+/// collapses to invisible when the glow is off or a custom reading theme owns the background.
+struct AccentGlowOverlay: View {
+    @ObservedObject private var settings = Settings.shared
+    @Environment(\.colorScheme) private var systemColorScheme
+
+    var body: some View {
+        let strength: Double = (settings.hasCustomThemeColors || !settings.showAccentGlow)
+            ? 0 : ((settings.colorScheme ?? systemColorScheme) == .dark ? 0.16 : 0.10)
+        let brand = settings.alIslamGlow
+
+        VStack(spacing: 0) {
+            ZStack {
+                RadialGradient(
+                    colors: [settings.accentColor.color.opacity(brand ? 0 : strength), .clear],
+                    center: .top,
+                    startRadius: 8,
+                    endRadius: 380
+                )
+
+                // Absolute corners, not leading/trailing: the brand look is yellow on the LEFT and
+                // green on the RIGHT, and it shouldn't mirror when the app runs in an RTL locale.
+                RadialGradient(
+                    colors: [Color.yellow.opacity(brand ? strength : 0), .clear],
+                    center: UnitPoint(x: 0, y: 0),
+                    startRadius: 8,
+                    endRadius: 380
+                )
+
+                RadialGradient(
+                    colors: [Color.green.opacity(brand ? strength : 0), .clear],
+                    center: UnitPoint(x: 1, y: 0),
+                    startRadius: 8,
+                    endRadius: 380
+                )
+            }
+            .frame(height: 420)
+
+            Spacer(minLength: 0)
+        }
+        .allowsHitTesting(false)
+        .ignoresSafeArea()
+    }
+}
+
 struct ConditionalListStyle: ViewModifier {
     @ObservedObject private var settings = Settings.shared
     @ObservedObject private var playback = PlaybackVisibility.shared
@@ -302,23 +353,7 @@ struct ConditionalListStyle: ViewModifier {
         ZStack(alignment: .top) {
             resolvedListBackground
 
-            VStack(spacing: 0) {
-                RadialGradient(
-                    colors: [
-                        settings.accentColor.color.opacity(
-                            (settings.hasCustomThemeColors || !settings.showAccentGlow)
-                                ? 0 : (currentColorScheme == .dark ? 0.16 : 0.10)
-                        ),
-                        .clear
-                    ],
-                    center: .top,
-                    startRadius: 8,
-                    endRadius: 380
-                )
-                .frame(height: 420)
-
-                Spacer(minLength: 0)
-            }
+            AccentGlowOverlay()
         }
         .ignoresSafeArea()
     }

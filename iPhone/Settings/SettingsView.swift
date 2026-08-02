@@ -745,7 +745,7 @@ extension SettingsSearchEntry {
         .init(title: "Accent Color", path: "Appearance", keywords: "green color swatch tint custom hex theme", destination: .appearance),
         .init(title: "App Theme (Light / Dark / Sepia / Gray)", path: "Appearance", keywords: "dark mode light mode night reading sepia gray paper background", destination: .appearance),
         .init(title: "Custom Background Color", path: "Appearance", keywords: "custom color background hex picker theme", destination: .appearance),
-        .init(title: "Top Accent Glow", path: "Appearance", keywords: "glow wash gradient accent top background flat hide", destination: .appearance),
+        .init(title: "Top Accent Glow", path: "Appearance", keywords: "glow wash gradient accent top background flat hide al islam green yellow brand", destination: .appearance),
         .init(title: "Default List View", path: "Appearance", keywords: "list style plain grouped inset layout", destination: .appearance),
         .init(title: "Haptic Feedback", path: "Appearance", keywords: "vibration taptic buzz feedback toggle", destination: .appearance),
     ]
@@ -932,6 +932,18 @@ struct SettingsAppearanceView: View {
                 .font(.caption)
                 .foregroundColor(.secondary)
                 .padding(.vertical, 2)
+
+            if settings.showAccentGlow {
+                Toggle("Al-Islam Glow", isOn: $settings.alIslamGlow.animation(.easeInOut))
+                    .font(.subheadline)
+                    .padding(.top, 6)
+                    .onChange(of: settings.alIslamGlow) { _ in settings.hapticFeedback() }
+
+                Text("Color the glow with Al-Islam's yellow and green - yellow from the left, green from the right - instead of your accent color.")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .padding(.vertical, 2)
+            }
         }
 
         VStack(alignment: .leading) {

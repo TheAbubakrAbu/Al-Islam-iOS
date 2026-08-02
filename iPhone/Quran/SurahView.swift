@@ -1379,6 +1379,10 @@ struct SurahView: View {
                 .background(Color.white.opacity(0.00001))
                 .animation(.easeInOut, value: active)
             }
+            // The list reader gets the top accent glow through `applyConditionalListStyle`; the pager
+            // is not a list, so it draws the same wash itself - the mushaf shouldn't be the one
+            // screen without it.
+            .background(AccentGlowOverlay())
             // No `.id(surah.id)` here, deliberately: identity-swapping the reader tore down and rebuilt the
             // ~604-page UIPageViewController - the single heaviest view realization in the app (~900ms) -
             // on EVERY surah jump. The reader now re-seeds its own page index when `surah.id` changes

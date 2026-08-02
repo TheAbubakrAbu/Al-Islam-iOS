@@ -1746,6 +1746,9 @@ struct HadithChapterView: View {
             // in page mode dumped you into list mode, the reported bug.
             if hadithPageMode {
                 HadithPagedView(book: book, bookData: bookData, chapterIndex: $chapterIndex, seedHadithID: scrollToHadithId)
+                    // The chapter list gets the top accent glow through `applyConditionalListStyle`;
+                    // the pager is not a list, so it draws the same wash itself.
+                    .background(AccentGlowOverlay())
             } else {
                 chapterList
             }
@@ -1921,36 +1924,37 @@ struct HadithChapterView: View {
 
     /// The title carries the BOOK and the chapter NUMBER only - the chapter's full name (both scripts)
     /// lives in the pinned header below, so the two never repeat each other.
+    ///
+    /// The surah title's metrics, EXACTLY - same fonts, same sizes, same paddings - so flipping
+    /// between the Quran and Hadith readers never makes the title pill visibly grow or shrink.
     private var chapterTitleLabel: some View {
         VStack(spacing: 0) {
             HStack(spacing: 10) {
-                // The surah title's metrics, exactly: the Latin side never shrinks (a scaled-down
-                // title next to full-size Arabic reads as a mistake) - it truncates instead.
+                // The Latin side never shrinks (a scaled-down title next to full-size Arabic reads
+                // as a mistake) - it truncates instead.
                 Text(book.englishTitle)
                     .font(.subheadline.bold())
                     .lineLimit(1)
 
-                // Arabic at the surah title's size (headline + 2), scaling down rather than
-                // truncating - a clipped Arabic name is unreadable, a smaller one is not.
+                // Arabic at the surah title's size (headline + 2) whatever the Arabic-face setting:
+                // the Basic face used to drop this to plain .headline and scale down to half, which
+                // is why this pill sat visibly smaller than the surah reader's.
                 HighlightedSnippet(
                     source: book.arabicTitle,
                     term: "",
-                    font: settings.useFontArabic
-                        ? Font.arabic(settings.nonQuranArabicFontName, size: UIFont.preferredFont(forTextStyle: .headline).pointSize + 2)
-                        : .headline,
+                    font: Font.arabic(settings.nonQuranArabicFontName, size: UIFont.preferredFont(forTextStyle: .headline).pointSize + 2),
                     accent: settings.accentColor.color,
                     fg: settings.accentColor.color,
                     lineLimit: 1,
-                    basicFontForCommas: settings.useFontArabic ? UIFont.preferredFont(forTextStyle: .headline).pointSize + 2 : nil
+                    basicFontForCommas: UIFont.preferredFont(forTextStyle: .headline).pointSize + 2
                 )
                 .arabicFontDesign(custom: settings.islamUsesCustomArabicFace)
-                .minimumScaleFactor(0.5)
             }
 
             Text("Chapter \(chapterIndex + 1) of \(bookData.chapters.count)")
                 .font(.caption2)
                 .lineLimit(1)
-                .padding(.top, -4)
+                .padding(.top, -8)
         }
         .frame(maxWidth: .infinity)
         .foregroundColor(.primary)

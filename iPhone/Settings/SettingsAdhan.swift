@@ -44,6 +44,14 @@ extension Settings {
         .init(id: "zakariya", title: "Zakariya")
     ]
 
+    /// What the ALERT TONE picker offers: the system sound and the chime, never a call to prayer.
+    /// The alert tone plays for prenotifications, the optional times, and prayers whose adhan is
+    /// switched off - exactly the moments an adhan would defeat the point.
+    static let supportedAlertTones: [AdhanSoundOption] = supportedAdhanSounds.filter {
+        $0.id == "default" || $0.id == "echo"
+    }
+    static let supportedAlertToneIDs = Set(supportedAlertTones.map(\.id))
+
     /// The adhan a fresh install gets: whichever clip is *titled* "Minshawi 1", which after the swap above
     /// is the one bundled as `minshawi-2`.
     static let defaultAdhanSoundID = "minshawi-2"
@@ -187,6 +195,14 @@ extension Settings {
             if normalized != stored {
                 defaults.set(normalized, forKey: key)
             }
+        }
+
+        // The alert tone stopped offering adhans (it plays exactly where the adhan was declined).
+        // A selection stored by an older build may still name one - clamp it to the chime, the
+        // closest legal thing to "a distinct app sound".
+        if let storedTone = defaults.string(forKey: "alertToneSound"),
+           !Self.supportedAlertToneIDs.contains(storedTone) {
+            defaults.set(Self.defaultAlertToneID, forKey: "alertToneSound")
         }
 
         // Minshawi 1 became the app's adhan. Adopt it once for everyone, including users who had already
