@@ -1,52 +1,75 @@
+# App Store What's New (Release Notes)
+
+The **What's New in This Version** field in App Store Connect: up to **4,000 characters**, shown on
+the product page for the current release. Changing it requires a new build (unlike Promotional Text).
+
+## Guidelines
+
+- **Hard cap 4,000 characters** - count the release section only (the `# Version 4.6.0` heading and
+  the `**n / 4,000**` tally line are for this file, not the store). Verify before shipping:
+  `awk '/^# Version 4.6.0$/{f=1;next} /^# Version /{f=0} f' "Docs/Whats New.md" | grep -v '^\*\*' | wc -m`
+- **Aim for ~2,000-2,500.** Nobody reads a wall of text on a phone; the description sells the app,
+  this field just says what changed. Shorter beats complete.
+- **One line per bullet, one idea per line.** Cut "now", "new", and every clause after a dash that
+  merely restates the first half. Name the feature, say what it does, stop.
+- Group under short domain headings (AI Search, Prayer Tracker, Al-Hadith, Widgets, Al-Quran,
+  Al-Adhan, Apple Watch, Islamic Tools, Bug fixes and optimizations). Drop a heading with nothing
+  new to say rather than padding it.
+- Lead with a one-sentence summary of the release, then the biggest feature first.
+- Plain text only - no markdown, emoji, or links; the store renders none of it.
+- Keep past versions below for reference; only the top section ships.
+
 # Version 4.6.0
 
-The major Hadith collections, on-device AI search everywhere, a prayer tracker, tafsir in Arabic and English, a living sky over your prayer times, and a sky full of new widgets.
+The major Hadith collections, on-device AI search, a prayer tracker, tafsir, a living sky over your prayer times, and a gallery of new widgets.
 
 AI Search:
-- Search by meaning, not just keywords - "patience in hardship" finds ayahs about sabr even when neither word appears. Built with Apple's on-device language frameworks: private, offline, and free.
-- It works everywhere: the whole Quran or the very surah you are reading, any hadith book or chapter, the 99 Names, duas, adhkar, and even Settings - "make text bigger" finds the font controls.
-- On iPhones with Apple Intelligence, Ask AI answers your question in a few sentences drawn only from the ayahs and hadiths it cites right below the answer - and it never gives religious rulings.
+- Search by meaning, not keywords - "patience in hardship" finds ayahs about sabr.
+- Works across the Quran, Hadith, 99 Names, duas, adhkar, and Settings.
+- Private, offline, and free. With Apple Intelligence, Ask AI answers from the ayahs and hadiths it cites, never with a ruling.
 
 Prayer Tracker:
-- Mark each prayer with a tap right on the Adhan tab, then watch your streaks, perfect days, and totals grow in History & Insights - a calendar heatmap by day, week, month, and year.
-- Travel-aware and Friday-aware: Jumuah counts as Dhuhr, and combined traveling prayers count as both. A menstruation and postpartum pause keeps exempt days from ever breaking a streak.
-- Nagging Mode now works with the tracker: answer "Yes, I prayed it" right from the notification to mark the prayer and stop the remaining reminders.
+- Mark each prayer with a tap, then watch streaks, perfect days, and a calendar heatmap grow.
+- Jumuah and combined traveling prayers count correctly, and an exemption pause protects your streak.
+- Nagging Mode: mark a prayer straight from the notification.
 
 Al-Hadith:
-- A new Hadith tab with all the major collections: the Six Books (Bukhari, Muslim, an-Nasa'i, Abu Dawud, at-Tirmidhi, and Ibn Majah), the early collections (Muwatta Malik, ad-Darimi, and Musnad Ahmad), the forty-Hadith collections, and classics like Riyad as-Salihin, Mishkat al-Masabih, and Bulugh al-Maram.
-- Read in Arabic with English translation and narrator chains, as a list or page by page, with a Hadith of the Day, bookmarks, favorites, and reference lookups like "Bukhari 5".
-- Search within any book or across all of them at once. Every collection is built into the app - nothing to download, and everything works fully offline.
+- A Hadith tab with the Nine books, the forty-hadith collections, and classics like Riyad as-Salihin.
+- Arabic with translation and narrator chains, list or page view, Hadith of the Day, bookmarks, and lookups like "Bukhari 5".
+- Search one book or all 50,000+ hadiths. Everything is built in and works offline.
 
 Widgets:
-- Every prayer widget now comes in two looks: the standard background and a Sky twin painted with the current prayer's own gradient - organized side by side in the gallery.
-- New Solar Arc widget with the sun on its true path across the day, a Moon Phase widget showing tonight's real moon, and a large Day & Night board carrying both with the whole day's prayers.
-- Widgets, the lock screen, and the Apple Watch now always show the same times as the app when you use manual prayer time adjustments.
+- Every prayer widget gains a Sky twin painted with the current prayer's gradient.
+- New Solar Arc, Moon Phase, and Day & Night widgets.
+- Widgets, the lock screen, and the Watch follow your manual time adjustments.
 
 Al-Quran:
-- Quran Planner: pick a finish date and get a daily amount that adjusts itself when you miss a day.
-- Tafsir for any ayah: Ibn Kathir, Maarif Ul Quran, and Tazkirul Quran in English, plus Ibn Kathir, al-Tabari, and as-Sa'di in Arabic - saved for offline reading.
-- Search the whole Quran from wherever you are reading, and use Siri too: play any surah, resume your last listen, or ask "When is Maghrib?" - in English and Arabic.
-- Offline ayah playback in the reciter's own voice: for a dozen reciters, downloading their surahs also fetches precise ayah timings, so single ayahs and ranges play from the file.
-- A faster, retypeset mushaf: pages open and flip quicker, every line fills the full width, and spacing is even in Arabic and English alike.
+- Quran Planner: pick a finish date and get a daily amount that adjusts when you miss a day.
+- Tafsir for any ayah: three English and three Arabic works, saved offline.
+- Search the whole Quran while reading, and ask Siri in English or Arabic.
+- Offline ayah-by-ayah audio in the reciter's own voice for a dozen reciters.
+- A retypeset mushaf: pages open and flip faster with even spacing.
 
 Al-Adhan:
-- A living sky over your prayer times: the sun rides its true arc, stars come out at night, and the moon shows its real phase. Drag across the day to preview any moment, and pick your own sky colors for every prayer.
-- A new At a Glance board: Qibla direction, distance to Makkah, daylight, fasting window, moon, and more.
-- A new Rakaah Guide under the prayer times: every prayer's fard count with its primary (mu'akkadah) and secondary sunnah rakahs, including Jumuah's masjid/home difference - and each prayer's own detail shows the same counts.
-- A full calculation method catalogue you can browse by region, with the angles each one uses shown up front.
+- A living sky: the sun on its true arc, stars at night, the real moon phase. Drag to preview any moment and pick your own colors.
+- An At a Glance board: Qibla, distance to Makkah, daylight, fasting window, and more.
+- A Rakaah Guide with every prayer's fard and sunnah counts.
+- Browse calculation methods by region with their angles shown.
 
 Apple Watch:
-- Full-surah recitation now plays on the watch - connect AirPods (or pick a route when asked) and every reciter works in their own voice.
-- Traveling Mode and settings now sync more reliably between iPhone and Apple Watch, including right after pairing a new watch.
+- Full-surah recitation plays on the watch in every reciter's voice.
+- Traveling Mode and settings sync more reliably, including after pairing.
 
 Islamic Tools:
-- New Halal Food Locator beside the Masjid Locator - both center on you as soon as your location arrives.
-- Eight new dua collections, each supplication authenticated with its exact source, and Listen buttons that read the Arabic aloud across duas, adhkar, and the Arabic alphabet.
-- Settings reorganized into dedicated Adhan, Quran, and Hadith screens, with a search that jumps straight to any setting.
+- A Halal Food Locator beside the Masjid Locator.
+- Eight dua collections with sources, and Listen buttons across duas, adhkar, and the alphabet.
+- Settings split into Adhan, Quran, and Hadith screens, with search.
 
 Bug fixes and optimizations:
-- A much smaller download and a dramatically faster launch: the Quran, qiraat, surah info, 99 Names, and all 17 hadith books now ship in a compact binary format.
-- Smoother hadith scrolling, lighter widget refreshes that are kinder to your battery, and polish throughout.
+- A smaller download and much faster launch - all content ships in a compact binary format.
+- Smoother hadith scrolling, lighter widget refreshes, and polish throughout.
+
+**2,612 / 4,000 characters.**
 
 
 # Version 4.5.3
