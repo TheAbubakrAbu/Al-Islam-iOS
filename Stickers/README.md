@@ -14,16 +14,37 @@ An iMessage sticker pack: the three Al-Islam-family app icons and the four wallp
 
 All seven are regenerated from art already in the app — nothing new was drawn, and nothing is borrowed from another project.
 
-## Adding it to the project (needs Xcode)
+## How it is wired up
 
-A sticker pack is a separate **extension target**; it cannot just be dragged into the app target.
+This ships as the **`Stickers`** target — product type `com.apple.product-type.app-extension.messages-sticker-pack`,
+bundle ID `com.Quran.Elmallah.Islamic-Pillars.Stickers`. It is source-less: one Resources build phase carrying
+[`Stickers.xcassets`](Stickers.xcassets), and nothing else.
 
-1. **File ▸ New ▸ Target… ▸ Sticker Pack Extension**. Name it `Al-Islam Stickers`. Xcode creates a folder with an `Info.plist` and an empty `Stickers.xcassets`.
-2. **Delete the `Stickers.xcassets` Xcode generated**, and drag in [`Stickers.xcassets`](Stickers.xcassets) from this folder instead — *Copy items if needed*, target = the new sticker extension only.
-3. Set the extension's **Display Name** to `Al-Islam` (this is the name shown in the iMessage drawer) and give it the same **Deployment Target** as the app.
-4. Build and run the sticker target on a device or simulator — it launches Messages with the pack loaded.
+- Info.plist: [`Resources/Info-Stickers.plist`](../Resources/Info-Stickers.plist) — declares the
+  `com.apple.message-payload-provider` extension point with the system `StickerBrowserViewController`.
+- The `iPhone` target depends on it and embeds `Stickers.appex` through **Embed Foundation Extensions**,
+  so it rides along in every app build; there is no separate scheme to remember.
+- `INFOPLIST_KEY_NSStickerSharingLevel = OS` lets stickers be shared out of Messages.
 
-Leave the `Info.plist` Xcode generates alone; it is target-specific and correct as generated. This folder deliberately contains only the asset catalog, which is the part with real content.
+## The iMessage app icon
+
+`iMessage App Icon.stickersiconset` is the icon Messages shows in its app drawer, and App Store
+validation rejects a sticker extension without it. It needs **12 sizes**, most of them 4:3 rather than
+square, so it cannot just reuse the app icon file.
+
+All twelve are generated from `Assets.xcassets/AppIcon Phone/al-islam.png` (square 1024²). The square art is
+aspect-fit and centred, and the letterbox bars are filled by **stretching the source's own edge columns**
+outward rather than with a flat colour — the app icon's background is a left-to-right orange→green gradient,
+so a single pad colour matches one side and clashes with the other. Extending the edges continues the
+gradient and the floor strip seamlessly, and the letterboxing is invisible.
+
+Regenerate them with `Stickers/mkstickericon.swift`:
+
+```bash
+xcrun swiftc -O Stickers/mkstickericon.swift -o /tmp/mkstickericon
+/tmp/mkstickericon "Resources/Assets.xcassets/AppIcon Phone.appiconset/al-islam.png" \
+                   "Stickers/Stickers.xcassets/iMessage App Icon.stickersiconset"
+```
 
 ## Why these sizes
 

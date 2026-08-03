@@ -41,6 +41,13 @@ ayah 1 of most surahs are now stripped (skeleton-stream matcher in
 `pipeline/extract.py::strip_surah_header`); verified zero leaks across all 12 payloads,
 with an-Nur's genuine «سُورَةٌ أَنزَلۡنَٰهَا» opening preserved.
 
+The **imalah dot** (ٜ U+065C) is captured: the print draws it as a separate glyph layer
+(3 strokes per dot), now decoded and re-attached to its letters. Output counts track
+each reader's known profile — ad-Duri al-Kisai 2,358, Khalaf 2,267, Abu al-Harith 1,830,
+Ishaq/Idris 1,777, Ibn Dhakwan 319, Khallad 137, and zero for the non-imalah readers.
+Beta limitation: within a word with several dotted letters, a dot can land on the
+neighboring letter (glyph x-positions were not retained).
+
 ## Remaining work to promote out of beta
 
 1. Pause-mark policy: decide whether to keep Islamweb's waqf marks or normalize them.

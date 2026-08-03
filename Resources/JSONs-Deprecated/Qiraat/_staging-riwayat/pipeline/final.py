@@ -161,6 +161,9 @@ def render_det(glyphs, detmap, missing=None, family="kufi", ctx=None):
     for i, k in enumerate(keys):
         if k == "sp| ":
             out.append(("sp", " ")); continue
+        if k == "CL|HQPB5#20|1":
+            out.append((k, ""))   # placeholder; the imalah pass above rewrites runs
+            continue
         v = None
         if ctx is not None and k in ctx:
             r = ctx[k]
@@ -181,6 +184,36 @@ def render_det(glyphs, detmap, missing=None, family="kufi", ctx=None):
             out.append((k, "✗"))
         else:
             out.append((k, v))
+    # Imalah dot (U+065C): glyph HQPB5 gid 20, drawn in ~3 layers per dot. A run of
+    # tokens = round(len/3) dots, belonging UNDER the letters immediately before the
+    # run (the print stacks them after the word's letters in x-order). Handled before
+    # the dup-collapse below, which would otherwise eat the whole run.
+    IMALAH_KEY = "CL|HQPB5#20|1"
+    if any(k == IMALAH_KEY for k, _ in out):
+        merged = []
+        i = 0
+        while i < len(out):
+            if out[i][0] == IMALAH_KEY:
+                j = i
+                while j < len(out) and out[j][0] == IMALAH_KEY:
+                    j += 1
+                ndots = max(1, round((j - i) / 3))
+                placed = 0
+                p = len(merged) - 1
+                while p >= 0 and placed < ndots:
+                    vv = merged[p][1]
+                    if vv and vv != " " and not unicodedata.combining(vv[0]):
+                        merged.insert(p + 1, (IMALAH_KEY, "\u065c"))
+                        placed += 1
+                    p -= 1
+                if placed == 0:
+                    merged.append((IMALAH_KEY, "\u065c"))
+                i = j
+            else:
+                merged.append(out[i])
+                i += 1
+        out = merged
+
     # SAME-key consecutive identical mark = stroke+fill double-draw → drop the copy.
     # DIFFERENT keys emitting the same single vowel adjacently = kasra+shadda pair
     # whose shadda glyph was EM-confused with the vowel → the second IS the shadda.
