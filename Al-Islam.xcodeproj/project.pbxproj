@@ -448,7 +448,6 @@
 			dstSubfolderSpec = 13;
 			files = (
 				723DA4592D59FC6400AC20B3 /* Widget.appex in Embed Foundation Extensions */,
-				725710002FFFFFFF0000000E /* Stickers.appex in Embed Foundation Extensions */,
 			);
 			name = "Embed Foundation Extensions";
 			runOnlyForDeploymentPostprocessing = 0;
@@ -1184,7 +1183,6 @@
 			dependencies = (
 				72B531AE2A22DCFF007FA002 /* PBXTargetDependency */,
 				725B420C2AA0061C009C8C91 /* PBXTargetDependency */,
-				725710002FFFFFFF0000000D /* PBXTargetDependency */,
 			);
 			name = iPhone;
 			packageProductDependencies = (
