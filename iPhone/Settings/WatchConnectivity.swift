@@ -439,6 +439,8 @@ extension Settings {
         "preNotificationFajr", "preNotificationSunrise", "preNotificationDhuhr", "preNotificationAsr",
         "preNotificationMaghrib", "preNotificationIsha", "preNotificationDuha",
         "preNotificationIslamicMidnight", "preNotificationLastThird",
+        // The sky palette: editable on the phone only, but the watch complications paint with it too.
+        "skyGradients",
         // [Al-Quran] Quran display
         "showArabicText", "showTransliteration", "showEnglishSaheeh", "showEnglishMustafa",
         "cleanArabicText", "removeArabicDots", "beginnerMode", "highlightAllahNames",
@@ -547,6 +549,11 @@ extension Settings {
         // On the watch this is the main write path for the key - the complication would never see it otherwise.
         UserDefaults(suiteName: AppIdentifiers.appGroupSuiteName)?
             .setValue(switchHijriDateAtMaghrib, forKey: "switchHijriDateAtMaghrib")
+
+        // Same story for the sky palette (see `skyGradientsJSON`'s didSet): the complication reads the
+        // App Group mirror, and on the watch this sync is the only thing that ever writes the key.
+        UserDefaults(suiteName: AppIdentifiers.appGroupSuiteName)?
+            .setValue(store.string(forKey: "skyGradients") ?? "", forKey: "skyGradients")
 
         // Same for the six manual prayer offsets: their didSet mirrors were bypassed by the raw
         // store.set above, and on the watch this sync IS the write path - without this the

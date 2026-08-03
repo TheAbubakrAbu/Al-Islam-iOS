@@ -476,6 +476,7 @@ struct PlayCustomRangeSheet: View {
                 playButtonBar
             }
         }
+        .navigationViewStyle(.stack)
         .onAppear {
             clampRangeToMaxAyah()
             clampStoredRepeatValues()

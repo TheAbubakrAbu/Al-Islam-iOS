@@ -408,6 +408,44 @@ struct HadithView: View {
 
     var body: some View {
         navigationContainer
+            // The window crossed the compact/regular boundary (iPad Split View drag, Slide Over, Stage
+            // Manager) and the container swapped between the split view and the stack. Carry the open
+            // book across the swap instead of dropping the reader back on the catalog.
+            .onChange(of: usesColumnNavigation) { columns in
+                guard #available(iOS 16.0, *) else { return }
+                if columns {
+                    // Stack → columns: a book opened through the tracked hidden links becomes the
+                    // content column's path. (The interceptors on `content` only fire on assignment,
+                    // and these were set BEFORE the flip, so they must be converted here.)
+                    if let book = pushedBook {
+                        pushedBook = nil
+                        bookPath = [BookRoute(slug: book.slug, autoOpenHadithID: nil)]
+                    } else if let reference = pushedReference {
+                        pushedReference = nil
+                        bookPath = [BookRoute(slug: reference.slug, autoOpenHadithID: reference.idInBook)]
+                    }
+                } else if let route = bookPath.last {
+                    // Columns → stack: reopen the book through the hidden links - at the spot the
+                    // reading column was on when the store has one (the reader keeps last-read fresh),
+                    // else at its chapter list. Delayed like every other programmatic push here: an
+                    // isActive flip during the container swap is unreliable in NavigationView.
+                    bookPath.removeAll()
+                    let slug = route.slug
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                        guard !usesColumnNavigation else { return }
+                        if let lastRead = store.lastRead(for: slug) {
+                            pushedReference = HadithBookmark(
+                                slug: slug,
+                                idInBook: lastRead.idInBook,
+                                reference: "",
+                                preview: ""
+                            )
+                        } else {
+                            pushedBook = HadithCatalogBook.bySlug[slug]
+                        }
+                    }
+                }
+            }
     }
 
     /// iPad/Mac read the tab as TWO columns, the Quran tab's shape exactly: the catalog (and, once a book
@@ -555,7 +593,9 @@ struct HadithView: View {
                 }
                 .themedListRowBackground()
             }
-            .applyConditionalListStyle()
+            // Column mode: the reading (detail) column shows its own Now Playing bar - suppress the
+            // catalog's copy or recitation puts one identical bar in EACH column (the Quran tab's rule).
+            .applyConditionalListStyle(disableNowPlayingInset: usesColumnNavigation)
             .compactListSectionSpacing()
             // The grid/list flip animates the whole catalog, same as the Quran tab.
             .animation(.easeInOut, value: hadithGridMode)
@@ -600,6 +640,25 @@ struct HadithView: View {
             .onChange(of: pushedReference) { reference in
                 guard usesColumnNavigation, let reference else { return }
                 pushedReference = nil
+                // Re-tapping a reference into the book whose chapters are ALREADY open: assigning the
+                // identical path is a structural no-op (the book screen's one-shot auto-open never
+                // re-fires), which used to read as a dead tap. Point the reading column at the hadith
+                // directly instead - identical-target re-taps still land via the selection's refresh
+                // token (rebuild + re-scroll).
+                if bookPath.last?.slug == reference.slug,
+                   let book = HadithCatalogBook.bySlug[reference.slug],
+                   let data = store.book(book),
+                   let hadith = data.hadiths.first(where: { $0.idInBook == reference.idInBook }),
+                   let chapter = data.chapters.first(where: { $0.id == hadith.chapterId }) {
+                    HadithColumnSelection.shared.select(
+                        book: book,
+                        bookData: data,
+                        chapter: chapter,
+                        scrollToHadithId: reference.idInBook,
+                        userInitiated: true
+                    )
+                    return
+                }
                 bookPath = [BookRoute(slug: reference.slug, autoOpenHadithID: reference.idInBook)]
             }
             // The search help floats over the list top while the field is focused and empty.

@@ -117,7 +117,7 @@ struct PrayerGradientEntryView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
 
             VStack(alignment: .trailing, spacing: 4) {
-                Text("Next: \(next.displayName)")
+                Text("Up Next: \(next.displayName)")
                     .font(.subheadline.weight(.semibold))
                     .lineLimit(1)
                     .minimumScaleFactor(0.6)
@@ -243,7 +243,7 @@ struct CountdownSkyWidget: Widget {
                 .modifier(PrayerSkyChrome(entry: entry))
         }
         .configurationDisplayName("Prayer Countdown Sky")
-        .description("The upcoming prayer time, over the current prayer's sky gradient.")
+        .description("The current prayer with its live countdown, over that prayer's sky gradient.")
         .supportedFamilies([.systemSmall, .systemMedium])
     }
 }

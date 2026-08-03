@@ -87,6 +87,9 @@ extension Settings {
             let teacher: String
             let teacherArabic: String
             let order: Int
+            /// Machine-extracted text pending scholarly verification (the 12 riwayat
+            /// beyond the eight the app ships from the King Fahd Complex data).
+            var beta: Bool = false
 
             var id: String { tag.isEmpty ? "Hafs" : tag }
         }
@@ -111,17 +114,42 @@ extension Settings {
         static let duri = "ad-Duri an Abi Amr"
         static let susi = "as-Susi an Abi Amr"
 
+        // The 12 remaining riwayat of the Ten Qiraat, extracted from the Islamweb
+        // mushaf set (see `BetaQiraatStore`). BETA: machine-extracted, not yet
+        // scholar-verified - always gated behind `Settings.betaQiraatEnabled`.
+        static let hisham = "Hisham an Ibn Amir"
+        static let ibnDhakwan = "Ibn Dhakwan an Ibn Amir"
+        static let khallad = "Khallad an Hamzah"
+        static let abuHarith = "Abu al-Harith an al-Kisai"
+        static let duriKisai = "ad-Duri an al-Kisai"
+        static let ibnWardan = "Ibn Wardan an Abi Jafar"
+        static let ibnJammaz = "Ibn Jammaz an Abi Jafar"
+        static let ruways = "Ruways an Yaqub"
+        static let rawh = "Rawh an Yaqub"
+        static let ishaq = "Ishaq an Khalaf al-Ashir"
+        static let idris = "Idris an Khalaf al-Ashir"
+
         static let asimTeacher = "Asim"
         static let nafiTeacher = "Nafi"
         static let ibnKathirTeacher = "Ibn Kathir"
         static let abiAmrTeacher = "Abu Amr"
         static let hamzahTeacher = "Hamzah"
+        static let ibnAmirTeacher = "Ibn Amir"
+        static let kisaiTeacher = "al-Kisai"
+        static let abiJafarTeacher = "Abu Jafar"
+        static let yaqubTeacher = "Yaqub"
+        static let khalafAshirTeacher = "Khalaf al-Ashir"
 
         static let asimTeacherArabic = "عَاصِم"
         static let nafiTeacherArabic = "نَافِع"
         static let ibnKathirTeacherArabic = "ابنِ كَثِير"
         static let abiAmrTeacherArabic = "أَبُو عَمرٍو"
         static let hamzahTeacherArabic = "حَمزَة"
+        static let ibnAmirTeacherArabic = "ابنُ عَامِر"
+        static let kisaiTeacherArabic = "الكِسَائِي"
+        static let abiJafarTeacherArabic = "أَبُو جَعفَر"
+        static let yaqubTeacherArabic = "يَعقُوب"
+        static let khalafAshirTeacherArabic = "خَلَفٌ العَاشِر"
 
         static let hafsArabic = "حَفص عَن عَاصِم"
         static let warshArabic = "وَرش عَن نَافِع"
@@ -132,53 +160,92 @@ extension Settings {
         static let qunbulArabic = "قُنبُل عَن ابنِ كَثِير"
         static let shubahArabic = "شُعبَة عَن عَاصِم"
         static let khalafArabic = "خَلَف عَن حَمزَة"
+        static let hishamArabic = "هِشَام عَن ابنِ عَامِر"
+        static let ibnDhakwanArabic = "ابنُ ذَكوَان عَن ابنِ عَامِر"
+        static let khalladArabic = "خَلَّاد عَن حَمزَة"
+        static let abuHarithArabic = "أَبُو الحَارِث عَنِ الكِسَائِي"
+        static let duriKisaiArabic = "الدُّورِي عَنِ الكِسَائِي"
+        static let ibnWardanArabic = "ابنُ وَردَان عَن أَبِي جَعفَر"
+        static let ibnJammazArabic = "ابنُ جَمَّاز عَن أَبِي جَعفَر"
+        static let ruwaysArabic = "رُوَيس عَن يَعقُوب"
+        static let rawhArabic = "رَوح عَن يَعقُوب"
+        static let ishaqArabic = "إِسحَاق عَن خَلَفٍ العَاشِر"
+        static let idrisArabic = "إِدرِيس عَن خَلَفٍ العَاشِر"
 
-        static let options: [Option] = [
+        /// Every riwayah the app can display. `beta` ones need `Settings.betaQiraatEnabled`
+        /// AND ship their text from `BetaQiraatStore` rather than the bundled pack.
+        static let allOptions: [Option] = [
+            // Asim
             Option(label: hafsLabel, tag: hafsTag, arabic: hafsArabic, teacher: asimTeacher, teacherArabic: asimTeacherArabic, order: 0),
             Option(label: shubah, tag: shubah, arabic: shubahArabic, teacher: asimTeacher, teacherArabic: asimTeacherArabic, order: 1),
+            // Nafi
             Option(label: warsh, tag: warsh, arabic: warshArabic, teacher: nafiTeacher, teacherArabic: nafiTeacherArabic, order: 2),
             Option(label: qaloon, tag: qaloon, arabic: qaloonArabic, teacher: nafiTeacher, teacherArabic: nafiTeacherArabic, order: 3),
+            // Ibn Kathir
             Option(label: buzzi, tag: buzzi, arabic: buzziArabic, teacher: ibnKathirTeacher, teacherArabic: ibnKathirTeacherArabic, order: 4),
             Option(label: qunbul, tag: qunbul, arabic: qunbulArabic, teacher: ibnKathirTeacher, teacherArabic: ibnKathirTeacherArabic, order: 5),
+            // Abu Amr
             Option(label: duri, tag: duri, arabic: duriArabic, teacher: abiAmrTeacher, teacherArabic: abiAmrTeacherArabic, order: 6),
             Option(label: susi, tag: susi, arabic: susiArabic, teacher: abiAmrTeacher, teacherArabic: abiAmrTeacherArabic, order: 7),
+            // Ibn Amir (beta)
+            Option(label: hisham, tag: hisham, arabic: hishamArabic, teacher: ibnAmirTeacher, teacherArabic: ibnAmirTeacherArabic, order: 8, beta: true),
+            Option(label: ibnDhakwan, tag: ibnDhakwan, arabic: ibnDhakwanArabic, teacher: ibnAmirTeacher, teacherArabic: ibnAmirTeacherArabic, order: 9, beta: true),
+            // Hamzah (beta)
+            Option(label: khalaf, tag: khalaf, arabic: khalafArabic, teacher: hamzahTeacher, teacherArabic: hamzahTeacherArabic, order: 10, beta: true),
+            Option(label: khallad, tag: khallad, arabic: khalladArabic, teacher: hamzahTeacher, teacherArabic: hamzahTeacherArabic, order: 11, beta: true),
+            // al-Kisai (beta)
+            Option(label: abuHarith, tag: abuHarith, arabic: abuHarithArabic, teacher: kisaiTeacher, teacherArabic: kisaiTeacherArabic, order: 12, beta: true),
+            Option(label: duriKisai, tag: duriKisai, arabic: duriKisaiArabic, teacher: kisaiTeacher, teacherArabic: kisaiTeacherArabic, order: 13, beta: true),
+            // Abu Jafar (beta)
+            Option(label: ibnWardan, tag: ibnWardan, arabic: ibnWardanArabic, teacher: abiJafarTeacher, teacherArabic: abiJafarTeacherArabic, order: 14, beta: true),
+            Option(label: ibnJammaz, tag: ibnJammaz, arabic: ibnJammazArabic, teacher: abiJafarTeacher, teacherArabic: abiJafarTeacherArabic, order: 15, beta: true),
+            // Yaqub (beta)
+            Option(label: ruways, tag: ruways, arabic: ruwaysArabic, teacher: yaqubTeacher, teacherArabic: yaqubTeacherArabic, order: 16, beta: true),
+            Option(label: rawh, tag: rawh, arabic: rawhArabic, teacher: yaqubTeacher, teacherArabic: yaqubTeacherArabic, order: 17, beta: true),
+            // Khalaf al-Ashir (beta)
+            Option(label: ishaq, tag: ishaq, arabic: ishaqArabic, teacher: khalafAshirTeacher, teacherArabic: khalafAshirTeacherArabic, order: 18, beta: true),
+            Option(label: idris, tag: idris, arabic: idrisArabic, teacher: khalafAshirTeacher, teacherArabic: khalafAshirTeacherArabic, order: 19, beta: true),
         ]
 
-        static let groups: [Group] = [
-            Group(teacher: asimTeacher, teacherArabic: asimTeacherArabic, options: options.filter { $0.teacher == asimTeacher }),
-            Group(teacher: nafiTeacher, teacherArabic: nafiTeacherArabic, options: options.filter { $0.teacher == nafiTeacher }),
-            Group(teacher: ibnKathirTeacher, teacherArabic: ibnKathirTeacherArabic, options: options.filter { $0.teacher == ibnKathirTeacher }),
-            Group(teacher: abiAmrTeacher, teacherArabic: abiAmrTeacherArabic, options: options.filter { $0.teacher == abiAmrTeacher }),
+        /// What the UI may offer right now: the 8 verified riwayat always, plus the 12
+        /// beta ones only when the user has switched beta qiraat on.
+        static var options: [Option] {
+            Settings.shared.betaQiraatEnabled ? allOptions : allOptions.filter { !$0.beta }
+        }
+
+        static let betaTags: Set<String> = Set(allOptions.filter(\.beta).map(\.tag))
+
+        static func isBeta(_ tag: String) -> Bool { betaTags.contains(canonicalTag(tag)) }
+
+        /// Teacher order for the qiraah menus - the classical order of the Ten.
+        static let teacherOrder: [String] = [
+            nafiTeacher, ibnKathirTeacher, abiAmrTeacher, ibnAmirTeacher,
+            asimTeacher, hamzahTeacher, kisaiTeacher,
+            abiJafarTeacher, yaqubTeacher, khalafAshirTeacher,
         ]
 
-        static let menuOptions: [(label: String, tag: String)] = [
-            (options[0].label, options[0].tag),
-            (options[1].label, options[1].tag),
-            (options[2].label, options[2].tag),
-            (options[3].label, options[3].tag),
-            (options[4].label, options[4].tag),
-            (options[5].label, options[5].tag),
-            (options[6].label, options[6].tag),
-            (options[7].label, options[7].tag),
-        ]
+        static var groups: [Group] {
+            let live = options
+            return teacherOrder.compactMap { teacher in
+                let opts = live.filter { $0.teacher == teacher }
+                guard let first = opts.first else { return nil }
+                return Group(teacher: teacher, teacherArabic: first.teacherArabic, options: opts)
+            }
+        }
 
-        static let arabicCaptionByTag: [String: String] = [
-            hafsTag: hafsArabic,
-            warsh: warshArabic,
-            qaloon: qaloonArabic,
-            duri: duriArabic,
-            susi: susiArabic,
-            buzzi: buzziArabic,
-            qunbul: qunbulArabic,
-            shubah: shubahArabic,
-            khalaf: khalafArabic,
-        ]
+        static var menuOptions: [(label: String, tag: String)] {
+            options.map { ($0.label, $0.tag) }
+        }
 
-        static let optionByTag: [String: Option] = Dictionary(uniqueKeysWithValues: options.map { ($0.tag, $0) })
+        static let arabicCaptionByTag: [String: String] = Dictionary(
+            uniqueKeysWithValues: allOptions.map { ($0.tag, $0.arabic) }
+        )
+
+        static let optionByTag: [String: Option] = Dictionary(uniqueKeysWithValues: allOptions.map { ($0.tag, $0) })
 
         static func option(for tag: String) -> Option {
             let key = canonicalTag(tag)
-            return optionByTag[key] ?? options[0]
+            return optionByTag[key] ?? allOptions[0]
         }
 
         static func canonicalTag(_ stored: String) -> String {

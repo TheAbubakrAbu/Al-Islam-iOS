@@ -339,6 +339,9 @@ struct ActiveTasbihCard: View {
         .padding(.horizontal, 16)
         .frame(maxWidth: .infinity)
         .contentShape(Rectangle())
+        // iOS-only: on the watch this card is a LIST ROW, and the system row platter already gives it
+        // chrome - glass on top would double-card it. On iOS it floats in a safe-area inset, so the
+        // glass IS its only background.
         #if os(iOS)
         .conditionalGlassEffect(rectangle: true, useColor: 0.12)
         #endif

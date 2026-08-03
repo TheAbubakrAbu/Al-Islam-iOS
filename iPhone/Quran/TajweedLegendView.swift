@@ -296,7 +296,7 @@ struct TajweedLegendView: View {
             .padding(.top, 20)
             .padding(.bottom, 28)
         }
-        .background(.clear)
+        .accentWashedBackground()
         .navigationTitle("Legend")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {

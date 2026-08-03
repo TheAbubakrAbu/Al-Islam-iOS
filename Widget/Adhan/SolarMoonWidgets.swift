@@ -240,8 +240,10 @@ struct MoonEntryView: View {
 
                     Spacer(minLength: 4)
 
-                    if let next = entry.nextPrayer {
-                        Text("\(next.displayName) \(Text(next.time, style: .time))")
+                    // The widget's one prayer slot names the prayer you're IN, with the time left in it -
+                    // the same current-first framing every other Adhan widget uses.
+                    if let current = entry.currentPrayer, let next = entry.nextPrayer {
+                        Text("\(current.displayName) \(Text(next.time, style: .timer))")
                             .font(.caption2)
                             .foregroundColor(skyStyle ? .white.opacity(0.9) : .primary)
                             .lineLimit(1)
@@ -411,7 +413,7 @@ struct MoonWidget: Widget {
                 .widgetContainerBackground(legacyPadding: true)
         }
         .configurationDisplayName("Moon Phase")
-        .description("Tonight's moon with its phase and illumination; the medium size adds the Hijri date and next prayer")
+        .description("Tonight's moon with its phase and illumination; the medium size adds the Hijri date and current prayer")
         .supportedFamilies([.systemSmall, .systemMedium])
     }
 }

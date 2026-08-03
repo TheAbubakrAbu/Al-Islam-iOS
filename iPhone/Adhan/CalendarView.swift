@@ -593,6 +593,9 @@ struct HijriMonthCalendarView: View {
             displayedYear = today.year ?? displayedYear
             displayedMonth = today.month ?? displayedMonth
         }
+        // The events list beside this mode washes itself through `applyConditionalListStyle`; the
+        // calendar grid is a plain ScrollView and needs the same light explicitly.
+        .accentWashedBackground()
     }
 
     // MARK: Header

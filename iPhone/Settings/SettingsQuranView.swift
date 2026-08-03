@@ -7,6 +7,8 @@ struct SettingsQuranView: View {
     @Environment(\.dismiss) private var dismiss
 
     @State private var confirmHideQiraahDetails = false
+    /// Gates turning ON beta qiraat behind the warning dialog (see `betaQiraatGroup`).
+    @State private var confirmEnableBetaQiraat = false
     private let presentedAsSheet: Bool
 
     init(presentedAsSheet: Bool = false) {
@@ -693,6 +695,7 @@ struct SettingsQuranView: View {
                 }
                                 
                 qiraahPicker
+                betaQiraatGroup
                 qiraahExplanation
                 qiraahLinks
                 qiraahHighlight
@@ -748,6 +751,53 @@ struct SettingsQuranView: View {
         )
         .font(.subheadline)
         .onChange(of: settings.displayQiraah) { _ in settings.hapticFeedback() }
+    }
+
+    /// The switch that unlocks the twelve machine-extracted riwayat, with the warning
+    /// stated up front and confirmed before anything unverified can appear on screen.
+    @ViewBuilder
+    private var betaQiraatGroup: some View {
+        Toggle(isOn: Binding(
+            get: { settings.betaQiraatEnabled },
+            set: { newValue in
+                settings.hapticFeedback()
+                if newValue {
+                    confirmEnableBetaQiraat = true      // confirm before unlocking
+                } else {
+                    withAnimation(.easeInOut) { settings.betaQiraatEnabled = false }
+                }
+            }
+        )) {
+            VStack(alignment: .leading, spacing: 2) {
+                Label("Beta Qiraat (12 More Riwayat)", systemImage: "flask")
+                Text("Adds Ibn Amir, Hamzah, al-Kisai, Abu Jafar, Yaqub and Khalaf al-Ashir.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .tint(settings.accentColor.color)
+        .confirmationDialog(
+            "Turn on beta qiraat?",
+            isPresented: $confirmEnableBetaQiraat,
+            titleVisibility: .visible
+        ) {
+            Button("Turn On") {
+                settings.hapticFeedback()
+                withAnimation(.easeInOut) {
+                    settings.betaQiraatEnabled = true
+                    settings.acceptedBetaQiraatNotice = true
+                }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text(Settings.betaQiraatNotice)
+        }
+
+        if settings.betaQiraatEnabled {
+            Text(Settings.betaQiraatNotice)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
     }
 
     private var qiraahExplanation: some View {

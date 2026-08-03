@@ -193,7 +193,7 @@ struct AyahRow: View, Equatable {
         let qiraahKey = qiraah ?? "Hafs"
         let ayahs = limit.map { Array(surah.ayahs.prefix($0)) } ?? surah.ayahs
 
-        for ayah in ayahs where ayah.existsInQiraah(qiraah) {
+        for ayah in ayahs where ayah.existsInQiraah(qiraah, surahID: surah.id) {
             let key = "\(surah.id):\(ayah.id)|\(clean ? 1 : 0)|\(beginner ? 1 : 0)|\(qiraahKey)" as NSString
             if Self.arabicDisplayCache.object(forKey: key) != nil { continue }
 

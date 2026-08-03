@@ -1208,8 +1208,12 @@ struct NoteEditorSheet: View {
                 )
             }
             .padding(.horizontal)
+            // Full-size BEFORE the wash: this VStack hugs its content, and a background on a hugging
+            // view would paint a floating rectangle instead of covering the sheet.
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
             .navigationTitle(title)
             .navigationBarTitleDisplayMode(.inline)
+            .accentWashedBackground()
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button(role: .cancel) {
@@ -1238,6 +1242,7 @@ struct NoteEditorSheet: View {
                 }
             }
         }
+        .navigationViewStyle(.stack)
     }
 }
 
@@ -1329,7 +1334,7 @@ struct SelectAyahTextSheet: View {
     }
 
     private var ayahExistsInSelectedQiraah: Bool {
-        ayah.existsInQiraah(selectedQiraah)
+        ayah.existsInQiraah(selectedQiraah, surahID: surah.id)
     }
 
     private var arabicText: String {
@@ -1434,6 +1439,7 @@ struct SelectAyahTextSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .sheetDismissToolbar()
         }
+        .navigationViewStyle(.stack)
     }
 
     @ViewBuilder

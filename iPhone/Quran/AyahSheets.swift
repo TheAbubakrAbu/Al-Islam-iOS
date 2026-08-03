@@ -377,7 +377,9 @@ struct AyahActionsSheet: View {
             .navigationTitle(ayahSheetTitle(surahNumber: surah.id, ayahNumber: ayah.id))
             .navigationBarTitleDisplayMode(.inline)
             .sheetDismissToolbar()
+            .accentWashedBackground()
         }
+        .navigationViewStyle(.stack)
         .confirmationDialog(Settings.bookmarkNoteRemovalDialogTitle, isPresented: $confirmRemoveNote, titleVisibility: .visible) {
             Button("Remove", role: .destructive) {
                 settings.hapticFeedback()

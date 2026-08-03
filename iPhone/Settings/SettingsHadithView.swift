@@ -21,6 +21,7 @@ struct SettingsHadithView: View {
                     .navigationBarTitleDisplayMode(.inline)
                     .sheetDismissToolbar()
             }
+            .navigationViewStyle(.stack)
         } else {
             settingsList
                 .navigationTitle("Hadith Settings")

@@ -641,10 +641,10 @@ struct PrayerRowLockWidget: Widget {
     }
 }
 
-// MARK: - Lock screen: next prayer progress
+// MARK: - Lock screen: current prayer progress
 
-/// The next prayer's name over the current window's auto-filling bar, with the live countdown beneath -
-/// "what's next and how long until it".
+/// The current prayer's name over its window's auto-filling bar, with the live countdown and what it
+/// lands on beneath - "where you are and how long is left".
 @available(iOS 16.0, *)
 struct NextPrayerProgressView: View {
     var entry: PrayersProvider.Entry
@@ -653,19 +653,19 @@ struct NextPrayerProgressView: View {
         VStack(alignment: .leading, spacing: 3) {
             if let current = entry.currentPrayer, let next = entry.nextPrayer {
                 HStack {
-                    if !next.nameTransliteration.contains("/") {
-                        Image(systemName: next.image)
+                    if !current.nameTransliteration.contains("/") {
+                        Image(systemName: current.image)
                             .font(.caption)
                             .padding(.trailing, -4)
                     }
 
-                    Text(next.displayName)
+                    Text(current.displayName)
                         .font(.headline)
 
                     Spacer()
 
-                    Text(next.time, style: .time)
-                        .font(.caption)
+                    Text(next.time, style: .timer)
+                        .font(.caption.monospacedDigit())
                         .foregroundColor(.secondary)
                 }
 
@@ -676,8 +676,8 @@ struct NextPrayerProgressView: View {
                     tint: .primary
                 )
 
-                Text(next.time, style: .timer)
-                    .font(.caption.monospacedDigit())
+                Text("Up Next: \(next.displayName) \(Text(next.time, style: .time))")
+                    .font(.caption)
             } else {
                 Text("Open app to get prayer times")
                     .font(.caption)
@@ -698,8 +698,8 @@ struct NextPrayerProgressWidget: Widget {
                 .widgetContainerBackground(accessory: true)
         }
         .supportedFamilies([.accessoryRectangular])
-        .configurationDisplayName("Next Prayer Progress")
-        .description("The next prayer with a live countdown and progress bar")
+        .configurationDisplayName("Current Prayer Progress")
+        .description("The current prayer with a live countdown, progress bar, and what's up next")
     }
 }
 
@@ -771,8 +771,8 @@ struct PrayerListSmallSkyWidget: Widget {
 
 // MARK: - Home screen: next prayer board
 
-/// A medium split: the NEXT prayer with its clock time, a live relative countdown and the window's
-/// progress on the left; the full day's list on the right with the current prayer accented.
+/// A medium split: the CURRENT prayer with its live countdown, the window's progress and one "Up Next"
+/// line on the left; the full day's list on the right with the current prayer accented.
 struct NextPrayerBoardView: View {
     var entry: PrayersProvider.Entry
     /// true = rendered inside the sky-gradient twin: white tiers replace accent/secondary/primary.
@@ -782,23 +782,23 @@ struct NextPrayerBoardView: View {
         if let current = entry.currentPrayer, let next = entry.nextPrayer {
             HStack(alignment: .center, spacing: 12) {
                 VStack(alignment: .leading, spacing: 3) {
-                    Text("NEXT")
+                    Text("CURRENT")
                         .font(.caption2.weight(.semibold))
                         .foregroundColor(skyStyle ? .white.opacity(0.75) : .secondary)
 
                     HStack(spacing: 5) {
-                        Image(systemName: next.image)
+                        Image(systemName: current.image)
                             .font(.subheadline)
 
-                        Text(next.displayName)
+                        Text(current.displayName)
                             .font(.headline)
                     }
-                    .foregroundColor(skyStyle ? .white : (next.nameTransliteration == "Shurooq" ? .primary : entry.accentColor.color))
+                    .foregroundColor(skyStyle ? .white : (current.nameTransliteration == "Shurooq" ? .primary : entry.accentColor.color))
 
-                    Text(next.time, style: .time)
+                    Text(next.time, style: .timer)
                         .font(.title2.weight(.semibold).monospacedDigit())
 
-                    Text(next.time, style: .relative)
+                    Text("Up Next: \(next.displayName) \(Text(next.time, style: .time))")
                         .font(.caption)
                         .foregroundColor(skyStyle ? .white.opacity(0.75) : .secondary)
 
@@ -857,12 +857,12 @@ struct NextPrayerBoardWidget: Widget {
                 .widgetContainerBackground(legacyPadding: true)
         }
         .supportedFamilies([.systemMedium])
-        .configurationDisplayName("Next Prayer")
-        .description("The next prayer with a live countdown beside the full day's times")
+        .configurationDisplayName("Current Prayer")
+        .description("The current prayer with a live countdown beside the full day's times")
     }
 }
 
-/// The Next Prayer widget, unchanged, over the current prayer's sky gradient.
+/// The Current Prayer widget, unchanged, over the current prayer's sky gradient.
 struct NextPrayerBoardSkyWidget: Widget {
     let kind: String = "NextPrayerBoardSkyWidget"
 
@@ -872,7 +872,7 @@ struct NextPrayerBoardSkyWidget: Widget {
                 .modifier(PrayerSkyChrome(entry: entry))
         }
         .supportedFamilies([.systemMedium])
-        .configurationDisplayName("Next Prayer Sky")
-        .description("The next prayer beside the full day's times, over the current prayer's sky gradient")
+        .configurationDisplayName("Current Prayer Sky")
+        .description("The current prayer beside the full day's times, over the current prayer's sky gradient")
     }
 }

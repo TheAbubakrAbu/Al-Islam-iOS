@@ -1,4 +1,7 @@
-#if os(iOS)
+// watchOS is in scope too: only the iPhone can EDIT the palette (SkyColorsView is iOS-only), but the
+// watch complications read it to paint the same sky gradient the home-screen widgets wear. The watch's
+// copy arrives through `watchSyncedAppStorageKeys`.
+#if os(iOS) || os(watchOS)
 import SwiftUI
 
 /// The two-stop gradient the sky card wears during each prayer, with the user's overrides applied.

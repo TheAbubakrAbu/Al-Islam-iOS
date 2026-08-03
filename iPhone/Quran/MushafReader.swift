@@ -105,7 +105,7 @@ enum MushafPagination {
         // Surahs and their ayahs are already in mushaf order, so a page's segments accumulate in order
         // too: extend the current run while the page and surah repeat, flush at each boundary.
         for surah in quran {
-            for ayah in surah.ayahs where ayah.existsInQiraah(qiraah) {
+            for ayah in surah.ayahs where ayah.existsInQiraah(qiraah, surahID: surah.id) {
                 guard let page = ayah.page else { continue }
 
                 if page != currentPage {

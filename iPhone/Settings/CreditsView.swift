@@ -9,6 +9,7 @@ struct CreditsView: View {
         NavigationView {
             creditsList
         }
+        .navigationViewStyle(.stack)
     }
 
     private var creditsList: some View {

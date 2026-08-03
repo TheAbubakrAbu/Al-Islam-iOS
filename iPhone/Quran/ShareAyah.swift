@@ -6,6 +6,13 @@ enum ActionMode: String {
     case image
 }
 
+enum ShareAyahRender {
+    /// The widest layout measure a share image is drawn at. iPhones are all narrower than this, so
+    /// they render at their real screen width as always; iPad/Mac (where `UIScreen.main` reports the
+    /// full 800-1400pt display regardless of the window) clamp down to a phone-proportioned card.
+    static let maxImageWidth: CGFloat = 440
+}
+
 struct ShareAyahSheet: View {
     @ObservedObject private var settings = Settings.shared
     @ObservedObject private var quranData = QuranData.shared
@@ -64,7 +71,7 @@ struct ShareAyahSheet: View {
     private var ayah: Ayah? { surah?.ayahs.first(where: { $0.id == ayahNumber }) }
     // Tajweed data is Hafs-only, so it keys off the sheet's riwayah, not the reader's.
     private var isHafsShare: Bool { shareQiraah.isEmpty }
-    private var ayahExistsInShareQiraah: Bool { ayah?.existsInQiraah(shareQiraah) ?? true }
+    private var ayahExistsInShareQiraah: Bool { ayah?.existsInQiraah(shareQiraah, surahID: surahNumber) ?? true }
     private var effectiveCleanArabic: Bool { shareSettings.cleanArabic }
     private var effectiveHideArabicDots: Bool { shareSettings.hideArabicDots }
     private var canShowHideArabicDotsToggle: Bool {
@@ -780,7 +787,11 @@ struct ShareAyahSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             // This sheet had no dismiss control at all - you could only swipe it away or complete a share.
             .sheetDismissToolbar()
+            // Full-size before the wash so the background always covers the whole sheet.
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .accentWashedBackground()
         }
+        .navigationViewStyle(.stack)
         .accentColor(settings.accentColor.color)
         .onAppear {
             guard !didInit else { return }
@@ -990,7 +1001,10 @@ struct ShareAyahSheet: View {
         // every toggle - the "screen jumps back" bug.
         isGeneratingImage = true
         // UIScreen.main is main-thread-only; capture the width here (still on main) for the queue below.
-        let screenWidth = UIScreen.main.bounds.width
+        // Clamped to a phone-like measure: on iPad/Mac the SCREEN is 800-1400pt wide even when the app's
+        // window is narrow (Split View, Stage Manager), and an image laid out that wide reads terribly.
+        // Every iPhone stays under the clamp, so phone output is unchanged.
+        let screenWidth = min(UIScreen.main.bounds.width, ShareAyahRender.maxImageWidth)
         Self.shareImageQueue.async { [self] in
             // Superseded before we even started drawing? Skip the (expensive, tajweed-attributed) render
             // entirely instead of drawing an image only to discard it. main.sync is deadlock-free here:
@@ -1265,7 +1279,8 @@ extension ShareAyahSheet {
             UIPasteboard.general.string = text
         case .image:
             // UIScreen.main is main-thread-only; capture the width here (still on main) for the queue below.
-            let screenWidth = UIScreen.main.bounds.width
+            // Same phone-like clamp as the share-sheet render - see `ShareAyahRender.maxImageWidth`.
+            let screenWidth = min(UIScreen.main.bounds.width, ShareAyahRender.maxImageWidth)
             DispatchQueue.global(qos: .userInitiated).async {
                 let img = buildShareImage(surah: surah, ayah: ayah, shareSettings: shareSettings, settings: settings, includeNote: includeNote, noteText: noteText, screenWidth: screenWidth)
                 DispatchQueue.main.async {

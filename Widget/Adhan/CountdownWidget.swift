@@ -114,8 +114,8 @@ struct CountdownEntryView: View {
                             Spacer()
                             
                             HStack {
-                                Text("Next:")
-                                
+                                Text("Up Next:")
+
                                 Image(systemName: nextPrayer.image)
                                     .padding(.horizontal, -6)
                                 

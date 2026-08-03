@@ -163,6 +163,7 @@ struct MapView: View {
                 }
                 .preferredColorScheme(scheme)
         }
+        .navigationViewStyle(.stack)
         .accentColor(settings.accentColor.color)
         .tint(settings.accentColor.color)
     }

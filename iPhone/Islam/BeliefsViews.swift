@@ -1493,6 +1493,7 @@ struct TajweedView: View {
             NavigationView {
                 TajweedLegendView()
             }
+            .navigationViewStyle(.stack)
             .smallMediumSheetPresentation()
         }
         #endif

@@ -157,6 +157,12 @@ extension View {
         } else {
             self
         }
+        #elseif os(watchOS)
+        if #available(watchOS 10.0, *) {
+            self.listSectionSpacing(.compact)
+        } else {
+            self
+        }
         #else
         self
         #endif
@@ -274,18 +280,125 @@ struct AccentGlowOverlay: View {
     }
 }
 
+#if os(watchOS)
+/// The watch's bottom accent glow: a quiet radial wash rising from the bottom edge - the wrist-scale
+/// mirror of the iPhone's top accent wash (`AccentGlowOverlay`). Every list screen gets it through
+/// `ConditionalListStyle`'s watch branch, so the whole watch app sits on the same grounded light.
+///
+/// Structurally constant like its iOS sibling: all three gradients are always in the tree and the
+/// settings only drive their opacities - the accent one for the normal glow, the yellow (left) +
+/// green (right) pair for the Al-Islam brand look. Everything collapses to invisible when the glow
+/// is off or a custom reading theme owns the background, and theme/accent flips never recreate the
+/// List they sit behind.
+struct WatchBottomGlowOverlay: View {
+    @ObservedObject private var settings = Settings.shared
+
+    var body: some View {
+        // The watch renders on pure black OLED, so the wash can sit a touch brighter than the
+        // iPhone's dark-mode 0.16 and still stay quiet.
+        let strength: Double = (settings.hasCustomThemeColors || !settings.showAccentGlow) ? 0 : 0.20
+        let brand = settings.alIslamGlow
+
+        VStack(spacing: 0) {
+            Spacer(minLength: 0)
+
+            ZStack {
+                RadialGradient(
+                    colors: [settings.accentColor.color.opacity(brand ? 0 : strength), .clear],
+                    center: .bottom,
+                    startRadius: 4,
+                    endRadius: 190
+                )
+
+                // Absolute corners, not leading/trailing: the brand look is yellow on the LEFT and
+                // green on the RIGHT, and it shouldn't mirror when the app runs in an RTL locale.
+                RadialGradient(
+                    colors: [Color.yellow.opacity(brand ? strength : 0), .clear],
+                    center: UnitPoint(x: 0, y: 1),
+                    startRadius: 4,
+                    endRadius: 190
+                )
+
+                RadialGradient(
+                    colors: [Color.green.opacity(brand ? strength : 0), .clear],
+                    center: UnitPoint(x: 1, y: 1),
+                    startRadius: 4,
+                    endRadius: 190
+                )
+            }
+            // Proportional, not fixed: 150pt covers the glow's reach on a 40mm (197pt) screen and the
+            // 49mm Ultra alike, because the gradients fade out well before their frame's top edge.
+            .frame(height: 150)
+        }
+        .allowsHitTesting(false)
+        .ignoresSafeArea()
+    }
+}
+#endif
+
+/// The app's ambient wash as a standalone modifier - the ONE implementation of "every screen sits on
+/// the same light": the themed base color + top accent glow on iOS, the bottom accent glow on the
+/// watch. `ConditionalListStyle` routes through this for every List screen; screens that are NOT
+/// system Lists (ScrollView sheets like tafsir/comparison/share, custom canvases) apply it directly
+/// via `.accentWashedBackground()`. Edit the look HERE and every screen on every platform follows.
+///
+/// Also re-asserts the theme's color scheme and accent: sheets are their own presentation contexts
+/// and don't inherit the root's `preferredColorScheme` - without this, a forced-Dark theme would
+/// paint a black wash behind light-mode sheet content.
+struct AccentWashedBackground: ViewModifier {
+    @ObservedObject private var settings = Settings.shared
+    @Environment(\.colorScheme) private var systemColorScheme
+
+    func body(content: Content) -> some View {
+        #if os(iOS)
+        content
+            .background(
+                ZStack(alignment: .top) {
+                    resolvedBackground
+
+                    AccentGlowOverlay()
+                }
+                .ignoresSafeArea()
+            )
+            .accentColor(settings.accentColor.color)
+            .tint(settings.accentColor.color)
+            .preferredColorScheme(settings.colorScheme)
+        #elseif os(watchOS)
+        content
+            .background(WatchBottomGlowOverlay())
+        #else
+        content
+        #endif
+    }
+
+    #if os(iOS)
+    /// The list background every theme resolves to - identical to what `ConditionalListStyle` painted
+    /// historically (`resolvedListBackground`), kept in ONE place now.
+    private var resolvedBackground: Color {
+        if settings.hasCustomThemeColors {
+            return settings.themeBackgroundColor ?? Color(.systemGroupedBackground)
+        }
+        if settings.defaultView {
+            return Color(.systemGroupedBackground)
+        }
+        return (settings.colorScheme ?? systemColorScheme) == .dark ? .black : .white
+    }
+    #endif
+}
+
+extension View {
+    /// The themed base + accent glow for screens that are not system Lists - see `AccentWashedBackground`.
+    func accentWashedBackground() -> some View {
+        modifier(AccentWashedBackground())
+    }
+}
+
 struct ConditionalListStyle: ViewModifier {
     @ObservedObject private var settings = Settings.shared
     @ObservedObject private var playback = PlaybackVisibility.shared
-    @Environment(\.colorScheme) private var systemColorScheme
-    @Environment(\.customColorScheme) private var customColorScheme
 
     let disableNowPlayingInset: Bool
     var topContentMargin: CGFloat = 0
-
-    private var currentColorScheme: ColorScheme {
-        settings.colorScheme ?? systemColorScheme
-    }
 
     private var shouldShowNowPlaying: Bool {
         playback.showsNowPlaying
@@ -297,7 +410,7 @@ struct ConditionalListStyle: ViewModifier {
             styledContent(content)
                 .navigationBarTitleDisplayMode(.inline)
             #else
-            content
+            watchStyledContent(content)
             #endif
         }
         .accentColor(settings.accentColor.color)
@@ -324,48 +437,43 @@ struct ConditionalListStyle: ViewModifier {
 
     #if os(iOS)
     // Single, structurally-constant modifier chain (only the VALUES change with the theme). Switching to/from
-    // Sepia/Gray used to flip between if/else branches, which changed the view tree and recreated the List - 
+    // Sepia/Gray used to flip between if/else branches, which changed the view tree and recreated the List -
     // scrolling it back to the top. Keeping one branch preserves the List, so no theme change resets scroll.
-    // (Row colors are handled separately by `themedListRowBackground()` applied inside each List.)
+    // (Row colors are handled separately by `themedListRowBackground()` applied inside each List. The wash
+    // itself lives in `AccentWashedBackground` - one implementation for lists, sheets, and the watch.)
     @ViewBuilder
     private func styledContent(_ content: Content) -> some View {
         let base = settings.defaultView ? AnyView(content) : AnyView(content.listStyle(.plain))
 
         if #available(iOS 16.0, *) {
-            // Always hidden (not just for custom themes): `resolvedListBackground` reproduces every
-            // theme's system color exactly, and hiding the system layer is what lets the accent wash
-            // below actually show through. Still one structurally-constant chain - values only.
+            // Always hidden (not just for custom themes): the wash reproduces every theme's system
+            // color exactly, and hiding the system layer is what lets the accent glow show through.
             base
                 .scrollContentBackground(.hidden)
-                .background(washedListBackground)
+                .modifier(AccentWashedBackground())
         } else {
             base
-                .background(washedListBackground)
+                .modifier(AccentWashedBackground())
         }
     }
+    #endif
 
-    /// The list background plus the splash screen's accent wash: a quiet radial glow of the user's
-    /// accent bleeding down from the top of every list, gone by mid-screen. Zeroed for the Sepia/Gray
-    /// reading themes - their whole point is calm paper, and an accent glow would pollute it. (An
-    /// opacity of 0, not a branch: the view tree must stay structurally constant or theme flips
-    /// recreate the List and reset its scroll position.)
-    private var washedListBackground: some View {
-        ZStack(alignment: .top) {
-            resolvedListBackground
-
-            AccentGlowOverlay()
+    #if os(watchOS)
+    /// The watch styling pass: the bottom accent glow behind every list (via the shared
+    /// `AccentWashedBackground`) plus compact section spacing, so the small screen spends its pixels
+    /// on content instead of gaps. The watch List canvas is transparent over black, so the wash reads
+    /// through it; the chain stays structurally constant (the glow zeroes its opacities rather than
+    /// leaving the tree), preserving List identity across theme and accent flips.
+    @ViewBuilder
+    private func watchStyledContent(_ content: Content) -> some View {
+        if #available(watchOS 10.0, *) {
+            content
+                .listSectionSpacing(.compact)
+                .modifier(AccentWashedBackground())
+        } else {
+            content
+                .modifier(AccentWashedBackground())
         }
-        .ignoresSafeArea()
-    }
-
-    private var resolvedListBackground: Color {
-        if settings.hasCustomThemeColors {
-            return settings.themeBackgroundColor ?? Color(.systemGroupedBackground)
-        }
-        if settings.defaultView {
-            return Color(.systemGroupedBackground)
-        }
-        return currentColorScheme == .dark ? .black : .white
     }
     #endif
 }

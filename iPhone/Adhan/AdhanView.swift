@@ -181,6 +181,7 @@ struct AdhanView: View {
             NavigationView {
                 SettingsAdhanView(showNotifications: true, presentedAsSheet: true)
             }
+            .navigationViewStyle(.stack)
             .smallMediumSheetPresentation()
         }
         #endif
@@ -558,6 +559,7 @@ private struct CurrentLocationRow: View {
                 PrayerTimesMapView()
                     .environmentObject(settings)
             }
+            .navigationViewStyle(.stack)
             .smallMediumSheetPresentation()
         }
         #endif

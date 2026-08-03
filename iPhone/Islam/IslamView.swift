@@ -5,10 +5,34 @@ struct IslamView: View {
     // No NamesViewModel observation: this body renders nothing from it, and observing it re-ran the
     // whole tab root when the 99 Names JSON finished its background load. NamesView observes it itself.
     #if os(iOS)
+    // Split-view multitasking (Slide Over, 1/3 Split View, narrow Stage Manager windows) makes an iPad
+    // window compact - the sidebar/detail layout must collapse to the iPhone shape there (see
+    // `usesColumnNavigation`), or the split collapses onto a pre-selected detail with no way back.
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @State private var selectedResource: IslamDestination? = .arabicAlphabet
+    /// Bumped when the SAME sidebar row is re-tapped: the detail stack is keyed on it, so the tap
+    /// always lands (pops that section back to its root) instead of dying against unchanged state.
+    @State private var islamDetailRefreshToken = 0
     /// Programmatic pushes for the grid tiles (a `NavigationLink` inside a List row drags the row chevron
     /// into each tile; a path append does not).
     @State private var islamPath: [IslamDestination] = []
+
+    /// Two side-by-side columns only when the window is actually wide enough - the Hadith tab's rule.
+    private var usesColumnNavigation: Bool {
+        guard #available(iOS 16.0, *) else { return false }
+        guard horizontalSizeClass == .regular else { return false }
+        return UIDevice.current.userInterfaceIdiom == .pad || UIDevice.current.userInterfaceIdiom == .mac
+    }
+
+    /// What re-identifies the iPad detail stack: the selected resource, or a re-tap of the same row.
+    private struct IslamDetailIdentity: Hashable {
+        let resource: IslamDestination
+        let token: Int
+    }
+
+    private var islamDetailIdentity: IslamDetailIdentity {
+        IslamDetailIdentity(resource: selectedResource ?? .arabicAlphabet, token: islamDetailRefreshToken)
+    }
 
     /// String-backed so favorites persist by raw value, CaseIterable so the resource list, the grid, and the
     /// favorites section all draw from one source of truth instead of three hand-maintained row lists.
@@ -126,25 +150,52 @@ struct IslamView: View {
     }
     #endif
 
+    /// Cross-platform mirror of `usesColumnNavigation`, so the shared `body` can observe layout flips
+    /// (the watch build reads a constant false).
+    private var columnLayoutActive: Bool {
+        #if os(iOS)
+        return usesColumnNavigation
+        #else
+        return false
+        #endif
+    }
+
     var body: some View {
         navigationContainer
+            // The window crossed the compact/regular boundary (iPad Split View drag, Slide Over, Stage
+            // Manager): carry the open resource across the sidebar/stack swap so the user stays where
+            // they were instead of being dumped back on the list.
+            .onChange(of: columnLayoutActive) { columns in
+                #if os(iOS)
+                guard #available(iOS 16.0, *) else { return }
+                if columns {
+                    if let top = islamPath.last {
+                        selectedResource = top
+                        islamPath.removeAll()
+                    }
+                } else if let selected = selectedResource {
+                    islamPath = [selected]
+                }
+                #endif
+            }
     }
 
     private var navigationContainer: some View {
         Group {
             #if os(iOS)
-            if #available(iOS 16.0, *), UIDevice.current.userInterfaceIdiom == .pad {
+            if #available(iOS 16.0, *), usesColumnNavigation {
                 NavigationSplitView {
                     islamSidebar
                 } detail: {
                     // The detail needs its own NavigationStack so NavigationLinks inside a destination
                     // (e.g. tapping a letter in ArabicView) push within the detail column instead of
                     // hijacking the whole split. `.id` rebuilds the stack when the sidebar selection
-                    // changes, so switching sections always resets to that section's root.
+                    // changes - or when the same row is re-tapped (the token) - so switching sections
+                    // always resets to that section's root.
                     NavigationStack {
                         islamDetail
                     }
-                    .id(selectedResource ?? .arabicAlphabet)
+                    .id(islamDetailIdentity)
                 }
             } else if #available(iOS 16.0, *) {
                 NavigationStack(path: $islamPath) {
@@ -167,22 +218,35 @@ struct IslamView: View {
         }
     }
 
-    private var islamList: some View {
-        List {
+    /// The list body both shapes share: only the resource rows swap their link grammar (stack links
+    /// on iPhone, selection rows in the iPad sidebar) - the quote and the apps card are literally the
+    /// same views everywhere, so an edit to them can never fork between iPhone and iPad.
+    @ViewBuilder
+    private func islamListEntries(split: Bool) -> some View {
+        Group {
             Group {
-            #if os(iOS)
-            if #available(iOS 16.0, *) {
-                modernResourceSections
-            } else {
+                #if os(iOS)
+                if split, #available(iOS 16.0, *) {
+                    resourcesSectionSplit
+                } else if #available(iOS 16.0, *) {
+                    modernResourceSections
+                } else {
+                    resourcesSection
+                }
+                #else
                 resourcesSection
+                #endif
             }
-            #else
-            resourcesSection
-            #endif
+
             ProphetQuote()
             AlIslamAppsSection()
-            }
-            .themedListRowBackground()
+        }
+        .themedListRowBackground()
+    }
+
+    private var islamList: some View {
+        List {
+            islamListEntries(split: false)
         }
         .applyConditionalListStyle()
         .navigationTitle("Al-Islam")
@@ -317,14 +381,11 @@ struct IslamView: View {
     @available(iOS 16.0, *)
     private var islamSidebar: some View {
         List(selection: $selectedResource) {
-            Group {
-            resourcesSectionSplit
-            ProphetQuote()
-            AlIslamAppsSection()
-            }
-            .themedListRowBackground()
+            islamListEntries(split: true)
         }
-        .applyConditionalListStyle()
+        // The detail column's screens show the Now Playing bar; suppress the sidebar's copy or
+        // recitation puts one identical bar in EACH column (the Quran tab's rule).
+        .applyConditionalListStyle(disableNowPlayingInset: true)
         .navigationTitle("Al-Islam")
     }
 
@@ -334,7 +395,7 @@ struct IslamView: View {
         // sidebar selection changes. Without this the detail could get "stuck" on a previous item after the
         // view disappeared and came back on iPad/Mac.
         destinationView(for: selectedResource ?? .arabicAlphabet)
-            .id(selectedResource ?? .arabicAlphabet)
+            .id(islamDetailIdentity)
     }
 
     @available(iOS 16.0, *)
@@ -454,7 +515,12 @@ struct IslamView: View {
         Button {
             settings.hapticFeedback()
             withAnimation(.easeInOut) {
-                selectedResource = value
+                if selectedResource == value {
+                    // Re-tapping the selected row must still LAND: pop its section back to the root.
+                    islamDetailRefreshToken &+= 1
+                } else {
+                    selectedResource = value
+                }
             }
         } label: {
             toolLabel(value.title, systemImage: value.systemImage)

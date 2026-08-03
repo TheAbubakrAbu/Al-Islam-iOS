@@ -9,20 +9,20 @@ struct LockScreen1EntryView: View {
             if entry.prayers.isEmpty {
                 Text("Open app to get prayer times")
                     .font(.caption)
-            } else if let nextPrayer = entry.nextPrayer {
+            } else if let currentPrayer = entry.currentPrayer {
                 HStack {
-                    if !nextPrayer.nameTransliteration.contains("/") {
-                        Image(systemName: nextPrayer.image)
+                    if !currentPrayer.nameTransliteration.contains("/") {
+                        Image(systemName: currentPrayer.image)
                             .font(.caption)
                             .padding(.trailing, -4)
                     }
-                    
-                    Text(nextPrayer.displayName)
+
+                    Text(currentPrayer.displayName)
                         .font(.headline)
-                        .lineLimit(nextPrayer.nameTransliteration.contains("/") ? 2 : 1)
+                        .lineLimit(currentPrayer.nameTransliteration.contains("/") ? 2 : 1)
                 }
-                
-                Text(nextPrayer.time, style: .time)
+
+                Text(currentPrayer.time, style: .time)
                     .font(.caption2)
                     .lineLimit(1)
             }
@@ -43,15 +43,15 @@ struct LockScreen1Widget: Widget {
                     .widgetContainerBackground(accessory: true)
             }
             .supportedFamilies([.accessoryCircular])
-            .configurationDisplayName("Next Prayer Time")
-            .description("Shows the next upcoming prayer time")
+            .configurationDisplayName("Current Prayer Time")
+            .description("Shows the current prayer and when it started")
         } else {
             return StaticConfiguration(kind: kind, provider: PrayersProvider()) { entry in
                 LockScreen1EntryView(entry: entry)
             }
             .supportedFamilies([.systemSmall])
-            .configurationDisplayName("Next Prayer Time")
-            .description("Shows the next upcoming prayer time")
+            .configurationDisplayName("Current Prayer Time")
+            .description("Shows the current prayer and when it started")
         }
         #endif
     }

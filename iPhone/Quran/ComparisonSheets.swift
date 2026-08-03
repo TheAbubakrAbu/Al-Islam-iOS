@@ -20,10 +20,13 @@ struct AyahQiraahComparisonSheet: View {
         let teacher: String
         let teacherArabic: String
         let order: Int
+        let beta: Bool
 
         var id: String { tag.isEmpty ? "Hafs" : tag }
     }
 
+    /// `Settings.Riwayah.options` already omits the beta riwayat unless the user turned
+    /// beta qiraat on, so comparison mode never surfaces unverified text by accident.
     private var options: [QiraahDisplay] {
         Settings.Riwayah.options.map {
             QiraahDisplay(
@@ -32,7 +35,8 @@ struct AyahQiraahComparisonSheet: View {
                 arabicCaption: $0.arabic,
                 teacher: $0.teacher,
                 teacherArabic: $0.teacherArabic,
-                order: $0.order
+                order: $0.order,
+                beta: $0.beta
             )
         }
     }
@@ -73,14 +77,11 @@ struct AyahQiraahComparisonSheet: View {
 
     var body: some View {
         NavigationView {
-            VStack(spacing: 0) {
-                if let currentOption {
-                    currentQiraahHeader(currentOption)
-
-                    Divider()
-                }
-
-                List {
+            // The pinned "current riwayah" strip rides as a safe-area inset on the List
+            // rather than a VStack above it: with a VStack, the half-height (.medium)
+            // sheet detent laid the header out as a blank gap until the sheet was
+            // dragged to full height.
+            List {
                     Group {
                         Section {
                             Text("Compare this ayah across the Arabic riwayat available in the app. Some riwayat merge or omit Hafs ayah numbers, so unavailable rows are dimmed. No ayah is ever missing; the same words may simply be joined or numbered differently.")
@@ -114,14 +115,27 @@ struct AyahQiraahComparisonSheet: View {
                     }
                     .themedListRowBackground()
                 }
-                .applyConditionalListStyle()
-                .compactListSectionSpacing()
-                .searchable(text: $searchText.animation(.easeInOut), prompt: "Search riwayat")
+            .applyConditionalListStyle()
+            .compactListSectionSpacing()
+            .searchable(text: $searchText.animation(.easeInOut), prompt: "Search riwayat")
+            .safeAreaInset(edge: .top, spacing: 0) {
+                if let currentOption {
+                    VStack(spacing: 0) {
+                        currentQiraahHeader(currentOption)
+
+                        Divider()
+                    }
+                    .background(.ultraThinMaterial)
+                }
             }
             .navigationTitle(ayahSheetTitle(surahNumber: surahNumber, ayahNumber: ayahNumber))
             .navigationBarTitleDisplayMode(.inline)
             .sheetDismissToolbar()
+            // The list below washes itself; this covers the header strip above it, so the whole
+            // sheet sits on the same light.
+            .accentWashedBackground()
         }
+        .navigationViewStyle(.stack)
     }
 
     private func currentQiraahHeader(_ option: QiraahDisplay) -> some View {
@@ -170,7 +184,7 @@ struct AyahQiraahComparisonSheet: View {
 
     private func qiraahText(for option: QiraahDisplay) -> String? {
         guard let ayah = quranData.ayah(surah: surahNumber, ayah: ayahNumber),
-              ayah.existsInQiraah(option.tag) else {
+              ayah.existsInQiraah(option.tag, surahID: surahNumber) else {
             return nil
         }
         return ayah.displayArabicText(surahId: surahNumber, clean: settings.cleanArabicText, qiraahOverride: option.tag)
@@ -439,10 +453,13 @@ struct AyahEnglishComparisonSheet: View {
             .navigationTitle(ayahSheetTitle(surahNumber: surahNumber, ayahNumber: ayahNumber))
             .navigationBarTitleDisplayMode(.inline)
             .sheetDismissToolbar()
+            // Same rule as the riwayah comparison: the list washes itself, this covers the header.
+            .accentWashedBackground()
             .task(id: loadKey) {
                 await viewModel.loadIfNeeded()
             }
         }
+        .navigationViewStyle(.stack)
     }
 
     private func currentTranslationHeader(text: String) -> some View {

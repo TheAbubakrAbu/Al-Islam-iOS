@@ -170,6 +170,12 @@ struct QuranView: View {
     @ObservedObject var quranPlayer = QuranPlayer.shared
     @ObservedObject private var searchHandoff = QuranSearchHandoff.shared
     @Environment(\.dismiss) private var dismiss
+    #if os(iOS)
+    // Split-view multitasking (Slide Over, 1/3 Split View, narrow Stage Manager windows) makes an iPad
+    // window compact - the column layout must collapse to the iPhone shape there, so the layout is keyed
+    // on the size class, not just the idiom (see `usesColumnNavigation`).
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    #endif
 
     /// Whether the Quran tab is the one on screen. Page mode means "the Quran tab IS the mushaf", so every time
     /// the tab is entered it should land in the mushaf again - not just the first time. Keying this on the tab
@@ -811,6 +817,26 @@ struct QuranView: View {
     /// Guards the once-per-appearance auto-open of the mushaf when page mode is already on.
     @State private var didAutoOpenMushaf = false
     @State private var selectedRoute: QuranRoute?
+    /// Bumped when a tap re-selects the route ALREADY shown in the detail column: the detail is keyed
+    /// on it, so every tap lands (re-scrolls to the ayah / reopens the surah at its top) - re-tapping
+    /// a bookmark after scrolling away must never read as a dead button.
+    @State private var detailRefreshToken = 0
+
+    /// What re-identifies the iPad detail: the route, or a same-route re-tap (the token).
+    struct QuranDetailIdentity: Hashable {
+        let route: QuranRoute
+        let token: Int
+    }
+
+    /// Route every user-initiated column selection through here (row taps, search hits, bookmark
+    /// tiles, in-reader surah moves): same-route re-taps refresh the detail instead of no-oping.
+    private func selectQuranRoute(_ route: QuranRoute) {
+        if selectedRoute == route {
+            detailRefreshToken &+= 1
+        } else {
+            selectedRoute = route
+        }
+    }
     /// Bumped to move the keyboard into the search bar - see `QuranSearchHandoff`.
     @State private var searchFocusRequestID = 0
     /// True while the page-mode toggle is paginating in the background (the button shows a spinner).
@@ -859,7 +885,12 @@ struct QuranView: View {
     private func runHandedOffSearch(_ query: String) {
         #if os(iOS)
         path.removeAll()
-        selectedRoute = nil
+        // Column mode keeps the detail where it is: the search lands in the SIDEBAR, which is already
+        // on screen - nilling the route would just re-point the detail at the default (and un-latch
+        // the stable `.id` the task above established).
+        if !usesColumnNavigation {
+            selectedRoute = nil
+        }
         #endif
         searchText = query
         searchFocusRequestID += 1
@@ -869,12 +900,46 @@ struct QuranView: View {
     func push(surahID: Int, ayahID: Int? = nil) {
         #if os(iOS)
         if usesColumnNavigation {
-            selectedRoute = QuranRoute.ayahs(surahID: surahID, ayah: ayahID)
+            selectQuranRoute(QuranRoute.ayahs(surahID: surahID, ayah: ayahID))
             return
         }
 
         if #available(iOS 16.0, *) {
             path.append(QuranRoute.ayahs(surahID: surahID, ayah: ayahID))
+        }
+        #endif
+    }
+
+    /// Cross-platform mirror of `usesColumnNavigation`, so the shared `body` can observe layout flips
+    /// without an `#if` in the middle of its modifier chain (the watch build reads a constant false).
+    private var columnLayoutActive: Bool {
+        #if os(iOS)
+        return usesColumnNavigation
+        #else
+        return false
+        #endif
+    }
+
+    /// The window crossed the compact/regular boundary (iPad Split View drag, Slide Over, Stage Manager,
+    /// a resized Designed-for-iPad Mac window) and the container swapped between the split view and the
+    /// stack. Carry the open reader across the swap - the system's own collapse keeps the detail on
+    /// screen, so ours should too - instead of dumping the user back on the surah list.
+    private func handleColumnLayoutChange(toColumns: Bool) {
+        #if os(iOS)
+        guard #available(iOS 16.0, *) else { return }
+        if toColumns {
+            if let top = path.last {
+                // Whatever was pushed in the stack becomes the detail selection.
+                selectedRoute = top
+                path.removeAll()
+            } else if selectedRoute == nil, !quranData.quran.isEmpty {
+                // Nothing was ever selected: latch the default so the detail `.id` stays stable
+                // (same rule as the `.task` latch).
+                selectedRoute = defaultDetailRoute
+            }
+        } else if let route = selectedRoute {
+            // Columns → stack: the detail column's surah stays on screen, pushed onto the stack.
+            path = [route]
         }
         #endif
     }
@@ -1101,6 +1166,18 @@ struct QuranView: View {
                 openMushafWhereLeftOff()
             }
             #endif
+            #if os(iOS)
+            // Column mode: latch the detail route once the data is there. While `selectedRoute` is nil
+            // the detail is keyed on `defaultDetailRoute`, which tracks the last-read ayah - and
+            // backgrounding the app SAVES the last read, so every app switch changed the `.id` and tore
+            // down/rebuilt the entire reader (the heaviest view in the app) for nothing.
+            if usesColumnNavigation, selectedRoute == nil {
+                await quranData.waitUntilCoreLoaded()
+                if usesColumnNavigation, selectedRoute == nil {
+                    selectedRoute = defaultDetailRoute
+                }
+            }
+            #endif
         }
         // Coming BACK to the Quran tab (from Adhan, Settings, ...) while page mode is on re-opens the mushaf -
         // but only when the tab was left sitting on the surah list with no reader open. `openMushafWhereLeftOff`
@@ -1115,6 +1192,9 @@ struct QuranView: View {
         .onChange(of: searchHandoff.pendingQuery) { query in
             guard let query else { return }
             runHandedOffSearch(query)
+        }
+        .onChange(of: columnLayoutActive) { columns in
+            handleColumnLayoutChange(toColumns: columns)
         }
         .onDisappear {
             ayahSearchTask?.cancel()
@@ -1189,12 +1269,20 @@ struct QuranView: View {
                     NavigationStack {
                         quranSelectedDetail
                     }
-                    .id((selectedRoute ?? defaultDetailRoute).surahID)
+                    // Keyed on the surah AND the re-tap token: a same-route re-tap must also pop
+                    // whatever the detail stack has pushed and land back on the reader.
+                    .id(QuranDetailIdentity(
+                        route: .ayahs(surahID: (selectedRoute ?? defaultDetailRoute).surahID, ayah: nil),
+                        token: detailRefreshToken
+                    ))
                 }
             } else if #available(iOS 16.0, *) {
                 pathNavigation
             } else {
+                // iOS 15 has no split view here, and on an iPad the default NavigationView style is
+                // two columns with a permanently empty detail pane - force the stack.
                 NavigationView { content }
+                    .navigationViewStyle(.stack)
             }
             #else
             NavigationView { content }
@@ -1203,8 +1291,14 @@ struct QuranView: View {
     }
 
     #if os(iOS)
+    /// Two side-by-side columns only when the window is actually wide enough: an iPad in Slide Over /
+    /// 1/3 Split View / a narrow Stage Manager window is `.compact`, where `NavigationSplitView` would
+    /// collapse onto its sidebar - leaving the surah rows pointing at a detail column that isn't on
+    /// screen (every tap dead) and the settings gear suppressed. Compact falls back to the iPhone stack.
     private var usesColumnNavigation: Bool {
-        UIDevice.current.userInterfaceIdiom == .pad || UIDevice.current.userInterfaceIdiom == .mac
+        guard #available(iOS 16.0, *) else { return false }
+        guard horizontalSizeClass == .regular else { return false }
+        return UIDevice.current.userInterfaceIdiom == .pad || UIDevice.current.userInterfaceIdiom == .mac
     }
     #endif
 
@@ -1218,18 +1312,14 @@ struct QuranView: View {
         }
     }
 
-    private var quranColumnPlaceholder: some View {
-        Color.clear
-            .navigationTitle("Al-Quran")
-    }
-
     @ViewBuilder
     private var quranSelectedDetail: some View {
         let route = selectedRoute ?? defaultDetailRoute
         // Key by the full route (surah + ayah) so picking a different ayah in the same surah recreates the
-        // detail and scrolls to that ayah, rather than reusing the view at its previous scroll position.
+        // detail and scrolls to that ayah - and by the re-tap token, so re-selecting the SAME route
+        // (bookmark tapped again after scrolling away) also recreates it instead of dying silently.
         routeDestination(route)
-            .id(route)
+            .id(QuranDetailIdentity(route: route, token: detailRefreshToken))
     }
 
     private var defaultDetailRoute: QuranRoute {
@@ -1260,7 +1350,7 @@ struct QuranView: View {
         #if os(iOS)
         if usesColumnNavigation {
             return { surahID, ayahID in
-                selectedRoute = .ayahs(surahID: surahID, ayah: ayahID)
+                selectQuranRoute(.ayahs(surahID: surahID, ayah: ayahID))
             }
         }
         return { surahID, ayahID in
@@ -1280,7 +1370,7 @@ struct QuranView: View {
         if usesColumnNavigation {
             Button {
                 settings.hapticFeedback()
-                selectedRoute = route
+                selectQuranRoute(route)
             } label: {
                 HStack(spacing: 8) {
                     label()
@@ -1333,16 +1423,24 @@ struct QuranView: View {
 
     @ViewBuilder
     private func ayahsDestination(surah: Surah, ayah: Int? = nil) -> some View {
-        if let ayah {
-            SurahView(
-                surah: surah,
-                ayah: ayah
-            )
-        } else {
-            SurahView(
-                surah: surah
-            )
-        }
+        #if os(iOS)
+        // Column mode: the parent owns the detail, so in-reader surah moves (Previous/Next, the surah
+        // picker) re-point `selectedRoute` instead of swapping state privately inside SurahView. Without
+        // this the sidebar's selection drifts from what's on screen - and re-tapping the sidebar row for
+        // the surah the detail was ORIGINALLY opened with becomes a dead tap (`.id` never changes).
+        SurahView(
+            surah: surah,
+            ayah: ayah,
+            onSelectSurah: usesColumnNavigation
+                ? { surahID in selectQuranRoute(.ayahs(surahID: surahID, ayah: nil)) }
+                : nil
+        )
+        #else
+        SurahView(
+            surah: surah,
+            ayah: ayah
+        )
+        #endif
     }
 
     /// Heap-box a section subtree. `content` is ONE expression: without boxing, every section's ENTIRE
@@ -1467,7 +1565,10 @@ struct QuranView: View {
             usesColumnNavigation: usesColumnNavigation
         ))
         .sheet(isPresented: $showingSettingsSheet) {
+            // .stack matters on iPad: a regular-width sheet renders a default NavigationView as two
+            // columns with an empty gray detail pane.
             NavigationView { SettingsQuranView(presentedAsSheet: true) }
+                .navigationViewStyle(.stack)
                 .smallMediumSheetPresentation()
         }
         .sheet(isPresented: $showReciterPickerSheet) {
@@ -1487,6 +1588,7 @@ struct QuranView: View {
                         }
                     }
             }
+            .navigationViewStyle(.stack)
             .smallMediumSheetPresentation()
         }
         .onDisappear {
@@ -1790,7 +1892,8 @@ struct QuranView: View {
             }
         }
         .padding(.leading, -8)
-        .padding(.top, UIDevice.current.userInterfaceIdiom == .pad ? 0 : -8)
+        // Keyed on the LAYOUT, not the idiom: an iPhone-width iPad window uses the iPhone shape.
+        .padding(.top, usesColumnNavigation ? 0 : -8)
         #else
         EmptyView()
         #endif

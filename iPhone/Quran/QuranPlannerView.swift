@@ -441,6 +441,7 @@ struct QuranPlannerView: View {
             .navigationTitle("Quran Planner")
             .sheetDismissToolbar()
         }
+        .navigationViewStyle(.stack)
         .onAppear {
             settings.settleQuranPlan(totalCompleted: totalCompleted, totalAyahs: totalAyahs)
             if let plan = settings.quranPlan {

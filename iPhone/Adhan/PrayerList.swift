@@ -671,6 +671,7 @@ struct PrayerList: View {
                 NavigationView {
                     SettingsAdhanView(showNotifications: false, presentedAsSheet: true, openTravelingMode: true)
                 }
+                .navigationViewStyle(.stack)
                 .smallMediumSheetPresentation()
             }
             #endif

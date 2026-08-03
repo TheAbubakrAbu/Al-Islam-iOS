@@ -171,7 +171,7 @@ struct Surah: Codable, Identifiable, Equatable {
         guard let qIn = displayQiraah, !qIn.isEmpty else { return numberOfAyahs }
         let q = Settings.normalizeLegacyRiwayahTag(qIn)
         guard !q.isEmpty, q != Settings.Riwayah.hafsTag, q != "Hafs" else { return numberOfAyahs }
-        return ayahs.filter { $0.existsInQiraah(displayQiraah) }.count
+        return ayahs.filter { $0.existsInQiraah(displayQiraah, surahID: id) }.count
     }
 }
 
@@ -223,7 +223,11 @@ struct Ayah: Codable, Identifiable, Equatable {
     }
 
     /// Raw Arabic for the given display qiraah. Nil = Hafs.
-    func textArabic(for displayQiraah: String?) -> String {
+    ///
+    /// `surahID` is only needed to reach the beta riwayat, whose text lives in a side
+    /// table keyed by surah (see `BetaQiraatStore`) rather than in this struct. Callers
+    /// that don't pass it still get every bundled riwayah.
+    func textArabic(for displayQiraah: String?, surahID: Int? = nil) -> String {
         let raw: String? = {
             guard let qIn = displayQiraah else { return nil }
             let q = Settings.normalizeLegacyRiwayahTag(qIn)
@@ -235,7 +239,13 @@ struct Ayah: Codable, Identifiable, Equatable {
             case Settings.Riwayah.qunbul: return textQunbul
             case Settings.Riwayah.shubah: return textShubah
             case Settings.Riwayah.susi: return textSusi
-            default: return nil
+            default:
+                #if os(iOS)
+                guard Settings.shared.betaQiraatEnabled, let surahID else { return nil }
+                return BetaQiraatStore.shared.text(tag: q, surah: surahID, ayah: id)
+                #else
+                return nil
+                #endif
             }
         }()
         return (raw ?? textHafs).trimmingCharacters(in: .whitespacesAndNewlines)
@@ -255,7 +265,7 @@ struct Ayah: Codable, Identifiable, Equatable {
     }
 
     /// True if this ayah exists as its own verse in the given qiraah. In Hafs every ayah exists; in Warsh/Qaloon/etc. some Hafs ayahs are merged, so we only show ayahs that have qiraah-specific text (e.g. Baqarah has 286 in Hafs but 285 in Warsh).
-    func existsInQiraah(_ displayQiraah: String?) -> Bool {
+    func existsInQiraah(_ displayQiraah: String?, surahID: Int? = nil) -> Bool {
         guard let qIn = displayQiraah, !qIn.isEmpty, qIn != "Hafs" else {
             return !textHafs.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         }
@@ -269,7 +279,16 @@ struct Ayah: Codable, Identifiable, Equatable {
         case Settings.Riwayah.qunbul: return textQunbul != nil
         case Settings.Riwayah.shubah: return textShubah != nil
         case Settings.Riwayah.susi: return textSusi != nil
-        default: return true
+        default:
+            #if os(iOS)
+            // Beta riwayat merge/split ayahs like the bundled ones do; without a surah
+            // to look in, assume it exists (callers that have one get the real answer).
+            guard Settings.shared.betaQiraatEnabled, Settings.Riwayah.isBeta(q) else { return true }
+            guard let surahID else { return true }
+            return BetaQiraatStore.shared.text(tag: q, surah: surahID, ayah: id) != nil
+            #else
+            return true
+            #endif
         }
     }
 
@@ -289,9 +308,9 @@ struct Ayah: Codable, Identifiable, Equatable {
             Settings.shared.displayQiraahForArabic
         }
         let text = if qiraah == nil {
-            clean ? textCleanArabic(for: qiraah) : textArabic(for: qiraah)
+            clean ? textCleanArabic(for: qiraah) : textArabic(for: qiraah, surahID: surahId)
         } else {
-            textArabic(for: qiraah).removingArabicSukoon
+            textArabic(for: qiraah, surahID: surahId).removingArabicSukoon
         }
         if surahId == 1 && id == 1 && clean {
             let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -3972,14 +3991,14 @@ final class QuranData: ObservableObject {
                 guard surah.pageCount == 1 else { return false }
                 guard index + 1 < surahs.count else { return false }
 
-                let ayahsForQiraah = surah.ayahs.filter { $0.existsInQiraah(displayQiraah) }
+                let ayahsForQiraah = surah.ayahs.filter { $0.existsInQiraah(displayQiraah, surahID: surah.id) }
                 guard let currentLastAyah = ayahsForQiraah.last,
                       let currentLastPage = currentLastAyah.page else {
                     return false
                 }
 
                 let nextSurah = surahs[index + 1]
-                guard let nextFirstAyah = nextSurah.ayahs.first(where: { $0.existsInQiraah(displayQiraah) }),
+                guard let nextFirstAyah = nextSurah.ayahs.first(where: { $0.existsInQiraah(displayQiraah, surahID: nextSurah.id) }),
                       let nextFirstPage = nextFirstAyah.page else {
                     return false
                 }
@@ -4104,7 +4123,7 @@ final class QuranData: ObservableObject {
         result.reserveCapacity(surahs.count)
 
         for (index, surah) in surahs.enumerated() {
-            let ayahsForQiraah = surah.ayahs.filter { $0.existsInQiraah(displayQiraah) }
+            let ayahsForQiraah = surah.ayahs.filter { $0.existsInQiraah(displayQiraah, surahID: surah.id) }
             guard !ayahsForQiraah.isEmpty else {
                 result[surah.id] = SurahBoundaryModel(
                     startDivider: nil,
@@ -4122,7 +4141,7 @@ final class QuranData: ObservableObject {
                 guard index > 0,
                       let firstAyah = ayahsForQiraah.first else { return false }
                 let previousSurah = surahs[index - 1]
-                let previousLastAyah = previousSurah.ayahs.last { $0.existsInQiraah(displayQiraah) }
+                let previousLastAyah = previousSurah.ayahs.last { $0.existsInQiraah(displayQiraah, surahID: previousSurah.id) }
                 guard let previousLastAyah else { return false }
                 return previousLastAyah.page != firstAyah.page || previousLastAyah.juz != firstAyah.juz
             }()
@@ -4131,7 +4150,7 @@ final class QuranData: ObservableObject {
                 guard index > 0,
                       let firstAyah = ayahsForQiraah.first else { return .allSecondary }
                 let previousSurah = surahs[index - 1]
-                let previousLastAyah = previousSurah.ayahs.last { $0.existsInQiraah(displayQiraah) }
+                let previousLastAyah = previousSurah.ayahs.last { $0.existsInQiraah(displayQiraah, surahID: previousSurah.id) }
                 guard let previousLastAyah else { return .allSecondary }
                 return boundaryStyle(
                     pageChanged: previousLastAyah.page != firstAyah.page,
@@ -4162,7 +4181,7 @@ final class QuranData: ObservableObject {
             if index + 1 < surahs.count {
                 let nextSurah = surahs[index + 1]
                 if let lastAyah = ayahsForQiraah.last,
-                   let nextAyah = nextSurah.ayahs.first(where: { $0.existsInQiraah(displayQiraah) }) {
+                   let nextAyah = nextSurah.ayahs.first(where: { $0.existsInQiraah(displayQiraah, surahID: nextSurah.id) }) {
                     nextFirstAyah = nextAyah
                     // Cross-surah boundary: the page belongs to the next surah, so it is shown without a
                     // surah-relative annotation - an "(N)" here would read as the next surah's page count.
@@ -4268,7 +4287,7 @@ final class QuranData: ObservableObject {
         var juzLookup = [Int: (surah: Int, ayah: Int)]()
 
         for surah in surahs {
-            for ayah in surah.ayahs where ayah.existsInQiraah(displayQiraah) {
+            for ayah in surah.ayahs where ayah.existsInQiraah(displayQiraah, surahID: surah.id) {
                 if let page = ayah.page, pageLookup[page] == nil {
                     pageLookup[page] = (surah: surah.id, ayah: ayah.id)
                 }

@@ -127,6 +127,7 @@ struct TashkeelLettersView: View {
             NavigationView {
                 shaddahDetail(for: letter)
             }
+            .navigationViewStyle(.stack)
             .smallMediumSheetPresentation()
         }
         .toolbar {
@@ -962,6 +963,7 @@ struct TashkeelDetailSheet: View {
             .sheetDismissToolbar()
             #endif
         }
+        .navigationViewStyle(.stack)
     }
 }
 

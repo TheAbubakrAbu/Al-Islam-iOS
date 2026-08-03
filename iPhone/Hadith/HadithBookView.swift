@@ -48,9 +48,11 @@ struct HadithBookView: View {
     /// What the detail column is reading, shared with the tab root that hosts it.
     @ObservedObject private var columnSelection = HadithColumnSelection.shared
 
-    /// Point the detail column at a chapter.
-    private func selectChapter(_ chapter: HadithBookData.Chapter, data: HadithBookData, scrollToHadithId: Int? = nil) {
-        columnSelection.select(book: book, bookData: data, chapter: chapter, scrollToHadithId: scrollToHadithId)
+    /// Point the detail column at a chapter. `userInitiated` defaults true because every call here is
+    /// a tap (rows, grid tiles, deep-linked references) except the onAppear default below - a re-tap
+    /// of the identical chapter must still land (rebuild + re-scroll), never die silently.
+    private func selectChapter(_ chapter: HadithBookData.Chapter, data: HadithBookData, scrollToHadithId: Int? = nil, userInitiated: Bool = true) {
+        columnSelection.select(book: book, bookData: data, chapter: chapter, scrollToHadithId: scrollToHadithId, userInitiated: userInitiated)
     }
 
     /// What the detail column reads when this book opens without a chapter picked - the book's remembered
@@ -58,9 +60,9 @@ struct HadithBookView: View {
     private func selectDefaultChapter(_ data: HadithBookData) {
         if let lastRead = store.lastRead(for: book.slug),
            let chapter = data.chapters.first(where: { $0.id == lastRead.chapterId }) {
-            selectChapter(chapter, data: data, scrollToHadithId: lastRead.idInBook)
+            selectChapter(chapter, data: data, scrollToHadithId: lastRead.idInBook, userInitiated: false)
         } else if let first = data.chapters.first {
-            selectChapter(first, data: data)
+            selectChapter(first, data: data, userInitiated: false)
         }
     }
 
@@ -617,7 +619,9 @@ struct HadithBookView: View {
             }
             .themedListRowBackground()
         }
-        .applyConditionalListStyle()
+        // Column mode: this is the CONTENT column and the reading column beside it shows the Now
+        // Playing bar - suppress the duplicate here (same rule as the catalog and the Quran sidebar).
+        .applyConditionalListStyle(disableNowPlayingInset: usesColumnNavigation)
         .compactListSectionSpacing()
         // No pinned book header here: the navigation title already names the book, and the CHAPTERS
         // header carries the counts - a floating bar was pure repetition on this screen.
@@ -1347,6 +1351,9 @@ final class HadithColumnSelection: ObservableObject {
     /// in place (Previous/Next, the picker) - which must NOT re-identify the detail, or every swap would
     /// rebuild the reader and lose its place. Only the chapter list's selected-row tint reads it.
     @Published private(set) var currentChapterID: Int?
+    /// Bumped when a USER tap re-selects the identical target: the detail is keyed on it, so the tap
+    /// always lands (re-scrolls to the hadith) instead of dying against an unchanged identity.
+    @Published private(set) var refreshToken = 0
 
     var bookSlug: String? { target?.book.slug }
 
@@ -1354,9 +1361,16 @@ final class HadithColumnSelection: ObservableObject {
         book: HadithCatalogBook,
         bookData: HadithBookData,
         chapter: HadithBookData.Chapter,
-        scrollToHadithId: Int? = nil
+        scrollToHadithId: Int? = nil,
+        userInitiated: Bool = false
     ) {
-        target = Target(book: book, bookData: bookData, chapter: chapter, scrollToHadithId: scrollToHadithId)
+        let newTarget = Target(book: book, bookData: bookData, chapter: chapter, scrollToHadithId: scrollToHadithId)
+        // Only USER re-taps force a refresh: programmatic defaults (book onAppear, last-read restore)
+        // re-select the same target on every visit and must never rebuild the reader mid-read.
+        if userInitiated, let current = target, current.identity == newTarget.identity {
+            refreshToken &+= 1
+        }
+        target = newTarget
         currentChapterID = chapter.id
     }
 
@@ -1390,7 +1404,8 @@ struct HadithDetailColumn: View {
                     // A different chapter (or a different hadith within one) rebuilds the reader so it
                     // lands where it was asked to - the Quran detail column's `.id(route)` rule. Swaps
                     // made INSIDE the reader deliberately don't touch the target, so they don't rebuild.
-                    .id(target.identity)
+                    // The refresh token folds in USER re-taps of the identical target (see `select`).
+                    .id("\(target.identity)#\(selection.refreshToken)")
                 } else {
                     placeholder
                 }
@@ -1427,6 +1442,10 @@ struct HadithDetailColumn: View {
                 .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        // The standard washed background + Now Playing inset: without this, the empty detail column is
+        // the one pane in the app with a bare system background - and the only place recitation had no
+        // bar at all once the catalog column suppresses its duplicate.
+        .applyConditionalListStyle()
     }
 }
 

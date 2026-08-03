@@ -57,10 +57,26 @@ struct SettingsView: View {
 
     @State private var showingCredits = false
     @State private var selectedDestination: SettingsDestination? = SettingsView.defaultDestination
-    @State private var hasSetDefaultSelection = false
+    /// Bumped when the SAME sidebar row is re-tapped: the detail stack is keyed on it, so the tap
+    /// always lands (pops the section back to its root) instead of dying against unchanged state.
+    @State private var settingsDetailRefreshToken = 0
     @State private var showResetConfirmation = false
     @State private var confirmEraseEverything = false
     @State private var settingsSearchText = ""
+
+    #if os(iOS)
+    // Split-view multitasking (Slide Over, 1/3 Split View, narrow Stage Manager windows) makes an iPad
+    // window compact - the sidebar/detail layout must collapse to the iPhone shape there, or the split
+    // collapses onto the pre-selected detail with no way back to the list.
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+
+    /// Two side-by-side columns only when the window is actually wide enough - the Hadith tab's rule.
+    private var usesColumnNavigation: Bool {
+        guard #available(iOS 16.0, *) else { return false }
+        guard horizontalSizeClass == .regular else { return false }
+        return UIDevice.current.userInterfaceIdiom == .pad || UIDevice.current.userInterfaceIdiom == .mac
+    }
+    #endif
 
     #if os(iOS)
     // Semantic settings search: "make text bigger" finds the font-size controls even though no
@@ -119,6 +135,20 @@ struct SettingsView: View {
         case hadithSettings
     }
 
+    /// What re-identifies the iPad detail stack: the selected destination, or a re-tap of the same
+    /// row (the token). One value drives both `.id` and the swap animation.
+    private struct SettingsDetailIdentity: Hashable {
+        let destination: SettingsDestination
+        let token: Int
+    }
+
+    private var settingsDetailIdentity: SettingsDetailIdentity {
+        SettingsDetailIdentity(
+            destination: selectedDestination ?? Self.defaultDestination,
+            token: settingsDetailRefreshToken
+        )
+    }
+
     var body: some View {
         navigationContainer
     }
@@ -127,15 +157,9 @@ struct SettingsView: View {
         Group {
             #if os(iOS)
             if #available(iOS 16.0, *) {
-                if UIDevice.current.userInterfaceIdiom == .pad {
+                if usesColumnNavigation {
                     NavigationSplitView {
                         settingsSplitList
-                            .onAppear {
-                                if !hasSetDefaultSelection {
-                                    selectedDestination = Self.defaultDestination
-                                    hasSetDefaultSelection = true
-                                }
-                            }
                     } detail: {
                         // Detail gets its own NavigationStack so the sub-screen NavigationLinks
                         // (e.g. Quran settings → Recitation) push within the detail column instead of
@@ -143,8 +167,8 @@ struct SettingsView: View {
                         NavigationStack {
                             settingsSplitDetail
                         }
-                        .id(selectedDestination ?? Self.defaultDestination)
-                        .animation(.easeInOut(duration: 0.25), value: selectedDestination)
+                        .id(settingsDetailIdentity)
+                        .animation(.easeInOut(duration: 0.25), value: settingsDetailIdentity)
                     }
                 } else {
                     NavigationStack {
@@ -166,51 +190,102 @@ struct SettingsView: View {
         }
     }
 
+    // ONE list body + ONE chrome for both shapes (iPhone stack and iPad sidebar). The `List`
+    // wrappers must differ (the sidebar needs `List(selection:)` for its highlight), but everything
+    // inside and around them is shared - so an edit here can never fork between iPhone and iPad.
+
     private var settingsList: some View {
-        List {
-            Group {
-                #if os(iOS)
-                if !settingsSearchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                    settingsSearchResultsSection
-                } else {
-                    standardSettingsSections
-                }
-                #else
-                standardSettingsSections
-                #endif
-            }
-            .themedListRowBackground()
-        }
         #if os(iOS)
-        // The search bar floats at the bottom, exactly like every other searchable screen: Apple
-        // Music-style minimize on scroll-down, restore on scroll-up (or while typing).
-        .collapseBarsOnScroll($barsCollapsed)
-        .adaptiveSafeArea(edge: .bottom) {
-            VStack(spacing: SafeAreaInsetVStackSpacing.standard) {
-                SearchBar(text: $settingsSearchText.animation(.easeInOut))
-                    .onChange(of: settingsSearchText) { text in
-                        runSettingsAISearch(query: text)
-                    }
-                    .onChange(of: semanticEngine.readyCorpora) { ready in
-                        guard ready.contains(Self.settingsSemanticCorpusID), !settingsSearchText.isEmpty else { return }
-                        runSettingsAISearch(query: settingsSearchText)
-                    }
-                    .padding([.horizontal, .top], -8)
-                    .minimizedBarStyle(barsCollapsed)
-            }
-            .animation(.spring(response: 0.35, dampingFraction: 0.85), value: barsCollapsed)
-            .padding(.horizontal, 24)
-            .padding(.bottom, 8)
-            .background(Color.white.opacity(0.00001))
-        }
+        settingsListChrome(
+            List { settingsListContent(split: false) },
+            disableNowPlayingInset: false
+        )
+        #else
+        List { settingsListContent(split: false) }
+            .navigationTitle("Settings")
+            .applyConditionalListStyle()
         #endif
-        .navigationTitle("Settings")
-        .applyConditionalListStyle()
     }
 
+    #if os(iOS)
+    @available(iOS 16.0, *)
+    private var settingsSplitList: some View {
+        settingsListChrome(
+            // The detail column's screens show the Now Playing bar; suppress the sidebar's copy or
+            // recitation puts one identical bar in EACH column (the Quran tab's rule).
+            List(selection: $selectedDestination) { settingsListContent(split: true) },
+            disableNowPlayingInset: true
+        )
+    }
+
+    /// The floating search bar, scroll-minimize, title, and wash - applied identically to both shapes.
+    private func settingsListChrome<L: View>(_ list: L, disableNowPlayingInset: Bool) -> some View {
+        list
+            .collapseBarsOnScroll($barsCollapsed)
+            .adaptiveSafeArea(edge: .bottom) {
+                settingsSearchBarInset
+            }
+            .navigationTitle("Settings")
+            .applyConditionalListStyle(disableNowPlayingInset: disableNowPlayingInset)
+    }
+
+    /// The floating bottom search bar, shared by the iPhone list and the iPad sidebar so settings
+    /// search works identically in both shapes.
+    private var settingsSearchBarInset: some View {
+        VStack(spacing: SafeAreaInsetVStackSpacing.standard) {
+            SearchBar(text: $settingsSearchText.animation(.easeInOut))
+                .onChange(of: settingsSearchText) { text in
+                    runSettingsAISearch(query: text)
+                }
+                .onChange(of: semanticEngine.readyCorpora) { ready in
+                    guard ready.contains(Self.settingsSemanticCorpusID), !settingsSearchText.isEmpty else { return }
+                    runSettingsAISearch(query: settingsSearchText)
+                }
+                .padding([.horizontal, .top], -8)
+                .minimizedBarStyle(barsCollapsed)
+        }
+        .animation(.spring(response: 0.35, dampingFraction: 0.85), value: barsCollapsed)
+        .padding(.horizontal, 24)
+        .padding(.bottom, 8)
+        .background(Color.white.opacity(0.00001))
+    }
+    #endif
+
+    /// The list body both shapes share. On iOS, search results replace the sections while a query is
+    /// typed - in the iPad sidebar each hit's legacy `NavigationLink(destination:)` opens in the
+    /// DETAIL column (that is where a split view routes destination links from its first column).
     @ViewBuilder
-    private var standardSettingsSections: some View {
-        settingsHubSection
+    private func settingsListContent(split: Bool) -> some View {
+        Group {
+            #if os(iOS)
+            if !settingsSearchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                settingsSearchResultsSection
+            } else {
+                settingsSections(split: split)
+            }
+            #else
+            settingsSections(split: split)
+            #endif
+        }
+        .themedListRowBackground()
+    }
+
+    /// Every Settings section, once. Only the hub swaps its link grammar per shape; everything after
+    /// it is literally the same views on iPhone, iPad, and the watch.
+    @ViewBuilder
+    private func settingsSections(split: Bool) -> some View {
+        Group {
+            #if os(iOS)
+            if split, #available(iOS 16.0, *) {
+                settingsHubSectionSplit
+            } else {
+                settingsHubSection
+            }
+            #else
+            settingsHubSection
+            #endif
+        }
+
         appearanceSection
         resetSection
         creditsSection
@@ -219,22 +294,6 @@ struct SettingsView: View {
     }
 
     #if os(iOS)
-    @available(iOS 16.0, *)
-    private var settingsSplitList: some View {
-        List(selection: $selectedDestination) {
-            Group {
-                settingsHubSectionSplit
-                appearanceSection
-                resetSection
-                creditsSection
-                AlIslamAppsSection()
-            }
-            .themedListRowBackground()
-        }
-        .navigationTitle("Settings")
-        .applyConditionalListStyle()
-    }
-
     @ViewBuilder
     private var settingsSplitDetail: some View {
         Group {
@@ -429,9 +488,24 @@ struct SettingsView: View {
         subtitle: String? = nil,
         value: SettingsDestination
     ) -> some View {
-        NavigationLink(value: value) {
+        // A Button (not `NavigationLink(value:)`) so a re-tap of the ALREADY-selected row still
+        // responds - it pops that section back to its root via the refresh token. The `.tag` keeps
+        // the sidebar highlight driven by `List(selection:)`, the Islam sidebar's exact pattern.
+        Button {
+            settings.hapticFeedback()
+            withAnimation(.easeInOut) {
+                if selectedDestination == value {
+                    settingsDetailRefreshToken &+= 1
+                } else {
+                    selectedDestination = value
+                }
+            }
+        } label: {
             toolLabel(title, systemImage: systemImage, subtitle: subtitle)
         }
+        .buttonStyle(.plain)
+        .contentShape(Rectangle())
+        .tag(value)
         .tint(settings.accentColor.color)
     }
 

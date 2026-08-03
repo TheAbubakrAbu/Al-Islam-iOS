@@ -230,7 +230,6 @@ struct SurahView: View {
     @State private var showSurahPickerSheet = false
     @State private var confirmConvertQiraahToHafs = false
     @State private var isAyahSearchFocused = false
-    @State private var selectedSurahNavigation: Int? = nil
     @State private var dividerInfo: DividerInfo? = nil
     @State private var surahInfoDialog: SurahInfoDialog? = nil
     /// Drives the title-tap chooser (Surah Picker / Surah Info / Revelation Info / page ↔ list).
@@ -819,7 +818,7 @@ struct SurahView: View {
             return cached
         }
 
-        let ayahs = surah.ayahs.filter { $0.existsInQiraah(settings.displayQiraahForArabic) }
+        let ayahs = surah.ayahs.filter { $0.existsInQiraah(settings.displayQiraahForArabic, surahID: surah.id) }
         let ayahByID = Dictionary(uniqueKeysWithValues: ayahs.map { ($0.id, $0) })
         let shouldBuildFullOverlayMap = surah.pageOrJuzChangesWithinSurah
 
@@ -1567,22 +1566,6 @@ struct SurahView: View {
         } message: {
             Text(quranPlayer.playbackAlertMessage)
         }
-        .background(
-            NavigationLink(
-                destination: selectedSurahNavigationDestination,
-                isActive: Binding(
-                    get: { selectedSurahNavigation != nil },
-                    set: { isActive in
-                        if !isActive {
-                            selectedSurahNavigation = nil
-                        }
-                    }
-                )
-            ) {
-                EmptyView()
-            }
-            .hidden()
-        )
         #else
         surahCoreBody
             .navigationTitle("\(surah.id) - \(surah.nameTransliteration)")
@@ -2340,6 +2323,24 @@ struct SurahView: View {
                         Spacer(minLength: 0)
                     }
 
+                    // Beta riwayat keep their warning ON SCREEN while being read - the
+                    // one-time selection dialog is easy to forget three surahs later.
+                    if option.beta {
+                        HStack(alignment: .top, spacing: 8) {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .font(.caption)
+                                .foregroundStyle(.orange)
+
+                            Text("Beta text: digitized by machine and not yet verified word by word. Do not rely on it for memorization.")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 8)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(Color.orange.opacity(0.12), in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                    }
+
                     Button {
                         settings.hapticFeedback()
                         confirmConvertQiraahToHafs = true
@@ -2799,7 +2800,7 @@ struct SurahView: View {
 
                     Button {
                         settings.hapticFeedback()
-                        let ayahsForQiraah = surah.ayahs.filter { $0.existsInQiraah(settings.displayQiraahForArabic) }
+                        let ayahsForQiraah = surah.ayahs.filter { $0.existsInQiraah(settings.displayQiraahForArabic, surahID: surah.id) }
                         if let randomAyah = ayahsForQiraah.randomElement() {
                             quranPlayer.playAyah(
                                 surahNumber: surah.id,
@@ -3051,18 +3052,11 @@ struct SurahView: View {
         }
     }
 
-    @ViewBuilder
-    private var selectedSurahNavigationDestination: some View {
-        if let targetID = selectedSurahNavigation,
-           let targetSurah = quranData.surah(targetID) {
-            SurahView(surah: targetSurah)
-        } else {
-            EmptyView()
-        }
-    }
-
     private var settingsSheet: some View {
+        // .stack matters on iPad: a regular-width sheet renders a default NavigationView as two
+        // columns with an empty gray detail pane.
         NavigationView { SettingsQuranView(presentedAsSheet: true) }
+            .navigationViewStyle(.stack)
     }
     #endif
 
@@ -3392,6 +3386,7 @@ private struct SurahPickerSheet: View {
                 .onChange(of: filteredSurahs.count) { _ in scrollToCurrentSurah(proxy) }
             }
         }
+        .navigationViewStyle(.stack)
     }
 
     private func normalized(_ text: String) -> String {
@@ -3400,27 +3395,59 @@ private struct SurahPickerSheet: View {
 }
 #endif
 
+/// Picks the Arabic riwayah, organized the way the science is: one entry per QIRAAH
+/// (the reader - Nafi, Ibn Kathir, ...), opening to that reader's two riwayat. Hafs
+/// appears twice on purpose: inside Asim with Shu'bah, and as its own top-level entry,
+/// because it is the default text virtually every user reads.
+///
+/// Selecting a BETA riwayah (the 12 machine-extracted ones) always routes through a
+/// confirmation first - see `BetaQiraahConfirmation`.
 struct ArabicTextRiwayahPicker: View {
     @ObservedObject private var settings = Settings.shared
 
     @Binding var selection: String
     var useSimpleIOSPicker: Bool = false
 
-    private static let options: [Settings.Riwayah.Option] = Settings.Riwayah.options
+    #if os(iOS)
+    @State private var pendingBeta: Settings.Riwayah.Option?
+    #endif
 
     private var currentLabel: String {
-        let tag = Settings.normalizeLegacyRiwayahTag(selection)
-        return Self.options.first(where: { $0.tag == tag })?.label ?? "Arabic Riwayah"
+        Settings.Riwayah.option(for: selection).label
+    }
+
+    private func choose(_ option: Settings.Riwayah.Option) {
+        settings.hapticFeedback()
+        #if os(iOS)
+        // Beta riwayat confirm once - the text is machine-extracted, not yet verified.
+        if option.beta, !settings.acceptedBetaQiraatNotice {
+            pendingBeta = option
+            return
+        }
+        #endif
+        withAnimation { selection = option.tag }
     }
 
     var body: some View {
+        #if os(iOS)
+        content
+            .betaQiraahConfirmation(option: $pendingBeta) { option in
+                withAnimation { selection = option.tag }
+            }
+        #else
+        content
+        #endif
+    }
+
+    @ViewBuilder
+    private var content: some View {
         #if os(iOS)
         if useSimpleIOSPicker {
             Picker("Arabic Riwayah", selection: $selection.animation(.easeInOut)) {
                 ForEach(Settings.Riwayah.groups) { group in
                     Section {
                         ForEach(group.options, id: \.tag) { option in
-                            Text(option.label).tag(option.tag)
+                            Text(option.beta ? "\(option.label) (Beta)" : option.label).tag(option.tag)
                         }
                     } header: {
                         Text("\(group.teacher) - \(group.teacherArabic)")
@@ -3431,11 +3458,7 @@ struct ArabicTextRiwayahPicker: View {
             .onChange(of: selection) { _ in settings.hapticFeedback() }
         } else {
             Menu {
-                ForEach(Settings.Riwayah.groups) { group in
-                    ForEach(group.options, id: \.tag) { option in
-                        qiraahButton(option)
-                    }
-                }
+                qiraahMenuContent
             } label: {
                 HStack(spacing: 4) {
                     Text(currentLabel)
@@ -3471,20 +3494,40 @@ struct ArabicTextRiwayahPicker: View {
         #endif
     }
 
+    /// Hafs standalone, then one submenu per qiraah. iOS-only: watchOS has no `Menu`,
+    /// and its picker (above) is a flat grouped list already.
+    #if os(iOS)
     @ViewBuilder
-    private func qiraahButton(_ option: Settings.Riwayah.Option) -> some View {
-        Button {
-            settings.hapticFeedback()
-            withAnimation {
-                selection = option.tag
+    private var qiraahMenuContent: some View {
+        let current = Settings.Riwayah.canonicalTag(selection)
+        qiraahButton(Settings.Riwayah.option(for: Settings.Riwayah.hafsTag), current: current)
+
+        ForEach(Settings.Riwayah.groups) { group in
+            Menu {
+                ForEach(group.options, id: \.tag) { option in
+                    qiraahButton(option, current: current)
+                }
+            } label: {
+                Label(
+                    "\(group.teacher) - \(group.teacherArabic)",
+                    systemImage: group.options.contains(where: { $0.tag == current }) ? "checkmark" : "book.closed"
+                )
             }
+        }
+    }
+    #endif
+
+    @ViewBuilder
+    private func qiraahButton(_ option: Settings.Riwayah.Option, current: String) -> some View {
+        Button {
+            choose(option)
         } label: {
             HStack {
-                if option.tag == Settings.normalizeLegacyRiwayahTag(selection) {
+                if option.tag == current {
                     Image(systemName: "checkmark")
                 }
 
-                Text(option.label)
+                Text(option.beta ? "\(option.label) (Beta)" : option.label)
             }
             .font(.caption)
         }
@@ -3529,6 +3572,7 @@ private struct TajweedLegendMenu: View {
             NavigationView {
                 TajweedLegendView()
             }
+            .navigationViewStyle(.stack)
             .smallMediumSheetPresentation()
         }
     }

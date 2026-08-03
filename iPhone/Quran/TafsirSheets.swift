@@ -257,7 +257,7 @@ struct AyahTafsirSheet: View {
 
     private var tafsirArabicAyahs: [Ayah] {
         quranData.surah(surahNumber)?.ayahs.filter {
-            tafsirAyahRange.contains($0.id) && $0.existsInQiraah(settings.displayQiraahForArabic)
+            tafsirAyahRange.contains($0.id) && $0.existsInQiraah(settings.displayQiraahForArabic, surahID: surahNumber)
         } ?? []
     }
 
@@ -413,7 +413,9 @@ struct AyahTafsirSheet: View {
             .searchable(text: $searchText.animation(.easeInOut), prompt: "Search tafsir")
             .dismissKeyboardOnScroll()
             .sheetDismissToolbar()
+            .accentWashedBackground()
         }
+        .navigationViewStyle(.stack)
         .task(id: loadKey) {
             await viewModel.loadIfNeeded()
         }
@@ -711,6 +713,7 @@ struct SurahInfoSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .searchable(text: $searchText.animation(.easeInOut), prompt: "Search info")
             .dismissKeyboardOnScroll()
+            .accentWashedBackground()
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button {
@@ -722,6 +725,7 @@ struct SurahInfoSheet: View {
                 }
             }
         }
+        .navigationViewStyle(.stack)
         .modifier(SheetPresentationModifier())
     }
 

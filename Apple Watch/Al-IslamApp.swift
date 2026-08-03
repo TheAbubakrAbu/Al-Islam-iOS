@@ -115,9 +115,21 @@ struct AlIslamApp: App {
         try? await Task.sleep(nanoseconds: 150_000_000)
         selectedTab = .settings
         try? await Task.sleep(nanoseconds: 80_000_000)
-        selectedTab = .adhan
+        selectedTab = launchTab
         try? await Task.sleep(nanoseconds: 80_000_000)
 
         LaunchWarmup.shared.markWarm()
+    }
+
+    /// The tab the watch lands on after the under-cover warm. Always Adhan for users; a DEBUG launch
+    /// argument lets automation land straight on a tab it wants to exercise - the same escape hatch
+    /// the iPhone's MainTabView has, because nothing else can drive the simulator's tabs from a harness.
+    private var launchTab: WatchTab {
+        #if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("-launchTabQuran") { return .quran }
+        if ProcessInfo.processInfo.arguments.contains("-launchTabIslam") { return .islam }
+        if ProcessInfo.processInfo.arguments.contains("-launchTabSettings") { return .settings }
+        #endif
+        return .adhan
     }
 }

@@ -1207,6 +1207,38 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     /// When on, ReciterListView reveals non-Hafs qiraat reciters.
     @AppStorage("showOtherQiraatReciters") var showOtherQiraatReciters: Bool = false
 
+    /// Unlocks the 12 machine-extracted riwayat (Ibn Amir, Hamzah, al-Kisai, Abu Jafar,
+    /// Yaqub, Khalaf al-Ashir). Their text is BETA - digitized from a printed mushaf set
+    /// and not yet verified word-by-word, so it stays opt-in and never appears in
+    /// comparison mode while off. Turning it off also drops a selected beta riwayah back
+    /// to Hafs, so no unverified text can be left on screen by a stale setting.
+    @AppStorage("betaQiraatEnabled") var betaQiraatEnabled: Bool = false {
+        didSet {
+            guard oldValue != betaQiraatEnabled else { return }
+            if !betaQiraatEnabled {
+                if Self.Riwayah.isBeta(displayQiraah) {
+                    displayQiraah = Self.Riwayah.hafsTag
+                }
+                #if os(iOS)
+                BetaQiraatStore.shared.unloadAll()
+                #endif
+            }
+            objectWillChange.send()
+        }
+    }
+
+    /// The beta notice has been shown and accepted once; further picks skip the dialog.
+    @AppStorage("acceptedBetaQiraatNotice") var acceptedBetaQiraatNotice: Bool = false
+
+    /// One wording for the beta warning, shown by the toggle and every selection dialog.
+    static let betaQiraatNotice = """
+        These twelve riwayat were digitized by machine from a printed mushaf and have \
+        not yet been checked word by word. Their ayah numbering and surah divisions are \
+        verified, but individual marks or letters may still be wrong. Please do not rely \
+        on them for memorization or recitation - use Hafs or another verified riwayah \
+        for that.
+        """
+
     /// Shared expand/collapse state for qiraah details in Quran settings and reciter lists.
     var showQiraahDetails: Bool {
         get { showOtherQiraatReciters }

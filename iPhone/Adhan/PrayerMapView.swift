@@ -565,5 +565,6 @@ struct PrayerTimesMapView: View {
         PrayerTimesMapView()
             .environmentObject(Settings.shared)
     }
+    .navigationViewStyle(.stack)
 }
 #endif
