@@ -186,21 +186,52 @@ final class QuranPlayer: ObservableObject {
     }
     
     #if os(watchOS)
-    /// watchOS long-form audio state. A multi-minute streamed surah needs the `.longFormAudio` routing policy
-    /// and the ASYNC `activate(options:completionHandler:)` - that call is what establishes an output route
-    /// (AirPods, or the route the user picks in the system sheet). The iOS-style synchronous `setActive(true)`
-    /// never routes long-form audio on the watch, which is why full-surah playback silently produced nothing
-    /// while short per-ayah clips scraped by - and why reciters whose per-ayah audio falls back to another
-    /// voice were "unusable" on the watch.
+    /// watchOS audio routing. There are two genuinely different paths and picking the wrong one is what
+    /// used to strand people on the "Connect to a device" sheet:
+    ///
+    /// - **Something wireless is already connected** → `.longFormAudio` plus the ASYNC
+    ///   `activate(options:completionHandler:)`. That combination is the only one that keeps a multi-minute
+    ///   surah playing with the wrist down (it rides the `audio` background mode declared in Info-Main.plist).
+    ///   The iOS-style synchronous `setActive(true)` never routes long-form audio on the watch, which is why
+    ///   full-surah playback silently produced nothing while short per-ayah clips scraped by.
+    ///
+    /// - **Nothing connected** → the DEFAULT route-sharing policy, which plays out of the watch's own
+    ///   speaker. `.longFormAudio` can NOT use the speaker: activating it with no active route makes the
+    ///   system present its route picker, so anyone who just wanted to listen on the watch got nagged to
+    ///   pair headphones (and got it again even with Bluetooth off, because the sheet is the system asking
+    ///   for a route, not the app asking for Bluetooth). Apple's guidance is explicit - to play through the
+    ///   speaker, don't set the long-form policy.
+    ///
+    /// The route is re-evaluated on every fresh activation, so connecting AirPods and playing again picks
+    /// the long-form path back up on its own.
     private var audioSessionActivated = false
     private var audioSessionActivating = false
     private var pendingSessionStarts: [() -> Void] = []
+
+    /// True when there is already an output we can hand long-form audio to. When this is false, asking for
+    /// `.longFormAudio` is what summons the route sheet.
+    private var hasWirelessAudioRoute: Bool {
+        AVAudioSession.sharedInstance().currentRoute.outputs.contains { output in
+            switch output.portType {
+            case .bluetoothA2DP, .bluetoothHFP, .bluetoothLE, .airPlay: return true
+            default:                                                    return false
+            }
+        }
+    }
     #endif
 
     private func setupAudioSession() {
         let s = AVAudioSession.sharedInstance()
         #if os(watchOS)
         guard !audioSessionActivated, !audioSessionActivating else { return }
+
+        // Nothing to send long-form audio to: go straight out of the watch speaker rather than making the
+        // system ask for a device the listener never wanted.
+        guard hasWirelessAudioRoute else {
+            activateWatchSpeakerSession()
+            return
+        }
+
         do {
             try s.setCategory(.playback, mode: .default, policy: .longFormAudio)
         } catch {
@@ -211,30 +242,18 @@ final class QuranPlayer: ObservableObject {
             DispatchQueue.main.async {
                 guard let self else { return }
                 self.audioSessionActivating = false
-                self.audioSessionActivated = success
                 if let error { logger.debug("Audio session activation failed: \(error)") }
 
-                let starts = self.pendingSessionStarts
-                self.pendingSessionStarts = []
                 if success {
+                    self.audioSessionActivated = true
+                    let starts = self.pendingSessionStarts
+                    self.pendingSessionStarts = []
                     starts.forEach { $0() }
                 } else {
-                    // The user dismissed the route sheet (or routing failed): there is nothing to play to.
-                    // The call sites flipped isPlaying on when the item became ready - audio never started,
-                    // so roll the whole play state back rather than showing a "playing" UI over silence.
-                    self.player?.pause()
-                    self.queuePlayer?.pause()
-                    self.isLoading = false
-                    self.isPlaying = false
-                    self.isPaused = false
-                    // SAY WHY, or dismissing the route sheet reads as the app being broken ("it keeps
-                    // trying to go to Bluetooth"). This is Apple's watchOS rule, not ours: third-party
-                    // apps cannot play media through the watch speaker - long-form audio must route to
-                    // Bluetooth headphones, and that sheet is the system asking which ones.
-                    self.presentPlaybackFailure(
-                        "Apple only allows watch apps to play recitations through Bluetooth headphones, like AirPods - the watch speaker isn't available to apps. Connect headphones and try again, or listen on your iPhone.",
-                        title: "Headphones Needed"
-                    )
+                    // The headphones went away between the route check and the activation, or the listener
+                    // dismissed the sheet. Dismissing it means "not on headphones" - so play on the speaker
+                    // instead of scolding them into pairing something.
+                    self.activateWatchSpeakerSession()
                 }
             }
         }
@@ -245,6 +264,45 @@ final class QuranPlayer: ObservableObject {
         } catch { logger.debug("Audio session setup failed: \(error)") }
         #endif
     }
+
+    #if os(watchOS)
+    /// The watch-speaker path: the DEFAULT route-sharing policy (no `.longFormAudio`), activated
+    /// synchronously. This is what makes the recitation come out of the watch itself, and it is also the
+    /// fallback when a long-form activation doesn't land - either way the listener gets audio instead of
+    /// a route sheet. Trade-off worth knowing: without the long-form policy the system may stop playback
+    /// when the app leaves the foreground, so headphones remain the better experience for a whole surah.
+    private func activateWatchSpeakerSession() {
+        let s = AVAudioSession.sharedInstance()
+        do {
+            try s.setCategory(.playback, mode: .default)
+            try s.setActive(true, options: .notifyOthersOnDeactivation)
+            audioSessionActivated = true
+        } catch {
+            logger.debug("Watch speaker session failed: \(error)")
+            audioSessionActivated = false
+        }
+
+        let starts = pendingSessionStarts
+        pendingSessionStarts = []
+
+        guard audioSessionActivated else {
+            // Genuinely no way to play. The call sites flipped isPlaying on when the item became ready -
+            // audio never started, so roll the play state back rather than showing a "playing" UI over
+            // silence.
+            player?.pause()
+            queuePlayer?.pause()
+            isLoading = false
+            isPlaying = false
+            isPaused = false
+            presentPlaybackFailure(
+                "The watch couldn't start audio. Try again, or connect Bluetooth headphones like AirPods.",
+                title: "Playback Error"
+            )
+            return
+        }
+        starts.forEach { $0() }
+    }
+    #endif
 
     /// Runs a play-start now - or, on watchOS, once the async long-form activation has an output route.
     /// Starting the player before that completes is silently dropped by the system, which looked like

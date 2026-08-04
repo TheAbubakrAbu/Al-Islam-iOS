@@ -419,10 +419,10 @@ struct HadithView: View {
                     // and these were set BEFORE the flip, so they must be converted here.)
                     if let book = pushedBook {
                         pushedBook = nil
-                        bookPath = [BookRoute(slug: book.slug, autoOpenHadithID: nil)]
+                        bookPath = [.book(slug: book.slug, autoOpenHadithID: nil)]
                     } else if let reference = pushedReference {
                         pushedReference = nil
-                        bookPath = [BookRoute(slug: reference.slug, autoOpenHadithID: reference.idInBook)]
+                        bookPath = [.book(slug: reference.slug, autoOpenHadithID: reference.idInBook)]
                     }
                 } else if let route = bookPath.last {
                     // Columns → stack: reopen the book through the hidden links - at the spot the
@@ -459,15 +459,88 @@ struct HadithView: View {
         return UIDevice.current.userInterfaceIdiom == .pad || UIDevice.current.userInterfaceIdiom == .mac
     }
 
-    /// One book, as a value the content column's stack can carry. Column mode navigates by VALUE, not by
-    /// destination: a legacy `NavigationLink(destination:)` inside a split view's first column is defined
-    /// to open in the DETAIL column, which would put the chapter list where the reader belongs.
-    struct BookRoute: Hashable {
-        let slug: String
-        let autoOpenHadithID: Int?
+    /// One pushable screen, as a value a `NavigationStack` path can carry - by VALUE, not destination.
+    /// In column mode because a legacy `NavigationLink(destination:)` inside a split view's first column
+    /// is defined to open in the DETAIL column; in iPhone stack mode (iOS 16+) because path state is what
+    /// finally killed the deep-link pop: a hidden `NavigationLink(isActive:)` could be handed a spurious
+    /// `false` whenever a store publish re-rendered its host mid-push (the Last Read record, a corpus
+    /// build), unwinding the just-opened chapter - no debounce or anchoring choice ever fully stopped it.
+    enum BookRoute: Hashable {
+        case book(slug: String, autoOpenHadithID: Int?)
+        /// Books → Chapters → Hadiths, as path elements: the chapter rides ON TOP of its book's route,
+        /// so backing out of a deep-linked hadith still lands on the chapter list, never skipping it.
+        case chapter(slug: String, chapterId: Int, scrollToHadithId: Int?)
+
+        var slug: String {
+            switch self {
+            case .book(let slug, _), .chapter(let slug, _, _): return slug
+            }
+        }
     }
 
     @State private var bookPath: [BookRoute] = []
+
+    /// The iOS 15 hidden-link pair - see the note at its `.background` call site in `content`.
+    @ViewBuilder
+    private var legacyHiddenPushLinks: some View {
+        if #unavailable(iOS 16.0) {
+            ZStack {
+                NavigationLink(isActive: Binding(
+                    get: { pushedBook != nil },
+                    set: { if !$0 { pushedBook = nil } }
+                )) {
+                    if let pushedBook {
+                        HadithBookView(book: pushedBook)
+                    }
+                } label: {
+                    EmptyView()
+                }
+                .isDetailLink(false)
+
+                NavigationLink(isActive: Binding(
+                    get: { pushedReference != nil },
+                    set: { if !$0 { pushedReference = nil } }
+                )) {
+                    if let pushedReference, let book = HadithCatalogBook.bySlug[pushedReference.slug] {
+                        HadithBookView(book: book, autoOpenHadithID: pushedReference.idInBook)
+                    }
+                } label: {
+                    EmptyView()
+                }
+                .isDetailLink(false)
+            }
+            .opacity(0)
+        }
+    }
+
+    /// Shared by both iOS 16 containers. `columns` decides the environment flag and whether the book
+    /// screen pushes chapters through the path (stack) or swaps the detail column (split).
+    @available(iOS 16.0, *)
+    @ViewBuilder
+    private func routeDestination(_ route: BookRoute, columns: Bool) -> some View {
+        switch route {
+        case .book(let slug, let autoOpenHadithID):
+            if let book = HadithCatalogBook.bySlug[slug] {
+                // Set ON the destination: a `navigationDestination` builds its content in its own
+                // environment, so a value applied to the stack above never reaches it - the book
+                // screen would silently fall back to pushing.
+                HadithBookView(
+                    book: book,
+                    autoOpenHadithID: autoOpenHadithID,
+                    onPushChapter: columns ? nil : { chapter, scrollTo in
+                        bookPath.append(.chapter(slug: slug, chapterId: chapter.id, scrollToHadithId: scrollTo))
+                    }
+                )
+                .environment(\.hadithUsesColumnNavigation, columns)
+            }
+        case .chapter(let slug, let chapterId, let scrollToHadithId):
+            if let book = HadithCatalogBook.bySlug[slug],
+               let data = store.book(book),
+               let chapter = data.chapters.first(where: { $0.id == chapterId }) {
+                HadithChapterView(book: book, bookData: data, chapter: chapter, scrollToHadithId: scrollToHadithId)
+            }
+        }
+    }
 
     @ViewBuilder
     private var navigationContainer: some View {
@@ -478,17 +551,20 @@ struct HadithView: View {
                 NavigationStack(path: $bookPath) {
                     content
                         .navigationDestination(for: BookRoute.self) { route in
-                            if let book = HadithCatalogBook.bySlug[route.slug] {
-                                // Set ON the destination: a `navigationDestination` builds its content in
-                                // its own environment, so a value applied to the stack above never
-                                // reaches it - the book screen would silently fall back to pushing.
-                                HadithBookView(book: book, autoOpenHadithID: route.autoOpenHadithID)
-                                    .environment(\.hadithUsesColumnNavigation, true)
-                            }
+                            routeDestination(route, columns: true)
                         }
                 }
             } detail: {
                 HadithDetailColumn()
+            }
+        } else if #available(iOS 16.0, *) {
+            // iPhone: a real NavigationStack, not NavigationView - programmatic pushes live in
+            // `bookPath`, which a mid-push re-render cannot spuriously unwind.
+            NavigationStack(path: $bookPath) {
+                content
+                    .navigationDestination(for: BookRoute.self) { route in
+                        routeDestination(route, columns: false)
+                    }
             }
         } else {
             NavigationView {
@@ -504,8 +580,11 @@ struct HadithView: View {
         _ book: HadithCatalogBook,
         @ViewBuilder label: () -> Label
     ) -> some View {
-        if #available(iOS 16.0, *), usesColumnNavigation {
-            NavigationLink(value: BookRoute(slug: book.slug, autoOpenHadithID: nil)) {
+        if #available(iOS 16.0, *) {
+            // Value link in BOTH iOS 16 containers - the stack branch is a NavigationStack now, and
+            // value pushes are what route every book open through `routeDestination` (which is also
+            // where the stack-mode chapter-push closure gets attached).
+            NavigationLink(value: BookRoute.book(slug: book.slug, autoOpenHadithID: nil)) {
                 label()
             }
         } else {
@@ -599,47 +678,33 @@ struct HadithView: View {
             .compactListSectionSpacing()
             // The grid/list flip animates the whole catalog, same as the Quran tab.
             .animation(.easeInOut, value: hadithGridMode)
-            // The invisible link the grid tiles push through (list rows use real NavigationLinks).
-            .background(
-                NavigationLink(isActive: Binding(
-                    get: { pushedBook != nil },
-                    set: { if !$0 { pushedBook = nil } }
-                )) {
-                    if let pushedBook {
-                        HadithBookView(book: pushedBook)
-                    }
-                } label: {
-                    EmptyView()
-                }
-                .opacity(0)
-            )
-            // And the one the shuffled bookmark / summary tiles / daily history push through - into the
-            // BOOK (chapters list), which then auto-pushes the hadith's chapter scrolled to it, so the
-            // full path is always Books → Chapters → Hadiths and back never skips a level.
-            .background(
-                NavigationLink(isActive: Binding(
-                    get: { pushedReference != nil },
-                    set: { if !$0 { pushedReference = nil } }
-                )) {
-                    if let pushedReference, let book = HadithCatalogBook.bySlug[pushedReference.slug] {
-                        HadithBookView(book: book, autoOpenHadithID: pushedReference.idInBook)
-                    }
-                } label: {
-                    EmptyView()
-                }
-                .opacity(0)
-            )
+            // iOS 15 ONLY: the hidden isActive links programmatic pushes ride on where there is no
+            // NavigationStack path (grid tiles → book; shuffled bookmark / summary tiles / daily
+            // history → book, which then auto-pushes the hadith's chapter). On iOS 16+ BOTH containers
+            // navigate by value through `bookPath` - these links must not even exist there: an active
+            // legacy link inside a NavigationStack can fire a phantom push in the frame before the
+            // interceptors below clear the state, and spurious binding writes are the very bug the
+            // path migration removes.
+            .background(legacyHiddenPushLinks)
             // Column mode navigates by value instead: both hidden links above are legacy
             // `destination` links, which a split view routes into the DETAIL column - the reader's
             // place. Intercepting the two state vars here keeps every caller in the tab unchanged.
             .onChange(of: pushedBook) { book in
-                guard usesColumnNavigation, let book else { return }
+                guard #available(iOS 16.0, *), let book else { return }
                 pushedBook = nil
-                bookPath = [BookRoute(slug: book.slug, autoOpenHadithID: nil)]
+                // Both iOS 16 containers navigate by path; only iOS 15 still uses the hidden link.
+                bookPath = [.book(slug: book.slug, autoOpenHadithID: nil)]
             }
             .onChange(of: pushedReference) { reference in
-                guard usesColumnNavigation, let reference else { return }
+                guard #available(iOS 16.0, *), let reference else { return }
                 pushedReference = nil
+                guard usesColumnNavigation else {
+                    // iPhone stack: the book route carries the target; the book screen resolves the
+                    // chapter and APPENDS it to this same path (see `routeDestination`), so the stack
+                    // is Books → Chapters → Hadiths and back never skips the chapter list.
+                    bookPath = [.book(slug: reference.slug, autoOpenHadithID: reference.idInBook)]
+                    return
+                }
                 // Re-tapping a reference into the book whose chapters are ALREADY open: assigning the
                 // identical path is a structural no-op (the book screen's one-shot auto-open never
                 // re-fires), which used to read as a dead tap. Point the reading column at the hadith
@@ -659,7 +724,7 @@ struct HadithView: View {
                     )
                     return
                 }
-                bookPath = [BookRoute(slug: reference.slug, autoOpenHadithID: reference.idInBook)]
+                bookPath = [.book(slug: reference.slug, autoOpenHadithID: reference.idInBook)]
             }
             // The search help floats over the list top while the field is focused and empty.
             .overlay(alignment: .top) {
@@ -849,7 +914,7 @@ struct HadithView: View {
                         Text(entry.englishPreview)
                             .font(.caption)
                             .foregroundColor(.secondary)
-                            .lineLimit(1)
+                            .reservedLineLimit(2)
                     }
                 }
                 .contentShape(Rectangle())
@@ -986,7 +1051,7 @@ struct HadithView: View {
                     Text(english)
                         .font(.footnote)
                         .foregroundColor(.secondary)
-                        .lineLimit(1)
+                        .reservedLineLimit(2)
                 }
             }
             // Hug the content - stretching to fill the row's height (maxHeight + a Spacer) parked
@@ -1030,7 +1095,7 @@ struct HadithView: View {
                             Text(lastRead.englishPreview)
                                 .font(.caption)
                                 .foregroundColor(.secondary)
-                                .lineLimit(1)
+                                .reservedLineLimit(2)
                         }
                     }
                     .padding(.vertical, 2)

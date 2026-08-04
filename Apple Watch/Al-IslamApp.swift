@@ -1,5 +1,4 @@
 import SwiftUI
-import WidgetKit
 
 @main
 struct AlIslamApp: App {
@@ -60,37 +59,16 @@ struct AlIslamApp: App {
             .animation(.easeInOut, value: isLaunching)
             .onAppear { settings.fetchPrayerTimes() }
         }
-        .onChange(of: settings.accentColor) { _ in
-            WidgetCenter.shared.reloadAllTimelines()
-        }
-        // No `.onChange` refresh for `prayerCalculation`, `travelingMode`, or `hanafiMadhab`: every path
-        // that writes them (the manual setters, the dialog overrides, the auto-checks inside a fetch, a
-        // synced snapshot - and for the madhab, its own didSet with auto-checks suppressed) already
-        // performs its own recompute. A blanket refresh here would run a SECOND full forced fetch per
-        // flip and re-run the automatic detection with checks ON right after the change - the exact
-        // override/spam bug the old one-shot flags existed to paper over.
-        .onChange(of: settings.hijriOffset) { _ in
-            settings.updateDates()
-            WidgetCenter.shared.reloadAllTimelines()
-        }
+        // No `.onChange` refreshes for settings here (the iPhone root's exact rule): each setting's
+        // own didSet performs its side effects - `accentColor` and `hijriOffset` recompute dates and
+        // repaint widgets from Settings on every write path (pickers, a synced snapshot, a reset), so
+        // duplicates here paid a SECOND timeline reload per flip. And no refresh for
+        // `prayerCalculation`, `travelingMode`, or `hanafiMadhab` either: every path that writes them
+        // already performs its own recompute - a blanket refresh would re-run the automatic detection
+        // with checks ON right after the change, the exact override/spam bug the old one-shot flags
+        // papered over. Phase transitions delegate to the one place that orchestrates them.
         .onChange(of: scenePhase) { phase in
-            if phase == .active {
-                // The watch senses its own location (location is never synced from the phone), but its
-                // continuous updates stop the moment the app suspends - so after a flight, raising the wrist
-                // showed the departure city indefinitely. One immediate one-shot fix on wake, then the same
-                // low-frequency cadence the iPhone uses while frontmost.
-                settings.refreshLocationIfStale()
-                settings.beginForegroundLocationCadence()
-            } else {
-                settings.endForegroundLocationCadence()
-                // A page flip within the last second may still have its last-read write pending.
-                settings.flushPendingLastRead()
-                // A khatm mark made in the last 250ms is still on the debounce timer; persist it before
-                // the system can suspend or kill the process.
-                settings.flushPendingKhatmProgress()
-                // Flush any just-made setting change before suspension so it reliably reaches the iPhone.
-                WatchConnectivityManager.shared.flushPendingSync()
-            }
+            AppLifecycle.scenePhaseChanged(to: phase)
         }
     }
 

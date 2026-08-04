@@ -297,6 +297,16 @@ final class HadithStore: ObservableObject {
     }
 
     func recordLastRead(book: HadithCatalogBook, hadith: HadithBookData.Hadith) {
+        // Re-recording the position already held is a NO-OP, publish included. Opening "Last Read" (or
+        // the auto-open landing on the remembered chapter) records the very hadith the store already
+        // holds - and that publish re-rendered the screens hosting the programmatic navigation links
+        // mid-push, whose reconciliation is what popped the just-opened chapter back to the chapter
+        // list. Deliberate trade-off: the entry's timestamp is NOT refreshed on a same-spot re-read,
+        // so the cross-book "latest" pick can lag until the reader actually moves to a new hadith.
+        if let existing = lastReadByBook[book.slug],
+           existing.idInBook == hadith.idInBook, existing.chapterId == hadith.chapterId {
+            return
+        }
         let entry = HadithLastRead(
             slug: book.slug,
             idInBook: hadith.idInBook,

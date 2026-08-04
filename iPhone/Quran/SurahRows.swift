@@ -283,14 +283,17 @@ struct SurahRow: View, Equatable {
                         .lineLimit(1)
                 }
 
+                // `lineLimit: 1` INSIDE both snippets: HighlightedSnippet applies its own `.lineLimit`
+                // to the inner Text, so the outer clamps here were silently overridden and long names
+                // ("The Enshrouded One" + the revelation emoji) wrapped to a second line.
                 HighlightedSnippet(
                     source: surah.nameTransliteration,
                     term: searchQuery,
                     font: .subheadline.weight(.semibold),
                     accent: accentColor.color,
-                    fg: .primary
+                    fg: .primary,
+                    lineLimit: 1
                 )
-                .lineLimit(1)
 
                 HighlightedSnippet(
                     source: surah.nameEnglish,
@@ -298,9 +301,9 @@ struct SurahRow: View, Equatable {
                     font: .caption,
                     accent: accentColor.color,
                     fg: showInfo ? .primary : .secondary,
-                    trailingSuffix: showInfo ? "" : " \(revelationEmoji)"
+                    trailingSuffix: showInfo ? "" : " \(revelationEmoji)",
+                    lineLimit: 1
                 )
-                .lineLimit(1)
 
                 if showInfo {
                     Text(pageLine)
@@ -399,14 +402,15 @@ struct SurahRow: View, Equatable {
                     .foregroundColor(accentColor.color)
                     .layoutPriority(1)
 
+                // Inner `lineLimit: 1`, same as the list row - the outer clamp was overridden.
                 HighlightedSnippet(
                     source: surah.nameTransliteration,
                     term: searchQuery,
                     font: .subheadline.weight(.semibold),
                     accent: accentColor.color,
-                    fg: .primary
+                    fg: .primary,
+                    lineLimit: 1
                 )
-                .lineLimit(1)
             }
             .minimumScaleFactor(0.6)
 
@@ -416,9 +420,9 @@ struct SurahRow: View, Equatable {
                 font: .caption,
                 accent: accentColor.color,
                 fg: showInfo ? .primary : .secondary,
-                trailingSuffix: showInfo ? "" : " \(revelationEmoji)"
+                trailingSuffix: showInfo ? "" : " \(revelationEmoji)",
+                lineLimit: 1
             )
-            .lineLimit(1)
             .minimumScaleFactor(0.6)
 
             if showInfo {

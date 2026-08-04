@@ -246,6 +246,8 @@ struct AccentGlowOverlay: View {
             ? 0 : ((settings.colorScheme ?? systemColorScheme) == .dark ? 0.16 : 0.10)
         let brand = settings.alIslamGlow
 
+        // Top-only, by explicit choice (a bottom band was tried and rolled back): the wash lights the
+        // navigation-bar edge and fades before mid-screen, leaving the bottom bars on plain background.
         VStack(spacing: 0) {
             ZStack {
                 RadialGradient(
@@ -390,6 +392,28 @@ extension View {
     /// The themed base + accent glow for screens that are not system Lists - see `AccentWashedBackground`.
     func accentWashedBackground() -> some View {
         modifier(AccentWashedBackground())
+    }
+
+    /// Clamp to `limit` lines AND always reserve that much height, so a one-line item and a three-line
+    /// one occupy the same box and a column of preview cards never comes out ragged. `reservesSpace`
+    /// is iOS 16+; below that this degrades to a plain clamp (ragged, but never clipped or crashed).
+    func reservedLineLimit(_ limit: Int = 2) -> some View {
+        modifier(ReservedLineLimit(limit: limit))
+    }
+}
+
+/// Backing modifier for `reservedLineLimit(_:)` - the availability branch lives here so call sites stay
+/// one clean modifier.
+struct ReservedLineLimit: ViewModifier {
+    let limit: Int
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if #available(iOS 16.0, watchOS 9.0, *) {
+            content.lineLimit(limit, reservesSpace: true)
+        } else {
+            content.lineLimit(limit)
+        }
     }
 }
 
@@ -672,6 +696,12 @@ struct SectionPillHeader: View {
 
             Spacer()
 
+            // The trailing cluster's ONE ordering rule, app-wide: the count pill sits at the far LEFT
+            // of the cluster (it is information, not a control), then the buttons - shuffle, then the
+            // expand chevron. SurahsHeader lays out the same way; a header that hand-rolls its cluster
+            // must follow this order too.
+            CountPill(count: count, overflow: overflow)
+
             if let onShuffle {
                 // A circle exactly as tall as the count pill (caption line + its 4pt vertical padding),
                 // and as wide as it is tall.
@@ -686,8 +716,6 @@ struct SectionPillHeader: View {
                     }
                     .accessibilityLabel("Random \(title.lowercased())")
             }
-
-            CountPill(count: count, overflow: overflow)
 
             if let isExpanded {
                 Image(systemName: isExpanded.wrappedValue ? "chevron.down.circle" : "chevron.up.circle")

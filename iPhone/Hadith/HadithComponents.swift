@@ -244,8 +244,17 @@ struct HadithRow: View, Equatable {
                     settings.hapticFeedback()
                     withAnimation(.easeInOut) { userData.toggleBookmark(book: book, hadith: hadith) }
                 }
+                // The ayah pill's badge grammar: the bookmark badge when bookmarked (the tinted pill
+                // plus this corner mark IS the bookmarked state - the actions button no longer morphs),
+                // else the book badge for the last-read spot.
                 .overlay(alignment: .topTrailing) {
-                    if isLastRead {
+                    if isBookmarked {
+                        Image(systemName: "bookmark.fill")
+                            .font(.caption2)
+                            .foregroundStyle(settings.accentColor.color)
+                            .padding(4)
+                            .offset(x: 8, y: -6)
+                    } else if isLastRead {
                         Image(systemName: "book.fill")
                             .font(.caption2)
                             .foregroundStyle(settings.accentColor.color)
@@ -257,12 +266,12 @@ struct HadithRow: View, Equatable {
                 Spacer(minLength: 0)
 
                 // The context menu, reachable without a long-press - the AyahRow actions button's exact
-                // sizing (icon in a glass square matching the pill's height). When bookmarked, the icon
-                // IS the bookmark, so the state and the menu share one control instead of two.
+                // sizing (icon in a glass square matching the pill's height). Always the ellipsis:
+                // bookmark state lives on the pill (tint + corner badge), the Quran rows' grammar.
                 Menu {
                     menuContent
                 } label: {
-                    Image(systemName: isBookmarked ? "bookmark.circle.fill" : "ellipsis.circle")
+                    Image(systemName: "ellipsis.circle")
                         .resizable()
                         .aspectRatio(contentMode: .fit)
                         .frame(width: compact ? 19 : 25, height: compact ? 19 : 25)
@@ -492,14 +501,19 @@ struct HadithSearchHistoryChips: View {
     }
 }
 
-/// One line of hadith Arabic in the Islam face, trailing - with commas falling back to the system
-/// face (the classical faces draw "\u{060C}" as an ornament circle). Every preview row renders through
-/// this so bookmarks, Hadith of the Day, Last Read, and the summary tiles all match the reader.
+/// Hadith Arabic in the Islam face, trailing - with commas falling back to the system face (the
+/// classical faces draw "\u{060C}" as an ornament circle). Every preview row renders through this so
+/// bookmarks, Hadith of the Day, Last Read, and the summary tiles all match the reader.
+///
+/// Two lines with the space RESERVED: a short hadith and a long one produce the same card height, so a
+/// bookmark grid and a stack of daily rows line up instead of stair-stepping. The English half of each
+/// card reserves two lines the same way (`reservedLineLimit`).
 struct HadithArabicPreview: View {
     @ObservedObject private var settings = Settings.shared
 
     let text: String
     var size: CGFloat = 15
+    var lineLimit: Int = 2
 
     var body: some View {
         HighlightedSnippet(
@@ -510,7 +524,10 @@ struct HadithArabicPreview: View {
                 : .footnote,
             accent: settings.accentColor.color,
             fg: .primary,
-            lineLimit: 1,
+            // The clamp must ride INSIDE the snippet: it applies `.lineLimit` to its own Text, and the
+            // innermost value wins - an outer `.reservedLineLimit` here was silently ignored.
+            lineLimit: lineLimit,
+            reservesSpace: true,
             basicFontForCommas: settings.useFontArabic ? size : nil
         )
         .arabicFontDesign(custom: settings.islamUsesCustomArabicFace)
@@ -596,13 +613,30 @@ struct HadithBookmarkRow: View, Equatable {
     @State private var noteDraft = ""
     @State private var showRespectAlert = false
 
-    var body: some View {
-        if let book = HadithCatalogBook.bySlug[bookmark.slug] {
+    /// Value link on iOS 16, legacy destination push on iOS 15 - see the note at the call site.
+    @ViewBuilder
+    private func bookmarkLink<Label: View>(book: HadithCatalogBook, @ViewBuilder label: () -> Label) -> some View {
+        if #available(iOS 16.0, *) {
+            NavigationLink(value: HadithView.BookRoute.book(slug: book.slug, autoOpenHadithID: bookmark.idInBook)) {
+                label()
+            }
+        } else {
             NavigationLink {
-                // Books → Chapters → Hadiths: land in the book, which auto-pushes the hadith's chapter
-                // scrolled to it - backing out of the hadith always shows the chapter list.
                 HadithBookView(book: book, autoOpenHadithID: bookmark.idInBook)
             } label: {
+                label()
+            }
+        }
+    }
+
+    var body: some View {
+        if let book = HadithCatalogBook.bySlug[bookmark.slug] {
+            // Books → Chapters → Hadiths: land in the book, which auto-pushes the hadith's chapter
+            // scrolled to it - backing out of the hadith always shows the chapter list. By VALUE on
+            // iOS 16 (both hadith containers are NavigationStacks whose `routeDestination` wires the
+            // chapter push); a legacy destination push would leave the book's auto-open with no
+            // path to append to.
+            bookmarkLink(book: book) {
                 HStack(spacing: 8) {
                     // The same accent-tinted glass number badge the Quran's bookmarked ayah rows lead with.
                     Text("\(bookmark.idInBook)")
@@ -635,13 +669,13 @@ struct HadithBookmarkRow: View, Equatable {
                             Text(english)
                                 .font(.caption)
                                 .foregroundColor(.secondary)
-                                .lineLimit(1)
+                                .reservedLineLimit(2)
                         } else if bookmark.arabicPreview == nil {
                             // A bookmark saved by an older build carries only the combined preview.
                             Text(bookmark.preview)
                                 .font(.caption)
                                 .foregroundColor(.secondary)
-                                .lineLimit(1)
+                                .reservedLineLimit(2)
                         }
 
                         // The bookmark's note - the Quran bookmark rows' quiet one-liner.
@@ -767,7 +801,7 @@ struct HadithBookmarkGridTile: View, Equatable {
                 Text(bookmark.englishPreview?.isEmpty == false ? (bookmark.englishPreview ?? "") : bookmark.preview)
                     .font(.caption2)
                     .foregroundColor(.secondary)
-                    .lineLimit(2)
+                    .reservedLineLimit(2)
             }
             // Hug the content - the old fixed 78pt frame left a band of dead space whenever the
             // preview ran short.

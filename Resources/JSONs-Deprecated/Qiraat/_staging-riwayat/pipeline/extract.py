@@ -9,7 +9,7 @@ Phases:
 import fitz, json, sys, collections, pathlib, re
 
 BASE = pathlib.Path(__file__).resolve().parent
-PDFS = BASE.parent / "riwayat-pdfs"
+PDFS = BASE.parent / "pdfs"
 DATA = BASE / "data"
 DATA.mkdir(exist_ok=True)
 APP = pathlib.Path("/Users/theabubakrabu/Library/Mobile Documents/com~apple~CloudDocs/Projects/(1) iOS/Al-Islam-iOS")
@@ -142,6 +142,14 @@ def page_tokens(page):
             return in_zone(t)
         gs = [t for t in toks if not is_markerish(t)]
         others = [t for t in toks if is_markerish(t)]
+        # The imalah dot (HQPB5 gid 20) sits BELOW the baseline and rarely overlaps its
+        # letter's bbox, so x-overlap clustering left it a stray singleton and its letter
+        # attribution was guessed downstream ("dot on the wrong letter", "two dots").
+        # Geometric truth instead: pull the dots out, merge the stroke/fill/color layer
+        # copies (identical position), and attach each REAL dot to the letter cluster
+        # whose span contains it.
+        dots = [t for t in gs if t[4][0] == "HQPB5#20"]
+        gs = [t for t in gs if t[4][0] != "HQPB5#20"]
         gs.sort(key=lambda t: -((t[1] + t[2]) / 2))
         clusters = []
         for t in gs:
@@ -156,6 +164,18 @@ def page_tokens(page):
                     placed = True
             if not placed:
                 clusters.append({"x0": t[1], "x1": t[2], "toks": [t]})
+        if dots and clusters:
+            uniq = []
+            for t in sorted(dots, key=lambda t: (t[1] + t[2]) / 2):
+                xc = (t[1] + t[2]) / 2
+                if uniq and abs(xc - uniq[-1]) <= 2.5:
+                    continue                     # a layer copy of the same dot
+                uniq.append(xc)
+            for xc in uniq:
+                best = min(clusters, key=lambda c: 0 if c["x0"] <= xc <= c["x1"]
+                           else min(abs(xc - c["x0"]), abs(xc - c["x1"])))
+                if not any(m[4][0] == "HQPB5#20" for m in best["toks"]):
+                    best["toks"].append((0, xc, xc, "g", ("HQPB5#20", "1")))
         # ONE token per cluster: an order-free multiset key. Mark-stack z-order was the
         # purity killer - inside a multiset there is no order to get wrong. Members are
         # kept in the key (joined by ||) so a fallback can decompose unseen combinations.

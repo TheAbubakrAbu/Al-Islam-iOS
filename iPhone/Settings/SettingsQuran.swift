@@ -226,11 +226,22 @@ extension Settings {
 
         static var groups: [Group] {
             let live = options
-            return teacherOrder.compactMap { teacher in
+            var result = teacherOrder.compactMap { teacher -> Group? in
                 let opts = live.filter { $0.teacher == teacher }
                 guard let first = opts.first else { return nil }
                 return Group(teacher: teacher, teacherArabic: first.teacherArabic, options: opts)
             }
+            // With all ten qiraat unlocked the classical ordering reads as arbitrary in
+            // a menu - go alphabetical (ignoring the "al-" article) so readers can scan.
+            if Settings.shared.betaQiraatEnabled {
+                result.sort { alphaKey($0.teacher) < alphaKey($1.teacher) }
+            }
+            return result
+        }
+
+        private static func alphaKey(_ teacher: String) -> String {
+            let lower = teacher.lowercased()
+            return lower.hasPrefix("al-") ? String(lower.dropFirst(3)) : lower
         }
 
         static var menuOptions: [(label: String, tag: String)] {

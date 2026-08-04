@@ -675,10 +675,10 @@ struct AdhkarView: View {
 
             Spacer()
 
-            // Plays every dhikr below, in order.
-            ListenAllPill(texts: commonDhikrItems.map(\.arabicText))
-
+            // Count pill first (the SectionPillHeader rule); the pill plays every dhikr below, in order.
             CountPill(count: commonDhikrItems.count)
+
+            ListenAllPill(texts: commonDhikrItems.map(\.arabicText))
         }) {
              Text("Short remembrances to keep your heart connected to Allah throughout the day.")
                  .font(.subheadline)

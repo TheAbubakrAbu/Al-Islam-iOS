@@ -164,6 +164,25 @@ def render_det(glyphs, detmap, missing=None, family="kufi", ctx=None):
         if k == "CL|HQPB5#20|1":
             out.append((k, ""))   # placeholder; the imalah pass above rewrites runs
             continue
+        if k.startswith("CL|") and "HQPB5#20|1" in k and k != "CL|HQPB5#20|1":
+            # letter cluster carrying its imalah dot (geometric attachment): resolve
+            # the letter without the dot, then put the dot right after it
+            members = [m for m in k[3:].split("||") if m != "HQPB5#20|1"]
+            base_key = "CL|" + "||".join(members)
+            bv = None
+            if ctx is not None and base_key in ctx:
+                r = ctx[base_key]
+                pv = keys[i - 1] if i > 0 else "^"
+                nx = keys[i + 1] if i + 1 < len(keys) else "$"
+                bv = r.get(f"b:{pv}|{nx}") or r.get(f"p:{pv}") or r.get(f"n:{nx}") or r.get("*")
+            if bv is None:
+                bv = detmap.get(base_key)
+            if bv is not None:
+                out.append((k, bv + "\u065c"))
+                continue
+        if k == "CL|HQPB5#7|$" and family != "kufi":
+            out.append((k, ""))   # wasl sign; family word-repair restores vowel+dot
+            continue
         v = None
         if ctx is not None and k in ctx:
             r = ctx[k]
@@ -230,29 +249,32 @@ def render_det(glyphs, detmap, missing=None, family="kufi", ctx=None):
                     continue
         fixed.append((k, v))
     t = re.sub(r"\s+", " ", "".join(v for _, v in fixed)).strip()
-    for dg in ("ٱا", "اٱ", "ٱٱ"):
-        t = t.replace(dg, "ٱ")       # wasla-sign glyph + bare-alef glyph = ONE ٱ
-    # الله/لله ligature: the lam strokes are VECTOR ART (not text glyphs); only the
-    # alef/heh print as text. 'ٱَ' and a standalone 'هِ' word cannot otherwise occur.
-    ALLAH_LL = "\u0644\u0644\u0651\u064e"          # ل ل ّ َ  (shadda before vowel)
-    for pat in ("\u0671\u064e", "\u0627\u064e"):     # ٱَ / اَ - impossible except in الله
-        t = t.replace(pat, "\u0671" + ALLAH_LL)         # always-wasl ٱللَّ
-    for pat in ("\u0671\u06e1", "\u0627\u06e1"):     # ٱۡ / اۡ - sukun of the INVISIBLE lam
-        t = t.replace(pat, "\u0671\u0644\u06e1")      # ٱلۡ
-    LILLAH_CORE = "\u0644\u0650" + ALLAH_LL + "\u0647"   # لِلَّه
-    words = t.split(" ")
-    LILLAH = {"هِ": LILLAH_CORE + "\u0650",
-              "وَهِ": "\u0648\u064e" + LILLAH_CORE + "\u0650",
-              "فَهِ": "\u0641\u064e" + LILLAH_CORE + "\u0650",
-              "هُ": LILLAH_CORE + "\u064f",
-              "هَ": LILLAH_CORE + "\u064e"}
-    t = " ".join(LILLAH.get(w, w) for w in words)
-    t = t.replace("\u0644\u0650\u0644\u0644", "\u0644\u0650\u0644")  # لِلل → لِل
+    if family == "kufi":
+        for dg in ("ٱا", "اٱ", "ٱٱ"):
+            t = t.replace(dg, "ٱ")   # wasla-sign glyph + bare-alef glyph = ONE ٱ
+        # الله/لله ligature: the lam strokes are VECTOR ART (not text glyphs); only the
+        # alef/heh print as text. 'ٱَ' and a standalone 'هِ' word cannot otherwise occur.
+        ALLAH_LL = "\u0644\u0644\u0651\u064e"          # ل ل ّ َ  (shadda before vowel)
+        for pat in ("\u0671\u064e", "\u0627\u064e"):     # ٱَ / اَ - impossible except in الله
+            t = t.replace(pat, "\u0671" + ALLAH_LL)         # always-wasl ٱللَّ
+        for pat in ("\u0671\u06e1", "\u0627\u06e1"):     # ٱۡ / اۡ - sukun of the INVISIBLE lam
+            t = t.replace(pat, "\u0671\u0644\u06e1")      # ٱلۡ
+        LILLAH_CORE = "\u0644\u0650" + ALLAH_LL + "\u0647"   # لِلَّه
+        words = t.split(" ")
+        LILLAH = {"هِ": LILLAH_CORE + "\u0650",
+                  "وَهِ": "\u0648\u064e" + LILLAH_CORE + "\u0650",
+                  "فَهِ": "\u0641\u064e" + LILLAH_CORE + "\u0650",
+                  "هُ": LILLAH_CORE + "\u064f",
+                  "هَ": LILLAH_CORE + "\u064e"}
+        t = " ".join(LILLAH.get(w, w) for w in words)
+        t = t.replace("\u0644\u0650\u0644\u0644", "\u0644\u0650\u0644")  # لِلل → لِل
     t = t.replace("\u0657\u0627\u0627", "\u0657\u0627").replace("\u064b\u0627\u0627", "\u064b\u0627").replace("\u0648\u0627\u0627", "\u0648\u0627")
     t = collapse_doubled_marks(t)
     t = attach_orphan_marks(t)
     if family == "kufi":
         t = apply_wasla_rule(t)   # kufi convention: word-initial bare alef is ٱ
+    else:
+        t = apply_family_conventions(t, family)
     return t
 
 
@@ -282,12 +304,19 @@ def ctxpass(fam, bridge_slugs):
             targets.add(k)
 
     class _EM:
-        def __init__(self, c):
+        def __init__(self, c, pinned=None):
             self.p = {}
+            self.pinned = pinned or {}
             for k, dist in c.items():
                 tot = sum(dist.values())
                 self.p[k] = {e: math.log(n / (tot + 2)) for e, n in dist.items()}
         def logp(self, key, e):
+            # a key the deterministic map already solved is PINNED: aligning it to
+            # anything else is heavily punished, which snaps the whole alignment tight
+            # around the few genuinely unknown keys
+            v = self.pinned.get(key)
+            if v is not None and v != "":
+                return -0.05 if e == v else -13.0
             d = self.p.get(key)
             if d is not None and e in d:
                 return d[e]
@@ -298,7 +327,8 @@ def ctxpass(fam, bridge_slugs):
 
     import hybrid
     old_em = hybrid.ALIGN_EM
-    hybrid.ALIGN_EM = _EM(counts)
+    pinned = {k: v for k, v in detmap.items() if k not in targets}
+    hybrid.ALIGN_EM = _EM(counts, pinned=pinned)
     obs = collections.defaultdict(collections.Counter)   # (key,prev,next) -> emissions
     flat = collections.defaultdict(collections.Counter)
     for slug in bridge_slugs:
@@ -349,6 +379,180 @@ def ctxpass(fam, bridge_slugs):
     (DATA / f"ctxdet-{fam}.json").write_text(json.dumps(rules, ensure_ascii=False, sort_keys=True))
     print(f"{fam}: ctx rules for {len(rules)}/{len(targets)} target keys")
     return rules
+
+# ------------------------------------------------- family conventions (madani/basri)
+
+FAMILY_BRIDGE_TEXT = {"madani": "QiraahQaloon", "basri": "QiraahDuri", "makki": "QiraahQunbul"}
+_conv_cache = {}
+_WASL_SIGNS = "\u06ec\u06ea"          # ۬ dot-above, ۪ dot-below
+_PAUSE_SET = set("\u06d6\u06d7\u06d8\u06d9\u06da\u06db")
+
+def _family_tables(family):
+    """Learn, from the family's OWN verified app text: (a) wasl-alef prefix forms keyed
+    by (previous word's final char, rest-of-word), (b) Allah-word forms by skeleton,
+    (c) nun-idgham junction forms keyed by (bare-final word, next word's first letter)."""
+    if family in _conv_cache:
+        return _conv_cache[family]
+    import collections as _c
+    name = FAMILY_BRIDGE_TEXT[family]
+    d = json.loads((APP / f"Resources/JSONs-Deprecated/Qiraat/{name}.json").read_text())
+    wasl = _c.defaultdict(_c.Counter)      # (prev_last, stripped) -> full word
+    allah = _c.defaultdict(_c.Counter)     # skeleton -> full word
+    idgh = _c.defaultdict(_c.Counter)      # (prev_stripped_suffix, next_first) -> (prev_full, next_prefix)
+    def _sk(w):
+        return "".join("ا" if ch in "اٱأإآ" else ch for ch in w
+                       if not unicodedata.combining(ch) and ch not in "ـ" and ch not in _WASL_SIGNS)
+    for v in d.values():
+        for a in v:
+            ws = a["text"].split()
+            for i, w in enumerate(ws):
+                prev = ws[i - 1] if i else ""
+                prev_last = prev[-1] if prev else "^"
+                wp = "".join(ch for ch in w if ch not in _PAUSE_SET)
+                if wp and wp[0] == "ا" and len(wp) > 2 and (wp[1] in "\u064e\u064f\u0650" and wp[2] in _WASL_SIGNS):
+                    stripped = "ا" + wp[3:]
+                    wasl[(prev_last, stripped)][wp] += 1
+                    wasl[("*", stripped)][wp] += 1
+                # madd-before-hamza: the app writes a trailing ٓ the print omits
+                if "\u0653" in w[-3:]:
+                    bare = w.replace("\u0653", "")
+                    nxt0 = ws[i + 1][0] if i + 1 < len(ws) else "$"
+                    idgh[("MADD", bare, nxt0)][(w, "")] += 1
+                # prefixed wasl (وَا فَا بِا كَا): vowel-on-alef, no dot
+                if len(w) > 3 and w[0] in "وفبكت" and w[1] == "\u064e" and w[2] == "ا" and w[3] in "\u064e\u064f\u0650":
+                    stripped = w[:3] + w[4:]
+                    wasl[("*", "".join(ch for ch in stripped if ch not in _PAUSE_SET))][
+                        "".join(ch for ch in w if ch not in _PAUSE_SET)] += 1
+                sk = _sk(w)
+                if sk in ("الله", "لله", "بالله", "والله", "تالله", "فالله", "ولله", "فلله", "ابالله"):
+                    # the print draws the lam pair as vector art: key by what the
+                    # RENDER produces (lamless skeleton + the final vowel)
+                    lamless = sk.replace("لل", "", 1)
+                    final = next((ch for ch in reversed(wp) if True), "")
+                    allah[(lamless, wp[-1] if wp else "")][wp] += 1
+                # nun/tanwin idgham junction: word ends bare ن + next starts doubled letter
+                if i + 1 < len(ws):
+                    nxt = ws[i + 1]
+                    if w.endswith("\u0646\u06e1") and len(nxt) > 2 and nxt[1] == "\u0651":
+                        idgh[(w[:-1], nxt[0])][(w, nxt[:2])] += 1
+                    elif w.endswith("\u0646") and len(nxt) > 2 and nxt[1] == "\u0651":
+                        idgh[(w, nxt[0])][(w, nxt[:2])] += 1
+    tables = (
+        {k: c.most_common(1)[0][0] for k, c in wasl.items()},
+        {k: c.most_common(1)[0][0] for k, c in allah.items()},
+        {k: c.most_common(1)[0][0] for k, c in idgh.items()},
+    )
+    _conv_cache[family] = tables
+    return tables
+
+def rep_pref(w, wasl_tab):
+    return wasl_tab.get(("*", w))
+
+def apply_family_conventions(t, family):
+    if family not in FAMILY_BRIDGE_TEXT:
+        return t
+    wasl_tab, allah_tab, idgh_tab = _family_tables(family)
+    # wasl-signs re-enter only via the learned tables; stray ones are print noise
+    t = t.replace("\u06ec", "").replace("\u06ea", "")
+    words = t.split(" ")
+    def _sk(w):
+        return "".join("ا" if ch in "اٱأإآ" else ch for ch in w
+                       if not unicodedata.combining(ch) and ch not in "ـ" and ch not in _WASL_SIGNS)
+    out = []
+    for i, w in enumerate(words):
+        # Allah-family words (lams are vector art in the print); the final vowel
+        # disambiguates against ordinary words sharing the lamless skeleton (لَهُ)
+        if "ه" in w and w:
+            tail = "".join(ch for ch in w if ch in _PAUSE_SET)
+            wp = "".join(ch for ch in w if ch not in _PAUSE_SET)
+            rep = allah_tab.get((_sk(wp), wp[-1] if wp else ""))
+            if rep and len(wp) < len(rep):
+                out.append(rep + tail)
+                continue
+        # the lam of ال before a hamza letter is vector art: 'اأ/اإ/اءا' never occur
+        for hz in ("\u0623", "\u0625", "\u0622"):
+            w = w.replace("ا" + hz, "ا\u0644\u06e1" + hz)
+        # wasl-alef prefix: rendered form is bare 'ا' + rest; the app form carries
+        # naql vowel + dot chosen by the PRECEDING word's ending
+        if w and w[0] == "ا" and (len(w) < 2 or w[1] not in "\u064e\u064f\u0650"):
+            prev_last = out[-1][-1] if out and out[-1] else "^"
+            rep = wasl_tab.get((prev_last, w)) or wasl_tab.get(("*", w))
+            if rep:
+                out.append(rep)
+                continue
+        if w and w[0] in "وفبكت" and rep_pref(w, wasl_tab) is not None:
+            out.append(rep_pref(w, wasl_tab))
+            continue
+        out.append(w)
+    # madd-before-hamza junctions
+    for i in range(len(out)):
+        nxt0 = out[i + 1][0] if i + 1 < len(out) and out[i + 1] else "$"
+        rep = idgh_tab.get(("MADD", out[i], nxt0))
+        if rep:
+            out[i] = rep[0]
+    # nun-idgham junctions: the print writes plain ن + plain next initial; the app
+    # convention writes نۡ + shadda on the next word's first letter. Learned pairs
+    # are keyed by (the bare word, next word's first letter).
+    for i in range(len(out) - 1):
+        w, nxt = out[i], out[i + 1]
+        if w.endswith("\u0646") and nxt:
+            rep = idgh_tab.get((w, nxt[0]))
+            if rep:
+                full_prev, next_prefix = rep
+                out[i] = full_prev
+                if len(nxt) > 1 and nxt[1] != "\u0651":
+                    out[i + 1] = next_prefix + nxt[1:]
+    return " ".join(out)
+
+# ------------------------------------------------- muqatta'at repair
+
+# The prints write the opening letter-sequences bare (الم); the app's KFGQPC texts
+# spell them with their pronunciation marks (Hafs-style الٓمٓ, Madani أَلَٓمِّٓ). A closed
+# set - repaired verbatim from each family's own bridge text, keyed by (surah, ayah).
+_MUQ_SURAHS = {2,3,7,10,11,12,13,14,15,19,20,26,27,28,29,30,31,32,36,38,40,41,42,43,44,45,46,50,68}
+_MUQ_LETTERS = set("اٱلمصركهيعطسحقنو")
+_MUQ_BRIDGE = {"kufi": "QiraahShubah", "madani": "QiraahQaloon",
+               "basri": "QiraahDuri", "makki": "QiraahQunbul"}
+_muq_cache = {}
+
+def _muq_table(family):
+    if family in _muq_cache:
+        return _muq_cache[family]
+    d = json.loads((APP / f"Resources/JSONs-Deprecated/Qiraat/{_MUQ_BRIDGE[family]}.json").read_text())
+    tab = {}
+    for sid in _MUQ_SURAHS:
+        for aid in (1, 2):
+            ayahs = d.get(str(sid), [])
+            entry = next((a for a in ayahs if a["id"] == aid), None)
+            if not entry or not entry["text"]:
+                continue
+            w = entry["text"].split()[0]
+            w = "".join(ch for ch in w if ch not in _PAUSE_SET)
+            core = "".join(ch for ch in w if not unicodedata.combining(ch))
+            if core and set(core) <= _MUQ_LETTERS and len(core) <= 5:
+                tab[(sid, aid)] = w
+    _muq_cache[family] = tab
+    return tab
+
+def apply_muqattaat(t, family, sid, aid):
+    rep = _muq_table(family).get((sid, aid))
+    if not rep:
+        return t
+    words = t.split()
+    if not words:
+        return t
+    first_core = "".join(ch for ch in words[0] if not unicodedata.combining(ch))
+    rep_core = "".join(ch for ch in rep if not unicodedata.combining(ch))
+    fc = first_core.replace("ٱ", "ا")
+    rc = rep_core.replace("ٱ", "ا").replace("أ", "ا")
+    def subseq(a, b):
+        it = iter(b)
+        return all(ch in it for ch in a)
+    if first_core and set(fc) <= _MUQ_LETTERS and len(fc) <= len(rc) + 2 and subseq(rc, fc):
+        words[0] = rep
+        return " ".join(words)
+    return t
+
 # ---------------------------------------------------------------- roundtrip loop
 
 def word_diff_classes(got, exp):
@@ -446,6 +650,8 @@ def emit_targets(slugs):
                     else:
                         t = strip_header_and_basmalah(t, keep_basmalah=False)
                 t = t.replace("✗", "").strip()
+                if aid <= 2:
+                    t = apply_muqattaat(t, fam, sid, aid)
                 ayahs.append({"id": aid, "text": re.sub(r"\s+", " ", t)})
             out[str(sid)] = ayahs
         name = NAMES[slug]

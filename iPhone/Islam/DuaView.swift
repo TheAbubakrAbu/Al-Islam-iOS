@@ -442,9 +442,11 @@ struct DuaView: View {
 
                         Spacer()
 
-                        ListenAllPill(texts: matching.map(\.arabicText))
-
+                        // Count pill first: it sits at the far left of every trailing cluster
+                        // (the SectionPillHeader rule).
                         CountPill(count: matching.count)
+
+                        ListenAllPill(texts: matching.map(\.arabicText))
                     }
                 }
             }
@@ -703,10 +705,10 @@ private struct DuaCollectionView: View {
 
             Spacer()
 
-            // Plays every dua currently shown, in order.
-            ListenAllPill(texts: shown.map(\.arabicText))
-
+            // Count pill first (the SectionPillHeader rule); the pill plays every dua shown, in order.
             CountPill(count: shown.count)
+
+            ListenAllPill(texts: shown.map(\.arabicText))
         }
     }
 

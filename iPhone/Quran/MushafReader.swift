@@ -2512,7 +2512,8 @@ enum MushafPageRenderCache {
     static func prewarm(pages: [MushafPage], around index: Int, radius: Int = 5, includeCenter: Bool = false,
                         at geometryOverride: (width: CGFloat, height: CGFloat)? = nil) {
         // `(1...radius)` below traps on a non-positive radius - guard it rather than trusting every caller.
-        guard let geometry = geometryOverride ?? lastGeometry, !pages.isEmpty, radius >= 1 else { return }
+        guard let geometry = geometryOverride ?? lastGeometry, !pages.isEmpty, radius >= 1,
+              !isDegenerate(width: geometry.width, height: geometry.height) else { return }
         lastPrewarmContext = (pages, index)
         // The background fit is nearly free for the main thread, but each warmed page still costs a colored
         // compose on main - in Low Power Mode keep that to the immediate neighbours.
@@ -2574,6 +2575,7 @@ enum MushafPageRenderCache {
                     guard let waiters = pendingRenders[key] else { return }
                     if waiters.isEmpty {
                         pendingRenders.removeValue(forKey: key)
+                        upgradedClaims.remove(key)
                     } else {
                         enqueueFit(page: page, width: width, height: height, key: key, config: config, generation: nil)
                     }
@@ -2590,6 +2592,7 @@ enum MushafPageRenderCache {
                     cache.setObject(rendered, forKey: key)
                     noteLatest(page: page, width: width, budget: height, rendered: rendered)
                 }
+                upgradedClaims.remove(key)
                 (pendingRenders.removeValue(forKey: key) ?? []).forEach { $0() }
             }
         }
@@ -2664,7 +2667,9 @@ enum MushafPageRenderCache {
     /// paid ~30 compose/measure passes on the main thread. A miss now returns nil and the page shows its
     /// last-known render (or, truly cold, a brief spinner) while `renderAsync` fits on the prewarm queue.
     static func renderedIfAvailable(page: MushafPage, width: CGFloat, height: CGFloat) -> MushafRenderedPage? {
-        lastGeometry = (width, height)
+        // Never let a mid-transition collapsed frame become the prewarm seed: a ring swept at degenerate
+        // geometry is 10+ wasted (or wedging) fits on the serial lane.
+        if !isDegenerate(width: width, height: height) { lastGeometry = (width, height) }
         // One signature build per call: this runs per mounted page per body pass (and the pager re-evals
         // on every playback tick), and it used to be rebuilt again inside noteLatest.
         let signature = settingsSignature
@@ -2719,15 +2724,36 @@ enum MushafPageRenderCache {
     /// In-flight async renders, keyed like the cache, each holding the completions to run when it lands -
     /// re-evaluations of a waiting page's body pile onto the same render instead of starting another.
     private static var pendingRenders: [NSString: [() -> Void]] = [:]
+    /// Claims that already got their one visible-lane duplicate (see `renderAsync`).
+    private static var upgradedClaims: Set<NSString> = []
 
     /// Fit + compose off-main, store, then tell every waiting page to re-read the cache. If the prewarm ring
     /// already queued this page's fit, the completion just attaches to it - one fit per key, ever.
+    /// Geometry a real reader can never have. Mid-navigation (a pop, a search-result push) SwiftUI can
+    /// report a collapsed frame for a beat; fitting a page into it is at best wasted ~30 passes and at
+    /// worst a degenerate fit that wedges the serial fit lane - after which every later page waits behind
+    /// it forever (the "spins forever after going back / tapping a search result" hang). The `.task(id:)`
+    /// on the spinner re-fires when the geometry becomes real, so refusing here loses nothing.
+    private static func isDegenerate(width: CGFloat, height: CGFloat) -> Bool {
+        width < 80 || height < 160
+    }
+
     static func renderAsync(page: MushafPage, width: CGFloat, height: CGFloat, onReady: @escaping () -> Void) {
+        guard !isDegenerate(width: width, height: height) else { return }
         let key = cacheKey(page: page, width: width, height: height, signature: settingsSignature)
         if cache.object(forKey: key) != nil { onReady(); return }
 
         if pendingRenders[key] != nil {
             pendingRenders[key]?.append(onReady)
+            // The claim may belong to a ring fit queued deep in the serial prewarm lane (or behind a
+            // wedged one). The user is LOOKING at this page: enqueue ONE must-run duplicate on the
+            // visible lane rather than waiting our turn. Safe: the completion path stores only if the
+            // cache is still empty and flushing waiters removes the key once - the loser's main-hop is
+            // a no-op. `upgradedClaims` bounds it to one duplicate per claim, not one per body pass.
+            if upgradedClaims.insert(key).inserted {
+                enqueueFit(page: page, width: width, height: height,
+                           key: key, config: MushafComposeConfig.current(), generation: nil)
+            }
             return
         }
         pendingRenders[key] = [onReady]

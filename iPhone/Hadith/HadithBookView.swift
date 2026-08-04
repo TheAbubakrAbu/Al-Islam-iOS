@@ -216,9 +216,18 @@ struct HadithBookView: View {
     @State private var didAutoOpen = false
     @State private var autoOpenTarget: HadithBookData.Chapter?
 
-    init(book: HadithCatalogBook, autoOpenHadithID: Int? = nil) {
+    /// iOS 16 stack mode's push channel: the tab root hands this in and appends a chapter ROUTE to its
+    /// `NavigationStack` path. Path state is the fix for the deep-link pop - a hidden
+    /// `NavigationLink(isActive:)` could be handed a spurious `false` whenever a store publish
+    /// re-rendered these screens mid-push, which unwound the freshly opened chapter no matter how the
+    /// publish was debounced or where the link was anchored. Nil on iOS 15 (hidden links remain) and in
+    /// column mode (chapters swap the detail column instead of pushing).
+    var onPushChapter: ((HadithBookData.Chapter, Int?) -> Void)? = nil
+
+    init(book: HadithCatalogBook, autoOpenHadithID: Int? = nil, onPushChapter: ((HadithBookData.Chapter, Int?) -> Void)? = nil) {
         self.book = book
         self.autoOpenHadithID = autoOpenHadithID
+        self.onPushChapter = onPushChapter
     }
 
     /// The open book. Every collection ships in the app, so this is a dictionary hit over an
@@ -366,6 +375,51 @@ struct HadithBookView: View {
         return (results, false)
     }
 
+    /// The two invisible `isActive` pushes this screen drives programmatically: the chapter a grid tile
+    /// taps, and the auto-open deep link (a hadith opened from the tab root lands on ITS chapter, scrolled
+    /// to it, so backing out shows the chapter list instead of skipping it).
+    ///
+    /// `isDetailLink(false)` is load-bearing, not decoration: NavigationView can feed a programmatic
+    /// link's `isActive` binding a spurious `false` while reconciling a re-render of the screen hosting
+    /// it - which nils the state and pops the pushed chapter right back here. That re-render reliably
+    /// arrived from the chapter recording Last Read (a publish these screens observe), so every deep-
+    /// linked open popped itself moments after the scroll landed, no matter where in this screen the
+    /// link was anchored.
+    @ViewBuilder
+    private var pushLinks: some View {
+        // iOS 15 only: on iOS 16+ chapter pushes go through `onPushChapter` into the tab root's
+        // NavigationStack path (stack mode) or swap the detail column (column mode) - these links
+        // must not exist there, or their bindings reintroduce the spurious-pop surface.
+        if #unavailable(iOS 16.0), let data {
+            ZStack {
+                NavigationLink(isActive: Binding(
+                    get: { pushedChapter != nil },
+                    set: { if !$0 { pushedChapter = nil } }
+                )) {
+                    if let pushedChapter {
+                        HadithChapterView(book: book, bookData: data, chapter: pushedChapter)
+                    }
+                } label: {
+                    EmptyView()
+                }
+                .isDetailLink(false)
+
+                NavigationLink(isActive: Binding(
+                    get: { autoOpenTarget != nil },
+                    set: { if !$0 { autoOpenTarget = nil } }
+                )) {
+                    if let autoOpenTarget, let autoOpenHadithID {
+                        HadithChapterView(book: book, bookData: data, chapter: autoOpenTarget, scrollToHadithId: autoOpenHadithID)
+                    }
+                } label: {
+                    EmptyView()
+                }
+                .isDetailLink(false)
+            }
+            .opacity(0)
+        }
+    }
+
     var body: some View {
         Group {
             if let data {
@@ -385,6 +439,11 @@ struct HadithBookView: View {
                 .padding()
             }
         }
+        // Both invisible push links live HERE, on the outer container, not on the chapters List.
+        // Hung off the List they were torn down whenever it re-diffed - and the chapter they pushed
+        // records Last Read through the store this screen observes, so opening a hadith from the tab
+        // root reliably popped itself back to the chapter list a beat after it scrolled.
+        .background(pushLinks)
         .navigationTitle(book.englishTitle)
         .navigationBarTitleDisplayMode(.inline)
         // The Quran reader's toolbar shape: the reading-mode toggle on the left, the gear on the
@@ -627,35 +686,12 @@ struct HadithBookView: View {
         // header carries the counts - a floating bar was pure repetition on this screen.
         // The grid/list flip animates, same as the catalog.
         .animation(.easeInOut, value: hadithGridMode)
-        // The invisible link the chapter grid tiles push through.
-        .background(
-            NavigationLink(isActive: Binding(
-                get: { pushedChapter != nil },
-                set: { if !$0 { pushedChapter = nil } }
-            )) {
-                if let pushedChapter {
-                    HadithChapterView(book: book, bookData: data, chapter: pushedChapter)
-                }
-            } label: {
-                EmptyView()
-            }
-            .opacity(0)
-        )
-        // And the auto-open link: a hadith opened from the tab root pushes ITS chapter (scrolled to the
-        // hadith) on top of this chapters screen - back lands here, never skipping the chapter list.
-        .background(
-            NavigationLink(isActive: Binding(
-                get: { autoOpenTarget != nil },
-                set: { if !$0 { autoOpenTarget = nil } }
-            )) {
-                if let autoOpenTarget, let autoOpenHadithID {
-                    HadithChapterView(book: book, bookData: data, chapter: autoOpenTarget, scrollToHadithId: autoOpenHadithID)
-                }
-            } label: {
-                EmptyView()
-            }
-            .opacity(0)
-        )
+        // NOTE: the two invisible push links (grid tile, auto-open) deliberately do NOT live here.
+        // Anchoring an `isActive` NavigationLink to this List means every re-diff of the List can tear
+        // it down and pop whatever it pushed - and the pushed chapter's own Last Read record publishes
+        // through the store THIS screen observes, which re-diffs the List (for a first read it inserts
+        // the whole LAST READ section). They hang off the outer container in `body` instead, where the
+        // List's content can't reach them. See `pushLinks`.
         .onAppear {
             // Build (or disk-load) this book's AI index shortly AFTER the book renders - ready by
             // the first search keystroke, but never competing with the open itself. No-ops when built.
@@ -684,7 +720,12 @@ struct HadithBookView: View {
                 return
             }
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
-                autoOpenTarget = chapter
+                if let onPushChapter {
+                    // iOS 16 stack: append the chapter to the tab root's path (immune to re-renders).
+                    onPushChapter(chapter, targetID)
+                } else {
+                    autoOpenTarget = chapter
+                }
             }
         }
         .onChange(of: searchText) { text in
@@ -788,7 +829,7 @@ struct HadithBookView: View {
                 Text(lastRead.englishPreview)
                     .font(.caption)
                     .foregroundColor(.secondary)
-                    .lineLimit(1)
+                    .reservedLineLimit(2)
             }
         }
         .padding(.vertical, 2)
@@ -1132,6 +1173,16 @@ struct HadithBookView: View {
                 // the range under the count pill.
                 HStack(alignment: .firstTextBaseline) {
                     if !chapter.arabic.isEmpty {
+                        // The chapter number in Arabic-Indic digits beside the Arabic name, matching
+                        // the grid tile - both scripts carry the number.
+                        Text(arabicNumberString(from: chapterOrdinal(chapter, data: data)))
+                            .font(settings.useFontArabic
+                                ? Font.arabic(settings.nonQuranArabicFontName, size: UIFont.preferredFont(forTextStyle: .caption1).pointSize + 2)
+                                : .caption.weight(.semibold))
+                            .arabicFontDesign(custom: settings.islamUsesCustomArabicFace)
+                            .foregroundColor(.secondary)
+                            .layoutPriority(1)
+
                         HighlightedSnippet(
                             source: chapter.arabic,
                             term: searchText,
@@ -1170,9 +1221,11 @@ struct HadithBookView: View {
         let isCurrent = usesColumnNavigation && columnSelection.currentChapterID == chapter.id
         return Button {
             settings.hapticFeedback()
-            // Column mode swaps the detail; otherwise the hidden link below the list does the push.
+            // Column mode swaps the detail; iOS 16 stack appends to the path; iOS 15 uses the hidden link.
             if usesColumnNavigation {
                 withAnimation(.easeInOut) { selectChapter(chapter, data: data) }
+            } else if let onPushChapter {
+                onPushChapter(chapter, nil)
             } else {
                 pushedChapter = chapter
             }
@@ -1180,6 +1233,16 @@ struct HadithBookView: View {
             VStack(alignment: .leading, spacing: 2) {
                 if !chapter.arabic.isEmpty {
                     HStack(spacing: 4) {
+                        // The surah grid tile's top-row grammar: the chapter number in Arabic-Indic
+                        // digits beside the Arabic name, so both scripts carry the number.
+                        Text(arabicNumberString(from: chapterOrdinal(chapter, data: data)))
+                            .font(settings.useFontArabic
+                                ? Font.arabic(settings.nonQuranArabicFontName, size: UIFont.preferredFont(forTextStyle: .subheadline).pointSize + 2)
+                                : .subheadline.weight(.semibold))
+                            .arabicFontDesign(custom: settings.islamUsesCustomArabicFace)
+                            .foregroundColor(settings.accentColor.color)
+                            .layoutPriority(1)
+
                         HighlightedSnippet(
                             source: chapter.arabic,
                             term: searchText,
@@ -1973,7 +2036,10 @@ struct HadithChapterView: View {
             Text("Chapter \(chapterIndex + 1) of \(bookData.chapters.count)")
                 .font(.caption2)
                 .lineLimit(1)
-                .padding(.top, -8)
+                // -2, NOT the surah pill's -8: that pull-up is tuned for the Quran faces' contained
+                // metrics, but hadith Arabic (full tashkeel, and the Basic face's tall line box) has
+                // real descenders here - at -8 they sat on top of this line with no gap at all.
+                .padding(.top, -2)
         }
         .frame(maxWidth: .infinity)
         .foregroundColor(.primary)
@@ -2699,6 +2765,32 @@ struct HadithPagedView: View {
         return map[hadith.idInBook]
     }
 
+    /// The page header's actions, shared verbatim by the ellipsis Menu and the long-press context menu.
+    @ViewBuilder
+    private func hadithHeaderActions(_ hadith: HadithBookData.Hadith, isBookmarked: Bool) -> some View {
+        Button {
+            settings.hapticFeedback()
+            withAnimation(.easeInOut) { HadithStore.shared.toggleBookmark(book: book, hadith: hadith) }
+        } label: {
+            Label(isBookmarked ? "Remove Bookmark" : "Bookmark Hadith",
+                  systemImage: isBookmarked ? "bookmark.fill" : "bookmark")
+        }
+
+        Button {
+            settings.hapticFeedback()
+            UIPasteboard.general.string = HadithShareSheet.composedText(book: book, hadith: hadith)
+        } label: {
+            Label("Copy Hadith", systemImage: "doc.on.doc")
+        }
+
+        Button {
+            settings.hapticFeedback()
+            presentSystemShareSheet(items: [HadithShareSheet.composedText(book: book, hadith: hadith)])
+        } label: {
+            Label("Share Hadith", systemImage: "square.and.arrow.up")
+        }
+    }
+
     private func pageBody(_ elements: [PageElement]) -> some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 12) {
@@ -2717,6 +2809,11 @@ struct HadithPagedView: View {
     private func blockView(_ element: PageElement) -> some View {
         switch element {
         case .hadithHeader(let hadith):
+            // The reading row's exact header grammar: tap the pill to toggle the bookmark (tinted +
+            // corner badge when set), and the same actions behind an always-ellipsis button - page
+            // mode used to offer only a long-press context menu, which read as "can't bookmark here".
+            let isBookmarked = HadithStore.shared.isBookmarked(slug: book.slug, idInBook: hadith.idInBook)
+
             HStack(spacing: 8) {
                 HStack(spacing: 5) {
                     if let chapterNumber = chapterHadithNumber(hadith) {
@@ -2740,35 +2837,42 @@ struct HadithPagedView: View {
                 .padding(.horizontal, 8)
                 .frame(height: 26)
                 .conditionalGlassEffect(
-                    useColor: HadithStore.shared.isBookmarked(slug: book.slug, idInBook: hadith.idInBook) ? 0.3 : nil,
-                    customTint: HadithStore.shared.isBookmarked(slug: book.slug, idInBook: hadith.idInBook) ? settings.accentColor.color : nil,
+                    useColor: isBookmarked ? 0.3 : nil,
+                    customTint: isBookmarked ? settings.accentColor.color : nil,
                     interactive: false
                 )
-
-                Spacer(minLength: 0)
-            }
-            .contextMenu {
-                Button {
+                .contentShape(Rectangle())
+                .onTapGesture {
                     settings.hapticFeedback()
                     withAnimation(.easeInOut) { HadithStore.shared.toggleBookmark(book: book, hadith: hadith) }
-                } label: {
-                    Label(HadithStore.shared.isBookmarked(slug: book.slug, idInBook: hadith.idInBook) ? "Remove Bookmark" : "Bookmark Hadith",
-                          systemImage: HadithStore.shared.isBookmarked(slug: book.slug, idInBook: hadith.idInBook) ? "bookmark.fill" : "bookmark")
+                }
+                .overlay(alignment: .topTrailing) {
+                    if isBookmarked {
+                        Image(systemName: "bookmark.fill")
+                            .font(.caption2)
+                            .foregroundStyle(settings.accentColor.color)
+                            .padding(4)
+                            .offset(x: 8, y: -6)
+                    }
                 }
 
-                Button {
-                    settings.hapticFeedback()
-                    UIPasteboard.general.string = HadithShareSheet.composedText(book: book, hadith: hadith)
-                } label: {
-                    Label("Copy Hadith", systemImage: "doc.on.doc")
-                }
+                Spacer(minLength: 0)
 
-                Button {
-                    settings.hapticFeedback()
-                    presentSystemShareSheet(items: [HadithShareSheet.composedText(book: book, hadith: hadith)])
+                Menu {
+                    hadithHeaderActions(hadith, isBookmarked: isBookmarked)
                 } label: {
-                    Label("Share Hadith", systemImage: "square.and.arrow.up")
+                    Image(systemName: "ellipsis.circle")
+                        .resizable()
+                        .aspectRatio(contentMode: .fit)
+                        .frame(width: 23, height: 23)
+                        .foregroundColor(settings.accentColor.color)
+                        .conditionalGlassEffect()
+                        .frame(width: 26, height: 26)
+                        .contentShape(Rectangle())
                 }
+            }
+            .contextMenu {
+                hadithHeaderActions(hadith, isBookmarked: isBookmarked)
             }
 
         case .arabic(let hadith):

@@ -14,6 +14,11 @@ struct HighlightedSnippet: View {
     var trailingSuffixFont: Font? = nil
     var trailingSuffixColor: Color? = nil
     var lineLimit: Int? = nil
+    /// With `lineLimit`, also RESERVE the clamped height (iOS 16+/watchOS 9+; plain clamp below): a
+    /// one-line snippet occupies the same box as a full one, so preview cards line up. NOTE: an outer
+    /// `.lineLimit` can never do this job - the unconditional `.lineLimit(lineLimit)` below sets the
+    /// innermost value (nil = unlimited), which silently overrides whatever a caller wraps around this.
+    var reservesSpace: Bool = false
     var highlightAllahNames: Bool = false
     /// When `true`, this field is guaranteed to show at least one highlight: if no confident match is found
     /// the fuzzy last-resorts (Arabic partial-prefix, closest/longest word) kick in so the user always sees
@@ -76,13 +81,19 @@ struct HighlightedSnippet: View {
                 )
             )
 
-            Text("\(Text(highlightedText))\(suffixText)")
-                .font(font)
-                .lineLimit(lineLimit)
+            limited(Text("\(Text(highlightedText))\(suffixText)"))
         } else {
-            Text("\(Text(source).foregroundColor(fg))\(suffixText)")
-                .font(font)
-                .lineLimit(lineLimit)
+            limited(Text("\(Text(source).foregroundColor(fg))\(suffixText)"))
+        }
+    }
+
+    /// The one place the line clamp lands, so `reservesSpace` and the plain clamp can't drift apart.
+    @ViewBuilder
+    private func limited(_ text: Text) -> some View {
+        if reservesSpace, let lineLimit, #available(iOS 16.0, watchOS 9.0, *) {
+            text.font(font).lineLimit(lineLimit, reservesSpace: true)
+        } else {
+            text.font(font).lineLimit(lineLimit)
         }
     }
 
