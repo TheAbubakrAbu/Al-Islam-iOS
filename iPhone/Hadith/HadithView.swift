@@ -117,15 +117,18 @@ struct HadithView: View {
     @ObservedObject private var semanticEngine = SemanticSearchEngine.shared
     @State private var globalAIResults: [GlobalHadithHit] = []
 
-    // Ask (the on-device LLM, grounded RAG) - the Quran search's Ask, for hadiths: auto-runs for
-    // question-shaped queries, one tap for everything else, always drawn only from the retrieved
-    // hadiths and cited. Exists only on Apple Intelligence devices (`OnDeviceAsk.isAvailable`).
+    // Ask (the on-device LLM) - the Quran search's Ask, for hadiths: auto-runs for question-shaped
+    // queries, one tap for everything else - grounded in the retrieved hadiths and cited when
+    // retrieval found any, an open general-knowledge answer (clearly labeled, quote-free) when it
+    // found none. Exists only on Apple Intelligence devices (`OnDeviceAsk.isAvailable`).
     @State private var hadithAskAnswer = ""
     @State private var hadithAskIsStreaming = false
     @State private var hadithAskRanForQuery = ""
-    /// A MANUAL ask that found nothing to ground on or errored - the tapped row must answer with
+    /// A MANUAL ask where the model declined or errored - the tapped row must answer with
     /// SOMETHING instead of silently restoring the prompt (the Quran search's `askNoAnswer`).
     @State private var hadithAskNoAnswer = false
+    /// Whether the current answer was grounded in retrieved hadiths (drives the card's footer).
+    @State private var hadithAskGrounded = true
     /// The AI-vs-keyword segmented switch, shown only when BOTH result kinds exist (the Quran search's
     /// `showKeywordResults`). Reset to the AI list on every new query.
     @State private var showHadithKeywordResults = false
@@ -256,28 +259,24 @@ struct HadithView: View {
             var sources: [OnDeviceAsk.Source] = []
             var sourceHits: [GlobalHadithHit] = []
             var seen = Set<String>()
-            for hit in globalAIResults.prefix(5) {
-                let reference = "\(hit.book.englishTitle) \(hit.hadith.idInBook)"
+            for hit in globalAIResults.prefix(6) {
+                let reference = "\(hit.book.englishTitle) \(hit.hadith.displayNumber)"
                 if seen.insert(reference).inserted, !hit.hadith.english.text.isEmpty {
                     sources.append(.init(reference: reference, text: hit.hadith.english.text))
                     sourceHits.append(hit)
                 }
             }
-            for hit in globalHadithResults.prefix(5) {
-                let reference = "\(hit.book.englishTitle) \(hit.hadith.idInBook)"
+            for hit in globalHadithResults.prefix(6) {
+                let reference = "\(hit.book.englishTitle) \(hit.hadith.displayNumber)"
                 if seen.insert(reference).inserted, !hit.hadith.english.text.isEmpty {
                     sources.append(.init(reference: reference, text: hit.hadith.english.text))
                     sourceHits.append(hit)
                 }
             }
-            guard !sources.isEmpty else {
-                hadithAskAnswer = ""; hadithAskIsStreaming = false; hadithAskRanForQuery = ""; hadithAskSourceHits = []
-                // A tapped ask MUST respond: with nothing retrieved to ground on, say so instead of
-                // silently restoring the prompt row (which read as "the button does nothing").
-                if manual { hadithAskNoAnswer = true }
-                return
-            }
+            // Nothing retrieved is no longer a dead end: the ask still runs, in OPEN mode - a clearly
+            // labeled general-knowledge answer with no recreated quotes (the engine's open rules).
 
+            hadithAskGrounded = !sources.isEmpty
             hadithAskAnswer = ""
             hadithAskIsStreaming = true
             hadithAskRanForQuery = trimmed
@@ -309,7 +308,7 @@ struct HadithView: View {
         let answer = hadithAskAnswer.lowercased()
         var cited: [(position: Int, hit: GlobalHadithHit)] = []
         for hit in hadithAskSourceHits {
-            let reference = "\(hit.book.englishTitle) \(hit.hadith.idInBook)".lowercased()
+            let reference = "\(hit.book.englishTitle) \(hit.hadith.displayNumber)".lowercased()
             guard let range = answer.range(of: reference) else { continue }
             if range.upperBound < answer.endIndex, answer[range.upperBound].isNumber { continue }
             cited.append((answer.distance(from: answer.startIndex, to: range.lowerBound), hit))
@@ -342,10 +341,24 @@ struct HadithView: View {
                 Self.cleanedQueryCache = (query, cleaned)
                 return cleaned
             }()
-        return settings.cleanSearch(book.arabicTitle, whitespace: true).localizedCaseInsensitiveContains(cleanedQuery)
+        if settings.cleanSearch(book.arabicTitle, whitespace: true).localizedCaseInsensitiveContains(cleanedQuery) {
+            return true
+        }
+        // The reference parser's name resolution as a last resort, so a misspelled book name
+        // ("Tirmidi", "Bokhari") still surfaces its book - same aliases, prefixes, and
+        // one-edit tolerance the "tirmidi 2950" reference path uses. Resolved once per query.
+        let resolvedSlug = Self.resolvedBookCache.query == query
+            ? Self.resolvedBookCache.slug
+            : {
+                let slug = HadithReferenceParser.book(named: query)?.slug
+                Self.resolvedBookCache = (query, slug)
+                return slug
+            }()
+        return resolvedSlug == book.slug
     }
 
     private static var cleanedQueryCache: (query: String, cleaned: String) = ("", "")
+    private static var resolvedBookCache: (query: String, slug: String?) = ("", nil)
 
     private func filteredBooks(in group: HadithCatalogBook.Group) -> [HadithCatalogBook] {
         HadithCatalogBook.books(in: group).filter(matches)
@@ -359,14 +372,15 @@ struct HadithView: View {
         HadithReferenceParser.parse(searchText)
     }
 
-    /// A bare-number query ("10") - drives the reference-number sweep (chapter N + hadith N across every
-    /// book). Distinct from `referenceResult` ("bukhari 10"), which names a book and resolves one
-    /// exact hadith. Capped at 5 digits to match the reference parser's number bound.
-    private var numberQuery: Int? {
-        let trimmed = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard (1...5).contains(trimmed.count), let n = Int(trimmed), n > 0 else { return nil }
-        return n
+    /// A bare-citation query ("10", or "8a" with sunnah.com's variant letter) - drives the
+    /// reference-number sweep (chapter N + hadith cited N across every book). Distinct from
+    /// `referenceResult` ("bukhari 10"), which names a book and resolves one exact hadith.
+    private var citationQuery: (base: Int, suffix: String?)? {
+        HadithBookData.citationNumber(inQuery: searchText)
     }
+
+    /// The base number of `citationQuery` - what the section headers and staleness guards key on.
+    private var numberQuery: Int? { citationQuery?.base }
 
     private var gridColumns: [GridItem] {
         [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)]
@@ -783,6 +797,25 @@ struct HadithView: View {
             }
             .onAppear {
                 store.loadLastRead()
+                #if DEBUG
+                // Headless visual verification (no tap access on the dev machine): land directly on a
+                // given hadith, e.g. `-launchHadithOpen muslim:6846`. DEBUG builds only.
+                if #available(iOS 16.0, *), bookPath.isEmpty,
+                   let flagIndex = ProcessInfo.processInfo.arguments.firstIndex(of: "-launchHadithOpen"),
+                   ProcessInfo.processInfo.arguments.indices.contains(flagIndex + 1) {
+                    let parts = ProcessInfo.processInfo.arguments[flagIndex + 1].split(separator: ":")
+                    if parts.count == 2, let id = Int(parts[1]) {
+                        bookPath = [.book(slug: String(parts[0]), autoOpenHadithID: id)]
+                    }
+                }
+                // Same rule for the settings sheet: `-launchHadithSettings` presents it directly,
+                // and `-launchHadithSettingsReading` lands on its Reading View subpage.
+                if ProcessInfo.processInfo.arguments.contains(where: {
+                    $0 == "-launchHadithSettings" || $0 == "-launchHadithSettingsReading"
+                }) {
+                    showHadithSettings = true
+                }
+                #endif
             }
             .task {
                 // Usually a no-op: the pick was resolved at app launch. This just covers day rollover
@@ -813,10 +846,10 @@ struct HadithView: View {
                 globalNumberHadiths = []
                 numberSearchRanFor = nil
                 let query = text.trimmingCharacters(in: .whitespacesAndNewlines)
-                if let number = numberQuery {
+                if let citation = citationQuery {
                     // A bare number: only the numbered chapter/hadith sweep - the text sweep, AI, and Ask
                     // are all meaningless for "10".
-                    runGlobalNumberSearch(number)
+                    runGlobalNumberSearch(citation.base, suffix: citation.suffix)
                 } else {
                     if query.count >= 3, HadithReferenceParser.parse(text) == nil {
                         runGlobalSearch(query: query)
@@ -968,7 +1001,7 @@ struct HadithView: View {
                     summaryTile(
                         title: "Hadith of the Day",
                         icon: "sparkles",
-                        reference: "\(dailyHadith.book.englishTitle) \(dailyHadith.hadith.idInBook)",
+                        reference: "\(dailyHadith.book.englishTitle) \(dailyHadith.hadith.displayNumber)",
                         arabic: String(dailyHadith.hadith.arabic.prefix(120)),
                         english: String(dailyHadith.hadith.english.text.prefix(140))
                     ) {
@@ -1167,27 +1200,61 @@ struct HadithView: View {
 
     private func referenceSection(_ reference: HadithReferenceParser.Reference) -> some View {
         Section(header: Text("GO TO REFERENCE")) {
-            NavigationLink {
-                HadithReferenceView(book: reference.book, chapter: reference.chapter, hadith: reference.hadith)
-            } label: {
-                HStack(spacing: 10) {
-                    Image(systemName: "number")
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(settings.accentColor.color)
-
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(reference.chapter.map { "\(reference.book.englishTitle) - Chapter \($0), Hadith \(reference.hadith)" }
-                             ?? "\(reference.book.englishTitle) - Hadith \(reference.hadith)")
-                            .font(.subheadline.weight(.semibold))
-
-                        Text(reference.book.arabicTitle)
-                            .font(.caption)
-                            .foregroundColor(settings.accentColor.color)
+            // The reference names ONE hadith - show that hadith in full, exactly like a keyword
+            // match, instead of a bare "go to" stub. Resolution mirrors HadithReferenceView; the
+            // pack is mapped, not read, so the body-path open is cheap. No `searchText` on the row:
+            // the number is the row's identity, not a text match (the BY NUMBER sections' rule).
+            if let data = HadithStore.shared.book(reference.book),
+               let resolved = resolvedReferenceHadith(reference, data: data) {
+                NavigationLink {
+                    // Land in the chapter, scrolled to the hadith - the keyword matches' arrival.
+                    if let chapter = data.chapters.first(where: { $0.id == resolved.chapterId }) {
+                        HadithChapterView(book: reference.book, bookData: data, chapter: chapter, scrollToHadithId: resolved.idInBook)
+                    } else {
+                        HadithReferenceView(book: reference.book, chapter: reference.chapter, hadith: reference.hadith, suffix: reference.suffix)
                     }
+                } label: {
+                    HadithRow(book: reference.book, hadith: resolved, compact: true).equatable()
                 }
-                .padding(.vertical, 2)
+            } else {
+                // Unresolvable number: keep the plain jump row - HadithReferenceView explains.
+                NavigationLink {
+                    HadithReferenceView(book: reference.book, chapter: reference.chapter, hadith: reference.hadith, suffix: reference.suffix)
+                } label: {
+                    HStack(spacing: 10) {
+                        Image(systemName: "number")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(settings.accentColor.color)
+
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(reference.chapter.map { "\(reference.book.englishTitle) - Chapter \($0), Hadith \(reference.hadith)" }
+                                 ?? "\(reference.book.englishTitle) - Hadith \(reference.hadith)\(reference.suffix ?? "")")
+                                .font(.subheadline.weight(.semibold))
+
+                            Text(reference.book.arabicTitle)
+                                .font(.caption)
+                                .foregroundColor(settings.accentColor.color)
+                        }
+                    }
+                    .padding(.vertical, 2)
+                }
             }
         }
+    }
+
+    /// "book N" resolves the hadith CITED N (standard sunnah.com numbering, falling back to the
+    /// internal row number); "book C:N" the Nth hadith of chapter C - the exact rule
+    /// `HadithReferenceView.resolved` applies, lifted here so the search list can show the full
+    /// hadith row for a reference query.
+    private func resolvedReferenceHadith(_ reference: HadithReferenceParser.Reference, data: HadithBookData) -> HadithBookData.Hadith? {
+        if let chapter = reference.chapter {
+            guard data.chapters.indices.contains(chapter - 1) else { return nil }
+            let inChapter = data.hadiths(in: data.chapters[chapter - 1])
+            let offset = inChapter.startIndex + (reference.hadith - 1)
+            guard reference.hadith >= 1, offset < inChapter.endIndex else { return nil }
+            return inChapter[offset]
+        }
+        return data.hadith(referenced: reference.hadith, suffix: reference.suffix)
     }
 
     // MARK: All-books search
@@ -1197,7 +1264,9 @@ struct HadithView: View {
     /// sweep is suppressed for a number query - the numbered chapter/hadith is what "10" means.
     @ViewBuilder
     private var globalNumberSection: some View {
-        if let number = numberQuery {
+        if let citation = citationQuery {
+            let number = citation.base
+            let citedLabel = "\(number)\(citation.suffix ?? "")"
             // Chapters numbered N - one flat section (each `globalChapterRow` names its own book).
             if !globalNumberChapters.isEmpty {
                 Section(header: SectionPillHeader(title: "CHAPTER \(number)", count: globalNumberChapters.count, icon: "book.closed")) {
@@ -1211,16 +1280,16 @@ struct HadithView: View {
                 }
             }
 
-            // Hadiths numbered N - one flat section; each compact `HadithRow` shows its own "10 <book>"
+            // Hadiths cited N - one flat section; each compact `HadithRow` shows its own "10 <book>"
             // citation, so no per-book grouping is needed.
             if !globalNumberHadiths.isEmpty {
-                Section(header: SectionPillHeader(title: "HADITH \(number)", count: globalNumberHadiths.count, icon: "number")) {
+                Section(header: SectionPillHeader(title: "HADITH \(citedLabel)", count: globalNumberHadiths.count, icon: "number")) {
                     ForEach(globalNumberHadiths) { hit in
                         NavigationLink {
                             if let chapter = hit.data.chapters.first(where: { $0.id == hit.hadith.chapterId }) {
                                 HadithChapterView(book: hit.book, bookData: hit.data, chapter: chapter, scrollToHadithId: hit.hadith.idInBook)
                             } else {
-                                HadithReferenceView(book: hit.book, chapter: nil, hadith: hit.hadith.idInBook)
+                                HadithReferenceView(book: hit.book, resolved: hit.hadith)
                             }
                         } label: {
                             HadithRow(book: hit.book, hadith: hit.hadith, searchText: searchText, compact: true).equatable()
@@ -1243,7 +1312,7 @@ struct HadithView: View {
             if !isNumberSearching, numberSearchRanFor == number,
                globalNumberChapters.isEmpty, globalNumberHadiths.isEmpty {
                 Section(footer: Text("Searches every collection in the app.")) {
-                    Text("No chapter or hadith is numbered \(number) in any collection.")
+                    Text("No chapter or hadith is numbered \(citedLabel) in any collection.")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 }
@@ -1257,9 +1326,7 @@ struct HadithView: View {
         if query.count >= 3, referenceResult == nil, numberQuery == nil {
             // Ask AI first - the streamed grounded answer WITH its cited hadiths (real tappable rows);
             // the citations are the answer's receipts, so they live in the same section - the Quran
-            // search's exact grammar. The one-tap prompt row shows only once there are results to
-            // ground an answer on: while the sweep is still running a tap had nothing to retrieve
-            // against and silently did nothing.
+            // search's exact grammar.
             if OnDeviceAsk.isAvailable {
                 if hadithAskNoAnswer {
                     Section(header: hadithAskAIHeader(citedCount: 0)) {
@@ -1268,21 +1335,23 @@ struct HadithView: View {
                 } else if !hadithAskRanForQuery.isEmpty {
                     let cited = hadithAskCitedResults
                     Section(header: hadithAskAIHeader(citedCount: cited.count)) {
-                        AskAnswerCard(answer: hadithAskAnswer, isStreaming: hadithAskIsStreaming)
+                        AskAnswerCard(answer: hadithAskAnswer, isStreaming: hadithAskIsStreaming, grounded: hadithAskGrounded)
 
                         ForEach(cited) { hit in
                             NavigationLink {
                                 if let chapter = hit.data.chapters.first(where: { $0.id == hit.hadith.chapterId }) {
                                     HadithChapterView(book: hit.book, bookData: hit.data, chapter: chapter, scrollToHadithId: hit.hadith.idInBook)
                                 } else {
-                                    HadithReferenceView(book: hit.book, chapter: nil, hadith: hit.hadith.idInBook)
+                                    HadithReferenceView(book: hit.book, resolved: hit.hadith)
                                 }
                             } label: {
                                 HadithRow(book: hit.book, hadith: hit.hadith, searchText: searchText, compact: true).equatable()
                             }
                         }
                     }
-                } else if !globalAIResults.isEmpty || !globalHadithResults.isEmpty || !globalChapterResults.isEmpty {
+                } else {
+                    // ALWAYS present while searching, results or none - the ask is an invitation,
+                    // not a result; with nothing retrieved it answers in the engine's open mode.
                     Section(header: hadithAskAIHeader(citedCount: 0)) {
                         hadithAskPromptRow
                     }
@@ -1313,16 +1382,26 @@ struct HadithView: View {
             let keywordVisible = !showResultsPicker || showHadithKeywordResults
 
             if !globalAIResults.isEmpty, !showResultsPicker || !showHadithKeywordResults {
+                // The keyword matches' grammar for the semantic list too: the sparkles TOTAL pill up
+                // top, then one section per book with its own count - AI matches from different books
+                // never read as one undifferentiated list.
                 Section(header: SectionPillHeader(title: "AI MATCHES", count: globalAIResults.count, icon: "sparkles", accentTitle: true)) {
-                    ForEach(globalAIResults) { hit in
-                        NavigationLink {
-                            if let chapter = hit.data.chapters.first(where: { $0.id == hit.hadith.chapterId }) {
-                                HadithChapterView(book: hit.book, bookData: hit.data, chapter: chapter, scrollToHadithId: hit.hadith.idInBook)
-                            } else {
-                                HadithReferenceView(book: hit.book, chapter: nil, hadith: hit.hadith.idInBook)
+                    EmptyView()
+                }
+                .padding(.bottom, -12)
+
+                ForEach(globalAIResultsGroupedByBook, id: \.book.slug) { group in
+                    Section(header: bookSearchSectionHeader(book: group.book, matchCount: group.hits.count)) {
+                        ForEach(group.hits) { hit in
+                            NavigationLink {
+                                if let chapter = hit.data.chapters.first(where: { $0.id == hit.hadith.chapterId }) {
+                                    HadithChapterView(book: hit.book, bookData: hit.data, chapter: chapter, scrollToHadithId: hit.hadith.idInBook)
+                                } else {
+                                    HadithReferenceView(book: hit.book, resolved: hit.hadith)
+                                }
+                            } label: {
+                                HadithRow(book: hit.book, hadith: hit.hadith, searchText: searchText, compact: true).equatable()
                             }
-                        } label: {
-                            HadithRow(book: hit.book, hadith: hit.hadith, searchText: searchText, compact: true).equatable()
                         }
                     }
                 }
@@ -1375,7 +1454,7 @@ struct HadithView: View {
                                 if let chapter = hit.data.chapters.first(where: { $0.id == hit.hadith.chapterId }) {
                                     HadithChapterView(book: hit.book, bookData: hit.data, chapter: chapter, scrollToHadithId: hit.hadith.idInBook)
                                 } else {
-                                    HadithReferenceView(book: hit.book, chapter: nil, hadith: hit.hadith.idInBook)
+                                    HadithReferenceView(book: hit.book, resolved: hit.hadith)
                                 }
                             } label: {
                                 HadithRow(book: hit.book, hadith: hit.hadith, searchText: searchText, compact: true).equatable()
@@ -1436,7 +1515,7 @@ struct HadithView: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
-            Text("AI couldn't find anything matching \u{201C}\(searchText.trimmingCharacters(in: .whitespacesAndNewlines))\u{201D}. Try different wording.")
+            Text("AI couldn't answer \u{201C}\(searchText.trimmingCharacters(in: .whitespacesAndNewlines))\u{201D} right now. Try different wording, or try again.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
@@ -1460,8 +1539,6 @@ struct HadithView: View {
 
                 Text("Ask AI about \u{201C}\(searchText.trimmingCharacters(in: .whitespacesAndNewlines))\u{201D}")
                     .font(.caption.weight(.semibold))
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.7)
 
                 Spacer()
 
@@ -1484,6 +1561,21 @@ struct HadithView: View {
         var order: [String] = []
         var byBook: [String: [GlobalHadithHit]] = [:]
         for hit in globalHadithResults {
+            if byBook[hit.book.slug] == nil { order.append(hit.book.slug) }
+            byBook[hit.book.slug, default: []].append(hit)
+        }
+        return order.compactMap { slug in
+            guard let hits = byBook[slug], let book = hits.first?.book else { return nil }
+            return (book, hits)
+        }
+    }
+
+    /// The AI matches bucketed per book, in first-appearance (relevance) order - the keyword results'
+    /// `globalHadithResultsGroupedByBook`, for the semantic list.
+    private var globalAIResultsGroupedByBook: [(book: HadithCatalogBook, hits: [GlobalHadithHit])] {
+        var order: [String] = []
+        var byBook: [String: [GlobalHadithHit]] = [:]
+        for hit in globalAIResults {
             if byBook[hit.book.slug] == nil { order.append(hit.book.slug) }
             byBook[hit.book.slug, default: []].append(hit)
         }
@@ -1550,10 +1642,11 @@ struct HadithView: View {
         .padding(.vertical, 2)
     }
 
-    /// The bare-number sweep: gather the chapter numbered N and the hadith numbered N (idInBook) from
-    /// every book. Each is at most one per book, so the filter is trivial, and the books are all open
+    /// The bare-number sweep: gather the chapter numbered N and every hadith CITED N (standard
+    /// sunnah.com numbering - "8" surfaces Sahih Muslim's 8a...8e) from every book, falling back to
+    /// the internal row number for the books that carry no citations. The books are all open
     /// already (mirrors `runGlobalSearch`'s staleness-guarded apply).
-    private func runGlobalNumberSearch(_ number: Int) {
+    private func runGlobalNumberSearch(_ number: Int, suffix: String?) {
         globalNumberTask?.cancel()
         isNumberSearching = true
 
@@ -1568,11 +1661,20 @@ struct HadithView: View {
             for book in HadithCatalogBook.all {
                 if Task.isCancelled { return }
                 guard let data = HadithStore.shared.book(book) else { continue }
-                // Chapter.id IS the chapter number; Hadith.idInBook IS the "Bukhari 10" reference number.
-                if let chapter = data.chapters.first(where: { $0.id == number }) {
+                // Chapter.id IS the chapter number - but "8a" can only mean a citation, never a chapter.
+                if suffix == nil, let chapter = data.chapters.first(where: { $0.id == number }) {
                     chapterHits.append(GlobalChapterHit(book: book, data: data, chapter: chapter))
                 }
-                if let hadith = data.hadiths.first(where: { $0.idInBook == number }) {
+                // Citation-first: all the variants a base owns; a typed suffix narrows to that one.
+                var cited = data.hadiths(citing: number)
+                if let suffix {
+                    cited = cited.filter { $0.citation == "\(number)\(suffix)" }
+                } else if cited.isEmpty, let fallback = data.hadith(numbered: number) {
+                    // No citations under this number (Muwatta Malik, most of Bulugh): the internal
+                    // row number is what these books show, exactly as before.
+                    cited = [fallback]
+                }
+                for hadith in cited {
                     hadithHits.append(GlobalHadithHit(book: book, data: data, hadith: hadith))
                 }
             }
@@ -1581,8 +1683,8 @@ struct HadithView: View {
             let finalChapters = chapterHits
             let finalHadiths = hadithHits
             await MainActor.run {
-                // Still the same number on screen? (Plain apply - the search-race crash rule.)
-                guard numberQuery == number else { return }
+                // Still the same citation on screen? (Plain apply - the search-race crash rule.)
+                guard citationQuery?.base == number, citationQuery?.suffix == suffix else { return }
                 globalNumberChapters = finalChapters
                 globalNumberHadiths = finalHadiths
                 numberSearchRanFor = number

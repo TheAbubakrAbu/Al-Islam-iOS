@@ -266,6 +266,56 @@ struct HighlightedSnippet: View {
         }
     }
 
+    /// The fold the highlighter itself matches against, served from (and filling) the same
+    /// content-keyed cache `highlight()` uses - so a "does this field contain the query?" check made
+    /// with it always agrees with the ranges the snippet will actually color.
+    nonisolated static func cachedNormalizedSource(for source: String) -> String {
+        guard !source.isEmpty else { return "" }
+        let key = source as NSString
+        if let cached = sourceNormCache.object(forKey: key) { return cached.normalizedSource }
+        let built = normalizedSourceAndMap(for: source)
+        sourceNormCache.setObject(SourceNormEntry(built.normalized, built.mapUTF16), forKey: key)
+        return built.normalized
+    }
+
+    /// Whether the ladder's confident rungs would color this folded source for this folded term: an
+    /// exact substring, or the phrase-prefix rule (leading words equal, last word a prefix). The
+    /// per-field match test the hadith rows use to decide which field carries the term - the ayah
+    /// rows' `sourceMatchesQuery`, shared. A `false` on every field means the row should force one
+    /// field with `guaranteeMatch` so the user still sees at least one highlight.
+    nonisolated static func foldedSourceMatches(_ normalizedSource: String, normalizedTerm: String) -> Bool {
+        guard !normalizedSource.isEmpty, !normalizedTerm.isEmpty else { return false }
+        if normalizedSource.contains(normalizedTerm) { return true }
+
+        let queryTokens = normalizedTerm
+            .split(separator: " ")
+            .map(String.init)
+            .filter { !$0.isEmpty }
+        guard !queryTokens.isEmpty else { return false }
+
+        let sourceTokens = normalizedTokenRanges(in: normalizedSource)
+        guard sourceTokens.count >= queryTokens.count else { return false }
+
+        for start in 0...(sourceTokens.count - queryTokens.count) {
+            var matched = true
+            for offset in queryTokens.indices {
+                let sourceToken = String(normalizedSource[sourceTokens[start + offset]])
+                let queryToken = queryTokens[offset]
+                if offset == queryTokens.count - 1 {
+                    if !sourceToken.hasPrefix(queryToken) {
+                        matched = false
+                        break
+                    }
+                } else if sourceToken != queryToken {
+                    matched = false
+                    break
+                }
+            }
+            if matched { return true }
+        }
+        return false
+    }
+
     private func normalizeForSearch(_ text: String, trimWhitespace: Bool) -> String {
         Self.normalizeForSearchText(text, trimWhitespace: trimWhitespace)
     }

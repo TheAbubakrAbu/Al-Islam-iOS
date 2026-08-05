@@ -117,6 +117,28 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
         loadKhatmProgressCacheFromStorage()
         Self.locationManager.delegate = self
 
+        #if DEBUG
+        // Headless riwayah forcing for simulator verification: `-displayQiraah <tag>` seeds the
+        // riwayah + beta unlock BEFORE anything derives from them. Raw UserDefaults writes on
+        // purpose - property didSets must not fire during init, and `simctl spawn defaults write`
+        // races cfprefsd on freshly-installed containers.
+        if let idx = ProcessInfo.processInfo.arguments.firstIndex(of: "-displayQiraah"),
+           ProcessInfo.processInfo.arguments.indices.contains(idx + 1) {
+            UserDefaults.standard.set(true, forKey: "betaQiraatEnabled")
+            UserDefaults.standard.set(true, forKey: "acceptedBetaQiraatNotice")
+            UserDefaults.standard.set(true, forKey: "showOtherQiraatReciters")
+            UserDefaults.standard.set(ProcessInfo.processInfo.arguments[idx + 1], forKey: "displayQiraah")
+        }
+        if ProcessInfo.processInfo.arguments.contains("-quranPageMode") {
+            UserDefaults.standard.set(true, forKey: "quranPageMode")
+            UserDefaults.standard.set(112, forKey: "lastReadSurah")
+            UserDefaults.standard.set(1, forKey: "lastReadAyah")
+        }
+        if ProcessInfo.processInfo.arguments.contains("-qiraatComparisonMode") {
+            UserDefaults.standard.set(true, forKey: "qiraatComparisonMode")
+        }
+        #endif
+
         runQuranStartupMigrations()
         runAdhanSoundStartupMigrations()
         runWatchSyncKeyMigration()
@@ -1204,6 +1226,10 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     /// When on, SurahView shows a qiraat picker above the search bar to compare riwayat in that view.
     @AppStorage("qiraatComparisonMode") var qiraatComparisonMode: Bool = false
 
+    /// When on, reading a non-Hafs riwayah tints every word that differs from Hafs an Asim (the
+    /// default text) - `QiraahComparison.diffAttributed` feeds the reader rows' pre-styled Arabic.
+    @AppStorage("highlightQiraahDifferences") var highlightQiraahDifferences: Bool = false
+
     /// When on, ReciterListView reveals non-Hafs qiraat reciters.
     @AppStorage("showOtherQiraatReciters") var showOtherQiraatReciters: Bool = false
 
@@ -1245,7 +1271,7 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
         set { showOtherQiraatReciters = newValue }
     }
 
-    /// Pass to Ayah.displayArabic(qiraah:clean:). Nil means Hafs.
+    /// Pass to Ayah.displayArabicText(surahId:clean:qiraahOverride:). Nil means Hafs.
     var displayQiraahForArabic: String? {
         let normalized = Self.normalizeLegacyRiwayahTag(displayQiraah)
         return normalized.isEmpty ? nil : normalized
@@ -1365,6 +1391,8 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     @AppStorage("highlightAllahNamesHadith") var highlightAllahNamesHadith: Bool = false
     /// Show the narrator ("It is narrated on the authority of...") line above the English text.
     @AppStorage("showHadithNarrator") var showHadithNarrator = true
+    /// Show scholar gradings ("Grade: Da'if (Darussalam)") under each hadith, where the data carries
+    /// them. Bukhari and Muslim carry none by design.
     /// Hadith text sizes, independent of the Quran's own sliders.
     @AppStorage("hadithArabicFontSize") var hadithArabicFontSize: Double = Double(UIFont.preferredFont(forTextStyle: .body).pointSize + 4)
     @AppStorage("hadithEnglishFontSize") var hadithEnglishFontSize: Double = Double(UIFont.preferredFont(forTextStyle: .body).pointSize)
@@ -1473,6 +1501,12 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     /// the marks can be practised from the Arabic alone rather than read off the transliteration.
     @AppStorage("hideEnglishInArabicLetters") var hideEnglishInArabicLetters: Bool = false
 
+    /// Writes the WITH HAMZA practice syllables with the Uthmani sukoon (U+06E1) instead of the plain
+    /// one (U+0652), so learners can practise the exact mark shape the mushaf prints. Persisted (unlike
+    /// the Tashkeel screen's ephemeral picker): letter screens are opened one at a time, and re-flipping
+    /// the script on every letter would get old fast.
+    @AppStorage("quranicSukoonInLetterPractice") var quranicSukoonInLetterPractice: Bool = false
+
     /// Starts at `.xSmall`, not `.large`: a floor is a *minimum*, so anchoring it at `.large` silently forced
     /// the alphabet up to the default text size for anyone whose system Dynamic Type is set smaller. The
     /// lowest slider position must mean "whatever the device is set to", which only `.xSmall` guarantees.
@@ -1575,8 +1609,14 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
         return cleaned
     }
 
+    /// The silent-letter search lane: the mushaf-sukoon fold (drops letters the recitation skips,
+    /// e.g. the alif of ءَامَنُوا۟) followed by the alif-wiqaya trim. The trim runs on BOTH this
+    /// corpus lane and the query, so spellings with the silent alif, without it, or MIXING both
+    /// (ءامنو وعملوا) converge to the same bytes - the raw sukoon fold alone was all-or-nothing per
+    /// blob, which is why partially-truncated queries used to miss.
     func cleanSearchIgnoringSilentArabicLetters(_ text: String, whitespace: Bool = false) -> String {
         cleanSearch(text.removingSilentArabicLettersForSearch, whitespace: whitespace)
+            .removingAlifWiqayaForSearch
     }
 
     /// Scalar form of `canonicalArabicSearchMap`, built once: `key scalar → replacement scalar`, or `nil`
@@ -1619,9 +1659,15 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
         "ۥ": "و",
         // Ya variants
         "ۦ": "ي",
+        "\u{06E7}": "ي", // small high yeh (إِبۡرَٰهِـۧمَ) -> plain yaa, the dagger-alif treatment
         "ى": "ا", // alif maqsurah -> alif (matches both ى and ا forms in search)
         // Teh marbuta equivalence (broad)
-        "ة": "ه"
+        "ة": "ه",
+        // Tatweel: a stretching stroke, and in the mushaf a CARRIER for floating marks (the ـۧ of
+        // إِبۡرَٰهِـۧمَ, the ـٔ of يَٰٓـَٔادَمُ). The mark folds above; the carrier must not survive it,
+        // or the folded word keeps a phantom letter no typed query contains ("ابراهـم"). Search
+        // fold only - the display folds keep their carriers, so rendering is untouched.
+        "\u{0640}": ""
     ]
 
     private static let unwantedCharSet: CharacterSet = {

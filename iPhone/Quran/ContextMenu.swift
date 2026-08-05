@@ -560,6 +560,11 @@ struct AyahContextMenuModifier: ViewModifier {
     let lastRead: Bool
     /// When true, the menu leads with "Hide for Today" + "Delete Forever" (the Ayah of the Day card).
     var ayahOfTheDay: Bool = false
+    /// When true, an ellipsis actions button is overlaid at the row's top-trailing corner - the
+    /// HadithRow header grammar for the compact search rows, which reserve a 22pt slot for it. The
+    /// button opens the SAME menu the long-press does, from the same modifier, so both entrances
+    /// share every sheet and confirmation for free.
+    var inlineEllipsis: Bool = false
 
     @State var showAyahSheet = false
 
@@ -656,16 +661,12 @@ struct AyahContextMenuModifier: ViewModifier {
         }
     }
 
+    /// The full action list, shared verbatim by the long-press context menu and (when
+    /// `inlineEllipsis` is on) the header ellipsis Menu - one list, two entrances, the HadithRow
+    /// grammar. Lives on this modifier because every sheet it opens presents from here.
+    #if os(iOS)
     @ViewBuilder
-    func body(content: Content) -> some View {
-        // O(1) dictionary lookup, not an O(114) linear scan. This `body` re-evaluates whenever
-        // `settings` publishes, and the modifier sits on every history/bookmark/favorite row - the
-        // linear scan added up across all visible rows.
-        let surahObj = quranData.surah(surah)
-
-        #if os(iOS)
-        content
-            .contextMenu {
+    private func menuItems(surahObj: Surah?) -> some View {
                 if ayahOfTheDay {
                     Button(role: .destructive) {
                         settings.hapticFeedback()
@@ -794,6 +795,42 @@ struct AyahContextMenuModifier: ViewModifier {
                         scrollToSurahID: $scrollToSurahID
                     )
                 }
+    }
+    #endif
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        // O(1) dictionary lookup, not an O(114) linear scan. This `body` re-evaluates whenever
+        // `settings` publishes, and the modifier sits on every history/bookmark/favorite row - the
+        // linear scan added up across all visible rows.
+        let surahObj = quranData.surah(surah)
+
+        #if os(iOS)
+        content
+            .contextMenu {
+                menuItems(surahObj: surahObj)
+            }
+            .overlay(alignment: .topTrailing) {
+                if inlineEllipsis {
+                    Menu {
+                        Text("Ayah Actions")
+                            .foregroundStyle(.secondary)
+
+                        menuItems(surahObj: surahObj)
+                    } label: {
+                        Image(systemName: "ellipsis.circle")
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .frame(width: 19, height: 19)
+                            .foregroundColor(settings.accentColor.color)
+                            .conditionalGlassEffect()
+                            .frame(width: 22, height: 22)
+                            .contentShape(Rectangle())
+                    }
+                    // Lands in the 22pt slot the compact search row reserves at its header's
+                    // trailing edge; the 2pt matches the row's own vertical padding.
+                    .padding(.top, 2)
+                }
             }
             .sheet(isPresented: $showAyahSheet) {
                 ShareAyahSheet(
@@ -918,7 +955,8 @@ extension View {
         searchText: Binding<String>,
         scrollToSurahID: Binding<Int>,
         lastRead: Bool = false,
-        ayahOfTheDay: Bool = false
+        ayahOfTheDay: Bool = false,
+        inlineEllipsis: Bool = false
     ) -> some View {
         self.modifier(AyahContextMenuModifier(
             surah: surah,
@@ -928,7 +966,8 @@ extension View {
             searchText: searchText,
             scrollToSurahID: scrollToSurahID,
             lastRead: lastRead,
-            ayahOfTheDay: ayahOfTheDay
+            ayahOfTheDay: ayahOfTheDay,
+            inlineEllipsis: inlineEllipsis
         ))
     }
 }
@@ -1357,7 +1396,7 @@ struct SelectAyahTextSheet: View {
                 Group {
                     if settings.showQiraahDetails {
                         Section {
-                            ArabicTextRiwayahPicker(selection: $selectedQiraah.animation(.easeInOut), useSimpleIOSPicker: true)
+                            ArabicTextRiwayahPicker(selection: $selectedQiraah.animation(.easeInOut), useMenuRow: true)
                         } footer: {
                             Text("Switching the riwayah changes the Arabic text only. Ayah numbering can differ between riwayat: no ayah is ever missing, but some are joined or split differently (for example, \"Alif Lam Meem\" and \"Dhalika al-Kitab...\" form a single ayah in most qiraat), so this ayah may appear under a different number or merged with its neighbor.")
                                 .font(.caption)
@@ -1507,8 +1546,30 @@ private struct SelectableTextView: UIViewRepresentable {
     let isArabic: Bool
     let lineSpacing: CGFloat
 
+    /// A non-scrolling text view whose intrinsic height always reflects the CURRENT width's layout.
+    /// The stock view measures once before SwiftUI hands the row its real width (zero width = one
+    /// endless line), and never re-reports - so every block stood one line tall, clipping the text
+    /// and stopping any selection at that single visible line. Re-measure whenever the width moves.
+    final class SelfSizingTextView: UITextView {
+        private var lastMeasuredWidth: CGFloat = 0
+
+        override var intrinsicContentSize: CGSize {
+            let measureWidth = bounds.width > 0 ? bounds.width : UIView.layoutFittingExpandedSize.width
+            let fitted = sizeThatFits(CGSize(width: measureWidth, height: .greatestFiniteMagnitude))
+            return CGSize(width: UIView.noIntrinsicMetric, height: ceil(fitted.height))
+        }
+
+        override func layoutSubviews() {
+            super.layoutSubviews()
+            if abs(bounds.width - lastMeasuredWidth) > 0.5 {
+                lastMeasuredWidth = bounds.width
+                invalidateIntrinsicContentSize()
+            }
+        }
+    }
+
     func makeUIView(context: Context) -> UITextView {
-        let tv = UITextView()
+        let tv = SelfSizingTextView()
         tv.isEditable = false
         tv.isSelectable = true
         tv.isScrollEnabled = false            // let it size itself; the List scrolls
@@ -1533,6 +1594,18 @@ private struct SelectableTextView: UIViewRepresentable {
             .foregroundColor: UIColor.label,
             .paragraphStyle: paragraph,
         ])
+        // New text = new height at the same width.
+        tv.invalidateIntrinsicContentSize()
+    }
+
+    /// iOS 16+: answer SwiftUI's size proposal directly with the wrapped height for the proposed
+    /// width, so the row gets the right multi-line height on the FIRST layout pass - no
+    /// invalidation round-trip (the subclass above still covers iOS 15).
+    @available(iOS 16.0, *)
+    func sizeThatFits(_ proposal: ProposedViewSize, uiView: UITextView, context: Context) -> CGSize? {
+        guard let width = proposal.width, width.isFinite, width > 0 else { return nil }
+        let fitted = uiView.sizeThatFits(CGSize(width: width, height: .greatestFiniteMagnitude))
+        return CGSize(width: width, height: ceil(fitted.height))
     }
 }
 #endif

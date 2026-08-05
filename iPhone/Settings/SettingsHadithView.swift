@@ -13,6 +13,13 @@ struct SettingsHadithView: View {
     /// Settings tab, where the surrounding navigation already provides the chrome.
     var presentedAsSheet: Bool = true
 
+    #if DEBUG
+    /// Headless visual verification (no tap access on the dev machine): `-launchHadithSettingsReading`
+    /// lands directly on the Reading View subpage. DEBUG builds only.
+    @State private var autoOpenReadingView =
+        ProcessInfo.processInfo.arguments.contains("-launchHadithSettingsReading")
+    #endif
+
     var body: some View {
         if presentedAsSheet {
             NavigationView {
@@ -20,6 +27,13 @@ struct SettingsHadithView: View {
                     .navigationTitle("Hadith Settings")
                     .navigationBarTitleDisplayMode(.inline)
                     .sheetDismissToolbar()
+                    #if DEBUG
+                    .background(
+                        NavigationLink(isActive: $autoOpenReadingView) { readingViewDestination }
+                                      label: { EmptyView() }
+                            .hidden()
+                    )
+                    #endif
             }
             .navigationViewStyle(.stack)
         } else {
@@ -134,6 +148,7 @@ struct SettingsHadithView: View {
                         }
                     ).animation(.easeInOut))
                 }
+
 
                 // In Reading View - not under Arabic Text - because it colors the name in BOTH scripts:
                 // the Arabic الله and "Allah" in the English translation and narrator lines, like the Quran.

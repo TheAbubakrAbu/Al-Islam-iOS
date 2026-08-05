@@ -187,7 +187,10 @@ final class NamesViewModel: ObservableObject {
 
     private func startLoading() {
         guard loadTask == nil else { return }
-        loadTask = Task(priority: .utility) { [weak self] in
+        // .userInitiated, not .utility: the LAUNCH SCREEN's reveal awaits `waitUntilLoaded`, and
+        // .utility is the QoS tier Low Power Mode throttles hardest - under LPM a tiny 100-entry
+        // parse could ride the throttle toward the 8s cap while the launch sat on it.
+        loadTask = Task(priority: .userInitiated) { [weak self] in
             await self?.loadNames()
         }
     }
@@ -427,6 +430,8 @@ struct NamesView: View {
     /// A MANUAL ask that found nothing to ground on or errored - the tapped row must answer with
     /// SOMETHING instead of silently restoring the prompt.
     @State private var askNoAnswer = false
+    /// Whether the current answer was grounded in retrieved items (drives the card's footer).
+    @State private var askGrounded = true
     /// The AI-vs-keyword segmented switch, shown only when BOTH result kinds exist. Reset to the
     /// AI list on every new query.
     @State private var showKeywordResults = false
@@ -462,13 +467,9 @@ struct NamesView: View {
             for name in filteredNames.prefix(6) where seen.insert(name.number).inserted {
                 sources.append(.init(reference: name.transliteration, text: "\(name.meaning). \(name.desc)"))
             }
-            guard !sources.isEmpty else {
-                askAnswer = ""; askIsStreaming = false; askRanForQuery = ""
-                // A tapped ask MUST respond: with nothing retrieved to ground on, say so instead
-                // of silently restoring the prompt row.
-                if manual { askNoAnswer = true }
-                return
-            }
+            // Nothing retrieved is no longer a dead end: the ask still runs, in OPEN mode - a
+            // clearly labeled general-knowledge answer with no recreated quotes.
+            askGrounded = !sources.isEmpty
 
             askAnswer = ""; askIsStreaming = true; askRanForQuery = trimmed
             guard #available(iOS 26.0, *) else { return }
@@ -506,7 +507,7 @@ struct NamesView: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
-            Text("AI couldn't find anything matching \u{201C}\(searchText.trimmingCharacters(in: .whitespacesAndNewlines))\u{201D}. Try different wording.")
+            Text("AI couldn't answer \u{201C}\(searchText.trimmingCharacters(in: .whitespacesAndNewlines))\u{201D} right now. Try different wording, or try again.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
@@ -528,8 +529,6 @@ struct NamesView: View {
 
                 Text("Ask AI about \u{201C}\(searchText.trimmingCharacters(in: .whitespacesAndNewlines))\u{201D}")
                     .font(.caption.weight(.semibold))
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.7)
 
                 Spacer()
 
@@ -555,8 +554,8 @@ struct NamesView: View {
             if askNoAnswer {
                 Section(header: askAIHeader) { askNoAnswerRow }
             } else if !askRanForQuery.isEmpty {
-                Section(header: askAIHeader) { AskAnswerCard(answer: askAnswer, isStreaming: askIsStreaming) }
-            } else if hasResults {
+                Section(header: askAIHeader) { AskAnswerCard(answer: askAnswer, isStreaming: askIsStreaming, grounded: askGrounded) }
+            } else {
                 Section(header: askAIHeader) { askPromptRow }
             }
         }

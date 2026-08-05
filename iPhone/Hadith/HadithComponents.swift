@@ -17,6 +17,9 @@ struct HadithReferenceView: View {
     /// 1-based chapter position when the lookup was "book C:N"; nil for a plain hadith number.
     let chapter: Int?
     let hadith: Int
+    /// The citation's variant letter when the lookup carried one ("muslim 8a" -> "a"). Only
+    /// meaningful without `chapter`.
+    var suffix: String? = nil
 
     /// The book, opened straight from its bundled pack - synchronous and instant, so this screen has
     /// no loading state and cannot fail for want of a network.
@@ -31,8 +34,13 @@ struct HadithReferenceView: View {
             guard hadith >= 1, offset < inChapter.endIndex else { return nil }
             return inChapter[offset]
         }
-        return data.hadith(numbered: hadith)
+        // Citation-first: "muslim 8" is the hadith CITED 8 (standard sunnah.com numbering), falling
+        // back to the internal row number for the books that have no citations.
+        return data.hadith(referenced: hadith, suffix: suffix)
     }
+
+    /// The number as the user asked for it - base plus any variant letter ("8a").
+    private var requestedNumber: String { "\(hadith)\(suffix ?? "")" }
 
     var body: some View {
         Group {
@@ -63,7 +71,7 @@ struct HadithReferenceView: View {
                             .foregroundStyle(.secondary)
 
                         Text(chapter.map { "No hadith \(hadith) in chapter \($0) of \(book.englishTitle)." }
-                             ?? "No hadith numbered \(hadith) in \(book.englishTitle).")
+                             ?? "No hadith numbered \(requestedNumber) in \(book.englishTitle).")
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
                             .multilineTextAlignment(.center)
@@ -85,8 +93,23 @@ struct HadithReferenceView: View {
                 .padding()
             }
         }
-        .navigationTitle(chapter.map { "\(book.englishTitle) \($0):\(hadith)" } ?? "\(book.englishTitle) \(hadith)")
+        .navigationTitle(chapter.map { "\(book.englishTitle) \($0):\(hadith)" } ?? "\(book.englishTitle) \(requestedNumber)")
         .navigationBarTitleDisplayMode(.inline)
+    }
+}
+
+extension HadithReferenceView {
+    /// A reference screen aimed at exactly this ALREADY-RESOLVED hadith: by its citation when it has
+    /// one (the number `hadith(referenced:)` resolves citation-first), by its internal row number
+    /// otherwise. The fallback call sites (a hit whose chapter can't be found) used to pass
+    /// `idInBook` straight in, which citation-first resolution would now read as a citation.
+    init(book: HadithCatalogBook, resolved: HadithBookData.Hadith) {
+        if let citation = resolved.citation,
+           let parsed = HadithBookData.citationNumber(inQuery: citation) {
+            self.init(book: book, chapter: nil, hadith: parsed.base, suffix: parsed.suffix)
+        } else {
+            self.init(book: book, chapter: nil, hadith: resolved.idInBook)
+        }
     }
 }
 
@@ -108,6 +131,40 @@ extension Settings {
             accentColor.rawValue,
             customAccentColorHex
         ].joined(separator: "|")
+    }
+}
+
+/// The sunnah.com grade line ("Grade: Da'if (Al-Albani) · Da'if (Darussalam)"), rendered wherever a
+/// full hadith shows. Verdicts display VERBATIM - the thousands of distinct nuanced strings are not
+/// points on one scale, so nothing here parses, ranks, or color-codes them. Renders nothing when the
+/// hadith carries no grading (Bukhari and Muslim carry none by design).
+struct HadithGradeLine: View {
+    let grades: [(name: String, grade: String)]
+    /// Caption-scale for compact (search-result) rows, footnote for reading rows.
+    var font: Font = .footnote
+
+    /// "Da'if (Al-Albani) · Da'if (Darussalam)" - the parenthetical omitted when the grader is unnamed.
+    /// Shared with the Share/Copy composition so the row and the shared text always agree.
+    static func joined(_ grades: [(name: String, grade: String)]) -> String {
+        grades
+            .map { $0.name.isEmpty ? $0.grade : "\($0.grade) (\($0.name))" }
+            .joined(separator: " · ")
+    }
+
+    var body: some View {
+        if !grades.isEmpty {
+            // Stacked, one verdict per line, so four graders read as a list rather than a run-on
+            // sentence. "Grade:" labels the first line only.
+            VStack(alignment: .leading, spacing: 2) {
+                ForEach(Array(grades.enumerated()), id: \.offset) { index, entry in
+                    Text("\(index == 0 ? "Grade: " : "")\(entry.name.isEmpty ? entry.grade : "\(entry.grade) (\(entry.name))")")
+                        .font(font)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
     }
 }
 
@@ -171,9 +228,10 @@ struct HadithRow: View, Equatable {
     @State private var noteDraft = ""
     @State private var showRespectAlert = false
 
-    /// "Sahih al-Bukhari 1234" - the standard way a hadith is cited.
+    /// "Sahih al-Bukhari 1234" - the standard way a hadith is cited (the sunnah.com citation when
+    /// one exists, the internal row number for the books that have none).
     private var reference: String {
-        "\(book.englishTitle) \(hadith.idInBook)"
+        "\(book.englishTitle) \(hadith.displayNumber)"
     }
 
     private var isBookmarked: Bool {
@@ -202,11 +260,65 @@ struct HadithRow: View, Equatable {
         (compact ? UIFont.preferredFont(forTextStyle: .caption2).pointSize : settings.hadithEnglishFontSize) * fontScale
     }
 
+    /// Which fields confidently contain the query, and - when none does - which single field gets
+    /// `guaranteeMatch` so the row still shows at least one highlight (the ayah rows'
+    /// `SearchVisibility`, for hadiths). The confident test uses the highlighter's OWN fold, so a
+    /// `true` here means the snippet will find a real range. All-false happens legitimately: the
+    /// search index folds differently than the highlighter, AI/semantic rows match on meaning rather
+    /// than substring, and Ask citations aren't substring matches at all - in every one of those a
+    /// searched row must still mark SOMETHING, exactly like the Quran's ayah results.
+    private struct SearchVisibility {
+        var mArabic = false
+        var mNarrator = false
+        var mText = false
+        var guaranteeArabic = false
+        var guaranteeNarrator = false
+        var guaranteeText = false
+    }
+
+    private func searchVisibility(text: (arabic: String, narrator: String, text: String)) -> SearchVisibility {
+        var v = SearchVisibility()
+        let trimmed = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return v }
+        // A bare-citation query ("10", "8a") is a hadith NUMBER: the number is the row's identity,
+        // not a text match (the BY NUMBER sections' rule) - forcing a closest-word span for "10"
+        // would paint noise.
+        guard HadithBookData.citationNumber(inQuery: trimmed) == nil else { return v }
+        let normalizedTerm = HighlightedSnippet.normalizeForSearchText(searchText, trimWhitespace: true)
+        guard !normalizedTerm.isEmpty else { return v }
+
+        v.mArabic = HighlightedSnippet.foldedSourceMatches(
+            HighlightedSnippet.cachedNormalizedSource(for: text.arabic), normalizedTerm: normalizedTerm
+        )
+        v.mNarrator = HighlightedSnippet.foldedSourceMatches(
+            HighlightedSnippet.cachedNormalizedSource(for: text.narrator), normalizedTerm: normalizedTerm
+        )
+        v.mText = HighlightedSnippet.foldedSourceMatches(
+            HighlightedSnippet.cachedNormalizedSource(for: text.text), normalizedTerm: normalizedTerm
+        )
+        guard !(v.mArabic || v.mNarrator || v.mText) else { return v }
+
+        // Nothing confident: the query's script picks the field that carries the guaranteed span.
+        if searchText.containsArabicLetters, !text.arabic.isEmpty {
+            v.guaranteeArabic = true
+        } else if !text.text.isEmpty {
+            v.guaranteeText = true
+        } else if !text.narrator.isEmpty {
+            v.guaranteeNarrator = true
+        } else if !text.arabic.isEmpty {
+            v.guaranteeArabic = true
+        }
+        return v
+    }
+
     var body: some View {
         // One block-cache lookup for all three strings. `hadith.arabic`/`hadith.english` are each a
         // full trip into the (locked) block cache; this body used to make six of those per pass,
         // which is also lock traffic contended against any detached search sweep.
         let text = hadith.allText
+        // One block-cache lookup, same rule as `allText` - and none at all with the toggle off.
+        let grades = hadith.grades
+        let visibility = searchVisibility(text: text)
         VStack(alignment: .leading, spacing: compact ? 5 : 10) {
             HStack(spacing: 8) {
                 // ONE glass capsule (the ayah row's "S:A" pill language): the hadith's position WITHIN
@@ -223,7 +335,7 @@ struct HadithRow: View, Equatable {
                             .opacity(0.55)
                     }
 
-                    Text("\(hadith.idInBook)")
+                    Text(hadith.displayNumber)
                         .font((compact ? Font.caption2 : .subheadline).monospacedDigit().weight(.semibold))
 
                     Text(book.englishTitle)
@@ -282,28 +394,34 @@ struct HadithRow: View, Equatable {
                 }
             }
 
-            if compact || settings.showHadithArabic, !text.arabic.isEmpty {
+            // A field that matched (or carries the guaranteed span) is forced visible even when its
+            // toggle is off - a searched row must never hide the very text that matched, the ayah
+            // rows' `showArabicLine` rule.
+            if compact || settings.showHadithArabic || visibility.mArabic || visibility.guaranteeArabic, !text.arabic.isEmpty {
                 HighlightedSnippet(
                     source: text.arabic,
                     term: searchText,
-                    font: settings.useFontArabic
-                        ? Font.arabic(settings.nonQuranArabicFontName, size: arabicFontSize)
-                        : .system(size: arabicFontSize),
+                    // The longest narrations fall back to the system face: the custom KFGQPC faces
+                    // DROP contextual shaping past a length cliff and every letter renders isolated
+                    // (see `arabicShapingCharacterLimit`).
+                    font: settings.hadithArabicFont(for: text.arabic, size: arabicFontSize),
                     accent: settings.accentColor.color,
                     fg: .primary,
                     highlightAllahNames: settings.highlightAllahNamesHadith,
+                    guaranteeMatch: visibility.guaranteeArabic,
                     // The classical faces draw "،" as an ornament circle - commas fall back to the
                     // system face.
-                    basicFontForCommas: settings.useFontArabic ? arabicFontSize : nil
+                    basicFontForCommas: settings.hadithArabicUsesCustomFace(for: text.arabic) ? arabicFontSize : nil
                 )
-                .arabicFontDesign(custom: settings.islamUsesCustomArabicFace)
+                .arabicFontDesign(custom: settings.hadithArabicUsesCustomFace(for: text.arabic))
                 .multilineTextAlignment(.trailing)
                 .lineSpacing(compact ? 0 : 6)
                 .frame(maxWidth: .infinity, alignment: .trailing)
                 .fixedSize(horizontal: false, vertical: true)
             }
 
-            if compact || settings.showHadithEnglish {
+            if compact || settings.showHadithEnglish || visibility.mNarrator || visibility.mText
+                || visibility.guaranteeNarrator || visibility.guaranteeText {
                 // The narrator is PART of the English text - it shows whenever English does (there is no
                 // separate toggle; a hadith without its isnad line reads incomplete).
                 if !text.narrator.isEmpty {
@@ -315,7 +433,8 @@ struct HadithRow: View, Equatable {
                         fg: .secondary,
                         // The narrator line is English text like any other - "Allah's Messenger" in an
                         // isnad gets the same red as the body, both scripts, like the Quran.
-                        highlightAllahNames: settings.highlightAllahNamesHadith
+                        highlightAllahNames: settings.highlightAllahNamesHadith,
+                        guaranteeMatch: visibility.guaranteeNarrator
                     )
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .fixedSize(horizontal: false, vertical: true)
@@ -328,12 +447,17 @@ struct HadithRow: View, Equatable {
                         font: .system(size: englishFontSize),
                         accent: settings.accentColor.color,
                         fg: .primary,
-                        highlightAllahNames: settings.highlightAllahNamesHadith
+                        highlightAllahNames: settings.highlightAllahNamesHadith,
+                        guaranteeMatch: visibility.guaranteeText
                     )
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .fixedSize(horizontal: false, vertical: true)
                 }
             }
+
+            // The scholar verdicts, sunnah.com's way - under the English (or the Arabic when English
+            // is all a hadith has), above the note.
+            HadithGradeLine(grades: grades, font: compact ? .caption2 : .footnote)
 
             // The bookmark's note, shown in the reading row exactly like a noted ayah - quiet, under the text.
             if !compact, let note = noteText {
@@ -519,8 +643,10 @@ struct HadithArabicPreview: View {
         HighlightedSnippet(
             source: text,
             term: "",
+            // Length-aware face (see `arabicShapingCharacterLimit`): a card whose source is a full
+            // giant narration must not shatter just because it is clamped to two lines.
             font: settings.useFontArabic
-                ? Font.arabic(settings.nonQuranArabicFontName, size: size)
+                ? settings.hadithArabicFont(for: text, size: size)
                 : .footnote,
             accent: settings.accentColor.color,
             fg: .primary,
@@ -528,9 +654,9 @@ struct HadithArabicPreview: View {
             // innermost value wins - an outer `.reservedLineLimit` here was silently ignored.
             lineLimit: lineLimit,
             reservesSpace: true,
-            basicFontForCommas: settings.useFontArabic ? size : nil
+            basicFontForCommas: settings.hadithArabicUsesCustomFace(for: text) ? size : nil
         )
-        .arabicFontDesign(custom: settings.islamUsesCustomArabicFace)
+        .arabicFontDesign(custom: settings.hadithArabicUsesCustomFace(for: text))
         .multilineTextAlignment(.trailing)
         .frame(maxWidth: .infinity, alignment: .trailing)
     }
@@ -639,7 +765,7 @@ struct HadithBookmarkRow: View, Equatable {
             bookmarkLink(book: book) {
                 HStack(spacing: 8) {
                     // The same accent-tinted glass number badge the Quran's bookmarked ayah rows lead with.
-                    Text("\(bookmark.idInBook)")
+                    Text(bookmark.displayNumber)
                         .font(.subheadline.monospacedDigit().weight(.semibold))
                         .foregroundColor(settings.accentColor.color)
                         .padding(5)
@@ -660,18 +786,24 @@ struct HadithBookmarkRow: View, Equatable {
                             .minimumScaleFactor(0.7)
 
                         // The reading rows' exact visibility rules: Arabic and English previews follow
-                        // the same toggles the reader uses, so a bookmark looks like its hadith.
-                        if settings.showHadithArabic, let arabic = bookmark.arabicPreview, !arabic.isEmpty {
-                            HadithArabicPreview(text: arabic)
+                        // the same toggles the reader uses, so a bookmark looks like its hadith. Each
+                        // enabled slot ALWAYS renders - an empty string still reserves its two lines -
+                        // so a hadith missing Arabic or English keeps the same row height as one that
+                        // has both, and the bookmark list never stair-steps.
+                        if settings.showHadithArabic {
+                            HadithArabicPreview(text: bookmark.arabicPreview ?? "")
                         }
 
-                        if settings.showHadithEnglish, let english = bookmark.englishPreview, !english.isEmpty {
-                            Text(english)
+                        if settings.showHadithEnglish {
+                            // A bookmark saved by an older build carries only the combined preview.
+                            let english = bookmark.englishPreview ?? ""
+                            Text(!english.isEmpty ? english : (bookmark.arabicPreview == nil ? bookmark.preview : ""))
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                                 .reservedLineLimit(2)
                         } else if bookmark.arabicPreview == nil {
-                            // A bookmark saved by an older build carries only the combined preview.
+                            // English hidden and nothing else stored: the legacy combined preview is all
+                            // this bookmark has.
                             Text(bookmark.preview)
                                 .font(.caption)
                                 .foregroundColor(.secondary)
@@ -794,11 +926,12 @@ struct HadithBookmarkGridTile: View, Equatable {
                         .minimumScaleFactor(0.6)
                 }
 
-                if let arabic = bookmark.arabicPreview, !arabic.isEmpty {
-                    HadithArabicPreview(text: arabic, size: 14)
-                }
+                // Both slots always render - an empty string still reserves its lines - so a tile
+                // missing Arabic or English keeps its neighbors' height instead of hugging shorter.
+                HadithArabicPreview(text: bookmark.arabicPreview ?? "", size: 14)
 
-                Text(bookmark.englishPreview?.isEmpty == false ? (bookmark.englishPreview ?? "") : bookmark.preview)
+                let english = bookmark.englishPreview ?? ""
+                Text(!english.isEmpty ? english : (bookmark.arabicPreview == nil ? bookmark.preview : ""))
                     .font(.caption2)
                     .foregroundColor(.secondary)
                     .reservedLineLimit(2)
@@ -940,6 +1073,9 @@ struct HadithShareSheet: View {
     @AppStorage("shareHadithFontFace") private var shareFontFaceRaw = ""
     @AppStorage("shareHadithHideTashkeel") private var hideTashkeel = false
     @AppStorage("shareHadithIncludeNote") private var includeNote = true
+    /// On by default: knowing a hadith's grading matters to whoever receives it. Text-only - the
+    /// share image deliberately stays clean.
+    @AppStorage("shareHadithGrade") private var includeGrade = true
 
     /// The share's Arabic face - defaults to the reading face until the user picks one here.
     private var shareFace: Settings.IslamArabicFace {
@@ -966,7 +1102,7 @@ struct HadithShareSheet: View {
         var parts: [String] = []
         // One block lookup for all three strings (this runs in a loop when sharing a whole chapter).
         let text = hadith.allText
-        if flag("shareHadithReference") { parts.append("[\(book.englishTitle) \(hadith.idInBook)]") }
+        if flag("shareHadithReference") { parts.append("[\(book.englishTitle) \(hadith.displayNumber)]") }
         if flag("shareHadithArabic"), !text.arabic.isEmpty {
             // Hide Tashkeel strips the diacritics for a cleaner shared text, the Share Ayah option's twin.
             let arabic = defaults.bool(forKey: "shareHadithHideTashkeel")
@@ -976,6 +1112,10 @@ struct HadithShareSheet: View {
         }
         if flag("shareHadithNarrator"), !text.narrator.isEmpty { parts.append(text.narrator) }
         if flag("shareHadithEnglish"), !text.text.isEmpty { parts.append(text.text) }
+        if flag("shareHadithGrade") {
+            let grades = hadith.grades
+            if !grades.isEmpty { parts.append("Grade: \(HadithGradeLine.joined(grades))") }
+        }
         if flag("shareHadithIncludeNote"),
            let note = HadithStore.shared.note(slug: book.slug, idInBook: hadith.idInBook) {
             parts.append("Note: \(note)")
@@ -1065,6 +1205,11 @@ struct HadithShareSheet: View {
                         if noteText != nil {
                             toggle("Include Note", $includeNote, disabled: false)
                         }
+
+                        // Text shares only - the share image stays clean by design.
+                        if !hadith.grades.isEmpty {
+                            toggle("Include Grade", $includeGrade, disabled: false)
+                        }
                     }
                 }
                 .frame(maxHeight: 200)
@@ -1109,7 +1254,7 @@ struct HadithShareSheet: View {
                 .padding(.horizontal, 16)
                 .padding(.bottom)
             }
-            .navigationTitle("\(book.englishTitle) \(hadith.idInBook)")
+            .navigationTitle("\(book.englishTitle) \(hadith.displayNumber)")
             .navigationBarTitleDisplayMode(.inline)
             .sheetDismissToolbar()
         }
@@ -1126,6 +1271,8 @@ struct HadithShareSheet: View {
         .onChange(of: includeEnglish) { _ in settings.hapticFeedback(); generatePreviewImage() }
         .onChange(of: hideTashkeel) { _ in settings.hapticFeedback(); generatePreviewImage() }
         .onChange(of: includeNote) { _ in settings.hapticFeedback(); generatePreviewImage() }
+        // No image regeneration: the grade travels in the TEXT composition only.
+        .onChange(of: includeGrade) { _ in settings.hapticFeedback() }
         .onChange(of: shareFontFaceRaw) { _ in settings.hapticFeedback(); generatePreviewImage() }
         .onChange(of: shareAsImage) { asImage in
             settings.hapticFeedback()
@@ -1246,7 +1393,7 @@ struct HadithShareSheet: View {
         // Hide Tashkeel, the Share Ayah option's twin: strip the diacritics for a cleaner card.
         let arabicText = hideTashkeel ? hadith.arabic.removingArabicDiacriticsAndSigns : hadith.arabic
 
-        if includeReference { append("\(book.englishTitle) \(hadith.idInBook)", font: captionFont, color: accent, alignment: .center) }
+        if includeReference { append("\(book.englishTitle) \(hadith.displayNumber)", font: captionFont, color: accent, alignment: .center) }
         if includeArabic, !arabicText.isEmpty { append(arabicText, font: arabicFont, color: .white, alignment: .right, isArabic: true) }
         if includeNarrator, !hadith.english.narrator.isEmpty { append(hadith.english.narrator, font: narratorFont, color: .lightGray, alignment: .left) }
         if includeEnglish, !hadith.english.text.isEmpty { append(hadith.english.text, font: englishFont, color: .white, alignment: .left) }

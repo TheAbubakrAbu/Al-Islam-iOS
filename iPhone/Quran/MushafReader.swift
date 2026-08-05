@@ -105,8 +105,14 @@ enum MushafPagination {
         // Surahs and their ayahs are already in mushaf order, so a page's segments accumulate in order
         // too: extend the current run while the page and surah repeat, flush at each boundary.
         for surah in quran {
+            var lastPageInSurah: Int?
             for ayah in surah.ayahs where ayah.existsInQiraah(qiraah, surahID: surah.id) {
-                guard let page = ayah.page else { continue }
+                // Ayahs that exist only in this riwayah's counting (a split past the Hafs range,
+                // e.g. al-Ikhlas 5 in the Shami count) carry NO Hafs page - they belong on the page
+                // of the ayah before them, not on no page at all. Skipping them was the page-mode
+                // "missing last verse" bug.
+                guard let page = ayah.page ?? lastPageInSurah else { continue }
+                lastPageInSurah = page
 
                 if page != currentPage {
                     flushPage()
@@ -3127,6 +3133,12 @@ enum QuranLaunchWarmup {
         // main-actor piece, so give the runloop a turn first and keep it off the current transaction.
         if settings.quranPageMode, settings.lastReadSurah > 0 {
             await Task.yield()
+            // Compose OFF the main actor (the same path QuranView's own .task uses; the builder is
+            // idempotent), then read the cached result. The old direct `pages(...)` call ran the
+            // full 6,236-ayah pagination ON the main actor, squarely inside the under-cover tab
+            // walk - on older hardware that contention stretched the launch far past the settles.
+            await MushafPagination.buildInBackground(quran: quranData.quran, qiraah: settings.displayQiraahForArabic)
+            if Task.isCancelled { return }
             let pages = MushafPagination.pages(quran: quranData.quran, qiraah: settings.displayQiraahForArabic)
             if let index = MushafPagination.pageIndex(
                 surahID: settings.lastReadSurah,
@@ -3137,6 +3149,15 @@ enum QuranLaunchWarmup {
             }
             await Task.yield()
         }
+
+        // The broad all-surah sweep is POST-reveal work: warming every surah makes later pushes
+        // instant, but under the cover it competed with the tab walk for the main actor - on older
+        // hardware that contention (not the fixed settles) is what stretched the launch. The reveal
+        // flag flips as the cover starts dissolving; the extra beat clears the finale + dissolve so
+        // they run on a free CPU.
+        await AppReveal.waitUntilRevealed()
+        try? await Task.sleep(nanoseconds: 1_200_000_000)
+        if Task.isCancelled { return }
 
         for surah in quranData.quran where seen.insert(surah.id).inserted {
             if Task.isCancelled { return }

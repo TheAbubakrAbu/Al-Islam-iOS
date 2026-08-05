@@ -592,6 +592,18 @@ struct ArabicLetterView: View {
                 }
 
                 Section(header: Text("WITH HAMZA")) {
+                    // Same mark, two scripts - the plain sukoon and the Uthmani one the mushaf prints
+                    // (the Tashkeel screen's "Sukoon script" choice, persisted here).
+                    Toggle("Use Quranic Sukoon", isOn: Binding(
+                        get: { settings.quranicSukoonInLetterPractice },
+                        set: { newValue in
+                            settings.hapticFeedback()
+                            withAnimation(.easeInOut) { settings.quranicSukoonInLetterPractice = newValue }
+                        }
+                    ))
+                    .font(.subheadline)
+                    .tint(settings.accentColor.color)
+
                     HamzaPracticeRow(
                         letterData: letterData,
                         useQuranicFontForLetter: useQuranicFontForLetter
@@ -973,13 +985,16 @@ struct HamzaPracticeRow: View {
     let letterData: LetterData
     let useQuranicFontForLetter: Bool
 
-    /// U+0652 SUKUN, written onto the closing consonant of each closed syllable (أَبْ, not أَب): these rows
+    /// The sukoon written onto the closing consonant of each closed syllable (أَبْ, not أَب): these rows
     /// teach "hamza + vowel + stopped letter", and without the sukoon the final letter reads as unmarked.
-    private static let sukoon = "\u{0652}"
+    /// Plain U+0652 by default; the section's toggle swaps in the Uthmani U+06E1 the mushaf prints.
+    private var sukoon: String {
+        settings.quranicSukoonInLetterPractice ? "\u{06E1}" : "\u{0652}"
+    }
 
     private var hamzaShortSyllables: [(latin: String, arabic: String)] {
         let s = letterData.sound
-        let l = letterData.letter + Self.sukoon
+        let l = letterData.letter + sukoon
         return [
             ("a" + s, "أَ" + l),
             ("i" + s, "إِ" + l),
@@ -989,7 +1004,7 @@ struct HamzaPracticeRow: View {
 
     private var hamzaLongSyllablesBasic: [(latin: String, arabic: String)] {
         let s = letterData.sound
-        let l = letterData.letter + Self.sukoon
+        let l = letterData.letter + sukoon
         return [
             ("aa" + s, "ءَ" + "ا" + l),
             ("ii" + s, "إِ" + "ي" + l),

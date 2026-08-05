@@ -60,8 +60,8 @@ Al-Islam is a simply designed and feature-rich app that helps Muslims strengthen
 ## Hadith Collections
 - All of the major Hadith books in one place: the Nine Books (Sahih al-Bukhari, Sahih Muslim, Sunan an-Nasa'i, Sunan Abi Dawud, Jami` at-Tirmidhi, Sunan Ibn Majah, Muwatta Malik, Sunan ad-Darimi, and Musnad Ahmad), the forty-Hadith collections (Nawawi's Forty, Hadith Qudsi, and Shah Waliullah's Forty), and other classics (Riyad as-Salihin, Mishkat al-Masabih, Bulugh al-Maram, Al-Adab Al-Mufrad, and Shama'il Muhammadiyah).
 - Browse by collection and chapter, in Arabic with English translation and narrator chains, as a list or page by page.
-- A Hadith of the Day, bookmarks, favorites, and reference lookups like "Bukhari 5".
-- Search within any book - or across every downloaded book at once - by keyword or by meaning (on-device AI) across the Arabic and English text.
+- A Hadith of the Day, bookmarks, favorites, and reference lookups like "Bukhari 5" or "Muslim 8a" - using the standard sunnah.com numbering, including variant letters.
+- Search within any book - or across every book at once - by keyword or by meaning (on-device AI) across the Arabic and English text.
 - Every collection is built into the app in a compact format - nothing to download, and everything works fully offline.
 - Copy or share any Hadith with its full reference.
 

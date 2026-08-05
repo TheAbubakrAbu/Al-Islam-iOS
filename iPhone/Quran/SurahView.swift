@@ -731,7 +731,7 @@ struct SurahView: View {
                 let containsTerm: Bool
                 if term.requiresTashkeelMatch {
                     let lettersMatch = ayahTermMatch(haystack: haystack, tokens: haystackTokens, term: term.value, mode: term.matchMode)
-                    let tashkeelHaystack = arabicTashkeelBlob(ayah.textArabic(for: settings.displayQiraahForArabic))
+                    let tashkeelHaystack = arabicTashkeelBlob(ayah.textArabic(for: settings.displayQiraahForArabic, surahID: surah.id))
                     let tashkeelMatch = term.tashkeelPattern.isEmpty || tashkeelHaystack.contains(term.tashkeelPattern)
                     containsTerm = lettersMatch && tashkeelMatch
                 } else if term.requiresExactEnglishMatch {
@@ -771,8 +771,9 @@ struct SurahView: View {
             let cacheKey = "\(surah.id)|\(qiraah ?? "")|s1" as NSString
             if preparedSurahSearchCache.object(forKey: cacheKey) == nil {
                 let ayahs = preparedCache(for: surah, settings: settings).ayahs
+                let surahID = surah.id
                 Task.detached(priority: .utility) {
-                    let map = buildSearchBlobMap(ayahs: ayahs, displayQiraah: qiraah)
+                    let map = buildSearchBlobMap(ayahs: ayahs, displayQiraah: qiraah, surahID: surahID)
                     await MainActor.run {
                         preparedSurahSearchCache.setObject(PreparedSurahSearchCache(searchBlobByAyahID: map), forKey: cacheKey)
                     }
@@ -872,7 +873,7 @@ struct SurahView: View {
             return cached
         }
 
-        let searchBlobMap = buildSearchBlobMap(ayahs: ayahs, displayQiraah: settings.displayQiraahForArabic)
+        let searchBlobMap = buildSearchBlobMap(ayahs: ayahs, displayQiraah: settings.displayQiraahForArabic, surahID: surah.id)
         let prepared = PreparedSurahSearchCache(searchBlobByAyahID: searchBlobMap)
         preparedSurahSearchCache.setObject(prepared, forKey: cacheKey)
         return prepared
@@ -938,7 +939,7 @@ struct SurahView: View {
             : cachedAyahsForQiraah
 
         Task.detached(priority: .utility) {
-            let blobMap = Self.buildSearchBlobMap(ayahs: ayahs, displayQiraah: displayQiraah)
+            let blobMap = Self.buildSearchBlobMap(ayahs: ayahs, displayQiraah: displayQiraah, surahID: surah.id)
             await MainActor.run {
                 // Discard if the user moved to another surah/qiraah mid-build.
                 let currentKey = "\(self.surah.id)|\(self.settings.displayQiraahForArabic ?? "")|s1"
@@ -952,14 +953,17 @@ struct SurahView: View {
     /// Pure, actor-agnostic builder for the per-ayah search-blob map. Marked `nonisolated` so it can run
     /// on a background task without hopping back to the main actor (SurahView, being a `View`, is otherwise
     /// `@MainActor`-isolated). It only touches `Settings.shared` config and immutable ayah text.
-    nonisolated private static func buildSearchBlobMap(ayahs: [Ayah], displayQiraah: String?) -> [Int: String] {
+    nonisolated private static func buildSearchBlobMap(ayahs: [Ayah], displayQiraah: String?, surahID: Int) -> [Int: String] {
         let settings = Settings.shared
         var searchBlobMap: [Int: String] = [:]
         searchBlobMap.reserveCapacity(ayahs.count)
         for ayah in ayahs {
+            // `surahID:` is REQUIRED for the beta riwayat: without it both Arabic reads silently
+            // fall back to Hafs (BetaQiraatStore needs the surah), and the in-surah search index
+            // desyncs from what the rows display - matches on invisible text, misses on visible.
             var parts = [
-                ayah.textArabic(for: displayQiraah),
-                ayah.textCleanArabic(for: displayQiraah),
+                ayah.textArabic(for: displayQiraah, surahID: surahID),
+                ayah.textCleanArabic(for: displayQiraah, surahID: surahID),
                 ayah.textTransliteration,
                 ayah.textEnglishSaheeh,
                 ayah.textEnglishMustafa,
@@ -971,8 +975,8 @@ struct SurahView: View {
             // Mirror QuranView's silent-letter search: also index the silent-letter-stripped Arabic so a
             // query that omits silent letters still matches. Always on - the fold is strictly additive
             // (the "s1" in the cache keys is the fossil of the old toggle).
-            parts.append(settings.cleanSearchIgnoringSilentArabicLetters(ayah.textArabic(for: displayQiraah)))
-            parts.append(settings.cleanSearchIgnoringSilentArabicLetters(ayah.textCleanArabic(for: displayQiraah)))
+            parts.append(settings.cleanSearchIgnoringSilentArabicLetters(ayah.textArabic(for: displayQiraah, surahID: surahID)))
+            parts.append(settings.cleanSearchIgnoringSilentArabicLetters(ayah.textCleanArabic(for: displayQiraah, surahID: surahID)))
 
             searchBlobMap[ayah.id] = parts.joined(separator: " ")
         }
@@ -1634,9 +1638,13 @@ struct SurahView: View {
                     return silentQuery.map { !$0.isEmpty && blob.contains($0) } ?? false
                 }
 
+                // Explicit surahID reads (not the bare `textArabic` conveniences): the beta riwayat
+                // silently serve Hafs without it, desyncing this fallback blob from the rows.
+                let fallbackArabic = a.textArabic(for: settings.displayQiraahForArabic, surahID: surah.id)
+                let fallbackCleanArabic = a.textCleanArabic(for: settings.displayQiraahForArabic, surahID: surah.id)
                 var fallbackParts = [
-                    settings.cleanSearch(a.textArabic),
-                    settings.cleanSearch(a.textCleanArabic),
+                    settings.cleanSearch(fallbackArabic),
+                    settings.cleanSearch(fallbackCleanArabic),
                     settings.cleanSearch(a.textTransliteration),
                     settings.cleanSearch(a.textEnglishSaheeh),
                     settings.cleanSearch(a.textEnglishMustafa),
@@ -1644,8 +1652,8 @@ struct SurahView: View {
                     settings.cleanSearch(a.idArabic)
                 ]
                 if silentQuery != nil {
-                    fallbackParts.append(settings.cleanSearchIgnoringSilentArabicLetters(a.textArabic))
-                    fallbackParts.append(settings.cleanSearchIgnoringSilentArabicLetters(a.textCleanArabic))
+                    fallbackParts.append(settings.cleanSearchIgnoringSilentArabicLetters(fallbackArabic))
+                    fallbackParts.append(settings.cleanSearchIgnoringSilentArabicLetters(fallbackCleanArabic))
                 }
                 let fallbackBlob = fallbackParts.joined(separator: " ")
 
@@ -1811,7 +1819,12 @@ struct SurahView: View {
 
                 Section {
                     VStack {
-                        let firstAyahClean = ayahsForQiraah.first?.textCleanArabic.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+                        // Riwayah-aware read (the bare `textCleanArabic` var silently serves Hafs
+                        // for beta riwayat): whether al-Fatihah's first NUMBERED ayah is the
+                        // bismillah differs by counting tradition, and this check decides which
+                        // header to show above it.
+                        let firstAyahClean = ayahsForQiraah.first
+                            .map { $0.textCleanArabic(for: settings.displayQiraahForArabic, surahID: surah.id).trimmingCharacters(in: .whitespacesAndNewlines) } ?? ""
                         let showTaawwudh = (surah.id == 9) || (surah.id == 1 && firstAyahClean.hasPrefix("بسم"))
                         if showTaawwudh {
                             HeaderRow(
@@ -3406,7 +3419,10 @@ struct ArabicTextRiwayahPicker: View {
     @ObservedObject private var settings = Settings.shared
 
     @Binding var selection: String
-    var useSimpleIOSPicker: Bool = false
+    /// Renders as a labeled row (title leading, current riwayah trailing) for Forms and sheets,
+    /// opening the SAME nested qiraah menu the comparison bar chip uses - one picker grammar
+    /// everywhere. `false` = the bare glass chip for toolbars/bars.
+    var useMenuRow: Bool = false
 
     #if os(iOS)
     @State private var pendingBeta: Settings.Riwayah.Option?
@@ -3442,30 +3458,46 @@ struct ArabicTextRiwayahPicker: View {
     @ViewBuilder
     private var content: some View {
         #if os(iOS)
-        if useSimpleIOSPicker {
-            Picker("Arabic Riwayah", selection: $selection.animation(.easeInOut)) {
-                ForEach(Settings.Riwayah.groups) { group in
-                    Section {
-                        ForEach(group.options, id: \.tag) { option in
-                            Text(option.beta ? "\(option.label) (Beta)" : option.label).tag(option.tag)
-                        }
-                    } header: {
-                        Text("\(group.teacher) - \(group.teacherArabic)")
-                            .foregroundStyle(.secondary)
+        if useMenuRow {
+            // The comparison bar's nested-menu picker (Hafs up top, then one submenu per qiraah), in
+            // row form for Forms and sheets: title leading, the current riwayah trailing, the whole
+            // row the tap target. This replaced a flat grouped `Picker` that lost the per-qiraah
+            // structure - the nested menu is THE riwayah picker everywhere it appears.
+            Menu {
+                qiraahMenuContent
+            } label: {
+                HStack {
+                    Text("Arabic Riwayah")
+                        .foregroundColor(.primary)
+
+                    Spacer()
+
+                    HStack(spacing: 4) {
+                        Text(currentLabel)
+                            .font(.caption)
+                            .lineLimit(1)
+
+                        Image(systemName: "chevron.up.chevron.down")
+                            .font(.caption2.weight(.semibold))
+                            .opacity(0.9)
                     }
+                    .foregroundColor(settings.accentColor.color)
                 }
+                .contentShape(Rectangle())
             }
-            .onChange(of: selection) { _ in settings.hapticFeedback() }
         } else {
             Menu {
                 qiraahMenuContent
             } label: {
                 HStack(spacing: 4) {
+                    // Full riwayah name, but NO `.fixedSize()`: at fixed size the longest labels
+                    // (Ibn Dhakwan an Ibn Amir) clipped their leading letters and squeezed the
+                    // search pill - now they shrink a touch, then tail-truncate gracefully.
                     Text(currentLabel)
                         .font(.caption)
                         .foregroundColor(settings.accentColor.color)
                         .lineLimit(1)
-                        .fixedSize()
+                        .minimumScaleFactor(0.8)
 
                     Image(systemName: "chevron.down")
                         .font(.caption2.weight(.semibold))
@@ -3500,7 +3532,14 @@ struct ArabicTextRiwayahPicker: View {
     @ViewBuilder
     private var qiraahMenuContent: some View {
         let current = Settings.Riwayah.canonicalTag(selection)
-        qiraahButton(Settings.Riwayah.option(for: Settings.Riwayah.hafsTag), current: current)
+        // The standalone Hafs entry keeps its full "(default)" label but drops the death-year
+        // subtitle - that detail belongs on the copy INSIDE the Asim submenu, where Hafs sits next
+        // to Shubah and the dates mean something (user rule).
+        qiraahButton(
+            Settings.Riwayah.option(for: Settings.Riwayah.hafsTag),
+            current: current,
+            hideDetail: true
+        )
 
         ForEach(Settings.Riwayah.groups) { group in
             Menu {
@@ -3512,13 +3551,18 @@ struct ArabicTextRiwayahPicker: View {
                     "\(group.teacher) - \(group.teacherArabic)",
                     systemImage: group.options.contains(where: { $0.tag == current }) ? "checkmark" : "book.closed"
                 )
+
+                // The menu subtitle line: where the imam taught, and when he died.
+                if let detail = Settings.Riwayah.teacherDetail(group.teacher) {
+                    Text(detail)
+                }
             }
         }
     }
     #endif
 
     @ViewBuilder
-    private func qiraahButton(_ option: Settings.Riwayah.Option, current: String) -> some View {
+    private func qiraahButton(_ option: Settings.Riwayah.Option, current: String, hideDetail: Bool = false) -> some View {
         Button {
             choose(option)
         } label: {
@@ -3530,6 +3574,11 @@ struct ArabicTextRiwayahPicker: View {
                 Text(option.beta ? "\(option.label) (Beta)" : option.label)
             }
             .font(.caption)
+
+            // The rawi's own death year as the menu subtitle (the standalone Hafs entry omits it).
+            if !hideDetail, let detail = option.narratorDetail {
+                Text(detail)
+            }
         }
     }
 }

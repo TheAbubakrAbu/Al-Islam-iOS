@@ -84,7 +84,7 @@ struct AyahQiraahComparisonSheet: View {
             List {
                     Group {
                         Section {
-                            Text("Compare this ayah across the Arabic riwayat available in the app. Some riwayat merge or omit Hafs ayah numbers, so unavailable rows are dimmed. No ayah is ever missing; the same words may simply be joined or numbered differently.")
+                            Text("Compare this ayah across the Arabic riwayat available in the app. Ayah numbering differs between riwayat, so rows are aligned to the SAME WORDS automatically; a note marks any riwayah that numbers this ayah differently or joins it with a neighbor. Words tinted in the accent color differ from the current riwayah's reading.")
                                 .font(.subheadline)
                                 .foregroundStyle(.secondary)
                         }
@@ -182,12 +182,96 @@ struct AyahQiraahComparisonSheet: View {
         .padding(.vertical, 10)
     }
 
-    private func qiraahText(for option: QiraahDisplay) -> String? {
-        guard let ayah = quranData.ayah(surah: surahNumber, ayah: ayahNumber),
-              ayah.existsInQiraah(option.tag, surahID: surahNumber) else {
-            return nil
+    private struct ResolvedQiraahText {
+        let text: String
+        /// The riwayah's OWN number for this ayah, when it differs from the number the sheet was
+        /// opened with (riwayat count ayahs differently - the words are aligned, the number moves).
+        let ownNumber: Int?
+        /// The Hafs ayahs this riwayah ayah spans (more than one = it joins neighbors).
+        let mergedSpan: ClosedRange<Int>?
+    }
+
+    /// The riwayah the sheet was OPENED from: the tapped ayah number is in THAT riwayah's own
+    /// numbering, so every row is anchored through its Hafs equivalent.
+    private var originTag: String { Settings.Riwayah.canonicalTag(settings.displayQiraah) }
+
+    private var anchorHafsAyah: Int {
+        QiraahComparison.hafsAnchor(surahID: surahNumber, ayahNumber: ayahNumber, tag: originTag, quranData: quranData)
+    }
+
+    /// The same WORDS as the tapped ayah, in this riwayah - aligned through the Hafs anchor, so an
+    /// off-by-one or merged numbering never shows the wrong verse (the old direct read did exactly
+    /// that for every non-Kufi-counted riwayah).
+    private func resolvedText(for option: QiraahDisplay) -> ResolvedQiraahText? {
+        let tag = Settings.Riwayah.canonicalTag(option.tag)
+        let anchor = anchorHafsAyah
+
+        if tag.isEmpty {
+            guard let ayah = quranData.ayah(surah: surahNumber, ayah: anchor) else { return nil }
+            return ResolvedQiraahText(
+                text: ayah.displayArabicText(surahId: surahNumber, clean: settings.cleanArabicText, qiraahOverride: ""),
+                ownNumber: anchor == ayahNumber ? nil : anchor,
+                mergedSpan: nil
+            )
         }
-        return ayah.displayArabicText(surahId: surahNumber, clean: settings.cleanArabicText, qiraahOverride: option.tag)
+
+        if let alignment = QiraahComparison.alignment(surahID: surahNumber, tag: tag, quranData: quranData),
+           let ownNumber = alignment.riwayahNumberForHafs[anchor],
+           let ayah = quranData.ayah(surah: surahNumber, ayah: ownNumber),
+           ayah.existsInQiraah(tag, surahID: surahNumber) {
+            let span = alignment.hafsRangeForRiwayah[ownNumber]
+            return ResolvedQiraahText(
+                text: ayah.displayArabicText(surahId: surahNumber, clean: settings.cleanArabicText, qiraahOverride: tag),
+                ownNumber: ownNumber == ayahNumber ? nil : ownNumber,
+                mergedSpan: (span.map { $0.count } ?? 1) > 1 ? span : nil
+            )
+        }
+
+        // No alignment (this riwayah has no text for the surah): the old direct read, else
+        // genuinely unavailable.
+        guard let ayah = quranData.ayah(surah: surahNumber, ayah: ayahNumber),
+              ayah.existsInQiraah(tag, surahID: surahNumber) else { return nil }
+        return ResolvedQiraahText(
+            text: ayah.displayArabicText(surahId: surahNumber, clean: settings.cleanArabicText, qiraahOverride: tag),
+            ownNumber: nil,
+            mergedSpan: nil
+        )
+    }
+
+    private func qiraahText(for option: QiraahDisplay) -> String? {
+        resolvedText(for: option)?.text
+    }
+
+    /// The current riwayah's resolved text - the reference every other row is diffed against.
+    private var referenceText: String? {
+        currentOption.flatMap { resolvedText(for: $0)?.text }
+    }
+
+    /// Differences from the CURRENT riwayah, tinted for `preStyledSource` - nil for the current row
+    /// itself and for unavailable rows (an active search term overrides it by the snippet's rule).
+    private func diffStyled(for option: QiraahDisplay, resolved: ResolvedQiraahText?) -> AttributedString? {
+        guard let resolved, option.id != currentOption?.id,
+              let reference = referenceText, reference != resolved.text else { return nil }
+        return QiraahComparison.diffAttributed(
+            text: resolved.text,
+            reference: reference,
+            baseColor: .primary,
+            diffColor: settings.accentColor.color
+        )
+    }
+
+    /// "Ayah 285 in this riwayah (spans 285\u{2013}286)" - the numbering note under a row's header.
+    private func numberNote(_ resolved: ResolvedQiraahText) -> String? {
+        if let own = resolved.ownNumber {
+            if let span = resolved.mergedSpan {
+                return "Ayah \(own) in this riwayah (spans \(span.lowerBound)\u{2013}\(span.upperBound))"
+            }
+            return "Ayah \(own) in this riwayah"
+        }
+        if let span = resolved.mergedSpan {
+            return "One ayah here (spans \(span.lowerBound)\u{2013}\(span.upperBound))"
+        }
+        return nil
     }
 
     private func comparisonArabicFontName(for option: QiraahDisplay) -> String {
@@ -195,7 +279,8 @@ struct AyahQiraahComparisonSheet: View {
     }
 
     private func qiraahRow(_ option: QiraahDisplay) -> some View {
-        let text = qiraahText(for: option)
+        let resolved = resolvedText(for: option)
+        let text = resolved?.text
 
         return VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .firstTextBaseline) {
@@ -238,6 +323,14 @@ struct AyahQiraahComparisonSheet: View {
                 }
             }
 
+            // The smart-alignment receipt: when this riwayah numbers the ayah differently (or joins
+            // it with a neighbor), say so plainly - the words below are still the SAME ayah.
+            if let resolved, let note = numberNote(resolved) {
+                Text(note)
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(settings.accentColor.color)
+            }
+
             HighlightedSnippet(
                 source: text ?? "This ayah is not separate in this riwayah.",
                 term: searchText,
@@ -246,7 +339,8 @@ struct AyahQiraahComparisonSheet: View {
                     size: arabicFontSize
                 ),
                 accent: settings.accentColor.color,
-                fg: text == nil ? .secondary : .primary
+                fg: text == nil ? .secondary : .primary,
+                preStyledSource: diffStyled(for: option, resolved: resolved)
             )
                 .arabicFontDesign(custom: settings.quranDisplayUsesCustomArabicFace)
                 .multilineTextAlignment(.trailing)

@@ -1822,7 +1822,15 @@ extension Settings {
             self?.schedulePrayerTimeNotifications()
         }
         pendingNotificationScheduleWorkItem = work
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35, execute: work)
+        // Under the launch cover, push the (up to 60-request) scheduling pass past the reveal: it
+        // used to land 0.35s after the launch `fetchPrayerTimes`, i.e. in the middle of the
+        // under-cover warm the launch screen waits on. The requests are for future prayer times -
+        // a few seconds' delay changes nothing about when they fire. Off-main callers (there are
+        // none today; the compute path asserts main) keep the old 0.35s rather than trap in
+        // `assumeIsolated`.
+        let revealed = Thread.isMainThread ? MainActor.assumeIsolated({ AppReveal.revealed }) : true
+        let delay: TimeInterval = revealed ? 0.35 : 3.0
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: work)
     }
 
     /// Static lookup table
@@ -2194,6 +2202,10 @@ extension Settings {
     private static let prayerTrackerDayFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "en_US_POSIX")
+        // Pinned explicitly (the Quran-side dayKey does the same): tracker keys must stay Gregorian
+        // "yyyy-MM-dd" even when the iPhone's SYSTEM calendar is Hijri - every lexicographic key
+        // comparison (pruning, menses ranges, earliest-day) depends on it.
+        formatter.calendar = Calendar(identifier: .gregorian)
         formatter.dateFormat = "yyyy-MM-dd"
         return formatter
     }()
@@ -2395,8 +2407,7 @@ extension Settings {
     /// dictionaries out once lets the stats engine walk a whole year without a lookup-per-day through
     /// the accessor methods.
     func trackerSnapshot() -> (marks: [String: Set<String>], exemptDays: Set<String>, activePauseStartKey: String?) {
-        let startKey = (mensesPauseActive && mensesPauseStartDate != nil)
-            ? prayerTrackerKey(for: mensesPauseStartDate!) : nil
+        let startKey = mensesPauseActive ? mensesPauseStartDate.map(prayerTrackerKey(for:)) : nil
         return (loadPrayerTracker(), loadExemptDays(), startKey)
     }
 
@@ -2408,14 +2419,30 @@ extension Settings {
         exemptDaysCache = nil
     }
 
-    /// The first day that has any mark or exemption - "tracking since". Nil until something is recorded.
+    /// The first day that has any mark or exemption - "tracking since". Nil until something is
+    /// recorded. Only well-formed "yyyy-MM-dd" keys count: a single foreign or corrupt key (they
+    /// tend to sort LOW) used to poison the lexicographic min AND send the stats walk on a
+    /// years-long main-thread loop that read as a crash on the affected device.
     func trackerEarliestDayKey() -> String? {
-        let marks = loadPrayerTracker().keys.min()
-        let exempt = loadExemptDays().min()
+        let marks = loadPrayerTracker().keys.filter(Self.isWellFormedTrackerDayKey).min()
+        let exempt = loadExemptDays().filter(Self.isWellFormedTrackerDayKey).min()
         switch (marks, exempt) {
         case let (m?, e?): return min(m, e)
         default: return marks ?? exempt
         }
+    }
+
+    /// Exactly ten ASCII bytes, digits with dashes at 4 and 7 - the only shape every tracker key
+    /// comparison in this file is valid for.
+    static func isWellFormedTrackerDayKey(_ key: String) -> Bool {
+        let bytes = Array(key.utf8)
+        guard bytes.count == 10,
+              bytes[4] == UInt8(ascii: "-"),
+              bytes[7] == UInt8(ascii: "-") else { return false }
+        for (index, byte) in bytes.enumerated() where index != 4 && index != 7 {
+            guard byte >= UInt8(ascii: "0"), byte <= UInt8(ascii: "9") else { return false }
+        }
+        return true
     }
 
     /// The prayer a nag BEFORE `cascadePrayerName` is actually about: the trackable prayer whose

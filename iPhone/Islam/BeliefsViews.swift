@@ -1786,16 +1786,16 @@ struct QiraatView: View {
                         .font(.body)
 
                     Group {
-                        Text("• Abu Jafar (أَبُو جَعفَر)")
-                        Text("• Abu Amr (أَبُو عَمرٍو)")
-                        Text("• al-Kisai (الكِسَائِي)")
-                        Text("• Asim (عَاصِم)")
-                        Text("• Hamzah (حَمزَة)")
-                        Text("• Ibn Amir (ابنُ عَامِر)")
-                        Text("• Ibn Kathir (ابنِ كَثِير)")
-                        Text("• Khalaf al-Ashir (خَلَف العَاشِر)")
-                        Text("• Nafi (نَافِع)")
-                        Text("• Yaqoub (يَعقُوب)")
+                        Text("• Abu Jafar (أَبُو جَعفَر): Madinah, died 130 AH")
+                        Text("• Abu Amr (أَبُو عَمرٍو): Basra, died 154 AH")
+                        Text("• al-Kisai (الكِسَائِي): Kufa, died 189 AH")
+                        Text("• Asim (عَاصِم): Kufa, died 127 AH")
+                        Text("• Hamzah (حَمزَة): Kufa, died 156 AH")
+                        Text("• Ibn Amir (ابنُ عَامِر): Damascus, died 118 AH")
+                        Text("• Ibn Kathir (ابنِ كَثِير): Makkah, died 120 AH")
+                        Text("• Khalaf al-Ashir (خَلَف العَاشِر): Baghdad, died 229 AH")
+                        Text("• Nafi (نَافِع): Madinah, died 169 AH")
+                        Text("• Yaqoub (يَعقُوب): Basra, died 205 AH")
                     }
                     .font(.body)
                 }
@@ -1806,46 +1806,56 @@ struct QiraatView: View {
 
                     Group {
                         // Abu Jafar
-                        Text("• Ibn Wardan an Abi Jafar (ابنُ وَردَان عَن أَبِي جَعفَر)")
-                        Text("• Ibn Jammaz an Abi Jafar (ابنُ جَمَّاز عَن أَبِي جَعفَر)")
+                        Text("• Ibn Wardan an Abi Jafar (ابنُ وَردَان عَن أَبِي جَعفَر): died 160 AH")
+                        Text("• Ibn Jammaz an Abi Jafar (ابنُ جَمَّاز عَن أَبِي جَعفَر): died 170 AH")
 
                         // Abu Amr
-                        Text("• ad-Duri an Abi Amr (الدُّورِي عَن أَبِي عَمرٍو)")
-                        Text("• as-Susi an Abi Amr (السُّوسِي عَن أَبِي عَمرٍو)")
+                        Text("• ad-Duri an Abi Amr (الدُّورِي عَن أَبِي عَمرٍو): died 246 AH")
+                        Text("• as-Susi an Abi Amr (السُّوسِي عَن أَبِي عَمرٍو): died 261 AH")
 
                         // al-Kisai
-                        Text("• Abu al-Harith an al-Kisai (أَبُو الحَارِث عَن الكِسَائِي)")
-                        Text("• ad-Duri an al-Kisai (الدُّورِي عَن الكِسَائِي)")
+                        Text("• Abu al-Harith an al-Kisai (أَبُو الحَارِث عَن الكِسَائِي): died 240 AH")
+                        Text("• ad-Duri an al-Kisai (الدُّورِي عَن الكِسَائِي): died 246 AH")
 
                         // Asim
-                        Text("• Shubah an Asim (شُعبَة عَن عَاصِم)")
-                        Text("• Hafs an Asim (حَفص عَن عَاصِم)")
+                        Text("• Shubah an Asim (شُعبَة عَن عَاصِم): died 193 AH")
+                        Text("• Hafs an Asim (حَفص عَن عَاصِم): died 180 AH")
 
                         // Hamzah
-                        Text("• Khalaf an Hamzah (خَلَف عَن حَمزَة)")
-                        Text("• Khallad an Hamzah (خَلَّاد عَن حَمزَة)")
+                        Text("• Khalaf an Hamzah (خَلَف عَن حَمزَة): died 229 AH")
+                        Text("• Khallad an Hamzah (خَلَّاد عَن حَمزَة): died 220 AH")
 
                         // Ibn Amir
-                        Text("• Hisham an Ibn Amir (هِشَام عَن ابنِ عَامِر)")
-                        Text("• Ibn Dhakwan an Ibn Amir (ابنُ ذَكوَان عَن ابنِ عَامِر)")
+                        Text("• Hisham an Ibn Amir (هِشَام عَن ابنِ عَامِر): died 245 AH")
+                        Text("• Ibn Dhakwan an Ibn Amir (ابنُ ذَكوَان عَن ابنِ عَامِر): died 242 AH")
 
                         // Ibn Kathir
-                        Text("• al-Bazzi an Ibn Kathir (البَزِّي عَن ابنِ كَثِير)")
-                        Text("• Qunbul an Ibn Kathir (قُنبُل عَن ابنِ كَثِير)")
+                        Text("• al-Bazzi an Ibn Kathir (البَزِّي عَن ابنِ كَثِير): died 250 AH")
+                        Text("• Qunbul an Ibn Kathir (قُنبُل عَن ابنِ كَثِير): died 291 AH")
 
                         // Khalaf al-Ashir
-                        Text("• Ishaq an Khalaf al-Ashir (إِسحَاق عَن خَلَف العَاشِر)")
-                        Text("• Idris an Khalaf al-Ashir (إِدرِيس عَن خَلَف العَاشِر)")
+                        Text("• Ishaq an Khalaf al-Ashir (إِسحَاق عَن خَلَف العَاشِر): died 286 AH")
+                        Text("• Idris an Khalaf al-Ashir (إِدرِيس عَن خَلَف العَاشِر): died 292 AH")
 
                         // Nafi
-                        Text("• Warsh an Nafi (وَرش عَن نَافِع)")
-                        Text("• Qalun an Nafi (قَالُون عَن نَافِع)")
+                        Text("• Warsh an Nafi (وَرش عَن نَافِع): died 197 AH")
+                        Text("• Qalun an Nafi (قَالُون عَن نَافِع): died 220 AH")
 
                         // Yaqoub
-                        Text("• Ruways an Yaqoub (رُوَيس عَن يَعقُوب)")
-                        Text("• Rawh an Yaqoub (رَوح عَن يَعقُوب)")
+                        Text("• Ruways an Yaqoub (رُوَيس عَن يَعقُوب): died 238 AH")
+                        Text("• Rawh an Yaqoub (رَوح عَن يَعقُوب): died 234 AH")
                     }
                     .font(.body)
+                }
+
+                Section(header: Text("READ THE 20 MUSHAFS")) {
+                    Text("Every riwayah above can be read inside the app. Pick a riwayah, open any surah, and optionally tint every word that differs from Hafs an Asim.")
+                        .font(.body)
+
+                    NavigationLink(destination: LazyDestination { RiwayatMushafBrowserView() }) {
+                        Label("Open the Mushaf Browser", systemImage: "books.vertical")
+                            .foregroundColor(Settings.shared.accentColor.color)
+                    }
                 }
 
                 Section(header: Text("THE COMPANIONS BEHIND EACH QIRAAH")) {
@@ -3062,5 +3072,61 @@ struct FiqhAqeedahManhajView: View {
 #Preview {
     AlIslamPreviewContainer {
         PillarsView()
+    }
+}
+
+/// The 20-mushaf browser: pick any riwayah (the comparison-mode nested menu), flip the
+/// difference-highlighting toggle, and open any surah to read that riwayah's mushaf - reached from
+/// the Qiraat guide's READ THE 20 MUSHAFS section.
+struct RiwayatMushafBrowserView: View {
+    @ObservedObject private var settings = Settings.shared
+    @ObservedObject private var quranData = QuranData.shared
+
+    var body: some View {
+        List {
+            Group {
+                Section {
+                    ArabicTextRiwayahPicker(
+                        selection: $settings.displayQiraah.animation(.easeInOut),
+                        useMenuRow: true
+                    )
+                    .font(.subheadline)
+                } footer: {
+                    Text("The reading view, page mode, search, and comparison sheets all follow this choice. Beta riwayat (machine-extracted) ask for a one-time confirmation; enable Beta Qiraat in Quran settings to unlock all 20.")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+
+                Section {
+                    Toggle("Highlight Differences from Hafs", isOn: $settings.highlightQiraahDifferences.animation(.easeInOut))
+                        .font(.subheadline)
+                        .onChange(of: settings.highlightQiraahDifferences) { _ in settings.hapticFeedback() }
+                } footer: {
+                    Text("When reading any riwayah other than Hafs an Asim, every word that differs from the Hafs text is tinted in your accent color.")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+
+                Section(header: Text("OPEN A SURAH")) {
+                    ForEach(quranData.quran) { surah in
+                        NavigationLink(destination: LazyDestination { SurahView(surah: surah) }) {
+                            HStack {
+                                Text("\(surah.id). \(surah.nameTransliteration)")
+                                    .font(.subheadline)
+
+                                Spacer()
+
+                                Text(settings.cleanedQuranArabic(surah.nameArabic))
+                                    .font(.subheadline)
+                                    .foregroundColor(settings.accentColor.color)
+                            }
+                        }
+                    }
+                }
+            }
+            .themedListRowBackground()
+        }
+        .applyConditionalListStyle()
+        .navigationTitle("The 20 Mushafs")
     }
 }

@@ -76,6 +76,20 @@ enum QuranPackLoader {
         ("susi", "textSusi"),
     ]
 
+    /// The highest ayah NUMBER any of the twelve BETA riwayat uses per surah, where it exceeds the
+    /// Hafs/bundled-overlay union (measured across the shipped QiraahBeta payloads). The Shami count
+    /// splits verses Hafs joins - al-Ikhlas is FIVE ayahs there - and without an `Ayah` struct for
+    /// the extra id, the riwayah's final verse did not exist ANYWHERE in the app: not in the list,
+    /// not on a mushaf page, not in search (the "missing a verse" bug). Structs minted for these ids
+    /// carry empty Hafs text, so `existsInQiraah` keeps them invisible everywhere except the riwayat
+    /// whose side-table actually has words for them - identical to how the 156 bundled-overlay extra
+    /// ids already behave.
+    private static let betaMaxAyahID: [Int: Int] = [
+        2: 287, 4: 177, 5: 123, 6: 167, 8: 77, 9: 130, 10: 110, 13: 47, 14: 55, 18: 111,
+        20: 140, 23: 119, 27: 95, 34: 55, 35: 46, 40: 86, 47: 40, 56: 99, 71: 30, 78: 41,
+        89: 32, 91: 16, 96: 20, 97: 6, 98: 9, 99: 9, 106: 5, 112: 5, 114: 7,
+    ]
+
     /// `field` → surah id → ayah id → text. Same shape `loadQiraatOverlay()` returns, so it can
     /// be dropped in unchanged. Empty strings are skipped, exactly as the JSON path does.
     static func qiraatOverlay() -> [String: [Int: [Int: String]]] {
@@ -148,6 +162,10 @@ enum QuranPackLoader {
                 var allIDs = Set(baseByID.keys)
                 for (_, field) in qiraatFields {
                     if let ids = overlay[field]?[meta.id]?.keys { allIDs.formUnion(ids) }
+                }
+                // The BETA riwayat can count past the bundled union too (see `betaMaxAyahID`).
+                if let betaMax = betaMaxAyahID[meta.id], let unionMax = allIDs.max(), betaMax > unionMax {
+                    allIDs.formUnion((unionMax + 1)...betaMax)
                 }
 
                 // Per-surah overlay tables hoisted out of the ayah loop (the field+surah lookup is

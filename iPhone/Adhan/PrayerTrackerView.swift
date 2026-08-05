@@ -28,6 +28,10 @@ struct PrayerTrackerStats: Equatable {
     static let dayKeyFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "en_US_POSIX")
+        // Pinned explicitly (the Quran-side dayKey does the same): tracker keys must stay Gregorian
+        // "yyyy-MM-dd" even when the iPhone's SYSTEM calendar is Hijri - the grid geometry may
+        // follow the system calendar, the storage keys never do.
+        formatter.calendar = Calendar(identifier: .gregorian)
         formatter.dateFormat = "yyyy-MM-dd"
         return formatter
     }()
@@ -44,7 +48,13 @@ struct PrayerTrackerStats: Equatable {
 
         var run = 0
         var day = calendar.startOfDay(for: firstDay)
-        while day <= today {
+        // Hard iteration cap: retention prunes at 1850 days, so a walk past ~5.5 years means a
+        // corrupt or foreign earliest key slipped in (e.g. one written under a non-Gregorian
+        // calendar) - without the cap, one bad key turned this loop into a main-thread hang that
+        // read as a crash (watchdog kill) on the affected device.
+        var remaining = 2_000
+        while day <= today, remaining > 0 {
+            remaining -= 1
             let key = dayKeyFormatter.string(from: day)
             let exempt = snapshot.exemptDays.contains(key)
                 || (snapshot.activePauseStartKey.map { key >= $0 } ?? false)
@@ -376,7 +386,14 @@ struct PrayerTrackerView: View {
     /// The date the shown period is anchored on - navigation moves it by one day/week/month/year.
     @State private var anchor = Date()
 
-    private var calendar: Calendar { Calendar.current }
+    /// Gregorian with the user's region intact (week start, timezone, localized names): the tracker's
+    /// storage keys, pruning, and menses ranges are all Gregorian "yyyy-MM-dd", so the GRID must count
+    /// months the same way. Under a system-wide Hijri calendar, plain `Calendar.current` drew
+    /// 29/30-cell Hijri months over Gregorian-keyed data and fed Hijri years into the year view - the
+    /// Hijri calendar has its own screen (CalendarView), the tracker is a civil-day log. One shared
+    /// pinned instance (`displayCalendar`) so grid math and every formatter/symbol agree, built once:
+    /// this is read per cell.
+    private var calendar: Calendar { Self.displayCalendar }
 
     var body: some View {
         List {
@@ -453,7 +470,11 @@ struct PrayerTrackerView: View {
 
     private var historySection: some View {
         Section(header: Text("HISTORY")) {
-            Picker("", selection: $scope.animation(.easeInOut)) {
+            // PLAIN binding, deliberately: switching scope swaps a data-dependent set of List rows
+            // (day content alone is 0-7 rows), and an ANIMATED structural diff of List rows is the
+            // same UICollectionView update-assertion crash the search results hit (see the
+            // SearchBar note in QuranView). Same rule for every anchor/scope write below.
+            Picker("", selection: $scope) {
                 ForEach(Scope.allCases) { scope in
                     Text(scope.rawValue).tag(scope)
                 }
@@ -492,7 +513,7 @@ struct PrayerTrackerView: View {
                 if !isCurrentPeriod {
                     Button {
                         settings.hapticFeedback()
-                        withAnimation { anchor = Date() }
+                        anchor = Date()
                     } label: {
                         Text("Back to today")
                             .font(.caption2)
@@ -666,11 +687,18 @@ struct PrayerTrackerView: View {
     /// One day of the shown period, resolved once per render. The week/month/year builders used to call
     /// `coveredCanonicalPrayers`/`isTrackerExempt` per CELL, each doing its own formatter + set-union
     /// work; one snapshot pass per period keeps the render cost flat no matter how many cells draw.
-    private struct DayRecord {
+    private struct DayRecord: Identifiable {
+        /// The Gregorian storage key doubles as the ForEach identity. A raw `Date` id could go
+        /// DUPLICATE or drift when a DST transition leaves consecutive "days" an hour apart -
+        /// duplicate ids in a List-hosted grid is a diffing crash on exactly the devices/timezones
+        /// the owner can't reproduce on. The key is unique and stable by construction.
+        let key: String
         let date: Date
         let covered: Set<String>
         let exempt: Bool
         let isFuture: Bool
+
+        var id: String { key }
     }
 
     private func dayRecords(from start: Date, count: Int) -> [DayRecord] {
@@ -679,18 +707,20 @@ struct PrayerTrackerView: View {
         let formatter = PrayerTrackerStats.dayKeyFormatter
 
         var records: [DayRecord] = []
-        records.reserveCapacity(count)
+        records.reserveCapacity(max(count, 0))
         var day = calendar.startOfDay(for: start)
-        for _ in 0..<count {
+        for _ in 0..<max(count, 0) {
             let key = formatter.string(from: day)
             let exempt = snapshot.exemptDays.contains(key)
                 || (snapshot.activePauseStartKey.map { key >= $0 } ?? false)
             let covered = (snapshot.marks[key] ?? []).reduce(into: Set<String>()) {
                 $0.formUnion(Settings.canonicalCoverage(of: $1))
             }
-            records.append(DayRecord(date: day, covered: covered, exempt: exempt, isFuture: day > today))
+            records.append(DayRecord(key: key, date: day, covered: covered, exempt: exempt, isFuture: day > today))
             guard let next = calendar.date(byAdding: .day, value: 1, to: day) else { break }
-            day = next
+            // Re-anchor EVERY step: across a DST transition `byAdding` can leave the running date
+            // at 01:00, which then mis-flags today as future and feeds the grids drifting dates.
+            day = calendar.startOfDay(for: next)
         }
         return records
     }
@@ -738,7 +768,7 @@ struct PrayerTrackerView: View {
                 .minimumScaleFactor(0.55)
                 .frame(width: 52, alignment: .leading)
 
-            ForEach(records, id: \.date) { record in
+            ForEach(records) { record in
                 cell(record)
                     .frame(maxWidth: .infinity)
             }
@@ -810,16 +840,18 @@ struct PrayerTrackerView: View {
             VStack(spacing: 8) {
                 LazyVGrid(columns: columns, spacing: 6) {
                     ForEach(0..<7, id: \.self) { index in
-                        Text(Self.weekdaySymbols[(calendar.firstWeekday - 1 + index) % 7])
+                        Text(Self.weekdaySymbol(at: (calendar.firstWeekday - 1 + index) % 7))
                             .font(.caption2.weight(.semibold))
                             .foregroundColor(.secondary)
                     }
 
-                    ForEach(0..<leadingBlanks, id: \.self) { _ in
+                    ForEach(0..<max(leadingBlanks, 0), id: \.self) { _ in
                         Color.clear.frame(height: 34)
                     }
 
-                    ForEach(Array(records.enumerated()), id: \.element.date) { index, record in
+                    // Identity = the record's Gregorian day KEY (see DayRecord): raw Dates could
+                    // duplicate across a DST transition and crash the grid's diff.
+                    ForEach(Array(records.enumerated()), id: \.element.key) { index, record in
                         monthCell(record: record, dayNumber: index + 1)
                     }
                 }
@@ -845,10 +877,10 @@ struct PrayerTrackerView: View {
         Button {
             guard !isFuture else { return }
             settings.hapticFeedback()
-            withAnimation {
-                anchor = day
-                scope = .day
-            }
+            // Plain writes: month → day swaps the section's row set structurally (see the scope
+            // picker note) - animating that swap is the List diff crash.
+            anchor = day
+            scope = .day
         } label: {
             ZStack {
                 RoundedRectangle(cornerRadius: 8)
@@ -1002,15 +1034,15 @@ struct PrayerTrackerView: View {
         return Button {
             guard hasData || summary.possible > 0 else { return }
             settings.hapticFeedback()
-            withAnimation {
-                if let date = calendar.date(from: DateComponents(year: year, month: summary.month, day: 1)) {
-                    anchor = date
-                    scope = .month
-                }
+            // Plain writes: year → month swaps the section's rows structurally (see the scope
+            // picker note) - animating that swap is the List diff crash.
+            if let date = calendar.date(from: DateComponents(year: year, month: summary.month, day: 1)) {
+                anchor = date
+                scope = .month
             }
         } label: {
             HStack(spacing: 10) {
-                Text(Self.monthSymbols[summary.month - 1])
+                Text(Self.monthSymbol(at: summary.month - 1))
                     .font(.caption.weight(.medium))
                     .foregroundColor(hasData ? .primary : .secondary.opacity(0.5))
                     .frame(width: 36, alignment: .leading)
@@ -1142,32 +1174,57 @@ struct PrayerTrackerView: View {
         .listRowSeparator(.hidden)
     }
 
+    /// Every display formatter and symbol table below is pinned to the same localized GREGORIAN
+    /// calendar the grid math uses (see `calendar`): month titles, dates, and weekday letters must
+    /// name the months the grid is actually drawing, in the user's language.
+    private static let displayCalendar: Calendar = {
+        var pinned = Calendar(identifier: .gregorian)
+        pinned.locale = Locale.current
+        pinned.firstWeekday = Calendar.current.firstWeekday
+        pinned.timeZone = Calendar.current.timeZone
+        return pinned
+    }()
+
     private static let longDateFormatter: DateFormatter = {
         let formatter = DateFormatter()
+        formatter.calendar = displayCalendar
         formatter.dateStyle = .medium
         return formatter
     }()
 
     private static let shortDateFormatter: DateFormatter = {
         let formatter = DateFormatter()
+        formatter.calendar = displayCalendar
         formatter.setLocalizedDateFormatFromTemplate("MMM d")
         return formatter
     }()
 
     private static let monthFormatter: DateFormatter = {
         let formatter = DateFormatter()
+        formatter.calendar = displayCalendar
         formatter.setLocalizedDateFormatFromTemplate("MMMM yyyy")
         return formatter
     }()
 
     private static let weekdayLetterFormatter: DateFormatter = {
         let formatter = DateFormatter()
+        formatter.calendar = displayCalendar
         formatter.setLocalizedDateFormatFromTemplate("EEEEE")
         return formatter
     }()
 
-    private static let weekdaySymbols: [String] = Calendar.current.veryShortWeekdaySymbols
-    private static let monthSymbols: [String] = Calendar.current.shortMonthSymbols
+    // Localized Gregorian symbols (matching `displayCalendar`). The safe accessors below stay as
+    // the last line of defense: no symbol lookup may ever trap the month grid.
+    private static let weekdaySymbols: [String] = displayCalendar.veryShortWeekdaySymbols
+    private static let monthSymbols: [String] = displayCalendar.shortMonthSymbols
+
+    private static func weekdaySymbol(at index: Int) -> String {
+        weekdaySymbols.indices.contains(index) ? weekdaySymbols[index] : "•"
+    }
+
+    private static func monthSymbol(at index: Int) -> String {
+        monthSymbols.indices.contains(index) ? monthSymbols[index] : "M\(index + 1)"
+    }
 }
 
 #Preview {

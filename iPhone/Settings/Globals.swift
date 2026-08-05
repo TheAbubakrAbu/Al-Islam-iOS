@@ -444,9 +444,9 @@ extension String {
                 continue
             }
 
-            if base.value == 0x0671 {
-                continue
-            }
+            // ٱ (hamzatul-wasl) is KEPT - `cleanSearch` folds it to a plain ا downstream. Dropping the
+            // whole cluster here made the silent-lane blob start "لذين" instead of "الذين", so every
+            // silent-letter query beginning with ال missed for a reason users could never see.
 
             let hasStandardSukoon = scalars.contains { $0.value == 0x0652 }
             let hasDaggerAlif = scalars.contains { $0.value == 0x0670 }
@@ -477,6 +477,39 @@ extension String {
 
             out.append(cluster)
         }
+
+        return out
+    }
+
+    /// Search twin of the mushaf's alif al-wiqaya: every whitespace-delimited token ending in "وا"
+    /// loses that final silent alif (ءامنوا → ءامنو, وعملوا → وعملو). Applied to the ALREADY FOLDED
+    /// corpus lane AND the folded query alike, so spellings with the alif, without it, or mixing
+    /// both converge to identical bytes - the mushaf-sukoon fold above can't do that for queries,
+    /// which carry no sukoon marks. Runs only on folded search text; NEVER fold this into the
+    /// highlighter's per-cluster normalization, where a context-sensitive rule desyncs its index map.
+    var removingAlifWiqayaForSearch: String {
+        guard contains("وا") else { return self }
+        var out = ""
+        out.reserveCapacity(count)
+        var token = ""
+
+        func flushToken() {
+            if token.hasSuffix("وا") {
+                token.removeLast()
+            }
+            out += token
+            token = ""
+        }
+
+        for character in self {
+            if character == " " {
+                flushToken()
+                out.append(" ")
+            } else {
+                token.append(character)
+            }
+        }
+        flushToken()
 
         return out
     }
@@ -579,4 +612,14 @@ extension EnvironmentValues {
 /// environment key (Watch app, previews); only the iPhone app root writes it.
 @MainActor enum AppReveal {
     static var revealed = true
+
+    /// Parks a task until the launch/splash cover has lifted. Deferred launch work (the 17-book
+    /// hadith sweep, the broad surah sweep, the NLEmbedding probe) waits on this so the under-cover
+    /// warm - the window the launch screen's reveal is actually gated on - keeps the main actor and
+    /// the disk to itself. 100ms poll: reveal latency is invisible at that grain.
+    static func waitUntilRevealed() async {
+        while !revealed, !Task.isCancelled {
+            try? await Task.sleep(nanoseconds: 100_000_000)
+        }
+    }
 }

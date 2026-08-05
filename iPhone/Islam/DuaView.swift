@@ -151,6 +151,8 @@ struct DuaView: View {
     /// A MANUAL ask that found nothing to ground on or errored - the tapped row must answer with
     /// SOMETHING instead of silently restoring the prompt.
     @State private var askNoAnswer = false
+    /// Whether the current answer was grounded in retrieved items (drives the card's footer).
+    @State private var askGrounded = true
     /// The AI-vs-keyword segmented switch, shown only when BOTH result kinds exist. Reset to the
     /// AI list on every new query.
     @State private var showKeywordResults = false
@@ -186,13 +188,9 @@ struct DuaView: View {
             for dua in matchingDuas(for: normalizedQuery).prefix(6) where seen.insert(dua.id).inserted {
                 sources.append(.init(reference: dua.reference ?? dua.transliteration, text: dua.translation))
             }
-            guard !sources.isEmpty else {
-                askAnswer = ""; askIsStreaming = false; askRanForQuery = ""
-                // A tapped ask MUST respond: with nothing retrieved to ground on, say so instead
-                // of silently restoring the prompt row.
-                if manual { askNoAnswer = true }
-                return
-            }
+            // Nothing retrieved is no longer a dead end: the ask still runs, in OPEN mode - a
+            // clearly labeled general-knowledge answer with no recreated quotes.
+            askGrounded = !sources.isEmpty
 
             askAnswer = ""; askIsStreaming = true; askRanForQuery = trimmed
             guard #available(iOS 26.0, *) else { return }
@@ -230,7 +228,7 @@ struct DuaView: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
-            Text("AI couldn't find anything matching \u{201C}\(searchText.trimmingCharacters(in: .whitespacesAndNewlines))\u{201D}. Try different wording.")
+            Text("AI couldn't answer \u{201C}\(searchText.trimmingCharacters(in: .whitespacesAndNewlines))\u{201D} right now. Try different wording, or try again.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
@@ -252,8 +250,6 @@ struct DuaView: View {
 
                 Text("Ask AI about \u{201C}\(searchText.trimmingCharacters(in: .whitespacesAndNewlines))\u{201D}")
                     .font(.caption.weight(.semibold))
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.7)
 
                 Spacer()
 
@@ -279,8 +275,8 @@ struct DuaView: View {
             if askNoAnswer {
                 Section(header: askAIHeader) { askNoAnswerRow }
             } else if !askRanForQuery.isEmpty {
-                Section(header: askAIHeader) { AskAnswerCard(answer: askAnswer, isStreaming: askIsStreaming) }
-            } else if hasResults {
+                Section(header: askAIHeader) { AskAnswerCard(answer: askAnswer, isStreaming: askIsStreaming, grounded: askGrounded) }
+            } else {
                 Section(header: askAIHeader) { askPromptRow }
             }
         }

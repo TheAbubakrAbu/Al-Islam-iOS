@@ -1176,28 +1176,35 @@ struct AyahSearchRow: View, Equatable {
         let visibility = searchVisibility()
 
         VStack(alignment: .leading, spacing: 8) {
+            // The HadithRow header grammar: the reference pill leading, the ellipsis actions button
+            // trailing. The button itself is OVERLAID by `ayahContextMenuModifier(inlineEllipsis:)`
+            // (which owns the menu items and every sheet they present) - this row just reserves its
+            // 22pt slot so the header lays out around it.
             HStack(spacing: 8) {
                 ayahReferenceBadge
 
-                if visibility.showArabicLine {
-                    HighlightedSnippet(
-                        source: arabicDisplayText(),
-                        term: (visibility.mArabic || visibility.forceArabicHighlight) ? query : "",
-                        font: .custom(searchArabicFontName, size: UIFont.preferredFont(forTextStyle: .body).pointSize),
-                        accent: settings.accentColor.color,
-                        fg: .primary,
-                        preStyledSource: arabicTajweedText(),
-                        beginnerMode: settings.beginnerMode,
-                        lineLimit: nil,
-                        guaranteeMatch: visibility.forceArabicHighlight
-                    )
-                    .arabicFontDesign(custom: settings.quranDisplayUsesCustomArabicFace)
-                    .frame(maxWidth: .infinity, alignment: .trailing)
-                    .multilineTextAlignment(.trailing)
-                    // Inside this badge+Arabic HStack SwiftUI otherwise truncates a long ayah to one line;
-                    // fixedSize lets it wrap to as many lines as needed.
-                    .fixedSize(horizontal: false, vertical: true)
-                }
+                Spacer(minLength: 0)
+
+                Color.clear
+                    .frame(width: 22, height: 22)
+            }
+
+            if visibility.showArabicLine {
+                HighlightedSnippet(
+                    source: arabicDisplayText(),
+                    term: (visibility.mArabic || visibility.forceArabicHighlight) ? query : "",
+                    font: .custom(searchArabicFontName, size: UIFont.preferredFont(forTextStyle: .body).pointSize),
+                    accent: settings.accentColor.color,
+                    fg: .primary,
+                    preStyledSource: arabicTajweedText(),
+                    beginnerMode: settings.beginnerMode,
+                    lineLimit: nil,
+                    guaranteeMatch: visibility.forceArabicHighlight
+                )
+                .arabicFontDesign(custom: settings.quranDisplayUsesCustomArabicFace)
+                .frame(maxWidth: .infinity, alignment: .trailing)
+                .multilineTextAlignment(.trailing)
+                .fixedSize(horizontal: false, vertical: true)
             }
 
             if visibility.showTrLine {
@@ -1342,10 +1349,12 @@ struct AyahSearchRow: View, Equatable {
             favoriteSurahs: favoriteSurahs,
             bookmarkedAyahs: bookmarkedAyahs,
             searchText: $searchText,
-            scrollToSurahID: $scrollToSurahID
+            scrollToSurahID: $scrollToSurahID,
+            // Compact rows carry the HadithRow-style header, whose trailing slot this fills.
+            inlineEllipsis: compact
         )
     }
-    
+
     static func == (l: Self, r: Self) -> Bool {
         l.surah == r.surah && l.ayah == r.ayah &&
         l.query == r.query &&

@@ -427,7 +427,9 @@ let recitersMuallim = [
 ].sorted()
 
 let recitersShubah = [
-    Reciter(name: "Ahmad Deban", ayahIdentifier: "ar.minshawi", ayahBitrate: "128", surahLink: "https://server16.mp3quran.net/deban/Rewayat-Sho-bah-A-n-Asim/001.mp3", qiraah: Settings.Riwayah.shubah),
+    // Trailing "/" only: QuranPlayer appends "NNN.mp3" itself - the old link ended in "001.mp3",
+    // so every surah request became ".../001.mp3001.mp3" and 404'd.
+    Reciter(name: "Ahmad Deban", ayahIdentifier: "ar.minshawi", ayahBitrate: "128", surahLink: "https://server16.mp3quran.net/deban/Rewayat-Sho-bah-A-n-Asim/", qiraah: Settings.Riwayah.shubah),
 ].sorted()
 
 let recitersKhalaf = [

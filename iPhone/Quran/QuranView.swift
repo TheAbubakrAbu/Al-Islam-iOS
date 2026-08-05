@@ -271,16 +271,18 @@ struct QuranView: View {
             && getSurahAndAyah(from: trimmed).surah == nil
     }
 
-    // Ask (the on-device LLM, grounded RAG): auto-runs for QUESTION-shaped queries only, streaming an
-    // answer card above the AI results - drawn strictly from the retrieved ayahs, cited, never invented.
-    // Exists only on Apple Intelligence devices (`OnDeviceAsk.isAvailable`); elsewhere nothing renders.
+    // Ask (the on-device LLM): auto-runs for QUESTION-shaped queries, streaming an answer card above
+    // the AI results - grounded in the retrieved ayahs and cited when retrieval found any, an open
+    // general-knowledge answer (clearly labeled, quote-free) when it found none. Exists only on Apple
+    // Intelligence devices (`OnDeviceAsk.isAvailable`); elsewhere nothing renders.
     @State private var askAnswer = ""
     @State private var askIsStreaming = false
     @State private var askRanForQuery = ""
-    /// A MANUAL ask that found nothing to ground on (gibberish like "taka") or errored. The tapped row
-    /// must answer with SOMETHING - silently tearing the card down left the prompt sitting there as if
-    /// the tap never happened.
+    /// A MANUAL ask where the model declined or errored. The tapped row must answer with SOMETHING -
+    /// silently tearing the card down left the prompt sitting there as if the tap never happened.
     @State private var askNoAnswer = false
+    /// Whether the current answer was grounded in retrieved passages (drives the card's footer).
+    @State private var askGrounded = true
     @State private var askTask: Task<Void, Never>?
 
     private func runAskIfNeeded(query: String) {
@@ -312,19 +314,18 @@ struct QuranView: View {
 
             var sources: [OnDeviceAsk.Source] = []
             var seen = Set<String>()
-            for hit in aiHits.prefix(6) {
-                let reference = "\(hit.surah):\(hit.ayah)"
-                if seen.insert(reference).inserted,
-                   let ayah = quranData.ayah(surah: hit.surah, ayah: hit.ayah) {
-                    sources.append(.init(reference: reference, text: ayah.textEnglishSaheeh))
-                }
+            func addSource(surah surahID: Int, ayah ayahID: Int) {
+                let reference = "\(surahID):\(ayahID)"
+                guard seen.insert(reference).inserted,
+                      let ayah = quranData.ayah(surah: surahID, ayah: ayahID) else { return }
+                sources.append(.init(reference: reference, text: ayah.textEnglishSaheeh))
             }
-            for hit in verseHits.prefix(6) {
-                let reference = "\(hit.surah):\(hit.ayah)"
-                if seen.insert(reference).inserted,
-                   let ayah = quranData.ayah(surah: hit.surah, ayah: hit.ayah) {
-                    sources.append(.init(reference: reference, text: ayah.textEnglishSaheeh))
-                }
+            // Semantic hits first, then keyword hits, then the "top" picks - every retrieval mode the
+            // page has gets a voice, up to the engine's 12-passage budget.
+            for hit in aiHits.prefix(6) { addSource(surah: hit.surah, ayah: hit.ayah) }
+            for hit in verseHits.prefix(6) { addSource(surah: hit.surah, ayah: hit.ayah) }
+            for hit in bestAyahHitsForCurrentQuery() where sources.count < 12 {
+                addSource(surah: hit.surah, ayah: hit.ayah)
             }
             // A "5:6"-style reference has no text hits, but it names its passage outright - asking
             // about it grounds the answer on that exact ayah.
@@ -334,14 +335,10 @@ struct QuranView: View {
                     sources.append(.init(reference: "\(surah.id):\(ayah.id)", text: ayah.textEnglishSaheeh))
                 }
             }
-            guard !sources.isEmpty else {
-                askAnswer = ""; askIsStreaming = false; askRanForQuery = ""
-                // A tapped ask MUST respond: with nothing retrieved to ground on, say so instead of
-                // silently putting the prompt row back (which read as "the button does nothing").
-                if manual { askNoAnswer = true }
-                return
-            }
+            // Nothing retrieved is no longer a dead end: the ask still runs, in OPEN mode - a clearly
+            // labeled general-knowledge answer with no recreated quotes (the engine's open rules).
 
+            askGrounded = !sources.isEmpty
             askAnswer = ""; askIsStreaming = true; askRanForQuery = trimmed
             guard #available(iOS 26.0, *) else { return }
             do {
@@ -425,7 +422,7 @@ struct QuranView: View {
             } else if !askRanForQuery.isEmpty {
                 let cited = askCitedAyahs
                 Section(header: askAIHeader(citedCount: cited.count)) {
-                    AskAnswerCard(answer: askAnswer, isStreaming: askIsStreaming)
+                    AskAnswerCard(answer: askAnswer, isStreaming: askIsStreaming, grounded: askGrounded)
 
                     ForEach(Array(cited.enumerated()), id: \.offset) { _, item in
                         pageJuzAyahRow(item: item)
@@ -439,15 +436,15 @@ struct QuranView: View {
         }
     }
 
-    /// Shown when a manual ask dead-ends: nothing retrieved matched the query, so there was nothing to
-    /// answer from. Editing the query clears it (`runAsk` resets `askNoAnswer` on every run).
+    /// Shown when a manual ask dead-ends: the model declined or errored (retrieval no longer dead-ends,
+    /// it falls back to the open answer). Editing the query clears it (`runAsk` resets `askNoAnswer`).
     private var askNoAnswerRow: some View {
         HStack(spacing: 8) {
             Image(systemName: "questionmark.circle")
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
-            Text("AI couldn't find anything in the Quran matching \u{201C}\(searchText.trimmingCharacters(in: .whitespacesAndNewlines))\u{201D}. Try different wording.")
+            Text("AI couldn't answer \u{201C}\(searchText.trimmingCharacters(in: .whitespacesAndNewlines))\u{201D} right now. Try different wording, or try again.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
@@ -1146,11 +1143,32 @@ struct QuranView: View {
         }
         .task {
             prewarmQuranDestinations()
+            #if DEBUG
+            // Headless visual verification (no tap access on the dev machine): `-quranSearch <term>`
+            // pushes the term through the real search pipeline once the verse index is ready.
+            if let flagIndex = ProcessInfo.processInfo.arguments.firstIndex(of: "-quranSearch"),
+               ProcessInfo.processInfo.arguments.indices.contains(flagIndex + 1) {
+                let term = ProcessInfo.processInfo.arguments[flagIndex + 1]
+                Task {
+                    await quranData.waitUntilCoreLoaded()
+                    while !quranData.isVerseSearchReady, !Task.isCancelled {
+                        try? await Task.sleep(nanoseconds: 200_000_000)
+                    }
+                    runHandedOffSearch(term)
+                }
+            }
+            #endif
             #if os(iOS)
             // Build (or disk-load) the AI search index AHEAD of the first search - by the time anyone
-            // types, it's ready and the "Preparing" row never shows.
+            // types, it's ready and the "Preparing" row never shows. AFTER the reveal, though: the
+            // disk load (or worse, a post-update re-embed) competed with the launch warm for IO and
+            // CPU under the cover, and the search-field FOCUS kick already covers anyone who starts
+            // searching before this fires.
             Task {
                 await quranData.waitUntilCoreLoaded()
+                await AppReveal.waitUntilRevealed()
+                try? await Task.sleep(nanoseconds: 2_000_000_000)
+                guard !Task.isCancelled else { return }
                 prepareQuranSemanticCorpus()
             }
             #endif
@@ -1241,6 +1259,12 @@ struct QuranView: View {
             // Shared with the app-root prewarm that fires when the Adhan tab appears - whichever finishes the
             // full sweep first sets the flag, and the other skips it (no duplicate pass).
             guard shouldPrewarmAllQuranDestinations, !QuranData.didBroadPrewarm else { return }
+
+            // Post-reveal only, like its QuranLaunchWarmup twin: under the cover this main-actor
+            // sweep competed with the tab walk the launch screen's reveal waits on.
+            await AppReveal.waitUntilRevealed()
+            try? await Task.sleep(nanoseconds: 1_200_000_000)
+            if Task.isCancelled || QuranData.didBroadPrewarm { return }
 
             for surah in quranData.quran {
                 guard seen.insert(surah.id).inserted else { continue }
@@ -3043,7 +3067,7 @@ struct QuranView: View {
 
             for surah in quranSnapshot {
                 for ayah in surah.ayahs {
-                    let text = ayah.textCleanArabic(for: displayQiraah)
+                    let text = ayah.textCleanArabic(for: displayQiraah, surahID: surah.id)
                     let cleaned = text.replacingOccurrences(of: "\u{200F}", with: "").trimmingCharacters(in: .whitespacesAndNewlines)
                     let wordCount = cleaned.split { $0.isWhitespace }.count
                     let letterCount = cleaned.filter { !$0.isWhitespace }.count
@@ -3786,6 +3810,29 @@ struct QuranView: View {
     }
 
     #if os(iOS)
+    /// AI hits bucketed by surah in first-appearance (relevance) order, deduped by id - the keyword
+    /// results' `verseHitsGroupedBySurah`, for the semantic list, so both lists read as the same
+    /// per-surah sections. The most relevant surah surfaces first; within a surah, engine order holds.
+    private var aiHitsGroupedBySurah: [(surahId: Int, hits: [AISearchHit])] {
+        var grouped = [Int: [AISearchHit]]()
+        var orderedSurahIDs: [Int] = []
+        var seenIDs = Set<String>()
+
+        for hit in aiHits {
+            guard seenIDs.insert(hit.id).inserted else { continue }
+            if grouped[hit.surah] == nil {
+                grouped[hit.surah] = []
+                orderedSurahIDs.append(hit.surah)
+            }
+            grouped[hit.surah, default: []].append(hit)
+        }
+
+        return orderedSurahIDs.compactMap { sid in
+            guard let hits = grouped[sid] else { return nil }
+            return (sid, hits)
+        }
+    }
+
     /// The semantic results block, shown automatically for any eligible (English text) query: the
     /// one-time build progress first, then the ranked matches - each the standard ayah search row.
     /// Deliberately SILENT otherwise (Arabic query, build failed, no semantic matches): an automatic
@@ -3795,9 +3842,21 @@ struct QuranView: View {
         if aiQueryEligible {
             if semanticEngine.isReady(quranSemanticCorpusID) {
                 if !aiHits.isEmpty {
+                    // The keyword results' grammar: the sparkles TOTAL pill up top, then one section
+                    // per surah with its own count - AI results from different surahs never read as
+                    // one undifferentiated list.
                     Section(header: aiResultsHeader(count: aiHits.count)) {
-                        ForEach(aiHits) { hit in
-                            aiHitRow(hit)
+                        EmptyView()
+                    }
+                    .padding(.bottom, -12)
+
+                    ForEach(aiHitsGroupedBySurah, id: \.surahId) { group in
+                        Section {
+                            ForEach(group.hits) { hit in
+                                aiHitRow(hit)
+                            }
+                        } header: {
+                            surahSearchSectionHeader(surahId: group.surahId, matchCount: group.hits.count)
                         }
                     }
                 }
@@ -3820,8 +3879,6 @@ struct QuranView: View {
 
                 Text("Ask AI about \u{201C}\(searchText.trimmingCharacters(in: .whitespacesAndNewlines))\u{201D}")
                     .font(.caption.weight(.semibold))
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.7)
 
                 Spacer()
 

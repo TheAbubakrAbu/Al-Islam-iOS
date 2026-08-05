@@ -132,8 +132,13 @@ struct AlIslamApp: App {
 
 private struct MainTabView: View {
     @ObservedObject private var settings = Settings.shared
-    @ObservedObject private var quranData = QuranData.shared
-    @ObservedObject private var quranPlayer = QuranPlayer.shared
+    // Deliberately NOT observing QuranData/QuranPlayer: this body never reads either, but the old
+    // `@ObservedObject` subscriptions re-evaluated the ENTIRE TabView (all five tabs) on every
+    // publish of the Quran load pipeline - the 10-property core-load batch, each loadState flip,
+    // the verse-index landing - on the main thread, exactly while the under-cover warm needed it.
+    // On older hardware those re-evals were a real slice of the launch. The launch screen already
+    // shields itself the same way; the tab host must too. `warmUnderCover` reaches the singletons
+    // directly.
 
     /// True while a launch/splash screen still covers the tabs (drives the under-cover warm below).
     let isCovered: Bool
@@ -179,15 +184,27 @@ private struct MainTabView: View {
             .task { await warmUnderCover() }
             // Al-Quran: the reader's font/page prewarm.
             .task { await QuranLaunchWarmup.prewarmAll() }
-            // Al-Quran: the AI-search capability probe loads a disk-backed NLEmbedding model; its first
-            // touch used to land on the MAIN thread mid-launch (aiQueryEligible / corpus prep). Pay it
-            // here, off-main.
-            .task { Task.detached(priority: .utility) { SemanticSearchEngine.prewarmOffMain() } }
-            // Al-Hadith: resolve today's Hadith of the Day while the launch cover is still up, so the
-            // Hadith tab opens with the card already there instead of computing it on arrival - and map
-            // every bundled collection (a few milliseconds for all 17), so any book opens instantly.
+            // Al-Quran: the AI-search capability probe loads a disk-backed NLEmbedding model, off-main.
+            // Deferred until AFTER the reveal: it's only needed once a search field gains focus, and
+            // .utility is the QoS tier Low Power Mode throttles hardest - under the cover it competed
+            // with the pack loads for the disk while the launch screen sat waiting.
+            .task {
+                await AppReveal.waitUntilRevealed()
+                try? await Task.sleep(nanoseconds: 2_000_000_000)
+                guard !Task.isCancelled else { return }
+                Task.detached(priority: .utility) { SemanticSearchEngine.prewarmOffMain() }
+            }
+            // Al-Hadith: today's card resolves under the cover (one book, so the Hadith tab realizes
+            // with the card already there) - but the 17-book shelf sweep waits for the reveal. Parsing
+            // ~51k rows on the main actor was the single heaviest launch item, competing with the tab
+            // walk for the exact window the launch screen's reveal waits on; the extra beat also keeps
+            // the finale + dissolve running on a free CPU. Books opened before the sweep reaches them
+            // load on demand, same as always.
             .task {
                 HadithStore.shared.prepareDailyHadith()
+                await AppReveal.waitUntilRevealed()
+                try? await Task.sleep(nanoseconds: 1_500_000_000)
+                guard !Task.isCancelled else { return }
                 HadithStore.shared.prewarmBooks()
             }
     }
@@ -203,7 +220,7 @@ private struct MainTabView: View {
         guard isCovered else { LaunchWarmup.shared.markWarm(); return }
 
         // Build the real surah list, not the empty loading state.
-        await quranData.waitUntilCoreLoaded()
+        await QuranData.shared.waitUntilCoreLoaded()
         if Task.isCancelled { LaunchWarmup.shared.markWarm(); return }
 
         // Walk every tab so TabView builds + RETAINS each view tree, heaviest (Quran) first with the longest
@@ -216,12 +233,18 @@ private struct MainTabView: View {
         // the user's first REAL switch into the tab - the visible lag this hides behind the launch cover.
         selectedTab = .quran
         try? await Task.sleep(nanoseconds: settings.quranPageMode ? 900_000_000 : 350_000_000)
-        selectedTab = .hadith
-        try? await Task.sleep(nanoseconds: 80_000_000)
-        selectedTab = .islam
-        try? await Task.sleep(nanoseconds: 120_000_000)
-        selectedTab = .settings
-        try? await Task.sleep(nanoseconds: 80_000_000)
+        // Low Power Mode / low-memory devices: walk ONLY the heavy Quran tab, then settle. The other
+        // three tabs realize on their first real visit instead - a small first-tap beat there buys
+        // ~280ms of fixed settles plus three tab-tree realizations off the throttled launch window,
+        // which on old hardware was a visible slice of "loading forever."
+        if !AppPerformance.shouldAvoidBroadPrewarm {
+            selectedTab = .hadith
+            try? await Task.sleep(nanoseconds: 80_000_000)
+            selectedTab = .islam
+            try? await Task.sleep(nanoseconds: 120_000_000)
+            selectedTab = .settings
+            try? await Task.sleep(nanoseconds: 80_000_000)
+        }
         selectedTab = launchTab
         // Let the landing tab become the rendered tab again before we allow the reveal.
         try? await Task.sleep(nanoseconds: 80_000_000)

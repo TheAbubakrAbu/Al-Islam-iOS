@@ -745,12 +745,13 @@ struct SettingsQuranView: View {
     }
 
     private var qiraahPicker: some View {
+        // Menu-row form: `choose(_:)` inside the picker already fires the haptic, so no `.onChange`
+        // echo here (the old flat Picker needed one).
         ArabicTextRiwayahPicker(
             selection: $settings.displayQiraah.animation(.easeInOut),
-            useSimpleIOSPicker: true
+            useMenuRow: true
         )
         .font(.subheadline)
-        .onChange(of: settings.displayQiraah) { _ in settings.hapticFeedback() }
     }
 
     /// The switch that unlocks the twelve machine-extracted riwayat, with the warning
@@ -844,6 +845,15 @@ struct SettingsQuranView: View {
                 .onChange(of: settings.qiraatComparisonMode) { _ in settings.hapticFeedback() }
 
             Text("When on, the ayah view shows a riwayah picker above the search bar so you can switch and compare qiraat in that screen.")
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .padding(.vertical, 2)
+
+            Toggle("Highlight Differences from Hafs", isOn: $settings.highlightQiraahDifferences.animation(.easeInOut))
+                .font(.subheadline)
+                .onChange(of: settings.highlightQiraahDifferences) { _ in settings.hapticFeedback() }
+
+            Text("When reading any other riwayah, every word that differs from Hafs an Asim is tinted in your accent color.")
                 .font(.caption)
                 .foregroundColor(.secondary)
                 .padding(.vertical, 2)
@@ -1470,6 +1480,16 @@ struct ReciterListView: View {
 
     private var qiraahReciterSections: [ReciterSectionGroup] {
         let sections = [
+            // Shubah leads the riwayah sections: it shares Asim with Hafs (the default every other
+            // list is implicitly "about"), mirroring `Riwayah.Option.order`. It was missing entirely,
+            // which stranded its only reciter in the OTHER GROUP catch-all at the bottom.
+            ReciterSectionGroup(
+                id: "shubah",
+                title: Settings.Riwayah.shubah.uppercased(),
+                arabic: Settings.Riwayah.shubahArabic,
+                reciters: filteredReciters(recitersShubah),
+                isQiraah: true
+            ),
             ReciterSectionGroup(
                 id: "khalaf",
                 title: Settings.Riwayah.khalaf.uppercased(),
@@ -1527,6 +1547,7 @@ struct ReciterListView: View {
             recitersMurattal +
             recitersMujawwad +
             recitersMuallim +
+            recitersShubah +
             recitersKhalaf +
             recitersWarsh +
             recitersQaloon +

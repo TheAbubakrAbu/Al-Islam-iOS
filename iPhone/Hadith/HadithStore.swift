@@ -100,11 +100,12 @@ final class HadithUserData: ObservableObject {
                 HadithBookmark(
                     slug: book.slug,
                     idInBook: hadith.idInBook,
-                    reference: "\(book.englishTitle) \(hadith.idInBook)",
+                    reference: "\(book.englishTitle) \(hadith.displayNumber)",
                     preview: String(preview.prefix(140)),
                     chapterId: hadith.chapterId,
                     arabicPreview: String(hadith.arabic.prefix(120)),
-                    englishPreview: String(hadith.english.text.prefix(140))
+                    englishPreview: String(hadith.english.text.prefix(140)),
+                    citation: hadith.citation
                 ),
                 at: 0
             )
@@ -141,6 +142,34 @@ final class HadithUserData: ObservableObject {
         if let data = try? JSONEncoder().encode(bookmarks) {
             UserDefaults.standard.set(data, forKey: Self.bookmarksKey)
         }
+    }
+
+    // MARK: One-shot citation refresh (driven by HadithStore's migration)
+
+    /// Rewrite each bookmark's stored citation and frozen reference string in place, persisting once
+    /// if anything changed. `resolve` returns nil to leave a bookmark untouched (its book failed to
+    /// load, or its hadith no longer exists).
+    func refreshCitations(_ resolve: (HadithBookmark) -> (citation: String?, reference: String)?) {
+        var changed = false
+        for index in bookmarks.indices {
+            let old = bookmarks[index]
+            guard let update = resolve(old),
+                  old.citation != update.citation || old.reference != update.reference else { continue }
+            // `reference` is a let - rebuild the record, carrying every other field across.
+            bookmarks[index] = HadithBookmark(
+                slug: old.slug,
+                idInBook: old.idInBook,
+                reference: update.reference,
+                preview: old.preview,
+                chapterId: old.chapterId,
+                arabicPreview: old.arabicPreview,
+                englishPreview: old.englishPreview,
+                note: old.note,
+                citation: update.citation
+            )
+            changed = true
+        }
+        if changed { persistBookmarks() }
     }
 }
 
@@ -310,7 +339,7 @@ final class HadithStore: ObservableObject {
         let entry = HadithLastRead(
             slug: book.slug,
             idInBook: hadith.idInBook,
-            reference: "\(book.englishTitle) \(hadith.idInBook)",
+            reference: "\(book.englishTitle) \(hadith.displayNumber)",
             arabicPreview: String(hadith.arabic.prefix(120)),
             englishPreview: String(hadith.english.text.prefix(140)),
             timestamp: Date(),
@@ -355,11 +384,92 @@ final class HadithStore: ObservableObject {
         Task {
             for book in targets where self.books[book.slug] == nil {
                 _ = self.book(book)
-                // One book per turn of the run loop: the whole sweep is milliseconds, but launch has
-                // better things to do with an uninterrupted main thread than 17 of them in a row.
+                // One book per turn of the run loop: the whole sweep is milliseconds on modern
+                // hardware, but launch has better things to do with an uninterrupted main thread
+                // than 17 of them in a row.
                 await Task.yield()
+                // Old / throttled devices get real air between books: under Low Power Mode the
+                // per-book parse is several times slower, and back-to-back turns still read as one
+                // long main-thread stall to the user.
+                if AppPerformance.shouldAvoidBroadPrewarm {
+                    try? await Task.sleep(nanoseconds: 60_000_000)
+                }
             }
+            // The whole shelf has been offered a chance to open - now the saved records' frozen
+            // reference strings can be refreshed to the standard citations, once.
+            self.refreshCitationReferences()
         }
+    }
+
+    /// One-shot refresh of every frozen reference string saved before citations existed: bookmarks
+    /// (their badge number and "Sahih Muslim 8a" reference line), each book's last-read record, and
+    /// the Hadith of the Day history. The flag is set only once every book the saved data references
+    /// actually loaded, so a failed load retries on the next launch. The records' idInBook KEYS are
+    /// untouched - only the display strings move to the standard numbering.
+    private func refreshCitationReferences() {
+        let flag = "hadithCitationRefresh1"
+        guard !UserDefaults.standard.bool(forKey: flag) else { return }
+        var allBooksLoaded = true
+
+        // A saved record back to its live hadith. An unknown slug or vanished hadith has nothing to
+        // rewrite (and never will, so it doesn't block the flag) - only a book that failed to OPEN does.
+        func resolve(slug: String, idInBook: Int) -> (book: HadithCatalogBook, hadith: HadithBookData.Hadith)? {
+            guard let book = HadithCatalogBook.bySlug[slug] else { return nil }
+            guard let data = self.book(book) else {
+                allBooksLoaded = false
+                return nil
+            }
+            guard let hadith = data.hadiths.first(where: { $0.idInBook == idInBook }) else { return nil }
+            return (book, hadith)
+        }
+
+        // Bookmarks, through the user-data object's own save path.
+        HadithUserData.shared.refreshCitations { bookmark in
+            guard let (book, hadith) = resolve(slug: bookmark.slug, idInBook: bookmark.idInBook) else { return nil }
+            return (hadith.citation, "\(book.englishTitle) \(hadith.displayNumber)")
+        }
+
+        // Each book's last-read record (its fields are lets - rebuild, keeping the timestamp).
+        var lastReadChanged = false
+        for (slug, entry) in lastReadByBook {
+            guard let (book, hadith) = resolve(slug: slug, idInBook: entry.idInBook) else { continue }
+            let reference = "\(book.englishTitle) \(hadith.displayNumber)"
+            guard entry.reference != reference else { continue }
+            lastReadByBook[slug] = HadithLastRead(
+                slug: entry.slug,
+                idInBook: entry.idInBook,
+                reference: reference,
+                arabicPreview: entry.arabicPreview,
+                englishPreview: entry.englishPreview,
+                timestamp: entry.timestamp,
+                chapterId: entry.chapterId
+            )
+            lastReadChanged = true
+        }
+        if lastReadChanged { persistLastRead() }
+
+        // The Hadith of the Day history rows ("dayKey|slug|idInBook" keys stay exactly as they are).
+        var history = Self.loadDailyHistory()
+        var historyChanged = false
+        for index in history.indices {
+            let entry = history[index]
+            guard let (book, hadith) = resolve(slug: entry.slug, idInBook: entry.idInBook) else { continue }
+            let reference = "\(book.englishTitle) \(hadith.displayNumber)"
+            guard entry.reference != reference else { continue }
+            history[index] = DailyHadithEntry(
+                dayKey: entry.dayKey,
+                slug: entry.slug,
+                idInBook: entry.idInBook,
+                reference: reference,
+                arabicPreview: entry.arabicPreview,
+                englishPreview: entry.englishPreview,
+                date: entry.date
+            )
+            historyChanged = true
+        }
+        if historyChanged { Self.saveDailyHistory(history) }
+
+        if allBooksLoaded { UserDefaults.standard.set(true, forKey: flag) }
     }
 
     /// Delete the pre-4.7 download cache, once. Before the books shipped inside the app they were
@@ -617,7 +727,7 @@ final class HadithStore: ObservableObject {
             dayKey: dayKey,
             slug: book.slug,
             idInBook: hadith.idInBook,
-            reference: "\(book.englishTitle) \(hadith.idInBook)",
+            reference: "\(book.englishTitle) \(hadith.displayNumber)",
             arabicPreview: String(strings.arabic.prefix(120)),
             englishPreview: String(strings.text.prefix(140)),
             date: Date()

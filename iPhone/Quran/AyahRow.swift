@@ -213,7 +213,7 @@ struct AyahRow: View, Equatable {
 
         let sources = MatchSources(
             arabic: settings.cleanSearch(
-                ayah.textArabic(for: comparisonQiraahOverride ?? settings.displayQiraahForArabic),
+                ayah.textArabic(for: comparisonQiraahOverride ?? settings.displayQiraahForArabic, surahID: surah.id),
                 whitespace: false
             ).removingArabicDiacriticsAndSigns,
             transliteration: settings.cleanSearch(ayah.textTransliteration, whitespace: false).removingArabicDiacriticsAndSigns,
@@ -257,6 +257,37 @@ struct AyahRow: View, Equatable {
             displayText: renderedDisplayText,
             cleanDisplayText: settings.cleanArabicText,
             beginnerSpacing: beginner
+        )
+    }
+
+    /// Reading a non-Hafs riwayah with "Highlight Differences from Hafs" on: the display text with
+    /// every word that differs from Hafs an Asim tinted (`QiraahComparison`). This row's id is the
+    /// riwayah's OWN ayah number, so the Hafs reference is looked up through the alignment - a
+    /// merged ayah diffs against BOTH Hafs neighbors it spans. Nil on Hafs, while searching (the
+    /// search paint wins), and in beginner spacing (letter spacing breaks word alignment). Takes
+    /// the tajweed slot, which is free here: tajweed colors are Hafs-only.
+    private func arabicDiffText(displayText: String, beginner: Bool) -> AttributedString? {
+        guard settings.highlightQiraahDifferences, !beginner else { return nil }
+        guard searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return nil }
+        let raw = comparisonQiraahOverride ?? (settings.displayQiraahForArabic ?? "")
+        let tag = Settings.Riwayah.canonicalTag(raw == "Hafs" ? "" : raw)
+        guard !tag.isEmpty else { return nil }
+
+        let quranData = QuranData.shared
+        let span = QiraahComparison.alignment(surahID: surah.id, tag: tag, quranData: quranData)?
+            .hafsRangeForRiwayah[ayah.id] ?? (ayah.id...ayah.id)
+        var referenceParts: [String] = []
+        for n in span {
+            if let hafsAyah = quranData.ayah(surah: surah.id, ayah: n) {
+                referenceParts.append(hafsAyah.displayArabicText(surahId: surah.id, clean: settings.cleanArabicText, qiraahOverride: ""))
+            }
+        }
+        guard !referenceParts.isEmpty else { return nil }
+        return QiraahComparison.diffAttributed(
+            text: displayText,
+            reference: referenceParts.joined(separator: " "),
+            baseColor: .primary,
+            diffColor: settings.accentColor.color
         )
     }
 
@@ -824,7 +855,8 @@ struct AyahRow: View, Equatable {
                     font: arabicFont,
                     accent: settings.accentColor.color,
                     fg: .primary,
-                    preStyledSource: arabicTajweedText(displayText: arabicSource, beginner: beginner),
+                    preStyledSource: arabicTajweedText(displayText: arabicSource, beginner: beginner)
+                        ?? arabicDiffText(displayText: arabicSource, beginner: beginner),
                     beginnerMode: beginner,
                     trailingSuffix: " \(ayah.idArabic)",
                     trailingSuffixFont: suffixFont,

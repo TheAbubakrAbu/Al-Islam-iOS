@@ -704,7 +704,7 @@ struct HijriMonthCalendarView: View {
 
     private var weekdayHeader: some View {
         HStack(spacing: 6) {
-            ForEach(Self.weekdaySymbols, id: \.self) { symbol in
+            ForEach(orderedWeekdaySymbols, id: \.self) { symbol in
                 Text(symbol)
                     .font(.caption2.weight(.semibold))
                     .foregroundColor(.secondary)
@@ -816,14 +816,24 @@ struct HijriMonthCalendarView: View {
     // MARK: Data helpers
 
     /// Cells for the displayed month: leading `nil`s for the first weekday offset, then day numbers.
+    /// The offset respects the region's week start (paired with `orderedWeekdaySymbols`): the old
+    /// hardcoded Sunday-first math drew every Monday-first/Saturday-first region's month shifted by
+    /// up to six columns.
     private var monthCells: [Int?] {
         guard let first = hijriCalendar.date(from: DateComponents(year: displayedYear, month: displayedMonth, day: 1)),
               let range = hijriCalendar.range(of: .day, in: .month, for: first) else { return [] }
-        let leading = hijriCalendar.component(.weekday, from: first) - 1
+        let leading = (hijriCalendar.component(.weekday, from: first) - hijriCalendar.firstWeekday + 7) % 7
         var cells: [Int?] = Array(repeating: nil, count: leading)
         cells.append(contentsOf: range.map { Optional($0) })
         while cells.count % 7 != 0 { cells.append(nil) }
         return cells
+    }
+
+    /// `weekdaySymbols` rotated so the header starts on the region's first weekday, matching
+    /// `monthCells`' leading-blank math.
+    private var orderedWeekdaySymbols: [String] {
+        let start = hijriCalendar.firstWeekday - 1
+        return (0..<7).map { Self.weekdaySymbols[(start + $0) % 7] }
     }
 
     /// Hijri components for "today", applying the same Maghrib switch and manual offset the rest of the app uses.

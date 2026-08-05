@@ -1,13 +1,14 @@
 import Foundation
 import SwiftUI
 
-// "Ask" - grounded question answering over the app's own retrieval, powered by Apple's ON-DEVICE
+// "Ask" - question answering over the app's own retrieval, powered by Apple's ON-DEVICE
 // foundation model (the ~3B-parameter LLM behind Apple Intelligence). Private, offline, free.
 //
-// The architecture is strict RAG: the model NEVER answers from its own knowledge - it receives only
-// the passages the app's search already retrieved (ayahs / hadiths with references) and must answer
-// from those, citing them, or say the passages don't contain the answer. Religious content is never
-// generated, only summarized from what is on screen.
+// The architecture is RAG-first: when the app's search retrieved passages (ayahs / hadiths with
+// references), the model answers grounded in them, citing each one, and never inventing verse or
+// hadith text. When retrieval found NOTHING, the ask still runs in an open mode: a general-knowledge
+// answer under strict integrity rules (no recreated quotations, honest uncertainty, no rulings) so
+// the button never dead-ends - the user asked to be answered like an assistant, not gated on search.
 //
 // Availability: iOS 26+ on an Apple Intelligence device with it enabled. Everywhere else,
 // `OnDeviceAsk.isAvailable` is false and the feature simply does not exist in the UI - the word-vector
@@ -47,48 +48,80 @@ enum OnDeviceAsk {
         return starters.contains { trimmed.hasPrefix($0) }
     }
 
-    /// The rules the session is created with. Firm on grounding and on never issuing rulings.
-    private static let instructions = """
-    You are a retrieval assistant inside a Quran and Hadith reading app. You will be given PASSAGES \
-    (each with its reference) and a QUESTION.
+    /// The rules a GROUNDED session is created with: cite everything, invent nothing, no rulings -
+    /// but answer fully, not in a two-sentence crouch.
+    private static let groundedInstructions = """
+    You are a knowledgeable, careful assistant inside a Quran and Hadith reading app. You will be \
+    given PASSAGES (each with its reference) and a QUESTION.
 
     Rules, in order:
-    1. Answer ONLY from the given passages. Never use outside knowledge, and never invent or complete \
-    verses, hadiths, or interpretations.
-    2. Cite EVERY passage that supports the answer, inline in parentheses exactly as its reference is \
-    given, e.g. (2:153) or (Sahih al-Bukhari 6114). Most questions draw on several passages - cite all \
-    that genuinely apply, not just the first one.
-    3. Do NOT quote or reproduce the passages' text. Explain the answer briefly in your own words - the \
-    app displays every passage you cite, in full, right beneath your answer.
-    4. If the passages do not contain an answer, say exactly that in one sentence - do not guess.
-    5. Never issue religious rulings, verdicts, or fatwas. For "is X halal/haram/allowed" questions, \
+    1. Ground the answer in the given passages. Cite EVERY passage that supports a point, inline in \
+    parentheses exactly as its reference is given, e.g. (2:153) or (Sahih al-Bukhari 6114). Most \
+    questions draw on several passages - cite all that genuinely apply, not just the first one.
+    2. Never invent, complete, or misattribute verses, hadiths, or interpretations. Do not reproduce \
+    a passage's full text - the app displays every passage you cite right beneath your answer - but \
+    you may briefly paraphrase what a cited passage says.
+    3. You may add short connecting explanation from general knowledge (historical context, what a \
+    term means), but keep every religious claim tied to the cited passages. If the passages only \
+    partly answer the question, answer what they support and say plainly what they do not cover.
+    4. Never issue religious rulings, verdicts, or fatwas. For "is X halal/haram/allowed" questions, \
     describe only what the passages say and add that a qualified scholar should be consulted.
-    6. Be concise: 2-5 sentences, plain respectful language.
+    5. Write a clear, complete answer: usually one or two short paragraphs, plain respectful \
+    language, no markdown formatting.
     """
 
-    /// Stream the grounded answer. Each yielded value is the FULL text so far (snapshots), so the UI
-    /// just replaces its string. Throws when the model declines or errors; the caller shows nothing.
+    /// The rules an OPEN session is created with, used when retrieval found nothing: answer like an
+    /// assistant from general knowledge, under integrity rules that forbid recreated quotations.
+    private static let openInstructions = """
+    You are a knowledgeable, careful assistant inside a Quran and Hadith reading app. The app's \
+    search found no passages for this question, so you are answering from general knowledge.
+
+    Rules, in order:
+    1. Answer the QUESTION helpfully from well-established general knowledge about Islam, its \
+    history, practices, and texts.
+    2. NEVER write out the text of a verse or hadith from memory, and never present wording as a \
+    quotation - describe content in your own words. You may name well-known references (a surah, a \
+    famous collection) when you are confident they are right.
+    3. Be honest about uncertainty: when you are not sure, say so rather than guessing, and \
+    encourage the reader to verify in the app's Quran and Hadith tabs.
+    4. Never issue religious rulings, verdicts, or fatwas. For "is X halal/haram/allowed" questions, \
+    describe the considerations involved and refer the reader to a qualified scholar.
+    5. Write a clear, complete answer: usually one or two short paragraphs, plain respectful \
+    language, no markdown formatting.
+    """
+
+    /// Stream the answer. Each yielded value is the FULL text so far (snapshots), so the UI just
+    /// replaces its string. Throws when the model declines or errors; the caller shows nothing.
+    /// Empty `sources` = open mode: the general-knowledge instructions with just the question.
     @available(iOS 26.0, *)
     static func streamAnswer(question: String, sources: [Source]) -> AsyncThrowingStream<String, Error> {
         AsyncThrowingStream { continuation in
             let task = Task {
                 do {
-                    // A passage block the small context window can always hold: at most 12 sources
-                    // (every surface feeds semantic hits first, then string-match hits, deduped - both
-                    // retrieval modes get a voice), each clipped at 500 characters. That is ~1.5k tokens
-                    // worst case against the model's ~4k window - room to spare with the instructions,
-                    // question, and answer - and 500 keeps whole hadiths intact far more often than the
-                    // old 320, which could clip the very sentence that answered the question.
-                    let passages = sources.prefix(12).map { source in
-                        "[\(source.reference)] \(String(source.text.prefix(500)))"
-                    }.joined(separator: "\n")
+                    let instructions: String
+                    let prompt: String
+                    if sources.isEmpty {
+                        instructions = openInstructions
+                        prompt = "QUESTION: \(question)"
+                    } else {
+                        // A passage block the small context window can always hold: at most 12
+                        // sources (every surface feeds semantic hits first, then string-match hits,
+                        // deduped - both retrieval modes get a voice), each clipped at 600
+                        // characters. That is ~1.8k tokens worst case against the model's ~4k
+                        // window - room to spare with the instructions, question, and answer - and
+                        // 600 keeps whole hadiths intact even more often than the old 500.
+                        let passages = sources.prefix(12).map { source in
+                            "[\(source.reference)] \(String(source.text.prefix(600)))"
+                        }.joined(separator: "\n")
 
-                    let prompt = """
-                    PASSAGES:
-                    \(passages)
+                        instructions = groundedInstructions
+                        prompt = """
+                        PASSAGES:
+                        \(passages)
 
-                    QUESTION: \(question)
-                    """
+                        QUESTION: \(question)
+                        """
+                    }
 
                     let session = LanguageModelSession(instructions: instructions)
                     let stream = session.streamResponse(to: prompt)
@@ -115,6 +148,9 @@ struct AskAnswerCard: View {
 
     let answer: String
     let isStreaming: Bool
+    /// False when the ask ran in open mode (no retrieved passages): the placeholder and the footer
+    /// must not claim the answer comes from passages shown below.
+    var grounded: Bool = true
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -134,7 +170,7 @@ struct AskAnswerCard: View {
             .foregroundStyle(settings.accentColor.color)
 
             if answer.isEmpty {
-                Text("Reading the matching passages…")
+                Text(grounded ? "Reading the matching passages…" : "Thinking…")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             } else {
@@ -145,7 +181,9 @@ struct AskAnswerCard: View {
                     .textSelection(.enabled)
             }
 
-            Text("From Apple Intelligence, on device • answers only from the passages shown below • not a religious ruling")
+            Text(grounded
+                 ? "From Apple Intelligence, on device • answers from the passages shown below • not a religious ruling"
+                 : "From Apple Intelligence, on device • a general answer, no passages were retrieved • verify important matters, not a religious ruling")
                 .font(.caption2)
                 .foregroundStyle(.secondary)
         }

@@ -68,7 +68,7 @@ struct HadithCatalogBook: Identifiable, Hashable {
             era: "d. 256 AH / 870 CE",
             shortDescription: "The most authentic book after the Quran, sifted from hundreds of thousands of narrations.",
             longDescription: "Its full title is al-Jami’ al-Musnad as-Sahih al-Mukhtasar min Umur Rasul Allah ﷺ wa Sunanihi wa Ayyamihi, “the abridged, authentically-chained collection of the affairs, practice, and times of the Messenger of Allah ﷺ.” Compiled over sixteen years by Imam al-Bukhari (الإمام البخاري), who sifted its 7,563 hadiths (about 2,600 without repetition) from hundreds of thousands he examined under the strictest standards of authenticity.\n\nMuslims across every generation have regarded it as the most authentic book after the Quran itself.",
-            aliases: ["bukhari", "bukharee", "bukhary", "albukhari"]
+            aliases: ["bukhari", "bukharee", "bukhary", "albukhari", "bokhari", "buhari", "bukhaari"]
         ),
         HadithCatalogBook(
             slug: "muslim",
@@ -78,7 +78,7 @@ struct HadithCatalogBook: Identifiable, Hashable {
             era: "d. 261 AH / 875 CE",
             shortDescription: "The second most authentic collection, every hadith gathered with its chains side by side.",
             longDescription: "Its full title is al-Musnad as-Sahih al-Mukhtasar bi-Naql al-‘Adl ‘an al-‘Adl ila Rasul Allah ﷺ. Compiled by Imam Muslim ibn al-Hajjaj of Naysabur (الإمام مسلم بن الحجاج النيسابوري), a student of Imam al-Bukhari.\n\nAlongside Sahih al-Bukhari it forms the Sahihayn, the two most authentic books of hadith, this the second of them. Scholars especially prize its arrangement: every narration of a hadith is gathered in one place with its chains compared side by side.",
-            aliases: ["muslim", "sahihmuslim"]
+            aliases: ["muslim", "sahihmuslim", "muslem", "moslem"]
         ),
         HadithCatalogBook(
             slug: "ibnmajah",
@@ -98,7 +98,7 @@ struct HadithCatalogBook: Identifiable, Hashable {
             era: "d. 275 AH / 889 CE",
             shortDescription: "The Sunan of legal rulings, about 4,800 hadiths chosen from 500,000.",
             longDescription: "Its full title is Sunan Abi Dawud. Imam Abu Dawud (الإمام أبو داود) selected roughly 4,800 hadiths from the 500,000 he had collected: the Sunan of legal rulings, focused on the narrations jurists build upon.\n\nHe remarked that four hadiths of it suffice a person for their religion, among them “Actions are by intentions.”",
-            aliases: ["abudawud", "abidawud", "abudaud", "abidaud", "dawud", "daud", "dawood", "abudawood"]
+            aliases: ["abudawud", "abidawud", "abudaud", "abidaud", "dawud", "daud", "dawood", "abudawood", "dawoud", "daood", "abu"]
         ),
         HadithCatalogBook(
             slug: "tirmidhi",
@@ -108,7 +108,7 @@ struct HadithCatalogBook: Identifiable, Hashable {
             era: "d. 279 AH / 892 CE",
             shortDescription: "The graded collection, noting each hadith's strength and the jurists' positions.",
             longDescription: "Its full title is al-Jami’ al-Kabir, known everywhere as Jami’ at-Tirmidhi. Compiled by Imam at-Tirmidhi (الإمام الترمذي), a student of Imam al-Bukhari.\n\nIts distinction is method: after most hadiths he states the grading (sahih, hasan, or otherwise) and which schools of law acted upon it, as much a manual of hadith science as a collection.",
-            aliases: ["tirmidhi", "tirmizi", "tirmidhee", "attirmidhi", "altirmidhi"]
+            aliases: ["tirmidhi", "tirmizi", "tirmidhee", "attirmidhi", "altirmidhi", "tirmidi", "termizi", "termidhi", "tirmithi", "tirmizee"]
         ),
         HadithCatalogBook(
             slug: "nasai",
@@ -118,7 +118,7 @@ struct HadithCatalogBook: Identifiable, Hashable {
             era: "d. 303 AH / 915 CE",
             shortDescription: "The strictest of the four Sunan in its conditions for accepting narrators.",
             longDescription: "Its full title is al-Mujtaba, also called as-Sunan as-Sughra, Imam an-Nasa’i’s (الإمام النسائي) own refinement of his larger Sunan, keeping the narrations he judged strongest.\n\nHis conditions for accepting narrators were the most rigorous among the authors of the four Sunan.",
-            aliases: ["nasai", "nisai", "nasaee", "annasai", "alnasai", "annisai", "alnisai"]
+            aliases: ["nasai", "nisai", "nasaee", "annasai", "alnasai", "annisai", "alnisai", "nasaai", "nassai", "nasayi"]
         ),
         // The early collections - all compiled before the Six Books - chronologically.
         HadithCatalogBook(
@@ -129,7 +129,7 @@ struct HadithCatalogBook: Identifiable, Hashable {
             era: "d. 179 AH / 795 CE",
             shortDescription: "The earliest collection of all, joining hadith with the practice of Madinah.",
             longDescription: "Its full title is al-Muwatta, “the well-trodden path.” The Muwatta of Imam Malik (الإمام مالك), the Imam of Madinah, is the earliest collection in this library, compiled a full century before Bukhari and Muslim.\n\nIt weaves hadith together with the established practice of the people of Madinah. Imam ash-Shafi’i called it the soundest book of its time.",
-            aliases: ["malik", "muwatta", "muwattamalik", "almuwatta"]
+            aliases: ["malik", "muwatta", "muwattamalik", "almuwatta", "muatta", "mowatta", "muwata"]
         ),
         HadithCatalogBook(
             slug: "ahmed",
@@ -160,7 +160,7 @@ struct HadithCatalogBook: Identifiable, Hashable {
             era: "Compiled selection",
             shortDescription: "The forty sacred hadiths, their meaning from Allah in the Prophet's ﷺ wording.",
             longDescription: "A hadith qudsi (حديث قدسي) is a narration in which the Prophet ﷺ relates words whose meaning is from Allah, expressed in the Prophet’s ﷺ own wording, distinct from the Quran, which is Allah’s speech in both word and meaning. This is a well-known selection of forty such sacred hadiths, drawn from the authentic collections.\n\nThis selection follows the widely-circulated compilation of Ezzedin Ibrahim and Denys Johnson-Davies (Abdul Wadud).",
-            aliases: ["qudsi", "qudsi40", "hadithqudsi"]
+            aliases: ["qudsi", "qudsi40", "hadithqudsi", "kudsi", "qudsee"]
         ),
         HadithCatalogBook(
             slug: "nawawi40",
@@ -170,7 +170,7 @@ struct HadithCatalogBook: Identifiable, Hashable {
             era: "d. 676 AH / 1277 CE",
             shortDescription: "The forty-two foundational hadiths, each an axis the religion turns upon.",
             longDescription: "Its full title is al-Arba’un an-Nawawiyyah. Imam an-Nawawi (الإمام النووي) gathered forty-two foundational hadiths (mostly from Bukhari and Muslim), each chosen because scholars described it as an axis the religion turns upon.\n\nMemorized across the Muslim world for over seven centuries, it is usually the first hadith book a student ever studies.",
-            aliases: ["nawawi", "nawawi40", "arbaeen", "arbain", "arbaeennawawi", "fortynawawi"]
+            aliases: ["nawawi", "nawawi40", "arbaeen", "arbain", "arbaeennawawi", "fortynawawi", "nawawee", "nawawy"]
         ),
         HadithCatalogBook(
             slug: "shahwaliullah40",
@@ -211,7 +211,7 @@ struct HadithCatalogBook: Identifiable, Hashable {
             era: "d. 676 AH / 1277 CE",
             shortDescription: "The Gardens of the Righteous, the world's most-read book of the daily Sunnah.",
             longDescription: "Its full title is Riyad as-Salihin min Kalam Sayyid al-Mursalin, “Gardens of the Righteous, from the words of the Master of the Messengers.” By Imam an-Nawawi (الإمام النووي): around 1,900 hadiths on worship, character, and everyday conduct, arranged under verses of the Quran.\n\nPerhaps the most widely read hadith book in the world, a practical guide to living the Sunnah day by day.",
-            aliases: ["riyad", "riyadh", "riyadassalihin", "riyadussalihin", "riyadsaliheen", "riyadhussaliheen", "salihin", "saliheen"]
+            aliases: ["riyad", "riyadh", "riyadassalihin", "riyadussalihin", "riyadsaliheen", "riyadhussaliheen", "salihin", "saliheen", "riad", "riadh"]
         ),
         HadithCatalogBook(
             slug: "mishkat_almasabih",
@@ -221,7 +221,7 @@ struct HadithCatalogBook: Identifiable, Hashable {
             era: "d. c. 741 AH / 1340 CE",
             shortDescription: "The Niche of the Lamps, a comprehensive sourced survey of the whole Sunnah.",
             longDescription: "Its full title is Mishkat al-Masabih, “the niche of the lamps.”\n\nAl-Khatib at-Tabrizi (الخطيب التبريزي) expanded al-Baghawi’s Masabih as-Sunnah: he named each hadith’s source collection and added a third section to every chapter, producing one of the most comprehensive single surveys of the Sunnah ever assembled.",
-            aliases: ["mishkat", "mishkaat", "mishkatalmasabih"]
+            aliases: ["mishkat", "mishkaat", "mishkatalmasabih", "meshkat"]
         ),
         HadithCatalogBook(
             slug: "bulugh_almaram",
@@ -313,9 +313,19 @@ struct HadithBookData {
         let id: Int
         let idInBook: Int
         let chapterId: Int
+        /// The standard sunnah.com citation ("2950", "8a") - the number readers cite, which is NOT
+        /// `idInBook` (upstream's row index drifts from the standard numbering; Jami` at-Tirmidhi
+        /// 2950 sits at idInBook 3033). Nil where sunnah.com has no collection-level number
+        /// (Muwatta Malik, most of Bulugh al-Maram) and for placeholder rows.
+        let citation: String?
         /// Precomputed answers that would otherwise need this hadith's text - see `HadithPack.Flag`.
         let flags: UInt8
         fileprivate let storage: Storage
+
+        /// The number every user-facing surface prints beside this hadith: the standard citation
+        /// when one exists, the internal row number when none does (which is also what those books
+        /// showed before citations existed, so nothing regresses).
+        var displayNumber: String { citation ?? String(idInBook) }
 
         /// This hadith's position in its book, which is also its row in the pack. -1 for placeholders.
         var row: Int {
@@ -328,14 +338,17 @@ struct HadithBookData {
             id = Int(record.id)
             idInBook = Int(record.idInBook)
             chapterId = Int(record.chapterId)
+            citation = record.citation
             flags = record.flags
             storage = .packed(pack, row)
         }
 
-        init(id: Int, idInBook: Int, chapterId: Int, arabic: String, english: EnglishText) {
+        init(id: Int, idInBook: Int, chapterId: Int, citation: String? = nil,
+             arabic: String, english: EnglishText) {
             self.id = id
             self.idInBook = idInBook
             self.chapterId = chapterId
+            self.citation = citation
             self.flags = 0
             self.storage = .literal(arabic, english)
         }
@@ -364,6 +377,16 @@ struct HadithBookData {
             case let .literal(arabic, english): return (arabic, english.narrator, english.text)
             }
         }
+
+        /// The scholar verdicts (sahih / hasan / da'if and their many nuanced forms), every one the
+        /// data carries - where scholars disagree, all are kept. Empty means "no grading is known",
+        /// never "ungraded": Bukhari and Muslim carry none by design (the collections are sahih),
+        /// and placeholders carry none at all. Display verbatim; the 2,358 distinct verdict strings
+        /// are not points on one scale and must not be ranked or color-coded by parsing.
+        var grades: [(name: String, grade: String)] {
+            if case let .packed(pack, row) = storage { return pack.grades(row: row) }
+            return []
+        }
     }
 
     let pack: HadithPack
@@ -387,6 +410,12 @@ struct HadithBookData {
             pack.chapters.enumerated().map { ($0.element.id, $0.offset) },
             uniquingKeysWith: { first, _ in first }
         )
+        var citationRows: [Int: [Int]] = [:]
+        citationRows.reserveCapacity(pack.rows.count)
+        for (row, record) in pack.rows.enumerated() where record.citationBase > 0 {
+            citationRows[Int(record.citationBase), default: []].append(row)
+        }
+        rowsByCitationBase = citationRows
     }
 
     // MARK: Chapters
@@ -435,13 +464,52 @@ struct HadithBookData {
         return number
     }
 
-    /// The hadith numbered `number` in this book, by `idInBook` - the number printed on the row and the
-    /// one a citation means. In most books `idInBook` is simply the row + 1, so the common case costs
-    /// one index check; the books whose numbering skips or repeats fall back to a scan.
+    /// The citation form of the same rule: digits with an optional variant letter, "2950" or "8a" -
+    /// how sunnah.com actually numbers. Returns nil for anything else, so keyword search is untouched.
+    static func citationNumber(inQuery raw: String) -> (base: Int, suffix: String?)? {
+        var trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        var suffix: String? = nil
+        if let last = trimmed.last, last.isASCII, last.isLetter {
+            suffix = String(last)
+            trimmed = String(trimmed.dropLast()).trimmingCharacters(in: .whitespaces)
+        }
+        guard !trimmed.isEmpty, trimmed.count <= 5,
+              trimmed.allSatisfy({ $0.isASCII && $0.isNumber }),
+              let number = Int(trimmed), number > 0 else { return nil }
+        return (number, suffix)
+    }
+
+    /// The hadith numbered `number` in this book, by `idInBook` - the internal row numbering. In most
+    /// books `idInBook` is simply the row + 1, so the common case costs one index check; the books
+    /// whose numbering skips or repeats fall back to a scan.
     func hadith(numbered number: Int) -> Hadith? {
         let index = number - 1
         if hadiths.indices.contains(index), hadiths[index].idInBook == number { return hadiths[index] }
         return hadiths.first { $0.idInBook == number }
+    }
+
+    // MARK: Citations
+
+    /// Citation base number -> the rows carrying it, in book order. "Sahih Muslim 8" owns five rows
+    /// (8a...8e); most bases own exactly one.
+    private let rowsByCitationBase: [Int: [Int]]
+
+    /// Every hadith cited under base `number` ("muslim 8" -> 8a, 8b, 8c, 8d, 8e), in book order.
+    func hadiths(citing number: Int) -> [Hadith] {
+        (rowsByCitationBase[number] ?? []).map { hadiths[$0] }
+    }
+
+    /// What a citation means in this book: the hadith cited `number` (+ optional variant letter),
+    /// preferring the standard numbering and falling back to `idInBook` for the books that have no
+    /// citations (Muwatta Malik, most of Bulugh al-Maram) - which is also what old habits typed in.
+    /// Without a suffix, a multi-variant base resolves to its first variant, sunnah.com's own order.
+    func hadith(referenced number: Int, suffix: String? = nil) -> Hadith? {
+        let cited = hadiths(citing: number)
+        if let suffix, !suffix.isEmpty {
+            return cited.first { $0.citation == "\(number)\(suffix)" }
+        }
+        if let first = cited.first { return first }
+        return hadith(numbered: number)
     }
 
     /// Whether this hadith matches the folded query. The comparison runs as a byte search inside the
@@ -524,6 +592,7 @@ enum HadithReferenceParser {
     ///   1. the whole name as a key      "abudawud", "riyadussalihin", "qudsi"
     ///   2. word by word                 "Mufrad 24", "Masabih 24", "Maram 24", "Shah 24"
     ///   3. word prefixes, 3+ characters "tirmid 24", "muhammad 24"
+    ///   4. one spelling slip, 4+ chars  "Tirmidi 24", "Bokhari 5", "Nasayi 100"
     static func book(named raw: String) -> HadithCatalogBook? {
         let queryWords = words(raw)
         guard !queryWords.isEmpty else { return nil }
@@ -548,15 +617,61 @@ enum HadithReferenceParser {
                 word.count >= 3 && known.contains { $0.hasPrefix(word) }
             }
         }
-        return prefixed.count == 1 ? prefixed[0] : nil
+        if prefixed.count == 1 { return prefixed[0] }
+        if prefixed.count > 1 { return nil }
+
+        // One spelling slip: "Tirmidi" reaches "tirmidhi", "Bokhari" reaches "bukhari". Unlike
+        // the passes above, each word matches independently here - exact, prefix (3+), or one
+        // edit (4+) - so "Abu Dawod" resolves even though "abu" is exact-only and "dawod" needs
+        // the edit. Four+ characters for the edit so a short word can't teleport across the
+        // shelf, and - like every pass above - a query that fits more than one book resolves
+        // nothing.
+        let fuzzy = HadithCatalogBook.all.filter { book in
+            let known = wordsBySlug[book.slug] ?? []
+            return queryWords.allSatisfy { word in
+                known.contains(word)
+                    || (word.count >= 3 && known.contains { $0.hasPrefix(word) })
+                    || (word.count >= 4 && known.contains { withinOneEdit(word, $0) })
+            }
+        }
+        return fuzzy.count == 1 ? fuzzy[0] : nil
+    }
+
+    /// Whether two words are within ONE edit - insertion, deletion, or substitution - of each
+    /// other. A single pass with early exit; this runs per keystroke, over short alias words.
+    private static func withinOneEdit(_ a: String, _ b: String) -> Bool {
+        let a = Array(a.utf8), b = Array(b.utf8)
+        if a.count == b.count {
+            var edits = 0
+            for i in 0..<a.count where a[i] != b[i] {
+                edits += 1
+                if edits > 1 { return false }
+            }
+            return true
+        }
+        // Lengths differ by one: the longer word must read as the shorter with one extra scalar.
+        let (long, short) = a.count > b.count ? (a, b) : (b, a)
+        guard long.count - short.count == 1 else { return false }
+        var i = 0, j = 0, skipped = false
+        while i < long.count && j < short.count {
+            if long[i] == short[j] { i += 1; j += 1; continue }
+            if skipped { return false }
+            skipped = true
+            i += 1
+        }
+        return true
     }
 
     struct Reference {
         let book: HadithCatalogBook
         /// 1-based chapter position in the book's chapter list, when the query was "book C:N".
         let chapter: Int?
-        /// "book N" -> the hadith numbered N in the book; "book C:N" -> the Nth hadith of chapter C.
+        /// "book N" -> the hadith CITED N in the book (standard sunnah.com numbering, falling back
+        /// to idInBook); "book C:N" -> the Nth hadith of chapter C.
         let hadith: Int
+        /// The citation's variant letter when the query carried one: "muslim 8a" -> "a". Only
+        /// meaningful without `chapter`.
+        var suffix: String? = nil
     }
 
     /// Compiled once: `parse` runs on the main thread per keystroke and several times per body pass,
@@ -566,12 +681,15 @@ enum HadithReferenceParser {
     // The name/number separator is whitespace OR punctuation, so "Qudsi 24", "Qudsi: 24", "Qudsi:24"
     // and "Qudsi-24" are all the same reference. The name is lazy, so a book whose own name carries a
     // hyphen ("Al-Adab Al-Mufrad 24") still backtracks to the separator before the NUMBER.
+    // The optional trailing letter is a citation variant - "muslim 8a", also "muslim 8 a" - which
+    // sunnah.com uses wherever one number covers several narrations. It cannot combine with "C:N".
     private static let referenceRegex = try? NSRegularExpression(
-        pattern: #"^(.+?)[\s:.\-]+(\d{1,5})(?:\s*[:.\-]\s*(\d{1,5}))?$"#
+        pattern: #"^(.+?)[\s:.\-]+(\d{1,5})(?:\s*([a-z]))?(?:\s*[:.\-]\s*(\d{1,5}))?$"#,
+        options: [.caseInsensitive]
     )
 
-    /// Parse "bukhari 5" or "muslim 3:12" (also "3.12" / "3-12"). Returns nil when the text before the
-    /// numbers doesn't name exactly one collection.
+    /// Parse "bukhari 5", "muslim 8a", or "muslim 3:12" (also "3.12" / "3-12"). Returns nil when the
+    /// text before the numbers doesn't name exactly one collection.
     static func parse(_ query: String) -> Reference? {
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard let regex = referenceRegex,
@@ -583,14 +701,17 @@ enum HadithReferenceParser {
         }
 
         guard let namePart = group(1), let firstNumber = group(2).flatMap({ Int($0) }) else { return nil }
-        let secondNumber = group(3).flatMap { Int($0) }
+        let suffix = group(3)?.lowercased()
+        let secondNumber = group(4).flatMap { Int($0) }
 
         guard let book = book(named: namePart) else { return nil }
 
+        // "muslim 8a:3" is not a reference in any numbering; refuse rather than guess.
         if let secondNumber {
+            guard suffix == nil else { return nil }
             return Reference(book: book, chapter: firstNumber, hadith: secondNumber)
         }
-        return Reference(book: book, chapter: nil, hadith: firstNumber)
+        return Reference(book: book, chapter: nil, hadith: firstNumber, suffix: suffix)
     }
 }
 
@@ -607,8 +728,16 @@ struct HadithBookmark: Codable, Identifiable, Equatable {
     var englishPreview: String? = nil
     /// A personal note, the bookmarked-ayah rule: notes live on bookmarks (optional so older data decodes).
     var note: String? = nil
+    /// The standard citation at save time ("2950", "8a"), so the badge and reference render without
+    /// loading the book. Optional: bookmarks saved before citations existed decode without it and
+    /// are refreshed once by the store's citation migration.
+    var citation: String? = nil
 
     var id: String { "\(slug)-\(idInBook)" }
+
+    /// The number on the bookmark's badge: the standard citation, or the row number for the books
+    /// (and old saves) that have none.
+    var displayNumber: String { citation ?? String(idInBook) }
 }
 
 /// The most recently read hadith - enough to render its row and jump back without loading the book.

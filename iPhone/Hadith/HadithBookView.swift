@@ -5,6 +5,15 @@ import SwiftUI
 
 #if os(iOS)
 
+fileprivate extension HadithBookData.Hadith {
+    /// The BASE of the number a reader would cite for this hadith: the citation with its variant
+    /// letter dropped ("8a" -> 8), or `idInBook` for the rows that carry no citation - what the
+    /// chapter range labels ("Hadiths 100-200") are built from.
+    var citedBaseNumber: Int {
+        citation.flatMap { Int($0.prefix(while: { $0.isASCII && $0.isNumber })) } ?? idInBook
+    }
+}
+
 // MARK: - One collection: chapters + book search + page mode
 
 struct HadithBookView: View {
@@ -108,6 +117,8 @@ struct HadithBookView: View {
     /// A MANUAL ask that found nothing to ground on or errored - the tapped row must answer with
     /// SOMETHING instead of silently restoring the prompt (the Quran search's `askNoAnswer`).
     @State private var askNoAnswer = false
+    /// Whether the current answer was grounded in retrieved hadiths (drives the card's footer).
+    @State private var askGrounded = true
     /// The AI-vs-keyword segmented switch, shown only when BOTH result kinds exist (the Quran search's
     /// `showKeywordResults`). Reset to the AI list on every new query.
     @State private var showBookKeywordResults = false
@@ -142,23 +153,19 @@ struct HadithBookView: View {
             var sources: [OnDeviceAsk.Source] = []
             var seen = Set<Int>()
             for hadith in aiHits.prefix(6) where seen.insert(hadith.idInBook).inserted {
-                sources.append(.init(reference: "\(book.englishTitle) \(hadith.idInBook)",
+                sources.append(.init(reference: "\(book.englishTitle) \(hadith.displayNumber)",
                                      text: hadith.english.text.isEmpty ? hadith.english.narrator : hadith.english.text))
             }
             // From the already-settled STATE (the 200ms scan finishes well inside this 900ms wait),
             // not the synchronous full-book scan - Ask's auto path is not a user gesture.
             for hadith in inBookMatches.shown.prefix(6) where seen.insert(hadith.idInBook).inserted {
-                sources.append(.init(reference: "\(book.englishTitle) \(hadith.idInBook)",
+                sources.append(.init(reference: "\(book.englishTitle) \(hadith.displayNumber)",
                                      text: hadith.english.text.isEmpty ? hadith.english.narrator : hadith.english.text))
             }
-            guard !sources.isEmpty else {
-                askAnswer = ""; askIsStreaming = false; askRanForQuery = ""
-                // A tapped ask MUST respond: with nothing retrieved to ground on, say so instead of
-                // silently restoring the prompt row.
-                if manual { askNoAnswer = true }
-                return
-            }
+            // Nothing retrieved is no longer a dead end: the ask still runs, in OPEN mode - a clearly
+            // labeled general-knowledge answer with no recreated quotes (the engine's open rules).
 
+            askGrounded = !sources.isEmpty
             askAnswer = ""; askIsStreaming = true; askRanForQuery = trimmed
             guard #available(iOS 26.0, *) else { return }
             do {
@@ -253,9 +260,19 @@ struct HadithBookView: View {
             for (offset, chapter) in data.chapters.enumerated() {
                 counts[chapter.id] = chapter.rowCount
                 ordinals[chapter.id] = offset + 1
+                // Citation BASE numbers - the numbers readers actually cite - with idInBook standing
+                // in per row where no citation exists (so books without citations behave exactly as
+                // before). Min/max over the WHOLE slice, never first/last: Sahih Muslim's citations
+                // are not monotonic within a chapter.
                 let rows = data.hadiths(in: chapter)
-                if let first = rows.first?.idInBook, let last = rows.last?.idInBook {
-                    ranges[chapter.id] = min(first, last)...max(first, last)
+                if var low = rows.first?.citedBaseNumber {
+                    var high = low
+                    for hadith in rows.dropFirst() {
+                        let number = hadith.citedBaseNumber
+                        low = min(low, number)
+                        high = max(high, number)
+                    }
+                    ranges[chapter.id] = low...high
                 }
             }
             self.counts = counts
@@ -291,11 +308,13 @@ struct HadithBookView: View {
         inBookSearchTask?.cancel()
         let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
 
-        // A pure number is a hadith NUMBER: "5" means hadith 5 of this book. Answered directly - no
-        // scan, and deliberately BEFORE the three-character floor below, which is why typing a one- or
-        // two-digit number used to show nothing at all.
-        if let number = HadithBookData.hadithNumber(inQuery: query) {
-            inBookMatches = (data.hadith(numbered: number).map { [$0] } ?? [], false)
+        // A pure citation ("5", or "8a" with the variant letter) is a hadith NUMBER: the hadith
+        // CITED 5 in this book, all its variants when the base owns several, falling back to the
+        // internal row number where no citations exist. Answered directly - no scan, and deliberately
+        // BEFORE the three-character floor below, which is why typing a one- or two-digit number
+        // used to show nothing at all.
+        if let citation = HadithBookData.citationNumber(inQuery: query) {
+            inBookMatches = (Self.citedMatches(citation, in: data), false)
             return
         }
 
@@ -350,12 +369,25 @@ struct HadithBookView: View {
         }
     }
 
+    /// The citation-first reading of a bare number in THIS book: every variant the base owns
+    /// (filtered to one when a suffix was typed), the internal row number when the book carries no
+    /// citations under it - shared by the debounced search and its synchronous twin.
+    private static func citedMatches(_ citation: (base: Int, suffix: String?), in data: HadithBookData) -> [HadithBookData.Hadith] {
+        var cited = data.hadiths(citing: citation.base)
+        if let suffix = citation.suffix {
+            cited = cited.filter { $0.citation == "\(citation.base)\(suffix)" }
+        } else if cited.isEmpty, let fallback = data.hadith(numbered: citation.base) {
+            cited = [fallback]
+        }
+        return cited
+    }
+
     /// Synchronous variant, kept ONLY for user-gesture paths (Ask's context gather, the focus-loss
     /// history check) - never called per keystroke or from body.
     private func matchingHadiths(_ data: HadithBookData) -> (shown: [HadithBookData.Hadith], hasMore: Bool) {
         let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
-        if let number = HadithBookData.hadithNumber(inQuery: query) {
-            return (data.hadith(numbered: number).map { [$0] } ?? [], false)
+        if let citation = HadithBookData.citationNumber(inQuery: query) {
+            return (Self.citedMatches(citation, in: data), false)
         }
         guard query.count >= 3 else { return ([], false) }
         // Script-aware: an Arabic query can only live in the Arabic text, a Latin one only in the
@@ -563,9 +595,8 @@ struct HadithBookView: View {
                 if isSearchActive {
                     // Question-shaped queries stream a grounded on-device answer automatically; other
                     // queries get a one-tap "Ask AI" row - the Quran search's exact grammar, under the
-                    // same accent ASK AI header. The prompt row shows only once there are results to
-                    // ground an answer on: while the scan is still running a tap had nothing to
-                    // retrieve against and silently did nothing.
+                    // same accent ASK AI header. ALWAYS present while searching, results or none: with
+                    // nothing retrieved the ask answers in the engine's open mode instead.
                     if OnDeviceAsk.isAvailable {
                         if askNoAnswer {
                             Section(header: askAIHeader) {
@@ -573,9 +604,9 @@ struct HadithBookView: View {
                             }
                         } else if !askRanForQuery.isEmpty {
                             Section(header: askAIHeader) {
-                                AskAnswerCard(answer: askAnswer, isStreaming: askIsStreaming)
+                                AskAnswerCard(answer: askAnswer, isStreaming: askIsStreaming, grounded: askGrounded)
                             }
-                        } else if !aiHits.isEmpty || !matches.shown.isEmpty {
+                        } else {
                             Section(header: askAIHeader) {
                                 Button {
                                     settings.hapticFeedback()
@@ -587,8 +618,6 @@ struct HadithBookView: View {
 
                                         Text("Ask AI about \u{201C}\(searchText.trimmingCharacters(in: .whitespacesAndNewlines))\u{201D}")
                                             .font(.caption.weight(.semibold))
-                                            .lineLimit(1)
-                                            .minimumScaleFactor(0.7)
 
                                         Spacer()
 
@@ -889,7 +918,7 @@ struct HadithBookView: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
-            Text("AI couldn't find anything in this book matching \u{201C}\(searchText.trimmingCharacters(in: .whitespacesAndNewlines))\u{201D}. Try different wording.")
+            Text("AI couldn't answer \u{201C}\(searchText.trimmingCharacters(in: .whitespacesAndNewlines))\u{201D} right now. Try different wording, or try again.")
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
@@ -909,19 +938,30 @@ struct HadithBookView: View {
         if aiQueryEligible {
             if semanticEngine.isReady(semanticCorpusID) {
                 if !aiHits.isEmpty {
+                    // The keyword matches' grammar: the sparkles TOTAL pill up top, then one section
+                    // per chapter with its own count - the same split `hadithMatchesSections` gives
+                    // the keyword hits, so both lists read identically.
                     Section(header: SectionPillHeader(title: "AI MATCHES", count: aiHits.count, icon: "sparkles", accentTitle: true)) {
-                        ForEach(aiHits) { hadith in
-                            // Land in the chapter, scrolled to the hadith - the keyword matches' arrival.
-                            if let chapter = data.chapters.first(where: { $0.id == hadith.chapterId }) {
-                                chapterLink(chapter, data: data, scrollToHadithId: hadith.idInBook) {
+                        EmptyView()
+                    }
+                    .padding(.bottom, -12)
+
+                    ForEach(hadithMatchGroups(data, shown: aiHits)) { group in
+                        Section {
+                            ForEach(group.shown) { hadith in
+                                // Land in the chapter, scrolled to the hadith - the keyword matches' arrival.
+                                chapterLink(group.chapter, data: data, scrollToHadithId: hadith.idInBook) {
                                     HadithRow(book: book, hadith: hadith, searchText: searchText, compact: true).equatable()
                                 }
-                            } else {
-                                NavigationLink {
-                                    HadithReferenceView(book: book, chapter: nil, hadith: hadith.idInBook)
-                                } label: {
-                                    HadithRow(book: book, hadith: hadith, searchText: searchText, compact: true).equatable()
-                                }
+                            }
+                        } header: {
+                            HStack(spacing: 8) {
+                                Text(group.chapter.english.uppercased())
+                                    .lineLimit(1)
+
+                                Spacer()
+
+                                CountPill(count: group.shown.count)
                             }
                         }
                     }
@@ -1610,16 +1650,22 @@ struct HadithChapterView: View {
         _chapterIndex = State(initialValue: bookData.chapters.firstIndex(where: { $0.id == chapter.id }) ?? 0)
         let hadiths = Array(bookData.hadiths(in: chapter))
         _allChapterHadiths = State(initialValue: hadiths)
-        // idInBook is ascending within a chapter (the packer checks the run is unbroken), so the
-        // chapter's span is its first and last hadith - no min/max walk.
         _chapterRange = State(initialValue: HadithChapterView.range(of: hadiths))
     }
 
-    /// The span of hadith numbers a chapter covers ("1234-1256"). The rows are in ascending idInBook
-    /// order within a chapter, so this is the ends of the slice.
+    /// The span of CITED hadith numbers a chapter covers ("1234-1256") - citation base numbers,
+    /// falling back to idInBook per row for the books without citations (identical to the old label
+    /// there). Min/max over the whole slice, never first/last: Sahih Muslim's citations are not
+    /// monotonic within a chapter.
     static func range(of hadiths: [HadithBookData.Hadith]) -> ClosedRange<Int>? {
-        guard let first = hadiths.first?.idInBook, let last = hadiths.last?.idInBook else { return nil }
-        return min(first, last)...max(first, last)
+        guard var low = hadiths.first?.citedBaseNumber else { return nil }
+        var high = low
+        for hadith in hadiths.dropFirst() {
+            let number = hadith.citedBaseNumber
+            low = min(low, number)
+            high = max(high, number)
+        }
+        return low...high
     }
 
     /// The book-order neighbours of the current chapter - the surah reader's Previous/Next, by chapter.
@@ -1771,7 +1817,7 @@ struct HadithChapterView: View {
             found.append(NumberMatch(hadith: allChapterHadiths[number - 1], caption: "\(ordinal) in this chapter"))
         }
 
-        if let overall = bookData.hadith(numbered: number) {
+        if let overall = bookData.hadith(referenced: number) {
             var caption = "Hadith \(number) in this book"
             // It can live in another chapter - name that chapter, since tapping the row goes there.
             if let home = bookData.chapter(of: overall), home.id != chapter.id {
@@ -2572,6 +2618,7 @@ struct HadithPagedView: View {
         case arabic(HadithBookData.Hadith)
         case narrator(HadithBookData.Hadith)
         case english(HadithBookData.Hadith)
+        case grades(HadithBookData.Hadith)
 
         var id: String {
             switch self {
@@ -2579,13 +2626,15 @@ struct HadithPagedView: View {
             case .arabic(let hadith): return "ar-\(hadith.id)"
             case .narrator(let hadith): return "narr-\(hadith.id)"
             case .english(let hadith): return "en-\(hadith.id)"
+            case .grades(let hadith): return "gr-\(hadith.id)"
             }
         }
 
         var hadith: HadithBookData.Hadith? {
             switch self {
             case .hadithHeader(let hadith), .arabic(let hadith),
-                 .narrator(let hadith), .english(let hadith):
+                 .narrator(let hadith), .english(let hadith),
+                 .grades(let hadith):
                 return hadith
             }
         }
@@ -2629,6 +2678,12 @@ struct HadithPagedView: View {
             if settings.showHadithEnglish {
                 if !text.narrator.isEmpty { elements.append(.narrator(hadith)) }
                 if !text.text.isEmpty { elements.append(.english(hadith)) }
+            }
+            // The grade line trails the text - after the English, or after the Arabic when English is
+            // off or absent (the reading rows' placement). Always shown: the grading is part of the
+            // hadith, not a preference - a reader must be able to tell sahih from da'if.
+            if !hadith.grades.isEmpty {
+                elements.append(.grades(hadith))
             }
             return BuiltPage(elements: elements)
         }
@@ -2825,7 +2880,7 @@ struct HadithPagedView: View {
                             .opacity(0.55)
                     }
 
-                    Text("\(hadith.idInBook)")
+                    Text(hadith.displayNumber)
                         .font(.subheadline.monospacedDigit().weight(.semibold))
 
                     Text(book.englishTitle)
@@ -2876,18 +2931,19 @@ struct HadithPagedView: View {
             }
 
         case .arabic(let hadith):
+            // The font comes from `hadithArabicFont(for:)`: the longest narrations fall back to the
+            // system face, because the custom KFGQPC faces DROP contextual shaping past a length
+            // cliff and every letter renders isolated (see `arabicShapingCharacterLimit`).
             HighlightedSnippet(
                 source: hadith.arabic,
                 term: "",
-                font: settings.useFontArabic
-                    ? Font.arabic(settings.nonQuranArabicFontName, size: settings.hadithArabicFontSize)
-                    : .system(size: settings.hadithArabicFontSize),
+                font: settings.hadithArabicFont(for: hadith.arabic, size: settings.hadithArabicFontSize),
                 accent: settings.accentColor.color,
                 fg: .primary,
                 highlightAllahNames: settings.highlightAllahNamesHadith,
-                basicFontForCommas: settings.useFontArabic ? settings.hadithArabicFontSize : nil
+                basicFontForCommas: settings.hadithArabicUsesCustomFace(for: hadith.arabic) ? settings.hadithArabicFontSize : nil
             )
-            .arabicFontDesign(custom: settings.islamUsesCustomArabicFace)
+            .arabicFontDesign(custom: settings.hadithArabicUsesCustomFace(for: hadith.arabic))
             .multilineTextAlignment(.trailing)
             .lineSpacing(6)
             .frame(maxWidth: .infinity, alignment: .trailing)
@@ -2921,6 +2977,11 @@ struct HadithPagedView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             .fixedSize(horizontal: false, vertical: true)
             .textSelection(.enabled)
+
+        case .grades(let hadith):
+            // The reading rows' grade line, verbatim - never parsed, ranked, or colored.
+            HadithGradeLine(grades: hadith.grades)
+                .textSelection(.enabled)
         }
     }
 
@@ -3049,7 +3110,7 @@ struct HadithPagedView: View {
                         ForEach(0..<max(pageCount, 1), id: \.self) { i in
                             // Within-chapter position plus the book-wide citation number.
                             if chapterHadiths.indices.contains(i) {
-                                Text("Hadith \(i + 1)  (#\(chapterHadiths[i].idInBook))").tag(i)
+                                Text("Hadith \(i + 1)  (#\(chapterHadiths[i].displayNumber))").tag(i)
                             } else {
                                 Text("Hadith \(i + 1)").tag(i)
                             }

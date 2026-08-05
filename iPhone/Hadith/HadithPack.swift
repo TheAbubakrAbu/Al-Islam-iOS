@@ -14,7 +14,7 @@ import Compression
 //
 //   header, 48 bytes
 //     u32  magic "HDPK"
-//     u16  format version (2)
+//     u16  format version (4)
 //     u8   eager codec, u8 text codec, u8 search codec, u8 reserved
 //     u16  block count
 //     u32  chapter count
@@ -33,11 +33,16 @@ import Compression
 //     u32 chapter count, then per chapter:
 //       i32 id, u32 first row, u32 row count, arabic, english, arabic fold, english fold
 //     u32 hadith count, then per hadith:
-//       u32 id, u32 idInBook, i32 chapterId, u16 block index, u8 flags
+//       u32 id, u32 idInBook, i32 chapterId, u32 citation base, u8 citation suffix,
+//       u16 block index, u8 flags
+//     (citation = the standard sunnah.com number, "2950" or "8a"; base 0 = none exists,
+//      suffix 0 = none, 1...26 = "a"..."z")
 //
 //   per block: the display payload, then the search payload
-//     display: the block's strings back to back, length-prefixed, THREE per hadith in row order
-//              (arabic, narrator, text) - so hadith `row` is at slot (row - firstRow) * 3
+//     display: the block's strings back to back, length-prefixed, FOUR per hadith in row order
+//              (arabic, narrator, text, grades) - so hadith `row` is at slot (row - firstRow) * 4.
+//              `grades` holds the scholar verdicts as "name U+001F grade" records joined by
+//              U+001E, empty when ungraded - see Hadith-JSON-Engine docs/03-gradings.md
 //     search:  u32 count, u32 arabic section length, then count u32 Arabic lengths and count u32
 //              English lengths, then the Arabic folds NUL-terminated, then the English folds
 //
@@ -236,9 +241,23 @@ final class HadithPack: @unchecked Sendable {
         let id: Int32
         let idInBook: Int32
         let chapterId: Int32
+        /// The standard sunnah.com citation number - the number readers cite and search with,
+        /// which is NOT `idInBook` (upstream's row index has known drift; Jami` at-Tirmidhi
+        /// 2950 sits at idInBook 3033). 0 = no standard citation exists for this row.
+        let citationBase: Int32
+        /// 0 = none, 1...26 = "a"..."z" - Sahih Muslim cites variant narrations as "8a", "8b".
+        let citationSuffix: UInt8
         let block: UInt16
         /// Precomputed answers to questions that would otherwise need the hadith's TEXT. See `Flag`.
         let flags: UInt8
+
+        /// "2950" or "8a", or nil where sunnah.com has no collection-level number (Muwatta
+        /// Malik, most of Bulugh al-Maram) - callers fall back to `idInBook` for display.
+        var citation: String? {
+            guard citationBase > 0 else { return nil }
+            guard citationSuffix >= 1, citationSuffix <= 26 else { return String(citationBase) }
+            return String(citationBase) + String(UnicodeScalar(96 + citationSuffix))
+        }
     }
 
     /// Bits in `Row.flags`, written by the packer.
@@ -293,7 +312,7 @@ final class HadithPack: @unchecked Sendable {
         self.data = mapped
 
         var header = PackReader(data: mapped, cursor: 0)
-        guard header.u32() == 0x4B50_4448, header.u16() == 2 else { return nil }
+        guard header.u32() == 0x4B50_4448, header.u16() == 4 else { return nil }
         let eagerCodecID = header.u8()
         let textCodecID = header.u8()
         let searchCodecID = header.u8()
@@ -359,14 +378,16 @@ final class HadithPack: @unchecked Sendable {
         }
 
         var rowList: [Row] = []
-        // Each id record is exactly 15 bytes.
-        let hadithCount = min(eagerReader.u32(), eagerReader.remaining / 15)
+        // Each id record is exactly 20 bytes.
+        let hadithCount = min(eagerReader.u32(), eagerReader.remaining / 20)
         rowList.reserveCapacity(hadithCount)
         for _ in 0..<hadithCount {
             rowList.append(Row(
                 id: Int32(truncatingIfNeeded: eagerReader.u32()),
                 idInBook: Int32(truncatingIfNeeded: eagerReader.u32()),
                 chapterId: Int32(truncatingIfNeeded: eagerReader.i32()),
+                citationBase: Int32(truncatingIfNeeded: eagerReader.u32()),
+                citationSuffix: UInt8(truncatingIfNeeded: eagerReader.u8()),
                 block: UInt16(truncatingIfNeeded: eagerReader.u16()),
                 flags: UInt8(truncatingIfNeeded: eagerReader.u8())
             ))
@@ -395,7 +416,7 @@ final class HadithPack: @unchecked Sendable {
         guard row >= 0, row < rows.count else { return ("", "", "") }
         let blockIndex = Int(rows[row].block)
         guard blockIndex < blocks.count, let strings = textBlock(blockIndex) else { return ("", "", "") }
-        let slot = (row - blocks[blockIndex].firstRow) * 3
+        let slot = (row - blocks[blockIndex].firstRow) * 4
         guard slot >= 0, slot + 2 < strings.count else { return ("", "", "") }
         return (strings[slot], strings[slot + 1], strings[slot + 2])
     }
@@ -404,9 +425,23 @@ final class HadithPack: @unchecked Sendable {
         guard row >= 0, row < rows.count else { return "" }
         let blockIndex = Int(rows[row].block)
         guard blockIndex < blocks.count, let strings = textBlock(blockIndex) else { return "" }
-        let slot = (row - blocks[blockIndex].firstRow) * 3 + field
+        let slot = (row - blocks[blockIndex].firstRow) * 4 + field
         guard slot >= 0, slot < strings.count else { return "" }
         return strings[slot]
+    }
+
+    /// The scholar gradings of one hadith, parsed from the fourth display string: every named
+    /// verdict the data carries, in its stored order. Empty means "no grading is known" - never
+    /// "ungraded by scholars" (and Bukhari/Muslim carry none by design; the collections are sahih).
+    func grades(row: Int) -> [(name: String, grade: String)] {
+        let raw = string(row: row, field: 3)
+        guard !raw.isEmpty else { return [] }
+        return raw.split(separator: "\u{1E}").compactMap { entry in
+            let parts = entry.split(separator: "\u{1F}", maxSplits: 1, omittingEmptySubsequences: false)
+            guard let grade = parts.last, !grade.isEmpty else { return nil }
+            let name = parts.count == 2 ? String(parts[0]) : ""
+            return (name, String(grade))
+        }
     }
 
     private func textBlock(_ index: Int) -> HadithBlockCache.TextBlock? {

@@ -90,8 +90,15 @@ extension Settings {
             /// Machine-extracted text pending scholarly verification (the 12 riwayat
             /// beyond the eight the app ships from the King Fahd Complex data).
             var beta: Bool = false
+            /// The rawi's (narrator's) own death year, Hijri - the pickers' secondary line.
+            var narratorDiedAH: Int? = nil
 
             var id: String { tag.isEmpty ? "Hafs" : tag }
+
+            /// "d. 180 AH" - secondary text under the rawi's name in the qiraah menus.
+            var narratorDetail: String? {
+                narratorDiedAH.map { "d. \($0) AH" }
+            }
         }
 
         struct Group: Identifiable, Hashable {
@@ -151,6 +158,27 @@ extension Settings {
         static let yaqubTeacherArabic = "يَعقُوب"
         static let khalafAshirTeacherArabic = "خَلَفٌ العَاشِر"
 
+        // Where each qiraah imam taught, and when he died (Hijri) - the pickers' secondary line and
+        // the Qiraat guide's facts. Cities match the "Companions behind each Qiraah" section.
+        static let teacherCity: [String: String] = [
+            asimTeacher: "Kufa", nafiTeacher: "Madinah", ibnKathirTeacher: "Makkah",
+            abiAmrTeacher: "Basra", hamzahTeacher: "Kufa", ibnAmirTeacher: "Damascus",
+            kisaiTeacher: "Kufa", abiJafarTeacher: "Madinah", yaqubTeacher: "Basra",
+            khalafAshirTeacher: "Baghdad",
+        ]
+
+        static let teacherDiedAH: [String: Int] = [
+            asimTeacher: 127, nafiTeacher: 169, ibnKathirTeacher: 120, abiAmrTeacher: 154,
+            hamzahTeacher: 156, ibnAmirTeacher: 118, kisaiTeacher: 189, abiJafarTeacher: 130,
+            yaqubTeacher: 205, khalafAshirTeacher: 229,
+        ]
+
+        /// "Kufa, d. 127 AH" - the qiraah submenus' secondary line for an imam.
+        static func teacherDetail(_ teacher: String) -> String? {
+            guard let city = teacherCity[teacher], let died = teacherDiedAH[teacher] else { return nil }
+            return "\(city), d. \(died) AH"
+        }
+
         static let hafsArabic = "حَفص عَن عَاصِم"
         static let warshArabic = "وَرش عَن نَافِع"
         static let qaloonArabic = "قَالُون عَن نَافِع"
@@ -176,35 +204,35 @@ extension Settings {
         /// AND ship their text from `BetaQiraatStore` rather than the bundled pack.
         static let allOptions: [Option] = [
             // Asim
-            Option(label: hafsLabel, tag: hafsTag, arabic: hafsArabic, teacher: asimTeacher, teacherArabic: asimTeacherArabic, order: 0),
-            Option(label: shubah, tag: shubah, arabic: shubahArabic, teacher: asimTeacher, teacherArabic: asimTeacherArabic, order: 1),
+            Option(label: hafsLabel, tag: hafsTag, arabic: hafsArabic, teacher: asimTeacher, teacherArabic: asimTeacherArabic, order: 0, narratorDiedAH: 180),
+            Option(label: shubah, tag: shubah, arabic: shubahArabic, teacher: asimTeacher, teacherArabic: asimTeacherArabic, order: 1, narratorDiedAH: 193),
             // Nafi
-            Option(label: warsh, tag: warsh, arabic: warshArabic, teacher: nafiTeacher, teacherArabic: nafiTeacherArabic, order: 2),
-            Option(label: qaloon, tag: qaloon, arabic: qaloonArabic, teacher: nafiTeacher, teacherArabic: nafiTeacherArabic, order: 3),
+            Option(label: warsh, tag: warsh, arabic: warshArabic, teacher: nafiTeacher, teacherArabic: nafiTeacherArabic, order: 2, narratorDiedAH: 197),
+            Option(label: qaloon, tag: qaloon, arabic: qaloonArabic, teacher: nafiTeacher, teacherArabic: nafiTeacherArabic, order: 3, narratorDiedAH: 220),
             // Ibn Kathir
-            Option(label: buzzi, tag: buzzi, arabic: buzziArabic, teacher: ibnKathirTeacher, teacherArabic: ibnKathirTeacherArabic, order: 4),
-            Option(label: qunbul, tag: qunbul, arabic: qunbulArabic, teacher: ibnKathirTeacher, teacherArabic: ibnKathirTeacherArabic, order: 5),
+            Option(label: buzzi, tag: buzzi, arabic: buzziArabic, teacher: ibnKathirTeacher, teacherArabic: ibnKathirTeacherArabic, order: 4, narratorDiedAH: 250),
+            Option(label: qunbul, tag: qunbul, arabic: qunbulArabic, teacher: ibnKathirTeacher, teacherArabic: ibnKathirTeacherArabic, order: 5, narratorDiedAH: 291),
             // Abu Amr
-            Option(label: duri, tag: duri, arabic: duriArabic, teacher: abiAmrTeacher, teacherArabic: abiAmrTeacherArabic, order: 6),
-            Option(label: susi, tag: susi, arabic: susiArabic, teacher: abiAmrTeacher, teacherArabic: abiAmrTeacherArabic, order: 7),
+            Option(label: duri, tag: duri, arabic: duriArabic, teacher: abiAmrTeacher, teacherArabic: abiAmrTeacherArabic, order: 6, narratorDiedAH: 246),
+            Option(label: susi, tag: susi, arabic: susiArabic, teacher: abiAmrTeacher, teacherArabic: abiAmrTeacherArabic, order: 7, narratorDiedAH: 261),
             // Ibn Amir (beta)
-            Option(label: hisham, tag: hisham, arabic: hishamArabic, teacher: ibnAmirTeacher, teacherArabic: ibnAmirTeacherArabic, order: 8, beta: true),
-            Option(label: ibnDhakwan, tag: ibnDhakwan, arabic: ibnDhakwanArabic, teacher: ibnAmirTeacher, teacherArabic: ibnAmirTeacherArabic, order: 9, beta: true),
+            Option(label: hisham, tag: hisham, arabic: hishamArabic, teacher: ibnAmirTeacher, teacherArabic: ibnAmirTeacherArabic, order: 8, beta: true, narratorDiedAH: 245),
+            Option(label: ibnDhakwan, tag: ibnDhakwan, arabic: ibnDhakwanArabic, teacher: ibnAmirTeacher, teacherArabic: ibnAmirTeacherArabic, order: 9, beta: true, narratorDiedAH: 242),
             // Hamzah (beta)
-            Option(label: khalaf, tag: khalaf, arabic: khalafArabic, teacher: hamzahTeacher, teacherArabic: hamzahTeacherArabic, order: 10, beta: true),
-            Option(label: khallad, tag: khallad, arabic: khalladArabic, teacher: hamzahTeacher, teacherArabic: hamzahTeacherArabic, order: 11, beta: true),
+            Option(label: khalaf, tag: khalaf, arabic: khalafArabic, teacher: hamzahTeacher, teacherArabic: hamzahTeacherArabic, order: 10, beta: true, narratorDiedAH: 229),
+            Option(label: khallad, tag: khallad, arabic: khalladArabic, teacher: hamzahTeacher, teacherArabic: hamzahTeacherArabic, order: 11, beta: true, narratorDiedAH: 220),
             // al-Kisai (beta)
-            Option(label: abuHarith, tag: abuHarith, arabic: abuHarithArabic, teacher: kisaiTeacher, teacherArabic: kisaiTeacherArabic, order: 12, beta: true),
-            Option(label: duriKisai, tag: duriKisai, arabic: duriKisaiArabic, teacher: kisaiTeacher, teacherArabic: kisaiTeacherArabic, order: 13, beta: true),
+            Option(label: abuHarith, tag: abuHarith, arabic: abuHarithArabic, teacher: kisaiTeacher, teacherArabic: kisaiTeacherArabic, order: 12, beta: true, narratorDiedAH: 240),
+            Option(label: duriKisai, tag: duriKisai, arabic: duriKisaiArabic, teacher: kisaiTeacher, teacherArabic: kisaiTeacherArabic, order: 13, beta: true, narratorDiedAH: 246),
             // Abu Jafar (beta)
-            Option(label: ibnWardan, tag: ibnWardan, arabic: ibnWardanArabic, teacher: abiJafarTeacher, teacherArabic: abiJafarTeacherArabic, order: 14, beta: true),
-            Option(label: ibnJammaz, tag: ibnJammaz, arabic: ibnJammazArabic, teacher: abiJafarTeacher, teacherArabic: abiJafarTeacherArabic, order: 15, beta: true),
+            Option(label: ibnWardan, tag: ibnWardan, arabic: ibnWardanArabic, teacher: abiJafarTeacher, teacherArabic: abiJafarTeacherArabic, order: 14, beta: true, narratorDiedAH: 160),
+            Option(label: ibnJammaz, tag: ibnJammaz, arabic: ibnJammazArabic, teacher: abiJafarTeacher, teacherArabic: abiJafarTeacherArabic, order: 15, beta: true, narratorDiedAH: 170),
             // Yaqub (beta)
-            Option(label: ruways, tag: ruways, arabic: ruwaysArabic, teacher: yaqubTeacher, teacherArabic: yaqubTeacherArabic, order: 16, beta: true),
-            Option(label: rawh, tag: rawh, arabic: rawhArabic, teacher: yaqubTeacher, teacherArabic: yaqubTeacherArabic, order: 17, beta: true),
+            Option(label: ruways, tag: ruways, arabic: ruwaysArabic, teacher: yaqubTeacher, teacherArabic: yaqubTeacherArabic, order: 16, beta: true, narratorDiedAH: 238),
+            Option(label: rawh, tag: rawh, arabic: rawhArabic, teacher: yaqubTeacher, teacherArabic: yaqubTeacherArabic, order: 17, beta: true, narratorDiedAH: 234),
             // Khalaf al-Ashir (beta)
-            Option(label: ishaq, tag: ishaq, arabic: ishaqArabic, teacher: khalafAshirTeacher, teacherArabic: khalafAshirTeacherArabic, order: 18, beta: true),
-            Option(label: idris, tag: idris, arabic: idrisArabic, teacher: khalafAshirTeacher, teacherArabic: khalafAshirTeacherArabic, order: 19, beta: true),
+            Option(label: ishaq, tag: ishaq, arabic: ishaqArabic, teacher: khalafAshirTeacher, teacherArabic: khalafAshirTeacherArabic, order: 18, beta: true, narratorDiedAH: 286),
+            Option(label: idris, tag: idris, arabic: idrisArabic, teacher: khalafAshirTeacher, teacherArabic: khalafAshirTeacherArabic, order: 19, beta: true, narratorDiedAH: 292),
         ]
 
         /// What the UI may offer right now: the 8 verified riwayat always, plus the 12
@@ -525,6 +553,28 @@ extension Settings {
     /// The reader's Hide-Tashkeel / Hide-Dots choices applied to ANY Quranic Arabic string - surah
     /// names, the title picker, share headers - so every corner of the app matches the reading view.
     /// Hafs-only, exactly like the reading text itself.
+    /// The KFGQPC faces (Uthmani/IndoPak) DROP contextual shaping when a single Text lays out a very
+    /// long string - every letter renders in isolated form, the "shattered Arabic" bug on the longest
+    /// narrations (verified: Muslim's ~7,800-char Ifk hadith shatters in the custom face and shapes
+    /// perfectly in the system face; short hadiths are fine in both). The ~30 hadiths past this limit
+    /// fall back to the system Arabic face instead. 4,000 leaves margin under the smallest observed
+    /// failure; the longest KNOWN-GOOD custom-face render is ~3k.
+    static let arabicShapingCharacterLimit = 4_000
+
+    /// The hadith-surface Arabic font for `text`: the user's chosen face, unless the text is long
+    /// enough to hit the custom faces' shaping cliff (see `arabicShapingCharacterLimit`).
+    func hadithArabicFont(for text: String, size: CGFloat) -> Font {
+        hadithArabicUsesCustomFace(for: text)
+            ? Font.arabic(nonQuranArabicFontName, size: size)
+            : .system(size: size)
+    }
+
+    /// Whether `text` renders in a bundled custom face (drives `arabicFontDesign(custom:)` and the
+    /// comma re-fonting, which only classical faces need).
+    func hadithArabicUsesCustomFace(for text: String) -> Bool {
+        useFontArabic && islamUsesCustomArabicFace && text.count < Self.arabicShapingCharacterLimit
+    }
+
     func cleanedQuranArabic(_ text: String) -> String {
         guard isHafsDisplay else { return text }
         var out = text
