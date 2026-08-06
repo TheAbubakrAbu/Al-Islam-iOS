@@ -12,6 +12,7 @@ struct AyahQiraahComparisonSheet: View {
     @State private var searchText = ""
     // Comparing scripts is exactly when you want the text bigger; the slider only affects this sheet.
     @State private var arabicFontSize: Double = Double(UIFont.preferredFont(forTextStyle: .title3).pointSize)
+    @State private var showSummarize = false
 
     private struct QiraahDisplay: Identifiable {
         let label: String
@@ -134,9 +135,63 @@ struct AyahQiraahComparisonSheet: View {
             // The list below washes itself; this covers the header strip above it, so the whole
             // sheet sits on the same light.
             .accentWashedBackground()
+            // On-device AI: summarize how the riwayat of this ayah compare - the current riwayah's
+            // text plus every compared row's text and numbering/difference notes, as rendered.
+            // Hidden when Apple Intelligence is unavailable (the Ask pattern).
+            #if canImport(FoundationModels)
+            .toolbar {
+                // The availability check lives INSIDE the item (ViewBuilder, iOS 15-safe):
+                // conditional toolbar items need the iOS 16 ToolbarContentBuilder.
+                ToolbarItem(placement: .primaryAction) {
+                    if OnDeviceAsk.isAvailable, !qiraahSummarizeSource.isEmpty {
+                        SummarizeToolbarButton { showSummarize = true }
+                    }
+                }
+            }
+            .sheet(isPresented: $showSummarize) {
+                SummarizeSheet(
+                    title: "Riwayat of \(ayahSheetTitle(surahNumber: surahNumber, ayahNumber: ayahNumber))",
+                    sourceText: qiraahSummarizeSource
+                )
+            }
+            #endif
         }
         .navigationViewStyle(.stack)
     }
+
+    #if canImport(FoundationModels)
+    /// Everything the sheet is showing, as one labeled text for the summarizer: the current
+    /// riwayah's text first, then every other riwayah with its aligned text plus the same
+    /// numbering note the row renders and whether its wording differs from the current reading.
+    private var qiraahSummarizeSource: String {
+        var lines: [String] = []
+
+        if let currentOption, let text = qiraahText(for: currentOption) {
+            lines.append("\(currentOption.label) (\(currentOption.teacher)) [CURRENT riwayah]: \(text)")
+        }
+
+        for option in options where option.id != currentOption?.id {
+            let resolved = resolvedText(for: option)
+            var entry = "\(option.label) (\(option.teacher)): "
+            if let resolved {
+                entry += resolved.text
+                if let note = numberNote(resolved) {
+                    entry += " [\(note)]"
+                }
+                if let reference = referenceText {
+                    entry += reference == resolved.text
+                        ? " [identical wording to the current riwayah]"
+                        : " [wording differs from the current riwayah]"
+                }
+            } else {
+                entry += "This ayah is not separate in this riwayah."
+            }
+            lines.append(entry)
+        }
+
+        return lines.joined(separator: "\n\n")
+    }
+    #endif
 
     private func currentQiraahHeader(_ option: QiraahDisplay) -> some View {
         let text = qiraahText(for: option)
@@ -411,6 +466,14 @@ private final class EnglishComparisonViewModel: ObservableObject {
         self.ayah = ayah
     }
 
+    /// True for the errors a torn-down SwiftUI task produces - never worth showing to the reader.
+    /// (Lived on the tafsir view model until tafsir moved to bundled packs and stopped fetching.)
+    static func isCancellation(_ error: Error) -> Bool {
+        if error is CancellationError { return true }
+        if let urlError = error as? URLError, urlError.code == .cancelled { return true }
+        return (error as NSError).code == NSURLErrorCancelled
+    }
+
     func loadIfNeeded() async {
         await load(surah: surah, ayah: ayah)
     }
@@ -440,7 +503,7 @@ private final class EnglishComparisonViewModel: ObservableObject {
             translations = Dictionary(uniqueKeysWithValues: decoded.data.map { ($0.edition.identifier, $0.text) })
             loadedReference = reference
         } catch {
-            if !AyahTafsirViewModel.isCancellation(error) {
+            if !Self.isCancellation(error) {
                 errorMessage = error.localizedDescription
             }
         }
@@ -459,6 +522,7 @@ struct AyahEnglishComparisonSheet: View {
 
     @StateObject private var viewModel: EnglishComparisonViewModel
     @State private var searchText = ""
+    @State private var showSummarize = false
 
     init(surahNumber: Int, ayahNumber: Int) {
         self.surahNumber = surahNumber
@@ -535,14 +599,21 @@ struct AyahEnglishComparisonSheet: View {
 
     var body: some View {
         NavigationView {
-            VStack(spacing: 0) {
+            // The pinned "current translation" strip rides as a safe-area inset on the List rather
+            // than a VStack above it - the exact structure (and reason) of the riwayah comparison's
+            // header: with a VStack, the half-height (.medium) sheet detent laid the header out as a
+            // blank gap, and the "Saheeh International / CURRENT" strip only appeared once the sheet
+            // was dragged to full height.
+            comparisonList
+            .safeAreaInset(edge: .top, spacing: 0) {
                 if let currentTranslationText {
-                    currentTranslationHeader(text: currentTranslationText)
+                    VStack(spacing: 0) {
+                        currentTranslationHeader(text: currentTranslationText)
 
-                    Divider()
+                        Divider()
+                    }
+                    .background(.ultraThinMaterial)
                 }
-
-                comparisonList
             }
             .navigationTitle(ayahSheetTitle(surahNumber: surahNumber, ayahNumber: ayahNumber))
             .navigationBarTitleDisplayMode(.inline)
@@ -552,8 +623,47 @@ struct AyahEnglishComparisonSheet: View {
             .task(id: loadKey) {
                 await viewModel.loadIfNeeded()
             }
+            // On-device AI: summarize how the translations of this ayah compare, then chat about it -
+            // grounded only on the texts below. Hidden when Apple Intelligence is unavailable.
+            #if canImport(FoundationModels)
+            .toolbar {
+                // The availability check lives INSIDE the item (ViewBuilder, iOS 15-safe):
+                // conditional toolbar items need the iOS 16 ToolbarContentBuilder.
+                ToolbarItem(placement: .primaryAction) {
+                    if OnDeviceAsk.isAvailable, !summarizeSourceText.isEmpty {
+                        SummarizeToolbarButton { showSummarize = true }
+                    }
+                }
+            }
+            .sheet(isPresented: $showSummarize) {
+                SummarizeSheet(
+                    title: "Translations of \(ayahSheetTitle(surahNumber: surahNumber, ayahNumber: ayahNumber))",
+                    sourceText: summarizeSourceText
+                )
+            }
+            #endif
         }
         .navigationViewStyle(.stack)
+    }
+
+    /// Everything the sheet is showing, as one labeled text for the summarizer: the in-app
+    /// translations plus whichever online editions have loaded.
+    private var summarizeSourceText: String {
+        guard let ayah = quranData.ayah(surah: surahNumber, ayah: ayahNumber) else { return "" }
+
+        var lines: [String] = []
+        for edition in inAppEnglishComparisonEditions {
+            let text = inAppTranslationText(for: edition.id, ayah: ayah)
+            if !text.isEmpty {
+                lines.append("\(edition.name): \(text)")
+            }
+        }
+        for edition in englishComparisonEditions {
+            if let text = viewModel.translations[edition.id], !text.isEmpty {
+                lines.append("\(edition.name): \(text)")
+            }
+        }
+        return lines.joined(separator: "\n\n")
     }
 
     private func currentTranslationHeader(text: String) -> some View {

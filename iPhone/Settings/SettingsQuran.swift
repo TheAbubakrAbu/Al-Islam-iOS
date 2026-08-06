@@ -537,9 +537,43 @@ extension Settings {
         return Riwayah.options.contains { !$0.tag.isEmpty && $0.tag == normalizedQiraah }
     }
 
+    // The official KFGQPC riwayah faces (PostScript names, truncated to 31 chars by the
+    // foundry itself). Bundled unmodified from fonts.qurancomplex.gov.sa (V2.0). Only Duri
+    // and Susi still ship their own face: their texts use U+0622 (alef with madda), which
+    // the Hafs V2.2 face has no glyph for. The other five KFGQPC riwayah faces (Warsh,
+    // Qaloun, Shuba, Bazzi, Qunbul) were dropped from the bundle - every codepoint in those
+    // riwayat's texts is covered by the Hafs face's cmap, so they render in Hafs directly.
+    static let duriUthmaniFontName = "KFGQPCDouriUthmanicScript-Regul"
+    static let susiUthmaniFontName = "KFGQPCSousiUthmanicScript-Regul"
+
+    /// Canonical riwayah tag → its official KFGQPC typeface, for the riwayat that still
+    /// bundle one (see above). The beta riwayat (no KFGQPC print edition) keep the
+    /// extended-coverage Qiraat face via the fallback in `quranArabicFontName`.
+    static let officialRiwayahFontNames: [String: String] = [
+        Riwayah.duri: duriUthmaniFontName,
+        Riwayah.susi: susiUthmaniFontName,
+    ]
+
+    /// Riwayat whose dedicated KFGQPC faces were removed after verifying full Hafs-cmap
+    /// coverage of their texts (zero uncovered codepoints) - they render in the Hafs face.
+    static let hafsCoveredRiwayahTags: Set<String> = [
+        Riwayah.warsh, Riwayah.qaloon, Riwayah.shubah, Riwayah.buzzi, Riwayah.qunbul,
+    ]
+
     static func quranArabicFontName(selectedFontName: String, qiraah: String?) -> String {
         guard isUthmaniArabicFont(selectedFontName) else {
             return normalizedArabicFontName(selectedFontName)
+        }
+        // On the default Uthmani choice, a riwayah that bundles its own KFGQPC face renders
+        // in that face; the five whose texts the Hafs cmap fully covers render in Hafs. A
+        // custom pick (IndoPak/Basic) never reaches this branch, so the user's explicit font
+        // choice always wins.
+        let riwayahTag = normalizeLegacyRiwayahTag(qiraah ?? Riwayah.hafsTag)
+        if let officialFace = officialRiwayahFontNames[riwayahTag] {
+            return officialFace
+        }
+        if hafsCoveredRiwayahTags.contains(riwayahTag) {
+            return hafsUthmaniFontName
         }
         return isNonHafsQiraah(qiraah) ? qiraatUthmaniFontName : hafsUthmaniFontName
     }

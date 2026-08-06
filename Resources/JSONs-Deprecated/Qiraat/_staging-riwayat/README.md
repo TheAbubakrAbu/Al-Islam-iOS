@@ -25,6 +25,18 @@ al-Harith, ad-Duri al-Kisai, Ishaq, Idris) are near-print-perfect; Ibn Wardan/Ib
 Jammaz are high-90s; Ruways/Rawh are the weakest (high-80s characters) and the top
 candidates for holding back. (*Shami pair rides the Kufi glyph family.)
 
+## Hamzatul-wasl repair (Aug 6, 2026)
+
+The extraction under-captured the Maghribi wasl notation (`ا` + haraka + `۬`) in the
+Madani/Basri volumes — ~1,300 bare alefs per riwayah against the same-family KFGQPC
+bridges. `pipeline/fix_wasl.py` restored them by skeleton-matched copy from the bridges
+(Qaloon/Warsh for Abu Jafar's pair, Duri/Susi for Yaqub's), additive-only and asserted
+per word: ibnwardan +1,236 · ibnjammaz +1,233 · ruways +1,352 · rawh +1,297. Words whose
+skeleton differs were untouched (genuine riwayah orthography), and the carrier guard
+correctly refused the two-hamza tas-hil words (`ءَٰا۬نذَرۡتَهُمۡ` is Abu Amr's smoothing —
+Yaqub reads the full hamza; rawh's 102 refusals are exactly these). Staging JSONs and the
+shipped `.json.deflate` bundles were both rewritten and round-trip-verified.
+
 ## Structural invariants — ALL PASS
 
 - Exact canonical ayah counts, all 12: Kufi 6,236 ×6; **Dimashqi 6,226 ×2** (the four

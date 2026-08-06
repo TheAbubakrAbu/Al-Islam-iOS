@@ -49,13 +49,16 @@ exactly the books where sunnah.com shows no number either).
   independently confirms 24,479 citations at 100% final agreement.
 - Result: **47,476 of 50,884 rows cited (93.3%)**. Uncited = no standard number exists
   (all of Malik, most of Bulugh, Muslim's 13 unnumbered muqaddimah rows, 15 Ahmad,
-  2 Shama'il, 2 Mishkat).
-- **HPK format v3**: per-row record 15 → 20 bytes (u32 citation base + u8 suffix,
-  0 = none / 1–26 = a–z). Spec, `read_pack.py`, and conformance vectors updated; packs
+  2 Nasa'i, 2 Shama'il, 2 Mishkat).
+- **HPK format v3 → v4**: v3 widened the per-row record 15 → 20 bytes (u32 citation base +
+  u8 suffix, 0 = none / 1–26 = a–z); v4 added a fourth display string per hadith carrying
+  the scholar gradings ("name U+001F grade" joined by U+001E), rendered unconditionally
+  under every full hadith. Spec, `read_pack.py`, and conformance vectors updated; packs
   rebuilt into `Resources/Data/Hadith/`.
 
 **App:**
-- `HadithPack` reads v3 (rejects v2); `Row.citation` renders "2950" / "8a".
+- `HadithPack` reads v4 (rejects earlier versions); `Row.citation` renders "2950" / "8a",
+  and `grades(row:)` parses the verdicts shown by `HadithGradeLine`.
 - `Hadith.citation` + `Hadith.displayNumber`; `HadithBookData.hadith(referenced:suffix:)`
   resolves citation-first with `idInBook` fallback; `hadiths(citing:)` returns all
   variants of a base ("muslim 8" → 8a…8e).

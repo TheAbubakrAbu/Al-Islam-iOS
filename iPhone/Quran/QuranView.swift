@@ -188,9 +188,7 @@ struct QuranView: View {
     @State private var scrollToSurahID: Int = -1
     @State private var showingSettingsSheet = false
     @State private var showReciterPickerSheet = false
-    @State private var showListeningHistory = false
     @State private var showReadingHistory = false
-    @State private var showAyahListeningHistory = false
 
     #if os(iOS)
     /// Which summary tile's recents are unfolded BELOW the tile grid. The rows can't unfold inside a
@@ -306,7 +304,10 @@ struct QuranView: View {
             return
         }
 
-        askTask = Task {
+        // @MainActor explicitly: the local `addSource` helper below reads main-isolated state
+        // (`quranData`), and without the annotation the compiler treats the nested function as
+        // nonisolated even though the Task itself inherits the view's actor.
+        askTask = Task { @MainActor in
             // Auto waits out the search debounces so the retrieval this answer is GROUNDED on has
             // settled; a manual tap means the results are already on screen - go immediately.
             try? await Task.sleep(nanoseconds: manual ? 100_000_000 : 900_000_000)
@@ -314,10 +315,13 @@ struct QuranView: View {
 
             var sources: [OnDeviceAsk.Source] = []
             var seen = Set<String>()
+            // Captured once: a nested func is nonisolated regardless of the Task's actor, so it
+            // cannot touch the main-isolated `quranData` property - but it can close over a value.
+            let data = quranData
             func addSource(surah surahID: Int, ayah ayahID: Int) {
                 let reference = "\(surahID):\(ayahID)"
                 guard seen.insert(reference).inserted,
-                      let ayah = quranData.ayah(surah: surahID, ayah: ayahID) else { return }
+                      let ayah = data.ayah(surah: surahID, ayah: ayahID) else { return }
                 sources.append(.init(reference: reference, text: ayah.textEnglishSaheeh))
             }
             // Semantic hits first, then keyword hits, then the "top" picks - every retrieval mode the
@@ -1140,6 +1144,19 @@ struct QuranView: View {
             Button("OK") { quranPlayer.offlineReciterSwitch = nil }
         } message: {
             Text(quranPlayer.playbackAlertMessage)
+        }
+        // First-ayah-play heads-up for reciters whose ayah audio substitutes Al-Minshawi. A pushed
+        // SurahView claims this dialog for itself (it zeroes the flag, same as the playback alert
+        // above), so this only presents when the play started from this level (history rows, search).
+        .confirmationDialog(
+            "Play in Al-Minshawi's voice?",
+            isPresented: $quranPlayer.showMinshawiAyahConfirmation,
+            titleVisibility: .visible
+        ) {
+            Button("Play") { quranPlayer.confirmMinshawiAyahPlayback() }
+            Button("Cancel", role: .cancel) { quranPlayer.cancelMinshawiAyahPlayback() }
+        } message: {
+            Text("\(quranPlayer.pendingMinshawiAyahPlay?.reciter.name ?? "This reciter") has no verse-by-verse recordings; ayah playback uses \(Reciter.minshawiAyahFallbackName). This won't be asked again for this reciter.")
         }
         .task {
             prewarmQuranDestinations()
@@ -2076,75 +2093,9 @@ struct QuranView: View {
     @ViewBuilder
     private func primaryHistorySections(context: SearchDisplayContext) -> some View {
         #if os(iOS)
-        if settings.quranSummaryMode {
-            if context.isSearching == false {
-                boxed(summaryTilesSection(context: context))
-            }
-        } else {
-            // Order: Ayah of the Day · Last Listened Surah · Last Listened Ayah · Last Read Ayah.
-            if context.isSearching == false,
-               settings.showAyahOfTheDay,
-               settings.isAyahOfTheDayHiddenToday == false,
-               let pair = ayahOfTheDayPair {
-                AyahOfTheDayRow(
-                    surah: pair.surah,
-                    ayah: pair.ayah,
-                    favoriteSurahs: context.favoriteSurahs,
-                    bookmarkedAyahs: context.bookmarkedAyahs,
-                    searchText: $searchText,
-                    scrollToSurahID: $scrollToSurahID,
-                    onSelectAyah: columnAyahSelectionHandler
-                )
-                // One animation (combined surah+ayah key) rather than a stack of two.
-                .animation(.easeInOut, value: pair.surah.id * 1000 + pair.ayah.id)
-            }
-
-            if context.isSearching == false, settings.saveLastListenedSurah, let surah = settings.lastListenedSurah {
-                LastListenedSurahRow(
-                    lastListenedSurah: surah,
-                    favoriteSurahs: context.favoriteSurahs,
-                    searchText: $searchText,
-                    scrollToSurahID: $scrollToSurahID,
-                    showListeningHistory: $showListeningHistory,
-                    onSelectSurah: usesColumnNavigation ? { surahID in
-                        selectedRoute = .ayahs(surahID: surahID, ayah: nil)
-                    } : nil
-                )
-                .animation(.easeInOut, value: surah.surahNumber)
-            }
-
-            if context.isSearching == false,
-               settings.saveLastListenedAyah,
-               let pair = lastListenedAyahPair {
-                LastListenedAyahRow(
-                    surah: pair.surah,
-                    ayah: pair.ayah,
-                    favoriteSurahs: context.favoriteSurahs,
-                    bookmarkedAyahs: context.bookmarkedAyahs,
-                    searchText: $searchText,
-                    scrollToSurahID: $scrollToSurahID,
-                    showAyahListeningHistory: $showAyahListeningHistory,
-                    onSelectAyah: columnAyahSelectionHandler
-                )
-                .animation(.easeInOut, value: pair.surah.id * 1000 + pair.ayah.id)
-            }
-
-            if context.isSearching == false,
-               settings.saveLastReadAyah,
-               let lastReadSurah,
-               let lastReadAyah {
-                LastReadAyahRow(
-                    surah: lastReadSurah,
-                    ayah: lastReadAyah,
-                    favoriteSurahs: context.favoriteSurahs,
-                    bookmarkedAyahs: context.bookmarkedAyahs,
-                    searchText: $searchText,
-                    scrollToSurahID: $scrollToSurahID,
-                    showReadingHistory: $showReadingHistory,
-                    onSelectAyah: columnAyahSelectionHandler
-                )
-                .animation(.easeInOut, value: settings.lastReadSurah * 1000 + settings.lastReadAyah)
-            }
+        // Summary mode is always on: the compact "Your Summary" tiles are the one history presentation.
+        if context.isSearching == false {
+            boxed(summaryTilesSection(context: context))
         }
         #else
         NowPlayingView(quranView: true)
@@ -2242,19 +2193,19 @@ struct QuranView: View {
                         settings.hapticFeedback()
                         push(surahID: surah.id, ayahID: nil)
                     } label: {
-                        HStack(spacing: 8) {
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text("\(surah.id) - \(surah.nameTransliteration)")
-                                    .font(.subheadline.weight(.semibold))
-                                    .foregroundColor(settings.accentColor.color)
-
-                                Text(item.reciter.displayNameWithEnglishQiraah)
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                            }
-                            .frame(maxWidth: .infinity, alignment: .leading)
-
+                        VStack(alignment: .leading, spacing: 4) {
+                            // Top-left "when", matching the ayah history rows (there is no number
+                            // pill on a surah row, so it simply leads the card).
                             historyTimestampLabel(item.timestamp)
+
+                            Text("\(surah.id) - \(surah.nameTransliteration)")
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundColor(settings.accentColor.color)
+
+                            Text(item.reciter.displayNameWithEnglishQiraah)
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                                .lineLimit(1)
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .contentShape(Rectangle())
@@ -2271,24 +2222,27 @@ struct QuranView: View {
             settings.hapticFeedback()
             push(surahID: surah.id, ayahID: ayah.id)
         } label: {
-            HStack(spacing: 8) {
-                VStack(alignment: .leading, spacing: 4) {
-                    if let caption {
-                        Text(caption)
-                            .font(.caption2.weight(.semibold))
-                            .foregroundColor(.secondary)
-                    }
-
-                    SurahAyahRow(surah: surah, ayah: ayah)
-                        .equatable()
+            VStack(alignment: .leading, spacing: 4) {
+                if let caption {
+                    Text(caption)
+                        .font(.caption2.weight(.semibold))
+                        .foregroundColor(.secondary)
+                        .lineLimit(1)
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
 
-                // The same trailing "when" the full-size rows carry, so summary mode's unfolded history
-                // reads as a timeline too.
+                // The "when" sits at the row's top-left, centered over SurahAyahRow's 65pt
+                // number-pill column so it reads as a caption directly above the pill.
                 if let timestamp {
-                    historyTimestampLabel(timestamp)
+                    Text(formatCompactHistoryTimestamp(timestamp))
+                        .font(.caption2)
+                        .monospacedDigit()
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .frame(width: 65)
                 }
+
+                SurahAyahRow(surah: surah, ayah: ayah)
+                    .equatable()
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .contentShape(Rectangle())
@@ -2320,8 +2274,7 @@ struct QuranView: View {
                 if settings.saveLastReadAyah, let lastReadSurah, let lastReadAyah {
                     SummaryAyahTile(title: "Last Read Ayah", icon: "book", surah: lastReadSurah, ayah: lastReadAyah, titleColor: settings.accentColor.color,
                                     isExpanded: summaryHistoryExpansion == .reading,
-                                    onExpand: quranPlayer.readingHistory.isEmpty ? nil : { toggleSummaryExpansion(.reading) },
-                                    timestamp: settings.lastReadDate) {
+                                    onExpand: quranPlayer.readingHistory.isEmpty ? nil : { toggleSummaryExpansion(.reading) }) {
                         push(surahID: lastReadSurah.id, ayahID: lastReadAyah.id)
                     }
                     .animation(.easeInOut, value: settings.lastReadSurah * 1000 + settings.lastReadAyah)
@@ -2337,8 +2290,7 @@ struct QuranView: View {
                 if settings.saveLastListenedAyah, let pair = lastListenedAyahPair {
                     SummaryAyahTile(title: "Last Listened Ayah", icon: "headphones.circle", surah: pair.surah, ayah: pair.ayah, titleColor: settings.accentColor.color,
                                     isExpanded: summaryHistoryExpansion == .listenedAyah,
-                                    onExpand: quranPlayer.ayahListeningHistory.isEmpty ? nil : { toggleSummaryExpansion(.listenedAyah) },
-                                    timestamp: settings.lastListenedAyah?.savedAt) {
+                                    onExpand: quranPlayer.ayahListeningHistory.isEmpty ? nil : { toggleSummaryExpansion(.listenedAyah) }) {
                         push(surahID: pair.surah.id, ayahID: pair.ayah.id)
                     }
                     .animation(.easeInOut, value: pair.surah.id * 1000 + pair.ayah.id)
@@ -2348,8 +2300,7 @@ struct QuranView: View {
                    let surah = quranData.surah(last.surahNumber) {
                     SummarySurahTile(title: "Last Listened Surah", icon: "headphones", surah: surah, lastListenedSurah: last, titleColor: settings.accentColor.color,
                                      isExpanded: summaryHistoryExpansion == .listenedSurah,
-                                     onExpand: quranPlayer.listeningHistory.isEmpty ? nil : { toggleSummaryExpansion(.listenedSurah) },
-                                     timestamp: last.savedAt) {
+                                     onExpand: quranPlayer.listeningHistory.isEmpty ? nil : { toggleSummaryExpansion(.listenedSurah) }) {
                         push(surahID: surah.id, ayahID: nil)
                     }
                     .animation(.easeInOut, value: last.surahNumber)

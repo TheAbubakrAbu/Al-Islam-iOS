@@ -1,6 +1,26 @@
 import SwiftUI
 import Foundation
 
+/// Whether any per-ayah sheet (tafsir, share, note, comparisons, page-mode actions...) is currently
+/// presented from the reader. The readers' "follow the recitation" scrolls/page-turns consult this and
+/// hold still while a sheet is up: auto-scrolling the List (or flipping the mushaf page) tears down the
+/// row/page that is PRESENTING the sheet, which dismissed the sheet mid-read on every ayah advance - and
+/// reclaiming a cell that is also a live presentation anchor is exactly the kind of teardown that can
+/// bring the whole presentation stack down. Following resumes on the first ayah advance after the sheet
+/// closes. Main-thread only (all writers are SwiftUI view callbacks).
+final class AyahSheetPresence: ObservableObject {
+    static let shared = AyahSheetPresence()
+    private init() {}
+
+    @Published private(set) var openCount = 0
+
+    var anySheetOpen: Bool { openCount > 0 }
+
+    func sheetOpened() { openCount += 1 }
+    /// Clamped: a presenter torn down in an unexpected order must never push the count negative.
+    func sheetClosed() { openCount = max(0, openCount - 1) }
+}
+
 struct AyahRow: View, Equatable {
     @ObservedObject var settings = Settings.shared
     @ObservedObject var quranData = QuranData.shared
@@ -659,6 +679,25 @@ struct AyahRow: View, Equatable {
             }
         }
         .animation(.easeInOut(duration: 0.15), value: isSelecting)
+        #if os(iOS)
+        // Report this row's sheet state to the shared tracker so the reader's follow-the-recitation
+        // scroll holds still while one of this row's sheets is up (see `AyahSheetPresence`).
+        .onChange(of: anyAyahSheetOpen) { open in
+            if open {
+                AyahSheetPresence.shared.sheetOpened()
+            } else {
+                AyahSheetPresence.shared.sheetClosed()
+            }
+        }
+        // If the row leaves the hierarchy while its flag is still set (e.g. the reader is popped with a
+        // sheet open), the onChange(false) above never fires - release the claim here so the follow
+        // scroll is never left disabled.
+        .onDisappear {
+            if anyAyahSheetOpen {
+                AyahSheetPresence.shared.sheetClosed()
+            }
+        }
+        #endif
         .contentShape(Rectangle())
         .onTapGesture {
             if isSelecting {

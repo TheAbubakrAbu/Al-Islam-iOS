@@ -1,0 +1,76 @@
+{
+  "format": "TFPK",
+  "version": 1,
+  "codec": "lzma-xz",
+  "blockTargetKB": 256,
+  "ayahs": 6236,
+  "totalBytes": 19656076,
+  "packs": [
+    {
+      "file": "en-tafsir-ibn-kathir.tpk",
+      "slug": "en-tafsir-ibn-kathir",
+      "title": "Tafsir Ibn Kathir",
+      "sha256": "95a5f663363cd49f4e32a5987849c5e96d8d1e61d1a2816b03f4c493a9a15f6b",
+      "bytes": 2765120,
+      "ayahs": 6236,
+      "passages": 1895,
+      "blocks": 42,
+      "corpusFingerprint": "7cdd9ad2f7a515a5"
+    },
+    {
+      "file": "en-tafsir-maarif-ul-quran.tpk",
+      "slug": "en-tafsir-maarif-ul-quran",
+      "title": "Maarif Ul Quran",
+      "sha256": "3e7b2e1179d69c561cc365296ba187e8effde77d7220b05bbf0537467170b2dd",
+      "bytes": 3388872,
+      "ayahs": 6236,
+      "passages": 3037,
+      "blocks": 45,
+      "corpusFingerprint": "c3ce9cbbb61d274b"
+    },
+    {
+      "file": "en-tafsir-tazkirul-quran.tpk",
+      "slug": "en-tafsir-tazkirul-quran",
+      "title": "Tazkirul Quran",
+      "sha256": "f533da278dcd9dbb2990beeb91857159e50a49b74e3dfb71840c128b5c99c364",
+      "bytes": 630268,
+      "ayahs": 6236,
+      "passages": 1948,
+      "blocks": 9,
+      "corpusFingerprint": "ef87ebfbdb176359"
+    },
+    {
+      "file": "ar-tafsir-ibn-kathir.tpk",
+      "slug": "ar-tafsir-ibn-kathir",
+      "title": "تفسير ابن كثير",
+      "sha256": "6661892d3b7eab81fd9d206c8799acf17f066dfea35c85cbc8946bde66742ae8",
+      "bytes": 4411364,
+      "ayahs": 6236,
+      "passages": 1911,
+      "blocks": 100,
+      "corpusFingerprint": "024652e65bc150b7"
+    },
+    {
+      "file": "ar-tafsir-al-tabari.tpk",
+      "slug": "ar-tafsir-al-tabari",
+      "title": "تفسير الطبري",
+      "sha256": "8e1df3e71c6f101fc6ba25d1bf6913cc88d742922e0e17b3c3cabe98e5ecf769",
+      "bytes": 7052636,
+      "ayahs": 6236,
+      "passages": 3636,
+      "blocks": 150,
+      "corpusFingerprint": "8a7a3ca189887bab"
+    },
+    {
+      "file": "ar-tafsir-as-saadi.tpk",
+      "slug": "ar-tafsir-as-saadi",
+      "title": "تفسير السعدي",
+      "sha256": "cdeed26f225f9ddd2bc7a1d38ae2a69f716afad3e447a2d57906034aabcf6ee1",
+      "bytes": 1407816,
+      "ayahs": 6236,
+      "passages": 1739,
+      "blocks": 22,
+      "corpusFingerprint": "cb39c78b5d3127bf"
+    }
+  ]
+}

@@ -696,7 +696,7 @@ final class HadithStore: ObservableObject {
             where isDailyWorthy(hadith, trustingFlags: true) {
                 worthy.append(row)
             }
-            return pick(worthy, index: index)
+            return pickDisplayable(worthy, index: index, data: data)
         }
 
         // The word list changed without a repack: fall back to reading the text of the hadiths that
@@ -707,7 +707,7 @@ final class HadithStore: ObservableObject {
             where isDailyWorthy(hadith, trustingFlags: false) {
                 worthy.append(row)
             }
-            return pick(worthy, index: index)
+            return pickDisplayable(worthy, index: index, data: data)
         }.value
     }
 
@@ -717,6 +717,27 @@ final class HadithStore: ObservableObject {
         guard !worthy.isEmpty else { return nil }
         guard let index else { return worthy.randomElement() }
         return worthy[index % worthy.count]
+    }
+
+    /// A daily card must have text in every script the reader displays. The length flag already
+    /// guarantees English, but 125 Malik rows carry no Arabic at all - showing one of those with
+    /// Arabic enabled makes a half-empty card. Checked on the PICKED row only (one text read),
+    /// never during the flag walk, so choosing the day's hadith stays a bit-scan.
+    private nonisolated static func hasDisplayableText(_ hadith: HadithBookData.Hadith) -> Bool {
+        let showsArabic = UserDefaults.standard.object(forKey: "showHadithArabic") == nil
+            ? true : UserDefaults.standard.bool(forKey: "showHadithArabic")
+        guard showsArabic else { return true }        // English presence is the dailyLength flag's job
+        return !hadith.arabic.isEmpty
+    }
+
+    /// `pick`, retried past rows whose text can't fill the card as currently configured.
+    private nonisolated static func pickDisplayable(_ worthy: [Int], index: Int?, data: HadithBookData) -> Int? {
+        var pool = worthy
+        while let row = pick(pool, index: index) {
+            if hasDisplayableText(data.hadiths[row]) { return row }
+            pool.removeAll { $0 == row }
+        }
+        return nil
     }
 
     /// Keeps the last 5 days on record, one entry per day (a shuffle REPLACES today's entry).

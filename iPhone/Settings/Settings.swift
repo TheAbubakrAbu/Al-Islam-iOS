@@ -1204,9 +1204,6 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     @AppStorage("saveLastListenedAyah") var saveLastListenedAyah: Bool = true
     /// When on, the Quran tab shows the daily "Ayah of the Day" card.
     @AppStorage("showAyahOfTheDay") var showAyahOfTheDay: Bool = true
-    /// When on, the Quran tab collapses the Ayah of the Day / Last Listened / Last Read cards into one
-    /// compact section of tiles. On by default.
-    @AppStorage("quranSummaryMode") var quranSummaryMode: Bool = true
     /// Day key (yyyy-MM-dd) for which the Ayah of the Day card has been hidden via "Hide for Today".
     @AppStorage("ayahOfTheDayHiddenDate") var ayahOfTheDayHiddenDate: String = ""
     /// A shuffled replacement for TODAY's Ayah of the Day, as "dayKey|surahID|ayahID". Stale days no
@@ -1389,10 +1386,6 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     /// readers can differ. Seeded from the Quran toggle once in `init` so the split changes nothing
     /// until the user actually flips it.
     @AppStorage("highlightAllahNamesHadith") var highlightAllahNamesHadith: Bool = false
-    /// Show the narrator ("It is narrated on the authority of...") line above the English text.
-    @AppStorage("showHadithNarrator") var showHadithNarrator = true
-    /// Show scholar gradings ("Grade: Da'if (Darussalam)") under each hadith, where the data carries
-    /// them. Bukhari and Muslim carry none by design.
     /// Hadith text sizes, independent of the Quran's own sliders.
     @AppStorage("hadithArabicFontSize") var hadithArabicFontSize: Double = Double(UIFont.preferredFont(forTextStyle: .body).pointSize + 4)
     @AppStorage("hadithEnglishFontSize") var hadithEnglishFontSize: Double = Double(UIFont.preferredFont(forTextStyle: .body).pointSize)

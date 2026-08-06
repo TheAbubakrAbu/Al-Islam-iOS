@@ -193,10 +193,41 @@ def page_tokens(page):
 
 MARKER_CHARS = set("∩∪") | set(DIGITS)
 
+# The PDFs are filed qiraah-first (`03-ibn-kathir-qunbul.pdf`) so the folder sorts into
+# the ten readings, two riwayat under each. Everything below still speaks the short slugs.
+PDF_NAMES = {
+    # qiraah-first, numbered in the app's own Settings.Riwayah `order` sequence.
+    "hafs": "01-asim-hafs", "shubah": "01-asim-shubah",
+    "warsh": "02-nafi-warsh", "qaloon": "02-nafi-qalun",
+    "warsh-asbahani": "02-nafi-warsh-tariq-al-asbahani",
+    "bazzi": "03-ibn-kathir-al-bazzi", "qunbul": "03-ibn-kathir-qunbul",
+    "duriabiamr": "04-abu-amr-ad-duri", "susi": "04-abu-amr-as-susi",
+    "hisham": "05-ibn-amir-hisham", "ibndhakwan": "05-ibn-amir-ibn-dhakwan",
+    "khalaf": "06-hamzah-khalaf", "khallad": "06-hamzah-khallad",
+    "abuharith": "07-al-kisai-abu-al-harith", "durikisai": "07-al-kisai-ad-duri",
+    "ibnwardan": "08-abu-jafar-ibn-wardan", "ibnjammaz": "08-abu-jafar-ibn-jammaz",
+    "ibnjammaz-alt": "08-abu-jafar-ibn-jammaz-second-copy",
+    "ruways": "09-yaqub-ruways", "rawh": "09-yaqub-rawh",
+    "ishaq": "10-khalaf-al-ashir-ishaq", "idris": "10-khalaf-al-ashir-idris",
+}
+
+
+def pdf_path(slug):
+    """The volume for a slug: full riwayah name first, bare slug second (older layouts)."""
+    for name in (PDF_NAMES.get(slug, slug), slug):
+        candidate = PDFS / f"{name}.pdf"
+        if candidate.exists():
+            return candidate
+    raise FileNotFoundError(
+        f"no PDF for {slug!r} in {PDFS} (looked for "
+        f"{PDF_NAMES.get(slug, slug)}.pdf and {slug}.pdf)"
+    )
+
+
 def extract_stream(slug):
     """Char-level stream. Marker glyphs (∩ digits ∪) can arrive as one span or split
     across several; assemble them from the exploded char run regardless."""
-    doc = fitz.open(PDFS / f"{slug}.pdf")
+    doc = fitz.open(pdf_path(slug))
     chars = []  # ("sp",) | ("c", font, ch)
     for page in doc:
         last_band = None

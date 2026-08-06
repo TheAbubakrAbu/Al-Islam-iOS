@@ -216,6 +216,9 @@ struct SurahView: View {
     @State private var arrivalAyahID: Int? = nil
     @State private var showingSettingsSheet = false
     @State private var showAlert = false
+    /// Local mirror of `QuranPlayer.showMinshawiAyahConfirmation` (same pattern as `showAlert`): when
+    /// this reader is frontmost it claims the dialog so it and QuranView never both try to present.
+    @State private var showMinshawiConfirm = false
     @State private var showCustomRangeSheet = false
     /// In page mode the reader crosses surah boundaries, so the toolbar must follow the page rather than the
     /// surah this view was opened with. `nil` in list mode, where `surah` never changes.
@@ -1570,6 +1573,13 @@ struct SurahView: View {
         } message: {
             Text(quranPlayer.playbackAlertMessage)
         }
+        .onChange(of: quranPlayer.showMinshawiAyahConfirmation) { if $0 { showMinshawiConfirm = true; quranPlayer.showMinshawiAyahConfirmation = false } }
+        .confirmationDialog("Play in Al-Minshawi's voice?", isPresented: $showMinshawiConfirm, titleVisibility: .visible) {
+            Button("Play") { quranPlayer.confirmMinshawiAyahPlayback() }
+            Button("Cancel", role: .cancel) { quranPlayer.cancelMinshawiAyahPlayback() }
+        } message: {
+            Text("\(quranPlayer.pendingMinshawiAyahPlay?.reciter.name ?? "This reciter") has no verse-by-verse recordings; ayah playback uses \(Reciter.minshawiAyahFallbackName). This won't be asked again for this reciter.")
+        }
         #else
         surahCoreBody
             .navigationTitle("\(surah.id) - \(surah.nameTransliteration)")
@@ -2078,7 +2088,13 @@ struct SurahView: View {
                 // Follow the reciter - unless the reader's finger is on the list (holding an ayah to
                 // read along, or mid-scroll). Their touch wins; following resumes on the next ayah
                 // after they let go.
-                if let id = newVal, surah.id == quranPlayer.currentSurahNumber, !userTouchingReader {
+                //
+                // Also hold still while any per-ayah sheet (tafsir, share, note...) is open: the sheet
+                // is presented FROM its List row, and scrolling that row out of the visible window
+                // tears the row down - which dismissed the open sheet (and could take the presentation
+                // stack down with it) on every ayah advance. See `AyahSheetPresence`.
+                if let id = newVal, surah.id == quranPlayer.currentSurahNumber, !userTouchingReader,
+                   !AyahSheetPresence.shared.anySheetOpen {
                     withAnimation { proxy.scrollTo(id, anchor: .top) }
                 }
             }

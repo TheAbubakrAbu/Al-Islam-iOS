@@ -20,6 +20,10 @@ struct HadithReferenceView: View {
     /// The citation's variant letter when the lookup carried one ("muslim 8a" -> "a"). Only
     /// meaningful without `chapter`.
     var suffix: String? = nil
+    /// Interpret `hadith` as the internal row number (idInBook), never as a citation - for records
+    /// saved by row key whose hadith can no longer be resolved directly. Without this, a stale row
+    /// key in a drifted book would be read citation-first and could open a DIFFERENT hadith.
+    var byRowNumber: Bool = false
 
     /// The book, opened straight from its bundled pack - synchronous and instant, so this screen has
     /// no loading state and cannot fail for want of a network.
@@ -34,6 +38,7 @@ struct HadithReferenceView: View {
             guard hadith >= 1, offset < inChapter.endIndex else { return nil }
             return inChapter[offset]
         }
+        if byRowNumber { return data.hadith(numbered: hadith) }
         // Citation-first: "muslim 8" is the hadith CITED 8 (standard sunnah.com numbering), falling
         // back to the internal row number for the books that have no citations.
         return data.hadith(referenced: hadith, suffix: suffix)
@@ -108,7 +113,10 @@ extension HadithReferenceView {
            let parsed = HadithBookData.citationNumber(inQuery: citation) {
             self.init(book: book, chapter: nil, hadith: parsed.base, suffix: parsed.suffix)
         } else {
-            self.init(book: book, chapter: nil, hadith: resolved.idInBook)
+            // No citation on the source hadith: its idInBook must be read as a ROW number, or an
+            // uncited row inside a cited book (Muslim's muqaddimah) could resolve to the hadith
+            // that happens to be CITED with that base.
+            self.init(book: book, chapter: nil, hadith: resolved.idInBook, byRowNumber: true)
         }
     }
 }
@@ -181,6 +189,10 @@ struct HadithRow: View, Equatable {
     /// English always render (no line clipping, and the show-Arabic/English toggles don't apply) so the
     /// highlighted match is visible wherever it falls in the text.
     var compact: Bool = false
+    /// Show the "3 -" within-chapter position before the citation. Only the chapter reading
+    /// screens pass true: in search results and standalone cards the ordinal is noise ("3 - 1000
+    /// Bukhari" answers a question nobody asked outside the chapter).
+    var showsChapterPosition: Bool = false
     /// The paged reader's Fit Page shrink - an overflowing page passes < 1 so its text fits the screen.
     var fontScale: CGFloat = 1
     /// Captured at construction so a parent re-render on an appearance change delivers a fresh value and
@@ -196,13 +208,15 @@ struct HadithRow: View, Equatable {
         hadith: HadithBookData.Hadith,
         searchText: String = "",
         compact: Bool = false,
-        fontScale: CGFloat = 1
+        fontScale: CGFloat = 1,
+        showsChapterPosition: Bool = false
     ) {
         self.book = book
         self.hadith = hadith
         self.searchText = searchText
         self.compact = compact
         self.fontScale = fontScale
+        self.showsChapterPosition = showsChapterPosition
         self.isLastRead = MainActor.assumeIsolated {
             HadithStore.shared.lastRead(for: book.slug)?.idInBook == hadith.idInBook
         }
@@ -247,7 +261,8 @@ struct HadithRow: View, Equatable {
     /// pack was built, so this is arithmetic - no scan, and nothing left to memoize (it used to walk
     /// the whole book for the chapter's lowest number, then cache the answer per chapter).
     private var chapterHadithNumber: Int? {
-        HadithStore.shared.cachedBook(book.slug)?.positionInChapter(hadith)
+        guard showsChapterPosition else { return nil }
+        return HadithStore.shared.cachedBook(book.slug)?.positionInChapter(hadith)
     }
 
     private var arabicFontSize: CGFloat {
@@ -316,7 +331,7 @@ struct HadithRow: View, Equatable {
         // full trip into the (locked) block cache; this body used to make six of those per pass,
         // which is also lock traffic contended against any detached search sweep.
         let text = hadith.allText
-        // One block-cache lookup, same rule as `allText` - and none at all with the toggle off.
+        // One block-cache lookup, same rule as `allText`.
         let grades = hadith.grades
         let visibility = searchVisibility(text: text)
         VStack(alignment: .leading, spacing: compact ? 5 : 10) {
@@ -629,9 +644,10 @@ struct HadithSearchHistoryChips: View {
 /// classical faces draw "\u{060C}" as an ornament circle). Every preview row renders through this so
 /// bookmarks, Hadith of the Day, Last Read, and the summary tiles all match the reader.
 ///
-/// Two lines with the space RESERVED: a short hadith and a long one produce the same card height, so a
-/// bookmark grid and a stack of daily rows line up instead of stair-stepping. The English half of each
-/// card reserves two lines the same way (`reservedLineLimit`).
+/// Clamped with the space RESERVED (two lines by default; callers pass four when this is the card's
+/// only language): a short hadith and a long one produce the same card height, so a bookmark grid and
+/// a stack of daily rows line up instead of stair-stepping. The English half of each card reserves
+/// its lines the same way (`reservedLineLimit`).
 struct HadithArabicPreview: View {
     @ObservedObject private var settings = Settings.shared
 
@@ -787,11 +803,16 @@ struct HadithBookmarkRow: View, Equatable {
 
                         // The reading rows' exact visibility rules: Arabic and English previews follow
                         // the same toggles the reader uses, so a bookmark looks like its hadith. Each
-                        // enabled slot ALWAYS renders - an empty string still reserves its two lines -
-                        // so a hadith missing Arabic or English keeps the same row height as one that
-                        // has both, and the bookmark list never stair-steps.
-                        if settings.showHadithArabic {
-                            HadithArabicPreview(text: bookmark.arabicPreview ?? "")
+                        // enabled slot ALWAYS renders - an empty string still reserves its lines - so a
+                        // hadith missing Arabic or English keeps the same row height as one that has
+                        // both, and the bookmark list never stair-steps. When only ONE slot renders
+                        // (the other toggled off), it reserves four lines instead of two, so a
+                        // single-language row matches the height of a two-language one.
+                        let arabicSlot = settings.showHadithArabic
+                        let englishSlot = settings.showHadithEnglish || bookmark.arabicPreview == nil
+
+                        if arabicSlot {
+                            HadithArabicPreview(text: bookmark.arabicPreview ?? "", lineLimit: englishSlot ? 2 : 4)
                         }
 
                         if settings.showHadithEnglish {
@@ -800,14 +821,14 @@ struct HadithBookmarkRow: View, Equatable {
                             Text(!english.isEmpty ? english : (bookmark.arabicPreview == nil ? bookmark.preview : ""))
                                 .font(.caption)
                                 .foregroundColor(.secondary)
-                                .reservedLineLimit(2)
+                                .reservedLineLimit(arabicSlot ? 2 : 4)
                         } else if bookmark.arabicPreview == nil {
                             // English hidden and nothing else stored: the legacy combined preview is all
                             // this bookmark has.
                             Text(bookmark.preview)
                                 .font(.caption)
                                 .foregroundColor(.secondary)
-                                .reservedLineLimit(2)
+                                .reservedLineLimit(arabicSlot ? 2 : 4)
                         }
 
                         // The bookmark's note - the Quran bookmark rows' quiet one-liner.
@@ -926,15 +947,24 @@ struct HadithBookmarkGridTile: View, Equatable {
                         .minimumScaleFactor(0.6)
                 }
 
-                // Both slots always render - an empty string still reserves its lines - so a tile
-                // missing Arabic or English keeps its neighbors' height instead of hugging shorter.
-                HadithArabicPreview(text: bookmark.arabicPreview ?? "", size: 14)
+                // The reader's own visibility toggles apply here exactly as in the bookmark list
+                // rows. Within an enabled slot an empty string still reserves its lines, so tiles
+                // keep their neighbors' height instead of hugging shorter. A tile showing only one
+                // language reserves four lines for it, matching the height of a two-language tile.
+                if settings.showHadithArabic {
+                    HadithArabicPreview(
+                        text: bookmark.arabicPreview ?? "", size: 14,
+                        lineLimit: settings.showHadithEnglish ? 2 : 4
+                    )
+                }
 
-                let english = bookmark.englishPreview ?? ""
-                Text(!english.isEmpty ? english : (bookmark.arabicPreview == nil ? bookmark.preview : ""))
-                    .font(.caption2)
-                    .foregroundColor(.secondary)
-                    .reservedLineLimit(2)
+                if settings.showHadithEnglish {
+                    let english = bookmark.englishPreview ?? ""
+                    Text(!english.isEmpty ? english : (bookmark.arabicPreview == nil ? bookmark.preview : ""))
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                        .reservedLineLimit(settings.showHadithArabic ? 2 : 4)
+                }
             }
             // Hug the content - the old fixed 78pt frame left a band of dead space whenever the
             // preview ran short.
@@ -944,37 +974,6 @@ struct HadithBookmarkGridTile: View, Equatable {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-    }
-}
-
-/// Every bookmarked hadith, pushed from the "View All" row.
-struct HadithBookmarksListView: View {
-    @ObservedObject private var settings = Settings.shared
-    /// Renders only the bookmark list - observe the user-data object, not the whole store.
-    @ObservedObject private var userData = HadithUserData.shared
-
-    var body: some View {
-        List {
-            Group {
-                Section(header: SectionPillHeader(title: "BOOKMARKS", count: userData.bookmarks.count)) {
-                    ForEach(userData.bookmarks) { bookmark in
-                        HadithBookmarkRow(bookmark: bookmark)
-                            .equatable()
-                    }
-
-                    if userData.bookmarks.isEmpty {
-                        Text("No bookmarked hadiths yet. Press and hold any hadith to bookmark it.")
-                            .font(.subheadline)
-                            .foregroundStyle(.secondary)
-                    }
-                }
-            }
-            .themedListRowBackground()
-        }
-        .applyConditionalListStyle()
-        .compactListSectionSpacing()
-        .navigationTitle("Bookmarks")
-        .navigationBarTitleDisplayMode(.inline)
     }
 }
 

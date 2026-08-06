@@ -321,8 +321,6 @@ struct HadithView: View {
     private var dailyHadith: (book: HadithCatalogBook, hadith: HadithBookData.Hadith)? { store.daily }
     /// Whether the daily section's history (last 5 days) is unfolded - the shuffle only shows here.
     @State private var showDailyHistory = false
-    /// Compact "summary mode": Hadith of the Day + Last Read as tiles, like the Quran tab. On by default.
-    @AppStorage("hadithSummaryMode") private var hadithSummaryMode = true
     /// A hidden push target (shuffled bookmark, summary tiles) - HadithReferenceView by slug+number.
     @State private var pushedReference: HadithBookmark? = nil
 
@@ -619,14 +617,10 @@ struct HadithView: View {
                     // thread's 1MB stack in QuranView (the simulator's 8MB stack hid it). See `boxed`.
                     if searchText.isEmpty {
                         // Before any reading has happened there is no Last Read - and an empty
-                        // "Your Summary" header is just noise.
-                        if hadithSummaryMode {
-                            if dailyHadith != nil || store.lastRead != nil {
-                                boxed(summaryTilesSection)
-                            }
-                        } else {
-                            boxed(hadithOfTheDaySection)
-                            boxed(lastReadSection)
+                        // "Your Summary" header is just noise. Summary tiles are the only form now;
+                        // the old full-row sections went with the removed Summary Mode setting.
+                        if dailyHadith != nil || store.lastRead != nil {
+                            boxed(summaryTilesSection)
                         }
                     }
 
@@ -884,40 +878,6 @@ struct HadithView: View {
 
     private var dailyHistory: [HadithStore.DailyHadithEntry] { HadithStore.loadDailyHistory() }
 
-    @ViewBuilder
-    private var hadithOfTheDaySection: some View {
-        if let dailyHadith {
-            Section {
-                HadithRow(book: dailyHadith.book, hadith: dailyHadith.hadith)
-                    .equatable()
-
-                if showDailyHistory {
-                    // The last 5 days, timestamped and dimmed - today first. The Today row carries the
-                    // shuffle (a genuinely random pick from any collection on this device).
-                    ForEach(Array(dailyHistory.enumerated()), id: \.element.dayKey) { index, entry in
-                        dailyHistoryRow(entry, isToday: index == 0)
-                            .opacity(index == 0 ? 1 : 0.75)
-                    }
-                }
-            } header: {
-                HStack {
-                    Text("HADITH OF THE DAY")
-
-                    Spacer()
-
-                    Image(systemName: showDailyHistory ? "minus.circle" : "plus.circle")
-                        .foregroundColor(settings.accentColor.color)
-                        .padding(4)
-                        .conditionalGlassEffect()
-                        .onTapGesture {
-                            settings.hapticFeedback()
-                            withAnimation { showDailyHistory.toggle() }
-                        }
-                        .accessibilityLabel("Show recent hadiths of the day")
-                }
-            }
-        }
-    }
 
     private func dailyHistoryRow(_ entry: HadithStore.DailyHadithEntry, isToday: Bool) -> some View {
         HStack(spacing: 8) {
@@ -929,25 +889,29 @@ struct HadithView: View {
                 )
             } label: {
                 VStack(alignment: .leading, spacing: 3) {
-                    HStack {
-                        Text(entry.reference)
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(settings.accentColor.color)
+                    // The timestamp lives ONLY here, in the expanded (+) rows - top-left, above the
+                    // reference pill. The compact tiles stay clean.
+                    historyTimestampLabel(entry.date)
 
-                        Spacer(minLength: 8)
+                    Text(entry.reference)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(settings.accentColor.color)
 
-                        historyTimestampLabel(entry.date)
+                    // When only one language is visible (toggle off, or the entry lacks one), that
+                    // single preview reserves four lines so every history row keeps the same height
+                    // as a two-language one. With both visible, each keeps its usual two.
+                    let showsArabic = settings.showHadithArabic && !entry.arabicPreview.isEmpty
+                    let showsEnglish = settings.showHadithEnglish && !entry.englishPreview.isEmpty
+
+                    if showsArabic {
+                        HadithArabicPreview(text: entry.arabicPreview, lineLimit: showsEnglish ? 2 : 4)
                     }
 
-                    if !entry.arabicPreview.isEmpty {
-                        HadithArabicPreview(text: entry.arabicPreview)
-                    }
-
-                    if !entry.englishPreview.isEmpty {
+                    if showsEnglish {
                         Text(entry.englishPreview)
                             .font(.caption)
                             .foregroundColor(.secondary)
-                            .reservedLineLimit(2)
+                            .reservedLineLimit(showsArabic ? 2 : 4)
                     }
                 }
                 .contentShape(Rectangle())
@@ -1002,8 +966,8 @@ struct HadithView: View {
                         title: "Hadith of the Day",
                         icon: "sparkles",
                         reference: "\(dailyHadith.book.englishTitle) \(dailyHadith.hadith.displayNumber)",
-                        arabic: String(dailyHadith.hadith.arabic.prefix(120)),
-                        english: String(dailyHadith.hadith.english.text.prefix(140))
+                        arabic: settings.showHadithArabic ? String(dailyHadith.hadith.arabic.prefix(120)) : "",
+                        english: settings.showHadithEnglish ? String(dailyHadith.hadith.english.text.prefix(140)) : ""
                     ) {
                         pushedReference = HadithBookmark(
                             slug: dailyHadith.book.slug, idInBook: dailyHadith.hadith.idInBook,
@@ -1017,9 +981,8 @@ struct HadithView: View {
                         title: "Last Read Hadith",
                         icon: "book",
                         reference: lastRead.reference,
-                        arabic: lastRead.arabicPreview,
-                        english: lastRead.englishPreview,
-                        timestamp: lastRead.timestamp
+                        arabic: settings.showHadithArabic ? lastRead.arabicPreview : "",
+                        english: settings.showHadithEnglish ? lastRead.englishPreview : ""
                     ) {
                         pushedReference = HadithBookmark(
                             slug: lastRead.slug, idInBook: lastRead.idInBook,
@@ -1039,7 +1002,7 @@ struct HadithView: View {
         }
     }
 
-    private func summaryTile(title: String, icon: String, reference: String, arabic: String, english: String, timestamp: Date? = nil, onTap: @escaping () -> Void) -> some View {
+    private func summaryTile(title: String, icon: String, reference: String, arabic: String, english: String, onTap: @escaping () -> Void) -> some View {
         Button {
             settings.hapticFeedback()
             onTap()
@@ -1054,20 +1017,7 @@ struct HadithView: View {
                         .foregroundColor(settings.accentColor.color)
                         .lineLimit(1)
                         .minimumScaleFactor(0.7)
-                        // The title must never lose this row: the timestamp is the flexible one.
                         .layoutPriority(1)
-
-                    if let timestamp {
-                        Spacer(minLength: 4)
-                        // NOT historyTimestampLabel: its fixedSize refuses to shrink and crushed
-                        // the title to a sliver in this narrow tile. Here the timestamp yields.
-                        Text(formatCompactHistoryTimestamp(timestamp))
-                            .font(.caption2)
-                            .monospacedDigit()
-                            .foregroundStyle(.secondary)
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.6)
-                    }
                 }
 
                 Text(reference)
@@ -1076,15 +1026,18 @@ struct HadithView: View {
                     .lineLimit(1)
                     .minimumScaleFactor(0.6)
 
+                // A tile showing only one language (toggle off, or nothing stored for the other)
+                // reserves four lines for it, so the two tiles in the grid stay the same height.
+                // With both languages, each keeps its usual two.
                 if !arabic.isEmpty {
-                    HadithArabicPreview(text: arabic)
+                    HadithArabicPreview(text: arabic, lineLimit: english.isEmpty ? 4 : 2)
                 }
 
                 if !english.isEmpty {
                     Text(english)
                         .font(.footnote)
                         .foregroundColor(.secondary)
-                        .reservedLineLimit(2)
+                        .reservedLineLimit(arabic.isEmpty ? 4 : 2)
                 }
             }
             // Hug the content - stretching to fill the row's height (maxHeight + a Spacer) parked
@@ -1097,47 +1050,6 @@ struct HadithView: View {
         .buttonStyle(.plain)
     }
 
-    /// Last Read Hadith, full-row form (summary mode off) - the Quran's Last Read Ayah counterpart.
-    @ViewBuilder
-    private var lastReadSection: some View {
-        if let lastRead = store.lastRead {
-            Section(header: Text("LAST READ HADITH")) {
-                Button {
-                    settings.hapticFeedback()
-                    pushedReference = HadithBookmark(
-                        slug: lastRead.slug, idInBook: lastRead.idInBook,
-                        reference: lastRead.reference, preview: ""
-                    )
-                } label: {
-                    VStack(alignment: .leading, spacing: 3) {
-                        HStack {
-                            Text(lastRead.reference)
-                                .font(.caption.weight(.semibold))
-                                .foregroundStyle(settings.accentColor.color)
-
-                            Spacer(minLength: 8)
-
-                            historyTimestampLabel(lastRead.timestamp)
-                        }
-
-                        if !lastRead.arabicPreview.isEmpty {
-                            HadithArabicPreview(text: lastRead.arabicPreview)
-                        }
-
-                        if !lastRead.englishPreview.isEmpty {
-                            Text(lastRead.englishPreview)
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                                .reservedLineLimit(2)
-                        }
-                    }
-                    .padding(.vertical, 2)
-                    .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-            }
-        }
-    }
 
     // MARK: About hadith
 
@@ -1835,11 +1747,11 @@ struct HadithView: View {
             }
         )) {
             if showHadithBookmarks {
-                // The first five, Quran-bookmark style; the full list lives one push away. In grid mode
-                // they render as tiles, like the Quran's bookmark grid.
+                // Every bookmark lives right here, Quran-bookmark style - no capped preview with a
+                // "View All" push. In grid mode they render as tiles, like the Quran's bookmark grid.
                 if hadithGridMode {
                     LazyVGrid(columns: gridColumns, alignment: .leading, spacing: 10) {
-                        ForEach(store.bookmarks.prefix(5)) { bookmark in
+                        ForEach(store.bookmarks) { bookmark in
                             HadithBookmarkGridTile(bookmark: bookmark) {
                                 pushedReference = bookmark
                             }
@@ -1848,19 +1760,9 @@ struct HadithView: View {
                     }
                     .padding(.vertical, 4)
                 } else {
-                    ForEach(store.bookmarks.prefix(5)) { bookmark in
+                    ForEach(store.bookmarks) { bookmark in
                         HadithBookmarkRow(bookmark: bookmark)
                             .equatable()
-                    }
-                }
-
-                if store.bookmarks.count > 5 {
-                    NavigationLink {
-                        HadithBookmarksListView()
-                    } label: {
-                        Label("View All (\(store.bookmarks.count))", systemImage: "bookmark")
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundColor(settings.accentColor.color)
                     }
                 }
             }

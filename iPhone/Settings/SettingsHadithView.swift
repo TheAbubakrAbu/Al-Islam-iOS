@@ -139,16 +139,6 @@ struct SettingsHadithView: View {
     private var readingViewDestination: some View {
         List {
             Group {
-                Section(footer: Text("Summary mode shows Hadith of the Day and your Last Read Hadith as compact tiles, like the Quran tab.")) {
-                    Toggle("Summary Mode", isOn: Binding(
-                        get: { UserDefaults.standard.object(forKey: "hadithSummaryMode") == nil ? true : UserDefaults.standard.bool(forKey: "hadithSummaryMode") },
-                        set: { newValue in
-                            settings.hapticFeedback()
-                            UserDefaults.standard.set(newValue, forKey: "hadithSummaryMode")
-                        }
-                    ).animation(.easeInOut))
-                }
-
 
                 // In Reading View - not under Arabic Text - because it colors the name in BOTH scripts:
                 // the Arabic الله and "Allah" in the English translation and narrator lines, like the Quran.
@@ -271,7 +261,6 @@ extension SettingsSearchEntry {
         .init(title: "Show Hadith Arabic / English", path: "Hadith Settings → Arabic / English Text", keywords: "hadith text toggles narrator display", destination: .hadithSettings),
         .init(title: "Hadith Font Sizes", path: "Hadith Settings → Arabic / English Text", keywords: "hadith arabic english font size", destination: .hadithSettings),
         .init(title: "Highlight Allah (Hadith)", path: "Hadith Settings → Reading View", keywords: "highlight name of allah red color hadith arabic english", destination: .hadithSettings),
-        .init(title: "Hadith Summary Mode", path: "Hadith Settings → Reading View", keywords: "hadith of the day last read tiles summary", destination: .hadithSettings),
     ]
 }
 

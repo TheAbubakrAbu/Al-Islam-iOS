@@ -206,6 +206,9 @@ private struct MainTabView: View {
                 try? await Task.sleep(nanoseconds: 1_500_000_000)
                 guard !Task.isCancelled else { return }
                 HadithStore.shared.prewarmBooks()
+                // Tafsir ships inside the app now too - delete the pre-pack download cache (up to
+                // ~345 MB for a reader who had downloaded every edition), once, off-main.
+                TafsirStore.purgeLegacyDownloadCache()
             }
     }
 

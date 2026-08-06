@@ -349,6 +349,38 @@ struct Reciter: Identifiable, Comparable, Codable, Hashable {
     }
 }
 
+/// Hosting quirks for surah audio feeds. mp3quran hosts serve plain per-surah "NNN.mp3" files with
+/// no strings attached. islamweb's audio library (audio.islamweb.net) serves the same per-surah
+/// "NNN.mp3" layout from its Azure Front Door CDN, but that CDN rejects any request that does not
+/// carry an islamweb Referer header (it 307s to the islamweb homepage instead). Every player /
+/// downloader request for those files must therefore attach the header via these helpers.
+enum ReciterAudioHosting {
+    /// audio.islamweb.net's CDN host - the origin behind the islamweb riwayah audio library.
+    static let islamwebCDNHost = "quran-fjamfcbbeybteyat.z01.azurefd.net"
+    private static let islamwebReferer = "https://audio.islamweb.net/"
+
+    /// Extra HTTP headers this URL's host requires; nil for hosts (mp3quran, everyayah,
+    /// islamic.network) that need none.
+    static func httpHeaders(for url: URL) -> [String: String]? {
+        guard url.host == islamwebCDNHost else { return nil }
+        return ["Referer": islamwebReferer]
+    }
+
+    /// `AVURLAsset` options carrying any required headers. Apple does not expose
+    /// "AVURLAssetHTTPHeaderFieldsKey" as a Swift constant, hence the literal key.
+    static func assetOptions(for url: URL) -> [String: Any] {
+        guard let headers = httpHeaders(for: url) else { return [:] }
+        return ["AVURLAssetHTTPHeaderFieldsKey": headers]
+    }
+
+    /// A URLRequest for fetching `url`, with any required headers attached.
+    static func request(for url: URL) -> URLRequest {
+        var request = URLRequest(url: url)
+        httpHeaders(for: url)?.forEach { request.setValue($1, forHTTPHeaderField: $0) }
+        return request
+    }
+}
+
 let reciters: [Reciter] = {
     let all =
         recitersMinshawi +
@@ -362,7 +394,19 @@ let reciters: [Reciter] = {
         recitersQunbul +
         recitersQaloon +
         recitersDuri +
-        recitersKhalaf
+        recitersSusi +
+        recitersKhalaf +
+        recitersHisham +
+        recitersIbnDhakwan +
+        recitersKhallad +
+        recitersAbuHarith +
+        recitersDuriKisai +
+        recitersIbnWardan +
+        recitersIbnJammaz +
+        recitersRuways +
+        recitersRawh +
+        recitersIshaq +
+        recitersIdris
     // The Minshawi variants intentionally appear in both `recitersMinshawi` and their style list, so the
     // combined lookup/random list must drop the duplicate ids (else `randomElement()` is biased and any
     // ForEach over `reciters` hits duplicate ids).
@@ -472,4 +516,62 @@ let recitersDuri = [
     Reciter(name: "Noreen Mohammad Siddiq", ayahIdentifier: "ar.minshawi", ayahBitrate: "128", surahLink: "https://server16.mp3quran.net/nourin_siddig/Rewayat-Aldori-A-n-Abi-Amr/", qiraah: Settings.Riwayah.duri),
     Reciter(name: "Mahmoud Al-Hussary", ayahIdentifier: "ar.minshawi", ayahBitrate: "128", surahLink: "https://server13.mp3quran.net/husr/Rewayat-Aldori-A-n-Abi-Amr/", qiraah: Settings.Riwayah.duri),
     Reciter(name: "Ahmad Deban", ayahIdentifier: "ar.minshawi", ayahBitrate: "128", surahLink: "https://server16.mp3quran.net/deban/Rewayat-Aldori-A-n-Abi-Amr/", qiraah: Settings.Riwayah.duri)
+].sorted()
+
+let recitersSusi = [
+    Reciter(name: "Abdurrasheed Sufi", ayahIdentifier: "ar.minshawi", ayahBitrate: "128", surahLink: "https://server16.mp3quran.net/soufi/Rewayat-Assosi-A-n-Abi-Amr/", qiraah: Settings.Riwayah.susi)
+].sorted()
+
+// MARK: The ten remaining riwayat - one complete reciter each, so EVERY riwayah the app can
+// display also has full-surah audio. mp3quran's API carries complete mushafs for Ibn Dhakwan and
+// ad-Duri al-Kisai; the other eight stream from islamweb's audio library (audio.islamweb.net),
+// whose per-surah files use the same "NNN.mp3" naming but sit behind a Referer-checking CDN -
+// `ReciterAudioHosting` attaches the required header. Each URL pattern below was verified
+// complete: all 114 surah files return HTTP 200/206 with an audio/mpeg content type.
+
+let recitersHisham = [
+    // islamweb: "Meftah Mohammed Alstunai", the same reciter mp3quran anglicizes as Muftah Alsaltany.
+    Reciter(name: "Muftah Alsaltany", ayahIdentifier: "ar.minshawi", ayahBitrate: "128", surahLink: "https://quran-fjamfcbbeybteyat.z01.azurefd.net/Audio3/quran/MeftahAlstunai/HishamIbnAmer/", qiraah: Settings.Riwayah.hisham)
+].sorted()
+
+let recitersIbnDhakwan = [
+    // NOTE the underscore after "Rewayat" - that is how mp3quran's API spells this mushaf's path.
+    Reciter(name: "Muftah Alsaltany", ayahIdentifier: "ar.minshawi", ayahBitrate: "128", surahLink: "https://server14.mp3quran.net/muftah_sultany/Rewayat_Ibn-Thakwan-A-n-Ibn-Amer/", qiraah: Settings.Riwayah.ibnDhakwan)
+].sorted()
+
+let recitersKhallad = [
+    Reciter(name: "Karim Rajeh", ayahIdentifier: "ar.minshawi", ayahBitrate: "128", surahLink: "https://quran-fjamfcbbeybteyat.z01.azurefd.net/Audio3/quran/KarimRajeh/khalad_hamzah/", qiraah: Settings.Riwayah.khallad)
+].sorted()
+
+let recitersAbuHarith = [
+    Reciter(name: "Karim Rajeh", ayahIdentifier: "ar.minshawi", ayahBitrate: "128", surahLink: "https://quran-fjamfcbbeybteyat.z01.azurefd.net/Audio3/quran/KarimRajeh/AbuHarith-Alexaii/", qiraah: Settings.Riwayah.abuHarith)
+].sorted()
+
+let recitersDuriKisai = [
+    Reciter(name: "Mohammad Al-Abdullah", ayahIdentifier: "ar.minshawi", ayahBitrate: "128", surahLink: "https://server9.mp3quran.net/abdullah/Rewayat-AlDorai-A-n-Al-Kisa-ai/", qiraah: Settings.Riwayah.duriKisai)
+].sorted()
+
+let recitersIbnWardan = [
+    Reciter(name: "Muftah Alsaltany", ayahIdentifier: "ar.minshawi", ayahBitrate: "128", surahLink: "https://quran-fjamfcbbeybteyat.z01.azurefd.net/Audio3/quran/MeftahAlstunai/ibnwerdan_abujaafar/", qiraah: Settings.Riwayah.ibnWardan)
+].sorted()
+
+let recitersIbnJammaz = [
+    Reciter(name: "Muftah Alsaltany", ayahIdentifier: "ar.minshawi", ayahBitrate: "128", surahLink: "https://quran-fjamfcbbeybteyat.z01.azurefd.net/Audio3/quran/MeftahAlstunai/ibnjumaz_abujaafar/", qiraah: Settings.Riwayah.ibnJammaz)
+].sorted()
+
+let recitersRuways = [
+    Reciter(name: "Muftah Alsaltany", ayahIdentifier: "ar.minshawi", ayahBitrate: "128", surahLink: "https://quran-fjamfcbbeybteyat.z01.azurefd.net/Audio3/quran/MeftahAlstunai/rowais_yaqoob/", qiraah: Settings.Riwayah.ruways)
+].sorted()
+
+let recitersRawh = [
+    Reciter(name: "Abdullah Mohammed Hamid", ayahIdentifier: "ar.minshawi", ayahBitrate: "128", surahLink: "https://quran-fjamfcbbeybteyat.z01.azurefd.net/Audio3/quran/AbdullahMohammedHamid/rawh_yaqoob/", qiraah: Settings.Riwayah.rawh)
+].sorted()
+
+let recitersIshaq = [
+    // islamweb's set is missing surah 4 (An-Nisa) - its 004.mp3 is a genuine 404 on their CDN.
+    Reciter(name: "Muftah Alsaltany", ayahIdentifier: "ar.minshawi", ayahBitrate: "128", surahLink: "https://quran-fjamfcbbeybteyat.z01.azurefd.net/Audio3/quran/MeftahAlstunai/eshaq_khalaf/", qiraah: Settings.Riwayah.ishaq, missingSurahs: [4])
+].sorted()
+
+let recitersIdris = [
+    Reciter(name: "Muftah Alsaltany", ayahIdentifier: "ar.minshawi", ayahBitrate: "128", surahLink: "https://quran-fjamfcbbeybteyat.z01.azurefd.net/Audio3/quran/MeftahAlstunai/edris_khalaf/", qiraah: Settings.Riwayah.idris)
 ].sorted()

@@ -435,7 +435,11 @@ struct SurahPageReader<Controls: View>: View {
             guard didSetInitialPage,
                   let ayahID,
                   let surahID = quranPlayer.currentSurahNumber,
-                  pages.indices.contains(pageIndex) else { return }
+                  pages.indices.contains(pageIndex),
+                  // Hold the page while any per-ayah sheet is up: a follow page-turn tears down the
+                  // page that is PRESENTING the sheet, dismissing it mid-read. Following resumes on
+                  // the first ayah advance after the sheet closes. See `AyahSheetPresence`.
+                  !AyahSheetPresence.shared.anySheetOpen else { return }
             func contains(_ page: MushafPage) -> Bool {
                 page.segments.contains { segment in
                     segment.surah.id == surahID && segment.ayahs.contains { $0.id == ayahID }
@@ -1214,6 +1218,26 @@ private struct MushafPageContent: View {
                 .environmentObject(settings)
                 .environmentObject(quranData)
         }
+        // Report this page's sheet state to the shared tracker so the pager's follow-the-recitation
+        // page turn holds still while a sheet presented from this page is up - turning the page tears
+        // this page view down, which dismissed its open sheet (see `AyahSheetPresence`).
+        .onChange(of: anyPageSheetOpen) { open in
+            if open {
+                AyahSheetPresence.shared.sheetOpened()
+            } else {
+                AyahSheetPresence.shared.sheetClosed()
+            }
+        }
+        .onDisappear {
+            if anyPageSheetOpen {
+                AyahSheetPresence.shared.sheetClosed()
+            }
+        }
+    }
+
+    /// Whether any sheet presented from THIS page (actions, secondary, surah info) is up.
+    private var anyPageSheetOpen: Bool {
+        sheetAyah != nil || secondarySheet != nil || infoSurah != nil
     }
 
     /// Tap a surah's name/basmala (in the page text or the pinned header) to read about the surah.
@@ -1268,6 +1292,17 @@ private struct MushafPageContent: View {
                 } onLongPressAyah: { surahID, ayahID in
                     guard let ref = ayahRef(surahID: surahID, ayahID: ayahID) else { return }
                     settings.hapticFeedback()
+                    // A long press on a DIFFERENT ayah while one is selected moves the selection
+                    // there. The tint precedence is `markedAyah ?? sheetAyahTint`, so without this
+                    // the old mark stayed lit behind the new ayah's actions sheet - the "long-press
+                    // doesn't move the selection" bug. No selection, or the same ayah pressed again:
+                    // nothing to move, current behavior kept.
+                    let pressed = HighlightedAyahRef(surahID: surahID, ayahID: ayahID)
+                    if highlightedAyah != nil, highlightedAyah != pressed {
+                        withAnimation(.easeInOut(duration: 0.15)) {
+                            highlightedAyah = pressed
+                        }
+                    }
                     sheetAyah = TappedAyahRef(surah: ref.0, ayah: ref.1)
                 } onTapHeading: { surahID in
                     showSurahInfo(surahID: surahID)

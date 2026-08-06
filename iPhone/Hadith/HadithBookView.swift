@@ -100,9 +100,9 @@ struct HadithBookView: View {
         return SemanticSearchEngine.isSupported
             && trimmed.count >= 3
             && !trimmed.containsArabicScript
-            // "1234" is a hadith number, not a question - it gets an exact lookup, so there is nothing
-            // for the semantic engine (or the Ask row) to be asked about.
-            && HadithBookData.hadithNumber(inQuery: trimmed) == nil
+            // "1234" (or "8a") is a hadith citation, not a question - it gets an exact lookup, so
+            // there is nothing for the semantic engine (or the Ask row) to be asked about.
+            && HadithBookData.citationNumber(inQuery: trimmed) == nil
     }
 
     private func prepareSemanticCorpus(_ data: HadithBookData) {
@@ -582,7 +582,9 @@ struct HadithBookView: View {
                             }
                         } else {
                             NavigationLink {
-                                HadithReferenceView(book: book, chapter: nil, hadith: lastRead.idInBook)
+                                // byRowNumber: a stale record's key is a row number, not a citation -
+                                // citation-first reading would open a different hadith in drifted books.
+                                HadithReferenceView(book: book, chapter: nil, hadith: lastRead.idInBook, byRowNumber: true)
                             } label: {
                                 lastReadRow(lastRead)
                             }
@@ -1809,15 +1811,17 @@ struct HadithChapterView: View {
     /// single-chapter book (the forties) and different rows everywhere else; either may not exist, in
     /// which case only the other shows.
     private func numberMatches() -> [NumberMatch] {
-        guard let number = HadithBookData.hadithNumber(inQuery: searchText) else { return [] }
+        guard let query = HadithBookData.citationNumber(inQuery: searchText) else { return [] }
+        let number = query.base
         let ordinal = Self.ordinalFormatter.string(from: NSNumber(value: number)) ?? "\(number)"
 
         var found: [NumberMatch] = []
-        if number <= allChapterHadiths.count {
+        // "8a" names a citation variant, not an ordinal - the in-chapter reading is digits-only.
+        if query.suffix == nil, number <= allChapterHadiths.count {
             found.append(NumberMatch(hadith: allChapterHadiths[number - 1], caption: "\(ordinal) in this chapter"))
         }
 
-        if let overall = bookData.hadith(referenced: number) {
+        if let overall = bookData.hadith(referenced: number, suffix: query.suffix) {
             var caption = "Hadith \(number) in this book"
             // It can live in another chapter - name that chapter, since tapping the row goes there.
             if let home = bookData.chapter(of: overall), home.id != chapter.id {
@@ -2123,7 +2127,7 @@ struct HadithChapterView: View {
 
                                     // No `searchText`: highlighting the digits inside the narration is
                                     // noise - the number is the row's identity here, not a text match.
-                                    HadithRow(book: book, hadith: match.hadith).equatable()
+                                    HadithRow(book: book, hadith: match.hadith, showsChapterPosition: true).equatable()
                                 }
                                 .contentShape(Rectangle())
                                 .onTapGesture { openMatch(match.hadith, scrollProxy: scrollProxy) }
@@ -2142,7 +2146,7 @@ struct HadithChapterView: View {
 
                         ForEach(aiOnly, id: \.row) { hadith in
                             Section {
-                                HadithRow(book: book, hadith: hadith).equatable()
+                                HadithRow(book: book, hadith: hadith, showsChapterPosition: true).equatable()
                                     .contentShape(Rectangle())
                                     .onTapGesture { openMatch(hadith, scrollProxy: scrollProxy) }
                             }
@@ -2165,7 +2169,7 @@ struct HadithChapterView: View {
 
                     ForEach(matches) { hadith in
                         Section {
-                            HadithRow(book: book, hadith: hadith, searchText: searchText).equatable()
+                            HadithRow(book: book, hadith: hadith, searchText: searchText, showsChapterPosition: true).equatable()
                                 .contentShape(Rectangle())
                                 .onTapGesture { openMatch(hadith, scrollProxy: scrollProxy) }
                         }
@@ -2182,7 +2186,7 @@ struct HadithChapterView: View {
                     ForEach(allChapterHadiths) { hadith in
                         Section {
                             let isSelected = selectedHadithIDs.contains(hadith.idInBook)
-                            HadithRow(book: book, hadith: hadith, searchText: searchText).equatable()
+                            HadithRow(book: book, hadith: hadith, searchText: searchText, showsChapterPosition: true).equatable()
                                 // The ayah list's tap grammar: selecting mode builds the selection
                                 // (accent tint); otherwise tap-to-mark (grey attention tint). The row's
                                 // own controls (number pill, menu) win their taps either way.

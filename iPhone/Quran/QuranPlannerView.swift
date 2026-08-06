@@ -1,5 +1,6 @@
 #if os(iOS)
 import SwiftUI
+import UserNotifications
 
 // The Quran Planner: set a finish goal ("finish in 2 months") and get a daily ayah amount that
 // recomputes every day from what is ACTUALLY left - miss a day and tomorrow's amount grows to absorb
@@ -100,6 +101,8 @@ extension Settings {
             if plan.completedDate == nil {
                 plan.completedDate = Date()
                 changed = true
+                // The khatm is done - no more daily amounts to nag about.
+                QuranPlannerReminder.cancel()
                 // A finished khatm is the single best moment this app will ever have to ask for a
                 // rating. Every gate (cooldown, quota, engagement) re-checks inside the manager.
                 AppReviewManager.shared.requestAtMomentOfDelight()
@@ -284,6 +287,62 @@ enum QuranPlannerMath {
     }
 }
 
+// MARK: - Daily reminder
+
+/// The planner's single repeating daily notification. One stable identifier means every schedule
+/// call REPLACES the pending request (same id in `UNUserNotificationCenter.add`), so re-scheduling
+/// on toggle/time/goal changes never stacks duplicates.
+enum QuranPlannerReminder {
+    static let identifier = "quran-planner-daily"
+    /// 6:00 PM, stored as minutes past midnight (matches the @AppStorage key's Int encoding).
+    static let defaultMinutes = 18 * 60
+
+    /// Schedules (replacing any pending) the daily reminder at `minutes` past midnight. The body is
+    /// frozen at schedule time: today's target when computable (quran loaded), else a generic line
+    /// built from the plan's stored pace/finish date.
+    static func schedule(plan: QuranPlan, minutes: Int, todayTarget: Int?, pagesEquivalent: Int?) {
+        let content = UNMutableNotificationContent()
+        content.title = "Quran Planner"
+        content.body = body(plan: plan, todayTarget: todayTarget, pagesEquivalent: pagesEquivalent)
+        content.sound = .default
+
+        var components = DateComponents()
+        components.hour = minutes / 60
+        components.minute = minutes % 60
+        let trigger = UNCalendarNotificationTrigger(dateMatching: components, repeats: true)
+
+        UNUserNotificationCenter.current().add(
+            UNNotificationRequest(identifier: identifier, content: content, trigger: trigger)
+        )
+    }
+
+    static func cancel() {
+        UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: [identifier])
+    }
+
+    private static func body(plan: QuranPlan, todayTarget: Int?, pagesEquivalent: Int?) -> String {
+        if let target = todayTarget, target > 0 {
+            var line = "Time for today's Quran reading — \(target) ayahs"
+            if let pages = pagesEquivalent { line += " (~\(pages) page\(pages == 1 ? "" : "s"))" }
+            if let end = plan.endDate { line += " to finish by \(mediumDate.string(from: end))." } else { line += "." }
+            return line
+        }
+        if let end = plan.endDate {
+            return "Time for today's Quran reading — keep your pace to finish by \(mediumDate.string(from: end))."
+        }
+        if let perDay = plan.ayahsPerDay {
+            return "Time for today's Quran reading — \(perDay) ayahs a day at your chosen pace."
+        }
+        return "Time for today's Quran reading."
+    }
+
+    private static let mediumDate: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        return formatter
+    }()
+}
+
 // MARK: - Toolbar entry point
 
 /// The planner's only entry point: the calendar button in the Quran tab's leading toolbar. Owns the
@@ -398,6 +457,11 @@ struct QuranPlannerView: View {
     @State private var showingEndPlanConfirmation = false
     @State private var showingRestartConfirmation = false
 
+    // Daily reminder (local to the planner - Settings is owned elsewhere, so plain @AppStorage keys)
+    @AppStorage("quranPlannerReminderEnabled") private var reminderEnabled = false
+    @AppStorage("quranPlannerReminderMinutes") private var reminderMinutes = QuranPlannerReminder.defaultMinutes
+    @State private var showingReminderDeniedAlert = false
+
     private enum GoalMode: String, CaseIterable, Identifiable {
         case byDate = "Finish by Date"
         case fixedPace = "Daily Amount"
@@ -447,6 +511,9 @@ struct QuranPlannerView: View {
             if let plan = settings.quranPlan {
                 prefillSetup(from: plan)
             }
+            // The notification body is frozen at schedule time; refresh it each visit so "today's
+            // target" tracks the plan's self-correcting amount (also cancels if the plan is gone).
+            if reminderEnabled { rescheduleReminder() }
         }
     }
 
@@ -633,6 +700,7 @@ struct QuranPlannerView: View {
             plan.ayahsPerDay = goalMode == .fixedPace ? ayahsPerDay : nil
             settings.quranPlan = plan
             withAnimation { editingGoal = false }
+            rescheduleReminder()
             return
         }
 
@@ -648,6 +716,7 @@ struct QuranPlannerView: View {
                 history: [:]
             )
         }
+        rescheduleReminder()
     }
 
     // MARK: Dashboard
@@ -788,7 +857,109 @@ struct QuranPlannerView: View {
         }
         .themedListRowBackground()
 
+        reminderSection
+
         manageSection
+    }
+
+    // MARK: Daily reminder
+
+    /// Toggle + time picker for the repeating daily reminder. Only rendered while a plan is active
+    /// (this lives in `dashboardSections`), so there is never a reminder without a plan behind it.
+    private var reminderSection: some View {
+        Section {
+            Toggle("Daily Reminder", isOn: reminderToggleBinding.animation(.easeInOut))
+                .font(.subheadline)
+                .listRowSeparator(.hidden)
+
+            if reminderEnabled {
+                DatePicker(
+                    "Time",
+                    selection: reminderTimeBinding,
+                    displayedComponents: .hourAndMinute
+                )
+                .font(.subheadline)
+                .listRowSeparator(.hidden)
+            }
+        } header: {
+            Text("REMINDER")
+        } footer: {
+            Text("A daily notification at the chosen time with your reading amount. It re-schedules whenever the goal or time changes, and stops when the plan ends.")
+                .font(.caption)
+        }
+        .themedListRowBackground()
+        .alert("Notifications Off", isPresented: $showingReminderDeniedAlert) {
+            Button("Open Settings") {
+                settings.hapticFeedback()
+                if let url = URL(string: UIApplication.openSettingsURLString) {
+                    UIApplication.shared.open(url)
+                }
+            }
+            Button("Cancel", role: .cancel) { }
+        } message: {
+            Text("Notifications are turned off for this app. Allow them in Settings to get a daily reading reminder.")
+        }
+    }
+
+    /// Enabling routes through notification authorization first: the toggle only lands in the ON
+    /// position once permission is actually granted; a denial bounces it back and points at Settings.
+    private var reminderToggleBinding: Binding<Bool> {
+        Binding(
+            get: { reminderEnabled },
+            set: { enabled in
+                settings.hapticFeedback()
+                guard enabled else {
+                    reminderEnabled = false
+                    QuranPlannerReminder.cancel()
+                    return
+                }
+                Task { @MainActor in
+                    if await settings.requestNotificationAuthorization() {
+                        withAnimation { reminderEnabled = true }
+                        rescheduleReminder()
+                    } else {
+                        withAnimation { reminderEnabled = false }
+                        showingReminderDeniedAlert = true
+                    }
+                }
+            }
+        )
+    }
+
+    /// The stored minutes-past-midnight as a Date for `DatePicker`, and back.
+    private var reminderTimeBinding: Binding<Date> {
+        Binding(
+            get: {
+                let startOfDay = Calendar.current.startOfDay(for: Date())
+                return Calendar.current.date(byAdding: .minute, value: reminderMinutes, to: startOfDay) ?? startOfDay
+            },
+            set: { date in
+                let components = Calendar.current.dateComponents([.hour, .minute], from: date)
+                reminderMinutes = (components.hour ?? 18) * 60 + (components.minute ?? 0)
+                rescheduleReminder()
+            }
+        )
+    }
+
+    /// Replaces (never stacks - stable identifier) the pending reminder with one matching the plan's
+    /// current pace and the chosen time. No-op cancel when the reminder is off or the plan is gone.
+    private func rescheduleReminder() {
+        guard reminderEnabled, let plan = settings.quranPlan, plan.completedDate == nil else {
+            QuranPlannerReminder.cancel()
+            return
+        }
+        var target: Int?
+        if totalAyahs > 0 {
+            let todayKey = QuranPlan.dayKey(for: Date())
+            let dayStart = plan.dayKey == todayKey ? min(plan.dayStartCompleted, totalCompleted) : totalCompleted
+            target = QuranPlannerMath.todayTarget(plan: plan, totalAyahs: totalAyahs, dayStartCompleted: dayStart)
+        }
+        QuranPlannerReminder.schedule(
+            plan: plan,
+            minutes: reminderMinutes,
+            todayTarget: target,
+            pagesEquivalent: target.map(pagesEquivalent)
+        )
     }
 
     /// Four stat tiles in the Prayer Tracker's visual language - the two features should feel like
@@ -943,6 +1114,8 @@ struct QuranPlannerView: View {
             ) {
                 Button("End Plan", role: .destructive) {
                     withAnimation { settings.quranPlan = nil }
+                    reminderEnabled = false
+                    QuranPlannerReminder.cancel()
                 }
             } message: {
                 Text("Your khatm progress is kept; only the goal and daily amounts are removed.")
@@ -1004,6 +1177,8 @@ struct QuranPlannerView: View {
                         settings.quranPlan = nil
                         editingGoal = false
                     }
+                    reminderEnabled = false
+                    QuranPlannerReminder.cancel()
                 }
             } message: {
                 Text("This resets khatm progress to zero so a fresh plan can begin.")
@@ -1012,6 +1187,8 @@ struct QuranPlannerView: View {
             Button(role: .destructive) {
                 settings.hapticFeedback()
                 withAnimation { settings.quranPlan = nil }
+                reminderEnabled = false
+                QuranPlannerReminder.cancel()
             } label: {
                 Label("End Plan", systemImage: "xmark.circle")
                     .font(.subheadline)

@@ -1626,6 +1626,17 @@ struct AhrufView: View {
                         .font(.body)
                 }
 
+                Section(header: Text("THE WISDOM BEHIND THE VARIETY")) {
+                    Text("Classical scholars draw out several wisdoms behind the revealed variety, beyond ease of recitation:")
+                        .font(.body)
+
+                    Text("• Mercy and ease: a largely unlettered nation of many dialects could all recite the Quran as it was revealed, without hardship.\n• A sign of inimitability (i'jaz): the wordings vary, yet the meanings align and complete one another; no mode contradicts another in a single ruling or belief.\n• Proof of its divine origin: had the Quran been from other than Allah (Glorified and Exalted be He), such parallel wordings would inevitably clash. They never do.\n• Extra preservation: each mode was memorized and passed on through its own verified channels, multiplying the independent lines guarding the text.")
+                        .font(.body)
+
+                    Text("As the narrations in Sahih Muslim make clear, the variation between the modes lies in how the words are recited, not in what the Quran commands: no harf permits what another forbids, and none changes the halal or the haram.")
+                        .font(.body)
+                }
+
                 Section(header: Text("PROPHETIC HADITH ON THE SEVEN AHRUF")) {
                     Text("Prophet Muhammad (peace and blessings be upon him) said:")
                         .font(.body)
@@ -1731,6 +1742,21 @@ struct QiraatView: View {
 
                     Text("Important: The Qiraat are not arbitrary. They reflect how the seven Ahruf were preserved through both writing and oral transmission, essentially a “mix and preserve” of the revealed modes into rigorously taught, verifiable recitational methods.")
                         .font(.body)
+
+                    Text("This precision goes back to how the Quran was taught from the very beginning: the Companions would take a portion of ayat from Prophet Muhammad (peace and blessings be upon him) and not move past it until they had mastered both its recitation and what it contained. The Qiraat continue that discipline, teacher to student, to this day.")
+                        .font(.body)
+                }
+
+                Section(header: Text("HOW THE READINGS DIFFER")) {
+                    Text("Imam Ibn al-Jazari (d. 833 AH), the foremost authority of this science, grouped the differences between the canonical readings into three kinds:")
+                        .font(.body)
+
+                    Text("• The same word, pronounced in more than one revealed way, with the meaning unchanged.\n• Different word-forms pointing to the same reality: in Surah al-Fatihah, “Maliki yawmid-din” (King of the Day of Judgment) and “Maaliki yawmid-din” (Owner of the Day of Judgment) are both revealed, and both describe Allah (Glorified and Exalted be He).\n• Different words carrying complementary meanings: each reading adds a facet, and none contradicts another.")
+                        .font(.body)
+
+                    Text("There is no fourth category of contradiction. Across all the canonical readings, not a single ayah makes lawful what another forbids or affirms what another denies; the differences enrich the meaning, never oppose it.")
+                        .font(.body)
+                        .foregroundColor(settings.accentColor.color)
                 }
 
                 Section(header: Text("QIRAAH (قراءة) VS RIWAYAH (رواية)")) {
@@ -1770,6 +1796,10 @@ struct QiraatView: View {
 
                     Text("They do not affect preservation; rather, they manifest it: letter for letter, word for word, in all the ways Prophet Muhammad (peace and blessings be upon him) taught.")
                         .font(.body)
+
+                    Text("Every canonical reading is equally Quran. As classical scholars explain, each one is revelation received by Prophet Muhammad (peace and blessings be upon him) and taught by him; none is a scholar's preference or a later refinement. Whoever recites by any canonical riwayah is reciting the Book of Allah (Glorified and Exalted be He) itself.")
+                        .font(.body)
+                        .foregroundColor(settings.accentColor.color)
                 }
 
                 Section(header: Text("THE FOUR MASTERS OF THE QURAN")) {
@@ -1848,16 +1878,6 @@ struct QiraatView: View {
                     .font(.body)
                 }
 
-                Section(header: Text("READ THE 20 MUSHAFS")) {
-                    Text("Every riwayah above can be read inside the app. Pick a riwayah, open any surah, and optionally tint every word that differs from Hafs an Asim.")
-                        .font(.body)
-
-                    NavigationLink(destination: LazyDestination { RiwayatMushafBrowserView() }) {
-                        Label("Open the Mushaf Browser", systemImage: "books.vertical")
-                            .foregroundColor(Settings.shared.accentColor.color)
-                    }
-                }
-
                 Section(header: Text("THE COMPANIONS BEHIND EACH QIRAAH")) {
                     Text("Every Qiraah traces back through its Imam and narrators to the Companions (may Allah be pleased with them) who learned the Quran directly from Prophet Muhammad (peace and blessings be upon him). The chains below show which Companions each reading is transmitted from.")
                         .font(.body)
@@ -1921,7 +1941,7 @@ struct QiraatView: View {
                 }
 
                 Section(header: Text("IN-APP AUDIO")) {
-                    Text("In this app, you can listen to multiple Qiraat/riwayaat (not all twenty are available). Availability varies by full-surah vs. ayah-by-ayah playback.")
+                    Text("In this app, every one of the 20 riwayaat has at least one complete full-surah reciter. Ayah-by-ayah playback remains Hafs-based, so availability varies by full-surah vs. ayah-by-ayah playback.")
                         .font(.body)
                 }
 
@@ -3075,58 +3095,3 @@ struct FiqhAqeedahManhajView: View {
     }
 }
 
-/// The 20-mushaf browser: pick any riwayah (the comparison-mode nested menu), flip the
-/// difference-highlighting toggle, and open any surah to read that riwayah's mushaf - reached from
-/// the Qiraat guide's READ THE 20 MUSHAFS section.
-struct RiwayatMushafBrowserView: View {
-    @ObservedObject private var settings = Settings.shared
-    @ObservedObject private var quranData = QuranData.shared
-
-    var body: some View {
-        List {
-            Group {
-                Section {
-                    ArabicTextRiwayahPicker(
-                        selection: $settings.displayQiraah.animation(.easeInOut),
-                        useMenuRow: true
-                    )
-                    .font(.subheadline)
-                } footer: {
-                    Text("The reading view, page mode, search, and comparison sheets all follow this choice. Beta riwayat (machine-extracted) ask for a one-time confirmation; enable Beta Qiraat in Quran settings to unlock all 20.")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-
-                Section {
-                    Toggle("Highlight Differences from Hafs", isOn: $settings.highlightQiraahDifferences.animation(.easeInOut))
-                        .font(.subheadline)
-                        .onChange(of: settings.highlightQiraahDifferences) { _ in settings.hapticFeedback() }
-                } footer: {
-                    Text("When reading any riwayah other than Hafs an Asim, every word that differs from the Hafs text is tinted in your accent color.")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-
-                Section(header: Text("OPEN A SURAH")) {
-                    ForEach(quranData.quran) { surah in
-                        NavigationLink(destination: LazyDestination { SurahView(surah: surah) }) {
-                            HStack {
-                                Text("\(surah.id). \(surah.nameTransliteration)")
-                                    .font(.subheadline)
-
-                                Spacer()
-
-                                Text(settings.cleanedQuranArabic(surah.nameArabic))
-                                    .font(.subheadline)
-                                    .foregroundColor(settings.accentColor.color)
-                            }
-                        }
-                    }
-                }
-            }
-            .themedListRowBackground()
-        }
-        .applyConditionalListStyle()
-        .navigationTitle("The 20 Mushafs")
-    }
-}

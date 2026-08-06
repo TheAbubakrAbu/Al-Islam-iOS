@@ -32,6 +32,7 @@ App Store: <https://apps.apple.com/us/app/al-islam-islamic-pillars/id6449729655>
 - **English Tafsir API (Ibn Kathir, Maarif Ul Quran, Tazkirul Quran)** - **Quran API Pages** - <https://quranapi.pages.dev/>
 - **Arabic Tafsirs (Ibn Kathir, al-Tabari, as-Sa'di)** - **Tafsir API by spa5k (data from QUL / Tarteel)** - <https://github.com/spa5k/tafsir_api>
 - **Hadith collections (all 17 books)** - **hadith-json by Ahmed Baset** - <https://github.com/AhmedBaset/hadith-json>
+- **Hadith text repairs, scholar gradings, and standard sunnah.com numbering** - restored and content-matched from two independent scrapes: **fawazahmed0/hadith-api** (<https://github.com/fawazahmed0/hadith-api>) and **CheeseWithSauce/HadithsJSONFormat** (<https://github.com/CheeseWithSauce/HadithsJSONFormat>), all ultimately from **sunnah.com** (<https://sunnah.com>). The gradings quote the published verdicts of Al-Albani, Zubair Ali Zai, Ahmad Muhammad Shakir, Shuaib Al Arnaut, the Darussalam editors, and others; where scholars differ, every verdict is shown.
 - **Surah Info** - **Quran.com (Quran Foundation)** - <https://api-docs.quran.foundation/docs/content_apis_versioned/4.0.0/get-chapter-info/>
 - **99 Names of Allah** - **MyIslam** - <https://myislam.org/99-names-of-allah/>
 

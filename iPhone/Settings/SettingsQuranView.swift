@@ -89,12 +89,6 @@ struct SettingsQuranView: View {
                     }
                 }
                 #if os(iOS)
-                Section {
-                    quranSettingsLink(title: "Tafsir", systemImage: "text.book.closed") {
-                        tafsirDestination
-                    }
-                }
-
                 favoritesAndBookmarksSection
 
                 readingModeSection
@@ -190,12 +184,6 @@ struct SettingsQuranView: View {
                 .padding(.vertical, 4)
         }
         .tint(settings.accentColor.color)
-    }
-
-    private var tafsirDestination: some View {
-        quranSettingsSubList(title: "Tafsir") {
-            TafsirDownloadSection()
-        }
     }
     #endif
 
@@ -326,17 +314,6 @@ struct SettingsQuranView: View {
                     .onChange(of: settings.showFullSurahRow) { _ in settings.hapticFeedback() }
 
                 Text("Adds extra details (revelation type, ayah count, page count, and more) beneath each surah in the main Quran list, the screen where all the surahs are shown.")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                    .padding(.vertical, 2)
-            }
-
-            VStack(alignment: .leading) {
-                Toggle("Summary Mode", isOn: $settings.quranSummaryMode.animation(.easeInOut))
-                    .font(.subheadline)
-                    .onChange(of: settings.quranSummaryMode) { _ in settings.hapticFeedback() }
-
-                Text("Bundles Ayah of the Day, Last Listened, and Last Read into one compact \"Your Summary\" section of tiles at the top of the Quran tab; it's all one thing. Turn it off to show each as its own full-width section instead, which is clearer but takes up a lot more space. (Summary is separate from the grid button, so you can keep this on while everything else stays a list.)")
                     .font(.caption)
                     .foregroundColor(.secondary)
                     .padding(.vertical, 2)
@@ -728,7 +705,9 @@ struct SettingsQuranView: View {
             }
         } footer: {
             if settings.showQiraahDetails {
-                Text("Play Ayahs is unsupported for other qiraat. For full surahs, you can choose reciters by riwayah. If you play a surah while viewing a different qiraah on screen, the reciter may be in another riwayah, so the audio may not match the text you see. For beginners, staying with Hafs an Asim for both reading and listening is recommended.")
+                Text("This app supports all 20 riwayat — 12 are in beta.\n\nAd-Duri and as-Susi use their official King Fahd Complex typefaces automatically; the other riwayat share the Uthmani script typeface.\n\nPlay Ayahs is unsupported for other qiraat. For full surahs, you can choose reciters by riwayah. If you play a surah while viewing a different qiraah on screen, the reciter may be in another riwayah, so the audio may not match the text you see. For beginners, staying with Hafs an Asim for both reading and listening is recommended.")
+            } else {
+                Text("This app supports all 20 riwayat — 12 are in beta.")
             }
         }
     }
@@ -1023,177 +1002,6 @@ struct FavoritesView: View {
 
 
 #if os(iOS)
-/// The Tafsir settings screen: choose which tafsir packages to keep offline - each individually, all
-/// English, all Arabic, or everything - with live progress and per-package storage management. Individual
-/// tafsirs are always cached automatically the first time they're opened; downloading just fills the cache
-/// up front.
-private struct TafsirDownloadSection: View {
-    @ObservedObject private var settings = Settings.shared
-    @ObservedObject private var store = TafsirStore.shared
-
-    /// The targets a tapped download button would fetch, pending confirmation.
-    @State private var pendingTargets: [TafsirDownloadTarget] = []
-    @State private var confirmDownload = false
-    @State private var deleteTarget: TafsirDownloadTarget?
-    @State private var confirmDelete = false
-
-    private func byteText(_ bytes: Int64) -> String {
-        ByteCountFormatter.string(fromByteCount: bytes, countStyle: .file)
-    }
-
-    private func usage(_ target: TafsirDownloadTarget) -> (files: Int, bytes: Int64) {
-        store.diskUsage[target.rawValue] ?? (0, 0)
-    }
-
-    private func requestDownload(_ targets: [TafsirDownloadTarget]) {
-        settings.hapticFeedback()
-        pendingTargets = targets
-        confirmDownload = true
-    }
-
-    var body: some View {
-        Section {
-            if store.isDownloading {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text(store.downloadingTargetName)
-                        .font(.subheadline.weight(.semibold))
-
-                    ProgressView(
-                        value: Double(store.downloadCompleted),
-                        total: Double(max(store.downloadTotal, 1))
-                    )
-
-                    Text("\(store.downloadCompleted) of \(store.downloadTotal) ayahs (\(byteText(store.downloadBytes)))")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                        .monospacedDigit()
-                        .padding(.vertical, 2)
-
-                    Button(role: .destructive) {
-                        settings.hapticFeedback()
-                        store.cancelDownload()
-                    } label: {
-                        Text("Cancel Download")
-                            .font(.subheadline)
-                    }
-                }
-                .padding(.vertical, 4)
-            } else {
-                ForEach(TafsirDownloadTarget.allCases) { target in
-                    targetRow(target)
-                }
-            }
-
-            if let error = store.downloadError {
-                Text(error)
-                    .font(.caption)
-                    .foregroundColor(.red)
-                    .padding(.vertical, 2)
-            }
-        } header: {
-            Text("OFFLINE TAFSIR")
-        } footer: {
-            Text("Tafsir for any ayah you open is saved automatically. Downloads run while the app is open, can be cancelled, and resume where they left off; already-saved ayahs are skipped. English includes all 3 English tafsirs in one package; each Arabic tafsir downloads separately.")
-        }
-        .onAppear {
-            store.refreshDiskUsage()
-        }
-
-        if !store.isDownloading {
-            Section {
-                bulkButton("Download All English (~\(TafsirDownloadTarget.estimatedTotal(TafsirDownloadTarget.englishTargets)) MB)",
-                           targets: TafsirDownloadTarget.englishTargets)
-                bulkButton("Download All Arabic (~\(TafsirDownloadTarget.estimatedTotal(TafsirDownloadTarget.arabicTargets)) MB)",
-                           targets: TafsirDownloadTarget.arabicTargets)
-                bulkButton("Download Everything (~\(TafsirDownloadTarget.estimatedTotal(TafsirDownloadTarget.allCases)) MB)",
-                           targets: TafsirDownloadTarget.allCases)
-            }
-            .confirmationDialog("Download Tafsir?", isPresented: $confirmDownload, titleVisibility: .visible) {
-                Button("Download (~\(TafsirDownloadTarget.estimatedTotal(pendingTargets)) MB)") {
-                    settings.hapticFeedback()
-                    store.startDownload(targets: pendingTargets)
-                }
-                Button("Cancel", role: .cancel) {}
-            } message: {
-                Text(pendingTargets.count == 1
-                     ? "This fetches \(pendingTargets.first?.displayName ?? "the tafsir") for all 6,236 ayahs for offline use. It may use significant data; Wi-Fi is recommended."
-                     : "This fetches \(pendingTargets.count) tafsir packages for all 6,236 ayahs each, for offline use. It may use significant data; Wi-Fi is recommended.")
-            }
-            .confirmationDialog("Delete saved tafsir?", isPresented: $confirmDelete, titleVisibility: .visible) {
-                Button("Delete \(deleteTarget?.displayName ?? "")", role: .destructive) {
-                    settings.hapticFeedback()
-                    if let deleteTarget {
-                        store.deleteDownloads(target: deleteTarget)
-                    }
-                }
-                Button("Cancel", role: .cancel) {}
-            } message: {
-                Text("It will be re-downloaded from the Internet as you open ayahs, or you can download it again here.")
-            }
-        }
-
-    }
-
-    @ViewBuilder
-    private func targetRow(_ target: TafsirDownloadTarget) -> some View {
-        let usage = usage(target)
-
-        HStack(spacing: 10) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(target.displayName)
-                    .font(.subheadline)
-
-                Text(usage.files > 0
-                     ? "Saved: \(usage.files) ayahs (\(byteText(usage.bytes)))"
-                     : "Not downloaded (~\(target.estimatedMegabytes) MB)")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                    .monospacedDigit()
-                    .padding(.vertical, 2)
-            }
-
-            Spacer()
-
-            if usage.files > 0 {
-                Button {
-                    settings.hapticFeedback()
-                    deleteTarget = target
-                    confirmDelete = true
-                } label: {
-                    Image(systemName: "trash")
-                        .font(.subheadline)
-                        .foregroundColor(.red)
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel("Delete \(target.displayName)")
-            }
-
-            Button {
-                requestDownload([target])
-            } label: {
-                Image(systemName: "icloud.and.arrow.down")
-                    .font(.subheadline)
-                    .foregroundColor(settings.accentColor.color)
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Download \(target.displayName)")
-        }
-        .padding(.vertical, 2)
-    }
-
-    private func bulkButton(_ title: String, targets: [TafsirDownloadTarget]) -> some View {
-        Button {
-            requestDownload(targets)
-        } label: {
-            Label(title, systemImage: "icloud.and.arrow.down")
-                .font(.subheadline)
-                .foregroundColor(settings.accentColor.color)
-        }
-    }
-}
-#endif
-
-#if os(iOS)
 // MARK: - Settings-search entries (kept in THIS file, next to the screens they describe)
 extension SettingsSearchEntry {
     static let quranEntries: [SettingsSearchEntry] = [
@@ -1205,8 +1013,7 @@ extension SettingsSearchEntry {
         .init(title: "Highlight Allah (Quran)", path: "Quran Settings → Arabic Text", keywords: "highlight name of allah red color quran", destination: .quranSettings),
         .init(title: "Riwayah & Qiraat", path: "Quran Settings → Arabic Text", keywords: "hafs warsh qaloon riwayah qiraat ahruf readings", destination: .quranSettings),
         .init(title: "Transliteration & English Translations", path: "Quran Settings → English Text", keywords: "saheeh international mustafa khattab translation english transliteration", destination: .quranSettings),
-        .init(title: "Reading Mode (List / Page)", path: "Quran Settings → Reading View", keywords: "page mode mushaf list mode grid summary last read", destination: .quranSettings),
-        .init(title: "Tafsir", path: "Quran Settings → Tafsir", keywords: "tafsir commentary ibn kathir download", destination: .quranSettings),
+        .init(title: "Reading Mode (List / Page)", path: "Quran Settings → Reading View", keywords: "page mode mushaf list mode grid last read", destination: .quranSettings),
         .init(title: "Favorites and Bookmarks (Quran)", path: "Quran Settings → Favorites and Bookmarks", keywords: "manage favorites bookmarks notes surahs ayahs letters", destination: .quranSettings),
     ]
 }
@@ -1217,13 +1024,15 @@ extension SettingsSearchEntry {
 private struct QiraahReciterSectionHeader: View {
     let title: String
     let arabic: String
+    /// Reciters in this riwayah section - shown as the app's standard trailing count pill.
+    let count: Int
 
     var body: some View {
         HStack(spacing: 6) {
             Text(title)
                 .lineLimit(2)
                 .minimumScaleFactor(0.75)
-            
+
             Text("- \(arabic)")
                 .font(.caption)
                 .foregroundStyle(.secondary)
@@ -1231,6 +1040,47 @@ private struct QiraahReciterSectionHeader: View {
                 .minimumScaleFactor(0.65)
                 .padding(.vertical, 2)
             Spacer(minLength: 0)
+
+            CountPill(count: count)
+        }
+    }
+}
+
+/// Qiraat-level header above a qiraah's riwayah sections: the imam's name and Arabic, with a
+/// riwayat-count pill in the `CountPill` idiom (accent caption on glass; text instead of a bare
+/// number because the data distinguishes riwayat from reciters). Accent title marks it as the
+/// higher grouping level, the same move `SectionPillHeader`'s `accentTitle` makes.
+private struct QiraahGroupSectionHeader: View {
+    @ObservedObject private var settings = Settings.shared
+
+    let teacher: String
+    let teacherArabic: String
+    let riwayahCount: Int
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Text("QIRAAH OF \(teacher.uppercased())")
+                .foregroundStyle(settings.accentColor.color)
+                .lineLimit(2)
+                .minimumScaleFactor(0.75)
+
+            Text("- \(teacherArabic)")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.65)
+                .padding(.vertical, 2)
+
+            Spacer(minLength: 0)
+
+            Text("\(riwayahCount) \(riwayahCount == 1 ? "riwayah" : "riwayat")")
+                .textCase(nil)
+                .font(.caption.weight(.semibold))
+                .monospacedDigit()
+                .foregroundStyle(settings.accentColor.color)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .conditionalGlassEffect()
         }
     }
 }
@@ -1531,6 +1381,92 @@ struct ReciterListView: View {
                 arabic: Settings.Riwayah.duriArabic,
                 reciters: filteredReciters(recitersDuri),
                 isQiraah: true
+            ),
+            ReciterSectionGroup(
+                id: "susi",
+                title: Settings.Riwayah.susi.uppercased(),
+                arabic: Settings.Riwayah.susiArabic,
+                reciters: filteredReciters(recitersSusi),
+                isQiraah: true
+            ),
+            // The remaining riwayat of the Ten Qiraat - one verified complete reciter each,
+            // so every riwayah the app can display also has full-surah audio.
+            ReciterSectionGroup(
+                id: "hisham",
+                title: Settings.Riwayah.hisham.uppercased(),
+                arabic: Settings.Riwayah.hishamArabic,
+                reciters: filteredReciters(recitersHisham),
+                isQiraah: true
+            ),
+            ReciterSectionGroup(
+                id: "ibnDhakwan",
+                title: Settings.Riwayah.ibnDhakwan.uppercased(),
+                arabic: Settings.Riwayah.ibnDhakwanArabic,
+                reciters: filteredReciters(recitersIbnDhakwan),
+                isQiraah: true
+            ),
+            ReciterSectionGroup(
+                id: "khallad",
+                title: Settings.Riwayah.khallad.uppercased(),
+                arabic: Settings.Riwayah.khalladArabic,
+                reciters: filteredReciters(recitersKhallad),
+                isQiraah: true
+            ),
+            ReciterSectionGroup(
+                id: "abuHarith",
+                title: Settings.Riwayah.abuHarith.uppercased(),
+                arabic: Settings.Riwayah.abuHarithArabic,
+                reciters: filteredReciters(recitersAbuHarith),
+                isQiraah: true
+            ),
+            ReciterSectionGroup(
+                id: "duriKisai",
+                title: Settings.Riwayah.duriKisai.uppercased(),
+                arabic: Settings.Riwayah.duriKisaiArabic,
+                reciters: filteredReciters(recitersDuriKisai),
+                isQiraah: true
+            ),
+            ReciterSectionGroup(
+                id: "ibnWardan",
+                title: Settings.Riwayah.ibnWardan.uppercased(),
+                arabic: Settings.Riwayah.ibnWardanArabic,
+                reciters: filteredReciters(recitersIbnWardan),
+                isQiraah: true
+            ),
+            ReciterSectionGroup(
+                id: "ibnJammaz",
+                title: Settings.Riwayah.ibnJammaz.uppercased(),
+                arabic: Settings.Riwayah.ibnJammazArabic,
+                reciters: filteredReciters(recitersIbnJammaz),
+                isQiraah: true
+            ),
+            ReciterSectionGroup(
+                id: "ruways",
+                title: Settings.Riwayah.ruways.uppercased(),
+                arabic: Settings.Riwayah.ruwaysArabic,
+                reciters: filteredReciters(recitersRuways),
+                isQiraah: true
+            ),
+            ReciterSectionGroup(
+                id: "rawh",
+                title: Settings.Riwayah.rawh.uppercased(),
+                arabic: Settings.Riwayah.rawhArabic,
+                reciters: filteredReciters(recitersRawh),
+                isQiraah: true
+            ),
+            ReciterSectionGroup(
+                id: "ishaq",
+                title: Settings.Riwayah.ishaq.uppercased(),
+                arabic: Settings.Riwayah.ishaqArabic,
+                reciters: filteredReciters(recitersIshaq),
+                isQiraah: true
+            ),
+            ReciterSectionGroup(
+                id: "idris",
+                title: Settings.Riwayah.idris.uppercased(),
+                arabic: Settings.Riwayah.idrisArabic,
+                reciters: filteredReciters(recitersIdris),
+                isQiraah: true
             )
         ]
 
@@ -1553,7 +1489,19 @@ struct ReciterListView: View {
             recitersQaloon +
             recitersBuzzi +
             recitersQunbul +
-            recitersDuri
+            recitersDuri +
+            recitersSusi +
+            recitersHisham +
+            recitersIbnDhakwan +
+            recitersKhallad +
+            recitersAbuHarith +
+            recitersDuriKisai +
+            recitersIbnWardan +
+            recitersIbnJammaz +
+            recitersRuways +
+            recitersRawh +
+            recitersIshaq +
+            recitersIdris
         ).map(\.id))
     }
 
@@ -1719,6 +1667,104 @@ struct ReciterListView: View {
 
     private var searchableQiraahSections: [ReciterSectionGroup] {
         qiraahReciterSections.filter { !$0.reciters.isEmpty }
+    }
+
+    /// Riwayah section id -> `Settings.Riwayah` tag, so each riwayah section can be grouped under
+    /// its qiraah imam (`Option.teacher`). Ids match `qiraahReciterSections`.
+    private static let riwayahTagBySectionID: [String: String] = [
+        "shubah": Settings.Riwayah.shubah,
+        "khalaf": Settings.Riwayah.khalaf,
+        "warsh": Settings.Riwayah.warsh,
+        "qaloon": Settings.Riwayah.qaloon,
+        "buzzi": Settings.Riwayah.buzzi,
+        "qunbul": Settings.Riwayah.qunbul,
+        "duri": Settings.Riwayah.duri,
+        "susi": Settings.Riwayah.susi,
+        "hisham": Settings.Riwayah.hisham,
+        "ibnDhakwan": Settings.Riwayah.ibnDhakwan,
+        "khallad": Settings.Riwayah.khallad,
+        "abuHarith": Settings.Riwayah.abuHarith,
+        "duriKisai": Settings.Riwayah.duriKisai,
+        "ibnWardan": Settings.Riwayah.ibnWardan,
+        "ibnJammaz": Settings.Riwayah.ibnJammaz,
+        "ruways": Settings.Riwayah.ruways,
+        "rawh": Settings.Riwayah.rawh,
+        "ishaq": Settings.Riwayah.ishaq,
+        "idris": Settings.Riwayah.idris
+    ]
+
+    /// One qiraah imam and the riwayah sections (each with its reciters) the list has for him.
+    /// `teacher == nil` is the catch-all bucket (OTHER GROUP), which has no qiraah-level header.
+    private struct QiraahSectionCluster: Identifiable {
+        let id: String
+        let teacher: String?
+        let teacherArabic: String?
+        var sections: [ReciterSectionGroup]
+    }
+
+    /// The qiraat area regrouped two-level: riwayah sections clustered under their qiraah imam,
+    /// in the sections' existing order (imams ordered by first appearance, so the visible reciter
+    /// order is exactly what the flat list showed).
+    private var qiraahGroupedSections: [QiraahSectionCluster] {
+        var clusters: [QiraahSectionCluster] = []
+        var indexByTeacher: [String: Int] = [:]
+
+        for section in searchableQiraahSections {
+            if section.isQiraah,
+               let tag = Self.riwayahTagBySectionID[section.id],
+               let option = Settings.Riwayah.allOptions.first(where: { $0.tag == tag }) {
+                if let index = indexByTeacher[option.teacher] {
+                    clusters[index].sections.append(section)
+                } else {
+                    indexByTeacher[option.teacher] = clusters.count
+                    clusters.append(QiraahSectionCluster(
+                        id: "qiraah-group-\(option.teacher)",
+                        teacher: option.teacher,
+                        teacherArabic: option.teacherArabic,
+                        sections: [section]
+                    ))
+                }
+            } else {
+                clusters.append(QiraahSectionCluster(id: "qiraah-group-\(section.id)", teacher: nil, teacherArabic: nil, sections: [section]))
+            }
+        }
+
+        return clusters
+    }
+
+    /// The qiraat reciter list, grouped by qiraah: each imam's first riwayah section carries the
+    /// qiraah-level header (name + riwayat-count pill) stacked above its own riwayah header, so
+    /// the sections, row identities, and scroll targets stay exactly as the flat list had them.
+    @ViewBuilder
+    private var qiraahGroupedReciterSections: some View {
+        ForEach(qiraahGroupedSections) { cluster in
+            ForEach(Array(cluster.sections.enumerated()), id: \.element.id) { index, section in
+                if section.isQiraah {
+                    Section(header: VStack(alignment: .leading, spacing: 10) {
+                        if index == 0, let teacher = cluster.teacher {
+                            QiraahGroupSectionHeader(
+                                teacher: teacher,
+                                teacherArabic: cluster.teacherArabic ?? "",
+                                riwayahCount: cluster.sections.count
+                            )
+                        }
+
+                        QiraahReciterSectionHeader(title: section.title, arabic: section.arabic ?? "", count: section.reciters.count)
+                    }, footer: Group {
+                        // Hafs stays at the top of the list in its own style sections rather than
+                        // under this Asim header - this footer is what says so.
+                        if section.id == "shubah" {
+                            Text("All reciters above are Hafs an 'Asim (default).")
+                        }
+                    }) {
+                        reciterButtons(section.reciters, qiraah: true)
+                    }
+                    .id("search-qiraah-\(section.id)")
+                } else {
+                    reciterSection(section)
+                }
+            }
+        }
     }
 
     private func searchResultsBanner() -> some View {
@@ -2045,9 +2091,7 @@ struct ReciterListView: View {
                                     .padding(.top, 4)
                             }
                             
-                            ForEach(searchableQiraahSections) { section in
-                                reciterSection(section)
-                            }
+                            qiraahGroupedReciterSections
                         } else {
                             Section {
                                 Button {
@@ -2118,9 +2162,7 @@ struct ReciterListView: View {
                                 .padding(.top, 4)
                         }
                         
-                        ForEach(searchableQiraahSections) { section in
-                            reciterSection(section)
-                        }
+                        qiraahGroupedReciterSections
                     } else {
                         Section {
                             Button {
@@ -2324,7 +2366,7 @@ struct ReciterListView: View {
     @ViewBuilder
     private func reciterSection(_ section: ReciterSectionGroup) -> some View {
         if section.isQiraah {
-            Section(header: QiraahReciterSectionHeader(title: section.title, arabic: section.arabic ?? "")) {
+            Section(header: QiraahReciterSectionHeader(title: section.title, arabic: section.arabic ?? "", count: section.reciters.count)) {
                 reciterButtons(section.reciters, qiraah: true)
             }
             .id("search-qiraah-\(section.id)")

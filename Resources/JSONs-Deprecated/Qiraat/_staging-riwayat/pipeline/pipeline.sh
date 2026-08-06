@@ -4,6 +4,7 @@ SCRATCH="/private/tmp/claude-501/-Users-theabubakrabu-Library-Mobile-Documents-c
 PY="$SCRATCH/venv/bin/python"
 cd "$SCRATCH/rq"
 "$PY" -c "import sys; sys.path.insert(0,'.'); import extract; assert hasattr(extract,'_bracket_kind'), 'extract.py missing gid helpers'" || exit 1
+# slugs stay short; extract.pdf_path maps them to the full riwayah filenames
 vols=(shubah qaloon duriabiamr susi warsh hisham ibndhakwan khalaf khallad abuharith durikisai ibnwardan ibnjammaz ruways rawh ishaq idris)
 echo "=== precache (4-way parallel) ==="
 i=0

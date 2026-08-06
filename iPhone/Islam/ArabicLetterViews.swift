@@ -103,8 +103,10 @@ struct TashkeelLettersView: View {
             Group {
                 markPickerSection
                 lettersSection
+                allMarksSection
             }
             .themedListRowBackground()
+
         }
         .applyConditionalListStyle()
         .navigationTitle("Tashkeel")
@@ -231,6 +233,73 @@ struct TashkeelLettersView: View {
             }
             .padding(.vertical, 2)
         }
+    }
+
+    /// The grid read the other way round, all at once: one row per letter carrying every core mark side by
+    /// side - the short vowels, the sukoon, the three tanween, and beneath them the shaddah with each vowel.
+    /// The grid above answers "one mark on every letter"; this answers "every mark on one letter" without
+    /// touching the picker. The long vowels and madd forms stay in the grid only - ten glyphs to a line is
+    /// already the limit of legible.
+    private static let allMarksCoreNames = ["Fatha", "Kasra", "Damma", plainSukoonName, "Fathatayn", "Kasratayn", "Dammatayn"]
+
+    /// بَ بِ بُ بْ بًا بٍ بٌ - written fatha-first, so under right-to-left rendering the fatha lands on the
+    /// right, the order the marks are taught in. Em-spaced like the letter forms, so the groups stay separate.
+    private func allMarksLine(_ letter: LetterData) -> String {
+        Self.allMarksCoreNames
+            .compactMap { name in tashkeels.first { $0.english == name }?.tashkeelMark }
+            .map { letter.letter + $0 }
+            .joined(separator: "\u{2002}")
+    }
+
+    /// بَّ بِّ بُّ - the shaddah carrying each short vowel, the second line of each row.
+    private func allMarksShaddahLine(_ letter: LetterData) -> String {
+        ["\u{064E}", "\u{0650}", "\u{064F}"]
+            .map { letter.letter + Self.shaddahMark + $0 }
+            .joined(separator: "\u{2002}")
+    }
+
+    private var allMarksSection: some View {
+        Section {
+            ForEach(letters) { letter in
+                allMarksRow(letter)
+            }
+        } header: {
+            Text("EVERY MARK ON EVERY LETTER")
+        } footer: {
+            Text("Read each row right to left: fatha, kasra, damma, sukoon, then the three tanween - and beneath them the shaddah carrying each vowel. The \"an\" tanween is written with its silent alif, as it appears at the end of words.")
+        }
+    }
+
+    private func allMarksRow(_ letter: LetterData) -> some View {
+        HStack(alignment: .center, spacing: 12) {
+            if !settings.hideEnglishInArabicLetters {
+                Text(letter.transliteration)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
+            }
+
+            Spacer(minLength: 8)
+
+            VStack(alignment: .trailing, spacing: 0) {
+                Text(allMarksLine(letter))
+                Text(allMarksShaddahLine(letter))
+            }
+            .font(useQuranicFont ? settings.scalableIslamArabicFont(base: 20, relativeTo: .title3) : .title3)
+            .arabicFontDesign(custom: useQuranicFont && settings.islamUsesCustomArabicFace)
+            .dynamicTypeSize(settings.arabicLetterDynamicTypeSize...)
+            .lineLimit(1)
+            .minimumScaleFactor(0.4)
+            .multilineTextAlignment(.trailing)
+        }
+        .padding(.vertical, 2)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            settings.hapticFeedback()
+            ArabicSpeech.shared.speak(allMarksLine(letter))
+        }
+        .accessibilityLabel("\(letter.transliteration) with every mark")
     }
 
     /// Sized to the glyph, not to the Quranic face's (very tall) line box - but it grows with the size slider,
@@ -394,10 +463,14 @@ struct ArabicLetterView: View {
     }
 
     /// Whether this page shows any English readings the eye toggle can hide - the harakaat/hamza practice
-    /// tables or the non-Arabic vowel row. Letters without them (taa marbuuTah, the hamza forms) have
-    /// nothing for the toggle to do, so it isn't offered and the name label ignores the flag.
+    /// tables, the non-Arabic vowel row, or the taa marbuuTah worked examples. Letters without them (the
+    /// hamza forms) have nothing for the toggle to do, so it isn't offered and the name label ignores the flag.
     private var hasHideableEnglish: Bool {
-        letterData.showTashkeel || letterData.isNonArabicScriptLetter
+        letterData.showTashkeel || letterData.isNonArabicScriptLetter || isTaaMarbuta
+    }
+
+    private var isTaaMarbuta: Bool {
+        letterData.transliteration == "taa marbuuTah"
     }
 
     /// The "it is always this" sentence for a letter whose weight never changes, phrased exactly like the one
@@ -522,6 +595,10 @@ struct ArabicLetterView: View {
                 .padding(.vertical, useQuranicFontForLetter ? 0 : 2)
             }
 
+            if isTaaMarbuta {
+                taaMarbutaPracticeSections
+            }
+
             if ["alif", "waaw", "yaa"].contains(letterData.transliteration) {
                 // Alif is NOT one of the letters with two roles. Waaw and yaa really do switch between vowel and
                 // consonant; alif is a vowel every single time it appears. The consonant people mistake it for is
@@ -639,6 +716,12 @@ struct ArabicLetterView: View {
             }
             }
             .themedListRowBackground()
+
+            #if os(iOS)
+            // The teacher's tail: lets the last section (WITH HAMZA on most letters) scroll up to the top of
+            // the screen like any other row, so a chosen row can always be the first visible one.
+            LettersBottomScrollSpacer()
+            #endif
         }
         #if !os(watchOS)
         // Apple Music-style: the bottom bar minimizes while scrolling down, restores on scroll-up.
@@ -677,6 +760,89 @@ struct ArabicLetterView: View {
             }
         }
         #endif
+    }
+
+    /// The taa marbuuTah page's worked examples, in the same section grammar as WITH HAMZA above: real words,
+    /// practised three ways. First stopping on the ة (it closes to a soft "h"), then continuing through it
+    /// (it opens to a full "t"), then unknotting it entirely - the dual and the sound feminine plural turn
+    /// the ة into an open ت.
+    @ViewBuilder
+    private var taaMarbutaPracticeSections: some View {
+        Section {
+            ArabicExampleRow(
+                arabic: "الجَنَّة",
+                transliteration: "al-jannah",
+                note: "Paradise"
+            )
+            ArabicExampleRow(
+                arabic: "رَحْمَة",
+                transliteration: "rahmah",
+                note: "Mercy"
+            )
+            ArabicExampleRow(
+                arabic: "صَلَاة",
+                transliteration: "salah",
+                note: "Prayer"
+            )
+            ArabicExampleRow(
+                arabic: "مَدْرَسَة",
+                transliteration: "madrasah",
+                note: "School"
+            )
+        } header: {
+            Text("STOPPING ON IT: SOUNDS LIKE HAA")
+        } footer: {
+            Text("Stop on a word ending in ة and it closes into a soft \"h\", exactly like a haa.")
+        }
+
+        Section {
+            ArabicExampleRow(
+                arabic: "رَحْمَةُ اللهِ",
+                transliteration: "rahmatu-llahi",
+                note: "The mercy of Allah"
+            )
+            ArabicExampleRow(
+                arabic: "سُورَةُ البَقَرَة",
+                transliteration: "suratu-l-baqarah",
+                note: "Surah al-Baqarah - the first ة is read \"t\"; the last is stopped on as \"h\""
+            )
+            ArabicExampleRow(
+                arabic: "مَدِينَةُ النَّبِيِّ",
+                transliteration: "madinatu-n-nabiyy",
+                note: "The city of the Prophet"
+            )
+        } header: {
+            Text("CONTINUING THROUGH: SOUNDS LIKE TAA")
+        } footer: {
+            Text("Keep reading into the next word and the ة is pronounced as a full \"t\".")
+        }
+
+        Section {
+            ArabicExampleRow(
+                arabic: "مُسْلِمَة \u{2190} مُسْلِمَتَانِ",
+                transliteration: "muslimah \u{2192} muslimataan(i)",
+                note: "One Muslim woman \u{2192} two: the ة opens into ت"
+            )
+            ArabicExampleRow(
+                arabic: "مُسْلِمَات",
+                transliteration: "muslimaat",
+                note: "Muslim women: ـات replaces the ة"
+            )
+            ArabicExampleRow(
+                arabic: "شَجَرَة \u{2190} شَجَرَتَانِ",
+                transliteration: "shajarah \u{2192} shajarataan(i)",
+                note: "One tree \u{2192} two trees"
+            )
+            ArabicExampleRow(
+                arabic: "صَلَاة \u{2190} صَلَوَات",
+                transliteration: "salah \u{2192} salawaat",
+                note: "Prayer \u{2192} prayers: this plural brings out a waaw"
+            )
+        } header: {
+            Text("UNKNOTTING INTO AN OPEN TAA")
+        } footer: {
+            Text("In the dual (ـتَانِ) and the sound feminine plural (ـات) the knot opens: the ة becomes a regular ت.")
+        }
     }
 
     @ViewBuilder
@@ -1160,6 +1326,74 @@ struct NonArabicVowelPracticeRow: View {
         .environment(\.layoutDirection, .rightToLeft)
     }
 }
+
+/// One worked example: the Arabic large on the trailing side in the app's Arabic font settings, the
+/// transliteration and a one-line English note leading - the shaddah detail rows' shape, shared by the
+/// taa marbuuTah teaching sections and the Basic Grammar screen. Tap to hear the Arabic; the English
+/// obeys the same Hide English flag every other practice table does.
+struct ArabicExampleRow: View {
+    @ObservedObject var settings = Settings.shared
+
+    let arabic: String
+    let transliteration: String
+    let note: String
+
+    private var useQuranicFont: Bool { settings.useFontArabic }
+
+    var body: some View {
+        HStack(alignment: .center, spacing: 12) {
+            if !settings.hideEnglishInArabicLetters {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(transliteration)
+                        .font(.subheadline.weight(.semibold))
+
+                    Text(note)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+
+            Spacer(minLength: 8)
+
+            Text(arabic)
+                .font(useQuranicFont ? settings.scalableIslamArabicFont(base: 24, relativeTo: .title2) : .title2)
+                .arabicFontDesign(custom: useQuranicFont && settings.islamUsesCustomArabicFace)
+                .dynamicTypeSize(settings.arabicLetterDynamicTypeSize...)
+                .multilineTextAlignment(.trailing)
+                .lineLimit(2)
+                .minimumScaleFactor(0.5)
+        }
+        .padding(.vertical, 2)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            settings.hapticFeedback()
+            ArabicSpeech.shared.speak(arabic)
+        }
+        .accessibilityAddTraits(.isButton)
+        .accessibilityLabel("\(transliteration), \(note)")
+    }
+}
+
+#if os(iOS)
+/// An invisible tail under a letters screen's last section, roughly two-thirds of the screen tall, so ANY
+/// row - including one in the final section - can be scrolled up to the top of the screen. A teacher
+/// scrolls the row being taught to the first visible position; without this, the last section stops at
+/// the bottom edge and can never get there. `Color.clear` with no insets and no separator, so nothing
+/// shows but the scroll range grows.
+struct LettersBottomScrollSpacer: View {
+    var body: some View {
+        Section {
+            Color.clear
+                .frame(height: UIScreen.main.bounds.height * 0.16)
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
+                .listRowInsets(EdgeInsets())
+        }
+        .accessibilityHidden(true)
+    }
+}
+#endif
 
 struct ArabicLetterRow: View, Equatable {
     @ObservedObject private var settings = Settings.shared

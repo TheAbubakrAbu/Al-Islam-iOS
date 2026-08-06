@@ -62,7 +62,7 @@ import Compression
 final class HadithBlockCache: @unchecked Sendable {
     static let shared = HadithBlockCache()
 
-    /// Decompressed display strings for one block: three per hadith, in row order.
+    /// Decompressed display strings for one block: four per hadith (arabic, narrator, text, grades), in row order.
     typealias TextBlock = [String]
 
     /// One decompressed search block: the folds as raw UTF-8, with each record's byte range, so
@@ -305,7 +305,7 @@ final class HadithPack: @unchecked Sendable {
     init?(slug: String, url: URL) {
         // Mapped, not read: the file's 12 MB of compressed text never enters the app's footprint,
         // and the pages that do get touched are clean file-backed pages the OS can evict for free.
-        guard let mapped = try? Data(contentsOf: url, options: [.mappedIfSafe]), mapped.count >= 32 else {
+        guard let mapped = try? Data(contentsOf: url, options: [.mappedIfSafe]), mapped.count >= 48 else {
             return nil
         }
         self.slug = slug
@@ -552,7 +552,7 @@ final class HadithPack: @unchecked Sendable {
 
 // MARK: - Reader
 
-/// A cursor over pack bytes. Every integer is assembled byte by byte - the records are 14 and 28
+/// A cursor over pack bytes. Every integer is assembled byte by byte - the records are 20 and 28
 /// bytes wide, so nothing in the file is guaranteed to land on its natural alignment.
 private struct PackReader {
     private let data: Data?

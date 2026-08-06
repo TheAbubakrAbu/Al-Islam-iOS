@@ -50,6 +50,27 @@ final class QuranPlayer: ObservableObject {
         let suggested: Reciter
     }
     @Published var offlineReciterSwitch: OfflineReciterSwitch?
+
+    /// A single-ayah play held back because the selected reciter has no verse-by-verse recordings of
+    /// their own (ayah playback would silently substitute Al-Minshawi's Murattal) and the user hasn't
+    /// OK'd that substitution for this reciter yet. The reader presents a Play/Cancel dialog:
+    /// `confirmMinshawiAyahPlayback()` remembers the reciter and starts the held playback;
+    /// `cancelMinshawiAyahPlayback()` just drops it. Asked once per reciter, remembered across launches.
+    struct PendingMinshawiAyahPlay {
+        let surahNumber: Int
+        let ayahNumber: Int
+        let continueRecitation: Bool
+        let repeatCount: Int
+        let reciter: Reciter
+    }
+    @Published var showMinshawiAyahConfirmation = false
+    private(set) var pendingMinshawiAyahPlay: PendingMinshawiAyahPlay?
+
+    /// Reciter ids whose Minshawi ayah substitution the user has already confirmed. Joined with a unit
+    /// separator because `Reciter.id` itself contains "|".
+    @AppStorage("confirmedMinshawiAyahFallbackReciterIDs") private var confirmedMinshawiAyahFallbackReciterIDsRaw = ""
+    private static let minshawiConfirmationSeparator = "\u{1F}"
+
     @Published private(set) var surahQueue: [SurahQueueItem] = []
 
     @Published private(set) var customRangeStartAyah: Int?
@@ -332,10 +353,11 @@ final class QuranPlayer: ObservableObject {
     }
 
     private func makeFastStartItem(url: URL, bufferDuration: TimeInterval = 2) -> AVPlayerItem {
-        let asset = AVURLAsset(
-            url: url,
-            options: [AVURLAssetPreferPreciseDurationAndTimingKey: false]
-        )
+        // islamweb-hosted riwayah feeds refuse requests without their Referer header;
+        // `assetOptions` is empty for every other host, so this is a no-op for mp3quran & co.
+        var options: [String: Any] = [AVURLAssetPreferPreciseDurationAndTimingKey: false]
+        ReciterAudioHosting.assetOptions(for: url).forEach { options[$0.key] = $0.value }
+        let asset = AVURLAsset(url: url, options: options)
         let item = AVPlayerItem(asset: asset)
         item.preferredForwardBufferDuration = bufferDuration
         return item
@@ -1124,7 +1146,49 @@ final class QuranPlayer: ObservableObject {
             presentPlaybackFailure("The selected reciter could not be found. Please choose another reciter in settings.")
             return
         }
-        playbackReciter = resolvedReciter
+
+        #if os(iOS)
+        // First-time heads-up before the silent voice swap: this reciter has no verse-by-verse
+        // recordings, so ayah playback substitutes Al-Minshawi (Murattal). Hold the play and let the
+        // reader confirm; once confirmed for a reciter it is remembered and never asked again.
+        // Skipped when the ayah will actually be cut from the reciter's own downloaded surah audio
+        // (their real voice), and for the internal bismillah insert.
+        if !isBismillah,
+           wouldSubstituteMinshawiForAyah(reciter: resolvedReciter, surahNumber: surahNumber, ayahNumber: ayahNumber),
+           !isMinshawiAyahFallbackConfirmed(resolvedReciter) {
+            pendingMinshawiAyahPlay = PendingMinshawiAyahPlay(
+                surahNumber: surahNumber,
+                ayahNumber: ayahNumber,
+                continueRecitation: continueRecitation,
+                repeatCount: repeatCount,
+                reciter: resolvedReciter
+            )
+            showMinshawiAyahConfirmation = true
+            return
+        }
+        #endif
+
+        beginAyahPlayback(
+            surahNumber: surahNumber,
+            ayahNumber: ayahNumber,
+            isBismillah: isBismillah,
+            continueRecitation: continueRecitation,
+            repeatCount: repeatCount,
+            reciter: resolvedReciter
+        )
+    }
+
+    /// The tail of `playAyah` once a reciter is settled - split out so the Minshawi confirmation can
+    /// resume the EXACT held playback (same reciter: re-resolving would re-roll "Random Reciter").
+    private func beginAyahPlayback(
+        surahNumber: Int,
+        ayahNumber: Int,
+        isBismillah: Bool,
+        continueRecitation: Bool,
+        repeatCount: Int,
+        reciter: Reciter
+    ) {
+        playbackReciter = reciter
 
         self.ayahRepeatCount      = max(1, repeatCount)
         self.ayahRepeatRemaining  = self.ayahRepeatCount
@@ -1143,6 +1207,55 @@ final class QuranPlayer: ObservableObject {
             isBismillah: isBismillah,
             continueRecitation: continueRecitation
         )
+    }
+
+    /// True when playing this ayah with this reciter would actually put Al-Minshawi's voice on: the
+    /// reciter has no verse-by-verse feed of their own, AND the ayah can't be cut from a downloaded
+    /// surah file (which plays the reciter's own voice and needs no heads-up).
+    private func wouldSubstituteMinshawiForAyah(reciter: Reciter, surahNumber: Int, ayahNumber: Int) -> Bool {
+        guard reciter.defaultToMinshawi else { return false }
+        if reciterDownloadManager.localSurahURL(reciter: reciter, surahNumber: surahNumber) != nil,
+           AyahTimingStore.shared.validatedWindow(reciter: reciter, surahNumber: surahNumber, ayahNumber: ayahNumber) != nil {
+            return false
+        }
+        return true
+    }
+
+    private func isMinshawiAyahFallbackConfirmed(_ reciter: Reciter) -> Bool {
+        confirmedMinshawiAyahFallbackReciterIDsRaw
+            .components(separatedBy: Self.minshawiConfirmationSeparator)
+            .contains(reciter.id)
+    }
+
+    private func rememberMinshawiAyahFallbackConfirmed(_ reciter: Reciter) {
+        guard !isMinshawiAyahFallbackConfirmed(reciter) else { return }
+        var ids = confirmedMinshawiAyahFallbackReciterIDsRaw
+            .components(separatedBy: Self.minshawiConfirmationSeparator)
+            .filter { !$0.isEmpty }
+        ids.append(reciter.id)
+        confirmedMinshawiAyahFallbackReciterIDsRaw = ids.joined(separator: Self.minshawiConfirmationSeparator)
+    }
+
+    /// "Play" on the Minshawi substitution dialog: remember this reciter and start the held playback.
+    func confirmMinshawiAyahPlayback() {
+        guard let pending = pendingMinshawiAyahPlay else { return }
+        pendingMinshawiAyahPlay = nil
+        showMinshawiAyahConfirmation = false
+        rememberMinshawiAyahFallbackConfirmed(pending.reciter)
+        beginAyahPlayback(
+            surahNumber: pending.surahNumber,
+            ayahNumber: pending.ayahNumber,
+            isBismillah: false,
+            continueRecitation: pending.continueRecitation,
+            repeatCount: pending.repeatCount,
+            reciter: pending.reciter
+        )
+    }
+
+    /// "Cancel" on the Minshawi substitution dialog: drop the held playback, remember nothing.
+    func cancelMinshawiAyahPlayback() {
+        pendingMinshawiAyahPlay = nil
+        showMinshawiAyahConfirmation = false
     }
 
     func playCustomRange(
@@ -2026,7 +2139,7 @@ final class QuranPlayer: ObservableObject {
         guard let url = URL(string: "\(reciter.surahLink)\(String(format: "%03d", surahNumber)).mp3") else { return }
 
         Task.detached(priority: .utility) {
-            let duration = (try? await AVURLAsset(url: url).load(.duration)) ?? .invalid
+            let duration = (try? await AVURLAsset(url: url, options: ReciterAudioHosting.assetOptions(for: url)).load(.duration)) ?? .invalid
             guard duration.isValid, !duration.isIndefinite else { return }
             let seconds = CMTimeGetSeconds(duration)
             guard seconds.isFinite, seconds > 0 else { return }
@@ -2084,6 +2197,9 @@ final class ReciterDownloadManager: NSObject, ObservableObject, URLSessionDownlo
         configuration.isDiscretionary = false
         configuration.sessionSendsLaunchEvents = true
         configuration.waitsForConnectivity = true
+        // A stalled transfer must eventually FAIL (and enter the per-surah retry path) rather than sit
+        // in the background-session default of 7 days while the UI shows a frozen progress bar.
+        configuration.timeoutIntervalForResource = 60 * 60
         return URLSession(configuration: configuration, delegate: self, delegateQueue: nil)
     }()
 
@@ -2157,6 +2273,12 @@ final class ReciterDownloadManager: NSObject, ObservableObject, URLSessionDownlo
             return
         }
 
+        // A fresh run retries everything still missing, including surahs that exhausted their retry
+        // budget last time.
+        failedSurahsByReciterID[reciterID] = nil
+        lastFailureMessageByReciterID[reciterID] = nil
+        retryAttempts = retryAttempts.filter { !$0.key.hasPrefix("\(reciterID)#") }
+
         var nextState = statesByReciterID[reciterID] ?? DownloadState()
         nextState.isDownloading = true
         nextState.errorMessage = nil
@@ -2169,6 +2291,12 @@ final class ReciterDownloadManager: NSObject, ObservableObject, URLSessionDownlo
         let reciterID = reciter.id
         activeTasks[reciterID]?.cancel()
         activeTasks[reciterID] = nil
+
+        // Drop this run's retry bookkeeping; any backoff timer still pending checks `isDownloading`
+        // before re-enqueueing and finds it false.
+        failedSurahsByReciterID[reciterID] = nil
+        lastFailureMessageByReciterID[reciterID] = nil
+        retryAttempts = retryAttempts.filter { !$0.key.hasPrefix("\(reciterID)#") }
 
         guard var state = statesByReciterID[reciterID] else { return }
         state.isDownloading = false
@@ -2219,27 +2347,16 @@ final class ReciterDownloadManager: NSObject, ObservableObject, URLSessionDownlo
         statesByReciterID.removeAll()
     }
 
-    /// Removes reciter folders that have some surahs but not the full 114-surah package (interrupted or failed download).
-    /// Skips reciters that still have an active URLSession task or `isDownloading` state.
+    /// Reconciles published state with what is actually on disk. This USED to delete any reciter folder
+    /// holding fewer than the reciter's full surah package - which defeated resume: a cancelled,
+    /// interrupted, or partially-failed "Download all" lost every finished surah the moment the reciter
+    /// list reappeared, forcing a from-scratch redownload. Each surah file is only ever installed whole
+    /// (the finished background task's temp file is moved into place atomically), so a partial set is
+    /// valid, playable, and resumable - keep it and just refresh the counts.
     func purgeIncompleteReciterDownloads() {
-        session.getAllTasks { tasks in
-            let busyReciterIDs = Set(
-                tasks.compactMap { self.taskContext(for: $0)?.reciter.id }
-            )
-            DispatchQueue.main.async {
-                for reciter in reciters {
-                    if busyReciterIDs.contains(reciter.id) { continue }
-                    if self.activeTasks[reciter.id] != nil { continue }
-                    if self.statesByReciterID[reciter.id]?.isDownloading == true { continue }
-                    let (count, _) = self.downloadedStats(for: reciter)
-                    // Against the surahs the reciter CARRIES, never a flat 114: a complete download of
-                    // a partial-mushaf reciter (Islam Sobhi carries 109) satisfied `count < 114` and
-                    // was silently deleted here on every reciter-list appearance.
-                    if count > 0 && count < reciter.carriedSurahCount {
-                        self.deleteDownloads(for: reciter)
-                    }
-                }
-            }
+        for reciter in reciters {
+            guard let state = statesByReciterID[reciter.id], !state.isDownloading else { continue }
+            refreshState(for: reciter)
         }
     }
 
@@ -2340,32 +2457,93 @@ final class ReciterDownloadManager: NSObject, ObservableObject, URLSessionDownlo
             return
         }
 
+        let failedThisRun = failedSurahsByReciterID[reciter.id] ?? []
         for surahNumber in 1...114 {
             // A partial mushaf's absent surahs aren't errors to retry - the file does not exist upstream.
             guard reciter.carriesSurah(surahNumber) else { continue }
+
+            // Exhausted its retry budget this run: move past it so one bad file can't wedge the queue.
+            // The final error summary (below) tells the user what is still missing.
+            if failedThisRun.contains(surahNumber) { continue }
 
             let targetURL = localSurahFileURL(reciter: reciter, surahNumber: surahNumber)
             if fileManager.fileExists(atPath: targetURL.path) {
                 continue
             }
 
-            // Timing-mapped reciters download the QDC encode instead of mp3quran's: the ayah timestamps were
-            // cut against QDC's files, and mp3quran's run seconds longer (different edits), so timings can
-            // only ever validate against the file they describe. One API call hands back BOTH the audio URL
-            // and the timing table; if it fails, the mp3quran path below downloads exactly as it always has
-            // (and the timing table simply never validates - nothing new breaks).
-            if reciter.qdcReciterID != nil {
-                Task { @MainActor in
-                    let qdc = await AyahTimingStore.shared.fetchDownloadSource(reciter: reciter, surahNumber: surahNumber)
-                    self.startSurahDownloadTask(reciter: reciter, surahNumber: surahNumber, overrideURL: qdc)
-                }
-            } else {
-                startSurahDownloadTask(reciter: reciter, surahNumber: surahNumber, overrideURL: nil)
-            }
+            enqueueSurahDownload(reciter: reciter, surahNumber: surahNumber)
             return
         }
 
-        finishSuccess(for: reciter)
+        if failedThisRun.isEmpty {
+            finishSuccess(for: reciter)
+        } else {
+            failedSurahsByReciterID[reciter.id] = nil
+            refreshState(for: reciter)
+            var message = failedThisRun.count == 1
+                ? "1 surah failed to download after several attempts. Tap Download to retry just the missing surahs."
+                : "\(failedThisRun.count) surahs failed to download after several attempts. Tap Download to retry just the missing surahs."
+            if let lastError = lastFailureMessageByReciterID.removeValue(forKey: reciter.id) {
+                message += " (Last error: \(lastError))"
+            }
+            finishWithError(for: reciter.id, message: message)
+        }
+    }
+
+    /// One surah's download. Timing-mapped reciters download the QDC encode instead of mp3quran's: the
+    /// ayah timestamps were cut against QDC's files, and mp3quran's run seconds longer (different edits),
+    /// so timings can only ever validate against the file they describe. One API call hands back BOTH the
+    /// audio URL and the timing table; if it fails, the mp3quran path below downloads exactly as it always
+    /// has (and the timing table simply never validates - nothing new breaks).
+    private func enqueueSurahDownload(reciter: Reciter, surahNumber: Int) {
+        if reciter.qdcReciterID != nil {
+            Task { @MainActor in
+                let qdc = await AyahTimingStore.shared.fetchDownloadSource(reciter: reciter, surahNumber: surahNumber)
+                self.startSurahDownloadTask(reciter: reciter, surahNumber: surahNumber, overrideURL: qdc)
+            }
+        } else {
+            startSurahDownloadTask(reciter: reciter, surahNumber: surahNumber, overrideURL: nil)
+        }
+    }
+
+    // MARK: Per-surah retry bookkeeping (main thread only)
+
+    /// Failed attempts per surah in the CURRENT run, keyed by `retryKey`.
+    private var retryAttempts: [String: Int] = [:]
+    /// Surahs that exhausted their retry budget this run; the queue moves past them and the run ends
+    /// with an error summary instead of stopping on the first bad file.
+    private var failedSurahsByReciterID: [String: Set<Int>] = [:]
+    /// The most recent failure's message per reciter, surfaced in the end-of-run summary.
+    private var lastFailureMessageByReciterID: [String: String] = [:]
+    private let maxAttemptsPerSurah = 3
+
+    /// "#" never appears in a reciter ID (name|qiraah|surahLink), so the key parses unambiguously.
+    private func retryKey(_ reciterID: String, _ surahNumber: Int) -> String { "\(reciterID)#\(surahNumber)" }
+
+    /// One surah's task failed: retry it with backoff (up to `maxAttemptsPerSurah` total tries), then
+    /// give up on JUST that surah and let the queue continue. Main thread only.
+    private func handleSurahFailure(reciter: Reciter, surahNumber: Int, message: String) {
+        lastFailureMessageByReciterID[reciter.id] = message
+
+        let key = retryKey(reciter.id, surahNumber)
+        let attempts = (retryAttempts[key] ?? 0) + 1
+        retryAttempts[key] = attempts
+
+        guard attempts < maxAttemptsPerSurah else {
+            retryAttempts[key] = nil
+            failedSurahsByReciterID[reciter.id, default: []].insert(surahNumber)
+            scheduleNextDownload(for: reciter)
+            return
+        }
+
+        let backoff = pow(2.0, Double(attempts)) // 2s after the first failure, 4s after the second
+        DispatchQueue.main.asyncAfter(deadline: .now() + backoff) { [weak self] in
+            guard let self else { return }
+            // The run may have been cancelled (or replaced) while the backoff timer waited.
+            guard self.statesByReciterID[reciter.id]?.isDownloading == true,
+                  self.activeTasks[reciter.id] == nil else { return }
+            self.enqueueSurahDownload(reciter: reciter, surahNumber: surahNumber)
+        }
     }
 
     /// Enqueue one surah's background download - from `overrideURL` (the QDC encode, for timing-mapped
@@ -2383,7 +2561,8 @@ final class ReciterDownloadManager: NSObject, ObservableObject, URLSessionDownlo
             remoteURL = url
         }
 
-        let task = session.downloadTask(with: remoteURL)
+        // Request (not bare URL) so islamweb-hosted feeds get their required Referer header.
+        let task = session.downloadTask(with: ReciterAudioHosting.request(for: remoteURL))
         task.taskDescription = taskDescription(for: reciter, surahNumber: surahNumber)
 
         DispatchQueue.main.async {
@@ -2406,11 +2585,16 @@ final class ReciterDownloadManager: NSObject, ObservableObject, URLSessionDownlo
     /// Intentionally avoids any shared mutable cache so it is safe to call from the background
     /// URLSession delegate queue without racing the main-thread dictionary writers.
     private func taskContext(for task: URLSessionTask) -> (reciter: Reciter, surahNumber: Int)? {
-        guard let description = task.taskDescription else { return nil }
-        let parts = description.split(separator: "|", maxSplits: 1).map(String.init)
-        guard parts.count == 2,
-              let surahNumber = Int(parts[1]),
-              let reciter = reciters.first(where: { $0.id == parts[0] }) else {
+        // `Reciter.id` ITSELF contains "|" separators (it is "name|qiraah|surahLink"), so the surah
+        // number is everything after the LAST "|". Splitting at the FIRST one - the old parsing -
+        // could never resolve a single task, which silently disabled every delegate callback: no
+        // progress, no file install, no next-surah scheduling. The visible symptom was every surah
+        // download frozen at "Downloading surah 1 of 114 (0%)" forever.
+        guard let description = task.taskDescription,
+              let separator = description.lastIndex(of: "|") else { return nil }
+        let reciterID = String(description[..<separator])
+        guard let surahNumber = Int(description[description.index(after: separator)...]),
+              let reciter = reciters.first(where: { $0.id == reciterID }) else {
             return nil
         }
         return (reciter, surahNumber)
@@ -2475,25 +2659,36 @@ final class ReciterDownloadManager: NSObject, ObservableObject, URLSessionDownlo
 
     func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
         guard let context = taskContext(for: task) else { return }
+        // Read on the delegate queue BEFORE hopping to main: didFinishDownloadingTo runs on the same
+        // serial queue and has already recorded any install failure for this task.
+        let installFailed = error == nil && installFailedReciterIDs.remove(context.reciter.id) != nil
+
         DispatchQueue.main.async {
             self.activeTasks[context.reciter.id] = nil
-        }
 
-        if let nsError = error as NSError? {
-            if nsError.domain == NSURLErrorDomain && nsError.code == NSURLErrorCancelled {
-                finishCancellation(for: context.reciter.id)
-            } else {
-                finishWithError(for: context.reciter.id, message: nsError.localizedDescription)
+            if let nsError = error as NSError? {
+                if nsError.domain == NSURLErrorDomain && nsError.code == NSURLErrorCancelled {
+                    self.finishCancellation(for: context.reciter.id)
+                } else {
+                    // Transient failures (offline, timeout, server hiccup) retry with backoff; a surah
+                    // that keeps failing is skipped so the rest of the queue still completes.
+                    self.handleSurahFailure(
+                        reciter: context.reciter,
+                        surahNumber: context.surahNumber,
+                        message: nsError.localizedDescription
+                    )
+                }
+                return
             }
-            return
+
+            // A failed install already surfaced its error; scheduling the next download would pick the
+            // still-missing surah again, forever. Stop the chain - the user retries explicitly.
+            if installFailed { return }
+
+            self.retryAttempts[self.retryKey(context.reciter.id, context.surahNumber)] = nil
+            self.refreshState(for: context.reciter)
+            self.scheduleNextDownload(for: context.reciter)
         }
-
-        // A failed install already surfaced its error; scheduling the next download would pick the
-        // still-missing surah again, forever. Stop the chain - the user retries explicitly.
-        if installFailedReciterIDs.remove(context.reciter.id) != nil { return }
-
-        refreshState(for: context.reciter)
-        scheduleNextDownload(for: context.reciter)
     }
 
     func urlSessionDidFinishEvents(forBackgroundURLSession session: URLSession) {

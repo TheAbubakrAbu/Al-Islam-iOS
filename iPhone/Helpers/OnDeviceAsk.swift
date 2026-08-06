@@ -90,6 +90,200 @@ enum OnDeviceAsk {
     language, no markdown formatting.
     """
 
+    // MARK: - Summarize (tafsir / surah info / comparison sheets)
+
+    /// The rules a SUMMARIZE session is created with: the given source text is the whole world -
+    /// summarize it faithfully, answer follow-ups only from it, invent nothing, no rulings.
+    private static let summarizeInstructions = """
+    You are a careful reading assistant inside a Quran and Hadith reading app. You will be given a \
+    SOURCE TEXT (a tafsir passage, surah background prose, or a set of translations of one ayah) \
+    and asked to summarize it, then possibly to answer follow-up questions about it.
+
+    Rules, in order:
+    1. Ground EVERYTHING in the given source text. Summarize faithfully: report only what the text \
+    actually says, in your own words, keeping its emphasis and proportions. Never fabricate or \
+    extend its content, and cite or reference nothing beyond the text itself.
+    2. Never write out the text of a verse or hadith from memory. If the source quotes one, refer \
+    to it briefly in your own words rather than reproducing it.
+    3. Never issue religious rulings, verdicts, or fatwas. Where the text discusses what is \
+    permitted or forbidden, describe only what the text says and note that a qualified scholar \
+    should be consulted for personal rulings.
+    4. If a question asks about something the source text does not cover, say plainly that this \
+    text does not address it - do not fill the gap from general knowledge.
+    5. Write clearly and completely: short paragraphs, plain respectful language, no markdown \
+    formatting.
+    """
+
+    /// The rules a MULTI-SOURCE summarize session is created with (the "all tafsirs" case): read every
+    /// labeled section, Arabic included, always write in English, synthesize one picture, and answer
+    /// follow-ups from ANY of the sources - naming which one a point comes from when relevant.
+    private static let summarizeMultiInstructions = """
+    You are a careful reading assistant inside a Quran and Hadith reading app. You will be given \
+    SOURCE TEXTS: several sections, each headed "=== ... ===" naming which tafsir (Quranic \
+    commentary) or source it is. Some sections are in English and some in Arabic.
+
+    Rules, in order:
+    1. Read ALL the sections, including the Arabic ones, but ALWAYS write in ENGLISH.
+    2. Ground EVERYTHING in the given sections. Synthesize one complete picture from all of them \
+    together: report only what the texts actually say, in your own words, keeping their emphasis. \
+    Where sources add distinct points, bring them together and name the source when that helps \
+    (e.g. "al-Tabari notes..."). Never fabricate or extend their content.
+    3. When answering follow-up questions, draw on ANY of the sections - not just one - and name \
+    which tafsir a point comes from when relevant.
+    4. Never write out the text of a verse or hadith from memory. If a source quotes one, refer to \
+    it briefly in your own words rather than reproducing it.
+    5. Never issue religious rulings, verdicts, or fatwas. Where the texts discuss what is \
+    permitted or forbidden, describe only what they say and note that a qualified scholar should \
+    be consulted for personal rulings.
+    6. If a question asks about something none of the sections cover, say plainly that these texts \
+    do not address it - do not fill the gap from general knowledge.
+    7. Write clearly and completely: short paragraphs, plain respectful language, no markdown \
+    formatting.
+    """
+
+    /// How much source text a summarize prompt carries. ~6000 characters is a sensible fit for the
+    /// on-device model's small context window once instructions, transcript, and answer share it.
+    static let summarizeSourceLimit = 6000
+
+    /// The cap for the MULTI-SOURCE case (all tafsirs of an ayah at once): higher, because the whole
+    /// point is breadth, but still leaving the small context window room for instructions, the
+    /// transcript, and the answer. Each section is truncated proportionally against this.
+    static let summarizeMultiSourceLimit = 12000
+
+    /// The source text a summarize session is grounded on: trimmed, clipped to the model's sensible
+    /// context, with a flag so the UI can disclose the truncation.
+    static func clippedSource(_ text: String) -> (text: String, truncated: Bool) {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard trimmed.count > summarizeSourceLimit else { return (trimmed, false) }
+        return (String(trimmed.prefix(summarizeSourceLimit)) + "…", true)
+    }
+
+    /// One labeled section of a multi-source summarize (e.g. "Tafsir Ibn Kathir (English)" + its text).
+    struct SummarizeSection {
+        let label: String
+        let text: String
+    }
+
+    /// Combine labeled sections into ONE source text under `limit`, each section headed
+    /// "=== label ===". When the total is over budget every section keeps its PROPORTIONAL share
+    /// (floored at 400 characters so a short tafsir is never starved to nothing), and a truncated
+    /// section says so inline - the model, and the reader via the returned flag, both know.
+    static func combinedSource(_ sections: [SummarizeSection],
+                               limit: Int = summarizeMultiSourceLimit) -> (text: String, truncated: Bool) {
+        let trimmed = sections
+            .map { (label: $0.label, text: $0.text.trimmingCharacters(in: .whitespacesAndNewlines)) }
+            .filter { !$0.text.isEmpty }
+        guard !trimmed.isEmpty else { return ("", false) }
+
+        // Reserve room for the headers, joiners, and truncation notes before sharing out the rest.
+        let overheadPerSection = 80
+        let budget = max(1000, limit - trimmed.count * overheadPerSection)
+        let total = trimmed.reduce(0) { $0 + $1.text.count }
+
+        var truncatedAny = false
+        let parts = trimmed.map { section -> String in
+            var text = section.text
+            var note = ""
+            if total > budget {
+                let share = max(400, budget * section.text.count / total)
+                if text.count > share {
+                    text = String(text.prefix(share)) + "…"
+                    note = "\n[This section was shortened to fit.]"
+                    truncatedAny = true
+                }
+            }
+            return "=== \(section.label) ===\n\(text)\(note)"
+        }
+        return (parts.joined(separator: "\n\n"), truncatedAny)
+    }
+
+    /// One completed follow-up exchange, re-sent with every turn so each answer is grounded on the
+    /// same source text plus the running conversation.
+    struct SummarizeTurn: Sendable {
+        let question: String
+        let answer: String
+    }
+
+    /// Stream a faithful summary of `source` (pass it pre-clipped via `clippedSource`, or
+    /// pre-combined via `combinedSource` with `multiSource: true`). Snapshots, like `streamAnswer`:
+    /// each yielded value is the full text so far.
+    @available(iOS 26.0, *)
+    static func streamSummary(title: String, source: String,
+                              multiSource: Bool = false) -> AsyncThrowingStream<String, Error> {
+        if multiSource {
+            return streamSummarizeTask(instructions: summarizeMultiInstructions, prompt: """
+            SOURCE TEXTS ("\(title)"):
+            \(source)
+
+            TASK: Read every section above, including the Arabic ones, and write ONE synthesized \
+            summary IN ENGLISH: the complete picture these sources give together, in a few short \
+            paragraphs, naming a specific source where it adds a distinct point. Nothing added.
+            """)
+        }
+        return streamSummarizeTask(instructions: summarizeInstructions, prompt: """
+        SOURCE TEXT ("\(title)"):
+        \(source)
+
+        TASK: Summarize this source text faithfully in a few short paragraphs: its main points, \
+        in its own emphasis, nothing added.
+        """)
+    }
+
+    /// Stream the answer to a follow-up question, re-grounded on the SAME source text plus the
+    /// running transcript. Older turns are dropped and long answers clipped so the source text
+    /// always keeps its full share of the context window.
+    @available(iOS 26.0, *)
+    static func streamFollowUp(title: String, source: String, transcript: [SummarizeTurn],
+                               question: String, multiSource: Bool = false) -> AsyncThrowingStream<String, Error> {
+        let recent = transcript.suffix(6).map { turn in
+            "Q: \(String(turn.question.prefix(300)))\nA: \(String(turn.answer.prefix(600)))"
+        }.joined(separator: "\n")
+
+        let conversation = recent.isEmpty ? "" : """
+
+        CONVERSATION SO FAR:
+        \(recent)
+        """
+
+        let sourceHeading = multiSource ? "SOURCE TEXTS" : "SOURCE TEXT"
+        let closing = multiSource
+            ? "Answer IN ENGLISH, only from the source texts above - any of the sections may " +
+              "supply the answer; name which source a point comes from when relevant."
+            : "Answer only from the source text above."
+
+        return streamSummarizeTask(
+            instructions: multiSource ? summarizeMultiInstructions : summarizeInstructions,
+            prompt: """
+            \(sourceHeading) ("\(title)"):
+            \(source)
+            \(conversation)
+
+            QUESTION: \(question)
+
+            \(closing)
+            """)
+    }
+
+    @available(iOS 26.0, *)
+    private static func streamSummarizeTask(instructions: String, prompt: String) -> AsyncThrowingStream<String, Error> {
+        AsyncThrowingStream { continuation in
+            let task = Task {
+                do {
+                    let session = LanguageModelSession(instructions: instructions)
+                    let stream = session.streamResponse(to: prompt)
+                    for try await partial in stream {
+                        if Task.isCancelled { break }
+                        continuation.yield(partial.content)
+                    }
+                    continuation.finish()
+                } catch {
+                    continuation.finish(throwing: error)
+                }
+            }
+            continuation.onTermination = { _ in task.cancel() }
+        }
+    }
+
     /// Stream the answer. Each yielded value is the FULL text so far (snapshots), so the UI just
     /// replaces its string. Throws when the model declines or errors; the caller shows nothing.
     /// Empty `sources` = open mode: the general-knowledge instructions with just the question.

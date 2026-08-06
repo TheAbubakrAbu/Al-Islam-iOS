@@ -4,118 +4,59 @@ import SwiftUI
 
 @MainActor
 final class AyahTafsirViewModel: ObservableObject {
+    /// Every edition's entry for this ayah, in author order, read straight out of the bundled packs.
+    /// All six are bundled, so this is synchronous and complete from the first render - no loading
+    /// states, no error states, no network, no session cache to rehydrate.
     @Published private(set) var tafsirs: [AyahTafsirEntry] = []
-    @Published private(set) var isLoading = false
-    @Published var errorMessage: String?
-    /// Arabic editions load one at a time, on selection - separate flags so an Arabic fetch never swaps the
-    /// whole sheet into the loading skeleton.
-    @Published private(set) var isLoadingArabic = false
-    @Published var arabicErrorMessage: String?
 
     private let surah: Int
     private let ayah: Int
-    private var loadedKey: String?
-    private var loadedArabicSlugs: Set<String> = []
-
-    /// Session-wide rehydration cache: if SwiftUI ever recreates the sheet's StateObject mid-read, the
-    /// new instance restores the SAME content synchronously in init - no reload, no skeleton flash, no
-    /// "the whole page redid itself". Keyed by surah:ayah; small and main-actor confined.
-    @MainActor private static var sessionCache: [String: (tafsirs: [AyahTafsirEntry], arabicSlugs: Set<String>)] = [:]
 
     init(surah: Int, ayah: Int) {
         self.surah = surah
         self.ayah = ayah
-        let key = "\(surah)-\(ayah)"
-        if let cached = Self.sessionCache[key] {
-            tafsirs = cached.tafsirs
-            loadedArabicSlugs = cached.arabicSlugs
-            loadedKey = key
-        }
     }
 
-    private func updateSessionCache() {
-        let key = "\(surah)-\(ayah)"
-        Self.sessionCache[key] = (tafsirs, loadedArabicSlugs)
-        // A handful of ayahs is all a reading session touches; keep the cache tiny.
-        if Self.sessionCache.count > 8 {
-            Self.sessionCache.remove(at: Self.sessionCache.indices.first!)
+    func loadIfNeeded() {
+        guard tafsirs.isEmpty else { return }
+        tafsirs = TafsirAuthor.allCases.compactMap {
+            TafsirStore.shared.entry(author: $0, surah: surah, ayah: ayah)
         }
-    }
-
-    func loadIfNeeded() async {
-        await load(surah: surah, ayah: ayah)
     }
 
     func hasEntry(for author: TafsirAuthor) -> Bool {
         tafsirs.contains { author.matches($0.author) }
     }
 
-    /// Fetch one Arabic edition's tafsir for this ayah (cache-first via TafsirStore) and append it to
-    /// `tafsirs` under the author's rawValue, so the existing selection/matching machinery just works.
-    func loadArabicIfNeeded(_ author: TafsirAuthor) async {
-        guard let slug = author.arabicSlug,
-              !loadedArabicSlugs.contains(slug),
-              !isLoadingArabic else { return }
-
-        isLoadingArabic = true
-        arabicErrorMessage = nil
-
-        do {
-            // Unstructured Task: the page reader rebuilds its hosting view mid-flight, which cancels the
-            // sheet's `.task` - without this wrapper that cancellation reached into URLSession and every
-            // page-mode tafsir died with "Cancelled". The fetch now survives the view churn.
-            let surah = self.surah, ayah = self.ayah
-            let data = try await Task { try await TafsirStore.shared.data(editionSlug: slug, surah: surah, ayah: ayah) }.value
-            let decoded = try JSONDecoder().decode(SpaTafsirAyahResponse.self, from: data)
-            let text = decoded.text.trimmingCharacters(in: .whitespacesAndNewlines)
-            if !text.isEmpty {
-                tafsirs.append(AyahTafsirEntry(author: author.rawValue, groupVerse: nil, content: text))
-            }
-            loadedArabicSlugs.insert(slug)
-            updateSessionCache()
-        } catch {
-            // Cancellation is view-lifecycle noise, not a failure - the next `.task` run retries silently.
-            if !Self.isCancellation(error) {
-                arabicErrorMessage = error.localizedDescription
-            }
+    #if canImport(FoundationModels)
+    /// EVERYTHING the app has for this ayah, for the multi-tafsir Summarize: all six editions,
+    /// labeled, in author order - instant, because every pack is bundled.
+    func gatherAllSummarizeSections() -> [OnDeviceAsk.SummarizeSection] {
+        loadIfNeeded()
+        return TafsirAuthor.allCases.compactMap { author in
+            guard let entry = tafsirs.first(where: { author.matches($0.author) }) else { return nil }
+            return OnDeviceAsk.SummarizeSection(label: author.summarizeSectionLabel, text: entry.content)
         }
-
-        isLoadingArabic = false
     }
+    #endif
+}
 
-    /// True for the errors a torn-down SwiftUI task produces - never worth showing to the reader.
-    static func isCancellation(_ error: Error) -> Bool {
-        if error is CancellationError { return true }
-        if let urlError = error as? URLError, urlError.code == .cancelled { return true }
-        return (error as NSError).code == NSURLErrorCancelled
-    }
-
-    func load(surah: Int, ayah: Int) async {
-        let key = "\(surah)-\(ayah)"
-        if loadedKey == key, !tafsirs.isEmpty { return }
-        if isLoading { return }
-
-        isLoading = true
-        errorMessage = nil
-
-        do {
-            // Cache-first through the shared store: an ayah whose tafsir was ever fetched (or bulk-downloaded)
-            // loads instantly and offline; only a true first look hits the network. The unstructured Task
-            // insulates the fetch from the page reader cancelling the sheet's `.task` mid-flight.
-            let data = try await Task { try await TafsirStore.shared.data(surah: surah, ayah: ayah) }.value
-            let decoded = try JSONDecoder().decode(AyahTafsirResponse.self, from: data)
-            tafsirs = decoded.tafsirs
-            loadedKey = key
-            updateSessionCache()
-        } catch {
-            if !Self.isCancellation(error) {
-                errorMessage = error.localizedDescription
-            }
+#if canImport(FoundationModels)
+private extension TafsirAuthor {
+    /// The "=== ... ===" section heading this edition gets in the multi-tafsir summarize source -
+    /// language spelled out so the model knows what it is reading.
+    var summarizeSectionLabel: String {
+        switch self {
+        case .ibnKathir:       return "Tafsir Ibn Kathir (English)"
+        case .maarifUlQuran:   return "Maarif Ul Quran (English)"
+        case .tazkirulQuran:   return "Tazkirul Quran (English)"
+        case .ibnKathirArabic: return "Tafsir Ibn Kathir (Arabic)"
+        case .tabariArabic:    return "Tafsir al-Tabari (Arabic)"
+        case .saadiArabic:     return "Tafsir as-Sa'di (Arabic)"
         }
-
-        isLoading = false
     }
 }
+#endif
 
 struct AyahTafsirSheet: View {
     @ObservedObject var settings = Settings.shared
@@ -132,6 +73,7 @@ struct AyahTafsirSheet: View {
     @State private var searchText = ""
     @State private var searchMatches: [(block: Int, occurrence: Int)] = []
     @State private var currentMatchIndex = 0
+    @State private var showSummarize = false
     @AppStorage("quran.tafsir.author") private var selectedAuthorRawValue = TafsirAuthor.ibnKathir.rawValue
 
     init(surahName: String, surahNumber: Int, ayahNumber: Int) {
@@ -169,16 +111,12 @@ struct AyahTafsirSheet: View {
         )
     }
 
-    private var loadKey: String {
-        "\(surahNumber):\(ayahNumber)"
-    }
-
     private var selectedTafsirEntry: AyahTafsirEntry? {
         if let match = viewModel.tafsirs.first(where: { selectedAuthor.matches($0.author) }) {
             return match
         }
-        // An Arabic edition that hasn't loaded yet shows its own loading row - falling back to an English
-        // entry here would flash the wrong tafsir under an Arabic heading.
+        // Falling back to an English entry under an Arabic heading would show the wrong tafsir -
+        // an Arabic edition with no entry shows the placeholder instead.
         return selectedAuthor.isArabic ? nil : viewModel.tafsirs.first
     }
 
@@ -354,27 +292,11 @@ struct AyahTafsirSheet: View {
                                 .environment(\.layoutDirection, .leftToRight)
                                 .id(selectedAuthor.rawValue)
                                 .textSelection(.enabled)
-                            } else if selectedAuthor.isArabic, viewModel.isLoadingArabic {
-                                ProgressView("Loading tafsir...")
-                                    .frame(maxWidth: .infinity, alignment: .center)
-                                    .padding(.vertical, 12)
-                            } else if selectedAuthor.isArabic, let arabicError = viewModel.arabicErrorMessage {
-                                tafsirPlaceholder(
-                                    title: "Couldn't Load Tafsir",
-                                    systemImage: "wifi.exclamationmark",
-                                    message: arabicError
-                                )
-                            } else if let errorMessage = viewModel.errorMessage, !selectedAuthor.isArabic {
-                                tafsirPlaceholder(
-                                    title: "Couldn't Load Tafsir",
-                                    systemImage: "wifi.exclamationmark",
-                                    message: errorMessage
-                                )
                             } else {
                                 tafsirPlaceholder(
                                     title: "No Tafsir Found",
                                     systemImage: "text.book.closed",
-                                    message: "No tafsir was returned for this ayah."
+                                    message: "This edition has no tafsir for this ayah."
                                 )
                             }
                         }
@@ -393,18 +315,6 @@ struct AyahTafsirSheet: View {
                     .onChange(of: searchText) { _ in recomputeMatches(scrollProxy: proxy) }
                     .onChange(of: selectedTafsirText) { _ in recomputeMatches(scrollProxy: nil) }
                     }
-                    // The loading skeleton OVERLAYS the always-mounted scroll content instead of
-                    // replacing it - swapping the branch reset the ScrollView's identity (and with it
-                    // the reader's place) whenever the state flipped.
-                    .overlay {
-                        if viewModel.isLoading && viewModel.tafsirs.isEmpty {
-                            tafsirLoadingView
-                                .frame(maxWidth: .infinity, maxHeight: .infinity)
-                                .background(Color(UIColor.systemBackground))
-                                .transition(.opacity)
-                        }
-                    }
-                    .animation(.easeInOut, value: viewModel.isLoading)
             }
             // Title reflects the tafsir's FULL range: when the selected tafsir groups several ayahs (Ibn
             // Kathir often does) it reads e.g. "Al-Baqarah 1:1-5", not just the tapped ayah.
@@ -414,21 +324,56 @@ struct AyahTafsirSheet: View {
             .dismissKeyboardOnScroll()
             .sheetDismissToolbar()
             .accentWashedBackground()
+            // On-device AI: summarize EVERY tafsir the app has for this ayah - the three English
+            // editions plus the three Arabic ones - fetching any not yet loaded (the same cache-first
+            // paths the tabs use), then chat about them, grounded only on those texts. Hidden
+            // entirely when Apple Intelligence is unavailable (the Ask pattern).
+            #if canImport(FoundationModels)
+            .toolbar {
+                // The availability check lives INSIDE the item (ViewBuilder, iOS 15-safe):
+                // conditional toolbar items need the iOS 16 ToolbarContentBuilder.
+                ToolbarItem(placement: .primaryAction) {
+                    if OnDeviceAsk.isAvailable, !viewModel.tafsirs.isEmpty {
+                        SummarizeToolbarButton { showSummarize = true }
+                    }
+                }
+            }
+            .sheet(isPresented: $showSummarize) {
+                SummarizeSheet(
+                    title: "All tafsirs on \(tafsirRangeTitle)",
+                    sourceText: "",
+                    multiSource: true,
+                    gatherSource: {
+                        // Instant: every edition is bundled, so gathering is a synchronous pack read.
+                        let sections = viewModel.gatherAllSummarizeSections()
+                        return OnDeviceAsk.combinedSource(sections)
+                    }
+                )
+            }
+            #endif
         }
         .navigationViewStyle(.stack)
-        .task(id: loadKey) {
-            await viewModel.loadIfNeeded()
-        }
-        // The Arabic editions load one at a time, when selected (each is its own per-ayah file on the CDN).
-        .task(id: "\(loadKey)|\(selectedAuthorRawValue)") {
-            if selectedAuthor.isArabic {
-                await viewModel.loadArabicIfNeeded(selectedAuthor)
-            }
+        // Synchronous: the packs are bundled, so the entries exist before the first frame renders.
+        .onAppear {
+            viewModel.loadIfNeeded()
         }
     }
 
     private var noticeCard: some View {
-        OnlineNoticeCard(text: "Tafsir is fetched online for the selected ayah or grouped ayahs, then saved on this device; an ayah you've opened before loads instantly and offline. English tafsirs load together; Arabic tafsirs (Ibn Kathir, al-Tabari, as-Sa'di) load per selection.")
+        VStack(alignment: .leading, spacing: 8) {
+            Label("Built Into the App", systemImage: "internaldrive")
+                .font(.subheadline.weight(.semibold))
+
+            Text("Every tafsir is built into the app and works offline: three English editions (Ibn Kathir, Maarif Ul Quran, Tazkirul Quran) and three Arabic (Ibn Kathir, al-Tabari, as-Sa'di). Nothing is downloaded.")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(12)
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(Color.secondary.opacity(0.1))
+        )
     }
 
     // The same ayah-card format as the page actions sheet: Arabic first, then the "Name S:A" reference
@@ -469,7 +414,7 @@ struct AyahTafsirSheet: View {
                 // inline when the group spans several ayahs), matching the Arabic run above.
                 let translations = tafsirArabicAyahs.compactMap { ayah -> String? in
                     guard let text = currentTranslationText(for: ayah) else { return nil }
-                    return tafsirArabicAyahs.count > 1 ? "(\(ayah.id)) \(text)" : text
+                    return tafsirArabicAyahs.count > 1 ? "\(text) (\(ayah.id))" : text
                 }
                 if !translations.isEmpty {
                     Text(translations.joined(separator: " "))
@@ -505,52 +450,6 @@ struct AyahTafsirSheet: View {
         )
     }
 
-    private var tafsirLoadingView: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
-                noticeCard
-
-                ProgressView("Loading tafsir...")
-                    .frame(maxWidth: .infinity, alignment: .center)
-                    .padding(.top, 4)
-
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(Color.secondary.opacity(0.18))
-                    .frame(height: 32)
-                    .overlay {
-                        HStack(spacing: 8) {
-                            Capsule().fill(Color.secondary.opacity(0.18))
-                            Capsule().fill(Color.secondary.opacity(0.12))
-                            Capsule().fill(Color.secondary.opacity(0.1))
-                        }
-                        .padding(4)
-                    }
-
-                ForEach(0..<4, id: \.self) { index in
-                    VStack(alignment: .leading, spacing: 10) {
-                        RoundedRectangle(cornerRadius: 8)
-                            .fill(Color.secondary.opacity(0.16))
-                            .frame(width: index == 0 ? 180 : 240, height: index == 0 ? 24 : 16)
-
-                        RoundedRectangle(cornerRadius: 8)
-                            .fill(Color.secondary.opacity(0.12))
-                            .frame(height: 16)
-
-                        RoundedRectangle(cornerRadius: 8)
-                            .fill(Color.secondary.opacity(0.12))
-                            .frame(height: 16)
-
-                        RoundedRectangle(cornerRadius: 8)
-                            .fill(Color.secondary.opacity(0.09))
-                            .frame(width: index.isMultiple(of: 2) ? 260 : 220, height: 16)
-                    }
-                    .redacted(reason: .placeholder)
-                }
-            }
-            .padding()
-        }
-    }
-
     private func tafsirPlaceholder(title: String, systemImage: String, message: String) -> some View {
         VStack(spacing: 10) {
             Image(systemName: systemImage)
@@ -583,6 +482,7 @@ struct SurahInfoSheet: View {
     @State private var searchText = ""
     @State private var searchMatches: [(block: Int, occurrence: Int)] = []
     @State private var currentMatchIndex = 0
+    @State private var showSummarize = false
     @AppStorage("quran.surahInfo.source") private var selectedSourceName = ""
 
     private var sources: [SurahInfoSource] {
@@ -644,21 +544,32 @@ struct SurahInfoSheet: View {
         NavigationView {
             Group {
                 if sources.isEmpty {
-                    infoPlaceholder
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: 16) {
+                            // Even with no bundled info, the sheet still offers playback.
+                            #if os(iOS)
+                            SurahInfoPlaybackCard(surahNumber: surahNumber, surahName: surahName)
+                            #endif
+
+                            infoPlaceholder
+                        }
+                        .padding()
+                    }
                 } else {
                     ScrollViewReader { proxy in
                     ScrollView {
                         VStack(alignment: .leading, spacing: 16) {
+                            // Listen from here: the page-mode header opens this sheet, so "play this
+                            // surah" (once or on repeat) leads the sheet. Deliberately NOT gated on the
+                            // displayed riwayah (isHafsDisplay): playback follows the selected reciter,
+                            // which works whatever Arabic text is on screen - hiding the button under
+                            // other qiraat display was wrong.
+                            #if os(iOS)
+                            SurahInfoPlaybackCard(surahNumber: surahNumber, surahName: surahName)
+                            #endif
+
                             noticeCard
                             surahHeaderCard
-
-                            // Listen from here: the page-mode header opens this sheet, so "play this
-                            // surah" (once or on repeat) belongs right under the surah's own card.
-                            #if os(iOS)
-                            if settings.isHafsDisplay {
-                                SurahInfoPlaybackCard(surahNumber: surahNumber, surahName: surahName)
-                            }
-                            #endif
 
                             if sources.count > 1 {
                                 Picker("Source", selection: selectedSourceBinding.animation(.easeInOut)) {
@@ -724,6 +635,32 @@ struct SurahInfoSheet: View {
                     }
                 }
             }
+            // On-device AI: summarize the surah's FULL background - every bundled source (Maududi,
+            // Ibn Ashur, ...), not just the one on screen - then chat about it, grounded only on
+            // those texts. Hidden entirely when Apple Intelligence is unavailable.
+            #if canImport(FoundationModels)
+            .toolbar {
+                // The availability check lives INSIDE the item (ViewBuilder, iOS 15-safe):
+                // conditional toolbar items need the iOS 16 ToolbarContentBuilder.
+                ToolbarItem(placement: .primaryAction) {
+                    if OnDeviceAsk.isAvailable,
+                       sources.contains(where: { !$0.contents.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }) {
+                        SummarizeToolbarButton { showSummarize = true }
+                    }
+                }
+            }
+            .sheet(isPresented: $showSummarize) {
+                let combined = OnDeviceAsk.combinedSource(sources.map {
+                    OnDeviceAsk.SummarizeSection(label: "\($0.name) - About this Surah", text: $0.contents)
+                })
+                SummarizeSheet(
+                    title: "About Surah \(surahNumber): \(surahName)",
+                    sourceText: combined.text,
+                    multiSource: true,
+                    sourceTruncated: combined.truncated
+                )
+            }
+            #endif
         }
         .navigationViewStyle(.stack)
         .modifier(SheetPresentationModifier())
@@ -767,6 +704,38 @@ struct SurahInfoSheet: View {
                     if let exceptions = surah.revelationExceptions?.trimmingCharacters(in: .whitespacesAndNewlines),
                        !exceptions.isEmpty {
                         Text("Exceptions: \(exceptions)")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
+                // Precomputed at build time (Scripts/generate_surah_stats.py) and bundled as
+                // surah-stats.json - decoded once into SurahStatsStore, never counted at runtime.
+                if let stats = SurahStatsStore.stats(for: surahNumber) {
+                    Divider()
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        Label("Surah Facts", systemImage: "number")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(settings.accentColor.color)
+
+                        Text("Ayahs: \(stats.ayahs.formatted())")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+
+                        Text("Words: \(stats.words.formatted())")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+
+                        Text("Letters: \(stats.letters.formatted())")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+
+                        Text(stats.juzLabel)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+
+                        Text("Revelation: \(stats.revelationLabel)")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }

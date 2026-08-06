@@ -393,6 +393,7 @@ struct ArabicView: View {
                 }
             }
             .themedListRowBackground()
+
         }
         #if os(watchOS)
         .searchable(text: (AppPerformance.shouldReduceAnimations ? $searchText : $searchText.animation(.easeInOut)))
@@ -705,6 +706,27 @@ struct ArabicView: View {
             }
 
             countedLetterSection("SPECIAL ARABIC LETTERS", otherArabicLetters)
+
+            Section("ARABIC BASICS") {
+                NavigationLink {
+                    ArabicBasicsView()
+                } label: {
+                    Label {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Basic Grammar")
+                                .foregroundColor(.primary)
+
+                            Text("Gender, duals, plurals, and the three case endings")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                    } icon: {
+                        Text("ال")
+                            .foregroundColor(settings.accentColor.color)
+                    }
+                    .padding(.vertical, 4)
+                }
+            }
 
             Section(header: SectionPillHeader(title: "ARABIC NUMBERS", count: numbers.count)) {
                 numberCollection
