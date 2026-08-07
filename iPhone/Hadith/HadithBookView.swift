@@ -549,8 +549,7 @@ struct HadithBookView: View {
                                     ? Font.arabic(settings.nonQuranArabicFontName, size: UIFont.preferredFont(forTextStyle: .subheadline).pointSize + 2)
                                     : .subheadline,
                                 accent: settings.accentColor.color,
-                                fg: settings.accentColor.color,
-                                basicFontForCommas: settings.useFontArabic ? UIFont.preferredFont(forTextStyle: .subheadline).pointSize + 2 : nil
+                                fg: settings.accentColor.color
                             )
                             .arabicFontDesign(custom: settings.islamUsesCustomArabicFace)
                         }
@@ -1233,8 +1232,7 @@ struct HadithBookView: View {
                                 : .caption,
                             accent: settings.accentColor.color,
                             fg: .secondary,
-                            lineLimit: 1,
-                            basicFontForCommas: settings.useFontArabic ? UIFont.preferredFont(forTextStyle: .caption1).pointSize + 2 : nil
+                            lineLimit: 1
                         )
                         .arabicFontDesign(custom: settings.islamUsesCustomArabicFace)
                         .minimumScaleFactor(0.6)
@@ -1293,8 +1291,7 @@ struct HadithBookView: View {
                                 : .subheadline,
                             accent: settings.accentColor.color,
                             fg: settings.accentColor.color,
-                            lineLimit: 1,
-                            basicFontForCommas: settings.useFontArabic ? UIFont.preferredFont(forTextStyle: .subheadline).pointSize + 2 : nil
+                            lineLimit: 1
                         )
                         .arabicFontDesign(custom: settings.islamUsesCustomArabicFace)
 
@@ -2077,8 +2074,7 @@ struct HadithChapterView: View {
                     font: Font.arabic(settings.nonQuranArabicFontName, size: UIFont.preferredFont(forTextStyle: .headline).pointSize + 2),
                     accent: settings.accentColor.color,
                     fg: settings.accentColor.color,
-                    lineLimit: 1,
-                    basicFontForCommas: UIFont.preferredFont(forTextStyle: .headline).pointSize + 2
+                    lineLimit: 1
                 )
                 .arabicFontDesign(custom: settings.islamUsesCustomArabicFace)
             }
@@ -2379,8 +2375,7 @@ struct HadithChapterView: View {
                             : .caption,
                         accent: settings.accentColor.color,
                         fg: .secondary,
-                        lineLimit: 1,
-                        basicFontForCommas: settings.useFontArabic ? UIFont.preferredFont(forTextStyle: .caption1).pointSize + 2 : nil
+                        lineLimit: 1
                     )
                     .arabicFontDesign(custom: settings.islamUsesCustomArabicFace)
                     .minimumScaleFactor(0.6)
@@ -2537,8 +2532,7 @@ struct HadithChapterPickerSheet: View {
                                             : .caption,
                                         accent: settings.accentColor.color,
                                         fg: .secondary,
-                                        lineLimit: 1,
-                                        basicFontForCommas: settings.useFontArabic ? UIFont.preferredFont(forTextStyle: .caption1).pointSize + 2 : nil
+                                        lineLimit: 1
                                     )
                                     .arabicFontDesign(custom: settings.islamUsesCustomArabicFace)
                                     .minimumScaleFactor(0.6)
@@ -2944,8 +2938,7 @@ struct HadithPagedView: View {
                 font: settings.hadithArabicFont(for: hadith.arabic, size: settings.hadithArabicFontSize),
                 accent: settings.accentColor.color,
                 fg: .primary,
-                highlightAllahNames: settings.highlightAllahNamesHadith,
-                basicFontForCommas: settings.hadithArabicUsesCustomFace(for: hadith.arabic) ? settings.hadithArabicFontSize : nil
+                highlightAllahNames: settings.highlightAllahNamesHadith
             )
             .arabicFontDesign(custom: settings.hadithArabicUsesCustomFace(for: hadith.arabic))
             .multilineTextAlignment(.trailing)

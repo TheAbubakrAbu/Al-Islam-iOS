@@ -494,9 +494,58 @@ struct SettingsQuranView: View {
         if settings.showArabicText {
             cleanArabicTextGroup
             arabicFontPicker
+            arabicScriptStylePicker
+            printedMushafGroup
             arabicFontSizeControls
             beginnerModeGroup
         }
+    }
+
+    /// The printed-mushaf facsimile switch. It lives with the Arabic script choices because that is what it
+    /// is - a third way of setting the Arabic, after the typeface and the script - even though the pages
+    /// themselves are images rather than composed text.
+    ///
+    /// Hidden entirely when this riwayah has no bundled PDF, so the row never promises a page it can't show.
+    @ViewBuilder
+    private var printedMushafGroup: some View {
+        #if os(iOS)
+        let riwayahTag = settings.displayQiraahForArabic ?? Settings.Riwayah.hafsTag
+        if MushafPDFLibrary.isAvailable(for: riwayahTag) {
+            VStack(alignment: .leading) {
+                Toggle("Show Printed Mushaf (PDF)", isOn: Binding(
+                    get: { settings.resolvedMushafPageLanguage.isPDF },
+                    set: { showPDF in
+                        settings.hapticFeedback()
+                        withAnimation(.easeInOut) {
+                            settings.mushafPageLanguage = showPDF
+                                ? MushafPageLanguage.pdf.rawValue
+                                : MushafPageLanguage.arabic.rawValue
+                        }
+                    }))
+                    .font(.subheadline)
+
+                // Spelled out rather than implied: this does nothing in List, and a reader who flips it there
+                // would otherwise see no change at all and assume it is broken.
+                Text(settings.quranPageMode
+                     ? "Replaces the composed Arabic with the actual printed mushaf for this riwayah - the same 604 pages, swiped right to left. Pages mode only; the typeface and script choices above don't apply to it."
+                     : "Pages mode only. Reading View is currently set to List - switch it to Pages to see the printed mushaf.")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .padding(.vertical, 2)
+
+                if settings.resolvedMushafPageLanguage.isPDF {
+                    Toggle("Printed Mushaf Night Mode", isOn: $settings.mushafPDFNightMode.animation(.easeInOut))
+                        .font(.subheadline)
+                        .onChange(of: settings.mushafPDFNightMode) { _ in settings.hapticFeedback() }
+
+                    Text("Darkens the printed page for night reading. Off shows it exactly as printed.")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .padding(.vertical, 2)
+                }
+            }
+        }
+        #endif
     }
 
     @ViewBuilder
@@ -555,6 +604,40 @@ struct SettingsQuranView: View {
         #endif
         .disabled(!settings.showArabicText)
         .onChange(of: settings.fontArabic) { _ in settings.hapticFeedback() }
+    }
+
+    /// Sits under the Arabic Font picker because it only refines the Uthmani choice - IndoPak
+    /// and Basic ignore it entirely, so with either of those selected the row isn't rendered at
+    /// all rather than shown dead. It stays for every reader otherwise: the two scripts are a
+    /// real choice even for someone reading Hafs alone. What the riwayat gate is the SHAPE of
+    /// the choice - with them hidden there is no Automatic to follow, and the captions describe
+    /// the scripts without naming a riwayah the reader has never been shown.
+    @ViewBuilder
+    private var arabicScriptStylePicker: some View {
+        if settings.usesUthmaniArabicFont {
+            let showQiraah = settings.showQiraahDetails
+            VStack(alignment: .leading, spacing: 8) {
+                Picker("Uthmani Script", selection: Binding(
+                    get: { settings.arabicScriptStyle },
+                    set: { newValue in
+                        settings.hapticFeedback()
+                        withAnimation(.easeInOut) { settings.arabicScriptStyle = newValue }
+                    }
+                )) {
+                    ForEach(Settings.ArabicScriptStyle.options(showQiraah: showQiraah)) { style in
+                        Text(style.label).tag(style)
+                    }
+                }
+                #if os(iOS)
+                .pickerStyle(SegmentedPickerStyle())
+                #endif
+
+                Text(settings.arabicScriptStyle.detail(namingRiwayat: showQiraah))
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+            }
+            .padding(.vertical, 2)
+        }
     }
 
     private var arabicFontSizeControls: some View {
@@ -705,7 +788,7 @@ struct SettingsQuranView: View {
             }
         } footer: {
             if settings.showQiraahDetails {
-                Text("This app supports all 20 riwayat — 12 are in beta.\n\nAd-Duri and as-Susi use their official King Fahd Complex typefaces automatically; the other riwayat share the Uthmani script typeface.\n\nPlay Ayahs is unsupported for other qiraat. For full surahs, you can choose reciters by riwayah. If you play a surah while viewing a different qiraah on screen, the reciter may be in another riwayah, so the audio may not match the text you see. For beginners, staying with Hafs an Asim for both reading and listening is recommended.")
+                Text("This app supports all 20 riwayat — 12 are in beta.\n\nThe riwayat printed in the Maghribi script use the official King Fahd Complex Warsh typeface; the others share the Uthmani (Madani) script typeface. You can override this under Arabic Text → Uthmani Script.\n\nPlay Ayahs is unsupported for other qiraat. For full surahs, you can choose reciters by riwayah. If you play a surah while viewing a different qiraah on screen, the reciter may be in another riwayah, so the audio may not match the text you see. For beginners, staying with Hafs an Asim for both reading and listening is recommended.")
             } else {
                 Text("This app supports all 20 riwayat — 12 are in beta.")
             }
@@ -828,14 +911,6 @@ struct SettingsQuranView: View {
                 .foregroundColor(.secondary)
                 .padding(.vertical, 2)
 
-            Toggle("Highlight Differences from Hafs", isOn: $settings.highlightQiraahDifferences.animation(.easeInOut))
-                .font(.subheadline)
-                .onChange(of: settings.highlightQiraahDifferences) { _ in settings.hapticFeedback() }
-
-            Text("When reading any other riwayah, every word that differs from Hafs an Asim is tinted in your accent color.")
-                .font(.caption)
-                .foregroundColor(.secondary)
-                .padding(.vertical, 2)
         }
     }
 
@@ -1826,10 +1901,11 @@ struct ReciterListView: View {
         return normalized(reciter.name).contains(query)
     }
 
-    /// Entry point for a reciter tap. Reciters with no ayah feed (they fall back to Minshawi for ayahs)
-    /// first get a confirmation dialog; everything else applies immediately.
+    /// Entry point for a reciter tap. A reciter with no ayah feed (ayahs fall back to Minshawi) is
+    /// explained ONCE, here at selection time - never again while playing. Everything else applies
+    /// immediately.
     private func handleReciterTap(_ reciter: Reciter) {
-        if reciter.defaultToMinshawi {
+        if QuranPlayer.shared.needsMinshawiFallbackNotice(for: reciter) {
             pendingMinshawiReciter = reciter
         } else if reciter.ayahMurattalStyleNote != nil {
             // Mujawwad/Muallim variant with no true per-ayah recording in that style - confirm the ayah
@@ -2228,6 +2304,8 @@ struct ReciterListView: View {
                     settings.hapticFeedback()
                     if let reciter = pendingMinshawiReciter {
                         pendingMinshawiReciter = nil
+                        // Recorded on CONFIRM only - a cancelled pick must ask again next time.
+                        QuranPlayer.shared.confirmMinshawiFallbackNotice(for: reciter)
                         applyReciterSelection(reciter)
                     }
                 }
@@ -2236,7 +2314,7 @@ struct ReciterListView: View {
                     pendingMinshawiReciter = nil
                 }
             } message: {
-                Text("\(pendingMinshawiReciter?.name ?? "This reciter") only has full-surah recitation. Individual ayahs and custom ranges will play in \(Reciter.minshawiAyahFallbackName).")
+                Text(QuranPlayer.shared.minshawiFallbackNoticeMessage(for: pendingMinshawiReciter))
             }
             .confirmationDialog("Ayahs Play in Murattal", isPresented: Binding(
                 get: { pendingMurattalStyleReciter != nil },

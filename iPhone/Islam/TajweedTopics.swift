@@ -166,12 +166,12 @@ struct TajweedMaddView: View {
                 Text("One Word Can Hold Two Different Madds")
                     .font(.subheadline.weight(.semibold))
 
-                Text("Do not assume every long madd in these words is hukmi. The word هَٰٓؤُلَآءِ contains BOTH:")
+                Text("Do not assume every long madd in these words is hukmi. The word هَٰٓؤُلَآءِ contains BOTH:")
                     .font(.body)
 
                 VStack(alignment: .leading, spacing: 8) {
                     Text("هَٰٓؤُ → Madd Munfasil Hukmi (the joined هَا particle)")
-                    Text("لَآءِ → a true Madd Muttasil (a real alif + hamzah in one word)")
+                    Text("لَآءِ → a true Madd Muttasil (a real alif + hamzah in one word)")
                 }
                 .font(.body)
                 .foregroundColor(.secondary)
@@ -183,13 +183,13 @@ struct TajweedMaddView: View {
                 Text("The Complete Set In The Qur\u{2019}an")
                     .font(.subheadline.weight(.semibold))
 
-                Text("هَٰٓأَنتُمۡ · هَٰٓؤُلَآءِ · أَهَٰٓؤُلَآءِ · وَهَٰٓؤُلَآءِ · يَٰٓـَٔادَمُ · وَيَٰٓـَٔادَمُ · يَٰٓأَبَانَا · يَٰٓأَبَتِ · يَٰٓإِبۡرَٰهِيمُ · يَٰٓإِبۡلِيسُ · يَٰٓأُخۡتَ · يَٰٓأَرۡضُ · يَٰٓأَسَفَىٰ · يَٰٓأَهۡلَ · يَٰٓأُوْلِي · يَٰٓأَيَّتُهَا · يَٰٓأَيُّهَ · يَٰٓأَيُّهَا")
+                Text("هَٰٓأَنتُمۡ · هَٰٓؤُلَآءِ · أَهَٰٓؤُلَآءِ · وَهَٰٓؤُلَآءِ · يَٰٓـَٔادَمُ · وَيَٰٓـَٔادَمُ · يَٰٓأَبَانَا · يَٰٓأَبَتِ · يَٰٓإِبۡرَٰهِيمُ · يَٰٓإِبۡلِيسُ · يَٰٓأُخۡتَ · يَٰٓأَرۡضُ · يَٰٓأَسَفَىٰ · يَٰٓأَهۡلَ · يَٰٓأُوْلِي · يَٰٓأَيَّتُهَا · يَٰٓأَيُّهَ · يَٰٓأَيُّهَا")
                     .font(.callout)
                     .foregroundColor(.secondary)
                     .frame(maxWidth: .infinity, alignment: .trailing)
                     .multilineTextAlignment(.trailing)
 
-                Text("(Counting orthographic variants such as يَٰٓأَبَانَآ and the pause-mark forms, this is 21 written words in the Hafs muṣḥaf.)")
+                Text("(Counting orthographic variants such as يَٰٓأَبَانَآ and the pause-mark forms, this is 21 written words in the Hafs muṣḥaf.)")
                     .font(.caption)
                     .foregroundColor(.secondary)
             }

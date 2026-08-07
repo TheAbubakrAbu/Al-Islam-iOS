@@ -2,6 +2,10 @@ import SwiftUI
 import UIKit
 
 #if os(iOS)
+import PDFKit
+#endif
+
+#if os(iOS)
 
 struct MushafPage: Identifiable {
     struct Segment: Identifiable {
@@ -197,8 +201,13 @@ struct SurahPageReader<Controls: View>: View {
     /// re-seed when the picked surah EQUALS the prop (after the reader paged away from it) - the token
     /// change is what forces the jump then.
     var jumpToken: Int = 0
-    /// Fires whenever the visible page belongs to a different surah, so the navigation title can follow the
-    /// reader across surah boundaries instead of naming the surah it was opened from forever.
+    /// Whether the current `jumpToken` re-seed should TURN the page (animated, like a swipe) instead of
+    /// swapping the index. Playback-driven jumps ("go to what's playing") turn; a surah/search jump - which
+    /// is a deliberate "take me there now" - stays instant.
+    var animateJump: Bool = false
+    /// Fires ONLY when the visible page's top surah actually changes, so the navigation title can follow the
+    /// reader across surah boundaries instead of naming the surah it was opened from forever. Page turns
+    /// WITHIN one surah report nothing at all - see `reportSurah`.
     var onSurahChange: ((Surah) -> Void)?
     /// Fires with the first surah + ayah of the page on screen. That's the anchor the list reader opens at
     /// when the user switches back out of page mode.
@@ -231,6 +240,13 @@ struct SurahPageReader<Controls: View>: View {
 
     @State private var pageIndex = 0
     @State private var didSetInitialPage = false
+    /// The surah named by the pinned header at the top of the reader, and the ONLY thing that decides when
+    /// the header (and the parent's toolbar title) re-renders. It is written by `reportSurah` and only when
+    /// the top surah's id actually changes, so paging within one surah leaves it - and the header - alone.
+    @State private var headerSurah: Surah?
+    /// The header's own surah-info sheet. Reader-level, not page-level: the header no longer lives inside a
+    /// page, so a page turn can't tear its sheet down.
+    @State private var headerInfoSurah: Surah?
     /// The first (surah, ayah) of the page on screen - the reading position a repagination re-seeds to.
     @State private var currentAnchor: (surahID: Int, ayahID: Int)?
     /// Set when `pageIndex` is about to be moved PROGRAMMATICALLY (initial seed, in-place surah swap),
@@ -336,17 +352,27 @@ struct SurahPageReader<Controls: View>: View {
                     // keeps this body from materializing a fresh 604-tuple array on every swipe (and on every
                     // player tick while audio runs) just so the diff can walk it.
                     ForEach(pages.indices.reversed(), id: \.self) { index in
-                        MushafPageContent(
-                            page: pages[index],
-                            highlightedAyah: $highlightedAyah,
-                            arrivalHighlight: arrivalHighlight,
-                            onClearArrival: onClearArrival,
-                            searchHighlight: liveSearch,
-                            isSelecting: isSelecting,
-                            selectionSurahID: surah.id,
-                            selectedAyahIDs: selectedAyahIDs,
-                            onToggleSelection: onToggleSelection
-                        )
+                        Group {
+                            // The facsimile swaps only the page BODY. Everything the reader wraps around it -
+                            // the pinned surah header, the page/juz pickers and meters in the footer, search,
+                            // the play control - is shared, so the printed mushaf behaves like the composed
+                            // one everywhere except the ink.
+                            if let facsimile = facsimileDocument {
+                                MushafPDFPageBody(document: facsimile, mushafPage: pages[index].page)
+                            } else {
+                                MushafPageContent(
+                                    page: pages[index],
+                                    highlightedAyah: $highlightedAyah,
+                                    arrivalHighlight: arrivalHighlight,
+                                    onClearArrival: onClearArrival,
+                                    searchHighlight: liveSearch,
+                                    isSelecting: isSelecting,
+                                    selectionSurahID: surah.id,
+                                    selectedAyahIDs: selectedAyahIDs,
+                                    onToggleSelection: onToggleSelection
+                                )
+                            }
+                        }
                             // Each page's own contents keep the app's reading direction; only the *paging* is
                             // flipped below.
                             .environment(\.layoutDirection, layoutDirection)
@@ -356,6 +382,13 @@ struct SurahPageReader<Controls: View>: View {
                 .tabViewStyle(.page(indexDisplayMode: .never))
             }
         }
+        // The pinned surah header belongs to the READER, not to each page. It used to be a top safe-area
+        // inset on `MushafPageContent`, i.e. one header per page, living INSIDE the pager - so every page
+        // turn slid the old header out and an identical new one in. Within a single surah that is a header
+        // that visibly re-animates for no reason, which is exactly the "the surah header changes when it
+        // shouldn't" report: the surah never changed, the header view did. One header up here holds
+        // perfectly still across a turn and only re-renders when `headerSurah` names a different surah.
+        .safeAreaInset(edge: .top, spacing: 0) { pinnedSurahHeader }
         // Order matters: the first inset applied sits closest to the content (higher), the last sits lowest.
         // So the tajweed/qiraah controls + mini player go ABOVE, and the page-navigation footer is pinned to
         // the very bottom.
@@ -376,6 +409,11 @@ struct SurahPageReader<Controls: View>: View {
         // Safe because the only text field in page mode is in the find bar, which is a TOP inset - it stays
         // above the keyboard on its own. The bottom controls being covered while typing is the intent.
         .ignoresSafeArea(.keyboard, edges: .bottom)
+        .sheet(item: $headerInfoSurah) { surah in
+            SurahInfoSheet(surahName: surah.nameTransliteration, surahNumber: surah.id)
+                .environmentObject(settings)
+                .environmentObject(quranData)
+        }
         .onAppear {
             // Seed the index once. Re-deriving it on every render (font change, qiraah switch) would yank the
             // reader back to the page it was opened at.
@@ -417,7 +455,10 @@ struct SurahPageReader<Controls: View>: View {
             if suppressNextPageTurnClear {
                 suppressNextPageTurnClear = false
             } else if didSetInitialPage {
-                highlightedAyah = nil
+                // Only write when there is something to clear: `highlightedAyah` is the parent's state, so
+                // assigning nil over nil re-runs SurahView (and re-installs its toolbar title) on every
+                // single swipe.
+                if highlightedAyah != nil { highlightedAyah = nil }
                 onPageTurned?()
             }
             // Matches are per-page: turning the page re-runs the find against the new page.
@@ -452,9 +493,8 @@ struct SurahPageReader<Controls: View>: View {
             // player must not yank the reader across the book.
             let showsPlayingSurah = pages[pageIndex].segments.contains { $0.surah.id == surahID }
             guard abs(target - pageIndex) == 1 || showsPlayingSurah else { return }
-            // A follow is not a user page turn - it must not wipe the mark/selections.
-            suppressNextPageTurnClear = true
-            withAnimation { pageIndex = target }
+            // Recitation crossing a page boundary TURNS the page, it doesn't cut to it.
+            turnPage(to: target, in: pages)
         }
         // A qiraah switch re-paginates the book. Keyed on the QIRAAH, not `pages.count`: dropping ayahs
         // absent from a qiraah never changes the page COUNT (page numbers are per-ayah metadata), so a
@@ -504,15 +544,41 @@ struct SurahPageReader<Controls: View>: View {
         }
     }
 
+    /// Move the pager to `target` the way a SWIPE does: an animated page turn, not an index teleport.
+    ///
+    /// The `withAnimation` is the whole mechanism, and it is not decorative. A paged `TabView` slides
+    /// between pages only when the selection change carries an animation in its transaction; the identical
+    /// assignment made outside one swaps the page within a single frame. (Verified frame-by-frame on an
+    /// iOS 26 simulator recording: animated = ~10 intermediate frames at 30fps, bare = zero.)
+    ///
+    /// Used for every PLAYBACK-driven page change - following the recitation across a boundary, and
+    /// starting playback on an ayah that lives on another page - so the reader turns the page and reading
+    /// carries on, instead of the page being swapped out from under the reciter.
+    private func turnPage(to target: Int, in pages: [MushafPage]) {
+        guard pages.indices.contains(target), target != pageIndex else { return }
+        // Compose the destination BEFORE the turn starts, so what slides in is the page rather than its
+        // loading spinner. (`.onChange(of: pageIndex)` prewarms too, but that runs as the turn begins.)
+        MushafPageRenderCache.prewarm(pages: pages, around: target, radius: 1, includeCenter: true)
+        // A follow/seed is not a user page turn - it must not wipe the mark or the selections.
+        suppressNextPageTurnClear = true
+        withAnimation(.easeInOut(duration: 0.35)) { pageIndex = target }
+    }
+
     /// Jump the live pager to this `surah`'s starting page (shared by the `surah.id` and `jumpToken`
-    /// onChange handlers - an in-place surah swap from the picker, next-surah, or a search hit).
+    /// onChange handlers - an in-place surah swap from the picker, next-surah, a search hit, or "go to
+    /// what's playing"). Only the playback jump animates (`animateJump`); a deliberate navigation is meant
+    /// to land immediately.
     private func reseedToStartingPage(in pages: [MushafPage]) {
         let target = startingPageIndex(in: pages)
         if target != pageIndex {
-            // A swap that arrives WITH a target ayah (search hit, picker) sets its own highlight in
-            // SurahView - the re-seed must not count as a page turn and wipe it.
-            suppressNextPageTurnClear = true
-            pageIndex = target
+            if animateJump {
+                turnPage(to: target, in: pages)
+            } else {
+                // A swap that arrives WITH a target ayah (search hit, picker) sets its own highlight in
+                // SurahView - the re-seed must not count as a page turn and wipe it.
+                suppressNextPageTurnClear = true
+                pageIndex = target
+            }
             // `.onChange(of: pageIndex)` reports + prewarms + saves.
         } else {
             reportSurah(on: target, in: pages)
@@ -631,9 +697,57 @@ struct SurahPageReader<Controls: View>: View {
         .padding(.top, 4)
     }
 
+    /// The single gate on "which surah am I in". Every page turn calls this, but only a turn that lands on a
+    /// page whose TOP surah is a different surah gets past the id check - so an intra-surah turn writes
+    /// nothing, re-renders nothing, and notifies nobody. Doing the comparison HERE (rather than in the
+    /// parent's callback) is the point: the parent's guard could only ever fire after the reader had already
+    /// pushed a value at it on every single swipe.
     private func reportSurah(on index: Int, in pages: [MushafPage]) {
         guard pages.indices.contains(index), let surah = pages[index].displayedSurah else { return }
+        guard headerSurah?.id != surah.id else { return }
+        headerSurah = surah
         onSurahChange?(surah)
+    }
+
+    /// The reader's pinned surah header: revelation symbol, ayah/page summary, favourite star - the same one
+    /// the list reader shows. It names `headerSurah`, which only ever moves when the page's top surah moves,
+    /// so swiping through a long surah leaves this completely untouched.
+    @ViewBuilder
+    private var pinnedSurahHeader: some View {
+        if let surah = headerSurah {
+            SurahSectionHeader(surah: surah)
+                .padding(.horizontal)
+                .padding(.vertical, 4)
+                // Keep the tapped header lit while its info sheet is open. While this surah is loaded in the
+                // player, the header carries the accent tint instead - the page-top twin of the in-page name
+                // highlight.
+                .background(
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .fill(headerInfoSurah?.id == surah.id
+                              ? Color.secondary.opacity(0.18)
+                              : quranPlayer.currentSurahNumber == surah.id
+                                ? settings.accentColor.color.opacity(0.18)
+                                : .clear)
+                )
+                .shadow(color: .black.opacity(0.15), radius: 2, x: 0, y: 0)
+                .conditionalGlassEffect(rectangle: true)
+                .padding(.top, 4)
+                // Equal air above and below the page block: this header is a TOP safe-area inset and the
+                // reader's controls are a BOTTOM one, so together they bound the band the page is centered
+                // in - but only the bottom inset carried a cushion (`bottomControls` opens with
+                // `.padding(.top, SafeAreaInsetVStackSpacing.standard)`). This mirrors that cushion.
+                .padding(.bottom, SafeAreaInsetVStackSpacing.standard)
+                .padding(.horizontal, settings.defaultView ? 20 : 16)
+                // Tap the header to read about the surah. The star/emoji keep their own tap gestures -
+                // a child gesture wins over this one, so favoriting still works.
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    settings.hapticFeedback()
+                    headerInfoSurah = surah
+                }
+                .animation(.easeInOut(duration: 0.15), value: headerInfoSurah?.id == surah.id)
+                .dynamicTypeSize(.large)
+        }
     }
 
     private func reportAnchor(on index: Int, in pages: [MushafPage]) {
@@ -652,6 +766,15 @@ struct SurahPageReader<Controls: View>: View {
     }
 
     // MARK: - Bottom page-navigation footer (pinned below the tajweed/qiraah controls and the mini player)
+
+    /// The bundled printed mushaf to draw instead of composing the page, or nil to compose as usual.
+    ///
+    /// nil unless the reader asked for the facsimile AND this riwayah has one bundled - so a riwayah without
+    /// a PDF silently keeps the composed text rather than showing blank pages.
+    private var facsimileDocument: PDFDocument? {
+        guard settings.resolvedMushafPageLanguage.isPDF else { return nil }
+        return MushafPDFLibrary.document(for: settings.displayQiraahForArabic ?? Settings.Riwayah.hafsTag)
+    }
 
     @ViewBuilder
     private func pageFooter(pages: [MushafPage]) -> some View {
@@ -760,26 +883,32 @@ struct SurahPageReader<Controls: View>: View {
     }
 
     /// "Surah 12/48" with its own little bar - the two positions the reader actually cares about.
+    ///
+    /// Mirrored for the mushaf: the bar sits to the LEFT of its label and fills right-to-left, so the fill
+    /// starts at the edge nearest the label and grows away from it - the exact mirror of the list-mode
+    /// meter, and the same direction the page text and the page turns run in.
     private func meter(label: String, position: Int, total: Int, color: Color) -> some View {
         HStack(spacing: 6) {
-            Text("\(label) \(position)/\(total)")
-                .font(.system(size: 10, weight: .semibold))
-                .monospacedDigit()
-                .foregroundStyle(.secondary)
-                .lineLimit(1)
-
             trackedBar(
                 fraction: total > 0 ? CGFloat(position) / CGFloat(total) : 0,
                 height: 3,
                 color: color
             )
             .frame(width: 44)
+
+            Text("\(label) \(position)/\(total)")
+                .font(.system(size: 10, weight: .semibold))
+                .monospacedDigit()
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
         }
     }
 
     /// A fill over a visible track, so a low value still reads as "a little way in" rather than as nothing.
+    /// Always right-to-left here: a mushaf is read - and paged - from right to left, so a fill that grew
+    /// leftward-to-rightward was progress running backwards against everything else on the screen.
     private func trackedBar(fraction: CGFloat, height: CGFloat, color: Color) -> some View {
-        TrackedBar(fraction: fraction, height: height, color: color)
+        TrackedBar(fraction: fraction, height: height, color: color, rightToLeft: true)
     }
 
     /// The page / juz readouts double as the buttons that open their picker. `seed` sets the wheel to where you
@@ -1083,7 +1212,8 @@ private struct MushafPageContent: View {
     /// A sheet the actions sheet asked for, presented from here once the actions sheet has closed.
     @State private var secondarySheet: SecondarySheetRequest?
 
-    /// A tapped surah heading (the in-page name/basmala, or the pinned header) - drives the surah info sheet.
+    /// A tapped surah heading in the page TEXT (the name/basmala where a surah begins mid-page) - drives
+    /// the surah info sheet. The reader's pinned header has its own, at reader level.
     @State private var infoSurah: Surah?
 
     private struct SecondarySheetRequest: Identifiable {
@@ -1153,11 +1283,20 @@ private struct MushafPageContent: View {
     var body: some View {
         GeometryReader { geo in
             let width = max(geo.size.width - Self.textPadding * 2, 1)
-            // The height the page can actually SHOW, not the height of its frame. Anything the pager hands down
-            // as a safe-area inset rather than as a smaller frame - the tajweed/qiraah bar most of all, which
-            // only exists in comparison mode - is covered by chrome: text fitted into it is text hidden behind
-            // the bar. Budgeting against the frame is what cost a comparison-mode page its last line.
-            let visibleHeight = max(geo.size.height - geo.safeAreaInsets.top - geo.safeAreaInsets.bottom, 1)
+            // The page's FRAME is the region it can show - every piece of reader chrome is already subtracted
+            // from it. Measured on an iPhone 16 Pro (points, screen 874 tall) with the reader open:
+            //
+            //   plain page mode   frame 144...697   safeAreaInsets top 44, bottom 0
+            //   comparison mode   frame 144...664   safeAreaInsets top 44, bottom 0
+            //
+            // The pinned surah header sits ABOVE 144 and the controls/footer/tab bar BELOW the frame's bottom
+            // (which moves up by exactly the riwayah bar's height when comparison mode adds it). So the bars
+            // reduce the frame; they are NOT handed down as insets. The 44 is the navigation bar, which is
+            // nowhere near this view - subtracting it took 44pt off every page's budget for chrome that
+            // covers nothing, and because a ScrollView TOP-pins content shorter than its viewport, all 44
+            // landed as dead space BELOW the page. That was the "page sits too high" bug: the block was
+            // centered correctly, but inside a band 44pt shorter than the one it was drawn in.
+            let visibleHeight = max(geo.size.height, 1)
             // The height the TEXT actually gets: the visible region minus its own vertical padding, nothing
             // else. The fit verifies against the real TextKit layout, so no slack is reserved on top.
             let textHeight = max(visibleHeight - Self.verticalPadding * 2, 1)
@@ -1196,9 +1335,9 @@ private struct MushafPageContent: View {
             }
         }
         .overlay(alignment: spineIsLeading ? .leading : .trailing) { spineRule }
-        // The same pinned surah header the list reader uses, so the two reading modes are titled identically:
-        // revelation symbol, ayah/page summary, favourite star. It names the page's TOP surah.
-        .safeAreaInset(edge: .top, spacing: 0) { topHeader }
+        // No pinned surah header here: it belongs to the READER (`SurahPageReader.pinnedSurahHeader`), one
+        // for the whole pager. A header per page rode INSIDE the pager, so every turn - including one
+        // between two pages of the SAME surah - slid it out and slid an identical copy in.
         // A mushaf page is fixed-size: the Arabic uses absolute point sizes, and the chrome must not grow with
         // Dynamic Type either, or it would eat the space the text was fitted into.
         .dynamicTypeSize(.large)
@@ -1240,7 +1379,7 @@ private struct MushafPageContent: View {
         sheetAyah != nil || secondarySheet != nil || infoSurah != nil
     }
 
-    /// Tap a surah's name/basmala (in the page text or the pinned header) to read about the surah.
+    /// Tap a surah's name/basmala in the page text to read about the surah.
     private func showSurahInfo(surahID: Int) {
         guard let surah = quranData.surah(surahID) else { return }
         settings.hapticFeedback()
@@ -1381,35 +1520,6 @@ private struct MushafPageContent: View {
         .smallMediumSheetPresentation()
     }
 
-    @ViewBuilder
-    private var topHeader: some View {
-        if let surah = page.firstSurah {
-            SurahSectionHeader(surah: surah)
-                .padding(.horizontal)
-                .padding(.vertical, 4)
-                // Keep the tapped header lit while its info sheet is open (task: highlight the selection until
-                // the sheet is gone). While this surah is loaded in the player, the header carries the accent
-                // tint instead - the page-top twin of the in-page name highlight.
-                .background(
-                    RoundedRectangle(cornerRadius: 18, style: .continuous)
-                        .fill(infoSurah?.id == surah.id
-                              ? Color.secondary.opacity(0.18)
-                              : quranPlayer.currentSurahNumber == surah.id
-                                ? settings.accentColor.color.opacity(0.18)
-                                : .clear)
-                )
-                .shadow(color: .black.opacity(0.15), radius: 2, x: 0, y: 0)
-                .conditionalGlassEffect(rectangle: true)
-                .padding(.top, 4)
-                .padding(.horizontal, settings.defaultView ? 20 : 16)
-                // Tap the header to read about the surah. The star/emoji keep their own tap gestures -
-                // a child gesture wins over this one, so favoriting still works.
-                .contentShape(Rectangle())
-                .onTapGesture { showSurahInfo(surahID: surah.id) }
-                .animation(.easeInOut(duration: 0.15), value: infoSurah?.id == surah.id)
-        }
-    }
-
     /// The spine: a hairline that fades out at both ends, drawn down the inner edge of the leaf.
     private var spineRule: some View {
         LinearGradient(
@@ -1518,7 +1628,7 @@ struct MushafPageComposer {
     /// Always the Uthmani face, even when the reader picked "Basic": that font is what draws the ayah number as the
     /// circled-flower ornament, so the system fallback would print bare digits mid-page.
     private func markerFont(_ size: CGFloat) -> UIFont {
-        UIFont(name: Settings.qiraatUthmaniFontName, size: size) ?? .roundedSystemFont(ofSize: size)
+        UIFont(name: Settings.hafsUthmaniFontName, size: size) ?? .roundedSystemFont(ofSize: size)
     }
 
     /// Mushaf pages 1 and 2 (al-Fatihah, and the opening of al-Baqarah) are set centered in a printed mushaf - 
@@ -1566,7 +1676,9 @@ struct MushafPageComposer {
         case .transliteration: return ayah.textTransliteration
         case .clearQuran:      return ayah.textEnglishMustafa
         case .saheeh:          return ayah.textEnglishSaheeh
-        case .arabic:          return ""
+        // Neither composes English body text: Arabic draws the mushaf itself, and the PDF is a page image
+        // that never reaches this composer at all (`SurahView` swaps in the facsimile reader instead).
+        case .arabic, .pdf:    return ""
         }
     }
 
@@ -2319,6 +2431,12 @@ enum MushafPageRenderCache {
         let s = Settings.shared
         return [
             s.fontArabic,
+            // Was missing: `fontArabic` is only the reader's PICK (Uthmani/IndoPak/Basic) - which of the two
+            // Uthmani faces actually draws the page is decided by the script style on top of it. Without this
+            // the key never moved when Automatic -> Maghribi did, so every composed page kept its old face and
+            // the setting looked dead. It appeared to work only when the riwayah changed too, because THAT
+            // moved `displayQiraahForArabic` below and busted the key as a side effect.
+            s.arabicScriptStyle.rawValue,
             // Full precision, matching the CGFloat the composer actually fits with (and the list-mode
             // signature). Truncating to Int would collide two fractional sizes onto one cache key.
             "\(s.fontArabicSize)",

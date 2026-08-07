@@ -313,7 +313,9 @@ struct AdhanView: View {
                 return .travelTurnOffAutomatic
             }
         }
-        if settings.calculationAutoChanged {
+        // Likewise the calculation card: only on the device that owns the region detection. A paired watch
+        // takes the phone's method, so its buttons would fight the value it was just handed.
+        if settings.ownsAutomaticCalculationCheck, settings.calculationAutoChanged {
             return .calculationAutomaticChanged
         }
         if !settings.locationNeverAskAgain && settings.showLocationAlert {

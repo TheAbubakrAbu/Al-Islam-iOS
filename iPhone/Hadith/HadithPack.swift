@@ -453,7 +453,9 @@ final class HadithPack: @unchecked Sendable {
             var strings: [String] = []
             strings.reserveCapacity(1024)
             while reader.remaining >= 4 {
-                strings.append(reader.string())
+                // Once per block (cached), never per row: the Hafs face has no precomposed آ,
+                // so it is swapped for its canonical parts here - see `decomposingAlefMadda`.
+                strings.append(reader.string().decomposingAlefMadda)
             }
             return strings
         }

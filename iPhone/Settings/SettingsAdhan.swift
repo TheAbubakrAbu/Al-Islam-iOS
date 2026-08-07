@@ -924,11 +924,47 @@ extension Settings {
         return PrayerCalculationCatalog.muslimWorldLeagueID
     }
 
+    /// Whether THIS device may auto-switch `prayerCalculation` from the detected region.
+    ///
+    /// Exactly the `ownsTravelingModeAutoCheck` rule, and for exactly the same reason. Both devices can
+    /// derive this one - unlike traveling mode it needs no home location, only a geocode - so a **paired**
+    /// watch geocodes its own position, reaches its own verdict, and writes its own `prayerCalculation`.
+    /// That verdict then travels back and argues with the phone's: it clobbers a manual Override, and where
+    /// it lands on a method the phone doesn't hold, the phone's next fetch re-detects a "change" and
+    /// re-raises the confirmation card the user already answered - the "Calculation Method Changed card
+    /// keeps coming back" bug, which is the traveling-mode bug wearing a different hat.
+    ///
+    /// The iPhone is the authority and syncs the resulting method to the watch (one-way; see
+    /// `watchSyncSnapshot`). A **standalone** watch (no companion iPhone app) has no phone to defer to and
+    /// keeps the check. Before WCSession activation resolves the answer isn't known yet - treat that as
+    /// "not mine": skipping one early check is harmless (the next fetch re-runs it), overwriting the
+    /// phone's method is not.
+    var ownsAutomaticCalculationCheck: Bool {
+        #if os(watchOS)
+        // Queried directly (rather than via WatchConnectivityManager) so this also compiles in targets that
+        // don't include the manager source, e.g. the watch Complication extension.
+        let session = WCSession.default
+        return session.activationState == .activated && !session.isCompanionAppInstalled
+        #else
+        return true
+        #endif
+    }
+
     /// Returns `true` if it switched `prayerCalculation`, so the enclosing fetch recomputes the prayer list.
     @discardableResult
     func checkAutomaticPrayerCalculation() -> Bool {
-        guard Bundle.main.bundleIdentifier?.contains("Widget") != true,
-              calculationAutomatic,
+        guard Bundle.main.bundleIdentifier?.contains("Widget") != true else { return false }
+
+        guard ownsAutomaticCalculationCheck else {
+            // A paired watch defers to the phone, same as `checkIfTraveling`. Any standing auto-change flag
+            // here is a leftover from a build where the watch still ran this check itself (or from before
+            // pairing): presenting its dialog would offer buttons that flip the just-synced method right
+            // back, so retire the flag instead of showing it.
+            if calculationAutoChanged { calculationAutoChanged = false }
+            return false
+        }
+
+        guard calculationAutomatic,
               let currentLocation = currentLocation,
               currentLocation.latitude != 1000,
               currentLocation.longitude != 1000
@@ -954,6 +990,15 @@ extension Settings {
             return false
         }
 
+        // Has the user already answered the card for THIS detection - same region, same recommendation? Both
+        // Confirm and Override are final answers, so asking again is never right; whatever moved
+        // `prayerCalculation` off their answer (a peer's copy of it, a restore, a method that was retired
+        // from the catalogue), re-raising the card is how the user experiences it as a bug. The method still
+        // switches to the region's - only the prompt, and its announcement, are retired.
+        let alreadyAnswered = !countryCode.isEmpty
+            && calculationAutoAnsweredCountryCode == countryCode
+            && calculationAutoAnsweredMethod == detectedMethod
+
         let currentParams = calculationParameters(forStoredLabel: previousMethod)
         withAnimation {
             prayerCalculation = detectedMethod
@@ -962,12 +1007,12 @@ extension Settings {
         calculationAutoPreviousMethod = previousMethod
         calculationAutoDetectedMethod = detectedMethod
         calculationAutoDetectedCountryCode = countryCode
-        calculationAutoChanged = true
+        calculationAutoChanged = !alreadyAnswered
 
         // The method switched either way, but the prayer TIMES only actually move if the angles differ. When they
         // don't (Custom sitting on the MWL angles, or two catalogue methods that agree), skip the push
         // notification - it would announce a change to times that are identical to the ones already on screen.
-        guard detectedParams != currentParams else { return true }
+        guard !alreadyAnswered, detectedParams != currentParams else { return true }
 
         #if os(iOS)
         // Same rate limit as the traveling-mode announcement: the method itself still switches; only the
@@ -1541,7 +1586,6 @@ extension Settings {
                     await updateCity(latitude: loc.latitude, longitude: loc.longitude)
                     if Self.isAppProcess,
                        runAutoChecks,
-                       calculationAutomatic,
                        checkAutomaticPrayerCalculation() {
                         // The method changed after this fetch already computed, so recompute with it. Checks
                         // stay off: the switch was just made from a fresh placemark, nothing to re-detect.
@@ -1576,9 +1620,12 @@ extension Settings {
             if checkIfTraveling() {
                 autoStateChanged = true
             }
+            // No `calculationAutomatic` precondition either, for the same reason as above: the check
+            // re-guards it itself, and on a paired watch its non-owner path also retires stale auto-change
+            // flags - it must run even when that precondition is false.
             // Coordinate placeholder city means ISO country may still be wrong or empty; geocode runs
             // asynchronously above - the check reruns from that Task once the placemark is known.
-            if calculationAutomatic, !loc.city.contains("("), checkAutomaticPrayerCalculation() {
+            if !loc.city.contains("("), checkAutomaticPrayerCalculation() {
                 autoStateChanged = true
             }
         }
@@ -2876,11 +2923,24 @@ extension Settings {
             prayerCalculation = calculationAutoPreviousMethod
         }
         calculationAutomatic = false
-        calculationAutoChanged = false
+        recordAutomaticCalculationAnswer()
         fetchPrayerTimes(force: true, runAutoChecks: false)
     }
 
     func confirmAutomaticCalculationChange() {
+        recordAutomaticCalculationAnswer()
+    }
+
+    /// Files the user's answer to the calculation card against the *detection* it answered, not just as a
+    /// "dismissed" bit. Clearing `calculationAutoChanged` alone was never durable: anything that later moved
+    /// `prayerCalculation` away from the answer made the next fetch see a fresh region change and set the
+    /// flag again, so the same card returned. Recording the (region, recommended method) pair means the
+    /// detection they answered is answered for good - see `checkAutomaticPrayerCalculation`. Re-arming
+    /// "Choose Automatically" clears it (see `calculationAutomatic`'s didSet), because that is the user
+    /// explicitly asking to be told again.
+    private func recordAutomaticCalculationAnswer() {
+        calculationAutoAnsweredCountryCode = calculationAutoDetectedCountryCode
+        calculationAutoAnsweredMethod = calculationAutoDetectedMethod
         calculationAutoChanged = false
     }
 }

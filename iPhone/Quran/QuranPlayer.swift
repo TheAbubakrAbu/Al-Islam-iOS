@@ -51,23 +51,8 @@ final class QuranPlayer: ObservableObject {
     }
     @Published var offlineReciterSwitch: OfflineReciterSwitch?
 
-    /// A single-ayah play held back because the selected reciter has no verse-by-verse recordings of
-    /// their own (ayah playback would silently substitute Al-Minshawi's Murattal) and the user hasn't
-    /// OK'd that substitution for this reciter yet. The reader presents a Play/Cancel dialog:
-    /// `confirmMinshawiAyahPlayback()` remembers the reciter and starts the held playback;
-    /// `cancelMinshawiAyahPlayback()` just drops it. Asked once per reciter, remembered across launches.
-    struct PendingMinshawiAyahPlay {
-        let surahNumber: Int
-        let ayahNumber: Int
-        let continueRecitation: Bool
-        let repeatCount: Int
-        let reciter: Reciter
-    }
-    @Published var showMinshawiAyahConfirmation = false
-    private(set) var pendingMinshawiAyahPlay: PendingMinshawiAyahPlay?
-
-    /// Reciter ids whose Minshawi ayah substitution the user has already confirmed. Joined with a unit
-    /// separator because `Reciter.id` itself contains "|".
+    /// Reciter ids whose Minshawi ayah substitution the user has already been told about. Joined with a
+    /// unit separator because `Reciter.id` itself contains "|". Remembered across launches.
     @AppStorage("confirmedMinshawiAyahFallbackReciterIDs") private var confirmedMinshawiAyahFallbackReciterIDsRaw = ""
     private static let minshawiConfirmationSeparator = "\u{1F}"
 
@@ -1147,27 +1132,8 @@ final class QuranPlayer: ObservableObject {
             return
         }
 
-        #if os(iOS)
-        // First-time heads-up before the silent voice swap: this reciter has no verse-by-verse
-        // recordings, so ayah playback substitutes Al-Minshawi (Murattal). Hold the play and let the
-        // reader confirm; once confirmed for a reciter it is remembered and never asked again.
-        // Skipped when the ayah will actually be cut from the reciter's own downloaded surah audio
-        // (their real voice), and for the internal bismillah insert.
-        if !isBismillah,
-           wouldSubstituteMinshawiForAyah(reciter: resolvedReciter, surahNumber: surahNumber, ayahNumber: ayahNumber),
-           !isMinshawiAyahFallbackConfirmed(resolvedReciter) {
-            pendingMinshawiAyahPlay = PendingMinshawiAyahPlay(
-                surahNumber: surahNumber,
-                ayahNumber: ayahNumber,
-                continueRecitation: continueRecitation,
-                repeatCount: repeatCount,
-                reciter: resolvedReciter
-            )
-            showMinshawiAyahConfirmation = true
-            return
-        }
-        #endif
-
+        // Playback is unconditional: the Minshawi-substitution heads-up is a SELECTION-time notice
+        // (`needsMinshawiFallbackNotice(for:)`), so pressing play never opens a dialog.
         beginAyahPlayback(
             surahNumber: surahNumber,
             ayahNumber: ayahNumber,
@@ -1209,16 +1175,28 @@ final class QuranPlayer: ObservableObject {
         )
     }
 
-    /// True when playing this ayah with this reciter would actually put Al-Minshawi's voice on: the
-    /// reciter has no verse-by-verse feed of their own, AND the ayah can't be cut from a downloaded
-    /// surah file (which plays the reciter's own voice and needs no heads-up).
-    private func wouldSubstituteMinshawiForAyah(reciter: Reciter, surahNumber: Int, ayahNumber: Int) -> Bool {
-        guard reciter.defaultToMinshawi else { return false }
-        if reciterDownloadManager.localSurahURL(reciter: reciter, surahNumber: surahNumber) != nil,
-           AyahTimingStore.shared.validatedWindow(reciter: reciter, surahNumber: surahNumber, ayahNumber: ayahNumber) != nil {
-            return false
-        }
-        return true
+    // MARK: - Minshawi ayah-fallback notice (selection time)
+    //
+    // Reciters with no verse-by-verse feed of their own silently borrow Al-Minshawi's Murattal for
+    // single ayahs and custom ranges. The user is told about that ONCE, at the moment they pick such a
+    // reciter - never again, and never by interrupting a play. The reciter picker owns the dialog; this
+    // player owns the memory of who has already been told.
+
+    /// True when choosing `reciter` should first surface the substitution notice. False once the user
+    /// has acknowledged it for that reciter, on this or any later launch.
+    func needsMinshawiFallbackNotice(for reciter: Reciter) -> Bool {
+        reciter.defaultToMinshawi && !isMinshawiAyahFallbackConfirmed(reciter)
+    }
+
+    /// The picker's "select anyway" tap: record that this reciter's notice has been shown, so the
+    /// dialog never appears for them again.
+    func confirmMinshawiFallbackNotice(for reciter: Reciter) {
+        rememberMinshawiAyahFallbackConfirmed(reciter)
+    }
+
+    /// The notice's body text, kept here so every presenter words the substitution identically.
+    func minshawiFallbackNoticeMessage(for reciter: Reciter?) -> String {
+        "\(reciter?.name ?? "This reciter") has no verse-by-verse recordings. Individual ayahs and custom ranges will play in \(Reciter.minshawiAyahFallbackName). This won't be asked again for this reciter."
     }
 
     private func isMinshawiAyahFallbackConfirmed(_ reciter: Reciter) -> Bool {
@@ -1234,28 +1212,6 @@ final class QuranPlayer: ObservableObject {
             .filter { !$0.isEmpty }
         ids.append(reciter.id)
         confirmedMinshawiAyahFallbackReciterIDsRaw = ids.joined(separator: Self.minshawiConfirmationSeparator)
-    }
-
-    /// "Play" on the Minshawi substitution dialog: remember this reciter and start the held playback.
-    func confirmMinshawiAyahPlayback() {
-        guard let pending = pendingMinshawiAyahPlay else { return }
-        pendingMinshawiAyahPlay = nil
-        showMinshawiAyahConfirmation = false
-        rememberMinshawiAyahFallbackConfirmed(pending.reciter)
-        beginAyahPlayback(
-            surahNumber: pending.surahNumber,
-            ayahNumber: pending.ayahNumber,
-            isBismillah: false,
-            continueRecitation: pending.continueRecitation,
-            repeatCount: pending.repeatCount,
-            reciter: pending.reciter
-        )
-    }
-
-    /// "Cancel" on the Minshawi substitution dialog: drop the held playback, remember nothing.
-    func cancelMinshawiAyahPlayback() {
-        pendingMinshawiAyahPlay = nil
-        showMinshawiAyahConfirmation = false
     }
 
     func playCustomRange(

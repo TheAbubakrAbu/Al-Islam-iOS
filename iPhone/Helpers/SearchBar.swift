@@ -7,17 +7,22 @@ struct SearchBar: View {
     /// Bump this to put the keyboard in the search bar. A token rather than a `Bool` so the same request can be
     /// made twice in a row (search, dismiss the keyboard, search again) and still be seen as a new one.
     var focusRequestID: Int = 0
+    /// Field placeholder. Screens that search one specific thing say so ("Search tafsir"),
+    /// which is what the `.searchable` prompts used to carry.
+    var placeholder: String = "Search"
     var onSearchButtonClicked: (() -> Void)?
     var onFocusChanged: ((Bool) -> Void)?
 
     init(
         text: Binding<String>,
         focusRequestID: Int = 0,
+        placeholder: String = "Search",
         onSearchButtonClicked: (() -> Void)? = nil,
         onFocusChanged: ((Bool) -> Void)? = nil
     ) {
         _text = text
         self.focusRequestID = focusRequestID
+        self.placeholder = placeholder
         self.onSearchButtonClicked = onSearchButtonClicked
         self.onFocusChanged = onFocusChanged
     }
@@ -28,6 +33,7 @@ struct SearchBar: View {
                 SearchBarUIKit(
                     text: $text,
                     focusRequestID: focusRequestID,
+                    placeholder: placeholder,
                     onSearchButtonClicked: onSearchButtonClicked,
                     onFocusChanged: onFocusChanged
                 )
@@ -35,6 +41,7 @@ struct SearchBar: View {
                 SearchBarUIKit(
                     text: $text,
                     focusRequestID: focusRequestID,
+                    placeholder: placeholder,
                     onSearchButtonClicked: onSearchButtonClicked,
                     onFocusChanged: onFocusChanged
                 )
@@ -54,6 +61,7 @@ struct SearchBarUIKit: UIViewRepresentable {
     @Binding var text: String
 
     var focusRequestID: Int = 0
+    var placeholder: String = "Search"
     var onSearchButtonClicked: (() -> Void)?
     var onFocusChanged: ((Bool) -> Void)?
 
@@ -68,7 +76,7 @@ struct SearchBarUIKit: UIViewRepresentable {
     func makeUIView(context: Context) -> UISearchBar {
         let searchBar = UISearchBar(frame: .zero)
         searchBar.delegate = context.coordinator
-        searchBar.placeholder = "Search"
+        searchBar.placeholder = placeholder
         searchBar.autocorrectionType = .no
         searchBar.autocapitalizationType = .none
         searchBar.returnKeyType = .search

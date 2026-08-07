@@ -300,10 +300,11 @@ final class WatchConnectivityManager: NSObject, WCSessionDelegate {
             var winners: [String: Any] = [:]
             for (key, field) in incoming {
                 #if os(iOS)
-                // `travelingMode` syncs ONE WAY (phone -> watch). Drop the key at the merge layer - not
-                // even its stamp is adopted - so a peer that still sends it (an older watch build, or a
-                // watch-side manual flip) can never influence the phone's state or its recency record.
-                if key == "travelingMode" { continue }
+                // The phone-authoritative keys sync ONE WAY (phone -> watch). Drop them at the merge layer
+                // - not even their stamps are adopted - so a peer that still sends them (an older watch
+                // build, or a watch-side manual flip) can never influence the phone's state or its recency
+                // record. See `Settings.phoneAuthoritativeSyncKeys`.
+                if Settings.phoneAuthoritativeSyncKeys.contains(key) { continue }
                 #endif
                 // Skip a stamp absurdly far in our future (mis-set peer clock) so it can't pin this key
                 // ahead and freeze out our own legitimately-newer edits.
@@ -462,6 +463,26 @@ extension Settings {
         "copyAyahArabic", "copyAyahTransliteration", "copyAyahEnglishSaheeh", "copyAyahEnglishMustafa",
     ]
 
+    /// Settings the **iPhone alone** may assert: they still travel phone -> watch, but a watch's copy is
+    /// never transmitted and is dropped at the phone's merge layer if an older build sends it anyway.
+    ///
+    /// All three are values a device DERIVES from where it is, rather than values the user typed in - which
+    /// is what makes them different from every other synced key. Two devices deriving the same thing from
+    /// two slightly different fixes disagree, and the disagreement round-trips forever:
+    /// - `travelingMode`: the watch seeds its own home location, so its verdict differs from the phone's and
+    ///   flips the just-synced value straight back (the original bug this rule was written for).
+    /// - `prayerCalculation` + `calculationAutomatic`: the watch geocodes its own position and runs its own
+    ///   region detection, so it re-asserts its own method over the user's Confirm/Override - and echoes
+    ///   `calculationAutomatic = true` back over a phone that just turned it off, re-arming the detection
+    ///   that raises the "Calculation Method Changed" card. Same failure, same rule.
+    ///
+    /// The phone runs the detection and syncs the RESULT; a paired watch consumes it and skips its own check
+    /// (`ownsTravelingModeAutoCheck` / `ownsAutomaticCalculationCheck`). A standalone watch has no peer to
+    /// receive from, keeps both checks, and is unaffected by this list.
+    static let phoneAuthoritativeSyncKeys: Set<String> = [
+        "travelingMode", "prayerCalculation", "calculationAutomatic",
+    ]
+
     /// A snapshot of the synced settings, containing **only keys this device has actually set**. A value
     /// the user never touched is absent from its backing store, so it is left out - and the receiver only
     /// writes keys that are present. That is the core safeguard against the "everything reset" bug: a
@@ -482,19 +503,28 @@ extension Settings {
         if chosen.contains("highLatitudeRule") { dict["highLatitudeRule"] = highLatitudeRule }
         if chosen.contains("customPrayerNames") { dict["customPrayerNames"] = customPrayerNames }
 
-        // `travelingMode` syncs ONE WAY: phone -> watch, value only. The phone is the sole authority -
-        // it owns the home location and every auto-check. A watch-side flip stays on the watch (its
-        // snapshot simply never carries the key), so the watch can never overwrite the phone's state.
+        // The phone-authoritative keys sync ONE WAY: phone -> watch, value only. The phone is the sole
+        // authority - it owns the home location and runs every auto-check. A watch-side flip stays on the
+        // watch (its snapshot simply never carries the key), so the watch can never overwrite the phone's
+        // state. See `phoneAuthoritativeSyncKeys`.
+        //
+        // `prayerCalculation` used to be sent only when `calculationAutomatic` was OFF, because both devices
+        // ran the detection and the gate was the only thing damping the resulting loop. Now that a paired
+        // watch doesn't run it at all (`ownsAutomaticCalculationCheck`), the gate has to go: with the watch
+        // no longer deriving a method, withholding the phone's automatic one would leave a paired watch
+        // computing its prayer times from whatever method it happened to be holding.
         #if os(iOS)
         if chosen.contains("travelingMode") { dict["travelingMode"] = travelingMode }
+        if chosen.contains("prayerCalculation") { dict["prayerCalculation"] = prayerCalculation }
         #endif
-        // `prayerCalculation` keeps the gate: BOTH devices can derive it (it needs no home location), so the
-        // two-deriving-devices loop is still real there. Only a manual choice (automatic OFF) travels.
-        if chosen.contains("prayerCalculation"), !calculationAutomatic { dict["prayerCalculation"] = prayerCalculation }
 
         // @AppStorage settings - likewise only keys that have been explicitly written.
         let store = UserDefaults.standard
         for key in Self.watchSyncedAppStorageKeys where store.object(forKey: key) != nil {
+            #if os(watchOS)
+            // A watch never asserts these; it only receives them.
+            if Self.phoneAuthoritativeSyncKeys.contains(key) { continue }
+            #endif
             dict[key] = store.object(forKey: key)
         }
         return dict
@@ -518,24 +548,29 @@ extension Settings {
         if let v = dict["highLatitudeRule"] as? String, v != highLatitudeRule { highLatitudeRule = v; changed = true }
         if let v = dict["customPrayerNames"] as? [String: String], v != customPrayerNames { customPrayerNames = v; changed = true }
 
-        // These two arrive only when the sender's automatic mode is off (see `watchSyncSnapshot`), so they
-        // are the user's manual choice; the recompute below runs with auto-checks off so this device cannot
-        // immediately overwrite them.
-        if let v = dict["prayerCalculation"] as? String, v != prayerCalculation {
-            prayerCalculation = v
-            changed = true
-        }
-        // Phone -> watch only: the watch adopts the phone's travelingMode; the phone ignores the key
-        // entirely (an older watch build may still send it - it must not win).
+        // Phone -> watch only: the watch adopts the phone's travelingMode and prayerCalculation; the phone
+        // ignores both keys entirely (an older watch build may still send them - they must not win). The
+        // recompute below runs with auto-checks off, so receiving a method can't make this device
+        // immediately re-detect and argue with it.
         #if os(watchOS)
         if let v = dict["travelingMode"] as? Bool, v != travelingMode {
             travelingMode = v
+            changed = true
+        }
+        if let v = dict["prayerCalculation"] as? String, v != prayerCalculation {
+            prayerCalculation = v
             changed = true
         }
         #endif
 
         let store = UserDefaults.standard
         for key in Self.watchSyncedAppStorageKeys {
+            #if os(iOS)
+            // Phone-authoritative: normally already dropped at the merge layer, but the apply must refuse
+            // them on its own too - it is the only thing standing between a stray payload and the user's
+            // explicit choice.
+            if Self.phoneAuthoritativeSyncKeys.contains(key) { continue }
+            #endif
             guard let incoming = dict[key] else { continue }
             let current = store.object(forKey: key)
             // NSObject equality covers every plist type the snapshot can carry (numbers, strings, arrays, dicts).

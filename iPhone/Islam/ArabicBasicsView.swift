@@ -25,7 +25,10 @@ struct ArabicBasicsView: View {
         }
         .applyConditionalListStyle()
         .navigationTitle("Basic Grammar")
-        .onDisappear { ArabicSpeech.shared.stop() }
+        .onDisappear {
+            ArabicSpeech.shared.stop()
+            ArabicPracticeSelection.shared.clear()
+        }
         #if os(iOS)
         // Apple Music-style: the bottom bar minimizes while scrolling down, restores on scroll-up.
         .collapseBarsOnScroll($barsCollapsed)

@@ -8,13 +8,17 @@ struct TrackedBar: View {
     let fraction: CGFloat
     let height: CGFloat
     let color: Color
+    /// Which edge the fill grows FROM. Opt-in (default leading, i.e. left-to-right) because every list-mode
+    /// and Hadith caller reads left-to-right; only the mushaf footer flips it, where the whole page - and so
+    /// the whole sense of "forward" - runs right-to-left.
+    var rightToLeft: Bool = false
 
     var body: some View {
         let clamped = min(max(fraction, 0), 1)
         return GeometryReader { geo in
             Capsule()
                 .fill(color.opacity(0.20))
-                .overlay(alignment: .leading) {
+                .overlay(alignment: rightToLeft ? .trailing : .leading) {
                     Capsule()
                         .fill(color)
                         .frame(width: max(geo.size.width * clamped, clamped > 0 ? height : 0))
@@ -216,9 +220,6 @@ struct SurahView: View {
     @State private var arrivalAyahID: Int? = nil
     @State private var showingSettingsSheet = false
     @State private var showAlert = false
-    /// Local mirror of `QuranPlayer.showMinshawiAyahConfirmation` (same pattern as `showAlert`): when
-    /// this reader is frontmost it claims the dialog so it and QuranView never both try to present.
-    @State private var showMinshawiConfirm = false
     @State private var showCustomRangeSheet = false
     /// In page mode the reader crosses surah boundaries, so the toolbar must follow the page rather than the
     /// surah this view was opened with. `nil` in list mode, where `surah` never changes.
@@ -227,6 +228,10 @@ struct SurahView: View {
     /// Bumped on every in-place surah navigation so the page reader re-seeds even when the target
     /// EQUALS the `surah` prop (whose `.onChange` then never fires) - the page-mode "Choose Surah" fix.
     @State private var pageJumpToken = 0
+    /// Whether the CURRENT `pageJumpToken` was bumped by playback ("go to what's playing" / starting a
+    /// recitation whose ayah is on another page). The page reader turns the page for those and lands
+    /// instantly for a deliberate surah/search navigation. Every writer of `pageJumpToken` sets this.
+    @State private var pageJumpIsPlayback = false
 
     @State private var showSurahInfoSheet = false
     @State private var showReciterPickerSheet = false
@@ -245,6 +250,11 @@ struct SurahView: View {
     let initialSurah: Surah
     let initialAyah: Int?
     var onSelectSurah: ((Int) -> Void)? = nil
+    /// Column navigation's ayah-aware twin of `onSelectSurah`: re-points the parent's detail route at a
+    /// surah AND an ayah within it. Used by "go to what's playing", which has to land on an ayah of a
+    /// surah the reader isn't currently showing. Nil in stack navigation, where the surah is swapped in
+    /// place instead.
+    var onSelectAyah: ((Int, Int?) -> Void)? = nil
 
     /// Set when the user goes to the previous/next surah or picks one - the view swaps the surah **in place**
     /// instead of pushing another `SurahView` onto the stack. `onChange(of: surah.id)` already rebuilds the
@@ -268,10 +278,16 @@ struct SurahView: View {
     /// unless a mode switch just named an ayah to land on, which wins over both.
     var ayah: Int? { modeSwitchAyah ?? (swappedSurah == nil ? initialAyah : nil) }
 
-    init(surah: Surah, ayah: Int? = nil, onSelectSurah: ((Int) -> Void)? = nil) {
+    init(
+        surah: Surah,
+        ayah: Int? = nil,
+        onSelectSurah: ((Int) -> Void)? = nil,
+        onSelectAyah: ((Int, Int?) -> Void)? = nil
+    ) {
         self.initialSurah = surah
         self.initialAyah = ayah
         self.onSelectSurah = onSelectSurah
+        self.onSelectAyah = onSelectAyah
     }
 
     private final class PreparedSurahCache {
@@ -1320,13 +1336,30 @@ struct SurahView: View {
         #if os(iOS)
         if settings.quranPageMode {
             // The reader owns the bottom stack: these controls sit ABOVE its page-navigation footer, which
-            // stays pinned at the very bottom.
+            // stays pinned at the very bottom. The printed-mushaf facsimile is NOT a separate reader - it
+            // swaps only the page body inside this one (see `SurahPageReader.facsimileDocument`), so the
+            // header, pickers, meters and play control are shared with the composed pages.
             SurahPageReader(
                 surah: surah,
                 initialAyah: ayah,
                 jumpToken: pageJumpToken,
-                onSurahChange: { pageSurah = $0 },
-                onPageAnchor: { surahID, ayahID in pageAnchor = (surahID, ayahID) },
+                animateJump: pageJumpIsPlayback,
+                // The reader now only calls this when the page's TOP surah has actually changed (see
+                // `SurahPageReader.reportSurah`) - a swipe between two pages of the same surah reports
+                // nothing at all, so this never runs and `pageSurah` never moves. The id check below is
+                // kept as a cheap backstop, not as the mechanism.
+                onSurahChange: { reportedSurah in
+                    guard displayedSurah.id != reportedSurah.id else { return }
+                    pageSurah = reportedSurah
+                },
+                // Guarded: `pageAnchor` is a tuple, so SwiftUI can't dedupe it and every write invalidates
+                // the WHOLE of SurahView - toolbar principal item included. Re-installing the title view on
+                // each swipe is the other half of "the header re-sets when it shouldn't", and it fired even
+                // when the anchor was unchanged.
+                onPageAnchor: { surahID, ayahID in
+                    guard pageAnchor?.surahID != surahID || pageAnchor?.ayahID != ayahID else { return }
+                    pageAnchor = (surahID, ayahID)
+                },
                 highlightedAyah: $highlightedAyah,
                 searchActive: $pageSearchActive,
                 arrivalHighlight: {
@@ -1350,40 +1383,19 @@ struct SurahView: View {
                         }
                     }
                 },
+                // Same rule: only write what actually needs clearing. An ordinary swipe through a surah
+                // has nothing selected and no arrival snippet, and blindly re-assigning empty over empty
+                // re-ran this whole view (and its toolbar) once per page.
                 onPageTurned: {
-                    selectedAyahIDs = []
-                    arrivalTerm = nil
-                    arrivalAyahID = nil
+                    if !selectedAyahIDs.isEmpty { selectedAyahIDs = [] }
+                    if arrivalTerm != nil { arrivalTerm = nil }
+                    if arrivalAyahID != nil { arrivalAyahID = nil }
                 },
                 onChooseReciter: {
                     showReciterPickerSheet = true
                 }
             ) {
-                let active = quranPlayer.isPlaying || quranPlayer.isPaused
-                VStack(spacing: 0) {
-                    // Select mode swaps the search cluster for the bulk-action bar, exactly like the list.
-                    if isSelectingAyahs {
-                        selectionActionBar
-                    } else {
-                    // Always present in page mode: search sits dead center, with the tajweed legend and the
-                    // riwayah picker flanking it when they apply (an English page shows neither, so the bar
-                    // is just the search).
-                    pageBottomControlsBar
-                    }
-
-                    if active {
-                        NowPlayingView(quranView: false)
-                            .padding(.horizontal, 24)
-                            .padding(.top, SafeAreaInsetVStackSpacing.standard)
-                            .transition(.opacity)
-                    }
-                }
-                // Same breathing room the list reader gives this bar - and here the bottom padding is
-                // also what separates it from the page-navigation footer pinned underneath.
-                .padding(.top, SafeAreaInsetVStackSpacing.standard)
-                .padding(.bottom, SafeAreaInsetVStackSpacing.standard)
-                .background(Color.white.opacity(0.00001))
-                .animation(.easeInOut, value: active)
+                pageReaderControls
             }
             // The list reader gets the top accent glow through `applyConditionalListStyle`; the pager
             // is not a list, so it draws the same wash itself - the mushaf shouldn't be the one
@@ -1572,13 +1584,6 @@ struct SurahView: View {
             Button("OK") { quranPlayer.offlineReciterSwitch = nil }
         } message: {
             Text(quranPlayer.playbackAlertMessage)
-        }
-        .onChange(of: quranPlayer.showMinshawiAyahConfirmation) { if $0 { showMinshawiConfirm = true; quranPlayer.showMinshawiAyahConfirmation = false } }
-        .confirmationDialog("Play in Al-Minshawi's voice?", isPresented: $showMinshawiConfirm, titleVisibility: .visible) {
-            Button("Play") { quranPlayer.confirmMinshawiAyahPlayback() }
-            Button("Cancel", role: .cancel) { quranPlayer.cancelMinshawiAyahPlayback() }
-        } message: {
-            Text("\(quranPlayer.pendingMinshawiAyahPlay?.reciter.name ?? "This reciter") has no verse-by-verse recordings; ayah playback uses \(Reciter.minshawiAyahFallbackName). This won't be asked again for this reciter.")
         }
         #else
         surahCoreBody
@@ -2599,9 +2604,50 @@ struct SurahView: View {
     /// The page reader's bottom bar: whole-Quran search always dead center, the tajweed legend and riwayah
     /// picker flanking it when they apply. English page text renders neither tajweed nor qiraat, so those
     /// two hide - the ZStack keeps the search centered whatever survives around it.
+    /// The riwayah whose facsimile the PDF reader shows - the same one the Arabic text follows.
+    private var pdfRiwayahTag: String {
+        settings.displayQiraahForArabic ?? Settings.Riwayah.hafsTag
+    }
+
+    /// The controls that sit under the pages - shared verbatim by the text reader and the PDF facsimile, so
+    /// search and the riwayah picker land in the same place in both.
+    private var pageReaderControls: some View {
+        let active = quranPlayer.isPlaying || quranPlayer.isPaused
+        return VStack(spacing: 0) {
+            // Select mode swaps the search cluster for the bulk-action bar, exactly like the list.
+            if isSelectingAyahs {
+                selectionActionBar
+            } else {
+                // Always present in page mode: search sits dead center, with the tajweed legend and the
+                // riwayah picker flanking it when they apply (an English page shows neither, so the bar
+                // is just the search).
+                pageBottomControlsBar
+            }
+
+            if active {
+                // Tapping the bar jumps to what's playing - here that means the PAGE holding the
+                // recited ayah (or the playing surah's first page).
+                NowPlayingView(quranView: false, onOpenPlayback: { _ in goToNowPlaying() })
+                    .padding(.horizontal, 24)
+                    .padding(.top, SafeAreaInsetVStackSpacing.standard)
+                    .transition(.opacity)
+            }
+        }
+        // Same breathing room the list reader gives this bar - and here the bottom padding is
+        // also what separates it from the page-navigation footer pinned underneath.
+        .padding(.top, SafeAreaInsetVStackSpacing.standard)
+        .padding(.bottom, SafeAreaInsetVStackSpacing.standard)
+        .background(Color.white.opacity(0.00001))
+        .animation(.easeInOut, value: active)
+    }
+
     private var pageBottomControlsBar: some View {
-        let arabicPage = !settings.resolvedMushafPageLanguage.isEnglish
+        let language = settings.resolvedMushafPageLanguage
+        let arabicPage = !language.isEnglish
+        // The facsimile carries the print's own colouring and cannot be re-coloured, so the tajweed legend
+        // has nothing to describe there. The riwayah picker DOES stay - it is what swaps which mushaf shows.
         let tajweedCanRenderNow = arabicPage
+            && !language.isPDF
             && settings.showTajweedColors
             && settings.showArabicText
             && settings.isHafsDisplay
@@ -2734,28 +2780,11 @@ struct SurahView: View {
 
     @ViewBuilder
     private func nowPlayingInset(proxy: ScrollViewProxy) -> some View {
-        NowPlayingView(quranView: false)
-            .onTapGesture {
-                guard
-                    let curSurah = quranPlayer.currentSurahNumber,
-                    let curAyah = quranPlayer.currentAyahNumber,
-                    curSurah == surah.id
-                else { return }
-
-                settings.hapticFeedback()
-
-                if !searchText.isEmpty {
-                    withAnimation {
-                        searchText = ""
-                        self.endEditing()
-                    }
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
-                        withAnimation { proxy.scrollTo(curAyah, anchor: .top) }
-                    }
-                } else {
-                    withAnimation { proxy.scrollTo(curAyah, anchor: .top) }
-                }
-            }
+        // Tapping the bar goes to what's playing. This used to be a tap gesture that could only scroll
+        // within the surah already on screen (and did nothing at all while a whole surah played, which has
+        // no per-ayah position); `goToNowPlaying` is the shared route - it swaps the surah when the
+        // recitation is somewhere else, and lands on the ayah in list mode / on its page in page mode.
+        NowPlayingView(quranView: false, onOpenPlayback: { _ in goToNowPlaying() })
     }
 
     #if os(iOS)
@@ -2980,19 +3009,53 @@ struct SurahView: View {
                       systemImage: settings.quranPageMode ? "list.bullet.rectangle" : "book")
             }
 
+            // The facsimile toggle sits at the TOP level next to "Read as Pages" rather than only inside the
+            // Page Text submenu: it is a reading MODE, not a translation choice, and three taps down is where
+            // it went unfound. It still writes `mushafPageLanguage`, so the two stay in sync.
+            if settings.quranPageMode, MushafPDFLibrary.isAvailable(for: pdfRiwayahTag) {
+                Button {
+                    settings.hapticFeedback()
+                    let isPDF = settings.resolvedMushafPageLanguage.isPDF
+                    withAnimation(.easeInOut) {
+                        settings.mushafPageLanguage = isPDF
+                            ? MushafPageLanguage.arabic.rawValue
+                            : MushafPageLanguage.pdf.rawValue
+                    }
+                } label: {
+                    Label(settings.resolvedMushafPageLanguage.isPDF
+                              ? "Read as Text" : "Read as Printed Mushaf (PDF)",
+                          systemImage: settings.resolvedMushafPageLanguage.isPDF
+                              ? "textformat" : "doc.richtext")
+                }
+            }
+
             // Page mode only: what the page's BODY text is. Arabic is the mushaf itself; the English options
             // replace the page wholesale (same page boundaries, same fit-to-page) for a reader following
             // along in Latin script. Headings follow the page's language automatically.
             if settings.quranPageMode {
                 Menu {
                     Picker("Page Text", selection: $settings.mushafPageLanguage) {
-                        ForEach(MushafPageLanguage.allCases) { language in
+                        // The PDF facsimile only lists itself when this riwayah actually has one bundled,
+                        // so a missing file reads as "not offered here" rather than an empty reader.
+                        ForEach(MushafPageLanguage.allCases.filter {
+                            !$0.isPDF || MushafPDFLibrary.isAvailable(for: pdfRiwayahTag)
+                        }) { language in
                             Text(language.displayName).tag(language.rawValue)
                         }
                     }
+
+                    // Only meaningful while the facsimile is on screen, so it only appears then.
+                    if settings.resolvedMushafPageLanguage.isPDF {
+                        Divider()
+                        Toggle(isOn: $settings.mushafPDFNightMode) {
+                            Label("Night Mode", systemImage: "moon.circle")
+                        }
+                        Text("The printed mushaf shows in page mode only.")
+                    }
                 } label: {
                     Label("Page Text: \(settings.resolvedMushafPageLanguage.displayName)",
-                          systemImage: "character.book.closed")
+                          systemImage: settings.resolvedMushafPageLanguage.isPDF
+                              ? "doc.richtext" : "character.book.closed")
                 }
             }
         } label: {
@@ -3133,10 +3196,16 @@ struct SurahView: View {
     /// Flips between the ayah list and the mushaf, landing on the same place in the text rather than at the
     /// top of the surah:
     ///
-    /// * list → page: opens the page that holds the ayah currently at the top of the screen. Reading ayah 40
-    ///   of a surah that starts on page 95 opens page 100, not 95.
-    /// * page → list: opens at the first ayah of the page you were on - and swaps the surah in place when that
-    ///   page belongs to a different one (mushaf pages run across surah boundaries).
+    /// * list → page: opens the page that holds the SELECTED ayah, else the ayah currently at the top of the
+    ///   screen. Reading ayah 40 of a surah that starts on page 95 opens page 100, not 95.
+    /// * page → list: opens at the SELECTED ayah, else the first ayah of the page you were on - swapping the
+    ///   surah in place when that ayah belongs to a different one (mushaf pages run across surah boundaries).
+    ///
+    /// Both directions derive the destination from ONE `(surah, ayah)` landing pair, and the destination surah
+    /// comes from that pair - never from the page's top surah. A page can hold the tail of one surah and the
+    /// whole of the next; marking an ayah in the SECOND surah used to be discarded (the old rule only honoured
+    /// a mark whose surah matched the page anchor's), so the list opened the TOP surah at the page's first
+    /// ayah instead of the ayah the reader actually chose.
     private func toggleReadingMode() {
         settings.hapticFeedback()
 
@@ -3145,42 +3214,118 @@ struct SurahView: View {
         selectedAyahIDs = []
 
         if settings.quranPageMode {
-            if let anchor = pageAnchor {
-                if anchor.surahID != surah.id, let anchorSurah = quranData.surah(anchor.surahID) {
+            // The ayah the reader MARKED wins outright - whichever of the page's surahs it belongs to.
+            // Only with nothing marked does the page's top ayah stand in.
+            let landing: (surahID: Int, ayahID: Int)? = {
+                if let selected = highlightedAyah, quranData.surah(selected.surahID) != nil {
+                    return (selected.surahID, selected.ayahID)
+                }
+                return pageAnchor.map { ($0.surahID, $0.ayahID) }
+            }()
+
+            if let landing {
+                if landing.surahID != surah.id, let landingSurah = quranData.surah(landing.surahID) {
                     searchText = ""
                     pendingScrollAfterSearchClear = nil
                     scrollDown = nil
                     visibility.resetScrollTracking()
-                    settings.recordSurahOpened(anchorSurah.id)
-                    swappedSurah = anchorSurah
+                    settings.recordSurahOpened(landingSurah.id)
+                    swappedSurah = landingSurah
                 }
-                // An ayah SELECTED on the page wins over the page's top ayah: switching to the list
-                // scrolls to the ayah the reader marked, not merely to wherever the page began.
-                let landing: Int = {
-                    if let selected = highlightedAyah, selected.surahID == anchor.surahID {
-                        return selected.ayahID
-                    }
-                    return anchor.ayahID
-                }()
-                visibility.setAnchor(landing)
-                modeSwitchAyah = landing
+                visibility.setAnchor(landing.ayahID)
+                modeSwitchAyah = landing.ayahID
                 // The list reader only performs its opening scroll once per surah; this is a fresh open.
                 didScrollDown = false
                 // Carry the highlight onto the ayah the list lands on.
-                highlightedAyah = HighlightedAyahRef(surahID: anchor.surahID, ayahID: landing)
+                highlightedAyah = HighlightedAyahRef(surahID: landing.surahID, ayahID: landing.ayahID)
             }
             pageSurah = nil
         } else {
-            let top = currentReadingAyahID()
+            // The mirror rule: a marked ayah decides the page to land on, and only when nothing is marked
+            // does the ayah at the top of the screen. (In the list every row belongs to `surah`, so the
+            // destination surah never moves here - but the ayah must still be the marked one, or page mode
+            // opened the page under the scroll position instead of the page holding the selection.)
+            let top: Int? = {
+                if let selected = highlightedAyah, selected.surahID == surah.id {
+                    return selected.ayahID
+                }
+                return currentReadingAyahID()
+            }()
             modeSwitchAyah = top
-            // Highlight the ayah that was at the top of the list (the would-be last-read ayah) so it's easy to
-            // find on the page you land on.
+            // Highlight the ayah that decided the landing page so it's easy to find once you're there.
             if let top {
                 highlightedAyah = HighlightedAyahRef(surahID: surah.id, ayahID: top)
             }
         }
 
         withAnimation { settings.quranPageMode.toggle() }
+    }
+
+    /// What the Now Playing bar's tap should open: the ayah being recited, or - when a WHOLE surah is
+    /// playing (one audio file, no per-ayah position) - that surah from its start.
+    private var nowPlayingTarget: (surah: Surah, ayah: Int?)? {
+        guard let surahID = quranPlayer.currentSurahNumber,
+              let target = quranData.surah(surahID),
+              quranPlayer.isPlaying || quranPlayer.isPaused else { return nil }
+        let ayahID = quranPlayer.isPlayingSurah ? nil : quranPlayer.currentAyahNumber
+        return (target, ayahID)
+    }
+
+    /// Go to what's playing, in whichever reading mode is on. One landing pair - `(surah, ayah)` - fed to
+    /// the navigation the reader already uses for "go to ayah/surah":
+    ///
+    /// * page mode: `ayah` becomes the reader's `initialAyah` and `pageJumpToken` forces a re-seed, so the
+    ///   pager lands on the PAGE holding that ayah (its own page-index lookup does the work).
+    /// * list mode: the same `ayah` drives `onChange(of: ayah)`, which scrolls the surah to it.
+    ///
+    /// A surah other than the one on screen is swapped in first (or handed to the parent in column
+    /// navigation), so the jump works while the reader is sitting on a completely different surah.
+    private func goToNowPlaying() {
+        guard let target = nowPlayingTarget else { return }
+        settings.hapticFeedback()
+
+        // Leaving for another position ends multi-select and clears a live query, exactly like a surah jump.
+        isSelectingAyahs = false
+        selectedAyahIDs = []
+        searchText = ""
+        pendingScrollAfterSearchClear = nil
+        scrollDown = nil
+        self.endEditing()
+
+        let swapsSurah = target.surah.id != surah.id
+        if swapsSurah {
+            if let onSelectAyah {
+                // Column navigation: the parent owns the detail, so let it re-point the route.
+                onSelectAyah(target.surah.id, target.ayah)
+                return
+            }
+            visibility.resetScrollTracking()
+            pageSurah = nil
+            settings.recordSurahOpened(target.surah.id)
+            withAnimation(.easeInOut) { swappedSurah = target.surah }
+        }
+
+        visibility.setAnchor(target.ayah)
+        // `modeSwitchAyah` IS the reader's landing-ayah override (it wins over `initialAyah` in `ayah`);
+        // nil means "this surah from the top", which is what whole-surah playback wants.
+        modeSwitchAyah = target.ayah
+        didScrollDown = false
+        // The token re-seeds the page reader even when neither `surah.id` nor the ayah changed value -
+        // tapping the bar twice, or tapping it after paging away from the ayah, must still jump back.
+        // Playback-driven, so the reader TURNS the page (like a swipe) instead of teleporting to it.
+        pageJumpIsPlayback = true
+        pageJumpToken += 1
+
+        if let ayahID = target.ayah {
+            highlightedAyah = HighlightedAyahRef(surahID: target.surah.id, ayahID: ayahID)
+            // Staying in the SAME surah in list mode: `ayah` may not have changed value (tapping the bar
+            // again after scrolling away from the reciter), so nothing would re-scroll. `scrollDown` is the
+            // list's own "go to this ayah" channel - the one a search hit uses - and it always scrolls.
+            // A surah swap doesn't need it: the new surah's own open scrolls to `ayah`.
+            if !swapsSurah && !settings.quranPageMode {
+                scrollDown = ayahID
+            }
+        }
     }
 
     private func navigateToSurah(_ targetSurah: Surah) {
@@ -3213,6 +3358,8 @@ struct SurahView: View {
             // The page reader re-seeds on `surah.id` changes - but after paging away, the picked surah
             // can EQUAL the prop (picking the surah the reader was opened from), so the id never
             // changes and no re-seed fires. The token forces one on every navigation.
+            // A deliberate "take me to this surah" lands immediately; only playback turns pages.
+            pageJumpIsPlayback = false
             pageJumpToken += 1
         }
     }
@@ -3378,8 +3525,20 @@ private struct SurahPickerSheet: View {
                                             select(surah)
                                         }
                                     } label: {
-                                        SurahRow(surah: surah, hideInfo: settings.showSurahInformation)
-                                            .contentShape(Rectangle())
+                                        // `searchQuery` is what paints the match: SurahRow feeds it to the
+                                        // shared `HighlightedSnippet` for the transliteration, the English
+                                        // name and the Arabic name - the exact treatment the Quran tab's
+                                        // search rows get (QuranView.surahSearchRow). Pass the RAW text, not
+                                        // `normalized(...)`: the snippet does its own script-aware
+                                        // normalization, and `guaranteeMatch` stays off (the default) so a
+                                        // query that only matched the transliteration doesn't also tint the
+                                        // English and Arabic names.
+                                        SurahRow(
+                                            surah: surah,
+                                            hideInfo: settings.showSurahInformation,
+                                            searchQuery: searchText
+                                        )
+                                        .contentShape(Rectangle())
                                     }
                                     .id(surah.id)
                                 }
@@ -3390,7 +3549,17 @@ private struct SurahPickerSheet: View {
                 }
                 .applyConditionalListStyle()
                 .compactListSectionSpacing()
-                .searchable(text: $searchText.animation(.easeInOut), prompt: "Search surah")
+                // The app's own bottom search bar, not `.searchable` - the same inset the reciter picker
+                // (`SettingsQuranView.reciterSearchControlsInset`) and the Quran/Hadith readers use, so
+                // every search in the app sits in the same place. (`SearchBar`'s placeholder is the shared
+                // `searchText`.
+                .adaptiveSafeArea(edge: .bottom) {
+                    SearchBar(text: AppPerformance.shouldReduceAnimations ? $searchText : $searchText.animation(.easeInOut), placeholder: "Search surah")
+                        .padding([.leading, .top], -8)
+                        .padding(.horizontal, 24)
+                        .padding(.bottom, 8)
+                        .background(Color.white.opacity(0.00001))
+                }
                 .navigationTitle("Choose Surah")
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
@@ -3522,7 +3691,11 @@ struct ArabicTextRiwayahPicker: View {
                 .padding(.horizontal, 10)
                 .padding(.vertical, 8)
                 .shadow(color: .black.opacity(0.15), radius: 2, x: 0, y: 0)
-                .conditionalGlassEffect()
+                // `interactive: false` matters on a MENU label. Interactive Liquid Glass plays its own
+                // press response, and to do that it wants the touch - which leaves the chip looking like a
+                // button that highlights and does nothing while the menu never opens. The Menu supplies the
+                // press feedback itself, so the glass has nothing to add here anyway.
+                .conditionalGlassEffect(interactive: false)
             }
         }
         #else

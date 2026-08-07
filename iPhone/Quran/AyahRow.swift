@@ -287,7 +287,10 @@ struct AyahRow: View, Equatable {
     /// search paint wins), and in beginner spacing (letter spacing breaks word alignment). Takes
     /// the tajweed slot, which is free here: tajweed colors are Hafs-only.
     private func arabicDiffText(displayText: String, beginner: Bool) -> AttributedString? {
-        guard settings.highlightQiraahDifferences, !beginner else { return nil }
+        // Always on: seeing which words differ from Hafs IS the point of reading another riwayah,
+        // so it is no longer a setting. Beginner mode still opts out - its spaced letterforms are
+        // for learning the script, and tinting words on top of that is noise.
+        guard !beginner else { return nil }
         guard searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return nil }
         let raw = comparisonQiraahOverride ?? (settings.displayQiraahForArabic ?? "")
         let tag = Settings.Riwayah.canonicalTag(raw == "Hafs" ? "" : raw)

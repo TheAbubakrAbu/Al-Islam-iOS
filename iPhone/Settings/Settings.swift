@@ -895,11 +895,32 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
         }
     }
 
-    @AppStorage("calculationAutomatic") var calculationAutomatic: Bool = true
+    @AppStorage("calculationAutomatic") var calculationAutomatic: Bool = true {
+        didSet {
+            // Re-arming automatic selection is the user asking to be told again, so forget which detection
+            // they last answered and let the next one raise its card. Turning it OFF deliberately keeps the
+            // record - that is what makes an Override final. (Only a real off->on transition counts; the
+            // watch-sync apply writes this key through raw `UserDefaults`, which bypasses this didSet.)
+            guard calculationAutomatic, !oldValue else { return }
+            calculationAutoAnsweredCountryCode = ""
+            calculationAutoAnsweredMethod = ""
+        }
+    }
     @AppStorage("calculationAutoChanged") var calculationAutoChanged: Bool = false
     @AppStorage("calculationAutoPreviousMethod") var calculationAutoPreviousMethod: String = ""
     @AppStorage("calculationAutoDetectedMethod") var calculationAutoDetectedMethod: String = ""
     @AppStorage("calculationAutoDetectedCountryCode") var calculationAutoDetectedCountryCode: String = ""
+
+    /// The detection the user has already answered on the "Calculation Method Changed" card - the region it
+    /// was raised for and the method it recommended. Confirm and Override are both FINAL answers, so a
+    /// detection matching this pair switches the method silently and never raises the card again; only a
+    /// genuinely different detection (new region, or a new recommendation for the same one) may ask.
+    ///
+    /// Deliberately NOT synced to the watch: it records what the person tapped on THIS device, and the whole
+    /// point of the pair is that a peer's copy of the calculation state can't resurrect an answered prompt.
+    @AppStorage("calculationAutoAnsweredCountryCode") var calculationAutoAnsweredCountryCode: String = ""
+    @AppStorage("calculationAutoAnsweredMethod") var calculationAutoAnsweredMethod: String = ""
+
     @AppStorage("currentCountryCode") var currentCountryCode: String = ""
 
     @AppStorage("showLocationAlert") var showLocationAlert: Bool = false {
@@ -1098,6 +1119,10 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     var resolvedMushafPageLanguage: MushafPageLanguage {
         MushafPageLanguage(rawValue: mushafPageLanguage) ?? .arabic
     }
+
+    /// Inverts the printed-mushaf PDF for dark reading (hue-preserving, so the green border stays green).
+    /// Off by default: the facsimile is meant to look like the printed page it is.
+    @AppStorage("mushafPDFNightMode") var mushafPDFNightMode = false
     /// Shows the spelled-out pronunciation aid above muqatta'at ayahs (e.g. أَلِفۡ لَآم مِيٓمۡ). Off by default.
     @AppStorage("showMuqattaatHelper") var showMuqattaatHelper = false
 
@@ -1223,9 +1248,6 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     /// When on, SurahView shows a qiraat picker above the search bar to compare riwayat in that view.
     @AppStorage("qiraatComparisonMode") var qiraatComparisonMode: Bool = false
 
-    /// When on, reading a non-Hafs riwayah tints every word that differs from Hafs an Asim (the
-    /// default text) - `QiraahComparison.diffAttributed` feeds the reader rows' pre-styled Arabic.
-    @AppStorage("highlightQiraahDifferences") var highlightQiraahDifferences: Bool = false
 
     /// When on, ReciterListView reveals non-Hafs qiraat reciters.
     @AppStorage("showOtherQiraatReciters") var showOtherQiraatReciters: Bool = false
@@ -1425,17 +1447,23 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     @AppStorage("THEfontArabic") var fontArabic: String = "KFGQPCHAFSUthmanicScript-Regula"
     @AppStorage("fontArabicSize") var fontArabicSize: Double = Double(UIFont.preferredFont(forTextStyle: .title1).pointSize)
     @AppStorage("useFontArabic") var useFontArabic = true
+    /// Raw storage for `arabicScriptStyle` (see SettingsQuran). Empty means the reader has never
+    /// chosen, which resolves to Madani - the effective default. A value written here is always an
+    /// explicit choice and is honored as one, so the old "automatic" saves still mean Automatic.
+    @AppStorage("quranArabicScriptStyle") var arabicScriptStyleRaw: String = ""
 
     /// The Arabic face for the NON-Quran Arabic screens (Hadith, Adhkar, Duas, 99 Names, Arabic Alphabet).
     /// Independent of the Quran's own font picker.
     enum IslamArabicFace: String, CaseIterable {
         case uthmani, indopak, basic
 
-        /// Outside the Quran, "Uthmani" is ALWAYS the Qiraat Uthmani face - never the Hafs Quran face,
-        /// which is reserved for the mushaf itself.
+        /// Outside the Quran, "Uthmani" is the Hafs face - the same one the mushaf uses. It ships
+        /// no precomposed آ, which plain Arabic prose leans on constantly (5,616 times in six hadith
+        /// books alone); every Arabic string is handed through `decomposingAlefMadda` first, so the
+        /// face draws it from its own parts instead of falling back mid-word.
         var fontName: String {
             switch self {
-            case .uthmani: return Settings.qiraatUthmaniFontName
+            case .uthmani: return Settings.hafsUthmaniFontName
             case .indopak: return Settings.indopakFontName
             case .basic: return Settings.systemArabicFontName
             }
@@ -1478,8 +1506,14 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     
     static let randomReciterName = "Random Reciter"
     static let hafsUthmaniFontName = "KFGQPCHAFSUthmanicScript-Regula"
-    static let qiraatUthmaniFontName = "KFGQPCQUMBULUthmanicScript-Regu"
+    /// Migration sentinel only. The app once bundled the KFGQPC Qunbul face (as `Qiraat.ttf`)
+    /// for non-Hafs qiraat and for all non-Quran Arabic; it is no longer shipped, and any stored
+    /// `fontArabic` still holding this name is migrated to the Hafs face at launch.
+    static let legacyQiraatFontName = "KFGQPCQUMBULUthmanicScript-Regu"
     static let indopakFontName = "Al_Mushaf"
+    /// Migration sentinels: names the IndoPak face briefly shipped under during testing. A stored
+    /// value matching one is rewritten at launch, or the reader keeps a name no font answers to.
+    static let legacyIndopakFontNames = ["KFGQPCNastaleeq-Regular", "AlQuranIndoPakbyQuranWBW"]
     /// Sentinel `fontArabic` value meaning "use the standard Apple system font" for Quran Arabic. It is not a
     /// real installed font, so any stray `.custom(_)` with it falls back to the system font anyway.
     static let systemArabicFontName = "AlIslamSystemArabicFont"

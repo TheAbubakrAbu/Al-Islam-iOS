@@ -320,7 +320,16 @@ struct AyahTafsirSheet: View {
             // Kathir often does) it reads e.g. "Al-Baqarah 1:1-5", not just the tapped ayah.
             .navigationTitle(ayahSheetTitle(surahNumber: surahNumber, ayahNumber: tafsirAyahRange.lowerBound, endAyah: tafsirAyahRange.upperBound))
             .navigationBarTitleDisplayMode(.inline)
-            .searchable(text: $searchText.animation(.easeInOut), prompt: "Search tafsir")
+            // The app's own bottom search bar, not `.searchable` - matching the reciter picker
+            // (`SettingsQuranView.reciterSearchControlsInset`) and every other search in the app.
+            // Behavior is unchanged: the same `searchText` still drives `recomputeMatches` and the find bar.
+            .adaptiveSafeArea(edge: .bottom) {
+                SearchBar(text: AppPerformance.shouldReduceAnimations ? $searchText : $searchText.animation(.easeInOut), placeholder: "Search tafsir")
+                    .padding([.leading, .top], -8)
+                    .padding(.horizontal, 24)
+                    .padding(.bottom, 8)
+                    .background(Color.white.opacity(0.00001))
+            }
             .dismissKeyboardOnScroll()
             .sheetDismissToolbar()
             .accentWashedBackground()
@@ -500,6 +509,14 @@ struct SurahInfoSheet: View {
         )
     }
 
+    /// Starting the surah from this sheet closes it: you asked to LISTEN to the surah, so the reader - not
+    /// the background info you were reading - is what should be on screen. Deferred by one runloop turn so
+    /// the action (including one taken from the Repeat menu, whose own dismissal is still animating) has
+    /// fully completed before its host goes away.
+    private func dismissAfterStartingPlayback() {
+        DispatchQueue.main.async { dismiss() }
+    }
+
     /// True when the text is mostly Arabic script, so the sheet can lay it out right-to-left.
     private static func isArabic(_ text: String) -> Bool {
         var arabic = 0, latin = 0
@@ -548,7 +565,8 @@ struct SurahInfoSheet: View {
                         VStack(alignment: .leading, spacing: 16) {
                             // Even with no bundled info, the sheet still offers playback.
                             #if os(iOS)
-                            SurahInfoPlaybackCard(surahNumber: surahNumber, surahName: surahName)
+                            SurahInfoPlaybackCard(surahNumber: surahNumber, surahName: surahName,
+                                                  onStartedPlaying: dismissAfterStartingPlayback)
                             #endif
 
                             infoPlaceholder
@@ -565,7 +583,8 @@ struct SurahInfoSheet: View {
                             // which works whatever Arabic text is on screen - hiding the button under
                             // other qiraat display was wrong.
                             #if os(iOS)
-                            SurahInfoPlaybackCard(surahNumber: surahNumber, surahName: surahName)
+                            SurahInfoPlaybackCard(surahNumber: surahNumber, surahName: surahName,
+                                                  onStartedPlaying: dismissAfterStartingPlayback)
                             #endif
 
                             noticeCard
@@ -622,7 +641,14 @@ struct SurahInfoSheet: View {
             }
             .navigationTitle("Surah \(surahNumber): \(surahName)")
             .navigationBarTitleDisplayMode(.inline)
-            .searchable(text: $searchText.animation(.easeInOut), prompt: "Search info")
+            // The app's own bottom search bar, not `.searchable` - see the tafsir sheet above.
+            .adaptiveSafeArea(edge: .bottom) {
+                SearchBar(text: AppPerformance.shouldReduceAnimations ? $searchText : $searchText.animation(.easeInOut), placeholder: "Search info")
+                    .padding([.leading, .top], -8)
+                    .padding(.horizontal, 24)
+                    .padding(.bottom, 8)
+                    .background(Color.white.opacity(0.00001))
+            }
             .dismissKeyboardOnScroll()
             .accentWashedBackground()
             .toolbar {
@@ -796,6 +822,9 @@ private struct SurahInfoPlaybackCard: View {
 
     let surahNumber: Int
     let surahName: String
+    /// Called right after playback STARTS (once or on repeat) - never on stop. The sheet uses it to close
+    /// itself, so starting a surah leaves you looking at the surah instead of at the info you just read.
+    var onStartedPlaying: () -> Void = {}
 
     private var isPlayingThisSurah: Bool {
         (quranPlayer.isPlaying || quranPlayer.isPaused) && quranPlayer.currentSurahNumber == surahNumber
@@ -809,6 +838,7 @@ private struct SurahInfoPlaybackCard: View {
                     quranPlayer.stop()
                 } else {
                     quranPlayer.playSurah(surahNumber: surahNumber, surahName: surahName)
+                    onStartedPlaying()
                 }
             } label: {
                 Label(isPlayingThisSurah ? "Stop Playing" : "Play Surah",
@@ -830,6 +860,7 @@ private struct SurahInfoPlaybackCard: View {
                     Button {
                         settings.hapticFeedback()
                         quranPlayer.playSurah(surahNumber: surahNumber, surahName: surahName, repeatCount: n)
+                        onStartedPlaying()
                     } label: {
                         Label("Play \(n)×", systemImage: "\(n).circle")
                     }

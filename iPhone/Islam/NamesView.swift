@@ -1185,7 +1185,7 @@ private struct NameRow: View, Equatable {
 
                         // Always the Uthmani face: it renders the number as the circled-flower ornament.
                         Text(name.numberArabic)
-                            .font(.custom(Settings.qiraatUthmaniFontName, size: 28))
+                            .font(.custom(Settings.hafsUthmaniFontName, size: 28))
                             .arabicFontDesign(custom: true)
                             .foregroundColor(accentColor.color)
                             .lineLimit(1)

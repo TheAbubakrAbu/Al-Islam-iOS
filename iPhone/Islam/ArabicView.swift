@@ -475,7 +475,10 @@ struct ArabicView: View {
         #endif
         .applyConditionalListStyle()
         .navigationTitle("Arabic Alphabet")
-        .onDisappear { ArabicSpeech.shared.stop() }
+        .onDisappear {
+            ArabicSpeech.shared.stop()
+            ArabicPracticeSelection.shared.clear()
+        }
         #if os(iOS)
         .onChange(of: searchText) { text in
             // A new query starts back on the AI list, with any dead-end ask notice cleared.

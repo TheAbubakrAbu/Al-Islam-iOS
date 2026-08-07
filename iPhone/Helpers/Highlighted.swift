@@ -30,34 +30,10 @@ struct HighlightedSnippet: View {
     /// left un-highlighted, so a query that matched only the transliteration doesn't also paint the English
     /// name and the Arabic name.
     var guaranteeMatch: Bool = false
-    /// The classical Quranic faces (Uthmani/IndoPak) map Arabic punctuation like "،" to ornament glyphs.
-    /// Set this to the text's point size to render commas and semicolons in the system face instead.
-    var basicFontForCommas: CGFloat? = nil
-
-    private static let commaCharacters: Set<Character> = ["،", "؛", ","]
-
-    /// source → contains-a-comma, memoized: this gate runs in `body` for every Arabic snippet that
-    /// passes `basicFontForCommas`, and the O(n) character scan repeated on every re-render of every
-    /// visible row. A string's comma content never changes, so it is a perfect cache key.
-    private static let commaPresenceCache: NSCache<NSString, NSNumber> = {
-        let c = NSCache<NSString, NSNumber>()
-        c.countLimit = 10_000
-        return c
-    }()
-
-    private var sourceHasCommas: Bool {
-        let key = source as NSString
-        if let cached = Self.commaPresenceCache.object(forKey: key) { return cached.boolValue }
-        let has = source.contains(where: { Self.commaCharacters.contains($0) })
-        Self.commaPresenceCache.setObject(NSNumber(value: has), forKey: key)
-        return has
-    }
-
     var body: some View {
         let resolvedSearchTerm = searchTerm
         let needsSearchHighlight = !resolvedSearchTerm.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-        let needsCommaWork = basicFontForCommas != nil && sourceHasCommas
-        let needsAttributedWork = needsSearchHighlight || highlightAllahNames || preStyledSource != nil || needsCommaWork
+        let needsAttributedWork = needsSearchHighlight || highlightAllahNames || preStyledSource != nil
         let suffixText = Text(trailingSuffix)
             .font(trailingSuffixFont ?? font)
             .foregroundColor(trailingSuffixColor ?? fg)
@@ -70,8 +46,7 @@ struct HighlightedSnippet: View {
             // returns nil) and a real - even exact - match never gets colored. On a matched row the search
             // highlight takes priority over tajweed, matching how text-search results are shown elsewhere.
             let base = needsSearchHighlight ? plainSourceAttributed() : baseAttributedText()
-            let highlightedText = applyBasicFontToCommas(
-                highlightAllahIfNeeded(
+            let highlightedText = highlightAllahIfNeeded(
                     source: source,
                     baseAttributed: highlight(
                         source: source,
@@ -79,7 +54,7 @@ struct HighlightedSnippet: View {
                         term: resolvedSearchTerm
                     )
                 )
-            )
+            
 
             limited(Text("\(Text(highlightedText))\(suffixText)"))
         } else {
@@ -99,37 +74,6 @@ struct HighlightedSnippet: View {
 
     private var searchTerm: String {
         beginnerMode ? term.map(String.init).joined(separator: " ") : term
-    }
-
-    /// Re-fonts every comma/semicolon run to the rounded system face - see `basicFontForCommas`.
-    ///
-    /// Two-phase on purpose: the old single pass kept walking with indices captured BEFORE each attribute
-    /// write, and AttributedString documents its indices as invalidated by ANY mutation (attribute-only
-    /// included). Collecting character offsets first, then re-deriving fresh indices from the current
-    /// string per write, never uses an index across a mutation. Comma counts are tiny, so the
-    /// offset-walk cost is noise. Scans the attributed string itself (not `source`) because a
-    /// `preStyledSource` base can have a different character layout than `source`.
-    private func applyBasicFontToCommas(_ attributed: AttributedString) -> AttributedString {
-        guard let size = basicFontForCommas, sourceHasCommas else { return attributed }
-        var result = attributed
-
-        var commaOffsets: [Int] = []
-        var index = result.startIndex
-        var offset = 0
-        while index < result.endIndex {
-            if Self.commaCharacters.contains(result.characters[index]) {
-                commaOffsets.append(offset)
-            }
-            index = result.characters.index(after: index)
-            offset += 1
-        }
-
-        for commaOffset in commaOffsets {
-            let start = result.characters.index(result.startIndex, offsetBy: commaOffset)
-            let end = result.characters.index(after: start)
-            result[start..<end].font = .system(size: size, design: .rounded)
-        }
-        return result
     }
 
     // nonisolated: statics on a View struct inherit @MainActor, but the prewarm path (a detached task)

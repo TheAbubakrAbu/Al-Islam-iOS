@@ -118,7 +118,16 @@ struct AyahQiraahComparisonSheet: View {
                 }
             .applyConditionalListStyle()
             .compactListSectionSpacing()
-            .searchable(text: $searchText.animation(.easeInOut), prompt: "Search riwayat")
+            // The app's own bottom search bar, not `.searchable` - the same inset the reciter picker
+            // (`SettingsQuranView.reciterSearchControlsInset`) and every other search in the app uses.
+            // The filtering itself is untouched: `filteredOptions` still reads `searchText`.
+            .adaptiveSafeArea(edge: .bottom) {
+                SearchBar(text: AppPerformance.shouldReduceAnimations ? $searchText : $searchText.animation(.easeInOut), placeholder: "Search riwayat")
+                    .padding([.leading, .top], -8)
+                    .padding(.horizontal, 24)
+                    .padding(.bottom, 8)
+                    .background(Color.white.opacity(0.00001))
+            }
             .safeAreaInset(edge: .top, spacing: 0) {
                 if let currentOption {
                     VStack(spacing: 0) {
@@ -304,6 +313,9 @@ struct AyahQiraahComparisonSheet: View {
 
     /// Differences from the CURRENT riwayah, tinted for `preStyledSource` - nil for the current row
     /// itself and for unavailable rows (an active search term overrides it by the snippet's rule).
+    ///
+    /// Always on, deliberately: comparing riwayat is the whole point of this sheet, so the diff tint
+    /// is never gated on a setting. Do not reintroduce a `highlightQiraahDifferences`-style check here.
     private func diffStyled(for option: QiraahDisplay, resolved: ResolvedQiraahText?) -> AttributedString? {
         guard let resolved, option.id != currentOption?.id,
               let reference = referenceText, reference != resolved.text else { return nil }
@@ -767,7 +779,14 @@ struct AyahEnglishComparisonSheet: View {
         }
         .applyConditionalListStyle()
         .compactListSectionSpacing()
-        .searchable(text: $searchText.animation(.easeInOut), prompt: "Search translations")
+        // The app's own bottom search bar, not `.searchable` - see the riwayah sheet above.
+        .adaptiveSafeArea(edge: .bottom) {
+            SearchBar(text: AppPerformance.shouldReduceAnimations ? $searchText : $searchText.animation(.easeInOut), placeholder: "Search translations")
+                .padding([.leading, .top], -8)
+                .padding(.horizontal, 24)
+                .padding(.bottom, 8)
+                .background(Color.white.opacity(0.00001))
+        }
     }
 
     private func inAppTranslationText(for editionID: String, ayah: Ayah? = nil) -> String {

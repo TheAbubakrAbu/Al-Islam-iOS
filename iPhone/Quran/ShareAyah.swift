@@ -597,29 +597,6 @@ struct ShareAyahSheet: View {
 
                 ScrollView {
                     VStack(spacing: 2) {
-                        if settings.showQiraahDetails {
-                            HStack {
-                                Text("Arabic Riwayah")
-                                    .foregroundColor(.primary)
-
-                                Spacer()
-
-                                ArabicTextRiwayahPicker(selection: $shareQiraah.animation(.easeInOut))
-                            }
-                            .padding(.horizontal, 20)
-                            .padding(.vertical, 4)
-
-                            Text(ayahExistsInShareQiraah
-                                ? "Ayah numbering can differ between riwayat: no ayah is ever missing, but some are joined or split differently (for example, \"Alif Lam Meem\" and \"Dhalika al-Kitab...\" form a single ayah in most qiraat)."
-                                : "This ayah is not separate in this riwayah; its words are part of a neighboring ayah, so the Hafs text is shown.")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                                .fixedSize(horizontal: false, vertical: true)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .padding(.horizontal, 20)
-                                .padding(.bottom, 4)
-                        }
-
                         toggle("Arabic", persistentCopyBinding(
                             get: { storedCopyArabic },
                             set: { storedCopyArabic = $0 },
@@ -748,6 +725,33 @@ struct ShareAyahSheet: View {
                             .scaleEffect(0.8)
                             .padding(.horizontal, -24)
                             .padding(.vertical, 2)
+
+                            // Last in the list, by request: which riwayah the shared Arabic is taken from.
+                            //
+                            // `useMenuRow`, NOT the bare glass chip. The chip form wraps its label in
+                            // `conditionalGlassEffect()`, which on iOS 26 is INTERACTIVE Liquid Glass - the
+                            // glass takes the touch to play its own press response, so the chip lit up like
+                            // a button and the menu never opened ("I touch it and it acts like a button not
+                            // a picker"). The row form's label is plain, with the whole row as one
+                            // `contentShape` tap target - the same form the Settings screen and
+                            // `SelectAyahTextSheet` use, where the picker has always opened correctly.
+                            ArabicTextRiwayahPicker(
+                                selection: $shareQiraah.animation(.easeInOut),
+                                useMenuRow: true
+                            )
+                            .padding(.horizontal, 20)
+                            .padding(.top, 6)
+                            .padding(.bottom, 4)
+
+                            Text(ayahExistsInShareQiraah
+                                ? "Ayah numbering can differ between riwayat: no ayah is ever missing, but some are joined or split differently (for example, \"Alif Lam Meem\" and \"Dhalika al-Kitab...\" form a single ayah in most qiraat)."
+                                : "This ayah is not separate in this riwayah; its words are part of a neighboring ayah, so the Hafs text is shown.")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .padding(.horizontal, 20)
+                                .padding(.bottom, 4)
                         }
                     }
                 }
@@ -1045,7 +1049,7 @@ struct ShareAyahSheet: View {
         // UIKit-drawn image, so the design is asked for explicitly).
         let bodyFont   = UIFont.roundedSystemFont(ofSize: UIFont.preferredFont(forTextStyle: .body).pointSize)
         let selectedArabicFontName = shareSettings.shareArabicFont.isEmpty ? settings.fontArabic : shareSettings.shareArabicFont
-        let arabicFontName = Settings.quranArabicFontName(selectedFontName: selectedArabicFontName, qiraah: shareQiraah)
+        let arabicFontName = Settings.quranArabicFontName(selectedFontName: selectedArabicFontName, qiraah: shareQiraah, style: settings.arabicScriptStyle)
         let arabicFont = shareSettings.hideArabicDots
             ? bodyFont.withSize(bodyFont.pointSize * 1.15)
             // The "Basic" sentinel has no real UIFont - it falls back to the ROUNDED system face at the
@@ -1360,7 +1364,7 @@ extension ShareAyahSheet {
         // Rounded, to match the app's system-font design (see the note in the other renderer above).
         let bodyFont = UIFont.roundedSystemFont(ofSize: UIFont.preferredFont(forTextStyle: .body).pointSize)
         let selectedArabicFontName = shareSettings.shareArabicFont.isEmpty ? settings.fontArabic : shareSettings.shareArabicFont
-        let arabicFontName = Settings.quranArabicFontName(selectedFontName: selectedArabicFontName, qiraah: settings.displayQiraahForArabic)
+        let arabicFontName = Settings.quranArabicFontName(selectedFontName: selectedArabicFontName, qiraah: settings.displayQiraahForArabic, style: settings.arabicScriptStyle)
         let arabicFont = shareSettings.hideArabicDots
             ? bodyFont.withSize(bodyFont.pointSize * 1.15)
             // The "Basic" sentinel has no real UIFont - it falls back to the ROUNDED system face at the

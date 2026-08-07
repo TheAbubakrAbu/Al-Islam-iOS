@@ -310,8 +310,15 @@ extension Settings {
     func runQuranStartupMigrations() {
         let defaults = UserDefaults(suiteName: AppIdentifiers.appGroupSuiteName)
 
-        if fontArabic == Self.qiraatUthmaniFontName {
+        if fontArabic == Self.legacyQiraatFontName {
             fontArabic = Self.hafsUthmaniFontName
+        }
+
+        // The IndoPak face changed from "Al_Mushaf" to the King Fahd Complex Nastaleeq, so the
+        // PostScript name it is stored under changed too. Without this, a reader who had IndoPak
+        // selected keeps a name no installed font answers to and silently drops to the system face.
+        if Self.legacyIndopakFontNames.contains(fontArabic) {
+            fontArabic = Self.indopakFontName
         }
 
         if defaults?.object(forKey: "quranSortMode") == nil,
@@ -406,6 +413,7 @@ extension Settings {
             showEnglishSaheeh ? "1" : "0",
             showEnglishMustafa ? "1" : "0",
             displayQiraah,
+            arabicScriptStyleRaw,
             fontArabic,
             "\(fontArabicSize)",
             "\(englishFontSize)",
@@ -524,12 +532,12 @@ extension Settings {
     }
 
     static func normalizedArabicFontName(_ fontName: String) -> String {
-        fontName == qiraatUthmaniFontName ? hafsUthmaniFontName : fontName
+        fontName == legacyQiraatFontName ? hafsUthmaniFontName : fontName
     }
 
     static func isUthmaniArabicFont(_ fontName: String) -> Bool {
         let trimmed = fontName.trimmingCharacters(in: .whitespacesAndNewlines)
-        return trimmed == hafsUthmaniFontName || trimmed == qiraatUthmaniFontName
+        return trimmed == hafsUthmaniFontName || trimmed == legacyQiraatFontName
     }
 
     static func isNonHafsQiraah(_ qiraah: String?) -> Bool {
@@ -537,45 +545,103 @@ extension Settings {
         return Riwayah.options.contains { !$0.tag.isEmpty && $0.tag == normalizedQiraah }
     }
 
-    // The official KFGQPC riwayah faces (PostScript names, truncated to 31 chars by the
-    // foundry itself). Bundled unmodified from fonts.qurancomplex.gov.sa (V2.0). Only Duri
-    // and Susi still ship their own face: their texts use U+0622 (alef with madda), which
-    // the Hafs V2.2 face has no glyph for. The other five KFGQPC riwayah faces (Warsh,
-    // Qaloun, Shuba, Bazzi, Qunbul) were dropped from the bundle - every codepoint in those
-    // riwayat's texts is covered by the Hafs face's cmap, so they render in Hafs directly.
-    static let duriUthmaniFontName = "KFGQPCDouriUthmanicScript-Regul"
-    static let susiUthmaniFontName = "KFGQPCSousiUthmanicScript-Regul"
+    // The KFGQPC riwayah faces, chosen by NOTATION FAMILY rather than per riwayah.
+    //
+    // Eight riwayat write hamzatul wasl the Maghribi way - plain alef + starting haraka +
+    // the round U+06EC mark (اَ۬) - and their texts carry U+0622 (alef-madda), which the
+    // Hafs V2.2 face has no glyph for at all. They render in the KFGQPC WARSH face, the
+    // foundry's own Maghribi script: it covers U+0622 and the Arabic comma, and it is the
+    // face those readings are actually printed in.
+    //
+    // The other twelve riwayat write wasl the Hafs way (ٱ, U+0671); every codepoint in
+    // their texts is covered by the Hafs face, so they render in Hafs directly - which
+    // also keeps tajweed coloring on the face it was tuned for.
+    //
+    // The Duri face is still bundled (Duri.ttf / Susi.ttf shipped from the foundry as
+    // byte-identical glyph sets under two names) but the resolver no longer reaches for
+    // it - Warsh serves the whole Maghribi notation family.
+    static let warshUthmaniFontName = "KFGQPCWarshUthmanicScript-Regul"
 
-    /// Canonical riwayah tag → its official KFGQPC typeface, for the riwayat that still
-    /// bundle one (see above). The beta riwayat (no KFGQPC print edition) keep the
-    /// extended-coverage Qiraat face via the fallback in `quranArabicFontName`.
-    static let officialRiwayahFontNames: [String: String] = [
-        Riwayah.duri: duriUthmaniFontName,
-        Riwayah.susi: susiUthmaniFontName,
+    /// The riwayat whose texts use the Maghribi wasl notation (and alef-madda): both of
+    /// Nafi's, Abu Amr's, Abu Jafar's, and Yaqub's.
+    static let maghribiNotationRiwayahTags: Set<String> = [
+        Riwayah.warsh, Riwayah.qaloon, Riwayah.duri, Riwayah.susi,
+        Riwayah.ibnWardan, Riwayah.ibnJammaz, Riwayah.ruways, Riwayah.rawh,
     ]
 
-    /// Riwayat whose dedicated KFGQPC faces were removed after verifying full Hafs-cmap
-    /// coverage of their texts (zero uncovered codepoints) - they render in the Hafs face.
-    static let hafsCoveredRiwayahTags: Set<String> = [
-        Riwayah.warsh, Riwayah.qaloon, Riwayah.shubah, Riwayah.buzzi, Riwayah.qunbul,
-    ]
+    /// Which Uthmani script the Quran draws in. `.madani` is the default - the script all but
+    /// one reader has ever seen. `.automatic` follows the riwayah's own notation family (the
+    /// printed convention each reading is set in) and is only offered to readers who have the
+    /// riwayat on screen at all; `.maghribi` sets everything in the North African script.
+    enum ArabicScriptStyle: String, CaseIterable, Identifiable {
+        case automatic, madani, maghribi
+        var id: String { rawValue }
 
-    static func quranArabicFontName(selectedFontName: String, qiraah: String?) -> String {
+        /// What the picker offers. Automatic has nothing to follow for a reader who never sees
+        /// the riwayat, so it isn't offered there - just the two scripts themselves.
+        static func options(showQiraah: Bool) -> [ArabicScriptStyle] {
+            showQiraah ? allCases : [.madani, .maghribi]
+        }
+
+        var label: String {
+            switch self {
+            case .automatic: return "Automatic"
+            case .madani: return "Madani"
+            case .maghribi: return "Maghribi"
+            }
+        }
+
+        /// Caption under the picker. `namingRiwayat` matches the picker's own gating: with the
+        /// riwayat hidden, naming Hafs or Warsh would mean nothing to that reader, so the
+        /// captions describe the scripts on their own terms.
+        func detail(namingRiwayat: Bool) -> String {
+            switch self {
+            case .automatic: return "Each riwayah in the script its printed mushaf uses."
+            case .madani:
+                return namingRiwayat ? "The Madinah mushaf script (Hafs an Asim)." : "The Madinah mushaf script."
+            case .maghribi:
+                return namingRiwayat ? "The North African mushaf script (Warsh an Nafi)." : "The North African mushaf script."
+            }
+        }
+
+        var fontName: String? {
+            switch self {
+            case .automatic: return nil
+            case .madani: return Settings.hafsUthmaniFontName
+            case .maghribi: return Settings.warshUthmaniFontName
+            }
+        }
+    }
+
+    /// The one choke point every consumer reads, so the picker, the reader, and sharing can
+    /// never disagree. Two corrections live here rather than in the storage:
+    /// - no stored value at all (the raw string is empty) means the reader never chose, and the
+    ///   effective default is Madani, not Automatic;
+    /// - a stored `.automatic` while the riwayat are hidden resolves to Madani, because Automatic
+    ///   isn't among the options offered in that state (see `ArabicScriptStyle.options`). The
+    ///   stored value survives untouched, so turning the riwayat back on restores Automatic.
+    var arabicScriptStyle: ArabicScriptStyle {
+        get {
+            let stored = ArabicScriptStyle(rawValue: arabicScriptStyleRaw) ?? .madani
+            if stored == .automatic && !showQiraahDetails { return .madani }
+            return stored
+        }
+        set { arabicScriptStyleRaw = newValue.rawValue }
+    }
+
+    static func quranArabicFontName(selectedFontName: String, qiraah: String?,
+                                    style: ArabicScriptStyle = .automatic) -> String {
         guard isUthmaniArabicFont(selectedFontName) else {
             return normalizedArabicFontName(selectedFontName)
         }
-        // On the default Uthmani choice, a riwayah that bundles its own KFGQPC face renders
-        // in that face; the five whose texts the Hafs cmap fully covers render in Hafs. A
-        // custom pick (IndoPak/Basic) never reaches this branch, so the user's explicit font
-        // choice always wins.
+        // An explicit script choice wins outright. Otherwise the notation family picks the
+        // face; a custom font pick (IndoPak/Basic) never reaches this branch at all, so the
+        // reader's own font choice always survives.
+        if let forced = style.fontName { return forced }
         let riwayahTag = normalizeLegacyRiwayahTag(qiraah ?? Riwayah.hafsTag)
-        if let officialFace = officialRiwayahFontNames[riwayahTag] {
-            return officialFace
-        }
-        if hafsCoveredRiwayahTags.contains(riwayahTag) {
-            return hafsUthmaniFontName
-        }
-        return isNonHafsQiraah(qiraah) ? qiraatUthmaniFontName : hafsUthmaniFontName
+        return maghribiNotationRiwayahTags.contains(riwayahTag)
+            ? warshUthmaniFontName
+            : hafsUthmaniFontName
     }
 
     var normalizedArabicFontName: String {
@@ -634,7 +700,7 @@ extension Settings {
     }
 
     func quranArabicFontName(for qiraah: String?) -> String {
-        Self.quranArabicFontName(selectedFontName: fontArabic, qiraah: qiraah)
+        Self.quranArabicFontName(selectedFontName: fontArabic, qiraah: qiraah, style: arabicScriptStyle)
     }
 
     func toggleSurahFavorite(surah: Int) {

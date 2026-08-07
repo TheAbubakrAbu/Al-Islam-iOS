@@ -1145,19 +1145,8 @@ struct QuranView: View {
         } message: {
             Text(quranPlayer.playbackAlertMessage)
         }
-        // First-ayah-play heads-up for reciters whose ayah audio substitutes Al-Minshawi. A pushed
-        // SurahView claims this dialog for itself (it zeroes the flag, same as the playback alert
-        // above), so this only presents when the play started from this level (history rows, search).
-        .confirmationDialog(
-            "Play in Al-Minshawi's voice?",
-            isPresented: $quranPlayer.showMinshawiAyahConfirmation,
-            titleVisibility: .visible
-        ) {
-            Button("Play") { quranPlayer.confirmMinshawiAyahPlayback() }
-            Button("Cancel", role: .cancel) { quranPlayer.cancelMinshawiAyahPlayback() }
-        } message: {
-            Text("\(quranPlayer.pendingMinshawiAyahPlay?.reciter.name ?? "This reciter") has no verse-by-verse recordings; ayah playback uses \(Reciter.minshawiAyahFallbackName). This won't be asked again for this reciter.")
-        }
+        // No Minshawi-substitution dialog here any more: that heads-up moved to the moment the reciter
+        // is chosen (`QuranPlayer.needsMinshawiFallbackNotice(for:)`), so playing an ayah never asks.
         .task {
             prewarmQuranDestinations()
             #if DEBUG
@@ -1474,6 +1463,12 @@ struct QuranView: View {
             ayah: ayah,
             onSelectSurah: usesColumnNavigation
                 ? { surahID in selectQuranRoute(.ayahs(surahID: surahID, ayah: nil)) }
+                : nil,
+            // Same rule, carrying an ayah: "go to what's playing" can target an ayah of a surah the
+            // detail isn't showing, and in column mode that has to move the ROUTE, not SurahView's
+            // private state.
+            onSelectAyah: usesColumnNavigation
+                ? { surahID, ayahID in selectQuranRoute(.ayahs(surahID: surahID, ayah: ayahID)) }
                 : nil
         )
         #else
@@ -1605,6 +1600,15 @@ struct QuranView: View {
             showingSettingsSheet: $showingSettingsSheet,
             usesColumnNavigation: usesColumnNavigation
         ))
+        .onAppear {
+            #if DEBUG
+            // Headless visual verification, the Hadith tab's pattern: `-launchQuranSettings`
+            // presents this sheet directly. DEBUG builds only.
+            if ProcessInfo.processInfo.arguments.contains("-launchQuranSettings") {
+                showingSettingsSheet = true
+            }
+            #endif
+        }
         .sheet(isPresented: $showingSettingsSheet) {
             // .stack matters on iPad: a regular-width sheet renders a default NavigationView as two
             // columns with an empty gray detail pane.

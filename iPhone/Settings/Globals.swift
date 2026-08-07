@@ -234,6 +234,24 @@ extension View {
     }
 }
 
+extension String {
+    /// آ (U+0622) written as its canonical parts: ا + the combining maddah (U+0653).
+    ///
+    /// The KFGQPC Hafs face - the one the Quran is set in, and the only one whose tajweed colouring
+    /// stays crisp - ships no precomposed آ, because the Madinah mushaf itself writes the maddah as a
+    /// separate mark. Ordinary Arabic prose (hadith, adhkar, duas, the 99 Names) uses the precomposed
+    /// character constantly, so rendering it in that face left thousands of characters to the system
+    /// fallback mid-word. The face DOES carry both pieces and positions marks (`mark`/`mkmk` GPOS), so
+    /// swapping in the decomposition renders identically without touching the font itself - which the
+    /// KFGQPC licence forbids ("no modifying, altering").
+    ///
+    /// Canonical equivalence, so search, copy and share are unaffected; the other faces (IndoPak,
+    /// system) draw the decomposed form the same way they draw the composed one.
+    var decomposingAlefMadda: String {
+        contains("\u{0622}") ? replacingOccurrences(of: "\u{0622}", with: "\u{0627}\u{0653}") : self
+    }
+}
+
 extension Font {
     /// The app's Arabic font resolver. A real bundled face (Uthmani / Qiraat / IndoPak) renders as
     /// authored; the "Basic" sentinel resolves to the ROUNDED system face explicitly. A bare
@@ -575,16 +593,23 @@ struct LazyDestination<Content: View>: View {
 /// same fit-to-page). Raw values are persisted in `Settings.mushafPageLanguage`.
 enum MushafPageLanguage: String, CaseIterable, Identifiable {
     case arabic
+    /// The bundled printed-mushaf facsimile for the selected riwayah (see `MushafPDFLibrary`). Page mode
+    /// only - a printed page has no list equivalent - and only offered when that riwayah's PDF is bundled.
+    case pdf
     case transliteration
     case clearQuran
     case saheeh
 
     var id: String { rawValue }
-    var isEnglish: Bool { self != .arabic }
+    /// The PDF is Arabic, but it is NOT composed text: it renders as a page image, so everything gated on
+    /// "is this page English" (tajweed, qiraat comparison, the text composer) must treat it as neither.
+    var isEnglish: Bool { self != .arabic && self != .pdf }
+    var isPDF: Bool { self == .pdf }
 
     var displayName: String {
         switch self {
         case .arabic:          return "Arabic"
+        case .pdf:             return "Printed Mushaf (PDF)"
         case .transliteration: return "Transliteration (English)"
         case .clearQuran:      return "The Clear Quran (English)"
         case .saheeh:          return "Saheeh International (English)"

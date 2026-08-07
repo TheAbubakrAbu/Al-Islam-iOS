@@ -676,7 +676,7 @@ struct NextPrayerProgressView: View {
                     tint: .primary
                 )
 
-                Text("Up Next: \(next.displayName) \(Text(next.time, style: .time))")
+                Text("Next: \(next.displayName) \(Text(next.time, style: .time))")
                     .font(.caption)
             } else {
                 Text("Open app to get prayer times")
@@ -771,7 +771,7 @@ struct PrayerListSmallSkyWidget: Widget {
 
 // MARK: - Home screen: next prayer board
 
-/// A medium split: the CURRENT prayer with its live countdown, the window's progress and one "Up Next"
+/// A medium split: the CURRENT prayer with its live countdown, the window's progress and one "Next"
 /// line on the left; the full day's list on the right with the current prayer accented.
 struct NextPrayerBoardView: View {
     var entry: PrayersProvider.Entry
@@ -798,7 +798,7 @@ struct NextPrayerBoardView: View {
                     Text(next.time, style: .timer)
                         .font(.title2.weight(.semibold).monospacedDigit())
 
-                    Text("Up Next: \(next.displayName) \(Text(next.time, style: .time))")
+                    Text("Next: \(next.displayName) \(Text(next.time, style: .time))")
                         .font(.caption)
                         .foregroundColor(skyStyle ? .white.opacity(0.75) : .secondary)
 

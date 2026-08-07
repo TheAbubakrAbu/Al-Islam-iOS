@@ -1543,8 +1543,7 @@ struct HadithView: View {
                             : .caption,
                         accent: settings.accentColor.color,
                         fg: .secondary,
-                        lineLimit: 1,
-                        basicFontForCommas: settings.useFontArabic ? UIFont.preferredFont(forTextStyle: .caption1).pointSize + 2 : nil
+                        lineLimit: 1
                     )
                     .arabicFontDesign(custom: settings.islamUsesCustomArabicFace)
                     .minimumScaleFactor(0.6)

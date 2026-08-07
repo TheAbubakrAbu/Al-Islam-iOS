@@ -147,6 +147,8 @@ extension Settings {
 /// points on one scale, so nothing here parses, ranks, or color-codes them. Renders nothing when the
 /// hadith carries no grading (Bukhari and Muslim carry none by design).
 struct HadithGradeLine: View {
+    @ObservedObject private var settings = Settings.shared
+
     let grades: [(name: String, grade: String)]
     /// Caption-scale for compact (search-result) rows, footnote for reading rows.
     var font: Font = .footnote
@@ -159,19 +161,31 @@ struct HadithGradeLine: View {
             .joined(separator: " · ")
     }
 
+    /// ONE wrapping line - "Grade: Sahih (Al-Albani) · Da'if (Darussalam)" - built from CONCATENATED
+    /// `Text` runs so the coloring is per segment: the VERDICT term carries the accent color, the
+    /// grader's name in parentheses (and the label and separators) stay secondary. Every verdict term
+    /// gets the SAME accent - nothing here ranks or color-codes one verdict against another; the only
+    /// distinction drawn is term-vs-name.
+    private var line: Text {
+        var result = Text("Grade: ").foregroundColor(.secondary)
+        for (index, entry) in grades.enumerated() {
+            if index > 0 {
+                result = result + Text(" · ").foregroundColor(.secondary)
+            }
+            result = result + Text(entry.grade).foregroundColor(settings.accentColor.color)
+            if !entry.name.isEmpty {
+                result = result + Text(" (\(entry.name))").foregroundColor(.secondary)
+            }
+        }
+        return result
+    }
+
     var body: some View {
         if !grades.isEmpty {
-            // Stacked, one verdict per line, so four graders read as a list rather than a run-on
-            // sentence. "Grade:" labels the first line only.
-            VStack(alignment: .leading, spacing: 2) {
-                ForEach(Array(grades.enumerated()), id: \.offset) { index, entry in
-                    Text("\(index == 0 ? "Grade: " : "")\(entry.name.isEmpty ? entry.grade : "\(entry.grade) (\(entry.name))")")
-                        .font(font)
-                        .foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
+            line
+                .font(font)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 }
@@ -426,7 +440,6 @@ struct HadithRow: View, Equatable {
                     guaranteeMatch: visibility.guaranteeArabic,
                     // The classical faces draw "،" as an ornament circle - commas fall back to the
                     // system face.
-                    basicFontForCommas: settings.hadithArabicUsesCustomFace(for: text.arabic) ? arabicFontSize : nil
                 )
                 .arabicFontDesign(custom: settings.hadithArabicUsesCustomFace(for: text.arabic))
                 .multilineTextAlignment(.trailing)
@@ -470,8 +483,10 @@ struct HadithRow: View, Equatable {
                 }
             }
 
-            // The scholar verdicts, sunnah.com's way - under the English (or the Arabic when English
-            // is all a hadith has), above the note.
+            // The scholar verdicts, sunnah.com's way - under the text, above the note. Deliberately
+            // OUTSIDE the Arabic/English blocks above: the grading is part of the hadith, not a
+            // display preference, so it renders whenever the hadith has grades - including with both
+            // display toggles off.
             HadithGradeLine(grades: grades, font: compact ? .caption2 : .footnote)
 
             // The bookmark's note, shown in the reading row exactly like a noted ayah - quiet, under the text.
@@ -669,8 +684,7 @@ struct HadithArabicPreview: View {
             // The clamp must ride INSIDE the snippet: it applies `.lineLimit` to its own Text, and the
             // innermost value wins - an outer `.reservedLineLimit` here was silently ignored.
             lineLimit: lineLimit,
-            reservesSpace: true,
-            basicFontForCommas: settings.hadithArabicUsesCustomFace(for: text) ? size : nil
+            reservesSpace: true
         )
         .arabicFontDesign(custom: settings.hadithArabicUsesCustomFace(for: text))
         .multilineTextAlignment(.trailing)
@@ -1055,9 +1069,18 @@ extension FocusItem {
 
 // MARK: - Share Hadith (custom sheet, image or text - the Share Ayah counterpart)
 
+/// The Share Ayah sheet, for a hadith. Everything structural is mirrored from `ShareAyahSheet`: the
+/// big live preview on top (the previous image STAYS on screen, dimmed, while a regeneration runs, so
+/// the sheet never jumps), the compact option stack in its own 200pt scroller, the Image/Text
+/// segmented picker, and the two glass action buttons feeding a `.sheet`-presented `ActivityView`
+/// that only dismisses this sheet after a COMPLETED share. The card itself is drawn with ShareAyah's
+/// `drawImage` layout - same rounded system fonts, same 1.15x Arabic scale, same padding/spacing
+/// constants, same screen-derived canvas width, same black card at corner radius 20, same
+/// logo + app-name watermark - with the hadith's parts (reference, Arabic, narrator, English, grade,
+/// note) in place of the ayah's.
 struct HadithShareSheet: View {
     @ObservedObject private var settings = Settings.shared
-    @Environment(\.dismiss) private var dismiss
+    @Environment(\.presentationMode) private var presentationMode
 
     let book: HadithCatalogBook
     let hadith: HadithBookData.Hadith
@@ -1067,14 +1090,30 @@ struct HadithShareSheet: View {
     @AppStorage("shareHadithEnglish") private var includeEnglish = true
     @AppStorage("shareHadithNarrator") private var includeNarrator = true
     @AppStorage("shareHadithReference") private var includeReference = true
-    @AppStorage("shareHadithAsImage") private var shareAsImage = true
     // The Share Ayah sheet's applicable options, for hadith: the Arabic face, tashkeel, and the note.
     @AppStorage("shareHadithFontFace") private var shareFontFaceRaw = ""
     @AppStorage("shareHadithHideTashkeel") private var hideTashkeel = false
     @AppStorage("shareHadithIncludeNote") private var includeNote = true
-    /// On by default: knowing a hadith's grading matters to whoever receives it. Text-only - the
-    /// share image deliberately stays clean.
-    @AppStorage("shareHadithGrade") private var includeGrade = true
+    /// ShareAyah's `shareAyahLastActionMode`, for hadith: the sheet reopens in the mode last used.
+    @AppStorage("shareHadithLastActionMode") private var storedActionModeRaw: String = ActionMode.image.rawValue
+
+    // There is deliberately NO grade option: the grading is part of the hadith, not a preference, so
+    // it always travels with the share - in the text AND on the card.
+
+    @State private var actionMode: ActionMode = .image
+    @State private var generatedImage: UIImage?
+    @State private var activityItems: [Any] = []
+    @State private var showingActivityView = false
+    /// Whether the last system share actually completed (vs. cancelled) - see the activity sheet below.
+    @State private var didCompleteShare = false
+    @State private var didInit = false
+    @State private var didFinishInitialSetup = false
+    @State private var isGeneratingImage = false
+    @State private var isSharing = false
+    /// ShareAyah's generation guard: rapid toggle flips overlap renders, and without this the LAST
+    /// render to FINISH won - a stale frame could land over the current options' image.
+    @State private var imageGenerationID = 0
+    private static let shareImageQueue = DispatchQueue(label: "app.shareHadith.imageGeneration", qos: .userInitiated)
 
     /// The share's Arabic face - defaults to the reading face until the user picks one here.
     private var shareFace: Settings.IslamArabicFace {
@@ -1091,6 +1130,16 @@ struct HadithShareSheet: View {
 
     private var composed: String {
         Self.composedText(book: book, hadith: hadith)
+    }
+
+    /// The ayah sheet's text preview, for hadith: the same Allah-name reddening over a white base, so
+    /// the two share surfaces render the names identically.
+    private var composedAttributedText: AttributedString {
+        ShareAyahSheet.allahHighlightedSwiftUIText(
+            composed,
+            baseColor: .white,
+            enabled: settings.highlightAllahNamesHadith
+        )
     }
 
     /// The unified hadith text composition, honoring the persisted include toggles - used by this sheet
@@ -1111,10 +1160,10 @@ struct HadithShareSheet: View {
         }
         if flag("shareHadithNarrator"), !text.narrator.isEmpty { parts.append(text.narrator) }
         if flag("shareHadithEnglish"), !text.text.isEmpty { parts.append(text.text) }
-        if flag("shareHadithGrade") {
-            let grades = hadith.grades
-            if !grades.isEmpty { parts.append("Grade: \(HadithGradeLine.joined(grades))") }
-        }
+        // ALWAYS, with no option gating it: whoever receives a hadith must be able to tell sahih from
+        // da'if, so the grading is not something a share can drop.
+        let grades = hadith.grades
+        if !grades.isEmpty { parts.append("Grade: \(HadithGradeLine.joined(grades))") }
         if flag("shareHadithIncludeNote"),
            let note = HadithStore.shared.note(slug: book.slug, idInBook: hadith.idInBook) {
             parts.append("Note: \(note)")
@@ -1122,49 +1171,55 @@ struct HadithShareSheet: View {
         return parts.joined(separator: "\n\n")
     }
 
-    @State private var generatedImage: UIImage?
-    @State private var didInit = false
-    /// ShareAyahSheet's generation guard: rapid toggle flips overlap renders, and without this the LAST
-    /// render to FINISH won - a stale frame could land over the current options' image.
-    @State private var renderGeneration = 0
-
     /// How many include-parts are on - the last one standing can't be turned off (an empty share is nothing).
     private var enabledPartCount: Int {
-        [includeReference,
-         includeArabic && !hadith.arabic.isEmpty,
-         includeNarrator && !hadith.english.narrator.isEmpty,
-         includeEnglish && !hadith.english.text.isEmpty].filter { $0 }.count
+        let text = hadith.allText
+        return [includeReference,
+                includeArabic && !text.arabic.isEmpty,
+                includeNarrator && !text.narrator.isEmpty,
+                includeEnglish && !text.text.isEmpty].filter { $0 }.count
     }
 
     // ShareAyahSheet's exact shape: the big preview on top (image, or the dark text card), the compact
     // toggle stack, the Image/Text segmented picker, and the Copy/Share glass buttons.
     var body: some View {
+        let text = hadith.allText
+
         NavigationView {
             VStack {
                 Spacer()
 
                 ZStack {
-                    if shareAsImage {
+                    if actionMode == .image {
                         if let img = generatedImage {
+                            // The PREVIOUS image stays on screen while a regeneration runs (it is never
+                            // nilled mid-flight), dimmed slightly so the swap reads as an update, not a
+                            // teardown - the ayah sheet's fix for the jump-and-reflow on every toggle.
                             Image(uiImage: img)
                                 .resizable()
                                 .scaledToFit()
                                 .cornerRadius(24)
                                 .padding(.horizontal, 16)
                                 .contextMenu { copyMenu(image: img) }
+                                .opacity(isGeneratingImage ? 0.6 : 1)
+                                .animation(.easeInOut(duration: 0.15), value: isGeneratingImage)
                                 .transition(.opacity)
                         } else {
+                            // First render only: hold the preview slot at a stable size so the controls
+                            // below don't shift when the image lands.
                             ProgressView()
                                 .frame(maxWidth: .infinity)
                                 .frame(height: 180)
                         }
                     } else {
+                        // The ayah sheet's dark text card, verbatim - except that it SCROLLS: a hadith
+                        // runs many times an ayah's length, and the ayah card's shrink-to-fit would
+                        // render the longest narrations at a few points tall.
                         ScrollView {
-                            // Same Allah-name reddening the Share Ayah text preview applies - the live
-                            // hadith rows highlight the names, so the share preview must too.
-                            Text(ShareAyahSheet.allahHighlightedSwiftUIText(composed, baseColor: .white, enabled: settings.highlightAllahNamesHadith))
+                            Text(composedAttributedText)
                                 .font(.body)
                                 .textSelection(.enabled)
+                                .lineLimit(nil)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                                 .padding()
                         }
@@ -1175,7 +1230,9 @@ struct HadithShareSheet: View {
                         .transition(.opacity.combined(with: .scale(scale: 0.98)))
                     }
                 }
-                .animation(.easeInOut, value: shareAsImage)
+                .scaleEffect(isSharing ? 0.98 : 1)
+                .animation(.easeInOut, value: actionMode)
+                .animation(.easeInOut, value: isSharing)
 
                 Spacer()
 
@@ -1183,50 +1240,46 @@ struct HadithShareSheet: View {
                     VStack(spacing: 2) {
                         toggle("Reference", $includeReference, disabled: includeReference && enabledPartCount == 1)
 
-                        if !hadith.arabic.isEmpty {
+                        if !text.arabic.isEmpty {
                             toggle("Arabic", $includeArabic, disabled: includeArabic && enabledPartCount == 1)
-
-                            // Applicable Share Ayah options, one for one: tashkeel off for a cleaner
-                            // card, and the Arabic face choice (segmented, like the ayah sheet's).
-                            if includeArabic {
-                                toggle("Hide Tashkeel", $hideTashkeel, disabled: false)
-                            }
                         }
 
-                        if !hadith.english.narrator.isEmpty {
+                        if !text.narrator.isEmpty {
                             toggle("Narrator", $includeNarrator, disabled: includeNarrator && enabledPartCount == 1)
                         }
 
-                        if !hadith.english.text.isEmpty {
+                        if !text.text.isEmpty {
                             toggle("English", $includeEnglish, disabled: includeEnglish && enabledPartCount == 1)
                         }
 
-                        if noteText != nil {
-                            toggle("Include Note", $includeNote, disabled: false)
+                        // The ayah sheet's secondary options: the same 0.8-scaled compact rows, and the
+                        // font picker lives INSIDE the option list, image mode only (the face is a
+                        // property of the drawn card, not of the text).
+                        if includeArabic, !text.arabic.isEmpty {
+                            if actionMode == .image {
+                                Picker("Arabic Font", selection: shareFaceBinding.animation(.easeInOut)) {
+                                    Text("Uthmani").tag(Settings.IslamArabicFace.uthmani)
+                                    Text("IndoPak").tag(Settings.IslamArabicFace.indopak)
+                                    Text("Basic").tag(Settings.IslamArabicFace.basic)
+                                }
+                                .pickerStyle(SegmentedPickerStyle())
+                                .padding(.horizontal, 16)
+                                .padding(.vertical, 2)
+                            }
+
+                            compactToggle("Hide Tashkeel and Diacretics", $hideTashkeel)
                         }
 
-                        // Text shares only - the share image stays clean by design.
-                        if !hadith.grades.isEmpty {
-                            toggle("Include Grade", $includeGrade, disabled: false)
+                        if noteText != nil {
+                            compactToggle("Include Note", $includeNote)
                         }
                     }
                 }
                 .frame(maxHeight: 200)
 
-                if includeArabic, !hadith.arabic.isEmpty {
-                    Picker("Arabic Font", selection: shareFaceBinding.animation(.easeInOut)) {
-                        Text("Uthmani").tag(Settings.IslamArabicFace.uthmani)
-                        Text("IndoPak").tag(Settings.IslamArabicFace.indopak)
-                        Text("Basic").tag(Settings.IslamArabicFace.basic)
-                    }
-                    .pickerStyle(SegmentedPickerStyle())
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 4)
-                }
-
-                Picker("Action Mode", selection: $shareAsImage.animation(.easeInOut)) {
-                    Text("Image").tag(true)
-                    Text("Text").tag(false)
+                Picker("Action Mode", selection: $actionMode.animation(.easeInOut)) {
+                    Text("Image").tag(ActionMode.image)
+                    Text("Text").tag(ActionMode.text)
                 }
                 .pickerStyle(SegmentedPickerStyle())
                 .padding(.horizontal, 16)
@@ -1234,49 +1287,75 @@ struct HadithShareSheet: View {
 
                 HStack(spacing: 12) {
                     actionButton("Copy") {
-                        if shareAsImage, let img = generatedImage {
-                            UIPasteboard.general.image = img
-                        } else {
-                            UIPasteboard.general.string = composed
-                        }
-                        dismiss()
+                        performCopyOrGenerate()
                     }
 
-                    actionButton("Share") {
-                        if shareAsImage, let img = generatedImage {
-                            presentSystemShareSheet(items: [img])
-                        } else {
-                            presentSystemShareSheet(items: [composed])
-                        }
+                    actionButton("Share", isAnimating: isSharing) {
+                        performShareOrGenerate()
                     }
                 }
                 .padding(.horizontal, 16)
                 .padding(.bottom)
+                .sheet(isPresented: $showingActivityView) {
+                    // didCompleteShare gates the auto-dismiss below: cancelling the system sheet must
+                    // not throw away the configured preview.
+                    if #available(iOS 16.0, *) {
+                        ActivityView(activityItems: activityItems, onComplete: { didCompleteShare = $0 })
+                            .presentationDetents([.medium])
+                    } else {
+                        ActivityView(activityItems: activityItems, onComplete: { didCompleteShare = $0 })
+                    }
+                }
             }
             .navigationTitle("\(book.englishTitle) \(hadith.displayNumber)")
             .navigationBarTitleDisplayMode(.inline)
             .sheetDismissToolbar()
+            // Full-size before the wash so the background always covers the whole sheet.
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .accentWashedBackground()
         }
         .navigationViewStyle(.stack)
         .accentColor(settings.accentColor.color)
         .onAppear {
             guard !didInit else { return }
             didInit = true
-            generatePreviewImage()
+
+            withAnimation {
+                actionMode = ActionMode(rawValue: storedActionModeRaw) ?? .image
+                generatePreviewImage()
+            }
+
+            DispatchQueue.main.async {
+                didFinishInitialSetup = true
+            }
         }
-        .onChange(of: includeReference) { _ in settings.hapticFeedback(); generatePreviewImage() }
-        .onChange(of: includeArabic) { _ in settings.hapticFeedback(); generatePreviewImage() }
-        .onChange(of: includeNarrator) { _ in settings.hapticFeedback(); generatePreviewImage() }
-        .onChange(of: includeEnglish) { _ in settings.hapticFeedback(); generatePreviewImage() }
-        .onChange(of: hideTashkeel) { _ in settings.hapticFeedback(); generatePreviewImage() }
-        .onChange(of: includeNote) { _ in settings.hapticFeedback(); generatePreviewImage() }
-        // No image regeneration: the grade travels in the TEXT composition only.
-        .onChange(of: includeGrade) { _ in settings.hapticFeedback() }
-        .onChange(of: shareFontFaceRaw) { _ in settings.hapticFeedback(); generatePreviewImage() }
-        .onChange(of: shareAsImage) { asImage in
-            settings.hapticFeedback()
-            if asImage && generatedImage == nil { generatePreviewImage() }
+        // Every trigger below is gated on didFinishInitialSetup, the ayah sheet's rule: onAppear already
+        // renders once explicitly, and its own state seeding used to echo through as a second, discarded render.
+        .onChange(of: includeReference) { _ in regenerate() }
+        .onChange(of: includeArabic) { _ in regenerate() }
+        .onChange(of: includeNarrator) { _ in regenerate() }
+        .onChange(of: includeEnglish) { _ in regenerate() }
+        .onChange(of: hideTashkeel) { _ in regenerate() }
+        .onChange(of: includeNote) { _ in regenerate() }
+        .onChange(of: shareFontFaceRaw) { _ in regenerate() }
+        .onChange(of: actionMode) { newValue in
+            if didFinishInitialSetup { settings.hapticFeedback() }
+            storedActionModeRaw = newValue.rawValue
+            if newValue == .image && generatedImage == nil { generatePreviewImage() }
         }
+        .onChange(of: showingActivityView) { open in
+            // Close the whole sheet only after a COMPLETED share. On cancel, stay put with the
+            // configured preview intact.
+            if !open && didCompleteShare {
+                presentationMode.wrappedValue.dismiss()
+            }
+        }
+    }
+
+    private func regenerate() {
+        guard didFinishInitialSetup else { return }
+        settings.hapticFeedback()
+        generatePreviewImage()
     }
 
     @ViewBuilder
@@ -1290,7 +1369,18 @@ struct HadithShareSheet: View {
         .padding(.vertical, 4)
     }
 
-    private func actionButton(_ title: String, action: @escaping () -> Void) -> some View {
+    /// The ayah sheet's secondary-option row: the same 0.8 scale and negative inset, so an option that
+    /// modifies a part reads quieter than the part's own switch.
+    @ViewBuilder
+    private func compactToggle(_ title: LocalizedStringKey, _ binding: Binding<Bool>) -> some View {
+        Toggle(title, isOn: binding.animation(.easeInOut))
+            .tint(settings.accentColor.color)
+            .scaleEffect(0.8)
+            .padding(.horizontal, -24)
+            .padding(.vertical, 2)
+    }
+
+    private func actionButton(_ title: String, isAnimating: Bool = false, action: @escaping () -> Void) -> some View {
         Button {
             settings.hapticFeedback()
             action()
@@ -1299,6 +1389,7 @@ struct HadithShareSheet: View {
                 .frame(maxWidth: .infinity)
                 .padding()
                 .foregroundColor(.primary)
+                .scaleEffect(isAnimating ? 0.96 : 1)
         }
         .conditionalGlassEffect(useColor: 0.25)
     }
@@ -1322,114 +1413,288 @@ struct HadithShareSheet: View {
         }
     }
 
-    /// Renders off the main thread, ShareAyah's way, so toggling never hitches the sheet.
-    private func generatePreviewImage() {
-        renderGeneration += 1
-        let generation = renderGeneration
-        DispatchQueue.global(qos: .userInitiated).async {
-            let image = renderImage()
-            DispatchQueue.main.async {
-                // A newer toggle superseded this render - drop the stale frame (the newer one is coming).
-                guard generation == renderGeneration else { return }
-                withAnimation(.easeInOut(duration: 0.15)) { generatedImage = image }
+    private func animateShare(completion: @escaping () -> Void) {
+        withAnimation(.spring(response: 0.2, dampingFraction: 0.7)) {
+            isSharing = true
+        }
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) {
+            completion()
+
+            withAnimation(.easeOut(duration: 0.18)) {
+                isSharing = false
             }
         }
     }
 
-    /// The dark rounded share card, in the Share Ayah visual language: reference caption, Arabic
-    /// trailing in the reader's face (Basic falls back to the rounded system face), narrator italic,
-    /// English body.
-    private func renderImage() -> UIImage? {
-        let width: CGFloat = 1080
-        let inset: CGFloat = 72
-        let textWidth = width - inset * 2
+    private func presentShareSheet(with items: [Any]) {
+        animateShare {
+            didCompleteShare = false
+            activityItems = items
+            showingActivityView = true
+        }
+    }
 
-        let baseSize: CGFloat = 40
-        // The user's chosen share face (Uthmani / IndoPak / Basic), the Share Ayah picker's twin.
-        let arabicFont = UIFont(name: shareFace.fontName, size: baseSize * 1.2)
-            ?? .roundedSystemFont(ofSize: baseSize * 1.2)
-        let englishFont = UIFont.roundedSystemFont(ofSize: baseSize)
-        let narratorFont = UIFont.italicSystemFont(ofSize: baseSize * 0.85)
-        let captionFont = UIFont.roundedSystemFont(ofSize: baseSize * 0.7, weight: .semibold)
-        let noteFont = UIFont.italicSystemFont(ofSize: baseSize * 0.75)
+    private func performCopyOrGenerate() {
+        switch actionMode {
+        case .text:
+            UIPasteboard.general.string = composed
+            presentationMode.wrappedValue.dismiss()
+        case .image:
+            if let img = generatedImage {
+                UIPasteboard.general.image = img
+                presentationMode.wrappedValue.dismiss()
+            } else {
+                generatePreviewImage { img in
+                    UIPasteboard.general.image = img
+                    presentationMode.wrappedValue.dismiss()
+                }
+            }
+        }
+    }
 
-        let accent = UIColor(settings.accentColor.color)
+    private func performShareOrGenerate() {
+        switch actionMode {
+        case .text:
+            presentShareSheet(with: [composed])
+        case .image:
+            if let img = generatedImage {
+                presentShareSheet(with: [img])
+            } else {
+                generatePreviewImage { img in
+                    presentShareSheet(with: [img])
+                }
+            }
+        }
+    }
 
-        func paragraph(_ alignment: NSTextAlignment, spacing: CGFloat = 8) -> NSParagraphStyle {
-            let p = NSMutableParagraphStyle()
-            p.alignment = alignment
-            p.lineSpacing = spacing
-            return p
+    // MARK: Card rendering
+
+    /// Everything the card is drawn from, captured on the main actor before the render hops queues -
+    /// the ayah sheet's rule: the render queue must never read view state a later toggle could be
+    /// rewriting (and `UIScreen.main` is main-thread-only).
+    private struct RenderInput {
+        var reference: String
+        var arabic: String
+        var narrator: String
+        var english: String
+        var grades: [(name: String, grade: String)]
+        var note: String?
+        var arabicFontName: String
+        var arabicUsesCustomFace: Bool
+        var accent: UIColor
+        var highlightAllahNames: Bool
+        var screenWidth: CGFloat
+    }
+
+    private func renderInput() -> RenderInput {
+        let text = hadith.allText
+        // Hide Tashkeel, the Share Ayah option's twin: strip the diacritics for a cleaner card.
+        let arabicText = includeArabic
+            ? (hideTashkeel ? text.arabic.removingArabicDiacriticsAndSigns : text.arabic)
+            : ""
+        // The KFGQPC faces DROP contextual shaping past a length cliff (every letter renders isolated),
+        // so the longest narrations fall back to the system face on the card too - the live rows' rule,
+        // see `arabicShapingCharacterLimit`. "Basic" is a sentinel with no real UIFont, and lands on the
+        // same rounded-system fallback in `drawImage`.
+        let usesCustomFace = shareFace != .basic && arabicText.count < Settings.arabicShapingCharacterLimit
+        return RenderInput(
+            reference: includeReference ? "[\(book.englishTitle) \(hadith.displayNumber)]" : "",
+            arabic: arabicText,
+            narrator: includeNarrator ? text.narrator : "",
+            english: includeEnglish ? text.text : "",
+            // No toggle: the grading always travels with the share.
+            grades: hadith.grades,
+            note: includeNote ? noteText : nil,
+            arabicFontName: usesCustomFace ? shareFace.fontName : Settings.systemArabicFontName,
+            arabicUsesCustomFace: usesCustomFace,
+            accent: settings.accentColor.color.uiColor,
+            highlightAllahNames: settings.highlightAllahNamesHadith,
+            // Clamped to a phone-like measure, exactly like the ayah card: on iPad/Mac the SCREEN is
+            // 800-1400pt wide even when the window is narrow, and a card laid out that wide reads terribly.
+            screenWidth: min(UIScreen.main.bounds.width, ShareAyahRender.maxImageWidth)
+        )
+    }
+
+    /// Renders off the main thread on a serial queue, ShareAyah's way, so toggling never hitches the sheet.
+    private func generatePreviewImage(completion: @escaping (UIImage) -> Void = { _ in }) {
+        let input = renderInput()
+        let generationID = imageGenerationID + 1
+        imageGenerationID = generationID
+        // The previous image deliberately STAYS visible (dimmed via isGeneratingImage) while this render
+        // runs - nilling it here would collapse the preview to zero height and make the sheet jump.
+        isGeneratingImage = true
+        Self.shareImageQueue.async {
+            // Superseded before we even started drawing? Skip the render entirely instead of drawing an
+            // image only to discard it. main.sync is deadlock-free here: nothing on the main thread ever
+            // blocks on this queue.
+            let stillCurrent = DispatchQueue.main.sync { self.imageGenerationID == generationID }
+            guard stillCurrent else { return }
+
+            let img: UIImage = autoreleasepool { Self.drawImage(input) }
+            DispatchQueue.main.async {
+                guard self.imageGenerationID == generationID else { return }
+                // Scoped to the image swap only - an unscoped withAnimation animates the whole sheet's
+                // layout and amplifies the jump.
+                withAnimation(.easeInOut(duration: 0.15)) {
+                    self.generatedImage = img
+                    self.isGeneratingImage = false
+                }
+                if self.actionMode == .image {
+                    self.activityItems = [img]
+                }
+                completion(img)
+            }
+        }
+    }
+
+    /// The share card, drawn with `ShareAyahSheet.drawImage`'s layout: one attributed string composed
+    /// block by block, measured against a screen-derived canvas, drawn on a black card at corner
+    /// radius 20 with the logo + app-name watermark centered at the foot.
+    private static func drawImage(_ input: RenderInput) -> UIImage {
+        // Rounded, to match the app's system-font design (the `fontDesign` environment does not reach
+        // this UIKit-drawn image, so the design is asked for explicitly).
+        let bodyFont = UIFont.roundedSystemFont(ofSize: UIFont.preferredFont(forTextStyle: .body).pointSize)
+        // The same 1.15x Arabic scale the ayah card uses, with the same rounded-system fallback for the
+        // faces that have no real UIFont.
+        let arabicSize = bodyFont.pointSize * 1.15
+        let arabicFont = UIFont(name: input.arabicFontName, size: arabicSize)
+            ?? UIFont.roundedSystemFont(ofSize: arabicSize)
+        let captionFont = UIFont.roundedSystemFont(ofSize: UIFont.preferredFont(forTextStyle: .caption2).pointSize)
+        let narratorFont = UIFont.italicSystemFont(ofSize: bodyFont.pointSize * 0.9)
+
+        let textColor = UIColor.white
+        // The ayah card's secondary caption color, RESOLVED for a dark card: this runs off the main
+        // thread, where `UITraitCollection.current` is unspecified, and an unresolved secondaryLabel can
+        // come back as near-black on the black card.
+        let secondaryColor = UIColor.secondaryLabel.resolvedColor(with: UITraitCollection(userInterfaceStyle: .dark))
+        let accent = input.accent
+
+        // --- Layout constants (ShareAyah's, unchanged)
+        let padding: CGFloat = 20, spacing: CGFloat = 8, extraSpacing: CGFloat = 30
+        let iPhoneCanvasCap: CGFloat = 500
+        let deviceWidth = input.screenWidth - 50
+        let maxWidth = min(deviceWidth, iPhoneCanvasCap)
+
+        // Paragraph styles
+        let right = NSMutableParagraphStyle(); right.alignment = .right
+        let left  = NSMutableParagraphStyle(); left.alignment  = .left
+        let cent  = NSMutableParagraphStyle(); cent.alignment  = .center
+
+        // Attr dictionaries
+        let bodyAttr = [NSAttributedString.Key.font: bodyFont, .foregroundColor: textColor, .paragraphStyle: left] as [NSAttributedString.Key: Any]
+        let arAttr = [NSAttributedString.Key.font: arabicFont, .foregroundColor: textColor, .paragraphStyle: right] as [NSAttributedString.Key: Any]
+        let accentAttr = [NSAttributedString.Key.font: bodyFont, .foregroundColor: accent, .paragraphStyle: left] as [NSAttributedString.Key: Any]
+        let narratorAttr = [NSAttributedString.Key.font: narratorFont, .foregroundColor: secondaryColor, .paragraphStyle: left] as [NSAttributedString.Key: Any]
+        let captionAttr = [NSAttributedString.Key.font: captionFont, .foregroundColor: secondaryColor, .paragraphStyle: left] as [NSAttributedString.Key: Any]
+        let captionAccentAttr = [NSAttributedString.Key.font: captionFont, .foregroundColor: accent, .paragraphStyle: left] as [NSAttributedString.Key: Any]
+        let centAccent = [NSAttributedString.Key.font: bodyFont, .foregroundColor: accent, .paragraphStyle: cent] as [NSAttributedString.Key: Any]
+
+        // --- Compose the full attributed text once
+        let text = NSMutableAttributedString()
+        func append(_ str: String, _ attrs: [NSAttributedString.Key: Any], highlightAllah: Bool = true) {
+            let piece = NSMutableAttributedString(string: str, attributes: attrs)
+            // The Share Ayah card's Allah-name reddening (Arabic pattern match + English "Allah") - the
+            // live rows highlight the names, so the shared image must too.
+            ShareAyahSheet.applyAllahHighlight(
+                to: piece,
+                source: str,
+                enabled: highlightAllah && input.highlightAllahNames
+            )
+            text.append(piece)
+        }
+        func sepIfNeeded() { if text.length > 0 { append("\n\n", bodyAttr, highlightAllah: false) } }
+
+        if !input.reference.isEmpty {
+            append(input.reference, accentAttr, highlightAllah: false)
         }
 
-        // The classical faces draw "،" and "؛" as ornament circles - those runs fall back to the
-        // system face, exactly like the live rows' `basicFontForCommas`.
-        func applyBasicFontToCommas(_ piece: NSMutableAttributedString, size: CGFloat) {
-            let ns = piece.string as NSString
-            for i in 0..<ns.length {
-                let ch = ns.substring(with: NSRange(location: i, length: 1))
-                if ch == "،" || ch == "؛" || ch == "," {
-                    piece.addAttribute(.font, value: UIFont.roundedSystemFont(ofSize: size), range: NSRange(location: i, length: 1))
+        if !input.arabic.isEmpty {
+            sepIfNeeded()
+            append(input.arabic, arAttr)
+        }
+
+        // The narrator sits directly above the English on a single break - the ayah card's grammar for
+        // an attribution line and the text it introduces ("- Saheeh International").
+        if !input.narrator.isEmpty {
+            sepIfNeeded()
+            append(input.narrator, narratorAttr)
+            if !input.english.isEmpty { append("\n", bodyAttr, highlightAllah: false) }
+        }
+
+        if !input.english.isEmpty {
+            if input.narrator.isEmpty { sepIfNeeded() }
+            append(input.english, bodyAttr)
+        }
+
+        // The grade line, drawn exactly as `HadithGradeLine` draws it on screen: the verdict term in the
+        // accent color, the grader's name secondary. No ranking, no per-verdict color-coding.
+        if !input.grades.isEmpty {
+            sepIfNeeded()
+            append("Grade: ", captionAttr, highlightAllah: false)
+            for (index, entry) in input.grades.enumerated() {
+                if index > 0 { append(" · ", captionAttr, highlightAllah: false) }
+                append(entry.grade, captionAccentAttr, highlightAllah: false)
+                if !entry.name.isEmpty {
+                    append(" (\(entry.name))", captionAttr, highlightAllah: false)
                 }
             }
         }
 
-        let text = NSMutableAttributedString()
-        func append(_ string: String, font: UIFont, color: UIColor, alignment: NSTextAlignment, isArabic: Bool = false) {
-            if text.length > 0 { text.append(NSAttributedString(string: "\n\n")) }
-            let piece = NSMutableAttributedString(string: string, attributes: [
-                .font: font, .foregroundColor: color, .paragraphStyle: paragraph(alignment)
-            ])
-            // The Share Ayah card's Allah-name reddening, applied to every part (Arabic pattern match +
-            // English "Allah") - the live rows highlight the names, so the shared image must too.
-            ShareAyahSheet.applyAllahHighlight(to: piece, source: string, enabled: settings.highlightAllahNamesHadith)
-            if isArabic, shareFace != .basic {
-                applyBasicFontToCommas(piece, size: baseSize * 1.2)
-            }
-            text.append(piece)
+        if let note = input.note {
+            sepIfNeeded()
+            append("- Note", captionAttr, highlightAllah: false)
+            append("\n", bodyAttr, highlightAllah: false)
+            append(note, bodyAttr)
         }
 
-        // Hide Tashkeel, the Share Ayah option's twin: strip the diacritics for a cleaner card.
-        let arabicText = hideTashkeel ? hadith.arabic.removingArabicDiacriticsAndSigns : hadith.arabic
+        guard text.length > 0 else { return UIImage() }
 
-        if includeReference { append("\(book.englishTitle) \(hadith.displayNumber)", font: captionFont, color: accent, alignment: .center) }
-        if includeArabic, !arabicText.isEmpty { append(arabicText, font: arabicFont, color: .white, alignment: .right, isArabic: true) }
-        if includeNarrator, !hadith.english.narrator.isEmpty { append(hadith.english.narrator, font: narratorFont, color: .lightGray, alignment: .left) }
-        if includeEnglish, !hadith.english.text.isEmpty { append(hadith.english.text, font: englishFont, color: .white, alignment: .left) }
-        if includeNote, let note = noteText { append("Note: \(note)", font: noteFont, color: .lightGray, alignment: .left) }
-        guard text.length > 0 else { return nil }
+        // --- Watermark (the ayah card's, unchanged): the app logo beside the full app name, in accent.
+        let wmString = AppIdentifiers.appFullName
+        let wmText = NSAttributedString(string: wmString, attributes: centAccent)
+        var logo = UIImage(named: AppIdentifiers.appName)
 
-        // The Al-Islam watermark, quietly at the bottom of every shared card.
-        let watermark = NSAttributedString(string: "Al-Islam", attributes: [
-            .font: UIFont.roundedSystemFont(ofSize: baseSize * 0.55, weight: .semibold),
-            .foregroundColor: accent.withAlphaComponent(0.85),
-            .paragraphStyle: paragraph(.center, spacing: 0)
-        ])
+        var wmTextSize = wmText.size()
+        var logoSize = CGSize(width: wmTextSize.height, height: wmTextSize.height)
+        let availWidth = maxWidth - 2*padding
+        let desiredWmW = logoSize.width + spacing + wmTextSize.width
 
-        let bounds = text.boundingRect(
-            with: CGSize(width: textWidth, height: .greatestFiniteMagnitude),
-            options: [.usesLineFragmentOrigin, .usesFontLeading],
-            context: nil
-        )
-        let watermarkBounds = watermark.boundingRect(
-            with: CGSize(width: textWidth, height: .greatestFiniteMagnitude),
-            options: [.usesLineFragmentOrigin, .usesFontLeading],
-            context: nil
-        )
-        let watermarkGap: CGFloat = 28
-        let height = ceil(bounds.height) + inset * 2 + watermarkGap + ceil(watermarkBounds.height)
-        let canvas = CGRect(x: 0, y: 0, width: width, height: height)
+        if desiredWmW > availWidth {
+            let scale = availWidth / desiredWmW
+            wmTextSize = CGSize(width: wmTextSize.width*scale, height: wmTextSize.height*scale)
+            logoSize = CGSize(width: logoSize.width*scale, height: logoSize.height*scale)
+            if let img = logo {
+                let r = UIGraphicsImageRenderer(size: logoSize)
+                logo = r.image { _ in img.draw(in: CGRect(origin: .zero, size: logoSize)) }
+            }
+        }
 
-        return UIGraphicsImageRenderer(size: canvas.size).image { context in
-            UIColor(red: 0.07, green: 0.07, blue: 0.08, alpha: 1).setFill()
-            UIBezierPath(roundedRect: canvas, cornerRadius: 48).fill()
-            text.draw(with: CGRect(x: inset, y: inset, width: textWidth, height: ceil(bounds.height)),
-                      options: [.usesLineFragmentOrigin, .usesFontLeading], context: nil)
-            watermark.draw(with: CGRect(x: inset, y: inset + ceil(bounds.height) + watermarkGap,
-                                        width: textWidth, height: ceil(watermarkBounds.height)),
-                           options: [.usesLineFragmentOrigin, .usesFontLeading], context: nil)
+        let constraint = CGSize(width: availWidth, height: .greatestFiniteMagnitude)
+        var textRect = text.boundingRect(with: constraint, options: [.usesLineFragmentOrigin, .usesFontLeading], context: nil).integral
+        textRect.size.width  += 2*padding
+        textRect.size.height += logoSize.height + extraSpacing + 25
+
+        let canvas = CGRect(origin: .zero, size: CGSize(width: maxWidth, height: textRect.height))
+
+        let r1 = UIGraphicsImageRenderer(size: canvas.size)
+        let blackCard = r1.image { ctx in
+            UIColor.black.setFill(); ctx.fill(canvas)
+            text.draw(in: CGRect(x: padding, y: padding, width: canvas.width - 2*padding, height: canvas.height))
+
+            let wmY = canvas.height - logoSize.height - extraSpacing/2
+            let wmX = (canvas.width - (logoSize.width + spacing + wmTextSize.width)) / 2
+            if let logo = logo {
+                let rect = CGRect(origin: CGPoint(x: wmX, y: wmY), size: logoSize)
+                ctx.cgContext.addPath(UIBezierPath(roundedRect: rect, cornerRadius: logoSize.height*0.25).cgPath)
+                ctx.cgContext.clip(); logo.draw(in: rect); ctx.cgContext.resetClip()
+            }
+            wmText.draw(in: CGRect(x: wmX + logoSize.width + spacing, y: wmY, width: wmTextSize.width, height: wmTextSize.height))
+        }
+        return UIGraphicsImageRenderer(size: canvas.size).image { _ in
+            UIBezierPath(roundedRect: canvas, cornerRadius: 20).addClip()
+            blackCard.draw(at: .zero)
         }
     }
 }
 #endif
-

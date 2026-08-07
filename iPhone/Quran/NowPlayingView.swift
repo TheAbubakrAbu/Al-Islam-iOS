@@ -45,21 +45,23 @@ struct NowPlayingView: View {
         return
             AnyView(
                 VStack(spacing: 8) {
-                    if quranView {
-                        if let onOpenPlayback {
-                            Button {
-                                settings.hapticFeedback()
-                                onOpenPlayback(ctx)
-                            } label: {
-                                playerRow(isPlaying: quranPlayer.isPlaying)
-                            }
-                            .buttonStyle(.plain)
-                        } else {
-                            NavigationLink {
-                                destinationView(for: ctx)
-                            } label: {
-                                playerRow(isPlaying: quranPlayer.isPlaying)
-                            }
+                    // Tapping the bar goes to what's playing. `onOpenPlayback` is honoured wherever it is
+                    // supplied - not just on the Quran list (`quranView`) - so the reader can hand the tap
+                    // to its own "go to ayah/surah" navigation (page mode lands on the page holding the
+                    // ayah, list mode scrolls the surah to it) instead of pushing a second reader.
+                    if let onOpenPlayback {
+                        Button {
+                            settings.hapticFeedback()
+                            onOpenPlayback(ctx)
+                        } label: {
+                            playerRow(isPlaying: quranPlayer.isPlaying)
+                        }
+                        .buttonStyle(.plain)
+                    } else if quranView {
+                        NavigationLink {
+                            destinationView(for: ctx)
+                        } label: {
+                            playerRow(isPlaying: quranPlayer.isPlaying)
                         }
                     } else {
                         playerRow(isPlaying: quranPlayer.isPlaying)
@@ -523,6 +525,42 @@ struct NowPlayingView: View {
         }
     }
 
+    /// The ±10s seek pair, as a palette-style row at the top of the compact player's context menu.
+    ///
+    /// Compact-only on purpose: the big player already shows `gobackward.10` / `goforward.10` inline, so
+    /// there it would be a duplicate. Small player has room for three controls, and long-pressing is how
+    /// you reach the rest - fine seeking included. Calls the player's own `seek(by:)`, the same API the
+    /// expanded transport row uses.
+    @ViewBuilder
+    private var seekControlGroup: some View {
+        // iOS-only: watchOS has no `ControlGroup` at all, and no context menu on this bar either.
+        #if os(iOS)
+        if #available(iOS 16.4, *) {
+            ControlGroup {
+                seekButton(by: -10)
+                seekButton(by: 10)
+            }
+            .controlGroupStyle(.compactMenu)
+        } else {
+            // Pre-16.4 has no compact/palette control group; the same two actions as ordinary menu rows.
+            seekButton(by: -10)
+            seekButton(by: 10)
+        }
+        #endif
+    }
+
+    private func seekButton(by seconds: Double) -> some View {
+        Button {
+            settings.hapticFeedback()
+            quranPlayer.seek(by: seconds)
+        } label: {
+            Label(
+                seconds < 0 ? "Back 10 Seconds" : "Forward 10 Seconds",
+                systemImage: seconds < 0 ? "gobackward.10" : "goforward.10"
+            )
+        }
+    }
+
     @ViewBuilder
     private func contextMenu(for context: PlaybackContext) -> some View {
         let isFavorite = settings.isSurahFavorite(surah: context.surah.id)
@@ -595,6 +633,14 @@ struct NowPlayingView: View {
             } label: {
                 Label("Scroll To Surah", systemImage: "arrow.down.circle")
             }
+        }
+
+        // Last, nearest the thumb: the compact player has no inline transport, so these are the
+        // scrub controls. The expanded player already shows them inline and skips this.
+        if !isExpanded {
+            Divider()
+
+            seekControlGroup
         }
     }
 }

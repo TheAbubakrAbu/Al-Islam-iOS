@@ -199,7 +199,9 @@ struct SettingsAdhanView: View {
                 showAlert = .travelTurnOnAutomatic
             } else if settings.ownsTravelingModeAutoCheck, settings.travelTurnOffAutomatic {
                 showAlert = .travelTurnOffAutomatic
-            } else if settings.calculationAutoChanged {
+            } else if settings.ownsAutomaticCalculationCheck, settings.calculationAutoChanged {
+                // Same rule for the calculation card: a paired watch takes the phone's method, so its
+                // buttons would fight the value it was just handed.
                 showAlert = .calculationAutomaticChanged
             }
         }

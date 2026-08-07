@@ -425,7 +425,7 @@ struct AllahPillarView: View {
                     .font(.title3)
                     .foregroundColor(settings.accentColor.color)
 
-                    Text("**Ayat al-Kursi (آيَة الكُرسِي)**, the Throne Verse, emphasizes Allah's supreme power, unmatched knowledge, and sovereignty over the universe. It is one of the most significant verses in the Quran and is often recited for protection and blessings.")
+                    Text("**Ayat al-Kursi (آيَة الكُرسِي)**, the Throne Verse, emphasizes Allah's supreme power, unmatched knowledge, and sovereignty over the universe. It is one of the most significant verses in the Quran and is often recited for protection and blessings.")
                         .font(.body)
                 }
 
@@ -1634,7 +1634,7 @@ struct BooksView: View {
                 }
 
                 Section(header: Text("THE QURAN")) {
-                    Text("The **Quran (القُرآن)**, meaning “the Recitation,” is the final and complete revelation from Allah, sent to all of humanity through the Prophet Muhammad (peace and blessings be upon him). It is preserved word for word, as Allah has promised:")
+                    Text("The **Quran (القُرآن)**, meaning “the Recitation,” is the final and complete revelation from Allah, sent to all of humanity through the Prophet Muhammad (peace and blessings be upon him). It is preserved word for word, as Allah has promised:")
                         .font(.body)
                     ScriptureQuote(text: "“Indeed, it is We who sent down the Quran and indeed, We will be its guardian” (Quran 15:9).")
 
@@ -1704,7 +1704,7 @@ struct ProphetsView: View {
                 Section(header: Text("OVERVIEW")) {
                     Text("""
                     Allah sent prophets to every nation, and a Muslim believes in every one of them. Prophets were chosen by Allah to guide their communities to monotheism and righteous living. The Quran mentions 25 prophets by name:
-                    - Adam: آدَم
+                    - Adam: آدَم
                     - Idris (Enoch): إِدرِيس
                     - Nuh (Noah): نُوح
                     - Hud (Heber): هُود

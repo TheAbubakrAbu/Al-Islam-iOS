@@ -34,7 +34,7 @@ struct SimpleEntryView: View {
                     tint: skyStyle ? .white : entry.accentColor.color
                 )
 
-                Text("Up Next: \(nextPrayer.displayName) at \(Text(nextPrayer.time, style: .time))")
+                Text("Next: \(nextPrayer.displayName) at \(Text(nextPrayer.time, style: .time))")
                     .font(.caption2)
                     .foregroundColor(skyStyle ? .white.opacity(0.75) : .secondary)
             }

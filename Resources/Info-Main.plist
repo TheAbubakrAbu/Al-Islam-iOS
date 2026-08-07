@@ -21,12 +21,10 @@
 	<true/>
 	<key>UIAppFonts</key>
 	<array>
-		<string>Qiraat.ttf</string>
 		<string>Uthmani.ttf</string>
 		<string>Indopak.ttf</string>
 		<string>QuranCommon.ttf</string>
-		<string>Duri.ttf</string>
-		<string>Susi.ttf</string>
+		<string>Warsh.ttf</string>
 	</array>
 	<key>UIBackgroundModes</key>
 	<array>

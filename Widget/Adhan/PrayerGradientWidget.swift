@@ -117,7 +117,7 @@ struct PrayerGradientEntryView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
 
             VStack(alignment: .trailing, spacing: 4) {
-                Text("Up Next: \(next.displayName)")
+                Text("Next: \(next.displayName)")
                     .font(.subheadline.weight(.semibold))
                     .lineLimit(1)
                     .minimumScaleFactor(0.6)
