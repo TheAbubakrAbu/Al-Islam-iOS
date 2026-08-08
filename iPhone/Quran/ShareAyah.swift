@@ -1249,7 +1249,12 @@ extension ShareAyahSheet {
 
     private static let shareIncludeRiwayahKey = "shareIncludeRiwayah"
 
-    static func copyAyahToPasteboard(surahNumber: Int, ayahNumber: Int, settings: Settings, quranData: QuranData) {
+    /// - Parameter mode: what to put on the pasteboard. Nil follows the share sheet's remembered
+    ///   choice, which is what a single "Copy" action wants. The mushaf's actions sheet offers Copy
+    ///   Text and Copy Image as separate tiles and passes the mode outright, so what you tap is what
+    ///   you get rather than whatever you last shared as.
+    static func copyAyahToPasteboard(surahNumber: Int, ayahNumber: Int, settings: Settings,
+                                     quranData: QuranData, mode: ActionMode? = nil) {
         guard let surah = quranData.quran.first(where: { $0.id == surahNumber }),
               let ayah = surah.ayahs.first(where: { $0.id == ayahNumber }) else { return }
         // Same rule as the sheet: a non-Hafs reading riwayah always names itself; Hafs follows the saved
@@ -1274,8 +1279,10 @@ extension ShareAyahSheet {
             return (trimmed?.isEmpty == true) ? nil : trimmed
         }()
         let includeNote = (noteText != nil)
-        let actionModeRaw = UserDefaults.standard.string(forKey: copyActionModeKey) ?? ActionMode.image.rawValue
-        let actionMode = ActionMode(rawValue: actionModeRaw) ?? .image
+        let actionMode: ActionMode = mode ?? {
+            let raw = UserDefaults.standard.string(forKey: copyActionModeKey) ?? ActionMode.image.rawValue
+            return ActionMode(rawValue: raw) ?? .image
+        }()
 
         switch actionMode {
         case .text:

@@ -159,8 +159,23 @@ struct AyahQiraahComparisonSheet: View {
             }
             .sheet(isPresented: $showSummarize) {
                 SummarizeSheet(
-                    title: "Riwayat of \(ayahSheetTitle(surahNumber: surahNumber, ayahNumber: ayahNumber))",
-                    sourceText: qiraahSummarizeSource
+                    title: "Tafsir, riwayat & translations of \(ayahSheetTitle(surahNumber: surahNumber, ayahNumber: ayahNumber))",
+                    sourceText: "",
+                    multiSource: true,
+                    gatherSource: {
+                        // Every ayah ask reads all three families - riwayat first here, since that is
+                        // what this sheet is about. The online translations are fetched best-effort.
+                        let anchor = AyahAISources.hafsAnchor(surahNumber: surahNumber, ayahNumber: ayahNumber)
+                        let online = await AyahAISources.fetchOnlineTranslations(surahNumber: surahNumber, hafsAyah: anchor)
+                        return OnDeviceAsk.combinedSource(
+                            AyahAISources.combinedSections(
+                                surahNumber: surahNumber,
+                                ayahNumber: ayahNumber,
+                                emphasis: .qiraah,
+                                onlineTranslations: online
+                            )
+                        )
+                    }
                 )
             }
             #endif
@@ -169,36 +184,11 @@ struct AyahQiraahComparisonSheet: View {
     }
 
     #if canImport(FoundationModels)
-    /// Everything the sheet is showing, as one labeled text for the summarizer: the current
-    /// riwayah's text first, then every other riwayah with its aligned text plus the same
-    /// numbering note the row renders and whether its wording differs from the current reading.
+    /// The riwayat block of the summarize source (also the toolbar button's non-empty gate). The full
+    /// gathering - tafsirs + riwayat + translations - lives in `AyahAISources`, shared by every ayah
+    /// AI entry point.
     private var qiraahSummarizeSource: String {
-        var lines: [String] = []
-
-        if let currentOption, let text = qiraahText(for: currentOption) {
-            lines.append("\(currentOption.label) (\(currentOption.teacher)) [CURRENT riwayah]: \(text)")
-        }
-
-        for option in options where option.id != currentOption?.id {
-            let resolved = resolvedText(for: option)
-            var entry = "\(option.label) (\(option.teacher)): "
-            if let resolved {
-                entry += resolved.text
-                if let note = numberNote(resolved) {
-                    entry += " [\(note)]"
-                }
-                if let reference = referenceText {
-                    entry += reference == resolved.text
-                        ? " [identical wording to the current riwayah]"
-                        : " [wording differs from the current riwayah]"
-                }
-            } else {
-                entry += "This ayah is not separate in this riwayah."
-            }
-            lines.append(entry)
-        }
-
-        return lines.joined(separator: "\n\n")
+        AyahAISources.qiraahComparisonText(surahNumber: surahNumber, ayahNumber: ayahNumber)
     }
     #endif
 
@@ -246,15 +236,6 @@ struct AyahQiraahComparisonSheet: View {
         .padding(.vertical, 10)
     }
 
-    private struct ResolvedQiraahText {
-        let text: String
-        /// The riwayah's OWN number for this ayah, when it differs from the number the sheet was
-        /// opened with (riwayat count ayahs differently - the words are aligned, the number moves).
-        let ownNumber: Int?
-        /// The Hafs ayahs this riwayah ayah spans (more than one = it joins neighbors).
-        let mergedSpan: ClosedRange<Int>?
-    }
-
     /// The riwayah the sheet was OPENED from: the tapped ayah number is in THAT riwayah's own
     /// numbering, so every row is anchored through its Hafs equivalent.
     private var originTag: String { Settings.Riwayah.canonicalTag(settings.displayQiraah) }
@@ -263,42 +244,14 @@ struct AyahQiraahComparisonSheet: View {
         QiraahComparison.hafsAnchor(surahID: surahNumber, ayahNumber: ayahNumber, tag: originTag, quranData: quranData)
     }
 
-    /// The same WORDS as the tapped ayah, in this riwayah - aligned through the Hafs anchor, so an
-    /// off-by-one or merged numbering never shows the wrong verse (the old direct read did exactly
-    /// that for every non-Kufi-counted riwayah).
+    /// The same WORDS as the tapped ayah, in this riwayah - the shared resolver, so the rows here and
+    /// the AI gatherer serve identical text (see `QiraahAyahResolver`).
     private func resolvedText(for option: QiraahDisplay) -> ResolvedQiraahText? {
-        let tag = Settings.Riwayah.canonicalTag(option.tag)
-        let anchor = anchorHafsAyah
-
-        if tag.isEmpty {
-            guard let ayah = quranData.ayah(surah: surahNumber, ayah: anchor) else { return nil }
-            return ResolvedQiraahText(
-                text: ayah.displayArabicText(surahId: surahNumber, clean: settings.cleanArabicText, qiraahOverride: ""),
-                ownNumber: anchor == ayahNumber ? nil : anchor,
-                mergedSpan: nil
-            )
-        }
-
-        if let alignment = QiraahComparison.alignment(surahID: surahNumber, tag: tag, quranData: quranData),
-           let ownNumber = alignment.riwayahNumberForHafs[anchor],
-           let ayah = quranData.ayah(surah: surahNumber, ayah: ownNumber),
-           ayah.existsInQiraah(tag, surahID: surahNumber) {
-            let span = alignment.hafsRangeForRiwayah[ownNumber]
-            return ResolvedQiraahText(
-                text: ayah.displayArabicText(surahId: surahNumber, clean: settings.cleanArabicText, qiraahOverride: tag),
-                ownNumber: ownNumber == ayahNumber ? nil : ownNumber,
-                mergedSpan: (span.map { $0.count } ?? 1) > 1 ? span : nil
-            )
-        }
-
-        // No alignment (this riwayah has no text for the surah): the old direct read, else
-        // genuinely unavailable.
-        guard let ayah = quranData.ayah(surah: surahNumber, ayah: ayahNumber),
-              ayah.existsInQiraah(tag, surahID: surahNumber) else { return nil }
-        return ResolvedQiraahText(
-            text: ayah.displayArabicText(surahId: surahNumber, clean: settings.cleanArabicText, qiraahOverride: tag),
-            ownNumber: nil,
-            mergedSpan: nil
+        QiraahAyahResolver.resolve(
+            surahNumber: surahNumber,
+            ayahNumber: ayahNumber,
+            anchorHafsAyah: anchorHafsAyah,
+            optionTag: option.tag
         )
     }
 
@@ -327,18 +280,8 @@ struct AyahQiraahComparisonSheet: View {
         )
     }
 
-    /// "Ayah 285 in this riwayah (spans 285\u{2013}286)" - the numbering note under a row's header.
     private func numberNote(_ resolved: ResolvedQiraahText) -> String? {
-        if let own = resolved.ownNumber {
-            if let span = resolved.mergedSpan {
-                return "Ayah \(own) in this riwayah (spans \(span.lowerBound)\u{2013}\(span.upperBound))"
-            }
-            return "Ayah \(own) in this riwayah"
-        }
-        if let span = resolved.mergedSpan {
-            return "One ayah here (spans \(span.lowerBound)\u{2013}\(span.upperBound))"
-        }
-        return nil
+        QiraahAyahResolver.numberNote(resolved)
     }
 
     private func comparisonArabicFontName(for option: QiraahDisplay) -> String {
@@ -649,8 +592,26 @@ struct AyahEnglishComparisonSheet: View {
             }
             .sheet(isPresented: $showSummarize) {
                 SummarizeSheet(
-                    title: "Translations of \(ayahSheetTitle(surahNumber: surahNumber, ayahNumber: ayahNumber))",
-                    sourceText: summarizeSourceText
+                    title: "Tafsir, riwayat & translations of \(ayahSheetTitle(surahNumber: surahNumber, ayahNumber: ayahNumber))",
+                    sourceText: "",
+                    multiSource: true,
+                    gatherSource: {
+                        // Every ayah ask reads all three families - translations first here, since
+                        // that is what this sheet is about. The already-loaded online editions are
+                        // reused; a fetch only runs if the sheet's own load hasn't landed yet.
+                        let anchor = AyahAISources.hafsAnchor(surahNumber: surahNumber, ayahNumber: ayahNumber)
+                        let online = viewModel.translations.isEmpty
+                            ? await AyahAISources.fetchOnlineTranslations(surahNumber: surahNumber, hafsAyah: anchor)
+                            : viewModel.translations
+                        return OnDeviceAsk.combinedSource(
+                            AyahAISources.combinedSections(
+                                surahNumber: surahNumber,
+                                ayahNumber: ayahNumber,
+                                emphasis: .translations,
+                                onlineTranslations: online
+                            )
+                        )
+                    }
                 )
             }
             #endif
@@ -850,5 +811,218 @@ struct AyahEnglishComparisonSheet: View {
         .textSelection(.enabled)
     }
 }
+
+struct ResolvedQiraahText {
+    let text: String
+    /// The riwayah's OWN number for this ayah, when it differs from the number the sheet was
+    /// opened with (riwayat count ayahs differently - the words are aligned, the number moves).
+    let ownNumber: Int?
+    /// The Hafs ayahs this riwayah ayah spans (more than one = it joins neighbors).
+    let mergedSpan: ClosedRange<Int>?
+}
+
+/// How a given riwayah renders ayah (`surahNumber`, `ayahNumber` in the ORIGIN riwayah's numbering) -
+/// anchored through Hafs so merged/shifted numbering never serves the wrong verse (the old direct read
+/// did exactly that for every non-Kufi-counted riwayah). File-scope rather than view-local so the
+/// comparison rows and the AI summarize gatherer (`AyahAISources`) resolve identical text.
+@MainActor
+enum QiraahAyahResolver {
+    static func resolve(
+        surahNumber: Int,
+        ayahNumber: Int,
+        anchorHafsAyah: Int,
+        optionTag: String
+    ) -> ResolvedQiraahText? {
+        let settings = Settings.shared
+        let quranData = QuranData.shared
+        let tag = Settings.Riwayah.canonicalTag(optionTag)
+        let anchor = anchorHafsAyah
+
+        if tag.isEmpty {
+            guard let ayah = quranData.ayah(surah: surahNumber, ayah: anchor) else { return nil }
+            return ResolvedQiraahText(
+                text: ayah.displayArabicText(surahId: surahNumber, clean: settings.cleanArabicText, qiraahOverride: ""),
+                ownNumber: anchor == ayahNumber ? nil : anchor,
+                mergedSpan: nil
+            )
+        }
+
+        if let alignment = QiraahComparison.alignment(surahID: surahNumber, tag: tag, quranData: quranData),
+           let ownNumber = alignment.riwayahNumberForHafs[anchor],
+           let ayah = quranData.ayah(surah: surahNumber, ayah: ownNumber),
+           ayah.existsInQiraah(tag, surahID: surahNumber) {
+            let span = alignment.hafsRangeForRiwayah[ownNumber]
+            return ResolvedQiraahText(
+                text: ayah.displayArabicText(surahId: surahNumber, clean: settings.cleanArabicText, qiraahOverride: tag),
+                ownNumber: ownNumber == ayahNumber ? nil : ownNumber,
+                mergedSpan: (span.map { $0.count } ?? 1) > 1 ? span : nil
+            )
+        }
+
+        // No alignment (this riwayah has no text for the surah): the old direct read, else
+        // genuinely unavailable.
+        guard let ayah = quranData.ayah(surah: surahNumber, ayah: ayahNumber),
+              ayah.existsInQiraah(tag, surahID: surahNumber) else { return nil }
+        return ResolvedQiraahText(
+            text: ayah.displayArabicText(surahId: surahNumber, clean: settings.cleanArabicText, qiraahOverride: tag),
+            ownNumber: nil,
+            mergedSpan: nil
+        )
+    }
+
+    /// "Ayah 285 in this riwayah (spans 285\u{2013}286)" - the numbering note under a row's header.
+    static func numberNote(_ resolved: ResolvedQiraahText) -> String? {
+        if let own = resolved.ownNumber {
+            if let span = resolved.mergedSpan {
+                return "Ayah \(own) in this riwayah (spans \(span.lowerBound)\u{2013}\(span.upperBound))"
+            }
+            return "Ayah \(own) in this riwayah"
+        }
+        if let span = resolved.mergedSpan {
+            return "One ayah here (spans \(span.lowerBound)\u{2013}\(span.upperBound))"
+        }
+        return nil
+    }
+}
+
+#if canImport(FoundationModels)
+/// One shared source-gatherer for every ayah "Summarize with AI" entry point. Whichever sheet the ask
+/// starts from - tafsir, riwayat, or translations - the model reads ALL THREE families for the ayah
+/// (all six bundled tafsirs, every riwayah's aligned reading, and the English translations), with the
+/// asking sheet's own family placed first. Lives in this file because the translation edition lists
+/// and their fetch shape are file-private here.
+@MainActor
+enum AyahAISources {
+    /// The family the ask came from - its sections lead, so the summary opens on what the user was reading.
+    enum Family { case tafsir, qiraah, translations }
+
+    /// Tafsirs and translations are keyed by Hafs numbering, while a sheet opened under another display
+    /// riwayah hands over THAT riwayah's own ayah number - anchor through Hafs first.
+    static func hafsAnchor(surahNumber: Int, ayahNumber: Int) -> Int {
+        QiraahComparison.hafsAnchor(
+            surahID: surahNumber,
+            ayahNumber: ayahNumber,
+            tag: Settings.Riwayah.canonicalTag(Settings.shared.displayQiraah),
+            quranData: QuranData.shared
+        )
+    }
+
+    static func combinedSections(
+        surahNumber: Int,
+        ayahNumber: Int,
+        emphasis: Family,
+        onlineTranslations: [String: String] = [:]
+    ) -> [OnDeviceAsk.SummarizeSection] {
+        let anchor = hafsAnchor(surahNumber: surahNumber, ayahNumber: ayahNumber)
+
+        // All six bundled tafsir editions - a synchronous pack read (Hafs numbering).
+        let tafsirSections = TafsirAuthor.allCases.compactMap { author -> OnDeviceAsk.SummarizeSection? in
+            guard let entry = TafsirStore.shared.entry(author: author, surah: surahNumber, ayah: anchor) else { return nil }
+            return OnDeviceAsk.SummarizeSection(label: author.summarizeSectionLabel, text: entry.content)
+        }
+
+        let qiraahSections = [OnDeviceAsk.SummarizeSection(
+            label: "Riwayat (qiraah readings) of this ayah",
+            text: qiraahComparisonText(surahNumber: surahNumber, ayahNumber: ayahNumber)
+        )].filter { !$0.text.isEmpty }
+
+        let translationSections = [OnDeviceAsk.SummarizeSection(
+            label: "English translations of this ayah",
+            text: translationsText(surahNumber: surahNumber, hafsAyah: anchor, online: onlineTranslations)
+        )].filter { !$0.text.isEmpty }
+
+        switch emphasis {
+        case .tafsir: return tafsirSections + qiraahSections + translationSections
+        case .qiraah: return qiraahSections + tafsirSections + translationSections
+        case .translations: return translationSections + tafsirSections + qiraahSections
+        }
+    }
+
+    /// The riwayat block: the current riwayah's reading first, then every other riwayah's aligned text
+    /// with the same numbering/difference notes the comparison rows render.
+    static func qiraahComparisonText(surahNumber: Int, ayahNumber: Int) -> String {
+        let anchor = hafsAnchor(surahNumber: surahNumber, ayahNumber: ayahNumber)
+        let currentTag = Settings.normalizeLegacyRiwayahTag(Settings.shared.displayQiraah)
+        let options = Settings.Riwayah.options
+
+        func resolved(_ tag: String) -> ResolvedQiraahText? {
+            QiraahAyahResolver.resolve(
+                surahNumber: surahNumber,
+                ayahNumber: ayahNumber,
+                anchorHafsAyah: anchor,
+                optionTag: tag
+            )
+        }
+
+        var lines: [String] = []
+        let currentOption = options.first { $0.tag == currentTag }
+        let referenceText = currentOption.flatMap { resolved($0.tag)?.text }
+
+        if let currentOption, let referenceText {
+            lines.append("\(currentOption.label) (\(currentOption.teacher)) [CURRENT riwayah]: \(referenceText)")
+        }
+
+        for option in options where option.tag != currentOption?.tag {
+            let res = resolved(option.tag)
+            var entry = "\(option.label) (\(option.teacher)): "
+            if let res {
+                entry += res.text
+                if let note = QiraahAyahResolver.numberNote(res) {
+                    entry += " [\(note)]"
+                }
+                if let referenceText {
+                    entry += referenceText == res.text
+                        ? " [identical wording to the current riwayah]"
+                        : " [wording differs from the current riwayah]"
+                }
+            } else {
+                entry += "This ayah is not separate in this riwayah."
+            }
+            lines.append(entry)
+        }
+
+        return lines.joined(separator: "\n\n")
+    }
+
+    /// The translations block: the two bundled editions always, plus whichever online editions arrived.
+    static func translationsText(surahNumber: Int, hafsAyah: Int, online: [String: String]) -> String {
+        guard let ayah = QuranData.shared.ayah(surah: surahNumber, ayah: hafsAyah) else { return "" }
+
+        var lines: [String] = []
+        for edition in inAppEnglishComparisonEditions {
+            let text = edition.id == "inapp.saheeh" ? ayah.textEnglishSaheeh : ayah.textEnglishMustafa
+            if !text.isEmpty { lines.append("\(edition.name): \(text)") }
+        }
+        for edition in englishComparisonEditions {
+            if let text = online[edition.id], !text.isEmpty {
+                lines.append("\(edition.name): \(text)")
+            }
+        }
+        return lines.joined(separator: "\n\n")
+    }
+
+    /// Best-effort fetch of the online translation editions, for the asks that start OUTSIDE the
+    /// translation sheet (its own view model already holds them). Bounded and non-throwing: on any
+    /// failure the summarize still runs with the bundled translations.
+    static func fetchOnlineTranslations(surahNumber: Int, hafsAyah: Int) async -> [String: String] {
+        let editions = englishComparisonEditions.map(\.id).joined(separator: ",")
+        guard let url = URL(string: "https://api.alquran.cloud/v1/ayah/\(surahNumber):\(hafsAyah)/editions/\(editions)") else {
+            return [:]
+        }
+        var request = URLRequest(url: url)
+        request.timeoutInterval = 8
+
+        // Same torn-down-view insulation as `EnglishComparisonViewModel.load`: the wrapper keeps a
+        // SwiftUI task cancellation from killing the fetch mid-flight.
+        let fetchTask = Task { try await URLSession.shared.data(for: request) }
+        guard let (data, response) = try? await fetchTask.value,
+              (response as? HTTPURLResponse).map({ (200...299).contains($0.statusCode) }) ?? true,
+              let decoded = try? JSONDecoder().decode(AyahEditionResponse.self, from: data) else {
+            return [:]
+        }
+        return Dictionary(decoded.data.map { ($0.edition.identifier, $0.text) }, uniquingKeysWith: { first, _ in first })
+    }
+}
+#endif
 
 #endif

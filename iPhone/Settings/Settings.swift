@@ -1646,6 +1646,110 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
             .removingAlifWiqayaForSearch
     }
 
+    /// The hamza-PRECISION lane: the same fold as `cleanSearch` except every hamza - the bare ء and the
+    /// waw/ya-seated ؤ ئ - survives as a single ء instead of being dropped or folded to its seat.
+    ///
+    /// `cleanSearch` deletes the hamza on purpose, so a typed نسا still finds نساء. The cost is that it
+    /// also makes نساء (women) and نسى (forgets) collapse to the same bytes نسا, so searching يانساء
+    /// returned يَنسَىٰ. This lane is the correction, and it is only consulted when the QUERY actually
+    /// carries a bare ء (see `HamzaPrecisionFilter`): type the hamza and it counts, leave it out and
+    /// nothing changes.
+    ///
+    /// Seated hamzas fold in because a word's hamza changes seat with its case ending - نِسَآءِ, نِسَآئِكُمۡ,
+    /// نِسَآؤُكُمۡ are one word - so a typed نساء has to reach all three. Alif-seated أ إ آ are deliberately
+    /// NOT folded here: they keep mapping to ا exactly as before, so word-initial spellings are untouched.
+    func cleanSearchKeepingHamza(_ text: String, whitespace: Bool = false) -> String {
+        var built = ""
+        built.unicodeScalars.reserveCapacity(text.unicodeScalars.count)
+        for scalar in text.unicodeScalars {
+            if let mapped = Self.hamzaPreservingArabicSearchScalarMap[scalar] {
+                guard let replacement = mapped else { continue }
+                if Self.unwantedCharSet.contains(replacement) { continue }
+                built.unicodeScalars.append(replacement)
+            } else {
+                if Self.unwantedCharSet.contains(scalar) { continue }
+                built.unicodeScalars.append(scalar)
+            }
+        }
+        var cleaned = collapsingWhitespace(built.lowercased())
+        if whitespace {
+            cleaned = cleaned.trimmingCharacters(in: .whitespacesAndNewlines)
+        }
+        return cleaned
+    }
+
+    /// The hamza-precision test for one query, or nil when the query carries no bare ء and therefore
+    /// nothing extra should be checked. Build it once per query; ask it about each candidate.
+    ///
+    /// It only ever REMOVES results. `cleanSearch` drops the hamza, so every hamza-lane match is also a
+    /// plain-lane match - which is why this runs as a filter over what the normal search already found
+    /// instead of as another index: no extra blob per ayah, and no cost at all for queries without a ء.
+    struct HamzaPrecisionFilter {
+        /// The folded query in every lane the ordinary search offers - plain, vocative-joined, and
+        /// silent-letter - so this can only reject a candidate the normal search would have rejected
+        /// for lacking the hamza, never one it found through a lane this doesn't model.
+        private let needles: [String]
+
+        init?(query: String) {
+            guard query.containsBareHamza else { return nil }
+            let settings = Settings.shared
+            let base = query.removingAyahSearchOperators
+            let plain = settings.cleanSearchKeepingHamza(base, whitespace: true)
+            guard !plain.isEmpty else { return nil }
+            let silent = settings.cleanSearchKeepingHamza(base.removingSilentArabicLettersForSearch, whitespace: true)
+                .removingAlifWiqayaForSearch
+
+            var built: [String] = []
+            for candidate in [plain, silent] where !candidate.isEmpty {
+                if !built.contains(candidate) { built.append(candidate) }
+                let joined = candidate.joiningVocativeYaForSearch
+                if joined != candidate, !built.contains(joined) { built.append(joined) }
+            }
+            needles = built
+        }
+
+        /// The hamza-preserving haystack for one ayah, in the same lanes the ordinary index builds.
+        /// Returns nil when the text carries no hamza at all - such an ayah can never satisfy a query
+        /// that has one, so callers can skip storing anything and treat nil as "no match".
+        static func corpusLanes(for arabicTexts: [String]) -> String? {
+            let settings = Settings.shared
+            var lanes: [String] = []
+            for text in arabicTexts {
+                for variant in text.arabicDaggerVariantsForSearch {
+                    lanes.append(settings.cleanSearchKeepingHamza(variant))
+                    lanes.append(
+                        settings.cleanSearchKeepingHamza(variant.removingSilentArabicLettersForSearch)
+                            .removingAlifWiqayaForSearch
+                    )
+                }
+            }
+            let joined = lanes.joined(separator: " ")
+            return joined.containsBareHamza ? joined : nil
+        }
+
+        /// True when the prebuilt haystack still contains the query with hamzas kept on both sides.
+        func matches(lanes: String?) -> Bool {
+            guard let lanes else { return false }
+            return needles.contains { lanes.contains($0) }
+        }
+
+        /// Convenience for callers that hold the ayah's Arabic rather than a prebuilt haystack.
+        func matches(anyOf arabicTexts: [String]) -> Bool {
+            matches(lanes: Self.corpusLanes(for: arabicTexts))
+        }
+    }
+
+    /// `canonicalArabicSearchScalarMap` with every hamza form redirected to a surviving ء.
+    private static let hamzaPreservingArabicSearchScalarMap: [UnicodeScalar: UnicodeScalar?] = {
+        var out = canonicalArabicSearchScalarMap
+        let hamza = UnicodeScalar(0x0621)!
+        // Bare hamza and its variants, plus the waw/ya-seated forms. The seat is not a letter here.
+        for value in [0x0621, 0x0674, 0x0624, 0x0626, 0x0676, 0x0677, 0x0678] {
+            if let scalar = UnicodeScalar(value) { out.updateValue(hamza, forKey: scalar) }
+        }
+        return out
+    }()
+
     /// Scalar form of `canonicalArabicSearchMap`, built once: `key scalar → replacement scalar`, or `nil`
     /// to drop the scalar entirely. Lets `cleanSearch` normalize in a single pass instead of 22 string scans.
     /// (All `canonicalArabicSearchMap` keys are single scalars and values are one scalar or empty.)

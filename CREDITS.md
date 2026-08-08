@@ -23,6 +23,7 @@ App Store: <https://apps.apple.com/us/app/al-islam-islamic-pillars/id6449729655>
 - **English Saheeh International translation** - **Global Quran** - <https://globalquran.com/download/data/>
 - **All Quranic Arabic text and all qiraat/riwayaat data** - **quran-data-kfgqpc (KFGQPC)** - <https://github.com/thetruetruth/quran-data-kfgqpc>
 - **Printed mushaf facsimiles (the in-app PDF reader) and the beta qiraat text for the twelve riwayat KFGQPC has never published digitally** - **Islamweb** - <https://www.islamweb.net>. Twenty complete mushafs, one per riwayah, 604 pages each on the Madani page division.
+- **Reference for the qiraat guide's profiles of the ten imams and twenty narrators** - **QiraatHub** - <https://qiraathub.com/>. The profile pages in the app are written for it; QiraatHub is the companion reference each page links out to.
 - **Uthmani Quran font** - **King Fahad Complex (KFGQPC)** - <https://qul.tarteel.ai/resources/font/245>
 - **Indopak Nastaleeq Quran font** - **Ayman Siddiqui and R. Siddiqua** - <https://qul.tarteel.ai/resources/font/242>
 - **Surah (full) Quran recitations** - **MP3 Quran** - <https://mp3quran.net/eng>

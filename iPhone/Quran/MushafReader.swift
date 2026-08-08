@@ -283,25 +283,47 @@ struct SurahPageReader<Controls: View>: View {
         let query = settings.cleanSearch(pageSearchText.removingAyahSearchOperators, whitespace: true)
             .removingArabicDiacriticsAndSigns
         guard !query.isEmpty, pages.indices.contains(pageIndex) else { return [] }
+        // Vocative-joined twin ("يا نساء" → "يانساء") tried alongside the typed form - the mushaf glues
+        // يا onto the word it calls, so the spaced typing alone can never substring-match.
+        let joinedQuery: String? = {
+            let joined = query.joiningVocativeYaForSearch
+            return joined == query ? nil : joined
+        }()
+        // A typed hamza means it: without this, نساء and نسى fold alike and يانساء found يَنسَىٰ.
+        let hamzaFilter = Settings.HamzaPrecisionFilter(query: pageSearchText)
 
-        let memoKey = "\(pageIndex)|\(settings.displayQiraahForArabic ?? "")|\(query)"
+        // The hamza-preserving fold goes in the key too: `query` has the hamza folded AWAY, so ينساء and
+        // ينسا produce the same `query` while now yielding different results - one key, two answers.
+        let memoKey = "\(pageIndex)|\(settings.displayQiraahForArabic ?? "")|\(query)|"
+            + (hamzaFilter != nil ? settings.cleanSearchKeepingHamza(pageSearchText, whitespace: true) : "")
         if PageFindMemo.key == memoKey { return PageFindMemo.matches }
 
         var result: [HighlightedAyahRef] = []
         for segment in pages[pageIndex].segments {
             for ayah in segment.ayahs {
+                // RAW Arabic first: the global index folds the raw text too, so the dagger-alif lanes
+                // ("يانسا" via dagger→ا, plus the dagger-dropped "ينسا"/"ابرهيم") match here exactly like
+                // they do in the whole-Quran search. The clean text alone had the dagger pre-stripped,
+                // which is why pasted Uthmani ("ٱسۡتَوَىٰ") and alif spellings used to miss on-page.
+                let rawArabic = ayah.displayArabicText(surahId: segment.surah.id, clean: false, qiraahOverride: settings.displayQiraahForArabic)
                 let sources = [
+                    rawArabic,
+                    rawArabic.removingDaggerAlifForSearch,
                     ayah.displayArabicText(surahId: segment.surah.id, clean: true, qiraahOverride: settings.displayQiraahForArabic),
                     ayah.textTransliteration,
                     ayah.textEnglishSaheeh,
                     ayah.textEnglishMustafa
                 ]
                 let matched = sources.contains { source in
-                    settings.cleanSearch(source, whitespace: true).removingArabicDiacriticsAndSigns.contains(query)
+                    let folded = settings.cleanSearch(source, whitespace: true).removingArabicDiacriticsAndSigns
+                    if folded.contains(query) { return true }
+                    if let joinedQuery, folded.contains(joinedQuery) { return true }
+                    return false
                 }
-                if matched {
-                    result.append(HighlightedAyahRef(surahID: segment.surah.id, ayahID: ayah.id))
-                }
+                guard matched else { continue }
+                // A hamza the reader actually typed has to be present in the ayah, not folded away.
+                if let hamzaFilter, !hamzaFilter.matches(anyOf: [rawArabic]) { continue }
+                result.append(HighlightedAyahRef(surahID: segment.surah.id, ayahID: ayah.id))
             }
         }
         PageFindMemo.key = memoKey
@@ -611,7 +633,16 @@ struct SurahPageReader<Controls: View>: View {
     private func syncMatch(pages: [MushafPage], resetIndex: Bool) {
         let matches = matchesOnPage(pages)
         if resetIndex { currentMatchIndex = 0 }
-        guard !matches.isEmpty else { return }
+        guard !matches.isEmpty else {
+            // A LIVE query with zero matches clears the selection outright - keeping the previous
+            // keystroke's ayah lit read as "this still matches" when nothing does. An EMPTY query
+            // (bar just opened, text cleared, bar closing) leaves the selection alone, so closing
+            // the find bar still keeps whatever the search had landed on.
+            if !pageSearchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, highlightedAyah != nil {
+                withAnimation(.easeInOut(duration: 0.15)) { highlightedAyah = nil }
+            }
+            return
+        }
         currentMatchIndex = min(currentMatchIndex, matches.count - 1)
         highlightedAyah = matches[currentMatchIndex]
     }
@@ -1515,6 +1546,11 @@ private struct MushafPageContent: View {
 
             case .share:
                 ShareAyahSheet(surahNumber: surah.id, ayahNumber: ayah.id)
+
+            case .selectText:
+                // The page's own text view is non-selectable by design (its gestures ARE the ayah
+                // gestures), so page mode hands selection off to the list rows' select-and-copy sheet.
+                SelectAyahTextSheet(surah: surah, ayah: ayah)
             }
         }
         .smallMediumSheetPresentation()
@@ -1812,7 +1848,10 @@ struct MushafPageComposer {
                 .paragraphStyle: tight,
             ]))
 
-            heading.append(NSAttributedString(string: " \(surah.nameArabic) \u{FD3E}", attributes: arabicAttributes))
+            // Em quad between the numeral and the name for the same reason as the bismillah gap below: an
+            // ordinary space between two Arabic runs collapses to almost nothing, leaving "١٤إبراهيم"
+            // reading as one word. The brackets keep their plain spaces - those already sit clear.
+            heading.append(NSAttributedString(string: "\u{2001}\(surah.nameArabic) \u{FD3E}", attributes: arabicAttributes))
         }
 
         let nameRange = NSRange(location: nameStart, length: heading.length - nameStart)
@@ -1949,7 +1988,7 @@ struct MushafPageComposer {
         if width > 0, !isEnglish, !usesSystemFont, !isOpeningSpread {
             let balanced = NSMutableAttributedString(attributedString: result)
             if spaceTracking > 0 { Self.addSpaceTracking(spaceTracking, to: balanced) }
-            Self.fillSurahClosingLines(balanced, width: width, segments: fillableSegments, bodySize: size)
+            Self.cascadeFillSparseLines(balanced, width: width, segments: fillableSegments, bodySize: size)
             return (Self.spaceJustified(balanced, width: width, closingLineEnds: closingLineEnds, bodySize: size), ranges)
         }
 
@@ -2081,22 +2120,40 @@ struct MushafPageComposer {
         return justified
     }
 
-    /// Fills a segment's sparse closing line - a surah ending mid-page, or the page's own last line -
-    /// by loosening THAT segment's word gaps until words cascade down into it - brought down from the
-    /// lines above, instead of two words flung across the measure or a short line trailing at the
-    /// right margin. The same idea as the page-wide `balancedSpaceTracking`, scoped to one segment:
-    /// the loosest setting that adds NO line is used, so the fitted page height is untouched (the
-    /// line boxes are pinned, so same lines = same height).
-    /// `spaceJustified` then tops the now-fuller lines up to the exact margins, and its sparseness cap
-    /// remains the backstop for a closing line nothing could fill.
+    /// Makes every line of a segment take the full measure, by cascading words DOWNWARD until no line is
+    /// left sparse enough to need an ugly stretch.
     ///
-    /// Cost: runs once per cached render (`finalize` is the only width-passing compose), and each
-    /// segment is probed against ONE live TextKit stack with its gap list precomputed - a probe is a
-    /// handful of absolute attribute writes plus an incremental relayout of that segment alone, not a
-    /// fresh stack and a full string rescan.
-    private static func fillSurahClosingLines(_ text: NSMutableAttributedString, width: CGFloat,
-                                              segments: [NSRange], bodySize: CGFloat) {
+    /// The problem this solves: TextKit breaks lines greedily, so a segment's closing line - a surah ending
+    /// mid-page, or the page's own last line - gets whatever is left over, which can be three words where
+    /// the lines above hold twelve. Justifying that flings a handful of words across the whole measure, and
+    /// the old fallback was to CENTRE it instead, leaving one line neither full nor trailing.
+    ///
+    /// The fix is the cascade a typesetter does by hand. Find the bottom-most sparse line, widen the gaps of
+    /// the line ABOVE it just past the margin so that line's last word no longer fits and drops into it, then
+    /// look again: the line above is now one word poorer and may itself be sparse, so the deficit walks up the
+    /// segment a line at a time until it lands somewhere it costs nothing. A page's worth of slack spread over
+    /// twelve lines is invisible; the same slack in one line is the artifact.
+    ///
+    /// Only the breaks are decided here. `spaceJustified` afterwards tops every line up to the exact margin,
+    /// so this pass just has to put the words on the right lines.
+    ///
+    /// EFFICIENCY. One TextKit stack per segment, reused for every probe. A step rewrites only the gaps of
+    /// the single line it is widening (not the segment's), so each probe is a handful of attribute writes plus
+    /// the incremental relayout they trigger. Steps are capped, and the whole pass is skipped outright unless
+    /// the segment's closing line is actually sparse - which for most pages it is not. Runs once per cached
+    /// render, off the main thread.
+    /// Extra widening a pull-down step adds per gap, in multiples of the body size, tried in order. The
+    /// first rung is "no extra" - the computed minimum overflow on its own.
+    private static let cascadeEscalation: [CGFloat] = [0, 0.1, 0.2, 0.4, 0.8]
+
+    private static func cascadeFillSparseLines(_ text: NSMutableAttributedString, width: CGFloat,
+                                               segments: [NSRange], bodySize: CGFloat) {
         guard width > 0, bodySize > 0 else { return }
+
+        // A gap may be widened by at most this before the line reads as flung apart. Same figure
+        // `spaceJustified`'s centring backstop uses, so the two passes can never disagree about which
+        // lines are sparse.
+        let sparseGapLimit = bodySize * 0.5
 
         for segment in segments where segment.length > 0 {
             // The segment lays out alone: line breaking never crosses a paragraph boundary, so the
@@ -2104,92 +2161,137 @@ struct MushafPageComposer {
             let sub = text.attributedSubstring(from: segment)
             let subString = sub.string as NSString
 
-            // Preprocessed once: every stretchable gap and the tracking it already carries (the
-            // page-wide loosening), so probes can SET absolute values idempotently.
-            var spaceLocations: [Int] = []
+            // Every stretchable gap and the tracking it already carries (the page-wide loosening), so a
+            // probe can SET absolute values idempotently rather than accumulating.
+            var gapLocations: [Int] = []
             var baseTracking: [CGFloat] = []
             for i in 0..<subString.length where subString.character(at: i) == 0x20 {
                 let style = sub.attribute(.paragraphStyle, at: i, effectiveRange: nil) as? NSParagraphStyle
                 guard style?.alignment == .right else { continue }
-                spaceLocations.append(i)
+                gapLocations.append(i)
                 baseTracking.append((sub.attribute(.tracking, at: i, effectiveRange: nil) as? CGFloat) ?? 0)
             }
-            guard !spaceLocations.isEmpty else { continue }
+            guard !gapLocations.isEmpty else { continue }
 
             // The whole stack stays bound: NSLayoutManager does not retain its NSTextStorage.
             let stack = layoutStack(for: sub, width: width)
+            // What this pass has added on top of `baseTracking`, per gap.
+            var extra = [CGFloat](repeating: 0, count: gapLocations.count)
 
-            func apply(_ tracking: CGFloat) {
+            /// Push `extra` for just these gaps into the live stack and relayout.
+            func commit(_ gapIndices: [Int]) {
                 stack.storage.beginEditing()
-                for (i, location) in spaceLocations.enumerated() {
-                    stack.storage.addAttribute(.tracking, value: baseTracking[i] + tracking,
-                                               range: NSRange(location: location, length: 1))
+                for gi in gapIndices {
+                    stack.storage.addAttribute(.tracking, value: baseTracking[gi] + extra[gi],
+                                               range: NSRange(location: gapLocations[gi], length: 1))
                 }
                 stack.storage.endEditing()
                 stack.manager.ensureLayout(for: stack.container)
             }
 
-            func measure() -> (lines: Int, lastContentLength: Int, lastUsedWidth: CGFloat, lastSpaces: Int) {
+            struct LineInfo {
+                let contentLength: Int
+                let usedWidth: CGFloat
+                /// Indices into `gapLocations` for the gaps this line can stretch.
+                let gapIndices: [Int]
+            }
+
+            func currentLines() -> [LineInfo] {
                 let manager = stack.manager
-                var lines = 0
-                var lastUsedRect = CGRect.zero
-                var lastCharRange = NSRange()
+                var out: [LineInfo] = []
                 var glyph = 0
+                var nextGap = 0
                 while glyph < manager.numberOfGlyphs {
-                    var lineRange = NSRange()
-                    lastUsedRect = manager.lineFragmentUsedRect(forGlyphAt: glyph, effectiveRange: &lineRange)
-                    lastCharRange = manager.characterRange(forGlyphRange: lineRange, actualGlyphRange: nil)
-                    glyph = NSMaxRange(lineRange)
-                    lines += 1
-                }
+                    var lineGlyphRange = NSRange()
+                    let used = manager.lineFragmentUsedRect(forGlyphAt: glyph, effectiveRange: &lineGlyphRange)
+                    let charRange = manager.characterRange(forGlyphRange: lineGlyphRange, actualGlyphRange: nil)
+                    glyph = NSMaxRange(lineGlyphRange)
 
-                var contentEnd = NSMaxRange(lastCharRange)
-                while contentEnd > lastCharRange.location,
-                      let scalar = Unicode.Scalar(subString.character(at: contentEnd - 1)),
-                      CharacterSet.whitespacesAndNewlines.contains(scalar) {
-                    contentEnd -= 1
+                    // The break's own trailing whitespace hangs outside the margin; widening it would move
+                    // the break rather than fill the line.
+                    var contentEnd = NSMaxRange(charRange)
+                    while contentEnd > charRange.location,
+                          let scalar = Unicode.Scalar(subString.character(at: contentEnd - 1)),
+                          CharacterSet.whitespacesAndNewlines.contains(scalar) {
+                        contentEnd -= 1
+                    }
+                    // `gapLocations` is ascending and lines are walked in order, so this cursor never rewinds.
+                    while nextGap < gapLocations.count, gapLocations[nextGap] < charRange.location { nextGap += 1 }
+                    var indices: [Int] = []
+                    var scan = nextGap
+                    while scan < gapLocations.count, gapLocations[scan] < contentEnd {
+                        indices.append(scan)
+                        scan += 1
+                    }
+                    out.append(LineInfo(contentLength: contentEnd - charRange.location,
+                                        usedWidth: used.width, gapIndices: indices))
                 }
-                let spaces = spaceLocations.reduce(into: 0) { count, i in
-                    if i >= lastCharRange.location && i < contentEnd { count += 1 }
-                }
-                return (lines, contentEnd - lastCharRange.location, lastUsedRect.width, spaces)
+                return out
             }
 
-            let base = measure()
-            // One line has nothing above to pull from; and a closing line that would justify within
-            // the sparseness cap anyway is left alone - only the lines the cap would otherwise leave
-            // trailing are worth rebalancing. The threshold is the cap's own formula, so the two
-            // passes can never disagree about which lines are sparse.
-            guard base.lines > 1 else { continue }
-            let slack = width - base.lastUsedWidth
-            let sparse = base.lastSpaces == 0 || (slack - 1.0) / CGFloat(base.lastSpaces) > bodySize * 0.5
-            guard sparse, slack > bodySize else { continue }
-
-            // Bisect the loosest tracking that keeps the segment's line count - the page-wide
-            // balancer's search, against a line-count budget instead of a height budget.
-            var lo: CGFloat = 0
-            var hi = bodySize * 0.9
-            apply(hi)
-            if measure().lines <= base.lines {
-                lo = hi
-            } else {
-                for _ in 0..<8 {
-                    let mid = (lo + hi) / 2
-                    apply(mid)
-                    if measure().lines <= base.lines { lo = mid } else { hi = mid }
-                }
+            /// A line nothing more can be done for, or one whose gaps would have to open too far.
+            func isSparse(_ line: LineInfo) -> Bool {
+                let slack = width - line.usedWidth
+                guard slack > 1.5 else { return false }
+                guard !line.gapIndices.isEmpty else { return true }
+                return (slack - 1.0) / CGFloat(line.gapIndices.count) > sparseGapLimit
             }
-            let tracking = (lo * 20).rounded(.down) / 20
-            guard tracking > 0 else { continue }
 
-            // Apply only if words actually came down: tracking that moves nothing would just widen
-            // the sparse line's own gaps - the exact look this pass exists to avoid.
-            apply(tracking)
-            guard measure().lastContentLength > base.lastContentLength else { continue }
+            var lines = currentLines()
+            guard lines.count > 1, let last = lines.last, isSparse(last) else { continue }
 
-            // Commit to the page text with the same absolute values the winning probe used.
-            for (i, location) in spaceLocations.enumerated() {
-                text.addAttribute(.tracking, value: baseTracking[i] + tracking,
+            // Bounded: each step either walks the sparse line one higher or gives up. The cap is the
+            // backstop for a pathological segment, not the expected exit.
+            let maxSteps = min(lines.count * 2 + 4, 24)
+            var committed = false
+
+            for _ in 0..<maxSteps {
+                // Fix the BOTTOM-most sparse line first; the deficit then walks upward on its own,
+                // because the line it borrows from is the next one to come up short.
+                guard let target = lines.indices.last(where: { $0 > 0 && isSparse(lines[$0]) }) else { break }
+                let donor = lines[target - 1]
+                guard !donor.gapIndices.isEmpty else { break }
+
+                // Open the donor's gaps past the measure so its final word no longer fits.
+                //
+                // The minimum overflow is tried FIRST because it disturbs the donor least, but it is not
+                // always enough on its own: TextKit will let a line sit a little over the measure rather
+                // than break it, and the probe then comes back with the donor grown to exactly the
+                // container width and not one word moved. So the bump escalates until the word actually
+                // comes down. Measured over 404 real page segments, the minimum carries 69% of steps and
+                // the first escalation another 30%, so the ladder almost never runs past its second rung.
+                let donorSlack = max(width - donor.usedWidth, 0)
+                let minimumBump = donorSlack / CGFloat(donor.gapIndices.count) + max(0.75, bodySize * 0.04)
+
+                let snapshot = extra
+                var after = lines
+                var moved = false
+                for escalation in Self.cascadeEscalation {
+                    extra = snapshot
+                    for gi in donor.gapIndices { extra[gi] += minimumBump + escalation * bodySize }
+                    commit(donor.gapIndices)
+                    after = currentLines()
+                    // A step must not cost a line: the page was fitted to this line count and the line
+                    // boxes are pinned, so an extra line is an extra page height. Nothing to escalate
+                    // towards either - a bigger bump only pushes harder in the same direction.
+                    if after.count != lines.count { break }
+                    if after[target].contentLength > lines[target].contentLength { moved = true; break }
+                }
+
+                guard moved else {
+                    extra = snapshot
+                    commit(donor.gapIndices)
+                    break
+                }
+                lines = after
+                committed = true
+            }
+
+            guard committed else { continue }
+
+            // Commit to the page text with the same absolute values the winning layout used.
+            for (gi, location) in gapLocations.enumerated() where extra[gi] != 0 {
+                text.addAttribute(.tracking, value: baseTracking[gi] + extra[gi],
                                   range: NSRange(location: segment.location + location, length: 1))
             }
         }
@@ -3122,6 +3224,17 @@ struct MushafPageTextView: UIViewRepresentable {
         tv.addGestureRecognizer(press)
         tap.require(toFail: press)
 
+        // A pointer's secondary (right / two-finger) click - on a Mac running the app as Designed for iPad,
+        // or an iPad trackpad - is the natural "act on this ayah" gesture, so it opens the same actions
+        // sheet as the long press without the hold. Touches never carry the secondary button, so this
+        // recognizer is inert on iPhone/iPad touch input (the plain tap above stays primary-only).
+        let secondaryClick = UITapGestureRecognizer(
+            target: context.coordinator,
+            action: #selector(Coordinator.handleSecondaryClick(_:))
+        )
+        secondaryClick.buttonMaskRequired = .secondary
+        tv.addGestureRecognizer(secondaryClick)
+
         context.coordinator.textView = tv
         return tv
     }
@@ -3211,6 +3324,18 @@ struct MushafPageTextView: UIViewRepresentable {
             guard gesture.state == .began else { return }
             guard let (surahID, ayahID) = ayah(at: gesture.location(in: textView)) else { return }
             // A press on a heading behaves like a tap on it - there are no per-ayah actions to offer there.
+            if ayahID <= 0 {
+                onTapHeading?(surahID)
+            } else {
+                onLongPressAyah?(surahID, ayahID)
+            }
+        }
+
+        /// A pointer's secondary (right / two-finger) click: the Mac-and-trackpad twin of the long press,
+        /// routed to the exact same per-ayah actions sheet.
+        @objc func handleSecondaryClick(_ gesture: UITapGestureRecognizer) {
+            guard gesture.state == .ended else { return }
+            guard let (surahID, ayahID) = ayah(at: gesture.location(in: textView)) else { return }
             if ayahID <= 0 {
                 onTapHeading?(surahID)
             } else {

@@ -30,6 +30,10 @@ struct VerseIndexEntry: Identifiable, Hashable, Codable {
     let englishExactBlob: String
     let arabicBlob: String
     let silentArabicBlob: String
+    /// The hamza-preserving twin of `arabicBlob`, consulted ONLY when the query carries a bare ء (see
+    /// `Settings.HamzaPrecisionFilter`). Nil for an ayah with no hamza at all - which can never satisfy
+    /// such a query, so there is nothing worth storing.
+    let hamzaArabicBlob: String?
     let englishBlob: String
     let arabicTokens: [String]
     let silentArabicTokens: [String]

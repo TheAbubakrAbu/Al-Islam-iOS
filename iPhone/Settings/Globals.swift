@@ -532,6 +532,56 @@ extension String {
         return out
     }
 
+    /// Search-lane twin of the dagger alif: the mushaf writes some long-a sounds as a superscript alef
+    /// (يَٰنِسَآءَ, إِبۡرَٰهِـۧمَ). `cleanSearch` folds that dagger into a full ا - matching a typed
+    /// "يانساء" / "ابراهيم" - and THIS fold removes it instead, matching the equally common typed
+    /// spellings that omit the alif ("ينساء" / "ابرهيم"). Run it on the RAW text BEFORE `cleanSearch`
+    /// (afterwards the dagger is already a full ا) and index both lanes so either spelling finds the ayah.
+    var removingDaggerAlifForSearch: String {
+        guard unicodeScalars.contains(where: { $0.value == 0x0670 }) else { return self }
+        return String(unicodeScalars.filter { $0.value != 0x0670 })
+    }
+
+    /// Query-side twin of the mushaf's attached vocative: the Uthmani script writes "يا + noun" as ONE
+    /// word (يَٰنِسَآءَ, يَٰٓأَيُّهَا), so a typed "يا نساء" can never substring-match the folded corpus,
+    /// where the يا is glued to the word it calls. Joining a standalone folded "يا" token onto the token
+    /// after it converges the typed form with the mushaf's. Whole tokens only - a word merely ENDING in
+    /// "يا" (الدنيا) is untouched. Applied to FOLDED QUERIES as an additional lane, never to corpus blobs
+    /// (which carry no standalone يا) and never inside the highlighter's per-cluster fold, where any
+    /// context-sensitive rule desyncs its index map.
+    var joiningVocativeYaForSearch: String {
+        guard contains("يا ") else { return self }
+        let tokens = split(separator: " ", omittingEmptySubsequences: true)
+        var out: [String] = []
+        out.reserveCapacity(tokens.count)
+        var index = 0
+        while index < tokens.count {
+            if tokens[index] == "يا", index + 1 < tokens.count {
+                out.append("يا" + tokens[index + 1])
+                index += 2
+            } else {
+                out.append(String(tokens[index]))
+                index += 1
+            }
+        }
+        return out.joined(separator: " ")
+    }
+
+    /// Whether the text carries a BARE hamza (ء) - the one the reader has to go out of their way to
+    /// type, and therefore the one that should mean something. Seated hamzas (أ إ آ ؤ ئ) don't count:
+    /// they come along for free with ordinary spellings.
+    var containsBareHamza: Bool {
+        unicodeScalars.contains { $0.value == 0x0621 }
+    }
+
+    /// The dagger-alif variants a corpus text has to be checked against, deduplicated. The mushaf writes
+    /// some long-a sounds as a superscript alef; the main fold turns it into a full ا and this pairs that
+    /// with the spelling that omits it, which is the same two-lane treatment the search index uses.
+    var arabicDaggerVariantsForSearch: [String] {
+        let dropped = removingDaggerAlifForSearch
+        return dropped == self ? [self] : [self, dropped]
+    }
+
     var removingArabicDots: String {
         let dotlessMap: [Character: Character] = [
             "أ": "ا", "إ": "ا", "ؤ": "ء", "ئ": "ء",

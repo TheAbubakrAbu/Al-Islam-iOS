@@ -980,8 +980,9 @@ struct SurahView: View {
             // `surahID:` is REQUIRED for the beta riwayat: without it both Arabic reads silently
             // fall back to Hafs (BetaQiraatStore needs the surah), and the in-surah search index
             // desyncs from what the rows display - matches on invisible text, misses on visible.
+            let rawArabic = ayah.textArabic(for: displayQiraah, surahID: surahID)
             var parts = [
-                ayah.textArabic(for: displayQiraah, surahID: surahID),
+                rawArabic,
                 ayah.textCleanArabic(for: displayQiraah, surahID: surahID),
                 ayah.textTransliteration,
                 ayah.textEnglishSaheeh,
@@ -990,6 +991,12 @@ struct SurahView: View {
                 ayah.idArabic
             ]
             .map { settings.cleanSearch($0) }
+
+            // The dagger-DROPPED lane ("ينسا", "ابرهيم"): the raw fold above turns a superscript alef
+            // into a full ا, this one removes it, so typed spellings without the alif match too. Skipped
+            // when it folds to the same bytes as the raw lane (an ayah with no dagger alif).
+            let daggerlessFold = settings.cleanSearch(rawArabic.removingDaggerAlifForSearch)
+            if daggerlessFold != parts[0] { parts.append(daggerlessFold) }
 
             // Mirror QuranView's silent-letter search: also index the silent-letter-stripped Arabic so a
             // query that omits silent letters still matches. Always on - the fold is strictly additive
@@ -1598,6 +1605,21 @@ struct SurahView: View {
         let silentQuery: String? = searchText.containsArabicLetters
             ? settings.cleanSearchIgnoringSilentArabicLetters(searchText, whitespace: true)
             : nil
+        // Vocative-joined twin ("يا نساء" → "يانساء") as an ADDITIONAL lane - the mushaf glues يا to the
+        // word it calls, so the spaced typing can never substring-match without it. Nil when joining
+        // changes nothing.
+        let joinedQuery: String? = {
+            guard searchText.containsArabicLetters else { return nil }
+            let joined = cleanQuery.joiningVocativeYaForSearch
+            return joined == cleanQuery ? nil : joined
+        }()
+        let joinedSilentQuery: String? = silentQuery.flatMap {
+            let joined = $0.joiningVocativeYaForSearch
+            return joined == $0 ? nil : joined
+        }
+        // A typed hamza means it: the main fold drops ء, so نساء and نسى collapse together and searching
+        // يانساء pulled in يَنسَىٰ. Only ever removes results, and only when a bare ء was typed.
+        let hamzaFilter = Settings.HamzaPrecisionFilter(query: searchText)
         let booleanGroups = booleanAyahSearchGroups(from: searchText)
         let pageJuzQuery = parsePageJuzQuery(from: searchText)
         let ayahNumberQuery = parseAyahNumberQuery(from: searchText)
@@ -1644,13 +1666,22 @@ struct SurahView: View {
                     return a.id == ayahNumberQuery
                 }
 
+                // A hamza the reader actually typed has to be in the ayah, not folded away. Checked
+                // before the blob tests because it can only ever reject - never rescue - a candidate.
+                if let hamzaFilter,
+                   !hamzaFilter.matches(anyOf: [a.textArabic(for: settings.displayQiraahForArabic, surahID: surah.id)]) {
+                    return false
+                }
+
                 if let blob = searchBlobByAyahID[a.id] {
                     if let booleanGroups {
                         if booleanGroups.isEmpty { return false }
                         return matchesBooleanAyahSearch(ayah: a, haystack: blob, groups: booleanGroups)
                     }
                     if blob.contains(cleanQuery) { return true }
-                    return silentQuery.map { !$0.isEmpty && blob.contains($0) } ?? false
+                    if let joinedQuery, blob.contains(joinedQuery) { return true }
+                    if silentQuery.map({ !$0.isEmpty && blob.contains($0) }) ?? false { return true }
+                    return joinedSilentQuery.map { blob.contains($0) } ?? false
                 }
 
                 // Explicit surahID reads (not the bare `textArabic` conveniences): the beta riwayat
@@ -1660,6 +1691,7 @@ struct SurahView: View {
                 var fallbackParts = [
                     settings.cleanSearch(fallbackArabic),
                     settings.cleanSearch(fallbackCleanArabic),
+                    settings.cleanSearch(fallbackArabic.removingDaggerAlifForSearch),
                     settings.cleanSearch(a.textTransliteration),
                     settings.cleanSearch(a.textEnglishSaheeh),
                     settings.cleanSearch(a.textEnglishMustafa),
@@ -1678,7 +1710,9 @@ struct SurahView: View {
                 }
 
                 if fallbackBlob.contains(cleanQuery) { return true }
-                return silentQuery.map { !$0.isEmpty && fallbackBlob.contains($0) } ?? false
+                if let joinedQuery, fallbackBlob.contains(joinedQuery) { return true }
+                if silentQuery.map({ !$0.isEmpty && fallbackBlob.contains($0) }) ?? false { return true }
+                return joinedSilentQuery.map { fallbackBlob.contains($0) } ?? false
             }
         }()
         let boundaryModel = showBoundaryDividers ? quranData.boundaryModel(forSurah: surah.id) : nil

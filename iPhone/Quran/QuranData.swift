@@ -3323,6 +3323,7 @@ final class QuranData: ObservableObject {
                 : nil
             return regularSearchResults(
                 for: q,
+                rawQuery: raw,
                 silentQuery: silentQuery,
                 useArabic: useArabic,
                 limit: limit,
@@ -3330,8 +3331,17 @@ final class QuranData: ObservableObject {
             )
         }
 
+        /// The typed query plus its vocative-joined twin ("يا نساء" → "يانساء"), or nil when joining
+        /// changes nothing. An ADDITIONAL lane, so the original spaced query still matches everything
+        /// it used to.
+        private func joinedArabicQueryVariant(_ query: String) -> String? {
+            let joined = query.joiningVocativeYaForSearch
+            return joined == query ? nil : joined
+        }
+
         private func regularSearchResults(
             for cleanedQuery: String,
+            rawQuery: String,
             silentQuery: String?,
             useArabic: Bool,
             limit: Int,
@@ -3344,6 +3354,14 @@ final class QuranData: ObservableObject {
             var results: [VerseIndexEntry] = []
             results.reserveCapacity(limit == .max ? 64 : min(limit, 64))
 
+            // Joined once per query, not per entry - the scan below visits up to 6,236 entries.
+            let joinedQuery = useArabic ? joinedArabicQueryVariant(cleanedQuery) : nil
+            let joinedSilentQuery = useArabic ? silentQuery.flatMap(joinedArabicQueryVariant) : nil
+            // Built once too. Non-nil only when the reader typed a bare ء, and then it REPLACES the
+            // ordinary Arabic test: the hamza lane is strictly stricter, so passing it implies passing
+            // the plain one. Filtering here (not at the call site) keeps limit/offset paging honest.
+            let hamzaFilter = useArabic ? Settings.HamzaPrecisionFilter(query: rawQuery) : nil
+
             var skipped = 0
             var scanned = 0
             for index in allVerseIndices {
@@ -3354,7 +3372,15 @@ final class QuranData: ObservableObject {
                 if scanned & 0x1FF == 0, Task.isCancelled { break }
                 guard verseIndex.indices.contains(index) else { continue }
                 let entry = verseIndex[index]
-                guard regularSearchEntryMatches(entry, cleanedQuery: cleanedQuery, silentQuery: silentQuery, useArabic: useArabic) else { continue }
+                guard regularSearchEntryMatches(
+                    entry,
+                    cleanedQuery: cleanedQuery,
+                    joinedQuery: joinedQuery,
+                    silentQuery: silentQuery,
+                    joinedSilentQuery: joinedSilentQuery,
+                    hamzaFilter: hamzaFilter,
+                    useArabic: useArabic
+                ) else { continue }
                 if skipped < offset {
                     skipped += 1
                     continue
@@ -3368,15 +3394,25 @@ final class QuranData: ObservableObject {
         private func regularSearchEntryMatches(
             _ entry: VerseIndexEntry,
             cleanedQuery: String,
+            joinedQuery: String?,
             silentQuery: String?,
+            joinedSilentQuery: String?,
+            hamzaFilter: Settings.HamzaPrecisionFilter?,
             useArabic: Bool
         ) -> Bool {
             // Pure substring (`contains`) - boundaries don't matter. Whole-word / phrase matching lives in
             // the `=` operator instead.
             if useArabic {
+                // A bare ء in the query is a deliberate keystroke, so it has to survive the fold on BOTH
+                // sides. This lane subsumes the ones below (dropping the hamza can only merge more words
+                // together), so it stands alone rather than adding to them.
+                if let hamzaFilter { return hamzaFilter.matches(lanes: entry.hamzaArabicBlob) }
                 if entry.arabicBlob.contains(cleanedQuery) { return true }
+                if let joinedQuery, entry.arabicBlob.contains(joinedQuery) { return true }
                 guard let silentQuery, !silentQuery.isEmpty else { return false }
-                return entry.silentArabicBlob.contains(silentQuery)
+                if entry.silentArabicBlob.contains(silentQuery) { return true }
+                if let joinedSilentQuery, entry.silentArabicBlob.contains(joinedSilentQuery) { return true }
+                return false
             }
 
             return entry.englishBlob.contains(cleanedQuery)
@@ -3782,8 +3818,15 @@ final class QuranData: ObservableObject {
         englishMustafa: String,
         transliteration: String
     ) -> VerseIndexEntry {
-        let arabicBlob = [rawArabic, cleanArabic]
-            .map { settings.cleanSearch($0) }
+        // Three Arabic lanes per ayah: the raw fold (dagger alif → full ا: "يانسا", "ابراهيم"), the
+        // pre-cleaned display text, and the dagger-DROPPED fold ("ينسا", "ابرهيم") - so typed spellings
+        // with or without the alif the mushaf writes as a superscript both land. The dagger lane is
+        // dropped when it folds to the same bytes as the raw one (~30% of ayahs carry no dagger alif),
+        // so those entries don't pay for a duplicate copy of their own text.
+        let rawArabicFold = settings.cleanSearch(rawArabic)
+        let daggerlessFold = settings.cleanSearch(rawArabic.removingDaggerAlifForSearch)
+        let arabicBlob = ([rawArabicFold, settings.cleanSearch(cleanArabic)]
+            + (daggerlessFold == rawArabicFold ? [] : [daggerlessFold]))
             .joined(separator: " ")
         let silentArabicBlob = [rawArabic, cleanArabic]
             .map { settings.cleanSearchIgnoringSilentArabicLetters($0) }
@@ -3803,6 +3846,7 @@ final class QuranData: ObservableObject {
             englishExactBlob: exactPhraseBlob([englishSaheeh, englishMustafa, transliteration].joined(separator: " ")),
             arabicBlob: arabicBlob,
             silentArabicBlob: silentArabicBlob,
+            hamzaArabicBlob: Settings.HamzaPrecisionFilter.corpusLanes(for: [rawArabic, cleanArabic]),
             englishBlob: englishBlob,
             arabicTokens: arabicTokens,
             silentArabicTokens: silentArabicTokens,

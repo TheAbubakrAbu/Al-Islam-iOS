@@ -547,11 +547,27 @@ struct HighlightedSnippet: View {
             let hi = skeleton.distance(from: skeleton.startIndex, to: r.upperBound)
             guard lo >= 0, hi > lo, hi - 1 < skeletonMap.count else { return nil }
             var start = skeletonMap[lo]
-            let end = source.index(after: skeletonMap[hi - 1])
+            var end = source.index(after: skeletonMap[hi - 1])
             // Pull a directly-preceding alef (e.g. the ا of الـ) into the highlight so it reads naturally.
             if start > source.startIndex {
                 let prev = source.index(before: start)
                 if Self.normalizeForSearchText(String(source[prev]), trimWhitespace: false) == "ا" { start = prev }
+            }
+            // Trailing counterpart of that pull, and for the same reason. This skeleton dropped every alef,
+            // and the fold drops hamza and the marks outright - so a match ending on a letter stops dead
+            // there and leaves the rest of the SAME WORD in the base color: searching نساء lit "يَٰنِسَ"
+            // and left "آءَ" dark, which reads as "the hamza isn't highlighted". Absorb that tail.
+            //
+            // The whitespace guard is load-bearing and must stay FIRST: a space folds to the empty string
+            // (the fold trims whitespace), so an `isEmpty` test alone swallows the space AND the next
+            // word's opening alef - "يَٰنِسَآءَ ٱ".
+            while end < source.endIndex {
+                let next = source.index(after: end)
+                let cluster = source[end..<next]
+                guard cluster.first?.isWhitespace != true else { break }
+                let folded = Self.normalizeForSearchText(String(cluster), trimWhitespace: false)
+                guard folded.isEmpty || folded == "ا" else { break }
+                end = next
             }
             return start..<end
         }

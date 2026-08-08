@@ -27,24 +27,13 @@ final class AyahTafsirViewModel: ObservableObject {
     func hasEntry(for author: TafsirAuthor) -> Bool {
         tafsirs.contains { author.matches($0.author) }
     }
-
-    #if canImport(FoundationModels)
-    /// EVERYTHING the app has for this ayah, for the multi-tafsir Summarize: all six editions,
-    /// labeled, in author order - instant, because every pack is bundled.
-    func gatherAllSummarizeSections() -> [OnDeviceAsk.SummarizeSection] {
-        loadIfNeeded()
-        return TafsirAuthor.allCases.compactMap { author in
-            guard let entry = tafsirs.first(where: { author.matches($0.author) }) else { return nil }
-            return OnDeviceAsk.SummarizeSection(label: author.summarizeSectionLabel, text: entry.content)
-        }
-    }
-    #endif
 }
 
 #if canImport(FoundationModels)
-private extension TafsirAuthor {
-    /// The "=== ... ===" section heading this edition gets in the multi-tafsir summarize source -
-    /// language spelled out so the model knows what it is reading.
+extension TafsirAuthor {
+    /// The "=== ... ===" section heading this edition gets in the multi-source summarize source -
+    /// language spelled out so the model knows what it is reading. Internal (not private): the shared
+    /// gatherer `AyahAISources` labels the same six editions for every ayah AI entry point.
     var summarizeSectionLabel: String {
         switch self {
         case .ibnKathir:       return "Tafsir Ibn Kathir (English)"
@@ -333,10 +322,10 @@ struct AyahTafsirSheet: View {
             .dismissKeyboardOnScroll()
             .sheetDismissToolbar()
             .accentWashedBackground()
-            // On-device AI: summarize EVERY tafsir the app has for this ayah - the three English
-            // editions plus the three Arabic ones - fetching any not yet loaded (the same cache-first
-            // paths the tabs use), then chat about them, grounded only on those texts. Hidden
-            // entirely when Apple Intelligence is unavailable (the Ask pattern).
+            // On-device AI: summarize EVERYTHING the app has for this ayah - all six tafsir editions
+            // plus the riwayat readings and the English translations (the shared `AyahAISources`
+            // gathering), then chat about them, grounded only on those texts. Hidden entirely when
+            // Apple Intelligence is unavailable (the Ask pattern).
             #if canImport(FoundationModels)
             .toolbar {
                 // The availability check lives INSIDE the item (ViewBuilder, iOS 15-safe):
@@ -349,13 +338,21 @@ struct AyahTafsirSheet: View {
             }
             .sheet(isPresented: $showSummarize) {
                 SummarizeSheet(
-                    title: "All tafsirs on \(tafsirRangeTitle)",
+                    title: "Tafsir, riwayat & translations of \(tafsirRangeTitle)",
                     sourceText: "",
                     multiSource: true,
                     gatherSource: {
-                        // Instant: every edition is bundled, so gathering is a synchronous pack read.
-                        let sections = viewModel.gatherAllSummarizeSections()
-                        return OnDeviceAsk.combinedSource(sections)
+                        // The tafsirs and riwayat are instant local reads; the online translation
+                        // editions are fetched best-effort (bundled ones go in regardless).
+                        let online = await AyahAISources.fetchOnlineTranslations(surahNumber: surahNumber, hafsAyah: ayahNumber)
+                        return OnDeviceAsk.combinedSource(
+                            AyahAISources.combinedSections(
+                                surahNumber: surahNumber,
+                                ayahNumber: ayahNumber,
+                                emphasis: .tafsir,
+                                onlineTranslations: online
+                            )
+                        )
                     }
                 )
             }

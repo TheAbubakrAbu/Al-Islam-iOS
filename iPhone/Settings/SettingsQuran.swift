@@ -545,29 +545,50 @@ extension Settings {
         return Riwayah.options.contains { !$0.tag.isEmpty && $0.tag == normalizedQiraah }
     }
 
-    // The KFGQPC riwayah faces, chosen by NOTATION FAMILY rather than per riwayah.
+    // Three KFGQPC faces, picked by what a riwayah's text actually needs.
     //
-    // Eight riwayat write hamzatul wasl the Maghribi way - plain alef + starting haraka +
-    // the round U+06EC mark (اَ۬) - and their texts carry U+0622 (alef-madda), which the
-    // Hafs V2.2 face has no glyph for at all. They render in the KFGQPC WARSH face, the
-    // foundry's own Maghribi script: it covers U+0622 and the Arabic comma, and it is the
-    // face those readings are actually printed in.
-    //
-    // The other twelve riwayat write wasl the Hafs way (ٱ, U+0671); every codepoint in
-    // their texts is covered by the Hafs face, so they render in Hafs directly - which
-    // also keeps tajweed coloring on the face it was tuned for.
-    //
-    // The Duri face is still bundled (Duri.ttf / Susi.ttf shipped from the foundry as
-    // byte-identical glyph sets under two names) but the resolver no longer reaches for
-    // it - Warsh serves the whole Maghribi notation family.
+    // WARSH - the North African script. Used only where the reader has asked for it: the Maghribi
+    // style outright, or Automatic on Nafi's two readings, whose printed mushaf really is that
+    // script. Never more broadly than that: it has no glyph for up to 2,695 codepoints in a single
+    // riwayah's text (U+06DA, U+06ED, U+06DB - the waqf marks - and U+0671), which is exactly what
+    // shows up on the page as missing letters.
     static let warshUthmaniFontName = "KFGQPCWarshUthmanicScript-Regul"
 
-    /// The riwayat whose texts use the Maghribi wasl notation (and alef-madda): both of
-    /// Nafi's, Abu Amr's, Abu Jafar's, and Yaqub's.
-    static let maghribiNotationRiwayahTags: Set<String> = [
+    /// SOUSI - the Basri script, and the face for the dot-wasl readings outside the Maghrib. It
+    /// covers all eight of their texts with nothing missing, where the Warsh face drops thousands
+    /// of marks from six of them.
+    ///
+    /// (Duri.ttf shipped from the foundry as the same glyph set under a second name, so bundling
+    /// Sousi alone is enough.)
+    static let susiUthmaniFontName = "KFGQPCSousiUthmanicScript-Regul"
+
+    /// The riwayat that mark hamzatul wasl with the round DOT (U+06EC over a bare alef) rather than
+    /// the Hafs saad-topped alef (U+0671): both of Nafi's, Abu Amr's, Abu Jafar's, and Yaqub's.
+    ///
+    /// Measured, not assumed - and the split across the twenty shipped texts is total, with no
+    /// riwayah mixing the conventions: these eight carry 9,755-10,088 dots and at most one saad,
+    /// the other twelve ~13,470 saads and at most a handful of dots.
+    static let dotWaslRiwayahTags: Set<String> = [
         Riwayah.warsh, Riwayah.qaloon, Riwayah.duri, Riwayah.susi,
         Riwayah.ibnWardan, Riwayah.ibnJammaz, Riwayah.ruways, Riwayah.rawh,
     ]
+
+    /// Nafi's pair - the only two whose printed mushaf really is the Maghribi script, and so the
+    /// only two Automatic puts on the Warsh face. Under Madani they follow the dot rule like every
+    /// other reading, because Madani is a request for a script, not for a riwayah's own printing.
+    static let nafiRiwayahTags: Set<String> = [Riwayah.warsh, Riwayah.qaloon]
+
+    /// The caption under the script picker, for readers who have the qiraat on screen. Named by the
+    /// TEN, not the twenty: a qiraah's two riwayat never disagree about this (checked across all
+    /// twenty shipped texts), so the riwayah always follows its qiraah here.
+    /// Four lines at `.caption` on a phone - checked, not guessed. The one Arabic sample is a bare
+    /// ص: the composed اَ۬ cluster this describes does NOT survive being dropped into a Latin
+    /// caption (it shapes as garbage in the system face), which is why the marks are named in words.
+    static let waslNotationNote = """
+        Hamzatul wasl, the silent alef a joined reading slides over, is marked two ways: a small \
+        circle over a bare alef in Nafi, Abu Amr, Abu Jafar and Yaqub; a ص on the alef in Asim, \
+        Ibn Kathir, Ibn Amir, Hamzah, al-Kisai and Khalaf al-Ashir.
+        """
 
     /// Which Uthmani script the Quran draws in. `.madani` is the default - the script all but
     /// one reader has ever seen. `.automatic` follows the riwayah's own notation family (the
@@ -604,10 +625,12 @@ extension Settings {
             }
         }
 
-        var fontName: String? {
+        /// The face this style forces regardless of riwayah, or nil when the riwayah decides.
+        /// Madani is nil too: it pins the SCRIPT, but a dot-wasl reading still has to be set in a
+        /// face that has the dot's companion marks - see `quranArabicFontName`.
+        var forcedFontName: String? {
             switch self {
-            case .automatic: return nil
-            case .madani: return Settings.hafsUthmaniFontName
+            case .automatic, .madani: return nil
             case .maghribi: return Settings.warshUthmaniFontName
             }
         }
@@ -634,14 +657,24 @@ extension Settings {
         guard isUthmaniArabicFont(selectedFontName) else {
             return normalizedArabicFontName(selectedFontName)
         }
-        // An explicit script choice wins outright. Otherwise the notation family picks the
-        // face; a custom font pick (IndoPak/Basic) never reaches this branch at all, so the
-        // reader's own font choice always survives.
-        if let forced = style.fontName { return forced }
+        // Maghribi is the one style that overrides the riwayah outright: it means "set the whole
+        // Quran in the North African script". A custom font pick (IndoPak/Basic) never reaches
+        // this branch at all, so the reader's own font choice always survives.
+        if let forced = style.forcedFontName { return forced }
+
         let riwayahTag = normalizeLegacyRiwayahTag(qiraah ?? Riwayah.hafsTag)
-        return maghribiNotationRiwayahTags.contains(riwayahTag)
-            ? warshUthmaniFontName
-            : hafsUthmaniFontName
+
+        // Automatic sets Nafi's two readings in the script their mushaf is actually printed in.
+        // Everything else falls through to the Madani rule below - which is what Automatic means
+        // for a reading whose printing is not Maghribi.
+        if style == .automatic, nafiRiwayahTags.contains(riwayahTag) {
+            return warshUthmaniFontName
+        }
+
+        // Madani (and Automatic on a non-Nafi reading): the face follows the WASL NOTATION, because
+        // that is the one thing the two faces genuinely disagree about drawing. Dot readings take
+        // the Basri face they are set in; saad readings take Hafs.
+        return dotWaslRiwayahTags.contains(riwayahTag) ? susiUthmaniFontName : hafsUthmaniFontName
     }
 
     var normalizedArabicFontName: String {

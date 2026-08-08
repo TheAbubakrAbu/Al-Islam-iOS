@@ -635,6 +635,15 @@ struct SettingsQuranView: View {
                 Text(settings.arabicScriptStyle.detail(namingRiwayat: showQiraah))
                     .font(.caption)
                     .foregroundColor(.secondary)
+
+                // Only for readers who have the qiraat on screen: what the script choice is really
+                // choosing between, named by the ten rather than the twenty (both riwayat of a
+                // qiraah always mark wasl the same way - verified across all twenty texts).
+                if showQiraah {
+                    Text(Settings.waslNotationNote)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
             }
             .padding(.vertical, 2)
         }

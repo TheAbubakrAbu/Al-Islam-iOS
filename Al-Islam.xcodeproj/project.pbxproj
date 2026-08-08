@@ -48,6 +48,8 @@
 		724B8BD22FADD98500804C3D /* Uthmani.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 724B8BD12FADD98500804C3D /* Uthmani.ttf */; };
 		724B8BD32FADD98500804C3D /* Uthmani.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 724B8BD12FADD98500804C3D /* Uthmani.ttf */; };
 		72FB30020000000000000009 /* Warsh.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 72FB30010000000000000006 /* Warsh.ttf */; };
+		72FB30050000000000000009 /* Susi.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 72FB30040000000000000006 /* Susi.ttf */; };
+		72FB30060000000000000009 /* Susi.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 72FB30040000000000000006 /* Susi.ttf */; };
 		72FB30030000000000000009 /* Warsh.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 72FB30010000000000000006 /* Warsh.ttf */; };
 		724B8BE12FADE8D900804C3D /* Indopak.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 724B8BE02FADE8D900804C3D /* Indopak.ttf */; };
 		724B8BE22FADE8D900804C3D /* Indopak.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 724B8BE02FADE8D900804C3D /* Indopak.ttf */; };
@@ -369,6 +371,8 @@
 		7ADD181400000000AA0018 /* PillarViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7ADD181300000000AA0018 /* PillarViews.swift */; };
 		7ADD181500000000AA0018 /* PillarViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7ADD181300000000AA0018 /* PillarViews.swift */; };
 		7ADD181700000000AA0018 /* BeliefsViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7ADD181600000000AA0018 /* BeliefsViews.swift */; };
+		7ADD9A0200000000AA0018 /* QiraatProfiles.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7ADD9A0100000000AA0018 /* QiraatProfiles.swift */; };
+		7ADD9A0300000000AA0018 /* QiraatProfiles.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7ADD9A0100000000AA0018 /* QiraatProfiles.swift */; };
 		7ADD181800000000AA0018 /* BeliefsViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7ADD181600000000AA0018 /* BeliefsViews.swift */; };
 		7ADD181A00000000AA0018 /* TajweedTopics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7ADD181900000000AA0018 /* TajweedTopics.swift */; };
 		7ADD181B00000000AA0018 /* TajweedTopics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7ADD181900000000AA0018 /* TajweedTopics.swift */; };
@@ -507,6 +511,7 @@
 		723873432F37342E00D3A8CD /* CustomRangeSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomRangeSheet.swift; sourceTree = "<group>"; };
 		724B8BD12FADD98500804C3D /* Uthmani.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = Uthmani.ttf; sourceTree = "<group>"; };
 		72FB30010000000000000006 /* Warsh.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = Warsh.ttf; sourceTree = "<group>"; };
+		72FB30040000000000000006 /* Susi.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = Susi.ttf; sourceTree = "<group>"; };
 		724B8BE02FADE8D900804C3D /* Indopak.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = Indopak.ttf; sourceTree = "<group>"; };
 		724C667C2FF0836600C0E1BB /* Watch.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Watch.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		724C667D2FF0836600C0E1BB /* Complication.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = Complication.appex; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -682,6 +687,7 @@
 		7ADD181000000000AA0018 /* HowToGuides.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HowToGuides.swift; sourceTree = "<group>"; };
 		7ADD181300000000AA0018 /* PillarViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PillarViews.swift; sourceTree = "<group>"; };
 		7ADD181600000000AA0018 /* BeliefsViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BeliefsViews.swift; sourceTree = "<group>"; };
+		7ADD9A0100000000AA0018 /* QiraatProfiles.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QiraatProfiles.swift; sourceTree = "<group>"; };
 		7ADD181900000000AA0018 /* TajweedTopics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TajweedTopics.swift; sourceTree = "<group>"; };
 		7ADD181C00000000AA0018 /* ArabicLetterViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArabicLetterViews.swift; sourceTree = "<group>"; };
 		7DAD00000000000000000001 /* HadithFold.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HadithFold.swift; sourceTree = "<group>"; };
@@ -976,6 +982,7 @@
 				724B8BE02FADE8D900804C3D /* Indopak.ttf */,
 				72FA10022FF0A00100AA0002 /* QuranCommon.ttf */,
 				72FB30010000000000000006 /* Warsh.ttf */,
+				72FB30040000000000000006 /* Susi.ttf */,
 			);
 			path = Fonts;
 			sourceTree = "<group>";
@@ -1011,6 +1018,7 @@
 				72E832A52F6F52BA0013428B /* WallpaperView.swift */,
 				72E832A12F6F52BA0013428B /* PillarsView.swift */,
 				7ADD181600000000AA0018 /* BeliefsViews.swift */,
+				7ADD9A0100000000AA0018 /* QiraatProfiles.swift */,
 				7ADD181300000000AA0018 /* PillarViews.swift */,
 				7ADD181000000000AA0018 /* HowToGuides.swift */,
 			);
@@ -1361,6 +1369,7 @@
 				72C6FDF12F7880700035F675 /* abdulghaffar-30.caf in Resources */,
 				72C6FDF22F7880700035F675 /* alaqsa-30.caf in Resources */,
 				72FB30020000000000000009 /* Warsh.ttf in Resources */,
+				72FB30050000000000000009 /* Susi.ttf in Resources */,
 				7DAD00000000000000000006 /* bukhari.hpk in Resources */,
 				7DAD00000000000000000008 /* muslim.hpk in Resources */,
 				7DAD0000000000000000000A /* ibnmajah.hpk in Resources */,
@@ -1453,6 +1462,7 @@
 				7A9A000000000000000000D6 /* qiraat.qpk in Resources */,
 				7A9A000000000000000000D8 /* surah-stats.json in Resources */,
 				72FB30030000000000000009 /* Warsh.ttf in Resources */,
+				72FB30060000000000000009 /* Susi.ttf in Resources */,
 				72C3FE552F6A039400136976 /* namesofallah.qpk in Resources */,
 				724B8BE22FADE8D900804C3D /* Indopak.ttf in Resources */,
 				72FA10082FF0A00100AA0008 /* QuranCommon.ttf in Resources */,
@@ -1610,6 +1620,7 @@
 				72E832B12F6F52BA0013428B /* NamesView.swift in Sources */,
 				72E832B22F6F52BA0013428B /* PillarsView.swift in Sources */,
 				7ADD181700000000AA0018 /* BeliefsViews.swift in Sources */,
+				7ADD9A0200000000AA0018 /* QiraatProfiles.swift in Sources */,
 				7ADD181400000000AA0018 /* PillarViews.swift in Sources */,
 				7ADD181100000000AA0018 /* HowToGuides.swift in Sources */,
 				7260F9412A8715D600E8FF87 /* PrayerCountdown.swift in Sources */,
@@ -1740,6 +1751,7 @@
 				72E832BE2F6F52BA0013428B /* NamesView.swift in Sources */,
 				72E832BF2F6F52BA0013428B /* PillarsView.swift in Sources */,
 				7ADD181800000000AA0018 /* BeliefsViews.swift in Sources */,
+				7ADD9A0300000000AA0018 /* QiraatProfiles.swift in Sources */,
 				7ADD181500000000AA0018 /* PillarViews.swift in Sources */,
 				7ADD181200000000AA0018 /* HowToGuides.swift in Sources */,
 				720CCE1B2E394375002DD82E /* QuranPlayer.swift in Sources */,

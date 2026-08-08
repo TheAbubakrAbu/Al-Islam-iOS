@@ -1812,70 +1812,37 @@ struct QiraatView: View {
                 }
 
                 Section(header: Text("THE 10 QIRAAT (القراءات)")) {
-                    Text("The 10 Qiraat are the canonical recitation methods of the Quran. Each is named after its primary teacher (the Imam of that recitation).")
+                    Text("The 10 Qiraat are the canonical recitation methods of the Quran. Each is named after its primary teacher (the Imam of that recitation). Tap any of them to read about the imam and reach his two narrators.")
                         .font(.body)
 
-                    Group {
-                        Text("• Abu Jafar (أَبُو جَعفَر): Madinah, died 130 AH")
-                        Text("• Abu Amr (أَبُو عَمرٍو): Basra, died 154 AH")
-                        Text("• al-Kisai (الكِسَائِي): Kufa, died 189 AH")
-                        Text("• Asim (عَاصِم): Kufa, died 127 AH")
-                        Text("• Hamzah (حَمزَة): Kufa, died 156 AH")
-                        Text("• Ibn Amir (ابنُ عَامِر): Damascus, died 118 AH")
-                        Text("• Ibn Kathir (ابنِ كَثِير): Makkah, died 120 AH")
-                        Text("• Khalaf al-Ashir (خَلَف العَاشِر): Baghdad, died 229 AH")
-                        Text("• Nafi (نَافِع): Madinah, died 169 AH")
-                        Text("• Yaqoub (يَعقُوب): Basra, died 205 AH")
+                    ForEach(QiraatProfiles.masters) { master in
+                        NavigationLink(destination: QiraahMasterDetailView(profile: master)) {
+                            QiraatProfileRow(
+                                title: master.id,
+                                arabic: master.arabic,
+                                detail: "\(master.city), died \(master.diedAH) AH"
+                            )
+                        }
                     }
-                    .font(.body)
                 }
 
                 Section(header: Text("THE 20 RIWAYAAT (روايات)")) {
-                    Text("Each Qiraah (recitation method) has two primary riwayaat (narrations). These are the 20 canonical transmissions used in teaching and ijazah (chain certification).")
+                    Text("Each Qiraah (recitation method) has two primary riwayaat (narrations). These are the 20 canonical transmissions used in teaching and ijazah (chain certification). Tap any of them to read about the narrator.")
                         .font(.body)
 
-                    Group {
-                        // Abu Jafar
-                        Text("• Ibn Wardan an Abi Jafar (ابنُ وَردَان عَن أَبِي جَعفَر): died 160 AH")
-                        Text("• Ibn Jammaz an Abi Jafar (ابنُ جَمَّاز عَن أَبِي جَعفَر): died 170 AH")
-
-                        // Abu Amr
-                        Text("• ad-Duri an Abi Amr (الدُّورِي عَن أَبِي عَمرٍو): died 246 AH")
-                        Text("• as-Susi an Abi Amr (السُّوسِي عَن أَبِي عَمرٍو): died 261 AH")
-
-                        // al-Kisai
-                        Text("• Abu al-Harith an al-Kisai (أَبُو الحَارِث عَن الكِسَائِي): died 240 AH")
-                        Text("• ad-Duri an al-Kisai (الدُّورِي عَن الكِسَائِي): died 246 AH")
-
-                        // Asim
-                        Text("• Shubah an Asim (شُعبَة عَن عَاصِم): died 193 AH")
-                        Text("• Hafs an Asim (حَفص عَن عَاصِم): died 180 AH")
-
-                        // Hamzah
-                        Text("• Khalaf an Hamzah (خَلَف عَن حَمزَة): died 229 AH")
-                        Text("• Khallad an Hamzah (خَلَّاد عَن حَمزَة): died 220 AH")
-
-                        // Ibn Amir
-                        Text("• Hisham an Ibn Amir (هِشَام عَن ابنِ عَامِر): died 245 AH")
-                        Text("• Ibn Dhakwan an Ibn Amir (ابنُ ذَكوَان عَن ابنِ عَامِر): died 242 AH")
-
-                        // Ibn Kathir
-                        Text("• al-Bazzi an Ibn Kathir (البَزِّي عَن ابنِ كَثِير): died 250 AH")
-                        Text("• Qunbul an Ibn Kathir (قُنبُل عَن ابنِ كَثِير): died 291 AH")
-
-                        // Khalaf al-Ashir
-                        Text("• Ishaq an Khalaf al-Ashir (إِسحَاق عَن خَلَف العَاشِر): died 286 AH")
-                        Text("• Idris an Khalaf al-Ashir (إِدرِيس عَن خَلَف العَاشِر): died 292 AH")
-
-                        // Nafi
-                        Text("• Warsh an Nafi (وَرش عَن نَافِع): died 197 AH")
-                        Text("• Qalun an Nafi (قَالُون عَن نَافِع): died 220 AH")
-
-                        // Yaqoub
-                        Text("• Ruways an Yaqoub (رُوَيس عَن يَعقُوب): died 238 AH")
-                        Text("• Rawh an Yaqoub (رَوح عَن يَعقُوب): died 234 AH")
+                    // Grouped under their imam, in the same order as the ten above, so the pairing is
+                    // visible rather than something you reconstruct from the names.
+                    ForEach(QiraatProfiles.masters) { master in
+                        ForEach(QiraatProfiles.narrators(ofMaster: master.id)) { narrator in
+                            NavigationLink(destination: RiwayahNarratorDetailView(profile: narrator)) {
+                                QiraatProfileRow(
+                                    title: "\(narrator.name) an \(master.id)",
+                                    arabic: narrator.arabic,
+                                    detail: "died \(narrator.diedAH) AH"
+                                )
+                            }
+                        }
                     }
-                    .font(.body)
                 }
 
                 Section(header: Text("THE COMPANIONS BEHIND EACH QIRAAH")) {

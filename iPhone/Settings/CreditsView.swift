@@ -174,6 +174,8 @@ struct CreditsView: View {
 
                 creditLink("Credit for the printed mushaf PDFs (one per riwayah) and the beta qiraat text goes to Islamweb", url: "https://www.islamweb.net")
 
+                creditLink("Credit for the qiraat guide's companion reference on the ten imams and twenty narrators goes to QiraatHub", url: "https://qiraathub.com/")
+
                 creditLink("Credit for the Uthmani Quran font goes to King Fahad Complex (KFGQPC)", url: "https://qul.tarteel.ai/resources/font/245")
                 
                 creditLink("Credit for the Indopak Nastaleeq Quran font goes to Ayman Siddiqui and R. Siddiqua", url: "https://qul.tarteel.ai/resources/font/242")

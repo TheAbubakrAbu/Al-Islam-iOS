@@ -4,7 +4,7 @@ import UIKit
 #if os(iOS)
 
 enum AyahSecondarySheet: String, Identifiable {
-    case tafsir, qiraah, translations, customRange, note, share
+    case tafsir, qiraah, translations, customRange, note, share, selectText
     var id: String { rawValue }
 }
 
@@ -279,10 +279,28 @@ struct AyahActionsSheet: View {
             }))
         }
 
-        list.append(AyahAction(id: "copy", title: "Copy", systemImage: "doc.on.doc", action: {
+        // The page's text view is deliberately non-selectable (taps and presses are ayah gestures), so this
+        // is page mode's route to the same select-and-copy sheet the list rows offer. It sits ahead of the
+        // copy tiles because picking out part of an ayah is the finer-grained version of copying it whole.
+        list.append(AyahAction(id: "selectText", title: "Select Text", systemImage: "highlighter", action: {
+            settings.hapticFeedback()
+            onRequestSheet?(.selectText)
+        }))
+
+        // Two explicit tiles rather than one "Copy" that follows whatever was last SHARED as. This sheet
+        // has the room, and a copy you have to guess the outcome of is worse than two you don't. (The list
+        // rows keep the single remembered-mode Copy - a context menu can't afford the extra row.)
+        list.append(AyahAction(id: "copyText", title: "Copy Text", systemImage: "doc.on.doc", action: {
             settings.hapticFeedback()
             ShareAyahSheet.copyAyahToPasteboard(surahNumber: surah.id, ayahNumber: ayah.id,
-                                                settings: settings, quranData: quranData)
+                                                settings: settings, quranData: quranData, mode: .text)
+            dismiss()
+        }))
+
+        list.append(AyahAction(id: "copyImage", title: "Copy Image", systemImage: "photo.on.rectangle", action: {
+            settings.hapticFeedback()
+            ShareAyahSheet.copyAyahToPasteboard(surahNumber: surah.id, ayahNumber: ayah.id,
+                                                settings: settings, quranData: quranData, mode: .image)
             dismiss()
         }))
 
@@ -294,19 +312,11 @@ struct AyahActionsSheet: View {
         return list
     }
 
-    /// Three across, unless that would leave a last row holding a single tile - a 10th tile stranded on its own
-    /// row reads as a mistake. In that case two across (which divides evenly), else four.
-    private var columnCount: Int {
-        let count = actions.count
-        for candidate in [3, 2, 4] where count % candidate != 1 {
-            return candidate
-        }
-        return 3
-    }
-
     private var actionGrid: some View {
+        // Always three across: a stable grid beats the old adaptive 2/3/4 column count, which made the
+        // sheet re-arrange itself depending on whether the ayah happened to carry a note.
         LazyVGrid(
-            columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: columnCount),
+            columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: 3),
             spacing: 10
         ) {
             ForEach(actions) { item in
