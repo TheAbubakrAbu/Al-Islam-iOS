@@ -13,10 +13,10 @@
     },
     {
       "blocks" : 7,
-      "bytes" : 1398228,
+      "bytes" : 1395840,
       "name" : "qiraat",
       "records" : 7,
-      "sha256" : "4b090f9e6c7ef3c24b15dec984e1f91f12d9af9dc2ac464648ca5fab9b156c13",
+      "sha256" : "d90b3a206a69d0243a3ac8c119fa51fc23d121e615b88db5e4c1060d72e72046",
       "sourceBytes" : 10369373,
       "units" : 43538
     },
@@ -31,5 +31,5 @@
     }
   ],
   "textCodec" : "lzma",
-  "totalPackBytes" : 3118760
+  "totalPackBytes" : 3116372
 }

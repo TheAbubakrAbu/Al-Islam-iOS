@@ -554,12 +554,11 @@ extension Settings {
     // shows up on the page as missing letters.
     static let warshUthmaniFontName = "KFGQPCWarshUthmanicScript-Regul"
 
-    /// SOUSI - the Basri script, and the face for the dot-wasl readings outside the Maghrib. It
-    /// covers all eight of their texts with nothing missing, where the Warsh face drops thousands
-    /// of marks from six of them.
-    ///
-    /// (Duri.ttf shipped from the foundry as the same glyph set under a second name, so bundling
-    /// Sousi alone is enough.)
+    /// SOUSI - the Basri script, formerly the face for the dot-wasl readings. Retired from the
+    /// bundle: the Hafs face now carries everything those texts need - the bare-alef wasl-dot
+    /// cluster ligatures (b8-b24, ported from this face), a proper filled dot below (U+065C,
+    /// imaalah kubra) and hollow ring below (U+06EA, taqlil/tashil) as zero-width marks. The
+    /// name stays declared so an old stored font preference can still be normalized.
     static let susiUthmaniFontName = "KFGQPCSousiUthmanicScript-Regul"
 
     /// The riwayat that mark hamzatul wasl with the round DOT (U+06EC over a bare alef) rather than
@@ -671,10 +670,11 @@ extension Settings {
             return warshUthmaniFontName
         }
 
-        // Madani (and Automatic on a non-Nafi reading): the face follows the WASL NOTATION, because
-        // that is the one thing the two faces genuinely disagree about drawing. Dot readings take
-        // the Basri face they are set in; saad readings take Hafs.
-        return dotWaslRiwayahTags.contains(riwayahTag) ? susiUthmaniFontName : hafsUthmaniFontName
+        // Madani (and Automatic on a non-Nafi reading): everything is set in the Hafs face. It
+        // carries both wasl notations now - the saad-topped alef AND the Sousi bare-alef dot
+        // clusters (ported ligatures) - plus the filled/hollow imaalah marks, so the dot readings
+        // no longer need the separate Basri face.
+        return hafsUthmaniFontName
     }
 
     var normalizedArabicFontName: String {

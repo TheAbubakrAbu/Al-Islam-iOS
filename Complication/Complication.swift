@@ -207,7 +207,7 @@ struct PrayersEntryView: View {
                 .foregroundColor(accent(for: currentPrayer))
                 .widgetAccentable()
 
-                Text("Up Next: \(nextPrayer.displayName) at \(Text(nextPrayer.time, style: .time))")
+                Text("Next: \(nextPrayer.displayName) at \(Text(nextPrayer.time, style: .time))")
                     .font(.subheadline)
 
                 HStack {

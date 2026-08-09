@@ -1307,6 +1307,37 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
         return Self.Riwayah.arabicCaptionByTag[key] ?? Self.Riwayah.arabicCaptionByTag[Self.Riwayah.hafsTag]!
     }
 
+    /// The displayed riwayah's tag when it is non-Hafs and ships a print-derived tajweed
+    /// color pack (`QiraahTajweedStore`); nil on Hafs or when no pack is bundled.
+    var riwayahTajweedPackTag: String? {
+        #if os(iOS)
+        guard let raw = displayQiraahForArabic else { return nil }
+        let tag = Self.Riwayah.canonicalTag(raw)
+        guard !tag.isEmpty, QiraahTajweedStore.shared.isAvailable(tag: tag) else { return nil }
+        return tag
+        #else
+        return nil
+        #endif
+    }
+
+    /// Hidden riwayah tajweed rules, by rule KEY ("idgham", "silah_meem", ...), comma-joined.
+    /// Keys are meaning-stable across riwayat, so hiding "idgham" hides it in every riwayah.
+    @AppStorage("riwayahTajweedHiddenRules") var riwayahTajweedHiddenRules: String = ""
+
+    var riwayahTajweedHiddenRuleSet: Set<String> {
+        Set(riwayahTajweedHiddenRules.split(separator: ",").map(String.init))
+    }
+
+    func isRiwayahTajweedRuleVisible(_ key: String) -> Bool {
+        !riwayahTajweedHiddenRuleSet.contains(key)
+    }
+
+    func setRiwayahTajweedRule(_ key: String, visible: Bool) {
+        var set = riwayahTajweedHiddenRuleSet
+        if visible { set.remove(key) } else { set.insert(key) }
+        riwayahTajweedHiddenRules = set.sorted().joined(separator: ",")
+    }
+
     @AppStorage("showArabicText") var showArabicText: Bool = true
     @AppStorage("highlightAllahNames") var highlightAllahNames: Bool = false
     @AppStorage("showTajweedColors") var showTajweedColors: Bool = false

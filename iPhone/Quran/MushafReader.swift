@@ -56,7 +56,7 @@ enum MushafPagination {
             return hit.pages
         }
 
-        let pages = build(quran: quran, qiraah: qiraah)
+        let pages = build(quran: quran, qiraah: qiraah, pageTable: hafsPageTable(quran: quran, qiraah: qiraah))
         if pageCache.count >= pageCacheLimit { pageCache.removeFirst() }
         pageCache.append((key, pages))
         return pages
@@ -73,19 +73,53 @@ enum MushafPagination {
     static func buildInBackground(quran: [Surah], qiraah: String?) async {
         let key = "\(qiraah ?? "Hafs")|\(quran.count)"
         guard !pageCache.contains(where: { $0.key == key }) else { return }
+        // The ayah alignment is MainActor state, so resolve it into a plain table up front;
+        // the detached pass then only reads value types.
+        let pageTable = hafsPageTable(quran: quran, qiraah: qiraah)
         let pages = await Task.detached(priority: .userInitiated) {
-            build(quran: quran, qiraah: qiraah)
+            build(quran: quran, qiraah: qiraah, pageTable: pageTable)
         }.value
         guard !pageCache.contains(where: { $0.key == key }) else { return }
         if pageCache.count >= pageCacheLimit { pageCache.removeFirst() }
         pageCache.append((key, pages))
     }
 
+    /// Non-Hafs riwayat paginate on the SAME Madinah page boundaries as Hafs: page N holds the
+    /// riwayah text whose ayahs ALIGN with Hafs page N's ayahs (`QiraahComparison`), so page
+    /// numbers, juz starts and "one page is one page" hold across every riwayah - a page just
+    /// runs a line or two longer or shorter where the riwayah merges/splits ayahs or spells
+    /// differently, and the fitter absorbs that. Keyed riwayah-ayah-id -> Hafs page.
+    /// (Direct `ayah.page` was wrong for them: their OWN ayah numbering drifts from the Hafs
+    /// rows mid-surah, which is what broke half the pages on other qiraat.)
+    private static func hafsPageTable(quran: [Surah], qiraah: String?) -> [Int: [Int: Int]]? {
+        guard let qiraah, !qiraah.isEmpty, qiraah != "Hafs" else { return nil }
+        let tag = Settings.Riwayah.canonicalTag(qiraah)
+        guard !tag.isEmpty else { return nil }
+        var out: [Int: [Int: Int]] = [:]
+        for surah in quran {
+            guard let alignment = QiraahComparison.alignment(surahID: surah.id, tag: tag, quranData: QuranData.shared) else { continue }
+            var pageByHafsID: [Int: Int] = [:]
+            pageByHafsID.reserveCapacity(surah.ayahs.count)
+            for ayah in surah.ayahs where ayah.page != nil {
+                pageByHafsID[ayah.id] = ayah.page
+            }
+            var table: [Int: Int] = [:]
+            for (riwayahID, span) in alignment.hafsRangeForRiwayah {
+                if let page = pageByHafsID[span.lowerBound] {
+                    table[riwayahID] = page
+                }
+            }
+            if !table.isEmpty { out[surah.id] = table }
+        }
+        return out.isEmpty ? nil : out
+    }
+
     /// The pagination pass itself: pure function of the inputs, no shared state.
     /// Accumulates each segment's ayahs IN PLACE and flushes at page/surah boundaries - the old pass
     /// rebuilt the trailing segment with `ayahs + [ayah]` on every ayah, a full copy of the growing
     /// array each time (O(n²) per page, ~135k array allocations across the book).
-    nonisolated private static func build(quran: [Surah], qiraah: String?) -> [MushafPage] {
+    nonisolated private static func build(quran: [Surah], qiraah: String?,
+                                          pageTable: [Int: [Int: Int]]? = nil) -> [MushafPage] {
         var pages: [MushafPage] = []
         var currentPage: Int?
         var currentSegments: [MushafPage.Segment] = []
@@ -110,12 +144,13 @@ enum MushafPagination {
         // too: extend the current run while the page and surah repeat, flush at each boundary.
         for surah in quran {
             var lastPageInSurah: Int?
+            let surahPageTable = pageTable?[surah.id]
             for ayah in surah.ayahs where ayah.existsInQiraah(qiraah, surahID: surah.id) {
                 // Ayahs that exist only in this riwayah's counting (a split past the Hafs range,
                 // e.g. al-Ikhlas 5 in the Shami count) carry NO Hafs page - they belong on the page
                 // of the ayah before them, not on no page at all. Skipping them was the page-mode
                 // "missing last verse" bug.
-                guard let page = ayah.page ?? lastPageInSurah else { continue }
+                guard let page = surahPageTable?[ayah.id] ?? ayah.page ?? lastPageInSurah else { continue }
                 lastPageInSurah = page
 
                 if page != currentPage {
@@ -1345,6 +1380,17 @@ private struct MushafPageContent: View {
                 // for the beat the refit takes.
                 renderedPageBody(rendered: stale, width: width, visibleHeight: visibleHeight)
                     .task(id: "\(width)|\(textHeight)") {
+                        // Debounced: during a chrome transition (a picker collapsing after a jump, the
+                        // mini player mounting) the height SWEEPS through intermediate values frame by
+                        // frame, and composing for each transient fitted the page to heights it never
+                        // rests at - the first one to land showed the page briefly fitted SHORT before
+                        // the settled fit grew it back (the shrink-then-grow flash on every picker
+                        // jump), while churning the fit queues with throwaway work. The task id cancels
+                        // this on every geometry change, so the sleep lets only a geometry that has
+                        // held still for a beat reach the fit queue; the last good render of this page
+                        // stays up meanwhile.
+                        try? await Task.sleep(nanoseconds: 150_000_000)
+                        guard !Task.isCancelled else { return }
                         MushafPageRenderCache.renderAsync(page: page, width: width, height: textHeight) {
                             renderTick &+= 1
                         }
@@ -1359,6 +1405,15 @@ private struct MushafPageContent: View {
                     // this whenever the geometry the page needs actually changes; renderAsync dedupes by
                     // key, so repeats are free.
                     .task(id: "\(width)|\(textHeight)") {
+                        // The same debounce as the stale branch above, for the same reason: a cold
+                        // picker-jump lands mid-transition, and fitting every transient height not only
+                        // queued the settled fit behind throwaway work - the first transient to finish
+                        // became this page's "nearest" render and flashed the page fitted short. Only a
+                        // geometry that holds still reaches the fit queue. (The reader's own prewarm
+                        // already requested the landing page at the settled geometry in parallel, so
+                        // this request is usually just the backstop.)
+                        try? await Task.sleep(nanoseconds: 150_000_000)
+                        guard !Task.isCancelled else { return }
                         MushafPageRenderCache.renderAsync(page: page, width: width, height: textHeight) {
                             renderTick &+= 1
                         }
@@ -1611,6 +1666,10 @@ struct MushafComposeConfig {
     let beginnerMode: Bool
     /// Already folded: tajweed toggles AND the page being Arabic. English pages never paint tajweed.
     let showTajweed: Bool
+    /// Non-nil = paint this non-Hafs riwayah's print-derived colors (tajweed on, pack bundled).
+    let riwayahTajweedTag: String?
+    /// Rule keys the reader has hidden in the riwayah legend.
+    let riwayahHiddenRules: Set<String>
     let fontSize: CGFloat
     let fitPage: Bool
     let accent: UIColor
@@ -1619,6 +1678,9 @@ struct MushafComposeConfig {
     static func current() -> MushafComposeConfig {
         let s = Settings.shared
         let language = s.resolvedMushafPageLanguage
+        let riwayahTajweedTag: String? =
+            (s.showTajweedColors && s.showArabicText && language == .arabic)
+            ? s.riwayahTajweedPackTag : nil
         return MushafComposeConfig(
             pageLanguage: language,
             removeArabicDots: s.removeArabicDots,
@@ -1628,6 +1690,8 @@ struct MushafComposeConfig {
             cleanArabicText: s.cleanArabicText,
             beginnerMode: s.beginnerMode,
             showTajweed: s.showTajweedColors && s.showArabicText && s.isHafsDisplay && language == .arabic,
+            riwayahTajweedTag: riwayahTajweedTag,
+            riwayahHiddenRules: s.riwayahTajweedHiddenRuleSet,
             fontSize: CGFloat(s.fontArabicSize),
             fitPage: s.mushafFitPage,
             accent: UIColor(s.accentColor.color)
@@ -1756,6 +1820,18 @@ struct MushafPageComposer {
             return ns
         }
 
+        // Non-Hafs riwayat: the print-derived word colors of THAT mushaf. Beginner spacing
+        // opts out - its per-letter spaces break the word tokenization the pack indexes by.
+        if colored, !beginner, let tag = config.riwayahTajweedTag,
+           let styled = QiraahTajweedStore.shared.attributedText(
+               tag: tag, surah: surah.id, ayah: ayah.id, displayText: display,
+               hiddenRules: config.riwayahHiddenRules
+           ) {
+            let ns = NSMutableAttributedString(attributedString: NSAttributedString(styled))
+            ns.addAttributes([.font: font, .paragraphStyle: para], range: NSRange(location: 0, length: ns.length))
+            return ns
+        }
+
         return NSAttributedString(
             string: display,
             attributes: [.font: font, .foregroundColor: UIColor.label, .paragraphStyle: para]
@@ -1848,10 +1924,17 @@ struct MushafPageComposer {
                 .paragraphStyle: tight,
             ]))
 
-            // Em quad between the numeral and the name for the same reason as the bismillah gap below: an
-            // ordinary space between two Arabic runs collapses to almost nothing, leaving "١٤إبراهيم"
-            // reading as one word. The brackets keep their plain spaces - those already sit clear.
-            heading.append(NSAttributedString(string: "\u{2001}\(surah.nameArabic) \u{FD3E}", attributes: arabicAttributes))
+            // The gap between the numeral and the name has to be a FIXED-width space, for the same reason as
+            // the bismillah gap below: an ordinary space between two Arabic runs collapses to almost nothing,
+            // leaving "١٤إبراهيم" reading as one word. A full em quad (\u{2001}) overshot the other way, so
+            // this is an en quad - half an em - widened by kerning to land between the two. Tune `nameGap`,
+            // not the character. The brackets keep their plain spaces; those already sit clear.
+            let nameGap = nameSize * 0.25          // en quad (0.5 em) + this = 0.75 em of separation
+            var gapAttributes = arabicAttributes
+            gapAttributes[.kern] = nameGap
+            heading.append(NSAttributedString(string: "\u{2000}", attributes: gapAttributes))
+
+            heading.append(NSAttributedString(string: "\(surah.nameArabic) \u{FD3E}", attributes: arabicAttributes))
         }
 
         let nameRange = NSRange(location: nameStart, length: heading.length - nameStart)
@@ -1882,18 +1965,15 @@ struct MushafPageComposer {
     /// `width` is the column width, needed only so a surah heading's rule can span the full page. It is
     /// optional because the measurement passes don't have a meaningful one yet and don't care.
     func attributed(size: CGFloat, colored: Bool = true, extraLineSpacing: CGFloat = 0,
-                    width: CGFloat = 0, spaceTracking: CGFloat = 0) -> (text: NSAttributedString, ranges: [MushafAyahRange]) {
+                    width: CGFloat = 0, spaceTracking: CGFloat = 0,
+                    justified: Bool = true) -> (text: NSAttributedString, ranges: [MushafAyahRange]) {
         let result = NSMutableAttributedString()
         var ranges: [MushafAyahRange] = []
         let accent = config.accent
         let para = paragraph(size, extraLineSpacing: extraLineSpacing)
-        // Character positions just past each segment's final ayah marker - a surah completing
-        // mid-page and the page's own last line alike. `fillSurahClosingLines` first tries to FILL
-        // a sparse closing line by loosening its segment's gaps so words cascade down into it;
-        // `spaceJustified`'s sparseness cap then lets whatever stays sparse sit naturally at the
-        // right margin instead of being flung across the full measure.
-        var closingLineEnds: Set<Int> = []
-        // The same segments' full ayah-text ranges (headings excluded), for the fill pass.
+        // Each segment's full ayah-text range (headings excluded), for the balance pass: it re-breaks
+        // the segment so every line - the closing one included - holds its fair share of words before
+        // `spaceJustified` stretches them all to the margins.
         var fillableSegments: [NSRange] = []
 
         for (i, segment) in page.segments.enumerated() {
@@ -1972,27 +2052,44 @@ struct MushafPageComposer {
                 ))
             }
 
-            // EVERY segment closes a paragraph whose last line deserves the treatment: a followed
-            // segment has necessarily completed its surah (surahs are contiguous in mushaf order),
-            // and the page's last segment - surah completed or continuing overleaf - still ends in
-            // the page's own last line, which reads just as broken when it's sparse and stretched.
-            closingLineEnds.insert(result.length)
             fillableSegments.append(NSRange(location: segmentTextStart,
                                             length: result.length - segmentTextStart))
         }
 
-        // Justify the final compose: first the page-wide loosening (`spaceTracking`, which DOES move line
-        // breaks - it was fitted against the same budget, see `balancedSpaceTracking`), then the per-line
-        // top-up to the exact margins, which only ever consumes slack inside a line and moves nothing.
-        // Tracking attributes don't shift character indices, so the ayah hit-test ranges stay valid.
-        if width > 0, !isEnglish, !usesSystemFont, !isOpeningSpread {
+        // Justify the final compose in three passes: the page-wide loosening (`spaceTracking`, which DOES
+        // move line breaks - it was fitted against the same budget, see `balancedSpaceTracking`), then the
+        // balance pass that re-breaks each segment so EVERY line can be filled with even gaps, then the
+        // per-line top-up to the exact margins, which only ever consumes slack inside a line and moves
+        // nothing. Tracking attributes don't shift character indices, so the ayah hit-test ranges stay valid.
+        // `justified: false` skips all of it - the render pipeline computes the justification OFF the main
+        // thread on the plain compose and transplants it (see `justification(size:...)`), so the colored
+        // main-thread compose must not pay for it again.
+        if justified, width > 0, !isEnglish, !usesSystemFont, !isOpeningSpread {
             let balanced = NSMutableAttributedString(attributedString: result)
             if spaceTracking > 0 { Self.addSpaceTracking(spaceTracking, to: balanced) }
-            Self.cascadeFillSparseLines(balanced, width: width, segments: fillableSegments, bodySize: size)
-            return (Self.spaceJustified(balanced, width: width, closingLineEnds: closingLineEnds, bodySize: size), ranges)
+            Self.balanceLineBreaks(balanced, width: width, segments: fillableSegments, bodySize: size)
+            return (Self.spaceJustified(balanced, width: width), ranges)
         }
 
         return (result, ranges)
+    }
+
+    /// The page-wide justification - loosening, balanced re-breaks, margin top-up - computed on the PLAIN
+    /// compose so it can run off the main thread, packaged as the final `.tracking` runs plus the exact
+    /// laid-out height. `finalize` transplants the runs onto the tajweed-colored compose instead of
+    /// re-running the pipeline on the main thread (segment layouts, break probes and verification made
+    /// that a per-page main-thread stall during every prewarm ring). Valid because color attributes never
+    /// move a glyph: the same invariant the whole fit pipeline already rests on - pages are FITTED plain
+    /// and DRAWN colored - and tracking is keyed by character index, which the two composes share.
+    func justification(size: CGFloat, extraLineSpacing: CGFloat, width: CGFloat,
+                       spaceTracking: CGFloat) -> (tracking: [(range: NSRange, value: CGFloat)], height: CGFloat) {
+        let text = attributed(size: size, colored: false, extraLineSpacing: extraLineSpacing,
+                              width: width, spaceTracking: spaceTracking).text
+        var runs: [(range: NSRange, value: CGFloat)] = []
+        text.enumerateAttribute(.tracking, in: NSRange(location: 0, length: text.length)) { value, range, _ in
+            if let value = value as? CGFloat { runs.append((range, value)) }
+        }
+        return (runs, Self.layoutHeight(of: text, width: width))
     }
 
     /// The TextKit-1 stack `MushafPageTextView` renders with (`lineFragmentPadding = 0`, unbounded height),
@@ -2015,285 +2112,492 @@ struct MushafPageComposer {
     /// Justifies right-aligned Arabic by distributing each line's leftover width across the word gaps (as
     /// tracking on the spaces). This is what `.justified` would do MINUS kashida glyph elongation, which
     /// TextKit is free to place inside a line's final letter - detaching that letter's tashkeel onto the
-    /// stretched tail, the mushaf reader's "floating haraka at the margin" artifact. Every line takes the
-    /// full measure, including a paragraph's last; headings keep their own centering, and a segment's
-    /// still-sparse closing line (see `closingLineEnds`) is centered on the measure instead of
-    /// stretched or left trailing - the printed mushaf's treatment of a surah's short last line.
-    private static func spaceJustified(_ source: NSAttributedString, width: CGFloat,
-                                       closingLineEnds: Set<Int> = [], bodySize: CGFloat = 0) -> NSAttributedString {
-        let justified = NSMutableAttributedString(attributedString: source)
+    /// stretched tail, the mushaf reader's "floating haraka at the margin" artifact. EVERY line takes the
+    /// full measure - each paragraph's closing line (a surah ending mid-page, the page's own last line)
+    /// included, deliberately: `balanceLineBreaks` has already re-broken each segment so the closing line
+    /// holds its fair share of words, and whatever sparseness remains is stretched anyway - a mushaf page
+    /// wants every line flush to both margins, never centered, never left short. Headings keep their own
+    /// centering; the only line left untouched is one with no gaps at all (a single word, nothing to
+    /// stretch - it sits at the right margin, where reading starts).
+    private static func spaceJustified(_ source: NSAttributedString, width: CGFloat) -> NSAttributedString {
         // The whole stack stays bound: NSLayoutManager does NOT retain its NSTextStorage, so discarding the
         // storage would tear the layout down under the queries below.
         let stack = layoutStack(for: source, width: width)
         let manager = stack.manager
-
         let string = source.string as NSString
-        // Paragraphs whose closing line was too sparse to justify - re-aligned centered after the
-        // walk, the way a printed mushaf centers a surah's short last line.
-        var centeredParagraphs: [NSRange] = []
-        var glyphIndex = 0
-        while glyphIndex < manager.numberOfGlyphs {
-            var lineGlyphRange = NSRange()
-            let usedRect = manager.lineFragmentUsedRect(forGlyphAt: glyphIndex, effectiveRange: &lineGlyphRange)
-            glyphIndex = NSMaxRange(lineGlyphRange)
 
-            let charRange = manager.characterRange(forGlyphRange: lineGlyphRange, actualGlyphRange: nil)
-            guard charRange.length > 0 else { continue }
+        var spaceAdvances: [UIFont: CGFloat] = [:]
+        func spaceAdvance(of font: UIFont) -> CGFloat {
+            if let cached = spaceAdvances[font] { return cached }
+            let advance = (" " as NSString).size(withAttributes: [.font: font]).width
+            spaceAdvances[font] = advance
+            return advance
+        }
 
-            // Only the running right-aligned Arabic participates; headings and rules are centered on purpose.
-            let style = source.attribute(.paragraphStyle, at: charRange.location, effectiveRange: nil) as? NSParagraphStyle
-            guard style?.alignment == .right else { continue }
+        /// One full justification build. `reclaimTrailing` zeroes each line's break-space and gives its
+        /// width to the content - see the note inside - and also reports the source layout's line count
+        /// so the caller can verify the reclaim never moved a break.
+        func justify(reclaimTrailing: Bool) -> (text: NSMutableAttributedString, sourceLines: Int) {
+            let justified = NSMutableAttributedString(attributedString: source)
+            var sourceLines = 0
+            var glyphIndex = 0
+            while glyphIndex < manager.numberOfGlyphs {
+                var lineGlyphRange = NSRange()
+                let usedRect = manager.lineFragmentUsedRect(forGlyphAt: glyphIndex, effectiveRange: &lineGlyphRange)
+                glyphIndex = NSMaxRange(lineGlyphRange)
+                sourceLines += 1
 
-            // Paragraph-final lines are stretched too - deliberately not what `.justified` would do. This is
-            // a mushaf page: a short closing line ending flush against only one margin reads as a typesetting
-            // mistake, so every line takes the full measure. The exception is a closing line the fill pass
-            // could not fill (checked below): that one is CENTERED, never stretched or left trailing.
-            let lineEnd = NSMaxRange(charRange)
+                let charRange = manager.characterRange(forGlyphRange: lineGlyphRange, actualGlyphRange: nil)
+                guard charRange.length > 0 else { continue }
 
-            // Stretch every space in the line except the trailing whitespace at the break - TextKit hangs
-            // that outside the margin, and widening it would move the break itself.
-            var contentEnd = lineEnd
-            while contentEnd > charRange.location,
-                  let scalar = Unicode.Scalar(string.character(at: contentEnd - 1)),
-                  CharacterSet.whitespacesAndNewlines.contains(scalar) {
-                contentEnd -= 1
-            }
-            var spaceLocations: [Int] = []
-            for i in charRange.location..<contentEnd where string.character(at: i) == 0x20 {
-                spaceLocations.append(i)
-            }
+                // Only the running right-aligned Arabic participates; headings and rules are centered on purpose.
+                let style = source.attribute(.paragraphStyle, at: charRange.location, effectiveRange: nil) as? NSParagraphStyle
+                guard style?.alignment == .right else { continue }
 
-            let slack = width - usedRect.width
+                let lineEnd = NSMaxRange(charRange)
 
-            // A segment's closing line - a surah ending mid-page, or the page's own last line - gets a
-            // sparseness cap. The fill pass has already pulled down whatever words COULD come down; if
-            // justifying what remains would still widen each gap by more than half the body size (or the
-            // line is a single gapless word), a handful of words flung across the full measure reads as
-            // broken setting - so the line is centered on the measure instead, the printed mushaf's
-            // treatment of a surah's short last line. (A mid-line break inside a segment can never be
-            // sparse enough to trip this: TextKit broke it against the full measure.)
-            if slack > 1.5, closingLineEnds.contains(where: { $0 > charRange.location && $0 <= lineEnd }) {
-                // The compose's own body size, not the font at the line start - a closing line can
-                // begin mid-marker-run, and the marker face's size would skew the cap.
-                let cap = (bodySize > 0
-                    ? bodySize
-                    : (source.attribute(.font, at: charRange.location, effectiveRange: nil) as? UIFont)?.pointSize ?? 20)
-                let perSpaceIfJustified = spaceLocations.isEmpty
-                    ? CGFloat.greatestFiniteMagnitude
-                    : (slack - 1.0) / CGFloat(spaceLocations.count)
-                if perSpaceIfJustified > cap * 0.5 {
-                    centeredParagraphs.append(string.paragraphRange(for: charRange))
-                    continue
+                // Stretch every space in the line except the trailing whitespace at the break - widening
+                // that would move the break itself.
+                var contentEnd = lineEnd
+                while contentEnd > charRange.location,
+                      let scalar = Unicode.Scalar(string.character(at: contentEnd - 1)),
+                      CharacterSet.whitespacesAndNewlines.contains(scalar) {
+                    contentEnd -= 1
+                }
+                var spaceLocations: [Int] = []
+                for i in charRange.location..<contentEnd where string.character(at: i) == 0x20 {
+                    spaceLocations.append(i)
+                }
+
+                // The line's used rect INCLUDES its trailing break-space, so slack measured from the used
+                // width alone leaves every line short of the left margin by exactly one tracked space -
+                // a phantom spacer at each line's end. Add the trailing space's advance back (its font's
+                // space plus its tracking, known exactly), and let the stretched content push the invisible
+                // space out past the margin instead. Only for lines the used rect reports honestly: a rect
+                // sitting at the container width has been CLAMPED - the trailing space already overflowed -
+                // and reclaiming there would overfill the line and cascade re-breaks; a jammed line is
+                // already flush anyway.
+                // In this configuration the break-space is NOT hung outside the measure: TextKit sets it
+                // INSIDE the line, between the content and the left margin - a literal phantom spacer at
+                // the end of every line, which is why lines used to stop one tracked space short of the
+                // edge. Its width is reclaimed below: the space's advance is zeroed outright (tracking
+                // adds to the advance, so minus the space's own width is exactly zero) and the content is
+                // topped up into the freed room. Both edits land together, so the line still fills the
+                // measure exactly and no break can move. The slack itself needs no width arithmetic: in
+                // container coordinates the left margin is x = 0 and the content's left edge is its
+                // leftmost glyph's origin, so that origin's x IS the slack - exact whether or not the
+                // used rect was clamped. The scan covers the line's whole last word (not just its final
+                // glyph) because a multi-digit ayah marker is a left-to-right run inside the
+                // right-to-left line, where the logically last glyph can sit a digit's width right of
+                // the block's true edge.
+                var slack = width - usedRect.width
+                if reclaimTrailing {
+                    var lastWordStart = contentEnd - 1
+                    while lastWordStart > charRange.location,
+                          string.character(at: lastWordStart - 1) != 0x20 {
+                        lastWordStart -= 1
+                    }
+                    var leftEdge = CGFloat.greatestFiniteMagnitude
+                    for c in lastWordStart..<contentEnd {
+                        let glyph = manager.glyphIndexForCharacter(at: c)
+                        leftEdge = min(leftEdge, manager.location(forGlyphAt: glyph).x)
+                    }
+                    if leftEdge < .greatestFiniteMagnitude { slack = leftEdge }
+                }
+
+                guard !spaceLocations.isEmpty else { continue }
+                guard slack > 1.5 else { continue }
+
+                // Zero the break-space only on a line that is being topped up: the two edits are what
+                // keep each other break-stable. A zeroed space on an un-stretched line would instead
+                // free room the next word could jump back up into.
+                if reclaimTrailing {
+                    for i in contentEnd..<lineEnd where string.character(at: i) == 0x20 {
+                        let font = (source.attribute(.font, at: i, effectiveRange: nil) as? UIFont)
+                            ?? UIFont.systemFont(ofSize: UIFont.systemFontSize)
+                        justified.addAttribute(.tracking, value: -spaceAdvance(of: font),
+                                               range: NSRange(location: i, length: 1))
+                    }
+                }
+                // Fill to a fixed 1pt short of the margin, not a percentage: a proportional factor leaves a
+                // margin that shrinks with the slack (2% of a 1pt slack is nothing), and a line that lands even
+                // a rounding error past the container re-breaks - which would shift every break below it and put
+                // all the following lines' widened gaps on the wrong spaces. An absolute point of headroom is
+                // bigger than any advance-rounding difference TextKit produces at these sizes.
+                let perSpace = (slack - 1.0) / CGFloat(spaceLocations.count)
+
+                // `.tracking`, deliberately NOT `.kern`: kern participates in glyph shaping, and an attribute
+                // boundary it introduces at a space could perturb how the neighbouring cluster's marks attach -
+                // the "tashkeel drifts off the letter" artifact, worst on an ayah's final letter where the marker
+                // run already changes fonts. Tracking is applied after shaping, so it widens the space's advance
+                // and can touch nothing else.
+                for location in spaceLocations {
+                    let existing = (justified.attribute(.tracking, at: location, effectiveRange: nil) as? CGFloat) ?? 0
+                    justified.addAttribute(.tracking, value: existing + perSpace, range: NSRange(location: location, length: 1))
                 }
             }
-
-            guard !spaceLocations.isEmpty else { continue }
-            guard slack > 1.5 else { continue }
-            // Fill to a fixed 1pt short of the margin, not a percentage: a proportional factor leaves a
-            // margin that shrinks with the slack (2% of a 1pt slack is nothing), and a line that lands even
-            // a rounding error past the container re-breaks - which would shift every break below it and put
-            // all the following lines' widened gaps on the wrong spaces. An absolute point of headroom is
-            // bigger than any advance-rounding difference TextKit produces at these sizes.
-            let perSpace = (slack - 1.0) / CGFloat(spaceLocations.count)
-
-            // `.tracking`, deliberately NOT `.kern`: kern participates in glyph shaping, and an attribute
-            // boundary it introduces at a space could perturb how the neighbouring cluster's marks attach -
-            // the "tashkeel drifts off the letter" artifact, worst on an ayah's final letter where the marker
-            // run already changes fonts. Tracking is applied after shaping, so it widens the space's advance
-            // and can touch nothing else.
-            for location in spaceLocations {
-                let existing = (justified.attribute(.tracking, at: location, effectiveRange: nil) as? CGFloat) ?? 0
-                justified.addAttribute(.tracking, value: existing + perSpace, range: NSRange(location: location, length: 1))
-            }
+            return (justified, sourceLines)
         }
 
-        // Re-align the too-sparse closing lines' paragraphs centered. Alignment is a paragraph-wide
-        // attribute, but only the sparse line visibly moves: every other line of the paragraph was
-        // topped up to the full measure above, so centering shifts it by at most the 1pt of headroom.
-        // Applied after the walk so the alignment guard above kept reading the original styles.
-        for paragraph in centeredParagraphs {
-            guard let style = source.attribute(.paragraphStyle, at: paragraph.location, effectiveRange: nil) as? NSParagraphStyle,
-                  let centered = style.mutableCopy() as? NSMutableParagraphStyle else { continue }
-            centered.alignment = .center
-            justified.addAttribute(.paragraphStyle, value: centered, range: paragraph)
+        // The reclaim can push a line's content to the exact margin, where a mis-read edge would mean
+        // an overfilled line and cascading re-breaks - so verify with one layout: same line count out
+        // as in, or fall back to the conservative used-width measure (which can only ever run short).
+        let (corrected, sourceLines) = justify(reclaimTrailing: true)
+        let verify = layoutStack(for: corrected, width: width)
+        var correctedLines = 0
+        var glyph = 0
+        while glyph < verify.manager.numberOfGlyphs {
+            var lineRange = NSRange()
+            verify.manager.lineFragmentRect(forGlyphAt: glyph, effectiveRange: &lineRange)
+            glyph = NSMaxRange(lineRange)
+            correctedLines += 1
         }
-        return justified
+        return correctedLines == sourceLines ? corrected : justify(reclaimTrailing: false).text
     }
 
-    /// Makes every line of a segment take the full measure, by cascading words DOWNWARD until no line is
-    /// left sparse enough to need an ugly stretch.
+    /// Re-breaks every right-aligned paragraph of each segment so that EVERY line - the closing one
+    /// included - can take the full measure with moderate, even gaps once `spaceJustified` tops it up.
     ///
-    /// The problem this solves: TextKit breaks lines greedily, so a segment's closing line - a surah ending
-    /// mid-page, or the page's own last line - gets whatever is left over, which can be three words where
-    /// the lines above hold twelve. Justifying that flings a handful of words across the whole measure, and
-    /// the old fallback was to CENTRE it instead, leaving one line neither full nor trailing.
+    /// The problem this solves: TextKit breaks lines greedily, so a paragraph's closing line gets whatever
+    /// is left over - three words, say, where the lines above hold twelve. Justifying that flings a handful
+    /// of words across the whole measure, and centring it instead leaves one line neither full nor trailing.
+    /// The typesetter's fix is to borrow: pull a word down from the line above, which may leave THAT line
+    /// short, so the borrowing cascades upward line by line until the deficit lands where it costs nothing.
+    /// The old pass ran that cascade literally - one word per step, each step an escalating ladder of probe
+    /// relayouts, up to ~a hundred incremental layouts per segment - and only ever started from the closing
+    /// line, so it stopped at "not ugly" rather than at "even".
     ///
-    /// The fix is the cascade a typesetter does by hand. Find the bottom-most sparse line, widen the gaps of
-    /// the line ABOVE it just past the margin so that line's last word no longer fits and drops into it, then
-    /// look again: the line above is now one word poorer and may itself be sparse, so the deficit walks up the
-    /// segment a line at a time until it lands somewhere it costs nothing. A page's worth of slack spread over
-    /// twelve lines is invisible; the same slack in one line is the artifact.
+    /// This pass solves the whole cascade at once. One layout measures every word's advance width (shaping
+    /// never crosses a space, so a line's width is additive in its words and gaps); a dynamic program then
+    /// picks, among ALL ways of breaking the same words into the SAME number of lines (the page was fitted
+    /// at that count and the line boxes are pinned - a different count is a different page height), the
+    /// breaks that minimize the summed squared per-gap widening. That is every line borrowing from every
+    /// line above it simultaneously, with the evenest result the words allow. The chosen breaks are then
+    /// FORCED: each line's gaps are widened until the line reaches just short of the measure, so TextKit's
+    /// greedy pass has no choice but to break where the program chose. `spaceJustified` afterwards tops
+    /// every line up to the exact margin - full and trailing, on every line.
     ///
-    /// Only the breaks are decided here. `spaceJustified` afterwards tops every line up to the exact margin,
-    /// so this pass just has to put the words on the right lines.
+    /// There is NO sparseness cap and no centered fallback: however few words a segment ends with, the
+    /// evenest breaks win and `spaceJustified` stretches every line - the closing one included - to the
+    /// full measure. The squared objective is what keeps that sane: it hates one wide-gapped line far more
+    /// than many slightly-loose ones, so the sparseness a short tail forces is always spread across the
+    /// whole segment rather than dumped on the last line.
     ///
-    /// EFFICIENCY. One TextKit stack per segment, reused for every probe. A step rewrites only the gaps of
-    /// the single line it is widening (not the segment's), so each probe is a handful of attribute writes plus
-    /// the incremental relayout they trigger. Steps are capped, and the whole pass is skipped outright unless
-    /// the segment's closing line is actually sparse - which for most pages it is not. Runs once per cached
-    /// render, off the main thread.
-    /// Extra widening a pull-down step adds per gap, in multiples of the body size, tried in order. The
-    /// first rung is "no extra" - the computed minimum overflow on its own.
-    private static let cascadeEscalation: [CGFloat] = [0, 0.1, 0.2, 0.4, 0.8]
-
-    private static func cascadeFillSparseLines(_ text: NSMutableAttributedString, width: CGFloat,
-                                               segments: [NSRange], bodySize: CGFloat) {
+    /// EFFICIENCY. A paragraph whose closing line is already nearly full skips everything after one
+    /// measurement. Otherwise: one word-width sweep feeds the model (gap advances come from a per-font
+    /// cache, no typesetting), the dynamic program runs in microseconds over prefix sums, and ONE
+    /// relayout normally verifies the forced breaks. A line that comes back broken a word early is truly
+    /// wider in-context than it measures alone (ayah markers, bidi digit runs) - it earns a doubling
+    /// width surcharge and the probe repeats, converging in a couple of rounds; a paragraph that never
+    /// converges reverts to its greedy breaks. Runs once per cached render, off the main thread.
+    private static func balanceLineBreaks(_ text: NSMutableAttributedString, width: CGFloat,
+                                          segments: [NSRange], bodySize: CGFloat) {
         guard width > 0, bodySize > 0 else { return }
 
-        // A gap may be widened by at most this before the line reads as flung apart. Same figure
-        // `spaceJustified`'s centring backstop uses, so the two passes can never disagree about which
-        // lines are sparse.
-        let sparseGapLimit = bodySize * 0.5
+        // Space advance per font, measured once per pass and shared by every gap on the page.
+        var spaceAdvances: [UIFont: CGFloat] = [:]
+        func spaceAdvance(of font: UIFont) -> CGFloat {
+            if let cached = spaceAdvances[font] { return cached }
+            let advance = (" " as NSString).size(withAttributes: [.font: font]).width
+            spaceAdvances[font] = advance
+            return advance
+        }
 
         for segment in segments where segment.length > 0 {
             // The segment lays out alone: line breaking never crosses a paragraph boundary, so the
-            // substring's breaks are exactly the page's, and probing it is far cheaper.
+            // substring's breaks are exactly the page's, and measuring it is far cheaper.
             let sub = text.attributedSubstring(from: segment)
             let subString = sub.string as NSString
-
-            // Every stretchable gap and the tracking it already carries (the page-wide loosening), so a
-            // probe can SET absolute values idempotently rather than accumulating.
-            var gapLocations: [Int] = []
-            var baseTracking: [CGFloat] = []
-            for i in 0..<subString.length where subString.character(at: i) == 0x20 {
-                let style = sub.attribute(.paragraphStyle, at: i, effectiveRange: nil) as? NSParagraphStyle
-                guard style?.alignment == .right else { continue }
-                gapLocations.append(i)
-                baseTracking.append((sub.attribute(.tracking, at: i, effectiveRange: nil) as? CGFloat) ?? 0)
-            }
-            guard !gapLocations.isEmpty else { continue }
-
             // The whole stack stays bound: NSLayoutManager does not retain its NSTextStorage.
             let stack = layoutStack(for: sub, width: width)
-            // What this pass has added on top of `baseTracking`, per gap.
-            var extra = [CGFloat](repeating: 0, count: gapLocations.count)
 
-            /// Push `extra` for just these gaps into the live stack and relayout.
-            func commit(_ gapIndices: [Int]) {
-                stack.storage.beginEditing()
-                for gi in gapIndices {
-                    stack.storage.addAttribute(.tracking, value: baseTracking[gi] + extra[gi],
-                                               range: NSRange(location: gapLocations[gi], length: 1))
-                }
-                stack.storage.endEditing()
-                stack.manager.ensureLayout(for: stack.container)
+            // Each right-aligned paragraph balances independently (in practice a segment is one; the
+            // headings and basmala are centered paragraphs and skip).
+            var cursor = 0
+            while cursor < subString.length {
+                let paragraph = subString.paragraphRange(for: NSRange(location: cursor, length: 0))
+                cursor = max(NSMaxRange(paragraph), cursor + 1)
+                guard paragraph.length > 0,
+                      let style = sub.attribute(.paragraphStyle, at: paragraph.location, effectiveRange: nil) as? NSParagraphStyle,
+                      style.alignment == .right else { continue }
+                balanceParagraph(paragraph, segment: segment, sub: sub, subString: subString,
+                                 stack: stack, pageText: text, width: width, spaceAdvance: spaceAdvance)
             }
+        }
+    }
 
-            struct LineInfo {
-                let contentLength: Int
-                let usedWidth: CGFloat
-                /// Indices into `gapLocations` for the gaps this line can stretch.
-                let gapIndices: [Int]
+    /// One paragraph of `balanceLineBreaks`: model the words, solve for the balanced breaks, force them,
+    /// verify against a real relayout, and commit the winning tracking to the page text.
+    private static func balanceParagraph(_ paragraph: NSRange, segment: NSRange,
+                                         sub: NSAttributedString, subString: NSString,
+                                         stack: (storage: NSTextStorage, manager: NSLayoutManager, container: NSTextContainer),
+                                         pageText: NSMutableAttributedString, width: CGFloat,
+                                         spaceAdvance: (UIFont) -> CGFloat) {
+        let manager = stack.manager
+
+        // The paragraph terminator and any trailing whitespace hang outside the last line.
+        var contentEnd = NSMaxRange(paragraph)
+        while contentEnd > paragraph.location,
+              let scalar = Unicode.Scalar(subString.character(at: contentEnd - 1)),
+              CharacterSet.whitespacesAndNewlines.contains(scalar) {
+            contentEnd -= 1
+        }
+        guard contentEnd > paragraph.location else { return }
+
+        // Words (maximal space-free runs - the ayah ornaments count, lines may break around them) and
+        // the gap runs between them.
+        var words: [NSRange] = []
+        var gaps: [NSRange] = []
+        var scan = paragraph.location
+        while scan < contentEnd {
+            let isSpace = subString.character(at: scan) == 0x20
+            var runEnd = scan + 1
+            while runEnd < contentEnd, (subString.character(at: runEnd) == 0x20) == isSpace { runEnd += 1 }
+            if isSpace {
+                gaps.append(NSRange(location: scan, length: runEnd - scan))
+            } else {
+                words.append(NSRange(location: scan, length: runEnd - scan))
             }
+            scan = runEnd
+        }
+        // Strictly interior gaps: a paragraph opening with a space (never composed, but cheap to refuse)
+        // would break the word/gap pairing the model rests on.
+        guard words.count >= 3, gaps.count == words.count - 1 else { return }
 
-            func currentLines() -> [LineInfo] {
-                let manager = stack.manager
-                var out: [LineInfo] = []
-                var glyph = 0
-                var nextGap = 0
-                while glyph < manager.numberOfGlyphs {
-                    var lineGlyphRange = NSRange()
-                    let used = manager.lineFragmentUsedRect(forGlyphAt: glyph, effectiveRange: &lineGlyphRange)
-                    let charRange = manager.characterRange(forGlyphRange: lineGlyphRange, actualGlyphRange: nil)
-                    glyph = NSMaxRange(lineGlyphRange)
-
-                    // The break's own trailing whitespace hangs outside the margin; widening it would move
-                    // the break rather than fill the line.
-                    var contentEnd = NSMaxRange(charRange)
-                    while contentEnd > charRange.location,
-                          let scalar = Unicode.Scalar(subString.character(at: contentEnd - 1)),
-                          CharacterSet.whitespacesAndNewlines.contains(scalar) {
-                        contentEnd -= 1
-                    }
-                    // `gapLocations` is ascending and lines are walked in order, so this cursor never rewinds.
-                    while nextGap < gapLocations.count, gapLocations[nextGap] < charRange.location { nextGap += 1 }
-                    var indices: [Int] = []
-                    var scan = nextGap
-                    while scan < gapLocations.count, gapLocations[scan] < contentEnd {
-                        indices.append(scan)
-                        scan += 1
-                    }
-                    out.append(LineInfo(contentLength: contentEnd - charRange.location,
-                                        usedWidth: used.width, gapIndices: indices))
-                }
-                return out
+        /// The word index opening each laid-out line of the paragraph, or nil on a layout the model
+        /// can't represent (a line starting mid-word).
+        func lineStartWords() -> [Int]? {
+            let content = NSRange(location: paragraph.location, length: contentEnd - paragraph.location)
+            let paragraphGlyphs = manager.glyphRange(forCharacterRange: content, actualCharacterRange: nil)
+            var starts: [Int] = []
+            var wordCursor = 0
+            var glyph = paragraphGlyphs.location
+            while glyph < NSMaxRange(paragraphGlyphs) {
+                var lineGlyphRange = NSRange()
+                manager.lineFragmentRect(forGlyphAt: glyph, effectiveRange: &lineGlyphRange)
+                let charRange = manager.characterRange(forGlyphRange: lineGlyphRange, actualGlyphRange: nil)
+                glyph = NSMaxRange(lineGlyphRange)
+                while wordCursor < words.count, words[wordCursor].location < charRange.location { wordCursor += 1 }
+                guard wordCursor < words.count else { break }
+                if starts.last == wordCursor { return nil }
+                starts.append(wordCursor)
             }
+            return starts.first == 0 ? starts : nil
+        }
 
-            /// A line nothing more can be done for, or one whose gaps would have to open too far.
-            func isSparse(_ line: LineInfo) -> Bool {
-                let slack = width - line.usedWidth
-                guard slack > 1.5 else { return false }
-                guard !line.gapIndices.isEmpty else { return true }
-                return (slack - 1.0) / CGFloat(line.gapIndices.count) > sparseGapLimit
+        guard let greedyStarts = lineStartWords(), greedyStarts.count > 1,
+              words.count > greedyStarts.count else { return }
+        let lineCount = greedyStarts.count
+
+
+        // Already-even fast path, before any modeling: greedy fills every line but the last, so when
+        // stretching the LAST line to the margin needs no more than a hair per gap, the paragraph is
+        // already as even as its words allow - skip the model, the program and the probes outright.
+        // One measurement decides it. (Marker-heavy lines read a little narrow standalone, which only
+        // OVERSTATES the slack and falls through to the full pass - the safe direction.)
+        let lastStart = greedyStarts[lineCount - 1]
+        let lastContent = NSRange(location: words[lastStart].location,
+                                  length: contentEnd - words[lastStart].location)
+        let lastSlack = width - 1 - sub.attributedSubstring(from: lastContent).size().width
+        if lastSlack / CGFloat(max(words.count - 1 - lastStart, 1)) <= 2.5 { return }
+
+        // Measured advance width of every word: each word measured STANDALONE from its attributed
+        // substring. Valid because a space breaks Arabic joining, so a word shapes identically alone
+        // and in the line, and `size()` is typographic (advance-based) - the widths are additive.
+        // (Measuring through the layout manager's boundingRect is NOT valid here: glyphs sit in visual
+        // order inside an RTL line, so a logical word's glyph range spans most of the line's extent.)
+        var wordWidths: [CGFloat] = []
+        wordWidths.reserveCapacity(words.count)
+        for word in words {
+            let w = sub.attributedSubstring(from: word).size().width
+            // A word as wide as the measure wraps mid-word - no gap model can place that; leave the
+            // paragraph on its greedy breaks.
+            guard w < width - 1 else { return }
+            wordWidths.append(w)
+        }
+        // A gap's advance is its font's space plus the tracking already sitting on it (the page-wide
+        // loosening) - a cache lookup and an attribute read, no typesetting. Measuring every gap in
+        // context (word-gap-word pairs) came out identical to this sum on the shipped faces, so the
+        // cheap model IS the accurate one; whatever in-context drift remains is the probe loop's job.
+        var gapWidths: [CGFloat] = []
+        gapWidths.reserveCapacity(gaps.count)
+        for gap in gaps {
+            var advance: CGFloat = 0
+            for c in gap.location..<NSMaxRange(gap) {
+                let font = (sub.attribute(.font, at: c, effectiveRange: nil) as? UIFont)
+                    ?? UIFont.systemFont(ofSize: UIFont.systemFontSize)
+                let tracking = (sub.attribute(.tracking, at: c, effectiveRange: nil) as? CGFloat) ?? 0
+                advance += spaceAdvance(font) + tracking
             }
+            gapWidths.append(advance)
+        }
 
-            var lines = currentLines()
-            guard lines.count > 1, let last = lines.last, isSparse(last) else { continue }
+        // Prefix sums, so any candidate line's natural width is O(1).
+        var prefixWord = [CGFloat](repeating: 0, count: words.count + 1)
+        for k in 0..<words.count { prefixWord[k + 1] = prefixWord[k] + wordWidths[k] }
+        var prefixGap = [CGFloat](repeating: 0, count: words.count)
+        for k in 1..<words.count { prefixGap[k] = prefixGap[k - 1] + gapWidths[k - 1] }
+        /// Natural (unwidened) width of a line holding words `a...b`.
+        func natural(_ a: Int, _ b: Int) -> CGFloat {
+            prefixWord[b + 1] - prefixWord[a] + (prefixGap[b] - prefixGap[a])
+        }
 
-            // Bounded: each step either walks the sparse line one higher or gives up. The cap is the
-            // backstop for a pathological segment, not the expected exit.
-            let maxSteps = min(lines.count * 2 + 4, 24)
-            var committed = false
+        let n = words.count
 
-            for _ in 0..<maxSteps {
-                // Fix the BOTTOM-most sparse line first; the deficit then walks upward on its own,
-                // because the line it borrows from is the next one to come up short.
-                guard let target = lines.indices.last(where: { $0 > 0 && isSparse(lines[$0]) }) else { break }
-                let donor = lines[target - 1]
-                guard !donor.gapIndices.isEmpty else { break }
-
-                // Open the donor's gaps past the measure so its final word no longer fits.
-                //
-                // The minimum overflow is tried FIRST because it disturbs the donor least, but it is not
-                // always enough on its own: TextKit will let a line sit a little over the measure rather
-                // than break it, and the probe then comes back with the donor grown to exactly the
-                // container width and not one word moved. So the bump escalates until the word actually
-                // comes down. Measured over 404 real page segments, the minimum carries 69% of steps and
-                // the first escalation another 30%, so the ladder almost never runs past its second rung.
-                let donorSlack = max(width - donor.usedWidth, 0)
-                let minimumBump = donorSlack / CGFloat(donor.gapIndices.count) + max(0.75, bodySize * 0.04)
-
-                let snapshot = extra
-                var after = lines
-                var moved = false
-                for escalation in Self.cascadeEscalation {
-                    extra = snapshot
-                    for gi in donor.gapIndices { extra[gi] += minimumBump + escalation * bodySize }
-                    commit(donor.gapIndices)
-                    after = currentLines()
-                    // A step must not cost a line: the page was fitted to this line count and the line
-                    // boxes are pinned, so an extra line is an extra page height. Nothing to escalate
-                    // towards either - a bigger bump only pushes harder in the same direction.
-                    if after.count != lines.count { break }
-                    if after[target].contentLength > lines[target].contentLength { moved = true; break }
-                }
-
-                guard moved else {
-                    extra = snapshot
-                    commit(donor.gapIndices)
+        // A two-line paragraph (a surah's short tail on the page) reads best print-style, not evened
+        // out: evening spreads BOTH lines' gaps wide - the same segment could read tight in one
+        // riwayah and "exploded" in another whose slightly different word widths flipped the model's
+        // optimum. Keep the first line as full as it fits, moving down only what the closing line
+        // needs to hold something worth stretching (about a quarter measure of natural content -
+        // greedy alone could strand a lone ayah marker at the margin). Longer paragraphs keep the
+        // balancing model; across many lines the even spread is what makes the page look uniform.
+        var overrideStarts: [Int]?
+        if lineCount == 2 {
+            // Fullest first line whose closing line still holds at least TWO tokens - one word plus
+            // the ayah marker at minimum. That is the greedy (print-style) break in almost every
+            // case; it only shifts a word down when greedy would strand the marker alone.
+            var k = n - 1
+            while k >= 2 {
+                if natural(0, k - 1) <= width, n - k >= 2 {
+                    overrideStarts = [0, k]
                     break
                 }
-                lines = after
-                committed = true
+                k -= 1
             }
+            guard overrideStarts != nil else { return }
+        }
 
-            guard committed else { continue }
-
-            // Commit to the page text with the same absolute values the winning layout used.
-            for (gi, location) in gapLocations.enumerated() where extra[gi] != 0 {
-                text.addAttribute(.tracking, value: baseTracking[gi] + extra[gi],
-                                  range: NSRange(location: segment.location + location, length: 1))
+        // The dynamic program: minimal summed squared per-gap widening over every way to set the first
+        // `j` words in `k` lines. A line is admissible when it FITS (natural width within the same 1pt
+        // guard the top-up keeps) - no upper cap on the widening: every line gets stretched to the
+        // margin regardless, so the objective's whole job is to spread the sparseness as evenly as the
+        // words allow instead of leaving it piled on the closing line.
+        let balancedStarts: [Int]
+        if let forced = overrideStarts {
+            balancedStarts = forced
+        } else {
+        let columns = n + 1
+        let unreachable = CGFloat.greatestFiniteMagnitude
+        var cost = [CGFloat](repeating: unreachable, count: (lineCount + 1) * columns)
+        var parent = [Int](repeating: 0, count: (lineCount + 1) * columns)
+        cost[0] = 0
+        for k in 1...lineCount {
+            // Leave at least one word for every line still to come, and one for every line before.
+            for j in k...(n - (lineCount - k)) {
+                var a = j - 1
+                while a >= k - 1 {
+                    let lineNatural = natural(a, j - 1)
+                    // Admit lines up to the FULL measure, not the top-up's 1pt guard: greedy lines sit
+                    // flush against it, and refusing them over a sub-point model disagreement declared
+                    // perfectly settable paragraphs unsolvable. The verification relayout is the
+                    // arbiter of whether a chosen break truly holds.
+                    if lineNatural > width { break }   // growing the line only overfills it further
+                    // A line holding a single token has no gap to stretch - it can never reach
+                    // the full measure, so it is not admissible (step #1: every line fills the
+                    // whole space, no more, no less).
+                    if j - a < 2 { a -= 1; continue }
+                    if cost[(k - 1) * columns + a] < unreachable {
+                        let gapCount = j - 1 - a
+                        // What the top-up will widen each gap by once the line is stretched to the margin.
+                        let widen = max(width - 1 - lineNatural, 0) / CGFloat(max(gapCount, 1))
+                        let candidate = cost[(k - 1) * columns + a] + widen * widen
+                        if candidate < cost[k * columns + j] {
+                            cost[k * columns + j] = candidate
+                            parent[k * columns + j] = a
+                        }
+                    }
+                    a -= 1
+                }
             }
+        }
+        // Unsolvable only when a single word can't fit a line (mid-word wraps) - keep the greedy
+        // breaks; `spaceJustified` still stretches whatever lines have gaps.
+        guard cost[lineCount * columns + n] < unreachable else { return }
+
+        var starts = [Int](repeating: 0, count: lineCount)
+        var wordEnd = n
+        var lineIndex = lineCount
+        while lineIndex > 0 {
+            let a = parent[lineIndex * columns + wordEnd]
+            starts[lineIndex - 1] = a
+            wordEnd = a
+            lineIndex -= 1
+        }
+        balancedStarts = starts
+        }
+        // Greedy already optimal: nothing to force, the top-up alone finishes the page.
+        guard balancedStarts != greedyStarts else { return }
+
+        // Force the chosen breaks: fill each line (except the last - that one is the top-up's) to just
+        // short of the measure, so no following word can still fit on it. The headroom absorbs any
+        // advance-rounding disagreement with TextKit while staying far narrower than any word; the
+        // probe loop's surcharge below absorbs everything bigger.
+        let baseTracking: [CGFloat] = gaps.map {
+            (sub.attribute(.tracking, at: $0.location, effectiveRange: nil) as? CGFloat) ?? 0
+        }
+        func forcedWrites(headroom: CGFloat, surcharge: [CGFloat]) -> [(gap: Int, extra: CGFloat)] {
+            var writes: [(gap: Int, extra: CGFloat)] = []
+            for line in 0..<(lineCount - 1) {
+                let a = balancedStarts[line]
+                let b = balancedStarts[line + 1] - 1
+                guard b > a else { continue }
+                let extra = (width - headroom - natural(a, b) - surcharge[line]) / CGFloat(b - a)
+                guard extra > 0 else { continue }   // already jammed against the measure - the break holds itself
+                for g in a..<b { writes.append((gap: g, extra: extra)) }
+            }
+            return writes
+        }
+        // Absolute values (base + extra), so successive attempts overwrite instead of accumulating;
+        // the extra goes on the gap run's FIRST character only - one advance bump per gap, exactly
+        // what the model counted.
+        func writeToStorage(_ writes: [(gap: Int, extra: CGFloat)]) {
+            stack.storage.beginEditing()
+            for g in gaps.indices {
+                stack.storage.addAttribute(.tracking, value: baseTracking[g],
+                                           range: NSRange(location: gaps[g].location, length: 1))
+            }
+            for write in writes {
+                stack.storage.addAttribute(.tracking, value: baseTracking[write.gap] + write.extra,
+                                           range: NSRange(location: gaps[write.gap].location, length: 1))
+            }
+            stack.storage.endEditing()
+            manager.ensureLayout(for: stack.container)
+        }
+
+        // Probe with feedback. A line that comes back broken one word EARLY is truly wider in-context
+        // than any standalone measurement of it (ayah markers and bidi digit runs lay out wider inside
+        // a line than they measure alone), so that line earns a width surcharge - its fill backs off -
+        // and the probe repeats. Backing off never costs fullness: the `spaceJustified` top-up works
+        // from the line's real laid-out slack, so a backed-off line still ends flush at the margin.
+        var winning: [(gap: Int, extra: CGFloat)]?
+        var surcharge = [CGFloat](repeating: 0, count: max(lineCount - 1, 1))
+        for _ in 0..<8 {
+            let writes = forcedWrites(headroom: 2.0, surcharge: surcharge)
+            writeToStorage(writes)
+            guard let got = lineStartWords() else { break }
+            if got == balancedStarts { winning = writes; break }
+            // The first line START that diverges names the line above it as the mis-filled one.
+            guard let i = (1..<min(got.count, lineCount)).first(where: { got[$0] != balancedStarts[$0] }) else { break }
+            if got[i] < balancedStarts[i] {
+                // Broke early: the line is wider than measured. Double the surcharge each round so a
+                // large in-context divergence converges in a few probes.
+                surcharge[i - 1] += max(surcharge[i - 1], 8)
+            } else if surcharge[i - 1] >= 4 {
+                // Overcorrected: the fill got small enough that the next word came back up.
+                surcharge[i - 1] -= 4
+            } else {
+                break
+            }
+        }
+        guard let winning else {
+            writeToStorage([])   // back to the greedy layout for any later paragraph in this segment
+            return
+        }
+
+        // Commit to the page text with the same absolute values the verified layout used.
+        for write in winning {
+            pageText.addAttribute(.tracking, value: baseTracking[write.gap] + write.extra,
+                                  range: NSRange(location: segment.location + gaps[write.gap].location, length: 1))
         }
     }
 
@@ -2344,7 +2648,15 @@ struct MushafPageComposer {
 
     /// The largest size a mushaf page can be set at without overflowing. Hard ceiling so a short page (a few
     /// ayahs of a late surah) doesn't blow up to absurd glyphs just because it has the room.
-    private var fitCeiling: CGFloat { min(config.fontSize * 2.5, 64) }
+    private var fitCeiling: CGFloat {
+        // Hafs IS the 604-page print: its pages genuinely fill, so the generous ceiling only ever
+        // engages on the few closing pages that print sparse anyway. Every other riwayah pours
+        // DIFFERENT text into Hafs's page boundaries - orthography widths and merged ayat leave
+        // many pages naturally short by a line or two - and letting the fitter inflate the face
+        // toward 2.5x to chase the page bottom is what made half their pages read broken-loose.
+        // Non-Hafs pages hold the reader's own size; a short page keeps a quiet bottom band.
+        config.displayQiraah == nil ? min(config.fontSize * 2.5, 64) : config.fontSize
+    }
 
     /// The font size the page renders at. With "Fit Page to Screen" on, the page takes up as much of the height
     /// as it can WITHOUT overflowing - it grows into empty space as readily as it shrinks out of an overflow.
@@ -2391,6 +2703,14 @@ struct MushafPageComposer {
             if tracking > 0 { Self.addSpaceTracking(tracking, to: text) }
             return Self.layoutHeight(of: text, width: width)
         }
+
+        // A page missing less than a line and a half of fill reads best left tight: the line-spacing
+        // settle and the centered band absorb the sliver. Cascading the whole page's word gaps to
+        // chase a single line makes that page's setting visibly looser than its neighbours' (a hair
+        // of per-riwayah text-width difference was enough to flip a page across this boundary).
+        let natural = heightWithTracking(0)
+        let lineBox = (usesSystemFont ? UIFont.roundedSystemFont(ofSize: size) : arabicFont(size)).lineHeight
+        guard budget - natural >= lineBox * 1.5 else { return 0 }
 
         // Loosening beyond this would read as broken setting, not justification; the height constraint
         // usually binds far earlier.
@@ -2547,6 +2867,7 @@ enum MushafPageRenderCache {
             // Per-category tajweed visibility. The master switch alone meant toggling a single legend
             // category kept serving already-composed pages with the old colors until cache eviction.
             s.tajweedCategoryVisibilitySignature,
+            s.riwayahTajweedHiddenRules,
             s.showArabicText ? "a" : "-",
             s.cleanArabicText ? "c" : "-",
             // Was missing: toggling "Hide Arabic Dots" did not change the key, so every already-composed page
@@ -2846,10 +3167,16 @@ enum MushafPageRenderCache {
 
             let composer = MushafPageComposer(page: page, config: config)
             let metrics = fitMetricsUsingStore(composer: composer, width: width, height: height)
+            // The justification (segment layouts, break probes, margin top-ups) is the expensive half of
+            // the final compose and depends on metrics only, never on colors - compute it HERE on the fit
+            // lane so the main-thread tail is just the colored compose plus attribute transplants.
+            let justification = composer.justification(size: metrics.size, extraLineSpacing: metrics.extraSpacing,
+                                                       width: width, spaceTracking: metrics.spaceTracking)
             DispatchQueue.main.async {
                 let key = keyString as NSString
                 if cache.object(forKey: key) == nil {
-                    let rendered = finalize(composer: composer, metrics: metrics, width: width)
+                    let rendered = finalize(composer: composer, metrics: metrics, width: width,
+                                            justification: justification)
                     cache.setObject(rendered, forKey: key)
                     noteLatest(page: page, width: width, budget: height, rendered: rendered)
                 }
@@ -2901,23 +3228,25 @@ enum MushafPageRenderCache {
         return FitMetrics(size: size, extraSpacing: extraSpacing, measured: measured, spaceTracking: tracking)
     }
 
-    /// The main-thread tail: the tajweed-colored compose (TajweedStore has main-confined state) and the
-    /// drawn-string height check.
-    private static func finalize(composer: MushafPageComposer, metrics: FitMetrics, width: CGFloat) -> MushafRenderedPage {
+    /// The main-thread tail: the tajweed-colored compose (TajweedStore has main-confined state), with the
+    /// off-main justification transplanted onto it. The height comes from the justified plain compose,
+    /// which lays out identically to the colored one (colors never move a glyph - the invariant the whole
+    /// fit pipeline rests on): this number IS the text view's frame, and measuring anything else (or
+    /// padding it "to be safe") either clips the last line or shrinks every page for slack it doesn't need.
+    private static func finalize(composer: MushafPageComposer, metrics: FitMetrics, width: CGFloat,
+                                 justification: (tracking: [(range: NSRange, value: CGFloat)], height: CGFloat)) -> MushafRenderedPage {
         let built = composer.attributed(size: metrics.size, extraLineSpacing: metrics.extraSpacing,
-                                        width: width, spaceTracking: metrics.spaceTracking)
-
-        // Measure the string that will ACTUALLY be drawn - colored and justified - with the same TextKit
-        // configuration the text view uses. This height IS the text view's frame: measuring anything else
-        // (or padding the number "to be safe") either clips the last line or shrinks every page for slack
-        // it doesn't need. Exact is the only correct value.
-        let laidOut = MushafPageComposer.layoutHeight(of: built.text, width: width)
+                                        width: width, justified: false)
+        let text = NSMutableAttributedString(attributedString: built.text)
+        for run in justification.tracking {
+            text.addAttribute(.tracking, value: run.value, range: run.range)
+        }
 
         return MushafRenderedPage(
             fontSize: metrics.size,
-            text: built.text,
+            text: text,
             ranges: built.ranges,
-            height: laidOut,
+            height: justification.height,
             baselineOffset: composer.bodyBaselineOffset(size: metrics.size),
             baselineBand: composer.uniformLineFragmentBand(size: metrics.size, extraLineSpacing: metrics.extraSpacing)
         )
@@ -3233,6 +3562,11 @@ struct MushafPageTextView: UIViewRepresentable {
             action: #selector(Coordinator.handleSecondaryClick(_:))
         )
         secondaryClick.buttonMaskRequired = .secondary
+        // Pointer input ONLY: without this, direct touches can satisfy the recognizer too (the
+        // button mask alone does not exclude them on every OS), so a plain fingertip tap opened
+        // the actions sheet alongside its selection. Finger taps must select; only a real
+        // right/two-finger CLICK (Mac, iPad trackpad) opens the sheet without a hold.
+        secondaryClick.allowedTouchTypes = [NSNumber(value: UITouch.TouchType.indirectPointer.rawValue)]
         tv.addGestureRecognizer(secondaryClick)
 
         context.coordinator.textView = tv

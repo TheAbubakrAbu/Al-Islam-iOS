@@ -280,6 +280,39 @@ struct AyahRow: View, Equatable {
         )
     }
 
+    /// The current row's non-Hafs riwayah tag when its print-derived tajweed colors should paint:
+    /// tajweed toggle on, not searching, and the riwayah's tajweed pack is bundled. The pack's
+    /// magenta khilaf words ARE the printed "differs from Hafs" highlighting, so while this is
+    /// non-nil the computed diff tint stands down (even on ayahs the print leaves uncolored).
+    private var riwayahTajweedTag: String? {
+        #if os(iOS)
+        guard settings.showTajweedColors, settings.showArabicText else { return nil }
+        guard searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return nil }
+        let raw = comparisonQiraahOverride ?? (settings.displayQiraahForArabic ?? "")
+        let tag = Settings.Riwayah.canonicalTag(raw == "Hafs" ? "" : raw)
+        guard !tag.isEmpty, QiraahTajweedStore.shared.isAvailable(tag: tag) else { return nil }
+        return tag
+        #else
+        return nil
+        #endif
+    }
+
+    /// Reading a non-Hafs riwayah with tajweed colors on: the display text colored word-by-word
+    /// the way THAT riwayah's printed mushaf colors it (khilaf words, idgham, imalah, ...).
+    /// Word indices come from the same space/NBSP tokenization the extraction used, so this only
+    /// paints the un-spaced display text (beginner mode opts out).
+    private func arabicRiwayahTajweedText(displayText: String, beginner: Bool) -> AttributedString? {
+        #if os(iOS)
+        guard !beginner, let tag = riwayahTajweedTag else { return nil }
+        return QiraahTajweedStore.shared.attributedText(
+            tag: tag, surah: surah.id, ayah: ayah.id, displayText: displayText,
+            hiddenRules: settings.riwayahTajweedHiddenRuleSet
+        )
+        #else
+        return nil
+        #endif
+    }
+
     /// Reading a non-Hafs riwayah with "Highlight Differences from Hafs" on: the display text with
     /// every word that differs from Hafs an Asim tinted (`QiraahComparison`). This row's id is the
     /// riwayah's OWN ayah number, so the Hafs reference is looked up through the alignment - a
@@ -292,6 +325,8 @@ struct AyahRow: View, Equatable {
         // for learning the script, and tinting words on top of that is noise.
         guard !beginner else { return nil }
         guard searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return nil }
+        // The print's own coloring supersedes the computed diff whenever it is active.
+        guard riwayahTajweedTag == nil else { return nil }
         let raw = comparisonQiraahOverride ?? (settings.displayQiraahForArabic ?? "")
         let tag = Settings.Riwayah.canonicalTag(raw == "Hafs" ? "" : raw)
         guard !tag.isEmpty else { return nil }
@@ -410,7 +445,8 @@ struct AyahRow: View, Equatable {
             settings.cleanArabicText ? "1" : "0",
             (settings.beginnerMode || ayahBeginnerMode || forceBeginner) ? "1" : "0",
             qiraahKey,
-            categorySignature
+            categorySignature,
+            settings.riwayahTajweedHiddenRules
         ].joined(separator: "|")
     }
 
@@ -898,6 +934,7 @@ struct AyahRow: View, Equatable {
                     accent: settings.accentColor.color,
                     fg: .primary,
                     preStyledSource: arabicTajweedText(displayText: arabicSource, beginner: beginner)
+                        ?? arabicRiwayahTajweedText(displayText: arabicSource, beginner: beginner)
                         ?? arabicDiffText(displayText: arabicSource, beginner: beginner),
                     beginnerMode: beginner,
                     trailingSuffix: " \(ayah.idArabic)",

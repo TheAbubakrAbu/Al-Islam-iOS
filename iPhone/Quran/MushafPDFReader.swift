@@ -44,17 +44,53 @@ enum MushafPDFLibrary {
         }
     }
 
-    /// The PDFs ship as a **folder reference**, so they land in the bundle under `Mushaf/` rather than flat.
-    /// That is deliberate: dropping another riwayah's PDF into `Resources/Mushaf` ships it with no Xcode
-    /// project edit at all, and this lookup picks it up automatically.
-    static func url(for tag: String) -> URL? {
+    /// The PDFs ship as a **folder reference**, so they land in the bundle under `Mushaf PDFs/` rather than
+    /// flat. That is deliberate: dropping another riwayah's file into `Resources/Mushaf PDFs` ships it with
+    /// no Xcode project edit at all, and this lookup picks it up automatically.
+    ///
+    /// They ship as `.pdf.xz`, not `.pdf`: the files are pure vector with per-stream Flate, and re-doing the
+    /// whole file as ONE solid xz stream is a third of the size, fully lossless (66 MB -> 22 MB across the
+    /// set). A plain `.pdf` alongside still wins for that riwayah, so a quick drop-in needs no compression.
+    static func bundledURL(for tag: String) -> (url: URL, isCompressed: Bool)? {
         guard let name = fileName(for: tag) else { return nil }
-        return Bundle.main.url(forResource: name, withExtension: "pdf", subdirectory: "Mushaf")
+        if let plain = Bundle.main.url(forResource: name, withExtension: "pdf", subdirectory: "Mushaf PDFs")
+            ?? Bundle.main.url(forResource: name, withExtension: "pdf", subdirectory: "Mushaf") {
+            return (plain, false)
+        }
+        if let packed = Bundle.main.url(forResource: name, withExtension: "pdf.xz", subdirectory: "Mushaf PDFs") {
+            return (packed, true)
+        }
+        return nil
     }
 
     /// Whether this riwayah has a bundled facsimile. The PDF option hides itself when it doesn't, so a
     /// partial set of files degrades to "no PDF for this riwayah" instead of a blank reader.
-    static func isAvailable(for tag: String) -> Bool { url(for: tag) != nil }
+    static func isAvailable(for tag: String) -> Bool { bundledURL(for: tag) != nil }
+
+    /// The readable PDF's location: the bundled file itself when plain, otherwise a one-time extraction
+    /// of the `.pdf.xz` into Caches. Extracting (not decompressing per open) keeps `PDFDocument` on its
+    /// lazy file-mapped path - RAM stays at catalog-and-xref scale, not the whole 20+ MB file - and the
+    /// system may evict the cache copy under disk pressure; it just re-extracts on next open.
+    private static func readableURL(for tag: String) -> URL? {
+        guard let (bundled, isCompressed) = bundledURL(for: tag) else { return nil }
+        guard isCompressed else { return bundled }
+
+        let name = bundled.deletingPathExtension().lastPathComponent   // "01-asim-hafs.pdf"
+        let cacheDir = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("MushafPDF", isDirectory: true)
+        let extracted = cacheDir.appendingPathComponent(name)
+        if FileManager.default.fileExists(atPath: extracted.path) { return extracted }
+
+        guard let compressed = try? Data(contentsOf: bundled),
+              let raw = SolidPack.xzDecompress(compressed) else { return nil }
+        do {
+            try FileManager.default.createDirectory(at: cacheDir, withIntermediateDirectories: true)
+            try raw.write(to: extracted, options: .atomic)
+            return extracted
+        } catch {
+            return nil
+        }
+    }
 
     /// Parsed documents, most-recently-used last. Opening a 604-page PDF costs enough to be felt as a pause
     /// on the riwayah switch, and a single slot meant flipping between two riwayat re-parsed *every* time.
@@ -72,7 +108,7 @@ enum MushafPDFLibrary {
             cache.append(entry)
             return entry.document
         }
-        guard let url = url(for: tag), let document = PDFDocument(url: url) else { return nil }
+        guard let url = readableURL(for: tag), let document = PDFDocument(url: url) else { return nil }
         if cache.count >= cacheLimit { cache.removeFirst() }
         cache.append((key, document))
         return document

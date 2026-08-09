@@ -92,11 +92,7 @@ final class BetaQiraatStore: @unchecked Sendable {
     }
 
     private static func load(_ name: String) -> [Int: [Int: String]]? {
-        guard let url = Bundle.main.url(forResource: name, withExtension: "json.deflate", subdirectory: "QiraahBeta")
-            ?? Bundle.main.url(forResource: name, withExtension: "json.deflate", subdirectory: "Data/QiraahBeta")
-            ?? Bundle.main.url(forResource: name, withExtension: "json.deflate"),
-              let blob = try? Data(contentsOf: url),
-              let json = inflate(blob) else { return nil }
+        guard let json = SolidPack.json(named: name, inPack: "qiraah") ?? looseJSON(name) else { return nil }
         guard let raw = try? JSONSerialization.jsonObject(with: json) as? [String: [[String: Any]]] else { return nil }
         var out: [Int: [Int: String]] = [:]
         out.reserveCapacity(raw.count)
@@ -113,6 +109,17 @@ final class BetaQiraatStore: @unchecked Sendable {
             out[sid] = lookup
         }
         return out.isEmpty ? nil : out
+    }
+
+    /// The pre-solidpack loose-file path, kept as a fallback: a `<name>.json.deflate` dropped into
+    /// the bundle (e.g. a reading still being QA'd that isn't in `qiraah.solidpack` yet) loads with
+    /// no repack step.
+    private static func looseJSON(_ name: String) -> Data? {
+        guard let url = Bundle.main.url(forResource: name, withExtension: "json.deflate", subdirectory: "QiraahBeta")
+            ?? Bundle.main.url(forResource: name, withExtension: "json.deflate", subdirectory: "Data/QiraahBeta")
+            ?? Bundle.main.url(forResource: name, withExtension: "json.deflate"),
+              let blob = try? Data(contentsOf: url) else { return nil }
+        return inflate(blob)
     }
 
     /// Raw-deflate inflate (the payloads are written with a raw stream, no zlib header,

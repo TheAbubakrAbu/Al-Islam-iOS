@@ -78,6 +78,8 @@ struct AyahActionsSheet: View {
     private var ayahPreview: some View {
         let arabic = ayah.displayArabicText(surahId: surah.id, clean: settings.cleanArabicText)
         let showsTajweed = settings.showTajweedColors && settings.showArabicText && settings.isHafsDisplay
+        let riwayahTajweedTag = settings.showTajweedColors && settings.showArabicText
+            ? settings.riwayahTajweedPackTag : nil
 
         VStack(spacing: 6) {
             Group {
@@ -90,6 +92,12 @@ struct AyahActionsSheet: View {
                        cleanDisplayText: settings.cleanArabicText,
                        beginnerSpacing: false
                    ) {
+                    Text(styled) + Text(" \(ayah.idArabic)").foregroundColor(settings.accentColor.accent1)
+                } else if let tag = riwayahTajweedTag,
+                          let styled = QiraahTajweedStore.shared.attributedText(
+                              tag: tag, surah: surah.id, ayah: ayah.id, displayText: arabic,
+                              hiddenRules: settings.riwayahTajweedHiddenRuleSet
+                          ) {
                     Text(styled) + Text(" \(ayah.idArabic)").foregroundColor(settings.accentColor.accent1)
                 } else {
                     Text(arabic) + Text(" \(ayah.idArabic)").foregroundColor(settings.accentColor.accent1)

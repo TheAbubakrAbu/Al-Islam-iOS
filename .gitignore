@@ -1,0 +1,17 @@
+# macOS
+.DS_Store
+
+# Xcode
+xcuserdata/
+DerivedData/
+
+# Tajweed extraction pipeline: intermediate per-page ink data and per-riwayah
+# stage-2 results. Regenerable from the PDFs (run_all_stage1.sh + tj_stage2_v3.py);
+# the shipped artifacts are the Tajweed*.json.deflate packs in Resources/Data/Quran.
+Scripts/tajweed-extraction/boxes/
+Scripts/tajweed-extraction/out/
+
+# Original Islamweb mushaf PDFs (66 MB). The shipped form is Resources/Mushaf PDFs/
+# *.pdf.xz - the same documents losslessly recompressed (qpdf --stream-data=uncompress
+# + xz -9e); `xz -d` on any of them yields a valid, identical-rendering PDF.
+Resources/Mushaf-Originals/

@@ -96,6 +96,86 @@ struct QuranPackReader {
     }
 }
 
+// MARK: - Solid packs
+
+/// Reader for the `.solidpack` bundles - ONE xz stream over a whole family of raw JSONs
+/// (the 12 beta qiraah texts, the 19 tajweed rule files) concatenated back to back.
+///
+/// Why solid instead of the per-file `.json.deflate`s it replaced: the qiraah JSONs are ~97%
+/// identical to each other (same Quran, different marks), so compressing them TOGETHER collapses
+/// 17.6 MB of JSON into ~0.4 MB where the individual files cost 3.5 MB shipped. The cost is that
+/// extracting one member decompresses the whole family (~150 ms), which only happens on a riwayah
+/// switch and whose parsed result the callers (BetaQiraatStore / QiraahTajweed) already cache.
+///
+/// Layout after decompression (built by Scripts/build_solidpacks.py):
+///   u32 LE index length, index JSON {"entries":[{"name","offset","length"},...]},
+///   then the raw JSONs back to back; offsets are relative to the first byte after the index.
+enum SolidPack {
+    /// The raw JSON for one member, or nil if the pack or member is missing.
+    static func json(named name: String, inPack pack: String) -> Data? {
+        guard let url = Bundle.main.url(forResource: pack, withExtension: "solidpack")
+            ?? Bundle.main.url(forResource: pack, withExtension: "solidpack", subdirectory: "Data/Quran"),
+              let compressed = try? Data(contentsOf: url),
+              let body = xzDecompress(compressed) else { return nil }
+
+        var reader = QuranPackReader(data: body, cursor: 0)
+        let indexLength = reader.u32()
+        let payloadStart = 4 + indexLength
+        guard indexLength > 0, payloadStart <= body.count,
+              let index = try? JSONSerialization.jsonObject(
+                  with: body.subdata(in: 4..<payloadStart)) as? [String: [[String: Any]]],
+              let entries = index["entries"] else { return nil }
+
+        for entry in entries {
+            guard entry["name"] as? String == name,
+                  let offset = entry["offset"] as? Int,
+                  let length = entry["length"] as? Int,
+                  offset >= 0, length > 0, payloadStart + offset + length <= body.count else { continue }
+            return body.subdata(in: (payloadStart + offset)..<(payloadStart + offset + length))
+        }
+        return nil
+    }
+
+    /// Streaming xz decode (`COMPRESSION_LZMA` reads the xz container). Streamed because, unlike
+    /// the qpk blocks, these files don't carry their decompressed size up front - the mushaf
+    /// `.pdf.xz` facsimiles come through here too.
+    static func xzDecompress(_ data: Data) -> Data? {
+        let bufferSize = 1 << 20
+        let buffer = UnsafeMutablePointer<UInt8>.allocate(capacity: bufferSize)
+        defer { buffer.deallocate() }
+
+        // compression_stream has no empty initializer in Swift; these fields are
+        // overwritten by compression_stream_init and the loop before first use.
+        var stream = compression_stream(dst_ptr: buffer, dst_size: 0, src_ptr: buffer, src_size: 0, state: nil)
+        guard compression_stream_init(&stream, COMPRESSION_STREAM_DECODE, COMPRESSION_LZMA)
+            == COMPRESSION_STATUS_OK else { return nil }
+        defer { compression_stream_destroy(&stream) }
+
+        var out = Data()
+        let finished: Bool? = data.withUnsafeBytes { (raw: UnsafeRawBufferPointer) -> Bool? in
+            guard let base = raw.bindMemory(to: UInt8.self).baseAddress else { return nil }
+            stream.src_ptr = base
+            stream.src_size = data.count
+            while true {
+                stream.dst_ptr = buffer
+                stream.dst_size = bufferSize
+                switch compression_stream_process(&stream, Int32(COMPRESSION_STREAM_FINALIZE.rawValue)) {
+                case COMPRESSION_STATUS_END:
+                    out.append(buffer, count: bufferSize - stream.dst_size)
+                    return true
+                case COMPRESSION_STATUS_OK:
+                    // A full pass with no output and no input left would spin forever: bail.
+                    guard bufferSize - stream.dst_size > 0 || stream.src_size > 0 else { return false }
+                    out.append(buffer, count: bufferSize - stream.dst_size)
+                default:
+                    return false
+                }
+            }
+        }
+        return finished == true ? out : nil
+    }
+}
+
 // MARK: - Container
 
 /// Header, block table, and eager section of one `.qpk`. The typed readers below layer their

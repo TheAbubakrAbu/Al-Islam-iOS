@@ -459,13 +459,15 @@ struct SettingsQuranView: View {
 
     private var tajweedSettingsGroup: some View {
         VStack(alignment: .leading, spacing: 12) {
+            // Hafs paints from the computed rule tree; every other riwayah paints the
+            // word colors of its own printed mushaf (QiraahTajweedStore pack).
             let tajweedCanRenderNow = settings.showArabicText
-                && settings.isHafsDisplay
+                && (settings.isHafsDisplay || settings.riwayahTajweedPackTag != nil)
             let tajweedToggleBinding = Binding<Bool>(
                 get: { settings.showTajweedColors && tajweedCanRenderNow },
                 set: { settings.showTajweedColors = $0 }
             )
-            
+
             Toggle("Show Tajweed Colors", isOn: tajweedToggleBinding.animation(.easeInOut))
                 .font(.subheadline)
                 .disabled(!tajweedCanRenderNow)
@@ -481,7 +483,9 @@ struct SettingsQuranView: View {
             #endif
 
             if settings.showQiraahDetails {
-                Text("Tajweed colors are currently available only for Hafs an Asim, not the other qiraat or riwayat.")
+                Text(settings.isHafsDisplay
+                     ? "Hafs an Asim colors every rule from the tajweed rule engine. The other qiraat and riwayat color words the way their own printed mushaf does - each with its own legend."
+                     : "This riwayah colors words the way its printed mushaf does (differences from Hafs, idgham, imalah, ...). See its legend in Customize Tajweed Colors.")
                     .font(.caption)
                     .foregroundColor(.secondary)
                     .padding(.vertical, 2)
@@ -495,58 +499,14 @@ struct SettingsQuranView: View {
             cleanArabicTextGroup
             arabicFontPicker
             arabicScriptStylePicker
-            printedMushafGroup
             arabicFontSizeControls
             beginnerModeGroup
         }
     }
 
-    /// The printed-mushaf facsimile switch. It lives with the Arabic script choices because that is what it
-    /// is - a third way of setting the Arabic, after the typeface and the script - even though the pages
-    /// themselves are images rather than composed text.
-    ///
-    /// Hidden entirely when this riwayah has no bundled PDF, so the row never promises a page it can't show.
-    @ViewBuilder
-    private var printedMushafGroup: some View {
-        #if os(iOS)
-        let riwayahTag = settings.displayQiraahForArabic ?? Settings.Riwayah.hafsTag
-        if MushafPDFLibrary.isAvailable(for: riwayahTag) {
-            VStack(alignment: .leading) {
-                Toggle("Show Printed Mushaf (PDF)", isOn: Binding(
-                    get: { settings.resolvedMushafPageLanguage.isPDF },
-                    set: { showPDF in
-                        settings.hapticFeedback()
-                        withAnimation(.easeInOut) {
-                            settings.mushafPageLanguage = showPDF
-                                ? MushafPageLanguage.pdf.rawValue
-                                : MushafPageLanguage.arabic.rawValue
-                        }
-                    }))
-                    .font(.subheadline)
-
-                // Spelled out rather than implied: this does nothing in List, and a reader who flips it there
-                // would otherwise see no change at all and assume it is broken.
-                Text(settings.quranPageMode
-                     ? "Replaces the composed Arabic with the actual printed mushaf for this riwayah - the same 604 pages, swiped right to left. Pages mode only; the typeface and script choices above don't apply to it."
-                     : "Pages mode only. Reading View is currently set to List - switch it to Pages to see the printed mushaf.")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                    .padding(.vertical, 2)
-
-                if settings.resolvedMushafPageLanguage.isPDF {
-                    Toggle("Printed Mushaf Night Mode", isOn: $settings.mushafPDFNightMode.animation(.easeInOut))
-                        .font(.subheadline)
-                        .onChange(of: settings.mushafPDFNightMode) { _ in settings.hapticFeedback() }
-
-                    Text("Darkens the printed page for night reading. Off shows it exactly as printed.")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                        .padding(.vertical, 2)
-                }
-            }
-        }
-        #endif
-    }
+    // The printed-mushaf (PDF) switch used to live here too; it is a reading MODE, so its only
+    // home now is the reader's own top menu ("Read as Printed Mushaf (PDF)" / Page Text picker),
+    // where the night-mode toggle also lives.
 
     @ViewBuilder
     private var cleanArabicTextGroup: some View {
@@ -915,7 +875,7 @@ struct SettingsQuranView: View {
                 .font(.subheadline)
                 .onChange(of: settings.qiraatComparisonMode) { _ in settings.hapticFeedback() }
 
-            Text("When on, the ayah view shows a riwayah picker above the search bar so you can switch and compare qiraat in that screen.")
+            Text("When on, the ayah view shows a riwayah picker above the search bar even on Hafs, so you can switch and compare qiraat in that screen. In any other riwayah the picker is always there.")
                 .font(.caption)
                 .foregroundColor(.secondary)
                 .padding(.vertical, 2)

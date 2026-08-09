@@ -248,13 +248,22 @@ struct AccentGlowOverlay: View {
 
         // Top-only, by explicit choice (a bottom band was tried and rolled back): the wash lights the
         // navigation-bar edge and fades before mid-screen, leaving the bottom bars on plain background.
-        VStack(spacing: 0) {
+        //
+        // The radius must track the screen width or wide screens break the look: 380pt covers an
+        // iPhone edge-to-edge, but on iPad/Mac the single-color glow died mid-screen (lit middle,
+        // dark corners) and the brand corners never met in the middle. Scaling the circle up would
+        // also drag the wash way down the page, so the vertical axis is pinned back to the iPhone's
+        // reach with a y-compression - the glow becomes a wide, shallow ellipse across the whole top.
+        GeometryReader { geo in
+            let radius = max(380, geo.size.width)
+            let verticalReach: CGFloat = 380
+
             ZStack {
                 RadialGradient(
                     colors: [settings.accentColor.color.opacity(brand ? 0 : strength), .clear],
                     center: .top,
                     startRadius: 8,
-                    endRadius: 380
+                    endRadius: radius
                 )
 
                 // Absolute corners, not leading/trailing: the brand look is yellow on the LEFT and
@@ -263,19 +272,18 @@ struct AccentGlowOverlay: View {
                     colors: [Color.yellow.opacity(brand ? strength : 0), .clear],
                     center: UnitPoint(x: 0, y: 0),
                     startRadius: 8,
-                    endRadius: 380
+                    endRadius: radius
                 )
 
                 RadialGradient(
                     colors: [Color.green.opacity(brand ? strength : 0), .clear],
                     center: UnitPoint(x: 1, y: 0),
                     startRadius: 8,
-                    endRadius: 380
+                    endRadius: radius
                 )
             }
-            .frame(height: 420)
-
-            Spacer(minLength: 0)
+            .frame(width: geo.size.width, height: radius)
+            .scaleEffect(y: verticalReach / radius, anchor: .top)
         }
         .allowsHitTesting(false)
         .ignoresSafeArea()
@@ -283,16 +291,18 @@ struct AccentGlowOverlay: View {
 }
 
 #if os(watchOS)
-/// The watch's bottom accent glow: a quiet radial wash rising from the bottom edge - the wrist-scale
-/// mirror of the iPhone's top accent wash (`AccentGlowOverlay`). Every list screen gets it through
-/// `ConditionalListStyle`'s watch branch, so the whole watch app sits on the same grounded light.
+/// The watch's top accent glow: a quiet radial wash bleeding down from the top edge - the
+/// wrist-scale mirror of the iPhone's top accent wash (`AccentGlowOverlay`). Every list screen gets
+/// it through `ConditionalListStyle`'s watch branch, so the whole watch app sits on the same
+/// grounded light. (A bottom-anchored version shipped first and read as upside-down next to the
+/// iPhone, so it now matches the phone: light from the top.)
 ///
 /// Structurally constant like its iOS sibling: all three gradients are always in the tree and the
 /// settings only drive their opacities - the accent one for the normal glow, the yellow (left) +
 /// green (right) pair for the Al-Islam brand look. Everything collapses to invisible when the glow
 /// is off or a custom reading theme owns the background, and theme/accent flips never recreate the
 /// List they sit behind.
-struct WatchBottomGlowOverlay: View {
+struct WatchTopGlowOverlay: View {
     @ObservedObject private var settings = Settings.shared
 
     var body: some View {
@@ -301,36 +311,39 @@ struct WatchBottomGlowOverlay: View {
         let strength: Double = (settings.hasCustomThemeColors || !settings.showAccentGlow) ? 0 : 0.20
         let brand = settings.alIslamGlow
 
-        VStack(spacing: 0) {
-            Spacer(minLength: 0)
+        // Same width-tracking ellipse as the iPhone overlay: the radius follows the screen width
+        // (198pt on a 45mm, wider on Ultra) so the wash spans the whole top edge, then compresses
+        // vertically to the tuned 150pt reach so it still dies well above the bottom.
+        GeometryReader { geo in
+            let radius = max(190, geo.size.width)
+            let verticalReach: CGFloat = 150
 
             ZStack {
                 RadialGradient(
                     colors: [settings.accentColor.color.opacity(brand ? 0 : strength), .clear],
-                    center: .bottom,
+                    center: .top,
                     startRadius: 4,
-                    endRadius: 190
+                    endRadius: radius
                 )
 
                 // Absolute corners, not leading/trailing: the brand look is yellow on the LEFT and
                 // green on the RIGHT, and it shouldn't mirror when the app runs in an RTL locale.
                 RadialGradient(
                     colors: [Color.yellow.opacity(brand ? strength : 0), .clear],
-                    center: UnitPoint(x: 0, y: 1),
+                    center: UnitPoint(x: 0, y: 0),
                     startRadius: 4,
-                    endRadius: 190
+                    endRadius: radius
                 )
 
                 RadialGradient(
                     colors: [Color.green.opacity(brand ? strength : 0), .clear],
-                    center: UnitPoint(x: 1, y: 1),
+                    center: UnitPoint(x: 1, y: 0),
                     startRadius: 4,
-                    endRadius: 190
+                    endRadius: radius
                 )
             }
-            // Proportional, not fixed: 150pt covers the glow's reach on a 40mm (197pt) screen and the
-            // 49mm Ultra alike, because the gradients fade out well before their frame's top edge.
-            .frame(height: 150)
+            .frame(width: geo.size.width, height: radius)
+            .scaleEffect(y: verticalReach / radius, anchor: .top)
         }
         .allowsHitTesting(false)
         .ignoresSafeArea()
@@ -339,7 +352,7 @@ struct WatchBottomGlowOverlay: View {
 #endif
 
 /// The app's ambient wash as a standalone modifier - the ONE implementation of "every screen sits on
-/// the same light": the themed base color + top accent glow on iOS, the bottom accent glow on the
+/// the same light": the themed base color + top accent glow on iOS, the top accent glow on the
 /// watch. `ConditionalListStyle` routes through this for every List screen; screens that are NOT
 /// system Lists (ScrollView sheets like tafsir/comparison/share, custom canvases) apply it directly
 /// via `.accentWashedBackground()`. Edit the look HERE and every screen on every platform follows.
@@ -367,7 +380,7 @@ struct AccentWashedBackground: ViewModifier {
             .preferredColorScheme(settings.colorScheme)
         #elseif os(watchOS)
         content
-            .background(WatchBottomGlowOverlay())
+            .background(WatchTopGlowOverlay())
         #else
         content
         #endif
@@ -483,7 +496,7 @@ struct ConditionalListStyle: ViewModifier {
     #endif
 
     #if os(watchOS)
-    /// The watch styling pass: the bottom accent glow behind every list (via the shared
+    /// The watch styling pass: the top accent glow behind every list (via the shared
     /// `AccentWashedBackground`) plus compact section spacing, so the small screen spends its pixels
     /// on content instead of gaps. The watch List canvas is transparent over black, so the wash reads
     /// through it; the chain stays structurally constant (the glow zeroes its opacities rather than

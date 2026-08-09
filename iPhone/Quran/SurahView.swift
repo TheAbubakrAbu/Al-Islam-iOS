@@ -2684,8 +2684,11 @@ struct SurahView: View {
             && !language.isPDF
             && settings.showTajweedColors
             && settings.showArabicText
-            && settings.isHafsDisplay
-        let comparisonVisible = arabicPage && settings.qiraatComparisonMode
+            && (settings.isHafsDisplay || settings.riwayahTajweedPackTag != nil)
+        // The picker ALWAYS shows when the reader is on a non-Hafs riwayah: being in another qiraah
+        // is itself the comparison context, and it's also the way back. The toggle only decides
+        // whether Hafs - the default everyone starts on - carries the extra control.
+        let comparisonVisible = arabicPage && (settings.qiraatComparisonMode || !settings.isHafsDisplay)
 
         // The search button only appears alongside the tajweed legend or the riwayah picker - with
         // neither enabled the bar shows nothing at all. It stretches to fill whatever width the flanking
@@ -2733,13 +2736,16 @@ struct SurahView: View {
     private var qiraatAndTajweedControls: some View {
         let tajweedCanRenderNow = settings.showTajweedColors
             && settings.showArabicText
-            && settings.isHafsDisplay
+            && (settings.isHafsDisplay || settings.riwayahTajweedPackTag != nil)
+        // Same rule as the page reader's bar: a non-Hafs riwayah always gets the picker; the
+        // comparison-mode toggle only adds it on Hafs.
+        let comparisonVisible = settings.qiraatComparisonMode || !settings.isHafsDisplay
 
         // Same shape as the page reader's bar: the global search only appears alongside the tajweed
         // legend or the riwayah picker, stretches between them, and matches their height. Labeled
         // "Global" because this reader has its own search bar right below, and this button is the "take
         // what I typed THERE" escape to the whole Quran.
-        if tajweedCanRenderNow || settings.qiraatComparisonMode {
+        if tajweedCanRenderNow || comparisonVisible {
             HStack(alignment: .bottom, spacing: 4) {
                 // Same rule as the page bar: the flanking controls take the space they need, the search
                 // fills the leftover and is the first to shrink when the row runs tight.
@@ -2765,7 +2771,7 @@ struct SurahView: View {
                 .buttonStyle(.plain)
                 .accessibilityLabel("Search the whole Quran for what is typed in the search bar")
 
-                if settings.qiraatComparisonMode {
+                if comparisonVisible {
                     ArabicTextRiwayahPicker(selection: $settings.displayQiraah.animation(.easeInOut))
                         .layoutPriority(1)
                 }
