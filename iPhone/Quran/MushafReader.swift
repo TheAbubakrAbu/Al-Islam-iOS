@@ -293,6 +293,9 @@ struct SurahPageReader<Controls: View>: View {
     @State private var activePicker: PickerTarget?
     @State private var pagePickerSelection = 0
     @State private var juzPickerSelection = 1
+    /// Bottom chrome folded away for a taller page (task: "collapse the bottom and bring it back").
+    /// Session-scoped on purpose: reopening the reader always starts with its controls visible.
+    @State private var bottomBarsCollapsed = false
     /// The typed-number fast path: an alert with a number pad, for jumping without scrolling the wheel.
     /// An alert (not an inline field) because the whole reader ignores the keyboard inset by design - the
     /// page must never resize - so an inline field at the bottom would be covered by the keyboard it raises.
@@ -449,8 +452,35 @@ struct SurahPageReader<Controls: View>: View {
         // Order matters: the first inset applied sits closest to the content (higher), the last sits lowest.
         // So the tajweed/qiraah controls + mini player go ABOVE, and the page-navigation footer is pinned to
         // the very bottom.
-        .safeAreaInset(edge: .bottom, spacing: 0) { bottomControls() }
-        .safeAreaInset(edge: .bottom, spacing: 0) { pageFooter(pages: pages) }
+        // Collapse folds the bars via height+opacity with the views still MOUNTED - an `if` removal
+        // snapshots the glass background as a hard black box on the way out (the artifact SurahView's
+        // list bars hit), because Liquid Glass can't participate in a removal transition. The page then
+        // re-fits to the taller band it gains (debounced, in `MushafPageContent`).
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            bottomControls()
+                .frame(height: bottomBarsCollapsed ? 0 : nil)
+                .clipped()
+                .opacity(bottomBarsCollapsed ? 0 : 1)
+                .allowsHitTesting(!bottomBarsCollapsed)
+        }
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            pageFooter(pages: pages)
+                .frame(height: bottomBarsCollapsed ? 0 : nil)
+                .clipped()
+                .opacity(bottomBarsCollapsed ? 0 : 1)
+                .allowsHitTesting(!bottomBarsCollapsed)
+        }
+        // The collapsed state's restore strip: ordinary layout, not a floating overlay - applied LAST
+        // so it sits BELOW everything else at the screen's bottom edge, and only has height while the
+        // bars are collapsed (expanded, the seam chevron in the footer is the collapse control and
+        // this strip costs nothing). Same mounted-collapse pattern as the bars themselves.
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            bottomBarsToggleStrip
+                .frame(height: bottomBarsCollapsed ? nil : 0)
+                .clipped()
+                .opacity(bottomBarsCollapsed ? 1 : 0)
+                .allowsHitTesting(bottomBarsCollapsed)
+        }
         .safeAreaInset(edge: .top, spacing: 0) {
             if searchActive {
                 pageFindBar(pages: pages, matches: liveSearch?.matches ?? [])
@@ -781,9 +811,11 @@ struct SurahPageReader<Controls: View>: View {
     @ViewBuilder
     private var pinnedSurahHeader: some View {
         if let surah = headerSurah {
-            SurahSectionHeader(surah: surah)
+            // Compact and tucked up high (task): the page header reads at .subheadline with smaller
+            // side icons and almost no air above, so the page itself gets the height back.
+            SurahSectionHeader(surah: surah, compact: true)
                 .padding(.horizontal)
-                .padding(.vertical, 4)
+                .padding(.vertical, 2)
                 // Keep the tapped header lit while its info sheet is open. While this surah is loaded in the
                 // player, the header carries the accent tint instead - the page-top twin of the in-page name
                 // highlight.
@@ -797,12 +829,8 @@ struct SurahPageReader<Controls: View>: View {
                 )
                 .shadow(color: .black.opacity(0.15), radius: 2, x: 0, y: 0)
                 .conditionalGlassEffect(rectangle: true)
-                .padding(.top, 4)
-                // Equal air above and below the page block: this header is a TOP safe-area inset and the
-                // reader's controls are a BOTTOM one, so together they bound the band the page is centered
-                // in - but only the bottom inset carried a cushion (`bottomControls` opens with
-                // `.padding(.top, SafeAreaInsetVStackSpacing.standard)`). This mirrors that cushion.
-                .padding(.bottom, SafeAreaInsetVStackSpacing.standard)
+                // A slim cushion below is all the page block needs; above, the header hugs the bar.
+                .padding(.bottom, 6)
                 .padding(.horizontal, settings.defaultView ? 20 : 16)
                 // Tap the header to read about the surah. The star/emoji keep their own tap gestures -
                 // a child gesture wins over this one, so favoriting still works.
@@ -814,6 +842,43 @@ struct SurahPageReader<Controls: View>: View {
                 .animation(.easeInOut(duration: 0.15), value: headerInfoSurah?.id == surah.id)
                 .dynamicTypeSize(.large)
         }
+    }
+
+    /// The collapse chevron, drawn on the seam between the footer's info pill and its play control -
+    /// a raw glyph with no backing, the expanded twin of the restore strip's bare chevron.
+    private var collapseChevronButton: some View {
+        Button {
+            settings.hapticFeedback()
+            withAnimation(.easeInOut(duration: 0.25)) { bottomBarsCollapsed = true }
+        } label: {
+            Image(systemName: "chevron.down")
+                .font(.caption2.weight(.bold))
+                .foregroundColor(settings.accentColor.color)
+                // The glyph shrank, the tap target didn't - padding keeps the hit circle finger-sized.
+                .padding(9)
+                .contentShape(Circle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel("Hide the bottom controls")
+    }
+
+    /// The collapsed state's restore strip: a full-width chevron row at the very bottom of the screen,
+    /// below everything - ordinary layout, nothing floating over the page.
+    private var bottomBarsToggleStrip: some View {
+        Button {
+            settings.hapticFeedback()
+            withAnimation(.easeInOut(duration: 0.25)) { bottomBarsCollapsed = false }
+        } label: {
+            Image(systemName: "chevron.up")
+                .font(.caption.weight(.bold))
+                .foregroundColor(settings.accentColor.color)
+                .padding(.vertical, 6)
+                .frame(maxWidth: .infinity)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .padding(.bottom, 2)
+        .accessibilityLabel("Show the bottom controls")
     }
 
     private func reportAnchor(on index: Int, in pages: [MushafPage]) {
@@ -863,10 +928,22 @@ struct SurahPageReader<Controls: View>: View {
                     inlinePicker(target: target, pages: pages)
                 }
 
-                HStack(spacing: 8) {
+                // Spacing 4, not 8: the zero-width chevron anchor in the middle contributes a second
+                // gap, so 4+4 keeps the pill and the play control exactly 8pt apart - the same as
+                // before the anchor existed. No extra spacing from the control (user requirement).
+                HStack(spacing: 4) {
                     pageInfoPill(page: page, surah: footerSurah, pages: pages,
                                  surahPosition: surahPosition, surahTotal: surahTotal,
                                  juzPosition: juzPosition, juzTotal: juzTotal)
+
+                    // Expanded-state collapse control (user-picked, round 3): floats ON the seam
+                    // between the info pill and the play control - a zero-width anchor whose overlay
+                    // draws the chevron over the gap, so it costs NO vertical space. The collapsed
+                    // state's restore strip is separate, at the screen's bottom edge.
+                    Color.clear
+                        .frame(width: 0, height: footerHeight)
+                        .overlay(alignment: .bottom) { collapseChevronButton }
+                        .zIndex(1)
 
                     if let footerSurah {
                         pageFooterPlayButton(surah: footerSurah)
@@ -1152,20 +1229,9 @@ struct SurahPageReader<Controls: View>: View {
                     Text("Surah Playback")
                         .foregroundStyle(.secondary)
 
-                    Button {
-                        settings.hapticFeedback()
-                        quranPlayer.playSurah(surahNumber: surah.id, surahName: surah.nameTransliteration)
-                    } label: {
-                        Label("Play Surah", systemImage: "memories")
-                    }
-
-                    Button {
-                        settings.hapticFeedback()
-                        quranPlayer.playAyah(surahNumber: surah.id, ayahNumber: 1, continueRecitation: true)
-                    } label: {
-                        Label("Play Ayah by Ayah", systemImage: "list.number")
-                    }
-
+                    // Play Surah sits at the visual BOTTOM of every play menu (user-picked order) -
+                    // the primary action lands nearest the thumb. Declared order is visual order
+                    // (`fixedMenuOrder`).
                     Menu {
                         Text("Repeat Count")
                             .foregroundStyle(.secondary)
@@ -1184,6 +1250,20 @@ struct SurahPageReader<Controls: View>: View {
                         }
                     } label: {
                         Label("Repeat Surah", systemImage: "repeat")
+                    }
+
+                    Button {
+                        settings.hapticFeedback()
+                        quranPlayer.playAyah(surahNumber: surah.id, ayahNumber: 1, continueRecitation: true)
+                    } label: {
+                        Label("Play Ayah by Ayah", systemImage: "list.number")
+                    }
+
+                    Button {
+                        settings.hapticFeedback()
+                        quranPlayer.playSurah(surahNumber: surah.id, surahName: surah.nameTransliteration)
+                    } label: {
+                        Label("Play Surah", systemImage: "memories")
                     }
                 } label: {
                     playControlLabel
@@ -2964,7 +3044,22 @@ enum MushafPageRenderCache {
     nonisolated private static let persistedMetricsSalt: String = {
         let os = ProcessInfo.processInfo.operatingSystemVersion
         let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "0"
-        return "\(build)|\(os.majorVersion).\(os.minorVersion).\(os.patchVersion)"
+        // The bundled faces and text packs move the fit numbers WITHOUT a build bump (dev installs
+        // patch fonts/packs in place under one CFBundleVersion) - and a stale store then serves fits
+        // measured against outlines that no longer exist, pages standing short or overflowing until
+        // eviction ("the page doesn't take full height"). Fingerprint their byte sizes so any font or
+        // pack change misses the whole store instead. Sizes, not mtimes: reinstalls re-stamp every
+        // file's date, and salting on that would discard the store on each dev build for nothing.
+        let fm = FileManager.default
+        let fingerprint = ((Bundle.main.urls(forResourcesWithExtension: "ttf", subdirectory: nil) ?? [])
+                           + (Bundle.main.urls(forResourcesWithExtension: "qpk", subdirectory: nil) ?? []))
+            .sorted { $0.lastPathComponent < $1.lastPathComponent }
+            .compactMap { url -> String? in
+                guard let size = (try? fm.attributesOfItem(atPath: url.path))?[.size] as? NSNumber else { return nil }
+                return "\(url.lastPathComponent):\(size.int64Value)"
+            }
+            .joined(separator: ",")
+        return "\(build)|\(os.majorVersion).\(os.minorVersion).\(os.patchVersion)|\(fingerprint)"
     }()
 
     /// Callers hold `persistedMetricsLock`.

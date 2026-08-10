@@ -272,9 +272,11 @@ struct SurahSectionHeader: View {
     }
 
     private var ayahSummary: some View {
+        // Compact (the mushaf page header): .subheadline with the smaller side icons - the page reader
+        // wants its chrome tight, not tiny.
         Text("\(surah.ayahCountLabel(for: settings.displayQiraahForArabic)) - \(surah.pageCountLabel)")
             .textCase(.uppercase)
-            .font(compact ? .caption.weight(.semibold) : .subheadline)
+            .font(.subheadline)
             .lineLimit(1)
             .minimumScaleFactor(compact ? 0.6 : 0.25)
     }

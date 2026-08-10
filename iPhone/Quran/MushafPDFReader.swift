@@ -199,13 +199,13 @@ private struct MushafPDFPageView: UIViewRepresentable {
         let document = PDFDocument()
         if let copy = page.copy() as? PDFPage {
             // Trim the page furniture (islamweb header, legend strip, side borders) off the display:
-            // the page's own crop box hugs the content vertically, the edition window cuts the rest.
-            // Applied to the COPY - the source document's pages stay untouched. The size guard keeps a
-            // malformed intersection (odd drop-in file) from collapsing the page to a sliver.
+            // the edition window cuts it away. Applied to the COPY - the source document's pages stay
+            // untouched. The size guard keeps a malformed intersection (odd drop-in file) from
+            // collapsing the page to a sliver.
             if let window = cropWindow {
                 let trimmed = copy.bounds(for: .cropBox).intersection(window)
                 if !trimmed.isNull, trimmed.width > 100, trimmed.height > 100 {
-                    copy.setBounds(trimmed, for: .cropBox)
+                    copy.setBounds(Self.inkCenteredCrop(trimmed, for: page), for: .cropBox)
                 }
             }
             document.insert(copy, at: 0)
@@ -215,6 +215,91 @@ private struct MushafPDFPageView: UIViewRepresentable {
         // `autoScales` only computes the fit-to-width scale once the view has a size, so re-assert it after
         // layout; without this the first page of a fresh reader comes up at 100% and overflows the screen.
         DispatchQueue.main.async { view.autoScales = true }
+    }
+
+    /// Measured ink-hugging crops, keyed by (file, page, window) - one small thumbnail render each,
+    /// paid once per page ever per session.
+    @MainActor private static var inkCenteredCrops: [String: CGRect] = [:]
+
+    /// The window cut down vertically to the page's INK plus a small, symmetric cushion - so the text
+    /// block sits with EQUAL air above and below, whatever the print left around it.
+    ///
+    /// The editions' own page crop boxes turned out NOT to hug the text vertically (Duri keeps ~200pt of
+    /// blank paper under the last line on ordinary full pages), so the window-trimmed page showed its ink
+    /// pushed to the top with a dead band below - glaring in night mode, where the blank paper is black
+    /// ("too much space above, not equal to the bottom" - user report). The blank varies by edition AND
+    /// by page (openers, surah ends), so no fixed window fixes it: measure the ink per page and cut to it.
+    /// Cut, not slid: sliding the fixed-height window up to center the ink runs past the page's own crop
+    /// box into the header furniture it had already excluded (verified on Duri - the shifted window
+    /// re-admitted the islamweb header). The cushion is clamped to the furniture-free region and kept
+    /// symmetric, so balance survives the clamp.
+    @MainActor
+    private static func inkCenteredCrop(_ trimmed: CGRect, for page: PDFPage) -> CGRect {
+        let key = "\(page.document?.documentURL?.lastPathComponent ?? "")|\(page.label ?? "")|\(Int(trimmed.minY))|\(Int(trimmed.height))"
+        if let hit = inkCenteredCrops[key] { return hit }
+
+        var result = trimmed
+        if let ink = inkSpan(of: page, in: trimmed), ink.top - ink.bottom > 60 {
+            let pad = min(20, trimmed.maxY - ink.top, ink.bottom - trimmed.minY)
+            result = CGRect(
+                x: trimmed.minX,
+                y: ink.bottom - pad,
+                width: trimmed.width,
+                height: (ink.top - ink.bottom) + pad * 2
+            )
+        }
+        // A rebuild-scale bound, far above 604 pages x 3 resident editions; entries are tiny.
+        if inkCenteredCrops.count > 4000 { inkCenteredCrops.removeAll(keepingCapacity: false) }
+        inkCenteredCrops[key] = result
+        return result
+    }
+
+    /// The vertical extent of the ink inside `rect`, in PDF coordinates (origin bottom-left), from a
+    /// small grayscale rasterization: ~200pt tall, so the measure costs a few milliseconds of vector
+    /// render once per page. Grayscale luminance keeps the colored prints honest - the red imaalah
+    /// letters and pink tajweed ink all read dark, only paper reads light. Nil when the page has no
+    /// ink at all (a malformed or blank drop-in), which keeps the original window.
+    @MainActor
+    private static func inkSpan(of page: PDFPage, in rect: CGRect) -> (top: CGFloat, bottom: CGFloat)? {
+        guard let copy = page.copy() as? PDFPage else { return nil }
+        copy.setBounds(rect, for: .cropBox)
+
+        let height = 200
+        let width = max(Int(rect.width / rect.height * CGFloat(height)), 40)
+        let image = copy.thumbnail(of: CGSize(width: width, height: height), for: .cropBox)
+        guard let cg = image.cgImage else { return nil }
+
+        var pixels = [UInt8](repeating: 255, count: width * height)
+        guard let ctx = CGContext(
+            data: &pixels, width: width, height: height, bitsPerComponent: 8, bytesPerRow: width,
+            space: CGColorSpaceCreateDeviceGray(), bitmapInfo: CGImageAlphaInfo.none.rawValue
+        ) else { return nil }
+        // White under the page first: the thumbnail can carry transparent margins, which would
+        // otherwise decode as 0 (ink-black) and defeat the whole measurement.
+        ctx.setFillColor(gray: 1, alpha: 1)
+        ctx.fill(CGRect(x: 0, y: 0, width: width, height: height))
+        ctx.draw(cg, in: CGRect(x: 0, y: 0, width: width, height: height))
+
+        // Buffer row 0 is the TOP scanline of the drawn page (verified empirically - a CGImage drawn
+        // into a bitmap context lands with its top row first in memory). Mark the rows with real ink.
+        var firstInkRow = -1, lastInkRow = -1
+        for row in 0..<height {
+            var count = 0
+            for col in stride(from: 0, to: width, by: 2) where pixels[row * width + col] < 216 {
+                count += 1
+                if count > 4 { break }
+            }
+            if count > 4 {
+                if firstInkRow < 0 { firstInkRow = row }
+                lastInkRow = row
+            }
+        }
+        guard firstInkRow >= 0 else { return nil }
+
+        let scale = rect.height / CGFloat(height)
+        let top = rect.maxY - CGFloat(firstInkRow) * scale
+        let bottom = rect.maxY - CGFloat(lastInkRow + 1) * scale
+        return (top, bottom)
     }
 }
 

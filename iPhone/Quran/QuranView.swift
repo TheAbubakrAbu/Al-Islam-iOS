@@ -2050,18 +2050,21 @@ struct QuranView: View {
 
         Divider()
 
-        if let last = settings.lastListenedSurah,
-              let surah = quranData.surah(last.surahNumber) {
-            Button {
-                settings.hapticFeedback()
-                quranPlayer.playSurah(
-                    surahNumber: last.surahNumber,
-                    surahName: last.surahName,
-                    certainReciter: true
+        // Bottom-up by importance (user-picked order): Play Last Listened sits at the visual BOTTOM -
+        // nearest the thumb - with Random Surah above it and Random Ayah above that. The menus use
+        // `fixedMenuOrder`, so declared order IS the visual top-to-bottom order.
+        Button {
+            settings.hapticFeedback()
+            if let randomSurah = quranData.quran.randomElement(),
+               let randomAyah = randomSurah.ayahs.randomElement() {
+                quranPlayer.playAyah(
+                    surahNumber: randomSurah.id,
+                    ayahNumber: randomAyah.id,
+                    continueRecitation: true
                 )
-            } label: {
-                Label("Play Last Listened Surah (\(surah.nameTransliteration))", systemImage: "play.fill")
             }
+        } label: {
+            Label("Play Random Ayah", systemImage: "shuffle.circle")
         }
 
         Button {
@@ -2077,20 +2080,19 @@ struct QuranView: View {
             Label("Play Random Surah", systemImage: "shuffle")
         }
 
-        Button {
-            settings.hapticFeedback()
-            if let randomSurah = quranData.quran.randomElement(),
-               let randomAyah = randomSurah.ayahs.randomElement() {
-                quranPlayer.playAyah(
-                    surahNumber: randomSurah.id,
-                    ayahNumber: randomAyah.id,
-                    continueRecitation: true
+        if let last = settings.lastListenedSurah,
+              let surah = quranData.surah(last.surahNumber) {
+            Button {
+                settings.hapticFeedback()
+                quranPlayer.playSurah(
+                    surahNumber: last.surahNumber,
+                    surahName: last.surahName,
+                    certainReciter: true
                 )
+            } label: {
+                Label("Play Last Listened Surah (\(surah.nameTransliteration))", systemImage: "play.fill")
             }
-        } label: {
-            Label("Play Random Ayah", systemImage: "shuffle.circle")
         }
-        // (Choose Reciter now lives at the TOP of this menu.)
         #endif
     }
 

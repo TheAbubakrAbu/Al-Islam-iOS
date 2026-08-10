@@ -1411,8 +1411,10 @@ struct SurahView: View {
             // is not a list, so it draws the same wash itself - the mushaf shouldn't be the one
             // screen without it. On the facsimile the wash stops at the surah-info bar: the page
             // begins right under it, and a glow reaching down the page's flanks made the night-mode
-            // page read as a separate black slab on a tinted field (user feedback).
-            .background(AccentGlowOverlay(verticalReach: settings.resolvedMushafPageLanguage.isPDF ? 190 : 380))
+            // page read as a separate black slab on a tinted field (user feedback). 150, not the
+            // original 190: the compacted surah-info bar sits higher now, and the wash was seen
+            // bleeding past it onto the page's top edge (user feedback again).
+            .background(AccentGlowOverlay(verticalReach: settings.resolvedMushafPageLanguage.isPDF ? 150 : 380))
             // No `.id(surah.id)` here, deliberately: identity-swapping the reader tore down and rebuilt the
             // ~604-page UIPageViewController - the single heaviest view realization in the app (~900ms) -
             // on EVERY surah jump. The reader now re-seeds its own page index when `surah.id` changes
@@ -2872,41 +2874,9 @@ struct SurahView: View {
                 Text("Surah Playback")
                     .foregroundStyle(.secondary)
 
-                if canResumeLast, let last = settings.lastListenedSurah {
-                    Button {
-                        settings.hapticFeedback()
-                        quranPlayer.playSurah(
-                            surahNumber: last.surahNumber,
-                            surahName: last.surahName,
-                            certainReciter: true
-                        )
-                    } label: {
-                        Label("Play Last Listened", systemImage: "play.fill")
-                    }
-                }
-
-                Button {
-                    settings.hapticFeedback()
-                    quranPlayer.playSurah(
-                        surahNumber: surah.id,
-                        surahName: surah.nameTransliteration
-                    )
-                } label: {
-                    Label(canResumeLast ? "Play from Beginning" : "Play Surah", systemImage: "memories")
-                }
-
-                Button {
-                    settings.hapticFeedback()
-                    quranPlayer.playAyah(
-                        surahNumber: surah.id,
-                        ayahNumber: 1,
-                        continueRecitation: true
-                    )
-                } label: {
-                    Label("Play Ayah by Ayah", systemImage: "list.number")
-                }
-                // (Choose Reciter now lives at the TOP of this menu.)
-
+                // Play Surah sits at the visual BOTTOM of every play menu (user-picked order) - the
+                // primary action lands nearest the thumb, with Play Last Listened just above it.
+                // Declared order is visual order (`fixedMenuOrder`).
                 Menu {
                     Text("More Playback")
                         .foregroundStyle(.secondary)
@@ -2960,6 +2930,40 @@ struct SurahView: View {
                     }
                 } label: {
                     Label("Other Options", systemImage: "ellipsis.circle")
+                }
+
+                Button {
+                    settings.hapticFeedback()
+                    quranPlayer.playAyah(
+                        surahNumber: surah.id,
+                        ayahNumber: 1,
+                        continueRecitation: true
+                    )
+                } label: {
+                    Label("Play Ayah by Ayah", systemImage: "list.number")
+                }
+
+                if canResumeLast, let last = settings.lastListenedSurah {
+                    Button {
+                        settings.hapticFeedback()
+                        quranPlayer.playSurah(
+                            surahNumber: last.surahNumber,
+                            surahName: last.surahName,
+                            certainReciter: true
+                        )
+                    } label: {
+                        Label("Play Last Listened", systemImage: "play.fill")
+                    }
+                }
+
+                Button {
+                    settings.hapticFeedback()
+                    quranPlayer.playSurah(
+                        surahNumber: surah.id,
+                        surahName: surah.nameTransliteration
+                    )
+                } label: {
+                    Label(canResumeLast ? "Play from Beginning" : "Play Surah", systemImage: "memories")
                 }
             } label: {
                 playbackMenuControlLabel {
@@ -3866,34 +3870,93 @@ private struct TajweedLegendMenu: View {
     @ObservedObject private var settings = Settings.shared
 
     @State private var showingSheet = false
+    /// The long-press quick peek: the first few legend entries in a small popover, so a color can be
+    /// checked without opening (and then dismissing) the full legend sheet.
+    @State private var showingQuickPeek = false
 
     var expandsToFillRow: Bool = false
 
+    /// The first few rows of whichever legend applies right now: the displayed riwayah's own printed
+    /// color code when one is bundled, the Hafs tajweed rules otherwise. (color, name, subtitle).
+    private var quickPeekEntries: [(color: Color, title: String, subtitle: String)] {
+        if let tag = settings.riwayahTajweedPackTag {
+            return QiraahTajweedStore.shared.legend(for: tag).prefix(6).map {
+                ($0.color, $0.english, $0.arabic)
+            }
+        }
+        return TajweedLegendCategory.allCases
+            .sorted { $0.sortRank < $1.sortRank }
+            .prefix(6)
+            .map { ($0.color, $0.transliteration, $0.exactEnglishTranslation) }
+    }
+
+    private var quickPeekCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            ForEach(Array(quickPeekEntries.enumerated()), id: \.offset) { _, entry in
+                HStack(spacing: 10) {
+                    Circle()
+                        .fill(entry.color)
+                        .frame(width: 10, height: 10)
+
+                    Text(entry.title)
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.primary)
+
+                    Text(entry.subtitle)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
+            }
+
+            Text("Tap Legend for the full guide")
+                .font(.caption2)
+                .foregroundStyle(.tertiary)
+        }
+        .padding(14)
+    }
+
     var body: some View {
-        Button {
+        HStack(spacing: 8) {
+            HStack(spacing: 4) {
+                ForEach([Color.red, .orange, .yellow, .green, .blue], id: \.self) { item in
+                    Circle()
+                        .fill(item)
+                        .frame(width: 5, height: 5)
+                }
+            }
+
+            Text("Legend")
+                .font(.caption)
+                .foregroundColor(settings.accentColor.color)
+                .lineLimit(1)
+                .fixedSize()
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
+        .contentShape(Rectangle())
+        .shadow(color: .primary.opacity(0.25), radius: 2, x: 0, y: 0)
+        .conditionalGlassEffect()
+        // Plain gestures, not a Button: a Button's tap would ALSO fire on release after the long press,
+        // opening the peek and the full sheet together. Exclusive gestures give the hold to the peek
+        // and the tap to the sheet, cleanly.
+        .onTapGesture {
             settings.hapticFeedback()
             showingSheet = true
-        } label: {
-            HStack(spacing: 8) {
-                HStack(spacing: 4) {
-                    ForEach([Color.red, .orange, .yellow, .green, .blue], id: \.self) { item in
-                        Circle()
-                            .fill(item)
-                            .frame(width: 5, height: 5)
-                    }
-                }
-
-                Text("Legend")
-                    .font(.caption)
-                    .foregroundColor(settings.accentColor.color)
-                    .lineLimit(1)
-                    .fixedSize()
+        }
+        .onLongPressGesture(minimumDuration: 0.35) {
+            settings.hapticFeedback()
+            showingQuickPeek = true
+        }
+        .popover(isPresented: $showingQuickPeek) {
+            if #available(iOS 16.4, *) {
+                quickPeekCard
+                    .presentationCompactAdaptation(.popover)
+            } else {
+                // Pre-16.4 a popover adapts to a sheet on iPhone anyway - give it a sensible height.
+                quickPeekCard
+                    .smallMediumSheetPresentation()
             }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 8)
-            .contentShape(Rectangle())
-            .shadow(color: .primary.opacity(0.25), radius: 2, x: 0, y: 0)
-            .conditionalGlassEffect()
         }
         .sheet(isPresented: $showingSheet) {
             NavigationView {

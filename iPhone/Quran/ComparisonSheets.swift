@@ -13,6 +13,10 @@ struct AyahQiraahComparisonSheet: View {
     // Comparing scripts is exactly when you want the text bigger; the slider only affects this sheet.
     @State private var arabicFontSize: Double = Double(UIFont.preferredFont(forTextStyle: .title3).pointSize)
     @State private var showSummarize = false
+    /// Smart comparison (default ON): rows are aligned through Hafs to the SAME WORDS even where a
+    /// riwayah numbers this ayah differently or joins it with a neighbor. Off = each row shows that
+    /// riwayah's ayah under this exact NUMBER, unaligned - useful for seeing the numbering itself.
+    @AppStorage("qiraahSmartComparison") private var smartComparison = true
 
     private struct QiraahDisplay: Identifiable {
         let label: String
@@ -86,8 +90,17 @@ struct AyahQiraahComparisonSheet: View {
             List {
                     Group {
                         Section {
-                            Text("Compare this ayah across the Arabic riwayat available in the app. Ayah numbering differs between riwayat, so rows are aligned to the SAME WORDS automatically; a note marks any riwayah that numbers this ayah differently or joins it with a neighbor. Words tinted in the accent color differ from the current riwayah's reading.")
-                                .font(.subheadline)
+                            Toggle(isOn: $smartComparison.animation(.easeInOut)) {
+                                Text("Smart Comparison")
+                                    .font(.subheadline.weight(.semibold))
+                            }
+                            .tint(settings.accentColor.color)
+                            .onChange(of: smartComparison) { _ in settings.hapticFeedback() }
+                        } footer: {
+                            Text(smartComparison
+                                 ? "Compare this ayah across the Arabic riwayat available in the app. Ayah numbering differs between riwayat, so rows are aligned to the SAME WORDS automatically; a note marks any riwayah that numbers this ayah differently or joins it with a neighbor. Words tinted in the accent color differ from the current riwayah's reading."
+                                 : "Smart Comparison is off: each row shows that riwayah's ayah under this exact NUMBER, with no word alignment - where numbering differs, rows may show different words. Turn it on to align every row to the same words.")
+                                .font(.caption)
                                 .foregroundStyle(.secondary)
                         }
 
@@ -246,9 +259,20 @@ struct AyahQiraahComparisonSheet: View {
     }
 
     /// The same WORDS as the tapped ayah, in this riwayah - the shared resolver, so the rows here and
-    /// the AI gatherer serve identical text (see `QiraahAyahResolver`).
+    /// the AI gatherer serve identical text (see `QiraahAyahResolver`). With Smart Comparison off,
+    /// the pre-resolver direct read instead: this riwayah's ayah under the tapped NUMBER, unaligned.
     private func resolvedText(for option: QiraahDisplay) -> ResolvedQiraahText? {
-        QiraahAyahResolver.resolve(
+        guard smartComparison else {
+            let tag = Settings.Riwayah.canonicalTag(option.tag)
+            guard let ayah = quranData.ayah(surah: surahNumber, ayah: ayahNumber),
+                  tag.isEmpty || ayah.existsInQiraah(tag, surahID: surahNumber) else { return nil }
+            return ResolvedQiraahText(
+                text: ayah.displayArabicText(surahId: surahNumber, clean: settings.cleanArabicText, qiraahOverride: tag),
+                ownNumber: nil,
+                mergedSpan: nil
+            )
+        }
+        return QiraahAyahResolver.resolve(
             surahNumber: surahNumber,
             ayahNumber: ayahNumber,
             anchorHafsAyah: anchorHafsAyah,

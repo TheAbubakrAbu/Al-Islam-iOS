@@ -1139,10 +1139,16 @@ struct SelectAyahTextSheet: View {
     @State private var hideTashkeel = Settings.shared.cleanArabicText
     @State private var hideDots = Settings.shared.removeArabicDots
 
+    // The sheet's own Arabic face, seeded from what the reader is showing for the current riwayah -
+    // switching here restyles only the text being selected, never the reading view.
+    @State private var selectedFontName: String = Settings.shared.quranArabicFontName(
+        for: Settings.normalizeLegacyRiwayahTag(Settings.shared.displayQiraah)
+    )
+
     private var usesCustomArabicFace: Bool {
         // The bundled faces carry no glyphs for the dotless skeleton letters, so hiding dots
         // falls back to the system face - the reading view's own rule.
-        !hideDots && settings.quranUsesCustomArabicFace
+        !hideDots && selectedFontName != Settings.systemArabicFontName
     }
 
     private var ayahExistsInSelectedQiraah: Bool {
@@ -1160,7 +1166,7 @@ struct SelectAyahTextSheet: View {
     }
 
     private var arabicFontName: String {
-        usesCustomArabicFace ? settings.quranArabicFontName(for: selectedQiraah) : settings.fontArabic
+        selectedFontName
     }
 
     var body: some View {
@@ -1178,6 +1184,16 @@ struct SelectAyahTextSheet: View {
                     }
 
                     Section {
+                        Picker("Arabic Font", selection: $selectedFontName.animation(.easeInOut)) {
+                            Text("Uthmani").tag(Settings.hafsUthmaniFontName)
+                            Text("Maghribi").tag(Settings.warshUthmaniFontName)
+                            Text("Indopak").tag(Settings.indopakFontName)
+                            Text("Basic").tag(Settings.systemArabicFontName)
+                        }
+                        .pickerStyle(SegmentedPickerStyle())
+                        .disabled(hideDots)
+                        .onChange(of: selectedFontName) { _ in settings.hapticFeedback() }
+
                         Toggle("Hide Tashkeel (Vowel Diacritics) and Signs", isOn: $hideTashkeel.animation(.easeInOut))
                             .font(.subheadline)
                             .onChange(of: hideTashkeel) { _ in settings.hapticFeedback() }
@@ -1188,7 +1204,7 @@ struct SelectAyahTextSheet: View {
                                 .onChange(of: hideDots) { _ in settings.hapticFeedback() }
                         }
                     } footer: {
-                        Text("Shapes only the Arabic text below; the reading view keeps its own settings.")
+                        Text("Shapes only the Arabic text below; the reading view keeps its own settings. Hiding Arabic dots always uses the Basic face - the classical faces have no dotless letterforms.")
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
