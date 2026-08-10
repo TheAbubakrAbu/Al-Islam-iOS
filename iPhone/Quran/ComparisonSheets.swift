@@ -26,10 +26,11 @@ struct AyahQiraahComparisonSheet: View {
         var id: String { tag.isEmpty ? "Hafs" : tag }
     }
 
-    /// `Settings.Riwayah.options` already omits the beta riwayat unless the user turned
-    /// beta qiraat on, so comparison mode never surfaces unverified text by accident.
+    /// Comparison columns are pure TEXT - there is no facsimile fallback here - so
+    /// they list `textOptions`: the beta riwayat appear only once their beta text
+    /// has been accepted, never as a silent Hafs stand-in.
     private var options: [QiraahDisplay] {
-        Settings.Riwayah.options.map {
+        Settings.Riwayah.textOptions.map {
             QiraahDisplay(
                 label: $0.label,
                 tag: $0.tag,
@@ -943,7 +944,7 @@ enum AyahAISources {
     static func qiraahComparisonText(surahNumber: Int, ayahNumber: Int) -> String {
         let anchor = hafsAnchor(surahNumber: surahNumber, ayahNumber: ayahNumber)
         let currentTag = Settings.normalizeLegacyRiwayahTag(Settings.shared.displayQiraah)
-        let options = Settings.Riwayah.options
+        let options = Settings.Riwayah.textOptions
 
         func resolved(_ tag: String) -> ResolvedQiraahText? {
             QiraahAyahResolver.resolve(

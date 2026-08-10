@@ -139,46 +139,83 @@ final class BetaQiraatStore: @unchecked Sendable {
     }
 }
 
-// MARK: - The beta notice
+// MARK: - The beta-text consent
 
-/// One shared confirmation for picking a beta riwayah, wherever the pick happens
-/// (Quran settings, the reader's riwayah menu, the comparison sheet). Presented as a
-/// dialog attached to the control that triggered it, so iPad anchors it correctly.
-struct BetaQiraahConfirmation: ViewModifier {
+/// Shown IN PLACE of a beta riwayah's text the first time text would render (the
+/// list reader; the Page Text menu routes here too). Selecting a beta riwayah is
+/// never blocked - its printed mushaf is exact and loads without any of this -
+/// so the consent lives exactly where the beta thing (the TEXT) would appear,
+/// with both ways out on the same screen. No dialog, no settings scavenger hunt.
+struct BetaTextConsentCard: View {
     @ObservedObject private var settings = Settings.shared
 
-    @Binding var option: Settings.Riwayah.Option?
-    let onAccept: (Settings.Riwayah.Option) -> Void
+    /// Riwayah shown in the title, e.g. "Ruways an Yaqub".
+    let riwayahLabel: String
+    /// Switch this reader to the printed mushaf (page mode + facsimile).
+    let onReadPrint: () -> Void
 
-    func body(content: Content) -> some View {
-        content.confirmationDialog(
-            "Use \(option?.label ?? "this riwayah")?",
-            isPresented: Binding(
-                get: { option != nil },
-                set: { if !$0 { option = nil } }
-            ),
-            titleVisibility: .visible
-        ) {
-            Button("Continue") {
-                settings.hapticFeedback()
-                settings.acceptedBetaQiraatNotice = true
-                if let option { onAccept(option) }
-                option = nil
+    var body: some View {
+        ScrollView {
+            VStack(spacing: 18) {
+                Image(systemName: "book.pages")
+                    .font(.system(size: 40, weight: .light))
+                    .foregroundStyle(settings.accentColor.color)
+                    .padding(.top, 28)
+
+                VStack(spacing: 6) {
+                    Text(riwayahLabel)
+                        .font(.title3.weight(.semibold))
+                    Text("Printed mushaf, or beta text?")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+
+                Text("The printed mushaf of this riwayah is exact - the scanned pages of its published print. Its SELECTABLE TEXT is a beta transcription:\n\n\(Settings.betaQiraatNotice)")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.horizontal, 6)
+
+                VStack(spacing: 10) {
+                    Button {
+                        settings.hapticFeedback()
+                        onReadPrint()
+                    } label: {
+                        Label("Read the Printed Mushaf", systemImage: "doc.richtext")
+                            .font(.subheadline.weight(.semibold))
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 12)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(settings.accentColor.color)
+
+                    Button {
+                        settings.hapticFeedback()
+                        withAnimation(.easeInOut) {
+                            settings.betaQiraatEnabled = true
+                            settings.acceptedBetaQiraatNotice = true
+                        }
+                    } label: {
+                        Label("Use the Beta Text", systemImage: "flask")
+                            .font(.subheadline.weight(.semibold))
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 12)
+                    }
+                    .buttonStyle(.bordered)
+                    .tint(settings.accentColor.color)
+                }
+
+                Text("Change anytime: Quran Settings → Beta Text, or the reader's Page Text menu.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
             }
-            Button("Cancel", role: .cancel) { option = nil }
-        } message: {
-            Text(Settings.betaQiraatNotice)
+            .padding(.horizontal, 24)
+            .padding(.bottom, 28)
+            .frame(maxWidth: 520)
+            .frame(maxWidth: .infinity)
         }
-    }
-}
-
-extension View {
-    /// Confirms a beta-riwayah selection before applying it.
-    func betaQiraahConfirmation(
-        option: Binding<Settings.Riwayah.Option?>,
-        onAccept: @escaping (Settings.Riwayah.Option) -> Void
-    ) -> some View {
-        modifier(BetaQiraahConfirmation(option: option, onAccept: onAccept))
     }
 }
 #endif

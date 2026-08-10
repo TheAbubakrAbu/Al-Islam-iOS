@@ -137,6 +137,16 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
         if ProcessInfo.processInfo.arguments.contains("-qiraatComparisonMode") {
             UserDefaults.standard.set(true, forKey: "qiraatComparisonMode")
         }
+        // Same headless-verification pattern for the facsimile: `-mushafPageLanguage pdf` puts page
+        // mode on the printed mushaf, `-mushafPDFAppearance light|night|auto` pins its lighting.
+        if let idx = ProcessInfo.processInfo.arguments.firstIndex(of: "-mushafPageLanguage"),
+           ProcessInfo.processInfo.arguments.indices.contains(idx + 1) {
+            UserDefaults.standard.set(ProcessInfo.processInfo.arguments[idx + 1], forKey: "mushafPageLanguage")
+        }
+        if let idx = ProcessInfo.processInfo.arguments.firstIndex(of: "-mushafPDFAppearance"),
+           ProcessInfo.processInfo.arguments.indices.contains(idx + 1) {
+            UserDefaults.standard.set(ProcessInfo.processInfo.arguments[idx + 1], forKey: "mushafPDFAppearance")
+        }
         #endif
 
         runQuranStartupMigrations()
@@ -1117,12 +1127,21 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     @AppStorage("mushafPageLanguage") var mushafPageLanguage: String = MushafPageLanguage.arabic.rawValue
 
     var resolvedMushafPageLanguage: MushafPageLanguage {
-        MushafPageLanguage(rawValue: mushafPageLanguage) ?? .arabic
+        let base = MushafPageLanguage(rawValue: mushafPageLanguage) ?? .arabic
+        #if os(iOS)
+        // A beta riwayah whose text hasn't been opted into: the composed Arabic page
+        // would show the unaccepted transcription, so page mode reads the riwayah's
+        // own printed mushaf instead - the exact print, nothing beta about it.
+        // (All 12 beta riwayat ship their facsimile.) English pages stay English.
+        if base == .arabic, displayBetaTextConsentNeeded { return .pdf }
+        #endif
+        return base
     }
 
-    /// Inverts the printed-mushaf PDF for dark reading (hue-preserving, so the green border stays green).
-    /// Off by default: the facsimile is meant to look like the printed page it is.
-    @AppStorage("mushafPDFNightMode") var mushafPDFNightMode = false
+    /// How the printed-mushaf PDF is lit: "auto" (default) follows the app's light/dark appearance, so a
+    /// dark app shows the print inverted without being asked; "light"/"night" pin it either way. The
+    /// invert is hue-preserving (the green border stays green). Raw `MushafPDFAppearance` value.
+    @AppStorage("mushafPDFAppearance") var mushafPDFAppearance: String = MushafPDFAppearance.auto.rawValue
     /// Shows the spelled-out pronunciation aid above muqatta'at ayahs (e.g. أَلِفۡ لَآم مِيٓمۡ). Off by default.
     @AppStorage("showMuqattaatHelper") var showMuqattaatHelper = false
 
@@ -1318,6 +1337,14 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
         #else
         return nil
         #endif
+    }
+
+    /// True when the DISPLAYED riwayah's selectable text is beta and the user hasn't
+    /// opted into beta text yet. Text surfaces show the consent card instead of text;
+    /// page mode falls back to the riwayah's printed mushaf (which is exact, not beta).
+    var displayBetaTextConsentNeeded: Bool {
+        guard let tag = displayQiraahForArabic else { return false }
+        return Self.Riwayah.isBeta(Self.Riwayah.canonicalTag(tag)) && !betaQiraatEnabled
     }
 
     /// Hidden riwayah tajweed rules, by rule KEY ("idgham", "silah_meem", ...), comma-joined.

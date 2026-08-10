@@ -241,6 +241,12 @@ struct AccentGlowOverlay: View {
     @ObservedObject private var settings = Settings.shared
     @Environment(\.colorScheme) private var systemColorScheme
 
+    /// How far down the wash reaches before it is fully faded. The default covers the navigation
+    /// area and dies before mid-screen. The PDF mushaf reader passes a short reach that ends at the
+    /// surah-info bar: the facsimile page starts right below it, and the wash tinting the background
+    /// around the page made the (black) night page read as a separate slab on a green field.
+    var verticalReach: CGFloat = 380
+
     var body: some View {
         let strength: Double = (settings.hasCustomThemeColors || !settings.showAccentGlow)
             ? 0 : ((settings.colorScheme ?? systemColorScheme) == .dark ? 0.16 : 0.10)
@@ -256,7 +262,6 @@ struct AccentGlowOverlay: View {
         // reach with a y-compression - the glow becomes a wide, shallow ellipse across the whole top.
         GeometryReader { geo in
             let radius = max(380, geo.size.width)
-            let verticalReach: CGFloat = 380
 
             ZStack {
                 RadialGradient(

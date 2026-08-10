@@ -237,6 +237,9 @@ struct SurahView: View {
     @State private var showReciterPickerSheet = false
     @State private var showSurahPickerSheet = false
     @State private var confirmConvertQiraahToHafs = false
+    /// Consent dialog for switching a beta riwayah's page text from the (exact) facsimile
+    /// to its beta transcription - the reader-menu twin of `BetaTextConsentCard`.
+    @State private var confirmBetaTextSwitch = false
     @State private var isAyahSearchFocused = false
     @State private var dividerInfo: DividerInfo? = nil
     @State private var surahInfoDialog: SurahInfoDialog? = nil
@@ -1406,12 +1409,27 @@ struct SurahView: View {
             }
             // The list reader gets the top accent glow through `applyConditionalListStyle`; the pager
             // is not a list, so it draws the same wash itself - the mushaf shouldn't be the one
-            // screen without it.
-            .background(AccentGlowOverlay())
+            // screen without it. On the facsimile the wash stops at the surah-info bar: the page
+            // begins right under it, and a glow reaching down the page's flanks made the night-mode
+            // page read as a separate black slab on a tinted field (user feedback).
+            .background(AccentGlowOverlay(verticalReach: settings.resolvedMushafPageLanguage.isPDF ? 190 : 380))
             // No `.id(surah.id)` here, deliberately: identity-swapping the reader tore down and rebuilt the
             // ~604-page UIPageViewController - the single heaviest view realization in the app (~900ms) -
             // on EVERY surah jump. The reader now re-seeds its own page index when `surah.id` changes
             // (see its `.onChange`), keeping the pager alive.
+        } else if settings.displayBetaTextConsentNeeded {
+            // List mode NEEDS the text, and this riwayah's text hasn't been opted
+            // into yet - so the list's place holds the choice itself: read the
+            // exact print (flips to page mode, which resolves to the facsimile)
+            // or accept the beta text (list renders immediately).
+            BetaTextConsentCard(
+                riwayahLabel: Settings.Riwayah.option(for: settings.displayQiraah).label,
+                onReadPrint: {
+                    withAnimation(.easeInOut) { settings.quranPageMode = true }
+                }
+            )
+            .background(AccentGlowOverlay())
+            .onAppear { pageSurah = nil }
         } else {
             surahCoreBody
                 // Back in list mode the title is fixed to this view's own surah again.
@@ -2391,9 +2409,11 @@ struct SurahView: View {
                         Spacer(minLength: 0)
                     }
 
-                    // Beta riwayat keep their warning ON SCREEN while being read - the
-                    // one-time selection dialog is easy to forget three surahs later.
-                    if option.beta {
+                    // The beta-TEXT warning stays on screen while beta text is actually
+                    // rendering - the one-time consent is easy to forget three surahs
+                    // later. Reading the facsimile (or pre-consent) shows no warning:
+                    // the print is exact.
+                    if option.beta, settings.betaQiraatEnabled {
                         HStack(alignment: .top, spacing: 8) {
                             Image(systemName: "exclamationmark.triangle.fill")
                                 .font(.caption)
@@ -2678,13 +2698,15 @@ struct SurahView: View {
     private var pageBottomControlsBar: some View {
         let language = settings.resolvedMushafPageLanguage
         let arabicPage = !language.isEnglish
-        // The facsimile carries the print's own colouring and cannot be re-coloured, so the tajweed legend
-        // has nothing to describe there. The riwayah picker DOES stay - it is what swaps which mushaf shows.
         let tajweedCanRenderNow = arabicPage
             && !language.isPDF
             && settings.showTajweedColors
             && settings.showArabicText
             && (settings.isHafsDisplay || settings.riwayahTajweedPackTag != nil)
+        // On the facsimile the legend ALWAYS shows (user rule): the print's own colour code is on screen
+        // and can't be turned off, and the legend sheet explains exactly that - the riwayah's print
+        // legend when one is bundled, the Hafs tajweed legend otherwise.
+        let legendVisible = tajweedCanRenderNow || (arabicPage && language.isPDF)
         // The picker ALWAYS shows when the reader is on a non-Hafs riwayah: being in another qiraah
         // is itself the comparison context, and it's also the way back. The toggle only decides
         // whether Hafs - the default everyone starts on - carries the extra control.
@@ -2694,12 +2716,12 @@ struct SurahView: View {
         // neither enabled the bar shows nothing at all. It stretches to fill whatever width the flanking
         // controls leave, at their exact height (caption text + 8pt vertical padding).
         return Group {
-            if tajweedCanRenderNow || comparisonVisible {
+            if legendVisible || comparisonVisible {
                 HStack(alignment: .bottom, spacing: 4) {
                     // The legend and the riwayah picker take exactly the space THEY need (layoutPriority +
                     // fixed-size labels); the search stretches into whatever is left over - and when there
                     // isn't enough, it is the one that shrinks, scaling its label down first.
-                    if tajweedCanRenderNow {
+                    if legendVisible {
                         TajweedLegendMenu()
                             .layoutPriority(1)
                     }
@@ -3056,6 +3078,12 @@ struct SurahView: View {
                 Button {
                     settings.hapticFeedback()
                     let isPDF = settings.resolvedMushafPageLanguage.isPDF
+                    // Switching a beta riwayah TO text is the consent moment: the print
+                    // is exact, the selectable text is the beta thing - confirm it here.
+                    if isPDF, settings.displayBetaTextConsentNeeded {
+                        confirmBetaTextSwitch = true
+                        return
+                    }
                     withAnimation(.easeInOut) {
                         settings.mushafPageLanguage = isPDF
                             ? MushafPageLanguage.arabic.rawValue
@@ -3063,7 +3091,8 @@ struct SurahView: View {
                     }
                 } label: {
                     Label(settings.resolvedMushafPageLanguage.isPDF
-                              ? "Read as Text" : "Read as Printed Mushaf (PDF)",
+                              ? (settings.displayBetaTextConsentNeeded ? "Read as Text (Beta)" : "Read as Text")
+                              : "Read as Printed Mushaf (PDF)",
                           systemImage: settings.resolvedMushafPageLanguage.isPDF
                               ? "textformat" : "doc.richtext")
                 }
@@ -3077,18 +3106,34 @@ struct SurahView: View {
                     Picker("Page Text", selection: $settings.mushafPageLanguage) {
                         // The PDF facsimile only lists itself when this riwayah actually has one bundled,
                         // so a missing file reads as "not offered here" rather than an empty reader.
+                        // While the beta text is unaccepted, "Arabic" leaves the picker (the facsimile
+                        // IS the Arabic page then) and returns as the consent button below.
                         ForEach(MushafPageLanguage.allCases.filter {
-                            !$0.isPDF || MushafPDFLibrary.isAvailable(for: pdfRiwayahTag)
+                            ($0.isPDF ? MushafPDFLibrary.isAvailable(for: pdfRiwayahTag)
+                                      : !($0 == .arabic && settings.displayBetaTextConsentNeeded))
                         }) { language in
                             Text(language.displayName).tag(language.rawValue)
                         }
                     }
 
+                    if settings.displayBetaTextConsentNeeded {
+                        Button {
+                            confirmBetaTextSwitch = true
+                        } label: {
+                            Label("Arabic - Beta Text…", systemImage: "flask")
+                        }
+                    }
+
                     // Only meaningful while the facsimile is on screen, so it only appears then.
+                    // Automatic follows the app's light/dark appearance; Light/Night pin the print
+                    // either way, so night reading is always one choice away regardless of theme.
                     if settings.resolvedMushafPageLanguage.isPDF {
                         Divider()
-                        Toggle(isOn: $settings.mushafPDFNightMode) {
-                            Label("Night Mode", systemImage: "moon.circle")
+                        Picker("Appearance", selection: $settings.mushafPDFAppearance) {
+                            ForEach(MushafPDFAppearance.allCases) { appearance in
+                                Label(appearance.displayName, systemImage: appearance.systemImage)
+                                    .tag(appearance.rawValue)
+                            }
                         }
                         Text("The printed mushaf shows in page mode only.")
                     }
@@ -3103,6 +3148,23 @@ struct SurahView: View {
                 .frame(maxWidth: .infinity)
         }
         .frame(maxWidth: .infinity)
+        .confirmationDialog(
+            "Use the beta text?",
+            isPresented: $confirmBetaTextSwitch,
+            titleVisibility: .visible
+        ) {
+            Button("Use Beta Text") {
+                settings.hapticFeedback()
+                withAnimation(.easeInOut) {
+                    settings.betaQiraatEnabled = true
+                    settings.acceptedBetaQiraatNotice = true
+                    settings.mushafPageLanguage = MushafPageLanguage.arabic.rawValue
+                }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("The printed mushaf is this riwayah's exact published print. Its selectable text is beta:\n\n\(Settings.betaQiraatNotice)")
+        }
     }
 
     private var surahTitleLabel: some View {
@@ -3638,8 +3700,10 @@ private struct SurahPickerSheet: View {
 /// appears twice on purpose: inside Asim with Shu'bah, and as its own top-level entry,
 /// because it is the default text virtually every user reads.
 ///
-/// Selecting a BETA riwayah (the 12 machine-extracted ones) always routes through a
-/// confirmation first - see `BetaQiraahConfirmation`.
+/// Selecting any riwayah applies immediately - including the 12 whose TEXT is beta.
+/// The riwayah itself is never "beta" (its printed mushaf is exact and always
+/// available); the beta-text consent happens where text would actually render
+/// (`BetaTextConsentCard`), not here at selection time.
 struct ArabicTextRiwayahPicker: View {
     @ObservedObject private var settings = Settings.shared
 
@@ -3649,35 +3713,17 @@ struct ArabicTextRiwayahPicker: View {
     /// everywhere. `false` = the bare glass chip for toolbars/bars.
     var useMenuRow: Bool = false
 
-    #if os(iOS)
-    @State private var pendingBeta: Settings.Riwayah.Option?
-    #endif
-
     private var currentLabel: String {
         Settings.Riwayah.option(for: selection).label
     }
 
     private func choose(_ option: Settings.Riwayah.Option) {
         settings.hapticFeedback()
-        #if os(iOS)
-        // Beta riwayat confirm once - the text is machine-extracted, not yet verified.
-        if option.beta, !settings.acceptedBetaQiraatNotice {
-            pendingBeta = option
-            return
-        }
-        #endif
         withAnimation { selection = option.tag }
     }
 
     var body: some View {
-        #if os(iOS)
         content
-            .betaQiraahConfirmation(option: $pendingBeta) { option in
-                withAnimation { selection = option.tag }
-            }
-        #else
-        content
-        #endif
     }
 
     @ViewBuilder
@@ -3800,7 +3846,10 @@ struct ArabicTextRiwayahPicker: View {
                     Image(systemName: "checkmark")
                 }
 
-                Text(option.beta ? "\(option.label) (Beta)" : option.label)
+                // No "(Beta)" here: the riwayah itself is never beta - its printed
+                // mushaf is exact. Only its selectable TEXT is, and that is flagged
+                // where text actually renders (the consent card / Page Text menu).
+                Text(option.label)
             }
             .font(.caption)
 

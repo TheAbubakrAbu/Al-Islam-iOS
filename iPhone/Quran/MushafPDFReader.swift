@@ -67,6 +67,47 @@ enum MushafPDFLibrary {
     /// partial set of files degrades to "no PDF for this riwayah" instead of a blank reader.
     static func isAvailable(for tag: String) -> Bool { bundledURL(for: tag) != nil }
 
+    /// Per-edition content window (PDF points, origin bottom-left) holding just the Quran text: the
+    /// islamweb header/logo, the legend strip, the URL footer and the decorative side borders all fall
+    /// OUTSIDE it. Measured offline, per file, by rendering sample pages and walking inward from each
+    /// page edge across the ink that is pixel-identical on every page (page furniture) until the first
+    /// page-varying ink (real text) - the editions genuinely differ (header top vs bottom, borders or
+    /// none, one- or two-row legends), so no shared inset works. Displayed crop = the page's own
+    /// (text-hugging) crop box ∩ this window, so per-page tightness is kept where the file provides it.
+    /// A file absent here (a new drop-in) simply shows uncropped.
+    /// The sides keep 18pt of the print's own margin in front of the text (a text-hugging cut read
+    /// as "no spacing" on screen - user feedback, then dialed down a touch from 24pt); top and
+    /// bottom cut to just past the furniture ink.
+    private static let contentWindows: [String: CGRect] = [
+        "01-asim-hafs":              CGRect(x: 68.0, y: 65.0, width: 456.0, height: 696.0),
+        "01-asim-shubah":            CGRect(x: 63.0, y: 127.0, width: 468.0, height: 627.0),
+        "02-nafi-qalun":             CGRect(x: 67.91, y: 65.0, width: 456.4, height: 697.0),
+        "02-nafi-warsh":             CGRect(x: 67.91, y: 143.0, width: 455.4, height: 602.0),
+        "03-ibn-kathir-al-bazzi":    CGRect(x: 69.0, y: 112.0, width: 455.0, height: 635.0),
+        "03-ibn-kathir-qunbul":      CGRect(x: 68.0, y: 108.0, width: 456.0, height: 642.0),
+        "04-abu-amr-ad-duri":        CGRect(x: 67.91, y: 127.0, width: 456.4, height: 623.0),
+        "04-abu-amr-as-susi":        CGRect(x: 67.91, y: 121.0, width: 455.4, height: 640.0),
+        "05-ibn-amir-hisham":        CGRect(x: 68.0, y: 107.0, width: 456.0, height: 643.0),
+        "05-ibn-amir-ibn-dhakwan":   CGRect(x: 68.0, y: 119.0, width: 457.0, height: 631.0),
+        "06-hamzah-khalaf":          CGRect(x: 68.0, y: 125.0, width: 455.0, height: 625.0),
+        "06-hamzah-khallad":         CGRect(x: 68.0, y: 120.0, width: 456.0, height: 630.0),
+        "07-al-kisai-abu-al-harith": CGRect(x: 68.0, y: 128.0, width: 457.0, height: 622.0),
+        "07-al-kisai-ad-duri":       CGRect(x: 58.0, y: 119.0, width: 483.0, height: 631.0),
+        "08-abu-jafar-ibn-jammaz":   CGRect(x: 100.87, y: 108.0, width: 392.48, height: 637.0),
+        "08-abu-jafar-ibn-wardan":   CGRect(x: 100.87, y: 108.0, width: 392.48, height: 637.0),
+        "09-yaqub-rawh":             CGRect(x: 99.87, y: 109.0, width: 392.48, height: 636.0),
+        "09-yaqub-ruways":           CGRect(x: 99.87, y: 111.0, width: 392.48, height: 634.0),
+        "10-khalaf-al-ashir-idris":  CGRect(x: 100.0, y: 111.0, width: 393.0, height: 620.0),
+        "10-khalaf-al-ashir-ishaq":  CGRect(x: 100.0, y: 111.0, width: 393.0, height: 620.0),
+    ]
+
+    /// The text-only window for a loaded document, keyed by its file base name - works for both the
+    /// cache-extracted `.pdf.xz` copy and a plain bundled `.pdf`, whose names match by construction.
+    static func contentWindow(for document: PDFDocument) -> CGRect? {
+        guard let url = document.documentURL else { return nil }
+        return contentWindows[url.deletingPathExtension().lastPathComponent]
+    }
+
     /// The readable PDF's location: the bundled file itself when plain, otherwise a one-time extraction
     /// of the `.pdf.xz` into Caches. Extracting (not decompressing per open) keeps `PDFDocument` on its
     /// lazy file-mapped path - RAM stays at catalog-and-xref scale, not the whole 20+ MB file - and the
@@ -120,6 +161,8 @@ enum MushafPDFLibrary {
 /// Keeping PDFKit for the page itself is what buys crisp vector rendering at any zoom plus pinch-to-zoom.
 private struct MushafPDFPageView: UIViewRepresentable {
     let page: PDFPage
+    /// The edition's text-only content window (`MushafPDFLibrary.contentWindow`); nil shows the page as-is.
+    let cropWindow: CGRect?
 
     /// Remembers which `PDFPage` is currently installed. The view holds a *copy* of the page (see `install`),
     /// so the copy can't be compared back to the source - the original reference has to be tracked here.
@@ -154,7 +197,19 @@ private struct MushafPDFPageView: UIViewRepresentable {
     /// happily scroll on to its neighbours and fight the `TabView` that owns paging.
     private func install(_ page: PDFPage, in view: PDFView, coordinator: Coordinator) {
         let document = PDFDocument()
-        if let copy = page.copy() as? PDFPage { document.insert(copy, at: 0) }
+        if let copy = page.copy() as? PDFPage {
+            // Trim the page furniture (islamweb header, legend strip, side borders) off the display:
+            // the page's own crop box hugs the content vertically, the edition window cuts the rest.
+            // Applied to the COPY - the source document's pages stay untouched. The size guard keeps a
+            // malformed intersection (odd drop-in file) from collapsing the page to a sliver.
+            if let window = cropWindow {
+                let trimmed = copy.bounds(for: .cropBox).intersection(window)
+                if !trimmed.isNull, trimmed.width > 100, trimmed.height > 100 {
+                    copy.setBounds(trimmed, for: .cropBox)
+                }
+            }
+            document.insert(copy, at: 0)
+        }
         view.document = document
         coordinator.installed = page
         // `autoScales` only computes the fit-to-width scale once the view has a size, so re-assert it after
@@ -177,24 +232,30 @@ struct MushafPDFPageBody: View {
     let mushafPage: Int
 
     @EnvironmentObject private var settings: Settings
+    @Environment(\.colorScheme) private var colorScheme
+
+    private var isNight: Bool {
+        (MushafPDFAppearance(rawValue: settings.mushafPDFAppearance) ?? .auto)
+            .isNight(inDarkScheme: colorScheme == .dark)
+    }
 
     var body: some View {
         Group {
             if document.pageCount > 0,
                let page = document.page(at: min(max(mushafPage - 1, 0), document.pageCount - 1)) {
-                MushafPDFPageView(page: page)
+                MushafPDFPageView(page: page, cropWindow: MushafPDFLibrary.contentWindow(for: document))
             } else {
                 Color.clear
             }
         }
-        .nightInverted(settings.mushafPDFNightMode)
+        .nightInverted(isNight)
     }
 }
 
 private extension View {
     /// Hue-preserving luminance invert - the standard document night mode. A straight `colorInvert()` would
     /// swing the page's colours to their opposites; rotating the hue a half turn afterwards puts them back,
-    /// leaving only the light/dark flip. Off by default, and then no filter is attached at all.
+    /// leaving only the light/dark flip. When off, no filter is attached at all.
     @ViewBuilder
     func nightInverted(_ enabled: Bool) -> some View {
         if enabled {

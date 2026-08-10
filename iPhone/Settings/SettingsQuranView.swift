@@ -785,8 +785,11 @@ struct SettingsQuranView: View {
         .font(.subheadline)
     }
 
-    /// The switch that unlocks the twelve machine-extracted riwayat, with the warning
-    /// stated up front and confirmed before anything unverified can appear on screen.
+    /// The beta-TEXT switch. All twenty riwayat are always selectable and their printed
+    /// mushafs (facsimiles) always load - this only governs whether the 12 machine-
+    /// extracted TEXTS may render (lists, comparison, page text). The same consent is
+    /// offered inline where text would appear (`BetaTextConsentCard`); this row is the
+    /// settings-side twin and the way to turn beta text back off.
     @ViewBuilder
     private var betaQiraatGroup: some View {
         Toggle(isOn: Binding(
@@ -801,15 +804,15 @@ struct SettingsQuranView: View {
             }
         )) {
             VStack(alignment: .leading, spacing: 2) {
-                Label("Beta Qiraat (12 More Riwayat)", systemImage: "flask")
-                Text("Adds Ibn Amir, Hamzah, al-Kisai, Abu Jafar, Yaqub and Khalaf al-Ashir.")
+                Label("Beta Text (12 Riwayat)", systemImage: "flask")
+                Text("Selectable text for Ibn Amir, Hamzah, al-Kisai, Abu Jafar, Yaqub and Khalaf al-Ashir. Their printed mushafs are exact and always available in page mode - only this machine-extracted text is beta.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
         }
         .tint(settings.accentColor.color)
         .confirmationDialog(
-            "Turn on beta qiraat?",
+            "Turn on beta text?",
             isPresented: $confirmEnableBetaQiraat,
             titleVisibility: .visible
         ) {

@@ -667,6 +667,38 @@ enum MushafPageLanguage: String, CaseIterable, Identifiable {
     }
 }
 
+/// How the printed-mushaf facsimile is lit. `auto` (the default) follows the app's light/dark
+/// appearance; `light` always shows the printed page as printed; `night` always applies the
+/// hue-preserving invert. Raw values are persisted in `Settings.mushafPDFAppearance`.
+enum MushafPDFAppearance: String, CaseIterable, Identifiable {
+    case auto
+    case light
+    case night
+
+    var id: String { rawValue }
+
+    var displayName: String {
+        switch self {
+        case .auto:  return "Automatic"
+        case .light: return "Light"
+        case .night: return "Night"
+        }
+    }
+
+    var systemImage: String {
+        switch self {
+        case .auto:  return "circle.lefthalf.filled"
+        case .light: return "sun.max"
+        case .night: return "moon"
+        }
+    }
+
+    /// Whether the invert applies, given whether the surrounding appearance is dark.
+    func isNight(inDarkScheme dark: Bool) -> Bool {
+        self == .night || (self == .auto && dark)
+    }
+}
+
 /// True once the launch/splash cover has been lifted and the tabs are actually on screen. Views that fire
 /// user-facing side effects on appear (e.g. AdhanView's prayer-calculation confirmation dialogs) read this so
 /// they don't present while they're only being built behind the launch screen. Defaults to `true`, so anywhere

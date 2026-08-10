@@ -235,9 +235,16 @@ extension Settings {
             Option(label: idris, tag: idris, arabic: idrisArabic, teacher: khalafAshirTeacher, teacherArabic: khalafAshirTeacherArabic, order: 19, beta: true, narratorDiedAH: 292),
         ]
 
-        /// What the UI may offer right now: the 8 verified riwayat always, plus the 12
-        /// beta ones only when the user has switched beta qiraat on.
-        static var options: [Option] {
+        /// Every riwayah is always offered: the printed mushaf (PDF) of each is exact
+        /// regardless of `betaQiraatEnabled`, which now gates only whether the 12
+        /// machine-extracted TEXTS may render (see `BetaTextConsentCard`).
+        static var options: [Option] { allOptions }
+
+        /// Riwayat whose TEXT may render right now - surfaces that can only show
+        /// composed text (comparison columns, text pickers with no facsimile
+        /// fallback) list these, so unaccepted beta text never renders as a
+        /// silent Hafs stand-in.
+        static var textOptions: [Option] {
             Settings.shared.betaQiraatEnabled ? allOptions : allOptions.filter { !$0.beta }
         }
 
@@ -259,11 +266,9 @@ extension Settings {
                 guard let first = opts.first else { return nil }
                 return Group(teacher: teacher, teacherArabic: first.teacherArabic, options: opts)
             }
-            // With all ten qiraat unlocked the classical ordering reads as arbitrary in
-            // a menu - go alphabetical (ignoring the "al-" article) so readers can scan.
-            if Settings.shared.betaQiraatEnabled {
-                result.sort { alphaKey($0.teacher) < alphaKey($1.teacher) }
-            }
+            // All ten qiraat always show now, and at ten the classical ordering reads
+            // as arbitrary in a menu - alphabetical (ignoring "al-") scans better.
+            result.sort { alphaKey($0.teacher) < alphaKey($1.teacher) }
             return result
         }
 
