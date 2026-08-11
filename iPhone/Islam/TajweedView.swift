@@ -139,6 +139,24 @@ struct TajweedFoundationsView: View {
                 }
             }
 
+            #if os(iOS)
+            if TajweedLessonsStore.isBundled {
+                Section("STRUCTURED LESSONS") {
+                    NavigationLink(destination: LazyDestination { TajweedLessonsView() }) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Tajweed Lessons")
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundColor(settings.accentColor.color)
+                            Text("A guided course from the alphabet to the rules, with Quranic examples you can hear - from Tilawa, by Jamil Hammoudeh.")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                        .padding(.vertical, 2)
+                    }
+                }
+            }
+            #endif
+
             Section("TAJWEED TOPICS") {
                 ForEach(topics, id: \.self) { topic in
                     NavigationLink(destination: LazyDestination { destinationView(for: topic) }) {

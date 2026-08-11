@@ -36,6 +36,8 @@ struct AyahRow: View, Equatable {
     #if os(iOS)
     @State private var showingAyahSheet = false
     @State private var showTafsirSheet = false
+    /// The word of this ayah whose meaning card is up (word-by-word mode). Nil when none is.
+    @State private var tappedWord: TappedWord?
 
     @State private var showingNoteSheet = false
     @State private var draftNote: String = ""
@@ -94,6 +96,7 @@ struct AyahRow: View, Equatable {
         #if os(iOS)
         showingAyahSheet || showTafsirSheet || showingNoteSheet || showCustomRangeSheet
             || showQiraahComparisonSheet || showEnglishComparisonSheet || showSelectTextSheet
+            || tappedWord != nil
         #else
         false
         #endif
@@ -265,6 +268,58 @@ struct AyahRow: View, Equatable {
         return settings.showTajweedColors
             && settings.showArabicText
             && usingHafs
+    }
+
+    #if os(iOS)
+    /// The per-word glosses to render this ayah with, or nil when word-by-word is off / can't apply here.
+    ///
+    /// Every condition is a case where a word index would not mean what the pack says it means:
+    /// another riwayah words the ayah differently, beginner mode splits every letter into its own token,
+    /// a comparison column isn't the reader's own text, and an active search needs the tap to belong to
+    /// the search highlight rather than to a word. Multi-select owns the tap outright.
+    private func wordByWordGlosses(displayText: String, beginner: Bool, highlightQuery: String) -> [String]? {
+        guard settings.wordByWordMeanings,
+              settings.showArabicText,
+              settings.isHafsDisplay,
+              !beginner,
+              !isSelecting,
+              comparisonQiraahOverride == nil,
+              highlightQuery.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return nil }
+
+        let raw = ayah.displayArabicText(surahId: surah.id, clean: false, qiraahOverride: nil)
+        return WordByWordStore.shared.glosses(
+            surah: surah.id,
+            ayah: ayah.id,
+            rawText: raw,
+            displayText: displayText
+        )
+    }
+    #endif
+
+    /// The reader's normal Arabic - one `Text`, search-highlighted. Extracted so the word-by-word
+    /// renderer can sit beside it as an alternative without duplicating the styling arguments.
+    private func arabicSnippet(source: String, font: Font, preStyled: AttributedString?,
+                               beginner: Bool, suffixFont: Font,
+                               highlightQuery: String, matchedArabic: Bool) -> some View {
+        HighlightedSnippet(
+            source: source,
+            term: highlightQuery,
+            font: font,
+            accent: settings.accentColor.color,
+            fg: .primary,
+            preStyledSource: preStyled,
+            beginnerMode: beginner,
+            trailingSuffix: " \(ayah.idArabic)",
+            trailingSuffixFont: suffixFont,
+            trailingSuffixColor: settings.accentColor.color,
+            highlightAllahNames: settings.highlightAllahNames,
+            guaranteeMatch: matchedArabic
+        )
+        .arabicFontDesign(custom: true)
+        .id(tajweedAnimationKey)
+        .multilineTextAlignment(.trailing)
+        .frame(maxWidth: .infinity, alignment: .trailing)
+        .lineLimit(nil)
     }
 
     private func arabicTajweedText(displayText renderedDisplayText: String, beginner: Bool) -> AttributedString? {
@@ -857,6 +912,20 @@ struct AyahRow: View, Equatable {
             .environmentObject(settings)
             .smallMediumSheetPresentation()
         }
+        // Word-by-word: the card for the word the reader tapped. `item:` rather than `isPresented:` so
+        // tapping a DIFFERENT word while the card is up re-presents it with the new word instead of
+        // leaving the old one on screen.
+        .sheet(item: $tappedWord) { tapped in
+            WordMeaningSheet(
+                surah: surah,
+                ayah: ayah,
+                word: tapped.word,
+                meaning: tapped.meaning,
+                position: tapped.index + 1,
+                total: tapped.total
+            )
+            .environmentObject(settings)
+        }
         #endif
     }
 
@@ -910,6 +979,7 @@ struct AyahRow: View, Equatable {
 
             muqattaatPronunciationBlock()
 
+
             if showArabic {
                 let beginner = settings.beginnerMode || ayahBeginnerMode || forceBeginner
                 let arabicSource = arabicDisplayText()
@@ -926,28 +996,46 @@ struct AyahRow: View, Equatable {
                 // The ayah-end marker is always the Hafs Uthmani face: that font is what renders the digits as the
                 // circled-flower ornament, so falling back to the system font here would print bare digits instead.
                 let suffixFont: Font = .custom(Settings.hafsUthmaniFontName, size: settings.fontArabicSize)
+                let preStyled = arabicTajweedText(displayText: arabicSource, beginner: beginner)
+                    ?? arabicRiwayahTajweedText(displayText: arabicSource, beginner: beginner)
+                    ?? arabicDiffText(displayText: arabicSource, beginner: beginner)
 
-                HighlightedSnippet(
-                    source: arabicSource,
-                    term: highlightQuery,
-                    font: arabicFont,
-                    accent: settings.accentColor.color,
-                    fg: .primary,
-                    preStyledSource: arabicTajweedText(displayText: arabicSource, beginner: beginner)
-                        ?? arabicRiwayahTajweedText(displayText: arabicSource, beginner: beginner)
-                        ?? arabicDiffText(displayText: arabicSource, beginner: beginner),
-                    beginnerMode: beginner,
-                    trailingSuffix: " \(ayah.idArabic)",
-                    trailingSuffixFont: suffixFont,
-                    trailingSuffixColor: settings.accentColor.color,
-                    highlightAllahNames: settings.highlightAllahNames,
-                    guaranteeMatch: matchedArabic
-                )
-                .arabicFontDesign(custom: true)
-                .id(tajweedAnimationKey)
-                .multilineTextAlignment(.trailing)
-                .frame(maxWidth: .infinity, alignment: .trailing)
-                .lineLimit(nil)
+                #if os(iOS)
+                if let glosses = wordByWordGlosses(displayText: arabicSource, beginner: beginner,
+                                                   highlightQuery: highlightQuery) {
+                    // Same text, same colors - rendered through TextKit so a single word can be tapped.
+                    WordByWordText(
+                        displayText: arabicSource,
+                        preStyled: preStyled,
+                        fontName: useSystemArabic
+                            ? nil
+                            : ayahArabicFontName(for: comparisonQiraahOverride ?? settings.displayQiraahForArabic),
+                        fontSize: CGFloat(settings.fontArabicSize),
+                        ayahNumberArabic: ayah.idArabic,
+                        glosses: glosses,
+                        selectedWord: tappedWord?.index,
+                        onSelectWord: { index in
+                            tappedWord = TappedWord(
+                                index: index,
+                                word: WordTokens.tokens(in: arabicSource)[index],
+                                meaning: glosses[index],
+                                total: glosses.count
+                            )
+                        }
+                    )
+                    .id(tajweedAnimationKey)
+                    .frame(maxWidth: .infinity, alignment: .trailing)
+
+                } else {
+                    arabicSnippet(source: arabicSource, font: arabicFont, preStyled: preStyled,
+                                  beginner: beginner, suffixFont: suffixFont,
+                                  highlightQuery: highlightQuery, matchedArabic: matchedArabic)
+                }
+                #else
+                arabicSnippet(source: arabicSource, font: arabicFont, preStyled: preStyled,
+                              beginner: beginner, suffixFont: suffixFont,
+                              highlightQuery: highlightQuery, matchedArabic: matchedArabic)
+                #endif
             }
 
             if showTranslit {

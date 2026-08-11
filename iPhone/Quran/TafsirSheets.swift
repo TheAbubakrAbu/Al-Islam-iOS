@@ -492,7 +492,15 @@ struct SurahInfoSheet: View {
     @AppStorage("quran.surahInfo.source") private var selectedSourceName = ""
 
     private var sources: [SurahInfoSource] {
-        quranData.surahInfoSources(for: surahNumber)
+        var list = quranData.surahInfoSources(for: surahNumber)
+        // Quranpedia's passage outline rides in as one more source: this sheet's picker, search,
+        // and markdown handling all apply to it unchanged. Appended HERE (not in QuranData) so
+        // targets that compile QuranData without the themes pack - the widget - never need the
+        // store symbol.
+        if let outline = SurahSectionsStore.shared.outlineMarkdown(surah: surahNumber) {
+            list.append(SurahInfoSource(name: "Outline (Quranpedia)", contents: outline))
+        }
+        return list
     }
 
     private var selectedSource: SurahInfoSource? {

@@ -2258,6 +2258,17 @@ struct SurahView: View {
                 // (Was: `!barsCollapsed || isAyahSearchFocused` - restore to fold it away again.)
                 let controlsVisible = true
                 VStack(spacing: 0) {
+                    // Now Playing rides on TOP of the whole bottom stack - above the legend/search/riwayah
+                    // row, matching the Quran tab, so the bar sits in the same place no matter which screen
+                    // is playing.
+                    if active {
+                        nowPlayingInset(proxy: proxy)
+                            .padding(.horizontal, 24)
+                            .transition(.opacity)
+                            // The mini player minimizes with the rest of the bars.
+                            .minimizedBarStyle(barsCollapsed && !isAyahSearchFocused)
+                    }
+
                     // Apple Music-style: the secondary legend/global/riwayah row folds away while scrolling
                     // down. The row STAYS MOUNTED and collapses via height+opacity - an `if` removal
                     // snapshots the glass background as a hard black box on the way out (the same artifact
@@ -2269,15 +2280,7 @@ struct SurahView: View {
                         .opacity(controlsVisible ? 1 : 0)
                         .allowsHitTesting(controlsVisible)
                         .animation(.spring(response: 0.35, dampingFraction: 0.85), value: controlsVisible)
-
-                    if active {
-                        nowPlayingInset(proxy: proxy)
-                            .padding(.horizontal, 24)
-                            .padding(.top, SafeAreaInsetVStackSpacing.standard)
-                            .transition(.opacity)
-                            // The mini player minimizes with the rest of the bars.
-                            .minimizedBarStyle(barsCollapsed && !isAyahSearchFocused)
-                    }
+                        .padding(.top, active ? SafeAreaInsetVStackSpacing.standard : 0)
                 }
                 .padding(.bottom, 7)
                 .background(Color.white.opacity(0.00001))
@@ -2670,24 +2673,27 @@ struct SurahView: View {
     private var pageReaderControls: some View {
         let active = quranPlayer.isPlaying || quranPlayer.isPaused
         return VStack(spacing: 0) {
-            // Select mode swaps the search cluster for the bulk-action bar, exactly like the list.
-            if isSelectingAyahs {
-                selectionActionBar
-            } else {
-                // Always present in page mode: search sits dead center, with the tajweed legend and the
-                // riwayah picker flanking it when they apply (an English page shows neither, so the bar
-                // is just the search).
-                pageBottomControlsBar
-            }
-
             if active {
-                // Tapping the bar jumps to what's playing - here that means the PAGE holding the
-                // recited ayah (or the playing surah's first page).
+                // Now Playing rides on TOP of the bar stack (same as the list reader and the Quran tab).
+                // Tapping it jumps to what's playing - here that means the PAGE holding the recited ayah
+                // (or the playing surah's first page).
                 NowPlayingView(quranView: false, onOpenPlayback: { _ in goToNowPlaying() })
                     .padding(.horizontal, 24)
-                    .padding(.top, SafeAreaInsetVStackSpacing.standard)
                     .transition(.opacity)
             }
+
+            // Select mode swaps the search cluster for the bulk-action bar, exactly like the list.
+            Group {
+                if isSelectingAyahs {
+                    selectionActionBar
+                } else {
+                    // Always present in page mode: search sits dead center, with the tajweed legend and the
+                    // riwayah picker flanking it when they apply (an English page shows neither, so the bar
+                    // is just the search).
+                    pageBottomControlsBar
+                }
+            }
+            .padding(.top, active ? SafeAreaInsetVStackSpacing.standard : 0)
         }
         // Same breathing room the list reader gives this bar - and here the bottom padding is
         // also what separates it from the page-navigation footer pinned underneath.

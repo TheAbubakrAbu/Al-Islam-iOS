@@ -1367,7 +1367,17 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
 
     @AppStorage("showArabicText") var showArabicText: Bool = true
     @AppStorage("highlightAllahNames") var highlightAllahNames: Bool = false
-    @AppStorage("showTajweedColors") var showTajweedColors: Bool = false
+    /// Tap a word in the reader to see what it means. ON by default - the meaning is the point of
+    /// reading, and a reader who doesn't know the feature exists will never go looking for it in
+    /// Settings. A tap that lands on a word opens its card; a tap anywhere else in the ayah still marks
+    /// the ayah exactly as before (see `WordByWordTextView.Coordinator`, which only claims the tap when
+    /// it is actually on a word). Only Hafs an Asim - the bundled glosses are indexed against its
+    /// wording, and another riwayah's words would not line up (see `WordByWordStore`, which the iOS
+    /// settings screen unloads when this is switched off).
+    @AppStorage("wordByWordMeanings") var wordByWordMeanings: Bool = true
+    /// ON by default: the colors are the fastest way to read correctly, and word-by-word (also
+    /// default-on) leans on them - the tapped word's card names the rules its colors show.
+    @AppStorage("showTajweedColors") var showTajweedColors: Bool = true
     @AppStorage("showTajweedTafkhim") var showTajweedTafkhim: Bool = true
     @AppStorage("showTajweedQalqalah") var showTajweedQalqalah: Bool = true
     @AppStorage("showTajweedLamShamsiyah") var showTajweedLamShamsiyah: Bool = true

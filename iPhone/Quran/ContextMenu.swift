@@ -346,6 +346,7 @@ struct AyahContextMenuModifier: ViewModifier {
     @State private var showRespectAlert = false
     @State private var showCustomRangeSheet = false
     @State private var showTafsirSheet = false
+    @State private var showSimilarAyahsSheet = false
     @State private var showQiraahComparisonSheet = false
     @State private var showEnglishComparisonSheet = false
 
@@ -512,6 +513,19 @@ struct AyahContextMenuModifier: ViewModifier {
                     }
                 }
 
+                // Similar Ayahs reads against the Hafs text (the pack's targets and phrases are
+                // Hafs wording), mirroring the tafsir gate above. The row shows whenever the pack
+                // is bundled - probing "does THIS ayah have matches" here would parse 4.5 MB of
+                // JSON on menu open, so the sheet handles the no-matches case instead.
+                if settings.isHafsDisplay && SimilarAyahsStore.isBundled {
+                    Button {
+                        settings.hapticFeedback()
+                        showSimilarAyahsSheet = true
+                    } label: {
+                        Label("Similar Ayahs", systemImage: "doc.text.magnifyingglass")
+                    }
+                }
+
                 comparisonMenuBlock
 
                 if settings.isHafsDisplay {
@@ -621,6 +635,9 @@ struct AyahContextMenuModifier: ViewModifier {
                     )
                     .smallMediumSheetPresentation()
                 }
+            }
+            .sheet(isPresented: $showSimilarAyahsSheet) {
+                SimilarAyahsSheet(surahNumber: surah, ayahNumber: ayah)
             }
             .sheet(isPresented: $showCustomRangeSheet) {
                 if let surahObj = surahObj {

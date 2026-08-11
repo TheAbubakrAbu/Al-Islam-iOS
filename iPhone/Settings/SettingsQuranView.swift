@@ -431,10 +431,45 @@ struct SettingsQuranView: View {
     private var arabicTextSection: some View {
         Section(header: Text("ARABIC TEXT")) {
             arabicVisibilityToggle
+            #if os(iOS)
+            wordByWordGroup
+            #endif
             tajweedSettingsGroup
             arabicDisplayControls
         }
     }
+
+    #if os(iOS)
+    /// Word-by-word meanings. Gated the same way tajweed colors are: the glosses are indexed against
+    /// Hafs an Asim's wording, and beginner mode's letter-spacing breaks the word boundaries they are
+    /// counted in - so the toggle goes dead (rather than silently doing nothing) in those modes.
+    private var wordByWordGroup: some View {
+        VStack(alignment: .leading) {
+            let canRenderNow = settings.showArabicText && settings.isHafsDisplay
+                && !settings.beginnerMode && WordByWordStore.isBundled
+            let binding = Binding<Bool>(
+                get: { settings.wordByWordMeanings && canRenderNow },
+                set: { settings.wordByWordMeanings = $0 }
+            )
+
+            Toggle("Tap a Word for Its Meaning", isOn: binding.animation(.easeInOut))
+                .font(.subheadline)
+                .disabled(!canRenderNow)
+                .onChange(of: settings.wordByWordMeanings) { enabled in
+                    settings.hapticFeedback()
+                    // A megabyte of glosses has no business staying resident once the mode is off.
+                    if !enabled { WordByWordStore.shared.unload() }
+                }
+
+            Text(canRenderNow || !settings.showArabicText
+                 ? "Tap any word while reading to see what that word means on its own. Works offline."
+                 : "Available in Hafs an Asim, with beginner mode off - the meanings are counted word by word against that text.")
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .padding(.vertical, 2)
+        }
+    }
+    #endif
 
     private var arabicVisibilityToggle: some View {
         Toggle("Show Arabic Quran Text", isOn: $settings.showArabicText.animation(.easeInOut))

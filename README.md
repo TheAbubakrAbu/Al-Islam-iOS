@@ -15,10 +15,20 @@ I received a **Certificate of Congressional Recognition** from U.S. Representati
   <img src="Logo.jpg" alt="Logo" width="120" style="border-radius:10px;"/>
 </a>
 
-### 📂 Related Projects on GitHub
+### 📂 The Al-Islamic Apps
 
-- [**Al-Adhan | Prayer Times**](https://github.com/TheAbubakrAbu/Al-Adhan-iOS)
-- [**Al-Quran | Beginner Quran**](https://github.com/TheAbubakrAbu/Al-Quran-iOS)
+Five repositories: three apps, and the two engines they are built on. Everything is free, offline-first, and open source.
+
+**Apps**
+
+- [**Al-Islam | Islamic Pillars**](https://github.com/TheAbubakrAbu/Al-Islam-iOS) — *this repository*. Prayer times, the Quran, hadith, tafsir, and the Islamic essentials in one app
+- [**Al-Adhan | Prayer Times**](https://github.com/TheAbubakrAbu/Al-Adhan-iOS) — prayer times, adhan notifications, and the Qibla
+- [**Al-Quran | Beginner Quran**](https://github.com/TheAbubakrAbu/Al-Quran-iOS) — the Quran for beginners and Arabic learners
+
+**Engines** — the data layers behind these apps, extracted so anyone can build on them in any language
+
+- [**Hadith JSON Engine**](https://github.com/TheAbubakrAbu/Hadith-JSON-Engine) — 50,884 hadiths across 17 collections: repaired, graded, cited, and packed. Al-Islam's Hadith tab ships its packs
+- [**Quran Tajweed Engine**](https://github.com/TheAbubakrAbu/Quran-Tajweed-Engine) — 6,236 ayahs with pre-computed tajweed, qiraat, and recitations
 
 ## Overview
 Al-Islam is a simply designed and feature-rich app that helps Muslims strengthen their faith and seamlessly practice Islam. Whether you’re a lifelong believer, a new convert, or simply exploring Islam, this app provides everything you need - from accurate prayer times and a prayer tracker to the complete Quran, the major Hadith collections, tafsir, on-device AI search, and essential Islamic tools.
@@ -47,6 +57,7 @@ Al-Islam is a simply designed and feature-rich app that helps Muslims strengthen
 - Read as a scrolling ayah list or as a mushaf, page by page.
 - Read in Arabic, English transliteration, and translation (Saheeh International and Clear Quran).
 - Color-coded tajweed with a built-in reference for the rules.
+- Tap any word to see what that word means on its own - all 77,629 words of the Quran, bundled and offline, with the word lit in place while its card is up.
 - Tafsir for any ayah - Ibn Kathir, Maarif Ul Quran, and Tazkirul Quran in English, plus Ibn Kathir, al-Tabari, and as-Sa'di in Arabic - fetched once and saved for offline reading, with an option to download all tafsirs.
 - Compare the qiraat (readings) and English translations side by side.
 - Select multiple ayahs to share, copy, bookmark, note, or switch to beginner mode all at once.

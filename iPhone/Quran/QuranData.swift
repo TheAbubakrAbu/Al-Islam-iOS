@@ -501,6 +501,19 @@ final class TajweedStore {
     /// eviction was a full `removeAll` once it crossed the limit - a cliff that wiped the entire cache
     /// mid-scroll on long surahs (Baqarah), forcing the expensive projection+painting to re-run. `NSCache`
     /// drops just the coldest entries at `countLimit` and also evicts automatically under memory pressure.
+    /// The final per-ayah paint ops, cached under the SAME key as the styled string. They carry
+    /// the rule categories, which is what the word-meaning card's "rules in this word" list reads -
+    /// the colors alone couldn't say WHICH rule painted a letter.
+    private final class PaintOpsBox {
+        let ops: [PaintOp]
+        init(_ ops: [PaintOp]) { self.ops = ops }
+    }
+    private let opsCache: NSCache<NSString, PaintOpsBox> = {
+        let c = NSCache<NSString, PaintOpsBox>()
+        c.countLimit = 128
+        return c
+    }()
+
     private let attributedCache: NSCache<NSString, AttributedStringBox> = {
         let c = NSCache<NSString, AttributedStringBox>()
         c.countLimit = AppPerformance.tajweedAttributedCacheLimit
@@ -559,6 +572,7 @@ final class TajweedStore {
         visibilityLock.lock()
         if visibilitySignature != lastVisibilitySignature {
             attributedCache.removeAllObjects()
+            opsCache.removeAllObjects()
             lastVisibilitySignature = visibilitySignature
         }
         visibilityLock.unlock()
@@ -681,6 +695,7 @@ final class TajweedStore {
         appendMuqattaatBareRaaTafkhimPaintOps(clusters: clusters, protectedIndices: muqattaatProtectedIndices, into: &ops)
         appendMuqattaatMaddLazimPaintOps(clusters: clusters, protectedIndices: muqattaatProtectedIndices, into: &ops)
         ops = filteredMuqattaatPaintOps(ops, clusters: clusters, protectedIndices: muqattaatProtectedIndices)
+        opsCache.setObject(PaintOpsBox(ops), forKey: cacheKey)
 
         let rawWaqfUTF16Skip = Self.utf16IndicesOfWaqfOrnaments(in: text)
         let waqfUTF16Skip = Self.utf16IndicesOfWaqfOrnaments(in: displayText)
@@ -709,6 +724,23 @@ final class TajweedStore {
         let result = AttributedString(attributed)
         attributedCache.setObject(AttributedStringBox(result), forKey: cacheKey)
         return result
+    }
+
+    /// The visible tajweed rules whose painted range touches `wordRange` of the RAW ayah text,
+    /// in legend order. Runs the same pipeline as `attributedText` (and warms the same caches),
+    /// so the list always agrees with the colors on screen. Empty when tajweed can't paint here.
+    func ruleCategories(surah: Int, ayah: Int, text: String, wordRange: NSRange) -> [TajweedLegendCategory] {
+        let cacheKey = "\(surah):\(ayah):\(Self.stableTextDigest(text)):0:0:0:0" as NSString
+        if opsCache.object(forKey: cacheKey) == nil {
+            _ = attributedText(surah: surah, ayah: ayah, text: text)
+        }
+        guard let box = opsCache.object(forKey: cacheKey) else { return [] }
+
+        var present = Set<TajweedLegendCategory>()
+        for op in box.ops where NSIntersectionRange(op.range, wordRange).length > 0 {
+            present.insert(op.category)
+        }
+        return TajweedLegendCategory.allCases.filter { present.contains($0) }
     }
 
     private struct TajweedProjection {

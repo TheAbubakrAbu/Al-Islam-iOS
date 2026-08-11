@@ -188,6 +188,18 @@ struct CreditsView: View {
 
                 creditLink("Credit for the ayah audio timings that power offline ayah playback goes to the QDC audio API by Quran.com (Quran Foundation)", url: "https://api-docs.quran.foundation/")
 
+                creditLink("Credit for the word-by-word English meanings, shown when you tap a word while reading, goes to the QDC content API by Quran.com (Quran Foundation), whose per-word glosses come from the Quranic Arabic Corpus by Kais Dukes", url: "https://corpus.quran.com/")
+
+                creditLink("Credit for the word-by-word reader itself - the idea, and the assembled gloss corpus this app's pack was built from - goes to Tilawa, by my friend Jamil Hammoudeh", url: "https://github.com/jamilhammoudeh/quran-app")
+
+                creditLink("Credit for the verified Similar Ayahs matches goes to qurani.ai's similar-ayah corpus; the additional phrase-overlap matches come from Tilawa's generator, built on the Quranic Arabic Corpus morphology by Kais Dukes", url: "https://qurani.ai/")
+
+                creditLink("Credit for the Browse by Theme topics goes to the Quran Semantic Annotation Corpus (QSAC) by Ahmad Bilal, used under CC BY 4.0", url: "https://github.com/dev-ahmadbilal/quran-semantic-annotation-corpus")
+
+                creditLink("Credit for the surah outlines (the Outline source in About this Surah) goes to Quranpedia", url: "https://quranpedia.net/")
+
+                creditLink("Credit for the Tajweed Lessons course - every chapter, lesson, drill, and example - goes to my friend Jamil Hammoudeh, who wrote it for Tilawa and gave his permission to bring it here", url: "https://github.com/jamilhammoudeh/quran-app")
+
                 creditLink("Credit for the English Quran translation comparison API goes to Al Quran Cloud", url: "https://alquran.cloud/api")
 
                 creditLink("Credit for the English Tafsir API goes to Quran API Pages", url: "https://quranapi.pages.dev/")

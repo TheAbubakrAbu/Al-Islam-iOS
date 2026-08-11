@@ -179,6 +179,16 @@
 		72AE0005AE5F4C7D00000005 /* OnDeviceAsk.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72AE0004AE5F4C7D00000004 /* OnDeviceAsk.swift */; };
 		72B531A52A22DCFE007FA002 /* Al-IslamApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72B531A42A22DCFE007FA002 /* Al-IslamApp.swift */; };
 		72BE7A022F90000000AAFF02 /* BetaQiraat.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72BE7A012F90000000AAFF01 /* BetaQiraat.swift */; };
+		7BD0000000000000000000B3 /* WordByWord.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7BD0000000000000000000A1 /* WordByWord.swift */; };
+		7BE0000000000000000000B1 /* SimilarAyahs.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7BE0000000000000000000A1 /* SimilarAyahs.swift */; };
+		7BF0000000000000000000B1 /* QuranThemes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7BF0000000000000000000A1 /* QuranThemes.swift */; };
+		7C00000000000000000000B1 /* TajweedLessons.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C00000000000000000000A1 /* TajweedLessons.swift */; };
+		7C00000000000000000000C1 /* TajweedLessons.json.deflate in Resources */ = {isa = PBXBuildFile; fileRef = 7C00000000000000000000A2 /* TajweedLessons.json.deflate */; };
+		7BF0000000000000000000C1 /* ThematicTopics.json.deflate in Resources */ = {isa = PBXBuildFile; fileRef = 7BF0000000000000000000A2 /* ThematicTopics.json.deflate */; };
+		7BF0000000000000000000C2 /* SurahSections.json.deflate in Resources */ = {isa = PBXBuildFile; fileRef = 7BF0000000000000000000A3 /* SurahSections.json.deflate */; };
+		7BE0000000000000000000C1 /* SimilarAyahs.json.deflate in Resources */ = {isa = PBXBuildFile; fileRef = 7BE0000000000000000000A2 /* SimilarAyahs.json.deflate */; };
+		7BD0000000000000000000B4 /* WordByWord.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7BD0000000000000000000A1 /* WordByWord.swift */; };
+		7BD0000000000000000000C1 /* WordByWord.json.deflate in Resources */ = {isa = PBXBuildFile; fileRef = 7BD0000000000000000000A2 /* WordByWord.json.deflate */; };
 		72BE7A032F90000000AAFF03 /* BetaQiraat.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72BE7A012F90000000AAFF01 /* BetaQiraat.swift */; };
 		72BE7A042F90000000AAFF04 /* BetaQiraat.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72BE7A012F90000000AAFF01 /* BetaQiraat.swift */; };
 		72BE7A052F90000000AAFF05 /* BetaQiraat.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72BE7A012F90000000AAFF01 /* BetaQiraat.swift */; };
@@ -554,6 +564,15 @@
 		72AE0004AE5F4C7D00000004 /* OnDeviceAsk.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnDeviceAsk.swift; sourceTree = "<group>"; };
 		72B531A42A22DCFE007FA002 /* Al-IslamApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Al-IslamApp.swift"; sourceTree = "<group>"; };
 		72BE7A012F90000000AAFF01 /* BetaQiraat.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BetaQiraat.swift; sourceTree = "<group>"; };
+		7BD0000000000000000000A1 /* WordByWord.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WordByWord.swift; sourceTree = "<group>"; };
+		7BE0000000000000000000A1 /* SimilarAyahs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SimilarAyahs.swift; sourceTree = "<group>"; };
+		7BF0000000000000000000A1 /* QuranThemes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuranThemes.swift; sourceTree = "<group>"; };
+		7C00000000000000000000A1 /* TajweedLessons.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TajweedLessons.swift; sourceTree = "<group>"; };
+		7C00000000000000000000A2 /* TajweedLessons.json.deflate */ = {isa = PBXFileReference; lastKnownFileType = file; path = TajweedLessons.json.deflate; sourceTree = "<group>"; };
+		7BF0000000000000000000A2 /* ThematicTopics.json.deflate */ = {isa = PBXFileReference; lastKnownFileType = file; path = ThematicTopics.json.deflate; sourceTree = "<group>"; };
+		7BF0000000000000000000A3 /* SurahSections.json.deflate */ = {isa = PBXFileReference; lastKnownFileType = file; path = SurahSections.json.deflate; sourceTree = "<group>"; };
+		7BE0000000000000000000A2 /* SimilarAyahs.json.deflate */ = {isa = PBXFileReference; lastKnownFileType = file; path = SimilarAyahs.json.deflate; sourceTree = "<group>"; };
+		7BD0000000000000000000A2 /* WordByWord.json.deflate */ = {isa = PBXFileReference; lastKnownFileType = file; path = WordByWord.json.deflate; sourceTree = "<group>"; };
 		72D492873028643E00BEBF8E /* Mushaf PDFs */ = {isa = PBXFileReference; lastKnownFileType = folder; path = "Mushaf PDFs"; sourceTree = "<group>"; };
 		72BE7A012F90000000AAFF10 /* QiraahTajweed.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QiraahTajweed.swift; sourceTree = "<group>"; };
 		72C3FE542F6A039400136976 /* namesofallah.qpk */ = {isa = PBXFileReference; lastKnownFileType = file; path = namesofallah.qpk; sourceTree = "<group>"; };
@@ -914,6 +933,9 @@
 				720CCE052E394375002DD82E /* QuranView.swift */,
 				72D4B0012FC2000000AA2001 /* QuranPlannerView.swift */,
 				72BE7A012F90000000AAFF01 /* BetaQiraat.swift */,
+				7BD0000000000000000000A1 /* WordByWord.swift */,
+				7BE0000000000000000000A1 /* SimilarAyahs.swift */,
+				7BF0000000000000000000A1 /* QuranThemes.swift */,
 				72BE7A012F90000000AAFF10 /* QiraahTajweed.swift */,
 				726200012F82000000AAFF00 /* MushafPageFitter.swift */,
 				720CCE062E394375002DD82E /* SurahRows.swift */,
@@ -983,6 +1005,7 @@
 				7ADD182000000000AA0018 /* ArabicBasicsView.swift */,
 				7ADD181C00000000AA0018 /* ArabicLetterViews.swift */,
 				72E832A22F6F52BA0013428B /* TajweedView.swift */,
+				7C00000000000000000000A1 /* TajweedLessons.swift */,
 				7ADD181900000000AA0018 /* TajweedTopics.swift */,
 				72E832992F6F52BA0013428B /* AdhkarView.swift */,
 				72E8329C2F6F52BA0013428B /* DuaView.swift */,
@@ -1072,6 +1095,11 @@
 			isa = PBXGroup;
 			children = (
 				7A9A000000000000000000A3 /* quran.qpk */,
+				7BD0000000000000000000A2 /* WordByWord.json.deflate */,
+				7BE0000000000000000000A2 /* SimilarAyahs.json.deflate */,
+				7BF0000000000000000000A2 /* ThematicTopics.json.deflate */,
+				7C00000000000000000000A2 /* TajweedLessons.json.deflate */,
+				7BF0000000000000000000A3 /* SurahSections.json.deflate */,
 				7A9A000000000000000000A4 /* surahinfos.qpk */,
 				7A9A000000000000000000A5 /* qiraat.qpk */,
 				7A9C00000000000000000011 /* qiraah.solidpack */,
@@ -1359,6 +1387,11 @@
 				7DAF0000000000000000000C /* ar-tafsir-as-saadi.tpk in Resources */,
 				72D492883028643E00BEBF90 /* Mushaf PDFs in Resources */,
 				7A9A000000000000000000D1 /* quran.qpk in Resources */,
+				7BD0000000000000000000C1 /* WordByWord.json.deflate in Resources */,
+				7BE0000000000000000000C1 /* SimilarAyahs.json.deflate in Resources */,
+				7BF0000000000000000000C1 /* ThematicTopics.json.deflate in Resources */,
+				7C00000000000000000000C1 /* TajweedLessons.json.deflate in Resources */,
+				7BF0000000000000000000C2 /* SurahSections.json.deflate in Resources */,
 				7A9A000000000000000000D3 /* surahinfos.qpk in Resources */,
 				7A9A000000000000000000D5 /* qiraat.qpk in Resources */,
 				7A9C00000000000000000001 /* qiraah.solidpack in Resources */,
@@ -1632,6 +1665,10 @@
 				72D4B0022FC2000000AA2002 /* QuranPlannerView.swift in Sources */,
 				72A7C0042FB1000000AA1004 /* SettingsHadithView.swift in Sources */,
 				72BE7A032F90000000AAFF03 /* BetaQiraat.swift in Sources */,
+				7BD0000000000000000000B3 /* WordByWord.swift in Sources */,
+				7BE0000000000000000000B1 /* SimilarAyahs.swift in Sources */,
+				7BF0000000000000000000B1 /* QuranThemes.swift in Sources */,
+				7C00000000000000000000B1 /* TajweedLessons.swift in Sources */,
 				72BE7A012F90000000AAFF13 /* QiraahTajweed.swift in Sources */,
 				726200022F82000000AAFF00 /* MushafPageFitter.swift in Sources */,
 			);
@@ -1677,6 +1714,7 @@
 				72F7DB6E2F030A630037B059 /* AdhanStructs.swift in Sources */,
 				72574CC92E49EE7F00BFF138 /* AppIntents.swift in Sources */,
 				72BE7A022F90000000AAFF02 /* BetaQiraat.swift in Sources */,
+				7BD0000000000000000000B4 /* WordByWord.swift in Sources */,
 				72BE7A012F90000000AAFF14 /* QiraahTajweed.swift in Sources */,
 				725C5FC23014308900DFEC8B /* MushafPageFitter.swift in Sources */,
 				725C5FC33014308900DFEC8B /* QuranPlannerView.swift in Sources */,

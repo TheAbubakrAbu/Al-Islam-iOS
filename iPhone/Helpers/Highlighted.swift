@@ -728,28 +728,7 @@ struct HighlightedSnippet: View {
     }
 
     private func highlightArabicAllah(source: String, attributed: inout AttributedString) {
-        let cacheKey = source as NSString
-        let ranges: [Range<String.Index>]
-        // Cached as instance-free UTF-16 spans; a nil materialization (can't happen for equal content)
-        // falls through to a fresh scan rather than being trusted.
-        if let cached = Self.allahRangeCache.object(forKey: cacheKey),
-           let materialized = Self.ranges(fromUTF16Spans: cached.spans, in: source) {
-            ranges = materialized
-        } else {
-            var found: [Range<String.Index>] = []
-            for start in source.indices {
-                if let range = arabicAllahRange(startingAt: start, in: source) {
-                    found.append(range)
-                }
-            }
-            Self.allahRangeCache.setObject(
-                RangeEntry(found.map { Self.utf16Span(of: $0, in: source) }),
-                forKey: cacheKey
-            )
-            ranges = found
-        }
-
-        for range in ranges {
+        for range in Self.arabicAllahRanges(in: source) {
             if let start = AttributedString.Index(range.lowerBound, within: attributed),
                let end = AttributedString.Index(range.upperBound, within: attributed) {
                 attributed[start..<end].foregroundColor = .red
@@ -757,7 +736,33 @@ struct HighlightedSnippet: View {
         }
     }
 
-    private func arabicAllahRange(startingAt start: String.Index, in source: String) -> Range<String.Index>? {
+    /// Every occurrence of the name الله in `source`, cached. Static and shared because the word-by-word
+    /// reader paints the same red name onto an `NSAttributedString` it builds itself (see
+    /// `WordByWordText`) - it renders through a text view rather than a `Text`, so it cannot go through
+    /// `HighlightedSnippet`, and a second copy of this scan would be a second thing to keep in sync.
+    nonisolated static func arabicAllahRanges(in source: String) -> [Range<String.Index>] {
+        let cacheKey = source as NSString
+        // Cached as instance-free UTF-16 spans; a nil materialization (can't happen for equal content)
+        // falls through to a fresh scan rather than being trusted.
+        if let cached = allahRangeCache.object(forKey: cacheKey),
+           let materialized = ranges(fromUTF16Spans: cached.spans, in: source) {
+            return materialized
+        }
+
+        var found: [Range<String.Index>] = []
+        for start in source.indices {
+            if let range = arabicAllahRange(startingAt: start, in: source) {
+                found.append(range)
+            }
+        }
+        allahRangeCache.setObject(
+            RangeEntry(found.map { utf16Span(of: $0, in: source) }),
+            forKey: cacheKey
+        )
+        return found
+    }
+
+    nonisolated private static func arabicAllahRange(startingAt start: String.Index, in source: String) -> Range<String.Index>? {
         if source[start].allahBase?.isAllahAlif == true,
            let afterAlif = nextNonMarkIndex(after: start, in: source),
            source[afterAlif].allahBase == "ل",
@@ -779,7 +784,7 @@ struct HighlightedSnippet: View {
         return nil
     }
 
-    private func nextNonMarkIndex(after index: String.Index, in source: String) -> String.Index? {
+    nonisolated private static func nextNonMarkIndex(after index: String.Index, in source: String) -> String.Index? {
         var cursor = source.index(after: index)
         while cursor < source.endIndex {
             // Stop at a word boundary: the letters of "Allah" (ل + ل + ه) must all be in the same word.
@@ -795,7 +800,7 @@ struct HighlightedSnippet: View {
         return nil
     }
 
-    private func rangeUpperBound(afterBaseAt index: String.Index, in source: String) -> String.Index {
+    nonisolated private static func rangeUpperBound(afterBaseAt index: String.Index, in source: String) -> String.Index {
         guard var scalarCursor = index.samePosition(in: source.unicodeScalars) else {
             return source.index(after: index)
         }

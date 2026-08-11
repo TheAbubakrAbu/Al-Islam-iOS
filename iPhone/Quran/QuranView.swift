@@ -815,6 +815,11 @@ struct QuranView: View {
     }
 
     @State private var path: [QuranRoute] = []
+    #if os(iOS)
+    /// Browse by Theme (QSAC topics, ported from Tilawa). Sheet-presented so it can never
+    /// tangle with the reader's path/column navigation.
+    @State private var showThemesSheet = false
+    #endif
     /// Guards the once-per-appearance auto-open of the mushaf when page mode is already on.
     @State private var didAutoOpenMushaf = false
     @State private var selectedRoute: QuranRoute?
@@ -2318,6 +2323,30 @@ struct QuranView: View {
             if let kind = summaryHistoryExpansion {
                 summaryHistoryRows(kind: kind)
                     .transition(.opacity)
+            }
+
+            if ThematicTopicsStore.isBundled {
+                Button {
+                    settings.hapticFeedback()
+                    showThemesSheet = true
+                } label: {
+                    HStack {
+                        Image(systemName: "square.grid.2x2")
+                            .foregroundColor(settings.accentColor.color)
+                        Text("Browse by Theme")
+                            .foregroundColor(.primary)
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
+                .sheet(isPresented: $showThemesSheet) {
+                    ThemesBrowseSheet { surahID, ayahID in
+                        showThemesSheet = false
+                        push(surahID: surahID, ayahID: ayahID)
+                    }
+                }
             }
         }
     }
