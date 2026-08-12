@@ -244,6 +244,17 @@ struct WordByWordTextView: UIViewRepresentable {
         view.invalidateIntrinsicContentSize()
     }
 
+    /// SwiftUI sizes a representable from `sizeThatFits`, and a `UITextView`'s own answer is its
+    /// CURRENT bounds' fitting size - one line, before it has ever been given the real width. Answer
+    /// with the text's laid-out height at the row width instead, or every ayah rendered through this
+    /// view clips to its first line.
+    @available(iOS 16.0, *)
+    func sizeThatFits(_ proposal: ProposedViewSize, uiView: UITextView, context: Context) -> CGSize? {
+        guard width > 0 else { return nil }
+        let fitting = uiView.sizeThatFits(CGSize(width: width, height: .greatestFiniteMagnitude))
+        return CGSize(width: width, height: ceil(fitting.height))
+    }
+
     /// The selected word's accent wash, painted on top rather than composed in: a background attribute
     /// changes no layout, so lighting a word re-measures nothing.
     private func lit(_ text: NSAttributedString) -> NSAttributedString {
@@ -328,6 +339,9 @@ struct WordByWordText: View {
     let fontSize: CGFloat
     let ayahNumberArabic: String
     let glosses: [String]
+    /// Non-Hafs riwayat have no gloss pack, but their words still open the riwayah word card -
+    /// every LETTERED token is tappable regardless of `glosses` (ornament-only tokens stay silent).
+    var alwaysTappable: Bool = false
     /// The word currently showing its card, lit in the accent.
     let selectedWord: Int?
     let onSelectWord: (Int) -> Void
@@ -354,8 +368,16 @@ struct WordByWordText: View {
                     highlightColor: settings.accentColor.color,
                     onTapWord: { index in
                         // A token with no gloss of its own (the ۞ mark, the tail of a merged word) has
-                        // nothing to show - stay silent rather than open an empty card.
-                        guard glosses.indices.contains(index), !glosses[index].isEmpty else { return }
+                        // nothing to show - stay silent rather than open an empty card. In riwayah mode
+                        // (no glosses exist at all) any token that carries letters opens the word card.
+                        if alwaysTappable {
+                            let tokens = WordTokens.tokens(in: displayText)
+                            guard tokens.indices.contains(index),
+                                  !tokens[index].removingArabicDiacriticsAndSigns
+                                      .trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+                        } else {
+                            guard glosses.indices.contains(index), !glosses[index].isEmpty else { return }
+                        }
                         settings.hapticFeedback()
                         onSelectWord(index)
                     }
@@ -655,6 +677,299 @@ struct WordMeaningSheet: View {
                 .padding()
             }
             .navigationTitle("Word Meaning")
+            .navigationBarTitleDisplayMode(.inline)
+            .sheetDismissToolbar()
+        }
+        .navigationViewStyle(.stack)
+        .smallMediumSheetPresentation()
+        .onDisappear { ArabicSpeech.shared.stop() }
+    }
+
+    private func actionButton(_ title: String, system: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Label(title, systemImage: system)
+                .font(.subheadline)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 10)
+                .background(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .fill(settings.accentColor.color.opacity(0.15))
+                )
+                .foregroundColor(settings.accentColor.color)
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+// MARK: - The riwayah word card
+
+/// The word a reader tapped in a NON-Hafs riwayah. There is no gloss pack for these texts (the
+/// meanings are Hafs-token-aligned), so the card's job is different: name the riwayah's own rules
+/// on this word - what the colors mean and how the word is recited - and show the Hafs counterpart
+/// underneath, aligned word-by-word through the ayah alignment.
+struct RiwayahTappedWord: Identifiable {
+    let index: Int
+    let word: String
+    let total: Int
+    let tag: String
+
+    var id: Int { index }
+}
+
+struct RiwayahWordSheet: View {
+    @ObservedObject private var settings = Settings.shared
+    @ObservedObject private var speech = ArabicSpeech.shared
+
+    let surah: Surah
+    let ayah: Ayah
+    let tag: String
+    let word: String
+    /// Zero-based DISPLAY token index of the tapped word.
+    let index: Int
+    let total: Int
+
+    private var isSpeakingThis: Bool { speech.currentText == word }
+
+    /// The tapped word located in the RAW (uncleaned) riwayah text - the text the pack's word
+    /// indices and letter extents address. Same display-index-over-raw-tokens walk as the Hafs
+    /// card: clean mode deletes ornament-only tokens, so the display index skips them.
+    private var rawWord: (text: String, tokenIndex: Int, range: NSRange)? {
+        let rawText = ayah.displayArabicText(surahId: surah.id, clean: false, qiraahOverride: tag)
+        let ranges = WordTokens.ranges(in: rawText)
+        let tokens = WordTokens.tokens(in: rawText)
+        guard ranges.count == tokens.count else { return nil }
+
+        var displayIndex = -1
+        for (rawIndex, token) in tokens.enumerated() {
+            let visible = !token.removingArabicDiacriticsAndSigns
+                .trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            if !visible && settings.cleanArabicText { continue }
+            displayIndex += 1
+            if displayIndex == index {
+                return (rawText, rawIndex, ranges[rawIndex])
+            }
+        }
+        return nil
+    }
+
+    /// The word painted the way THIS riwayah's print colors it. Painted unconditionally (the card
+    /// doubles as the word's legend), honouring only the reader's hidden-rule choices.
+    private var styledWord: AttributedString? {
+        guard let located = rawWord,
+              let styled = QiraahTajweedStore.shared.attributedText(
+                  tag: tag, surah: surah.id, ayah: ayah.id, displayText: located.text,
+                  hiddenRules: settings.riwayahTajweedHiddenRuleSet
+              ) else { return nil }
+        let ns = NSAttributedString(styled)
+        guard located.range.location + located.range.length <= ns.length else { return nil }
+        return AttributedString(ns.attributedSubstring(from: located.range))
+    }
+
+    /// The riwayah rules this word carries, resolved through the pack's own legend - the names,
+    /// the colors, and the how-to-recite descriptions, in legend order.
+    private var wordRuleEntries: [QiraahTajweedStore.LegendEntry] {
+        guard let located = rawWord,
+              let rules = QiraahTajweedStore.shared.wordRules(tag: tag, surah: surah.id, ayah: ayah.id),
+              let wordRules = rules[located.tokenIndex], !wordRules.isEmpty else { return [] }
+        let legend = QiraahTajweedStore.shared.legend(for: tag)
+        let hidden = settings.riwayahTajweedHiddenRuleSet
+        var seen = Set<String>()
+        var out: [QiraahTajweedStore.LegendEntry] = []
+        for entry in legend where !hidden.contains(entry.key) {
+            guard wordRules.contains(where: { $0.letter == entry.letter }), seen.insert(entry.key).inserted else { continue }
+            out.append(entry)
+        }
+        return out
+    }
+
+    // MARK: Hafs counterpart
+
+    /// Base-letter skeleton with hamza seats folded, so orthography differences (seatless qat',
+    /// Maghribi wasl alefs) don't break the word matching.
+    private static func skeleton(_ token: String) -> String {
+        var out = ""
+        for scalar in token.unicodeScalars {
+            let v = scalar.value
+            guard (0x0621...0x064A).contains(v) || v == 0x0671 || v == 0x0649
+                    || v == 0x066E || v == 0x06CC || v == 0x067E else { continue }
+            switch v {
+            case 0x0671, 0x0622, 0x0623, 0x0625: out.append("ا")
+            case 0x0624: out.append("و")
+            case 0x0626: out.append("ي")
+            case 0x0621: break
+            default: out.append(Character(scalar))
+            }
+        }
+        return out
+    }
+
+    /// The Hafs word(s) this riwayah word corresponds to, via the ayah alignment plus a token-level
+    /// LCS over letter skeletons. A word absent from Hafs (or unmappable) returns nil - the card
+    /// says so instead of guessing.
+    private var hafsCounterpart: String? {
+        guard let located = rawWord else { return nil }
+        let quranData = QuranData.shared
+        let span = QiraahComparison.alignment(surahID: surah.id, tag: tag, quranData: quranData)?
+            .hafsRangeForRiwayah[ayah.id] ?? (ayah.id...ayah.id)
+        var hafsTokens: [String] = []
+        for n in span {
+            guard let hafsAyah = quranData.ayah(surah: surah.id, ayah: n) else { continue }
+            hafsTokens.append(contentsOf: WordTokens.tokens(
+                in: hafsAyah.displayArabicText(surahId: surah.id, clean: false, qiraahOverride: "")
+            ))
+        }
+        guard !hafsTokens.isEmpty else { return nil }
+
+        let mine = WordTokens.tokens(in: located.text)
+        let a = mine.map(Self.skeleton)
+        let b = hafsTokens.map(Self.skeleton)
+
+        // LCS table over the two token skeleton lists (ayahs are small - at most a few dozen words).
+        var lcs = [[Int]](repeating: [Int](repeating: 0, count: b.count + 1), count: a.count + 1)
+        for i in stride(from: a.count - 1, through: 0, by: -1) {
+            for j in stride(from: b.count - 1, through: 0, by: -1) {
+                lcs[i][j] = a[i] == b[j] ? lcs[i + 1][j + 1] + 1 : max(lcs[i + 1][j], lcs[i][j + 1])
+            }
+        }
+        // Walk the LCS, recording each matched pair.
+        var matches: [(mine: Int, hafs: Int)] = []
+        var i = 0, j = 0
+        while i < a.count, j < b.count {
+            if a[i] == b[j], lcs[i][j] == lcs[i + 1][j + 1] + 1 {
+                matches.append((i, j)); i += 1; j += 1
+            } else if lcs[i + 1][j] >= lcs[i][j + 1] {
+                i += 1
+            } else {
+                j += 1
+            }
+        }
+        if let exact = matches.first(where: { $0.mine == located.tokenIndex }) {
+            return hafsTokens[exact.hafs]
+        }
+        // Unmatched (the word differs from Hafs): the Hafs words BETWEEN the nearest matched
+        // neighbours are its counterpart - possibly several (a merged word), possibly none.
+        let before = matches.last(where: { $0.mine < located.tokenIndex })
+        let after = matches.first(where: { $0.mine > located.tokenIndex })
+        let lo = before.map { $0.hafs + 1 } ?? 0
+        let hi = after.map { $0.hafs } ?? hafsTokens.count
+        guard lo < hi else { return nil }
+        return hafsTokens[lo..<hi].joined(separator: " ")
+    }
+
+    private var riwayahFontName: String { settings.quranArabicFontName(for: tag) }
+
+    var body: some View {
+        NavigationView {
+            ScrollView {
+                VStack(spacing: 20) {
+                    Group {
+                        if let styled = styledWord {
+                            Text(styled)
+                        } else {
+                            Text(word)
+                        }
+                    }
+                    .font(.custom(riwayahFontName, size: CGFloat(settings.fontArabicSize) + 16))
+                    .arabicFontDesign(custom: true)
+                    .multilineTextAlignment(.center)
+                    .frame(maxWidth: .infinity)
+                    .padding(.top, 8)
+
+                    Text("Word \(index + 1) of \(total) · \(surah.nameTransliteration) \(surah.id):\(ayah.id)")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+
+                    HStack(spacing: 12) {
+                        if ArabicSpeech.shared.isAvailable {
+                            actionButton(
+                                isSpeakingThis ? "Stop" : "Listen",
+                                system: isSpeakingThis ? "stop.fill" : "speaker.wave.2.fill"
+                            ) {
+                                settings.hapticFeedback()
+                                if isSpeakingThis {
+                                    ArabicSpeech.shared.stop()
+                                } else {
+                                    ArabicSpeech.shared.speak(word)
+                                }
+                            }
+                        }
+
+                        actionButton("Copy", system: "doc.on.doc") {
+                            settings.hapticFeedback()
+                            UIPasteboard.general.string = "\(word)\n\(surah.nameTransliteration) \(surah.id):\(ayah.id)"
+                        }
+                    }
+                    .padding(.top, 4)
+
+                    // The riwayah's own rules on this word - the card doubles as a per-word legend,
+                    // with each rule's how-it-is-recited note from the print's legend descriptions.
+                    if !wordRuleEntries.isEmpty {
+                        VStack(alignment: .leading, spacing: 12) {
+                            Divider()
+                                .padding(.bottom, 4)
+                            Text("IN THIS RIWAYAH")
+                                .font(.caption)
+                                .fontWeight(.semibold)
+                                .foregroundColor(.secondary)
+                            ForEach(wordRuleEntries) { entry in
+                                VStack(alignment: .leading, spacing: 3) {
+                                    HStack(spacing: 10) {
+                                        Circle()
+                                            .fill(entry.color)
+                                            .frame(width: 12, height: 12)
+                                        Text(entry.english)
+                                            .font(.subheadline)
+                                            .fontWeight(.medium)
+                                        Spacer()
+                                        Text(entry.arabic)
+                                            .font(.subheadline)
+                                            .foregroundColor(entry.color)
+                                    }
+                                    let description = entry.longDescription.isEmpty
+                                        ? entry.shortDescription : entry.longDescription
+                                    if !description.isEmpty {
+                                        Text(description)
+                                            .font(.footnote)
+                                            .foregroundColor(.secondary)
+                                            .fixedSize(horizontal: false, vertical: true)
+                                    }
+                                }
+                            }
+                        }
+                        .padding(.top, 4)
+                    }
+
+                    // The Hafs counterpart, so the difference is visible side by side. Aligned
+                    // word-by-word; a merged or dropped word shows its whole Hafs span.
+                    VStack(alignment: .leading, spacing: 8) {
+                        Divider()
+                            .padding(.bottom, 4)
+                        Text("IN HAFS AN 'ASIM")
+                            .font(.caption)
+                            .fontWeight(.semibold)
+                            .foregroundColor(.secondary)
+                        if let hafs = hafsCounterpart {
+                            Text(hafs)
+                                .font(.custom(Settings.hafsUthmaniFontName, size: CGFloat(settings.fontArabicSize) + 6))
+                                .arabicFontDesign(custom: true)
+                                .multilineTextAlignment(.center)
+                                .frame(maxWidth: .infinity)
+                            if Self.skeleton(hafs) == Self.skeleton(word) {
+                                Text("Written the same; the coloring above marks how this riwayah recites it.")
+                                    .font(.caption2)
+                                    .foregroundColor(.secondary)
+                            }
+                        } else {
+                            Text("This word has no separate counterpart in the Hafs text.")
+                                .font(.footnote)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                    .padding(.top, 4)
+                }
+                .padding()
+            }
+            .navigationTitle("Word")
             .navigationBarTitleDisplayMode(.inline)
             .sheetDismissToolbar()
         }

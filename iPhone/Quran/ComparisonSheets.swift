@@ -225,7 +225,15 @@ struct AyahQiraahComparisonSheet: View {
                     .foregroundStyle(.secondary)
             }
 
-            Text(text ?? "This ayah is not separate in this riwayah.")
+            // The current riwayah's own khilaf wash paints here too - same khilaf-only rule as
+            // the comparison rows below (all other tajweed stays off in this sheet).
+            Group {
+                if text != nil, let styled = rowStyled(for: option, resolved: resolvedText(for: option)) {
+                    Text(styled)
+                } else {
+                    Text(text ?? "This ayah is not separate in this riwayah.")
+                }
+            }
                 .font(.custom(comparisonArabicFontName(for: option), size: arabicFontSize))
                 .arabicFontDesign(custom: settings.quranDisplayUsesCustomArabicFace)
                 .foregroundColor(text == nil ? .secondary : .primary)
@@ -309,6 +317,43 @@ struct AyahQiraahComparisonSheet: View {
         QiraahAyahResolver.numberNote(resolved)
     }
 
+    /// The row's coloring: the accent diff tint (vs the current riwayah) with the print's KHILAF
+    /// wash layered on top. In comparison every other tajweed rule stays off - the sheet is about
+    /// what differs, so only khilaf_word/khilaf_harf paint, always on regardless of the tajweed
+    /// toggle, and the khilaf magenta wins where both would color a word.
+    private func rowStyled(for option: QiraahDisplay, resolved: ResolvedQiraahText?) -> AttributedString? {
+        guard let resolved else { return nil }
+        let diff = diffStyled(for: option, resolved: resolved)
+
+        let tag = Settings.Riwayah.canonicalTag(option.tag)
+        guard !tag.isEmpty else { return diff }
+        let ownAyah = resolved.ownNumber ?? ayahNumber
+        let allRules = Set(QiraahTajweedStore.shared.legend(for: tag).map(\.key))
+        let hidden = allRules.subtracting(["khilaf_word", "khilaf_harf"])
+        guard let khilaf = QiraahTajweedStore.shared.attributedText(
+            tag: tag, surah: surahNumber, ayah: ownAyah, displayText: resolved.text,
+            hiddenRules: hidden
+        ) else { return diff }
+
+        // Overlay the khilaf runs onto the diff-tinted base (or a plain-primary base). Both strings
+        // are built over `resolved.text`, so UTF-16 offsets transfer exactly.
+        var merged = diff ?? {
+            var plain = AttributedString(resolved.text)
+            plain.foregroundColor = .primary
+            return plain
+        }()
+        let khilafNS = NSAttributedString(khilaf)
+        guard khilafNS.string == resolved.text else { return diff }
+        khilafNS.enumerateAttribute(.foregroundColor, in: NSRange(location: 0, length: khilafNS.length)) { value, nsRange, _ in
+            guard let color = value as? UIColor, color != .label,
+                  let range = Range(nsRange, in: resolved.text),
+                  let start = AttributedString.Index(range.lowerBound, within: merged),
+                  let end = AttributedString.Index(range.upperBound, within: merged) else { return }
+            merged[start..<end].foregroundColor = Color(color)
+        }
+        return merged
+    }
+
     private func comparisonArabicFontName(for option: QiraahDisplay) -> String {
         settings.quranArabicFontName(for: option.tag)
     }
@@ -375,7 +420,7 @@ struct AyahQiraahComparisonSheet: View {
                 ),
                 accent: settings.accentColor.color,
                 fg: text == nil ? .secondary : .primary,
-                preStyledSource: diffStyled(for: option, resolved: resolved)
+                preStyledSource: rowStyled(for: option, resolved: resolved)
             )
                 .arabicFontDesign(custom: settings.quranDisplayUsesCustomArabicFace)
                 .multilineTextAlignment(.trailing)

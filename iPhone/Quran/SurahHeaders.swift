@@ -413,7 +413,7 @@ struct HeaderRow: View {
             cleanedText = cleanedText.removingArabicDots
         }
         if settings.beginnerMode || ayahBeginnerMode {
-            return cleanedText.map { "\($0) " }.joined()
+            return cleanedText.beginnerSpaced
         }
         return cleanedText
     }

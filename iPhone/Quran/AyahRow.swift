@@ -42,6 +42,8 @@ struct AyahRow: View, Equatable {
     @State private var showTafsirSheet = false
     /// The word of this ayah whose meaning card is up (word-by-word mode). Nil when none is.
     @State private var tappedWord: TappedWord?
+    /// The word whose riwayah card is up (non-Hafs word tap). Nil when none is.
+    @State private var tappedRiwayahWord: RiwayahTappedWord?
 
     @State private var showingNoteSheet = false
     @State private var draftNote: String = ""
@@ -100,7 +102,7 @@ struct AyahRow: View, Equatable {
         #if os(iOS)
         showingAyahSheet || showTafsirSheet || showingNoteSheet || showCustomRangeSheet
             || showQiraahComparisonSheet || showEnglishComparisonSheet || showSelectTextSheet
-            || tappedWord != nil
+            || tappedWord != nil || tappedRiwayahWord != nil
         #else
         false
         #endif
@@ -195,7 +197,7 @@ struct AyahRow: View, Equatable {
     }
 
     private func spacedArabic(_ text: String) -> String {
-        (settings.beginnerMode || ayahBeginnerMode || forceBeginner) ? text.map { String($0) }.joined(separator: " ") : text
+        (settings.beginnerMode || ayahBeginnerMode || forceBeginner) ? text.beginnerSpaced : text
     }
 
     private func arabicDisplayText() -> String {
@@ -225,7 +227,7 @@ struct AyahRow: View, Equatable {
             if Self.arabicDisplayCache.object(forKey: key) != nil { continue }
 
             let baseText = ayah.displayArabicText(surahId: surah.id, clean: clean, qiraahOverride: qiraah)
-            let displayText = beginner ? baseText.map { String($0) }.joined(separator: " ") : baseText
+            let displayText = beginner ? baseText.beginnerSpaced : baseText
             Self.arabicDisplayCache.setObject(displayText as NSString, forKey: key)
         }
     }
@@ -315,7 +317,7 @@ struct AyahRow: View, Equatable {
             beginnerMode: beginner,
             trailingSuffix: " \(ayah.idArabic)",
             trailingSuffixFont: suffixFont,
-            trailingSuffixColor: settings.accentColor.color,
+            trailingSuffixColor: ayahNumberColor,
             highlightAllahNames: settings.highlightAllahNames,
             guaranteeMatch: matchedArabic
         )
@@ -339,6 +341,63 @@ struct AyahRow: View, Equatable {
         )
     }
 
+    /// The color of this row's trailing ayah number. The prints ring an ayah's number medallion
+    /// in magenta when its NUMBERING differs from Hafs (a merge/split point of the riwayah's own
+    /// counting) - mirror that here. A fact of the riwayah's text, not a tajweed color, so it
+    /// shows whenever a non-Hafs riwayah with a bundled pack is displayed (same philosophy as
+    /// the always-on word diff tint), independent of the tajweed toggle.
+    private var ayahNumberColor: Color {
+        #if os(iOS)
+        let raw = comparisonQiraahOverride ?? (settings.displayQiraahForArabic ?? "")
+        let tag = Settings.Riwayah.canonicalTag(raw == "Hafs" ? "" : raw)
+        if !tag.isEmpty,
+           QiraahTajweedStore.shared.isKhilafNumbered(tag: tag, surah: surah.id, ayah: ayah.id) {
+            return Color(QiraahTajweedStore.khilafNumberColor)
+        }
+        #endif
+        return settings.accentColor.color
+    }
+
+    #if os(iOS)
+    #if DEBUG
+    /// One-shot launch args for headless verification - taps aren't scriptable in the simulator:
+    /// "-openWordCard N" opens the riwayah word card for word N of the first tappable non-Hafs
+    /// row on screen; "-openQiraahComparison" opens the first such row's comparison sheet.
+    private static var debugWordCardIndex: Int? = {
+        let args = ProcessInfo.processInfo.arguments
+        guard let i = args.firstIndex(of: "-openWordCard"), i + 1 < args.count else { return nil }
+        return Int(args[i + 1])
+    }()
+    private static var debugOpenComparison = ProcessInfo.processInfo.arguments.contains("-openQiraahComparison")
+    /// The "s:a" the session was launched at (the "-lastRead" arg) - matched directly because the
+    /// live last-read tracking overwrites the defaults as rows scroll past.
+    private static let debugTargetAyah: (surah: Int, ayah: Int)? = {
+        let args = ProcessInfo.processInfo.arguments
+        guard let i = args.firstIndex(of: "-lastRead"), i + 1 < args.count else { return nil }
+        let parts = args[i + 1].split(separator: ":")
+        guard parts.count == 2, let s = Int(parts[0]), let a = Int(parts[1]) else { return nil }
+        return (s, a)
+    }()
+    #endif
+
+    /// The row's non-Hafs riwayah tag when its WORDS should be tappable: word-by-word mode on
+    /// (the master switch for tappable words), a non-Hafs riwayah with a bundled pack displayed,
+    /// and none of the states where a word index would lie (beginner letter-spacing, multi-select,
+    /// an active search that owns the tap). The card shows the riwayah's rules and the aligned
+    /// Hafs counterpart instead of a gloss - there is no gloss pack for non-Hafs texts.
+    private func riwayahWordTapTag(beginner: Bool, highlightQuery: String) -> String? {
+        guard settings.wordByWordMeanings,
+              settings.showArabicText,
+              !beginner,
+              !isSelecting,
+              highlightQuery.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return nil }
+        let raw = comparisonQiraahOverride ?? (settings.displayQiraahForArabic ?? "")
+        let tag = Settings.Riwayah.canonicalTag(raw == "Hafs" ? "" : raw)
+        guard !tag.isEmpty, QiraahTajweedStore.shared.isAvailable(tag: tag) else { return nil }
+        return tag
+    }
+    #endif
+
     /// The current row's non-Hafs riwayah tag when its print-derived tajweed colors should paint:
     /// tajweed toggle on, not searching, and the riwayah's tajweed pack is bundled. The pack's
     /// magenta khilaf words ARE the printed "differs from Hafs" highlighting, so while this is
@@ -358,13 +417,14 @@ struct AyahRow: View, Equatable {
 
     /// Reading a non-Hafs riwayah with tajweed colors on: the display text colored word-by-word
     /// the way THAT riwayah's printed mushaf colors it (khilaf words, idgham, imalah, ...).
-    /// Word indices come from the same space/NBSP tokenization the extraction used, so this only
-    /// paints the un-spaced display text (beginner mode opts out).
+    /// Word indices come from the same space/NBSP tokenization the extraction used; beginner
+    /// spacing keeps its colors - the store re-tokenizes by the 2+ space original word gaps.
     private func arabicRiwayahTajweedText(displayText: String, beginner: Bool) -> AttributedString? {
         #if os(iOS)
-        guard !beginner, let tag = riwayahTajweedTag else { return nil }
+        guard let tag = riwayahTajweedTag else { return nil }
         return QiraahTajweedStore.shared.attributedText(
             tag: tag, surah: surah.id, ayah: ayah.id, displayText: displayText,
+            beginnerSpacing: beginner,
             hiddenRules: settings.riwayahTajweedHiddenRuleSet
         )
         #else
@@ -936,6 +996,18 @@ struct AyahRow: View, Equatable {
             )
             .environmentObject(settings)
         }
+        // The riwayah word card: this riwayah's rules on the tapped word plus its Hafs counterpart.
+        .sheet(item: $tappedRiwayahWord) { tapped in
+            RiwayahWordSheet(
+                surah: surah,
+                ayah: ayah,
+                tag: tapped.tag,
+                word: tapped.word,
+                index: tapped.index,
+                total: tapped.total
+            )
+            .environmentObject(settings)
+        }
         #endif
     }
 
@@ -1035,6 +1107,59 @@ struct AyahRow: View, Equatable {
                     )
                     .id(tajweedAnimationKey)
                     .frame(maxWidth: .infinity, alignment: .trailing)
+
+                } else if let riwayahTag = riwayahWordTapTag(beginner: beginner, highlightQuery: highlightQuery) {
+                    // Non-Hafs word tap: same tappable TextKit rendering, no glosses - the tap opens
+                    // the riwayah word card (this riwayah's rules + the Hafs counterpart) instead.
+                    WordByWordText(
+                        displayText: arabicSource,
+                        preStyled: preStyled,
+                        fontName: useSystemArabic
+                            ? nil
+                            : ayahArabicFontName(for: comparisonQiraahOverride ?? settings.displayQiraahForArabic),
+                        fontSize: CGFloat(settings.fontArabicSize),
+                        ayahNumberArabic: ayah.idArabic,
+                        glosses: [],
+                        alwaysTappable: true,
+                        selectedWord: tappedRiwayahWord?.index,
+                        onSelectWord: { index in
+                            let tokens = WordTokens.tokens(in: arabicSource)
+                            guard tokens.indices.contains(index) else { return }
+                            tappedRiwayahWord = RiwayahTappedWord(
+                                index: index,
+                                word: tokens[index],
+                                total: tokens.count,
+                                tag: riwayahTag
+                            )
+                        }
+                    )
+                    .id(tajweedAnimationKey)
+                    .frame(maxWidth: .infinity, alignment: .trailing)
+                    #if DEBUG
+                    .onAppear {
+                        // Only the launch-target row consumes the one-shot: any other row may be a
+                        // recycled off-screen cell whose sheet SwiftUI immediately tears down.
+                        guard let target = Self.debugTargetAyah,
+                              target.surah == surah.id, target.ayah == ayah.id else { return }
+                        if let idx = Self.debugWordCardIndex {
+                            Self.debugWordCardIndex = nil
+                            let tokens = WordTokens.tokens(in: arabicSource)
+                            if tokens.indices.contains(idx) {
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                                    tappedRiwayahWord = RiwayahTappedWord(
+                                        index: idx, word: tokens[idx], total: tokens.count, tag: riwayahTag
+                                    )
+                                }
+                            }
+                        }
+                        if Self.debugOpenComparison {
+                            Self.debugOpenComparison = false
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                                showQiraahComparisonSheet = true
+                            }
+                        }
+                    }
+                    #endif
 
                 } else {
                     arabicSnippet(source: arabicSource, font: arabicFont, preStyled: preStyled,

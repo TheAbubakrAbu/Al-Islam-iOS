@@ -439,7 +439,7 @@ struct SummaryAyahTile: View {
 
     private func arabicDisplayText() -> String {
         let text = ayah.displayArabicText(surahId: surah.id, clean: settings.cleanArabicText)
-        return settings.beginnerMode ? text.map { String($0) }.joined(separator: " ") : text
+        return settings.beginnerMode ? text.beginnerSpaced : text
     }
 
     private var shouldShowTajweedColors: Bool {
@@ -450,7 +450,7 @@ struct SummaryAyahTile: View {
         guard shouldShowTajweedColors else { return nil }
         let text = ayah.displayArabicText(surahId: surah.id, clean: false)
         let displayText = settings.cleanArabicText ? ayah.displayArabicText(surahId: surah.id, clean: true) : text
-        let renderedDisplayText = settings.beginnerMode ? displayText.map { String($0) }.joined(separator: " ") : displayText
+        let renderedDisplayText = settings.beginnerMode ? displayText.beginnerSpaced : displayText
         return TajweedStore.shared.attributedText(
             surah: surah.id,
             ayah: ayah.id,

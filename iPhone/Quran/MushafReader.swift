@@ -651,20 +651,13 @@ struct SurahPageReader<Controls: View>: View {
                 findSurahID = nil
             }
         }
-        // Folding (or restoring) the bottom bars changes every page's height budget. The VISIBLE page
-        // re-fits on its own (debounced, in `MushafPageContent`), but the prewarmed ring around it stayed
-        // composed at the OLD height - so the first swipe after a collapse served the neighbour's stale
-        // short render as the fallback, which read as "the page shows up uncollapsed, then grows" (user
-        // report). Re-warm the ring at the settled geometry instead, so neighbours are already composed
-        // for the new band before any swipe. Delayed past the 0.25s fold animation plus the page's own
-        // 150ms settle debounce: `lastGeometry` mid-sweep holds a transient height the pages never rest
-        // at, and a ring fitted to it would be thrown away.
-        .onChange(of: bottomBarsCollapsed) { _ in
-            Task {
-                try? await Task.sleep(nanoseconds: 500_000_000)
-                MushafPageRenderCache.prewarm(pages: pages, around: pageIndex, includeCenter: true)
-            }
-        }
+        // Folding (or restoring) the bottom bars changes every page's height budget. No handling here:
+        // the fold animates the visible page's geometry, and `lastGeometry`'s debounced settle sweep
+        // re-warms the ring at the height the pages come to rest at - the same path that covers the
+        // mini player mounting and every other bottom-inset change. (A fixed post-toggle delay lived
+        // here before, and it raced the fold: transient-height fits started mid-animation overwrote
+        // the neighbours' fallback renders, which is exactly the "page shows up uncollapsed for a
+        // beat" flash it was meant to fix.)
         // Warm the wheel's CANDIDATE while the user is still scrolling it: by the time they tap the
         // checkmark, the page they settled on is usually already composed and the jump lands instantly.
         // Radius 1 keeps each detent to the candidate and its neighbours, and the generation bump inside
@@ -1934,6 +1927,10 @@ struct MushafComposeConfig {
     let showTajweed: Bool
     /// Non-nil = paint this non-Hafs riwayah's print-derived colors (tajweed on, pack bundled).
     let riwayahTajweedTag: String?
+    /// Non-nil = this non-Hafs riwayah's pack is bundled, so khilaf-NUMBERED ayahs (its counting
+    /// merges/splits vs Hafs) tint their number medallion magenta the way the print rings them.
+    /// Independent of the tajweed toggle: numbering khilaf is a fact of the riwayah, not a color rule.
+    let khilafMarkerTag: String?
     /// Rule keys the reader has hidden in the riwayah legend.
     let riwayahHiddenRules: Set<String>
     let fontSize: CGFloat
@@ -1958,6 +1955,7 @@ struct MushafComposeConfig {
             beginnerAyahs: AyahBeginnerOverrides.shared.ayahs,
             showTajweed: s.showTajweedColors && s.showArabicText && s.isHafsDisplay && language == .arabic,
             riwayahTajweedTag: riwayahTajweedTag,
+            khilafMarkerTag: s.riwayahTajweedPackTag,
             riwayahHiddenRules: s.riwayahTajweedHiddenRuleSet,
             fontSize: CGFloat(s.fontArabicSize),
             fitPage: s.mushafFitPage,
@@ -2072,7 +2070,7 @@ struct MushafPageComposer {
             || config.beginnerAyahs.contains(HighlightedAyahRef(surahID: surah.id, ayahID: ayah.id))
         let qiraahOverride = config.displayQiraah ?? "Hafs"
         let base = ayah.displayArabicText(surahId: surah.id, clean: clean, qiraahOverride: qiraahOverride)
-        let display = beginner ? base.map { String($0) }.joined(separator: " ") : base
+        let display = beginner ? base.beginnerSpaced : base
         let font = arabicFont(size)
 
         if colored, shouldShowTajweed,
@@ -2090,11 +2088,12 @@ struct MushafPageComposer {
             return ns
         }
 
-        // Non-Hafs riwayat: the print-derived word colors of THAT mushaf. Beginner spacing
-        // opts out - its per-letter spaces break the word tokenization the pack indexes by.
-        if colored, !beginner, let tag = config.riwayahTajweedTag,
+        // Non-Hafs riwayat: the print-derived word colors of THAT mushaf. Beginner spacing keeps
+        // its colors: the store re-tokenizes the spaced text by the 2+ space original word gaps.
+        if colored, let tag = config.riwayahTajweedTag,
            let styled = QiraahTajweedStore.shared.attributedText(
                tag: tag, surah: surah.id, ayah: ayah.id, displayText: display,
+               beginnerSpacing: beginner,
                hiddenRules: config.riwayahHiddenRules
            ) {
             let ns = NSMutableAttributedString(attributedString: NSAttributedString(styled))
@@ -2302,9 +2301,22 @@ struct MushafPageComposer {
                 result.append(ayahText(ayah, surah: segment.surah, size: size, colored: colored,
                                        extraLineSpacing: extraLineSpacing))
                 let markerStart = result.length
+                // The prints ring an ayah's number medallion in magenta when its NUMBERING differs
+                // from Hafs (a merge/split point of this riwayah's counting) - mirror that on the
+                // composed page. Number khilaf is a fact of the riwayah's text, not a tajweed color,
+                // so it shows whenever a non-Hafs riwayah with a pack is displayed (same philosophy
+                // as the always-on word diff tint), independent of the tajweed toggle. Colors never
+                // move a glyph, so the plain and colored composes still lay out identically.
+                let markerColor: UIColor
+                if let tag = config.khilafMarkerTag,
+                   QiraahTajweedStore.shared.isKhilafNumbered(tag: tag, surah: segment.surah.id, ayah: ayah.id) {
+                    markerColor = QiraahTajweedStore.khilafNumberColor
+                } else {
+                    markerColor = accent
+                }
                 result.append(NSAttributedString(string: " \(ayah.idArabic) ", attributes: [
                     .font: markerFont(size),
-                    .foregroundColor: accent,
+                    .foregroundColor: markerColor,
                     .paragraphStyle: para
                 ]))
                 ranges.append(MushafAyahRange(
@@ -2591,7 +2603,8 @@ struct MushafPageComposer {
                       let style = sub.attribute(.paragraphStyle, at: paragraph.location, effectiveRange: nil) as? NSParagraphStyle,
                       style.alignment == .right else { continue }
                 balanceParagraph(paragraph, segment: segment, sub: sub, subString: subString,
-                                 stack: stack, pageText: text, width: width, spaceAdvance: spaceAdvance)
+                                 stack: stack, pageText: text, width: width, bodySize: bodySize,
+                                 spaceAdvance: spaceAdvance)
             }
         }
     }
@@ -2602,6 +2615,7 @@ struct MushafPageComposer {
                                          sub: NSAttributedString, subString: NSString,
                                          stack: (storage: NSTextStorage, manager: NSLayoutManager, container: NSTextContainer),
                                          pageText: NSMutableAttributedString, width: CGFloat,
+                                         bodySize: CGFloat,
                                          spaceAdvance: (UIFont) -> CGFloat) {
         let manager = stack.manager
 
@@ -2734,7 +2748,21 @@ struct MushafPageComposer {
                 }
                 k -= 1
             }
-            guard overrideStarts != nil else { return }
+            guard let printStyle = overrideStarts else { return }
+            // Print-style only while the closing line still reads as a SET line. A short surah tail
+            // (al-Kawthar's lone closing word plus its marker) left the closing line one word and its
+            // marker, and the top-up then stretched that pair across the whole measure - a single
+            // enormous gap, the exact unevenness this pass exists to remove. The limit is FONT-relative
+            // (like the page-wide tracking ceiling), not measure-relative: whether a gap reads as a set
+            // line depends on its size against the type, and a measure-relative cut both re-admitted
+            // huge gaps on wide (iPad) measures and flipped fine print-style paragraphs to the balanced
+            // model at large type on narrow ones. Roughly: more than ~1.25em of top-up per gap reads
+            // as a hole, not a gap - hand the paragraph to the DP and both lines spread evenly.
+            let tail = printStyle[1]
+            let tailGaps = CGFloat(max(n - 1 - tail, 1))
+            if max(width - 1 - natural(tail, n - 1), 0) / tailGaps > bodySize * 1.25 {
+                overrideStarts = nil
+            }
         }
 
         // The dynamic program: minimal summed squared per-gap widening over every way to set the first
@@ -2852,11 +2880,15 @@ struct MushafPageComposer {
                 // Broke early: the line is wider than measured. Double the surcharge each round so a
                 // large in-context divergence converges in a few probes.
                 surcharge[i - 1] += max(surcharge[i - 1], 8)
-            } else if surcharge[i - 1] >= 4 {
-                // Overcorrected: the fill got small enough that the next word came back up.
-                surcharge[i - 1] -= 4
             } else {
-                break
+                // The next word came back UP: the line lays out NARROWER in context than its words
+                // measure standalone, so its fill has to reach PAST the nominal measure - let the
+                // surcharge go negative rather than give up. (Giving up here reverted the whole
+                // paragraph to greedy breaks - the stranded two-word closing line stretched across
+                // the full measure, the exact unevenness this pass exists to remove - and it hit
+                // precisely the riwayat whose glyph metrics drift most from Hafs's.) The relayout
+                // check above stays the arbiter, and the 8-round cap bounds any oscillation.
+                surcharge[i - 1] -= 4
             }
         }
         guard let winning else {
@@ -2982,10 +3014,15 @@ struct MushafPageComposer {
         let lineBox = (usesSystemFont ? UIFont.roundedSystemFont(ofSize: size) : arabicFont(size)).lineHeight
         guard budget - natural >= lineBox * 1.5 else { return 0 }
 
-        // Loosening beyond this would read as broken setting, not justification; the height constraint
-        // usually binds far earlier.
+        // Loosening beyond this reads as broken setting, not justification. The old ceiling of 0.9x
+        // the font size mattered on exactly the pages that hit it: non-Hafs riwayat hold the reader's
+        // own size (`fitCeiling`), so any page their text leaves short by a few lines blew straight
+        // past every reasonable value and landed at the ceiling - nearly a full em of extra advance
+        // on EVERY word gap, the "huge word spacing" pages. At ~0.4x the gaps top out around two and
+        // a half natural spaces - visibly loosened, still a set line; whatever height that can't
+        // absorb stays as the quiet bottom band the centered layout and the line-spacing settle share.
         var lo: CGFloat = 0
-        var hi = size * 0.9
+        var hi = size * 0.4
 
         guard heightWithTracking(hi) > budget else { return hi }
         for _ in 0..<8 {
@@ -3160,20 +3197,31 @@ enum MushafPageRenderCache {
         didSet {
             guard let g = lastGeometry, g != (oldValue ?? (0, 0)) else { return }
             UserDefaults.standard.set([Double(g.width), Double(g.height)], forKey: geometryDefaultsKey)
-            // Rotation / iPad split-resize: every page in the prewarm ring was fitted for the OLD
-            // geometry, so the first swipe in each direction landed on a cold spinner. Re-warm the ring
-            // for the new geometry (async - this setter runs during view-body evaluation). Intermediate
-            // live-resize values just bump the generation; stale unstarted fits skip themselves cheaply.
+            // Rotation / iPad split-resize / the bottom bars folding: every page in the prewarm ring
+            // was fitted for the OLD geometry, so the first swipe in each direction landed on a cold
+            // spinner (or the stale fallback). Re-warm the ring - but DEBOUNCED to the value that holds
+            // still. An animated chrome fold sweeps the height through transient values frame by frame,
+            // and sweeping the ring per transient didn't just churn the generation counter: a transient
+            // fit that had already STARTED ran to completion and overwrote `latestByPage` with a render
+            // fitted to a height the page never rests at, and THAT is what `nearestRendered` served on
+            // the next swipe - the "bars are collapsed but the incoming page shows up sized for
+            // uncollapsed, then grows" flash. Only a geometry that has held still for a beat may sweep.
             if oldValue != nil {
-                DispatchQueue.main.async {
+                geometrySettleWork?.cancel()
+                let work = DispatchWorkItem {
                     guard let context = lastPrewarmContext else { return }
                     // Center included: a geometry change makes the VISIBLE page cold too, and its refit
                     // must lead the ring, not trail it.
                     prewarm(pages: context.pages, around: context.index, includeCenter: true)
                 }
+                geometrySettleWork = work
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3, execute: work)
             }
         }
     }
+
+    /// The pending settled-geometry ring sweep; every geometry change supersedes the last.
+    private static var geometrySettleWork: DispatchWorkItem?
 
     /// What the most recent prewarm sweep covered, so a geometry change can re-run it unprompted.
     private static var lastPrewarmContext: (pages: [MushafPage], index: Int)?
@@ -3231,6 +3279,11 @@ enum MushafPageRenderCache {
             .appendingPathComponent("mushaf-fit-metrics.plist")
     }
 
+    /// Bumped whenever the fit ALGORITHM itself changes (ceilings, tracking caps, balance rules):
+    /// the persisted numbers are pure over (page, geometry, settings) only for a FIXED fitter, and
+    /// the build number alone can't see a code change on a dev install that reuses its version.
+    nonisolated private static let fitterVersion = 2
+
     nonisolated private static let persistedMetricsSalt: String = {
         let os = ProcessInfo.processInfo.operatingSystemVersion
         let build = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "0"
@@ -3241,15 +3294,21 @@ enum MushafPageRenderCache {
         // pack change misses the whole store instead. Sizes, not mtimes: reinstalls re-stamp every
         // file's date, and salting on that would discard the store on each dev build for nothing.
         let fm = FileManager.default
+        // Solidpacks and loose deflates too, not just fonts and qpk: the beta qiraah TEXTS and the
+        // riwayah page tables ship in those, and both move the fit (different words on a page, and
+        // different ayahs on it). They were the one unfingerprinted input - a pack rebuild under an
+        // unchanged CFBundleVersion kept serving fits measured against the old text.
         let fingerprint = ((Bundle.main.urls(forResourcesWithExtension: "ttf", subdirectory: nil) ?? [])
-                           + (Bundle.main.urls(forResourcesWithExtension: "qpk", subdirectory: nil) ?? []))
+                           + (Bundle.main.urls(forResourcesWithExtension: "qpk", subdirectory: nil) ?? [])
+                           + (Bundle.main.urls(forResourcesWithExtension: "solidpack", subdirectory: nil) ?? [])
+                           + (Bundle.main.urls(forResourcesWithExtension: "deflate", subdirectory: nil) ?? []))
             .sorted { $0.lastPathComponent < $1.lastPathComponent }
             .compactMap { url -> String? in
                 guard let size = (try? fm.attributesOfItem(atPath: url.path))?[.size] as? NSNumber else { return nil }
                 return "\(url.lastPathComponent):\(size.int64Value)"
             }
             .joined(separator: ",")
-        return "\(build)|\(os.majorVersion).\(os.minorVersion).\(os.patchVersion)|\(fingerprint)"
+        return "f\(fitterVersion)|\(build)|\(os.majorVersion).\(os.minorVersion).\(os.patchVersion)|\(fingerprint)"
     }()
 
     /// Callers hold `persistedMetricsLock`.

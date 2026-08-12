@@ -159,7 +159,7 @@ struct AyahTafsirSheet: View {
     /// letter spacing when on - the same string an AyahRow would show.
     private func tafsirArabicDisplay(_ ayah: Ayah) -> String {
         let text = ayah.displayArabicText(surahId: surahNumber, clean: settings.cleanArabicText, qiraahOverride: settings.displayQiraahForArabic)
-        return settings.beginnerMode ? text.map { String($0) }.joined(separator: " ") : text
+        return settings.beginnerMode ? text.beginnerSpaced : text
     }
 
     /// Tajweed-colored attributed text for the card, when tajweed is on and the display is Hafs.
@@ -167,7 +167,7 @@ struct AyahTafsirSheet: View {
         guard settings.showTajweedColors, settings.showArabicText, settings.isHafsDisplay else { return nil }
         let text = ayah.displayArabicText(surahId: surahNumber, clean: false)
         let displayText = settings.cleanArabicText ? ayah.displayArabicText(surahId: surahNumber, clean: true) : text
-        let rendered = settings.beginnerMode ? displayText.map { String($0) }.joined(separator: " ") : displayText
+        let rendered = settings.beginnerMode ? displayText.beginnerSpaced : displayText
         return TajweedStore.shared.attributedText(
             surah: surahNumber,
             ayah: ayah.id,

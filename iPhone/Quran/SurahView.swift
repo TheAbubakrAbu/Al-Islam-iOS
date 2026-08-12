@@ -888,7 +888,7 @@ struct SurahView: View {
             // Mirror exactly what AyahRow will ask for, so these warms fill the same cache entries.
             let raw = ayah.displayArabicText(surahId: surah.id, clean: false)
             let displayBase = settings.cleanArabicText ? ayah.displayArabicText(surahId: surah.id, clean: true) : raw
-            let display = settings.beginnerMode ? displayBase.map { String($0) }.joined(separator: " ") : displayBase
+            let display = settings.beginnerMode ? displayBase.beginnerSpaced : displayBase
             _ = TajweedStore.shared.attributedText(
                 surah: surah.id,
                 ayah: ayah.id,

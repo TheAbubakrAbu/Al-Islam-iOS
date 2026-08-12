@@ -765,6 +765,11 @@ final class TajweedStore {
 
         var rawUTF16Offset = 0
         var displayUTF16Offset = 0
+        // Beginner spacing goes BETWEEN emitting clusters, never after the last one - every caller
+        // builds its display text with `joined(separator: " ")`, and the projection must come out
+        // byte-identical to it or every consumer that aligns the two by offset (the mushaf page's
+        // justification transplant, word-by-word's equality check) drifts by the stray trailing space.
+        var pendingBeginnerSpacer = false
 
         for character in rawText {
             let clusterRawStart = rawUTF16Offset
@@ -775,6 +780,11 @@ final class TajweedStore {
             for scalar in String(character).unicodeScalars {
                 let rawLength = utf16Length(of: scalar)
                 let outScalars = displayScalars(for: scalar, cleanDisplayText: cleanDisplayText, removeArabicDots: removeArabicDots)
+                if pendingBeginnerSpacer, !outScalars.isEmpty {
+                    projectedScalars.append(" ")
+                    displayUTF16Offset += 1
+                    pendingBeginnerSpacer = false
+                }
                 let outStart = displayUTF16Offset
 
                 for outScalar in outScalars {
@@ -797,8 +807,7 @@ final class TajweedStore {
             }
 
             if beginnerSpacing, emittedVisibleClusterContent {
-                projectedScalars.append(" ")
-                displayUTF16Offset += 1
+                pendingBeginnerSpacer = true
             }
 
             let fallback: NSRange?

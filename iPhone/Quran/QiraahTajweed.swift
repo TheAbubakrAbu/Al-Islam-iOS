@@ -156,6 +156,16 @@ final class QiraahTajweedStore: @unchecked Sendable {
         pack(for: tag)?.pages
     }
 
+    /// The print rings this ayah's number medallion in magenta: its NUMBERING
+    /// differs from Hafs (a merge/split point of this riwayah's own counting).
+    func isKhilafNumbered(tag: String, surah: Int, ayah: Int) -> Bool {
+        pack(for: tag)?.khilafMarkers[surah]?.contains(ayah) ?? false
+    }
+
+    /// The magenta the prints ring khilaf-numbered ayahs with - one place, so
+    /// every surface (list suffix, page medallion) uses the same tone.
+    static var khilafNumberColor: UIColor { uiColor(for: "m") }
+
     func pack(for tag: String) -> Pack? {
         let key = Settings.Riwayah.canonicalTag(tag)
         lock.lock()
@@ -206,8 +216,11 @@ final class QiraahTajweedStore: @unchecked Sendable {
     /// vowel of an imālah, the merging letter of an idghām, ...). A resolver
     /// that can't find its target letters falls back to the whole word.
     /// `hiddenRules` (rule keys) come from the legend's show/hide toggles.
+    /// `beginnerSpacing` tells the tokenizer the text carries a space after every
+    /// letter, so words are recovered from the wider original gaps instead.
     /// Nil when nothing paints (plain text renders cheaper).
     func attributedText(tag: String, surah: Int, ayah: Int, displayText: String,
+                        beginnerSpacing: Bool = false,
                         hiddenRules: Set<String> = []) -> AttributedString? {
         guard let pack = pack(for: tag),
               let rules = pack.rules[surah]?[ayah], !rules.isEmpty else { return nil }
@@ -219,62 +232,71 @@ final class QiraahTajweedStore: @unchecked Sendable {
                         range: NSRange(location: 0, length: ns.length))
 
         let units = Array(displayText.utf16)
-        var tokenIndex = 0
-        var start = 0
         var painted = false
-        var i = 0
-        while i <= units.count {
-            let isBreak = i == units.count || units[i] == 0x20 || units[i] == 0xA0
-            if isBreak {
-                if i > start {
-                    for rule in rules[tokenIndex] ?? [] {
-                        let key = keyOf[rule.letter] ?? String(rule.letter)
-                        if hiddenRules.contains(key) { continue }
-                        let ranges: [NSRange]
-                        if pack.exactLetters {
-                            // v2: the extents were computed from the text's own
-                            // marks at build time - paint them verbatim. -1 =
-                            // the print colors the whole word (khilaf words).
-                            if rule.hasExtent {
-                                if let extent = Self.clusterRange(baseLo: rule.baseLo, baseHi: rule.baseHi,
-                                                                  in: units, tokenStart: start, tokenEnd: i) {
-                                    ranges = [extent]
-                                } else {
-                                    ranges = Self.paintRanges(key: key, in: units, tokenStart: start, tokenEnd: i)
-                                }
-                            } else {
-                                ranges = [NSRange(location: start, length: i - start)]
-                            }
-                        } else {
-                            // v1 (beta packs): rules whose target letter is DETERMINED
-                            // by the rule itself (the final mim of a silah, the sad of
-                            // an ishmam, ...) use the resolver - the print's floating
-                            // signs sit BETWEEN words and their ink bleeds into neighbor
-                            // runs, so measured extents are noisy exactly for these.
-                            // Positional rules use the measured extent, resolver as fallback.
-                            let resolverFirst = ["silah_meem", "ha_dhamir", "ishmam_sad",
-                                                 "raa_muraqqaqah", "lam_mughallazah"].contains(key)
-                            if !resolverFirst, rule.hasExtent,
-                               let extent = Self.clusterRange(baseLo: rule.baseLo, baseHi: rule.baseHi,
-                                                              in: units, tokenStart: start, tokenEnd: i) {
-                                ranges = [extent]
-                            } else {
-                                ranges = Self.paintRanges(key: key, in: units, tokenStart: start, tokenEnd: i)
-                            }
-                        }
-                        for range in ranges {
-                            ns.addAttribute(.foregroundColor, value: Self.uiColor(for: rule.letter), range: range)
-                            painted = true
-                        }
-                    }
-                    tokenIndex += 1
+        for (tokenIndex, token) in Self.tokenSpans(in: units, beginnerSpacing: beginnerSpacing).enumerated() {
+            let (start, end) = token
+            for rule in rules[tokenIndex] ?? [] {
+                let key = keyOf[rule.letter] ?? String(rule.letter)
+                if hiddenRules.contains(key) { continue }
+                // v2 packs (exact letters from the text's own marks at build time) paint their
+                // extents verbatim; -1 = the print colors the whole word (khilaf words).
+                // v1 (beta packs) prefer the resolver for rules whose target letter is DETERMINED
+                // by the rule itself (the final mim of a silah, the sad of an ishmam, ...) - the
+                // print's floating signs sit BETWEEN words and their ink bleeds into neighbor
+                // runs, so measured extents are noisy exactly for these. Positional rules use
+                // the measured extent, resolver as fallback.
+                let resolverFirst = !pack.exactLetters
+                    && ["silah_meem", "ha_dhamir", "ishmam_sad",
+                        "raa_muraqqaqah", "lam_mughallazah"].contains(key)
+                let ranges: [NSRange]
+                if pack.exactLetters, !rule.hasExtent {
+                    ranges = [NSRange(location: start, length: end - start)]
+                } else if !resolverFirst, rule.hasExtent,
+                          let extent = Self.clusterRange(baseLo: rule.baseLo, baseHi: rule.baseHi,
+                                                         in: units, tokenStart: start, tokenEnd: end) {
+                    ranges = [extent]
+                } else {
+                    ranges = Self.paintRanges(key: key, in: units, tokenStart: start, tokenEnd: end)
                 }
-                start = i + 1
+                for range in ranges {
+                    ns.addAttribute(.foregroundColor, value: Self.uiColor(for: rule.letter), range: range)
+                    painted = true
+                }
             }
-            i += 1
         }
         guard painted else { return nil }
         return AttributedString(ns)
+    }
+
+    /// The word-token spans of `displayText`'s UTF-16 units, in reading order - the
+    /// same tokenization the packs' word indices were extracted with (split on
+    /// space/NBSP). Under beginner spacing every letter carries an inserted single
+    /// space, which turns the ORIGINAL word gaps into runs of two or more - so there
+    /// only those runs separate words, and a lone space stays inside its token (the
+    /// letter resolvers skip it like any other non-base unit).
+    private static func tokenSpans(in units: [UInt16], beginnerSpacing: Bool) -> [(start: Int, end: Int)] {
+        func isGap(_ u: UInt16) -> Bool { u == 0x20 || u == 0xA0 }
+        var spans: [(start: Int, end: Int)] = []
+        var i = 0
+        while i < units.count {
+            while i < units.count, isGap(units[i]) { i += 1 }
+            guard i < units.count else { break }
+            let start = i
+            var lastContent = i
+            while i < units.count {
+                if isGap(units[i]) {
+                    var j = i
+                    while j < units.count, isGap(units[j]) { j += 1 }
+                    if !beginnerSpacing || j - i >= 2 { break }
+                    i = j   // a single inserted letter-gap inside a beginner-spaced word
+                } else {
+                    lastContent = i
+                    i += 1
+                }
+            }
+            spans.append((start, lastContent + 1))
+        }
+        return spans
     }
 
     // MARK: Letter resolvers

@@ -1,5 +1,18 @@
 import SwiftUI
 
+extension String {
+    /// Beginner mode's letter-spaced Arabic: one space between every grapheme cluster.
+    /// THE single producer of beginner-spaced text - every surface that renders it and
+    /// every consumer that reasons about it must agree on the same construction:
+    /// `TajweedStore.tajweedProjection` promises byte-identity with this join, and
+    /// `QiraahTajweedStore.tokenSpans` recovers word boundaries from the fact that an
+    /// original word gap comes out as a run of 2+ spaces while the inserted letter gaps
+    /// are single. Change the spacing here and those two must change with it.
+    var beginnerSpaced: String {
+        map { String($0) }.joined(separator: " ")
+    }
+}
+
 struct Juz: Codable, Identifiable, Equatable {
     let id: Int
     let nameArabic: String

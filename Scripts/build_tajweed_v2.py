@@ -95,6 +95,7 @@ VOCAL = {FATHA, KASRA, DAMMA, FATHATAN, DAMMATAN, KASRATAN, SHADDA, "ْ",
 HAMZA_BASES = set("ءأإؤئ")  # ء أ إ ؤ ئ
 ISTILA = set("خصضطظغق")
 YARMALOON = set("يرملون")
+TANWIN = {FATHATAN, DAMMATAN, KASRATAN, TAN_OPEN_K, TAN_OPEN_D, TAN_OPEN_F}
 
 def skel(tok, norm_hamza=False):
     s = "".join(ch for ch in tok if is_base(ord(ch))).replace("ٱ", "ا")
@@ -104,14 +105,38 @@ def skel(tok, norm_hamza=False):
             s = s.replace(a, b)
     return s
 
+# The 12 beta riwayat: machine-extracted texts shipping as loose deflates.
+# These MAY be corrected later - rerun this script afterwards; everything is
+# re-derived from the current text, and print flags re-attach by word skeleton.
+BETA_Q = {
+    "hisham": "QiraahHisham", "ibndhakwan": "QiraahIbnDhakwan",
+    "khalaf": "QiraahKhalaf", "khallad": "QiraahKhallad",
+    "abuharith": "QiraahAbuHarith", "durikisai": "QiraahDuriKisai",
+    "ibnwardan": "QiraahIbnWardan", "ibnjammaz": "QiraahIbnJammaz",
+    "ruways": "QiraahRuways", "rawh": "QiraahRawh",
+    "ishaq": "QiraahIshaq", "idris": "QiraahIdris",
+}
+
+def load_beta_text(qname):
+    blob = open(os.path.join(ROOT, "Resources", "Data", "Quran", f"{qname}.json.deflate"), "rb").read()
+    d = json.loads(zlib.decompress(blob, -15))
+    return {s: {str(a["id"]): a["text"] for a in ayat} for s, ayat in d.items()}
+
+BETA_T = {k: load_beta_text(q) for k, q in BETA_Q.items()}
+
 def texts_of(key):
     if key == "hafs":
         return {str(s): {str(a): t for a, t in v.items()} for s, v in HAFS_T.items()}
+    if key in BETA_T:
+        return BETA_T[key]
     return qpk[key]
+
+NONBETA = ["susi", "duri", "shubah", "warsh", "qaloon", "bazzi", "qunbul"]
+ALL_RIWAYAT = NONBETA + list(BETA_Q)
 
 TOKS = {}
 CLS = {}
-for key in ["hafs", "susi", "duri", "shubah", "warsh", "qaloon", "bazzi", "qunbul"]:
+for key in ["hafs"] + ALL_RIWAYAT:
     t = defaultdict(dict)
     c = defaultdict(dict)
     for s, ayat in texts_of(key).items():
@@ -128,16 +153,47 @@ def marks(c):
 def bare(c):
     return not (marks(c) & VOCAL)
 
-# ---------------- v1 packs (extraction originals, restored from git HEAD -
+def noon_sakinah(c):
+    """A noon carrying no vowel: written bare (Maghribi) or with sukoon."""
+    return c[0] == "ن" and marks(c) & VOCAL <= {SUKOON}
+
+# Maghribi-orthography texts write the wasl dots and the shadda on ordinary
+# noon/tanwin idgham into ي/و; for them that shadda is spelling, not khilaf.
+# (Khalaf's ي/و shaddas are NOT in this set on purpose: his idgham there is
+# بلا غنة - a real reading difference the print colors blue.)
+# DECLARED, not inferred: this set drives extraction semantics (imalah ring
+# interpretation), so a text-correction pass must never silently reclassify a
+# riwayah. The dot-count assertion below fails the build instead - if it fires,
+# either the correction really changed the text's orthography (update the set)
+# or it broke the wasl dots (fix the text).
+MAGHRIBI = {"warsh", "qaloon", "duri", "susi",
+            "ibnwardan", "ibnjammaz", "ruways", "rawh"}
+
+def _dot_count(key):
+    n = 0
+    for s, ayat in texts_of(key).items():
+        for a, t in ayat.items():
+            n += t.count(HIGHDOT)
+    return n
+
+for _k in ALL_RIWAYAT:
+    assert (_k in MAGHRIBI) == (_dot_count(_k) > 5000), \
+        f"orthography class changed for {_k}: dots={_dot_count(_k)}, declared MAGHRIBI={_k in MAGHRIBI}"
+
+PACK_NAME = {
+    "warsh": "TajweedWarsh", "qaloon": "TajweedQaloon", "duri": "TajweedDuri",
+    "susi": "TajweedSusi", "bazzi": "TajweedBazzi", "qunbul": "TajweedQunbul",
+    "shubah": "TajweedShubah",
+    **{k: "Tajweed" + q[6:] for k, q in BETA_Q.items()},
+}
+
+# ---------------- v1 packs (extraction originals, pinned in the repo -
 # the Resources copies are the v2 output of this very script) ----------------
 def load_v1(name):
     blob = open(os.path.join(V1DIR, f"{name}.json.deflate"), "rb").read()
     return json.loads(zlib.decompress(blob, -15))
 
-V1 = {k: load_v1(n) for k, n in [
-    ("warsh", "TajweedWarsh"), ("qaloon", "TajweedQaloon"), ("duri", "TajweedDuri"),
-    ("susi", "TajweedSusi"), ("bazzi", "TajweedBazzi"), ("qunbul", "TajweedQunbul"),
-    ("shubah", "TajweedShubah")]}
+V1 = {k: load_v1(n) for k, n in PACK_NAME.items()}
 
 def v1_words(key):
     d = V1[key]
@@ -150,7 +206,71 @@ def v1_words(key):
                 words[keyOf.get(c, c)][(int(s), int(a), int(wi))] = v
     return words
 
-V1W = {k: v1_words(k) for k in V1}
+# ---------------- print flags, pinned by WORD SKELETON not position ----------------
+# The v1 packs address words by token index against the texts as they were when
+# the flags snapshot was taken. Texts (especially the beta ones) may be corrected
+# later; print-flags.json re-keys every flag as (surah, ayah, skeleton,
+# nth-occurrence [, v1 ink extent]) so a rerun re-attaches flags to the right
+# words - or drops them cleanly when a word's letters changed. The file is
+# generated ONCE from the pinned v1 packs + the texts current at pin time and
+# should be committed; delete it only to re-pin against the current texts.
+FLAGS_PATH = os.path.join(ROOT, "Scripts", "tajweed-extraction", "print-flags.json")
+
+def _skel_occ(key, s, a, wi):
+    tks = TOKS[key][s].get(a)
+    if tks is None or wi >= len(tks):
+        return None
+    sk = skel(tks[wi])
+    occ = sum(1 for j in range(wi) if skel(tks[j]) == sk)
+    return sk, occ
+
+def pin_flags():
+    out = {}
+    for key in ALL_RIWAYAT:
+        rw = {}
+        for rule, words in v1_words(key).items():
+            rows = []
+            for (s, a, wi), v in sorted(words.items()):
+                so = _skel_occ(key, s, a, wi)
+                if so is None:
+                    continue
+                lo, hi = (v[1], v[2]) if isinstance(v, list) and len(v) == 3 else (-1, -1)
+                rows.append([s, a, so[0], so[1], lo, hi])
+            rw[rule] = rows
+        out[key] = rw
+    return out
+
+if os.path.exists(FLAGS_PATH):
+    PINNED = json.load(open(FLAGS_PATH))
+else:
+    PINNED = pin_flags()
+    with open(FLAGS_PATH, "w") as f:
+        json.dump(PINNED, f, ensure_ascii=False)
+    print(f"pinned print flags -> {FLAGS_PATH}")
+
+def flags_for(key, rule):
+    """Pinned flags resolved against the CURRENT text: {(s,a,wi): (lo,hi)}.
+    A flag whose word skeleton no longer exists at its occurrence is dropped."""
+    out = {}
+    dropped = 0
+    for s, a, sk, occ, lo, hi in PINNED.get(key, {}).get(rule, []):
+        tks = TOKS[key][s].get(a)
+        if tks is None:
+            dropped += 1
+            continue
+        n = -1
+        hit = None
+        for wi, t in enumerate(tks):
+            if skel(t) == sk:
+                n += 1
+                if n == occ:
+                    hit = wi
+                    break
+        if hit is None:
+            dropped += 1
+            continue
+        out[(s, a, hit)] = (lo, hi)
+    return out, dropped
 
 # ---------------- hafs token alignment (per surah, via SequenceMatcher on skeletons) ----------------
 # maps riwayah (s, a, wi) -> hafs token string, for khilaf letter-diff extents.
@@ -309,10 +429,22 @@ def extract_idgham(key, rules, letter):
                     pcl = CLS[key][prev[0]][prev[1]][prev[2]]
                     if not pcl:
                         continue
-                    # ordinary noon-sakinah/tanwin idgham written with shadda (Maghribi orthography)
+                    # Ordinary noon-sakinah/tanwin idgham written with shadda is a
+                    # spelling convention shared with Hafs - never a khilaf - so it
+                    # is skipped for EVERY riwayah, not only where H_CROSS happens to
+                    # match (a khilaf letter in either word changes the skeleton-pair
+                    # key, and gating this skip on the orthography class let those
+                    # sites leak through as false blue idgham that then suppressed
+                    # merge_khilaf's magenta - the Shubah 6:139 تَكُن regression).
+                    # The ONE real exception: Khalaf and Khallad merge noon into ي/و
+                    # WITHOUT ghunnah (بلا غنة) - a reading difference their prints
+                    # color blue, and their Mashriqi texts write that shadda only
+                    # where it is real (Hafs's naqis ي/و idgham carries no shadda,
+                    # so H_CROSS never hides these).
                     plast = pcl[-1]
-                    tanwin = marks(plast) & {FATHATAN, DAMMATAN, KASRATAN, TAN_OPEN_K, TAN_OPEN_D, TAN_OPEN_F}
-                    if cl[0][0] in YARMALOON and ((plast[0] == "ن" and bare(plast)) or tanwin):
+                    bila_ghunnah = key in ("khalaf", "khallad") and cl[0][0] in "يو"
+                    if not bila_ghunnah and cl[0][0] in YARMALOON \
+                       and (noon_sakinah(plast) or marks(plast) & TANWIN):
                         continue
                     if (skel(ptok, True), skel(tlist[wi], True)) in H_CROSS:
                         continue
@@ -352,7 +484,6 @@ def extract_warsh_badal(rules, letter):
                     n += 1
     # naql (hamza's vowel moved onto the preceding sakin, hamza dropped) - the
     # print colors these cyan with the badal family (p3: عذابٌ اَليم / في الَارض).
-    TANWIN = {FATHATAN, DAMMATAN, KASRATAN, TAN_OPEN_K, TAN_OPEN_D, TAN_OPEN_F}
     for s, ayat in CLS[key].items():
         for a, toks in ayat.items():
             for wi, cl in enumerate(toks):
@@ -657,8 +788,7 @@ def idgham_orthography_equal(key, s, a, wi, r, h):
     if not pcl:
         return False
     plast = pcl[-1]
-    tanwin = marks(plast) & {FATHATAN, DAMMATAN, KASRATAN, TAN_OPEN_K, TAN_OPEN_D, TAN_OPEN_F}
-    return bool(tanwin) or (plast[0] == "ن" and (bare(plast) or marks(plast) & VOCAL <= {SUKOON}))
+    return bool(marks(plast) & TANWIN) or noon_sakinah(plast)
 
 def reading_diff(key, s, a, wi, cl):
     """None when no aligned Hafs token; else (identical, lo, hi) where lo/hi is
@@ -711,10 +841,38 @@ def identical_to_hafs(key, s, a, wi, cl):
     d = reading_diff(key, s, a, wi, cl)
     return d is not None and d[0]
 
-def merge_khilaf(key, rules, letter, v1_key, whole_word_edition):
-    v1 = V1W[key].get(v1_key, {})
+def substitution_shaped(key, s, a, wi, cl):
+    """For the machine-extracted beta texts, an unflagged diff earns a khilaf
+    color only when it looks like a READING substitution: same letter skeleton,
+    and every differing cluster swaps marks rather than merely lacking them.
+    (A missing haraka/shadda is an extraction gap, not a khilaf; the one
+    legitimate omission is the hamza mark - the ibdal readings.) Words that
+    lost or gained letters are extraction dropouts; their real khilaf coverage
+    comes from the print flags."""
+    ht = hafs_tok(key, s, a, wi)
+    if ht is None:
+        return False
+    r = norm_clusters(cl)
+    h = norm_clusters(clusterize(ht))
+    if [x[0] for x in r] != [x[0] for x in h]:
+        return False
+    for ci in markdiff_extent(r, h):
+        rm, hm = r[ci][1], h[ci][1]
+        omitted = hm - rm
+        extra = rm - hm
+        # purely-omitted marks (no replacement) = extraction gap, except the
+        # hamza mark whose absence IS the ibdal reading. Extra marks are fine:
+        # noise drops marks, readings add them (يُكَذِّبُونَ's shadda).
+        if not extra and omitted - {HAMZA_ABOVE}:
+            return False
+    return True
+
+def merge_khilaf(key, rules, letter, v1_key, whole_word_edition, strict_additions=False):
+    v1, dropped = flags_for(key, v1_key)
     stats = Counter()
-    for (s, a, wi), v in v1.items():
+    if dropped:
+        stats["flag-unmatched"] = dropped
+    for (s, a, wi), (vlo, vhi) in v1.items():
         toks = CLS[key][s].get(a)
         if toks is None or wi >= len(toks):
             stats["dropped-oob"] += 1
@@ -730,8 +888,8 @@ def merge_khilaf(key, rules, letter, v1_key, whole_word_edition):
             add(rules, s, a, wi, letter, -1, -1)
             stats["whole"] += 1
             continue
-        if isinstance(v, list) and len(v) == 3 and isinstance(v[1], int):
-            lo, hi = v[1], min(v[2], len(cl))
+        if vlo >= 0:
+            lo, hi = vlo, min(vhi, len(cl))
             if 0 <= lo < hi:
                 add(rules, s, a, wi, letter, lo, hi - 1)  # v1 hi is exclusive
                 stats["v1-extent"] += 1
@@ -790,6 +948,8 @@ def merge_khilaf(key, rules, letter, v1_key, whole_word_edition):
                             if d0 is not None and not d0[0] and d0[1] == len(cl) - 1 \
                                and d0[2] == len(cl) - 1:
                                 continue
+                if strict_additions and not substitution_shaped(key, s, a, wi, cl):
+                    continue
                 d = reading_diff(key, s, a, wi, cl)
                 if d is not None and not d[0] and d[1] is not None:
                     if whole_word_edition:
@@ -799,15 +959,19 @@ def merge_khilaf(key, rules, letter, v1_key, whole_word_edition):
                     stats["diff-added"] += 1
     return stats
 
-def idgham_from_pack(key, rules, letter):
-    """Print-flagged idgham words (warsh: the قد ضّل / أخذتّم family, incl. ones
-    Hafs shares) with letter-exact extents recomputed from the text."""
-    v1 = V1W[key].get("idgham", {})
+def idgham_from_pack(key, rules, letter, skip_existing=False):
+    """Print-flagged idgham words (the قد ضّل / أخذتّم families, incl. ones
+    Hafs shares) with letter-exact extents recomputed from the text. With
+    skip_existing, words the text-pattern extractor already colored are left
+    alone (used when a riwayah runs both sources)."""
+    v1, _ = flags_for(key, "idgham")
     n = 0
     flagged = set(v1)
     for (s, a, wi) in v1:
         toks = CLS[key][s].get(a)
         if toks is None or wi >= len(toks) or not toks[wi]:
+            continue
+        if skip_existing and any(e[0] == letter for e in rules[s][a].get(wi, [])):
             continue
         cl = toks[wi]
         lo = hi = None
@@ -827,6 +991,151 @@ def idgham_from_pack(key, rules, letter):
         n += 1
     return n
 
+# ---------------- beta-specific extractors (all locked to the text) ----------------
+def extract_imalah_with_flags(key, rules, letter, use_rings):
+    """Imalah for the beta editions: exact letters from the text's own 065C
+    (and hollow rings on non-wasl letters for the Mashriqi Hamzah pair), PLUS
+    the print's imalah word flags for words the text leaves unmarked (Yaqub,
+    most of Khallad, half of Kisai...) - extent falls back to the final
+    inclined-vowel cluster, the same resolution the print's reader performs."""
+    n = 0
+    done = set()
+    for s, ayat in CLS[key].items():
+        for a, toks in ayat.items():
+            for wi, cl in enumerate(toks):
+                for ci, c in enumerate(cl):
+                    hit = IMALAH in c[1] or (use_rings and RING in c[1] and not (ci == 0 and c[0] == "ا"))
+                    if hit:
+                        lo, hi = inclined_extent(cl, ci)
+                        add(rules, s, a, wi, letter, lo, hi)
+                        done.add((s, a, wi))
+                        n += 1
+    flags, _ = flags_for(key, "imalah")
+    for (s, a, wi) in flags:
+        if (s, a, wi) in done:
+            continue
+        toks = CLS[key][s].get(a)
+        if toks is None or wi >= len(toks) or not toks[wi]:
+            continue
+        cl = toks[wi]
+        idx = None
+        for ci in range(len(cl) - 1, -1, -1):
+            if cl[ci][0] in "اىٱ" and bare(cl[ci]):
+                idx = ci
+                break
+            if DAGGER in cl[ci][1]:
+                idx = ci
+                break
+        if idx is None:
+            continue  # no inclined vowel to lean = the flag is extraction noise
+        add(rules, s, a, wi, letter, max(0, idx - 1), idx)
+        n += 1
+    return n
+
+def extract_sakt(key, rules, letter, scope):
+    """Khalaf pauses on ANY sakin before hamza (joined and separated); Khallad
+    only on the article lam and on شيء. Both are fully text-derivable, so a
+    future text fix just needs a rerun."""
+    n = 0
+    for s, ayat in CLS[key].items():
+        for a, toks in ayat.items():
+            for wi, cl in enumerate(toks):
+                if not cl:
+                    continue
+                for ci in range(len(cl) - 1):
+                    if SUKOON not in cl[ci][1] or not is_hamza_cluster(cl[ci + 1]):
+                        continue
+                    if scope == "khallad":
+                        is_article = cl[ci][0] == "ل" and ci >= 1 and cl[ci - 1][0] in "اٱ"
+                        is_shay = cl[ci][0] == "ي" and ci >= 1 and cl[ci - 1][0] == "ش"
+                        if not (is_article or is_shay):
+                            continue
+                    add(rules, s, a, wi, letter, ci, ci + 1)
+                    n += 1
+                if scope == "khalaf":
+                    last = cl[-1]
+                    if SUKOON in last[1] and wi + 1 < len(toks) and toks[wi + 1] \
+                       and is_hamza_cluster(toks[wi + 1][0]):
+                        add(rules, s, a, wi, letter, len(cl) - 1, len(cl) - 1)
+                        add(rules, s, a, wi + 1, letter, 0, 0)
+                        n += 1
+    return n
+
+def extract_ishmam_flags(key, rules, letter):
+    """Print-flagged ishmam words (صراط blended toward zay); the ص is the rule's
+    letter by definition."""
+    flags, _ = flags_for(key, "ishmam_sad")
+    n = 0
+    for (s, a, wi) in flags:
+        toks = CLS[key][s].get(a)
+        if toks is None or wi >= len(toks) or not toks[wi]:
+            continue
+        cl = toks[wi]
+        sads = [ci for ci, c in enumerate(cl) if c[0] == "ص"]
+        if sads:
+            for ci in sads:
+                add(rules, s, a, wi, letter, ci, ci)
+        else:
+            add(rules, s, a, wi, letter, -1, -1)
+        n += 1
+    return n
+
+def extract_ghunnah_kha_ghayn(key, rules, letter):
+    """Abu Jafar keeps the ghunnah before خ and غ - deterministic: every noon
+    sakinah / tanwin met by خ/غ, in-word or across words."""
+    n = 0
+    for s, ayat in CLS[key].items():
+        for a, toks in ayat.items():
+            for wi, cl in enumerate(toks):
+                for ci, c in enumerate(cl):
+                    nxt = None
+                    if ci + 1 < len(cl):
+                        nxt = cl[ci + 1][0]
+                    elif wi + 1 < len(toks) and toks[wi + 1]:
+                        nxt = toks[wi + 1][0][0]
+                    if nxt not in ("خ", "غ"):
+                        continue
+                    if noon_sakinah(c) or marks(c) & TANWIN:
+                        add(rules, s, a, wi, letter, ci, ci)
+                        n += 1
+    return n
+
+def extract_silah_pronoun(key, rules, letter):
+    """Abu Jafar's plural-mim silah. His texts do NOT write the small waw the
+    Ibn Kathir texts use, so the rule is structural: a final sukooned م whose
+    seat is the pronoun (preceded by ه / ت / suffix ك), joined to a following
+    word (silah never applies at the ayah's end, and iltiqa positions carry a
+    vowel instead of sukoon)."""
+    n = 0
+    for s, ayat in CLS[key].items():
+        for a, toks in ayat.items():
+            last_wi = len(toks) - 1
+            for wi, cl in enumerate(toks):
+                if wi == last_wi or len(cl) < 2:
+                    continue
+                lastc = cl[-1]
+                # silah'd mim is sakin: written bare (Maghribi) or with sukoon;
+                # a voweled mim is the iltiqa/i'rab form and takes no silah.
+                if lastc[0] != "م" or (marks(lastc) & VOCAL) - {SUKOON}:
+                    continue
+                p = cl[-2]
+                if p[0] not in "هكت":
+                    continue
+                # The question word كَمۡ always writes its fathah (كَمۡ، وَكَمۡ، فَكَم -
+                # the old 2-cluster test missed the prefixed forms), while the
+                # pronoun كُم carries a dammah or is written bare (وَلَكم) - never
+                # a fathah.
+                if p[0] == "ك" and FATHA in p[1]:
+                    continue
+                # A SAKIN حۡ directly before كُم makes the م a root radical - the
+                # jussive/imperative of حكم (يَحۡكُم، فَٱحۡكُم، وَلۡيَحۡكُمۡ). A genuine
+                # pronoun host ending in ح carries its case vowel (رِيحُكُمۡ).
+                if p[0] == "ك" and len(cl) >= 3 and cl[-3][0] == "ح" and SUKOON in cl[-3][1]:
+                    continue
+                add(rules, s, a, wi, letter, len(cl) - 1, len(cl) - 1)
+                n += 1
+    return n
+
 # ---------------- per-riwayah build ----------------
 LGD = {
     "khilaf_harf": ("الحرف المخالف لحفص", "Letter differing from Ḥafṣ"),
@@ -840,6 +1149,9 @@ LGD = {
     "madd_leen": ("مد اللين", "Madd al-līn"),
     "raa_muraqqaqah": ("الراءات المرققة", "Light (muraqqaq) rāʾ"),
     "lam_mughallazah": ("اللامات المغلظة", "Heavy (mughallaẓ) lām"),
+    "sakt": ("السكت", "Sakt (breathless pause)"),
+    "ishmam_sad": ("إشمام الصاد صوت الزاي", "Ṣād blended toward zāy"),
+    "ghunnah_kha_ghayn": ("الغنة مع الخاء والغين", "Ghunnah kept before khāʾ/ghayn"),
 }
 
 def legend_entry(c, k):
@@ -859,7 +1171,7 @@ def build(key, name):
         rep["idgham_words"] = idgham_from_pack(key, rules, "b")
         rep["taqlil"] = extract_taqlil(key, rules, "r")
         rep["badal"] = extract_warsh_badal(rules, "c")
-        rep["raa"] = extract_warsh_raa(rules, "g", V1W[key].get("raa_muraqqaqah", {}))
+        rep["raa"] = extract_warsh_raa(rules, "g", flags_for(key, "raa_muraqqaqah")[0])
         rep["lam"] = extract_warsh_lam(rules, "l")
         rep["silah"] = extract_silah_meem(key, rules, "o")
         rep["leen"] = extract_warsh_leen(rules, "y")
@@ -897,6 +1209,46 @@ def build(key, name):
         rep["imalah"] = extract_imalah(key, rules, "r")
         rep["khilaf"] = dict(merge_khilaf(key, rules, "m", "khilaf_harf", False))
 
+    # ---- the 12 beta riwayat (legends per each print, transcribed in v1) ----
+    elif key in ("hisham", "ibndhakwan", "ishaq", "idris", "ruways", "rawh"):
+        legend = [legend_entry("m", "khilaf_harf"), legend_entry("b", "idgham"),
+                  legend_entry("r", "imalah")]
+        rep["idgham_sites"] = extract_idgham(key, rules, "b")
+        rep["idgham_flag_words"] = idgham_from_pack(key, rules, "b", skip_existing=True)
+        rep["imalah"] = extract_imalah_with_flags(key, rules, "r", use_rings=key not in MAGHRIBI)
+        rep["khilaf"] = dict(merge_khilaf(key, rules, "m", "khilaf_harf", False, strict_additions=True))
+    elif key in ("khalaf", "khallad"):
+        legend = [legend_entry("m", "khilaf_word"), legend_entry("b", "idgham"),
+                  legend_entry("r", "imalah"), legend_entry("c", "sakt"),
+                  legend_entry("o", "ishmam_sad")]
+        rep["idgham_sites"] = extract_idgham(key, rules, "b")
+        # Khalaf's idgham (his بلا غنة merging included) is fully WRITTEN in his
+        # text, so the pattern is complete - the print flags only add extraction
+        # noise on top (ءَامَنَّا etc.). Khallad's text writes far less; his
+        # print-listed words still matter.
+        if key == "khallad":
+            rep["idgham_flag_words"] = idgham_from_pack(key, rules, "b", skip_existing=True)
+        rep["imalah"] = extract_imalah_with_flags(key, rules, "r", use_rings=True)
+        rep["sakt"] = extract_sakt(key, rules, "c", scope=key)
+        rep["ishmam"] = extract_ishmam_flags(key, rules, "o")
+        rep["khilaf"] = dict(merge_khilaf(key, rules, "m", "khilaf_word", True, strict_additions=True))
+    elif key in ("abuharith", "durikisai"):
+        legend = [legend_entry("m", "khilaf_harf"), legend_entry("b", "idgham"),
+                  legend_entry("r", "imalah"), legend_entry("o", "ishmam_sad")]
+        rep["idgham_sites"] = extract_idgham(key, rules, "b")
+        rep["idgham_flag_words"] = idgham_from_pack(key, rules, "b", skip_existing=True)
+        rep["imalah"] = extract_imalah_with_flags(key, rules, "r", use_rings=True)
+        rep["ishmam"] = extract_ishmam_flags(key, rules, "o")
+        rep["khilaf"] = dict(merge_khilaf(key, rules, "m", "khilaf_harf", False, strict_additions=True))
+    elif key in ("ibnwardan", "ibnjammaz"):
+        legend = [legend_entry("m", "khilaf_harf"), legend_entry("b", "idgham"),
+                  legend_entry("r", "silah_meem"), legend_entry("c", "ghunnah_kha_ghayn")]
+        rep["idgham_sites"] = extract_idgham(key, rules, "b")
+        rep["idgham_flag_words"] = idgham_from_pack(key, rules, "b", skip_existing=True)
+        rep["silah"] = extract_silah_pronoun(key, rules, "r")
+        rep["ghunnah"] = extract_ghunnah_kha_ghayn(key, rules, "c")
+        rep["khilaf"] = dict(merge_khilaf(key, rules, "m", "khilaf_harf", False, strict_additions=True))
+
     # order entries per word: whole-word first, then letter extents
     out_rules = {}
     total_entries = 0
@@ -924,16 +1276,14 @@ def build(key, name):
         rep["bytes"] = len(blob)
     return pack
 
+print(f"maghribi-orthography texts: {sorted(MAGHRIBI)}")
 print("building alignments...")
-for key in ["warsh", "susi", "bazzi", "qunbul", "shubah", "duri", "qaloon"]:
+for key in ALL_RIWAYAT:
     ALIGNED[key] = build_alignment(key)
     print(f"  {key}: {len(ALIGNED[key])} tokens aligned")
 
-for key, name in [("warsh", "TajweedWarsh"), ("qaloon", "TajweedQaloon"),
-                  ("duri", "TajweedDuri"), ("susi", "TajweedSusi"),
-                  ("bazzi", "TajweedBazzi"), ("qunbul", "TajweedQunbul"),
-                  ("shubah", "TajweedShubah")]:
-    build(key, name)
+for key in ALL_RIWAYAT:
+    build(key, PACK_NAME[key])
 
 print(f"\n{'WRITTEN' if WRITE else 'DRY RUN'}")
 for rep in REPORT:
