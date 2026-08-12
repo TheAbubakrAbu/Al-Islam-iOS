@@ -58,6 +58,9 @@ struct AyahActionsSheet: View {
     @ObservedObject private var settings = Settings.shared
     @ObservedObject private var quranData = QuranData.shared
     @ObservedObject private var quranPlayer = QuranPlayer.shared
+    /// The per-ayah beginner spacing, shared with the list rows and the page composer - so the tile below
+    /// shows the ayah's real current state and toggling it re-composes the page behind the sheet.
+    @ObservedObject private var beginnerOverrides = AyahBeginnerOverrides.shared
     @Environment(\.dismiss) private var dismiss
 
     let surah: Surah
@@ -295,20 +298,31 @@ struct AyahActionsSheet: View {
             onRequestSheet?(.selectText)
         }))
 
-        // Two explicit tiles rather than one "Copy" that follows whatever was last SHARED as. This sheet
-        // has the room, and a copy you have to guess the outcome of is worse than two you don't. (The list
-        // rows keep the single remembered-mode Copy - a context menu can't afford the extra row.)
-        list.append(AyahAction(id: "copyText", title: "Copy Text", systemImage: "doc.on.doc", action: {
-            settings.hapticFeedback()
-            ShareAyahSheet.copyAyahToPasteboard(surahNumber: surah.id, ayahNumber: ayah.id,
-                                                settings: settings, quranData: quranData, mode: .text)
-            dismiss()
-        }))
+        // The per-ayah letter spacing, offered here exactly as the list rows offer it in their context menu -
+        // page mode had no route to it at all. Hidden while the GLOBAL beginner mode is on, since then every
+        // ayah is already spaced and the toggle would do nothing (same rule as the list's).
+        if settings.showArabicText && !settings.beginnerMode {
+            let isBeginner = beginnerOverrides.contains(surah: surah.id, ayah: ayah.id)
+            list.append(AyahAction(
+                id: "beginner",
+                title: "Beginner",
+                systemImage: isBeginner ? "textformat.size.larger.ar" : "textformat.size.ar",
+                action: {
+                    settings.hapticFeedback()
+                    withAnimation(.easeInOut) {
+                        beginnerOverrides.toggle(surah: surah.id, ayah: ayah.id)
+                    }
+                }
+            ))
+        }
 
-        list.append(AyahAction(id: "copyImage", title: "Copy Image", systemImage: "photo.on.rectangle", action: {
+        // ONE copy tile, in the remembered mode - the same "Copy Ayah" the list rows offer (user rule).
+        // This used to be two tiles, Copy Text and Copy Image, which is the one thing page mode did
+        // differently from the list for no reason the reader could see.
+        list.append(AyahAction(id: "copy", title: "Copy Ayah", systemImage: "doc.on.doc", action: {
             settings.hapticFeedback()
             ShareAyahSheet.copyAyahToPasteboard(surahNumber: surah.id, ayahNumber: ayah.id,
-                                                settings: settings, quranData: quranData, mode: .image)
+                                                settings: settings, quranData: quranData)
             dismiss()
         }))
 

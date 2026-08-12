@@ -28,6 +28,15 @@ struct MushafPage: Identifiable {
     /// surah on the page - the one the page opens with. On a page holding Al-Ikhlas, Al-Falaq and An-Nas,
     /// that is Al-Ikhlas (112), not whichever happens to have the most ayahs.
     var displayedSurah: Surah? { firstSurah }
+
+    /// Every ayah printed on this page, as (surah, ayah) refs. Used to scope the per-ayah beginner overrides
+    /// to the page they affect, so a toggle anywhere else in the mushaf can't evict this page's render or
+    /// discard its measured fit.
+    var ayahRefs: [HighlightedAyahRef] {
+        segments.flatMap { segment in
+            segment.ayahs.map { HighlightedAyahRef(surahID: segment.surah.id, ayahID: $0.id) }
+        }
+    }
 }
 
 /// The whole mushaf as swipeable pages: each page holds every ayah printed on it - across surah boundaries - 
@@ -214,13 +223,20 @@ enum MushafPagination {
     }
 }
 
-/// Single-slot memo for the in-page find fold (file-scope: `SurahPageReader` is generic, and generic
-/// types can't hold static stored state). One slot suffices - consecutive evaluations ask for the same
-/// (page, query); any change simply recomputes once.
+/// One find match, carrying the page it sits on: widening the find to a whole surah means stepping through
+/// matches turns pages, so the destination has to travel with the ayah.
+struct MushafFindMatch {
+    let pageIndex: Int
+    let ref: HighlightedAyahRef
+}
+
+/// Single-slot memo for the find fold (file-scope: `SurahPageReader` is generic, and generic types can't hold
+/// static stored state). One slot suffices - consecutive evaluations ask for the same (scope, page, query);
+/// any change simply recomputes once.
 @MainActor
 private enum PageFindMemo {
     static var key = ""
-    static var matches: [HighlightedAyahRef] = []
+    static var matches: [MushafFindMatch] = []
 }
 
 struct SurahPageReader<Controls: View>: View {
@@ -255,15 +271,22 @@ struct SurahPageReader<Controls: View>: View {
     /// page colors the matched substring in accent until the reader's first touch clears it.
     var arrivalHighlight: (ref: HighlightedAyahRef, term: String)? = nil
     var onClearArrival: (() -> Void)? = nil
-    /// Multi-select (parent-owned): while on, taps toggle ayahs of `surah` instead of marking them.
+    /// Multi-select (parent-owned): while on, taps toggle ayahs instead of marking them. Keyed by
+    /// (surah, ayah) and NOT cleared on a page turn, so a selection can be built across several pages -
+    /// including across a surah boundary, which a page routinely straddles.
     var isSelecting: Bool = false
-    var selectedAyahIDs: Set<Int> = []
-    var onToggleSelection: ((Int) -> Void)? = nil
+    var selectedAyahs: Set<HighlightedAyahRef> = []
+    var onToggleSelection: ((Int, Int) -> Void)? = nil
     /// Fires on a real page turn (not the initial seed) - the parent clears its selections and snippet.
     var onPageTurned: (() -> Void)? = nil
     /// Opens the reciter picker (the parent owns the sheet). Page mode had no way to change reciter
     /// without leaving to list mode; the footer play menu offers it through this hook.
     var onChooseReciter: (() -> Void)? = nil
+    /// Opens the custom-range sheet, and starts a random reciter, for the surah the footer is showing. Both
+    /// are owned by the parent (the sheet, and the reciter list), and both exist so the page reader's play
+    /// menu can be the list reader's play menu exactly, rather than a reduced version of it.
+    var onPlayCustomRange: (() -> Void)? = nil
+    var onPlayRandomReciter: ((Surah) -> Void)? = nil
     /// The optional tajweed/qiraah controls and the mini player. The reader owns the ordering: these sit
     /// ABOVE the page-navigation footer, which is applied last so it stays pinned at the very bottom.
     @ViewBuilder var bottomControls: () -> Controls
@@ -306,18 +329,22 @@ struct SurahPageReader<Controls: View>: View {
     /// moment the picker closes and the jump lands; fits at the picker-shrunken height would all near-miss.
     @State private var pickerBaseGeometry: (width: CGFloat, height: CGFloat)?
 
-    // In-page find: the query, and which of the current page's matches is active.
+    // In-page find: the query, and which of the current matches is active.
     @State private var pageSearchText = ""
     @State private var currentMatchIndex = 0
     @FocusState private var pageSearchFocused: Bool
+    /// Non-nil when the find has been widened from THIS PAGE to a whole surah - it holds which surah, captured
+    /// when the reader asked for it. Captured rather than re-read from the visible page, because widening then
+    /// stepping through the matches turns pages, which would otherwise keep moving the target underfoot.
+    @State private var findSurahID: Int?
 
-    /// The ayahs on the currently-visible page whose text matches the find query, in reading order. Matching
-    /// is diacritic-insensitive over Arabic + transliteration + both English translations, so it finds the
-    /// ayah whatever the page is showing.
-    /// Memoized by (page, folded query, qiraah): the body evaluates this on EVERY re-render while the find
-    /// bar is open (including each recitation tick - the reader observes the player), and `syncMatch` /
-    /// `goToMatch` ask again per event. The fold now runs once per page+query; every repeat is a hit.
-    private func matchesOnPage(_ pages: [MushafPage]) -> [HighlightedAyahRef] {
+    /// The ayahs matching the find query, in reading order - on the visible page, or across the whole surah
+    /// once the reader has widened the find (`findSurahID`). Matching is diacritic-insensitive over Arabic +
+    /// transliteration + both English translations, so it finds the ayah whatever the page is showing.
+    /// Memoized by (scope, page, folded query, qiraah): the body evaluates this on EVERY re-render while the
+    /// find bar is open (including each recitation tick - the reader observes the player), and `syncMatch` /
+    /// `goToMatch` ask again per event. The fold runs once per scope+page+query; every repeat is a hit.
+    private func matchesOnPage(_ pages: [MushafPage]) -> [MushafFindMatch] {
         let query = settings.cleanSearch(pageSearchText.removingAyahSearchOperators, whitespace: true)
             .removingArabicDiacriticsAndSigns
         guard !query.isEmpty, pages.indices.contains(pageIndex) else { return [] }
@@ -332,12 +359,26 @@ struct SurahPageReader<Controls: View>: View {
 
         // The hamza-preserving fold goes in the key too: `query` has the hamza folded AWAY, so ينساء and
         // ينسا produce the same `query` while now yielding different results - one key, two answers.
-        let memoKey = "\(pageIndex)|\(settings.displayQiraahForArabic ?? "")|\(query)|"
+        // The page index is part of the key ONLY for a page-scoped find. A surah-wide result doesn't depend
+        // on which page is showing - and stepping through its matches TURNS pages, so keying on the page
+        // there re-folded the entire surah (48 pages for al-Baqarah) on every single step.
+        let scopeKey = findSurahID.map { "surah\($0)" } ?? "page\(pageIndex)"
+        let memoKey = "\(scopeKey)|\(settings.displayQiraahForArabic ?? "")|\(query)|"
             + (hamzaFilter != nil ? settings.cleanSearchKeepingHamza(pageSearchText, whitespace: true) : "")
         if PageFindMemo.key == memoKey { return PageFindMemo.matches }
 
-        var result: [HighlightedAyahRef] = []
-        for segment in pages[pageIndex].segments {
+        // Widened to a surah: every page that carries any of that surah, in page order. Otherwise just the
+        // page on screen - the find bar's default, and what the reader gets before asking for more.
+        let scanned: [Int] = {
+            guard let findSurahID else { return [pageIndex] }
+            return pages.indices.filter { i in
+                pages[i].segments.contains { $0.surah.id == findSurahID }
+            }
+        }()
+
+        var result: [MushafFindMatch] = []
+        for index in scanned {
+          for segment in pages[index].segments where findSurahID == nil || segment.surah.id == findSurahID {
             for ayah in segment.ayahs {
                 // RAW Arabic first: the global index folds the raw text too, so the dagger-alif lanes
                 // ("يانسا" via dagger→ا, plus the dagger-dropped "ينسا"/"ابرهيم") match here exactly like
@@ -361,8 +402,12 @@ struct SurahPageReader<Controls: View>: View {
                 guard matched else { continue }
                 // A hamza the reader actually typed has to be present in the ayah, not folded away.
                 if let hamzaFilter, !hamzaFilter.matches(anyOf: [rawArabic]) { continue }
-                result.append(HighlightedAyahRef(surahID: segment.surah.id, ayahID: ayah.id))
+                result.append(MushafFindMatch(
+                    pageIndex: index,
+                    ref: HighlightedAyahRef(surahID: segment.surah.id, ayahID: ayah.id)
+                ))
             }
+          }
         }
         PageFindMemo.key = memoKey
         PageFindMemo.matches = result
@@ -384,11 +429,14 @@ struct SurahPageReader<Controls: View>: View {
         // The live find state, computed ONCE per evaluation and shared by the find bar and the pages:
         // every matching ayah on the page gets its matched substrings in accent, and the whole page drops
         // its tajweed colors while the query is live (see `MushafPageTextView.searchHighlight`).
+        let findMatches: [MushafFindMatch] = searchActive ? matchesOnPage(pages) : []
         let liveSearch: (matches: [HighlightedAyahRef], term: String)? = {
             guard searchActive else { return nil }
             let term = pageSearchText.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !term.isEmpty else { return nil }
-            return (matchesOnPage(pages), term)
+            // Every match, whichever page it is on: a page only ever paints the refs it actually contains,
+            // so a surah-wide match set lights each page's own hits and nothing else.
+            return (findMatches.map(\.ref), term)
         }()
 
         Group {
@@ -427,8 +475,7 @@ struct SurahPageReader<Controls: View>: View {
                                     onClearArrival: onClearArrival,
                                     searchHighlight: liveSearch,
                                     isSelecting: isSelecting,
-                                    selectionSurahID: surah.id,
-                                    selectedAyahIDs: selectedAyahIDs,
+                                    selectedAyahs: selectedAyahs,
                                     onToggleSelection: onToggleSelection
                                 )
                             }
@@ -470,20 +517,14 @@ struct SurahPageReader<Controls: View>: View {
                 .opacity(bottomBarsCollapsed ? 0 : 1)
                 .allowsHitTesting(!bottomBarsCollapsed)
         }
-        // The collapsed state's restore strip: ordinary layout, not a floating overlay - applied LAST
-        // so it sits BELOW everything else at the screen's bottom edge, and only has height while the
-        // bars are collapsed (expanded, the seam chevron in the footer is the collapse control and
-        // this strip costs nothing). Same mounted-collapse pattern as the bars themselves.
-        .safeAreaInset(edge: .bottom, spacing: 0) {
-            bottomBarsToggleStrip
-                .frame(height: bottomBarsCollapsed ? nil : 0)
-                .clipped()
-                .opacity(bottomBarsCollapsed ? 1 : 0)
-                .allowsHitTesting(bottomBarsCollapsed)
-        }
+        // The collapse/restore strip: ordinary layout, not a floating overlay - applied LAST so it sits
+        // BELOW everything else at the screen's bottom edge. It is ALWAYS mounted and always visible (user
+        // rule: "put collapse at the bottom rather than at the right, the same as it is when collapsed"),
+        // so the control never moves - only its chevron flips direction.
+        .safeAreaInset(edge: .bottom, spacing: 0) { bottomBarsToggleStrip }
         .safeAreaInset(edge: .top, spacing: 0) {
             if searchActive {
-                pageFindBar(pages: pages, matches: liveSearch?.matches ?? [])
+                pageFindBar(pages: pages, matches: findMatches)
                     .transition(.move(edge: .top).combined(with: .opacity))
             }
         }
@@ -548,8 +589,10 @@ struct SurahPageReader<Controls: View>: View {
                 if highlightedAyah != nil { highlightedAyah = nil }
                 onPageTurned?()
             }
-            // Matches are per-page: turning the page re-runs the find against the new page.
-            if searchActive { syncMatch(pages: pages, resetIndex: true) }
+            // Page-scoped matches are per-page, so turning the page re-runs the find against the new one. A
+            // surah-wide find already holds every match and turning pages is how you STEP through it -
+            // resyncing there would throw the position back to the first match on every step.
+            if searchActive, findSurahID == nil { syncMatch(pages: pages, resetIndex: true) }
             guard pages.indices.contains(index),
                   let surah = pages[index].firstSurah,
                   let ayah = pages[index].firstAyah else { return }
@@ -603,6 +646,23 @@ struct SurahPageReader<Controls: View>: View {
             } else {
                 pageSearchText = ""
                 pageSearchFocused = false
+                // The find always REOPENS scoped to the page you are on - widening to the surah is a
+                // deliberate per-search choice, not a mode that quietly persists into the next one.
+                findSurahID = nil
+            }
+        }
+        // Folding (or restoring) the bottom bars changes every page's height budget. The VISIBLE page
+        // re-fits on its own (debounced, in `MushafPageContent`), but the prewarmed ring around it stayed
+        // composed at the OLD height - so the first swipe after a collapse served the neighbour's stale
+        // short render as the fallback, which read as "the page shows up uncollapsed, then grows" (user
+        // report). Re-warm the ring at the settled geometry instead, so neighbours are already composed
+        // for the new band before any swipe. Delayed past the 0.25s fold animation plus the page's own
+        // 150ms settle debounce: `lastGeometry` mid-sweep holds a transient height the pages never rest
+        // at, and a ring fitted to it would be thrown away.
+        .onChange(of: bottomBarsCollapsed) { _ in
+            Task {
+                try? await Task.sleep(nanoseconds: 500_000_000)
+                MushafPageRenderCache.prewarm(pages: pages, around: pageIndex, includeCenter: true)
             }
         }
         // Warm the wheel's CANDIDATE while the user is still scrolling it: by the time they tap the
@@ -709,32 +769,51 @@ struct SurahPageReader<Controls: View>: View {
             return
         }
         currentMatchIndex = min(currentMatchIndex, matches.count - 1)
-        highlightedAyah = matches[currentMatchIndex]
+        let match = matches[currentMatchIndex]
+        highlightedAyah = match.ref
+        // A surah-wide find can land its first match on a page other than the one on screen - take the
+        // reader there, the way tapping through the matches does.
+        if findSurahID != nil, match.pageIndex != pageIndex, pages.indices.contains(match.pageIndex) {
+            suppressNextPageTurnClear = true
+            withAnimation(.easeInOut(duration: 0.2)) { pageIndex = match.pageIndex }
+        }
     }
 
-    /// Step to the previous/next match on this page, wrapping around, and light it up.
+    /// Step to the previous/next match, wrapping around, and light it up. In a surah-wide find the match may
+    /// be on another page, so this turns to it - and suppresses the page-turn clear, which would otherwise
+    /// wipe the very selection the step just made.
     private func goToMatch(_ delta: Int, pages: [MushafPage]) {
         let matches = matchesOnPage(pages)
         guard !matches.isEmpty else { return }
         settings.hapticFeedback()
         currentMatchIndex = (currentMatchIndex + delta + matches.count) % matches.count
+        let match = matches[currentMatchIndex]
         withAnimation(.easeInOut(duration: 0.15)) {
-            highlightedAyah = matches[currentMatchIndex]
+            highlightedAyah = match.ref
+        }
+        if match.pageIndex != pageIndex, pages.indices.contains(match.pageIndex) {
+            suppressNextPageTurnClear = true
+            withAnimation(.easeInOut(duration: 0.2)) { pageIndex = match.pageIndex }
         }
     }
 
-    /// The in-page find bar: a text field, a match counter with up/down, a close button, and - always - an
-    /// escape to the whole-Quran search (offered whether or not this page has a match).
-    /// `matches` comes from the body's shared `liveSearch` computation, so the fold runs once per keystroke.
-    private func pageFindBar(pages: [MushafPage], matches: [HighlightedAyahRef]) -> some View {
+    /// The in-page find bar: a text field, a match counter with up/down, a close button, and - always - the
+    /// two ways OUT of this page: widen the find to the whole surah (in place, stepping through it turns
+    /// pages), or hand the query to the whole-Quran search. Both are offered whether or not this page has a
+    /// match, which is the point: a page with nothing on it should never be a dead end.
+    /// `matches` comes from the body's shared fold, so it runs once per keystroke.
+    private func pageFindBar(pages: [MushafPage], matches: [MushafFindMatch]) -> some View {
         let hasQuery = !pageSearchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        // The surah to widen INTO: the one the page on screen is showing.
+        let scopeSurah = pages.indices.contains(pageIndex) ? pages[pageIndex].displayedSurah : nil
+        let searchingSurah = findSurahID != nil
 
-        return VStack(spacing: 8) {
+        return VStack(spacing: 5) {
             HStack(spacing: 10) {
                 Image(systemName: "magnifyingglass")
                     .foregroundStyle(.secondary)
 
-                TextField("Search this page", text: $pageSearchText)
+                TextField(searchingSurah ? "Search this surah" : "Search this page", text: $pageSearchText)
                     .textFieldStyle(.plain)
                     .autocorrectionDisabled()
                     .focused($pageSearchFocused)
@@ -767,30 +846,65 @@ struct SurahPageReader<Controls: View>: View {
             }
             .foregroundStyle(settings.accentColor.color)
             .padding(.horizontal, 14)
-            .padding(.vertical, 10)
+            .padding(.vertical, 8)
             .conditionalGlassEffect(rectangle: true)
 
-            // Always offer the whole-Quran search - the whole point is that a page with no match (or even one
-            // with a match) can escape to searching everywhere, without bouncing back to the surah list first.
-            Button {
-                settings.hapticFeedback()
-                let query = pageSearchText
-                withAnimation(.easeInOut) { searchActive = false }
-                QuranSearchHandoff.shared.request(query)
-            } label: {
-                Label(matches.isEmpty && hasQuery ? "No matches on this page. Search the whole Quran"
-                                                  : "Search the whole Quran",
-                      systemImage: "text.magnifyingglass")
-                    .font(.caption.weight(.semibold))
-                    .foregroundColor(settings.accentColor.color)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 8)
-                    .conditionalGlassEffect(rectangle: true)
+            // The scope row. The first button is a TOGGLE that always names where it will take you - "Search
+            // this Surah" while the find is on this page, "Search this Page" once it has been widened - so
+            // the label is the action, never a status line you can't act on. The whole-Quran button beside
+            // it still hands the query off to the global search.
+            HStack(spacing: 6) {
+                if scopeSurah != nil {
+                    Button {
+                        settings.hapticFeedback()
+                        withAnimation(.easeInOut) {
+                            findSurahID = searchingSurah ? nil : scopeSurah?.id
+                        }
+                        syncMatch(pages: pages, resetIndex: true)
+                    } label: {
+                        scopeButtonLabel(
+                            searchingSurah ? "Search this Page" : "Search this Surah",
+                            systemImage: searchingSurah ? "doc.text.magnifyingglass" : "book.closed",
+                            color: settings.accentColor.accent1
+                        )
+                    }
+                    .buttonStyle(.plain)
+                }
+
+                Button {
+                    settings.hapticFeedback()
+                    let query = pageSearchText
+                    withAnimation(.easeInOut) { searchActive = false }
+                    QuranSearchHandoff.shared.request(query)
+                } label: {
+                    scopeButtonLabel("Search the whole Quran",
+                                     systemImage: "text.magnifyingglass",
+                                     color: settings.accentColor.color)
+                }
+                .buttonStyle(.plain)
             }
-            .buttonStyle(.plain)
+
+            // The dead-end note, once the reader has actually come up empty on whatever they scoped to.
+            if hasQuery, matches.isEmpty {
+                Text(searchingSurah ? "No matches in this surah." : "No matches on this page.")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
         }
         .padding(.horizontal, settings.defaultView ? 20 : 16)
-        .padding(.top, 4)
+        .padding(.top, 2)
+    }
+
+    /// The two scope buttons share a label so they read as one pair rather than two differently-sized pills.
+    private func scopeButtonLabel(_ title: String, systemImage: String, color: Color) -> some View {
+        Label(title, systemImage: systemImage)
+            .font(.caption.weight(.semibold))
+            .lineLimit(1)
+            .minimumScaleFactor(0.6)
+            .foregroundColor(color)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 7)
+            .conditionalGlassEffect(rectangle: true)
     }
 
     /// The single gate on "which surah am I in". Every page turn calls this, but only a turn that lands on a
@@ -844,41 +958,30 @@ struct SurahPageReader<Controls: View>: View {
         }
     }
 
-    /// The collapse chevron, drawn on the seam between the footer's info pill and its play control -
-    /// a raw glyph with no backing, the expanded twin of the restore strip's bare chevron.
-    private var collapseChevronButton: some View {
-        Button {
-            settings.hapticFeedback()
-            withAnimation(.easeInOut(duration: 0.25)) { bottomBarsCollapsed = true }
-        } label: {
-            Image(systemName: "chevron.down")
-                .font(.caption2.weight(.bold))
-                .foregroundColor(settings.accentColor.color)
-                // The glyph shrank, the tap target didn't - padding keeps the hit circle finger-sized.
-                .padding(9)
-                .contentShape(Circle())
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel("Hide the bottom controls")
-    }
-
-    /// The collapsed state's restore strip: a full-width chevron row at the very bottom of the screen,
-    /// below everything - ordinary layout, nothing floating over the page.
+    /// The collapse/restore strip: a full-width chevron row at the very bottom of the screen, below
+    /// everything - ordinary layout, nothing floating over the page. One control for both directions, so
+    /// collapsing and restoring happen in the same place (the chevron just turns over).
     private var bottomBarsToggleStrip: some View {
         Button {
             settings.hapticFeedback()
-            withAnimation(.easeInOut(duration: 0.25)) { bottomBarsCollapsed = false }
+            withAnimation(.easeInOut(duration: 0.25)) { bottomBarsCollapsed.toggle() }
         } label: {
-            Image(systemName: "chevron.up")
+            Image(systemName: bottomBarsCollapsed ? "chevron.up" : "chevron.down")
                 .font(.caption.weight(.bold))
                 .foregroundColor(settings.accentColor.color)
-                .padding(.vertical, 6)
+                // Asymmetric on purpose: the tap target keeps its height, but almost all of it hangs BELOW
+                // the glyph, so the chevron sits tight under the bar above it instead of floating in a band
+                // of its own (user: "the chevron has too much spacing above it").
+                .padding(.top, 1)
+                .padding(.bottom, 7)
                 .frame(maxWidth: .infinity)
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .padding(.bottom, 2)
-        .accessibilityLabel("Show the bottom controls")
+        // Pulls the strip up into the padding the footer above it already leaves - but only while the footer
+        // is there. Collapsed, the neighbour above is the page, and pulling into that would overlap the text.
+        .padding(.top, bottomBarsCollapsed ? -2 : -8)
+        .accessibilityLabel(bottomBarsCollapsed ? "Show the bottom controls" : "Hide the bottom controls")
     }
 
     private func reportAnchor(on index: Int, in pages: [MushafPage]) {
@@ -928,22 +1031,12 @@ struct SurahPageReader<Controls: View>: View {
                     inlinePicker(target: target, pages: pages)
                 }
 
-                // Spacing 4, not 8: the zero-width chevron anchor in the middle contributes a second
-                // gap, so 4+4 keeps the pill and the play control exactly 8pt apart - the same as
-                // before the anchor existed. No extra spacing from the control (user requirement).
-                HStack(spacing: 4) {
+                // The collapse control moved OUT of this row to the strip at the screen's bottom edge,
+                // so the pill and the play control sit at their plain 8pt apart again.
+                HStack(spacing: 8) {
                     pageInfoPill(page: page, surah: footerSurah, pages: pages,
                                  surahPosition: surahPosition, surahTotal: surahTotal,
                                  juzPosition: juzPosition, juzTotal: juzTotal)
-
-                    // Expanded-state collapse control (user-picked, round 3): floats ON the seam
-                    // between the info pill and the play control - a zero-width anchor whose overlay
-                    // draws the chevron over the gap, so it costs NO vertical space. The collapsed
-                    // state's restore strip is separate, at the screen's bottom edge.
-                    Color.clear
-                        .frame(width: 0, height: footerHeight)
-                        .overlay(alignment: .bottom) { collapseChevronButton }
-                        .zIndex(1)
 
                     if let footerSurah {
                         pageFooterPlayButton(surah: footerSurah)
@@ -1205,10 +1298,14 @@ struct SurahPageReader<Controls: View>: View {
         withAnimation(.easeInOut) { activePicker = nil }
     }
 
-    /// The same playback menu the list reader offers - play the surah, play it ayah by ayah, repeat it, pick a
-    /// reciter - rather than a lone play/stop button that could only do one of those.
+    /// The list reader's play menu, verbatim (user rule: "take the SurahView play menu exactly and put it in
+    /// the mushaf one") - reciter picker on top, then Other Options (custom range, random ayah, random
+    /// reciter, repeat), ayah-by-ayah, last listened, and Play Surah nearest the thumb. It acts on the surah
+    /// the FOOTER is showing, which in page mode is wherever the reader has paged to.
     private func pageFooterPlayButton(surah: Surah) -> some View {
         let idle = !quranPlayer.isLoading && !quranPlayer.isPlaying && !quranPlayer.isPaused
+        let canResumeLast = settings.lastListenedSurah?.surahNumber == surah.id
+        let repeatCounts = [20, 15, 10, 5, 3, 2]
 
         return Group {
             if idle {
@@ -1229,27 +1326,68 @@ struct SurahPageReader<Controls: View>: View {
                     Text("Surah Playback")
                         .foregroundStyle(.secondary)
 
-                    // Play Surah sits at the visual BOTTOM of every play menu (user-picked order) -
-                    // the primary action lands nearest the thumb. Declared order is visual order
-                    // (`fixedMenuOrder`).
+                    // Play Surah sits at the visual BOTTOM of every play menu (user-picked order) - the
+                    // primary action lands nearest the thumb, with Play Last Listened just above it.
+                    // Declared order is visual order (`fixedMenuOrder`).
                     Menu {
-                        Text("Repeat Count")
+                        Text("More Playback")
                             .foregroundStyle(.secondary)
 
-                        ForEach([20, 15, 10, 5, 3, 2], id: \.self) { n in
+                        if let onPlayCustomRange {
                             Button {
                                 settings.hapticFeedback()
-                                quranPlayer.playSurah(
-                                    surahNumber: surah.id,
-                                    surahName: surah.nameTransliteration,
-                                    repeatCount: n
-                                )
+                                onPlayCustomRange()
                             } label: {
-                                Label("Repeat \(n)×", systemImage: "\(n).circle")
+                                Label("Play Custom Range", systemImage: "slider.horizontal.3")
                             }
                         }
+
+                        Button {
+                            settings.hapticFeedback()
+                            let ayahsForQiraah = surah.ayahs.filter {
+                                $0.existsInQiraah(settings.displayQiraahForArabic, surahID: surah.id)
+                            }
+                            if let randomAyah = ayahsForQiraah.randomElement() {
+                                quranPlayer.playAyah(
+                                    surahNumber: surah.id,
+                                    ayahNumber: randomAyah.id,
+                                    continueRecitation: true
+                                )
+                            }
+                        } label: {
+                            Label("Play Random Ayah", systemImage: "shuffle.circle")
+                        }
+
+                        if let onPlayRandomReciter {
+                            Button {
+                                settings.hapticFeedback()
+                                onPlayRandomReciter(surah)
+                            } label: {
+                                Label("Play Random Reciter", systemImage: "person.wave.2")
+                            }
+                        }
+
+                        Menu {
+                            Text("Repeat Count")
+                                .foregroundStyle(.secondary)
+
+                            ForEach(repeatCounts, id: \.self) { n in
+                                Button {
+                                    settings.hapticFeedback()
+                                    quranPlayer.playSurah(
+                                        surahNumber: surah.id,
+                                        surahName: surah.nameTransliteration,
+                                        repeatCount: n
+                                    )
+                                } label: {
+                                    Label("Repeat \(n)×", systemImage: "\(n).circle")
+                                }
+                            }
+                        } label: {
+                            Label("Repeat Surah", systemImage: "repeat")
+                        }
                     } label: {
-                        Label("Repeat Surah", systemImage: "repeat")
+                        Label("Other Options", systemImage: "ellipsis.circle")
                     }
 
                     Button {
@@ -1259,11 +1397,24 @@ struct SurahPageReader<Controls: View>: View {
                         Label("Play Ayah by Ayah", systemImage: "list.number")
                     }
 
+                    if canResumeLast, let last = settings.lastListenedSurah {
+                        Button {
+                            settings.hapticFeedback()
+                            quranPlayer.playSurah(
+                                surahNumber: last.surahNumber,
+                                surahName: last.surahName,
+                                certainReciter: true
+                            )
+                        } label: {
+                            Label("Play Last Listened", systemImage: "play.fill")
+                        }
+                    }
+
                     Button {
                         settings.hapticFeedback()
                         quranPlayer.playSurah(surahNumber: surah.id, surahName: surah.nameTransliteration)
                     } label: {
-                        Label("Play Surah", systemImage: "memories")
+                        Label(canResumeLast ? "Play from Beginning" : "Play Surah", systemImage: "memories")
                     }
                 } label: {
                     playControlLabel
@@ -1313,6 +1464,9 @@ private struct MushafPageContent: View {
     // environment object. Observing it made every mounted page re-render on every QuranData publish.
     private let quranData = QuranData.shared
     @ObservedObject private var quranPlayer = QuranPlayer.shared
+    /// Observed so toggling an ayah's beginner spacing re-evaluates this page: the composed text changes, and
+    /// the render cache key (which folds in this page's overrides) has to be recomputed to pick it up.
+    @ObservedObject private var beginnerOverrides = AyahBeginnerOverrides.shared
 
     let page: MushafPage
 
@@ -1328,12 +1482,11 @@ private struct MushafPageContent: View {
     /// The in-page find, while its query is live: every matching ayah's matched substrings in accent,
     /// tajweed flattened for the whole page (see `MushafPageTextView.searchHighlight`).
     var searchHighlight: (matches: [HighlightedAyahRef], term: String)? = nil
-    /// Multi-select: while on, taps toggle ayahs of `selectionSurahID` (the surah the bulk actions
-    /// operate on) instead of marking; selected ayahs carry the accent tint.
+    /// Multi-select: while on, taps toggle whichever ayah was touched - of EITHER surah the page carries -
+    /// instead of marking it; selected ayahs take the accent tint.
     var isSelecting: Bool = false
-    var selectionSurahID: Int = 0
-    var selectedAyahIDs: Set<Int> = []
-    var onToggleSelection: ((Int) -> Void)? = nil
+    var selectedAyahs: Set<HighlightedAyahRef> = []
+    var onToggleSelection: ((Int, Int) -> Void)? = nil
 
     /// Padding around the ayah block; the composer measures fit against the same text width and height.
     /// No slack constants beyond these: the fit verifies against the real TextKit layout, so the text gets
@@ -1552,8 +1705,39 @@ private struct MushafPageContent: View {
         infoSurah = surah
     }
 
+    /// The bookmarked ayahs among the ones this page shows - each gets a bookmark glyph over its number
+    /// ornament.
+    ///
+    /// ONE walk of the bookmark list, not one per ayah: `settings.isBookmarked` is a linear scan, and this is
+    /// evaluated on every body pass - which during recitation means every player tick, on all three mounted
+    /// pages. Asking it per ayah made that ~45 full scans a tick.
+    private var bookmarkedAyahsOnPage: [(surahID: Int, ayahID: Int)] {
+        let onPage = Set(page.ayahRefs)
+        guard !onPage.isEmpty else { return [] }
+        return settings.bookmarkedAyahs.compactMap { bookmark in
+            let ref = HighlightedAyahRef(surahID: bookmark.surah, ayahID: bookmark.ayah)
+            return onPage.contains(ref) ? (surahID: ref.surahID, ayahID: ref.ayahID) : nil
+        }
+    }
+
+    /// Fit-to-page typesets the WHOLE page into the band the reader can see, so there is nothing below the
+    /// fold to scroll to - and a live scroll view there only lets the page be dragged off its own margins and
+    /// rubber-banded back (user report: "if fit to page don't allow me to scroll up or down"). So once the
+    /// page genuinely fits, the scroll container is dropped entirely. A page that still overflows keeps it:
+    /// the composer refuses to shrink English pages, the system font and the opening spread (see
+    /// `MushafPageComposer.fittedFontSize`), and those must remain reachable.
+    @ViewBuilder
     private func renderedPageBody(rendered: MushafRenderedPage, width: CGFloat, visibleHeight: CGFloat) -> some View {
+        if settings.mushafFitPage, rendered.height + Self.verticalPadding * 2 <= visibleHeight {
+            pageTextBody(rendered: rendered, width: width, visibleHeight: visibleHeight)
+        } else {
             ScrollView {
+                pageTextBody(rendered: rendered, width: width, visibleHeight: visibleHeight)
+            }
+        }
+    }
+
+    private func pageTextBody(rendered: MushafRenderedPage, width: CGFloat, visibleHeight: CGFloat) -> some View {
                 MushafPageTextView(
                     attributed: rendered.text,
                     ranges: rendered.ranges,
@@ -1566,18 +1750,17 @@ private struct MushafPageContent: View {
                     searchHighlight: searchHighlight.map { highlight in
                         (matches: highlight.matches.map { (surahID: $0.surahID, ayahID: $0.ayahID) }, term: highlight.term)
                     },
-                    selected: isSelecting ? selectedAyahIDs.map { (surahID: selectionSurahID, ayahID: $0) } : [],
+                    selected: isSelecting ? selectedAyahs.map { (surahID: $0.surahID, ayahID: $0.ayahID) } : [],
+                    bookmarked: bookmarkedAyahsOnPage,
                     baselineOffset: rendered.baselineOffset,
                     baselineBand: rendered.baselineBand
                 ) { surahID, ayahID in
                     guard ayahRef(surahID: surahID, ayahID: ayahID) != nil else { return }
-                    // Select mode: taps build the selection (this surah only - the bulk actions
-                    // operate on it) and never touch the reading mark.
+                    // Select mode: taps build the selection - ANY ayah on the page, whichever of the (up to
+                    // two) surahs it belongs to - and never touch the reading mark.
                     if isSelecting {
-                        if surahID == selectionSurahID {
-                            settings.hapticFeedback()
-                            onToggleSelection?(ayahID)
-                        }
+                        settings.hapticFeedback()
+                        onToggleSelection?(surahID, ayahID)
                         return
                     }
                     // A search arrival clears in ONE tap: touching the arrived ayah removes the accent
@@ -1618,7 +1801,6 @@ private struct MushafPageContent: View {
                 // Fill the visible region so a page that fits sits centered in what the reader can SEE (balanced
                 // top/bottom spacing); a page that overflows stays its natural height and scrolls.
                 .frame(maxWidth: .infinity, minHeight: visibleHeight, alignment: .center)
-        }
     }
 
     /// Close the actions sheet, THEN open the one it asked for. UIKit can't present a second sheet while the
@@ -1744,6 +1926,10 @@ struct MushafComposeConfig {
     let displayQiraah: String?
     let cleanArabicText: Bool
     let beginnerMode: Bool
+    /// Individual ayahs the reader set letter-by-letter (the per-ayah toggle, or the multi-select "Beginner"
+    /// bulk action), on top of the global `beginnerMode`. Captured here with the rest of the snapshot so the
+    /// off-main fit passes never reach back to the main actor for it.
+    let beginnerAyahs: Set<HighlightedAyahRef>
     /// Already folded: tajweed toggles AND the page being Arabic. English pages never paint tajweed.
     let showTajweed: Bool
     /// Non-nil = paint this non-Hafs riwayah's print-derived colors (tajweed on, pack bundled).
@@ -1769,6 +1955,7 @@ struct MushafComposeConfig {
             displayQiraah: s.displayQiraahForArabic,
             cleanArabicText: s.cleanArabicText,
             beginnerMode: s.beginnerMode,
+            beginnerAyahs: AyahBeginnerOverrides.shared.ayahs,
             showTajweed: s.showTajweedColors && s.showArabicText && s.isHafsDisplay && language == .arabic,
             riwayahTajweedTag: riwayahTajweedTag,
             riwayahHiddenRules: s.riwayahTajweedHiddenRuleSet,
@@ -1879,7 +2066,10 @@ struct MushafPageComposer {
         }
 
         let clean = config.cleanArabicText
+        // The global setting OR this one ayah's own override - so the per-ayah toggle and the multi-select
+        // "Beginner" bulk action space out exactly the ayahs they were applied to, on the page as in the list.
         let beginner = config.beginnerMode
+            || config.beginnerAyahs.contains(HighlightedAyahRef(surahID: surah.id, ayahID: ayah.id))
         let qiraahOverride = config.displayQiraah ?? "Hafs"
         let base = ayah.displayArabicText(surahId: surah.id, clean: clean, qiraahOverride: qiraahOverride)
         let display = beginner ? base.map { String($0) }.joined(separator: " ") : base
@@ -3130,6 +3320,9 @@ enum MushafPageRenderCache {
             config.displayQiraah ?? "Hafs",
             config.cleanArabicText ? "c" : "-",
             config.beginnerMode ? "b" : "-",
+            // Per-ayah beginner overrides change the composed text, so they change the fit. Scoped to THIS
+            // page's ayahs: a toggle elsewhere in the mushaf must not throw away this page's measured fit.
+            AyahBeginnerOverrides.signature(config.beginnerAyahs, limitedTo: page.ayahRefs),
             "\(config.fontSize)",
             config.fitPage ? "f" : "-",
         ].joined(separator: "|")
@@ -3283,7 +3476,10 @@ enum MushafPageRenderCache {
 
     private static func cacheKey(page: MushafPage, width: CGFloat, height: CGFloat, signature: String) -> NSString {
         // Geometry is rounded so a sub-point layout jitter can't miss the cache on every frame.
-        "\(page.page)|\(Int(width.rounded()))|\(Int(height.rounded()))|\(signature)" as NSString
+        // The per-ayah beginner overrides join in PER PAGE rather than through `settingsSignature`: they
+        // change the composed text, but toggling one ayah must only evict the page that ayah is on.
+        let beginner = AyahBeginnerOverrides.signature(AyahBeginnerOverrides.shared.ayahs, limitedTo: page.ayahRefs)
+        return "\(page.page)|\(Int(width.rounded()))|\(Int(height.rounded()))|\(signature)|\(beginner)" as NSString
     }
 
     /// The pure, heavy part: fit the size, spread the leftover height, measure. Runs on the prewarm queue
@@ -3481,6 +3677,12 @@ struct MushafPageTextView: UIViewRepresentable {
     var searchHighlight: (matches: [(surahID: Int, ayahID: Int)], term: String)? = nil
     /// Multi-select: every listed ayah carries the accent selection tint.
     var selected: [(surahID: Int, ayahID: Int)] = []
+    /// Bookmarked ayahs on this page: each gets a small bookmark glyph drawn just ABOVE its number ornament,
+    /// so page mode shows the same "this one is saved" mark the list rows do (user rule). Drawn as an overlay
+    /// subview rather than as text: the fit/justification pipeline composes the page PLAIN and transplants
+    /// its tracking runs onto the colored compose BY CHARACTER INDEX, so inserting so much as one glyph into
+    /// the colored pass would slide every index after it out of alignment.
+    var bookmarked: [(surahID: Int, ayahID: Int)] = []
     /// Forced distance from each line fragment's top to its baseline - see `MushafRenderedPage.baselineOffset`.
     var baselineOffset: CGFloat = 0
     /// Fragment heights the forced baseline applies to (running text lines, not headings).
@@ -3686,7 +3888,8 @@ struct MushafPageTextView: UIViewRepresentable {
         let termKey = termHighlight.map { "\($0.surahID):\($0.ayahID):\($0.term)" } ?? ""
         let selectedKey = selected.map { "\($0.surahID):\($0.ayahID)" }.sorted().joined(separator: ",")
         let searchKey = searchHighlight.map { "\($0.term)#\($0.matches.map { "\($0.surahID):\($0.ayahID)" }.joined(separator: ","))" } ?? ""
-        let highlightKey = "\(key(highlight))|\(playingSurahID.map(String.init) ?? "")|\(key(mark))|\(termKey)|\(selectedKey)|\(searchKey)"
+        let bookmarkKey = bookmarked.map { "\($0.surahID):\($0.ayahID)" }.sorted().joined(separator: ",")
+        let highlightKey = "\(key(highlight))|\(playingSurahID.map(String.init) ?? "")|\(key(mark))|\(termKey)|\(selectedKey)|\(searchKey)|\(bookmarkKey)"
         if context.coordinator.lastAssignedText === attributed,
            context.coordinator.lastHighlightKey == highlightKey,
            context.coordinator.lastWidth == width {
@@ -3700,6 +3903,7 @@ struct MushafPageTextView: UIViewRepresentable {
         tv.textContainer.widthTracksTextView = false
         tv.textContainer.size = CGSize(width: width, height: .greatestFiniteMagnitude)
         tv.attributedText = highlighted(attributed)
+        context.coordinator.updateBookmarkBadges(bookmarked, color: UIColor(highlightColor))
     }
 
     func makeCoordinator() -> Coordinator { Coordinator() }
@@ -3737,6 +3941,86 @@ struct MushafPageTextView: UIViewRepresentable {
         var lastAssignedText: NSAttributedString?
         var lastHighlightKey = ""
         var lastWidth: CGFloat = 0
+
+        /// The bookmark glyphs currently drawn over the page, so each update can clear the previous set.
+        private var bookmarkBadges: [UIImageView] = []
+
+        /// Draws a small bookmark just above each bookmarked ayah's number ornament.
+        ///
+        /// The ornament's own character range is already recorded by the composer (`ayahMarkerID`), but ALL
+        /// of a page's markers share that sentinel id - so a marker is matched to its ayah by the fact that it
+        /// is the tail of that ayah's range (the composer appends the number last, then records both ranges).
+        /// The badge is a plain non-interactive subview: it must not intercept the taps and presses that
+        /// select the ayah underneath it.
+        func updateBookmarkBadges(_ refs: [(surahID: Int, ayahID: Int)], color: UIColor) {
+            for badge in bookmarkBadges { badge.removeFromSuperview() }
+            bookmarkBadges.removeAll()
+
+            guard let tv = textView, !refs.isEmpty, tv.textStorage.length > 0 else { return }
+            let markerRanges = ranges.filter { $0.ayahID == MushafAyahRange.ayahMarkerID }
+            guard !markerRanges.isEmpty else { return }
+            tv.layoutManager.ensureLayout(for: tv.textContainer)
+
+            for ref in refs {
+                guard let ayahRange = ranges.first(where: {
+                    $0.surahID == ref.surahID && $0.ayahID == ref.ayahID
+                })?.range else { continue }
+                // The marker that ENDS where this ayah ends is this ayah's number.
+                guard let marker = markerRanges.first(where: {
+                    NSMaxRange($0.range) == NSMaxRange(ayahRange) && $0.surahID == ref.surahID
+                })?.range, NSMaxRange(marker) <= tv.textStorage.length else { continue }
+
+                // The ornament ITSELF, not the composer's " ٢ " with its padding spaces - the badge points at
+                // the number.
+                let ornament = marker.length > 2
+                    ? NSRange(location: marker.location + 1, length: marker.length - 2)
+                    : marker
+                let glyphs = tv.layoutManager.glyphRange(forCharacterRange: ornament, actualCharacterRange: nil)
+                guard glyphs.length > 0 else { continue }
+                // `enumerateEnclosingRects`, NOT `boundingRect`: the page is right-to-left with LTR number
+                // runs inside it, and `boundingRect` returns the UNION over the bidi runs - which on a mushaf
+                // line came out as the whole ayah's extent, so every badge sat centred over its ayah instead
+                // of over its number. The enclosing rects follow the real visual runs (this is how selection
+                // highlights are drawn), and the first one is the ornament's own box.
+                var found: CGRect?
+                tv.layoutManager.enumerateEnclosingRects(
+                    forGlyphRange: glyphs,
+                    withinSelectedGlyphRange: NSRange(location: NSNotFound, length: 0),
+                    in: tv.textContainer
+                ) { candidate, stop in
+                    found = candidate
+                    stop.pointee = true
+                }
+                guard var rect = found, rect.height > 0, rect.width > 0 else { continue }
+                rect.origin.x += tv.textContainerInset.left
+                rect.origin.y += tv.textContainerInset.top
+
+                // Deliberately TINY - a hint, not a second ornament. Sized off the line box so it still
+                // scales with the page's fitted font, but kept well under the ayah number's own size (user
+                // rule: "keep it small, like a very small thing above it") and tucked close in above it.
+                let side = min(max(rect.height * 0.15, 4), 7)
+                let image = UIImage(systemName: "bookmark.fill")?
+                    .withConfiguration(UIImage.SymbolConfiguration(pointSize: side, weight: .semibold))
+                guard let image else { continue }
+
+                let badge = UIImageView(image: image)
+                badge.tintColor = color
+                badge.contentMode = .scaleAspectFit
+                badge.isUserInteractionEnabled = false
+                // `rect` is the LINE BOX, whose top sits well above the ornament's ink (the composer leads
+                // its lines generously to make room for stacked marks). Sitting the badge fully above that
+                // top left it marooned nearer the line above than the number it belongs to, so it is nudged
+                // down into the leading instead - close over the ornament, still clear of it.
+                badge.frame = CGRect(
+                    x: rect.midX - side / 2,
+                    y: rect.minY - side * 0.25,
+                    width: side,
+                    height: side
+                )
+                tv.addSubview(badge)
+                bookmarkBadges.append(badge)
+            }
+        }
 
         @objc func handleTap(_ gesture: UITapGestureRecognizer) {
             guard let (surahID, ayahID) = ayah(at: gesture.location(in: textView)) else { return }

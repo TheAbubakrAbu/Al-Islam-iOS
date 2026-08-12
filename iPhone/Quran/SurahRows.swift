@@ -195,45 +195,51 @@ struct SurahRow: View, Equatable {
     
     @ViewBuilder
     private var surahNumberPill: some View {
-        ZStack(alignment: .topTrailing) {
-            Text("\(surah.id)")
-                .font(.caption.weight(.bold))
-                .foregroundColor(accentColor.color)
-                .frame(width: badgeWidth)
-                .frame(maxHeight: .infinity)
-                .conditionalGlassEffect(
-                    useColor: favoriteState ? 0.3 : nil,
-                    customTint: favoriteState ? accentColor.color : nil
-                )
-                .onTapGesture {
-                    settings.hapticFeedback()
-                    settings.toggleSurahFavorite(surah: surah.id)
-                }
-                .accessibilityLabel("Surah \(surah.id)\(isLastRead ? ", last read" : isLastListened ? ", last listened" : "")")
-
-            if favoriteState {
-                Image(systemName: "star.fill")
-                    .font(.caption2)
-                    .foregroundStyle(settings.accentColor.color)
-                    .padding(4)
-                    .offset(x: 8, y: -6)
-            } else if isLastRead {
-                Image(systemName: "book.fill")
-                    .font(.caption2)
-                    .foregroundStyle(settings.accentColor.color)
-                    .padding(4)
-                    .offset(x: 8, y: -6)
-            } else if isLastListened {
-                Image(systemName: "speaker.wave.2.fill")
-                    .font(.caption2)
-                    .foregroundStyle(settings.accentColor.color)
-                    .padding(4)
-                    .offset(x: 8, y: -6)
+        Text("\(surah.id)")
+            .font(.caption.weight(.bold))
+            .foregroundColor(accentColor.color)
+            .frame(width: badgeWidth)
+            .frame(maxHeight: .infinity)
+            .conditionalGlassEffect(
+                useColor: favoriteState ? 0.3 : nil,
+                customTint: favoriteState ? accentColor.color : nil
+            )
+            .onTapGesture {
+                settings.hapticFeedback()
+                settings.toggleSurahFavorite(surah: surah.id)
             }
-        }
-        .padding(.vertical, {
-            if #available(iOS 26, *) { 0 } else { 8 }
-        }())
+            .accessibilityLabel("Surah \(surah.id)\(isLastRead ? ", last read" : isLastListened ? ", last listened" : "")")
+            // The favourite star keeps the RIGHT corner - that is where favouriting a surah has always
+            // shown up. Reading position moves to the LEFT (user rule), so the two stop competing for one
+            // corner: a favourited surah that is also where you left off now shows both badges, where the
+            // star used to hide the book outright.
+            .overlay(alignment: .topTrailing) {
+                if favoriteState {
+                    Image(systemName: "star.fill")
+                        .font(.caption2)
+                        .foregroundStyle(settings.accentColor.color)
+                        .padding(4)
+                        .offset(x: 8, y: -6)
+                }
+            }
+            .overlay(alignment: .topLeading) {
+                if isLastRead {
+                    Image(systemName: "book.fill")
+                        .font(.caption2)
+                        .foregroundStyle(settings.accentColor.color)
+                        .padding(4)
+                        .offset(x: -6, y: -6)
+                } else if isLastListened {
+                    Image(systemName: "speaker.wave.2.fill")
+                        .font(.caption2)
+                        .foregroundStyle(settings.accentColor.color)
+                        .padding(4)
+                        .offset(x: -6, y: -6)
+                }
+            }
+            .padding(.vertical, {
+                if #available(iOS 26, *) { 0 } else { 8 }
+            }())
     }
     
     var body: some View {

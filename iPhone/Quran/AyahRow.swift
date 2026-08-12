@@ -31,7 +31,11 @@ struct AyahRow: View, Equatable {
     /// instead, so an ayah advance re-renders exactly the two rows whose tint changes.
     private var quranPlayer: QuranPlayer { .shared }
 
-    @State private var ayahBeginnerMode = false
+    /// The per-ayah "Beginner Mode" toggle, held in a shared session store rather than in this row's own
+    /// `@State`. A row in a lazy list is torn down when it scrolls away and rebuilt from its inputs when it
+    /// comes back, so private state could not survive - which is why the toggle "sometimes didn't work".
+    @ObservedObject private var beginnerOverrides = AyahBeginnerOverrides.shared
+    private var ayahBeginnerMode: Bool { beginnerOverrides.contains(surah: surah.id, ayah: ayah.id) }
 
     #if os(iOS)
     @State private var showingAyahSheet = false
@@ -578,38 +582,44 @@ struct AyahRow: View, Equatable {
 
             VStack(alignment: .leading, spacing: 12) {
                 HStack(spacing: 4) {
-                    ZStack(alignment: .topTrailing) {
-                        Text("\(surah.id):\(ayah.id)")
-                            .font(.subheadline.monospacedDigit().weight(.semibold))
-                            .foregroundColor(settings.accentColor.color)
-                            .padding(5)
-                            .frame(width: 60, height: 28)
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.5)
-                            .conditionalGlassEffect(
-                                useColor: isBookmarked ? 0.3 : nil,
-                                customTint: isBookmarked ? settings.accentColor.color : nil,
-                                interactive: false
-                            )
-                            .onTapGesture {
-                                settings.hapticFeedback()
-                                toggleBookmarkWithNoteGuard()
-                            }
-
-                        if isBookmarked {
-                            Image(systemName: "bookmark.fill")
-                                .font(.caption2)
-                                .foregroundStyle(settings.accentColor.color)
-                                .padding(4)
-                                .offset(x: 8, y: -6)
-                        } else if isLastListened {
-                            Image(systemName: "speaker.wave.2.fill")
-                                .font(.caption2)
-                                .foregroundStyle(settings.accentColor.color)
-                                .padding(4)
-                                .offset(x: 8, y: -6)
+                    Text("\(surah.id):\(ayah.id)")
+                        .font(.subheadline.monospacedDigit().weight(.semibold))
+                        .foregroundColor(settings.accentColor.color)
+                        .padding(5)
+                        .frame(width: 60, height: 28)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.5)
+                        .conditionalGlassEffect(
+                            useColor: isBookmarked ? 0.3 : nil,
+                            customTint: isBookmarked ? settings.accentColor.color : nil,
+                            interactive: false
+                        )
+                        .onTapGesture {
+                            settings.hapticFeedback()
+                            toggleBookmarkWithNoteGuard()
                         }
-                    }
+                        // The bookmark keeps the RIGHT corner - that is where saving an ayah has always
+                        // shown up. The listening badge moves to the LEFT (user rule), so the two no longer
+                        // compete for one corner: an ayah that is both bookmarked and the last one listened
+                        // to now shows both, instead of the bookmark silently hiding the speaker.
+                        .overlay(alignment: .topTrailing) {
+                            if isBookmarked {
+                                Image(systemName: "bookmark.fill")
+                                    .font(.caption2)
+                                    .foregroundStyle(settings.accentColor.color)
+                                    .padding(4)
+                                    .offset(x: 8, y: -6)
+                            }
+                        }
+                        .overlay(alignment: .topLeading) {
+                            if isLastListened {
+                                Image(systemName: "speaker.wave.2.fill")
+                                    .font(.caption2)
+                                    .foregroundStyle(settings.accentColor.color)
+                                    .padding(4)
+                                    .offset(x: -6, y: -6)
+                            }
+                        }
 
                     Spacer()
 
@@ -1331,7 +1341,7 @@ struct AyahRow: View, Equatable {
                 Button {
                     settings.hapticFeedback()
                     withAnimation {
-                        ayahBeginnerMode.toggle()
+                        beginnerOverrides.toggle(surah: surah.id, ayah: ayah.id)
                     }
                 } label: {
                     Label("Beginner Mode",

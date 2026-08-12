@@ -134,6 +134,27 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
             UserDefaults.standard.set(112, forKey: "lastReadSurah")
             UserDefaults.standard.set(1, forKey: "lastReadAyah")
         }
+        // The counterpart, for verifying the LIST reader headlessly: `simctl spawn defaults write
+        // quranPageMode -bool NO` reads back as 0 but the app still opens the page reader (cfprefsd serves
+        // its cached copy), so turning page mode OFF needed a launch argument of its own. Seeds the same
+        // last-read position, so the reader lands somewhere rather than at the surah list.
+        if ProcessInfo.processInfo.arguments.contains("-quranListMode") {
+            UserDefaults.standard.set(false, forKey: "quranPageMode")
+            UserDefaults.standard.set(112, forKey: "lastReadSurah")
+            UserDefaults.standard.set(1, forKey: "lastReadAyah")
+        }
+        // "-lastRead 2:29" - open the reader at that position. Manual `simctl spawn defaults write`
+        // can't do this (cfprefsd serves the app its cached copy), so verifying a SPECIFIC ayah's
+        // rendering headlessly needs the seed to happen in-process. Placed after -quranPageMode /
+        // -quranListMode so it overrides their 112:1 seed when combined.
+        if let idx = ProcessInfo.processInfo.arguments.firstIndex(of: "-lastRead"),
+           idx + 1 < ProcessInfo.processInfo.arguments.count {
+            let parts = ProcessInfo.processInfo.arguments[idx + 1].split(separator: ":")
+            if parts.count == 2, let s = Int(parts[0]), let a = Int(parts[1]) {
+                UserDefaults.standard.set(s, forKey: "lastReadSurah")
+                UserDefaults.standard.set(a, forKey: "lastReadAyah")
+            }
+        }
         if ProcessInfo.processInfo.arguments.contains("-qiraatComparisonMode") {
             UserDefaults.standard.set(true, forKey: "qiraatComparisonMode")
         }

@@ -1189,7 +1189,13 @@ struct QuranView: View {
             // The pagination is awaited OFF-main first: this task races the launch prewarm, and whichever
             // loses used to pay the full 6,236-ayah build synchronously inside the reader's first body -
             // main-thread work that landed exactly on the first switch into this tab.
-            if settings.quranPageMode, !didAutoOpenMushaf {
+            // `-quranListMode` (DEBUG only) opens the reader the same way with page mode OFF - it is the only
+            // headless route to the LIST reader, which otherwise needs a tap the simulator can't be given.
+            var shouldAutoOpen = settings.quranPageMode
+            #if DEBUG
+            shouldAutoOpen = shouldAutoOpen || ProcessInfo.processInfo.arguments.contains("-quranListMode")
+            #endif
+            if shouldAutoOpen, !didAutoOpenMushaf {
                 didAutoOpenMushaf = true
                 await MushafPagination.buildInBackground(quran: quranData.quran, qiraah: settings.displayQiraahForArabic)
                 openMushafWhereLeftOff()

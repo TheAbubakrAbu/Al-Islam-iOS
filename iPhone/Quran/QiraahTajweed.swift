@@ -3,13 +3,20 @@ import Foundation
 import SwiftUI
 import Compression
 
-/// Print-derived tajweed / khilaf coloring for the 19 non-Hafs riwayat,
-/// extracted from the Islamweb printed mushaf series (the same books the beta
-/// texts come from). Each riwayah pack carries:
-///  * word-level rule colors (`rules`): the printed color of every colored
-///    word - what differs from Hafs, idgham, imalah/taqlil, sakt, ... The
-///    MEANING of a color is per edition and ships in `legend`, transcribed
-///    from that mushaf's own printed legend box.
+/// Tajweed / khilaf coloring for the 19 non-Hafs riwayat. Two generations:
+///  * v2 (the 7 non-beta KFGQPC riwayat): rules and EXACT letter extents are
+///    derived from the original texts' own marks at build time - the imalah
+///    dot (U+065C), taqlil ring (U+06EA), silah waw (U+06E5), the idgham
+///    bare-letter + shadda orthography, Warsh's naql/badal/raa/lam patterns -
+///    cross-checked against the Islamweb prints (Scripts note in repo).
+///    Khilaf word flags still come from the print extraction; their letter
+///    extents are refined by diffing the word against its aligned Hafs token.
+///  * v1 (the 12 beta riwayat): word flags + ink extents extracted from the
+///    Islamweb printed mushaf PDFs, letters resolved at paint time.
+/// Each riwayah pack carries:
+///  * word-level rule colors (`rules`): what differs from Hafs, idgham,
+///    imalah/taqlil, sakt, ... The MEANING of a color is per edition and
+///    ships in `legend`, transcribed from that mushaf's own printed legend box.
 ///  * the riwayah's own ayah -> page table (`pages`): the true pagination of
 ///    ITS 604-page print. The Madinah page numbers on the Hafs rows do not
 ///    hold for other riwayat (merged ayahs, different orthography), which is
@@ -76,9 +83,11 @@ final class QiraahTajweedStore: @unchecked Sendable {
 
     struct WordRule {
         let letter: Character
-        /// Base-letter index range the PRINT colors within the word (reading
-        /// order), extracted from the word's own ink runs. Nil = whole word
-        /// colored, or the extent couldn't be mapped.
+        /// INCLUSIVE base-letter index range the rule colors within the word
+        /// (reading order). -1 = the whole word is colored.
+        /// v2 packs (the 8 KFGQPC riwayat) carry exact letters derived from the
+        /// text's own marks (imalah dots, silah waws, idgham shaddas, ...);
+        /// v1 packs (beta riwayat) carry print-ink extents, resolved at paint time.
         let baseLo: Int
         let baseHi: Int
         var hasExtent: Bool { baseLo >= 0 }
@@ -86,14 +95,18 @@ final class QiraahTajweedStore: @unchecked Sendable {
 
     struct Pack {
         /// surah -> ayah (riwayah's own numbering, = `Ayah.id`) -> word index
-        /// over space/NBSP-split tokens -> rule.
-        let rules: [Int: [Int: [Int: WordRule]]]
+        /// over space/NBSP-split tokens -> rules (a word can carry several:
+        /// e.g. a khilaf wash plus an exact imalah letter).
+        let rules: [Int: [Int: [Int: [WordRule]]]]
         /// surah -> ayah -> page (1...604) in this riwayah's own print.
         let pages: [Int: [Int: Int]]
         let legend: [LegendEntry]
         /// Ayahs whose number medallion is printed with a magenta ring - the
         /// ayah NUMBERING there differs from Hafs (merge/split points).
         let khilafMarkers: [Int: Set<Int>]
+        /// v2 = text-derived exact-letter extents: paint them directly, no
+        /// resolver guessing. v1 (beta packs) keeps the resolver-first behavior.
+        let exactLetters: Bool
     }
 
     private let lock = NSLock()
@@ -134,7 +147,7 @@ final class QiraahTajweedStore: @unchecked Sendable {
         pack(for: tag)?.legend ?? []
     }
 
-    func wordRules(tag: String, surah: Int, ayah: Int) -> [Int: WordRule]? {
+    func wordRules(tag: String, surah: Int, ayah: Int) -> [Int: [WordRule]]? {
         pack(for: tag)?.rules[surah]?[ayah]
     }
 
@@ -214,19 +227,33 @@ final class QiraahTajweedStore: @unchecked Sendable {
             let isBreak = i == units.count || units[i] == 0x20 || units[i] == 0xA0
             if isBreak {
                 if i > start {
-                    if let rule = rules[tokenIndex] {
+                    for rule in rules[tokenIndex] ?? [] {
                         let key = keyOf[rule.letter] ?? String(rule.letter)
-                        if !hiddenRules.contains(key) {
-                            // Rules whose target letter is DETERMINED by the rule itself
-                            // (the final mim of a silah, the sad of an ishmam, ...) use the
-                            // resolver - the print's floating signs sit BETWEEN words and
-                            // their ink bleeds into neighbor runs, so measured extents are
-                            // noisy exactly for these. Positional rules (which letter of
-                            // the word differs from Hafs, where the imalah/idgham sits)
-                            // use the extent measured off the print, resolver as fallback.
+                        if hiddenRules.contains(key) { continue }
+                        let ranges: [NSRange]
+                        if pack.exactLetters {
+                            // v2: the extents were computed from the text's own
+                            // marks at build time - paint them verbatim. -1 =
+                            // the print colors the whole word (khilaf words).
+                            if rule.hasExtent {
+                                if let extent = Self.clusterRange(baseLo: rule.baseLo, baseHi: rule.baseHi,
+                                                                  in: units, tokenStart: start, tokenEnd: i) {
+                                    ranges = [extent]
+                                } else {
+                                    ranges = Self.paintRanges(key: key, in: units, tokenStart: start, tokenEnd: i)
+                                }
+                            } else {
+                                ranges = [NSRange(location: start, length: i - start)]
+                            }
+                        } else {
+                            // v1 (beta packs): rules whose target letter is DETERMINED
+                            // by the rule itself (the final mim of a silah, the sad of
+                            // an ishmam, ...) use the resolver - the print's floating
+                            // signs sit BETWEEN words and their ink bleeds into neighbor
+                            // runs, so measured extents are noisy exactly for these.
+                            // Positional rules use the measured extent, resolver as fallback.
                             let resolverFirst = ["silah_meem", "ha_dhamir", "ishmam_sad",
                                                  "raa_muraqqaqah", "lam_mughallazah"].contains(key)
-                            let ranges: [NSRange]
                             if !resolverFirst, rule.hasExtent,
                                let extent = Self.clusterRange(baseLo: rule.baseLo, baseHi: rule.baseHi,
                                                               in: units, tokenStart: start, tokenEnd: i) {
@@ -234,10 +261,10 @@ final class QiraahTajweedStore: @unchecked Sendable {
                             } else {
                                 ranges = Self.paintRanges(key: key, in: units, tokenStart: start, tokenEnd: i)
                             }
-                            for range in ranges {
-                                ns.addAttribute(.foregroundColor, value: Self.uiColor(for: rule.letter), range: range)
-                                painted = true
-                            }
+                        }
+                        for range in ranges {
+                            ns.addAttribute(.foregroundColor, value: Self.uiColor(for: rule.letter), range: range)
+                            painted = true
                         }
                     }
                     tokenIndex += 1
@@ -291,14 +318,14 @@ final class QiraahTajweedStore: @unchecked Sendable {
         NSRange(location: from.start, length: to.end - from.start)
     }
 
-    /// UTF-16 range of base-letter clusters [baseLo, baseHi) of the token -
-    /// the letter indexes the extraction measured off the print's ink.
+    /// UTF-16 range of base-letter clusters [baseLo, baseHi] (INCLUSIVE) of the
+    /// token. v1 packs' exclusive upper bounds are normalized at load time.
     private static func clusterRange(baseLo: Int, baseHi: Int, in units: [UInt16],
                                      tokenStart: Int, tokenEnd: Int) -> NSRange? {
         let cl = clusters(in: units, from: tokenStart, to: tokenEnd)
-        guard baseLo >= 0, baseHi > baseLo, baseLo < cl.count else { return nil }
-        let hi = min(baseHi, cl.count)
-        return range(cl[baseLo], cl[hi - 1])
+        guard baseLo >= 0, baseHi >= baseLo, baseLo < cl.count else { return nil }
+        let hi = min(baseHi, cl.count - 1)
+        return range(cl[baseLo], cl[hi])
     }
 
     /// Which letters of the flagged word the rule paints.
@@ -413,26 +440,37 @@ final class QiraahTajweedStore: @unchecked Sendable {
     private static func load(_ name: String) -> Pack? {
         guard let json = SolidPack.json(named: name, inPack: "tajweed") ?? looseJSON(name),
               let raw = try? JSONSerialization.jsonObject(with: json) as? [String: Any] else { return nil }
+        let exactLetters = (raw["v"] as? Int ?? 1) >= 2
 
-        var rules: [Int: [Int: [Int: WordRule]]] = [:]
+        var rules: [Int: [Int: [Int: [WordRule]]]] = [:]
         if let rulesRaw = raw["rules"] as? [String: [String: [String: Any]]] {
             rules.reserveCapacity(rulesRaw.count)
             for (s, ayahs) in rulesRaw {
                 guard let sid = Int(s) else { continue }
-                var surahOut: [Int: [Int: WordRule]] = [:]
+                var surahOut: [Int: [Int: [WordRule]]] = [:]
                 for (a, words) in ayahs {
                     guard let aid = Int(a) else { continue }
-                    var wordOut: [Int: WordRule] = [:]
+                    var wordOut: [Int: [WordRule]] = [:]
                     for (wi, value) in words {
                         guard let w = Int(wi) else { continue }
-                        // "m" = whole word; ["m", lo, hi] = the print's own
-                        // colored-letter extent (base-letter indexes).
+                        // v1: "m" = whole word; ["m", lo, hi) = print-ink extent.
+                        // v2: [["m", lo, hi], ...] with INCLUSIVE hi, several per word.
                         if let s = value as? String, let letter = s.first {
-                            wordOut[w] = WordRule(letter: letter, baseLo: -1, baseHi: -1)
-                        } else if let arr = value as? [Any], arr.count == 3,
-                                  let s = arr[0] as? String, let letter = s.first,
-                                  let lo = arr[1] as? Int, let hi = arr[2] as? Int {
-                            wordOut[w] = WordRule(letter: letter, baseLo: lo, baseHi: hi)
+                            wordOut[w] = [WordRule(letter: letter, baseLo: -1, baseHi: -1)]
+                        } else if let arr = value as? [Any] {
+                            if arr.count == 3, let s = arr[0] as? String, let letter = s.first,
+                               let lo = arr[1] as? Int, let hi = arr[2] as? Int {
+                                wordOut[w] = [WordRule(letter: letter, baseLo: lo, baseHi: hi - 1)]
+                            } else {
+                                var list: [WordRule] = []
+                                for entry in arr {
+                                    guard let e = entry as? [Any], e.count == 3,
+                                          let s = e[0] as? String, let letter = s.first,
+                                          let lo = e[1] as? Int, let hi = e[2] as? Int else { continue }
+                                    list.append(WordRule(letter: letter, baseLo: lo, baseHi: hi))
+                                }
+                                if !list.isEmpty { wordOut[w] = list }
+                            }
                         }
                     }
                     if !wordOut.isEmpty { surahOut[aid] = wordOut }
@@ -473,7 +511,8 @@ final class QiraahTajweedStore: @unchecked Sendable {
         }
 
         guard !rules.isEmpty || !pages.isEmpty else { return nil }
-        return Pack(rules: rules, pages: pages, legend: legend, khilafMarkers: khilaf)
+        return Pack(rules: rules, pages: pages, legend: legend, khilafMarkers: khilaf,
+                    exactLetters: exactLetters)
     }
 
     /// The pre-solidpack loose-file path, kept as a fallback: a `Tajweed<name>.json.deflate`
