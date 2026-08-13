@@ -69,6 +69,11 @@ struct AyahActionsSheet: View {
 
     @State private var confirmRemoveNote = false
 
+    /// Word-by-word: the tapped word's card (the Hafs gloss + tajweed-rules card, or the riwayah word
+    /// card), presented OVER this sheet so closing it returns to the actions.
+    @State private var tappedWord: TappedWord?
+    @State private var tappedRiwayahWord: RiwayahTappedWord?
+
     private var isBookmarked: Bool { settings.bookmarkIndex(surah: surah.id, ayah: ayah.id) != nil }
     private var currentNote: String { settings.bookmarkNoteText(surah: surah.id, ayah: ayah.id) }
     private var canShowTafsir: Bool { settings.isHafsDisplay }
@@ -84,40 +89,77 @@ struct AyahActionsSheet: View {
         let riwayahTajweedTag = settings.showTajweedColors && settings.showArabicText
             ? settings.riwayahTajweedPackTag : nil
 
-        VStack(spacing: 6) {
-            Group {
-                if showsTajweed,
-                   let styled = TajweedStore.shared.attributedText(
-                       surah: surah.id,
-                       ayah: ayah.id,
-                       text: ayah.displayArabicText(surahId: surah.id, clean: false),
-                       displayText: arabic,
-                       cleanDisplayText: settings.cleanArabicText,
-                       beginnerSpacing: false
-                   ) {
-                    Text(styled) + Text(" \(ayah.idArabic)").foregroundColor(settings.accentColor.accent1)
-                } else if let tag = riwayahTajweedTag,
-                          let styled = QiraahTajweedStore.shared.attributedText(
-                              tag: tag, surah: surah.id, ayah: ayah.id, displayText: arabic,
-                              hiddenRules: settings.riwayahTajweedHiddenRuleSet
-                          ) {
-                    Text(styled) + Text(" \(ayah.idArabic)").foregroundColor(settings.accentColor.accent1)
-                } else {
-                    Text(arabic) + Text(" \(ayah.idArabic)").foregroundColor(settings.accentColor.accent1)
-                }
+        // The tajweed-colored preview text, when either store paints this ayah.
+        let preStyled: AttributedString? = {
+            if showsTajweed,
+               let styled = TajweedStore.shared.attributedText(
+                   surah: surah.id,
+                   ayah: ayah.id,
+                   text: ayah.displayArabicText(surahId: surah.id, clean: false),
+                   displayText: arabic,
+                   cleanDisplayText: settings.cleanArabicText,
+                   beginnerSpacing: false
+               ) {
+                return styled
             }
-            // Deliberately smaller than the reader's own size: this is a reminder of which ayah you tapped,
-            // not a place to read from, and at full size it pushed every action off the sheet.
-            .font(Font.arabic(settings.quranDisplayFontName, size: min(settings.fontArabicSize * 0.55, 20)))
-            .arabicFontDesign(custom: settings.quranDisplayUsesCustomArabicFace)
-            // NO `.environment(\.layoutDirection, .rightToLeft)` here - in an RTL context `.trailing`
-            // resolves to the LEFT edge, so that override made this exact modifier left-align wrapped
-            // Arabic (the "still not trailing" bug). The bidi algorithm already lays the Arabic out
-            // right-to-left from the characters themselves; what we want is the visual right edge, which
-            // in the app's LTR layout is `.trailing` - on both the wrapped lines AND the frame (a
-            // max-width frame with no alignment CENTERS a short single-line ayah).
-            .multilineTextAlignment(.trailing)
-            .lineSpacing(4)
+            if let tag = riwayahTajweedTag,
+               let styled = QiraahTajweedStore.shared.attributedText(
+                   tag: tag, surah: surah.id, ayah: ayah.id, displayText: arabic,
+                   hiddenRules: settings.riwayahTajweedHiddenRuleSet
+               ) {
+                return styled
+            }
+            return nil
+        }()
+        // Hafs: glosses lined up with the preview's tokens, so a tapped word opens the same meaning +
+        // tajweed card the list rows offer. Empty (but still tappable) when the pack can't line up -
+        // the card then shows the word's rules without a gloss.
+        let glosses: [String] = settings.isHafsDisplay
+            ? (WordByWordStore.shared.glosses(
+                surah: surah.id, ayah: ayah.id,
+                rawText: ayah.displayArabicText(surahId: surah.id, clean: false, qiraahOverride: nil),
+                displayText: arabic
+              ) ?? [])
+            : []
+        // Non-Hafs: a tapped word opens the riwayah word card instead (its rules + the Hafs
+        // counterpart) - same rule as the list rows, only when the riwayah's pack is bundled.
+        let riwayahWordTag: String? = {
+            guard !settings.isHafsDisplay else { return nil }
+            let tag = Settings.Riwayah.canonicalTag(settings.displayQiraahForArabic ?? "")
+            return !tag.isEmpty && QiraahTajweedStore.shared.isAvailable(tag: tag) ? tag : nil
+        }()
+
+        VStack(spacing: 6) {
+            // Rendered through the word-by-word TextKit view so every word is tappable (task: tap a word
+            // in this sheet to open its card) - same colors and trailing alignment the plain Text had.
+            // Deliberately smaller than the reader's own size: this is a reminder of which ayah you
+            // tapped, not a place to read from, and at full size it pushed every action off the sheet.
+            WordByWordText(
+                displayText: arabic,
+                preStyled: preStyled,
+                fontName: settings.quranDisplayUsesCustomArabicFace ? settings.quranDisplayFontName : nil,
+                fontSize: min(CGFloat(settings.fontArabicSize) * 0.55, 20),
+                ayahNumberArabic: ayah.idArabic,
+                glosses: glosses,
+                alwaysTappable: (settings.isHafsDisplay && glosses.isEmpty) || riwayahWordTag != nil,
+                selectedWord: tappedWord?.index ?? tappedRiwayahWord?.index,
+                onSelectWord: { index in
+                    let tokens = WordTokens.tokens(in: arabic)
+                    guard tokens.indices.contains(index) else { return }
+                    if let tag = riwayahWordTag {
+                        tappedRiwayahWord = RiwayahTappedWord(
+                            index: index, word: tokens[index], total: tokens.count, tag: tag
+                        )
+                    } else if settings.isHafsDisplay {
+                        tappedWord = TappedWord(
+                            index: index,
+                            word: tokens[index],
+                            meaning: glosses.indices.contains(index) ? glosses[index] : "",
+                            total: glosses.isEmpty ? tokens.count : glosses.count
+                        )
+                    }
+                }
+            )
             .frame(maxWidth: .infinity, alignment: .trailing)
 
             // The same reference format every ayah sheet uses, plus the ayah's ACTUAL text in the active
@@ -326,7 +368,7 @@ struct AyahActionsSheet: View {
             dismiss()
         }))
 
-        list.append(AyahAction(id: "share", title: "Share", systemImage: "square.and.arrow.up", action: {
+        list.append(AyahAction(id: "share", title: "Share Ayah", systemImage: "square.and.arrow.up", action: {
             settings.hapticFeedback()
             onRequestSheet?(.share)
         }))
@@ -420,6 +462,31 @@ struct AyahActionsSheet: View {
             Button("Cancel", role: .cancel) {}
         } message: {
             Text(Settings.bookmarkNoteRemovalDialogMessage)
+        }
+        // The tapped word's card, presented over this sheet (the one deliberate sheet-on-sheet here:
+        // closing the card should land you back on the actions, mid-exploration). `item:` so tapping a
+        // different word re-presents with the new word.
+        .sheet(item: $tappedWord) { tapped in
+            WordMeaningSheet(
+                surah: surah,
+                ayah: ayah,
+                word: tapped.word,
+                meaning: tapped.meaning,
+                position: tapped.index + 1,
+                total: tapped.total
+            )
+            .environmentObject(settings)
+        }
+        .sheet(item: $tappedRiwayahWord) { tapped in
+            RiwayahWordSheet(
+                surah: surah,
+                ayah: ayah,
+                tag: tapped.tag,
+                word: tapped.word,
+                index: tapped.index,
+                total: tapped.total
+            )
+            .environmentObject(settings)
         }
     }
 }

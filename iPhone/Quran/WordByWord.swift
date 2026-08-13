@@ -575,11 +575,13 @@ struct WordMeaningSheet: View {
                     .frame(maxWidth: .infinity)
                     .padding(.top, 8)
 
+                    // Leading, not centered (user rule): the English gloss reads as a sentence fragment,
+                    // and centered fragments float - lead-align it like the translation block below.
                     Text(meaning.isEmpty ? "No meaning recorded for this word." : meaning)
                         .font(.title3)
                         .foregroundColor(meaning.isEmpty ? .secondary : .primary)
-                        .multilineTextAlignment(.center)
-                        .frame(maxWidth: .infinity)
+                        .multilineTextAlignment(.leading)
+                        .frame(maxWidth: .infinity, alignment: .leading)
 
                     Text("Word \(position) of \(total) · \(surah.nameTransliteration) \(surah.id):\(ayah.id)")
                         .font(.caption)

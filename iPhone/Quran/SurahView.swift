@@ -2891,7 +2891,7 @@ struct SurahView: View {
                         withAnimation(.easeInOut) { pageSearchActive = true }
                     } label: {
                         Label("Search", systemImage: "magnifyingglass")
-                            .font(.caption.weight(.semibold))
+                            .font(.caption)
                             .foregroundColor(settings.accentColor.accent1)
                             .lineLimit(1)
                             .minimumScaleFactor(0.6)

@@ -891,7 +891,7 @@ struct SurahPageReader<Controls: View>: View {
     /// The two scope buttons share a label so they read as one pair rather than two differently-sized pills.
     private func scopeButtonLabel(_ title: String, systemImage: String, color: Color) -> some View {
         Label(title, systemImage: systemImage)
-            .font(.caption.weight(.semibold))
+            .font(.caption)
             .lineLimit(1)
             .minimumScaleFactor(0.6)
             .foregroundColor(color)
@@ -1996,20 +1996,26 @@ struct MushafPageComposer {
         UIFont(name: Settings.hafsUthmaniFontName, size: size) ?? .roundedSystemFont(ofSize: size)
     }
 
-    /// Mushaf pages 1 and 2 (al-Fatihah, and the opening of al-Baqarah) are set centered in a printed mushaf - 
-    /// they're short, framed pages, not columns of running text. Every other page is a full block.
+    /// Mushaf pages 1 and 2 (al-Fatihah, and the opening of al-Baqarah). They used to be set fully centered
+    /// (short framed pages); now their body justifies like every other page - each line flush to both
+    /// margins EXCEPT the paragraph's last (user rule) - and only the English/system-font renders (which
+    /// can't justify, see `paragraph`) keep the centered setting.
     private var isOpeningSpread: Bool { page.page <= 2 }
 
-    /// Justified everywhere except the opening spread, so every line reaches BOTH margins - that's what makes a
-    /// trailing-aligned page look set rather than ragged.
+    /// Whether this page's body can be space-justified at all: only the Arabic set in a real Quranic face.
+    private var isJustifiable: Bool { !isEnglish && !usesSystemFont }
+
+    /// Justified everywhere (the opening spread exempts only its LAST line - see `spaceJustified`), so every
+    /// line reaches BOTH margins - that's what makes a trailing-aligned page look set rather than ragged.
     ///
     /// NOT justified when the text is in the system face. Justifying Arabic works by elongating the glyphs
     /// (kashida), and only the Quranic faces carry the elongation forms; with the system face the layout engine
     /// has nothing to stretch, so it dumps ALL the slack into the word gaps instead - which is the "weird spaces
     /// between words" in Basic/no-dots mode. Trailing-aligned with natural spacing is the honest rendering there.
+    /// Those renders also keep the opening spread centered, its old framed look.
     private func paragraph(_ size: CGFloat, extraLineSpacing: CGFloat = 0, centered: Bool? = nil) -> NSParagraphStyle {
         let p = NSMutableParagraphStyle()
-        if centered ?? isOpeningSpread {
+        if centered ?? (isOpeningSpread && !isJustifiable) {
             p.alignment = .center
         } else {
             // English pages are set natural (left-aligned): justified Latin text without hyphenation
@@ -2113,7 +2119,7 @@ struct MushafPageComposer {
     ///
     /// The name and the bismillah shared a line's worth of height each before, which is a lot of a page to give
     /// up on a mushaf that already fits its text exactly. Al-Fatihah counts its basmala as ayah 1 and at-Tawbah
-    /// has none, so neither gets the ornament.
+    /// has none, so both show the isti'adhah in the ornament's place instead (see `firstAyahIsBasmala`).
     /// How many box-drawing glyphs it takes to span `width` at `ruleSize`. The rule used to be a hardcoded 10
     /// glyphs, so it was a short dash floating in the middle of the column no matter how wide the page was.
     private func ruleString(width: CGFloat, ruleSize: CGFloat) -> String {
@@ -2126,7 +2132,8 @@ struct MushafPageComposer {
     }
 
     private func surahOpeningHeading(_ surah: Surah, size: CGFloat, width: CGFloat,
-                                     extraLineSpacing: CGFloat, leadingBreak: Bool) -> (text: NSAttributedString, nameRange: NSRange) {
+                                     extraLineSpacing: CGFloat, leadingBreak: Bool,
+                                     firstAyahIsBasmala: Bool = false) -> (text: NSAttributedString, nameRange: NSRange) {
         let accent = config.accent
         let heading = NSMutableAttributedString()
 
@@ -2198,7 +2205,7 @@ struct MushafPageComposer {
             // leaving "١٤إبراهيم" reading as one word. A full em quad (\u{2001}) overshot the other way, so
             // this is an en quad - half an em - widened by kerning to land between the two. Tune `nameGap`,
             // not the character. The brackets keep their plain spaces; those already sit clear.
-            let nameGap = nameSize * 0.25          // en quad (0.5 em) + this = 0.75 em of separation
+            let nameGap = -nameSize * 0.125        // en quad (0.5 em) + this = 0.375 em of separation
             var gapAttributes = arabicAttributes
             gapAttributes[.kern] = nameGap
             heading.append(NSAttributedString(string: "\u{2000}", attributes: gapAttributes))
@@ -2208,19 +2215,38 @@ struct MushafPageComposer {
 
         let nameRange = NSRange(location: nameStart, length: heading.length - nameStart)
 
-        if surah.id != 1, surah.id != 9 {
-            // On the SAME line as the name. Em quads (not spaces): a run of ordinary spaces between two Arabic
-            // runs collapses to almost nothing, which is why the ornament was sitting right up against the name.
+        // What follows the name on its line. An ordinary surah gets the basmala ornament. Al-Fatihah whose
+        // first NUMBERED ayah IS the basmala (Hafs and most countings - the basmala prints right below as
+        // ayah 1), and at-Tawbah (no basmala at all), get the isti'adhah instead - the same headers the
+        // list reader shows. A Fatiha text whose first numbered ayah is alhamdu (its basmala unnumbered)
+        // gets the basmala, again matching the list rule.
+        //
+        // On the SAME line as the name. Em quads (not spaces): a run of ordinary spaces between two Arabic
+        // runs collapses to almost nothing, which is why the ornament was sitting right up against the name.
+        heading.append(NSAttributedString(string: "\u{2001}\u{2001}\u{2001}", attributes: [
+            .font: arabicFont(nameSize),
+            .foregroundColor: accent,
+            .paragraphStyle: tight,
+        ]))
+        let showsTaawwudh = surah.id == 9 || (surah.id == 1 && firstAyahIsBasmala)
+        let ornament: (text: String, font: UIFont)
+        if showsTaawwudh {
+            // The phrase in the reader's own Arabic face (user rule: "just say audhubillahi mina... in
+            // the arabic font"). Its spaces are NO-BREAK, so it can never split mid-phrase: when the
+            // name's line can't hold it, it drops WHOLE onto the next centered line (the break happens
+            // at the breakable em quads above) instead of leaving ٱلرَّجِيمِ orphaned below.
+            ornament = (Self.taawwudhText.replacingOccurrences(of: " ", with: "\u{00A0}"),
+                        arabicFont(nameSize * 0.85))
+        } else {
             let bismillahFont = UIFont(name: QuranGlyphFont.commonName, size: nameSize)
-            heading.append(NSAttributedString(
-                string: "\u{2001}\u{2001}\u{2001}" + (bismillahFont != nil ? QuranGlyphFont.bismillahOrnament : Self.basmalaText),
-                attributes: [
-                    .font: bismillahFont ?? arabicFont(nameSize * 0.85),
-                    .foregroundColor: accent,
-                    .paragraphStyle: tight,
-                ]
-            ))
+            ornament = (bismillahFont != nil ? QuranGlyphFont.bismillahOrnament : Self.basmalaText,
+                        bismillahFont ?? arabicFont(nameSize * 0.85))
         }
+        heading.append(NSAttributedString(string: ornament.text, attributes: [
+            .font: ornament.font,
+            .foregroundColor: accent,
+            .paragraphStyle: tight,
+        ]))
 
         // The closing rule under the heading line.
         heading.append(NSAttributedString(string: "\n" + rule + "\n", attributes: ruleAttributes))
@@ -2229,6 +2255,10 @@ struct MushafPageComposer {
 
     /// Fallback only - used if `QuranCommon` isn't installed and the ornament can't be drawn.
     private static let basmalaText = "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ"
+
+    /// The isti'adhah, shown in place of the basmala for al-Fatihah and at-Tawbah (the same text the list
+    /// reader's header row shows).
+    private static let taawwudhText = "أَعُوذُ بِٱللَّهِ مِنَ ٱلشَّيۡطَانِ ٱلرَّجِيمِ"
 
     /// The composed page text plus each ayah's character range for hit-testing.
     /// `width` is the column width, needed only so a surah heading's rule can span the full page. It is
@@ -2251,8 +2281,18 @@ struct MushafPageComposer {
             // and the page's own opening surah is titled by the pinned header, so it gets nothing.
             if segment.ayahs.first?.id == 1 {
                 let headingStart = result.length
+                // Fatiha only: whether its first NUMBERED ayah is the basmala (Hafs) or alhamdu (countings
+                // that leave the basmala unnumbered) decides isti'adhah vs basmala in the heading - the
+                // same check the list reader makes. Raw text + sign-strip rather than `textCleanArabic`,
+                // which folds dots away under "Hide Arabic Dots" and would break the بسم prefix match.
+                let firstAyahIsBasmala = segment.surah.id == 1 && (segment.ayahs.first?
+                    .textArabic(for: config.displayQiraah, surahID: segment.surah.id)
+                    .removingArabicDiacriticsAndSigns
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+                    .hasPrefix("بسم") ?? false)
                 let heading = surahOpeningHeading(segment.surah, size: size, width: width,
-                                                  extraLineSpacing: extraLineSpacing, leadingBreak: i > 0)
+                                                  extraLineSpacing: extraLineSpacing, leadingBreak: i > 0,
+                                                  firstAyahIsBasmala: firstAyahIsBasmala)
                 result.append(heading.text)
                 // The heading (rule + name + basmala) is tappable: `ayahID: 0` marks it as a heading range so a
                 // tap opens the surah info sheet instead of trying to mark an ayah.
@@ -2346,11 +2386,16 @@ struct MushafPageComposer {
         // `justified: false` skips all of it - the render pipeline computes the justification OFF the main
         // thread on the plain compose and transplants it (see `justification(size:...)`), so the colored
         // main-thread compose must not pay for it again.
-        if justified, width > 0, !isEnglish, !usesSystemFont, !isOpeningSpread {
+        if justified, width > 0, isJustifiable {
             let balanced = NSMutableAttributedString(attributedString: result)
             if spaceTracking > 0 { Self.addSpaceTracking(spaceTracking, to: balanced) }
-            Self.balanceLineBreaks(balanced, width: width, segments: fillableSegments, bodySize: size)
-            return (Self.spaceJustified(balanced, width: width), ranges)
+            // The opening spread justifies too (user rule: its lines fill the measure like any page) but
+            // classically - greedy breaks, last line left natural - so the balance pass, which exists to
+            // make a STRETCHED closing line sane, stands down there.
+            if !isOpeningSpread {
+                Self.balanceLineBreaks(balanced, width: width, segments: fillableSegments, bodySize: size)
+            }
+            return (Self.spaceJustified(balanced, width: width, exemptClosingLines: isOpeningSpread), ranges)
         }
 
         return (result, ranges)
@@ -2401,7 +2446,10 @@ struct MushafPageComposer {
     /// wants every line flush to both margins, never centered, never left short. Headings keep their own
     /// centering; the only line left untouched is one with no gaps at all (a single word, nothing to
     /// stretch - it sits at the right margin, where reading starts).
-    private static func spaceJustified(_ source: NSAttributedString, width: CGFloat) -> NSAttributedString {
+    /// `exemptClosingLines` (the opening spread): each right-aligned paragraph's LAST line keeps its natural
+    /// setting instead of being stretched - classic justification, where only full lines reach the margin.
+    private static func spaceJustified(_ source: NSAttributedString, width: CGFloat,
+                                       exemptClosingLines: Bool = false) -> NSAttributedString {
         // The whole stack stays bound: NSLayoutManager does NOT retain its NSTextStorage, so discarding the
         // storage would tear the layout down under the queries below.
         let stack = layoutStack(for: source, width: width)
@@ -2435,6 +2483,18 @@ struct MushafPageComposer {
                 // Only the running right-aligned Arabic participates; headings and rules are centered on purpose.
                 let style = source.attribute(.paragraphStyle, at: charRange.location, effectiveRange: nil) as? NSParagraphStyle
                 guard style?.alignment == .right else { continue }
+
+                // Opening spread: the paragraph's closing line keeps its natural setting.
+                if exemptClosingLines {
+                    let para = string.paragraphRange(for: NSRange(location: charRange.location, length: 0))
+                    var paraContentEnd = NSMaxRange(para)
+                    while paraContentEnd > para.location,
+                          let scalar = Unicode.Scalar(string.character(at: paraContentEnd - 1)),
+                          CharacterSet.whitespacesAndNewlines.contains(scalar) {
+                        paraContentEnd -= 1
+                    }
+                    if NSMaxRange(charRange) >= paraContentEnd { continue }
+                }
 
                 let lineEnd = NSMaxRange(charRange)
 
@@ -2950,14 +3010,14 @@ struct MushafPageComposer {
 
     /// The largest size a mushaf page can be set at without overflowing. Hard ceiling so a short page (a few
     /// ayahs of a late surah) doesn't blow up to absurd glyphs just because it has the room.
+    ///
+    /// The SAME generous ceiling for every riwayah (user rule: the font being as big as the page allows is
+    /// the number-one priority - everything else comes after). Non-Hafs riwayat used to hold the reader's
+    /// own size because their pages run naturally short by a line or two (different orthography poured into
+    /// Hafs's page boundaries) and per-page inflation makes neighbouring pages' faces visibly differ - a
+    /// trade the bigger-font rule now deliberately accepts.
     private var fitCeiling: CGFloat {
-        // Hafs IS the 604-page print: its pages genuinely fill, so the generous ceiling only ever
-        // engages on the few closing pages that print sparse anyway. Every other riwayah pours
-        // DIFFERENT text into Hafs's page boundaries - orthography widths and merged ayat leave
-        // many pages naturally short by a line or two - and letting the fitter inflate the face
-        // toward 2.5x to chase the page bottom is what made half their pages read broken-loose.
-        // Non-Hafs pages hold the reader's own size; a short page keeps a quiet bottom band.
-        config.displayQiraah == nil ? min(config.fontSize * 2.5, 64) : config.fontSize
+        min(config.fontSize * 2.5, 64)
     }
 
     /// The font size the page renders at. With "Fit Page to Screen" on, the page takes up as much of the height
@@ -3925,6 +3985,15 @@ struct MushafPageTextView: UIViewRepresentable {
         secondaryClick.allowedTouchTypes = [NSNumber(value: UITouch.TouchType.indirectPointer.rawValue)]
         tv.addGestureRecognizer(secondaryClick)
 
+        // Pinch to magnify the composed page (the printed-PDF facsimile gets this from PDFKit for free):
+        // the text scales around the fingers and springs back when they lift - a magnifier for reading a
+        // small tajweed mark, not a persistent zoom mode, so it can never fight the pager's swipe or the
+        // tap targets. A layer transform (not a re-typeset) so the whole page moves as one composited
+        // group; two-finger only, so taps and long presses are untouched.
+        let pinch = UIPinchGestureRecognizer(target: context.coordinator,
+                                             action: #selector(Coordinator.handlePinch(_:)))
+        tv.addGestureRecognizer(pinch)
+
         context.coordinator.textView = tv
         return tv
     }
@@ -4112,6 +4181,42 @@ struct MushafPageTextView: UIViewRepresentable {
                 onTapHeading?(surahID)
             } else {
                 onLongPressAyah?(surahID, ayahID)
+            }
+        }
+
+        /// Pinch-to-magnify (composed pages only - the PDF facsimile zooms through PDFKit). The transform
+        /// anchors at the pinch centre and follows it as the fingers move, so the reader can pan while
+        /// zoomed by dragging the pinch; lifting the fingers springs the page back to rest. Transient by
+        /// design: a persistent zoom would fight the pager's swipe, the tap targets, and the fit-to-page
+        /// layout all at once.
+        @objc func handlePinch(_ gesture: UIPinchGestureRecognizer) {
+            guard let tv = textView else { return }
+            switch gesture.state {
+            case .began, .changed:
+                // Zoom out is meaningless on a page fitted to its box - clamp to [1, 5].
+                let currentScale = tv.transform.a
+                var factor = gesture.scale
+                if currentScale * factor < 1 { factor = 1 / currentScale }
+                if currentScale * factor > 5 { factor = 5 / currentScale }
+                // `location(in:)` converts through the current transform, so the anchor stays under the
+                // fingers across updates. Draw the zoomed page over its neighbours' chrome, not under it.
+                let center = gesture.location(in: tv)
+                let anchor = CGPoint(x: center.x - tv.bounds.midX, y: center.y - tv.bounds.midY)
+                tv.transform = tv.transform
+                    .translatedBy(x: anchor.x, y: anchor.y)
+                    .scaledBy(x: factor, y: factor)
+                    .translatedBy(x: -anchor.x, y: -anchor.y)
+                gesture.scale = 1
+                tv.layer.zPosition = 1
+            case .ended, .cancelled, .failed:
+                UIView.animate(withDuration: 0.35, delay: 0, usingSpringWithDamping: 0.85,
+                               initialSpringVelocity: 0, options: [.allowUserInteraction]) {
+                    tv.transform = .identity
+                } completion: { _ in
+                    tv.layer.zPosition = 0
+                }
+            default:
+                break
             }
         }
 
