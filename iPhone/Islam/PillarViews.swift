@@ -257,7 +257,7 @@ struct IslamPillarView: View {
                     ScriptureQuote(text: "“The best among you are those who have the best manners and character” (Sahih al-Bukhari 6029)", dimmed: true)
 
                     Text("He also said:").font(.body)
-                    ScriptureQuote(text: "“The most beloved people to Allah are those who are most beneficial to people. The most beloved deed to Allah is to make a Muslim happy, or remove one of his troubles, or forgive his debt, or feed his hunger” (al-Mu'jam al Awsat lil-Tabarani 6026).", dimmed: true)
+                    ScriptureQuote(text: "“The most beloved people to Allah are those who are most beneficial to people. The most beloved deed to Allah is to make a Muslim happy, or remove one of his troubles, or forgive his debt, or feed his hunger” (al-Mu'jam al-Awsat lil-Tabarani 6026; graded hasan by al-Albani, as-Silsilah as-Sahihah 906).", dimmed: true)
 
                     Text("These teachings show that Islam is not only about fulfilling religious obligations but also about treating others with respect, kindness, and fairness. Upholding good character is considered a sign of true faith and devotion to Allah (Glorified and Exalted be He).")
                         .font(.body)
@@ -722,7 +722,7 @@ struct ProphetPillarView: View {
                     ScriptureQuote(text: "“Be calm, for I am not a king. Verily, I am only the son of a woman who ate dried meat” (Sunan Ibn Majah 3312).", dimmed: true)
 
                     Text("He also said:").font(.body)
-                    ScriptureQuote(text: "“I am only a servant. I eat as the servant eats, and I sit as the servant sits” (as-Silsilah as-Sahihah 544, graded hasan).", dimmed: true)
+                    ScriptureQuote(text: "“I am only a servant. I eat as the servant eats, and I sit as the servant sits” (as-Silsilah as-Sahihah 544; graded hasan by al-Albani).", dimmed: true)
 
                     Text("Similarly, the Prophet (peace and blessings be upon him) warned against excessive praise, saying:").font(.body)
                     ScriptureQuote(text: "“Do not exaggerate in praising me as the Christians praised the son of Mary (Jesus), for I am only a Slave. So, call me the Slave of Allah and His Messenger” (Sahih al-Bukhari 3445).", dimmed: true)
@@ -923,7 +923,10 @@ struct HadithPillarView: View {
                     Text("3. **Strengthening Faith:** They contain spiritual guidance and wisdom that deepen a Muslim’s connection to Allah (Glorified and Exalted be He).").font(.body)
 
                     Text("The Prophet (peace and blessings be upon him) said:").font(.body)
-                    ScriptureQuote(text: "“I have left you with two matters which will never lead you astray, as long as you hold to them: the Book of Allah and the Sunnah of his Prophet” (al-Muwatta' 1661).", dimmed: true)
+                    ScriptureQuote(text: "“I have left among you the Book of Allah: if you hold fast to it, you will never go astray” (Sahih Muslim 1218).", dimmed: true)
+
+                    Text("And he commanded holding to his Sunnah: “Hold fast to my Sunnah and the Sunnah of the rightly guided caliphs after me” (Sunan Abi Dawud 4607). The well-known wording “the Book of Allah and the Sunnah of His Prophet” is reported in al-Muwatta' (1661) with corroborating chains.")
+                        .font(.body)
                 }
 
                 Section(header: Text("RESOURCES")) {
@@ -1356,7 +1359,7 @@ struct HajjView: View {
                         .font(.body)
 
                     Text("The Prophet Muhammad (peace and blessings be upon him) said:").font(.body)
-                    ScriptureQuote(text: "“Whoever performs Hajj (pilgrimage) and does not have sexual relations (with his wife), nor commits sin, nor disputes unjustly (during Hajj), then he returns from Hajj as pure and free from sins as on the day on which his mother gave birth to him” (Riyad as-Salihin 1274).", dimmed: true)
+                    ScriptureQuote(text: "“Whoever performs Hajj (pilgrimage) and does not have sexual relations (with his wife), nor commits sin, nor disputes unjustly (during Hajj), then he returns from Hajj as pure and free from sins as on the day on which his mother gave birth to him” (Sahih al-Bukhari 1521).", dimmed: true)
                 }
 
                 Section(header: Text("CONCLUSION")) {
@@ -1923,7 +1926,7 @@ struct QadarView: View {
                         .font(.body)
 
                     Text("The Prophet Muhammad (peace and blessings be upon him) said:").font(.body)
-                    ScriptureQuote(text: "“Strive for that which will benefit you, seek help from Allah, and do not give up. If something befalls you, do not say, ‘If only I had done such and such,’ but say, ‘Allah decreed it, and what He willed has happened.’ For saying ‘if’ opens the door to **Shaytan (شَيطَان)**’s (Satan’s) work” (Sunan Ibn Majah 79).", dimmed: true)
+                    ScriptureQuote(text: "“Strive for that which will benefit you, seek help from Allah, and do not give up. If something befalls you, do not say, ‘If only I had done such and such,’ but say, ‘Allah decreed it, and what He willed has happened.’ For saying ‘if’ opens the door to **Shaytan (شَيطَان)**’s (Satan’s) work” (Sahih Muslim 2664).", dimmed: true)
                 }
 
                 Section(header: Text("PATIENT AND GRATEFUL")) {

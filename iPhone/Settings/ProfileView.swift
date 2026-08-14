@@ -575,14 +575,30 @@ struct ProfileView: View {
 
         return ProfileCard(title: "Badges", systemImage: "rosette",
                            trailing: "\(earned.count) of \(AlIslamBadge.allCases.count)") {
+            // The whole cabinet at a glance: one thin accent bar under the header, so "how far along
+            // am I overall" is answered before any scrolling through the families.
+            ProgressView(value: Double(earned.count), total: Double(AlIslamBadge.allCases.count))
+                .progressViewStyle(.linear)
+                .tint(settings.accentColor.color)
+                .padding(.bottom, 2)
+
             ForEach(AlIslamBadge.Family.allCases) { family in
                 let badges = AlIslamBadge.allCases.filter { $0.family == family }
+                let familyEarned = badges.filter { $0.isEarned(stats) }.count
 
                 VStack(alignment: .leading, spacing: 6) {
-                    Text(family.rawValue.uppercased())
-                        .font(.caption2.weight(.semibold))
-                        .foregroundStyle(.secondary)
-                        .padding(.top, 4)
+                    HStack(alignment: .firstTextBaseline) {
+                        Text(family.rawValue.uppercased())
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(.secondary)
+
+                        Spacer()
+
+                        Text("\(familyEarned)/\(badges.count)")
+                            .font(.caption2.weight(.semibold).monospacedDigit())
+                            .foregroundStyle(familyEarned == badges.count ? AnyShapeStyle(settings.accentColor.color) : AnyShapeStyle(.secondary))
+                    }
+                    .padding(.top, 4)
 
                     LazyVGrid(
                         columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 3),
@@ -661,6 +677,10 @@ private struct RingHero: View {
     @ObservedObject private var settings = Settings.shared
     let stats: ProfileStats
 
+    /// Rings sweep in from zero each time the screen appears - the fill IS the story here, and the
+    /// half-second sweep is what makes it read as progress rather than as static decoration.
+    @State private var appeared = false
+
     private var rings: [(fraction: Double, color: Color, label: String, value: String)] {
         let accent = settings.accentColor.color
         var list: [(Double, Color, String, String)] = [
@@ -683,12 +703,20 @@ private struct RingHero: View {
             ZStack {
                 ForEach(Array(rings.enumerated()), id: \.offset) { index, ring in
                     let inset = CGFloat(index) * 22
-                    Ring(fraction: ring.fraction, color: ring.color)
+                    Ring(fraction: appeared ? ring.fraction : 0, color: ring.color, delay: Double(index) * 0.1)
                         .padding(inset)
                 }
+
+                // The hole the rings leave is real estate - a quiet on-palette centerpiece keeps the
+                // hero from reading as an unfinished donut chart, without inventing another number.
+                Image(systemName: "moon.stars.fill")
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundStyle(settings.accentColor.color.opacity(0.85))
             }
             .frame(width: 150, height: 150)
             .padding(.top, 4)
+            .onAppear { appeared = true }
+            .onDisappear { appeared = false }
 
             HStack(spacing: 16) {
                 ForEach(Array(rings.enumerated()), id: \.offset) { _, ring in
@@ -711,6 +739,7 @@ private struct RingHero: View {
     private struct Ring: View {
         let fraction: Double
         let color: Color
+        var delay: Double = 0
 
         var body: some View {
             ZStack {
@@ -729,7 +758,8 @@ private struct RingHero: View {
                             style: StrokeStyle(lineWidth: 9, lineCap: .round)
                         )
                         .rotationEffect(.degrees(-90))
-                        .animation(.easeInOut(duration: 0.4), value: fraction)
+                        // The stagger makes the three rings land as a cascade rather than one blob.
+                        .animation(.easeOut(duration: 0.55).delay(delay), value: fraction)
                 }
             }
         }
@@ -797,6 +827,8 @@ private struct BadgeTile: View {
                         : AnyShapeStyle(Color.secondary.opacity(0.14))
                     )
                 )
+                // The soft accent glow is what separates "earned" from "colored in" at a glance.
+                .shadow(color: earned ? tint.opacity(0.35) : .clear, radius: 5, y: 2)
 
             Text(badge.title)
                 .font(.caption2.weight(.medium))
@@ -822,6 +854,20 @@ private struct BadgeTile: View {
             RoundedRectangle(cornerRadius: 14, style: .continuous)
                 .fill(Color.primary.opacity(earned ? 0.06 : 0.03))
         )
+        // A hairline of accent frames the earned tiles - locked ones stay borderless so the cabinet
+        // reads as a field of quiet grey with the earned work lit up.
+        .overlay(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .strokeBorder(settings.accentColor.color.opacity(earned ? 0.28 : 0), lineWidth: 1)
+        )
+        .overlay(alignment: .topTrailing) {
+            if earned {
+                Image(systemName: "checkmark.seal.fill")
+                    .font(.caption2)
+                    .foregroundStyle(settings.accentColor.color)
+                    .padding(5)
+            }
+        }
         .contentShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
         .opacity(earned ? 1 : 0.75)
     }
@@ -834,6 +880,10 @@ private struct BadgeDetailSheet: View {
     let badge: AlIslamBadge
     let stats: ProfileStats
 
+    /// Same appear-sweep as the profile hero: the ring around the badge fills from zero when the
+    /// sheet opens, so the distance (or the completed lap) is watched rather than merely stated.
+    @State private var appeared = false
+
     var body: some View {
         let earned = badge.isEarned(stats)
         let (value, goal) = badge.progress(stats)
@@ -841,22 +891,48 @@ private struct BadgeDetailSheet: View {
 
         NavigationView {
             VStack(spacing: 16) {
-                Image(systemName: badge.systemImage)
-                    .font(.system(size: 40, weight: .semibold))
-                    .foregroundStyle(earned ? .white : Color.secondary)
-                    .frame(width: 92, height: 92)
-                    .background(
-                        Circle().fill(
-                            earned
-                            ? AnyShapeStyle(LinearGradient(
-                                colors: [tint.opacity(0.95), tint.opacity(0.6)],
-                                startPoint: .topLeading, endPoint: .bottomTrailing))
-                            : AnyShapeStyle(Color.secondary.opacity(0.14))
+                ZStack {
+                    Circle()
+                        .stroke(settings.accentColor.color.opacity(0.15), lineWidth: 6)
+                        .frame(width: 118, height: 118)
+
+                    // Full lap when earned, partial when not - one shape tells both stories.
+                    Circle()
+                        .trim(from: 0, to: appeared ? badge.fraction(stats) : 0)
+                        .stroke(
+                            settings.accentColor.color,
+                            style: StrokeStyle(lineWidth: 6, lineCap: .round)
                         )
-                    )
-                    .padding(.top, 20)
+                        .rotationEffect(.degrees(-90))
+                        .frame(width: 118, height: 118)
+                        .animation(.easeOut(duration: 0.6), value: appeared)
+
+                    Image(systemName: badge.systemImage)
+                        .font(.system(size: 40, weight: .semibold))
+                        .foregroundStyle(earned ? .white : Color.secondary)
+                        .frame(width: 92, height: 92)
+                        .background(
+                            Circle().fill(
+                                earned
+                                ? AnyShapeStyle(LinearGradient(
+                                    colors: [tint.opacity(0.95), tint.opacity(0.6)],
+                                    startPoint: .topLeading, endPoint: .bottomTrailing))
+                                : AnyShapeStyle(Color.secondary.opacity(0.14))
+                            )
+                        )
+                        .shadow(color: earned ? tint.opacity(0.35) : .clear, radius: 8, y: 3)
+                }
+                .padding(.top, 20)
+                .onAppear { appeared = true }
 
                 VStack(spacing: 6) {
+                    Text(badge.family.rawValue.uppercased())
+                        .font(.caption2.weight(.bold))
+                        .foregroundStyle(settings.accentColor.color)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 3)
+                        .background(Capsule().fill(settings.accentColor.color.opacity(0.12)))
+
                     Text(badge.title)
                         .font(.title3.weight(.bold))
 
@@ -866,22 +942,20 @@ private struct BadgeDetailSheet: View {
                         .multilineTextAlignment(.center)
                 }
 
-                if earned {
-                    Label("Earned", systemImage: "checkmark.seal.fill")
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(settings.accentColor.color)
-                } else {
-                    VStack(spacing: 8) {
-                        ProgressView(value: badge.fraction(stats))
-                            .progressViewStyle(.linear)
-                            .tint(settings.accentColor.color)
-
-                        Text("\(value.formatted(.number)) of \(goal.formatted(.number))")
-                            .font(.caption.monospacedDigit())
-                            .foregroundStyle(.secondary)
+                VStack(spacing: 6) {
+                    if earned {
+                        Label("Earned", systemImage: "checkmark.seal.fill")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(settings.accentColor.color)
                     }
-                    .padding(.horizontal, 40)
+
+                    // The receipt in the badge's own unit, earned or not - "12,405 of 10,000" is
+                    // worth seeing even after the seal.
+                    Text("\(value.formatted(.number)) of \(goal.formatted(.number))")
+                        .font(.caption.monospacedDigit())
+                        .foregroundStyle(.secondary)
                 }
+                .padding(.horizontal, 40)
 
                 Spacer()
             }

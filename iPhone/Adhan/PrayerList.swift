@@ -823,8 +823,17 @@ struct PrayerList: View {
         if let index = sorted.firstIndex(where: { $0.stableDisplayID == prayer.stableDisplayID }),
            index + 1 < sorted.count {
             next = sorted[index + 1]
-        } else if let tomorrow = Calendar.current.date(byAdding: .day, value: 1, to: prayer.time) {
-            next = settings.getPrayerTimes(for: tomorrow)?.first { $0.nameTransliteration == "Fajr" }
+        } else {
+            // The last entry rolls to the NEXT Fajr after this time. For post-midnight optional times
+            // (Last Third ~3 AM, a late Islamic Midnight) that is the Fajr of this very civil day, an
+            // hour or two later - "+1 day" unconditionally fetched the day after's Fajr and reported a
+            // ~25-hour window.
+            let sameDayFajr = settings.getPrayerTimes(for: prayer.time)?.first { $0.nameTransliteration == "Fajr" }
+            if let sameDayFajr, sameDayFajr.time > prayer.time {
+                next = sameDayFajr
+            } else if let tomorrow = Calendar.current.date(byAdding: .day, value: 1, to: prayer.time) {
+                next = settings.getPrayerTimes(for: tomorrow)?.first { $0.nameTransliteration == "Fajr" }
+            }
         }
 
         guard let next, next.time > prayer.time else { return nil }

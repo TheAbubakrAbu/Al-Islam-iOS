@@ -167,17 +167,19 @@ struct AyahActionsSheet: View {
 
             // The same reference format every ayah sheet uses, plus the ayah's ACTUAL text in the active
             // translation (not just the translation's name).
-            VStack(spacing: 3) {
+            VStack(alignment: .leading, spacing: 3) {
                 Text(ayahSheetTitle(surahNumber: surah.id, ayahNumber: ayah.id))
                     .font(.caption2.weight(.semibold))
                     .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
 
                 if let translation = currentTranslationText(for: ayah) {
                     Text(translation)
                         .font(.caption2)
                         .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
+                        .multilineTextAlignment(.leading)
                         .fixedSize(horizontal: false, vertical: true)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                 }
             }
 

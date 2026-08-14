@@ -790,6 +790,84 @@ struct SurahPageReader<Controls: View>: View {
         }
     }
 
+    /// The typed query understood as a REFERENCE rather than text - the list search's `getSurahAndAyah`
+    /// lanes, brought to page mode: "2:255", "Baqarah:255", "Baqarah 255", Arabic numerals, and every
+    /// English surah spelling `resolveSurahIdentifier` knows. A bare surah name resolves to the surah
+    /// alone (ayah nil = its first page); a bare NUMBER offers the ayah in the surah on screen first
+    /// ("255" while reading al-Baqarah) and the surah with that number second - both rows when both
+    /// parse, so "2" can mean 2:2 here or Surah al-Baqarah without the reader losing either. Additive:
+    /// the text matches below keep working - this only decides which "Go to" rows are offered above them.
+    private func referenceJumpTargets(scope: Surah?) -> [(surah: Surah, ayahID: Int?)] {
+        let raw = pageSearchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !raw.isEmpty else { return [] }
+
+        // Western AND Arabic-Indic/Eastern digits - `applyingTransform(.toLatin)` does not touch
+        // digits, so the mapping is explicit (the same lane the list's `arabicToEnglishNumber` covers).
+        func number(_ token: String) -> Int? {
+            if let n = Int(token) { return n }
+            let digitMap: [Character: Character] = [
+                "٠": "0", "١": "1", "٢": "2", "٣": "3", "٤": "4",
+                "٥": "5", "٦": "6", "٧": "7", "٨": "8", "٩": "9",
+                "۰": "0", "۱": "1", "۲": "2", "۳": "3", "۴": "4",
+                "۵": "5", "۶": "6", "۷": "7", "۸": "8", "۹": "9"
+            ]
+            guard token.contains(where: { digitMap[$0] != nil }) else { return nil }
+            return Int(String(token.map { digitMap[$0] ?? $0 }))
+        }
+
+        // "S:A" - surah by name or number before the colon, ayah number after it.
+        let colonParts = raw.split(separator: ":").map { String($0).trimmingCharacters(in: .whitespaces) }
+        if colonParts.count == 2 {
+            guard let surah = quranData.resolveSurahIdentifier(colonParts[0]),
+                  let ayah = number(colonParts[1]),
+                  quranData.ayah(surah: surah.id, ayah: ayah) != nil else { return [] }
+            return [(surah, ayah)]
+        }
+        guard colonParts.count == 1 else { return [] }
+
+        // A bare number: this surah's ayah first, the surah with that number second.
+        if let n = number(raw) {
+            var targets: [(surah: Surah, ayahID: Int?)] = []
+            if let scope, quranData.ayah(surah: scope.id, ayah: n) != nil {
+                targets.append((scope, n))
+            }
+            if (1...114).contains(n), let surah = quranData.surah(n) {
+                targets.append((surah, nil))
+            }
+            return targets
+        }
+
+        // "Baqarah 255" - the colon form with a space, since that's how it gets typed half the time.
+        let words = raw.split(separator: " ").map(String.init)
+        if words.count >= 2, let ayah = number(words[words.count - 1]),
+           let surah = quranData.resolveSurahIdentifier(words.dropLast().joined(separator: " ")),
+           quranData.ayah(surah: surah.id, ayah: ayah) != nil {
+            return [(surah, ayah)]
+        }
+
+        // A bare surah name: offer the surah itself. Requiring a resolvable name keeps ordinary
+        // word searches from sprouting a bogus jump row.
+        if let surah = quranData.resolveSurahIdentifier(raw) { return [(surah, nil)] }
+        return []
+    }
+
+    /// Take the reader to a typed reference: the same move a search hit makes - turn to the page,
+    /// light the ayah (kept after the bar closes, exactly like a find selection), close the find.
+    private func jumpToReference(_ target: (surah: Surah, ayahID: Int?), pages: [MushafPage]) {
+        guard let index = MushafPagination.pageIndex(surahID: target.surah.id, ayahID: target.ayahID, in: pages) else { return }
+        settings.hapticFeedback()
+        withAnimation(.easeInOut) {
+            if let ayahID = target.ayahID {
+                highlightedAyah = HighlightedAyahRef(surahID: target.surah.id, ayahID: ayahID)
+            }
+            if index != pageIndex {
+                suppressNextPageTurnClear = true
+                pageIndex = index
+            }
+            searchActive = false
+        }
+    }
+
     /// The in-page find bar: a text field, a match counter with up/down, a close button, and - always - the
     /// two ways OUT of this page: widen the find to the whole surah (in place, stepping through it turns
     /// pages), or hand the query to the whole-Quran search. Both are offered whether or not this page has a
@@ -799,6 +877,7 @@ struct SurahPageReader<Controls: View>: View {
         let hasQuery = !pageSearchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         // The surah to widen INTO: the one the page on screen is showing.
         let scopeSurah = pages.indices.contains(pageIndex) ? pages[pageIndex].displayedSurah : nil
+        let refTargets = hasQuery ? referenceJumpTargets(scope: scopeSurah) : []
         let searchingSurah = findSurahID != nil
 
         return VStack(spacing: 5) {
@@ -842,6 +921,23 @@ struct SurahPageReader<Controls: View>: View {
             .padding(.vertical, 8)
             .conditionalGlassEffect(rectangle: true)
 
+            // The typed-reference row: "2:255" / "Baqarah 255" / a bare surah name offers a direct jump,
+            // the way the list search's SURAH / AYAH result sections answer the same queries. Above the
+            // scope row because when it appears it is almost always what was meant.
+            ForEach(Array(refTargets.enumerated()), id: \.offset) { _, target in
+                Button {
+                    jumpToReference(target, pages: pages)
+                } label: {
+                    scopeButtonLabel(
+                        target.ayahID.map { "Go to \(target.surah.nameTransliteration) \(target.surah.id):\($0)" }
+                            ?? "Go to Surah \(target.surah.nameTransliteration)",
+                        systemImage: "arrow.turn.down.right",
+                        color: settings.accentColor.color
+                    )
+                }
+                .buttonStyle(.plain)
+            }
+
             // The scope row. The first button is a TOGGLE that always names where it will take you - "Search
             // this Surah" while the find is on this page, "Search this Page" once it has been widened - so
             // the label is the action, never a status line you can't act on. The whole-Quran button beside
@@ -878,7 +974,8 @@ struct SurahPageReader<Controls: View>: View {
             }
 
             // The dead-end note, once the reader has actually come up empty on whatever they scoped to.
-            if hasQuery, matches.isEmpty {
+            // Not when a reference jump is on offer - "Go to 2:255" plus "no matches" reads as a shrug.
+            if hasQuery, matches.isEmpty, refTargets.isEmpty {
                 Text(searchingSurah ? "No matches in this surah." : "No matches on this page.")
                     .font(.caption2)
                     .foregroundStyle(.secondary)

@@ -436,6 +436,24 @@ struct NamesView: View {
     /// AI list on every new query.
     @State private var showKeywordResults = false
     @State private var askTask: Task<Void, Never>?
+    /// The names the answer was grounded on, kept so the answer's citations can resolve back to
+    /// REAL rows - the hadith search's `hadithAskSourceHits`, for names.
+    @State private var askSourceNames: [NameOfAllah] = []
+
+    /// The names the streamed answer actually cited, in citation order - matched against the exact
+    /// source references the model was given (the transliteration, e.g. "Ar-Rahman"), so every row
+    /// is guaranteed to be a real name. Rendered as standard `NameRow`s, full menu and swipes included.
+    private var askCitedNames: [NameOfAllah] {
+        guard !askAnswer.isEmpty else { return [] }
+        let answer = askAnswer.lowercased()
+        var cited: [(position: Int, name: NameOfAllah)] = []
+        var seen = Set<Int>()
+        for name in askSourceNames where seen.insert(name.number).inserted {
+            guard let range = answer.range(of: name.transliteration.lowercased()) else { continue }
+            cited.append((answer.distance(from: answer.startIndex, to: range.lowerBound), name))
+        }
+        return cited.sorted { $0.position < $1.position }.prefix(10).map(\.name)
+    }
 
     /// Auto mode runs only for QUESTION-shaped queries; `manual` (the tapped "Ask AI" row) runs
     /// for anything - the user explicitly asked.
@@ -460,18 +478,22 @@ struct NamesView: View {
             guard !Task.isCancelled else { return }
 
             var sources: [OnDeviceAsk.Source] = []
+            var sourceNames: [NameOfAllah] = []
             var seen = Set<Int>()
             for name in aiHits.prefix(6) where seen.insert(name.number).inserted {
                 sources.append(.init(reference: name.transliteration, text: "\(name.meaning). \(name.desc)"))
+                sourceNames.append(name)
             }
             for name in filteredNames.prefix(6) where seen.insert(name.number).inserted {
                 sources.append(.init(reference: name.transliteration, text: "\(name.meaning). \(name.desc)"))
+                sourceNames.append(name)
             }
             // Nothing retrieved is no longer a dead end: the ask still runs, in OPEN mode - a
             // clearly labeled general-knowledge answer with no recreated quotes.
             askGrounded = !sources.isEmpty
 
             askAnswer = ""; askIsStreaming = true; askRanForQuery = trimmed
+            askSourceNames = sourceNames
             guard #available(iOS 26.0, *) else { return }
             do {
                 for try await text in OnDeviceAsk.streamAnswer(question: trimmed, sources: sources) {
@@ -482,7 +504,7 @@ struct NamesView: View {
                 askIsStreaming = false
             } catch {
                 guard !Task.isCancelled else { return }
-                askAnswer = ""; askIsStreaming = false; askRanForQuery = ""
+                askAnswer = ""; askIsStreaming = false; askRanForQuery = ""; askSourceNames = []
                 if manual { askNoAnswer = true }
             }
         }
@@ -549,12 +571,33 @@ struct NamesView: View {
     /// the hadith book search's exact grammar. The prompt row shows only once there are results
     /// to ground an answer on.
     @ViewBuilder
-    private func askAISection(hasResults: Bool) -> some View {
+    private func askAISection(hasResults: Bool, favoriteSet: Set<Int>, hasActiveSearch: Bool, proxy: ScrollViewProxy) -> some View {
         if OnDeviceAsk.isAvailable {
             if askNoAnswer {
                 Section(header: askAIHeader) { askNoAnswerRow }
             } else if !askRanForQuery.isEmpty {
-                Section(header: askAIHeader) { AskAnswerCard(answer: askAnswer, isStreaming: askIsStreaming, grounded: askGrounded) }
+                Section(header: askAIHeader) {
+                    AskAnswerCard(answer: askAnswer, isStreaming: askIsStreaming, grounded: askGrounded)
+
+                    // The answer's receipts: the names it actually cited, as the STANDARD name rows -
+                    // same context menu and favorite swipes as every other name row in the app.
+                    ForEach(askCitedNames, id: \.id) { name in
+                        NameRow(
+                            name: name,
+                            firstFoundTarget: namesData.firstFoundTargetsByNameNumber[name.number],
+                            showDescription: settings.showDescription,
+                            isExpanded: expandedNameNumbers.contains(name.number),
+                            isFavorite: favoriteSet.contains(name.number),
+                            accentColor: settings.accentColor,
+                            useFontArabic: settings.useFontArabic,
+                            fontArabic: settings.nonQuranArabicFontName,
+                            searchQuery: searchText
+                        ) {
+                            handleNameTap(name: name, hasActiveSearch: hasActiveSearch, proxy: proxy)
+                        }
+                        .equatable()
+                    }
+                }
             } else {
                 Section(header: askAIHeader) { askPromptRow }
             }
@@ -648,7 +691,7 @@ struct NamesView: View {
                     favoriteNamesSection(favorites, hasActiveSearch: hasActiveSearch, proxy: proxy)
                     #if os(iOS)
                     if hasActiveSearch {
-                        askAISection(hasResults: !aiHits.isEmpty || !names.isEmpty)
+                        askAISection(hasResults: !aiHits.isEmpty || !names.isEmpty, favoriteSet: favoriteSet, hasActiveSearch: hasActiveSearch, proxy: proxy)
                         if showResultsPicker { resultsPickerSection }
                         // AI matches appear AUTOMATICALLY above the keyword results - no mode to enter.
                         if !showResultsPicker || !showKeywordResults {

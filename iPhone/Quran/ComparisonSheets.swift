@@ -17,6 +17,12 @@ struct AyahQiraahComparisonSheet: View {
     /// riwayah numbers this ayah differently or joins it with a neighbor. Off = each row shows that
     /// riwayah's ayah under this exact NUMBER, unaligned - useful for seeing the numbering itself.
     @AppStorage("qiraahSmartComparison") private var smartComparison = true
+    /// Head-to-Head: pick exactly TWO riwayat and read them against each other - the list below
+    /// steps aside while it's on. The tags persist so a reader comparing, say, Hafs vs Warsh across
+    /// many ayat doesn't re-pick every time ("__unset__" = derive a sensible default).
+    @AppStorage("qiraahDuelMode") private var duelMode = false
+    @AppStorage("qiraahDuelATag") private var duelATagRaw = "__unset__"
+    @AppStorage("qiraahDuelBTag") private var duelBTagRaw = "__unset__"
 
     private struct QiraahDisplay: Identifiable {
         let label: String
@@ -104,27 +110,62 @@ struct AyahQiraahComparisonSheet: View {
                                 .foregroundStyle(.secondary)
                         }
 
-                        if !favoriteOptions.isEmpty {
-                            Section(header: Text("FAVORITES")) {
-                                ForEach(favoriteOptions) { option in
-                                    qiraahRow(option)
+                        Section {
+                            Toggle(isOn: $duelMode.animation(.easeInOut)) {
+                                Label {
+                                    Text("Head-to-Head")
+                                        .font(.subheadline.weight(.semibold))
+                                } icon: {
+                                    Image(systemName: "arrow.left.arrow.right.circle.fill")
+                                        .foregroundStyle(settings.accentColor.color)
                                 }
                             }
-                        }
+                            .tint(settings.accentColor.color)
+                            .onChange(of: duelMode) { _ in settings.hapticFeedback() }
 
-                        ForEach(groupedOptions, id: \.teacher) { group in
-                            Section(header: Text("\(group.teacher.uppercased()) - \(group.teacherArabic)")) {
-                                ForEach(group.options) { option in
-                                    qiraahRow(option)
+                            if duelMode {
+                                duelPickerRow
+
+                                if let a = duelOptionA {
+                                    duelCard(a, against: duelOptionB)
+                                }
+                                if let b = duelOptionB {
+                                    duelCard(b, against: duelOptionA)
                                 }
                             }
-                        }
-
-                        if filteredOptions.isEmpty {
-                            Section {
-                                Text("No riwayat found.")
-                                    .font(.subheadline)
+                        } footer: {
+                            if duelMode {
+                                Text(duelTextsIdentical
+                                     ? "These two riwayat read this ayah with identical wording."
+                                     : "Pick any two riwayat and read them directly against each other. Words tinted in the accent color differ between the two.")
+                                    .font(.caption)
                                     .foregroundStyle(.secondary)
+                            }
+                        }
+
+                        if !duelMode {
+                            if !favoriteOptions.isEmpty {
+                                Section(header: Text("FAVORITES")) {
+                                    ForEach(favoriteOptions) { option in
+                                        qiraahRow(option)
+                                    }
+                                }
+                            }
+
+                            ForEach(groupedOptions, id: \.teacher) { group in
+                                Section(header: Text("\(group.teacher.uppercased()) - \(group.teacherArabic)")) {
+                                    ForEach(group.options) { option in
+                                        qiraahRow(option)
+                                    }
+                                }
+                            }
+
+                            if filteredOptions.isEmpty {
+                                Section {
+                                    Text("No riwayat found.")
+                                        .font(.subheadline)
+                                        .foregroundStyle(.secondary)
+                                }
                             }
                         }
                     }
@@ -136,11 +177,14 @@ struct AyahQiraahComparisonSheet: View {
             // (`SettingsQuranView.reciterSearchControlsInset`) and every other search in the app uses.
             // The filtering itself is untouched: `filteredOptions` still reads `searchText`.
             .adaptiveSafeArea(edge: .bottom) {
-                SearchBar(text: AppPerformance.shouldReduceAnimations ? $searchText : $searchText.animation(.easeInOut), placeholder: "Search riwayat")
-                    .padding([.leading, .top], -8)
-                    .padding(.horizontal, 24)
-                    .padding(.bottom, 8)
-                    .background(Color.white.opacity(0.00001))
+                // In Head-to-Head the list is hidden, so the search bar steps aside with it.
+                if !duelMode {
+                    SearchBar(text: AppPerformance.shouldReduceAnimations ? $searchText : $searchText.animation(.easeInOut), placeholder: "Search riwayat")
+                        .padding([.leading, .top], -8)
+                        .padding(.horizontal, 24)
+                        .padding(.bottom, 8)
+                        .background(Color.white.opacity(0.00001))
+                }
             }
             .safeAreaInset(edge: .top, spacing: 0) {
                 if let currentOption {
@@ -323,8 +367,12 @@ struct AyahQiraahComparisonSheet: View {
     /// toggle, and the khilaf magenta wins where both would color a word.
     private func rowStyled(for option: QiraahDisplay, resolved: ResolvedQiraahText?) -> AttributedString? {
         guard let resolved else { return nil }
-        let diff = diffStyled(for: option, resolved: resolved)
+        return khilafOverlaid(diffStyled(for: option, resolved: resolved), option: option, resolved: resolved)
+    }
 
+    /// Layers the print's KHILAF wash onto a diff-tinted base (or a plain-primary base) - shared by
+    /// the current-vs-all rows and the Head-to-Head cards, so both color khilaf identically.
+    private func khilafOverlaid(_ diff: AttributedString?, option: QiraahDisplay, resolved: ResolvedQiraahText) -> AttributedString? {
         let tag = Settings.Riwayah.canonicalTag(option.tag)
         guard !tag.isEmpty else { return diff }
         let ownAyah = resolved.ownNumber ?? ayahNumber
@@ -352,6 +400,159 @@ struct AyahQiraahComparisonSheet: View {
             merged[start..<end].foregroundColor = Color(color)
         }
         return merged
+    }
+
+    // MARK: - Head-to-Head (compare exactly two riwayat)
+
+    /// Side A defaults to the riwayah the reader is displaying; side B to the first other riwayah
+    /// (Hafs, unless A IS Hafs). "__unset__" keeps the default alive until the reader picks.
+    private var duelOptionA: QiraahDisplay? {
+        if duelATagRaw != "__unset__", let picked = options.first(where: { $0.tag == duelATagRaw }) {
+            return picked
+        }
+        return currentOption ?? options.first
+    }
+
+    private var duelOptionB: QiraahDisplay? {
+        if duelBTagRaw != "__unset__", let picked = options.first(where: { $0.tag == duelBTagRaw }) {
+            return picked
+        }
+        return options.first { $0.id != duelOptionA?.id }
+    }
+
+    private var duelTextsIdentical: Bool {
+        guard let a = duelOptionA, let b = duelOptionB,
+              let aText = qiraahText(for: a), let bText = qiraahText(for: b) else { return false }
+        return aText == bText
+    }
+
+    private var duelPickerRow: some View {
+        HStack(spacing: 10) {
+            duelPicker(side: "A", selected: duelOptionA) { duelATagRaw = $0 }
+
+            Button {
+                settings.hapticFeedback()
+                withAnimation(.easeInOut) {
+                    let a = duelOptionA?.tag ?? "__unset__"
+                    let b = duelOptionB?.tag ?? "__unset__"
+                    duelATagRaw = b
+                    duelBTagRaw = a
+                }
+            } label: {
+                Image(systemName: "arrow.left.arrow.right")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(settings.accentColor.color)
+                    .padding(6)
+                    .background(Circle().fill(settings.accentColor.color.opacity(0.12)))
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Swap the two riwayat")
+
+            duelPicker(side: "B", selected: duelOptionB) { duelBTagRaw = $0 }
+        }
+        .padding(.vertical, 2)
+    }
+
+    private func duelPicker(side: String, selected: QiraahDisplay?, choose: @escaping (String) -> Void) -> some View {
+        Menu {
+            ForEach(options) { option in
+                Button {
+                    settings.hapticFeedback()
+                    withAnimation(.easeInOut) { choose(option.tag) }
+                } label: {
+                    if option.id == selected?.id {
+                        Label("\(option.label) - \(option.teacher)", systemImage: "checkmark")
+                    } else {
+                        Text("\(option.label) - \(option.teacher)")
+                    }
+                }
+            }
+        } label: {
+            VStack(spacing: 2) {
+                Text(side)
+                    .font(.caption2.weight(.bold))
+                    .foregroundStyle(.secondary)
+
+                HStack(spacing: 4) {
+                    Text(selected?.label ?? "Choose")
+                        .font(.subheadline.weight(.semibold))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+
+                    Image(systemName: "chevron.up.chevron.down")
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 6)
+            .padding(.horizontal, 8)
+            .background(RoundedRectangle(cornerRadius: 10).fill(settings.accentColor.color.opacity(0.08)))
+        }
+        .buttonStyle(.plain)
+    }
+
+    /// One side of the duel: the riwayah's aligned text, diffed against the OTHER side (not against
+    /// the current riwayah), with its khilaf wash layered on top - the same styling stack as the rows.
+    private func duelCard(_ option: QiraahDisplay, against other: QiraahDisplay?) -> some View {
+        let resolved = resolvedText(for: option)
+        let text = resolved?.text
+
+        return VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .firstTextBaseline) {
+                Text(option.label)
+                    .font(.subheadline.weight(.semibold))
+
+                Text(option.arabicCaption)
+                    .font(.caption)
+                    .foregroundColor(settings.accentColor.color)
+
+                Spacer()
+
+                if text == nil {
+                    Text("Unavailable")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                }
+            }
+
+            if let resolved, let note = numberNote(resolved) {
+                Text(note)
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(settings.accentColor.color)
+            }
+
+            Group {
+                if let resolved, let styled = duelStyled(for: option, resolved: resolved, against: other) {
+                    Text(styled)
+                } else {
+                    Text(text ?? "This ayah is not separate in this riwayah.")
+                }
+            }
+                .font(.custom(comparisonArabicFontName(for: option), size: arabicFontSize))
+                .arabicFontDesign(custom: settings.quranDisplayUsesCustomArabicFace)
+                .foregroundColor(text == nil ? .secondary : .primary)
+                .multilineTextAlignment(.trailing)
+                .lineSpacing(6)
+                .frame(maxWidth: .infinity, alignment: .trailing)
+        }
+        .padding(.vertical, 4)
+        .opacity(text == nil ? 0.55 : 1)
+        .textSelection(.enabled)
+    }
+
+    private func duelStyled(for option: QiraahDisplay, resolved: ResolvedQiraahText, against other: QiraahDisplay?) -> AttributedString? {
+        var diff: AttributedString?
+        if let other, other.id != option.id,
+           let reference = qiraahText(for: other), reference != resolved.text {
+            diff = QiraahComparison.diffAttributed(
+                text: resolved.text,
+                reference: reference,
+                baseColor: .primary,
+                diffColor: settings.accentColor.color
+            )
+        }
+        return khilafOverlaid(diff, option: option, resolved: resolved)
     }
 
     private func comparisonArabicFontName(for option: QiraahDisplay) -> String {

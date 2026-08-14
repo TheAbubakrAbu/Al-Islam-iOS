@@ -3312,6 +3312,8 @@ struct QuranView: View {
         Text("#\(order)")
             .font(.caption.weight(.semibold))
             .monospacedDigit()
+            .lineLimit(1)
+            .minimumScaleFactor(0.5)
             .foregroundStyle(settings.accentColor.color)
             .frame(width: revelationBadgeWidth, alignment: .center)
             .accessibilityLabel("Revelation order \(order)")
@@ -3698,6 +3700,31 @@ struct QuranView: View {
                     .equatable()
             }
         }
+        // The standard ayah treatment - these rows back the AI answer's citations and the page/juz
+        // range results, and an ayah row acts the same everywhere (bookmark/favorite swipes, play
+        // swipes, full context menu), exactly like the search result rows.
+        .rightSwipeActions(
+            surahID: item.surah.id,
+            surahName: item.surah.nameTransliteration,
+            ayahID: item.ayah.id,
+            searchText: $searchText,
+            scrollToSurahID: $scrollToSurahID
+        )
+        .leftSwipeActions(
+            surah: item.surah.id,
+            favoriteSurahs: Set(settings.favoriteSurahs),
+            bookmarkedAyahs: Set(settings.bookmarkedAyahs.map(\.id)),
+            bookmarkedSurah: item.surah.id,
+            bookmarkedAyah: item.ayah.id
+        )
+        .ayahContextMenuModifier(
+            surah: item.surah.id,
+            ayah: item.ayah.id,
+            favoriteSurahs: Set(settings.favoriteSurahs),
+            bookmarkedAyahs: Set(settings.bookmarkedAyahs.map(\.id)),
+            searchText: $searchText,
+            scrollToSurahID: $scrollToSurahID
+        )
     }
 
     private func pageSearchHeader(title: String, valueText: String) -> some View {

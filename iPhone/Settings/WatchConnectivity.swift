@@ -428,6 +428,9 @@ extension Settings {
         // [Shared] Appearance & general
         "colorSchemeString", "defaultView", "hapticOn",
         // [Al-Adhan] Prayer / notifications
+        // The custom-method angles travel WITH the method label (`prayerCalculation` syncs above):
+        // without them a watch receiving "Custom Angles" computed with the 18/17 defaults forever.
+        "customFajrAngle", "customIshaAngle",
         "calculationAutomatic", "switchHijriDateAtMaghrib", "dateNotifications",
         "naggingMode", "naggingStartOffset", "adhanNotificationSound", "showPrayerInfo",
         "shortAdhanFajr", "shortAdhanDhuhr", "shortAdhanAsr", "shortAdhanMaghrib", "shortAdhanIsha",

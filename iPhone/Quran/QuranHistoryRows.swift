@@ -956,6 +956,14 @@ struct LastListenedAyahRow: View {
                 bookmarkedSurah: histSurah.id,
                 bookmarkedAyah: histAyah.id
             )
+            .ayahContextMenuModifier(
+                surah: histSurah.id,
+                ayah: histAyah.id,
+                favoriteSurahs: favoriteSurahs,
+                bookmarkedAyahs: bookmarkedAyahs,
+                searchText: $searchText,
+                scrollToSurahID: $scrollToSurahID
+            )
         }
     }
 

@@ -203,35 +203,148 @@ struct ThemesBrowseView: View {
 
     let onOpenAyah: (Int, Int) -> Void
 
+    @State private var searchText = ""
+    /// Domains the user folded shut. Stored as the EXCEPTION set so every section starts expanded.
+    @State private var collapsedDomains = Set<String>()
+    /// Domains whose "Show All" was tapped - those sections list every topic instead of the first 10.
+    @State private var showAllDomains = Set<String>()
+
+    /// How many topics a section shows before the "Show All" button takes over. Big domains carry
+    /// 40+ topics; ten keeps the browse scannable without hiding the small domains at all.
+    private static let topicsPerSection = 10
+
+    private var trimmedQuery: String {
+        searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    /// The memoized store grouping, filtered in the view (the store's comment: never re-group per
+    /// render). Searching matches a topic's name, description, category, or its domain's name.
+    private var displayedGroups: [(domain: String, topics: [ThemeTopic])] {
+        let groups = ThematicTopicsStore.shared.topicsByDomain()
+        let query = settings.cleanSearch(trimmedQuery, whitespace: true)
+        guard !query.isEmpty else { return groups }
+
+        return groups.compactMap { group in
+            if settings.cleanSearch(group.domain, whitespace: true).contains(query) {
+                return group
+            }
+            let topics = group.topics.filter { topic in
+                settings.cleanSearch(topic.name, whitespace: true).contains(query)
+                || settings.cleanSearch(topic.description, whitespace: true).contains(query)
+                || settings.cleanSearch(topic.category, whitespace: true).contains(query)
+            }
+            return topics.isEmpty ? nil : (group.domain, topics)
+        }
+    }
+
     var body: some View {
+        let isSearching = !trimmedQuery.isEmpty
+        let groups = displayedGroups
+
         List {
-            ForEach(ThematicTopicsStore.shared.topicsByDomain(), id: \.domain) { group in
-                Section(header: Text(group.domain.uppercased())) {
-                    ForEach(group.topics) { topic in
-                        NavigationLink {
-                            ThemeTopicDetailView(topic: topic, onOpenAyah: onOpenAyah)
-                        } label: {
-                            topicLabel(topic)
-                        }
-                    }
+            ForEach(groups, id: \.domain) { group in
+                themeSection(group, isSearching: isSearching)
+            }
+
+            if isSearching && groups.isEmpty {
+                Section {
+                    Text("No themes match your search.")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
                 }
             }
 
-            Section(footer:
-                Text("Topics from the Quran Semantic Annotation Corpus (CC BY 4.0), via Tilawa.")
-                    .font(.caption2)
-            ) { EmptyView() }
+            // The credits hide while searching, the app's convention for trailing footers.
+            if !isSearching {
+                Section(footer:
+                    Text("Topics from the Quran Semantic Annotation Corpus (CC BY 4.0), via Tilawa.")
+                        .font(.caption2)
+                ) { EmptyView() }
+            }
         }
         .applyConditionalListStyle(disableNowPlayingInset: true)
+        .dismissKeyboardOnScroll()
+        // The app's own bottom search bar, not `.searchable` - the same inset the surah picker and
+        // the Quran/Hadith readers use, so every search in the app sits in the same place.
+        .adaptiveSafeArea(edge: .bottom) {
+            SearchBar(text: AppPerformance.shouldReduceAnimations ? $searchText : $searchText.animation(.easeInOut), placeholder: "Search themes")
+                .padding([.leading, .top], -8)
+                .padding(.horizontal, 24)
+                .padding(.bottom, 8)
+                .background(Color.white.opacity(0.00001))
+        }
         .navigationTitle("Browse by Theme")
         .navigationBarTitleDisplayMode(.inline)
+    }
+
+    /// One domain's section: a fold-able pill header, the first ten topics, and a "Show All" row for
+    /// the rest. While searching every match shows (no fold, no truncation) - a search that hid its
+    /// own results inside collapsed sections would read as broken.
+    @ViewBuilder
+    private func themeSection(_ group: (domain: String, topics: [ThemeTopic]), isSearching: Bool) -> some View {
+        let isExpanded = isSearching || !collapsedDomains.contains(group.domain)
+        let showsAll = isSearching || showAllDomains.contains(group.domain)
+        let shown = showsAll ? group.topics : Array(group.topics.prefix(Self.topicsPerSection))
+
+        Section(header: SectionPillHeader(
+            title: group.domain.uppercased(),
+            count: group.topics.count,
+            isExpanded: isSearching ? nil : Binding(
+                get: { !collapsedDomains.contains(group.domain) },
+                set: { expanded in
+                    if expanded {
+                        collapsedDomains.remove(group.domain)
+                    } else {
+                        collapsedDomains.insert(group.domain)
+                    }
+                }
+            )
+        )) {
+            if isExpanded {
+                ForEach(shown) { topic in
+                    NavigationLink {
+                        ThemeTopicDetailView(topic: topic, onOpenAyah: onOpenAyah)
+                    } label: {
+                        topicLabel(topic)
+                    }
+                }
+
+                if !showsAll && group.topics.count > Self.topicsPerSection {
+                    Button {
+                        settings.hapticFeedback()
+                        withAnimation(.easeInOut) {
+                            _ = showAllDomains.insert(group.domain)
+                        }
+                    } label: {
+                        HStack(spacing: 6) {
+                            Image(systemName: "chevron.down.circle")
+                                .font(.subheadline)
+
+                            Text("Show All \(group.topics.count) Topics")
+                                .font(.subheadline.weight(.semibold))
+
+                            Spacer()
+                        }
+                        .foregroundColor(settings.accentColor.color)
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
     }
 
     private func topicLabel(_ topic: ThemeTopic) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             HStack(spacing: 8) {
-                Text(topic.name)
-                    .font(.headline)
+                // Highlighted like every other search surface, so a match shows WHY it matched.
+                HighlightedSnippet(
+                    source: topic.name,
+                    term: trimmedQuery,
+                    font: .headline,
+                    accent: settings.accentColor.color,
+                    fg: .primary
+                )
 
                 Spacer(minLength: 8)
 
@@ -248,10 +361,14 @@ struct ThemesBrowseView: View {
             }
 
             if !topic.description.isEmpty {
-                Text(topic.description)
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                    .lineLimit(2)
+                HighlightedSnippet(
+                    source: topic.description,
+                    term: trimmedQuery,
+                    font: .caption,
+                    accent: settings.accentColor.color,
+                    fg: .secondary,
+                    lineLimit: 2
+                )
             }
         }
         .padding(.vertical, 2)

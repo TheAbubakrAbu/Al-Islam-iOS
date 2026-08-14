@@ -3806,19 +3806,28 @@ private struct SurahPickerSheet: View {
         dismiss()
     }
 
-    private func scrollToCurrentSurah(_ proxy: ScrollViewProxy) {
+    private func scrollToCurrentSurah(_ proxy: ScrollViewProxy, animated: Bool = true) {
         guard searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
         guard filteredSurahs.contains(where: { $0.id == currentSurahID }) else { return }
 
         let requestScroll = {
-            withAnimation(.easeInOut) {
+            if animated {
+                withAnimation(.easeInOut) {
+                    proxy.scrollTo(currentSurahID, anchor: .center)
+                }
+            } else {
                 proxy.scrollTo(currentSurahID, anchor: .center)
             }
         }
 
+        // The sheet's presentation (and its medium-detent resize) can swallow a scroll issued
+        // mid-transition, so the open-time jump fires again after the transition has settled.
         DispatchQueue.main.async {
             requestScroll()
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                requestScroll()
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) {
                 requestScroll()
             }
         }
@@ -3869,8 +3878,11 @@ private struct SurahPickerSheet: View {
                                         )
                                         .contentShape(Rectangle())
                                     }
-                                    .id(surah.id)
                                 }
+                                // The scroll target lives on the Section's row content, not the nested
+                                // Button - scrollTo could not reliably resolve the id when it sat on a
+                                // view buried inside the ZStack.
+                                .id(surah.id)
                             }
                         }
                     }
@@ -3904,7 +3916,8 @@ private struct SurahPickerSheet: View {
                     }
                 }
                 .onAppear {
-                    scrollToCurrentSurah(proxy)
+                    // Open ALREADY positioned on the current surah - no visible scroll animation.
+                    scrollToCurrentSurah(proxy, animated: false)
                 }
                 .onChange(of: searchText) { _ in
                     guard searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }

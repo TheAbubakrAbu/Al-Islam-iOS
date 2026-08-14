@@ -123,6 +123,25 @@ struct HadithBookView: View {
     /// `showKeywordResults`). Reset to the AI list on every new query.
     @State private var showBookKeywordResults = false
     @State private var askTask: Task<Void, Never>?
+    /// The hadiths the answer was grounded on, kept so the answer's citations can resolve back to
+    /// REAL rows - the global hadith search's `hadithAskSourceHits`, for this book.
+    @State private var askSourceHadiths: [HadithBookData.Hadith] = []
+
+    /// The hadiths the streamed answer actually cited, in citation order - matched against the exact
+    /// source references the model was given ("Sahih al-Bukhari 6114"). The digit-boundary check
+    /// keeps "…6114" from also matching a claimed "611".
+    private var askCitedHadiths: [HadithBookData.Hadith] {
+        guard !askAnswer.isEmpty else { return [] }
+        let answer = askAnswer.lowercased()
+        var cited: [(position: Int, hadith: HadithBookData.Hadith)] = []
+        for hadith in askSourceHadiths {
+            let reference = "\(book.englishTitle) \(hadith.displayNumber)".lowercased()
+            guard let range = answer.range(of: reference) else { continue }
+            if range.upperBound < answer.endIndex, answer[range.upperBound].isNumber { continue }
+            cited.append((answer.distance(from: answer.startIndex, to: range.lowerBound), hadith))
+        }
+        return cited.sorted { $0.position < $1.position }.prefix(10).map(\.hadith)
+    }
 
     private func runAskIfNeeded(query: String, data: HadithBookData?) {
         runAsk(query: query, data: data, manual: false)
@@ -151,22 +170,26 @@ struct HadithBookView: View {
             guard !Task.isCancelled else { return }
 
             var sources: [OnDeviceAsk.Source] = []
+            var sourceHadiths: [HadithBookData.Hadith] = []
             var seen = Set<Int>()
             for hadith in aiHits.prefix(6) where seen.insert(hadith.idInBook).inserted {
                 sources.append(.init(reference: "\(book.englishTitle) \(hadith.displayNumber)",
                                      text: hadith.english.text.isEmpty ? hadith.english.narrator : hadith.english.text))
+                sourceHadiths.append(hadith)
             }
             // From the already-settled STATE (the 200ms scan finishes well inside this 900ms wait),
             // not the synchronous full-book scan - Ask's auto path is not a user gesture.
             for hadith in inBookMatches.shown.prefix(6) where seen.insert(hadith.idInBook).inserted {
                 sources.append(.init(reference: "\(book.englishTitle) \(hadith.displayNumber)",
                                      text: hadith.english.text.isEmpty ? hadith.english.narrator : hadith.english.text))
+                sourceHadiths.append(hadith)
             }
             // Nothing retrieved is no longer a dead end: the ask still runs, in OPEN mode - a clearly
             // labeled general-knowledge answer with no recreated quotes (the engine's open rules).
 
             askGrounded = !sources.isEmpty
             askAnswer = ""; askIsStreaming = true; askRanForQuery = trimmed
+            askSourceHadiths = sourceHadiths
             guard #available(iOS 26.0, *) else { return }
             do {
                 for try await text in OnDeviceAsk.streamAnswer(question: trimmed, sources: sources) {
@@ -177,7 +200,7 @@ struct HadithBookView: View {
                 askIsStreaming = false
             } catch {
                 guard !Task.isCancelled else { return }
-                askAnswer = ""; askIsStreaming = false; askRanForQuery = ""
+                askAnswer = ""; askIsStreaming = false; askRanForQuery = ""; askSourceHadiths = []
                 if manual { askNoAnswer = true }
             }
         }
@@ -606,6 +629,17 @@ struct HadithBookView: View {
                         } else if !askRanForQuery.isEmpty {
                             Section(header: askAIHeader) {
                                 AskAnswerCard(answer: askAnswer, isStreaming: askIsStreaming, grounded: askGrounded)
+
+                                // The answer's receipts: the hadiths it actually cited, as standard
+                                // rows (full context menu) landing in their chapter - the global
+                                // hadith search's exact grammar.
+                                ForEach(askCitedHadiths) { hadith in
+                                    if let chapter = data.chapters.first(where: { $0.id == hadith.chapterId }) {
+                                        chapterLink(chapter, data: data, scrollToHadithId: hadith.idInBook) {
+                                            HadithRow(book: book, hadith: hadith, searchText: searchText, compact: true).equatable()
+                                        }
+                                    }
+                                }
                             }
                         } else {
                             Section(header: askAIHeader) {
@@ -2496,8 +2530,23 @@ struct HadithChapterPickerSheet: View {
         }
     }
 
+    /// Open ALREADY positioned on the current chapter - the surah picker's exact behavior. The
+    /// repeated fire covers the sheet transition swallowing a scroll issued mid-presentation.
+    private func scrollToCurrentChapter(_ proxy: ScrollViewProxy) {
+        guard searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+        guard filteredChapters.contains(where: { $0.element.id == currentChapterID }) else { return }
+
+        let requestScroll = { proxy.scrollTo(currentChapterID, anchor: .center) }
+        DispatchQueue.main.async {
+            requestScroll()
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) { requestScroll() }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) { requestScroll() }
+        }
+    }
+
     var body: some View {
         NavigationView {
+            ScrollViewReader { proxy in
             List {
                 let counts = countsByChapter
                 ForEach(filteredChapters, id: \.element.id) { offset, chapter in
@@ -2549,6 +2598,7 @@ struct HadithChapterPickerSheet: View {
                     }
                     .buttonStyle(.plain)
                     .themedListRowBackground()
+                    .id(chapter.id)
                 }
             }
             .applyConditionalListStyle()
@@ -2558,6 +2608,8 @@ struct HadithChapterPickerSheet: View {
             .searchable(text: $searchText, prompt: "Search chapters")
             .dismissKeyboardOnScroll()
             .sheetDismissToolbar()
+            .onAppear { scrollToCurrentChapter(proxy) }
+            }
         }
         .navigationViewStyle(.stack)
         .accentColor(settings.accentColor.color)

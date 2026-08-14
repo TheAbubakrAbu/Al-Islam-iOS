@@ -292,6 +292,12 @@ extension Settings {
         let hanafiMadhab: Bool
         let highLatitudeRule: String
         let offsets: [Int]
+        /// The angles behind "Custom Angles" - in the KEY, not just handled by didSet invalidation,
+        /// because write paths that bypass the didSet (watch-sync apply writes raw defaults) would
+        /// otherwise serve stale times for already-computed days. Same bug class as the Hijri offset.
+        let customAngles: [Double]
+        /// In the key because the Umm al-Qura Ramadan Isha extension consults the ADJUSTED hijri month.
+        let hijriOffset: Int
     }
 
     private static var rawPrayerCache: [RawPrayerCacheKey: [Prayer]] = [:]
@@ -527,7 +533,10 @@ extension Settings {
             // Existing user with a location but no home yet: adopt the current location as home.
             seedHomeLocationIfNeeded()
             if shouldRecomputePrayers {
-                fetchPrayerTimes(force: false)
+                // Forced: the non-forced fetch keys staleness on (city label, day), so a real move that
+                // KEEPS the label - 20 km across one metro - never recomputed, and times/adhans kept the
+                // old coordinate all day. The thresholds above already gate how often this can fire.
+                fetchPrayerTimes(force: true)
             }
         }
     }
@@ -1211,7 +1220,9 @@ extension Settings {
     func updateDates() {
         let now = Date()
         let effectiveDate = effectiveHijriReferenceDate(now: now)
-        if let h = hijriDate, Self.gregorian.isDate(h.date, inSameDayAs: effectiveDate) {
+        // Same-day AND same-offset: a cache computed under a different Hijri adjustment is stale
+        // even within the day (the adjustment stepper must repaint immediately).
+        if let h = hijriDate, Self.gregorian.isDate(h.date, inSameDayAs: effectiveDate), h.offset == hijriOffset {
             return
         }
 
@@ -1220,7 +1231,7 @@ extension Settings {
         let english = Self.hijriFormatterEN.string(from: base)
 
         withAnimation {
-            hijriDate = HijriDate(english: english, arabic: arabic, date: effectiveDate)
+            hijriDate = HijriDate(english: english, arabic: arabic, date: effectiveDate, offset: hijriOffset)
         }
     }
     
@@ -1361,7 +1372,9 @@ extension Settings {
             calculation: method,
             hanafiMadhab: hanafiMadhab,
             highLatitudeRule: highLatitudeRule,
-            offsets: [offsetFajr, offsetSunrise, offsetDhuhr, offsetAsr, offsetMaghrib, offsetIsha]
+            offsets: [offsetFajr, offsetSunrise, offsetDhuhr, offsetAsr, offsetMaghrib, offsetIsha],
+            customAngles: [customFajrAngle, customIshaAngle],
+            hijriOffset: hijriOffset
         )
 
         if let cached = Self.rawPrayerCache[cacheKey] {
@@ -1375,9 +1388,13 @@ extension Settings {
         params.highLatitudeRule = resolvedHighLatitudeRule(at: coordinates)
 
         // Umm Al-Qura delays Isha by 30 minutes throughout Ramadan. The reference date is pushed a day forward
-        // because taraweeh on the night *before* 1 Ramadan already follows the Ramadan timing.
+        // because taraweeh on the night *before* 1 Ramadan already follows the Ramadan timing. The user's
+        // Hijri offset applies here too - "is it Ramadan" must agree with the calendar the app displays
+        // (the fasting Live Activity already applies it; these two used to disagree by the offset).
         if usesUmmAlQuraRamadanExtension(method) {
-            let hijriMonth = Self.hijriCalendarAR.dateComponents([.month], from: date.addingTimeInterval(86_400)).month
+            let reference = date.addingTimeInterval(86_400)
+            let adjustedReference = Self.hijriCalendarAR.date(byAdding: .day, value: hijriOffset, to: reference) ?? reference
+            let hijriMonth = Self.hijriCalendarAR.dateComponents([.month], from: adjustedReference).month
             if hijriMonth == 9 {
                 params.adjustments.isha += 30
             }
@@ -2692,7 +2709,11 @@ extension Settings {
         var beforeFajr = false
         for _ in 0...1 {
             guard let hijriDate = hijriCalendar.date(from: comps) else { return nil }
-            let eventDay = gregorianCalendar.startOfDay(for: hijriDate)
+            // The event's hijri components are the ADJUSTED date the user sees; its real Gregorian day
+            // reverses the manual offset, exactly like the calendar screens. Without this the
+            // "First Day of Ramadan" suhoor reminder fired on the unadjusted Umm al-Qura day.
+            let offsetCorrected = hijriCalendar.date(byAdding: .day, value: -hijriOffset, to: hijriDate) ?? hijriDate
+            let eventDay = gregorianCalendar.startOfDay(for: offsetCorrected)
             // Fire 30 minutes before Fajr on the event day (useful for fasting days - suhoor / intention).
             // Fajr needs computed prayer times, which need a location; if those aren't available, fall back
             // to 5:00 AM so the reminder still lands pre-dawn.

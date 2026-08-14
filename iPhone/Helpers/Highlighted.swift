@@ -30,9 +30,15 @@ struct HighlightedSnippet: View {
     /// left un-highlighted, so a query that matched only the transliteration doesn't also paint the English
     /// name and the Arabic name.
     var guaranteeMatch: Bool = false
+    /// Extra spans (UTF-16 offsets into `source`) colored with the accent IN ADDITION to `term`'s own
+    /// matches. This is the cross-language word highlight's delivery path: the search row computes,
+    /// through the word-by-word gloss pack, which English words align with an Arabic query hit (and
+    /// vice versa) and hands the spans in here - the snippet itself stays language-agnostic.
+    var extraHighlightRanges: [NSRange] = []
     var body: some View {
         let resolvedSearchTerm = searchTerm
         let needsSearchHighlight = !resolvedSearchTerm.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            || !extraHighlightRanges.isEmpty
         let needsAttributedWork = needsSearchHighlight || highlightAllahNames || preStyledSource != nil
         let suffixText = Text(trailingSuffix)
             .font(trailingSuffixFont ?? font)
@@ -46,20 +52,36 @@ struct HighlightedSnippet: View {
             // returns nil) and a real - even exact - match never gets colored. On a matched row the search
             // highlight takes priority over tajweed, matching how text-search results are shown elsewhere.
             let base = needsSearchHighlight ? plainSourceAttributed() : baseAttributedText()
-            let highlightedText = highlightAllahIfNeeded(
-                    source: source,
-                    baseAttributed: highlight(
+            let highlightedText = applyExtraRanges(
+                    to: highlightAllahIfNeeded(
                         source: source,
-                        baseAttributed: base,
-                        term: resolvedSearchTerm
+                        baseAttributed: highlight(
+                            source: source,
+                            baseAttributed: base,
+                            term: resolvedSearchTerm
+                        )
                     )
                 )
-            
 
             limited(Text("\(Text(highlightedText))\(suffixText)"))
         } else {
             limited(Text("\(Text(source).foregroundColor(fg))\(suffixText)"))
         }
+    }
+
+    /// Colors `extraHighlightRanges` with the accent. UTF-16 spans (instance-free, like the caches)
+    /// are materialized against THIS `source` instance; a span that doesn't land on character
+    /// boundaries is skipped rather than trusted.
+    private func applyExtraRanges(to attributed: AttributedString) -> AttributedString {
+        guard !extraHighlightRanges.isEmpty else { return attributed }
+        var result = attributed
+        for span in extraHighlightRanges {
+            guard let range = Range(span, in: source),
+                  let start = AttributedString.Index(range.lowerBound, within: result),
+                  let end = AttributedString.Index(range.upperBound, within: result) else { continue }
+            result[start..<end].foregroundColor = accent
+        }
+        return result
     }
 
     /// The one place the line clamp lands, so `reservesSpace` and the plain clamp can't drift apart.

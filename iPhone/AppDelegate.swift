@@ -107,6 +107,12 @@ class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterD
         let actionIdentifier = response.actionIdentifier
         DispatchQueue.main.async {
             let settings = Settings.shared
+            // A nag action can COLD-LAUNCH the app in the background (no scene, no .onAppear fetch),
+            // leaving `prayers` holding yesterday's snapshot - and `naggedPrayerName`/`trackerDate`
+            // read that snapshot. Un-refreshed, a 5 AM "did you pray Isha?" resolved against
+            // yesterday's Isha time and marked TODAY instead of yesterday. Refresh first; when the
+            // snapshot is already today's, this is a no-op.
+            settings.fetchPrayerTimes()
             let asked = settings.naggedPrayerName(forCascade: cascadeName)
             switch actionIdentifier {
             case Settings.nagActionMarkPrayedIdentifier:

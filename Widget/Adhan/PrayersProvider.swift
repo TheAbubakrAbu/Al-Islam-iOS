@@ -177,6 +177,15 @@ struct PrayersProvider: TimelineProvider {
                 extensionDefaults.set(mirrored, forKey: key)
             }
         }
+        // The "Custom Angles" method's angles, same mirror: the method LABEL arrives via
+        // `prayerCalculation` above, but without the angles behind it this process computed custom
+        // times with the 18/17 defaults. Absent key = user never touched them; leave the defaults.
+        for key in ["customFajrAngle", "customIshaAngle"] {
+            if let mirrored = store?.object(forKey: key) as? Double,
+               extensionDefaults.object(forKey: key) as? Double != mirrored {
+                extensionDefaults.set(mirrored, forKey: key)
+            }
+        }
 
         settings.fetchPrayerTimes()
 

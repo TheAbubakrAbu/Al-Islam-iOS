@@ -395,6 +395,23 @@ struct AdhkarView: View {
     /// AI list on every new query.
     @State private var showKeywordResults = false
     @State private var askTask: Task<Void, Never>?
+    /// The adhkar the answer was grounded on, kept so the answer's citations can resolve back to
+    /// REAL rows - the hadith search's `hadithAskSourceHits`, for adhkar.
+    @State private var askSourceDhikr: [CommonDhikr] = []
+
+    /// The adhkar the streamed answer actually cited, in citation order - matched against the exact
+    /// source references the model was given (the transliteration). Rendered as standard `AdhkarRow`s.
+    private var askCitedDhikr: [CommonDhikr] {
+        guard !askAnswer.isEmpty else { return [] }
+        let answer = askAnswer.lowercased()
+        var cited: [(position: Int, dhikr: CommonDhikr)] = []
+        var seen = Set<String>()
+        for dhikr in askSourceDhikr where seen.insert(dhikr.id).inserted {
+            guard let range = answer.range(of: dhikr.transliteration.lowercased()) else { continue }
+            cited.append((answer.distance(from: answer.startIndex, to: range.lowerBound), dhikr))
+        }
+        return cited.sorted { $0.position < $1.position }.prefix(10).map(\.dhikr)
+    }
 
     /// Auto mode runs only for QUESTION-shaped queries; `manual` (the tapped "Ask AI" row) runs
     /// for anything - the user explicitly asked.
@@ -419,18 +436,22 @@ struct AdhkarView: View {
             guard !Task.isCancelled else { return }
 
             var sources: [OnDeviceAsk.Source] = []
+            var sourceDhikr: [CommonDhikr] = []
             var seen = Set<String>()
             for dhikr in aiHits.prefix(6) where seen.insert(dhikr.id).inserted {
                 sources.append(.init(reference: dhikr.transliteration, text: dhikr.translation))
+                sourceDhikr.append(dhikr)
             }
             for dhikr in commonDhikrItems.filter({ matchesSearch($0) }).prefix(6) where seen.insert(dhikr.id).inserted {
                 sources.append(.init(reference: dhikr.transliteration, text: dhikr.translation))
+                sourceDhikr.append(dhikr)
             }
             // Nothing retrieved is no longer a dead end: the ask still runs, in OPEN mode - a
             // clearly labeled general-knowledge answer with no recreated quotes.
             askGrounded = !sources.isEmpty
 
             askAnswer = ""; askIsStreaming = true; askRanForQuery = trimmed
+            askSourceDhikr = sourceDhikr
             guard #available(iOS 26.0, *) else { return }
             do {
                 for try await text in OnDeviceAsk.streamAnswer(question: trimmed, sources: sources) {
@@ -441,7 +462,7 @@ struct AdhkarView: View {
                 askIsStreaming = false
             } catch {
                 guard !Task.isCancelled else { return }
-                askAnswer = ""; askIsStreaming = false; askRanForQuery = ""
+                askAnswer = ""; askIsStreaming = false; askRanForQuery = ""; askSourceDhikr = []
                 if manual { askNoAnswer = true }
             }
         }
@@ -513,7 +534,22 @@ struct AdhkarView: View {
             if askNoAnswer {
                 Section(header: askAIHeader) { askNoAnswerRow }
             } else if !askRanForQuery.isEmpty {
-                Section(header: askAIHeader) { AskAnswerCard(answer: askAnswer, isStreaming: askIsStreaming, grounded: askGrounded) }
+                Section(header: askAIHeader) {
+                    AskAnswerCard(answer: askAnswer, isStreaming: askIsStreaming, grounded: askGrounded)
+
+                    // The answer's receipts: the adhkar it actually cited, as the standard rows.
+                    ForEach(askCitedDhikr, id: \.id) { dhikr in
+                        AdhkarRow(
+                            arabicText: dhikr.arabicText,
+                            transliteration: dhikr.transliteration,
+                            translation: dhikr.translation,
+                            useQuranicFont: settings.useFontArabic,
+                            searchQuery: searchText,
+                            speechEnabled: true
+                        )
+                        .equatable()
+                    }
+                }
             } else {
                 Section(header: askAIHeader) { askPromptRow }
             }

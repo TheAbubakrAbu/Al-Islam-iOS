@@ -600,6 +600,8 @@ struct SurahAyahRow: View, Equatable {
                     Text("\(surah.id):\(ayah.id)")
                         .font(.headline)
                         .monospacedDigit()
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.5)
                         #if os(iOS)
                         .frame(width: badgeWidth, alignment: .center)
                         .padding(4)
@@ -879,6 +881,8 @@ struct AyahSearchResultRow: View {
                     .font(.caption2)
                     .foregroundStyle(.secondary)
                     .monospacedDigit()
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
             }
         }
 
@@ -1028,6 +1032,8 @@ struct AyahSearchRow: View, Equatable {
                 .font(.caption2)
                 .foregroundStyle(.secondary)
                 .monospacedDigit()
+                .lineLimit(1)
+                .minimumScaleFactor(0.75)
         }
     }
 
@@ -1044,6 +1050,8 @@ struct AyahSearchRow: View, Equatable {
                 .font(.caption.weight(.semibold))
                 .foregroundColor(settings.accentColor.color)
                 .monospacedDigit()
+                .lineLimit(1)
+                .minimumScaleFactor(0.5)
                 .frame(width: badgeWidth, alignment: .center)
                 .padding(.horizontal, 6)
                 .padding(.vertical, 4)
@@ -1192,9 +1200,65 @@ struct AyahSearchRow: View, Equatable {
         )
     }
 
+    /// Cross-language word highlight (iOS, Hafs, non-beginner): an Arabic query also lights the
+    /// aligned English words in the translation lines, and an English query also lights the Arabic
+    /// tokens whose gloss carries it - so a hit like ضاقت shows WHERE it sits in the translation.
+    /// Routed through the word-by-word gloss pack, whose per-ayah alignment is exact.
+    ///
+    /// Deliberately NOT gated on `visibility` (which only reports LITERAL field matches): the AI
+    /// (semantic) results and the string results are the same rows, and a semantic hit is exactly
+    /// the case where "where is this in the ayah?" matters most. The alignment itself decides -
+    /// when the query's words aren't in this ayah, both directions return no spans anyway. Where
+    /// the pack's alignment contract doesn't hold (other riwayat, beginner spacing) this returns
+    /// empty and the row renders exactly as before.
+    ///
+    /// The per-ayah pass finds nothing for a query whose wording isn't literally in this ayah (a
+    /// semantic hit, a different inflection), so both directions fall back to the corpus-wide
+    /// Quran lexicon - the same path the hadith rows use.
+    private func crossLanguageSpans() -> (arabic: [NSRange], saheeh: [NSRange], mustafa: [NSRange]) {
+        #if os(iOS)
+        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty,
+              settings.isHafsDisplay,
+              !settings.beginnerMode,
+              WordByWordStore.isBundled else { return ([], [], []) }
+
+        let displayText = arabicDisplayText()
+        // The gloss pack's token order is defined against the RAW (unstripped) text; with "Hide
+        // Tashkeel and Signs" off the display text IS raw, so the lookup is skipped.
+        let rawText = settings.cleanArabicText
+            ? (QuranData.shared.ayah(surah: surah, ayah: ayah)?.displayArabicText(surahId: surah, clean: false) ?? displayText)
+            : arabic
+
+        if trimmed.containsArabicLetters {
+            var terms = CrossLanguageWordHighlight.englishTermsForArabicMatch(
+                query: trimmed, surah: surah, ayah: ayah, rawText: rawText, displayText: displayText
+            )
+            if terms.isEmpty {
+                terms = CrossLanguageWordHighlight.englishTermsForUnalignedArabicQuery(trimmed)
+            }
+            guard !terms.isEmpty else { return ([], [], []) }
+            return ([],
+                    CrossLanguageWordHighlight.wordSpans(of: terms, in: englishSaheeh),
+                    CrossLanguageWordHighlight.wordSpans(of: terms, in: englishMustafa))
+        } else {
+            var spans = CrossLanguageWordHighlight.arabicSpansForEnglishMatch(
+                query: trimmed, surah: surah, ayah: ayah, rawText: rawText, displayText: displayText
+            )
+            if spans.isEmpty {
+                spans = CrossLanguageWordHighlight.arabicSpansForEnglishQuery(trimmed, arabicText: displayText)
+            }
+            return (spans, [], [])
+        }
+        #else
+        return ([], [], [])
+        #endif
+    }
+
     @ViewBuilder
     private func buildCompactSearchRow() -> some View {
         let visibility = searchVisibility()
+        let cross = crossLanguageSpans()
 
         VStack(alignment: .leading, spacing: 8) {
             // The HadithRow header grammar: the reference pill leading, the ellipsis actions button
@@ -1210,7 +1274,7 @@ struct AyahSearchRow: View, Equatable {
                     .frame(width: 22, height: 22)
             }
 
-            if visibility.showArabicLine {
+            if visibility.showArabicLine || !cross.arabic.isEmpty {
                 HighlightedSnippet(
                     source: arabicDisplayText(),
                     term: (visibility.mArabic || visibility.forceArabicHighlight) ? query : "",
@@ -1220,7 +1284,8 @@ struct AyahSearchRow: View, Equatable {
                     preStyledSource: arabicTajweedText(),
                     beginnerMode: settings.beginnerMode,
                     lineLimit: nil,
-                    guaranteeMatch: visibility.forceArabicHighlight
+                    guaranteeMatch: visibility.forceArabicHighlight,
+                    extraHighlightRanges: cross.arabic
                 )
                 .arabicFontDesign(custom: settings.quranDisplayUsesCustomArabicFace)
                 .frame(maxWidth: .infinity, alignment: .trailing)
@@ -1238,23 +1303,27 @@ struct AyahSearchRow: View, Equatable {
                 )
             }
 
-            if visibility.showSaheehLine {
+            // Cross-language spans FORCE the translation line visible: an Arabic hit whose aligned
+            // English words were found must show them even when the user's translation toggle is off.
+            if visibility.showSaheehLine || !cross.saheeh.isEmpty {
                 HighlightedSnippet(
                     source: englishSaheeh,
                     term: visibility.mSaheeh ? query : "",
                     font: .footnote,
                     accent: settings.accentColor.color,
-                    fg: .secondary
+                    fg: .secondary,
+                    extraHighlightRanges: cross.saheeh
                 )
             }
 
-            if visibility.showMustafaLine {
+            if visibility.showMustafaLine || (!cross.mustafa.isEmpty && !visibility.showSaheehLine && cross.saheeh.isEmpty) {
                 HighlightedSnippet(
                     source: englishMustafa,
                     term: visibility.mMustafa ? query : "",
                     font: .footnote,
                     accent: settings.accentColor.color,
-                    fg: .secondary
+                    fg: .secondary,
+                    extraHighlightRanges: cross.mustafa
                 )
             }
 
@@ -1276,18 +1345,21 @@ struct AyahSearchRow: View, Equatable {
     @ViewBuilder
     private func buildFullSearchRow() -> some View {
         let visibility = searchVisibility()
+        let cross = crossLanguageSpans()
 
         VStack(alignment: .leading, spacing: 8) {
             HStack {
                 ayahReferenceBadge
 
                 Text(surahName)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
             }
             .font(.caption)
             .foregroundColor(settings.accentColor.color)
             .transition(.opacity)
 
-            if visibility.showArabicLine {
+            if visibility.showArabicLine || !cross.arabic.isEmpty {
                 HighlightedSnippet(
                     source: arabicDisplayText(),
                     term: (visibility.mArabic || visibility.forceArabicHighlight) ? query : "",
@@ -1297,7 +1369,8 @@ struct AyahSearchRow: View, Equatable {
                     preStyledSource: arabicTajweedText(),
                     beginnerMode: settings.beginnerMode,
                     lineLimit: nil,
-                    guaranteeMatch: visibility.forceArabicHighlight
+                    guaranteeMatch: visibility.forceArabicHighlight,
+                    extraHighlightRanges: cross.arabic
                 )
                 .arabicFontDesign(custom: settings.quranDisplayUsesCustomArabicFace)
                 .frame(maxWidth: .infinity, alignment: .trailing)
@@ -1315,23 +1388,26 @@ struct AyahSearchRow: View, Equatable {
                 )
             }
 
-            if visibility.showSaheehLine {
+            // Cross-language spans FORCE the translation line visible - see buildCompactSearchRow.
+            if visibility.showSaheehLine || !cross.saheeh.isEmpty {
                 HighlightedSnippet(
                     source: englishSaheeh,
                     term: visibility.mSaheeh ? query : "",
                     font: .footnote,
                     accent: settings.accentColor.color,
-                    fg: .secondary
+                    fg: .secondary,
+                    extraHighlightRanges: cross.saheeh
                 )
             }
 
-            if visibility.showMustafaLine {
+            if visibility.showMustafaLine || (!cross.mustafa.isEmpty && !visibility.showSaheehLine && cross.saheeh.isEmpty) {
                 HighlightedSnippet(
                     source: englishMustafa,
                     term: visibility.mMustafa ? query : "",
                     font: .footnote,
                     accent: settings.accentColor.color,
-                    fg: .secondary
+                    fg: .secondary,
+                    extraHighlightRanges: cross.mustafa
                 )
             }
 

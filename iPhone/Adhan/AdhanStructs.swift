@@ -58,6 +58,12 @@ struct HijriDate: Identifiable, Codable {
     let english: String
     let arabic: String
     let date: Date
+    /// The `hijriOffset` this rendering was computed with - part of the same-day cache check in
+    /// `updateDates()`. Without it, changing the Hijri adjustment did nothing until the next day:
+    /// the guard saw a fresh-looking same-day cache (persisted across launches, so even a restart
+    /// didn't help) and returned before applying the new offset. Optional so entries persisted
+    /// before this field existed still decode - they read as "unknown offset" and recompute once.
+    let offset: Int?
 }
 
 extension Date {

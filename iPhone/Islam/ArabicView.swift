@@ -207,6 +207,25 @@ struct ArabicView: View {
     /// AI list on every new query.
     @State private var showKeywordResults = false
     @State private var askTask: Task<Void, Never>?
+    /// The letters the answer was grounded on, kept so the answer's citations can resolve back to
+    /// REAL rows - the hadith search's `hadithAskSourceHits`, for letters.
+    @State private var askSourceLetters: [LetterData] = []
+
+    /// The letters the streamed answer actually cited, in citation order - matched against the exact
+    /// source references the model was given (the transliteration, e.g. "Alif"), so every row is a
+    /// real letter. Rendered through `letterCollection`, so they get the standard row (full context
+    /// menu + favorite swipes) or the standard grid tile, whichever mode the screen is in.
+    private var askCitedLetters: [LetterData] {
+        guard !askAnswer.isEmpty else { return [] }
+        let answer = askAnswer.lowercased()
+        var cited: [(position: Int, letter: LetterData)] = []
+        var seen = Set<Int>()
+        for letter in askSourceLetters where seen.insert(letter.id).inserted {
+            guard let range = answer.range(of: letter.transliteration.lowercased()) else { continue }
+            cited.append((answer.distance(from: answer.startIndex, to: range.lowerBound), letter))
+        }
+        return cited.sorted { $0.position < $1.position }.prefix(10).map(\.letter)
+    }
 
     /// Auto mode runs only for QUESTION-shaped queries; `manual` (the tapped "Ask AI" row) runs
     /// for anything - the user explicitly asked.
@@ -231,18 +250,22 @@ struct ArabicView: View {
             guard !Task.isCancelled else { return }
 
             var sources: [OnDeviceAsk.Source] = []
+            var sourceLetters: [LetterData] = []
             var seen = Set<Int>()
             for letter in aiHits.prefix(6) where seen.insert(letter.id).inserted {
                 sources.append(.init(reference: letter.transliteration, text: Self.letterEnglishText(letter)))
+                sourceLetters.append(letter)
             }
             for letter in (filteredStandardForMode + filteredOther).prefix(6) where seen.insert(letter.id).inserted {
                 sources.append(.init(reference: letter.transliteration, text: Self.letterEnglishText(letter)))
+                sourceLetters.append(letter)
             }
             // Nothing retrieved is no longer a dead end: the ask still runs, in OPEN mode - a
             // clearly labeled general-knowledge answer with no recreated quotes.
             askGrounded = !sources.isEmpty
 
             askAnswer = ""; askIsStreaming = true; askRanForQuery = trimmed
+            askSourceLetters = sourceLetters
             guard #available(iOS 26.0, *) else { return }
             do {
                 for try await text in OnDeviceAsk.streamAnswer(question: trimmed, sources: sources) {
@@ -253,7 +276,7 @@ struct ArabicView: View {
                 askIsStreaming = false
             } catch {
                 guard !Task.isCancelled else { return }
-                askAnswer = ""; askIsStreaming = false; askRanForQuery = ""
+                askAnswer = ""; askIsStreaming = false; askRanForQuery = ""; askSourceLetters = []
                 if manual { askNoAnswer = true }
             }
         }
@@ -325,7 +348,13 @@ struct ArabicView: View {
             if askNoAnswer {
                 Section(header: askAIHeader) { askNoAnswerRow }
             } else if !askRanForQuery.isEmpty {
-                Section(header: askAIHeader) { AskAnswerCard(answer: askAnswer, isStreaming: askIsStreaming, grounded: askGrounded) }
+                Section(header: askAIHeader) {
+                    AskAnswerCard(answer: askAnswer, isStreaming: askIsStreaming, grounded: askGrounded)
+
+                    // The answer's receipts: the letters it actually cited, as the STANDARD letter
+                    // rows/tiles - same context menu and favorite swipes as everywhere else.
+                    letterCollection(askCitedLetters)
+                }
             } else {
                 Section(header: askAIHeader) { askPromptRow }
             }

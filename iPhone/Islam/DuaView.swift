@@ -157,6 +157,25 @@ struct DuaView: View {
     /// AI list on every new query.
     @State private var showKeywordResults = false
     @State private var askTask: Task<Void, Never>?
+    /// The duas the answer was grounded on, kept so the answer's citations can resolve back to
+    /// REAL rows - the hadith search's `hadithAskSourceHits`, for duas.
+    @State private var askSourceDuas: [DuaItem] = []
+
+    /// The duas the streamed answer actually cited, in citation order - matched against the exact
+    /// source references the model was given (the reference, else the transliteration). Rendered as
+    /// the standard dua rows.
+    private var askCitedDuas: [DuaItem] {
+        guard !askAnswer.isEmpty else { return [] }
+        let answer = askAnswer.lowercased()
+        var cited: [(position: Int, dua: DuaItem)] = []
+        var seen = Set<String>()
+        for dua in askSourceDuas where seen.insert(dua.id).inserted {
+            let reference = (dua.reference ?? dua.transliteration).lowercased()
+            guard let range = answer.range(of: reference) else { continue }
+            cited.append((answer.distance(from: answer.startIndex, to: range.lowerBound), dua))
+        }
+        return cited.sorted { $0.position < $1.position }.prefix(10).map(\.dua)
+    }
 
     /// Auto mode runs only for QUESTION-shaped queries; `manual` (the tapped "Ask AI" row) runs
     /// for anything - the user explicitly asked.
@@ -181,18 +200,22 @@ struct DuaView: View {
             guard !Task.isCancelled else { return }
 
             var sources: [OnDeviceAsk.Source] = []
+            var sourceDuas: [DuaItem] = []
             var seen = Set<String>()
             for dua in aiHits.prefix(6) where seen.insert(dua.id).inserted {
                 sources.append(.init(reference: dua.reference ?? dua.transliteration, text: dua.translation))
+                sourceDuas.append(dua)
             }
             for dua in matchingDuas(for: normalizedQuery).prefix(6) where seen.insert(dua.id).inserted {
                 sources.append(.init(reference: dua.reference ?? dua.transliteration, text: dua.translation))
+                sourceDuas.append(dua)
             }
             // Nothing retrieved is no longer a dead end: the ask still runs, in OPEN mode - a
             // clearly labeled general-knowledge answer with no recreated quotes.
             askGrounded = !sources.isEmpty
 
             askAnswer = ""; askIsStreaming = true; askRanForQuery = trimmed
+            askSourceDuas = sourceDuas
             guard #available(iOS 26.0, *) else { return }
             do {
                 for try await text in OnDeviceAsk.streamAnswer(question: trimmed, sources: sources) {
@@ -203,7 +226,7 @@ struct DuaView: View {
                 askIsStreaming = false
             } catch {
                 guard !Task.isCancelled else { return }
-                askAnswer = ""; askIsStreaming = false; askRanForQuery = ""
+                askAnswer = ""; askIsStreaming = false; askRanForQuery = ""; askSourceDuas = []
                 if manual { askNoAnswer = true }
             }
         }
@@ -275,7 +298,24 @@ struct DuaView: View {
             if askNoAnswer {
                 Section(header: askAIHeader) { askNoAnswerRow }
             } else if !askRanForQuery.isEmpty {
-                Section(header: askAIHeader) { AskAnswerCard(answer: askAnswer, isStreaming: askIsStreaming, grounded: askGrounded) }
+                Section(header: askAIHeader) {
+                    AskAnswerCard(answer: askAnswer, isStreaming: askIsStreaming, grounded: askGrounded)
+
+                    // The answer's receipts: the duas it actually cited, as the standard dua rows.
+                    ForEach(askCitedDuas, id: \.id) { dua in
+                        AdhkarRow(
+                            arabicText: dua.arabicText,
+                            transliteration: dua.transliteration,
+                            translation: dua.translation,
+                            useQuranicFont: settings.useFontArabic,
+                            searchQuery: searchText,
+                            alwaysTrailing: true,
+                            speechEnabled: true,
+                            source: dua.reference
+                        )
+                        .equatable()
+                    }
+                }
             } else {
                 Section(header: askAIHeader) { askPromptRow }
             }

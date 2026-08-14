@@ -340,6 +340,36 @@ struct HadithRow: View, Equatable {
         return v
     }
 
+    /// Cross-language word highlight, for a corpus with NO word-alignment data: an Arabic query also
+    /// lights the aligned English words in the narrator/body lines, and an English query lights the
+    /// Arabic words - matched through the lexicon the Quran's word-by-word pack yields
+    /// (`CrossLanguageWordHighlight`). Classical Arabic vocabulary overlaps heavily between the Quran
+    /// and the hadith corpus; a word the Quran never uses simply highlights nothing.
+    ///
+    /// Runs for BOTH retrieval kinds - the AI (semantic) hits and the keyword hits - because it keys
+    /// off the QUERY and the row's own text, never off which lane produced the row.
+    private func crossLanguageSpans(text: (arabic: String, narrator: String, text: String))
+    -> (arabic: [NSRange], narrator: [NSRange], text: [NSRange]) {
+        #if HAS_QURAN
+        let trimmed = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty,
+              HadithBookData.citationNumber(inQuery: trimmed) == nil,
+              WordByWordStore.isBundled else { return ([], [], []) }
+
+        if trimmed.containsArabicLetters {
+            let terms = CrossLanguageWordHighlight.englishTermsForUnalignedArabicQuery(trimmed)
+            guard !terms.isEmpty else { return ([], [], []) }
+            return ([],
+                    CrossLanguageWordHighlight.wordSpans(of: terms, in: text.narrator),
+                    CrossLanguageWordHighlight.wordSpans(of: terms, in: text.text))
+        } else {
+            return (CrossLanguageWordHighlight.arabicSpansForEnglishQuery(trimmed, arabicText: text.arabic), [], [])
+        }
+        #else
+        return ([], [], [])
+        #endif
+    }
+
     var body: some View {
         // One block-cache lookup for all three strings. `hadith.arabic`/`hadith.english` are each a
         // full trip into the (locked) block cache; this body used to make six of those per pass,
@@ -348,6 +378,7 @@ struct HadithRow: View, Equatable {
         // One block-cache lookup, same rule as `allText`.
         let grades = hadith.grades
         let visibility = searchVisibility(text: text)
+        let cross = crossLanguageSpans(text: text)
         VStack(alignment: .leading, spacing: compact ? 5 : 10) {
             HStack(spacing: 8) {
                 // ONE glass capsule (the ayah row's "S:A" pill language): the hadith's position WITHIN
@@ -426,7 +457,8 @@ struct HadithRow: View, Equatable {
             // A field that matched (or carries the guaranteed span) is forced visible even when its
             // toggle is off - a searched row must never hide the very text that matched, the ayah
             // rows' `showArabicLine` rule.
-            if compact || settings.showHadithArabic || visibility.mArabic || visibility.guaranteeArabic, !text.arabic.isEmpty {
+            if compact || settings.showHadithArabic || visibility.mArabic || visibility.guaranteeArabic
+                || !cross.arabic.isEmpty, !text.arabic.isEmpty {
                 HighlightedSnippet(
                     source: text.arabic,
                     term: searchText,
@@ -440,6 +472,7 @@ struct HadithRow: View, Equatable {
                     guaranteeMatch: visibility.guaranteeArabic,
                     // The classical faces draw "،" as an ornament circle - commas fall back to the
                     // system face.
+                    extraHighlightRanges: cross.arabic
                 )
                 .arabicFontDesign(custom: settings.hadithArabicUsesCustomFace(for: text.arabic))
                 .multilineTextAlignment(.trailing)
@@ -448,8 +481,11 @@ struct HadithRow: View, Equatable {
                 .fixedSize(horizontal: false, vertical: true)
             }
 
+            // Cross-language spans FORCE the English block visible too: an Arabic hit whose aligned
+            // English words were found must show them even with the English toggle off.
             if compact || settings.showHadithEnglish || visibility.mNarrator || visibility.mText
-                || visibility.guaranteeNarrator || visibility.guaranteeText {
+                || visibility.guaranteeNarrator || visibility.guaranteeText
+                || !cross.narrator.isEmpty || !cross.text.isEmpty {
                 // The narrator is PART of the English text - it shows whenever English does (there is no
                 // separate toggle; a hadith without its isnad line reads incomplete).
                 if !text.narrator.isEmpty {
@@ -462,7 +498,8 @@ struct HadithRow: View, Equatable {
                         // The narrator line is English text like any other - "Allah's Messenger" in an
                         // isnad gets the same red as the body, both scripts, like the Quran.
                         highlightAllahNames: settings.highlightAllahNamesHadith,
-                        guaranteeMatch: visibility.guaranteeNarrator
+                        guaranteeMatch: visibility.guaranteeNarrator,
+                        extraHighlightRanges: cross.narrator
                     )
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .fixedSize(horizontal: false, vertical: true)
@@ -476,7 +513,8 @@ struct HadithRow: View, Equatable {
                         accent: settings.accentColor.color,
                         fg: .primary,
                         highlightAllahNames: settings.highlightAllahNamesHadith,
-                        guaranteeMatch: visibility.guaranteeText
+                        guaranteeMatch: visibility.guaranteeText,
+                        extraHighlightRanges: cross.text
                     )
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .fixedSize(horizontal: false, vertical: true)
@@ -768,6 +806,15 @@ struct HadithBookmarkRow: View, Equatable {
     @State private var showNoteSheet = false
     @State private var noteDraft = ""
     @State private var showRespectAlert = false
+    /// Set to the FULL hadith (resolved from the book pack on demand) when Share Hadith is tapped -
+    /// the bookmark itself only stores previews.
+    @State private var shareHadith: HadithBookData.Hadith? = nil
+
+    /// The bookmarked hadith's full row from its book pack - opening a book is synchronous and cheap
+    /// (mapped, not read), so resolving on menu tap is fine. Nil only if the pack is missing.
+    private func fullHadith(in book: HadithCatalogBook) -> HadithBookData.Hadith? {
+        HadithStore.shared.book(book)?.hadith(numbered: bookmark.idInBook)
+    }
 
     /// Value link on iOS 16, legacy destination push on iOS 15 - see the note at the call site.
     @ViewBuilder
@@ -863,6 +910,22 @@ struct HadithBookmarkRow: View, Equatable {
                 .padding(.vertical, 2)
             }
             .contextMenu {
+                // HadithRow's menu grammar exactly - reference, bookmark, note actions, a divider,
+                // then Copy and Share - so a bookmarked hadith's menu reads like every hadith's menu.
+                Text(bookmark.reference)
+                    .foregroundStyle(.secondary)
+
+                Button(role: .destructive) {
+                    settings.hapticFeedback()
+                    let placeholder = HadithBookData.Hadith(
+                        id: -1, idInBook: bookmark.idInBook, chapterId: bookmark.chapterId ?? -1,
+                        arabic: "", english: HadithBookData.Hadith.EnglishText(narrator: "", text: "")
+                    )
+                    userData.toggleBookmark(book: book, hadith: placeholder)
+                } label: {
+                    Label("Remove Bookmark", systemImage: "bookmark.fill")
+                }
+
                 Button {
                     settings.hapticFeedback()
                     noteDraft = bookmark.note ?? ""
@@ -884,16 +947,25 @@ struct HadithBookmarkRow: View, Equatable {
 
                 Divider()
 
-                Button(role: .destructive) {
+                Button {
                     settings.hapticFeedback()
-                    let placeholder = HadithBookData.Hadith(
-                        id: -1, idInBook: bookmark.idInBook, chapterId: bookmark.chapterId ?? -1,
-                        arabic: "", english: HadithBookData.Hadith.EnglishText(narrator: "", text: "")
-                    )
-                    userData.toggleBookmark(book: book, hadith: placeholder)
+                    if let hadith = fullHadith(in: book) {
+                        UIPasteboard.general.string = HadithShareSheet.composedText(book: book, hadith: hadith)
+                    }
                 } label: {
-                    Label("Remove Bookmark", systemImage: "bookmark.fill")
+                    Label("Copy Hadith", systemImage: "doc.on.doc")
                 }
+
+                Button {
+                    settings.hapticFeedback()
+                    shareHadith = fullHadith(in: book)
+                } label: {
+                    Label("Share Hadith", systemImage: "square.and.arrow.up")
+                }
+            }
+            .sheet(item: $shareHadith) { hadith in
+                HadithShareSheet(book: book, hadith: hadith)
+                    .smallMediumSheetPresentation()
             }
             .sheet(isPresented: $showNoteSheet) {
                 NoteEditorSheet(

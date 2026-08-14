@@ -104,10 +104,12 @@ struct CalendarView: View {
     }()
 
     /// Which Hijri month it is right now, so the list can mark it. Reads the same Umm al-Qura calendar the rest of
-    /// the screen does, and honours the user's Hijri offset.
+    /// the screen does, and honours BOTH the user's Hijri offset and the Maghrib switch - the same derivation as
+    /// the month grid's `todayHijriComponents()`, so the two halves of this screen can never disagree on "now".
     private var currentHijriMonthNumber: Int {
         let calendar = Self.ummAlQuraEN
-        let adjusted = calendar.date(byAdding: .day, value: settings.hijriOffset, to: Date()) ?? Date()
+        let effective = settings.effectiveHijriReferenceDate()
+        let adjusted = calendar.date(byAdding: .day, value: settings.hijriOffset, to: effective) ?? effective
         return calendar.component(.month, from: adjusted)
     }
 
@@ -222,7 +224,12 @@ struct CalendarView: View {
         settings.specialEvents.map { event in
             var components = event.1
             components.year = year
-            let date = settings.hijriCalendar.date(from: components) ?? Date()
+            // Reverse the manual offset, exactly like the month grid's `gregorianDate(forDay:)` - the
+            // stored hijri date is the ADJUSTED one the user sees, so its Gregorian day moves the other
+            // way. Without this the list's dates, countdowns, and past-graying sat `hijriOffset` days
+            // off from the grid on the same screen.
+            let unadjusted = settings.hijriCalendar.date(from: components) ?? Date()
+            let date = settings.hijriCalendar.date(byAdding: .day, value: -settings.hijriOffset, to: unadjusted) ?? unadjusted
             let monthName = Self.monthSymbols[(components.month ?? 1) - 1]
 
             return HijriEventRowModel(
@@ -245,7 +252,9 @@ struct CalendarView: View {
         let allPast = settings.specialEvents.allSatisfy { event in
             var components = event.1
             components.year = currentYear
-            guard let date = settings.hijriCalendar.date(from: components) else { return true }
+            guard let unadjusted = settings.hijriCalendar.date(from: components) else { return true }
+            // Same offset reversal as `buildEventRows` - the rollover decision must see the dates the list shows.
+            let date = settings.hijriCalendar.date(byAdding: .day, value: -settings.hijriOffset, to: unadjusted) ?? unadjusted
             return date < todayStart
         }
         return currentYear + (allPast ? 1 : 0)
@@ -373,7 +382,10 @@ struct CalendarView: View {
     }
 
     private func updateInformation() {
-        let currentDate = settings.effectiveHijriReferenceDate()
+        // Maghrib switch AND manual offset, like every other "today in hijri" on this screen - the
+        // reference date alone put the events list a day (or a year, near Muharram 1) off for offset users.
+        let effective = settings.effectiveHijriReferenceDate()
+        let currentDate = settings.hijriCalendar.date(byAdding: .day, value: settings.hijriOffset, to: effective) ?? effective
         let components = settings.hijriCalendar.dateComponents([.year, .month], from: currentDate)
         hijriYear = components.year ?? 1445
         hijriMonth = components.month ?? 1

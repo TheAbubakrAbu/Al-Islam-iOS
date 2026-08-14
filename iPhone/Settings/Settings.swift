@@ -168,6 +168,16 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
            ProcessInfo.processInfo.arguments.indices.contains(idx + 1) {
             UserDefaults.standard.set(ProcessInfo.processInfo.arguments[idx + 1], forKey: "mushafPDFAppearance")
         }
+        // "-hijriOffset 2" - seed the Hijri date adjustment headlessly. `simctl spawn defaults write
+        // group.com.IslamicPillars.AppGroup ...` lands in the simulator-global prefs file, NOT the
+        // app's shared container, so the app never sees it - the seed has to happen in-process.
+        // Direct ivar assignment: didSet must not fire during init; `updateDates()` runs later in
+        // this init and picks the value up.
+        if let idx = ProcessInfo.processInfo.arguments.firstIndex(of: "-hijriOffset"),
+           ProcessInfo.processInfo.arguments.indices.contains(idx + 1),
+           let forcedOffset = Int(ProcessInfo.processInfo.arguments[idx + 1]) {
+            self.hijriOffset = forcedOffset
+        }
         #endif
 
         runQuranStartupMigrations()
@@ -526,6 +536,10 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
             // The offset shifts the displayed Hijri date everywhere it appears, so recompute it and
             // repaint the widgets that show it. Owned here for the same reason as `accentColor`'s.
             updateDates()
+            // Prayer times and reminders consult the ADJUSTED calendar too (the Umm al-Qura Ramadan
+            // Isha extension, and the Islamic-event notifications' Gregorian day), so a forced fetch
+            // recomputes and reschedules under the new offset.
+            fetchPrayerTimes(force: true, runAutoChecks: false)
             reloadWidgets(deferred: true)
         }
     }
@@ -629,7 +643,11 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     }()
 
     var specialEvents: [(String, DateComponents, String, String)] {
-        let currentHijriYear = hijriCalendar.component(.year, from: effectiveHijriReferenceDate())
+        // Offset-adjusted, like the displayed Hijri date: near Muharram 1 an offset user's "current
+        // Hijri year" is the adjusted one, and taking the raw reference year put every event a year off.
+        let effective = effectiveHijriReferenceDate()
+        let adjusted = hijriCalendar.date(byAdding: .day, value: hijriOffset, to: effective) ?? effective
+        let currentHijriYear = hijriCalendar.component(.year, from: adjusted)
         return [
             ("Islamic New Year", DateComponents(year: currentHijriYear, month: 1, day: 1), "Start of Hijri year", "The first day of the Islamic calendar; no special acts of worship or celebration are prescribed."),
             ("Day Before Ashura", DateComponents(year: currentHijriYear, month: 1, day: 9), "Recommended to fast", "The Prophet ﷺ intended to fast the 9th to differ from the Jews, making it Sunnah to do so before Ashura."),
@@ -914,6 +932,11 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     @AppStorage("customFajrAngle") var customFajrAngle: Double = 18.0 {
         didSet {
             guard oldValue != customFajrAngle else { return }
+            // Mirrored to the App Group for the same reason as the manual offsets: the widget and
+            // complication providers recompute times in their own processes, and without the mirror
+            // they run "Custom Angles" with the 18/17 defaults - drifting from the app by however far
+            // the user's angles sit from those.
+            if Self.isAppProcess { appGroupUserDefaults?.setValue(customFajrAngle, forKey: "customFajrAngle") }
             Settings.invalidatePrayerComputationCache()
             fetchPrayerTimes(force: true, runAutoChecks: false)
         }
@@ -921,6 +944,7 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     @AppStorage("customIshaAngle") var customIshaAngle: Double = 17.0 {
         didSet {
             guard oldValue != customIshaAngle else { return }
+            if Self.isAppProcess { appGroupUserDefaults?.setValue(customIshaAngle, forKey: "customIshaAngle") }
             Settings.invalidatePrayerComputationCache()
             fetchPrayerTimes(force: true, runAutoChecks: false)
         }

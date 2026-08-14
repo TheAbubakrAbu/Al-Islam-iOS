@@ -183,6 +183,348 @@ enum WordTokens {
     }
 }
 
+// MARK: - Cross-language search highlight
+
+/// Maps a search hit in one language to the aligned word(s) in the other, through the gloss pack:
+/// an ARABIC query's matched tokens name their English glosses, whose content words are then lit in
+/// the translation lines; an ENGLISH query lights the Arabic tokens whose gloss carries the query.
+/// Alignment holds only where the pack's contract holds (Hafs display, no beginner spacing) - the
+/// callers gate on that, and `glosses(surah:ayah:rawText:displayText:)` returns nil otherwise anyway.
+///
+/// Everything here is approximate ON PURPOSE: glosses are a literal word-for-word rendering, not an
+/// excerpt of the flowing translation, so the English side matches word-by-word (whole words, prefix
+/// and shared-stem tolerant) rather than as phrases - a wrong-word highlight is worse than none.
+enum CrossLanguageWordHighlight {
+    /// Glue words a gloss carries around its content word ("(of) Allah", "the Most Gracious") and
+    /// that an English query shouldn't align through - too common to identify a word pair.
+    private static let stopwords: Set<String> = [
+        "the", "and", "for", "with", "that", "this", "those", "these", "not", "nor",
+        "who", "whom", "what", "which", "will", "shall", "was", "were", "are", "has",
+        "have", "had", "his", "her", "him", "its", "their", "them", "they", "you",
+        "your", "then", "than", "but", "from", "into", "unto", "upon", "when", "there",
+        "indeed", "surely", "verily", "any", "all", "one"
+    ]
+
+    private final class SpansEntry: NSObject {
+        let spans: [NSRange]
+        init(_ spans: [NSRange]) { self.spans = spans }
+    }
+
+    private final class TermsEntry: NSObject {
+        let terms: [String]
+        init(_ terms: [String]) { self.terms = terms }
+    }
+
+    /// NSRange spans are UTF-16 offsets - instance-free, so entries keyed by string CONTENT can serve
+    /// any equal-content instance (the `HighlightedSnippet` caches' exact reasoning).
+    nonisolated(unsafe) private static let spansCache: NSCache<NSString, SpansEntry> = {
+        let c = NSCache<NSString, SpansEntry>()
+        c.countLimit = 4_000
+        return c
+    }()
+
+    nonisolated(unsafe) private static let termsCache: NSCache<NSString, TermsEntry> = {
+        let c = NSCache<NSString, TermsEntry>()
+        c.countLimit = 2_000
+        return c
+    }()
+
+    /// ARABIC query → the English gloss content-words of the Arabic tokens the query highlighted.
+    /// The caller runs these through `wordSpans(of:in:)` against each translation line.
+    static func englishTermsForArabicMatch(query: String, surah: Int, ayah: Int,
+                                           rawText: String, displayText: String) -> [String] {
+        let key = "a→e\u{0000}\(query)\u{0000}\(surah):\(ayah)\u{0000}\(displayText.hashValue)" as NSString
+        if let cached = termsCache.object(forKey: key) { return cached.terms }
+
+        var terms: [String] = []
+        defer { termsCache.setObject(TermsEntry(terms), forKey: key) }
+
+        guard query.containsArabicLetters,
+              let glosses = WordByWordStore.shared.glosses(surah: surah, ayah: ayah,
+                                                           rawText: rawText, displayText: displayText)
+        else { return terms }
+
+        let matches = HighlightedSnippet.matchRanges(of: query, in: displayText)
+        guard !matches.isEmpty else { return terms }
+        let tokenRanges = WordTokens.ranges(in: displayText)
+        guard tokenRanges.count == glosses.count else { return terms }
+
+        // The matched spans → the tokens they touch (a phrase query or a loose Arabic match can
+        // cover several), in order, deduped.
+        var tokenIndices: [Int] = []
+        var seenTokens = Set<Int>()
+        for match in matches {
+            let span = NSRange(match, in: displayText)
+            for (index, token) in tokenRanges.enumerated()
+            where NSIntersectionRange(span, token).length > 0 && seenTokens.insert(index).inserted {
+                tokenIndices.append(index)
+            }
+        }
+
+        var seenTerms = Set<String>()
+        for index in tokenIndices {
+            for word in contentWords(of: glosses[index]) where seenTerms.insert(word).inserted {
+                terms.append(word)
+            }
+        }
+        return terms
+    }
+
+    /// ENGLISH query → the UTF-16 spans of the Arabic tokens whose gloss carries a query word.
+    /// Feed the result to `HighlightedSnippet.extraHighlightRanges` on the Arabic line.
+    static func arabicSpansForEnglishMatch(query: String, surah: Int, ayah: Int,
+                                           rawText: String, displayText: String) -> [NSRange] {
+        let key = "e→a\u{0000}\(query)\u{0000}\(surah):\(ayah)\u{0000}\(displayText.hashValue)" as NSString
+        if let cached = spansCache.object(forKey: key) { return cached.spans }
+
+        var spans: [NSRange] = []
+        defer { spansCache.setObject(SpansEntry(spans), forKey: key) }
+
+        guard !query.containsArabicLetters,
+              let glosses = WordByWordStore.shared.glosses(surah: surah, ayah: ayah,
+                                                           rawText: rawText, displayText: displayText)
+        else { return spans }
+
+        let queryTokens = HighlightedSnippet.normalizeForSearchText(query, trimWhitespace: true)
+            .split(separator: " ").map(String.init)
+            .filter { $0.count >= 3 && !stopwords.contains($0) }
+        guard !queryTokens.isEmpty else { return spans }
+
+        let tokenRanges = WordTokens.ranges(in: displayText)
+        guard tokenRanges.count == glosses.count else { return spans }
+
+        for (index, gloss) in glosses.enumerated() {
+            let glossWords = gloss.lowercased()
+                .components(separatedBy: CharacterSet.alphanumerics.inverted)
+                .filter { $0.count >= 3 && !stopwords.contains($0) }
+            guard !glossWords.isEmpty else { continue }
+            if queryTokens.contains(where: { q in glossWords.contains { wordMatches(query: q, word: $0) } }) {
+                spans.append(tokenRanges[index])
+            }
+        }
+        return spans
+    }
+
+    /// Whole-word spans of `terms` in `text` (a translation line): each whitespace token is folded
+    /// and compared word-to-word, so "ease" can never light the middle of "increase" the way a
+    /// substring pass would. Spans are trimmed of the token's surrounding punctuation.
+    static func wordSpans(of terms: [String], in text: String) -> [NSRange] {
+        guard !terms.isEmpty, !text.isEmpty else { return [] }
+        let key = "spans\u{0000}\(terms.joined(separator: "\u{0001}"))\u{0000}\(text.hashValue)" as NSString
+        if let cached = spansCache.object(forKey: key) { return cached.spans }
+
+        var spans: [NSRange] = []
+        let ns = text as NSString
+        for tokenRange in WordTokens.ranges(in: text) {
+            let word = HighlightedSnippet.normalizeForSearchText(ns.substring(with: tokenRange), trimWhitespace: true)
+            guard word.count >= 3 else { continue }
+            if terms.contains(where: { wordMatches(query: $0, word: word) }) {
+                spans.append(trimmedWordSpan(tokenRange, in: ns))
+            }
+        }
+        spansCache.setObject(SpansEntry(spans), forKey: key)
+        return spans
+    }
+
+    // MARK: Quran-derived lexicon (texts with NO alignment data - hadith)
+
+    /// folded-Arabic-skeleton → every gloss content word that token carries anywhere in the Quran.
+    /// Hadith has no word-alignment pack, so its cross-language highlight matches through this
+    /// dictionary instead: classical Arabic vocabulary overlaps heavily, and a word the Quran never
+    /// uses simply highlights nothing (no guessing). Built ONCE off-main from the gloss pack zipped
+    /// against the app's own Hafs text; until it's ready the lookups return empty WITHOUT caching,
+    /// so no empty result can stick from the pre-build window.
+    nonisolated(unsafe) private static var lexicon: [String: Set<String>]?
+    private static let lexiconLock = NSLock()
+    nonisolated(unsafe) private static var lexiconBuildStarted = false
+
+    /// The lexicon if built; otherwise kicks the build off (once) and returns nil. Callable from any
+    /// thread; the build itself runs at utility QoS off-main (~77k token folds).
+    private static func lexiconIfReady(quranSnapshot: @autoclosure () -> [Surah]) -> [String: Set<String>]? {
+        lexiconLock.lock()
+        let ready = lexicon
+        let alreadyStarted = lexiconBuildStarted
+        if ready == nil, !alreadyStarted { lexiconBuildStarted = true }
+        lexiconLock.unlock()
+
+        if let ready { return ready }
+        if !alreadyStarted {
+            // Snapshot the (value-type) surah array on the calling thread; the fold work moves off it.
+            let surahs = quranSnapshot()
+            DispatchQueue.global(qos: .utility).async { buildLexicon(surahs: surahs) }
+        }
+        return nil
+    }
+
+    /// The floor a real build clears by a wide margin (the shipping corpus yields ~17.8k keys).
+    /// Anything under it means the inputs weren't there - Quran data still loading at launch, or the
+    /// gloss pack unloaded mid-build by the word-by-word setting - so the result is DISCARDED and the
+    /// build is re-armed rather than caching a crippled lexicon for the rest of the session.
+    private static let minimumLexiconEntries = 1_000
+
+    /// A key carrying more than this many distinct glosses is a grammatical particle (or a word as
+    /// ubiquitous as الله), not a content word: highlighting it would paint noise across every row.
+    /// Measured against the shipping data this drops ~24 keys and nothing else. (Allah's names have
+    /// their own dedicated highlight setting, so losing that key here costs nothing.)
+    private static let glossNoiseCap = 12
+
+    private static func buildLexicon(surahs: [Surah]) {
+        var table: [String: Set<String>] = [:]
+        table.reserveCapacity(24_000)
+        for surah in surahs {
+            for ayah in surah.ayahs {
+                guard let glosses = WordByWordStore.shared.glosses(surah: surah.id, ayah: ayah.id) else { continue }
+                let tokens = WordTokens.tokens(in: ayah.textHafs.trimmingCharacters(in: .whitespacesAndNewlines))
+                guard tokens.count == glosses.count else { continue }
+                for (token, gloss) in zip(tokens, glosses) {
+                    let words = contentWords(of: gloss)
+                    guard !words.isEmpty else { continue }
+                    // Indexed under EVERY variant, exactly the set the lookups ask for, so a hadith's
+                    // والصبر and the Quran's ٱلصَّبْر meet at the same key.
+                    for key in lookupKeys(for: HighlightedSnippet.normalizeForSearchText(token, trimWhitespace: true)) {
+                        table[key, default: []].formUnion(words)
+                    }
+                }
+            }
+        }
+        table = table.filter { $0.value.count <= glossNoiseCap }
+
+        lexiconLock.lock()
+        if table.count >= minimumLexiconEntries {
+            lexicon = table
+        } else {
+            lexiconBuildStarted = false
+        }
+        lexiconLock.unlock()
+    }
+
+    /// Every key one folded Arabic word should be findable under: itself, plus the forms left after
+    /// peeling PROCLITICS - the connectives و/ف, the prepositions ب/ل/ك, and the article ال (alone or
+    /// after one of those). So a hadith's وَالصَّبْر and the Quran's ٱلصَّبْر meet at the same key.
+    ///
+    /// Deliberately NOT stripping enclitic pronouns (رحمته → رحمة): measured against the shipping
+    /// corpus that conflation drags a possessor's gloss words in with the noun's, turning a clean
+    /// رحمة → "mercy" into "mercy, Allah, Lord, bestowed". Precision wins - a word this misses simply
+    /// highlights nothing, which is the correct failure for a feature that points at meaning.
+    private static let minimumStemLength = 3
+
+    private static func lookupKeys(for folded: String) -> [String] {
+        var keys: [String] = []
+        var seen = Set<String>()
+        func add(_ candidate: String) {
+            guard candidate.count >= 2, seen.insert(candidate).inserted else { return }
+            keys.append(candidate)
+        }
+
+        add(folded)
+        var stem = folded
+        while let first = stem.first, "وفبلك".contains(first), stem.count - 1 >= minimumStemLength {
+            stem.removeFirst()
+            add(stem)
+            if stem.hasPrefix("ال"), stem.count - 2 >= minimumStemLength {
+                add(String(stem.dropFirst(2)))
+            }
+        }
+        if folded.hasPrefix("ال"), folded.count - 2 >= minimumStemLength {
+            add(String(folded.dropFirst(2)))
+        }
+        return keys
+    }
+
+    /// ARABIC query against a text with NO alignment data (hadith): the query words' Quran-lexicon
+    /// gloss words. Run the result through `wordSpans(of:in:)` against the English text.
+    static func englishTermsForUnalignedArabicQuery(_ query: String) -> [String] {
+        guard query.containsArabicLetters else { return [] }
+        let key = "lex-a→e\u{0000}\(query)" as NSString
+        if let cached = termsCache.object(forKey: key) { return cached.terms }
+        guard let lexicon = lexiconIfReady(quranSnapshot: QuranData.shared.quran) else { return [] }
+
+        var terms: [String] = []
+        var seen = Set<String>()
+        let queryWords = HighlightedSnippet.normalizeForSearchText(query, trimWhitespace: true)
+            .split(separator: " ").map(String.init).filter { $0.count >= 2 }
+        for word in queryWords {
+            for lookupKey in lookupKeys(for: word) {
+                for gloss in lexicon[lookupKey] ?? [] where seen.insert(gloss).inserted {
+                    terms.append(gloss)
+                }
+            }
+        }
+        termsCache.setObject(TermsEntry(terms), forKey: key)
+        return terms
+    }
+
+    /// ENGLISH query against Arabic with NO alignment data (hadith): spans of the Arabic tokens whose
+    /// Quran-lexicon gloss carries a query word. Feed to `extraHighlightRanges` on the Arabic line.
+    static func arabicSpansForEnglishQuery(_ query: String, arabicText: String) -> [NSRange] {
+        guard !query.containsArabicLetters, !arabicText.isEmpty else { return [] }
+        let key = "lex-e→a\u{0000}\(query)\u{0000}\(arabicText.hashValue)" as NSString
+        if let cached = spansCache.object(forKey: key) { return cached.spans }
+        guard let lexicon = lexiconIfReady(quranSnapshot: QuranData.shared.quran) else { return [] }
+
+        let queryTokens = HighlightedSnippet.normalizeForSearchText(query, trimWhitespace: true)
+            .split(separator: " ").map(String.init)
+            .filter { $0.count >= 3 && !stopwords.contains($0) }
+        guard !queryTokens.isEmpty else {
+            spansCache.setObject(SpansEntry([]), forKey: key)
+            return []
+        }
+
+        var spans: [NSRange] = []
+        let ns = arabicText as NSString
+        for tokenRange in WordTokens.ranges(in: arabicText) {
+            let folded = HighlightedSnippet.normalizeForSearchText(ns.substring(with: tokenRange), trimWhitespace: true)
+            guard folded.count >= 2 else { continue }
+            var glossWords = Set<String>()
+            for lookupKey in lookupKeys(for: folded) {
+                glossWords.formUnion(lexicon[lookupKey] ?? [])
+            }
+            guard !glossWords.isEmpty else { continue }
+            if queryTokens.contains(where: { q in glossWords.contains { wordMatches(query: q, word: $0) } }) {
+                spans.append(tokenRange)
+            }
+        }
+        spansCache.setObject(SpansEntry(spans), forKey: key)
+        return spans
+    }
+
+    /// The gloss minus its "(...)" glue inserts, split to content words. "(is) the book" → ["book"].
+    private static func contentWords(of gloss: String) -> [String] {
+        var text = gloss
+        while let open = text.firstIndex(of: "("), let close = text[open...].firstIndex(of: ")") {
+            text.removeSubrange(open...close)
+        }
+        return text.lowercased()
+            .components(separatedBy: CharacterSet.alphanumerics.inverted)
+            .filter { $0.count >= 3 && !stopwords.contains($0) }
+    }
+
+    /// Word-to-word tolerance: equal, a prefix ("hardship" → "hardships"), or a shared stem long
+    /// enough to be the same word family ("mercy" → "merciful": 4 shared of 5) - and nothing looser.
+    private static func wordMatches(query: String, word: String) -> Bool {
+        if word == query || word.hasPrefix(query) { return true }
+        guard query.count >= 4, word.count >= 4 else { return false }
+        let common = zip(query, word).prefix(while: { $0.0 == $0.1 }).count
+        return common >= max(4, min(query.count, word.count) - 2)
+    }
+
+    /// The token span minus leading/trailing punctuation, so a highlight on "ease," stops at the "e".
+    private static func trimmedWordSpan(_ span: NSRange, in ns: NSString) -> NSRange {
+        var start = span.location
+        var end = span.location + span.length
+        let alnum = CharacterSet.alphanumerics
+        while start < end {
+            guard let scalar = Unicode.Scalar(ns.character(at: start)), !alnum.contains(scalar) else { break }
+            start += 1
+        }
+        while end > start {
+            guard let scalar = Unicode.Scalar(ns.character(at: end - 1)), !alnum.contains(scalar) else { break }
+            end -= 1
+        }
+        return NSRange(location: start, length: end - start)
+    }
+}
+
 // MARK: - The reader's word-tappable Arabic
 
 /// The ayah's Arabic, rendered through TextKit so one word can be hit-tested and lit.
