@@ -956,7 +956,7 @@ struct FavoritesView: View {
                     Text("No favorite surahs here, long tap a surah to favorite it.")
                 } else {
                     ForEach(settings.favoriteSurahs.sorted(), id: \.self) { surahId in
-                        if let surah = quranData.quran.first(where: { $0.id == surahId }) {
+                        if let surah = quranData.surah(surahId) {
                             SurahRow(surah: surah, isFavorite: true).equatable()
                         }
                     }
@@ -966,11 +966,11 @@ struct FavoritesView: View {
                 if settings.bookmarkedAyahs.isEmpty {
                     Text("No bookmarked ayahs here, long tap an ayah to bookmark it.")
                 } else {
-                    ForEach(settings.bookmarkedAyahs.sorted {
-                        $0.surah == $1.surah ? ($0.ayah < $1.ayah) : ($0.surah < $1.surah)
-                    }, id: \.id) { bookmarkedAyah in
-                        if let surah = quranData.quran.first(where: { $0.id == bookmarkedAyah.surah }),
-                           let ayah = surah.ayahs.first(where: { $0.id == bookmarkedAyah.ayah }) {
+                    // Memoized order + indexed lookups: this list re-sorted itself and then walked
+                    // all 114 surahs (and the surah's ayahs) for EVERY row on every body pass.
+                    ForEach(settings.bookmarkedAyahsInMushafOrder, id: \.id) { bookmarkedAyah in
+                        if let surah = quranData.surah(bookmarkedAyah.surah),
+                           let ayah = quranData.ayah(surah: bookmarkedAyah.surah, ayah: bookmarkedAyah.ayah) {
                             SurahAyahRow(surah: surah, ayah: ayah)
                                 .equatable()
                         }

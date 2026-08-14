@@ -36,6 +36,13 @@ final class TasbihCounters: ObservableObject {
         })
     }
 
+    /// Everything ever counted here - the free counter plus every preset row. Read by the profile's
+    /// dhikr card and its badges; the individual counts stay private so nothing outside this object can
+    /// write them behind `binding(for:)`'s back.
+    var totalCount: Int {
+        freeCount + presetCounts.values.reduce(0, +)
+    }
+
     func binding(for index: Int) -> Binding<Int> {
         if index == Self.freeIndex {
             return Binding(

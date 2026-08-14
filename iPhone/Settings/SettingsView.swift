@@ -274,6 +274,15 @@ struct SettingsView: View {
     /// it is literally the same views on iPhone, iPad, and the watch.
     @ViewBuilder
     private func settingsSections(split: Bool) -> some View {
+        // Above the settings themselves, because it is not a setting: it is the one place the app tells
+        // you what you have done rather than asking what you want. iPhone/iPad only - the watch has
+        // neither the room for the rings nor the stores (hadith, tasbih) the profile reads.
+        #if os(iOS)
+        Section {
+            ProfileSettingsRow()
+        }
+        #endif
+
         Group {
             #if os(iOS)
             if split, #available(iOS 16.0, *) {

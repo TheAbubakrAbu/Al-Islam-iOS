@@ -536,6 +536,44 @@ extension Settings {
         }
     }
 
+    /// The bookmarks in mushaf order, memoized on the same blob. Every list that shows bookmarks wants
+    /// this order and each was sorting the array itself, inside a view body - so the Quran tab re-sorted
+    /// the whole list on every render pass, which during recitation is once per player tick.
+    private static var bookmarksInOrderCache: (data: Data, value: [BookmarkedAyah])?
+    var bookmarkedAyahsInMushafOrder: [BookmarkedAyah] {
+        if let cached = Self.bookmarksInOrderCache, cached.data == bookmarkedAyahsData {
+            return cached.value
+        }
+        let sorted = bookmarkedAyahs.sorted {
+            $0.surah == $1.surah ? ($0.ayah < $1.ayah) : ($0.surah < $1.surah)
+        }
+        Self.bookmarksInOrderCache = (bookmarkedAyahsData, sorted)
+        return sorted
+    }
+
+    /// `"surah-ayah"` → position in `bookmarkedAyahs`, memoized on the same blob the list itself is.
+    ///
+    /// The list is walked LINEARLY by every lookup that doesn't go through here, and the reader asks
+    /// several times per row per body pass - is it bookmarked, what tint does its badge take, does it
+    /// carry a note, what highlight is on it - across every visible row of a scrolling surah. That is
+    /// O(bookmarks x rows x passes) against a list that a long-time user grows into the hundreds. The
+    /// index makes each of those a dictionary hit, and it is built once per change to the bookmark data
+    /// rather than once per question asked about it.
+    private static var bookmarkLookupCache: (data: Data, value: [String: Int])?
+    private var bookmarkLookup: [String: Int] {
+        if let cached = Self.bookmarkLookupCache, cached.data == bookmarkedAyahsData {
+            return cached.value
+        }
+        // Built off `bookmarkedAyahs` (not a fresh decode) so the two caches share one decode. Later
+        // duplicates of an id lose to the first, matching `firstIndex(where:)`'s answer exactly.
+        var lookup: [String: Int] = [:]
+        for (index, bookmark) in bookmarkedAyahs.enumerated() where lookup[bookmark.id] == nil {
+            lookup[bookmark.id] = index
+        }
+        Self.bookmarkLookupCache = (bookmarkedAyahsData, lookup)
+        return lookup
+    }
+
     static func normalizedArabicFontName(_ fontName: String) -> String {
         fontName == legacyQiraatFontName ? hafsUthmaniFontName : fontName
     }
@@ -940,7 +978,7 @@ extension Settings {
     static let bookmarkNoteRemovalDialogMessage = "This ayah has a note. Unbookmarking will delete the note."
 
     func bookmarkIndex(surah: Int, ayah: Int) -> Int? {
-        bookmarkedAyahs.firstIndex { $0.surah == surah && $0.ayah == ayah }
+        bookmarkLookup["\(surah)-\(ayah)"]
     }
 
     func bookmarkedAyah(surah: Int, ayah: Int) -> BookmarkedAyah? {
@@ -959,18 +997,16 @@ extension Settings {
 
     func toggleBookmark(surah: Int, ayah: Int) {
         withAnimation {
-            let bookmark = BookmarkedAyah(surah: surah, ayah: ayah)
-            if let index = bookmarkedAyahs.firstIndex(where: {$0.id == bookmark.id}) {
+            if let index = bookmarkIndex(surah: surah, ayah: ayah) {
                 bookmarkedAyahs.remove(at: index)
             } else {
-                bookmarkedAyahs.append(bookmark)
+                bookmarkedAyahs.append(BookmarkedAyah(surah: surah, ayah: ayah))
             }
         }
     }
 
     func isBookmarked(surah: Int, ayah: Int) -> Bool {
-        let bookmark = BookmarkedAyah(surah: surah, ayah: ayah)
-        return bookmarkedAyahs.contains(where: {$0.id == bookmark.id})
+        bookmarkIndex(surah: surah, ayah: ayah) != nil
     }
 
     @discardableResult
@@ -1000,6 +1036,45 @@ extension Settings {
             } else {
                 bookmarkedAyahs.append(BookmarkedAyah(surah: surah, ayah: ayah, note: storedNote))
             }
+        }
+    }
+
+    // MARK: - Highlights
+    // A highlight is a color ON a bookmark, never a record of its own. Highlighting an ayah that isn't
+    // bookmarked bookmarks it first (that is the whole point: you highlighted it, so you saved it), and
+    // the bookmark then renders in the highlight's color instead of the accent. Clearing the highlight
+    // deliberately KEEPS the bookmark - the user asked for a color, not for the ayah to be forgotten.
+
+    func bookmarkHighlight(surah: Int, ayah: Int) -> AyahHighlightColor? {
+        bookmarkedAyah(surah: surah, ayah: ayah)?.highlight
+    }
+
+    func isAyahHighlighted(surah: Int, ayah: Int) -> Bool {
+        bookmarkHighlight(surah: surah, ayah: ayah) != nil
+    }
+
+    /// Sets (or with `nil`, clears) the highlight. Creating the bookmark when one is missing is the
+    /// bookmark-on-highlight rule; clearing on an ayah that isn't bookmarked is a no-op rather than an
+    /// empty bookmark.
+    func setBookmarkHighlight(surah: Int, ayah: Int, color: AyahHighlightColor?) {
+        withAnimation {
+            if let index = bookmarkIndex(surah: surah, ayah: ayah) {
+                var bookmark = bookmarkedAyahs[index]
+                bookmark.highlight = color
+                bookmarkedAyahs[index] = bookmark
+            } else if let color {
+                bookmarkedAyahs.append(BookmarkedAyah(surah: surah, ayah: ayah, highlightRaw: color.rawValue))
+            }
+        }
+    }
+
+    /// The one-tap path: highlight in the last color used (or the default), or lift the highlight if the
+    /// ayah already wears that same color. A different color replaces the existing one.
+    func toggleBookmarkHighlight(surah: Int, ayah: Int, color: AyahHighlightColor) {
+        if bookmarkHighlight(surah: surah, ayah: ayah) == color {
+            setBookmarkHighlight(surah: surah, ayah: ayah, color: nil)
+        } else {
+            setBookmarkHighlight(surah: surah, ayah: ayah, color: color)
         }
     }
 

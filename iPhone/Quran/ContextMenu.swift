@@ -36,6 +36,83 @@ func currentTranslationText(for ayah: Ayah) -> String? {
     return trimmed.isEmpty ? nil : trimmed
 }
 
+#if os(iOS)
+extension AyahHighlightColor {
+    /// The swatch as a real image rather than a tinted SF Symbol: a menu forces its own tint onto symbol
+    /// images, so `Image(systemName: "circle.fill").foregroundStyle(color)` comes out accent-colored in
+    /// every row - which defeats a color picker. An `alwaysOriginal` UIImage keeps the color it was drawn
+    /// with. Cached because a menu rebuilds its rows on every render pass of the row that owns it.
+    private static var swatchCache: [String: Image] = [:]
+
+    /// `selected` draws the checkmark INSIDE the swatch. A menu row can't carry both a colored icon and a
+    /// trailing checkmark (the trailing mark belongs to `Picker`, which can't express "tap the active
+    /// color to clear it"), so the swatch does both jobs.
+    func swatchImage(selected: Bool) -> Image {
+        let key = "\(rawValue)-\(selected)"
+        if let cached = Self.swatchCache[key] { return cached }
+
+        let size = CGSize(width: 20, height: 20)
+        let rendered = UIGraphicsImageRenderer(size: size).image { context in
+            UIColor(color).setFill()
+            context.cgContext.fillEllipse(in: CGRect(origin: .zero, size: size).insetBy(dx: 2, dy: 2))
+
+            guard selected else { return }
+            let check = UIImage(
+                systemName: "checkmark",
+                withConfiguration: UIImage.SymbolConfiguration(pointSize: 11, weight: .bold)
+            )?.withTintColor(.white, renderingMode: .alwaysOriginal)
+            let box = CGRect(x: 4, y: 4, width: 12, height: 12)
+            check?.draw(in: box)
+        }
+
+        let image = Image(uiImage: rendered.withRenderingMode(.alwaysOriginal))
+        Self.swatchCache[key] = image
+        return image
+    }
+}
+#endif
+
+/// The highlighter's palette, as menu rows. Every surface that offers highlighting (the list rows'
+/// long-press menu, page mode's actions sheet) renders THIS, so the palette, the checkmark state, and the
+/// bookmark-on-highlight rule can never drift apart between them.
+///
+/// Picking a color bookmarks the ayah if it wasn't already (`setBookmarkHighlight`), and picking the color
+/// it already wears lifts the highlight - the same tap-to-toggle grammar the bookmark button itself has.
+@ViewBuilder
+func ayahHighlightMenuItems(surah: Int, ayah: Int, settings: Settings) -> some View {
+    let current = settings.bookmarkHighlight(surah: surah, ayah: ayah)
+
+    ForEach(AyahHighlightColor.allCases) { color in
+        Button {
+            settings.hapticFeedback()
+            withAnimation(.easeInOut) {
+                settings.toggleBookmarkHighlight(surah: surah, ayah: ayah, color: color)
+            }
+        } label: {
+            #if os(iOS)
+            Label { Text(color.title) } icon: { color.swatchImage(selected: current == color) }
+            #else
+            Label(color.title, systemImage: current == color ? "checkmark.circle.fill" : "circle.fill")
+            #endif
+        }
+    }
+
+    if current != nil {
+        Divider()
+
+        Button(role: .destructive) {
+            settings.hapticFeedback()
+            withAnimation(.easeInOut) {
+                settings.setBookmarkHighlight(surah: surah, ayah: ayah, color: nil)
+            }
+        } label: {
+            // Removing the highlight deliberately keeps the bookmark - the label says so, because a
+            // destructive-red row otherwise reads as "this will unsave the ayah".
+            Label("Remove Highlight", systemImage: "highlighter")
+        }
+    }
+}
+
 struct SurahContextMenu: View {
     @ObservedObject var settings = Settings.shared
     @ObservedObject var quranData = QuranData.shared
@@ -375,6 +452,10 @@ struct AyahContextMenuModifier: ViewModifier {
         settings.bookmarkNoteText(surah: surah, ayah: ayah)
     }
 
+    private var currentHighlight: AyahHighlightColor? {
+        settings.bookmarkHighlight(surah: surah, ayah: ayah)
+    }
+
     private var canCompareEnglishText: Bool {
         settings.isHafsDisplay
     }
@@ -479,6 +560,17 @@ struct AyahContextMenuModifier: ViewModifier {
                     Label(
                         isBookmarked ? "Unbookmark Ayah" : "Bookmark Ayah",
                         systemImage: isBookmarked ? "bookmark.fill" : "bookmark"
+                    )
+                }
+
+                // Directly under the bookmark row, because it IS a bookmark action: picking a color saves
+                // the ayah and paints its bookmark in that color.
+                Menu {
+                    ayahHighlightMenuItems(surah: surah, ayah: ayah, settings: settings)
+                } label: {
+                    Label(
+                        currentHighlight == nil ? "Highlight" : "Highlight: \(currentHighlight!.title)",
+                        systemImage: "highlighter"
                     )
                 }
 

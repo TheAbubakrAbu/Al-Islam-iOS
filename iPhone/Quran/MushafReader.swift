@@ -1704,12 +1704,15 @@ private struct MushafPageContent: View {
     /// ONE walk of the bookmark list, not one per ayah: `settings.isBookmarked` is a linear scan, and this is
     /// evaluated on every body pass - which during recitation means every player tick, on all three mounted
     /// pages. Asking it per ayah made that ~45 full scans a tick.
-    private var bookmarkedAyahsOnPage: [(surahID: Int, ayahID: Int)] {
+    private var bookmarkedAyahsOnPage: [(surahID: Int, ayahID: Int, highlight: AyahHighlightColor?)] {
         let onPage = Set(page.ayahRefs)
         guard !onPage.isEmpty else { return [] }
+        // The highlight rides along on the same walk - it lives on the bookmark record, so carrying it
+        // costs nothing here and saves the page a second scan for the washes.
         return settings.bookmarkedAyahs.compactMap { bookmark in
             let ref = HighlightedAyahRef(surahID: bookmark.surah, ayahID: bookmark.ayah)
-            return onPage.contains(ref) ? (surahID: ref.surahID, ayahID: ref.ayahID) : nil
+            guard onPage.contains(ref) else { return nil }
+            return (surahID: ref.surahID, ayahID: ref.ayahID, highlight: bookmark.highlight)
         }
     }
 
@@ -3770,6 +3773,26 @@ enum MushafPageRenderCache {
 
 /// The composed page in a non-scrolling `UITextView`. A merged SwiftUI `Text` can't hit-test an individual
 /// run, so the mushaf page uses UIKit and maps a tap to the ayah whose range contains the tapped character.
+extension AyahHighlightColor {
+    /// The page wash as a DYNAMIC UIColor. The alpha has to differ between light and dark (the same hue is
+    /// invisible on the dark page at the light theme's weight), and a dynamic color lets TextKit resolve it
+    /// against the text view's own traits - so a theme switch repaints the page for free, without the
+    /// composed-page cache key having to carry the color scheme.
+    /// Built once per color, not once per wash: `updateUIView` resolves this for every highlighted ayah
+    /// on the page, on every page update, and a dynamic UIColor allocates a closure box each time.
+    private static var pageWashCache: [AyahHighlightColor: UIColor] = [:]
+
+    var pageWashUIColor: UIColor {
+        if let cached = Self.pageWashCache[self] { return cached }
+        let base = UIColor(color)
+        let wash = UIColor { traits in
+            base.withAlphaComponent(traits.userInterfaceStyle == .dark ? 0.28 : 0.20)
+        }
+        Self.pageWashCache[self] = wash
+        return wash
+    }
+}
+
 struct MushafPageTextView: UIViewRepresentable {
     let attributed: NSAttributedString
     let ranges: [MushafAyahRange]
@@ -3801,7 +3824,9 @@ struct MushafPageTextView: UIViewRepresentable {
     /// subview rather than as text: the fit/justification pipeline composes the page PLAIN and transplants
     /// its tracking runs onto the colored compose BY CHARACTER INDEX, so inserting so much as one glyph into
     /// the colored pass would slide every index after it out of alignment.
-    var bookmarked: [(surahID: Int, ayahID: Int)] = []
+    /// `highlight` is the highlighter's color when the bookmark carries one: it paints the badge AND washes
+    /// the ayah's range on the page, so the mark you left in the list reader is the same mark you see here.
+    var bookmarked: [(surahID: Int, ayahID: Int, highlight: AyahHighlightColor?)] = []
     /// Forced distance from each line fragment's top to its baseline - see `MushafRenderedPage.baselineOffset`.
     var baselineOffset: CGFloat = 0
     /// Fragment heights the forced baseline applies to (running text lines, not headings).
@@ -3869,9 +3894,21 @@ struct MushafPageTextView: UIViewRepresentable {
             }
         }()
 
-        guard !tints.isEmpty || termTarget != nil || searchIsActive else { return text }
+        // The highlighter's standing washes, resolved before the momentary tints so those paint OVER them:
+        // the reciting/marked/selected tint has to win on the ayah it is on, exactly as it does in the list
+        // reader, and the highlight comes back when it moves away.
+        let highlightWashes: [(NSRange, UIColor)] = bookmarked.compactMap { ref in
+            guard let color = ref.highlight,
+                  let range = range(of: (ref.surahID, ref.ayahID)) else { return nil }
+            return (range, color.pageWashUIColor)
+        }
+
+        guard !tints.isEmpty || !highlightWashes.isEmpty || termTarget != nil || searchIsActive else { return text }
 
         let mutable = NSMutableAttributedString(attributedString: text)
+        for (range, color) in highlightWashes {
+            mutable.addAttribute(.backgroundColor, value: color, range: range)
+        }
         for (range, color) in tints {
             mutable.addAttribute(.backgroundColor, value: UIColor(color).withAlphaComponent(0.22), range: range)
         }
@@ -4016,7 +4053,12 @@ struct MushafPageTextView: UIViewRepresentable {
         let termKey = termHighlight.map { "\($0.surahID):\($0.ayahID):\($0.term)" } ?? ""
         let selectedKey = selected.map { "\($0.surahID):\($0.ayahID)" }.sorted().joined(separator: ",")
         let searchKey = searchHighlight.map { "\($0.term)#\($0.matches.map { "\($0.surahID):\($0.ayahID)" }.joined(separator: ","))" } ?? ""
-        let bookmarkKey = bookmarked.map { "\($0.surahID):\($0.ayahID)" }.sorted().joined(separator: ",")
+        // The color is part of the key: recoloring a highlight changes the page's wash and its badge while
+        // the bookmark set itself is unchanged, and without the color that repaint would be skipped.
+        let bookmarkKey = bookmarked
+            .map { "\($0.surahID):\($0.ayahID):\($0.highlight?.rawValue ?? "")" }
+            .sorted()
+            .joined(separator: ",")
         let highlightKey = "\(key(highlight))|\(playingSurahID.map(String.init) ?? "")|\(key(mark))|\(termKey)|\(selectedKey)|\(searchKey)|\(bookmarkKey)"
         if context.coordinator.lastAssignedText === attributed,
            context.coordinator.lastHighlightKey == highlightKey,
@@ -4080,7 +4122,9 @@ struct MushafPageTextView: UIViewRepresentable {
         /// is the tail of that ayah's range (the composer appends the number last, then records both ranges).
         /// The badge is a plain non-interactive subview: it must not intercept the taps and presses that
         /// select the ayah underneath it.
-        func updateBookmarkBadges(_ refs: [(surahID: Int, ayahID: Int)], color: UIColor) {
+        /// `color` is the fallback for a plain bookmark; a highlighted one paints in its own color instead.
+        func updateBookmarkBadges(_ refs: [(surahID: Int, ayahID: Int, highlight: AyahHighlightColor?)],
+                                  color: UIColor) {
             for badge in bookmarkBadges { badge.removeFromSuperview() }
             bookmarkBadges.removeAll()
 
@@ -4132,7 +4176,7 @@ struct MushafPageTextView: UIViewRepresentable {
                 guard let image else { continue }
 
                 let badge = UIImageView(image: image)
-                badge.tintColor = color
+                badge.tintColor = ref.highlight.map { UIColor($0.color) } ?? color
                 badge.contentMode = .scaleAspectFit
                 badge.isUserInteractionEnabled = false
                 // `rect` is the LINE BOX, whose top sits well above the ornament's ink (the composer leads

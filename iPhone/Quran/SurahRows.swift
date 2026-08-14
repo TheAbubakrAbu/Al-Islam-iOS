@@ -530,7 +530,16 @@ struct SurahAyahRow: View, Equatable {
     }
 
     private var isBookmarked: Bool {
-        settings.bookmarkedAyahs.contains { $0.surah == surah.id && $0.ayah == ayah.id }
+        // Through the indexed accessor, not a scan of the list: this row renders in the bookmarks list,
+        // the histories, and the search results, all of which mount many of it at once.
+        settings.isBookmarked(surah: surah.id, ayah: ayah.id)
+    }
+
+    /// A highlighted ayah's bookmark carries the highlight's color into every list that shows it - the
+    /// bookmarks list, the histories, the search results - so the color is a property of the SAVED ayah
+    /// rather than something that only exists on the page you highlighted it on.
+    private var bookmarkTint: Color {
+        settings.bookmarkHighlight(surah: surah.id, ayah: ayah.id)?.color ?? settings.accentColor.color
     }
 
     private func toggleBookmarkWithNoteGuard() {
@@ -600,7 +609,7 @@ struct SurahAyahRow: View, Equatable {
                         #endif
                         .conditionalGlassEffect(
                             useColor: isBookmarked ? 0.3 : nil,
-                            customTint: isBookmarked ? settings.accentColor.color : nil,
+                            customTint: isBookmarked ? bookmarkTint : nil,
                             interactive: false
                         )
                         .onTapGesture {
@@ -611,7 +620,7 @@ struct SurahAyahRow: View, Equatable {
                     if isBookmarked {
                         Image(systemName: "bookmark.fill")
                             .font(.caption2)
-                            .foregroundStyle(settings.accentColor.color)
+                            .foregroundStyle(bookmarkTint)
                             .padding(4)
                             .offset(x: 8, y: -6)
                     }
@@ -719,7 +728,7 @@ struct SurahAyahRow: View, Equatable {
         .overlay(alignment: .topTrailing) {
             Image(systemName: isBookmarked ? "bookmark.fill" : "bookmark")
                 .font(.system(size: 11, weight: .semibold))
-                .foregroundColor(isBookmarked ? settings.accentColor.color : .secondary)
+                .foregroundColor(isBookmarked ? bookmarkTint : .secondary)
                 // Same fix as `gridFavoriteStar`: the target is a 30pt square centered on the GLYPH.
                 // The old shape came after the corner paddings and inflated by 10 more, hit-testing a
                 // ~40pt+ zone that swallowed the tile's right side (taps opened the bookmark, not the ayah).
@@ -988,7 +997,13 @@ struct AyahSearchRow: View, Equatable {
     private var isBookmarked: Bool {
         bookmarkedAyahs.contains("\(surah)-\(ayah)")
     }
-    
+
+    /// Same rule as `SurahAyahRow.bookmarkTint`: highlighted ayahs carry their color into the search and
+    /// history rows too, so one saved ayah looks the same wherever it surfaces.
+    private var bookmarkTint: Color {
+        settings.bookmarkHighlight(surah: surah, ayah: ayah)?.color ?? settings.accentColor.color
+    }
+
     private var badgeWidth: CGFloat {
         BadgeWidthCache.width(template: "10:100")
     }
@@ -1034,7 +1049,7 @@ struct AyahSearchRow: View, Equatable {
                 .padding(.vertical, 4)
                 .conditionalGlassEffect(
                     useColor: isBookmarked ? 0.3 : nil,
-                    customTint: isBookmarked ? settings.accentColor.color : nil
+                    customTint: isBookmarked ? bookmarkTint : nil
                 )
                 .onTapGesture {
                     settings.hapticFeedback()
@@ -1044,7 +1059,7 @@ struct AyahSearchRow: View, Equatable {
             if isBookmarked {
                 Image(systemName: "bookmark.fill")
                     .font(.caption2)
-                    .foregroundStyle(settings.accentColor.color)
+                    .foregroundStyle(bookmarkTint)
                     .padding(4)
                     .offset(x: 8, y: -6)
             }

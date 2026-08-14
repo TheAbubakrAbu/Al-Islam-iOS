@@ -2725,6 +2725,7 @@ struct SurahView: View {
                                  systemImage: allSelectedBookmarked ? "bookmark.fill" : "bookmark") {
                     bulkToggleBookmarks()
                 }
+                bulkHighlightMenu
                 bulkActionButton("Note", systemImage: "square.and.pencil") {
                     bulkNoteDraft = ""
                     showBulkNoteSheet = true
@@ -2749,26 +2750,84 @@ struct SurahView: View {
         .padding(.bottom, 8)
     }
 
+    /// The one selected color when every selected ayah wears the same one - the bar can then show which
+    /// color the selection is in. A mixed selection has no single answer, so it shows none.
+    private var uniformSelectionHighlight: AyahHighlightColor? {
+        guard let first = selectedAyahs.first,
+              let color = settings.bookmarkHighlight(surah: first.surahID, ayah: first.ayahID) else { return nil }
+        let uniform = selectedAyahs.allSatisfy {
+            settings.bookmarkHighlight(surah: $0.surahID, ayah: $0.ayahID) == color
+        }
+        return uniform ? color : nil
+    }
+
+    /// Highlighting in bulk: one color applied to the whole selection (bookmarking whatever wasn't saved,
+    /// same as the per-ayah rule). Deliberately NOT a toggle - with a mixed selection there is no sensible
+    /// "off", so clearing is its own row and only appears when something in the selection is highlighted.
+    private var bulkHighlightMenu: some View {
+        let selected = uniformSelectionHighlight
+        let anyHighlighted = selectedAyahs.contains { settings.isAyahHighlighted(surah: $0.surahID, ayah: $0.ayahID) }
+
+        return Menu {
+            ForEach(AyahHighlightColor.allCases) { color in
+                Button {
+                    settings.hapticFeedback()
+                    withAnimation(.easeInOut) {
+                        for ref in selectedAyahs {
+                            settings.setBookmarkHighlight(surah: ref.surahID, ayah: ref.ayahID, color: color)
+                        }
+                    }
+                } label: {
+                    Label { Text(color.title) } icon: { color.swatchImage(selected: selected == color) }
+                }
+            }
+
+            if anyHighlighted {
+                Divider()
+
+                Button(role: .destructive) {
+                    settings.hapticFeedback()
+                    withAnimation(.easeInOut) {
+                        for ref in selectedAyahs {
+                            settings.setBookmarkHighlight(surah: ref.surahID, ayah: ref.ayahID, color: nil)
+                        }
+                    }
+                } label: {
+                    Label("Remove Highlight", systemImage: "highlighter")
+                }
+            }
+        } label: {
+            bulkActionLabel("Highlight", systemImage: "highlighter", tint: selected?.color)
+        }
+        .buttonStyle(.plain)
+    }
+
     private func bulkActionButton(_ title: String, systemImage: String, action: @escaping () -> Void) -> some View {
         Button {
             settings.hapticFeedback()
             action()
         } label: {
-            VStack(spacing: 3) {
-                Image(systemName: systemImage)
-                    .font(.body.weight(.semibold))
-
-                Text(title)
-                    .font(.system(size: 10, weight: .semibold))
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.7)
-            }
-            .foregroundColor(settings.accentColor.color)
-            .frame(maxWidth: .infinity)
-            // The whole equal-width slot is tappable, not just the glyph's own ink.
-            .contentShape(Rectangle())
+            bulkActionLabel(title, systemImage: systemImage)
         }
         .buttonStyle(.plain)
+    }
+
+    /// Shared by the bar's buttons and its one menu, so a menu slot is the same size and weight as a
+    /// button slot instead of quietly rendering as a differently-metricked label.
+    private func bulkActionLabel(_ title: String, systemImage: String, tint: Color? = nil) -> some View {
+        VStack(spacing: 3) {
+            Image(systemName: systemImage)
+                .font(.body.weight(.semibold))
+
+            Text(title)
+                .font(.system(size: 10, weight: .semibold))
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+        }
+        .foregroundColor(tint ?? settings.accentColor.color)
+        .frame(maxWidth: .infinity)
+        // The whole equal-width slot is tappable, not just the glyph's own ink.
+        .contentShape(Rectangle())
     }
 
     /// The combined text of every selected ayah: reference, Arabic, and whichever translations the reader

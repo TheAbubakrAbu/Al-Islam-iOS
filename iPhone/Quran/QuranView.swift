@@ -815,11 +815,6 @@ struct QuranView: View {
     }
 
     @State private var path: [QuranRoute] = []
-    #if os(iOS)
-    /// Browse by Theme (QSAC topics, ported from Tilawa). Sheet-presented so it can never
-    /// tangle with the reader's path/column navigation.
-    @State private var showThemesSheet = false
-    #endif
     /// Guards the once-per-appearance auto-open of the mushaf when page mode is already on.
     @State private var didAutoOpenMushaf = false
     @State private var selectedRoute: QuranRoute?
@@ -2332,27 +2327,32 @@ struct QuranView: View {
             }
 
             if ThematicTopicsStore.isBundled {
-                Button {
-                    settings.hapticFeedback()
-                    showThemesSheet = true
-                } label: {
-                    HStack {
-                        Image(systemName: "square.grid.2x2")
-                            .foregroundColor(settings.accentColor.color)
-                        Text("Browse by Theme")
-                            .foregroundColor(.primary)
-                        Spacer()
-                        Image(systemName: "chevron.right")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-                }
-                .sheet(isPresented: $showThemesSheet) {
-                    ThemesBrowseSheet { surahID, ayahID in
-                        showThemesSheet = false
+                // A real push (LazyDestination so the topic corpus isn't touched until it's opened),
+                // not a sheet: on iPhone it takes the whole screen, and in the iPad/Mac split it pushes
+                // in the LEFT column, leaving the reader on the right - the hadith chapter grammar.
+                NavigationLink(destination: LazyDestination {
+                    ThemesBrowseView { surahID, ayahID in
                         push(surahID: surahID, ayahID: ayahID)
                     }
+                }) {
+                    HStack(spacing: 12) {
+                        AccentIconChip(systemImage: "square.grid.2x2.fill", size: 30)
+
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text("Browse by Theme")
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundColor(.primary)
+
+                            Text("Find ayahs by what they speak about")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.8)
+                        }
+                    }
+                    .padding(.vertical, 3)
                 }
+                .tint(settings.accentColor.color)
             }
         }
     }
@@ -2361,9 +2361,9 @@ struct QuranView: View {
     @ViewBuilder
     private func bookmarkSection(context: SearchDisplayContext) -> some View {
         if !settings.bookmarkedAyahs.isEmpty && !context.isSearching {
-            let sortedBookmarks = settings.bookmarkedAyahs.sorted {
-                $0.surah == $1.surah ? ($0.ayah < $1.ayah) : ($0.surah < $1.surah)
-            }
+            // Memoized on the bookmark blob - this body re-runs on every player tick while a surah
+            // plays, and it was re-sorting the whole list each time.
+            let sortedBookmarks = settings.bookmarkedAyahsInMushafOrder
             Section(header: bookmarkHeader(count: sortedBookmarks.count)) {
                 if settings.showBookmarks {
                     if settings.gridMode {
@@ -2620,6 +2620,12 @@ struct QuranView: View {
         settings.quranSortDirection == .descending
     }
 
+    /// Cache slot for `orderedQuranSurahs`, keyed by everything the order depends on. The browse list's
+    /// body re-runs on every player tick while a surah plays, and each pass was re-sorting all 114
+    /// surahs and allocating a fresh array - for an order that only changes when the user picks a
+    /// different sort.
+    private static var orderedSurahsCache: (key: String, value: [Surah])?
+
     private func orderedQuranSurahs(showsRevelationOrder: Bool) -> [Surah] {
         // Khatm's Surah grouping is always natural surah order - it reuses the Asc/Desc slot for the
         // Surah/Juz toggle, so `quranSortDirection` (left over from another mode) must not reorder it.
@@ -2629,6 +2635,18 @@ struct QuranView: View {
 
         if settings.quranSortDirection == .surahOrder {
             return quranData.quran
+        }
+
+        // The surah count is in the key so the pre-load empty list can't be cached as the real answer.
+        let cacheKey = [
+            settings.quranSortMode.rawValue,
+            settings.quranSortDirection.rawValue,
+            showsRevelationOrder ? "1" : "0",
+            String(quranData.quran.count)
+        ].joined(separator: "|")
+
+        if let cached = Self.orderedSurahsCache, cached.key == cacheKey {
+            return cached.value
         }
 
         let surahs: [Surah]
@@ -2666,7 +2684,9 @@ struct QuranView: View {
             surahs = quranData.quran
         }
 
-        return usesDescendingQuranSort ? Array(surahs.reversed()) : surahs
+        let ordered = usesDescendingQuranSort ? Array(surahs.reversed()) : surahs
+        Self.orderedSurahsCache = (cacheKey, ordered)
+        return ordered
     }
 
     private func orderedSearchSurahs(_ surahs: [Surah]) -> [Surah] {

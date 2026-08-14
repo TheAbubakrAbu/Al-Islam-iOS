@@ -67,7 +67,7 @@ struct ShareAyahSheet: View {
         return n
     }
 
-    private var surah: Surah? { quranData.quran.first(where: { $0.id == surahNumber }) }
+    private var surah: Surah? { quranData.surah(surahNumber) }
     private var ayah: Ayah? { surah?.ayahs.first(where: { $0.id == ayahNumber }) }
     // Tajweed data is Hafs-only, so it keys off the sheet's riwayah, not the reader's.
     private var isHafsShare: Bool { shareQiraah.isEmpty }
@@ -1255,7 +1255,7 @@ extension ShareAyahSheet {
     ///   you get rather than whatever you last shared as.
     static func copyAyahToPasteboard(surahNumber: Int, ayahNumber: Int, settings: Settings,
                                      quranData: QuranData, mode: ActionMode? = nil) {
-        guard let surah = quranData.quran.first(where: { $0.id == surahNumber }),
+        guard let surah = quranData.surah(surahNumber),
               let ayah = surah.ayahs.first(where: { $0.id == ayahNumber }) else { return }
         // Same rule as the sheet: a non-Hafs reading riwayah always names itself; Hafs follows the saved
         // preference (off by default).

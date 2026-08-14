@@ -23,16 +23,80 @@ struct Juz: Codable, Identifiable, Equatable {
     let endAyah: Int
 }
 
+/// The highlighter's palette. Six hues, chosen to echo the system highlight colors and to read on both
+/// the light and the dark page - the same base hue is reused across themes and only the wash's alpha
+/// changes (`tintOpacity`), because a light-theme wash that reads as a highlight disappears on black.
+///
+/// A highlight is not a separate record: it is a FIELD on `BookmarkedAyah`. Highlighting an ayah
+/// bookmarks it, and the bookmark then wears the highlight's color everywhere it appears - the reader's
+/// bookmark glyph, the mushaf page badge, and the bookmarks list. Removing the bookmark removes the
+/// highlight with it; removing the highlight leaves the (plain, accent-colored) bookmark behind.
+enum AyahHighlightColor: String, Codable, CaseIterable, Identifiable {
+    case yellow, green, blue, pink, orange, purple
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .yellow: return "Yellow"
+        case .green:  return "Green"
+        case .blue:   return "Blue"
+        case .pink:   return "Pink"
+        case .orange: return "Orange"
+        case .purple: return "Purple"
+        }
+    }
+
+    /// The saturated hue: swatches, the bookmark glyph, and the picker's checkmarks.
+    var color: Color {
+        switch self {
+        case .yellow: return Color(red: 1.00, green: 0.84, blue: 0.04)
+        case .green:  return Color(red: 0.20, green: 0.83, blue: 0.47)
+        case .blue:   return Color(red: 0.04, green: 0.52, blue: 1.00)
+        case .pink:   return Color(red: 1.00, green: 0.22, blue: 0.37)
+        case .orange: return Color(red: 1.00, green: 0.62, blue: 0.04)
+        case .purple: return Color(red: 0.75, green: 0.35, blue: 0.95)
+        }
+    }
+
+    /// The wash laid behind the ayah. Dark mode needs more presence to register against the dim page.
+    func tintOpacity(_ scheme: ColorScheme) -> Double {
+        scheme == .dark ? 0.28 : 0.20
+    }
+
+    func tint(_ scheme: ColorScheme) -> Color {
+        color.opacity(tintOpacity(scheme))
+    }
+
+    /// Lenient decode: an unknown stored value (an older build, a future color) resolves to `nil` rather
+    /// than throwing. `bookmarkedAyahs` decodes the whole array with `try?`, so a strict enum field would
+    /// let one bad value silently wipe every bookmark the user has.
+    static func resolve(_ raw: String?) -> AyahHighlightColor? {
+        guard let raw else { return nil }
+        return AyahHighlightColor(rawValue: raw)
+    }
+}
+
 struct BookmarkedAyah: Codable, Identifiable, Equatable, Hashable {
     var id: String { "\(surah)-\(ayah)" }
 
     var surah: Int
     var ayah: Int
     var note: String? = nil
+    /// The highlighter's color, stored raw (not as the enum) so an unrecognized value degrades to "no
+    /// highlight" instead of failing the array's decode - see `AyahHighlightColor.resolve`.
+    var highlightRaw: String? = nil
 
     var hasNote: Bool {
         !(note?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true)
     }
+
+    var highlight: AyahHighlightColor? {
+        get { AyahHighlightColor.resolve(highlightRaw) }
+        set { highlightRaw = newValue?.rawValue }
+    }
+
+    var isHighlighted: Bool { highlight != nil }
 }
 
 struct VerseIndexEntry: Identifiable, Hashable, Codable {

@@ -24,6 +24,9 @@ final class AyahSheetPresence: ObservableObject {
 struct AyahRow: View, Equatable {
     @ObservedObject var settings = Settings.shared
     @ObservedObject var quranData = QuranData.shared
+    /// Only the highlighter's wash reads this: the same hue needs a heavier alpha on the dark page to
+    /// register at all, so the tint is resolved per scheme rather than baked into the palette.
+    @Environment(\.colorScheme) private var colorScheme
     /// NOT @ObservedObject: the player is used only inside action closures plus the one
     /// `isPlayingThis` input below. Observing it re-ran EVERY visible row's body once per ayah while
     /// a surah played (`currentAyahNumber` publishes each advance), bypassing `.equatable()` -
@@ -169,6 +172,17 @@ struct AyahRow: View, Equatable {
     private var isBookmarkedHere: Bool { bookmarkIndex != nil }
     private var currentNote: String {
         settings.bookmarkNoteText(surah: surah.id, ayah: ayah.id)
+    }
+
+    /// This ayah's highlight, read straight from the bookmark record - a highlight has no storage of its
+    /// own, so there is nothing here to keep in sync with the bookmark.
+    private var ayahHighlight: AyahHighlightColor? {
+        bookmark?.highlight
+    }
+
+    /// What the bookmark badge paints with: the highlight's color when there is one, the accent otherwise.
+    private var bookmarkTint: Color {
+        ayahHighlight?.color ?? settings.accentColor.color
     }
 
     private var canCompareEnglishText: Bool {
@@ -628,6 +642,13 @@ struct AyahRow: View, Equatable {
         let showSelectionTint = isSelecting && isSelected
         let showAttentionTint = !isPlayingThis && !isSelecting && (isHighlighted || anyAyahSheetOpen)
 
+        // The highlighter's wash. It is the quietest of the four tints on purpose: the recitation tint,
+        // the selection tint, and the attention tint are all momentary - what the app is doing right now -
+        // while the highlight is a standing mark the user left, and it must not compete with them for the
+        // same row. So a highlighted ayah shows its color only when nothing momentary is on it, and the
+        // color comes back the moment the reciter moves on.
+        let highlightWash = ayahHighlight
+
         ZStack {
             if isPlayingThis || showAttentionTint || showSelectionTint {
                 RoundedRectangle(cornerRadius: 24)
@@ -636,6 +657,11 @@ struct AyahRow: View, Equatable {
                         ? settings.accentColor.color.opacity(settings.defaultView ? 0.15 : 0.25)
                         : Color.secondary.opacity(0.18)
                     )
+                    .padding(.horizontal, -12)
+                    .padding(.vertical, ayahHighlightBackgroundVerticalPadding)
+            } else if let highlightWash {
+                RoundedRectangle(cornerRadius: 24)
+                    .fill(highlightWash.tint(colorScheme))
                     .padding(.horizontal, -12)
                     .padding(.vertical, ayahHighlightBackgroundVerticalPadding)
             }
@@ -651,7 +677,7 @@ struct AyahRow: View, Equatable {
                         .minimumScaleFactor(0.5)
                         .conditionalGlassEffect(
                             useColor: isBookmarked ? 0.3 : nil,
-                            customTint: isBookmarked ? settings.accentColor.color : nil,
+                            customTint: isBookmarked ? bookmarkTint : nil,
                             interactive: false
                         )
                         .onTapGesture {
@@ -664,9 +690,12 @@ struct AyahRow: View, Equatable {
                         // to now shows both, instead of the bookmark silently hiding the speaker.
                         .overlay(alignment: .topTrailing) {
                             if isBookmarked {
+                                // The bookmark wears the highlight's color when the ayah is highlighted,
+                                // and the accent when it isn't - so the color you picked is visible from
+                                // the row's badge alone, without reading the wash behind the text.
                                 Image(systemName: "bookmark.fill")
                                     .font(.caption2)
-                                    .foregroundStyle(settings.accentColor.color)
+                                    .foregroundStyle(bookmarkTint)
                                     .padding(4)
                                     .offset(x: 8, y: -6)
                             }

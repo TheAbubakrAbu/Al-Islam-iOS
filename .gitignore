@@ -4,6 +4,7 @@
 # Xcode
 xcuserdata/
 DerivedData/
+Resources/Packages/adhan-swift-main/build/
 
 # Tajweed extraction pipeline: intermediate per-page ink data and per-riwayah
 # stage-2 results. Regenerable from the PDFs (run_all_stage1.sh + tj_stage2_v3.py);

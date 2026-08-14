@@ -30,6 +30,9 @@ final class ThematicTopicsStore: @unchecked Sendable {
 
     private let lock = NSLock()
     private var cached: [ThemeTopic]?
+    /// The grouped browse list, built once. The topics never change after load, and the browse screen's
+    /// body used to re-group all 323 of them (dictionary + order walk) on every render pass.
+    private var groupedCache: [(domain: String, topics: [ThemeTopic])]?
     private var loadFailed = false
 
     static let isBundled: Bool = ThemesPack.url("ThematicTopics") != nil
@@ -52,8 +55,13 @@ final class ThematicTopicsStore: @unchecked Sendable {
         return []
     }
 
-    /// Topics grouped for the browse list, preserving domain order of first appearance.
+    /// Topics grouped for the browse list, preserving domain order of first appearance. Memoized -
+    /// the corpus is immutable after load, so the grouping is computed exactly once.
     func topicsByDomain() -> [(domain: String, topics: [ThemeTopic])] {
+        lock.lock()
+        if let groupedCache { lock.unlock(); return groupedCache }
+        lock.unlock()
+
         var order: [String] = []
         var groups: [String: [ThemeTopic]] = [:]
         for topic in topics() {
@@ -61,7 +69,14 @@ final class ThematicTopicsStore: @unchecked Sendable {
             if groups[domain] == nil { order.append(domain) }
             groups[domain, default: []].append(topic)
         }
-        return order.map { ($0, groups[$0] ?? []) }
+        let grouped = order.map { ($0, groups[$0] ?? []) }
+
+        lock.lock(); defer { lock.unlock() }
+        // Don't cache the empty answer a missing/corrupt pack produces via `topics()` - `loadFailed`
+        // already remembers that case, and caching [] here would also freeze an early call that raced
+        // the pack load.
+        if groupedCache == nil, !grouped.isEmpty { groupedCache = grouped }
+        return groupedCache ?? grouped
     }
 
     private static func load() -> [ThemeTopic]? {
@@ -172,57 +187,74 @@ enum ThemesPack {
 
 // MARK: - Browse by Theme
 
-/// Domains → topics → the topic's ayahs. Self-contained sheet: pushes happen inside its own
-/// NavigationView, and "open in reader" hands the ayah back to QuranView through `onOpenAyah`
-/// (which closes the sheet first) so the reader push uses the tab's own navigation machinery.
-struct ThemesBrowseSheet: View {
+/// Domains → topics → the topic's ayahs.
+///
+/// PUSHED, not presented. It used to be a half-height sheet, which cut a three-level browse (domains,
+/// topics, ayahs) off at the knees - every list arrived pre-scrolled into a letterbox. As a pushed
+/// screen it gets the full height on iPhone, and inside the Quran tab's `NavigationSplitView` it pushes
+/// in the LEFT column exactly as a hadith book's chapters do: the topic list stays on the left while
+/// the ayah you pick opens in the reader on the right.
+///
+/// That is also why this owns no NavigationView of its own - it must inherit whichever column it was
+/// pushed into. "Open in reader" hands the ayah back to QuranView through `onOpenAyah`, which routes it
+/// via `push(surahID:ayahID:)` and therefore does the right thing in both layouts for free.
+struct ThemesBrowseView: View {
     @ObservedObject private var settings = Settings.shared
 
     let onOpenAyah: (Int, Int) -> Void
 
     var body: some View {
-        NavigationView {
-            List {
-                ForEach(ThematicTopicsStore.shared.topicsByDomain(), id: \.domain) { group in
-                    Section(header: Text(group.domain.uppercased())) {
-                        ForEach(group.topics) { topic in
-                            NavigationLink {
-                                ThemeTopicDetailView(topic: topic, onOpenAyah: onOpenAyah)
-                            } label: {
-                                VStack(alignment: .leading, spacing: 4) {
-                                    HStack {
-                                        Text(topic.name)
-                                            .font(.headline)
-                                        Spacer()
-                                        Text("\(topic.ayahs.count)")
-                                            .font(.caption)
-                                            .foregroundColor(.secondary)
-                                    }
-                                    if !topic.description.isEmpty {
-                                        Text(topic.description)
-                                            .font(.caption)
-                                            .foregroundColor(.secondary)
-                                            .lineLimit(2)
-                                    }
-                                }
-                                .padding(.vertical, 2)
-                            }
+        List {
+            ForEach(ThematicTopicsStore.shared.topicsByDomain(), id: \.domain) { group in
+                Section(header: Text(group.domain.uppercased())) {
+                    ForEach(group.topics) { topic in
+                        NavigationLink {
+                            ThemeTopicDetailView(topic: topic, onOpenAyah: onOpenAyah)
+                        } label: {
+                            topicLabel(topic)
                         }
                     }
                 }
-
-                Section(footer:
-                    Text("Topics from the Quran Semantic Annotation Corpus (CC BY 4.0), via Tilawa.")
-                        .font(.caption2)
-                ) { EmptyView() }
             }
-            .applyConditionalListStyle(disableNowPlayingInset: true)
-            .navigationTitle("Browse by Theme")
-            .navigationBarTitleDisplayMode(.inline)
-            .sheetDismissToolbar()
+
+            Section(footer:
+                Text("Topics from the Quran Semantic Annotation Corpus (CC BY 4.0), via Tilawa.")
+                    .font(.caption2)
+            ) { EmptyView() }
         }
-        .navigationViewStyle(.stack)
-        .smallMediumSheetPresentation()
+        .applyConditionalListStyle(disableNowPlayingInset: true)
+        .navigationTitle("Browse by Theme")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+
+    private func topicLabel(_ topic: ThemeTopic) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 8) {
+                Text(topic.name)
+                    .font(.headline)
+
+                Spacer(minLength: 8)
+
+                // The ayah count as a pill rather than bare grey digits - it is the row's one piece of
+                // quantitative information and it reads as a tag, not as trailing punctuation.
+                Text("\(topic.ayahs.count)")
+                    .font(.caption.weight(.semibold).monospacedDigit())
+                    .foregroundStyle(settings.accentColor.color)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .background(
+                        Capsule().fill(settings.accentColor.color.opacity(0.12))
+                    )
+            }
+
+            if !topic.description.isEmpty {
+                Text(topic.description)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .lineLimit(2)
+            }
+        }
+        .padding(.vertical, 2)
     }
 }
 
@@ -256,32 +288,43 @@ private struct ThemeTopicDetailView: View {
     @ViewBuilder
     private func ayahRow(_ key: String) -> some View {
         let parts = key.split(separator: ":").compactMap { Int($0) }
+        // Both lookups indexed: `surah.ayahs.first(where:)` here was a linear walk per row, which on a
+        // 267-ayah topic over Al-Baqarah's 286 ayahs is real per-frame work while the list scrolls.
         if parts.count == 2,
            let surah = quranData.surah(parts[0]),
-           let ayah = surah.ayahs.first(where: { $0.id == parts[1] }) {
+           let ayah = quranData.ayah(surah: parts[0], ayah: parts[1]) {
             VStack(alignment: .leading, spacing: 8) {
-                HStack(spacing: 8) {
-                    Text("\(surah.nameTransliteration) \(parts[0]):\(parts[1])")
-                        .font(.subheadline)
-                        .fontWeight(.semibold)
-                        .foregroundColor(settings.accentColor.color)
-                    Spacer()
-                    Button {
-                        settings.hapticFeedback()
-                        QuranPlayer.shared.playAyah(surahNumber: parts[0], ayahNumber: parts[1])
-                    } label: {
-                        Image(systemName: "play.circle")
-                            .foregroundColor(settings.accentColor.color)
-                    }
-                    .buttonStyle(.plain)
-                }
+                Text("\(surah.nameTransliteration) \(parts[0]):\(parts[1])")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundColor(settings.accentColor.color)
+                    .frame(maxWidth: .infinity, alignment: .leading)
 
-                Text(ayah.textEnglishSaheeh)
+                // The ayah itself, in Arabic, above the translation - the same order and the same
+                // fonts every other ayah list in the app uses (Similar Ayahs is the closest twin).
+                // A topic screen that showed only English was the one place in the Quran tab where
+                // you could read about an ayah without seeing it.
+                Text(ayah.displayArabicText(surahId: surah.id, clean: settings.cleanArabicText, qiraahOverride: ""))
+                    .font(.custom(settings.quranArabicFontName(for: nil), size: CGFloat(settings.fontArabicSize) - 4))
+                    .arabicFontDesign(custom: true)
+                    .multilineTextAlignment(.trailing)
+                    // Both are needed for a long ayah in a List row: the bundled Uthmani face reports a
+                    // line height the row's default sizing truncates against, so without an explicit
+                    // "take the height you need" the ayah stops at two lines and ellipsizes mid-word -
+                    // which on a screen whose whole job is showing you the ayah is the worst possible cut.
+                    .lineLimit(nil)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .frame(maxWidth: .infinity, alignment: .trailing)
+
+                Text(settings.showEnglishMustafa && !settings.showEnglishSaheeh
+                     ? ayah.textEnglishMustafa
+                     : ayah.textEnglishSaheeh)
                     .font(.system(size: CGFloat(settings.englishFontSize)))
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .padding(.vertical, 4)
+            .padding(.vertical, 6)
             .contentShape(Rectangle())
+            // The whole row opens the ayah in the reader. There is deliberately no play button: the
+            // row already has one job, and the reader it opens carries every playback control there is.
             .onTapGesture {
                 settings.hapticFeedback()
                 onOpenAyah(parts[0], parts[1])

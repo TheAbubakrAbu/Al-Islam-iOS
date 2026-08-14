@@ -229,6 +229,10 @@ struct SimilarAyahsSheet: View {
                     .font(.custom(settings.quranArabicFontName(for: nil), size: CGFloat(settings.fontArabicSize) - 4))
                     .arabicFontDesign(custom: true)
                     .multilineTextAlignment(.trailing)
+                    // Same fix as the theme topic rows: without an explicit "take the height you need",
+                    // a long ayah in the bundled Uthmani face stops at two lines and ellipsizes mid-word.
+                    .lineLimit(nil)
+                    .fixedSize(horizontal: false, vertical: true)
                     .frame(maxWidth: .infinity, alignment: .trailing)
 
                 if settings.showEnglishSaheeh || !settings.showEnglishMustafa {

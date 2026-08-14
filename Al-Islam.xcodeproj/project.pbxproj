@@ -166,6 +166,7 @@
 		7294023E2D66FF9800EEC56D /* ViewExtensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72CCAEA12D42DF5700871A6A /* ViewExtensions.swift */; };
 		72A7C0022FB1000000AA1002 /* PrayerTrackerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72A7C0012FB1000000AA1001 /* PrayerTrackerView.swift */; };
 		72A7C0042FB1000000AA1004 /* SettingsHadithView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72A7C0032FB1000000AA1003 /* SettingsHadithView.swift */; };
+		72A7C0062FB1000000AA1006 /* ProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72A7C0052FB1000000AA1005 /* ProfileView.swift */; };
 		72AB5PE22F900000AAA002 /* ArabicSpeech.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72AB5PE12F900000AAA001 /* ArabicSpeech.swift */; };
 		72AB5PE32F900000AAA003 /* ArabicSpeech.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72AB5PE12F900000AAA001 /* ArabicSpeech.swift */; };
 		72AC00042F7E000000AAFC00 /* FastingAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72AC00012F7E000000AAFC00 /* FastingAttributes.swift */; };
@@ -260,6 +261,7 @@
 		72E832AA2F6F52BA0013428B /* WallpaperView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72E832A52F6F52BA0013428B /* WallpaperView.swift */; };
 		72E832AC2F6F52BA0013428B /* TajweedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72E832A22F6F52BA0013428B /* TajweedView.swift */; };
 		72E832AE2F6F52BA0013428B /* DuaView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72E8329C2F6F52BA0013428B /* DuaView.swift */; };
+		72A7C0082FB1000000AA1008 /* DuaSessionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72A7C0072FB1000000AA1007 /* DuaSessionView.swift */; };
 		72E832B02F6F52BA0013428B /* TasbihView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72E832A32F6F52BA0013428B /* TasbihView.swift */; };
 		72E832B12F6F52BA0013428B /* NamesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72E832A02F6F52BA0013428B /* NamesView.swift */; };
 		72E832B22F6F52BA0013428B /* PillarsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72E832A12F6F52BA0013428B /* PillarsView.swift */; };
@@ -554,6 +556,7 @@
 		729115372AF817CF00A4EB2B /* IslamView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = IslamView.swift; sourceTree = "<group>"; };
 		72A7C0012FB1000000AA1001 /* PrayerTrackerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrayerTrackerView.swift; sourceTree = "<group>"; };
 		72A7C0032FB1000000AA1003 /* SettingsHadithView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsHadithView.swift; sourceTree = "<group>"; };
+		72A7C0052FB1000000AA1005 /* ProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileView.swift; sourceTree = "<group>"; };
 		72AA3ABD301FEFB700BAB10E /* Logo.jpg */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; path = Logo.jpg; sourceTree = "<group>"; };
 		72AB5PE12F900000AAA001 /* ArabicSpeech.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArabicSpeech.swift; sourceTree = "<group>"; };
 		72AC00012F7E000000AAFC00 /* FastingAttributes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FastingAttributes.swift; sourceTree = "<group>"; };
@@ -621,6 +624,7 @@
 		72E832992F6F52BA0013428B /* AdhkarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdhkarView.swift; sourceTree = "<group>"; };
 		72E8329B2F6F52BA0013428B /* DateView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DateView.swift; sourceTree = "<group>"; };
 		72E8329C2F6F52BA0013428B /* DuaView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DuaView.swift; sourceTree = "<group>"; };
+		72A7C0072FB1000000AA1007 /* DuaSessionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DuaSessionView.swift; sourceTree = "<group>"; };
 		72E8329E2F6F52BA0013428B /* MasjidView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MasjidView.swift; sourceTree = "<group>"; };
 		72E832A02F6F52BA0013428B /* NamesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NamesView.swift; sourceTree = "<group>"; };
 		72E832A12F6F52BA0013428B /* PillarsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PillarsView.swift; sourceTree = "<group>"; };
@@ -877,6 +881,7 @@
 				72827EA52E3C425300EBA534 /* SettingsAdhanView.swift */,
 				72827EAB2E3C425B00EBA534 /* SettingsQuranView.swift */,
 				72A7C0032FB1000000AA1003 /* SettingsHadithView.swift */,
+				72A7C0052FB1000000AA1005 /* ProfileView.swift */,
 				720DEC5A2D244EEF006EA342 /* CreditsView.swift */,
 				7260F9162A8715D600E8FF87 /* Settings.swift */,
 				728E2EE02E6E017E00F2C24C /* SettingsAdhan.swift */,
@@ -1009,6 +1014,7 @@
 				7ADD181900000000AA0018 /* TajweedTopics.swift */,
 				72E832992F6F52BA0013428B /* AdhkarView.swift */,
 				72E8329C2F6F52BA0013428B /* DuaView.swift */,
+				72A7C0072FB1000000AA1007 /* DuaSessionView.swift */,
 				72E832A32F6F52BA0013428B /* TasbihView.swift */,
 				72E832A02F6F52BA0013428B /* NamesView.swift */,
 				72FA0001AB5F4C7D00000001 /* ZakahView.swift */,
@@ -1604,6 +1610,7 @@
 				72E832AC2F6F52BA0013428B /* TajweedView.swift in Sources */,
 				7ADD181A00000000AA0018 /* TajweedTopics.swift in Sources */,
 				72E832AE2F6F52BA0013428B /* DuaView.swift in Sources */,
+				72A7C0082FB1000000AA1008 /* DuaSessionView.swift in Sources */,
 				72E832B02F6F52BA0013428B /* TasbihView.swift in Sources */,
 				72FA0002AB5F4C7D00000002 /* ZakahView.swift in Sources */,
 				72E832B12F6F52BA0013428B /* NamesView.swift in Sources */,
@@ -1664,6 +1671,7 @@
 				72A7C0022FB1000000AA1002 /* PrayerTrackerView.swift in Sources */,
 				72D4B0022FC2000000AA2002 /* QuranPlannerView.swift in Sources */,
 				72A7C0042FB1000000AA1004 /* SettingsHadithView.swift in Sources */,
+				72A7C0062FB1000000AA1006 /* ProfileView.swift in Sources */,
 				72BE7A032F90000000AAFF03 /* BetaQiraat.swift in Sources */,
 				7BD0000000000000000000B3 /* WordByWord.swift in Sources */,
 				7BE0000000000000000000B1 /* SimilarAyahs.swift in Sources */,

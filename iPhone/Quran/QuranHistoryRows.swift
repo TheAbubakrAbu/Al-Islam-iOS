@@ -102,7 +102,7 @@ struct LastListenedSurahRow: View {
     @State private var confirmDeleteForever = false
 
     var body: some View {
-        guard let surah = quranData.quran.first(where: { $0.id == lastListenedSurah.surahNumber })
+        guard let surah = quranData.surah(lastListenedSurah.surahNumber)
         else { return AnyView(EmptyView()) }
 
         return AnyView(
@@ -185,7 +185,7 @@ struct LastListenedSurahRow: View {
 
                 if showListeningHistory && !quranPlayer.listeningHistory.isEmpty {
                     ForEach(quranPlayer.listeningHistory) { item in
-                        if let historySurah = quranData.quran.first(where: { $0.id == item.surahNumber }) {
+                        if let historySurah = quranData.surah(item.surahNumber) {
                             if let onSelectSurah {
                                 Button {
                                     settings.hapticFeedback()
@@ -817,7 +817,7 @@ struct LastReadAyahRow: View {
             if showReadingHistory && !quranPlayer.readingHistory.isEmpty {
                 ForEach(quranPlayer.readingHistory) { item in
                     let normalizedAyah = max(1, item.ayahNumber)
-                    if let surah = quranData.quran.first(where: { $0.id == item.surahNumber }), let ayah = surah.ayahs.first(where: { $0.id == normalizedAyah }) {
+                    if let surah = quranData.surah(item.surahNumber), let ayah = quranData.ayah(surah: item.surahNumber, ayah: normalizedAyah) {
                         Group {
                             if let onSelectAyah {
                                 Button {

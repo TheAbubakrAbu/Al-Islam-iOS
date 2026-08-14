@@ -76,6 +76,9 @@ struct AyahActionsSheet: View {
 
     private var isBookmarked: Bool { settings.bookmarkIndex(surah: surah.id, ayah: ayah.id) != nil }
     private var currentNote: String { settings.bookmarkNoteText(surah: surah.id, ayah: ayah.id) }
+    private var currentHighlight: AyahHighlightColor? {
+        settings.bookmarkHighlight(surah: surah.id, ayah: ayah.id)
+    }
     private var canShowTafsir: Bool { settings.isHafsDisplay }
     /// The comparison tile is worth showing as soon as either comparison is available.
     private var canCompare: Bool { settings.showQiraahDetails || settings.isHafsDisplay }
@@ -215,8 +218,13 @@ struct AyahActionsSheet: View {
         .buttonStyle(.plain)
     }
 
-    private func actionTileLabel(_ title: String, systemImage: String, destructive: Bool = false) -> some View {
-        VStack(spacing: 5) {
+    private func actionTileLabel(_ title: String, systemImage: String, destructive: Bool = false,
+                                 tint: Color? = nil) -> some View {
+        // `tint` overrides the accent for one tile (the highlighter, showing its color). `destructive`
+        // still wins - a red tile is a warning, and nothing should be able to paint over that.
+        let color = destructive ? Color.red : (tint ?? settings.accentColor.accent1)
+
+        return VStack(spacing: 5) {
             Image(systemName: systemImage)
                 .font(.system(size: 17, weight: .semibold))
 
@@ -226,13 +234,13 @@ struct AyahActionsSheet: View {
                 .lineLimit(2)
                 .minimumScaleFactor(0.7)
         }
-        .foregroundStyle(destructive ? Color.red : settings.accentColor.accent1)
+        .foregroundStyle(color)
         .frame(maxWidth: .infinity)
         .frame(height: 62)
         .contentShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
         .background(
             RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill((destructive ? Color.red : settings.accentColor.accent1).opacity(0.10))
+                .fill(color.opacity(0.10))
         )
     }
 
@@ -241,13 +249,16 @@ struct AyahActionsSheet: View {
     private struct AyahAction: Identifiable {
         /// The two tiles that open a menu instead of firing an action: the repeat count and the comparison
         /// (qiraah vs translation) both need a choice before anything happens.
-        enum Kind { case button, repeatMenu, comparisonMenu }
+        enum Kind { case button, repeatMenu, comparisonMenu, highlightMenu }
 
         let id: String
         let title: String
         let systemImage: String
         var kind: Kind = .button
         var destructive = false
+        /// Paints the tile in the ayah's highlight color instead of the accent - only the highlight tile
+        /// uses it, so the tile shows which color the ayah is wearing without being opened.
+        var tint: Color? = nil
         var action: () -> Void = {}
     }
 
@@ -265,6 +276,16 @@ struct AyahActionsSheet: View {
                         confirmRemoveNote = true
                     }
                 }
+            ),
+            // Next to the bookmark tile, because it is one: picking a color saves the ayah and colors its
+            // bookmark. The tile itself wears the current color, so page mode can answer "what did I mark
+            // this in?" without opening the menu.
+            AyahAction(
+                id: "highlight",
+                title: currentHighlight?.title ?? "Highlight",
+                systemImage: "highlighter",
+                kind: .highlightMenu,
+                tint: currentHighlight?.color
             ),
             AyahAction(
                 id: "note",
@@ -420,6 +441,13 @@ struct AyahActionsSheet: View {
                         }
                     } label: {
                         actionTileLabel(item.title, systemImage: item.systemImage)
+                    }
+
+                case .highlightMenu:
+                    Menu {
+                        ayahHighlightMenuItems(surah: surah.id, ayah: ayah.id, settings: settings)
+                    } label: {
+                        actionTileLabel(item.title, systemImage: item.systemImage, tint: item.tint)
                     }
 
                 case .button:

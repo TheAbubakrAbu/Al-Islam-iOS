@@ -1,6 +1,6 @@
 import SwiftUI
 
-private struct DuaItem: Identifiable {
+struct DuaItem: Identifiable {
     let arabicText: String
     let transliteration: String
     let translation: String
@@ -22,7 +22,7 @@ private struct DuaItem: Identifiable {
     var id: String { "\(reference ?? transliteration)-\(arabicText)" }
 }
 
-private struct DuaCollection: Identifiable {
+struct DuaCollection: Identifiable {
     let title: String
     let subtitle: String
     let systemImage: String
@@ -612,6 +612,15 @@ private struct DuaCollectionView: View {
 
         return List {
             Group {
+            #if os(iOS)
+            // Above the introduction, and only when not searching: a search is a lookup, and the last
+            // thing a lookup wants is an invitation to start a twelve-step walkthrough.
+            if query.isEmpty, !collection.items.isEmpty {
+                Section {
+                    DuaSessionStartButton(collection: collection)
+                }
+            }
+            #endif
             introductionSection
             #if os(iOS)
             if !query.isEmpty, !aiHits.isEmpty {

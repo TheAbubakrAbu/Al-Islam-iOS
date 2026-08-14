@@ -1248,6 +1248,32 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     func surahOpenCount(_ surahID: Int) -> Int { decodeSurahCounts(surahOpenCountsData)[surahID] ?? 0 }
     func surahPlayCount(_ surahID: Int) -> Int { decodeSurahCounts(surahPlayCountsData)[surahID] ?? 0 }
 
+    // The whole map at once. The per-surah accessors above decode the JSON on EVERY call, which is fine
+    // for a surah header (one call, one surah on screen) and quadratic-feeling for anything that wants
+    // all 114 - the profile's totals asked for 228 decodes per pass before these existed.
+    var allSurahOpenCounts: [Int: Int] { decodeSurahCounts(surahOpenCountsData) }
+    var allSurahPlayCounts: [Int: Int] { decodeSurahCounts(surahPlayCountsData) }
+
+    /// A cheap stamp of everything `ProfileStats` derives from, so the profile can skip recomputing when
+    /// nothing it reads has changed. Kept next to the storage it hashes: a new counted thing must be
+    /// added here or the profile will quietly show a stale number.
+    var profileStatsStamp: Int {
+        var hasher = Hasher()
+        hasher.combine(prayerTrackerData)
+        hasher.combine(trackerExemptDaysData)
+        hasher.combine(mensesPauseActive)
+        hasher.combine(mensesPauseStartStamp)
+        hasher.combine(khatmCompletedAyahsData)
+        hasher.combine(quranPlanData)
+        hasher.combine(bookmarkedAyahsData)
+        hasher.combine(favoriteSurahsData)
+        hasher.combine(favoriteReciterIDsData)
+        hasher.combine(surahOpenCountsData)
+        hasher.combine(surahPlayCountsData)
+        hasher.combine(Calendar.current.startOfDay(for: Date()))
+        return hasher.finalize()
+    }
+
     func recordSurahOpened(_ surahID: Int) {
         guard (1...114).contains(surahID) else { return }
         var counts = decodeSurahCounts(surahOpenCountsData)
