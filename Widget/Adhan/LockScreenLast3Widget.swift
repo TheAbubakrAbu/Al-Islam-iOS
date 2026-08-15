@@ -9,12 +9,9 @@ struct LockScreen4EntryView: View {
             if entry.prayers.isEmpty {
                 Text("Open app to get prayer times")
             } else {
-                let prayers = Array(
-                    entry.prayers
-                        .suffix(Int(floor(Double(
-                            entry.prayers.count / 2
-                        ))))
-                )
+                // The remainder of the split its "first" twin takes, so between them the two widgets
+                // show every prayer exactly once - see the note there.
+                let prayers = Array(entry.prayers.dropFirst((entry.prayers.count + 1) / 2))
                 
                 ForEach(prayers) { prayer in
                     HStack {

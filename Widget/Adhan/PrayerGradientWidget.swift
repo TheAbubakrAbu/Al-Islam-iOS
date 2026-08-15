@@ -88,7 +88,7 @@ struct PrayerGradientEntryView: View {
     }
 
     private func mediumBody(current: Prayer, next: Prayer) -> some View {
-        HStack(alignment: .center, spacing: 12) {
+        HStack(alignment: .top, spacing: 12) {
             VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 6) {
                     Image(systemName: current.image)
@@ -112,10 +112,13 @@ struct PrayerGradientEntryView: View {
                     entryDate: entry.date,
                     tint: showsSky ? .white : entry.accentColor.color
                 )
-                .padding(.top, 2)
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
 
+            // Both columns declare full height and top-align, so the "Next:" block starts level
+            // with the prayer name rather than floating at the vertical centre of a much taller
+            // left column. It also gets a width, which it never had - three unconstrained trailing
+            // labels were free to squeeze the countdown beside them.
             VStack(alignment: .trailing, spacing: 4) {
                 Text("Next: \(next.displayName)")
                     .font(.subheadline.weight(.semibold))
@@ -126,12 +129,15 @@ struct PrayerGradientEntryView: View {
                     .font(.subheadline)
                     .opacity(0.9)
 
+                Spacer(minLength: 0)
+
                 Text(hijriDate)
                     .font(.caption2)
                     .opacity(0.75)
                     .lineLimit(1)
                     .minimumScaleFactor(0.6)
             }
+            .frame(maxHeight: .infinity, alignment: .topTrailing)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }

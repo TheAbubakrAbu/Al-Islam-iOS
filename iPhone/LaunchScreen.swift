@@ -377,24 +377,42 @@ struct LaunchLogoCard: View {
 
         ZStack {
             #if os(iOS)
+            // Glass has to be built from opposite materials on the two backgrounds. On black, white at
+            // low opacity IS the glass: the material lifts off the background and the white edge reads
+            // as a lit rim. On white, every one of those cues is nothing - a white edge on white is
+            // invisible, and a near-white material over white has nothing to lift off, which left the
+            // light launch screen looking like the icon floating on a bare page. So light mode gets the
+            // inverse: a faint accent tint so the body isn't the same white as the page, a dark neutral
+            // rim instead of a white one, and a real drop shadow, which is what actually makes a pale
+            // card read as floating rather than painted on.
             RoundedRectangle(cornerRadius: cr, style: .continuous)
                 .fill(.ultraThinMaterial.opacity(isDarkMode ? 0.45 : 0.7))
                 .frame(width: outer, height: outer)
                 .overlay(
+                    // NEUTRAL, not accent. Tinting the body with the accent turned the card into a
+                    // green plate - a color cast reads as painted plastic, where glass reads as a
+                    // faint grey because it is slightly darker than the page behind it.
+                    RoundedRectangle(cornerRadius: cr, style: .continuous)
+                        .fill(Color.black.opacity(isDarkMode ? 0 : 0.05))
+                )
+                .overlay(
                     RoundedRectangle(cornerRadius: cr, style: .continuous)
                         .stroke(
                             LinearGradient(
-                                colors: [
-                                    Color.white.opacity(0.55),
-                                    accentColor.opacity(0.4)
-                                ],
+                                colors: isDarkMode
+                                    ? [Color.white.opacity(0.55), accentColor.opacity(0.4)]
+                                    : [Color.black.opacity(0.20), accentColor.opacity(0.45)],
                                 startPoint: .topLeading,
                                 endPoint: .bottomTrailing
                             ),
                             lineWidth: max(1.2, 1 * s)
                         )
                 )
-                .shadow(color: accentColor.opacity(0.22), radius: 24 * s, y: 10 * s)
+                // The accent halo is dialled DOWN on light, not up: at full strength it swamped the
+                // card in green and became the only thing on screen. It's brand seasoning here; the
+                // neutral shadow below is what actually carries the depth.
+                .shadow(color: accentColor.opacity(isDarkMode ? 0.22 : 0.16), radius: 24 * s, y: 10 * s)
+                .shadow(color: Color.black.opacity(isDarkMode ? 0 : 0.18), radius: 20 * s, y: 10 * s)
                 .overlay(alignment: .topLeading) {
                     RoundedRectangle(cornerRadius: glossCr, style: .continuous)
                         .fill(
@@ -461,8 +479,13 @@ struct LaunchCompanionCard: View {
                 .fill(Color.white.opacity(isDarkMode ? 0.08 : 0.16))
                 #endif
                 .overlay(
+                    // Same white-on-white problem as `LaunchLogoCard` above, same fix: on light the
+                    // rim has to be darker than the page, not lighter.
                     RoundedRectangle(cornerRadius: cornerRadius, style: .continuous)
-                        .stroke(Color.white.opacity(isDarkMode ? 0.12 : 0.24), lineWidth: 1)
+                        .stroke(
+                            isDarkMode ? Color.white.opacity(0.12) : Color.black.opacity(0.12),
+                            lineWidth: 1
+                        )
                 )
 
             Image(imageName)

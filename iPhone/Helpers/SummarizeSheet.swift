@@ -269,11 +269,9 @@ struct SummarizeSheet: View {
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             } else {
-                Text(summary)
-                    .font(.subheadline)
-                    .foregroundStyle(.primary)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .textSelection(.enabled)
+                // A generated summary is read to be quoted from - the drag-selectable text view,
+                // not the modifier that only yields a whole-block copy.
+                SelectableProse(text: summary, textStyle: .subheadline)
             }
 
             Text(multiSource || gatherSource != nil
@@ -331,11 +329,7 @@ struct SummarizeSheet: View {
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 } else {
-                    Text(turn.answer)
-                        .font(.subheadline)
-                        .foregroundStyle(.primary)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .textSelection(.enabled)
+                    SelectableProse(text: turn.answer, textStyle: .subheadline)
                 }
             }
             .padding(12)

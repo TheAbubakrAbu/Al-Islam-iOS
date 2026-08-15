@@ -243,6 +243,11 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.35, execute: work)
     }
 
+    /// Posted by a full erase (`resetAllSettings(keepingContent: false)`) so in-memory stores that live
+    /// outside this file can drop their copies of the user's content. The domain wipe clears what's on
+    /// disk; this clears what's already loaded.
+    static let contentErasedNotification = Notification.Name("alIslamContentErased")
+
     /// Restores every *preference* (appearance, prayer, and Quran options) to its default while keeping the
     /// user's content. We wipe the app's standard-defaults domain - which clears all the `@AppStorage`
     /// preferences in one shot - but first snapshot the content keys and write them back afterward, then
@@ -267,6 +272,10 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
             "hadithLastReadByBook", "hadithSearchHistoryData", "hadithOfTheDayHistory", "hadithBookCounts",
             // Tally counts (and the free counter's custom label, which is the user's own text).
             "tasbihFreeCount", "tasbihPresetCounts", "tasbihFreeLabel",
+            // The achievement ledger. Kept alongside the content it was earned from: the badges are
+            // a record of what the user DID, and wiping them here would silently re-seed the whole
+            // cabinet (dates and all) off data that itself survived the reset.
+            "achievementUnlockedAt", "achievementsSeeded",
             // Only wiped by a full erase: these are stats/history rather than saved items, but they're still
             // the user's, not preferences.
             "surahOpenCountsData", "surahPlayCountsData",
@@ -291,6 +300,11 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
         // the widgets' copy of everything, and the one-shot migration flags. That's what makes it equivalent to
         // deleting and reinstalling the app, rather than just to clearing this process's defaults.
         if !keepingContent {
+            // The badges go with the content they were earned from, and the in-memory ledger has to
+            // be told: it holds a @Published dictionary the domain wipe alone would not touch.
+            // Announced rather than called, because this file also compiles into the widget and
+            // complication targets, which don't ship the achievements module.
+            NotificationCenter.default.post(name: Self.contentErasedNotification, object: nil)
             appGroupUserDefaults?.removePersistentDomain(forName: AppIdentifiers.appGroupSuiteName)
             explicitlySetKeys.removeAll()
             homeLocation = nil

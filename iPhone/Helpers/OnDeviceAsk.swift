@@ -368,11 +368,8 @@ struct AskAnswerCard: View {
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             } else {
-                Text(answer)
-                    .font(.subheadline)
-                    .foregroundStyle(.primary)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .textSelection(.enabled)
+                // See `SummarizeSheet` - an on-device answer is prose worth quoting part of.
+                SelectableProse(text: answer, textStyle: .subheadline)
             }
 
             Text(grounded

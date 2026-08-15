@@ -9,12 +9,10 @@ struct LockScreen3EntryView: View {
             if entry.prayers.isEmpty {
                 Text("Open app to get prayer times")
             } else {
-                let prayers = Array(
-                    entry.prayers
-                        .prefix(Int(floor(Double(
-                            entry.prayers.count / 2
-                        ))))
-                )
+                // Rounded UP so this widget and its "last" twin partition the day between them. The
+                // old `count / 2` dropped the middle prayer from BOTH halves on an odd count, which
+                // traveling mode produces (five slots once Dhuhr/Asr and Maghrib/Isha combine).
+                let prayers = Array(entry.prayers.prefix((entry.prayers.count + 1) / 2))
                 
                 ForEach(prayers) { prayer in
                     HStack {

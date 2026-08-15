@@ -26,7 +26,7 @@ struct LockScreen2EntryView: View {
                 }
 
                 Text("Next: \(nextPrayer.displayName) at \(Text(nextPrayer.time, style: .time))")
-                    .font(.footnote)
+                    .font(.caption2)
 
                 // How far through the current prayer's window we are, filling live from its start to
                 // the next prayer's time.

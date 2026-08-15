@@ -225,7 +225,11 @@ struct PrayerCountdown: View {
             }
         }
         .conditionalGlassEffect()
-        .padding(.vertical, 2)
+        // Symmetric, and only a point: this pads BOTH sides of the bar, and the stack it sits in
+        // already supplies the real separation. Paired with dropping `timeLeftRow`'s `.padding(.top)`
+        // below - that extra top padding was the whole reason the bar sat nearer the row above it
+        // than the caption beneath it.
+        .padding(.vertical, 1)
         #if os(watchOS)
         .padding(.top, 4)
         #endif
@@ -248,7 +252,6 @@ struct PrayerCountdown: View {
         }
         .foregroundStyle(.secondary)
         .frame(maxWidth: .infinity)
-        .padding(.top, 2)
     }
 
     private func handleScenePhaseChange(_ phase: ScenePhase) {

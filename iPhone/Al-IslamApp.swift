@@ -56,6 +56,10 @@ struct AlIslamApp: App {
                 // modifier in the tree, and environment only flows down - the launch-cover gate on the
                 // review sheet was silently inert without this.
                 .environment(\.appRevealed, rootStage == .main)
+                // Watches the stores the badges are thresholds on. The banner itself is NOT hosted
+                // here - it lives in its own window above the app (see `AchievementBannerPresenter`)
+                // so it can still be seen when the thing that earned it happened inside a sheet.
+                .achievementTracking()
                 .onAppear { settings.fetchPrayerTimes() }
                 //.statusBarHidden()
         }
@@ -335,3 +339,4 @@ private struct MainTabView: View {
         }
     }
 }
+

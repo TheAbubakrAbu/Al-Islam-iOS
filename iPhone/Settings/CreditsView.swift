@@ -114,13 +114,11 @@ struct CreditsView: View {
 
     private var storySection: some View {
         Section {
-            Text("""
+            ProseText(text: """
             This app was inspired by my desire to help new reverts and non-Muslims learn about Islam and easily access the Quran and prayer times. I’m deeply grateful to my parents for instilling in me a love for the faith (may Allah reward them).
 
             I also want to express my gratitude to my high school teacher, Mr. Joe Silvey, who, despite not being Muslim, stood with our Muslim Student Association and helped us organize weekly Jumuah prayers.
             """)
-                .font(.body)
-                .multilineTextAlignment(.leading)
 
             let urlText = "https://github.com/TheAbubakrAbu/Al-Islam-iOS"
             if let url = URL(string: urlText) {
@@ -241,9 +239,7 @@ struct CreditsView: View {
 
     private var intentSection: some View {
         Section(header: Text("A NOTE ON INTENT")) {
-            Text("This app is offered as *sadaqah jariyah*, a contribution for the benefit of the Muslim community and anyone building tools to read, learn, and listen to the Quran. If it helps you, please keep the chain of attribution intact and consider contributing improvements back.")
-                .font(.body)
-                .multilineTextAlignment(.leading)
+            ProseText(text: "This app is offered as *sadaqah jariyah*, a contribution for the benefit of the Muslim community and anyone building tools to read, learn, and listen to the Quran. If it helps you, please keep the chain of attribution intact and consider contributing improvements back.")
         }
     }
 

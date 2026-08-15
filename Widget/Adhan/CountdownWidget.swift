@@ -78,7 +78,6 @@ struct CountdownEntryView: View {
                                 tint: accent
                             )
                             .padding(.leading, 6)
-                            .padding(.top, 2)
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(.horizontal, 4)
@@ -136,7 +135,6 @@ struct CountdownEntryView: View {
                                 entryDate: entry.date,
                                 tint: accent
                             )
-                            .padding(.top, 2)
 
                             Spacer()
 

@@ -581,11 +581,11 @@ struct HadithBookView: View {
                             .font(.caption)
                             .foregroundColor(.secondary)
 
-                        // The fuller, authentic orientation to this collection.
-                        Text(book.longDescription)
-                            .font(.footnote)
-                            .foregroundColor(.secondary)
-                            .fixedSize(horizontal: false, vertical: true)
+                        // The fuller, authentic orientation to this collection - selectable,
+                        // because it's the one paragraph on the screen a reader would quote.
+                        SelectableProse(text: book.longDescription,
+                                        textStyle: .footnote,
+                                        secondary: true)
                     }
                     .padding(.vertical, 2)
                 }

@@ -28,7 +28,7 @@ struct GuidesView: View {
             }
             .themedListRowBackground()
         }
-        .applyConditionalListStyle()
+        .selectableArticleList()
         .navigationTitle("How-To Guides")
     }
 
@@ -172,7 +172,7 @@ struct HowToPrayView: View {
             }
             .themedListRowBackground()
         }
-        .applyConditionalListStyle()
+        .selectableArticleList()
         .navigationTitle("How to Pray")
     }
 }
@@ -245,7 +245,7 @@ struct HowToFastView: View {
             }
             .themedListRowBackground()
         }
-        .applyConditionalListStyle()
+        .selectableArticleList()
         .navigationTitle("How to Fast")
     }
 }
@@ -307,7 +307,7 @@ struct HowToZakahView: View {
             }
             .themedListRowBackground()
         }
-        .applyConditionalListStyle()
+        .selectableArticleList()
         .navigationTitle("How to Give Zakah")
     }
 }
@@ -370,7 +370,7 @@ struct HowToHajjView: View {
             }
             .themedListRowBackground()
         }
-        .applyConditionalListStyle()
+        .selectableArticleList()
         .navigationTitle("How to Perform Hajj")
     }
 }
@@ -429,7 +429,7 @@ struct HowToUmrahView: View {
             }
             .themedListRowBackground()
         }
-        .applyConditionalListStyle()
+        .selectableArticleList()
         .navigationTitle("How to Perform Umrah")
     }
 }

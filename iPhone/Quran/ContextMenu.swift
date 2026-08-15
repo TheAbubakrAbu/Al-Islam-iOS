@@ -1382,9 +1382,10 @@ struct SelectAyahTextSheet: View {
     @ViewBuilder
     private func selectableBlock(title: String, text: String, font: Font, isArabic: Bool) -> some View {
         Section {
-            // A real (read-only) UITextView, not `Text(...).textSelection(.enabled)`. Inside a List row, that
-            // modifier loses the press-and-drag to the list's own scroll gesture, so all you ever get is a
-            // whole-block "Copy" on long press - never the partial highlight this sheet exists to provide.
+            // A real (read-only) UITextView, not `Text(...).textSelection(.enabled)` - see the note
+            // on `SelectableTextView` in Helpers/SelectableText.swift for why the modifier can't do
+            // this job inside a List. This sheet was where that was first worked out; the type now
+            // lives in Helpers so the rest of the app's prose can use it too.
             SelectableTextView(
                 text: text,
                 font: resolvedUIFont(font, isArabic: isArabic),
@@ -1436,74 +1437,4 @@ struct SelectAyahTextSheet: View {
     }
 }
 
-/// Read-only, selectable text. `isEditable = false` with `isSelectable = true` gives exactly what is wanted
-/// here: you can drag to highlight any part of the passage and copy it, but you cannot alter a word of it.
-private struct SelectableTextView: UIViewRepresentable {
-    let text: String
-    let font: UIFont
-    let isArabic: Bool
-    let lineSpacing: CGFloat
-
-    /// A non-scrolling text view whose intrinsic height always reflects the CURRENT width's layout.
-    /// The stock view measures once before SwiftUI hands the row its real width (zero width = one
-    /// endless line), and never re-reports - so every block stood one line tall, clipping the text
-    /// and stopping any selection at that single visible line. Re-measure whenever the width moves.
-    final class SelfSizingTextView: UITextView {
-        private var lastMeasuredWidth: CGFloat = 0
-
-        override var intrinsicContentSize: CGSize {
-            let measureWidth = bounds.width > 0 ? bounds.width : UIView.layoutFittingExpandedSize.width
-            let fitted = sizeThatFits(CGSize(width: measureWidth, height: .greatestFiniteMagnitude))
-            return CGSize(width: UIView.noIntrinsicMetric, height: ceil(fitted.height))
-        }
-
-        override func layoutSubviews() {
-            super.layoutSubviews()
-            if abs(bounds.width - lastMeasuredWidth) > 0.5 {
-                lastMeasuredWidth = bounds.width
-                invalidateIntrinsicContentSize()
-            }
-        }
-    }
-
-    func makeUIView(context: Context) -> UITextView {
-        let tv = SelfSizingTextView()
-        tv.isEditable = false
-        tv.isSelectable = true
-        tv.isScrollEnabled = false            // let it size itself; the List scrolls
-        tv.backgroundColor = .clear
-        tv.textContainerInset = .zero
-        tv.textContainer.lineFragmentPadding = 0
-        tv.adjustsFontForContentSizeCategory = false
-        // Without this the text view reports a huge intrinsic width and the row stops wrapping.
-        tv.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
-        tv.setContentHuggingPriority(.required, for: .vertical)
-        return tv
-    }
-
-    func updateUIView(_ tv: UITextView, context: Context) {
-        let paragraph = NSMutableParagraphStyle()
-        paragraph.alignment = isArabic ? .right : .natural
-        paragraph.baseWritingDirection = isArabic ? .rightToLeft : .natural
-        paragraph.lineSpacing = lineSpacing
-
-        tv.attributedText = NSAttributedString(string: text, attributes: [
-            .font: font,
-            .foregroundColor: UIColor.label,
-            .paragraphStyle: paragraph,
-        ])
-        // New text = new height at the same width.
-        tv.invalidateIntrinsicContentSize()
-    }
-
-    /// iOS 16+: answer SwiftUI's size proposal directly with the wrapped height for the proposed
-    /// width, so the row gets the right multi-line height on the FIRST layout pass - no
-    /// invalidation round-trip (the subclass above still covers iOS 15).
-    @available(iOS 16.0, *)
-    func sizeThatFits(_ proposal: ProposedViewSize, uiView: UITextView, context: Context) -> CGSize? {
-        guard let width = proposal.width, width.isFinite, width > 0 else { return nil }
-        let fitted = uiView.sizeThatFits(CGSize(width: width, height: .greatestFiniteMagnitude))
-        return CGSize(width: width, height: ceil(fitted.height))
-    }
-}
 #endif

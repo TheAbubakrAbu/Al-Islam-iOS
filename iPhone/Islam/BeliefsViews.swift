@@ -113,7 +113,7 @@ struct HaramView: View {
             }
             .themedListRowBackground()
         }
-        .applyConditionalListStyle()
+        .selectableArticleList()
         .navigationTitle("Masjid Al-Haram")
     }
 }
@@ -217,7 +217,7 @@ struct NabawiView: View {
             }
             .themedListRowBackground()
         }
-        .applyConditionalListStyle()
+        .selectableArticleList()
         .navigationTitle("Masjid An-Nabawi")
     }
 }
@@ -305,7 +305,7 @@ struct AqsaView: View {
             }
             .themedListRowBackground()
         }
-        .applyConditionalListStyle()
+        .selectableArticleList()
         .navigationTitle("Masjid Al-Aqsa")
     }
 }
@@ -537,7 +537,7 @@ struct WudhuView: View {
             }
             .themedListRowBackground()
         }
-        .applyConditionalListStyle()
+        .selectableArticleList()
         .navigationTitle("How to Make Wudhu")
     }
 }
@@ -641,7 +641,7 @@ struct GhuslView: View {
             }
             .themedListRowBackground()
         }
-        .applyConditionalListStyle()
+        .selectableArticleList()
         .navigationTitle("How to Make Ghusl")
     }
 }
@@ -730,7 +730,7 @@ struct JumuahView: View {
             }
             .themedListRowBackground()
         }
-        .applyConditionalListStyle()
+        .selectableArticleList()
         .navigationTitle("Jumuah")
     }
 }
@@ -866,7 +866,7 @@ struct AdhanOtherView: View {
             }
             .themedListRowBackground()
         }
-        .applyConditionalListStyle()
+        .selectableArticleList()
         .navigationTitle("Adhan")
     }
 }
@@ -977,7 +977,7 @@ struct IqamahView: View {
             }
             .themedListRowBackground()
         }
-        .applyConditionalListStyle()
+        .selectableArticleList()
         .navigationTitle("Iqamah")
     }
 }
@@ -1163,7 +1163,7 @@ struct TakbiratView: View {
             .themedListRowBackground()
         }
         .navigationTitle("How to Pray Eid")
-        .applyConditionalListStyle()
+        .selectableArticleList()
     }
 }
 
@@ -1234,7 +1234,7 @@ struct HijriCalendarView: View {
             .themedListRowBackground()
         }
         .navigationTitle("Hijri Calendar")
-        .applyConditionalListStyle()
+        .selectableArticleList()
     }
 }
 
@@ -1385,7 +1385,7 @@ struct CompileView: View {
             .themedListRowBackground()
         }
         .navigationTitle("Compilation of the Quran")
-        .applyConditionalListStyle()
+        .selectableArticleList()
     }
 }
 
@@ -1490,7 +1490,7 @@ struct TajweedView: View {
             .themedListRowBackground()
         }
         .navigationTitle("Tajweed")
-        .applyConditionalListStyle()
+        .selectableArticleList()
         #if os(iOS)
         .sheet(isPresented: $showTajweedLegend) {
             NavigationView {
@@ -1595,7 +1595,7 @@ struct JuzView: View {
             .themedListRowBackground()
         }
         .navigationTitle("Thirty Juz")
-        .applyConditionalListStyle()
+        .selectableArticleList()
     }
 }
 
@@ -1721,7 +1721,7 @@ struct AhrufView: View {
             .themedListRowBackground()
         }
         .navigationTitle("7 Ahruf (Modes)")
-        .applyConditionalListStyle()
+        .selectableArticleList()
     }
 }
 
@@ -2010,7 +2010,7 @@ struct QiraatView: View {
             .themedListRowBackground()
         }
         .navigationTitle("10 Qiraat (Recitations)")
-        .applyConditionalListStyle()
+        .selectableArticleList()
     }
 
     /// A tappable Instagram handle that opens the creator's profile, used for the infographic credits.
@@ -2094,7 +2094,7 @@ struct FarewellView: View {
             .themedListRowBackground()
         }
         .navigationTitle("Farewell Sermon")
-        .applyConditionalListStyle()
+        .selectableArticleList()
     }
 }
 
@@ -2200,7 +2200,7 @@ struct SahabahView: View {
             .themedListRowBackground()
         }
         .navigationTitle("The Sahabah")
-        .applyConditionalListStyle()
+        .selectableArticleList()
     }
 }
 
@@ -2345,7 +2345,7 @@ struct WivesView: View {
             .themedListRowBackground()
         }
         .navigationTitle("The Wives")
-        .applyConditionalListStyle()
+        .selectableArticleList()
     }
 }
 
@@ -2491,7 +2491,7 @@ struct CaliphatesView: View {
             .themedListRowBackground()
         }
         .navigationTitle("The Caliphates")
-        .applyConditionalListStyle()
+        .selectableArticleList()
     }
 }
 
@@ -2607,7 +2607,7 @@ struct MadhabView: View {
             .themedListRowBackground()
         }
         .navigationTitle("The 4 Madhahib")
-        .applyConditionalListStyle()
+        .selectableArticleList()
     }
 
     /// One imam's entry: a bold name (with the Arabic name), a secondary line of school / region / dates, and a
@@ -2742,7 +2742,7 @@ struct AhlulBaytView: View {
             .themedListRowBackground()
         }
         .navigationTitle("The People of the House")
-        .applyConditionalListStyle()
+        .selectableArticleList()
     }
 }
 
@@ -2856,7 +2856,7 @@ struct AhlusSunnahView: View {
             .themedListRowBackground()
         }
         .navigationTitle("Ahl As-Sunnah")
-        .applyConditionalListStyle()
+        .selectableArticleList()
     }
 }
 
@@ -2946,7 +2946,7 @@ struct SeerahView: View {
             .themedListRowBackground()
         }
         .navigationTitle("The Seerah")
-        .applyConditionalListStyle()
+        .selectableArticleList()
     }
 }
 
@@ -3029,7 +3029,7 @@ struct TafsirView: View {
             .themedListRowBackground()
         }
         .navigationTitle("Tafsir")
-        .applyConditionalListStyle()
+        .selectableArticleList()
     }
 }
 
@@ -3096,7 +3096,7 @@ struct FiqhAqeedahManhajView: View {
             .themedListRowBackground()
         }
         .navigationTitle("Fiqh, Aqeedah, Manhaj")
-        .applyConditionalListStyle()
+        .selectableArticleList()
     }
 }
 

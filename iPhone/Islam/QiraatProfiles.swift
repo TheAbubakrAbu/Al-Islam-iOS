@@ -589,7 +589,7 @@ struct QiraahMasterDetailView: View {
 
                 Section(header: Text("BIOGRAPHY")) {
                     ForEach(profile.paragraphs, id: \.self) { paragraph in
-                        Text(paragraph).font(.body)
+                        ProseText(text: paragraph)
                     }
                 }
 
@@ -600,7 +600,7 @@ struct QiraahMasterDetailView: View {
                 }
 
                 Section(header: Text("CHAIN TO THE COMPANIONS")) {
-                    Text(profile.companions).font(.body)
+                    ProseText(text: profile.companions)
                 }
 
                 Section(header: Text("ITS TWO RIWAYAT")) {
@@ -617,7 +617,7 @@ struct QiraahMasterDetailView: View {
             .themedListRowBackground()
         }
         .navigationTitle(profile.id)
-        .applyConditionalListStyle()
+        .selectableArticleList()
     }
 }
 
@@ -648,7 +648,7 @@ struct RiwayahNarratorDetailView: View {
 
                 Section(header: Text("BIOGRAPHY")) {
                     ForEach(profile.paragraphs, id: \.self) { paragraph in
-                        Text(paragraph).font(.body)
+                        ProseText(text: paragraph)
                     }
                 }
 
@@ -672,7 +672,7 @@ struct RiwayahNarratorDetailView: View {
             .themedListRowBackground()
         }
         .navigationTitle(profile.name)
-        .applyConditionalListStyle()
+        .selectableArticleList()
     }
 }
 

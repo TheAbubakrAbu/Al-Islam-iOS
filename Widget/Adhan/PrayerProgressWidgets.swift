@@ -39,13 +39,16 @@ struct PrayerIntervalProgressBar: View {
             }
             .progressViewStyle(.linear)
             .tint(tint)
-            // Two height problems, two fixes. The system draws this bar THICK (especially the lock
-            // screen's vibrant rendering), and WidgetKit won't live-animate a custom style's fraction -
-            // so the drawn bar is squashed to half thickness instead, keeping the live fill. Then the
-            // frame cap trims the phantom space `ProgressView(timerInterval:)` reserves for its (empty)
-            // labels, which was what squeezed the text rows around it on the ~72pt rectangulars.
+            // The system draws this bar 4pt thick and WidgetKit won't live-animate a custom style's
+            // fraction, so the drawn bar is squashed to half thickness instead, keeping the live fill.
+            //
+            // The frame then has to MATCH the drawn 2pt, not the unsquashed 4pt. Measured on device:
+            // the style's intrinsic height is exactly 4pt with no phantom label space (an older
+            // comment here claimed otherwise), and `scaleEffect` is a paint-time transform that
+            // leaves layout at 4pt - so a 4pt frame reserved a point of dead air above AND below
+            // every bar in the app. At 2pt the reserved slot is exactly the ink.
             .scaleEffect(x: 1, y: 0.5, anchor: .center)
-            .frame(height: 4)
+            .frame(height: 2)
         }
     }
 }
@@ -525,6 +528,12 @@ struct FastingCountdownView: View {
                 .scaleEffect(x: 1, y: 0.5, anchor: .center)
                 .frame(height: 4)
 
+                // Header at the top, footer at the bottom - the same anchoring `PrayerDayView` gets
+                // for free from its greedy arc. Without it these three fixed-height rows clumped in
+                // the vertical middle with a wide dead margin above and below, which is what made
+                // this medium tile read as a different height from the ones beside it.
+                Spacer(minLength: 0)
+
                 HStack {
                     if !entry.currentCity.isEmpty {
                         Image(systemName: "location.fill")
@@ -544,6 +553,7 @@ struct FastingCountdownView: View {
                 .lineLimit(1)
                 .minimumScaleFactor(0.6)
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         } else {
             PrayerWidgetEmptyState(tint: accent, skyStyle: skyStyle)
         }
@@ -716,8 +726,13 @@ struct PrayerListSmallView: View {
         if entry.prayers.isEmpty {
             PrayerWidgetEmptyState(tint: entry.accentColor.color, skyStyle: skyStyle)
         } else {
-            VStack(spacing: 4) {
-                ForEach(entry.prayers) { prayer in
+            // Rows spread across the whole tile instead of clustering in a fixed-spacing stack in
+            // the middle of it - the same fill the other small widgets already do, so a page mixing
+            // them doesn't show one tile's content sitting visibly higher than its neighbour's.
+            VStack(spacing: 0) {
+                ForEach(Array(entry.prayers.enumerated()), id: \.element.id) { index, prayer in
+                    if index > 0 { Spacer(minLength: 2) }
+
                     HStack {
                         Image(systemName: prayer.image)
                             .font(.caption2)
@@ -736,6 +751,7 @@ struct PrayerListSmallView: View {
                     .minimumScaleFactor(0.5)
                 }
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
     }
 }
@@ -780,7 +796,11 @@ struct NextPrayerBoardView: View {
 
     var body: some View {
         if let current = entry.currentPrayer, let next = entry.nextPrayer {
-            HStack(alignment: .center, spacing: 12) {
+            // `.top`, not `.center`: the left column is greedy (the solar arc takes every spare
+            // point) while the right one is only as tall as six caption rows. Centering the short
+            // column against the tall one is what left the list floating in the middle of a
+            // full-height divider, with dead space above Fajr and below Isha.
+            HStack(alignment: .top, spacing: 12) {
                 VStack(alignment: .leading, spacing: 3) {
                     Text("CURRENT")
                         .font(.caption2.weight(.semibold))
@@ -815,13 +835,19 @@ struct NextPrayerBoardView: View {
                         tint: skyStyle ? .white : entry.accentColor.color
                     )
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
 
                 Divider()
                     .background(skyStyle ? Color.white.opacity(0.7) : entry.accentColor.color)
 
-                VStack(spacing: 3) {
-                    ForEach(entry.prayers) { prayer in
+                // Flexible gaps rather than a fixed 3pt stack: the rows spread to span exactly the
+                // height the left column occupies, so Fajr lines up with CURRENT and Isha with the
+                // progress bar. It also self-corrects for a short list - traveling mode combines
+                // Dhuhr/Asr and Maghrib/Isha, and a fixed-spacing 4-row column looked badly adrift.
+                VStack(spacing: 0) {
+                    ForEach(Array(entry.prayers.enumerated()), id: \.element.id) { index, prayer in
+                        if index > 0 { Spacer(minLength: 2) }
+
                         HStack {
                             Image(systemName: prayer.image)
                                 .font(.caption2)
@@ -838,8 +864,9 @@ struct NextPrayerBoardView: View {
                         .foregroundColor(prayerTierColor(for: prayer, in: entry.prayers, entry: entry, skyStyle: skyStyle))
                     }
                 }
-                .frame(maxWidth: .infinity)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
             .lineLimit(1)
             .minimumScaleFactor(0.5)
         } else {

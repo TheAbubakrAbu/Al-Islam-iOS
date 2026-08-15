@@ -305,8 +305,13 @@ struct SplashScreen: View {
                 .stroke(settings.accentColor.color.opacity(0.2), lineWidth: max(1, 1.2 * s))
                 .frame(width: ring, height: ring)
 
+            // The outer halo ring. White on light mode is white on white - invisible, the same trap
+            // the launch card's rim fell into; on light it has to be darker than the page.
             Circle()
-                .stroke(Color.white.opacity(isDarkMode ? 0.14 : 0.2), lineWidth: max(0.8, 1 * s))
+                .stroke(
+                    isDarkMode ? Color.white.opacity(0.14) : Color.black.opacity(0.10),
+                    lineWidth: max(0.8, 1 * s)
+                )
                 .frame(width: ring * 1.2, height: ring * 1.2)
         }
         .offset(y: 10 * s)

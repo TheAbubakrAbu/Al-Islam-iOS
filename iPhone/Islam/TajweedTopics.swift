@@ -403,7 +403,7 @@ struct TajweedMaddView: View {
             }
             .themedListRowBackground()
         }
-        .applyConditionalListStyle()
+        .selectableArticleList()
         .navigationTitle("Madd")
     }
 }
@@ -517,7 +517,7 @@ struct TajweedQalqalahView: View {
             }
             .themedListRowBackground()
         }
-        .applyConditionalListStyle()
+        .selectableArticleList()
         .navigationTitle("Qalqalah")
     }
 }
@@ -751,7 +751,7 @@ struct TajweedIdghamIkhfaView: View {
             }
             .themedListRowBackground()
         }
-        .applyConditionalListStyle()
+        .selectableArticleList()
         .navigationTitle("Noon Sakinah and Tanween")
     }
 }
@@ -920,7 +920,7 @@ struct TajweedMeemSakinahView: View {
             }
             .themedListRowBackground()
         }
-        .applyConditionalListStyle()
+        .selectableArticleList()
         .navigationTitle("Meem Sakinah")
     }
 }
@@ -1029,7 +1029,7 @@ struct TajweedAaridLisSukoonView: View {
             }
             .themedListRowBackground()
         }
-        .applyConditionalListStyle()
+        .selectableArticleList()
         .navigationTitle("4 Sukoon")
     }
 }
@@ -1187,7 +1187,7 @@ struct TajweedHamzatulWaslView: View {
             }
             .themedListRowBackground()
         }
-        .applyConditionalListStyle()
+        .selectableArticleList()
         .navigationTitle("Hamzatul-Wasl")
     }
 }
@@ -1479,7 +1479,7 @@ struct TajweedWaqfView: View {
             }
             .themedListRowBackground()
         }
-        .applyConditionalListStyle()
+        .selectableArticleList()
         .navigationTitle("Waqf")
     }
 }
@@ -1578,7 +1578,7 @@ struct TajweedTopicPlaceholderView: View {
 
     var body: some View {
         List { }
-            .applyConditionalListStyle()
+            .selectableArticleList()
             .navigationTitle(title)
     }
 }

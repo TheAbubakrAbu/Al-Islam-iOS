@@ -12,6 +12,28 @@ struct ScrollCollapseMetrics: Equatable {
     let distanceFromBottom: CGFloat
 }
 
+/// A paragraph of body prose the iPhone reader can drag-select, the way Apple News lets you highlight
+/// part of an article rather than all of it or none.
+///
+/// Declared here rather than beside `SelectableProse` (Helpers/SelectableText.swift, iPhone-only) so
+/// views shared with the Watch app - the qiraat biographies, the credits - can use it too. watchOS has
+/// no text selection and simply gets the plain `Text` it always had.
+struct ProseText: View {
+    let text: String
+    var secondary: Bool = false
+
+    var body: some View {
+        #if os(iOS)
+        SelectableProse(text: text, secondary: secondary)
+        #else
+        Text(text)
+            .font(.body)
+            .foregroundColor(secondary ? .secondary : .primary)
+            .fixedSize(horizontal: false, vertical: true)
+        #endif
+    }
+}
+
 extension View {
     /// Watches this scroll view's direction and drives `collapsed`: true while scrolling down, false on
     /// scroll-up or near either END of the content. Attach to the `List`/`ScrollView` whose bars should
@@ -142,6 +164,29 @@ extension View {
         modifier(ConditionalListStyle(disableNowPlayingInset: disableNowPlayingInset, topContentMargin: topContentMargin))
     }
 
+
+    /// `applyConditionalListStyle()` plus text selection, for the app's ARTICLE screens - the Islam
+    /// tab's explainers, the tajweed topics, the how-to guides, the qiraat biographies.
+    ///
+    /// This is the cheap, broad half of making the app's prose selectable: it costs nothing, changes
+    /// no rendering, and gives every paragraph on the screen at least a long-press "Copy". The
+    /// passages worth quoting precisely use `SelectableProse` (Helpers/SelectableText.swift) on top
+    /// of it, which is what actually allows a partial highlight inside a List - see the note there
+    /// for why the modifier alone can't. SwiftUI doesn't apply text selection to text inside
+    /// controls, so rows that are navigation links or buttons keep behaving as taps.
+    @ViewBuilder
+    func selectableArticleList(disableNowPlayingInset: Bool = false, topContentMargin: CGFloat = 0) -> some View {
+        let styled = applyConditionalListStyle(
+            disableNowPlayingInset: disableNowPlayingInset,
+            topContentMargin: topContentMargin
+        )
+        #if os(iOS)
+        styled.textSelection(.enabled)
+        #else
+        styled
+        #endif
+    }
+
     /// Tints list rows for the Sepia / Gray reading themes. Apply this to the rows/sections INSIDE a `List`
     /// (not to the `List` itself) - `.listRowBackground` only propagates when attached to row content, which
     /// is why the list-level version in `ConditionalListStyle` couldn't color the cells.
@@ -247,9 +292,18 @@ struct AccentGlowOverlay: View {
     /// around the page made the (black) night page read as a separate slab on a green field.
     var verticalReach: CGFloat = 380
 
+    /// Light mode gets the HIGHER opacity, which looks backwards written down but is what parity
+    /// requires: a translucent tint over white barely shifts the pixel, while the same tint over black
+    /// is most of the light in it. At the old matched-ish 0.10 the light-mode wash was invisible - the
+    /// yellow half especially, yellow-on-white being the weakest pairing in the brand palette. 0.26
+    /// against dark's 0.16 reads as the same glow in both; measured side by side, not guessed.
+    private var resolvedStrength: Double {
+        guard !settings.hasCustomThemeColors, settings.showAccentGlow else { return 0 }
+        return (settings.colorScheme ?? systemColorScheme) == .dark ? 0.16 : 0.26
+    }
+
     var body: some View {
-        let strength: Double = (settings.hasCustomThemeColors || !settings.showAccentGlow)
-            ? 0 : ((settings.colorScheme ?? systemColorScheme) == .dark ? 0.16 : 0.10)
+        let strength = resolvedStrength
         let brand = settings.alIslamGlow
 
         // Top-only, by explicit choice (a bottom band was tried and rolled back): the wash lights the

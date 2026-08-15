@@ -9,10 +9,10 @@ import SwiftUI
 /// set, the bookmark list, the surah counters, the hadith store, and the tasbih counters. That is the
 /// whole design rule for this screen - if the app doesn't already know it, the profile doesn't claim it.
 ///
-/// The consequence worth stating: badges need no persistence either (see `AlIslamBadge`). They are
-/// thresholds ON these numbers, so they can never drift out of sync with the thing they celebrate, they
-/// survive a settings reset exactly as far as the underlying content does, and they cost nothing to sync
-/// to the watch or the widgets because there is nothing to sync.
+/// Badges (`AlIslamBadge`, in Achievements.swift) are thresholds ON these numbers, so the cabinet can
+/// never claim something the data doesn't support. The one thing that IS stored is the fact that a
+/// threshold was crossed - see `AchievementsStore` for why that has to be remembered rather than
+/// re-derived.
 struct ProfileStats: Equatable {
     // Prayer - all from the tracker's own engine, so the profile and the tracker can never disagree.
     var prayer = PrayerTrackerStats()
@@ -27,6 +27,8 @@ struct ProfileStats: Equatable {
     var planDoneToday = 0
     var planTarget = 0
     var surahsOpened = 0
+    /// Surahs whose every ayah is marked in the khatm set - "finished", not merely visited.
+    var surahsCompleted = 0
     var totalOpens = 0
     var totalPlays = 0
     var mostReadSurah: (id: Int, count: Int)?
@@ -47,6 +49,11 @@ struct ProfileStats: Equatable {
 
     // Dhikr
     var dhikrTotal = 0
+
+    /// Distinct highlight colors the reader has actually reached for.
+    var highlightColorsUsed: Int {
+        highlightsByColor.reduce(0) { $0 + ($1.value > 0 ? 1 : 0) }
+    }
 
     var khatmFraction: Double {
         khatmTotal > 0 ? min(1, Double(khatmCompleted) / Double(khatmTotal)) : 0
@@ -72,7 +79,8 @@ struct ProfileStats: Equatable {
         l.todayCovered == r.todayCovered && l.todayTrackable == r.todayTrackable &&
         l.khatmCompleted == r.khatmCompleted && l.khatmTotal == r.khatmTotal &&
         l.planStreak == r.planStreak && l.planDoneToday == r.planDoneToday && l.planTarget == r.planTarget &&
-        l.surahsOpened == r.surahsOpened && l.totalOpens == r.totalOpens && l.totalPlays == r.totalPlays &&
+        l.surahsOpened == r.surahsOpened && l.surahsCompleted == r.surahsCompleted &&
+        l.totalOpens == r.totalOpens && l.totalPlays == r.totalPlays &&
         l.mostReadSurah?.id == r.mostReadSurah?.id && l.mostReadSurah?.count == r.mostReadSurah?.count &&
         l.mostPlayedSurah?.id == r.mostPlayedSurah?.id && l.mostPlayedSurah?.count == r.mostPlayedSurah?.count &&
         l.bookmarks == r.bookmarks && l.notes == r.notes && l.highlights == r.highlights &&
@@ -186,6 +194,11 @@ struct ProfileStats: Equatable {
                     stats.mostReadSurah = (surah.id, opens)
                 }
             }
+            // Reads the same per-surah cache the khatm UI does, so "finished" here means exactly what
+            // a filled surah row means over in the reader.
+            if settings.khatmCompletedCount(for: surah) >= surah.numberOfAyahs {
+                stats.surahsCompleted += 1
+            }
             if plays > 0 {
                 stats.totalPlays += plays
                 if plays > (stats.mostPlayedSurah?.count ?? 0) {
@@ -219,167 +232,6 @@ struct ProfileStats: Equatable {
     }
 }
 
-// MARK: - Badges
-
-/// Achievements as pure thresholds on `ProfileStats`. No storage, no unlock event, no "new badge!"
-/// interstitial - a badge is simply true or false about what the app already knows, recomputed every
-/// time the screen opens.
-///
-/// The cost of that choice is honest and worth naming: there is no way to celebrate the MOMENT one is
-/// earned, because nothing records that it wasn't earned before. The benefit is that a badge can never
-/// be wrong - it cannot survive the data that justified it, and it cannot be lost while that data
-/// remains. For an app whose whole posture is "your data never leaves your device and nothing is
-/// invented", that trade is the right way round.
-enum AlIslamBadge: String, CaseIterable, Identifiable {
-    case firstPrayer, weekOfSalah, monthOfSalah, steadfast, perfectTen, perfectHundred
-    case openedTheBook, juzDone, halfway, khatm
-    case collector, annotator, highlighter
-    case listener, devotedListener
-    case hadithReader, hadithScholar
-    case dhikrThousand, dhikrTenThousand
-
-    var id: String { rawValue }
-
-    var title: String {
-        switch self {
-        case .firstPrayer:      return "First Steps"
-        case .weekOfSalah:      return "Week of Salah"
-        case .monthOfSalah:     return "Month of Salah"
-        case .steadfast:        return "Steadfast"
-        case .perfectTen:       return "Ten Perfect Days"
-        case .perfectHundred:   return "A Hundred Perfect Days"
-        case .openedTheBook:    return "Opened the Book"
-        case .juzDone:          return "A Juz' In"
-        case .halfway:          return "Halfway"
-        case .khatm:            return "Khatm"
-        case .collector:        return "Collector"
-        case .annotator:        return "Annotator"
-        case .highlighter:      return "Highlighter"
-        case .listener:         return "Listener"
-        case .devotedListener:  return "Devoted Listener"
-        case .hadithReader:     return "Hadith Reader"
-        case .hadithScholar:    return "Hadith Scholar"
-        case .dhikrThousand:    return "A Thousand Remembrances"
-        case .dhikrTenThousand: return "Ten Thousand Remembrances"
-        }
-    }
-
-    var detail: String {
-        switch self {
-        case .firstPrayer:      return "Mark your first prayer"
-        case .weekOfSalah:      return "A 7-day prayer streak"
-        case .monthOfSalah:     return "A 30-day prayer streak"
-        case .steadfast:        return "A 100-day prayer streak"
-        case .perfectTen:       return "10 days with all five prayers"
-        case .perfectHundred:   return "100 days with all five prayers"
-        case .openedTheBook:    return "Mark your first ayah read"
-        case .juzDone:          return "Read a thirtieth of the Quran"
-        case .halfway:          return "Read half of the Quran"
-        case .khatm:            return "Complete the Quran"
-        case .collector:        return "25 bookmarked ayahs"
-        case .annotator:        return "10 ayahs with notes"
-        case .highlighter:      return "10 highlighted ayahs"
-        case .listener:         return "50 surahs played"
-        case .devotedListener:  return "500 surahs played"
-        case .hadithReader:     return "Start reading 3 hadith books"
-        case .hadithScholar:    return "25 bookmarked hadiths"
-        case .dhikrThousand:    return "1,000 counted on the tasbih"
-        case .dhikrTenThousand: return "10,000 counted on the tasbih"
-        }
-    }
-
-    var systemImage: String {
-        switch self {
-        case .firstPrayer:      return "figure.stand"
-        case .weekOfSalah:      return "calendar"
-        case .monthOfSalah:     return "calendar.badge.clock"
-        case .steadfast:        return "flame.fill"
-        case .perfectTen:       return "checkmark.seal"
-        case .perfectHundred:   return "checkmark.seal.fill"
-        case .openedTheBook:    return "book"
-        case .juzDone:          return "book.closed"
-        case .halfway:          return "book.closed.fill"
-        case .khatm:            return "crown.fill"
-        case .collector:        return "bookmark.fill"
-        case .annotator:        return "note.text"
-        case .highlighter:      return "highlighter"
-        case .listener:         return "headphones"
-        case .devotedListener:  return "headphones.circle.fill"
-        case .hadithReader:     return "text.book.closed"
-        case .hadithScholar:    return "books.vertical.fill"
-        case .dhikrThousand:    return "circle.hexagonpath"
-        case .dhikrTenThousand: return "circle.hexagonpath.fill"
-        }
-    }
-
-    /// The family a badge belongs to, so the grid can group them instead of presenting nineteen
-    /// unrelated tiles.
-    enum Family: String, CaseIterable, Identifiable {
-        case prayer = "Prayer"
-        case quran = "Quran"
-        case library = "Library"
-        case hadith = "Hadith"
-        case dhikr = "Dhikr"
-
-        var id: String { rawValue }
-    }
-
-    var family: Family {
-        switch self {
-        case .firstPrayer, .weekOfSalah, .monthOfSalah, .steadfast, .perfectTen, .perfectHundred:
-            return .prayer
-        case .openedTheBook, .juzDone, .halfway, .khatm, .listener, .devotedListener:
-            return .quran
-        case .collector, .annotator, .highlighter:
-            return .library
-        case .hadithReader, .hadithScholar:
-            return .hadith
-        case .dhikrThousand, .dhikrTenThousand:
-            return .dhikr
-        }
-    }
-
-    /// `(progress, goal)` in the badge's own unit. An unearned badge shows how far along it is, which is
-    /// the only thing that makes a locked tile worth rendering at all.
-    func progress(_ stats: ProfileStats) -> (value: Int, goal: Int) {
-        switch self {
-        case .firstPrayer:      return (stats.prayer.totalPrayed, 1)
-        case .weekOfSalah:      return (max(stats.prayer.currentStreak, stats.prayer.bestStreak), 7)
-        case .monthOfSalah:     return (max(stats.prayer.currentStreak, stats.prayer.bestStreak), 30)
-        case .steadfast:        return (max(stats.prayer.currentStreak, stats.prayer.bestStreak), 100)
-        case .perfectTen:       return (stats.prayer.perfectDays, 10)
-        case .perfectHundred:   return (stats.prayer.perfectDays, 100)
-        case .openedTheBook:    return (stats.khatmCompleted, 1)
-        case .juzDone:          return (stats.khatmCompleted, max(1, stats.khatmTotal / 30))
-        case .halfway:          return (stats.khatmCompleted, max(1, stats.khatmTotal / 2))
-        case .khatm:            return (stats.khatmCompleted, max(1, stats.khatmTotal))
-        case .collector:        return (stats.bookmarks, 25)
-        case .annotator:        return (stats.notes, 10)
-        case .highlighter:      return (stats.highlights, 10)
-        case .listener:         return (stats.totalPlays, 50)
-        case .devotedListener:  return (stats.totalPlays, 500)
-        case .hadithReader:     return (stats.hadithBooksStarted, 3)
-        case .hadithScholar:    return (stats.hadithBookmarks, 25)
-        case .dhikrThousand:    return (stats.dhikrTotal, 1_000)
-        case .dhikrTenThousand: return (stats.dhikrTotal, 10_000)
-        }
-    }
-
-    func isEarned(_ stats: ProfileStats) -> Bool {
-        let (value, goal) = progress(stats)
-        return value >= goal
-    }
-
-    func fraction(_ stats: ProfileStats) -> Double {
-        let (value, goal) = progress(stats)
-        return goal > 0 ? min(1, Double(value) / Double(goal)) : 0
-    }
-
-    static func earned(in stats: ProfileStats) -> [AlIslamBadge] {
-        allCases.filter { $0.isEarned(stats) }
-    }
-}
-
 // MARK: - Entry point
 
 /// The Settings row that opens the profile. Carries live numbers in its caption so the row itself is
@@ -391,6 +243,8 @@ struct ProfileSettingsRow: View {
     /// the count lands - without a subscription the caption's badge tally would stay stale until some
     /// unrelated settings publish happened by.
     @ObservedObject private var hadithStore = HadithStore.shared
+    /// Observed so a badge unlocked elsewhere in the app bumps the caption's tally immediately.
+    @ObservedObject private var achievements = AchievementsStore.shared
 
     private var stats: ProfileStats {
         ProfileStats.current(settings: settings, quranData: quranData)
@@ -404,7 +258,7 @@ struct ProfileSettingsRow: View {
         if stats.khatmCompleted > 0 {
             parts.append("\(Int((stats.khatmFraction * 100).rounded()))% of the Quran")
         }
-        let earned = AlIslamBadge.earned(in: stats).count
+        let earned = achievements.unlockedCount(stats)
         if earned > 0 {
             parts.append("\(earned) badge\(earned == 1 ? "" : "s")")
         }
@@ -447,8 +301,20 @@ struct ProfileView: View {
     @ObservedObject private var hadithUserData = HadithUserData.shared
     /// See `ProfileSettingsRow` - the deferred last-read load must be able to re-render this screen.
     @ObservedObject private var hadithStore = HadithStore.shared
+    @ObservedObject private var achievements = AchievementsStore.shared
 
     @State private var selectedBadge: AlIslamBadge?
+    @State private var badgeFilter: BadgeFilter = .all
+
+    /// The cabinet is large enough now that "what am I close to?" is a different question from "what
+    /// have I done?", and one wall of tiles answers neither well.
+    private enum BadgeFilter: String, CaseIterable, Identifiable {
+        case all = "All"
+        case unlocked = "Earned"
+        case locked = "In Progress"
+
+        var id: String { rawValue }
+    }
 
     private var stats: ProfileStats {
         ProfileStats.current(settings: settings, quranData: quranData)
@@ -571,47 +437,66 @@ struct ProfileView: View {
     }
 
     private func badgesSection(_ stats: ProfileStats) -> some View {
-        let earned = AlIslamBadge.earned(in: stats)
+        let unlockedCount = achievements.unlockedCount(stats)
 
         return ProfileCard(title: "Badges", systemImage: "rosette",
-                           trailing: "\(earned.count) of \(AlIslamBadge.allCases.count)") {
+                           trailing: "\(unlockedCount) of \(AlIslamBadge.allCases.count)") {
             // The whole cabinet at a glance: one thin accent bar under the header, so "how far along
             // am I overall" is answered before any scrolling through the families.
-            ProgressView(value: Double(earned.count), total: Double(AlIslamBadge.allCases.count))
+            ProgressView(value: Double(unlockedCount), total: Double(AlIslamBadge.allCases.count))
                 .progressViewStyle(.linear)
                 .tint(settings.accentColor.color)
                 .padding(.bottom, 2)
 
+            Picker("Show", selection: $badgeFilter) {
+                ForEach(BadgeFilter.allCases) { filter in
+                    Text(filter.rawValue).tag(filter)
+                }
+            }
+            .pickerStyle(.segmented)
+            .padding(.bottom, 2)
+
             ForEach(AlIslamBadge.Family.allCases) { family in
                 let badges = AlIslamBadge.allCases.filter { $0.family == family }
-                let familyEarned = badges.filter { $0.isEarned(stats) }.count
-
-                VStack(alignment: .leading, spacing: 6) {
-                    HStack(alignment: .firstTextBaseline) {
-                        Text(family.rawValue.uppercased())
-                            .font(.caption2.weight(.semibold))
-                            .foregroundStyle(.secondary)
-
-                        Spacer()
-
-                        Text("\(familyEarned)/\(badges.count)")
-                            .font(.caption2.weight(.semibold).monospacedDigit())
-                            .foregroundStyle(familyEarned == badges.count ? AnyShapeStyle(settings.accentColor.color) : AnyShapeStyle(.secondary))
+                let familyUnlocked = achievements.unlockedCount(in: family, stats)
+                let shown = badges.filter { badge in
+                    switch badgeFilter {
+                    case .all:      return true
+                    case .unlocked: return achievements.isUnlocked(badge, stats)
+                    case .locked:   return !achievements.isUnlocked(badge, stats)
                     }
-                    .padding(.top, 4)
+                }
 
-                    LazyVGrid(
-                        columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 3),
-                        spacing: 8
-                    ) {
-                        ForEach(badges) { badge in
-                            Button {
-                                settings.hapticFeedback()
-                                selectedBadge = badge
-                            } label: {
-                                BadgeTile(badge: badge, stats: stats)
+                // A family with nothing matching the filter drops out entirely rather than leaving a
+                // header over an empty grid.
+                if !shown.isEmpty {
+                    VStack(alignment: .leading, spacing: 6) {
+                        HStack(alignment: .firstTextBaseline) {
+                            Text(family.rawValue.uppercased())
+                                .font(.caption2.weight(.semibold))
+                                .foregroundStyle(.secondary)
+
+                            Spacer()
+
+                            Text("\(familyUnlocked)/\(badges.count)")
+                                .font(.caption2.weight(.semibold).monospacedDigit())
+                                .foregroundStyle(familyUnlocked == badges.count ? AnyShapeStyle(settings.accentColor.color) : AnyShapeStyle(.secondary))
+                        }
+                        .padding(.top, 4)
+
+                        LazyVGrid(
+                            columns: Array(repeating: GridItem(.flexible(), spacing: 8), count: 3),
+                            spacing: 8
+                        ) {
+                            ForEach(shown) { badge in
+                                Button {
+                                    settings.hapticFeedback()
+                                    selectedBadge = badge
+                                } label: {
+                                    BadgeTile(badge: badge, stats: stats)
+                                }
+                                .buttonStyle(.plain)
                             }
-                            .buttonStyle(.plain)
                         }
                     }
                 }
@@ -806,11 +691,12 @@ private struct ProfileCard<Content: View>: View {
 
 private struct BadgeTile: View {
     @ObservedObject private var settings = Settings.shared
+    @ObservedObject private var achievements = AchievementsStore.shared
     let badge: AlIslamBadge
     let stats: ProfileStats
 
     var body: some View {
-        let earned = badge.isEarned(stats)
+        let earned = achievements.isUnlocked(badge, stats)
         let tint = earned ? settings.accentColor.color : Color.secondary
 
         VStack(spacing: 5) {
@@ -875,6 +761,7 @@ private struct BadgeTile: View {
 
 private struct BadgeDetailSheet: View {
     @ObservedObject private var settings = Settings.shared
+    @ObservedObject private var achievements = AchievementsStore.shared
     @Environment(\.dismiss) private var dismiss
 
     let badge: AlIslamBadge
@@ -885,7 +772,7 @@ private struct BadgeDetailSheet: View {
     @State private var appeared = false
 
     var body: some View {
-        let earned = badge.isEarned(stats)
+        let earned = achievements.isUnlocked(badge, stats)
         let (value, goal) = badge.progress(stats)
         let tint = earned ? settings.accentColor.color : Color.secondary
 
@@ -896,9 +783,11 @@ private struct BadgeDetailSheet: View {
                         .stroke(settings.accentColor.color.opacity(0.15), lineWidth: 6)
                         .frame(width: 118, height: 118)
 
-                    // Full lap when earned, partial when not - one shape tells both stories.
+                    // Full lap when earned, partial when not - one shape tells both stories. An
+                    // earned badge is pinned full even if the underlying number has since dropped,
+                    // so the ring agrees with the seal beneath it.
                     Circle()
-                        .trim(from: 0, to: appeared ? badge.fraction(stats) : 0)
+                        .trim(from: 0, to: appeared ? (earned ? 1 : badge.fraction(stats)) : 0)
                         .stroke(
                             settings.accentColor.color,
                             style: StrokeStyle(lineWidth: 6, lineCap: .round)
@@ -944,9 +833,19 @@ private struct BadgeDetailSheet: View {
 
                 VStack(spacing: 6) {
                     if earned {
-                        Label("Earned", systemImage: "checkmark.seal.fill")
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(settings.accentColor.color)
+                        // The date is shown only when the ledger actually recorded one. Badges
+                        // adopted at the seed (earned before the ledger existed) carry no date, and
+                        // the sheet stays silent rather than dating them to the upgrade.
+                        if let date = achievements.unlockDate(badge) {
+                            Label("Earned \(date.formatted(date: .abbreviated, time: .omitted))",
+                                  systemImage: "checkmark.seal.fill")
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(settings.accentColor.color)
+                        } else {
+                            Label("Earned", systemImage: "checkmark.seal.fill")
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(settings.accentColor.color)
+                        }
                     }
 
                     // The receipt in the badge's own unit, earned or not - "12,405 of 10,000" is
@@ -954,6 +853,16 @@ private struct BadgeDetailSheet: View {
                     Text("\(value.formatted(.number)) of \(goal.formatted(.number))")
                         .font(.caption.monospacedDigit())
                         .foregroundStyle(.secondary)
+
+                    // An unlocked badge whose number has since fallen back below the line (a prayer
+                    // unmarked, a bookmark deleted) says so instead of letting the two lines
+                    // silently contradict each other.
+                    if earned, !badge.isEarned(stats) {
+                        Text("Kept - once earned, a badge stays earned.")
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                            .multilineTextAlignment(.center)
+                    }
                 }
                 .padding(.horizontal, 40)
 

@@ -169,7 +169,7 @@ struct TajweedFoundationsView: View {
             }
             .themedListRowBackground()
         }
-        .applyConditionalListStyle()
+        .selectableArticleList()
         .navigationTitle("Tajweed Foundations")
         #if os(iOS)
         .sheet(isPresented: $showTajweedLegend) {
@@ -347,7 +347,7 @@ private struct TajweedImprovingRecitationView: View {
             }
             .themedListRowBackground()
         }
-        .applyConditionalListStyle()
+        .selectableArticleList()
         .navigationTitle("Improving Your Recitation")
     }
 }
@@ -407,7 +407,7 @@ private struct TajweedFoundationsTopicView: View {
             }
             .themedListRowBackground()
         }
-        .applyConditionalListStyle()
+        .selectableArticleList()
         .navigationTitle("Lip Movement")
     }
 }
@@ -641,7 +641,7 @@ private struct TajweedInMushafView: View {
             }
             .themedListRowBackground()
         }
-        .applyConditionalListStyle()
+        .selectableArticleList()
         .navigationTitle("Tajweed Hints in the Mushaf")
     }
 }
@@ -885,7 +885,7 @@ private struct TajweedMakharijView: View {
             }
             .themedListRowBackground()
         }
-        .applyConditionalListStyle()
+        .selectableArticleList()
         .navigationTitle("Makhaarij")
     }
 }
@@ -1083,7 +1083,7 @@ private struct TajweedHeavyLightView: View {
             }
             .themedListRowBackground()
         }
-        .applyConditionalListStyle()
+        .selectableArticleList()
         .navigationTitle("Heavy and Light")
     }
 }
@@ -1210,7 +1210,7 @@ private struct TajweedShamsQamarView: View {
             }
             .themedListRowBackground()
         }
-        .applyConditionalListStyle()
+        .selectableArticleList()
         .navigationTitle("Shams and Qamar")
     }
 }

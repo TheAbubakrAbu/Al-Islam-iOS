@@ -25,99 +25,63 @@ struct Prayers2EntryView: View {
                 PrayerWidgetEmptyState(tint: accent, skyStyle: skyStyle)
             } else {
                 if let currentPrayer = entry.currentPrayer, let nextPrayer = entry.nextPrayer {
-                    HStack {
-                        Image(systemName: currentPrayer.image)
-                            .foregroundColor(accent)
-                        
-                        Text(currentPrayer.displayName)
-                            .foregroundColor(accent)
-                            .fontWeight(.bold)
-                        
-                        Spacer()
-                        
+                    // Header and bar grouped at an explicit 6pt rather than left to the outer
+                    // stack's default spacing plus two separate paddings.
+                    VStack(spacing: 6) {
                         HStack {
-                            Spacer()
-                            
-                            Text("Time left: \(nextPrayer.time, style: .timer)")
-                                .font(.subheadline.monospacedDigit())
-                                .frame(alignment: .trailing)
-                                .multilineTextAlignment(.trailing)
-                                .frame(maxWidth: .infinity, alignment: .trailing)
-                        }
-                    }
-                    .font(.headline)
-                    .padding(.vertical, 4)
+                            Image(systemName: currentPrayer.image)
+                                .foregroundColor(accent)
 
-                    PrayerIntervalProgressBar(
-                        current: currentPrayer,
-                        next: nextPrayer,
-                        entryDate: entry.date,
-                        tint: accent
-                    )
-                    .padding(.bottom, 2)
+                            Text(currentPrayer.displayName)
+                                .foregroundColor(accent)
+                                .fontWeight(.bold)
+
+                            Spacer()
+
+                            HStack {
+                                Spacer()
+
+                                Text("Time left: \(nextPrayer.time, style: .timer)")
+                                    .font(.subheadline.monospacedDigit())
+                                    .frame(alignment: .trailing)
+                                    .multilineTextAlignment(.trailing)
+                                    .frame(maxWidth: .infinity, alignment: .trailing)
+                            }
+                        }
+                        .font(.headline)
+
+                        PrayerIntervalProgressBar(
+                            current: currentPrayer,
+                            next: nextPrayer,
+                            entryDate: entry.date,
+                            tint: accent
+                        )
+                    }
+                    .padding(.top, 4)
                 }
                 
                 Spacer()
                 
                 HStack {
-                    let first3Prayers = Array(entry.prayers
-                        .prefix(Int(floor(Double(
-                            entry.prayers.count / 2
-                        )))))
-                    
-                    VStack(spacing: 4) {
-                        ForEach(first3Prayers) { prayer in
-                            HStack {
-                                Image(systemName: prayer.image)
-                                    .frame(width: 10, alignment: .center)
-                                
-                                Text(prayer.displayName)
-                                    .fontWeight(.bold)
-                                    .lineLimit(1)
-                                    .minimumScaleFactor(0.5)
-                                
-                                Spacer()
-                                
-                                Text(prayer.time, style: .time)
-                                    .monospacedDigit()
-                                    .fontWeight(.bold)
-                            }
-                            .foregroundColor(prayerTierColor(for: prayer, in: entry.prayers, entry: entry, skyStyle: skyStyle))
-                            .font(.caption)
-                        }
-                    }
-                    
+                    // Rounded UP, and the second column takes the remainder. The old
+                    // `prefix(count/2)` + `suffix(count/2)` silently DROPPED the middle prayer on an
+                    // odd count - which traveling mode produces (Dhuhr/Asr and Maghrib/Isha combine
+                    // to five slots) - and left the two columns unequal heights on top of that.
+                    let split = (entry.prayers.count + 1) / 2
+                    let leftColumn = Array(entry.prayers.prefix(split))
+                    let rightColumn = Array(entry.prayers.dropFirst(split))
+
+                    prayerColumn(leftColumn)
+
+                    // Stretches to the columns beside it instead of being pinned to 65pt, which was
+                    // right for exactly three default-sized rows and wrong for every other case
+                    // (larger Dynamic Type, or a two-row column).
                     Divider()
                         .background(skyStyle ? Color.white.opacity(0.7) : entry.accentColor.color)
-                        .frame(height: 65)
+                        .frame(maxHeight: .infinity)
                         .padding(.horizontal, 4)
-                    
-                    let last3Prayers = Array(entry.prayers
-                        .suffix(Int(floor(Double(
-                            entry.prayers.count / 2
-                        )))))
-                    
-                    VStack(spacing: 4) {
-                        ForEach(last3Prayers) { prayer in
-                            HStack {
-                                Image(systemName: prayer.image)
-                                    .frame(width: 10, alignment: .center)
-                                
-                                Text(prayer.displayName)
-                                    .fontWeight(.bold)
-                                    .lineLimit(1)
-                                    .minimumScaleFactor(0.5)
-                                
-                                Spacer()
-                                
-                                Text(prayer.time, style: .time)
-                                    .monospacedDigit()
-                                    .fontWeight(.bold)
-                            }
-                            .foregroundColor(prayerTierColor(for: prayer, in: entry.prayers, entry: entry, skyStyle: skyStyle))
-                            .font(.caption)
-                        }
-                    }
+
+                    prayerColumn(rightColumn)
                 }
                 .frame(maxHeight: .infinity)
                 
@@ -146,6 +110,35 @@ struct Prayers2EntryView: View {
             }
         }
         .lineLimit(1)
+    }
+
+    /// One half of the split list. Flexible gaps between rows so a 3-row column and a 2-row column
+    /// still span the same height either side of the divider.
+    private func prayerColumn(_ prayers: [Prayer]) -> some View {
+        VStack(spacing: 0) {
+            ForEach(Array(prayers.enumerated()), id: \.element.id) { index, prayer in
+                if index > 0 { Spacer(minLength: 2) }
+
+                HStack {
+                    Image(systemName: prayer.image)
+                        .frame(width: 10, alignment: .center)
+
+                    Text(prayer.displayName)
+                        .fontWeight(.bold)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.5)
+
+                    Spacer()
+
+                    Text(prayer.time, style: .time)
+                        .monospacedDigit()
+                        .fontWeight(.bold)
+                }
+                .foregroundColor(prayerTierColor(for: prayer, in: entry.prayers, entry: entry, skyStyle: skyStyle))
+                .font(.caption)
+            }
+        }
+        .frame(maxHeight: .infinity)
     }
 }
 

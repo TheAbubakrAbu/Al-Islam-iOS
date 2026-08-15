@@ -923,11 +923,7 @@ struct AyahEnglishComparisonSheet: View {
                     .foregroundStyle(.secondary)
             }
 
-            Text(text)
-                .font(.subheadline)
-                .fixedSize(horizontal: false, vertical: true)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .textSelection(.enabled)
+            SelectableProse(text: text, textStyle: .subheadline)
         }
         .padding(.horizontal)
         .padding(.vertical, 10)

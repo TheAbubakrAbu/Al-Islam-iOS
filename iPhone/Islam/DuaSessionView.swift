@@ -321,6 +321,9 @@ struct DuaSessionView: View {
         .padding(18)
         .frame(maxWidth: .infinity)
         .conditionalGlassEffect(rectangle: true, interactive: false)
+        // The session card is the one dua surface that ISN'T a List row, so the plain modifier gives
+        // real drag-selection here - the Arabic, the transliteration and the translation all.
+        .textSelection(.enabled)
     }
 
     /// The tally. A ring rather than a plain number so a target you set is visible as distance

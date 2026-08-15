@@ -246,6 +246,9 @@ struct SimilarAyahsSheet: View {
                 }
             }
             .padding(.vertical, 6)
+            // Brings these rows in line with `AyahRow`, which has had selection all along - the same
+            // ayah shouldn't be copyable in the reader and inert in the similar-ayahs list.
+            .textSelection(.enabled)
         }
     }
 }

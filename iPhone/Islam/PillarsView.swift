@@ -97,7 +97,12 @@ struct ScriptureQuote: View {
             .font(.title3)
             .foregroundColor(settings.accentColor.color.opacity(dimmed ? 0.85 : 1))
         #if os(iOS)
+        // Kept as a `Text` rather than a `SelectableProse`: the context menu below already covers
+        // "copy the whole quote, citation included", which is what a quote is normally wanted for,
+        // and swapping in a text view per quote would put a UITextView in every article row to
+        // duplicate a path that already works.
         quote
+            .textSelection(.enabled)
             .contextMenu {
                 Text("Copy")
                     .foregroundStyle(.secondary)

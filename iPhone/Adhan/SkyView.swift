@@ -445,12 +445,21 @@ struct SkyView: View {
             let moonReference = scrubber.scrubbedDate ?? selectedDay.date ?? now
             let moonDate = Date(timeIntervalSinceReferenceDate:
                 (moonReference.timeIntervalSinceReferenceDate / 3600).rounded(.down) * 3600)
+            let moonPhase = MoonPhase.on(moonDate)
             HStack(spacing: 6) {
                 MoonPhaseView(date: moonDate, diameter: 20)
 
-                Text(MoonPhase.on(moonDate).name)
+                Text(moonPhase.name)
                     .font(.caption2)
                     .foregroundStyle(.white.opacity(0.75))
+
+                // How lit it actually is, which is the one thing the phase NAME can't tell you -
+                // "Waxing Crescent" spans everything from a fingernail to nearly half. Smaller and
+                // dimmer than the name so it reads as the footnote it is. The glyph beside it is
+                // drawn from this same number, so the row now says in words what it already draws.
+                Text("\(moonPhase.illuminationPercent)% lit")
+                    .font(.system(size: 9, weight: .medium))
+                    .foregroundStyle(.white.opacity(0.55))
             }
             .lineLimit(1)
             .minimumScaleFactor(0.7)

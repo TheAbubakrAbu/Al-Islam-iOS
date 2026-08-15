@@ -114,56 +114,56 @@ struct PrayersEntryView: View {
                     
                     Spacer()
                     
-                    VStack {
+                    // ONE stack with an explicit spacing, so the gap above the bar and the gap below
+                    // it are the same 6pt by construction. It used to be two nested VStacks at their
+                    // DEFAULT spacing with the bar carrying its own vertical padding and the next-
+                    // prayer row carrying a `.padding(.top, -8)` to claw some of it back - three
+                    // numbers that never agreed, which is why the bar sat visibly closer to the row
+                    // above it than the one below.
+                    VStack(spacing: 6) {
                         if let currentPrayer = entry.currentPrayer, let nextPrayer = entry.nextPrayer {
-                            VStack(alignment: .leading) {
-                                HStack {
-                                    Image(systemName: currentPrayer.image)
-                                        .resizable()
-                                        .aspectRatio(contentMode: .fit)
-                                        .frame(width: 22, height: 22)
-                                        .foregroundColor(prayerTint(currentPrayer))
-                                    
-                                    Text(currentPrayer.displayName)
-                                        .font(.title3)
-                                        .foregroundColor(prayerTint(currentPrayer))
-                                    
-                                    Spacer()
-                                    
-                                    Text("Time left: \(nextPrayer.time, style: .timer)")
-                                        .font(.caption.monospacedDigit())
-                                        .padding(.trailing, 2)
-                                }
-                                .padding(.leading, 4)
+                            HStack {
+                                Image(systemName: currentPrayer.image)
+                                    .resizable()
+                                    .aspectRatio(contentMode: .fit)
+                                    .frame(width: 22, height: 22)
+                                    .foregroundColor(prayerTint(currentPrayer))
 
-                                // The current prayer's window filling live, bridging the current row
-                                // above and the next row below.
-                                PrayerIntervalProgressBar(
-                                    current: currentPrayer,
-                                    next: nextPrayer,
-                                    entryDate: entry.date,
-                                    tint: skyStyle ? .white : entry.accentColor.color
-                                )
-                                .padding(.horizontal, 4)
-                                .padding(.vertical, 2)
+                                Text(currentPrayer.displayName)
+                                    .font(.title3)
+                                    .foregroundColor(prayerTint(currentPrayer))
+
+                                Spacer()
+
+                                Text("Time left: \(nextPrayer.time, style: .timer)")
+                                    .font(.caption.monospacedDigit())
+                                    .padding(.trailing, 2)
                             }
+                            .padding(.leading, 4)
 
-                            VStack(alignment: .trailing) {
-                                HStack {
-                                    Text("Starts at \(nextPrayer.time, style: .time)")
-                                        .font(.caption)
-                                    
-                                    Text(nextPrayer.displayName)
-                                        .font(.title3)
-                                        .foregroundColor(prayerTint(nextPrayer))
-                                    
-                                    Image(systemName: nextPrayer.image)
-                                        .resizable()
-                                        .aspectRatio(contentMode: .fit)
-                                        .frame(width: 22, height: 22)
-                                        .foregroundColor(prayerTint(nextPrayer))
-                                }
-                                .padding(.top, -8)
+                            // The current prayer's window filling live, bridging the current row
+                            // above and the next row below.
+                            PrayerIntervalProgressBar(
+                                current: currentPrayer,
+                                next: nextPrayer,
+                                entryDate: entry.date,
+                                tint: skyStyle ? .white : entry.accentColor.color
+                            )
+                            .padding(.horizontal, 4)
+
+                            HStack {
+                                Text("Starts at \(nextPrayer.time, style: .time)")
+                                    .font(.caption)
+
+                                Text(nextPrayer.displayName)
+                                    .font(.title3)
+                                    .foregroundColor(prayerTint(nextPrayer))
+
+                                Image(systemName: nextPrayer.image)
+                                    .resizable()
+                                    .aspectRatio(contentMode: .fit)
+                                    .frame(width: 22, height: 22)
+                                    .foregroundColor(prayerTint(nextPrayer))
                             }
                             .frame(maxWidth: .infinity, alignment: .trailing)
                         }

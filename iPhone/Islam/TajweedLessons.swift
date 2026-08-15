@@ -211,7 +211,7 @@ struct TajweedLessonsView: View {
                     .font(.caption2)
             ) { EmptyView() }
         }
-        .applyConditionalListStyle(disableNowPlayingInset: true)
+        .selectableArticleList(disableNowPlayingInset: true)
         .navigationTitle("Tajweed Lessons")
         .navigationBarTitleDisplayMode(.inline)
     }
@@ -268,8 +268,7 @@ struct TajweedLessonDetailView: View {
 
             Section(header: Text("LESSON")) {
                 ForEach(Array(lesson.body.enumerated()), id: \.offset) { _, paragraph in
-                    Text(paragraph)
-                        .font(.body)
+                    SelectableProse(text: paragraph)
                         .padding(.vertical, 2)
                 }
             }
@@ -302,7 +301,7 @@ struct TajweedLessonDetailView: View {
                 }
             }
         }
-        .applyConditionalListStyle(disableNowPlayingInset: true)
+        .selectableArticleList(disableNowPlayingInset: true)
         .navigationTitle(lesson.titleEn)
         .navigationBarTitleDisplayMode(.inline)
     }

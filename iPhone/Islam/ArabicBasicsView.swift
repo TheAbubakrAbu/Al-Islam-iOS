@@ -23,7 +23,7 @@ struct ArabicBasicsView: View {
             .themedListRowBackground()
 
         }
-        .applyConditionalListStyle()
+        .selectableArticleList()
         .navigationTitle("Basic Grammar")
         .onDisappear {
             ArabicSpeech.shared.stop()

@@ -155,7 +155,7 @@ struct GodPillarView: View {
             }
             .themedListRowBackground()
         }
-        .applyConditionalListStyle()
+        .selectableArticleList()
         .navigationTitle("Does God Exist?")
     }
 }
@@ -271,7 +271,7 @@ struct IslamPillarView: View {
             }
             .themedListRowBackground()
         }
-        .applyConditionalListStyle()
+        .selectableArticleList()
         .navigationTitle("What is Islam?")
     }
 }
@@ -343,7 +343,7 @@ struct MuslimPillarView: View {
             }
             .themedListRowBackground()
         }
-        .applyConditionalListStyle()
+        .selectableArticleList()
         .navigationTitle("What is a Muslim?")
     }
 }
@@ -437,7 +437,7 @@ struct AllahPillarView: View {
             }
             .themedListRowBackground()
         }
-        .applyConditionalListStyle()
+        .selectableArticleList()
         .navigationTitle("Who is Allah?")
     }
 }
@@ -527,7 +527,7 @@ struct QuranPillarView: View {
             }
             .themedListRowBackground()
         }
-        .applyConditionalListStyle()
+        .selectableArticleList()
         .navigationTitle("What is the Quran?")
     }
 }
@@ -640,7 +640,7 @@ struct MuqattaatPillarView: View {
             .themedListRowBackground()
         }
         .navigationTitle("Muqatta'at Letters")
-        .applyConditionalListStyle()
+        .selectableArticleList()
     }
 
     private func muqattaatRow(_ row: MuqattaatRow) -> some View {
@@ -765,7 +765,7 @@ struct ProphetPillarView: View {
             }
             .themedListRowBackground()
         }
-        .applyConditionalListStyle()
+        .selectableArticleList()
         .navigationTitle("Who is the Prophet?")
     }
 }
@@ -843,7 +843,7 @@ struct SunnahPillarView: View {
             }
             .themedListRowBackground()
         }
-        .applyConditionalListStyle()
+        .selectableArticleList()
         .navigationTitle("What is the Sunnah?")
     }
 }
@@ -942,7 +942,7 @@ struct HadithPillarView: View {
             }
             .themedListRowBackground()
         }
-        .applyConditionalListStyle()
+        .selectableArticleList()
         .navigationTitle("What are Hadiths?")
     }
 }
@@ -1066,7 +1066,7 @@ struct ShahadahView: View {
             }
             .themedListRowBackground()
         }
-        .applyConditionalListStyle()
+        .selectableArticleList()
         .navigationTitle("Shahadah")
     }
 }
@@ -1153,7 +1153,7 @@ struct SalahView: View {
             }
             .themedListRowBackground()
         }
-        .applyConditionalListStyle()
+        .selectableArticleList()
         .navigationTitle("Salah")
     }
 }
@@ -1234,7 +1234,7 @@ struct SawmView: View {
             }
             .themedListRowBackground()
         }
-        .applyConditionalListStyle()
+        .selectableArticleList()
         .navigationTitle("Sawm")
     }
 }
@@ -1298,7 +1298,7 @@ struct ZakahView: View {
             }
             .themedListRowBackground()
         }
-        .applyConditionalListStyle()
+        .selectableArticleList()
         .navigationTitle("Zakah")
     }
 }
@@ -1385,7 +1385,7 @@ struct HajjView: View {
             }
             .themedListRowBackground()
         }
-        .applyConditionalListStyle()
+        .selectableArticleList()
         .navigationTitle("Hajj")
     }
 }
@@ -1504,7 +1504,7 @@ struct GodView: View {
             }
             .themedListRowBackground()
         }
-        .applyConditionalListStyle()
+        .selectableArticleList()
         .navigationTitle("Belief in Allah")
     }
 }
@@ -1609,7 +1609,7 @@ struct AngelsView: View {
             }
             .themedListRowBackground()
         }
-        .applyConditionalListStyle()
+        .selectableArticleList()
         .navigationTitle("Belief in the Angels")
     }
 }
@@ -1688,7 +1688,7 @@ struct BooksView: View {
             }
             .themedListRowBackground()
         }
-        .applyConditionalListStyle()
+        .selectableArticleList()
         .navigationTitle("Belief in the Books")
     }
 }
@@ -1804,7 +1804,7 @@ struct ProphetsView: View {
             }
             .themedListRowBackground()
         }
-        .applyConditionalListStyle()
+        .selectableArticleList()
         .navigationTitle("Belief in the Prophets")
     }
 }
@@ -1878,7 +1878,7 @@ struct DayView: View {
             }
             .themedListRowBackground()
         }
-        .applyConditionalListStyle()
+        .selectableArticleList()
         .navigationTitle("Belief in the Last Day")
     }
 }
@@ -1949,7 +1949,7 @@ struct QadarView: View {
             }
             .themedListRowBackground()
         }
-        .applyConditionalListStyle()
+        .selectableArticleList()
         .navigationTitle("Belief in Al-Qadar")
     }
 }
