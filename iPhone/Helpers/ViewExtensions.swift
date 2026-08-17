@@ -264,6 +264,19 @@ enum SafeAreaInsetVStackSpacing {
     }
 }
 
+/// The cushion UNDER a floating bottom bar (above the tab bar / home indicator). On iOS 26 the bar
+/// floats over content and 8pt reads right; pre-26 the same 8pt stacked onto the opaque bar's own
+/// clearance and read as dead space (user report: "a lot of padding on pre iOS 26, fix everywhere"),
+/// so there the bar sits flush on the safe area instead.
+enum BottomBarCushion {
+    static var standard: CGFloat {
+        if #available(iOS 26.0, watchOS 26.0, *) {
+            return 8
+        }
+        return 0
+    }
+}
+
 /// The now-playing bar's narrow seam between shared chrome and whichever module owns playback.
 ///
 /// Lives in HELPERS - not next to QuranPlayer - so shared files never name a Quran type: this is what
@@ -540,7 +553,7 @@ struct ConditionalListStyle: ViewModifier {
                     bar()
                 }
                 .padding(.horizontal, 24)
-                .padding(.bottom, 8)
+                .padding(.bottom, BottomBarCushion.standard)
                 .background(Color.white.opacity(0.00001))
                 .animation(.easeInOut, value: shouldShowNowPlaying)
             }

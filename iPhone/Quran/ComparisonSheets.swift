@@ -181,7 +181,7 @@ struct AyahQiraahComparisonSheet: View {
                 if !duelMode {
                     SearchBar(text: AppPerformance.shouldReduceAnimations ? $searchText : $searchText.animation(.easeInOut), placeholder: "Search riwayat")
                         .padding(.horizontal, 24)
-                        .padding(.bottom, 8)
+                        .padding(.bottom, BottomBarCushion.standard)
                         .background(Color.white.opacity(0.00001))
                 }
             }
@@ -249,6 +249,21 @@ struct AyahQiraahComparisonSheet: View {
     }
     #endif
 
+    /// The beta-text marker, comparison surfaces only (user rule: "say beta for the riwayah in qiraah
+    /// comparison"). The riwayah pickers elsewhere stay unmarked - the riwayah itself is never beta,
+    /// and outside comparison mode its text never renders.
+    @ViewBuilder
+    private func betaBadge(_ option: QiraahDisplay) -> some View {
+        if option.beta {
+            Text("BETA")
+                .font(.caption2.weight(.bold))
+                .foregroundStyle(.orange)
+                .padding(.horizontal, 6)
+                .padding(.vertical, 2)
+                .background(Color.orange.opacity(0.15), in: Capsule())
+        }
+    }
+
     private func currentQiraahHeader(_ option: QiraahDisplay) -> some View {
         let text = qiraahText(for: option)
 
@@ -260,6 +275,8 @@ struct AyahQiraahComparisonSheet: View {
                 Text(option.arabicCaption)
                     .font(.caption)
                     .foregroundColor(settings.accentColor.color)
+
+                betaBadge(option)
 
                 Spacer()
 
@@ -459,10 +476,11 @@ struct AyahQiraahComparisonSheet: View {
                     settings.hapticFeedback()
                     withAnimation(.easeInOut) { choose(option.tag) }
                 } label: {
+                    let title = "\(option.label) - \(option.teacher)\(option.beta ? " (Beta)" : "")"
                     if option.id == selected?.id {
-                        Label("\(option.label) - \(option.teacher)", systemImage: "checkmark")
+                        Label(title, systemImage: "checkmark")
                     } else {
-                        Text("\(option.label) - \(option.teacher)")
+                        Text(title)
                     }
                 }
             }
@@ -505,6 +523,8 @@ struct AyahQiraahComparisonSheet: View {
                 Text(option.arabicCaption)
                     .font(.caption)
                     .foregroundColor(settings.accentColor.color)
+
+                betaBadge(option)
 
                 Spacer()
 
@@ -580,6 +600,8 @@ struct AyahQiraahComparisonSheet: View {
                         accent: settings.accentColor.color,
                         fg: settings.accentColor.color
                     )
+
+                    betaBadge(option)
                 }
 
                 Spacer()
@@ -1010,7 +1032,7 @@ struct AyahEnglishComparisonSheet: View {
         .adaptiveSafeArea(edge: .bottom) {
             SearchBar(text: AppPerformance.shouldReduceAnimations ? $searchText : $searchText.animation(.easeInOut), placeholder: "Search translations")
                 .padding(.horizontal, 24)
-                .padding(.bottom, 8)
+                .padding(.bottom, BottomBarCushion.standard)
                 .background(Color.white.opacity(0.00001))
         }
     }
@@ -1224,12 +1246,13 @@ enum AyahAISources {
         let referenceText = currentOption.flatMap { resolved($0.tag)?.text }
 
         if let currentOption, let referenceText {
-            lines.append("\(currentOption.label) (\(currentOption.teacher)) [CURRENT riwayah]: \(referenceText)")
+            let beta = currentOption.beta ? " [beta text]" : ""
+            lines.append("\(currentOption.label) (\(currentOption.teacher))\(beta) [CURRENT riwayah]: \(referenceText)")
         }
 
         for option in options where option.tag != currentOption?.tag {
             let res = resolved(option.tag)
-            var entry = "\(option.label) (\(option.teacher)): "
+            var entry = "\(option.label) (\(option.teacher))\(option.beta ? " [beta text]" : ""): "
             if let res {
                 entry += res.text
                 if let note = QiraahAyahResolver.numberNote(res) {

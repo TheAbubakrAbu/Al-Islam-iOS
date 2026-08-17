@@ -812,15 +812,28 @@ struct WordByWordTextView: UIViewRepresentable {
             let container = textView.textContainer
             let glyphIndex = layoutManager.glyphIndex(for: location, in: container)
             // `glyphIndex(for:)` returns the NEAREST glyph, so a tap in the empty run at the end of a
-            // line would otherwise "hit" the last word on it. Only accept a point actually inside the
-            // glyph's box (with a little slack for tashkeel ink riding above the line).
+            // line would otherwise "hit" the last word on it. And the glyph's bounding rect spans the
+            // whole LINE FRAGMENT, whose generous Arabic leading meant taps in the air between lines
+            // still opened the word card ("a little too easy to tap" - user report). Accept only the
+            // word's actual text band: the glyph's font line height, centered in its fragment.
             let bounds = layoutManager.boundingRect(
                 forGlyphRange: NSRange(location: glyphIndex, length: 1),
                 in: container
             )
-            guard bounds.insetBy(dx: -2, dy: -6).contains(location) else { return nil }
+            let charIndex = layoutManager.characterIndexForGlyph(at: glyphIndex)
+            let glyphFont = (charIndex < textView.textStorage.length
+                ? textView.textStorage.attribute(.font, at: charIndex, effectiveRange: nil) as? UIFont
+                : nil) ?? textView.font
+            let bandHeight = min(bounds.height, (glyphFont?.lineHeight ?? bounds.height) * 1.15)
+            let band = CGRect(
+                x: bounds.minX - 2,
+                y: bounds.midY - bandHeight / 2,
+                width: bounds.width + 4,
+                height: bandHeight
+            )
+            guard band.contains(location) else { return nil }
 
-            return WordTokens.index(of: layoutManager.characterIndexForGlyph(at: glyphIndex), in: wordRanges)
+            return WordTokens.index(of: charIndex, in: wordRanges)
         }
 
         /// Only claim taps that land ON a word. A tap anywhere else in the text block - the gaps at the
@@ -1012,6 +1025,62 @@ struct TappedWord: Identifiable {
     var id: Int { index }
 }
 
+/// `String.beginnerSpaced`, for a STYLED word: every grapheme cluster re-joined with a plain space,
+/// each keeping the exact attributes painted on it - so the letter-by-letter line below shows the
+/// same tajweed colors the word above carries.
+private func beginnerSpacedStyled(_ styled: AttributedString) -> AttributedString {
+    let ns = NSAttributedString(styled)
+    let full = ns.string as NSString
+    let out = NSMutableAttributedString()
+    var index = 0
+    while index < full.length {
+        let cluster = full.rangeOfComposedCharacterSequence(at: index)
+        if out.length > 0 {
+            // The space inherits the cluster's attributes (minus any wash) so the gap scales with
+            // the letter it follows.
+            var attrs = ns.attributes(at: cluster.location, effectiveRange: nil)
+            attrs.removeValue(forKey: .backgroundColor)
+            out.append(NSAttributedString(string: " ", attributes: attrs))
+        }
+        out.append(ns.attributedSubstring(from: cluster))
+        index = NSMaxRange(cluster)
+    }
+    return AttributedString(out)
+}
+
+/// The beginner block at the BOTTOM of both word cards (user rule: "add a beginner arabic mode option
+/// at the bottom showing each letter"): the exact same word - same tajweed colors, same face - just
+/// with a space between every letter, so a beginner can read it letter by letter.
+private struct BeginnerLettersSection: View {
+    let styled: AttributedString?
+    let word: String
+    let fontName: String
+    let fontSize: CGFloat
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Divider()
+                .padding(.bottom, 4)
+            Text("BEGINNER MODE - LETTER BY LETTER")
+                .font(.caption)
+                .fontWeight(.semibold)
+                .foregroundColor(.secondary)
+            Group {
+                if let styled {
+                    Text(beginnerSpacedStyled(styled))
+                } else {
+                    Text(word.beginnerSpaced)
+                }
+            }
+            .font(.custom(fontName, size: fontSize))
+            .arabicFontDesign(custom: true)
+            .multilineTextAlignment(.center)
+            .frame(maxWidth: .infinity)
+        }
+        .padding(.top, 4)
+    }
+}
+
 /// What one word means. Deliberately small: the word, its meaning, where it sits, and the two things
 /// worth doing with it.
 struct WordMeaningSheet: View {
@@ -1192,6 +1261,13 @@ struct WordMeaningSheet: View {
                             .frame(maxWidth: .infinity, alignment: .leading)
                     }
                     .padding(.top, 4)
+
+                    BeginnerLettersSection(
+                        styled: tajweedStyledWord,
+                        word: word,
+                        fontName: Settings.hafsUthmaniFontName,
+                        fontSize: CGFloat(settings.fontArabicSize) + 8
+                    )
                 }
                 .padding()
             }
@@ -1485,6 +1561,13 @@ struct RiwayahWordSheet: View {
                         }
                     }
                     .padding(.top, 4)
+
+                    BeginnerLettersSection(
+                        styled: styledWord,
+                        word: word,
+                        fontName: riwayahFontName,
+                        fontSize: CGFloat(settings.fontArabicSize) + 8
+                    )
                 }
                 .padding()
             }

@@ -1700,7 +1700,7 @@ struct QuranView: View {
             // The mini player minimizes with the rest of the bars.
             .minimizedBarStyle(barsCollapsed && !isQuranSearchFocused)
             .padding(.horizontal, 24)
-            .padding(.bottom, active ? 8 : 0)
+            .padding(.bottom, active ? BottomBarCushion.standard : 0)
             .background(Color.white.opacity(0.00001))
             .animation(.easeInOut, value: active)
         }
@@ -1739,7 +1739,7 @@ struct QuranView: View {
         // Being value-gated, it never touches the keyboard-driven position changes the strip exists for.
         .animation(.spring(response: 0.35, dampingFraction: 0.85), value: barsCollapsed)
         .padding(.horizontal, 24)
-        .padding(.bottom, 8)
+        .padding(.bottom, BottomBarCushion.standard)
         .background(Color.white.opacity(0.00001))
         // Strip the inherited animation transaction so this bottom bar SNAPS to its keyboard-driven position
         // instead of easing on its own curve. Dismissing the keyboard on scroll fires onFocusChanged →

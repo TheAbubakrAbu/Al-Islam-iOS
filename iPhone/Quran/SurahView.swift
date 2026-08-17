@@ -1491,11 +1491,12 @@ struct SurahView: View {
             // ~604-page UIPageViewController - the single heaviest view realization in the app (~900ms) -
             // on EVERY surah jump. The reader now re-seeds its own page index when `surah.id` changes
             // (see its `.onChange`), keeping the pager alive.
-        } else if settings.displayBetaTextConsentNeeded {
+        } else if settings.displayBetaTextConsentNeeded, settings.qiraatComparisonMode {
             // List mode NEEDS the text, and this riwayah's text hasn't been opted
             // into yet - so the list's place holds the choice itself: read the
             // exact print (flips to page mode, which resolves to the facsimile)
             // or accept the beta text (list renders immediately).
+            // Comparison users only: everyone else never sees the beta pitch (branch below).
             BetaTextConsentCard(
                 riwayahLabel: Settings.Riwayah.option(for: settings.displayQiraah).label,
                 onReadPrint: {
@@ -1504,6 +1505,17 @@ struct SurahView: View {
             )
             .background(AccentGlowOverlay())
             .onAppear { pageSurah = nil }
+        } else if settings.displayBetaTextConsentNeeded {
+            // Comparison mode is off, so the beta text is never even mentioned: a beta riwayah
+            // simply reads as its printed mushaf. Landing here in list mode (a riwayah switch)
+            // flips straight to page mode, where the facsimile takes over (user rule: "even when
+            // switching, don't mention beta text - just PDFs").
+            Color.clear
+                .background(AccentGlowOverlay())
+                .onAppear {
+                    pageSurah = nil
+                    withAnimation(.easeInOut) { settings.quranPageMode = true }
+                }
         } else {
             surahCoreBody
                 // Back in list mode the title is fixed to this view's own surah again.
@@ -2353,7 +2365,7 @@ struct SurahView: View {
                         .animation(.spring(response: 0.35, dampingFraction: 0.85), value: controlsVisible)
                         .padding(.top, active ? SafeAreaInsetVStackSpacing.standard : 0)
                 }
-                .padding(.bottom, 7)
+                .padding(.bottom, BottomBarCushion.standard)
                 .background(Color.white.opacity(0.00001))
                 .animation(.easeInOut, value: active)
                 .animation(.spring(response: 0.35, dampingFraction: 0.85), value: barsCollapsed)
@@ -2564,7 +2576,11 @@ struct SurahView: View {
         // When both the surah header and the page/juz divider are stacked, use a rounded rectangle;
         // a lone header reads better as a capsule.
         .conditionalGlassEffect(rectangle: true)
+        // Symmetric: the pill had 4pt above (under the progress bar / toolbar) and NOTHING below,
+        // so pre-iOS-26 it read as chopped against its neighbors (user rule: "spacing between the
+        // top and bottom even").
         .padding(.top, 4)
+        .padding(.bottom, 4)
         .padding(.horizontal, settings.defaultView ? 20 : 16)
         .zIndex(1)
     }
@@ -3003,7 +3019,7 @@ struct SurahView: View {
             }
         }
         .padding(.horizontal, 24)
-        .padding(.bottom, 8)
+        .padding(.bottom, BottomBarCushion.standard)
         .background(Color.white.opacity(0.00001))
         .animation(.easeInOut, value: quranPlayer.isPlaying)
         // Also animate the swap INTO the loading spinner: tapping play flips isLoading before isPlaying, so
@@ -3295,7 +3311,10 @@ struct SurahView: View {
                         }
                     }
 
-                    if settings.displayBetaTextConsentNeeded {
+                    // Only comparison users are ever offered the beta text; for everyone else this
+                    // riwayah's Arabic is its printed mushaf, full stop (user rule: "don't mention
+                    // beta text, just PDFs").
+                    if settings.displayBetaTextConsentNeeded, settings.qiraatComparisonMode {
                         Button {
                             confirmBetaTextSwitch = true
                         } label: {
@@ -3646,36 +3665,36 @@ struct SurahView: View {
     }
 
     /// Previous | Next surah, side by side - shown at both the top and the bottom of the reader. Each
-    /// swaps the surah in place (`navigateToSurah`) rather than pushing a new view.
+    /// swaps the surah in place (`navigateToSurah`) rather than pushing a new view. BOTH slots always
+    /// render: at the book's ends the dead direction stays visible but dimmed, with "First Surah" /
+    /// "Last Surah" where a name would be - so it reads as "there is nothing before al-Fatihah", not
+    /// as a mysteriously missing button (user rule: make it clear you can't go back/forward there).
     @ViewBuilder
     private func surahNavigationButtonPair(previous: Surah?, next: Surah?) -> some View {
         HStack(spacing: 10) {
-            if let previous {
-                surahNavigationButton(title: "Previous", surah: previous, systemImage: "chevron.left", trailing: false)
-            }
-            if let next {
-                surahNavigationButton(title: "Next", surah: next, systemImage: "chevron.right", trailing: true)
-            }
+            surahNavigationButton(title: "Previous", surah: previous, endNote: "First Surah",
+                                  systemImage: "chevron.left", trailing: false)
+            surahNavigationButton(title: "Next", surah: next, endNote: "Last Surah",
+                                  systemImage: "chevron.right", trailing: true)
         }
     }
 
-    private func surahNavigationButton(title: String, surah targetSurah: Surah, systemImage: String, trailing: Bool) -> some View {
+    private func surahNavigationButton(title: String, surah targetSurah: Surah?, endNote: String,
+                                       systemImage: String, trailing: Bool) -> some View {
         Button {
-            navigateToSurah(targetSurah)
+            if let targetSurah { navigateToSurah(targetSurah) }
         } label: {
-            HStack(spacing: 8) {
+            HStack(spacing: 10) {
                 if !trailing {
-                    Image(systemName: systemImage)
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundColor(settings.accentColor.color)
+                    surahNavigationChevron(systemImage, enabled: targetSurah != nil)
                 }
 
                 VStack(alignment: trailing ? .trailing : .leading, spacing: 2) {
                     Text(title)
                         .font(.subheadline.weight(.semibold))
-                        .foregroundColor(.primary)
+                        .foregroundColor(targetSurah != nil ? .primary : .secondary)
 
-                    Text("\(targetSurah.id) - \(targetSurah.nameTransliteration)")
+                    Text(targetSurah.map { "\($0.id) - \($0.nameTransliteration)" } ?? endNote)
                         .font(.caption)
                         .foregroundColor(.secondary)
                         .lineLimit(1)
@@ -3684,15 +3703,28 @@ struct SurahView: View {
                 .frame(maxWidth: .infinity, alignment: trailing ? .trailing : .leading)
 
                 if trailing {
-                    Image(systemName: systemImage)
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundColor(settings.accentColor.color)
+                    surahNavigationChevron(systemImage, enabled: targetSurah != nil)
                 }
             }
             .frame(maxWidth: .infinity)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .disabled(targetSurah == nil)
+        .opacity(targetSurah == nil ? 0.55 : 1)
+    }
+
+    /// The chevron in a soft accent disc - the same weight on Liquid Glass and the classic look, so the
+    /// pair reads as tappable on both. The dead direction's disc goes gray with the rest of its slot.
+    private func surahNavigationChevron(_ systemImage: String, enabled: Bool) -> some View {
+        Image(systemName: systemImage)
+            .font(.footnote.weight(.bold))
+            .foregroundColor(enabled ? settings.accentColor.color : .secondary)
+            .frame(width: 28, height: 28)
+            .background(
+                Circle()
+                    .fill((enabled ? settings.accentColor.color : Color.secondary).opacity(0.16))
+            )
     }
 }
 
@@ -3849,7 +3881,7 @@ private struct SurahPickerSheet: View {
                 .adaptiveSafeArea(edge: .bottom) {
                     SearchBar(text: AppPerformance.shouldReduceAnimations ? $searchText : $searchText.animation(.easeInOut), placeholder: "Search surah")
                         .padding(.horizontal, 24)
-                        .padding(.bottom, 8)
+                        .padding(.bottom, BottomBarCushion.standard)
                         .background(Color.white.opacity(0.00001))
                 }
                 .navigationTitle("Choose Surah")

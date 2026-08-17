@@ -156,6 +156,21 @@ enum MushafPDFLibrary {
     }
 }
 
+/// A `PDFView` whose zoom floor IS the fitted page: the default view (fit to screen) is already the maximum
+/// zoom-out, so pinching out never shrinks the page into a floating island (user rule: "max zoom out should
+/// be the default"). Pinned on every layout pass because `scaleFactorForSizeToFit` only exists once the view
+/// has a size, and changes with it (rotation, the bars folding).
+private final class FitFlooredPDFView: PDFView {
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        let fit = scaleFactorForSizeToFit
+        guard fit > 0 else { return }
+        minScaleFactor = fit
+        maxScaleFactor = max(fit * 5, 5)
+        if scaleFactor < fit { scaleFactor = fit }
+    }
+}
+
 /// One page of the facsimile. A `PDFView` pinned to a single page rather than PDFKit's own pager: the pager
 /// is the `TabView` above, which is what lets the pages turn right-to-left like the rest of the mushaf.
 /// Keeping PDFKit for the page itself is what buys crisp vector rendering at any zoom plus pinch-to-zoom.
@@ -173,7 +188,7 @@ private struct MushafPDFPageView: UIViewRepresentable {
     func makeCoordinator() -> Coordinator { Coordinator() }
 
     func makeUIView(context: Context) -> PDFView {
-        let view = PDFView()
+        let view = FitFlooredPDFView()
         view.displayMode = .singlePage
         view.displayDirection = .vertical
         view.autoScales = true

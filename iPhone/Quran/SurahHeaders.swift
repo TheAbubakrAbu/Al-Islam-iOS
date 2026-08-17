@@ -251,7 +251,10 @@ struct SurahSectionHeader: View {
 
     private var symbolFont: Font {
         #if os(iOS)
-        micro ? .caption2 : (compact ? .caption : .subheadline)
+        // Micro sizes are absolute, a step under caption2/caption: the strip has to sit comfortably
+        // inside its hairline pill (user rule: "make the text and the emoji and the star a little
+        // smaller to fit comfortably inside").
+        micro ? .system(size: 9) : (compact ? .caption : .subheadline)
         #else
         .title3
         #endif
@@ -261,7 +264,7 @@ struct SurahSectionHeader: View {
     /// match exactly (same size as `symbolFont`) so they look balanced.
     private var starFont: Font {
         #if os(iOS)
-        micro ? .caption : (compact ? .subheadline : .body)
+        micro ? .system(size: 11) : (compact ? .subheadline : .body)
         #else
         .title3
         #endif
@@ -278,7 +281,7 @@ struct SurahSectionHeader: View {
         // wants its chrome tight, not tiny.
         Text("\(surah.ayahCountLabel(for: settings.displayQiraahForArabic)) - \(surah.pageCountLabel)")
             .textCase(.uppercase)
-            .font(micro ? .caption2.weight(.semibold) : .subheadline)
+            .font(micro ? .system(size: 10, weight: .semibold) : .subheadline)
             .lineLimit(1)
             .minimumScaleFactor(compact ? 0.6 : 0.25)
     }
@@ -380,7 +383,9 @@ struct HeaderRow: View {
                 .padding(.vertical, 4)
             }
         }
-        .padding(.top, -8)
+        // Was -8, which pressed the Arabic's tall marks against the card's top edge - the Quran line
+        // read as chopped (user report). -2 keeps the row snug without starving the ink of air.
+        .padding(.top, -2)
         #if os(iOS)
         .contextMenu {
             Text("Ayah Actions")

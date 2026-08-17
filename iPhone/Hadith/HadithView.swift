@@ -768,7 +768,7 @@ struct HadithView: View {
                         }
                     )
                     .padding(.horizontal, 24)
-                    .padding(.bottom, 8)
+                    .padding(.bottom, BottomBarCushion.standard)
                     .minimizedBarStyle(barsCollapsed && !isHadithSearchFocused)
                 }
                 .background(Color.white.opacity(0.00001))

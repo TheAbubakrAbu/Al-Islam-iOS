@@ -18,6 +18,17 @@ struct AlIslamApp: App {
     init() {
         // Activate WatchConnectivity so settings sync (and watch app-installed detection) work both ways.
         _ = WatchConnectivityManager.shared
+
+        if #unavailable(iOS 26.0) {
+            // Pre-Liquid-Glass, a scroll view resting at its bottom edge flips the tab bar to its
+            // scroll-edge appearance - which iOS leaves fully TRANSPARENT by default, so list content
+            // (the Adhan date footer, the Quran rows) collided bare with the tab icons (user report:
+            // "the bottom is transparent"). Pin the standard blurred bar in that state too. iOS 26's
+            // Liquid Glass bar handles its own legibility and must not be overridden.
+            let bottomEdge = UITabBarAppearance()
+            bottomEdge.configureWithDefaultBackground()
+            UITabBar.appearance().scrollEdgeAppearance = bottomEdge
+        }
     }
 
     private enum RootStage: Equatable {

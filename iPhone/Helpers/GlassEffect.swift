@@ -77,7 +77,15 @@ struct ConditionalGlassEffect: ViewModifier {
         return content
             .background {
                 if #available(iOS 15.0, watchOS 10.0, *) {
-                    shape.fill(.ultraThinMaterial)
+                    // Regular material, not ultra-thin: on pre-Liquid-Glass systems these pills float
+                    // straight over list content, and ultra-thin let the rows bleed through them
+                    // ("wayyy too transparent" - user report). `clear` keeps the see-through variant
+                    // for surfaces that want it.
+                    if clear {
+                        shape.fill(.ultraThinMaterial)
+                    } else {
+                        shape.fill(.regularMaterial)
+                    }
                 } else {
                     shape.fill(fallbackBaseFill)
                 }

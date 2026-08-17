@@ -552,6 +552,16 @@ struct SurahPageReader<Controls: View>: View {
                 .environmentObject(quranData)
         }
         .onAppear {
+            #if DEBUG
+            // Headless verification: `-mushafFindBar <query>` opens the in-page find pre-filled, the
+            // only way to drive it from `simctl launch` (no tap injection in that harness).
+            if let flag = ProcessInfo.processInfo.arguments.firstIndex(of: "-mushafFindBar"),
+               ProcessInfo.processInfo.arguments.indices.contains(flag + 1),
+               !searchActive {
+                searchActive = true
+                pageSearchText = ProcessInfo.processInfo.arguments[flag + 1]
+            }
+            #endif
             // Seed the index once. Re-deriving it on every render (font change, qiraah switch) would yank the
             // reader back to the page it was opened at.
             guard !didSetInitialPage else { return }
@@ -991,7 +1001,11 @@ struct SurahPageReader<Controls: View>: View {
             }
         }
         .padding(.horizontal, settings.defaultView ? 20 : 16)
-        .padding(.top, 2)
+        // SYMMETRIC air (user rule, after a round each way: 2pt read as glued to the title, 10pt
+        // as "too much at the top" with none below): the same cushion above the pill and below the
+        // block, so the find bar floats evenly between the title and the surah strip.
+        .padding(.top, 5)
+        .padding(.bottom, 5)
     }
 
     /// The two scope buttons share a label so they read as one pair rather than two differently-sized pills.
@@ -1038,7 +1052,14 @@ struct SurahPageReader<Controls: View>: View {
                                 : .clear)
                 )
                 .conditionalGlassEffect(rectangle: true)
-                .padding(.bottom, 2)
+                // SYMMETRIC air, and always positive: the collapse wrapper clips this inset, and
+                // pre-iOS-26 the safe area starts flush at the navigation bar's bottom edge - so a
+                // negative pull (or the emoji's ink overshooting its line box) was SHEARED there
+                // ("top is cut off"), and 1pt read as the strip being glued to the bar. 3pt above =
+                // 3pt below (user rule: "spacing between the top and bottom even"); the strip stays
+                // small through its micro fonts, not by starving its margins.
+                .padding(.top, 3)
+                .padding(.bottom, 3)
                 .padding(.horizontal, settings.defaultView ? 20 : 16)
                 .contentShape(Rectangle())
                 .onTapGesture {
@@ -1148,7 +1169,7 @@ struct SurahPageReader<Controls: View>: View {
                 }
             }
             .padding(.horizontal, 24)
-            .padding(.bottom, 8)
+            .padding(.bottom, BottomBarCushion.standard)
         }
     }
 
@@ -1835,16 +1856,21 @@ private struct MushafPageContent: View {
     /// `MushafPageComposer.fittedFontSize`), and those must remain reachable.
     @ViewBuilder
     private func renderedPageBody(rendered: MushafRenderedPage, width: CGFloat, visibleHeight: CGFloat) -> some View {
-        if settings.mushafFitPage, rendered.height + Self.verticalPadding * 2 <= visibleHeight {
-            pageTextBody(rendered: rendered, width: width, visibleHeight: visibleHeight)
+        // The 1pt tolerance absorbs layout-height ceil rounding: a page fitted flush to its budget
+        // must never fall into the scroll branch over a fraction of a point (user rule: fit-to-page
+        // must never scroll or rubber-band).
+        if settings.mushafFitPage, rendered.height + Self.verticalPadding * 2 <= visibleHeight + 1 {
+            // The fitted page zooms like the facsimile: pinch in and it stays, the fit is the floor.
+            pageTextBody(rendered: rendered, width: width, visibleHeight: visibleHeight, zoomable: true)
         } else {
             ScrollView {
-                pageTextBody(rendered: rendered, width: width, visibleHeight: visibleHeight)
+                pageTextBody(rendered: rendered, width: width, visibleHeight: visibleHeight, zoomable: false)
             }
         }
     }
 
-    private func pageTextBody(rendered: MushafRenderedPage, width: CGFloat, visibleHeight: CGFloat) -> some View {
+    private func pageTextBody(rendered: MushafRenderedPage, width: CGFloat, visibleHeight: CGFloat,
+                              zoomable: Bool) -> some View {
                 MushafPageTextView(
                     attributed: rendered.text,
                     ranges: rendered.ranges,
@@ -1860,7 +1886,8 @@ private struct MushafPageContent: View {
                     selected: isSelecting ? selectedAyahs.map { (surahID: $0.surahID, ayahID: $0.ayahID) } : [],
                     bookmarked: bookmarkedAyahsOnPage,
                     baselineOffset: rendered.baselineOffset,
-                    baselineBand: rendered.baselineBand
+                    baselineBand: rendered.baselineBand,
+                    zoomsLikePDF: zoomable
                 ) { surahID, ayahID in
                     guard ayahRef(surahID: surahID, ayahID: ayahID) != nil else { return }
                     // Select mode: taps build the selection - ANY ayah on the page, whichever of the (up to
@@ -3554,7 +3581,7 @@ enum MushafPageRenderCache {
     /// the build number alone can't see a code change on a dev install that reuses its version.
     /// v3: uncapped fit ceiling (maximize-font user rule), 0.01pt search resolution, uncapped
     /// line-spacing spread (full vertical fill).
-    nonisolated private static let fitterVersion = 3
+    nonisolated private static let fitterVersion = 4
 
     nonisolated private static let persistedMetricsSalt: String = {
         let os = ProcessInfo.processInfo.operatingSystemVersion
@@ -3838,7 +3865,11 @@ enum MushafPageRenderCache {
         if composer.config.fitPage, !composer.config.pageLanguage.isEnglish, measured < height {
             let lines = composer.lineCount(size: size, width: width, tracking: tracking)
             if lines > 1 {
-                extraSpacing = (height - measured) / CGFloat(lines - 1)
+                // One point of the budget is deliberately left on the table: filling it EXACTLY, with
+                // ceil-rounded layout heights on top, could land the final measure a fraction past the
+                // budget - which flips the page into the scroll container and lets a fitted page be
+                // dragged and rubber-banded (user rule: fit-to-page must never scroll).
+                extraSpacing = max((height - measured - 1) / CGFloat(lines - 1), 0)
                 measured = composer.balancedLayoutHeight(
                     size: size, width: width, tracking: tracking, extraLineSpacing: extraSpacing
                 )
@@ -4002,6 +4033,28 @@ extension AyahHighlightColor {
     }
 }
 
+/// The scroll view hosting a composed mushaf page. UIScrollView never lays out its content on its own, so
+/// this keeps the text view pinned to the box SwiftUI gives the page - and resets the zoom whenever that
+/// box changes size (a rotation, a bars-fold): the page refits to the new box anyway, so a held-over
+/// magnification would be anchored to a layout that no longer exists.
+final class PageZoomScrollView: UIScrollView {
+    weak var pageView: UIView?
+    private var lastSize: CGSize = .zero
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        guard let pageView, bounds.size != lastSize else { return }
+        lastSize = bounds.size
+        if zoomScale != 1 {
+            setZoomScale(1, animated: false)
+            bounces = false
+            clipsToBounds = false
+        }
+        pageView.frame = CGRect(origin: .zero, size: bounds.size)
+        contentSize = bounds.size
+    }
+}
+
 struct MushafPageTextView: UIViewRepresentable {
     let attributed: NSAttributedString
     let ranges: [MushafAyahRange]
@@ -4040,6 +4093,12 @@ struct MushafPageTextView: UIViewRepresentable {
     var baselineOffset: CGFloat = 0
     /// Fragment heights the forced baseline applies to (running text lines, not headings).
     var baselineBand: ClosedRange<CGFloat> = 0...0
+    /// PDF-style zoom (user rule: "text page zoom in and out should be the same as PDF"): pinch zooms the
+    /// page in and it STAYS zoomed, pan moves around it, and pinching back out stops at the fitted page -
+    /// the fit is the maximum zoom-out, exactly like the facsimile. On only for the fitted page; a page
+    /// that overflows into a scroll container keeps the old transient magnifier instead (a persistent
+    /// zoom inside a vertical scroller fights its pan).
+    var zoomsLikePDF: Bool = false
     let onTapAyah: (Int, Int) -> Void
     let onLongPressAyah: (Int, Int) -> Void
     /// A tap on a surah heading (name/basmala) - passes the surah's id.
@@ -4178,7 +4237,7 @@ struct MushafPageTextView: UIViewRepresentable {
         }
     }
 
-    func makeUIView(context: Context) -> UITextView {
+    func makeUIView(context: Context) -> UIScrollView {
         let tv = UITextView()
         tv.isEditable = false
         tv.isSelectable = false
@@ -4231,20 +4290,48 @@ struct MushafPageTextView: UIViewRepresentable {
         secondaryClick.allowedTouchTypes = [NSNumber(value: UITouch.TouchType.indirectPointer.rawValue)]
         tv.addGestureRecognizer(secondaryClick)
 
-        // Pinch to magnify the composed page (the printed-PDF facsimile gets this from PDFKit for free):
-        // the text scales around the fingers and springs back when they lift - a magnifier for reading a
-        // small tajweed mark, not a persistent zoom mode, so it can never fight the pager's swipe or the
-        // tap targets. A layer transform (not a re-typeset) so the whole page moves as one composited
-        // group; two-finger only, so taps and long presses are untouched.
-        let pinch = UIPinchGestureRecognizer(target: context.coordinator,
-                                             action: #selector(Coordinator.handlePinch(_:)))
-        tv.addGestureRecognizer(pinch)
+        if !zoomsLikePDF {
+            // The overflowing page keeps the old transient magnifier: the text scales around the fingers
+            // and springs back when they lift. A persistent zoom would fight the surrounding vertical
+            // scroll container's pan, so it is reserved for the fitted page below.
+            let pinch = UIPinchGestureRecognizer(target: context.coordinator,
+                                                 action: #selector(Coordinator.handlePinch(_:)))
+            tv.addGestureRecognizer(pinch)
+        }
+
+        // The page always ships inside a scroll view; on the fitted page it IS the zoomer (PDF-style
+        // persistent pinch zoom), on an overflowing page it is inert (no scroll, no zoom) and just holds
+        // the text view for the SwiftUI scroll container around it.
+        let scroll = PageZoomScrollView()
+        scroll.pageView = tv
+        scroll.backgroundColor = .clear
+        scroll.showsVerticalScrollIndicator = false
+        scroll.showsHorizontalScrollIndicator = false
+        scroll.contentInsetAdjustmentBehavior = .never
+        scroll.delegate = context.coordinator
+        scroll.clipsToBounds = false
+        scroll.minimumZoomScale = 1
+        if zoomsLikePDF {
+            scroll.maximumZoomScale = 5
+            scroll.bouncesZoom = true
+            // No give at rest: the fitted page must never rubber-band (user rule). Panning while
+            // zoomed re-enables the bounce, and clipping turns on only while zoomed too (at rest the
+            // page's overhanging tashkeel ink must keep drawing into the horizontal padding - see
+            // `tv.clipsToBounds` above) - both in `scrollViewDidZoom`.
+            scroll.bounces = false
+        } else {
+            scroll.maximumZoomScale = 1
+            scroll.isScrollEnabled = false
+        }
+        scroll.addSubview(tv)
 
         context.coordinator.textView = tv
-        return tv
+        context.coordinator.scrollView = scroll
+        return scroll
     }
 
-    func updateUIView(_ tv: UITextView, context: Context) {
+    func updateUIView(_ scroll: UIScrollView, context: Context) {
+        guard let tv = context.coordinator.textView else { return }
         context.coordinator.ranges = ranges
         context.coordinator.onTapAyah = onTapAyah
         context.coordinator.onLongPressAyah = onLongPressAyah
@@ -4287,9 +4374,25 @@ struct MushafPageTextView: UIViewRepresentable {
 
     func makeCoordinator() -> Coordinator { Coordinator() }
 
-    final class Coordinator: NSObject, NSLayoutManagerDelegate {
+    final class Coordinator: NSObject, NSLayoutManagerDelegate, UIScrollViewDelegate {
         weak var textView: UITextView?
+        weak var scrollView: UIScrollView?
         var ranges: [MushafAyahRange] = []
+
+        // MARK: PDF-style zoom (fitted page only - the host enables zooming there)
+
+        func viewForZooming(in scrollView: UIScrollView) -> UIView? { textView }
+
+        /// Bounce and clipping only exist while actually zoomed in: panning a magnified page should feel
+        /// like the facsimile's PDFView (and must not slide over the reader's chrome, hence the clip),
+        /// but at rest (scale 1) the fitted page stays perfectly still - no rubber-banding (user rule:
+        /// fit-to-page never scrolls) - and its overhanging tashkeel ink keeps drawing into the page's
+        /// horizontal padding unclipped.
+        func scrollViewDidZoom(_ scrollView: UIScrollView) {
+            let zoomed = scrollView.zoomScale > 1.001
+            scrollView.bounces = zoomed
+            scrollView.clipsToBounds = zoomed
+        }
         var onTapAyah: ((Int, Int) -> Void)?
         var onLongPressAyah: ((Int, Int) -> Void)?
         var onTapHeading: ((Int) -> Void)?

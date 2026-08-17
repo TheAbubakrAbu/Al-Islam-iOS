@@ -852,7 +852,7 @@ struct HadithBookView: View {
                     }
                 )
                 .padding(.horizontal, 24)
-                .padding(.bottom, 8)
+                .padding(.bottom, BottomBarCushion.standard)
                 .minimizedBarStyle(barsCollapsed && !isBookSearchFocused)
             }
             .background(Color.white.opacity(0.00001))
@@ -2293,12 +2293,12 @@ struct HadithChapterView: View {
             if isSelectingHadiths {
                 selectionActionBar
                     .padding(.horizontal, 24)
-                    .padding(.bottom, 8)
+                    .padding(.bottom, BottomBarCushion.standard)
                     .background(Color.white.opacity(0.00001))
             } else {
                 SearchBar(text: AppPerformance.shouldReduceAnimations ? $searchText : $searchText.animation(.easeInOut))
                     .padding(.horizontal, 24)
-                    .padding(.bottom, 8)
+                    .padding(.bottom, BottomBarCushion.standard)
                     .background(Color.white.opacity(0.00001))
                     .minimizedBarStyle(barsCollapsed)
             }

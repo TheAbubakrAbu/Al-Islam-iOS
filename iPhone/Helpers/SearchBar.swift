@@ -102,6 +102,15 @@ private struct SystemSearchField: UIViewRepresentable {
         field.autocapitalizationType = .none
         field.returnKeyType = .search
         field.clearButtonMode = .whileEditing
+        if #unavailable(iOS 26.0) {
+            // Pre-Liquid-Glass the bare field draws only its translucent gray fill, and floating over
+            // list content it read as "way too transparent" (user report). The old UISearchBar layered
+            // that same fill over an opaque bar; an opaque backing under the field restores that look.
+            // iOS 26 draws the field as glass and needs nothing.
+            field.backgroundColor = .secondarySystemBackground
+            field.layer.cornerRadius = 12
+            field.clipsToBounds = true
+        }
         field.delegate = context.coordinator
         field.addTarget(context.coordinator, action: #selector(Coordinator.editingChanged(_:)), for: .editingChanged)
         field.addTarget(context.coordinator, action: #selector(Coordinator.editingBegan), for: .editingDidBegin)

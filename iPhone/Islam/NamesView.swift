@@ -727,7 +727,7 @@ struct NamesView: View {
             }
             .animation(.spring(response: 0.35, dampingFraction: 0.85), value: barsCollapsed)
             .padding(.horizontal, 24)
-            .padding(.bottom, 8)
+            .padding(.bottom, BottomBarCushion.standard)
             .background(Color.white.opacity(0.00001))
         }
         #endif

@@ -275,7 +275,7 @@ struct CreditsView: View {
         .foregroundColor(settings.accentColor.color)
         .conditionalGlassEffect(useColor: 0.25)
         .padding(.horizontal, 24)
-        .padding(.bottom, 8)
+        .padding(.bottom, BottomBarCushion.standard)
     }
 }
 

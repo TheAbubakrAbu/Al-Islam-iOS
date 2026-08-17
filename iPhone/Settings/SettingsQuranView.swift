@@ -759,7 +759,12 @@ struct SettingsQuranView: View {
                 }
                                 
                 qiraahPicker
-                betaQiraatGroup
+                // The beta-TEXT switch only surfaces for comparison users: everyone else reads a beta
+                // riwayah through its exact printed mushaf and is never pitched the beta text at all
+                // (user rule: "only show the beta toggle if comparison mode is on - otherwise just PDFs").
+                if settings.qiraatComparisonMode {
+                    betaQiraatGroup
+                }
                 qiraahExplanation
                 qiraahLinks
                 qiraahHighlight
@@ -2274,7 +2279,7 @@ struct ReciterListView: View {
             .adaptiveSafeArea(edge: .bottom) {
                 reciterSearchControlsInset
                     .padding(.horizontal, 24)
-                    .padding(.bottom, 8)
+                    .padding(.bottom, BottomBarCushion.standard)
                     .background(Color.white.opacity(0.00001))
             }
             #elseif os(watchOS)

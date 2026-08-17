@@ -1560,7 +1560,7 @@ struct PrayerCalculationListView: View {
         .adaptiveSafeArea(edge: .bottom) {
             SearchBar(text: $searchText.animation(.easeInOut))
                 .padding(.horizontal, 24)
-                .padding(.bottom, 8)
+                .padding(.bottom, BottomBarCushion.standard)
                 .background(Color.white.opacity(0.00001))
         }
         #elseif os(watchOS)

@@ -41,7 +41,7 @@ struct ArabicBasicsView: View {
             }
             .minimizedBarStyle(barsCollapsed)
             .padding(.horizontal, 24)
-            .padding(.bottom, 8)
+            .padding(.bottom, BottomBarCushion.standard)
         }
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {

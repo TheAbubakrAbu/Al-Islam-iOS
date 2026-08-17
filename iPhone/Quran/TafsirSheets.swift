@@ -306,7 +306,7 @@ struct AyahTafsirSheet: View {
             .adaptiveSafeArea(edge: .bottom) {
                 SearchBar(text: AppPerformance.shouldReduceAnimations ? $searchText : $searchText.animation(.easeInOut), placeholder: "Search tafsir")
                     .padding(.horizontal, 24)
-                    .padding(.bottom, 8)
+                    .padding(.bottom, BottomBarCushion.standard)
                     .background(Color.white.opacity(0.00001))
             }
             .dismissKeyboardOnScroll()
@@ -631,7 +631,7 @@ struct SurahInfoSheet: View {
             .adaptiveSafeArea(edge: .bottom) {
                 SearchBar(text: AppPerformance.shouldReduceAnimations ? $searchText : $searchText.animation(.easeInOut), placeholder: "Search info")
                     .padding(.horizontal, 24)
-                    .padding(.bottom, 8)
+                    .padding(.bottom, BottomBarCushion.standard)
                     .background(Color.white.opacity(0.00001))
             }
             .dismissKeyboardOnScroll()
