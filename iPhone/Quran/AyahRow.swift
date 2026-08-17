@@ -320,7 +320,8 @@ struct AyahRow: View, Equatable {
     /// renderer can sit beside it as an alternative without duplicating the styling arguments.
     private func arabicSnippet(source: String, font: Font, preStyled: AttributedString?,
                                beginner: Bool, suffixFont: Font,
-                               highlightQuery: String, matchedArabic: Bool) -> some View {
+                               highlightQuery: String, matchedArabic: Bool,
+                               extraRanges: [NSRange] = []) -> some View {
         HighlightedSnippet(
             source: source,
             term: highlightQuery,
@@ -333,7 +334,8 @@ struct AyahRow: View, Equatable {
             trailingSuffixFont: suffixFont,
             trailingSuffixColor: ayahNumberColor,
             highlightAllahNames: settings.highlightAllahNames,
-            guaranteeMatch: matchedArabic
+            guaranteeMatch: matchedArabic,
+            extraHighlightRanges: extraRanges
         )
         .arabicFontDesign(custom: true)
         .id(tajweedAnimationKey)
@@ -627,10 +629,24 @@ struct AyahRow: View, Equatable {
         let anyFieldMatched = rawArabicMatch || mTranslit || mSaheeh || mMustafa
         let mArabic = rawArabicMatch || (hasSearch && !anyFieldMatched)
 
-        let showArabic = settings.showArabicText || mArabic
+        // Cross-language word highlight, the search rows' behavior brought into the reader itself: an
+        // Arabic term (typed in the in-surah search, or riding a search-arrival) also lights its aligned
+        // ENGLISH words, and an English term lights the Arabic tokens whose gloss carries it.
+        #if os(iOS)
+        let cross = hasSearch ? crossLanguageSpans(query: activeTerm)
+                              : (arabic: [NSRange](), saheeh: [NSRange](), mustafa: [NSRange]())
+        #else
+        let cross: (arabic: [NSRange], saheeh: [NSRange], mustafa: [NSRange]) = ([], [], [])
+        #endif
+
+        let showArabic = settings.showArabicText || mArabic || !cross.arabic.isEmpty
         let showTranslit = hafsOnly && (settings.showTransliteration || mTranslit)
-        let showEnglishSaheeh = hafsOnly && (settings.showEnglishSaheeh || mSaheeh)
-        let showEnglishMustafa = hafsOnly && (settings.showEnglishMustafa || mMustafa)
+        // Cross spans FORCE the opposite-language line visible (the search rows' rule): an Arabic hit
+        // whose aligned English words were found must show them even when the translation toggle is off.
+        // Saheeh takes precedence when both translations would be forced.
+        let showEnglishSaheeh = hafsOnly && (settings.showEnglishSaheeh || mSaheeh || !cross.saheeh.isEmpty)
+        let showEnglishMustafa = hafsOnly
+            && (settings.showEnglishMustafa || mMustafa || (!cross.mustafa.isEmpty && !showEnglishSaheeh))
         let highlightQuery = hasSearch ? queryForInlineHighlight(activeTerm) : ""
         let fontSizeEN = settings.englishFontSize
 
@@ -855,7 +871,10 @@ struct AyahRow: View, Equatable {
                     matchedArabic: mArabic,
                     matchedTranslit: mTranslit,
                     matchedSaheeh: mSaheeh,
-                    matchedMustafa: mMustafa
+                    matchedMustafa: mMustafa,
+                    crossArabic: cross.arabic,
+                    crossSaheeh: cross.saheeh,
+                    crossMustafa: cross.mustafa
                 )
                 .padding(.bottom, 2)
                 .fixedSize(horizontal: false, vertical: true)
@@ -1040,6 +1059,72 @@ struct AyahRow: View, Equatable {
         #endif
     }
 
+    #if os(iOS)
+    /// Cross-language spans for the reader's own rows - the search rows' `crossLanguageSpans`, with the
+    /// same guards (Hafs display, no beginner letter-spacing, gloss pack bundled; comparison columns are
+    /// another riwayah's text, so they opt out). Arabic query → aligned English words in each translation;
+    /// English query → the Arabic tokens whose gloss carries it. Per-ayah exact alignment first, then the
+    /// corpus lexicon fallback, exactly like the search results - so tapping a hit and landing here shows
+    /// the same words lit that the result row showed.
+    private func crossLanguageSpans(query: String) -> (arabic: [NSRange], saheeh: [NSRange], mustafa: [NSRange]) {
+        let trimmed = queryForInlineHighlight(query)
+        guard !trimmed.isEmpty,
+              settings.isHafsDisplay,
+              comparisonQiraahOverride == nil,
+              !(settings.beginnerMode || ayahBeginnerMode || forceBeginner),
+              WordByWordStore.isBundled else { return ([], [], []) }
+
+        let displayText = arabicDisplayText()
+        // The gloss pack's token order is defined against the RAW (unstripped) text; with "Hide
+        // Tashkeel and Signs" off the display text IS raw, so the second resolve is skipped.
+        let rawText = settings.cleanArabicText
+            ? ayah.displayArabicText(surahId: surah.id, clean: false, qiraahOverride: nil)
+            : displayText
+
+        if trimmed.containsArabicLetters {
+            // Per-ayah exact terms UNIONED with the corpus lexicon's - not a fallback. The aligned gloss
+            // is one wording of the word ("straitened"); the lexicon carries the word family's gloss
+            // variants from every occurrence, which is what bridges to a translation that phrased it
+            // differently ("confining"). The union is what "maximize" buys here.
+            var terms = CrossLanguageWordHighlight.englishTermsForArabicMatch(
+                query: trimmed, surah: surah.id, ayah: ayah.id, rawText: rawText, displayText: displayText
+            )
+            for term in CrossLanguageWordHighlight.englishTermsForUnalignedArabicQuery(trimmed)
+            where !terms.contains(term) {
+                terms.append(term)
+            }
+            // The morphological Arabic spans are ADDITIVE: tokens of the same word family the plain
+            // highlighter misses (صلاتهم for a صلاة query) light up in the Arabic line too.
+            let arabicExtra = CrossLanguageWordHighlight.arabicSpansForArabicQuery(
+                query: trimmed, in: displayText
+            )
+            guard !terms.isEmpty || !arabicExtra.isEmpty else { return ([], [], []) }
+            return (arabicExtra,
+                    CrossLanguageWordHighlight.wordSpans(of: terms, in: ayah.textEnglishSaheeh),
+                    CrossLanguageWordHighlight.wordSpans(of: terms, in: ayah.textEnglishMustafa))
+        } else {
+            // Union here too: the per-ayah alignment and the corpus lexicon each catch tokens the
+            // other misses (an inflected form the exact gloss missed; a gloss wording the lexicon
+            // dropped under its noise cap).
+            var spans = CrossLanguageWordHighlight.arabicSpansForEnglishMatch(
+                query: trimmed, surah: surah.id, ayah: ayah.id, rawText: rawText, displayText: displayText
+            )
+            for span in CrossLanguageWordHighlight.arabicSpansForEnglishQuery(trimmed, arabicText: displayText)
+            where !spans.contains(where: { NSIntersectionRange($0, span).length > 0 }) {
+                spans.append(span)
+            }
+            return (spans, [], [])
+        }
+    }
+    #endif
+
+    /// Shifts UTF-16 spans forward when the rendered line carries an "N. " prefix the spans were not
+    /// computed against.
+    private static func offsetSpans(_ spans: [NSRange], by offset: Int) -> [NSRange] {
+        guard offset > 0, !spans.isEmpty else { return spans }
+        return spans.map { NSRange(location: $0.location + offset, length: $0.length) }
+    }
+
     @ViewBuilder
     private func ayahTextBlock(
         showArabic: Bool,
@@ -1051,7 +1136,10 @@ struct AyahRow: View, Equatable {
         matchedArabic: Bool = false,
         matchedTranslit: Bool = false,
         matchedSaheeh: Bool = false,
-        matchedMustafa: Bool = false
+        matchedMustafa: Bool = false,
+        crossArabic: [NSRange] = [],
+        crossSaheeh: [NSRange] = [],
+        crossMustafa: [NSRange] = []
     ) -> some View {
         let groupHasEnglishOrTranslit = showTranslit || showEnglishSaheeh || showEnglishMustafa
         let prefixOnTranslit  = groupHasEnglishOrTranslit && showTranslit
@@ -1193,12 +1281,14 @@ struct AyahRow: View, Equatable {
                 } else {
                     arabicSnippet(source: arabicSource, font: arabicFont, preStyled: preStyled,
                                   beginner: beginner, suffixFont: suffixFont,
-                                  highlightQuery: highlightQuery, matchedArabic: matchedArabic)
+                                  highlightQuery: highlightQuery, matchedArabic: matchedArabic,
+                                  extraRanges: crossArabic)
                 }
                 #else
                 arabicSnippet(source: arabicSource, font: arabicFont, preStyled: preStyled,
                               beginner: beginner, suffixFont: suffixFont,
-                              highlightQuery: highlightQuery, matchedArabic: matchedArabic)
+                              highlightQuery: highlightQuery, matchedArabic: matchedArabic,
+                              extraRanges: crossArabic)
                 #endif
             }
 
@@ -1219,7 +1309,8 @@ struct AyahRow: View, Equatable {
             }
 
             if showEnglishSaheeh {
-                let txt = prefixOnSaheeh ? "\(ayah.id). \(ayah.textEnglishSaheeh)" : ayah.textEnglishSaheeh
+                let prefix = prefixOnSaheeh ? "\(ayah.id). " : ""
+                let txt = prefix + ayah.textEnglishSaheeh
                 VStack(alignment: .leading, spacing: 4) {
                     HighlightedSnippet(
                         source: txt,
@@ -1228,7 +1319,8 @@ struct AyahRow: View, Equatable {
                         accent: settings.accentColor.color,
                         fg: .primary,
                         highlightAllahNames: settings.highlightAllahNames,
-                        guaranteeMatch: matchedSaheeh
+                        guaranteeMatch: matchedSaheeh,
+                        extraHighlightRanges: Self.offsetSpans(crossSaheeh, by: (prefix as NSString).length)
                     )
                     Text("- Saheeh International")
                         .font(.caption)
@@ -1240,7 +1332,8 @@ struct AyahRow: View, Equatable {
             }
 
             if showEnglishMustafa {
-                let txt = prefixOnMustafa ? "\(ayah.id). \(ayah.textEnglishMustafa)" : ayah.textEnglishMustafa
+                let prefix = prefixOnMustafa ? "\(ayah.id). " : ""
+                let txt = prefix + ayah.textEnglishMustafa
                 VStack(alignment: .leading, spacing: 4) {
                     HighlightedSnippet(
                         source: txt,
@@ -1249,7 +1342,8 @@ struct AyahRow: View, Equatable {
                         accent: settings.accentColor.color,
                         fg: .primary,
                         highlightAllahNames: settings.highlightAllahNames,
-                        guaranteeMatch: matchedMustafa
+                        guaranteeMatch: matchedMustafa,
+                        extraHighlightRanges: Self.offsetSpans(crossMustafa, by: (prefix as NSString).length)
                     )
                     Text("- Clear Quran (Mustafa Khattab)")
                         .font(.caption)
@@ -1452,6 +1546,18 @@ struct AyahRow: View, Equatable {
                 Label(
                     isBookmarked ? "Unbookmark Ayah" : "Bookmark Ayah",
                     systemImage: isBookmarked ? "bookmark.fill" : "bookmark"
+                )
+            }
+
+            // Directly under the bookmark row, because it IS a bookmark action: picking a color saves
+            // the ayah and paints its bookmark in that color - the same Highlight menu page mode's
+            // actions sheet and the history cards already offer (list-mode parity, user rule).
+            Menu {
+                ayahHighlightMenuItems(surah: surah.id, ayah: ayah.id, settings: settings)
+            } label: {
+                Label(
+                    ayahHighlight == nil ? "Highlight" : "Highlight: \(ayahHighlight!.title)",
+                    systemImage: "highlighter"
                 )
             }
 

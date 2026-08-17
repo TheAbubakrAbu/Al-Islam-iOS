@@ -231,6 +231,14 @@ enum CrossLanguageWordHighlight {
 
     /// ARABIC query → the English gloss content-words of the Arabic tokens the query highlighted.
     /// The caller runs these through `wordSpans(of:in:)` against each translation line.
+    ///
+    /// Two lanes, unioned. Lane 1 is the display-text match (exact substrings, phrases, the loose
+    /// Arabic skeleton) → the tokens those spans touch. Lane 2 is the MORPHOLOGICAL sweep: every
+    /// token any query word matches through `arabicWordsMatch` - proclitics (و ف ب ل ك + ال),
+    /// enclitic pronouns (صلاتهم ↔ صلاة), the plural واو (قالوا ↔ قال), and the vowel-letter
+    /// skeleton (قلب ↔ قلوب). Lane 2 is what "maximize" means here, and it is SAFE in a way the
+    /// corpus lexicon can't be: the gloss always comes from the exact token that matched, so looser
+    /// matching can never import a neighbouring word's meaning.
     static func englishTermsForArabicMatch(query: String, surah: Int, ayah: Int,
                                            rawText: String, displayText: String) -> [String] {
         let key = "a→e\u{0000}\(query)\u{0000}\(surah):\(ayah)\u{0000}\(displayText.hashValue)" as NSString
@@ -244,16 +252,15 @@ enum CrossLanguageWordHighlight {
                                                            rawText: rawText, displayText: displayText)
         else { return terms }
 
-        let matches = HighlightedSnippet.matchRanges(of: query, in: displayText)
-        guard !matches.isEmpty else { return terms }
         let tokenRanges = WordTokens.ranges(in: displayText)
         guard tokenRanges.count == glosses.count else { return terms }
 
-        // The matched spans → the tokens they touch (a phrase query or a loose Arabic match can
-        // cover several), in order, deduped.
         var tokenIndices: [Int] = []
         var seenTokens = Set<Int>()
-        for match in matches {
+
+        // Lane 1: the matched spans → the tokens they touch (a phrase query or a loose Arabic match
+        // can cover several), in order, deduped.
+        for match in HighlightedSnippet.matchRanges(of: query, in: displayText) {
             let span = NSRange(match, in: displayText)
             for (index, token) in tokenRanges.enumerated()
             where NSIntersectionRange(span, token).length > 0 && seenTokens.insert(index).inserted {
@@ -261,13 +268,69 @@ enum CrossLanguageWordHighlight {
             }
         }
 
+        // Lane 2: the morphological sweep over the ayah's own tokens.
+        let queryWords = HighlightedSnippet.normalizeForSearchText(query, trimWhitespace: true)
+            .split(separator: " ").map(String.init)
+            .filter { $0.count >= 3 }
+        if !queryWords.isEmpty {
+            let ns = displayText as NSString
+            for (index, tokenRange) in tokenRanges.enumerated() where !seenTokens.contains(index) {
+                let folded = HighlightedSnippet.normalizeForSearchText(
+                    ns.substring(with: tokenRange), trimWhitespace: true)
+                guard folded.count >= 3 else { continue }
+                if queryWords.contains(where: { arabicWordsMatch($0, folded) }),
+                   seenTokens.insert(index).inserted {
+                    tokenIndices.append(index)
+                }
+            }
+        }
+
         var seenTerms = Set<String>()
-        for index in tokenIndices {
+        for index in tokenIndices.sorted() {
             for word in contentWords(of: glosses[index]) where seenTerms.insert(word).inserted {
                 terms.append(word)
             }
         }
         return terms
+    }
+
+    /// The Arabic spans an ARABIC query lights in the ayah itself, through the SAME morphology lane 2
+    /// uses - so the reader can also tint صلاتهم when the query was صلاة, beyond what the plain
+    /// substring highlighter finds. Returns only tokens the base highlighter would MISS.
+    static func arabicSpansForArabicQuery(query: String, in displayText: String) -> [NSRange] {
+        let key = "a→a\u{0000}\(query)\u{0000}\(displayText.hashValue)" as NSString
+        if let cached = spansCache.object(forKey: key) { return cached.spans }
+
+        var spans: [NSRange] = []
+        defer { spansCache.setObject(SpansEntry(spans), forKey: key) }
+
+        guard query.containsArabicLetters else { return spans }
+        let queryWords = HighlightedSnippet.normalizeForSearchText(query, trimWhitespace: true)
+            .split(separator: " ").map(String.init)
+            .filter { $0.count >= 3 }
+        guard !queryWords.isEmpty else { return spans }
+
+        // Tokens the base highlighter already colors are excluded - these spans are ADDITIVE.
+        var covered = Set<Int>()
+        let tokenRanges = WordTokens.ranges(in: displayText)
+        for match in HighlightedSnippet.matchRanges(of: query, in: displayText) {
+            let span = NSRange(match, in: displayText)
+            for (index, token) in tokenRanges.enumerated()
+            where NSIntersectionRange(span, token).length > 0 {
+                covered.insert(index)
+            }
+        }
+
+        let ns = displayText as NSString
+        for (index, tokenRange) in tokenRanges.enumerated() where !covered.contains(index) {
+            let folded = HighlightedSnippet.normalizeForSearchText(
+                ns.substring(with: tokenRange), trimWhitespace: true)
+            guard folded.count >= 3 else { continue }
+            if queryWords.contains(where: { arabicWordsMatch($0, folded) }) {
+                spans.append(tokenRange)
+            }
+        }
+        return spans
     }
 
     /// ENGLISH query → the UTF-16 spans of the Arabic tokens whose gloss carries a query word.
@@ -307,7 +370,9 @@ enum CrossLanguageWordHighlight {
 
     /// Whole-word spans of `terms` in `text` (a translation line): each whitespace token is folded
     /// and compared word-to-word, so "ease" can never light the middle of "increase" the way a
-    /// substring pass would. Spans are trimmed of the token's surrounding punctuation.
+    /// substring pass would. A hyphenated/compound token ("All-Knowing", "so-called") also matches
+    /// through its alphanumeric PARTS, which the whole-token fold would otherwise glue into one
+    /// unmatchable word. Spans are trimmed of the token's surrounding punctuation.
     static func wordSpans(of terms: [String], in text: String) -> [NSRange] {
         guard !terms.isEmpty, !text.isEmpty else { return [] }
         let key = "spans\u{0000}\(terms.joined(separator: "\u{0001}"))\u{0000}\(text.hashValue)" as NSString
@@ -316,9 +381,17 @@ enum CrossLanguageWordHighlight {
         var spans: [NSRange] = []
         let ns = text as NSString
         for tokenRange in WordTokens.ranges(in: text) {
-            let word = HighlightedSnippet.normalizeForSearchText(ns.substring(with: tokenRange), trimWhitespace: true)
+            let raw = ns.substring(with: tokenRange)
+            let word = HighlightedSnippet.normalizeForSearchText(raw, trimWhitespace: true)
             guard word.count >= 3 else { continue }
-            if terms.contains(where: { wordMatches(query: $0, word: word) }) {
+            var matched = terms.contains { wordMatches(query: $0, word: word) }
+            if !matched, raw.contains(where: { !$0.isLetter && !$0.isNumber }) {
+                let parts = raw.lowercased()
+                    .components(separatedBy: CharacterSet.alphanumerics.inverted)
+                    .filter { $0.count >= 3 }
+                matched = parts.contains { part in terms.contains { wordMatches(query: $0, word: part) } }
+            }
+            if matched {
                 spans.append(trimmedWordSpan(tokenRange, in: ns))
             }
         }
@@ -444,7 +517,10 @@ enum CrossLanguageWordHighlight {
         let queryWords = HighlightedSnippet.normalizeForSearchText(query, trimWhitespace: true)
             .split(separator: " ").map(String.init).filter { $0.count >= 2 }
         for word in queryWords {
-            for lookupKey in lookupKeys(for: word) {
+            // The enclitic-aware variants, not just the proclitic keys: a query typed as صلاتهم or
+            // رحمته still reaches the noun's lexicon entry. Peeling happens on the QUERY side only -
+            // the build stays unpeeled, so the possessor-noise problem this peel causes there can't occur.
+            for lookupKey in arabicMatchVariants(of: word) {
                 for gloss in lexicon[lookupKey] ?? [] where seen.insert(gloss).inserted {
                     terms.append(gloss)
                 }
@@ -476,7 +552,8 @@ enum CrossLanguageWordHighlight {
             let folded = HighlightedSnippet.normalizeForSearchText(ns.substring(with: tokenRange), trimWhitespace: true)
             guard folded.count >= 2 else { continue }
             var glossWords = Set<String>()
-            for lookupKey in lookupKeys(for: folded) {
+            // Enclitic-aware on the TEXT side too, so رحمته in a hadith reaches رحمة's entry.
+            for lookupKey in arabicMatchVariants(of: folded) {
                 glossWords.formUnion(lexicon[lookupKey] ?? [])
             }
             guard !glossWords.isEmpty else { continue }
@@ -499,13 +576,111 @@ enum CrossLanguageWordHighlight {
             .filter { $0.count >= 3 && !stopwords.contains($0) }
     }
 
-    /// Word-to-word tolerance: equal, a prefix ("hardship" → "hardships"), or a shared stem long
-    /// enough to be the same word family ("mercy" → "merciful": 4 shared of 5) - and nothing looser.
+    // MARK: Arabic morphology (per-ayah matching)
+
+    /// One layer of enclitic pronoun / plural / verbal endings, longest first. Peeled only for MATCHING
+    /// a query word against a token whose own gloss is then used - never on the lexicon build, where the
+    /// same peel measurably drags a possessor's gloss in with the noun's. The plural morphemes (ون ين ات)
+    /// and the verbal تم are what let الصبر meet ٱلصَّٰبِرِينَ and أخذ meet أَخَذتُم; every peel leaves ≥3 letters.
+    private static let encliticSuffixes = [
+        "كموها", "كموه", "هما", "كما", "كم", "كن", "هم", "هن", "ها", "نا",
+        "ون", "ين", "ات", "تم", "وا", "ه", "ك", "ي",
+    ]
+
+    /// Every folded form a word should be comparable under: itself, its proclitic-peeled forms
+    /// (و ف ب ل ك + ال - `lookupKeys`), and each of those with ONE enclitic layer peeled
+    /// (صلاتهم → صلاته? no - صلاتهم → صلات; قالوا → قال). Minimum 3 letters survive any peel.
+    static func arabicMatchVariants(of folded: String) -> [String] {
+        var out: [String] = []
+        var seen = Set<String>()
+        func add(_ candidate: String) {
+            guard candidate.count >= 2, seen.insert(candidate).inserted else { return }
+            out.append(candidate)
+        }
+        func addWithTaTwins(_ candidate: String) {
+            add(candidate)
+            // The taa marbuta reappears as a plain taa before a suffix (صلاتهم = صلاة + هم), and the
+            // feminine past verb ends in a plain taa (ضاقت = ضاق + ت) - keep the stripped form and
+            // the ة-restored twin so any of the three spellings meets the query.
+            if candidate.hasSuffix("ت"), candidate.count - 1 >= 3 {
+                let stripped = String(candidate.dropLast())
+                add(stripped)
+                add(stripped + "ة")
+            }
+        }
+        for base in lookupKeys(for: folded) {
+            addWithTaTwins(base)
+            for suffix in encliticSuffixes
+            where base.hasSuffix(suffix) && base.count - suffix.count >= 3 {
+                addWithTaTwins(String(base.dropLast(suffix.count)))
+                break   // longest suffix only - one layer
+            }
+        }
+        return out
+    }
+
+    /// The word minus its long vowel letters (ا و ي) - the loosest comparable form, only trusted at
+    /// ≥3 letters so short roots can't collide (قوم/قيم both skeleton to قم and are correctly refused).
+    private static func vowelSkeleton(_ word: String) -> String {
+        word.filter { $0 != "ا" && $0 != "و" && $0 != "ي" && $0 != "ى" }
+    }
+
+    /// Whether two folded Arabic words are the same word for highlighting purposes: any variant pair
+    /// equal, a ≥4-letter prefix of the other, equal once alef-stripped (الرحمن/الرحمان), or equal on
+    /// the ≥3-letter vowel skeleton (قلب/قلوب, يعلمون/تعلمون stays apart on its lead letter).
+    static func arabicWordsMatch(_ a: String, _ b: String) -> Bool {
+        let variantsA = arabicMatchVariants(of: a)
+        let variantsB = arabicMatchVariants(of: b)
+        for va in variantsA {
+            for vb in variantsB {
+                if va == vb { return true }
+                if va.count >= 4, vb.hasPrefix(va) { return true }
+                if vb.count >= 4, va.hasPrefix(vb) { return true }
+                let alefA = va.filter { $0 != "ا" }
+                let alefB = vb.filter { $0 != "ا" }
+                if alefA.count >= 3, alefA == alefB { return true }
+                let skeletonA = vowelSkeleton(va)
+                let skeletonB = vowelSkeleton(vb)
+                if skeletonA.count >= 3, skeletonA == skeletonB { return true }
+            }
+        }
+        return false
+    }
+
+    // MARK: English morphology
+
+    /// One layer of English inflection, longest first, with a ≥3-letter stem guard - enough for the
+    /// gloss↔translation drift that actually occurs (believe/believers, mercy/mercies, pray/prayers).
+    private static func englishStem(_ word: String) -> String {
+        for suffix in ["ingly", "fully", "ings", "ers", "ies", "ing", "est", "ed", "er", "ly", "es", "s"]
+        where word.hasSuffix(suffix) && word.count - suffix.count >= 3 {
+            var stem = String(word.dropLast(suffix.count))
+            // "mercies" → "merc" + trailing i-restore → "mercy"; "carried" → "carri" → "carry".
+            if stem.hasSuffix("i") { stem = String(stem.dropLast()) + "y" }
+            return stem
+        }
+        return word
+    }
+
+    /// Word-to-word tolerance: equal, one a prefix of the other (≥3), the same after one inflection
+    /// layer, or a shared stem long enough to be the same word family ("mercy" → "merciful").
     private static func wordMatches(query: String, word: String) -> Bool {
-        if word == query || word.hasPrefix(query) { return true }
-        guard query.count >= 4, word.count >= 4 else { return false }
-        let common = zip(query, word).prefix(while: { $0.0 == $0.1 }).count
-        return common >= max(4, min(query.count, word.count) - 2)
+        if pairMatches(query, word) { return true }
+        let stemmedQuery = englishStem(query)
+        let stemmedWord = englishStem(word)
+        if (stemmedQuery != query || stemmedWord != word), pairMatches(stemmedQuery, stemmedWord) {
+            return true
+        }
+        return false
+    }
+
+    private static func pairMatches(_ a: String, _ b: String) -> Bool {
+        if a == b { return true }
+        if a.count >= 3, b.hasPrefix(a) { return true }
+        if b.count >= 3, a.hasPrefix(b) { return true }
+        guard a.count >= 4, b.count >= 4 else { return false }
+        let common = zip(a, b).prefix(while: { $0.0 == $0.1 }).count
+        return common >= max(4, min(a.count, b.count) - 2)
     }
 
     /// The token span minus leading/trailing punctuation, so a highlight on "ease," stops at the "e".

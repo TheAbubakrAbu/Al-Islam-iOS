@@ -43,6 +43,9 @@ struct AlIslamApp: App {
                 // Every system font in the app is SF Rounded. Views that render a bundled Arabic face opt back
                 // out with `arabicFontDesign(custom:)` - see the note in `Globals.swift`.
                 .appFontDesign()
+                // Every Toggle in the app breathes: the standard switch with 2pt of vertical padding
+                // (user rule), applied once here so no individual row can forget it.
+                .toggleStyle(PaddedSwitchToggleStyle())
                 .environmentObject(settings)
                 .environmentObject(quranData)
                 .environmentObject(quranPlayer)

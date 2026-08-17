@@ -329,7 +329,6 @@ struct PlaceLocatorView: View {
     private var searchPanel: some View {
         VStack(alignment: .leading, spacing: 8) {
             SearchBar(text: $searchText.animation(.easeInOut))
-                .padding(-8)
 
             if shouldShowResultsPanel {
                 HStack {

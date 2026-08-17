@@ -317,8 +317,16 @@ struct SurahPageReader<Controls: View>: View {
     @State private var pagePickerSelection = 0
     @State private var juzPickerSelection = 1
     /// Bottom chrome folded away for a taller page (task: "collapse the bottom and bring it back").
+    /// It folds the pinned surah header too - collapsed means the PAGE, nothing else.
     /// Session-scoped on purpose: reopening the reader always starts with its controls visible.
-    @State private var bottomBarsCollapsed = false
+    /// (DEBUG launch arg `-mushafCollapseBars` seeds it for headless screenshot verification.)
+    @State private var bottomBarsCollapsed = {
+        #if DEBUG
+        ProcessInfo.processInfo.arguments.contains("-mushafCollapseBars")
+        #else
+        false
+        #endif
+    }()
     /// The typed-number fast path: an alert with a number pad, for jumping without scrolling the wheel.
     /// An alert (not an inline field) because the whole reader ignores the keyboard inset by design - the
     /// page must never resize - so an inline field at the bottom would be covered by the keyboard it raises.
@@ -489,16 +497,17 @@ struct SurahPageReader<Controls: View>: View {
                 .tabViewStyle(.page(indexDisplayMode: .never))
             }
         }
-        // The pinned surah header belongs to the READER, not to each page. It used to be a top safe-area
-        // inset on `MushafPageContent`, i.e. one header per page, living INSIDE the pager - so every page
-        // turn slid the old header out and an identical new one in. Within a single surah that is a header
-        // that visibly re-animates for no reason, which is exactly the "the surah header changes when it
-        // shouldn't" report: the surah never changed, the header view did. One header up here holds
-        // perfectly still across a turn and only re-renders when `headerSurah` names a different surah.
-        .safeAreaInset(edge: .top, spacing: 0) { pinnedSurahHeader }
-        // Order matters: the first inset applied sits closest to the content (higher), the last sits lowest.
-        // So the tajweed/qiraah controls + mini player go ABOVE, and the page-navigation footer is pinned to
-        // the very bottom.
+        // The surah header, PINNED AT THE TOP again (user rule, final position) - but tiny: caption2
+        // text (`micro`), clamped dynamic type, and almost no air above or below, so the page loses as
+        // little height as possible. One header for the whole pager (it only re-renders when
+        // `headerSurah` names a different surah), and it folds with the collapse.
+        .safeAreaInset(edge: .top, spacing: 0) {
+            topSurahHeader
+                .frame(height: bottomBarsCollapsed ? 0 : nil)
+                .clipped()
+                .opacity(bottomBarsCollapsed ? 0 : 1)
+                .allowsHitTesting(!bottomBarsCollapsed)
+        }
         // Collapse folds the bars via height+opacity with the views still MOUNTED - an `if` removal
         // snapshots the glass background as a hard black box on the way out (the artifact SurahView's
         // list bars hit), because Liquid Glass can't participate in a removal transition. The page then
@@ -1009,42 +1018,35 @@ struct SurahPageReader<Controls: View>: View {
         onSurahChange?(surah)
     }
 
-    /// The reader's pinned surah header: revelation symbol, ayah/page summary, favourite star - the same one
-    /// the list reader shows. It names `headerSurah`, which only ever moves when the page's top surah moves,
-    /// so swiping through a long surah leaves this completely untouched.
+    /// The reader's pinned surah header, in its smallest form: revelation symbol, ayah/page summary at
+    /// caption2, favourite star - hugging the navigation bar with a hair of padding. Tap for the surah
+    /// info sheet; the star keeps its own tap.
     @ViewBuilder
-    private var pinnedSurahHeader: some View {
+    private var topSurahHeader: some View {
         if let surah = headerSurah {
-            // Compact and tucked up high (task): the page header reads at .subheadline with smaller
-            // side icons and almost no air above, so the page itself gets the height back.
-            SurahSectionHeader(surah: surah, compact: true)
-                .padding(.horizontal)
-                .padding(.vertical, 2)
-                // Keep the tapped header lit while its info sheet is open. While this surah is loaded in the
-                // player, the header carries the accent tint instead - the page-top twin of the in-page name
-                // highlight.
+            SurahSectionHeader(surah: surah, compact: true, micro: true)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 1)
+                // Keep the tapped header lit while its info sheet is open; the accent tint marks the
+                // surah loaded in the player.
                 .background(
-                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
                         .fill(headerInfoSurah?.id == surah.id
                               ? Color.secondary.opacity(0.18)
                               : quranPlayer.currentSurahNumber == surah.id
                                 ? settings.accentColor.color.opacity(0.18)
                                 : .clear)
                 )
-                .shadow(color: .black.opacity(0.15), radius: 2, x: 0, y: 0)
                 .conditionalGlassEffect(rectangle: true)
-                // A slim cushion below is all the page block needs; above, the header hugs the bar.
-                .padding(.bottom, 6)
+                .padding(.bottom, 2)
                 .padding(.horizontal, settings.defaultView ? 20 : 16)
-                // Tap the header to read about the surah. The star/emoji keep their own tap gestures -
-                // a child gesture wins over this one, so favoriting still works.
                 .contentShape(Rectangle())
                 .onTapGesture {
                     settings.hapticFeedback()
                     headerInfoSurah = surah
                 }
                 .animation(.easeInOut(duration: 0.15), value: headerInfoSurah?.id == surah.id)
-                .dynamicTypeSize(.large)
+                .dynamicTypeSize(.small)
         }
     }
 
@@ -1052,7 +1054,15 @@ struct SurahPageReader<Controls: View>: View {
     /// everything - ordinary layout, nothing floating over the page. One control for both directions, so
     /// collapsing and restoring happen in the same place (the chevron just turns over).
     private var bottomBarsToggleStrip: some View {
-        Button {
+        // Collapsed, the tap target grows UPWARD toward the Arabic - without moving the chevron or any
+        // spacing: the extra height is added INSIDE the label and cancelled by the outer negative
+        // padding, so the button's frame (and its full-width contentShape) reaches ~18pt into the
+        // page's bottom air while everything draws exactly where it did (user rule: keep the chevron
+        // small, make the clickable height bigger). Expanded keeps the plain target - reaching up
+        // there would steal taps from the footer pill's lower edge.
+        let hitExtension: CGFloat = bottomBarsCollapsed ? 18 : 0
+
+        return Button {
             settings.hapticFeedback()
             withAnimation(.easeInOut(duration: 0.25)) { bottomBarsCollapsed.toggle() }
         } label: {
@@ -1062,16 +1072,20 @@ struct SurahPageReader<Controls: View>: View {
                 // Asymmetric on purpose: the tap target keeps its height, but almost all of it hangs BELOW
                 // the glyph, so the chevron sits tight under the bar above it instead of floating in a band
                 // of its own (user: "the chevron has too much spacing above it").
-                .padding(.top, 1)
-                .padding(.bottom, 7)
+                .padding(.top, 1 + hitExtension)
+                // Collapsed, the strip is the screen's last band - a tighter cushion gives the page the
+                // difference (user: "still some more space at the bottom" when collapsed).
+                .padding(.bottom, bottomBarsCollapsed ? 3 : 7)
                 .frame(maxWidth: .infinity)
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         // Pulls the strip up into the padding the footer above it already leaves - but only while the footer
-        // is there. Collapsed, the neighbour above is the page, and pulling into that would overlap the text.
-        .padding(.top, bottomBarsCollapsed ? -2 : -8)
-        .accessibilityLabel(bottomBarsCollapsed ? "Show the bottom controls" : "Hide the bottom controls")
+        // is there. Collapsed, the base -2 keeps the drawn strip where it was and the extra `hitExtension`
+        // cancels the invisible tap-target growth above.
+        .padding(.top, (bottomBarsCollapsed ? -2 : -8) - hitExtension)
+        .accessibilityLabel(bottomBarsCollapsed ? "Show the reader controls and surah header"
+                                                : "Hide the reader controls and surah header")
     }
 
     private func reportAnchor(on index: Int, in pages: [MushafPage]) {
@@ -1151,8 +1165,8 @@ struct SurahPageReader<Controls: View>: View {
         VStack(spacing: 6) {
             HStack(alignment: .center, spacing: 10) {
                 VStack(alignment: .leading, spacing: 4) {
-                    // The ayah count and revelation place live in the pinned header now - the footer is purely
-                    // where you are and where you can jump to.
+                    // Plain "Surah", deliberately (user rule: names run too long here) - the row
+                    // above names it.
                     meter(label: "Surah", position: surahPosition, total: surahTotal,
                           color: settings.accentColor.accent1)
 
@@ -2033,6 +2047,9 @@ struct MushafComposeConfig {
     let khilafMarkerTag: String?
     /// Rule keys the reader has hidden in the riwayah legend.
     let riwayahHiddenRules: Set<String>
+    /// "Highlight Allah" - the composed page paints the divine name red, exactly like the list rows
+    /// (English pages included: the list highlights "Allah" in translations too).
+    let highlightAllahNames: Bool
     let fontSize: CGFloat
     let fitPage: Bool
     let accent: UIColor
@@ -2057,6 +2074,7 @@ struct MushafComposeConfig {
             riwayahTajweedTag: riwayahTajweedTag,
             khilafMarkerTag: s.riwayahTajweedPackTag,
             riwayahHiddenRules: s.riwayahTajweedHiddenRuleSet,
+            highlightAllahNames: s.highlightAllahNames,
             fontSize: CGFloat(s.fontArabicSize),
             fitPage: s.mushafFitPage,
             accent: UIColor(s.accentColor.color)
@@ -2159,7 +2177,7 @@ struct MushafPageComposer {
 
         if isEnglish {
             // No tajweed, no beginner letter-spacing - both are Arabic-script concepts.
-            return NSAttributedString(
+            let ns = NSMutableAttributedString(
                 string: englishText(for: ayah),
                 attributes: [
                     .font: UIFont.roundedSystemFont(ofSize: size),
@@ -2167,6 +2185,8 @@ struct MushafPageComposer {
                     .paragraphStyle: para,
                 ]
             )
+            if colored { paintAllahNames(in: ns) }
+            return ns
         }
 
         let clean = config.cleanArabicText
@@ -2191,6 +2211,7 @@ struct MushafPageComposer {
             // The tajweed colours are already UIColor; overlay the font/paragraph without touching them.
             let ns = NSMutableAttributedString(attributedString: NSAttributedString(styled))
             ns.addAttributes([.font: font, .paragraphStyle: para], range: NSRange(location: 0, length: ns.length))
+            paintAllahNames(in: ns)
             return ns
         }
 
@@ -2204,13 +2225,40 @@ struct MushafPageComposer {
            ) {
             let ns = NSMutableAttributedString(attributedString: NSAttributedString(styled))
             ns.addAttributes([.font: font, .paragraphStyle: para], range: NSRange(location: 0, length: ns.length))
+            paintAllahNames(in: ns)
             return ns
         }
 
-        return NSAttributedString(
+        let ns = NSMutableAttributedString(
             string: display,
             attributes: [.font: font, .foregroundColor: UIColor.label, .paragraphStyle: para]
         )
+        if colored { paintAllahNames(in: ns) }
+        return ns
+    }
+
+    /// "Highlight Allah" on the composed page - the list rows' red divine name, page-mode edition.
+    /// Painted AFTER the tajweed/riwayah colors so the red wins on overlap, exactly like the list
+    /// (`HighlightedSnippet` applies it over the pre-styled tajweed text). Arabic goes through the
+    /// SAME shared scanner the list and word-by-word renderers use - one detector, and it already
+    /// stops the red before a trailing stop-sign ornament; English matches "Allah" case-insensitively.
+    /// A foreground color never moves a glyph, so the fitted layout is untouched.
+    private func paintAllahNames(in ns: NSMutableAttributedString) {
+        guard config.highlightAllahNames else { return }
+        let text = ns.string
+        if isEnglish {
+            var searchStart = text.startIndex
+            while searchStart < text.endIndex,
+                  let match = text.range(of: "Allah", options: [.caseInsensitive, .diacriticInsensitive],
+                                         range: searchStart..<text.endIndex) {
+                ns.addAttribute(.foregroundColor, value: UIColor.systemRed, range: NSRange(match, in: text))
+                searchStart = match.upperBound
+            }
+            return
+        }
+        for range in HighlightedSnippet.arabicAllahRanges(in: text) {
+            ns.addAttribute(.foregroundColor, value: UIColor.systemRed, range: NSRange(range, in: text))
+        }
     }
 
     /// The header a surah gets where it BEGINS, mid-page: a rule, then ONE line carrying the bracketed name
@@ -2478,6 +2526,18 @@ struct MushafPageComposer {
                                             length: result.length - segmentTextStart))
         }
 
+        // The opening spread's LAST page line is set CENTERED - the classic framed look of the mushaf's
+        // first two pages (user rule: "first two pages make the last line centered always"). Done in BOTH
+        // compose paths (the justified plain compose and the `justified: false` colored one) with a swap
+        // that never changes the character count, so the transplant below and the ayah hit-test ranges
+        // stay index-aligned by construction.
+        var centeredClosingLine = false
+        if isOpeningSpread, isJustifiable, width > 0 {
+            centeredClosingLine = Self.centerLastLine(of: result, width: width, size: size,
+                                                      extraLineSpacing: extraLineSpacing,
+                                                      baseSize: config.fontSize)
+        }
+
         // Justify the final compose in three passes: the page-wide loosening (`spaceTracking`, which DOES
         // move line breaks - it was fitted against the same budget, see `balancedSpaceTracking`), then the
         // balance pass that re-breaks each segment so EVERY line can be filled with even gaps, then the
@@ -2490,15 +2550,65 @@ struct MushafPageComposer {
             let balanced = NSMutableAttributedString(attributedString: result)
             if spaceTracking > 0 { Self.addSpaceTracking(spaceTracking, to: balanced) }
             // The opening spread justifies too (user rule: its lines fill the measure like any page) but
-            // classically - greedy breaks, last line left natural - so the balance pass, which exists to
-            // make a STRETCHED closing line sane, stands down there.
+            // classically - greedy breaks - so the balance pass, which exists to make a STRETCHED closing
+            // line sane, stands down there.
             if !isOpeningSpread {
                 Self.balanceLineBreaks(balanced, width: width, segments: fillableSegments, bodySize: size)
             }
-            return (Self.spaceJustified(balanced, width: width, exemptClosingLines: isOpeningSpread), ranges)
+            // Once the last line is its own centered paragraph, every remaining right-aligned line - the
+            // body's new closing line included - fills to both margins like any other page; the centered
+            // tail is skipped by alignment. Only if the swap didn't land does the old exemption hold.
+            return (Self.spaceJustified(balanced, width: width,
+                                        exemptClosingLines: isOpeningSpread && !centeredClosingLine), ranges)
         }
 
         return (result, ranges)
+    }
+
+    /// Opening spread only: turns the page's final soft wrap into a hard break and centers the tail.
+    ///
+    /// The break SPACE is REPLACED, in place, by a newline - same character count, so every ayah
+    /// hit-test range and the off-main justification transplant's indices survive untouched. The new
+    /// tail paragraph keeps the pinned line box and carries `paragraphSpacingBefore` equal to the line
+    /// spacing the paragraph split removed (TextKit applies `lineSpacing` only WITHIN a paragraph), so
+    /// the last line sits exactly where it did and the page's height doesn't move.
+    /// Returns whether the swap landed - a single-line paragraph, or a last line that opens a paragraph
+    /// of its own already, has no break space to absorb and keeps its natural setting.
+    @discardableResult
+    private static func centerLastLine(of text: NSMutableAttributedString, width: CGFloat,
+                                       size: CGFloat, extraLineSpacing: CGFloat,
+                                       baseSize: CGFloat) -> Bool {
+        // Bound as a whole: NSLayoutManager does not retain its NSTextStorage.
+        let stack = layoutStack(for: text, width: width)
+        let manager = stack.manager
+        guard manager.numberOfGlyphs > 0 else { return false }
+
+        var lastLineRange = NSRange()
+        var glyph = 0
+        while glyph < manager.numberOfGlyphs {
+            var lineGlyphRange = NSRange()
+            manager.lineFragmentRect(forGlyphAt: glyph, effectiveRange: &lineGlyphRange)
+            lastLineRange = manager.characterRange(forGlyphRange: lineGlyphRange, actualGlyphRange: nil)
+            glyph = NSMaxRange(lineGlyphRange)
+        }
+
+        let string = text.string as NSString
+        let lineStart = lastLineRange.location
+        // Only a RUNNING-TEXT last line (right-aligned body) that wrapped off a space is centered.
+        guard lineStart > 0, lineStart < string.length,
+              string.character(at: lineStart - 1) == 0x20,
+              let style = text.attribute(.paragraphStyle, at: lineStart, effectiveRange: nil) as? NSParagraphStyle,
+              style.alignment == .right,
+              let centered = style.mutableCopy() as? NSMutableParagraphStyle else { return false }
+
+        text.replaceCharacters(in: NSRange(location: lineStart - 1, length: 1), with: "\n")
+
+        centered.alignment = .center
+        centered.paragraphSpacingBefore = MushafPageFitter.lineSpacing(for: size, baseSize: baseSize)
+            + extraLineSpacing
+        text.addAttribute(.paragraphStyle, value: centered,
+                          range: NSRange(location: lineStart, length: text.length - lineStart))
+        return true
     }
 
     /// The page-wide justification - loosening, balanced re-breaks, margin top-up - computed on the PLAIN
@@ -3108,17 +3218,13 @@ struct MushafPageComposer {
         return lines
     }
 
-    /// The largest size a mushaf page can be set at without overflowing. Hard ceiling so a short page (a few
-    /// ayahs of a late surah) doesn't blow up to absurd glyphs just because it has the room.
+    /// The largest size a mushaf page can be set at without overflowing.
     ///
-    /// The SAME generous ceiling for every riwayah (user rule: the font being as big as the page allows is
-    /// the number-one priority - everything else comes after). Non-Hafs riwayat used to hold the reader's
-    /// own size because their pages run naturally short by a line or two (different orthography poured into
-    /// Hafs's page boundaries) and per-page inflation makes neighbouring pages' faces visibly differ - a
-    /// trade the bigger-font rule now deliberately accepts.
-    private var fitCeiling: CGFloat {
-        min(config.fontSize * 2.5, 64)
-    }
+    /// Practically UNCAPPED (user rule, restated hard: "MAXIMIZE the Arabic font, even for a 0.01pt
+    /// difference - number one priority"). The old `min(fontSize * 2.5, 64)` ceiling existed so a short
+    /// page wouldn't blow up; the height budget itself bounds every real page, so the only cap kept is
+    /// an absurdity guard far above anything a phone page can actually fit.
+    private var fitCeiling: CGFloat { 120 }
 
     /// The font size the page renders at. With "Fit Page to Screen" on, the page takes up as much of the height
     /// as it can WITHOUT overflowing - it grows into empty space as readily as it shrinks out of an overflow.
@@ -3234,8 +3340,9 @@ struct MushafPageComposer {
             // The floor is a legibility limit - a page that can't fit even at 9pt keeps 9pt and scrolls.
             var low: CGFloat = 9
             var high = ceiling
-            // 9 iterations resolve a ~30pt range to under 0.06pt - finer than the 0.01pt rounding below.
-            for _ in 0..<9 {
+            // 14 iterations resolve the full 9…120 range to under 0.01pt - the user rule is that even a
+            // hundredth of a point of font is worth taking.
+            for _ in 0..<14 {
                 let mid = (low + high) / 2
                 if measuredHeight(size: mid, width: availableWidth) <= budget {
                     low = mid
@@ -3258,11 +3365,12 @@ struct MushafPageComposer {
         // Then take back every fraction the coarse measurement gave away. `boundingRect` tends to
         // OVER-estimate against pinned line heights, so the search above settles small and the page wastes
         // its bottom - and stepping down can only ever shrink. Binary-search the REAL layout upward toward
-        // the ceiling: the page ends at the biggest size that truly fits, down to the hundredth of a point.
+        // the ceiling: the page ends at the biggest size that truly fits, down to the hundredth of a point
+        // (14 iterations cover the full 9…120 range at that resolution - the maximize-font user rule).
         var lo = candidate
         var hi = ceiling
         if lo < hi {
-            for _ in 0..<10 {
+            for _ in 0..<14 {
                 let mid = (lo + hi) / 2
                 if Self.layoutHeight(of: attributed(size: mid, colored: false).text, width: availableWidth) <= budget {
                     lo = mid
@@ -3335,6 +3443,8 @@ enum MushafPageRenderCache {
             // category kept serving already-composed pages with the old colors until cache eviction.
             s.tajweedCategoryVisibilitySignature,
             s.riwayahTajweedHiddenRules,
+            // Toggling "Highlight Allah" repaints the composed page (red divine names), so it keys the cache.
+            s.highlightAllahNames ? "h" : "-",
             s.showArabicText ? "a" : "-",
             s.cleanArabicText ? "c" : "-",
             // Was missing: toggling "Hide Arabic Dots" did not change the key, so every already-composed page
@@ -3442,7 +3552,9 @@ enum MushafPageRenderCache {
     /// Bumped whenever the fit ALGORITHM itself changes (ceilings, tracking caps, balance rules):
     /// the persisted numbers are pure over (page, geometry, settings) only for a FIXED fitter, and
     /// the build number alone can't see a code change on a dev install that reuses its version.
-    nonisolated private static let fitterVersion = 2
+    /// v3: uncapped fit ceiling (maximize-font user rule), 0.01pt search resolution, uncapped
+    /// line-spacing spread (full vertical fill).
+    nonisolated private static let fitterVersion = 3
 
     nonisolated private static let persistedMetricsSalt: String = {
         let os = ProcessInfo.processInfo.operatingSystemVersion
@@ -3718,17 +3830,15 @@ enum MushafPageRenderCache {
         var measured = composer.balancedLayoutHeight(size: size, width: width, tracking: tracking)
 
         // Sizing alone can never fill the page exactly: line wrapping is quantized, so one point more font
-        // pushes a whole extra line and overflows. A printed mushaf closes the leftover by spreading the
-        // lines - but only a LITTLE. The old cap (three quarters of the font size per gap!) let each page
-        // pick its own rhythm, which read as every page having different line spacing. A fifth of the font
-        // size is at most a subtle settle; whatever it can't absorb stays as the symmetric top/bottom band
-        // the centered layout already gives. English pages skip the spread entirely: prose reads on constant
-        // leading, and it was the English pages where the wandering spacing was most obvious.
+        // pushes a whole extra line and overflows. The leftover is spread across the line gaps so the text
+        // SPANS THE FULL HEIGHT (user rule: after maximizing the font, take the whole vertical space - a
+        // per-page rhythm difference is accepted for it; the old 0.2×size cap left a dead band instead).
+        // English pages skip the spread entirely: prose reads on constant leading, and it was the English
+        // pages where wandering spacing was most obvious.
         if composer.config.fitPage, !composer.config.pageLanguage.isEnglish, measured < height {
             let lines = composer.lineCount(size: size, width: width, tracking: tracking)
             if lines > 1 {
-                let perGap = (height - measured) / CGFloat(lines - 1)
-                extraSpacing = min(perGap, size * 0.2)
+                extraSpacing = (height - measured) / CGFloat(lines - 1)
                 measured = composer.balancedLayoutHeight(
                     size: size, width: width, tracking: tracking, extraLineSpacing: extraSpacing
                 )
@@ -3882,8 +3992,10 @@ extension AyahHighlightColor {
     var pageWashUIColor: UIColor {
         if let cached = Self.pageWashCache[self] { return cached }
         let base = UIColor(color)
+        // Kept in step with `tintOpacity` (the list rows' wash): the highlight is a standing margin
+        // note, deliberately faint (user rule: "make highlighting opacity wayyy less").
         let wash = UIColor { traits in
-            base.withAlphaComponent(traits.userInterfaceStyle == .dark ? 0.28 : 0.20)
+            base.withAlphaComponent(traits.userInterfaceStyle == .dark ? 0.14 : 0.10)
         }
         Self.pageWashCache[self] = wash
         return wash

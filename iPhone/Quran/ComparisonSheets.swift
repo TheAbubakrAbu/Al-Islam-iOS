@@ -180,7 +180,6 @@ struct AyahQiraahComparisonSheet: View {
                 // In Head-to-Head the list is hidden, so the search bar steps aside with it.
                 if !duelMode {
                     SearchBar(text: AppPerformance.shouldReduceAnimations ? $searchText : $searchText.animation(.easeInOut), placeholder: "Search riwayat")
-                        .padding([.leading, .top], -8)
                         .padding(.horizontal, 24)
                         .padding(.bottom, 8)
                         .background(Color.white.opacity(0.00001))
@@ -1010,7 +1009,6 @@ struct AyahEnglishComparisonSheet: View {
         // The app's own bottom search bar, not `.searchable` - see the riwayah sheet above.
         .adaptiveSafeArea(edge: .bottom) {
             SearchBar(text: AppPerformance.shouldReduceAnimations ? $searchText : $searchText.animation(.easeInOut), placeholder: "Search translations")
-                .padding([.leading, .top], -8)
                 .padding(.horizontal, 24)
                 .padding(.bottom, 8)
                 .background(Color.white.opacity(0.00001))

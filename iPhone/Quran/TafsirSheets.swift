@@ -305,7 +305,6 @@ struct AyahTafsirSheet: View {
             // Behavior is unchanged: the same `searchText` still drives `recomputeMatches` and the find bar.
             .adaptiveSafeArea(edge: .bottom) {
                 SearchBar(text: AppPerformance.shouldReduceAnimations ? $searchText : $searchText.animation(.easeInOut), placeholder: "Search tafsir")
-                    .padding([.leading, .top], -8)
                     .padding(.horizontal, 24)
                     .padding(.bottom, 8)
                     .background(Color.white.opacity(0.00001))
@@ -631,7 +630,6 @@ struct SurahInfoSheet: View {
             // The app's own bottom search bar, not `.searchable` - see the tafsir sheet above.
             .adaptiveSafeArea(edge: .bottom) {
                 SearchBar(text: AppPerformance.shouldReduceAnimations ? $searchText : $searchText.animation(.easeInOut), placeholder: "Search info")
-                    .padding([.leading, .top], -8)
                     .padding(.horizontal, 24)
                     .padding(.bottom, 8)
                     .background(Color.white.opacity(0.00001))

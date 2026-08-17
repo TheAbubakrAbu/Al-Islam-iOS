@@ -198,11 +198,6 @@ struct SurahView: View {
     /// deliberately exempt - its bottom inset height feeds the page-fit geometry, and a shrinking bar there
     /// would re-fit every cached page mid-scroll.
     @State private var barsCollapsed = false
-    /// The LIST reader's manual bottom-chrome collapse - the twin of the page reader's, driven by the same
-    /// full-width chevron strip at the very bottom of the screen (user rule: "show collapse on list mode
-    /// too"). Separate from `barsCollapsed`, which is the scroll-driven size minimization.
-    /// Session-scoped on purpose: reopening a surah always starts with its controls visible.
-    @State private var listBarsCollapsed = false
     /// True while the reader's finger is on the list (or a flick is still coasting) - see
     /// `trackUserScrollTouch`. Playback's follow-scroll defers to it: holding an ayah to read it must
     /// not be yanked away when the reciter moves on.
@@ -2362,27 +2357,13 @@ struct SurahView: View {
                 .background(Color.white.opacity(0.00001))
                 .animation(.easeInOut, value: active)
                 .animation(.spring(response: 0.35, dampingFraction: 0.85), value: barsCollapsed)
-                // Manual collapse folds the bars via height+opacity with the views still MOUNTED - an `if`
-                // removal snapshots the glass background as a hard black box on the way out, because Liquid
-                // Glass can't participate in a removal transition. Same pattern as the page reader's.
-                .frame(height: listBarsCollapsed ? 0 : nil)
-                .clipped()
-                .opacity(listBarsCollapsed ? 0 : 1)
-                .allowsHitTesting(!listBarsCollapsed)
             }
             .adaptiveSafeArea(edge: .bottom) {
                 bottomInsetContent(proxy: proxy)
                     // Apple Music-style: the search/play row shrinks toward the bottom edge while scrolling
                     // down; typing in it always restores full size.
                     .minimizedBarStyle(barsCollapsed && !isAyahSearchFocused)
-                    .frame(height: listBarsCollapsed ? 0 : nil)
-                    .clipped()
-                    .opacity(listBarsCollapsed ? 0 : 1)
-                    .allowsHitTesting(!listBarsCollapsed)
             }
-            // Applied LAST so it sits BELOW everything else at the screen's bottom edge - the same
-            // always-present collapse/restore chevron the page reader carries, in the same place.
-            .safeAreaInset(edge: .bottom, spacing: 0) { listBarsToggleStrip }
             .confirmationDialog("Convert Qiraah to Hafs an Asim?", isPresented: $confirmConvertQiraahToHafs, titleVisibility: .visible) {
                 Button("Yes") {
                     settings.hapticFeedback()
@@ -2589,34 +2570,6 @@ struct SurahView: View {
     }
 
     #if os(iOS)
-    @ViewBuilder
-    /// The list reader's collapse/restore strip: a full-width chevron row at the very bottom of the screen,
-    /// below everything - the exact twin of the page reader's `bottomBarsToggleStrip`, so the control sits in
-    /// the same place whichever reading mode you're in. One button for both directions; the chevron turns over.
-    private var listBarsToggleStrip: some View {
-        Button {
-            settings.hapticFeedback()
-            withAnimation(.easeInOut(duration: 0.25)) { listBarsCollapsed.toggle() }
-        } label: {
-            Image(systemName: listBarsCollapsed ? "chevron.up" : "chevron.down")
-                .font(.caption.weight(.bold))
-                .foregroundColor(settings.accentColor.color)
-                // Same asymmetry as the page reader's: the hit area hangs below the glyph so the chevron
-                // tucks up under the bar above rather than sitting in a band of its own.
-                .padding(.top, 1)
-                .padding(.bottom, 7)
-                .frame(maxWidth: .infinity)
-                .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        // The list's bottom bar carries more of its own padding than the page footer does (and on iOS 26 it
-        // is a `safeAreaBar`, which adds its own), so this pulls back hard to close the gap. Only while the
-        // bars are THERE, though: collapsed, the strip's neighbour above is the list itself, and pulling
-        // into that would slide the chevron over the last row.
-        .padding(.top, listBarsCollapsed ? -2 : -22)
-        .accessibilityLabel(listBarsCollapsed ? "Show the bottom controls" : "Hide the bottom controls")
-    }
-
     private func bottomInsetContent(proxy: ScrollViewProxy) -> some View {
         VStack(spacing: SafeAreaInsetVStackSpacing.standard) {
             if isSelectingAyahs {
@@ -3024,7 +2977,9 @@ struct SurahView: View {
 
     private func playbackAndSearchControls(proxy: ScrollViewProxy) -> some View {
         VStack(spacing: SafeAreaInsetVStackSpacing.standard) {
-            HStack(spacing: 0) {
+            // The compact SwiftUI bar has no internal insets, so the old negative-padding compensation
+            // is gone - an ordinary 8pt gap separates the field from the play button.
+            HStack(spacing: 8) {
                 SearchBar(
                     // Animated again - results sliding in/out is part of the reader's feel. Low Power
                     // Mode keeps the plain binding (under its CPU throttle the whole-list animated diff
@@ -3043,11 +2998,9 @@ struct SurahView: View {
                 // width - you're searching, not reaching for playback.
                 if !isAyahSearchFocused {
                     playButton(proxy: proxy)
-                        .padding(.bottom, 2)
                         .transition(.move(edge: .trailing).combined(with: .opacity))
                 }
             }
-            .padding([.leading, .top], -8)
         }
         .padding(.horizontal, 24)
         .padding(.bottom, 8)
@@ -3208,9 +3161,8 @@ struct SurahView: View {
         @ViewBuilder content: () -> Content
     ) -> some View {
         content()
-            .frame(width: 27, height: 27)
-            .padding()
-            .frame(minWidth: 44, minHeight: 44)
+            .frame(width: 22, height: 22)
+            .frame(width: 42, height: 42)
             .contentShape(Rectangle())
             .conditionalGlassEffect()
     }
@@ -3896,7 +3848,6 @@ private struct SurahPickerSheet: View {
                 // `searchText`.
                 .adaptiveSafeArea(edge: .bottom) {
                     SearchBar(text: AppPerformance.shouldReduceAnimations ? $searchText : $searchText.animation(.easeInOut), placeholder: "Search surah")
-                        .padding([.leading, .top], -8)
                         .padding(.horizontal, 24)
                         .padding(.bottom, 8)
                         .background(Color.white.opacity(0.00001))

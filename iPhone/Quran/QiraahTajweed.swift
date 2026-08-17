@@ -259,13 +259,37 @@ final class QiraahTajweedStore: @unchecked Sendable {
                     ranges = Self.paintRanges(key: key, in: units, tokenStart: start, tokenEnd: end)
                 }
                 for range in ranges {
-                    ns.addAttribute(.foregroundColor, value: Self.uiColor(for: rule.letter), range: range)
-                    painted = true
+                    // Around the stop signs, never over them: the waqf ornaments ride on a word's last
+                    // letter in these texts, so a whole-word or last-cluster wash would tint them too.
+                    for run in Self.subrangesExcludingStopSigns(range, in: units) {
+                        ns.addAttribute(.foregroundColor, value: Self.uiColor(for: rule.letter), range: run)
+                        painted = true
+                    }
                 }
             }
         }
         guard painted else { return nil }
         return AttributedString(ns)
+    }
+
+    /// `range` minus any stop-sign ornaments inside it, as the contiguous runs between them - so a rule
+    /// wash colors the word's letters and marks but steps over ۖ ۗ ۘ ۙ ۚ ۛ (and the standalone ۞/۩),
+    /// which are punctuation of the PAGE, not of the word (user rule: stop signs are never highlighted).
+    private static func subrangesExcludingStopSigns(_ range: NSRange, in units: [UInt16]) -> [NSRange] {
+        let end = min(range.location + range.length, units.count)
+        var start = max(range.location, 0)
+        guard start < end else { return [] }
+        var runs: [NSRange] = []
+        var runStart = start
+        while start < end {
+            if TajweedRules.stopSignUTF16.contains(units[start]) {
+                if start > runStart { runs.append(NSRange(location: runStart, length: start - runStart)) }
+                runStart = start + 1
+            }
+            start += 1
+        }
+        if end > runStart { runs.append(NSRange(location: runStart, length: end - runStart)) }
+        return runs
     }
 
     /// The word-token spans of `displayText`'s UTF-16 units, in reading order - the

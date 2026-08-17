@@ -54,12 +54,12 @@ struct ArabicBasicsView: View {
     private var genderSection: some View {
         Section {
             ArabicExampleRow(
-                arabic: "مُسْلِم",
+                arabic: "مُسۡلِم",
                 transliteration: "muslim",
                 note: "A Muslim man - no ة"
             )
             ArabicExampleRow(
-                arabic: "مُسْلِمَة",
+                arabic: "مُسۡلِمَة",
                 transliteration: "muslimah",
                 note: "A Muslim woman - the ة marks the feminine"
             )
@@ -88,9 +88,9 @@ struct ArabicBasicsView: View {
                 note: "Two books - subject form (raf'): add ـَانِ"
             )
             ArabicExampleRow(
-                arabic: "كِتَابَيْنِ",
+                arabic: "كِتَابَيۡنِ",
                 transliteration: "kitaabayn(i)",
-                note: "Two books - object or after-preposition form (nasb/jarr): add ـَيْنِ"
+                note: "Two books - object or after-preposition form (nasb/jarr): add ـَيۡنِ"
             )
         } header: {
             Text("THE DUAL: EXACTLY TWO")
@@ -102,17 +102,17 @@ struct ArabicBasicsView: View {
     private var pluralsSection: some View {
         Section {
             ArabicExampleRow(
-                arabic: "مُسْلِمُونَ",
+                arabic: "مُسۡلِمُونَ",
                 transliteration: "muslimuun(a)",
                 note: "Sound masculine plural, subject form: add ـُونَ"
             )
             ArabicExampleRow(
-                arabic: "مُسْلِمِينَ",
+                arabic: "مُسۡلِمِينَ",
                 transliteration: "muslimiin(a)",
                 note: "Sound masculine plural, object or after-preposition form: add ـِينَ"
             )
             ArabicExampleRow(
-                arabic: "مُسْلِمَات",
+                arabic: "مُسۡلِمَات",
                 transliteration: "muslimaat",
                 note: "Sound feminine plural: the ة opens into ـَات"
             )
@@ -127,7 +127,7 @@ struct ArabicBasicsView: View {
                 note: "Man \u{2192} men (broken plural)"
             )
             ArabicExampleRow(
-                arabic: "بَيْت \u{2190} بُيُوت",
+                arabic: "بَيۡت \u{2190} بُيُوت",
                 transliteration: "bayt \u{2192} buyuut",
                 note: "House \u{2192} houses (broken plural)"
             )
@@ -141,17 +141,17 @@ struct ArabicBasicsView: View {
     private var casesSection: some View {
         Section {
             ArabicExampleRow(
-                arabic: "جَاءَ الرَّجُلُ",
+                arabic: "جَآءَ ٱلرَّجُلُ",
                 transliteration: "jaa'a r-rajulu",
                 note: "Raf' (marfuu'): damma - the subject. \"The man came.\""
             )
             ArabicExampleRow(
-                arabic: "رَأَيْتُ الرَّجُلَ",
+                arabic: "رَأَيۡتُ ٱلرَّجُلَ",
                 transliteration: "ra'aytu r-rajula",
                 note: "Nasb (mansuub): fatha - the object. \"I saw the man.\""
             )
             ArabicExampleRow(
-                arabic: "فِي البَيْتِ",
+                arabic: "فِي ٱلۡبَيۡتِ",
                 transliteration: "fi l-bayti",
                 note: "Jarr (majruur): kasra - after a preposition or in idafah. \"In the house.\""
             )

@@ -79,10 +79,10 @@ struct TajweedMaddView: View {
                     .font(.subheadline.weight(.semibold))
 
                 VStack(alignment: .leading, spacing: 12) {
-                    TajweedPairRow(arabic: "جَاءَ", english: "jaaa", arabicFont: arabicHeadlineFont)
-                    TajweedPairRow(arabic: "السَّمَاءِ", english: "as-samaaa", arabicFont: arabicHeadlineFont)
-                    TajweedPairRow(arabic: "سُوءَ", english: "suuu", arabicFont: arabicHeadlineFont)
-                    TajweedPairRow(arabic: "شَيْءٌ", english: "shay (with extended yaa sound)", arabicFont: arabicHeadlineFont)
+                    TajweedPairRow(arabic: "جَآءَ", english: "jaaa", arabicFont: arabicHeadlineFont)
+                    TajweedPairRow(arabic: "ٱلسَّمَآءِ", english: "as-samaaa", arabicFont: arabicHeadlineFont)
+                    TajweedPairRow(arabic: "سُوٓءَ", english: "suuu", arabicFont: arabicHeadlineFont)
+                    TajweedPairRow(arabic: "شَيۡءٌ", english: "shay (with extended yaa sound)", arabicFont: arabicHeadlineFont)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
 
@@ -115,9 +115,9 @@ struct TajweedMaddView: View {
                     .font(.subheadline.weight(.semibold))
 
                 VStack(alignment: .leading, spacing: 12) {
-                    TajweedPairRow(arabic: "فِي أَنفُسِكُمْ", english: "fi an-fu-si-kum", arabicFont: arabicHeadlineFont)
-                    TajweedPairRow(arabic: "قَالُوا إِنَّا", english: "qalu in-na", arabicFont: arabicHeadlineFont)
-                    TajweedPairRow(arabic: "إِنَّا أَعْطَيْنَاكَ", english: "in-naa a'-tay-naa-ka", arabicFont: arabicHeadlineFont)
+                    TajweedPairRow(arabic: "فِي أَنفُسِكُمۡ", english: "fi an-fu-si-kum", arabicFont: arabicHeadlineFont)
+                    TajweedPairRow(arabic: "قَالُوٓاْ إِنَّا", english: "qalu in-na", arabicFont: arabicHeadlineFont)
+                    TajweedPairRow(arabic: "إِنَّآ أَعۡطَيۡنَٰكَ", english: "in-naa a'-tay-naa-ka", arabicFont: arabicHeadlineFont)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
 
@@ -330,9 +330,9 @@ struct TajweedMaddView: View {
                     .font(.body)
 
                 VStack(alignment: .leading, spacing: 12) {
-                    TajweedPairRow(arabic: "الم", english: "Alif (no madd) Laaaaaam (6) Miiiiiim (6)", arabicFont: arabicHeadlineFont)
-                    TajweedPairRow(arabic: "كهيعص", english: "Kaaaaaaf (6) Haa (2) Yaa (2) 'Ayyyn (4-6) Saaaaaad (6)", arabicFont: arabicHeadlineFont)
-                    TajweedPairRow(arabic: "حم", english: "Haa (2) Miiiiiim (6)", arabicFont: arabicHeadlineFont)
+                    TajweedPairRow(arabic: "الٓمٓ", english: "Alif (no madd) Laaaaaam (6) Miiiiiim (6)", arabicFont: arabicHeadlineFont)
+                    TajweedPairRow(arabic: "كٓهيعٓصٓ", english: "Kaaaaaaf (6) Haa (2) Yaa (2) 'Ayyyn (4-6) Saaaaaad (6)", arabicFont: arabicHeadlineFont)
+                    TajweedPairRow(arabic: "حمٓ", english: "Haa (2) Miiiiiim (6)", arabicFont: arabicHeadlineFont)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
 
@@ -345,8 +345,8 @@ struct TajweedMaddView: View {
                     .font(.body)
 
                 VStack(alignment: .leading, spacing: 12) {
-                    TajweedPairRow(arabic: "الضَّالِّينَ", english: "ad-daaallin", arabicFont: arabicHeadlineFont)
-                    TajweedPairRow(arabic: "الطَّامَّة", english: "at-taaammah", arabicFont: arabicHeadlineFont)
+                    TajweedPairRow(arabic: "ٱلضَّآلِّينَ", english: "ad-daaallin", arabicFont: arabicHeadlineFont)
+                    TajweedPairRow(arabic: "ٱلطَّآمَّة", english: "at-taaammah", arabicFont: arabicHeadlineFont)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
@@ -469,11 +469,11 @@ struct TajweedQalqalahView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
 
                 VStack(alignment: .leading, spacing: 12) {
-                    TajweedPairRow(arabic: "أَحَدْ", english: "aha(d)", arabicFont: arabicHeadlineFont)
-                    TajweedPairRow(arabic: "يَجْعَل", english: "ya(j)-'al", arabicFont: arabicHeadlineFont)
-                    TajweedPairRow(arabic: "أَجْر", english: "a(j)r", arabicFont: arabicHeadlineFont)
-                    TajweedPairRow(arabic: "يَقْطَع", english: "ya(q)ta'", arabicFont: arabicHeadlineFont)
-                    TajweedPairRow(arabic: "يَبْتَغُون", english: "ya(b)taghun", arabicFont: arabicHeadlineFont)
+                    TajweedPairRow(arabic: "أَحَدۡ", english: "aha(d)", arabicFont: arabicHeadlineFont)
+                    TajweedPairRow(arabic: "يَجۡعَل", english: "ya(j)-'al", arabicFont: arabicHeadlineFont)
+                    TajweedPairRow(arabic: "أَجۡر", english: "a(j)r", arabicFont: arabicHeadlineFont)
+                    TajweedPairRow(arabic: "يَقۡطَع", english: "ya(q)ta'", arabicFont: arabicHeadlineFont)
+                    TajweedPairRow(arabic: "يَبۡتَغُون", english: "ya(b)taghun", arabicFont: arabicHeadlineFont)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
 
@@ -548,21 +548,21 @@ struct TajweedIdghamIkhfaView: View {
                 VStack(alignment: .leading, spacing: 12) {
                     TajweedRuleRow(
                         arabic: "بًا",
-                        pronunciation: "بَنْ (ban)",
+                        pronunciation: "بَنۡ (ban)",
                         rule: "",
                         arabicFont: arabicHeadlineFont
                     )
 
                     TajweedRuleRow(
                         arabic: "بٌ",
-                        pronunciation: "بُنْ (bun)",
+                        pronunciation: "بُنۡ (bun)",
                         rule: "",
                         arabicFont: arabicHeadlineFont
                     )
 
                     TajweedRuleRow(
                         arabic: "بٍ",
-                        pronunciation: "بِنْ (bin)",
+                        pronunciation: "بِنۡ (bin)",
                         rule: "",
                         arabicFont: arabicHeadlineFont
                     )
@@ -610,7 +610,7 @@ struct TajweedIdghamIkhfaView: View {
                 Text("Example")
                     .font(.subheadline.weight(.semibold))
 
-                TajweedPairRow(arabic: "مِنْ هَادٍ", english: "min hadin", arabicFont: arabicHeadlineFont)
+                TajweedPairRow(arabic: "مِنۡ هَادٍ", english: "min hadin", arabicFont: arabicHeadlineFont)
 
                 Text("The throat letters prevent merging, so the sound must remain clear.")
                     .font(.body)
@@ -833,7 +833,7 @@ struct TajweedMeemSakinahView: View {
                 Text("Example")
                     .font(.subheadline.weight(.semibold))
 
-                Text("وَلَهُم مَّا يَشْتَهُونَ")
+                Text("وَلَهُم مَّا يَشۡتَهُونَ")
                     .font(Font.arabic(settings.fontArabic, size: 24))
                     .arabicFontDesign(custom: settings.quranUsesCustomArabicFace)
                     .frame(maxWidth: .infinity, alignment: .center)
@@ -863,17 +863,17 @@ struct TajweedMeemSakinahView: View {
                 Text("Example")
                     .font(.subheadline.weight(.semibold))
 
-                Text("وَمَا بَلَغُوا۟ مِعْشَارَ مَآ ءَاتَيْنَٰهُمْ فَكَذَّبُوا۟ رُسُلِى")
+                Text("وَمَا بَلَغُواْ مِعۡشَارَ مَآ ءَاتَيۡنَٰهُمۡ فَكَذَّبُواْ رُسُلِي")
                     .font(Font.arabic(settings.fontArabic, size: 24))
                     .arabicFontDesign(custom: settings.quranUsesCustomArabicFace)
                     .frame(maxWidth: .infinity, alignment: .center)
 
-                Text("In this example, the Meem Sakinah in ءَاتَيْنَٰهُمْ is followed by ف, so it is read with Idhaar Shafawi.")
+                Text("In this example, the Meem Sakinah in ءَاتَيۡنَٰهُمۡ is followed by ف, so it is read with Idhaar Shafawi.")
                     .font(.body)
 
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("لَكُمْ فِيهَا")
-                    Text("عَلَيْكُمْ سَلَامٌ")
+                    Text("لَكُمۡ فِيهَا")
+                    Text("عَلَيۡكُمۡ سَلَامٌ")
                 }
                 .font(.body)
                 .foregroundColor(.secondary)
@@ -905,9 +905,9 @@ struct TajweedMeemSakinahView: View {
                     .foregroundColor(settings.accentColor.color)
 
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("1. Ikhfaa Shafawi: مْ + ب, hide the meem with ghunnah. Example: أَم بِهِۦ")
-                    Text("2. Idgham Shafawi: مْ + م, merge the two meems with ghunnah. Example: لَهُم مَّا")
-                    Text("3. Idhaar Shafawi: مْ + any letter except ب or م, pronounce the meem clearly. Example: لَكُمْ فِيهَا")
+                    Text("1. Ikhfaa Shafawi: مۡ + ب, hide the meem with ghunnah. Example: أَم بِهِۦ")
+                    Text("2. Idgham Shafawi: مۡ + م, merge the two meems with ghunnah. Example: لَهُم مَّا")
+                    Text("3. Idhaar Shafawi: مۡ + any letter except ب or م, pronounce the meem clearly. Example: لَكُمۡ فِيهَا")
                 }
                 .font(.body)
                 .foregroundColor(.secondary)
@@ -1127,7 +1127,7 @@ struct TajweedHamzatulWaslView: View {
             }
 
             Section("4. Hamzatul-Wasl in Verbs Depends on the Third Letter") {
-                Text("For verbs, examine the third letter: if it has ḍammah, begin with “u”; if it has fatḥah or kasrah, begin with “i”. Exception: when that ḍammah is incidental (ʿāriḍah), begin with kasrah instead: ٱمْشُوا، ٱقْضُوا، ٱبْنُوا، ٱمْضُوا، ٱئْتُوا are read imshu, iqdu, ibnu, imdu, i’tu, not umshu / uqdu / ubnu.")
+                Text("For verbs, examine the third letter: if it has ḍammah, begin with “u”; if it has fatḥah or kasrah, begin with “i”. Exception: when that ḍammah is incidental (ʿāriḍah), begin with kasrah instead: ٱمۡشُوا، ٱقۡضُوا، ٱبۡنُوا، ٱمۡضُوا، ٱئۡتُوا are read imshu, iqdu, ibnu, imdu, i’tu, not umshu / uqdu / ubnu.")
                     .font(.body)
 
                 Text("Example (third letter ḍammah → start with 'u'):")
@@ -1288,19 +1288,19 @@ struct TajweedWaqfView: View {
 
                 VStack(alignment: .leading, spacing: 12) {
                     TajweedRuleRow(
-                        arabic: "الْعَالَمِينَ -> الْعَالَمِينْ",
+                        arabic: "ٱلۡعَالَمِينَ -> ٱلۡعَالَمِينۡ",
                         pronunciation: "Connected -> Stopping",
                         rule: "",
                         arabicFont: arabicHeadlineFont
                     )
                     TajweedRuleRow(
-                        arabic: "نَسْتَعِينُ -> نَسْتَعِينْ",
+                        arabic: "نَسۡتَعِينُ -> نَسۡتَعِينۡ",
                         pronunciation: "Connected -> Stopping",
                         rule: "",
                         arabicFont: arabicHeadlineFont
                     )
                     TajweedRuleRow(
-                        arabic: "الْكِتَابِ -> الْكِتَابْ",
+                        arabic: "ٱلۡكِتَابِ -> ٱلۡكِتَابۡ",
                         pronunciation: "Connected -> Stopping",
                         rule: "",
                         arabicFont: arabicHeadlineFont
@@ -1318,19 +1318,19 @@ struct TajweedWaqfView: View {
 
                 VStack(alignment: .leading, spacing: 12) {
                     TajweedRuleRow(
-                        arabic: "بَصِيرٌ -> بَصِيرْ",
+                        arabic: "بَصِيرٌ -> بَصِيرۡ",
                         pronunciation: "Dammatayn",
                         rule: "",
                         arabicFont: arabicHeadlineFont
                     )
                     TajweedRuleRow(
-                        arabic: "عَلِيمٍ -> عَلِيمْ",
+                        arabic: "عَلِيمٍ -> عَلِيمۡ",
                         pronunciation: "Kasratayn",
                         rule: "",
                         arabicFont: arabicHeadlineFont
                     )
                     TajweedRuleRow(
-                        arabic: "رَحْمَةً -> رَحْمَةْ",
+                        arabic: "رَحۡمَةً -> رَحۡمَةۡ",
                         pronunciation: "Fathatayn (no alif)",
                         rule: "",
                         arabicFont: arabicHeadlineFont
@@ -1359,18 +1359,18 @@ struct TajweedWaqfView: View {
             }
 
             Section("3. TAA MARBUTAH (ة)") {
-                Text("When stopping, taa marbutah is pronounced as haa saakinah (ـهْ).")
+                Text("When stopping, taa marbutah is pronounced as haa saakinah (ـهۡ).")
                     .font(.body)
 
                 VStack(alignment: .leading, spacing: 12) {
                     TajweedRuleRow(
-                        arabic: "رَحْمَةٌ -> رَحْمَهْ",
+                        arabic: "رَحۡمَةٌ -> رَحۡمَهۡ",
                         pronunciation: "Connected -> Stopping",
                         rule: "",
                         arabicFont: arabicHeadlineFont
                     )
                     TajweedRuleRow(
-                        arabic: "جَنَّةٍ -> جَنَّهْ",
+                        arabic: "جَنَّةٍ -> جَنَّهۡ",
                         pronunciation: "Connected -> Stopping",
                         rule: "",
                         arabicFont: arabicHeadlineFont
@@ -1394,7 +1394,7 @@ struct TajweedWaqfView: View {
                         arabicFont: arabicHeadlineFont
                     )
                     TajweedRuleRow(
-                        arabic: "يَقُولُ -> يَقُولْ",
+                        arabic: "يَقُولُ -> يَقُولۡ",
                         pronunciation: "Final vowel drops, long sound remains",
                         rule: "",
                         arabicFont: arabicHeadlineFont
@@ -1448,7 +1448,7 @@ struct TajweedWaqfView: View {
                 Text("Example of a dangerous stop:")
                     .font(.subheadline.weight(.semibold))
 
-                Text("لَا تَقْرَبُوا الصَّلَاةَ")
+                Text("لَا تَقۡرَبُواْ ٱلصَّلَوٰةَ")
                     .font(arabicHeadlineFont)
                     .arabicFontDesign(custom: settings.quranUsesCustomArabicFace)
                     .frame(maxWidth: .infinity, alignment: .trailing)
@@ -1456,7 +1456,7 @@ struct TajweedWaqfView: View {
                 Text("Stopping here implies \"Do not approach prayer,\" which is incorrect.")
                     .font(.body)
 
-                Text("The ayah continues: وَأَنتُمْ سُكَارَى")
+                Text("The ayah continues: وَأَنتُمۡ سُكَٰرَىٰ")
                     .font(.body)
                     .foregroundColor(.secondary)
             }

@@ -1231,22 +1231,36 @@ struct AyahSearchRow: View, Equatable {
             : arabic
 
         if trimmed.containsArabicLetters {
+            // Per-ayah exact terms UNIONED with the corpus lexicon's - not a fallback. The aligned gloss
+            // is one wording of the word ("straitened"); the lexicon carries the word family's gloss
+            // variants from every occurrence, which is what bridges to a translation that phrased it
+            // differently ("confining"). The union is what "maximize" buys here.
             var terms = CrossLanguageWordHighlight.englishTermsForArabicMatch(
                 query: trimmed, surah: surah, ayah: ayah, rawText: rawText, displayText: displayText
             )
-            if terms.isEmpty {
-                terms = CrossLanguageWordHighlight.englishTermsForUnalignedArabicQuery(trimmed)
+            for term in CrossLanguageWordHighlight.englishTermsForUnalignedArabicQuery(trimmed)
+            where !terms.contains(term) {
+                terms.append(term)
             }
-            guard !terms.isEmpty else { return ([], [], []) }
-            return ([],
+            // The morphological Arabic spans are ADDITIVE: tokens of the same word family the plain
+            // highlighter misses (صلاتهم for a صلاة query) light up in the Arabic line too.
+            let arabicExtra = CrossLanguageWordHighlight.arabicSpansForArabicQuery(
+                query: trimmed, in: displayText
+            )
+            guard !terms.isEmpty || !arabicExtra.isEmpty else { return ([], [], []) }
+            return (arabicExtra,
                     CrossLanguageWordHighlight.wordSpans(of: terms, in: englishSaheeh),
                     CrossLanguageWordHighlight.wordSpans(of: terms, in: englishMustafa))
         } else {
+            // Union here too: the per-ayah alignment and the corpus lexicon each catch tokens the
+            // other misses (an inflected form the exact gloss missed; a gloss wording the lexicon
+            // dropped under its noise cap).
             var spans = CrossLanguageWordHighlight.arabicSpansForEnglishMatch(
                 query: trimmed, surah: surah, ayah: ayah, rawText: rawText, displayText: displayText
             )
-            if spans.isEmpty {
-                spans = CrossLanguageWordHighlight.arabicSpansForEnglishQuery(trimmed, arabicText: displayText)
+            for span in CrossLanguageWordHighlight.arabicSpansForEnglishQuery(trimmed, arabicText: displayText)
+            where !spans.contains(where: { NSIntersectionRange($0, span).length > 0 }) {
+                spans.append(span)
             }
             return (spans, [], [])
         }

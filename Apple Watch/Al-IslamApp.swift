@@ -54,6 +54,9 @@ struct AlIslamApp: App {
             // The app-wide SF Rounded design, same as the iPhone root - covers every system-font Text on
             // the watch, styled or not (watchOS 9.1+; a visual no-op earlier).
             .appFontDesign()
+            // Every Toggle breathes: the standard switch with 2pt of vertical padding (user rule),
+            // applied once at the root exactly like the iPhone app.
+            .toggleStyle(PaddedSwitchToggleStyle())
             .preferredColorScheme(settings.colorScheme)
             .transition(.opacity)
             .animation(.easeInOut, value: isLaunching)

@@ -599,6 +599,19 @@ struct TajweedRules {
     static let waqfScalarSkipColorLower: UInt32 = 0x06D6
     static let waqfScalarSkipColorUpper: UInt32 = 0x06ED
 
+    /// The STOP-SIGN ornaments proper: the six waqf ligature marks that ride on a word's last letter
+    /// (ۖ ۗ ۘ ۙ ۚ ۛ), plus the standalone hizb ۞ and sajdah ۩ symbols. Narrower than the skip band
+    /// above on purpose - the other scalars in 06D6…06ED are letter components in the riwayah texts
+    /// (the qunbul small seen, wasl/silence zeros, iqlab meems), which their packs legitimately color.
+    /// Every word-level wash (riwayah tajweed, khilaf words, the diff tint) must paint AROUND these:
+    /// a stop sign is punctuation, never part of the highlighted word.
+    static let stopSignScalars: Set<UInt32> = [
+        0x06D6, 0x06D7, 0x06D8, 0x06D9, 0x06DA, 0x06DB, 0x06DE, 0x06E9,
+    ]
+
+    /// The same set as UTF-16 units (all BMP, one unit each) for painters that walk UTF-16 buffers.
+    static let stopSignUTF16: Set<UInt16> = Set(stopSignScalars.map { UInt16($0) })
+
     /// A few Uthmani marks in the same block must stay paintable because they are part of letters, not stop symbols.
     static let waqfScalarExceptions: Set<UInt32> = [0x06E1, 0x06E2, 0x06E5, 0x06E6, 0x06ED]
 

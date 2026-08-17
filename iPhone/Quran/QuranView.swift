@@ -151,7 +151,20 @@ private struct QuranLeadingToolbar: ViewModifier {
 @MainActor
 final class QuranSearchHandoff: ObservableObject {
     static let shared = QuranSearchHandoff()
-    private init() {}
+    private init() {
+        #if DEBUG
+        // Headless search verification: "-quranSearch <term>" runs the Quran tab's global search as if
+        // a reader had handed the term off (taps and typing aren't scriptable in the simulator). Fired
+        // on a delay so the tab - and its onChange observer - are mounted before the value lands.
+        let args = ProcessInfo.processInfo.arguments
+        if let idx = args.firstIndex(of: "-quranSearch"), idx + 1 < args.count {
+            let query = args[idx + 1]
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) { [weak self] in
+                self?.request(query)
+            }
+        }
+        #endif
+    }
 
     /// Non-nil means "a reader asked for the Quran search". Empty string is a legitimate request - it means
     /// "open the search with nothing typed yet".
@@ -1931,20 +1944,19 @@ struct QuranView: View {
 
     private var searchAndPlaybackRow: some View {
         #if os(iOS)
-        HStack(spacing: 0) {
+        // (The old UIKit search bar carried ~8pt of internal inset that this row cancelled with negative
+        // leading/top padding; the compact SwiftUI bar has none, so the row needs no compensation - just
+        // an ordinary gap between the field and the play button.)
+        HStack(spacing: 8) {
             quranSearchBar
 
             // While the search field is focused, the playback menu slides away so the field takes the whole
             // width - you're searching, not reaching for playback.
             if !isQuranSearchFocused {
                 playbackMenuButton
-                    .padding(.bottom, 2)
                     .transition(.move(edge: .trailing).combined(with: .opacity))
             }
         }
-        .padding(.leading, -8)
-        // Keyed on the LAYOUT, not the idiom: an iPhone-width iPad window uses the iPhone shape.
-        .padding(.top, usesColumnNavigation ? 0 : -8)
         #else
         EmptyView()
         #endif
@@ -2035,9 +2047,8 @@ struct QuranView: View {
         @ViewBuilder content: () -> Content
     ) -> some View {
         content()
-            .frame(width: 27, height: 27)
-            .padding()
-            .frame(minWidth: 44, minHeight: 44)
+            .frame(width: 22, height: 22)
+            .frame(width: 42, height: 42)
             .contentShape(Rectangle())
             .conditionalGlassEffect()
     }
@@ -2419,6 +2430,16 @@ struct QuranView: View {
                     .equatable()
             }
             .buttonStyle(.plain)
+            // The same per-ayah actions the bookmark LIST rows carry - Highlight included, so a saved
+            // ayah can be colored from the grid too, not only from the row layout.
+            .ayahContextMenuModifier(
+                surah: surah.id,
+                ayah: ayah.id,
+                favoriteSurahs: context.favoriteSurahs,
+                bookmarkedAyahs: context.bookmarkedAyahs,
+                searchText: $searchText,
+                scrollToSurahID: $scrollToSurahID
+            )
             #else
             Button {
                 settings.hapticFeedback()

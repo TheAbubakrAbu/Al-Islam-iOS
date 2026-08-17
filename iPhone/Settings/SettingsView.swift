@@ -241,7 +241,6 @@ struct SettingsView: View {
                     guard ready.contains(Self.settingsSemanticCorpusID), !settingsSearchText.isEmpty else { return }
                     runSettingsAISearch(query: settingsSearchText)
                 }
-                .padding([.horizontal, .top], -8)
                 .minimizedBarStyle(barsCollapsed)
         }
         .animation(.spring(response: 0.35, dampingFraction: 0.85), value: barsCollapsed)

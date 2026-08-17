@@ -767,7 +767,6 @@ struct HadithView: View {
                             if focused { prepareAllBooksCorpus() }
                         }
                     )
-                    .padding([.horizontal, .top], -8)
                     .padding(.horizontal, 24)
                     .padding(.bottom, 8)
                     .minimizedBarStyle(barsCollapsed && !isHadithSearchFocused)

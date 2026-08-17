@@ -209,6 +209,8 @@ struct SurahSectionHeader: View {
 
     var surah: Surah
     var compact: Bool = false
+    /// One step smaller again than `compact` - the page footer pill's row (user rule: caption2 there).
+    var micro: Bool = false
 
     var body: some View {
         #if os(watchOS)
@@ -249,7 +251,7 @@ struct SurahSectionHeader: View {
 
     private var symbolFont: Font {
         #if os(iOS)
-        compact ? .caption : .subheadline
+        micro ? .caption2 : (compact ? .caption : .subheadline)
         #else
         .title3
         #endif
@@ -259,7 +261,7 @@ struct SurahSectionHeader: View {
     /// match exactly (same size as `symbolFont`) so they look balanced.
     private var starFont: Font {
         #if os(iOS)
-        compact ? .subheadline : .body
+        micro ? .caption : (compact ? .subheadline : .body)
         #else
         .title3
         #endif
@@ -276,7 +278,7 @@ struct SurahSectionHeader: View {
         // wants its chrome tight, not tiny.
         Text("\(surah.ayahCountLabel(for: settings.displayQiraahForArabic)) - \(surah.pageCountLabel)")
             .textCase(.uppercase)
-            .font(.subheadline)
+            .font(micro ? .caption2.weight(.semibold) : .subheadline)
             .lineLimit(1)
             .minimumScaleFactor(compact ? 0.6 : 0.25)
     }

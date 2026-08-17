@@ -1,5 +1,22 @@
 import SwiftUI
 
+// MARK: - App-wide toggle style
+
+/// The standard switch with 2pt of vertical padding (user rule: every toggle in the app breathes a
+/// little). Applied ONCE at each app root via `.toggleStyle(PaddedSwitchToggleStyle())`, so no
+/// individual settings row can forget it - and any future toggle gets it for free. The explicit
+/// `.switch` inside is what stops the style from recursing into itself.
+struct PaddedSwitchToggleStyle: ToggleStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        // Rebuilt from the configuration's own binding + label rather than `Toggle(configuration)`,
+        // which needs iOS 16 (the app deploys to 15). The explicit `.switch` inside is what stops the
+        // style from recursing into itself.
+        Toggle(isOn: configuration.$isOn) { configuration.label }
+            .toggleStyle(.switch)
+            .padding(.vertical, 2)
+    }
+}
+
 // MARK: - Apple Music-style bar minimization
 //
 // The system tab bar minimizes natively on iOS 26 (`tabBarMinimizeBehavior`); the app's custom glass bars

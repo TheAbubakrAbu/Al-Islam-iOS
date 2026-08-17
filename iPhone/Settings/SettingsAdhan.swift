@@ -1725,13 +1725,16 @@ extension Settings {
     func prayerBoundaryTimeline(around now: Date = Date()) -> [Prayer] {
         guard let prayerObj = prayers, !prayerObj.prayers.isEmpty else { return [] }
 
+        // "View Full Prayers" while traveling: the countdown and current/next follow the UNCOMBINED
+        // five, so passing Asr time rolls the current prayer to Asr instead of holding "Dhuhr/Asr".
+        let useFullPrayers = travelingMode && travelingShowFullPrayers
         let calendar = Calendar.current
         return [-1, 0, 1]
             .compactMap { calendar.date(byAdding: .day, value: $0, to: now) }
             .flatMap { date -> [Prayer] in
                 let base = calendar.isDate(date, inSameDayAs: prayerObj.day)
-                    ? prayerObj.prayers
-                    : (getPrayerTimes(for: date) ?? [])
+                    ? (useFullPrayers ? prayerObj.fullPrayers : prayerObj.prayers)
+                    : (getPrayerTimes(for: date, fullPrayers: useFullPrayers) ?? [])
                 return prayersIncludingOptional(base, for: date)
             }
             .sorted { $0.time < $1.time }

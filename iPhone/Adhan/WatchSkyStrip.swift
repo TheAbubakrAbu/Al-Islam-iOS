@@ -28,8 +28,10 @@ struct WatchSkyStrip: View {
             let displayedDate = scrubber.scrubbedDate ?? now
             let fraction = dayFraction(now: displayedDate, sunrise: sunrise, sunset: sunset)
             let prayerDots = mandatoryPrayerFractions(on: now, sunrise: sunrise, sunset: sunset)
+            let skyPeriod = skyPeriodName(at: displayedDate, now: now)
+            let moonPhase = MoonPhase.on(displayedDate)
 
-            VStack(spacing: 2) {
+            VStack(spacing: 3) {
                 // Only appears while scrubbing: the prayer in effect at the previewed moment, and that time.
                 // No prayer-times table - just "which prayer, and when", exactly like the iPhone sky readout.
                 if scrubber.isScrubbing {
@@ -41,35 +43,78 @@ struct WatchSkyStrip: View {
                         Text(settings.formatDate(displayedDate))
                             .font(.system(size: 11).monospacedDigit())
                     }
-                    .foregroundStyle(settings.accentColor.color)
+                    .foregroundStyle(.white)
                     .lineLimit(1)
                     .minimumScaleFactor(0.6)
                     .transition(.opacity)
                 }
 
-                HStack(spacing: 8) {
-                    GeometryReader { geo in
-                        SunArc(fraction: fraction, color: settings.accentColor.accent1, dotFractions: prayerDots)
-                            .frame(height: 22)
-                            .contentShape(Rectangle())
-                            .gesture(dragGesture(width: geo.size.width, sunrise: sunrise, sunset: sunset, now: now))
-                    }
-                    .frame(height: 22)
-                    .frame(maxWidth: .infinity)
-
-                    VStack(spacing: 1) {
-                        MoonPhaseView(date: displayedDate, diameter: 16)
-
-                        Text("\(MoonPhase.on(displayedDate).illuminationPercent)%")
-                            .font(.system(size: 8).monospacedDigit())
-                            .foregroundStyle(.secondary)
-                    }
+                // The arc takes the whole width now - the moon moved to its own line below (user rule).
+                GeometryReader { geo in
+                    SunArc(fraction: fraction, color: .white, dotFractions: prayerDots)
+                        .frame(height: 22)
+                        .contentShape(Rectangle())
+                        .gesture(dragGesture(width: geo.size.width, sunrise: sunrise, sunset: sunset, now: now))
                 }
+                .frame(height: 22)
+                .frame(maxWidth: .infinity)
+
+                // The moon's own line: glyph, phase name, and how lit it is - the iPhone sky card's row.
+                HStack(spacing: 5) {
+                    MoonPhaseView(date: displayedDate, diameter: 14)
+
+                    Text(moonPhase.name)
+                        .font(.system(size: 10))
+                        .foregroundStyle(.white.opacity(0.75))
+
+                    Text("\(moonPhase.illuminationPercent)% lit")
+                        .font(.system(size: 8, weight: .medium).monospacedDigit())
+                        .foregroundStyle(.white.opacity(0.55))
+                }
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
             }
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 2)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 7)
+            // The solar background the iPhone card has (user rule): the user's own sky palette, keyed to
+            // the TRUE full-set period - past Isha wears Isha's colors even while the list shows the
+            // traveling "Maghrib/Isha" pair - with the complication's legibility scrim over it.
+            .background(
+                ZStack {
+                    LinearGradient(
+                        colors: settings.skyGradientColors(forPrayer: skyPeriod),
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                    LinearGradient(
+                        colors: [.black.opacity(0.10), .black.opacity(0.28)],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    )
+                }
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .environment(\.colorScheme, .dark)
             .animation(.easeInOut(duration: 0.15), value: scrubber.isScrubbing)
+            .animation(.easeInOut(duration: 0.4), value: skyPeriod)
         }
+    }
+
+    /// The TRUE prayer period at `date`, resolved against the FULL prayer set (never the traveling
+    /// combined pairs) - what the gradient is keyed to. Before today's Fajr, the previous night's
+    /// period still holds, so the pre-dawn strip stays in Isha's colors.
+    private func skyPeriodName(at date: Date, now: Date) -> String? {
+        if let today = settings.getPrayerTimes(for: now, fullPrayers: true),
+           let current = today.last(where: { $0.time <= date }) {
+            return current.nameTransliteration
+        }
+        let calendar = Calendar.current
+        if let yesterday = calendar.date(byAdding: .day, value: -1, to: now),
+           let previous = settings.getPrayerTimes(for: yesterday, fullPrayers: true) {
+            return previous.last(where: { $0.time <= date })?.nameTransliteration
+        }
+        return nil
     }
 
     /// Scrub the sun along the daylight arc: x → fraction → a time between sunrise and sunset. The scrubber's

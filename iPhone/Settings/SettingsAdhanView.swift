@@ -1559,7 +1559,6 @@ struct PrayerCalculationListView: View {
         #if os(iOS)
         .adaptiveSafeArea(edge: .bottom) {
             SearchBar(text: $searchText.animation(.easeInOut))
-                .padding([.leading, .top], -8)
                 .padding(.horizontal, 24)
                 .padding(.bottom, 8)
                 .background(Color.white.opacity(0.00001))

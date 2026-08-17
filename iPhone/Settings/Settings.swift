@@ -178,6 +178,15 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
            let forcedOffset = Int(ProcessInfo.processInfo.arguments[idx + 1]) {
             self.hijriOffset = forcedOffset
         }
+        // "-travelingMode 1|0" - force Qasr mode headlessly (it lives in the APP GROUP, which
+        // `simctl spawn defaults write` cannot reach - see the -hijriOffset note). Value form so a
+        // later run can force it back OFF; the didSet's app-group mirror makes the value persist,
+        // exactly like -hijriOffset.
+        if let idx = ProcessInfo.processInfo.arguments.firstIndex(of: "-travelingMode"),
+           ProcessInfo.processInfo.arguments.indices.contains(idx + 1),
+           let forced = Int(ProcessInfo.processInfo.arguments[idx + 1]) {
+            self.travelingMode = forced != 0
+        }
         #endif
 
         runQuranStartupMigrations()
@@ -186,9 +195,20 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
 
         // Hadith Allah-highlighting used to follow the Quran toggle; when the setting split in two,
         // seed the new key from the old one so nothing visibly changes until the user flips it.
-        if UserDefaults.standard.object(forKey: "highlightAllahNamesHadith") == nil {
-            UserDefaults.standard.set(UserDefaults.standard.bool(forKey: "highlightAllahNames"),
-                                      forKey: "highlightAllahNamesHadith")
+        // Only an EXPLICITLY stored Quran value is copied: `bool(forKey:)` reads an absent key as
+        // false, and writing THAT would pin the hadith toggle to a stored false on fresh installs -
+        // silently overriding the (now-true) default the absent key is supposed to fall through to.
+        if UserDefaults.standard.object(forKey: "highlightAllahNamesHadith") == nil,
+           let storedQuranValue = UserDefaults.standard.object(forKey: "highlightAllahNames") as? Bool {
+            UserDefaults.standard.set(storedQuranValue, forKey: "highlightAllahNamesHadith")
+        }
+        // Undo the phantom seed older builds already made: a stored-false hadith key NEXT TO an absent
+        // Quran key can only be that old migration's write (it "preserved" what was itself just the old
+        // default) - remove it so a user who never touched either toggle gets the new ON default on both.
+        if UserDefaults.standard.object(forKey: "highlightAllahNames") == nil,
+           let storedHadithValue = UserDefaults.standard.object(forKey: "highlightAllahNamesHadith") as? Bool,
+           storedHadithValue == false {
+            UserDefaults.standard.removeObject(forKey: "highlightAllahNamesHadith")
         }
         isReadyForUI = true
 
@@ -922,6 +942,17 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     @AppStorage("travelTurnOffAutomatic") var travelTurnOffAutomatic: Bool = false
     @AppStorage("travelTurnOnAutomatic") var travelTurnOnAutomatic: Bool = false
 
+    /// "View Full Prayers" while traveling: show the uncombined five instead of the Qasr pairs. Settings-level
+    /// (not view state) because the COUNTDOWN and the sky card's current/next columns must follow it too -
+    /// with the flag on, passing Asr time makes Asr the current prayer even in traveling mode. Reset whenever
+    /// traveling mode itself flips (PrayerList owns that), so a new trip always starts on the Qasr view.
+    @AppStorage("travelingShowFullPrayers") var travelingShowFullPrayers: Bool = false {
+        didSet {
+            guard oldValue != travelingShowFullPrayers else { return }
+            updateCurrentAndNextPrayer()
+        }
+    }
+
     /// When the traveling-mode auto-toggle last announced itself. Persisted, so the cooldown survives a relaunch
     /// - the app is relaunched constantly in the background, and an in-memory timestamp would reset with it and
     /// let the notification through again. See `notifyTravelingModeChanged`.
@@ -1451,7 +1482,9 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     }
 
     @AppStorage("showArabicText") var showArabicText: Bool = true
-    @AppStorage("highlightAllahNames") var highlightAllahNames: Bool = false
+    /// ON by default, like the tajweed colors (user rule): the divine name reads red out of the box.
+    /// A user who explicitly turned it off has a stored false, which this default never overrides.
+    @AppStorage("highlightAllahNames") var highlightAllahNames: Bool = true
     /// Tap a word in the reader to see what it means. ON by default - the meaning is the point of
     /// reading, and a reader who doesn't know the feature exists will never go looking for it in
     /// Settings. A tap that lands on a word opens its card; a tap anywhere else in the ayah still marks
@@ -1560,7 +1593,8 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     /// Hadith's own "Highlight Allah" toggle, split from the Quran's `highlightAllahNames` so the two
     /// readers can differ. Seeded from the Quran toggle once in `init` so the split changes nothing
     /// until the user actually flips it.
-    @AppStorage("highlightAllahNamesHadith") var highlightAllahNamesHadith: Bool = false
+    /// ON by default, matching the Quran toggle's new default (user rule).
+    @AppStorage("highlightAllahNamesHadith") var highlightAllahNamesHadith: Bool = true
     /// Hadith text sizes, independent of the Quran's own sliders.
     @AppStorage("hadithArabicFontSize") var hadithArabicFontSize: Double = Double(UIFont.preferredFont(forTextStyle: .body).pointSize + 4)
     @AppStorage("hadithEnglishFontSize") var hadithEnglishFontSize: Double = Double(UIFont.preferredFont(forTextStyle: .body).pointSize)

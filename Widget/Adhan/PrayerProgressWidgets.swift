@@ -729,9 +729,13 @@ struct PrayerListSmallView: View {
             // Rows spread across the whole tile instead of clustering in a fixed-spacing stack in
             // the middle of it - the same fill the other small widgets already do, so a page mixing
             // them doesn't show one tile's content sitting visibly higher than its neighbour's.
-            VStack(spacing: 0) {
+            // ONLY for the full six-row list: traveling mode's combined 4 rows spread across a whole
+            // small tile read as rows adrift in empty space (user rule), so a short list keeps a
+            // fixed-spacing stack centered in the tile instead.
+            let spread = entry.prayers.count >= 5
+            VStack(spacing: spread ? 0 : 5) {
                 ForEach(Array(entry.prayers.enumerated()), id: \.element.id) { index, prayer in
-                    if index > 0 { Spacer(minLength: 2) }
+                    if spread, index > 0 { Spacer(minLength: 2) }
 
                     HStack {
                         Image(systemName: prayer.image)
@@ -842,11 +846,13 @@ struct NextPrayerBoardView: View {
 
                 // Flexible gaps rather than a fixed 3pt stack: the rows spread to span exactly the
                 // height the left column occupies, so Fajr lines up with CURRENT and Isha with the
-                // progress bar. It also self-corrects for a short list - traveling mode combines
-                // Dhuhr/Asr and Maghrib/Isha, and a fixed-spacing 4-row column looked badly adrift.
-                VStack(spacing: 0) {
+                // progress bar. Full six-row lists only - traveling mode's combined 4 rows spread
+                // over the same height read as rows adrift in empty space (user rule), so a short
+                // list keeps a fixed-spacing stack instead.
+                let spread = entry.prayers.count >= 5
+                VStack(spacing: spread ? 0 : 4) {
                     ForEach(Array(entry.prayers.enumerated()), id: \.element.id) { index, prayer in
-                        if index > 0 { Spacer(minLength: 2) }
+                        if spread, index > 0 { Spacer(minLength: 2) }
 
                         HStack {
                             Image(systemName: prayer.image)

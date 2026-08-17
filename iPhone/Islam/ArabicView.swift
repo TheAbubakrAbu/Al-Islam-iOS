@@ -443,7 +443,7 @@ struct ArabicView: View {
                 // what made it look like a row vanishing mid-scroll. It just rides with the bar.
                 arabicFontPicker
 
-                HStack(spacing: 0) {
+                HStack(spacing: 8) {
                     SearchBar(text: (AppPerformance.shouldReduceAnimations ? $searchText : $searchText.animation(.easeInOut)))
 
                     Menu {
@@ -491,9 +491,7 @@ struct ArabicView: View {
                                 .transition(.opacity)
                         }
                     }
-                    .padding(.bottom, 2)
                 }
-                .padding([.leading, .top], -8)
                 .minimizedBarStyle(barsCollapsed)
             }
             .animation(.spring(response: 0.35, dampingFraction: 0.85), value: barsCollapsed)
@@ -541,9 +539,8 @@ struct ArabicView: View {
         @ViewBuilder content: () -> Content
     ) -> some View {
         content()
-            .frame(width: 27, height: 27)
-            .padding()
-            .frame(minWidth: 44, minHeight: 44)
+            .frame(width: 22, height: 22)
+            .frame(width: 42, height: 42)
             .contentShape(Rectangle())
             .conditionalGlassEffect()
     }

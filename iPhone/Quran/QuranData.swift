@@ -5314,11 +5314,37 @@ enum QiraahComparison {
         var attributed = AttributedString(text)
         attributed.foregroundColor = baseColor
         for range in differingRanges(in: text, vs: reference) {
-            if let start = AttributedString.Index(range.lowerBound, within: attributed),
-               let end = AttributedString.Index(range.upperBound, within: attributed) {
-                attributed[start..<end].foregroundColor = diffColor
+            // A differing word can carry a stop-sign ornament on its last letter - tint around it
+            // (user rule: stop signs are never highlighted), splitting the word into the runs between.
+            for run in stopSignFreeSubranges(of: range, in: text) {
+                if let start = AttributedString.Index(run.lowerBound, within: attributed),
+                   let end = AttributedString.Index(run.upperBound, within: attributed) {
+                    attributed[start..<end].foregroundColor = diffColor
+                }
             }
         }
         return attributed
+    }
+
+    /// `range` minus the waqf stop-sign scalars inside it, as the contiguous runs between them. Walked at
+    /// SCALAR granularity: the stop signs are combining marks riding a word's last letter, so they live
+    /// INSIDE that letter's grapheme cluster - a character-level walk could never separate them. Scalar
+    /// boundaries are valid String (and AttributedString) indices, the same mechanics the Allah-name
+    /// highlighter already banks on to stop its red before a trailing waqf mark.
+    private static func stopSignFreeSubranges(of range: Range<String.Index>, in text: String) -> [Range<String.Index>] {
+        let scalars = text.unicodeScalars
+        var runs: [Range<String.Index>] = []
+        var runStart = range.lowerBound
+        var cursor = range.lowerBound
+        while cursor < range.upperBound {
+            let next = scalars.index(after: cursor)
+            if TajweedRules.stopSignScalars.contains(scalars[cursor].value) {
+                if runStart < cursor { runs.append(runStart..<cursor) }
+                runStart = next
+            }
+            cursor = next
+        }
+        if runStart < range.upperBound { runs.append(runStart..<range.upperBound) }
+        return runs
     }
 }

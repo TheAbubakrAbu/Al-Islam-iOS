@@ -113,11 +113,15 @@ struct Prayers2EntryView: View {
     }
 
     /// One half of the split list. Flexible gaps between rows so a 3-row column and a 2-row column
-    /// still span the same height either side of the divider.
+    /// still span the same height either side of the divider - but ONLY for the full six-prayer list.
+    /// Traveling mode's combined list is 4 rows (2+2), and spreading those across the tile read as
+    /// rows adrift in empty space (user rule: don't equalize heights for traveling mode) - a short
+    /// list keeps a plain fixed-spacing stack centered in the band instead.
     private func prayerColumn(_ prayers: [Prayer]) -> some View {
-        VStack(spacing: 0) {
+        let spread = entry.prayers.count >= 5
+        return VStack(spacing: spread ? 0 : 4) {
             ForEach(Array(prayers.enumerated()), id: \.element.id) { index, prayer in
-                if index > 0 { Spacer(minLength: 2) }
+                if spread, index > 0 { Spacer(minLength: 2) }
 
                 HStack {
                     Image(systemName: prayer.image)
@@ -138,7 +142,7 @@ struct Prayers2EntryView: View {
                 .font(.caption)
             }
         }
-        .frame(maxHeight: .infinity)
+        .frame(maxHeight: spread ? .infinity : nil)
     }
 }
 

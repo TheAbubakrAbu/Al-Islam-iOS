@@ -1876,7 +1876,6 @@ struct ReciterListView: View {
     private var reciterSearchControlsInset: some View {
         #if os(iOS)
         SearchBar(text: (AppPerformance.shouldReduceAnimations ? $searchText : $searchText.animation(.easeInOut)))
-        .padding([.leading, .top], -8)
         #else
         EmptyView()
         #endif

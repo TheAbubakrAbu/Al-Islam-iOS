@@ -268,7 +268,6 @@ struct ThemesBrowseView: View {
         // the Quran/Hadith readers use, so every search in the app sits in the same place.
         .adaptiveSafeArea(edge: .bottom) {
             SearchBar(text: AppPerformance.shouldReduceAnimations ? $searchText : $searchText.animation(.easeInOut), placeholder: "Search themes")
-                .padding([.leading, .top], -8)
                 .padding(.horizontal, 24)
                 .padding(.bottom, 8)
                 .background(Color.white.opacity(0.00001))

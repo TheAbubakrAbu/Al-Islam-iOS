@@ -16,7 +16,6 @@ struct PrayerList: View {
     @State private var lastActiveDay = Calendar.current.startOfDay(for: Date())
 
     @State private var expandedPrayerKey: String?
-    @State private var fullPrayers = false
     /// Presents Adhan settings landed on the Traveling Mode screen - the footer's exit from Qasr mode.
     @State private var showTravelingModeSettings = false
     @State private var animatingBellPrayerName: String?
@@ -93,6 +92,11 @@ struct PrayerList: View {
     private func mergedWithOptional(_ base: [Prayer], for date: Date) -> [Prayer] {
         settings.prayersIncludingOptional(base, for: date)
     }
+
+    /// "View Full Prayers" while traveling. Settings-backed (not view `@State`) so the COUNTDOWN and the
+    /// sky card's current/next columns follow the same choice - `prayerBoundaryTimeline` reads it. Only
+    /// meaningful while traveling; the guards below reset it whenever traveling mode flips.
+    private var fullPrayers: Bool { settings.travelingMode && settings.travelingShowFullPrayers }
 
     /// True when the user has picked a day other than today. Derived from `selectedDate` so the
     /// comparison UI stays in sync without any imperative state to keep updated.
@@ -402,7 +406,7 @@ struct PrayerList: View {
         }
         .onChange(of: settings.travelingMode) { _ in
             withAnimation {
-                fullPrayers = false
+                settings.travelingShowFullPrayers = false
             }
         }
     }
@@ -530,7 +534,10 @@ struct PrayerList: View {
         let tileHorizontalPadding: CGFloat = 7
         let tileVerticalPadding: CGFloat = 6
         #else
-        let columnCount = settings.travelingMode ? 2 : 3
+        // Keyed on what is actually RENDERED: the combined Qasr set (4 rows) reads best two-up, but
+        // "View Full Prayers" restores the six - which want the normal three columns, not two rows of
+        // three stretched tiles with a hole (user rule: full prayers = grid of 3).
+        let columnCount = (settings.travelingMode && !fullPrayers) ? 2 : 3
         let tileSpacing: CGFloat = 8
         let tileHorizontalPadding: CGFloat = 8
         let tileVerticalPadding: CGFloat = 8
@@ -606,7 +613,7 @@ struct PrayerList: View {
         .lineLimit(1)
         .minimumScaleFactor(0.5)
         .onChange(of: settings.travelingMode) { _ in
-            withAnimation { fullPrayers = false }
+            withAnimation { settings.travelingShowFullPrayers = false }
         }
 
         expandedPrayerDetail(for: prayers)
@@ -647,7 +654,7 @@ struct PrayerList: View {
 
                 HStack(spacing: 10) {
                     footerActionButton(fullPrayers ? "View Qasr Prayers" : "View Full Prayers") {
-                        fullPrayers.toggle()
+                        withAnimation { settings.travelingShowFullPrayers.toggle() }
                     }
 
                     // The footer explains Qasr but gave no way OUT of it: turning traveling mode off meant
@@ -660,7 +667,7 @@ struct PrayerList: View {
 
                 #if os(watchOS)
                 footerActionButton(fullPrayers ? "View Qasr Prayers" : "View Full Prayers") {
-                    fullPrayers.toggle()
+                    withAnimation { settings.travelingShowFullPrayers.toggle() }
                 }
 
                 travelingModeDescription
@@ -719,7 +726,20 @@ struct PrayerList: View {
     }
 
     private var travelingModeDescription: some View {
-        Text("Traveling mode is on. If you are traveling more than 48 mi, then you can pray Qasr, where you combine prayers. You can customize and learn more in settings.")
+        // Names the HOME CITY the 48-mile rule measures from, and points at the exact control that
+        // changes it - "customize in settings" alone left the reader hunting (user rule).
+        let homeCity = settings.homeLocation?.city.trimmingCharacters(in: .whitespacesAndNewlines)
+        #if os(watchOS)
+        // No Travel Settings button on the watch - the pointer would dangle.
+        let homeSentence = (homeCity?.isEmpty == false)
+            ? "Your home city is \(homeCity!) - you can change it in the iPhone app's Travel Settings."
+            : "You can set your home city in the iPhone app's Travel Settings."
+        #else
+        let homeSentence = (homeCity?.isEmpty == false)
+            ? "Your home city is \(homeCity!) - you can change it by tapping Travel Settings below."
+            : "You can set your home city by tapping Travel Settings below."
+        #endif
+        return Text("Traveling mode is on. If you are traveling more than 48 mi from home, you can pray Qasr, where you shorten and combine prayers. \(homeSentence)")
             .font(.caption)
             .foregroundColor(.secondary)
             .multilineTextAlignment(.leading)

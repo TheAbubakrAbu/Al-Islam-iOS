@@ -225,12 +225,11 @@ struct SkyView: View {
         return settings.prayersIncludingOptional(displayed, for: now)
     }
 
-    /// The mandatory prayers marked as dots on the arc: the five obligatory ones as the list actually shows
-    /// them - Jumuah on Friday, the combined pairs in traveling mode - and nothing optional. Reuses the
-    /// adhan-eligible set, which is exactly "the obligatory prayers and the names that route to them".
+    /// The mandatory prayers marked as dots on the arc: always the FULL five (Jumuah on Friday), never the
+    /// traveling combined pairs - the arc describes the day's real structure, and a traveler still wants to
+    /// see where Asr and Isha fall even while the list shows "Dhuhr/Asr" (user rule). Nothing optional.
     private var dotPrayers: [Prayer] {
-        let displayed = settings.prayers?.prayers ?? todaysPrayers
-        return displayed.filter { Settings.adhanEligiblePrayerNames.contains($0.nameTransliteration) }
+        todaysPrayers.filter { Settings.adhanEligiblePrayerNames.contains($0.nameTransliteration) }
     }
 
     /// The moment the whole card is describing: the dragged one, or now.
@@ -240,12 +239,29 @@ struct SkyView: View {
         scrubber.previewPrayer ?? settings.currentPrayer
     }
 
+    /// The TRUE prayer period at `date`, resolved against the FULL prayer set - never the traveling
+    /// combined pairs. This keys the sky's gradient and stars: past Isha the sky must wear Isha's colors
+    /// and at Asr time Asr's, even while the list (and `displayedPrayer`'s name) says "Maghrib/Isha" or
+    /// "Dhuhr/Asr" (user rule). Before today's Fajr the previous night's period still holds.
+    private func colorPeriodName(at date: Date) -> String? {
+        let today = settings.prayersIncludingOptional(todaysPrayers, for: now)
+        if let current = today.last(where: { $0.time <= date }) { return current.nameTransliteration }
+        let calendar = Calendar.current
+        if let yesterday = calendar.date(byAdding: .day, value: -1, to: date),
+           let previous = settings.getPrayerTimes(for: yesterday, fullPrayers: true) {
+            return settings.prayersIncludingOptional(previous, for: yesterday)
+                .last(where: { $0.time <= date })?
+                .nameTransliteration
+        }
+        return nil
+    }
+
     /// Stars come out at night. Full through Isha and the late-night times, fading in over Maghrib and back
     /// out through Fajr, and gone once the sun is up - which also pauses the twinkle animation.
+    /// Keyed on the true (full-set) period, so the stars agree with the gradient while traveling.
     private var starOpacity: Double {
-        switch displayedPrayer?.nameTransliteration {
+        switch colorPeriodName(at: displayedDate) {
         case "Isha", "Islamic Midnight", "Last Third": return 1
-        case "Maghrib/Isha":                           return 0.8
         case "Fajr":                                   return 0.5
         case "Maghrib":                                return 0.3
         default:                                       return 0
@@ -273,14 +289,16 @@ struct SkyView: View {
             sunsetFractionOfWindow: sunset.map(window.fraction(of:))
         )
 
+        let skyPeriod = colorPeriodName(at: displayedDate)
+
         ZStack {
             LinearGradient(
-                colors: settings.skyGradientColors(forPrayer: displayedPrayer?.nameTransliteration),
+                colors: settings.skyGradientColors(forPrayer: skyPeriod),
                 startPoint: .top,
                 endPoint: .bottom
             )
-            // Re-tint both when the prayer changes and when the user edits that prayer's colors.
-            .animation(.easeInOut(duration: 0.4), value: displayedPrayer?.nameTransliteration)
+            // Re-tint both when the period changes and when the user edits that prayer's colors.
+            .animation(.easeInOut(duration: 0.4), value: skyPeriod)
             .animation(.easeInOut(duration: 0.25), value: settings.skyGradientsJSON)
 
             StarFieldView(opacity: starOpacity)

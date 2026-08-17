@@ -366,6 +366,79 @@ final class QuranPlayer: ObservableObject {
         }
     }
 
+    /// What actually went wrong with a failed item, bucketed for the user. Every `.failed` observer used
+    /// to collapse into one "check your internet connection" line, so a server missing the file (a 404 -
+    /// the Hazza Al-Balushi report) read as an offline problem on a perfectly connected phone.
+    enum PlaybackFailureKind {
+        case offline, timeout, notFound, server, unknown
+    }
+
+    static func classifyPlaybackError(_ error: Error?) -> PlaybackFailureKind {
+        guard let nsError = error as NSError? else { return .unknown }
+        // AVFoundation wraps the transport failure; the underlying error carries the real cause.
+        if let underlying = nsError.userInfo[NSUnderlyingErrorKey] as? NSError {
+            let kind = classifyPlaybackError(underlying)
+            if kind != .unknown { return kind }
+        }
+        switch (nsError.domain, nsError.code) {
+        case (NSURLErrorDomain, NSURLErrorNotConnectedToInternet),
+             (NSURLErrorDomain, NSURLErrorNetworkConnectionLost),
+             (NSURLErrorDomain, NSURLErrorInternationalRoamingOff),
+             (NSURLErrorDomain, NSURLErrorDataNotAllowed),
+             // DNS failures are connectivity-shaped in practice (captive portals, dead Wi-Fi).
+             (NSURLErrorDomain, NSURLErrorCannotFindHost),
+             (NSURLErrorDomain, NSURLErrorDNSLookupFailed):
+            return .offline
+        case (NSURLErrorDomain, NSURLErrorTimedOut):
+            return .timeout
+        case (NSURLErrorDomain, NSURLErrorFileDoesNotExist),
+             (NSURLErrorDomain, NSURLErrorZeroByteResource),
+             (NSURLErrorDomain, NSURLErrorResourceUnavailable),
+             // The CoreMedia HTTP loader's "server sent 404" / "403" codes.
+             ("CoreMediaErrorDomain", -12938),
+             ("CoreMediaErrorDomain", -12660):
+            return .notFound
+        case (NSURLErrorDomain, NSURLErrorBadServerResponse),
+             (NSURLErrorDomain, NSURLErrorCannotConnectToHost):
+            return .server
+        default:
+            return .unknown
+        }
+    }
+
+    /// The specific, honest alert for a failed load: names the real problem (missing file, timeout,
+    /// server trouble, offline) instead of blaming the connection for everything. `what` reads like
+    /// "surah" / "ayah" / "custom range"; `wasLocal` marks a corrupt DOWNLOADED file, which is a
+    /// re-download problem, not a network one.
+    func playbackFailureDetails(for error: Error?, reciter: Reciter?, what: String,
+                                wasLocal: Bool = false) -> (title: String, message: String) {
+        if wasLocal {
+            return ("Downloaded File Problem",
+                    "The downloaded audio for this \(what) could not be played - the file may be damaged. Re-download this reciter in Settings → Manage Audio.")
+        }
+        switch Self.classifyPlaybackError(error) {
+        case .offline:
+            return ("No Internet Connection",
+                    "You appear to be offline. Connect to the internet and try again.")
+        case .timeout:
+            return ("Server Not Responding",
+                    "The audio server is taking too long to respond. Try again in a moment.")
+        case .notFound:
+            let name = reciter?.name ?? "this reciter"
+            return ("Recitation Not Available",
+                    "The audio for this \(what) could not be found on the server - \(name) may not have recorded it. Try another reciter.")
+        case .server:
+            return ("Server Problem",
+                    "The audio server could not serve this \(what) right now. Please try again later or pick another reciter.")
+        case .unknown:
+            var message = "Unable to load this \(what). Check your internet connection and try again."
+            if let description = (error as NSError?)?.localizedDescription, !description.isEmpty {
+                message += "\n(\(description))"
+            }
+            return ("Playback Error", message)
+        }
+    }
+
     /// Downloaded reciters that carry `surahNumber`, favorites first, alphabetical within each tier
     /// (the global `reciters` list is already name-sorted, so filtering preserves that order).
     private func downloadedRecitersForSurah(_ surahNumber: Int, excluding excluded: Reciter) -> [Reciter] {
@@ -885,10 +958,17 @@ final class QuranPlayer: ObservableObject {
                 case .readyToPlay:
                     self.onSurahItemReady(surahNumber: surahNumber, surahName: surahName, reciter: reciter, certainReciter: certainReciter, skipSurah: skipSurah)
                 case .failed:
-                    // A failed STREAM (not a corrupt local file) is the reactive offline signal - the
-                    // reachability flag can miss captive/portal states, so offer downloaded reciters here too.
-                    if wasLocal || !self.presentOfflineReciterOptions(surahNumber: surahNumber, surahName: surahName, failedReciter: reciter) {
-                        self.presentPlaybackFailure("Unable to load this recitation. Check your internet connection and try again.", title: "Playback Unavailable")
+                    // Only a CONNECTIVITY-shaped failure is the reactive offline signal (the reachability
+                    // flag can miss captive/portal states, so those still offer downloaded reciters). A
+                    // missing file (404) on a healthy connection must say so instead - the old blanket
+                    // "check your internet" is exactly how a partial-mushaf reciter read as broken.
+                    let kind = Self.classifyPlaybackError(itm.error)
+                    let offlineShaped = kind == .offline || kind == .timeout || kind == .unknown
+                    if wasLocal || !offlineShaped
+                        || !self.presentOfflineReciterOptions(surahNumber: surahNumber, surahName: surahName, failedReciter: reciter) {
+                        let details = self.playbackFailureDetails(for: itm.error, reciter: reciter,
+                                                                  what: "surah", wasLocal: wasLocal)
+                        self.presentPlaybackFailure(details.message, title: details.title)
                     }
                 default:
                     break   // .unknown / still loading - wait for the next status change
@@ -1331,7 +1411,8 @@ final class QuranPlayer: ObservableObject {
                     self.nowPlayingReciter = self.ayahNowPlayingReciterName(for: reciter)
                     self.updateNowPlayingInfo()
                 } else if itm.status == .failed {
-                    self.presentPlaybackFailure("Unable to start this custom range. Check your internet connection and try again.", title: "Range Playback Failed")
+                    let details = self.playbackFailureDetails(for: itm.error, reciter: reciter, what: "custom range")
+                    self.presentPlaybackFailure(details.message, title: details.title)
                 }
             }
         }
@@ -1512,7 +1593,8 @@ final class QuranPlayer: ObservableObject {
                         self.updateNowPlayingInfo()
                     } else if itm.status == .failed {
                         self.isLoading = false
-                        self.presentPlaybackFailure("Unable to start ayah playback. Check your internet connection and try again.")
+                        let details = self.playbackFailureDetails(for: itm.error, reciter: reciter, what: "ayah")
+                        self.presentPlaybackFailure(details.message, title: details.title)
                     }
                 }
             }
@@ -1597,7 +1679,8 @@ final class QuranPlayer: ObservableObject {
                     self.updateNowPlayingInfo()
                 } else if itm.status == .failed {
                     self.isLoading = false
-                    self.presentPlaybackFailure("Unable to continue ayah playback. Check your internet connection and try again.")
+                    let details = self.playbackFailureDetails(for: itm.error, reciter: reciter, what: "ayah")
+                    self.presentPlaybackFailure(details.message, title: details.title)
                 }
             }
         }
@@ -2588,6 +2671,18 @@ final class ReciterDownloadManager: NSObject, ObservableObject, URLSessionDownlo
 
     func urlSession(_ session: URLSession, downloadTask: URLSessionDownloadTask, didFinishDownloadingTo location: URL) {
         guard let context = taskContext(for: downloadTask) else { return }
+
+        // A non-2xx response is a FAILED download, whatever the transport says: a 404 error page used
+        // to be installed as "NNN.mp3", counted as downloaded, and then played as a corrupt local file.
+        if let http = downloadTask.response as? HTTPURLResponse, !(200...299).contains(http.statusCode) {
+            installFailedReciterIDs.insert(context.reciter.id)
+            let message = http.statusCode == 404
+                ? "The server has no audio file for surah \(context.surahNumber) from this reciter."
+                : "The server refused surah \(context.surahNumber) (HTTP \(http.statusCode))."
+            finishWithError(for: context.reciter.id, message: message)
+            return
+        }
+
         do {
             let targetURL = localSurahFileURL(reciter: context.reciter, surahNumber: context.surahNumber)
             try installDownloadedFile(from: location, to: targetURL, reciter: context.reciter)

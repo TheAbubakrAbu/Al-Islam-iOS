@@ -723,7 +723,6 @@ struct NamesView: View {
                     .conditionalGlassEffect(interactive: false)
 
                 SearchBar(text: (AppPerformance.shouldReduceAnimations ? $searchText : $searchText.animation(.easeInOut)))
-                    .padding([.horizontal, .top], -8)
                     .minimizedBarStyle(barsCollapsed)
             }
             .animation(.spring(response: 0.35, dampingFraction: 0.85), value: barsCollapsed)

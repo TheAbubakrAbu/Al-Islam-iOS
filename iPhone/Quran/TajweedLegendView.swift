@@ -7,6 +7,33 @@ struct TajweedLegendView: View {
 
     var showsDismissButton = true
 
+    /// The riwayah whose legend is being PREVIEWED, independent of what is being read (user rule: with
+    /// qiraah details on, the legend can show any riwayah's tajweed). nil = follow the displayed riwayah.
+    @State private var previewTag: String?
+    /// The compare mode: every riwayah's printed color code, one after another.
+    @State private var compareAll = false
+
+    /// Every riwayah that ships a print-derived color pack - a cheap static check (`fileName`, no pack
+    /// load), so building the picker menu never parses 19 packs.
+    private static let packOptions: [Settings.Riwayah.Option] = Settings.Riwayah.allOptions.filter {
+        QiraahTajweedStore.fileName(for: $0.tag) != nil
+    }
+
+    /// The legend the page leads with: the previewed riwayah when one is picked (nil = the Hafs guide),
+    /// else whatever is actually displayed.
+    private var effectiveLegendTag: String? {
+        guard let previewTag else { return currentRiwayahLegendTag }
+        let canonical = Settings.Riwayah.canonicalTag(previewTag)
+        return canonical == Settings.Riwayah.canonicalTag(Settings.Riwayah.hafsTag) ? nil : previewTag
+    }
+
+    private func optionLabel(forTag tag: String) -> String {
+        let canonical = Settings.Riwayah.canonicalTag(tag)
+        return Settings.Riwayah.allOptions
+            .first { Settings.Riwayah.canonicalTag($0.tag) == canonical }?
+            .label ?? tag
+    }
+
     private struct LegendSection: Identifiable {
         let section: TajweedLegendCategory.Section
         let items: [TajweedLegendCategory]
@@ -215,6 +242,165 @@ struct TajweedLegendView: View {
         )
     }
 
+    /// The riwayah preview row: a menu naming whose legend is on the page, plus the compare toggle.
+    /// Previewing never changes the reading riwayah - it only swaps which color code is explained below.
+    private var riwayahPreviewCard: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 8) {
+                Text("Showing")
+                    .font(.subheadline.weight(.semibold))
+
+                Spacer(minLength: 8)
+
+                Menu {
+                    Button {
+                        settings.hapticFeedback()
+                        withAnimation { previewTag = nil }
+                    } label: {
+                        Label("Currently Reading", systemImage: previewTag == nil ? "checkmark" : "book")
+                    }
+
+                    Divider()
+
+                    Button {
+                        settings.hapticFeedback()
+                        withAnimation { previewTag = Settings.Riwayah.hafsTag }
+                    } label: {
+                        selectionLabel(Settings.Riwayah.hafsLabel, tag: Settings.Riwayah.hafsTag)
+                    }
+
+                    ForEach(Self.packOptions, id: \.tag) { option in
+                        Button {
+                            settings.hapticFeedback()
+                            withAnimation { previewTag = option.tag }
+                        } label: {
+                            selectionLabel(option.label, tag: option.tag)
+                        }
+                    }
+                } label: {
+                    HStack(spacing: 5) {
+                        Text(previewTag.map { optionLabel(forTag: $0) }
+                             ?? "\(optionLabel(forTag: currentRiwayahLegendTag ?? Settings.Riwayah.hafsTag)) (reading)")
+                            .font(.subheadline.weight(.semibold))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.6)
+
+                        Image(systemName: "chevron.up.chevron.down")
+                            .font(.caption2.weight(.semibold))
+                    }
+                    .foregroundStyle(settings.accentColor.color)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .conditionalGlassEffect()
+                }
+                .fixedMenuOrder()
+            }
+
+            Text("Preview any riwayah's tajweed color code here without changing what you are reading.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+
+            Button {
+                settings.hapticFeedback()
+                withAnimation { compareAll.toggle() }
+            } label: {
+                Label(compareAll ? "Hide Riwayat Comparison" : "Compare All Riwayat",
+                      systemImage: compareAll ? "rectangle.stack.fill" : "rectangle.stack")
+                    .font(.subheadline.weight(.semibold))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 10)
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(settings.accentColor.color)
+            .conditionalGlassEffect(rectangle: true)
+            .contentShape(Rectangle())
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .conditionalGlassEffect(rectangle: true)
+    }
+
+    /// A menu row for one riwayah, checkmarked when it is the previewed one.
+    private func selectionLabel(_ title: String, tag: String) -> some View {
+        let selected = previewTag.map {
+            Settings.Riwayah.canonicalTag($0) == Settings.Riwayah.canonicalTag(tag)
+        } ?? false
+        return Label(title, systemImage: selected ? "checkmark" : "character.book.closed.fill.ar")
+    }
+
+    /// The compare mode: every riwayah's printed color code, one compact card each - Hafs's engine rules
+    /// first, then the 19 print-derived packs. LazyVStack, so a pack is only parsed when its card scrolls
+    /// into view rather than all 19 up front.
+    private var compareAllSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("All Riwayat Compared")
+                .font(.headline)
+
+            Text("Each riwayah's mushaf prints its own color code. The same rule keeps the same meaning everywhere; what changes is which rules that riwayah marks.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+
+            LazyVStack(alignment: .leading, spacing: 10) {
+                compareCardShell(
+                    title: Settings.Riwayah.hafsLabel,
+                    arabic: Settings.Riwayah.hafsArabic
+                ) {
+                    ForEach(TajweedLegendCategory.allCases.sorted { $0.sortRank < $1.sortRank }) { item in
+                        compareRuleRow(color: item.color, english: item.transliteration)
+                    }
+                }
+
+                ForEach(Self.packOptions, id: \.tag) { option in
+                    compareCardShell(title: option.label, arabic: option.arabic) {
+                        ForEach(QiraahTajweedStore.shared.legend(for: option.tag)) { entry in
+                            compareRuleRow(color: entry.color, english: entry.english)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private func compareCardShell<Rows: View>(title: String, arabic: String,
+                                              @ViewBuilder rows: () -> Rows) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .firstTextBaseline) {
+                Text(title)
+                    .font(.subheadline.weight(.semibold))
+
+                Spacer(minLength: 6)
+
+                Text(arabic)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
+            }
+
+            LazyVGrid(columns: quickLegendColumns, alignment: .leading, spacing: 6) {
+                rows()
+            }
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .conditionalGlassEffect(rectangle: true)
+    }
+
+    private func compareRuleRow(color: Color, english: String) -> some View {
+        HStack(spacing: 6) {
+            Circle()
+                .fill(color)
+                .frame(width: 8, height: 8)
+
+            Text(english)
+                .font(.caption2)
+                .foregroundStyle(.primary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.6)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
     @ViewBuilder
     private func detailItemCard(_ item: TajweedLegendCategory) -> some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -312,18 +498,25 @@ struct TajweedLegendView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .conditionalGlassEffect(rectangle: true)
 
-                // Reading a non-Hafs riwayah: the ONLY legend that applies is that riwayah's
-                // own printed color code - the Hafs rule guide would describe colors that
+                // With qiraah details on: preview ANY riwayah's color code from here, and a compare
+                // mode that lays every riwayah's rules out one after another (user rule) - without
+                // changing what is actually being read.
+                if settings.showQiraahDetails {
+                    riwayahPreviewCard
+                }
+
+                // Reading (or previewing) a non-Hafs riwayah: the ONLY legend that applies is that
+                // riwayah's own printed color code - the Hafs rule guide would describe colors that
                 // aren't on screen, so it stands down entirely here. Same page structure as
                 // the Hafs legend: quick grid, show/hide all, then the detail cards.
-                if let riwayahTag = currentRiwayahLegendTag {
+                if let riwayahTag = effectiveLegendTag {
                     let entries = QiraahTajweedStore.shared.legend(for: riwayahTag)
 
                     VStack(alignment: .leading, spacing: 12) {
                         Text("Quick Guide")
                             .font(.headline)
 
-                        Text("The colors follow this riwayah's printed mushaf (\(riwayahTag)) - each word or letter is colored exactly where that print colors it.")
+                        Text("The colors follow \(optionLabel(forTag: riwayahTag))'s printed mushaf - each word or letter is colored exactly where that print colors it.")
                             .font(.caption)
                             .foregroundStyle(.secondary)
 
@@ -403,6 +596,10 @@ struct TajweedLegendView: View {
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .conditionalGlassEffect(rectangle: true, useColor: 0.1)
                     }
+                }
+
+                if settings.showQiraahDetails, compareAll {
+                    compareAllSection
                 }
 
                 VStack(alignment: .leading, spacing: 12) {

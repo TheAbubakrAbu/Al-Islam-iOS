@@ -60,8 +60,10 @@ enum AyahHighlightColor: String, Codable, CaseIterable, Identifiable {
     }
 
     /// The wash laid behind the ayah. Dark mode needs more presence to register against the dim page.
+    /// Deliberately faint (user rule: "make highlighting opacity wayyy less") - a highlight is a standing
+    /// margin note, not a selection, so it must never compete with the text it sits behind.
     func tintOpacity(_ scheme: ColorScheme) -> Double {
-        scheme == .dark ? 0.28 : 0.20
+        scheme == .dark ? 0.14 : 0.10
     }
 
     func tint(_ scheme: ColorScheme) -> Color {
@@ -525,7 +527,9 @@ let recitersMurattal = [
     Reciter(name: "Muhammad Ayyub", ayahIdentifier: "ar.muhammadayyoub", ayahBitrate: "128", surahLink: "https://server8.mp3quran.net/ayyub/"),
     Reciter(name: "Muhammad Ayyub (Special)", ayahIdentifier: "ar.muhammadayyoub", ayahBitrate: "128", surahLink: "https://server16.mp3quran.net/ayyoub2/Rewayat-Hafs-A-n-Assem/"),
     Reciter(name: "Abdulrahman Aloosi", ayahIdentifier: "ar.minshawi", ayahBitrate: "128", surahLink: "https://server6.mp3quran.net/aloosi/"),
-    Reciter(name: "Hazza Al-Balushi", ayahIdentifier: "ar.minshawi", ayahBitrate: "128", surahLink: "https://server11.mp3quran.net/hazza/"),
+    // mp3quran carries only 91 of 114 surahs for this mushaf (their API's surah_list omits these 23) -
+    // without the list, tapping one of the missing surahs 404'd and surfaced as a bogus "no internet" error.
+    Reciter(name: "Hazza Al-Balushi", ayahIdentifier: "ar.minshawi", ayahBitrate: "128", surahLink: "https://server11.mp3quran.net/hazza/", missingSurahs: [2, 3, 4, 5, 7, 9, 10, 11, 16, 23, 24, 26, 27, 28, 33, 48, 58, 59, 60, 62, 64, 65, 66]),
     Reciter(name: "Ali Jaber", ayahIdentifier: "ar.minshawi", ayahBitrate: "128", surahLink: "https://server11.mp3quran.net/a_jbr/", everyayahFolder: "Ali_Jaber_64kbps"),
     Reciter(name: "Saad Al-Ghamdi", ayahIdentifier: "ar.minshawi", ayahBitrate: "128", surahLink: "https://server7.mp3quran.net/s_gmd/", everyayahFolder: "Ghamadi_40kbps"),
     Reciter(name: "Yasser Al-Dosari", ayahIdentifier: "ar.minshawi", ayahBitrate: "128", surahLink: "https://server11.mp3quran.net/yasser/", everyayahFolder: "Yasser_Ad-Dussary_128kbps", qdcReciterID: 97),
