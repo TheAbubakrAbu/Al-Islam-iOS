@@ -193,6 +193,16 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
         runAdhanSoundStartupMigrations()
         runWatchSyncKeyMigration()
 
+        #if os(watchOS)
+        // Reading themes (Sepia/Gray/Custom) are phone-only looks: earlier builds synced the phone's
+        // theme over, which painted the watch's whole ground gray and - through the flat themed
+        // row color - erased its native rounded section cards. Reduce an already-stored theme to
+        // the base scheme it sits on; the sync layer no longer sends theme values at all.
+        if ["sepia", "gray", "custom"].contains(colorSchemeString) {
+            colorSchemeString = Self.baseColorScheme(colorSchemeString, customHex: customBackgroundColorHex)
+        }
+        #endif
+
         // Hadith Allah-highlighting used to follow the Quran toggle; when the setting split in two,
         // seed the new key from the old one so nothing visibly changes until the user flips it.
         // Only an EXPLICITLY stored Quran value is copied: `bool(forKey:)` reads an absent key as
@@ -2127,6 +2137,25 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
         case "gray":  return Color(red: 0.33, green: 0.33, blue: 0.35).opacity(0.55)
         case "custom": return adjustedCustomBackground(by: (customBackgroundLuminance ?? 1) < 0.5 ? 0.12 : -0.08)?.opacity(0.55)
         default:      return nil
+        }
+    }
+
+    /// Maps a reading-theme scheme string to the Light/Dark base it sits on ("sepia" -> "light",
+    /// "gray" -> "dark", "custom" -> by the picked background's luminance); base values pass through.
+    /// Lives HERE (not in WatchConnectivity.swift) because the watch migration in `init` needs it and
+    /// the Complication target compiles Settings without the connectivity file.
+    static func baseColorScheme(_ scheme: String, customHex: String) -> String {
+        switch scheme {
+        case "sepia": return "light"
+        case "gray": return "dark"
+        case "custom":
+            // Same brightness rule as `colorSchemeFromString`: a dark custom background reads as Dark.
+            var s = customHex.trimmingCharacters(in: .whitespacesAndNewlines)
+            if s.hasPrefix("#") { s.removeFirst() }
+            guard s.count == 6, let rgb = UInt64(s, radix: 16) else { return "light" }
+            let r = Double((rgb >> 16) & 0xFF) / 255, g = Double((rgb >> 8) & 0xFF) / 255, b = Double(rgb & 0xFF) / 255
+            return (0.299 * r + 0.587 * g + 0.114 * b) < 0.5 ? "dark" : "light"
+        default: return scheme
         }
     }
 

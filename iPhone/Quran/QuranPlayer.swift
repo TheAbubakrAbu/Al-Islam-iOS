@@ -176,6 +176,48 @@ final class QuranPlayer: ObservableObject {
         loadHistoryFromDefaults()
         setupRemoteTransportControls()
         isReadyForUI = true
+
+        #if DEBUG && os(iOS)
+        // Headless verification: `-playSurah <n>` starts surah playback a moment after launch so the
+        // Now Playing bar can be screenshotted from `simctl` (no tap tooling on this machine). The
+        // delay lets the UI (and the network path monitor) settle first.
+        // Both args wait for QuranData's async load (playCustomRange guards on it - firing at a fixed
+        // delay silently no-oped on cold launches).
+        func debugStartWhenDataReady(_ start: @escaping () -> Void, attempts: Int = 24) {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                if QuranData.shared.quran.isEmpty {
+                    guard attempts > 0 else { return }
+                    debugStartWhenDataReady(start, attempts: attempts - 1)
+                    return
+                }
+                start()
+            }
+        }
+        if let idx = ProcessInfo.processInfo.arguments.firstIndex(of: "-playSurah"),
+           ProcessInfo.processInfo.arguments.indices.contains(idx + 1),
+           let surahNumber = Int(ProcessInfo.processInfo.arguments[idx + 1]) {
+            debugStartWhenDataReady {
+                let name = QuranData.shared.quran.first(where: { $0.id == surahNumber })?.nameTransliteration ?? "Surah \(surahNumber)"
+                QuranPlayer.shared.playSurah(surahNumber: surahNumber, surahName: name)
+            }
+        }
+        // `-playCustomRange s:a:b` - ayah-by-ayah range playback, for verifying the reader's
+        // playback-driven page turns headlessly (pick a range that crosses a page boundary).
+        if let idx = ProcessInfo.processInfo.arguments.firstIndex(of: "-playCustomRange"),
+           ProcessInfo.processInfo.arguments.indices.contains(idx + 1) {
+            let parts = ProcessInfo.processInfo.arguments[idx + 1].split(separator: ":").compactMap { Int($0) }
+            if parts.count == 3 {
+                debugStartWhenDataReady {
+                    let name = QuranData.shared.quran.first(where: { $0.id == parts[0] })?.nameTransliteration ?? "Surah \(parts[0])"
+                    QuranPlayer.shared.playCustomRange(
+                        surahNumber: parts[0], surahName: name,
+                        startAyah: parts[1], endAyah: parts[2],
+                        repeatPerAyah: 1, repeatSection: 1
+                    )
+                }
+            }
+        }
+        #endif
     }
 
     func waitUntilReady() async {

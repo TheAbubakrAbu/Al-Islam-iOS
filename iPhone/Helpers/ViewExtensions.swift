@@ -97,6 +97,35 @@ extension View {
         #endif
     }
 
+    /// Streams this scroll view's TRUE scroll progress (0...1 of the scrollable span) into `update`,
+    /// or nil when the content fits the viewport and there is nothing to measure. iOS 18+ (same
+    /// mechanism as `collapseBarsOnScroll`); on earlier OSes `update` is simply never called, so the
+    /// consumer keeps whatever coarser fallback it has. Built for the reader's top progress bar: the
+    /// ayah-anchor fill only moves when the TOP-visible ayah changes, which on a surah of a page or
+    /// two meant sitting at ~25% and then snapping to 100% at the footer (user report).
+    @ViewBuilder
+    func trackScrollFraction(_ update: @escaping (Double?) -> Void) -> some View {
+        #if os(iOS)
+        if #available(iOS 18.0, *) {
+            self.onScrollGeometryChange(for: Double.self) { geometry in
+                // Same adjusted-offset convention as `collapseBarsOnScroll`: 0 at rest at the top,
+                // and the span ends where `distanceFromBottom` reaches 0.
+                let span = geometry.contentSize.height + geometry.contentInsets.top
+                    + geometry.contentInsets.bottom - geometry.containerSize.height
+                guard span > 1 else { return -1 }
+                let offset = geometry.contentOffset.y + geometry.contentInsets.top
+                return min(max(offset / span, 0), 1)
+            } action: { _, newValue in
+                update(newValue < 0 ? nil : newValue)
+            }
+        } else {
+            self
+        }
+        #else
+        self
+        #endif
+    }
+
     /// Drives `active` true while the user's finger is on this scroll view (including a still hold that
     /// hasn't moved it - `.tracking`) or while their flick is still coasting (`.decelerating`). Programmatic
     /// scrolls (`.animating`) don't count: they're ours, not the user's. iOS 18+, same pattern as
@@ -468,14 +497,12 @@ struct AccentWashedBackground: ViewModifier {
             .tint(settings.accentColor.color)
             .preferredColorScheme(settings.colorScheme)
         #elseif os(watchOS)
-        // The watch honors the reading themes too (the theme + custom color sync over from the phone):
-        // the themed base sits under the glow exactly as on iOS. Nil (Light/Dark/System) paints nothing,
-        // keeping the watch's native black ground.
+        // The watch does NOT honor the reading themes (user rule: don't send background/theme colors
+        // to the watch) - a themed ground painted the whole watch gray and its flat row color erased
+        // the native rounded section cards. The watch keeps its black ground + glow, always.
         content
             .background(
                 ZStack(alignment: .top) {
-                    settings.themeBackgroundColor ?? Color.clear
-
                     WatchTopGlowOverlay()
                 }
                 .ignoresSafeArea()
@@ -637,11 +664,18 @@ struct ThemedListRowBackground: ViewModifier {
 
     @ViewBuilder
     func body(content: Content) -> some View {
+        // iOS only: on the watch a flat `.listRowBackground` color REPLACES the native rounded
+        // section cards (rows read as square, "cut off") - and the reading themes are phone-only
+        // looks anyway (they no longer sync to the watch).
+        #if os(iOS)
         if settings.hasCustomThemeColors, let rowColor = settings.themeRowBackgroundColor {
             content.listRowBackground(rowColor)
         } else {
             content
         }
+        #else
+        content
+        #endif
     }
 }
 

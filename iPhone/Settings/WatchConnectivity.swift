@@ -500,7 +500,9 @@ extension Settings {
         let chosen = explicitlySetKeys
         if chosen.contains("accentColor") { dict["accentColor"] = accentColor.rawValue }
         if chosen.contains("customAccentColorHex") { dict["customAccentColorHex"] = customAccentColorHex }
-        if chosen.contains("customBackgroundColorHex") { dict["customBackgroundColorHex"] = customBackgroundColorHex }
+        // `customBackgroundColorHex` deliberately does NOT sync (either direction): the reading themes
+        // are phone-only looks. On the watch a themed flat row color erased the native rounded section
+        // cards and painted the whole ground gray (user report), so the watch keeps its black ground.
         if chosen.contains("hanafiMadhab") { dict["hanafiMadhab"] = hanafiMadhab }
         if chosen.contains("hijriOffset") { dict["hijriOffset"] = hijriOffset }
         if chosen.contains("highLatitudeRule") { dict["highLatitudeRule"] = highLatitudeRule }
@@ -530,6 +532,14 @@ extension Settings {
             #endif
             dict[key] = store.object(forKey: key)
         }
+
+        // The reading themes (Sepia/Gray/Custom) are phone-only: the watch has no themed row/ground
+        // rendering (see the `customBackgroundColorHex` note above), so it receives only the BASE
+        // scheme the theme sits on. Sanitized at send AND at the watch's apply, so an older peer
+        // build on either side can't smuggle a theme string across.
+        if let scheme = dict["colorSchemeString"] as? String {
+            dict["colorSchemeString"] = Self.baseColorScheme(scheme, customHex: customBackgroundColorHex)
+        }
         return dict
     }
 
@@ -545,7 +555,8 @@ extension Settings {
 
         if let raw = dict["accentColor"] as? String, let c = AccentColor(rawValue: raw), c != accentColor { accentColor = c; changed = true }
         if let v = dict["customAccentColorHex"] as? String, v != customAccentColorHex { customAccentColorHex = v; changed = true }
-        if let v = dict["customBackgroundColorHex"] as? String, v != customBackgroundColorHex { customBackgroundColorHex = v; changed = true }
+        // `customBackgroundColorHex` is deliberately NOT applied - reading themes are phone-only (see
+        // `watchSyncSnapshot`); an older peer build may still send it, and it must not land here.
         if let v = dict["hanafiMadhab"] as? Bool, v != hanafiMadhab { hanafiMadhab = v; changed = true }
         if let v = dict["hijriOffset"] as? Int, v != hijriOffset { hijriOffset = v; changed = true }
         if let v = dict["highLatitudeRule"] as? String, v != highLatitudeRule { highLatitudeRule = v; changed = true }
@@ -574,7 +585,19 @@ extension Settings {
             // explicit choice.
             if Self.phoneAuthoritativeSyncKeys.contains(key) { continue }
             #endif
-            guard let incoming = dict[key] else { continue }
+            guard let rawIncoming = dict[key] else { continue }
+            #if os(watchOS)
+            // Reading themes never land on the watch: an older phone build may still send "sepia"/
+            // "gray"/"custom" - reduce it to the base scheme here (see `watchSyncSnapshot`).
+            let incoming: Any = {
+                if key == "colorSchemeString", let scheme = rawIncoming as? String {
+                    return Settings.baseColorScheme(scheme, customHex: customBackgroundColorHex)
+                }
+                return rawIncoming
+            }()
+            #else
+            let incoming = rawIncoming
+            #endif
             let current = store.object(forKey: key)
             // NSObject equality covers every plist type the snapshot can carry (numbers, strings, arrays, dicts).
             if let current = current as? NSObject, let incoming = incoming as? NSObject, current == incoming { continue }

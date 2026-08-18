@@ -1084,6 +1084,10 @@ private struct NameRow: View, Equatable {
     let isExpanded: Bool
     let isFavorite: Bool
     let accentColor: AccentColor
+    /// Compared alongside `accentColor`: for the `.custom` accent, `.color` resolves through this hex,
+    /// so an edit to it must fail `==` - this row observes nothing, and comparing only the enum case
+    /// left visible rows on the old tint until they scrolled off (the `ReciterRow` fix, applied here).
+    let customAccentHex: String
     let useFontArabic: Bool
     let fontArabic: String
     let searchQuery: String
@@ -1107,6 +1111,7 @@ private struct NameRow: View, Equatable {
         self.isExpanded = isExpanded
         self.isFavorite = isFavorite
         self.accentColor = accentColor
+        self.customAccentHex = Settings.shared.customAccentColorHex
         self.useFontArabic = useFontArabic
         self.fontArabic = fontArabic
         self.searchQuery = searchQuery
@@ -1345,6 +1350,7 @@ private struct NameRow: View, Equatable {
         lhs.isExpanded == rhs.isExpanded &&
         lhs.isFavorite == rhs.isFavorite &&
         lhs.accentColor == rhs.accentColor &&
+        lhs.customAccentHex == rhs.customAccentHex &&
         lhs.useFontArabic == rhs.useFontArabic &&
         lhs.fontArabic == rhs.fontArabic &&
         lhs.searchQuery == rhs.searchQuery
@@ -1460,12 +1466,16 @@ private struct NameGridTile: View, Equatable {
     let accentColor: AccentColor
     let useFontArabic: Bool
     let fontArabic: String
+    /// The `.custom` accent resolves `.color` through this hex, so an edit to it must fail `==` -
+    /// comparing only the enum case left tiles on the old tint (the `ReciterRow` fix, applied here).
+    var customAccentHex: String = Settings.shared.customAccentColorHex
 
     /// Every appearance input is a stored value, so equality of the values means the drawn tile is identical.
     static func == (lhs: Self, rhs: Self) -> Bool {
         lhs.name == rhs.name &&
         lhs.isFavorite == rhs.isFavorite &&
         lhs.accentColor == rhs.accentColor &&
+        lhs.customAccentHex == rhs.customAccentHex &&
         lhs.useFontArabic == rhs.useFontArabic &&
         lhs.fontArabic == rhs.fontArabic
     }

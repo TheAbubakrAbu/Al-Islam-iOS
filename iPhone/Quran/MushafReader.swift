@@ -720,7 +720,14 @@ struct SurahPageReader<Controls: View>: View {
         MushafPageRenderCache.prewarm(pages: pages, around: target, radius: 1, includeCenter: true)
         // A follow/seed is not a user page turn - it must not wipe the mark or the selections.
         suppressNextPageTurnClear = true
-        withAnimation(.easeInOut(duration: 0.35)) { pageIndex = target }
+        // Deferred one runloop tick, deliberately: this is called from `.onChange` handlers running
+        // INSIDE the player publish's own update pass, and a selection write made there reached the
+        // UIPageViewController without the animated transaction - the page SNAPPED instead of sliding
+        // (verified frame-by-frame: one giant scene step, zero intermediates). Hopping to the next
+        // tick puts the write in a fresh transaction whose animation the pager honors.
+        DispatchQueue.main.async {
+            withAnimation(.easeInOut(duration: 0.35)) { pageIndex = target }
+        }
     }
 
     /// Jump the live pager to this `surah`'s starting page (shared by the `surah.id` and `jumpToken`
@@ -3949,16 +3956,19 @@ enum MushafPageRenderCache {
     /// exact fit runs. Same width and same settings only: the text re-wraps identically at the same width
     /// (so nothing clips), while a different width or changed settings would show genuinely wrong content.
     ///
-    /// Close-enough budgets only. The fallback exists for the small jitters (a bar mounting, the mini
-    /// player appearing - ~10-15% of the page). The reader's FIRST layout pass mid-launch can report
-    /// around half the final height; serving that fit as the fallback showed a visibly shrunken page
-    /// squatting in half the screen until the exact refit landed. A budget that far off gets the honest
-    /// spinner instead - and the refit itself is fast now (see `visibleFitQueue`).
+    /// Close-enough budgets only. The fallback exists for height jitters (a bar mounting, the mini
+    /// player appearing) AND the bottom-chrome collapse, whose band is up to ~40% of the page - the
+    /// old 30%-of-new-height bound refused the collapse jump, so toggling the chevron flashed the
+    /// spinner over a page that was JUST on screen (user report). The reader's FIRST layout pass
+    /// mid-launch can still report around half the final height, and serving that fit showed a
+    /// visibly shrunken page squatting in half the screen - so the bound stays, measured against the
+    /// LARGER of the two budgets (collapse: ~38%, accepted; mid-launch: ~50%, still refused) and only
+    /// a budget that far off gets the honest spinner. The refit itself is fast (see `visibleFitQueue`).
     static func nearestRendered(page: MushafPage, width: CGFloat, height: CGFloat) -> MushafRenderedPage? {
         guard let entry = latestByPage[page.page],
               Int(entry.width.rounded()) == Int(width.rounded()),
               entry.signature == settingsSignature,
-              abs(entry.budget - height) <= height * 0.3 else { return nil }
+              abs(entry.budget - height) <= max(entry.budget, height) * 0.45 else { return nil }
         return entry.rendered
     }
 

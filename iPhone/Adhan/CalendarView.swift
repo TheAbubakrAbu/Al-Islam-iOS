@@ -957,11 +957,15 @@ struct HijriMonthRow: View, Equatable {
     var accentColor: AccentColor = Settings.shared.accentColor
     var usesCustomArabicFace: Bool = Settings.shared.islamUsesCustomArabicFace
     var fontArabic: String = Settings.shared.nonQuranArabicFontName
+    /// The `.custom` accent resolves `.color` through this hex, so an edit to it must fail `==` -
+    /// comparing only the enum case left rows on the old tint (the `ReciterRow` fix, applied here).
+    var customAccentHex: String = Settings.shared.customAccentColorHex
 
     static func == (lhs: Self, rhs: Self) -> Bool {
         lhs.month.number == rhs.month.number &&
         lhs.isCurrent == rhs.isCurrent &&
         lhs.accentColor == rhs.accentColor &&
+        lhs.customAccentHex == rhs.customAccentHex &&
         lhs.usesCustomArabicFace == rhs.usesCustomArabicFace &&
         lhs.fontArabic == rhs.fontArabic
     }

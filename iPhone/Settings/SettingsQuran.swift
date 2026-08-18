@@ -420,6 +420,7 @@ extension Settings {
             displayQiraah,
             arabicScriptStyleRaw,
             fontArabic,
+            useFontArabic ? "1" : "0",
             "\(fontArabicSize)",
             "\(englishFontSize)",
             // Was missing: per-category tajweed visibility and the accent color. Equatable rows skipped
@@ -427,7 +428,20 @@ extension Settings {
             // every VISIBLE row on its old colors until it scrolled off screen and back.
             tajweedCategoryVisibilitySignature,
             accentColor.rawValue,
-            customAccentColorHex
+            customAccentColorHex,
+            // Also previously missing (same class of bug, audited 2026-08-17): every remaining Settings
+            // field an equatable ayah row reads in its body. Word-by-word drives the tappable-word
+            // overlay, the hidden-rules list feeds the tajweed builder (the mushaf page cache already
+            // keyed on it - the two signatures now agree), the muqattaat helper adds its disclosure row,
+            // the khatm pair drives the checkmark/mark button, defaultView picks the selection tint
+            // opacity, and showFullSurahRow adds the page/juz line under search results.
+            wordByWordMeanings ? "1" : "0",
+            riwayahTajweedHiddenRules,
+            showMuqattaatHelper ? "1" : "0",
+            quranSortModeRaw,
+            automaticKhatmCompletion ? "1" : "0",
+            defaultView ? "1" : "0",
+            showFullSurahRow ? "1" : "0"
         ].joined(separator: "|")
     }
 

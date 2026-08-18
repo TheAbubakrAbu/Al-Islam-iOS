@@ -1882,6 +1882,9 @@ struct ArabicLetterRow: View, Equatable {
     let letterData: LetterData
     let isFavorite: Bool
     let accentColor: AccentColor
+    /// The `.custom` accent resolves `.color` through this hex, so an edit to it must fail `==` -
+    /// comparing only the enum case left rows on the old tint (the `ReciterRow` fix, applied here).
+    let customAccentHex: String
     let useFontArabic: Bool
     let fontArabic: String
     let searchQuery: String
@@ -1897,6 +1900,7 @@ struct ArabicLetterRow: View, Equatable {
         self.letterData = letterData
         self.isFavorite = isFavorite ?? Settings.shared.isLetterFavorite(letterData: letterData)
         self.accentColor = accentColor
+        self.customAccentHex = Settings.shared.customAccentColorHex
         self.useFontArabic = useFontArabic
         self.fontArabic = fontArabic
         self.searchQuery = searchQuery
@@ -2031,6 +2035,7 @@ struct ArabicLetterRow: View, Equatable {
         lhs.letterData == rhs.letterData &&
         lhs.isFavorite == rhs.isFavorite &&
         lhs.accentColor == rhs.accentColor &&
+        lhs.customAccentHex == rhs.customAccentHex &&
         lhs.useFontArabic == rhs.useFontArabic &&
         lhs.fontArabic == rhs.fontArabic &&
         lhs.searchQuery == rhs.searchQuery &&
@@ -2388,6 +2393,9 @@ struct ArabicLetterGridTile: View, Equatable {
     let fontArabic: String
     /// Snapshot of the size slider, folded into `==` because the body scales with it.
     var sizeIndex: Int = Settings.shared.arabicLetterSizeIndex
+    /// The `.custom` accent resolves `.color` through this hex, so an edit to it must fail `==` -
+    /// comparing only the enum case left tiles on the old tint (the `ReciterRow` fix, applied here).
+    var customAccentHex: String = Settings.shared.customAccentColorHex
 
     /// `onTap` is deliberately not compared (closures cannot be) - it is stable per call site, and every
     /// input that changes what the tile DRAWS is compared, so skipping the body on equality is safe.
@@ -2395,6 +2403,7 @@ struct ArabicLetterGridTile: View, Equatable {
         lhs.letterData == rhs.letterData &&
         lhs.isFavorite == rhs.isFavorite &&
         lhs.accentColor == rhs.accentColor &&
+        lhs.customAccentHex == rhs.customAccentHex &&
         lhs.useFontArabic == rhs.useFontArabic &&
         lhs.fontArabic == rhs.fontArabic &&
         lhs.sizeIndex == rhs.sizeIndex

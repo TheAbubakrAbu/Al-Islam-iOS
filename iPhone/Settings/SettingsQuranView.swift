@@ -405,6 +405,10 @@ struct SettingsQuranView: View {
             set: { newValue in
                 let systemBodySize = Double(UIFont.preferredFont(forTextStyle: .body).pointSize)
                 withAnimation {
+                    // Explicit publish: this is a direct assignment through a hand-rolled Binding, not the
+                    // `$settings` projection, and an @AppStorage write from here was observed NOT reaching
+                    // observers reliably - leaving every equatable row on the old size until scrolled off.
+                    settings.objectWillChange.send()
                     settings.fontArabicSize = newValue ? systemBodySize + 10 : systemBodySize + 11
                 }
             }
@@ -422,6 +426,8 @@ struct SettingsQuranView: View {
             set: { newValue in
                 let systemBodySize = Double(UIFont.preferredFont(forTextStyle: .body).pointSize)
                 withAnimation {
+                    // Explicit publish - see `useSystemArabicFontSize`.
+                    settings.objectWillChange.send()
                     settings.englishFontSize = newValue ? systemBodySize : systemBodySize + 1
                 }
             }
@@ -1636,15 +1642,64 @@ struct ReciterListView: View {
     private var searchResultSections: [ReciterSectionGroup] {
         guard isSearchingReciters else { return [] }
 
-        return searchableReciterSections.compactMap { section in
+        // The same RECORDING (one reciter id) can live in several browse sections - Minshawi (Murattal)
+        // is in his featured section, the Classical Egyptian murattal group, AND the flat Murattal
+        // section - and search used to show a row per section, which read as three different reciters
+        // (user report). So search DEDUPES by reciter id and names every section the entry belongs to
+        // in ONE combined header ("... / ..."). Genuinely different recordings (Mujawwad vs Murattal,
+        // another riwayah, the 1387 AH archival mushaf) are distinct ids and keep their own rows.
+        struct SearchEntry {
+            let reciter: Reciter
+            var sections: [ReciterSectionGroup]
+        }
+        var order: [String] = []
+        var entries: [String: SearchEntry] = [:]
+
+        for section in searchableReciterSections {
             let sectionMatchesTitle = matchesSectionTitle(section, query: normalizedSearchText)
-            let reciters = sectionMatchesTitle
+            let matched = sectionMatchesTitle
                 ? section.reciters
                 : section.reciters.filter { reciterMatchesSearch($0, query: normalizedSearchText) }
 
-            guard !reciters.isEmpty else { return nil }
-            return section.withReciters(reciters)
+            for reciter in matched {
+                if entries[reciter.id] == nil {
+                    entries[reciter.id] = SearchEntry(reciter: reciter, sections: [])
+                    order.append(reciter.id)
+                }
+                if entries[reciter.id]?.sections.contains(where: { $0.id == section.id }) == false {
+                    entries[reciter.id]?.sections.append(section)
+                }
+            }
         }
+
+        // Reciters sharing the same section membership share one result section (first-appearance
+        // order). A single-membership group keeps its original section verbatim - title, Arabic
+        // riwayah header, qiraah styling; only multi-membership entries get a synthesized combined
+        // header, joined in the sections' browse order.
+        var result: [ReciterSectionGroup] = []
+        var indexBySignature: [String: Int] = [:]
+
+        for id in order {
+            guard let entry = entries[id] else { continue }
+            let signature = entry.sections.map(\.id).joined(separator: "|")
+            if let idx = indexBySignature[signature] {
+                result[idx] = result[idx].withReciters(result[idx].reciters + [entry.reciter])
+                continue
+            }
+            indexBySignature[signature] = result.count
+            if entry.sections.count == 1, let only = entry.sections.first {
+                result.append(only.withReciters([entry.reciter]))
+            } else {
+                result.append(ReciterSectionGroup(
+                    id: "search-combined-\(signature)",
+                    title: entry.sections.map(\.title).joined(separator: " / "),
+                    arabic: nil,
+                    reciters: [entry.reciter],
+                    isQiraah: entry.sections.allSatisfy(\.isQiraah)
+                ))
+            }
+        }
+        return result
     }
 
     private var searchResultCount: Int {
@@ -2589,6 +2644,16 @@ private struct ReciterRow: View, Equatable {
             && lhs.searchQuery == rhs.searchQuery
     }
 
+    /// RECITER-LIST-ONLY display name (user rule: nowhere else - Now Playing, settings rows, and every
+    /// other surface keep the bare name). The standard Murattal is both the app's default reciter and
+    /// mp3quran's plain "minsh" mushaf - the complete 1381 AH Egyptian-radio murattal-project recording -
+    /// so the list marks it apart from the archival "(1387 AH)" sibling entry.
+    private var listDisplayName: String {
+        reciter.name == Reciter.minshawiAyahFallbackName
+            ? "\(reciter.name) (Default - 1381 AH)"
+            : reciter.name
+    }
+
     var body: some View {
         let hasDownloads = downloadState.completedSurahs > 0
         let isDownloading = downloadState.isDownloading
@@ -2628,7 +2693,7 @@ private struct ReciterRow: View, Equatable {
                         }
 
                         HighlightedSnippet(
-                            source: reciter.name,
+                            source: listDisplayName,
                             term: searchQuery,
                             font: .subheadline,
                             accent: accentColor.color,

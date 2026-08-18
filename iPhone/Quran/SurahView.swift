@@ -145,6 +145,17 @@ final class AyahVisibilityModel: ObservableObject {
     /// True while the "Go to Next Surah" footer is on screen - the ONLY thing that marks the ayah
     /// progress bar 100%. Seeing the last ayah isn't finishing; reaching the footer is.
     @Published var nextSurahButtonVisible = false
+    /// The list's REAL scroll progress (0...1), when the OS can report it (iOS 18+) and the content
+    /// actually scrolls; nil otherwise. Preferred over the ayah-anchor fill: the anchor only moves
+    /// when the top-visible ayah changes, so on a surah of a page or two the bar sat at ~25% and
+    /// then snapped to 100% at the footer. Quantized to 0.5% steps so a 120Hz scroll publishes at
+    /// most ~200 times across a full surah instead of every frame.
+    @Published private(set) var scrollFraction: Double? = nil
+
+    func setScrollFraction(_ fraction: Double?) {
+        let quantized = fraction.map { (($0 * 200).rounded()) / 200 }
+        if quantized != scrollFraction { scrollFraction = quantized }
+    }
 
     private func syncDerived() {
         if let next = visibleAyahIDs.union(visibleBoundaryAyahIDs).min(), next != firstVisibleAyahID {
@@ -162,6 +173,9 @@ final class AyahVisibilityModel: ObservableObject {
     func resetScrollTracking() {
         visibleAyahIDs.removeAll()
         visibleBoundaryAyahIDs.removeAll()
+        // A stale fraction from the previous surah must not paint the next one's bar for the beat
+        // until its first scroll-geometry report lands.
+        scrollFraction = nil
     }
 }
 
@@ -170,10 +184,10 @@ final class AyahVisibilityModel: ObservableObject {
 /// SurahView through `content`, called with the freshly-derived anchor state.
 private struct ReaderPinnedHeader<Content: View>: View {
     @ObservedObject var visibility: AyahVisibilityModel
-    @ViewBuilder let content: (_ anchorAyahID: Int?, _ isLastAyahVisible: Bool, _ nextSurahButtonVisible: Bool) -> Content
+    @ViewBuilder let content: (_ anchorAyahID: Int?, _ isLastAyahVisible: Bool, _ nextSurahButtonVisible: Bool, _ scrollFraction: Double?) -> Content
 
     var body: some View {
-        content(visibility.firstVisibleAyahID, visibility.isLastAyahVisible, visibility.nextSurahButtonVisible)
+        content(visibility.firstVisibleAyahID, visibility.isLastAyahVisible, visibility.nextSurahButtonVisible, visibility.scrollFraction)
     }
 }
 
@@ -1554,6 +1568,16 @@ struct SurahView: View {
             if let target = ayah {
                 highlightedAyah = HighlightedAyahRef(surahID: surah.id, ayahID: target)
             }
+            #if DEBUG
+            // Headless verification: `-showCustomRangeSheet` opens the custom-range sheet a beat
+            // after the reader appears - the sheet is otherwise only reachable through the play
+            // menu, which `simctl` can't tap.
+            if ProcessInfo.processInfo.arguments.contains("-showCustomRangeSheet") {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                    showCustomRangeSheet = true
+                }
+            }
+            #endif
         }
         .sheet(isPresented: $showingSettingsSheet) {
             settingsSheet
@@ -2165,6 +2189,9 @@ struct SurahView: View {
             // Apple Music-style: the bottom bars minimize while scrolling down, restore on scroll-up.
             .collapseBarsOnScroll($barsCollapsed)
             .trackUserScrollTouch($userTouchingReader)
+            // Feeds the pinned header's progress bar its true scroll position. `visibility` is
+            // deliberately unobserved by this view, so these writes re-render only the header strip.
+            .trackScrollFraction { visibility.setScrollFraction($0) }
             .compactListSectionSpacing()
             #if os(iOS)
             .onChange(of: scrollDown) { value in
@@ -2290,14 +2317,17 @@ struct SurahView: View {
                 // The ONLY observer of the scroll-visibility model: a viewport crossing re-renders
                 // this strip, never the reader body. The captured locals (ayah caches, divider maps,
                 // neighbors) refresh whenever the reader body legitimately re-runs.
-                ReaderPinnedHeader(visibility: visibility) { anchorID, lastAyahVisible, footerVisible in
+                ReaderPinnedHeader(visibility: visibility) { anchorID, lastAyahVisible, footerVisible, scrollFraction in
                     VStack(spacing: 0) {
                         // The ayah progress bar is attached full-width directly beneath the toolbar - not
                         // part of the floating pill - so it reads as the screen's own progress indicator.
-                        // It fills by AYAH (not page), so it shows for every surah, including single-page
-                        // ones. Full ONLY once the "Go to Next Surah" footer scrolls into view - the last
-                        // ayah merely being visible isn't the end of the surah, the footer is. Surah 114
-                        // has no next-surah button, so there the last ayah on screen is the finish line.
+                        // It fills by the REAL scroll position when the OS reports one (iOS 18+): the old
+                        // ayah-anchor fill only moved when the TOP-visible ayah changed, so on a surah of
+                        // a page or two it sat at ~25% and snapped to 100% at the footer (user report).
+                        // The anchor fill remains as the pre-18 fallback. Full ONLY once the "Go to Next
+                        // Surah" footer scrolls into view - the last ayah merely being visible isn't the
+                        // end of the surah, the footer is. Surah 114 has no next-surah button, so there
+                        // the last ayah on screen is the finish line.
                         let barFraction: CGFloat? = {
                             guard searchText.isEmpty,
                                   let firstID = ayahsForQiraah.first?.id,
@@ -2305,8 +2335,11 @@ struct SurahView: View {
                                   lastID > firstID else { return nil }
                             if footerVisible { return 1 }
                             if nextSurah == nil, lastAyahVisible { return 1 }
-                            let currentID = anchorID.flatMap { ayahByID[$0] }?.id ?? firstID
                             // Never quite full while scrolling: 100% is reserved for the footer.
+                            if let scrollFraction {
+                                return min(CGFloat(scrollFraction), 0.97)
+                            }
+                            let currentID = anchorID.flatMap { ayahByID[$0] }?.id ?? firstID
                             return min(CGFloat(currentID - firstID) / CGFloat(lastID - firstID), 0.97)
                         }()
                         if let barFraction {

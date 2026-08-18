@@ -66,6 +66,14 @@ struct SurahRow: View, Equatable {
     /// The listening twin: this surah holds the last-listened full-surah playback position, so the
     /// pill gets a speaker badge. Star > book > speaker when a surah qualifies for more than one.
     let isLastListened: Bool
+    /// Compared alongside `accentColor`: with the `.custom` accent, `.color` resolves through this
+    /// hex, so an edit to it must fail `==` - comparing only the enum case left visible rows on the
+    /// old tint until they scrolled off (the `ReciterRow` fix, applied here too).
+    let customAccentHex: String
+    /// The Arabic surah name renders through `cleanedQuranArabic`, which reads these two toggles -
+    /// snapshotted so flipping either re-renders visible rows. (`removeArabicDots` also feeds the
+    /// compared `fontArabic` default, but only on Hafs - on other riwayat only this snapshot moves.)
+    let cleanArabicKey: String
 
     init(
         surah: Surah,
@@ -97,6 +105,8 @@ struct SurahRow: View, Equatable {
         self.displayQiraahKey = Settings.shared.displayQiraahForArabic ?? ""
         self.isLastRead = Settings.shared.saveLastReadAyah && Settings.shared.lastReadSurah == surah.id
         self.isLastListened = Settings.shared.lastListenedSurah?.surahNumber == surah.id
+        self.customAccentHex = Settings.shared.customAccentColorHex
+        self.cleanArabicKey = "\(Settings.shared.cleanArabicText ? 1 : 0)\(Settings.shared.removeArabicDots ? 1 : 0)"
     }
 
     private var revelationEmoji: String {
@@ -494,7 +504,9 @@ struct SurahRow: View, Equatable {
         lhs.sortModeKey == rhs.sortModeKey &&
         lhs.displayQiraahKey == rhs.displayQiraahKey &&
         lhs.isLastRead == rhs.isLastRead &&
-        lhs.isLastListened == rhs.isLastListened
+        lhs.isLastListened == rhs.isLastListened &&
+        lhs.customAccentHex == rhs.customAccentHex &&
+        lhs.cleanArabicKey == rhs.cleanArabicKey
     }
 }
 
