@@ -255,7 +255,6 @@ struct SurahPageReader<Controls: View>: View {
     /// Whether the current `jumpToken` re-seed should TURN the page (animated, like a swipe) instead of
     /// swapping the index. Playback-driven jumps ("go to what's playing") turn; a surah/search jump - which
     /// is a deliberate "take me there now" - stays instant.
-    var animateJump: Bool = false
     /// Fires ONLY when the visible page's top surah actually changes, so the navigation title can follow the
     /// reader across surah boundaries instead of naming the surah it was opened from forever. Page turns
     /// WITHIN one surah report nothing at all - see `reportSurah`.
@@ -713,13 +712,15 @@ struct SurahPageReader<Controls: View>: View {
     /// Used for every PLAYBACK-driven page change - following the recitation across a boundary, and
     /// starting playback on an ayah that lives on another page - so the reader turns the page and reading
     /// carries on, instead of the page being swapped out from under the reciter.
-    private func turnPage(to target: Int, in pages: [MushafPage]) {
+    private func turnPage(to target: Int, in pages: [MushafPage], suppressClear: Bool = true) {
         guard pages.indices.contains(target), target != pageIndex else { return }
         // Compose the destination BEFORE the turn starts, so what slides in is the page rather than its
         // loading spinner. (`.onChange(of: pageIndex)` prewarms too, but that runs as the turn begins.)
         MushafPageRenderCache.prewarm(pages: pages, around: target, radius: 1, includeCenter: true)
-        // A follow/seed is not a user page turn - it must not wipe the mark or the selections.
-        suppressNextPageTurnClear = true
+        // A follow/seed is not a user page turn - it must not wipe the mark or the selections. A
+        // DELIBERATE jump (the page/juz pickers) passes false: there a new page is a fresh start,
+        // exactly as if it had been swiped to.
+        if suppressClear { suppressNextPageTurnClear = true }
         // Deferred one runloop tick, deliberately: this is called from `.onChange` handlers running
         // INSIDE the player publish's own update pass, and a selection write made there reached the
         // UIPageViewController without the animated transaction - the page SNAPPED instead of sliding
@@ -732,19 +733,14 @@ struct SurahPageReader<Controls: View>: View {
 
     /// Jump the live pager to this `surah`'s starting page (shared by the `surah.id` and `jumpToken`
     /// onChange handlers - an in-place surah swap from the picker, next-surah, a search hit, or "go to
-    /// what's playing"). Only the playback jump animates (`animateJump`); a deliberate navigation is meant
-    /// to land immediately.
+    /// what's playing"). EVERY jump turns the page like a real swipe now, in whichever direction the
+    /// target lies (user rule: "as if I was actually swiping, whether it goes back or forward") - the
+    /// old instant landing for deliberate navigation is gone. `turnPage` keeps the arrival highlight a
+    /// search hit or picker set (its suppressed page-turn clear).
     private func reseedToStartingPage(in pages: [MushafPage]) {
         let target = startingPageIndex(in: pages)
         if target != pageIndex {
-            if animateJump {
-                turnPage(to: target, in: pages)
-            } else {
-                // A swap that arrives WITH a target ayah (search hit, picker) sets its own highlight in
-                // SurahView - the re-seed must not count as a page turn and wipe it.
-                suppressNextPageTurnClear = true
-                pageIndex = target
-            }
+            turnPage(to: target, in: pages)
             // `.onChange(of: pageIndex)` reports + prewarms + saves.
         } else {
             reportSurah(on: target, in: pages)
@@ -794,7 +790,7 @@ struct SurahPageReader<Controls: View>: View {
         // reader there, the way tapping through the matches does.
         if findSurahID != nil, match.pageIndex != pageIndex, pages.indices.contains(match.pageIndex) {
             suppressNextPageTurnClear = true
-            withAnimation(.easeInOut(duration: 0.2)) { pageIndex = match.pageIndex }
+            withAnimation(.easeInOut(duration: 0.35)) { pageIndex = match.pageIndex }
         }
     }
 
@@ -812,7 +808,7 @@ struct SurahPageReader<Controls: View>: View {
         }
         if match.pageIndex != pageIndex, pages.indices.contains(match.pageIndex) {
             suppressNextPageTurnClear = true
-            withAnimation(.easeInOut(duration: 0.2)) { pageIndex = match.pageIndex }
+            withAnimation(.easeInOut(duration: 0.35)) { pageIndex = match.pageIndex }
         }
     }
 
@@ -1356,12 +1352,17 @@ struct SurahPageReader<Controls: View>: View {
                     switch target {
                     case .page:
                         // Clamped: the selection was seeded against the pagination it was OPENED with, and a
-                        // qiraah switch mid-pick can shrink it - an out-of-range TabView selection blanks the pager.
-                        pageIndex = min(max(pagePickerSelection, 0), max(pages.count - 1, 0))
+                        // qiraah switch mid-pick can shrink it - an out-of-range TabView selection blanks the
+                        // pager. Turned, not teleported (user rule: every jump slides like a swipe); the
+                        // picker jump is a fresh start, so the page-turn clear runs as usual.
+                        turnPage(to: min(max(pagePickerSelection, 0), max(pages.count - 1, 0)), in: pages,
+                                 suppressClear: false)
                     case .juz:
-                        // A juz is picked by number, but the reader navigates by page - jump to the page the
+                        // A juz is picked by number, but the reader navigates by page - turn to the page the
                         // juz opens on.
-                        if let start = ranges[juzPickerSelection]?.start { pageIndex = start }
+                        if let start = ranges[juzPickerSelection]?.start {
+                            turnPage(to: start, in: pages, suppressClear: false)
+                        }
                     }
                     withAnimation(.easeInOut) { activePicker = nil }
                 } label: {
@@ -1942,6 +1943,14 @@ private struct MushafPageContent: View {
                 // Fill the visible region so a page that fits sits centered in what the reader can SEE (balanced
                 // top/bottom spacing); a page that overflows stays its natural height and scrolls.
                 .frame(maxWidth: .infinity, minHeight: visibleHeight, alignment: .center)
+                // Mathematical centering reads bottom-heavy: the band's BOTTOM edge is real chrome (the
+                // chevron strip / footer), but its TOP edge hides ~7-8pt of navigation-bar dead space below
+                // the title pill's visible bottom. Measured on the collapsed reader: 19pt of visual air
+                // above the first line vs 12pt between the last line and the chevron. Nudging the fitted
+                // page up by half the difference evens the two (user rule: measure the bottom gap to the
+                // CHEVRON, not the screen bottom, and make top and bottom look even). Fit-only: a
+                // scrolling page has no centering to bias.
+                .offset(y: zoomable ? -4 : 0)
     }
 
     /// Close the actions sheet, THEN open the one it asked for. UIKit can't present a second sheet while the
@@ -3588,7 +3597,10 @@ enum MushafPageRenderCache {
     /// the build number alone can't see a code change on a dev install that reuses its version.
     /// v3: uncapped fit ceiling (maximize-font user rule), 0.01pt search resolution, uncapped
     /// line-spacing spread (full vertical fill).
-    nonisolated private static let fitterVersion = 4
+    // 6: Uthmani.ttf keeps ONLY the حۡمَٰنِ (Rahmaani) ligature removed - the other five dagger-alif
+    // word bakes were restored (user: the non-ligated forms "look awful"), so those words' glyph
+    // advances changed back and fits computed under v5 must recompute.
+    nonisolated private static let fitterVersion = 6
 
     nonisolated private static let persistedMetricsSalt: String = {
         let os = ProcessInfo.processInfo.operatingSystemVersion

@@ -187,6 +187,39 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
            let forced = Int(ProcessInfo.processInfo.arguments[idx + 1]) {
             self.travelingMode = forced != 0
         }
+        // "-settingsProbe key=value[,key=value…]" - applies the writes ~6s AFTER launch, in-process
+        // through the normal setters. This is the only way to reproduce "I changed a font setting and
+        // the visible rows didn't update" headlessly: the sliders aren't tappable from simctl, and an
+        // external `defaults write` never reaches a running app's @AppStorage. Screenshot before ~5s
+        // and after ~9s; any visible row still on the old value is a stale Equatable row.
+        if let idx = ProcessInfo.processInfo.arguments.firstIndex(of: "-settingsProbe"),
+           ProcessInfo.processInfo.arguments.indices.contains(idx + 1) {
+            // Each step is "key=value[@delaySeconds]" (default 6s), so one run can change a setting on
+            // one tab and then LOOK at another: "fontArabicSize=44@6,tab=quran@10". "tab=" posts the
+            // debug tab-switch notification rather than writing a setting.
+            let spec = ProcessInfo.processInfo.arguments[idx + 1]
+            for pair in spec.split(separator: ",") {
+                let stepAndDelay = pair.split(separator: "@", maxSplits: 1)
+                let kv = stepAndDelay[0].split(separator: "=", maxSplits: 1).map(String.init)
+                guard kv.count == 2 else { continue }
+                let delay = stepAndDelay.count == 2 ? (Double(stepAndDelay[1]) ?? 6) : 6
+                DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+                    let shared = Settings.shared
+                    switch kv[0] {
+                    case "fontArabicSize": shared.fontArabicSize = Double(kv[1]) ?? shared.fontArabicSize
+                    case "englishFontSize": shared.englishFontSize = Double(kv[1]) ?? shared.englishFontSize
+                    case "fontArabic": shared.fontArabic = kv[1]
+                    case "useFontArabic": shared.useFontArabic = kv[1] == "1"
+                    case "hadithArabicFontSize": shared.hadithArabicFontSize = Double(kv[1]) ?? shared.hadithArabicFontSize
+                    case "hadithEnglishFontSize": shared.hadithEnglishFontSize = Double(kv[1]) ?? shared.hadithEnglishFontSize
+                    case "islamArabicFace": shared.islamArabicFace = IslamArabicFace(rawValue: kv[1]) ?? shared.islamArabicFace
+                    case "tab":
+                        NotificationCenter.default.post(name: Notification.Name("AlIslamDebugSwitchTab"), object: kv[1])
+                    default: break
+                    }
+                }
+            }
+        }
         #endif
 
         runQuranStartupMigrations()

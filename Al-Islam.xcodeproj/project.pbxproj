@@ -281,6 +281,24 @@
 		72E99E892FE8EC0E00CD0D8F /* Uthmani.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 724B8BD12FADD98500804C3D /* Uthmani.ttf */; };
 		72EC00042F80000000AAFE00 /* echo.caf in Resources */ = {isa = PBXBuildFile; fileRef = 72EC00012F80000000AAFE00 /* echo.caf */; };
 		72EC00052F80000000AAFE00 /* echo.caf in Resources */ = {isa = PBXBuildFile; fileRef = 72EC00012F80000000AAFE00 /* echo.caf */; };
+		72ADA0000000000000000001 /* serene.caf in Resources */ = {isa = PBXBuildFile; fileRef = 72ADF0000000000000000001 /* serene.caf */; };
+		72ADA0000000000000000002 /* serene-30.caf in Resources */ = {isa = PBXBuildFile; fileRef = 72ADF0000000000000000002 /* serene-30.caf */; };
+		72ADA0000000000000000003 /* serene-short.caf in Resources */ = {isa = PBXBuildFile; fileRef = 72ADF0000000000000000003 /* serene-short.caf */; };
+		72ADA0000000000000000004 /* aaqib.caf in Resources */ = {isa = PBXBuildFile; fileRef = 72ADF0000000000000000004 /* aaqib.caf */; };
+		72ADA0000000000000000005 /* aaqib-30.caf in Resources */ = {isa = PBXBuildFile; fileRef = 72ADF0000000000000000005 /* aaqib-30.caf */; };
+		72ADA0000000000000000006 /* aaqib-short.caf in Resources */ = {isa = PBXBuildFile; fileRef = 72ADF0000000000000000006 /* aaqib-short.caf */; };
+		72ADA0000000000000000007 /* takbir.caf in Resources */ = {isa = PBXBuildFile; fileRef = 72ADF0000000000000000007 /* takbir.caf */; };
+		72ADA0000000000000000008 /* takbir-30.caf in Resources */ = {isa = PBXBuildFile; fileRef = 72ADF0000000000000000008 /* takbir-30.caf */; };
+		72ADA0000000000000000009 /* takbir-short.caf in Resources */ = {isa = PBXBuildFile; fileRef = 72ADF0000000000000000009 /* takbir-short.caf */; };
+		72ADB0000000000000000001 /* serene.caf in Resources */ = {isa = PBXBuildFile; fileRef = 72ADF0000000000000000001 /* serene.caf */; };
+		72ADB0000000000000000002 /* serene-30.caf in Resources */ = {isa = PBXBuildFile; fileRef = 72ADF0000000000000000002 /* serene-30.caf */; };
+		72ADB0000000000000000003 /* serene-short.caf in Resources */ = {isa = PBXBuildFile; fileRef = 72ADF0000000000000000003 /* serene-short.caf */; };
+		72ADB0000000000000000004 /* aaqib.caf in Resources */ = {isa = PBXBuildFile; fileRef = 72ADF0000000000000000004 /* aaqib.caf */; };
+		72ADB0000000000000000005 /* aaqib-30.caf in Resources */ = {isa = PBXBuildFile; fileRef = 72ADF0000000000000000005 /* aaqib-30.caf */; };
+		72ADB0000000000000000006 /* aaqib-short.caf in Resources */ = {isa = PBXBuildFile; fileRef = 72ADF0000000000000000006 /* aaqib-short.caf */; };
+		72ADB0000000000000000007 /* takbir.caf in Resources */ = {isa = PBXBuildFile; fileRef = 72ADF0000000000000000007 /* takbir.caf */; };
+		72ADB0000000000000000008 /* takbir-30.caf in Resources */ = {isa = PBXBuildFile; fileRef = 72ADF0000000000000000008 /* takbir-30.caf */; };
+		72ADB0000000000000000009 /* takbir-short.caf in Resources */ = {isa = PBXBuildFile; fileRef = 72ADF0000000000000000009 /* takbir-short.caf */; };
 		72EC00062F80000000AAFE00 /* echo-30.caf in Resources */ = {isa = PBXBuildFile; fileRef = 72EC00022F80000000AAFE00 /* echo-30.caf */; };
 		72EC00072F80000000AAFE00 /* echo-30.caf in Resources */ = {isa = PBXBuildFile; fileRef = 72EC00022F80000000AAFE00 /* echo-30.caf */; };
 		72EC00082F80000000AAFE00 /* echo-short.caf in Resources */ = {isa = PBXBuildFile; fileRef = 72EC00032F80000000AAFE00 /* echo-short.caf */; };
@@ -637,6 +655,15 @@
 		72E832A52F6F52BA0013428B /* WallpaperView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WallpaperView.swift; sourceTree = "<group>"; };
 		72E832C02F6F53760013428B /* ArabicView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ArabicView.swift; sourceTree = "<group>"; };
 		72EC00012F80000000AAFE00 /* echo.caf */ = {isa = PBXFileReference; lastKnownFileType = file; path = echo.caf; sourceTree = "<group>"; };
+		72ADF0000000000000000001 /* serene.caf */ = {isa = PBXFileReference; lastKnownFileType = file; path = serene.caf; sourceTree = "<group>"; };
+		72ADF0000000000000000002 /* serene-30.caf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "serene-30.caf"; sourceTree = "<group>"; };
+		72ADF0000000000000000003 /* serene-short.caf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "serene-short.caf"; sourceTree = "<group>"; };
+		72ADF0000000000000000004 /* aaqib.caf */ = {isa = PBXFileReference; lastKnownFileType = file; path = aaqib.caf; sourceTree = "<group>"; };
+		72ADF0000000000000000005 /* aaqib-30.caf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "aaqib-30.caf"; sourceTree = "<group>"; };
+		72ADF0000000000000000006 /* aaqib-short.caf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "aaqib-short.caf"; sourceTree = "<group>"; };
+		72ADF0000000000000000007 /* takbir.caf */ = {isa = PBXFileReference; lastKnownFileType = file; path = takbir.caf; sourceTree = "<group>"; };
+		72ADF0000000000000000008 /* takbir-30.caf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "takbir-30.caf"; sourceTree = "<group>"; };
+		72ADF0000000000000000009 /* takbir-short.caf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "takbir-short.caf"; sourceTree = "<group>"; };
 		72EC00022F80000000AAFE00 /* echo-30.caf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "echo-30.caf"; sourceTree = "<group>"; };
 		72EC00032F80000000AAFE00 /* echo-short.caf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "echo-short.caf"; sourceTree = "<group>"; };
 		72EF01C22F775A5600B273F7 /* PreviewSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreviewSupport.swift; sourceTree = "<group>"; };
@@ -1099,6 +1126,15 @@
 				72EC00012F80000000AAFE00 /* echo.caf */,
 				72EC00022F80000000AAFE00 /* echo-30.caf */,
 				72EC00032F80000000AAFE00 /* echo-short.caf */,
+				72ADF0000000000000000001 /* serene.caf */,
+				72ADF0000000000000000002 /* serene-30.caf */,
+				72ADF0000000000000000003 /* serene-short.caf */,
+				72ADF0000000000000000004 /* aaqib.caf */,
+				72ADF0000000000000000005 /* aaqib-30.caf */,
+				72ADF0000000000000000006 /* aaqib-short.caf */,
+				72ADF0000000000000000007 /* takbir.caf */,
+				72ADF0000000000000000008 /* takbir-30.caf */,
+				72ADF0000000000000000009 /* takbir-short.caf */,
 			);
 			path = "Adhan Sounds";
 			sourceTree = "<group>";
@@ -1440,6 +1476,15 @@
 				72EC00042F80000000AAFE00 /* echo.caf in Resources */,
 				72EC00062F80000000AAFE00 /* echo-30.caf in Resources */,
 				72EC00082F80000000AAFE00 /* echo-short.caf in Resources */,
+				72ADA0000000000000000001 /* serene.caf in Resources */,
+				72ADA0000000000000000002 /* serene-30.caf in Resources */,
+				72ADA0000000000000000003 /* serene-short.caf in Resources */,
+				72ADA0000000000000000004 /* aaqib.caf in Resources */,
+				72ADA0000000000000000005 /* aaqib-30.caf in Resources */,
+				72ADA0000000000000000006 /* aaqib-short.caf in Resources */,
+				72ADA0000000000000000007 /* takbir.caf in Resources */,
+				72ADA0000000000000000008 /* takbir-30.caf in Resources */,
+				72ADA0000000000000000009 /* takbir-short.caf in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1482,6 +1527,15 @@
 				72EC00052F80000000AAFE00 /* echo.caf in Resources */,
 				72EC00072F80000000AAFE00 /* echo-30.caf in Resources */,
 				72EC00092F80000000AAFE00 /* echo-short.caf in Resources */,
+				72ADB0000000000000000001 /* serene.caf in Resources */,
+				72ADB0000000000000000002 /* serene-30.caf in Resources */,
+				72ADB0000000000000000003 /* serene-short.caf in Resources */,
+				72ADB0000000000000000004 /* aaqib.caf in Resources */,
+				72ADB0000000000000000005 /* aaqib-30.caf in Resources */,
+				72ADB0000000000000000006 /* aaqib-short.caf in Resources */,
+				72ADB0000000000000000007 /* takbir.caf in Resources */,
+				72ADB0000000000000000008 /* takbir-30.caf in Resources */,
+				72ADB0000000000000000009 /* takbir-short.caf in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

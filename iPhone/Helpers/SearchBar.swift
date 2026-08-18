@@ -7,7 +7,8 @@ import UIKit
 /// its field with - same background, magnifier, placeholder, clear button, fonts - but as a plain
 /// UITextField subclass it can be laid out at ANY height, while UISearchBar proper refuses anything
 /// under ~48pt (it keeps painting a 48pt field inside the smaller slot). So this hosts the field
-/// directly at 42pt and adds the Cancel button UISearchBar used to own.
+/// directly at 50pt (settled after rounds at 38, 42, and 46 - Abu's final pick)
+/// and adds the Cancel button UISearchBar used to own.
 ///
 /// Same API as ever: a text binding, a focus-request token, a placeholder, the search-key callback,
 /// and focus-change notifications.
@@ -56,7 +57,7 @@ struct SearchBar: View {
                     onFocusChanged?(focused)
                 }
             )
-            .frame(height: 42)
+            .frame(height: 50)
 
             if isEditing {
                 // The app's circle-glass ✕, not a text "Cancel" (user rule: the word read as dated
@@ -69,7 +70,7 @@ struct SearchBar: View {
                     Image(systemName: "xmark")
                         .font(.body.weight(.semibold))
                         .foregroundColor(.primary)
-                        .frame(width: 42, height: 42)
+                        .frame(width: 50, height: 50)
                         .contentShape(Circle())
                         .conditionalGlassEffect(circle: true)
                 }
@@ -84,6 +85,13 @@ struct SearchBar: View {
 
 /// The UIKit half: `UISearchTextField` with the old UISearchBar wrapper's text-sync guards intact.
 private struct SystemSearchField: UIViewRepresentable {
+    #if DEBUG
+    /// "-searchPasteProbe": headless reproduction of paste-into-search (crash report 2026-08-18) -
+    /// the simulator has no tap/key injection, and only the REAL `paste(_:)` path exercises the
+    /// keyboard's inline-candidate machinery. The first field mounted claims the probe; seed the sim
+    /// pasteboard with `simctl pbcopy` before launching.
+    nonisolated(unsafe) private static var didSchedulePasteProbe = false
+    #endif
     @Binding var text: String
     var focusRequestID: Int
     var cancelToken: Int
@@ -100,6 +108,14 @@ private struct SystemSearchField: UIViewRepresentable {
         field.placeholder = placeholder
         field.autocorrectionType = .no
         field.autocapitalizationType = .none
+        field.spellCheckingType = .no
+        if #available(iOS 17.0, *) {
+            // A search field must not run the keyboard's inline predictions (UISearchBar's own field
+            // never did): pasting Quranic Arabic - dagger alif, Uthmani sukoon - into this bare field
+            // trapped inside UIKit's UIKeyboardInlineCandidateStorage on iOS 26 (EXC_BREAKPOINT,
+            // 2026-08-18 report). Off = that machinery never engages.
+            field.inlinePredictionType = .no
+        }
         field.returnKeyType = .search
         field.clearButtonMode = .whileEditing
         if #unavailable(iOS 26.0) {
@@ -108,7 +124,7 @@ private struct SystemSearchField: UIViewRepresentable {
             // that same fill over an opaque bar; an opaque backing under the field restores that look.
             // iOS 26 draws the field as glass and needs nothing.
             field.backgroundColor = .secondarySystemBackground
-            field.layer.cornerRadius = 12
+            field.layer.cornerRadius = 14
             field.clipsToBounds = true
         }
         field.delegate = context.coordinator
@@ -118,6 +134,33 @@ private struct SystemSearchField: UIViewRepresentable {
         // Don't let the field's intrinsic width fight the SwiftUI frame.
         field.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
         field.setContentHuggingPriority(.defaultLow, for: .horizontal)
+        #if DEBUG
+        // The payload rides in "-searchPasteText <string>" and is planted on the pasteboard IN-PROCESS:
+        // a same-app paste skips the iOS cross-app paste permission dialog, which is untappable here.
+        if ProcessInfo.processInfo.arguments.contains("-searchPasteProbe"), !Self.didSchedulePasteProbe {
+            Self.didSchedulePasteProbe = true
+            DispatchQueue.main.asyncAfter(deadline: .now() + 3) { [weak field] in
+                let args = ProcessInfo.processInfo.arguments
+                if let i = args.firstIndex(of: "-searchPasteText"), args.indices.contains(i + 1) {
+                    let payload = args[i + 1]
+                    if args.contains("-searchPasteHTML") {
+                        // Mimic a copy from a browser/chat: the pasteboard carries RICH flavors, and the
+                        // paste converts through attributed text - a different UIKit path than plain.
+                        UIPasteboard.general.items = [[
+                            "public.html": "<html><body><b>\(payload)</b></body></html>",
+                            "public.utf8-plain-text": payload,
+                        ]]
+                    } else {
+                        UIPasteboard.general.string = payload
+                    }
+                }
+                field?.becomeFirstResponder()
+                DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                    field?.paste(nil)
+                }
+            }
+        }
+        #endif
         return field
     }
 
@@ -132,7 +175,11 @@ private struct SystemSearchField: UIViewRepresentable {
         // That was the old type-delete-retype search crash; the guard carries over from the UISearchBar
         // wrapper verbatim.
         if field.text != text {
-            if !field.isFirstResponder || !context.coordinator.recentlySentTexts.contains(text) {
+            // Also never write while a composition/candidate session is open (`markedTextRange`):
+            // stomping marked text mid-session is the exact class of corruption behind both the old
+            // type-delete-retype crash and the 2026-08-18 paste trap in UIKit's keyboard code.
+            if (!field.isFirstResponder || !context.coordinator.recentlySentTexts.contains(text)),
+               field.markedTextRange == nil {
                 field.text = text
             }
         }

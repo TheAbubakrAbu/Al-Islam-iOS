@@ -18,6 +18,9 @@ App Store: <https://apps.apple.com/us/app/al-islam-islamic-pillars/id6449729655>
 
 - **Adhan calculations** (fully offline, on-device) - **Batoul Apps** - <https://github.com/batoulapps/adhan-swift>
 - **Adhan sounds** - **Omar Al-Ejel** - <https://github.com/oalejel/Athan-Utility>
+- **"Serene" adhan** - **"Beautiful adhan" by Adam-synagda**, CC0 1.0 (public domain dedication), via Wikimedia Commons - <https://commons.wikimedia.org/wiki/File:Beautiful_adhan.ogg>. Trimmed and loudness-normalized from the original.
+- **"Aaqib Azeez" adhan** - **Aaqib Azeez**, CC BY-SA 4.0, via Wikimedia Commons - <https://commons.wikimedia.org/wiki/File:The_Adhan_-_Muslim_Call_to_Prayer_-_Aaqib_Azeez.mp3> - license: <https://creativecommons.org/licenses/by-sa/4.0/>. Trimmed and loudness-normalized from the original; the derived audio clips remain under CC BY-SA 4.0.
+- **"Takbir" alert tone** - the opening takbir pair of the **Aaqib Azeez** adhan above, CC BY-SA 4.0, via Wikimedia Commons - <https://commons.wikimedia.org/wiki/File:The_Adhan_-_Muslim_Call_to_Prayer_-_Aaqib_Azeez.mp3> - license: <https://creativecommons.org/licenses/by-sa/4.0/>. Trimmed and loudness-normalized from the original; the derived clip remains under CC BY-SA 4.0.
 - **Moon phase algorithm** (the sky card and Moon widgets) - **SunCalc by Vladimir Agafonkin** (low-precision lunar theory from Meeus' *Astronomical Algorithms*) - <https://github.com/mourner/suncalc>
 - **English transliteration of the Quran** - **Risan Bagja Pradana** - <https://github.com/risan/quran-json>
 - **English Saheeh International translation** - **Global Quran** - <https://globalquran.com/download/data/>

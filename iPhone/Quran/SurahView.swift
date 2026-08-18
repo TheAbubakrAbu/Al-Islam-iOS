@@ -308,7 +308,6 @@ struct SurahView: View {
     /// Whether the CURRENT `pageJumpToken` was bumped by playback ("go to what's playing" / starting a
     /// recitation whose ayah is on another page). The page reader turns the page for those and lands
     /// instantly for a deliberate surah/search navigation. Every writer of `pageJumpToken` sets this.
-    @State private var pageJumpIsPlayback = false
 
     @State private var showSurahInfoSheet = false
     @State private var showReciterPickerSheet = false
@@ -1430,7 +1429,6 @@ struct SurahView: View {
                 surah: surah,
                 initialAyah: ayah,
                 jumpToken: pageJumpToken,
-                animateJump: pageJumpIsPlayback,
                 // The reader now only calls this when the page's TOP surah has actually changed (see
                 // `SurahPageReader.reportSurah`) - a swipe between two pages of the same surah reports
                 // nothing at all, so this never runs and `pageSurah` never moves. The id check below is
@@ -3215,8 +3213,8 @@ struct SurahView: View {
         @ViewBuilder content: () -> Content
     ) -> some View {
         content()
-            .frame(width: 22, height: 22)
-            .frame(width: 42, height: 42)
+            .frame(width: 26, height: 26)
+            .frame(width: 50, height: 50)
             .contentShape(Rectangle())
             .conditionalGlassEffect()
     }
@@ -3653,8 +3651,7 @@ struct SurahView: View {
         didScrollDown = false
         // The token re-seeds the page reader even when neither `surah.id` nor the ayah changed value -
         // tapping the bar twice, or tapping it after paging away from the ayah, must still jump back.
-        // Playback-driven, so the reader TURNS the page (like a swipe) instead of teleporting to it.
-        pageJumpIsPlayback = true
+        // The reader TURNS the page (like a swipe) for every jump.
         pageJumpToken += 1
 
         if let ayahID = target.ayah {
@@ -3698,9 +3695,8 @@ struct SurahView: View {
             }
             // The page reader re-seeds on `surah.id` changes - but after paging away, the picked surah
             // can EQUAL the prop (picking the surah the reader was opened from), so the id never
-            // changes and no re-seed fires. The token forces one on every navigation.
-            // A deliberate "take me to this surah" lands immediately; only playback turns pages.
-            pageJumpIsPlayback = false
+            // changes and no re-seed fires. The token forces one on every navigation, and the reader
+            // turns to it like a swipe (user rule: every jump slides, back or forward).
             pageJumpToken += 1
         }
     }

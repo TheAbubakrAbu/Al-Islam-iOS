@@ -750,10 +750,22 @@ struct WordByWordTextView: UIViewRepresentable {
         context.coordinator.onTapWord = onTapWord
 
         // Reassigning `attributedText` is a full TextKit relayout, and this view's parent re-renders on
-        // every settings/playback change - so only when something visible actually changed.
-        let key = "\(attributed.string.hashValue)|\(attributed.length)|\(selectedWord ?? -1)|\(width)"
-        guard context.coordinator.lastKey != key else { return }
-        context.coordinator.lastKey = key
+        // every settings/playback change - so only when something visible actually changed. The comparison
+        // must be FULL attributed equality (attributes included), not a characters-only key: a font-size,
+        // font-face, or tajweed/accent recolor keeps the exact same characters, and the old string-hash key
+        // swallowed those - every VISIBLE ayah stayed on its old font until it scrolled off screen and was
+        // rebuilt through `makeUIView` ("only the rows I can't see change" - user report). `isEqual(to:)`
+        // still skips the relayout when a playback tick re-renders the parent with identical content.
+        let selectionAndWidthUnchanged = context.coordinator.lastSelectedWord == (selectedWord ?? -1)
+            && context.coordinator.lastWidth == width
+        if selectionAndWidthUnchanged,
+           let last = context.coordinator.lastAttributed,
+           last === attributed || last.isEqual(to: attributed) {
+            return
+        }
+        context.coordinator.lastAttributed = attributed
+        context.coordinator.lastSelectedWord = selectedWord ?? -1
+        context.coordinator.lastWidth = width
 
         view.textContainer.widthTracksTextView = false
         view.textContainer.size = CGSize(width: width, height: .greatestFiniteMagnitude)
@@ -794,7 +806,11 @@ struct WordByWordTextView: UIViewRepresentable {
         weak var textView: UITextView?
         var wordRanges: [NSRange] = []
         var onTapWord: ((Int) -> Void)?
-        var lastKey = ""
+        /// The last content actually assigned to the view, for the update guard above. The un-lit
+        /// original (not the `lit(_:)` copy), so selection changes compare against the right base.
+        var lastAttributed: NSAttributedString?
+        var lastSelectedWord = -1
+        var lastWidth: CGFloat = 0
 
         @objc func handleTap(_ gesture: UITapGestureRecognizer) {
             guard let word = word(at: gesture.location(in: textView)) else { return }

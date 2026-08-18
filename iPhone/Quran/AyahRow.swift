@@ -40,6 +40,13 @@ struct AyahRow: View, Equatable {
     @ObservedObject private var beginnerOverrides = AyahBeginnerOverrides.shared
     private var ayahBeginnerMode: Bool { beginnerOverrides.contains(surah: surah.id, ayah: ayah.id) }
 
+    /// Lines a match FORCED visible (a search hit / arrival showing the transliteration or a translation
+    /// even though its toggle is off), latched for as long as this row stays mounted: clearing the arrival
+    /// used to collapse those lines, shrink the row, and nudge the whole list ("it'll scroll a little up
+    /// or down" - user report). Latched lines keep the row's height stable through the clear; the row is
+    /// recycled once it scrolls away, so the latch resets naturally. Order: translit, saheeh, mustafa, arabic.
+    @State private var latchedForcedLines: [Bool] = [false, false, false, false]
+
     #if os(iOS)
     @State private var showingAyahSheet = false
     @State private var showTafsirSheet = false
@@ -639,14 +646,21 @@ struct AyahRow: View, Equatable {
         let cross: (arabic: [NSRange], saheeh: [NSRange], mustafa: [NSRange]) = ([], [], [])
         #endif
 
-        let showArabic = settings.showArabicText || mArabic || !cross.arabic.isEmpty
-        let showTranslit = hafsOnly && (settings.showTransliteration || mTranslit)
         // Cross spans FORCE the opposite-language line visible (the search rows' rule): an Arabic hit
         // whose aligned English words were found must show them even when the translation toggle is off.
-        // Saheeh takes precedence when both translations would be forced.
-        let showEnglishSaheeh = hafsOnly && (settings.showEnglishSaheeh || mSaheeh || !cross.saheeh.isEmpty)
+        // Saheeh takes precedence when both translations would be forced. Forced lines are LATCHED (see
+        // `latchedForcedLines`) so clearing the arrival doesn't shrink the row and jiggle the list.
+        let forcedTranslit = hafsOnly && mTranslit
+        let forcedSaheeh = hafsOnly && (mSaheeh || !cross.saheeh.isEmpty)
+        let forcedMustafa = hafsOnly && (mMustafa || (!cross.mustafa.isEmpty && !forcedSaheeh))
+        let forcedArabic = !settings.showArabicText && (mArabic || !cross.arabic.isEmpty)
+        let forcedNow = [forcedTranslit, forcedSaheeh, forcedMustafa, forcedArabic]
+
+        let showArabic = settings.showArabicText || forcedArabic || latchedForcedLines[3]
+        let showTranslit = hafsOnly && (settings.showTransliteration || forcedTranslit || latchedForcedLines[0])
+        let showEnglishSaheeh = hafsOnly && (settings.showEnglishSaheeh || forcedSaheeh || latchedForcedLines[1])
         let showEnglishMustafa = hafsOnly
-            && (settings.showEnglishMustafa || mMustafa || (!cross.mustafa.isEmpty && !showEnglishSaheeh))
+            && (settings.showEnglishMustafa || forcedMustafa || latchedForcedLines[2])
         let highlightQuery = hasSearch ? queryForInlineHighlight(activeTerm) : ""
         let fontSizeEN = settings.englishFontSize
 
@@ -910,6 +924,14 @@ struct AyahRow: View, Equatable {
             }
         }
         #endif
+        // Latch every line a match forces visible - one-way, cleared only by row recycling - so the
+        // arrival-clear tap never changes this row's height (the list-jiggle fix; see the state's doc).
+        .onAppear {
+            for i in forcedNow.indices where forcedNow[i] { latchedForcedLines[i] = true }
+        }
+        .onChange(of: forcedNow) { now in
+            for i in now.indices where now[i] { latchedForcedLines[i] = true }
+        }
         .contentShape(Rectangle())
         .onTapGesture {
             if isSelecting {

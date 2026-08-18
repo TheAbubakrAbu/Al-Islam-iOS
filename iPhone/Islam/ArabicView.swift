@@ -539,8 +539,8 @@ struct ArabicView: View {
         @ViewBuilder content: () -> Content
     ) -> some View {
         content()
-            .frame(width: 22, height: 22)
-            .frame(width: 42, height: 42)
+            .frame(width: 26, height: 26)
+            .frame(width: 50, height: 50)
             .contentShape(Rectangle())
             .conditionalGlassEffect()
     }

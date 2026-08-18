@@ -25,13 +25,27 @@ extension Settings {
         // A 3.6-second chime, not a call to prayer - for being told without being called. All three of its
         // clips are the same recording, because there is nothing to cut down.
         .init(id: "echo", title: "Echo"),
+        // A 2.6-second SINGLE takbir ("Allahu Akbar"), the second tone-not-adhan option: instantly
+        // recognizable as the prayer app without being a full call. Like echo, all three clips are the
+        // same recording. Cut from the opening of the Aaqib Azeez adhan below, ending on the first
+        // takbir's decay (the RMS dip before the second "Allahu" - the pair is sung in one breath, so
+        // there is no silence to cut at; a prior CC0 field recording was dropped because its second
+        // takbir was clipped in the source). Mastered to match the adhan clips' loudness, hotter than
+        // echo, for the "tones are too quiet" complaint. CC BY-SA 4.0, see CREDITS.md.
+        .init(id: "takbir", title: "Takbir"),
 
         .init(id: "egypt", title: "Egypt"),
         .init(id: "makkah", title: "Makkah"),
         .init(id: "madina", title: "Madina"),
         .init(id: "alaqsa", title: "Al-Aqsa"),
         .init(id: "alaqsa-2", title: "Al-Aqsa 2"),
+        // Clean solo-voice adhan, CC0 via Wikimedia Commons ("Beautiful adhan" by Adam-synagda) - the
+        // uploader is not the muadhin's stage name, so it's titled by style, not by name. See CREDITS.md.
+        .init(id: "serene", title: "Serene"),
 
+        // Adhan by Aaqib Azeez, CC BY-SA 4.0 via Wikimedia Commons (see CREDITS.md). Its -30 cut ends on a
+        // natural phrase boundary at ~27.7s rather than a mid-phrase fade.
+        .init(id: "aaqib", title: "Aaqib Azeez"),
         .init(id: "abdulbaset", title: "Abdul Baset"),
         .init(id: "abdulghaffar", title: "Abdul Ghaffar"),
         .init(id: "al-qatami", title: "Al-Qatami"),
@@ -49,7 +63,7 @@ extension Settings {
     /// The alert tone plays for prenotifications, the optional times, and prayers whose adhan is
     /// switched off - exactly the moments an adhan would defeat the point.
     static let supportedAlertTones: [AdhanSoundOption] = supportedAdhanSounds.filter {
-        $0.id == "default" || $0.id == "echo"
+        $0.id == "default" || $0.id == "echo" || $0.id == "takbir"
     }
     static let supportedAlertToneIDs = Set(supportedAlertTones.map(\.id))
 
@@ -1922,6 +1936,15 @@ extension Settings {
         "Last Third":    .init(enabled: \.notificationLastThird, preMinutes: \.preNotificationLastThird, nagging: \.naggingLastThird)
     ]
 
+    /// The identifier namespaces this scheduler OWNS and may prune: its prayer requests
+    /// ("<name>-<minutes>-Y-M-D", one prefix per `notifTable` name), Hijri-event reminders ("Event-")
+    /// and refresh nags ("RefreshReminder-"). Every other pending identifier belongs to another
+    /// feature and must be left alone - the blanket "not in desiredIDs → stale" prune used to delete
+    /// the Quran planner's daily reminder on every prayer reschedule (i.e. every launch), because the
+    /// planner only re-adds it when its own settings change.
+    private static let ownedNotificationIDPrefixes: [String] =
+        notifTable.keys.map { "\($0)-" } + ["Event-", "RefreshReminder-"]
+
     /// Pre‑computes the full list of minutes‑before offsets for a prayer.
     /// The distinct minutes-before offsets a prayer should fire at. Deduplicated: a prenotification of 15
     /// minutes and a nagging step at 15 minutes describe the same notification, and every offset consumes one
@@ -2041,18 +2064,27 @@ extension Settings {
 
         var adhanRequests: [(request: UNNotificationRequest, date: Date)] = []
         var reminderRequests: [(request: UNNotificationRequest, date: Date)] = []
+        // Days past the near window, collected separately so they can only ever spend LEFTOVER budget:
+        // the near window's reminders and nag cascades always win over a day-10 adhan, but a day-10 adhan
+        // beats an empty slot. This is what keeps notifications alive for a user who doesn't open the app
+        // (and whose background refresh iOS never grants, e.g. after a force-quit) for a week or more -
+        // the schedule used to go silent after 4 days.
+        var extendedAdhanRequests: [(request: UNNotificationRequest, date: Date)] = []
+        var extendedReminderRequests: [(request: UNNotificationRequest, date: Date)] = []
 
         // Prayer notifications need a resolved location + computed prayer times. Hijri-event reminders and
         // refresh nags below do NOT, so they're collected regardless of location - date notifications work
         // even before (or without) a location fix, instead of being silently skipped by an early return.
         let hasPrayers = currentLocation?.city != nil && prayers != nil
         if let city = currentLocation?.city, let prayerObj = prayers {
-            func collectPrayer(_ prayer: Prayer, _ minutes: Int?) {
+            func collectPrayer(_ prayer: Prayer, _ minutes: Int?, extended: Bool = false) {
                 guard let built = makePrayerNotificationRequest(for: prayer, preNotificationTime: minutes, city: city) else { return }
                 if built.isAdhan {
-                    adhanRequests.append((built.request, built.date))
+                    extended ? extendedAdhanRequests.append((built.request, built.date))
+                             : adhanRequests.append((built.request, built.date))
                 } else {
-                    reminderRequests.append((built.request, built.date))
+                    extended ? extendedReminderRequests.append((built.request, built.date))
+                             : reminderRequests.append((built.request, built.date))
                 }
             }
 
@@ -2065,18 +2097,24 @@ extension Settings {
                 }
             }
 
+            // The near window keeps its full fidelity (pre-reminders + nag cascades); nagging mode stays
+            // at 1 day because its cascades are budget-hungry and go stale as tracker answers land.
             let futureDays = naggingMode ? 1 : 3
-            if futureDays > 0 {
-                for dayOffset in 1...futureDays {
-                    let date = Calendar.current.date(byAdding: .day, value: dayOffset, to: prayerObj.day) ?? Date()
-                    guard let list = getPrayerTimes(for: date) else { continue }
-                    let dayList = prayersIncludingOptional(list, for: date)
-                    for prayer in dayList {
-                        guard let prefs = Self.notifTable[prayer.nameTransliteration] else { continue }
-                        let includeNags = !nagCascadeIsAnswered(for: prayer, in: dayList, on: date)
-                        for minutes in offsets(for: prefs, includeNags: includeNags) {
-                            collectPrayer(prayer, minutes == 0 ? nil : minutes)
-                        }
+            // Beyond it, collect at-time notifications out to two weeks. Times that far ahead are still
+            // exact - they're computed locally per date for the stored location - and any location change
+            // reschedules everything anyway. No cascades out there: a cascade's premise (yesterday's
+            // tracker answer) is unknowable that far ahead.
+            let extendedHorizonDays = 13
+            for dayOffset in 1...extendedHorizonDays {
+                let extended = dayOffset > futureDays
+                let date = Calendar.current.date(byAdding: .day, value: dayOffset, to: prayerObj.day) ?? Date()
+                guard let list = getPrayerTimes(for: date) else { continue }
+                let dayList = prayersIncludingOptional(list, for: date)
+                for prayer in dayList {
+                    guard let prefs = Self.notifTable[prayer.nameTransliteration] else { continue }
+                    let includeNags = !extended && !nagCascadeIsAnswered(for: prayer, in: dayList, on: date)
+                    for minutes in offsets(for: prefs, includeNags: includeNags) {
+                        collectPrayer(prayer, minutes == 0 ? nil : minutes, extended: extended)
                     }
                 }
             }
@@ -2095,20 +2133,57 @@ extension Settings {
         if let built = makeRefreshNagRequest(inDays: 3) { nagRequests.append(built) }
 
         // Add in priority order, soonest-first within each tier, capped under iOS's 64 limit:
-        //   1. at-time adhan (the actual sound) - must never be dropped
+        //   1. near-window at-time adhan (the actual sound) - must never be dropped
         //   2. refresh nags - keep the rolling schedule alive so future days get rescheduled
         //   3. special-event reminders
-        //   4. pre-/nagging reminders - fill whatever budget remains
+        //   4. near-window pre-/nagging reminders
+        //   5. extended-window at-time adhans - fill leftover budget out to the horizon
+        //   6. end-of-coverage nags (slots reserved in 5) - "open the app" lands right before the
+        //      schedule would actually run dry, not while adhans are still flowing
+        //   7. extended-window pre-reminders - whatever is left
         var finalRequests: [UNNotificationRequest] = []
-        func appendCapped(_ items: [(request: UNNotificationRequest, date: Date)]) {
-            for item in items.sorted(by: { $0.date < $1.date }) where finalRequests.count < maxPending {
+        var latestAdhanFireDate: Date?
+        func appendCapped(
+            _ items: [(request: UNNotificationRequest, date: Date)],
+            reserving reserve: Int = 0,
+            trackAdhanCoverage: Bool = false
+        ) {
+            for item in items.sorted(by: { $0.date < $1.date }) where finalRequests.count < maxPending - reserve {
                 finalRequests.append(item.request)
+                if trackAdhanCoverage {
+                    latestAdhanFireDate = max(latestAdhanFireDate ?? .distantPast, item.date)
+                }
             }
         }
-        appendCapped(adhanRequests)
+        appendCapped(adhanRequests, trackAdhanCoverage: true)
         appendCapped(nagRequests)
         appendCapped(eventRequests)
         appendCapped(reminderRequests)
+        appendCapped(extendedAdhanRequests, reserving: 2, trackAdhanCoverage: true)
+
+        // The fixed +2/+3 nags above cover the "background refresh is dead AND the app stays closed"
+        // case early; these two cover the schedule's true horizon. Only when coverage actually extends
+        // past the fixed nags - otherwise the ids collide and the slot is wasted.
+        if let latest = latestAdhanFireDate {
+            let cal = Calendar.current
+            let endOffset = cal.dateComponents(
+                [.day],
+                from: cal.startOfDay(for: Date()),
+                to: cal.startOfDay(for: latest)
+            ).day ?? 0
+            if endOffset > 3 {
+                var endNags: [(request: UNNotificationRequest, date: Date)] = []
+                for offset in [endOffset - 1, endOffset] where offset > 3 {
+                    if let built = makeRefreshNagRequest(inDays: offset) { endNags.append(built) }
+                }
+                appendCapped(endNags)
+            }
+        }
+        appendCapped(extendedReminderRequests)
+
+        #if DEBUG
+        logger.debug("Prayer schedule: \(finalRequests.count)/\(maxPending) requests, adhan coverage through \(latestAdhanFireDate.map { $0.formatted() } ?? "none")")
+        #endif
 
         // Incremental refresh instead of wiping everything first: adding a request with an existing
         // identifier replaces it in place (all our identifiers are stable), so unchanged notifications are
@@ -2124,13 +2199,12 @@ extension Settings {
         center.getPendingNotificationRequests { pending in
             let stale = pending.map(\.identifier).filter { id in
                 guard !desiredIDs.contains(id) else { return false }
-                // Never prune the one-shot informational alerts (traveling-mode on/off, auto-calculation
-                // change). They are scheduled by `checkIfTraveling` / `checkAutomaticPrayerCalculation` with
-                // their own fixed IDs and a ~1s trigger, so they are always "pending" for about a second and
-                // are never part of `desiredIDs`. Because those very state changes trigger this reschedule,
-                // pruning them here would delete the alert before it is ever delivered - which is exactly why
-                // the "traveling mode turned on/off" notification never appeared.
-                if id == Self.travelingNotificationId || id == Self.calculationNotificationId { return false }
+                // Only identifiers in this scheduler's own namespaces are candidates. This is what spares
+                // the one-shot traveling/calculation alerts (scheduled with a ~1s trigger by the very
+                // state changes that trigger this reschedule - pruning them deleted the alert before
+                // delivery) and every other feature's notifications, like the Quran planner's daily
+                // reminder, which this prune used to silently kill on every reschedule.
+                guard Self.ownedNotificationIDPrefixes.contains(where: { id.hasPrefix($0) }) else { return false }
                 // When there were no prayers to rebuild (no location yet), only prune the categories we DID
                 // rebuild - events and refresh nags. Leaving prayer notifications alone means a momentary
                 // location gap can't wipe a working adhan schedule.
