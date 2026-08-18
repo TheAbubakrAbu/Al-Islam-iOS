@@ -150,6 +150,11 @@ final class ForegroundAdhanPlayer: NSObject, ObservableObject {
             p.delegate = self
             p.prepareToPlay()
             p.play()
+            // Retire a still-playing previous adhan through a local (the stopAdhan idiom): stop it
+            // explicitly, and never let its release run inside the `player = p` write - the shape of
+            // the achievement-banner exclusivity crash.
+            let old = player
+            old?.stop()
             player = p
             playingPrayerName = prayerName ?? "Adhan"
         } catch {

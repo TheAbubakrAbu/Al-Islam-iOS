@@ -326,15 +326,15 @@ final class QuranPlayer: ObservableObject {
         #endif
     }
 
+    /// Only the AVAudioSession call - safe from any thread. The watch's session flags are NOT reset
+    /// here: `stop()` runs this on a global queue, and resetting `pendingSessionStarts` there raced
+    /// the main thread's activation callbacks (concurrent Array mutation). The flags reset on main,
+    /// in `stop()`, before the hop.
     private func deactivateAudioSession() {
         do {
             try AVAudioSession.sharedInstance().setActive(false,
                                                           options: .notifyOthersOnDeactivation)
         } catch { logger.debug("Audio session deactivate failed: \(error)") }
-        #if os(watchOS)
-        audioSessionActivated = false
-        pendingSessionStarts = []
-        #endif
     }
 
     private func makeFastStartItem(url: URL, bufferDuration: TimeInterval = 2) -> AVPlayerItem {
@@ -713,7 +713,11 @@ final class QuranPlayer: ObservableObject {
         guard target.isFinite else { return }
         // Timescale 600, not 1: a timescale of 1 quantizes the seek to whole seconds.
         p.seek(to: CMTime(seconds: target, preferredTimescale: 600)) { _ in
-            self.updateNowPlayingInfo(); self.saveLastListenedSurah(); self.saveLastListenedAyah()
+            // AVPlayer invokes seek completions on an internal queue - hop before touching
+            // published/persisted state (same as the Control Center scrub handler does).
+            DispatchQueue.main.async {
+                self.updateNowPlayingInfo(); self.saveLastListenedSurah(); self.saveLastListenedAyah()
+            }
         }
     }
     
@@ -744,6 +748,13 @@ final class QuranPlayer: ObservableObject {
         removeAllObservers()
         discardPrewarm()
 
+        // Retire the players through locals: releasing the last reference inside the stored-property
+        // write would run AVPlayer's dealloc while the exclusive access is still open (the shape of
+        // the achievement-banner exclusivity crash). With observers already removed the dealloc calls
+        // no app code today; the locals keep that true even if a future observer slips past
+        // `removeAllObservers()`. They release when this scope ends, after every access has closed.
+        let retiringPlayer = player
+        let retiringQueue = queuePlayer
         player = nil
         queuePlayer = nil
         currentSurahNumber = nil
@@ -766,11 +777,20 @@ final class QuranPlayer: ObservableObject {
 
         updateNowPlayingInfo(clear: true)
 
+        #if os(watchOS)
+        // On main, BEFORE the background hop: these are also mutated by main-thread activation
+        // callbacks, so resetting them from the global queue was a data race.
+        audioSessionActivated = false
+        pendingSessionStarts = []
+        #endif
+
         DispatchQueue.global(qos: .userInitiated).async {
             self.deactivateAudioSession()
         }
 
         self.idleTimerSet(false)
+        _ = retiringPlayer
+        _ = retiringQueue
     }
     
     private func removeAllObservers() {
@@ -883,6 +903,10 @@ final class QuranPlayer: ObservableObject {
         isLoading = true
         player?.pause(); removeAllObservers()
 
+        // Retire the outgoing player via a local (see stop()) so its dealloc runs after the
+        // `player = ...` write below closes, never inside it.
+        let retiringPlayer = player
+
         let startupBuffer: TimeInterval = localURL != nil ? localSurahStartupBuffer : remoteSurahStartupBuffer
 
         // Adopt a matching prewarmed (already-buffering) player for a gapless hand-off; otherwise build fresh.
@@ -910,6 +934,7 @@ final class QuranPlayer: ObservableObject {
             skipSurah: skipSurah,
             wasLocal: localURL != nil
         )
+        _ = retiringPlayer
     }
 
     /// Applies the "ready to play" transition for a surah item (used by the status observer and, when a
@@ -939,7 +964,10 @@ final class QuranPlayer: ObservableObject {
            last.surahNumber == surahNumber,
            last.currentDuration > 1 {
             let seekT = CMTime(seconds: last.currentDuration, preferredTimescale: 600)
-            player?.seek(to: seekT) { [weak self] _ in self?.updateNowPlayingInfo() }
+            // Seek completions arrive on AVFoundation's queue - hop before touching now-playing state.
+            player?.seek(to: seekT) { [weak self] _ in
+                DispatchQueue.main.async { self?.updateNowPlayingInfo() }
+            }
             didResume = true
         }
 
@@ -996,10 +1024,14 @@ final class QuranPlayer: ObservableObject {
                 }
 
                 self.player?.seek(to: .zero) { _ in
-                    self.player?.play()
-                    self.isPlaying = true
-                    self.isPaused = false
-                    self.updateNowPlayingInfo()
+                    // Seek completions arrive on AVFoundation's queue - the published flags must
+                    // flip on main.
+                    DispatchQueue.main.async {
+                        self.player?.play()
+                        self.isPlaying = true
+                        self.isPaused = false
+                        self.updateNowPlayingInfo()
+                    }
                 }
                 return
             }
@@ -1172,7 +1204,11 @@ final class QuranPlayer: ObservableObject {
             playPreviousSurah(); backButtonClickCount = 0
         } else {
             pause()
-            player?.seek(to: .zero) { [weak self] _ in self?.resume() }
+            // Seek completions arrive on AVFoundation's queue; resume() flips published flags and
+            // the (main-thread-only) idle timer, so hop first.
+            player?.seek(to: .zero) { [weak self] _ in
+                DispatchQueue.main.async { self?.resume() }
+            }
             updateNowPlayingInfo()
             // Reset must outlast the double-tap window above, otherwise a legitimate second tap near the
             // 1.5s edge would be counted as a fresh first tap and just restart instead of going back.
@@ -1203,7 +1239,9 @@ final class QuranPlayer: ObservableObject {
             presentPlaybackFailure("This surah could not be found. Please try again.")
             return
         }
-        guard (1...surah.numberOfAyahs).contains(ayahNumber) else {
+        // Not `(1...count).contains(...)`: constructing the range itself traps when a corrupt pack
+        // decodes a surah with 0 ayahs (QuranPackReader returns 0 past end-of-data by design).
+        guard ayahNumber >= 1, ayahNumber <= surah.numberOfAyahs else {
             presentPlaybackFailure("This ayah is outside the valid range for the selected surah.")
             return
         }
@@ -1310,8 +1348,8 @@ final class QuranPlayer: ObservableObject {
             presentPlaybackFailure("This surah could not be found. Please try again.")
             return
         }
-        guard (1...surah.numberOfAyahs).contains(startAyah),
-              (1...surah.numberOfAyahs).contains(endAyah) else {
+        guard startAyah >= 1, startAyah <= surah.numberOfAyahs,
+              endAyah >= 1, endAyah <= surah.numberOfAyahs else {
             presentPlaybackFailure("The selected ayah range is not valid for this surah.")
             return
         }
@@ -1390,8 +1428,13 @@ final class QuranPlayer: ObservableObject {
             }
         }
 
+        // Retire the outgoing players via locals (see stop()) so their dealloc runs after the
+        // writes below close, never inside them.
+        let retiringPlayer = player
+        let retiringQueue = queuePlayer
         queuePlayer = q
         player = q
+        _ = retiringPlayer; _ = retiringQueue
 
         statusObserver = firstItem.observe(\.status) { [weak self] itm, _ in
             guard let self = self else { return }
@@ -1549,7 +1592,7 @@ final class QuranPlayer: ObservableObject {
 
         guard
             let surah  = quranData.quran.first(where: { $0.id == surahNumber }),
-            (1...surah.numberOfAyahs).contains(ayahNumber),
+            ayahNumber >= 1, ayahNumber <= surah.numberOfAyahs,
             let reciter = playbackReciter ?? resolvedSelectedReciter()
         else {
             presentPlaybackFailure("Could not prepare this ayah for playback. Please verify surah, ayah, and reciter settings.")
@@ -1560,6 +1603,9 @@ final class QuranPlayer: ObservableObject {
         isLoading = true
 
         if ayahRepeatCount > 1 || !continueRecitation {
+            // Retire the outgoing players via locals (see stop()).
+            let retiringPlayer = player
+            let retiringQueue = queuePlayer
             queuePlayer = nil
 
             guard let firstItem = makeItem(forSurah: surah, reciter: reciter, ayahNumber: ayahNumber, isBismillah: isBismillah) else {
@@ -1573,6 +1619,7 @@ final class QuranPlayer: ObservableObject {
             single.actionAtItemEnd = .none
             configureFastStartPlayer(single, bufferDuration: ayahStartupBuffer)
             player = single
+            _ = retiringPlayer; _ = retiringQueue
 
             statusObserver = firstItem.observe(\.status) { [weak self] itm, _ in
                 guard let self = self else { return }
@@ -1615,15 +1662,19 @@ final class QuranPlayer: ObservableObject {
                 if self.ayahRepeatRemaining > 1 {
                     self.ayahRepeatRemaining -= 1
                     self.player?.seek(to: .zero) { _ in
-                        self.didHandleSingleAyahEnd = false
-                        self.nowPlayingTitle =
-                            "\(surah.nameTransliteration) \(surahNumber):\(ayahNumber)" +
-                            self.repeatSuffix(total: self.ayahRepeatCount,
-                                              remaining: self.ayahRepeatRemaining)
-                        self.updateNowPlayingInfo()
-                        self.player?.play()
-                        self.isPlaying = true
-                        self.isPaused  = false
+                        // Seek completions arrive on AVFoundation's queue - the published state
+                        // must change on main.
+                        DispatchQueue.main.async {
+                            self.didHandleSingleAyahEnd = false
+                            self.nowPlayingTitle =
+                                "\(surah.nameTransliteration) \(surahNumber):\(ayahNumber)" +
+                                self.repeatSuffix(total: self.ayahRepeatCount,
+                                                  remaining: self.ayahRepeatRemaining)
+                            self.updateNowPlayingInfo()
+                            self.player?.play()
+                            self.isPlaying = true
+                            self.isPaused  = false
+                        }
                     }
                 } else {
                     self.stop()
@@ -1657,8 +1708,12 @@ final class QuranPlayer: ObservableObject {
             q.insert(ni, after: firstItem)
         }
 
+        // Retire the outgoing players via locals (see stop()).
+        let retiringPlayer = player
+        let retiringQueue = queuePlayer
         queuePlayer = q
         player = q
+        _ = retiringPlayer; _ = retiringQueue
 
         statusObserver = firstItem.observe(\.status) { [weak self] itm, _ in
             guard let self = self else { return }
@@ -1725,7 +1780,12 @@ final class QuranPlayer: ObservableObject {
                     if nextAyah <= sur.numberOfAyahs,
                        let upcoming = self.makeItem(forSurah: sur, reciter: rec, ayahNumber: nextAyah) {
                         upcoming.preferredForwardBufferDuration = self.ayahStartupBuffer
-                        qPlayer.insert(upcoming, after: newItem)
+                        // The queue may have advanced past (or dropped) `newItem` between the KVO
+                        // delivery and this async block - inserting after an item that left the
+                        // queue raises NSInvalidArgumentException. Anchor on the LIVE current item,
+                        // like the custom-range twin does.
+                        let anchor = qPlayer.items().contains(newItem) ? newItem : qPlayer.currentItem
+                        qPlayer.insert(upcoming, after: anchor)
                     }
                 }
             }
@@ -1810,7 +1870,11 @@ final class QuranPlayer: ObservableObject {
             self.ayahBackPendingRestart = nil
             self.ayahBackPendingRestartScheduledAt = nil
             self.pause()
-            self.player?.seek(to: .zero) { [weak self] _ in self?.resume() }
+            // Seek completions arrive on AVFoundation's queue; resume() flips published flags and
+            // the (main-thread-only) idle timer, so hop first.
+            self.player?.seek(to: .zero) { [weak self] _ in
+                DispatchQueue.main.async { self?.resume() }
+            }
             self.updateNowPlayingInfo()
         }
         ayahBackPendingRestart = work

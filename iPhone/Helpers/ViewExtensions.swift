@@ -468,8 +468,18 @@ struct AccentWashedBackground: ViewModifier {
             .tint(settings.accentColor.color)
             .preferredColorScheme(settings.colorScheme)
         #elseif os(watchOS)
+        // The watch honors the reading themes too (the theme + custom color sync over from the phone):
+        // the themed base sits under the glow exactly as on iOS. Nil (Light/Dark/System) paints nothing,
+        // keeping the watch's native black ground.
         content
-            .background(WatchTopGlowOverlay())
+            .background(
+                ZStack(alignment: .top) {
+                    settings.themeBackgroundColor ?? Color.clear
+
+                    WatchTopGlowOverlay()
+                }
+                .ignoresSafeArea()
+            )
         #else
         content
         #endif
@@ -490,10 +500,26 @@ struct AccentWashedBackground: ViewModifier {
     #endif
 }
 
+/// The reading theme's base color alone (no glow, no scheme assertion) - for the page-mode readers,
+/// which draw their own `AccentGlowOverlay` but historically fell through to the bare system window
+/// background, so Sepia/Gray/Custom never reached them. No-op on Light/Dark/System.
+struct ThemedReaderBackground: ViewModifier {
+    @ObservedObject private var settings = Settings.shared
+
+    func body(content: Content) -> some View {
+        content.background((settings.themeBackgroundColor ?? Color.clear).ignoresSafeArea())
+    }
+}
+
 extension View {
     /// The themed base + accent glow for screens that are not system Lists - see `AccentWashedBackground`.
     func accentWashedBackground() -> some View {
         modifier(AccentWashedBackground())
+    }
+
+    /// The reading theme's base color for page-mode readers - see `ThemedReaderBackground`.
+    func themedReaderBackground() -> some View {
+        modifier(ThemedReaderBackground())
     }
 
     /// Clamp to `limit` lines AND always reserve that much height, so a one-line item and a three-line

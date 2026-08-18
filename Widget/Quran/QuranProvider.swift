@@ -271,7 +271,9 @@ struct QuranWidgetEntryView: View {
         let ns = NSMutableAttributedString(string: text)
         for run in runs {
             let range = NSRange(location: run.start, length: run.length)
-            guard run.start >= 0, NSMaxRange(range) <= ns.length else { continue }
+            // length > 0 matters: a negative length passes the NSMaxRange check (it shrinks the
+            // max) but makes addAttribute throw NSRangeException and kill the widget process.
+            guard run.start >= 0, run.length > 0, NSMaxRange(range) <= ns.length else { continue }
             ns.addAttribute(.foregroundColor,
                             value: UIColor(red: CGFloat(run.r), green: CGFloat(run.g), blue: CGFloat(run.b), alpha: 1),
                             range: range)

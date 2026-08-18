@@ -2447,11 +2447,11 @@ struct QuranView: View {
             } label: {
                 ZStack(alignment: .topTrailing) {
                     Text("\(surah.id):\(ayah.id)")
-                        .font(.subheadline.monospacedDigit().weight(.semibold))
+                        .font(.headline.monospacedDigit())
                         .foregroundColor(settings.accentColor.color)
                         .lineLimit(1)
                         .minimumScaleFactor(0.5)
-                        .padding(.vertical, 10)
+                        .padding(.vertical, 12)
                         .frame(maxWidth: .infinity)
                         .conditionalGlassEffect(
                             useColor: 0.3,

@@ -1235,11 +1235,12 @@ struct ReciterListView: View {
                 settings.hapticFeedback()
                 showReciterTypeLegendInfo = true
             } label: {
-                HStack(spacing: 10) {
+                HStack(spacing: 8) {
                     reciterTypeLegendItem(.blue, "Full offline")
                     reciterTypeLegendItem(.green, "Own voice")
                     reciterTypeLegendItem(.orange, "Murattal")
                     reciterTypeLegendItem(.red, "Surahs only")
+                    reciterTypeLegendItem(.purple, "Incomplete")
                 }
                 .padding(.vertical, 2)
                 .contentShape(Rectangle())
@@ -1248,7 +1249,7 @@ struct ReciterListView: View {
             .confirmationDialog("Reciter Types", isPresented: $showReciterTypeLegendInfo, titleVisibility: .visible) {
             Button("OK") {}
         } message: {
-            Text("Blue: the highest tier; surahs and individual ayahs play in this reciter's own voice, and downloaded surahs also play ayah-by-ayah fully offline. Green: individual ayahs play in this reciter's own voice when streaming. Orange: streamed ayahs play in a Murattal style; download the surah to hear ayahs in this reciter's own voice. Red: full surahs only; individual ayahs default to Minshawi (Murattal).")
+            Text("Blue: the highest tier; surahs and individual ayahs play in this reciter's own voice, and downloaded surahs also play ayah-by-ayah fully offline. Green: individual ayahs play in this reciter's own voice when streaming. Orange: streamed ayahs play in a Murattal style; download the surah to hear ayahs in this reciter's own voice. Red: full surahs only; individual ayahs default to Minshawi (Murattal). Purple: incomplete; this reciter has not recorded all 114 surahs.")
         }
 
             Spacer(minLength: 0)
@@ -2615,6 +2616,14 @@ private struct ReciterRow: View, Equatable {
                         if !qiraah {
                             Circle()
                                 .fill(reciterTypeDotColor)
+                                .frame(width: 8, height: 8)
+                        }
+
+                        // Incomplete coverage is orthogonal to the playback-tier dot, so it gets its
+                        // own purple dot - shown in qiraah sections too, where the tier dot is hidden.
+                        if reciter.carriedSurahCount < 114 {
+                            Circle()
+                                .fill(Color.purple)
                                 .frame(width: 8, height: 8)
                         }
 

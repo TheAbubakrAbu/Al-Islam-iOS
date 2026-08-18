@@ -1487,6 +1487,9 @@ struct SurahView: View {
             // original 190: the compacted surah-info bar sits higher now, and the wash was seen
             // bleeding past it onto the page's top edge (user feedback again).
             .background(AccentGlowOverlay(verticalReach: settings.resolvedMushafPageLanguage.isPDF ? 150 : 380))
+            // Behind the glow: the reading theme's base color (Sepia/Gray/Custom), which the pager -
+            // not being a List - never got from `applyConditionalListStyle`.
+            .themedReaderBackground()
             // No `.id(surah.id)` here, deliberately: identity-swapping the reader tore down and rebuilt the
             // ~604-page UIPageViewController - the single heaviest view realization in the app (~900ms) -
             // on EVERY surah jump. The reader now re-seeds its own page index when `surah.id` changes
@@ -1504,6 +1507,7 @@ struct SurahView: View {
                 }
             )
             .background(AccentGlowOverlay())
+            .themedReaderBackground()
             .onAppear { pageSurah = nil }
         } else if settings.displayBetaTextConsentNeeded {
             // Comparison mode is off, so the beta text is never even mentioned: a beta riwayah
@@ -1512,6 +1516,7 @@ struct SurahView: View {
             // switching, don't mention beta text - just PDFs").
             Color.clear
                 .background(AccentGlowOverlay())
+                .themedReaderBackground()
                 .onAppear {
                     pageSurah = nil
                     withAnimation(.easeInOut) { settings.quranPageMode = true }
@@ -3285,9 +3290,12 @@ struct SurahView: View {
                             : MushafPageLanguage.pdf.rawValue
                     }
                 } label: {
+                    // "Read PAGES as ..." - both options stay in page/mushaf mode (they swap what the
+                    // page shows, not the reading mode); the bare "Read as Text" read as if it left
+                    // page mode, sitting right under "Read as List".
                     Label(settings.resolvedMushafPageLanguage.isPDF
-                              ? (settings.displayBetaTextConsentNeeded ? "Read as Text (Beta)" : "Read as Text")
-                              : "Read as Printed Mushaf (PDF)",
+                              ? (settings.displayBetaTextConsentNeeded ? "Read Pages as Text (Beta)" : "Read Pages as Text")
+                              : "Read Pages as Printed Mushaf (PDF)",
                           systemImage: settings.resolvedMushafPageLanguage.isPDF
                               ? "textformat" : "doc.richtext")
                 }

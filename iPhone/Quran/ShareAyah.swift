@@ -36,6 +36,14 @@ struct ShareAyahSheet: View {
     // The sheet's own riwayah, seeded from the reading view's, so switching here never disturbs the reader.
     @State private var shareQiraah: String = Settings.normalizeLegacyRiwayahTag(Settings.shared.displayQiraah)
 
+    // The reader's riwayah at open time - the numbering `ayahNumber` was tapped under. Smart matching
+    // anchors through Hafs from this origin; `shareQiraah` moves with the picker, this never does.
+    private let originQiraah: String = Settings.normalizeLegacyRiwayahTag(Settings.shared.displayQiraah)
+
+    // Same preference the comparison sheet stores: follow the WORDS across riwayat (numbering differs),
+    // not the raw number.
+    @AppStorage("qiraahSmartComparison") private var smartAyahMatching = true
+
     @State private var didInit = false
     @State private var didFinishInitialSetup = false
 
@@ -68,7 +76,35 @@ struct ShareAyahSheet: View {
     }
 
     private var surah: Surah? { quranData.surah(surahNumber) }
-    private var ayah: Ayah? { surah?.ayahs.first(where: { $0.id == ayahNumber }) }
+
+    /// The tapped ayah's Hafs anchor (identity when the reader was on Hafs or a Kufi-counted riwayah).
+    private var anchorHafsAyah: Int {
+        QiraahComparison.hafsAnchor(surahID: surahNumber, ayahNumber: ayahNumber, tag: originQiraah, quranData: quranData)
+    }
+
+    /// The ayah number whose ARABIC the sheet serves. Smart matching resolves the share riwayah's own
+    /// number for the tapped words via the Hafs anchor; off, it is the tapped number as-is (the old
+    /// direct read, which for merged/shifted numbering shows whatever verse sits at that number).
+    private var resolvedAyahNumber: Int {
+        guard smartAyahMatching else { return ayahNumber }
+        let tag = Settings.Riwayah.canonicalTag(shareQiraah)
+        if tag.isEmpty { return anchorHafsAyah }
+        guard let alignment = QiraahComparison.alignment(surahID: surahNumber, tag: tag, quranData: quranData) else {
+            return ayahNumber
+        }
+        return alignment.riwayahNumberForHafs[anchorHafsAyah] ?? ayahNumber
+    }
+
+    private var ayah: Ayah? { surah?.ayahs.first(where: { $0.id == resolvedAyahNumber }) }
+
+    /// Hafs-keyed companions (transliteration, both translations) read from the Hafs anchor when smart
+    /// matching is on, so the English always matches the words being shared even when the Arabic sits
+    /// under a different riwayah number.
+    private var translationAyah: Ayah? {
+        guard smartAyahMatching else { return ayah }
+        return surah?.ayahs.first(where: { $0.id == anchorHafsAyah }) ?? ayah
+    }
+
     // Tajweed data is Hafs-only, so it keys off the sheet's riwayah, not the reader's.
     private var isHafsShare: Bool { shareQiraah.isEmpty }
     private var ayahExistsInShareQiraah: Bool { ayah?.existsInQiraah(shareQiraah, surahID: surahNumber) ?? true }
@@ -426,6 +462,7 @@ struct ShareAyahSheet: View {
 
     private var shareText: String {
         guard let surah = surah, let ayah = ayah else { return "" }
+        let hafsAyah = translationAyah ?? ayah
 
         var s = ""
 
@@ -468,12 +505,12 @@ struct ShareAyahSheet: View {
                 : surah.nameTransliteration
 
             let header: String? = settings.showAyahInformation
-                ? "[\(trLabelName) \(surah.id):\(ayah.id)]"
+                ? "[\(trLabelName) \(surah.id):\(hafsAyah.id)]"
                 : nil
 
             appendBlock(
                 label: header,
-                text: settings.showAyahInformation ? ayah.textTransliteration : "\(ayah.textTransliteration) (\(ayah.id))"
+                text: settings.showAyahInformation ? hafsAyah.textTransliteration : "\(hafsAyah.textTransliteration) (\(hafsAyah.id))"
             )
         }
 
@@ -487,7 +524,7 @@ struct ShareAyahSheet: View {
             sepIfNeeded()
 
             if settings.showAyahInformation {
-                s += "[\(headerName) \(surah.id):\(ayah.id)]\n"
+                s += "[\(headerName) \(surah.id):\(hafsAyah.id)]\n"
             }
 
             if shareSettings.englishSaheeh {
@@ -495,7 +532,7 @@ struct ShareAyahSheet: View {
                     s += "- Saheeh International\n"
                 }
 
-                s += settings.showAyahInformation ? ayah.textEnglishSaheeh : "\(ayah.textEnglishSaheeh) (\(ayah.id))"
+                s += settings.showAyahInformation ? hafsAyah.textEnglishSaheeh : "\(hafsAyah.textEnglishSaheeh) (\(hafsAyah.id))"
             }
 
             if shareSettings.englishMustafa {
@@ -503,7 +540,7 @@ struct ShareAyahSheet: View {
                 if settings.showAyahInformation {
                     s += "- Mustafa Khattab\n"
                 }
-                s += settings.showAyahInformation ? ayah.textEnglishMustafa : "\(ayah.textEnglishMustafa) (\(ayah.id))"
+                s += settings.showAyahInformation ? hafsAyah.textEnglishMustafa : "\(hafsAyah.textEnglishMustafa) (\(hafsAyah.id))"
             }
         }
 
@@ -546,6 +583,21 @@ struct ShareAyahSheet: View {
     private static func qiraahLabels(displayQiraah: String) -> (english: String, arabic: String) {
         let option = Settings.Riwayah.option(for: displayQiraah)
         return (option.label, option.arabic)
+    }
+
+    /// The caption under the riwayah picker: names the resolved number when smart matching moved it,
+    /// explains the numbering drift otherwise.
+    private var riwayahFooterText: String {
+        if !ayahExistsInShareQiraah {
+            return "This ayah is not separate in this riwayah; its words are part of a neighboring ayah, so the Hafs text is shown."
+        }
+        if smartAyahMatching {
+            if resolvedAyahNumber != ayahNumber {
+                return "Smart Ayah Matching: these words sit at ayah \(resolvedAyahNumber) in this riwayah (ayah numbering differs between riwayat), so that ayah is shared."
+            }
+            return "Ayah numbering can differ between riwayat: no ayah is ever missing, but some are joined or split differently. Smart Ayah Matching follows the words, so the matching ayah is shared even where numbering differs."
+        }
+        return "Ayah numbering can differ between riwayat: no ayah is ever missing, but some are joined or split differently (for example, \"Alif Lam Meem\" and \"Dhalika al-Kitab...\" form a single ayah in most qiraat). With Smart Ayah Matching off, the exact tapped number is shared as-is."
     }
 
     var body: some View {
@@ -743,9 +795,17 @@ struct ShareAyahSheet: View {
                             .padding(.top, 6)
                             .padding(.bottom, 4)
 
-                            Text(ayahExistsInShareQiraah
-                                ? "Ayah numbering can differ between riwayat: no ayah is ever missing, but some are joined or split differently (for example, \"Alif Lam Meem\" and \"Dhalika al-Kitab...\" form a single ayah in most qiraat)."
-                                : "This ayah is not separate in this riwayah; its words are part of a neighboring ayah, so the Hafs text is shown.")
+                            // The same words across riwayat (anchored through Hafs, like the comparison
+                            // sheet) vs. whatever verse sits at the raw tapped number.
+                            Toggle(isOn: $smartAyahMatching.animation(.easeInOut)) {
+                                Label("Smart Ayah Matching", systemImage: "wand.and.stars")
+                            }
+                            .tint(settings.accentColor.color)
+                            .scaleEffect(0.8)
+                            .padding(.horizontal, -24)
+                            .padding(.vertical, 2)
+
+                            Text(riwayahFooterText)
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                                 .fixedSize(horizontal: false, vertical: true)
@@ -853,6 +913,11 @@ struct ShareAyahSheet: View {
             generatePreviewImage()
         }
         .onChange(of: includeNote) { _ in
+            guard didFinishInitialSetup else { return }
+            settings.hapticFeedback()
+            generatePreviewImage()
+        }
+        .onChange(of: smartAyahMatching) { _ in
             guard didFinishInitialSetup else { return }
             settings.hapticFeedback()
             generatePreviewImage()
@@ -998,6 +1063,12 @@ struct ShareAyahSheet: View {
         let qiraahSnapshot = shareQiraah
         let includeNoteSnapshot = includeNote
         let noteSnapshot = noteText
+        // The RESOLVED ayahs too: resolving them (smart ayah matching) walks QiraahComparison's
+        // main-actor alignment cache - an unsynchronized static dictionary the render queue must
+        // never touch while the main thread (this sheet's own footer) is reading/populating it.
+        let surahSnapshot = surah
+        let ayahSnapshot = ayah
+        let hafsAyahSnapshot = translationAyah
         let generationID = imageGenerationID + 1
         imageGenerationID = generationID
         // The previous image deliberately STAYS visible (dimmed via isGeneratingImage) while this render
@@ -1019,6 +1090,9 @@ struct ShareAyahSheet: View {
 
             let img: UIImage = autoreleasepool {
                 self.drawImage(
+                    surah: surahSnapshot,
+                    ayah: ayahSnapshot,
+                    hafsAyah: hafsAyahSnapshot,
                     shareSettings: snapshot,
                     qiraah: qiraahSnapshot,
                     includeNote: includeNoteSnapshot,
@@ -1042,8 +1116,11 @@ struct ShareAyahSheet: View {
         }
     }
 
-    private func drawImage(shareSettings: ShareSettings, qiraah shareQiraah: String, includeNote: Bool, noteText: String?, screenWidth: CGFloat) -> UIImage {
-        guard let surah = surah, let ayah = ayah else { return UIImage() }
+    /// Runs on the render queue - `surah`/`ayah`/`hafsAyah` are passed in as main-thread snapshots,
+    /// never resolved here (resolution touches the main-actor alignment cache).
+    private func drawImage(surah: Surah?, ayah: Ayah?, hafsAyah hafsAyahSnapshot: Ayah?, shareSettings: ShareSettings, qiraah shareQiraah: String, includeNote: Bool, noteText: String?, screenWidth: CGFloat) -> UIImage {
+        guard let surah, let ayah else { return UIImage() }
+        let hafsAyah = hafsAyahSnapshot ?? ayah
 
         // Rounded, to match the app's system-font design (the `fontDesign` environment does not reach this
         // UIKit-drawn image, so the design is asked for explicitly).
@@ -1140,11 +1217,11 @@ struct ShareAyahSheet: View {
             sepIfNeeded()
 
             if settings.showAyahInformation {
-                append("[\(trLabelName) \(surah.id):\(ayah.id)]", accentAttr, highlightAllah: false)
+                append("[\(trLabelName) \(surah.id):\(hafsAyah.id)]", accentAttr, highlightAllah: false)
                 append("\n", bodyAttr, highlightAllah: false)
             }
 
-            append(settings.showAyahInformation ? ayah.textTransliteration : "\(ayah.textTransliteration) (\(ayah.id))", bodyAttr)
+            append(settings.showAyahInformation ? hafsAyah.textTransliteration : "\(hafsAyah.textTransliteration) (\(hafsAyah.id))", bodyAttr)
         }
 
         let wantsAnyEnglish = shareSettings.englishSaheeh || shareSettings.englishMustafa
@@ -1156,7 +1233,7 @@ struct ShareAyahSheet: View {
             sepIfNeeded()
 
             if settings.showAyahInformation {
-                append("[\(enHeaderName) \(surah.id):\(ayah.id)]", accentAttr, highlightAllah: false)
+                append("[\(enHeaderName) \(surah.id):\(hafsAyah.id)]", accentAttr, highlightAllah: false)
                 append("\n", bodyAttr, highlightAllah: false)
             }
 
@@ -1165,7 +1242,7 @@ struct ShareAyahSheet: View {
                     append("- Saheeh International", captionAttr, highlightAllah: false)
                     append("\n", bodyAttr, highlightAllah: false)
                 }
-                append(settings.showAyahInformation ? ayah.textEnglishSaheeh : "\(ayah.textEnglishSaheeh) (\(ayah.id))", bodyAttr)
+                append(settings.showAyahInformation ? hafsAyah.textEnglishSaheeh : "\(hafsAyah.textEnglishSaheeh) (\(hafsAyah.id))", bodyAttr)
             }
 
             if shareSettings.englishMustafa {
@@ -1175,7 +1252,7 @@ struct ShareAyahSheet: View {
                     append("- Clear Quran (Mustafa Khattab)", captionAttr, highlightAllah: false)
                     append("\n", bodyAttr, highlightAllah: false)
                 }
-                append(settings.showAyahInformation ? ayah.textEnglishMustafa : "\(ayah.textEnglishMustafa) (\(ayah.id))", bodyAttr)
+                append(settings.showAyahInformation ? hafsAyah.textEnglishMustafa : "\(hafsAyah.textEnglishMustafa) (\(hafsAyah.id))", bodyAttr)
             }
         }
 

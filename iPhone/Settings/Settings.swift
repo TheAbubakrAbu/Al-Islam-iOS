@@ -1439,7 +1439,7 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     /// Arabic riwayah line for settings section headers (matches on-screen Arabic text riwayah).
     var displayQiraahArabicCaption: String {
         let key = Self.normalizeLegacyRiwayahTag(displayQiraah)
-        return Self.Riwayah.arabicCaptionByTag[key] ?? Self.Riwayah.arabicCaptionByTag[Self.Riwayah.hafsTag]!
+        return Self.Riwayah.arabicCaptionByTag[key] ?? Self.Riwayah.arabicCaptionByTag[Self.Riwayah.hafsTag] ?? ""
     }
 
     /// The displayed riwayah's tag when it is non-Hafs and ships a print-derived tajweed

@@ -334,9 +334,19 @@ struct MushafPDFPageBody: View {
     @EnvironmentObject private var settings: Settings
     @Environment(\.colorScheme) private var colorScheme
 
+    private var appearance: MushafPDFAppearance {
+        MushafPDFAppearance(rawValue: settings.mushafPDFAppearance) ?? .auto
+    }
+
     private var isNight: Bool {
-        (MushafPDFAppearance(rawValue: settings.mushafPDFAppearance) ?? .auto)
-            .isNight(inDarkScheme: colorScheme == .dark)
+        appearance.isNight(inDarkScheme: colorScheme == .dark)
+    }
+
+    /// The reading theme's paper color (Sepia / Gray / Custom), honored on Auto only - an explicit
+    /// Light or Night pick in the page menu keeps the plain white/black page it always meant.
+    private var paperTint: Color? {
+        guard appearance == .auto, settings.hasCustomThemeColors else { return nil }
+        return settings.themeBackgroundColor
     }
 
     var body: some View {
@@ -349,6 +359,7 @@ struct MushafPDFPageBody: View {
             }
         }
         .nightInverted(isNight)
+        .paperTinted(paperTint, night: isNight)
     }
 }
 
@@ -360,6 +371,28 @@ private extension View {
     func nightInverted(_ enabled: Bool) -> some View {
         if enabled {
             self.colorInvert().hueRotation(.degrees(180))
+        } else {
+            self
+        }
+    }
+
+    /// Recolors the page "paper" to the reading theme. Multiply maps white paper onto the theme color
+    /// while dark ink stays dark; over an already-inverted (night) page, screen lifts the black paper to
+    /// the theme color while the light ink stays light. The leading `compositingGroup` flattens the
+    /// PDFView so the blend sees the rendered page; the trailing one stops the blend from reaching
+    /// whatever sits behind the reader.
+    @ViewBuilder
+    func paperTinted(_ color: Color?, night: Bool) -> some View {
+        if let color {
+            self
+                .compositingGroup()
+                .overlay(
+                    Rectangle()
+                        .fill(color)
+                        .blendMode(night ? .screen : .multiply)
+                        .allowsHitTesting(false)
+                )
+                .compositingGroup()
         } else {
             self
         }

@@ -14,6 +14,16 @@ struct ConditionalGlassEffect: ViewModifier {
     /// already-tinted card) so it doesn't read as a heavy double-tinted box.
     var themeTint: Bool = true
 
+    /// A 24pt radius reads right on iPhone-sized cards; on the watch's small tiles it rounds them into
+    /// near-stadiums that look chopped, so the watch uses a gentler curve.
+    private var rectangleCornerRadius: CGFloat {
+        #if os(watchOS)
+        14
+        #else
+        24
+        #endif
+    }
+
     func body(content: Content) -> some View {
         if #available(iOS 26.0, watchOS 26.0, *) {
             modernGlass(content: content)
@@ -42,7 +52,7 @@ struct ConditionalGlassEffect: ViewModifier {
             if circle {
                 content.glassEffect(clear ? clearStyle : regularStyle, in: Circle())
             } else if rectangle {
-                content.glassEffect(clear ? clearStyle : regularStyle, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
+                content.glassEffect(clear ? clearStyle : regularStyle, in: RoundedRectangle(cornerRadius: rectangleCornerRadius, style: .continuous))
             } else if clear {
                 content.glassEffect(clearStyle)
             } else {
@@ -57,7 +67,7 @@ struct ConditionalGlassEffect: ViewModifier {
         if circle {
             fallbackGlassShape(content: content, shape: Circle())
         } else if rectangle {
-            fallbackGlassShape(content: content, shape: RoundedRectangle(cornerRadius: 24, style: .continuous))
+            fallbackGlassShape(content: content, shape: RoundedRectangle(cornerRadius: rectangleCornerRadius, style: .continuous))
         } else {
             fallbackGlassShape(content: content, shape: Capsule())
         }

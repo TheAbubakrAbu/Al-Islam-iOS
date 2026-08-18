@@ -163,17 +163,26 @@ struct PrayersEntryView: View {
             }
 
             if let currentPrayer = entry.currentPrayer {
-                VStack(spacing: 1) {
-                    Image(systemName: currentPrayer.image)
-                        .font(.system(size: 15, weight: .medium))
-                        .foregroundColor(accent(for: currentPrayer))
-                        .widgetAccentable()
+                // The ring shows how far the current prayer's window has elapsed (stepped per timeline
+                // entry, like the battery gauge), so the dial reads prayer + time + progress at a glance
+                // instead of a flat icon on a disc.
+                Gauge(value: entry.dayProgress) {
+                    EmptyView()
+                } currentValueLabel: {
+                    VStack(spacing: 0) {
+                        Image(systemName: currentPrayer.image)
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundColor(accent(for: currentPrayer))
+                            .widgetAccentable()
 
-                    Text(currentPrayer.time, style: .time)
-                        .font(.caption2.weight(.semibold))
-                        .monospacedDigit()
-                        .foregroundColor(accent(for: currentPrayer))
+                        Text(currentPrayer.time, style: .time)
+                            .font(.system(size: 11, weight: .semibold, design: .rounded))
+                            .monospacedDigit()
+                            .foregroundColor(accent(for: currentPrayer))
+                    }
                 }
+                .gaugeStyle(.accessoryCircular)
+                .tint(accent(for: currentPrayer))
             } else {
                 Text("Open app")
                     .font(.caption2)
@@ -201,7 +210,8 @@ struct PrayersEntryView: View {
                         .font(.headline)
 
                     Text("\(nextPrayer.time, style: .timer)")
-                        .font(.caption)
+                        .font(.caption.weight(.semibold))
+                        .monospacedDigit()
                         .foregroundColor(secondaryColor)
                 }
                 .foregroundColor(accent(for: currentPrayer))
@@ -212,10 +222,12 @@ struct PrayersEntryView: View {
 
                 HStack {
                     Image(systemName: "location.fill")
+                        .font(.caption2)
                         .foregroundColor(skyStyle ? .white : entry.accentColor.color)
                         .padding(.trailing, -4)
 
                     Text(entry.currentCity)
+                        .foregroundColor(secondaryColor)
                 }
                 .font(.caption)
             }

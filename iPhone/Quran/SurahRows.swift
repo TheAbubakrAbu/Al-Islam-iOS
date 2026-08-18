@@ -603,11 +603,12 @@ struct SurahAyahRow: View, Equatable {
                         .lineLimit(1)
                         .minimumScaleFactor(0.5)
                         #if os(iOS)
-                        .frame(width: badgeWidth, alignment: .center)
-                        .padding(4)
+                        .frame(width: badgeWidth + 6, alignment: .center)
+                        .padding(.vertical, 7)
+                        .padding(.horizontal, 4)
                         #else
-                        .padding(.vertical, 6)
-                        .padding(.horizontal, 8)
+                        .padding(.vertical, 8)
+                        .padding(.horizontal, 11)
                         #endif
                         .conditionalGlassEffect(
                             useColor: isBookmarked ? 0.3 : nil,
@@ -638,9 +639,9 @@ struct SurahAyahRow: View, Equatable {
                     .minimumScaleFactor(0.5)
             }
             #if os(iOS)
-            .frame(width: 65, alignment: .center)
+            .frame(width: 74, alignment: .center)
             #else
-            .frame(width: 50, alignment: .center)
+            .frame(width: 58, alignment: .center)
             #endif
             .foregroundColor(settings.accentColor.color)
             .padding(.trailing, 8)

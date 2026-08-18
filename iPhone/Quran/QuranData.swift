@@ -5146,7 +5146,9 @@ enum QiraahComparison {
         guard !canonical.isEmpty else { return nil }
         let key = "\(surahID)|\(canonical)"
         if let cached = alignmentCache[key] { return cached }
-        guard let surah = quranData.surah(surahID) else { return nil }
+        // numberOfAyahs > 0 also protects the `1...` range below - a truncated pack decodes surah
+        // metas with count 0 (the reader returns 0 past end-of-data instead of failing).
+        guard let surah = quranData.surah(surahID), surah.numberOfAyahs > 0 else { return nil }
 
         var hafsWords: [Int] = []
         for n in 1...surah.numberOfAyahs {

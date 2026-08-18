@@ -211,7 +211,6 @@ class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterD
     // prayer times (with a fresh location fix when authorized - see below).
     private func handleAppRefresh(task: BGTask) {
         logger.debug("🚀 Background refresh fired (\(task.identifier))")
-        scheduleBackgroundRefreshes()
 
         // `setTaskCompleted` must be called exactly once. The expiration handler and the fetch completion
         // can race (e.g. the fetch finishes just as the task expires), so gate it behind a lock + flag.
@@ -230,27 +229,34 @@ class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterD
             complete(false)
         }
 
-        // A refresh computed against the stored location faithfully rebuilds widgets for the city you LEFT
-        // and feeds the traveling-mode check coordinates from before the trip. Ask for one fresh fix first:
-        // its delegate callback commits the move, and that commit re-fetches prayer times, reschedules
-        // notifications and reloads widgets on its own. The fetch below still runs immediately with the
-        // stored location, so the task succeeds even when no fix arrives.
-        let requestedLocationFix = Settings.locationManager.authorizationStatus == .authorizedAlways
-        if requestedLocationFix {
-            Settings.locationManager.requestLocation()
-        }
-
-        Settings.shared.fetchPrayerTimes {
-            logger.debug("🎉 BG task completed – prayer times refreshed")
-            guard requestedLocationFix else {
-                complete(true)
-                return
+        // BGTaskScheduler invokes this handler on ITS queue (registered with `using: nil`), but
+        // everything below touches main-confined state - `Settings.shared.prayers` (read by
+        // `nextFajrTime` inside `scheduleBackgroundRefreshes`), the location manager created and
+        // delegated on main. Hop once; the expiration handler is installed before the hop.
+        DispatchQueue.main.async {
+            self.scheduleBackgroundRefreshes()
+            // A refresh computed against the stored location faithfully rebuilds widgets for the city you
+            // LEFT and feeds the traveling-mode check coordinates from before the trip. Ask for one fresh
+            // fix first: its delegate callback commits the move, and that commit re-fetches prayer times,
+            // reschedules notifications and reloads widgets on its own. The fetch below still runs
+            // immediately with the stored location, so the task succeeds even when no fix arrives.
+            let requestedLocationFix = Settings.locationManager.authorizationStatus == .authorizedAlways
+            if requestedLocationFix {
+                Settings.locationManager.requestLocation()
             }
-            // Hold the task open a beat so the one-shot fix - and the commit/fetch/reload chain it
-            // triggers - can land before iOS suspends the process. BGAppRefresh allows ~30 s; the
-            // expiration handler still completes us if the system calls time first.
-            DispatchQueue.main.asyncAfter(deadline: .now() + 12) {
-                complete(true)
+
+            Settings.shared.fetchPrayerTimes {
+                logger.debug("🎉 BG task completed – prayer times refreshed")
+                guard requestedLocationFix else {
+                    complete(true)
+                    return
+                }
+                // Hold the task open a beat so the one-shot fix - and the commit/fetch/reload chain it
+                // triggers - can land before iOS suspends the process. BGAppRefresh allows ~30 s; the
+                // expiration handler still completes us if the system calls time first.
+                DispatchQueue.main.asyncAfter(deadline: .now() + 12) {
+                    complete(true)
+                }
             }
         }
     }

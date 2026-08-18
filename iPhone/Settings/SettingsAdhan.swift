@@ -1245,8 +1245,11 @@ extension Settings {
                 .custom(fajrAngle: customFajrAngle, ishaAngle: customIshaAngle)
                 .parameters
         }
-        guard let method = PrayerCalculationCatalog.method(id: id) else {
-            return PrayerCalculationCatalog.method(id: PrayerCalculationCatalog.muslimWorldLeagueID)!.parameters
+        // Double fallback: an unknown stored label falls to Muslim World League; if THAT entry ever
+        // leaves the catalog, standard 18/17 angles - never a trap on a settings string.
+        guard let method = PrayerCalculationCatalog.method(id: id)
+                ?? PrayerCalculationCatalog.method(id: PrayerCalculationCatalog.muslimWorldLeagueID) else {
+            return PrayerCalculationCatalog.custom(fajrAngle: 18, ishaAngle: 17).parameters
         }
         return method.parameters
     }
@@ -1282,7 +1285,10 @@ extension Settings {
     
     @inline(__always)
     private func prayer(from key: String, time: Date) -> Prayer {
-        let p = Self.prayerProtos[key]!
+        // An unknown key is a programmer error (every caller passes a literal that exists in the
+        // dict above), but a future misspelling must degrade to a generic row, not take the app down.
+        let p = Self.prayerProtos[key]
+            ?? Proto(ar: key, tr: key, en: key, img: "moon", rakah: "0", sunnahB: "0", sunnahA: "0")
         return Prayer(
             nameArabic: p.ar,
             nameTransliteration: p.tr,

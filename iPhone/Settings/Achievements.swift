@@ -796,8 +796,16 @@ final class AchievementBannerPresenter {
     }
 
     func dismiss() {
-        window?.isHidden = true
+        // Take the window OUT of the stored property before letting it deallocate. Releasing it
+        // inside the `window = nil` assignment ran UIWindow dealloc - and the hosting view's
+        // teardown - while the property's exclusive write access was still open; the teardown
+        // re-entered `setInteractiveFrame`, whose read of `window` then trapped ("Simultaneous
+        // accesses ... modification requires exclusive access", live crash on dismissing a
+        // bookmark achievement's banner). The local keeps it alive until this scope ends, after
+        // the write access has closed.
+        let retiring = window
         window = nil
+        retiring?.isHidden = true
     }
 
     /// The card reports its own frame so the window can pass every touch outside it straight

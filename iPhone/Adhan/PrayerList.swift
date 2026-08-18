@@ -530,9 +530,9 @@ struct PrayerList: View {
         // Tighter on the watch: the icon shares the name's line instead of taking one of its own, and the
         // padding comes down - that's what lets six prayers fit a screen at a readable size.
         let columnCount = 2
-        let tileSpacing: CGFloat = 6
+        let tileSpacing: CGFloat = 5
         let tileHorizontalPadding: CGFloat = 7
-        let tileVerticalPadding: CGFloat = 6
+        let tileVerticalPadding: CGFloat = 5
         #else
         // Keyed on what is actually RENDERED: the combined Qasr set (4 rows) reads best two-up, but
         // "View Full Prayers" restores the six - which want the normal three columns, not two rows of
@@ -552,21 +552,27 @@ struct PrayerList: View {
                 let color: Color = isComparisonBaseline ? .secondary : (highlightsCurrent ? prayerColor(for: prayer, in: prayers) : .primary)
                 let isCurrent = highlightsCurrent && !isComparisonBaseline && isCurrentPrayer(prayer)
 
-                VStack(alignment: .leading, spacing: 3) {
+                VStack(alignment: .leading, spacing: 2) {
                     #if os(watchOS)
-                    HStack(spacing: 4) {
+                    HStack(spacing: 3) {
                         Image(systemName: prayer.image)
-                            .font(.caption2)
+                            .font(.system(size: 11, weight: .medium))
                             .foregroundColor(color)
 
+                        // The name owns the line: a fixed-size icon plus layoutPriority keeps a long
+                        // name ("Shurooq") from being the one tile that scales to a sliver while its
+                        // neighbors render full size. 0.8 is a trim, not a shrink.
                         Text(prayer.compactDisplayName)
                             .font(.caption.weight(.semibold))
                             .foregroundColor(color)
+                            .minimumScaleFactor(0.8)
+                            .layoutPriority(1)
                     }
 
                     Text(prayer.time, style: .time)
                         .font(.caption.monospacedDigit())
                         .foregroundColor(color)
+                        .minimumScaleFactor(0.8)
                     #else
                     HStack(alignment: .top) {
                         Image(systemName: prayer.image)
@@ -612,6 +618,13 @@ struct PrayerList: View {
         }
         .lineLimit(1)
         .minimumScaleFactor(0.5)
+        #if os(watchOS)
+        // The tiles draw their own glass; the List's default row card behind them (plus its side
+        // insets) squeezed the grid and read as one chopped slab. Clear it and give the tiles the
+        // full row width.
+        .listRowBackground(Color.clear)
+        .listRowInsets(EdgeInsets(top: 2, leading: 0, bottom: 2, trailing: 0))
+        #endif
         .onChange(of: settings.travelingMode) { _ in
             withAnimation { settings.travelingShowFullPrayers = false }
         }

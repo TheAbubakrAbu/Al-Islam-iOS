@@ -500,7 +500,12 @@ let reciters: [Reciter] = {
 let recitersMinshawi = [
     Reciter(name: "Muhammad Al-Minshawi (Murattal)", ayahIdentifier: "ar.minshawi", ayahBitrate: "128", surahLink: "https://server10.mp3quran.net/minsh/", qdcReciterID: 9),
     Reciter(name: "Muhammad Al-Minshawi (Mujawwad)", ayahIdentifier: "ar.minshawimujawwad", ayahBitrate: "64", surahLink: "https://server10.mp3quran.net/minsh/Almusshaf-Al-Mojawwad/", everyayahFolder: "Minshawy_Mujawwad_192kbps"),
-    Reciter(name: "Muhammad Al-Minshawi (Muallim)", ayahIdentifier: "ar.minshawi", ayahBitrate: "128", surahLink: "https://server10.mp3quran.net/minsh/Almusshaf-Al-Mo-lim/", ayahMurattalStyleNote: "Muhammad Al-Minshawi (Murattal)")
+    // mp3quran's archival 1387 AH (1967 CE) recording - only 26 surahs survive (1-15, 17-22, 25-29).
+    Reciter(name: "Muhammad Al-Minshawi (1387 AH)", ayahIdentifier: "ar.minshawi", ayahBitrate: "128", surahLink: "https://server10.mp3quran.net/minsh1387/", ayahMurattalStyleNote: "Muhammad Al-Minshawi (Murattal)", missingSurahs: Set([16, 23, 24]).union(Set(30...114))),
+    // everyayah's Minshawy_Teacher_128kbps folder is absent from their recitations.js index but serves the
+    // complete per-ayah teacher set (verified 1:1, 2:286, 67:1, 114:6) - so streamed ayahs play in the
+    // Muallim style itself, not a substitute Murattal.
+    Reciter(name: "Muhammad Al-Minshawi (Muallim)", ayahIdentifier: "ar.minshawi", ayahBitrate: "128", surahLink: "https://server10.mp3quran.net/minsh/Almusshaf-Al-Mo-lim/", everyayahFolder: "Minshawy_Teacher_128kbps")
 ].sorted()
 
 let recitersMurattal = [
@@ -538,6 +543,8 @@ let recitersMurattal = [
     // mp3quran carries 109 of 114 surahs for this mushaf (their API's surah_list omits these five).
     Reciter(name: "Islam Sobhi", ayahIdentifier: "ar.minshawi", ayahBitrate: "128", surahLink: "https://server14.mp3quran.net/islam/Rewayat-Hafs-A-n-Assem/", missingSurahs: [37, 39, 40, 45, 65]),
     Reciter(name: "Mohamed Al-Tablawi", ayahIdentifier: "ar.minshawi", ayahBitrate: "128", surahLink: "https://server12.mp3quran.net/tblawi/", everyayahFolder: "Mohammad_al_Tablaway_128kbps"),
+    // See recitersMinshawi: the surviving 26 surahs of the 1387 AH recording.
+    Reciter(name: "Muhammad Al-Minshawi (1387 AH)", ayahIdentifier: "ar.minshawi", ayahBitrate: "128", surahLink: "https://server10.mp3quran.net/minsh1387/", ayahMurattalStyleNote: "Muhammad Al-Minshawi (Murattal)", missingSurahs: Set([16, 23, 24]).union(Set(30...114))),
     Reciter(name: "Khalifa Al-Tunaiji", ayahIdentifier: "ar.minshawi", ayahBitrate: "128", surahLink: "https://server12.mp3quran.net/tnjy/", everyayahFolder: "khalefa_al_tunaiji_64kbps", qdcReciterID: 161)
 ].sorted()
 
@@ -552,13 +559,17 @@ let recitersMujawwad = [
 
 let recitersMuallim = [
     Reciter(name: "Maher Al-Muaiqly (Muallim)", ayahIdentifier: "ar.mahermuaiqly", ayahBitrate: "128", surahLink: "https://server12.mp3quran.net/maher/Almusshaf-Al-Mo-lim/", ayahMurattalStyleNote: "Maher Al-Muaiqly (Murattal)"),
-    Reciter(name: "Muhammad Al-Minshawi (Muallim)", ayahIdentifier: "ar.minshawi", ayahBitrate: "128", surahLink: "https://server10.mp3quran.net/minsh/Almusshaf-Al-Mo-lim/", ayahMurattalStyleNote: "Muhammad Al-Minshawi (Murattal)")
+    // everyayah's Minshawy_Teacher_128kbps folder is absent from their recitations.js index but serves the
+    // complete per-ayah teacher set (verified 1:1, 2:286, 67:1, 114:6) - so streamed ayahs play in the
+    // Muallim style itself, not a substitute Murattal.
+    Reciter(name: "Muhammad Al-Minshawi (Muallim)", ayahIdentifier: "ar.minshawi", ayahBitrate: "128", surahLink: "https://server10.mp3quran.net/minsh/Almusshaf-Al-Mo-lim/", everyayahFolder: "Minshawy_Teacher_128kbps")
 ].sorted()
 
 let recitersShubah = [
     // Trailing "/" only: QuranPlayer appends "NNN.mp3" itself - the old link ended in "001.mp3",
     // so every surah request became ".../001.mp3001.mp3" and 404'd.
     Reciter(name: "Ahmad Deban", ayahIdentifier: "ar.minshawi", ayahBitrate: "128", surahLink: "https://server16.mp3quran.net/deban/Rewayat-Sho-bah-A-n-Asim/", qiraah: Settings.Riwayah.shubah),
+    Reciter(name: "Ali Al-Huthaifi", ayahIdentifier: "ar.minshawi", ayahBitrate: "128", surahLink: "https://server9.mp3quran.net/hthfi/Rewayat-Sho-bah-A-n-Asim/", qiraah: Settings.Riwayah.shubah)
 ].sorted()
 
 let recitersKhalaf = [
@@ -571,7 +582,9 @@ let recitersWarsh = [
     Reciter(name: "Mahmoud Al-Hussary", ayahIdentifier: "ar.minshawi", ayahBitrate: "128", surahLink: "https://server13.mp3quran.net/husr/Rewayat-Warsh-A-n-Nafi/", qiraah: Settings.Riwayah.warsh),
     Reciter(name: "Al-Qari Yassin", ayahIdentifier: "ar.minshawi", ayahBitrate: "128", surahLink: "https://server11.mp3quran.net/qari/", qiraah: Settings.Riwayah.warsh),
     Reciter(name: "Al-Uyoun Al-Koshi", ayahIdentifier: "ar.minshawi", ayahBitrate: "128", surahLink: "https://server11.mp3quran.net/koshi/", qiraah: Settings.Riwayah.warsh),
-    Reciter(name: "Hisham Al Haraz", ayahIdentifier: "ar.minshawi", ayahBitrate: "128", surahLink: "https://server16.mp3quran.net/H-Lharraz/Rewayat-Warsh-A-n-Nafi/", qiraah: Settings.Riwayah.warsh),
+    // mp3quran's surah_list omits Al-Ahzab for this mushaf - 113 of 114.
+    Reciter(name: "Hisham Al Haraz", ayahIdentifier: "ar.minshawi", ayahBitrate: "128", surahLink: "https://server16.mp3quran.net/H-Lharraz/Rewayat-Warsh-A-n-Nafi/", qiraah: Settings.Riwayah.warsh, missingSurahs: [33]),
+    Reciter(name: "Abdelmoujib Benkirane", ayahIdentifier: "ar.minshawi", ayahBitrate: "128", surahLink: "https://server16.mp3quran.net/A-Benkirane/Rewayat-Warsh-A-n-Nafi/", qiraah: Settings.Riwayah.warsh),
     Reciter(name: "Ibrahim Al-Dossary", ayahIdentifier: "ar.minshawi", ayahBitrate: "128", surahLink: "https://server10.mp3quran.net/ibrahim_dosri/Rewayat-Warsh-A-n-Nafi/", qiraah: Settings.Riwayah.warsh),
     Reciter(name: "Muhammad Sayed", ayahIdentifier: "ar.minshawi", ayahBitrate: "128", surahLink: "https://server16.mp3quran.net/m_sayed/Rewayat-Warsh-A-n-Nafi/", qiraah: Settings.Riwayah.warsh),
     Reciter(name: "Omar Al-Qazabri", ayahIdentifier: "ar.minshawi", ayahBitrate: "128", surahLink: "https://server9.mp3quran.net/omar_warsh/", qiraah: Settings.Riwayah.warsh),
@@ -582,11 +595,16 @@ let recitersWarsh = [
 
 let recitersBuzzi = [
     Reciter(name: "Ahmad Deban", ayahIdentifier: "ar.minshawi", ayahBitrate: "128", surahLink: "https://server16.mp3quran.net/deban/Rewayat-Albizi-A-n-Ibn-Katheer/", qiraah: Settings.Riwayah.buzzi),
-    Reciter(name: "Okasha Kameny", ayahIdentifier: "ar.minshawi", ayahBitrate: "128", surahLink: "https://server16.mp3quran.net/okasha/Rewayat-Albizi-A-n-Ibn-Katheer/", qiraah: Settings.Riwayah.buzzi)
+    Reciter(name: "Okasha Kameny", ayahIdentifier: "ar.minshawi", ayahBitrate: "128", surahLink: "https://server16.mp3quran.net/okasha/Rewayat-Albizi-A-n-Ibn-Katheer/", qiraah: Settings.Riwayah.buzzi),
+    // mp3quran's combined "Al-Bazzi and Qunbul" mushaf (one complete recording covering Ibn Kathir
+    // through both narrators), so it serves both riwayah lists.
+    Reciter(name: "Mohammad Al-Abdullah", ayahIdentifier: "ar.minshawi", ayahBitrate: "128", surahLink: "https://server9.mp3quran.net/abdullah/", qiraah: Settings.Riwayah.buzzi)
 ].sorted()
 
 let recitersQunbul = [
-    Reciter(name: "Ahmad Deban", ayahIdentifier: "ar.minshawi", ayahBitrate: "128", surahLink: "https://server16.mp3quran.net/deban/Rewayat-Qunbol-A-n-Ibn-Katheer/", qiraah: Settings.Riwayah.qunbul)
+    Reciter(name: "Ahmad Deban", ayahIdentifier: "ar.minshawi", ayahBitrate: "128", surahLink: "https://server16.mp3quran.net/deban/Rewayat-Qunbol-A-n-Ibn-Katheer/", qiraah: Settings.Riwayah.qunbul),
+    // See recitersBuzzi: the combined Al-Bazzi + Qunbul recording.
+    Reciter(name: "Mohammad Al-Abdullah", ayahIdentifier: "ar.minshawi", ayahBitrate: "128", surahLink: "https://server9.mp3quran.net/abdullah/", qiraah: Settings.Riwayah.qunbul)
 ].sorted()
 
 let recitersQaloon = [
@@ -594,13 +612,20 @@ let recitersQaloon = [
     Reciter(name: "Mahmoud Al-Hussary", ayahIdentifier: "ar.minshawi", ayahBitrate: "128", surahLink: "https://server13.mp3quran.net/husr/Rewayat-Qalon-A-n-Nafi/", qiraah: Settings.Riwayah.qaloon),
     Reciter(name: "Ahmed Al-Trabulsi", ayahIdentifier: "ar.minshawi", ayahBitrate: "128", surahLink: "https://server10.mp3quran.net/trablsi/", qiraah: Settings.Riwayah.qaloon),
     Reciter(name: "Ibrahim Qushaydan", ayahIdentifier: "ar.minshawi", ayahBitrate: "128", surahLink: "https://server16.mp3quran.net/i_kshidan/Rewayat-Qalon-A-n-Nafi/", qiraah: Settings.Riwayah.qaloon),
-    Reciter(name: "Tareq Daawob", ayahIdentifier: "ar.minshawi", ayahBitrate: "128", surahLink: "https://server10.mp3quran.net/tareq/", qiraah: Settings.Riwayah.qaloon)
+    Reciter(name: "Tareq Daawob", ayahIdentifier: "ar.minshawi", ayahBitrate: "128", surahLink: "https://server10.mp3quran.net/tareq/", qiraah: Settings.Riwayah.qaloon),
+    Reciter(name: "Ali Al-Huthaifi", ayahIdentifier: "ar.minshawi", ayahBitrate: "128", surahLink: "https://server9.mp3quran.net/huthifi_qalon/", qiraah: Settings.Riwayah.qaloon),
+    Reciter(name: "Addokali Muhammad Al-Alim", ayahIdentifier: "ar.minshawi", ayahBitrate: "128", surahLink: "https://server7.mp3quran.net/dokali/", qiraah: Settings.Riwayah.qaloon),
+    Reciter(name: "Marwan Al-Akri", ayahIdentifier: "ar.minshawi", ayahBitrate: "128", surahLink: "https://server16.mp3quran.net/m_akri/Rewayat-Qalon-A-n-Nafi/", qiraah: Settings.Riwayah.qaloon),
+    Reciter(name: "Muhammad Al-Amin Qeniwa", ayahIdentifier: "ar.minshawi", ayahBitrate: "128", surahLink: "https://server16.mp3quran.net/qeniwa/Rewayat-Qalon-A-n-Nafi/", qiraah: Settings.Riwayah.qaloon),
+    Reciter(name: "Muhammad Abu Sneina", ayahIdentifier: "ar.minshawi", ayahBitrate: "128", surahLink: "https://server16.mp3quran.net/sneineh/Rewayat-Qalon-A-n-Nafi/", qiraah: Settings.Riwayah.qaloon)
 ].sorted()
 
 let recitersDuri = [
     Reciter(name: "Noreen Mohammad Siddiq", ayahIdentifier: "ar.minshawi", ayahBitrate: "128", surahLink: "https://server16.mp3quran.net/nourin_siddig/Rewayat-Aldori-A-n-Abi-Amr/", qiraah: Settings.Riwayah.duri),
     Reciter(name: "Mahmoud Al-Hussary", ayahIdentifier: "ar.minshawi", ayahBitrate: "128", surahLink: "https://server13.mp3quran.net/husr/Rewayat-Aldori-A-n-Abi-Amr/", qiraah: Settings.Riwayah.duri),
-    Reciter(name: "Ahmad Deban", ayahIdentifier: "ar.minshawi", ayahBitrate: "128", surahLink: "https://server16.mp3quran.net/deban/Rewayat-Aldori-A-n-Abi-Amr/", qiraah: Settings.Riwayah.duri)
+    Reciter(name: "Ahmad Deban", ayahIdentifier: "ar.minshawi", ayahBitrate: "128", surahLink: "https://server16.mp3quran.net/deban/Rewayat-Aldori-A-n-Abi-Amr/", qiraah: Settings.Riwayah.duri),
+    Reciter(name: "Alfateh Al-Zubair", ayahIdentifier: "ar.minshawi", ayahBitrate: "128", surahLink: "https://server6.mp3quran.net/fateh/", qiraah: Settings.Riwayah.duri),
+    Reciter(name: "Muftah Alsaltany", ayahIdentifier: "ar.minshawi", ayahBitrate: "128", surahLink: "https://server14.mp3quran.net/muftah_sultany/Rewayat-Aldori-A-n-Abi-Amr/", qiraah: Settings.Riwayah.duri)
 ].sorted()
 
 let recitersSusi = [
@@ -633,7 +658,9 @@ let recitersAbuHarith = [
 ].sorted()
 
 let recitersDuriKisai = [
-    Reciter(name: "Mohammad Al-Abdullah", ayahIdentifier: "ar.minshawi", ayahBitrate: "128", surahLink: "https://server9.mp3quran.net/abdullah/Rewayat-AlDorai-A-n-Al-Kisa-ai/", qiraah: Settings.Riwayah.duriKisai)
+    Reciter(name: "Mohammad Al-Abdullah", ayahIdentifier: "ar.minshawi", ayahBitrate: "128", surahLink: "https://server9.mp3quran.net/abdullah/Rewayat-AlDorai-A-n-Al-Kisa-ai/", qiraah: Settings.Riwayah.duriKisai),
+    Reciter(name: "Mahmoud Al-Sheimy", ayahIdentifier: "ar.minshawi", ayahBitrate: "128", surahLink: "https://server10.mp3quran.net/sheimy/", qiraah: Settings.Riwayah.duriKisai),
+    Reciter(name: "Muftah Alsaltany", ayahIdentifier: "ar.minshawi", ayahBitrate: "128", surahLink: "https://server14.mp3quran.net/muftah_sultany/Rewayat-AlDorai-A-n-Al-Kisa-ai/", qiraah: Settings.Riwayah.duriKisai)
 ].sorted()
 
 let recitersIbnWardan = [
@@ -645,11 +672,16 @@ let recitersIbnJammaz = [
 ].sorted()
 
 let recitersRuways = [
-    Reciter(name: "Muftah Alsaltany", ayahIdentifier: "ar.minshawi", ayahBitrate: "128", surahLink: "https://quran-fjamfcbbeybteyat.z01.azurefd.net/Audio3/quran/MeftahAlstunai/rowais_yaqoob/", qiraah: Settings.Riwayah.ruways)
+    Reciter(name: "Muftah Alsaltany", ayahIdentifier: "ar.minshawi", ayahBitrate: "128", surahLink: "https://quran-fjamfcbbeybteyat.z01.azurefd.net/Audio3/quran/MeftahAlstunai/rowais_yaqoob/", qiraah: Settings.Riwayah.ruways),
+    // mp3quran's combined "Ruways and Rawh" mushaf (one complete recording covering Ya'qub through
+    // both narrators), so it serves both riwayah lists.
+    Reciter(name: "Yasser Al-Mazroyee", ayahIdentifier: "ar.minshawi", ayahBitrate: "128", surahLink: "https://server9.mp3quran.net/mzroyee/", qiraah: Settings.Riwayah.ruways)
 ].sorted()
 
 let recitersRawh = [
-    Reciter(name: "Abdullah Mohammed Hamid", ayahIdentifier: "ar.minshawi", ayahBitrate: "128", surahLink: "https://quran-fjamfcbbeybteyat.z01.azurefd.net/Audio3/quran/AbdullahMohammedHamid/rawh_yaqoob/", qiraah: Settings.Riwayah.rawh)
+    Reciter(name: "Abdullah Mohammed Hamid", ayahIdentifier: "ar.minshawi", ayahBitrate: "128", surahLink: "https://quran-fjamfcbbeybteyat.z01.azurefd.net/Audio3/quran/AbdullahMohammedHamid/rawh_yaqoob/", qiraah: Settings.Riwayah.rawh),
+    // See recitersRuways: the combined Ruways + Rawh recording.
+    Reciter(name: "Yasser Al-Mazroyee", ayahIdentifier: "ar.minshawi", ayahBitrate: "128", surahLink: "https://server9.mp3quran.net/mzroyee/", qiraah: Settings.Riwayah.rawh)
 ].sorted()
 
 let recitersIshaq = [

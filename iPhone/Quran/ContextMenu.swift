@@ -1243,6 +1243,14 @@ struct SelectAyahTextSheet: View {
     // The sheet's own riwayah, seeded from the reading view's, so switching here never disturbs the reader.
     @State private var selectedQiraah: String = Settings.normalizeLegacyRiwayahTag(Settings.shared.displayQiraah)
 
+    // The reader's riwayah at open time - the numbering `ayah.id` was tapped under. Smart matching
+    // anchors through Hafs from this origin; `selectedQiraah` moves with the picker, this never does.
+    private let originQiraah: String = Settings.normalizeLegacyRiwayahTag(Settings.shared.displayQiraah)
+
+    // Same preference the comparison sheet stores: follow the WORDS across riwayat (numbering differs),
+    // not the raw number.
+    @AppStorage("qiraahSmartComparison") private var smartAyahMatching = true
+
     // The sheet's own cleanup switches - the reading view's exact Hide Tashkeel / Hide Dots options,
     // seeded from its settings but scoped to the text you are selecting here.
     @State private var hideTashkeel = Settings.shared.cleanArabicText
@@ -1260,12 +1268,41 @@ struct SelectAyahTextSheet: View {
         !hideDots && selectedFontName != Settings.systemArabicFontName
     }
 
+    /// The tapped ayah's Hafs anchor (identity when the reader was on Hafs or a Kufi-counted riwayah).
+    private var anchorHafsAyah: Int {
+        QiraahComparison.hafsAnchor(surahID: surah.id, ayahNumber: ayah.id, tag: originQiraah, quranData: QuranData.shared)
+    }
+
+    /// The ayah whose ARABIC the sheet serves under `selectedQiraah`. Smart matching resolves the
+    /// riwayah's own number for the tapped words via the Hafs anchor; off, the tapped ayah as-is (the
+    /// old direct read, which for merged/shifted numbering shows whatever verse sits at that number).
+    private var arabicAyah: Ayah {
+        guard smartAyahMatching else { return ayah }
+        let tag = Settings.Riwayah.canonicalTag(selectedQiraah)
+        let number: Int
+        if tag.isEmpty {
+            number = anchorHafsAyah
+        } else if let alignment = QiraahComparison.alignment(surahID: surah.id, tag: tag, quranData: QuranData.shared) {
+            number = alignment.riwayahNumberForHafs[anchorHafsAyah] ?? ayah.id
+        } else {
+            number = ayah.id
+        }
+        return surah.ayahs.first(where: { $0.id == number }) ?? ayah
+    }
+
+    /// Hafs-keyed companions (transliteration, both translations) read from the Hafs anchor when smart
+    /// matching is on, so they always describe the words in the Arabic block above.
+    private var hafsAyah: Ayah {
+        guard smartAyahMatching else { return ayah }
+        return surah.ayahs.first(where: { $0.id == anchorHafsAyah }) ?? ayah
+    }
+
     private var ayahExistsInSelectedQiraah: Bool {
-        ayah.existsInQiraah(selectedQiraah, surahID: surah.id)
+        arabicAyah.existsInQiraah(selectedQiraah, surahID: surah.id)
     }
 
     private var arabicText: String {
-        var text = ayah.displayArabicText(
+        var text = arabicAyah.displayArabicText(
             surahId: surah.id,
             clean: hideTashkeel,
             qiraahOverride: selectedQiraah
@@ -1278,6 +1315,18 @@ struct SelectAyahTextSheet: View {
         selectedFontName
     }
 
+    /// The riwayah section footer: names the resolved number when smart matching moved it, explains
+    /// the numbering drift otherwise.
+    private var riwayahFooterText: String {
+        if smartAyahMatching {
+            if arabicAyah.id != ayah.id {
+                return "Switching the riwayah changes the Arabic text only. Smart Ayah Matching: these words sit at ayah \(arabicAyah.id) in this riwayah (ayah numbering differs between riwayat), so that ayah is shown."
+            }
+            return "Switching the riwayah changes the Arabic text only. Ayah numbering can differ between riwayat: no ayah is ever missing, but some are joined or split differently. Smart Ayah Matching follows the words, so the matching ayah is shown even where numbering differs."
+        }
+        return "Switching the riwayah changes the Arabic text only. Ayah numbering can differ between riwayat: no ayah is ever missing, but some are joined or split differently (for example, \"Alif Lam Meem\" and \"Dhalika al-Kitab...\" form a single ayah in most qiraat). With Smart Ayah Matching off, the exact tapped number is shown as-is."
+    }
+
     var body: some View {
         NavigationView {
             List {
@@ -1285,8 +1334,16 @@ struct SelectAyahTextSheet: View {
                     if settings.showQiraahDetails {
                         Section {
                             ArabicTextRiwayahPicker(selection: $selectedQiraah.animation(.easeInOut), useMenuRow: true)
+
+                            // The same words across riwayat (anchored through Hafs, like the comparison
+                            // sheet) vs. whatever verse sits at the raw tapped number.
+                            Toggle(isOn: $smartAyahMatching.animation(.easeInOut)) {
+                                Label("Smart Ayah Matching", systemImage: "wand.and.stars")
+                            }
+                            .font(.subheadline)
+                            .onChange(of: smartAyahMatching) { _ in settings.hapticFeedback() }
                         } footer: {
-                            Text("Switching the riwayah changes the Arabic text only. Ayah numbering can differ between riwayat: no ayah is ever missing, but some are joined or split differently (for example, \"Alif Lam Meem\" and \"Dhalika al-Kitab...\" form a single ayah in most qiraat), so this ayah may appear under a different number or merged with its neighbor.")
+                            Text(riwayahFooterText)
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                         }
@@ -1335,28 +1392,28 @@ struct SelectAyahTextSheet: View {
                         }
                     }
 
-                    if !ayah.textTransliteration.isEmpty {
+                    if !hafsAyah.textTransliteration.isEmpty {
                         selectableBlock(
                             title: "TRANSLITERATION",
-                            text: ayah.textTransliteration,
+                            text: hafsAyah.textTransliteration,
                             font: .system(size: settings.englishFontSize),
                             isArabic: false
                         )
                     }
 
-                    if !ayah.textEnglishSaheeh.isEmpty {
+                    if !hafsAyah.textEnglishSaheeh.isEmpty {
                         selectableBlock(
                             title: "SAHEEH INTERNATIONAL",
-                            text: ayah.textEnglishSaheeh,
+                            text: hafsAyah.textEnglishSaheeh,
                             font: .system(size: settings.englishFontSize),
                             isArabic: false
                         )
                     }
 
-                    if !ayah.textEnglishMustafa.isEmpty {
+                    if !hafsAyah.textEnglishMustafa.isEmpty {
                         selectableBlock(
                             title: "CLEAR QURAN (MUSTAFA KHATTAB)",
-                            text: ayah.textEnglishMustafa,
+                            text: hafsAyah.textEnglishMustafa,
                             font: .system(size: settings.englishFontSize),
                             isArabic: false
                         )

@@ -1909,8 +1909,9 @@ struct HadithChapterView: View {
             if hadithPageMode {
                 HadithPagedView(book: book, bookData: bookData, chapterIndex: $chapterIndex, seedHadithID: scrollToHadithId)
                     // The chapter list gets the top accent glow through `applyConditionalListStyle`;
-                    // the pager is not a list, so it draws the same wash itself.
+                    // the pager is not a list, so it draws the same wash itself - themed base included.
                     .background(AccentGlowOverlay())
+                    .themedReaderBackground()
             } else {
                 chapterList
             }
