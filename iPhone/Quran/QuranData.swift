@@ -311,8 +311,13 @@ struct Ayah: Codable, Identifiable, Equatable {
         } else {
             Settings.shared.displayQiraahForArabic
         }
+        // Clean/no-dots applies to EVERY riwayah, not just Hafs: the transforms are pure string
+        // maps (all 20 texts ship fully vocalized; the skeleton is derived at render time), and
+        // stripping tashkeel + signs is exactly what exposes the shared Uthmani rasm across qiraat.
         let text = if qiraah == nil {
             clean ? textCleanArabic(for: qiraah) : textArabic(for: qiraah, surahID: surahId)
+        } else if clean {
+            textCleanArabic(for: qiraah, surahID: surahId)
         } else {
             textArabic(for: qiraah, surahID: surahId).removingArabicSukoon
         }
@@ -910,7 +915,10 @@ final class TajweedStore {
         case 0x0624, 0x0626: return UnicodeScalar(0x0621)!
         case 0x0622: return UnicodeScalar(0x0627)!
         case 0x0671: return UnicodeScalar(0x0627)!
-        case 0x0628, 0x062A, 0x062B, 0x0646: return UnicodeScalar(0x066E)!
+        case 0x0628, 0x062A, 0x062B: return UnicodeScalar(0x066E)!
+        // Noon keeps its own skeleton (U+06BA: bowl in isolated/final, tooth elsewhere), matching
+        // the early-manuscript rasm - see `removingArabicDots` in Globals.swift, its string twin.
+        case 0x0646: return UnicodeScalar(0x06BA)!
         case 0x064A: return UnicodeScalar(0x0649)!
         case 0x062C, 0x062E: return UnicodeScalar(0x062D)!
         case 0x0630: return UnicodeScalar(0x062F)!

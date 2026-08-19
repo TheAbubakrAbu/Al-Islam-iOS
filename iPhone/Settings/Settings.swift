@@ -187,6 +187,19 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
            let forced = Int(ProcessInfo.processInfo.arguments[idx + 1]) {
             self.travelingMode = forced != 0
         }
+        // "-seedBool key=1[,key=0…]" - raw UserDefaults bool seeds BEFORE anything derives from
+        // them, for headless verification of boolean @AppStorage settings (external `defaults
+        // write` between launches is unreliable - the app's cached prefs resurrect old values).
+        // E.g. `-seedBool cleanArabicText=1,removeArabicDots=1` or `-seedBool wordByWordInline=1`.
+        if let idx = ProcessInfo.processInfo.arguments.firstIndex(of: "-seedBool"),
+           ProcessInfo.processInfo.arguments.indices.contains(idx + 1) {
+            for pair in ProcessInfo.processInfo.arguments[idx + 1].split(separator: ",") {
+                let kv = pair.split(separator: "=", maxSplits: 1)
+                if kv.count == 2, let value = Int(kv[1]) {
+                    UserDefaults.standard.set(value != 0, forKey: String(kv[0]))
+                }
+            }
+        }
         // "-settingsProbe key=value[,key=value…]" - applies the writes ~6s AFTER launch, in-process
         // through the normal setters. This is the only way to reproduce "I changed a font setting and
         // the visible rows didn't update" headlessly: the sliders aren't tappable from simctl, and an
@@ -1536,6 +1549,10 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     /// wording, and another riwayah's words would not line up (see `WordByWordStore`, which the iOS
     /// settings screen unloads when this is switched off).
     @AppStorage("wordByWordMeanings") var wordByWordMeanings: Bool = true
+    /// Word-by-word INLINE: the reader lays the ayah out word by word with each word's English
+    /// meaning directly beneath it (the study layout). Rides on `wordByWordMeanings`' gloss pack
+    /// and gates (Hafs an Asim display only) - with the parent toggle off this one does nothing.
+    @AppStorage("wordByWordInline") var wordByWordInline: Bool = false
     /// ON by default: the colors are the fastest way to read correctly, and word-by-word (also
     /// default-on) leans on them - the tapped word's card names the rules its colors show.
     @AppStorage("showTajweedColors") var showTajweedColors: Bool = true

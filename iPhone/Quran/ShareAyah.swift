@@ -684,7 +684,7 @@ struct ShareAyahSheet: View {
                         }
 
                         if shareSettings.arabic {
-                            if actionMode == .image && !shareSettings.hideArabicDots {
+                            if actionMode == .image {
                                 Picker("Arabic Font", selection: Binding(
                                     get: {
                                         Settings.normalizedArabicFontName(
@@ -1127,12 +1127,11 @@ struct ShareAyahSheet: View {
         let bodyFont   = UIFont.roundedSystemFont(ofSize: UIFont.preferredFont(forTextStyle: .body).pointSize)
         let selectedArabicFontName = shareSettings.shareArabicFont.isEmpty ? settings.fontArabic : shareSettings.shareArabicFont
         let arabicFontName = Settings.quranArabicFontName(selectedFontName: selectedArabicFontName, qiraah: shareQiraah, style: settings.arabicScriptStyle)
-        let arabicFont = shareSettings.hideArabicDots
-            ? bodyFont.withSize(bodyFont.pointSize * 1.15)
-            // The "Basic" sentinel has no real UIFont - it falls back to the ROUNDED system face at the
-            // same 1.15x Arabic scale (the bare bodyFont fallback silently shrank Basic Arabic).
-            : (UIFont(name: arabicFontName, size: bodyFont.pointSize * 1.15)
-                ?? UIFont.roundedSystemFont(ofSize: bodyFont.pointSize * 1.15))
+        // Dots-hidden text renders in the chosen face too (the ttfs carry real dotless glyphs now).
+        // The "Basic" sentinel has no real UIFont - it falls back to the ROUNDED system face at the
+        // same 1.15x Arabic scale (the bare bodyFont fallback silently shrank Basic Arabic).
+        let arabicFont = UIFont(name: arabicFontName, size: bodyFont.pointSize * 1.15)
+            ?? UIFont.roundedSystemFont(ofSize: bodyFont.pointSize * 1.15)
         let arabicNumberFont = UIFont(name: Settings.hafsUthmaniFontName, size: bodyFont.pointSize * 1.15) ?? arabicFont
         let captionFont = UIFont.roundedSystemFont(ofSize: UIFont.preferredFont(forTextStyle: .caption2).pointSize)
 
@@ -1449,12 +1448,11 @@ extension ShareAyahSheet {
         let bodyFont = UIFont.roundedSystemFont(ofSize: UIFont.preferredFont(forTextStyle: .body).pointSize)
         let selectedArabicFontName = shareSettings.shareArabicFont.isEmpty ? settings.fontArabic : shareSettings.shareArabicFont
         let arabicFontName = Settings.quranArabicFontName(selectedFontName: selectedArabicFontName, qiraah: settings.displayQiraahForArabic, style: settings.arabicScriptStyle)
-        let arabicFont = shareSettings.hideArabicDots
-            ? bodyFont.withSize(bodyFont.pointSize * 1.15)
-            // The "Basic" sentinel has no real UIFont - it falls back to the ROUNDED system face at the
-            // same 1.15x Arabic scale (the bare bodyFont fallback silently shrank Basic Arabic).
-            : (UIFont(name: arabicFontName, size: bodyFont.pointSize * 1.15)
-                ?? UIFont.roundedSystemFont(ofSize: bodyFont.pointSize * 1.15))
+        // Dots-hidden text renders in the chosen face too (the ttfs carry real dotless glyphs now).
+        // The "Basic" sentinel has no real UIFont - it falls back to the ROUNDED system face at the
+        // same 1.15x Arabic scale (the bare bodyFont fallback silently shrank Basic Arabic).
+        let arabicFont = UIFont(name: arabicFontName, size: bodyFont.pointSize * 1.15)
+            ?? UIFont.roundedSystemFont(ofSize: bodyFont.pointSize * 1.15)
         let arabicNumberFont = UIFont(name: Settings.hafsUthmaniFontName, size: bodyFont.pointSize * 1.15) ?? arabicFont
         let captionFont = UIFont.roundedSystemFont(ofSize: UIFont.preferredFont(forTextStyle: .caption2).pointSize)
         let textColor = UIColor.white

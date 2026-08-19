@@ -473,6 +473,22 @@ struct SettingsQuranView: View {
                 .font(.caption)
                 .foregroundColor(.secondary)
                 .padding(.vertical, 2)
+
+            if settings.wordByWordMeanings && canRenderNow {
+                let inlineBinding = Binding<Bool>(
+                    get: { settings.wordByWordInline && canRenderNow },
+                    set: { settings.wordByWordInline = $0 }
+                )
+                Toggle("Show Meanings Under Words", isOn: inlineBinding.animation(.easeInOut))
+                    .font(.subheadline)
+                    .disabled(!canRenderNow)
+                    .onChange(of: settings.wordByWordInline) { _ in settings.hapticFeedback() }
+
+                Text("Lays the ayah out word by word, with each word's meaning written directly beneath it.")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .padding(.vertical, 2)
+            }
         }
     }
     #endif
@@ -551,17 +567,9 @@ struct SettingsQuranView: View {
 
     @ViewBuilder
     private var cleanArabicTextGroup: some View {
-        // The clean/no-dots text exists only for the Hafs reading - the other qiraat ship as fully
-        // vocalized text and the renderer ignores these flags for them - so with another riwayah
-        // selected the toggles hide behind a short explanation instead of silently doing nothing.
-        if !settings.isHafsDisplay {
-            Text("Hide Tashkeel and Hide Dots are available for the Hafs reading only. Switch the Arabic Riwayah back to Hafs to use them.")
-                .font(.caption)
-                .foregroundColor(.secondary)
-                .padding(.vertical, 2)
-        } else {
-            cleanArabicTextToggles
-        }
+        // Clean/no-dots applies to every riwayah now: the skeleton is derived at render time from
+        // the fully vocalized text, so the toggles show regardless of the selected reading.
+        cleanArabicTextToggles
     }
 
     private var cleanArabicTextToggles: some View {

@@ -346,6 +346,20 @@ struct CountdownComplicationView: View {
         .tint(accent(for: current))
     }
 
+    /// Whether the current prayer's window is nearly over at this entry's date - the Pray-Watch cue
+    /// the bar answers ("eventually turns red when there isn't much time left to pray"). 30 minutes,
+    /// or half the window when the window itself is short (Maghrib→Isha), so short intervals aren't
+    /// born mostly red. The provider pre-builds a timeline entry exactly at each warning instant
+    /// (`PrayersProvider.lowTimeWarningWindow`), so the re-render that turns the bar red happens on
+    /// time without a reload.
+    private func isLowTime(current: Prayer, next: Prayer) -> Bool {
+        var start = current.time
+        if start > entry.date { start.addTimeInterval(-86_400) }
+        let total = next.time.timeIntervalSince(start)
+        guard total > 0 else { return false }
+        return next.time.timeIntervalSince(entry.date) <= PrayersProvider.lowTimeWarningWindow(total)
+    }
+
     private func rectangular(current: Prayer, next: Prayer) -> some View {
         VStack(alignment: .leading, spacing: 0) {
             HStack(spacing: 4) {
@@ -369,6 +383,18 @@ struct CountdownComplicationView: View {
                     .font(.caption2)
                     .foregroundColor(skyStyle ? .white.opacity(0.75) : .secondary)
             }
+
+            // The live bar under the countdown, emptying toward the adhan (a self-updating
+            // `timerInterval` progress, like the ring on the circular family). Red once the window
+            // is nearly over; the labels are suppressed - the countdown line above IS the label.
+            ProgressView(timerInterval: interval(to: next), countsDown: true) {
+                EmptyView()
+            } currentValueLabel: {
+                EmptyView()
+            }
+            .progressViewStyle(.linear)
+            .tint(isLowTime(current: current, next: next) ? .red : accent(for: current))
+            .padding(.top, 3)
         }
         .lineLimit(1)
         .minimumScaleFactor(0.5)

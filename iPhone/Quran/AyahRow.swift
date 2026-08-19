@@ -224,7 +224,9 @@ struct AyahRow: View, Equatable {
     private func arabicDisplayText() -> String {
         let clean = settings.cleanArabicText
         let qiraahKey = comparisonQiraahOverride ?? (settings.displayQiraahForArabic ?? "Hafs")
-        let key = "\(surah.id):\(ayah.id)|\(clean ? 1 : 0)|\((settings.beginnerMode || ayahBeginnerMode || forceBeginner) ? 1 : 0)|\(qiraahKey)"
+        // The dots flag must be in the key: it changes the text `textCleanArabic` returns for the
+        // same `clean` bit, and nothing purges this cache when the toggle flips.
+        let key = "\(surah.id):\(ayah.id)|\(clean ? 1 : 0)\(settings.removeArabicDots ? 1 : 0)|\((settings.beginnerMode || ayahBeginnerMode || forceBeginner) ? 1 : 0)|\(qiraahKey)"
 
         if let cached = Self.arabicDisplayCache.object(forKey: key as NSString) {
             return cached as String
@@ -244,7 +246,7 @@ struct AyahRow: View, Equatable {
         let ayahs = limit.map { Array(surah.ayahs.prefix($0)) } ?? surah.ayahs
 
         for ayah in ayahs where ayah.existsInQiraah(qiraah, surahID: surah.id) {
-            let key = "\(surah.id):\(ayah.id)|\(clean ? 1 : 0)|\(beginner ? 1 : 0)|\(qiraahKey)" as NSString
+            let key = "\(surah.id):\(ayah.id)|\(clean ? 1 : 0)\(settings.removeArabicDots ? 1 : 0)|\(beginner ? 1 : 0)|\(qiraahKey)" as NSString
             if Self.arabicDisplayCache.object(forKey: key) != nil { continue }
 
             let baseText = ayah.displayArabicText(surahId: surah.id, clean: clean, qiraahOverride: qiraah)
@@ -1204,10 +1206,11 @@ struct AyahRow: View, Equatable {
             if showArabic {
                 let beginner = settings.beginnerMode || ayahBeginnerMode || forceBeginner
                 let arabicSource = arabicDisplayText()
-                // "Basic" font (and the dots-removed mode) render with the standard Apple system font. The design is
-                // named explicitly rather than inherited, because this view opts out of the app-wide rounded design
-                // below (its ayah-number suffix always uses a bundled face, which that design would clobber).
-                let useSystemArabic = settings.removeArabicDots || settings.quranUsesSystemArabicFont
+                // "Basic" font renders with the standard Apple system font. The design is named explicitly rather
+                // than inherited, because this view opts out of the app-wide rounded design below (its ayah-number
+                // suffix always uses a bundled face, which that design would clobber). Dots-removed text stays in
+                // the chosen bundled face - the ttfs carry real dotless glyphs now (patch_dotless_glyphs.py).
+                let useSystemArabic = settings.quranUsesSystemArabicFont
                 let arabicFont: Font = useSystemArabic
                     ? .system(size: settings.fontArabicSize, design: .rounded)
                     : .custom(
@@ -1224,28 +1227,48 @@ struct AyahRow: View, Equatable {
                 #if os(iOS)
                 if let glosses = wordByWordGlosses(displayText: arabicSource, beginner: beginner,
                                                    highlightQuery: highlightQuery) {
-                    // Same text, same colors - rendered through TextKit so a single word can be tapped.
-                    WordByWordText(
-                        displayText: arabicSource,
-                        preStyled: preStyled,
-                        fontName: useSystemArabic
-                            ? nil
-                            : ayahArabicFontName(for: comparisonQiraahOverride ?? settings.displayQiraahForArabic),
-                        fontSize: CGFloat(settings.fontArabicSize),
-                        ayahNumberArabic: ayah.idArabic,
-                        glosses: glosses,
-                        selectedWord: tappedWord?.index,
-                        onSelectWord: { index in
-                            tappedWord = TappedWord(
-                                index: index,
-                                word: WordTokens.tokens(in: arabicSource)[index],
-                                meaning: glosses[index],
-                                total: glosses.count
-                            )
-                        }
-                    )
-                    .id(tajweedAnimationKey)
-                    .frame(maxWidth: .infinity, alignment: .trailing)
+                    let selectWord: (Int) -> Void = { index in
+                        tappedWord = TappedWord(
+                            index: index,
+                            word: WordTokens.tokens(in: arabicSource)[index],
+                            meaning: glosses[index],
+                            total: glosses.count
+                        )
+                    }
+                    if settings.wordByWordInline {
+                        // The study layout: each word a column with its meaning beneath it. Tapping
+                        // still opens the same word card.
+                        WordByWordInlineText(
+                            displayText: arabicSource,
+                            preStyled: preStyled,
+                            fontName: useSystemArabic
+                                ? nil
+                                : ayahArabicFontName(for: comparisonQiraahOverride ?? settings.displayQiraahForArabic),
+                            fontSize: CGFloat(settings.fontArabicSize),
+                            ayahNumberArabic: ayah.idArabic,
+                            glosses: glosses,
+                            selectedWord: tappedWord?.index,
+                            onSelectWord: selectWord
+                        )
+                        .id(tajweedAnimationKey)
+                        .frame(maxWidth: .infinity, alignment: .trailing)
+                    } else {
+                        // Same text, same colors - rendered through TextKit so a single word can be tapped.
+                        WordByWordText(
+                            displayText: arabicSource,
+                            preStyled: preStyled,
+                            fontName: useSystemArabic
+                                ? nil
+                                : ayahArabicFontName(for: comparisonQiraahOverride ?? settings.displayQiraahForArabic),
+                            fontSize: CGFloat(settings.fontArabicSize),
+                            ayahNumberArabic: ayah.idArabic,
+                            glosses: glosses,
+                            selectedWord: tappedWord?.index,
+                            onSelectWord: selectWord
+                        )
+                        .id(tajweedAnimationKey)
+                        .frame(maxWidth: .infinity, alignment: .trailing)
+                    }
 
                 } else if let riwayahTag = riwayahWordTapTag(beginner: beginner, highlightQuery: highlightQuery) {
                     // Non-Hafs word tap: same tappable TextKit rendering, no glosses - the tap opens

@@ -294,16 +294,13 @@ enum SafeAreaInsetVStackSpacing {
 }
 
 /// The cushion UNDER a floating bottom bar (above the tab bar / home indicator). On iOS 26 the bar
-/// floats over content and 8pt reads right; pre-26 the same 8pt stacked onto the opaque bar's own
-/// clearance and read as dead space (user report: "a lot of padding on pre iOS 26, fix everywhere"),
-/// so there the bar sits flush on the safe area instead.
+/// floats over content and 8pt reads right. Pre-26 this has swung both ways: 8pt read as dead space
+/// when the bars were built on UISearchBar, whose own fat internal padding stacked onto it ("a lot
+/// of padding on pre iOS 26"), so it went to 0 - but after the 38pt SwiftUI search field replaced
+/// UISearchBar, 0 left the row sitting flush on the opaque tab bar ("no spacing at the bottom looks
+/// bad"). With the compact field the same 8pt now reads right on both, so the cushion is uniform.
 enum BottomBarCushion {
-    static var standard: CGFloat {
-        if #available(iOS 26.0, watchOS 26.0, *) {
-            return 8
-        }
-        return 0
-    }
+    static var standard: CGFloat { 8 }
 }
 
 /// The now-playing bar's narrow seam between shared chrome and whichever module owns playback.

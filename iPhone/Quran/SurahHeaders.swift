@@ -425,10 +425,11 @@ struct HeaderRow: View {
         return cleanedText
     }
 
-    /// "Remove Arabic dots" forces the system face, and so does picking "Basic" in the font picker. In both cases
-    /// the bismillah / ta'awwudh is really system text, so it should stay rounded like the rest of the UI.
+    /// Picking "Basic" in the font picker means system text, so the bismillah / ta'awwudh stays rounded like
+    /// the rest of the UI. (Dots-removed text no longer forces the system face: the bundled ttfs carry real
+    /// dotless skeleton glyphs now - `Scripts/patch_dotless_glyphs.py`.)
     private var usesCustomArabicFace: Bool {
-        !settings.removeArabicDots && settings.quranUsesCustomArabicFace
+        settings.quranUsesCustomArabicFace
     }
 
     private var arabicFont: Font {

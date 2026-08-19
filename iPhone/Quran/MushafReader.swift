@@ -483,7 +483,8 @@ struct SurahPageReader<Controls: View>: View {
                                     searchHighlight: liveSearch,
                                     isSelecting: isSelecting,
                                     selectedAyahs: selectedAyahs,
-                                    onToggleSelection: onToggleSelection
+                                    onToggleSelection: onToggleSelection,
+                                    bottomBarsCollapsed: bottomBarsCollapsed
                                 )
                             }
                         }
@@ -1620,6 +1621,10 @@ private struct MushafPageContent: View {
     var isSelecting: Bool = false
     var selectedAyahs: Set<HighlightedAyahRef> = []
     var onToggleSelection: ((Int, Int) -> Void)? = nil
+    /// Whether the reader's chrome is folded away - the fitted page's centering nudge applies only
+    /// then (collapsed, the visible band's top edge hides navigation-bar dead space; uncollapsed,
+    /// both edges are real chrome and plain centering is already visually even).
+    var bottomBarsCollapsed: Bool = false
 
     /// Padding around the ayah block; the composer measures fit against the same text width and height.
     /// No slack constants beyond these: the fit verifies against the real TextKit layout, so the text gets
@@ -1943,14 +1948,18 @@ private struct MushafPageContent: View {
                 // Fill the visible region so a page that fits sits centered in what the reader can SEE (balanced
                 // top/bottom spacing); a page that overflows stays its natural height and scrolls.
                 .frame(maxWidth: .infinity, minHeight: visibleHeight, alignment: .center)
-                // Mathematical centering reads bottom-heavy: the band's BOTTOM edge is real chrome (the
-                // chevron strip / footer), but its TOP edge hides ~7-8pt of navigation-bar dead space below
-                // the title pill's visible bottom. Measured on the collapsed reader: 19pt of visual air
-                // above the first line vs 12pt between the last line and the chevron. Nudging the fitted
-                // page up by half the difference evens the two (user rule: measure the bottom gap to the
-                // CHEVRON, not the screen bottom, and make top and bottom look even). Fit-only: a
-                // scrolling page has no centering to bias.
-                .offset(y: zoomable ? -4 : 0)
+                // Evens the fitted page's visual air, PER CHROME STATE (user rule both times: make the
+                // gaps above the first line and below the last look the same; fit-only - a scrolling
+                // page has no centering to bias).
+                // COLLAPSED -4: the band's bottom edge is real chrome (the chevron strip) but its top
+                // edge hides ~7-8pt of navigation-bar dead space below the title pill, so the page rides
+                // up by half that difference (measured 19pt above vs 12pt below before the nudge).
+                // UNCOLLAPSED +2: both edges are real chrome (surah header strip above, legend/search
+                // below), but the Uthmani line boxes leave more ink-free air below the last baseline
+                // than above the first line's stacked marks - measured 12pt above vs 16pt below with
+                // plain centering (and the collapsed -4 applied here read outright top-tight, the
+                // "same height from top and below when not collapsed" report). +2 lands 14/14.
+                .offset(y: zoomable ? (bottomBarsCollapsed ? -4 : 2) : 0)
     }
 
     /// Close the actions sheet, THEN open the one it asked for. UIKit can't present a second sheet while the
@@ -2139,10 +2148,10 @@ struct MushafPageComposer {
 
     private var isEnglish: Bool { config.pageLanguage.isEnglish }
 
-    /// Dots-removed text is built from substitution glyphs (ٮ ٯ ڡ) that the Quranic faces do not carry, so it
-    /// has to fall back to the system face - the same rule `AyahRow` and `SurahHeaders` already apply. Page mode
-    /// was the one reader that ignored it, which is why "Hide Arabic Dots" appeared to do nothing here.
-    private var usesSystemFont: Bool { isEnglish || config.removeArabicDots || config.quranUsesSystemArabicFont }
+    /// Dots-removed text renders in the chosen Quranic face: the bundled ttfs carry real dotless
+    /// skeleton glyphs (ٮ ٯ ڡ ں with full joining forms - added by `Scripts/patch_dotless_glyphs.py`),
+    /// so the old forced system-face fallback is gone everywhere (`AyahRow`/`SurahHeaders` match).
+    private var usesSystemFont: Bool { isEnglish || config.quranUsesSystemArabicFont }
     private var arabicFontName: String { config.arabicFontName }
     private var shouldShowTajweed: Bool { config.showTajweed }
 
@@ -3600,7 +3609,7 @@ enum MushafPageRenderCache {
     // 6: Uthmani.ttf keeps ONLY the حۡمَٰنِ (Rahmaani) ligature removed - the other five dagger-alif
     // word bakes were restored (user: the non-ligated forms "look awful"), so those words' glyph
     // advances changed back and fits computed under v5 must recompute.
-    nonisolated private static let fitterVersion = 6
+    nonisolated private static let fitterVersion = 7
 
     nonisolated private static let persistedMetricsSalt: String = {
         let os = ProcessInfo.processInfo.operatingSystemVersion

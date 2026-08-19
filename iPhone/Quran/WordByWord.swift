@@ -1027,6 +1027,221 @@ private struct WordByWordWidthKey: PreferenceKey {
     }
 }
 
+// MARK: - The inline study layout (meaning under every word)
+
+/// "Show Meanings Under Words": the ayah laid out word by word, right to left, wrapping like text -
+/// each word a small column with its English gloss directly beneath it, the way word-by-word study
+/// mushafs print it. Same data, same colors, and the same tap (the word card) as `WordByWordText`;
+/// only the geometry differs, so the two stay interchangeable behind the one setting.
+struct WordByWordInlineText: View {
+    @ObservedObject private var settings = Settings.shared
+
+    /// What the reader is showing - already clean-mode / dots-mode processed.
+    let displayText: String
+    /// Tajweed-colored version of `displayText`, when tajweed colors are on.
+    let preStyled: AttributedString?
+    let fontName: String?
+    let fontSize: CGFloat
+    let ayahNumberArabic: String
+    let glosses: [String]
+    /// The word currently showing its card, washed in the accent.
+    let selectedWord: Int?
+    let onSelectWord: (Int) -> Void
+
+    @State private var width: CGFloat = 0
+
+    private struct WordCell: Identifiable {
+        let id: Int
+        let arabic: AttributedString
+        let gloss: String
+        var isOrnament: Bool { id == -1 }
+    }
+
+    var body: some View {
+        Group {
+            if width > 0 {
+                flow(containerWidth: width)
+                    // Rows are pre-partitioned with measured widths; RTL layout makes each HStack
+                    // lay its first word at the RIGHT edge, the mushaf's reading order.
+                    .environment(\.layoutDirection, .rightToLeft)
+                    .frame(maxWidth: .infinity, alignment: .trailing)
+            } else {
+                // Until the width is known, the plain one-Text rendering (identical content, not
+                // tappable) keeps the row from flashing an empty block while measuring.
+                HighlightedSnippet(
+                    source: displayText,
+                    term: "",
+                    font: arabicSwiftUIFont,
+                    accent: settings.accentColor.color,
+                    fg: .primary,
+                    preStyledSource: preStyled,
+                    trailingSuffix: " \(ayahNumberArabic)",
+                    trailingSuffixFont: .custom(Settings.hafsUthmaniFontName, size: fontSize),
+                    trailingSuffixColor: settings.accentColor.color,
+                    highlightAllahNames: settings.highlightAllahNames
+                )
+                .arabicFontDesign(custom: true)
+                .multilineTextAlignment(.trailing)
+                .frame(maxWidth: .infinity, alignment: .trailing)
+            }
+        }
+        .background(
+            GeometryReader { proxy in
+                Color.clear.preference(key: WordByWordWidthKey.self, value: proxy.size.width)
+            }
+        )
+        .onPreferenceChange(WordByWordWidthKey.self) { measured in
+            guard measured > 0, abs(measured - width) > 0.5 else { return }
+            width = measured
+        }
+    }
+
+    // MARK: Content
+
+    private var arabicSwiftUIFont: Font {
+        if let fontName { return .custom(fontName, size: fontSize) }
+        return .system(size: fontSize, design: .rounded)
+    }
+
+    private var arabicUIFont: UIFont {
+        if let fontName, let font = UIFont(name: fontName, size: fontSize) { return font }
+        return .roundedSystemFont(ofSize: fontSize)
+    }
+
+    /// One styled slice per token (plus the trailing ornament cell), colors carried per word. Sliced
+    /// from ONE styled pass over the whole ayah so tajweed runs, the red الله, and any future paint
+    /// stay identical to the flowing rendering.
+    private var cells: [WordCell] {
+        let base: NSMutableAttributedString
+        // A pre-styled string whose characters don't match the display text (a mode the tajweed
+        // store couldn't map) would shift every word range - fall back to plain rather than paint
+        // the wrong word (same rule as `WordByWordText`).
+        if let preStyled, String(preStyled.characters) == displayText {
+            base = NSMutableAttributedString(attributedString: NSAttributedString(preStyled))
+        } else {
+            base = NSMutableAttributedString(
+                string: displayText,
+                attributes: [.foregroundColor: UIColor.label]
+            )
+        }
+        if settings.highlightAllahNames {
+            let ns = displayText as NSString
+            for range in HighlightedSnippet.arabicAllahRanges(in: displayText) {
+                let utf16 = NSRange(range, in: displayText)
+                guard utf16.location + utf16.length <= ns.length else { continue }
+                base.addAttribute(.foregroundColor, value: UIColor.systemRed, range: utf16)
+            }
+        }
+
+        var out: [WordCell] = []
+        let ranges = WordTokens.ranges(in: displayText)
+        out.reserveCapacity(ranges.count + 1)
+        for (index, range) in ranges.enumerated() {
+            guard range.location + range.length <= base.length else { continue }
+            out.append(WordCell(
+                id: index,
+                arabic: AttributedString(base.attributedSubstring(from: range)),
+                gloss: glosses.indices.contains(index) ? glosses[index] : ""
+            ))
+        }
+        out.append(WordCell(id: -1, arabic: AttributedString(ayahNumberArabic), gloss: ""))
+        return out
+    }
+
+    // MARK: Geometry
+
+    private var glossFontSize: CGFloat { max(11, min(14, fontSize * 0.32)) }
+    /// Widest a gloss may render; longer ones wrap to a second line, then truncate.
+    private let glossMaxWidth: CGFloat = 110
+    private let cellHorizontalPadding: CGFloat = 3
+    private let cellSpacing: CGFloat = 4
+
+    private func cellView(_ cell: WordCell) -> some View {
+        let selected = !cell.isOrnament && selectedWord == cell.id
+        return VStack(spacing: 2) {
+            Text(cell.arabic)
+                .font(cell.isOrnament ? .custom(Settings.hafsUthmaniFontName, size: fontSize) : arabicSwiftUIFont)
+                .foregroundColor(cell.isOrnament ? settings.accentColor.color : nil)
+                .arabicFontDesign(custom: true)
+                .lineLimit(1)
+                .fixedSize()
+            if !cell.gloss.isEmpty {
+                Text(cell.gloss)
+                    .font(.system(size: glossFontSize))
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+                    .lineLimit(2)
+                    .frame(maxWidth: glossMaxWidth)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .environment(\.layoutDirection, .leftToRight)
+            }
+        }
+        .padding(.horizontal, cellHorizontalPadding)
+        .background(
+            RoundedRectangle(cornerRadius: 6)
+                .fill(selected ? settings.accentColor.color.opacity(0.18) : Color.clear)
+        )
+        .contentShape(Rectangle())
+        .onTapGesture {
+            // A token with no gloss of its own (the ۞ mark, the tail of a merged word) has nothing
+            // to show - stay silent rather than open an empty card.
+            guard !cell.isOrnament, !cell.gloss.isEmpty else { return }
+            settings.hapticFeedback()
+            onSelectWord(cell.id)
+        }
+    }
+
+    /// A cell's rendered width, measured with the SAME fonts the cell view uses - so rows can be
+    /// partitioned deterministically in plain code (no alignment-guide layout tricks, which proved
+    /// unreliable under RTL inside a List).
+    private func cellWidth(_ cell: WordCell) -> CGFloat {
+        let font = cell.isOrnament
+            ? (UIFont(name: Settings.hafsUthmaniFontName, size: fontSize) ?? arabicUIFont)
+            : arabicUIFont
+        let arabicWidth = ceil((String(cell.arabic.characters) as NSString)
+            .size(withAttributes: [.font: font]).width)
+        var glossWidth: CGFloat = 0
+        if !cell.gloss.isEmpty {
+            glossWidth = min(glossMaxWidth, ceil((cell.gloss as NSString)
+                .size(withAttributes: [.font: UIFont.systemFont(ofSize: glossFontSize)]).width))
+        }
+        return max(arabicWidth, glossWidth) + cellHorizontalPadding * 2
+    }
+
+    /// Rows of cell indices, greedily filled in reading order against the measured widths.
+    private func partitionedRows(containerWidth: CGFloat) -> [[WordCell]] {
+        var rows: [[WordCell]] = []
+        var row: [WordCell] = []
+        var used: CGFloat = 0
+        for cell in cells {
+            let width = cellWidth(cell)
+            if !row.isEmpty, used + cellSpacing + width > containerWidth - 2 {
+                rows.append(row)
+                row = []
+                used = 0
+            }
+            used += (row.isEmpty ? 0 : cellSpacing) + width
+            row.append(cell)
+        }
+        if !row.isEmpty { rows.append(row) }
+        return rows
+    }
+
+    private func flow(containerWidth: CGFloat) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            ForEach(Array(partitionedRows(containerWidth: containerWidth).enumerated()), id: \.offset) { _, row in
+                HStack(alignment: .top, spacing: cellSpacing) {
+                    ForEach(row) { cell in
+                        cellView(cell)
+                    }
+                }
+            }
+        }
+        // `.leading` under the RTL environment = the right edge, where the first word belongs.
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
 // MARK: - The card
 
 /// The word a reader tapped, resolved: which token it was, its text, its meaning, and how many words the
@@ -1402,7 +1617,8 @@ struct RiwayahWordSheet: View {
         for scalar in token.unicodeScalars {
             let v = scalar.value
             guard (0x0621...0x064A).contains(v) || v == 0x0671 || v == 0x0649
-                    || v == 0x066E || v == 0x06CC || v == 0x067E else { continue }
+                    || v == 0x066E || v == 0x06CC || v == 0x067E
+                    || v == 0x066F || v == 0x06A1 || v == 0x06BA else { continue }
             switch v {
             case 0x0671, 0x0622, 0x0623, 0x0625: out.append("ا")
             case 0x0624: out.append("و")

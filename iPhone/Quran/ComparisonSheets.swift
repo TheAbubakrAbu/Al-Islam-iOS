@@ -23,6 +23,11 @@ struct AyahQiraahComparisonSheet: View {
     @AppStorage("qiraahDuelMode") private var duelMode = false
     @AppStorage("qiraahDuelATag") private var duelATagRaw = "__unset__"
     @AppStorage("qiraahDuelBTag") private var duelBTagRaw = "__unset__"
+    /// Sheet-local Hide Tashkeel / Hide Dots, independent of the reader's global toggles: with the
+    /// tashkeel and dots stripped, most riwayat collapse to the SAME Uthmani rasm skeleton - which
+    /// is exactly what this sheet exists to show. Persisted so the exploration survives reopening.
+    @AppStorage("qiraahCompareHideTashkeel") private var compareHideTashkeel = false
+    @AppStorage("qiraahCompareHideDots") private var compareHideDots = false
 
     private struct QiraahDisplay: Identifiable {
         let label: String
@@ -106,6 +111,33 @@ struct AyahQiraahComparisonSheet: View {
                             Text(smartComparison
                                  ? "Compare this ayah across the Arabic riwayat available in the app. Ayah numbering differs between riwayat, so rows are aligned to the SAME WORDS automatically; a note marks any riwayah that numbers this ayah differently or joins it with a neighbor. Words tinted in the accent color differ from the current riwayah's reading."
                                  : "Smart Comparison is off: each row shows that riwayah's ayah under this exact NUMBER, with no word alignment - where numbering differs, rows may show different words. Turn it on to align every row to the same words.")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+
+                        Section {
+                            Toggle(isOn: $compareHideTashkeel.animation(.easeInOut)) {
+                                Text("Hide Tashkeel and Signs")
+                                    .font(.subheadline.weight(.semibold))
+                            }
+                            .tint(settings.accentColor.color)
+                            .onChange(of: compareHideTashkeel) { newValue in
+                                settings.hapticFeedback()
+                                // Dots without the tashkeel stripped is not a state the reading
+                                // view offers either; keep the pair coupled the same way.
+                                if !newValue { compareHideDots = false }
+                            }
+
+                            if compareHideTashkeel {
+                                Toggle(isOn: $compareHideDots.animation(.easeInOut)) {
+                                    Text("Hide Dots")
+                                        .font(.subheadline.weight(.semibold))
+                                }
+                                .tint(settings.accentColor.color)
+                                .onChange(of: compareHideDots) { _ in settings.hapticFeedback() }
+                            }
+                        } footer: {
+                            Text(rasmFooterText)
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }
@@ -326,25 +358,62 @@ struct AyahQiraahComparisonSheet: View {
         QiraahComparison.hafsAnchor(surahID: surahNumber, ayahNumber: ayahNumber, tag: originTag, quranData: quranData)
     }
 
+    /// The caption under the Hide Tashkeel / Hide Dots toggles. With either on it also REPORTS the
+    /// result - how many riwayat now read identically to the current one - because seeing the
+    /// shared Uthmani rasm emerge is the whole point of the toggles.
+    private var rasmFooterText: String {
+        guard compareHideTashkeel || compareHideDots else {
+            return "Strip the vowel marks (and then the dots) to compare the bare letter skeletons. All qiraat descend from the dotless Uthmani rasm of the copies Uthman ibn Affan sent out, so most differences vanish at the skeleton level."
+        }
+        guard let reference = referenceText else { return "" }
+        let others = options.filter { $0.id != currentOption?.id }
+        let identical = others.filter { resolvedText(for: $0)?.text == reference }.count
+        let what = compareHideDots ? "letter skeleton (rasm)" : "lettering"
+        return "With these marks hidden, \(identical) of the \(others.count) other riwayat share this ayah's exact \(what) with the current riwayah. Rows tinted in the accent color still differ."
+    }
+
+    /// The sheet's Hide Tashkeel / Hide Dots, applied inside `resolvedText` - the one choke point
+    /// every consumer of row text goes through (rows, diff reference, duel cards, search filter) -
+    /// so the diff tint and the "identical" checks always operate on exactly what is displayed.
+    private func compareTransformed(_ text: String) -> String {
+        var out = text
+        if compareHideTashkeel { out = out.removingArabicDiacriticsAndSigns }
+        if compareHideDots { out = out.removingArabicDots }
+        return out
+    }
+
     /// The same WORDS as the tapped ayah, in this riwayah - the shared resolver, so the rows here and
     /// the AI gatherer serve identical text (see `QiraahAyahResolver`). With Smart Comparison off,
     /// the pre-resolver direct read instead: this riwayah's ayah under the tapped NUMBER, unaligned.
+    /// Both paths resolve the FULL text (`clean: false`): the sheet's own toggles are the only
+    /// cleanup applied here, so unchecking them restores tashkeel even when the reader's global
+    /// Hide Tashkeel is on.
     private func resolvedText(for option: QiraahDisplay) -> ResolvedQiraahText? {
-        guard smartComparison else {
+        let resolved: ResolvedQiraahText?
+        if smartComparison {
+            resolved = QiraahAyahResolver.resolve(
+                surahNumber: surahNumber,
+                ayahNumber: ayahNumber,
+                anchorHafsAyah: anchorHafsAyah,
+                optionTag: option.tag,
+                clean: false
+            )
+        } else {
             let tag = Settings.Riwayah.canonicalTag(option.tag)
             guard let ayah = quranData.ayah(surah: surahNumber, ayah: ayahNumber),
                   tag.isEmpty || ayah.existsInQiraah(tag, surahID: surahNumber) else { return nil }
-            return ResolvedQiraahText(
-                text: ayah.displayArabicText(surahId: surahNumber, clean: settings.cleanArabicText, qiraahOverride: tag),
+            resolved = ResolvedQiraahText(
+                text: ayah.displayArabicText(surahId: surahNumber, clean: false, qiraahOverride: tag),
                 ownNumber: nil,
                 mergedSpan: nil
             )
         }
-        return QiraahAyahResolver.resolve(
-            surahNumber: surahNumber,
-            ayahNumber: ayahNumber,
-            anchorHafsAyah: anchorHafsAyah,
-            optionTag: option.tag
+        guard let resolved else { return nil }
+        guard compareHideTashkeel || compareHideDots else { return resolved }
+        return ResolvedQiraahText(
+            text: compareTransformed(resolved.text),
+            ownNumber: resolved.ownNumber,
+            mergedSpan: resolved.mergedSpan
         )
     }
 
@@ -1114,13 +1183,17 @@ struct ResolvedQiraahText {
 /// comparison rows and the AI summarize gatherer (`AyahAISources`) resolve identical text.
 @MainActor
 enum QiraahAyahResolver {
+    /// `clean` = strip tashkeel/signs via `displayArabicText`. The comparison sheet passes `false`
+    /// and layers its OWN sheet-local Hide Tashkeel / Hide Dots on top (so unchecking them there
+    /// restores the full text even when the reader's global setting is on); the AI gatherer passes
+    /// the reader's global setting, matching what is on screen.
     static func resolve(
         surahNumber: Int,
         ayahNumber: Int,
         anchorHafsAyah: Int,
-        optionTag: String
+        optionTag: String,
+        clean: Bool
     ) -> ResolvedQiraahText? {
-        let settings = Settings.shared
         let quranData = QuranData.shared
         let tag = Settings.Riwayah.canonicalTag(optionTag)
         let anchor = anchorHafsAyah
@@ -1128,7 +1201,7 @@ enum QiraahAyahResolver {
         if tag.isEmpty {
             guard let ayah = quranData.ayah(surah: surahNumber, ayah: anchor) else { return nil }
             return ResolvedQiraahText(
-                text: ayah.displayArabicText(surahId: surahNumber, clean: settings.cleanArabicText, qiraahOverride: ""),
+                text: ayah.displayArabicText(surahId: surahNumber, clean: clean, qiraahOverride: ""),
                 ownNumber: anchor == ayahNumber ? nil : anchor,
                 mergedSpan: nil
             )
@@ -1140,7 +1213,7 @@ enum QiraahAyahResolver {
            ayah.existsInQiraah(tag, surahID: surahNumber) {
             let span = alignment.hafsRangeForRiwayah[ownNumber]
             return ResolvedQiraahText(
-                text: ayah.displayArabicText(surahId: surahNumber, clean: settings.cleanArabicText, qiraahOverride: tag),
+                text: ayah.displayArabicText(surahId: surahNumber, clean: clean, qiraahOverride: tag),
                 ownNumber: ownNumber == ayahNumber ? nil : ownNumber,
                 mergedSpan: (span.map { $0.count } ?? 1) > 1 ? span : nil
             )
@@ -1151,7 +1224,7 @@ enum QiraahAyahResolver {
         guard let ayah = quranData.ayah(surah: surahNumber, ayah: ayahNumber),
               ayah.existsInQiraah(tag, surahID: surahNumber) else { return nil }
         return ResolvedQiraahText(
-            text: ayah.displayArabicText(surahId: surahNumber, clean: settings.cleanArabicText, qiraahOverride: tag),
+            text: ayah.displayArabicText(surahId: surahNumber, clean: clean, qiraahOverride: tag),
             ownNumber: nil,
             mergedSpan: nil
         )
@@ -1237,7 +1310,8 @@ enum AyahAISources {
                 surahNumber: surahNumber,
                 ayahNumber: ayahNumber,
                 anchorHafsAyah: anchor,
-                optionTag: tag
+                optionTag: tag,
+                clean: Settings.shared.cleanArabicText
             )
         }
 

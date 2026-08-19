@@ -582,11 +582,15 @@ extension String {
         return dropped == self ? [self] : [self, dropped]
     }
 
+    /// Noon maps to U+06BA (not U+066E like ba/ta/tha): in the early rasm a FINAL noon keeps its
+    /// deep bowl while ba/ta/tha finals stay flat, and U+06BA is exactly that skeleton - bowl in
+    /// isolated/final position, tooth elsewhere. Must stay in lockstep with `dotlessArabicScalar`
+    /// (QuranData.swift), the scalar-level twin the tajweed projection uses.
     var removingArabicDots: String {
         let dotlessMap: [Character: Character] = [
             "أ": "ا", "إ": "ا", "ؤ": "ء", "ئ": "ء",
             "آ": "ا", "ٱ": "ا", "ى": "ى",
-            "ب": "ٮ", "ت": "ٮ", "ث": "ٮ", "ن": "ٮ", "ي": "ى",
+            "ب": "ٮ", "ت": "ٮ", "ث": "ٮ", "ن": "ں", "ي": "ى",
             "ج": "ح", "خ": "ح", "ذ": "د", "ز": "ر", "ش": "س", "ض": "ص",
             "ظ": "ط", "غ": "ع", "ف": "ڡ", "ق": "ٯ", "ة": "ه"
         ]

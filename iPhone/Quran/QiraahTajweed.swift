@@ -222,6 +222,16 @@ final class QiraahTajweedStore: @unchecked Sendable {
     func attributedText(tag: String, surah: Int, ayah: Int, displayText: String,
                         beginnerSpacing: Bool = false,
                         hiddenRules: Set<String> = []) -> AttributedString? {
+        // "Hide Tashkeel and Signs" text never paints: the packs address words by TOKEN INDEX and
+        // letters by measured extents of the FULL text - stripping deletes the standalone ۞ token
+        // (so every later wash shifts a word) and moves the letter offsets. Every riwayah text
+        // ships fully vocalized, so a display string with no combining marks at all can only be
+        // the cleaned rendering; dropping the colors is the safe failure (Hafs keeps its colors
+        // through `tajweedProjection`, which maps offsets properly).
+        guard displayText.unicodeScalars.contains(where: { scalar in
+            let v = scalar.value
+            return (0x064B...0x065F).contains(v) || v == 0x0670 || (0x06D6...0x06ED).contains(v)
+        }) else { return nil }
         guard let pack = pack(for: tag),
               let rules = pack.rules[surah]?[ayah], !rules.isEmpty else { return nil }
         var keyOf: [Character: String] = [:]
@@ -327,6 +337,7 @@ final class QiraahTajweedStore: @unchecked Sendable {
 
     private static func isBase(_ u: UInt16) -> Bool {
         (0x0621...0x064A).contains(u) || u == 0x0671 || u == 0x0649 || u == 0x066E || u == 0x06CC || u == 0x067E
+            || u == 0x066F || u == 0x06A1 || u == 0x06BA  // dotless qaf/feh/noon (Hide Dots skeletons)
     }
 
     /// Everything that rides on a base letter: harakat, tanwin, sukoons, madd

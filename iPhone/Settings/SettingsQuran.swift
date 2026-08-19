@@ -436,6 +436,7 @@ extension Settings {
             // the khatm pair drives the checkmark/mark button, defaultView picks the selection tint
             // opacity, and showFullSurahRow adds the page/juz line under search results.
             wordByWordMeanings ? "1" : "0",
+            wordByWordInline ? "1" : "0",
             riwayahTajweedHiddenRules,
             showMuqattaatHelper ? "1" : "0",
             quranSortModeRaw,
@@ -766,18 +767,17 @@ extension Settings {
     }
 
     func cleanedQuranArabic(_ text: String) -> String {
-        guard isHafsDisplay else { return text }
         var out = text
         if cleanArabicText { out = out.removingArabicDiacriticsAndSigns }
         if removeArabicDots { out = out.removingArabicDots }
         return out
     }
 
-    /// The face for Quran Arabic outside the main reader (summary tiles, bookmarks, surah names):
-    /// "Hide Arabic Dots" forces the system face, because the bundled faces carry no glyphs for the
-    /// dotless skeleton letters (U+066E ...). Mirrors what the reading view already does.
+    /// The face for Quran Arabic outside the main reader (summary tiles, bookmarks, surah names).
+    /// "Hide Arabic Dots" no longer forces the system face: the bundled ttfs carry real dotless
+    /// skeleton glyphs with full joining forms now (`Scripts/patch_dotless_glyphs.py`).
     var quranDisplayFontName: String {
-        removeArabicDots && isHafsDisplay ? Settings.systemArabicFontName : fontArabic
+        fontArabic
     }
 
     /// Whether `quranDisplayFontName` resolves to a real bundled face (for `arabicFontDesign(custom:)`).
