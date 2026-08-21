@@ -168,6 +168,12 @@ struct CreditsView: View {
 
                 creditLink("The Takbir alert tone is the opening takbir pair of the Aaqib Azeez adhan (CC BY-SA 4.0, via Wikimedia Commons), trimmed and loudness-normalized; the clip remains CC BY-SA 4.0", url: "https://commons.wikimedia.org/wiki/File:The_Adhan_-_Muslim_Call_to_Prayer_-_Aaqib_Azeez.mp3")
 
+                creditLink("The Chime alert tone is \"[UI Sound] Approval - High Pitched Bell Synth\" by GabFitzgerald (CC0, via Freesound), trimmed, repeated, and loudness-normalized", url: "https://freesound.org/people/GabFitzgerald/sounds/625174/")
+
+                creditLink("The Ring alert tone is \"Signal-Ring 1\" by Vendarro (CC0, via Freesound), trimmed, repeated, and loudness-normalized", url: "https://freesound.org/people/Vendarro/sounds/399315/")
+
+                creditLink("The Alarm alert tone is \"Alarm clock beep\" by Kesu (CC0, via Freesound), trimmed, repeated, and loudness-normalized", url: "https://freesound.org/people/Kesu/sounds/182351/")
+
                 // Al-Quran
                 
                 creditLink("Credit for the English transliteration of the Quran data goes to Risan Bagja Pradana", url: "https://github.com/risan/quran-json")

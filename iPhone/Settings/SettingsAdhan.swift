@@ -34,6 +34,24 @@ extension Settings {
         // echo, for the "tones are too quiet" complaint. CC BY-SA 4.0, see CREDITS.md.
         .init(id: "takbir", title: "Takbir"),
 
+        // The three "cuts through a noisy room" tones, added for listeners who cannot pick a prayer
+        // notification out of everyday background noise. Echo and Takbir both sit at 300-750 Hz, which
+        // is exactly where traffic, kitchens, HVAC and speech put their own energy, so they mask easily.
+        // These three put their fundamentals at 1.2-2.6 kHz (above most room noise, still below the
+        // range age-related hearing loss takes first) and repeat the figure two or three times, because
+        // a repeated pattern is far easier to detect in noise than one hit. All CC0, see CREDITS.md.
+        // Like echo and takbir, all three clips of each are the same recording: there is nothing to cut.
+        //
+        // A rising three-note bell (A6-B6-E7, so 1.8-2.6 kHz), the figure struck three times, each
+        // strike decaying in about half a second. The gentlest and the highest-pitched of the three.
+        .init(id: "chime", title: "Chime"),
+        // A rising three-note signal (C6-D6-E6, 1.0-1.3 kHz) whose last note rings out for a full
+        // second, played twice. The lowest of the three, so the one that survives a phone in a pocket.
+        .init(id: "ring", title: "Ring"),
+        // Twelve 110ms beeps in three groups of four, 1.2 kHz with strong harmonics through 4.6 kHz.
+        // The loudest and most cutting tone in the app, and the only one that sounds like an alarm.
+        .init(id: "alarm", title: "Alarm"),
+
         .init(id: "egypt", title: "Egypt"),
         .init(id: "makkah", title: "Makkah"),
         .init(id: "madina", title: "Madina"),
@@ -59,11 +77,13 @@ extension Settings {
         .init(id: "zakariya", title: "Zakariya")
     ]
 
-    /// What the ALERT TONE picker offers: the system sound and the chime, never a call to prayer.
+    /// What the ALERT TONE picker offers: the system sound and the short tones, never a call to prayer.
     /// The alert tone plays for prenotifications, the optional times, and prayers whose adhan is
-    /// switched off - exactly the moments an adhan would defeat the point.
+    /// switched off - exactly the moments an adhan would defeat the point. Ordered by how far each one
+    /// carries, from the soft Echo up to Alarm, so a listener who cannot hear one can walk down the list.
+    static let alertToneIDs: Set<String> = ["default", "echo", "takbir", "chime", "ring", "alarm"]
     static let supportedAlertTones: [AdhanSoundOption] = supportedAdhanSounds.filter {
-        $0.id == "default" || $0.id == "echo" || $0.id == "takbir"
+        alertToneIDs.contains($0.id)
     }
     static let supportedAlertToneIDs = Set(supportedAlertTones.map(\.id))
 

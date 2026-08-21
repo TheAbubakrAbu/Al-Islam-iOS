@@ -187,6 +187,15 @@
 		72ADA0000000000000000007 /* takbir.caf in Resources */ = {isa = PBXBuildFile; fileRef = 72ADF0000000000000000007 /* takbir.caf */; };
 		72ADA0000000000000000008 /* takbir-30.caf in Resources */ = {isa = PBXBuildFile; fileRef = 72ADF0000000000000000008 /* takbir-30.caf */; };
 		72ADA0000000000000000009 /* takbir-short.caf in Resources */ = {isa = PBXBuildFile; fileRef = 72ADF0000000000000000009 /* takbir-short.caf */; };
+		72ADA0000000000000000010 /* alarm.caf in Resources */ = {isa = PBXBuildFile; fileRef = 72ADF0000000000000000010 /* alarm.caf */; };
+		72ADA0000000000000000011 /* alarm-30.caf in Resources */ = {isa = PBXBuildFile; fileRef = 72ADF0000000000000000011 /* alarm-30.caf */; };
+		72ADA0000000000000000012 /* alarm-short.caf in Resources */ = {isa = PBXBuildFile; fileRef = 72ADF0000000000000000012 /* alarm-short.caf */; };
+		72ADA0000000000000000013 /* ring.caf in Resources */ = {isa = PBXBuildFile; fileRef = 72ADF0000000000000000013 /* ring.caf */; };
+		72ADA0000000000000000014 /* ring-30.caf in Resources */ = {isa = PBXBuildFile; fileRef = 72ADF0000000000000000014 /* ring-30.caf */; };
+		72ADA0000000000000000015 /* ring-short.caf in Resources */ = {isa = PBXBuildFile; fileRef = 72ADF0000000000000000015 /* ring-short.caf */; };
+		72ADA0000000000000000016 /* chime.caf in Resources */ = {isa = PBXBuildFile; fileRef = 72ADF0000000000000000016 /* chime.caf */; };
+		72ADA0000000000000000017 /* chime-30.caf in Resources */ = {isa = PBXBuildFile; fileRef = 72ADF0000000000000000017 /* chime-30.caf */; };
+		72ADA0000000000000000018 /* chime-short.caf in Resources */ = {isa = PBXBuildFile; fileRef = 72ADF0000000000000000018 /* chime-short.caf */; };
 		72ADB0000000000000000001 /* serene.caf in Resources */ = {isa = PBXBuildFile; fileRef = 72ADF0000000000000000001 /* serene.caf */; };
 		72ADB0000000000000000002 /* serene-30.caf in Resources */ = {isa = PBXBuildFile; fileRef = 72ADF0000000000000000002 /* serene-30.caf */; };
 		72ADB0000000000000000003 /* serene-short.caf in Resources */ = {isa = PBXBuildFile; fileRef = 72ADF0000000000000000003 /* serene-short.caf */; };
@@ -196,6 +205,15 @@
 		72ADB0000000000000000007 /* takbir.caf in Resources */ = {isa = PBXBuildFile; fileRef = 72ADF0000000000000000007 /* takbir.caf */; };
 		72ADB0000000000000000008 /* takbir-30.caf in Resources */ = {isa = PBXBuildFile; fileRef = 72ADF0000000000000000008 /* takbir-30.caf */; };
 		72ADB0000000000000000009 /* takbir-short.caf in Resources */ = {isa = PBXBuildFile; fileRef = 72ADF0000000000000000009 /* takbir-short.caf */; };
+		72ADB0000000000000000010 /* alarm.caf in Resources */ = {isa = PBXBuildFile; fileRef = 72ADF0000000000000000010 /* alarm.caf */; };
+		72ADB0000000000000000011 /* alarm-30.caf in Resources */ = {isa = PBXBuildFile; fileRef = 72ADF0000000000000000011 /* alarm-30.caf */; };
+		72ADB0000000000000000012 /* alarm-short.caf in Resources */ = {isa = PBXBuildFile; fileRef = 72ADF0000000000000000012 /* alarm-short.caf */; };
+		72ADB0000000000000000013 /* ring.caf in Resources */ = {isa = PBXBuildFile; fileRef = 72ADF0000000000000000013 /* ring.caf */; };
+		72ADB0000000000000000014 /* ring-30.caf in Resources */ = {isa = PBXBuildFile; fileRef = 72ADF0000000000000000014 /* ring-30.caf */; };
+		72ADB0000000000000000015 /* ring-short.caf in Resources */ = {isa = PBXBuildFile; fileRef = 72ADF0000000000000000015 /* ring-short.caf */; };
+		72ADB0000000000000000016 /* chime.caf in Resources */ = {isa = PBXBuildFile; fileRef = 72ADF0000000000000000016 /* chime.caf */; };
+		72ADB0000000000000000017 /* chime-30.caf in Resources */ = {isa = PBXBuildFile; fileRef = 72ADF0000000000000000017 /* chime-30.caf */; };
+		72ADB0000000000000000018 /* chime-short.caf in Resources */ = {isa = PBXBuildFile; fileRef = 72ADF0000000000000000018 /* chime-short.caf */; };
 		72AE0002AE5F4C7D00000002 /* SemanticSearch.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72AE0001AE5F4C7D00000001 /* SemanticSearch.swift */; };
 		72AE0003AE5F4C7D00000003 /* SemanticSearch.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72AE0001AE5F4C7D00000001 /* SemanticSearch.swift */; };
 		72AE0005AE5F4C7D00000005 /* OnDeviceAsk.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72AE0004AE5F4C7D00000004 /* OnDeviceAsk.swift */; };
@@ -595,6 +613,15 @@
 		72ADF0000000000000000007 /* takbir.caf */ = {isa = PBXFileReference; lastKnownFileType = file; path = takbir.caf; sourceTree = "<group>"; };
 		72ADF0000000000000000008 /* takbir-30.caf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "takbir-30.caf"; sourceTree = "<group>"; };
 		72ADF0000000000000000009 /* takbir-short.caf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "takbir-short.caf"; sourceTree = "<group>"; };
+		72ADF0000000000000000010 /* alarm.caf */ = {isa = PBXFileReference; lastKnownFileType = file; path = alarm.caf; sourceTree = "<group>"; };
+		72ADF0000000000000000011 /* alarm-30.caf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "alarm-30.caf"; sourceTree = "<group>"; };
+		72ADF0000000000000000012 /* alarm-short.caf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "alarm-short.caf"; sourceTree = "<group>"; };
+		72ADF0000000000000000013 /* ring.caf */ = {isa = PBXFileReference; lastKnownFileType = file; path = ring.caf; sourceTree = "<group>"; };
+		72ADF0000000000000000014 /* ring-30.caf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "ring-30.caf"; sourceTree = "<group>"; };
+		72ADF0000000000000000015 /* ring-short.caf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "ring-short.caf"; sourceTree = "<group>"; };
+		72ADF0000000000000000016 /* chime.caf */ = {isa = PBXFileReference; lastKnownFileType = file; path = chime.caf; sourceTree = "<group>"; };
+		72ADF0000000000000000017 /* chime-30.caf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "chime-30.caf"; sourceTree = "<group>"; };
+		72ADF0000000000000000018 /* chime-short.caf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "chime-short.caf"; sourceTree = "<group>"; };
 		72AE0001AE5F4C7D00000001 /* SemanticSearch.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SemanticSearch.swift; sourceTree = "<group>"; };
 		72AE0004AE5F4C7D00000004 /* OnDeviceAsk.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnDeviceAsk.swift; sourceTree = "<group>"; };
 		72B531A42A22DCFE007FA002 /* Al-IslamApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "Al-IslamApp.swift"; sourceTree = "<group>"; };
@@ -1135,6 +1162,15 @@
 				72ADF0000000000000000007 /* takbir.caf */,
 				72ADF0000000000000000008 /* takbir-30.caf */,
 				72ADF0000000000000000009 /* takbir-short.caf */,
+				72ADF0000000000000000010 /* alarm.caf */,
+				72ADF0000000000000000011 /* alarm-30.caf */,
+				72ADF0000000000000000012 /* alarm-short.caf */,
+				72ADF0000000000000000013 /* ring.caf */,
+				72ADF0000000000000000014 /* ring-30.caf */,
+				72ADF0000000000000000015 /* ring-short.caf */,
+				72ADF0000000000000000016 /* chime.caf */,
+				72ADF0000000000000000017 /* chime-30.caf */,
+				72ADF0000000000000000018 /* chime-short.caf */,
 			);
 			path = "Adhan Sounds";
 			sourceTree = "<group>";
@@ -1485,6 +1521,15 @@
 				72ADA0000000000000000007 /* takbir.caf in Resources */,
 				72ADA0000000000000000008 /* takbir-30.caf in Resources */,
 				72ADA0000000000000000009 /* takbir-short.caf in Resources */,
+				72ADA0000000000000000010 /* alarm.caf in Resources */,
+				72ADA0000000000000000011 /* alarm-30.caf in Resources */,
+				72ADA0000000000000000012 /* alarm-short.caf in Resources */,
+				72ADA0000000000000000013 /* ring.caf in Resources */,
+				72ADA0000000000000000014 /* ring-30.caf in Resources */,
+				72ADA0000000000000000015 /* ring-short.caf in Resources */,
+				72ADA0000000000000000016 /* chime.caf in Resources */,
+				72ADA0000000000000000017 /* chime-30.caf in Resources */,
+				72ADA0000000000000000018 /* chime-short.caf in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1536,6 +1581,15 @@
 				72ADB0000000000000000007 /* takbir.caf in Resources */,
 				72ADB0000000000000000008 /* takbir-30.caf in Resources */,
 				72ADB0000000000000000009 /* takbir-short.caf in Resources */,
+				72ADB0000000000000000010 /* alarm.caf in Resources */,
+				72ADB0000000000000000011 /* alarm-30.caf in Resources */,
+				72ADB0000000000000000012 /* alarm-short.caf in Resources */,
+				72ADB0000000000000000013 /* ring.caf in Resources */,
+				72ADB0000000000000000014 /* ring-30.caf in Resources */,
+				72ADB0000000000000000015 /* ring-short.caf in Resources */,
+				72ADB0000000000000000016 /* chime.caf in Resources */,
+				72ADB0000000000000000017 /* chime-30.caf in Resources */,
+				72ADB0000000000000000018 /* chime-short.caf in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

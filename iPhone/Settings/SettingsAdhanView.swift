@@ -786,7 +786,7 @@ struct NotificationView: View {
                             }
                     }
 
-                    Text("Used for prenotifications, the optional times (Shurooq, Duhaa, Islamic Midnight, Last Third), and any prayer whose adhan is switched off — so you can tell a prayer notification from every other alert on your phone. Echo is a short chime rather than a call to prayer. Choose Default to go back to the iPhone's own alert sound.")
+                    Text("Used for prenotifications, the optional times (Shurooq, Duhaa, Islamic Midnight, Last Third), and any prayer whose adhan is switched off, so you can tell a prayer notification from every other alert on your phone. None of these is a call to prayer. Echo and Takbir are soft; Chime, Ring, and Alarm are pitched to carry through background noise, Alarm the most of all. Choose Default to go back to the iPhone's own alert sound.")
                         .font(.caption)
                         .foregroundColor(.secondary)
                         .padding(.vertical, 2)
