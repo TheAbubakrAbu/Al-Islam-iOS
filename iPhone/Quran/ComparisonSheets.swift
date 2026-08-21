@@ -28,6 +28,10 @@ struct AyahQiraahComparisonSheet: View {
     /// is exactly what this sheet exists to show. Persisted so the exploration survives reopening.
     @AppStorage("qiraahCompareHideTashkeel") private var compareHideTashkeel = false
     @AppStorage("qiraahCompareHideDots") private var compareHideDots = false
+    /// The rows' tajweed coloring (each print's khilaf wash). On by default, persisted, and
+    /// independent of Hide Tashkeel / Hide Dots: the colors are painted over the full text and
+    /// projected onto the stripped skeleton, so hiding the marks no longer hides the coloring.
+    @AppStorage("qiraahCompareShowTajweed") private var compareShowTajweed = true
 
     private struct QiraahDisplay: Identifiable {
         let label: String
@@ -111,6 +115,19 @@ struct AyahQiraahComparisonSheet: View {
                             Text(smartComparison
                                  ? "Compare this ayah across the Arabic riwayat available in the app. Ayah numbering differs between riwayat, so rows are aligned to the SAME WORDS automatically; a note marks any riwayah that numbers this ayah differently or joins it with a neighbor. Words tinted in the accent color differ from the current riwayah's reading."
                                  : "Smart Comparison is off: each row shows that riwayah's ayah under this exact NUMBER, with no word alignment - where numbering differs, rows may show different words. Turn it on to align every row to the same words.")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+
+                        Section {
+                            Toggle(isOn: $compareShowTajweed.animation(.easeInOut)) {
+                                Text("Show Tajweed")
+                                    .font(.subheadline.weight(.semibold))
+                            }
+                            .tint(settings.accentColor.color)
+                            .onChange(of: compareShowTajweed) { _ in settings.hapticFeedback() }
+                        } footer: {
+                            Text("Each riwayah's print-derived tajweed coloring (the khilaf wash marking what differs from Hafs) paints on every row - and stays on even with tashkeel or dots hidden below.")
                                 .font(.caption)
                                 .foregroundStyle(.secondary)
                         }
@@ -389,31 +406,34 @@ struct AyahQiraahComparisonSheet: View {
     /// cleanup applied here, so unchecking them restores tashkeel even when the reader's global
     /// Hide Tashkeel is on.
     private func resolvedText(for option: QiraahDisplay) -> ResolvedQiraahText? {
-        let resolved: ResolvedQiraahText?
+        guard let resolved = resolvedBase(for: option) else { return nil }
+        guard compareHideTashkeel || compareHideDots else { return resolved }
+        return ResolvedQiraahText(
+            text: compareTransformed(resolved.text),
+            ownNumber: resolved.ownNumber,
+            mergedSpan: resolved.mergedSpan
+        )
+    }
+
+    /// The resolver's full (untransformed) text - what `resolvedText` strips its sheet toggles
+    /// from, and the projection source that keeps the khilaf wash painting on stripped rows.
+    private func resolvedBase(for option: QiraahDisplay) -> ResolvedQiraahText? {
         if smartComparison {
-            resolved = QiraahAyahResolver.resolve(
+            return QiraahAyahResolver.resolve(
                 surahNumber: surahNumber,
                 ayahNumber: ayahNumber,
                 anchorHafsAyah: anchorHafsAyah,
                 optionTag: option.tag,
                 clean: false
             )
-        } else {
-            let tag = Settings.Riwayah.canonicalTag(option.tag)
-            guard let ayah = quranData.ayah(surah: surahNumber, ayah: ayahNumber),
-                  tag.isEmpty || ayah.existsInQiraah(tag, surahID: surahNumber) else { return nil }
-            resolved = ResolvedQiraahText(
-                text: ayah.displayArabicText(surahId: surahNumber, clean: false, qiraahOverride: tag),
-                ownNumber: nil,
-                mergedSpan: nil
-            )
         }
-        guard let resolved else { return nil }
-        guard compareHideTashkeel || compareHideDots else { return resolved }
+        let tag = Settings.Riwayah.canonicalTag(option.tag)
+        guard let ayah = quranData.ayah(surah: surahNumber, ayah: ayahNumber),
+              tag.isEmpty || ayah.existsInQiraah(tag, surahID: surahNumber) else { return nil }
         return ResolvedQiraahText(
-            text: compareTransformed(resolved.text),
-            ownNumber: resolved.ownNumber,
-            mergedSpan: resolved.mergedSpan
+            text: ayah.displayArabicText(surahId: surahNumber, clean: false, qiraahOverride: tag),
+            ownNumber: nil,
+            mergedSpan: nil
         )
     }
 
@@ -457,15 +477,20 @@ struct AyahQiraahComparisonSheet: View {
 
     /// Layers the print's KHILAF wash onto a diff-tinted base (or a plain-primary base) - shared by
     /// the current-vs-all rows and the Head-to-Head cards, so both color khilaf identically.
+    /// Stands down entirely while the sheet's Show Tajweed toggle is off.
     private func khilafOverlaid(_ diff: AttributedString?, option: QiraahDisplay, resolved: ResolvedQiraahText) -> AttributedString? {
+        guard compareShowTajweed else { return diff }
         let tag = Settings.Riwayah.canonicalTag(option.tag)
         guard !tag.isEmpty else { return diff }
         let ownAyah = resolved.ownNumber ?? ayahNumber
         let allRules = Set(QiraahTajweedStore.shared.legend(for: tag).map(\.key))
         let hidden = allRules.subtracting(["khilaf_word", "khilaf_harf"])
+        // With the sheet's Hide Tashkeel / Hide Dots on, `resolved.text` is the stripped skeleton;
+        // the full resolved text lets the store paint the real print and project the runs onto it.
         guard let khilaf = QiraahTajweedStore.shared.attributedText(
             tag: tag, surah: surahNumber, ayah: ownAyah, displayText: resolved.text,
-            hiddenRules: hidden
+            hiddenRules: hidden,
+            fullText: (compareHideTashkeel || compareHideDots) ? resolvedBase(for: option)?.text : nil
         ) else { return diff }
 
         // Overlay the khilaf runs onto the diff-tinted base (or a plain-primary base). Both strings

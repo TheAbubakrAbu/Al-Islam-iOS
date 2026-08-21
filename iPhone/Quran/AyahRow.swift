@@ -447,10 +447,18 @@ struct AyahRow: View, Equatable {
     private func arabicRiwayahTajweedText(displayText: String, beginner: Bool) -> AttributedString? {
         #if os(iOS)
         guard let tag = riwayahTajweedTag else { return nil }
+        // With "Hide Tashkeel and Signs" on, the store colors the FULL text and projects the runs
+        // onto the stripped rendering - so the print's coloring survives the strip, like Hafs's does.
+        let fullText: String? = {
+            guard settings.cleanArabicText else { return nil }
+            let full = ayah.displayArabicText(surahId: surah.id, clean: false, qiraahOverride: comparisonQiraahOverride)
+            return beginner ? full.beginnerSpaced : full
+        }()
         return QiraahTajweedStore.shared.attributedText(
             tag: tag, surah: surah.id, ayah: ayah.id, displayText: displayText,
             beginnerSpacing: beginner,
-            hiddenRules: settings.riwayahTajweedHiddenRuleSet
+            hiddenRules: settings.riwayahTajweedHiddenRuleSet,
+            fullText: fullText
         )
         #else
         return nil

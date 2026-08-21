@@ -281,6 +281,10 @@ struct SurahPageReader<Controls: View>: View {
     /// Opens the reciter picker (the parent owns the sheet). Page mode had no way to change reciter
     /// without leaving to list mode; the footer play menu offers it through this hook.
     var onChooseReciter: (() -> Void)? = nil
+    /// Opens the Choose Surah picker (the parent owns the sheet). A tap anywhere on the footer's
+    /// Surah/Juz info pill - outside the page/juz jump buttons - goes here, so the pill that names
+    /// the position is also the way to jump to a different surah.
+    var onChooseSurah: (() -> Void)? = nil
     /// Opens the custom-range sheet, and starts a random reciter, for the surah the footer is showing. Both
     /// are owned by the parent (the sheet, and the reciter list), and both exist so the page reader's play
     /// menu can be the list reader's play menu exactly, rather than a reduced version of it.
@@ -588,6 +592,9 @@ struct SurahPageReader<Controls: View>: View {
             reseedToStartingPage(in: pages)
         }
         .onChange(of: pageIndex) { index in
+            // Leaving a page resets its pinch zoom to the fitted view (user rule: same as the PDF) -
+            // otherwise the adjacent page stays mounted zoomed-in and greets you magnified on return.
+            NotificationCenter.default.post(name: PageZoomScrollView.resetZoomNotification, object: nil)
             reportSurah(on: index, in: pages)
             reportAnchor(on: index, in: pages)
             // `includeCenter` is load-bearing for far jumps (page/juz/surah picker): this onChange runs
@@ -1239,6 +1246,16 @@ struct SurahPageReader<Controls: View>: View {
         .frame(height: footerHeight)
         .frame(maxWidth: .infinity)
         .conditionalGlassEffect(rectangle: true)
+        // The pill itself opens Choose Surah: tapping the Surah/Juz readout is the natural "take me
+        // to another surah" gesture. The jump BUTTONS are real Buttons, so they keep winning their
+        // own taps; only the rest of the pill falls through to this.
+        .contentShape(Rectangle())
+        .onTapGesture {
+            guard let onChooseSurah else { return }
+            settings.hapticFeedback()
+            onChooseSurah()
+        }
+        .accessibilityAction(named: "Choose Surah") { onChooseSurah?() }
     }
 
     /// "43%" - how far through the mushaf (or through the 30 juz) this page sits.
@@ -1631,8 +1648,11 @@ private struct MushafPageContent: View {
     /// every point the paddings don't take. Vertically almost nothing - the Quranic faces carry generous
     /// line-box air above the first ink and below the last (room for stacked marks), which reads as the
     /// page's visual margin on its own; real padding on top of it just shrank the font.
-    private static let textPadding: CGFloat = 20
-    private static let verticalPadding: CGFloat = 6
+    /// Narrow on purpose (they were 20/6): every point of margin is paid for twice horizontally and
+    /// once per page vertically, and the maximize-font rule says the text takes it instead. The faces'
+    /// own line-box air keeps the page from touching the chrome even at these values.
+    private static let textPadding: CGFloat = 12
+    private static let verticalPadding: CGFloat = 2
 
     /// The ayah a long press landed on, driving the actions sheet. It is tinted while the sheet is open.
     @State private var sheetAyah: TappedAyahRef?
@@ -2183,6 +2203,37 @@ struct MushafPageComposer {
     /// has nothing to stretch, so it dumps ALL the slack into the word gaps instead - which is the "weird spaces
     /// between words" in Basic/no-dots mode. Trailing-aligned with natural spacing is the honest rendering there.
     /// Those renders also keep the opening spread centered, its old framed look.
+    /// Base leading between the page's lines. With Fit Page on, the Arabic page is measured TIGHT: zero
+    /// added spacing, the Quranic faces' own line box (~1.76x the point size, carrying all the air stacked
+    /// marks need) is the only leading, so the size search converts what the old scaled-12pt gap reserved
+    /// on every line into font instead (user rule: MAXIMIZE the font first). Whatever height the maximized
+    /// size leaves over comes back as `extraLineSpacing` (see `fitMetrics`): spacing is paid out of the
+    /// LEFTOVER, never out of the font. English prose and fit-off pages keep the classic scaled rule.
+    func baseLineSpacing(for size: CGFloat) -> CGFloat {
+        config.fitPage && !isEnglish
+            ? 0
+            : MushafPageFitter.lineSpacing(for: size, baseSize: config.fontSize)
+    }
+
+    /// How much of the body face's natural line box the fitted Arabic page keeps. The KFGQPC faces
+    /// reserve ~1.76x the point size per line, sized for the rare full-height mark stack over a deep
+    /// descender - and at natural leading that reservation is the single biggest thing still capping
+    /// the font (maximize-font user rule: every line's saving compounds across ~15 lines). At 0.90,
+    /// baselines sit 1.58x the point size apart - the pitch a printed mushaf runs - and the overflow
+    /// splits evenly above and below (`bodyBaselineOffset`), where the neighbouring lines' own air
+    /// absorbs it; nothing clips, the text view and zoom container draw outside their bounds already.
+    /// Only the fitted Quranic-face page: English prose and the system face have no air to give, and
+    /// fit-off pages keep their classic setting.
+    private var lineBoxScale: CGFloat {
+        config.fitPage && !isEnglish && !usesSystemFont ? 0.90 : 1
+    }
+
+    /// The pinned height of one body line under `lineBoxScale`.
+    func lineBox(for size: CGFloat) -> CGFloat {
+        let body = usesSystemFont ? UIFont.roundedSystemFont(ofSize: size) : arabicFont(size)
+        return body.lineHeight * lineBoxScale
+    }
+
     private func paragraph(_ size: CGFloat, extraLineSpacing: CGFloat = 0, centered: Bool? = nil) -> NSParagraphStyle {
         let p = NSMutableParagraphStyle()
         if centered ?? (isOpeningSpread && !isJustifiable) {
@@ -2198,16 +2249,16 @@ struct MushafPageComposer {
             p.alignment = usesSystemFont ? .natural : .right
         }
         p.baseWritingDirection = isEnglish ? .leftToRight : .rightToLeft
-        p.lineSpacing = MushafPageFitter.lineSpacing(for: size, baseSize: config.fontSize)
-            + extraLineSpacing
+        p.lineSpacing = baseLineSpacing(for: size) + extraLineSpacing
         // Pin every line box to the BODY font's height. The inline ayah ornaments come from the Uthmani
         // marker face, whose line metrics differ - without the pin, only the lines that happen to carry an
         // ornament grew taller, and the page read as unevenly leaded (worst in English, where the body face
         // is much shorter than the ornament's). Ornament ink taller than the box just draws into the line
-        // gap, which the generous lineSpacing above exists to absorb.
-        let bodyFont = usesSystemFont ? UIFont.roundedSystemFont(ofSize: size) : arabicFont(size)
-        p.minimumLineHeight = bodyFont.lineHeight
-        p.maximumLineHeight = bodyFont.lineHeight
+        // gap - the leftover spread (or, fit off, the classic lineSpacing) leaves one, and the body face's
+        // own line-box air absorbs the rest.
+        let box = lineBox(for: size)
+        p.minimumLineHeight = box
+        p.maximumLineHeight = box
         return p
     }
 
@@ -2273,7 +2324,14 @@ struct MushafPageComposer {
            let styled = QiraahTajweedStore.shared.attributedText(
                tag: tag, surah: surah.id, ayah: ayah.id, displayText: display,
                beginnerSpacing: beginner,
-               hiddenRules: config.riwayahHiddenRules
+               hiddenRules: config.riwayahHiddenRules,
+               // "Hide Tashkeel and Signs": the store paints the FULL text and projects the runs
+               // onto the stripped page, so the print's coloring survives the strip here too.
+               fullText: clean
+                   ? (beginner
+                      ? ayah.displayArabicText(surahId: surah.id, clean: false, qiraahOverride: qiraahOverride).beginnerSpaced
+                      : ayah.displayArabicText(surahId: surah.id, clean: false, qiraahOverride: qiraahOverride))
+                   : nil
            ) {
             let ns = NSMutableAttributedString(attributedString: NSAttributedString(styled))
             ns.addAttributes([.font: font, .paragraphStyle: para], range: NSRange(location: 0, length: ns.length))
@@ -2585,9 +2643,8 @@ struct MushafPageComposer {
         // stay index-aligned by construction.
         var centeredClosingLine = false
         if isOpeningSpread, isJustifiable, width > 0 {
-            centeredClosingLine = Self.centerLastLine(of: result, width: width, size: size,
-                                                      extraLineSpacing: extraLineSpacing,
-                                                      baseSize: config.fontSize)
+            centeredClosingLine = Self.centerLastLine(of: result, width: width,
+                                                      lineSpacing: baseLineSpacing(for: size) + extraLineSpacing)
         }
 
         // Justify the final compose in three passes: the page-wide loosening (`spaceTracking`, which DOES
@@ -2628,8 +2685,7 @@ struct MushafPageComposer {
     /// of its own already, has no break space to absorb and keeps its natural setting.
     @discardableResult
     private static func centerLastLine(of text: NSMutableAttributedString, width: CGFloat,
-                                       size: CGFloat, extraLineSpacing: CGFloat,
-                                       baseSize: CGFloat) -> Bool {
+                                       lineSpacing: CGFloat) -> Bool {
         // Bound as a whole: NSLayoutManager does not retain its NSTextStorage.
         let stack = layoutStack(for: text, width: width)
         let manager = stack.manager
@@ -2656,8 +2712,7 @@ struct MushafPageComposer {
         text.replaceCharacters(in: NSRange(location: lineStart - 1, length: 1), with: "\n")
 
         centered.alignment = .center
-        centered.paragraphSpacingBefore = MushafPageFitter.lineSpacing(for: size, baseSize: baseSize)
-            + extraLineSpacing
+        centered.paragraphSpacingBefore = lineSpacing
         text.addAttribute(.paragraphStyle, value: centered,
                           range: NSRange(location: lineStart, length: text.length - lineStart))
         return true
@@ -3329,8 +3384,7 @@ struct MushafPageComposer {
         // chase a single line makes that page's setting visibly looser than its neighbours' (a hair
         // of per-riwayah text-width difference was enough to flip a page across this boundary).
         let natural = heightWithTracking(0)
-        let lineBox = (usesSystemFont ? UIFont.roundedSystemFont(ofSize: size) : arabicFont(size)).lineHeight
-        guard budget - natural >= lineBox * 1.5 else { return 0 }
+        guard budget - natural >= lineBox(for: size) * 1.5 else { return 0 }
 
         // Loosening beyond this reads as broken setting, not justification. The old ceiling of 0.9x
         // the font size mattered on exactly the pages that hit it: non-Hafs riwayat hold the reader's
@@ -3357,9 +3411,13 @@ struct MushafPageComposer {
     /// Where every line's baseline sits, measured from the top of its line fragment - the body face's own
     /// ascent, which is exactly where TextKit puts it on lines that contain only body text. Handed to the
     /// text view so ornament-carrying lines can't move it (see `MushafRenderedPage.baselineOffset`).
+    /// When the line box is compressed (`lineBoxScale`), the baseline drops by half the overflow so the
+    /// squeeze splits evenly between the ink above and below - each side leans into the neighbouring
+    /// line's own air instead of one side taking the whole loss.
     func bodyBaselineOffset(size: CGFloat) -> CGFloat {
         let body = usesSystemFont ? UIFont.roundedSystemFont(ofSize: size) : arabicFont(size)
-        return ceil(body.ascender)
+        let overflow = body.lineHeight - lineBox(for: size)
+        return ceil(body.ascender - overflow / 2)
     }
 
     /// The fragment heights that count as "a running text line" - the pinned body box, alone or with the
@@ -3367,9 +3425,8 @@ struct MushafPageComposer {
     /// inside this band, so surah-heading lines (own smaller styles, natural heights) keep their own
     /// baselines instead of having the body's - which could sit below their whole fragment - imposed on them.
     func uniformLineFragmentBand(size: CGFloat, extraLineSpacing: CGFloat) -> ClosedRange<CGFloat> {
-        let body = usesSystemFont ? UIFont.roundedSystemFont(ofSize: size) : arabicFont(size)
-        let box = body.lineHeight
-        let spacing = MushafPageFitter.lineSpacing(for: size, baseSize: config.fontSize) + extraLineSpacing
+        let box = lineBox(for: size)
+        let spacing = baseLineSpacing(for: size) + extraLineSpacing
         return (box - 2)...(box + spacing + 2)
     }
 
@@ -3609,7 +3666,10 @@ enum MushafPageRenderCache {
     // 6: Uthmani.ttf keeps ONLY the حۡمَٰنِ (Rahmaani) ligature removed - the other five dagger-alif
     // word bakes were restored (user: the non-ligated forms "look awful"), so those words' glyph
     // advances changed back and fits computed under v5 must recompute.
-    nonisolated private static let fitterVersion = 7
+    // 9: fit measures Arabic pages with ZERO base line spacing (the leftover spread supplies the gaps
+    // afterwards), the page margins tightened 20/6 -> 12/2, and the fitted Quranic-face line box
+    // compressed to 0.90x natural (`lineBoxScale`), so every persisted size moves up.
+    nonisolated private static let fitterVersion = 9
 
     nonisolated private static let persistedMetricsSalt: String = {
         let os = ProcessInfo.processInfo.operatingSystemVersion
@@ -4071,6 +4131,30 @@ extension AyahHighlightColor {
 final class PageZoomScrollView: UIScrollView {
     weak var pageView: UIView?
     private var lastSize: CGSize = .zero
+
+    /// Posted by the reader on every page turn: a zoomed-in page resets to its fitted view the
+    /// moment you leave it, exactly as the facsimile does - coming back always lands on the fit.
+    static let resetZoomNotification = Notification.Name("MushafPageResetZoom")
+
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        NotificationCenter.default.addObserver(self, selector: #selector(resetZoomToFit),
+                                               name: Self.resetZoomNotification, object: nil)
+    }
+
+    required init?(coder: NSCoder) {
+        super.init(coder: coder)
+        NotificationCenter.default.addObserver(self, selector: #selector(resetZoomToFit),
+                                               name: Self.resetZoomNotification, object: nil)
+    }
+
+    @objc private func resetZoomToFit() {
+        guard zoomScale != 1 else { return }
+        setZoomScale(1, animated: false)
+        setContentOffset(.zero, animated: false)
+        bounces = false
+        clipsToBounds = false
+    }
 
     override func layoutSubviews() {
         super.layoutSubviews()

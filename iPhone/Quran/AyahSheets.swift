@@ -108,7 +108,10 @@ struct AyahActionsSheet: View {
             if let tag = riwayahTajweedTag,
                let styled = QiraahTajweedStore.shared.attributedText(
                    tag: tag, surah: surah.id, ayah: ayah.id, displayText: arabic,
-                   hiddenRules: settings.riwayahTajweedHiddenRuleSet
+                   hiddenRules: settings.riwayahTajweedHiddenRuleSet,
+                   fullText: settings.cleanArabicText
+                       ? ayah.displayArabicText(surahId: surah.id, clean: false)
+                       : nil
                ) {
                 return styled
             }

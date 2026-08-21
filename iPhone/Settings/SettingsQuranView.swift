@@ -62,6 +62,14 @@ struct SettingsQuranView: View {
         )
     }
     
+    #if DEBUG && os(iOS)
+    /// Headless visual verification (no tap access on the dev machine): `-launchQuranSettingsArabic`
+    /// lands directly on the Arabic Text subpage, the Hadith tab's `-launchHadithSettingsReading`
+    /// pattern. DEBUG builds only.
+    @State private var autoOpenArabicText =
+        ProcessInfo.processInfo.arguments.contains("-launchQuranSettingsArabic")
+    #endif
+
     var body: some View {
         List {
             Group {
@@ -98,6 +106,13 @@ struct SettingsQuranView: View {
         }
         .applyConditionalListStyle()
         .compactListSectionSpacing()
+        #if DEBUG && os(iOS)
+        .background(
+            NavigationLink(isActive: $autoOpenArabicText) { arabicTextDestination }
+                          label: { EmptyView() }
+                .hidden()
+        )
+        #endif
         .navigationTitle("Al-Quran Settings")
         #if os(iOS)
         .toolbar {
@@ -468,7 +483,7 @@ struct SettingsQuranView: View {
                 }
 
             Text(canRenderNow || !settings.showArabicText
-                 ? "Tap any word while reading to see what that word means on its own. Works offline."
+                 ? "Tap any word while reading to see what that word means on its own. With tajweed colors on, the word's card also explains every tajweed color painted on it. Works offline."
                  : "Available in Hafs an Asim, with beginner mode off - the meanings are counted word by word against that text.")
                 .font(.caption)
                 .foregroundColor(.secondary)
@@ -479,12 +494,12 @@ struct SettingsQuranView: View {
                     get: { settings.wordByWordInline && canRenderNow },
                     set: { settings.wordByWordInline = $0 }
                 )
-                Toggle("Show Meanings Under Words", isOn: inlineBinding.animation(.easeInOut))
+                Toggle("Show Meanings Under Words (Word by Word)", isOn: inlineBinding.animation(.easeInOut))
                     .font(.subheadline)
                     .disabled(!canRenderNow)
                     .onChange(of: settings.wordByWordInline) { _ in settings.hapticFeedback() }
 
-                Text("Lays the ayah out word by word, with each word's meaning written directly beneath it.")
+                Text("Lays the ayah out word by word, with each word's meaning written directly beneath it. List mode only: page mode keeps the mushaf layout, so this has no effect there.")
                     .font(.caption)
                     .foregroundColor(.secondary)
                     .padding(.vertical, 2)
@@ -553,11 +568,13 @@ struct SettingsQuranView: View {
     @ViewBuilder
     private var arabicDisplayControls: some View {
         if settings.showArabicText {
-            cleanArabicTextGroup
             arabicFontPicker
             arabicScriptStylePicker
             arabicFontSizeControls
             beginnerModeGroup
+            // Last on purpose (user rule): Hide Tashkeel is the section's most drastic, least
+            // recommended option, so it sits at the bottom of the list rather than leading it.
+            cleanArabicTextGroup
         }
     }
 
@@ -684,7 +701,7 @@ struct SettingsQuranView: View {
                 .font(.subheadline)
                 .onChange(of: settings.mushafFitPage) { _ in settings.hapticFeedback() }
 
-            Text("In reading mode, shrinks each mushaf page's Arabic just enough that all of its ayahs fit on one screen, the way a printed mushaf sets them. Never larger than your chosen font size. Turn this off to read at exactly the size above and scroll.")
+            Text("In reading mode, sets each mushaf page's Arabic at the largest size that fits all of its ayahs on one screen, the way a printed mushaf sets them - larger or smaller than the size above, whatever the page allows. Turn this off to read at exactly the size above and scroll.")
                 .font(.caption)
                 .foregroundColor(.secondary)
                 .padding(.vertical, 2)

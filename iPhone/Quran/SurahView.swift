@@ -1479,6 +1479,11 @@ struct SurahView: View {
                 onChooseReciter: {
                     showReciterPickerSheet = true
                 },
+                // A tap on the footer's Surah/Juz pill (outside its page/juz jump buttons) opens the
+                // same Choose Surah sheet the title menu offers.
+                onChooseSurah: {
+                    showSurahPickerSheet = true
+                },
                 // The page reader's play menu is the list reader's play menu exactly, and these are the two
                 // entries in it that need something this view owns: the custom-range sheet, and the reciter
                 // list a random pick comes from.

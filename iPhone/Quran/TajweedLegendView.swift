@@ -269,12 +269,31 @@ struct TajweedLegendView: View {
                         selectionLabel(Settings.Riwayah.hafsLabel, tag: Settings.Riwayah.hafsTag)
                     }
 
-                    ForEach(Self.packOptions, id: \.tag) { option in
-                        Button {
-                            settings.hapticFeedback()
-                            withAnimation { previewTag = option.tag }
+                    // The same nested grammar as the riwayah picker everywhere else: one submenu
+                    // per qiraah, each opening its two riwayat - not a flat list of all twenty.
+                    ForEach(Settings.Riwayah.groups) { group in
+                        Menu {
+                            ForEach(group.options, id: \.tag) { option in
+                                Button {
+                                    settings.hapticFeedback()
+                                    withAnimation { previewTag = option.tag }
+                                } label: {
+                                    selectionLabel(option.label, tag: option.tag)
+                                }
+                            }
                         } label: {
-                            selectionLabel(option.label, tag: option.tag)
+                            Label(
+                                "\(group.teacher) - \(group.teacherArabic)",
+                                systemImage: group.options.contains(where: { option in
+                                    previewTag.map { tag in
+                                        Settings.Riwayah.canonicalTag(tag) == Settings.Riwayah.canonicalTag(option.tag)
+                                    } ?? false
+                                }) ? "checkmark" : "book.closed"
+                            )
+
+                            if let detail = Settings.Riwayah.teacherDetail(group.teacher) {
+                                Text(detail)
+                            }
                         }
                     }
                 } label: {
@@ -304,7 +323,7 @@ struct TajweedLegendView: View {
                 settings.hapticFeedback()
                 withAnimation { compareAll.toggle() }
             } label: {
-                Label(compareAll ? "Hide Riwayat Comparison" : "Compare All Riwayat",
+                Label(compareAll ? "Show Full Legend" : "Compare All Riwayat",
                       systemImage: compareAll ? "rectangle.stack.fill" : "rectangle.stack")
                     .font(.subheadline.weight(.semibold))
                     .frame(maxWidth: .infinity)
@@ -458,6 +477,11 @@ struct TajweedLegendView: View {
         )
     }
 
+    /// Compare mode takes the page over: the button's whole point is to bring the comparison to
+    /// the top, so while it's on nothing else renders (the always-on copy at the page's bottom is
+    /// what you scroll past otherwise).
+    private var compareOnlyMode: Bool { settings.showQiraahDetails && compareAll }
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
@@ -465,11 +489,50 @@ struct TajweedLegendView: View {
                     Text("Tajweed Legend")
                         .font(.title3.weight(.semibold))
 
-                    Text("Use the colors as a quick guide, then read the longer notes below for what each rule is doing in recitation.")
+                    Text(compareOnlyMode
+                         ? "Every riwayah's printed color code, side by side."
+                         : "Use the colors as a quick guide, then read the longer notes below for what each rule is doing in recitation.")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 }
 
+                if compareOnlyMode {
+                    // ONLY the comparison (plus the card holding the way back): clicking Compare All
+                    // Riwayat brings the riwayat to the top instead of burying them under the legend.
+                    riwayahPreviewCard
+
+                    compareAllSection
+                } else {
+                    fullLegendContent
+                }
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 20)
+            .padding(.bottom, 28)
+        }
+        .accentWashedBackground()
+        .navigationTitle("Legend")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarLeading) {
+                if showsDismissButton {
+                    Button {
+                        settings.hapticFeedback()
+                        presentationMode.wrappedValue.dismiss()
+                    } label: {
+                        Image(systemName: "xmark")
+                            .font(.body.weight(.semibold))
+                    }
+                    .tint(settings.accentColor.color)
+                }
+            }
+        }
+    }
+
+    /// The ordinary legend page: master toggle, preview card, the applicable legend, signs and
+    /// stops - and, with qiraah details on, the full riwayat comparison always at the very bottom.
+    @ViewBuilder
+    private var fullLegendContent: some View {
                 VStack(alignment: .leading, spacing: 6) {
                     Toggle(isOn: Binding(
                         get: { settings.showTajweedColors },
@@ -598,38 +661,18 @@ struct TajweedLegendView: View {
                     }
                 }
 
-                if settings.showQiraahDetails, compareAll {
-                    compareAllSection
-                }
-
                 VStack(alignment: .leading, spacing: 12) {
                     Text("Mushaf Signs and Stops")
                         .font(.headline)
 
                     QuranSignsSectionContent(accentColor: settings.accentColor.color)
                 }
-            }
-            .padding(.horizontal, 20)
-            .padding(.top, 20)
-            .padding(.bottom, 28)
-        }
-        .accentWashedBackground()
-        .navigationTitle("Legend")
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .navigationBarLeading) {
-                if showsDismissButton {
-                    Button {
-                        settings.hapticFeedback()
-                        presentationMode.wrappedValue.dismiss()
-                    } label: {
-                        Image(systemName: "xmark")
-                            .font(.body.weight(.semibold))
-                    }
-                    .tint(settings.accentColor.color)
+
+                // The full riwayat comparison, ALWAYS at the very bottom with qiraah details on
+                // (user rule) - the Compare All Riwayat button above exists to bring it to the top.
+                if settings.showQiraahDetails {
+                    compareAllSection
                 }
-            }
-        }
     }
 }
 
