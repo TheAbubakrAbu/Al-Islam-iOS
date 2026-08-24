@@ -704,6 +704,17 @@ struct NotificationView: View {
                     Toggle("Islamic Calendar Notifications", isOn: $settings.dateNotifications.animation(.easeInOut))
                         .font(.subheadline)
                         .onChange(of: settings.dateNotifications) { _ in settings.hapticFeedback() }
+
+                    if settings.dateNotifications {
+                        Toggle("Remind a Day Before", isOn: $settings.dateNotificationsDayBefore.animation(.easeInOut))
+                            .font(.subheadline)
+                            .onChange(of: settings.dateNotificationsDayBefore) { _ in settings.hapticFeedback() }
+
+                        Text("Also sends a heads-up the evening before each Islamic date - so Ramadan, Eid, and the days of fasting never arrive unannounced.")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .padding(.vertical, 2)
+                    }
                 }
 
                 #if os(iOS)
@@ -1466,6 +1477,7 @@ extension SettingsSearchEntry {
         .init(title: "Notification Settings", path: "Notifications", keywords: "alerts permission bell", destination: .notifications),
         .init(title: "Adhan Sound", path: "Notifications", keywords: "athan azan sound mecca madinah silent mode ringer", destination: .notifications),
         .init(title: "Hijri Calendar Notifications", path: "Notifications", keywords: "islamic events eid ramadan reminders", destination: .notifications),
+        .init(title: "Remind a Day Before", path: "Notifications", keywords: "islamic dates day before tomorrow ramadan eid heads up early", destination: .notifications),
         .init(title: "Prayer Reminders & Pre-Notifications", path: "Notifications → Prayer Reminders", keywords: "before minutes early alert per prayer fajr dhuhr asr maghrib isha", destination: .notificationReminders),
         .init(title: "Nagging Mode", path: "Notifications → Prayer Reminders", keywords: "nag repeat reminders pray on time cascade did you pray tracker", destination: .notificationReminders),
     ]

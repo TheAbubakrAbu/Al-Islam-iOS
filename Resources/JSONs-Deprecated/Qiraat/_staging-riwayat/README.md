@@ -1,5 +1,20 @@
 # The 12 extra riwayat — extraction record
 
+> **2026-08-24: read [HANDOFF-2026-08-24.md](HANDOFF-2026-08-24.md) first.**
+> A correction pass is in progress (Hamzah). Three things in this file are now known to be
+> wrong or incomplete:
+> * the accuracy table below predates this session's fixes; the Shubah bridge round-trip
+>   is now **89.46%**, not 87.4%;
+> * **both** volumes mark Hamzah's imalah in full (1,884 each, agreeing on 1,850 words).
+>   Khallad draws the dot in `Hamd2` and Khalaf in `MSH-Quraan1`; the extractor was
+>   dropping both, Khalaf's as page furniture;
+> * `ishaq.json` and `idris.json` are byte-identical **because Islamweb published one body
+>   text under both rawi names** (verified: different PDFs, identical glyph streams, pages
+>   differing only in the header). This is a source limitation, not a pipeline bug.
+>
+> Also: do **not** extract from `Resources/Mushaf PDFs/*.pdf.xz`. Those are display-only
+> and lose ~12,000 word spaces per volume. See the handoff §1.
+
 Source: Islamweb's 22-volume electronic mushaf series (permission obtained by email,
 Aug 2026), via the deterministic pipeline in `pipeline/`. Bundled at
 `Resources/Data/Quran/Qiraah*.json.deflate`, gated behind Settings → Quran →

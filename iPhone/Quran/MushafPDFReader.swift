@@ -229,7 +229,15 @@ private struct MushafPDFPageView: UIViewRepresentable {
         coordinator.installed = page
         // `autoScales` only computes the fit-to-width scale once the view has a size, so re-assert it after
         // layout; without this the first page of a fresh reader comes up at 100% and overflows the screen.
-        DispatchQueue.main.async { view.autoScales = true }
+        // The forced layout pass matters on a DOCUMENT SWAP (riwayah switch): the editions' crop windows
+        // differ in size, and until `layoutSubviews` re-pins the floor the view keeps the previous
+        // edition's smaller `minScaleFactor` - which is what let the freshly swapped page pinch out
+        // below its own fit into a floating island.
+        DispatchQueue.main.async {
+            view.autoScales = true
+            view.setNeedsLayout()
+            view.layoutIfNeeded()
+        }
     }
 
     /// Measured ink-hugging crops, keyed by (file, page, window) - one small thumbnail render each,

@@ -69,6 +69,21 @@ struct AyahActionsSheet: View {
 
     @State private var confirmRemoveNote = false
 
+    /// Show the ayah preview as PLAIN standard text - full tashkeel and dots, no tajweed coloring -
+    /// while the reader has any of those shaping it (user rule). Sheet-local; the reader keeps its own.
+    @State private var showPlainText = false
+
+    /// Whether the reader's settings are shaping the Arabic preview at all - the plain-text button
+    /// only appears when there is something to undo.
+    private var previewTextIsModified: Bool {
+        guard settings.showArabicText else { return false }
+        if settings.cleanArabicText || settings.removeArabicDots { return true }
+        if settings.showTajweedColors && (settings.isHafsDisplay || settings.riwayahTajweedPackTag != nil) {
+            return true
+        }
+        return false
+    }
+
     /// Word-by-word: the tapped word's card (the Hafs gloss + tajweed-rules card, or the riwayah word
     /// card), presented OVER this sheet so closing it returns to the actions.
     @State private var tappedWord: TappedWord?
@@ -87,9 +102,10 @@ struct AyahActionsSheet: View {
     /// that's on, and it carries the Arabic ayah marker the page does.
     @ViewBuilder
     private var ayahPreview: some View {
-        let arabic = ayah.displayArabicText(surahId: surah.id, clean: settings.cleanArabicText)
-        let showsTajweed = settings.showTajweedColors && settings.showArabicText && settings.isHafsDisplay
-        let riwayahTajweedTag = settings.showTajweedColors && settings.showArabicText
+        let arabic = ayah.displayArabicText(surahId: surah.id, clean: settings.cleanArabicText && !showPlainText)
+        let showsTajweed = !showPlainText
+            && settings.showTajweedColors && settings.showArabicText && settings.isHafsDisplay
+        let riwayahTajweedTag = !showPlainText && settings.showTajweedColors && settings.showArabicText
             ? settings.riwayahTajweedPackTag : nil
 
         // The tajweed-colored preview text, when either store paints this ayah.
@@ -167,6 +183,24 @@ struct AyahActionsSheet: View {
                 }
             )
             .frame(maxWidth: .infinity, alignment: .trailing)
+
+            // Plain standard text on demand (user rule): with tajweed colors, hidden tashkeel, or hidden
+            // dots shaping the preview, one tap shows the ayah exactly as written - full marks, no
+            // coloring - without touching the reader's settings.
+            if previewTextIsModified {
+                Button {
+                    settings.hapticFeedback()
+                    withAnimation(.easeInOut) { showPlainText.toggle() }
+                } label: {
+                    Label(showPlainText ? "Show Reader's Text" : "Show Plain Text",
+                          systemImage: showPlainText ? "paintpalette" : "textformat")
+                        .font(.caption2.weight(.medium))
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(settings.accentColor.accent1)
+                .frame(maxWidth: .infinity, alignment: .trailing)
+            }
 
             // The same reference format every ayah sheet uses, plus the ayah's ACTUAL text in the active
             // translation (not just the translation's name).

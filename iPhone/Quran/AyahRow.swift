@@ -61,6 +61,8 @@ struct AyahRow: View, Equatable {
     @State private var showQiraahComparisonSheet = false
     @State private var showEnglishComparisonSheet = false
     @State private var showSelectTextSheet = false
+    /// The long-press ayah actions sheet - the same `AyahActionsSheet` page mode presents.
+    @State private var showAyahActionsSheet = false
     #endif
     #if os(watchOS)
     @State private var showWatchPlaybackDialog = false
@@ -112,11 +114,33 @@ struct AyahRow: View, Equatable {
         #if os(iOS)
         showingAyahSheet || showTafsirSheet || showingNoteSheet || showCustomRangeSheet
             || showQiraahComparisonSheet || showEnglishComparisonSheet || showSelectTextSheet
-            || tappedWord != nil || tappedRiwayahWord != nil
+            || showAyahActionsSheet || tappedWord != nil || tappedRiwayahWord != nil
         #else
         false
         #endif
     }
+
+    #if os(iOS)
+    /// Routes the actions sheet's "open another sheet" requests onto this row's own sheet states -
+    /// the list-mode twin of `MushafPageContent.requestSecondarySheet`. The actions sheet closes
+    /// first; UIKit can't present a second sheet while the first is still animating away.
+    private func requestRowSecondarySheet(_ kind: AyahSecondarySheet) {
+        showAyahActionsSheet = false
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+            switch kind {
+            case .tafsir: showTafsirSheet = true
+            case .qiraah: showQiraahComparisonSheet = true
+            case .translations: showEnglishComparisonSheet = true
+            case .customRange: showCustomRangeSheet = true
+            case .note:
+                draftNote = currentNote
+                showingNoteSheet = true
+            case .share: showingAyahSheet = true
+            case .selectText: showSelectTextSheet = true
+            }
+        }
+    }
+    #endif
 
     static func == (lhs: Self, rhs: Self) -> Bool {
         lhs.surah == rhs.surah &&
@@ -960,8 +984,21 @@ struct AyahRow: View, Equatable {
             }
         }
         #if os(iOS)
-        .contextMenu {
-            menuBlock(isBookmarked: isBookmarked, includePlaybackOptions: true)
+        // Long press opens the SAME ayah actions sheet page mode's long press shows (user rule: one
+        // grammar for "act on this ayah" in both modes) - the old .contextMenu is retired. The row's
+        // ellipsis menu keeps the inline menu for discoverability.
+        .onLongPressGesture {
+            guard !isSelecting else { return }
+            settings.hapticFeedback()
+            showAyahActionsSheet = true
+        }
+        .sheet(isPresented: $showAyahActionsSheet) {
+            AyahActionsSheet(
+                surah: surah,
+                ayah: ayah,
+                onRequestSheet: { kind in requestRowSecondarySheet(kind) }
+            )
+            .smallMediumSheetPresentation()
         }
         // The tap-to-scroll jump, as a swipe too: while searching, swipe the result row to scroll down
         // to that ayah in the full list.

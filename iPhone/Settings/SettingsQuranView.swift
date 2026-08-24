@@ -623,6 +623,8 @@ struct SettingsQuranView: View {
         Picker("Arabic Font", selection: $settings.fontArabic.animation(.easeInOut)) {
             Text("Uthmani").tag(Settings.hafsUthmaniFontName)
             Text("Indopak").tag(Settings.indopakFontName)
+            // The classic angular script of the earliest written mushafs (Noto Kufi Arabic).
+            Text("Kufic").tag(Settings.kufiFontName)
             Text("Basic").tag(Settings.systemArabicFontName)
         }
         #if os(iOS)
@@ -816,21 +818,23 @@ struct SettingsQuranView: View {
                 }
             }
         } header: {
+            // With riwayah/qiraah hidden the header carries no riwayah caption and the footer stays
+            // empty: the collapsed section is just the "Show Riwayah / Qiraah" entry point, not a pitch.
             HStack(spacing: 6) {
                 Text("RIWAYAH / QIRAAH")
-                Text("- \(settings.displayQiraahArabicCaption)")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.65)
-                    .padding(.vertical, 2)
+                if settings.showQiraahDetails {
+                    Text("- \(settings.displayQiraahArabicCaption)")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.65)
+                        .padding(.vertical, 2)
+                }
                 Spacer(minLength: 0)
             }
         } footer: {
             if settings.showQiraahDetails {
                 Text("This app supports all 20 riwayat — 12 are in beta.\n\nThe riwayat printed in the Maghribi script use the official King Fahd Complex Warsh typeface; the others share the Uthmani (Madani) script typeface. You can override this under Arabic Text → Uthmani Script.\n\nPlay Ayahs is unsupported for other qiraat. For full surahs, you can choose reciters by riwayah. If you play a surah while viewing a different qiraah on screen, the reciter may be in another riwayah, so the audio may not match the text you see. For beginners, staying with Hafs an Asim for both reading and listening is recommended.")
-            } else {
-                Text("This app supports all 20 riwayat — 12 are in beta.")
             }
         }
     }

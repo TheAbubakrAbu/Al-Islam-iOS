@@ -1392,13 +1392,13 @@ struct WordMeaningSheet: View {
                     .frame(maxWidth: .infinity)
                     .padding(.top, 8)
 
-                    // Leading, not centered (user rule): the English gloss reads as a sentence fragment,
-                    // and centered fragments float - lead-align it like the translation block below.
+                    // Centered under the centered Arabic word (user rule, 2026-08: reversed the earlier
+                    // lead-align rule) - the gloss belongs to the word above it, not the block below.
                     Text(meaning.isEmpty ? "No meaning recorded for this word." : meaning)
                         .font(.title3)
                         .foregroundColor(meaning.isEmpty ? .secondary : .primary)
-                        .multilineTextAlignment(.leading)
-                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .multilineTextAlignment(.center)
+                        .frame(maxWidth: .infinity, alignment: .center)
 
                     Text("Word \(position) of \(total) · \(surah.nameTransliteration) \(surah.id):\(ayah.id)")
                         .font(.caption)

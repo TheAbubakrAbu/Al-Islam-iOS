@@ -107,6 +107,12 @@ struct ShareAyahSheet: View {
 
     // Tajweed data is Hafs-only, so it keys off the sheet's riwayah, not the reader's.
     private var isHafsShare: Bool { shareQiraah.isEmpty }
+
+    /// Smart Ayah Matching only matters once the sheet's riwayah has moved away from the one the ayah
+    /// was tapped under - on the same riwayah the resolution is the identity, so the toggle is noise.
+    private var shareQiraahDiffersFromOrigin: Bool {
+        Settings.Riwayah.canonicalTag(shareQiraah) != Settings.Riwayah.canonicalTag(originQiraah)
+    }
     private var ayahExistsInShareQiraah: Bool { ayah?.existsInQiraah(shareQiraah, surahID: surahNumber) ?? true }
     private var effectiveCleanArabic: Bool { shareSettings.cleanArabic }
     private var effectiveHideArabicDots: Bool { shareSettings.hideArabicDots }
@@ -709,6 +715,7 @@ struct ShareAyahSheet: View {
                                 ).animation(.easeInOut)) {
                                     Text("Uthmani").tag(Settings.hafsUthmaniFontName)
                                     Text("Indopak").tag(Settings.indopakFontName)
+                                    Text("Kufic").tag(Settings.kufiFontName)
                                     Text("Basic").tag(Settings.systemArabicFontName)
                                 }
                                 .pickerStyle(SegmentedPickerStyle())
@@ -796,22 +803,26 @@ struct ShareAyahSheet: View {
                             .padding(.bottom, 4)
 
                             // The same words across riwayat (anchored through Hafs, like the comparison
-                            // sheet) vs. whatever verse sits at the raw tapped number.
-                            Toggle(isOn: $smartAyahMatching.animation(.easeInOut)) {
-                                Label("Smart Ayah Matching", systemImage: "wand.and.stars")
-                            }
-                            .tint(settings.accentColor.color)
-                            .scaleEffect(0.8)
-                            .padding(.horizontal, -24)
-                            .padding(.vertical, 2)
+                            // sheet) vs. whatever verse sits at the raw tapped number. Only shown once the
+                            // picker has moved off the riwayah the ayah was tapped under - on the same
+                            // riwayah the resolution is the identity.
+                            if shareQiraahDiffersFromOrigin {
+                                Toggle(isOn: $smartAyahMatching.animation(.easeInOut)) {
+                                    Label("Smart Ayah Matching", systemImage: "wand.and.stars")
+                                }
+                                .tint(settings.accentColor.color)
+                                .scaleEffect(0.8)
+                                .padding(.horizontal, -24)
+                                .padding(.vertical, 2)
 
-                            Text(riwayahFooterText)
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                                .fixedSize(horizontal: false, vertical: true)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .padding(.horizontal, 20)
-                                .padding(.bottom, 4)
+                                Text(riwayahFooterText)
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                                    .fixedSize(horizontal: false, vertical: true)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .padding(.horizontal, 20)
+                                    .padding(.bottom, 4)
+                            }
                         }
                     }
                 }

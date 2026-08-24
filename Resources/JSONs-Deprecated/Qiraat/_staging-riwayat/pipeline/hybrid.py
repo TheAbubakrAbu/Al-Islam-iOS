@@ -17,7 +17,7 @@ import json, sys, math, collections, pathlib, re, difflib
 
 BASE = pathlib.Path(__file__).resolve().parent
 DATA = BASE / "data"
-APP = pathlib.Path("/Users/theabubakrabu/Library/Mobile Documents/com~apple~CloudDocs/Projects/(1) iOS/Al-Islam-iOS")
+APP = pathlib.Path("/Users/theabubakrabu/Downloads/Islam/Al-Islam-iOS")
 sys.path.insert(0, str(BASE))
 from extract import overlay, BRIDGES, strip_header_and_basmalah, skeleton
 from decode import LM, load_emissions, decode_ayah, hafs_text

@@ -652,6 +652,27 @@ struct SurahPageReader<Controls: View>: View {
             // Recitation crossing a page boundary TURNS the page, it doesn't cut to it.
             turnPage(to: target, in: pages)
         }
+        // Follow WHOLE-SURAH playback across surah boundaries too. Surah files carry no per-ayah
+        // position (`currentAyahNumber` stays nil), so when playback rolls into the next surah the
+        // handler above never fires - the reader sat on the finished surah's page. Keyed on the surah:
+        // when the new surah starts on another page, turn to it, under the same natural-progression
+        // guard (the next/previous physical page, or a page already showing it) so listening to some
+        // far-away surah from the mini player never yanks the reader across the book.
+        .onChange(of: quranPlayer.currentSurahNumber) { surahID in
+            guard didSetInitialPage,
+                  let surahID,
+                  quranPlayer.isPlayingSurah,
+                  pages.indices.contains(pageIndex),
+                  !AyahSheetPresence.shared.anySheetOpen else { return }
+            func containsStart(_ page: MushafPage) -> Bool {
+                page.segments.contains { $0.surah.id == surahID && $0.ayahs.contains { $0.id == 1 } }
+            }
+            guard !pages[pageIndex].segments.contains(where: { $0.surah.id == surahID }),
+                  let target = pages.firstIndex(where: containsStart),
+                  target != pageIndex else { return }
+            guard abs(target - pageIndex) == 1 else { return }
+            turnPage(to: target, in: pages)
+        }
         // A qiraah switch re-paginates the book. Keyed on the QIRAAH, not `pages.count`: dropping ayahs
         // absent from a qiraah never changes the page COUNT (page numbers are per-ayah metadata), so a
         // count-based onChange usually never fired - leaving the prewarm ring and its stored context on
@@ -1673,6 +1694,33 @@ private struct MushafPageContent: View {
     /// the surah info sheet. The reader's pinned header has its own, at reader level.
     @State private var infoSurah: Surah?
 
+    /// A double-tapped word's meaning card (Hafs: gloss + tajweed; non-Hafs: the riwayah word card) -
+    /// the page-mode twin of the list rows' word tap, reached without opening the actions sheet first.
+    /// Own wrappers rather than `TappedWord`/`RiwayahTappedWord`: those carry no surah/ayah (their
+    /// sheets get them from the presenting context), and a page can show up to two surahs.
+    private struct PageTappedWord: Identifiable {
+        let surah: Surah
+        let ayah: Ayah
+        let index: Int
+        let word: String
+        let meaning: String
+        let total: Int
+        var id: String { "\(surah.id).\(ayah.id).\(index)" }
+    }
+
+    private struct PageTappedRiwayahWord: Identifiable {
+        let surah: Surah
+        let ayah: Ayah
+        let index: Int
+        let word: String
+        let total: Int
+        let tag: String
+        var id: String { "\(surah.id).\(ayah.id).\(index)" }
+    }
+
+    @State private var pageTappedWord: PageTappedWord?
+    @State private var pageTappedRiwayahWord: PageTappedRiwayahWord?
+
     private struct SecondarySheetRequest: Identifiable {
         let kind: AyahSecondarySheet
         let surah: Surah
@@ -1834,6 +1882,30 @@ private struct MushafPageContent: View {
                 .environmentObject(settings)
                 .environmentObject(quranData)
         }
+        // The double-tapped word's card. `item:` so double-tapping a different word re-presents
+        // with the new word - same pattern as the actions sheet's own word tap.
+        .sheet(item: $pageTappedWord) { tapped in
+            WordMeaningSheet(
+                surah: tapped.surah,
+                ayah: tapped.ayah,
+                word: tapped.word,
+                meaning: tapped.meaning,
+                position: tapped.index + 1,
+                total: tapped.total
+            )
+            .environmentObject(settings)
+        }
+        .sheet(item: $pageTappedRiwayahWord) { tapped in
+            RiwayahWordSheet(
+                surah: tapped.surah,
+                ayah: tapped.ayah,
+                tag: tapped.tag,
+                word: tapped.word,
+                index: tapped.index,
+                total: tapped.total
+            )
+            .environmentObject(settings)
+        }
         // Report this page's sheet state to the shared tracker so the pager's follow-the-recitation
         // page turn holds still while a sheet presented from this page is up - turning the page tears
         // this page view down, which dismissed its open sheet (see `AyahSheetPresence`).
@@ -1851,9 +1923,54 @@ private struct MushafPageContent: View {
         }
     }
 
-    /// Whether any sheet presented from THIS page (actions, secondary, surah info) is up.
+    /// Whether any sheet presented from THIS page (actions, secondary, surah info, word card) is up.
     private var anyPageSheetOpen: Bool {
         sheetAyah != nil || secondarySheet != nil || infoSurah != nil
+            || pageTappedWord != nil || pageTappedRiwayahWord != nil
+    }
+
+    /// Double tap on a word: open its meaning card - the gloss + tajweed card on Hafs, the riwayah
+    /// word card on a non-Hafs riwayah with a bundled pack (the same routing as the actions sheet's
+    /// word tap). The word index arrives over the COMPOSED page's tokens; the ayah's trailing number
+    /// ornament is one extra final token, dropped here by the bounds check against the display text.
+    private func presentWordMeaning(surahID: Int, ayahID: Int, wordIndex: Int) {
+        guard !isSelecting, let (surah, ayah) = ayahRef(surahID: surahID, ayahID: ayahID) else { return }
+        let displayText = ayah.displayArabicText(
+            surahId: surah.id,
+            clean: settings.cleanArabicText,
+            qiraahOverride: settings.displayQiraahForArabic
+        )
+        let tokens = WordTokens.tokens(in: displayText)
+        guard tokens.indices.contains(wordIndex) else { return }
+
+        if settings.isHafsDisplay {
+            let glosses = WordByWordStore.shared.glosses(
+                surah: surah.id, ayah: ayah.id,
+                rawText: ayah.displayArabicText(surahId: surah.id, clean: false, qiraahOverride: nil),
+                displayText: displayText
+            ) ?? []
+            settings.hapticFeedback()
+            pageTappedWord = PageTappedWord(
+                surah: surah,
+                ayah: ayah,
+                index: wordIndex,
+                word: tokens[wordIndex],
+                meaning: glosses.indices.contains(wordIndex) ? glosses[wordIndex] : "",
+                total: glosses.isEmpty ? tokens.count : glosses.count
+            )
+        } else {
+            let tag = Settings.Riwayah.canonicalTag(settings.displayQiraahForArabic ?? "")
+            guard !tag.isEmpty, QiraahTajweedStore.shared.isAvailable(tag: tag) else { return }
+            settings.hapticFeedback()
+            pageTappedRiwayahWord = PageTappedRiwayahWord(
+                surah: surah,
+                ayah: ayah,
+                index: wordIndex,
+                word: tokens[wordIndex],
+                total: tokens.count,
+                tag: tag
+            )
+        }
     }
 
     /// Tap a surah's name/basmala in the page text to read about the surah.
@@ -1961,6 +2078,8 @@ private struct MushafPageContent: View {
                     sheetAyah = TappedAyahRef(surah: ref.0, ayah: ref.1)
                 } onTapHeading: { surahID in
                     showSurahInfo(surahID: surahID)
+                } onDoubleTapWord: { surahID, ayahID, wordIndex in
+                    presentWordMeaning(surahID: surahID, ayahID: ayahID, wordIndex: wordIndex)
                 }
                 .frame(width: width, height: rendered.height)
                 .padding(.horizontal, Self.textPadding)
@@ -2468,7 +2587,12 @@ struct MushafPageComposer {
             gapAttributes[.kern] = nameGap
             heading.append(NSAttributedString(string: "\u{2000}", attributes: gapAttributes))
 
-            heading.append(NSAttributedString(string: "\(surah.nameArabic) \u{FD3E}", attributes: arabicAttributes))
+            // The name honours Hide Tashkeel / Hide Dots like every other surah-name surface (list rows,
+            // toolbar title). Through the config snapshot, not Settings.shared - the composer runs off-main.
+            var headingName = surah.nameArabic
+            if config.cleanArabicText { headingName = headingName.removingArabicDiacriticsAndSigns }
+            if config.removeArabicDots { headingName = headingName.removingArabicDots }
+            heading.append(NSAttributedString(string: "\(headingName) \u{FD3E}", attributes: arabicAttributes))
         }
 
         let nameRange = NSRange(location: nameStart, length: heading.length - nameStart)
@@ -4218,6 +4342,11 @@ struct MushafPageTextView: UIViewRepresentable {
     let onLongPressAyah: (Int, Int) -> Void
     /// A tap on a surah heading (name/basmala) - passes the surah's id.
     var onTapHeading: ((Int) -> Void)? = nil
+    /// A DOUBLE tap on a word: (surahID, ayahID, word index over whitespace-split tokens of the
+    /// ayah's composed text - the same splitting `WordTokens.tokens` uses). The single-tap
+    /// recognizer deliberately does NOT wait for this one to fail: a double tap toggles the ayah
+    /// mark twice (a visual no-op) and then opens the word card, which keeps single taps instant.
+    var onDoubleTapWord: ((Int, Int, Int) -> Void)? = nil
 
     private func range(of ayah: (surahID: Int, ayahID: Int)?) -> NSRange? {
         guard let ayah else { return nil }
@@ -4380,6 +4509,15 @@ struct MushafPageTextView: UIViewRepresentable {
         let tap = UITapGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.handleTap(_:)))
         tv.addGestureRecognizer(tap)
 
+        // Double tap on a word opens its meaning card (user rule: page mode should offer the word
+        // check too). No `tap.require(toFail:)` on purpose - see `onDoubleTapWord`.
+        if onDoubleTapWord != nil {
+            let doubleTap = UITapGestureRecognizer(target: context.coordinator,
+                                                   action: #selector(Coordinator.handleDoubleTap(_:)))
+            doubleTap.numberOfTapsRequired = 2
+            tv.addGestureRecognizer(doubleTap)
+        }
+
         // A tap only marks an ayah; the actions sheet is the deliberate gesture, so it takes a press. The tap
         // must not also fire when the press wins, hence the dependency.
         let press = UILongPressGestureRecognizer(
@@ -4451,6 +4589,7 @@ struct MushafPageTextView: UIViewRepresentable {
         context.coordinator.onTapAyah = onTapAyah
         context.coordinator.onLongPressAyah = onLongPressAyah
         context.coordinator.onTapHeading = onTapHeading
+        context.coordinator.onDoubleTapWord = onDoubleTapWord
         // Before any text assignment below, so the relayout it triggers already sees the new values.
         context.coordinator.forcedBaselineOffset = baselineOffset
         context.coordinator.baselineBand = baselineBand
@@ -4507,10 +4646,19 @@ struct MushafPageTextView: UIViewRepresentable {
             let zoomed = scrollView.zoomScale > 1.001
             scrollView.bounces = zoomed
             scrollView.clipsToBounds = zoomed
+
+            // Keep the page CENTERED whenever it is smaller than the viewport - the below-floor
+            // rubber-band included. UIScrollView pins an undersized zoom view to the content origin
+            // (top-leading), which is what made pinching out anchor to the far left; PDFView centers
+            // its document view itself, and this is the same behavior for the text page.
+            let offsetX = max((scrollView.bounds.width - scrollView.contentSize.width) * 0.5, 0)
+            let offsetY = max((scrollView.bounds.height - scrollView.contentSize.height) * 0.5, 0)
+            scrollView.contentInset = UIEdgeInsets(top: offsetY, left: offsetX, bottom: offsetY, right: offsetX)
         }
         var onTapAyah: ((Int, Int) -> Void)?
         var onLongPressAyah: ((Int, Int) -> Void)?
         var onTapHeading: ((Int) -> Void)?
+        var onDoubleTapWord: ((Int, Int, Int) -> Void)?
         var forcedBaselineOffset: CGFloat = 0
         var baselineBand: ClosedRange<CGFloat> = 0...0
 
@@ -4629,6 +4777,36 @@ struct MushafPageTextView: UIViewRepresentable {
             } else {
                 onTapAyah?(surahID, ayahID)
             }
+        }
+
+        /// Double tap on a word: resolves which whitespace-split token of the ayah's composed text
+        /// sits under the fingers and hands (surah, ayah, word index) up. The index is over the SAME
+        /// splitting `WordTokens.tokens` uses, so the presenter's tokens/glosses line up; the ayah's
+        /// trailing number ornament is one extra final token, which the presenter's bounds check drops.
+        @objc func handleDoubleTap(_ gesture: UITapGestureRecognizer) {
+            guard gesture.state == .ended, let tv = textView, tv.textStorage.length > 0 else { return }
+            let point = gesture.location(in: tv)
+            let location = CGPoint(x: point.x - tv.textContainerInset.left, y: point.y - tv.textContainerInset.top)
+            var fraction: CGFloat = 0
+            let index = tv.layoutManager.characterIndex(
+                for: location,
+                in: tv.textContainer,
+                fractionOfDistanceBetweenInsertionPoints: &fraction
+            )
+            guard index >= 0, index < tv.textStorage.length else { return }
+            guard let entry = ranges.first(where: { NSLocationInRange(index, $0.range) }),
+                  entry.ayahID > 0 else { return }
+            let storage = tv.textStorage.string as NSString
+            // A double tap on the space between words picks nothing - same rule as the list's word tap.
+            let tappedChar = storage.substring(with: storage.rangeOfComposedCharacterSequence(at: index))
+            guard tappedChar.rangeOfCharacter(from: .whitespacesAndNewlines.inverted) != nil else { return }
+            // The word's index = tokens in the ayah's text up to and including the tapped character, minus one.
+            let upToTap = storage.substring(
+                with: NSRange(location: entry.range.location, length: index - entry.range.location + 1)
+            )
+            let wordIndex = upToTap.split(whereSeparator: { $0.isWhitespace }).count - 1
+            guard wordIndex >= 0 else { return }
+            onDoubleTapWord?(entry.surahID, entry.ayahID, wordIndex)
         }
 
         @objc func handleLongPress(_ gesture: UILongPressGestureRecognizer) {

@@ -6,13 +6,38 @@ Phases:
   learn <bridge...>       → data/glyphmap.json        (votes from app-known riwayat)
   apply <slug>            → data/<slug>.text.json     (+ unmapped report)
 """
-import fitz, json, sys, collections, pathlib, re
+import fitz, json, sys, os, collections, pathlib, re
 
 BASE = pathlib.Path(__file__).resolve().parent
 PDFS = BASE.parent / "pdfs"
 DATA = BASE / "data"
 DATA.mkdir(exist_ok=True)
-APP = pathlib.Path("/Users/theabubakrabu/Library/Mobile Documents/com~apple~CloudDocs/Projects/(1) iOS/Al-Islam-iOS")
+APP = pathlib.Path("/Users/theabubakrabu/Downloads/Islam/Al-Islam-iOS")
+
+MSH_IMALAH_GID = 38   # see page_tokens: the red imalah dot in the Khalaf volume
+# The same layer carries the FARSH TEXT - the letters where this riwayah departs from
+# Hafs, printed in magenta per the volumes' own legend (magenta = الكلمة المخالفة لحفص,
+# blue = idgham, red = imalah, cyan = sakt, orange = ishmam). The HQPB body layer leaves a
+# zero-width spacer where each one goes, so dropping this layer silently deletes exactly
+# the letters that make a riwayah a riwayah: `جَبۡرَءِيلَ` lost its ء (2:97, 2:98, 66:4) and
+# `وَلِيَسۡتَبِينَ` lost its ي (6:55). ~160 glyphs across the three Kufi volumes.
+# Every INKED non-furniture glyph in that layer (the blank spacers and the two rosette
+# gids 155/156 are excluded). Determined by outline bounds, not by eye.
+MSH_TEXT_GIDS = frozenset({7, 9, 17, 29, 30, 33, 36, 41, 43, 46, 54, 55, 58, 60, 70, 73,
+                           78, 87, 96, 97, 98, 119, 170, 178, 210, 221})
+
+def _is_msh_text(fontkey):
+    """Real text in the MSH layer. See MSH_TEXT_GIDS."""
+    base, _, gid = str(fontkey).rpartition("#")
+    return base.startswith(("MSH", "Msh")) and gid.isdigit() and int(gid) in MSH_TEXT_GIDS
+
+def _is_imalah_dot(fontkey):
+    """Both spellings of the same mark: HQPB5 gid 20 (most volumes) and MSH-Quraan1
+    gid 38 (the Khalaf volume's red dot). Normalised to the former downstream."""
+    if fontkey == "HQPB5#20":
+        return True
+    base, _, gid = str(fontkey).rpartition("#")
+    return base.startswith(("MSH", "Msh")) and gid == str(MSH_IMALAH_GID)
 
 LETTER_FONTS = {"HQPB1", "HQPB3", "HQPB5", "Hamd1", "Hamd2", "Hamd3"}
 MARK_FONTS = {"HQPB2", "HQPB4", "HQPB6", "HQPB7"}
@@ -80,7 +105,11 @@ def page_tokens(page):
             if chrome:
                 continue
             if f.startswith(("MSH", "Msh")):
-                if ch.isdigit():
+                # This layer is mostly page furniture, but the Khalaf volume draws its
+                # imalah dot here: gid 38, inked red, a below-baseline dot (font bounds
+                # 118,-1300..587,-848). 2,846 of them in khalaf against 24 in khallad.
+                # Dropping the whole layer silently cost ~500 imalah marks.
+                if ch.isdigit() or gid == MSH_IMALAH_GID or gid in MSH_TEXT_GIDS:
                     body.append((yc, x0, x1, "g", (f"{f}#{gid}", ch)))
                 continue
             # everything else is body text/sign layers (HQPB*, Hamd*, DecoType*, ...)
@@ -136,7 +165,9 @@ def page_tokens(page):
         def is_markerish(t):
             if t[3] != "g": return True
             f, txt = t[4]
-            if f.startswith(("MSH", "Msh")): return True
+            if f.startswith(("MSH", "Msh")):
+                # the imalah dot and the standalone hamza are real text and must cluster
+                return not (_is_imalah_dot(f) or _is_msh_text(f))
             if _bracket_kind(f) is not None or _digit_val(f) is not None: return True
             if all(ch in MARKERISH for ch in txt): return True
             return in_zone(t)
@@ -148,8 +179,8 @@ def page_tokens(page):
         # Geometric truth instead: pull the dots out, merge the stroke/fill/color layer
         # copies (identical position), and attach each REAL dot to the letter cluster
         # whose span contains it.
-        dots = [t for t in gs if t[4][0] == "HQPB5#20"]
-        gs = [t for t in gs if t[4][0] != "HQPB5#20"]
+        dots = [t for t in gs if _is_imalah_dot(t[4][0])]
+        gs = [t for t in gs if not _is_imalah_dot(t[4][0])]
         gs.sort(key=lambda t: -((t[1] + t[2]) / 2))
         clusters = []
         for t in gs:
@@ -174,7 +205,7 @@ def page_tokens(page):
             for xc in uniq:
                 best = min(clusters, key=lambda c: 0 if c["x0"] <= xc <= c["x1"]
                            else min(abs(xc - c["x0"]), abs(xc - c["x1"])))
-                if not any(m[4][0] == "HQPB5#20" for m in best["toks"]):
+                if not any(_is_imalah_dot(m[4][0]) for m in best["toks"]):
                     best["toks"].append((0, xc, xc, "g", ("HQPB5#20", "1")))
         # ONE token per cluster: an order-free multiset key. Mark-stack z-order was the
         # purity killer - inside a multiset there is no order to get wrong. Members are
@@ -213,14 +244,41 @@ PDF_NAMES = {
 
 
 def pdf_path(slug):
-    """The volume for a slug: full riwayah name first, bare slug second (older layouts)."""
+    """The volume for a slug, from pipeline/../pdfs/<name>.pdf.
+
+    DO NOT substitute `Resources/Mushaf PDFs/<name>.pdf.xz`. Those ship in the app and are
+    display-only: the size optimisation that produced them merged text spans, destroying
+    ~12,000 inter-word space tokens per volume. The glyphs survive, so a page still LOOKS
+    right and still segments to the correct 6236 ayahs - but words run together, which
+    silently corrupts the extracted text (1,201 of khalaf's 6,236 ayahs differ, and the
+    Shubah bridge round-trip falls from 89.09% to 71.87%).
+
+    Set QIRAAT_ALLOW_SHIPPED_PDFS=1 to use them anyway for a quick structural check; never
+    for text you intend to keep.
+    """
     for name in (PDF_NAMES.get(slug, slug), slug):
         candidate = PDFS / f"{name}.pdf"
         if candidate.exists():
             return candidate
+    name = PDF_NAMES.get(slug, slug)
+    packed = APP / "Resources/Mushaf PDFs" / f"{name}.pdf.xz"
+    if packed.exists() and os.environ.get("QIRAAT_ALLOW_SHIPPED_PDFS") == "1":
+        import lzma
+        cache = BASE / "pdfcache"
+        cache.mkdir(exist_ok=True)
+        out = cache / f"{name}.pdf"
+        if not out.exists() or out.stat().st_size == 0:
+            print(f"  !! DEGRADED SOURCE: decompressing shipped {packed.name}; "
+                  f"word spacing is lossy, text from this run is NOT trustworthy")
+            out.write_bytes(lzma.decompress(packed.read_bytes()))
+        return out
+    hint = ""
+    if packed.exists():
+        hint = (f"\n  ({packed.name} exists but is the display-only shipped copy; it loses "
+                f"word spaces.\n   Set QIRAAT_ALLOW_SHIPPED_PDFS=1 only for a structural check.)")
     raise FileNotFoundError(
-        f"no PDF for {slug!r} in {PDFS} (looked for "
-        f"{PDF_NAMES.get(slug, slug)}.pdf and {slug}.pdf)"
+        f"no extraction PDF for {slug!r}: put {name}.pdf in {PDFS}\n"
+        f"  Source: https://archive.org/details/quran-islamweb.net (see pdfs/README.md){hint}"
     )
 
 
@@ -492,10 +550,17 @@ def segment(slug, bootstrap=False):
 # ---------------------------------------------------------------- learning
 
 def overlay(name):
+    # Hafs is not an overlay file - it is the app's primary text, and the only bridge whose
+    # every ayah is KFGQPC-verified AND whose Kufi count (6236) matches the Kufi volumes
+    # ayah-for-ayah, so no surah is ever skipped for a count mismatch.
+    if name == "__quran__":
+        d = json.loads((APP / "Resources/JSONs-Deprecated/Quran.json").read_text())
+        return {s["id"]: [(a["id"], a["textArabic"]) for a in s["ayahs"]] for s in d}
     d = json.loads((APP / f"Resources/JSONs-Deprecated/Qiraat/{name}.json").read_text())
     return {int(k): [(a["id"], a["text"]) for a in v] for k, v in d.items()}
 
 BRIDGES = {
+    "hafs": "__quran__",
     "shubah": "QiraahShubah",
     "qaloon": "QiraahQaloon",
     "warsh": "QiraahWarsh",

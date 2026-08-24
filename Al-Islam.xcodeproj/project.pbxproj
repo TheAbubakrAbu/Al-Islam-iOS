@@ -344,6 +344,7 @@
 		72FB00032F7B000000AAF900 /* CustomPrayerNames.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72FB00012F7B000000AAF900 /* CustomPrayerNames.swift */; };
 		72FB30020000000000000009 /* Warsh.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 72FB30010000000000000006 /* Warsh.ttf */; };
 		72FB30030000000000000009 /* Warsh.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 72FB30010000000000000006 /* Warsh.ttf */; };
+		72FB30060000000000000009 /* Kufi.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 72FB30050000000000000006 /* Kufi.ttf */; };
 		73A100112F90000100ABCDE1 /* QuranProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 73A100012F90000100ABCDE1 /* QuranProvider.swift */; };
 		73A100122F90000100ABCDE1 /* LastReadAyahWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 73A100022F90000100ABCDE1 /* LastReadAyahWidget.swift */; };
 		73A100132F90000100ABCDE1 /* LastListenedSurahWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 73A100032F90000100ABCDE1 /* LastListenedSurahWidget.swift */; };
@@ -700,6 +701,7 @@
 		72FB00012F7B000000AAF900 /* CustomPrayerNames.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomPrayerNames.swift; sourceTree = "<group>"; };
 		72FB30010000000000000006 /* Warsh.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = Warsh.ttf; sourceTree = "<group>"; };
 		72FB30040000000000000006 /* Susi.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = Susi.ttf; sourceTree = "<group>"; };
+		72FB30050000000000000006 /* Kufi.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = Kufi.ttf; sourceTree = "<group>"; };
 		73A100012F90000100ABCDE1 /* QuranProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuranProvider.swift; sourceTree = "<group>"; };
 		73A100022F90000100ABCDE1 /* LastReadAyahWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LastReadAyahWidget.swift; sourceTree = "<group>"; };
 		73A100032F90000100ABCDE1 /* LastListenedSurahWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LastListenedSurahWidget.swift; sourceTree = "<group>"; };
@@ -1045,6 +1047,7 @@
 				72FA10022FF0A00100AA0002 /* QuranCommon.ttf */,
 				72FB30010000000000000006 /* Warsh.ttf */,
 				72FB30040000000000000006 /* Susi.ttf */,
+				72FB30050000000000000006 /* Kufi.ttf */,
 			);
 			path = Fonts;
 			sourceTree = "<group>";
@@ -1446,6 +1449,7 @@
 				72C6FDF12F7880700035F675 /* abdulghaffar-30.caf in Resources */,
 				72C6FDF22F7880700035F675 /* alaqsa-30.caf in Resources */,
 				72FB30020000000000000009 /* Warsh.ttf in Resources */,
+				72FB30060000000000000009 /* Kufi.ttf in Resources */,
 				7DAD00000000000000000006 /* bukhari.hpk in Resources */,
 				7DAD00000000000000000008 /* muslim.hpk in Resources */,
 				7DAD0000000000000000000A /* ibnmajah.hpk in Resources */,

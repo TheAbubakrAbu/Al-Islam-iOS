@@ -3871,6 +3871,34 @@ private struct SurahPickerSheet: View {
             ScrollViewReader { proxy in
                 List {
                     Group {
+                        // The same header the Quran tab's surah list wears: the 114 count pill plus the
+                        // shuffle (user rule) - here the shuffle CHOOSES a random surah instead of
+                        // navigating, since choosing is what this sheet is for.
+                        Section {
+                        } header: {
+                            HStack {
+                                Text("SURAHS")
+
+                                Spacer()
+
+                                CountPill(count: quranData.quran.count)
+
+                                Button {
+                                    settings.hapticFeedback()
+                                    if let random = quranData.quran.randomElement() {
+                                        withAnimation {
+                                            select(random)
+                                        }
+                                    }
+                                } label: {
+                                    Image(systemName: "shuffle.circle")
+                                        .padding(4)
+                                        .conditionalGlassEffect()
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+
                         ForEach(filteredSurahs, id: \.id) { surah in
                             Section {
                                 ZStack {
@@ -4051,10 +4079,10 @@ struct ArabicTextRiwayahPicker: View {
         }
         #else
         Picker("Arabic Riwayah", selection: $selection.animation(.easeInOut)) {
-            ForEach(Settings.Riwayah.groups) { group in
+            ForEach(Settings.Riwayah.textGroups) { group in
                 Section {
                     ForEach(group.options, id: \.tag) { option in
-                        Text(option.label).tag(option.tag)
+                        Text(option.beta ? "\(option.label) (Beta)" : option.label).tag(option.tag)
                     }
                 } header: {
                     Text("\(group.teacher) - \(group.teacherArabic)")
@@ -4081,7 +4109,7 @@ struct ArabicTextRiwayahPicker: View {
             hideDetail: true
         )
 
-        ForEach(Settings.Riwayah.groups) { group in
+        ForEach(Settings.Riwayah.textGroups) { group in
             Menu {
                 ForEach(group.options, id: \.tag) { option in
                     qiraahButton(option, current: current)
@@ -4111,16 +4139,16 @@ struct ArabicTextRiwayahPicker: View {
                     Image(systemName: "checkmark")
                 }
 
-                // No "(Beta)" here: the riwayah itself is never beta - its printed
-                // mushaf is exact. Only its selectable TEXT is, and that is flagged
-                // where text actually renders (the consent card / Page Text menu).
-                Text(option.label)
+                // Beta riwayat only appear here at all once beta text is unlocked, and then
+                // they carry the marker so the unverified text is never picked unknowingly.
+                Text(option.beta ? "\(option.label) (Beta)" : option.label)
             }
             .font(.caption)
 
-            // The rawi's own death year as the menu subtitle (the standalone Hafs entry omits it).
+            // The menu subtitle: the riwayah's Arabic name, then the rawi's own death year
+            // (the standalone Hafs entry omits it).
             if !hideDetail, let detail = option.narratorDetail {
-                Text(detail)
+                Text("\(option.arabic) · \(detail)")
             }
         }
     }

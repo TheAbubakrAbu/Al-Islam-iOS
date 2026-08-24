@@ -8,11 +8,11 @@ visible ✗ that fails validation.
   roundtrip <bridge...> : render bridge volumes deterministically, diff vs app texts,
                           print a CLASS HISTOGRAM of every difference
 """
-import json, sys, math, collections, pathlib, re, unicodedata, difflib
+import json, sys, os, math, collections, pathlib, re, unicodedata, difflib
 
 BASE = pathlib.Path(__file__).resolve().parent
 DATA = BASE / "data"
-APP = pathlib.Path("/Users/theabubakrabu/Library/Mobile Documents/com~apple~CloudDocs/Projects/(1) iOS/Al-Islam-iOS")
+APP = pathlib.Path("/Users/theabubakrabu/Downloads/Islam/Al-Islam-iOS")
 sys.path.insert(0, str(BASE))
 from extract import overlay, BRIDGES
 from hybrid import FAMILY, template_texts
@@ -85,6 +85,31 @@ def verify_rules():
         if nt != t: dev += 1
     print(f"ayahs whose app text ≠ canonical mark order: {dev}/{tot}")
 
+# Zone-corrected mark emissions, from `zonectx.py --write`.
+#
+# This print draws a doubled letter as [kasra stroke][shadda], in that stream order, and
+# Unicode writes the shadda first. Instead of reordering, the EM learner simply SWAPPED the
+# two emissions: the below-baseline kasra glyph (HQPB4#176 and friends) learned to emit a
+# shadda, and the above-baseline shadda ladder (HQPB4#65/67/68/69/70/71/73..77/79..82, one
+# outline at fifteen stack heights) learned to emit a kasra.
+#
+# That produces the right string for the PAIR and nonsense for every ladder glyph appearing
+# without its kasra partner, which is where `جَبۡرَِيل` for `جَبۡرَئِيل` came from. Here each
+# glyph emits the mark its ink actually is, and `reorder_shadda` below puts the pair back
+# into Unicode order, so an unpaired ladder glyph now yields a bare shadda instead of a
+# spurious kasra.
+ZONEFLIP = json.loads((DATA / "zoneflip.json").read_text()) \
+    if (DATA / "zoneflip.json").exists() else {}
+
+SHADDA = "\u0651"
+# tanween, fatha, damma, kasra, and the dagger alef: everything a shadda can cap
+_CAPPABLE = "\u064b\u064c\u064d\u064e\u064f\u0650\u0670\u0656"
+
+def reorder_shadda(text):
+    """[vowel][shadda] -> [shadda][vowel]. See ZONEFLIP: the page stacks the shadda after
+    the vowel it caps; Unicode and the app both write it first."""
+    return re.sub("([" + _CAPPABLE + "])" + SHADDA, lambda m: SHADDA + m.group(1), text)
+
 # ---------------------------------------------------------------- deterministic map
 
 def build_detmap(fam, bridges_counts=("kufi", "madani", "basri", "makki")):
@@ -135,13 +160,33 @@ def build_detmap(fam, bridges_counts=("kufi", "madani", "basri", "makki")):
 
 def collapse_doubled_marks(text):
     """No app text ever repeats the identical combining mark consecutively - doubled
-    marks are stroke+fill double-draw artifacts."""
+    marks are stroke+fill double-draw artifacts.
+
+    Also folds a repeated mark SEQUENCE, not just a repeated character: a glyph that
+    carries two marks at once (HQPB4 gid 38 is kasra + small low meem) double-draws as
+    `ِِۭۭ`, where no two adjacent characters are equal and the per-character rule above
+    sees nothing to remove."""
     out = []
     for ch in text:
         if out and ch == out[-1] and unicodedata.combining(ch):
             continue
         out.append(ch)
-    return "".join(out)
+    # second pass: within each maximal run of combining marks, XY XY -> XY
+    res, i, n = [], 0, len(out)
+    while i < n:
+        if not unicodedata.combining(out[i]):
+            res.append(out[i]); i += 1
+            continue
+        j = i
+        while j < n and unicodedata.combining(out[j]):
+            j += 1
+        run = out[i:j]
+        half = len(run) // 2
+        if len(run) % 2 == 0 and half and run[:half] == run[half:]:
+            run = run[:half]
+        res.extend(run)
+        i = j
+    return "".join(res)
 
 def attach_orphan_marks(text):
     """A whitespace-separated token that is ONLY combining marks (a pause sign whose
@@ -192,6 +237,16 @@ def render_det(glyphs, detmap, missing=None, family="kufi", ctx=None):
             if v is None: v = r.get(f"p:{pv}")
             if v is None: v = r.get(f"n:{nx}")
             if v is None: v = r.get("*")
+        if k in ZONEFLIP:
+            v = ZONEFLIP[k]          # geometry beats the learner; see ZONEFLIP
+        if v == "" and k != "sp| ":
+            # A ctx rule may blank a MARK (a stray layer copy) but never a LETTER: a letter
+            # that is printed is a letter that is read. Across the Kufi map only 34 rules on
+            # 14 letter keys do this, against 1,800+ that keep the letter, and they cost
+            # real words: 3 of HQPB2#179's 117 rules deleted the ya of `يَٰبُنَيَّ`.
+            base = detmap.get(k)
+            if base and not any(unicodedata.combining(c) for c in base):
+                v = base
         if v is None:
             v = detmap.get(k)
         if v is None and k.startswith(("CL|TraditionalArabic", "CL|DecoType")):
@@ -241,6 +296,10 @@ def render_det(glyphs, detmap, missing=None, family="kufi", ctx=None):
     for k, v in out:
         if fixed:
             pk, pv2 = fixed[-1]
+            # The MSH farsh layer double-draws its LETTERS too (stroke then fill), which the
+            # combining-only rule below cannot see: `جَبۡرَءِيلَ` came out `جَبۡرَءءِيلَ`.
+            if k == pk and v == pv2 and v and "MSH" in k:
+                continue
             if v == pv2 and v and unicodedata.combining(v[0]) and len(v) == 1:
                 if k == pk:
                     continue                    # double-draw artifact
@@ -248,7 +307,7 @@ def render_det(glyphs, detmap, missing=None, family="kufi", ctx=None):
                     fixed[-1] = (pk, "ّ" + pv2)  # shadda glyph + vowel; app orders shadda FIRST
                     continue
         fixed.append((k, v))
-    t = re.sub(r"\s+", " ", "".join(v for _, v in fixed)).strip()
+    t = reorder_shadda(re.sub(r"\s+", " ", "".join(v for _, v in fixed)).strip())
     if family == "kufi":
         for dg in ("ٱا", "اٱ", "ٱٱ"):
             t = t.replace(dg, "ٱ")   # wasla-sign glyph + bare-alef glyph = ONE ٱ
@@ -259,6 +318,12 @@ def render_det(glyphs, detmap, missing=None, family="kufi", ctx=None):
             t = t.replace(pat, "\u0671" + ALLAH_LL)         # always-wasl ٱللَّ
         for pat in ("\u0671\u06e1", "\u0627\u06e1"):     # ٱۡ / اۡ - sukun of the INVISIBLE lam
             t = t.replace(pat, "\u0671\u0644\u06e1")      # ٱلۡ
+        # `وَلَٰكِنِ ٱللَّهُ` (8:17) is a Hamzah farsh word, so the print highlights it and draws
+        # the lam's shadda-fatha as its own glyph ON TOP of the ٱَ pair the rule above
+        # already expands to للَّ. That leaves the heh carrying two vowels; it carries one,
+        # and the second is the real one (the page reads ٱللَّهُ, not ٱللَّهَ).
+        t = re.sub("(\u0671\u0644\u0644\u0651\u064e\u0647)[\u064b-\u0650]([\u064b-\u0650])",
+                   r"\1\2", t)
         LILLAH_CORE = "\u0644\u0650" + ALLAH_LL + "\u0647"   # لِلَّه
         words = t.split(" ")
         LILLAH = {"هِ": LILLAH_CORE + "\u0650",
@@ -296,6 +361,16 @@ def ctxpass(fam, bridge_slugs):
     for k in counts:
         if k.startswith(("CL|TraditionalArabic", "CL|DecoType", "CL|Hamd")):
             targets.add(k)
+    # Glyphs the zone audit proved are mismapped: their ink sits on the wrong side of
+    # the baseline for the mark they emit (a kasra is drawn below, a shadda above), so a
+    # high "purity" score here only means the EM learned one wrong answer confidently.
+    # They MUST be targets, otherwise the pinning below freezes the error in place.
+    zb = DATA / "zonebad.json"
+    if zb.exists():
+        bad = set(json.loads(zb.read_text()))
+        targets |= bad
+        print(f"{fam}: +{len(bad)} zone-violating keys forced into the target set")
+
     # low-purity flat keys too
     for k, dist in counts.items():
         items = sorted(dist.items(), key=lambda x: -x[1])
@@ -622,7 +697,10 @@ def emit_targets(slugs):
     import zlib
     from extract import strip_header_and_basmalah
     OUT = DATA
-    APPOUT = APP / "Resources/Data/Quran"
+    # Emit destination. Defaults to pipeline/emit/ so a pipeline run can NEVER overwrite
+    # the shipped .json.deflate by accident; point QIRAAT_EMIT_DIR at
+    # Resources/Data/Quran only when you have reviewed the diff and mean to ship it.
+    APPOUT = pathlib.Path(os.environ.get("QIRAAT_EMIT_DIR", BASE / "emit"))
     APPOUT.mkdir(parents=True, exist_ok=True)
     NAMES = {"hisham":"QiraahHisham","ibndhakwan":"QiraahIbnDhakwan","khalaf":"QiraahKhalaf",
              "khallad":"QiraahKhallad","abuharith":"QiraahAbuHarith","durikisai":"QiraahDuriKisai",

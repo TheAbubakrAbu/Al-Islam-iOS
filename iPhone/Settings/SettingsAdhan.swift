@@ -2144,6 +2144,13 @@ extension Settings {
         if dateNotifications {
             for event in specialEvents {
                 if let built = makeEventNotificationRequest(for: event) { eventRequests.append(built) }
+                // The day-before heads-up (on by default): "Ramadan begins tomorrow evening" beats
+                // finding out at suhoor time. The hand-written "Day Before Ashura" table row already
+                // IS a day-before reminder, so it never gets one of its own.
+                if dateNotificationsDayBefore, !event.0.hasPrefix("Day Before"),
+                   let built = makeEventNotificationRequest(for: event, dayBefore: true) {
+                    eventRequests.append(built)
+                }
             }
         }
 
@@ -2797,7 +2804,10 @@ extension Settings {
         }
     }
 
-    private func makeEventNotificationRequest(for event: (String, DateComponents, String, String)) -> (request: UNNotificationRequest, date: Date)? {
+    /// `dayBefore` builds the evening-before heads-up instead: it fires at 6 PM on the previous day
+    /// ("X begins tomorrow"), rather than pre-dawn on the day itself.
+    private func makeEventNotificationRequest(for event: (String, DateComponents, String, String),
+                                              dayBefore: Bool = false) -> (request: UNNotificationRequest, date: Date)? {
         let (titleText, hijriComps, eventSubTitle, _) = event
 
         let gregorianCalendar = Calendar(identifier: .gregorian)
@@ -2817,13 +2827,20 @@ extension Settings {
             // "First Day of Ramadan" suhoor reminder fired on the unadjusted Umm al-Qura day.
             let offsetCorrected = hijriCalendar.date(byAdding: .day, value: -hijriOffset, to: hijriDate) ?? hijriDate
             let eventDay = gregorianCalendar.startOfDay(for: offsetCorrected)
+            let candidate: Date?
+            if dayBefore {
+                // The heads-up lands the EVENING before, when there is still time to plan (intend the
+                // fast, prepare suhoor) - not pre-dawn of a day that hasn't started mattering yet.
+                let previousDay = gregorianCalendar.date(byAdding: .day, value: -1, to: eventDay) ?? eventDay
+                candidate = gregorianCalendar.date(bySettingHour: 18, minute: 0, second: 0, of: previousDay)
+                beforeFajr = false
+            }
             // Fire 30 minutes before Fajr on the event day (useful for fasting days - suhoor / intention).
             // Fajr needs computed prayer times, which need a location; if those aren't available, fall back
             // to 5:00 AM so the reminder still lands pre-dawn.
-            let candidate: Date?
             // Found by name, not by position: a large manual Fajr offset can move it out of first place
             // now that the day is ordered chronologically.
-            if let fajr = getPrayerTimes(for: eventDay, fullPrayers: true)?
+            else if let fajr = getPrayerTimes(for: eventDay, fullPrayers: true)?
                 .first(where: { $0.nameTransliteration == "Fajr" }) {
                 candidate = gregorianCalendar.date(byAdding: .minute, value: -30, to: fajr.time)
                 beforeFajr = true
@@ -2846,9 +2863,13 @@ extension Settings {
 
         let content = UNMutableNotificationContent()
         content.title = AppIdentifiers.appName
-        content.body = beforeFajr
-            ? "\(titleText) is today: \(eventSubTitle). Sent 30 minutes before Fajr."
-            : "\(titleText) is today: \(eventSubTitle)."
+        if dayBefore {
+            content.body = "\(titleText) is tomorrow: \(eventSubTitle)."
+        } else {
+            content.body = beforeFajr
+                ? "\(titleText) is today: \(eventSubTitle). Sent 30 minutes before Fajr."
+                : "\(titleText) is today: \(eventSubTitle)."
+        }
         content.sound = .default
         content.userInfo[Self.intendedFireDateUserInfoKey] = finalDate.timeIntervalSince1970
         #if os(iOS)
@@ -2859,8 +2880,9 @@ extension Settings {
 
         let trigger = UNCalendarNotificationTrigger(dateMatching: gregorianComps, repeats: false)
         // Stable identifier (title + date) so incremental rescheduling updates the same request in place
-        // instead of churning a new UUID every refresh.
-        let id = "Event-\(titleText)-\(gregorianComps.year ?? 0)-\(gregorianComps.month ?? 0)-\(gregorianComps.day ?? 0)"
+        // instead of churning a new UUID every refresh. The day-before variant stays under the "Event-"
+        // prefix so the owned-prefix prune covers it.
+        let id = "Event-\(dayBefore ? "DayBefore-" : "")\(titleText)-\(gregorianComps.year ?? 0)-\(gregorianComps.month ?? 0)-\(gregorianComps.day ?? 0)"
         let request = UNNotificationRequest(
             identifier: id,
             content: content,

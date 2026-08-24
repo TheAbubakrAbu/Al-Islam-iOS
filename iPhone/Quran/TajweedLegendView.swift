@@ -12,6 +12,11 @@ struct TajweedLegendView: View {
     @State private var previewTag: String?
     /// The compare mode: every riwayah's printed color code, one after another.
     @State private var compareAll = false
+    /// How the comparison is grouped: false = one card per riwayah under its qiraah's section,
+    /// true = one section per rule listing the riwayat that mark it. Remembered across opens.
+    @AppStorage("tajweedCompareGrouping") private var compareByRule = false
+    /// The by-rule index, built once (off-main) the first time By Rule is opened.
+    @State private var ruleSections: [CompareRuleSection]?
 
     /// Every riwayah that ships a print-derived color pack - a cheap static check (`fileName`, no pack
     /// load), so building the picker menu never parses 19 packs.
@@ -323,16 +328,18 @@ struct TajweedLegendView: View {
                 settings.hapticFeedback()
                 withAnimation { compareAll.toggle() }
             } label: {
+                // The contentShape must sit INSIDE the label: with `.plain`, a shape applied outside
+                // the Button never widened the hit area, so only the words themselves took the tap.
                 Label(compareAll ? "Show Full Legend" : "Compare All Riwayat",
                       systemImage: compareAll ? "rectangle.stack.fill" : "rectangle.stack")
                     .font(.subheadline.weight(.semibold))
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 10)
+                    .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             .foregroundStyle(settings.accentColor.color)
             .conditionalGlassEffect(rectangle: true)
-            .contentShape(Rectangle())
         }
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -347,9 +354,12 @@ struct TajweedLegendView: View {
         return Label(title, systemImage: selected ? "checkmark" : "character.book.closed.fill.ar")
     }
 
-    /// The compare mode: every riwayah's printed color code, one compact card each - Hafs's engine rules
-    /// first, then the 19 print-derived packs. LazyVStack, so a pack is only parsed when its card scrolls
-    /// into view rather than all 19 up front.
+    /// The compare mode: every riwayah's printed color code, groupable two ways. By qiraah (default):
+    /// one compact card per riwayah under its qiraah's section header - Hafs an Asim's section always
+    /// first with its engine rules on top, the other qiraat alphabetical. By rule: one section per
+    /// print-derived rule, listing which riwayat mark it (Hafs first where its own legend colors an
+    /// equivalent, the rest alphabetical). LazyVStack, so by-qiraah cards only parse their pack when
+    /// scrolled into view; the by-rule index is built once, off the main thread.
     private var compareAllSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("All Riwayat Compared")
@@ -359,25 +369,216 @@ struct TajweedLegendView: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
-            LazyVStack(alignment: .leading, spacing: 10) {
-                compareCardShell(
-                    title: Settings.Riwayah.hafsLabel,
-                    arabic: Settings.Riwayah.hafsArabic
-                ) {
-                    ForEach(TajweedLegendCategory.allCases.sorted { $0.sortRank < $1.sortRank }) { item in
-                        compareRuleRow(color: item.color, english: item.transliteration)
-                    }
-                }
+            Picker("Group By", selection: $compareByRule.animation(.easeInOut)) {
+                Text("By Qiraah").tag(false)
+                Text("By Rule").tag(true)
+            }
+            .pickerStyle(SegmentedPickerStyle())
+            .onChange(of: compareByRule) { _ in settings.hapticFeedback() }
 
-                ForEach(Self.packOptions, id: \.tag) { option in
-                    compareCardShell(title: option.label, arabic: option.arabic) {
-                        ForEach(QiraahTajweedStore.shared.legend(for: option.tag)) { entry in
-                            compareRuleRow(color: entry.color, english: entry.english)
+            if compareByRule {
+                compareByRuleContent
+            } else {
+                compareByQiraahContent
+            }
+        }
+        .task(id: compareByRule) {
+            guard compareByRule, ruleSections == nil else { return }
+            let sections = await Task.detached(priority: .userInitiated) {
+                Self.buildRuleSections()
+            }.value
+            withAnimation(.easeInOut) { ruleSections = sections }
+        }
+    }
+
+    private var compareByQiraahContent: some View {
+        LazyVStack(alignment: .leading, spacing: 14) {
+            ForEach(Self.compareQiraahGroups) { group in
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("\(group.teacher.uppercased()) - \(group.teacherArabic)")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+
+                    if group.includesHafs {
+                        compareCardShell(
+                            title: Settings.Riwayah.hafsLabel,
+                            arabic: Settings.Riwayah.hafsArabic
+                        ) {
+                            ForEach(TajweedLegendCategory.allCases.sorted { $0.sortRank < $1.sortRank }) { item in
+                                compareRuleRow(color: item.color, english: item.transliteration)
+                            }
+                        }
+                    }
+
+                    ForEach(group.options, id: \.tag) { option in
+                        compareCardShell(title: option.label, arabic: option.arabic) {
+                            ForEach(QiraahTajweedStore.shared.legend(for: option.tag)) { entry in
+                                compareRuleRow(color: entry.color, english: entry.english)
+                            }
                         }
                     }
                 }
             }
         }
+    }
+
+    @ViewBuilder
+    private var compareByRuleContent: some View {
+        if let ruleSections {
+            LazyVStack(alignment: .leading, spacing: 10) {
+                ForEach(ruleSections) { section in
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack(alignment: .firstTextBaseline) {
+                            Text(section.english)
+                                .font(.subheadline.weight(.semibold))
+
+                            Spacer(minLength: 6)
+
+                            Text(section.arabic)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.6)
+                        }
+
+                        if !section.description.isEmpty {
+                            Text(section.description)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+
+                        LazyVGrid(columns: quickLegendColumns, alignment: .leading, spacing: 6) {
+                            ForEach(section.rows) { row in
+                                compareRuleRow(color: row.color, english: row.title)
+                            }
+                        }
+                    }
+                    .padding(12)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .conditionalGlassEffect(rectangle: true)
+                }
+            }
+        } else {
+            HStack(spacing: 8) {
+                ProgressView()
+                Text("Indexing all riwayah legends…")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            .frame(maxWidth: .infinity, alignment: .center)
+            .padding(.vertical, 20)
+        }
+    }
+
+    /// The by-qiraah sections: Asim first (Hafs an Asim on top of it - user rule), the other
+    /// qiraat alphabetically (ignoring "al-"), each holding its bundled riwayah packs.
+    private struct CompareQiraahGroup: Identifiable {
+        let teacher: String
+        let teacherArabic: String
+        let includesHafs: Bool
+        let options: [Settings.Riwayah.Option]
+        var id: String { teacher }
+    }
+
+    private static let compareQiraahGroups: [CompareQiraahGroup] = {
+        let hafs = Settings.Riwayah.option(for: Settings.Riwayah.hafsTag)
+        let byTeacher = Dictionary(grouping: packOptions, by: \.teacher)
+        func alphaKey(_ teacher: String) -> String {
+            let lower = teacher.lowercased()
+            return lower.hasPrefix("al-") ? String(lower.dropFirst(3)) : lower
+        }
+        var groups: [CompareQiraahGroup] = [
+            CompareQiraahGroup(
+                teacher: hafs.teacher,
+                teacherArabic: hafs.teacherArabic,
+                includesHafs: true,
+                options: (byTeacher[hafs.teacher] ?? []).sorted { $0.label < $1.label }
+            )
+        ]
+        let rest = byTeacher.keys
+            .filter { $0 != hafs.teacher }
+            .sorted { alphaKey($0) < alphaKey($1) }
+        for teacher in rest {
+            guard let opts = byTeacher[teacher], let first = opts.first else { continue }
+            groups.append(CompareQiraahGroup(
+                teacher: teacher,
+                teacherArabic: first.teacherArabic,
+                includesHafs: false,
+                options: opts.sorted { $0.label < $1.label }
+            ))
+        }
+        return groups
+    }()
+
+    // MARK: By-rule index
+
+    private struct CompareRuleRowItem: Identifiable {
+        let id: String
+        let color: Color
+        let title: String
+    }
+
+    private struct CompareRuleSection: Identifiable {
+        let key: String
+        let english: String
+        let arabic: String
+        let description: String
+        let rows: [CompareRuleRowItem]
+        var id: String { key }
+    }
+
+    /// Print-derived rule keys whose equivalent the HAFS legend also colors - only these get a
+    /// "Hafs an Asim" row (at the top of their section, user rule). Kept deliberately narrow:
+    /// a Hafs row claims "the standard Hafs color code marks this", so rules Hafs applies but
+    /// never colors (its four sakt places, the lone imalah of 11:41) stay off this list.
+    private static let hafsColoredCounterparts: [String: [TajweedLegendCategory]] = [
+        "idgham": [.idghamGhunnah, .idghamBilaGhunnah],
+        "madd_badal": [.maddNatural],
+        "madd_leen": [.maddSukoon],
+    ]
+
+    /// Loads every bundled pack's legend and inverts it: rule key -> the riwayat that mark it.
+    /// Hafs-only engine rules do NOT get sections of their own (user rule) - Hafs appears only
+    /// inside sections other riwayat opened, via `hafsColoredCounterparts`.
+    private static func buildRuleSections() -> [CompareRuleSection] {
+        struct Collected {
+            var english: String
+            var arabic: String
+            var rows: [CompareRuleRowItem] = []
+        }
+        var byKey: [String: Collected] = [:]
+
+        for option in packOptions.sorted(by: { $0.label < $1.label }) {
+            for entry in QiraahTajweedStore.shared.legend(for: option.tag) {
+                var collected = byKey[entry.key] ?? Collected(english: entry.english, arabic: entry.arabic)
+                collected.rows.append(CompareRuleRowItem(
+                    id: "\(entry.key)-\(option.tag)",
+                    color: entry.color,
+                    title: option.label
+                ))
+                byKey[entry.key] = collected
+            }
+        }
+
+        return byKey
+            .map { key, collected -> CompareRuleSection in
+                let hafsRows = (hafsColoredCounterparts[key] ?? []).map { category in
+                    CompareRuleRowItem(
+                        id: "\(key)-hafs-\(category.rawValue)",
+                        color: category.color,
+                        title: "\(Settings.Riwayah.hafsLabel) - \(category.transliteration)"
+                    )
+                }
+                return CompareRuleSection(
+                    key: key,
+                    english: collected.english,
+                    arabic: collected.arabic,
+                    description: QiraahTajweedStore.shortDescriptions[key] ?? "",
+                    rows: hafsRows + collected.rows
+                )
+            }
+            .sorted { $0.english < $1.english }
     }
 
     private func compareCardShell<Rows: View>(title: String, arabic: String,
@@ -651,7 +852,11 @@ struct TajweedLegendView: View {
                         Text("Tip")
                             .font(.headline)
 
-                        Text("This covers Tajweed rules for Hafs an Asim recitation, the most widely used qiraah. Other qiraat may apply these rules slightly differently.")
+                        // The qiraat sentence only with riwayah/qiraah shown - with it hidden the
+                        // legend never mentions qiraat at all (user rule).
+                        Text(settings.showQiraahDetails
+                             ? "This covers Tajweed rules for Hafs an Asim recitation, the most widely used qiraah. Other qiraat may apply these rules slightly differently."
+                             : "This covers Tajweed rules for Hafs an Asim recitation, the most widely used way of reciting the Quran.")
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
                             .fixedSize(horizontal: false, vertical: true)

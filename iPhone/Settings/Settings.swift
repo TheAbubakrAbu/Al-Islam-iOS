@@ -117,6 +117,14 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
         loadKhatmProgressCacheFromStorage()
         Self.locationManager.delegate = self
 
+        // Comparison mode is a riwayah feature: with riwayah/qiraah hidden it must be off. The
+        // showOtherQiraatReciters didSet enforces this on every change; this covers installs that
+        // stored the stale pair before the rule existed. Raw write - didSets must not fire in init.
+        if !UserDefaults.standard.bool(forKey: "showOtherQiraatReciters"),
+           UserDefaults.standard.bool(forKey: "qiraatComparisonMode") {
+            UserDefaults.standard.set(false, forKey: "qiraatComparisonMode")
+        }
+
         #if DEBUG
         // Headless riwayah forcing for simulator verification: `-displayQiraah <tag>` seeds the
         // riwayah + beta unlock BEFORE anything derives from them. Raw UserDefaults writes on
@@ -156,6 +164,9 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
             }
         }
         if ProcessInfo.processInfo.arguments.contains("-qiraatComparisonMode") {
+            // Comparison requires riwayah/qiraah shown (the init reconcile above would otherwise
+            // clear it on the next launch), so the seed sets the pair.
+            UserDefaults.standard.set(true, forKey: "showOtherQiraatReciters")
             UserDefaults.standard.set(true, forKey: "qiraatComparisonMode")
         }
         // Same headless-verification pattern for the facsimile: `-mushafPageLanguage pdf` puts page
@@ -761,6 +772,12 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     // MARK: - [Al-Adhan] Prayer - @AppStorage (notifications, travel, calculation, alerts)
 
     @AppStorage("dateNotifications") var dateNotifications = true {
+        didSet { self.fetchPrayerTimes(notification: true) }
+    }
+
+    /// Also remind one day BEFORE each Islamic date (e.g. the day before Ramadan begins), so the
+    /// day itself never arrives unannounced. Only meaningful while `dateNotifications` is on.
+    @AppStorage("dateNotificationsDayBefore") var dateNotificationsDayBefore = true {
         didSet { self.fetchPrayerTimes(notification: true) }
     }
 
@@ -1441,7 +1458,16 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
 
 
     /// When on, ReciterListView reveals non-Hafs qiraat reciters.
-    @AppStorage("showOtherQiraatReciters") var showOtherQiraatReciters: Bool = false
+    /// Hiding riwayah/qiraah also switches comparison mode off: comparison is a riwayah feature, and
+    /// leaving it on would keep riwayah pickers in the reader after the user asked for none of it.
+    @AppStorage("showOtherQiraatReciters") var showOtherQiraatReciters: Bool = false {
+        didSet {
+            guard oldValue != showOtherQiraatReciters else { return }
+            if !showOtherQiraatReciters && qiraatComparisonMode {
+                qiraatComparisonMode = false
+            }
+        }
+    }
 
     /// Unlocks the 12 machine-extracted riwayat (Ibn Amir, Hamzah, al-Kisai, Abu Jafar,
     /// Yaqub, Khalaf al-Ashir). Their text is BETA - digitized from a printed mushaf set
@@ -1758,6 +1784,13 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     /// `fontArabic` still holding this name is migrated to the Hafs face at launch.
     static let legacyQiraatFontName = "KFGQPCQUMBULUthmanicScript-Regu"
     static let indopakFontName = "Al_Mushaf"
+    /// KUFIC - Noto Kufi Arabic (SIL OFL, `Resources/Fonts/Kufi.ttf`), the classic angular script of
+    /// the earliest written mushafs in a modern digitization. Full harakat + Quranic annotation
+    /// coverage except U+06EC (the round wasl dot some non-Hafs texts use), and real dotless
+    /// skeleton glyphs (U+066E/066F/06A1/06BA) for Hide Arabic Dots. No redistributable Hijazi-script
+    /// face exists (checked 2026-08: the one attempt on GitHub carries no license), so Kufic is the
+    /// app's "ancient script" option.
+    static let kufiFontName = "NotoKufiArabic-Regular"
     /// Migration sentinels: names the IndoPak face briefly shipped under during testing. A stored
     /// value matching one is rewritten at launch, or the reader keeps a name no font answers to.
     static let legacyIndopakFontNames = ["KFGQPCNastaleeq-Regular", "AlQuranIndoPakbyQuranWBW"]

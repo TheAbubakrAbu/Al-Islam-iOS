@@ -14,7 +14,7 @@ import json, sys, math, collections, pathlib, re
 
 BASE = pathlib.Path(__file__).resolve().parent
 DATA = BASE / "data"
-APP = pathlib.Path("/Users/theabubakrabu/Library/Mobile Documents/com~apple~CloudDocs/Projects/(1) iOS/Al-Islam-iOS")
+APP = pathlib.Path("/Users/theabubakrabu/Downloads/Islam/Al-Islam-iOS")
 
 sys.path.insert(0, str(BASE))
 from extract import (BRIDGES, overlay, strip_header_and_basmalah,

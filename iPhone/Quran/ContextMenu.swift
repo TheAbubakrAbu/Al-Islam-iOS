@@ -1202,16 +1202,18 @@ private struct SurahContextMenuPreviewContent: View {
 // render itself here, so the overlay stays usable in an app that ships without a Quran.
 extension FocusItem {
     static func surah(_ surah: Surah) -> FocusItem {
-        FocusItem(
+        // The name honours Hide Tashkeel / Hide Dots like the list rows and toolbar title do.
+        let displayName = Settings.shared.cleanedQuranArabic(surah.nameArabic)
+        return FocusItem(
             id: "surah-\(surah.id)",
-            arabic: surah.nameArabic,
+            arabic: displayName,
             title: "\(surah.id) · \(surah.nameTransliteration)",
             subtitle: surah.nameEnglish,
             footnote: "\(surah.type.capitalized) · \(surah.numberOfAyahs) ayahs",
             secondaryArabic: surah.idArabic,
             shareLabel: "Share Surah",
             shareText: """
-            Surah \(surah.id) - \(surah.nameTransliteration) (\(surah.nameArabic))
+            Surah \(surah.id) - \(surah.nameTransliteration) (\(displayName))
             \(surah.nameEnglish)
             \(surah.type.capitalized) · \(surah.numberOfAyahs) ayahs
             """
@@ -1299,12 +1301,32 @@ struct SelectAyahTextSheet: View {
         arabicAyah.existsInQiraah(selectedQiraah, surahID: surah.id)
     }
 
+    /// Smart Ayah Matching only matters once the sheet's riwayah has moved away from the one the
+    /// ayah was tapped under - on the same riwayah the resolution is the identity, so the toggle
+    /// is noise (same rule as the share sheet).
+    private var selectedQiraahDiffersFromOrigin: Bool {
+        Settings.Riwayah.canonicalTag(selectedQiraah) != Settings.Riwayah.canonicalTag(originQiraah)
+    }
+
     private var arabicText: String {
+        // Resolve the FULL text (`clean: false`) and apply this sheet's own switches, like the share and
+        // comparison sheets do. Passing `clean: hideTashkeel` would route through textCleanArabic, which
+        // reads the READER's global Hide Dots itself - so the sheet's Hide Tashkeel would also strip dots
+        // and its Hide Dots toggle couldn't restore them.
         var text = arabicAyah.displayArabicText(
             surahId: surah.id,
-            clean: hideTashkeel,
+            clean: false,
             qiraahOverride: selectedQiraah
         )
+        if hideTashkeel {
+            text = text.removingArabicDiacriticsAndSigns
+            if surah.id == 1 && arabicAyah.id == 1 {
+                let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+                if !trimmed.hasPrefix("بسم") {
+                    text = Ayah.bismillahCleanArabic
+                }
+            }
+        }
         if hideDots { text = text.removingArabicDots }
         return text
     }
@@ -1334,16 +1356,22 @@ struct SelectAyahTextSheet: View {
                             ArabicTextRiwayahPicker(selection: $selectedQiraah.animation(.easeInOut), useMenuRow: true)
 
                             // The same words across riwayat (anchored through Hafs, like the comparison
-                            // sheet) vs. whatever verse sits at the raw tapped number.
-                            Toggle(isOn: $smartAyahMatching.animation(.easeInOut)) {
-                                Label("Smart Ayah Matching", systemImage: "wand.and.stars")
+                            // sheet) vs. whatever verse sits at the raw tapped number. Only shown once the
+                            // picker has moved off the riwayah the ayah was tapped under - on the same
+                            // riwayah the resolution is the identity (same rule as the share sheet).
+                            if selectedQiraahDiffersFromOrigin {
+                                Toggle(isOn: $smartAyahMatching.animation(.easeInOut)) {
+                                    Label("Smart Ayah Matching", systemImage: "wand.and.stars")
+                                }
+                                .font(.subheadline)
+                                .onChange(of: smartAyahMatching) { _ in settings.hapticFeedback() }
                             }
-                            .font(.subheadline)
-                            .onChange(of: smartAyahMatching) { _ in settings.hapticFeedback() }
                         } footer: {
-                            Text(riwayahFooterText)
-                                .font(.caption)
-                                .foregroundColor(.secondary)
+                            if selectedQiraahDiffersFromOrigin {
+                                Text(riwayahFooterText)
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
                         }
                     }
 
@@ -1352,6 +1380,7 @@ struct SelectAyahTextSheet: View {
                             Text("Uthmani").tag(Settings.hafsUthmaniFontName)
                             Text("Maghribi").tag(Settings.warshUthmaniFontName)
                             Text("Indopak").tag(Settings.indopakFontName)
+                            Text("Kufic").tag(Settings.kufiFontName)
                             Text("Basic").tag(Settings.systemArabicFontName)
                         }
                         .pickerStyle(SegmentedPickerStyle())

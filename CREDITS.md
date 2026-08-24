@@ -32,6 +32,7 @@ App Store: <https://apps.apple.com/us/app/al-islam-islamic-pillars/id6449729655>
 - **Reference for the qiraat guide's profiles of the ten imams and twenty narrators** - **QiraatHub** - <https://qiraathub.com/>. The profile pages in the app are written for it; QiraatHub is the companion reference each page links out to.
 - **Uthmani Quran font** - **King Fahad Complex (KFGQPC)** - <https://qul.tarteel.ai/resources/font/245>
 - **Indopak Nastaleeq Quran font** - **Ayman Siddiqui and R. Siddiqua** - <https://qul.tarteel.ai/resources/font/242>
+- **Kufic Quran font (Noto Kufi Arabic)** - **The Noto Project Authors (Google)**, SIL Open Font License 1.1 (`Resources/Fonts/Kufi-OFL.txt`) - <https://fonts.google.com/noto/specimen/Noto+Kufi+Arabic>
 - **Surah (full) Quran recitations** - **MP3 Quran** - <https://mp3quran.net/eng>
 - **Ayah-by-ayah Quran recitations** - **Al Quran** - <https://alquran.cloud/cdn>
 - **Additional ayah-by-ayah Quran recitations** - **EveryAyah** - <https://everyayah.com/>

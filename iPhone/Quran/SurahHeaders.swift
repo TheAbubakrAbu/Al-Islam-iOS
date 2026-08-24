@@ -79,7 +79,7 @@ struct JuzHeader: View {
             Text("JUZ \(juz.id)")
                 .lineLimit(1)
 
-            Text("- \(juz.nameTransliteration.uppercased()) - \(juz.nameArabic)")
+            Text("- \(juz.nameTransliteration.uppercased()) - \(Settings.shared.cleanedQuranArabic(juz.nameArabic))")
                 .font(.footnote)
                 .lineLimit(1)
                 .minimumScaleFactor(0.5)
@@ -115,7 +115,7 @@ struct JuzHeader: View {
     private var infoMessage: String {
         let stats = quranData.juzStats(for: juz)
         return """
-        \(juz.nameArabic)
+        \(Settings.shared.cleanedQuranArabic(juz.nameArabic))
 
         Ayahs: \(stats.ayahCount)
         Pages: \(stats.pageCount)

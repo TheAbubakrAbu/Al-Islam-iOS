@@ -14,7 +14,7 @@ import hybrid
 
 detmap = build_detmap("kufi")
 khalaf = json.loads(pathlib.Path(
-    "/Users/theabubakrabu/Library/Mobile Documents/com~apple~CloudDocs/Projects/(1) iOS/Al-Islam-iOS/Resources/JSONs-Deprecated/Qiraat/_staging-riwayat/khalaf.json").read_text())
+    "/Users/theabubakrabu/Downloads/Islam/Al-Islam-iOS/Resources/JSONs-Deprecated/Qiraat/_staging-riwayat/khalaf.json").read_text())
 
 class _EM:
     def logp(self, key, e):

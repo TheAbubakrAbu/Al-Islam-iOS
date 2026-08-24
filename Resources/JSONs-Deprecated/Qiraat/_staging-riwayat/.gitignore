@@ -1,0 +1,18 @@
+# Extraction input. The volumes are ~84 MB and live outside the repo; see HANDOFF §1.
+pdfs/*.pdf
+
+# Generated caches and intermediates. These reached 109 MB in one session, and a stale
+# copy silently poisons every later run (raw_ayahs caches the PDF parse and never checks
+# whether the PDF changed), so they are regenerated rather than stored.
+pipeline/pdfcache/
+pipeline/emit/
+pipeline/data/*.raw.json
+pipeline/data/*.surahs.json
+pipeline/data/*.final.json
+pipeline/data/*.text.json
+pipeline/data/detmap-*.json
+pipeline/data/detamb-*.json
+pipeline/data/zonespec.json
+
+__pycache__/
+venv/

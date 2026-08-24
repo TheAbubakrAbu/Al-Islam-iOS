@@ -8,7 +8,7 @@ import json, sys, collections, pathlib, unicodedata
 
 BASE = pathlib.Path(__file__).resolve().parent
 DATA = BASE / "data"
-APP = pathlib.Path("/Users/theabubakrabu/Library/Mobile Documents/com~apple~CloudDocs/Projects/(1) iOS/Al-Islam-iOS")
+APP = pathlib.Path("/Users/theabubakrabu/Downloads/Islam/Al-Islam-iOS")
 OUTDIR = APP / "Resources/JSONs-Deprecated/Qiraat"
 
 TARGETS = {
