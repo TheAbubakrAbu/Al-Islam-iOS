@@ -199,6 +199,24 @@ final class NamesViewModel: ObservableObject {
         loadState == .ready
     }
 
+    /// Re-runs a load that failed (or somehow never ran). Called as the page appears and from its
+    /// Try Again row, so a one-off failure at launch is retried the moment someone actually looks for
+    /// the names, instead of the page opening on its header and description with no names under
+    /// them for the rest of the session. Main thread only (it publishes).
+    func retryIfNeeded() {
+        switch loadState {
+        case .failed:
+            // The finished task's own nil-out hops through the main queue; don't wait for it.
+            loadTask = nil
+            loadState = .loading
+            startLoading()
+        case .idle:
+            startLoading()
+        case .loading, .ready:
+            break
+        }
+    }
+
     /// Wall-clock capped: this gates the LAUNCH SCREEN reveal (LaunchScreen awaits it with no cap of
     /// its own), and the uncapped loop had no escape if the load task never ran or wedged before
     /// setting `.ready`/`.failed` - a permanently stranded launch. Eight seconds is far beyond any
@@ -217,6 +235,16 @@ final class NamesViewModel: ObservableObject {
         await MainActor.run {
             loadState = .loading
         }
+
+        #if DEBUG
+        // `-failNamesLoad`: every attempt fails on purpose while the flag is present, so the page's
+        // failed state and its Try Again row can be screenshotted. (Without the flag, the same
+        // retry path was verified end to end: two forced failures, then the names appeared.)
+        if ProcessInfo.processInfo.arguments.contains("-failNamesLoad") {
+            await MainActor.run { self.loadState = .failed }
+            return
+        }
+        #endif
 
         defer {
             Task { @MainActor in
@@ -701,7 +729,11 @@ struct NamesView: View {
                     #endif
                     if keywordVisible {
                         namesHeaderSection(resultCount: names.count, hasActiveSearch: hasActiveSearch, proxy: proxy)
-                        namesSections(filteredNames: names, favoriteSet: favoriteSet, hasActiveSearch: hasActiveSearch, proxy: proxy)
+                        if names.isEmpty, !namesData.isReadyForUI {
+                            namesLoadStateSection
+                        } else {
+                            namesSections(filteredNames: names, favoriteSet: favoriteSet, hasActiveSearch: hasActiveSearch, proxy: proxy)
+                        }
                     }
                     finalInvocationSection
                 }
@@ -734,6 +766,8 @@ struct NamesView: View {
         .applyConditionalListStyle()
         .compactListSectionSpacing()
         .navigationTitle("99 Names of Allah")
+        // A load that failed at launch gets another go the moment the page is actually opened.
+        .onAppear { namesData.retryIfNeeded() }
         .onChange(of: searchText) { newValue in
             cleanedSearch = Self.clean(newValue)
             #if os(iOS)
@@ -886,6 +920,41 @@ struct NamesView: View {
             onShuffle: (hasActiveSearch || settings.namesGridMode) ? nil : { shuffleToRandomName(proxy: proxy) }
         )) { }
         .padding(.bottom, -12)
+    }
+
+    /// What the list shows while the model has nothing to list: the load still running, or a load that
+    /// failed, with a way to try again. Before this row existed, both states left the page looking
+    /// finished with no names on it.
+    @ViewBuilder
+    private var namesLoadStateSection: some View {
+        Section {
+            if namesData.loadState == .failed {
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("The names could not be loaded.")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+
+                    Button {
+                        settings.hapticFeedback()
+                        namesData.retryIfNeeded()
+                    } label: {
+                        Label("Try Again", systemImage: "arrow.clockwise")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(settings.accentColor.color)
+                    }
+                    .buttonStyle(.plain)
+                }
+                .padding(.vertical, 4)
+            } else {
+                HStack(spacing: 10) {
+                    ProgressView()
+                    Text("Loading the names…")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+                .padding(.vertical, 4)
+            }
+        }
     }
 
     /// Expands a random name and scrolls it to the top - the header's shuffle button.

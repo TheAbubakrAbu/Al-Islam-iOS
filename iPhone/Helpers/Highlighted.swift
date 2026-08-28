@@ -187,7 +187,9 @@ struct HighlightedSnippet: View {
     }()
 
     /// source → Allah highlight ranges: amortises the O(n) per-render Allah scan.
-    private static let allahRangeCache: NSCache<NSString, RangeEntry> = {
+    /// nonisolated(unsafe): NSCache is thread-safe by contract; `arabicAllahRanges` is nonisolated
+    /// because the word-by-word reader and the prewarm call it off the main actor.
+    nonisolated(unsafe) private static let allahRangeCache: NSCache<NSString, RangeEntry> = {
         let c = NSCache<NSString, RangeEntry>()
         c.countLimit = 7_000
         return c

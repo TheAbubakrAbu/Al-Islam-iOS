@@ -569,6 +569,7 @@ struct SettingsQuranView: View {
     private var arabicDisplayControls: some View {
         if settings.showArabicText {
             arabicFontPicker
+            hijaziMarkStylePicker
             arabicScriptStylePicker
             arabicFontSizeControls
             beginnerModeGroup
@@ -620,18 +621,70 @@ struct SettingsQuranView: View {
     }
 
     private var arabicFontPicker: some View {
-        Picker("Arabic Font", selection: $settings.fontArabic.animation(.easeInOut)) {
-            Text("Uthmani").tag(Settings.hafsUthmaniFontName)
-            Text("Indopak").tag(Settings.indopakFontName)
-            // The classic angular script of the earliest written mushafs (Noto Kufi Arabic).
-            Text("Kufic").tag(Settings.kufiFontName)
-            Text("Basic").tag(Settings.systemArabicFontName)
+        VStack(alignment: .leading, spacing: 8) {
+            // Every Hijazi mark style reads as "Hijazi" here; the style itself is chosen on the row
+            // below, which exists only while Hijazi is selected (five segments is all an iPhone
+            // width fits). Order: the two printed-mushaf hands, then the two historical scripts
+            // oldest first, then the system font.
+            Picker("Arabic Font", selection: Binding(
+                get: { Settings.pickerFaceName(for: settings.fontArabic) },
+                set: { settings.fontArabic = $0 }
+            ).animation(.easeInOut)) {
+                Text("Uthmani").tag(Settings.hafsUthmaniFontName)
+                Text("Indopak").tag(Settings.indopakFontName)
+                // The hand of the earliest mushafs themselves (Al-Islam Hijazi, built from hijazifont).
+                Text("Hijazi").tag(Settings.hijaziFontName)
+                // The angular script of the early Abbasid mushafs (Noto Kufi Arabic).
+                Text("Kufi").tag(Settings.kufiFontName)
+                Text("Basic").tag(Settings.systemArabicFontName)
+            }
+            #if os(iOS)
+            .pickerStyle(SegmentedPickerStyle())
+            #endif
+            .disabled(!settings.showArabicText)
+            .onChange(of: settings.fontArabic) { _ in settings.hapticFeedback() }
+
+            #if os(iOS)
+            // Where the chosen hand comes from, then the one thing every face shares.
+            if let face = Settings.arabicFace(forQuranFontName: settings.fontArabic) {
+                Text(face.historyCaption)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .padding(.vertical, 2)
+            }
+
+            Text(Settings.uthmaniRasmCaption)
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .padding(.vertical, 2)
+            #endif
         }
-        #if os(iOS)
-        .pickerStyle(SegmentedPickerStyle())
-        #endif
-        .disabled(!settings.showArabicText)
-        .onChange(of: settings.fontArabic) { _ in settings.hapticFeedback() }
+    }
+
+    /// The Hijazi face's three mark styles (`Settings.HijaziMarkStyle`): one typeface to the picker
+    /// above, three builds of it here. Shown only while Hijazi is the Quran face.
+    @ViewBuilder
+    private var hijaziMarkStylePicker: some View {
+        if Settings.isHijaziFontName(settings.fontArabic) {
+            VStack(alignment: .leading, spacing: 8) {
+                Picker("Hijazi Marks", selection: $settings.fontArabic.animation(.easeInOut)) {
+                    ForEach(Settings.HijaziMarkStyle.allCases) { style in
+                        Text(style.label).tag(style.fontName)
+                    }
+                }
+                #if os(iOS)
+                .pickerStyle(SegmentedPickerStyle())
+                #endif
+                .disabled(!settings.showArabicText)
+
+                #if os(iOS)
+                Text("The letters are the same in all three; only the vowel marks change. Light and Bold are the usual marks at two weights. Dot Vowels writes them the way the earliest vocalised mushafs did: a dot above the letter is fatha, below it is kasra, in front of it is damma, and doubled dots are tanween.")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .padding(.vertical, 2)
+                #endif
+            }
+        }
     }
 
     /// Sits under the Arabic Font picker because it only refines the Uthmani choice - IndoPak

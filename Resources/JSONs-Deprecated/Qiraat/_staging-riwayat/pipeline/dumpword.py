@@ -1,9 +1,11 @@
 """Dump the glyph keys of one word in one ayah, with each key's detmap emission."""
 import sys, json
 sys.path.insert(0, ".")
-import final, extract
+import final, extract, os
 
-FAM = "kufi"
+# Override per family, exactly as fixdrops.py and showdrops.py do:
+#   QIRAAT_FAMILY=madani python3 dumpword.py qaloon 2 9 ا
+FAM = os.environ.get("QIRAAT_FAMILY", "kufi")
 
 def main():
     slug, sid, aid, needle = sys.argv[1], int(sys.argv[2]), int(sys.argv[3]), sys.argv[4]

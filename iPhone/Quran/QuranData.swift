@@ -741,10 +741,26 @@ final class TajweedStore {
         }
         guard let box = opsCache.object(forKey: cacheKey) else { return [] }
 
-        var present = Set<TajweedLegendCategory>()
-        for op in box.ops where NSIntersectionRange(op.range, wordRange).length > 0 {
-            present.insert(op.category)
+        // Only the rule that actually WINS a character is listed - resolved exactly the way
+        // `attributedText` paints (ascending priority, later op wins a tie), so a letter two rules
+        // both claim (the bare wasl alef of ٱللَّهِ, which the dropped-letter pass also marks before
+        // the wasl rule outpaints it) reports only the color the reader sees.
+        guard wordRange.location >= 0, wordRange.length > 0 else { return [] }
+        var winner = [(priority: Int, category: TajweedLegendCategory)?](repeating: nil, count: wordRange.length)
+        let ordered = box.ops.enumerated().sorted {
+            if $0.element.priority == $1.element.priority { return $0.offset < $1.offset }
+            return $0.element.priority < $1.element.priority
         }
+        for (_, op) in ordered {
+            let hit = NSIntersectionRange(op.range, wordRange)
+            guard hit.length > 0 else { continue }
+            for i in hit.location ..< hit.location + hit.length {
+                let slot = i - wordRange.location
+                if let current = winner[slot], op.priority < current.priority { continue }
+                winner[slot] = (op.priority, op.category)
+            }
+        }
+        let present = Set(winner.compactMap { $0?.category })
         return TajweedLegendCategory.allCases.filter { present.contains($0) }
     }
 
@@ -5131,22 +5147,6 @@ enum QiraahComparison {
     private static var alignmentCache: [String: Alignment] = [:]
     private static var diffCache: [String: [(Int, Int)]] = [:]
 
-    /// Word count of a display text - tashkeel never moves a word boundary, so raw splitting is
-    /// enough for the alignment signal.
-    private static func wordCount(_ text: String) -> Int {
-        var count = 0
-        var inWord = false
-        for ch in text {
-            if ch.isWhitespace {
-                inWord = false
-            } else if !inWord {
-                inWord = true
-                count += 1
-            }
-        }
-        return count
-    }
-
     /// The alignment for one surah of one riwayah, cached for the app's lifetime (texts are
     /// immutable). Nil for Hafs itself, unknown tags, or a riwayah with no text for this surah.
     static func alignment(surahID: Int, tag: String, quranData: QuranData) -> Alignment? {
@@ -5154,24 +5154,62 @@ enum QiraahComparison {
         guard !canonical.isEmpty else { return nil }
         let key = "\(surahID)|\(canonical)"
         if let cached = alignmentCache[key] { return cached }
-        // numberOfAyahs > 0 also protects the `1...` range below - a truncated pack decodes surah
-        // metas with count 0 (the reader returns 0 past end-of-data instead of failing).
-        guard let surah = quranData.surah(surahID), surah.numberOfAyahs > 0 else { return nil }
+        #if DEBUG
+        var phase = Date()
+        func lap(_ slot: Int) { phaseMillis[slot] += Date().timeIntervalSince(phase) * 1000; phase = Date() }
+        #else
+        func lap(_ slot: Int) {}
+        #endif
 
-        var hafsWords: [Int] = []
-        for n in 1...surah.numberOfAyahs {
-            guard let a = quranData.ayah(surah: surahID, ayah: n) else { return nil }
-            hafsWords.append(wordCount(a.textArabic(for: nil)))
+        // Each side's texts are read and split ONCE: word counts for the count walk, rasm sets for
+        // the word check. Hafs's side serves all nineteen riwayat of this surah.
+        guard let hafs = hafsSide(surahID: surahID, quranData: quranData),
+              let riwayahTexts = texts(surahID: surahID, tag: canonical, quranData: quranData) else { return nil }
+        let riwayah = Side(texts: riwayahTexts)
+        lap(0)
+
+        var result = countWalk(riwayahWords: riwayah.counts, hafsWords: hafs.counts)
+        lap(3)
+
+        // WORD COUNTS ARE NOT ENOUGH. The count walk decides from counts alone, and equal counts
+        // do not imply equal boundaries: al-Fatiha has seven ayahs in every tradition, yet the
+        // Madani and Basri counts do not number the basmalah and split the last ayah, so every
+        // verse sits one place off - the identity short-circuit then aligned Warsh 1:3
+        // (مَلِكِ يَوْمِ ٱلدِّينِ) to Hafs 1:3 (ٱلرَّحْمَٰنِ ٱلرَّحِيمِ); Al Imran keeps its 200
+        // through one merge and one split each way. So the mapping is CHECKED against the words
+        // themselves, and re-derived from content where it fails - a surah the counts got right
+        // keeps exactly the mapping it had.
+        let countScore = agreement(result.hafsRangeForRiwayah, riwayah: riwayah.rasm, hafs: hafs.rasm)
+        lap(1)
+        var finalScore = countScore.mean
+        var walkScore: Double? = nil
+        // The gate is the WORST ayah, not the average: a long surah hides one misplaced ayah
+        // behind a high mean (one slip in Baqarah still averages 0.996), while the misplaced ayah
+        // itself scores near zero - and mere wording differences never drag one below about 0.7.
+        if countScore.worst < 0.6 {
+            let repaired = contentAlignment(riwayah: riwayah.rasm, hafs: hafs.rasm)
+            lap(2)
+            let repairedScore = agreement(repaired.hafsRangeForRiwayah, riwayah: riwayah.rasm, hafs: hafs.rasm)
+            lap(1)
+            walkScore = repairedScore.mean
+            if repairedScore.mean > countScore.mean + 0.005 {
+                result = repaired
+                finalScore = repairedScore.mean
+            }
         }
+        #if DEBUG
+        diagnostics[key] = Diagnostics(countScore: countScore.mean, finalScore: finalScore, walkScore: walkScore)
+        #endif
 
-        var riwayahWords: [Int] = []
-        var n = 1
-        while let a = quranData.ayah(surah: surahID, ayah: n), a.existsInQiraah(canonical, surahID: surahID) {
-            riwayahWords.append(wordCount(a.textArabic(for: canonical, surahID: surahID)))
-            n += 1
-        }
-        guard !riwayahWords.isEmpty else { return nil }
+        alignmentCache[key] = result
+        return result
+    }
 
+    /// The greedy count walk: pairs one riwayah ayah against one, two, or three Hafs ayahs (and
+    /// the reverse for splits) by word counts alone - at a genuine merge point the count evidence
+    /// is unambiguous, and identical totals short-circuit to identity. Right for most surahs,
+    /// and checked against the words by `alignment` for the rest.
+    private static func countWalk(riwayahWords: [Int], hafsWords: [Int]) -> Alignment {
         var rForH: [Int: Int] = [:]
         var hForR: [Int: ClosedRange<Int>] = [:]
 
@@ -5226,11 +5264,347 @@ enum QiraahComparison {
                 h += 1
             }
         }
-
-        let result = Alignment(riwayahNumberForHafs: rForH, hafsRangeForRiwayah: hForR)
-        alignmentCache[key] = result
-        return result
+        return Alignment(riwayahNumberForHafs: rForH, hafsRangeForRiwayah: hForR)
     }
+
+    // MARK: Content check
+
+    /// A word reduced to its bare rasm: marks dropped, hamza seats folded to their carrier, the
+    /// dotless letters and alef maqsura folded back. What every riwayah of one ayah shares is the
+    /// skeleton, so this is what alignment can be checked against - vowels, hamza spellings and
+    /// dots differ by design.
+    nonisolated static func wordSkeleton<S: StringProtocol>(_ token: S) -> String {
+        var out = String.UnicodeScalarView()
+        for scalar in token.unicodeScalars {
+            switch scalar.value {
+            case 0x0622, 0x0623, 0x0625, 0x0671: out.append(Self.alef)     // hamza seats, wasl alef
+            case 0x0624: out.append(Self.waw)
+            case 0x0626, 0x0649, 0x06CC: out.append(Self.ya)              // ya seat, alef maqsura, Farsi ya
+            case 0x066E, 0x067E: out.append(Self.ba)                      // dotless beh, peh
+            case 0x066F: out.append(Self.qaf)
+            case 0x06A1: out.append(Self.fa)
+            case 0x06BA: out.append(Self.noon)
+            case 0x0621, 0x0640: continue                                 // bare hamza, tatweel: no rasm
+            case 0x0627...0x064A: out.append(scalar)
+            default: continue                                             // marks, digits, ornaments
+            }
+        }
+        return String(out)
+    }
+
+    private nonisolated static let alef: Unicode.Scalar = "ا"
+    private nonisolated static let waw: Unicode.Scalar = "و"
+    private nonisolated static let ya: Unicode.Scalar = "ي"
+    private nonisolated static let ba: Unicode.Scalar = "ب"
+    private nonisolated static let qaf: Unicode.Scalar = "ق"
+    private nonisolated static let fa: Unicode.Scalar = "ف"
+    private nonisolated static let noon: Unicode.Scalar = "ن"
+
+    /// One reading's surah, split once: each ayah's word count and its set of rasm words.
+    private struct Side {
+        let counts: [Int]
+        let rasm: [Set<String>]
+
+        init(texts: [String]) {
+            var counts: [Int] = []
+            var rasm: [Set<String>] = []
+            counts.reserveCapacity(texts.count)
+            rasm.reserveCapacity(texts.count)
+            for text in texts {
+                var words = Set<String>()
+                var count = 0
+                for token in text.split(whereSeparator: { $0.isWhitespace }) {
+                    count += 1
+                    let skeleton = wordSkeleton(token)
+                    if !skeleton.isEmpty { words.insert(skeleton) }
+                }
+                counts.append(count)
+                rasm.append(words)
+            }
+            self.counts = counts
+            self.rasm = rasm
+        }
+    }
+
+    /// Surah → the Hafs side, shared by every riwayah's alignment of that surah.
+    private static var hafsSideCache: [Int: Side] = [:]
+
+    private static func hafsSide(surahID: Int, quranData: QuranData) -> Side? {
+        if let cached = hafsSideCache[surahID] { return cached }
+        guard let texts = texts(surahID: surahID, tag: nil, quranData: quranData) else { return nil }
+        let side = Side(texts: texts)
+        hafsSideCache[surahID] = side
+        return side
+    }
+
+    /// The ayah texts of one reading for a surah (nil tag = Hafs), in that reading's own
+    /// numbering. Nil when the surah has no text there. numberOfAyahs > 0 also protects the
+    /// `1...` range - a truncated pack decodes surah metas with count 0.
+    private static func texts(surahID: Int, tag: String?, quranData: QuranData) -> [String]? {
+        guard let surah = quranData.surah(surahID), surah.numberOfAyahs > 0 else { return nil }
+        var out: [String] = []
+        if let tag {
+            var n = 1
+            while let a = quranData.ayah(surah: surahID, ayah: n), a.existsInQiraah(tag, surahID: surahID) {
+                out.append(a.textArabic(for: tag, surahID: surahID))
+                n += 1
+            }
+        } else {
+            for n in 1...surah.numberOfAyahs {
+                guard let a = quranData.ayah(surah: surahID, ayah: n) else { return nil }
+                out.append(a.textArabic(for: nil))
+            }
+        }
+        return out.isEmpty ? nil : out
+    }
+
+    /// How much of each riwayah ayah's rasm actually appears in the Hafs ayah(s) it was mapped to:
+    /// the average over the surah, and the single worst ayah. Containment (not Jaccard) so a
+    /// genuine merge or split still scores 1: the question is whether the riwayah's words are IN
+    /// the span, not whether the span is the same size. An unmapped ayah scores 0.
+    private static func agreement(_ mapping: [Int: ClosedRange<Int>],
+                                  riwayah: [Set<String>], hafs: [Set<String>]) -> (mean: Double, worst: Double) {
+        guard !riwayah.isEmpty else { return (0, 0) }
+        var total = 0.0
+        var worst = 1.0
+        for (index, words) in riwayah.enumerated() {
+            // An ayah with no rasm at all (marks only) says nothing either way.
+            guard !words.isEmpty else { total += 1; continue }
+            var score = 0.0
+            if let span = mapping[index + 1] {
+                var union = Set<String>()
+                for n in span where n >= 1 && n <= hafs.count { union.formUnion(hafs[n - 1]) }
+                score = containment(words, union)
+            }
+            total += score
+            worst = min(worst, score)
+        }
+        return (total / Double(riwayah.count), worst)
+    }
+
+    private static func containment(_ a: Set<String>, _ b: Set<String>) -> Double {
+        guard !a.isEmpty, !b.isEmpty else { return 0 }
+        return Double(a.intersection(b).count) / Double(min(a.count, b.count))
+    }
+
+    /// The content alignment proper: a banded dynamic-programming alignment of the two ayah
+    /// sequences, scored by the words themselves. A block pairs one riwayah ayah with up to five
+    /// Hafs ayahs (a merge), up to five riwayah ayahs with one Hafs ayah (a split - Ta-Ha 40 is
+    /// FOUR ayahs in the Shami count), or leaves an ayah on either side unpaired (a Hafs ayah this
+    /// counting does not number at all - the basmalah - or a riwayah ayah Hafs has no counterpart
+    /// for). A block earns its shared words and pays half for every word only one side has, so a
+    /// merge or split wins only where the extra ayah's words are genuinely there; a wider block
+    /// pays a hair more, so a tie between absorbing a neighbor and leaving it alone goes to
+    /// leaving it alone. Globally optimal, so a many-piece split or an early drift cannot throw
+    /// the rest of the surah off the way a greedy step does.
+    ///
+    /// Every distinct rasm word in the surah gets one bit, so an ayah (or a run of them) is a few
+    /// UInt64 lanes and a block's shared-word count is a few popcounts - the table scores tens of
+    /// thousands of blocks for a long surah.
+    private static func contentAlignment(riwayah: [Set<String>], hafs: [Set<String>]) -> Alignment {
+        let n = riwayah.count, m = hafs.count
+        guard n > 0, m > 0 else { return Alignment(riwayahNumberForHafs: [:], hafsRangeForRiwayah: [:]) }
+
+        var bitOf: [String: Int] = [:]
+        for words in riwayah { for word in words where bitOf[word] == nil { bitOf[word] = bitOf.count } }
+        for words in hafs { for word in words where bitOf[word] == nil { bitOf[word] = bitOf.count } }
+        let lanes = max(1, (bitOf.count + 63) / 64)
+        let maxSpan = 5
+
+        // Flat lane buffers, [width - 1][ayah][lane]: width 1 is the ayahs themselves, wider
+        // slots the unions of that many consecutive ayahs (clamped at the end - such blocks are
+        // never scored anyway). `counts` holds each slot's popcount.
+        func buffers(_ sets: [Set<String>]) -> (bits: [UInt64], counts: [Int]) {
+            let count = sets.count
+            var bits = [UInt64](repeating: 0, count: maxSpan * count * lanes)
+            for (index, words) in sets.enumerated() {
+                for word in words {
+                    guard let bit = bitOf[word] else { continue }
+                    bits[index * lanes + (bit >> 6)] |= 1 << UInt64(bit & 63)
+                }
+            }
+            for width in 2...maxSpan {
+                let base = (width - 1) * count * lanes
+                let prev = (width - 2) * count * lanes
+                for index in 0..<count {
+                    let last = min(index + width - 1, count - 1) * lanes
+                    for lane in 0..<lanes {
+                        bits[base + index * lanes + lane] = bits[prev + index * lanes + lane] | bits[last + lane]
+                    }
+                }
+            }
+            var counts = [Int](repeating: 0, count: maxSpan * count)
+            for slot in 0..<(maxSpan * count) {
+                var total = 0
+                for lane in 0..<lanes { total += bits[slot * lanes + lane].nonzeroBitCount }
+                counts[slot] = total
+            }
+            return (bits, counts)
+        }
+        let r = buffers(riwayah)
+        let h = buffers(hafs)
+
+        // (riwayah ayahs consumed, Hafs ayahs consumed).
+        var moves: [(dr: Int, dh: Int)] = [(1, 1)]
+        for width in 2...maxSpan { moves.append((1, width)) }
+        for width in 2...maxSpan { moves.append((width, 1)) }
+        moves.append((0, 1))
+        moves.append((1, 0))
+        // The true path never strays further from the diagonal than the counts differ, plus a few
+        // local merge/split pairs that cancel out - the band keeps the table small.
+        let band = abs(n - m) + 8
+        let stride = m + 1
+        var best = [Double](repeating: -.infinity, count: (n + 1) * stride)
+        var from = [Int](repeating: -1, count: (n + 1) * stride)
+        best[0] = 0
+        r.bits.withUnsafeBufferPointer { rp in
+            h.bits.withUnsafeBufferPointer { hp in
+                best.withUnsafeMutableBufferPointer { bp in
+                    from.withUnsafeMutableBufferPointer { fp in
+                        for i in 0...n {
+                            let lo = max(0, i - band), hi = min(m, i + band)
+                            guard lo <= hi else { continue }
+                            for j in lo...hi {
+                                let here = bp[i * stride + j]
+                                guard here > -.infinity else { continue }
+                                for (index, move) in moves.enumerated() {
+                                    let ni = i + move.dr, nj = j + move.dh
+                                    guard ni <= n, nj <= m else { continue }
+                                    let score: Double
+                                    if move.dr == 0 {
+                                        // Leaving an ayah unpaired costs exactly what pairing it
+                                        // with nothing would: half its words.
+                                        score = -0.5 * Double(h.counts[j])
+                                    } else if move.dh == 0 {
+                                        score = -0.5 * Double(r.counts[i])
+                                    } else {
+                                        let ra = ((move.dr - 1) * n + i) * lanes
+                                        let hb = ((move.dh - 1) * m + j) * lanes
+                                        var common = 0
+                                        for lane in 0..<lanes {
+                                            common += (rp[ra + lane] & hp[hb + lane]).nonzeroBitCount
+                                        }
+                                        let only = r.counts[(move.dr - 1) * n + i] + h.counts[(move.dh - 1) * m + j] - 2 * common
+                                        score = Double(common) - 0.5 * Double(only) - 0.01 * Double(move.dr + move.dh - 2)
+                                    }
+                                    let total = here + score
+                                    let slot = ni * stride + nj
+                                    if total > bp[slot] {
+                                        bp[slot] = total
+                                        fp[slot] = index
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Walk the chosen blocks back from the end. Same conventions as the count walk: every
+        // piece of a split maps to its one Hafs ayah, and a Hafs ayah points at the riwayah ayah
+        // that STARTS its block. A skipped ayah simply has no entry.
+        var rForH: [Int: Int] = [:]
+        var hForR: [Int: ClosedRange<Int>] = [:]
+        var i = n, j = m
+        while i > 0 || j > 0 {
+            let index = from[i * stride + j]
+            guard index >= 0 else { break }
+            let move = moves[index]
+            let ri = i - move.dr, hj = j - move.dh
+            if move.dr > 0, move.dh > 0 {
+                let hafsSpan = (hj + 1)...(hj + move.dh)
+                for piece in (ri + 1)...(ri + move.dr) { hForR[piece] = hafsSpan }
+                for hafsNumber in hafsSpan { rForH[hafsNumber] = ri + 1 }
+            }
+            i = ri; j = hj
+        }
+        return Alignment(riwayahNumberForHafs: rForH, hafsRangeForRiwayah: hForR)
+    }
+
+    #if DEBUG
+    struct Diagnostics {
+        let countScore: Double
+        let finalScore: Double
+        /// What the content alignment scored, when it was tried at all.
+        let walkScore: Double?
+        var repaired: Bool { finalScore > countScore }
+    }
+
+    /// "surahID|tag" → how the count-derived mapping scored and what shipped, filled in as
+    /// alignments are computed.
+    static var diagnostics: [String: Diagnostics] = [:]
+    /// Milliseconds spent per phase across every alignment computed: 0 = reading and splitting
+    /// the texts, 1 = agreement scoring, 2 = the content alignment table, 3 = the count walk.
+    static var phaseMillis = [0.0, 0.0, 0.0, 0.0]
+
+    /// "-auditQiraahAlignment" - align every surah of every riwayah and print what the word check
+    /// made of it. Alignment is the one part of the reader that cannot be verified by looking at a
+    /// page, and a silent one-ayah shift reads as perfectly ordinary text.
+    static func auditAlignments(quranData: QuranData) {
+        var repairs: [String] = []
+        var weak: [String] = []
+        var weakCount = 0
+        var worst = 1.0
+        var count = 0
+        let started = Date()
+        var slowest = (ms: 0.0, pair: "")
+        for option in Settings.Riwayah.allOptions where !Settings.Riwayah.canonicalTag(option.tag).isEmpty {
+            let tag = Settings.Riwayah.canonicalTag(option.tag)
+            for surahID in 1...114 {
+                let t0 = Date()
+                let aligned = alignment(surahID: surahID, tag: tag, quranData: quranData) != nil
+                let ms = Date().timeIntervalSince(t0) * 1000
+                if ms > slowest.ms { slowest = (ms, "\(option.label) surah \(surahID)") }
+                guard aligned, let diagnostic = diagnostics["\(surahID)|\(tag)"] else { continue }
+                count += 1
+                worst = min(worst, diagnostic.finalScore)
+                if diagnostic.repaired {
+                    repairs.append(String(format: "  %@ surah %d: %.3f -> %.3f",
+                                          option.label, surahID, diagnostic.countScore, diagnostic.finalScore))
+                } else if diagnostic.finalScore < 0.75 {
+                    weakCount += 1
+                    weak.append(String(format: "  %@ surah %d: %.3f (word check scored %.3f - kept the count mapping)",
+                                       option.label, surahID, diagnostic.finalScore, diagnostic.walkScore ?? -1))
+                    weak.append(contentsOf: weakDetail(surahID: surahID, tag: tag, quranData: quranData))
+                }
+            }
+        }
+        print("ALIGNMENT AUDIT: \(count) surah/riwayah pairs, worst score \(String(format: "%.3f", worst))")
+        print(String(format: "ALIGNMENT AUDIT: %.0f ms total, slowest %.1f ms (%@)",
+                     Date().timeIntervalSince(started) * 1000, slowest.ms, slowest.pair))
+        print(String(format: "ALIGNMENT AUDIT: phases - texts %.0f ms, agreement %.0f ms, content table %.0f ms, count walk %.0f ms",
+                     phaseMillis[0], phaseMillis[1], phaseMillis[2], phaseMillis[3]))
+        print("ALIGNMENT AUDIT: \(repairs.count) repaired by the word check")
+        repairs.forEach { print($0) }
+        print("ALIGNMENT AUDIT: \(weakCount) still below 0.75")
+        weak.forEach { print($0) }
+        print("ALIGNMENT AUDIT: done")
+        fflush(stdout)
+    }
+
+    /// Per-ayah detail for one weak pair: each riwayah ayah whose rasm is not fully inside the
+    /// Hafs ayah(s) it maps to, with the words that went missing.
+    private static func weakDetail(surahID: Int, tag: String, quranData: QuranData) -> [String] {
+        guard let alignment = alignment(surahID: surahID, tag: tag, quranData: quranData),
+              let hafs = hafsSide(surahID: surahID, quranData: quranData),
+              let riwayahTexts = texts(surahID: surahID, tag: tag, quranData: quranData) else { return [] }
+        let riwayah = Side(texts: riwayahTexts)
+        var lines = ["    \(riwayah.rasm.count) ayahs here vs \(hafs.rasm.count) in Hafs"]
+        for (index, words) in riwayah.rasm.enumerated() {
+            guard let span = alignment.hafsRangeForRiwayah[index + 1] else {
+                lines.append("    r\(index + 1): unmapped")
+                continue
+            }
+            var union = Set<String>()
+            for n in span where n >= 1 && n <= hafs.rasm.count { union.formUnion(hafs.rasm[n - 1]) }
+            let missing = words.subtracting(union)
+            guard !missing.isEmpty else { continue }
+            lines.append("    r\(index + 1) -> h\(span.lowerBound)-\(span.upperBound): missing [\(missing.sorted().joined(separator: " "))] hafs [\(union.sorted().joined(separator: " "))]")
+        }
+        return lines
+    }
+    #endif
 
     /// The Hafs anchor for a riwayah's own ayah number - what "\(riwayahNumber)" means in Hafs
     /// terms when reading that riwayah. Identity for Hafs/unknown.

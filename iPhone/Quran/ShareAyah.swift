@@ -693,12 +693,15 @@ struct ShareAyahSheet: View {
                             if actionMode == .image {
                                 Picker("Arabic Font", selection: Binding(
                                     get: {
-                                        Settings.normalizedArabicFontName(
+                                        // Every Hijazi mark style reads as "Hijazi" in a segmented picker.
+                                        Settings.pickerFaceName(for: Settings.normalizedArabicFontName(
                                             shareSettings.shareArabicFont.isEmpty ? settings.fontArabic : shareSettings.shareArabicFont
-                                        )
+                                        ))
                                     },
                                     set: { val in
-                                        let normalizedFont = Settings.normalizedArabicFontName(val)
+                                        // "Hijazi" means the mark style the reader is on (or the default one).
+                                        let chosen = val == Settings.hijaziFontName ? Settings.currentHijaziFontName : val
+                                        let normalizedFont = Settings.normalizedArabicFontName(chosen)
                                         storedShareArabicFont = normalizedFont
                                         shareSettings = ShareSettings(
                                             arabic: shareSettings.arabic,
@@ -715,7 +718,8 @@ struct ShareAyahSheet: View {
                                 ).animation(.easeInOut)) {
                                     Text("Uthmani").tag(Settings.hafsUthmaniFontName)
                                     Text("Indopak").tag(Settings.indopakFontName)
-                                    Text("Kufic").tag(Settings.kufiFontName)
+                                    Text("Hijazi").tag(Settings.hijaziFontName)
+                                    Text("Kufi").tag(Settings.kufiFontName)
                                     Text("Basic").tag(Settings.systemArabicFontName)
                                 }
                                 .pickerStyle(SegmentedPickerStyle())

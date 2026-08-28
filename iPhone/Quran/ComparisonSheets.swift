@@ -184,9 +184,7 @@ struct AyahQiraahComparisonSheet: View {
                             }
                         } footer: {
                             if duelMode {
-                                Text(duelTextsIdentical
-                                     ? "These two riwayat read this ayah with identical wording."
-                                     : "Pick any two riwayat and read them directly against each other. Words tinted in the accent color differ between the two.")
+                                Text(duelFooterText)
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
                             }
@@ -536,6 +534,20 @@ struct AyahQiraahComparisonSheet: View {
         return aText == bText
     }
 
+    /// The caption under the two picked riwayat. Two riwayat agreeing on ONE ayah is ordinary and the
+    /// generic line covers it; two riwayat that agree on EVERY ayah is a fact about the transmission,
+    /// and saying so is the difference between the sheet looking broken and the sheet teaching
+    /// something. See `QiraatProfiles.sharedTextRiwayat`.
+    private var duelFooterText: String {
+        if let a = duelOptionA?.tag, let b = duelOptionB?.tag,
+           QiraatProfiles.shareOneText(a, b) {
+            return QiraatProfiles.sharedTextExplanation
+        }
+        return duelTextsIdentical
+            ? "These two riwayat read this ayah with identical wording."
+            : "Pick any two riwayat and read them directly against each other. Words tinted in the accent color differ between the two."
+    }
+
     private var duelPickerRow: some View {
         HStack(spacing: 10) {
             duelPicker(side: "A", selected: duelOptionA) { duelATagRaw = $0 }
@@ -723,6 +735,14 @@ struct AyahQiraahComparisonSheet: View {
             // it with a neighbor), say so plainly - the words below are still the SAME ayah.
             if let resolved, let note = numberNote(resolved) {
                 Text(note)
+                    .font(.caption2.weight(.semibold))
+                    .foregroundStyle(settings.accentColor.color)
+            }
+
+            // Scanning the rows, one of them matches the current riwayah word for word in every
+            // ayah. Name the reason on the row where it is noticed.
+            if QiraatProfiles.shareOneText(option.tag, originTag) {
+                Text("Same transmitted text as \(QiraatProfiles.shortName(of: originTag)): al-Durrah reports no difference between the two narrators.")
                     .font(.caption2.weight(.semibold))
                     .foregroundStyle(settings.accentColor.color)
             }
@@ -1200,6 +1220,10 @@ struct ResolvedQiraahText {
     let ownNumber: Int?
     /// The Hafs ayahs this riwayah ayah spans (more than one = it joins neighbors).
     let mergedSpan: ClosedRange<Int>?
+    /// The riwayah's own ayah numbers this ONE Hafs ayah is divided into there (a split - al-Fatiha's
+    /// last ayah is two in the Madani count). `text` carries every piece, so the row still shows
+    /// the same words; nil when the ayah is one ayah there too.
+    var splitSpan: ClosedRange<Int>? = nil
 }
 
 /// How a given riwayah renders ayah (`surahNumber`, `ayahNumber` in the ORIGIN riwayah's numbering) -
@@ -1232,15 +1256,29 @@ enum QiraahAyahResolver {
             )
         }
 
-        if let alignment = QiraahComparison.alignment(surahID: surahNumber, tag: tag, quranData: quranData),
-           let ownNumber = alignment.riwayahNumberForHafs[anchor],
-           let ayah = quranData.ayah(surah: surahNumber, ayah: ownNumber),
-           ayah.existsInQiraah(tag, surahID: surahNumber) {
+        if let alignment = QiraahComparison.alignment(surahID: surahNumber, tag: tag, quranData: quranData) {
+            // The alignment is the authority: a Hafs ayah it maps to nothing is one this riwayah
+            // does not number at all (the basmalah in the Madani count of al-Fatiha) - unavailable
+            // here, never the unrelated text that happens to carry the same number.
+            guard let ownNumber = alignment.riwayahNumberForHafs[anchor],
+                  let ayah = quranData.ayah(surah: surahNumber, ayah: ownNumber),
+                  ayah.existsInQiraah(tag, surahID: surahNumber) else { return nil }
             let span = alignment.hafsRangeForRiwayah[ownNumber]
+            // A split: `ownNumber` is only the piece that STARTS this Hafs ayah. Every following
+            // riwayah ayah that maps to exactly this Hafs ayah is the rest of it.
+            var text = ayah.displayArabicText(surahId: surahNumber, clean: clean, qiraahOverride: tag)
+            var lastPiece = ownNumber
+            while alignment.hafsRangeForRiwayah[lastPiece + 1] == anchor...anchor,
+                  let piece = quranData.ayah(surah: surahNumber, ayah: lastPiece + 1),
+                  piece.existsInQiraah(tag, surahID: surahNumber) {
+                lastPiece += 1
+                text += " " + piece.displayArabicText(surahId: surahNumber, clean: clean, qiraahOverride: tag)
+            }
             return ResolvedQiraahText(
-                text: ayah.displayArabicText(surahId: surahNumber, clean: clean, qiraahOverride: tag),
+                text: text,
                 ownNumber: ownNumber == ayahNumber ? nil : ownNumber,
-                mergedSpan: (span.map { $0.count } ?? 1) > 1 ? span : nil
+                mergedSpan: (span.map { $0.count } ?? 1) > 1 ? span : nil,
+                splitSpan: lastPiece > ownNumber ? ownNumber...lastPiece : nil
             )
         }
 
@@ -1257,6 +1295,9 @@ enum QiraahAyahResolver {
 
     /// "Ayah 285 in this riwayah (spans 285\u{2013}286)" - the numbering note under a row's header.
     static func numberNote(_ resolved: ResolvedQiraahText) -> String? {
+        if let split = resolved.splitSpan {
+            return "Ayahs \(split.lowerBound)\u{2013}\(split.upperBound) in this riwayah (divided there)"
+        }
         if let own = resolved.ownNumber {
             if let span = resolved.mergedSpan {
                 return "Ayah \(own) in this riwayah (spans \(span.lowerBound)\u{2013}\(span.upperBound))"

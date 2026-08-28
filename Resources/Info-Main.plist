@@ -26,6 +26,9 @@
 		<string>QuranCommon.ttf</string>
 		<string>Warsh.ttf</string>
 		<string>Kufi.ttf</string>
+		<string>Hijazi.ttf</string>
+		<string>Hijazi3.ttf</string>
+		<string>Hijazi4.ttf</string>
 	</array>
 	<key>UIBackgroundModes</key>
 	<array>

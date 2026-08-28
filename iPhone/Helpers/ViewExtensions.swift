@@ -743,9 +743,9 @@ extension View {
 }
 
 #if os(iOS)
-/// The shared three-way Arabic face picker for the non-Quran Arabic screens (Hadith, Adhkar, Duas,
+/// The shared five-way Arabic face picker for the non-Quran Arabic screens (Hadith, Adhkar, Duas,
 /// 99 Names, Arabic Alphabet). One control, one setting - every screen that shows standard Arabic
-/// text offers the same choice: Uthmani (the Qiraat face), IndoPak, or the system font.
+/// text offers the same choice: Uthmani, IndoPak, Hijazi, Kufi, or the system font.
 struct IslamArabicFontPicker: View {
     @ObservedObject private var settings = Settings.shared
 
@@ -760,6 +760,8 @@ struct IslamArabicFontPicker: View {
         )) {
             Text("Uthmani").tag(Settings.IslamArabicFace.uthmani)
             Text("IndoPak").tag(Settings.IslamArabicFace.indopak)
+            Text("Hijazi").tag(Settings.IslamArabicFace.hijazi)
+            Text("Kufi").tag(Settings.IslamArabicFace.kufi)
             Text("Basic").tag(Settings.IslamArabicFace.basic)
         }
         .pickerStyle(.segmented)

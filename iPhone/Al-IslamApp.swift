@@ -161,6 +161,19 @@ private struct MainTabView: View {
     /// True while a launch/splash screen still covers the tabs (drives the under-cover warm below).
     let isCovered: Bool
 
+    /// The in-app "Did you pray X?" answer: records the mark (on time or late) in the tracker and
+    /// silences the rest of that nag cascade, exactly as the notification's own action buttons do.
+    private func answerNagQuestion(mark: PrayerMark) {
+        if let question = settings.pendingNagQuestion {
+            settings.markPrayerPrayedFromNag(
+                asked: question.prayerName,
+                cascadePrayerName: question.cascadePrayerName,
+                mark: mark
+            )
+        }
+        settings.pendingNagQuestion = nil
+    }
+
     private enum AppTab: String, Hashable { case adhan, quran, hadith, islam, settings }
 
     #if DEBUG
@@ -197,15 +210,8 @@ private struct MainTabView: View {
                 ),
                 titleVisibility: .visible
             ) {
-                Button("Yes, I prayed it") {
-                    if let question = settings.pendingNagQuestion {
-                        settings.markPrayerPrayedFromNag(
-                            asked: question.prayerName,
-                            cascadePrayerName: question.cascadePrayerName
-                        )
-                    }
-                    settings.pendingNagQuestion = nil
-                }
+                Button("Yes, on time") { answerNagQuestion(mark: .onTime) }
+                Button("Yes, but late") { answerNagQuestion(mark: .late) }
                 Button("Not yet", role: .cancel) { settings.pendingNagQuestion = nil }
             } message: {
                 Text("Answering yes marks it in the prayer tracker and stops the remaining reminders.")
@@ -214,6 +220,55 @@ private struct MainTabView: View {
             // root is copied into a companion app, delete the domains it doesn't ship.
             // Shared: the tab walk behind the launch cover.
             .task { await warmUnderCover() }
+            #if DEBUG
+            // "-auditQiraahAlignment" - print the whole-Quran riwayah alignment audit once the
+            // texts are in (see QiraahComparison.auditAlignments).
+            .task {
+                guard ProcessInfo.processInfo.arguments.contains("-auditQiraahAlignment") else { return }
+                while QuranData.shared.quran.count < 114 {
+                    try? await Task.sleep(nanoseconds: 250_000_000)
+                    guard !Task.isCancelled else { return }
+                }
+                QiraahComparison.auditAlignments(quranData: QuranData.shared)
+            }
+            // "-dumpComparison 1:3" - print the qiraah comparison sheet's own rows for one ayah
+            // (its copy text, built by the same resolver the rows render), since a sheet cannot be
+            // scrolled headlessly.
+            .task {
+                let args = ProcessInfo.processInfo.arguments
+                guard let i = args.firstIndex(of: "-dumpComparison"), i + 1 < args.count else { return }
+                let parts = args[i + 1].split(separator: ":")
+                guard parts.count == 2, let surah = Int(parts[0]), let ayah = Int(parts[1]) else { return }
+                while QuranData.shared.quran.count < 114 {
+                    try? await Task.sleep(nanoseconds: 250_000_000)
+                    guard !Task.isCancelled else { return }
+                }
+                print("COMPARISON DUMP \(surah):\(ayah)")
+                print(AyahAISources.qiraahComparisonText(surahNumber: surah, ayahNumber: ayah))
+                // The display riwayah's ayah map for this surah, compressed to where the offset
+                // from Hafs numbering changes (merges, splits, skipped ayahs).
+                let tag = Settings.Riwayah.canonicalTag(Settings.shared.displayQiraah)
+                if !tag.isEmpty,
+                   let alignment = QiraahComparison.alignment(surahID: surah, tag: tag, quranData: QuranData.shared),
+                   let last = alignment.hafsRangeForRiwayah.keys.max() {
+                    var lines: [String] = []
+                    var lastOffset = 0
+                    for r in 1...last {
+                        guard let span = alignment.hafsRangeForRiwayah[r] else { lines.append("r\(r):none"); continue }
+                        let offset = span.lowerBound - r
+                        if offset != lastOffset || span.count > 1 || r == 1 {
+                            lines.append("r\(r)->h\(span.lowerBound)\(span.count > 1 ? "-\(span.upperBound)" : "")")
+                            lastOffset = offset
+                        }
+                    }
+                    let hafsCount = QuranData.shared.surah(surah)?.numberOfAyahs ?? 0
+                    let unmapped = hafsCount > 0 ? (1...hafsCount).filter { alignment.riwayahNumberForHafs[$0] == nil } : []
+                    print("ALIGNMENT MAP \(tag) surah \(surah): \(lines.joined(separator: " ")) | Hafs ayahs with no ayah here: \(unmapped)")
+                }
+                print("COMPARISON DUMP done")
+                fflush(stdout)
+            }
+            #endif
             // Al-Quran: the reader's font/page prewarm.
             .task { await QuranLaunchWarmup.prewarmAll() }
             // Al-Quran: the AI-search capability probe loads a disk-backed NLEmbedding model, off-main.

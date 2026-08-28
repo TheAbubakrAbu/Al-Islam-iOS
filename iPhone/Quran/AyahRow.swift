@@ -1314,6 +1314,25 @@ struct AyahRow: View, Equatable {
                         .id(tajweedAnimationKey)
                         .frame(maxWidth: .infinity, alignment: .trailing)
                     }
+                    #if DEBUG
+                    // "-openWordCard N" on a HAFS row opens the meaning card instead - same one-shot,
+                    // same launch-target-row guard as the riwayah branch below.
+                    Color.clear
+                        .frame(height: 0)
+                        .onAppear {
+                            guard let target = Self.debugTargetAyah,
+                                  target.surah == surah.id, target.ayah == ayah.id,
+                                  let idx = Self.debugWordCardIndex else { return }
+                            Self.debugWordCardIndex = nil
+                            let tokens = WordTokens.tokens(in: arabicSource)
+                            guard tokens.indices.contains(idx), glosses.indices.contains(idx) else { return }
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                                tappedWord = TappedWord(
+                                    index: idx, word: tokens[idx], meaning: glosses[idx], total: glosses.count
+                                )
+                            }
+                        }
+                    #endif
 
                 } else if let riwayahTag = riwayahWordTapTag(beginner: beginner, highlightQuery: highlightQuery) {
                     // Non-Hafs word tap: same tappable TextKit rendering, no glosses - the tap opens

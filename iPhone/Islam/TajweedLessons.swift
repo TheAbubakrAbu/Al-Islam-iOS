@@ -251,8 +251,8 @@ struct TajweedLessonDetailView: View {
                     ForEach(card.fragments) { fragment in
                         VStack(alignment: .trailing, spacing: 4) {
                             Text(fragment.text)
-                                .font(.custom(Settings.hafsUthmaniFontName, size: CGFloat(settings.fontArabicSize)))
-                                .arabicFontDesign(custom: true)
+                                .font(Font.arabic(settings.quranArabicFontName(for: nil), size: CGFloat(settings.fontArabicSize)))
+                                .arabicFontDesign(custom: settings.quranUsesCustomArabicFace)
                                 .frame(maxWidth: .infinity, alignment: .trailing)
                             if !fragment.caption.isEmpty {
                                 Text(fragment.caption)
@@ -278,8 +278,8 @@ struct TajweedLessonDetailView: View {
                     ForEach(lesson.drills) { drill in
                         VStack(alignment: .trailing, spacing: 4) {
                             Text(drill.text)
-                                .font(.custom(Settings.hafsUthmaniFontName, size: CGFloat(settings.fontArabicSize)))
-                                .arabicFontDesign(custom: true)
+                                .font(Font.arabic(settings.quranArabicFontName(for: nil), size: CGFloat(settings.fontArabicSize)))
+                                .arabicFontDesign(custom: settings.quranUsesCustomArabicFace)
                                 .frame(maxWidth: .infinity, alignment: .trailing)
                             if !drill.caption.isEmpty {
                                 Text(drill.caption)

@@ -1,0 +1,482 @@
+{
+ "shubah": {
+  "unit": "letter",
+  "keys": {
+   "#0000ff": {
+    "rule": "idgham",
+    "ar": "الإدغام",
+    "en": "idgham"
+   },
+   "#ff0000": {
+    "rule": "imalah",
+    "ar": "الإمالة",
+    "en": "imalah"
+   },
+   "#ff00ff": {
+    "rule": "khilaf-letter",
+    "ar": "الحرف المخالف لحفص",
+    "en": "the letter differing from Hafs"
+   }
+  }
+ },
+ "warsh": {
+  "unit": "letter",
+  "keys": {
+   "#0000ff": {
+    "rule": "idgham",
+    "ar": "الإدغام",
+    "en": "idgham"
+   },
+   "#00ccff": {
+    "rule": "badal",
+    "ar": "مد البدل",
+    "en": "madd al-badal"
+   },
+   "#00ff00": {
+    "rule": "raa",
+    "ar": "الراءات المرققة",
+    "en": "the lightened ra"
+   },
+   "#3366ff": {
+    "rule": "lam",
+    "ar": "اللامات المغلظة",
+    "en": "the thickened lam"
+   },
+   "#99cc00": {
+    "rule": "leen",
+    "ar": "مد اللين",
+    "en": "madd al-leen"
+   },
+   "#ff0000": {
+    "rule": "taqlil",
+    "ar": "التقليل",
+    "en": "taqlil"
+   },
+   "#ff00ff": {
+    "rule": "khilaf-letter",
+    "ar": "الحرف المخالف لحفص",
+    "en": "the letter differing from Hafs"
+   },
+   "#ff6600": {
+    "rule": "silah",
+    "ar": "صلة ميم الجمع",
+    "en": "silat meem al-jam'"
+   }
+  }
+ },
+ "qaloon": {
+  "unit": "letter",
+  "keys": {
+   "#0000ff": {
+    "rule": "idgham",
+    "ar": "الإدغام",
+    "en": "idgham"
+   },
+   "#ff00ff": {
+    "rule": "khilaf-letter",
+    "ar": "الحرف المخالف لحفص",
+    "en": "the letter differing from Hafs"
+   }
+  }
+ },
+ "bazzi": {
+  "unit": "letter",
+  "keys": {
+   "#0000ff": {
+    "rule": "khilaf-ha",
+    "ar": "هاء الضمير المخالفة لحفص",
+    "en": "the pronoun ha differing from Hafs"
+   },
+   "#00ccff": {
+    "rule": "tashdid-ta",
+    "ar": "تشديد التاء",
+    "en": "the doubled ta"
+   },
+   "#ff0000": {
+    "rule": "silah",
+    "ar": "صلة ميم الجمع",
+    "en": "silat meem al-jam'"
+   },
+   "#ff00ff": {
+    "rule": "khilaf-letter",
+    "ar": "الحرف المخالف لحفص",
+    "en": "the letter differing from Hafs"
+   }
+  }
+ },
+ "qunbul": {
+  "unit": "letter",
+  "keys": {
+   "#0000ff": {
+    "rule": "khilaf-ha",
+    "ar": "هاء الضمير المخالفة لحفص",
+    "en": "the pronoun ha differing from Hafs"
+   },
+   "#ff0000": {
+    "rule": "silah",
+    "ar": "صلة ميم الجمع",
+    "en": "silat meem al-jam'"
+   },
+   "#ff00ff": {
+    "rule": "khilaf-letter",
+    "ar": "الحرف المخالف لحفص",
+    "en": "the letter differing from Hafs"
+   }
+  }
+ },
+ "duriabiamr": {
+  "unit": "word",
+  "keys": {
+   "#0000ff": {
+    "rule": "idgham",
+    "ar": "الإدغام",
+    "en": "idgham"
+   },
+   "#ff0000": {
+    "rule": "imalah",
+    "ar": "الإمالة",
+    "en": "imalah"
+   },
+   "#ff00ff": {
+    "rule": "khilaf-word",
+    "ar": "الكلمة المخالفة لحفص",
+    "en": "the word differing from Hafs"
+   }
+  }
+ },
+ "susi": {
+  "unit": "letter",
+  "keys": {
+   "#0000ff": {
+    "rule": "idgham",
+    "ar": "الإدغام",
+    "en": "idgham"
+   },
+   "#ff0000": {
+    "rule": "imalah",
+    "ar": "الإمالة",
+    "en": "imalah"
+   },
+   "#ff00ff": {
+    "rule": "khilaf-letter",
+    "ar": "الحرف المخالف لحفص",
+    "en": "the letter differing from Hafs"
+   }
+  }
+ },
+ "hisham": {
+  "unit": "letter",
+  "keys": {
+   "#0000ff": {
+    "rule": "idgham",
+    "ar": "الإدغام",
+    "en": "idgham"
+   },
+   "#ff0000": {
+    "rule": "imalah",
+    "ar": "الإمالة",
+    "en": "imalah"
+   },
+   "#ff00ff": {
+    "rule": "khilaf-letter",
+    "ar": "الحرف المخالف لحفص",
+    "en": "the letter differing from Hafs"
+   }
+  }
+ },
+ "ibndhakwan": {
+  "unit": "letter",
+  "keys": {
+   "#0000ff": {
+    "rule": "idgham",
+    "ar": "الإدغام",
+    "en": "idgham"
+   },
+   "#ff0000": {
+    "rule": "imalah",
+    "ar": "الإمالة",
+    "en": "imalah"
+   },
+   "#ff00ff": {
+    "rule": "khilaf-letter",
+    "ar": "الحرف المخالف لحفص",
+    "en": "the letter differing from Hafs"
+   }
+  }
+ },
+ "khalaf": {
+  "unit": "word",
+  "keys": {
+   "#0000ff": {
+    "rule": "idgham",
+    "ar": "الإدغام",
+    "en": "idgham"
+   },
+   "#00ccff": {
+    "rule": "sakt",
+    "ar": "السكت",
+    "en": "sakt"
+   },
+   "#ff0000": {
+    "rule": "imalah",
+    "ar": "الإمالة",
+    "en": "imalah"
+   },
+   "#ff00ff": {
+    "rule": "khilaf-word",
+    "ar": "الكلمة المخالفة لحفص",
+    "en": "the word differing from Hafs"
+   },
+   "#ff6600": {
+    "rule": "ishmam",
+    "ar": "إشمام الصاد صوت الزاي",
+    "en": "ishmam of sad with the sound of zay"
+   }
+  }
+ },
+ "khallad": {
+  "unit": "word",
+  "keys": {
+   "#0000ff": {
+    "rule": "idgham",
+    "ar": "الإدغام",
+    "en": "idgham"
+   },
+   "#00ccff": {
+    "rule": "sakt",
+    "ar": "السكت",
+    "en": "sakt"
+   },
+   "#ff0000": {
+    "rule": "imalah",
+    "ar": "الإمالة",
+    "en": "imalah"
+   },
+   "#ff00ff": {
+    "rule": "khilaf-word",
+    "ar": "الكلمة المخالفة لحفص",
+    "en": "the word differing from Hafs"
+   },
+   "#ff6600": {
+    "rule": "ishmam",
+    "ar": "إشمام الصاد صوت الزاي",
+    "en": "ishmam of sad with the sound of zay"
+   }
+  }
+ },
+ "abuharith": {
+  "unit": "letter",
+  "keys": {
+   "#0000ff": {
+    "rule": "idgham",
+    "ar": "الإدغام",
+    "en": "idgham"
+   },
+   "#ff0000": {
+    "rule": "imalah",
+    "ar": "الإمالة",
+    "en": "imalah"
+   },
+   "#ff00ff": {
+    "rule": "khilaf-letter",
+    "ar": "الحرف المخالف لحفص",
+    "en": "the letter differing from Hafs"
+   },
+   "#ff6600": {
+    "rule": "ishmam",
+    "ar": "إشمام الصاد صوت الزاي",
+    "en": "ishmam of sad with the sound of zay"
+   }
+  }
+ },
+ "durikisai": {
+  "unit": "letter",
+  "keys": {
+   "#0000ff": {
+    "rule": "idgham",
+    "ar": "الإدغام",
+    "en": "idgham"
+   },
+   "#ff0000": {
+    "rule": "imalah",
+    "ar": "الإمالة",
+    "en": "imalah"
+   },
+   "#ff00ff": {
+    "rule": "khilaf-letter",
+    "ar": "الحرف المخالف لحفص",
+    "en": "the letter differing from Hafs"
+   },
+   "#ff6600": {
+    "rule": "ishmam",
+    "ar": "إشمام الصاد صوت الزاي",
+    "en": "ishmam of sad with the sound of zay"
+   }
+  }
+ },
+ "ibnwardan": {
+  "unit": "letter",
+  "keys": {
+   "#0000ff": {
+    "rule": "idgham",
+    "ar": "الإدغام",
+    "en": "idgham"
+   },
+   "#00b050": {
+    "rule": "ibtida-wasl",
+    "ar": "الابتداء بهمزة الوصل",
+    "en": "beginning on the wasl hamzah"
+   },
+   "#00ccff": {
+    "rule": "ghunnah",
+    "ar": "الغنة مع الخاء والغين",
+    "en": "ghunnah with kha and ghayn"
+   },
+   "#00ff00": {
+    "rule": "sakt",
+    "ar": "السكت",
+    "en": "sakt"
+   },
+   "#ff0000": {
+    "rule": "silah",
+    "ar": "صلة ميم الجمع",
+    "en": "silat meem al-jam'"
+   },
+   "#ff00ff": {
+    "rule": "khilaf-letter",
+    "ar": "الحرف المخالف لحفص",
+    "en": "the letter differing from Hafs"
+   }
+  }
+ },
+ "ibnjammaz": {
+  "unit": "letter",
+  "keys": {
+   "#0000ff": {
+    "rule": "idgham",
+    "ar": "الإدغام",
+    "en": "idgham"
+   },
+   "#00b050": {
+    "rule": "ibtida-wasl",
+    "ar": "الابتداء بهمزة الوصل",
+    "en": "beginning on the wasl hamzah"
+   },
+   "#00ccff": {
+    "rule": "ghunnah",
+    "ar": "الغنة مع الخاء والغين",
+    "en": "ghunnah with kha and ghayn"
+   },
+   "#00ff00": {
+    "rule": "sakt",
+    "ar": "السكت",
+    "en": "sakt"
+   },
+   "#ff0000": {
+    "rule": "silah",
+    "ar": "صلة ميم الجمع",
+    "en": "silat meem al-jam'"
+   },
+   "#ff00ff": {
+    "rule": "khilaf-letter",
+    "ar": "الحرف المخالف لحفص",
+    "en": "the letter differing from Hafs"
+   }
+  }
+ },
+ "ruways": {
+  "unit": "letter",
+  "keys": {
+   "#0000ff": {
+    "rule": "idgham",
+    "ar": "الإدغام",
+    "en": "idgham"
+   },
+   "#ff0000": {
+    "rule": "imalah",
+    "ar": "الإمالة",
+    "en": "imalah"
+   },
+   "#ff00ff": {
+    "rule": "khilaf-letter",
+    "ar": "الحرف المخالف لحفص",
+    "en": "the letter differing from Hafs"
+   },
+   "#ff6600": {
+    "rule": "ishmam",
+    "ar": "إشمام الصاد صوت الزاي",
+    "en": "ishmam of sad with the sound of zay"
+   }
+  }
+ },
+ "rawh": {
+  "unit": "letter",
+  "keys": {
+   "#0000ff": {
+    "rule": "idgham",
+    "ar": "الإدغام",
+    "en": "idgham"
+   },
+   "#ff0000": {
+    "rule": "imalah",
+    "ar": "الإمالة",
+    "en": "imalah"
+   },
+   "#ff00ff": {
+    "rule": "khilaf-letter",
+    "ar": "الحرف المخالف لحفص",
+    "en": "the letter differing from Hafs"
+   }
+  }
+ },
+ "ishaq": {
+  "unit": "letter",
+  "keys": {
+   "#0000ff": {
+    "rule": "idgham",
+    "ar": "الإدغام",
+    "en": "idgham"
+   },
+   "#ff0000": {
+    "rule": "imalah",
+    "ar": "الإمالة",
+    "en": "imalah"
+   },
+   "#ff00ff": {
+    "rule": "khilaf-letter",
+    "ar": "الحرف المخالف لحفص",
+    "en": "the letter differing from Hafs"
+   },
+   "#ff6600": {
+    "rule": "ishmam",
+    "ar": "إشمام الصاد صوت الزاي",
+    "en": "ishmam of sad with the sound of zay"
+   }
+  }
+ },
+ "idris": {
+  "unit": "letter",
+  "keys": {
+   "#0000ff": {
+    "rule": "idgham",
+    "ar": "الإدغام",
+    "en": "idgham"
+   },
+   "#ff0000": {
+    "rule": "imalah",
+    "ar": "الإمالة",
+    "en": "imalah"
+   },
+   "#ff00ff": {
+    "rule": "khilaf-letter",
+    "ar": "الحرف المخالف لحفص",
+    "en": "the letter differing from Hafs"
+   },
+   "#ff6600": {
+    "rule": "ishmam",
+    "ar": "إشمام الصاد صوت الزاي",
+    "en": "ishmam of sad with the sound of zay"
+   }
+  }
+ }
+}

@@ -15,7 +15,19 @@ struct IslamView: View {
     @State private var islamDetailRefreshToken = 0
     /// Programmatic pushes for the grid tiles (a `NavigationLink` inside a List row drags the row chevron
     /// into each tile; a path append does not).
-    @State private var islamPath: [IslamDestination] = []
+    @State private var islamPath: [IslamDestination] = Self.launchDestination.map { [$0] } ?? []
+
+    /// DEBUG launch argument `-islamDestination <rawValue>` (e.g. `namesOfAllah`): the resource is
+    /// pushed as the tab appears, the only headless route into a resource page (see Settings.init).
+    private static var launchDestination: IslamDestination? {
+        #if DEBUG
+        if let idx = ProcessInfo.processInfo.arguments.firstIndex(of: "-islamDestination"),
+           ProcessInfo.processInfo.arguments.indices.contains(idx + 1) {
+            return IslamDestination(rawValue: ProcessInfo.processInfo.arguments[idx + 1])
+        }
+        #endif
+        return nil
+    }
 
     /// Two side-by-side columns only when the window is actually wide enough - the Hadith tab's rule.
     private var usesColumnNavigation: Bool {
@@ -313,7 +325,10 @@ struct IslamView: View {
                     .buttonStyle(.plain)
                 }
             }
-            .padding(.vertical, 4)
+            // 1, not 4: the section row already carries ~16pt of its own vertical inset, so 4
+            // put the tiles 20pt from the container's top and bottom edges against 17pt at the
+            // sides. Measured on the iPhone 17 Pro; 1 lands all four insets on 17pt.
+            .padding(.vertical, 1)
         } else {
             ForEach(items, id: \.self) { item in
                 NavigationLink(value: item) {
@@ -405,7 +420,18 @@ struct IslamView: View {
         case .arabicAlphabet:
             ArabicView()
         case .tajweedFoundations:
+            // `-showQiraatAnalysis` opens the buried textual-comparison page directly: it normally
+            // takes seven taps at the bottom of the Qiraat guide, and taps aren't scriptable in the
+            // simulator, so headless verification needs a way in.
+            #if DEBUG
+            if ProcessInfo.processInfo.arguments.contains("-showQiraatAnalysis") {
+                QiraatTextAnalysisView()
+            } else {
+                TajweedFoundationsView()
+            }
+            #else
             TajweedFoundationsView()
+            #endif
         case .commonAdhkar:
             AdhkarView()
         case .commonDuas:

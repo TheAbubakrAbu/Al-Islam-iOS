@@ -179,7 +179,8 @@ struct SettingsHadithView: View {
                 }
 
                 if settings.showHadithArabic {
-                    Section(header: Text("ARABIC FONT"), footer: Text("Uthmani and IndoPak are classical script styles; Basic is the standard system font.")) {
+                    // The footer is the chosen face's own story (same captions as the Quran font picker).
+                    Section(header: Text("ARABIC FONT"), footer: Text(settings.islamArabicFace.historyCaption)) {
                         IslamArabicFontPicker()
 
                         // The Quran settings' font controls, one for one: system-size toggle,

@@ -124,11 +124,20 @@ struct ConditionalGlassEffect: ViewModifier {
 /// takes a moment. On iPad a sheet is a centred card, where a half-height detent is meaningless, so it stays
 /// full-size.
 struct SheetPresentationModifier: ViewModifier {
+    #if DEBUG
+    /// "-sheetLarge" - open every sheet at full height. Sheets can't be dragged headlessly (taps
+    /// aren't scriptable in the simulator), so verifying anything below the medium detent's fold
+    /// needs the sheet to start there.
+    private static let forceLarge = ProcessInfo.processInfo.arguments.contains("-sheetLarge")
+    #else
+    private static let forceLarge = false
+    #endif
+
     func body(content: Content) -> some View {
         if #available(iOS 16.0, *) {
             if UIDevice.current.userInterfaceIdiom == .phone {
                 content
-                    .presentationDetents([.medium, .large])
+                    .presentationDetents(Self.forceLarge ? [.large] : [.medium, .large])
                     .presentationDragIndicator(.visible)
             } else {
                 content

@@ -6,11 +6,13 @@ honest way to decide whether a leftover glyph matters.
 
     python3 showdrops.py khalaf khallad
 """
-import sys, json, pathlib, difflib, collections
+import sys, json, os, pathlib, difflib, collections
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import final, extract
 
-FAM = "kufi"
+FAM = os.environ.get("QIRAAT_FAMILY", "kufi")
+# Override per family, exactly as fixdrops.py does:
+#   QIRAAT_FAMILY=basri python3 showdrops.py ruways rawh
 DATA = pathlib.Path(__file__).resolve().parent / "data"
 
 def hafs():

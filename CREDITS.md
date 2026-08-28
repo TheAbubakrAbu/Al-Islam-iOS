@@ -30,9 +30,10 @@ App Store: <https://apps.apple.com/us/app/al-islam-islamic-pillars/id6449729655>
 - **All Quranic Arabic text and all qiraat/riwayaat data** - **quran-data-kfgqpc (KFGQPC)** - <https://github.com/thetruetruth/quran-data-kfgqpc>
 - **Printed mushaf facsimiles (the in-app PDF reader) and the beta qiraat text for the twelve riwayat KFGQPC has never published digitally** - **Islamweb** - <https://www.islamweb.net>. Twenty complete mushafs, one per riwayah, 604 pages each on the Madani page division.
 - **Reference for the qiraat guide's profiles of the ten imams and twenty narrators** - **QiraatHub** - <https://qiraathub.com/>. The profile pages in the app are written for it; QiraatHub is the companion reference each page links out to.
-- **Uthmani Quran font** - **King Fahad Complex (KFGQPC)** - <https://qul.tarteel.ai/resources/font/245>
+- **Uthmani Quran fonts (the Hafs face, and the Warsh face behind the Maghribi script style)** - **King Fahad Complex (KFGQPC)** - <https://qul.tarteel.ai/resources/font/245>
 - **Indopak Nastaleeq Quran font** - **Ayman Siddiqui and R. Siddiqua** - <https://qul.tarteel.ai/resources/font/242>
-- **Kufic Quran font (Noto Kufi Arabic)** - **The Noto Project Authors (Google)**, SIL Open Font License 1.1 (`Resources/Fonts/Kufi-OFL.txt`) - <https://fonts.google.com/noto/specimen/Noto+Kufi+Arabic>
+- **Kufi Quran font (Noto Kufi Arabic)** - **The Noto Project Authors (Google)**, SIL Open Font License 1.1 (`Resources/Fonts/Kufi-OFL.txt`) - <https://fonts.google.com/noto/specimen/Noto+Kufi+Arabic>
+- **Hijazi Quran font (Al-Islam Hijazi, adapted from hijazifont)** - **Khalid Alabdullah**, CC BY-NC 4.0 (`Resources/Fonts/Hijazi-CC-BY-NC.txt`), used with the author's permission. The tashkeel, annotation marks, hamza, digits and mark positioning were added by this project (`Scripts/build_hijazi_font.py`) in three mark styles: light marks, bold marks, and dot vowels after the earliest vocalised mushafs - <https://github.com/khalidalabdullah/hijazifont>
 - **Surah (full) Quran recitations** - **MP3 Quran** - <https://mp3quran.net/eng>
 - **Ayah-by-ayah Quran recitations** - **Al Quran** - <https://alquran.cloud/cdn>
 - **Additional ayah-by-ayah Quran recitations** - **EveryAyah** - <https://everyayah.com/>

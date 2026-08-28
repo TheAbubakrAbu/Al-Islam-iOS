@@ -30,16 +30,48 @@ struct AdhanView: View {
         }
     }
 
+    /// DEBUG launch argument `-openPrayerTracker`: the tab's root becomes the tracker's History &
+    /// Insights page, which is otherwise only reachable by a tap - the way to screenshot it headlessly
+    /// (see the launch-arg notes in Settings.init).
+    private var opensPrayerTrackerDirectly: Bool {
+        #if DEBUG
+        return ProcessInfo.processInfo.arguments.contains("-openPrayerTracker")
+        #else
+        return false
+        #endif
+    }
+
+    private var hoistsTrackerForDebug: Bool {
+        #if DEBUG
+        return ProcessInfo.processInfo.arguments.contains("-adhanTrackerFirst")
+        #else
+        return false
+        #endif
+    }
+
+    @ViewBuilder
+    private var adhanRoot: some View {
+        #if os(iOS)
+        if opensPrayerTrackerDirectly {
+            PrayerTrackerView()
+        } else {
+            adhanContent
+        }
+        #else
+        adhanContent
+        #endif
+    }
+
     var body: some View {
         Group {
             #if os(iOS)
             if #available(iOS 16.0, *) {
                 NavigationStack {
-                    adhanContent
+                    adhanRoot
                 }
             } else {
                 NavigationView {
-                    adhanContent
+                    adhanRoot
                 }
                 .navigationViewStyle(.stack)
             }
@@ -100,12 +132,20 @@ struct AdhanView: View {
                     }
                 }
 
-                prayersSection
-
                 // The tracker is its own section directly beneath the times: marking prayers is a
                 // different activity from reading them, and it carries its own header, streak and
-                // history entry point (see PrayerTrackerView.swift).
-                PrayerTrackerSection()
+                // history entry point (see PrayerTrackerView.swift). The DEBUG launch argument
+                // `-adhanTrackerFirst` hoists it above the times, so the card can be screenshotted
+                // without scrolling (there is no scroll tooling for the simulator).
+                Group {
+                    if hoistsTrackerForDebug {
+                        PrayerTrackerSection()
+                        prayersSection
+                    } else {
+                        prayersSection
+                        PrayerTrackerSection()
+                    }
+                }
 
                 Section(header: Text("AT A GLANCE")) {
                     GlanceCard()

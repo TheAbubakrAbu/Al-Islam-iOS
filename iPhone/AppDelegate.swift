@@ -46,12 +46,17 @@ class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterD
         // screen marks the tracker and silences the remaining nags without ever opening the app.
         let markPrayed = UNNotificationAction(
             identifier: Settings.nagActionMarkPrayedIdentifier,
-            title: "Yes, I prayed it",
+            title: "Yes, on time",
+            options: []
+        )
+        let markPrayedLate = UNNotificationAction(
+            identifier: Settings.nagActionMarkPrayedLateIdentifier,
+            title: "Yes, but late",
             options: []
         )
         let nagCategory = UNNotificationCategory(
             identifier: Settings.nagCategoryIdentifier,
-            actions: [markPrayed],
+            actions: [markPrayed, markPrayedLate],
             intentIdentifiers: [],
             options: []
         )
@@ -117,10 +122,13 @@ class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterD
             switch actionIdentifier {
             case Settings.nagActionMarkPrayedIdentifier:
                 settings.markPrayerPrayedFromNag(asked: asked, cascadePrayerName: cascadeName)
+            case Settings.nagActionMarkPrayedLateIdentifier:
+                settings.markPrayerPrayedFromNag(asked: asked, cascadePrayerName: cascadeName, mark: .late)
             case UNNotificationDefaultActionIdentifier:
-                // Already marked (from the tracker, or an earlier nag in the cascade) - asking "did you
-                // pray it?" again would be exactly the nagging the mark was supposed to end.
-                if !settings.isPrayerMarkedPrayed(asked, on: settings.trackerDate(forMarking: asked)) {
+                // Already answered (from the tracker, or an earlier nag in the cascade) - whether prayed
+                // or recorded as missed, asking "did you pray it?" again would be exactly the nagging
+                // the mark was supposed to end.
+                if !settings.isPrayerMarked(asked, on: settings.trackerDate(forMarking: asked)) {
                     settings.pendingNagQuestion = .init(prayerName: asked, cascadePrayerName: cascadeName)
                 }
             default:

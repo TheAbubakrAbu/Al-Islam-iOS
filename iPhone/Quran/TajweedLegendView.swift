@@ -20,7 +20,7 @@ struct TajweedLegendView: View {
 
     /// Every riwayah that ships a print-derived color pack - a cheap static check (`fileName`, no pack
     /// load), so building the picker menu never parses 19 packs.
-    private static let packOptions: [Settings.Riwayah.Option] = Settings.Riwayah.allOptions.filter {
+    nonisolated private static let packOptions: [Settings.Riwayah.Option] = Settings.Riwayah.allOptions.filter {
         QiraahTajweedStore.fileName(for: $0.tag) != nil
     }
 
@@ -532,7 +532,7 @@ struct TajweedLegendView: View {
     /// "Hafs an Asim" row (at the top of their section, user rule). Kept deliberately narrow:
     /// a Hafs row claims "the standard Hafs color code marks this", so rules Hafs applies but
     /// never colors (its four sakt places, the lone imalah of 11:41) stay off this list.
-    private static let hafsColoredCounterparts: [String: [TajweedLegendCategory]] = [
+    nonisolated private static let hafsColoredCounterparts: [String: [TajweedLegendCategory]] = [
         "idgham": [.idghamGhunnah, .idghamBilaGhunnah],
         "madd_badal": [.maddNatural],
         "madd_leen": [.maddSukoon],
@@ -541,7 +541,7 @@ struct TajweedLegendView: View {
     /// Loads every bundled pack's legend and inverts it: rule key -> the riwayat that mark it.
     /// Hafs-only engine rules do NOT get sections of their own (user rule) - Hafs appears only
     /// inside sections other riwayat opened, via `hafsColoredCounterparts`.
-    private static func buildRuleSections() -> [CompareRuleSection] {
+    nonisolated private static func buildRuleSections() -> [CompareRuleSection] {
         struct Collected {
             var english: String
             var arabic: String
@@ -632,6 +632,7 @@ struct TajweedLegendView: View {
                 VStack(alignment: .leading, spacing: 2) {
                     legendLine(item.transliteration)
                     legendLine(item.arabicTitle, primary: false)
+                    legendLine(item.exactEnglishTranslation, primary: false)
                 }
 
                 Spacer(minLength: 6)

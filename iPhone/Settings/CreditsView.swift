@@ -174,6 +174,8 @@ struct CreditsView: View {
 
                 creditLink("The Alarm alert tone is \"Alarm clock beep\" by Kesu (CC0, via Freesound), trimmed, repeated, and loudness-normalized", url: "https://freesound.org/people/Kesu/sounds/182351/")
 
+                creditLink("Credit for the moon phase algorithm behind the sky card and the Moon widgets goes to SunCalc by Vladimir Agafonkin, built on the lunar theory in Meeus' Astronomical Algorithms", url: "https://github.com/mourner/suncalc")
+
                 // Al-Quran
                 
                 creditLink("Credit for the English transliteration of the Quran data goes to Risan Bagja Pradana", url: "https://github.com/risan/quran-json")
@@ -186,9 +188,13 @@ struct CreditsView: View {
 
                 creditLink("Credit for the qiraat guide's companion reference on the ten imams and twenty narrators goes to QiraatHub", url: "https://qiraathub.com/")
 
-                creditLink("Credit for the Uthmani Quran font goes to King Fahad Complex (KFGQPC)", url: "https://qul.tarteel.ai/resources/font/245")
+                creditLink("Credit for the Uthmani Quran fonts (the Hafs face, and the Warsh face behind the Maghribi script style) goes to King Fahad Complex (KFGQPC)", url: "https://qul.tarteel.ai/resources/font/245")
                 
                 creditLink("Credit for the Indopak Nastaleeq Quran font goes to Ayman Siddiqui and R. Siddiqua", url: "https://qul.tarteel.ai/resources/font/242")
+
+                creditLink("Credit for the Kufi Quran font (Noto Kufi Arabic) goes to the Noto Project Authors at Google, used under the SIL Open Font License 1.1", url: "https://fonts.google.com/noto/specimen/Noto+Kufi+Arabic")
+
+                creditLink("Credit for the Hijazi Quran font goes to Khalid Alabdullah, whose hijazifont models the hand of the earliest mushafs (CC BY-NC 4.0, used with the author's permission); the vowel marks, hamza, digits and mark positioning of Al-Islam Hijazi, in its light, bold and dot-vowel styles, were added by this app", url: "https://github.com/khalidalabdullah/hijazifont")
                 
                 creditLink("Credit for the Surah Quran Recitations goes to MP3 Quran", url: "https://mp3quran.net/eng")
                 

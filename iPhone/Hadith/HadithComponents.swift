@@ -1332,6 +1332,8 @@ struct HadithShareSheet: View {
                                 Picker("Arabic Font", selection: shareFaceBinding.animation(.easeInOut)) {
                                     Text("Uthmani").tag(Settings.IslamArabicFace.uthmani)
                                     Text("IndoPak").tag(Settings.IslamArabicFace.indopak)
+                                    Text("Hijazi").tag(Settings.IslamArabicFace.hijazi)
+                                    Text("Kufi").tag(Settings.IslamArabicFace.kufi)
                                     Text("Basic").tag(Settings.IslamArabicFace.basic)
                                 }
                                 .pickerStyle(SegmentedPickerStyle())

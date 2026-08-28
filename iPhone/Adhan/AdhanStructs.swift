@@ -52,6 +52,29 @@ struct Prayer: Identifiable, Codable, Equatable {
     }
 }
 
+/// How a prayer was recorded in the tracker: the three answers to "did you pray it?". On time and
+/// late both mean it WAS prayed (late = made up after its window passed, still an answered
+/// obligation); missed records honestly that it was not, instead of leaving the slot blank. The raw
+/// values are the on-disk encoding (see `Settings.decodePrayerTracker`), so they never change.
+enum PrayerMark: String, CaseIterable, Codable {
+    case onTime
+    case late
+    case missed
+
+    /// True for the marks that mean the prayer was prayed: everything the tracker counted before
+    /// the marks existed (streaks, totals, coverage) counts exactly these.
+    var isPrayed: Bool { self != .missed }
+
+    /// Ordering for conflicts and combined rows: the higher rank is the better outcome.
+    var rank: Int {
+        switch self {
+        case .onTime: return 2
+        case .late: return 1
+        case .missed: return 0
+        }
+    }
+}
+
 struct HijriDate: Identifiable, Codable {
     var id: Date { date }
 

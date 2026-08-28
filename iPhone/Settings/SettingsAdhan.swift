@@ -1990,9 +1990,10 @@ extension Settings {
     }
 
     /// True when the nag cascade leading up to `prayer` on `day` already has its answer, so scheduling
-    /// it would only nag about a prayer that is already prayed. The cascade before a prayer asks about
-    /// the PREVIOUS trackable prayer of that day; the cascade before the day's first (Fajr) asks about
-    /// the night prayer begun the previous civil day (Isha). Menses pause silences every cascade.
+    /// it would only nag about a prayer that is already recorded - prayed on time, prayed late, or
+    /// missed: any mark is an answer. The cascade before a prayer asks about the PREVIOUS trackable
+    /// prayer of that day; the cascade before the day's first (Fajr) asks about the night prayer begun
+    /// the previous civil day (Isha). Menses pause silences every cascade.
     private func nagCascadeIsAnswered(for prayer: Prayer, in dayList: [Prayer], on day: Date) -> Bool {
         if isTrackerExempt(on: day) || isTrackerExempt(on: Date()) { return true }
 
@@ -2001,11 +2002,11 @@ extension Settings {
                 && $0.nameTransliteration != prayer.nameTransliteration
                 && Self.trackablePrayerNames.contains($0.nameTransliteration) })
             .max(by: { $0.time < $1.time }) {
-            return isPrayerMarkedPrayed(previous.nameTransliteration, on: day)
+            return isPrayerMarked(previous.nameTransliteration, on: day)
         }
 
         guard let previousDay = Calendar.current.date(byAdding: .day, value: -1, to: day) else { return false }
-        return isPrayerMarkedPrayed("Isha", on: previousDay)
+        return isPrayerMarked("Isha", on: previousDay)
     }
 
     /// The reminder cascade leading up to a prayer: 30, 15, 10, 5 minutes before, by default.
@@ -2351,16 +2352,37 @@ extension Settings {
         }
     }
 
-    /// The canonical prayers marked prayed on `date`, resolved through `canonicalCoverage` - so a day
-    /// recorded while traveling ("Dhuhr/Asr") reads correctly after traveling mode turns off, and vice
-    /// versa.
+    /// The canonical prayers marked PRAYED (on time or late) on `date`, resolved through
+    /// `canonicalCoverage` - so a day recorded while traveling ("Dhuhr/Asr") reads correctly after
+    /// traveling mode turns off, and vice versa. A prayer recorded as missed is not covered.
     func coveredCanonicalPrayers(on date: Date) -> Set<String> {
         coveredCanonicalPrayers(forDayKey: prayerTrackerKey(for: date))
     }
 
     func coveredCanonicalPrayers(forDayKey key: String) -> Set<String> {
-        guard let day = loadPrayerTracker()[key] else { return [] }
-        return day.reduce(into: Set<String>()) { $0.formUnion(Self.canonicalCoverage(of: $1)) }
+        Set(canonicalMarks(forDayKey: key).filter { $0.value.isPrayed }.keys)
+    }
+
+    /// Every canonical prayer recorded on the day, with its mark. See `canonicalMarks(of:)`.
+    func canonicalMarks(forDayKey key: String) -> [String: PrayerMark] {
+        guard let day = loadPrayerTracker()[key] else { return [:] }
+        return Self.canonicalMarks(of: day)
+    }
+
+    /// Resolves one stored day (recorded name → mark) to canonical prayer → mark: a traveling-day
+    /// "Dhuhr/Asr" entry yields both prayers under its mark, a "Jumuah" entry yields Dhuhr. Where two
+    /// stored entries cover the same prayer (only possible in a record older than the marks, where
+    /// "Jumuah" and "Dhuhr" could sit side by side), the stronger mark wins - prayed beats missed, on
+    /// time beats late - so a duplicate can never hide a prayer that was prayed.
+    static func canonicalMarks(of day: [String: PrayerMark]) -> [String: PrayerMark] {
+        var marks: [String: PrayerMark] = [:]
+        for (stored, mark) in day {
+            for canonical in canonicalCoverage(of: stored) {
+                if let existing = marks[canonical], existing.rank >= mark.rank { continue }
+                marks[canonical] = mark
+            }
+        }
+        return marks
     }
 
     /// Prayer names that can OWN a nag cascade (have a nagging preference): the next one of these
@@ -2371,6 +2393,7 @@ extension Settings {
 
     static let nagCategoryIdentifier = "PRAYER_NAG"
     static let nagActionMarkPrayedIdentifier = "PRAYER_NAG_MARK_PRAYED"
+    static let nagActionMarkPrayedLateIdentifier = "PRAYER_NAG_MARK_PRAYED_LATE"
     static let nagPrayerNameUserInfoKey = "nagPrayerName"
 
     private static let prayerTrackerDayFormatter: DateFormatter = {
@@ -2385,22 +2408,45 @@ extension Settings {
     }()
 
     /// Decoded tracker, cached - rows read this on every render and the underlying data only changes
-    /// through `savePrayerTracker`.
-    private static var prayerTrackerCache: [String: Set<String>]?
+    /// through `savePrayerTracker`. Day key → recorded prayer name → its mark.
+    private static var prayerTrackerCache: [String: [String: PrayerMark]]?
 
     private func prayerTrackerKey(for date: Date) -> String {
         Self.prayerTrackerDayFormatter.string(from: date)
     }
 
-    private func loadPrayerTracker() -> [String: Set<String>] {
+    private func loadPrayerTracker() -> [String: [String: PrayerMark]] {
         if let cached = Self.prayerTrackerCache { return cached }
-        let decoded = (try? JSONDecoder().decode([String: [String]].self, from: prayerTrackerData)) ?? [:]
-        let tracker = decoded.mapValues(Set.init)
+        let tracker = Self.decodePrayerTracker(prayerTrackerData)
         Self.prayerTrackerCache = tracker
         return tracker
     }
 
-    private func savePrayerTracker(_ tracker: [String: Set<String>]) {
+    /// Two on-disk shapes decode: the current `[day: [name: mark]]`, and the original `[day: [name]]`
+    /// of the single-checkmark tracker, whose every entry meant "prayed" and reads as on time. Nothing
+    /// is migrated or rewritten until the next mark is saved. The legacy shape is tried second, so a
+    /// store written by this version never round-trips through it.
+    static func decodePrayerTracker(_ data: Data) -> [String: [String: PrayerMark]] {
+        guard !data.isEmpty else { return [:] }
+        let decoder = JSONDecoder()
+        if let marked = try? decoder.decode([String: [String: String]].self, from: data) {
+            return marked.mapValues { day in
+                day.reduce(into: [String: PrayerMark]()) { result, entry in
+                    // A raw value this build doesn't know (a mark added later) still says the prayer
+                    // was recorded: read it as prayed rather than dropping it from the record.
+                    result[entry.key] = PrayerMark(rawValue: entry.value) ?? .onTime
+                }
+            }
+        }
+        if let legacy = try? decoder.decode([String: [String]].self, from: data) {
+            return legacy.mapValues { names in
+                names.reduce(into: [String: PrayerMark]()) { $0[$1] = .onTime }
+            }
+        }
+        return [:]
+    }
+
+    private func savePrayerTracker(_ tracker: [String: [String: PrayerMark]]) {
         var pruned = tracker
         // "yyyy-MM-dd" sorts lexicographically, so pruning is a string compare. Five years of history:
         // the year-by-year tracker views need real history, and a full year of marks is only a few KB.
@@ -2409,18 +2455,39 @@ extension Settings {
             pruned = pruned.filter { $0.key >= cutoff }
         }
         Self.prayerTrackerCache = pruned
-        prayerTrackerData = (try? JSONEncoder().encode(pruned.mapValues { Array($0).sorted() })) ?? Data()
+        let encodable = pruned.mapValues { $0.mapValues(\.rawValue) }
+        prayerTrackerData = (try? JSONEncoder().encode(encodable)) ?? Data()
     }
 
-    /// True when everything `prayerName` stands for is covered on `date`: a combined "Dhuhr/Asr" row
-    /// reads prayed only when BOTH are covered; a "Dhuhr" row reads prayed if the day recorded "Dhuhr",
-    /// "Jumuah", or a combined "Dhuhr/Asr".
-    func isPrayerMarkedPrayed(_ prayerName: String, on date: Date = Date()) -> Bool {
+    /// The mark shown for `prayerName` on `date`, or nil while it is unmarked. A combined row
+    /// ("Dhuhr/Asr") reads as the mark its members share, or the weaker one when they differ (a late
+    /// Asr makes the pair read late, a missed member makes it read missed), and stays unmarked while
+    /// any member is; a "Dhuhr" row reads the day's "Dhuhr", "Jumuah", or combined record.
+    func prayerMark(for prayerName: String, on date: Date = Date()) -> PrayerMark? {
+        let key = prayerTrackerKey(for: date)
         let target = Self.canonicalCoverage(of: prayerName)
-        guard !target.isEmpty else {
-            return loadPrayerTracker()[prayerTrackerKey(for: date)]?.contains(prayerName) ?? false
+        guard !target.isEmpty else { return loadPrayerTracker()[key]?[prayerName] }
+        let marks = canonicalMarks(forDayKey: key)
+        var result: PrayerMark?
+        for canonical in target {
+            guard let mark = marks[canonical] else { return nil }
+            if let current = result, current.rank <= mark.rank { continue }
+            result = mark
         }
-        return target.isSubset(of: coveredCanonicalPrayers(on: date))
+        return result
+    }
+
+    /// True when everything `prayerName` stands for was PRAYED (on time or late) on `date`: a combined
+    /// "Dhuhr/Asr" row reads prayed only when BOTH are covered; a "Dhuhr" row reads prayed if the day
+    /// recorded "Dhuhr", "Jumuah", or a combined "Dhuhr/Asr". A missed mark is not prayed.
+    func isPrayerMarkedPrayed(_ prayerName: String, on date: Date = Date()) -> Bool {
+        prayerMark(for: prayerName, on: date)?.isPrayed ?? false
+    }
+
+    /// True when `prayerName` carries ANY mark on `date` - prayed on time, late, or missed. This is the
+    /// question the nagging reminders care about: a recorded answer, whichever it is.
+    func isPrayerMarked(_ prayerName: String, on date: Date = Date()) -> Bool {
+        prayerMark(for: prayerName, on: date) != nil
     }
 
     /// How many of `prayerNames` are marked prayed on `date` (the tracker row's "3/5").
@@ -2432,30 +2499,41 @@ extension Settings {
         }.count
     }
 
+    /// The single-checkmark entry point, kept for the callers that only know "prayed": marking is
+    /// recorded as on time, unmarking clears the record.
     func setPrayerPrayed(_ prayerName: String, on date: Date = Date(), prayed: Bool) {
+        setPrayerMark(prayerName, on: date, mark: prayed ? .onTime : nil)
+    }
+
+    /// Records `mark` for `prayerName` on `date`; nil clears it back to unmarked.
+    func setPrayerMark(_ prayerName: String, on date: Date = Date(), mark: PrayerMark?) {
         var tracker = loadPrayerTracker()
         let key = prayerTrackerKey(for: date)
-        var day = tracker[key] ?? []
+        var day = tracker[key] ?? [:]
 
         let target = Self.canonicalCoverage(of: prayerName)
-        if prayed {
-            // Combined rows are stored as their canonical members, so the record stays meaningful in
-            // whatever mode it is later read. Jumuah is kept as itself - "prayed Jumuah" is worth
-            // remembering, and its coverage makes it count as Dhuhr everywhere.
-            if prayerName == "Jumuah" || target.isEmpty {
-                day.insert(prayerName)
-            } else {
-                day.formUnion(target)
-            }
-        } else if target.isEmpty {
-            day.remove(prayerName)
+        if target.isEmpty {
+            // A name outside the five: stored and cleared verbatim.
+            day[prayerName] = mark
         } else {
-            // Unmarking removes exactly the canonical prayers this name stands for. A stored entry that
-            // covers MORE than that (unmarking "Dhuhr" on a day recorded as "Dhuhr/Asr") is replaced by
-            // its residual coverage, so the other half stays prayed.
-            for stored in day where !Self.canonicalCoverage(of: stored).isDisjoint(with: target) {
-                day.remove(stored)
-                day.formUnion(Self.canonicalCoverage(of: stored).subtracting(target))
+            // Whatever covered any of these prayers before gives way. A stored entry that covers MORE
+            // than the target (marking "Dhuhr" on a day recorded as "Dhuhr/Asr") is replaced by its
+            // residual coverage under its own mark, so the other half keeps its record.
+            for (stored, storedMark) in day where !Self.canonicalCoverage(of: stored).isDisjoint(with: target) {
+                day[stored] = nil
+                for residual in Self.canonicalCoverage(of: stored).subtracting(target) {
+                    day[residual] = storedMark
+                }
+            }
+            if let mark = mark {
+                // Combined rows are stored as their canonical members, so the record stays meaningful
+                // in whatever mode it is later read. Jumuah is kept as itself - "prayed Jumuah" is
+                // worth remembering, and its coverage makes it count as Dhuhr everywhere.
+                if prayerName == "Jumuah" {
+                    day[prayerName] = mark
+                } else {
+                    for canonical in target { day[canonical] = mark }
+                }
             }
         }
         tracker[key] = day.isEmpty ? nil : day
@@ -2466,16 +2544,17 @@ extension Settings {
         let affectsLiveNags = Calendar.current.isDateInToday(date)
             || (Calendar.current.isDateInYesterday(date) && target.contains("Isha"))
 
-        if prayed {
+        if mark != nil {
+            // Any answer settles the question the nags keep asking - prayed on time, prayed late, or
+            // missed - so today's remaining ones go silent (they live under the NEXT prayer's
+            // identifier).
             if Calendar.current.isDateInToday(date) {
-                // Marking a prayer prayed TODAY also silences its remaining nags (they live under the
-                // NEXT prayer's identifier).
                 cancelNagsAboutPrayer(prayerName)
             } else if affectsLiveNags {
                 cancelPendingNags(cascadePrayerName: "Fajr", on: Date())
             }
         } else if naggingMode, affectsLiveNags {
-            // Unmarking re-arms them: the schedule is rebuilt, and the builder re-adds any nag
+            // Clearing re-arms them: the schedule is rebuilt, and the builder re-adds any nag
             // cascade that is no longer answered (see `nagCascadeIsAnswered`).
             fetchPrayerTimes(notification: true)
         }
@@ -2580,7 +2659,7 @@ extension Settings {
     /// One consistent snapshot of everything the statistics are computed from. Handing the decoded
     /// dictionaries out once lets the stats engine walk a whole year without a lookup-per-day through
     /// the accessor methods.
-    func trackerSnapshot() -> (marks: [String: Set<String>], exemptDays: Set<String>, activePauseStartKey: String?) {
+    func trackerSnapshot() -> (marks: [String: [String: PrayerMark]], exemptDays: Set<String>, activePauseStartKey: String?) {
         let startKey = mensesPauseActive ? mensesPauseStartDate.map(prayerTrackerKey(for:)) : nil
         return (loadPrayerTracker(), loadExemptDays(), startKey)
     }
@@ -2648,9 +2727,10 @@ extension Settings {
         return now
     }
 
-    /// The full "Yes, I prayed it" handling shared by the notification action and the in-app dialog.
-    func markPrayerPrayedFromNag(asked prayerName: String, cascadePrayerName: String) {
-        setPrayerPrayed(prayerName, on: trackerDate(forMarking: prayerName), prayed: true)
+    /// The full "Yes, I prayed it" handling shared by the notification actions and the in-app dialog.
+    /// On time unless the "prayed it late" answer passes `.late`.
+    func markPrayerPrayedFromNag(asked prayerName: String, cascadePrayerName: String, mark: PrayerMark = .onTime) {
+        setPrayerMark(prayerName, on: trackerDate(forMarking: prayerName), mark: mark)
         cancelPendingNags(cascadePrayerName: cascadePrayerName)
     }
 

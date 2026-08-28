@@ -358,6 +358,11 @@ struct ProfileView: View {
     private func prayerCard(_ stats: ProfileStats) -> some View {
         ProfileCard(title: "Prayer", systemImage: "safari.fill") {
             statRow("Prayers marked", value: formatted(stats.prayer.totalPrayed))
+            if stats.prayer.totalPrayed > 0 {
+                // The share of marked prayers recorded as on time (a late prayer is still prayed, so
+                // it stays in "marked" and only moves this percentage).
+                statRow("Prayed on time", value: "\(Int((stats.prayer.onTimeFraction * 100).rounded()))%")
+            }
             statRow("Days tracked", value: formatted(stats.prayer.trackedDays))
             statRow("Coverage", value: "\(Int((stats.prayerCoverageFraction * 100).rounded()))%")
             if stats.prayer.exemptDayCount > 0 {

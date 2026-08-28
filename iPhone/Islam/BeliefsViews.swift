@@ -2005,6 +2005,34 @@ struct QiraatView: View {
                 Section(header: Text("IN SUMMARY")) {
                     Text("The differences among the Qiraat are all revelation and add richness of meaning; none contradicts another, and all are recited today.")
                         .font(.body)
+
+                    // The buried way into the textual comparison. Everything above this point is the
+                    // settled record of the qurra; that page is the output of a program that diffed the
+                    // printed mushafs, and a reader who meets a table of "how far each riwayah differs"
+                    // without its caveats can badly misread it. So it is not linked, not searchable, and
+                    // not in any list: seven taps on the closing line open it, and the page itself leads
+                    // with the warning rather than the data.
+                    #if os(iOS)
+                    Text("Every Qiraah is the Quran, complete.")
+                        .font(.footnote)
+                        .foregroundColor(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .center)
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            analysisTaps += 1
+                            if analysisTaps == 7 {
+                                settings.hapticFeedback()
+                                withAnimation(.easeInOut) { showTextAnalysis = true }
+                            }
+                        }
+
+                    if showTextAnalysis {
+                        NavigationLink(destination: QiraatTextAnalysisView()) {
+                            Label("Textual Comparison (Analysis)", systemImage: "flask")
+                        }
+                        .foregroundColor(settings.accentColor.color)
+                    }
+                    #endif
                 }
             }
             .themedListRowBackground()
@@ -2012,6 +2040,11 @@ struct QiraatView: View {
         .navigationTitle("10 Qiraat (Recitations)")
         .selectableArticleList()
     }
+
+    /// Taps on the closing line; at seven the textual-comparison link appears. Not persisted, so the
+    /// page goes back into hiding every time the guide is left.
+    @State private var analysisTaps = 0
+    @State private var showTextAnalysis = false
 
     /// A tappable Instagram handle that opens the creator's profile, used for the infographic credits.
     private func qiraatCreditLink(handle: String) -> some View {

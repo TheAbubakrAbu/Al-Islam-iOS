@@ -72,6 +72,48 @@ enum QiraatProfiles {
         narrators.filter { $0.masterID == id }
     }
 
+    // MARK: - Narrations that share one transmitted text
+
+    /// Riwayat whose texts match because the transmission does not separate them.
+    ///
+    /// Ishaq and Idris are the two narrators of Khalaf al-Ashir, and via al-Durrah al-Mutammimah
+    /// nothing is transmitted differently between them: not in the usul, and no difference in the
+    /// farsh is reported either. The electronic mushaf the app's Arabic comes from prints one body
+    /// text under both names, and every other narrator pair in that same series does differ (58
+    /// ayahs at the closest, Ibn Wardan against Ibn Jammaz), so an exact match here is a statement
+    /// about the transmission rather than a shortcut taken by the publisher.
+    ///
+    /// Where the two narrations DO part company is Tayyibat al-Nashr, the greater ten, in which Ibn
+    /// al-Jazari gives Idris two turuq. The app follows the Durrah path, so that divergence is out
+    /// of scope for the text it shows.
+    static let sharedTextRiwayat: Set<String> = [Settings.Riwayah.ishaq, Settings.Riwayah.idris]
+
+    /// True when two riwayat carry one transmitted text, so a reader comparing them can be told why
+    /// they match instead of being left to read it as a defect in the app.
+    static func shareOneText(_ a: String, _ b: String) -> Bool {
+        let (x, y) = (Settings.Riwayah.canonicalTag(a), Settings.Riwayah.canonicalTag(b))
+        return x != y && sharedTextRiwayat.contains(x) && sharedTextRiwayat.contains(y)
+    }
+
+    /// The riwayah `tag` shares its text with, when it shares with one.
+    static func sharedTextPartner(of tag: String) -> String? {
+        let canonical = Settings.Riwayah.canonicalTag(tag)
+        guard sharedTextRiwayat.contains(canonical) else { return nil }
+        return sharedTextRiwayat.first { $0 != canonical }
+    }
+
+    /// The narrator's short name for a riwayah tag ("Idris"), for captions that name the other side.
+    static func shortName(of tag: String) -> String {
+        narrator(tag: Settings.Riwayah.canonicalTag(tag))?.name ?? tag
+    }
+
+    /// The explanation itself, shared by the profile pages and the comparison sheet so the reader
+    /// meets one account of this rather than two that drift apart.
+    static let sharedTextExplanation = "Ishaq and Idris are the two narrators of Khalaf al-Ashir, and via al-Durrah al-Mutammimah nothing is transmitted differently between them: they agree in the usul, and no difference in the farsh is reported either. The mushaf this app's Arabic is taken from prints one body text under both narrators' names, so the two read alike in every ayah. The places where the two narrations do part company belong to Tayyibat al-Nashr, the greater ten, in which Ibn al-Jazari gives Idris two turuq."
+
+    /// The one-line form, for a footer under a list that already names the two.
+    static let sharedTextShortNote = "Nothing is transmitted differently between these two narrators via al-Durrah, so they carry one text. Open either for the detail."
+
     // MARK: - The ten imams, in the guide's own alphabetical order
 
     static let masters: [QiraahMasterProfile] = [
@@ -541,6 +583,7 @@ enum QiraatProfiles {
             hallmarks: [
                 "Transmits Khalaf's own ikhtiyar, not Hamzah's reading.",
                 "Baghdadi in chain and in teaching.",
+                "Reads identically to Idris: al-Durrah reports no difference between them.",
             ]
         ),
         RiwayahNarratorProfile(
@@ -555,6 +598,7 @@ enum QiraatProfiles {
             hallmarks: [
                 "The most widely transmitted of the two narrations of Khalaf al-Ashir.",
                 "The last of the twenty by death date.",
+                "Reads identically to Ishaq: al-Durrah reports no difference between them.",
             ]
         ),
     ]
@@ -603,12 +647,20 @@ struct QiraahMasterDetailView: View {
                     ProseText(text: profile.companions)
                 }
 
-                Section(header: Text("ITS TWO RIWAYAT")) {
-                    ForEach(QiraatProfiles.narrators(ofMaster: profile.id)) { narrator in
+                let riwayat = QiraatProfiles.narrators(ofMaster: profile.id)
+                Section {
+                    ForEach(riwayat) { narrator in
                         NavigationLink(destination: RiwayahNarratorDetailView(profile: narrator)) {
                             QiraatProfileRow(title: narrator.name, arabic: narrator.arabic,
                                              detail: "\(narrator.city) · d. \(narrator.diedAH) AH")
                         }
+                    }
+                } header: {
+                    Text("ITS TWO RIWAYAT")
+                } footer: {
+                    if riwayat.count == 2,
+                       QiraatProfiles.shareOneText(riwayat[0].id, riwayat[1].id) {
+                        Text(QiraatProfiles.sharedTextShortNote)
                     }
                 }
 
@@ -649,6 +701,15 @@ struct RiwayahNarratorDetailView: View {
                 Section(header: Text("BIOGRAPHY")) {
                     ForEach(profile.paragraphs, id: \.self) { paragraph in
                         ProseText(text: paragraph)
+                    }
+                }
+
+                // Two riwayat that always read alike look like a defect in the app unless the page
+                // says why they do, so the reason travels with the narrator rather than sitting
+                // only in the comparison sheet where the match is first noticed.
+                if let partner = QiraatProfiles.sharedTextPartner(of: profile.id) {
+                    Section(header: Text("THE SAME TEXT AS \(QiraatProfiles.shortName(of: partner).uppercased())")) {
+                        ProseText(text: QiraatProfiles.sharedTextExplanation)
                     }
                 }
 

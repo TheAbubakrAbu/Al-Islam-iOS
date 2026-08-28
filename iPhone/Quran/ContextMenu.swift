@@ -1380,10 +1380,16 @@ struct SelectAyahTextSheet: View {
                             Text("Uthmani").tag(Settings.hafsUthmaniFontName)
                             Text("Maghribi").tag(Settings.warshUthmaniFontName)
                             Text("Indopak").tag(Settings.indopakFontName)
-                            Text("Kufic").tag(Settings.kufiFontName)
+                            // The Hijazi face's three mark styles get an entry each (a menu has the room).
+                            ForEach(Settings.HijaziMarkStyle.allCases) { style in
+                                Text("Hijazi (\(style.label))").tag(style.fontName)
+                            }
+                            Text("Kufi").tag(Settings.kufiFontName)
                             Text("Basic").tag(Settings.systemArabicFontName)
                         }
-                        .pickerStyle(SegmentedPickerStyle())
+                        // Six faces no longer fit a segmented control on an iPhone-width sheet (every
+                        // label truncated), so this is a menu row like the riwayah row above it.
+                        .pickerStyle(.menu)
                         .onChange(of: selectedFontName) { _ in settings.hapticFeedback() }
 
                         Toggle("Hide Tashkeel (Vowel Diacritics) and Signs", isOn: $hideTashkeel.animation(.easeInOut))

@@ -669,7 +669,10 @@ struct ArabicView: View {
                 }
             }
             .padding(.horizontal, -8)
-            .padding(.vertical, 2)
+            // Negative for the same reason the horizontal inset is: the row's own vertical inset
+            // is ~15pt, which put the tiles 17pt below the container's top edge against the 9pt
+            // the -8 leaves at the sides. -6 squares all four up at 9pt.
+            .padding(.vertical, -6)
         } else {
             ForEach(letters) { letterRow(for: $0) }
         }
@@ -687,7 +690,10 @@ struct ArabicView: View {
                 ForEach(numbers, id: \.number) { ArabicNumberGridTile(numberData: $0) }
             }
             .padding(.horizontal, -8)
-            .padding(.vertical, 2)
+            // Negative for the same reason the horizontal inset is: the row's own vertical inset
+            // is ~15pt, which put the tiles 17pt below the container's top edge against the 9pt
+            // the -8 leaves at the sides. -6 squares all four up at 9pt.
+            .padding(.vertical, -6)
         } else {
             ForEach(numbers, id: \.number) { ArabicNumberRow(numberData: $0) }
         }

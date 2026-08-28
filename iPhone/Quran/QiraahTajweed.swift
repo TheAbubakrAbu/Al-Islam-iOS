@@ -60,6 +60,8 @@ final class QiraahTajweedStore: @unchecked Sendable {
         "madd_leen": "Soft wāw/yāʾ stretched before a stop.",
         "raa_muraqqaqah": "Rāʾ pronounced light here.",
         "lam_mughallazah": "Lām pronounced heavy here.",
+        "tashdid_ta": "Tāʾ doubled onto the word before.",
+        "ibtida_wasl": "If you begin here, the hamzah becomes a madd letter.",
     ]
 
     /// The longer note under the card.
@@ -79,6 +81,8 @@ final class QiraahTajweedStore: @unchecked Sendable {
         "madd_leen": "The soft wāw or yāʾ (preceded by fatḥah) before the word's final letter is stretched - Warsh gives these extra length when stopping.",
         "raa_muraqqaqah": "This rāʾ is pronounced LIGHT (muraqqaqah) where Ḥafṣ says it heavy - one of Warsh's well-known rāʾ rules after a kasrah or yāʾ.",
         "lam_mughallazah": "This lām is pronounced HEAVY (mughallaẓah) - Warsh thickens the lām after ṣād, ṭāʾ, or ẓāʾ, similar to the lām of Allāh.",
+        "tashdid_ta": "The tāʾ that begins this word is doubled and joined to the word before it (وَلَا تَّيَمَّمُوا, أَن تَّبَدَّلَ) - al-Bazzī's best-known rule. It only happens when the two words are joined, so the particle before is colored with it; when stopping there, the tāʾ is read single.",
+        "ibtida_wasl": "Joined to the word before, this waṣl hamzah is silent. But if you BEGIN reciting at this word, it takes a vowel and the silent hamzah after it becomes a long vowel: ٱئۡتِنَا is begun إِيتِنَا, and ٱؤۡتُمِنَ is begun اُوتُمِنَ. The dot's position on the alif is the vowel - below for kasrah, halfway up for ḍammah - and this muṣḥaf colors it in the sixteen places where beginning changes the word this way.",
     ]
 
     struct WordRule {
@@ -186,7 +190,7 @@ final class QiraahTajweedStore: @unchecked Sendable {
     // MARK: - Colors
 
     /// The print palette, adjusted per appearance for on-screen legibility.
-    /// r red, b blue, m magenta, c cyan, o orange, g green, l royal, y olive.
+    /// r red, b blue, m magenta, c cyan, o orange, g green, e sea green, l royal, y olive.
     static func uiColor(for letter: Character) -> UIColor {
         func dyn(_ light: (CGFloat, CGFloat, CGFloat), _ dark: (CGFloat, CGFloat, CGFloat)) -> UIColor {
             UIColor { traits in
@@ -201,6 +205,10 @@ final class QiraahTajweedStore: @unchecked Sendable {
         case "c": return dyn((0.00, 0.52, 0.66), (0.30, 0.83, 1.00))
         case "o": return dyn((0.85, 0.42, 0.00), (1.00, 0.64, 0.22))
         case "g": return dyn((0.00, 0.58, 0.12), (0.32, 0.88, 0.42))
+        // Deeper and bluer than "g" on purpose: the two Abu Jaʿfar volumes are the only
+        // ones that use both, and the print itself separates them the same way
+        // (#00ff00 for the sakt, #00b050 for the waṣl dot).
+        case "e": return dyn((0.00, 0.45, 0.33), (0.20, 0.80, 0.62))
         case "l": return dyn((0.32, 0.42, 0.95), (0.60, 0.72, 1.00))
         case "y": return dyn((0.55, 0.53, 0.00), (0.82, 0.80, 0.28))
         default:  return .label

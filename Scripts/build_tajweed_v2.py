@@ -147,6 +147,59 @@ for key in ["hafs"] + ALL_RIWAYAT:
     TOKS[key] = t
     CLS[key] = c
 
+# ---- khilaf ayah markers, derived rather than measured ----------------------------------
+def derive_khilaf_markers(key):
+    """Ayahs whose NUMBERING parts from Hafs: {surah: [ayah, ...]}.
+
+    The prints ring such an ayah's medallion magenta and stage 2 read that ring off the page
+    with an ink threshold (`magenta > 40`). Audited against the texts, that rule found only
+    about a third of them: 20 of Qaloon's 59, 15 of ad-Duri's 57, and it rang 3 ayahs in
+    Shubah, who shares Hafs's Kufi numbering exactly and has none at all.
+
+    The fact itself does not need measuring. Align the surah's words against Hafs's, map every
+    ayah boundary through the alignment, and an ayah whose end does not land on a Hafs boundary
+    is a khilaf number - exact by construction, and it cannot miss one or invent one.
+    """
+    out = {}
+    for s in sorted(TOKS[key]):
+        if s not in TOKS["hafs"]:
+            continue
+        # Ornament-only tokens are dropped first. The rub-el-hizb `\u06de` stands as its own token
+        # in these texts and the editions disagree wildly on how many they print (199 in Hafs,
+        # 433 in ad-Duri), so leaving them in breaks the alignment at every extra one and
+        # reports 45 ayahs per volume as renumbered when only their ornaments moved.
+        def real(toks):
+            return [t for t in toks if any(is_base(ord(ch)) for ch in t)]
+        hafs_ayat = [real(TOKS["hafs"][s][a]) for a in sorted(TOKS["hafs"][s])]
+        ours_ids = sorted(TOKS[key][s])
+        ours = [real(TOKS[key][s][a]) for a in ours_ids]
+        hb, n = set(), 0
+        for toks in hafs_ayat:
+            n += len(toks); hb.add(n)
+        # A normalisation loose enough that the ALIGNMENT never breaks on a spelling
+        # difference: hamza seats, alef maqsura against ya, and the silah waw/ya all fold
+        # away. A word the alignment fails on looks like a boundary shift and would be
+        # reported as a khilaf number that is not one.
+        def nk(w):
+            return skel(w, True).replace("ى", "ي").replace("ۥ", "").replace("ۦ", "").replace("ـ", "")
+        a_words = [nk(w) for toks in hafs_ayat for w in toks]
+        b_words = [nk(w) for toks in ours for w in toks]
+        sm = SequenceMatcher(None, a_words, b_words, autojunk=False)
+        b2a = {}
+        for blk in sm.get_matching_blocks():
+            for k in range(blk.size + 1):
+                b2a[blk.b + k] = blk.a + k
+        hits, n = [], 0
+        for aid, toks in zip(ours_ids, ours):
+            n += len(toks)
+            mapped = b2a.get(n)
+            if mapped is None or mapped not in hb:
+                hits.append(aid)
+        if hits:
+            out[str(s)] = hits
+    return out
+
+
 def marks(c):
     return set(c[1])
 
@@ -790,10 +843,26 @@ def idgham_orthography_equal(key, s, a, wi, r, h):
     plast = pcl[-1]
     return bool(marks(plast) & TANWIN) or noon_sakinah(plast)
 
+def _runs(indexes):
+    """[3, 4, 7] -> [(3, 4), (7, 7)]."""
+    out = []
+    for i in sorted(indexes):
+        if out and i == out[-1][1] + 1:
+            out[-1][1] = i
+        else:
+            out.append([i, i])
+    return [tuple(x) for x in out]
+
+
 def reading_diff(key, s, a, wi, cl):
-    """None when no aligned Hafs token; else (identical, lo, hi) where lo/hi is
-    the differing cluster extent in ORIGINAL cluster indexes (None, None when
-    identical or when there is no local letter to paint)."""
+    """None when no aligned Hafs token; else (identical, lo, hi, runs).
+
+    lo/hi is the differing cluster extent in ORIGINAL cluster indexes (None, None when
+    identical or when there is no local letter to paint). `runs` is the same information
+    split into CONTIGUOUS stretches: a word differing at letters 1 and 5 has runs
+    [(1,1),(5,5)] where lo/hi alone says 1..5, and the span washed the three letters
+    between them that the print leaves black. Callers that can emit several extents per
+    word use `runs`; `lo`/`hi` stay for the ones that cannot."""
     ht = hafs_tok(key, s, a, wi)
     if ht is None:
         return None
@@ -801,14 +870,14 @@ def reading_diff(key, s, a, wi, cl):
     r = norm_clusters(cl)
     h = norm_clusters(hcl)
     if article_naql_equal(r, h):
-        return (True, None, None)
+        return (True, None, None, [])
     if [x[0] for x in r] == [x[0] for x in h]:
         diff = markdiff_extent(r, h)
         if not diff:
-            return (True, None, None)
+            return (True, None, None, [])
         if idgham_orthography_equal(key, s, a, wi, r, h):
-            return (True, None, None)
-        return (False, min(diff), max(diff))
+            return (True, None, None, [])
+        return (False, min(diff), max(diff), _runs(diff))
     # unequal skeletons: canonicalize dagger alefs and retry
     re_, rmap = expand_daggers(r)
     he, _ = expand_daggers(h)
@@ -817,8 +886,8 @@ def reading_diff(key, s, a, wi, cl):
     if rb == hb:
         diff = markdiff_extent(re_, he)
         if not diff:
-            return (True, None, None)
-        return (False, rmap[min(diff)], rmap[max(diff)])
+            return (True, None, None, [])
+        return (False, rmap[min(diff)], rmap[max(diff)], _runs([rmap[i] for i in diff]))
     lo = 0
     while lo < len(rb) and lo < len(hb) and rb[lo] == hb[lo] \
             and (re_[lo][1] == he[lo][1] or re_[lo][1] ^ he[lo][1] == {SUKOON}):
@@ -831,11 +900,11 @@ def reading_diff(key, s, a, wi, cl):
     if hi_r < lo:
         hi_r = lo
     if hi_r >= len(rb):
-        return (False, None, None)  # pure deletion vs hafs: no local letter to paint
+        return (False, None, None, [])  # pure deletion vs hafs: no local letter to paint
     olo, ohi = rmap[lo], rmap[min(hi_r, len(rb) - 1)]
     if olo > 0 and all(cl[j][0] in "ويا" and not (set(cl[j][1]) & VOCAL) for j in range(olo, ohi + 1)):
         olo -= 1  # converted bare madd sounds through its predecessor's vowel
-    return (False, olo, ohi)
+    return (False, olo, ohi, [(olo, ohi)])
 
 def identical_to_hafs(key, s, a, wi, cl):
     d = reading_diff(key, s, a, wi, cl)
@@ -901,7 +970,11 @@ def merge_khilaf(key, rules, letter, v1_key, whole_word_edition, strict_addition
             continue
         d = reading_diff(key, s, a, wi, cl)
         if d is not None and not d[0] and d[1] is not None:
-            add(rules, s, a, wi, letter, d[1], d[2])
+            # One entry per CONTIGUOUS run, not one span from the first difference to
+            # the last: the span washed 1,771 letters across 1,150 words that the print
+            # leaves black, which is the bleeding into neighbouring letters.
+            for lo_, hi_ in (d[3] or [(d[1], d[2])]):
+                add(rules, s, a, wi, letter, lo_, hi_)
             stats["hafs-diff-extent"] += 1
         else:
             add(rules, s, a, wi, letter, -1, -1)
@@ -955,7 +1028,8 @@ def merge_khilaf(key, rules, letter, v1_key, whole_word_edition, strict_addition
                     if whole_word_edition:
                         add(rules, s, a, wi, letter, -1, -1)
                     else:
-                        add(rules, s, a, wi, letter, d[1], d[2])
+                        for lo_, hi_ in (d[3] or [(d[1], d[2])]):
+                            add(rules, s, a, wi, letter, lo_, hi_)
                     stats["diff-added"] += 1
     return stats
 
@@ -1152,102 +1226,213 @@ LGD = {
     "sakt": ("السكت", "Sakt (breathless pause)"),
     "ishmam_sad": ("إشمام الصاد صوت الزاي", "Ṣād blended toward zāy"),
     "ghunnah_kha_ghayn": ("الغنة مع الخاء والغين", "Ghunnah kept before khāʾ/ghayn"),
+    "tashdid_ta": ("تشديد التاء", "Doubled tāʾ joined to the word before"),
+    "ibtida_wasl": ("الابتداء بهمزة الوصل", "Beginning on the waṣl hamzah"),
 }
 
 def legend_entry(c, k):
     ar, en = LGD[k]
     return {"c": c, "k": k, "ar": ar, "en": en}
 
+# ================= the print's own colour layer =========================================
+# Every one of the nineteen volumes draws its tajweed colouring as ordinary coloured text
+# in the PDF content stream - one RGB fill per glyph, no raster anywhere. So the rules are
+# not inferred here at all: `pipeline/colorlayer.py` carries each glyph's fill through the
+# deterministic renderer and writes the coloured ayah, and `pipeline/legend.py` reads each
+# volume's own printed key. This function only moves those runs onto the shipped text.
+#
+# What it replaces: an ink threshold over rasterised pages (which supplied an extent for
+# just 34% of flagged words), a Hafs-diff fallback for the other 71%, and a whole-word
+# fallback for the rest. Hafs has no colour layer and is not built here.
+PIPE = os.path.join(ROOT, "Resources", "JSONs-Deprecated", "Qiraat",
+                    "_staging-riwayat", "pipeline", "data")
+
+# The builder's key for ad-Duri Abu Amr; every other key is the pipeline slug already.
+PIPE_SLUG = {"duri": "duriabiamr"}
+
+# The print's key colour -> the pack's colour letter. QiraahTajweed.swift renders these as
+# the same eight colours the volumes print, so the letter IS the print's colour.
+PACK_LETTER = {0xff00ff: "m", 0x0000ff: "b", 0xff0000: "r", 0x00ccff: "c",
+               0xff6600: "o", 0x00ff00: "g", 0x3366ff: "l", 0x99cc00: "y",
+               # a SECOND green, in the two Abu Ja'far volumes only: bright green is
+               # their sakt on the fawatih, this deeper one is the wasl-hamzah dot. The
+               # print separates them by shade, so the app does too.
+               0x00b050: "e"}
+
+# legend.py's rule slug -> this script's legend key
+PACK_RULE = {"khilaf-letter": "khilaf_harf", "khilaf-word": "khilaf_word",
+             "khilaf-ha": "ha_dhamir", "idgham": "idgham", "imalah": "imalah",
+             "taqlil": "taqlil", "badal": "madd_badal", "raa": "raa_muraqqaqah",
+             "lam": "lam_mughallazah", "silah": "silah_meem", "leen": "madd_leen",
+             "sakt": "sakt", "ishmam": "ishmam_sad", "ghunnah": "ghunnah_kha_ghayn",
+             "tashdid-ta": "tashdid_ta", "ibtida-wasl": "ibtida_wasl"}
+
+RULE_ORDER = ["khilaf-letter", "khilaf-word", "khilaf-ha", "idgham", "imalah", "taqlil",
+              "sakt", "tashdid-ta", "ibtida-wasl", "badal", "raa", "lam", "leen",
+              "silah", "ishmam", "ghunnah"]
+
+_LEGEND_JSON = json.load(open(os.path.join(PIPE, "legend.json"), encoding="utf-8"))
+
+# For ALIGNMENT ONLY, and every fold is a rewrite the emit chain itself performs.
+_FOLD = {"ٱ": "ا", "أ": "ا", "إ": "ا", "آ": "ا",
+         "ى": "ي", "ئ": "ي", "ؤ": "و", "ـ": ""}
+_OFFSPINE = "﷐✗"
+
+
+def _units(text):
+    """Letter units: one base letter with the marks riding on it -> [(folded, lo, hi)]."""
+    out = []
+    for i, ch in enumerate(text):
+        if ch == " ":
+            out.append((" ", i, i))
+        elif is_base(ord(ch)) and ch not in _OFFSPINE:
+            out.append((_FOLD.get(ch, ch), i, i))
+        elif out and out[-1][0] != " ":
+            out[-1] = (out[-1][0], out[-1][1], i)
+    return out
+
+
+def _nearest_key(col, keys):
+    def dist(a, b):
+        return sum((((a >> sh) & 255) - ((b >> sh) & 255)) ** 2 for sh in (16, 8, 0))
+    best = min(keys, key=lambda k: dist(col, k))
+    # 45 per channel: the key and the ink round differently (#99cc00 keyed against
+    # #9acc00 inked; Khallad's 1,578 sakt marks are #33cccc against a #00ccff key), and
+    # 45 still leaves the closest DIFFERENT pair in any volume (#ff6600 / #ff0000) apart.
+    return best if dist(col, best) <= 3 * 45 * 45 else None
+
+
+def _wskel(w):
+    """A word's letter spine, for matching one text's words against another's."""
+    k = "".join(_FOLD.get(c, c) for c in w if is_base(ord(c)) and c not in _OFFSPINE)
+    return k or w          # ۞ and other markless tokens match each other, not letters
+
+
+def _pairs(rw, sw):
+    """Pair the render's words to the shipped text's, per surah.
+
+    Pairing by ayah id does NOT work: the volume's own numbering and the shipped text's
+    disagree by design (Susi renders 6,204 ayahs against a 6,217-ayah text), and pairing
+    by id put 26% of Susi's colour on the wrong ayah entirely. Aligning the surah's WORD
+    stream instead makes the numbering irrelevant. Words the alignment marks as replaced
+    are exactly the khilaf words - the ones that matter most - so they are paired
+    positionally inside the replaced block rather than dropped.
+    """
+    sm = SequenceMatcher(None, [_wskel(w[0]) for w in rw], [_wskel(w[0]) for w in sw],
+                         autojunk=False)
+    out = []
+    for tag, i1, i2, j1, j2 in sm.get_opcodes():
+        if tag in ("equal", "replace"):
+            n = min(i2 - i1, j2 - j1)
+            out += [(i1 + k, j1 + k) for k in range(n)]
+    return out
+
+
+def print_rules(key, rules):
+    """Paint every rule this volume's print inks, at the letter the print inks it.
+
+    The colour runs are in the RENDERED text's coordinates; the pack must be in the
+    SHIPPED text's. The two differ (for the seven non-beta riwayat the shipped text is not
+    this pipeline's output at all), so the transfer runs on the LETTER SPINE: the emit
+    chain reorders marks freely but never touches the letters, and a letter that does not
+    align is counted rather than painted.
+    """
+    slug = PIPE_SLUG.get(key, key)
+    cl = json.load(open(os.path.join(PIPE, f"{slug}.colorlayer.json"), encoding="utf-8"))
+    spec = _LEGEND_JSON[slug]
+    keys = {int(c[1:], 16): v["rule"] for c, v in spec["keys"].items()}
+    word_unit = spec["unit"] == "word"
+    st = Counter()
+    for s in sorted(TOKS[key]):
+        rt_s = cl["text"].get(str(s))
+        if not rt_s:
+            st["no-rendered-surah"] += 1
+            continue
+        runs_s = cl["runs"].get(str(s), {})
+        rw = []                                  # (word, [colour per char])
+        for a_ in sorted(rt_s, key=int):
+            text = rt_s[a_]
+            col = [0] * len(text)
+            for lo, hi, c in runs_s.get(a_, []):
+                for x in range(lo, min(hi + 1, len(text))):
+                    col[x] = c
+            pos = 0
+            for w in text.split(" "):
+                if w:
+                    rw.append((w, col[pos:pos + len(w)]))
+                pos += len(w) + 1
+        sw = []                                  # (word, ayah, word index)
+        for a in sorted(TOKS[key][s]):
+            for wi, tok in enumerate(TOKS[key][s][a]):
+                sw.append((tok, a, wi))
+        # count LETTERS, like `letters-placed`, so the two are the same unit
+        for _w, c in rw:
+            st["letters-inked"] += sum(1 for _b, lo, hi in _units(_w)
+                                       if any(c[lo:hi + 1]))
+        for ri, si in _pairs(rw, sw):
+            rword, rcol = rw[ri]
+            if not any(rcol):
+                continue
+            tok, a, wi = sw[si]
+            pu, su = _units(rword), _units(tok)
+            pcol = [next((c for c in rcol[lo:hi + 1] if c), 0) for _b, lo, hi in pu]
+            # cluster index of each shipped unit (marks ride on their letter)
+            sci, ci = [], -1
+            for _b, lo, _hi in su:
+                if is_base(ord(tok[lo])):
+                    ci += 1
+                sci.append(max(ci, 0))
+            hits = defaultdict(set)
+            m = SequenceMatcher(None, [u[0] for u in pu], [u[0] for u in su],
+                                autojunk=False)
+            for i, j, n in m.get_matching_blocks():
+                for k in range(n):
+                    c = pcol[i + k]
+                    if not c:
+                        continue
+                    st["letters-placed"] += 1
+                    kc = _nearest_key(c, keys)
+                    if kc is None:
+                        st["unlisted-colour"] += 1
+                        continue
+                    hits[(PACK_LETTER[kc], keys[kc])].add(sci[j + k])
+            for (letter, rule), cis in sorted(hits.items()):
+                if word_unit and rule == "khilaf-word":
+                    add(rules, s, a, wi, letter, -1, -1)
+                    st["whole-word"] += 1
+                    continue
+                # one entry per CONTIGUOUS run of letters, never one span from the first
+                # inked letter to the last: that is what bled into the letters between.
+                run = []
+                for x in sorted(cis):
+                    if run and x == run[-1][1] + 1:
+                        run[-1][1] = x
+                    else:
+                        run.append([x, x])
+                for lo, hi in run:
+                    add(rules, s, a, wi, letter, lo, hi)
+                    st["letter-extent"] += 1
+    return st
+
+
+def print_legend(key):
+    spec = _LEGEND_JSON[PIPE_SLUG.get(key, key)]
+    seen = {v["rule"]: int(c[1:], 16) for c, v in spec["keys"].items()}
+    return [legend_entry(PACK_LETTER[seen[r]], PACK_RULE[r])
+            for r in RULE_ORDER if r in seen]
+
+
 REPORT = []
 
 def build(key, name):
     rules = new_rules()
     rep = {"riwayah": key}
-    if key == "warsh":
-        legend = [legend_entry("m", "khilaf_harf"), legend_entry("b", "idgham"),
-                  legend_entry("r", "taqlil"), legend_entry("c", "madd_badal"),
-                  legend_entry("g", "raa_muraqqaqah"), legend_entry("l", "lam_mughallazah"),
-                  legend_entry("o", "silah_meem"), legend_entry("y", "madd_leen")]
-        rep["idgham_words"] = idgham_from_pack(key, rules, "b")
-        rep["taqlil"] = extract_taqlil(key, rules, "r")
-        rep["badal"] = extract_warsh_badal(rules, "c")
-        rep["raa"] = extract_warsh_raa(rules, "g", flags_for(key, "raa_muraqqaqah")[0])
-        rep["lam"] = extract_warsh_lam(rules, "l")
-        rep["silah"] = extract_silah_meem(key, rules, "o")
-        rep["leen"] = extract_warsh_leen(rules, "y")
-        rep["khilaf"] = dict(merge_khilaf(key, rules, "m", "khilaf_harf", False))
-    elif key == "qaloon":
-        legend = [legend_entry("m", "khilaf_word"), legend_entry("r", "imalah")]
-        rep["imalah"] = extract_imalah(key, rules, "r")
-        rep["khilaf"] = dict(merge_khilaf(key, rules, "m", "khilaf_word", True))
-    elif key == "duri":
-        legend = [legend_entry("m", "khilaf_word"), legend_entry("b", "idgham"),
-                  legend_entry("r", "imalah"), legend_entry("o", "taqlil")]
-        rep["idgham_sites"] = extract_idgham(key, rules, "b")
-        rep["imalah"] = extract_imalah(key, rules, "r")
-        rep["taqlil"] = extract_taqlil(key, rules, "o")
-        rep["khilaf"] = dict(merge_khilaf(key, rules, "m", "khilaf_word", True))
-    elif key == "susi":
-        # the susi print's own legend box reads "الحرف المخالف لحفص" (letter, not
-        # word - PDF p1) even though v1 transcribed it as khilaf_word.
-        legend = [legend_entry("m", "khilaf_harf"), legend_entry("b", "idgham"),
-                  legend_entry("r", "imalah"), legend_entry("o", "taqlil")]
-        rep["idgham_sites"] = extract_idgham(key, rules, "b")
-        rep["imalah"] = extract_imalah(key, rules, "r")
-        rep["taqlil"] = extract_taqlil(key, rules, "o")
-        rep["khilaf"] = dict(merge_khilaf(key, rules, "m", "khilaf_word", False))
-    elif key in ("bazzi", "qunbul"):
-        legend = [legend_entry("m", "khilaf_harf"), legend_entry("b", "ha_dhamir"),
-                  legend_entry("r", "silah_meem")]
-        rep["ha"] = extract_ha_dhamir(key, rules, "b")
-        rep["silah"] = extract_silah_meem(key, rules, "r")
-        rep["khilaf"] = dict(merge_khilaf(key, rules, "m", "khilaf_harf", False))
-    elif key == "shubah":
-        legend = [legend_entry("m", "khilaf_harf"), legend_entry("b", "idgham"),
-                  legend_entry("r", "imalah")]
-        rep["idgham_sites"] = extract_idgham(key, rules, "b")
-        rep["imalah"] = extract_imalah(key, rules, "r")
-        rep["khilaf"] = dict(merge_khilaf(key, rules, "m", "khilaf_harf", False))
-
-    # ---- the 12 beta riwayat (legends per each print, transcribed in v1) ----
-    elif key in ("hisham", "ibndhakwan", "ishaq", "idris", "ruways", "rawh"):
-        legend = [legend_entry("m", "khilaf_harf"), legend_entry("b", "idgham"),
-                  legend_entry("r", "imalah")]
-        rep["idgham_sites"] = extract_idgham(key, rules, "b")
-        rep["idgham_flag_words"] = idgham_from_pack(key, rules, "b", skip_existing=True)
-        rep["imalah"] = extract_imalah_with_flags(key, rules, "r", use_rings=key not in MAGHRIBI)
-        rep["khilaf"] = dict(merge_khilaf(key, rules, "m", "khilaf_harf", False, strict_additions=True))
-    elif key in ("khalaf", "khallad"):
-        legend = [legend_entry("m", "khilaf_word"), legend_entry("b", "idgham"),
-                  legend_entry("r", "imalah"), legend_entry("c", "sakt"),
-                  legend_entry("o", "ishmam_sad")]
-        rep["idgham_sites"] = extract_idgham(key, rules, "b")
-        # Khalaf's idgham (his بلا غنة merging included) is fully WRITTEN in his
-        # text, so the pattern is complete - the print flags only add extraction
-        # noise on top (ءَامَنَّا etc.). Khallad's text writes far less; his
-        # print-listed words still matter.
-        if key == "khallad":
-            rep["idgham_flag_words"] = idgham_from_pack(key, rules, "b", skip_existing=True)
-        rep["imalah"] = extract_imalah_with_flags(key, rules, "r", use_rings=True)
-        rep["sakt"] = extract_sakt(key, rules, "c", scope=key)
-        rep["ishmam"] = extract_ishmam_flags(key, rules, "o")
-        rep["khilaf"] = dict(merge_khilaf(key, rules, "m", "khilaf_word", True, strict_additions=True))
-    elif key in ("abuharith", "durikisai"):
-        legend = [legend_entry("m", "khilaf_harf"), legend_entry("b", "idgham"),
-                  legend_entry("r", "imalah"), legend_entry("o", "ishmam_sad")]
-        rep["idgham_sites"] = extract_idgham(key, rules, "b")
-        rep["idgham_flag_words"] = idgham_from_pack(key, rules, "b", skip_existing=True)
-        rep["imalah"] = extract_imalah_with_flags(key, rules, "r", use_rings=True)
-        rep["ishmam"] = extract_ishmam_flags(key, rules, "o")
-        rep["khilaf"] = dict(merge_khilaf(key, rules, "m", "khilaf_harf", False, strict_additions=True))
-    elif key in ("ibnwardan", "ibnjammaz"):
-        legend = [legend_entry("m", "khilaf_harf"), legend_entry("b", "idgham"),
-                  legend_entry("r", "silah_meem"), legend_entry("c", "ghunnah_kha_ghayn")]
-        rep["idgham_sites"] = extract_idgham(key, rules, "b")
-        rep["idgham_flag_words"] = idgham_from_pack(key, rules, "b", skip_existing=True)
-        rep["silah"] = extract_silah_pronoun(key, rules, "r")
-        rep["ghunnah"] = extract_ghunnah_kha_ghayn(key, rules, "c")
-        rep["khilaf"] = dict(merge_khilaf(key, rules, "m", "khilaf_harf", False, strict_additions=True))
+    # Every riwayah is built the same way now: whatever its own print inks, where it
+    # inks it. The per-riwayah extractor lists that used to sit here (text patterns for
+    # idgham/imalah/taqlil/badal/raa/lam/leen/silah/sakt/ishmam plus `merge_khilaf`) were
+    # each a reconstruction of a rule the page already states in colour.
+    legend = print_legend(key)
+    rep["print"] = dict(print_rules(key, rules))
 
     # order entries per word: whole-word first, then letter extents
     out_rules = {}
@@ -1266,7 +1451,7 @@ def build(key, name):
     REPORT.append(rep)
 
     pack = {"v": 2, "legend": legend, "rules": out_rules,
-            "pages": V1[key].get("pages", {}), "khilafMarkers": V1[key].get("khilafMarkers", {})}
+            "pages": V1[key].get("pages", {}), "khilafMarkers": derive_khilaf_markers(key)}
     if WRITE:
         raw = json.dumps(pack, ensure_ascii=False, separators=(",", ":")).encode()
         co = zlib.compressobj(9, zlib.DEFLATED, -15)
