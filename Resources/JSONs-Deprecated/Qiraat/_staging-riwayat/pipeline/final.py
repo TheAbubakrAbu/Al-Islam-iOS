@@ -247,6 +247,119 @@ CTXPIN = {
 # `\u0644\u064e` because in most words the alef is ALSO printed as its own glyph and the pair comes
 # out right; where it is not, the alef was simply lost - `\u0641\u064e\u0644\u064e` for `\u0641\u064e\u0644\u064e\u0627` (2:172),
 # `\u0628\u064e\u0644\u064e\u0653\u0621\u065e` for `\u0628\u064e\u0644\u064e\u0627\u0653\u0621\u065e` (2:48), `\u062f\u064e\u0644\u0650\u064a\u0644\u064e` for `\u062f\u064e\u0644\u0650\u064a\u0644\u0657\u0627` (25:45).
+# ---- residue pins, 2026-08-28 (each read off the glyph outline and the printed page) ----
+def _pin(fam, key, rules):
+    CTXPIN.setdefault(fam, {}).setdefault(key, {}).update(rules)
+
+for _f in ("kufi", "madani", "basri"):
+    # HQPB2#197 is a dagger alef from a rarely used subset (outline: a short raised stroke).
+    # It closes `يُفۡتَرَىٰ`, `وَنَخۡزَىٰ`, `عَلَىٰٓ إِلۡ`, `إِلَىٰٓ أُمِّ مُوسَىٰٓ`,
+    # `ٱلۡقُرَىٰ` (7:101, drawn three times) and `أُخۡرَىٰ` (35:18), and the learner had it
+    # as nothing in kufi and basri and blanked by six context rules in madani.
+    _pin(_f, "CL|HQPB2#197|\u2211", {"*": "\u0670"})
+    # HQPB7#85 is the fatha (HQPB5#85's twin in another subset); blank, it cost Rawh the
+    # second hamza's vowel in `ءَأَذۡهَبۡتُمۡ` (46:20) and ad-Duri/Susi two words each.
+    _pin(_f, "CL|HQPB7#85|r", {"*": "\u064e"})
+# HQPB5#21 is the Madani books' dagger alef on ayah-final `ى` words (`وَبُشۡرَىٰ`, `نَادَىٰ`); two
+# of its six context rules had learned Qaloon's ayah-final `ۖ` instead, 16 words a volume.
+_pin("madani", "CL|HQPB5#21|2", {"*": "\u0670"})
+# The wide-fatha glyph before the `لَّآ` ligature is a fatha: `كَلَّآ` 74:54, the only one of
+# the thirteen `كَلَّآ` in the volume set with this glyph, shipped `كالَّا`.
+_pin("madani", "CL|HQPB5#129|\u0178", {"n:CL|Hamd2#18|\uf02f": "\u064e"})
+# The Yaqub books' shadda-fatha-meem stacks (iqlab on a doubled letter). Learned with the
+# Madani alef baked in (`ّاَۢ`) because the bridge texts spell `غَمّاَۢ`; the alef glyph
+# follows anyway, so `غَمَّۢا` / `لَيَّۢا` / `وَبَرَّۢا` / `مَنَّۢا` doubled it and
+# `كُلَّۢا` (7:45) doubled the lam too. Zero uses in the two Basri bridges.
+_pin("basri", "CL|HQPB5#38|C", {"*": "\u0651\u064e\u06e2"})
+_pin("basri", "CL|HQPB5#39|D", {"*": "\u0651\u064e\u06e2"})
+# HQPB5#50 is the Yaqub subset's copy of HQPB5#55 (the books number that subset five
+# lower): the ring the print draws on a letter dropped in wasl - `أَنَا۠`, and the heh of
+# `ٱقۡتَدِه۠` (6:90) / `يَتَسَنَّه۠` (2:259) that Ya'qub reads without. It emitted a space.
+_pin("basri", "CL|HQPB5#50|O", {"*": "\u06e0"})
+# Hamd2#9 under this cmap code is the eased-hamza alef of Ruways' `ءَا۬قۡرَرۡتُمۡ` (3:81),
+# `ٱلسُّفَهَآءَ ا۬مۡوَٰلَكُمُ` (4:5) and `جَآءَ ا۬حَدٌ` (4:43); learned as `ءَٰا۬` off ad-Duri's idkhal
+# spelling, it doubled the hamza (`ءَءَٰاقۡرَرۡتُمۡ`).
+_pin("basri", "CL|Hamd2#9|\uf026", {"*": "\u0627\u06ec"})
+# HQPB7#11 is HQPB5#11's twin, the silent-alef oval; its learned value was `ِۗ إِنَّ`.
+_pin("basri", "CL|HQPB7#11|(", {"*": "\u0652"})
+# The dagger alefs of `وَٱلسَّٰبِقُونَ` (9:100) and `ٱلرَّٰكِعُونَ` (9:112): two learned rules
+# blanked HQPB2#155/#154 in exactly these two contexts, which occur nowhere else in the four
+# Basri volumes, and every verified text (the two bridges included) writes the dagger.
+_pin("basri", "CL|HQPB2#155|\u2248", {"b:CL|HQPB4#130|\u00a1|CL|HQPB1#25|6": "\u0670"})
+_pin("basri", "CL|HQPB2#154|\u2261", {"b:CL|HQPB4#136|\u00a7|CL|HQPB2#21|2": "\u0670"})
+# Khalaf's volume alone inserts the dotted alef of Hamd2#3 after the hamza of `أَكَلَ` (5:3),
+# `فَسَأَكۡتُبُهَا` (7:156), `وَأَكُن` (12:33) and `ذَرَأَكُمۡ` (67:24). Khallad's, Abu
+# al-Harith's and Ishaq's pages set the identical words without it, no reading exists,
+# and every verified text writes the plain hamza: a typesetting artifact, dropped.
+_pin("kufi", "CL|Hamd2#3| ", {"*": ""})
+_pin("kufi", "CL|Hamd2#3|\uf020", {"*": ""})
+# Khallad's sakt-site `ٱلۡأَرۡضَ` (2:22, 2:27): the farsh layer's wasl sign MSH-Quraan1#35
+# now sits between the alef and the `أ` ligature, so the pin above that hands the
+# ligature its lam has to know this neighbour too.
+_pin("kufi", "CL|HQPB2#93|{", {"b:CL|MSH-Quraan1#35|\u2245|CL|HQPB5#46|F": "\u06e1\u0623"})
+
+# The `لأ` ligature (HQPB2#93) in the BASRI books: like `لإ`, the vowels of BOTH letters
+# arrive as the next glyph, one rung per pair. Read off Ruways against Hafs and confirmed
+# on ad-Duri's own coding, which numbers the same subset five higher:
+#   Yaqub #47 / Duri #52  kasra + fatha   `لِأَنفُسِكُمۡ`      (39 / 38 words)
+#   Yaqub #57 / Duri #62  fatha + fatha   `لَأَعۡنَتَكُمۡ`     (35 / 35)
+#   Yaqub #55 / Duri #60  kasra + damma   `لِأُنذِرَكُم`, and `لِّأُوْلِي` with the
+#                                          second damma glyph read as its shadda
+#   Yaqub #59 / Duri #64  kasra-shadda + fatha `لِّأَيۡمَٰنِكُمۡ` (10 / 10)
+#   Yaqub #66 / Duri #71  fatha + damma   `لَأُكَفِّرَنَّ`     (8 / 8)
+#   Yaqub #67 / Duri #72  fatha-shadda + fatha `لَّأَسۡمَعَهُمۡ` (3 / 3)
+#   Yaqub #70 / Duri #75  fatha-shadda + damma `لَّأُكَفِّرَنَّ` 5:13
+# The learner had #93 itself as `۬لۡأ` in the Yaqub books (no bridge codes it), so ~100
+# words a volume shipped with a sukoon on a lam that opens the word (`لۡأَنفُسِكُم`).
+for _lig in ("CL|HQPB2#93|{",):
+    for _gid, _lam, _hz in ((47, "\u0644\u0650\u0623", "\u064e"), (52, "\u0644\u0650\u0623", "\u064e"),
+                            (57, "\u0644\u064e\u0623", "\u064e"), (62, "\u0644\u064e\u0623", "\u064e"),
+                            (55, "\u0644\u0650\u0623", "\u064f"), (60, "\u0644\u0650\u0623", "\u064f"),
+                            (59, "\u0644\u0651\u0650\u0623", "\u064e"), (64, "\u0644\u0651\u0650\u0623", "\u064e"),
+                            (66, "\u0644\u064e\u0623", "\u064f"), (71, "\u0644\u064e\u0623", "\u064f"),
+                            (67, "\u0644\u0651\u064e\u0623", "\u064e"), (72, "\u0644\u0651\u064e\u0623", "\u064e"),
+                            (70, "\u0644\u0651\u064e\u0623", "\u064f"), (75, "\u0644\u0651\u064e\u0623", "\u064f")):
+        _ch = {47: "L", 52: "L", 57: "V", 62: "V", 55: "T", 60: "T", 59: "X", 64: "X",
+               66: "_", 71: "_", 67: "`", 72: "`", 70: "c", 75: "c"}[_gid]
+        _rung = f"CL|HQPB5#{_gid}|{_ch}"
+        _pin("basri", _lig, {f"n:{_rung}": _lam})
+        _pin("basri", _rung, {f"p:{_lig}": _hz})
+
+# The Abu Ja'far books set `لَأَتَوۡهَا` (33:14, the qasr reading Nafi' shares) as the `لأ`
+# ligature + the hamza's fatha (#80, their numbering of #85) + the wide fatha glyph #129
+# for the lam; the learner read #129 as an alef and shipped `لۡأَاتَوۡهَا`.
+_pin("madani", "CL|HQPB2#93|{", {"n:CL|HQPB5#80|m": "\u0644\u064e\u0623"})
+_pin("madani", "CL|HQPB5#129|\u0178", {"b:CL|HQPB5#80|m|CL|HQPB1#34|?": ""})
+
+_LAM_MARKS = set("\u064b\u064c\u064d\u064e\u064f\u0650\u0651\u0652\u06e1\u06e2\u06ed\u0656\u0657\u065e")
+_PAUSE_ALL = set("\u06d6\u06d7\u06d8\u06d9\u06da\u06db\u06dc\u06dd\u06de\u06e9")
+_DARATUM_RX = re.compile("(\u0670\u0631\u064e\u0623)\u06e1(\u062a\u064f\u0645)")
+_HAMZA_SHADDA_RX = re.compile("\u0644([\u064e\u0650])\u0623([\u064e\u064f\u0650]*)\u0651([\u064e\u064f\u0650]*)")
+_EASED_ALEF_RX = re.compile("^(\u0627(?:[\u064e\u064f\u0650]?[\u06ec\u06df]|[\u06ec\u06df][\u064e\u064f\u0650]?))\u0627")
+
+# ---- site patches: print errors, corrected by hand and listed in data/sitepatch.json ----
+_sitepatch_cache = {}
+
+def apply_sitepatch(t, slug, sid, aid):
+    """Replace one word at one site. Only for a PRINT error - a word the page itself sets
+    wrong against every reading and its own sister volume - never for a reading. The file
+    keys slug -> "surah:ayah" -> [[word index, printed form, corrected form, why], ...] and
+    a patch whose printed form is not what the render produced is reported, not applied."""
+    if not _sitepatch_cache:
+        sp = DATA / "sitepatch.json"
+        _sitepatch_cache.update(json.loads(sp.read_text()) if sp.exists() else {"_": {}})
+    rules = _sitepatch_cache.get(slug, {}).get(f"{sid}:{aid}")
+    if not rules:
+        return t
+    ws = t.split(" ")
+    for idx, frm, to, why in rules:
+        if idx < len(ws) and ws[idx] == frm:
+            ws[idx] = to
+        else:
+            print(f"sitepatch {slug} {sid}:{aid} w{idx}: expected {frm!r}, found "
+                  f"{ws[idx] if idx < len(ws) else None!r} - NOT applied", file=sys.stderr)
+    return " ".join(ws)
+
 LAM_ALEF_LIGATURE = ("CL|HQPB2#89|\u03c9", "CL|HQPB2#90|\u03be")
 
 
@@ -274,6 +387,35 @@ def _weld_ligature_alef(out):
             k2, v2 = out[i + 1]
             if v2 and all(unicodedata.combining(c) for c in v2) and set(v2) <= set(v):
                 out[i + 1] = (k2, "")
+    # The marks of the ligature's LAM can arrive as their own glyph AFTER the ligature,
+    # i.e. after the alef it already carries: the Yaqub books draw `لَّازِبِۢ` (37:11) as
+    # the ligature + a shadda-fatha glyph, and `كُلَّۢا` (7:45) as the ligature + the
+    # shadda-fatha-meem stack, which shipped `لَاَّزِبِۢ` and `كُلَالّاَۢ`. A vowel,
+    # tanween, shadda, sukoon or small meem can only sit on the lam, so those go in front
+    # of the alef; a maddah, a hamza or a silent-alef sign stays on the alef.
+    for i, (k, v) in enumerate(out):
+        if k.split("||")[0] not in LAM_ALEF_LIGATURE or not v or "\u0627" not in v:
+            continue
+        ai = v.rfind("\u0627")
+        head, tail = v[:ai], v[ai + 1:]
+        j, lam_marks, consumed = i + 1, [], []
+        while j < len(out):
+            k2, v2 = out[j]
+            if k2 == "sp" or not v2 or not all(unicodedata.combining(c) for c in v2):
+                break
+            for c in v2:
+                if c in _LAM_MARKS:
+                    lam_marks.append(c)
+                else:
+                    tail += c
+            consumed.append(j); j += 1
+        if not consumed:
+            continue
+        add = [c for c in lam_marks if c not in head]
+        if add or tail != v[ai + 1:]:
+            out[i] = (k, head + "".join(add) + "\u0627" + tail)
+        for j2 in consumed:               # moved, or a repeat of what the ligature says
+            out[j2] = (out[j2][0], "")
     return out
 
 
@@ -324,8 +466,14 @@ def compose_hamza(text):
     compose, and let NFC pick the right precomposed letter."""
     def fold(m):
         return unicodedata.normalize("NFC", m.group(1) + m.group(3)) + m.group(2)
-    return re.sub("([\u0627\u0648\u064a\u0649])([\u064b-\u0652\u0670]*)([\u0654\u0655])",
+    # The mark class includes the Basri/Madani tanween forms (U+0656/57/5E): `هُزُوٗ` + the
+    # farsh layer's hamza is `وٗٔ`, and a class that stopped at U+0652 never composed it.
+    text = re.sub("([\u0627\u0648\u064a\u0649])([\u064b-\u0652\u0656\u0657\u065e\u0670]*)([\u0654\u0655])",
                   fold, text)
+    # ...and a hamza stacked on a letter that already carries one is the farsh layer
+    # redrawing what the body layer drew (ad-Duri's `هُزُؤٗا` 2:231: MSH#47 over a waw the
+    # learner had already read as `ؤ`). Nothing to compose; drop it.
+    return re.sub("([\u0623\u0624\u0626])([\u064b-\u0652\u0656\u0657\u065e\u0670]*)[\u0654\u0655]", r"\1\2", text)
 
 def reorder_dagger(text):
     """[dagger alef][vowel] -> [vowel][dagger alef].
@@ -784,6 +932,11 @@ def weld_bare_alef(text):
         # NFD both sides: `\u0622` and `\u0627\u0653` are the same spelling, and the twelve write the
         # precomposed form where the verified texts write the pair.
         hit = [c for c in cands if unicodedata.normalize("NFD", c[1]) in known]
+        if not hit:
+            # No landing makes a word: the alef is a stray copy (ruways 35:11 draws the
+            # fatha-alef glyph of `وَلَا` a second time, as its own token). A lone alef is
+            # never a word, so an alef that fits nowhere is dropped rather than shipped.
+            i += 1; continue
         if len(hit) != 1:
             out.append(ws[i]); i += 1; continue
         where, word = hit[0]
@@ -805,11 +958,135 @@ def attach_orphan_marks(text):
         # verified texts write it welded to the last word of the ayah (`يَسۡجُدُونَۤ۩`,
         # `ٱلۡأٓصَالِ۩`) and none of them as a token of its own. The rub-el-hizb `۞` is the
         # opposite - standalone in all seven, 199 to 440 times - so only ۩ is absorbed.
-        if w and (all(unicodedata.combining(c) for c in w) or w == "\u06e9") and out:
-            out[-1] += w
+        if w and (all(unicodedata.combining(c) for c in w) or w == "\u06e9") and out and out[-1]:
+            tail = "".join(c for c in w if c in _PAUSE_ALL or c == "\u06e9")
+            core = "".join(c for c in w if c not in _PAUSE_ALL and c != "\u06e9")
+            last = out[-1][-1]
+            # A waqf sign always lands. A letter mark lands only where the previous word can
+            # take it: on a bare letter, a shadda over a vowel, a vowel over a shadda, a
+            # dagger after a fatha, a maddah after a long letter. Anything else is the page
+            # redrawing a mark the word already has, and welding it used to hand
+            # `strip_impossible_marks` a second vowel to "correct" the real one with.
+            ok = (not core
+                  or not unicodedata.combining(last)
+                  or (core[0] == "\u0651" and last in "\u064e\u064f\u0650")
+                  or (last == "\u0651" and core[0] in "\u064b\u064c\u064d\u064e\u064f\u0650\u0670\u0656\u0657\u065e")
+                  or (core[0] == "\u0670" and last == "\u064e")
+                  or (core[0] == "\u0653" and last in "\u0627\u0648\u064a\u0649\u0670"))
+            out[-1] += w if ok else tail
         else:
             out.append(w)
     return " ".join(out)
+
+def _verified(s):
+    return unicodedata.normalize("NFD", "".join(c for c in s if c not in _PAUSE_ALL)) in verified_words()
+
+
+_DAGGER_AFTER_IU = re.compile("([\u0650\u064f])\u0670")
+
+def seat_dagger(text):
+    """A dagger alef after a kasra or a damma belongs to the letter BEFORE.
+
+    The dagger is a long /a:/, so it can only follow a fatha (or a bare letter); the seven
+    verified texts write `ِٰ` and `ُٰ` zero times against 7,200+ `َٰ`. Like the imalah dot
+    it is its own glyph and clusters with whichever letter it overlaps, and on a tight
+    line that is the NEXT one: Hisham's farsh layer draws the idkhal alif of `أَٰءِنَّا`
+    between the two hamzas and the stream hands it to the second (`أَءِٰنَّا`), the plural
+    `رِسَٰلَٰتِهِۦ` came out `رِسَٰلَتِٰهِۦ`, `سَادَٰتِنَا` as `سَادَتِٰنَا`. Moved back one
+    letter, after that letter's own marks. A doubled dagger that results (the body layer
+    had already drawn one) folds in collapse_doubled_marks.
+    """
+    out = []
+    for w in text.split(" "):
+        while True:
+            m = _DAGGER_AFTER_IU.search(w)
+            if not m:
+                break
+            # the letter carrying the kasra/damma
+            j = m.start() - 1
+            while j >= 0 and unicodedata.combining(w[j]):
+                j -= 1
+            # the letter before THAT one, and the end of its marks
+            i = j - 1
+            while i >= 0 and unicodedata.combining(w[i]):
+                i -= 1
+            if i < 0:
+                w = w[:m.start() + 1] + w[m.end():]      # nothing before it: drop the dagger
+                continue
+            k = i + 1
+            while k < len(w) and unicodedata.combining(w[k]) and k < j:
+                k += 1
+            w = w[:k] + "\u0670" + w[k:m.start() + 1] + w[m.end():]
+        out.append(w)
+    return " ".join(out)
+
+
+def repair_broken_tokens(text, family):
+    """A token that BEGINS with a combining mark is a word the separator layer cut.
+
+    Three different defects wear that one symptom, so no single repair fits: a space inside
+    a word (`لِلد ِّينِ` 10:105, `وَجُن ُودٗا` 33:9), a space one mark too early
+    (`غَيۡر ِٱللَّهِ` 35:3 - joining would fuse two words), and the ring of an eased second
+    hamza drawn before the alef it sits on (`جَآءَ ۟الَ` 15:61, `هَٰؤُلَآءِ َ۟الِهَةٗ` 21:98).
+    The verified texts decide where they can: a whole-join that is a known word wins, then a
+    split that leaves two known words. Where neither is known the SHAPE decides - a previous
+    word ending on a bare letter takes the marks (and the rest joins unless it is a word of
+    its own), a dagger follows a fatha, and a mark nothing can carry is dropped
+    (`فَبِهُدٜىٰهُمُ ٰٱقۡتَدِه۠` 6:90, a doubled dagger).
+    The ring: Warsh and Qunbul write `جَآءَ ا۟لَ` and every Madani/Makki text `اَ۟لِهَةٗ`
+    where the Basri two write `اَ۬لِهَةٗ`; the print draws the same magenta dot for both.
+    """
+    ws = text.split(" ")
+    out = []
+    for w in ws:
+        # EASE_MARK rides the glyph's emission and is not a mark; work on the bare word
+        # and put the flag back on whatever token the word ends up in.
+        marked = EASE_MARK in w
+        w = w.replace(EASE_MARK, "")
+        # The ring glyph of an eased hamza resolves to `ا۬` where the bridge spells it so
+        # (ad-Duri's `اَ۬لِهَةٗ`), and the page's own alef glyph then follows it: `اَ۬ا`.
+        # One alef, marked so the conventions keep the dot.
+        m = _EASED_ALEF_RX.match(w)
+        if m:
+            w = m.group(1) + w[m.end():]; marked = True
+        flag = EASE_MARK if marked else ""
+        if not w or not unicodedata.combining(w[0]) or not out or not out[-1]:
+            out.append(w + flag); continue
+        j = 0
+        while j < len(w) and unicodedata.combining(w[j]):
+            j += 1
+        lead, rest = w[:j], w[j:]
+        prev = out[-1]
+        if _verified(prev + w):
+            out[-1] = prev + w + flag; continue
+        if rest and _verified(prev + lead) and _verified(rest):
+            out[-1] = prev + lead; out.append(rest + flag); continue
+        if rest and rest[0] == "\u0627" and "\u06df" in lead and set(lead) <= {"\u06df", "\u064e"}:
+            if "\u064e" in lead:
+                dot = "\u06ec" if family == "basri" else "\u06df"
+                out.append("\u0627\u064e" + dot + rest[1:] + EASE_MARK)
+            else:
+                out.append("\u0627\u06df" + rest[1:] + EASE_MARK)
+            continue
+        last = prev[-1]
+        # A previous word that is already a complete verified word takes nothing: the
+        # marks were drawn before the NEXT word's first letter (the Yaqub `لأ` ligature
+        # emits its wasl-style dot first). Joining fused `أَغۡوَيۡتَنِي لَأُزَيِّنَنَّ` into
+        # one 27-character token.
+        if rest and len([c for c in rest if not unicodedata.combining(c)]) >= 2 and _verified(prev):
+            out.append(rest[0] + lead + rest[1:] + flag); continue
+        if not unicodedata.combining(last):
+            if rest and _verified(rest):
+                out[-1] = prev + lead; out.append(rest + flag)
+            else:
+                out[-1] = prev + w + flag
+            continue
+        if (lead[0] == "\u0670" and last == "\u064e") or (lead[0] == "\u0653" and last in "\u0627\u0648\u064a\u0649\u0670"):
+            out[-1] = prev + w + flag; continue
+        if rest:
+            out.append(rest + flag)       # the leading marks fit nowhere: dropped
+    return " ".join(out)
+
 
 # The imalah/taqlil dot annotates a BENT VOWEL, so it belongs to the letter whose vowel
 # bends - never to the alef that vowel leans towards. Across all seven KFGQPC-verified
@@ -946,6 +1223,27 @@ def is_marginalia(key):
     return len(parts) > 1 and parts[1].startswith(NOTE_FACES)
 
 
+_PAUSE_RX = re.compile("[\u06d6-\u06db]")
+
+def _is_pause_glyph(k, detmap):
+    b = detmap.get(k)
+    return bool(b) and all(c in _PAUSE_SET for c in b)
+
+def _sane_rule(k, val, detmap):
+    """A waqf sign may only come from a glyph that IS a waqf sign.
+
+    The Madani learner was taught from QiraahQaloon, whose waqf layer is degenerate: 9,942
+    U+06D6 and nothing else, one on nearly every ayah-final word. So it learned 170 rules
+    of the form "this letter, at the end of the ayah, is `ىۖ`" and both Abu Ja'far
+    volumes shipped with a `ۖ` on 1,766 of their 6,214 ayah ends that the page never
+    draws (Hafs has two). The sign is stripped out of any emission whose glyph is not
+    itself a pause glyph; a rule that says nothing else afterwards is skipped."""
+    if not val or not _PAUSE_RX.search(val) or _is_pause_glyph(k, detmap):
+        return val
+    val = _PAUSE_RX.sub("", val)
+    return val if val else None
+
+
 def render_det(glyphs, detmap, missing=None, family="kufi", ctx=None, slug=None,
                cols=None, trace=None):
     """`cols` is extract.raw_colors()' entry for this ayah - one member-colour list per
@@ -993,7 +1291,11 @@ def render_det(glyphs, detmap, missing=None, family="kufi", ctx=None, slug=None,
             if bv is not None:
                 out.append((k, bv + imalah_mark(family))); ocol.append(col)
                 continue
-        if k == "CL|HQPB5#7|$" and family != "kufi":
+        if k in ("CL|HQPB5#7|$", "CL|MSH-Quraan1#35|\u2245") and family != "kufi":
+            # MSH-Quraan1#35 is the farsh layer's copy of the same sign, drawn in magenta
+            # on a wasl alef that Hafs reads with a hamza (`فَٱتَّبَعَ` 18:85, `فَٱسۡرِ`
+            # 15:65, `ٱتَّخَذۡنَٰهُمۡ` 38:63) and on the jalalah of 23:87/89 (`ٱللَّهُ`
+            # for Hafs's `لِلَّهِ`): the page saying "a sign belongs HERE".
             # The print DRAWS the wasl sign here and this glyph is where it draws it.
             # Emitting nothing threw that away and left the word-keyed repair to guess
             # from the skeleton, which cannot tell `ا۪ذۡ` from `إِذۡ` or `اَ۬لَا` from
@@ -1007,10 +1309,11 @@ def render_det(glyphs, detmap, missing=None, family="kufi", ctx=None, slug=None,
             r = ctx[k]
             pv = keys[i - 1] if i > 0 else "^"
             nx = keys[i + 1] if i + 1 < len(keys) else "$"
-            v = r.get(f"b:{pv}|{nx}")
-            if v is None: v = r.get(f"p:{pv}")
-            if v is None: v = r.get(f"n:{nx}")
-            if v is None: v = r.get("*")
+            for kk in (f"b:{pv}|{nx}", f"p:{pv}", f"n:{nx}", "*"):
+                if kk in r:
+                    v = _sane_rule(k, r[kk], detmap)   # see _sane_rule
+                    if v is not None:
+                        break
         if k in ZONEFLIP:
             zv = ZONEFLIP[k]         # geometry beats the learner; see ZONEFLIP
             # ...but only where the learner contradicts the geometry. A flat override
@@ -1099,7 +1402,7 @@ def render_det(glyphs, detmap, missing=None, family="kufi", ctx=None, slug=None,
                 if not want <= set(near):
                     v = base
         if v is None:
-            v = detmap.get(k)
+            v = _sane_rule(k, detmap.get(k), detmap)
         if v is None:
             # A cluster of ONE glyph drawn on top of itself is that glyph. The page stacks
             # a second copy of a mark on the first often enough that five such keys were
@@ -1125,6 +1428,8 @@ def render_det(glyphs, detmap, missing=None, family="kufi", ctx=None, slug=None,
             if missing is not None: missing[k] += 1
             out.append((k, "✗")); ocol.append(col)
         else:
+            if v and _is_ease_glyph(k):
+                v = v + EASE_MARK          # see EASE_MARK
             out.append((k, v)); ocol.append(col)
     _weld_ligature_alef(out)
     # Imalah dot (U+065C): glyph HQPB5 gid 20, drawn in ~3 layers per dot. A run of
@@ -1191,6 +1496,7 @@ def render_det(glyphs, detmap, missing=None, family="kufi", ctx=None, slug=None,
     if trace is not None:
         pre, precol = [], []
         for (_k, v), c in zip(fixed, fcol):
+            v = v.replace(EASE_MARK, "")
             pre.append(v); precol.extend([c] * len(v))
         trace["pre"] = "".join(pre)
         trace["precol"] = precol
@@ -1244,9 +1550,15 @@ def render_det(glyphs, detmap, missing=None, family="kufi", ctx=None, slug=None,
     t = t.replace("\u0657\u0627\u0627", "\u0657\u0627").replace("\u064b\u0627\u0627", "\u064b\u0627").replace("\u0648\u0627\u0627", "\u0648\u0627")
     t = pause_to_word_end(t)
     t = collapse_doubled_marks(t)
+    # `لِّأُوْلِي`: the double-drawn damma on the hamza is read as a shadda by the rule
+    # above, but a hamza never carries a shadda in any verified text (0 of 8) - it is the
+    # lam's, the idgham of the tanween before it. Move it.
+    t = _HAMZA_SHADDA_RX.sub(lambda m: "\u0644\u0651" + m.group(1) + "\u0623" + m.group(2) + m.group(3), t)
     t = attach_orphan_marks(t)
+    t = repair_broken_tokens(t, family)
     t = seat_imalah_dot(t)
     t = reorder_dagger(t)
+    t = seat_dagger(t)
     t = strip_impossible_marks(t)
     t = canonical_mark_order(t)
     t = weld_bare_alef(t)
@@ -1255,6 +1567,11 @@ def render_det(glyphs, detmap, missing=None, family="kufi", ctx=None, slug=None,
         t = apply_wasla_rule(t)   # kufi convention: word-initial bare alef is ٱ
     else:
         t = apply_family_conventions(t, family, MADD_TEXT.get(slug))
+    t = t.replace(EASE_MARK, "")
+    # `فَٱدَّٰرَأْتُمۡ` (2:72): all seven verified texts, and only there, write the sukoon on
+    # the hamza as U+0652 - the single `أْ` in each of them against ~485 `أۡ`. One word,
+    # one codepoint, matched so comparison mode does not show a phantom difference.
+    t = _DARATUM_RX.sub("\\1\u0652\\2", t)
     # Last, because the Madani conventions above re-introduce it: `اُ۬لَارۡضَ` is spelled
     # with a wasl alef AND the lam-alef ligature's own alef, and the pair survives as `اا`.
     # No verified text writes two bare alefs in a row.
@@ -1411,6 +1728,21 @@ FAMILY_BRIDGE_TEXT = {"madani": "QiraahQaloon", "basri": "QiraahDuri", "makki": 
 MADD_TEXT = {"ruways": "QiraahSusi", "rawh": "QiraahSusi", "susi": "QiraahSusi"}
 _conv_cache = {}
 WASL_MARK = "\ufdd0"                  # noncharacter: never survives a render
+# A second noncharacter, for the alef that stands in for an EASED second hamza. The Madani
+# and Basri prints draw it as its own glyph - Hamd2#3 is the alef with the dot below
+# (`هَٰؤُلَآءِ ا۪ن` for Hafs's `إِن`, `تَفِيٓءَ ا۪لَىٰ`), Hamd2#8/#9 the alef with the dot above
+# (`ءَا۬نذَرۡتَهُمۡ`, `جَآءَ ا۬جَلُهُمۡ`) - and the seven verified texts write exactly those
+# marks. But the same two codepoints are also the wasl signs, which `apply_family_conventions`
+# strips and re-derives from its tables, so every eased hamza was losing its dot and 44
+# words a Madani volume shipped as `ان` / `اذۡ`. The marker rides the word through the
+# conventions (which leave a marked word alone) and is removed at the end of render_det.
+EASE_MARK = "\ufdd1"
+# Hamd2#76 is the Madani books' one-glyph `ءَٰا۬` (hamza, idkhal alef, eased second hamza)
+# of `ءَٰا۬نذَرۡتَهُمۡ`, `ءَٰا۬نتُمۡ`, `ءَٰا۬سۡلَمۡتُمۡ`, `ءَٰا۬لِدُ` (11:72): 21 words a volume.
+EASE_GLYPHS = ("CL|Hamd2#3|", "CL|Hamd2#7|", "CL|Hamd2#8|", "CL|Hamd2#9|", "CL|Hamd2#76|")
+
+def _is_ease_glyph(k):
+    return any(k.startswith(g) or ("||" + g[3:]) in k for g in EASE_GLYPHS)
 _WASL_SIGNS = "\u06ec\u06ea"          # ۬ dot-above, ۪ dot-below
 # U+06DF joins them wherever a sign is being IDENTIFIED rather than stripped
 _ALL_WASL_SIGNS = "\u06ec\u06ea\u06df"
@@ -1555,14 +1887,20 @@ def apply_family_conventions(t, family, madd_name=None):
     # wasl alef, so the blanket strip was deleting about 1,900 real marks per volume and
     # leaving the words bare - which read as "the print does not draw taqlil" and is why
     # the dot was being emitted as U+065C in the first place.
-    t = t.replace("\u06ec", "")
     # ...and not when an alef maqsura follows. That shape is the Madani print's `ا۪ىٰتِنَا`
     # family, where Hamdy2#167 DRAWS the dot under the alef and the small letter over the
     # bare tooth carries the vowel, so there is nothing for the learned table to put back
     # afterwards. Across all seven verified texts the lookahead costs exactly one word,
     # Susi's own `اَ۪ىتِ` at 10:15, which is one of these same words.
-    t = re.sub(r"(^|\s)([\u0648\u0641\u0628\u0643\u062a\u0644]?[\u064e\u064f\u0650]?"
-               r"[\u0627\u0671][\u064b-\u0652\u0670]*)\u06ea(?!\u0649)", r"\1\2", t)
+    # ...and never from a word carrying EASE_MARK: there the dot is the eased hamza the
+    # page drew, not a wasl sign, and no table knows the word.
+    def _strip_signs(w):
+        if EASE_MARK in w:
+            return w
+        w = w.replace("\u06ec", "")
+        return re.sub(r"^([\u0648\u0641\u0628\u0643\u062a\u0644]?[\u064e\u064f\u0650]?"
+                      r"[\u0627\u0671][\u064b-\u0652\u0670]*)\u06ea(?!\u0649)", r"\1", w)
+    t = " ".join(_strip_signs(w) for w in t.split(" "))
     words = t.split(" ")
     # the marker would stop every table below from matching, so take it out and remember
     # which words carried one
@@ -1573,6 +1911,8 @@ def apply_family_conventions(t, family, madd_name=None):
                        if not unicodedata.combining(ch) and ch not in "ـ" and ch not in _WASL_SIGNS)
     out = []
     for i, w in enumerate(words):
+        if EASE_MARK in w:
+            out.append(w); continue          # the page's own spelling; see EASE_MARK
         # Allah-family words (lams are vector art in the print); the final vowel
         # disambiguates against ordinary words sharing the lamless skeleton (لَهُ)
         if "ه" in w and w:
@@ -1586,7 +1926,9 @@ def apply_family_conventions(t, family, madd_name=None):
                 tail = wp[-1] + tail
                 wp = wp[:-1]
             rep = allah_tab.get((_sk(wp), wp[-1] if wp else ""))
-            if rep and len(wp) < len(rep):
+            # `لِيَبۡلُغَ فَاهُ` (13:14) is the one real word in the Quran whose lamless
+            # skeleton is a jalalah's: it shipped as `فَٱللَّهُ` in both Abu Ja'far volumes.
+            if rep and len(wp) < len(rep) and not (out and _sk(out[-1]) == "\u0644\u064a\u0628\u0644\u063a"):
                 out.append(rep + tail)
                 continue
         # the lam of ال before a hamza letter is vector art: 'اأ/اإ/اءا' never occur
@@ -1737,6 +2079,8 @@ def fix_wasl_vowels(t):
     """
     words = t.split(" ")
     for i, w in enumerate(words):
+        if EASE_MARK in w:
+            continue                          # the vowel is the hamza's own; see EASE_MARK
         def sub(m):
             ctxt = w[:m.start()] if m.start() else (words[i - 1] if i else "")
             v = carried_vowel(ctxt) if ctxt else None
@@ -1916,6 +2260,7 @@ def emit_targets(slugs):
                 t = t.replace("✗", "").strip()
                 if aid <= 2:
                     t = apply_muqattaat(t, slug, sid, aid)
+                t = apply_sitepatch(t, slug, sid, aid)
                 ayahs.append({"id": aid, "text": re.sub(r"\s+", " ", t)})
             out[str(sid)] = ayahs
         name = NAMES[slug]

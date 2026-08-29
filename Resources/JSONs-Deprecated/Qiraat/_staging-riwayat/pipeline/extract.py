@@ -25,7 +25,17 @@ MSH_IMALAH_GID = 38   # see page_tokens: the red imalah dot in the Khalaf volume
 # gids 155/156 are excluded). Determined by outline bounds, not by eye.
 MSH_TEXT_GIDS = frozenset({7, 8, 9, 10, 13, 16, 17, 29, 30, 33, 36, 39, 40, 41, 43, 44,
                            45, 46, 49, 52, 54, 55, 58, 60, 70, 72, 73, 74, 78, 87, 88, 96,
-                           97, 98, 99, 101, 119, 170, 178, 210, 211, 217, 221})
+                           97, 98, 99, 101, 119, 170, 178, 210, 211, 217, 221,
+                           # 2026-08-28: the ten gids the colour scan found INKED (magenta)
+                           # but unlisted. Each is a piece of a farsh word the body layer
+                           # leaves out: #191 the noon of Ya'qub's `نَّقۡضِيَ` (20:114),
+                           # #35 the shadda of `فَٱتَّبَعَ` / `ٱتَّخَذۡنَٰهُمۡ` and the wasl
+                           # sign of `فَٱسۡرِ`, #32 the dammatain of `طَآئِفَةُۢ` (9:66),
+                           # #192 the `ةً` of `نِعۡمَةً` (31:20), #47/#202 the `ؤً` of
+                           # `هُزُؤًا`, #34/#50/#51/#125 singletons in Khallad and Ruways.
+                           # Ruways 10, Rawh 9, Ibn Wardan 10, Khallad 9, and the Basri
+                           # and Madani bridges carry them too.
+                           32, 34, 35, 47, 50, 51, 125, 191, 192, 202})
 # Which gids are INKED is per volume, because each embeds its own subset of the font: 39
 # and 49 draw nothing in the Hamzah volumes, 13 draws nothing in the Al-Kisai ones but is
 # a real mark in the Shami pair. So this set is the union, and a gid that is blank in a
@@ -589,7 +599,10 @@ def strip_surah_header(t):
     banner_end = None
     for i in range(surah_at + 1, W):
         sk = sks[i]
-        if "اياتها" in sk:
+        # ...and `ياتها` on its own: the banner's `وَءَايَاتُهَا` prints its alef as a
+        # glyph of its own, which the render now drops as a stray (no Quranic word ends
+        # in these letters, so the shorter match is just as unambiguous).
+        if "اياتها" in sk or sk.endswith("ياتها"):
             banner_end = i
             break
         # split print: '...يا' + 'تها' or 'ا' + 'ياتها' etc.
