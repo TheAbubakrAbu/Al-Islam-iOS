@@ -1644,6 +1644,10 @@ enum HadithLastReadDebounce {
 }
 
 struct HadithChapterView: View {
+    #if DEBUG
+    /// `-launchHadithShare` (with `-launchHadithOpen`): the landed hadith's share sheet, presented headlessly.
+    @State private var debugShareHadith: HadithBookData.Hadith? = nil
+    #endif
     @ObservedObject private var settings = Settings.shared
     /// NOT `@ObservedObject`: this view's render tree never reads a published store property (the three
     /// `store.` uses are inside onChange/button handlers). Observing it re-ran the whole reading body -
@@ -1976,6 +1980,19 @@ struct HadithChapterView: View {
             }
             .smallMediumSheetPresentation()
         }
+        #if DEBUG
+        // Headless visual verification of the share card (no tap access on the dev machine):
+        // `-launchHadithOpen abudawud:120 -launchHadithShare` opens the share sheet for the landed hadith.
+        .sheet(item: $debugShareHadith) { hadith in
+            HadithShareSheet(book: book, hadith: hadith)
+        }
+        .onAppear {
+            guard ProcessInfo.processInfo.arguments.contains("-launchHadithShare"),
+                  let id = scrollToHadithId,
+                  let target = allChapterHadiths.first(where: { $0.idInBook == id }) else { return }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { debugShareHadith = target }
+        }
+        #endif
         .onAppear {
             // In LIST mode the chapter is the reading surface, so it owns the Last Read record - routed
             // through the ONE shared debounce slot, deferred past the push transition (`recordLastRead`
@@ -2392,9 +2409,12 @@ struct HadithChapterView: View {
             VStack(alignment: .leading, spacing: 1) {
                 // ONE line, like every other floating overlay in the Quran and hadith readers: a two-line
                 // title made the pinned header grow and shove the reading surface down mid-scroll.
+                // The title is the one PRIMARY element - the chapter row's grammar, where the English
+                // name leads and the Arabic and the span sit secondary beneath it; an all-secondary bar
+                // read as one grey block with nothing to hold on to.
                 Text((chapter.english.isEmpty ? book.englishTitle : chapter.english).uppercased())
                     .font(.caption.weight(.semibold))
-                    .foregroundColor(.secondary)
+                    .foregroundColor(.primary)
                     .lineLimit(1)
                     .minimumScaleFactor(0.6)
 

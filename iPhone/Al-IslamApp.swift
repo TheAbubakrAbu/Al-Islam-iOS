@@ -231,6 +231,28 @@ private struct MainTabView: View {
                 }
                 QiraahComparison.auditAlignments(quranData: QuranData.shared)
             }
+            // "-dumpPrintTokens" - write every riwayah's per-page ayah token counts (the printed-line
+            // tables' ground truth, see MushafPagination.dumpPrintTokens) once the texts are in.
+            .task {
+                guard ProcessInfo.processInfo.arguments.contains("-dumpPrintTokens") else { return }
+                while QuranData.shared.quran.count < 114 {
+                    try? await Task.sleep(nanoseconds: 250_000_000)
+                    guard !Task.isCancelled else { return }
+                }
+                MushafPagination.dumpPrintTokens(quranData: QuranData.shared)
+            }
+            // "-auditPrintLines" - compose every page of the displayed riwayah on its printed-line
+            // table and report any page whose lines don't hold (see MushafPageRenderCache.auditPrintLines).
+            .task {
+                guard ProcessInfo.processInfo.arguments.contains("-auditPrintLines") else { return }
+                while QuranData.shared.quran.count < 114 {
+                    try? await Task.sleep(nanoseconds: 250_000_000)
+                    guard !Task.isCancelled else { return }
+                }
+                let pages = MushafPagination.pages(quran: QuranData.shared.quran,
+                                                   qiraah: Settings.shared.displayQiraahForArabic)
+                MushafPageRenderCache.auditPrintLines(pages: pages)
+            }
             // "-dumpComparison 1:3" - print the qiraah comparison sheet's own rows for one ayah
             // (its copy text, built by the same resolver the rows render), since a sheet cannot be
             // scrolled headlessly.

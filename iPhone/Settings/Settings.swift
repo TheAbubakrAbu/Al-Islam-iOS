@@ -1301,8 +1301,9 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     /// Reads a surah as swipeable mushaf pages instead of a scrolling ayah list. Toggled from the Quran tab's
     /// toolbar, but only takes effect inside SurahView - the surah browse list itself is unchanged.
     @AppStorage("quranPageMode") var quranPageMode = false
-    /// Reading mode shrinks each mushaf page's Arabic until the whole page fits on screen, the way a printed
-    /// mushaf sets it. Off, the page renders at the chosen font size and scrolls.
+    /// Reading mode sets each mushaf page the way its printed mushaf does: every line breaks where the
+    /// displayed riwayah's print breaks it (`MushafPrintLineTable`), at the largest size whose widest
+    /// printed line fits the screen. Off, the page renders at the chosen font size and scrolls.
     @AppStorage("mushafFitPage") var mushafFitPage = true
 
     /// What page mode draws as each page's BODY text. "arabic" (default) is the mushaf itself; the English

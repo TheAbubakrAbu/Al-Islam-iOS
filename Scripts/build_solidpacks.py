@@ -28,6 +28,9 @@ DATA = pathlib.Path(__file__).resolve().parent.parent / "Resources" / "Data" / "
 FAMILIES = {
     "qiraah.solidpack": "Qiraah*.json.deflate",
     "tajweed.solidpack": "Tajweed*.json.deflate",
+    # The printed-line tables (pipeline/printlines_build.py): where each riwayah's Islamweb
+    # print breaks its lines, so page mode can set the same lines.
+    "lines.solidpack": "Lines*.json.deflate",
 }
 
 

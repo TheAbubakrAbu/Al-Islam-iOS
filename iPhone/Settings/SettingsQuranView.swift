@@ -756,7 +756,7 @@ struct SettingsQuranView: View {
                 .font(.subheadline)
                 .onChange(of: settings.mushafFitPage) { _ in settings.hapticFeedback() }
 
-            Text("In reading mode, sets each mushaf page's Arabic at the largest size that fits all of its ayahs on one screen, the way a printed mushaf sets them - larger or smaller than the size above, whatever the page allows. Turn this off to read at exactly the size above and scroll.")
+            Text("In reading mode, sets each mushaf page the way this riwayah's printed mushaf sets it: the same lines, broken at the same words, at the largest size that fits on one screen - larger or smaller than the size above, whatever the page allows - in your own font and colors. Turn this off to read at exactly the size above and scroll.")
                 .font(.caption)
                 .foregroundColor(.secondary)
                 .padding(.vertical, 2)

@@ -378,6 +378,7 @@
 		7A9A000000000000000000F2 /* MoonPhase.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72F000022F7A000000AAF800 /* MoonPhase.swift */; };
 		7A9C00000000000000000001 /* qiraah.solidpack in Resources */ = {isa = PBXBuildFile; fileRef = 7A9C00000000000000000011 /* qiraah.solidpack */; };
 		7A9C00000000000000000002 /* tajweed.solidpack in Resources */ = {isa = PBXBuildFile; fileRef = 7A9C00000000000000000012 /* tajweed.solidpack */; };
+		7A9C00000000000000000003 /* lines.solidpack in Resources */ = {isa = PBXBuildFile; fileRef = 7A9C00000000000000000013 /* lines.solidpack */; };
 		7ADD171122F0000000AA0011 /* HadithModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7ADD171022F0000000AA0010 /* HadithModels.swift */; };
 		7ADD171322F0000000AA0013 /* HadithStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7ADD171222F0000000AA0012 /* HadithStore.swift */; };
 		7ADD171522F0000000AA0015 /* HadithView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7ADD171422F0000000AA0014 /* HadithView.swift */; };
@@ -726,6 +727,7 @@
 		7A9A000000000000000000F0 /* SolarMoonWidgets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SolarMoonWidgets.swift; sourceTree = "<group>"; };
 		7A9C00000000000000000011 /* qiraah.solidpack */ = {isa = PBXFileReference; lastKnownFileType = file; path = qiraah.solidpack; sourceTree = "<group>"; };
 		7A9C00000000000000000012 /* tajweed.solidpack */ = {isa = PBXFileReference; lastKnownFileType = file; path = tajweed.solidpack; sourceTree = "<group>"; };
+		7A9C00000000000000000013 /* lines.solidpack */ = {isa = PBXFileReference; lastKnownFileType = file; path = lines.solidpack; sourceTree = "<group>"; };
 		7ADD171022F0000000AA0010 /* HadithModels.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = HadithModels.swift; sourceTree = "<group>"; };
 		7ADD171222F0000000AA0012 /* HadithStore.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = HadithStore.swift; sourceTree = "<group>"; };
 		7ADD171422F0000000AA0014 /* HadithView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = HadithView.swift; sourceTree = "<group>"; };
@@ -1204,6 +1206,7 @@
 				7A9A000000000000000000A5 /* qiraat.qpk */,
 				7A9C00000000000000000011 /* qiraah.solidpack */,
 				7A9C00000000000000000012 /* tajweed.solidpack */,
+				7A9C00000000000000000013 /* lines.solidpack */,
 				7A9A000000000000000000A7 /* surah-stats.json */,
 			);
 			path = Quran;
@@ -1500,6 +1503,7 @@
 				7A9A000000000000000000D5 /* qiraat.qpk in Resources */,
 				7A9C00000000000000000001 /* qiraah.solidpack in Resources */,
 				7A9C00000000000000000002 /* tajweed.solidpack in Resources */,
+				7A9C00000000000000000003 /* lines.solidpack in Resources */,
 				7A9A000000000000000000D7 /* surah-stats.json in Resources */,
 				72F7DB752F0431740037B059 /* Assets.xcassets in Resources */,
 				72C3FE562F6A039400136976 /* namesofallah.qpk in Resources */,

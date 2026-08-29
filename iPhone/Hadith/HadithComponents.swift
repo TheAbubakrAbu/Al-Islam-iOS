@@ -1160,8 +1160,11 @@ struct HadithShareSheet: View {
     // What travels with the share - persisted, and shared with Copy Hadith so the two always agree.
     @AppStorage("shareHadithArabic") private var includeArabic = true
     @AppStorage("shareHadithEnglish") private var includeEnglish = true
-    @AppStorage("shareHadithNarrator") private var includeNarrator = true
     @AppStorage("shareHadithReference") private var includeReference = true
+    // There is deliberately NO narrator option (user rule, 2026-08-29): the narrator is PART of the
+    // English - "my father said, then he went to the Prophet..." is often the sentence the body's
+    // "He is greater than us" only makes sense after - so English on means narrator on, always,
+    // exactly as the reading rows do it.
     // The Share Ayah sheet's applicable options, for hadith: the Arabic face, tashkeel, and the note.
     @AppStorage("shareHadithFontFace") private var shareFontFaceRaw = ""
     @AppStorage("shareHadithHideTashkeel") private var hideTashkeel = false
@@ -1222,16 +1225,32 @@ struct HadithShareSheet: View {
         var parts: [String] = []
         // One block lookup for all three strings (this runs in a loop when sharing a whole chapter).
         let text = hadith.allText
-        if flag("shareHadithReference") { parts.append("[\(book.englishTitle) \(hadith.displayNumber)]") }
-        if flag("shareHadithArabic"), !text.arabic.isEmpty {
-            // Hide Tashkeel strips the diacritics for a cleaner shared text, the Share Ayah option's twin.
-            let arabic = defaults.bool(forKey: "shareHadithHideTashkeel")
-                ? text.arabic.removingArabicDiacriticsAndSigns
-                : text.arabic
-            parts.append(arabic)
+        // Hide Tashkeel strips the diacritics for a cleaner shared text, the Share Ayah option's twin.
+        let hideTashkeel = defaults.bool(forKey: "shareHadithHideTashkeel")
+        let includeReference = flag("shareHadithReference")
+        let includeArabic = flag("shareHadithArabic") && !text.arabic.isEmpty
+        // The narrator is part of the English (no switch of its own, the reading rows' rule): English
+        // on means the narrator line travels too, always.
+        let includeEnglish = flag("shareHadithEnglish") && (!text.text.isEmpty || !text.narrator.isEmpty)
+        // The Share Ayah grammar: each script's block opens with the reference in ITS OWN script, the
+        // Arabic under "[سُنَن أَبِي داوُد ١٢٠]" and the English under "[Sunan Abi Dawud 120]", so a
+        // reader of either half knows where the hadith is from without reading the other.
+        if includeArabic {
+            let arabic = hideTashkeel ? text.arabic.removingArabicDiacriticsAndSigns : text.arabic
+            parts.append(includeReference
+                ? "\(arabicReference(book: book, hadith: hadith, hideTashkeel: hideTashkeel))\n\(arabic)"
+                : arabic)
         }
-        if flag("shareHadithNarrator"), !text.narrator.isEmpty { parts.append(text.narrator) }
-        if flag("shareHadithEnglish"), !text.text.isEmpty { parts.append(text.text) }
+        if includeEnglish {
+            var english: [String] = []
+            if !text.narrator.isEmpty { english.append(text.narrator) }
+            if !text.text.isEmpty { english.append(text.text) }
+            let block = english.joined(separator: "\n\n")
+            parts.append(includeReference ? "\(englishReference(book: book, hadith: hadith))\n\(block)" : block)
+        } else if includeReference, !includeArabic {
+            // The reference alone (every text part off): the bare English citation, as before.
+            parts.append(englishReference(book: book, hadith: hadith))
+        }
         // ALWAYS, with no option gating it: whoever receives a hadith must be able to tell sahih from
         // da'if, so the grading is not something a share can drop.
         let grades = hadith.grades
@@ -1243,13 +1262,38 @@ struct HadithShareSheet: View {
         return parts.joined(separator: "\n\n")
     }
 
+    /// "[سُنَن أَبِي داوُد ١٢٠]": the book's Arabic title with the citation in Arabic-Indic digits, the
+    /// ayah share's "[سورة البقرة ٢:١٢٠]" for hadith. A citation's letter suffix ("8a") stays Latin: it
+    /// is sunnah.com's, not Arabic.
+    static func arabicReference(book: HadithCatalogBook, hadith: HadithBookData.Hadith, hideTashkeel: Bool) -> String {
+        "[\(arabicReferenceTitle(book: book, hideTashkeel: hideTashkeel)) \(arabicDigits(hadith.displayNumber))]"
+    }
+
+    /// The Arabic title as the reference prints it: bare when the share hides tashkeel, so the heading
+    /// is as clean as the text under it.
+    static func arabicReferenceTitle(book: HadithCatalogBook, hideTashkeel: Bool) -> String {
+        hideTashkeel ? book.arabicTitle.removingArabicDiacriticsAndSigns : book.arabicTitle
+    }
+
+    /// "[Sunan Abi Dawud 120]", the ayah share's "[Al-Baqarah 2:120]" for hadith.
+    static func englishReference(book: HadithCatalogBook, hadith: HadithBookData.Hadith) -> String {
+        "[\(book.englishTitle) \(hadith.displayNumber)]"
+    }
+
+    /// ASCII digits to Arabic-Indic (٠…٩); everything else passes through.
+    static func arabicDigits(_ ascii: String) -> String {
+        String(ascii.map { ch -> Character in
+            guard ch.isASCII, let digit = ch.wholeNumberValue, let scalar = UnicodeScalar(0x0660 + digit) else { return ch }
+            return Character(scalar)
+        })
+    }
+
     /// How many include-parts are on - the last one standing can't be turned off (an empty share is nothing).
     private var enabledPartCount: Int {
         let text = hadith.allText
         return [includeReference,
                 includeArabic && !text.arabic.isEmpty,
-                includeNarrator && !text.narrator.isEmpty,
-                includeEnglish && !text.text.isEmpty].filter { $0 }.count
+                includeEnglish && (!text.text.isEmpty || !text.narrator.isEmpty)].filter { $0 }.count
     }
 
     // ShareAyahSheet's exact shape: the big preview on top (image, or the dark text card), the compact
@@ -1316,11 +1360,8 @@ struct HadithShareSheet: View {
                             toggle("Arabic", $includeArabic, disabled: includeArabic && enabledPartCount == 1)
                         }
 
-                        if !text.narrator.isEmpty {
-                            toggle("Narrator", $includeNarrator, disabled: includeNarrator && enabledPartCount == 1)
-                        }
-
-                        if !text.text.isEmpty {
+                        // English carries its narrator line (no separate switch - see the include flags).
+                        if !text.text.isEmpty || !text.narrator.isEmpty {
                             toggle("English", $includeEnglish, disabled: includeEnglish && enabledPartCount == 1)
                         }
 
@@ -1407,7 +1448,6 @@ struct HadithShareSheet: View {
         // renders once explicitly, and its own state seeding used to echo through as a second, discarded render.
         .onChange(of: includeReference) { _ in regenerate() }
         .onChange(of: includeArabic) { _ in regenerate() }
-        .onChange(of: includeNarrator) { _ in regenerate() }
         .onChange(of: includeEnglish) { _ in regenerate() }
         .onChange(of: hideTashkeel) { _ in regenerate() }
         .onChange(of: includeNote) { _ in regenerate() }
@@ -1548,7 +1588,11 @@ struct HadithShareSheet: View {
     /// the ayah sheet's rule: the render queue must never read view state a later toggle could be
     /// rewriting (and `UIScreen.main` is main-thread-only).
     private struct RenderInput {
-        var reference: String
+        /// The Arabic reference's two halves (empty when the reference is off): the title is drawn in
+        /// the share face, the number in the rounded face, the ayah card's split.
+        var arabicReferenceTitle: String
+        var arabicReferenceNumber: String
+        var englishReference: String
         var arabic: String
         var narrator: String
         var english: String
@@ -1573,9 +1617,12 @@ struct HadithShareSheet: View {
         // same rounded-system fallback in `drawImage`.
         let usesCustomFace = shareFace != .basic && arabicText.count < Settings.arabicShapingCharacterLimit
         return RenderInput(
-            reference: includeReference ? "[\(book.englishTitle) \(hadith.displayNumber)]" : "",
+            arabicReferenceTitle: includeReference ? Self.arabicReferenceTitle(book: book, hideTashkeel: hideTashkeel) : "",
+            arabicReferenceNumber: includeReference ? Self.arabicDigits(hadith.displayNumber) : "",
+            englishReference: includeReference ? Self.englishReference(book: book, hadith: hadith) : "",
             arabic: arabicText,
-            narrator: includeNarrator ? text.narrator : "",
+            // The narrator travels with the English, never separately (see `composedText`).
+            narrator: includeEnglish ? text.narrator : "",
             english: includeEnglish ? text.text : "",
             // No toggle: the grading always travels with the share.
             grades: hadith.grades,
@@ -1659,6 +1706,7 @@ struct HadithShareSheet: View {
         let bodyAttr = [NSAttributedString.Key.font: bodyFont, .foregroundColor: textColor, .paragraphStyle: left] as [NSAttributedString.Key: Any]
         let arAttr = [NSAttributedString.Key.font: arabicFont, .foregroundColor: textColor, .paragraphStyle: right] as [NSAttributedString.Key: Any]
         let accentAttr = [NSAttributedString.Key.font: bodyFont, .foregroundColor: accent, .paragraphStyle: left] as [NSAttributedString.Key: Any]
+        let arAccent = [NSAttributedString.Key.font: arabicFont, .foregroundColor: accent, .paragraphStyle: right] as [NSAttributedString.Key: Any]
         let narratorAttr = [NSAttributedString.Key.font: narratorFont, .foregroundColor: secondaryColor, .paragraphStyle: left] as [NSAttributedString.Key: Any]
         let captionAttr = [NSAttributedString.Key.font: captionFont, .foregroundColor: secondaryColor, .paragraphStyle: left] as [NSAttributedString.Key: Any]
         let captionAccentAttr = [NSAttributedString.Key.font: captionFont, .foregroundColor: accent, .paragraphStyle: left] as [NSAttributedString.Key: Any]
@@ -1679,26 +1727,39 @@ struct HadithShareSheet: View {
         }
         func sepIfNeeded() { if text.length > 0 { append("\n\n", bodyAttr, highlightAllah: false) } }
 
-        if !input.reference.isEmpty {
-            append(input.reference, accentAttr, highlightAllah: false)
-        }
-
+        // The ayah card's grammar: each script's block opens with the reference in its own script, in
+        // accent. "[سُنَن أَبِي داوُد ١٢٠]" over the Arabic (the title in the share face, the digits in
+        // the rounded face, exactly the ayah card's "[سورة البقرة ٢:١٢٠]" split), "[Sunan Abi Dawud 120]"
+        // over the narrator and English.
         if !input.arabic.isEmpty {
-            sepIfNeeded()
+            if !input.arabicReferenceTitle.isEmpty {
+                append("[\(input.arabicReferenceTitle) ", arAccent, highlightAllah: false)
+                append("\(input.arabicReferenceNumber)]", accentAttr, highlightAllah: false)
+                append("\n", bodyAttr, highlightAllah: false)
+            }
             append(input.arabic, arAttr)
         }
 
-        // The narrator sits directly above the English on a single break - the ayah card's grammar for
-        // an attribution line and the text it introduces ("- Saheeh International").
-        if !input.narrator.isEmpty {
+        if !input.narrator.isEmpty || !input.english.isEmpty {
             sepIfNeeded()
-            append(input.narrator, narratorAttr)
-            if !input.english.isEmpty { append("\n", bodyAttr, highlightAllah: false) }
-        }
+            if !input.englishReference.isEmpty {
+                append(input.englishReference, accentAttr, highlightAllah: false)
+                append("\n", bodyAttr, highlightAllah: false)
+            }
 
-        if !input.english.isEmpty {
-            if input.narrator.isEmpty { sepIfNeeded() }
-            append(input.english, bodyAttr)
+            // The narrator sits directly above the English on a single break - the ayah card's grammar
+            // for an attribution line and the text it introduces ("- Saheeh International").
+            if !input.narrator.isEmpty {
+                append(input.narrator, narratorAttr)
+                if !input.english.isEmpty { append("\n", bodyAttr, highlightAllah: false) }
+            }
+
+            if !input.english.isEmpty {
+                append(input.english, bodyAttr)
+            }
+        } else if input.arabic.isEmpty, !input.englishReference.isEmpty {
+            // The reference alone (every text part off): the bare English citation, as before.
+            append(input.englishReference, accentAttr, highlightAllah: false)
         }
 
         // The grade line, drawn exactly as `HadithGradeLine` draws it on screen: the verdict term in the
