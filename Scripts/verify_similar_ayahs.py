@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Gate for the shipped SimilarAyahs.json.deflate. Must pass before it ships.
+"""Gate for the shipped SimilarAyahs.json.xz. Must pass before it ships.
 
 Checks the pack ON DISK: raw-deflate inflates; every source key and every
 target reference is a real ayah of this app's Quran; no ayah lists itself; rows
@@ -16,10 +16,10 @@ import json
 import pathlib
 import subprocess
 import sys
-import zlib
+import lzma
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-PACK = ROOT / "Resources" / "Data" / "Quran" / "SimilarAyahs.json.deflate"
+PACK = ROOT / "Resources" / "Data" / "Quran" / "SimilarAyahs.json.xz"
 
 _spec = importlib.util.spec_from_file_location("b", ROOT / "Scripts" / "build_similar_ayahs.py")
 _builder = importlib.util.module_from_spec(_spec)
@@ -32,8 +32,8 @@ def main() -> None:
 
     blob = PACK.read_bytes()
     try:
-        raw = zlib.decompress(blob, -15)
-    except zlib.error as error:
+        raw = lzma.decompress(blob)
+    except lzma.LZMAError as error:
         raise SystemExit(f"pack is not a raw deflate stream: {error}")
 
     packed = json.loads(raw.decode("utf-8"))

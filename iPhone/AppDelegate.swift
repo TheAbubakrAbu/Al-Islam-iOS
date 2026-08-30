@@ -31,6 +31,13 @@ class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterD
         scheduleBackgroundRefreshes()
         UNUserNotificationCenter.current().delegate = self
 
+        // The selected adhan's notification cuts live in Library/Sounds, rendered from the bundled
+        // recording (AdhanClipStore). Start that now so the launch's scheduling pass, which runs a few
+        // seconds later, finds them; if they land after it, the pass runs again with the real sound.
+        AdhanClipStore.ensureClips(for: Settings.shared.adhanNotificationSound) { rendered in
+            if rendered { Settings.shared.fetchPrayerTimes(notification: true) }
+        }
+
         // Re-arm the background refreshes every time the app is backgrounded - via the NOTIFICATION,
         // not the legacy `applicationDidEnterBackground` delegate method: this is a scene-based
         // (SwiftUI-lifecycle) app, so UIKit never calls that method and the old re-arm was dead code.

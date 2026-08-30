@@ -240,7 +240,7 @@ struct SummarizeSheet: View {
         )
     }
 
-    /// The same card language as `AskAnswerCard`: sparkles header, streaming spinner, integrity footer.
+    /// The Ask AI chat's reply-card language: sparkles header, streaming spinner, integrity footer.
     private var summaryCard: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 6) {

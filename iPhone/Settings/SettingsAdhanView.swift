@@ -720,12 +720,22 @@ struct NotificationView: View {
                 #if os(iOS)
                 Section(header: Text("ADHAN SOUND")) {
                     Picker("Adhan Sound", selection: $settings.adhanNotificationSound.animation(.easeInOut)) {
+                        // Two groups, not one run of nineteen names: the tones (with Default, the same
+                        // six the ALERT TONE picker offers) and then the calls to prayer.
                         Section {
-                            ForEach(Settings.supportedAdhanSounds) { option in
+                            ForEach(Settings.supportedAlertTones) { option in
                                 Text(option.title).tag(option.id)
                             }
                         } header: {
-                            Text("Adhan Sound")
+                            Text("Tones")
+                                .foregroundStyle(.secondary)
+                        }
+                        Section {
+                            ForEach(Settings.supportedAdhanRecordings) { option in
+                                Text(option.title).tag(option.id)
+                            }
+                        } header: {
+                            Text("Adhans")
                                 .foregroundStyle(.secondary)
                         }
                     }

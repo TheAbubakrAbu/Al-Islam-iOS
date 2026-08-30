@@ -42,10 +42,10 @@ struct HaramView: View {
                         .font(.body)
 
                     Text("Allah (Glorified and Exalted be He) says in the Quran:").font(.body)
-                    ScriptureQuote(text: "“And [mention] when We made the House (the Ka'bah) a place of return for the people and [a place of] security” (Quran 2:125).")
+                    ScriptureQuote(text: "“And [mention] when We made the House (the Ka'bah) a place of return for the people and [a place of] security” (Quran 2:125).", arabic: "وَإِذۡ جَعَلۡنَا ٱلۡبَيۡتَ مَثَابَةٗ لِّلنَّاسِ وَأَمۡنٗا")
 
                     Text("Masjid Al-Haram is the destination for **Hajj (حَجّ)** and **Umrah (عُمرَة)**, two pivotal acts of worship in Islam. The Prophet Muhammad (peace and blessings be upon him) said:").font(.body)
-                    ScriptureQuote(text: "“One prayer in the Sacred Mosque is better than one hundred thousand prayers elsewhere” (Sunan Ibn Majah 1406).", dimmed: true)
+                    ScriptureQuote(text: "“One prayer in my mosque is better than a thousand prayers elsewhere, except the Sacred Mosque, and one prayer in the Sacred Mosque is better than one hundred thousand prayers elsewhere” (Sunan Ibn Majah 1406; graded sahih by al-Albani).", arabic: "صَلاَةٌ فِي مَسْجِدِي أَفْضَلُ مِنْ أَلْفِ صَلاَةٍ فِيمَا سِوَاهُ. إِلاَّ الْمَسْجِدَ الْحَرَامَ. وَصَلاَةٌ فِي الْمَسْجِدِ الْحَرَامِ أَفْضَلُ مِنْ مِائَةِ أَلْفِ صَلاَةٍ فِيمَا سِوَاهُ", dimmed: true)
                 }
 
                 Section(header: Text("SIGNIFICANCE OF THE KA'BAH")) {
@@ -54,7 +54,7 @@ struct HaramView: View {
 
                     Text("The Ka'bah was built by **Prophet Ibrahim** (Abraham, peace be upon him) and his son **Prophet Isma'il** (Ishmael, peace be upon him) as a place of monotheistic worship. Allah says in the Quran:")
                         .font(.body)
-                    ScriptureQuote(text: "“And [mention] when Ibrahim was raising the foundations of the House and [with him] Isma'il, [saying], ‘Our Lord, accept [this] from us. Indeed, You are the Hearing, the Knowing.’” (Quran 2:127)")
+                    ScriptureQuote(text: "“And [mention] when Ibrahim was raising the foundations of the House and [with him] Isma'il, [saying], ‘Our Lord, accept [this] from us. Indeed, You are the Hearing, the Knowing.’” (Quran 2:127)", arabic: "وَإِذۡ يَرۡفَعُ إِبۡرَٰهِـۧمُ ٱلۡقَوَاعِدَ مِنَ ٱلۡبَيۡتِ وَإِسۡمَٰعِيلُ رَبَّنَا تَقَبَّلۡ مِنَّآۖ إِنَّكَ أَنتَ ٱلسَّمِيعُ ٱلۡعَلِيمُ")
 
                     Text("The **Black Stone** (ٱلحَجَرُ ٱلأَسوَد, Hajar Al-Aswad), embedded in one corner of the Ka'bah, is a sacred relic dating back to the time of Prophet Ibrahim (peace be upon him). Touching or kissing it during **Tawaf** is a Sunnah, but not obligatory.")
                         .font(.body)
@@ -71,15 +71,15 @@ struct HaramView: View {
                     Text("1. **Multiplied Rewards**: Praying in Masjid Al-Haram is rewarded 100,000 times more than praying elsewhere.")
                         .font(.body)
                     Text("2. **Forgiveness of Sins**: Performing Hajj or Umrah with sincerity cleanses one’s sins. The Prophet Muhammad (peace and blessings be upon him) said:").font(.body)
-                    ScriptureQuote(text: "“Whoever performs Hajj (pilgrimage) and does not have sexual relations (with his wife), nor commits sin, nor disputes unjustly (during Hajj), then he returns from Hajj as pure and free from sins as on the day on which his mother gave birth to him” (Sahih al-Bukhari 1521).", dimmed: true)
+                    ScriptureQuote(text: "“Whoever performs Hajj (pilgrimage) and does not have sexual relations (with his wife), nor commits sin, nor disputes unjustly (during Hajj), then he returns from Hajj as pure and free from sins as on the day on which his mother gave birth to him” (Sahih al-Bukhari 1521).", arabic: "مَنْ حَجَّ لِلَّهِ فَلَمْ يَرْفُثْ وَلَمْ يَفْسُقْ رَجَعَ كَيَوْمِ وَلَدَتْهُ أُمُّهُ", dimmed: true)
                     Text("3. **Unity of the Ummah**: Millions of Muslims from diverse cultures and backgrounds gather in Masjid Al-Haram, symbolizing the unity and equality of the Muslim Ummah under the worship of Allah.")
                         .font(.body)
                 }
 
                 Section(header: Text("QURANIC VERSES ABOUT MAKKAH")) {
                     Text("Allah mentions the sanctity of Makkah and Masjid Al-Haram in several verses:").font(.body)
-                    ScriptureQuote(text: "“Indeed, the first House [of worship] established for mankind was that at Makkah - blessed and a guidance for the worlds” (Quran 3:96).")
-                    ScriptureQuote(text: "“And [mention] when We made the House (the Ka'bah) a place of return for the people and [a place of] security” (Quran 2:125).")
+                    ScriptureQuote(text: "“Indeed, the first House [of worship] established for mankind was that at Makkah - blessed and a guidance for the worlds” (Quran 3:96).", arabic: "إِنَّ أَوَّلَ بَيۡتٖ وُضِعَ لِلنَّاسِ لَلَّذِي بِبَكَّةَ مُبَارَكٗا وَهُدٗى لِّلۡعَٰلَمِينَ")
+                    ScriptureQuote(text: "“And [mention] when We made the House (the Ka'bah) a place of return for the people and [a place of] security” (Quran 2:125).", arabic: "وَإِذۡ جَعَلۡنَا ٱلۡبَيۡتَ مَثَابَةٗ لِّلنَّاسِ وَأَمۡنٗا")
                 }
 
                 Section(header: Text("MASJID AL-HARAM")) {
@@ -137,13 +137,13 @@ struct NabawiView: View {
                         .font(.body)
 
                     Text("The Prophet (peace and blessings be upon him) said:").font(.body)
-                    ScriptureQuote(text: "“One prayer in my mosque is better than a thousand prayers in any other mosque except Al-Masjid Al-Haram” (Sahih Bukhari 1190).", dimmed: true)
+                    ScriptureQuote(text: "“One prayer in my mosque is better than a thousand prayers in any other mosque except Al-Masjid Al-Haram” (Sahih Bukhari 1190).", arabic: "صَلاَةٌ فِي مَسْجِدِي هَذَا خَيْرٌ مِنْ أَلْفِ صَلاَةٍ فِيمَا سِوَاهُ إِلاَّ الْمَسْجِدَ الْحَرَامَ", dimmed: true)
                 }
 
                 Section(header: Text("SIGNIFICANCE")) {
                     Text("Masjid An-Nabawi is home to the **Rawdah (ٱلرَّوضَة)**, an area between the Prophet's pulpit and his house, which he described as a garden from the gardens of Paradise. The Prophet (peace and blessings be upon him) said:")
                         .font(.body)
-                    ScriptureQuote(text: "“Between my house and my pulpit there is a garden of the gardens of Paradise” (Sahih al-Bukhari 1196).", dimmed: true)
+                    ScriptureQuote(text: "“Between my house and my pulpit there is a garden of the gardens of Paradise” (Sahih al-Bukhari 1196).", arabic: "مَا بَيْنَ بَيْتِي وَمِنْبَرِي رَوْضَةٌ مِنْ رِيَاضِ الْجَنَّةِ، وَمِنْبَرِي عَلَى حَوْضِي", dimmed: true)
 
                     Text("The mosque also contains the grave of the Prophet Muhammad (peace and blessings be upon him) and his companions Abu Bakr As-Siddiq and Umar ibn Al-Khattab (may Allah be pleased with them). It is from the Sunnah to send salaam upon him when you are there.")
                         .font(.body)
@@ -155,17 +155,18 @@ struct NabawiView: View {
 
                     Text("Duaa is worship, and worship belongs to Allah alone:")
                         .font(.body)
-                    ScriptureQuote(text: "“And the mosques are for Allah, so do not invoke with Allah anyone” (Quran 72:18).")
+                    ScriptureQuote(text: "“And the mosques are for Allah, so do not invoke with Allah anyone” (Quran 72:18).", arabic: "وَأَنَّ ٱلۡمَسَٰجِدَ لِلَّهِ فَلَا تَدۡعُواْ مَعَ ٱللَّهِ أَحَدٗا")
 
                     Text("When you pray in Masjid An-Nabawi, you face the Qiblah, towards the Kaaba in Makkah, exactly as you would anywhere else on earth. The grave happens to lie in that direction from parts of the mosque; that is a fact of geography, not a thing to be prayed towards.")
                         .font(.body)
 
                     Text("The Prophet (peace and blessings be upon him) himself warned against precisely this, in his final illness:")
                         .font(.body)
-                    ScriptureQuote(text: "“May Allah curse the Jews and the Christians, for they took the graves of their prophets as places of worship” (Sahih al-Bukhari 435, Sahih Muslim 531).", dimmed: true)
+                    ScriptureQuote(text: "“May Allah curse the Jews and the Christians, for they took the graves of their prophets as places of worship” (Sahih al-Bukhari 435, Sahih Muslim 531).", arabic: "لَعْنَةُ اللَّهِ عَلَى الْيَهُودِ وَالنَّصَارَى اتَّخَذُوا قُبُورَ أَنْبِيَائِهِمْ مَسَاجِدَ", dimmed: true)
 
-                    Text("He also said: “Do not make my grave a place of festivity, and send blessings upon me, for your blessings reach me wherever you are” (Sunan Abi Dawud 2042).")
+                    Text("He also said:")
                         .font(.body)
+                    ScriptureQuote(text: "“Do not make your houses graves, and do not make my grave a place of festivity. Send blessings upon me, for your blessings reach me wherever you are” (Sunan Abi Dawud 2042; graded sahih by al-Albani).", arabic: "لاَ تَجْعَلُوا بُيُوتَكُمْ قُبُورًا وَلاَ تَجْعَلُوا قَبْرِي عِيدًا وَصَلُّوا عَلَىَّ فَإِنَّ صَلاَتَكُمْ تَبْلُغُنِي حَيْثُ كُنْتُمْ", dimmed: true)
 
                     Text("So love him, follow him, and send salaah and salaam upon him abundantly. But direct every act of worship to Allah alone. That is what he taught, and honouring him means obeying him.")
                         .font(.body)
@@ -183,7 +184,7 @@ struct NabawiView: View {
                 Section(header: Text("QURANIC VERSES ABOUT THE MOSQUE")) {
                     Text("Allah emphasizes the sanctity of mosques, particularly those established on righteousness. He says in the Quran:")
                         .font(.body)
-                    ScriptureQuote(text: "“A mosque founded on righteousness from the first day is more worthy for you to stand in” (Quran 9:108).")
+                    ScriptureQuote(text: "“A mosque founded on righteousness from the first day is more worthy for you to stand in” (Quran 9:108).", arabic: "لَّمَسۡجِدٌ أُسِّسَ عَلَى ٱلتَّقۡوَىٰ مِنۡ أَوَّلِ يَوۡمٍ أَحَقُّ أَن تَقُومَ فِيهِۚ")
                 }
 
                 Section(header: Text("MASJID AN-NABAWI")) {
@@ -238,7 +239,7 @@ struct AqsaView: View {
                         .font(.body)
 
                     Text("Masjid Al-Aqsa holds immense historical and spiritual significance in Islam. Allah (Glorified and Exalted be He) mentions it in the Quran:").font(.body)
-                    ScriptureQuote(text: "“Exalted is He who took His Servant by night from Al-Masjid Al-Haram to Al-Masjid Al-Aqsa, whose surroundings We have blessed, to show him of Our signs. Indeed, He is the Hearing, the Seeing” (Quran 17:1).")
+                    ScriptureQuote(text: "“Exalted is He who took His Servant by night from Al-Masjid Al-Haram to Al-Masjid Al-Aqsa, whose surroundings We have blessed, to show him of Our signs. Indeed, He is the Hearing, the Seeing” (Quran 17:1).", arabic: "سُبۡحَٰنَ ٱلَّذِيٓ أَسۡرَىٰ بِعَبۡدِهِۦ لَيۡلٗا مِّنَ ٱلۡمَسۡجِدِ ٱلۡحَرَامِ إِلَى ٱلۡمَسۡجِدِ ٱلۡأَقۡصَا ٱلَّذِي بَٰرَكۡنَا حَوۡلَهُۥ لِنُرِيَهُۥ مِنۡ ءَايَٰتِنَآۚ إِنَّهُۥ هُوَ ٱلسَّمِيعُ ٱلۡبَصِيرُ")
 
                     Text("It was the first Qiblah (direction of prayer) for Muslims before it was changed to the Ka'bah in Makkah, and it was the destination of the Prophet Muhammad’s (peace and blessings be upon him) Night Journey, **Isra (الإِسرَاء)**, before his Ascension, **Mi'raj (المِعرَاج)**.")
                         .font(.body)
@@ -248,20 +249,21 @@ struct AqsaView: View {
                     Text("1. **First Qiblah**: Muslims initially faced Masjid Al-Aqsa during their prayers, highlighting its significance from the earliest days of Islam.").font(.body)
                     Text("2. **Al-Isra wa al-Mi'raj (الإِسرَاء وَالمِعرَاج)**: It was the destination of the miraculous Night Journey of the Prophet Muhammad (peace and blessings be upon him), during which he led all prophets in prayer before ascending to the heavens.").font(.body)
                     Text("3. **Land of Blessings**: The Quran describes the surroundings of Masjid Al-Aqsa as a blessed land. Allah says:").font(.body)
-                    ScriptureQuote(text: "“And We delivered him and Lot to the land which We had blessed for all people” (Quran 21:71).")
+                    ScriptureQuote(text: "“And We delivered him and Lot to the land which We had blessed for all people” (Quran 21:71).", arabic: "وَنَجَّيۡنَٰهُ وَلُوطًا إِلَى ٱلۡأَرۡضِ ٱلَّتِي بَٰرَكۡنَا فِيهَا لِلۡعَٰلَمِينَ")
                 }
 
                 Section(header: Text("HISTORICAL AND RELIGIOUS IMPORTANCE")) {
-                    Text("Masjid Al-Aqsa is a place of worship for many prophets, including Ibrahim (Abraham), Dawud (David), and Sulaiman (Solomon) (peace be upon them). It is believed that Prophet Muhammad (peace and blessings be upon him) led all the prophets in prayer here during the Night Journey.")
+                    Text("Masjid Al-Aqsa is a place of worship for many prophets, including Ibrahim (Abraham), Dawud (David), and Sulaiman (Solomon) (peace be upon them). Prophet Muhammad (peace and blessings be upon him) led the prophets in prayer there during the Night Journey. He said:")
                         .font(.body)
+                    ScriptureQuote(text: "“I saw myself among a company of the prophets: there was Musa standing in prayer, a man of medium build with curly hair as if he were one of the men of Shanu'ah; there was Isa the son of Mary (peace be upon him) standing in prayer, the person most resembling him being Urwah ibn Mas'ud ath-Thaqafi; and there was Ibrahim (peace be upon him) standing in prayer, the person most resembling him being your companion (meaning himself). Then the time of prayer came, and I led them” (Sahih Muslim 172).", arabic: "وَقَدْ رَأَيْتُنِي فِي جَمَاعَةٍ مِنَ الأَنْبِيَاءِ فَإِذَا مُوسَى قَائِمٌ يُصَلِّي فَإِذَا رَجُلٌ ضَرْبٌ جَعْدٌ كَأَنَّهُ مِنْ رِجَالِ شَنُوءَةَ وَإِذَا عِيسَى ابْنُ مَرْيَمَ - عَلَيْهِ السَّلاَمُ - قَائِمٌ يُصَلِّي أَقْرَبُ النَّاسِ بِهِ شَبَهًا عُرْوَةُ بْنُ مَسْعُودٍ الثَّقَفِيُّ وَإِذَا إِبْرَاهِيمُ - عَلَيْهِ السَّلاَمُ - قَائِمٌ يُصَلِّي أَشْبَهُ النَّاسِ بِهِ صَاحِبُكُمْ - يَعْنِي نَفْسَهُ - فَحَانَتِ الصَّلاَةُ فَأَمَمْتُهُمْ", dimmed: true)
 
                     Text("The Prophet Muhammad (peace and blessings be upon him) said:").font(.body)
-                    ScriptureQuote(text: "“Do not undertake a journey to visit any mosque but three: Al-Masjid Al-Haram, Al-Masjid An-Nabawi, and Al-Masjid Al-Aqsa” (Sahih al-Bukhari 1189).", dimmed: true)
+                    ScriptureQuote(text: "“Do not undertake a journey to visit any mosque but three: Al-Masjid Al-Haram, Al-Masjid An-Nabawi, and Al-Masjid Al-Aqsa” (Sahih al-Bukhari 1189).", arabic: "لاَ تُشَدُّ الرِّحَالُ إِلاَّ إِلَى ثَلاَثَةِ مَسَاجِدَ الْمَسْجِدِ الْحَرَامِ، وَمَسْجِدِ الرَّسُولِ صلى الله عليه وسلم وَمَسْجِدِ الأَقْصَى", dimmed: true)
                 }
 
                 Section(header: Text("REWARDS OF PRAYING IN MASJID AL-AQSA")) {
                     Text("Prayer in the three sacred mosques carries immense reward. What is established is the authentic narration in which the Prophet Muhammad (peace and blessings be upon him) said:").font(.body)
-                    ScriptureQuote(text: "“A prayer in this mosque of mine is better than a thousand prayers elsewhere, except for Al-Masjid Al-Haram” (Sahih al-Bukhari 1190).", dimmed: true)
+                    ScriptureQuote(text: "“A prayer in this mosque of mine is better than a thousand prayers elsewhere, except for Al-Masjid Al-Haram” (Sahih al-Bukhari 1190).", arabic: "صَلاَةٌ فِي مَسْجِدِي هَذَا خَيْرٌ مِنْ أَلْفِ صَلاَةٍ فِيمَا سِوَاهُ إِلاَّ الْمَسْجِدَ الْحَرَامَ", dimmed: true)
 
                     Text("A report giving a specific figure for Masjid Al-Aqsa (fifty thousand prayers) is narrated in Sunan Ibn Majah 1413, but its chain is weak (da'if), and its figure for Masjid An-Nabawi contradicts the authentic hadith above, so it is not relied upon.").font(.body)
                 }
@@ -414,7 +416,13 @@ struct BeliefsHistoricalView: View {
             .padding(.vertical, 4)
 
             NavigationLink(destination: LazyDestination { MadhabView() }) {
-                Text("The 4 Madhaahib (Schools of Thought)")
+                Text("The Madhahib of Fiqh (Schools of Law)")
+                    .font(.subheadline)
+            }
+            .padding(.vertical, 4)
+
+            NavigationLink(destination: LazyDestination { AqeedahMadhabView() }) {
+                Text("The Madhahib of Aqeedah (Schools of Creed)")
                     .font(.subheadline)
             }
             .padding(.vertical, 4)
@@ -450,13 +458,13 @@ struct WudhuView: View {
                         .font(.body)
                     Text("Without it, the prayer is not accepted. The Prophet (peace and blessings be upon him) said:")
                         .font(.body)
-                    ScriptureQuote(text: "“Allah does not accept the prayer of any of you if he breaks his wudhu until he performs wudhu again” (Sahih al-Bukhari 135, Sahih Muslim 225).", dimmed: true)
+                    ScriptureQuote(text: "“Allah does not accept the prayer of any of you if he breaks his wudhu until he performs wudhu again” (Sahih al-Bukhari 135, Sahih Muslim 225).", arabic: "لاَ تُقْبَلُ صَلاَةُ مَنْ أَحْدَثَ حَتَّى يَتَوَضَّأَ", dimmed: true)
                 }
 
                 Section(header: Text("THE COMMAND IN THE QURAN")) {
                     Text("Allah (Glorified and Exalted be He) says:")
                         .font(.body)
-                    ScriptureQuote(text: "“O you who have believed, when you rise to [perform] prayer, wash your faces and your forearms to the elbows and wipe over your heads and [wash] your feet to the ankles” (Quran 5:6).")
+                    ScriptureQuote(text: "“O you who have believed, when you rise to [perform] prayer, wash your faces and your forearms to the elbows and wipe over your heads and [wash] your feet to the ankles” (Quran 5:6).", arabic: "يَٰٓأَيُّهَا ٱلَّذِينَ ءَامَنُوٓاْ إِذَا قُمۡتُمۡ إِلَى ٱلصَّلَوٰةِ فَٱغۡسِلُواْ وُجُوهَكُمۡ وَأَيۡدِيَكُمۡ إِلَى ٱلۡمَرَافِقِ وَٱمۡسَحُواْ بِرُءُوسِكُمۡ وَأَرۡجُلَكُمۡ إِلَى ٱلۡكَعۡبَيۡنِۚ")
                     Text("This one verse names the four obligatory parts: the face, the arms to the elbows, wiping the head, and the feet to the ankles. Everything else in the description below is Sunnah, following the way the Prophet (peace and blessings be upon him) actually did it.")
                         .font(.body)
                 }
@@ -483,10 +491,14 @@ struct WudhuView: View {
 
                     Text("The Prophet (peace and blessings be upon him) said about that closing testimony:")
                         .font(.body)
-                    ScriptureQuote(text: "“There is no one among you who performs wudhu and does it well, then says: I bear witness that there is no god but Allah alone with no partner, and that Muhammad is His slave and Messenger, but the eight gates of Paradise will be opened for him, and he may enter through whichever of them he wishes” (Sahih Muslim 234).", dimmed: true)
+                    ScriptureQuote(text: "“There is no one among you who performs wudhu and completes it well, then says: I bear witness that there is no god but Allah and that Muhammad is the slave of Allah and His Messenger, but the eight gates of Paradise will be opened for him, and he may enter through whichever of them he wishes” (Sahih Muslim 234).", arabic: "مَا مِنْكُمْ مِنْ أَحَدٍ يَتَوَضَّأُ فَيُبْلِغُ - أَوْ فَيُسْبِغُ - الْوُضُوءَ ثُمَّ يَقُولُ أَشْهَدُ أَنْ لاَ إِلَهَ إِلاَّ اللَّهُ وَأَنَّ مُحَمَّدًا عَبْدُ اللَّهِ وَرَسُولُهُ إِلاَّ فُتِحَتْ لَهُ أَبْوَابُ الْجَنَّةِ الثَّمَانِيَةُ يَدْخُلُ مِنْ أَيِّهَا شَاءَ", dimmed: true)
 
-                    Text("Do not be wasteful with water, even at a flowing river, as reported in a narration in Sunan Ibn Majah 425 whose grading scholars have debated; the principle itself is explicit in the Quran: “and eat and drink, but be not excessive. Indeed, He likes not those who commit excess” (Quran 7:31).")
+                    Text("Do not be wasteful with water. Anas (may Allah be pleased with him) described how little the Prophet (peace and blessings be upon him) used:")
                         .font(.body)
+                    ScriptureQuote(text: "“The Prophet used to wash (or bathe) with a sa' up to five mudds of water, and he would perform wudhu with a mudd” (Sahih al-Bukhari 201).", arabic: "كَانَ النَّبِيُّ صلى الله عليه وسلم يَغْسِلُ ـ أَوْ كَانَ يَغْتَسِلُ ـ بِالصَّاعِ إِلَى خَمْسَةِ أَمْدَادٍ، وَيَتَوَضَّأُ بِالْمُدِّ", dimmed: true)
+                    Text("A mudd is roughly what two cupped hands hold, about two thirds of a litre. The principle itself is explicit in the Quran:")
+                        .font(.body)
+                    ScriptureQuote(text: "“And eat and drink, but be not excessive. Indeed, He likes not those who commit excess” (Quran 7:31).", arabic: "وَكُلُواْ وَٱشۡرَبُواْ وَلَا تُسۡرِفُوٓاْۚ إِنَّهُۥ لَا يُحِبُّ ٱلۡمُسۡرِفِينَ")
                 }
 
                 Section(header: Text("WHAT BREAKS WUDHU")) {
@@ -498,8 +510,9 @@ struct WudhuView: View {
                         .font(.body)
                     Text("• Touching the private parts directly with the hand, without a barrier.")
                         .font(.body)
-                    Text("• Eating camel meat.")
+                    Text("• Eating camel meat. A man asked the Prophet (peace and blessings be upon him) whether he should make wudhu after eating camel meat, and he said:")
                         .font(.body)
+                    ScriptureQuote(text: "“Yes, perform wudhu after eating camel meat” (Sahih Muslim 360).", arabic: "نَعَمْ فَتَوَضَّأْ مِنْ لُحُومِ الإِبِلِ", dimmed: true)
                     Text("Doubt alone does not break it. If you are certain you had wudhu and merely suspect you lost it, you still have it.")
                         .font(.body)
                 }
@@ -507,14 +520,15 @@ struct WudhuView: View {
                 Section(header: Text("THE REWARD")) {
                     Text("The Prophet Muhammad (peace and blessings be upon him) said:")
                         .font(.body)
-                    ScriptureQuote(text: "“When a Muslim or a believer washes his face (in wudhu), every sin he contemplated with his eyes will be washed away from his face along with the water, or with the last drop of water; when he washes his hands, every sin they wrought will be effaced from his hands with the water, or with the last drop of water; and when he washes his feet, every sin towards which his feet have walked will be washed away with the water or with the last drop of water, with the result that he comes out pure from all sins” (Sahih Muslim 244).", dimmed: true)
+                    ScriptureQuote(text: "“When a Muslim or a believer washes his face (in wudhu), every sin he contemplated with his eyes will be washed away from his face along with the water, or with the last drop of water; when he washes his hands, every sin they wrought will be effaced from his hands with the water, or with the last drop of water; and when he washes his feet, every sin towards which his feet have walked will be washed away with the water or with the last drop of water, with the result that he comes out pure from all sins” (Sahih Muslim 244).", arabic: "إِذَا تَوَضَّأَ الْعَبْدُ الْمُسْلِمُ - أَوِ الْمُؤْمِنُ - فَغَسَلَ وَجْهَهُ خَرَجَ مِنْ وَجْهِهِ كُلُّ خَطِيئَةٍ نَظَرَ إِلَيْهَا بِعَيْنَيْهِ مَعَ الْمَاءِ - أَوْ مَعَ آخِرِ قَطْرِ الْمَاءِ - فَإِذَا غَسَلَ يَدَيْهِ خَرَجَ مِنْ يَدَيْهِ كُلُّ خَطِيئَةٍ كَانَ بَطَشَتْهَا يَدَاهُ مَعَ الْمَاءِ - أَوْ مَعَ آخِرِ قَطْرِ الْمَاءِ - فَإِذَا غَسَلَ رِجْلَيْهِ خَرَجَتْ كُلُّ خَطِيئَةٍ مَشَتْهَا رِجْلاَهُ مَعَ الْمَاءِ - أَوْ مَعَ آخِرِ قَطْرِ الْمَاءِ - حَتَّى يَخْرُجَ نَقِيًّا مِنَ الذُّنُوبِ", dimmed: true)
 
                     Text("He also said:")
                         .font(.body)
-                    ScriptureQuote(text: "“Shall I not tell you of that by which Allah erases sins and raises ranks? Performing wudhu properly even when it is difficult, taking many steps to the mosque, and waiting for the next prayer after the previous one” (Sahih Muslim 251).", dimmed: true)
+                    ScriptureQuote(text: "“Shall I not tell you of that by which Allah erases sins and raises ranks? Performing wudhu properly even when it is difficult, taking many steps to the mosque, and waiting for the next prayer after the previous one” (Sahih Muslim 251).", arabic: "أَلاَ أَدُلُّكُمْ عَلَى مَا يَمْحُو اللَّهُ بِهِ الْخَطَايَا وَيَرْفَعُ بِهِ الدَّرَجَاتِ. قَالُوا بَلَى يَا رَسُولَ اللَّهِ. قَالَ إِسْبَاغُ الْوُضُوءِ عَلَى الْمَكَارِهِ وَكَثْرَةُ الْخُطَا إِلَى الْمَسَاجِدِ وَانْتِظَارُ الصَّلاَةِ بَعْدَ الصَّلاَةِ فَذَلِكُمُ الرِّبَاطُ", dimmed: true)
 
-                    Text("And he said that his nation will be called on the Day of Resurrection with radiant faces, hands, and feet, from the traces of wudhu (Sahih al-Bukhari 136).")
+                    Text("And he said:")
                         .font(.body)
+                    ScriptureQuote(text: "“My nation will be called on the Day of Resurrection with radiant faces and bright limbs from the traces of wudhu, so whoever of you can extend his radiance, let him do so” (Sahih al-Bukhari 136).", arabic: "إِنَّ أُمَّتِي يُدْعَوْنَ يَوْمَ الْقِيَامَةِ غُرًّا مُحَجَّلِينَ مِنْ آثَارِ الْوُضُوءِ، فَمَنِ اسْتَطَاعَ مِنْكُمْ أَنْ يُطِيلَ غُرَّتَهُ فَلْيَفْعَلْ", dimmed: true)
 
                     Text("It is also from the Sunnah to make wudhu before sleeping.")
                         .font(.body)
@@ -589,15 +603,16 @@ struct GhuslView: View {
                 Section(header: Text("THE COMMAND IN THE QURAN")) {
                     Text("Allah (Glorified and Exalted be He) says:")
                         .font(.body)
-                    ScriptureQuote(text: "“And if you are in a state of janabah, then purify yourselves” (Quran 5:6).")
+                    ScriptureQuote(text: "“And if you are in a state of janabah, then purify yourselves” (Quran 5:6).", arabic: "وَإِن كُنتُمۡ جُنُبٗا فَٱطَّهَّرُواْۚ")
                     Text("And He says:")
                         .font(.body)
-                    ScriptureQuote(text: "“And do not approach prayer while you are intoxicated until you know what you are saying, or in a state of janabah, except those passing through [a place of prayer], until you have washed [your whole body]” (Quran 4:43).")
+                    ScriptureQuote(text: "“And do not approach prayer while you are intoxicated until you know what you are saying, or in a state of janabah, except those passing through [a place of prayer], until you have washed [your whole body]” (Quran 4:43).", arabic: "يَٰٓأَيُّهَا ٱلَّذِينَ ءَامَنُواْ لَا تَقۡرَبُواْ ٱلصَّلَوٰةَ وَأَنتُمۡ سُكَٰرَىٰ حَتَّىٰ تَعۡلَمُواْ مَا تَقُولُونَ وَلَا جُنُبًا إِلَّا عَابِرِي سَبِيلٍ حَتَّىٰ تَغۡتَسِلُواْۚ")
                 }
 
                 Section(header: Text("HOW TO MAKE GHUSL")) {
-                    Text("This is the way described by Aisha and Maymunah (may Allah be pleased with them), who saw the Prophet (peace and blessings be upon him) perform it (Sahih al-Bukhari 248, 249, 257).")
+                    Text("This is the way described by Aisha and Maymunah (may Allah be pleased with them), who saw the Prophet (peace and blessings be upon him) perform it (Sahih al-Bukhari 248, 249, 257). Aisha said:")
                         .font(.body)
+                    ScriptureQuote(text: "“Whenever the Prophet took a bath after janabah, he would begin by washing his hands, then perform wudhu as he did for the prayer, then put his fingers in the water and run them through the roots of his hair, then pour three handfuls of water over his head with his hands, then pour water over his whole body” (Sahih al-Bukhari 248).", arabic: "كَانَ إِذَا اغْتَسَلَ مِنَ الْجَنَابَةِ بَدَأَ فَغَسَلَ يَدَيْهِ، ثُمَّ يَتَوَضَّأُ كَمَا يَتَوَضَّأُ لِلصَّلاَةِ، ثُمَّ يُدْخِلُ أَصَابِعَهُ فِي الْمَاءِ، فَيُخَلِّلُ بِهَا أُصُولَ شَعَرِهِ ثُمَّ يَصُبُّ عَلَى رَأْسِهِ ثَلاَثَ غُرَفٍ بِيَدَيْهِ، ثُمَّ يُفِيضُ الْمَاءَ عَلَى جِلْدِهِ كُلِّهِ", dimmed: true)
 
                     Text("1. Make the **niyyah (نِيَّة)** in the heart to lift the state of janabah.")
                         .font(.body)
@@ -619,13 +634,13 @@ struct GhuslView: View {
 
                     Text("Women do **not** need to undo braided hair for the ghusl of janabah, so long as the water reaches the roots. Umm Salamah (may Allah be pleased with her) asked about this, and the Prophet (peace and blessings be upon him) said:")
                         .font(.body)
-                    ScriptureQuote(text: "“No, it is enough for you to pour three handfuls of water over your head, then pour water over yourself, and you will be purified” (Sahih Muslim 330).", dimmed: true)
+                    ScriptureQuote(text: "“No, it is enough for you to pour three handfuls of water over your head, then pour water over yourself, and you will be purified” (Sahih Muslim 330).", arabic: "لاَ إِنَّمَا يَكْفِيكِ أَنْ تَحْثِي عَلَى رَأْسِكِ ثَلاَثَ حَثَيَاتٍ ثُمَّ تُفِيضِينَ عَلَيْكِ الْمَاءَ فَتَطْهُرِينَ", dimmed: true)
                 }
 
                 Section(header: Text("IF THERE IS NO WATER: TAYAMMUM")) {
                     Text("If water cannot be found, or using it would cause harm or illness, then **Tayammum (تَيَمُّم)**, dry purification, takes its place for both wudhu and ghusl. Allah says in the same verse:")
                         .font(.body)
-                    ScriptureQuote(text: "“And if you do not find water, then seek clean earth and wipe over your faces and your hands [with it]” (Quran 5:6).")
+                    ScriptureQuote(text: "“And if you do not find water, then seek clean earth and wipe over your faces and your hands [with it]” (Quran 5:6).", arabic: "فَلَمۡ تَجِدُواْ مَآءٗ فَتَيَمَّمُواْ صَعِيدٗا طَيِّبٗا فَٱمۡسَحُواْ بِوُجُوهِكُمۡ وَأَيۡدِيكُم مِّنۡهُۚ")
                     Text("Strike clean earth once with both palms, then wipe the face, then wipe the hands. That is all.")
                         .font(.body)
                 }
@@ -664,10 +679,11 @@ struct JumuahView: View {
                     Text("Allah (Glorified and Exalted be He) says in the Quran:")
                         .font(.body)
 
-                    ScriptureQuote(text: "“O you who have believed, when [the adhan] is called for the prayer on the day of Jumu’ah [Friday], then proceed to the remembrance of Allah and leave trade. That is better for you, if you only knew” (Quran 62:9).")
+                    ScriptureQuote(text: "“O you who have believed, when [the adhan] is called for the prayer on the day of Jumu’ah [Friday], then proceed to the remembrance of Allah and leave trade. That is better for you, if you only knew” (Quran 62:9).", arabic: "يَٰٓأَيُّهَا ٱلَّذِينَ ءَامَنُوٓاْ إِذَا نُودِيَ لِلصَّلَوٰةِ مِن يَوۡمِ ٱلۡجُمُعَةِ فَٱسۡعَوۡاْ إِلَىٰ ذِكۡرِ ٱللَّهِ وَذَرُواْ ٱلۡبَيۡعَۚ ذَٰلِكُمۡ خَيۡرٞ لَّكُمۡ إِن كُنتُمۡ تَعۡلَمُونَ")
 
-                    Text("Jumuah prayer consists of a sermon (**Khutbah, خُطبَة**) followed by a two-rak’ah Salah led by the Imam. It is obligatory for Muslim men who can attend, though it is not obligatory for women.")
+                    Text("Jumuah prayer consists of a sermon (**Khutbah, خُطبَة**) followed by a two-rak’ah Salah led by the Imam. It is obligatory for Muslim men who can attend, though it is not obligatory for women. The Prophet (peace and blessings be upon him) said:")
                         .font(.body)
+                    ScriptureQuote(text: "“Jumuah in congregation is an obligatory duty upon every Muslim, except four: a slave, a woman, a child, and a sick person” (Sunan Abi Dawud 1067; graded sahih by al-Albani).", arabic: "الْجُمُعَةُ حَقٌّ وَاجِبٌ عَلَى كُلِّ مُسْلِمٍ فِي جَمَاعَةٍ إِلاَّ أَرْبَعَةً عَبْدٌ مَمْلُوكٌ أَوِ امْرَأَةٌ أَوْ صَبِيٌّ أَوْ مَرِيضٌ", dimmed: true)
 
                     Text("If Jumuah is missed at the mosque, one performs the full Dhuhr prayer (4 rak’ahs).")
                         .font(.body)
@@ -677,7 +693,7 @@ struct JumuahView: View {
                     Text("The Prophet Muhammad (peace and blessings be upon him) said:")
                         .font(.body)
 
-                    ScriptureQuote(text: "“The best day on which the sun has risen is Friday; on it Adam was created, on it he was admitted to Paradise, and on it he was expelled therefrom” (Sahih Muslim 854).", dimmed: true)
+                    ScriptureQuote(text: "“The best day on which the sun has risen is Friday; on it Adam was created, on it he was admitted to Paradise, and on it he was expelled therefrom” (Sahih Muslim 854).", arabic: "خَيْرُ يَوْمٍ طَلَعَتْ عَلَيْهِ الشَّمْسُ يَوْمُ الْجُمُعَةِ فِيهِ خُلِقَ آدَمُ وَفِيهِ أُدْخِلَ الْجَنَّةَ وَفِيهِ أُخْرِجَ مِنْهَا", dimmed: true)
 
                     Text("Friday is considered the best day of the week in Islam. It unites the community, strengthens social bonds, and serves as a weekly reminder of our responsibilities toward Allah (Glorified and Exalted be He) and humanity.")
                         .font(.body)
@@ -690,19 +706,19 @@ struct JumuahView: View {
                     Text("1. **Reciting Surah Al-Kahf (سُورَة ٱلكَهف):** The Prophet Muhammad (peace and blessings be upon him) said:")
                         .font(.body)
 
-                    Text("“Whoever reads Surah Al-Kahf on Friday will have a light between this Friday and the next” (al-Hakim and al-Bayhaqi; graded sahih by al-Albani, Sahih al-Jami' 6470).")
-                        .font(.body)
-                        .foregroundColor(settings.accentColor.color)
+                    ScriptureQuote(text: "“Whoever reads Surah Al-Kahf on Friday, a light will shine for him between the two Fridays” (al-Hakim 2/368 and al-Bayhaqi; graded sahih by al-Albani, Sahih al-Jami' 6470).", arabic: "مَنْ قَرَأَ سُورَةَ الْكَهْفِ فِي يَوْمِ الْجُمُعَةِ أَضَاءَ لَهُ مِنَ النُّورِ مَا بَيْنَ الْجُمُعَتَيْنِ", dimmed: true)
 
                     Text("2. **Sending Salawat on the Prophet (peace and blessings be upon him):**")
                         .font(.body)
 
-                    ScriptureQuote(text: "“Increase your supplications for me on the day and night of Friday. Whoever blesses me once, Allah will bless him ten times” (al-Sunan al-Kubra lil-Bayhaqi 5994, graded hasan by al-Albani; the tenfold blessing is also in Sahih Muslim 408).", dimmed: true)
+                    ScriptureQuote(text: "“Among the best of your days is Friday: on it Adam was created, on it he died, on it the Trumpet will be blown, and on it the Shout will come. So send abundant blessings upon me on it, for your blessings are presented to me” (Sunan Abi Dawud 1047; graded sahih by al-Albani).", arabic: "إِنَّ مِنْ أَفْضَلِ أَيَّامِكُمْ يَوْمَ الْجُمُعَةِ فِيهِ خُلِقَ آدَمُ وَفِيهِ قُبِضَ وَفِيهِ النَّفْخَةُ وَفِيهِ الصَّعْقَةُ فَأَكْثِرُوا عَلَىَّ مِنَ الصَّلاَةِ فِيهِ فَإِنَّ صَلاَتَكُمْ مَعْرُوضَةٌ عَلَىَّ", dimmed: true)
+
+                    ScriptureQuote(text: "“Whoever sends one blessing upon me, Allah sends ten blessings upon him” (Sahih Muslim 408).", arabic: "مَنْ صَلَّى عَلَىَّ وَاحِدَةً صَلَّى اللَّهُ عَلَيْهِ عَشْرًا", dimmed: true)
 
                     Text("3. **Making Dua (Supplication)**: There is a special hour on Friday during which all supplications are accepted. The Prophet Muhammad (peace and blessings be upon him) said:")
                         .font(.body)
 
-                    ScriptureQuote(text: "“Friday is twelve hours in which there is no Muslim slave who asks Allah for something but He will give it to him, so seek it in the last hour after Asr” (Sunan an-Nasa'i 1389; graded sahih by al-Albani, Sahih Abi Dawud 1048).", dimmed: true)
+                    ScriptureQuote(text: "“Friday is twelve hours in which there is no Muslim slave who asks Allah for something but He will give it to him, so seek it in the last hour after Asr” (Sunan an-Nasa'i 1389; graded sahih by al-Albani).", arabic: "يَوْمُ الْجُمُعَةِ اثْنَتَا عَشْرَةَ سَاعَةً لاَ يُوجَدُ فِيهَا عَبْدٌ مُسْلِمٌ يَسْأَلُ اللَّهَ شَيْئًا إِلاَّ آتَاهُ إِيَّاهُ فَالْتَمِسُوهَا آخِرَ سَاعَةٍ بَعْدَ الْعَصْرِ", dimmed: true)
                 }
 
                 Section(header: Text("ETIQUETTE")) {
@@ -756,7 +772,7 @@ struct AdhanOtherView: View {
                     Text("The Adhan originated during the time of Prophet Muhammad (peace and blessings be upon him) in Madinah.")
                         .font(.body)
 
-                    Text("The method of calling to prayer was revealed through the dream of Abdullah ibn Zaid (may Allah be pleased with him), and the Prophet (peace and blessings be upon him) chose Bilal ibn Rabah (may Allah be pleased with him) to deliver it because of his melodious and powerful voice.")
+                    Text("The Companions had discussed how to announce the prayer, and some suggested a bell like the Christians or a horn like the Jews. Umar (may Allah be pleased with him) proposed that a man call the people, and the Prophet (peace and blessings be upon him) ordered Bilal to rise and give the call (Sahih al-Bukhari 604). The words of the Adhan were shown to Abdullah ibn Zayd (may Allah be pleased with him) in a dream, which the Prophet confirmed as a true vision, telling him to teach them to Bilal ibn Rabah (may Allah be pleased with him), whose voice was the louder (Sunan Abi Dawud 499; graded hasan sahih by al-Albani).")
                         .font(.body)
                 }
 
@@ -836,8 +852,9 @@ struct AdhanOtherView: View {
                     Text("As-salatu khayrun mina-nawm\n(Prayer is better than sleep)")
                         .font(.body)
 
-                    Text("This line is said twice, and only in the Adhan for Fajr. It is never said in the Adhan for Dhuhr, Asr, Maghrib, or Isha, and it is never said in the Iqamah.")
+                    Text("This line is said twice, and only in the Adhan for Fajr. It is never said in the Adhan for Dhuhr, Asr, Maghrib, or Isha, and it is never said in the Iqamah. Abu Mahdhurah (may Allah be pleased with him), whom the Prophet (peace and blessings be upon him) taught the Adhan, said:")
                         .font(.body)
+                    ScriptureQuote(text: "“I used to give the Adhan for the Messenger of Allah, and in the first Adhan of Fajr I would say: Hayya alal-falah, as-salatu khayrun minan-nawm, as-salatu khayrun minan-nawm, Allahu Akbar Allahu Akbar, la ilaha illallah” (Sunan an-Nasa'i 647; graded sahih by al-Albani).", arabic: "كُنْتُ أُؤَذِّنُ لِرَسُولِ اللَّهِ صلى الله عليه وسلم وَكُنْتُ أَقُولُ فِي أَذَانِ الْفَجْرِ الأَوَّلِ حَىَّ عَلَى الْفَلاَحِ الصَّلاَةُ خَيْرٌ مِنَ النَّوْمِ الصَّلاَةُ خَيْرٌ مِنَ النَّوْمِ اللَّهُ أَكْبَرُ اللَّهُ أَكْبَرُ لاَ إِلَهَ إِلاَّ اللَّهُ", dimmed: true)
                 }
 
                 Section(header: Text("IN SUMMARY")) {
@@ -848,16 +865,19 @@ struct AdhanOtherView: View {
                 Section(header: Text("THE VIRTUE OF THE ADHAN")) {
                     Text("Allah (Glorified and Exalted be He) says:")
                         .font(.body)
-                    ScriptureQuote(text: "“O you who have believed, when [the adhan] is called for the prayer on the day of Jumuah, then proceed to the remembrance of Allah and leave trade” (Quran 62:9).")
+                    ScriptureQuote(text: "“O you who have believed, when [the adhan] is called for the prayer on the day of Jumuah, then proceed to the remembrance of Allah and leave trade” (Quran 62:9).", arabic: "يَٰٓأَيُّهَا ٱلَّذِينَ ءَامَنُوٓاْ إِذَا نُودِيَ لِلصَّلَوٰةِ مِن يَوۡمِ ٱلۡجُمُعَةِ فَٱسۡعَوۡاْ إِلَىٰ ذِكۡرِ ٱللَّهِ وَذَرُواْ ٱلۡبَيۡعَۚ")
                     Text("The Prophet (peace and blessings be upon him) said:")
                         .font(.body)
-                    ScriptureQuote(text: "“If the people knew what there is in the call to prayer and the first row, and they could find no other way than to draw lots, they would draw lots for it” (Sahih al-Bukhari 615).", dimmed: true)
-                    ScriptureQuote(text: "“When the call to prayer is made, Satan takes to his heels and passes wind with noise so as not to hear the call” (Sahih al-Bukhari 608).", dimmed: true)
-                    Text("Answer the muadhin. He said: “When you hear the muadhin, say the like of what he says” (Sahih Muslim 383). Except at “Hayya ala as-salah“ and “Hayya ala al-falah,“ where you say “La hawla wa la quwwata illa billah“ (Sahih Muslim 385).")
+                    ScriptureQuote(text: "“If the people knew what there is in the call to prayer and the first row, and they could find no other way than to draw lots, they would draw lots for it” (Sahih al-Bukhari 615).", arabic: "لَوْ يَعْلَمُ النَّاسُ مَا فِي النِّدَاءِ وَالصَّفِّ الأَوَّلِ، ثُمَّ لَمْ يَجِدُوا إِلاَّ أَنْ يَسْتَهِمُوا عَلَيْهِ لاَسْتَهَمُوا", dimmed: true)
+                    ScriptureQuote(text: "“When the call to prayer is made, Satan takes to his heels and passes wind with noise so as not to hear the call” (Sahih al-Bukhari 608).", arabic: "إِذَا نُودِيَ لِلصَّلاَةِ أَدْبَرَ الشَّيْطَانُ وَلَهُ ضُرَاطٌ حَتَّى لاَ يَسْمَعَ التَّأْذِينَ", dimmed: true)
+                    Text("Answer the muadhin. He said:")
+                        .font(.body)
+                    ScriptureQuote(text: "“When you hear the call, say the like of what the muadhin says” (Sahih Muslim 383).", arabic: "إِذَا سَمِعْتُمُ النِّدَاءَ فَقُولُوا مِثْلَ مَا يَقُولُ الْمُؤَذِّنُ", dimmed: true)
+                    Text("Except at “Hayya ala as-salah“ and “Hayya ala al-falah,“ where you say “La hawla wa la quwwata illa billah“ (there is no might nor power except with Allah), as Umar (may Allah be pleased with him) reported from him (Sahih Muslim 385).")
                         .font(.body)
                     Text("Then send blessings on the Prophet (peace and blessings be upon him), and say:")
                         .font(.body)
-                    ScriptureQuote(text: "“Allahumma Rabba hadhihi ad-dawati at-tammah, was-salatil-qa'imah, ati Muhammadan al-wasilata wal-fadilah, wab'ath-hu maqaman mahmudan alladhi wa'adtah“ - whoever says this after the adhan, my intercession will be permitted for him on the Day of Resurrection (Sahih al-Bukhari 614).", dimmed: true)
+                    ScriptureQuote(text: "“Allahumma Rabba hadhihi ad-dawati at-tammah, was-salatil-qa'imah, ati Muhammadan al-wasilata wal-fadilah, wab'ath-hu maqaman mahmudan alladhi wa'adtah“ - whoever says this after the adhan, my intercession will be permitted for him on the Day of Resurrection (Sahih al-Bukhari 614).", arabic: "مَنْ قَالَ حِينَ يَسْمَعُ النِّدَاءَ اللَّهُمَّ رَبَّ هَذِهِ الدَّعْوَةِ التَّامَّةِ وَالصَّلاَةِ الْقَائِمَةِ آتِ مُحَمَّدًا الْوَسِيلَةَ وَالْفَضِيلَةَ وَابْعَثْهُ مَقَامًا مَحْمُودًا الَّذِي وَعَدْتَهُ، حَلَّتْ لَهُ شَفَاعَتِي يَوْمَ الْقِيَامَةِ", dimmed: true)
                 }
 
                 GuideSourcesSection(sources: [
@@ -960,15 +980,16 @@ struct IqamahView: View {
                 Section(header: Text("AFTER THE IQAMAH")) {
                     Text("The Iqamah is said in single phrases, unlike the Adhan, which is said in pairs. Anas (may Allah be pleased with him) said:")
                         .font(.body)
-                    ScriptureQuote(text: "“Bilal was ordered to say the words of the adhan twice and the words of the iqamah once” (Sahih al-Bukhari 605, Sahih Muslim 378).", dimmed: true)
+                    ScriptureQuote(text: "“Bilal was ordered to say the words of the adhan twice and the words of the iqamah once” (Sahih al-Bukhari 605, Sahih Muslim 378).", arabic: "أُمِرَ بِلاَلٌ أَنْ يَشْفَعَ الأَذَانَ وَأَنْ يُوتِرَ الإِقَامَةَ إِلاَّ الإِقَامَةَ", dimmed: true)
                     Text("Once the Iqamah is called, no other prayer is begun. The Prophet (peace and blessings be upon him) said:")
                         .font(.body)
-                    ScriptureQuote(text: "“When the iqamah for the prayer has been called, then there is no prayer except the obligatory one” (Sahih Muslim 710).", dimmed: true)
+                    ScriptureQuote(text: "“When the iqamah for the prayer has been called, then there is no prayer except the obligatory one” (Sahih Muslim 710).", arabic: "إِذَا أُقِيمَتِ الصَّلاَةُ فَلاَ صَلاَةَ إِلاَّ الْمَكْتُوبَةُ", dimmed: true)
                     Text("And straighten the rows before the imam begins:")
                         .font(.body)
-                    ScriptureQuote(text: "“Straighten your rows, for straightening the rows is part of the perfection of the prayer” (Sahih al-Bukhari 723, Sahih Muslim 433).", dimmed: true)
-                    Text("Walk to the prayer calmly. He said: “When the iqamah is called, do not come to it running. Come to it walking, with tranquillity. Whatever you catch, pray, and whatever you miss, complete it” (Sahih al-Bukhari 636, Sahih Muslim 602).")
+                    ScriptureQuote(text: "“Straighten your rows, for straightening the rows is part of the perfection of the prayer” (Sahih al-Bukhari 723, Sahih Muslim 433).", arabic: "سَوُّوا صُفُوفَكُمْ فَإِنَّ تَسْوِيَةَ الصُّفُوفِ مِنْ إِقَامَةِ الصَّلاَةِ", dimmed: true)
+                    Text("Walk to the prayer calmly. He said:")
                         .font(.body)
+                    ScriptureQuote(text: "“When you hear the iqamah, walk to the prayer with tranquillity and dignity, and do not hurry. Whatever you catch, pray, and whatever you miss, complete it” (Sahih al-Bukhari 636, Sahih Muslim 602).", arabic: "إِذَا سَمِعْتُمُ الإِقَامَةَ فَامْشُوا إِلَى الصَّلاَةِ، وَعَلَيْكُمْ بِالسَّكِينَةِ وَالْوَقَارِ وَلاَ تُسْرِعُوا، فَمَا أَدْرَكْتُمْ فَصَلُّوا وَمَا فَاتَكُمْ فَأَتِمُّوا", dimmed: true)
                 }
 
                 GuideSourcesSection(sources: [
@@ -1002,8 +1023,9 @@ struct TakbiratView: View {
                         .font(.body)
                     Text("4. Say the Takbir on the way, out loud (see below).")
                         .font(.body)
-                    Text("5. Go out to the **musalla (مُصَلَّى)**, the open prayer ground, which is the Sunnah, and take the women and children with you. Go by one route and return by another, as the Prophet (peace and blessings be upon him) did (Sahih al-Bukhari 986).")
+                    Text("5. Go out to the **musalla (مُصَلَّى)**, the open prayer ground, which is the Sunnah, and take the women and children with you. Go by one route and return by another. Jabir (may Allah be pleased with him) said:")
                         .font(.body)
+                    ScriptureQuote(text: "“On the day of Eid, the Prophet would take a different route back” (Sahih al-Bukhari 986).", arabic: "كَانَ النَّبِيُّ صلى الله عليه وسلم إِذَا كَانَ يَوْمُ عِيدٍ خَالَفَ الطَّرِيقَ", dimmed: true)
                 }
 
                 Section(header: Text("THE TIME OF THE PRAYER")) {
@@ -1043,9 +1065,9 @@ struct TakbiratView: View {
                     Text("There is **no nafl prayer** before or after the Eid prayer at the musalla.")
                         .font(.body)
 
-                    Text("The Prophet (peace and blessings be upon him) is reported to have said:")
+                    Text("Aisha (may Allah be pleased with her) said:")
                         .font(.body)
-                    ScriptureQuote(text: "“The takbir in Fitr and Adha is seven in the first rak'ah and five in the second, apart from the two takbirs of ruku'” (Sunan Abi Dawud 1151).", dimmed: true)
+                    ScriptureQuote(text: "“The Messenger of Allah would say the takbir on al-Fitr and al-Adha seven times in the first rak'ah and five in the second, apart from the two takbirs of ruku'” (Sunan Abi Dawud 1149-1150; graded sahih by al-Albani).", arabic: "كَانَ يُكَبِّرُ فِي الْفِطْرِ وَالأَضْحَى فِي الأُولَى سَبْعَ تَكْبِيرَاتٍ وَفِي الثَّانِيَةِ خَمْسًا سِوَى تَكْبِيرَتَىِ الرُّكُوعِ", dimmed: true)
 
                     Text("If you miss a takbir, or the imam has already begun, join him where he is and do not try to make up the extra takbirs. They are a Sunnah, not a pillar, and forgetting them does not invalidate the prayer or require the prostration of forgetfulness.")
                         .font(.body)
@@ -1058,8 +1080,9 @@ struct TakbiratView: View {
                         .font(.body)
                     Text("If you missed the congregation entirely, you may pray two rak'ah on your own.")
                         .font(.body)
-                    Text("Greet one another with **“Taqabbal Allahu minna wa minkum“ (تَقَبَّلَ اللهُ مِنَّا وَمِنكُم)**, “May Allah accept it from us and from you.“ This was the greeting of the Companions.")
+                    Text("Greet one another as the Companions did. Jubayr ibn Nufayr said: when the Companions of the Messenger of Allah (peace and blessings be upon him) met on the day of Eid, they would say to one another:")
                         .font(.body)
+                    ScriptureQuote(text: "“Taqabbal Allahu minna wa minka: May Allah accept it from us and from you” (reported by al-Mahamili; Ibn Hajar said its chain is hasan, Fath al-Bari 2/446).", arabic: "تَقَبَّلَ اللَّهُ مِنَّا وَمِنْكَ", dimmed: true)
                 }
 
                 Section(header: Text("EID OCCASIONS")) {
@@ -1083,7 +1106,7 @@ struct TakbiratView: View {
                     Text("Allah (Glorified and Exalted be He) says in the Quran:")
                         .font(.body)
 
-                    ScriptureQuote(text: "“And [He wants] for you to complete the period and to glorify Allah for that [to] which He has guided you; and perhaps you will be grateful” (Quran 2:185).")
+                    ScriptureQuote(text: "“And [He wants] for you to complete the period and to glorify Allah for that [to] which He has guided you; and perhaps you will be grateful” (Quran 2:185).", arabic: "وَلِتُكۡمِلُواْ ٱلۡعِدَّةَ وَلِتُكَبِّرُواْ ٱللَّهَ عَلَىٰ مَا هَدَىٰكُمۡ وَلَعَلَّكُمۡ تَشۡكُرُونَ")
                 }
 
                 Section(header: Text("SHORT TAKBIRAT")) {
@@ -1103,51 +1126,34 @@ struct TakbiratView: View {
                         .font(.body)
                 }
 
-                Section(header: Text("LONGER TAKBIRAT")) {
-                    Text("""
-                    اللَّهُ أَكبَرُ، اللَّهُ أَكبَرُ، اللَّهُ أَكبَرُ، لَا إِلَهَ إِلَّا اللَّهُ
+                Section(header: Text("THE TAKBIR OF THE COMPANIONS")) {
+                    Text("No fixed wording of the Eid takbir is narrated from the Prophet (peace and blessings be upon him) himself; what is established is the practice of his Companions, and their wording is what Ahl as-Sunnah keep to. Ibn Mas’ud (may Allah be pleased with him) would say:")
+                        .font(.body)
+                    ScriptureQuote(text: "“Allahu Akbar, Allahu Akbar, la ilaha illallah, wallahu Akbar, Allahu Akbar, wa lillahil-hamd: Allah is the Greatest, Allah is the Greatest, there is no deity but Allah; and Allah is the Greatest, Allah is the Greatest, and to Allah belongs all praise” (Musannaf Ibn Abi Shaybah; graded sahih by al-Albani, Irwa' al-Ghalil 3/125).", arabic: "اللَّهُ أَكْبَرُ اللَّهُ أَكْبَرُ، لَا إِلَهَ إِلَّا اللَّهُ، وَاللَّهُ أَكْبَرُ اللَّهُ أَكْبَرُ وَلِلَّهِ الْحَمْدُ", dimmed: true)
 
-                    اللَّهُ أَكبَرُ، اللَّهُ أَكبَرُ، وَلِلَّهِ الحَمدُ
+                    Text("And from Ibn Abbas (may Allah be pleased with him):")
+                        .font(.body)
+                    ScriptureQuote(text: "“Allahu Akbar kabira, Allahu Akbar kabira, Allahu Akbar wa ajall, Allahu Akbar wa lillahil-hamd: Allah is the Greatest, truly great; Allah is the Greatest, truly great; Allah is the Greatest and most Majestic; Allah is the Greatest, and to Allah belongs all praise” (al-Bayhaqi 3/315; graded sahih by al-Albani, Irwa' al-Ghalil 3/126).", arabic: "اللَّهُ أَكْبَرُ كَبِيرًا، اللَّهُ أَكْبَرُ كَبِيرًا، اللَّهُ أَكْبَرُ وَأَجَلُّ، اللَّهُ أَكْبَرُ وَلِلَّهِ الْحَمْدُ", dimmed: true)
 
-                    اللَّهُ أَكبَرُ كَبِيرًا، وَالحَمدُ لِلَّهِ كَثِيرًا، وَسُبحَانَ اللَّهِ بُكرَةً وَأَصِيلًا
+                    Text("Saying it three times (Allahu Akbar, Allahu Akbar, Allahu Akbar) is also reported from the Salaf, and both are fine. Men raise their voices with it in the markets, the mosques and on the way to the prayer ground, as Ibn Umar and Abu Hurayrah used to (Sahih al-Bukhari, Book of the Two Eids, chapter heading).")
+                        .font(.body)
+                }
 
-                    لَا إِلَهَ إِلَّا اللَّهُ وَحدَهُ، صَدَقَ وَعدَهُ، وَنَصَرَ عَبدَهُ، وَأَعَزَّ جُندَهُ، وَهَزَمَ الأَحزَابَ وَحدَهُ
+                Section(header: Text("OTHER WORDS OF REMEMBRANCE FROM THE SUNNAH")) {
+                    Text("Longer chants heard on Eid morning gather phrases that are themselves authentic remembrances, and these may be said. A Companion said this in the prayer, and the Prophet (peace and blessings be upon him) said of it: “I marvelled at it; the gates of heaven were opened for it” (Sahih Muslim 601):")
+                        .font(.body)
+                    ScriptureQuote(text: "“Allahu Akbar kabira, wal-hamdu lillahi kathira, wa subhanallahi bukratan wa asila: Allah is the Greatest, truly great; much praise be to Allah; and glory be to Allah morning and evening” (Sahih Muslim 601).", arabic: "اللَّهُ أَكْبَرُ كَبِيرًا وَالْحَمْدُ لِلَّهِ كَثِيرًا وَسُبْحَانَ اللَّهِ بُكْرَةً وَأَصِيلاً", dimmed: true)
 
-                    لَا إِلَهَ إِلَّا اللَّهُ، وَلَا نَعبُدُ إِلَّا إِيَّاهُ، مُخلِصِينَ لَهُ الدِّينَ وَلَو كَرِهَ الكَافِرُونَ
+                    Text("The Prophet (peace and blessings be upon him) would say on returning from Hajj, Umrah or a campaign:")
+                        .font(.body)
+                    ScriptureQuote(text: "“There is no deity but Allah alone, with no partner. His is the dominion and His is the praise, and He is able to do all things. We return repenting, worshipping, prostrating, praising our Lord. Allah has kept His promise, granted victory to His slave, and defeated the confederates alone” (Sahih al-Bukhari 1797).", arabic: "لاَ إِلَهَ إِلاَّ اللَّهُ وَحْدَهُ لاَ شَرِيكَ لَهُ، لَهُ الْمُلْكُ، وَلَهُ الْحَمْدُ، وَهُوَ عَلَى كُلِّ شَىْءٍ قَدِيرٌ، آيِبُونَ تَائِبُونَ عَابِدُونَ سَاجِدُونَ لِرَبِّنَا حَامِدُونَ، صَدَقَ اللَّهُ وَعْدَهُ وَنَصَرَ عَبْدَهُ وَهَزَمَ الأَحْزَابَ وَحْدَهُ", dimmed: true)
 
-                    اللَّهُمَّ صَلِّ عَلَى سَيِّدِنَا مُحَمَّدٍ، وَعَلَى آلِ سَيِّدِنَا مُحَمَّدٍ، وَعَلَى أَصحَابِ سَيِّدِنَا مُحَمَّدٍ، وَعَلَى أَنصَارِ سَيِّدِنَا مُحَمَّدٍ، وَعَلَى أَزوَاجِ سَيِّدِنَا مُحَمَّدٍ، وَعَلَى ذُرِّيَّةِ سَيِّدِنَا مُحَمَّدٍ، وَسَلِّم تَسلِيمًا كَثِيرًا
-                    """)
-                    .font(.body)
-                    .foregroundColor(settings.accentColor.color)
-                    .multilineTextAlignment(.trailing)
-                    .frame(maxWidth: .infinity, alignment: .trailing)
+                    Text("And after every obligatory prayer he would say:")
+                        .font(.body)
+                    ScriptureQuote(text: "“There is no deity but Allah alone, with no partner. His is the dominion and His is the praise, and He is able to do all things. There is no might nor power except with Allah. There is no deity but Allah, and we worship none but Him. His is the favour, His is the grace, and His is the excellent praise. There is no deity but Allah, being sincere to Him in religion, even if the disbelievers dislike it” (Sahih Muslim 594).", arabic: "لاَ إِلَهَ إِلاَّ اللَّهُ وَحْدَهُ لاَ شَرِيكَ لَهُ لَهُ الْمُلْكُ وَلَهُ الْحَمْدُ وَهُوَ عَلَى كُلِّ شَىْءٍ قَدِيرٌ لاَ حَوْلَ وَلاَ قُوَّةَ إِلاَّ بِاللَّهِ لاَ إِلَهَ إِلاَّ اللَّهُ وَلاَ نَعْبُدُ إِلاَّ إِيَّاهُ لَهُ النِّعْمَةُ وَلَهُ الْفَضْلُ وَلَهُ الثَّنَاءُ الْحَسَنُ لاَ إِلَهَ إِلاَّ اللَّهُ مُخْلِصِينَ لَهُ الدِّينَ وَلَوْ كَرِهَ الْكَافِرُونَ", dimmed: true)
 
-                    Text("""
-                    Allahu Akbar, Allahu Akbar, Allahu Akbar, La ilaha illa Allah
-
-                    Allahu Akbar, Allahu Akbar, wa Lillahil Hamd
-
-                    Allahu Akbar Kabira, wal Hamdu Lillahi Kathira, wa Subhan Allahi bukratan wa asila
-
-                    La ilaha illa Allahu Wahdah, sadaqa wa’dah, wa nasara abdah, wa a’azza jundahu wa hazama al-Ahzaba wahdah
-
-                    La ilaha illa Allah, wa la na’budu illa iyyah, mukhliseena lahud-deen, walaw karihal kafirun
-
-                    Allahumma salli ‘ala Sayyidina Muhammad, wa ‘ala ali Sayyidina Muhammad, wa ‘ala ashabi Sayyidina Muhammad, wa ‘ala ansari Sayyidina Muhammad, wa ‘ala azwaji Sayyidina Muhammad, wa ‘ala dhurriyyati Sayyidina Muhammad, wa sallim tasliman kathira
-                    """)
-                    .font(.body)
-
-                    Text("""
-                    “Allah is the Greatest, Allah is the Greatest, Allah is the Greatest; There is no deity but Allah.
-                    Allah is the Greatest, Allah is the Greatest, and to Allah belongs all praise.
-
-                    Allah is the Greatest in greatness; much praise be to Allah; and Glory be to Allah in the morning and evening.
-                    There is no deity but Allah alone. He fulfilled His promise, granted victory to His servant, and honored His army, and He alone defeated the confederates.
-
-                    There is no deity but Allah; we do not worship anyone but Him, being sincere in faith and devotion to Him, even if the disbelievers dislike it.
-                    O Allah, send Your blessings on our master Muhammad, and on the family of our master Muhammad, on the companions of our master Muhammad, on the supporters of our master Muhammad, on the wives of our master Muhammad, and on the descendants of our master Muhammad, and bestow upon them abundant peace.”
-                    """)
-                    .font(.body)
+                    Text("What has no basis is the composed formula that adds blessings on “our master Muhammad, his companions, his supporters, his wives and his offspring” inside the takbir itself: it is not narrated from the Prophet (peace and blessings be upon him) or from any of his Companions. Sending blessings on him is beloved at all times (Quran 33:56), but the takbir of Eid is kept to the transmitted wording.")
+                        .font(.body)
                 }
 
                 Section(header: Text("IN SUMMARY")) {
@@ -1188,7 +1194,7 @@ struct HijriCalendarView: View {
                     Text("Allah (Glorified and Exalted be He) says in the Quran:")
                         .font(.body)
 
-                    ScriptureQuote(text: "“Indeed, the number of months with Allah is twelve [lunar] months in the register of Allah [from] the day He created the heavens and the earth; of these, four are sacred” (Quran 9:36).")
+                    ScriptureQuote(text: "“Indeed, the number of months with Allah is twelve [lunar] months in the register of Allah [from] the day He created the heavens and the earth; of these, four are sacred” (Quran 9:36).", arabic: "إِنَّ عِدَّةَ ٱلشُّهُورِ عِندَ ٱللَّهِ ٱثۡنَا عَشَرَ شَهۡرٗا فِي كِتَٰبِ ٱللَّهِ يَوۡمَ خَلَقَ ٱلسَّمَٰوَٰتِ وَٱلۡأَرۡضَ مِنۡهَآ أَرۡبَعَةٌ حُرُمٞۚ")
                 }
 
                 Section(header: Text("DETAILS")) {
@@ -1223,7 +1229,7 @@ struct HijriCalendarView: View {
                     Text("Allah (Glorified and Exalted be He) says in the Quran:")
                         .font(.body)
 
-                    ScriptureQuote(text: "“Indeed, the number of months with Allah is twelve... of these, four are sacred. That is the correct religion, so do not wrong yourselves during them” (Quran 9:36).")
+                    ScriptureQuote(text: "“Indeed, the number of months with Allah is twelve... of these, four are sacred. That is the correct religion, so do not wrong yourselves during them” (Quran 9:36).", arabic: "إِنَّ عِدَّةَ ٱلشُّهُورِ عِندَ ٱللَّهِ ٱثۡنَا عَشَرَ شَهۡرٗا … مِنۡهَآ أَرۡبَعَةٌ حُرُمٞۚ ذَٰلِكَ ٱلدِّينُ ٱلۡقَيِّمُۚ فَلَا تَظۡلِمُواْ فِيهِنَّ أَنفُسَكُمۡۚ")
                 }
 
                 Section(header: Text("IN SUMMARY")) {
@@ -1258,13 +1264,13 @@ struct CompileView: View {
                 }
 
                 Section(header: Text("ALLAH’S PROMISE OF PRESERVATION")) {
-                    ScriptureQuote(text: "“Indeed, it is We who sent down the Qur'an and indeed, We will be its guardian.” (Quran 15:9)")
+                    ScriptureQuote(text: "“Indeed, it is We who sent down the Qur'an and indeed, We will be its guardian.” (Quran 15:9)", arabic: "إِنَّا نَحۡنُ نَزَّلۡنَا ٱلذِّكۡرَ وَإِنَّا لَهُۥ لَحَٰفِظُونَ")
 
-                    ScriptureQuote(text: "“Move not your tongue with it to hasten it. Indeed, upon Us is its collection and its recitation. So when We have recited it, then follow its recitation. Then upon Us is its clarification.” (Quran 75:16–19)")
+                    ScriptureQuote(text: "“Move not your tongue with it to hasten it. Indeed, upon Us is its collection and its recitation. So when We have recited it, then follow its recitation. Then upon Us is its clarification.” (Quran 75:16–19)", arabic: "لَا تُحَرِّكۡ بِهِۦ لِسَانَكَ لِتَعۡجَلَ بِهِۦٓ ۝ إِنَّ عَلَيۡنَا جَمۡعَهُۥ وَقُرۡءَانَهُۥ ۝ فَإِذَا قَرَأۡنَٰهُ فَٱتَّبِعۡ قُرۡءَانَهُۥ ۝ ثُمَّ إِنَّ عَلَيۡنَا بَيَانَهُۥ")
 
-                    ScriptureQuote(text: "“And recite the Quran with measured recitation.” (Quran 73:4)")
+                    ScriptureQuote(text: "“And recite the Quran with measured recitation.” (Quran 73:4)", arabic: "وَرَتِّلِ ٱلۡقُرۡءَانَ تَرۡتِيلًا")
 
-                    ScriptureQuote(text: "“And [it is] a Qur'an which We have separated [by intervals] that you might recite it to the people over a prolonged period. And We have sent it down progressively.” (Quran 17:106)")
+                    ScriptureQuote(text: "“And [it is] a Qur'an which We have separated [by intervals] that you might recite it to the people over a prolonged period. And We have sent it down progressively.” (Quran 17:106)", arabic: "وَقُرۡءَانٗا فَرَقۡنَٰهُ لِتَقۡرَأَهُۥ عَلَى ٱلنَّاسِ عَلَىٰ مُكۡثٖ وَنَزَّلۡنَٰهُ تَنزِيلٗا")
                 }
 
                 Section(header: Text("DURING THE PROPHET’S LIFETIME ﷺ")) {
@@ -1310,9 +1316,9 @@ struct CompileView: View {
                 }
 
                 Section(header: Text("THE FOUR MASTERS & LEADING TRANSMITTERS")) {
-                    Text("Prophet Muhammad (peace and blessings be upon him) said: “Take the Quran from four: Abdullah ibn Masud, Salim (the freed slave of Abu Hudhayfah), Ubayy ibn Ka‘b, and Mu‘adh ibn Jabal.” (Sahih al-Bukhari 4999)")
-                        .font(.title3)
-                        .foregroundColor(settings.accentColor.color.opacity(0.85))
+                    Text("Prophet Muhammad (peace and blessings be upon him) said:")
+                        .font(.body)
+                    ScriptureQuote(text: "“Take the Quran from four: Abdullah ibn Mas‘ud, Salim (the freed slave of Abu Hudhayfah), Mu‘adh ibn Jabal, and Ubayy ibn Ka‘b” (Sahih al-Bukhari 4999).", arabic: "خُذُوا الْقُرْآنَ مِنْ أَرْبَعَةٍ مِنْ عَبْدِ اللَّهِ بْنِ مَسْعُودٍ وَسَالِمٍ وَمُعَاذٍ وَأُبَىِّ بْنِ كَعْبٍ", dimmed: true)
 
                     Text("These masters, together with others like Zayd ibn Thabit, were key references for wording, recitation, and teaching, anchoring transmission among the Companions and their students.")
                         .font(.body)
@@ -1327,8 +1333,7 @@ struct CompileView: View {
                 }
 
                 Section(header: Text("KEY REPORTS (BRIEF)")) {
-                    Text("• 7 Ahruf: “The Quran was revealed in seven Ahruf, so recite whichever is easiest for you.” (Sahih al-Bukhari 4992; Sahih Muslim 818)")
-                        .font(.body)
+                    ScriptureQuote(text: "“This Quran was revealed in seven Ahruf, so recite of it whatever is easiest for you” (Sahih al-Bukhari 4992, Sahih Muslim 818).", arabic: "إِنَّ هَذَا الْقُرْآنَ أُنْزِلَ عَلَى سَبْعَةِ أَحْرُفٍ فَاقْرَءُوا مَا تَيَسَّرَ مِنْهُ", dimmed: true)
                     Text("• Double review in final Ramadan (al-Ardah al-Akhirah): reported in authentic narrations.")
                         .font(.body)
                     Text("• Abu Bakr’s compilation via Zayd after Yamamah: authentic reports in Sahih collections.")
@@ -1365,11 +1370,11 @@ struct CompileView: View {
                 }
 
                 Section(header: Text("SELECT VERSES & REMINDERS")) {
-                    ScriptureQuote(text: "“And when the Quran is recited, then listen to it and pay attention that you may receive mercy.” (Quran 7:204)")
+                    ScriptureQuote(text: "“And when the Quran is recited, then listen to it and pay attention that you may receive mercy.” (Quran 7:204)", arabic: "وَإِذَا قُرِئَ ٱلۡقُرۡءَانُ فَٱسۡتَمِعُواْ لَهُۥ وَأَنصِتُواْ لَعَلَّكُمۡ تُرۡحَمُونَ")
 
-                    ScriptureQuote(text: "“Do they not reflect upon the Quran? If it had been from other than Allah (Glorified and Exalted be He), they would have found within it much contradiction.” (Quran 4:82)")
+                    ScriptureQuote(text: "“Do they not reflect upon the Quran? If it had been from other than Allah (Glorified and Exalted be He), they would have found within it much contradiction.” (Quran 4:82)", arabic: "أَفَلَا يَتَدَبَّرُونَ ٱلۡقُرۡءَانَۚ وَلَوۡ كَانَ مِنۡ عِندِ غَيۡرِ ٱللَّهِ لَوَجَدُواْ فِيهِ ٱخۡتِلَٰفٗا كَثِيرٗا")
 
-                    ScriptureQuote(text: "“Falsehood cannot approach it from before it or from behind it; [it is] a revelation from One All-Wise, Praiseworthy.” (Quran 41:42)")
+                    ScriptureQuote(text: "“Falsehood cannot approach it from before it or from behind it; [it is] a revelation from One All-Wise, Praiseworthy.” (Quran 41:42)", arabic: "لَّا يَأۡتِيهِ ٱلۡبَٰطِلُ مِنۢ بَيۡنِ يَدَيۡهِ وَلَا مِنۡ خَلۡفِهِۦۖ تَنزِيلٞ مِّنۡ حَكِيمٍ حَمِيدٖ")
                 }
 
                 Section(header: Text("USEFUL LINKS")) {
@@ -1428,7 +1433,7 @@ struct TajweedView: View {
                     Text("Allah (Glorified and Exalted be He) says in the Quran:")
                         .font(.body)
 
-                    ScriptureQuote(text: "“And recite the Quran with measured recitation” (Quran 73:4).")
+                    ScriptureQuote(text: "“And recite the Quran with measured recitation” (Quran 73:4).", arabic: "وَرَتِّلِ ٱلۡقُرۡءَانَ تَرۡتِيلًا")
                 }
 
                 Section(header: Text("IMPORTANCE")) {
@@ -1532,7 +1537,7 @@ struct JuzView: View {
                     Text("Allah (Glorified and Exalted be He) says in the Quran:")
                         .font(.body)
 
-                    ScriptureQuote(text: "“So when the Quran is recited, then listen to it and pay attention that you may receive mercy” (Quran 7:204).")
+                    ScriptureQuote(text: "“So when the Quran is recited, then listen to it and pay attention that you may receive mercy” (Quran 7:204).", arabic: "وَإِذَا قُرِئَ ٱلۡقُرۡءَانُ فَٱسۡتَمِعُواْ لَهُۥ وَأَنصِتُواْ لَعَلَّكُمۡ تُرۡحَمُونَ")
                 }
 
                 Section(header: Text("HISTORICAL NOTES")) {
@@ -1545,7 +1550,7 @@ struct JuzView: View {
                     Text("Prophet Muhammad (peace and blessings be upon him) emphasized balanced recitation, saying:")
                         .font(.body)
 
-                    ScriptureQuote(text: "“He who recites the Quran in less than three days does not grasp its meaning” (Sunan Abu Dawud 1394).", dimmed: true)
+                    ScriptureQuote(text: "“He who recites the Quran in less than three days does not grasp its meaning” (Sunan Abu Dawud 1394).", arabic: "لاَ يَفْقَهُ مَنْ قَرَأَ الْقُرْآنَ فِي أَقَلَّ مِنْ ثَلاَثٍ", dimmed: true)
                 }
 
                 // Each Juz is named for the word it opens with, and that name is Arabic. Listing them by number
@@ -1644,12 +1649,12 @@ struct AhrufView: View {
                     Text("Prophet Muhammad (peace and blessings be upon him) said:")
                         .font(.body)
 
-                    ScriptureQuote(text: "“The Quran was revealed in seven Ahruf, so recite whichever is easiest for you.”\n- Sahih al-Bukhari 4992 • Sahih Muslim 818", dimmed: true)
+                    ScriptureQuote(text: "“The Quran was revealed in seven Ahruf, so recite whichever is easiest for you.”\n- Sahih al-Bukhari 4992 • Sahih Muslim 818", arabic: "إِنَّ هَذَا الْقُرْآنَ أُنْزِلَ عَلَى سَبْعَةِ أَحْرُفٍ فَاقْرَءُوا مَا تَيَسَّرَ مِنْهُ", dimmed: true)
 
                     Text("Another narration explains how Jibril kept requesting ease for the Ummah:")
                         .font(.body)
 
-                    ScriptureQuote(text: "“Jibril recited to me in one harf. I asked him to increase it… until he ended with seven Ahruf.”\n- Sahih al-Bukhari 4991 • Sahih Muslim 819", dimmed: true)
+                    ScriptureQuote(text: "“Jibril recited to me in one harf. I asked him to increase it… until he ended with seven Ahruf.”\n- Sahih al-Bukhari 4991 • Sahih Muslim 819", arabic: "أَقْرَأَنِي جِبْرِيلُ عَلَى حَرْفٍ فَرَاجَعْتُهُ، فَلَمْ أَزَلْ أَسْتَزِيدُهُ وَيَزِيدُنِي حَتَّى انْتَهَى إِلَى سَبْعَةِ أَحْرُفٍ", dimmed: true)
 
                     Text("In the famous incident of Umar and Hisham ibn Hakim: both of them recited differently, and Prophet Muhammad (peace and blessings be upon him) said that both were revealed, proving that the variations are not mistakes but revelation (Sahih al-Bukhari 4992; Sahih Muslim 818).")
                         .font(.title3)
@@ -1663,7 +1668,7 @@ struct AhrufView: View {
                     Text("Allah (Glorified and Exalted be He) promised:")
                         .font(.body)
 
-                    ScriptureQuote(text: "“Indeed, it is We who sent down the Qur'an and indeed, We will be its guardian.” (Quran 15:9)")
+                    ScriptureQuote(text: "“Indeed, it is We who sent down the Qur'an and indeed, We will be its guardian.” (Quran 15:9)", arabic: "إِنَّا نَحۡنُ نَزَّلۡنَا ٱلذِّكۡرَ وَإِنَّا لَهُۥ لَحَٰفِظُونَ")
 
                     Text("The variations in Ahruf do not alter meanings, beliefs, or rulings. Rather, they highlight precision and perfection: the Ummah memorized and transmitted every letter exactly as revealed.")
                         .font(.body)
@@ -1828,7 +1833,7 @@ struct QiraatView: View {
                     Text("The 10 Qiraat are mutawatir, mass attested by many independent chains. They are part of the precise preservation Allah (Glorified and Exalted be He) promised for His Book.")
                         .font(.body)
 
-                    ScriptureQuote(text: "“Indeed, it is We who sent down the Qur'an and indeed, We will be its guardian.” (Quran 15:9)")
+                    ScriptureQuote(text: "“Indeed, it is We who sent down the Qur'an and indeed, We will be its guardian.” (Quran 15:9)", arabic: "إِنَّا نَحۡنُ نَزَّلۡنَا ٱلذِّكۡرَ وَإِنَّا لَهُۥ لَحَٰفِظُونَ")
 
                     Text("They do not affect preservation; rather, they manifest it: letter for letter, word for word, in all the ways Prophet Muhammad (peace and blessings be upon him) taught.")
                         .font(.body)
@@ -1839,9 +1844,9 @@ struct QiraatView: View {
                 }
 
                 Section(header: Text("THE FOUR MASTERS OF THE QURAN")) {
-                    Text("Prophet Muhammad (peace and blessings be upon him) said: “Take the Quran from four: Abdullah ibn Masud, Salim (the freed slave of Abu Hudhayfah), Ubayy ibn Ka‘b, and Mu‘adh ibn Jabal.” (Sahih al-Bukhari 4999)")
-                        .font(.title3)
-                        .foregroundColor(settings.accentColor.color.opacity(0.85))
+                    Text("Prophet Muhammad (peace and blessings be upon him) said:")
+                        .font(.body)
+                    ScriptureQuote(text: "“Take the Quran from four: Abdullah ibn Mas‘ud, Salim (the freed slave of Abu Hudhayfah), Mu‘adh ibn Jabal, and Ubayy ibn Ka‘b” (Sahih al-Bukhari 4999).", arabic: "خُذُوا الْقُرْآنَ مِنْ أَرْبَعَةٍ مِنْ عَبْدِ اللَّهِ بْنِ مَسْعُودٍ وَسَالِمٍ وَمُعَاذٍ وَأُبَىِّ بْنِ كَعْبٍ", dimmed: true)
 
                     Text("These four masters were among the foremost teachers of the Quran among the Companions, and their recitation and teaching shaped subsequent generations of transmitters.")
                         .font(.body)
@@ -2071,41 +2076,37 @@ struct FarewellView: View {
                          """)
                     .font(.body)
 
-                    Text("""
-                         During this momentous occasion, Allah (Glorified and Exalted be He) revealed:
-                         “This day I have perfected for you your religion and completed My favor upon you and have approved for you Islam as religion” (Quran 5:3).
-                         """)
-                    .font(.title3)
-                    .foregroundColor(settings.accentColor.color)
+                    Text("During this momentous occasion, Allah (Glorified and Exalted be He) revealed:")
+                        .font(.body)
+                    ScriptureQuote(text: "“This day I have perfected for you your religion and completed My favor upon you and have approved for you Islam as religion” (Quran 5:3).", arabic: "ٱلۡيَوۡمَ أَكۡمَلۡتُ لَكُمۡ دِينَكُمۡ وَأَتۡمَمۡتُ عَلَيۡكُمۡ نِعۡمَتِي وَرَضِيتُ لَكُمُ ٱلۡإِسۡلَٰمَ دِينٗاۚ")
                 }
 
                 Section(header: Text("FINAL DAYS OF THE PROPHET")) {
-                    Text("""
-                         After delivering this sermon, the Prophet (peace be upon him) continued to guide the Muslim Ummah until his passing on 12th Rabi’ al-Awwal, 11 AH (632 CE). His final words were, “O Allah, with the highest companions” (Sahih al-Bukhari 4463), expressing his longing to meet Allah. He passed away in the home of Aisha (may Allah be pleased with her), leaving behind a legacy of faith and compassion.
-                         """)
-                    .font(.body)
+                    Text("After delivering this sermon, the Prophet (peace be upon him) continued to guide the Muslim Ummah until his passing on 12th Rabi’ al-Awwal, 11 AH (632 CE). He passed away in the home of Aisha (may Allah be pleased with her), his head resting on her lap, and his final words, expressing his longing to meet Allah, were:")
+                        .font(.body)
+                    ScriptureQuote(text: "“O Allah, the highest companion” (Sahih al-Bukhari 4463).", arabic: "اللَّهُمَّ الرَّفِيقَ الأَعْلَى", dimmed: true)
                 }
 
                 Section(header: Text("TEXT OF THE SERMON")) {
-                    Text("""
-                         O People,
+                    Text("The popular “full text” of the Farewell Sermon is a later composite. Below are its portions as they are actually narrated, each with its source: from Jabir ibn Abdullah’s account of the Hajj in Sahih Muslim, from the sermon of the Day of Sacrifice in Sahih al-Bukhari, and from the remaining authentic reports. Every line here is sahih or hasan; lines that circulate without a chain (such as “after me no prophet will come”) are not included.")
+                        .font(.body)
 
-                         Listen attentively, for I do not know whether I will be with you again after this year. Convey my words to those who are absent. Just as you regard this day, this month, and this city as sacred, so regard the life and property of every Muslim as a sacred trust. Return goods entrusted to you to their rightful owners. Do not harm one another, for you will meet your Lord, and He will hold you accountable.
+                    Text("He (peace and blessings be upon him) said:")
+                        .font(.body)
+                    ScriptureQuote(text: "“Indeed your blood and your wealth are sacred to you, like the sanctity of this day of yours, in this month of yours, in this land of yours” (Sahih Muslim 1218).", arabic: "إِنَّ دِمَاءَكُمْ وَأَمْوَالَكُمْ حَرَامٌ عَلَيْكُمْ كَحُرْمَةِ يَوْمِكُمْ هَذَا فِي شَهْرِكُمْ هَذَا فِي بَلَدِكُمْ هَذَا", dimmed: true)
+                    ScriptureQuote(text: "“Indeed your blood, your wealth and your honour are sacred to one another, like the sanctity of this day of yours, in this land of yours, in this month of yours” (Sahih al-Bukhari 1739).", arabic: "فَإِنَّ دِمَاءَكُمْ وَأَمْوَالَكُمْ وَأَعْرَاضَكُمْ عَلَيْكُمْ حَرَامٌ، كَحُرْمَةِ يَوْمِكُمْ هَذَا، فِي بَلَدِكُمْ هَذَا فِي شَهْرِكُمْ هَذَا", dimmed: true)
+                    ScriptureQuote(text: "“The riba of the days of ignorance is abolished, and the first riba I abolish is our riba, the riba of Abbas ibn Abd al-Muttalib; it is abolished entirely” (Sahih Muslim 1218).", arabic: "وَرِبَا الْجَاهِلِيَّةِ مَوْضُوعٌ وَأَوَّلُ رِبًا أَضَعُ رِبَانَا رِبَا عَبَّاسِ بْنِ عَبْدِ الْمُطَّلِبِ فَإِنَّهُ مَوْضُوعٌ كُلُّهُ", dimmed: true)
+                    ScriptureQuote(text: "“Fear Allah concerning women, for you have taken them by the trust of Allah and made their private parts lawful to you by the word of Allah. Your right over them is that they do not let anyone you dislike sit upon your beds; if they do that, then strike them without severity. And their right over you is their provision and their clothing in a fitting manner” (Sahih Muslim 1218).", arabic: "فَاتَّقُوا اللَّهَ فِي النِّسَاءِ فَإِنَّكُمْ أَخَذْتُمُوهُنَّ بِأَمَانِ اللَّهِ وَاسْتَحْلَلْتُمْ فُرُوجَهُنَّ بِكَلِمَةِ اللَّهِ وَلَكُمْ عَلَيْهِنَّ أَنْ لاَ يُوطِئْنَ فُرُشَكُمْ أَحَدًا تَكْرَهُونَهُ. فَإِنْ فَعَلْنَ ذَلِكَ فَاضْرِبُوهُنَّ ضَرْبًا غَيْرَ مُبَرِّحٍ وَلَهُنَّ عَلَيْكُمْ رِزْقُهُنَّ وَكِسْوَتُهُنَّ بِالْمَعْرُوفِ", dimmed: true)
+                    ScriptureQuote(text: "“I have left among you that which, if you hold fast to it, you will never go astray: the Book of Allah” (Sahih Muslim 1218).", arabic: "وَقَدْ تَرَكْتُ فِيكُمْ مَا لَنْ تَضِلُّوا بَعْدَهُ إِنِ اعْتَصَمْتُمْ بِهِ كِتَابَ اللَّهِ", dimmed: true)
+                    ScriptureQuote(text: "“Fear Allah your Lord, pray your five prayers, fast your month, pay the zakah on your wealth, and obey those in authority over you, and you will enter the Paradise of your Lord” (Sunan al-Tirmidhi 616; graded sahih by al-Albani).", arabic: "اتَّقُوا اللَّهَ رَبَّكُمْ وَصَلُّوا خَمْسَكُمْ وَصُومُوا شَهْرَكُمْ وَأَدُّوا زَكَاةَ أَمْوَالِكُمْ وَأَطِيعُوا ذَا أَمْرِكُمْ تَدْخُلُوا جَنَّةَ رَبِّكُمْ", dimmed: true)
+                    ScriptureQuote(text: "“Indeed Satan has despaired of ever being worshipped in this land of yours, but he will be obeyed in what you consider insignificant of your deeds, and he will be content with that” (Sunan al-Tirmidhi 2159; graded sahih by al-Albani).", arabic: "أَلاَ وَإِنَّ الشَّيْطَانَ قَدْ أَيِسَ مِنْ أَنْ يُعْبَدَ فِي بِلاَدِكُمْ هَذِهِ أَبَدًا وَلَكِنْ سَتَكُونُ لَهُ طَاعَةٌ فِيمَا تَحْتَقِرُونَ مِنْ أَعْمَالِكُمْ فَسَيَرْضَى بِهِ", dimmed: true)
+                    ScriptureQuote(text: "“O people, your Lord is one and your father is one. There is no superiority of an Arab over a non-Arab, nor of a non-Arab over an Arab, nor of a red (light-skinned) person over a black person, nor of a black person over a red person, except by taqwa” (Musnad Ahmad 23489; graded sahih by al-Albani, as-Silsilah as-Sahihah 2700).", arabic: "يَا أَيُّهَا النَّاسُ، أَلَا إِنَّ رَبَّكُمْ وَاحِدٌ، وَإِنَّ أَبَاكُمْ وَاحِدٌ، أَلَا لَا فَضْلَ لِعَرَبِيٍّ عَلَى أَعْجَمِيٍّ، وَلَا لِعَجَمِيٍّ عَلَى عَرَبِيٍّ، وَلَا لِأَحْمَرَ عَلَى أَسْوَدَ، وَلَا أَسْوَدَ عَلَى أَحْمَرَ، إِلَّا بِالتَّقْوَى", dimmed: true)
+                    ScriptureQuote(text: "“Let the one present convey to the one absent. Do not return after me to disbelief, striking one another’s necks” (Sahih al-Bukhari 1739).", arabic: "فَلْيُبْلِغِ الشَّاهِدُ الْغَائِبَ، لاَ تَرْجِعُوا بَعْدِي كُفَّارًا يَضْرِبُ بَعْضُكُمْ رِقَابَ بَعْضٍ", dimmed: true)
 
-                         Allah has forbidden interest; all interest obligations are canceled, starting with those owed to my uncle, Abbas ibn Abd al-Muttalib. Beware of Satan, for he has lost hope of leading you astray in big matters but will try in small ones.
-
-                         O People,
-
-                         You have rights over your women, and they have rights over you. Treat them with kindness, for they are your partners. Provide for them with goodness. Worship Allah, pray your five daily prayers, fast during Ramadan, give Zakat, and perform Hajj if able. 
-
-                         All mankind is from Adam and Eve. No Arab is superior to a non-Arab, nor is a non-Arab superior to an Arab; no white is superior to a black, nor is a black superior to a white, except in piety and good deeds. Every Muslim is a brother to every other Muslim. Do not commit injustices.
-
-                         After me, no prophet will come, and no new religion will be born. I leave behind the Book of Allah; if you hold fast to it, you will never go astray. Be my witness, O Allah, that I have conveyed Your message.
-                         """)
-                    .font(.body)
-
-                    Text("This is a composite rendering of the Farewell Sermon, bringing together its authentically narrated portions (Sahih Muslim 1218; Sahih al-Bukhari 1739; Musnad Ahmad 23489, and others).")
-                        .font(.caption)
+                    Text("Then he asked them:")
+                        .font(.body)
+                    ScriptureQuote(text: "“You will be asked about me, so what will you say?” They said: We bear witness that you have conveyed, fulfilled and advised sincerely. Then he raised his forefinger to the sky and pointed it to the people, saying: “O Allah, bear witness! O Allah, bear witness!” (Sahih Muslim 1218).", arabic: "وَأَنْتُمْ تُسْأَلُونَ عَنِّي فَمَا أَنْتُمْ قَائِلُونَ. قَالُوا نَشْهَدُ أَنَّكَ قَدْ بَلَّغْتَ وَأَدَّيْتَ وَنَصَحْتَ. فَقَالَ بِإِصْبَعِهِ السَّبَّابَةِ يَرْفَعُهَا إِلَى السَّمَاءِ وَيَنْكُتُهَا إِلَى النَّاسِ اللَّهُمَّ اشْهَدِ اللَّهُمَّ اشْهَدْ", dimmed: true)
+                    ScriptureQuote(text: "“O Allah, have I conveyed? O Allah, have I conveyed?” (Sahih al-Bukhari 1739).", arabic: "اللَّهُمَّ هَلْ بَلَّغْتُ اللَّهُمَّ هَلْ بَلَّغْتُ", dimmed: true)
                 }
 
                 Section(header: Text("KEY MESSAGES OF THE SERMON")) {
@@ -2149,18 +2150,22 @@ struct SahabahView: View {
                     Text("They supported him in his mission, witnessed the revelation of the Quran, and preserved the teachings of Islam through word and action.")
                         .font(.body)
 
-                    Text("Allah (Glorified and Exalted be He) praised them in the Quran: “And the first forerunners [in the faith] among the Muhajireen and the Ansar and those who followed them with good conduct – Allah is pleased with them and they are pleased with Him” (Quran 9:100).")
-                        .font(.title3)
-                        .foregroundColor(settings.accentColor.color)
+                    Text("Allah (Glorified and Exalted be He) praised them in the Quran:")
+                        .font(.body)
+                    ScriptureQuote(text: "“And the first forerunners [in the faith] among the Muhajireen and the Ansar and those who followed them with good conduct - Allah is pleased with them and they are pleased with Him” (Quran 9:100).", arabic: "وَٱلسَّٰبِقُونَ ٱلۡأَوَّلُونَ مِنَ ٱلۡمُهَٰجِرِينَ وَٱلۡأَنصَارِ وَٱلَّذِينَ ٱتَّبَعُوهُم بِإِحۡسَٰنٖ رَّضِيَ ٱللَّهُ عَنۡهُمۡ وَرَضُواْ عَنۡهُ")
+
+                    Text("And the Prophet (peace be upon him) said:")
+                        .font(.body)
+                    ScriptureQuote(text: "“The best of people are my generation, then those who follow them, then those who follow them” (Sahih al-Bukhari 2652).", arabic: "خَيْرُ النَّاسِ قَرْنِي، ثُمَّ الَّذِينَ يَلُونَهُمْ، ثُمَّ الَّذِينَ يَلُونَهُمْ", dimmed: true)
                 }
 
                 Section(header: Text("ABU BAKR AS-SIDDIQ")) {
                     Text("Abu Bakr (may Allah be pleased with him) was the Prophet’s (peace be upon him) closest friend and the first adult male to embrace Islam.")
                         .font(.body)
 
-                    Text("The Prophet (peace be upon him) said: “If I were to take a Khalil (close friend) other than my Lord, I would take Abu Bakr” (Sahih al-Bukhari 3656).")
-                        .font(.title3)
-                        .foregroundColor(settings.accentColor.color.opacity(0.85))
+                    Text("The Prophet (peace be upon him) said:")
+                        .font(.body)
+                    ScriptureQuote(text: "“If I were to take a Khalil (close friend) from my nation, I would have taken Abu Bakr, but he is my brother and my companion” (Sahih al-Bukhari 3656).", arabic: "وَلَوْ كُنْتُ مُتَّخِذًا مِنْ أُمَّتِي خَلِيلاً لاَتَّخَذْتُ، أَبَا بَكْرٍ وَلَكِنْ أَخِي وَصَاحِبِي", dimmed: true)
 
                     Text("He was known as As-Siddiq (the Truthful) for immediately affirming the Prophet’s Night Journey (Isra’ and Mi’raj). He was chosen as the first Caliph after the Prophet’s death and led the Muslim Ummah with wisdom and justice.")
                         .font(.body)
@@ -2173,11 +2178,11 @@ struct SahabahView: View {
                     Text("Umar (may Allah be pleased with him) was known for his strength, justice, and piety. He was the second Caliph and expanded the Islamic state significantly.")
                         .font(.body)
 
-                    Text("The Prophet (peace be upon him) said: “If there were to be a Prophet after me, it would be Umar ibn Al-Khattab” (Sunan al-Tirmidhi 3686; graded hasan by al-Albani, as-Silsilah as-Sahihah 327).")
-                        .font(.title3)
-                        .foregroundColor(settings.accentColor.color.opacity(0.85))
+                    Text("The Prophet (peace be upon him) said:")
+                        .font(.body)
+                    ScriptureQuote(text: "“If there were to be a Prophet after me, it would have been Umar ibn al-Khattab” (Sunan al-Tirmidhi 3686; graded hasan by al-Albani, as-Silsilah as-Sahihah 327).", arabic: "لَوْ كَانَ بَعْدِي نَبِيٌّ لَكَانَ عُمَرَ بْنَ الْخَطَّابِ", dimmed: true)
 
-                    Text("Allah (Glorified and Exalted be He) revealed verses confirming Umar’s opinions, including the ruling of hijab and the prohibition of alcohol.")
+                    Text("Allah (Glorified and Exalted be He) revealed verses agreeing with Umar’s opinions, including the veiling of the Prophet's wives (Sahih al-Bukhari 402) and the prohibition of alcohol (Sunan Abi Dawud 3670; graded sahih by al-Albani).")
                         .font(.body)
                 }
 
@@ -2185,9 +2190,9 @@ struct SahabahView: View {
                     Text("Uthman (may Allah be pleased with him) was known for his generosity, modesty, and devotion. He unified the Ummah upon official copies of the already compiled Quran, based on the manuscript first compiled under Abu Bakr.")
                         .font(.body)
 
-                    Text("The Prophet (peace be upon him) climbed Mount Uhud with Abu Bakr, Umar, and Uthman and said: “Be firm, O Uhud! For on you there is none but a Prophet, a Siddiq, and two martyrs” (Sahih al-Bukhari 3675).")
-                        .font(.title3)
-                        .foregroundColor(settings.accentColor.color.opacity(0.85))
+                    Text("The Prophet (peace be upon him) climbed Mount Uhud with Abu Bakr, Umar, and Uthman, and when it shook beneath them he said:")
+                        .font(.body)
+                    ScriptureQuote(text: "“Be firm, O Uhud! For on you there is none but a Prophet, a Siddiq, and two martyrs” (Sahih al-Bukhari 3675).", arabic: "اثْبُتْ أُحُدُ فَإِنَّمَا عَلَيْكَ نَبِيٌّ وَصِدِّيقٌ وَشَهِيدَانِ", dimmed: true)
 
                     Text("He funded the expansion of Al-Masjid an-Nabawi and financed the army during the Battle of Tabuk. His contributions earned him repeated praise from the Prophet (peace be upon him).")
                         .font(.body)
@@ -2197,9 +2202,9 @@ struct SahabahView: View {
                     Text("Ali (may Allah be pleased with him) was the cousin and son-in-law of the Prophet (peace be upon him). He was a scholar, warrior, and deeply spiritual leader.")
                         .font(.body)
 
-                    Text("The Prophet (peace be upon him) said: “You are to me what Harun was to Musa, except there is no prophet after me” (Sahih Muslim 2404).")
-                        .font(.title3)
-                        .foregroundColor(settings.accentColor.color.opacity(0.85))
+                    Text("The Prophet (peace be upon him) said to him:")
+                        .font(.body)
+                    ScriptureQuote(text: "“You are to me in the position of Harun to Musa, except that there is no prophet after me” (Sahih Muslim 2404).", arabic: "أَنْتَ مِنِّي بِمَنْزِلَةِ هَارُونَ مِنْ مُوسَى إِلاَّ أَنَّهُ لاَ نَبِيَّ بَعْدِي", dimmed: true)
 
                     Text("He was among the most learned of the Companions, and many later scholars traced their knowledge back to him. He was known for his eloquence, bravery, and deep understanding of Islam.")
                         .font(.body)
@@ -2212,9 +2217,9 @@ struct SahabahView: View {
                     Text("The Ansar were the residents of Madinah who welcomed the Prophet (peace be upon him) and his followers with open hearts and supported them in every way.")
                         .font(.body)
 
-                    Text("Allah (Glorified and Exalted be He) praised them both: “And [also for] those who were settled in al-Madinah and [adopted] the faith before them. They love those who emigrated to them and find not any want in their breasts of what the emigrants were given but give [them] preference over themselves...” (Quran 59:9).")
-                        .font(.title3)
-                        .foregroundColor(settings.accentColor.color)
+                    Text("Allah (Glorified and Exalted be He) praised them both:")
+                        .font(.body)
+                    ScriptureQuote(text: "“And [also for] those who were settled in al-Madinah and [adopted] the faith before them. They love those who emigrated to them and find not any want in their breasts of what the emigrants were given but give [them] preference over themselves” (Quran 59:9).", arabic: "وَٱلَّذِينَ تَبَوَّءُو ٱلدَّارَ وَٱلۡإِيمَٰنَ مِن قَبۡلِهِمۡ يُحِبُّونَ مَنۡ هَاجَرَ إِلَيۡهِمۡ وَلَا يَجِدُونَ فِي صُدُورِهِمۡ حَاجَةٗ مِّمَّآ أُوتُواْ وَيُؤۡثِرُونَ عَلَىٰٓ أَنفُسِهِمۡ")
                 }
 
                 Section(header: Text("LEGACY")) {
@@ -2255,7 +2260,7 @@ struct WivesView: View {
                     Text("Allah (Glorified and Exalted be He) says in the Quran:")
                         .font(.body)
 
-                    ScriptureQuote(text: "“The Prophet is more worthy of the believers than themselves, and his wives are [in the position of] their mothers” (Quran 33:6).")
+                    ScriptureQuote(text: "“The Prophet is more worthy of the believers than themselves, and his wives are [in the position of] their mothers” (Quran 33:6).", arabic: "ٱلنَّبِيُّ أَوۡلَىٰ بِٱلۡمُؤۡمِنِينَ مِنۡ أَنفُسِهِمۡۖ وَأَزۡوَٰجُهُۥٓ أُمَّهَٰتُهُمۡۗ")
 
                     Text("Prophet Muhammad (peace be upon him) married a total of **11 women** throughout his lifetime. At one time, he was married to a maximum of **9 wives** simultaneously, an exception granted to him as a Prophet. This exception was not unique to him; it was also granted to previous prophets due to their elevated responsibilities and status. For example, Prophet Solomon (peace be upon him) is known to have had a large number of wives, traditionally said to be 100 or more.")
                         .font(.body)
@@ -2279,15 +2284,20 @@ struct WivesView: View {
                     Text("Khadijah bint Khuwaylid (may Allah be pleased with her) was the first person to believe in Prophet Muhammad (peace be upon him) and thus the **first Muslim**. After his first revelation in the cave of Hira, she comforted him, wrapped him in a cloak, and reassured him with her deep insight and love.")
                         .font(.body)
 
-                    Text("She said: “Never! By Allah, Allah will never disgrace you. You maintain family ties, speak the truth, support the needy, host guests, and assist those afflicted by calamity” (Sahih al-Bukhari 3).")
+                    Text("She said:")
                         .font(.body)
+                    ScriptureQuote(text: "“Never! By Allah, Allah will never disgrace you. You maintain the ties of kinship, bear the burdens of the weak, earn for the destitute, honour the guest, and help in the calamities of truth” (Sahih al-Bukhari 3).", arabic: "كَلاَّ وَاللَّهِ مَا يُخْزِيكَ اللَّهُ أَبَدًا، إِنَّكَ لَتَصِلُ الرَّحِمَ، وَتَحْمِلُ الْكَلَّ، وَتَكْسِبُ الْمَعْدُومَ، وَتَقْرِي الضَّيْفَ، وَتُعِينُ عَلَى نَوَائِبِ الْحَقِّ", dimmed: true)
 
                     Text("Allah (Glorified and Exalted be He) affirmed the beginning of the Prophet’s (peace be upon him) mission in **Surah Al-Muzzammil (73:1)** and **Surah Al-Muddaththir (74:1)**, moments when Khadijah (may Allah be pleased with her) lovingly wrapped and comforted him.")
                         .font(.body)
                         .foregroundColor(settings.accentColor.color)
 
-                    Text("The Prophet (peace be upon him) said of her: “She believed in me when the people disbelieved, she affirmed my truthfulness when the people belied me, she supported me with her wealth when the people deprived me, and Allah granted me children by her and not by any other woman” (Musnad Ahmad 24864). Aisha (may Allah be pleased with her) reported that he said, “I was given her love” (Sahih Muslim 2435).")
+                    Text("The Prophet (peace be upon him) said of her:")
                         .font(.body)
+                    ScriptureQuote(text: "“She believed in me when the people disbelieved in me, she affirmed my truthfulness when the people belied me, she supported me with her wealth when the people deprived me, and Allah granted me her children when He withheld from me the children of other women” (Musnad Ahmad 24864; its chain graded hasan by Ibn Hajar, Fath al-Bari 7/138, and by Shu'ayb al-Arna'ut).", arabic: "آمَنَتْ بِي إِذْ كَفَرَ بِي النَّاسُ، وَصَدَّقَتْنِي إِذْ كَذَّبَنِي النَّاسُ، وَوَاسَتْنِي بِمَالِهَا إِذْ حَرَمَنِي النَّاسُ، وَرَزَقَنِي اللَّهُ عَزَّ وَجَلَّ وَلَدَهَا إِذْ حَرَمَنِي أَوْلَادَ النِّسَاءِ", dimmed: true)
+                    Text("Aisha (may Allah be pleased with her) reported that he said:")
+                        .font(.body)
+                    ScriptureQuote(text: "“I was given her love” (Sahih Muslim 2435).", arabic: "إِنِّي قَدْ رُزِقْتُ حُبَّهَا", dimmed: true)
                 }
 
                 Section(header: Text("AISHA")) {
@@ -2298,11 +2308,13 @@ struct WivesView: View {
                         .font(.body)
                         .foregroundColor(settings.accentColor.color)
 
-                    Text("The Prophet (peace be upon him) was once asked, “Who do you love the most?” He replied, “Aisha.” They asked, “And among men?” He answered, “Her father” (Sahih al-Bukhari 3662).")
+                    Text("Amr ibn al-As (may Allah be pleased with him) asked the Prophet (peace be upon him):")
                         .font(.body)
+                    ScriptureQuote(text: "“Who of the people is most beloved to you?” He said: “Aisha.” I said: “Among men?” He said: “Her father” (Sahih al-Bukhari 3662).", arabic: "أَىُّ النَّاسِ أَحَبُّ إِلَيْكَ قَالَ عَائِشَةُ. فَقُلْتُ مِنَ الرِّجَالِ فَقَالَ أَبُوهَا", dimmed: true)
 
-                    Text("He also said, “The superiority of Aisha to other women is like the superiority of Tharid to other foods” (Sahih Muslim 2446).")
+                    Text("He also said:")
                         .font(.body)
+                    ScriptureQuote(text: "“The superiority of Aisha over other women is like the superiority of tharid over all other food” (Sahih Muslim 2446).", arabic: "فَضْلُ عَائِشَةَ عَلَى النِّسَاءِ كَفَضْلِ الثَّرِيدِ عَلَى سَائِرِ الطَّعَامِ", dimmed: true)
 
                     Text("After the Prophet’s (peace be upon him) death, she became one of the greatest scholars of Islam. She taught both men and women and was a source of religious rulings and interpretations.")
                         .font(.body)
@@ -2315,17 +2327,19 @@ struct WivesView: View {
                     Text("The Prophet (peace be upon him) was the best example of kindness, patience, and love toward his wives. These hadiths reflect his character:")
                         .font(.body)
 
-                    Text("• “The best of you are those who are best to their wives, and I am the best of you to my wives” (Sunan al-Tirmidhi 3895).")
-                        .font(.body)
+                    ScriptureQuote(text: "“The best of you are those who are best to their wives, and I am the best of you to my wives” (Sunan al-Tirmidhi 3895; graded sahih by al-Albani).", arabic: "خَيْرُكُمْ خَيْرُكُمْ لأَهْلِهِ وَأَنَا خَيْرُكُمْ لأَهْلِي", dimmed: true)
 
-                    Text("• Aisha (may Allah be pleased with her) said: “The Messenger of Allah (peace be upon him) never struck anything with his hand, not a woman nor a servant” (Sahih Muslim 2328).")
+                    Text("Aisha (may Allah be pleased with her) said:")
                         .font(.body)
+                    ScriptureQuote(text: "“The Messenger of Allah never struck anything with his hand, not a woman nor a servant” (Sahih Muslim 2328).", arabic: "مَا ضَرَبَ رَسُولُ اللَّهِ صلى الله عليه وسلم شَيْئًا قَطُّ بِيَدِهِ وَلاَ امْرَأَةً وَلاَ خَادِمًا", dimmed: true)
 
-                    Text("• “A believing man should not hate a believing woman. If he dislikes one of her characteristics, he will be pleased with another” (Sahih Muslim 1469).")
+                    Text("He said:")
                         .font(.body)
+                    ScriptureQuote(text: "“A believing man should not hate a believing woman. If he dislikes one of her characteristics, he will be pleased with another” (Sahih Muslim 1469).", arabic: "لاَ يَفْرَكْ مُؤْمِنٌ مُؤْمِنَةً إِنْ كَرِهَ مِنْهَا خُلُقًا رَضِيَ مِنْهَا آخَرَ", dimmed: true)
 
-                    Text("• Aisha (may Allah be pleased with her) said: “He used to serve his family, and when the time for prayer came, he would go out to pray” (Sahih al-Bukhari 6039).")
+                    Text("And Aisha (may Allah be pleased with her) said of his life at home:")
                         .font(.body)
+                    ScriptureQuote(text: "“He would be busy serving his family, and when the time for prayer came, he would get up for the prayer” (Sahih al-Bukhari 6039).", arabic: "كَانَ فِي مِهْنَةِ أَهْلِهِ، فَإِذَا حَضَرَتِ الصَّلاَةُ قَامَ إِلَى الصَّلاَةِ", dimmed: true)
                 }
 
                 Section(header: Text("THE ELEVEN WIVES")) {
@@ -2400,9 +2414,9 @@ struct CaliphatesView: View {
                     Text("The Caliph (خَلِيفَة), literally “successor,“ was entrusted with political, military, judicial, and spiritual leadership, guided by the Quran and Sunnah. The first four caliphs, known as the **Rightly Guided Caliphs (ٱلخُلَفَاء ٱلرَّاشِدُون)**, are regarded as models of righteous rule.")
                         .font(.body)
 
-                    Text("The Prophet (peace be upon him) said: “The Caliphate will remain among you for thirty years, then Allah will give the kingdom to whomever He wills” (Sunan Abi Dawud 4646).")
-                        .font(.title3)
-                        .foregroundColor(settings.accentColor.color.opacity(0.85))
+                    Text("The Prophet (peace be upon him) said:")
+                        .font(.body)
+                    ScriptureQuote(text: "“The caliphate of prophethood will last thirty years; then Allah will give the kingdom to whomever He wills” (Sunan Abi Dawud 4646; graded hasan sahih by al-Albani).", arabic: "خِلاَفَةُ النُّبُوَّةِ ثَلاَثُونَ سَنَةً ثُمَّ يُؤْتِي اللَّهُ الْمُلْكَ - أَوْ مُلْكَهُ - مَنْ يَشَاءُ", dimmed: true)
 
                     Text("These thirty years, known as the **Rashidun Caliphate**, represented the ideal Islamic system. The caliphs were chosen by **consultation (شُورَىٰ)** and the pledge of allegiance (**bay'ah, بَيعَة**) of the community: Abu Bakr at Saqifah and then in the mosque, and Uthman after Abd al-Rahman ibn Awf canvassed the people of Madinah house by house, men and women alike, for three nights (Sahih al-Bukhari 7207). This model emphasized justice, humility, accountability, and service to the people.")
                         .font(.body)
@@ -2415,9 +2429,9 @@ struct CaliphatesView: View {
                     Text("He led decisively during a time of crisis, launching the **Riddah Wars** to bring back apostate tribes and false prophets. About one year after the Prophet’s death (12 AH), he initiated the first complete compilation of the Quran into a single manuscript.")
                         .font(.body)
 
-                    Text("The Prophet (peace be upon him) said: “There is no one who has helped me more with his wealth and companionship than Abu Bakr” (Sahih al-Bukhari 3661).")
-                        .foregroundColor(settings.accentColor.color.opacity(0.85))
-                        .font(.title3)
+                    Text("When some of the Companions were harsh with him, the Prophet (peace be upon him) said:")
+                        .font(.body)
+                    ScriptureQuote(text: "“Allah sent me to you and you said, ‘You lie,’ while Abu Bakr said, ‘He has spoken the truth,’ and he supported me with his self and his wealth. So will you leave my companion alone for me?” (Sahih al-Bukhari 3661).", arabic: "إِنَّ اللَّهَ بَعَثَنِي إِلَيْكُمْ فَقُلْتُمْ كَذَبْتَ. وَقَالَ أَبُو بَكْرٍ صَدَقَ. وَوَاسَانِي بِنَفْسِهِ وَمَالِهِ، فَهَلْ أَنْتُمْ تَارِكُو لِي صَاحِبِي", dimmed: true)
 
                     Text("His caliphate lasted just over two years but laid the foundation for unity and stability in the Ummah.")
                         .font(.body)
@@ -2430,9 +2444,9 @@ struct CaliphatesView: View {
                     Text("His 10-year reign witnessed the rapid expansion of Islam into the **Byzantine and Persian Empires**, including Jerusalem and Egypt. He established **public registers**, **courts**, **salaries for soldiers**, and the **Islamic calendar**.")
                         .font(.body)
 
-                    Text("The Prophet (peace be upon him) said: “Indeed, Allah has placed the truth upon Umar’s tongue and heart” (Sunan al-Tirmidhi 3682).")
-                        .foregroundColor(settings.accentColor.color.opacity(0.85))
-                        .font(.title3)
+                    Text("The Prophet (peace be upon him) said:")
+                        .font(.body)
+                    ScriptureQuote(text: "“Indeed, Allah has placed the truth upon Umar’s tongue and heart” (Sunan al-Tirmidhi 3682; graded sahih by al-Albani).", arabic: "إِنَّ اللَّهَ جَعَلَ الْحَقَّ عَلَى لِسَانِ عُمَرَ وَقَلْبِهِ", dimmed: true)
 
                     Text("He was assassinated while praying in the masjid and is buried beside the Prophet Muhammad (peace be upon him).")
                         .font(.body)
@@ -2445,9 +2459,9 @@ struct CaliphatesView: View {
                     Text("He **standardized official copies of the Quran** from the already compiled manuscript preserved from Abu Bakr’s time, unifying public recitation and preventing disputes over unverified personal materials. He sent official copies to major cities and retired non-verified personal codices used outside official transmission.")
                         .font(.body)
 
-                    Text("The Prophet (peace be upon him) said: “Should I not feel shy of the one whom the angels are shy of?” (Sahih Muslim 2401).")
-                        .foregroundColor(settings.accentColor.color.opacity(0.85))
-                        .font(.title3)
+                    Text("The Prophet (peace be upon him) said of him:")
+                        .font(.body)
+                    ScriptureQuote(text: "“Should I not feel shy of a man of whom the angels feel shy?” (Sahih Muslim 2401).", arabic: "أَلاَ أَسْتَحِي مِنْ رَجُلٍ تَسْتَحِي مِنْهُ الْمَلاَئِكَةُ", dimmed: true)
 
                     Text("Due to political unrest and false accusations, he was unjustly besieged and martyred while reciting the Quran.")
                         .font(.body)
@@ -2460,9 +2474,9 @@ struct CaliphatesView: View {
                     Text("His caliphate was challenged by internal strife, including the **Battle of the Camel** and **Battle of Siffin**. Despite the trials, he remained committed to justice and truth.")
                         .font(.body)
 
-                    Text("The Prophet (peace be upon him) said to him: “You are to me like Harun was to Musa, except that there is no prophet after me” (Sahih Muslim 2404).")
-                        .foregroundColor(settings.accentColor.color.opacity(0.85))
-                        .font(.title3)
+                    Text("The Prophet (peace be upon him) said to him:")
+                        .font(.body)
+                    ScriptureQuote(text: "“You are to me in the position of Harun to Musa, except that there is no prophet after me” (Sahih Muslim 2404).", arabic: "أَنْتَ مِنِّي بِمَنْزِلَةِ هَارُونَ مِنْ مُوسَى إِلاَّ أَنَّهُ لاَ نَبِيَّ بَعْدِي", dimmed: true)
 
                     Text("Ali was assassinated in Kufah while leading the Fajr prayer. His legacy lives on in scholarship, courage, and moral leadership.")
                         .font(.body)
@@ -2472,12 +2486,8 @@ struct CaliphatesView: View {
                     Text("The Rashidun Caliphs (632–661 CE) ruled with unmatched integrity, transparency, and adherence to prophetic tradition. Their rule was guided by **shura (شُورَىٰ)**, justice, and humility.")
                         .font(.body)
 
-                    Text("Though later caliphates transitioned into **hereditary monarchy**, the Prophet Muhammad (peace be upon him) had foretold this change.")
+                    Text("Though later caliphates transitioned into **hereditary monarchy**, the Prophet Muhammad (peace be upon him) had foretold this change in the hadith quoted above: thirty years of the caliphate of prophethood, and then kingship given to whomever Allah wills (Sunan Abi Dawud 4646). Safinah (may Allah be pleased with him), who narrated it, counted them: two years for Abu Bakr, ten for Umar, twelve for Uthman, and the remainder for Ali.")
                         .font(.body)
-
-                    Text("He said: “The Caliphate after me will last thirty years; then there will be kingship” (Sunan Abi Dawud 4646).")
-                        .font(.title3)
-                        .foregroundColor(settings.accentColor.color.opacity(0.85))
 
                     Text("Despite this shift, many later caliphs still contributed greatly to Islamic knowledge, architecture, and global influence.")
                         .font(.body)
@@ -2535,7 +2545,7 @@ struct MadhabView: View {
         List {
             Group {
                 Section(header: Text("SUMMARY")) {
-                    Text("In short: the four madhahib (Hanafi, Maliki, Shafi'i, and Hanbali) are the accepted schools of Islamic jurisprudence, differing in fiqh but united in creed.")
+                    Text("In short: the four madhahib (Hanafi, Maliki, Shafi'i, and Hanbali) are the accepted schools of fiqh, the practical rulings of Islam, where more than one opinion can be valid. They differ in fiqh and are one in aqeedah.")
                         .font(.body)
                 }
 
@@ -2546,12 +2556,135 @@ struct MadhabView: View {
                     Text("Madhahib developed as scholars preserved and codified fiqh (فِقه), or Islamic legal reasoning/jurisprudence, to help Muslims navigate daily life, worship, transactions, and society with clarity and consistency.")
                         .font(.body)
 
-                    Text("Following a madhhab ensures one is following a valid, peer-reviewed methodology developed by righteous scholars deeply rooted in the Quran, Sunnah, consensus (إِجمَاع), and analogy (قِيَاس). It is not blind following; it is trust in generations of qualified scholarship.")
+                    Text("Following a madhhab ensures one is following a valid, peer-reviewed methodology developed by righteous scholars deeply rooted in the Quran, Sunnah, consensus (إِجمَاع), and analogy (قِيَاس). It is not blind following; it is trust in generations of qualified scholarship. Allah (Glorified and Exalted be He) commands the one who does not know to ask those who do:")
+                        .font(.body)
+                    ScriptureQuote(text: "“So ask the people of the message if you do not know” (Quran 16:43).", arabic: "فَسۡـَٔلُوٓاْ أَهۡلَ ٱلذِّكۡرِ إِن كُنتُمۡ لَا تَعۡلَمُونَ")
+
+                    Text("And the Prophet Muhammad (peace be upon him) said:")
+                        .font(.body)
+                    ScriptureQuote(text: "“Whomever Allah wishes good for, He gives him understanding of the religion” (Sahih al-Bukhari 71, Sahih Muslim 1037).", arabic: "مَنْ يُرِدِ اللَّهُ بِهِ خَيْرًا يُفَقِّهْهُ فِي الدِّينِ", dimmed: true)
+                }
+
+                Section(header: Text("FIQH IS NOT AQEEDAH")) {
+                    Text("**Fiqh (فِقه)** means “understanding“: the practical rulings of Islam, how to pray, fast, trade, marry, and inherit, derived from the Quran and Sunnah by qualified effort (**ijtihad**). **Aqeedah (عَقِيدَة)**, from “to tie a knot,“ is what the heart is bound to: belief about Allah, His angels, books, messengers, the Last Day, and the decree. The madhahib are schools of **fiqh**. There are no “four schools“ of aqeedah, because aqeedah is one (see “The Madhahib of Aqeedah“).")
                         .font(.body)
 
-                    Text("The Prophet Muhammad (peace be upon him) said: “Scholars are the inheritors of the prophets” (Sunan Abi Dawud 3641).")
-                        .font(.title3)
-                        .foregroundColor(settings.accentColor.color.opacity(0.85))
+                    Text("In fiqh more than one answer can be valid, and the Companions (may Allah be pleased with them) themselves differed in it in the Prophet’s own presence. After the Battle of the Trench he said:")
+                        .font(.body)
+                    ScriptureQuote(text: "“None of you should pray Asr except at Banu Qurayzah.” The time of Asr came upon some of them on the way. Some said, “We will not pray until we reach it,” and others said, “Rather we will pray; that was not what was meant of us.” This was mentioned to the Prophet, and he did not censure either of them (Sahih al-Bukhari 946).", arabic: "قَالَ النَّبِيُّ صلى الله عليه وسلم لَنَا لَمَّا رَجَعَ مِنَ الأَحْزَابِ لاَ يُصَلِّيَنَّ أَحَدٌ الْعَصْرَ إِلاَّ فِي بَنِي قُرَيْظَةَ. فَأَدْرَكَ بَعْضُهُمُ الْعَصْرَ فِي الطَّرِيقِ فَقَالَ بَعْضُهُمْ لاَ نُصَلِّي حَتَّى نَأْتِيَهَا، وَقَالَ بَعْضُهُمْ بَلْ نُصَلِّي لَمْ يُرَدْ مِنَّا ذَلِكَ. فَذُكِرَ لِلنَّبِيِّ صلى الله عليه وسلم فَلَمْ يُعَنِّفْ وَاحِدًا مِنْهُمْ", dimmed: true)
+
+                    Text("One group held to the literal words and prayed late; the other understood the intent and prayed on time. Both reasoned sincerely from his command, and he approved both. This is the root of every difference between the madhahib: the same texts, read by sincere scholars, sometimes yield more than one acceptable ruling.")
+                        .font(.body)
+
+                    Text("Aqeedah admits no such range. Abu Bakr, Umar, Uthman, Ali, the Ahlul Bayt, and every Companion believed exactly the same things about Allah, and so did every prophet before them; the Prophet (peace be upon him) said the prophets’ “religion is one“ (Sahih al-Bukhari 3443). So a Muslim may be Hanafi or Maliki in fiqh, but in creed there is only the creed of the Salaf.")
+                        .font(.body)
+                }
+
+                Section(header: Text("KEY TERMS")) {
+                    Text("**Fiqh (فِقْه)**: “deep understanding,” from the root ف-ق-ه, to grasp the meaning of a thing beneath its surface; the Quran uses the verb when Musa asks that the people “may understand my speech” (Quran 20:28). In the Shari‘ah, fiqh is the knowledge of the practical rulings of Islam (how to purify oneself, pray, fast, trade, marry, and inherit) drawn from their detailed evidences. The Prophet (peace be upon him) tied this understanding to Allah wanting good for a person (Sahih al-Bukhari 71, quoted above), and the Quran made it the purpose of setting out to seek knowledge:")
+                        .font(.body)
+                    ScriptureQuote(text: "“For there should separate from every division of them a group [remaining] to obtain understanding in the religion and warn their people when they return to them” (Quran 9:122).", arabic: "فَلَوۡلَا نَفَرَ مِن كُلِّ فِرۡقَةٖ مِّنۡهُمۡ طَآئِفَةٞ لِّيَتَفَقَّهُواْ فِي ٱلدِّينِ وَلِيُنذِرُواْ قَوۡمَهُمۡ إِذَا رَجَعُوٓاْ إِلَيۡهِمۡ")
+
+                    Text("**Faqih (فَقِيه)**, plural **fuqaha (فُقَهَاء)**: one who possesses fiqh, a jurist. The word is about understanding, not memory alone. The Prophet (peace be upon him) prayed for Ibn Abbas (may Allah be pleased with them) with the verb of this very word, allahumma faqqihhu fid-din:")
+                        .font(.body)
+                    ScriptureQuote(text: "“O Allah! Make him a learned scholar in the religion” (Sahih al-Bukhari 143).", arabic: "اللَّهُمَّ فَقِّهْهُ فِي الدِّينِ", dimmed: true)
+                    Text("And he distinguished the one who carries knowledge from the one who understands it:")
+                        .font(.body)
+                    ScriptureQuote(text: "“May Allah gladden a man who hears a hadith from us, so he memorizes it until he conveys it to someone else. Perhaps he carries fiqh to one who is more understanding than him, and perhaps the one who carries the fiqh is not a faqih” (Sunan al-Tirmidhi 2656; graded sahih by al-Albani).", arabic: "نَضَّرَ اللَّهُ امْرَأً سَمِعَ مِنَّا حَدِيثًا فَحَفِظَهُ حَتَّى يُبَلِّغَهُ غَيْرَهُ فَرُبَّ حَامِلِ فِقْهٍ إِلَى مَنْ هُوَ أَفْقَهُ مِنْهُ وَرُبَّ حَامِلِ فِقْهٍ لَيْسَ بِفَقِيهٍ", dimmed: true)
+                    Text("The Salaf added that fiqh without fear of Allah is not fiqh. When someone objected to al-Hasan al-Basri (may Allah have mercy on him), “The fuqaha do not say that,” he replied:")
+                        .font(.body)
+                    ScriptureQuote(text: "“Woe to you! Have you ever seen a faqih? The faqih is only the one who renounces this world, desires the Hereafter, has insight into the affair of his religion, and is constant in the worship of his Lord” (Sunan al-Darimi 297).", arabic: "وَيْحَكَ! وَرَأَيْتَ أَنْتَ فَقِيهًا قَطُّ؟ إِنَّمَا الْفَقِيهُ الزَّاهِدُ فِي الدُّنْيَا، الرَّاغِبُ فِي الْآخِرَةِ، الْبَصِيرُ بِأَمْرِ دِينِهِ، الْمُدَاوِمُ عَلَى عِبَادَةِ رَبِّهِ", dimmed: true)
+
+                    Text("**Madhhab (مَذْهَب)**, plural **madhahib (مَذَاهِب)**: from ذَهَبَ (dhahaba), “he went”; literally the way one goes, or the place one goes to. In fiqh it is the method an imam used to derive rulings, together with the body of rulings that his students preserved, refined, and passed on. A madhhab is a way to the Quran and Sunnah, not a source alongside them, and the imams themselves said so (see “Unity Through Diversity” below).")
+                        .font(.body)
+
+                    Text("**Shari‘ah (شَرِيعَة)**: from ش-ر-ع, the open path that leads down to water; the whole law that Allah revealed, which is why He says of the nations, “To each of you We prescribed a law and a method” (Quran 5:48). The Shari‘ah is one and infallible, because it is from Allah; fiqh is the scholars’ understanding of it, and a scholar can be right or mistaken. Keeping the two apart explains how the schools can differ while the religion stays one:")
+                        .font(.body)
+                    ScriptureQuote(text: "“Then We put you, [O Muhammad], on an ordained way concerning the matter [of religion]; so follow it and do not follow the inclinations of those who do not know” (Quran 45:18).", arabic: "ثُمَّ جَعَلۡنَٰكَ عَلَىٰ شَرِيعَةٖ مِّنَ ٱلۡأَمۡرِ فَٱتَّبِعۡهَا وَلَا تَتَّبِعۡ أَهۡوَآءَ ٱلَّذِينَ لَا يَعۡلَمُونَ")
+
+                    Text("**Usul al-fiqh (أُصُول الفِقْه)**: “the roots of fiqh,” usul being the plural of asl (أَصْل), a root or foundation. It is the science of the sources of the law and of the rules for deriving rulings from them: the Quran, the Sunnah, consensus, and analogy, together with the study of commands and prohibitions, the general and the specific, and the abrogating and the abrogated. Imam ash-Shafi‘i’s ar-Risalah (الرِّسَالَة) is the earliest book on it that has reached us. Scholars of usul point to one ayah that gathers the sources in order: obedience to Allah (the Quran), obedience to the Messenger (the Sunnah), the people of authority (whose agreement is consensus), and the referring of new disputes back to the two revelations (analogy):")
+                        .font(.body)
+                    ScriptureQuote(text: "“O you who have believed, obey Allah and obey the Messenger and those in authority among you” (Quran 4:59).", arabic: "يَٰٓأَيُّهَا ٱلَّذِينَ ءَامَنُوٓاْ أَطِيعُواْ ٱللَّهَ وَأَطِيعُواْ ٱلرَّسُولَ وَأُوْلِي ٱلۡأَمۡرِ مِنكُمۡۖ")
+                    Text("and then sends every dispute back to the two revelations:")
+                        .font(.body)
+                    ScriptureQuote(text: "“And if you disagree over anything, refer it to Allah and the Messenger, if you should believe in Allah and the Last Day” (Quran 4:59).", arabic: "فَإِن تَنَٰزَعۡتُمۡ فِي شَيۡءٖ فَرُدُّوهُ إِلَى ٱللَّهِ وَٱلرَّسُولِ إِن كُنتُمۡ تُؤۡمِنُونَ بِٱللَّهِ وَٱلۡيَوۡمِ ٱلۡأٓخِرِۚ")
+                    Text("The Sunnah is revelation alongside the Book, a source in its own right and not a mere commentary, and the Prophet (peace be upon him) foretold those who would try to set it aside:")
+                        .font(.body)
+                    ScriptureQuote(text: "“Beware! I have been given the Qur'an and something like it, yet the time is coming when a man replete on his couch will say: Keep to the Qur'an; what you find in it to be permissible treat as permissible, and what you find in it to be prohibited treat as prohibited” (Sunan Abi Dawud 4604; graded sahih by al-Albani).", arabic: "أَلاَ إِنِّي أُوتِيتُ الْكِتَابَ وَمِثْلَهُ مَعَهُ أَلاَ يُوشِكُ رَجُلٌ شَبْعَانُ عَلَى أَرِيكَتِهِ يَقُولُ عَلَيْكُمْ بِهَذَا الْقُرْآنِ فَمَا وَجَدْتُمْ فِيهِ مِنْ حَلاَلٍ فَأَحِلُّوهُ وَمَا وَجَدْتُمْ فِيهِ مِنْ حَرَامٍ فَحَرِّمُوهُ", dimmed: true)
+
+                    Text("**Dalil (دَلِيل)**, plural **adillah (أَدِلَّة)**: from د-ل-ل, to guide or point the way; a proof, that which leads to a ruling. The Quran uses the word of the sun, which marks out the movement of the shadow:")
+                        .font(.body)
+                    ScriptureQuote(text: "“Then We made the sun for it an indication” (Quran 25:45).", arabic: "ثُمَّ جَعَلۡنَا ٱلشَّمۡسَ عَلَيۡهِ دَلِيلٗا")
+                    Text("A dalil may be textual (naqli: an ayah or a hadith) or rational (‘aqli), and definitive (qat‘i) or probable (zanni). Most differences in fiqh arise over probable evidences, which is why they are tolerated; no difference is tolerated over what is definitive.")
+                        .font(.body)
+
+                    Text("**Ijtihad (اِجْتِهَاد)** and **mujtahid (مُجْتَهِد)**: from ج-ه-د, to exert oneself to the utmost. Ijtihad is the qualified scholar’s utmost effort to reach the ruling of Allah on a question the texts do not settle explicitly, and the mujtahid is the one qualified to make it: he must know the Quran, the Sunnah and its chains, the Arabic language, the points of consensus, the abrogating and the abrogated, and the rules of usul. Allah rewards the sincere, qualified effort even when it misses the mark:")
+                        .font(.body)
+                    ScriptureQuote(text: "“If a judge gives a verdict according to the best of his knowledge and his verdict is correct, he will receive a double reward, and if he gives a verdict according to the best of his knowledge and his verdict is wrong, even then he will get a reward” (Sahih al-Bukhari 7352, Sahih Muslim 1716).", arabic: "إِذَا حَكَمَ الْحَاكِمُ فَاجْتَهَدَ ثُمَّ أَصَابَ فَلَهُ أَجْرَانِ، وَإِذَا حَكَمَ فَاجْتَهَدَ ثُمَّ أَخْطَأَ فَلَهُ أَجْرٌ", dimmed: true)
+                    Text("Ijtihad reaches for the ruling of Allah but is not the same as it, which is why the Prophet (peace be upon him) instructed his commanders:")
+                        .font(.body)
+                    ScriptureQuote(text: "“When you besiege a fort and the besieged want you to let them out in accordance with Allah's command, do not let them come out in accordance with His command, but do so at your own command, for you do not know whether or not you will hit upon Allah's command with regard to them” (Sahih Muslim 1731).", arabic: "وَإِذَا حَاصَرْتَ أَهْلَ حِصْنٍ فَأَرَادُوكَ أَنْ تُنْزِلَهُمْ عَلَى حُكْمِ اللَّهِ فَلاَ تُنْزِلْهُمْ عَلَى حُكْمِ اللَّهِ وَلَكِنْ أَنْزِلْهُمْ عَلَى حُكْمِكَ فَإِنَّكَ لاَ تَدْرِي أَتُصِيبُ حُكْمَ اللَّهِ فِيهِمْ أَمْ لاَ", dimmed: true)
+
+                    Text("**Taqlid (تَقْلِيد)** and **ittiba‘ (اِتِّبَاع)**: taqlid is from qiladah (قِلَادَة), a collar or necklace; to make taqlid of someone is to hang your affair around his neck, accepting his statement without knowing its evidence. Ittiba‘ is from ت-ب-ع, to follow; it is following a statement because its evidence has become clear to you. The Quran condemns the taqlid that turns away from revelation:")
+                        .font(.body)
+                    ScriptureQuote(text: "“And when it is said to them, ‘Follow what Allah has revealed,’ they say, ‘Rather, we will follow that which we found our fathers doing.’ Even though their fathers understood nothing, nor were they guided?” (Quran 2:170).", arabic: "وَإِذَا قِيلَ لَهُمُ ٱتَّبِعُواْ مَآ أَنزَلَ ٱللَّهُ قَالُواْ بَلۡ نَتَّبِعُ مَآ أَلۡفَيۡنَا عَلَيۡهِ ءَابَآءَنَآۚ أَوَلَوۡ كَانَ ءَابَآؤُهُمۡ لَا يَعۡقِلُونَ شَيۡـٔٗا وَلَا يَهۡتَدُونَ")
+                    Text("and it makes ittiba‘ of the Messenger (peace be upon him) the proof of love for Allah:")
+                        .font(.body)
+                    ScriptureQuote(text: "“Say, [O Muhammad], ‘If you should love Allah, then follow me, [so] Allah will love you and forgive you your sins’” (Quran 3:31).", arabic: "قُلۡ إِن كُنتُمۡ تُحِبُّونَ ٱللَّهَ فَٱتَّبِعُونِي يُحۡبِبۡكُمُ ٱللَّهُ وَيَغۡفِرۡ لَكُمۡ ذُنُوبَكُمۡۚ")
+                    Text("Ibn Abd al-Barr (may Allah have mercy on him) records the scholars’ distinction in Jami‘ Bayan al-‘Ilm: taqlid is returning to a statement whose speaker has no proof for it, while ittiba‘ is what a proof has established. Ibn al-Qayyim (may Allah have mercy on him) builds on it in I‘lam al-Muwaqqi‘in, separating the blameworthy taqlid (turning away from what Allah revealed in favour of one’s forefathers, following someone one does not know to be qualified, and clinging to an opinion after the evidence against it has appeared) from the permitted asking of the people of knowledge by the one who cannot derive rulings himself, which is what Allah commanded in Quran 16:43 (quoted above). The scholar practises ittiba‘; the layman practises a permitted taqlid that should move toward ittiba‘ as he learns.")
+                        .font(.body)
+
+                    Text("**Ijma‘ (إِجْمَاع)**: from ج-م-ع, to gather or agree; the agreement of the qualified scholars of the ummah, after the Prophet (peace be upon him), on a ruling. It is the third source of the law, and its proof is that Allah threatened whoever follows other than the way of the believers (Quran 4:115, quoted below). Imam Ahmad (may Allah have mercy on him) warned against loose claims of it:")
+                        .font(.body)
+                    ScriptureQuote(text: "“Whoever claims consensus is lying” (Ibn al-Qayyim, I‘lam al-Muwaqqi‘in).", arabic: "مَنِ ادَّعَى الإِجْمَاعَ فَهُوَ كَاذِبٌ", dimmed: true)
+                    Text("He meant that a scholar may simply not know of a dissenting opinion, so a claim of ijma‘ must be verified; the ijma‘ known with certainty is that of the Companions and the first generations.")
+                        .font(.body)
+
+                    Text("**Qiyas (قِيَاس)**: from ق-ي-س, to measure one thing against another; extending the ruling of a case settled by a text to a new case that shares its effective cause (**‘illah, عِلَّة**). Wine is forbidden because it intoxicates, so every intoxicant is forbidden. The Prophet (peace be upon him) himself reasoned this way when a woman asked whether she could perform Hajj on behalf of her mother, who had vowed to perform it and died:")
+                        .font(.body)
+                    ScriptureQuote(text: "“Perform Hajj on her behalf. Had there been a debt on your mother, would you have paid it or not? So, pay Allah's debt, as He has more right to be paid” (Sahih al-Bukhari 1852).", arabic: "حُجِّي عَنْهَا، أَرَأَيْتِ لَوْ كَانَ عَلَى أُمِّكِ دَيْنٌ أَكُنْتِ قَاضِيَةً اقْضُوا اللَّهَ، فَاللَّهُ أَحَقُّ بِالْوَفَاءِ", dimmed: true)
+                    Text("Qiyas is a source only where no text speaks directly. It is accepted by the four schools and rejected by the Zahiris.")
+                        .font(.body)
+
+                    Text("**Fatwa (فَتْوَى)** and **mufti (مُفْتِي)**: from ف-ت-ي, to make a matter clear; a fatwa is an answer to a question about a ruling, and the mufti is the one qualified to give it. The Quran uses the very word of Allah answering His servants:")
+                        .font(.body)
+                    ScriptureQuote(text: "“They request from you a [legal] ruling. Say, ‘Allah gives you a ruling concerning one having neither descendants nor ascendants [as heirs]’” (Quran 4:176).", arabic: "يَسۡتَفۡتُونَكَ قُلِ ٱللَّهُ يُفۡتِيكُمۡ فِي ٱلۡكَلَٰلَةِۚ")
+                    Text("Giving fatwa without knowledge is a grave sin. The Prophet (peace be upon him) said:")
+                        .font(.body)
+                    ScriptureQuote(text: "“Whoever is given a fatwa that has no basis, then his sin will be upon the one who issued that fatwa” (Sunan Ibn Majah 53; graded hasan by al-Albani).", arabic: "مَنْ أُفْتِيَ بِفُتْيَا غَيْرَ ثَبَتٍ فَإِنَّمَا إِثْمُهُ عَلَى مَنْ أَفْتَاهُ", dimmed: true)
+
+                    Text("**The five rulings (الأَحْكَام الخَمْسَة)**: every act falls under one of five. **Fard (فَرْض)** or **wajib (وَاجِب)**: obligatory. Fard is from ف-ر-ض, to cut or fix definitively (Allah calls the shares of inheritance “an obligation [imposed] by Allah,” Quran 4:11), and wajib is from و-ج-ب, to be binding. Most scholars use the two as synonyms; the Hanafis reserve fard for what is established by definitive proof and wajib for what is established by probable proof. One is rewarded for doing it and punished for leaving it. **Mustahabb (مُسْتَحَبّ)**, also called sunnah or **mandub (مَنْدُوب)**: recommended, from ح-ب-ب, to love; rewarded if done, not punished if left. **Mubah (مُبَاح)**: permitted, from ب-و-ح, to be open; neither reward nor punishment in itself. **Makruh (مَكْرُوه)**: disliked, from ك-ر-ه, to hate; rewarded for leaving it, not punished for doing it. **Haram (حَرَام)**: forbidden, from ح-ر-م, to be inviolable; punished for doing it and rewarded for leaving it out of obedience. Only Allah assigns these categories:")
+                        .font(.body)
+                    ScriptureQuote(text: "“And do not say about what your tongues assert of untruth, ‘This is lawful and this is unlawful,’ to invent falsehood about Allah” (Quran 16:116).", arabic: "وَلَا تَقُولُواْ لِمَا تَصِفُ أَلۡسِنَتُكُمُ ٱلۡكَذِبَ هَٰذَا حَلَٰلٞ وَهَٰذَا حَرَامٞ لِّتَفۡتَرُواْ عَلَى ٱللَّهِ ٱلۡكَذِبَۚ")
+
+                    Text("**Halal (حَلَال)** and **haram (حَرَام)**: halal is from ح-ل-ل, to untie or release, hence what is permitted; haram is what is forbidden. Between the two lie doubtful matters, and piety is to keep clear of them. The Prophet (peace be upon him) said:")
+                        .font(.body)
+                    ScriptureQuote(text: "“The halal is clear and the haram is clear, and between them are doubtful things which many people do not know. So whoever guards against the doubtful things has kept his religion and his honour blameless” (Sahih al-Bukhari 52, Sahih Muslim 1599).", arabic: "الْحَلاَلُ بَيِّنٌ وَالْحَرَامُ بَيِّنٌ، وَبَيْنَهُمَا مُشَبَّهَاتٌ لاَ يَعْلَمُهَا كَثِيرٌ مِنَ النَّاسِ، فَمَنِ اتَّقَى الْمُشَبَّهَاتِ اسْتَبْرَأَ لِدِيِنِهِ وَعِرْضِهِ", dimmed: true)
+
+                    Text("**Rukhsah (رُخْصَة)** and **‘azimah (عَزِيمَة)**: ‘azimah, from ع-ز-م, resolve, is the original ruling; rukhsah, from ر-خ-ص, ease, is the concession Allah grants when there is hardship: shortening the prayer and breaking the fast on a journey, tayammum when water is absent, eating forbidden meat under necessity. Allah says of the fast:")
+                        .font(.body)
+                    ScriptureQuote(text: "“Allah intends for you ease and does not intend for you hardship” (Quran 2:185).", arabic: "يُرِيدُ ٱللَّهُ بِكُمُ ٱلۡيُسۡرَ وَلَا يُرِيدُ بِكُمُ ٱلۡعُسۡرَ")
+                    Text("When Umar (may Allah be pleased with him) asked the Prophet (peace be upon him) why the prayer is still shortened on journeys now that the Muslims are safe, he answered:")
+                        .font(.body)
+                    ScriptureQuote(text: "“It is an act of charity which Allah has done to you, so accept His charity” (Sahih Muslim 686).", arabic: "صَدَقَةٌ تَصَدَّقَ اللَّهُ بِهَا عَلَيْكُمْ فَاقْبَلُوا صَدَقَتَهُ", dimmed: true)
+                    Text("And when Hamzah ibn Amr al-Aslami (may Allah be pleased with him) asked whether he sinned by fasting on a journey, since he had the strength for it, he answered:")
+                        .font(.body)
+                    ScriptureQuote(text: "“It is a concession from Allah. He who took advantage of it, it is good for him, and he who preferred to observe the fast, there is no sin upon him” (Sahih Muslim 1121).", arabic: "هِيَ رُخْصَةٌ مِنَ اللَّهِ فَمَنْ أَخَذَ بِهَا فَحَسَنٌ وَمَنْ أَحَبَّ أَنْ يَصُومَ فَلاَ جُنَاحَ عَلَيْهِ", dimmed: true)
+
+                    Text("**The four schools**: the Hanafi school of Abu Hanifah an-Nu‘man ibn Thabit (d. 150 AH, Kufa), the Maliki school of Malik ibn Anas (d. 179 AH, Madinah), the Shafi‘i school of Muhammad ibn Idris ash-Shafi‘i (d. 204 AH, Egypt, after Makkah, Madinah, and Iraq), and the Hanbali school of Ahmad ibn Hanbal (d. 241 AH, Baghdad). Each is treated in “The Four Sunni Madhahib” below. Other imams of the same rank had schools that did not survive as living traditions, among them al-Awza‘i (d. 157 AH) in Syria, Sufyan ath-Thawri (d. 161 AH) in Kufa, al-Layth ibn Sa‘d (d. 175 AH) in Egypt, and Ibn Jarir at-Tabari (d. 310 AH) in Baghdad.")
+                        .font(.body)
+
+                    Text("**The Zahiri school (الظَّاهِرِيَّة)**: from zahir (ظَاهِر), the apparent; the school of Dawud ibn Ali al-Asbahani, known as az-Zahiri (d. 270 AH, Baghdad), a pupil of Ishaq ibn Rahawayh and Abu Thawr, and developed most fully by Ibn Hazm al-Andalusi (d. 456 AH), author of al-Muhalla in fiqh and al-Ihkam in usul. The Zahiris hold to the apparent meaning of the texts and to consensus, and reject qiyas as a source. Scholars valued its devotion to the texts (adh-Dhahabi records in Siyar A‘lam an-Nubala’ that al-‘Izz ibn Abd as-Salam counted al-Muhalla, with Ibn Qudamah’s al-Mughni, among the finest books of fiqh), while noting that in some questions of Allah’s attributes Ibn Hazm departed from the way of the Salaf. The school did not survive as a living tradition with its own continuous community.")
+                        .font(.body)
+
+                    Text("**Ahl ar-Ra’y (أَهْل الرَّأْي)** and **Ahl al-Hadith (أَهْل الحَدِيث)**: “the people of considered opinion” and “the people of hadith,” the two tendencies of early fiqh. Ahl ar-Ra’y, centred in Kufa and represented by Abu Hanifah and his companions, made wide use of qiyas and juristic preference (istihsan), partly because fewer narrations were established in Iraq, where forgery was also more common, so its jurists were stricter in what they accepted. Ahl al-Hadith, centred in Madinah and Makkah and represented by Malik, then by ash-Shafi‘i and Ahmad, kept close to the narrated texts and used qiyas sparingly. The labels describe an emphasis, not a rejection: the Hanafis accept authentic hadith, and the hadith scholars use analogy. Ash-Shafi‘i studied the Iraqi fiqh under Muhammad ash-Shaybani and the Madinan fiqh under Malik, and his usul brought the two together.")
+                        .font(.body)
+
+                    Text("**The seven fuqaha of Madinah (الفُقَهَاء السَّبْعَة)**: the seven jurists of the generation after the Companions who carried the fiqh of Madinah at the end of the first century AH: Sa‘id ibn al-Musayyib, ‘Urwah ibn az-Zubayr, al-Qasim ibn Muhammad ibn Abi Bakr, Kharijah ibn Zayd ibn Thabit, ‘Ubaydullah ibn Abdullah ibn ‘Utbah, Sulayman ibn Yasar, and a seventh whom the lists give as Abu Bakr ibn Abd ar-Rahman ibn al-Harith, Salim ibn Abdullah ibn Umar, or Abu Salamah ibn Abd ar-Rahman. Their students, above all Ibn Shihab az-Zuhri, taught Malik, so the Maliki school stands on the fiqh of Madinah at one remove from the Companions.")
+                        .font(.body)
+
+                    Text("**The four Abdullahs (العَبَادِلَة الأَرْبَعَة)**: four Companions named Abdullah whose fatawa shaped early fiqh: Abdullah ibn Umar, Abdullah ibn Abbas, Abdullah ibn az-Zubayr, and Abdullah ibn Amr ibn al-As (may Allah be pleased with them). When they agreed on a ruling it was called “the opinion of the Abadilah.” Abdullah ibn Mas‘ud (may Allah be pleased with him) died earlier and, as Imam Ahmad noted (reported by Ibn as-Salah in his Muqaddimah), is not counted among them, but he is the root of the fiqh of Kufa: his students Alqamah and al-Aswad taught Ibrahim an-Nakha‘i, who taught Hammad ibn Abi Sulayman, the teacher of Abu Hanifah. Ibn Abbas’s circle in Makkah (Ata’, Mujahid, Tawus, and Ikrimah) and Ibn Umar’s student Nafi‘, from whom Malik narrated, show that every madhhab goes back through the Tabi‘in to the Companions, and through them to the Prophet (peace be upon him).")
+                        .font(.body)
                 }
 
                 Section(header: Text("WHY FOLLOW A MADHHAB?")) {
@@ -2620,7 +2753,19 @@ struct MadhabView: View {
                     Text("No single school is “more Islamic“; each preserved knowledge and served the Ummah according to its time and place. Following any of them keeps one on the path of the Prophet (peace be upon him) and his companions.")
                         .font(.body)
 
-                    Text("Imam Malik ibn Anas (may Allah have mercy on him) said: “Everyone's statement may be taken from or rejected, except the one in this grave,” pointing to the grave of the Prophet (peace be upon him).")
+                    Text("The imams themselves put their schools beneath the Quran and Sunnah. Imam Malik ibn Anas (may Allah have mercy on him) said, pointing to the grave of the Prophet (peace be upon him):")
+                        .font(.body)
+                    ScriptureQuote(text: "“Everyone's words may be accepted or rejected, except the one in this grave” (Ibn Abd al-Barr, Jami' Bayan al-Ilm 2/91).", arabic: "كُلُّ أَحَدٍ يُؤْخَذُ مِنْ قَوْلِهِ وَيُرَدُّ إِلَّا صَاحِبَ هَذَا الْقَبْرِ", dimmed: true)
+
+                    Text("Imam al-Shafi‘i (may Allah have mercy on him) said, and the same is reported from Imam Abu Hanifah:")
+                        .font(.body)
+                    ScriptureQuote(text: "“If the hadith is authentic, then that is my madhhab” (al-Nawawi, al-Majmu' 1/63; Ibn Abidin, Hashiyah 1/63).", arabic: "إِذَا صَحَّ الْحَدِيثُ فَهُوَ مَذْهَبِي", dimmed: true)
+
+                    Text("And Imam Ahmad ibn Hanbal (may Allah have mercy on him) said:")
+                        .font(.body)
+                    ScriptureQuote(text: "“Do not blindly follow me, nor Malik, nor al-Shafi‘i, nor al-Awza‘i, nor al-Thawri; take from where they took” (Ibn al-Qayyim, I'lam al-Muwaqqi'in 2/302).", arabic: "لَا تُقَلِّدْنِي وَلَا تُقَلِّدْ مَالِكًا وَلَا الشَّافِعِيَّ وَلَا الْأَوْزَاعِيَّ وَلَا الثَّوْرِيَّ، وَخُذْ مِنْ حَيْثُ أَخَذُوا", dimmed: true)
+
+                    Text("So the madhahib are followed as a means to the Quran and Sunnah, never as a rival to them: where an authentic text is clear, it is the text that is followed, and this is what the four imams commanded.")
                         .font(.body)
                 }
 
@@ -2632,14 +2777,164 @@ struct MadhabView: View {
                         .font(.body)
                 }
 
+                Section(header: Text("COMMON QUESTIONS")) {
+                    Text("**Must every Muslim follow one madhhab?**")
+                        .font(.body)
+                    Text("No. What Allah made obligatory is following His Messenger (peace be upon him) and asking the people of knowledge when one does not know (Quran 16:43, quoted above). Binding oneself to the opinions of one imam in every question is not something Allah or His Messenger commanded:")
+                        .font(.body)
+                    ScriptureQuote(text: "“And whatever the Messenger has given you - take; and what he has forbidden you - refrain from” (Quran 59:7).", arabic: "وَمَآ ءَاتَىٰكُمُ ٱلرَّسُولُ فَخُذُوهُ وَمَا نَهَىٰكُمۡ عَنۡهُ فَٱنتَهُواْۚ")
+                    Text("The best generations did not do it. The Prophet (peace be upon him) said:")
+                        .font(.body)
+                    ScriptureQuote(text: "“The people of my generation are the best, then those who follow them, and then those who follow the latter” (Sahih al-Bukhari 2652).", arabic: "خَيْرُ النَّاسِ قَرْنِي، ثُمَّ الَّذِينَ يَلُونَهُمْ، ثُمَّ الَّذِينَ يَلُونَهُمْ", dimmed: true)
+                    Text("The Companions and their students asked whichever scholar was at hand: the people of Madinah asked Zayd ibn Thabit and Ibn Umar, the people of Makkah asked Ibn Abbas, the people of Kufa asked Ibn Mas‘ud and then Ali (may Allah be pleased with them), and none of them said, “I am on the madhhab of so-and-so.” The four imams belong to the generations after the Companions (the earliest of them, Abu Hanifah, saw the Companion Anas ibn Malik as a boy but took his fiqh from the Tabi‘in), so the first generations obviously had no Hanafi or Maliki school. Ibn Taymiyyah (may Allah have mercy on him) writes in Majmu‘ al-Fatawa that following the madhhab of a specific person, because one cannot learn the Shari‘ah except through him, is permitted for such a person but is not obligatory on everyone, and that no one is bound to follow one particular man in everything he says except the Messenger of Allah (peace be upon him). In practice: the scholar follows the evidence, the student learns through a school and checks it against the evidence as he grows, and the layman follows the trustworthy scholars available to him, whether they teach within a madhhab or not.")
+                        .font(.body)
+
+                    Text("**Can I take a ruling from another madhhab, or change my madhhab?**")
+                        .font(.body)
+                    Text("Yes, when it is done for the evidence or on the word of a scholar one trusts more, and not to hunt for the easiest answer. The imams’ own students did it: Abu Yusuf and Muhammad ash-Shaybani differed from Abu Hanifah in many questions, al-Muzani differed from ash-Shafi‘i, and ash-Shafi‘i revised his own madhhab when he moved to Egypt. Every school’s later scholars weighed (tarjih) between the reports from their imam and sometimes preferred another school’s view. Ibn Taymiyyah (may Allah have mercy on him) says in Majmu‘ al-Fatawa that whoever moves from one madhhab to another for a religious reason, because he finds the other closer to the Quran and Sunnah, has done well, and whoever does so for a worldly aim is blamed. What is condemned is tatabbu‘ ar-rukhas (تَتَبُّع الرُّخَص), collecting the most convenient opinion from each school out of desire. Sulayman at-Taymi (may Allah have mercy on him), one of the Tabi‘in, said that if you take the concession of every scholar, all evil gathers in you, and Ibn Abd al-Barr, who reports it in Jami‘ Bayan al-‘Ilm, adds that he knows of no disagreement on this. The touchstone is Quran 4:59 (quoted above): the dispute is referred to Allah and the Messenger, not to one’s ease.")
+                        .font(.body)
+
+                    Text("**What if my madhhab contradicts an authentic hadith?**")
+                        .font(.body)
+                    Text("Then the hadith is followed, because that is exactly what the four imams commanded. Malik, ash-Shafi‘i, and Ahmad are quoted above in “Unity Through Diversity”; Abu Hanifah (may Allah have mercy on him) said:")
+                        .font(.body)
+                    ScriptureQuote(text: "“It is not permitted for anyone to take our opinion without knowing where we took it from” (Ibn Abd al-Barr, al-Intiqa’; Ibn al-Qayyim, I‘lam al-Muwaqqi‘in).", arabic: "لَا يَحِلُّ لِأَحَدٍ أَنْ يَأْخُذَ بِقَوْلِنَا مَا لَمْ يَعْلَمْ مِنْ أَيْنَ أَخَذْنَاهُ", dimmed: true)
+                    Text("Al-Albani (may Allah have mercy on him) gathered these statements of the imams in the introduction to Sifat Salat an-Nabi, and drew the conclusion the imams themselves drew: leaving an imam’s opinion for the authentic hadith is obedience to the imam, not disloyalty to him. Allah says:")
+                        .font(.body)
+                    ScriptureQuote(text: "“So let those beware who dissent from the Prophet's order, lest fitnah strike them or a painful punishment” (Quran 24:63).", arabic: "فَلۡيَحۡذَرِ ٱلَّذِينَ يُخَالِفُونَ عَنۡ أَمۡرِهِۦٓ أَن تُصِيبَهُمۡ فِتۡنَةٌ أَوۡ يُصِيبَهُمۡ عَذَابٌ أَلِيمٌ")
+                    Text("Two cautions keep this honest. First, a hadith may be authentic yet abrogated, restricted by another text, or understood by the Companions differently from its first appearance, so the one who acts on it must be able to verify the chain, the abrogation, and the meaning; a layman who meets such a hadith asks a scholar rather than ruling alone. Second, no scholar may set aside an authentic, unabrogated hadith merely because his imam did not act on it, for the imam had an excuse (the next question) and he does not.")
+                        .font(.body)
+
+                    Text("**Why do the scholars differ, if the Quran and Sunnah are one?**")
+                        .font(.body)
+                    Text("Ibn Taymiyyah (may Allah have mercy on him) answers this in Raf‘ al-Malam ‘an al-A’immah al-A‘lam, beginning with a principle:")
+                        .font(.body)
+                    ScriptureQuote(text: "“None of the imams who are accepted by the ummah with general acceptance deliberately opposes the Messenger of Allah (peace be upon him) in anything of his Sunnah, small or great, for they are agreed with certainty upon the obligation of following the Messenger” (Ibn Taymiyyah, Raf‘ al-Malam ‘an al-A’immah al-A‘lam).", arabic: "لَيْسَ أَحَدٌ مِنَ الْأَئِمَّةِ الْمَقْبُولِينَ عِنْدَ الْأُمَّةِ قَبُولًا عَامًّا يَتَعَمَّدُ مُخَالَفَةَ رَسُولِ اللَّهِ صَلَّى اللَّهُ عَلَيْهِ وَسَلَّمَ فِي شَيْءٍ مِنْ سُنَّتِهِ، دَقِيقٍ وَلَا جَلِيلٍ، فَإِنَّهُمْ مُتَّفِقُونَ اتِّفَاقًا يَقِينِيًّا عَلَى وُجُوبِ اتِّبَاعِ الرَّسُولِ", dimmed: true)
+                    Text("He then gathers the excuses under three heads: the imam did not believe the Prophet said it (the hadith did not reach him, or reached him through a chain he did not trust), he did not believe the text meant that case (a word with more than one meaning, a general text he thought restricted, a report he understood differently), or he believed the ruling abrogated or outweighed by stronger evidence. Every one of these befell the Companions themselves. When Abu Musa told Umar (may Allah be pleased with them) that the Prophet had commanded whoever asks permission three times without an answer to go back, Umar had never heard it and asked for a witness, then said:")
+                        .font(.body)
+                    ScriptureQuote(text: "“Has this order of Allah's Messenger been hidden from me? I used to be busy trading in the markets” (Sahih al-Bukhari 2062).", arabic: "أَخَفِيَ عَلَىَّ مِنْ أَمْرِ رَسُولِ اللَّهِ صلى الله عليه وسلم أَلْهَانِي الصَّفْقُ بِالأَسْوَاقِ", dimmed: true)
+                    Text("Umar likewise did not know the ruling on the Magians until the report reached him:")
+                        .font(.body)
+                    ScriptureQuote(text: "“Umar did not take the jizyah from the Magians till Abdur-Rahman bin Auf testified that Allah's Messenger had taken the jizyah from the Magians of Hajar” (Sahih al-Bukhari 3156).", arabic: "وَلَمْ يَكُنْ عُمَرُ أَخَذَ الْجِزْيَةَ مِنَ الْمَجُوسِ. حَتَّى شَهِدَ عَبْدُ الرَّحْمَنِ بْنُ عَوْفٍ أَنَّ رَسُولَ اللَّهِ صلى الله عليه وسلم أَخَذَهَا مِنْ مَجُوسِ هَجَرٍ", dimmed: true)
+                    Text("Abrogation caused differences too: Ubayy ibn Ka‘b (may Allah be pleased with him) explained that the early fatwa that a bath is required only when there is emission was a concession from the beginning of Islam which the Prophet later replaced with the command to bathe (Sunan Abi Dawud 215; graded sahih by al-Albani), so whoever knew only the first ruling gave fatwa by it. And understanding differed: Ibn Umar reported that the dead are punished by their family’s weeping, while Aisha (may Allah be pleased with them) held that the report had been misunderstood, for what the Prophet said was that the deceased is punished for his own sin while his family weeps over him (Sahih al-Bukhari 3978). If Umar could miss a hadith and Ibn Umar could misunderstand one, an imam in Kufa or Madinah two generations later could do so more easily. Allah Himself records two prophets judging one case differently, and praises both:")
+                        .font(.body)
+                    ScriptureQuote(text: "“And [mention] David and Solomon, when they judged concerning the field - when the sheep of a people overran it [at night], and We were witness to their judgement. And We gave understanding of the case to Solomon, and to each [of them] We gave judgement and knowledge” (Quran 21:78-79).", arabic: "وَدَاوُۥدَ وَسُلَيۡمَٰنَ إِذۡ يَحۡكُمَانِ فِي ٱلۡحَرۡثِ إِذۡ نَفَشَتۡ فِيهِ غَنَمُ ٱلۡقَوۡمِ وَكُنَّا لِحُكۡمِهِمۡ شَٰهِدِينَ ۝ فَفَهَّمۡنَٰهَا سُلَيۡمَٰنَۚ وَكُلًّا ءَاتَيۡنَا حُكۡمٗا وَعِلۡمٗاۚ")
+                    Text("Add that Arabic words can carry more than one meaning, that texts can appear to conflict, and that the Companions differed in fiqh in the Prophet’s presence and he approved both sides (the Banu Qurayzah report quoted above), and the differences of the madhahib become what they are: sincere ijtihad over probable evidences, rewarded whether it hits or misses.")
+                        .font(.body)
+
+                    Text("**Is “the differing of my ummah is a mercy” a hadith?**")
+                        .font(.body)
+                    Text("No. It has no chain of narration. Al-Albani (may Allah have mercy on him) rules that it has no basis (Silsilat al-Ahadith ad-Da‘ifah 57), citing the Shafi‘i imam as-Subki, who could find for it no chain at all, sound, weak, or fabricated. Long before them Ibn Hazm (may Allah have mercy on him) rejected its very meaning:")
+                        .font(.body)
+                    ScriptureQuote(text: "“If differing were a mercy, then agreement would be a punishment” (Ibn Hazm, al-Ihkam fi Usul al-Ahkam).", arabic: "لَوْ كَانَ الِاخْتِلَافُ رَحْمَةً لَكَانَ الِاتِّفَاقُ سَخَطًا", dimmed: true)
+                    Text("The Quran describes those who are shown mercy as the ones who do not differ:")
+                        .font(.body)
+                    ScriptureQuote(text: "“And if your Lord had willed, He could have made mankind one community; but they will not cease to differ. Except whom your Lord has given mercy, and for that He created them. But the word of your Lord is to be fulfilled that, ‘I will surely fill Hell with jinn and men all together’” (Quran 11:118-119).", arabic: "وَلَوۡ شَآءَ رَبُّكَ لَجَعَلَ ٱلنَّاسَ أُمَّةٗ وَٰحِدَةٗۖ وَلَا يَزَالُونَ مُخۡتَلِفِينَ ۝ إِلَّا مَن رَّحِمَ رَبُّكَۚ وَلِذَٰلِكَ خَلَقَهُمۡۗ وَتَمَّتۡ كَلِمَةُ رَبِّكَ لَأَمۡلَأَنَّ جَهَنَّمَ مِنَ ٱلۡجِنَّةِ وَٱلنَّاسِ أَجۡمَعِينَ")
+                    Text("Ibn Kathir (may Allah have mercy on him) explains in his Tafsir that those given mercy are the followers of the messengers, who hold to what Allah revealed and are not divided over it. The Prophet (peace be upon him) warned:")
+                        .font(.body)
+                    ScriptureQuote(text: "“The people who were before you were ruined because of their questions and their differences over their prophets” (Sahih al-Bukhari 7288).", arabic: "إِنَّمَا هَلَكَ مَنْ كَانَ قَبْلَكُمْ بِسُؤَالِهِمْ وَاخْتِلاَفِهِمْ عَلَى أَنْبِيَائِهِمْ", dimmed: true)
+                    Text("Ibn Mas‘ud (may Allah be pleased with him) showed how the Companions handled a difference in fiqh: he disapproved of Uthman completing the prayer at Mina, yet prayed the full four behind him rather than split the congregation:")
+                        .font(.body)
+                    ScriptureQuote(text: "Abdullah (ibn Mas‘ud) once prayed four rak‘ahs. He was told, “You criticized Uthman but you yourself prayed four?” He replied, “Dissension is evil” (Sunan Abi Dawud 1960; graded sahih by al-Albani).", arabic: "أَنَّ عَبْدَ اللَّهِ صَلَّى أَرْبَعًا قَالَ فَقِيلَ لَهُ عِبْتَ عَلَى عُثْمَانَ ثُمَّ صَلَّيْتَ أَرْبَعًا قَالَ الْخِلاَفُ شَرٌّ", dimmed: true)
+                    Text("What is true is narrower: sincere ijtihad that misses the mark is excused and even rewarded (Sahih al-Bukhari 7352, quoted above), and the range of the Companions’ ijtihad left the ummah room; it is reported from Umar ibn Abd al-Aziz that he would not have loved the Companions to have agreed on everything, since their differing left a concession (Ibn Abd al-Barr, Jami‘ Bayan al-‘Ilm). The mercy is in the excuse and the ease, not in the differing itself, and what Allah commands is unity (the next question).")
+                        .font(.body)
+
+                    Text("**Is following a madhhab a bid‘ah?**")
+                        .font(.body)
+                    Text("No. Bid‘ah is introducing into the religion an act of worship that has no basis in it. The Prophet (peace be upon him) said:")
+                        .font(.body)
+                    ScriptureQuote(text: "“If somebody innovates something which is not in harmony with the principles of our religion, that thing is rejected” (Sahih al-Bukhari 2697, Sahih Muslim 1718).", arabic: "مَنْ أَحْدَثَ فِي أَمْرِنَا هَذَا مَا لَيْسَ فِيهِ فَهُوَ رَدٌّ", dimmed: true)
+                    Text("A madhhab introduces no worship; it is a method of understanding the texts, taught by imams whom the whole of Ahl as-Sunnah honours, and adh-Dhahabi (may Allah have mercy on him) praises each of the four at length in Siyar A‘lam an-Nubala’. What is blameworthy is ta‘assub (تَعَصُّب), fanatical partisanship: treating the imam as infallible, rejecting an authentic hadith for his sake, or making agreement with him the basis of love and enmity among the Muslims. When partisanship goes so far that a scholar’s word overrides the text of Allah and His Messenger, it approaches what the Quran condemned in the People of the Book:")
+                        .font(.body)
+                    ScriptureQuote(text: "“They have taken their scholars and monks as lords besides Allah” (Quran 9:31).", arabic: "ٱتَّخَذُوٓاْ أَحۡبَارَهُمۡ وَرُهۡبَٰنَهُمۡ أَرۡبَابٗا مِّن دُونِ ٱللَّهِ")
+                    Text("Ibn Kathir (may Allah have mercy on him) explains in his Tafsir that they did not pray to them; they obeyed them in making lawful what Allah had forbidden and forbidding what He had allowed. Ibn Taymiyyah (may Allah have mercy on him) writes in Majmu‘ al-Fatawa that whoever sets up any person other than the Messenger and gives loyalty and enmity on the basis of agreeing with him is among those who divided their religion into sects. The Prophet (peace be upon him) told us what to hold to when differences multiply:")
+                        .font(.body)
+                    ScriptureQuote(text: "“Whoever among you lives will see much differing. Beware of the newly invented matters, for indeed they are misguidance. Whoever among you sees that must stick to my Sunnah and the Sunnah of the rightly guided caliphs; cling to it with the molars” (Sunan al-Tirmidhi 2676; graded sahih by al-Albani).", arabic: "فَإِنَّهُ مَنْ يَعِشْ مِنْكُمْ يَرَى اخْتِلاَفًا كَثِيرًا وَإِيَّاكُمْ وَمُحْدَثَاتِ الأُمُورِ فَإِنَّهَا ضَلاَلَةٌ فَمَنْ أَدْرَكَ ذَلِكَ مِنْكُمْ فَعَلَيْهِ بِسُنَّتِي وَسُنَّةِ الْخُلَفَاءِ الرَّاشِدِينَ الْمَهْدِيِّينَ عَضُّوا عَلَيْهَا بِالنَّوَاجِذِ", dimmed: true)
+                    Text("And Allah says:")
+                        .font(.body)
+                    ScriptureQuote(text: "“And hold firmly to the rope of Allah all together and do not become divided” (Quran 3:103).", arabic: "وَٱعۡتَصِمُواْ بِحَبۡلِ ٱللَّهِ جَمِيعٗا وَلَا تَفَرَّقُواْۚ")
+                    ScriptureQuote(text: "“Indeed, those who have divided their religion and become sects - you, [O Muhammad], are not [associated] with them in anything. Their affair is only [left] to Allah; then He will inform them about what they used to do” (Quran 6:159).", arabic: "إِنَّ ٱلَّذِينَ فَرَّقُواْ دِينَهُمۡ وَكَانُواْ شِيَعٗا لَّسۡتَ مِنۡهُمۡ فِي شَيۡءٍۚ إِنَّمَآ أَمۡرُهُمۡ إِلَى ٱللَّهِ ثُمَّ يُنَبِّئُهُم بِمَا كَانُواْ يَفۡعَلُونَ")
+
+                    Text("**Did the Salafi scholars follow madhhabs?**")
+                        .font(.body)
+                    Text("Yes. Ibn Taymiyyah, Ibn al-Qayyim, Ibn Qudamah, and Ibn Rajab were Hanbalis; Ibn Kathir, adh-Dhahabi, an-Nawawi, and Ibn Hajar were Shafi‘is; Ibn Abd al-Barr was a Maliki; at-Tahawi was a Hanafi. Ibn Baz and Ibn al-Uthaymin (may Allah have mercy on them) were trained in Hanbali fiqh and taught from its texts (Ibn al-Uthaymin’s ash-Sharh al-Mumti‘ is a commentary on the Hanbali manual Zad al-Mustaqni‘), and al-Albani (may Allah have mercy on him), raised in a Hanafi household, devoted himself to hadith and weighed the evidence without binding himself to a school. What unites them is the rule, not the label: the madhhab is a ladder to the evidence, never a veil over it. Ibn Taymiyyah left the Hanbali position where he found the evidence against it, Ibn al-Uthaymin’s commentaries repeatedly prefer another school’s view over his own, and al-Albani cited the imams’ own words as his warrant. At the same time, Ibn Rajab (may Allah have mercy on him) wrote a treatise defending adherence to the four schools by those who lack the tools of ijtihad, because unqualified people claiming to derive rulings for themselves harm the religion. Both are the way of the Salaf: the qualified follow the evidence, the untrained follow the qualified, and all honour the imams. Allah praised:")
+                        .font(.body)
+                    ScriptureQuote(text: "“And the first forerunners [in the faith] among the Muhajireen and the Ansar and those who followed them with good conduct - Allah is pleased with them and they are pleased with Him” (Quran 9:100).", arabic: "وَٱلسَّٰبِقُونَ ٱلۡأَوَّلُونَ مِنَ ٱلۡمُهَٰجِرِينَ وَٱلۡأَنصَارِ وَٱلَّذِينَ ٱتَّبَعُوهُم بِإِحۡسَٰنٖ رَّضِيَ ٱللَّهُ عَنۡهُمۡ وَرَضُواْ عَنۡهُ")
+
+                    Text("**Is the Hanbali madhhab “the Salafi madhhab”?**")
+                        .font(.body)
+                    Text("No. Salafiyyah is a creed and a methodology (following the Quran and Sunnah as the Companions understood them), not a school of fiqh. All four imams were Salafi in creed, and a Salafi may be Hanafi, Maliki, Shafi‘i, or Hanbali in fiqh, or may follow the evidence across the schools if he is qualified. The Hanbali school is associated with Ahl al-Hadith because Imam Ahmad was their imam and because Ibn Taymiyyah and his students came from it, but the creed of the Salaf is the creed of Abu Hanifah, Malik, and ash-Shafi‘i just as much as it is the creed of Ahmad (see “Salafiyyah” and “The Madhahib of Aqeedah”).")
+                        .font(.body)
+
+                    Text("**Can a layman weigh the evidence himself?**")
+                        .font(.body)
+                    Text("Not in the sense of deriving rulings, because that requires tools he does not have: Arabic, the grading of chains, knowledge of abrogation, of the general and the specific, and of what the Companions did. The Quran assigns derivation (istinbat) to a particular group:")
+                        .font(.body)
+                    ScriptureQuote(text: "“But if they had referred it back to the Messenger or to those of authority among them, then the ones who [can] draw correct conclusions from it would have known about it” (Quran 4:83).", arabic: "وَلَوۡ رَدُّوهُ إِلَى ٱلرَّسُولِ وَإِلَىٰٓ أُوْلِي ٱلۡأَمۡرِ مِنۡهُمۡ لَعَلِمَهُ ٱلَّذِينَ يَسۡتَنۢبِطُونَهُۥ مِنۡهُمۡۗ")
+                    ScriptureQuote(text: "“And We sent not before you, [O Muhammad], except men to whom We revealed [the message], so ask the people of the message if you do not know” (Quran 21:7).", arabic: "وَمَآ أَرۡسَلۡنَا قَبۡلَكَ إِلَّا رِجَالٗا نُّوحِيٓ إِلَيۡهِمۡۖ فَسۡـَٔلُوٓاْ أَهۡلَ ٱلذِّكۡرِ إِن كُنتُمۡ لَا تَعۡلَمُونَ")
+                    ScriptureQuote(text: "“Say, ‘Are those who know equal to those who do not know?’ Only they will remember [who are] people of understanding” (Quran 39:9).", arabic: "قُلۡ هَلۡ يَسۡتَوِي ٱلَّذِينَ يَعۡلَمُونَ وَٱلَّذِينَ لَا يَعۡلَمُونَۗ إِنَّمَا يَتَذَكَّرُ أُوْلُواْ ٱلۡأَلۡبَٰبِ")
+                    Text("The Prophet (peace be upon him) warned of what happens when the untrained give rulings:")
+                        .font(.body)
+                    ScriptureQuote(text: "“Allah does not take away the knowledge by taking it away from the people, but takes it away by the death of the scholars, till when none of them remains, people will take as their leaders ignorant persons who, when consulted, will give their verdict without knowledge. So they will go astray and will lead the people astray” (Sahih al-Bukhari 100).", arabic: "إِنَّ اللَّهَ لاَ يَقْبِضُ الْعِلْمَ انْتِزَاعًا، يَنْتَزِعُهُ مِنَ الْعِبَادِ، وَلَكِنْ يَقْبِضُ الْعِلْمَ بِقَبْضِ الْعُلَمَاءِ، حَتَّى إِذَا لَمْ يُبْقِ عَالِمًا، اتَّخَذَ النَّاسُ رُءُوسًا جُهَّالاً فَسُئِلُوا، فَأَفْتَوْا بِغَيْرِ عِلْمٍ، فَضَلُّوا وَأَضَلُّوا", dimmed: true)
+                    Text("Ibn al-Qayyim (may Allah have mercy on him) explains in I‘lam al-Muwaqqi‘in that the layman’s asking a mufti is the very thing Allah commanded, not the blameworthy taqlid. What the layman can and must weigh is the mufti: he chooses the most knowledgeable and most God-fearing scholar he can reach, as he would choose a doctor, and when two trustworthy scholars differ he follows the one whose knowledge and piety he trusts more, or the one who shows him the evidence, without following his own desire. Learning the evidence for what one practises is praiseworthy, and a layman who sees a clear authentic hadith should ask about it rather than ignore it; but being unable to derive rulings is not a deficiency in him, it is the division of labour Allah set out in Quran 9:122 (quoted above), and Allah reminds every scholar that:")
+                        .font(.body)
+                    ScriptureQuote(text: "“over every possessor of knowledge is one [more] knowing” (Quran 12:76).", arabic: "وَفَوۡقَ كُلِّ ذِي عِلۡمٍ عَلِيمٞ")
+
+                    Text("**Did the four imams differ in creed?**")
+                        .font(.body)
+                    Text("No. Their differences were in fiqh; in aqeedah they held one creed, the creed of the Salaf. Abu Hanifah and his two companions affirmed the attributes of Allah as revealed, and at-Tahawi (d. 321 AH) wrote his famous creed as their creed. Malik (may Allah have mercy on him), asked how Allah rose over the Throne, answered:")
+                        .font(.body)
+                    ScriptureQuote(text: "“The rising is not unknown, the how is not comprehended, belief in it is obligatory, and asking about it is an innovation” (al-Lalaka’i, Sharh Usul I‘tiqad Ahl as-Sunnah; al-Bayhaqi, al-Asma’ was-Sifat).", arabic: "الِاسْتِوَاءُ غَيْرُ مَجْهُولٍ، وَالْكَيْفُ غَيْرُ مَعْقُولٍ، وَالْإِيمَانُ بِهِ وَاجِبٌ، وَالسُّؤَالُ عَنْهُ بِدْعَةٌ", dimmed: true)
+                    Text("Ash-Shafi‘i (may Allah have mercy on him) said:")
+                        .font(.body)
+                    ScriptureQuote(text: "“I believe in Allah and in what has come from Allah as Allah intended it, and I believe in the Messenger of Allah and in what has come from the Messenger of Allah as the Messenger of Allah intended it” (Ibn Qudamah, Lum‘at al-I‘tiqad).", arabic: "آمَنْتُ بِاللَّهِ وَبِمَا جَاءَ عَنِ اللَّهِ عَلَى مُرَادِ اللَّهِ، وَآمَنْتُ بِرَسُولِ اللَّهِ وَبِمَا جَاءَ عَنْ رَسُولِ اللَّهِ عَلَى مُرَادِ رَسُولِ اللَّهِ", dimmed: true)
+                    Text("And Ahmad (may Allah have mercy on him) opened his Usul as-Sunnah with the words:")
+                        .font(.body)
+                    ScriptureQuote(text: "“The foundations of the Sunnah with us are: holding fast to what the Companions of the Messenger of Allah (peace be upon him) were upon, taking them as the example, and abandoning innovations, for every innovation is misguidance” (Ahmad ibn Hanbal, Usul as-Sunnah, narrated by ‘Abdus ibn Malik al-‘Attar).", arabic: "أُصُولُ السُّنَّةِ عِنْدَنَا: التَّمَسُّكُ بِمَا كَانَ عَلَيْهِ أَصْحَابُ رَسُولِ اللَّهِ صَلَّى اللَّهُ عَلَيْهِ وَسَلَّمَ، وَالِاقْتِدَاءُ بِهِمْ، وَتَرْكُ الْبِدَعِ، وَكُلُّ بِدْعَةٍ فَهِيَ ضَلَالَةٌ", dimmed: true)
+                    Text("All four affirmed that the Quran is the speech of Allah, uncreated, that the believers will see their Lord in the Hereafter, that faith is speech and deed, and that the Companions are to be loved and honoured. See “The Madhahib of Aqeedah” for the fuller picture. Allah commanded:")
+                        .font(.body)
+                    ScriptureQuote(text: "“He has ordained for you of religion what He enjoined upon Noah and that which We have revealed to you, [O Muhammad], and what We enjoined upon Abraham and Moses and Jesus - to establish the religion and not be divided therein” (Quran 42:13).", arabic: "شَرَعَ لَكُم مِّنَ ٱلدِّينِ مَا وَصَّىٰ بِهِۦ نُوحٗا وَٱلَّذِيٓ أَوۡحَيۡنَآ إِلَيۡكَ وَمَا وَصَّيۡنَا بِهِۦٓ إِبۡرَٰهِيمَ وَمُوسَىٰ وَعِيسَىٰٓۖ أَنۡ أَقِيمُواْ ٱلدِّينَ وَلَا تَتَفَرَّقُواْ فِيهِۚ")
+
+                    Text("**Which madhhab is the best?**")
+                        .font(.body)
+                    Text("On any given question, the best opinion is the one with the strongest evidence, whichever school holds it. No imam is followed absolutely; only the Prophet (peace be upon him) is:")
+                        .font(.body)
+                    ScriptureQuote(text: "“But no, by your Lord, they will not [truly] believe until they make you, [O Muhammad], judge concerning that over which they dispute among themselves and then find within themselves no discomfort from what you have judged and submit in [full, willing] submission” (Quran 4:65).", arabic: "فَلَا وَرَبِّكَ لَا يُؤۡمِنُونَ حَتَّىٰ يُحَكِّمُوكَ فِيمَا شَجَرَ بَيۡنَهُمۡ ثُمَّ لَا يَجِدُواْ فِيٓ أَنفُسِهِمۡ حَرَجٗا مِّمَّا قَضَيۡتَ وَيُسَلِّمُواْ تَسۡلِيمٗا")
+                    ScriptureQuote(text: "“It is not for a believing man or a believing woman, when Allah and His Messenger have decided a matter, that they should [thereafter] have any choice about their affair” (Quran 33:36).", arabic: "وَمَا كَانَ لِمُؤۡمِنٖ وَلَا مُؤۡمِنَةٍ إِذَا قَضَى ٱللَّهُ وَرَسُولُهُۥٓ أَمۡرًا أَن يَكُونَ لَهُمُ ٱلۡخِيَرَةُ مِنۡ أَمۡرِهِمۡۗ")
+                    Text("The hadith of the two rewards (Sahih al-Bukhari 7352, quoted above) proves that even the best mujtahid can err, so no school can be right in everything. Imam Malik (may Allah have mercy on him) said of himself:")
+                        .font(.body)
+                    ScriptureQuote(text: "“I am only a man; I err and I am right. So look into my opinion: whatever agrees with the Book and the Sunnah, take it, and whatever does not agree with the Book and the Sunnah, leave it” (Ibn Abd al-Barr, Jami‘ Bayan al-‘Ilm).", arabic: "إِنَّمَا أَنَا بَشَرٌ أُخْطِئُ وَأُصِيبُ، فَانْظُرُوا فِي رَأْيِي، فَكُلُّ مَا وَافَقَ الْكِتَابَ وَالسُّنَّةَ فَخُذُوهُ، وَكُلُّ مَا لَمْ يُوَافِقِ الْكِتَابَ وَالسُّنَّةَ فَاتْرُكُوهُ", dimmed: true)
+                    Text("The practical answer is to learn from the trustworthy scholars near you, in whichever of the four schools they teach, to learn the evidence for what you practise, and to put the authentic hadith first, as that school’s own imam commanded.")
+                        .font(.body)
+
+                    Text("**What is the ruling on ijma‘, and can the ummah agree on an error?**")
+                        .font(.body)
+                    Text("Ijma‘ is a binding proof, and the ummah as a whole is protected from agreeing on misguidance. Allah says:")
+                        .font(.body)
+                    ScriptureQuote(text: "“And whoever opposes the Messenger after guidance has become clear to him and follows other than the way of the believers - We will give him what he has taken and drive him into Hell, and evil it is as a destination” (Quran 4:115).", arabic: "وَمَن يُشَاقِقِ ٱلرَّسُولَ مِنۢ بَعۡدِ مَا تَبَيَّنَ لَهُ ٱلۡهُدَىٰ وَيَتَّبِعۡ غَيۡرَ سَبِيلِ ٱلۡمُؤۡمِنِينَ نُوَلِّهِۦ مَا تَوَلَّىٰ وَنُصۡلِهِۦ جَهَنَّمَۖ وَسَآءَتۡ مَصِيرًا")
+                    Text("Ibn Kathir (may Allah have mercy on him) records in his Tafsir that Imam ash-Shafi‘i took this ayah as the proof that ijma‘ is binding and that opposing it is forbidden. Allah also says:")
+                        .font(.body)
+                    ScriptureQuote(text: "“And thus we have made you a just community that you will be witnesses over the people and the Messenger will be a witness over you” (Quran 2:143).", arabic: "وَكَذَٰلِكَ جَعَلۡنَٰكُمۡ أُمَّةٗ وَسَطٗا لِّتَكُونُواْ شُهَدَآءَ عَلَى ٱلنَّاسِ وَيَكُونَ ٱلرَّسُولُ عَلَيۡكُمۡ شَهِيدٗاۗ")
+                    Text("A community whose testimony Allah accepts over the nations cannot unite on falsehood. The Prophet (peace be upon him) also promised that truth will never be without its bearers:")
+                        .font(.body)
+                    ScriptureQuote(text: "“A group of people from my ummah will always remain triumphant on the right path. He who deserts them shall not be able to do them any harm. They will remain in this position until Allah's Command is executed” (Sahih Muslim 1920; Sahih al-Bukhari 3641 similar).", arabic: "لاَ تَزَالُ طَائِفَةٌ مِنْ أُمَّتِي ظَاهِرِينَ عَلَى الْحَقِّ لاَ يَضُرُّهُمْ مَنْ خَذَلَهُمْ حَتَّى يَأْتِيَ أَمْرُ اللَّهِ وَهُمْ كَذَلِكَ", dimmed: true)
+                    Text("So the whole ummah can never unite on an error, because a group upon the truth always remains. The wording “my ummah will not unite upon misguidance” is reported through several chains that the hadith scholars grade individually; its meaning rests securely on the ayat and reports above. Two limits keep ijma‘ sound: it must be real, which is why Imam Ahmad warned against loose claims of it (quoted above), and the ijma‘ known with certainty is that of the Companions and the Salaf; and, as Ibn Taymiyyah notes in Majmu‘ al-Fatawa, every genuine ijma‘ rests on a text, so consensus never opposes the Quran and Sunnah but confirms them.")
+                        .font(.body)
+
+                    Text("**Is the door of ijtihad closed?**")
+                        .font(.body)
+                    Text("No. Some later scholars claimed that no mujtahid could arise after the early centuries, but Ibn Taymiyyah, Ibn al-Qayyim, as-Suyuti, and ash-Shawkani (may Allah have mercy on them) rejected the claim; as-Suyuti wrote a treatise arguing that ijtihad is an obligation of the ummah in every age. Ibn Taymiyyah adds that ijtihad is divisible: a scholar may be qualified to weigh the evidence in one field while following others elsewhere. What is closed is ijtihad without its tools, which the Prophet (peace be upon him) described as ignorant heads giving verdicts without knowledge (Sahih al-Bukhari 100, quoted above). The reward of the qualified mujtahid (Sahih al-Bukhari 7352, quoted above) and the command that a group in every community obtain understanding in the religion (Quran 9:122, quoted above) both assume that the effort continues until the Hour.")
+                        .font(.body)
+                }
+
                 Section(header: Text("IN SUMMARY")) {
-                    Text("Following a qualified school connects a Muslim to generations of disciplined scholarship; their differences are a mercy, and all are within Ahl as-Sunnah.")
+                    Text("Following a qualified school connects a Muslim to generations of disciplined scholarship; their differences are sincere ijtihad that Allah rewards, all four imams held one creed, and all four schools are within Ahl as-Sunnah.")
                         .font(.body)
                 }
             }
             .themedListRowBackground()
         }
-        .navigationTitle("The 4 Madhahib")
+        .navigationTitle("Madhahib of Fiqh")
         .selectableArticleList()
     }
 
@@ -2679,7 +2974,7 @@ struct AhlulBaytView: View {
                     Text("The Quran uses the term directly when addressing the Prophet’s household:")
                         .font(.body)
 
-                    ScriptureQuote(text: "“Allah only intends to remove from you the impurity [of sin], O people of the household, and to purify you with [extensive] purification” (Quran 33:33).")
+                    ScriptureQuote(text: "“Allah only intends to remove from you the impurity [of sin], O people of the household, and to purify you with [extensive] purification” (Quran 33:33).", arabic: "إِنَّمَا يُرِيدُ ٱللَّهُ لِيُذۡهِبَ عَنكُمُ ٱلرِّجۡسَ أَهۡلَ ٱلۡبَيۡتِ وَيُطَهِّرَكُمۡ تَطۡهِيرٗا")
 
                     Text("This is one continuous passage. It is essential to read the verses immediately before and after it to see who is being addressed.")
                         .font(.body)
@@ -2689,11 +2984,11 @@ struct AhlulBaytView: View {
                     Text("The verse of purification (33:33) sits in the middle of a passage directed to the Prophet’s wives (may Allah be pleased with them). The address begins:")
                         .font(.body)
 
-                    ScriptureQuote(text: "“O wives of the Prophet, you are not like anyone among women. If you fear Allah, then do not be soft in speech…” (Quran 33:32).")
+                    ScriptureQuote(text: "“O wives of the Prophet, you are not like anyone among women. If you fear Allah, then do not be soft in speech…” (Quran 33:32).", arabic: "يَٰنِسَآءَ ٱلنَّبِيِّ لَسۡتُنَّ كَأَحَدٖ مِّنَ ٱلنِّسَآءِ إِنِ ٱتَّقَيۡتُنَّۚ فَلَا تَخۡضَعۡنَ بِٱلۡقَوۡلِ")
 
-                    ScriptureQuote(text: "“And abide in your houses and do not display yourselves as [was] the display of the former times of ignorance. And establish prayer and give zakah and obey Allah and His Messenger. Allah only intends to remove from you the impurity, O people of the household, and to purify you with [extensive] purification” (Quran 33:33).")
+                    ScriptureQuote(text: "“And abide in your houses and do not display yourselves as [was] the display of the former times of ignorance. And establish prayer and give zakah and obey Allah and His Messenger. Allah only intends to remove from you the impurity, O people of the household, and to purify you with [extensive] purification” (Quran 33:33).", arabic: "إِنَّمَا يُرِيدُ ٱللَّهُ لِيُذۡهِبَ عَنكُمُ ٱلرِّجۡسَ أَهۡلَ ٱلۡبَيۡتِ وَيُطَهِّرَكُمۡ تَطۡهِيرٗا")
 
-                    ScriptureQuote(text: "“And remember what is recited in your houses of the verses of Allah and wisdom. Indeed, Allah is ever Subtle and Acquainted [with all things]” (Quran 33:34).")
+                    ScriptureQuote(text: "“And remember what is recited in your houses of the verses of Allah and wisdom. Indeed, Allah is ever Subtle and Acquainted [with all things]” (Quran 33:34).", arabic: "وَٱذۡكُرۡنَ مَا يُتۡلَىٰ فِي بُيُوتِكُنَّ مِنۡ ءَايَٰتِ ٱللَّهِ وَٱلۡحِكۡمَةِۚ إِنَّ ٱللَّهَ كَانَ لَطِيفًا خَبِيرًا")
 
                     Text("The phrase “O people of the household“ is therefore addressed, first and foremost, to the wives of the Prophet (peace be upon him), the **Mothers of the Believers (أُمَّهَاتُ المُؤمِنِين)**, whom Allah placed in the position of mothers to every believer (Quran 33:6).")
                         .font(.body)
@@ -2701,7 +2996,7 @@ struct AhlulBaytView: View {
                     Text("Allah also called the wife of Ibrahim (peace be upon him) part of the “people of the house“ using the very same expression:")
                         .font(.body)
 
-                    ScriptureQuote(text: "“They said, ‘Are you amazed at the decree of Allah? May the mercy of Allah and His blessings be upon you, people of the house. Indeed, He is Praiseworthy and Honorable’” (Quran 11:73).")
+                    ScriptureQuote(text: "“They said, ‘Are you amazed at the decree of Allah? May the mercy of Allah and His blessings be upon you, people of the house. Indeed, He is Praiseworthy and Honorable’” (Quran 11:73).", arabic: "قَالُوٓاْ أَتَعۡجَبِينَ مِنۡ أَمۡرِ ٱللَّهِۖ رَحۡمَتُ ٱللَّهِ وَبَرَكَٰتُهُۥ عَلَيۡكُمۡ أَهۡلَ ٱلۡبَيۡتِۚ إِنَّهُۥ حَمِيدٞ مَّجِيدٞ")
 
                     Text("So a prophet’s wives being included in “Ahl al-Bayt“ is the established Quranic usage, not an exception.")
                         .font(.body)
@@ -2711,44 +3006,48 @@ struct AhlulBaytView: View {
                     Text("The Ahlul Bayt also includes the Prophet’s daughter **Fatimah**, his cousin and son-in-law **Ali**, and their sons **al-Hasan** and **al-Husayn** (may Allah be pleased with them all).")
                         .font(.body)
 
-                    Text("Aisha (may Allah be pleased with her) narrated: “The Prophet (peace be upon him) went out one morning wearing a cloak of black camel hair. Al-Hasan ibn Ali came and he took him in, then al-Husayn came in with him, then Fatimah, then Ali. Then he said: ‘Allah only intends to remove from you the impurity, O people of the household, and to purify you with [extensive] purification’” (Sahih Muslim 2424).")
-                        .font(.title3)
-                        .foregroundColor(settings.accentColor.color.opacity(0.85))
+                    Text("Aisha (may Allah be pleased with her) narrated:")
+                        .font(.body)
+                    ScriptureQuote(text: "“The Prophet went out one morning wearing a striped cloak of black camel hair. Al-Hasan ibn Ali came and he took him in under it, then al-Husayn came and entered with him, then Fatimah, and he took her in, then Ali, and he took him in. Then he said: ‘Allah only intends to remove from you the impurity, O people of the household, and to purify you with [extensive] purification’” (Sahih Muslim 2424).", arabic: "خَرَجَ النَّبِيُّ صلى الله عليه وسلم غَدَاةً وَعَلَيْهِ مِرْطٌ مُرَحَّلٌ مِنْ شَعْرٍ أَسْوَدَ فَجَاءَ الْحَسَنُ بْنُ عَلِيٍّ فَأَدْخَلَهُ ثُمَّ جَاءَ الْحُسَيْنُ فَدَخَلَ مَعَهُ ثُمَّ جَاءَتْ فَاطِمَةُ فَأَدْخَلَهَا ثُمَّ جَاءَ عَلِيٌّ فَأَدْخَلَهُ ثُمَّ قَالَ إِنَّمَا يُرِيدُ اللَّهُ لِيُذْهِبَ عَنْكُمُ الرِّجْسَ أَهْلَ الْبَيْتِ وَيُطَهِّرَكُمْ تَطْهِيرًا", dimmed: true)
 
                     Text("Including these four does not exclude the wives; the Prophet (peace be upon him) was gathering additional members of his household under the cloak, within a passage whose context is already addressing his wives. The two are complementary, not contradictory.")
                         .font(.body)
 
-                    Text("The Prophet (peace be upon him) said of his grandsons: “Al-Hasan and al-Husayn are the two masters of the youth of Paradise” (Sunan al-Tirmidhi 3768).")
+                    Text("The Prophet (peace be upon him) said of his grandsons:")
                         .font(.body)
+                    ScriptureQuote(text: "“Al-Hasan and al-Husayn are the two masters of the youth of Paradise” (Sunan al-Tirmidhi 3768; graded sahih by al-Albani).", arabic: "الْحَسَنُ وَالْحُسَيْنُ سَيِّدَا شَبَابِ أَهْلِ الْجَنَّةِ", dimmed: true)
 
-                    Text("And of Fatimah (may Allah be pleased with her) he said: “Fatimah is a part of me. Whoever angers her angers me” (Sahih al-Bukhari 3714).")
+                    Text("And of Fatimah (may Allah be pleased with her) he said:")
                         .font(.body)
+                    ScriptureQuote(text: "“Fatimah is a part of me. Whoever angers her angers me” (Sahih al-Bukhari 3714).", arabic: "فَاطِمَةُ بَضْعَةٌ مِنِّي، فَمَنْ أَغْضَبَهَا أَغْضَبَنِي", dimmed: true)
                 }
 
                 Section(header: Text("THE BANU HASHIM AND THE PROPHET’S KIN")) {
                     Text("The Ahlul Bayt further includes the relatives of the Prophet (peace be upon him) upon whom charity (sadaqah) is forbidden: the family of Ali, the family of Ja‘far, the family of Aqil, and the family of al-Abbas (may Allah be pleased with them).")
                         .font(.body)
 
-                    Text("The Prophet (peace be upon him) said: “Charity is not permissible for Muhammad or the family of Muhammad; it is only the people’s impurities” (Sahih Muslim 1072).")
+                    Text("The Prophet (peace be upon him) said:")
                         .font(.body)
+                    ScriptureQuote(text: "“These charities are only the impurities of the people, and they are not permissible for Muhammad or for the family of Muhammad” (Sahih Muslim 1072).", arabic: "إِنَّ هَذِهِ الصَّدَقَاتِ إِنَّمَا هِيَ أَوْسَاخُ النَّاسِ وَإِنَّهَا لاَ تَحِلُّ لِمُحَمَّدٍ وَلاَ لآلِ مُحَمَّدٍ", dimmed: true)
 
-                    Text("Zayd ibn Arqam (may Allah be pleased with him) was asked, “Who are the people of his household? Are not his wives among the people of his household?” He said: “His wives are among the people of his household, but the people of his household are those for whom charity is forbidden after him” (Sahih Muslim 2408).")
-                        .font(.title3)
-                        .foregroundColor(settings.accentColor.color.opacity(0.85))
+                    Text("Zayd ibn Arqam (may Allah be pleased with him) was asked, “Who are the people of his household? Are not his wives among the people of his household?” He said:")
+                        .font(.body)
+                    ScriptureQuote(text: "“His wives are among the people of his household, but the people of his household are those for whom charity is forbidden after him” (Sahih Muslim 2408).", arabic: "نِسَاؤُهُ مِنْ أَهْلِ بَيْتِهِ وَلَكِنْ أَهْلُ بَيْتِهِ مَنْ حُرِمَ الصَّدَقَةَ بَعْدَهُ", dimmed: true)
                 }
 
                 Section(header: Text("THE COMMAND TO LOVE THEM")) {
                     Text("Allah (Glorified and Exalted be He) says:")
                         .font(.body)
 
-                    ScriptureQuote(text: "“Say, [O Muhammad], ‘I do not ask you for it any payment [but] only good will through kinship’” (Quran 42:23).")
+                    ScriptureQuote(text: "“Say, [O Muhammad], ‘I do not ask you for it any payment [but] only good will through kinship’” (Quran 42:23).", arabic: "قُل لَّآ أَسۡـَٔلُكُمۡ عَلَيۡهِ أَجۡرًا إِلَّا ٱلۡمَوَدَّةَ فِي ٱلۡقُرۡبَىٰۗ")
 
-                    Text("In his farewell address the Prophet (peace be upon him) said: “I am leaving among you two weighty things: the first is the Book of Allah, in which there is guidance and light… hold fast to the Book of Allah.” Then he said: “And the people of my household. I remind you of Allah concerning the people of my household. I remind you of Allah concerning the people of my household” (Sahih Muslim 2408).")
-                        .font(.title3)
-                        .foregroundColor(settings.accentColor.color.opacity(0.85))
-
-                    Text("Every believer sends blessings upon them in each prayer: “O Allah, send prayers upon Muhammad and upon the family of Muhammad, as You sent prayers upon Ibrahim and upon the family of Ibrahim” (Sahih al-Bukhari 3370).")
+                    Text("At the pool of Khumm, between Makkah and Madinah, the Prophet (peace be upon him) said:")
                         .font(.body)
+                    ScriptureQuote(text: "“I am leaving among you two weighty things: the first is the Book of Allah, in which there is guidance and light, so take the Book of Allah and hold fast to it … And the people of my household: I remind you of Allah concerning the people of my household. I remind you of Allah concerning the people of my household. I remind you of Allah concerning the people of my household” (Sahih Muslim 2408).", arabic: "وَأَنَا تَارِكٌ فِيكُمْ ثَقَلَيْنِ أَوَّلُهُمَا كِتَابُ اللَّهِ فِيهِ الْهُدَى وَالنُّورُ فَخُذُوا بِكِتَابِ اللَّهِ وَاسْتَمْسِكُوا بِهِ … وَأَهْلُ بَيْتِي أُذَكِّرُكُمُ اللَّهَ فِي أَهْلِ بَيْتِي أُذَكِّرُكُمُ اللَّهَ فِي أَهْلِ بَيْتِي أُذَكِّرُكُمُ اللَّهَ فِي أَهْلِ بَيْتِي", dimmed: true)
+
+                    Text("Every believer sends blessings upon them in each prayer, in the words the Prophet (peace be upon him) taught:")
+                        .font(.body)
+                    ScriptureQuote(text: "“Say: O Allah, send prayers upon Muhammad and upon the family of Muhammad, as You sent prayers upon Ibrahim and upon the family of Ibrahim; indeed You are Praiseworthy, Glorious. O Allah, send blessings upon Muhammad and upon the family of Muhammad, as You sent blessings upon Ibrahim and upon the family of Ibrahim; indeed You are Praiseworthy, Glorious” (Sahih al-Bukhari 3370).", arabic: "قُولُوا اللَّهُمَّ صَلِّ عَلَى مُحَمَّدٍ، وَعَلَى آلِ مُحَمَّدٍ، كَمَا صَلَّيْتَ عَلَى إِبْرَاهِيمَ وَعَلَى آلِ إِبْرَاهِيمَ، إِنَّكَ حَمِيدٌ مَجِيدٌ، اللَّهُمَّ بَارِكْ عَلَى مُحَمَّدٍ، وَعَلَى آلِ مُحَمَّدٍ، كَمَا بَارَكْتَ عَلَى إِبْرَاهِيمَ، وَعَلَى آلِ إِبْرَاهِيمَ، إِنَّكَ حَمِيدٌ مَجِيدٌ", dimmed: true)
 
                     Text("Loving the Ahlul Bayt is a sign of faith. It is never in tension with loving the Companions (may Allah be pleased with them): Ali, al-Hasan, al-Husayn, and the Prophet’s wives were themselves among the Companions.")
                         .font(.body)
@@ -2761,7 +3060,7 @@ struct AhlulBaytView: View {
                     Text("The straight path is between the two: love and honor them without exaggeration, and love all the Companions of the Prophet (peace be upon him) alongside them.")
                         .font(.body)
 
-                    ScriptureQuote(text: "“And [there is a share for] those who came after them, saying, ‘Our Lord, forgive us and our brothers who preceded us in faith and put not in our hearts [any] resentment toward those who have believed. Our Lord, indeed You are Kind and Merciful’” (Quran 59:10).")
+                    ScriptureQuote(text: "“And [there is a share for] those who came after them, saying, ‘Our Lord, forgive us and our brothers who preceded us in faith and put not in our hearts [any] resentment toward those who have believed. Our Lord, indeed You are Kind and Merciful’” (Quran 59:10).", arabic: "وَٱلَّذِينَ جَآءُو مِنۢ بَعۡدِهِمۡ يَقُولُونَ رَبَّنَا ٱغۡفِرۡ لَنَا وَلِإِخۡوَٰنِنَا ٱلَّذِينَ سَبَقُونَا بِٱلۡإِيمَٰنِ وَلَا تَجۡعَلۡ فِي قُلُوبِنَا غِلّٗا لِّلَّذِينَ ءَامَنُواْ رَبَّنَآ إِنَّكَ رَءُوفٞ رَّحِيمٌ")
 
                     Text("Ali, al-Hasan, and al-Husayn (may Allah be pleased with them) themselves loved, prayed behind, married into, and named their children after Abu Bakr, Umar, and Uthman (may Allah be pleased with them). Their example is the proof of this unity.")
                         .font(.body)
@@ -2800,7 +3099,7 @@ struct AhlusSunnahView: View {
                     Text("Allah (Glorified and Exalted be He) says:")
                         .font(.body)
 
-                    ScriptureQuote(text: "“And whoever opposes the Messenger after guidance has become clear to him and follows other than the way of the believers - We will give him what he has taken and drive him into Hell, and evil it is as a destination” (Quran 4:115).")
+                    ScriptureQuote(text: "“And whoever opposes the Messenger after guidance has become clear to him and follows other than the way of the believers - We will give him what he has taken and drive him into Hell, and evil it is as a destination” (Quran 4:115).", arabic: "وَمَن يُشَاقِقِ ٱلرَّسُولَ مِنۢ بَعۡدِ مَا تَبَيَّنَ لَهُ ٱلۡهُدَىٰ وَيَتَّبِعۡ غَيۡرَ سَبِيلِ ٱلۡمُؤۡمِنِينَ نُوَلِّهِۦ مَا تَوَلَّىٰ وَنُصۡلِهِۦ جَهَنَّمَۖ وَسَآءَتۡ مَصِيرًا")
 
                     Text("“The way of the believers“ in this verse is the way of the first believers: the Companions.")
                         .font(.body)
@@ -2816,13 +3115,13 @@ struct AhlusSunnahView: View {
                     Text("**3. The understanding of the Salaf**: the Quran and Sunnah are understood the way the first three generations understood them, not according to later opinions or personal reasoning that contradicts them.")
                         .font(.body)
 
-                    Text("Allah (Glorified and Exalted be He) says: “And the first forerunners among the Muhajireen and the Ansar and those who followed them with good conduct - Allah is pleased with them and they are pleased with Him” (Quran 9:100).")
-                        .font(.title3)
-                        .foregroundColor(settings.accentColor.color)
+                    Text("Allah (Glorified and Exalted be He) says:")
+                        .font(.body)
+                    ScriptureQuote(text: "“And the first forerunners among the Muhajireen and the Ansar and those who followed them with good conduct - Allah is pleased with them and they are pleased with Him” (Quran 9:100).", arabic: "وَٱلسَّٰبِقُونَ ٱلۡأَوَّلُونَ مِنَ ٱلۡمُهَٰجِرِينَ وَٱلۡأَنصَارِ وَٱلَّذِينَ ٱتَّبَعُوهُم بِإِحۡسَٰنٖ رَّضِيَ ٱللَّهُ عَنۡهُمۡ وَرَضُواْ عَنۡهُ")
 
-                    Text("The Prophet (peace be upon him) said: “The best of people are my generation, then those who follow them, then those who follow them” (Sahih al-Bukhari 2652).")
-                        .font(.title3)
-                        .foregroundColor(settings.accentColor.color.opacity(0.85))
+                    Text("The Prophet (peace be upon him) said:")
+                        .font(.body)
+                    ScriptureQuote(text: "“The best of people are my generation, then those who follow them, then those who follow them” (Sahih al-Bukhari 2652).", arabic: "خَيْرُ النَّاسِ قَرْنِي، ثُمَّ الَّذِينَ يَلُونَهُمْ، ثُمَّ الَّذِينَ يَلُونَهُمْ", dimmed: true)
                 }
 
                 Section(header: Text("THEIR CREED (AQEEDAH)")) {
@@ -2832,7 +3131,7 @@ struct AhlusSunnahView: View {
                     Text("• **Names and Attributes**: affirmed as Allah affirmed them for Himself, without likening Him to creation (tashbih) and without stripping the meanings away (ta‘til).")
                         .font(.body)
 
-                    ScriptureQuote(text: "“There is nothing like unto Him, and He is the Hearing, the Seeing” (Quran 42:11).")
+                    ScriptureQuote(text: "“There is nothing like unto Him, and He is the Hearing, the Seeing” (Quran 42:11).", arabic: "لَيۡسَ كَمِثۡلِهِۦ شَيۡءٞۖ وَهُوَ ٱلسَّمِيعُ ٱلۡبَصِيرُ")
 
                     Text("• **Iman** consists of belief in the heart, statement of the tongue, and action of the limbs. It increases with obedience and decreases with disobedience.")
                         .font(.body)
@@ -2848,24 +3147,29 @@ struct AhlusSunnahView: View {
                 }
 
                 Section(header: Text("THE SAVED GROUP")) {
-                    Text("The Prophet (peace be upon him) said: “The Jews split into seventy-one sects, the Christians into seventy-two, and my nation will split into seventy-three sects, all of them in the Fire except one.“ They asked, “Who are they, O Messenger of Allah?“ He said: “Those who are upon what I and my Companions are upon today” (Sunan al-Tirmidhi 2641; graded hasan by al-Albani, Sahih al-Tirmidhi).")
-                        .font(.title3)
-                        .foregroundColor(settings.accentColor.color.opacity(0.85))
+                    Text("The Prophet (peace be upon him) said:")
+                        .font(.body)
+                    ScriptureQuote(text: "“The Jews split into seventy-one sects: one in Paradise and seventy in the Fire. The Christians split into seventy-two sects: seventy-one in the Fire and one in Paradise. By the One in whose hand is the soul of Muhammad, my nation will split into seventy-three sects: one in Paradise and seventy-two in the Fire.” It was said: O Messenger of Allah, who are they? He said: “The Jama‘ah” (Sunan Ibn Majah 3992; graded sahih by al-Albani).", arabic: "افْتَرَقَتِ الْيَهُودُ عَلَى إِحْدَى وَسَبْعِينَ فِرْقَةً فَوَاحِدَةٌ فِي الْجَنَّةِ وَسَبْعُونَ فِي النَّارِ وَافْتَرَقَتِ النَّصَارَى عَلَى ثِنْتَيْنِ وَسَبْعِينَ فِرْقَةً فَإِحْدَى وَسَبْعُونَ فِي النَّارِ وَوَاحِدَةٌ فِي الْجَنَّةِ وَالَّذِي نَفْسُ مُحَمَّدٍ بِيَدِهِ لَتَفْتَرِقَنَّ أُمَّتِي عَلَى ثَلاَثٍ وَسَبْعِينَ فِرْقَةً فَوَاحِدَةٌ فِي الْجَنَّةِ وَثِنْتَانِ وَسَبْعُونَ فِي النَّارِ. قِيلَ يَا رَسُولَ اللَّهِ مَنْ هُمْ قَالَ الْجَمَاعَةُ", dimmed: true)
 
-                    Text("The defining measure in this hadith is not a name or a label, but a **standard**: what the Prophet (peace be upon him) and his Companions were upon. Ahl as-Sunnah wal-Jama‘ah is simply the name for those who hold to that standard.")
+                    Text("In another narration he described that one group as:")
+                        .font(.body)
+                    ScriptureQuote(text: "“What I and my Companions are upon” (Sunan al-Tirmidhi 2641; graded hasan by al-Albani).", arabic: "مَا أَنَا عَلَيْهِ وَأَصْحَابِي", dimmed: true)
+
+                    Text("The defining measure in this hadith is not a name or a label, but a **standard**: the Jama‘ah, what the Prophet (peace be upon him) and his Companions were upon. Ahl as-Sunnah wal-Jama‘ah is simply the name for those who hold to that standard.")
                         .font(.body)
 
-                    Text("He (peace be upon him) also said: “Hold fast to my Sunnah and the Sunnah of the rightly guided caliphs after me. Cling to it with your molar teeth, and beware of newly invented matters, for every innovation is misguidance” (Sunan Abi Dawud 4607).")
+                    Text("He (peace be upon him) also said:")
                         .font(.body)
+                    ScriptureQuote(text: "“Hold fast to my Sunnah and the Sunnah of the rightly guided caliphs after me. Cling to it with your molar teeth, and beware of newly invented matters, for every newly invented matter is an innovation, and every innovation is misguidance” (Sunan Abi Dawud 4607; graded sahih by al-Albani).", arabic: "فَعَلَيْكُمْ بِسُنَّتِي وَسُنَّةِ الْخُلَفَاءِ الْمَهْدِيِّينَ الرَّاشِدِينَ تَمَسَّكُوا بِهَا وَعَضُّوا عَلَيْهَا بِالنَّوَاجِذِ وَإِيَّاكُمْ وَمُحْدَثَاتِ الأُمُورِ فَإِنَّ كُلَّ مُحْدَثَةٍ بِدْعَةٌ وَكُلَّ بِدْعَةٍ ضَلاَلَةٌ", dimmed: true)
                 }
 
                 Section(header: Text("UNITY, NOT SECTARIANISM")) {
                     Text("Allah (Glorified and Exalted be He) commands unity upon the truth:")
                         .font(.body)
 
-                    ScriptureQuote(text: "“And hold firmly to the rope of Allah all together and do not become divided” (Quran 3:103).")
+                    ScriptureQuote(text: "“And hold firmly to the rope of Allah all together and do not become divided” (Quran 3:103).", arabic: "وَٱعۡتَصِمُواْ بِحَبۡلِ ٱللَّهِ جَمِيعٗا وَلَا تَفَرَّقُواْۚ")
 
-                    ScriptureQuote(text: "“Indeed, those who have divided their religion and become sects - you are not associated with them in anything” (Quran 6:159).")
+                    ScriptureQuote(text: "“Indeed, those who have divided their religion and become sects - you are not associated with them in anything” (Quran 6:159).", arabic: "إِنَّ ٱلَّذِينَ فَرَّقُواْ دِينَهُمۡ وَكَانُواْ شِيَعٗا لَّسۡتَ مِنۡهُمۡ فِي شَيۡءٍۚ")
 
                     Text("Ahl as-Sunnah wal-Jama‘ah is therefore not a sect among sects. It is the original, undivided Islam of the Prophet (peace be upon him) and his Companions. Its adherents differ in fiqh across the four madhahib, yet stand united in creed.")
                         .font(.body)
@@ -2878,7 +3182,7 @@ struct AhlusSunnahView: View {
                     Text("To be from Ahl as-Sunnah wal-Jama‘ah is to take the Quran and the authentic Sunnah as they came, to understand them as the Companions understood them, to love the Prophet’s family and his Companions together, and to hold to the community of the Muslims.")
                         .font(.body)
 
-                    ScriptureQuote(text: "“So if they believe in the same as you believe in, then they have been rightly guided” (Quran 2:137).")
+                    ScriptureQuote(text: "“So if they believe in the same as you believe in, then they have been rightly guided” (Quran 2:137).", arabic: "فَإِنۡ ءَامَنُواْ بِمِثۡلِ مَآ ءَامَنتُم بِهِۦ فَقَدِ ٱهۡتَدَواْۖ")
                 }
 
                 Section(header: Text("IN SUMMARY")) {
@@ -2911,9 +3215,9 @@ struct SeerahView: View {
                     Text("Studying it is not merely history; it shows how revelation was lived, and it is a means of knowing, loving, and following him.")
                         .font(.body)
 
-                    Text("Allah (Glorified and Exalted be He) says: “There has certainly been for you in the Messenger of Allah an excellent pattern for anyone whose hope is in Allah and the Last Day and [who] remembers Allah often” (Quran 33:21).")
-                        .font(.title3)
-                        .foregroundColor(settings.accentColor.color)
+                    Text("Allah (Glorified and Exalted be He) says:")
+                        .font(.body)
+                    ScriptureQuote(text: "“There has certainly been for you in the Messenger of Allah an excellent pattern for anyone whose hope is in Allah and the Last Day and [who] remembers Allah often” (Quran 33:21).", arabic: "لَّقَدۡ كَانَ لَكُمۡ فِي رَسُولِ ٱللَّهِ أُسۡوَةٌ حَسَنَةٞ لِّمَن كَانَ يَرۡجُواْ ٱللَّهَ وَٱلۡيَوۡمَ ٱلۡأٓخِرَ وَذَكَرَ ٱللَّهَ كَثِيرٗا")
                 }
 
                 Section(header: Text("BEFORE PROPHETHOOD")) {
@@ -2925,8 +3229,9 @@ struct SeerahView: View {
                 }
 
                 Section(header: Text("THE FIRST REVELATION")) {
-                    Text("At the age of forty, while worshipping alone in the cave of **Hira (حِرَاء)** near Makkah, the angel **Jibril (جِبرِيل)** brought him the first revelation: “**Iqra (اِقرَأ)**,” “Read in the name of your Lord who created” (Quran 96:1).")
+                    Text("At the age of forty, while worshipping alone in the cave of **Hira (حِرَاء)** near Makkah, the angel **Jibril (جِبرِيل)** brought him the first revelation, beginning with **Iqra (اِقرَأ)**:")
                         .font(.body)
+                    ScriptureQuote(text: "“Recite in the name of your Lord who created” (Quran 96:1).", arabic: "ٱقۡرَأۡ بِٱسۡمِ رَبِّكَ ٱلَّذِي خَلَقَ")
 
                     Text("This began twenty-three years of the revelation of the Quran, which continued until shortly before his death.")
                         .font(.body)
@@ -2965,9 +3270,12 @@ struct SeerahView: View {
                     Text("He was sent as a mercy to all creation, **Rahmatan lil-Alamin (رَحمَة لِلعَالَمِين)**.")
                         .font(.body)
 
-                    ScriptureQuote(text: "“And We have not sent you except as a mercy to the worlds” (Quran 21:107).")
+                    ScriptureQuote(text: "“And We have not sent you except as a mercy to the worlds” (Quran 21:107).", arabic: "وَمَآ أَرۡسَلۡنَٰكَ إِلَّا رَحۡمَةٗ لِّلۡعَٰلَمِينَ")
 
-                    Text("When Aishah (may Allah be pleased with her) was asked about his character, she said that his character was the Quran (Sahih Muslim 746): he embodied its teachings in the most complete way.")
+                    Text("When Aishah (may Allah be pleased with her) was asked about his character, she said:")
+                        .font(.body)
+                    ScriptureQuote(text: "“The character of the Prophet of Allah was the Quran” (Sahih Muslim 746).", arabic: "فَإِنَّ خُلُقَ نَبِيِّ اللَّهِ صلى الله عليه وسلم كَانَ الْقُرْآنَ", dimmed: true)
+                    Text("He embodied its teachings in the most complete way.")
                         .font(.body)
                 }
 
@@ -3001,9 +3309,9 @@ struct TafsirView: View {
                     Text("Its blameworthy counterpart is **Tafsir bir-Ra'y (تَفسِير بِالرَّأي)** in the censured sense: interpreting the Quran by mere opinion, away from its established meaning and the understanding of the Salaf.")
                         .font(.body)
 
-                    Text("Allah (Glorified and Exalted be He) says: “This is a blessed Book which We have revealed to you that they might reflect upon its verses” (Quran 38:29).")
-                        .font(.title3)
-                        .foregroundColor(settings.accentColor.color)
+                    Text("Allah (Glorified and Exalted be He) says:")
+                        .font(.body)
+                    ScriptureQuote(text: "“[This is] a blessed Book which We have revealed to you, [O Muhammad], that they might reflect upon its verses” (Quran 38:29).", arabic: "كِتَٰبٌ أَنزَلۡنَٰهُ إِلَيۡكَ مُبَٰرَكٞ لِّيَدَّبَّرُوٓاْ ءَايَٰتِهِۦ")
                 }
 
                 Section(header: Text("HOW THE QURAN IS EXPLAINED")) {
@@ -3013,9 +3321,9 @@ struct TafsirView: View {
                     Text("**1. The Quran by the Quran**: a matter left general in one place is often clarified in another.")
                         .font(.body)
 
-                    Text("**2. The Quran by the Sunnah**: the Prophet (peace be upon him) explained what was revealed to him. “And We revealed to you the message that you may make clear to the people what was sent down to them” (Quran 16:44).")
-                        .font(.title3)
-                        .foregroundColor(settings.accentColor.color)
+                    Text("**2. The Quran by the Sunnah**: the Prophet (peace be upon him) explained what was revealed to him.")
+                        .font(.body)
+                    ScriptureQuote(text: "“And We revealed to you the message that you may make clear to the people what was sent down to them” (Quran 16:44).", arabic: "وَأَنزَلۡنَآ إِلَيۡكَ ٱلذِّكۡرَ لِتُبَيِّنَ لِلنَّاسِ مَا نُزِّلَ إِلَيۡهِمۡ")
 
                     Text("**3. The statements of the Companions (Sahabah)**: they witnessed the revelation and knew its context best.")
                         .font(.body)
@@ -3042,11 +3350,15 @@ struct TafsirView: View {
                     Text("Allah (Glorified and Exalted be He) warned:")
                         .font(.body)
 
-                    ScriptureQuote(text: "“And do not pursue that of which you have no knowledge. Indeed, the hearing, the sight and the heart - about all those [one] will be questioned.” (Quran 17:36)")
+                    ScriptureQuote(text: "“And do not pursue that of which you have no knowledge. Indeed, the hearing, the sight and the heart - about all those [one] will be questioned.” (Quran 17:36)", arabic: "وَلَا تَقۡفُ مَا لَيۡسَ لَكَ بِهِۦ عِلۡمٌۚ إِنَّ ٱلسَّمۡعَ وَٱلۡبَصَرَ وَٱلۡفُؤَادَ كُلُّ أُوْلَٰٓئِكَ كَانَ عَنۡهُ مَسۡـُٔولٗا")
 
-                    Text("And He counted among what He has forbidden “that you say about Allah that which you do not know” (Quran 7:33). The Prophet (peace and blessings be upon him) also said: “Whoever tells a lie against me intentionally, then (surely) let him occupy his seat in Hell-fire” (Sahih al-Bukhari 108).")
-                        .font(.title3)
-                        .foregroundColor(settings.accentColor.color.opacity(0.85))
+                    Text("And He counted among what He has forbidden:")
+                        .font(.body)
+                    ScriptureQuote(text: "“…and that you say about Allah that which you do not know” (Quran 7:33).", arabic: "وَأَن تَقُولُواْ عَلَى ٱللَّهِ مَا لَا تَعۡلَمُونَ")
+
+                    Text("The Prophet (peace and blessings be upon him) also said:")
+                        .font(.body)
+                    ScriptureQuote(text: "“Whoever tells a lie against me intentionally, then (surely) let him occupy his seat in Hell-fire” (Sahih al-Bukhari 108).", arabic: "مَنْ تَعَمَّدَ عَلَىَّ كَذِبًا فَلْيَتَبَوَّأْ مَقْعَدَهُ مِنَ النَّارِ", dimmed: true)
                 }
 
                 Section(header: Text("WELL-KNOWN WORKS")) {
@@ -3092,7 +3404,7 @@ struct FiqhAqeedahManhajView: View {
                     Text("It includes the six pillars of faith: belief in Allah, His angels, His books, His messengers, the Last Day, and **Al-Qadar (القَدَر)**, the divine decree. Aqeedah does not change with time or place and is one for all the believers.")
                         .font(.body)
 
-                    ScriptureQuote(text: "“The Messenger has believed in what was revealed to him from his Lord, and so have the believers. All of them have believed in Allah and His angels and His books and His messengers” (Quran 2:285).")
+                    ScriptureQuote(text: "“The Messenger has believed in what was revealed to him from his Lord, and so have the believers. All of them have believed in Allah and His angels and His books and His messengers” (Quran 2:285).", arabic: "ءَامَنَ ٱلرَّسُولُ بِمَآ أُنزِلَ إِلَيۡهِ مِن رَّبِّهِۦ وَٱلۡمُؤۡمِنُونَۚ كُلٌّ ءَامَنَ بِٱللَّهِ وَمَلَٰٓئِكَتِهِۦ وَكُتُبِهِۦ وَرُسُلِهِۦ")
                 }
 
                 Section(header: Text("FIQH (JURISPRUDENCE)")) {
@@ -3110,7 +3422,7 @@ struct FiqhAqeedahManhajView: View {
                     Text("The sound manhaj is to take the Quran and the authentic Sunnah upon the understanding of the **Salaf (السَّلَف)**, the first righteous generations, rather than by later opinions that contradict them.")
                         .font(.body)
 
-                    ScriptureQuote(text: "“And the first forerunners among the Muhajireen and the Ansar and those who followed them with good conduct - Allah is pleased with them and they are pleased with Him” (Quran 9:100).")
+                    ScriptureQuote(text: "“And the first forerunners among the Muhajireen and the Ansar and those who followed them with good conduct - Allah is pleased with them and they are pleased with Him” (Quran 9:100).", arabic: "وَٱلسَّٰبِقُونَ ٱلۡأَوَّلُونَ مِنَ ٱلۡمُهَٰجِرِينَ وَٱلۡأَنصَارِ وَٱلَّذِينَ ٱتَّبَعُوهُم بِإِحۡسَٰنٖ رَّضِيَ ٱللَّهُ عَنۡهُمۡ وَرَضُواْ عَنۡهُ")
                 }
 
                 Section(header: Text("HOW THEY RELATE")) {

@@ -448,7 +448,65 @@ struct HighlightedSnippet: View {
         if ranges.isEmpty, guaranteeMatch {
             ranges = closestMatchRanges(in: source, normalizedTerm: normalizedTerm)
         }
-        return ranges
+        // A one-letter term would snap every word it touches; below two letters the exact ranges stand.
+        return normalizedTerm.count >= 2 ? snappedToWholeWords(ranges, in: source) : ranges
+    }
+
+    /// Every match painted as WHOLE WORDS. The rungs above find substrings - "صلاة" inside
+    /// "وَٱلصَّلَوٰةِ", "believ" inside "believers", the alef-skeleton prefix "لصل" of a word the loose
+    /// rung could only half-match - and painting exactly the matched letters left words chopped in
+    /// two colors: the head of the word in the accent, its tail in the base color, which read as a
+    /// highlight that had been cut off mid-word. A word either matched or it didn't, so each range
+    /// grows outward to the whitespace on both sides, then sheds the punctuation it picked up at the
+    /// edges (a closing quote, the comma after "ease,") - the accent covers the word and nothing
+    /// else. Overlapping or touching ranges merge, so a phrase reads as one span. Shared by every
+    /// caller of the ladder (list rows, the mushaf page reader, the cross-language token lookup), so
+    /// the same query paints the same words everywhere.
+    nonisolated private static func snappedToWholeWords(
+        _ ranges: [Range<String.Index>],
+        in source: String
+    ) -> [Range<String.Index>] {
+        guard !ranges.isEmpty else { return ranges }
+        var snapped: [Range<String.Index>] = []
+        for range in ranges.sorted(by: { $0.lowerBound < $1.lowerBound }) {
+            var start = range.lowerBound
+            while start > source.startIndex {
+                let previous = source.index(before: start)
+                if isWordBoundary(source[previous]) { break }
+                start = previous
+            }
+            var end = range.upperBound
+            while end < source.endIndex, !isWordBoundary(source[end]) {
+                end = source.index(after: end)
+            }
+            while start < end, !isWordCharacter(source[start]) { start = source.index(after: start) }
+            while end > start, !isWordCharacter(source[source.index(before: end)]) { end = source.index(before: end) }
+            guard start < end else { continue }
+            if let last = snapped.last, last.upperBound >= start {
+                snapped[snapped.count - 1] = last.lowerBound..<max(last.upperBound, end)
+            } else {
+                snapped.append(start..<end)
+            }
+        }
+        return snapped
+    }
+
+    /// Where a snapped range stops growing: whitespace, and the dashes that glue two words together
+    /// without a space (an em or en dash), so "mercy\u{2014}indeed" never paints its neighbour. A
+    /// hyphen is NOT a boundary: "All-Knowing" is one word.
+    nonisolated private static func isWordBoundary(_ character: Character) -> Bool {
+        character.isWhitespace || character == "\u{2014}" || character == "\u{2013}" || character == "/"
+    }
+
+    /// A character that belongs to a word for painting purposes: it carries a letter or a digit, or an
+    /// Arabic mark (a standalone tashkeel cluster after its letter). Quotes, brackets, commas, and the
+    /// like are not, so they are trimmed off the ends of a snapped range.
+    nonisolated private static func isWordCharacter(_ character: Character) -> Bool {
+        character.unicodeScalars.contains { scalar in
+            CharacterSet.letters.contains(scalar)
+                || CharacterSet.decimalDigits.contains(scalar)
+                || scalar.isArabicMarkScalar
+        }
     }
 
     /// Convenience for callers without a cached fold (the mushaf page reader): folds `source` fresh, then

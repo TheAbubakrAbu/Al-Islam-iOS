@@ -282,194 +282,33 @@ struct QuranView: View {
             && getSurahAndAyah(from: trimmed).surah == nil
     }
 
-    // Ask (the on-device LLM): auto-runs for QUESTION-shaped queries, streaming an answer card above
-    // the AI results - grounded in the retrieved ayahs and cited when retrieval found any, an open
-    // general-knowledge answer (clearly labeled, quote-free) when it found none. Exists only on Apple
-    // Intelligence devices (`OnDeviceAsk.isAvailable`); elsewhere nothing renders.
-    @State private var askAnswer = ""
-    @State private var askIsStreaming = false
-    @State private var askRanForQuery = ""
-    /// A MANUAL ask where the model declined or errored. The tapped row must answer with SOMETHING -
-    /// silently tearing the card down left the prompt sitting there as if the tap never happened.
-    @State private var askNoAnswer = false
-    /// Whether the current answer was grounded in retrieved passages (drives the card's footer).
-    @State private var askGrounded = true
-    @State private var askTask: Task<Void, Never>?
+    // Ask AI: the on-device chat (`AskAIChatView`), opened from the ASK AI row above the results with
+    // the typed query as its first question. The chat runs its OWN retrieval over the Quran and the
+    // hadith library and keeps a conversation, so its answer never depends on what this screen's
+    // search happened to retrieve. Exists only on Apple Intelligence devices (`OnDeviceAsk.isAvailable`).
+    @State private var showAskAI = false
 
-    private func runAskIfNeeded(query: String) {
-        runAsk(query: query, manual: false)
-    }
-
-    /// Auto mode runs only for QUESTION-shaped queries; `manual` (the tapped "Ask AI" row) runs for
-    /// anything - the user explicitly asked, so the query IS the question.
-    private func runAsk(query: String, manual: Bool) {
-        askTask?.cancel()
-        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
-        // Any new run (or keystroke) clears a previous dead-end notice.
-        askNoAnswer = false
-        guard OnDeviceAsk.isAvailable, trimmed.count >= 3,
-              manual || OnDeviceAsk.looksLikeQuestion(trimmed) else {
-            if !askRanForQuery.isEmpty {
-                // Plain writes here and below: the Ask card is a List section, and animated section
-                // churn during typing is the collection-view assertion (see the SearchBar binding note).
-                askAnswer = ""; askIsStreaming = false; askRanForQuery = ""
-            }
-            return
-        }
-
-        // @MainActor explicitly: the local `addSource` helper below reads main-isolated state
-        // (`quranData`), and without the annotation the compiler treats the nested function as
-        // nonisolated even though the Task itself inherits the view's actor.
-        askTask = Task { @MainActor in
-            // Auto waits out the search debounces so the retrieval this answer is GROUNDED on has
-            // settled; a manual tap means the results are already on screen - go immediately.
-            try? await Task.sleep(nanoseconds: manual ? 100_000_000 : 900_000_000)
-            guard !Task.isCancelled else { return }
-
-            var sources: [OnDeviceAsk.Source] = []
-            var seen = Set<String>()
-            // Captured once: a nested func is nonisolated regardless of the Task's actor, so it
-            // cannot touch the main-isolated `quranData` property - but it can close over a value.
-            let data = quranData
-            func addSource(surah surahID: Int, ayah ayahID: Int) {
-                let reference = "\(surahID):\(ayahID)"
-                guard seen.insert(reference).inserted,
-                      let ayah = data.ayah(surah: surahID, ayah: ayahID) else { return }
-                sources.append(.init(reference: reference, text: ayah.textEnglishSaheeh))
-            }
-            // Semantic hits first, then keyword hits, then the "top" picks - every retrieval mode the
-            // page has gets a voice, up to the engine's 12-passage budget.
-            for hit in aiHits.prefix(6) { addSource(surah: hit.surah, ayah: hit.ayah) }
-            for hit in verseHits.prefix(6) { addSource(surah: hit.surah, ayah: hit.ayah) }
-            for hit in bestAyahHitsForCurrentQuery() where sources.count < 12 {
-                addSource(surah: hit.surah, ayah: hit.ayah)
-            }
-            // A "5:6"-style reference has no text hits, but it names its passage outright - asking
-            // about it grounds the answer on that exact ayah.
-            if sources.isEmpty {
-                let exact = getSurahAndAyah(from: trimmed)
-                if let surah = exact.surah, let ayah = exact.ayah {
-                    sources.append(.init(reference: "\(surah.id):\(ayah.id)", text: ayah.textEnglishSaheeh))
-                }
-            }
-            // Nothing retrieved is no longer a dead end: the ask still runs, in OPEN mode - a clearly
-            // labeled general-knowledge answer with no recreated quotes (the engine's open rules).
-
-            askGrounded = !sources.isEmpty
-            askAnswer = ""; askIsStreaming = true; askRanForQuery = trimmed
-            guard #available(iOS 26.0, *) else { return }
-            do {
-                for try await text in OnDeviceAsk.streamAnswer(question: trimmed, sources: sources) {
-                    guard !Task.isCancelled else { return }
-                    askAnswer = text
-                }
-                guard !Task.isCancelled else { return }
-                askIsStreaming = false
-            } catch {
-                // Declined or errored: the card goes away - keyword and AI results still stand. But a
-                // MANUAL ask still owes a response (see the empty-sources guard).
-                guard !Task.isCancelled else { return }
-                askAnswer = ""; askIsStreaming = false; askRanForQuery = ""
-                if manual { askNoAnswer = true }
-            }
-        }
-    }
-
-    /// "(46:15)"-style references parsed out of the streamed answer, resolved against the Quran and
-    /// deduped in citation order - the model names the verses, these rows OPEN them. Parsing the live
-    /// text keeps the rows in lockstep with whatever the answer actually cites.
-    private static let askCitationRegex = try! NSRegularExpression(pattern: #"\b(\d{1,3}):(\d{1,3})\b"#)
-
-    private var askCitedAyahs: [(surah: Surah, ayah: Ayah)] {
-        guard !askAnswer.isEmpty else { return [] }
-        let text = askAnswer as NSString
-        var seen = Set<Int>()
-        var cited: [(surah: Surah, ayah: Ayah)] = []
-        for match in Self.askCitationRegex.matches(in: askAnswer, range: NSRange(location: 0, length: text.length)) {
-            guard let surahID = Int(text.substring(with: match.range(at: 1))),
-                  let ayahID = Int(text.substring(with: match.range(at: 2))),
-                  seen.insert(surahID * 1000 + ayahID).inserted,
-                  let surah = quranData.surah(surahID),
-                  let ayah = quranData.ayah(surah: surahID, ayah: ayahID)
-            else { continue }
-            cited.append((surah, ayah))
-            if cited.count == 10 { break }
-        }
-        return cited
-    }
-
-    /// "ASK AI" with the sparkles glyph; the pill counts the answer's cited ayahs once they exist.
-    private func askAIHeader(citedCount: Int) -> some View {
+    /// "ASK AI" with the sparkles glyph.
+    private var askAIHeader: some View {
         HStack(spacing: 6) {
             Image(systemName: "sparkles")
-            
+
             Text("ASK AI")
 
             Spacer()
-
-            if citedCount > 0 {
-                Text(String(citedCount))
-                    .font(.caption.weight(.semibold))
-                    .monospacedDigit()
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 6)
-                    .conditionalGlassEffect()
-                    .padding(.vertical, -16)
-            }
         }
         .foregroundStyle(settings.accentColor.color)
     }
 
-    /// The grounded Ask experience as ONE section pinned ABOVE the surah results: the one-tap prompt
-    /// row before it runs, the streamed answer WITH its cited ayahs (real tappable rows) after - the
-    /// citations are the answer's receipts, so they live in the same section, not a separate one.
-    /// ALWAYS present while searching (even for "5:6" references and zero-result queries) - the ask is
-    /// an invitation, not a result.
+    /// The Ask AI entry as ONE section pinned ABOVE the surah results - ALWAYS present while searching
+    /// (even for "5:6" references and zero-result queries): the ask is an invitation, not a result.
     @ViewBuilder
     private func askAISection(context: SearchDisplayContext) -> some View {
-        if context.isSearching,
-           quranData.isVerseSearchReady,
-           OnDeviceAsk.isAvailable {
-            if askNoAnswer {
-                // The tapped ask found nothing to ground on (or the model declined): answer with a
-                // clear dead-end instead of silently restoring the prompt row.
-                Section(header: askAIHeader(citedCount: 0)) {
-                    askNoAnswerRow
-                }
-            } else if !askRanForQuery.isEmpty {
-                let cited = askCitedAyahs
-                Section(header: askAIHeader(citedCount: cited.count)) {
-                    AskAnswerCard(answer: askAnswer, isStreaming: askIsStreaming, grounded: askGrounded)
-
-                    ForEach(Array(cited.enumerated()), id: \.offset) { _, item in
-                        pageJuzAyahRow(item: item)
-                    }
-                }
-            } else {
-                Section(header: askAIHeader(citedCount: 0)) {
-                    askPromptRow
-                }
+        if context.isSearching, OnDeviceAsk.isAvailable {
+            Section(header: askAIHeader) {
+                askPromptRow
             }
         }
-    }
-
-    /// Shown when a manual ask dead-ends: the model declined or errored (retrieval no longer dead-ends,
-    /// it falls back to the open answer). Editing the query clears it (`runAsk` resets `askNoAnswer`).
-    private var askNoAnswerRow: some View {
-        HStack(spacing: 8) {
-            Image(systemName: "questionmark.circle")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-
-            Text("AI couldn't answer \u{201C}\(searchText.trimmingCharacters(in: .whitespacesAndNewlines))\u{201D} right now. Try different wording, or try again.")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-
-            Spacer(minLength: 0)
-        }
-        .padding(.vertical, 8)
-        .padding(.horizontal, 12)
-        .conditionalGlassEffect(clear: true, rectangle: true)
     }
 
     /// Debounced semantic query - runs alongside (never instead of) the keyword pipeline, so AI results
@@ -1162,6 +1001,14 @@ struct QuranView: View {
         // is chosen (`QuranPlayer.needsMinshawiFallbackNotice(for:)`), so playing an ayah never asks.
         .task {
             prewarmQuranDestinations()
+            #if os(iOS)
+            // The cross-language highlight's corpus lexicon (the semantic-hit and hadith lane), built
+            // before the first query instead of on the first result row.
+            Task {
+                await quranData.waitUntilCoreLoaded()
+                CrossLanguageWordHighlight.prewarmLexicon()
+            }
+            #endif
             #if DEBUG
             // Headless visual verification (no tap access on the dev machine): `-quranSearch <term>`
             // pushes the term through the real search pipeline once the verse index is ready.
@@ -1549,7 +1396,6 @@ struct QuranView: View {
                 handleAyahSearchChange(txt)
                 #if os(iOS)
                 runAISearch(query: txt)
-                runAskIfNeeded(query: txt)
                 #endif
             }
             #if os(iOS)
@@ -1634,6 +1480,11 @@ struct QuranView: View {
             NavigationView { SettingsQuranView(presentedAsSheet: true) }
                 .navigationViewStyle(.stack)
                 .smallMediumSheetPresentation()
+        }
+        .sheet(isPresented: $showAskAI) {
+            if #available(iOS 16.0, *) {
+                AskAIChatSheet(initialQuestion: searchText)
+            }
         }
         .sheet(isPresented: $showReciterPickerSheet) {
             NavigationView {
@@ -3784,8 +3635,8 @@ struct QuranView: View {
             }
         } else {
             #if os(iOS)
-            // (The Ask AI block - prompt row, streamed answer, cited ayahs - now renders in
-            // `askAISection`, hoisted ABOVE the surah results in `content`.)
+            // (The Ask AI row renders in `askAISection`, hoisted ABOVE the surah results in `content`;
+            // the answer itself lives in the chat sheet it opens.)
 
             // Both result kinds landed: ONE segmented switch decides which list fills the page - the
             // AI's ranked meaning matches or the exhaustive keyword lists - never both stacked. With
@@ -3926,12 +3777,12 @@ struct QuranView: View {
         }
     }
 
-    /// The one-tap Ask entry for non-question queries: press to run the grounded on-device answer for
-    /// exactly what's typed.
+    /// The one-tap Ask entry: press to open the Ask AI chat with exactly what's typed as its first
+    /// question (or to continue the conversation, if that question was already asked).
     private var askPromptRow: some View {
         Button {
             settings.hapticFeedback()
-            runAsk(query: searchText, manual: true)
+            showAskAI = true
         } label: {
             HStack(spacing: 8) {
                 Image(systemName: "sparkles")

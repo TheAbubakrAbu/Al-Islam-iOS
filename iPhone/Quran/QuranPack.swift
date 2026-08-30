@@ -81,6 +81,12 @@ struct QuranPackReader {
         return low | (high << 32)
     }
 
+    /// Steps over one length-prefixed string without decoding it.
+    mutating func skipString() {
+        let length = u32()
+        cursor = min(cursor + max(length, 0), count)
+    }
+
     mutating func string() -> String {
         let length = u32()
         guard length > 0, cursor + length <= count else {
@@ -486,8 +492,14 @@ final class QuranPack: @unchecked Sendable {
 // MARK: - qiraat.qpk
 
 /// The seven alternate readings. Which surahs a reading covers, and how many ayahs each has,
-/// are resident; the text of a reading is one block, decompressed only when that reading is
-/// actually displayed. Most users never open one.
+/// are resident; the text is decompressed only when a reading is actually displayed. Most users
+/// never open one.
+///
+/// The seven texts share ONE solid block (Scripts/reblock_packs.py): they are ~97% the same
+/// Quran with different marks, and only a compressor that sees them together can exploit that -
+/// 0.47 MB shipped against 1.4 MB as seven separate blocks. The eager section still records a
+/// block per reading; readings that share a block are stored back to back in eager order, and
+/// `allAyahs` walks past the ones ahead of the reading it was asked for.
 final class QiraatPack: @unchecked Sendable {
 
     struct Reading {
@@ -536,6 +548,17 @@ final class QiraatPack: @unchecked Sendable {
     func allAyahs(reading key: String) -> [(surah: Int, ayahs: [(id: Int, text: String)])]? {
         guard let reading = reading(key), let raw = container.block(reading.block) else { return nil }
         var r = QuranPackReader(bytes: raw)
+        // Readings sharing this block sit back to back in eager order: step over the earlier ones.
+        for earlier in readings {
+            if earlier.key == key { break }
+            guard earlier.block == reading.block else { continue }
+            for sid in earlier.surahOrder {
+                for _ in 0..<(earlier.ayahCounts[sid] ?? 0) {
+                    _ = r.u32()
+                    r.skipString()
+                }
+            }
+        }
         var out: [(surah: Int, ayahs: [(id: Int, text: String)])] = []
         out.reserveCapacity(reading.surahOrder.count)
         for sid in reading.surahOrder {
@@ -554,9 +577,10 @@ final class QiraatPack: @unchecked Sendable {
 
 // MARK: - surahinfos.qpk
 
-/// "About this surah" prose. One block per surah, because it is opened for exactly one surah
-/// at a time and the prose is large - a shared block would decompress 113 surahs nobody asked
-/// for. Source NAMES are resident so a picker can be built without touching any prose.
+/// "About this surah" prose. Source NAMES are resident so a picker can be built without touching
+/// any prose; the prose itself sits in a couple of ~1 MB blocks (Scripts/reblock_packs.py merged
+/// the original one-block-per-surah layout, which cost 0.24 MB more to ship). Entries that share a
+/// block are stored back to back in eager order, and `sources(surah:)` walks past the earlier ones.
 final class SurahInfoPack: @unchecked Sendable {
 
     struct Entry {
@@ -590,12 +614,17 @@ final class SurahInfoPack: @unchecked Sendable {
         entries.first { $0.id == surah }?.sourceNames ?? []
     }
 
-    /// The prose for one surah, as `(name, contents)` pairs. Decompresses that surah's block only.
+    /// The prose for one surah, as `(name, contents)` pairs. Decompresses that surah's block only
+    /// (cached by the container, so the surahs sharing it come for free afterwards).
     func sources(surah: Int) -> [(name: String, contents: String)] {
-        guard let entry = entries.first(where: { $0.id == surah }),
-              let raw = container.block(entry.block) else { return [] }
+        guard let index = entries.firstIndex(where: { $0.id == surah }),
+              let raw = container.block(entries[index].block) else { return [] }
         var r = QuranPackReader(bytes: raw)
-        return entry.sourceNames.map { ($0, r.string()) }
+        // Entries sharing this block sit back to back in eager order: step over the earlier ones.
+        for earlier in entries[..<index] where earlier.block == entries[index].block {
+            for _ in earlier.sourceNames { r.skipString() }
+        }
+        return entries[index].sourceNames.map { ($0, r.string()) }
     }
 
     func purge() { container.purge() }

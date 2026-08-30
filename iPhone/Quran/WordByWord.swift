@@ -16,7 +16,7 @@ import Compression
 
 // MARK: - Store
 
-/// Per-word English glosses for all 6236 ayahs, from `WordByWord.json.deflate`.
+/// Per-word English glosses for all 6236 ayahs, from `WordByWord.json.xz`.
 ///
 /// THE INVARIANT THIS RESTS ON: the pack stores one gloss per whitespace-separated token of THIS APP's
 /// Hafs text, in the app's own token order - the alignment against the upstream corpus (whose tokenizing
@@ -103,9 +103,9 @@ final class WordByWordStore: @unchecked Sendable {
     }
 
     private static func packURL() -> URL? {
-        Bundle.main.url(forResource: "WordByWord", withExtension: "json.deflate", subdirectory: "Data/Quran")
-            ?? Bundle.main.url(forResource: "WordByWord", withExtension: "json.deflate", subdirectory: "Quran")
-            ?? Bundle.main.url(forResource: "WordByWord", withExtension: "json.deflate")
+        Bundle.main.url(forResource: "WordByWord", withExtension: "json.xz", subdirectory: "Data/Quran")
+            ?? Bundle.main.url(forResource: "WordByWord", withExtension: "json.xz", subdirectory: "Quran")
+            ?? Bundle.main.url(forResource: "WordByWord", withExtension: "json.xz")
     }
 
     private static func load() -> [Int: [[String]]]? {
@@ -123,20 +123,9 @@ final class WordByWordStore: @unchecked Sendable {
         return out.isEmpty ? nil : out
     }
 
-    /// Raw-deflate inflate - no zlib header, matching the Qiraah/Tajweed payloads and what
-    /// `Scripts/build_wordbyword.py` writes.
+    /// The payload is an xz stream (what `Scripts/build_wordbyword.py` writes); `COMPRESSION_LZMA` reads that container directly.
     private static func inflate(_ data: Data) -> Data? {
-        let capacity = max(data.count * 12, 1 << 21)
-        var out = Data()
-        let buffer = UnsafeMutablePointer<UInt8>.allocate(capacity: capacity)
-        defer { buffer.deallocate() }
-        let written = data.withUnsafeBytes { (rawBuffer: UnsafeRawBufferPointer) -> Int in
-            guard let base = rawBuffer.bindMemory(to: UInt8.self).baseAddress else { return 0 }
-            return compression_decode_buffer(buffer, capacity, base, data.count, nil, COMPRESSION_ZLIB)
-        }
-        guard written > 0 else { return nil }
-        out.append(buffer, count: written)
-        return out
+        SolidPack.xzDecompress(data)
     }
 }
 
@@ -395,8 +384,44 @@ enum CrossLanguageWordHighlight {
                 spans.append(trimmedWordSpan(tokenRange, in: ns))
             }
         }
+        spans = bridgingGlueWords(spans, in: ns)
         spansCache.setObject(SpansEntry(spans), forKey: key)
         return spans
+    }
+
+    /// Two lit words with nothing but glue between them become ONE span: "establish [the] prayer",
+    /// "mercy [of his] Lord". The glosses name content words, so a phrase query landed as scattered
+    /// single words with unlit articles and prepositions punched through it - a highlight that read
+    /// as chopped. A gap of at most two tokens, every one a stopword or a one-to-two-letter word, is
+    /// bridged (the span then runs from the first word's start to the last word's end); a gap
+    /// carrying any real word ("prayer and give zakah") stays two spans, because that middle word
+    /// was never matched.
+    private static func bridgingGlueWords(_ spans: [NSRange], in ns: NSString) -> [NSRange] {
+        guard spans.count >= 2 else { return spans }
+        var bridged: [NSRange] = [spans[0]]
+        for span in spans.dropFirst() {
+            let previous = bridged[bridged.count - 1]
+            let gapStart = previous.location + previous.length
+            let gapLength = span.location - gapStart
+            guard gapLength > 0 else {
+                bridged[bridged.count - 1] = NSUnionRange(previous, span)
+                continue
+            }
+            let gap = ns.substring(with: NSRange(location: gapStart, length: gapLength))
+            let gapWords = gap.lowercased()
+                .components(separatedBy: CharacterSet.alphanumerics.inverted)
+                .filter { !$0.isEmpty }
+            // A sentence boundary in the gap is never glue: "prayer. And patience" stays two spans.
+            let crossesClause = gap.contains { ".!?;:".contains($0) }
+            let isGlue = !crossesClause && gapWords.count <= 2
+                && gapWords.allSatisfy { $0.count <= 2 || stopwords.contains($0) }
+            if isGlue {
+                bridged[bridged.count - 1] = NSUnionRange(previous, span)
+            } else {
+                bridged.append(span)
+            }
+        }
+        return bridged
     }
 
     // MARK: Quran-derived lexicon (texts with NO alignment data - hadith)
@@ -427,6 +452,18 @@ enum CrossLanguageWordHighlight {
             DispatchQueue.global(qos: .utility).async { buildLexicon(surahs: surahs) }
         }
         return nil
+    }
+
+    /// Start the lexicon build now (off-main, once), so the first hadith rows a query produces find it
+    /// ready. Left to its lazy trigger, the build began on the FIRST ROW'S render and finished after
+    /// that row was already on screen: the row's English line stayed unlit (the row never re-renders
+    /// for the same query), which read as the cross-language highlight silently missing. The tabs call
+    /// this once the Quran text is loaded; an early call before that is harmless (the build discards
+    /// itself under `minimumLexiconEntries` and re-arms).
+    static func prewarmLexicon() {
+        let surahs = QuranData.shared.quran
+        guard !surahs.isEmpty else { return }
+        _ = lexiconIfReady(quranSnapshot: surahs)
     }
 
     /// The floor a real build clears by a wide margin (the shipping corpus yields ~17.8k keys).

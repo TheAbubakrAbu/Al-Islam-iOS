@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build Resources/Data/Quran/SimilarAyahs.json.deflate - the offline "Similar
+"""Build Resources/Data/Quran/SimilarAyahs.json.xz - the offline "Similar
 Ayahs" pack behind the reader's related-verses sheet.
 
 SOURCES (both bundled in the sibling Tilawa app, ported with permission)
@@ -22,7 +22,7 @@ order; the Swift store never ranks, merges, or scores.
 
 OUTPUT FORMAT
 -------------
-Raw-deflate (no zlib header, like the other Data/Quran payloads) over:
+xz (like the other Data/Quran payloads) over:
 
     { "2:255": [ [42, 4, "<shared phrase>", 1],          <- verified row
                  [20, 110, "<shared phrase>", 0, ["Shared phrase","Root HwT"]],
@@ -44,11 +44,21 @@ from __future__ import annotations
 import json
 import pathlib
 import sys
-import zlib
+import lzma
+
+
+def xz_compress(body: bytes) -> bytes:
+    """xz stream, preset 9e, dictionary no larger than the payload needs (the app decodes it with
+    Apple's Compression framework, COMPRESSION_LZMA, which reads the xz container directly)."""
+    dict_size = 1 << 16
+    while dict_size < len(body) and dict_size < (1 << 26):
+        dict_size <<= 1
+    filters = [{"id": lzma.FILTER_LZMA2, "preset": 9 | lzma.PRESET_EXTREME, "dict_size": dict_size}]
+    return lzma.compress(body, format=lzma.FORMAT_XZ, check=lzma.CHECK_CRC32, filters=filters)
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 QURAN_JSON = ROOT / "Resources" / "JSONs-Deprecated" / "Quran.json"
-OUT = ROOT / "Resources" / "Data" / "Quran" / "SimilarAyahs.json.deflate"
+OUT = ROOT / "Resources" / "Data" / "Quran" / "SimilarAyahs.json.xz"
 DEFAULT_TILAWA = ROOT.parent / "Tilawa"
 
 MAX_MATCHES = 12
@@ -144,12 +154,11 @@ def main() -> None:
         raise SystemExit(1)
 
     body = json.dumps(packed, ensure_ascii=False, separators=(",", ":"), sort_keys=True).encode("utf-8")
-    compressor = zlib.compressobj(9, zlib.DEFLATED, -15)
-    blob = compressor.compress(body) + compressor.flush()
+    blob = xz_compress(body)
     OUT.write_bytes(blob)
 
     print(f"{len(packed)} ayahs with matches ({verified_rows} verified rows, {generated_rows} generated rows)")
-    print(f"{OUT.name}: {len(body):,} raw -> {len(blob):,} deflated")
+    print(f"{OUT.name}: {len(body):,} raw -> {len(blob):,} xz")
 
 
 if __name__ == "__main__":

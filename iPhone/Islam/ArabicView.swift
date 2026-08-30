@@ -193,94 +193,13 @@ struct ArabicView: View {
         }
     }
 
-    // Ask (the on-device LLM, grounded RAG): question-shaped queries stream an answer card above
-    // the matches, drawn strictly from the retrieved letters - the hadith book search's exact feature.
-    @State private var askAnswer = ""
-    @State private var askIsStreaming = false
-    @State private var askRanForQuery = ""
-    /// A MANUAL ask that found nothing to ground on or errored - the tapped row must answer with
-    /// SOMETHING instead of silently restoring the prompt.
-    @State private var askNoAnswer = false
-    /// Whether the current answer was grounded in retrieved items (drives the card's footer).
-    @State private var askGrounded = true
+    // Ask AI: the on-device chat (`AskAIChatView`), opened from the ASK AI row above the matches
+    // with the typed query as its first question - the Quran search's rule. Exists only on Apple
+    // Intelligence devices (`OnDeviceAsk.isAvailable`).
+    @State private var showAskAI = false
     /// The AI-vs-keyword segmented switch, shown only when BOTH result kinds exist. Reset to the
     /// AI list on every new query.
     @State private var showKeywordResults = false
-    @State private var askTask: Task<Void, Never>?
-    /// The letters the answer was grounded on, kept so the answer's citations can resolve back to
-    /// REAL rows - the hadith search's `hadithAskSourceHits`, for letters.
-    @State private var askSourceLetters: [LetterData] = []
-
-    /// The letters the streamed answer actually cited, in citation order - matched against the exact
-    /// source references the model was given (the transliteration, e.g. "Alif"), so every row is a
-    /// real letter. Rendered through `letterCollection`, so they get the standard row (full context
-    /// menu + favorite swipes) or the standard grid tile, whichever mode the screen is in.
-    private var askCitedLetters: [LetterData] {
-        guard !askAnswer.isEmpty else { return [] }
-        let answer = askAnswer.lowercased()
-        var cited: [(position: Int, letter: LetterData)] = []
-        var seen = Set<Int>()
-        for letter in askSourceLetters where seen.insert(letter.id).inserted {
-            guard let range = answer.range(of: letter.transliteration.lowercased()) else { continue }
-            cited.append((answer.distance(from: answer.startIndex, to: range.lowerBound), letter))
-        }
-        return cited.sorted { $0.position < $1.position }.prefix(10).map(\.letter)
-    }
-
-    /// Auto mode runs only for QUESTION-shaped queries; `manual` (the tapped "Ask AI" row) runs
-    /// for anything - the user explicitly asked.
-    private func runAsk(query: String, manual: Bool) {
-        askTask?.cancel()
-        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
-        // Any new run (or keystroke) clears a previous dead-end notice. Plain writes throughout:
-        // the Ask card is a List section, and animated section churn racing the async result
-        // applies is the collection-view assertion crash the Quran search hit.
-        askNoAnswer = false
-        guard OnDeviceAsk.isAvailable, trimmed.count >= 3,
-              manual || OnDeviceAsk.looksLikeQuestion(trimmed) else {
-            if !askRanForQuery.isEmpty {
-                askAnswer = ""; askIsStreaming = false; askRanForQuery = ""
-            }
-            return
-        }
-
-        askTask = Task {
-            // Auto waits out the search debounce; a manual tap goes immediately.
-            try? await Task.sleep(nanoseconds: manual ? 100_000_000 : 900_000_000)
-            guard !Task.isCancelled else { return }
-
-            var sources: [OnDeviceAsk.Source] = []
-            var sourceLetters: [LetterData] = []
-            var seen = Set<Int>()
-            for letter in aiHits.prefix(6) where seen.insert(letter.id).inserted {
-                sources.append(.init(reference: letter.transliteration, text: Self.letterEnglishText(letter)))
-                sourceLetters.append(letter)
-            }
-            for letter in (filteredStandardForMode + filteredOther).prefix(6) where seen.insert(letter.id).inserted {
-                sources.append(.init(reference: letter.transliteration, text: Self.letterEnglishText(letter)))
-                sourceLetters.append(letter)
-            }
-            // Nothing retrieved is no longer a dead end: the ask still runs, in OPEN mode - a
-            // clearly labeled general-knowledge answer with no recreated quotes.
-            askGrounded = !sources.isEmpty
-
-            askAnswer = ""; askIsStreaming = true; askRanForQuery = trimmed
-            askSourceLetters = sourceLetters
-            guard #available(iOS 26.0, *) else { return }
-            do {
-                for try await text in OnDeviceAsk.streamAnswer(question: trimmed, sources: sources) {
-                    guard !Task.isCancelled else { return }
-                    askAnswer = text
-                }
-                guard !Task.isCancelled else { return }
-                askIsStreaming = false
-            } catch {
-                guard !Task.isCancelled else { return }
-                askAnswer = ""; askIsStreaming = false; askRanForQuery = ""; askSourceLetters = []
-                if manual { askNoAnswer = true }
-            }
-        }
-    }
 
     /// "ASK AI" with the sparkles glyph, accent-tinted - the Quran search's `askAIHeader`.
     private var askAIHeader: some View {
@@ -293,29 +212,10 @@ struct ArabicView: View {
         .foregroundStyle(settings.accentColor.color)
     }
 
-    /// Shown when a manual ask dead-ends: nothing retrieved matched the query, so there was
-    /// nothing to answer from. Editing the query clears it (`runAsk` resets the flag on every run).
-    private var askNoAnswerRow: some View {
-        HStack(spacing: 8) {
-            Image(systemName: "questionmark.circle")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-
-            Text("AI couldn't answer \u{201C}\(searchText.trimmingCharacters(in: .whitespacesAndNewlines))\u{201D} right now. Try different wording, or try again.")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-
-            Spacer(minLength: 0)
-        }
-        .padding(.vertical, 8)
-        .padding(.horizontal, 12)
-        .conditionalGlassEffect(clear: true, rectangle: true)
-    }
-
     private var askPromptRow: some View {
         Button {
             settings.hapticFeedback()
-            runAsk(query: searchText, manual: true)
+            showAskAI = true
         } label: {
             HStack(spacing: 8) {
                 Image(systemName: "sparkles")
@@ -339,25 +239,11 @@ struct ArabicView: View {
         .buttonStyle(.plain)
     }
 
-    /// The ASK AI section: the dead-end notice, the streaming answer card, or the one-tap prompt -
-    /// the hadith book search's exact grammar. The prompt row shows only once there are results
-    /// to ground an answer on.
+    /// The ASK AI section: the one-tap row that opens the chat with the query as its first question.
     @ViewBuilder
     private func askAISection(hasResults: Bool) -> some View {
         if OnDeviceAsk.isAvailable {
-            if askNoAnswer {
-                Section(header: askAIHeader) { askNoAnswerRow }
-            } else if !askRanForQuery.isEmpty {
-                Section(header: askAIHeader) {
-                    AskAnswerCard(answer: askAnswer, isStreaming: askIsStreaming, grounded: askGrounded)
-
-                    // The answer's receipts: the letters it actually cited, as the STANDARD letter
-                    // rows/tiles - same context menu and favorite swipes as everywhere else.
-                    letterCollection(askCitedLetters)
-                }
-            } else {
-                Section(header: askAIHeader) { askPromptRow }
-            }
+            Section(header: askAIHeader) { askPromptRow }
         }
     }
 
@@ -508,11 +394,14 @@ struct ArabicView: View {
         }
         #if os(iOS)
         .onChange(of: searchText) { text in
-            // A new query starts back on the AI list, with any dead-end ask notice cleared.
+            // A new query starts back on the AI list.
             showKeywordResults = false
-            askNoAnswer = false
             runAISearch(query: text)
-            runAsk(query: text, manual: false)
+        }
+        .sheet(isPresented: $showAskAI) {
+            if #available(iOS 16.0, *) {
+                AskAIChatSheet(initialQuestion: searchText)
+            }
         }
         // The one-time vector build finishing mid-query: surface the results without another keystroke.
         .onChange(of: semanticEngine.readyCorpora) { ready in

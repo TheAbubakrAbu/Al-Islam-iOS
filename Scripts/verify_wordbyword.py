@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Gate for the shipped WordByWord.json.deflate. Must pass before the pack ships.
+"""Gate for the shipped WordByWord.json.xz. Must pass before the pack ships.
 
 Checks the pack ON DISK (not the builder's in-memory result) against the app's own
 Quran text, so a stale or partially-rewritten pack cannot slip through:
 
-  1. it inflates as raw deflate (what the Swift reader does);
+  1. it decodes as xz (what the Swift reader does);
   2. it covers all 114 surahs with the right ayah counts;
   3. every ayah's gloss array is EXACTLY as long as that ayah's whitespace token
      count - the invariant the reader indexes on. A short array would silently
@@ -21,10 +21,10 @@ import json
 import pathlib
 import re
 import sys
-import zlib
+import lzma
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-PACK = ROOT / "Resources" / "Data" / "Quran" / "WordByWord.json.deflate"
+PACK = ROOT / "Resources" / "Data" / "Quran" / "WordByWord.json.xz"
 QURAN_JSON = ROOT / "Resources" / "JSONs-Deprecated" / "Quran.json"
 
 _spec = importlib.util.spec_from_file_location("build_wordbyword", ROOT / "Scripts" / "build_wordbyword.py")
@@ -38,8 +38,8 @@ def main() -> None:
 
     blob = PACK.read_bytes()
     try:
-        raw = zlib.decompress(blob, -15)
-    except zlib.error as error:
+        raw = lzma.decompress(blob)
+    except lzma.LZMAError as error:
         raise SystemExit(f"pack is not a raw deflate stream: {error}")
 
     packed = json.loads(raw.decode("utf-8"))

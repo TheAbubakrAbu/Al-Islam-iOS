@@ -4133,7 +4133,8 @@ enum MushafPageRenderCache {
         let fingerprint = ((Bundle.main.urls(forResourcesWithExtension: "ttf", subdirectory: nil) ?? [])
                            + (Bundle.main.urls(forResourcesWithExtension: "qpk", subdirectory: nil) ?? [])
                            + (Bundle.main.urls(forResourcesWithExtension: "solidpack", subdirectory: nil) ?? [])
-                           + (Bundle.main.urls(forResourcesWithExtension: "deflate", subdirectory: nil) ?? []))
+                           + (Bundle.main.urls(forResourcesWithExtension: "deflate", subdirectory: nil) ?? [])
+                           + (Bundle.main.urls(forResourcesWithExtension: "xz", subdirectory: nil) ?? []))
             .sorted { $0.lastPathComponent < $1.lastPathComponent }
             .compactMap { url -> String? in
                 guard let size = (try? fm.attributesOfItem(atPath: url.path))?[.size] as? NSNumber else { return nil }

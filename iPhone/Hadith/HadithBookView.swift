@@ -109,102 +109,13 @@ struct HadithBookView: View {
         prepareBookSemanticCorpus(semanticEngine, data: data, corpusID: semanticCorpusID)
     }
 
-    // Ask (the on-device LLM, grounded RAG): question-shaped queries stream an answer card above the
-    // matches, drawn strictly from THIS book's retrieved hadiths - the Quran search's exact feature.
-    @State private var askAnswer = ""
-    @State private var askIsStreaming = false
-    @State private var askRanForQuery = ""
-    /// A MANUAL ask that found nothing to ground on or errored - the tapped row must answer with
-    /// SOMETHING instead of silently restoring the prompt (the Quran search's `askNoAnswer`).
-    @State private var askNoAnswer = false
-    /// Whether the current answer was grounded in retrieved hadiths (drives the card's footer).
-    @State private var askGrounded = true
+    // Ask AI: the on-device chat (`AskAIChatView`), opened from the ASK AI row above the matches
+    // with the typed query as its first question - the Quran search's rule. Exists only on Apple
+    // Intelligence devices (`OnDeviceAsk.isAvailable`).
+    @State private var showAskAI = false
     /// The AI-vs-keyword segmented switch, shown only when BOTH result kinds exist (the Quran search's
     /// `showKeywordResults`). Reset to the AI list on every new query.
     @State private var showBookKeywordResults = false
-    @State private var askTask: Task<Void, Never>?
-    /// The hadiths the answer was grounded on, kept so the answer's citations can resolve back to
-    /// REAL rows - the global hadith search's `hadithAskSourceHits`, for this book.
-    @State private var askSourceHadiths: [HadithBookData.Hadith] = []
-
-    /// The hadiths the streamed answer actually cited, in citation order - matched against the exact
-    /// source references the model was given ("Sahih al-Bukhari 6114"). The digit-boundary check
-    /// keeps "…6114" from also matching a claimed "611".
-    private var askCitedHadiths: [HadithBookData.Hadith] {
-        guard !askAnswer.isEmpty else { return [] }
-        let answer = askAnswer.lowercased()
-        var cited: [(position: Int, hadith: HadithBookData.Hadith)] = []
-        for hadith in askSourceHadiths {
-            let reference = "\(book.englishTitle) \(hadith.displayNumber)".lowercased()
-            guard let range = answer.range(of: reference) else { continue }
-            if range.upperBound < answer.endIndex, answer[range.upperBound].isNumber { continue }
-            cited.append((answer.distance(from: answer.startIndex, to: range.lowerBound), hadith))
-        }
-        return cited.sorted { $0.position < $1.position }.prefix(10).map(\.hadith)
-    }
-
-    private func runAskIfNeeded(query: String, data: HadithBookData?) {
-        runAsk(query: query, data: data, manual: false)
-    }
-
-    /// Auto mode runs only for QUESTION-shaped queries; `manual` (the tapped "Ask AI" row) runs for
-    /// anything - the user explicitly asked.
-    private func runAsk(query: String, data: HadithBookData?, manual: Bool) {
-        askTask?.cancel()
-        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
-        // Any new run (or keystroke) clears a previous dead-end notice. Plain writes throughout: the
-        // Ask card is a List section, and animated section churn racing the async result applies is
-        // the collection-view assertion crash the Quran search hit.
-        askNoAnswer = false
-        guard OnDeviceAsk.isAvailable, trimmed.count >= 3, data != nil,
-              manual || OnDeviceAsk.looksLikeQuestion(trimmed) else {
-            if !askRanForQuery.isEmpty {
-                askAnswer = ""; askIsStreaming = false; askRanForQuery = ""
-            }
-            return
-        }
-
-        askTask = Task {
-            // Auto waits out the search debounces; a manual tap goes immediately.
-            try? await Task.sleep(nanoseconds: manual ? 100_000_000 : 900_000_000)
-            guard !Task.isCancelled else { return }
-
-            var sources: [OnDeviceAsk.Source] = []
-            var sourceHadiths: [HadithBookData.Hadith] = []
-            var seen = Set<Int>()
-            for hadith in aiHits.prefix(6) where seen.insert(hadith.idInBook).inserted {
-                sources.append(.init(reference: "\(book.englishTitle) \(hadith.displayNumber)",
-                                     text: hadith.english.text.isEmpty ? hadith.english.narrator : hadith.english.text))
-                sourceHadiths.append(hadith)
-            }
-            // From the already-settled STATE (the 200ms scan finishes well inside this 900ms wait),
-            // not the synchronous full-book scan - Ask's auto path is not a user gesture.
-            for hadith in inBookMatches.shown.prefix(6) where seen.insert(hadith.idInBook).inserted {
-                sources.append(.init(reference: "\(book.englishTitle) \(hadith.displayNumber)",
-                                     text: hadith.english.text.isEmpty ? hadith.english.narrator : hadith.english.text))
-                sourceHadiths.append(hadith)
-            }
-            // Nothing retrieved is no longer a dead end: the ask still runs, in OPEN mode - a clearly
-            // labeled general-knowledge answer with no recreated quotes (the engine's open rules).
-
-            askGrounded = !sources.isEmpty
-            askAnswer = ""; askIsStreaming = true; askRanForQuery = trimmed
-            askSourceHadiths = sourceHadiths
-            guard #available(iOS 26.0, *) else { return }
-            do {
-                for try await text in OnDeviceAsk.streamAnswer(question: trimmed, sources: sources) {
-                    guard !Task.isCancelled else { return }
-                    askAnswer = text
-                }
-                guard !Task.isCancelled else { return }
-                askIsStreaming = false
-            } catch {
-                guard !Task.isCancelled else { return }
-                askAnswer = ""; askIsStreaming = false; askRanForQuery = ""; askSourceHadiths = []
-                if manual { askNoAnswer = true }
-            }
-        }
-    }
 
     private func runAISearch(query: String, data: HadithBookData?) {
         aiSearchTask?.cancel()
@@ -542,6 +453,11 @@ struct HadithBookView: View {
             SettingsHadithView()
                 .smallMediumSheetPresentation()
         }
+        .sheet(isPresented: $showAskAI) {
+            if #available(iOS 16.0, *) {
+                AskAIChatSheet(initialQuestion: searchText)
+            }
+        }
     }
 
     private func loadedBody(_ data: HadithBookData) -> some View {
@@ -617,57 +533,35 @@ struct HadithBookView: View {
                 // While searching: chapter matches first, then hadith matches - each page-sized with
                 // load-more controls, the Quran search's way.
                 if isSearchActive {
-                    // Question-shaped queries stream a grounded on-device answer automatically; other
-                    // queries get a one-tap "Ask AI" row - the Quran search's exact grammar, under the
-                    // same accent ASK AI header. ALWAYS present while searching, results or none: with
-                    // nothing retrieved the ask answers in the engine's open mode instead.
+                    // The Ask AI row - ALWAYS present while searching, results or none - under the
+                    // same accent ASK AI header as the Quran search: it opens the chat with this query
+                    // as its first question.
                     if OnDeviceAsk.isAvailable {
-                        if askNoAnswer {
-                            Section(header: askAIHeader) {
-                                askNoAnswerRow
-                            }
-                        } else if !askRanForQuery.isEmpty {
-                            Section(header: askAIHeader) {
-                                AskAnswerCard(answer: askAnswer, isStreaming: askIsStreaming, grounded: askGrounded)
+                        Section(header: askAIHeader) {
+                            Button {
+                                settings.hapticFeedback()
+                                showAskAI = true
+                            } label: {
+                                HStack(spacing: 8) {
+                                    Image(systemName: "sparkles")
+                                        .font(.caption)
 
-                                // The answer's receipts: the hadiths it actually cited, as standard
-                                // rows (full context menu) landing in their chapter - the global
-                                // hadith search's exact grammar.
-                                ForEach(askCitedHadiths) { hadith in
-                                    if let chapter = data.chapters.first(where: { $0.id == hadith.chapterId }) {
-                                        chapterLink(chapter, data: data, scrollToHadithId: hadith.idInBook) {
-                                            HadithRow(book: book, hadith: hadith, searchText: searchText, compact: true).equatable()
-                                        }
-                                    }
+                                    Text("Ask AI about \u{201C}\(searchText.trimmingCharacters(in: .whitespacesAndNewlines))\u{201D}")
+                                        .font(.caption.weight(.semibold))
+
+                                    Spacer()
+
+                                    Image(systemName: "chevron.right")
+                                        .font(.caption2.weight(.semibold))
+                                        .foregroundStyle(.secondary)
                                 }
+                                .foregroundColor(settings.accentColor.color)
+                                .padding(.vertical, 8)
+                                .padding(.horizontal, 12)
+                                .conditionalGlassEffect(clear: true, rectangle: true)
+                                .contentShape(Rectangle())
                             }
-                        } else {
-                            Section(header: askAIHeader) {
-                                Button {
-                                    settings.hapticFeedback()
-                                    runAsk(query: searchText, data: data, manual: true)
-                                } label: {
-                                    HStack(spacing: 8) {
-                                        Image(systemName: "sparkles")
-                                            .font(.caption)
-
-                                        Text("Ask AI about \u{201C}\(searchText.trimmingCharacters(in: .whitespacesAndNewlines))\u{201D}")
-                                            .font(.caption.weight(.semibold))
-
-                                        Spacer()
-
-                                        Image(systemName: "chevron.right")
-                                            .font(.caption2.weight(.semibold))
-                                            .foregroundStyle(.secondary)
-                                    }
-                                    .foregroundColor(settings.accentColor.color)
-                                    .padding(.vertical, 8)
-                                    .padding(.horizontal, 12)
-                                    .conditionalGlassEffect(clear: true, rectangle: true)
-                                    .contentShape(Rectangle())
-                                }
-                                .buttonStyle(.plain)
-                            }
+                            .buttonStyle(.plain)
                         }
                     }
 
@@ -793,15 +687,12 @@ struct HadithBookView: View {
             }
         }
         .onChange(of: searchText) { text in
-            // A new query starts back at the first page of matches, on the AI list, with any
-            // dead-end ask notice cleared.
+            // A new query starts back at the first page of matches, on the AI list.
             chapterMatchLimit = 5
             hadithMatchLimit = 5
             showBookKeywordResults = false
-            askNoAnswer = false
             runInBookSearch(data)
             runAISearch(query: text, data: data)
-            runAskIfNeeded(query: text, data: data)
         }
         // Load-more bumps the limit; re-run the (debounced, off-main) scan for the bigger page.
         .onChange(of: hadithMatchLimit) { _ in
@@ -942,25 +833,6 @@ struct HadithBookView: View {
             Spacer()
         }
         .foregroundStyle(settings.accentColor.color)
-    }
-
-    /// Shown when a manual ask dead-ends: nothing retrieved matched the query, so there was nothing to
-    /// answer from. Editing the query clears it (`runAsk` resets the flag on every run).
-    private var askNoAnswerRow: some View {
-        HStack(spacing: 8) {
-            Image(systemName: "questionmark.circle")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-
-            Text("AI couldn't answer \u{201C}\(searchText.trimmingCharacters(in: .whitespacesAndNewlines))\u{201D} right now. Try different wording, or try again.")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-
-            Spacer(minLength: 0)
-        }
-        .padding(.vertical, 8)
-        .padding(.horizontal, 12)
-        .conditionalGlassEffect(clear: true, rectangle: true)
     }
 
     /// The AI (semantic) matches for the live query, shown automatically: build progress the first time,

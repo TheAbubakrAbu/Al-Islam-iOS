@@ -3941,6 +3941,9 @@ final class QuranData: ObservableObject {
             if loadTask == nil {
                 return
             }
+            // A cancelled caller must leave: `Task.sleep` throws at once after cancellation, and the
+            // swallowed throw turned this into a hot spin until the core finished loading.
+            if Task.isCancelled { return }
             try? await Task.sleep(nanoseconds: 25_000_000)
         }
     }

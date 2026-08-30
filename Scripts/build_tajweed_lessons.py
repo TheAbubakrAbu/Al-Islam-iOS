@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build Resources/Data/Quran/TajweedLessons.json.deflate - the structured tajweed
+"""Build Resources/Data/Quran/TajweedLessons.json.xz - the structured tajweed
 course behind Islam tab -> Tajweed -> Structured Lessons.
 
 SOURCE
@@ -20,7 +20,7 @@ VALIDATION (build fails, writing nothing, if violated)
 * every lesson has an id, English title, and at least one body paragraph;
 * lesson ids are unique across chapters.
 
-OUTPUT: raw deflate over {"chapters": [...]} in the source's own order, fields
+OUTPUT: xz over {"chapters": [...]} in the source's own order, fields
         exactly as authored (titleEn/titleAr/color/summary/body/examples/
         drills/mushafCard; narrationUrl dropped - no recordings exist).
 
@@ -33,11 +33,21 @@ import json
 import pathlib
 import subprocess
 import sys
-import zlib
+import lzma
+
+
+def xz_compress(body: bytes) -> bytes:
+    """xz stream, preset 9e, dictionary no larger than the payload needs (the app decodes it with
+    Apple's Compression framework, COMPRESSION_LZMA, which reads the xz container directly)."""
+    dict_size = 1 << 16
+    while dict_size < len(body) and dict_size < (1 << 26):
+        dict_size <<= 1
+    filters = [{"id": lzma.FILTER_LZMA2, "preset": 9 | lzma.PRESET_EXTREME, "dict_size": dict_size}]
+    return lzma.compress(body, format=lzma.FORMAT_XZ, check=lzma.CHECK_CRC32, filters=filters)
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 QURAN_JSON = ROOT / "Resources" / "JSONs-Deprecated" / "Quran.json"
-OUT = ROOT / "Resources" / "Data" / "Quran" / "TajweedLessons.json.deflate"
+OUT = ROOT / "Resources" / "Data" / "Quran" / "TajweedLessons.json.xz"
 DEFAULT_TILAWA = ROOT.parent / "Tilawa"
 
 
@@ -101,12 +111,11 @@ def main() -> None:
 
     body = json.dumps({"chapters": chapters}, ensure_ascii=False,
                       separators=(",", ":"), sort_keys=True).encode("utf-8")
-    compressor = zlib.compressobj(9, zlib.DEFLATED, -15)
-    blob = compressor.compress(body) + compressor.flush()
+    blob = xz_compress(body)
     OUT.write_bytes(blob)
 
     print(f"{len(chapters)} chapters, {lessons} lessons, {examples} examples, {drills} drills")
-    print(f"{OUT.name}: {len(body):,} raw -> {len(blob):,} deflated")
+    print(f"{OUT.name}: {len(body):,} raw -> {len(blob):,} xz")
 
 
 if __name__ == "__main__":

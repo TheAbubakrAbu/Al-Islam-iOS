@@ -117,74 +117,38 @@ struct HadithView: View {
     @ObservedObject private var semanticEngine = SemanticSearchEngine.shared
     @State private var globalAIResults: [GlobalHadithHit] = []
 
-    // Ask (the on-device LLM) - the Quran search's Ask, for hadiths: auto-runs for question-shaped
-    // queries, one tap for everything else - grounded in the retrieved hadiths and cited when
-    // retrieval found any, an open general-knowledge answer (clearly labeled, quote-free) when it
-    // found none. Exists only on Apple Intelligence devices (`OnDeviceAsk.isAvailable`).
-    @State private var hadithAskAnswer = ""
-    @State private var hadithAskIsStreaming = false
-    @State private var hadithAskRanForQuery = ""
-    /// A MANUAL ask where the model declined or errored - the tapped row must answer with
-    /// SOMETHING instead of silently restoring the prompt (the Quran search's `askNoAnswer`).
-    @State private var hadithAskNoAnswer = false
-    /// Whether the current answer was grounded in retrieved hadiths (drives the card's footer).
-    @State private var hadithAskGrounded = true
+    // Ask AI: the on-device chat (`AskAIChatView`), opened from the ASK AI row above the results with
+    // the typed query as its first question - the Quran tab's rule. Exists only on Apple Intelligence
+    // devices (`OnDeviceAsk.isAvailable`).
+    @State private var showAskAI = false
     /// The AI-vs-keyword segmented switch, shown only when BOTH result kinds exist (the Quran search's
     /// `showKeywordResults`). Reset to the AI list on every new query.
     @State private var showHadithKeywordResults = false
-    @State private var hadithAskTask: Task<Void, Never>?
-    /// The hadiths the running answer was grounded on - the pool citations are resolved from, so a
-    /// cited row can never point at a hadith the model wasn't shown.
-    @State private var hadithAskSourceHits: [GlobalHadithHit] = []
     @State private var globalAITask: Task<Void, Never>?
     /// True while the slow path (reading every book to gather texts) runs, pre-embedding.
     @State private var isGatheringAllBooks = false
 
-    private var allBooksCorpusID: String { "hadith-all" }
+    private var allBooksCorpusID: String { HadithSemanticCorpus.id }
 
-    /// Version keyed to the shelf itself - deterministic (never hashValue, which is seeded per
-    /// launch), so yesterday's build loads from disk today.
-    private var allBooksCorpusVersion: String {
-        "all3-" + HadithCatalogBook.all.map(\.slug).sorted().joined(separator: ".")
-    }
-
-    /// Load-or-build the all-books corpus. The disk hit is instant; the cold build reads each book
-    /// once (off the visible path) and then embeds a SHARED vocabulary - the books overlap heavily in
-    /// words, so all-of-them costs little more than Bukhari alone.
+    /// Load-or-build the all-books corpus (`HadithSemanticCorpus`, shared with the Ask AI chat). The
+    /// disk hit is instant; the cold build reads each book once (off the visible path) and then
+    /// embeds a SHARED vocabulary - the books overlap heavily in words, so all-of-them costs little
+    /// more than Bukhari alone.
     private func prepareAllBooksCorpus() {
         guard SemanticSearchEngine.isSupported,
               !semanticEngine.isReady(allBooksCorpusID),
               !semanticEngine.isBuilding(allBooksCorpusID),
-              !isGatheringAllBooks else { return }
-        let books = HadithCatalogBook.all
-
-        // Disk-first probe: `texts` is an autoclosure evaluated only past the disk check, so this
-        // costs nothing when a persisted build exists.
-        semanticEngine.prepare(corpusID: allBooksCorpusID, version: allBooksCorpusVersion, texts: [])
-        guard !semanticEngine.isReady(allBooksCorpusID) else { return }
-
+              !isGatheringAllBooks,
+              // The Ask AI chat may own the gather: never re-enter while it runs (a prepare that
+              // returns at once would otherwise re-run the search, which re-calls this, forever).
+              !HadithSemanticCorpus.isGathering else { return }
         isGatheringAllBooks = true
         Task {
-            // The books are opened on the main actor (that is where the store lives), but the TEXT is
-            // gathered off it: this walks all 50,884 hadiths, and over the packs that decompresses the
-            // whole library. Inline, it was a second of main thread in ~100 ms hitches.
-            let opened = books.compactMap { book in store.book(book).map { (book.slug, $0) } }
-            let built = await Task.detached(priority: .utility) { () -> (texts: [String], keys: [String]) in
-                var texts: [String] = []
-                var keys: [String] = []
-                for (slug, data) in opened {
-                    for hadith in data.hadiths {
-                        let strings = hadith.allText
-                        texts.append("\(strings.narrator) \(strings.text)")
-                        keys.append("\(slug)|\(hadith.idInBook)")
-                    }
-                }
-                return (texts, keys)
-            }.value
-            semanticEngine.prepare(corpusID: allBooksCorpusID, version: allBooksCorpusVersion,
-                                   texts: built.texts, keys: built.keys)
+            await HadithSemanticCorpus.prepare(engine: semanticEngine, store: store)
             isGatheringAllBooks = false
-            runGlobalAISearch(query: searchText)
+            // Re-run only when a corpus actually landed (the disk load); a build started here
+            // finishes through `.onChange(of: semanticEngine.readyCorpora)`.
+            if semanticEngine.isReady(allBooksCorpusID) { runGlobalAISearch(query: searchText) }
         }
     }
 
@@ -231,89 +195,6 @@ struct HadithView: View {
                 globalAIResults = top
             }
         }
-    }
-
-    /// The Quran search's `runAsk`, for hadiths: grounded strictly on the retrieved hadiths (AI
-    /// matches first, then keyword matches), streaming the answer card in `globalSearchSection`.
-    private func runHadithAsk(query: String, manual: Bool) {
-        hadithAskTask?.cancel()
-        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
-        // Any new run (or keystroke) clears a previous dead-end notice. Plain writes throughout: the
-        // Ask card is a List section, and animated section churn racing the async result applies is
-        // the collection-view assertion crash the Quran search hit.
-        hadithAskNoAnswer = false
-        guard OnDeviceAsk.isAvailable, trimmed.count >= 3,
-              manual || OnDeviceAsk.looksLikeQuestion(trimmed) else {
-            if !hadithAskRanForQuery.isEmpty {
-                hadithAskAnswer = ""; hadithAskIsStreaming = false; hadithAskRanForQuery = ""; hadithAskSourceHits = []
-            }
-            return
-        }
-
-        hadithAskTask = Task {
-            // Auto waits out the search debounces so the retrieval this answer is GROUNDED on has
-            // settled; a manual tap means the results are already on screen - go immediately.
-            try? await Task.sleep(nanoseconds: manual ? 100_000_000 : 900_000_000)
-            guard !Task.isCancelled else { return }
-
-            var sources: [OnDeviceAsk.Source] = []
-            var sourceHits: [GlobalHadithHit] = []
-            var seen = Set<String>()
-            for hit in globalAIResults.prefix(6) {
-                let reference = "\(hit.book.englishTitle) \(hit.hadith.displayNumber)"
-                if seen.insert(reference).inserted, !hit.hadith.english.text.isEmpty {
-                    sources.append(.init(reference: reference, text: hit.hadith.english.text))
-                    sourceHits.append(hit)
-                }
-            }
-            for hit in globalHadithResults.prefix(6) {
-                let reference = "\(hit.book.englishTitle) \(hit.hadith.displayNumber)"
-                if seen.insert(reference).inserted, !hit.hadith.english.text.isEmpty {
-                    sources.append(.init(reference: reference, text: hit.hadith.english.text))
-                    sourceHits.append(hit)
-                }
-            }
-            // Nothing retrieved is no longer a dead end: the ask still runs, in OPEN mode - a clearly
-            // labeled general-knowledge answer with no recreated quotes (the engine's open rules).
-
-            hadithAskGrounded = !sources.isEmpty
-            hadithAskAnswer = ""
-            hadithAskIsStreaming = true
-            hadithAskRanForQuery = trimmed
-            hadithAskSourceHits = sourceHits
-            guard #available(iOS 26.0, *) else { return }
-            do {
-                for try await text in OnDeviceAsk.streamAnswer(question: trimmed, sources: sources) {
-                    guard !Task.isCancelled else { return }
-                    hadithAskAnswer = text
-                }
-                guard !Task.isCancelled else { return }
-                hadithAskIsStreaming = false
-            } catch {
-                // Declined or errored: the card goes away - AI and keyword results still stand. But a
-                // MANUAL ask still owes a response (see the empty-sources guard).
-                guard !Task.isCancelled else { return }
-                hadithAskAnswer = ""; hadithAskIsStreaming = false; hadithAskRanForQuery = ""; hadithAskSourceHits = []
-                if manual { hadithAskNoAnswer = true }
-            }
-        }
-    }
-
-    /// The hadiths the streamed answer actually cited, in citation order - the Quran's `askCitedAyahs`,
-    /// for hadiths. Citations are matched against the exact source references the model was given
-    /// ("Sahih al-Bukhari 6114"), so every resolved row is guaranteed to open a real hadith. The
-    /// digit-boundary check keeps "…6114" from also matching a claimed "611".
-    private var hadithAskCitedResults: [GlobalHadithHit] {
-        guard !hadithAskAnswer.isEmpty else { return [] }
-        let answer = hadithAskAnswer.lowercased()
-        var cited: [(position: Int, hit: GlobalHadithHit)] = []
-        for hit in hadithAskSourceHits {
-            let reference = "\(hit.book.englishTitle) \(hit.hadith.displayNumber)".lowercased()
-            guard let range = answer.range(of: reference) else { continue }
-            if range.upperBound < answer.endIndex, answer[range.upperBound].isNumber { continue }
-            cited.append((answer.distance(from: answer.startIndex, to: range.lowerBound), hit))
-        }
-        return cited.sorted { $0.position < $1.position }.prefix(10).map(\.hit)
     }
 
     /// Today's hadith lives in the STORE, resolved at app launch - the tab
@@ -788,6 +669,11 @@ struct HadithView: View {
                 SettingsHadithView()
                     .smallMediumSheetPresentation()
             }
+            .sheet(isPresented: $showAskAI) {
+                if #available(iOS 16.0, *) {
+                    AskAIChatSheet(initialQuestion: searchText)
+                }
+            }
             .onAppear {
                 store.loadLastRead()
                 #if DEBUG
@@ -800,6 +686,13 @@ struct HadithView: View {
                     if parts.count == 2, let id = Int(parts[1]) {
                         bookPath = [.book(slug: String(parts[0]), autoOpenHadithID: id)]
                     }
+                }
+                // `-hadithSearch <term>` runs the tab-wide search headlessly (typing isn't scriptable
+                // in the simulator), on a delay so the search field and its onChange are mounted.
+                if let flagIndex = ProcessInfo.processInfo.arguments.firstIndex(of: "-hadithSearch"),
+                   ProcessInfo.processInfo.arguments.indices.contains(flagIndex + 1) {
+                    let term = ProcessInfo.processInfo.arguments[flagIndex + 1]
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) { searchText = term }
                 }
                 // Same rule for the settings sheet: `-launchHadithSettings` presents it directly,
                 // and `-launchHadithSettingsReading` lands on its Reading View subpage.
@@ -816,6 +709,12 @@ struct HadithView: View {
                 store.prepareDailyHadith()
                 // Same no-op rule: the launch task usually already warmed the likely books.
                 store.prewarmBooks()
+                #if HAS_QURAN
+                // The cross-language highlight's Quran-derived lexicon, built before the first query
+                // instead of on the first result row (which rendered before it was ready).
+                await QuranData.shared.waitUntilCoreLoaded()
+                CrossLanguageWordHighlight.prewarmLexicon()
+                #endif
             }
             .onChange(of: searchText) { text in
                 // A new query invalidates the last all-books sweep and starts back at page one -
@@ -829,9 +728,8 @@ struct HadithView: View {
                 globalChapterLimit = 5
                 globalHadithLimit = 5
                 globalSearchRanFor = ""
-                // Every new query starts back on the AI list, with any dead-end ask notice cleared.
+                // Every new query starts back on the AI list.
                 showHadithKeywordResults = false
-                hadithAskNoAnswer = false
                 // Reset the bare-number sweep too.
                 globalNumberTask?.cancel()
                 isNumberSearching = false
@@ -850,9 +748,6 @@ struct HadithView: View {
                     // AI matches ride along automatically (already-built corpora only) - the Quran
                     // search's rule: AI adds understanding on top, keyword stays exhaustive below.
                     runGlobalAISearch(query: text)
-                    // Question-shaped queries stream a grounded answer automatically; anything else keeps
-                    // the one-tap Ask row (and this call clears a previous answer).
-                    runHadithAsk(query: text, manual: false)
                 }
             }
             // A corpus finishing its build mid-query (from a book view) surfaces here immediately.
@@ -1235,44 +1130,18 @@ struct HadithView: View {
     private var globalSearchSection: some View {
         let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
         if query.count >= 3, referenceResult == nil, numberQuery == nil {
-            // Ask AI first - the streamed grounded answer WITH its cited hadiths (real tappable rows);
-            // the citations are the answer's receipts, so they live in the same section - the Quran
-            // search's exact grammar.
+            // Ask AI first - ALWAYS present while searching, results or none: the ask is an
+            // invitation, not a result. It opens the chat with this query as its first question.
             if OnDeviceAsk.isAvailable {
-                if hadithAskNoAnswer {
-                    Section(header: hadithAskAIHeader(citedCount: 0)) {
-                        hadithAskNoAnswerRow
-                    }
-                } else if !hadithAskRanForQuery.isEmpty {
-                    let cited = hadithAskCitedResults
-                    Section(header: hadithAskAIHeader(citedCount: cited.count)) {
-                        AskAnswerCard(answer: hadithAskAnswer, isStreaming: hadithAskIsStreaming, grounded: hadithAskGrounded)
-
-                        ForEach(cited) { hit in
-                            NavigationLink {
-                                if let chapter = hit.data.chapters.first(where: { $0.id == hit.hadith.chapterId }) {
-                                    HadithChapterView(book: hit.book, bookData: hit.data, chapter: chapter, scrollToHadithId: hit.hadith.idInBook)
-                                } else {
-                                    HadithReferenceView(book: hit.book, resolved: hit.hadith)
-                                }
-                            } label: {
-                                HadithRow(book: hit.book, hadith: hit.hadith, searchText: searchText, compact: true).equatable()
-                            }
-                        }
-                    }
-                } else {
-                    // ALWAYS present while searching, results or none - the ask is an invitation,
-                    // not a result; with nothing retrieved it answers in the engine's open mode.
-                    Section(header: hadithAskAIHeader(citedCount: 0)) {
-                        hadithAskPromptRow
-                    }
+                Section(header: hadithAskAIHeader) {
+                    hadithAskPromptRow
                 }
             }
 
             // While the one-time all-books index builds, the standard progress row shows in its place.
             if SemanticSearchEngine.isSupported, !query.containsArabicScript,
                !semanticEngine.isReady(allBooksCorpusID),
-               isGatheringAllBooks || semanticEngine.isBuilding(allBooksCorpusID) {
+               isGatheringAllBooks || HadithSemanticCorpus.isGathering || semanticEngine.isBuilding(allBooksCorpusID) {
                 Section { AISearchStatusRow(progress: semanticEngine.progress(allBooksCorpusID), failed: false) }
             }
 
@@ -1396,53 +1265,23 @@ struct HadithView: View {
         }
     }
 
-    /// "ASK AI" with the sparkles glyph; the pill counts the answer's cited hadiths once they exist -
-    /// the Quran search's `askAIHeader`, verbatim (accent tint on the whole header included).
-    private func hadithAskAIHeader(citedCount: Int) -> some View {
+    /// "ASK AI" with the sparkles glyph - the Quran search's `askAIHeader`, verbatim.
+    private var hadithAskAIHeader: some View {
         HStack(spacing: 6) {
             Image(systemName: "sparkles")
             Text("ASK AI")
 
             Spacer()
-
-            if citedCount > 0 {
-                Text(String(citedCount))
-                    .font(.caption.weight(.semibold))
-                    .monospacedDigit()
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 6)
-                    .conditionalGlassEffect()
-                    .padding(.vertical, -16)
-            }
         }
         .foregroundStyle(settings.accentColor.color)
     }
 
-    /// Shown when a manual ask dead-ends: nothing retrieved matched the query, so there was nothing to
-    /// answer from. Editing the query clears it (`runHadithAsk` resets the flag on every run).
-    private var hadithAskNoAnswerRow: some View {
-        HStack(spacing: 8) {
-            Image(systemName: "questionmark.circle")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-
-            Text("AI couldn't answer \u{201C}\(searchText.trimmingCharacters(in: .whitespacesAndNewlines))\u{201D} right now. Try different wording, or try again.")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-
-            Spacer(minLength: 0)
-        }
-        .padding(.vertical, 8)
-        .padding(.horizontal, 12)
-        .conditionalGlassEffect(clear: true, rectangle: true)
-    }
-
-    /// The one-tap Ask entry for non-question queries: press to run the grounded on-device answer for
-    /// exactly what's typed - the Quran search's row, verbatim.
+    /// The one-tap Ask entry: press to open the Ask AI chat with exactly what's typed as its first
+    /// question - the Quran search's row, verbatim.
     private var hadithAskPromptRow: some View {
         Button {
             settings.hapticFeedback()
-            runHadithAsk(query: searchText, manual: true)
+            showAskAI = true
         } label: {
             HStack(spacing: 8) {
                 Image(systemName: "sparkles")
@@ -2096,3 +1935,67 @@ struct HadithView: View {
     }
 }
 #endif
+
+// MARK: - The all-books hadith corpus
+
+/// The ONE combined AI-search corpus over EVERY book, shared by the Hadith tab's search and the Ask AI
+/// chat: built once (a gather of all ~50k hadiths off the main thread, then the engine's shared
+/// embedding) and persisted, so every launch after the first loads it from disk in one read.
+@MainActor
+enum HadithSemanticCorpus {
+    static let id = "hadith-all"
+
+    /// Version keyed to the shelf itself - deterministic (never hashValue, which is seeded per
+    /// launch), so yesterday's build loads from disk today.
+    static var version: String {
+        "all3-" + HadithCatalogBook.all.map(\.slug).sorted().joined(separator: ".")
+    }
+
+    /// True while the slow path (reading every book to gather texts) runs, pre-embedding.
+    private(set) static var isGathering = false
+
+    /// The instant half of `prepare`: load a persisted build from disk, synchronously, so a caller can
+    /// search the corpus in the same turn. True when the corpus is ready afterwards. (`texts` is an
+    /// autoclosure the engine evaluates only past its disk check, and an empty list starts no build.)
+    @discardableResult
+    static func probeDisk(engine: SemanticSearchEngine) -> Bool {
+        guard SemanticSearchEngine.isSupported else { return false }
+        if !engine.isReady(id), !engine.isBuilding(id) {
+            engine.prepare(corpusID: id, version: version, texts: [])
+        }
+        return engine.isReady(id)
+    }
+
+    /// Load-or-build. Returns immediately after the disk probe when a persisted build exists (or one
+    /// is already building or gathering); otherwise returns once the texts are gathered and handed to
+    /// the engine, whose embedding then continues in the background (`readyCorpora` publishes).
+    /// True when this call loaded or started something; false when there was nothing to do.
+    @discardableResult
+    static func prepare(engine: SemanticSearchEngine, store: HadithStore) async -> Bool {
+        guard SemanticSearchEngine.isSupported,
+              !engine.isReady(id), !engine.isBuilding(id), !isGathering else { return false }
+
+        if probeDisk(engine: engine) { return true }
+
+        isGathering = true
+        defer { isGathering = false }
+        // The books are opened on the main actor (that is where the store lives), but the TEXT is
+        // gathered off it: this walks every hadith, and over the packs that decompresses the whole
+        // library. Inline, it was a second of main thread in ~100 ms hitches.
+        let opened = HadithCatalogBook.all.compactMap { book in store.book(book).map { (book.slug, $0) } }
+        let built = await Task.detached(priority: .utility) { () -> (texts: [String], keys: [String]) in
+            var texts: [String] = []
+            var keys: [String] = []
+            for (slug, data) in opened {
+                for hadith in data.hadiths {
+                    let strings = hadith.allText
+                    texts.append("\(strings.narrator) \(strings.text)")
+                    keys.append("\(slug)|\(hadith.idInBook)")
+                }
+            }
+            return (texts, keys)
+        }.value
+        engine.prepare(corpusID: id, version: version, texts: built.texts, keys: built.keys)
+        return true
+    }
+}

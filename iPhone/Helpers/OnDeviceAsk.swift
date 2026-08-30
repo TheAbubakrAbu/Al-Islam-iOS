@@ -1,14 +1,14 @@
 import Foundation
 import SwiftUI
 
-// "Ask" - question answering over the app's own retrieval, powered by Apple's ON-DEVICE
-// foundation model (the ~3B-parameter LLM behind Apple Intelligence). Private, offline, free.
+// "Ask" - the on-device model behind the app's Ask AI chat and its summarize sheets: Apple's
+// ON-DEVICE foundation model (the ~3B-parameter LLM behind Apple Intelligence). Private, offline, free.
 //
-// The architecture is RAG-first: when the app's search retrieved passages (ayahs / hadiths with
-// references), the model answers grounded in them, citing each one, and never inventing verse or
-// hadith text. When retrieval found NOTHING, the ask still runs in an open mode: a general-knowledge
-// answer under strict integrity rules (no recreated quotations, honest uncertainty, no rulings) so
-// the button never dead-ends - the user asked to be answered like an assistant, not gated on search.
+// The chat (`AskAIChatView`, Helpers/AskAIChat.swift) runs the app's own retrieval for every question
+// and hands the passages here as SUPPORT: the model answers from what it knows AND the passages,
+// citing each one it actually uses, and never writes out verse or hadith text from memory - the app
+// shows every cited passage as a real row beneath the answer. The summarize sessions are the strict
+// opposite: the given source text is their whole world.
 //
 // Availability: iOS 26+ on an Apple Intelligence device with it enabled. Everywhere else,
 // `OnDeviceAsk.isAvailable` is false and the feature simply does not exist in the UI - the word-vector
@@ -23,6 +23,11 @@ enum OnDeviceAsk {
     struct Source {
         let reference: String
         let text: String
+        /// How much of `text` a chat turn carries. Retrieved ayahs and hadiths keep the default;
+        /// a tafsir passage or a surah's background prose is allowed more, because it IS the answer.
+        var maxCharacters: Int = OnDeviceAsk.chatPassageCharacterLimit
+        /// The verse or surah the question named: labelled SUBJECT in the prompt.
+        var isSubject: Bool = false
     }
 
     /// Whether the on-device model can run right now (device eligible + Apple Intelligence enabled +
@@ -34,61 +39,116 @@ enum OnDeviceAsk {
         return false
     }
 
-    /// True for queries that read as QUESTIONS - the trigger for the Ask card. Keyword/reference/topic
-    /// queries never invoke the model; only something a person would actually ask.
-    static func looksLikeQuestion(_ query: String) -> Bool {
-        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        guard trimmed.count >= 8 else { return false }
-        if trimmed.hasSuffix("?") { return true }
-        guard trimmed.split(separator: " ").count >= 4 else { return false }
-        let starters = [
-            "what ", "why ", "how ", "when ", "where ", "who ", "which ",
-            "does ", "do ", "did ", "is ", "are ", "can ", "could ", "should ", "will ", "am i", "tell me"
-        ]
-        return starters.contains { trimmed.hasPrefix($0) }
+    /// The rules a CHAT session is created with: answer like a knowledgeable assistant, use the
+    /// retrieved passages as support and cite the ones used, never recreate scripture from memory,
+    /// no rulings, keep the conversation's thread.
+    private static let chatInstructions = """
+    You are a knowledgeable, warm assistant inside a Quran and Hadith reading app. People ask you \
+    about the Quran, the hadith, Islamic history and practice, and you answer the way a well-read \
+    friend would: directly, completely, and in plain language.
+
+    You may be given PASSAGES the app retrieved for the question (ayahs, hadiths, tafsir excerpts, \
+    or a surah's background, each with its reference) and the CONVERSATION so far. Rules, in order:
+    1. Answer the question fully, from your general knowledge of Islam AND the passages. When the \
+    question names a verse or a surah and a passage carries that exact reference, that passage IS \
+    the subject: explain it, and do not describe some other verse instead. Other passages are \
+    support, not a fence: build on the relevant ones and ignore the rest silently.
+    2. Cite a passage you use inline in parentheses exactly as its reference is written, for \
+    example (2:153) or (Sahih al-Bukhari 6114). Cite ONLY references that appear in PASSAGES. \
+    Never add a reference, a verse number, or a hadith number from memory: if you draw on general \
+    knowledge, say so in words ("the Quran teaches", "it is reported that") with no number.
+    3. Never write out the wording of a verse or a hadith, and never put anything in quotation \
+    marks as if it were scripture. Describe and paraphrase in your own words. The app shows every \
+    passage you cite right beneath your answer.
+    4. Be honest about uncertainty and scholarly disagreement: say when something is debated, and \
+    when you are not sure.
+    5. Never issue a religious ruling, verdict, or fatwa. For "is X halal/haram/allowed" questions, \
+    explain the considerations and the views that exist, then note that a qualified scholar should \
+    be consulted for a personal ruling.
+    6. Keep the conversation's thread: a follow-up refers to what was discussed before.
+    7. Write in English even when the question is in another language, keeping key Arabic terms. \
+    PLAIN TEXT ONLY: no asterisks, underscores, pound signs, or other markdown; short paragraphs; \
+    a numbered list only when it genuinely helps.
+    8. Begin directly with the answer: no preamble ("Sure!", "Great question"), no labels such as \
+    "Q:" or "A:", and never repeat the question back. Do not add a "References" list at the end.
+    """
+
+    /// How many retrieved passages a chat turn carries, and how much of each: 8 passages of 500
+    /// characters is ~1k tokens against the on-device model's ~4k window, leaving room for the
+    /// instructions, the recent conversation, the question, and a full answer.
+    static let chatPassageLimit = 8
+    static let chatPassageCharacterLimit = 500
+
+    /// Stream a chat answer: the question, the retrieved passages (support, cited when used), and the
+    /// recent conversation (the last few completed turns, clipped). Snapshots, like `streamSummary`:
+    /// each yielded value is the full text so far. Throws when the model declines or errors.
+    @available(iOS 26.0, *)
+    static func streamChatAnswer(question: String, sources: [Source],
+                                 transcript: [SummarizeTurn]) -> AsyncThrowingStream<String, Error> {
+        let passages = sources.prefix(chatPassageLimit).map { source in
+            "\(source.isSubject ? "SUBJECT OF THE QUESTION " : "")[\(source.reference)] \(String(source.text.prefix(source.maxCharacters)))"
+        }.joined(separator: "\n")
+        let recent = transcript.suffix(3).map { turn in
+            "Earlier question: \(String(turn.question.prefix(300)))\nEarlier answer: \(String(turn.answer.prefix(500)))"
+        }.joined(separator: "\n")
+
+        var prompt = ""
+        if !passages.isEmpty {
+            prompt += "PASSAGES the app retrieved for this question (a passage marked SUBJECT OF THE QUESTION is the verse or surah the question is about: base the answer on it; cite the passages you use, ignore the rest):\n\(passages)\n\n"
+        }
+        if !recent.isEmpty {
+            prompt += "CONVERSATION SO FAR:\n\(recent)\n\n"
+        }
+        prompt += "QUESTION: \(question)"
+        // Measured on the shipping model: 0.7 drifted from the passages, 0.3 fell into paragraph
+        // loops; 0.5 keeps citations put without looping. The token ceiling stops a runaway turn (an
+        // unbounded one once produced a 90-item list), and the caller cuts a loop the moment a
+        // paragraph repeats (`AskAIAnswerText.isLooping`).
+        let options = GenerationOptions(temperature: 0.5, maximumResponseTokens: 900)
+        return streamSummarizeTask(instructions: chatInstructions, prompt: prompt, options: options)
     }
 
-    /// The rules a GROUNDED session is created with: cite everything, invent nothing, no rulings -
-    /// but answer fully, not in a two-sentence crouch.
-    private static let groundedInstructions = """
-    You are a knowledgeable, careful assistant inside a Quran and Hadith reading app. You will be \
-    given PASSAGES (each with its reference) and a QUESTION.
+    /// Loads the model ahead of the first question (the chat screen calls this on appear), so the
+    /// first answer does not also pay the model's cold start. Once per process.
+    nonisolated(unsafe) private static var didPrewarmChat = false
+    @available(iOS 26.0, *)
+    static func prewarmChatModel() {
+        guard !didPrewarmChat, isAvailable else { return }
+        didPrewarmChat = true
+        LanguageModelSession(instructions: chatInstructions).prewarm()
+    }
 
-    Rules, in order:
-    1. Ground the answer in the given passages. Cite EVERY passage that supports a point, inline in \
-    parentheses exactly as its reference is given, e.g. (2:153) or (Sahih al-Bukhari 6114). Most \
-    questions draw on several passages - cite all that genuinely apply, not just the first one.
-    2. Never invent, complete, or misattribute verses, hadiths, or interpretations. Do not reproduce \
-    a passage's full text - the app displays every passage you cite right beneath your answer - but \
-    you may briefly paraphrase what a cited passage says.
-    3. You may add short connecting explanation from general knowledge (historical context, what a \
-    term means), but keep every religious claim tied to the cited passages. If the passages only \
-    partly answer the question, answer what they support and say plainly what they do not cover.
-    4. Never issue religious rulings, verdicts, or fatwas. For "is X halal/haram/allowed" questions, \
-    describe only what the passages say and add that a qualified scholar should be consulted.
-    5. Write a clear, complete answer: usually one or two short paragraphs, plain respectful \
-    language, no markdown formatting.
-    """
+    /// Whether a failed generation was Apple's safety guardrail - the one failure worth one retry with
+    /// the question framed as the educational request it is.
+    @available(iOS 26.0, *)
+    static func isGuardrail(_ error: Error) -> Bool {
+        if case LanguageModelSession.GenerationError.guardrailViolation = error { return true }
+        return false
+    }
 
-    /// The rules an OPEN session is created with, used when retrieval found nothing: answer like an
-    /// assistant from general knowledge, under integrity rules that forbid recreated quotations.
-    private static let openInstructions = """
-    You are a knowledgeable, careful assistant inside a Quran and Hadith reading app. The app's \
-    search found no passages for this question, so you are answering from general knowledge.
+    /// Whether a failed generation ran out of context window - the one error worth retrying leaner.
+    @available(iOS 26.0, *)
+    static func isContextOverflow(_ error: Error) -> Bool {
+        if case LanguageModelSession.GenerationError.exceededContextWindowSize = error { return true }
+        return false
+    }
 
-    Rules, in order:
-    1. Answer the QUESTION helpfully from well-established general knowledge about Islam, its \
-    history, practices, and texts.
-    2. NEVER write out the text of a verse or hadith from memory, and never present wording as a \
-    quotation - describe content in your own words. You may name well-known references (a surah, a \
-    famous collection) when you are confident they are right.
-    3. Be honest about uncertainty: when you are not sure, say so rather than guessing, and \
-    encourage the reader to verify in the app's Quran and Hadith tabs.
-    4. Never issue religious rulings, verdicts, or fatwas. For "is X halal/haram/allowed" questions, \
-    describe the considerations involved and refer the reader to a qualified scholar.
-    5. Write a clear, complete answer: usually one or two short paragraphs, plain respectful \
-    language, no markdown formatting.
-    """
+    /// What to tell the reader when a generation fails for a reason they can act on. Nil for the
+    /// generic case (the caller's own wording applies).
+    @available(iOS 26.0, *)
+    static func failureMessage(for error: Error) -> String? {
+        guard let generationError = error as? LanguageModelSession.GenerationError else { return nil }
+        switch generationError {
+        case .guardrailViolation:
+            return "Apple Intelligence declined to answer this one. Try rephrasing the question, or asking about it in a different way."
+        case .unsupportedLanguageOrLocale:
+            return "Apple Intelligence can\u{2019}t work in that language yet. Try asking in English."
+        case .rateLimited, .concurrentRequests:
+            return "Apple Intelligence is busy right now. Try again in a moment."
+        default:
+            return nil
+        }
+    }
 
     // MARK: - Summarize (tafsir / surah info / comparison sheets)
 
@@ -205,7 +265,7 @@ enum OnDeviceAsk {
     }
 
     /// Stream a faithful summary of `source` (pass it pre-clipped via `clippedSource`, or
-    /// pre-combined via `combinedSource` with `multiSource: true`). Snapshots, like `streamAnswer`:
+    /// pre-combined via `combinedSource` with `multiSource: true`). Snapshots, like `streamChatAnswer`:
     /// each yielded value is the full text so far.
     @available(iOS 26.0, *)
     static func streamSummary(title: String, source: String,
@@ -265,12 +325,13 @@ enum OnDeviceAsk {
     }
 
     @available(iOS 26.0, *)
-    private static func streamSummarizeTask(instructions: String, prompt: String) -> AsyncThrowingStream<String, Error> {
+    private static func streamSummarizeTask(instructions: String, prompt: String,
+                                            options: GenerationOptions = GenerationOptions()) -> AsyncThrowingStream<String, Error> {
         AsyncThrowingStream { continuation in
             let task = Task {
                 do {
                     let session = LanguageModelSession(instructions: instructions)
-                    let stream = session.streamResponse(to: prompt)
+                    let stream = session.streamResponse(to: prompt, options: options)
                     for try await partial in stream {
                         if Task.isCancelled { break }
                         continuation.yield(partial.content)
@@ -282,124 +343,29 @@ enum OnDeviceAsk {
             }
             continuation.onTermination = { _ in task.cancel() }
         }
-    }
-
-    /// Stream the answer. Each yielded value is the FULL text so far (snapshots), so the UI just
-    /// replaces its string. Throws when the model declines or errors; the caller shows nothing.
-    /// Empty `sources` = open mode: the general-knowledge instructions with just the question.
-    @available(iOS 26.0, *)
-    static func streamAnswer(question: String, sources: [Source]) -> AsyncThrowingStream<String, Error> {
-        AsyncThrowingStream { continuation in
-            let task = Task {
-                do {
-                    let instructions: String
-                    let prompt: String
-                    if sources.isEmpty {
-                        instructions = openInstructions
-                        prompt = "QUESTION: \(question)"
-                    } else {
-                        // A passage block the small context window can always hold: at most 12
-                        // sources (every surface feeds semantic hits first, then string-match hits,
-                        // deduped - both retrieval modes get a voice), each clipped at 600
-                        // characters. That is ~1.8k tokens worst case against the model's ~4k
-                        // window - room to spare with the instructions, question, and answer - and
-                        // 600 keeps whole hadiths intact even more often than the old 500.
-                        let passages = sources.prefix(12).map { source in
-                            "[\(source.reference)] \(String(source.text.prefix(600)))"
-                        }.joined(separator: "\n")
-
-                        instructions = groundedInstructions
-                        prompt = """
-                        PASSAGES:
-                        \(passages)
-
-                        QUESTION: \(question)
-                        """
-                    }
-
-                    let session = LanguageModelSession(instructions: instructions)
-                    let stream = session.streamResponse(to: prompt)
-                    for try await partial in stream {
-                        if Task.isCancelled { break }
-                        continuation.yield(partial.content)
-                    }
-                    continuation.finish()
-                } catch {
-                    continuation.finish(throwing: error)
-                }
-            }
-            continuation.onTermination = { _ in task.cancel() }
-        }
-    }
-}
-
-// MARK: - The Ask answer card (shared by the Quran and Hadith search surfaces)
-
-/// The streaming answer card shown above the search results: question echo, the growing answer, the
-/// grounding note. One component so both surfaces read identically.
-struct AskAnswerCard: View {
-    @ObservedObject var settings = Settings.shared
-
-    let answer: String
-    let isStreaming: Bool
-    /// False when the ask ran in open mode (no retrieved passages): the placeholder and the footer
-    /// must not claim the answer comes from passages shown below.
-    var grounded: Bool = true
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 6) {
-                Image(systemName: "sparkles")
-                    .font(.caption)
-                Text("Asked AI")
-                    .font(.caption.weight(.semibold))
-
-                if isStreaming {
-                    ProgressView()
-                        .controlSize(.mini)
-                }
-
-                Spacer()
-            }
-            .foregroundStyle(settings.accentColor.color)
-
-            if answer.isEmpty {
-                Text(grounded ? "Reading the matching passages…" : "Thinking…")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-            } else {
-                // See `SummarizeSheet` - an on-device answer is prose worth quoting part of.
-                SelectableProse(text: answer, textStyle: .subheadline)
-            }
-
-            Text(grounded
-                 ? "From Apple Intelligence, on device • answers from the passages shown below • not a religious ruling"
-                 : "From Apple Intelligence, on device • a general answer, no passages were retrieved • verify important matters, not a religious ruling")
-                .font(.caption2)
-                .foregroundStyle(.secondary)
-        }
-        .padding(12)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .conditionalGlassEffect(clear: true, rectangle: true)
-        .overlay(
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .stroke(settings.accentColor.color.opacity(0.18), lineWidth: 1)
-        )
     }
 }
 
 #else
 
-/// Non-iOS or SDK-without-FoundationModels: the feature does not exist; call sites are `#if os(iOS)`
-/// gated, so nothing references this stub in practice.
+/// Non-iOS or SDK-without-FoundationModels: the feature does not exist. `isAvailable` is false, so the
+/// surfaces that reference this (the Islam tab's resource list, `AskAIChat.swift` on an SDK without
+/// FoundationModels) compile and simply never show it.
 enum OnDeviceAsk {
     struct Source {
         let reference: String
         let text: String
+        var maxCharacters: Int = 500
+        var isSubject: Bool = false
+    }
+
+    struct SummarizeTurn: Sendable {
+        let question: String
+        let answer: String
     }
 
     static var isAvailable: Bool { false }
-    static func looksLikeQuestion(_ query: String) -> Bool { false }
+    static let chatPassageLimit = 8
 }
 
 #endif

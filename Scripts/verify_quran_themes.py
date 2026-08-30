@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Gate for ThematicTopics.json.deflate + SurahSections.json.deflate.
+"""Gate for ThematicTopics.json.xz + SurahSections.json.xz.
 
 Checks the packs ON DISK: they inflate as raw deflate; every topic ayah ref and
 every section range is a real ayah of this app's Quran; sections stay in order;
@@ -16,7 +16,7 @@ import json
 import pathlib
 import subprocess
 import sys
-import zlib
+import lzma
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 
@@ -27,7 +27,7 @@ _spec.loader.exec_module(_builder)
 
 def inflate(path: pathlib.Path):
     blob = path.read_bytes()
-    return blob, json.loads(zlib.decompress(blob, -15).decode("utf-8"))
+    return blob, json.loads(lzma.decompress(blob).decode("utf-8"))
 
 
 def main() -> None:

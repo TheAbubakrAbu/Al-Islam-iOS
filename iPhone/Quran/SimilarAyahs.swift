@@ -4,7 +4,7 @@ import Compression
 
 // Similar Ayahs: pick an ayah, see the other places the Quran says something like it.
 //
-// The data is `Resources/Data/Quran/SimilarAyahs.json.deflate`, built by
+// The data is `Resources/Data/Quran/SimilarAyahs.json.xz`, built by
 // Scripts/build_similar_ayahs.py and gated by Scripts/verify_similar_ayahs.py. Two kinds of
 // rows, merged and RANKED AT BUILD TIME so nothing here scores or sorts:
 //   * verified - qurani.ai's similar-ayah corpus (the classical mutashabihat), shown first;
@@ -71,9 +71,9 @@ final class SimilarAyahsStore: @unchecked Sendable {
     }
 
     private static func packURL() -> URL? {
-        Bundle.main.url(forResource: "SimilarAyahs", withExtension: "json.deflate", subdirectory: "Data/Quran")
-            ?? Bundle.main.url(forResource: "SimilarAyahs", withExtension: "json.deflate", subdirectory: "Quran")
-            ?? Bundle.main.url(forResource: "SimilarAyahs", withExtension: "json.deflate")
+        Bundle.main.url(forResource: "SimilarAyahs", withExtension: "json.xz", subdirectory: "Data/Quran")
+            ?? Bundle.main.url(forResource: "SimilarAyahs", withExtension: "json.xz", subdirectory: "Quran")
+            ?? Bundle.main.url(forResource: "SimilarAyahs", withExtension: "json.xz")
     }
 
     private static func load() -> [String: [SimilarAyahMatch]]? {
@@ -104,18 +104,9 @@ final class SimilarAyahsStore: @unchecked Sendable {
         return out.isEmpty ? nil : out
     }
 
+    /// The payload is an xz stream; `COMPRESSION_LZMA` reads that container directly.
     private static func inflate(_ data: Data) -> Data? {
-        let capacity = max(data.count * 14, 1 << 22)
-        var out = Data()
-        let buffer = UnsafeMutablePointer<UInt8>.allocate(capacity: capacity)
-        defer { buffer.deallocate() }
-        let written = data.withUnsafeBytes { (rawBuffer: UnsafeRawBufferPointer) -> Int in
-            guard let base = rawBuffer.bindMemory(to: UInt8.self).baseAddress else { return 0 }
-            return compression_decode_buffer(buffer, capacity, base, data.count, nil, COMPRESSION_ZLIB)
-        }
-        guard written > 0 else { return nil }
-        out.append(buffer, count: written)
-        return out
+        SolidPack.xzDecompress(data)
     }
 }
 

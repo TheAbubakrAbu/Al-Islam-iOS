@@ -821,7 +821,16 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
         didSet { self.fetchPrayerTimes(notification: true) }
     }
     @AppStorage("adhanNotificationSound") var adhanNotificationSound: String = Settings.defaultAdhanSoundID {
-        didSet { self.fetchPrayerTimes(notification: true) }
+        didSet {
+            #if os(iOS)
+            // The new adhan's notification cuts are rendered on the device (AdhanClipStore); the reschedule
+            // below runs with whatever exists now and runs once more when the cuts land.
+            AdhanClipStore.ensureClips(for: adhanNotificationSound) { [weak self] rendered in
+                if rendered { self?.fetchPrayerTimes(notification: true) }
+            }
+            #endif
+            self.fetchPrayerTimes(notification: true)
+        }
     }
 
     // The tone for notifications that TELL rather than CALL: pre-alerts, the non-obligatory times, and any

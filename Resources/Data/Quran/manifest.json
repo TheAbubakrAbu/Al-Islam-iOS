@@ -1,35 +1,36 @@
 {
-  "blockTargetBytes" : 262144,
-  "formatVersion" : 1,
-  "packs" : [
+  "blockTargetBytes": 2097152,
+  "formatVersion": 1,
+  "packs": [
     {
-      "blocks" : 13,
-      "bytes" : 1041592,
-      "name" : "quran",
-      "records" : 114,
-      "sha256" : "441ba1695e6edea1c4e65d1ab5a91443efcb8a450d0c72adc42b9f1d20e942ba",
-      "sourceBytes" : 4645503,
-      "units" : 6236
+      "blocks": 2,
+      "bytes": 864764,
+      "name": "quran",
+      "records": 114,
+      "sha256": "888c455e968042ee3ab1c0edf431b07835f81aed3eece292dacb80144d143693",
+      "sourceBytes": 4645503,
+      "units": 6236
     },
     {
-      "blocks" : 7,
-      "bytes" : 1395840,
-      "name" : "qiraat",
-      "records" : 7,
-      "sha256" : "d90b3a206a69d0243a3ac8c119fa51fc23d121e615b88db5e4c1060d72e72046",
-      "sourceBytes" : 10369373,
-      "units" : 43538
+      "blocks": 1,
+      "bytes": 473684,
+      "name": "qiraat",
+      "records": 7,
+      "sha256": "5e5bfe1aae3267f41515fb8cc4c52cf356d49b1cdc526bbba2d631137a8dc3ce",
+      "sourceBytes": 10369373,
+      "units": 43538
     },
     {
-      "blocks" : 114,
-      "bytes" : 678940,
-      "name" : "surahinfos",
-      "records" : 114,
-      "sha256" : "9816a3f24098df4696dc602f6b568380cf5b986d0976b8fceb7d09ad56f04acb",
-      "sourceBytes" : 1819647,
-      "units" : 342
+      "blocks": 2,
+      "bytes": 439136,
+      "name": "surahinfos",
+      "records": 114,
+      "sha256": "89f90884d88985ac7597005f8d7b8690d25fbb7839cc2c5e2fe75095ead370e0",
+      "sourceBytes": 1819647,
+      "units": 342
     }
   ],
-  "textCodec" : "lzma",
-  "totalPackBytes" : 3116372
+  "textCodec": "lzma",
+  "totalPackBytes": 3116372,
+  "blockNote": "Re-blocked 2026-08-29 by Scripts/reblock_packs.py: quran 2 MiB blocks, qiraat one solid block, surahinfos 1 MiB blocks."
 }

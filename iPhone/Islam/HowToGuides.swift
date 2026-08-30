@@ -5,6 +5,15 @@ struct GuidesView: View {
 
     var body: some View {
         List {
+            #if DEBUG
+            DebugArticleLink(articles: [
+                "pray": AnyView(HowToPrayView()), "fast": AnyView(HowToFastView()), "zakah": AnyView(HowToZakahView()),
+                "hajj": AnyView(HowToHajjView()), "umrah": AnyView(HowToUmrahView()), "wudhu": AnyView(WudhuView()),
+                "ghusl": AnyView(GhuslView()), "jumuah": AnyView(JumuahView()), "adhan": AnyView(AdhanOtherView()),
+                "iqamah": AnyView(IqamahView()), "eid": AnyView(TakbiratView()),
+            ], argument: "-guidesArticle")
+            #endif
+
             Group {
                 Section(header: Text("HOW TO WORSHIP")) {
                     guideLink("How to Pray (Salah)", destination: HowToPrayView())
@@ -117,7 +126,7 @@ struct HowToPrayView: View {
 
                 Section(header: Text("STEP BY STEP")) {
                     Text("The Prophet (peace and blessings be upon him) said:").font(.body)
-                    ScriptureQuote(text: "“Pray as you have seen me praying” (Sahih al-Bukhari 631).", dimmed: true)
+                    ScriptureQuote(text: "“Pray as you have seen me praying” (Sahih al-Bukhari 631).", arabic: "وَصَلُّوا كَمَا رَأَيْتُمُونِي أُصَلِّي", dimmed: true)
                     Text("1. **Takbir (تَكبِير)**: raise the hands and say “Allahu Akbar,” then place the right hand over the left upon the chest.").font(.body)
                     Text("2. **Recitation**: say the opening supplication, then recite Surah **Al-Fatiha (الفَاتِحَة)**, required in every rak'ah, followed by another passage of the Quran in the first two rak'ah.").font(.body)
                     Text("3. **Ruku (رُكُوع)**: bow with a straight back, hands on the knees, saying “Subhana Rabbi al-Adheem” three times.").font(.body)
@@ -131,34 +140,35 @@ struct HowToPrayView: View {
                 Section(header: Text("THE COMMAND TO PRAY")) {
                     Text("Allah (Glorified and Exalted be He) says:")
                         .font(.body)
-                    ScriptureQuote(text: "“And establish prayer and give zakah and bow with those who bow” (Quran 2:43).")
+                    ScriptureQuote(text: "“And establish prayer and give zakah and bow with those who bow” (Quran 2:43).", arabic: "وَأَقِيمُواْ ٱلصَّلَوٰةَ وَءَاتُواْ ٱلزَّكَوٰةَ وَٱرۡكَعُواْ مَعَ ٱلرَّٰكِعِينَ")
 
-                    ScriptureQuote(text: "“Indeed, prayer has been decreed upon the believers a decree of specified times” (Quran 4:103).")
+                    ScriptureQuote(text: "“Indeed, prayer has been decreed upon the believers a decree of specified times” (Quran 4:103).", arabic: "إِنَّ ٱلصَّلَوٰةَ كَانَتۡ عَلَى ٱلۡمُؤۡمِنِينَ كِتَٰبٗا مَّوۡقُوتٗا")
 
-                    ScriptureQuote(text: "“Maintain with care the [obligatory] prayers and [in particular] the middle prayer and stand before Allah, devoutly obedient” (Quran 2:238).")
+                    ScriptureQuote(text: "“Maintain with care the [obligatory] prayers and [in particular] the middle prayer and stand before Allah, devoutly obedient” (Quran 2:238).", arabic: "حَٰفِظُواْ عَلَى ٱلصَّلَوَٰتِ وَٱلصَّلَوٰةِ ٱلۡوُسۡطَىٰ وَقُومُواْ لِلَّهِ قَٰنِتِينَ")
 
-                    ScriptureQuote(text: "“Indeed, prayer prohibits immorality and wrongdoing, and the remembrance of Allah is greater” (Quran 29:45).")
+                    ScriptureQuote(text: "“Indeed, prayer prohibits immorality and wrongdoing, and the remembrance of Allah is greater” (Quran 29:45).", arabic: "إِنَّ ٱلصَّلَوٰةَ تَنۡهَىٰ عَنِ ٱلۡفَحۡشَآءِ وَٱلۡمُنكَرِۗ وَلَذِكۡرُ ٱللَّهِ أَكۡبَرُۗ")
                 }
 
                 Section(header: Text("ITS PLACE AND ITS WEIGHT")) {
                     Text("The prayer is the first thing a person will be asked about. The Prophet (peace and blessings be upon him) said:")
                         .font(.body)
-                    ScriptureQuote(text: "“The first thing for which a person will be brought to account on the Day of Resurrection is his prayer. If it is sound, he will have prospered and succeeded; and if it is unsound, he will have failed and lost” (Sunan al-Tirmidhi 413).", dimmed: true)
+                    ScriptureQuote(text: "“The first thing for which a person will be brought to account on the Day of Resurrection is his prayer. If it is sound, he will have prospered and succeeded; and if it is unsound, he will have failed and lost” (Sunan al-Tirmidhi 413; graded sahih by al-Albani).", arabic: "إِنَّ أَوَّلَ مَا يُحَاسَبُ بِهِ الْعَبْدُ يَوْمَ الْقِيَامَةِ مِنْ عَمَلِهِ صَلاَتُهُ فَإِنْ صَلُحَتْ فَقَدْ أَفْلَحَ وَأَنْجَحَ وَإِنْ فَسَدَتْ فَقَدْ خَابَ وَخَسِرَ", dimmed: true)
 
                     Text("It is the line between belief and disbelief:")
                         .font(.body)
-                    ScriptureQuote(text: "“Between a man and shirk and kufr is the abandonment of prayer” (Sahih Muslim 82).", dimmed: true)
+                    ScriptureQuote(text: "“Between a man and shirk and kufr is the abandonment of prayer” (Sahih Muslim 82).", arabic: "إِنَّ بَيْنَ الرَّجُلِ وَبَيْنَ الشِّرْكِ وَالْكُفْرِ تَرْكَ الصَّلاَةِ", dimmed: true)
 
                     Text("And it washes a person clean:")
                         .font(.body)
-                    ScriptureQuote(text: "“If there was a river at the door of any of you, and he bathed in it five times a day, would any dirt remain on him? They said: No dirt would remain on him. He said: That is the example of the five daily prayers; by them Allah wipes away sins” (Sahih al-Bukhari 528, Sahih Muslim 667).", dimmed: true)
+                    ScriptureQuote(text: "“If there was a river at the door of any of you, and he bathed in it five times a day, would any dirt remain on him? They said: No dirt would remain on him. He said: That is the example of the five daily prayers; by them Allah wipes away sins” (Sahih al-Bukhari 528, Sahih Muslim 667).", arabic: "أَرَأَيْتُمْ لَوْ أَنَّ نَهَرًا بِبَابِ أَحَدِكُمْ، يَغْتَسِلُ فِيهِ كُلَّ يَوْمٍ خَمْسًا، مَا تَقُولُ ذَلِكَ يُبْقِي مِنْ دَرَنِهِ. قَالُوا لاَ يُبْقِي مِنْ دَرَنِهِ شَيْئًا. قَالَ فَذَلِكَ مِثْلُ الصَّلَوَاتِ الْخَمْسِ، يَمْحُو اللَّهُ بِهَا الْخَطَايَا", dimmed: true)
 
                     Text("Praying in congregation multiplies it further:")
                         .font(.body)
-                    ScriptureQuote(text: "“Prayer in congregation is twenty-seven times superior to the prayer offered by a person alone” (Sahih al-Bukhari 645, Sahih Muslim 650).", dimmed: true)
+                    ScriptureQuote(text: "“Prayer in congregation is twenty-seven times superior to the prayer offered by a person alone” (Sahih al-Bukhari 645, Sahih Muslim 650).", arabic: "صَلاَةُ الْجَمَاعَةِ تَفْضُلُ صَلاَةَ الْفَذِّ بِسَبْعٍ وَعِشْرِينَ دَرَجَةً", dimmed: true)
 
-                    Text("And its calm is a mercy. The Prophet (peace and blessings be upon him) would say to Bilal: “Call the prayer, O Bilal, and give us comfort by it” (Sunan Abi Dawud 4985).")
+                    Text("And its calm is a mercy. The Prophet (peace and blessings be upon him) would say to Bilal:")
                         .font(.body)
+                    ScriptureQuote(text: "“O Bilal, call the iqamah for the prayer; give us comfort by it” (Sunan Abi Dawud 4985; graded sahih by al-Albani).", arabic: "يَا بِلاَلُ أَقِمِ الصَّلاَةَ أَرِحْنَا بِهَا", dimmed: true)
                 }
 
                 Section(header: Text("IN SUMMARY")) {
@@ -189,35 +199,45 @@ struct HowToFastView: View {
                 }
 
                 Section(header: Text("1. MAKE THE INTENTION")) {
-                    Text("Form the **Niyyah (نِيَّة)** to fast in the heart before **Fajr**. For an obligatory Ramadan fast, intend it the night before.")
+                    Text("Form the **Niyyah (نِيَّة)** to fast in the heart before **Fajr**. For an obligatory Ramadan fast, intend it the night before. The Prophet (peace and blessings be upon him) said:")
                         .font(.body)
+                    ScriptureQuote(text: "“Whoever does not resolve to fast before dawn, there is no fast for him” (Sunan Abi Dawud 2454; graded sahih by al-Albani).", arabic: "مَنْ لَمْ يُجْمِعِ الصِّيَامَ قَبْلَ الْفَجْرِ فَلاَ صِيَامَ لَهُ", dimmed: true)
                 }
 
                 Section(header: Text("2. EAT SUHOOR")) {
                     Text("Take the pre-dawn meal, **Suhoor (سُحُور)**, which is a blessed Sunnah, and stop eating and drinking at the entry of **Fajr**.").font(.body)
                     Text("The Prophet (peace and blessings be upon him) said:").font(.body)
-                    ScriptureQuote(text: "“Take Suhoor, for in Suhoor there is a blessing” (Sahih al-Bukhari 1923).", dimmed: true)
+                    ScriptureQuote(text: "“Take Suhoor, for in Suhoor there is a blessing” (Sahih al-Bukhari 1923).", arabic: "تَسَحَّرُوا فَإِنَّ فِي السَّحُورِ بَرَكَةً", dimmed: true)
                 }
 
                 Section(header: Text("3. FAST THROUGH THE DAY")) {
                     Text("From Fajr to Maghrib, abstain from food, drink, and intimacy. The fast is also of the limbs and tongue: guard against lying, backbiting, and anger.").font(.body)
                     Text("The Prophet (peace and blessings be upon him) said:").font(.body)
-                    ScriptureQuote(text: "“Whoever does not give up false speech and acting upon it, Allah has no need of his giving up his food and drink” (Sahih al-Bukhari 1903).", dimmed: true)
+                    ScriptureQuote(text: "“Whoever does not give up false speech and acting upon it, Allah has no need of his giving up his food and drink” (Sahih al-Bukhari 1903).", arabic: "مَنْ لَمْ يَدَعْ قَوْلَ الزُّورِ وَالْعَمَلَ بِهِ فَلَيْسَ لِلَّهِ حَاجَةٌ فِي أَنْ يَدَعَ طَعَامَهُ وَشَرَابَهُ", dimmed: true)
                 }
 
                 Section(header: Text("4. BREAK THE FAST AT MAGHRIB")) {
-                    Text("Break the fast (**Iftar, إِفطَار**) as soon as the sun sets, hastening it as the Sunnah, traditionally with fresh or dried dates and water, then supplicate, for the fasting person's dua at Iftar is answered.")
+                    Text("Break the fast (**Iftar, إِفطَار**) as soon as the sun sets. Hastening it is the Sunnah:")
                         .font(.body)
+                    ScriptureQuote(text: "“The people will remain upon goodness as long as they hasten to break the fast” (Sahih al-Bukhari 1957).", arabic: "لاَ يَزَالُ النَّاسُ بِخَيْرٍ مَا عَجَّلُوا الْفِطْرَ", dimmed: true)
+                    Text("Anas (may Allah be pleased with him) described how the Prophet (peace and blessings be upon him) broke his fast:")
+                        .font(.body)
+                    ScriptureQuote(text: "“The Messenger of Allah would break his fast with fresh dates before praying; if there were no fresh dates, then with dried dates; and if there were no dried dates, he would take a few sips of water” (Sunan Abi Dawud 2356; graded hasan sahih by al-Albani).", arabic: "كَانَ رَسُولُ اللَّهِ صلى الله عليه وسلم يُفْطِرُ عَلَى رُطَبَاتٍ قَبْلَ أَنْ يُصَلِّيَ فَإِنْ لَمْ تَكُنْ رُطَبَاتٌ فَعَلَى تَمَرَاتٍ فَإِنْ لَمْ تَكُنْ حَسَا حَسَوَاتٍ مِنْ مَاءٍ", dimmed: true)
+                    Text("And he would say when he broke his fast:")
+                        .font(.body)
+                    ScriptureQuote(text: "“Thirst has gone, the veins are moistened, and the reward is certain, if Allah wills” (Sunan Abi Dawud 2357; graded hasan by al-Albani).", arabic: "ذَهَبَ الظَّمَأُ وَابْتَلَّتِ الْعُرُوقُ وَثَبَتَ الأَجْرُ إِنْ شَاءَ اللَّهُ", dimmed: true)
                 }
 
                 Section(header: Text("WHAT INVALIDATES THE FAST")) {
-                    Text("Deliberately eating or drinking, intentional intimacy, and the onset of menstruation or postpartum bleeding break the fast. Eating or drinking by genuine forgetfulness does not; one simply continues fasting.")
+                    Text("Deliberately eating or drinking, intentional intimacy, and the onset of menstruation or postpartum bleeding break the fast. Eating or drinking by genuine forgetfulness does not; one simply continues fasting. The Prophet (peace and blessings be upon him) said:")
                         .font(.body)
+                    ScriptureQuote(text: "“If someone forgets and eats or drinks, let him complete his fast, for it is Allah who fed him and gave him drink” (Sahih al-Bukhari 1933).", arabic: "إِذَا نَسِيَ فَأَكَلَ وَشَرِبَ فَلْيُتِمَّ صَوْمَهُ، فَإِنَّمَا أَطْعَمَهُ اللَّهُ وَسَقَاهُ", dimmed: true)
                 }
 
                 Section(header: Text("WHO IS EXCUSED")) {
-                    Text("The sick, travelers, pregnant and nursing women, and the elderly who cannot fast are excused; missed fasts are made up later, or a **Fidyah (فِديَة)** (feeding a needy person per day) is given by those unable to fast at all.")
+                    Text("The sick, travelers, pregnant and nursing women, and the elderly who cannot fast are excused; missed fasts are made up later, or a **Fidyah (فِديَة)** (feeding a needy person per day) is given by those unable to fast at all. Allah (Glorified and Exalted be He) says:")
                         .font(.body)
+                    ScriptureQuote(text: "“So whoever among you is ill or on a journey [during them] - then an equal number of days [are to be made up]. And upon those who are able [to fast, but with hardship] - a ransom [as substitute] of feeding a poor person [each day]” (Quran 2:184).", arabic: "فَمَن كَانَ مِنكُم مَّرِيضًا أَوۡ عَلَىٰ سَفَرٖ فَعِدَّةٞ مِّنۡ أَيَّامٍ أُخَرَۚ وَعَلَى ٱلَّذِينَ يُطِيقُونَهُۥ فِدۡيَةٞ طَعَامُ مِسۡكِينٖۖ")
                 }
 
                 Section(header: Text("IN SUMMARY")) {
@@ -228,15 +248,13 @@ struct HowToFastView: View {
                 Section(header: Text("WHY WE FAST")) {
                     Text("Allah (Glorified and Exalted be He) says:")
                         .font(.body)
-                    ScriptureQuote(text: "“O you who have believed, decreed upon you is fasting as it was decreed upon those before you, that you may become righteous” (Quran 2:183).")
-                    ScriptureQuote(text: "“The month of Ramadan [is that] in which was revealed the Quran, a guidance for the people and clear proofs of guidance and criterion” (Quran 2:185).")
+                    ScriptureQuote(text: "“O you who have believed, decreed upon you is fasting as it was decreed upon those before you, that you may become righteous” (Quran 2:183).", arabic: "يَٰٓأَيُّهَا ٱلَّذِينَ ءَامَنُواْ كُتِبَ عَلَيۡكُمُ ٱلصِّيَامُ كَمَا كُتِبَ عَلَى ٱلَّذِينَ مِن قَبۡلِكُمۡ لَعَلَّكُمۡ تَتَّقُونَ")
+                    ScriptureQuote(text: "“The month of Ramadan [is that] in which was revealed the Quran, a guidance for the people and clear proofs of guidance and criterion” (Quran 2:185).", arabic: "شَهۡرُ رَمَضَانَ ٱلَّذِيٓ أُنزِلَ فِيهِ ٱلۡقُرۡءَانُ هُدٗى لِّلنَّاسِ وَبَيِّنَٰتٖ مِّنَ ٱلۡهُدَىٰ وَٱلۡفُرۡقَانِۚ")
                     Text("The Prophet (peace and blessings be upon him) said:")
                         .font(.body)
-                    ScriptureQuote(text: "“Allah said: Every deed of the son of Adam is for him, except fasting; it is for Me, and I shall reward for it” (Sahih al-Bukhari 1904, Sahih Muslim 1151).", dimmed: true)
-                    ScriptureQuote(text: "“Whoever fasts Ramadan out of faith and seeking reward, his previous sins will be forgiven” (Sahih al-Bukhari 38, Sahih Muslim 760).", dimmed: true)
-                    ScriptureQuote(text: "“There is a gate in Paradise called Ar-Rayyan, through which those who fast will enter on the Day of Resurrection, and no one but they will enter it” (Sahih al-Bukhari 1896).", dimmed: true)
-                    Text("And fasting is not of the stomach alone. He said: “Whoever does not give up false speech and acting upon it, Allah has no need of him giving up his food and drink” (Sahih al-Bukhari 1903).")
-                        .font(.body)
+                    ScriptureQuote(text: "“Allah said: Every deed of the son of Adam is for him, except fasting; it is for Me, and I shall reward for it” (Sahih al-Bukhari 1904, Sahih Muslim 1151).", arabic: "قَالَ اللَّهُ كُلُّ عَمَلِ ابْنِ آدَمَ لَهُ إِلاَّ الصِّيَامَ، فَإِنَّهُ لِي، وَأَنَا أَجْزِي بِهِ", dimmed: true)
+                    ScriptureQuote(text: "“Whoever fasts Ramadan out of faith and seeking reward, his previous sins will be forgiven” (Sahih al-Bukhari 38, Sahih Muslim 760).", arabic: "مَنْ صَامَ رَمَضَانَ إِيمَانًا وَاحْتِسَابًا غُفِرَ لَهُ مَا تَقَدَّمَ مِنْ ذَنْبِهِ", dimmed: true)
+                    ScriptureQuote(text: "“There is a gate in Paradise called Ar-Rayyan, through which those who fast will enter on the Day of Resurrection, and no one but they will enter it” (Sahih al-Bukhari 1896).", arabic: "إِنَّ فِي الْجَنَّةِ بَابًا يُقَالُ لَهُ الرَّيَّانُ، يَدْخُلُ مِنْهُ الصَّائِمُونَ يَوْمَ الْقِيَامَةِ، لاَ يَدْخُلُ مِنْهُ أَحَدٌ غَيْرُهُمْ يُقَالُ أَيْنَ الصَّائِمُونَ فَيَقُومُونَ، لاَ يَدْخُلُ مِنْهُ أَحَدٌ غَيْرُهُمْ، فَإِذَا دَخَلُوا أُغْلِقَ، فَلَمْ يَدْخُلْ مِنْهُ أَحَدٌ", dimmed: true)
                 }
 
                 GuideSourcesSection(sources: [
@@ -278,7 +296,7 @@ struct HowToZakahView: View {
 
                 Section(header: Text("4. GIVE IT TO THOSE ENTITLED")) {
                     Text("Allah (Glorified and Exalted be He) named eight categories of recipients:").font(.body)
-                    ScriptureQuote(text: "“Zakah expenditures are only for the poor and for the needy and for those employed to collect [it] and for bringing hearts together [for Islam] and for freeing captives [or slaves] and for those in debt and for the cause of Allah and for the [stranded] traveler” (Quran 9:60).")
+                    ScriptureQuote(text: "“Zakah expenditures are only for the poor and for the needy and for those employed to collect [it] and for bringing hearts together [for Islam] and for freeing captives [or slaves] and for those in debt and for the cause of Allah and for the [stranded] traveler” (Quran 9:60).", arabic: "إِنَّمَا ٱلصَّدَقَٰتُ لِلۡفُقَرَآءِ وَٱلۡمَسَٰكِينِ وَٱلۡعَٰمِلِينَ عَلَيۡهَا وَٱلۡمُؤَلَّفَةِ قُلُوبُهُمۡ وَفِي ٱلرِّقَابِ وَٱلۡغَٰرِمِينَ وَفِي سَبِيلِ ٱللَّهِ وَٱبۡنِ ٱلسَّبِيلِۖ")
                 }
 
                 Section(header: Text("IN SUMMARY")) {
@@ -289,16 +307,14 @@ struct HowToZakahView: View {
                 Section(header: Text("WHY WE GIVE ZAKAH")) {
                     Text("Allah (Glorified and Exalted be He) says:")
                         .font(.body)
-                    ScriptureQuote(text: "“Take from their wealth a charity by which you purify them and cause them increase, and invoke [Allah's blessings] upon them” (Quran 9:103).")
-                    ScriptureQuote(text: "“And establish prayer and give zakah, and whatever good you put forward for yourselves, you will find it with Allah” (Quran 2:110).")
+                    ScriptureQuote(text: "“Take from their wealth a charity by which you purify them and cause them increase, and invoke [Allah's blessings] upon them” (Quran 9:103).", arabic: "خُذۡ مِنۡ أَمۡوَٰلِهِمۡ صَدَقَةٗ تُطَهِّرُهُمۡ وَتُزَكِّيهِم بِهَا وَصَلِّ عَلَيۡهِمۡۖ")
+                    ScriptureQuote(text: "“And establish prayer and give zakah, and whatever good you put forward for yourselves, you will find it with Allah” (Quran 2:110).", arabic: "وَأَقِيمُواْ ٱلصَّلَوٰةَ وَءَاتُواْ ٱلزَّكَوٰةَۚ وَمَا تُقَدِّمُواْ لِأَنفُسِكُم مِّنۡ خَيۡرٖ تَجِدُوهُ عِندَ ٱللَّهِۗ")
                     Text("It is not a favour to the poor. It is their right in your wealth, and withholding it is a warning:")
                         .font(.body)
-                    ScriptureQuote(text: "“And let not those who [greedily] withhold what Allah has given them of His bounty ever think that it is better for them. Rather, it is worse for them. Their necks will be encircled by what they withheld on the Day of Resurrection” (Quran 3:180).")
+                    ScriptureQuote(text: "“And let not those who [greedily] withhold what Allah has given them of His bounty ever think that it is better for them. Rather, it is worse for them. Their necks will be encircled by what they withheld on the Day of Resurrection” (Quran 3:180).", arabic: "وَلَا يَحۡسَبَنَّ ٱلَّذِينَ يَبۡخَلُونَ بِمَآ ءَاتَىٰهُمُ ٱللَّهُ مِن فَضۡلِهِۦ هُوَ خَيۡرٗا لَّهُمۖ بَلۡ هُوَ شَرّٞ لَّهُمۡۖ سَيُطَوَّقُونَ مَا بَخِلُواْ بِهِۦ يَوۡمَ ٱلۡقِيَٰمَةِۗ")
                     Text("When the Prophet (peace and blessings be upon him) sent Mu'adh to Yemen, he told him:")
                         .font(.body)
-                    ScriptureQuote(text: "“Teach them that Allah has enjoined upon them a charity to be taken from their rich and given to their poor” (Sahih al-Bukhari 1395, Sahih Muslim 19).", dimmed: true)
-                    Text("And He named exactly who may receive it: “Zakah expenditures are only for the poor and for the needy and for those employed to collect [zakah] and for bringing hearts together [for Islam] and for freeing captives [or slaves] and for those in debt and for the cause of Allah and for the [stranded] traveler” (Quran 9:60).")
-                        .font(.body)
+                    ScriptureQuote(text: "“Teach them that Allah has enjoined upon them a charity in their wealth, to be taken from their rich and given to their poor” (Sahih al-Bukhari 1395, Sahih Muslim 19).", arabic: "فَأَعْلِمْهُمْ أَنَّ اللَّهَ افْتَرَضَ عَلَيْهِمْ صَدَقَةً فِي أَمْوَالِهِمْ، تُؤْخَذُ مِنْ أَغْنِيَائِهِمْ وَتُرَدُّ عَلَى فُقَرَائِهِمْ", dimmed: true)
                 }
 
                 GuideSourcesSection(sources: [
@@ -329,8 +345,9 @@ struct HowToHajjView: View {
                 }
 
                 Section(header: Text("1. ENTER IHRAM")) {
-                    Text("At the appointed boundary (**Miqat, مِيقَات**), bathe, wear the Ihram garments (two unstitched cloths for men; ordinary modest dress for women), make the intention for Hajj, and begin the **Talbiyah (تَلبِيَة)**: “Labbayk Allahumma labbayk…”")
+                    Text("At the appointed boundary (**Miqat, مِيقَات**), bathe, wear the Ihram garments (two unstitched cloths for men; ordinary modest dress for women), make the intention for Hajj, and begin the **Talbiyah (تَلبِيَة)**. Ibn Umar (may Allah be pleased with him) reported the Talbiyah of the Messenger of Allah (peace and blessings be upon him):")
                         .font(.body)
+                    ScriptureQuote(text: "“Labbayk Allahumma labbayk, labbayka la sharika laka labbayk, innal-hamda wan-ni'mata laka wal-mulk, la sharika lak: Here I am, O Allah, here I am. Here I am, You have no partner, here I am. Indeed all praise, favour and sovereignty are Yours; You have no partner” (Sahih al-Bukhari 1549).", arabic: "لَبَّيْكَ اللَّهُمَّ لَبَّيْكَ، لَبَّيْكَ لاَ شَرِيكَ لَكَ لَبَّيْكَ، إِنَّ الْحَمْدَ وَالنِّعْمَةَ لَكَ وَالْمُلْكَ، لاَ شَرِيكَ لَكَ", dimmed: true)
                 }
 
                 Section(header: Text("2. DAY 8: MINA")) {
@@ -340,7 +357,7 @@ struct HowToHajjView: View {
 
                 Section(header: Text("3. DAY 9: ARAFAH")) {
                     Text("After sunrise proceed to **Arafah (عَرَفَة)** and stand there in supplication until sunset; this standing (**Wuquf**) is the essence of Hajj. Dhuhr and Asr are combined and shortened. The Prophet (peace and blessings be upon him) said:").font(.body)
-                    ScriptureQuote(text: "“Hajj is Arafah” (Sunan al-Tirmidhi 889).", dimmed: true)
+                    ScriptureQuote(text: "“Hajj is Arafah. Whoever comes on the night of Muzdalifah before dawn breaks has caught the Hajj. The days of Mina are three; whoever hastens away after two days, there is no sin upon him, and whoever stays on, there is no sin upon him” (Sunan al-Tirmidhi 889; graded sahih by al-Albani).", arabic: "الْحَجُّ عَرَفَةُ مَنْ جَاءَ لَيْلَةَ جَمْعٍ قَبْلَ طُلُوعِ الْفَجْرِ فَقَدْ أَدْرَكَ الْحَجَّ أَيَّامُ مِنًى ثَلاَثَةٌ فَمَنْ تَعَجَّلَ فِي يَوْمَيْنِ فَلاَ إِثْمَ عَلَيْهِ وَمَنْ تَأَخَّرَ فَلاَ إِثْمَ عَلَيْهِ", dimmed: true)
                     Text("After sunset, move to **Muzdalifah (مُزدَلِفَة)**, combine Maghrib and Isha, rest for the night, and gather pebbles.").font(.body)
                 }
 
@@ -387,7 +404,10 @@ struct HowToUmrahView: View {
                 }
 
                 Section(header: Text("1. ENTER IHRAM")) {
-                    Text("At the **Miqat (مِيقَات)**, bathe, wear the Ihram (two unstitched cloths for men; modest dress for women), make the intention for Umrah, and recite the **Talbiyah (تَلبِيَة)**: “Labbayk Allahumma bi-Umrah.” In Ihram, avoid perfume, cutting hair or nails, and marital relations.")
+                    Text("At the **Miqat (مِيقَات)**, bathe, wear the Ihram (two unstitched cloths for men; modest dress for women), make the intention for Umrah with the words “Labbayk Allahumma umratan” (here I am, O Allah, for Umrah), then recite the **Talbiyah (تَلبِيَة)** of the Prophet (peace and blessings be upon him):")
+                        .font(.body)
+                    ScriptureQuote(text: "“Labbayk Allahumma labbayk, labbayka la sharika laka labbayk, innal-hamda wan-ni'mata laka wal-mulk, la sharika lak: Here I am, O Allah, here I am. Here I am, You have no partner, here I am. Indeed all praise, favour and sovereignty are Yours; You have no partner” (Sahih al-Bukhari 1549).", arabic: "لَبَّيْكَ اللَّهُمَّ لَبَّيْكَ، لَبَّيْكَ لاَ شَرِيكَ لَكَ لَبَّيْكَ، إِنَّ الْحَمْدَ وَالنِّعْمَةَ لَكَ وَالْمُلْكَ، لاَ شَرِيكَ لَكَ", dimmed: true)
+                    Text("In Ihram, avoid perfume, cutting hair or nails, and marital relations.")
                         .font(.body)
                 }
 
@@ -414,13 +434,14 @@ struct HowToUmrahView: View {
                 Section(header: Text("THE VIRTUE OF UMRAH")) {
                     Text("Allah (Glorified and Exalted be He) says:")
                         .font(.body)
-                    ScriptureQuote(text: "“And complete the Hajj and Umrah for Allah” (Quran 2:196).")
+                    ScriptureQuote(text: "“And complete the Hajj and Umrah for Allah” (Quran 2:196).", arabic: "وَأَتِمُّواْ ٱلۡحَجَّ وَٱلۡعُمۡرَةَ لِلَّهِۚ")
                     Text("The Prophet (peace and blessings be upon him) said:")
                         .font(.body)
-                    ScriptureQuote(text: "“Umrah to Umrah is an expiation for whatever comes between them, and the accepted Hajj has no reward but Paradise” (Sahih al-Bukhari 1773, Sahih Muslim 1349).", dimmed: true)
-                    ScriptureQuote(text: "“Umrah in Ramadan is equivalent to Hajj” (Sahih al-Bukhari 1782, Sahih Muslim 1256).", dimmed: true)
-                    Text("And of the journey itself he said: “Perform Hajj and Umrah consecutively, for they remove poverty and sin as the bellows removes impurity from iron, gold and silver” (Sunan al-Tirmidhi 810).")
+                    ScriptureQuote(text: "“Umrah to Umrah is an expiation for whatever comes between them, and the accepted Hajj has no reward but Paradise” (Sahih al-Bukhari 1773, Sahih Muslim 1349).", arabic: "الْعُمْرَةُ إِلَى الْعُمْرَةِ كَفَّارَةٌ لِمَا بَيْنَهُمَا، وَالْحَجُّ الْمَبْرُورُ لَيْسَ لَهُ جَزَاءٌ إِلاَّ الْجَنَّةُ", dimmed: true)
+                    ScriptureQuote(text: "“Umrah in Ramadan is equivalent to Hajj” (Sahih al-Bukhari 1782, Sahih Muslim 1256).", arabic: "فَإِنَّ عُمْرَةً فِي رَمَضَانَ حَجَّةٌ", dimmed: true)
+                    Text("And of the journey itself he said:")
                         .font(.body)
+                    ScriptureQuote(text: "“Follow Hajj with Umrah and Umrah with Hajj, for the two of them remove poverty and sins as the bellows removes the dross of iron, gold and silver, and there is no reward for an accepted Hajj except Paradise” (Sunan al-Tirmidhi 810; graded hasan sahih by al-Albani).", arabic: "تَابِعُوا بَيْنَ الْحَجِّ وَالْعُمْرَةِ فَإِنَّهُمَا يَنْفِيَانِ الْفَقْرَ وَالذُّنُوبَ كَمَا يَنْفِي الْكِيرُ خَبَثَ الْحَدِيدِ وَالذَّهَبِ وَالْفِضَّةِ وَلَيْسَ لِلْحَجَّةِ الْمَبْرُورَةِ ثَوَابٌ إِلاَّ الْجَنَّةُ", dimmed: true)
                 }
 
                 GuideSourcesSection(sources: [

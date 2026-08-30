@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Gate for the shipped TajweedLessons.json.deflate.
+"""Gate for the shipped TajweedLessons.json.xz.
 
-Checks the pack ON DISK: it inflates as raw deflate; every lesson carries an
+Checks the pack ON DISK: it decodes as xz; every lesson carries an
 id, English title, and body; lesson ids are unique; every example references a
 real ayah; and (when Tilawa is reachable) a fresh build reproduces the pack
 byte for byte.
@@ -16,10 +16,10 @@ import json
 import pathlib
 import subprocess
 import sys
-import zlib
+import lzma
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-PACK = ROOT / "Resources" / "Data" / "Quran" / "TajweedLessons.json.deflate"
+PACK = ROOT / "Resources" / "Data" / "Quran" / "TajweedLessons.json.xz"
 
 _spec = importlib.util.spec_from_file_location("b", ROOT / "Scripts" / "build_tajweed_lessons.py")
 _builder = importlib.util.module_from_spec(_spec)
@@ -32,8 +32,8 @@ def main() -> None:
 
     blob = PACK.read_bytes()
     try:
-        raw = zlib.decompress(blob, -15)
-    except zlib.error as error:
+        raw = lzma.decompress(blob)
+    except lzma.LZMAError as error:
         raise SystemExit(f"pack is not a raw deflate stream: {error}")
 
     chapters = json.loads(raw.decode("utf-8")).get("chapters", [])

@@ -16,10 +16,14 @@ struct AdhanSoundOption: Identifiable, Equatable {
 }
 
 extension Settings {
-    /// Each adhan ships as three clips: `<id>.caf` (the whole adhan), `<id>-30.caf` (its opening 30 seconds)
-    /// and `<id>-short.caf` (a 5–15 second excerpt). iOS rejects notification sounds longer than 30 seconds,
-    /// so a notification gets one of the two cuts - which one is a per-prayer choice - while in-app playback
-    /// and the settings preview get the full recording.
+    /// Each adhan is one bundled recording, `<id>.caf` (AAC, the whole adhan), and two cuts a notification
+    /// can carry: `<id>-30.caf` (its opening 30 seconds) and `<id>-short.caf` (a 5–15 second excerpt). iOS
+    /// rejects notification sounds longer than 30 seconds and only plays PCM/IMA4, so a notification gets one
+    /// of the two cuts - which one is a per-prayer choice - while in-app playback and the settings preview get
+    /// the full recording. The cuts are not bundled: `AdhanClipStore` renders the selected adhan's two into
+    /// Library/Sounds (where `UNNotificationSound` looks) from the full recording, which took 7 MB of IMA4 off
+    /// every install. The tones (echo, takbir, chime, ring, alarm) are seconds long and ship as three
+    /// identical bundled clips, as before.
     static let supportedAdhanSounds: [AdhanSoundOption] = [
         .init(id: "default", title: "Default"),
         // A 3.6-second chime, not a call to prayer - for being told without being called. All three of its
@@ -87,6 +91,13 @@ extension Settings {
     }
     static let supportedAlertToneIDs = Set(supportedAlertTones.map(\.id))
 
+    /// The calls to prayer alone: the second group of the ADHAN SOUND picker, which lists the tones
+    /// (`supportedAlertTones`, "Default" included) first and these after them, so a listener picking an
+    /// adhan is not reading Chime and Alarm in the same run as Makkah and Madina.
+    static let supportedAdhanRecordings: [AdhanSoundOption] = supportedAdhanSounds.filter {
+        !alertToneIDs.contains($0.id)
+    }
+
     /// The adhan a fresh install gets: whichever clip is *titled* "Minshawi 1", which after the swap above
     /// is the one bundled as `minshawi-2`.
     static let defaultAdhanSoundID = "minshawi-2"
@@ -138,8 +149,16 @@ extension Settings {
     static let supportedAdhanSoundIDs = Set(supportedAdhanSounds.map(\.id))
     private static var adhanSoundResourceCache: [String: String?] = [:]
 
-    /// Resolves a picker id to a bundled `.caf` resource name, or `nil` for "Default" and for any id whose
-    /// clip is missing from the bundle. `variant` picks the full recording ("") or the 30-second cut.
+    /// Forget every resolved clip: the on-device cuts just changed (rendered, or pruned).
+    static func invalidateAdhanSoundResourceCache() {
+        assert(Thread.isMainThread, "invalidateAdhanSoundResourceCache must be called on the main thread")
+        adhanSoundResourceCache.removeAll()
+    }
+
+    /// Resolves a picker id to a `.caf` resource name, or `nil` for "Default" and for any id whose clip
+    /// isn't available yet. `variant` picks the full recording ("") or one of the two cuts. The full
+    /// recordings and the tones' clips are bundled; an adhan's cuts are rendered on the device by
+    /// `AdhanClipStore` (a nil here means "not rendered yet" - the store reschedules once they are).
     private func adhanSoundResource(for selection: String, variant: String) -> String? {
         // The static cache is a plain Dictionary; every current caller is main-confined and this keeps
         // that invariant enforced rather than remembered.
@@ -150,11 +169,13 @@ extension Settings {
         }
 
         let resolved: String? = {
-            guard selection != "default",
-                  Self.supportedAdhanSoundIDs.contains(selection),
-                  Bundle.main.path(forResource: resource, ofType: "caf") != nil else {
-                return nil
+            guard selection != "default", Self.supportedAdhanSoundIDs.contains(selection) else { return nil }
+            #if os(iOS)
+            if !variant.isEmpty, AdhanClipStore.cuts[selection] != nil {
+                return AdhanClipStore.isReady(resource: resource) ? resource : nil
             }
+            #endif
+            guard Bundle.main.path(forResource: resource, ofType: "caf") != nil else { return nil }
             return resource
         }()
 
@@ -167,8 +188,9 @@ extension Settings {
         adhanSoundResource(for: selection, variant: "")
     }
 
-    /// Filename of the notification cut, for `UNNotificationSound`. Falls back to the 30-second cut when the
-    /// requested short clip isn't bundled, so a missing asset degrades to a longer adhan rather than silence.
+    /// Filename of the notification cut, for `UNNotificationSound` (which finds the rendered cuts in
+    /// Library/Sounds by name). Falls back to the 30-second cut when the requested short clip isn't
+    /// available, so a missing asset degrades to a longer adhan rather than silence.
     func adhanNotificationSoundFilename(for selection: String, length: AdhanClipLength = .full) -> String? {
         let resource = adhanSoundResource(for: selection, variant: length.suffix)
             ?? adhanSoundResource(for: selection, variant: Self.adhanNotificationClipSuffix)
@@ -1869,6 +1891,12 @@ extension Settings {
             return false
 
         case .notDetermined:
+            #if DEBUG
+            // Headless screenshots: the system prompt cannot be dismissed without a tap and covers the
+            // middle of every screen on a fresh simulator, so `-skipNotificationPrompt` leaves the
+            // permission undetermined instead of asking. DEBUG builds only.
+            if ProcessInfo.processInfo.arguments.contains("-skipNotificationPrompt") { return false }
+            #endif
             do {
                 let granted = try await center.requestAuthorization(options: [.alert, .sound])
                 showNotificationAlert = !granted && !notificationNeverAskAgain
@@ -2071,6 +2099,14 @@ extension Settings {
             // standalone so the two devices can't double-alert for the same prayer.
             UNUserNotificationCenter.current().removeAllPendingNotificationRequests()
             return
+        }
+        #endif
+        #if os(iOS)
+        // The adhan's notification cuts are rendered on the device. If the selected adhan's aren't there
+        // yet (first launch, a new recording, a re-render), this pass goes out with the system sound and
+        // the store runs it again the moment the cuts exist - the app never blocks on the render.
+        AdhanClipStore.ensureClips(for: adhanNotificationSound) { [weak self] rendered in
+            if rendered { self?.scheduleNotifications(deferred: true) }
         }
         #endif
         #if os(iOS) || os(watchOS)
@@ -2817,7 +2853,8 @@ extension Settings {
         }
         return .default
         #else
-        // The Watch schedules its own notifications and has none of these clips bundled.
+        // The Watch schedules its own notifications and bundles no clips at all (its 43 cafs were dead
+        // weight until 2026-08-29: nothing on the watch ever played one).
         return .default
         #endif
     }

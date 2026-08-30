@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Build the two theme packs behind "Browse by Theme" and the surah outlines:
 
-    Resources/Data/Quran/ThematicTopics.json.deflate
-    Resources/Data/Quran/SurahSections.json.deflate
+    Resources/Data/Quran/ThematicTopics.json.xz
+    Resources/Data/Quran/SurahSections.json.xz
 
 SOURCES (bundled in the sibling Tilawa app, ported with permission)
 -------------------------------------------------------------------
@@ -12,7 +12,7 @@ SOURCES (bundled in the sibling Tilawa app, ported with permission)
 * surah-sections.json  - Quranpedia's per-surah passage outlines (an Arabic
   title + English translation per passage, plus a whole-surah overview row).
 
-OUTPUT FORMATS (raw deflate, like the other Data/Quran payloads)
+OUTPUT FORMATS (xz, like the other Data/Quran payloads)
 ----------------------------------------------------------------
 ThematicTopics: {"topics": [ {id, name, description, domain, category,
                               ayahs: ["2:22", ...]} ... ]}   - topic order kept.
@@ -29,12 +29,22 @@ from __future__ import annotations
 import json
 import pathlib
 import sys
-import zlib
+import lzma
+
+
+def xz_compress(body: bytes) -> bytes:
+    """xz stream, preset 9e, dictionary no larger than the payload needs (the app decodes it with
+    Apple's Compression framework, COMPRESSION_LZMA, which reads the xz container directly)."""
+    dict_size = 1 << 16
+    while dict_size < len(body) and dict_size < (1 << 26):
+        dict_size <<= 1
+    filters = [{"id": lzma.FILTER_LZMA2, "preset": 9 | lzma.PRESET_EXTREME, "dict_size": dict_size}]
+    return lzma.compress(body, format=lzma.FORMAT_XZ, check=lzma.CHECK_CRC32, filters=filters)
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 QURAN_JSON = ROOT / "Resources" / "JSONs-Deprecated" / "Quran.json"
-OUT_TOPICS = ROOT / "Resources" / "Data" / "Quran" / "ThematicTopics.json.deflate"
-OUT_SECTIONS = ROOT / "Resources" / "Data" / "Quran" / "SurahSections.json.deflate"
+OUT_TOPICS = ROOT / "Resources" / "Data" / "Quran" / "ThematicTopics.json.xz"
+OUT_SECTIONS = ROOT / "Resources" / "Data" / "Quran" / "SurahSections.json.xz"
 DEFAULT_TILAWA = ROOT.parent / "Tilawa"
 
 
@@ -45,8 +55,7 @@ def ayah_counts() -> dict[int, int]:
 
 def deflate(obj) -> tuple[bytes, bytes]:
     body = json.dumps(obj, ensure_ascii=False, separators=(",", ":"), sort_keys=True).encode("utf-8")
-    compressor = zlib.compressobj(9, zlib.DEFLATED, -15)
-    return body, compressor.compress(body) + compressor.flush()
+    return body, xz_compress(body)
 
 
 def main() -> None:
@@ -140,9 +149,9 @@ def main() -> None:
     OUT_SECTIONS.write_bytes(blob_s)
 
     print(f"topics: {len(topics_out)} topics, {assignments:,} ayah assignments "
-          f"({len(raw_t):,} raw -> {len(blob_t):,} deflated)")
+          f"({len(raw_t):,} raw -> {len(blob_t):,} xz)")
     print(f"sections: {len(sections_out)} surahs, {section_rows} passage rows "
-          f"({len(raw_s):,} raw -> {len(blob_s):,} deflated)")
+          f"({len(raw_s):,} raw -> {len(blob_s):,} xz)")
 
 
 if __name__ == "__main__":

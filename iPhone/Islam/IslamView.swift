@@ -49,6 +49,8 @@ struct IslamView: View {
     /// String-backed so favorites persist by raw value, CaseIterable so the resource list, the grid, and the
     /// favorites section all draw from one source of truth instead of three hand-maintained row lists.
     private enum IslamDestination: String, Hashable, CaseIterable {
+        /// The on-device chat. Listed only where Apple Intelligence can run it (`available`).
+        case askAI
         case arabicAlphabet
         case tajweedFoundations
         case commonAdhkar
@@ -67,6 +69,7 @@ struct IslamView: View {
 
         var title: String {
             switch self {
+            case .askAI: return "Ask AI"
             case .arabicAlphabet: return "Arabic Alphabet"
             case .tajweedFoundations: return "Tajweed Foundations"
             case .commonAdhkar: return "Dhikr & Remembrances"
@@ -85,6 +88,7 @@ struct IslamView: View {
 
         var systemImage: String {
             switch self {
+            case .askAI: return "sparkles"
             case .arabicAlphabet: return "textformat.size.ar"
             case .tajweedFoundations: return "waveform"
             case .commonAdhkar: return "book.closed"
@@ -104,6 +108,7 @@ struct IslamView: View {
         /// One line of what lives behind the row - the Settings hub's caption column, here.
         var subtitle: String {
             switch self {
+            case .askAI: return "Ask anything about Islam, on device"
             case .arabicAlphabet: return "Letters, forms, diacritics, and signs"
             case .tajweedFoundations: return "The rules of beautiful recitation"
             case .commonAdhkar: return "Morning, evening, and daily remembrances"
@@ -125,6 +130,7 @@ struct IslamView: View {
         /// one rhythm.
         var gridTitle: String {
             switch self {
+            case .askAI: return "Ask\nAI"
             case .arabicAlphabet: return "Arabic\nAlphabet"
             case .tajweedFoundations: return "Tajweed\nFoundations"
             case .commonAdhkar: return "Dhikr &\nRemembrances"
@@ -140,13 +146,19 @@ struct IslamView: View {
             case .howToGuides: return "How-To\nGuides"
             }
         }
+
+        /// Every resource this device can show: all of them, minus Ask AI where Apple Intelligence
+        /// can't run it (a row that opens onto "not available here" is worse than no row).
+        static var available: [IslamDestination] {
+            allCases.filter { $0 != .askAI || OnDeviceAsk.isAvailable }
+        }
     }
 
     /// Collapse state for the favorites section, same as the Quran tab's Favorite Surahs.
     @AppStorage("showIslamFavorites") private var showIslamFavorites = true
 
     private var favoriteResources: [IslamDestination] {
-        IslamDestination.allCases.filter { settings.isIslamResourceFavorite($0.rawValue) }
+        IslamDestination.available.filter { settings.isIslamResourceFavorite($0.rawValue) }
     }
 
     private func favoriteToggleButton(_ item: IslamDestination) -> some View {
@@ -302,8 +314,8 @@ struct IslamView: View {
             }
         }
 
-        Section(header: SectionPillHeader(title: "ISLAMIC RESOURCES", count: IslamDestination.allCases.count)) {
-            resourceItems(IslamDestination.allCases)
+        Section(header: SectionPillHeader(title: "ISLAMIC RESOURCES", count: IslamDestination.available.count)) {
+            resourceItems(IslamDestination.available)
         }
     }
 
@@ -417,6 +429,8 @@ struct IslamView: View {
     @ViewBuilder
     private func destinationView(for destination: IslamDestination) -> some View {
         switch destination {
+        case .askAI:
+            AskAIChatView()
         case .arabicAlphabet:
             ArabicView()
         case .tajweedFoundations:
@@ -532,7 +546,7 @@ struct IslamView: View {
         }
 
         Section(header: Text("ISLAMIC RESOURCES")) {
-            ForEach(IslamDestination.allCases, id: \.self) { splitResourceLink($0) }
+            ForEach(IslamDestination.available, id: \.self) { splitResourceLink($0) }
         }
     }
 

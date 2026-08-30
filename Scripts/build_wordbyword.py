@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build Resources/Data/Quran/WordByWord.json.deflate - the per-word English gloss
+"""Build Resources/Data/Quran/WordByWord.json.xz - the per-word English gloss
 pack that backs "tap a word" in the reader.
 
 WHY A BUILD-TIME ALIGNMENT AND NOT A RUNTIME ONE
@@ -25,7 +25,7 @@ merged) stores "" and the reader shows no card for it.
 
 OUTPUT FORMAT
 -------------
-Raw-deflate (no zlib header - what iPhone/Quran/WordByWord.swift's inflate and
+xz (what iPhone/Quran/WordByWord.swift's inflate and
 Apple's COMPRESSION_ZLIB expect, matching the Qiraah*/Tajweed* payloads) over:
 
     {"1": [["In (the) name", "(of) Allah", ...], ...], ..., "114": [...]}
@@ -47,11 +47,21 @@ import json
 import pathlib
 import re
 import sys
-import zlib
+import lzma
+
+
+def xz_compress(body: bytes) -> bytes:
+    """xz stream, preset 9e, dictionary no larger than the payload needs (the app decodes it with
+    Apple's Compression framework, COMPRESSION_LZMA, which reads the xz container directly)."""
+    dict_size = 1 << 16
+    while dict_size < len(body) and dict_size < (1 << 26):
+        dict_size <<= 1
+    filters = [{"id": lzma.FILTER_LZMA2, "preset": 9 | lzma.PRESET_EXTREME, "dict_size": dict_size}]
+    return lzma.compress(body, format=lzma.FORMAT_XZ, check=lzma.CHECK_CRC32, filters=filters)
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 QURAN_JSON = ROOT / "Resources" / "JSONs-Deprecated" / "Quran.json"
-OUT = ROOT / "Resources" / "Data" / "Quran" / "WordByWord.json.deflate"
+OUT = ROOT / "Resources" / "Data" / "Quran" / "WordByWord.json.xz"
 DEFAULT_SOURCE = ROOT.parent / "Tilawa" / "assets" / "quran" / "word-by-word-en.json"
 
 # Everything that carries no consonantal identity: harakat, sukun/madda variants,
@@ -220,16 +230,14 @@ def main() -> None:
         raise SystemExit(1)
 
     body = json.dumps(packed, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
-    # Raw deflate: no zlib header, matching the other bundled payloads.
-    compressor = zlib.compressobj(9, zlib.DEFLATED, -15)
-    blob = compressor.compress(body) + compressor.flush()
+    blob = xz_compress(body)
 
     OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_bytes(blob)
 
     print(f"{total_ayahs} ayahs aligned, {total_tokens:,} tokens "
           f"({glossed:,} glossed, {total_tokens - glossed:,} ornament/merged)")
-    print(f"{OUT.name}: {len(body):,} raw -> {len(blob):,} deflated")
+    print(f"{OUT.name}: {len(body):,} raw -> {len(blob):,} xz")
 
 
 if __name__ == "__main__":

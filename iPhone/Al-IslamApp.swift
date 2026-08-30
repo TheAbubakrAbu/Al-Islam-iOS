@@ -253,6 +253,12 @@ private struct MainTabView: View {
                                                    qiraah: Settings.shared.displayQiraahForArabic)
                 MushafPageRenderCache.auditPrintLines(pages: pages)
             }
+            // "-auditPacks" - fingerprint every bundled pack and loose payload through the app's own
+            // readers (see PackAudit); run before and after a repack and diff Documents/packaudit.txt.
+            .task {
+                guard ProcessInfo.processInfo.arguments.contains("-auditPacks") else { return }
+                await Task.detached(priority: .utility) { PackAudit.run() }.value
+            }
             // "-dumpComparison 1:3" - print the qiraah comparison sheet's own rows for one ayah
             // (its copy text, built by the same resolver the rows render), since a sheet cannot be
             // scrolled headlessly.

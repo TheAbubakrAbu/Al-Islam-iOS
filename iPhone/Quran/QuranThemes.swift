@@ -6,9 +6,9 @@ import Compression
 //
 // Two packs, both built by Scripts/build_quran_themes.py and gated by
 // Scripts/verify_quran_themes.py:
-//   * ThematicTopics.json.deflate - the QSAC corpus (CC BY 4.0): 323 topics, each carrying a
+//   * ThematicTopics.json.xz - the QSAC corpus (CC BY 4.0): 323 topics, each carrying a
 //     description, a domain, and the ayahs it annotates. Backs the Browse by Theme sheet.
-//   * SurahSections.json.deflate - Quranpedia's passage outlines per surah. Surfaced as a
+//   * SurahSections.json.xz - Quranpedia's passage outlines per surah. Surfaced as a
 //     synthetic "Outline" source inside the existing About this Surah sheet, so it inherits
 //     that sheet's picker, search, and text handling for free.
 
@@ -158,9 +158,9 @@ final class SurahSectionsStore: @unchecked Sendable {
 
 enum ThemesPack {
     static func url(_ name: String) -> URL? {
-        Bundle.main.url(forResource: name, withExtension: "json.deflate", subdirectory: "Data/Quran")
-            ?? Bundle.main.url(forResource: name, withExtension: "json.deflate", subdirectory: "Quran")
-            ?? Bundle.main.url(forResource: name, withExtension: "json.deflate")
+        Bundle.main.url(forResource: name, withExtension: "json.xz", subdirectory: "Data/Quran")
+            ?? Bundle.main.url(forResource: name, withExtension: "json.xz", subdirectory: "Quran")
+            ?? Bundle.main.url(forResource: name, withExtension: "json.xz")
     }
 
     static func json(_ name: String) -> Any? {
@@ -170,18 +170,9 @@ enum ThemesPack {
         return try? JSONSerialization.jsonObject(with: json)
     }
 
+    /// The payload is an xz stream; `COMPRESSION_LZMA` reads that container directly.
     private static func inflate(_ data: Data) -> Data? {
-        let capacity = max(data.count * 14, 1 << 21)
-        var out = Data()
-        let buffer = UnsafeMutablePointer<UInt8>.allocate(capacity: capacity)
-        defer { buffer.deallocate() }
-        let written = data.withUnsafeBytes { (rawBuffer: UnsafeRawBufferPointer) -> Int in
-            guard let base = rawBuffer.bindMemory(to: UInt8.self).baseAddress else { return 0 }
-            return compression_decode_buffer(buffer, capacity, base, data.count, nil, COMPRESSION_ZLIB)
-        }
-        guard written > 0 else { return nil }
-        out.append(buffer, count: written)
-        return out
+        SolidPack.xzDecompress(data)
     }
 }
 
