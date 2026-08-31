@@ -56,9 +56,8 @@ struct IslamView: View {
         case commonAdhkar
         case commonDuas
         case tasbihCounter
-        // Zakah Calculator is built (ZakahView.swift) but hidden for now - uncomment this case and its
-        // title/systemImage/gridTitle/destination/resourceLink entries below to ship it.
-        // case zakahCalculator
+        case zakahCalculator
+        case inheritanceCalculator
         case namesOfAllah
         case hijriCalendarConverter
         case masjidLocator
@@ -75,7 +74,8 @@ struct IslamView: View {
             case .commonAdhkar: return "Dhikr & Remembrances"
             case .commonDuas: return "Dua & Supplications"
             case .tasbihCounter: return "Tasbih Counter"
-            // case .zakahCalculator: return "Zakah Calculator"
+            case .zakahCalculator: return "Zakah Calculator"
+            case .inheritanceCalculator: return "Inheritance Calculator"
             case .namesOfAllah: return "99 Names of Allah"
             case .hijriCalendarConverter: return "Hijri Date Converter"
             case .masjidLocator: return "Masjid Locator"
@@ -94,7 +94,8 @@ struct IslamView: View {
             case .commonAdhkar: return "book.closed"
             case .commonDuas: return "text.book.closed"
             case .tasbihCounter: return "circles.hexagonpath.fill"
-            // case .zakahCalculator: return "percent"
+            case .zakahCalculator: return "percent"
+            case .inheritanceCalculator: return "divide.circle"
             case .namesOfAllah: return "signature"
             case .hijriCalendarConverter: return "calendar"
             case .masjidLocator: return "mappin.and.ellipse"
@@ -114,7 +115,8 @@ struct IslamView: View {
             case .commonAdhkar: return "Morning, evening, and daily remembrances"
             case .commonDuas: return "Authenticated supplications with sources"
             case .tasbihCounter: return "Count dhikr with a tap"
-            // case .zakahCalculator: return "Work out what you owe"
+            case .zakahCalculator: return "Work out what you owe"
+            case .inheritanceCalculator: return "Divide an estate by the Quranic shares"
             case .namesOfAllah: return "Asma ul-Husna with meanings"
             case .hijriCalendarConverter: return "Convert Hijri and Gregorian dates"
             case .masjidLocator: return "Find mosques near you"
@@ -136,7 +138,8 @@ struct IslamView: View {
             case .commonAdhkar: return "Dhikr &\nRemembrances"
             case .commonDuas: return "Dua &\nSupplications"
             case .tasbihCounter: return "Tasbih\nCounter"
-            // case .zakahCalculator: return "Zakah\nCalculator"
+            case .zakahCalculator: return "Zakah\nCalculator"
+            case .inheritanceCalculator: return "Inheritance\nCalculator"
             case .namesOfAllah: return "99 Names\nof Allah"
             case .hijriCalendarConverter: return "Hijri Date\nConverter"
             case .masjidLocator: return "Masjid\nLocator"
@@ -452,8 +455,10 @@ struct IslamView: View {
             DuaView()
         case .tasbihCounter:
             TasbihView()
-        // case .zakahCalculator:
-        //     ZakahCalculatorView()
+        case .zakahCalculator:
+            ZakahCalculatorView()
+        case .inheritanceCalculator:
+            InheritanceCalculatorView()
         case .namesOfAllah:
             NamesView()
         case .hijriCalendarConverter:
@@ -494,11 +499,15 @@ struct IslamView: View {
                 TasbihView()
             }
 
-            // #if os(iOS)
-            // resourceLink(title: "Zakah Calculator", systemImage: "percent") {
-            //     ZakahCalculatorView()
-            // }
-            // #endif
+            #if os(iOS)
+            resourceLink(title: "Zakah Calculator", systemImage: "percent") {
+                ZakahCalculatorView()
+            }
+
+            resourceLink(title: "Inheritance Calculator", systemImage: "divide.circle") {
+                InheritanceCalculatorView()
+            }
+            #endif
 
             resourceLink(title: "99 Names of Allah", systemImage: "signature") {
                 NamesView()

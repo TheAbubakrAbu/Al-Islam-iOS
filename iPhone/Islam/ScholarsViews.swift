@@ -83,6 +83,51 @@ struct SahabahScholarsView: View {
                         .font(.body)
                 }
 
+                Section(header: Text("THE FIRST SCHOLARS")) {
+                    Text("The Companions (may Allah be pleased with them) learned the Quran as it came down and the Sunnah from the one who lived it. Among them some were singled out for knowledge. The Prophet (peace be upon him) said:")
+                        .font(.body)
+                    ScriptureQuote(text: "“The most merciful of my nation to my nation is Abu Bakr, the most severe of them in the command of Allah is Umar, the most truly modest of them is Uthman ibn Affan, the most knowledgeable of them in the lawful and the unlawful is Mu‘adh ibn Jabal, the most knowledgeable of them in inheritance is Zayd ibn Thabit, the best reciter among them is Ubayy ibn Ka‘b, and every nation has a trustworthy one, and the trustworthy one of this nation is Abu Ubaydah ibn al-Jarrah” (Sunan al-Tirmidhi 3790; graded sahih by al-Albani).", arabic: "أَرْحَمُ أُمَّتِي بِأُمَّتِي أَبُو بَكْرٍ وَأَشَدُّهُمْ فِي أَمْرِ اللَّهِ عُمَرُ وَأَصْدَقُهُمْ حَيَاءً عُثْمَانُ وَأَعْلَمُهُمْ بِالْحَلاَلِ وَالْحَرَامِ مُعَاذُ بْنُ جَبَلٍ وَأَفْرَضُهُمْ زَيْدُ بْنُ ثَابِتٍ وَأَقْرَؤُهُمْ أُبَىُّ بْنُ كَعْبٍ وَلِكُلِّ أُمَّةٍ أَمِينٌ وَأَمِينُ هَذِهِ الأُمَّةِ أَبُو عُبَيْدَةَ بْنُ الْجَرَّاحِ", dimmed: true)
+
+                    ScriptureQuote(text: "“Take the Quran from four: Abdullah ibn Mas‘ud, Salim, Mu‘adh, and Ubayy ibn Ka‘b” (Sahih al-Bukhari 4999).", arabic: "خُذُوا الْقُرْآنَ مِنْ أَرْبَعَةٍ مِنْ عَبْدِ اللَّهِ بْنِ مَسْعُودٍ وَسَالِمٍ وَمُعَاذٍ وَأُبَىِّ بْنِ كَعْبٍ", dimmed: true)
+                }
+
+                Section(header: Text("THE RIGHTLY GUIDED CALIPHS")) {
+                    ScholarEntry(name: "Abu Bakr as-Siddiq", arabic: "أَبُو بَكر الصِّدِّيق", meta: "d. 13 AH / 634 CE · Madinah", description: "The most knowledgeable of the Companions. When the Prophet (peace be upon him) hinted from the pulpit that a servant had been given the choice to meet his Lord, Abu Bakr alone understood and wept, and the narrator says, “Abu Bakr was the most knowledgeable of us“ (Sahih al-Bukhari 3654). He led the prayer in the Prophet’s final illness by his command (Sahih al-Bukhari 664), fought the apostates, and ordered the first collection of the Quran.")
+
+                    ScholarEntry(name: "Umar ibn al-Khattab", arabic: "عُمَر بن الخَطَّاب", meta: "d. 23 AH / 644 CE · Madinah", description: "Of whom the Prophet (peace be upon him) said, “If there were to be a muhaddath (one inspired with the truth) in my nation, it would be Umar“ (Sahih al-Bukhari 3689). The Quran came down agreeing with his view more than once. He organised the Hijri calendar, the Tarawih congregation, the courts, and the provinces, and sent scholars such as Ibn Mas‘ud to teach the new cities.")
+
+                    ScholarEntry(name: "Uthman ibn Affan", arabic: "عُثمَان بن عَفَّان", meta: "d. 35 AH / 656 CE · Madinah", description: "Married to two daughters of the Prophet (peace be upon him), one after the other, hence “Dhun-Nurayn.“ He gathered the nation upon one written Quran, sending official copies to the great cities, the mushaf every Muslim reads today.")
+
+                    ScholarEntry(name: "Ali ibn Abi Talib", arabic: "عَلِي بن أَبِي طَالِب", meta: "d. 40 AH / 661 CE · Kufah", description: "Raised in the Prophet’s house and among the first to believe. The Prophet (peace be upon him) gave him the banner at Khaybar, saying Allah would grant victory at his hands (Sahih al-Bukhari 3701). A judge of the highest rank, the teacher of the scholars of Kufah, and the narrator of the hadith on the Khawarij, whom he fought.")
+                }
+
+                Section(header: Text("THE SCHOLARS AMONG THE COMPANIONS")) {
+                    ScholarEntry(name: "Abdullah ibn Mas‘ud", arabic: "عَبد الله بن مَسعُود", meta: "d. 32 AH / 653 CE · Madinah, taught in Kufah", description: "The sixth person to accept Islam and the first to recite the Quran aloud in Makkah. The Prophet (peace be upon him) named him first among those to take the Quran from. Sent by Umar to Kufah, his students (Alqamah, al-Aswad, Masruq, then Ibrahim al-Nakha‘i, then Hammad, then Abu Hanifah) became the Iraqi school of fiqh.")
+
+                    ScholarEntry(name: "Abdullah ibn Abbas", arabic: "عَبد الله بن عَبَّاس", meta: "d. 68 AH / 687 CE · Ta’if", description: "The Prophet’s cousin, for whom he prayed, “O Allah, teach him the Book“ (Sahih al-Bukhari 75) and “give him understanding of the religion“ (Sahih al-Bukhari 143). He became “the Interpreter of the Quran“ and “the Scholar of the Nation,“ the teacher of Mujahid, Ikrimah, Sa‘id ibn Jubayr, and Ata’, and the root of the Makkan school of tafsir.")
+
+                    ScholarEntry(name: "Aisha bint Abi Bakr", arabic: "عَائِشَة بِنت أَبِي بَكر", meta: "d. 58 AH / 678 CE · Madinah", description: "The Mother of the Believers and the most knowledgeable woman of the nation; the Prophet (peace be upon him) said her superiority over women is like that of tharid over other food (Sahih al-Bukhari 3770). The senior Companions asked her about inheritance, the Prophet’s worship, and his private life, and she corrected scholars from the Quran and Sunnah. Over two thousand hadith are narrated from her.")
+
+                    ScholarEntry(name: "Zayd ibn Thabit", arabic: "زَيد بن ثَابِت", meta: "d. 45 AH / 665 CE · Madinah", description: "The Prophet’s scribe of revelation, who learned Hebrew at his command in a fortnight. The most knowledgeable in inheritance law (Sunan al-Tirmidhi 3790), he was chosen by Abu Bakr to collect the Quran and by Uthman to head its transcription.")
+
+                    ScholarEntry(name: "Mu‘adh ibn Jabal", arabic: "مُعَاذ بن جَبَل", meta: "d. 18 AH / 639 CE · Syria", description: "The most knowledgeable in the lawful and the unlawful (Sunan al-Tirmidhi 3790). The Prophet (peace be upon him) sent him to Yemen as teacher and judge with the words, “let the first thing you call them to be the tawhid of Allah“ (Sahih al-Bukhari 7372), and rode with him while teaching him the right of Allah upon His servants (Sahih al-Bukhari 2856).")
+
+                    ScholarEntry(name: "Ubayy ibn Ka‘b", arabic: "أُبَيّ بن كَعب", meta: "d. c. 22 AH / 643 CE · Madinah", description: "The master of the reciters. Allah commanded the Prophet (peace be upon him) to recite Surat al-Bayyinah to him by name, and Ubayy wept (Sahih al-Bukhari 4959). Umar chose him to lead the Tarawih prayer.")
+
+                    ScholarEntry(name: "Abu Hurayrah", arabic: "أَبُو هُرَيرَة", meta: "d. 59 AH / 679 CE · Madinah", description: "The most prolific narrator of hadith, having devoted himself to the Prophet’s company for the last years of his life and, by the Prophet’s prayer, forgotten nothing he heard. He narrated because the Quran condemns concealing knowledge (Sahih al-Bukhari 118), and over five thousand hadith reached the nation through him.")
+
+                    ScholarEntry(name: "Abdullah ibn Umar", arabic: "عَبد الله بن عُمَر", meta: "d. 73 AH / 693 CE · Makkah", description: "Of whom the Prophet (peace be upon him) said, “What an excellent man Abdullah is, if only he prayed at night,“ after which he hardly slept (Sahih al-Bukhari 3738). The most careful follower of the Prophet’s every action, the teacher of Nafi‘ and Salim, and a root of the Madinan school of Imam Malik.")
+
+                    ScholarEntry(name: "Hudhayfah ibn al-Yaman", arabic: "حُذَيفَة بن اليَمَان", meta: "d. 36 AH / 656 CE · Mada’in", description: "The keeper of the Prophet’s secret, who asked him about evil while others asked about good, and preserved his guidance for times of trial: “Hold to the community of the Muslims and their leader“ (Sahih al-Bukhari 7084).")
+
+                    ScholarEntry(name: "Abu ad-Darda’, Abu Musa al-Ash‘ari, Abu Dharr, Jabir, Anas", arabic: "وَغَيرُهُم", meta: "the teachers of the cities", description: "Abu ad-Darda’ taught in Damascus; Abu Musa al-Ash‘ari, given “one of the flutes of the family of Dawud“ (Sahih al-Bukhari 5048), governed and taught Basrah and Kufah; Abu Dharr, than whom “the sky has not shaded nor the earth carried anyone more truthful“ (Sunan al-Tirmidhi 3801; graded sahih by al-Albani), was the voice of ascetic honesty; Jabir ibn Abdullah had a circle in the Prophet’s mosque; and Anas ibn Malik, the Prophet’s servant for ten years, blessed with long life and children by his prayer (Sahih al-Bukhari 6334), taught in Basrah until 93 AH.")
+                }
+
+                Section(header: Text("IN SUMMARY")) {
+                    Text("The Companions were the first scholars and the first teachers. Every madhhab of fiqh, every school of tafsir, and every chain of hadith goes back to one of these men and women sitting before the Prophet.")
+                        .font(.body)
+                }
+
                 Section(header: Text("KEY TERMS")) {
                     Text("**Sahabi (صَحَابِيّ)**: a Companion, from the root ص-ح-ب, “to accompany.“ Ibn Hajar (may Allah have mercy on him) gives the accepted definition in al-Isabah:")
                         .font(.body)
@@ -156,7 +201,7 @@ struct SahabahScholarsView: View {
                     Text("**Muhaddith (مُحَدِّث)**: from hadith (حَدِيث), “speech, report“: a scholar who transmits and examines the narrations of the Prophet (peace be upon him): their chains, their narrators, their wordings, and their hidden defects. Al-Bukhari, Muslim, Abu Dawud, and in our time al-Albani are muhaddithun. Not every muhaddith is a jurist; as the Prophet (peace be upon him) said in the hadith narrated by Zayd ibn Thabit, “many a bearer of knowledge conveys it to one who is more versed than he is, and many a bearer of knowledge is not versed in it“ (Sunan Abi Dawud 3660; graded sahih by al-Albani).")
                         .font(.body)
 
-                    Text("**Faqih (فَقِيه)**: from fiqh (فِقه), “understanding“: a scholar who derives the rulings of the lawful and the unlawful from the texts. The Prophet (peace be upon him) prayed that Ibn Abbas be given fiqh (Sahih al-Bukhari 143), and Mu‘adh was the most knowledgeable of the Companions in the lawful and the unlawful (Sunan al-Tirmidhi 3790, quoted below).")
+                    Text("**Faqih (فَقِيه)**: from fiqh (فِقه), “understanding“: a scholar who derives the rulings of the lawful and the unlawful from the texts. The Prophet (peace be upon him) prayed that Ibn Abbas be given fiqh (Sahih al-Bukhari 143), and Mu‘adh was the most knowledgeable of the Companions in the lawful and the unlawful (Sunan al-Tirmidhi 3790, quoted above).")
                         .font(.body)
 
                     Text("**Mufassir (مُفَسِّر)**: from tafsir (تَفسِير), “explanation,“ from the root ف-س-ر, “to uncover“: a scholar who explains the Quran by the Quran, the Sunnah, the statements of the Companions and the Tabi‘un, and the Arabic language. Ibn Abbas was the first great mufassir, by the prayer of the Prophet (peace be upon him) that he be taught the Book (Sahih al-Bukhari 75); at-Tabari, Ibn Kathir, and as-Sa‘di are among his heirs. See the page “Tafsir.“")
@@ -194,51 +239,6 @@ struct SahabahScholarsView: View {
                         .font(.body)
 
                     Text("**Tabaqat (طَبَقَات)**: “layers“ or “generations,“ from the root ط-ب-ق. The scholars arranged the narrators and the jurists in generations, the Companions, then the Tabi‘un, and so on, in books such as at-Tabaqat al-Kubra of Ibn Sa‘d, Tabaqat al-Hanabilah of Ibn Abi Ya‘la, and Tabaqat ash-Shafi‘iyyah of as-Subki, so that a chain can be checked: each narrator must have lived in the generation that could meet the one above him.")
-                        .font(.body)
-                }
-
-                Section(header: Text("THE FIRST SCHOLARS")) {
-                    Text("The Companions (may Allah be pleased with them) learned the Quran as it came down and the Sunnah from the one who lived it. Among them some were singled out for knowledge. The Prophet (peace be upon him) said:")
-                        .font(.body)
-                    ScriptureQuote(text: "“The most merciful of my nation to my nation is Abu Bakr, the most severe of them in the command of Allah is Umar, the most truly modest of them is Uthman ibn Affan, the most knowledgeable of them in the lawful and the unlawful is Mu‘adh ibn Jabal, the most knowledgeable of them in inheritance is Zayd ibn Thabit, the best reciter among them is Ubayy ibn Ka‘b, and every nation has a trustworthy one, and the trustworthy one of this nation is Abu Ubaydah ibn al-Jarrah” (Sunan al-Tirmidhi 3790; graded sahih by al-Albani).", arabic: "أَرْحَمُ أُمَّتِي بِأُمَّتِي أَبُو بَكْرٍ وَأَشَدُّهُمْ فِي أَمْرِ اللَّهِ عُمَرُ وَأَصْدَقُهُمْ حَيَاءً عُثْمَانُ وَأَعْلَمُهُمْ بِالْحَلاَلِ وَالْحَرَامِ مُعَاذُ بْنُ جَبَلٍ وَأَفْرَضُهُمْ زَيْدُ بْنُ ثَابِتٍ وَأَقْرَؤُهُمْ أُبَىُّ بْنُ كَعْبٍ وَلِكُلِّ أُمَّةٍ أَمِينٌ وَأَمِينُ هَذِهِ الأُمَّةِ أَبُو عُبَيْدَةَ بْنُ الْجَرَّاحِ", dimmed: true)
-
-                    ScriptureQuote(text: "“Take the Quran from four: Abdullah ibn Mas‘ud, Salim, Mu‘adh, and Ubayy ibn Ka‘b” (Sahih al-Bukhari 4999).", arabic: "خُذُوا الْقُرْآنَ مِنْ أَرْبَعَةٍ مِنْ عَبْدِ اللَّهِ بْنِ مَسْعُودٍ وَسَالِمٍ وَمُعَاذٍ وَأُبَىِّ بْنِ كَعْبٍ", dimmed: true)
-                }
-
-                Section(header: Text("THE RIGHTLY GUIDED CALIPHS")) {
-                    ScholarEntry(name: "Abu Bakr as-Siddiq", arabic: "أَبُو بَكر الصِّدِّيق", meta: "d. 13 AH / 634 CE · Madinah", description: "The most knowledgeable of the Companions. When the Prophet (peace be upon him) hinted from the pulpit that a servant had been given the choice to meet his Lord, Abu Bakr alone understood and wept, and the narrator says, “Abu Bakr was the most knowledgeable of us“ (Sahih al-Bukhari 3654). He led the prayer in the Prophet’s final illness by his command (Sahih al-Bukhari 664), fought the apostates, and ordered the first collection of the Quran.")
-
-                    ScholarEntry(name: "Umar ibn al-Khattab", arabic: "عُمَر بن الخَطَّاب", meta: "d. 23 AH / 644 CE · Madinah", description: "Of whom the Prophet (peace be upon him) said, “If there were to be a muhaddath (one inspired with the truth) in my nation, it would be Umar“ (Sahih al-Bukhari 3689). The Quran came down agreeing with his view more than once. He organised the Hijri calendar, the Tarawih congregation, the courts, and the provinces, and sent scholars such as Ibn Mas‘ud to teach the new cities.")
-
-                    ScholarEntry(name: "Uthman ibn Affan", arabic: "عُثمَان بن عَفَّان", meta: "d. 35 AH / 656 CE · Madinah", description: "Married to two daughters of the Prophet (peace be upon him), one after the other, hence “Dhun-Nurayn.“ He gathered the nation upon one written Quran, sending official copies to the great cities, the mushaf every Muslim reads today.")
-
-                    ScholarEntry(name: "Ali ibn Abi Talib", arabic: "عَلِي بن أَبِي طَالِب", meta: "d. 40 AH / 661 CE · Kufah", description: "Raised in the Prophet’s house and among the first to believe. The Prophet (peace be upon him) gave him the banner at Khaybar, saying Allah would grant victory at his hands (Sahih al-Bukhari 3701). A judge of the highest rank, the teacher of the scholars of Kufah, and the narrator of the hadith on the Khawarij, whom he fought.")
-                }
-
-                Section(header: Text("THE SCHOLARS AMONG THE COMPANIONS")) {
-                    ScholarEntry(name: "Abdullah ibn Mas‘ud", arabic: "عَبد الله بن مَسعُود", meta: "d. 32 AH / 653 CE · Madinah, taught in Kufah", description: "The sixth person to accept Islam and the first to recite the Quran aloud in Makkah. The Prophet (peace be upon him) named him first among those to take the Quran from. Sent by Umar to Kufah, his students (Alqamah, al-Aswad, Masruq, then Ibrahim al-Nakha‘i, then Hammad, then Abu Hanifah) became the Iraqi school of fiqh.")
-
-                    ScholarEntry(name: "Abdullah ibn Abbas", arabic: "عَبد الله بن عَبَّاس", meta: "d. 68 AH / 687 CE · Ta’if", description: "The Prophet’s cousin, for whom he prayed, “O Allah, teach him the Book“ (Sahih al-Bukhari 75) and “give him understanding of the religion“ (Sahih al-Bukhari 143). He became “the Interpreter of the Quran“ and “the Scholar of the Nation,“ the teacher of Mujahid, Ikrimah, Sa‘id ibn Jubayr, and Ata’, and the root of the Makkan school of tafsir.")
-
-                    ScholarEntry(name: "Aisha bint Abi Bakr", arabic: "عَائِشَة بِنت أَبِي بَكر", meta: "d. 58 AH / 678 CE · Madinah", description: "The Mother of the Believers and the most knowledgeable woman of the nation; the Prophet (peace be upon him) said her superiority over women is like that of tharid over other food (Sahih al-Bukhari 3770). The senior Companions asked her about inheritance, the Prophet’s worship, and his private life, and she corrected scholars from the Quran and Sunnah. Over two thousand hadith are narrated from her.")
-
-                    ScholarEntry(name: "Zayd ibn Thabit", arabic: "زَيد بن ثَابِت", meta: "d. 45 AH / 665 CE · Madinah", description: "The Prophet’s scribe of revelation, who learned Hebrew at his command in a fortnight. The most knowledgeable in inheritance law (Sunan al-Tirmidhi 3790), he was chosen by Abu Bakr to collect the Quran and by Uthman to head its transcription.")
-
-                    ScholarEntry(name: "Mu‘adh ibn Jabal", arabic: "مُعَاذ بن جَبَل", meta: "d. 18 AH / 639 CE · Syria", description: "The most knowledgeable in the lawful and the unlawful (Sunan al-Tirmidhi 3790). The Prophet (peace be upon him) sent him to Yemen as teacher and judge with the words, “let the first thing you call them to be the tawhid of Allah“ (Sahih al-Bukhari 7372), and rode with him while teaching him the right of Allah upon His servants (Sahih al-Bukhari 2856).")
-
-                    ScholarEntry(name: "Ubayy ibn Ka‘b", arabic: "أُبَيّ بن كَعب", meta: "d. c. 22 AH / 643 CE · Madinah", description: "The master of the reciters. Allah commanded the Prophet (peace be upon him) to recite Surat al-Bayyinah to him by name, and Ubayy wept (Sahih al-Bukhari 4959). Umar chose him to lead the Tarawih prayer.")
-
-                    ScholarEntry(name: "Abu Hurayrah", arabic: "أَبُو هُرَيرَة", meta: "d. 59 AH / 679 CE · Madinah", description: "The most prolific narrator of hadith, having devoted himself to the Prophet’s company for the last years of his life and, by the Prophet’s prayer, forgotten nothing he heard. He narrated because the Quran condemns concealing knowledge (Sahih al-Bukhari 118), and over five thousand hadith reached the nation through him.")
-
-                    ScholarEntry(name: "Abdullah ibn Umar", arabic: "عَبد الله بن عُمَر", meta: "d. 73 AH / 693 CE · Makkah", description: "Of whom the Prophet (peace be upon him) said, “What an excellent man Abdullah is, if only he prayed at night,“ after which he hardly slept (Sahih al-Bukhari 3738). The most careful follower of the Prophet’s every action, the teacher of Nafi‘ and Salim, and a root of the Madinan school of Imam Malik.")
-
-                    ScholarEntry(name: "Hudhayfah ibn al-Yaman", arabic: "حُذَيفَة بن اليَمَان", meta: "d. 36 AH / 656 CE · Mada’in", description: "The keeper of the Prophet’s secret, who asked him about evil while others asked about good, and preserved his guidance for times of trial: “Hold to the community of the Muslims and their leader“ (Sahih al-Bukhari 7084).")
-
-                    ScholarEntry(name: "Abu ad-Darda’, Abu Musa al-Ash‘ari, Abu Dharr, Jabir, Anas", arabic: "وَغَيرُهُم", meta: "the teachers of the cities", description: "Abu ad-Darda’ taught in Damascus; Abu Musa al-Ash‘ari, given “one of the flutes of the family of Dawud“ (Sahih al-Bukhari 5048), governed and taught Basrah and Kufah; Abu Dharr, than whom “the sky has not shaded nor the earth carried anyone more truthful“ (Sunan al-Tirmidhi 3801; graded sahih by al-Albani), was the voice of ascetic honesty; Jabir ibn Abdullah had a circle in the Prophet’s mosque; and Anas ibn Malik, the Prophet’s servant for ten years, blessed with long life and children by his prayer (Sahih al-Bukhari 6334), taught in Basrah until 93 AH.")
-                }
-
-                Section(header: Text("IN SUMMARY")) {
-                    Text("The Companions were the first scholars and the first teachers. Every madhhab of fiqh, every school of tafsir, and every chain of hadith goes back to one of these men and women sitting before the Prophet.")
                         .font(.body)
                 }
             }

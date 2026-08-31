@@ -24,7 +24,7 @@ struct PillarsView: View {
                 "sahabah-scholars": AnyView(SahabahScholarsView()), "salaf": AnyView(SalafScholarsView()), "tabari": AnyView(TabariView()),
                 "ibntaymiyyah": AnyView(IbnTaymiyyahView()), "ibnqayyim": AnyView(IbnQayyimView()), "dhahabi": AnyView(DhahabiView()),
                 "ibnkathir": AnyView(IbnKathirView()), "later": AnyView(LaterScholarsView()),
-                "salafiyyah": AnyView(SalafiyyahView()), "quransunnah": AnyView(QuranSunnahView()), "shirk": AnyView(ShirkView()),
+                "tawhid": AnyView(TawhidView()), "salafiyyah": AnyView(SalafiyyahView()), "quransunnah": AnyView(QuranSunnahView()), "shirk": AnyView(ShirkView()),
                 "kufr": AnyView(KufrView()), "bidah": AnyView(BidahView()), "mawlid": AnyView(MawlidView()),
                 "sufism": AnyView(SufismAnswerView()), "shia": AnyView(ShiaAnswerView()), "christianity": AnyView(ChristianityAnswerView()),
                 "judaism": AnyView(JudaismAnswerView()), "hinduism": AnyView(HinduismAnswerView()), "paganism": AnyView(PaganismAnswerView()),

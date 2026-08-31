@@ -979,6 +979,22 @@ struct AskAIChatView: View {
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
 
+            Label("This is a machine, not a scholar. It is here for quick, simple, general questions, and it can be confidently wrong. It does not give rulings, it is never the final answer, and anything that actually matters belongs with a knowledgeable scholar of Ahl as-Sunnah wa al-Jama\u{2018}ah.", systemImage: "exclamationmark.triangle")
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+
+            // How it works, in the app itself: a reader who knows the model cannot quote scripture
+            // and cannot invent a reference can judge what they are reading. Kept to four lines.
+            VStack(alignment: .leading, spacing: 6) {
+                Text("HOW IT WORKS")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+
+                Text("Your question first searches this app's own Quran and hadith libraries. What it finds is handed to Apple Intelligence running on your device, which answers in its own words and cites the passages it used.\n\nIt is not allowed to write out a verse or a hadith, and not allowed to cite a reference the app did not give it: anything it invents is stripped out before you see it, and a quotation that matches nothing is marked \u{201C}wording not verified\u{201D}. Every citation becomes a row beneath the answer that opens the real source, so you can always check it yourself.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
             VStack(alignment: .leading, spacing: 8) {
                 ForEach(Self.starters, id: \.self) { question in
                     Button {
@@ -1076,8 +1092,15 @@ struct AskAIChatView: View {
                         .foregroundStyle(.secondary)
                 }
 
-                if message.asksForRuling, !message.isStreaming, !message.failed {
-                    Label("Not a ruling. Scholars differ on questions like this; for your own situation ask a qualified scholar.", systemImage: "exclamationmark.triangle")
+                // On EVERY finished answer, not only the ruling-shaped ones. A caution that appears
+                // selectively teaches the reader that its absence means "this one is reliable",
+                // which is the opposite of true: the model is a machine that can be confidently
+                // wrong about anything, so the caution belongs under everything it says.
+                if !message.isStreaming, !message.failed {
+                    Label(message.asksForRuling
+                          ? "Not a ruling, and scholars differ on questions like this. This is AI: useful for quick, simple, general questions, never the final word. For your own situation ask a knowledgeable scholar of Ahl as-Sunnah."
+                          : "This is AI: useful for quick, simple, general questions, never the final word. For anything that matters, ask a knowledgeable scholar of Ahl as-Sunnah.",
+                          systemImage: "exclamationmark.triangle")
                         .font(.caption2)
                         .foregroundStyle(.secondary)
                 }

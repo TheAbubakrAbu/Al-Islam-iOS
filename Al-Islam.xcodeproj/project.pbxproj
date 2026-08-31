@@ -104,6 +104,7 @@
 		72827EAC2E3C425B00EBA534 /* SettingsQuranView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72827EAB2E3C425B00EBA534 /* SettingsQuranView.swift */; };
 		72827EAD2E3C425B00EBA534 /* SettingsQuranView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72827EAB2E3C425B00EBA534 /* SettingsQuranView.swift */; };
 		7283C8D5301EC78200AED881 /* ZakahView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72FA0001AB5F4C7D00000001 /* ZakahView.swift */; };
+		72FA0012AB5F4C7D00000012 /* InheritanceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72FA0011AB5F4C7D00000011 /* InheritanceView.swift */; };
 		7283C8D6301EC88C00AED881 /* MoonPhase.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72F000022F7A000000AAF800 /* MoonPhase.swift */; };
 		7283C8D9301EC89F00AED881 /* SkyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72F000032F7A000000AAF800 /* SkyView.swift */; };
 		7283C8DA301EC8A300AED881 /* PrayerCalendarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72CA00012F7D000000AAFB00 /* PrayerCalendarView.swift */; };
@@ -266,6 +267,7 @@
 		72F7DB772F0431740037B059 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 72F7DB742F0431740037B059 /* Assets.xcassets */; };
 		72F7DB782F0431740037B059 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 72F7DB742F0431740037B059 /* Assets.xcassets */; };
 		72FA0002AB5F4C7D00000002 /* ZakahView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72FA0001AB5F4C7D00000001 /* ZakahView.swift */; };
+		72FA0013AB5F4C7D00000013 /* InheritanceView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72FA0011AB5F4C7D00000011 /* InheritanceView.swift */; };
 		72FA0004AB5F4C7D00000004 /* PrayerProgressWidgets.swift in Sources */ = {isa = PBXBuildFile; fileRef = 72FA0003AB5F4C7D00000003 /* PrayerProgressWidgets.swift */; };
 		72FA10042FF0A00100AA0004 /* QuranCommon.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 72FA10022FF0A00100AA0002 /* QuranCommon.ttf */; };
 		72FA10062FF0A00100AA0006 /* QuranCommon.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 72FA10022FF0A00100AA0002 /* QuranCommon.ttf */; };
@@ -623,6 +625,7 @@
 		72F7DB712F03FEE50037B059 /* AppReview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppReview.swift; sourceTree = "<group>"; };
 		72F7DB742F0431740037B059 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		72FA0001AB5F4C7D00000001 /* ZakahView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ZakahView.swift; sourceTree = "<group>"; };
+		72FA0011AB5F4C7D00000011 /* InheritanceView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InheritanceView.swift; sourceTree = "<group>"; };
 		72FA0003AB5F4C7D00000003 /* PrayerProgressWidgets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrayerProgressWidgets.swift; sourceTree = "<group>"; };
 		72FA10022FF0A00100AA0002 /* QuranCommon.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = QuranCommon.ttf; sourceTree = "<group>"; };
 		72FA10092FF0A00100AA0009 /* QuranGlyphFonts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuranGlyphFonts.swift; sourceTree = "<group>"; };
@@ -1029,6 +1032,7 @@
 				72E832A32F6F52BA0013428B /* TasbihView.swift */,
 				72E832A02F6F52BA0013428B /* NamesView.swift */,
 				72FA0001AB5F4C7D00000001 /* ZakahView.swift */,
+				72FA0011AB5F4C7D00000011 /* InheritanceView.swift */,
 				72E8329B2F6F52BA0013428B /* DateView.swift */,
 				72E8329E2F6F52BA0013428B /* MasjidView.swift */,
 				72E832A52F6F52BA0013428B /* WallpaperView.swift */,
@@ -1604,6 +1608,7 @@
 				72A7C0082FB1000000AA1008 /* DuaSessionView.swift in Sources */,
 				72E832B02F6F52BA0013428B /* TasbihView.swift in Sources */,
 				72FA0002AB5F4C7D00000002 /* ZakahView.swift in Sources */,
+				72FA0013AB5F4C7D00000013 /* InheritanceView.swift in Sources */,
 				72E832B12F6F52BA0013428B /* NamesView.swift in Sources */,
 				72E832B22F6F52BA0013428B /* PillarsView.swift in Sources */,
 				7ADD181700000000AA0018 /* BeliefsViews.swift in Sources */,
@@ -1688,6 +1693,7 @@
 				72DD9A012F900000AAC001 /* MoonPhase.swift in Sources */,
 				FACE11022D42DDF100871A6A /* WatchConnectivity.swift in Sources */,
 				7283C8D5301EC78200AED881 /* ZakahView.swift in Sources */,
+				72FA0012AB5F4C7D00000012 /* InheritanceView.swift in Sources */,
 				728D75A62F79C51C00502B8A /* ArabicLetters.swift in Sources */,
 				728D75B82F79CA4E00502B8A /* MapView.swift in Sources */,
 				720CCE272E39439E002DD82E /* Globals.swift in Sources */,

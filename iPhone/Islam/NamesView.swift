@@ -758,7 +758,7 @@ struct NamesView: View {
                         .fixedSize(horizontal: false, vertical: true)
 
                     #if HAS_QURAN
-                    Text("“In the name of Allah, the Entirely Merciful, the Especially Merciful.” — Quran 1:1")
+                    Text("“In the name of Allah, the Entirely Merciful, the Especially Merciful.” (Quran 1:1)")
                         .font(.footnote.italic())
                         .foregroundColor(.primary)
                         .fixedSize(horizontal: false, vertical: true)

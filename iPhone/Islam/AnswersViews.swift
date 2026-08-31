@@ -15,83 +15,17 @@ struct SufismAnswerView: View {
                 }
 
                 Section(header: Text("WHAT IS SUFISM?")) {
-                    Text("**Tasawwuf (تَصَوُّف)**, Sufism, began as a name for asceticism and devotion in the second and third centuries AH. The early ascetics of the Salaf, such as al-Fudayl ibn Iyad and Ibn al-Mubarak, were men of the Sunnah, and the purification of the heart (**tazkiyah**) is a duty in the Quran:")
+                    Text("**Tasawwuf (تَصَوُّف)**, Sufism, is named after **suf (صُوف)**, wool, for the coarse woollen garments the early ascetics wore. It began as a name for asceticism and devotion in the second and third centuries AH. The early ascetics of the Salaf, such as al-Fudayl ibn Iyad and Ibn al-Mubarak, were men of the Sunnah, and the purification of the heart (**tazkiyah**) is a duty in the Quran:")
                         .font(.body)
                     ScriptureQuote(text: "“He has succeeded who purifies it, and he has failed who instills it [with corruption]” (Quran 91:9-10).", arabic: "قَدۡ أَفۡلَحَ مَن زَكَّىٰهَا ۝ وَقَدۡ خَابَ مَن دَسَّىٰهَا")
 
-                    Text("Over the centuries, however, organised **tariqahs** (orders) appeared, each with a shaykh, a pledge of obedience, set formulas of dhikr, and ranks of “saints,“ and ideas entered that the Salaf never knew: seeking help from the dead, building over graves, dhikr with music and dancing, the shaykh’s word above the text, and the doctrines of **hulul** (Allah dwelling in creation) and **wahdat al-wujud** (that creation and Creator are one). Even al-Junayd (d. 297 AH), whom the Sufis take as their imam, tied the whole matter to the Sunnah:")
+                    Text("Over the centuries, however, organised **tariqahs (طُرُق)** appeared: a **tariqah (طَرِيقَة)**, from ط-ر-ق, is a road, and here an order with its own way of travelling to Allah. Each had a **shaykh (شَيخ)**, an elder or master, a pledge of obedience to him (**bay‘ah (بَيعَة)**, from ب-ي-ع, the pledge sealed by a clasp of hands), set formulas of **dhikr (ذِكر)**, the remembrance of Allah, and ranks of “saints,“ and ideas entered that the Salaf never knew: seeking help from the dead, building over graves, dhikr with music and dancing, the shaykh’s word above the text, and the doctrines of **hulul (حُلُول)**, from ح-ل-ل, to alight and dwell in a place (Allah dwelling in creation), and **wahdat al-wujud (وَحدَة الوُجُود)**, the oneness of being (that creation and Creator are one). Even al-Junayd (d. 297 AH), whom the Sufis take as their imam, tied the whole matter to the Sunnah:")
                         .font(.body)
                     ScriptureQuote(text: "“All the paths are closed to the creation except for the one who follows the footsteps of the Messenger” (al-Qushayri, ar-Risalah).", arabic: "الطُّرُقُ كُلُّهَا مَسْدُودَةٌ عَلَى الْخَلْقِ إِلَّا مَنِ اقْتَفَى أَثَرَ الرَّسُولِ صَلَّى اللَّهُ عَلَيْهِ وَسَلَّمَ", dimmed: true)
                 }
 
-                Section(header: Text("KEY TERMS")) {
-                    Text("**Sufi / tasawwuf (صُوفِيّ / تَصَوُّف)**: from **suf (صُوف)**, wool, after the coarse woollen garments worn by the early ascetics. Ibn Taymiyyah (may Allah have mercy on him) records that the name was not current in the first three generations, that the Sufis first appeared in Basra, and that the first small lodge of the Sufis was built there by some of the companions of Abd al-Wahid ibn Zayd, himself a companion of al-Hasan al-Basri (Majmu‘ al-Fatawa 11/5-7). He also shows why the other proposed origins fail the rules of Arabic derivation: the relative adjective from **as-Suffah** (the poor Companions who lived in the Prophet’s mosque) would be Suffi, from **as-saff** (the first row in prayer) it would be Saffi, and from **as-safwah** (the elect) it would be Safawi; so the name goes back to wool. The Greek **sophia** (wisdom), which some later writers proposed, is not an Arabic root at all. Al-Qushayri, himself a Sufi, admits in ar-Risalah that no analogy or derivation in the Arabic language supports the name and that it is rather like a nickname, and Ibn Khaldun (al-Muqaddimah) judges wool the most likely origin. The Companions and the Tabi‘in never used the word; their names for the matter were faith, worship, and zuhd.")
-                        .font(.body)
-
-                    Text("**Zuhd (زُهْد)**: from ز-ه-د, to turn away from a thing because one has no desire for it. True asceticism is not rags, hunger, or withdrawal from people; it is the heart’s freedom from the world. Ibn al-Qayyim relates from his teacher Ibn Taymiyyah that zuhd is to leave what does not benefit in the Hereafter, and wara‘ (scrupulousness) is to leave what one fears will harm there (Madarij as-Salikin). The Prophet (peace be upon him) said:")
-                        .font(.body)
-                    ScriptureQuote(text: "“The world is a prison for the believer and a paradise for the disbeliever” (Sahih Muslim 2956).", arabic: "الدُّنْيَا سِجْنُ الْمُؤْمِنِ وَجَنَّةُ الْكَافِرِ", dimmed: true)
-                    ScriptureQuote(text: "“Be in this world as if you were a stranger or a traveller” (Sahih al-Bukhari 6416).", arabic: "كُنْ فِي الدُّنْيَا كَأَنَّكَ غَرِيبٌ، أَوْ عَابِرُ سَبِيلٍ", dimmed: true)
-
-                    Text("**Tariqah (طَرِيقَة)**, pl. turuq: “way,“ from ط-ر-ق; in Sufi usage an organised order with its own chain of shaykhs, litany, and rites. The major orders and the men they are named after: the **Qadiriyyah** after Abd al-Qadir al-Jilani (d. 561 AH), a Hanbali preacher of Baghdad whose own book al-Ghunyah affirms the creed of the Salaf, and whose later followers went far beyond him; the **Rifa‘iyyah** after Ahmad ar-Rifa‘i (d. 578 AH); the **Shadhiliyyah** after Abu al-Hasan ash-Shadhili (d. 656 AH); the **Naqshbandiyyah** after Baha’ ad-Din Naqshband (d. 791 AH); and the **Tijaniyyah** after Ahmad at-Tijani (d. 1230 AH). None of them existed in the three generations the Prophet (peace be upon him) called the best of people (Sahih al-Bukhari 2652), and a way to Allah that the best generations did not know is not the way of the Prophet (peace be upon him).")
-                        .font(.body)
-
-                    Text("**Shaykh / murshid (شَيْخ / مُرْشِد)**: the head of an order; murshid is from ر-ش-د, to guide aright. The orders make his word binding on the disciple. In Islam the only man who is followed absolutely is the Messenger (peace be upon him); everyone else is followed when he agrees with the Book and the Sunnah and left when he departs from them.")
-                        .font(.body)
-
-                    Text("**Murid (مُرِيد)**: “the one who wills,“ from إِرَادَة: the disciple who has handed his will over to a shaykh.")
-                        .font(.body)
-
-                    Text("**Bay‘ah (بَيْعَة)**: a pledge, from ب-ي-ع, to conclude a deal by clasping hands. In the Sunnah, bay‘ah is given to the Prophet (peace be upon him) and after him to the Muslim ruler, to hear and obey in what is good (Sahih al-Bukhari 7199, Sahih Muslim 1709); the orders moved it to the shaykh, with a rite of hand-clasping and a sworn litany.")
-                        .font(.body)
-
-                    Text("**Wird / awrad (وِرْد / أَوْرَاد)**: a set daily portion of remembrance, from و-ر-د, to come down to water. Among the Salaf a man’s wird was his nightly portion of Quran and prayer; the orders assigned fixed formulas and counts composed by the shaykh.")
-                        .font(.body)
-
-                    Text("**Hadrah (حَضْرَة)**: “presence“: the collective dhikr gathering of the orders, with swaying, drumming, and chanting in unison.")
-                        .font(.body)
-
-                    Text("**Sama‘ (سَمَاع)**: “listening“: dhikr with singing and instruments, often with dancing. The Prophet (peace be upon him) counted musical instruments among the things people would try to make lawful (Sahih al-Bukhari 5590, cited in section 4 below).")
-                        .font(.body)
-
-                    Text("**Wali / awliya’ (وَلِيّ / أَوْلِيَاء)**: from و-ل-ي, nearness and support. The Quran defines the awliya’ of Allah as every believer who fears Him (Quran 10:62-63, quoted in section 1 below), not a class of appointed saints. Ibn Taymiyyah’s book al-Furqan bayna Awliya’ ar-Rahman wa Awliya’ ash-Shaytan makes following the Sunnah the only test of wilayah.")
-                        .font(.body)
-
-                    Text("**Karamah (كَرَامَة)**: an honour that Allah grants a righteous servant, from ك-ر-م, nobility and generosity. Ahl as-Sunnah affirm karamat: the provision Maryam received in her prayer chamber, the People of the Cave who slept for centuries (Quran 18:9-26), the throne of the queen of Saba’ brought by one who had knowledge of the Scripture (Quran 27:40), and the light that went before Usayd ibn Hudayr and Abbad ibn Bishr on a dark night (Sahih al-Bukhari 3805). Of Maryam, Allah said:")
-                        .font(.body)
-                    ScriptureQuote(text: "“Every time Zechariah entered upon her in the prayer chamber, he found with her provision. He said, ‘O Mary, from where is this [coming] to you?’ She said, ‘It is from Allah. Indeed, Allah provides for whom He wills without account’” (Quran 3:37).", arabic: "كُلَّمَا دَخَلَ عَلَيۡهَا زَكَرِيَّا ٱلۡمِحۡرَابَ وَجَدَ عِندَهَا رِزۡقٗاۖ قَالَ يَٰمَرۡيَمُ أَنَّىٰ لَكِ هَٰذَاۖ قَالَتۡ هُوَ مِنۡ عِندِ ٱللَّهِۖ إِنَّ ٱللَّهَ يَرۡزُقُ مَن يَشَآءُ بِغَيۡرِ حِسَابٍ")
-
-                    Text("A karamah is a gift, not a rank; it proves nothing about a person unless he follows the Sunnah, and it never makes him someone to be called upon.")
-                        .font(.body)
-
-                    Text("**Fana’ / baqa’ (فَنَاء / بَقَاء)**: “passing away“ and “subsistence“: the claim that the self is annihilated in the witnessing of Allah until nothing but He is seen. Ibn Taymiyyah distinguishes three things called fana’: passing away from willing anything other than Allah, which is the state of the prophets and their followers; passing away from witnessing other than Him, which is a weakness that overcomes some worshippers and is not a goal; and the claim that nothing other than Him exists, which is the doctrine of hulul and ittihad (Majmu‘ al-Fatawa, vol. 10).")
-                        .font(.body)
-
-                    Text("**Hulul (حُلُول)**: “indwelling,“ from ح-ل-ل, to alight in a place: the claim that Allah dwells in a creature. **Ittihad (اتِّحَاد)**: “union“: the claim that the servant becomes one with Allah. **Wahdat al-wujud (وَحْدَة الوُجُود)**: “the oneness of existence“: the doctrine of Ibn Arabi (d. 638 AH) that the existence of creation is the very existence of the Creator. Al-Hallaj (d. 309 AH) was executed in Baghdad after his saying “Ana al-Haqq“ (I am the Truth). Ibn Taymiyyah refuted this doctrine at length (Majmu‘ al-Fatawa, vol. 2), and section 7 below answers it from the Quran.")
-                        .font(.body)
-
-                    Text("**Qutb / ghawth / abdal (قُطْب / غَوْث / أَبْدَال)**: “axis,“ “succour,“ and “substitutes“: in the orders, a hidden hierarchy of saints who are said to govern the world, the ghawth being the one people cry to for help. Ibn Taymiyyah says that the names ghawth, awtad, aqtab, and nujaba’ are found neither in the Book of Allah nor in any report from the Prophet (peace be upon him), and that the one term with a report behind it, the abdal, rests on a chain that is not established (Majmu‘ al-Fatawa, vol. 11); Ibn al-Qayyim rules that the hadiths of the abdal, aqtab, aghwath, nuqaba’, nujaba’, and awtad are all baseless attributions to the Messenger of Allah (al-Manar al-Munif). No creature governs the world; that belongs to Allah alone.")
-                        .font(.body)
-
-                    Text("**Kashf (كَشْف)**: “unveiling“: an inspiration or vision claimed as a source of knowledge. Revelation ended with the last of the prophets (Quran 33:40), and no kashf is a proof in the religion; it is judged by the texts, never the reverse.")
-                        .font(.body)
-
-                    Text("**Khalwah (خَلْوَة)**: “seclusion“: a retreat, often of forty days, in a cell with fasting and litanies set by the shaykh. The retreat of the Sunnah is i‘tikaf in the mosque, which the Prophet (peace be upon him) practised in the last ten nights of Ramadan until he died (Sahih al-Bukhari 2026).")
-                        .font(.body)
-
-                    Text("**Shari‘ah / tariqah / haqiqah (شَرِيعَة / طَرِيقَة / حَقِيقَة)**: the claimed three levels of the religion: the outer law, the Sufi path, and the inner reality that the elite reach. Answered under Common Questions below.")
-                        .font(.body)
-
-                    Text("**Ihsan (إِحْسَان)**: “doing well,“ from ح-س-ن, beauty and excellence; the third level of the religion in the hadith of Jibril, after Islam and iman. The Prophet (peace be upon him) defined it:")
-                        .font(.body)
-                    ScriptureQuote(text: "“That you worship Allah as if you see Him, for though you do not see Him, He sees you” (Sahih Muslim 8).", arabic: "أَنْ تَعْبُدَ اللَّهَ كَأَنَّكَ تَرَاهُ فَإِنْ لَمْ تَكُنْ تَرَاهُ فَإِنَّهُ يَرَاكَ", dimmed: true)
-
-                    Text("This is the real spiritual path: worship with the presence of the heart, inside the shari‘ah, needing no order.")
-                        .font(.body)
-                }
-
                 Section(header: Text("1. CLOSENESS TO ALLAH IS THROUGH WHAT HE LEGISLATED")) {
-                    Text("The Sufi orders offer a “path“ to Allah of their own devising. But Allah told us who His **awliya’** (close friends) are and how they reach Him:")
+                    Text("The Sufi orders offer a “path“ to Allah of their own devising. But Allah told us who His **awliya’ (أَولِيَاء)**, from و-ل-ي, nearness (the singular is **wali (وَلِي)**, a close friend of Allah), are and how they reach Him:")
                         .font(.body)
                     ScriptureQuote(text: "“Unquestionably, [for] the allies of Allah there will be no fear concerning them, nor will they grieve. Those who believed and were fearing Allah” (Quran 10:62-63).", arabic: "أَلَآ إِنَّ أَوۡلِيَآءَ ٱللَّهِ لَا خَوۡفٌ عَلَيۡهِمۡ وَلَا هُمۡ يَحۡزَنُونَ ۝ ٱلَّذِينَ ءَامَنُواْ وَكَانُواْ يَتَّقُونَ")
 
@@ -163,7 +97,7 @@ struct SufismAnswerView: View {
                 }
 
                 Section(header: Text("6. THE SHAYKH IS NOT ABOVE THE TEXT")) {
-                    Text("The orders teach that the disciple must be before his shaykh “like a corpse in the hands of its washer,“ and that the shaykh’s unveilings (**kashf**) are a source of knowledge beside revelation. Allah described people who gave their scholars that place:")
+                    Text("The orders teach that the disciple must be before his shaykh “like a corpse in the hands of its washer,“ and that the shaykh’s unveilings (**kashf (كَشف)**, from ك-ش-ف, to uncover) are a source of knowledge beside revelation. Allah described people who gave their scholars that place:")
                         .font(.body)
                     ScriptureQuote(text: "“They have taken their scholars and monks as lords besides Allah” (Quran 9:31).", arabic: "ٱتَّخَذُوٓاْ أَحۡبَارَهُمۡ وَرُهۡبَٰنَهُمۡ أَرۡبَابٗا مِّن دُونِ ٱللَّهِ")
 
@@ -195,7 +129,7 @@ struct SufismAnswerView: View {
 
                     Text("**Were Ibn Taymiyyah, Ibn al-Qayyim, or an-Nawawi Sufis?**")
                         .font(.body)
-                    Text("None of them took a tariqah, gave bay‘ah to a shaykh, or practised the rites of the orders. Ibn al-Qayyim’s Madarij as-Salikin is a commentary on Manazil as-Sa’irin of Abu Isma‘il al-Harawi (d. 481 AH), a Hanbali of Herat who defended the creed of the Salaf; Ibn al-Qayyim praises him where he is right and corrects him openly where his expressions slip toward fana’ and ittihad, saying:")
+                    Text("None of them took a tariqah, gave bay‘ah to a shaykh, or practised the rites of the orders. Ibn al-Qayyim’s Madarij as-Salikin is a commentary on Manazil as-Sa’irin of Abu Isma‘il al-Harawi (d. 481 AH), a Hanbali of Herat who defended the creed of the Salaf; Ibn al-Qayyim praises him where he is right and corrects him openly where his expressions slip toward fana’ (فَنَاء, the passing away of the self) and ittihad (اِتِّحَاد, union with Allah), saying:")
                         .font(.body)
                     ScriptureQuote(text: "“Shaykh al-Islam is beloved to us, but the truth is more beloved to us than him” (Ibn al-Qayyim, Madarij as-Salikin).", arabic: "شَيْخُ الْإِسْلَامِ حَبِيبٌ إِلَيْنَا، وَالْحَقُّ أَحَبُّ إِلَيْنَا مِنْهُ", dimmed: true)
 
@@ -204,7 +138,7 @@ struct SufismAnswerView: View {
 
                     Text("**Is ihsan and purifying the soul (tazkiyah) Sufism?**")
                         .font(.body)
-                    Text("Ihsan and tazkiyah are Islam itself. Allah made purification one of the purposes of sending the Messenger (peace be upon him):")
+                    Text("**Ihsan (إِحسَان)**, from ح-س-ن, to do a thing well and beautifully, is what the Prophet (peace be upon him) defined as worshipping Allah as though you see Him; **tazkiyah (تَزكِيَة)**, from ز-ك-و, to grow and to be purified, is the purifying of the soul. Both are Islam itself. Allah made purification one of the purposes of sending the Messenger (peace be upon him):")
                         .font(.body)
                     ScriptureQuote(text: "“Just as We have sent among you a messenger from yourselves reciting to you Our verses and purifying you and teaching you the Book and wisdom and teaching you that which you did not know” (Quran 2:151).", arabic: "كَمَآ أَرۡسَلۡنَا فِيكُمۡ رَسُولٗا مِّنكُمۡ يَتۡلُواْ عَلَيۡكُمۡ ءَايَٰتِنَا وَيُزَكِّيكُمۡ وَيُعَلِّمُكُمُ ٱلۡكِتَٰبَ وَٱلۡحِكۡمَةَ وَيُعَلِّمُكُم مَّا لَمۡ تَكُونُواْ تَعۡلَمُونَ")
 
@@ -235,7 +169,7 @@ struct SufismAnswerView: View {
                         .font(.body)
                     ScriptureQuote(text: "“Said one who had knowledge from the Scripture, ‘I will bring it to you before your glance returns to you’” (Quran 27:40).", arabic: "قَالَ ٱلَّذِي عِندَهُۥ عِلۡمٞ مِّنَ ٱلۡكِتَٰبِ أَنَا۠ ءَاتِيكَ بِهِۦ قَبۡلَ أَن يَرۡتَدَّ إِلَيۡكَ طَرۡفُكَۚ")
 
-                    Text("But a karamah gives the servant no share in what belongs to Allah. The dead do not hear the callers, and they will disown those who called them (Quran 35:14 and 46:5-6, quoted in section 2). Calling upon a dead wali for a need is the shirk of the Arabs who said “that they may bring us nearer to Allah“ (Quran 39:3, quoted in section 2); asking a living, present, able person for what he can do is permitted, and asking a righteous living person to supplicate for you is what Umar did with al-Abbas (Sahih al-Bukhari 1010, quoted in section 2).")
+                    Text("But a karamah (كَرَامَة, from ك-ر-م, honour: an honour Allah grants a righteous believer without his asking) gives the servant no share in what belongs to Allah. The dead do not hear the callers, and they will disown those who called them (Quran 35:14 and 46:5-6, quoted in section 2). Calling upon a dead wali for a need is the shirk of the Arabs who said “that they may bring us nearer to Allah“ (Quran 39:3, quoted in section 2); asking a living, present, able person for what he can do is permitted, and asking a righteous living person to supplicate for you is what Umar did with al-Abbas (Sahih al-Bukhari 1010, quoted in section 2).")
                         .font(.body)
 
                     Text("**May we seek blessing from a shaykh’s body, clothes, or grave?**")
@@ -245,7 +179,7 @@ struct SufismAnswerView: View {
 
                     Text("**Is the division into shari‘ah, tariqah, and haqiqah valid?**")
                         .font(.body)
-                    Text("No. Allah gave the Prophet (peace be upon him) one way and commanded him to follow it:")
+                    Text("No. The three words are Arabic: **shari‘ah (شَرِيعَة)**, from ش-ر-ع, is the path to water, and so the revealed law; **tariqah (طَرِيقَة)** is a road; and **haqiqah (حَقِيقَة)**, from ح-ق-ق, is the reality of a thing. But dividing the religion into an outer law for the common people, an order for the disciple, and an inner reality above the law is an invention: Allah gave the Prophet (peace be upon him) one way and commanded him to follow it:")
                         .font(.body)
                     ScriptureQuote(text: "“Then We put you, [O Muhammad], on an ordained way concerning the matter [of religion]; so follow it and do not follow the inclinations of those who do not know” (Quran 45:18).", arabic: "ثُمَّ جَعَلۡنَٰكَ عَلَىٰ شَرِيعَةٖ مِّنَ ٱلۡأَمۡرِ فَٱتَّبِعۡهَا وَلَا تَتَّبِعۡ أَهۡوَآءَ ٱلَّذِينَ لَا يَعۡلَمُونَ")
 
@@ -304,6 +238,72 @@ struct SufismAnswerView: View {
                     Text("Purify the heart by the Sunnah, call upon Allah alone, leave the graves as the Prophet left them, and keep every shaykh beneath the text. That is the tazkiyah of the Salaf, and it needs no order.")
                         .font(.body)
                 }
+
+                Section(header: Text("KEY TERMS")) {
+                    Text("**Sufi / tasawwuf (صُوفِيّ / تَصَوُّف)**: from **suf (صُوف)**, wool, after the coarse woollen garments worn by the early ascetics. Ibn Taymiyyah (may Allah have mercy on him) records that the name was not current in the first three generations, that the Sufis first appeared in Basra, and that the first small lodge of the Sufis was built there by some of the companions of Abd al-Wahid ibn Zayd, himself a companion of al-Hasan al-Basri (Majmu‘ al-Fatawa 11/5-7). He also shows why the other proposed origins fail the rules of Arabic derivation: the relative adjective from **as-Suffah** (the poor Companions who lived in the Prophet’s mosque) would be Suffi, from **as-saff** (the first row in prayer) it would be Saffi, and from **as-safwah** (the elect) it would be Safawi; so the name goes back to wool. The Greek **sophia** (wisdom), which some later writers proposed, is not an Arabic root at all. Al-Qushayri, himself a Sufi, admits in ar-Risalah that no analogy or derivation in the Arabic language supports the name and that it is rather like a nickname, and Ibn Khaldun (al-Muqaddimah) judges wool the most likely origin. The Companions and the Tabi‘in never used the word; their names for the matter were faith, worship, and zuhd.")
+                        .font(.body)
+
+                    Text("**Zuhd (زُهْد)**: from ز-ه-د, to turn away from a thing because one has no desire for it. True asceticism is not rags, hunger, or withdrawal from people; it is the heart’s freedom from the world. Ibn al-Qayyim relates from his teacher Ibn Taymiyyah that zuhd is to leave what does not benefit in the Hereafter, and wara‘ (scrupulousness) is to leave what one fears will harm there (Madarij as-Salikin). The Prophet (peace be upon him) said:")
+                        .font(.body)
+                    ScriptureQuote(text: "“The world is a prison for the believer and a paradise for the disbeliever” (Sahih Muslim 2956).", arabic: "الدُّنْيَا سِجْنُ الْمُؤْمِنِ وَجَنَّةُ الْكَافِرِ", dimmed: true)
+                    ScriptureQuote(text: "“Be in this world as if you were a stranger or a traveller” (Sahih al-Bukhari 6416).", arabic: "كُنْ فِي الدُّنْيَا كَأَنَّكَ غَرِيبٌ، أَوْ عَابِرُ سَبِيلٍ", dimmed: true)
+
+                    Text("**Tariqah (طَرِيقَة)**, pl. turuq: “way,“ from ط-ر-ق; in Sufi usage an organised order with its own chain of shaykhs, litany, and rites. The major orders and the men they are named after: the **Qadiriyyah** after Abd al-Qadir al-Jilani (d. 561 AH), a Hanbali preacher of Baghdad whose own book al-Ghunyah affirms the creed of the Salaf, and whose later followers went far beyond him; the **Rifa‘iyyah** after Ahmad ar-Rifa‘i (d. 578 AH); the **Shadhiliyyah** after Abu al-Hasan ash-Shadhili (d. 656 AH); the **Naqshbandiyyah** after Baha’ ad-Din Naqshband (d. 791 AH); and the **Tijaniyyah** after Ahmad at-Tijani (d. 1230 AH). None of them existed in the three generations the Prophet (peace be upon him) called the best of people (Sahih al-Bukhari 2652), and a way to Allah that the best generations did not know is not the way of the Prophet (peace be upon him).")
+                        .font(.body)
+
+                    Text("**Shaykh / murshid (شَيْخ / مُرْشِد)**: the head of an order; murshid is from ر-ش-د, to guide aright. The orders make his word binding on the disciple. In Islam the only man who is followed absolutely is the Messenger (peace be upon him); everyone else is followed when he agrees with the Book and the Sunnah and left when he departs from them.")
+                        .font(.body)
+
+                    Text("**Murid (مُرِيد)**: “the one who wills,“ from إِرَادَة: the disciple who has handed his will over to a shaykh.")
+                        .font(.body)
+
+                    Text("**Bay‘ah (بَيْعَة)**: a pledge, from ب-ي-ع, to conclude a deal by clasping hands. In the Sunnah, bay‘ah is given to the Prophet (peace be upon him) and after him to the Muslim ruler, to hear and obey in what is good (Sahih al-Bukhari 7199, Sahih Muslim 1709); the orders moved it to the shaykh, with a rite of hand-clasping and a sworn litany.")
+                        .font(.body)
+
+                    Text("**Wird / awrad (وِرْد / أَوْرَاد)**: a set daily portion of remembrance, from و-ر-د, to come down to water. Among the Salaf a man’s wird was his nightly portion of Quran and prayer; the orders assigned fixed formulas and counts composed by the shaykh.")
+                        .font(.body)
+
+                    Text("**Hadrah (حَضْرَة)**: “presence“: the collective dhikr gathering of the orders, with swaying, drumming, and chanting in unison.")
+                        .font(.body)
+
+                    Text("**Sama‘ (سَمَاع)**: “listening“: dhikr with singing and instruments, often with dancing. The Prophet (peace be upon him) counted musical instruments among the things people would try to make lawful (Sahih al-Bukhari 5590, cited in section 4 below).")
+                        .font(.body)
+
+                    Text("**Wali / awliya’ (وَلِيّ / أَوْلِيَاء)**: from و-ل-ي, nearness and support. The Quran defines the awliya’ of Allah as every believer who fears Him (Quran 10:62-63, quoted in section 1 below), not a class of appointed saints. Ibn Taymiyyah’s book al-Furqan bayna Awliya’ ar-Rahman wa Awliya’ ash-Shaytan makes following the Sunnah the only test of wilayah.")
+                        .font(.body)
+
+                    Text("**Karamah (كَرَامَة)**: an honour that Allah grants a righteous servant, from ك-ر-م, nobility and generosity. Ahl as-Sunnah affirm karamat: the provision Maryam received in her prayer chamber, the People of the Cave who slept for centuries (Quran 18:9-26), the throne of the queen of Saba’ brought by one who had knowledge of the Scripture (Quran 27:40), and the light that went before Usayd ibn Hudayr and Abbad ibn Bishr on a dark night (Sahih al-Bukhari 3805). Of Maryam, Allah said:")
+                        .font(.body)
+                    ScriptureQuote(text: "“Every time Zechariah entered upon her in the prayer chamber, he found with her provision. He said, ‘O Mary, from where is this [coming] to you?’ She said, ‘It is from Allah. Indeed, Allah provides for whom He wills without account’” (Quran 3:37).", arabic: "كُلَّمَا دَخَلَ عَلَيۡهَا زَكَرِيَّا ٱلۡمِحۡرَابَ وَجَدَ عِندَهَا رِزۡقٗاۖ قَالَ يَٰمَرۡيَمُ أَنَّىٰ لَكِ هَٰذَاۖ قَالَتۡ هُوَ مِنۡ عِندِ ٱللَّهِۖ إِنَّ ٱللَّهَ يَرۡزُقُ مَن يَشَآءُ بِغَيۡرِ حِسَابٍ")
+
+                    Text("A karamah is a gift, not a rank; it proves nothing about a person unless he follows the Sunnah, and it never makes him someone to be called upon.")
+                        .font(.body)
+
+                    Text("**Fana’ / baqa’ (فَنَاء / بَقَاء)**: “passing away“ and “subsistence“: the claim that the self is annihilated in the witnessing of Allah until nothing but He is seen. Ibn Taymiyyah distinguishes three things called fana’: passing away from willing anything other than Allah, which is the state of the prophets and their followers; passing away from witnessing other than Him, which is a weakness that overcomes some worshippers and is not a goal; and the claim that nothing other than Him exists, which is the doctrine of hulul and ittihad (Majmu‘ al-Fatawa, vol. 10).")
+                        .font(.body)
+
+                    Text("**Hulul (حُلُول)**: “indwelling,“ from ح-ل-ل, to alight in a place: the claim that Allah dwells in a creature. **Ittihad (اتِّحَاد)**: “union“: the claim that the servant becomes one with Allah. **Wahdat al-wujud (وَحْدَة الوُجُود)**: “the oneness of existence“: the doctrine of Ibn Arabi (d. 638 AH) that the existence of creation is the very existence of the Creator. Al-Hallaj (d. 309 AH) was executed in Baghdad after his saying “Ana al-Haqq“ (I am the Truth). Ibn Taymiyyah refuted this doctrine at length (Majmu‘ al-Fatawa, vol. 2), and section 7 below answers it from the Quran.")
+                        .font(.body)
+
+                    Text("**Qutb / ghawth / abdal (قُطْب / غَوْث / أَبْدَال)**: “axis,“ “succour,“ and “substitutes“: in the orders, a hidden hierarchy of saints who are said to govern the world, the ghawth being the one people cry to for help. Ibn Taymiyyah says that the names ghawth, awtad, aqtab, and nujaba’ are found neither in the Book of Allah nor in any report from the Prophet (peace be upon him), and that the one term with a report behind it, the abdal, rests on a chain that is not established (Majmu‘ al-Fatawa, vol. 11); Ibn al-Qayyim rules that the hadiths of the abdal, aqtab, aghwath, nuqaba’, nujaba’, and awtad are all baseless attributions to the Messenger of Allah (al-Manar al-Munif). No creature governs the world; that belongs to Allah alone.")
+                        .font(.body)
+
+                    Text("**Kashf (كَشْف)**: “unveiling“: an inspiration or vision claimed as a source of knowledge. Revelation ended with the last of the prophets (Quran 33:40), and no kashf is a proof in the religion; it is judged by the texts, never the reverse.")
+                        .font(.body)
+
+                    Text("**Khalwah (خَلْوَة)**: “seclusion“: a retreat, often of forty days, in a cell with fasting and litanies set by the shaykh. The retreat of the Sunnah is i‘tikaf in the mosque, which the Prophet (peace be upon him) practised in the last ten nights of Ramadan until he died (Sahih al-Bukhari 2026).")
+                        .font(.body)
+
+                    Text("**Shari‘ah / tariqah / haqiqah (شَرِيعَة / طَرِيقَة / حَقِيقَة)**: the claimed three levels of the religion: the outer law, the Sufi path, and the inner reality that the elite reach. Answered under Common Questions below.")
+                        .font(.body)
+
+                    Text("**Ihsan (إِحْسَان)**: “doing well,“ from ح-س-ن, beauty and excellence; the third level of the religion in the hadith of Jibril, after Islam and iman. The Prophet (peace be upon him) defined it:")
+                        .font(.body)
+                    ScriptureQuote(text: "“That you worship Allah as if you see Him, for though you do not see Him, He sees you” (Sahih Muslim 8).", arabic: "أَنْ تَعْبُدَ اللَّهَ كَأَنَّكَ تَرَاهُ فَإِنْ لَمْ تَكُنْ تَرَاهُ فَإِنَّهُ يَرَاكَ", dimmed: true)
+
+                    Text("This is the real spiritual path: worship with the presence of the heart, inside the shari‘ah, needing no order.")
+                        .font(.body)
+                }
             }
             .themedListRowBackground()
         }
@@ -338,85 +338,7 @@ struct ShiaAnswerView: View {
                         .font(.body)
                     ScriptureQuote(text: "“Allah is pleased with them, and they are pleased with Him - those are the party of Allah. Unquestionably, the party of Allah - they are the successful” (Quran 58:22).", arabic: "رَضِيَ ٱللَّهُ عَنۡهُمۡ وَرَضُواْ عَنۡهُۚ أُوْلَٰٓئِكَ حِزۡبُ ٱللَّهِۚ أَلَآ إِنَّ حِزۡبَ ٱللَّهِ هُمُ ٱلۡمُفۡلِحُونَ")
 
-                    Text("The Salaf called those who reject the Companions the **Rafidah (الرَّافِضَة)**, “the rejecters,“ from ر-ف-ض, to cast off. The name goes back to Zayd ibn Ali ibn al-Husayn (may Allah have mercy on him), the grandson of al-Husayn, who rose against the Umayyads in Kufah in 122 AH. Those who had gathered to him demanded that he disavow Abu Bakr and Umar; he refused and asked Allah’s mercy on them, so they deserted him, and he said, “You have rejected me“ (rafadtumuni). Those who stayed with him became the **Zaydiyyah**, and those who left became the Rafidah. Ibn Taymiyyah (Minhaj as-Sunnah) and Ibn Kathir (al-Bidayah wan-Nihayah, events of 122 AH) record the story, ash-Shahrastani (al-Milal wan-Nihal) records that they cast him off when they learned that he would not disavow the two shaykhs, and al-Ash‘ari (Maqalat al-Islamiyyin) records that the name was given for their rejection of the caliphates of Abu Bakr and Umar. From then on the Salaf counted honouring the Companions and the Ahlul Bayt together as a mark of the Sunnah, and rejecting the Companions as the mark of the Rafidah.")
-                        .font(.body)
-                }
-
-                Section(header: Text("KEY TERMS")) {
-                    Text("**Shia / shi‘ah (شِيعَة)**: from ش-ي-ع, to follow and support: a party of followers, as explained above. In the language every man has his shi‘ah; as a name it came to mean those who hold that the leadership after the Prophet (peace be upon him) belonged to Ali and his descendants by divine text.")
-                        .font(.body)
-
-                    Text("**Ahlul Bayt (أَهْل البَيْت)**: “the people of the house“: the household of the Prophet (peace be upon him). The ayah of purification comes in the middle of an address to his wives (Quran 33:32-34), so they are inside it by its context:")
-                        .font(.body)
-                    ScriptureQuote(text: "“Allah intends only to remove from you the impurity [of sin], O people of the [Prophet's] household, and to purify you with [extensive] purification” (Quran 33:33).", arabic: "إِنَّمَا يُرِيدُ ٱللَّهُ لِيُذۡهِبَ عَنكُمُ ٱلرِّجۡسَ أَهۡلَ ٱلۡبَيۡتِ وَيُطَهِّرَكُمۡ تَطۡهِيرٗا")
-
-                    Text("The Prophet (peace be upon him) then wrapped al-Hasan, al-Husayn, Fatimah, and Ali in his cloak and recited it over them (Sahih Muslim 2424), so they are inside it by his word. Zayd ibn Arqam (may Allah be pleased with him), who heard the sermon at Ghadir Khumm, was asked who the household are, and answered:")
-                        .font(.body)
-                    ScriptureQuote(text: "“His wives are of his household, but his household are those who are forbidden the sadaqah after him.” He was asked: Who are they? He said: “The family of Ali, the family of Aqil, the family of Ja‘far, and the family of al-Abbas” (Sahih Muslim 2408).", arabic: "نِسَاؤُهُ مِنْ أَهْلِ بَيْتِهِ وَلَكِنْ أَهْلُ بَيْتِهِ مَنْ حُرِمَ الصَّدَقَةَ بَعْدَهُ. قَالَ وَمَنْ هُمْ قَالَ هُمْ آلُ عَلِيٍّ وَآلُ عَقِيلٍ وَآلُ جَعْفَرٍ وَآلُ عَبَّاسٍ", dimmed: true)
-
-                    Text("Ahl as-Sunnah love all of them, the wives and the relatives together, and it is part of their creed.")
-                        .font(.body)
-
-                    Text("**Rafidah (الرَّافِضَة)**: “the rejecters,“ from ر-ف-ض: those who rejected Abu Bakr and Umar and deserted Zayd ibn Ali for refusing to disavow them, as explained above. The Salaf used the name for whoever curses the Companions.")
-                        .font(.body)
-
-                    Text("**Zaydiyyah (الزَّيْدِيَّة)**: the followers of Zayd ibn Ali (d. 122 AH). They are the closest of the Shia to Ahl as-Sunnah: in the main they accept the caliphates of Abu Bakr and Umar, holding that the less excellent may lead while the more excellent is present, they do not curse the Companions, and they claim neither infallibility nor a hidden imam; their imam is any descendant of Fatimah who is learned and rises openly (ash-Shahrastani, al-Milal wan-Nihal).")
-                        .font(.body)
-
-                    Text("**Imamiyyah / Ithna ‘Ashariyyah (الإِمَامِيَّة / الاِثْنَا عَشَرِيَّة)**: “the Twelvers,“ the largest body of the Shia today. Their twelve imams are Ali, al-Hasan, al-Husayn, Ali Zayn al-Abidin, Muhammad al-Baqir, Ja‘far as-Sadiq, Musa al-Kazim, Ali ar-Rida, Muhammad al-Jawad, Ali al-Hadi, al-Hasan al-Askari, and Muhammad ibn al-Hasan, who is said to have gone into occultation as a small child in Samarra in 260 AH. Ahl as-Sunnah honour the first of these as the fourth rightly guided caliph, the next two as the masters of the youth of Paradise, and Zayn al-Abidin, al-Baqir, and as-Sadiq as imams of knowledge and piety whose narrations are in the books of the Sunnah; the dispute is not over loving them but over the claims of divine appointment and infallibility made for them.")
-                        .font(.body)
-
-                    Text("**Isma‘iliyyah (الإِسْمَاعِيلِيَّة)**: named after Isma‘il ibn Ja‘far as-Sadiq, who died in his father’s lifetime and whom they hold to be the seventh imam. From them came the Fatimid dynasty that ruled North Africa and Egypt (297-567 AH), and the **Qaramitah** of Bahrayn, who in 317 AH attacked Makkah during the Hajj, slaughtered the pilgrims inside the sanctuary, and carried off the Black Stone, which stayed away from the Ka‘bah for about twenty-two years (Ibn Kathir, al-Bidayah wan-Nihayah, events of 317 AH). Their doctrine of a hidden meaning (batin) behind the texts emptied the shari‘ah of its rulings.")
-                        .font(.body)
-
-                    Text("**Nusayriyyah (النُّصَيْرِيَّة)**: named after Muhammad ibn Nusayr (third century AH), who claimed that Ali was divine. They hold Ali to be God made manifest, believe in the transmigration of souls, and keep their doctrine secret from outsiders. Ibn Taymiyyah, asked about them, ruled that they are outside Islam altogether (Majmu‘ al-Fatawa, vol. 35), and no school of the Muslims, Sunni or Shia, counts their creed as Islam.")
-                        .font(.body)
-
-                    Text("**Ghulat (غُلَاة)**: “extremists,“ from غ-ل-و, to exceed the bound: those who raised Ali or the imams to divinity or prophethood. The first were the **Saba’iyyah**, the followers of Abdullah ibn Saba’, whom al-Ash‘ari (Maqalat al-Islamiyyin) and ash-Shahrastani (al-Milal wan-Nihal) count as the first of the ghulat. Ali (may Allah be pleased with him) burned a group of these heretics, whom the commentators, including Ibn Hajar in Fath al-Bari, identify as people who had claimed divinity for him, and Ibn Abbas commented:")
-                        .font(.body)
-                    ScriptureQuote(text: "Ali burnt some people, and the news reached Ibn Abbas, who said: “Had I been in his place I would not have burnt them, as the Prophet said, ‘Do not punish with the punishment of Allah.’ But I would have killed them, for the Prophet said, ‘Whoever has changed his religion, kill him’” (Sahih al-Bukhari 3017).", arabic: "أَنَّ عَلِيًّا ـ رضى الله عنه ـ حَرَّقَ قَوْمًا، فَبَلَغَ ابْنَ عَبَّاسٍ فَقَالَ لَوْ كُنْتُ أَنَا لَمْ أُحَرِّقْهُمْ، لأَنَّ النَّبِيَّ صلى الله عليه وسلم قَالَ لاَ تُعَذِّبُوا بِعَذَابِ اللَّهِ. وَلَقَتَلْتُهُمْ كَمَا قَالَ النَّبِيُّ صلى الله عليه وسلم مَنْ بَدَّلَ دِينَهُ فَاقْتُلُوهُ", dimmed: true)
-
-                    Text("Ali was the first to disown those who exaggerated about him, and the Imami Shia themselves disown the ghulat.")
-                        .font(.body)
-
-                    Text("**Imamah (إِمَامَة)**: “leadership.“ For Ahl as-Sunnah the caliphate is a trust established by the choice and pledge of the Muslims for the good of the religion and the people; for the Twelvers it is a pillar of faith, the appointment by Allah of twelve named men, without which faith is incomplete. The pillars the Prophet (peace be upon him) counted are in section 3 below.")
-                        .font(.body)
-
-                    Text("**‘Ismah (عِصْمَة)**: “protection“ from sin and error. Ahl as-Sunnah affirm it for the prophets in what they convey from Allah; the Twelvers claim it for the twelve imams and for Fatimah, which makes their words a revelation beside the Quran.")
-                        .font(.body)
-
-                    Text("**Ghaybah (غَيْبَة)**: “occultation“: the claim that the twelfth imam has been hidden since 260 AH and will return as the Mahdi. Ahl as-Sunnah believe in a Mahdi from the household of the Prophet (peace be upon him), of the descendants of Fatimah, whose name will be the Prophet’s name and whose father’s name will be his father’s name, and who will fill the earth with justice as it was filled with oppression (Sunan Abi Dawud 4282, graded hasan sahih by al-Albani; Sunan Abi Dawud 4284, graded sahih by al-Albani); that is Muhammad ibn Abdullah, not Muhammad ibn al-Hasan, and not a child hidden for more than a thousand years.")
-                        .font(.body)
-
-                    Text("**Raj‘ah (رَجْعَة)**: “return“: the Twelver belief that the imams and their enemies will be brought back to life before the Day of Resurrection so that the imams may take their due. No text of the Quran or the Sunnah mentions it.")
-                        .font(.body)
-
-                    Text("**Bada’ (بَدَاء)**: “the appearing of what was hidden“: the belief that Allah decides a matter and then a new view appears to Him; it entered the Shia sources to explain why an expected imam died before his father. Ahl as-Sunnah reject it, because Allah has encompassed all things in knowledge (Quran 65:12) and nothing appears to Him that He did not know.")
-                        .font(.body)
-
-                    Text("**Taqiyyah (تَقِيَّة)**: from و-ق-ي, to guard: concealing one’s belief to escape harm. Discussed under Common Questions below.")
-                        .font(.body)
-
-                    Text("**Tawalla / tabarra (تَوَلِّي / تَبَرِّي)**: loyalty to the imams and disavowal of their enemies. In Twelver usage the “enemies“ include Abu Bakr, Umar, Uthman, and Aisha, so tabarra becomes a duty of hating the Companions. The loyalty and disavowal of Ahl as-Sunnah is for the sake of Allah toward faith and disbelief, and never between the Companions of one Prophet.")
-                        .font(.body)
-
-                    Text("**Mut‘ah (مُتْعَة)**: “enjoyment“: marriage contracted for a fixed period against a payment, ending by itself. Discussed under Common Questions below.")
-                        .font(.body)
-
-                    Text("**Ashura and latm (عَاشُورَاء / لَطْم)**: Ashura is the tenth of Muharram, which the Prophet (peace be upon him) fasted and commanded to be fasted in thanks for the deliverance of Musa (Sahih al-Bukhari 2004). Latm means striking the face or chest. The Twelvers made the day a season of mourning for al-Husayn with breast-beating, wailing, and self-wounding, which the Prophet (peace be upon him) disowned in the hadith quoted in section 7.")
-                        .font(.body)
-
-                    Text("**Ghadir Khumm (غَدِير خُمّ)**: the pool between Makkah and Madinah where the Prophet (peace be upon him) halted on the way back from the Farewell Hajj and said, “Whoever I am his mawla, then Ali is his mawla“ (Sunan al-Tirmidhi 3713, quoted in section 3), after commanding the people to hold to the Book of Allah and reminding them three times of his household (Sahih Muslim 2408). The Twelvers keep the day as the festival of Ali’s appointment; what was actually said is explained in section 3 and under Common Questions.")
-                        .font(.body)
-
-                    Text("**Karbala (كَرْبَلَاء)**: the place in Iraq where al-Husayn ibn Ali (may Allah be pleased with him) was killed on 10 Muharram 61 AH, with most of his family and companions, by the army sent by Ubaydullah ibn Ziyad, the governor of Kufah for Yazid ibn Mu‘awiyah, after the people of Kufah who had invited him abandoned him (Ibn Kathir, al-Bidayah wan-Nihayah, events of 61 AH). Ahl as-Sunnah hold his killing to be one of the gravest crimes in the history of the ummah. The Prophet (peace be upon him) said:")
-                        .font(.body)
-                    ScriptureQuote(text: "“Husayn is from me, and I am from Husayn. Allah loves whoever loves Husayn” (Sunan al-Tirmidhi 3775; graded hasan by al-Albani).", arabic: "حُسَيْنٌ مِنِّي وَأَنَا مِنْ حُسَيْنٍ أَحَبَّ اللَّهُ مَنْ أَحَبَّ حُسَيْنًا", dimmed: true)
-
-                    Text("**Marja‘ (مَرْجِع)**: “the one referred to,“ from ر-ج-ع, to return: in Twelver usage the senior jurist (marja‘ at-taqlid) whom the laity must follow during the occultation. Ahl as-Sunnah ask the people of knowledge (Quran 16:43) but bind themselves absolutely to no one but the Messenger (peace be upon him).")
-                        .font(.body)
-
-                    Text("**Sahabi (صَحَابِيّ)**: a Companion: in the definition of Ibn Hajar, whoever met the Prophet (peace be upon him) believing in him and died upon Islam (al-Isabah). Allah’s praise of them is quoted in section 1 below, and no one who met the Prophet in faith and died upon it is outside it.")
+                    Text("The Salaf called those who reject the Companions the **Rafidah (الرَّافِضَة)**, “the rejecters,“ from ر-ف-ض, to cast off. The name goes back to Zayd ibn Ali ibn al-Husayn (may Allah have mercy on him), the grandson of al-Husayn, who rose against the Umayyads in Kufah in 122 AH. Those who had gathered to him demanded that he disavow Abu Bakr and Umar; he refused and asked Allah’s mercy on them, so they deserted him, and he said, “You have rejected me“ (rafadtumuni). Those who stayed with him became the **Zaydiyyah**, and those who left became the Rafidah. Ibn Taymiyyah (Minhaj as-Sunnah) and Ibn Kathir (al-Bidayah wan-Nihayah, events of 122 AH) record the story, ash-Shahrastani (al-Milal wan-Nihal) records that they cast him off when they learned that he would not disavow the two shaykhs, and al-Ash‘ari (Maqalat al-Islamiyyin) records that the name was given for their rejection of the caliphates of Abu Bakr and Umar. From then on the Salaf counted honouring the Companions and the Ahlul Bayt (أَهل البَيت, the people of the House: the Prophet’s household and family) together as a mark of the Sunnah, and rejecting the Companions as the mark of the Rafidah.")
                         .font(.body)
                 }
 
@@ -578,7 +500,7 @@ struct ShiaAnswerView: View {
 
                     Text("**What do Sunnis say about Karbala and Yazid?**")
                         .font(.body)
-                    Text("That al-Husayn (may Allah be pleased with him) was killed unjustly, as a martyr, on 10 Muharram 61 AH by the army of Ubaydullah ibn Ziyad, and that his killing is one of the greatest crimes committed in this ummah. The Prophet (peace be upon him) had said “Husayn is from me, and I am from Husayn“ (Sunan al-Tirmidhi 3775, quoted above). Ahl as-Sunnah grieve for him as the Prophet permitted grief, with sorrow of the heart and tears, and without wailing, striking the cheeks, or tearing the garments (Sahih al-Bukhari 1294, quoted in section 7). As for Yazid ibn Mu‘awiyah, Ibn Taymiyyah records the position of Ahmad ibn Hanbal and the imams: he was a king among the kings of the Muslims, neither loved nor cursed, not a Companion and not one of the righteous, and the crime at Karbala is not excused; but the Muslim does not make cursing a named individual a part of his religion (Majmu‘ al-Fatawa 4/481-484).")
+                    Text("That al-Husayn (may Allah be pleased with him) was killed unjustly, as a martyr, on 10 Muharram 61 AH by the army of Ubaydullah ibn Ziyad, and that his killing is one of the greatest crimes committed in this ummah. The Prophet (peace be upon him) had said “Husayn is from me, and I am from Husayn“ (Sunan al-Tirmidhi 3775, quoted below). Ahl as-Sunnah grieve for him as the Prophet permitted grief, with sorrow of the heart and tears, and without wailing, striking the cheeks, or tearing the garments (Sahih al-Bukhari 1294, quoted in section 7). As for Yazid ibn Mu‘awiyah, Ibn Taymiyyah records the position of Ahmad ibn Hanbal and the imams: he was a king among the kings of the Muslims, neither loved nor cursed, not a Companion and not one of the righteous, and the crime at Karbala is not excused; but the Muslim does not make cursing a named individual a part of his religion (Majmu‘ al-Fatawa 4/481-484).")
                         .font(.body)
 
                     Text("**Do the Shia have a different Quran?**")
@@ -660,6 +582,84 @@ struct ShiaAnswerView: View {
                     Text("Allah praised the Companions, Ali ranked Abu Bakr and Umar above himself and married his daughter to Umar, no imamate is among the pillars, and no one after the Prophet is infallible. Love of the Ahlul Bayt, which Ahl as-Sunnah share, does not require any of the beliefs built upon it.")
                         .font(.body)
                 }
+
+                Section(header: Text("KEY TERMS")) {
+                    Text("**Shia / shi‘ah (شِيعَة)**: from ش-ي-ع, to follow and support: a party of followers, as explained above. In the language every man has his shi‘ah; as a name it came to mean those who hold that the leadership after the Prophet (peace be upon him) belonged to Ali and his descendants by divine text.")
+                        .font(.body)
+
+                    Text("**Ahlul Bayt (أَهْل البَيْت)**: “the people of the house“: the household of the Prophet (peace be upon him). The ayah of purification comes in the middle of an address to his wives (Quran 33:32-34), so they are inside it by its context:")
+                        .font(.body)
+                    ScriptureQuote(text: "“Allah intends only to remove from you the impurity [of sin], O people of the [Prophet's] household, and to purify you with [extensive] purification” (Quran 33:33).", arabic: "إِنَّمَا يُرِيدُ ٱللَّهُ لِيُذۡهِبَ عَنكُمُ ٱلرِّجۡسَ أَهۡلَ ٱلۡبَيۡتِ وَيُطَهِّرَكُمۡ تَطۡهِيرٗا")
+
+                    Text("The Prophet (peace be upon him) then wrapped al-Hasan, al-Husayn, Fatimah, and Ali in his cloak and recited it over them (Sahih Muslim 2424), so they are inside it by his word. Zayd ibn Arqam (may Allah be pleased with him), who heard the sermon at Ghadir Khumm, was asked who the household are, and answered:")
+                        .font(.body)
+                    ScriptureQuote(text: "“His wives are of his household, but his household are those who are forbidden the sadaqah after him.” He was asked: Who are they? He said: “The family of Ali, the family of Aqil, the family of Ja‘far, and the family of al-Abbas” (Sahih Muslim 2408).", arabic: "نِسَاؤُهُ مِنْ أَهْلِ بَيْتِهِ وَلَكِنْ أَهْلُ بَيْتِهِ مَنْ حُرِمَ الصَّدَقَةَ بَعْدَهُ. قَالَ وَمَنْ هُمْ قَالَ هُمْ آلُ عَلِيٍّ وَآلُ عَقِيلٍ وَآلُ جَعْفَرٍ وَآلُ عَبَّاسٍ", dimmed: true)
+
+                    Text("Ahl as-Sunnah love all of them, the wives and the relatives together, and it is part of their creed.")
+                        .font(.body)
+
+                    Text("**Rafidah (الرَّافِضَة)**: “the rejecters,“ from ر-ف-ض: those who rejected Abu Bakr and Umar and deserted Zayd ibn Ali for refusing to disavow them, as explained above. The Salaf used the name for whoever curses the Companions.")
+                        .font(.body)
+
+                    Text("**Zaydiyyah (الزَّيْدِيَّة)**: the followers of Zayd ibn Ali (d. 122 AH). They are the closest of the Shia to Ahl as-Sunnah: in the main they accept the caliphates of Abu Bakr and Umar, holding that the less excellent may lead while the more excellent is present, they do not curse the Companions, and they claim neither infallibility nor a hidden imam; their imam is any descendant of Fatimah who is learned and rises openly (ash-Shahrastani, al-Milal wan-Nihal).")
+                        .font(.body)
+
+                    Text("**Imamiyyah / Ithna ‘Ashariyyah (الإِمَامِيَّة / الاِثْنَا عَشَرِيَّة)**: “the Twelvers,“ the largest body of the Shia today. Their twelve imams are Ali, al-Hasan, al-Husayn, Ali Zayn al-Abidin, Muhammad al-Baqir, Ja‘far as-Sadiq, Musa al-Kazim, Ali ar-Rida, Muhammad al-Jawad, Ali al-Hadi, al-Hasan al-Askari, and Muhammad ibn al-Hasan, who is said to have gone into occultation as a small child in Samarra in 260 AH. Ahl as-Sunnah honour the first of these as the fourth rightly guided caliph, the next two as the masters of the youth of Paradise, and Zayn al-Abidin, al-Baqir, and as-Sadiq as imams of knowledge and piety whose narrations are in the books of the Sunnah; the dispute is not over loving them but over the claims of divine appointment and infallibility made for them.")
+                        .font(.body)
+
+                    Text("**Isma‘iliyyah (الإِسْمَاعِيلِيَّة)**: named after Isma‘il ibn Ja‘far as-Sadiq, who died in his father’s lifetime and whom they hold to be the seventh imam. From them came the Fatimid dynasty that ruled North Africa and Egypt (297-567 AH), and the **Qaramitah** of Bahrayn, who in 317 AH attacked Makkah during the Hajj, slaughtered the pilgrims inside the sanctuary, and carried off the Black Stone, which stayed away from the Ka‘bah for about twenty-two years (Ibn Kathir, al-Bidayah wan-Nihayah, events of 317 AH). Their doctrine of a hidden meaning (batin) behind the texts emptied the shari‘ah of its rulings.")
+                        .font(.body)
+
+                    Text("**Nusayriyyah (النُّصَيْرِيَّة)**: named after Muhammad ibn Nusayr (third century AH), who claimed that Ali was divine. They hold Ali to be God made manifest, believe in the transmigration of souls, and keep their doctrine secret from outsiders. Ibn Taymiyyah, asked about them, ruled that they are outside Islam altogether (Majmu‘ al-Fatawa, vol. 35), and no school of the Muslims, Sunni or Shia, counts their creed as Islam.")
+                        .font(.body)
+
+                    Text("**Ghulat (غُلَاة)**: “extremists,“ from غ-ل-و, to exceed the bound: those who raised Ali or the imams to divinity or prophethood. The first were the **Saba’iyyah**, the followers of Abdullah ibn Saba’, whom al-Ash‘ari (Maqalat al-Islamiyyin) and ash-Shahrastani (al-Milal wan-Nihal) count as the first of the ghulat. Ali (may Allah be pleased with him) burned a group of these heretics, whom the commentators, including Ibn Hajar in Fath al-Bari, identify as people who had claimed divinity for him, and Ibn Abbas commented:")
+                        .font(.body)
+                    ScriptureQuote(text: "Ali burnt some people, and the news reached Ibn Abbas, who said: “Had I been in his place I would not have burnt them, as the Prophet said, ‘Do not punish with the punishment of Allah.’ But I would have killed them, for the Prophet said, ‘Whoever has changed his religion, kill him’” (Sahih al-Bukhari 3017).", arabic: "أَنَّ عَلِيًّا ـ رضى الله عنه ـ حَرَّقَ قَوْمًا، فَبَلَغَ ابْنَ عَبَّاسٍ فَقَالَ لَوْ كُنْتُ أَنَا لَمْ أُحَرِّقْهُمْ، لأَنَّ النَّبِيَّ صلى الله عليه وسلم قَالَ لاَ تُعَذِّبُوا بِعَذَابِ اللَّهِ. وَلَقَتَلْتُهُمْ كَمَا قَالَ النَّبِيُّ صلى الله عليه وسلم مَنْ بَدَّلَ دِينَهُ فَاقْتُلُوهُ", dimmed: true)
+
+                    Text("Ali was the first to disown those who exaggerated about him, and the Imami Shia themselves disown the ghulat.")
+                        .font(.body)
+
+                    Text("**Imamah (إِمَامَة)**: “leadership.“ For Ahl as-Sunnah the caliphate is a trust established by the choice and pledge of the Muslims for the good of the religion and the people; for the Twelvers it is a pillar of faith, the appointment by Allah of twelve named men, without which faith is incomplete. The pillars the Prophet (peace be upon him) counted are in section 3 below.")
+                        .font(.body)
+
+                    Text("**‘Ismah (عِصْمَة)**: “protection“ from sin and error. Ahl as-Sunnah affirm it for the prophets in what they convey from Allah; the Twelvers claim it for the twelve imams and for Fatimah, which makes their words a revelation beside the Quran.")
+                        .font(.body)
+
+                    Text("**Ghaybah (غَيْبَة)**: “occultation“: the claim that the twelfth imam has been hidden since 260 AH and will return as the Mahdi. Ahl as-Sunnah believe in a Mahdi from the household of the Prophet (peace be upon him), of the descendants of Fatimah, whose name will be the Prophet’s name and whose father’s name will be his father’s name, and who will fill the earth with justice as it was filled with oppression (Sunan Abi Dawud 4282, graded hasan sahih by al-Albani; Sunan Abi Dawud 4284, graded sahih by al-Albani); that is Muhammad ibn Abdullah, not Muhammad ibn al-Hasan, and not a child hidden for more than a thousand years.")
+                        .font(.body)
+
+                    Text("**Raj‘ah (رَجْعَة)**: “return“: the Twelver belief that the imams and their enemies will be brought back to life before the Day of Resurrection so that the imams may take their due. No text of the Quran or the Sunnah mentions it.")
+                        .font(.body)
+
+                    Text("**Bada’ (بَدَاء)**: “the appearing of what was hidden“: the belief that Allah decides a matter and then a new view appears to Him; it entered the Shia sources to explain why an expected imam died before his father. Ahl as-Sunnah reject it, because Allah has encompassed all things in knowledge (Quran 65:12) and nothing appears to Him that He did not know.")
+                        .font(.body)
+
+                    Text("**Taqiyyah (تَقِيَّة)**: from و-ق-ي, to guard: concealing one’s belief to escape harm. Discussed under Common Questions below.")
+                        .font(.body)
+
+                    Text("**Tawalla / tabarra (تَوَلِّي / تَبَرِّي)**: loyalty to the imams and disavowal of their enemies. In Twelver usage the “enemies“ include Abu Bakr, Umar, Uthman, and Aisha, so tabarra becomes a duty of hating the Companions. The loyalty and disavowal of Ahl as-Sunnah is for the sake of Allah toward faith and disbelief, and never between the Companions of one Prophet.")
+                        .font(.body)
+
+                    Text("**Mut‘ah (مُتْعَة)**: “enjoyment“: marriage contracted for a fixed period against a payment, ending by itself. Discussed under Common Questions below.")
+                        .font(.body)
+
+                    Text("**Ashura and latm (عَاشُورَاء / لَطْم)**: Ashura is the tenth of Muharram, which the Prophet (peace be upon him) fasted and commanded to be fasted in thanks for the deliverance of Musa (Sahih al-Bukhari 2004). Latm means striking the face or chest. The Twelvers made the day a season of mourning for al-Husayn with breast-beating, wailing, and self-wounding, which the Prophet (peace be upon him) disowned in the hadith quoted in section 7.")
+                        .font(.body)
+
+                    Text("**Ghadir Khumm (غَدِير خُمّ)**: the pool between Makkah and Madinah where the Prophet (peace be upon him) halted on the way back from the Farewell Hajj and said, “Whoever I am his mawla, then Ali is his mawla“ (Sunan al-Tirmidhi 3713, quoted in section 3), after commanding the people to hold to the Book of Allah and reminding them three times of his household (Sahih Muslim 2408). The Twelvers keep the day as the festival of Ali’s appointment; what was actually said is explained in section 3 and under Common Questions.")
+                        .font(.body)
+
+                    Text("**Karbala (كَرْبَلَاء)**: the place in Iraq where al-Husayn ibn Ali (may Allah be pleased with him) was killed on 10 Muharram 61 AH, with most of his family and companions, by the army sent by Ubaydullah ibn Ziyad, the governor of Kufah for Yazid ibn Mu‘awiyah, after the people of Kufah who had invited him abandoned him (Ibn Kathir, al-Bidayah wan-Nihayah, events of 61 AH). Ahl as-Sunnah hold his killing to be one of the gravest crimes in the history of the ummah. The Prophet (peace be upon him) said:")
+                        .font(.body)
+                    ScriptureQuote(text: "“Husayn is from me, and I am from Husayn. Allah loves whoever loves Husayn” (Sunan al-Tirmidhi 3775; graded hasan by al-Albani).", arabic: "حُسَيْنٌ مِنِّي وَأَنَا مِنْ حُسَيْنٍ أَحَبَّ اللَّهُ مَنْ أَحَبَّ حُسَيْنًا", dimmed: true)
+
+                    Text("**Marja‘ (مَرْجِع)**: “the one referred to,“ from ر-ج-ع, to return: in Twelver usage the senior jurist (marja‘ at-taqlid) whom the laity must follow during the occultation. Ahl as-Sunnah ask the people of knowledge (Quran 16:43) but bind themselves absolutely to no one but the Messenger (peace be upon him).")
+                        .font(.body)
+
+                    Text("**Sahabi (صَحَابِيّ)**: a Companion: in the definition of Ibn Hajar, whoever met the Prophet (peace be upon him) believing in him and died upon Islam (al-Isabah). Allah’s praise of them is quoted in section 1 below, and no one who met the Prophet in faith and died upon it is outside it.")
+                        .font(.body)
+                }
             }
             .themedListRowBackground()
         }
@@ -689,81 +689,6 @@ struct ChristianityAnswerView: View {
                     ScriptureQuote(text: "“Both in this world and in the Hereafter, I am the nearest of all the people to Jesus, the son of Mary. The prophets are paternal brothers; their mothers are different, but their religion is one” (Sahih al-Bukhari 3443).", arabic: "أَنَا أَوْلَى النَّاسِ بِعِيسَى ابْنِ مَرْيَمَ فِي الدُّنْيَا وَالآخِرَةِ، وَالأَنْبِيَاءُ إِخْوَةٌ لِعَلاَّتٍ، أُمَّهَاتُهُمْ شَتَّى، وَدِينُهُمْ وَاحِدٌ", dimmed: true)
 
                     Text("So the disagreement is not about whether to honour Jesus, but about what he was.")
-                        .font(.body)
-                }
-
-                Section(header: Text("KEY TERMS")) {
-                    Text("**Nasara (النَّصَارَى)**: the Quran’s name for the Christians. Ibn Kathir (may Allah have mercy on him) gives two derivations in his tafsir of 2:62: from **an-Nasirah (النَّاصِرَة)**, Nazareth, the town of Jesus, or from **nasr (نَصْر)**, help, because they helped one another, as the disciples answered when Jesus asked who would be his helpers for Allah (Quran 3:52, 61:14):")
-                        .font(.body)
-                    ScriptureQuote(text: "“The disciples said, ‘We are supporters for Allah. We have believed in Allah and testify that we are Muslims [submitting to Him]’” (Quran 3:52).", arabic: "قَالَ ٱلۡحَوَارِيُّونَ نَحۡنُ أَنصَارُ ٱللَّهِ ءَامَنَّا بِٱللَّهِ وَٱشۡهَدۡ بِأَنَّا مُسۡلِمُونَ")
-
-                    Text("**Ahl al-Kitab (أَهْلُ الكِتَاب)**: “the People of the Scripture,“ the Jews and the Christians, the two communities that received a revealed Book before the Quran. Islam gives them a standing distinct from the idolaters: their slaughtered meat and their chaste women are lawful to Muslims (Quran 5:5), they are to be argued with only in the best manner (Quran 29:46), and yet their doctrines are refuted without apology (Quran 4:171).")
-                        .font(.body)
-
-                    Text("**Isa ibn Maryam (عِيسَى ابْنُ مَرْيَم)**: Jesus, the son of Mary. The Quran names him by his mother, a standing reminder that he had no father, and mentions him by name more often than it mentions Muhammad (peace be upon them both). Muslims say “alayhis-salam“ (peace be upon him) after his name as after every prophet.")
-                        .font(.body)
-
-                    Text("**Al-Masih (المَسِيح)**: “the Messiah,“ from **masaha (مَسَحَ)**, to wipe or to anoint; the Hebrew mashiah and the Greek christos mean the same, “the anointed one.“ Ibn Kathir notes several explanations of the name, among them that he wiped over the sick and they were healed by Allah’s permission. The Quran confirms that this title belongs to Jesus alone, so a Muslim who says “Messiah“ affirms exactly what the Jews denied:")
-                        .font(.body)
-                    ScriptureQuote(text: "“O Mary, indeed Allah gives you good tidings of a word from Him, whose name will be the Messiah, Jesus, the son of Mary - distinguished in this world and the Hereafter and among those brought near [to Allah]” (Quran 3:45).", arabic: "يَٰمَرۡيَمُ إِنَّ ٱللَّهَ يُبَشِّرُكِ بِكَلِمَةٖ مِّنۡهُ ٱسۡمُهُ ٱلۡمَسِيحُ عِيسَى ٱبۡنُ مَرۡيَمَ وَجِيهٗا فِي ٱلدُّنۡيَا وَٱلۡأٓخِرَةِ وَمِنَ ٱلۡمُقَرَّبِينَ")
-
-                    Text("**Injil (الإِنْجِيل)**: from the Greek euangelion, “good news“: the revelation Allah gave to Jesus. It is not the same thing as the four Gospels. The Injil of the Quran is what Jesus received and taught, and no copy of it survives in the tongue he spoke:")
-                        .font(.body)
-                    ScriptureQuote(text: "“and We gave him the Gospel, in which was guidance and light” (Quran 5:46).", arabic: "وَءَاتَيۡنَٰهُ ٱلۡإِنجِيلَ فِيهِ هُدٗى وَنُورٞ")
-
-                    Text("**The Gospels (الأَنَاجِيل)**: Matthew, Mark, Luke and John, the four accounts of Jesus at the start of the New Testament. They were written in Greek by others, decades after him (scholars date them to roughly 65–100 CE), while Jesus spoke Aramaic; their authors do not name themselves, and the titles were attached later. So they are at best reports about Jesus containing some of his words in translation, not the Injil itself. Muslims judge their contents by the Quran: what agrees with it is accepted, what contradicts it is rejected, and the rest is left alone.")
-                        .font(.body)
-
-                    Text("**The Bible**: the Old Testament (the Jewish scriptures) and the New Testament (Gospels, Acts, the letters, Revelation). Protestants count 66 books and Catholics 73 (adding the books they call deuterocanonical), and the Orthodox churches count more still. The list itself was fixed by councils of bishops, at Hippo (393 CE) and Carthage (397 CE), and for Catholics finally at Trent (1546 CE). A book whose table of contents was voted on by men centuries after Jesus is not what Islam means by the Injil.")
-                        .font(.body)
-
-                    Text("**Paul of Tarsus (بُولُس)**: a Jew of Tarsus who persecuted the followers of Jesus, never met him in his lifetime, and then reported a vision of him on the road to Damascus (Acts 9). Thirteen letters of the New Testament are attributed to him, more than to any other writer, and they, not the words of Jesus, are the source of the doctrines that the death of Jesus atones for sin and that the Law of Moses is no longer binding (Romans 10:4, Galatians 3). Jesus himself said he came to fulfil the Law, not to destroy it (Matthew 5:17). Muslim scholars who examined the Christian texts, such as Ibn Hazm in al-Fisal and Ibn Taymiyyah in al-Jawab as-Sahih, traced the alteration of the religion of the Messiah to those who came after him.")
-                        .font(.body)
-
-                    Text("**Trinity (التَّثْلِيث)**: the doctrine that God is one essence in three persons, Father, Son and Holy Spirit. The word is not in the Bible. The doctrine was defined at the Council of Nicaea (325 CE), which declared the Son “of one substance“ with the Father, and completed at the Council of Constantinople (381 CE), which added the Holy Spirit. The Quran names it and rejects it (Quran 4:171, 5:73).")
-                        .font(.body)
-
-                    Text("**Incarnation (التَّجَسُّد)**: the belief that God became flesh in Jesus. Islam holds that the Creator does not enter His creation: Jesus was a word from Allah cast to Maryam, a human being who ate food like his mother (Quran 5:75).")
-                        .font(.body)
-
-                    Text("**Crucifixion (الصَّلْب)**: Christianity teaches that Jesus was crucified, died, and rose on the third day. The Quran denies that he was killed or crucified: another was made to resemble him, and Allah raised him alive (Quran 4:157-158).")
-                        .font(.body)
-
-                    Text("**Atonement and original sin (الفِدَاء والخَطِيئَة الأَصْلِيَّة)**: the doctrine that all mankind inherits the guilt of Adam and can be forgiven only through the sacrifice of the son of God. Islam teaches that Adam repented and was forgiven (Quran 2:37), that no soul bears the burden of another (Quran 6:164), and that Allah forgives whom He wills directly, without a victim (Quran 39:53).")
-                        .font(.body)
-
-                    Text("**“Son of God“ (ابْنُ الله)**: in the Bible the phrase is used loosely. Adam is “the son of God“ (Luke 3:38), Israel is God’s “firstborn son“ (Exodus 4:22), David is told “Thou art my Son“ (Psalm 2:7), and the peacemakers “shall be called the children of God“ (Matthew 5:9). It meant a beloved and obedient servant. Later Christians made it literal for Jesus alone, and the Quran rejects that in the strongest terms (Quran 9:30, 19:88-93, 112:1-4).")
-                        .font(.body)
-
-                    Text("**The Holy Spirit (رُوحُ القُدُس)**: in the Quran Ruh al-Qudus is the angel Jibril, by whom Allah supported Jesus (Quran 2:87, 5:110) and by whom He sent down the Quran:")
-                        .font(.body)
-                    ScriptureQuote(text: "“Say, [O Muhammad], ‘The Pure Spirit has brought it down from your Lord in truth to make firm those who believe and as guidance and good tidings to the Muslims’” (Quran 16:102).", arabic: "قُلۡ نَزَّلَهُۥ رُوحُ ٱلۡقُدُسِ مِن رَّبِّكَ بِٱلۡحَقِّ لِيُثَبِّتَ ٱلَّذِينَ ءَامَنُواْ وَهُدٗى وَبُشۡرَىٰ لِلۡمُسۡلِمِينَ")
-                    Text("The Prophet (peace be upon him) prayed for the poet Hassan ibn Thabit (may Allah be pleased with him) with the same words, and in another narration named the angel:")
-                        .font(.body)
-                    ScriptureQuote(text: "“O Hassan, reply on behalf of Allah’s Messenger. O Allah, help him with the Holy Spirit” (Sahih al-Bukhari 453, Sahih Muslim 2485).", arabic: "يَا حَسَّانُ، أَجِبْ عَنْ رَسُولِ اللَّهِ صلى الله عليه وسلم، اللَّهُمَّ أَيِّدْهُ بِرُوحِ الْقُدُسِ", dimmed: true)
-                    ScriptureQuote(text: "“Lampoon them, and Jibril is with you” (Sahih al-Bukhari 3213).", arabic: "اهْجُهُمْ ـ أَوْ هَاجِهِمْ ـ وَجِبْرِيلُ مَعَكَ", dimmed: true)
-                    Text("So the Holy Spirit is a created angel, not a person of the Godhead.")
-                        .font(.body)
-
-                    Text("**Kalimat Allah and Ruh minhu (كَلِمَةُ اللهِ ورُوحٌ مِنْه)**: Jesus is called “His word“ and “a soul from Him“ (Quran 4:171, quoted below). Ibn Kathir explains that he is a word from Allah because he was created by Allah’s word “Be,“ without a father, not because he is a part of Allah’s speech; and “a spirit from Him“ means a spirit created by Him, just as Allah says He subjected to us all that is in the heavens and the earth “from Him“ (Quran 45:13), that is, as His creation, not from His essence. The angel said to Maryam:")
-                        .font(.body)
-                    ScriptureQuote(text: "“Such is Allah; He creates what He wills. When He decrees a matter, He only says to it, ‘Be,’ and it is” (Quran 3:47).", arabic: "كَذَٰلِكِ ٱللَّهُ يَخۡلُقُ مَا يَشَآءُۚ إِذَا قَضَىٰٓ أَمۡرٗا فَإِنَّمَا يَقُولُ لَهُۥ كُن فَيَكُونُ")
-
-                    Text("**Maryam (مَرْيَم)**: Mary, the daughter of Imran, the only woman named in the Quran, and a surah bears her name. She was chosen above the women of the worlds (Quran 3:42, quoted above), conceived Jesus as a virgin, and is called a supporter of truth (Quran 5:75). Muslims honour her without worshipping her, and the Quran rejects taking her as a deity besides Allah (Quran 5:116):")
-                        .font(.body)
-                    ScriptureQuote(text: "“She said, ‘How can I have a boy while no man has touched me and I have not been unchaste?’” (Quran 19:20).", arabic: "قَالَتۡ أَنَّىٰ يَكُونُ لِي غُلَٰمٞ وَلَمۡ يَمۡسَسۡنِي بَشَرٞ وَلَمۡ أَكُ بَغِيّٗا")
-                    ScriptureQuote(text: "“And [the example of] Mary, the daughter of 'Imran, who guarded her chastity, so We blew into [her garment] through Our angel, and she believed in the words of her Lord and His scriptures and was of the devoutly obedient” (Quran 66:12).", arabic: "وَمَرۡيَمَ ٱبۡنَتَ عِمۡرَٰنَ ٱلَّتِيٓ أَحۡصَنَتۡ فَرۡجَهَا فَنَفَخۡنَا فِيهِ مِن رُّوحِنَا وَصَدَّقَتۡ بِكَلِمَٰتِ رَبِّهَا وَكُتُبِهِۦ وَكَانَتۡ مِنَ ٱلۡقَٰنِتِينَ")
-
-                    Text("**The Hawariyyun (الحَوَارِيُّون)**: the disciples of Jesus, from **hawar (حَوَر)**, whiteness, said to refer to their white garments or to the purity of their hearts. They declared themselves Muslims (Quran 3:52, quoted above), asked Allah for a table from heaven (Quran 5:112-115), and were supported against those who disbelieved (Quran 61:14).")
-                        .font(.body)
-
-                    Text("**Arius (آرِيُوس) and the early Christians who denied the Trinity**: Arius (d. 336 CE), a priest of Alexandria, taught that the Son was created and had a beginning, and that the Father alone is God without beginning. His view was condemned at Nicaea, yet for decades afterwards much of the church, and later whole Gothic nations, held it. Before him the Ebionites, described by the church fathers Irenaeus and Eusebius, held Jesus to be a man and not God, kept the Law of Moses, and rejected Paul. The Quran’s account of Jesus was therefore not foreign to early Christianity; it was the side that lost.")
-                        .font(.body)
-
-                    Text("**Catholic, Orthodox, Protestant**: the three main branches of Christianity. The Catholic Church under the Pope of Rome and the Eastern Orthodox churches divided in 1054 CE; the Protestants broke from Rome in the Reformation begun by Martin Luther in 1517 CE, rejecting papal authority and holding to the Bible alone. All three affirm the Trinity, the Incarnation, and the Crucifixion; they differ over authority, sacraments, and the saints. Islam’s discussion with them concerns what all three share.")
-                        .font(.body)
-
-                    Text("**The “Gospel of Barnabas“**: a book that presents Jesus as foretelling Muhammad by name. Muslims should not rely on it. No manuscript of it older than the sixteenth century is known, it contains historical errors, and it even denies that Jesus is the Messiah, which contradicts the Quran (Quran 3:45). The case of Islam rests on the Quran and the Sunnah, not on disputed books.")
                         .font(.body)
                 }
 
@@ -862,8 +787,9 @@ struct ChristianityAnswerView: View {
                         .font(.body)
                     ScriptureQuote(text: "“[He is] Originator of the heavens and the earth. How could He have a son when He does not have a companion and He created all things? And He is, of all things, Knowing” (Quran 6:101).", arabic: "بَدِيعُ ٱلسَّمَٰوَٰتِ وَٱلۡأَرۡضِۖ أَنَّىٰ يَكُونُ لَهُۥ وَلَدٞ وَلَمۡ تَكُن لَّهُۥ صَٰحِبَةٞۖ وَخَلَقَ كُلَّ شَيۡءٖۖ وَهُوَ بِكُلِّ شَيۡءٍ عَلِيمٞ")
                     ScriptureQuote(text: "“They say, ‘Allah has taken a son.’ Exalted is He! Rather, to Him belongs whatever is in the heavens and the earth. All are devoutly obedient to Him, Originator of the heavens and the earth. When He decrees a matter, He only says to it, ‘Be,’ and it is” (Quran 2:116-117).", arabic: "وَقَالُواْ ٱتَّخَذَ ٱللَّهُ وَلَدٗاۗ سُبۡحَٰنَهُۥۖ بَل لَّهُۥ مَا فِي ٱلسَّمَٰوَٰتِ وَٱلۡأَرۡضِۖ كُلّٞ لَّهُۥ قَٰنِتُونَ ۝ بَدِيعُ ٱلسَّمَٰوَٰتِ وَٱلۡأَرۡضِۖ وَإِذَا قَضَىٰٓ أَمۡرٗا فَإِنَّمَا يَقُولُ لَهُۥ كُن فَيَكُونُ")
-                    Text("A son requires a mate, a beginning, and a likeness to the father; none of that is possible for the One who created everything. When the Bible calls Adam, Israel, David and the peacemakers sons of God, it means beloved servants, and that is what Jesus was: there is no one in the heavens and the earth but comes to the Most Merciful as a servant (Quran 19:93, quoted above).")
+                    Text("A son requires a mate, a beginning, and a likeness to the father; none of that is possible for the One who created everything. When the Bible calls Adam, Israel, David and the peacemakers sons of God, it means beloved servants, and that is what Jesus was, as Allah says of every single creature:")
                         .font(.body)
+                    ScriptureQuote(text: "“There is no one in the heavens and earth but that he comes to the Most Merciful as a servant” (Quran 19:93).", arabic: "إِن كُلُّ مَن فِي ٱلسَّمَٰوَٰتِ وَٱلۡأَرۡضِ إِلَّآ ءَاتِي ٱلرَّحۡمَٰنِ عَبۡدٗا")
 
                     Text("**Who was Paul, and why does it matter?**")
                         .font(.body)
@@ -873,7 +799,7 @@ struct ChristianityAnswerView: View {
 
                     Text("**Is the Bible the word of God?**")
                         .font(.body)
-                    Text("Muslims believe that Allah revealed the Tawrah to Musa, the Zabur to Dawud and the Injil to Isa, and that the books in circulation today contain some of that revelation mixed with the writing, editing, and translating of men. The Quran says of the People of the Scripture:")
+                    Text("Muslims believe that Allah revealed the Tawrah to Musa, the Zabur to Dawud and the Injil (الإِنجِيل, the Gospel) to Isa, and that the books in circulation today contain some of that revelation mixed with the writing, editing, and translating of men. The Quran says of the People of the Scripture:")
                         .font(.body)
                     ScriptureQuote(text: "“So woe to those who write the ‘scripture’ with their own hands, then say, ‘This is from Allah,’ in order to exchange it for a small price” (Quran 2:79).", arabic: "فَوَيۡلٞ لِّلَّذِينَ يَكۡتُبُونَ ٱلۡكِتَٰبَ بِأَيۡدِيهِمۡ ثُمَّ يَقُولُونَ هَٰذَا مِنۡ عِندِ ٱللَّهِ لِيَشۡتَرُواْ بِهِۦ ثَمَنٗا قَلِيلٗاۖ")
                     ScriptureQuote(text: "“And indeed, there is among them a party who alter the Scripture with their tongues so you may think it is from the Scripture, but it is not from the Scripture. And they say, ‘This is from Allah,’ but it is not from Allah. And they speak untruth about Allah while they know” (Quran 3:78).", arabic: "وَإِنَّ مِنۡهُمۡ لَفَرِيقٗا يَلۡوُۥنَ أَلۡسِنَتَهُم بِٱلۡكِتَٰبِ لِتَحۡسَبُوهُ مِنَ ٱلۡكِتَٰبِ وَمَا هُوَ مِنَ ٱلۡكِتَٰبِ وَيَقُولُونَ هُوَ مِنۡ عِندِ ٱللَّهِ وَمَا هُوَ مِنۡ عِندِ ٱللَّهِۖ وَيَقُولُونَ عَلَى ٱللَّهِ ٱلۡكَذِبَ وَهُمۡ يَعۡلَمُونَ")
@@ -972,6 +898,81 @@ struct ChristianityAnswerView: View {
                     Text("Islam gives Jesus his true place: a mighty messenger and the word of Allah, not God and not His son. He ate food, prayed, and called to the worship of his Lord and ours, and he foretold the one who would come after him.")
                         .font(.body)
                 }
+
+                Section(header: Text("KEY TERMS")) {
+                    Text("**Nasara (النَّصَارَى)**: the Quran’s name for the Christians. Ibn Kathir (may Allah have mercy on him) gives two derivations in his tafsir of 2:62: from **an-Nasirah (النَّاصِرَة)**, Nazareth, the town of Jesus, or from **nasr (نَصْر)**, help, because they helped one another, as the disciples answered when Jesus asked who would be his helpers for Allah (Quran 3:52, 61:14):")
+                        .font(.body)
+                    ScriptureQuote(text: "“The disciples said, ‘We are supporters for Allah. We have believed in Allah and testify that we are Muslims [submitting to Him]’” (Quran 3:52).", arabic: "قَالَ ٱلۡحَوَارِيُّونَ نَحۡنُ أَنصَارُ ٱللَّهِ ءَامَنَّا بِٱللَّهِ وَٱشۡهَدۡ بِأَنَّا مُسۡلِمُونَ")
+
+                    Text("**Ahl al-Kitab (أَهْلُ الكِتَاب)**: “the People of the Scripture,“ the Jews and the Christians, the two communities that received a revealed Book before the Quran. Islam gives them a standing distinct from the idolaters: their slaughtered meat and their chaste women are lawful to Muslims (Quran 5:5), they are to be argued with only in the best manner (Quran 29:46), and yet their doctrines are refuted without apology (Quran 4:171).")
+                        .font(.body)
+
+                    Text("**Isa ibn Maryam (عِيسَى ابْنُ مَرْيَم)**: Jesus, the son of Mary. The Quran names him by his mother, a standing reminder that he had no father, and mentions him by name more often than it mentions Muhammad (peace be upon them both). Muslims say “alayhis-salam“ (peace be upon him) after his name as after every prophet.")
+                        .font(.body)
+
+                    Text("**Al-Masih (المَسِيح)**: “the Messiah,“ from **masaha (مَسَحَ)**, to wipe or to anoint; the Hebrew mashiah and the Greek christos mean the same, “the anointed one.“ Ibn Kathir notes several explanations of the name, among them that he wiped over the sick and they were healed by Allah’s permission. The Quran confirms that this title belongs to Jesus alone, so a Muslim who says “Messiah“ affirms exactly what the Jews denied:")
+                        .font(.body)
+                    ScriptureQuote(text: "“O Mary, indeed Allah gives you good tidings of a word from Him, whose name will be the Messiah, Jesus, the son of Mary - distinguished in this world and the Hereafter and among those brought near [to Allah]” (Quran 3:45).", arabic: "يَٰمَرۡيَمُ إِنَّ ٱللَّهَ يُبَشِّرُكِ بِكَلِمَةٖ مِّنۡهُ ٱسۡمُهُ ٱلۡمَسِيحُ عِيسَى ٱبۡنُ مَرۡيَمَ وَجِيهٗا فِي ٱلدُّنۡيَا وَٱلۡأٓخِرَةِ وَمِنَ ٱلۡمُقَرَّبِينَ")
+
+                    Text("**Injil (الإِنْجِيل)**: from the Greek euangelion, “good news“: the revelation Allah gave to Jesus. It is not the same thing as the four Gospels. The Injil of the Quran is what Jesus received and taught, and no copy of it survives in the tongue he spoke:")
+                        .font(.body)
+                    ScriptureQuote(text: "“and We gave him the Gospel, in which was guidance and light” (Quran 5:46).", arabic: "وَءَاتَيۡنَٰهُ ٱلۡإِنجِيلَ فِيهِ هُدٗى وَنُورٞ")
+
+                    Text("**The Gospels (الأَنَاجِيل)**: Matthew, Mark, Luke and John, the four accounts of Jesus at the start of the New Testament. They were written in Greek by others, decades after him (scholars date them to roughly 65–100 CE), while Jesus spoke Aramaic; their authors do not name themselves, and the titles were attached later. So they are at best reports about Jesus containing some of his words in translation, not the Injil itself. Muslims judge their contents by the Quran: what agrees with it is accepted, what contradicts it is rejected, and the rest is left alone.")
+                        .font(.body)
+
+                    Text("**The Bible**: the Old Testament (the Jewish scriptures) and the New Testament (Gospels, Acts, the letters, Revelation). Protestants count 66 books and Catholics 73 (adding the books they call deuterocanonical), and the Orthodox churches count more still. The list itself was fixed by councils of bishops, at Hippo (393 CE) and Carthage (397 CE), and for Catholics finally at Trent (1546 CE). A book whose table of contents was voted on by men centuries after Jesus is not what Islam means by the Injil.")
+                        .font(.body)
+
+                    Text("**Paul of Tarsus (بُولُس)**: a Jew of Tarsus who persecuted the followers of Jesus, never met him in his lifetime, and then reported a vision of him on the road to Damascus (Acts 9). Thirteen letters of the New Testament are attributed to him, more than to any other writer, and they, not the words of Jesus, are the source of the doctrines that the death of Jesus atones for sin and that the Law of Moses is no longer binding (Romans 10:4, Galatians 3). Jesus himself said he came to fulfil the Law, not to destroy it (Matthew 5:17). Muslim scholars who examined the Christian texts, such as Ibn Hazm in al-Fisal and Ibn Taymiyyah in al-Jawab as-Sahih, traced the alteration of the religion of the Messiah to those who came after him.")
+                        .font(.body)
+
+                    Text("**Trinity (التَّثْلِيث)**: the doctrine that God is one essence in three persons, Father, Son and Holy Spirit. The word is not in the Bible. The doctrine was defined at the Council of Nicaea (325 CE), which declared the Son “of one substance“ with the Father, and completed at the Council of Constantinople (381 CE), which added the Holy Spirit. The Quran names it and rejects it (Quran 4:171, 5:73).")
+                        .font(.body)
+
+                    Text("**Incarnation (التَّجَسُّد)**: the belief that God became flesh in Jesus. Islam holds that the Creator does not enter His creation: Jesus was a word from Allah cast to Maryam, a human being who ate food like his mother (Quran 5:75).")
+                        .font(.body)
+
+                    Text("**Crucifixion (الصَّلْب)**: Christianity teaches that Jesus was crucified, died, and rose on the third day. The Quran denies that he was killed or crucified: another was made to resemble him, and Allah raised him alive (Quran 4:157-158).")
+                        .font(.body)
+
+                    Text("**Atonement and original sin (الفِدَاء والخَطِيئَة الأَصْلِيَّة)**: the doctrine that all mankind inherits the guilt of Adam and can be forgiven only through the sacrifice of the son of God. Islam teaches that Adam repented and was forgiven (Quran 2:37), that no soul bears the burden of another (Quran 6:164), and that Allah forgives whom He wills directly, without a victim (Quran 39:53).")
+                        .font(.body)
+
+                    Text("**“Son of God“ (ابْنُ الله)**: in the Bible the phrase is used loosely. Adam is “the son of God“ (Luke 3:38), Israel is God’s “firstborn son“ (Exodus 4:22), David is told “Thou art my Son“ (Psalm 2:7), and the peacemakers “shall be called the children of God“ (Matthew 5:9). It meant a beloved and obedient servant. Later Christians made it literal for Jesus alone, and the Quran rejects that in the strongest terms (Quran 9:30, 19:88-93, 112:1-4).")
+                        .font(.body)
+
+                    Text("**The Holy Spirit (رُوحُ القُدُس)**: in the Quran Ruh al-Qudus is the angel Jibril, by whom Allah supported Jesus (Quran 2:87, 5:110) and by whom He sent down the Quran:")
+                        .font(.body)
+                    ScriptureQuote(text: "“Say, [O Muhammad], ‘The Pure Spirit has brought it down from your Lord in truth to make firm those who believe and as guidance and good tidings to the Muslims’” (Quran 16:102).", arabic: "قُلۡ نَزَّلَهُۥ رُوحُ ٱلۡقُدُسِ مِن رَّبِّكَ بِٱلۡحَقِّ لِيُثَبِّتَ ٱلَّذِينَ ءَامَنُواْ وَهُدٗى وَبُشۡرَىٰ لِلۡمُسۡلِمِينَ")
+                    Text("The Prophet (peace be upon him) prayed for the poet Hassan ibn Thabit (may Allah be pleased with him) with the same words, and in another narration named the angel:")
+                        .font(.body)
+                    ScriptureQuote(text: "“O Hassan, reply on behalf of Allah’s Messenger. O Allah, help him with the Holy Spirit” (Sahih al-Bukhari 453, Sahih Muslim 2485).", arabic: "يَا حَسَّانُ، أَجِبْ عَنْ رَسُولِ اللَّهِ صلى الله عليه وسلم، اللَّهُمَّ أَيِّدْهُ بِرُوحِ الْقُدُسِ", dimmed: true)
+                    ScriptureQuote(text: "“Lampoon them, and Jibril is with you” (Sahih al-Bukhari 3213).", arabic: "اهْجُهُمْ ـ أَوْ هَاجِهِمْ ـ وَجِبْرِيلُ مَعَكَ", dimmed: true)
+                    Text("So the Holy Spirit is a created angel, not a person of the Godhead.")
+                        .font(.body)
+
+                    Text("**Kalimat Allah and Ruh minhu (كَلِمَةُ اللهِ ورُوحٌ مِنْه)**: Jesus is called “His word“ and “a soul from Him“ (Quran 4:171, quoted above). Ibn Kathir explains that he is a word from Allah because he was created by Allah’s word “Be,“ without a father, not because he is a part of Allah’s speech; and “a spirit from Him“ means a spirit created by Him, just as Allah says He subjected to us all that is in the heavens and the earth “from Him“ (Quran 45:13), that is, as His creation, not from His essence. The angel said to Maryam:")
+                        .font(.body)
+                    ScriptureQuote(text: "“Such is Allah; He creates what He wills. When He decrees a matter, He only says to it, ‘Be,’ and it is” (Quran 3:47).", arabic: "كَذَٰلِكِ ٱللَّهُ يَخۡلُقُ مَا يَشَآءُۚ إِذَا قَضَىٰٓ أَمۡرٗا فَإِنَّمَا يَقُولُ لَهُۥ كُن فَيَكُونُ")
+
+                    Text("**Maryam (مَرْيَم)**: Mary, the daughter of Imran, the only woman named in the Quran, and a surah bears her name. She was chosen above the women of the worlds (Quran 3:42, quoted above), conceived Jesus as a virgin, and is called a supporter of truth (Quran 5:75). Muslims honour her without worshipping her, and the Quran rejects taking her as a deity besides Allah (Quran 5:116):")
+                        .font(.body)
+                    ScriptureQuote(text: "“She said, ‘How can I have a boy while no man has touched me and I have not been unchaste?’” (Quran 19:20).", arabic: "قَالَتۡ أَنَّىٰ يَكُونُ لِي غُلَٰمٞ وَلَمۡ يَمۡسَسۡنِي بَشَرٞ وَلَمۡ أَكُ بَغِيّٗا")
+                    ScriptureQuote(text: "“And [the example of] Mary, the daughter of 'Imran, who guarded her chastity, so We blew into [her garment] through Our angel, and she believed in the words of her Lord and His scriptures and was of the devoutly obedient” (Quran 66:12).", arabic: "وَمَرۡيَمَ ٱبۡنَتَ عِمۡرَٰنَ ٱلَّتِيٓ أَحۡصَنَتۡ فَرۡجَهَا فَنَفَخۡنَا فِيهِ مِن رُّوحِنَا وَصَدَّقَتۡ بِكَلِمَٰتِ رَبِّهَا وَكُتُبِهِۦ وَكَانَتۡ مِنَ ٱلۡقَٰنِتِينَ")
+
+                    Text("**The Hawariyyun (الحَوَارِيُّون)**: the disciples of Jesus, from **hawar (حَوَر)**, whiteness, said to refer to their white garments or to the purity of their hearts. They declared themselves Muslims (Quran 3:52, quoted above), asked Allah for a table from heaven (Quran 5:112-115), and were supported against those who disbelieved (Quran 61:14).")
+                        .font(.body)
+
+                    Text("**Arius (آرِيُوس) and the early Christians who denied the Trinity**: Arius (d. 336 CE), a priest of Alexandria, taught that the Son was created and had a beginning, and that the Father alone is God without beginning. His view was condemned at Nicaea, yet for decades afterwards much of the church, and later whole Gothic nations, held it. Before him the Ebionites, described by the church fathers Irenaeus and Eusebius, held Jesus to be a man and not God, kept the Law of Moses, and rejected Paul. The Quran’s account of Jesus was therefore not foreign to early Christianity; it was the side that lost.")
+                        .font(.body)
+
+                    Text("**Catholic, Orthodox, Protestant**: the three main branches of Christianity. The Catholic Church under the Pope of Rome and the Eastern Orthodox churches divided in 1054 CE; the Protestants broke from Rome in the Reformation begun by Martin Luther in 1517 CE, rejecting papal authority and holding to the Bible alone. All three affirm the Trinity, the Incarnation, and the Crucifixion; they differ over authority, sacraments, and the saints. Islam’s discussion with them concerns what all three share.")
+                        .font(.body)
+
+                    Text("**The “Gospel of Barnabas“**: a book that presents Jesus as foretelling Muhammad by name. Muslims should not rely on it. No manuscript of it older than the sixteenth century is known, it contains historical errors, and it even denies that Jesus is the Messiah, which contradicts the Quran (Quran 3:45). The case of Islam rests on the Quran and the Sunnah, not on disputed books.")
+                        .font(.body)
+                }
             }
             .themedListRowBackground()
         }
@@ -999,83 +1000,6 @@ struct JudaismAnswerView: View {
                     ScriptureQuote(text: "“Indeed, We sent down the Torah, in which was guidance and light” (Quran 5:44).", arabic: "إِنَّآ أَنزَلۡنَا ٱلتَّوۡرَىٰةَ فِيهَا هُدٗى وَنُورٞۚ")
 
                     Text("When the Prophet (peace be upon him) came to Madinah and found the Jews fasting Ashura for the deliverance of Musa, he said, “We have more right to Musa than you,“ fasted it, and commanded fasting it (Sahih al-Bukhari 2004). Moses is a Muslim’s prophet, mentioned in the Quran more than any other.")
-                        .font(.body)
-                }
-
-                Section(header: Text("KEY TERMS")) {
-                    Text("**Yahud (اليَهُود)**: the Jews. Ibn Kathir (may Allah have mercy on him), in his tafsir of 2:62, relates that the name comes from **hada (هَادَ)**, to return and repent, from the words of Musa’s people, “inna hudna ilayk“ (indeed, we have turned back to You); the commentators also mention **Yahudha (يَهُوذَا)**, Judah, the son of Ya‘qub whose tribe gave its name to the kingdom of Judah and then to the whole people:")
-                        .font(.body)
-                    ScriptureQuote(text: "“And decree for us in this world [that which is] good and [also] in the Hereafter; indeed, we have turned back to You” (Quran 7:156).", arabic: "وَٱكۡتُبۡ لَنَا فِي هَٰذِهِ ٱلدُّنۡيَا حَسَنَةٗ وَفِي ٱلۡأٓخِرَةِ إِنَّا هُدۡنَآ إِلَيۡكَۚ")
-
-                    Text("**Bani Isra’il (بَنُو إِسْرَائِيل)**: the Children of Israel. Isra’il is the prophet Ya‘qub (Jacob), as the Quran shows when it says that Israel forbade a food upon himself before the Torah was revealed (Quran 3:93); Ibn Kathir notes that the name means “servant of Allah.“ His twelve sons became the twelve tribes, the **asbat (الأَسْبَاط)**:")
-                        .font(.body)
-                    ScriptureQuote(text: "“And We divided them into twelve descendant tribes [as distinct] nations” (Quran 7:160).", arabic: "وَقَطَّعۡنَٰهُمُ ٱثۡنَتَيۡ عَشۡرَةَ أَسۡبَاطًا أُمَمٗاۚ")
-
-                    Text("**Ahl al-Kitab (أَهْلُ الكِتَاب)**: “the People of the Scripture,“ the Jews and the Christians, who received a revealed Book before the Quran. Islam gives them a standing distinct from the idolaters: their slaughtered meat and their chaste women are lawful to Muslims (Quran 5:5), they are argued with in the best manner (Quran 29:46), and they are invited to the common word of worshipping Allah alone (Quran 3:64, quoted below).")
-                        .font(.body)
-
-                    Text("**Tawrah (التَّوْرَاة)**: the Hebrew torah, “instruction“: the revelation given to Musa, in which was guidance and light (Quran 5:44, quoted above). Today “Torah“ names the first five books of the Bible, the Pentateuch (Genesis, Exodus, Leviticus, Numbers, Deuteronomy). These contain much of what was revealed, but they were not all written by Musa: Deuteronomy 34 records his death and burial, says that no one knows his grave “unto this day,“ and speaks of him in the past. This is what the Quran means when it says that a portion was forgotten and that men wrote with their own hands (Quran 5:13, 2:79, quoted below).")
-                        .font(.body)
-
-                    Text("**Talmud (التَّلْمُود)**: the “oral law“ of the rabbis: the Mishnah, a code compiled around 200 CE, and the Gemara, the commentary on it completed around 500 CE in the Babylonian Talmud. Rabbinic Judaism is built on it as much as on the Torah. For Muslims it is the opinion of scholars, not revelation, and the Quran warns against turning the words of scholars into law beside Allah’s (Quran 9:31, quoted below).")
-                        .font(.body)
-
-                    Text("**Zabur (الزَّبُور)**: from **zabara (زَبَرَ)**, to write; the Book given to Dawud (David), corresponding to the Psalms. The Quran mentions it three times (Quran 4:163, 17:55, 21:105). Muslims hold that Dawud was a prophet and a king, not merely a poet:")
-                        .font(.body)
-                    ScriptureQuote(text: "“and to David We gave the book [of Psalms]” (Quran 4:163).", arabic: "وَءَاتَيۡنَا دَاوُۥدَ زَبُورٗا")
-
-                    Text("**Ahbar (أَحْبَار) and rabbaniyyun (رَبَّانِيُّون)**: the scholars of the Jews. Ahbar is the plural of **habr (حَبْر)**, a learned man; rabbani is from **rabb (رَبّ)**, one who raises people with knowledge, and the title “rabbi“ comes from the Hebrew rav, master. The Quran honours those who judged by the Tawrah (Quran 5:44, quoted above) and condemns those who concealed the truth and sold it (Quran 5:63, 2:174). It then says of their followers:")
-                        .font(.body)
-                    ScriptureQuote(text: "“They have taken their scholars and monks as lords besides Allah, and [also] the Messiah, the son of Mary. And they were not commanded except to worship one God; there is no deity except Him” (Quran 9:31).", arabic: "ٱتَّخَذُوٓاْ أَحۡبَارَهُمۡ وَرُهۡبَٰنَهُمۡ أَرۡبَابٗا مِّن دُونِ ٱللَّهِ وَٱلۡمَسِيحَ ٱبۡنَ مَرۡيَمَ وَمَآ أُمِرُوٓاْ إِلَّا لِيَعۡبُدُوٓاْ إِلَٰهٗا وَٰحِدٗاۖ لَّآ إِلَٰهَ إِلَّا هُوَۚ")
-                    Text("The Salaf explained that taking scholars as lords does not mean bowing to them; it means obeying them when they made lawful what Allah had forbidden and forbade what He had allowed. Hudhayfah and Ibn Abbas (may Allah be pleased with them) said so, as at-Tabari records in his tafsir, and Ibn Taymiyyah explains it at length in Majmu‘ al-Fatawa. The warning applies to Muslims who do the same with their own scholars.")
-                        .font(.body)
-
-                    Text("**Sabbath, as-Sabt (السَّبْت)**: Saturday, the day of rest imposed on Bani Isra’il as part of their covenant, on which they were forbidden to work. The Quran recalls the oath they took, the town by the sea whose people fished on the Sabbath and were punished (Quran 7:163, 2:65), and states that the Sabbath was a test for that people, not a law for all:")
-                        .font(.body)
-                    ScriptureQuote(text: "“and We said to them, ‘Do not transgress on the sabbath’, and We took from them a solemn covenant” (Quran 4:154).", arabic: "وَقُلۡنَا لَهُمۡ لَا تَعۡدُواْ فِي ٱلسَّبۡتِ وَأَخَذۡنَا مِنۡهُم مِّيثَٰقًا غَلِيظٗا")
-                    ScriptureQuote(text: "“The sabbath was only appointed for those who differed over it. And indeed, your Lord will judge between them on the Day of Resurrection concerning that over which they used to differ” (Quran 16:124).", arabic: "إِنَّمَا جُعِلَ ٱلسَّبۡتُ عَلَى ٱلَّذِينَ ٱخۡتَلَفُواْ فِيهِۚ وَإِنَّ رَبَّكَ لَيَحۡكُمُ بَيۡنَهُمۡ يَوۡمَ ٱلۡقِيَٰمَةِ فِيمَا كَانُواْ فِيهِ يَخۡتَلِفُونَ")
-                    Text("The Prophet (peace be upon him) said:")
-                        .font(.body)
-                    ScriptureQuote(text: "“We are the last but will be the foremost on the Day of Resurrection, though the former nations were given the Scriptures before us. And this was their day, which was made obligatory for them, but they differed about it. So Allah guided us to it, and all the other people are behind us in this respect: the Jews’ is tomorrow and the Christians’ the day after tomorrow” (Sahih al-Bukhari 876).", arabic: "نَحْنُ الآخِرُونَ السَّابِقُونَ يَوْمَ الْقِيَامَةِ، بَيْدَ أَنَّهُمْ أُوتُوا الْكِتَابَ مِنْ قَبْلِنَا، ثُمَّ هَذَا يَوْمُهُمُ الَّذِي فُرِضَ عَلَيْهِمْ فَاخْتَلَفُوا فِيهِ، فَهَدَانَا اللَّهُ، فَالنَّاسُ لَنَا فِيهِ تَبَعٌ، الْيَهُودُ غَدًا وَالنَّصَارَى بَعْدَ غَدٍ", dimmed: true)
-                    Text("Islam’s day is Friday, a day of congregational prayer, not of rest.")
-                        .font(.body)
-
-                    Text("**The Messiah, al-Masih (المَسِيح), Hebrew Mashiah**: “the anointed one,“ the king from the line of Dawud whom the Jews awaited. The Quran declares that Isa ibn Maryam was that Messiah, and that the Jews rejected him:")
-                        .font(.body)
-                    ScriptureQuote(text: "“whose name will be the Messiah, Jesus, the son of Mary - distinguished in this world and the Hereafter and among those brought near [to Allah]” (Quran 3:45).", arabic: "ٱسۡمُهُ ٱلۡمَسِيحُ عِيسَى ٱبۡنُ مَرۡيَمَ وَجِيهٗا فِي ٱلدُّنۡيَا وَٱلۡأٓخِرَةِ وَمِنَ ٱلۡمُقَرَّبِينَ")
-                    Text("They still await another, and the Prophet (peace be upon him) warned that a false messiah, al-Masih ad-Dajjal, will come before the Hour and that many of them will follow him:")
-                        .font(.body)
-                    ScriptureQuote(text: "“The Dajjal would be followed by seventy thousand Jews of Isfahan wearing Persian shawls” (Sahih Muslim 2944).", arabic: "يَتْبَعُ الدَّجَّالَ مِنْ يَهُودِ أَصْبَهَانَ سَبْعُونَ أَلْفًا عَلَيْهِمُ الطَّيَالِسَةُ", dimmed: true)
-
-                    Text("**Bayt al-Maqdis (بَيْتُ المَقْدِس) and the Temple of Sulayman**: “the Holy House,“ the sanctuary of Jerusalem, which the Quran calls **al-Masjid al-Aqsa (المَسْجِدُ الأَقْصَى)**, the farthest mosque. It was the first qiblah of the Muslims and the destination of the Prophet’s night journey:")
-                        .font(.body)
-                    ScriptureQuote(text: "“Exalted is He who took His Servant by night from al-Masjid al-Haram to al-Masjid al-Aqsa, whose surroundings We have blessed, to show him of Our signs. Indeed, He is the Hearing, the Seeing” (Quran 17:1).", arabic: "سُبۡحَٰنَ ٱلَّذِيٓ أَسۡرَىٰ بِعَبۡدِهِۦ لَيۡلٗا مِّنَ ٱلۡمَسۡجِدِ ٱلۡحَرَامِ إِلَى ٱلۡمَسۡجِدِ ٱلۡأَقۡصَا ٱلَّذِي بَٰرَكۡنَا حَوۡلَهُۥ لِنُرِيَهُۥ مِنۡ ءَايَٰتِنَآۚ إِنَّهُۥ هُوَ ٱلسَّمِيعُ ٱلۡبَصِيرُ")
-                    Text("The Prophet (peace be upon him) said it was the second mosque built on earth, forty years after the Ka‘bah (Sahih al-Bukhari 3366), and one of only three mosques to which a journey may be undertaken (Sahih al-Bukhari 1189). The prophet Sulayman (Solomon) built its temple, with the jinn Allah had subjected to him working for him (Quran 34:12-13), and when he finished he asked Allah for three things, among them that whoever came to it only to pray there would leave as free of sin as on the day his mother bore him (Sunan an-Nasa’i 693; graded sahih by al-Albani). The Quran records that the Children of Israel were twice punished for corruption by enemies who entered the sanctuary (Quran 17:4-7). Muslims call the city **al-Quds (القُدْس)**, the Holy.")
-                        .font(.body)
-
-                    Text("**The Ark, at-Tabut (التَّابُوت)**: the chest of the covenant of the Bible (Exodus 25), which held relics of the family of Musa and Harun. The Quran mentions its return as the sign of the kingship of Talut (Saul):")
-                        .font(.body)
-                    ScriptureQuote(text: "“Indeed, a sign of his kingship is that the chest will come to you in which is assurance from your Lord and a remnant of what the family of Moses and the family of Aaron had left, carried by the angels” (Quran 2:248).", arabic: "إِنَّ ءَايَةَ مُلۡكِهِۦٓ أَن يَأۡتِيَكُمُ ٱلتَّابُوتُ فِيهِ سَكِينَةٞ مِّن رَّبِّكُمۡ وَبَقِيَّةٞ مِّمَّا تَرَكَ ءَالُ مُوسَىٰ وَءَالُ هَٰرُونَ تَحۡمِلُهُ ٱلۡمَلَٰٓئِكَةُۚ")
-
-                    Text("**Circumcision (الخِتَان) and kosher (الكَاشِير)**: two laws Jews and Muslims share. Circumcision is the covenant of Ibrahim, and the Prophet (peace be upon him) said:")
-                        .font(.body)
-                    ScriptureQuote(text: "“Abraham did his circumcision with an adze at the age of eighty” (Sahih al-Bukhari 3356).", arabic: "اخْتَتَنَ إِبْرَاهِيمُ ـ عَلَيْهِ السَّلاَمُ ـ وَهْوَ ابْنُ ثَمَانِينَ سَنَةً بِالْقَدُّومِ", dimmed: true)
-                    Text("Kosher (Hebrew kasher, “fit“) is the Jewish dietary law: no pork, no blood, animals slaughtered by cutting the throat. The halal of Islam is close to it, which is why Allah made the food of the People of the Scripture lawful (Quran 5:5, quoted below). But some Jewish prohibitions were a punishment specific to them, which Jesus was sent to lift in part (Quran 3:50):")
-                        .font(.body)
-                    ScriptureQuote(text: "“And to those who are Jews We prohibited every animal of uncloven hoof” (Quran 6:146).", arabic: "وَعَلَى ٱلَّذِينَ هَادُواْ حَرَّمۡنَا كُلَّ ذِي ظُفُرٖۖ")
-
-                    Text("**Samaritans (السَّامِرِيُّون)**: a small community, fewer than a thousand people today, that accepts only the Torah (in its own version, the Samaritan Pentateuch), worships on Mount Gerizim rather than in Jerusalem, and has been at odds with the Jews since ancient times (John 4:9). The Quran names **as-Samiri (السَّامِرِيّ)** as the man who made the calf for Bani Isra’il in the absence of Musa; the exegetes differ on his origin, and some said he was of a tribe of that name:")
-                        .font(.body)
-                    ScriptureQuote(text: "“[Allah] said, ‘But indeed, We have tried your people after you [departed], and the Samiri has led them astray’” (Quran 20:85).", arabic: "قَالَ فَإِنَّا قَدۡ فَتَنَّا قَوۡمَكَ مِنۢ بَعۡدِكَ وَأَضَلَّهُمُ ٱلسَّامِرِيُّ")
-
-                    Text("**Orthodox, Conservative, Reform**: the main branches of Judaism today. Orthodox Jews hold the written and oral law binding in full; Reform Judaism, begun in nineteenth-century Germany, treats the law as adaptable to modern life; Conservative Judaism stands between them. A Muslim finds the Orthodox nearest to what the Quran describes of the religion of Musa, and all of them further from it than Islam is.")
-                        .font(.body)
-
-                    Text("**Isra’iliyyat (الإِسْرَائِيلِيَّات)**: reports taken from Jewish sources that found their way into the books of tafsir and history. The Prophet (peace be upon him) permitted narrating them and forbade taking them as truth:")
-                        .font(.body)
-                    ScriptureQuote(text: "“Convey from me even a single ayah, and narrate from Bani Isra’il, for there is no harm in that; and whoever tells a lie on me intentionally will surely take his place in the Fire” (Sahih al-Bukhari 3461).", arabic: "بَلِّغُوا عَنِّي وَلَوْ آيَةً، وَحَدِّثُوا عَنْ بَنِي إِسْرَائِيلَ وَلاَ حَرَجَ، وَمَنْ كَذَبَ عَلَىَّ مُتَعَمِّدًا فَلْيَتَبَوَّأْ مَقْعَدَهُ مِنَ النَّارِ", dimmed: true)
-                    ScriptureQuote(text: "“Do not believe the People of the Scripture and do not disbelieve them, but say, ‘We believe in Allah and what is revealed to us’” (Sahih al-Bukhari 4485).", arabic: "لاَ تُصَدِّقُوا أَهْلَ الْكِتَابِ وَلاَ تُكَذِّبُوهُمْ، وَقُولُوا آمَنَّا بِاللَّهِ وَمَا أُنْزِلَ الآيَةَ", dimmed: true)
-                    Text("Ibn Kathir set out the rule in the introduction to his tafsir: what the Quran and Sunnah confirm is accepted, what they contradict is rejected, and what they are silent about is neither believed nor denied, and it is not narrated as religion.")
                         .font(.body)
                 }
 
@@ -1143,7 +1067,7 @@ struct JudaismAnswerView: View {
 
                     Text("**Are the Jews the chosen people?**")
                         .font(.body)
-                    Text("Allah did favour Bani Isra’il in their time, with prophets, revelation, and kingdom, and the Quran says so plainly, twice in the same surah (Quran 2:47, 2:122):")
+                    Text("Allah did favour Bani Isra’il (بَنُو إِسرَائِيل, the Children of Israel; Isra’il is the name Allah gave the prophet Ya‘qub) in their time, with prophets, revelation, and kingdom, and the Quran says so plainly, twice in the same surah (Quran 2:47, 2:122):")
                         .font(.body)
                     ScriptureQuote(text: "“O Children of Israel, remember My favor that I have bestowed upon you and that I preferred you over the worlds” (Quran 2:47).", arabic: "يَٰبَنِيٓ إِسۡرَٰٓءِيلَ ٱذۡكُرُواْ نِعۡمَتِيَ ٱلَّتِيٓ أَنۡعَمۡتُ عَلَيۡكُمۡ وَأَنِّي فَضَّلۡتُكُمۡ عَلَى ٱلۡعَٰلَمِينَ")
                     ScriptureQuote(text: "“And We did certainly give the Children of Israel the Scripture and judgement and prophethood, and We provided them with good things and preferred them over the worlds” (Quran 45:16).", arabic: "وَلَقَدۡ ءَاتَيۡنَا بَنِيٓ إِسۡرَٰٓءِيلَ ٱلۡكِتَٰبَ وَٱلۡحُكۡمَ وَٱلنُّبُوَّةَ وَرَزَقۡنَٰهُم مِّنَ ٱلطَّيِّبَٰتِ وَفَضَّلۡنَٰهُمۡ عَلَى ٱلۡعَٰلَمِينَ")
@@ -1231,7 +1155,7 @@ struct JudaismAnswerView: View {
 
                     Text("**What laws do Jews and Muslims share?**")
                         .font(.body)
-                    Text("A great deal, because the source is one. Circumcision (Sahih al-Bukhari 3356, quoted above). Dietary law: no pork, no blood, no carrion, and slaughter by the throat, so that Allah made their food lawful for Muslims:")
+                    Text("A great deal, because the source is one. Circumcision (Sahih al-Bukhari 3356, quoted below). Dietary law: no pork, no blood, no carrion, and slaughter by the throat, so that Allah made their food lawful for Muslims:")
                         .font(.body)
                     ScriptureQuote(text: "“the food of those who were given the Scripture is lawful for you and your food is lawful for them” (Quran 5:5).", arabic: "وَطَعَامُ ٱلَّذِينَ أُوتُواْ ٱلۡكِتَٰبَ حِلّٞ لَّكُمۡ وَطَعَامُكُمۡ حِلّٞ لَّهُمۡۖ")
                     Text("Fasting, which the Torah and Ashura show:")
@@ -1243,7 +1167,7 @@ struct JudaismAnswerView: View {
                     Text("**Will the Jews believe in Isa when he returns?**")
                         .font(.body)
                     ScriptureQuote(text: "“And there is none from the People of the Scripture but that he will surely believe in Jesus before his death. And on the Day of Resurrection he will be against them a witness” (Quran 4:159).", arabic: "وَإِن مِّنۡ أَهۡلِ ٱلۡكِتَٰبِ إِلَّا لَيُؤۡمِنَنَّ بِهِۦ قَبۡلَ مَوۡتِهِۦۖ وَيَوۡمَ ٱلۡقِيَٰمَةِ يَكُونُ عَلَيۡهِمۡ شَهِيدٗا")
-                    Text("Ibn Kathir explains, following Ibn Jarir at-Tabari, that “before his death“ means before the death of Isa: when he descends, every Jew and Christian who remains will believe in him as he truly is, the servant and messenger of Allah, and Abu Hurayrah (may Allah be pleased with him) recited this ayah after narrating the hadith of his descent (Sahih al-Bukhari 3448). Before that, the Dajjal will claim to be the Messiah and gather followers from among them (Sahih Muslim 2944, quoted above), and Isa will kill him (Sahih Muslim 2937).")
+                    Text("Ibn Kathir explains, following Ibn Jarir at-Tabari, that “before his death“ means before the death of Isa: when he descends, every Jew and Christian who remains will believe in him as he truly is, the servant and messenger of Allah, and Abu Hurayrah (may Allah be pleased with him) recited this ayah after narrating the hadith of his descent (Sahih al-Bukhari 3448). Before that, the Dajjal will claim to be the Messiah and gather followers from among them (Sahih Muslim 2944, quoted below), and Isa will kill him (Sahih Muslim 2937).")
                         .font(.body)
 
                     Text("**Are Jews disbelievers, and what is owed to them?**")
@@ -1270,7 +1194,7 @@ struct JudaismAnswerView: View {
 
                     Text("**What is the Muslim view of the Jewish expectation of a Messiah?**")
                         .font(.body)
-                    Text("The Messiah already came. He was Isa ibn Maryam (Quran 3:45, quoted above), and he announced the messenger who would follow him:")
+                    Text("The Messiah already came. He was Isa ibn Maryam (Quran 3:45, quoted below), and he announced the messenger who would follow him:")
                         .font(.body)
                     ScriptureQuote(text: "“And [mention] when Jesus, the son of Mary, said, ‘O children of Israel, indeed I am the messenger of Allah to you confirming what came before me of the Torah and bringing good tidings of a messenger to come after me, whose name is Ahmad.’ But when he came to them with clear evidences, they said, ‘This is obvious magic’” (Quran 61:6).", arabic: "وَإِذۡ قَالَ عِيسَى ٱبۡنُ مَرۡيَمَ يَٰبَنِيٓ إِسۡرَٰٓءِيلَ إِنِّي رَسُولُ ٱللَّهِ إِلَيۡكُم مُّصَدِّقٗا لِّمَا بَيۡنَ يَدَيَّ مِنَ ٱلتَّوۡرَىٰةِ وَمُبَشِّرَۢا بِرَسُولٖ يَأۡتِي مِنۢ بَعۡدِي ٱسۡمُهُۥٓ أَحۡمَدُۖ فَلَمَّا جَآءَهُم بِٱلۡبَيِّنَٰتِ قَالُواْ هَٰذَا سِحۡرٞ مُّبِينٞ")
                     Text("The one who will come claiming to be the awaited Messiah is the Dajjal, of whom every prophet warned his people:")
@@ -1289,6 +1213,83 @@ struct JudaismAnswerView: View {
 
                 Section(header: Text("IN SUMMARY")) {
                     Text("Islam honours Moses and the Torah, and asks the Children of Israel to keep the covenant they gave: to believe in the messengers who came after him, whom their own scripture foretold, and to worship the God of Abraham as Abraham did.")
+                        .font(.body)
+                }
+
+                Section(header: Text("KEY TERMS")) {
+                    Text("**Yahud (اليَهُود)**: the Jews. Ibn Kathir (may Allah have mercy on him), in his tafsir of 2:62, relates that the name comes from **hada (هَادَ)**, to return and repent, from the words of Musa’s people, “inna hudna ilayk“ (indeed, we have turned back to You); the commentators also mention **Yahudha (يَهُوذَا)**, Judah, the son of Ya‘qub whose tribe gave its name to the kingdom of Judah and then to the whole people:")
+                        .font(.body)
+                    ScriptureQuote(text: "“And decree for us in this world [that which is] good and [also] in the Hereafter; indeed, we have turned back to You” (Quran 7:156).", arabic: "وَٱكۡتُبۡ لَنَا فِي هَٰذِهِ ٱلدُّنۡيَا حَسَنَةٗ وَفِي ٱلۡأٓخِرَةِ إِنَّا هُدۡنَآ إِلَيۡكَۚ")
+
+                    Text("**Bani Isra’il (بَنُو إِسْرَائِيل)**: the Children of Israel. Isra’il is the prophet Ya‘qub (Jacob), as the Quran shows when it says that Israel forbade a food upon himself before the Torah was revealed (Quran 3:93); Ibn Kathir notes that the name means “servant of Allah.“ His twelve sons became the twelve tribes, the **asbat (الأَسْبَاط)**:")
+                        .font(.body)
+                    ScriptureQuote(text: "“And We divided them into twelve descendant tribes [as distinct] nations” (Quran 7:160).", arabic: "وَقَطَّعۡنَٰهُمُ ٱثۡنَتَيۡ عَشۡرَةَ أَسۡبَاطًا أُمَمٗاۚ")
+
+                    Text("**Ahl al-Kitab (أَهْلُ الكِتَاب)**: “the People of the Scripture,“ the Jews and the Christians, who received a revealed Book before the Quran. Islam gives them a standing distinct from the idolaters: their slaughtered meat and their chaste women are lawful to Muslims (Quran 5:5), they are argued with in the best manner (Quran 29:46), and they are invited to the common word of worshipping Allah alone (Quran 3:64, quoted above).")
+                        .font(.body)
+
+                    Text("**Tawrah (التَّوْرَاة)**: the Hebrew torah, “instruction“: the revelation given to Musa, in which was guidance and light (Quran 5:44, quoted above). Today “Torah“ names the first five books of the Bible, the Pentateuch (Genesis, Exodus, Leviticus, Numbers, Deuteronomy). These contain much of what was revealed, but they were not all written by Musa: Deuteronomy 34 records his death and burial, says that no one knows his grave “unto this day,“ and speaks of him in the past. This is what the Quran means when it says that a portion was forgotten and that men wrote with their own hands (Quran 5:13, 2:79, quoted above).")
+                        .font(.body)
+
+                    Text("**Talmud (التَّلْمُود)**: the “oral law“ of the rabbis: the Mishnah, a code compiled around 200 CE, and the Gemara, the commentary on it completed around 500 CE in the Babylonian Talmud. Rabbinic Judaism is built on it as much as on the Torah. For Muslims it is the opinion of scholars, not revelation, and the Quran warns against turning the words of scholars into law beside Allah’s (Quran 9:31, quoted below).")
+                        .font(.body)
+
+                    Text("**Zabur (الزَّبُور)**: from **zabara (زَبَرَ)**, to write; the Book given to Dawud (David), corresponding to the Psalms. The Quran mentions it three times (Quran 4:163, 17:55, 21:105). Muslims hold that Dawud was a prophet and a king, not merely a poet:")
+                        .font(.body)
+                    ScriptureQuote(text: "“and to David We gave the book [of Psalms]” (Quran 4:163).", arabic: "وَءَاتَيۡنَا دَاوُۥدَ زَبُورٗا")
+
+                    Text("**Ahbar (أَحْبَار) and rabbaniyyun (رَبَّانِيُّون)**: the scholars of the Jews. Ahbar is the plural of **habr (حَبْر)**, a learned man; rabbani is from **rabb (رَبّ)**, one who raises people with knowledge, and the title “rabbi“ comes from the Hebrew rav, master. The Quran honours those who judged by the Tawrah (Quran 5:44, quoted above) and condemns those who concealed the truth and sold it (Quran 5:63, 2:174). It then says of their followers:")
+                        .font(.body)
+                    ScriptureQuote(text: "“They have taken their scholars and monks as lords besides Allah, and [also] the Messiah, the son of Mary. And they were not commanded except to worship one God; there is no deity except Him” (Quran 9:31).", arabic: "ٱتَّخَذُوٓاْ أَحۡبَارَهُمۡ وَرُهۡبَٰنَهُمۡ أَرۡبَابٗا مِّن دُونِ ٱللَّهِ وَٱلۡمَسِيحَ ٱبۡنَ مَرۡيَمَ وَمَآ أُمِرُوٓاْ إِلَّا لِيَعۡبُدُوٓاْ إِلَٰهٗا وَٰحِدٗاۖ لَّآ إِلَٰهَ إِلَّا هُوَۚ")
+                    Text("The Salaf explained that taking scholars as lords does not mean bowing to them; it means obeying them when they made lawful what Allah had forbidden and forbade what He had allowed. Hudhayfah and Ibn Abbas (may Allah be pleased with them) said so, as at-Tabari records in his tafsir, and Ibn Taymiyyah explains it at length in Majmu‘ al-Fatawa. The warning applies to Muslims who do the same with their own scholars.")
+                        .font(.body)
+
+                    Text("**Sabbath, as-Sabt (السَّبْت)**: Saturday, the day of rest imposed on Bani Isra’il as part of their covenant, on which they were forbidden to work. The Quran recalls the oath they took, the town by the sea whose people fished on the Sabbath and were punished (Quran 7:163, 2:65), and states that the Sabbath was a test for that people, not a law for all:")
+                        .font(.body)
+                    ScriptureQuote(text: "“and We said to them, ‘Do not transgress on the sabbath’, and We took from them a solemn covenant” (Quran 4:154).", arabic: "وَقُلۡنَا لَهُمۡ لَا تَعۡدُواْ فِي ٱلسَّبۡتِ وَأَخَذۡنَا مِنۡهُم مِّيثَٰقًا غَلِيظٗا")
+                    ScriptureQuote(text: "“The sabbath was only appointed for those who differed over it. And indeed, your Lord will judge between them on the Day of Resurrection concerning that over which they used to differ” (Quran 16:124).", arabic: "إِنَّمَا جُعِلَ ٱلسَّبۡتُ عَلَى ٱلَّذِينَ ٱخۡتَلَفُواْ فِيهِۚ وَإِنَّ رَبَّكَ لَيَحۡكُمُ بَيۡنَهُمۡ يَوۡمَ ٱلۡقِيَٰمَةِ فِيمَا كَانُواْ فِيهِ يَخۡتَلِفُونَ")
+                    Text("The Prophet (peace be upon him) said:")
+                        .font(.body)
+                    ScriptureQuote(text: "“We are the last but will be the foremost on the Day of Resurrection, though the former nations were given the Scriptures before us. And this was their day, which was made obligatory for them, but they differed about it. So Allah guided us to it, and all the other people are behind us in this respect: the Jews’ is tomorrow and the Christians’ the day after tomorrow” (Sahih al-Bukhari 876).", arabic: "نَحْنُ الآخِرُونَ السَّابِقُونَ يَوْمَ الْقِيَامَةِ، بَيْدَ أَنَّهُمْ أُوتُوا الْكِتَابَ مِنْ قَبْلِنَا، ثُمَّ هَذَا يَوْمُهُمُ الَّذِي فُرِضَ عَلَيْهِمْ فَاخْتَلَفُوا فِيهِ، فَهَدَانَا اللَّهُ، فَالنَّاسُ لَنَا فِيهِ تَبَعٌ، الْيَهُودُ غَدًا وَالنَّصَارَى بَعْدَ غَدٍ", dimmed: true)
+                    Text("Islam’s day is Friday, a day of congregational prayer, not of rest.")
+                        .font(.body)
+
+                    Text("**The Messiah, al-Masih (المَسِيح), Hebrew Mashiah**: “the anointed one,“ the king from the line of Dawud whom the Jews awaited. The Quran declares that Isa ibn Maryam was that Messiah, and that the Jews rejected him:")
+                        .font(.body)
+                    ScriptureQuote(text: "“whose name will be the Messiah, Jesus, the son of Mary - distinguished in this world and the Hereafter and among those brought near [to Allah]” (Quran 3:45).", arabic: "ٱسۡمُهُ ٱلۡمَسِيحُ عِيسَى ٱبۡنُ مَرۡيَمَ وَجِيهٗا فِي ٱلدُّنۡيَا وَٱلۡأٓخِرَةِ وَمِنَ ٱلۡمُقَرَّبِينَ")
+                    Text("They still await another, and the Prophet (peace be upon him) warned that a false messiah, al-Masih ad-Dajjal, will come before the Hour and that many of them will follow him:")
+                        .font(.body)
+                    ScriptureQuote(text: "“The Dajjal would be followed by seventy thousand Jews of Isfahan wearing Persian shawls” (Sahih Muslim 2944).", arabic: "يَتْبَعُ الدَّجَّالَ مِنْ يَهُودِ أَصْبَهَانَ سَبْعُونَ أَلْفًا عَلَيْهِمُ الطَّيَالِسَةُ", dimmed: true)
+
+                    Text("**Bayt al-Maqdis (بَيْتُ المَقْدِس) and the Temple of Sulayman**: “the Holy House,“ the sanctuary of Jerusalem, which the Quran calls **al-Masjid al-Aqsa (المَسْجِدُ الأَقْصَى)**, the farthest mosque. It was the first qiblah of the Muslims and the destination of the Prophet’s night journey:")
+                        .font(.body)
+                    ScriptureQuote(text: "“Exalted is He who took His Servant by night from al-Masjid al-Haram to al-Masjid al-Aqsa, whose surroundings We have blessed, to show him of Our signs. Indeed, He is the Hearing, the Seeing” (Quran 17:1).", arabic: "سُبۡحَٰنَ ٱلَّذِيٓ أَسۡرَىٰ بِعَبۡدِهِۦ لَيۡلٗا مِّنَ ٱلۡمَسۡجِدِ ٱلۡحَرَامِ إِلَى ٱلۡمَسۡجِدِ ٱلۡأَقۡصَا ٱلَّذِي بَٰرَكۡنَا حَوۡلَهُۥ لِنُرِيَهُۥ مِنۡ ءَايَٰتِنَآۚ إِنَّهُۥ هُوَ ٱلسَّمِيعُ ٱلۡبَصِيرُ")
+                    Text("The Prophet (peace be upon him) said it was the second mosque built on earth, forty years after the Ka‘bah (Sahih al-Bukhari 3366), and one of only three mosques to which a journey may be undertaken (Sahih al-Bukhari 1189). The prophet Sulayman (Solomon) built its temple, with the jinn Allah had subjected to him working for him (Quran 34:12-13), and when he finished he asked Allah for three things, among them that whoever came to it only to pray there would leave as free of sin as on the day his mother bore him (Sunan an-Nasa’i 693; graded sahih by al-Albani). The Quran records that the Children of Israel were twice punished for corruption by enemies who entered the sanctuary (Quran 17:4-7). Muslims call the city **al-Quds (القُدْس)**, the Holy.")
+                        .font(.body)
+
+                    Text("**The Ark, at-Tabut (التَّابُوت)**: the chest of the covenant of the Bible (Exodus 25), which held relics of the family of Musa and Harun. The Quran mentions its return as the sign of the kingship of Talut (Saul):")
+                        .font(.body)
+                    ScriptureQuote(text: "“Indeed, a sign of his kingship is that the chest will come to you in which is assurance from your Lord and a remnant of what the family of Moses and the family of Aaron had left, carried by the angels” (Quran 2:248).", arabic: "إِنَّ ءَايَةَ مُلۡكِهِۦٓ أَن يَأۡتِيَكُمُ ٱلتَّابُوتُ فِيهِ سَكِينَةٞ مِّن رَّبِّكُمۡ وَبَقِيَّةٞ مِّمَّا تَرَكَ ءَالُ مُوسَىٰ وَءَالُ هَٰرُونَ تَحۡمِلُهُ ٱلۡمَلَٰٓئِكَةُۚ")
+
+                    Text("**Circumcision (الخِتَان) and kosher (الكَاشِير)**: two laws Jews and Muslims share. Circumcision is the covenant of Ibrahim, and the Prophet (peace be upon him) said:")
+                        .font(.body)
+                    ScriptureQuote(text: "“Abraham did his circumcision with an adze at the age of eighty” (Sahih al-Bukhari 3356).", arabic: "اخْتَتَنَ إِبْرَاهِيمُ ـ عَلَيْهِ السَّلاَمُ ـ وَهْوَ ابْنُ ثَمَانِينَ سَنَةً بِالْقَدُّومِ", dimmed: true)
+                    Text("Kosher (Hebrew kasher, “fit“) is the Jewish dietary law: no pork, no blood, animals slaughtered by cutting the throat. The halal of Islam is close to it, which is why Allah made the food of the People of the Scripture lawful (Quran 5:5, quoted above). But some Jewish prohibitions were a punishment specific to them, which Jesus was sent to lift in part (Quran 3:50):")
+                        .font(.body)
+                    ScriptureQuote(text: "“And to those who are Jews We prohibited every animal of uncloven hoof” (Quran 6:146).", arabic: "وَعَلَى ٱلَّذِينَ هَادُواْ حَرَّمۡنَا كُلَّ ذِي ظُفُرٖۖ")
+
+                    Text("**Samaritans (السَّامِرِيُّون)**: a small community, fewer than a thousand people today, that accepts only the Torah (in its own version, the Samaritan Pentateuch), worships on Mount Gerizim rather than in Jerusalem, and has been at odds with the Jews since ancient times (John 4:9). The Quran names **as-Samiri (السَّامِرِيّ)** as the man who made the calf for Bani Isra’il in the absence of Musa; the exegetes differ on his origin, and some said he was of a tribe of that name:")
+                        .font(.body)
+                    ScriptureQuote(text: "“[Allah] said, ‘But indeed, We have tried your people after you [departed], and the Samiri has led them astray’” (Quran 20:85).", arabic: "قَالَ فَإِنَّا قَدۡ فَتَنَّا قَوۡمَكَ مِنۢ بَعۡدِكَ وَأَضَلَّهُمُ ٱلسَّامِرِيُّ")
+
+                    Text("**Orthodox, Conservative, Reform**: the main branches of Judaism today. Orthodox Jews hold the written and oral law binding in full; Reform Judaism, begun in nineteenth-century Germany, treats the law as adaptable to modern life; Conservative Judaism stands between them. A Muslim finds the Orthodox nearest to what the Quran describes of the religion of Musa, and all of them further from it than Islam is.")
+                        .font(.body)
+
+                    Text("**Isra’iliyyat (الإِسْرَائِيلِيَّات)**: reports taken from Jewish sources that found their way into the books of tafsir and history. The Prophet (peace be upon him) permitted narrating them and forbade taking them as truth:")
+                        .font(.body)
+                    ScriptureQuote(text: "“Convey from me even a single ayah, and narrate from Bani Isra’il, for there is no harm in that; and whoever tells a lie on me intentionally will surely take his place in the Fire” (Sahih al-Bukhari 3461).", arabic: "بَلِّغُوا عَنِّي وَلَوْ آيَةً، وَحَدِّثُوا عَنْ بَنِي إِسْرَائِيلَ وَلاَ حَرَجَ، وَمَنْ كَذَبَ عَلَىَّ مُتَعَمِّدًا فَلْيَتَبَوَّأْ مَقْعَدَهُ مِنَ النَّارِ", dimmed: true)
+                    ScriptureQuote(text: "“Do not believe the People of the Scripture and do not disbelieve them, but say, ‘We believe in Allah and what is revealed to us’” (Sahih al-Bukhari 4485).", arabic: "لاَ تُصَدِّقُوا أَهْلَ الْكِتَابِ وَلاَ تُكَذِّبُوهُمْ، وَقُولُوا آمَنَّا بِاللَّهِ وَمَا أُنْزِلَ الآيَةَ", dimmed: true)
+                    Text("Ibn Kathir set out the rule in the introduction to his tafsir: what the Quran and Sunnah confirm is accepted, what they contradict is rejected, and what they are silent about is neither believed nor denied, and it is not narrated as religion.")
                         .font(.body)
                 }
             }
@@ -1316,85 +1317,6 @@ struct HinduismAnswerView: View {
 
                     Text("Notably, the oldest Hindu scriptures contain statements of one God without image: “He is One, without a second“ (Chandogya Upanishad 6:2:1), and a verse whose Sanskrit says **na tasya pratima asti**, “there is no pratima of Him“ (Shvetashvatara Upanishad 4:19; Yajurveda 32:3), which Muslims read as “no image“ and many Hindu commentators read as “no likeness“ or “no equal.“ Either reading says the same thing about worship: what has no likeness cannot be represented by a carved one. Islam calls Hindus back to that.")
                         .font(.body)
-                }
-
-                Section(header: Text("KEY TERMS")) {
-                    Text("**Hindu (هِنْدُوسِيّ)**: not a name from any scripture. It comes from Sindhu, the Sanskrit name of the Indus river; the Persians pronounced it “Hindu” and used it for the land and the peoples beyond that river, and the Arabs took it from them as al-Hind (الهِنْد). “Hinduism” as the name of one religion is a modern usage, gathering under one word many traditions and philosophies that never called themselves by it.")
-                        .font(.body)
-
-                    Text("**Sanatana Dharma**: “the eternal order” or “eternal law,” the name many Hindus prefer for their tradition. Islam agrees that the true religion is eternal and one, but says it is the religion Allah gave to every prophet, not a set of rites tied to one land:")
-                        .font(.body)
-                    ScriptureQuote(text: "“He has ordained for you of religion what He enjoined upon Noah and that which We have revealed to you, [O Muhammad], and what We enjoined upon Abraham and Moses and Jesus - to establish the religion and not be divided therein” (Quran 42:13).", arabic: "شَرَعَ لَكُم مِّنَ ٱلدِّينِ مَا وَصَّىٰ بِهِۦ نُوحٗا وَٱلَّذِيٓ أَوۡحَيۡنَآ إِلَيۡكَ وَمَا وَصَّيۡنَا بِهِۦٓ إِبۡرَٰهِيمَ وَمُوسَىٰ وَعِيسَىٰٓۖ أَنۡ أَقِيمُواْ ٱلدِّينَ وَلَا تَتَفَرَّقُواْ فِيهِۚ")
-                    ScriptureQuote(text: "“Indeed, the religion in the sight of Allah is Islam” (Quran 3:19).", arabic: "إِنَّ ٱلدِّينَ عِندَ ٱللَّهِ ٱلۡإِسۡلَٰمُۗ")
-
-                    Text("**Brahman** and **Ishvara**: Brahman is the impersonal absolute of the Upanishads, the one reality behind all things, of which the school of Advaita (“non-duality,” taught by Shankara around the eighth century CE) says that the soul and the world are ultimately not different from it. Ishvara is a personal Lord, worshipped under names such as Vishnu or Shiva. Islam rejects both the impersonal absolute and the many lords: Allah is one personal Lord who knows, hears, sees, speaks, loves, and is pleased and angered, and He is utterly distinct from His creation:")
-                        .font(.body)
-                    ScriptureQuote(text: "“Allah - there is no deity except Him, the Ever-Living, the Sustainer of [all] existence. Neither drowsiness overtakes Him nor sleep” (Quran 2:255).", arabic: "ٱللَّهُ لَآ إِلَٰهَ إِلَّا هُوَ ٱلۡحَيُّ ٱلۡقَيُّومُۚ لَا تَأۡخُذُهُۥ سِنَةٞ وَلَا نَوۡمٞۚ")
-                    ScriptureQuote(text: "“There is no one in the heavens and earth but that he comes to the Most Merciful as a servant” (Quran 19:93).", arabic: "إِن كُلُّ مَن فِي ٱلسَّمَٰوَٰتِ وَٱلۡأَرۡضِ إِلَّآ ءَاتِي ٱلرَّحۡمَٰنِ عَبۡدٗا")
-
-                    Text("**Atman**: the self or soul, which Advaita holds to be identical with Brahman (“that thou art,” Chandogya Upanishad 6:8:7). Islam affirms that the soul (**ruh, الرُّوح**) is real, but it is a created thing whose nature Allah has kept mostly hidden (Quran 17:85). Allah breathed into Adam “of My [created] soul” (Quran 15:29); the soul is His creation and His servant, never a part of Him. Ibn Taymiyyah (may Allah have mercy on him) wrote at length against the Sufi doctrine of the “unity of existence” (wahdat al-wujud) precisely because it makes the creature one with the Creator, the same error in a Muslim dress (Majmu‘ al-Fatawa, volume 2).")
-                        .font(.body)
-
-                    Text("**Samsara**: the cycle of birth, death, and rebirth in which the soul returns in new bodies. Islam knows one birth, one death, and one resurrection (Quran 23:99-100). The people of Paradise will say to one another:")
-                        .font(.body)
-                    ScriptureQuote(text: "“Then, are we not to die except for our first death, and we will not be punished?” (Quran 37:58-59).", arabic: "أَفَمَا نَحۡنُ بِمَيِّتِينَ ۝ إِلَّا مَوۡتَتَنَا ٱلۡأُولَىٰ وَمَا نَحۡنُ بِمُعَذَّبِينَ")
-
-                    Text("**Karma**: literally “action”; the law by which deeds bear fruit in this life or the next. Islam affirms that every deed is recorded and repaid in full (Quran 99:7-8), but by a Judge who knows and forgives, not by a blind mechanism:")
-                        .font(.body)
-                    ScriptureQuote(text: "“Indeed, Allah does not do injustice, [even] as much as an atom's weight; while if there is a good deed, He multiplies it and gives from Himself a great reward” (Quran 4:40).", arabic: "إِنَّ ٱللَّهَ لَا يَظۡلِمُ مِثۡقَالَ ذَرَّةٖۖ وَإِن تَكُ حَسَنَةٗ يُضَٰعِفۡهَا وَيُؤۡتِ مِن لَّدُنۡهُ أَجۡرًا عَظِيمٗا")
-
-                    Text("**Moksha**: “liberation” from samsara, understood as merging into Brahman or eternal union with the deity. Islam’s salvation is not dissolution but entry into Paradise as a living, conscious person:")
-                        .font(.body)
-                    ScriptureQuote(text: "“So he who is drawn away from the Fire and admitted to Paradise has attained [his desire]. And what is the life of this world except the enjoyment of delusion” (Quran 3:185).", arabic: "فَمَن زُحۡزِحَ عَنِ ٱلنَّارِ وَأُدۡخِلَ ٱلۡجَنَّةَ فَقَدۡ فَازَۗ وَمَا ٱلۡحَيَوٰةُ ٱلدُّنۡيَآ إِلَّا مَتَٰعُ ٱلۡغُرُورِ")
-
-                    Text("**Dharma**: duty, right order, religion; each caste and stage of life has its own dharma. Islam’s **din (الدِّين)** is one for all, revealed and complete:")
-                        .font(.body)
-                    ScriptureQuote(text: "“This day I have perfected for you your religion and completed My favor upon you and have approved for you Islam as religion” (Quran 5:3).", arabic: "ٱلۡيَوۡمَ أَكۡمَلۡتُ لَكُمۡ دِينَكُمۡ وَأَتۡمَمۡتُ عَلَيۡكُمۡ نِعۡمَتِي وَرَضِيتُ لَكُمُ ٱلۡإِسۡلَٰمَ دِينٗاۚ")
-
-                    Text("**Avatar**: “descent,” a deity taking a body on earth. Vishnu is said to have ten avatars, among them Rama, the hero of the Ramayana, and Krishna, the speaker of the Bhagavad Gita. Islam denies that the Creator ever enters His creation or takes a body:")
-                        .font(.body)
-                    ScriptureQuote(text: "“[He is] Originator of the heavens and the earth. How could He have a son when He does not have a companion and He created all things? And He is, of all things, Knowing” (Quran 6:101).", arabic: "بَدِيعُ ٱلسَّمَٰوَٰتِ وَٱلۡأَرۡضِۖ أَنَّىٰ يَكُونُ لَهُۥ وَلَدٞ وَلَمۡ تَكُن لَّهُۥ صَٰحِبَةٞۖ وَخَلَقَ كُلَّ شَيۡءٖۖ وَهُوَ بِكُلِّ شَيۡءٍ عَلِيمٞ")
-
-                    Text("**Murti** and **puja**: the murti is the image or statue in which the deity is held to be present; puja is the worship offered to it, with flowers, food, lamps, and prostration. This is exactly what Ibrahim (peace be upon him) confronted in his own people (Quran 21:52-54), and what the Quran describes as worshipping what cannot create a fly (Quran 22:73).")
-                        .font(.body)
-
-                    Text("**The Vedas, Upanishads, and Gita**: the four Vedas (Rig, Sama, Yajur, Atharva) are the oldest Hindu texts, the Rig Veda dating to roughly 1500-1200 BCE. The Upanishads are the later philosophical texts, and the Bhagavad Gita is Krishna’s discourse to the warrior Arjuna, a part of the epic Mahabharata. The Quran does not name them; the scriptures it names are the Tawrah, the Zabur, the Injil, the scrolls of Ibrahim and Musa (Quran 87:18-19), and itself, while it affirms that Allah sent messengers whose stories He did not relate (Quran 40:78). The Quran is the criterion over every earlier book (Quran 5:48): whatever agrees with it about the One God is truth, and whatever contradicts it is not from Allah.")
-                        .font(.body)
-
-                    Text("**Trimurti**: the “three forms,” Brahma the creator, Vishnu the preserver, and Shiva the destroyer. The Quran answers every division of the divine work, and names Allah alone as the Creator, the Inventor, and the Fashioner (Quran 59:24, quoted in the questions below):")
-                        .font(.body)
-                    ScriptureQuote(text: "“Allah has not taken any son, nor has there ever been with Him any deity. [If there had been], then each deity would have taken what it created, and some of them would have sought to overcome others. Exalted is Allah above what they describe [concerning Him]” (Quran 23:91).", arabic: "مَا ٱتَّخَذَ ٱللَّهُ مِن وَلَدٖ وَمَا كَانَ مَعَهُۥ مِنۡ إِلَٰهٍۚ إِذٗا لَّذَهَبَ كُلُّ إِلَٰهِۭ بِمَا خَلَقَ وَلَعَلَا بَعۡضُهُمۡ عَلَىٰ بَعۡضٖۚ سُبۡحَٰنَ ٱللَّهِ عَمَّا يَصِفُونَ")
-
-                    Text("**Varna** and caste: the four hereditary classes, Brahmin (priests), Kshatriya (rulers and warriors), Vaishya (merchants and farmers), and Shudra (labourers), described in the Rig Veda (10:90) as born from the different limbs of the primal man, and codified in the Laws of Manu; and below them the Dalits, once called untouchables, outside the system altogether. Islam has no priestly class and no hereditary rank; nobility is by piety alone (Quran 49:13), and the Prophet (peace be upon him) said that people are all the children of Adam, and Adam was created from dust (Sunan al-Tirmidhi 3955; graded hasan by al-Albani).")
-                        .font(.body)
-
-                    Text("**Yoga**: “yoking” or “union”; in Hindu teaching a discipline of body, breath, and mind whose goal is union with Brahman or the deity. Its physical postures are one thing; its spiritual aim is another (see the questions below).")
-                        .font(.body)
-
-                    Text("**Guru**: the teacher, in many traditions treated as a channel of the divine and honoured with rites of devotion. Islam honours scholars but forbids making any human a lord:")
-                        .font(.body)
-                    ScriptureQuote(text: "“They have taken their scholars and monks as lords besides Allah, and [also] the Messiah, the son of Mary. And they were not commanded except to worship one God; there is no deity except Him. Exalted is He above whatever they associate with Him” (Quran 9:31).", arabic: "ٱتَّخَذُوٓاْ أَحۡبَارَهُمۡ وَرُهۡبَٰنَهُمۡ أَرۡبَابٗا مِّن دُونِ ٱللَّهِ وَٱلۡمَسِيحَ ٱبۡنَ مَرۡيَمَ وَمَآ أُمِرُوٓاْ إِلَّا لِيَعۡبُدُوٓاْ إِلَٰهٗا وَٰحِدٗاۖ لَّآ إِلَٰهَ إِلَّا هُوَۚ سُبۡحَٰنَهُۥ عَمَّا يُشۡرِكُونَ")
-
-                    Text("**OM** and **mantra**: OM is the sacred syllable held to be the sound of Brahman itself, chanted at the start of prayers and meditation; a mantra is a formula repeated for spiritual power. The Muslim’s remembrance is of Allah by His revealed names, in words He taught:")
-                        .font(.body)
-                    ScriptureQuote(text: "“And to Allah belong the best names, so invoke Him by them” (Quran 7:180).", arabic: "وَلِلَّهِ ٱلۡأَسۡمَآءُ ٱلۡحُسۡنَىٰ فَٱدۡعُوهُ بِهَاۖ")
-
-                    Text("**Shirk (شِرْك)**: from sharika, to share; giving any part of what belongs to Allah alone, whether worship, prayer, sacrifice, or lordship, to another. It is the one sin Allah has said He does not forgive for the one who dies upon it (Quran 4:48). Luqman told his son:")
-                        .font(.body)
-                    ScriptureQuote(text: "“O my son, do not associate [anything] with Allah. Indeed, association [with him] is great injustice” (Quran 31:13).", arabic: "يَٰبُنَيَّ لَا تُشۡرِكۡ بِٱللَّهِۖ إِنَّ ٱلشِّرۡكَ لَظُلۡمٌ عَظِيمٞ")
-
-                    Text("**Tawhid (تَوْحِيد)**: from wahhada, to make one; affirming that Allah alone is the Lord, alone deserves worship, and is alone in His names and attributes. Its clearest statement is Surat al-Ikhlas:")
-                        .font(.body)
-                    ScriptureQuote(text: "“Say, ‘He is Allah, [who is] One, Allah, the Eternal Refuge. He neither begets nor is born, nor is there to Him any equivalent’” (Quran 112:1-4).", arabic: "قُلۡ هُوَ ٱللَّهُ أَحَدٌ ۝ ٱللَّهُ ٱلصَّمَدُ ۝ لَمۡ يَلِدۡ وَلَمۡ يُولَدۡ ۝ وَلَمۡ يَكُن لَّهُۥ كُفُوًا أَحَدُۢ")
-
-                    Text("**Fitrah (فِطْرَة)**: from fatara, to originate; the natural disposition on which Allah creates every human being, which knows its Maker and inclines to worship Him alone. The Hindu who looks past the images to a single supreme reality is feeling the pull of that fitrah:")
-                        .font(.body)
-                    ScriptureQuote(text: "“So direct your face toward the religion, inclining to truth. [Adhere to] the fitrah of Allah upon which He has created [all] people. No change should there be in the creation of Allah. That is the correct religion, but most of the people do not know” (Quran 30:30).", arabic: "فَأَقِمۡ وَجۡهَكَ لِلدِّينِ حَنِيفٗاۚ فِطۡرَتَ ٱللَّهِ ٱلَّتِي فَطَرَ ٱلنَّاسَ عَلَيۡهَاۚ لَا تَبۡدِيلَ لِخَلۡقِ ٱللَّهِۚ ذَٰلِكَ ٱلدِّينُ ٱلۡقَيِّمُ وَلَٰكِنَّ أَكۡثَرَ ٱلنَّاسِ لَا يَعۡلَمُونَ")
-                    ScriptureQuote(text: "“Every child is born upon the fitrah, and then his parents make him a Jew, a Christian, or a Magian” (Sahih al-Bukhari 1385).", arabic: "كُلُّ مَوْلُودٍ يُولَدُ عَلَى الْفِطْرَةِ، فَأَبَوَاهُ يُهَوِّدَانِهِ أَوْ يُنَصِّرَانِهِ أَوْ يُمَجِّسَانِهِ", dimmed: true)
-
-                    Text("**Ba‘th (بَعْث)**: “raising”; the resurrection of the body from the grave for judgement, the Islamic answer to rebirth:")
-                        .font(.body)
-                    ScriptureQuote(text: "“And [that they may know] that the Hour is coming - no doubt about it - and that Allah will resurrect those in the graves” (Quran 22:7).", arabic: "وَأَنَّ ٱلسَّاعَةَ ءَاتِيَةٞ لَّا رَيۡبَ فِيهَا وَأَنَّ ٱللَّهَ يَبۡعَثُ مَن فِي ٱلۡقُبُورِ")
                 }
 
                 Section(header: Text("1. THE ARGUMENT OF IBRAHIM")) {
@@ -1593,6 +1515,85 @@ struct HinduismAnswerView: View {
                     Text("One Creator without image, one life followed by judgement, and one humanity ranked only by piety: this is what Ibrahim taught in a land of idols, and what Islam offers in its place.")
                         .font(.body)
                 }
+
+                Section(header: Text("KEY TERMS")) {
+                    Text("**Hindu (هِنْدُوسِيّ)**: not a name from any scripture. It comes from Sindhu, the Sanskrit name of the Indus river; the Persians pronounced it “Hindu” and used it for the land and the peoples beyond that river, and the Arabs took it from them as al-Hind (الهِنْد). “Hinduism” as the name of one religion is a modern usage, gathering under one word many traditions and philosophies that never called themselves by it.")
+                        .font(.body)
+
+                    Text("**Sanatana Dharma**: “the eternal order” or “eternal law,” the name many Hindus prefer for their tradition. Islam agrees that the true religion is eternal and one, but says it is the religion Allah gave to every prophet, not a set of rites tied to one land:")
+                        .font(.body)
+                    ScriptureQuote(text: "“He has ordained for you of religion what He enjoined upon Noah and that which We have revealed to you, [O Muhammad], and what We enjoined upon Abraham and Moses and Jesus - to establish the religion and not be divided therein” (Quran 42:13).", arabic: "شَرَعَ لَكُم مِّنَ ٱلدِّينِ مَا وَصَّىٰ بِهِۦ نُوحٗا وَٱلَّذِيٓ أَوۡحَيۡنَآ إِلَيۡكَ وَمَا وَصَّيۡنَا بِهِۦٓ إِبۡرَٰهِيمَ وَمُوسَىٰ وَعِيسَىٰٓۖ أَنۡ أَقِيمُواْ ٱلدِّينَ وَلَا تَتَفَرَّقُواْ فِيهِۚ")
+                    ScriptureQuote(text: "“Indeed, the religion in the sight of Allah is Islam” (Quran 3:19).", arabic: "إِنَّ ٱلدِّينَ عِندَ ٱللَّهِ ٱلۡإِسۡلَٰمُۗ")
+
+                    Text("**Brahman** and **Ishvara**: Brahman is the impersonal absolute of the Upanishads, the one reality behind all things, of which the school of Advaita (“non-duality,” taught by Shankara around the eighth century CE) says that the soul and the world are ultimately not different from it. Ishvara is a personal Lord, worshipped under names such as Vishnu or Shiva. Islam rejects both the impersonal absolute and the many lords: Allah is one personal Lord who knows, hears, sees, speaks, loves, and is pleased and angered, and He is utterly distinct from His creation:")
+                        .font(.body)
+                    ScriptureQuote(text: "“Allah - there is no deity except Him, the Ever-Living, the Sustainer of [all] existence. Neither drowsiness overtakes Him nor sleep” (Quran 2:255).", arabic: "ٱللَّهُ لَآ إِلَٰهَ إِلَّا هُوَ ٱلۡحَيُّ ٱلۡقَيُّومُۚ لَا تَأۡخُذُهُۥ سِنَةٞ وَلَا نَوۡمٞۚ")
+                    ScriptureQuote(text: "“There is no one in the heavens and earth but that he comes to the Most Merciful as a servant” (Quran 19:93).", arabic: "إِن كُلُّ مَن فِي ٱلسَّمَٰوَٰتِ وَٱلۡأَرۡضِ إِلَّآ ءَاتِي ٱلرَّحۡمَٰنِ عَبۡدٗا")
+
+                    Text("**Atman**: the self or soul, which Advaita holds to be identical with Brahman (“that thou art,” Chandogya Upanishad 6:8:7). Islam affirms that the soul (**ruh, الرُّوح**) is real, but it is a created thing whose nature Allah has kept mostly hidden (Quran 17:85). Allah breathed into Adam “of My [created] soul” (Quran 15:29); the soul is His creation and His servant, never a part of Him. Ibn Taymiyyah (may Allah have mercy on him) wrote at length against the Sufi doctrine of the “unity of existence” (wahdat al-wujud) precisely because it makes the creature one with the Creator, the same error in a Muslim dress (Majmu‘ al-Fatawa, volume 2).")
+                        .font(.body)
+
+                    Text("**Samsara**: the cycle of birth, death, and rebirth in which the soul returns in new bodies. Islam knows one birth, one death, and one resurrection (Quran 23:99-100). The people of Paradise will say to one another:")
+                        .font(.body)
+                    ScriptureQuote(text: "“Then, are we not to die except for our first death, and we will not be punished?” (Quran 37:58-59).", arabic: "أَفَمَا نَحۡنُ بِمَيِّتِينَ ۝ إِلَّا مَوۡتَتَنَا ٱلۡأُولَىٰ وَمَا نَحۡنُ بِمُعَذَّبِينَ")
+
+                    Text("**Karma**: literally “action”; the law by which deeds bear fruit in this life or the next. Islam affirms that every deed is recorded and repaid in full (Quran 99:7-8), but by a Judge who knows and forgives, not by a blind mechanism:")
+                        .font(.body)
+                    ScriptureQuote(text: "“Indeed, Allah does not do injustice, [even] as much as an atom's weight; while if there is a good deed, He multiplies it and gives from Himself a great reward” (Quran 4:40).", arabic: "إِنَّ ٱللَّهَ لَا يَظۡلِمُ مِثۡقَالَ ذَرَّةٖۖ وَإِن تَكُ حَسَنَةٗ يُضَٰعِفۡهَا وَيُؤۡتِ مِن لَّدُنۡهُ أَجۡرًا عَظِيمٗا")
+
+                    Text("**Moksha**: “liberation” from samsara, understood as merging into Brahman or eternal union with the deity. Islam’s salvation is not dissolution but entry into Paradise as a living, conscious person:")
+                        .font(.body)
+                    ScriptureQuote(text: "“So he who is drawn away from the Fire and admitted to Paradise has attained [his desire]. And what is the life of this world except the enjoyment of delusion” (Quran 3:185).", arabic: "فَمَن زُحۡزِحَ عَنِ ٱلنَّارِ وَأُدۡخِلَ ٱلۡجَنَّةَ فَقَدۡ فَازَۗ وَمَا ٱلۡحَيَوٰةُ ٱلدُّنۡيَآ إِلَّا مَتَٰعُ ٱلۡغُرُورِ")
+
+                    Text("**Dharma**: duty, right order, religion; each caste and stage of life has its own dharma. Islam’s **din (الدِّين)** is one for all, revealed and complete:")
+                        .font(.body)
+                    ScriptureQuote(text: "“This day I have perfected for you your religion and completed My favor upon you and have approved for you Islam as religion” (Quran 5:3).", arabic: "ٱلۡيَوۡمَ أَكۡمَلۡتُ لَكُمۡ دِينَكُمۡ وَأَتۡمَمۡتُ عَلَيۡكُمۡ نِعۡمَتِي وَرَضِيتُ لَكُمُ ٱلۡإِسۡلَٰمَ دِينٗاۚ")
+
+                    Text("**Avatar**: “descent,” a deity taking a body on earth. Vishnu is said to have ten avatars, among them Rama, the hero of the Ramayana, and Krishna, the speaker of the Bhagavad Gita. Islam denies that the Creator ever enters His creation or takes a body:")
+                        .font(.body)
+                    ScriptureQuote(text: "“[He is] Originator of the heavens and the earth. How could He have a son when He does not have a companion and He created all things? And He is, of all things, Knowing” (Quran 6:101).", arabic: "بَدِيعُ ٱلسَّمَٰوَٰتِ وَٱلۡأَرۡضِۖ أَنَّىٰ يَكُونُ لَهُۥ وَلَدٞ وَلَمۡ تَكُن لَّهُۥ صَٰحِبَةٞۖ وَخَلَقَ كُلَّ شَيۡءٖۖ وَهُوَ بِكُلِّ شَيۡءٍ عَلِيمٞ")
+
+                    Text("**Murti** and **puja**: the murti is the image or statue in which the deity is held to be present; puja is the worship offered to it, with flowers, food, lamps, and prostration. This is exactly what Ibrahim (peace be upon him) confronted in his own people (Quran 21:52-54), and what the Quran describes as worshipping what cannot create a fly (Quran 22:73).")
+                        .font(.body)
+
+                    Text("**The Vedas, Upanishads, and Gita**: the four Vedas (Rig, Sama, Yajur, Atharva) are the oldest Hindu texts, the Rig Veda dating to roughly 1500-1200 BCE. The Upanishads are the later philosophical texts, and the Bhagavad Gita is Krishna’s discourse to the warrior Arjuna, a part of the epic Mahabharata. The Quran does not name them; the scriptures it names are the Tawrah, the Zabur, the Injil, the scrolls of Ibrahim and Musa (Quran 87:18-19), and itself, while it affirms that Allah sent messengers whose stories He did not relate (Quran 40:78). The Quran is the criterion over every earlier book (Quran 5:48): whatever agrees with it about the One God is truth, and whatever contradicts it is not from Allah.")
+                        .font(.body)
+
+                    Text("**Trimurti**: the “three forms,” Brahma the creator, Vishnu the preserver, and Shiva the destroyer. The Quran answers every division of the divine work, and names Allah alone as the Creator, the Inventor, and the Fashioner (Quran 59:24, quoted in the questions below):")
+                        .font(.body)
+                    ScriptureQuote(text: "“Allah has not taken any son, nor has there ever been with Him any deity. [If there had been], then each deity would have taken what it created, and some of them would have sought to overcome others. Exalted is Allah above what they describe [concerning Him]” (Quran 23:91).", arabic: "مَا ٱتَّخَذَ ٱللَّهُ مِن وَلَدٖ وَمَا كَانَ مَعَهُۥ مِنۡ إِلَٰهٍۚ إِذٗا لَّذَهَبَ كُلُّ إِلَٰهِۭ بِمَا خَلَقَ وَلَعَلَا بَعۡضُهُمۡ عَلَىٰ بَعۡضٖۚ سُبۡحَٰنَ ٱللَّهِ عَمَّا يَصِفُونَ")
+
+                    Text("**Varna** and caste: the four hereditary classes, Brahmin (priests), Kshatriya (rulers and warriors), Vaishya (merchants and farmers), and Shudra (labourers), described in the Rig Veda (10:90) as born from the different limbs of the primal man, and codified in the Laws of Manu; and below them the Dalits, once called untouchables, outside the system altogether. Islam has no priestly class and no hereditary rank; nobility is by piety alone (Quran 49:13), and the Prophet (peace be upon him) said that people are all the children of Adam, and Adam was created from dust (Sunan al-Tirmidhi 3955; graded hasan by al-Albani).")
+                        .font(.body)
+
+                    Text("**Yoga**: “yoking” or “union”; in Hindu teaching a discipline of body, breath, and mind whose goal is union with Brahman or the deity. Its physical postures are one thing; its spiritual aim is another (see the questions below).")
+                        .font(.body)
+
+                    Text("**Guru**: the teacher, in many traditions treated as a channel of the divine and honoured with rites of devotion. Islam honours scholars but forbids making any human a lord:")
+                        .font(.body)
+                    ScriptureQuote(text: "“They have taken their scholars and monks as lords besides Allah, and [also] the Messiah, the son of Mary. And they were not commanded except to worship one God; there is no deity except Him. Exalted is He above whatever they associate with Him” (Quran 9:31).", arabic: "ٱتَّخَذُوٓاْ أَحۡبَارَهُمۡ وَرُهۡبَٰنَهُمۡ أَرۡبَابٗا مِّن دُونِ ٱللَّهِ وَٱلۡمَسِيحَ ٱبۡنَ مَرۡيَمَ وَمَآ أُمِرُوٓاْ إِلَّا لِيَعۡبُدُوٓاْ إِلَٰهٗا وَٰحِدٗاۖ لَّآ إِلَٰهَ إِلَّا هُوَۚ سُبۡحَٰنَهُۥ عَمَّا يُشۡرِكُونَ")
+
+                    Text("**OM** and **mantra**: OM is the sacred syllable held to be the sound of Brahman itself, chanted at the start of prayers and meditation; a mantra is a formula repeated for spiritual power. The Muslim’s remembrance is of Allah by His revealed names, in words He taught:")
+                        .font(.body)
+                    ScriptureQuote(text: "“And to Allah belong the best names, so invoke Him by them” (Quran 7:180).", arabic: "وَلِلَّهِ ٱلۡأَسۡمَآءُ ٱلۡحُسۡنَىٰ فَٱدۡعُوهُ بِهَاۖ")
+
+                    Text("**Shirk (شِرْك)**: from sharika, to share; giving any part of what belongs to Allah alone, whether worship, prayer, sacrifice, or lordship, to another. It is the one sin Allah has said He does not forgive for the one who dies upon it (Quran 4:48). Luqman told his son:")
+                        .font(.body)
+                    ScriptureQuote(text: "“O my son, do not associate [anything] with Allah. Indeed, association [with him] is great injustice” (Quran 31:13).", arabic: "يَٰبُنَيَّ لَا تُشۡرِكۡ بِٱللَّهِۖ إِنَّ ٱلشِّرۡكَ لَظُلۡمٌ عَظِيمٞ")
+
+                    Text("**Tawhid (تَوْحِيد)**: from wahhada, to make one; affirming that Allah alone is the Lord, alone deserves worship, and is alone in His names and attributes. Its clearest statement is Surat al-Ikhlas:")
+                        .font(.body)
+                    ScriptureQuote(text: "“Say, ‘He is Allah, [who is] One, Allah, the Eternal Refuge. He neither begets nor is born, nor is there to Him any equivalent’” (Quran 112:1-4).", arabic: "قُلۡ هُوَ ٱللَّهُ أَحَدٌ ۝ ٱللَّهُ ٱلصَّمَدُ ۝ لَمۡ يَلِدۡ وَلَمۡ يُولَدۡ ۝ وَلَمۡ يَكُن لَّهُۥ كُفُوًا أَحَدُۢ")
+
+                    Text("**Fitrah (فِطْرَة)**: from fatara, to originate; the natural disposition on which Allah creates every human being, which knows its Maker and inclines to worship Him alone. The Hindu who looks past the images to a single supreme reality is feeling the pull of that fitrah:")
+                        .font(.body)
+                    ScriptureQuote(text: "“So direct your face toward the religion, inclining to truth. [Adhere to] the fitrah of Allah upon which He has created [all] people. No change should there be in the creation of Allah. That is the correct religion, but most of the people do not know” (Quran 30:30).", arabic: "فَأَقِمۡ وَجۡهَكَ لِلدِّينِ حَنِيفٗاۚ فِطۡرَتَ ٱللَّهِ ٱلَّتِي فَطَرَ ٱلنَّاسَ عَلَيۡهَاۚ لَا تَبۡدِيلَ لِخَلۡقِ ٱللَّهِۚ ذَٰلِكَ ٱلدِّينُ ٱلۡقَيِّمُ وَلَٰكِنَّ أَكۡثَرَ ٱلنَّاسِ لَا يَعۡلَمُونَ")
+                    ScriptureQuote(text: "“Every child is born upon the fitrah, and then his parents make him a Jew, a Christian, or a Magian” (Sahih al-Bukhari 1385).", arabic: "كُلُّ مَوْلُودٍ يُولَدُ عَلَى الْفِطْرَةِ، فَأَبَوَاهُ يُهَوِّدَانِهِ أَوْ يُنَصِّرَانِهِ أَوْ يُمَجِّسَانِهِ", dimmed: true)
+
+                    Text("**Ba‘th (بَعْث)**: “raising”; the resurrection of the body from the grave for judgement, the Islamic answer to rebirth:")
+                        .font(.body)
+                    ScriptureQuote(text: "“And [that they may know] that the Hour is coming - no doubt about it - and that Allah will resurrect those in the graves” (Quran 22:7).", arabic: "وَأَنَّ ٱلسَّاعَةَ ءَاتِيَةٞ لَّا رَيۡبَ فِيهَا وَأَنَّ ٱللَّهَ يَبۡعَثُ مَن فِي ٱلۡقُبُورِ")
+                }
             }
             .themedListRowBackground()
         }
@@ -1621,6 +1622,188 @@ struct PaganismAnswerView: View {
                     ScriptureQuote(text: "“When they died, Shaytan inspired their people to set up statues in the places where they used to sit and to name them after them. They did so, and they were not worshipped, until those people died and the knowledge was forgotten; then they were worshipped” (Sahih al-Bukhari 4920).", arabic: "فَلَمَّا هَلَكُوا أَوْحَى الشَّيْطَانُ إِلَى قَوْمِهِمْ أَنِ انْصِبُوا إِلَى مَجَالِسِهِمُ الَّتِي كَانُوا يَجْلِسُونَ أَنْصَابًا، وَسَمُّوهَا بِأَسْمَائِهِمْ فَفَعَلُوا فَلَمْ تُعْبَدْ حَتَّى إِذَا هَلَكَ أُولَئِكَ وَتَنَسَّخَ الْعِلْمُ عُبِدَتْ", dimmed: true)
 
                     Text("Every idol began as excess in honouring someone or something Allah created. That is why Islam guards so carefully against the veneration of graves and saints: it is the road paganism took.")
+                        .font(.body)
+                }
+
+                Section(header: Text("1. THE PAGANS ADMIT THE CREATOR")) {
+                    Text("The pagans of Makkah did not deny Allah. They believed He created the heavens and the earth, and they turned to Him alone in the storm. Their shirk was to worship others alongside Him:")
+                        .font(.body)
+                    ScriptureQuote(text: "“And if you asked them who created them, they would surely say, ‘Allah.’ So how are they deluded?” (Quran 43:87).", arabic: "وَلَئِن سَأَلۡتَهُم مَّنۡ خَلَقَهُمۡ لَيَقُولُنَّ ٱللَّهُۖ فَأَنَّىٰ يُؤۡفَكُونَ")
+
+                    ScriptureQuote(text: "“And when they board a ship, they supplicate Allah, sincere to Him in religion. But when He delivers them to the land, at once they associate others with Him” (Quran 29:65).", arabic: "فَإِذَا رَكِبُواْ فِي ٱلۡفُلۡكِ دَعَوُاْ ٱللَّهَ مُخۡلِصِينَ لَهُ ٱلدِّينَ فَلَمَّا نَجَّىٰهُمۡ إِلَى ٱلۡبَرِّ إِذَا هُمۡ يُشۡرِكُونَ")
+
+                    ScriptureQuote(text: "“Say, [O Muhammad], ‘To whom belongs the earth and whoever is in it, if you should know?’ They will say, ‘To Allah.’ Say, ‘Then will you not remember?’ Say, ‘Who is Lord of the seven heavens and Lord of the Great Throne?’ They will say, ‘[They belong] to Allah.’ Say, ‘Then will you not fear Him?’” (Quran 23:84-87).", arabic: "قُل لِّمَنِ ٱلۡأَرۡضُ وَمَن فِيهَآ إِن كُنتُمۡ تَعۡلَمُونَ ۝ سَيَقُولُونَ لِلَّهِۚ قُلۡ أَفَلَا تَذَكَّرُونَ ۝ قُلۡ مَن رَّبُّ ٱلسَّمَٰوَٰتِ ٱلسَّبۡعِ وَرَبُّ ٱلۡعَرۡشِ ٱلۡعَظِيمِ ۝ سَيَقُولُونَ لِلَّهِۚ قُلۡ أَفَلَا تَتَّقُونَ")
+
+                    Text("So the argument of the Quran is: the One you admit created you, provides for you, and saves you at sea is the only One who deserves your worship. Anything else is created like you.")
+                        .font(.body)
+                }
+
+                Section(header: Text("2. NOTHING CREATED DESERVES WORSHIP")) {
+                    ScriptureQuote(text: "“Do they associate with Him those who create nothing and they are [themselves] created? And the false deities are unable to [give] them help, nor can they help themselves” (Quran 7:191-192).", arabic: "أَيُشۡرِكُونَ مَا لَا يَخۡلُقُ شَيۡـٔٗا وَهُمۡ يُخۡلَقُونَ ۝ وَلَا يَسۡتَطِيعُونَ لَهُمۡ نَصۡرٗا وَلَآ أَنفُسَهُمۡ يَنصُرُونَ")
+
+                    ScriptureQuote(text: "“Indeed, those you [polytheists] call upon besides Allah are servants like you. So call upon them and let them respond to you, if you should be truthful” (Quran 7:194).", arabic: "إِنَّ ٱلَّذِينَ تَدۡعُونَ مِن دُونِ ٱللَّهِ عِبَادٌ أَمۡثَالُكُمۡۖ فَٱدۡعُوهُمۡ فَلۡيَسۡتَجِيبُواْ لَكُمۡ إِن كُنتُمۡ صَٰدِقِينَ")
+
+                    ScriptureQuote(text: "“But they have taken besides Him gods which create nothing, while they are created, and possess not for themselves any harm or benefit and possess not [power to cause] death or life or resurrection” (Quran 25:3).", arabic: "وَٱتَّخَذُواْ مِن دُونِهِۦٓ ءَالِهَةٗ لَّا يَخۡلُقُونَ شَيۡـٔٗا وَهُمۡ يُخۡلَقُونَ وَلَا يَمۡلِكُونَ لِأَنفُسِهِمۡ ضَرّٗا وَلَا نَفۡعٗا وَلَا يَمۡلِكُونَ مَوۡتٗا وَلَا حَيَوٰةٗ وَلَا نُشُورٗا")
+
+                    ScriptureQuote(text: "“Say, [O Muhammad], ‘Invoke those you claim [as deities] besides Allah.’ They do not possess an atom's weight [of ability] in the heavens or on the earth, and they do not have therein any partnership [with Him], nor is there for Him from among them any assistant” (Quran 34:22).", arabic: "قُلِ ٱدۡعُواْ ٱلَّذِينَ زَعَمۡتُم مِّن دُونِ ٱللَّهِ لَا يَمۡلِكُونَ مِثۡقَالَ ذَرَّةٖ فِي ٱلسَّمَٰوَٰتِ وَلَا فِي ٱلۡأَرۡضِ وَمَا لَهُمۡ فِيهِمَا مِن شِرۡكٖ وَمَا لَهُۥ مِنۡهُم مِّن ظَهِيرٖ")
+
+                    Text("Ibrahim (peace be upon him) reasoned through the star, the moon, and the sun, and saw that whatever sets and vanishes cannot be a lord:")
+                        .font(.body)
+                    ScriptureQuote(text: "“Indeed, I have turned my face toward He who created the heavens and the earth, inclining toward truth, and I am not of those who associate others with Allah” (Quran 6:79).", arabic: "إِنِّي وَجَّهۡتُ وَجۡهِيَ لِلَّذِي فَطَرَ ٱلسَّمَٰوَٰتِ وَٱلۡأَرۡضَ حَنِيفٗاۖ وَمَآ أَنَا۠ مِنَ ٱلۡمُشۡرِكِينَ")
+                }
+
+                Section(header: Text("3. THE INTERCESSION EXCUSE")) {
+                    Text("Pagans in every age say the idols are only a way to reach the High God, or that the spirits carry prayers to Him. The Quran quotes the excuse and rejects it:")
+                        .font(.body)
+                    ScriptureQuote(text: "“And they worship other than Allah that which neither harms them nor benefits them, and they say, ‘These are our intercessors with Allah.’ Say, ‘Do you inform Allah of something He does not know in the heavens or on the earth?’ Exalted is He and high above what they associate with Him” (Quran 10:18).", arabic: "وَيَعۡبُدُونَ مِن دُونِ ٱللَّهِ مَا لَا يَضُرُّهُمۡ وَلَا يَنفَعُهُمۡ وَيَقُولُونَ هَٰٓؤُلَآءِ شُفَعَٰٓؤُنَا عِندَ ٱللَّهِۚ قُلۡ أَتُنَبِّـُٔونَ ٱللَّهَ بِمَا لَا يَعۡلَمُ فِي ٱلسَّمَٰوَٰتِ وَلَا فِي ٱلۡأَرۡضِۚ سُبۡحَٰنَهُۥ وَتَعَٰلَىٰ عَمَّا يُشۡرِكُونَ")
+
+                    ScriptureQuote(text: "“You worship not besides Him except [mere] names you have named them, you and your fathers, for which Allah has sent down no authority. Legislation is not but for Allah. He has commanded that you worship not except Him. That is the correct religion, but most of the people do not know” (Quran 12:40).", arabic: "إِنِ ٱلۡحُكۡمُ إِلَّا لِلَّهِ أَمَرَ أَلَّا تَعۡبُدُوٓاْ إِلَّآ إِيَّاهُۚ ذَٰلِكَ ٱلدِّينُ ٱلۡقَيِّمُ وَلَٰكِنَّ أَكۡثَرَ ٱلنَّاسِ لَا يَعۡلَمُونَ")
+                }
+
+                Section(header: Text("4. THE END OF THE IDOLS")) {
+                    Text("When the Prophet (peace be upon him) entered Makkah in 8 AH, he struck the 360 idols around the Ka‘bah with his stick, reciting:")
+                        .font(.body)
+                    ScriptureQuote(text: "“And say, ‘Truth has come, and falsehood has departed. Indeed is falsehood, [by nature], ever bound to depart’” (Quran 17:81).", arabic: "وَقُلۡ جَآءَ ٱلۡحَقُّ وَزَهَقَ ٱلۡبَٰطِلُۚ إِنَّ ٱلۡبَٰطِلَ كَانَ زَهُوقٗا")
+
+                    Text("The House built by Ibrahim for the worship of Allah alone was cleansed and has remained so (Sahih al-Bukhari 4287). And the Prophet (peace be upon him) sent Ali to leave no image without effacing it and no raised grave without levelling it (Sahih Muslim 969), closing the road by which idols return.")
+                        .font(.body)
+                }
+
+                Section(header: Text("COMMON QUESTIONS")) {
+                    Text("**Were the Arabs always idolaters?**")
+                        .font(.body)
+                    Text("No. Makkah was founded on tawhid. Ibrahim and Isma‘il (peace be upon them) raised the House for the worship of Allah alone and prayed that their descendants would be Muslims and would be sent a messenger from among themselves (Quran 2:127-129):")
+                        .font(.body)
+                    ScriptureQuote(text: "“And [mention] when Abraham was raising the foundations of the House and [with him] Ishmael, [saying], ‘Our Lord, accept [this] from us. Indeed You are the Hearing, the Knowing’” (Quran 2:127).", arabic: "وَإِذۡ يَرۡفَعُ إِبۡرَٰهِـۧمُ ٱلۡقَوَاعِدَ مِنَ ٱلۡبَيۡتِ وَإِسۡمَٰعِيلُ رَبَّنَا تَقَبَّلۡ مِنَّآۖ إِنَّكَ أَنتَ ٱلسَّمِيعُ ٱلۡعَلِيمُ")
+                    ScriptureQuote(text: "“Indeed, the first House [of worship] established for mankind was that at Mecca - blessed and a guidance for the worlds” (Quran 3:96).", arabic: "إِنَّ أَوَّلَ بَيۡتٖ وُضِعَ لِلنَّاسِ لَلَّذِي بِبَكَّةَ مُبَارَكٗا وَهُدٗى لِّلۡعَٰلَمِينَ")
+                    ScriptureQuote(text: "“And [due] to Allah from the people is a pilgrimage to the House - for whoever is able to find thereto a way” (Quran 3:97).", arabic: "وَلِلَّهِ عَلَى ٱلنَّاسِ حِجُّ ٱلۡبَيۡتِ مَنِ ٱسۡتَطَاعَ إِلَيۡهِ سَبِيلٗاۚ")
+                    ScriptureQuote(text: "“And [mention, O Muhammad], when Abraham said, ‘My Lord, make this city [Mecca] secure and keep me and my sons away from worshipping idols’” (Quran 14:35).", arabic: "وَإِذۡ قَالَ إِبۡرَٰهِيمُ رَبِّ ٱجۡعَلۡ هَٰذَا ٱلۡبَلَدَ ءَامِنٗا وَٱجۡنُبۡنِي وَبَنِيَّ أَن نَّعۡبُدَ ٱلۡأَصۡنَامَ")
+                    Text("The Arabs kept much of that religion for centuries: the Hajj, the tawaf (طَوَاف, from ط-و-ف, to go round: the circling of the Ka‘bah), the sanctity of the House and the sacred months. Idolatry came in later through ‘Amr ibn Luhayy of Khuza‘ah, whom the Prophet (peace be upon him) saw dragging his intestines in the Fire (Sahih al-Bukhari 3521, quoted below), and who, as Ibn Ishaq relates, brought Hubal from Syria and set it up at the Ka‘bah. Some hanifs, seekers of the religion of Ibrahim, still refused the idols in the Prophet’s own generation. Zayd ibn ‘Amr ibn Nufayl would not eat what was slaughtered for the idols (Sahih al-Bukhari 3826), and Asma’ bint Abi Bakr (may Allah be pleased with her) saw him standing with his back against the Ka‘bah, saying:")
+                        .font(.body)
+                    ScriptureQuote(text: "“O people of Quraish! By Allah, none amongst you is on the religion of Abraham except me” (Sahih al-Bukhari 3828).", arabic: "يَا مَعَاشِرَ قُرَيْشٍ، وَاللَّهِ مَا مِنْكُمْ عَلَى دِينِ إِبْرَاهِيمَ غَيْرِي", dimmed: true)
+                    Text("Islam did not bring a new god to the Arabs; it removed the intruders.")
+                        .font(.body)
+
+                    Text("**Is the Ka‘bah or the Black Stone idolatry?**")
+                        .font(.body)
+                    Text("No. Muslims pray toward the Ka‘bah, not to it; it is a direction commanded by Allah, so that the whole Ummah faces one point:")
+                        .font(.body)
+                    ScriptureQuote(text: "“So turn your face toward al-Masjid al-Haram. And wherever you [believers] are, turn your faces toward it [in prayer]” (Quran 2:144).", arabic: "فَوَلِّ وَجۡهَكَ شَطۡرَ ٱلۡمَسۡجِدِ ٱلۡحَرَامِۚ وَحَيۡثُ مَا كُنتُمۡ فَوَلُّواْ وُجُوهَكُمۡ شَطۡرَهُۥۗ")
+                    Text("The House was built by Ibrahim on the condition “do not associate anything with Me” (Quran 22:26). As for the Black Stone, the Muslims kiss it only because the Prophet (peace be upon him) did, and the Companions said so plainly. ‘Umar (may Allah be pleased with him) came to it, kissed it, and said:")
+                        .font(.body)
+                    ScriptureQuote(text: "“No doubt, I know that you are a stone and can neither benefit anyone nor harm anyone. Had I not seen Allah’s Messenger (peace be upon him) kissing you I would not have kissed you” (Sahih al-Bukhari 1597, Sahih Muslim 1270).", arabic: "إِنِّي أَعْلَمُ أَنَّكَ حَجَرٌ لاَ تَضُرُّ وَلاَ تَنْفَعُ، وَلَوْلاَ أَنِّي رَأَيْتُ النَّبِيَّ صلى الله عليه وسلم يُقَبِّلُكَ مَا قَبَّلْتُكَ", dimmed: true)
+                    Text("No Muslim prays to the stone, asks it for anything, or believes it hears. Idolatry is directing worship to a created thing; following a command about where to face is obedience to the Creator.")
+                        .font(.body)
+
+                    Text("**Are shrines, relics, and saints’ tombs paganism?**")
+                        .font(.body)
+                    Text("Praying to the dead, asking them for children or cures, vowing and sacrificing at their graves, and circling their shrines is the same shirk as the idols of Nuh’s people, which began as the honouring of righteous men (Quran 71:23). The Prophet (peace be upon him) warned against the first step on that road even on his deathbed:")
+                        .font(.body)
+                    ScriptureQuote(text: "“May Allah curse the Jews and Christians, for they built the places of worship at the graves of their Prophets” (Sahih al-Bukhari 435, Sahih Muslim 531).", arabic: "لَعْنَةُ اللَّهِ عَلَى الْيَهُودِ وَالنَّصَارَى اتَّخَذُوا قُبُورَ أَنْبِيَائِهِمْ مَسَاجِدَ", dimmed: true)
+                    ScriptureQuote(text: "“Beware of those who preceded you and used to take the graves of their prophets and righteous men as places of worship, but you must not take graves as mosques; I forbid you to do that” (Sahih Muslim 532).", arabic: "أَلاَ وَإِنَّ مَنْ كَانَ قَبْلَكُمْ كَانُوا يَتَّخِذُونَ قُبُورَ أَنْبِيَائِهِمْ وَصَالِحِيهِمْ مَسَاجِدَ أَلاَ فَلاَ تَتَّخِذُوا الْقُبُورَ مَسَاجِدَ إِنِّي أَنْهَاكُمْ عَنْ ذَلِكَ", dimmed: true)
+                    Text("He sent ‘Ali to level every raised grave (Sahih Muslim 969), and he forbade plastering graves, sitting on them, and building over them (Sahih Muslim 970). Visiting graves to remember death and to pray for the dead is Sunnah; building shrines over them and praying to their occupants is the very thing the Prophet (peace be upon him) cursed. Ibn al-Qayyim (may Allah have mercy on him) devoted a long section of Ighathat al-Lahfan to showing how the veneration of graves turns into the worship of their occupants.")
+                        .font(.body)
+
+                    Text("**Are astrology, fortune-telling, and magic shirk?**")
+                        .font(.body)
+                    Text("Astrology is a branch of magic (Sunan Abi Dawud 3905) and attributing rain to a star is disbelief in Allah (Sahih al-Bukhari 846), both quoted below. Asking a fortune-teller voids the prayer of forty nights (Sahih Muslim 2230), and believing him is worse; the Prophet (peace be upon him) said that whoever goes to a kahin (كَاهِن, a soothsayer who claims to know the unseen) and believes what he says has nothing to do with what was sent down to Muhammad (Sunan Abi Dawud 3904; graded sahih by al-Albani). Where do the kahins get the occasional truth that impresses their clients? Aishah (may Allah be pleased with her) asked exactly that:")
+                        .font(.body)
+                    ScriptureQuote(text: "“That is a word pertaining to truth which a jinn snatches and throws into the ear of his friend, and makes an addition of one hundred lies to it” (Sahih Muslim 2228).", arabic: "تِلْكَ الْكَلِمَةُ الْحَقُّ يَخْطَفُهَا الْجِنِّيُّ فَيَقْذِفُهَا فِي أُذُنِ وَلِيِّهِ وَيَزِيدُ فِيهَا مِائَةَ كَذْبَةٍ", dimmed: true)
+                    ScriptureQuote(text: "“The angels descend in the clouds and mention this or that matter decreed in the Heaven. The devils listen stealthily to such a matter, come down to inspire the soothsayers with it, and the latter would add to it one hundred lies of their own” (Sahih al-Bukhari 3210).", arabic: "إِنَّ الْمَلاَئِكَةَ تَنْزِلُ فِي الْعَنَانِ ـ وَهْوَ السَّحَابُ ـ فَتَذْكُرُ الأَمْرَ قُضِيَ فِي السَّمَاءِ، فَتَسْتَرِقُ الشَّيَاطِينُ السَّمْعَ، فَتَسْمَعُهُ فَتُوحِيهِ إِلَى الْكُهَّانِ، فَيَكْذِبُونَ مَعَهَا مِائَةَ كَذْبَةٍ مِنْ عِنْدِ أَنْفُسِهِمْ", dimmed: true)
+                    Text("Magic is the second of the seven destroyers (Sahih al-Bukhari 2766), and the Quran says of those who buy it that they have no share in the Hereafter (Quran 2:102). Its practice involves serving devils, and that is shirk.")
+                        .font(.body)
+
+                    Text("**Are omens and superstitions shirk?**")
+                        .font(.body)
+                    Text("Omens (**tiyarah (طِيَرَة)**, from ط-ي-ر, a bird, because the Arabs would startle a bird and take its direction of flight as a sign) are shirk by the Prophet’s own words (Sunan Abi Dawud 3910, quoted below), because they attach harm and benefit to something Allah gave no power. Black cats, broken mirrors, unlucky numbers and days, and “touch wood” all fall under it. Islam replaces the omen with the good word:")
+                        .font(.body)
+                    ScriptureQuote(text: "“No ‘adwa nor tiyarah; but I like the fa’l.” They said, “What is the fa’l?” He said, “A good word” (Sahih al-Bukhari 5776).", arabic: "لاَ عَدْوَى، وَلاَ طِيَرَةَ، وَيُعْجِبُنِي الْفَأْلُ. قَالُوا وَمَا الْفَأْلُ قَالَ كَلِمَةٌ طَيِّبَةٌ", dimmed: true)
+                    Text("Even swearing by something other than Allah, as pagans swore by their idols and ancestors, was forbidden as a form of shirk:")
+                        .font(.body)
+                    ScriptureQuote(text: "“Whoever swears by other than Allah, he has committed disbelief or shirk” (Sunan al-Tirmidhi 1535; graded sahih by al-Albani).", arabic: "مَنْ حَلَفَ بِغَيْرِ اللَّهِ فَقَدْ كَفَرَ أَوْ أَشْرَكَ", dimmed: true)
+                    Text("The cure the Prophet (peace be upon him) gave is tawakkul, reliance on Allah, which drives the omen out of the heart.")
+                        .font(.body)
+
+                    Text("**Is it shirk to seek blessing from a tree, a stone, or a place?**")
+                        .font(.body)
+                    Text("Yes, if one believes the thing itself gives blessing. On a campaign the Prophet (peace be upon him) passed a tree of the pagans called Dhat Anwat, on which they used to hang their weapons, and some of those with him asked for one like it:")
+                        .font(.body)
+                    ScriptureQuote(text: "They said, “O Messenger of Allah, make a Dhat Anwat for us as they have a Dhat Anwat.” The Prophet (peace be upon him) said, “Subhan Allah! This is like what Musa’s people said: Make for us a god like their gods. By the One in Whose hand is my soul, you shall follow the way of those who were before you” (Sunan al-Tirmidhi 2180; graded sahih by al-Albani).", arabic: "فَقَالُوا يَا رَسُولَ اللَّهِ اجْعَلْ لَنَا ذَاتَ أَنْوَاطٍ كَمَا لَهُمْ ذَاتُ أَنْوَاطٍ. فَقَالَ النَّبِيُّ صلى الله عليه وسلم سُبْحَانَ اللَّهِ هَذَا كَمَا قَالَ قَوْمُ مُوسَى : (اجْعَلْ لَنَا إِلَهًا كَمَا لَهُمْ آلِهَةٌ ) وَالَّذِي نَفْسِي بِيَدِهِ لَتَرْكَبُنَّ سُنَّةَ مَنْ كَانَ قَبْلَكُمْ", dimmed: true)
+                    Text("Blessing (barakah) belongs to Allah, who places it where He wills: in the Quran, in Zamzam, in the sacred places He named. It is not sought from a tree, a wall, a saint’s cloth, or a stone.")
+                        .font(.body)
+
+                    Text("**What of nature, “Mother Earth,” the sun and the moon?**")
+                        .font(.body)
+                    Text("They are creatures and signs. The sun, moon, mountains, and trees prostrate to Allah (Quran 22:18, quoted below); to prostrate to them is to worship a fellow servant, and Allah forbade it in so many words:")
+                        .font(.body)
+                    ScriptureQuote(text: "“Do not prostrate to the sun or to the moon, but prostate to Allah, who created them” (Quran 41:37).", arabic: "لَا تَسۡجُدُواْ لِلشَّمۡسِ وَلَا لِلۡقَمَرِ وَٱسۡجُدُواْۤ لِلَّهِۤ ٱلَّذِي خَلَقَهُنَّ")
+                    Text("Ibrahim (peace be upon him) reasoned from the setting of the star, the moon, and the sun that what vanishes cannot be a lord (Quran 6:76-79). The Quran invites us to look at nature and see the One behind it:")
+                        .font(.body)
+                    ScriptureQuote(text: "“Indeed, in the creation of the heavens and earth, and the alternation of the night and the day, and the [great] ships which sail through the sea with that which benefits people, and what Allah has sent down from the heavens of rain, giving life thereby to the earth after its lifelessness and dispersing therein every [kind of] moving creature, and [His] directing of the winds and the clouds controlled between the heaven and the earth are signs for a people who use reason” (Quran 2:164).", arabic: "إِنَّ فِي خَلۡقِ ٱلسَّمَٰوَٰتِ وَٱلۡأَرۡضِ وَٱخۡتِلَٰفِ ٱلَّيۡلِ وَٱلنَّهَارِ وَٱلۡفُلۡكِ ٱلَّتِي تَجۡرِي فِي ٱلۡبَحۡرِ بِمَا يَنفَعُ ٱلنَّاسَ وَمَآ أَنزَلَ ٱللَّهُ مِنَ ٱلسَّمَآءِ مِن مَّآءٖ فَأَحۡيَا بِهِ ٱلۡأَرۡضَ بَعۡدَ مَوۡتِهَا وَبَثَّ فِيهَا مِن كُلِّ دَآبَّةٖ وَتَصۡرِيفِ ٱلرِّيَٰحِ وَٱلسَّحَابِ ٱلۡمُسَخَّرِ بَيۡنَ ٱلسَّمَآءِ وَٱلۡأَرۡضِ لَأٓيَٰتٖ لِّقَوۡمٖ يَعۡقِلُونَ")
+                    ScriptureQuote(text: "“Say, ‘Who provides for you from the heaven and the earth? Or who controls hearing and sight and who brings the living out of the dead and brings the dead out of the living and who arranges [every] matter?’ They will say, ‘Allah,’ so say, ‘Then will you not fear Him?’” (Quran 10:31).", arabic: "قُلۡ مَن يَرۡزُقُكُم مِّنَ ٱلسَّمَآءِ وَٱلۡأَرۡضِ أَمَّن يَمۡلِكُ ٱلسَّمۡعَ وَٱلۡأَبۡصَٰرَ وَمَن يُخۡرِجُ ٱلۡحَيَّ مِنَ ٱلۡمَيِّتِ وَيُخۡرِجُ ٱلۡمَيِّتَ مِنَ ٱلۡحَيِّ وَمَن يُدَبِّرُ ٱلۡأَمۡرَۚ فَسَيَقُولُونَ ٱللَّهُۚ فَقُلۡ أَفَلَا تَتَّقُونَ")
+                    Text("Caring for the earth is a duty in Islam; the Prophet (peace be upon him) said that no Muslim plants a tree or sows a crop from which a bird, a person, or an animal eats but that it is counted as charity for him (Sahih al-Bukhari 2320, Sahih Muslim 1553). But the earth is Allah’s creation and our trust, not our mother or our goddess.")
+                        .font(.body)
+
+                    Text("**Did Islam keep pagan rites?**")
+                        .font(.body)
+                    Text("No. Hajj, tawaf, the sacrifice, and the sanctity of the House are older than paganism in Arabia; they are the rites of Ibrahim, whom Allah commanded:")
+                        .font(.body)
+                    ScriptureQuote(text: "“And proclaim to the people the Hajj [pilgrimage]; they will come to you on foot and on every lean camel; they will come from every distant pass” (Quran 22:27).", arabic: "وَأَذِّن فِي ٱلنَّاسِ بِٱلۡحَجِّ يَأۡتُوكَ رِجَالٗا وَعَلَىٰ كُلِّ ضَامِرٖ يَأۡتِينَ مِن كُلِّ فَجٍّ عَمِيقٖ")
+                    ScriptureQuote(text: "“And We charged Abraham and Ishmael, [saying], ‘Purify My House for those who perform Tawaf and those who are staying [there] for worship and those who bow and prostrate [in prayer]’” (Quran 2:125).", arabic: "وَعَهِدۡنَآ إِلَىٰٓ إِبۡرَٰهِـۧمَ وَإِسۡمَٰعِيلَ أَن طَهِّرَا بَيۡتِيَ لِلطَّآئِفِينَ وَٱلۡعَٰكِفِينَ وَٱلرُّكَّعِ ٱلسُّجُودِ")
+                    Text("The pagans had corrupted these rites with naked tawaf, whistling and clapping at the House, a partner in the talbiyah (see the key terms above), and tribal privileges. Quraysh, calling themselves al-Hums, would not stand at Arafat with the other Arabs:")
+                        .font(.body)
+                    ScriptureQuote(text: "“The Quraish people and those who embraced their religion, used to stay at Muzdalifa and used to call themselves al-Hums, while the rest of the Arabs used to stay at ‘Arafat. When Islam came, Allah ordered His Prophet to go to ‘Arafat and stay at it, and then pass on from there” (Sahih al-Bukhari 4520).", arabic: "كَانَتْ قُرَيْشٌ وَمَنْ دَانَ دِينَهَا يَقِفُونَ بِالْمُزْدَلِفَةِ، وَكَانُوا يُسَمَّوْنَ الْحُمْسَ، وَكَانَ سَائِرُ الْعَرَبِ يَقِفُونَ بِعَرَفَاتٍ، فَلَمَّا جَاءَ الإِسْلاَمُ أَمَرَ اللَّهُ نَبِيَّهُ صلى الله عليه وسلم أَنْ يَأْتِيَ عَرَفَاتٍ، ثُمَّ يَقِفَ بِهَا ثُمَّ يُفِيضَ مِنْهَا", dimmed: true)
+                    Text("Islam stripped every one of these away and restored the rite of Ibrahim. In the year before the Farewell Hajj Abu Bakr had it proclaimed:")
+                        .font(.body)
+                    ScriptureQuote(text: "“No pagan is allowed to perform Hajj after this year, and no naked person is allowed to perform Tawaf of the Ka‘bah” (Sahih al-Bukhari 1622).", arabic: "أَلاَ لاَ يَحُجُّ بَعْدَ الْعَامِ مُشْرِكٌ، وَلاَ يَطُوفُ بِالْبَيْتِ عُرْيَانٌ", dimmed: true)
+                    Text("And in the Farewell Hajj itself, standing at Arafat, the Prophet (peace be upon him) declared:")
+                        .font(.body)
+                    ScriptureQuote(text: "“Behold! Everything pertaining to the Days of Ignorance is under my feet completely abolished. Abolished are also the blood-revenges of the Days of Ignorance” (Sahih Muslim 1218).", arabic: "أَلاَ كُلُّ شَىْءٍ مِنْ أَمْرِ الْجَاهِلِيَّةِ تَحْتَ قَدَمَىَّ مَوْضُوعٌ وَدِمَاءُ الْجَاهِلِيَّةِ مَوْضُوعَةٌ", dimmed: true)
+                    Text("A rite is pagan by what it is offered to, not by its age. Prostration, fasting, and pilgrimage existed among idolaters too; offered to Allah alone, on His command, they are worship.")
+                        .font(.body)
+
+                    Text("**What were al-Lat, al-‘Uzza, and Manat, and what became of them?**")
+                        .font(.body)
+                    Text("Al-Lat was a white stone at Ta’if, the idol of Thaqif, with a house built over it; al-‘Uzza was a group of trees with a shrine at Nakhlah, the most venerated idol of Quraysh; Manat was a stone at Qudayd on the coast road to Madinah, venerated by the Aws and Khazraj. The Quran named them and stripped them of everything but their names (Quran 53:19-23, quoted below). After the conquest of Makkah in 8 AH the Prophet (peace be upon him) sent Khalid ibn al-Walid to al-‘Uzza, and he destroyed it and its shrine, and he sent Sa‘d ibn Zayd al-Ashhali to Manat; al-Lat was demolished when Thaqif accepted Islam in 9 AH, by al-Mughirah ibn Shu‘bah and Abu Sufyan (Ibn Hisham, as-Sirah an-Nabawiyyah; Ibn Kathir, al-Bidayah wan-Nihayah). He also sent Jarir ibn Abdullah to the idol-house of Khath‘am in the south:")
+                        .font(.body)
+                    ScriptureQuote(text: "“Will you relieve me from Dhul-Khalasa?” Dhul-Khalasa was a house of an idol belonging to the tribe of Khath‘am called the Yemenite Ka‘bah (Sahih al-Bukhari 3020).", arabic: "أَلاَ تُرِيحُنِي مِنْ ذِي الْخَلَصَةِ. وَكَانَ بَيْتًا فِي خَثْعَمَ يُسَمَّى كَعْبَةَ الْيَمَانِيَةَ", dimmed: true)
+                    Text("Jarir went with a hundred and fifty horsemen, tore it down, and burned it. Within two years of the conquest not one of the great idols of Arabia was standing.")
+                        .font(.body)
+
+                    Text("**Is asking the jinn or spirits shirk?**")
+                        .font(.body)
+                    Text("Yes. Seeking refuge with the jinn, asking them for knowledge or help, and making pacts with them was the paganism of the old Arabs (Quran 72:6, quoted below), and the jinn and the angels will disown their worshippers on the Day of Judgement (Quran 34:41). Allah describes the reckoning:")
+                        .font(.body)
+                    ScriptureQuote(text: "“‘O company of jinn, you have [misled] many of mankind.’ And their allies among mankind will say, ‘Our Lord, some of us made use of others’” (Quran 6:128).", arabic: "يَٰمَعۡشَرَ ٱلۡجِنِّ قَدِ ٱسۡتَكۡثَرۡتُم مِّنَ ٱلۡإِنسِۖ وَقَالَ أَوۡلِيَآؤُهُم مِّنَ ٱلۡإِنسِ رَبَّنَا ٱسۡتَمۡتَعَ بَعۡضُنَا بِبَعۡضٖ")
+                    ScriptureQuote(text: "“But they have attributed to Allah partners - the jinn, while He has created them - and have fabricated for Him sons and daughters. Exalted is He and high above what they describe” (Quran 6:100).", arabic: "وَجَعَلُواْ لِلَّهِ شُرَكَآءَ ٱلۡجِنَّ وَخَلَقَهُمۡۖ وَخَرَقُواْ لَهُۥ بَنِينَ وَبَنَٰتِۭ بِغَيۡرِ عِلۡمٖۚ سُبۡحَٰنَهُۥ وَتَعَٰلَىٰ عَمَّا يَصِفُونَ")
+                    Text("Spirit-guides, séances, channelling, and “communicating with the departed” are the same thing in modern dress. The one who answers is a jinn, and the price is the servant’s religion. Refuge is sought from the jinn, in Allah, not with the jinn.")
+                        .font(.body)
+
+                    Text("**Are crystals, energy healing, and “manifesting” paganism?**")
+                        .font(.body)
+                    Text("To believe that a stone heals by its own energy, that a ritual draws “abundance” from “the universe,” or that one’s intention bends the cosmos is to attribute Allah’s acts to His creation. It is the intercession excuse in new words (Quran 39:3) and the calling on what cannot answer (Quran 10:106; 7:194):")
+                        .font(.body)
+                    ScriptureQuote(text: "“To Him [alone] is the supplication of truth. And those they call upon besides Him do not respond to them with a thing, except as one who stretches his hands toward water [from afar, calling it] to reach his mouth, but it will not reach it [thus]. And the supplication of the disbelievers is not but in error [i.e. futility]” (Quran 13:14).", arabic: "لَهُۥ دَعۡوَةُ ٱلۡحَقِّۚ وَٱلَّذِينَ يَدۡعُونَ مِن دُونِهِۦ لَا يَسۡتَجِيبُونَ لَهُم بِشَيۡءٍ إِلَّا كَبَٰسِطِ كَفَّيۡهِ إِلَى ٱلۡمَآءِ لِيَبۡلُغَ فَاهُ وَمَا هُوَ بِبَٰلِغِهِۦۚ وَمَا دُعَآءُ ٱلۡكَٰفِرِينَ إِلَّا فِي ضَلَٰلٖ")
+                    ScriptureQuote(text: "“And whatever you have of favor - it is from Allah. Then when adversity touches you, to Him you cry for help” (Quran 16:53).", arabic: "وَمَا بِكُم مِّن نِّعۡمَةٖ فَمِنَ ٱللَّهِۖ ثُمَّ إِذَا مَسَّكُمُ ٱلضُّرُّ فَإِلَيۡهِ تَجۡـَٔرُونَ")
+                    Text("Islam has its own healing: medicine, which the Prophet (peace be upon him) commanded, and ruqyah with the Quran and the supplications he taught. When the Companions asked him about the incantations they had used in Jahiliyyah (جَاهِلِيَّة, from ج-ه-ل, ignorance: the age before Islam), he said:")
+                        .font(.body)
+                    ScriptureQuote(text: "“Let me know your invocation. There is no harm in the invocation as long as there is no polytheism in it” (Sahih Muslim 2200).", arabic: "اعْرِضُوا عَلَىَّ رُقَاكُمْ لاَ بَأْسَ بِالرُّقَى مَا لَمْ يَكُنْ فِيهِ شِرْكٌ", dimmed: true)
+                    Text("And the one who wants provision is told where it comes from:")
+                        .font(.body)
+                    ScriptureQuote(text: "“And whoever relies upon Allah - then He is sufficient for him” (Quran 65:3).", arabic: "وَمَن يَتَوَكَّلۡ عَلَى ٱللَّهِ فَهُوَ حَسۡبُهُۥٓۚ")
+                }
+
+                Section(header: Text("THE INVITATION")) {
+                    ScriptureQuote(text: "“And [mention, O Muhammad], when Abraham said to his father and his people, ‘Indeed, I am disassociated from that which you worship except for He who created me; and indeed, He will guide me’” (Quran 43:26-27).", arabic: "وَإِذۡ قَالَ إِبۡرَٰهِيمُ لِأَبِيهِ وَقَوۡمِهِۦٓ إِنَّنِي بَرَآءٞ مِّمَّا تَعۡبُدُونَ ۝ إِلَّا ٱلَّذِي فَطَرَنِي فَإِنَّهُۥ سَيَهۡدِينِ")
+
+                    ScriptureQuote(text: "“Say, ‘O disbelievers, I do not worship what you worship. Nor are you worshippers of what I worship. Nor will I be a worshipper of what you worship. Nor will you be worshippers of what I worship. For you is your religion, and for me is my religion’” (Quran 109:1-6).", arabic: "قُلۡ يَٰٓأَيُّهَا ٱلۡكَٰفِرُونَ ۝ لَآ أَعۡبُدُ مَا تَعۡبُدُونَ ۝ وَلَآ أَنتُمۡ عَٰبِدُونَ مَآ أَعۡبُدُ ۝ وَلَآ أَنَا۠ عَابِدٞ مَّا عَبَدتُّمۡ ۝ وَلَآ أَنتُمۡ عَٰبِدُونَ مَآ أَعۡبُدُ ۝ لَكُمۡ دِينُكُمۡ وَلِيَ دِينِ")
+
+                    Text("Allah is nearer than any idol, hears without any intermediary, and forgives the one who turns to Him. The pagan is invited to worship the One he already knows made him.")
+                        .font(.body)
+                }
+
+                Section(header: Text("IN SUMMARY")) {
+                    Text("Paganism is the worship of created things, born of excess in honouring the dead and the beautiful. The pagans themselves admit that Allah created them, and that admission is the proof that He alone should be worshipped.")
                         .font(.body)
                 }
 
@@ -1705,188 +1888,6 @@ struct PaganismAnswerView: View {
                     ScriptureQuote(text: "“And do not invoke besides Allah that which neither benefits you nor harms you, for if you did, then indeed you would be of the wrongdoers” (Quran 10:106).", arabic: "وَلَا تَدۡعُ مِن دُونِ ٱللَّهِ مَا لَا يَنفَعُكَ وَلَا يَضُرُّكَۖ فَإِن فَعَلۡتَ فَإِنَّكَ إِذٗا مِّنَ ٱلظَّٰلِمِينَ")
                     ScriptureQuote(text: "“And who is more astray than he who invokes besides Allah those who will not respond to him until the Day of Resurrection, and they, of their invocation, are unaware” (Quran 46:5).", arabic: "وَمَنۡ أَضَلُّ مِمَّن يَدۡعُواْ مِن دُونِ ٱللَّهِ مَن لَّا يَسۡتَجِيبُ لَهُۥٓ إِلَىٰ يَوۡمِ ٱلۡقِيَٰمَةِ وَهُمۡ عَن دُعَآئِهِمۡ غَٰفِلُونَ")
                 }
-
-                Section(header: Text("1. THE PAGANS ADMIT THE CREATOR")) {
-                    Text("The pagans of Makkah did not deny Allah. They believed He created the heavens and the earth, and they turned to Him alone in the storm. Their shirk was to worship others alongside Him:")
-                        .font(.body)
-                    ScriptureQuote(text: "“And if you asked them who created them, they would surely say, ‘Allah.’ So how are they deluded?” (Quran 43:87).", arabic: "وَلَئِن سَأَلۡتَهُم مَّنۡ خَلَقَهُمۡ لَيَقُولُنَّ ٱللَّهُۖ فَأَنَّىٰ يُؤۡفَكُونَ")
-
-                    ScriptureQuote(text: "“And when they board a ship, they supplicate Allah, sincere to Him in religion. But when He delivers them to the land, at once they associate others with Him” (Quran 29:65).", arabic: "فَإِذَا رَكِبُواْ فِي ٱلۡفُلۡكِ دَعَوُاْ ٱللَّهَ مُخۡلِصِينَ لَهُ ٱلدِّينَ فَلَمَّا نَجَّىٰهُمۡ إِلَى ٱلۡبَرِّ إِذَا هُمۡ يُشۡرِكُونَ")
-
-                    ScriptureQuote(text: "“Say, [O Muhammad], ‘To whom belongs the earth and whoever is in it, if you should know?’ They will say, ‘To Allah.’ Say, ‘Then will you not remember?’ Say, ‘Who is Lord of the seven heavens and Lord of the Great Throne?’ They will say, ‘[They belong] to Allah.’ Say, ‘Then will you not fear Him?’” (Quran 23:84-87).", arabic: "قُل لِّمَنِ ٱلۡأَرۡضُ وَمَن فِيهَآ إِن كُنتُمۡ تَعۡلَمُونَ ۝ سَيَقُولُونَ لِلَّهِۚ قُلۡ أَفَلَا تَذَكَّرُونَ ۝ قُلۡ مَن رَّبُّ ٱلسَّمَٰوَٰتِ ٱلسَّبۡعِ وَرَبُّ ٱلۡعَرۡشِ ٱلۡعَظِيمِ ۝ سَيَقُولُونَ لِلَّهِۚ قُلۡ أَفَلَا تَتَّقُونَ")
-
-                    Text("So the argument of the Quran is: the One you admit created you, provides for you, and saves you at sea is the only One who deserves your worship. Anything else is created like you.")
-                        .font(.body)
-                }
-
-                Section(header: Text("2. NOTHING CREATED DESERVES WORSHIP")) {
-                    ScriptureQuote(text: "“Do they associate with Him those who create nothing and they are [themselves] created? And the false deities are unable to [give] them help, nor can they help themselves” (Quran 7:191-192).", arabic: "أَيُشۡرِكُونَ مَا لَا يَخۡلُقُ شَيۡـٔٗا وَهُمۡ يُخۡلَقُونَ ۝ وَلَا يَسۡتَطِيعُونَ لَهُمۡ نَصۡرٗا وَلَآ أَنفُسَهُمۡ يَنصُرُونَ")
-
-                    ScriptureQuote(text: "“Indeed, those you [polytheists] call upon besides Allah are servants like you. So call upon them and let them respond to you, if you should be truthful” (Quran 7:194).", arabic: "إِنَّ ٱلَّذِينَ تَدۡعُونَ مِن دُونِ ٱللَّهِ عِبَادٌ أَمۡثَالُكُمۡۖ فَٱدۡعُوهُمۡ فَلۡيَسۡتَجِيبُواْ لَكُمۡ إِن كُنتُمۡ صَٰدِقِينَ")
-
-                    ScriptureQuote(text: "“But they have taken besides Him gods which create nothing, while they are created, and possess not for themselves any harm or benefit and possess not [power to cause] death or life or resurrection” (Quran 25:3).", arabic: "وَٱتَّخَذُواْ مِن دُونِهِۦٓ ءَالِهَةٗ لَّا يَخۡلُقُونَ شَيۡـٔٗا وَهُمۡ يُخۡلَقُونَ وَلَا يَمۡلِكُونَ لِأَنفُسِهِمۡ ضَرّٗا وَلَا نَفۡعٗا وَلَا يَمۡلِكُونَ مَوۡتٗا وَلَا حَيَوٰةٗ وَلَا نُشُورٗا")
-
-                    ScriptureQuote(text: "“Say, [O Muhammad], ‘Invoke those you claim [as deities] besides Allah.’ They do not possess an atom's weight [of ability] in the heavens or on the earth, and they do not have therein any partnership [with Him], nor is there for Him from among them any assistant” (Quran 34:22).", arabic: "قُلِ ٱدۡعُواْ ٱلَّذِينَ زَعَمۡتُم مِّن دُونِ ٱللَّهِ لَا يَمۡلِكُونَ مِثۡقَالَ ذَرَّةٖ فِي ٱلسَّمَٰوَٰتِ وَلَا فِي ٱلۡأَرۡضِ وَمَا لَهُمۡ فِيهِمَا مِن شِرۡكٖ وَمَا لَهُۥ مِنۡهُم مِّن ظَهِيرٖ")
-
-                    Text("Ibrahim (peace be upon him) reasoned through the star, the moon, and the sun, and saw that whatever sets and vanishes cannot be a lord:")
-                        .font(.body)
-                    ScriptureQuote(text: "“Indeed, I have turned my face toward He who created the heavens and the earth, inclining toward truth, and I am not of those who associate others with Allah” (Quran 6:79).", arabic: "إِنِّي وَجَّهۡتُ وَجۡهِيَ لِلَّذِي فَطَرَ ٱلسَّمَٰوَٰتِ وَٱلۡأَرۡضَ حَنِيفٗاۖ وَمَآ أَنَا۠ مِنَ ٱلۡمُشۡرِكِينَ")
-                }
-
-                Section(header: Text("3. THE INTERCESSION EXCUSE")) {
-                    Text("Pagans in every age say the idols are only a way to reach the High God, or that the spirits carry prayers to Him. The Quran quotes the excuse and rejects it:")
-                        .font(.body)
-                    ScriptureQuote(text: "“And they worship other than Allah that which neither harms them nor benefits them, and they say, ‘These are our intercessors with Allah.’ Say, ‘Do you inform Allah of something He does not know in the heavens or on the earth?’ Exalted is He and high above what they associate with Him” (Quran 10:18).", arabic: "وَيَعۡبُدُونَ مِن دُونِ ٱللَّهِ مَا لَا يَضُرُّهُمۡ وَلَا يَنفَعُهُمۡ وَيَقُولُونَ هَٰٓؤُلَآءِ شُفَعَٰٓؤُنَا عِندَ ٱللَّهِۚ قُلۡ أَتُنَبِّـُٔونَ ٱللَّهَ بِمَا لَا يَعۡلَمُ فِي ٱلسَّمَٰوَٰتِ وَلَا فِي ٱلۡأَرۡضِۚ سُبۡحَٰنَهُۥ وَتَعَٰلَىٰ عَمَّا يُشۡرِكُونَ")
-
-                    ScriptureQuote(text: "“You worship not besides Him except [mere] names you have named them, you and your fathers, for which Allah has sent down no authority. Legislation is not but for Allah. He has commanded that you worship not except Him. That is the correct religion, but most of the people do not know” (Quran 12:40).", arabic: "إِنِ ٱلۡحُكۡمُ إِلَّا لِلَّهِ أَمَرَ أَلَّا تَعۡبُدُوٓاْ إِلَّآ إِيَّاهُۚ ذَٰلِكَ ٱلدِّينُ ٱلۡقَيِّمُ وَلَٰكِنَّ أَكۡثَرَ ٱلنَّاسِ لَا يَعۡلَمُونَ")
-                }
-
-                Section(header: Text("4. THE END OF THE IDOLS")) {
-                    Text("When the Prophet (peace be upon him) entered Makkah in 8 AH, he struck the 360 idols around the Ka‘bah with his stick, reciting:")
-                        .font(.body)
-                    ScriptureQuote(text: "“And say, ‘Truth has come, and falsehood has departed. Indeed is falsehood, [by nature], ever bound to depart’” (Quran 17:81).", arabic: "وَقُلۡ جَآءَ ٱلۡحَقُّ وَزَهَقَ ٱلۡبَٰطِلُۚ إِنَّ ٱلۡبَٰطِلَ كَانَ زَهُوقٗا")
-
-                    Text("The House built by Ibrahim for the worship of Allah alone was cleansed and has remained so (Sahih al-Bukhari 4287). And the Prophet (peace be upon him) sent Ali to leave no image without effacing it and no raised grave without levelling it (Sahih Muslim 969), closing the road by which idols return.")
-                        .font(.body)
-                }
-
-                Section(header: Text("COMMON QUESTIONS")) {
-                    Text("**Were the Arabs always idolaters?**")
-                        .font(.body)
-                    Text("No. Makkah was founded on tawhid. Ibrahim and Isma‘il (peace be upon them) raised the House for the worship of Allah alone and prayed that their descendants would be Muslims and would be sent a messenger from among themselves (Quran 2:127-129):")
-                        .font(.body)
-                    ScriptureQuote(text: "“And [mention] when Abraham was raising the foundations of the House and [with him] Ishmael, [saying], ‘Our Lord, accept [this] from us. Indeed You are the Hearing, the Knowing’” (Quran 2:127).", arabic: "وَإِذۡ يَرۡفَعُ إِبۡرَٰهِـۧمُ ٱلۡقَوَاعِدَ مِنَ ٱلۡبَيۡتِ وَإِسۡمَٰعِيلُ رَبَّنَا تَقَبَّلۡ مِنَّآۖ إِنَّكَ أَنتَ ٱلسَّمِيعُ ٱلۡعَلِيمُ")
-                    ScriptureQuote(text: "“Indeed, the first House [of worship] established for mankind was that at Mecca - blessed and a guidance for the worlds” (Quran 3:96).", arabic: "إِنَّ أَوَّلَ بَيۡتٖ وُضِعَ لِلنَّاسِ لَلَّذِي بِبَكَّةَ مُبَارَكٗا وَهُدٗى لِّلۡعَٰلَمِينَ")
-                    ScriptureQuote(text: "“And [due] to Allah from the people is a pilgrimage to the House - for whoever is able to find thereto a way” (Quran 3:97).", arabic: "وَلِلَّهِ عَلَى ٱلنَّاسِ حِجُّ ٱلۡبَيۡتِ مَنِ ٱسۡتَطَاعَ إِلَيۡهِ سَبِيلٗاۚ")
-                    ScriptureQuote(text: "“And [mention, O Muhammad], when Abraham said, ‘My Lord, make this city [Mecca] secure and keep me and my sons away from worshipping idols’” (Quran 14:35).", arabic: "وَإِذۡ قَالَ إِبۡرَٰهِيمُ رَبِّ ٱجۡعَلۡ هَٰذَا ٱلۡبَلَدَ ءَامِنٗا وَٱجۡنُبۡنِي وَبَنِيَّ أَن نَّعۡبُدَ ٱلۡأَصۡنَامَ")
-                    Text("The Arabs kept much of that religion for centuries: the Hajj, the tawaf, the sanctity of the House and the sacred months. Idolatry came in later through ‘Amr ibn Luhayy of Khuza‘ah, whom the Prophet (peace be upon him) saw dragging his intestines in the Fire (Sahih al-Bukhari 3521, quoted above), and who, as Ibn Ishaq relates, brought Hubal from Syria and set it up at the Ka‘bah. Some hanifs, seekers of the religion of Ibrahim, still refused the idols in the Prophet’s own generation. Zayd ibn ‘Amr ibn Nufayl would not eat what was slaughtered for the idols (Sahih al-Bukhari 3826), and Asma’ bint Abi Bakr (may Allah be pleased with her) saw him standing with his back against the Ka‘bah, saying:")
-                        .font(.body)
-                    ScriptureQuote(text: "“O people of Quraish! By Allah, none amongst you is on the religion of Abraham except me” (Sahih al-Bukhari 3828).", arabic: "يَا مَعَاشِرَ قُرَيْشٍ، وَاللَّهِ مَا مِنْكُمْ عَلَى دِينِ إِبْرَاهِيمَ غَيْرِي", dimmed: true)
-                    Text("Islam did not bring a new god to the Arabs; it removed the intruders.")
-                        .font(.body)
-
-                    Text("**Is the Ka‘bah or the Black Stone idolatry?**")
-                        .font(.body)
-                    Text("No. Muslims pray toward the Ka‘bah, not to it; it is a direction commanded by Allah, so that the whole Ummah faces one point:")
-                        .font(.body)
-                    ScriptureQuote(text: "“So turn your face toward al-Masjid al-Haram. And wherever you [believers] are, turn your faces toward it [in prayer]” (Quran 2:144).", arabic: "فَوَلِّ وَجۡهَكَ شَطۡرَ ٱلۡمَسۡجِدِ ٱلۡحَرَامِۚ وَحَيۡثُ مَا كُنتُمۡ فَوَلُّواْ وُجُوهَكُمۡ شَطۡرَهُۥۗ")
-                    Text("The House was built by Ibrahim on the condition “do not associate anything with Me” (Quran 22:26). As for the Black Stone, the Muslims kiss it only because the Prophet (peace be upon him) did, and the Companions said so plainly. ‘Umar (may Allah be pleased with him) came to it, kissed it, and said:")
-                        .font(.body)
-                    ScriptureQuote(text: "“No doubt, I know that you are a stone and can neither benefit anyone nor harm anyone. Had I not seen Allah’s Messenger (peace be upon him) kissing you I would not have kissed you” (Sahih al-Bukhari 1597, Sahih Muslim 1270).", arabic: "إِنِّي أَعْلَمُ أَنَّكَ حَجَرٌ لاَ تَضُرُّ وَلاَ تَنْفَعُ، وَلَوْلاَ أَنِّي رَأَيْتُ النَّبِيَّ صلى الله عليه وسلم يُقَبِّلُكَ مَا قَبَّلْتُكَ", dimmed: true)
-                    Text("No Muslim prays to the stone, asks it for anything, or believes it hears. Idolatry is directing worship to a created thing; following a command about where to face is obedience to the Creator.")
-                        .font(.body)
-
-                    Text("**Are shrines, relics, and saints’ tombs paganism?**")
-                        .font(.body)
-                    Text("Praying to the dead, asking them for children or cures, vowing and sacrificing at their graves, and circling their shrines is the same shirk as the idols of Nuh’s people, which began as the honouring of righteous men (Quran 71:23). The Prophet (peace be upon him) warned against the first step on that road even on his deathbed:")
-                        .font(.body)
-                    ScriptureQuote(text: "“May Allah curse the Jews and Christians, for they built the places of worship at the graves of their Prophets” (Sahih al-Bukhari 435, Sahih Muslim 531).", arabic: "لَعْنَةُ اللَّهِ عَلَى الْيَهُودِ وَالنَّصَارَى اتَّخَذُوا قُبُورَ أَنْبِيَائِهِمْ مَسَاجِدَ", dimmed: true)
-                    ScriptureQuote(text: "“Beware of those who preceded you and used to take the graves of their prophets and righteous men as places of worship, but you must not take graves as mosques; I forbid you to do that” (Sahih Muslim 532).", arabic: "أَلاَ وَإِنَّ مَنْ كَانَ قَبْلَكُمْ كَانُوا يَتَّخِذُونَ قُبُورَ أَنْبِيَائِهِمْ وَصَالِحِيهِمْ مَسَاجِدَ أَلاَ فَلاَ تَتَّخِذُوا الْقُبُورَ مَسَاجِدَ إِنِّي أَنْهَاكُمْ عَنْ ذَلِكَ", dimmed: true)
-                    Text("He sent ‘Ali to level every raised grave (Sahih Muslim 969), and he forbade plastering graves, sitting on them, and building over them (Sahih Muslim 970). Visiting graves to remember death and to pray for the dead is Sunnah; building shrines over them and praying to their occupants is the very thing the Prophet (peace be upon him) cursed. Ibn al-Qayyim (may Allah have mercy on him) devoted a long section of Ighathat al-Lahfan to showing how the veneration of graves turns into the worship of their occupants.")
-                        .font(.body)
-
-                    Text("**Are astrology, fortune-telling, and magic shirk?**")
-                        .font(.body)
-                    Text("Astrology is a branch of magic (Sunan Abi Dawud 3905) and attributing rain to a star is disbelief in Allah (Sahih al-Bukhari 846), both quoted above. Asking a fortune-teller voids the prayer of forty nights (Sahih Muslim 2230), and believing him is worse; the Prophet (peace be upon him) said that whoever goes to a kahin and believes what he says has nothing to do with what was sent down to Muhammad (Sunan Abi Dawud 3904; graded sahih by al-Albani). Where do the kahins get the occasional truth that impresses their clients? Aishah (may Allah be pleased with her) asked exactly that:")
-                        .font(.body)
-                    ScriptureQuote(text: "“That is a word pertaining to truth which a jinn snatches and throws into the ear of his friend, and makes an addition of one hundred lies to it” (Sahih Muslim 2228).", arabic: "تِلْكَ الْكَلِمَةُ الْحَقُّ يَخْطَفُهَا الْجِنِّيُّ فَيَقْذِفُهَا فِي أُذُنِ وَلِيِّهِ وَيَزِيدُ فِيهَا مِائَةَ كَذْبَةٍ", dimmed: true)
-                    ScriptureQuote(text: "“The angels descend in the clouds and mention this or that matter decreed in the Heaven. The devils listen stealthily to such a matter, come down to inspire the soothsayers with it, and the latter would add to it one hundred lies of their own” (Sahih al-Bukhari 3210).", arabic: "إِنَّ الْمَلاَئِكَةَ تَنْزِلُ فِي الْعَنَانِ ـ وَهْوَ السَّحَابُ ـ فَتَذْكُرُ الأَمْرَ قُضِيَ فِي السَّمَاءِ، فَتَسْتَرِقُ الشَّيَاطِينُ السَّمْعَ، فَتَسْمَعُهُ فَتُوحِيهِ إِلَى الْكُهَّانِ، فَيَكْذِبُونَ مَعَهَا مِائَةَ كَذْبَةٍ مِنْ عِنْدِ أَنْفُسِهِمْ", dimmed: true)
-                    Text("Magic is the second of the seven destroyers (Sahih al-Bukhari 2766), and the Quran says of those who buy it that they have no share in the Hereafter (Quran 2:102). Its practice involves serving devils, and that is shirk.")
-                        .font(.body)
-
-                    Text("**Are omens and superstitions shirk?**")
-                        .font(.body)
-                    Text("Omens are shirk by the Prophet’s own words (Sunan Abi Dawud 3910, quoted above), because they attach harm and benefit to something Allah gave no power. Black cats, broken mirrors, unlucky numbers and days, and “touch wood” all fall under it. Islam replaces the omen with the good word:")
-                        .font(.body)
-                    ScriptureQuote(text: "“No ‘adwa nor tiyarah; but I like the fa’l.” They said, “What is the fa’l?” He said, “A good word” (Sahih al-Bukhari 5776).", arabic: "لاَ عَدْوَى، وَلاَ طِيَرَةَ، وَيُعْجِبُنِي الْفَأْلُ. قَالُوا وَمَا الْفَأْلُ قَالَ كَلِمَةٌ طَيِّبَةٌ", dimmed: true)
-                    Text("Even swearing by something other than Allah, as pagans swore by their idols and ancestors, was forbidden as a form of shirk:")
-                        .font(.body)
-                    ScriptureQuote(text: "“Whoever swears by other than Allah, he has committed disbelief or shirk” (Sunan al-Tirmidhi 1535; graded sahih by al-Albani).", arabic: "مَنْ حَلَفَ بِغَيْرِ اللَّهِ فَقَدْ كَفَرَ أَوْ أَشْرَكَ", dimmed: true)
-                    Text("The cure the Prophet (peace be upon him) gave is tawakkul, reliance on Allah, which drives the omen out of the heart.")
-                        .font(.body)
-
-                    Text("**Is it shirk to seek blessing from a tree, a stone, or a place?**")
-                        .font(.body)
-                    Text("Yes, if one believes the thing itself gives blessing. On a campaign the Prophet (peace be upon him) passed a tree of the pagans called Dhat Anwat, on which they used to hang their weapons, and some of those with him asked for one like it:")
-                        .font(.body)
-                    ScriptureQuote(text: "They said, “O Messenger of Allah, make a Dhat Anwat for us as they have a Dhat Anwat.” The Prophet (peace be upon him) said, “Subhan Allah! This is like what Musa’s people said: Make for us a god like their gods. By the One in Whose hand is my soul, you shall follow the way of those who were before you” (Sunan al-Tirmidhi 2180; graded sahih by al-Albani).", arabic: "فَقَالُوا يَا رَسُولَ اللَّهِ اجْعَلْ لَنَا ذَاتَ أَنْوَاطٍ كَمَا لَهُمْ ذَاتُ أَنْوَاطٍ. فَقَالَ النَّبِيُّ صلى الله عليه وسلم سُبْحَانَ اللَّهِ هَذَا كَمَا قَالَ قَوْمُ مُوسَى : (اجْعَلْ لَنَا إِلَهًا كَمَا لَهُمْ آلِهَةٌ ) وَالَّذِي نَفْسِي بِيَدِهِ لَتَرْكَبُنَّ سُنَّةَ مَنْ كَانَ قَبْلَكُمْ", dimmed: true)
-                    Text("Blessing (barakah) belongs to Allah, who places it where He wills: in the Quran, in Zamzam, in the sacred places He named. It is not sought from a tree, a wall, a saint’s cloth, or a stone.")
-                        .font(.body)
-
-                    Text("**What of nature, “Mother Earth,” the sun and the moon?**")
-                        .font(.body)
-                    Text("They are creatures and signs. The sun, moon, mountains, and trees prostrate to Allah (Quran 22:18, quoted above); to prostrate to them is to worship a fellow servant, and Allah forbade it in so many words:")
-                        .font(.body)
-                    ScriptureQuote(text: "“Do not prostrate to the sun or to the moon, but prostate to Allah, who created them” (Quran 41:37).", arabic: "لَا تَسۡجُدُواْ لِلشَّمۡسِ وَلَا لِلۡقَمَرِ وَٱسۡجُدُواْۤ لِلَّهِۤ ٱلَّذِي خَلَقَهُنَّ")
-                    Text("Ibrahim (peace be upon him) reasoned from the setting of the star, the moon, and the sun that what vanishes cannot be a lord (Quran 6:76-79). The Quran invites us to look at nature and see the One behind it:")
-                        .font(.body)
-                    ScriptureQuote(text: "“Indeed, in the creation of the heavens and earth, and the alternation of the night and the day, and the [great] ships which sail through the sea with that which benefits people, and what Allah has sent down from the heavens of rain, giving life thereby to the earth after its lifelessness and dispersing therein every [kind of] moving creature, and [His] directing of the winds and the clouds controlled between the heaven and the earth are signs for a people who use reason” (Quran 2:164).", arabic: "إِنَّ فِي خَلۡقِ ٱلسَّمَٰوَٰتِ وَٱلۡأَرۡضِ وَٱخۡتِلَٰفِ ٱلَّيۡلِ وَٱلنَّهَارِ وَٱلۡفُلۡكِ ٱلَّتِي تَجۡرِي فِي ٱلۡبَحۡرِ بِمَا يَنفَعُ ٱلنَّاسَ وَمَآ أَنزَلَ ٱللَّهُ مِنَ ٱلسَّمَآءِ مِن مَّآءٖ فَأَحۡيَا بِهِ ٱلۡأَرۡضَ بَعۡدَ مَوۡتِهَا وَبَثَّ فِيهَا مِن كُلِّ دَآبَّةٖ وَتَصۡرِيفِ ٱلرِّيَٰحِ وَٱلسَّحَابِ ٱلۡمُسَخَّرِ بَيۡنَ ٱلسَّمَآءِ وَٱلۡأَرۡضِ لَأٓيَٰتٖ لِّقَوۡمٖ يَعۡقِلُونَ")
-                    ScriptureQuote(text: "“Say, ‘Who provides for you from the heaven and the earth? Or who controls hearing and sight and who brings the living out of the dead and brings the dead out of the living and who arranges [every] matter?’ They will say, ‘Allah,’ so say, ‘Then will you not fear Him?’” (Quran 10:31).", arabic: "قُلۡ مَن يَرۡزُقُكُم مِّنَ ٱلسَّمَآءِ وَٱلۡأَرۡضِ أَمَّن يَمۡلِكُ ٱلسَّمۡعَ وَٱلۡأَبۡصَٰرَ وَمَن يُخۡرِجُ ٱلۡحَيَّ مِنَ ٱلۡمَيِّتِ وَيُخۡرِجُ ٱلۡمَيِّتَ مِنَ ٱلۡحَيِّ وَمَن يُدَبِّرُ ٱلۡأَمۡرَۚ فَسَيَقُولُونَ ٱللَّهُۚ فَقُلۡ أَفَلَا تَتَّقُونَ")
-                    Text("Caring for the earth is a duty in Islam; the Prophet (peace be upon him) said that no Muslim plants a tree or sows a crop from which a bird, a person, or an animal eats but that it is counted as charity for him (Sahih al-Bukhari 2320, Sahih Muslim 1553). But the earth is Allah’s creation and our trust, not our mother or our goddess.")
-                        .font(.body)
-
-                    Text("**Did Islam keep pagan rites?**")
-                        .font(.body)
-                    Text("No. Hajj, tawaf, the sacrifice, and the sanctity of the House are older than paganism in Arabia; they are the rites of Ibrahim, whom Allah commanded:")
-                        .font(.body)
-                    ScriptureQuote(text: "“And proclaim to the people the Hajj [pilgrimage]; they will come to you on foot and on every lean camel; they will come from every distant pass” (Quran 22:27).", arabic: "وَأَذِّن فِي ٱلنَّاسِ بِٱلۡحَجِّ يَأۡتُوكَ رِجَالٗا وَعَلَىٰ كُلِّ ضَامِرٖ يَأۡتِينَ مِن كُلِّ فَجٍّ عَمِيقٖ")
-                    ScriptureQuote(text: "“And We charged Abraham and Ishmael, [saying], ‘Purify My House for those who perform Tawaf and those who are staying [there] for worship and those who bow and prostrate [in prayer]’” (Quran 2:125).", arabic: "وَعَهِدۡنَآ إِلَىٰٓ إِبۡرَٰهِـۧمَ وَإِسۡمَٰعِيلَ أَن طَهِّرَا بَيۡتِيَ لِلطَّآئِفِينَ وَٱلۡعَٰكِفِينَ وَٱلرُّكَّعِ ٱلسُّجُودِ")
-                    Text("The pagans had corrupted these rites with naked tawaf, whistling and clapping at the House, a partner in the talbiyah (see the key terms above), and tribal privileges. Quraysh, calling themselves al-Hums, would not stand at Arafat with the other Arabs:")
-                        .font(.body)
-                    ScriptureQuote(text: "“The Quraish people and those who embraced their religion, used to stay at Muzdalifa and used to call themselves al-Hums, while the rest of the Arabs used to stay at ‘Arafat. When Islam came, Allah ordered His Prophet to go to ‘Arafat and stay at it, and then pass on from there” (Sahih al-Bukhari 4520).", arabic: "كَانَتْ قُرَيْشٌ وَمَنْ دَانَ دِينَهَا يَقِفُونَ بِالْمُزْدَلِفَةِ، وَكَانُوا يُسَمَّوْنَ الْحُمْسَ، وَكَانَ سَائِرُ الْعَرَبِ يَقِفُونَ بِعَرَفَاتٍ، فَلَمَّا جَاءَ الإِسْلاَمُ أَمَرَ اللَّهُ نَبِيَّهُ صلى الله عليه وسلم أَنْ يَأْتِيَ عَرَفَاتٍ، ثُمَّ يَقِفَ بِهَا ثُمَّ يُفِيضَ مِنْهَا", dimmed: true)
-                    Text("Islam stripped every one of these away and restored the rite of Ibrahim. In the year before the Farewell Hajj Abu Bakr had it proclaimed:")
-                        .font(.body)
-                    ScriptureQuote(text: "“No pagan is allowed to perform Hajj after this year, and no naked person is allowed to perform Tawaf of the Ka‘bah” (Sahih al-Bukhari 1622).", arabic: "أَلاَ لاَ يَحُجُّ بَعْدَ الْعَامِ مُشْرِكٌ، وَلاَ يَطُوفُ بِالْبَيْتِ عُرْيَانٌ", dimmed: true)
-                    Text("And in the Farewell Hajj itself, standing at Arafat, the Prophet (peace be upon him) declared:")
-                        .font(.body)
-                    ScriptureQuote(text: "“Behold! Everything pertaining to the Days of Ignorance is under my feet completely abolished. Abolished are also the blood-revenges of the Days of Ignorance” (Sahih Muslim 1218).", arabic: "أَلاَ كُلُّ شَىْءٍ مِنْ أَمْرِ الْجَاهِلِيَّةِ تَحْتَ قَدَمَىَّ مَوْضُوعٌ وَدِمَاءُ الْجَاهِلِيَّةِ مَوْضُوعَةٌ", dimmed: true)
-                    Text("A rite is pagan by what it is offered to, not by its age. Prostration, fasting, and pilgrimage existed among idolaters too; offered to Allah alone, on His command, they are worship.")
-                        .font(.body)
-
-                    Text("**What were al-Lat, al-‘Uzza, and Manat, and what became of them?**")
-                        .font(.body)
-                    Text("Al-Lat was a white stone at Ta’if, the idol of Thaqif, with a house built over it; al-‘Uzza was a group of trees with a shrine at Nakhlah, the most venerated idol of Quraysh; Manat was a stone at Qudayd on the coast road to Madinah, venerated by the Aws and Khazraj. The Quran named them and stripped them of everything but their names (Quran 53:19-23, quoted above). After the conquest of Makkah in 8 AH the Prophet (peace be upon him) sent Khalid ibn al-Walid to al-‘Uzza, and he destroyed it and its shrine, and he sent Sa‘d ibn Zayd al-Ashhali to Manat; al-Lat was demolished when Thaqif accepted Islam in 9 AH, by al-Mughirah ibn Shu‘bah and Abu Sufyan (Ibn Hisham, as-Sirah an-Nabawiyyah; Ibn Kathir, al-Bidayah wan-Nihayah). He also sent Jarir ibn Abdullah to the idol-house of Khath‘am in the south:")
-                        .font(.body)
-                    ScriptureQuote(text: "“Will you relieve me from Dhul-Khalasa?” Dhul-Khalasa was a house of an idol belonging to the tribe of Khath‘am called the Yemenite Ka‘bah (Sahih al-Bukhari 3020).", arabic: "أَلاَ تُرِيحُنِي مِنْ ذِي الْخَلَصَةِ. وَكَانَ بَيْتًا فِي خَثْعَمَ يُسَمَّى كَعْبَةَ الْيَمَانِيَةَ", dimmed: true)
-                    Text("Jarir went with a hundred and fifty horsemen, tore it down, and burned it. Within two years of the conquest not one of the great idols of Arabia was standing.")
-                        .font(.body)
-
-                    Text("**Is asking the jinn or spirits shirk?**")
-                        .font(.body)
-                    Text("Yes. Seeking refuge with the jinn, asking them for knowledge or help, and making pacts with them was the paganism of the old Arabs (Quran 72:6, quoted above), and the jinn and the angels will disown their worshippers on the Day of Judgement (Quran 34:41). Allah describes the reckoning:")
-                        .font(.body)
-                    ScriptureQuote(text: "“‘O company of jinn, you have [misled] many of mankind.’ And their allies among mankind will say, ‘Our Lord, some of us made use of others’” (Quran 6:128).", arabic: "يَٰمَعۡشَرَ ٱلۡجِنِّ قَدِ ٱسۡتَكۡثَرۡتُم مِّنَ ٱلۡإِنسِۖ وَقَالَ أَوۡلِيَآؤُهُم مِّنَ ٱلۡإِنسِ رَبَّنَا ٱسۡتَمۡتَعَ بَعۡضُنَا بِبَعۡضٖ")
-                    ScriptureQuote(text: "“But they have attributed to Allah partners - the jinn, while He has created them - and have fabricated for Him sons and daughters. Exalted is He and high above what they describe” (Quran 6:100).", arabic: "وَجَعَلُواْ لِلَّهِ شُرَكَآءَ ٱلۡجِنَّ وَخَلَقَهُمۡۖ وَخَرَقُواْ لَهُۥ بَنِينَ وَبَنَٰتِۭ بِغَيۡرِ عِلۡمٖۚ سُبۡحَٰنَهُۥ وَتَعَٰلَىٰ عَمَّا يَصِفُونَ")
-                    Text("Spirit-guides, séances, channelling, and “communicating with the departed” are the same thing in modern dress. The one who answers is a jinn, and the price is the servant’s religion. Refuge is sought from the jinn, in Allah, not with the jinn.")
-                        .font(.body)
-
-                    Text("**Are crystals, energy healing, and “manifesting” paganism?**")
-                        .font(.body)
-                    Text("To believe that a stone heals by its own energy, that a ritual draws “abundance” from “the universe,” or that one’s intention bends the cosmos is to attribute Allah’s acts to His creation. It is the intercession excuse in new words (Quran 39:3) and the calling on what cannot answer (Quran 10:106; 7:194):")
-                        .font(.body)
-                    ScriptureQuote(text: "“To Him [alone] is the supplication of truth. And those they call upon besides Him do not respond to them with a thing, except as one who stretches his hands toward water [from afar, calling it] to reach his mouth, but it will not reach it [thus]. And the supplication of the disbelievers is not but in error [i.e. futility]” (Quran 13:14).", arabic: "لَهُۥ دَعۡوَةُ ٱلۡحَقِّۚ وَٱلَّذِينَ يَدۡعُونَ مِن دُونِهِۦ لَا يَسۡتَجِيبُونَ لَهُم بِشَيۡءٍ إِلَّا كَبَٰسِطِ كَفَّيۡهِ إِلَى ٱلۡمَآءِ لِيَبۡلُغَ فَاهُ وَمَا هُوَ بِبَٰلِغِهِۦۚ وَمَا دُعَآءُ ٱلۡكَٰفِرِينَ إِلَّا فِي ضَلَٰلٖ")
-                    ScriptureQuote(text: "“And whatever you have of favor - it is from Allah. Then when adversity touches you, to Him you cry for help” (Quran 16:53).", arabic: "وَمَا بِكُم مِّن نِّعۡمَةٖ فَمِنَ ٱللَّهِۖ ثُمَّ إِذَا مَسَّكُمُ ٱلضُّرُّ فَإِلَيۡهِ تَجۡـَٔرُونَ")
-                    Text("Islam has its own healing: medicine, which the Prophet (peace be upon him) commanded, and ruqyah with the Quran and the supplications he taught. When the Companions asked him about the incantations they had used in Jahiliyyah, he said:")
-                        .font(.body)
-                    ScriptureQuote(text: "“Let me know your invocation. There is no harm in the invocation as long as there is no polytheism in it” (Sahih Muslim 2200).", arabic: "اعْرِضُوا عَلَىَّ رُقَاكُمْ لاَ بَأْسَ بِالرُّقَى مَا لَمْ يَكُنْ فِيهِ شِرْكٌ", dimmed: true)
-                    Text("And the one who wants provision is told where it comes from:")
-                        .font(.body)
-                    ScriptureQuote(text: "“And whoever relies upon Allah - then He is sufficient for him” (Quran 65:3).", arabic: "وَمَن يَتَوَكَّلۡ عَلَى ٱللَّهِ فَهُوَ حَسۡبُهُۥٓۚ")
-                }
-
-                Section(header: Text("THE INVITATION")) {
-                    ScriptureQuote(text: "“And [mention, O Muhammad], when Abraham said to his father and his people, ‘Indeed, I am disassociated from that which you worship except for He who created me; and indeed, He will guide me’” (Quran 43:26-27).", arabic: "وَإِذۡ قَالَ إِبۡرَٰهِيمُ لِأَبِيهِ وَقَوۡمِهِۦٓ إِنَّنِي بَرَآءٞ مِّمَّا تَعۡبُدُونَ ۝ إِلَّا ٱلَّذِي فَطَرَنِي فَإِنَّهُۥ سَيَهۡدِينِ")
-
-                    ScriptureQuote(text: "“Say, ‘O disbelievers, I do not worship what you worship. Nor are you worshippers of what I worship. Nor will I be a worshipper of what you worship. Nor will you be worshippers of what I worship. For you is your religion, and for me is my religion’” (Quran 109:1-6).", arabic: "قُلۡ يَٰٓأَيُّهَا ٱلۡكَٰفِرُونَ ۝ لَآ أَعۡبُدُ مَا تَعۡبُدُونَ ۝ وَلَآ أَنتُمۡ عَٰبِدُونَ مَآ أَعۡبُدُ ۝ وَلَآ أَنَا۠ عَابِدٞ مَّا عَبَدتُّمۡ ۝ وَلَآ أَنتُمۡ عَٰبِدُونَ مَآ أَعۡبُدُ ۝ لَكُمۡ دِينُكُمۡ وَلِيَ دِينِ")
-
-                    Text("Allah is nearer than any idol, hears without any intermediary, and forgives the one who turns to Him. The pagan is invited to worship the One he already knows made him.")
-                        .font(.body)
-                }
-
-                Section(header: Text("IN SUMMARY")) {
-                    Text("Paganism is the worship of created things, born of excess in honouring the dead and the beautiful. The pagans themselves admit that Allah created them, and that admission is the proof that He alone should be worshipped.")
-                        .font(.body)
-                }
             }
             .themedListRowBackground()
         }
@@ -1908,77 +1909,6 @@ struct BuddhismAnswerView: View {
 
                 Section(header: Text("WHAT BUDDHISM TEACHES")) {
                     Text("Buddhism follows Siddhartha Gautama, the Buddha (“the awakened one“), who lived in northern India around the fifth century BCE. Its core is the Four Noble Truths: life is suffering (**dukkha**), suffering comes from craving, it ends by ending craving, and the way is the Eightfold Path of ethics, meditation, and wisdom. It teaches **karma** and rebirth, denies a permanent self (**anatta**), and aims at **nirvana**, the extinction of craving and of rebirth. It has no Creator God; the Buddha did not teach one. In practice most Buddhists bow to and make offerings before images of the Buddha and of bodhisattvas, and some schools venerate many celestial beings.")
-                        .font(.body)
-                }
-
-                Section(header: Text("KEY TERMS")) {
-                    Text("**Buddha**: Sanskrit for “the awakened one,” a title, not a name. It was taken by Siddhartha Gautama, a prince of the Shakya clan born at Lumbini at the foot of the Himalayas, who lived in northern India around the fifth century BCE (the traditional and the modern datings differ by some decades), left his palace and family in search of the end of suffering, and taught for the rest of his life. Buddhists hold that there were Buddhas before him and will be after him. Islam does not know whether any messenger of Allah was sent to that land in that age (Quran 40:78; see the questions below).")
-                        .font(.body)
-
-                    Text("**Dharma (Pali: dhamma)**: “the teaching,” the Buddha’s doctrine, and also the law of things. With **sangha**, the community of monks and nuns, and the Buddha himself, it forms the “three jewels” in which a Buddhist “takes refuge.” The Muslim takes refuge in Allah alone, and his religion is what Allah revealed, not what a man discovered.")
-                        .font(.body)
-
-                    Text("**The Four Noble Truths**: that life is suffering (dukkha); that suffering arises from craving (tanha); that it ceases when craving ceases; and that the way to that cessation is the Eightfold Path. **The Eightfold Path**: right view, right intention, right speech, right action, right livelihood, right effort, right mindfulness, and right concentration. Much of this is sound conduct that Islam also commands; what is missing is the One who commands it and the One to whom the path leads.")
-                        .font(.body)
-
-                    Text("**Dukkha**: suffering, unsatisfactoriness, the ache of existence. The Quran does not deny it:")
-                        .font(.body)
-                    ScriptureQuote(text: "“We have certainly created man into hardship” (Quran 90:4).", arabic: "لَقَدۡ خَلَقۡنَا ٱلۡإِنسَٰنَ فِي كَبَدٍ")
-                    ScriptureQuote(text: "“O mankind, indeed you are laboring toward your Lord with [great] exertion and will meet it” (Quran 84:6).", arabic: "يَٰٓأَيُّهَا ٱلۡإِنسَٰنُ إِنَّكَ كَادِحٌ إِلَىٰ رَبِّكَ كَدۡحٗا فَمُلَٰقِيهِ")
-                    Text("But it names its Author and its purpose: a test set by a merciful Creator, ending in a meeting with Him (Quran 67:2, quoted below).")
-                        .font(.body)
-
-                    Text("**Tanha**: craving or thirst, the root of suffering in Buddhist teaching. Islam does not command the extinction of desire but its direction: the believer desires Allah, His pleasure, and Paradise more than the world, and enjoys the world within His limits (Quran 7:32, quoted below).")
-                        .font(.body)
-
-                    Text("**Anatta**: “no-self”; the teaching that there is no permanent soul, only a passing bundle of processes. **Anicca**: impermanence, the passing of all things. Islam affirms the second and denies the first: everything created passes, but the soul is real, created, accountable, and will return to its Lord (Quran 17:85; see the questions below).")
-                        .font(.body)
-
-                    Text("**Karma** and **rebirth**: deeds shaping the next existence, in an endless cycle across human, animal, and celestial births, until release. Islam teaches one life, one death, one resurrection, and one judgement by a Lord who knows, not by an impersonal law (Quran 23:99-100, quoted below).")
-                        .font(.body)
-
-                    Text("**Nirvana**: literally “blowing out,” as of a flame; the extinction of craving and of the cycle of rebirth, described in negatives and said to be beyond description. Islam’s goal is the opposite of extinction: a real Paradise for a real person, in the presence of the Lord who made him.")
-                        .font(.body)
-
-                    Text("**Theravada, Mahayana, Vajrayana**: the three great branches. Theravada (“the way of the elders”), in Sri Lanka and Southeast Asia, keeps to the Pali canon and the ideal of the monk. Mahayana (“the great vehicle”), in East Asia, added many scriptures, celestial Buddhas, and the bodhisattva ideal. Vajrayana (“the diamond vehicle”), in Tibet and Mongolia, added tantric rites, mantras, and lamas. In all three, bowing before images, offerings, and appeals to Buddhas or bodhisattvas are part of ordinary devotion, though Buddhists usually call this veneration rather than the worship of a god; and none of it is directed to a Creator.")
-                        .font(.body)
-
-                    Text("**Bodhisattva**: in Mahayana, a being who has reached the threshold of nirvana but stays to help others, and who is prayed to for aid, such as Avalokiteshvara, who is called Guanyin in East Asia. Prayer to any being other than Allah is shirk, however compassionate that being is held to be (Quran 10:18; 39:3).")
-                        .font(.body)
-
-                    Text("**Meditation**: in Buddhism, the disciplined stilling and observation of the mind, sometimes with mantras or visualisation, aimed at insight and release. Islam has its own disciplines of the heart, reflection and remembrance, with Allah as their object (see the questions below).")
-                        .font(.body)
-
-                    Text("**Monasticism**: the celibate, propertyless life of the monk, the highest calling in Buddhism. Islam says of the monasticism of the Christians:")
-                        .font(.body)
-                    ScriptureQuote(text: "“And We placed in the hearts of those who followed him compassion and mercy and monasticism, which they innovated; We did not prescribe it for them except [that they did so] seeking the approval of Allah. But they did not observe it with due observance” (Quran 57:27).", arabic: "وَجَعَلۡنَا فِي قُلُوبِ ٱلَّذِينَ ٱتَّبَعُوهُ رَأۡفَةٗ وَرَحۡمَةٗۚ وَرَهۡبَانِيَّةً ٱبۡتَدَعُوهَا مَا كَتَبۡنَٰهَا عَلَيۡهِمۡ إِلَّا ٱبۡتِغَآءَ رِضۡوَٰنِ ٱللَّهِ فَمَا رَعَوۡهَا حَقَّ رِعَايَتِهَاۖ")
-
-                    Text("**Khaliq (الخَالِق)**: the Creator, from khalaqa, to bring into being by measure. This is the name Buddhism leaves out and the Quran begins with:")
-                        .font(.body)
-                    ScriptureQuote(text: "“He is Allah, the Creator, the Inventor, the Fashioner; to Him belong the best names. Whatever is in the heavens and earth is exalting Him. And He is the Exalted in Might, the Wise” (Quran 59:24).", arabic: "هُوَ ٱللَّهُ ٱلۡخَٰلِقُ ٱلۡبَارِئُ ٱلۡمُصَوِّرُۖ لَهُ ٱلۡأَسۡمَآءُ ٱلۡحُسۡنَىٰۚ يُسَبِّحُ لَهُۥ مَا فِي ٱلسَّمَٰوَٰتِ وَٱلۡأَرۡضِۖ وَهُوَ ٱلۡعَزِيزُ ٱلۡحَكِيمُ")
-
-                    Text("**Qadar (قَدَر)**: from qaddara, to measure out; Allah’s decree of all things by His knowledge and will, the Islamic answer to karma. What befalls a person is measured by a Lord who knows him, not by a ledger of past lives:")
-                        .font(.body)
-                    ScriptureQuote(text: "“Indeed, all things We created with predestination” (Quran 54:49).", arabic: "إِنَّا كُلَّ شَيۡءٍ خَلَقۡنَٰهُ بِقَدَرٖ")
-
-                    Text("**Ruh (رُوح)**: the soul, which Allah breathes into each person and takes at death; real, single, and known to its Maker, though its nature is hidden from us (Quran 17:85, quoted below).")
-                        .font(.body)
-
-                    Text("**Sabr (صَبْر)**: patience, from sabara, to hold firm; the believer’s response to dukkha, which Islam makes a source of reward rather than an occasion for escape:")
-                        .font(.body)
-                    ScriptureQuote(text: "“O you who have believed, seek help through patience and prayer. Indeed, Allah is with the patient” (Quran 2:153).", arabic: "يَٰٓأَيُّهَا ٱلَّذِينَ ءَامَنُواْ ٱسۡتَعِينُواْ بِٱلصَّبۡرِ وَٱلصَّلَوٰةِۚ إِنَّ ٱللَّهَ مَعَ ٱلصَّٰبِرِينَ")
-                    ScriptureQuote(text: "“Indeed, the patient will be given their reward without account” (Quran 39:10).", arabic: "إِنَّمَا يُوَفَّى ٱلصَّٰبِرُونَ أَجۡرَهُم بِغَيۡرِ حِسَابٖ")
-
-                    Text("**Tafakkur (تَفَكُّر)**: reflection, from fakkara, to think; the Muslim’s contemplation, whose object is not emptiness but the signs of the Creator:")
-                        .font(.body)
-                    ScriptureQuote(text: "“Who remember Allah while standing or sitting or [lying] on their sides and give thought to the creation of the heavens and the earth, [saying], ‘Our Lord, You did not create this aimlessly’” (Quran 3:191).", arabic: "ٱلَّذِينَ يَذۡكُرُونَ ٱللَّهَ قِيَٰمٗا وَقُعُودٗا وَعَلَىٰ جُنُوبِهِمۡ وَيَتَفَكَّرُونَ فِي خَلۡقِ ٱلسَّمَٰوَٰتِ وَٱلۡأَرۡضِ رَبَّنَا مَا خَلَقۡتَ هَٰذَا بَٰطِلٗا")
-
-                    Text("**Dhikr (ذِكْر)**: remembrance of Allah with the tongue and the heart, in the words He and His Messenger taught; it is what gives the heart the peace that meditation seeks:")
-                        .font(.body)
-                    ScriptureQuote(text: "“Those who have believed and whose hearts are assured by the remembrance of Allah. Unquestionably, by the remembrance of Allah hearts are assured” (Quran 13:28).", arabic: "ٱلَّذِينَ ءَامَنُواْ وَتَطۡمَئِنُّ قُلُوبُهُم بِذِكۡرِ ٱللَّهِۗ أَلَا بِذِكۡرِ ٱللَّهِ تَطۡمَئِنُّ ٱلۡقُلُوبُ")
-                    ScriptureQuote(text: "“O you who have believed, remember Allah with much remembrance” (Quran 33:41).", arabic: "يَٰٓأَيُّهَا ٱلَّذِينَ ءَامَنُواْ ٱذۡكُرُواْ ٱللَّهَ ذِكۡرٗا كَثِيرٗا")
-
-                    Text("**Rahbaniyyah (رَهْبَانِيَّة)**: monasticism, from rahiba, to fear; the withdrawal from marriage and the world that the Quran describes as a human invention (Quran 57:27, above) and that the Prophet (peace be upon him) refused for his Ummah (Sahih al-Bukhari 5063, quoted below).")
                         .font(.body)
                 }
 
@@ -2074,10 +2004,10 @@ struct BuddhismAnswerView: View {
 
                     Text("**Is meditation allowed?**")
                         .font(.body)
-                    Text("Reflection and remembrance are commanded. The believers are those who “give thought to the creation of the heavens and the earth” (Quran 3:191, quoted above), and Allah asks:")
+                    Text("Reflection and remembrance are commanded. The believers are those who “give thought to the creation of the heavens and the earth” (Quran 3:191, quoted below), and Allah asks:")
                         .font(.body)
                     ScriptureQuote(text: "“Do they not contemplate within themselves? Allah has not created the heavens and the earth and what is between them except in truth and for a specified term” (Quran 30:8).", arabic: "أَوَلَمۡ يَتَفَكَّرُواْ فِيٓ أَنفُسِهِمۗ مَّا خَلَقَ ٱللَّهُ ٱلسَّمَٰوَٰتِ وَٱلۡأَرۡضَ وَمَا بَيۡنَهُمَآ إِلَّا بِٱلۡحَقِّ وَأَجَلٖ مُّسَمّٗىۗ")
-                    Text("The heart finds its rest in dhikr (Quran 13:28), and the Prophet (peace be upon him) himself withdrew to reflect and worship before revelation came. Aishah (may Allah be pleased with her) said:")
+                    Text("The heart finds its rest in dhikr (ذِكر, the remembrance of Allah) (Quran 13:28), and the Prophet (peace be upon him) himself withdrew to reflect and worship before revelation came. Aishah (may Allah be pleased with her) said:")
                         .font(.body)
                     ScriptureQuote(text: "“Then the love of seclusion was bestowed upon him. He used to go in seclusion in the cave of Hira where he used to worship (Allah alone) continuously for many days before his desire to see his family” (Sahih al-Bukhari 3).", arabic: "ثُمَّ حُبِّبَ إِلَيْهِ الْخَلاَءُ، وَكَانَ يَخْلُو بِغَارِ حِرَاءٍ فَيَتَحَنَّثُ فِيهِ ـ وَهُوَ التَّعَبُّدُ ـ اللَّيَالِيَ ذَوَاتِ الْعَدَدِ قَبْلَ أَنْ يَنْزِعَ إِلَى أَهْلِهِ", dimmed: true)
                     Text("What is not allowed is Buddhist meditation as such: chanting mantras, visualising Buddhas, emptying the self to realise “no-self,” or sitting before a statue in a posture of devotion. Islamic reflection has an object, Allah and His signs; it fills the heart rather than emptying it. The prayer itself, with its stillness, its recitation, and its prostration, is the Muslim’s daily discipline of the mind, and the Sunnah retreat (i‘tikaf) in the mosque is his seclusion.")
@@ -2097,7 +2027,7 @@ struct BuddhismAnswerView: View {
 
                     Text("**Karma or qadar?**")
                         .font(.body)
-                    Text("Both say deeds have consequences. The difference is who keeps the account. In Islam it is a Lord who sees:")
+                    Text("**Qadar (قَدَر)**, from ق-د-ر, to measure out, is Allah’s decree: His knowledge, His writing, His will, and His creating of all that is. Both qadar and karma say deeds have consequences. The difference is who keeps the account. In Islam it is a Lord who sees:")
                         .font(.body)
                     ScriptureQuote(text: "“So whoever does an atom's weight of good will see it, and whoever does an atom's weight of evil will see it” (Quran 99:7-8).", arabic: "فَمَن يَعۡمَلۡ مِثۡقَالَ ذَرَّةٍ خَيۡرٗا يَرَهُۥ ۝ وَمَن يَعۡمَلۡ مِثۡقَالَ ذَرَّةٖ شَرّٗا يَرَهُۥ")
                     ScriptureQuote(text: "“Indeed, Allah does not do injustice, [even] as much as an atom's weight; while if there is a good deed, He multiplies it and gives from Himself a great reward” (Quran 4:40).", arabic: "إِنَّ ٱللَّهَ لَا يَظۡلِمُ مِثۡقَالَ ذَرَّةٖۖ وَإِن تَكُ حَسَنَةٗ يُضَٰعِفۡهَا وَيُؤۡتِ مِن لَّدُنۡهُ أَجۡرًا عَظِيمٗا")
@@ -2159,7 +2089,7 @@ struct BuddhismAnswerView: View {
 
                     Text("**Is monasticism praiseworthy?**")
                         .font(.body)
-                    Text("No. Allah called it something people invented and then failed to keep (Quran 57:27, quoted above), and the Prophet (peace be upon him) said that whoever turns away from his Sunnah of marrying, sleeping, and eating is not of him (Sahih al-Bukhari 5063, quoted above). Sa‘d ibn Abi Waqqas (may Allah be pleased with him) said:")
+                    Text("No. Allah called it something people invented and then failed to keep (Quran 57:27, quoted below), and the Prophet (peace be upon him) said that whoever turns away from his Sunnah of marrying, sleeping, and eating is not of him (Sahih al-Bukhari 5063, quoted below). Sa‘d ibn Abi Waqqas (may Allah be pleased with him) said:")
                         .font(.body)
                     ScriptureQuote(text: "“Allah’s Messenger (peace be upon him) forbade ‘Uthman bin Maz‘un to abstain from marrying, and if he had allowed him, we would have gotten ourselves castrated” (Sahih al-Bukhari 5073).", arabic: "رَدَّ رَسُولُ اللَّهِ صلى الله عليه وسلم عَلَى عُثْمَانَ بْنِ مَظْعُونٍ التَّبَتُّلَ، وَلَوْ أَذِنَ لَهُ لاَخْتَصَيْنَا", dimmed: true)
                     Text("The Muslim’s asceticism (zuhd) is in the heart, not in the abandonment of duties: he marries, earns, raises children, serves his neighbours, and fights injustice, and in the midst of all that he keeps his heart for Allah and seeks the Hereafter without forgetting his share of the world (Quran 28:77, above). The Companions were traders, farmers, soldiers, and fathers, and they were the best of this Ummah.")
@@ -2199,6 +2129,77 @@ struct BuddhismAnswerView: View {
                     Text("Buddhism describes suffering and denies the Creator; Islam names the Creator and gives suffering its meaning. There is one life, one soul, one Judge, and one road: worship Allah, be patient, and hope for His mercy.")
                         .font(.body)
                 }
+
+                Section(header: Text("KEY TERMS")) {
+                    Text("**Buddha**: Sanskrit for “the awakened one,” a title, not a name. It was taken by Siddhartha Gautama, a prince of the Shakya clan born at Lumbini at the foot of the Himalayas, who lived in northern India around the fifth century BCE (the traditional and the modern datings differ by some decades), left his palace and family in search of the end of suffering, and taught for the rest of his life. Buddhists hold that there were Buddhas before him and will be after him. Islam does not know whether any messenger of Allah was sent to that land in that age (Quran 40:78; see the questions below).")
+                        .font(.body)
+
+                    Text("**Dharma (Pali: dhamma)**: “the teaching,” the Buddha’s doctrine, and also the law of things. With **sangha**, the community of monks and nuns, and the Buddha himself, it forms the “three jewels” in which a Buddhist “takes refuge.” The Muslim takes refuge in Allah alone, and his religion is what Allah revealed, not what a man discovered.")
+                        .font(.body)
+
+                    Text("**The Four Noble Truths**: that life is suffering (dukkha); that suffering arises from craving (tanha); that it ceases when craving ceases; and that the way to that cessation is the Eightfold Path. **The Eightfold Path**: right view, right intention, right speech, right action, right livelihood, right effort, right mindfulness, and right concentration. Much of this is sound conduct that Islam also commands; what is missing is the One who commands it and the One to whom the path leads.")
+                        .font(.body)
+
+                    Text("**Dukkha**: suffering, unsatisfactoriness, the ache of existence. The Quran does not deny it:")
+                        .font(.body)
+                    ScriptureQuote(text: "“We have certainly created man into hardship” (Quran 90:4).", arabic: "لَقَدۡ خَلَقۡنَا ٱلۡإِنسَٰنَ فِي كَبَدٍ")
+                    ScriptureQuote(text: "“O mankind, indeed you are laboring toward your Lord with [great] exertion and will meet it” (Quran 84:6).", arabic: "يَٰٓأَيُّهَا ٱلۡإِنسَٰنُ إِنَّكَ كَادِحٌ إِلَىٰ رَبِّكَ كَدۡحٗا فَمُلَٰقِيهِ")
+                    Text("But it names its Author and its purpose: a test set by a merciful Creator, ending in a meeting with Him (Quran 67:2, quoted above).")
+                        .font(.body)
+
+                    Text("**Tanha**: craving or thirst, the root of suffering in Buddhist teaching. Islam does not command the extinction of desire but its direction: the believer desires Allah, His pleasure, and Paradise more than the world, and enjoys the world within His limits (Quran 7:32, quoted above).")
+                        .font(.body)
+
+                    Text("**Anatta**: “no-self”; the teaching that there is no permanent soul, only a passing bundle of processes. **Anicca**: impermanence, the passing of all things. Islam affirms the second and denies the first: everything created passes, but the soul is real, created, accountable, and will return to its Lord (Quran 17:85; see the questions below).")
+                        .font(.body)
+
+                    Text("**Karma** and **rebirth**: deeds shaping the next existence, in an endless cycle across human, animal, and celestial births, until release. Islam teaches one life, one death, one resurrection, and one judgement by a Lord who knows, not by an impersonal law (Quran 23:99-100, quoted above).")
+                        .font(.body)
+
+                    Text("**Nirvana**: literally “blowing out,” as of a flame; the extinction of craving and of the cycle of rebirth, described in negatives and said to be beyond description. Islam’s goal is the opposite of extinction: a real Paradise for a real person, in the presence of the Lord who made him.")
+                        .font(.body)
+
+                    Text("**Theravada, Mahayana, Vajrayana**: the three great branches. Theravada (“the way of the elders”), in Sri Lanka and Southeast Asia, keeps to the Pali canon and the ideal of the monk. Mahayana (“the great vehicle”), in East Asia, added many scriptures, celestial Buddhas, and the bodhisattva ideal. Vajrayana (“the diamond vehicle”), in Tibet and Mongolia, added tantric rites, mantras, and lamas. In all three, bowing before images, offerings, and appeals to Buddhas or bodhisattvas are part of ordinary devotion, though Buddhists usually call this veneration rather than the worship of a god; and none of it is directed to a Creator.")
+                        .font(.body)
+
+                    Text("**Bodhisattva**: in Mahayana, a being who has reached the threshold of nirvana but stays to help others, and who is prayed to for aid, such as Avalokiteshvara, who is called Guanyin in East Asia. Prayer to any being other than Allah is shirk, however compassionate that being is held to be (Quran 10:18; 39:3).")
+                        .font(.body)
+
+                    Text("**Meditation**: in Buddhism, the disciplined stilling and observation of the mind, sometimes with mantras or visualisation, aimed at insight and release. Islam has its own disciplines of the heart, reflection and remembrance, with Allah as their object (see the questions below).")
+                        .font(.body)
+
+                    Text("**Monasticism**: the celibate, propertyless life of the monk, the highest calling in Buddhism. Islam says of the monasticism of the Christians:")
+                        .font(.body)
+                    ScriptureQuote(text: "“And We placed in the hearts of those who followed him compassion and mercy and monasticism, which they innovated; We did not prescribe it for them except [that they did so] seeking the approval of Allah. But they did not observe it with due observance” (Quran 57:27).", arabic: "وَجَعَلۡنَا فِي قُلُوبِ ٱلَّذِينَ ٱتَّبَعُوهُ رَأۡفَةٗ وَرَحۡمَةٗۚ وَرَهۡبَانِيَّةً ٱبۡتَدَعُوهَا مَا كَتَبۡنَٰهَا عَلَيۡهِمۡ إِلَّا ٱبۡتِغَآءَ رِضۡوَٰنِ ٱللَّهِ فَمَا رَعَوۡهَا حَقَّ رِعَايَتِهَاۖ")
+
+                    Text("**Khaliq (الخَالِق)**: the Creator, from khalaqa, to bring into being by measure. This is the name Buddhism leaves out and the Quran begins with:")
+                        .font(.body)
+                    ScriptureQuote(text: "“He is Allah, the Creator, the Inventor, the Fashioner; to Him belong the best names. Whatever is in the heavens and earth is exalting Him. And He is the Exalted in Might, the Wise” (Quran 59:24).", arabic: "هُوَ ٱللَّهُ ٱلۡخَٰلِقُ ٱلۡبَارِئُ ٱلۡمُصَوِّرُۖ لَهُ ٱلۡأَسۡمَآءُ ٱلۡحُسۡنَىٰۚ يُسَبِّحُ لَهُۥ مَا فِي ٱلسَّمَٰوَٰتِ وَٱلۡأَرۡضِۖ وَهُوَ ٱلۡعَزِيزُ ٱلۡحَكِيمُ")
+
+                    Text("**Qadar (قَدَر)**: from qaddara, to measure out; Allah’s decree of all things by His knowledge and will, the Islamic answer to karma. What befalls a person is measured by a Lord who knows him, not by a ledger of past lives:")
+                        .font(.body)
+                    ScriptureQuote(text: "“Indeed, all things We created with predestination” (Quran 54:49).", arabic: "إِنَّا كُلَّ شَيۡءٍ خَلَقۡنَٰهُ بِقَدَرٖ")
+
+                    Text("**Ruh (رُوح)**: the soul, which Allah breathes into each person and takes at death; real, single, and known to its Maker, though its nature is hidden from us (Quran 17:85, quoted above).")
+                        .font(.body)
+
+                    Text("**Sabr (صَبْر)**: patience, from sabara, to hold firm; the believer’s response to dukkha, which Islam makes a source of reward rather than an occasion for escape:")
+                        .font(.body)
+                    ScriptureQuote(text: "“O you who have believed, seek help through patience and prayer. Indeed, Allah is with the patient” (Quran 2:153).", arabic: "يَٰٓأَيُّهَا ٱلَّذِينَ ءَامَنُواْ ٱسۡتَعِينُواْ بِٱلصَّبۡرِ وَٱلصَّلَوٰةِۚ إِنَّ ٱللَّهَ مَعَ ٱلصَّٰبِرِينَ")
+                    ScriptureQuote(text: "“Indeed, the patient will be given their reward without account” (Quran 39:10).", arabic: "إِنَّمَا يُوَفَّى ٱلصَّٰبِرُونَ أَجۡرَهُم بِغَيۡرِ حِسَابٖ")
+
+                    Text("**Tafakkur (تَفَكُّر)**: reflection, from fakkara, to think; the Muslim’s contemplation, whose object is not emptiness but the signs of the Creator:")
+                        .font(.body)
+                    ScriptureQuote(text: "“Who remember Allah while standing or sitting or [lying] on their sides and give thought to the creation of the heavens and the earth, [saying], ‘Our Lord, You did not create this aimlessly’” (Quran 3:191).", arabic: "ٱلَّذِينَ يَذۡكُرُونَ ٱللَّهَ قِيَٰمٗا وَقُعُودٗا وَعَلَىٰ جُنُوبِهِمۡ وَيَتَفَكَّرُونَ فِي خَلۡقِ ٱلسَّمَٰوَٰتِ وَٱلۡأَرۡضِ رَبَّنَا مَا خَلَقۡتَ هَٰذَا بَٰطِلٗا")
+
+                    Text("**Dhikr (ذِكْر)**: remembrance of Allah with the tongue and the heart, in the words He and His Messenger taught; it is what gives the heart the peace that meditation seeks:")
+                        .font(.body)
+                    ScriptureQuote(text: "“Those who have believed and whose hearts are assured by the remembrance of Allah. Unquestionably, by the remembrance of Allah hearts are assured” (Quran 13:28).", arabic: "ٱلَّذِينَ ءَامَنُواْ وَتَطۡمَئِنُّ قُلُوبُهُم بِذِكۡرِ ٱللَّهِۗ أَلَا بِذِكۡرِ ٱللَّهِ تَطۡمَئِنُّ ٱلۡقُلُوبُ")
+                    ScriptureQuote(text: "“O you who have believed, remember Allah with much remembrance” (Quran 33:41).", arabic: "يَٰٓأَيُّهَا ٱلَّذِينَ ءَامَنُواْ ٱذۡكُرُواْ ٱللَّهَ ذِكۡرٗا كَثِيرٗا")
+
+                    Text("**Rahbaniyyah (رَهْبَانِيَّة)**: monasticism, from rahiba, to fear; the withdrawal from marriage and the world that the Quran describes as a human invention (Quran 57:27, above) and that the Prophet (peace be upon him) refused for his Ummah (Sahih al-Bukhari 5063, quoted above).")
+                        .font(.body)
+                }
             }
             .themedListRowBackground()
         }
@@ -2225,69 +2226,6 @@ struct AtheismAnswerView: View {
 
                     Text("Notice the verdict: “they are only assuming.“ Atheism is not the result of knowledge; it is a claim that cannot be proved, since to know there is no God one would have to know everything.")
                         .font(.body)
-                }
-
-                Section(header: Text("KEY TERMS")) {
-                    Text("**Atheism / ilhad (إِلْحَاد)**: from lahada, to deviate or lean away; the lahd is the niche in a grave that is cut sideways, away from the straight shaft. Ilhad is thus any leaning away from the truth, and the **mulhid (مُلْحِد)** in later usage is the one who denies the Creator altogether. The Quran uses the root for those who twist Allah’s names and His verses:")
-                        .font(.body)
-                    ScriptureQuote(text: "“And to Allah belong the best names, so invoke Him by them. And leave [the company of] those who practice deviation concerning His names. They will be recompensed for what they have been doing” (Quran 7:180).", arabic: "وَلِلَّهِ ٱلۡأَسۡمَآءُ ٱلۡحُسۡنَىٰ فَٱدۡعُوهُ بِهَاۖ وَذَرُواْ ٱلَّذِينَ يُلۡحِدُونَ فِيٓ أَسۡمَٰٓئِهِۦۚ سَيُجۡزَوۡنَ مَا كَانُواْ يَعۡمَلُونَ")
-                    ScriptureQuote(text: "“Indeed, those who inject deviation into Our verses are not concealed from Us” (Quran 41:40).", arabic: "إِنَّ ٱلَّذِينَ يُلۡحِدُونَ فِيٓ ءَايَٰتِنَا لَا يَخۡفَوۡنَ عَلَيۡنَآۗ")
-
-                    Text("**Dahriyyah (الدَّهْرِيَّة)**: from dahr, time; the ancient materialists who held that the world has no beginning and no Judge, only time that wears everything away. The Quran quoted them (Quran 45:24, above), and Ibn Hazm (may Allah have mercy on him) refuted those who say the world is eternal in the opening chapters of al-Fisal fi al-Milal. Since the pagan Arabs blamed “time” for every loss, the Prophet (peace be upon him) taught:")
-                        .font(.body)
-                    ScriptureQuote(text: "“Do not curse Time, for it is Allah Who is Time” (Sahih Muslim 2246).", arabic: "لاَ تَسُبُّوا الدَّهْرَ فَإِنَّ اللَّهَ هُوَ الدَّهْرُ", dimmed: true)
-                    Text("That is, what they call time is Allah’s disposal of affairs: “in My Hands are all things, and I cause the revolution of day and night” (Sahih al-Bukhari 4826).")
-                        .font(.body)
-
-                    Text("**Agnosticism**: from the Greek for “not knowing”; the claim that whether God exists cannot be known. The messengers answered it with a question of their own, “Can there be doubt about Allah, Creator of the heavens and earth?” (Quran 14:10, quoted in the questions below).")
-                        .font(.body)
-
-                    Text("**Naturalism / materialism**: the belief that matter and its laws are all there is, that the universe caused itself or has no cause, and that mind, purpose, and morality are by-products of matter. The Quran’s three-fold question (Quran 52:35-36, quoted below) is aimed exactly here: created by nothing, self-created, or created by another?")
-                        .font(.body)
-
-                    Text("**Scientism**: the belief that the methods of natural science are the only road to knowledge, so that whatever they cannot measure does not exist. The Quran honours knowledge and observation, and describes the limit of a knowledge that stops at the surface:")
-                        .font(.body)
-                    ScriptureQuote(text: "“They know what is apparent of the worldly life, but they, of the Hereafter, are unaware” (Quran 30:7).", arabic: "يَعۡلَمُونَ ظَٰهِرٗا مِّنَ ٱلۡحَيَوٰةِ ٱلدُّنۡيَا وَهُمۡ عَنِ ٱلۡأٓخِرَةِ هُمۡ غَٰفِلُونَ")
-                    ScriptureQuote(text: "“And they have thereof no knowledge. They follow not except assumption, and indeed, assumption avails not against the truth at all” (Quran 53:28).", arabic: "وَمَا لَهُم بِهِۦ مِنۡ عِلۡمٍۖ إِن يَتَّبِعُونَ إِلَّا ٱلظَّنَّۖ وَإِنَّ ٱلظَّنَّ لَا يُغۡنِي مِنَ ٱلۡحَقِّ شَيۡـٔٗا")
-
-                    Text("**Secularism**: the confining of religion to private belief, with life, law, and learning conducted as if there were no God. Islam knows no such division; the whole of a life is offered to its Maker:")
-                        .font(.body)
-                    ScriptureQuote(text: "“Say, ‘Indeed, my prayer, my rites of sacrifice, my living and my dying are for Allah, Lord of the worlds’” (Quran 6:162).", arabic: "قُلۡ إِنَّ صَلَاتِي وَنُسُكِي وَمَحۡيَايَ وَمَمَاتِي لِلَّهِ رَبِّ ٱلۡعَٰلَمِينَ")
-
-                    Text("**Humanism**: the creed that makes man the measure of all things and the source of his own values. The Quran’s diagnosis of it is a single sentence:")
-                        .font(.body)
-                    ScriptureQuote(text: "“No! [But] indeed, man transgresses because he sees himself self-sufficient” (Quran 96:6-7).", arabic: "كـَلَّآ إِنَّ ٱلۡإِنسَٰنَ لَيَطۡغَىٰٓ ۝ أَن رَّءَاهُ ٱسۡتَغۡنَىٰٓ")
-                    ScriptureQuote(text: "“O mankind, you are those in need of Allah, while Allah is the Free of need, the Praiseworthy” (Quran 35:15).", arabic: "يَٰٓأَيُّهَا ٱلنَّاسُ أَنتُمُ ٱلۡفُقَرَآءُ إِلَى ٱللَّهِۖ وَٱللَّهُ هُوَ ٱلۡغَنِيُّ ٱلۡحَمِيدُ")
-
-                    Text("**Nihilism**: from the Latin nihil, nothing; the conclusion, drawn honestly by some atheists and resisted by others, that life has no meaning, value, or purpose. The Quran names the alternative:")
-                        .font(.body)
-                    ScriptureQuote(text: "“Then did you think that We created you uselessly and that to Us you would not be returned?” (Quran 23:115).", arabic: "أَفَحَسِبۡتُمۡ أَنَّمَا خَلَقۡنَٰكُمۡ عَبَثٗا وَأَنَّكُمۡ إِلَيۡنَا لَا تُرۡجَعُونَ")
-
-                    Text("**Deism**: belief in a Creator who made the world and then left it to run by itself, sending no revelation and hearing no prayer. The Quran describes a Lord who is never absent from His creation:")
-                        .font(.body)
-                    ScriptureQuote(text: "“Whoever is within the heavens and earth asks Him; every day He is bringing about a matter” (Quran 55:29).", arabic: "يَسۡـَٔلُهُۥ مَن فِي ٱلسَّمَٰوَٰتِ وَٱلۡأَرۡضِۚ كُلَّ يَوۡمٍ هُوَ فِي شَأۡنٖ")
-                    ScriptureQuote(text: "“Indeed, Allah holds the heavens and the earth, lest they cease. And if they should cease, no one could hold them [in place] after Him” (Quran 35:41).", arabic: "إِنَّ ٱللَّهَ يُمۡسِكُ ٱلسَّمَٰوَٰتِ وَٱلۡأَرۡضَ أَن تَزُولَاۚ وَلَئِن زَالَتَآ إِنۡ أَمۡسَكَهُمَا مِنۡ أَحَدٖ مِّنۢ بَعۡدِهِۦٓۚ")
-
-                    Text("**The fitrah (الفِطْرَة)**: the innate disposition on which every human is born, which knows its Maker before any teaching (Quran 30:30; Sahih al-Bukhari 1385, both quoted below). Ibn Taymiyyah (may Allah have mercy on him) held that the affirmation of the Creator is settled in the fitrah of every person whose nature is sound, and that proofs are needed only to remove what has been laid over it (Dar’ Ta‘arud al-‘Aql wan-Naql).")
-                        .font(.body)
-
-                    Text("**The argument from creation**: whatever begins to exist has a cause other than itself; the universe began; therefore it has a Cause that did not begin. This is the argument of Surat at-Tur (Quran 52:35-36, quoted below), and Ibn Kathir (may Allah have mercy on him) notes in his tafsir that the verse is a step-by-step proof: they were not brought into being without a maker, and they did not bring themselves into being, so it is Allah who created them.")
-                        .font(.body)
-
-                    Text("**The argument from design**: order, fine-tuning, and law point to a Designer; a text points to an author, and the universe is a text without a misprint (Quran 67:3-4 and 88:17-20, both quoted below). Ibn al-Qayyim (may Allah have mercy on him) filled much of Miftah Dar as-Sa‘adah with the signs of wisdom in the creatures, from the human body to the birds and the bees, as proofs of their Maker.")
-                        .font(.body)
-
-                    Text("**The argument from the fitrah**: belief in a Creator is universal, spontaneous, and returns under pressure (Quran 29:65, quoted below); it is the atheism that must be learned and maintained.")
-                        .font(.body)
-
-                    Text("**Contingency**: everything we observe depends on something else for its existence and could have been otherwise; a chain of dependent things cannot hold itself up, and must rest on One who is independent, necessary, and self-sufficient. That is the meaning of as-Samad in Surat al-Ikhlas, which Ibn Abbas (may Allah be pleased with him) explained as the Master to whom all creation turns in its needs (Tafsir Ibn Kathir):")
-                        .font(.body)
-                    ScriptureQuote(text: "“Allah, the Eternal Refuge” (Quran 112:2).", arabic: "ٱللَّهُ ٱلصَّمَدُ")
-
-                    Text("**The Quranic challenge (التَّحَدِّي)**: the Quran’s standing proof of its origin, an open challenge to produce anything like it, never met in fourteen centuries:")
-                        .font(.body)
-                    ScriptureQuote(text: "“And if you are in doubt about what We have sent down upon Our Servant [Muhammad], then produce a surah the like thereof and call upon your witnesses other than Allah, if you should be truthful” (Quran 2:23).", arabic: "وَإِن كُنتُمۡ فِي رَيۡبٖ مِّمَّا نَزَّلۡنَا عَلَىٰ عَبۡدِنَا فَأۡتُواْ بِسُورَةٖ مِّن مِّثۡلِهِۦ وَٱدۡعُواْ شُهَدَآءَكُم مِّن دُونِ ٱللَّهِ إِن كُنتُمۡ صَٰدِقِينَ")
-                    ScriptureQuote(text: "“Say, ‘If mankind and the jinn gathered in order to produce the like of this Qur'an, they could not produce the like of it, even if they were to each other assistants’” (Quran 17:88).", arabic: "قُل لَّئِنِ ٱجۡتَمَعَتِ ٱلۡإِنسُ وَٱلۡجِنُّ عَلَىٰٓ أَن يَأۡتُواْ بِمِثۡلِ هَٰذَا ٱلۡقُرۡءَانِ لَا يَأۡتُونَ بِمِثۡلِهِۦ وَلَوۡ كَانَ بَعۡضُهُمۡ لِبَعۡضٖ ظَهِيرٗا")
                 }
 
                 Section(header: Text("1. THE ARGUMENT THAT SHOOK A HEART")) {
@@ -2318,7 +2256,7 @@ struct AtheismAnswerView: View {
                 }
 
                 Section(header: Text("3. THE FITRAH")) {
-                    Text("Belief in a Creator is not taught; it is born in every human being, and atheism is what has to be taught over it:")
+                    Text("The **fitrah (فِطرَة)**, from ف-ط-ر, to originate or split something open anew, is the disposition Allah created every human upon. Belief in a Creator is not taught; it is born in every human being, and atheism is what has to be taught over it:")
                         .font(.body)
                     ScriptureQuote(text: "“So direct your face toward the religion, inclining to truth. [Adhere to] the fitrah of Allah upon which He has created [all] people. No change should there be in the creation of Allah. That is the correct religion, but most of the people do not know” (Quran 30:30).", arabic: "فَأَقِمۡ وَجۡهَكَ لِلدِّينِ حَنِيفٗاۚ فِطۡرَتَ ٱللَّهِ ٱلَّتِي فَطَرَ ٱلنَّاسَ عَلَيۡهَاۚ لَا تَبۡدِيلَ لِخَلۡقِ ٱللَّهِۚ ذَٰلِكَ ٱلدِّينُ ٱلۡقَيِّمُ وَلَٰكِنَّ أَكۡثَرَ ٱلنَّاسِ لَا يَعۡلَمُونَ")
 
@@ -2438,7 +2376,7 @@ struct AtheismAnswerView: View {
                         .font(.body)
                     ScriptureQuote(text: "“Indeed, the religion in the sight of Allah is Islam. And those who were given the Scripture did not differ except after knowledge had come to them - out of jealous animosity between themselves” (Quran 3:19).", arabic: "إِنَّ ٱلدِّينَ عِندَ ٱللَّهِ ٱلۡإِسۡلَٰمُۗ وَمَا ٱخۡتَلَفَ ٱلَّذِينَ أُوتُواْ ٱلۡكِتَٰبَ إِلَّا مِنۢ بَعۡدِ مَا جَآءَهُمُ ٱلۡعِلۡمُ بَغۡيَۢا بَيۡنَهُمۡۗ")
                     ScriptureQuote(text: "“And whoever desires other than Islam as religion - never will it be accepted from him, and he, in the Hereafter, will be among the losers” (Quran 3:85).", arabic: "وَمَن يَبۡتَغِ غَيۡرَ ٱلۡإِسۡلَٰمِ دِينٗا فَلَن يُقۡبَلَ مِنۡهُ وَهُوَ فِي ٱلۡأٓخِرَةِ مِنَ ٱلۡخَٰسِرِينَ")
-                    Text("The Quran is the criterion over what came before (Quran 5:48), and it stands apart from every other scripture in two ways that can be tested: it was preserved word for word, as Allah promised, and it has never been matched, as Allah challenged (Quran 2:23; 17:88, quoted above):")
+                    Text("The Quran is the criterion over what came before (Quran 5:48), and it stands apart from every other scripture in two ways that can be tested: it was preserved word for word, as Allah promised, and it has never been matched, as Allah challenged (Quran 2:23; 17:88, quoted below):")
                         .font(.body)
                     ScriptureQuote(text: "“Indeed, it is We who sent down the Qur'an and indeed, We will be its guardian” (Quran 15:9).", arabic: "إِنَّا نَحۡنُ نَزَّلۡنَا ٱلذِّكۡرَ وَإِنَّا لَهُۥ لَحَٰفِظُونَ")
                     Text("The man-made is many and contradictory; the revealed is one, and the differences between religions are the measure of how far men have drifted from it.")
@@ -2547,6 +2485,69 @@ struct AtheismAnswerView: View {
                 Section(header: Text("IN SUMMARY")) {
                     Text("Nothing comes from nothing, order does not write itself, and the fitrah knows its Maker. The universe that began was begun by the One who did not, and He sent a Book to say who He is and what He asks.")
                         .font(.body)
+                }
+
+                Section(header: Text("KEY TERMS")) {
+                    Text("**Atheism / ilhad (إِلْحَاد)**: from lahada, to deviate or lean away; the lahd is the niche in a grave that is cut sideways, away from the straight shaft. Ilhad is thus any leaning away from the truth, and the **mulhid (مُلْحِد)** in later usage is the one who denies the Creator altogether. The Quran uses the root for those who twist Allah’s names and His verses:")
+                        .font(.body)
+                    ScriptureQuote(text: "“And to Allah belong the best names, so invoke Him by them. And leave [the company of] those who practice deviation concerning His names. They will be recompensed for what they have been doing” (Quran 7:180).", arabic: "وَلِلَّهِ ٱلۡأَسۡمَآءُ ٱلۡحُسۡنَىٰ فَٱدۡعُوهُ بِهَاۖ وَذَرُواْ ٱلَّذِينَ يُلۡحِدُونَ فِيٓ أَسۡمَٰٓئِهِۦۚ سَيُجۡزَوۡنَ مَا كَانُواْ يَعۡمَلُونَ")
+                    ScriptureQuote(text: "“Indeed, those who inject deviation into Our verses are not concealed from Us” (Quran 41:40).", arabic: "إِنَّ ٱلَّذِينَ يُلۡحِدُونَ فِيٓ ءَايَٰتِنَا لَا يَخۡفَوۡنَ عَلَيۡنَآۗ")
+
+                    Text("**Dahriyyah (الدَّهْرِيَّة)**: from dahr, time; the ancient materialists who held that the world has no beginning and no Judge, only time that wears everything away. The Quran quoted them (Quran 45:24, above), and Ibn Hazm (may Allah have mercy on him) refuted those who say the world is eternal in the opening chapters of al-Fisal fi al-Milal. Since the pagan Arabs blamed “time” for every loss, the Prophet (peace be upon him) taught:")
+                        .font(.body)
+                    ScriptureQuote(text: "“Do not curse Time, for it is Allah Who is Time” (Sahih Muslim 2246).", arabic: "لاَ تَسُبُّوا الدَّهْرَ فَإِنَّ اللَّهَ هُوَ الدَّهْرُ", dimmed: true)
+                    Text("That is, what they call time is Allah’s disposal of affairs: “in My Hands are all things, and I cause the revolution of day and night” (Sahih al-Bukhari 4826).")
+                        .font(.body)
+
+                    Text("**Agnosticism**: from the Greek for “not knowing”; the claim that whether God exists cannot be known. The messengers answered it with a question of their own, “Can there be doubt about Allah, Creator of the heavens and earth?” (Quran 14:10, quoted in the questions below).")
+                        .font(.body)
+
+                    Text("**Naturalism / materialism**: the belief that matter and its laws are all there is, that the universe caused itself or has no cause, and that mind, purpose, and morality are by-products of matter. The Quran’s three-fold question (Quran 52:35-36, quoted below) is aimed exactly here: created by nothing, self-created, or created by another?")
+                        .font(.body)
+
+                    Text("**Scientism**: the belief that the methods of natural science are the only road to knowledge, so that whatever they cannot measure does not exist. The Quran honours knowledge and observation, and describes the limit of a knowledge that stops at the surface:")
+                        .font(.body)
+                    ScriptureQuote(text: "“They know what is apparent of the worldly life, but they, of the Hereafter, are unaware” (Quran 30:7).", arabic: "يَعۡلَمُونَ ظَٰهِرٗا مِّنَ ٱلۡحَيَوٰةِ ٱلدُّنۡيَا وَهُمۡ عَنِ ٱلۡأٓخِرَةِ هُمۡ غَٰفِلُونَ")
+                    ScriptureQuote(text: "“And they have thereof no knowledge. They follow not except assumption, and indeed, assumption avails not against the truth at all” (Quran 53:28).", arabic: "وَمَا لَهُم بِهِۦ مِنۡ عِلۡمٍۖ إِن يَتَّبِعُونَ إِلَّا ٱلظَّنَّۖ وَإِنَّ ٱلظَّنَّ لَا يُغۡنِي مِنَ ٱلۡحَقِّ شَيۡـٔٗا")
+
+                    Text("**Secularism**: the confining of religion to private belief, with life, law, and learning conducted as if there were no God. Islam knows no such division; the whole of a life is offered to its Maker:")
+                        .font(.body)
+                    ScriptureQuote(text: "“Say, ‘Indeed, my prayer, my rites of sacrifice, my living and my dying are for Allah, Lord of the worlds’” (Quran 6:162).", arabic: "قُلۡ إِنَّ صَلَاتِي وَنُسُكِي وَمَحۡيَايَ وَمَمَاتِي لِلَّهِ رَبِّ ٱلۡعَٰلَمِينَ")
+
+                    Text("**Humanism**: the creed that makes man the measure of all things and the source of his own values. The Quran’s diagnosis of it is a single sentence:")
+                        .font(.body)
+                    ScriptureQuote(text: "“No! [But] indeed, man transgresses because he sees himself self-sufficient” (Quran 96:6-7).", arabic: "كـَلَّآ إِنَّ ٱلۡإِنسَٰنَ لَيَطۡغَىٰٓ ۝ أَن رَّءَاهُ ٱسۡتَغۡنَىٰٓ")
+                    ScriptureQuote(text: "“O mankind, you are those in need of Allah, while Allah is the Free of need, the Praiseworthy” (Quran 35:15).", arabic: "يَٰٓأَيُّهَا ٱلنَّاسُ أَنتُمُ ٱلۡفُقَرَآءُ إِلَى ٱللَّهِۖ وَٱللَّهُ هُوَ ٱلۡغَنِيُّ ٱلۡحَمِيدُ")
+
+                    Text("**Nihilism**: from the Latin nihil, nothing; the conclusion, drawn honestly by some atheists and resisted by others, that life has no meaning, value, or purpose. The Quran names the alternative:")
+                        .font(.body)
+                    ScriptureQuote(text: "“Then did you think that We created you uselessly and that to Us you would not be returned?” (Quran 23:115).", arabic: "أَفَحَسِبۡتُمۡ أَنَّمَا خَلَقۡنَٰكُمۡ عَبَثٗا وَأَنَّكُمۡ إِلَيۡنَا لَا تُرۡجَعُونَ")
+
+                    Text("**Deism**: belief in a Creator who made the world and then left it to run by itself, sending no revelation and hearing no prayer. The Quran describes a Lord who is never absent from His creation:")
+                        .font(.body)
+                    ScriptureQuote(text: "“Whoever is within the heavens and earth asks Him; every day He is bringing about a matter” (Quran 55:29).", arabic: "يَسۡـَٔلُهُۥ مَن فِي ٱلسَّمَٰوَٰتِ وَٱلۡأَرۡضِۚ كُلَّ يَوۡمٍ هُوَ فِي شَأۡنٖ")
+                    ScriptureQuote(text: "“Indeed, Allah holds the heavens and the earth, lest they cease. And if they should cease, no one could hold them [in place] after Him” (Quran 35:41).", arabic: "إِنَّ ٱللَّهَ يُمۡسِكُ ٱلسَّمَٰوَٰتِ وَٱلۡأَرۡضَ أَن تَزُولَاۚ وَلَئِن زَالَتَآ إِنۡ أَمۡسَكَهُمَا مِنۡ أَحَدٖ مِّنۢ بَعۡدِهِۦٓۚ")
+
+                    Text("**The fitrah (الفِطْرَة)**: the innate disposition on which every human is born, which knows its Maker before any teaching (Quran 30:30; Sahih al-Bukhari 1385, both quoted above). Ibn Taymiyyah (may Allah have mercy on him) held that the affirmation of the Creator is settled in the fitrah of every person whose nature is sound, and that proofs are needed only to remove what has been laid over it (Dar’ Ta‘arud al-‘Aql wan-Naql).")
+                        .font(.body)
+
+                    Text("**The argument from creation**: whatever begins to exist has a cause other than itself; the universe began; therefore it has a Cause that did not begin. This is the argument of Surat at-Tur (Quran 52:35-36, quoted above), and Ibn Kathir (may Allah have mercy on him) notes in his tafsir that the verse is a step-by-step proof: they were not brought into being without a maker, and they did not bring themselves into being, so it is Allah who created them.")
+                        .font(.body)
+
+                    Text("**The argument from design**: order, fine-tuning, and law point to a Designer; a text points to an author, and the universe is a text without a misprint (Quran 67:3-4 and 88:17-20, both quoted above). Ibn al-Qayyim (may Allah have mercy on him) filled much of Miftah Dar as-Sa‘adah with the signs of wisdom in the creatures, from the human body to the birds and the bees, as proofs of their Maker.")
+                        .font(.body)
+
+                    Text("**The argument from the fitrah**: belief in a Creator is universal, spontaneous, and returns under pressure (Quran 29:65, quoted above); it is the atheism that must be learned and maintained.")
+                        .font(.body)
+
+                    Text("**Contingency**: everything we observe depends on something else for its existence and could have been otherwise; a chain of dependent things cannot hold itself up, and must rest on One who is independent, necessary, and self-sufficient. That is the meaning of as-Samad in Surat al-Ikhlas, which Ibn Abbas (may Allah be pleased with him) explained as the Master to whom all creation turns in its needs (Tafsir Ibn Kathir):")
+                        .font(.body)
+                    ScriptureQuote(text: "“Allah, the Eternal Refuge” (Quran 112:2).", arabic: "ٱللَّهُ ٱلصَّمَدُ")
+
+                    Text("**The Quranic challenge (التَّحَدِّي)**: the Quran’s standing proof of its origin, an open challenge to produce anything like it, never met in fourteen centuries:")
+                        .font(.body)
+                    ScriptureQuote(text: "“And if you are in doubt about what We have sent down upon Our Servant [Muhammad], then produce a surah the like thereof and call upon your witnesses other than Allah, if you should be truthful” (Quran 2:23).", arabic: "وَإِن كُنتُمۡ فِي رَيۡبٖ مِّمَّا نَزَّلۡنَا عَلَىٰ عَبۡدِنَا فَأۡتُواْ بِسُورَةٖ مِّن مِّثۡلِهِۦ وَٱدۡعُواْ شُهَدَآءَكُم مِّن دُونِ ٱللَّهِ إِن كُنتُمۡ صَٰدِقِينَ")
+                    ScriptureQuote(text: "“Say, ‘If mankind and the jinn gathered in order to produce the like of this Qur'an, they could not produce the like of it, even if they were to each other assistants’” (Quran 17:88).", arabic: "قُل لَّئِنِ ٱجۡتَمَعَتِ ٱلۡإِنسُ وَٱلۡجِنُّ عَلَىٰٓ أَن يَأۡتُواْ بِمِثۡلِ هَٰذَا ٱلۡقُرۡءَانِ لَا يَأۡتُونَ بِمِثۡلِهِۦ وَلَوۡ كَانَ بَعۡضُهُمۡ لِبَعۡضٖ ظَهِيرٗا")
                 }
             }
             .themedListRowBackground()

@@ -28,112 +28,6 @@ struct AqeedahMadhabView: View {
                     ScriptureQuote(text: "“That you believe in Allah, His angels, His books, His messengers, and the Last Day, and that you believe in the decree, its good and its bad” (Sahih Muslim 8).", arabic: "أَنْ تُؤْمِنَ بِاللَّهِ وَمَلاَئِكَتِهِ وَكُتُبِهِ وَرُسُلِهِ وَالْيَوْمِ الآخِرِ وَتُؤْمِنَ بِالْقَدَرِ خَيْرِهِ وَشَرِّهِ", dimmed: true)
                 }
 
-                Section(header: Text("KEY TERMS")) {
-                    Text("**Aqeedah (عَقِيدَة) and i‘tiqad (اِعتِقَاد)**: aqeedah, from the root ع-ق-د explained above, is the belief itself; i‘tiqad is the verbal noun of i‘taqada, “to hold firmly,” the act of holding it, which is why the classic books carry names like Sharh Usul I‘tiqad Ahl as-Sunnah of al-Lalaka’i (d. 418 AH) and Lum‘at al-I‘tiqad of Ibn Qudamah (d. 620 AH). Nobody founded aqeedah; it is the scholars’ word for what the Quran and Sunnah call iman, and its content was fixed by revelation before any school existed.")
-                        .font(.body)
-
-                    Text("**Iman (إِيمَان)**: from the root **أ-م-ن**, which carries both **amn**, security, and **tasdiq**, affirming something as true; the brothers of Yusuf used the same verb when they said “you would not believe us” (Quran 12:17). In the Shari‘ah, iman is belief in the heart, statement on the tongue, and action of the limbs; it increases by obedience and decreases by sin. Al-Bukhari opened the Book of Faith in his Sahih with exactly this definition:")
-                        .font(.body)
-                    ScriptureQuote(text: "“It is statement and action, and it increases and decreases” (Sahih al-Bukhari, Kitab al-Iman, opening chapter).", arabic: "وَهُوَ قَوْلٌ وَفِعْلٌ، وَيَزِيدُ وَيَنْقُصُ", dimmed: true)
-
-                    Text("Its six pillars are the ones the Prophet (peace be upon him) listed for Jibril in the hadith quoted above (Sahih Muslim 8): belief in Allah, His angels, His books, His messengers, the Last Day, and the decree. The Quran gathers the first five in one verse and names the sixth in another:")
-                        .font(.body)
-                    ScriptureQuote(text: "“But [true] righteousness is [in] one who believes in Allah, the Last Day, the angels, the Book, and the prophets” (Quran 2:177).", arabic: "وَلَٰكِنَّ ٱلۡبِرَّ مَنۡ ءَامَنَ بِٱللَّهِ وَٱلۡيَوۡمِ ٱلۡأٓخِرِ وَٱلۡمَلَٰٓئِكَةِ وَٱلۡكِتَٰبِ وَٱلنَّبِيِّـۧنَ")
-                    ScriptureQuote(text: "“Indeed, all things We created with predestination” (Quran 54:49).", arabic: "إِنَّا كُلَّ شَيۡءٍ خَلَقۡنَٰهُ بِقَدَرٖ")
-
-                    Text("Deeds belong to faith, which is why the Prophet (peace be upon him) counted modesty among its branches:")
-                        .font(.body)
-                    ScriptureQuote(text: "“Faith consists of more than sixty branches, and modesty is a branch of faith” (Sahih al-Bukhari 9).", arabic: "الإِيمَانُ بِضْعٌ وَسِتُّونَ شُعْبَةً، وَالْحَيَاءُ شُعْبَةٌ مِنَ الإِيمَانِ", dimmed: true)
-
-                    Text("**Tawhid (تَوحِيد)**: the verbal noun of wahhada, “to make one” or “to single out,” from the root **و-ح-د**: to single Allah out in everything that belongs to Him alone. It is the Prophet’s own word: sending Mu‘adh to Yemen he said, “let the first thing you call them to be that they single out Allah (yuwahhidu Allah)” (Sahih al-Bukhari 7372). The scholars describe what the Quran contains under three headings: **tawhid ar-rububiyyah (تَوحِيد الرُّبُوبِيَّة)**, Allah alone creates, owns, provides, and controls; **tawhid al-uluhiyyah (تَوحِيد الأُلُوهِيَّة)**, Allah alone is worshipped; and **tawhid al-asma’ was-sifat (تَوحِيد الأَسمَاء وَالصِّفَات)**, His names and attributes are affirmed as He affirmed them, without likeness. This is not a new creed but a description, just as “the five pillars of Islam” is a description of what the Prophet (peace be upon him) said (Sahih al-Bukhari 8). One verse carries all three:")
-                        .font(.body)
-                    ScriptureQuote(text: "“Lord of the heavens and the earth and whatever is between them - so worship Him and have patience for His worship. Do you know of any similarity to Him?” (Quran 19:65).", arabic: "رَّبُّ ٱلسَّمَٰوَٰتِ وَٱلۡأَرۡضِ وَمَا بَيۡنَهُمَا فَٱعۡبُدۡهُ وَٱصۡطَبِرۡ لِعِبَٰدَتِهِۦۚ هَلۡ تَعۡلَمُ لَهُۥ سَمِيّٗا")
-
-                    Text("“Lord of the heavens and the earth” is rububiyyah, “so worship Him” is uluhiyyah, and “Do you know of any similarity to Him?” is the names and attributes. Surah al-Ikhlas does the same in four verses:")
-                        .font(.body)
-                    ScriptureQuote(text: "“Say, ‘He is Allah, [who is] One, Allah, the Eternal Refuge. He neither begets nor is born, Nor is there to Him any equivalent’” (Quran 112:1-4).", arabic: "قُلۡ هُوَ ٱللَّهُ أَحَدٌ ۝ ٱللَّهُ ٱلصَّمَدُ ۝ لَمۡ يَلِدۡ وَلَمۡ يُولَدۡ ۝ وَلَمۡ يَكُن لَّهُۥ كُفُوًا أَحَدُۢ")
-
-                    Text("**Athar (أَثَر), Athari, Ahl al-Athar, Ahl al-Hadith**: athar, from the root **أ-ث-ر**, is a track or a trace, what someone leaves behind; Allah says He records “what they have put forth and what they left behind (atharahum)” (Quran 36:12). A narration is an athar because it is the trace the Prophet (peace be upon him) and his Companions left. So the creed is named after narration, not after any man, and its people are **Ahl al-Athar (أَهل الأَثَر)** and **Ahl al-Hadith (أَهل الحَدِيث)**; its imam is Ahmad ibn Hanbal, as its own section below explains. The Prophet (peace be upon him) said:")
-                        .font(.body)
-                    ScriptureQuote(text: "“There will always be a group of my nation standing upon the command of Allah; those who forsake them or oppose them will not harm them, until the command of Allah comes while they are upon that” (Sahih al-Bukhari 3641, Sahih Muslim 1920).", arabic: "لاَ يَزَالُ مِنْ أُمَّتِي أُمَّةٌ قَائِمَةٌ بِأَمْرِ اللَّهِ، لاَ يَضُرُّهُمْ مَنْ خَذَلَهُمْ وَلاَ مَنْ خَالَفَهُمْ حَتَّى يَأْتِيَهُمْ أَمْرُ اللَّهِ وَهُمْ عَلَى ذَلِكَ", dimmed: true)
-
-                    Text("Imam Ahmad (may Allah have mercy on him) said of this group:")
-                        .font(.body)
-                    ScriptureQuote(text: "“If they are not the people of hadith, then I do not know who they are” (al-Khatib al-Baghdadi, Sharaf Ashab al-Hadith; an-Nawawi, Sharh Sahih Muslim; similarly al-Hakim, Ma'rifat Ulum al-Hadith).", arabic: "إِنْ لَمْ يَكُونُوا أَهْلَ الْحَدِيثِ فَلَا أَدْرِي مَنْ هُمْ", dimmed: true)
-
-                    Text("**Kalam (كَلَام) and the mutakallimun (المُتَكَلِّمُون)**: kalam means “speech.” **‘Ilm al-kalam** is theology argued by speech, that is, by rational premises and disputation, instead of received by narration, and the mutakallimun are its practitioners. Its first practitioners in Islam were the Mu‘tazilah; the Ash‘ari and Maturidi schools later took up its tools in order to answer them. The Salaf condemned it by name: ash-Shafi‘i’s verdict is quoted below under Two Roads, and Imam Ahmad said that a man of kalam never prospers, and that you hardly see anyone look into kalam without corruption entering his heart (Ibn Abd al-Barr, Jami‘ Bayan al-‘Ilm wa-Fadlih).")
-                        .font(.body)
-
-                    Text("**Ahl as-Sunnah wal-Jama‘ah (أَهل السُّنَّة وَالجَمَاعَة)**: the Sunnah, from **س-ن-ن**, is a laid-down path, the way of the Prophet (peace be upon him); the Jama‘ah, from **ج-م-ع**, “to gather,” is the united body of the Companions and whoever holds to their way. The name is not a party label: the Jama‘ah is the Prophet’s own name for the saved group (the hadith below), and the Sunnah is what he commanded to be held fast to (Sunan Abi Dawud 4607; graded sahih by al-Albani; quoted below in Common Questions). Having said that this nation would split into seventy-three sects, he said:")
-                        .font(.body)
-                    ScriptureQuote(text: "“Seventy-two are in the Fire and one is in Paradise, and it is the Jama‘ah” (Sunan Abi Dawud 4597; graded hasan by al-Albani).", arabic: "ثِنْتَانِ وَسَبْعُونَ فِي النَّارِ وَوَاحِدَةٌ فِي الْجَنَّةِ وَهِيَ الْجَمَاعَةُ", dimmed: true)
-
-                    Text("Ibn Mas‘ud (may Allah be pleased with him) explained that the Jama‘ah is whatever agrees with the truth, even if you are alone (al-Lalaka’i, Sharh Usul I‘tiqad Ahl as-Sunnah). And Ibn Abbas (may Allah be pleased with them both) is related to have used the very phrase in explaining the verse:")
-                        .font(.body)
-                    ScriptureQuote(text: "“On the Day [some] faces will turn white and [some] faces will turn black” (Quran 3:106).", arabic: "يَوۡمَ تَبۡيَضُّ وُجُوهٞ وَتَسۡوَدُّ وُجُوهٞۚ")
-                    Text("Ibn Kathir (may Allah have mercy on him) relates it from him in his Tafsir at this verse: the faces of Ahl as-Sunnah wal-Jama‘ah will turn white, and the faces of the people of innovation and division will turn black.")
-                        .font(.body)
-
-                    Text("**Salaf (سَلَف) and Khalaf (خَلَف)**: salaf, from **س-ل-ف**, is what has gone before; Allah says of a destroyed people, “We made them a precedent (salafan)” (Quran 43:56). In creed, the Salaf are the first three generations, the Companions, the Tabi‘un, and their followers, whom the Prophet (peace be upon him) called the best of people (Sahih al-Bukhari 2652, quoted below). Khalaf, from **خ-ل-ف**, is what comes after; the Quran speaks of “successors (khalf)” who inherited the Scripture and neglected it (Quran 7:169). In the books of creed the Khalaf are the later scholars who took up kalam and reinterpretation. A saying spread among them, “the way of the Salaf is safer, the way of the Khalaf is more knowledgeable and wiser,” and Ibn Taymiyyah (may Allah have mercy on him) answered in al-Fatwa al-Hamawiyyah that the way of the Salaf is safer, more knowledgeable, and wiser all at once, because it is the way of the people who understood revelation best.")
-                        .font(.body)
-
-                    Text("**Mu‘tazilah (المُعتَزِلَة)**: from **ع-ز-ل**, i‘tazala, “to withdraw” or “to set oneself apart.” Wasil ibn Ata (80–131 AH) sat in the circle of al-Hasan al-Basri (d. 110 AH) in Basrah. When a man asked about the Muslim who commits a major sin, Wasil answered ahead of his teacher that he is neither a believer nor a disbeliever but in “a station between the two stations,” and withdrew to a pillar of the mosque with those who agreed with him; al-Hasan said, “Wasil has withdrawn from us (i‘tazalana Wasil)” (ash-Shahrastani, al-Milal wan-Nihal). His companion Amr ibn Ubayd (d. 144 AH) joined him, and the name stuck. They built their creed on five principles (al-usul al-khamsah): **tawhid**, by which they meant denying Allah’s attributes; **‘adl**, “justice,” by which they meant that Allah does not create the servants’ acts; **al-wa‘d wal-wa‘id**, the promise and the threat, by which they meant that the major sinner is in the Fire forever; **al-manzilah bayn al-manzilatayn**, the station between two stations; and **enjoining good and forbidding evil**, by which they justified revolt against the rulers. They called themselves “the people of tawhid and justice”; Ahl as-Sunnah called them the Mu‘tazilah and, for their denial of the decree, the Qadariyyah (al-Ash‘ari, Maqalat al-Islamiyyin; ash-Shahrastani, al-Milal wan-Nihal).")
-                        .font(.body)
-
-                    Text("**Ash‘ariyyah (الأَشعَرِيَّة)**: named after Abu al-Hasan Ali ibn Isma‘il al-Ash‘ari (260–324 AH), not after the Companion Abu Musa al-Ash‘ari (may Allah be pleased with him), his ancestor. He was a Mu‘tazili for about forty years under his stepfather al-Jubba’i, renounced them publicly in the mosque of Basrah, and ended by writing al-Ibanah on the creed of Imam Ahmad, as quoted below (Ibn Asakir, Tabyin Kadhib al-Muftari). The school that bears his name follows his middle period rather than his last book: it affirms seven attributes (life, knowledge, power, will, hearing, sight, and speech) by rational proof, reinterprets (**ta’wil**) the rest, such as the Hand, the Face, and the rising over the Throne, and proves the existence of Allah by the kalam argument from the origination of bodies rather than by the way of the Quran.")
-                        .font(.body)
-
-                    Text("**Maturidiyyah (المَاتُرِيدِيَّة)**: named after Abu Mansur Muhammad ibn Muhammad al-Maturidi (d. 333 AH) of Maturid, a quarter of Samarqand, a Hanafi jurist and the author of Kitab at-Tawhid and Ta’wilat al-Quran; the school is described below under The Schools of Kalam.")
-                        .font(.body)
-
-                    Text("**Khawarij (الخَوَارِج), Haruriyyah (الحَرُورِيَّة), al-Muhakkimah (المُحَكِّمَة)**: three names for one sect. Khawarij is from kharaja, “to go out”: they went out against Ali (may Allah be pleased with him), and in the Prophet’s words, quoted below under The Rejected Sects, they “pass out” of the religion. Haruriyyah is from Harura’, the village near Kufah where they first gathered after Siffin; the name was already current among the Companions, for when a woman asked Aisha (may Allah be pleased with her) whether a menstruating woman makes up her prayers, she replied:")
-                        .font(.body)
-                    ScriptureQuote(text: "“Are you a Haruriyyah? We used to menstruate in the time of the Prophet and he did not order us to do so” (Sahih al-Bukhari 321).", arabic: "أَحَرُورِيَّةٌ أَنْتِ كُنَّا نَحِيضُ مَعَ النَّبِيِّ صلى الله عليه وسلم فَلاَ يَأْمُرُنَا بِهِ", dimmed: true)
-
-                    Text("Al-Muhakkimah is from their slogan “no judgement (hukm) but Allah’s,” with which they rejected the arbitration (tahkim) between Ali and Mu‘awiyah; Ali’s reply to it is quoted below. Ali fought them at Nahrawan in 38 AH, and one of the Khawarij, Abd ar-Rahman ibn Muljam, struck him down in Kufah in Ramadan 40 AH (Ibn Kathir, al-Bidayah wan-Nihayah; ash-Shahrastani, al-Milal wan-Nihal).")
-                        .font(.body)
-
-                    Text("**Jahmiyyah (الجَهمِيَّة)**: the followers of Jahm ibn Safwan (executed 128 AH), who took his ideas from al-Ja‘d ibn Dirham. He denied Allah’s names and attributes altogether, said the Quran is created, that Allah is everywhere and not above His Throne, that faith is bare knowledge in the heart, and that man is compelled in his acts. Salm ibn Ahwaz executed him in Marw in 128 AH (at-Tabari, Tarikh, events of 128 AH; Ibn Kathir, al-Bidayah wan-Nihayah). Before him the governor Khalid ibn Abdillah al-Qasri had said at the Eid prayer in Wasit:")
-                        .font(.body)
-                    ScriptureQuote(text: "“O people, offer your sacrifices, may Allah accept them from you; I am sacrificing al-Ja‘d ibn Dirham, for he claims that Allah did not take Ibrahim as a close friend and did not speak to Musa. Exalted is Allah far above what al-Ja‘d says.” Then he came down and slaughtered him (al-Bukhari, Khalq Af'al al-'Ibad; ad-Darimi, ar-Radd 'ala al-Jahmiyyah; al-Lalaka'i, Sharh Usul I'tiqad Ahl as-Sunnah).", arabic: "أَيُّهَا النَّاسُ ضَحُّوا تَقَبَّلَ اللَّهُ ضَحَايَاكُمْ، فَإِنِّي مُضَحٍّ بِالْجَعْدِ بْنِ دِرْهَمٍ، إِنَّهُ زَعَمَ أَنَّ اللَّهَ لَمْ يَتَّخِذْ إِبْرَاهِيمَ خَلِيلًا، وَلَمْ يُكَلِّمْ مُوسَى تَكْلِيمًا، تَعَالَى اللَّهُ عَمَّا يَقُولُ الْجَعْدُ عُلُوًّا كَبِيرًا. ثُمَّ نَزَلَ فَذَبَحَهُ", dimmed: true)
-
-                    Text("Every later denial of the attributes, however refined, is a portion of Jahm’s inheritance, which is why the Salaf called the deniers “Jahmiyyah” whatever they called themselves.")
-                        .font(.body)
-
-                    Text("**Murji’ah (المُرجِئَة)**: from **ر-ج-أ**, arja’a, “to postpone” or “to defer”; the Quran speaks of “others deferred (murjawn) until the command of Allah” (Quran 9:106). They deferred deeds out of faith: faith, they said, is affirmation only, so sins do not diminish it and the sinner is a believer of complete faith; the extreme form, Jahm’s, makes faith bare knowledge in the heart. The Salaf distinguished this from the milder “irja’ of the jurists” of Kufah, who left deeds out of the definition of faith yet affirmed that sins are punished and commanded the deeds; they disagreed with the latter as an error in wording and with the former as a heresy (Ibn Taymiyyah, Kitab al-Iman).")
-                        .font(.body)
-
-                    Text("**Qadariyyah (القَدَرِيَّة)**: named after **qadar (قَدَر)**, the decree, which they denied; they said Allah does not decree the servants’ deeds and that each man originates his own action, so that the matter is “new” and unforeknown. The first to say it was Ma‘bad al-Juhani in Basrah, as Yahya ibn Ya‘mur reported when he brought the matter to Ibn Umar (Sahih Muslim 8, quoted below under The Schools of Kalam), then Ghaylan of Damascus, and the Mu‘tazilah inherited it from them.")
-                        .font(.body)
-
-                    Text("**Jabriyyah (الجَبرِيَّة)**: from **jabr (جَبر)**, compulsion: the opposite error, that man has no real will or act at all and is moved like a feather in the wind. This was Jahm’s view. Ahl as-Sunnah stand between the two: Allah creates all things, including the servants’ acts, and the servant truly wills, chooses, and acts, and is justly rewarded or punished; see the question on the decree below.")
-                        .font(.body)
-
-                    Text("**Rafidah (الرَّافِضَة)**: from **rafada (رَفَضَ)**, “to reject” or “to desert.” In 122 AH Zayd ibn Ali ibn al-Husayn (may Allah have mercy on him), the grandson of al-Husayn, rose in Kufah against the Umayyads. Those who had pledged to him demanded that he disavow Abu Bakr and Umar. He refused and said they were his grandfather’s two ministers, so they deserted him, and he said, “You have rejected me (rafadtumuni).” Those who deserted him were called the Rafidah, and the Zaydiyyah are those who stayed with Zayd (ash-Shahrastani, al-Milal wan-Nihal; Ibn Taymiyyah, Minhaj as-Sunnah; Ibn Kathir, al-Bidayah wan-Nihayah, events of 122 AH). The Rafidah reject the Companions who transmitted the religion, and so cast away the very channel it reached us through; see “Answering the Shia” under Salafiyyah.")
-                        .font(.body)
-
-                    Text("**The four errors in the attributes**: **tahrif (تَحرِيف)**, from **ح-ر-ف**, to turn a word from its place, as the Quran says of those who “distort words from their [proper] usages” (Quran 4:46): changing the meaning of a text, such as reading “rose over” as “conquered”; **ta‘til (تَعطِيل)**, from **ع-ط-ل**, to leave idle or empty, as in “an abandoned well” (Quran 22:45): stripping Allah of the attribute altogether; **takyif (تَكيِيف)**, from kayfa, “how”: assigning a manner to the attribute; and **tamthil (تَمثِيل)**, from mithl, “a likeness”: likening it to the attributes of creation. To these the scholars add **tafwid al-ma‘na (تَفوِيض المَعنَى)**, consigning the meaning: the claim that the Salaf recited the texts of the attributes without knowing what they meant. The Salaf consigned only the “how,” never the meaning; Imam Malik’s “the rising is not unknown,” quoted below under Two Roads, says so plainly. Ibn Taymiyyah (may Allah have mercy on him) wrote:")
-                        .font(.body)
-                    ScriptureQuote(text: "“The position of the people of tafwid, who claim to be following the Sunnah and the Salaf, is among the worst of the positions of the people of innovation and heresy” (Ibn Taymiyyah, Dar' Ta'arud al-'Aql wan-Naql).", arabic: "قَوْلُ أَهْلِ التَّفْوِيضِ الَّذِينَ يَزْعُمُونَ أَنَّهُمْ مُتَّبِعُونَ لِلسُّنَّةِ وَالسَّلَفِ مِنْ شَرِّ أَقْوَالِ أَهْلِ الْبِدَعِ وَالْإِلْحَادِ", dimmed: true)
-
-                    Text("**Istiwa’ (اِستِوَاء)**: from **س-و-ي**; istawa ‘ala means to rise over and settle upon. Allah says of Himself in seven places that He “established Himself above the Throne” (Quran 7:54, 10:3, 13:2, 20:5, 25:59, 32:4, 57:4). In the Book of Tawhid of his Sahih, al-Bukhari related from the Tabi‘i Abu al-‘Aliyah that istawa means “He rose (irtafa‘a),” and from Mujahid that it means “He ascended over (‘ala) the Throne.” The Jahmiyyah denied it, the later kalam schools read it as istawla, “He conquered,” a reading the Salaf rejected and the Arabs never used, and Malik (may Allah have mercy on him) gave the rule that settles it, quoted below.")
-                        .font(.body)
-
-                    Text("**Bid‘ah (بِدعَة)**: from **ب-د-ع**, to originate something with no precedent; Allah is “Originator (Badi‘) of the heavens and the earth” (Quran 2:117) because He made them from nothing. In the religion, a bid‘ah is a newly invented way of worship that has no basis from the Prophet (peace be upon him), practised as though it were part of the religion (ash-Shatibi, al-I‘tisam). He said:")
-                        .font(.body)
-                    ScriptureQuote(text: "“Whoever introduces into this matter of ours what is not in it, it is rejected” (Sahih al-Bukhari 2697, Sahih Muslim 1718).", arabic: "مَنْ أَحْدَثَ فِي أَمْرِنَا هَذَا مَا لَيْسَ فِيهِ فَهُوَ رَدٌّ", dimmed: true)
-
-                    Text("and in his sermons he used to say, “every innovation is misguidance” (Sahih Muslim 867). Innovations in creed are the gravest kind, because they are inventions about Allah Himself.")
-                        .font(.body)
-
-                    Text("**The hadith of the seventy-three sects**: the Prophet (peace be upon him) said:")
-                        .font(.body)
-                    ScriptureQuote(text: "“The Jews split into seventy-one or seventy-two sects, and the Christians split into seventy-one or seventy-two sects, and my nation will split into seventy-three sects” (Sunan Abi Dawud 4596; graded hasan sahih by al-Albani).", arabic: "افْتَرَقَتِ الْيَهُودُ عَلَى إِحْدَى أَوْ ثِنْتَيْنِ وَسَبْعِينَ فِرْقَةً وَتَفَرَّقَتِ النَّصَارَى عَلَى إِحْدَى أَوْ ثِنْتَيْنِ وَسَبْعِينَ فِرْقَةً وَتَفْتَرِقُ أُمَّتِي عَلَى ثَلاَثٍ وَسَبْعِينَ فِرْقَةً", dimmed: true)
-
-                    Text("Together with the report of Mu‘awiyah above, which names the saved sect as the Jama‘ah, this is the foundation of the Salaf’s writing about the sects. Ibn Taymiyyah (may Allah have mercy on him) added a caution in Majmu‘ al-Fatawa: the Prophet counted all seventy-three as “my nation,” so belonging to a deviant sect is a threat of the Fire, not by itself disbelief, and whoever declares every one of the seventy-two sects a disbeliever has opposed the Book, the Sunnah, and the consensus of the Companions and the four imams.")
-                        .font(.body)
-                }
-
                 Section(header: Text("ONE AQEEDAH, MANY FIQH OPINIONS")) {
                     Text("Fiqh can carry more than one valid answer. The Companions (may Allah be pleased with them) themselves differed in fiqh in the Prophet’s own lifetime, and he approved both sides. After the Battle of the Trench he said:")
                         .font(.body)
@@ -164,10 +58,10 @@ struct AqeedahMadhabView: View {
                     Text("**1. The road of athar (أَثَر, “narration“ or “track“)**: creed is taken from the Quran, the Sunnah, and the reports of the Companions, and the mind submits to the text. Whatever Allah affirmed for Himself is affirmed as He said it, without asking how, and whatever He negated is negated.")
                         .font(.body)
 
-                    Text("**2. The road of kalam (عِلم الكَلَام, “speculative theology“)**: creed is argued from rational premises, many of them inherited from Greek philosophy, which entered Muslim lands through the translation movement of the second and third centuries AH. The text is then reinterpreted to fit the conclusions of reason.")
+                    Text("**2. The road of kalam (عِلم الكَلَام, from the root ك-ل-م, speech: “speculative theology,“ named for the arguing it consists of)**: creed is argued from rational premises, many of them inherited from Greek philosophy, which entered Muslim lands through the translation movement of the second and third centuries AH. The text is then reinterpreted to fit the conclusions of reason.")
                         .font(.body)
 
-                    Text("The Salaf warned against the second road before it even had a name. Allah (Glorified and Exalted be He) says:")
+                    Text("The Salaf (السَّلَف, from the root س-ل-ف: those who have gone before, meaning the first three generations) warned against the second road before it even had a name. Allah (Glorified and Exalted be He) says:")
                         .font(.body)
                     ScriptureQuote(text: "“As for those in whose hearts is deviation [from truth], they will follow that of it which is unspecific, seeking discord and seeking an interpretation [suitable to them]” (Quran 3:7).", arabic: "فَأَمَّا ٱلَّذِينَ فِي قُلُوبِهِمۡ زَيۡغٞ فَيَتَّبِعُونَ مَا تَشَٰبَهَ مِنۡهُ ٱبۡتِغَآءَ ٱلۡفِتۡنَةِ وَٱبۡتِغَآءَ تَأۡوِيلِهِۦۖ")
 
@@ -381,7 +275,7 @@ struct AqeedahMadhabView: View {
 
                     Text("**Is the Muslim who commits a major sin a believer or a disbeliever?**")
                         .font(.body)
-                    Text("A believer with deficient faith: a believer by his faith and a sinner (fasiq) by his major sin. He is not expelled from Islam, and in the Hereafter he is under Allah’s will, forgiven or punished and then brought out of the Fire by the tawhid he died upon. Three sects went wrong here: the Khawarij said he is a disbeliever, the Mu‘tazilah said he is in a station between the two, and the Murji’ah said his faith is untouched. Allah says:")
+                    Text("A believer with deficient faith: a believer by his faith and a sinner (fasiq) by his major sin. He is not expelled from Islam, and in the Hereafter he is under Allah’s will, forgiven or punished and then brought out of the Fire by the tawhid (تَوحِيد, from the root و-ح-د: singling Allah out in everything that belongs to Him alone) he died upon. Three sects went wrong here: the Khawarij said he is a disbeliever, the Mu‘tazilah said he is in a station between the two, and the Murji’ah said his faith is untouched. Allah says:")
                         .font(.body)
                     ScriptureQuote(text: "“Indeed, Allah does not forgive association with Him, but He forgives what is less than that for whom He wills” (Quran 4:48).", arabic: "إِنَّ ٱللَّهَ لَا يَغۡفِرُ أَن يُشۡرَكَ بِهِۦ وَيَغۡفِرُ مَا دُونَ ذَٰلِكَ لِمَن يَشَآءُۚ")
                     ScriptureQuote(text: "“And if two factions among the believers should fight, then make settlement between the two” (Quran 49:9).", arabic: "وَإِن طَآئِفَتَانِ مِنَ ٱلۡمُؤۡمِنِينَ ٱقۡتَتَلُواْ فَأَصۡلِحُواْ بَيۡنَهُمَاۖ")
@@ -431,7 +325,7 @@ struct AqeedahMadhabView: View {
                         .font(.body)
                     ScriptureQuote(text: "“Yes, we flee from the decree of Allah to the decree of Allah” (Sahih al-Bukhari 5729).", arabic: "نَعَمْ نَفِرُّ مِنْ قَدَرِ اللَّهِ إِلَى قَدَرِ اللَّهِ", dimmed: true)
 
-                    Text("Choosing a course is itself part of what Allah decreed. Ibn Umar’s disavowal of the Qadariyyah is quoted above (Sahih Muslim 8). The Qadariyyah denied the decree to protect man’s freedom, the Jabriyyah denied man’s freedom to protect the decree, and Ahl as-Sunnah accept both sets of texts; Ibn al-Qayyim (may Allah have mercy on him) wrote Shifa’ al-‘Alil on nothing else.")
+                    Text("Choosing a course is itself part of what Allah decreed. Ibn Umar’s disavowal of the Qadariyyah is quoted above (Sahih Muslim 8). The Qadariyyah denied the decree to protect man’s freedom, the Jabriyyah (الجَبرِيَّة, from ج-ب-ر, compulsion) denied man’s freedom to protect the decree, and Ahl as-Sunnah accept both sets of texts; Ibn al-Qayyim (may Allah have mercy on him) wrote Shifa’ al-‘Alil on nothing else.")
                         .font(.body)
 
                     Text("**Are the Ash‘aris and Maturidis disbelievers?**")
@@ -510,7 +404,7 @@ struct AqeedahMadhabView: View {
 
                     Text("**Is the “three categories of tawhid” a bid‘ah?**")
                         .font(.body)
-                    Text("No. A bid‘ah is a new act of worship; a classification is a way of teaching what the texts contain, like “the five pillars of Islam,” “the six pillars of faith,” or the division of fiqh into worship and dealings. Allah Himself distinguishes the tawhid the idolaters affirmed from the tawhid they refused:")
+                    Text("No. A bid‘ah (بِدعَة, from ب-د-ع, to originate something with no precedent) is a new act of worship; a classification is a way of teaching what the texts contain, like “the five pillars of Islam,” “the six pillars of faith,” or the division of fiqh into worship and dealings. Allah Himself distinguishes the tawhid the idolaters affirmed from the tawhid they refused:")
                         .font(.body)
                     ScriptureQuote(text: "“And if you asked them, ‘Who created the heavens and earth?’ they would surely say, ‘Allah’” (Quran 31:25).", arabic: "وَلَئِن سَأَلۡتَهُم مَّنۡ خَلَقَ ٱلسَّمَٰوَٰتِ وَٱلۡأَرۡضَ لَيَقُولُنَّ ٱللَّهُۚ")
                     ScriptureQuote(text: "“We only worship them that they may bring us nearer to Allah in position” (Quran 39:3).", arabic: "مَا نَعۡبُدُهُمۡ إِلَّا لِيُقَرِّبُونَآ إِلَى ٱللَّهِ زُلۡفَىٰٓ")
@@ -535,6 +429,112 @@ struct AqeedahMadhabView: View {
 
                 Section(header: Text("IN SUMMARY")) {
                     Text("Aqeedah is the knot in the heart, and it is one: the creed of all the prophets, held by every Companion and the Ahlul Bayt alike. The Salaf preserved it as the Athari creed, Imam Ahmad defended it under torture, and the schools of kalam that came three centuries later are measured against it.")
+                        .font(.body)
+                }
+
+                Section(header: Text("KEY TERMS")) {
+                    Text("**Aqeedah (عَقِيدَة) and i‘tiqad (اِعتِقَاد)**: aqeedah, from the root ع-ق-د explained above, is the belief itself; i‘tiqad is the verbal noun of i‘taqada, “to hold firmly,” the act of holding it, which is why the classic books carry names like Sharh Usul I‘tiqad Ahl as-Sunnah of al-Lalaka’i (d. 418 AH) and Lum‘at al-I‘tiqad of Ibn Qudamah (d. 620 AH). Nobody founded aqeedah; it is the scholars’ word for what the Quran and Sunnah call iman, and its content was fixed by revelation before any school existed.")
+                        .font(.body)
+
+                    Text("**Iman (إِيمَان)**: from the root **أ-م-ن**, which carries both **amn**, security, and **tasdiq**, affirming something as true; the brothers of Yusuf used the same verb when they said “you would not believe us” (Quran 12:17). In the Shari‘ah, iman is belief in the heart, statement on the tongue, and action of the limbs; it increases by obedience and decreases by sin. Al-Bukhari opened the Book of Faith in his Sahih with exactly this definition:")
+                        .font(.body)
+                    ScriptureQuote(text: "“It is statement and action, and it increases and decreases” (Sahih al-Bukhari, Kitab al-Iman, opening chapter).", arabic: "وَهُوَ قَوْلٌ وَفِعْلٌ، وَيَزِيدُ وَيَنْقُصُ", dimmed: true)
+
+                    Text("Its six pillars are the ones the Prophet (peace be upon him) listed for Jibril in the hadith quoted above (Sahih Muslim 8): belief in Allah, His angels, His books, His messengers, the Last Day, and the decree. The Quran gathers the first five in one verse and names the sixth in another:")
+                        .font(.body)
+                    ScriptureQuote(text: "“But [true] righteousness is [in] one who believes in Allah, the Last Day, the angels, the Book, and the prophets” (Quran 2:177).", arabic: "وَلَٰكِنَّ ٱلۡبِرَّ مَنۡ ءَامَنَ بِٱللَّهِ وَٱلۡيَوۡمِ ٱلۡأٓخِرِ وَٱلۡمَلَٰٓئِكَةِ وَٱلۡكِتَٰبِ وَٱلنَّبِيِّـۧنَ")
+                    ScriptureQuote(text: "“Indeed, all things We created with predestination” (Quran 54:49).", arabic: "إِنَّا كُلَّ شَيۡءٍ خَلَقۡنَٰهُ بِقَدَرٖ")
+
+                    Text("Deeds belong to faith, which is why the Prophet (peace be upon him) counted modesty among its branches:")
+                        .font(.body)
+                    ScriptureQuote(text: "“Faith consists of more than sixty branches, and modesty is a branch of faith” (Sahih al-Bukhari 9).", arabic: "الإِيمَانُ بِضْعٌ وَسِتُّونَ شُعْبَةً، وَالْحَيَاءُ شُعْبَةٌ مِنَ الإِيمَانِ", dimmed: true)
+
+                    Text("**Tawhid (تَوحِيد)**: the verbal noun of wahhada, “to make one” or “to single out,” from the root **و-ح-د**: to single Allah out in everything that belongs to Him alone. It is the Prophet’s own word: sending Mu‘adh to Yemen he said, “let the first thing you call them to be that they single out Allah (yuwahhidu Allah)” (Sahih al-Bukhari 7372). The scholars describe what the Quran contains under three headings: **tawhid ar-rububiyyah (تَوحِيد الرُّبُوبِيَّة)**, Allah alone creates, owns, provides, and controls; **tawhid al-uluhiyyah (تَوحِيد الأُلُوهِيَّة)**, Allah alone is worshipped; and **tawhid al-asma’ was-sifat (تَوحِيد الأَسمَاء وَالصِّفَات)**, His names and attributes are affirmed as He affirmed them, without likeness. This is not a new creed but a description, just as “the five pillars of Islam” is a description of what the Prophet (peace be upon him) said (Sahih al-Bukhari 8). One verse carries all three:")
+                        .font(.body)
+                    ScriptureQuote(text: "“Lord of the heavens and the earth and whatever is between them - so worship Him and have patience for His worship. Do you know of any similarity to Him?” (Quran 19:65).", arabic: "رَّبُّ ٱلسَّمَٰوَٰتِ وَٱلۡأَرۡضِ وَمَا بَيۡنَهُمَا فَٱعۡبُدۡهُ وَٱصۡطَبِرۡ لِعِبَٰدَتِهِۦۚ هَلۡ تَعۡلَمُ لَهُۥ سَمِيّٗا")
+
+                    Text("“Lord of the heavens and the earth” is rububiyyah, “so worship Him” is uluhiyyah, and “Do you know of any similarity to Him?” is the names and attributes. Surah al-Ikhlas does the same in four verses:")
+                        .font(.body)
+                    ScriptureQuote(text: "“Say, ‘He is Allah, [who is] One, Allah, the Eternal Refuge. He neither begets nor is born, Nor is there to Him any equivalent’” (Quran 112:1-4).", arabic: "قُلۡ هُوَ ٱللَّهُ أَحَدٌ ۝ ٱللَّهُ ٱلصَّمَدُ ۝ لَمۡ يَلِدۡ وَلَمۡ يُولَدۡ ۝ وَلَمۡ يَكُن لَّهُۥ كُفُوًا أَحَدُۢ")
+
+                    Text("**Athar (أَثَر), Athari, Ahl al-Athar, Ahl al-Hadith**: athar, from the root **أ-ث-ر**, is a track or a trace, what someone leaves behind; Allah says He records “what they have put forth and what they left behind (atharahum)” (Quran 36:12). A narration is an athar because it is the trace the Prophet (peace be upon him) and his Companions left. So the creed is named after narration, not after any man, and its people are **Ahl al-Athar (أَهل الأَثَر)** and **Ahl al-Hadith (أَهل الحَدِيث)**; its imam is Ahmad ibn Hanbal, as its own section below explains. The Prophet (peace be upon him) said:")
+                        .font(.body)
+                    ScriptureQuote(text: "“There will always be a group of my nation standing upon the command of Allah; those who forsake them or oppose them will not harm them, until the command of Allah comes while they are upon that” (Sahih al-Bukhari 3641, Sahih Muslim 1920).", arabic: "لاَ يَزَالُ مِنْ أُمَّتِي أُمَّةٌ قَائِمَةٌ بِأَمْرِ اللَّهِ، لاَ يَضُرُّهُمْ مَنْ خَذَلَهُمْ وَلاَ مَنْ خَالَفَهُمْ حَتَّى يَأْتِيَهُمْ أَمْرُ اللَّهِ وَهُمْ عَلَى ذَلِكَ", dimmed: true)
+
+                    Text("Imam Ahmad (may Allah have mercy on him) said of this group:")
+                        .font(.body)
+                    ScriptureQuote(text: "“If they are not the people of hadith, then I do not know who they are” (al-Khatib al-Baghdadi, Sharaf Ashab al-Hadith; an-Nawawi, Sharh Sahih Muslim; similarly al-Hakim, Ma'rifat Ulum al-Hadith).", arabic: "إِنْ لَمْ يَكُونُوا أَهْلَ الْحَدِيثِ فَلَا أَدْرِي مَنْ هُمْ", dimmed: true)
+
+                    Text("**Kalam (كَلَام) and the mutakallimun (المُتَكَلِّمُون)**: kalam means “speech.” **‘Ilm al-kalam** is theology argued by speech, that is, by rational premises and disputation, instead of received by narration, and the mutakallimun are its practitioners. Its first practitioners in Islam were the Mu‘tazilah; the Ash‘ari and Maturidi schools later took up its tools in order to answer them. The Salaf condemned it by name: ash-Shafi‘i’s verdict is quoted above under Two Roads, and Imam Ahmad said that a man of kalam never prospers, and that you hardly see anyone look into kalam without corruption entering his heart (Ibn Abd al-Barr, Jami‘ Bayan al-‘Ilm wa-Fadlih).")
+                        .font(.body)
+
+                    Text("**Ahl as-Sunnah wal-Jama‘ah (أَهل السُّنَّة وَالجَمَاعَة)**: the Sunnah, from **س-ن-ن**, is a laid-down path, the way of the Prophet (peace be upon him); the Jama‘ah, from **ج-م-ع**, “to gather,” is the united body of the Companions and whoever holds to their way. The name is not a party label: the Jama‘ah is the Prophet’s own name for the saved group (the hadith below), and the Sunnah is what he commanded to be held fast to (Sunan Abi Dawud 4607; graded sahih by al-Albani; quoted above in Common Questions). Having said that this nation would split into seventy-three sects, he said:")
+                        .font(.body)
+                    ScriptureQuote(text: "“Seventy-two are in the Fire and one is in Paradise, and it is the Jama‘ah” (Sunan Abi Dawud 4597; graded hasan by al-Albani).", arabic: "ثِنْتَانِ وَسَبْعُونَ فِي النَّارِ وَوَاحِدَةٌ فِي الْجَنَّةِ وَهِيَ الْجَمَاعَةُ", dimmed: true)
+
+                    Text("Ibn Mas‘ud (may Allah be pleased with him) explained that the Jama‘ah is whatever agrees with the truth, even if you are alone (al-Lalaka’i, Sharh Usul I‘tiqad Ahl as-Sunnah). And Ibn Abbas (may Allah be pleased with them both) is related to have used the very phrase in explaining the verse:")
+                        .font(.body)
+                    ScriptureQuote(text: "“On the Day [some] faces will turn white and [some] faces will turn black” (Quran 3:106).", arabic: "يَوۡمَ تَبۡيَضُّ وُجُوهٞ وَتَسۡوَدُّ وُجُوهٞۚ")
+                    Text("Ibn Kathir (may Allah have mercy on him) relates it from him in his Tafsir at this verse: the faces of Ahl as-Sunnah wal-Jama‘ah will turn white, and the faces of the people of innovation and division will turn black.")
+                        .font(.body)
+
+                    Text("**Salaf (سَلَف) and Khalaf (خَلَف)**: salaf, from **س-ل-ف**, is what has gone before; Allah says of a destroyed people, “We made them a precedent (salafan)” (Quran 43:56). In creed, the Salaf are the first three generations, the Companions, the Tabi‘un, and their followers, whom the Prophet (peace be upon him) called the best of people (Sahih al-Bukhari 2652, quoted above). Khalaf, from **خ-ل-ف**, is what comes after; the Quran speaks of “successors (khalf)” who inherited the Scripture and neglected it (Quran 7:169). In the books of creed the Khalaf are the later scholars who took up kalam and reinterpretation. A saying spread among them, “the way of the Salaf is safer, the way of the Khalaf is more knowledgeable and wiser,” and Ibn Taymiyyah (may Allah have mercy on him) answered in al-Fatwa al-Hamawiyyah that the way of the Salaf is safer, more knowledgeable, and wiser all at once, because it is the way of the people who understood revelation best.")
+                        .font(.body)
+
+                    Text("**Mu‘tazilah (المُعتَزِلَة)**: from **ع-ز-ل**, i‘tazala, “to withdraw” or “to set oneself apart.” Wasil ibn Ata (80–131 AH) sat in the circle of al-Hasan al-Basri (d. 110 AH) in Basrah. When a man asked about the Muslim who commits a major sin, Wasil answered ahead of his teacher that he is neither a believer nor a disbeliever but in “a station between the two stations,” and withdrew to a pillar of the mosque with those who agreed with him; al-Hasan said, “Wasil has withdrawn from us (i‘tazalana Wasil)” (ash-Shahrastani, al-Milal wan-Nihal). His companion Amr ibn Ubayd (d. 144 AH) joined him, and the name stuck. They built their creed on five principles (al-usul al-khamsah): **tawhid**, by which they meant denying Allah’s attributes; **‘adl**, “justice,” by which they meant that Allah does not create the servants’ acts; **al-wa‘d wal-wa‘id**, the promise and the threat, by which they meant that the major sinner is in the Fire forever; **al-manzilah bayn al-manzilatayn**, the station between two stations; and **enjoining good and forbidding evil**, by which they justified revolt against the rulers. They called themselves “the people of tawhid and justice”; Ahl as-Sunnah called them the Mu‘tazilah and, for their denial of the decree, the Qadariyyah (al-Ash‘ari, Maqalat al-Islamiyyin; ash-Shahrastani, al-Milal wan-Nihal).")
+                        .font(.body)
+
+                    Text("**Ash‘ariyyah (الأَشعَرِيَّة)**: named after Abu al-Hasan Ali ibn Isma‘il al-Ash‘ari (260–324 AH), not after the Companion Abu Musa al-Ash‘ari (may Allah be pleased with him), his ancestor. He was a Mu‘tazili for about forty years under his stepfather al-Jubba’i, renounced them publicly in the mosque of Basrah, and ended by writing al-Ibanah on the creed of Imam Ahmad, as quoted above (Ibn Asakir, Tabyin Kadhib al-Muftari). The school that bears his name follows his middle period rather than his last book: it affirms seven attributes (life, knowledge, power, will, hearing, sight, and speech) by rational proof, reinterprets (**ta’wil**) the rest, such as the Hand, the Face, and the rising over the Throne, and proves the existence of Allah by the kalam argument from the origination of bodies rather than by the way of the Quran.")
+                        .font(.body)
+
+                    Text("**Maturidiyyah (المَاتُرِيدِيَّة)**: named after Abu Mansur Muhammad ibn Muhammad al-Maturidi (d. 333 AH) of Maturid, a quarter of Samarqand, a Hanafi jurist and the author of Kitab at-Tawhid and Ta’wilat al-Quran; the school is described above under The Schools of Kalam.")
+                        .font(.body)
+
+                    Text("**Khawarij (الخَوَارِج), Haruriyyah (الحَرُورِيَّة), al-Muhakkimah (المُحَكِّمَة)**: three names for one sect. Khawarij is from kharaja, “to go out”: they went out against Ali (may Allah be pleased with him), and in the Prophet’s words, quoted above under The Rejected Sects, they “pass out” of the religion. Haruriyyah is from Harura’, the village near Kufah where they first gathered after Siffin; the name was already current among the Companions, for when a woman asked Aisha (may Allah be pleased with her) whether a menstruating woman makes up her prayers, she replied:")
+                        .font(.body)
+                    ScriptureQuote(text: "“Are you a Haruriyyah? We used to menstruate in the time of the Prophet and he did not order us to do so” (Sahih al-Bukhari 321).", arabic: "أَحَرُورِيَّةٌ أَنْتِ كُنَّا نَحِيضُ مَعَ النَّبِيِّ صلى الله عليه وسلم فَلاَ يَأْمُرُنَا بِهِ", dimmed: true)
+
+                    Text("Al-Muhakkimah is from their slogan “no judgement (hukm) but Allah’s,” with which they rejected the arbitration (tahkim) between Ali and Mu‘awiyah; Ali’s reply to it is quoted above. Ali fought them at Nahrawan in 38 AH, and one of the Khawarij, Abd ar-Rahman ibn Muljam, struck him down in Kufah in Ramadan 40 AH (Ibn Kathir, al-Bidayah wan-Nihayah; ash-Shahrastani, al-Milal wan-Nihal).")
+                        .font(.body)
+
+                    Text("**Jahmiyyah (الجَهمِيَّة)**: the followers of Jahm ibn Safwan (executed 128 AH), who took his ideas from al-Ja‘d ibn Dirham. He denied Allah’s names and attributes altogether, said the Quran is created, that Allah is everywhere and not above His Throne, that faith is bare knowledge in the heart, and that man is compelled in his acts. Salm ibn Ahwaz executed him in Marw in 128 AH (at-Tabari, Tarikh, events of 128 AH; Ibn Kathir, al-Bidayah wan-Nihayah). Before him the governor Khalid ibn Abdillah al-Qasri had said at the Eid prayer in Wasit:")
+                        .font(.body)
+                    ScriptureQuote(text: "“O people, offer your sacrifices, may Allah accept them from you; I am sacrificing al-Ja‘d ibn Dirham, for he claims that Allah did not take Ibrahim as a close friend and did not speak to Musa. Exalted is Allah far above what al-Ja‘d says.” Then he came down and slaughtered him (al-Bukhari, Khalq Af'al al-'Ibad; ad-Darimi, ar-Radd 'ala al-Jahmiyyah; al-Lalaka'i, Sharh Usul I'tiqad Ahl as-Sunnah).", arabic: "أَيُّهَا النَّاسُ ضَحُّوا تَقَبَّلَ اللَّهُ ضَحَايَاكُمْ، فَإِنِّي مُضَحٍّ بِالْجَعْدِ بْنِ دِرْهَمٍ، إِنَّهُ زَعَمَ أَنَّ اللَّهَ لَمْ يَتَّخِذْ إِبْرَاهِيمَ خَلِيلًا، وَلَمْ يُكَلِّمْ مُوسَى تَكْلِيمًا، تَعَالَى اللَّهُ عَمَّا يَقُولُ الْجَعْدُ عُلُوًّا كَبِيرًا. ثُمَّ نَزَلَ فَذَبَحَهُ", dimmed: true)
+
+                    Text("Every later denial of the attributes, however refined, is a portion of Jahm’s inheritance, which is why the Salaf called the deniers “Jahmiyyah” whatever they called themselves.")
+                        .font(.body)
+
+                    Text("**Murji’ah (المُرجِئَة)**: from **ر-ج-أ**, arja’a, “to postpone” or “to defer”; the Quran speaks of “others deferred (murjawn) until the command of Allah” (Quran 9:106). They deferred deeds out of faith: faith, they said, is affirmation only, so sins do not diminish it and the sinner is a believer of complete faith; the extreme form, Jahm’s, makes faith bare knowledge in the heart. The Salaf distinguished this from the milder “irja’ of the jurists” of Kufah, who left deeds out of the definition of faith yet affirmed that sins are punished and commanded the deeds; they disagreed with the latter as an error in wording and with the former as a heresy (Ibn Taymiyyah, Kitab al-Iman).")
+                        .font(.body)
+
+                    Text("**Qadariyyah (القَدَرِيَّة)**: named after **qadar (قَدَر)**, the decree, which they denied; they said Allah does not decree the servants’ deeds and that each man originates his own action, so that the matter is “new” and unforeknown. The first to say it was Ma‘bad al-Juhani in Basrah, as Yahya ibn Ya‘mur reported when he brought the matter to Ibn Umar (Sahih Muslim 8, quoted below under The Schools of Kalam), then Ghaylan of Damascus, and the Mu‘tazilah inherited it from them.")
+                        .font(.body)
+
+                    Text("**Jabriyyah (الجَبرِيَّة)**: from **jabr (جَبر)**, compulsion: the opposite error, that man has no real will or act at all and is moved like a feather in the wind. This was Jahm’s view. Ahl as-Sunnah stand between the two: Allah creates all things, including the servants’ acts, and the servant truly wills, chooses, and acts, and is justly rewarded or punished; see the question on the decree below.")
+                        .font(.body)
+
+                    Text("**Rafidah (الرَّافِضَة)**: from **rafada (رَفَضَ)**, “to reject” or “to desert.” In 122 AH Zayd ibn Ali ibn al-Husayn (may Allah have mercy on him), the grandson of al-Husayn, rose in Kufah against the Umayyads. Those who had pledged to him demanded that he disavow Abu Bakr and Umar. He refused and said they were his grandfather’s two ministers, so they deserted him, and he said, “You have rejected me (rafadtumuni).” Those who deserted him were called the Rafidah, and the Zaydiyyah are those who stayed with Zayd (ash-Shahrastani, al-Milal wan-Nihal; Ibn Taymiyyah, Minhaj as-Sunnah; Ibn Kathir, al-Bidayah wan-Nihayah, events of 122 AH). The Rafidah reject the Companions who transmitted the religion, and so cast away the very channel it reached us through; see “Answering the Shia” under Salafiyyah.")
+                        .font(.body)
+
+                    Text("**The four errors in the attributes**: **tahrif (تَحرِيف)**, from **ح-ر-ف**, to turn a word from its place, as the Quran says of those who “distort words from their [proper] usages” (Quran 4:46): changing the meaning of a text, such as reading “rose over” as “conquered”; **ta‘til (تَعطِيل)**, from **ع-ط-ل**, to leave idle or empty, as in “an abandoned well” (Quran 22:45): stripping Allah of the attribute altogether; **takyif (تَكيِيف)**, from kayfa, “how”: assigning a manner to the attribute; and **tamthil (تَمثِيل)**, from mithl, “a likeness”: likening it to the attributes of creation. To these the scholars add **tafwid al-ma‘na (تَفوِيض المَعنَى)**, consigning the meaning: the claim that the Salaf recited the texts of the attributes without knowing what they meant. The Salaf consigned only the “how,” never the meaning; Imam Malik’s “the rising is not unknown,” quoted above under Two Roads, says so plainly. Ibn Taymiyyah (may Allah have mercy on him) wrote:")
+                        .font(.body)
+                    ScriptureQuote(text: "“The position of the people of tafwid, who claim to be following the Sunnah and the Salaf, is among the worst of the positions of the people of innovation and heresy” (Ibn Taymiyyah, Dar' Ta'arud al-'Aql wan-Naql).", arabic: "قَوْلُ أَهْلِ التَّفْوِيضِ الَّذِينَ يَزْعُمُونَ أَنَّهُمْ مُتَّبِعُونَ لِلسُّنَّةِ وَالسَّلَفِ مِنْ شَرِّ أَقْوَالِ أَهْلِ الْبِدَعِ وَالْإِلْحَادِ", dimmed: true)
+
+                    Text("**Istiwa’ (اِستِوَاء)**: from **س-و-ي**; istawa ‘ala means to rise over and settle upon. Allah says of Himself in seven places that He “established Himself above the Throne” (Quran 7:54, 10:3, 13:2, 20:5, 25:59, 32:4, 57:4). In the Book of Tawhid of his Sahih, al-Bukhari related from the Tabi‘i Abu al-‘Aliyah that istawa means “He rose (irtafa‘a),” and from Mujahid that it means “He ascended over (‘ala) the Throne.” The Jahmiyyah denied it, the later kalam schools read it as istawla, “He conquered,” a reading the Salaf rejected and the Arabs never used, and Malik (may Allah have mercy on him) gave the rule that settles it, quoted above.")
+                        .font(.body)
+
+                    Text("**Bid‘ah (بِدعَة)**: from **ب-د-ع**, to originate something with no precedent; Allah is “Originator (Badi‘) of the heavens and the earth” (Quran 2:117) because He made them from nothing. In the religion, a bid‘ah is a newly invented way of worship that has no basis from the Prophet (peace be upon him), practised as though it were part of the religion (ash-Shatibi, al-I‘tisam). He said:")
+                        .font(.body)
+                    ScriptureQuote(text: "“Whoever introduces into this matter of ours what is not in it, it is rejected” (Sahih al-Bukhari 2697, Sahih Muslim 1718).", arabic: "مَنْ أَحْدَثَ فِي أَمْرِنَا هَذَا مَا لَيْسَ فِيهِ فَهُوَ رَدٌّ", dimmed: true)
+
+                    Text("and in his sermons he used to say, “every innovation is misguidance” (Sahih Muslim 867). Innovations in creed are the gravest kind, because they are inventions about Allah Himself.")
+                        .font(.body)
+
+                    Text("**The hadith of the seventy-three sects**: the Prophet (peace be upon him) said:")
+                        .font(.body)
+                    ScriptureQuote(text: "“The Jews split into seventy-one or seventy-two sects, and the Christians split into seventy-one or seventy-two sects, and my nation will split into seventy-three sects” (Sunan Abi Dawud 4596; graded hasan sahih by al-Albani).", arabic: "افْتَرَقَتِ الْيَهُودُ عَلَى إِحْدَى أَوْ ثِنْتَيْنِ وَسَبْعِينَ فِرْقَةً وَتَفَرَّقَتِ النَّصَارَى عَلَى إِحْدَى أَوْ ثِنْتَيْنِ وَسَبْعِينَ فِرْقَةً وَتَفْتَرِقُ أُمَّتِي عَلَى ثَلاَثٍ وَسَبْعِينَ فِرْقَةً", dimmed: true)
+
+                    Text("Together with the report of Mu‘awiyah above, which names the saved sect as the Jama‘ah, this is the foundation of the Salaf’s writing about the sects. Ibn Taymiyyah (may Allah have mercy on him) added a caution in Majmu‘ al-Fatawa: the Prophet counted all seventy-three as “my nation,” so belonging to a deviant sect is a threat of the Fire, not by itself disbelief, and whoever declares every one of the seventy-two sects a disbeliever has opposed the Book, the Sunnah, and the consensus of the Companions and the four imams.")
                         .font(.body)
                 }
             }

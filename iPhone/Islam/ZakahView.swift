@@ -138,7 +138,7 @@ struct ZakahCalculatorView: View {
 
     private var notesSection: some View {
         Section {
-            Text("Zakah is 2.5% of wealth held for one full lunar year (hawl), due once your net wealth reaches the nisab. وَأَقِيمُواْ ٱلصَّلَوٰةَ وَءَاتُواْ ٱلزَّكَوٰةَ \"And establish prayer and give zakah\" (Quran 2:110). This simple calculator is a guide; for complex situations (property, retirement accounts, crops, livestock), consult a knowledgeable scholar.")
+            Text("Zakah is 2.5% of wealth held for one full lunar year (hawl), due once your net wealth reaches the nisab. وَأَقِيمُواْ ٱلصَّلَوٰةَ وَءَاتُواْ ٱلزَّكَوٰةَ \"And establish prayer and give zakah\" (Quran 2:110).\n\nThis is a quick, rough guide for the simple case, and nothing more. It is not a fatwa and it is not the final answer. Anything beyond plain savings, and in particular property, retirement accounts, shares held to trade, business assets, debts owed to you, crops, livestock, gold mixed with stones, or a year you are unsure of, needs a knowledgeable scholar of Ahl as-Sunnah wa al-Jamaʿah who can hear your actual situation. Ask one before you rely on this number.")
                 .font(.caption)
                 .foregroundColor(.secondary)
         }

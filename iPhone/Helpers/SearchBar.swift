@@ -83,6 +83,35 @@ struct SearchBar: View {
     }
 }
 
+/// `UISearchTextField`, with a trailing gap wide enough for right-to-left text.
+///
+/// MEASURED, not guessed: in a 296pt-wide field the stock `textRect` returns x=37.67 w=251.33, so
+/// the leading side gets 37.7pt (the magnifier and its spacing) and the trailing side gets 7pt.
+/// That asymmetry is invisible for Latin text, which is leading-aligned - all the spare room piles
+/// up on the trailing side where nothing is drawn. Arabic aligns to the TRAILING edge, so an
+/// unfocused Arabic query sat 7pt from a 14pt-radius rounded corner and read as though the word had
+/// been cut off (Abu's report: "looks chopped when the searchbar is not selected and there is
+/// arabic"). Focused it looked right, because the clear button pushes the text further in.
+///
+/// So: widen the resting gap. `textRect` is the unfocused geometry, so the editing layout - which
+/// was never the problem - is left exactly as it was.
+private final class PaddedSearchTextField: UISearchTextField {
+    /// 7pt + 10 = 17pt. Not the full 37.7pt of the leading side: with no button drawn there, that
+    /// much empty room reads as a hole rather than as padding.
+    private static let extraTrailingGap: CGFloat = 10
+
+    override func textRect(forBounds bounds: CGRect) -> CGRect {
+        let rect = super.textRect(forBounds: bounds)
+        // Trailing, not "right": mirrored for a right-to-left INTERFACE, which is a different thing
+        // from right-to-left text inside a left-to-right interface.
+        let isRTL = effectiveUserInterfaceLayoutDirection == .rightToLeft
+        return rect.inset(by: UIEdgeInsets(top: 0,
+                                           left: isRTL ? Self.extraTrailingGap : 0,
+                                           bottom: 0,
+                                           right: isRTL ? 0 : Self.extraTrailingGap))
+    }
+}
+
 /// The UIKit half: `UISearchTextField` with the old UISearchBar wrapper's text-sync guards intact.
 private struct SystemSearchField: UIViewRepresentable {
     #if DEBUG
@@ -104,7 +133,7 @@ private struct SystemSearchField: UIViewRepresentable {
     }
 
     func makeUIView(context: Context) -> UISearchTextField {
-        let field = UISearchTextField()
+        let field = PaddedSearchTextField()
         field.placeholder = placeholder
         field.autocorrectionType = .no
         field.autocapitalizationType = .none

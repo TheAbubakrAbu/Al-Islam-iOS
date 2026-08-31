@@ -2335,9 +2335,17 @@ struct MushafComposeConfig {
     let highlightAllahNames: Bool
     let fontSize: CGFloat
     let fitPage: Bool
-    /// Non-nil = break the page's lines where this riwayah's printed mushaf does (always, with Fit
-    /// Page: there is no separate setting); the composer sizes the page so its widest printed line
-    /// fits the measure.
+    /// DISABLED - always nil. Non-nil would break the page's lines where this riwayah's printed
+    /// mushaf does, and size the page so its widest printed line fits the measure. That is what a
+    /// print-matched page cost: sized off the print's widest line, it ran well short of a phone
+    /// screen (half the height on most pages), and the lines the print leaves short were set
+    /// natural, so the closing ayahs dangled instead of justifying to the measure.
+    ///
+    /// Matching the print means matching WHICH AYAHS open and close each page - nothing else. The
+    /// paginator already does exactly that: every one of the twenty prints is a standard 604-page
+    /// Madani mushaf, and `hafsPageTable` maps each riwayah onto those same page boundaries through
+    /// `QiraahComparison`. The print's line breaks, its measure, and its type size are the print's
+    /// own business and are not reproduced. The table machinery below is left in place, inert.
     let printLines: MushafPrintLineTable?
     let accent: UIColor
 
@@ -2364,7 +2372,7 @@ struct MushafComposeConfig {
             highlightAllahNames: s.highlightAllahNames,
             fontSize: CGFloat(s.fontArabicSize),
             fitPage: s.mushafFitPage,
-            printLines: s.mushafFitPage ? MushafPrintLines.table(for: s.displayQiraahForArabic) : nil,
+            printLines: nil,
             accent: UIColor(s.accentColor.color)
         )
     }
@@ -4114,7 +4122,10 @@ enum MushafPageRenderCache {
     // 9: fit measures Arabic pages with ZERO base line spacing (the leftover spread supplies the gaps
     // afterwards), the page margins tightened 20/6 -> 12/2, and the fitted Quranic-face line box
     // compressed to 0.90x natural (`lineBoxScale`), so every persisted size moves up.
-    nonisolated private static let fitterVersion = 9
+    // 10: print-matched lines withdrawn (`MushafComposeConfig.printLines` is always nil). Every
+    // page composes and fits the ordinary way again, so every fit persisted by a print-matched
+    // build measured a page that no longer exists - those pages stood at half height.
+    nonisolated private static let fitterVersion = 10
 
     nonisolated private static let persistedMetricsSalt: String = {
         let os = ProcessInfo.processInfo.operatingSystemVersion

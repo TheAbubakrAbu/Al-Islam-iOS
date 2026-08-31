@@ -2580,113 +2580,6 @@ struct MadhabView: View {
                         .font(.body)
                 }
 
-                Section(header: Text("KEY TERMS")) {
-                    Text("**Fiqh (فِقْه)**: “deep understanding,” from the root ف-ق-ه, to grasp the meaning of a thing beneath its surface; the Quran uses the verb when Musa asks that the people “may understand my speech” (Quran 20:28). In the Shari‘ah, fiqh is the knowledge of the practical rulings of Islam (how to purify oneself, pray, fast, trade, marry, and inherit) drawn from their detailed evidences. The Prophet (peace be upon him) tied this understanding to Allah wanting good for a person (Sahih al-Bukhari 71, quoted above), and the Quran made it the purpose of setting out to seek knowledge:")
-                        .font(.body)
-                    ScriptureQuote(text: "“For there should separate from every division of them a group [remaining] to obtain understanding in the religion and warn their people when they return to them” (Quran 9:122).", arabic: "فَلَوۡلَا نَفَرَ مِن كُلِّ فِرۡقَةٖ مِّنۡهُمۡ طَآئِفَةٞ لِّيَتَفَقَّهُواْ فِي ٱلدِّينِ وَلِيُنذِرُواْ قَوۡمَهُمۡ إِذَا رَجَعُوٓاْ إِلَيۡهِمۡ")
-
-                    Text("**Faqih (فَقِيه)**, plural **fuqaha (فُقَهَاء)**: one who possesses fiqh, a jurist. The word is about understanding, not memory alone. The Prophet (peace be upon him) prayed for Ibn Abbas (may Allah be pleased with them) with the verb of this very word, allahumma faqqihhu fid-din:")
-                        .font(.body)
-                    ScriptureQuote(text: "“O Allah! Make him a learned scholar in the religion” (Sahih al-Bukhari 143).", arabic: "اللَّهُمَّ فَقِّهْهُ فِي الدِّينِ", dimmed: true)
-                    Text("And he distinguished the one who carries knowledge from the one who understands it:")
-                        .font(.body)
-                    ScriptureQuote(text: "“May Allah gladden a man who hears a hadith from us, so he memorizes it until he conveys it to someone else. Perhaps he carries fiqh to one who is more understanding than him, and perhaps the one who carries the fiqh is not a faqih” (Sunan al-Tirmidhi 2656; graded sahih by al-Albani).", arabic: "نَضَّرَ اللَّهُ امْرَأً سَمِعَ مِنَّا حَدِيثًا فَحَفِظَهُ حَتَّى يُبَلِّغَهُ غَيْرَهُ فَرُبَّ حَامِلِ فِقْهٍ إِلَى مَنْ هُوَ أَفْقَهُ مِنْهُ وَرُبَّ حَامِلِ فِقْهٍ لَيْسَ بِفَقِيهٍ", dimmed: true)
-                    Text("The Salaf added that fiqh without fear of Allah is not fiqh. When someone objected to al-Hasan al-Basri (may Allah have mercy on him), “The fuqaha do not say that,” he replied:")
-                        .font(.body)
-                    ScriptureQuote(text: "“Woe to you! Have you ever seen a faqih? The faqih is only the one who renounces this world, desires the Hereafter, has insight into the affair of his religion, and is constant in the worship of his Lord” (Sunan al-Darimi 297).", arabic: "وَيْحَكَ! وَرَأَيْتَ أَنْتَ فَقِيهًا قَطُّ؟ إِنَّمَا الْفَقِيهُ الزَّاهِدُ فِي الدُّنْيَا، الرَّاغِبُ فِي الْآخِرَةِ، الْبَصِيرُ بِأَمْرِ دِينِهِ، الْمُدَاوِمُ عَلَى عِبَادَةِ رَبِّهِ", dimmed: true)
-
-                    Text("**Madhhab (مَذْهَب)**, plural **madhahib (مَذَاهِب)**: from ذَهَبَ (dhahaba), “he went”; literally the way one goes, or the place one goes to. In fiqh it is the method an imam used to derive rulings, together with the body of rulings that his students preserved, refined, and passed on. A madhhab is a way to the Quran and Sunnah, not a source alongside them, and the imams themselves said so (see “Unity Through Diversity” below).")
-                        .font(.body)
-
-                    Text("**Shari‘ah (شَرِيعَة)**: from ش-ر-ع, the open path that leads down to water; the whole law that Allah revealed, which is why He says of the nations, “To each of you We prescribed a law and a method” (Quran 5:48). The Shari‘ah is one and infallible, because it is from Allah; fiqh is the scholars’ understanding of it, and a scholar can be right or mistaken. Keeping the two apart explains how the schools can differ while the religion stays one:")
-                        .font(.body)
-                    ScriptureQuote(text: "“Then We put you, [O Muhammad], on an ordained way concerning the matter [of religion]; so follow it and do not follow the inclinations of those who do not know” (Quran 45:18).", arabic: "ثُمَّ جَعَلۡنَٰكَ عَلَىٰ شَرِيعَةٖ مِّنَ ٱلۡأَمۡرِ فَٱتَّبِعۡهَا وَلَا تَتَّبِعۡ أَهۡوَآءَ ٱلَّذِينَ لَا يَعۡلَمُونَ")
-
-                    Text("**Usul al-fiqh (أُصُول الفِقْه)**: “the roots of fiqh,” usul being the plural of asl (أَصْل), a root or foundation. It is the science of the sources of the law and of the rules for deriving rulings from them: the Quran, the Sunnah, consensus, and analogy, together with the study of commands and prohibitions, the general and the specific, and the abrogating and the abrogated. Imam ash-Shafi‘i’s ar-Risalah (الرِّسَالَة) is the earliest book on it that has reached us. Scholars of usul point to one ayah that gathers the sources in order: obedience to Allah (the Quran), obedience to the Messenger (the Sunnah), the people of authority (whose agreement is consensus), and the referring of new disputes back to the two revelations (analogy):")
-                        .font(.body)
-                    ScriptureQuote(text: "“O you who have believed, obey Allah and obey the Messenger and those in authority among you” (Quran 4:59).", arabic: "يَٰٓأَيُّهَا ٱلَّذِينَ ءَامَنُوٓاْ أَطِيعُواْ ٱللَّهَ وَأَطِيعُواْ ٱلرَّسُولَ وَأُوْلِي ٱلۡأَمۡرِ مِنكُمۡۖ")
-                    Text("and then sends every dispute back to the two revelations:")
-                        .font(.body)
-                    ScriptureQuote(text: "“And if you disagree over anything, refer it to Allah and the Messenger, if you should believe in Allah and the Last Day” (Quran 4:59).", arabic: "فَإِن تَنَٰزَعۡتُمۡ فِي شَيۡءٖ فَرُدُّوهُ إِلَى ٱللَّهِ وَٱلرَّسُولِ إِن كُنتُمۡ تُؤۡمِنُونَ بِٱللَّهِ وَٱلۡيَوۡمِ ٱلۡأٓخِرِۚ")
-                    Text("The Sunnah is revelation alongside the Book, a source in its own right and not a mere commentary, and the Prophet (peace be upon him) foretold those who would try to set it aside:")
-                        .font(.body)
-                    ScriptureQuote(text: "“Beware! I have been given the Qur'an and something like it, yet the time is coming when a man replete on his couch will say: Keep to the Qur'an; what you find in it to be permissible treat as permissible, and what you find in it to be prohibited treat as prohibited” (Sunan Abi Dawud 4604; graded sahih by al-Albani).", arabic: "أَلاَ إِنِّي أُوتِيتُ الْكِتَابَ وَمِثْلَهُ مَعَهُ أَلاَ يُوشِكُ رَجُلٌ شَبْعَانُ عَلَى أَرِيكَتِهِ يَقُولُ عَلَيْكُمْ بِهَذَا الْقُرْآنِ فَمَا وَجَدْتُمْ فِيهِ مِنْ حَلاَلٍ فَأَحِلُّوهُ وَمَا وَجَدْتُمْ فِيهِ مِنْ حَرَامٍ فَحَرِّمُوهُ", dimmed: true)
-
-                    Text("**Dalil (دَلِيل)**, plural **adillah (أَدِلَّة)**: from د-ل-ل, to guide or point the way; a proof, that which leads to a ruling. The Quran uses the word of the sun, which marks out the movement of the shadow:")
-                        .font(.body)
-                    ScriptureQuote(text: "“Then We made the sun for it an indication” (Quran 25:45).", arabic: "ثُمَّ جَعَلۡنَا ٱلشَّمۡسَ عَلَيۡهِ دَلِيلٗا")
-                    Text("A dalil may be textual (naqli: an ayah or a hadith) or rational (‘aqli), and definitive (qat‘i) or probable (zanni). Most differences in fiqh arise over probable evidences, which is why they are tolerated; no difference is tolerated over what is definitive.")
-                        .font(.body)
-
-                    Text("**Ijtihad (اِجْتِهَاد)** and **mujtahid (مُجْتَهِد)**: from ج-ه-د, to exert oneself to the utmost. Ijtihad is the qualified scholar’s utmost effort to reach the ruling of Allah on a question the texts do not settle explicitly, and the mujtahid is the one qualified to make it: he must know the Quran, the Sunnah and its chains, the Arabic language, the points of consensus, the abrogating and the abrogated, and the rules of usul. Allah rewards the sincere, qualified effort even when it misses the mark:")
-                        .font(.body)
-                    ScriptureQuote(text: "“If a judge gives a verdict according to the best of his knowledge and his verdict is correct, he will receive a double reward, and if he gives a verdict according to the best of his knowledge and his verdict is wrong, even then he will get a reward” (Sahih al-Bukhari 7352, Sahih Muslim 1716).", arabic: "إِذَا حَكَمَ الْحَاكِمُ فَاجْتَهَدَ ثُمَّ أَصَابَ فَلَهُ أَجْرَانِ، وَإِذَا حَكَمَ فَاجْتَهَدَ ثُمَّ أَخْطَأَ فَلَهُ أَجْرٌ", dimmed: true)
-                    Text("Ijtihad reaches for the ruling of Allah but is not the same as it, which is why the Prophet (peace be upon him) instructed his commanders:")
-                        .font(.body)
-                    ScriptureQuote(text: "“When you besiege a fort and the besieged want you to let them out in accordance with Allah's command, do not let them come out in accordance with His command, but do so at your own command, for you do not know whether or not you will hit upon Allah's command with regard to them” (Sahih Muslim 1731).", arabic: "وَإِذَا حَاصَرْتَ أَهْلَ حِصْنٍ فَأَرَادُوكَ أَنْ تُنْزِلَهُمْ عَلَى حُكْمِ اللَّهِ فَلاَ تُنْزِلْهُمْ عَلَى حُكْمِ اللَّهِ وَلَكِنْ أَنْزِلْهُمْ عَلَى حُكْمِكَ فَإِنَّكَ لاَ تَدْرِي أَتُصِيبُ حُكْمَ اللَّهِ فِيهِمْ أَمْ لاَ", dimmed: true)
-
-                    Text("**Taqlid (تَقْلِيد)** and **ittiba‘ (اِتِّبَاع)**: taqlid is from qiladah (قِلَادَة), a collar or necklace; to make taqlid of someone is to hang your affair around his neck, accepting his statement without knowing its evidence. Ittiba‘ is from ت-ب-ع, to follow; it is following a statement because its evidence has become clear to you. The Quran condemns the taqlid that turns away from revelation:")
-                        .font(.body)
-                    ScriptureQuote(text: "“And when it is said to them, ‘Follow what Allah has revealed,’ they say, ‘Rather, we will follow that which we found our fathers doing.’ Even though their fathers understood nothing, nor were they guided?” (Quran 2:170).", arabic: "وَإِذَا قِيلَ لَهُمُ ٱتَّبِعُواْ مَآ أَنزَلَ ٱللَّهُ قَالُواْ بَلۡ نَتَّبِعُ مَآ أَلۡفَيۡنَا عَلَيۡهِ ءَابَآءَنَآۚ أَوَلَوۡ كَانَ ءَابَآؤُهُمۡ لَا يَعۡقِلُونَ شَيۡـٔٗا وَلَا يَهۡتَدُونَ")
-                    Text("and it makes ittiba‘ of the Messenger (peace be upon him) the proof of love for Allah:")
-                        .font(.body)
-                    ScriptureQuote(text: "“Say, [O Muhammad], ‘If you should love Allah, then follow me, [so] Allah will love you and forgive you your sins’” (Quran 3:31).", arabic: "قُلۡ إِن كُنتُمۡ تُحِبُّونَ ٱللَّهَ فَٱتَّبِعُونِي يُحۡبِبۡكُمُ ٱللَّهُ وَيَغۡفِرۡ لَكُمۡ ذُنُوبَكُمۡۚ")
-                    Text("Ibn Abd al-Barr (may Allah have mercy on him) records the scholars’ distinction in Jami‘ Bayan al-‘Ilm: taqlid is returning to a statement whose speaker has no proof for it, while ittiba‘ is what a proof has established. Ibn al-Qayyim (may Allah have mercy on him) builds on it in I‘lam al-Muwaqqi‘in, separating the blameworthy taqlid (turning away from what Allah revealed in favour of one’s forefathers, following someone one does not know to be qualified, and clinging to an opinion after the evidence against it has appeared) from the permitted asking of the people of knowledge by the one who cannot derive rulings himself, which is what Allah commanded in Quran 16:43 (quoted above). The scholar practises ittiba‘; the layman practises a permitted taqlid that should move toward ittiba‘ as he learns.")
-                        .font(.body)
-
-                    Text("**Ijma‘ (إِجْمَاع)**: from ج-م-ع, to gather or agree; the agreement of the qualified scholars of the ummah, after the Prophet (peace be upon him), on a ruling. It is the third source of the law, and its proof is that Allah threatened whoever follows other than the way of the believers (Quran 4:115, quoted below). Imam Ahmad (may Allah have mercy on him) warned against loose claims of it:")
-                        .font(.body)
-                    ScriptureQuote(text: "“Whoever claims consensus is lying” (Ibn al-Qayyim, I‘lam al-Muwaqqi‘in).", arabic: "مَنِ ادَّعَى الإِجْمَاعَ فَهُوَ كَاذِبٌ", dimmed: true)
-                    Text("He meant that a scholar may simply not know of a dissenting opinion, so a claim of ijma‘ must be verified; the ijma‘ known with certainty is that of the Companions and the first generations.")
-                        .font(.body)
-
-                    Text("**Qiyas (قِيَاس)**: from ق-ي-س, to measure one thing against another; extending the ruling of a case settled by a text to a new case that shares its effective cause (**‘illah, عِلَّة**). Wine is forbidden because it intoxicates, so every intoxicant is forbidden. The Prophet (peace be upon him) himself reasoned this way when a woman asked whether she could perform Hajj on behalf of her mother, who had vowed to perform it and died:")
-                        .font(.body)
-                    ScriptureQuote(text: "“Perform Hajj on her behalf. Had there been a debt on your mother, would you have paid it or not? So, pay Allah's debt, as He has more right to be paid” (Sahih al-Bukhari 1852).", arabic: "حُجِّي عَنْهَا، أَرَأَيْتِ لَوْ كَانَ عَلَى أُمِّكِ دَيْنٌ أَكُنْتِ قَاضِيَةً اقْضُوا اللَّهَ، فَاللَّهُ أَحَقُّ بِالْوَفَاءِ", dimmed: true)
-                    Text("Qiyas is a source only where no text speaks directly. It is accepted by the four schools and rejected by the Zahiris.")
-                        .font(.body)
-
-                    Text("**Fatwa (فَتْوَى)** and **mufti (مُفْتِي)**: from ف-ت-ي, to make a matter clear; a fatwa is an answer to a question about a ruling, and the mufti is the one qualified to give it. The Quran uses the very word of Allah answering His servants:")
-                        .font(.body)
-                    ScriptureQuote(text: "“They request from you a [legal] ruling. Say, ‘Allah gives you a ruling concerning one having neither descendants nor ascendants [as heirs]’” (Quran 4:176).", arabic: "يَسۡتَفۡتُونَكَ قُلِ ٱللَّهُ يُفۡتِيكُمۡ فِي ٱلۡكَلَٰلَةِۚ")
-                    Text("Giving fatwa without knowledge is a grave sin. The Prophet (peace be upon him) said:")
-                        .font(.body)
-                    ScriptureQuote(text: "“Whoever is given a fatwa that has no basis, then his sin will be upon the one who issued that fatwa” (Sunan Ibn Majah 53; graded hasan by al-Albani).", arabic: "مَنْ أُفْتِيَ بِفُتْيَا غَيْرَ ثَبَتٍ فَإِنَّمَا إِثْمُهُ عَلَى مَنْ أَفْتَاهُ", dimmed: true)
-
-                    Text("**The five rulings (الأَحْكَام الخَمْسَة)**: every act falls under one of five. **Fard (فَرْض)** or **wajib (وَاجِب)**: obligatory. Fard is from ف-ر-ض, to cut or fix definitively (Allah calls the shares of inheritance “an obligation [imposed] by Allah,” Quran 4:11), and wajib is from و-ج-ب, to be binding. Most scholars use the two as synonyms; the Hanafis reserve fard for what is established by definitive proof and wajib for what is established by probable proof. One is rewarded for doing it and punished for leaving it. **Mustahabb (مُسْتَحَبّ)**, also called sunnah or **mandub (مَنْدُوب)**: recommended, from ح-ب-ب, to love; rewarded if done, not punished if left. **Mubah (مُبَاح)**: permitted, from ب-و-ح, to be open; neither reward nor punishment in itself. **Makruh (مَكْرُوه)**: disliked, from ك-ر-ه, to hate; rewarded for leaving it, not punished for doing it. **Haram (حَرَام)**: forbidden, from ح-ر-م, to be inviolable; punished for doing it and rewarded for leaving it out of obedience. Only Allah assigns these categories:")
-                        .font(.body)
-                    ScriptureQuote(text: "“And do not say about what your tongues assert of untruth, ‘This is lawful and this is unlawful,’ to invent falsehood about Allah” (Quran 16:116).", arabic: "وَلَا تَقُولُواْ لِمَا تَصِفُ أَلۡسِنَتُكُمُ ٱلۡكَذِبَ هَٰذَا حَلَٰلٞ وَهَٰذَا حَرَامٞ لِّتَفۡتَرُواْ عَلَى ٱللَّهِ ٱلۡكَذِبَۚ")
-
-                    Text("**Halal (حَلَال)** and **haram (حَرَام)**: halal is from ح-ل-ل, to untie or release, hence what is permitted; haram is what is forbidden. Between the two lie doubtful matters, and piety is to keep clear of them. The Prophet (peace be upon him) said:")
-                        .font(.body)
-                    ScriptureQuote(text: "“The halal is clear and the haram is clear, and between them are doubtful things which many people do not know. So whoever guards against the doubtful things has kept his religion and his honour blameless” (Sahih al-Bukhari 52, Sahih Muslim 1599).", arabic: "الْحَلاَلُ بَيِّنٌ وَالْحَرَامُ بَيِّنٌ، وَبَيْنَهُمَا مُشَبَّهَاتٌ لاَ يَعْلَمُهَا كَثِيرٌ مِنَ النَّاسِ، فَمَنِ اتَّقَى الْمُشَبَّهَاتِ اسْتَبْرَأَ لِدِيِنِهِ وَعِرْضِهِ", dimmed: true)
-
-                    Text("**Rukhsah (رُخْصَة)** and **‘azimah (عَزِيمَة)**: ‘azimah, from ع-ز-م, resolve, is the original ruling; rukhsah, from ر-خ-ص, ease, is the concession Allah grants when there is hardship: shortening the prayer and breaking the fast on a journey, tayammum when water is absent, eating forbidden meat under necessity. Allah says of the fast:")
-                        .font(.body)
-                    ScriptureQuote(text: "“Allah intends for you ease and does not intend for you hardship” (Quran 2:185).", arabic: "يُرِيدُ ٱللَّهُ بِكُمُ ٱلۡيُسۡرَ وَلَا يُرِيدُ بِكُمُ ٱلۡعُسۡرَ")
-                    Text("When Umar (may Allah be pleased with him) asked the Prophet (peace be upon him) why the prayer is still shortened on journeys now that the Muslims are safe, he answered:")
-                        .font(.body)
-                    ScriptureQuote(text: "“It is an act of charity which Allah has done to you, so accept His charity” (Sahih Muslim 686).", arabic: "صَدَقَةٌ تَصَدَّقَ اللَّهُ بِهَا عَلَيْكُمْ فَاقْبَلُوا صَدَقَتَهُ", dimmed: true)
-                    Text("And when Hamzah ibn Amr al-Aslami (may Allah be pleased with him) asked whether he sinned by fasting on a journey, since he had the strength for it, he answered:")
-                        .font(.body)
-                    ScriptureQuote(text: "“It is a concession from Allah. He who took advantage of it, it is good for him, and he who preferred to observe the fast, there is no sin upon him” (Sahih Muslim 1121).", arabic: "هِيَ رُخْصَةٌ مِنَ اللَّهِ فَمَنْ أَخَذَ بِهَا فَحَسَنٌ وَمَنْ أَحَبَّ أَنْ يَصُومَ فَلاَ جُنَاحَ عَلَيْهِ", dimmed: true)
-
-                    Text("**The four schools**: the Hanafi school of Abu Hanifah an-Nu‘man ibn Thabit (d. 150 AH, Kufa), the Maliki school of Malik ibn Anas (d. 179 AH, Madinah), the Shafi‘i school of Muhammad ibn Idris ash-Shafi‘i (d. 204 AH, Egypt, after Makkah, Madinah, and Iraq), and the Hanbali school of Ahmad ibn Hanbal (d. 241 AH, Baghdad). Each is treated in “The Four Sunni Madhahib” below. Other imams of the same rank had schools that did not survive as living traditions, among them al-Awza‘i (d. 157 AH) in Syria, Sufyan ath-Thawri (d. 161 AH) in Kufa, al-Layth ibn Sa‘d (d. 175 AH) in Egypt, and Ibn Jarir at-Tabari (d. 310 AH) in Baghdad.")
-                        .font(.body)
-
-                    Text("**The Zahiri school (الظَّاهِرِيَّة)**: from zahir (ظَاهِر), the apparent; the school of Dawud ibn Ali al-Asbahani, known as az-Zahiri (d. 270 AH, Baghdad), a pupil of Ishaq ibn Rahawayh and Abu Thawr, and developed most fully by Ibn Hazm al-Andalusi (d. 456 AH), author of al-Muhalla in fiqh and al-Ihkam in usul. The Zahiris hold to the apparent meaning of the texts and to consensus, and reject qiyas as a source. Scholars valued its devotion to the texts (adh-Dhahabi records in Siyar A‘lam an-Nubala’ that al-‘Izz ibn Abd as-Salam counted al-Muhalla, with Ibn Qudamah’s al-Mughni, among the finest books of fiqh), while noting that in some questions of Allah’s attributes Ibn Hazm departed from the way of the Salaf. The school did not survive as a living tradition with its own continuous community.")
-                        .font(.body)
-
-                    Text("**Ahl ar-Ra’y (أَهْل الرَّأْي)** and **Ahl al-Hadith (أَهْل الحَدِيث)**: “the people of considered opinion” and “the people of hadith,” the two tendencies of early fiqh. Ahl ar-Ra’y, centred in Kufa and represented by Abu Hanifah and his companions, made wide use of qiyas and juristic preference (istihsan), partly because fewer narrations were established in Iraq, where forgery was also more common, so its jurists were stricter in what they accepted. Ahl al-Hadith, centred in Madinah and Makkah and represented by Malik, then by ash-Shafi‘i and Ahmad, kept close to the narrated texts and used qiyas sparingly. The labels describe an emphasis, not a rejection: the Hanafis accept authentic hadith, and the hadith scholars use analogy. Ash-Shafi‘i studied the Iraqi fiqh under Muhammad ash-Shaybani and the Madinan fiqh under Malik, and his usul brought the two together.")
-                        .font(.body)
-
-                    Text("**The seven fuqaha of Madinah (الفُقَهَاء السَّبْعَة)**: the seven jurists of the generation after the Companions who carried the fiqh of Madinah at the end of the first century AH: Sa‘id ibn al-Musayyib, ‘Urwah ibn az-Zubayr, al-Qasim ibn Muhammad ibn Abi Bakr, Kharijah ibn Zayd ibn Thabit, ‘Ubaydullah ibn Abdullah ibn ‘Utbah, Sulayman ibn Yasar, and a seventh whom the lists give as Abu Bakr ibn Abd ar-Rahman ibn al-Harith, Salim ibn Abdullah ibn Umar, or Abu Salamah ibn Abd ar-Rahman. Their students, above all Ibn Shihab az-Zuhri, taught Malik, so the Maliki school stands on the fiqh of Madinah at one remove from the Companions.")
-                        .font(.body)
-
-                    Text("**The four Abdullahs (العَبَادِلَة الأَرْبَعَة)**: four Companions named Abdullah whose fatawa shaped early fiqh: Abdullah ibn Umar, Abdullah ibn Abbas, Abdullah ibn az-Zubayr, and Abdullah ibn Amr ibn al-As (may Allah be pleased with them). When they agreed on a ruling it was called “the opinion of the Abadilah.” Abdullah ibn Mas‘ud (may Allah be pleased with him) died earlier and, as Imam Ahmad noted (reported by Ibn as-Salah in his Muqaddimah), is not counted among them, but he is the root of the fiqh of Kufa: his students Alqamah and al-Aswad taught Ibrahim an-Nakha‘i, who taught Hammad ibn Abi Sulayman, the teacher of Abu Hanifah. Ibn Abbas’s circle in Makkah (Ata’, Mujahid, Tawus, and Ikrimah) and Ibn Umar’s student Nafi‘, from whom Malik narrated, show that every madhhab goes back through the Tabi‘in to the Companions, and through them to the Prophet (peace be upon him).")
-                        .font(.body)
-                }
-
                 Section(header: Text("WHY FOLLOW A MADHHAB?")) {
                     Text("Islamic rulings are not always black and white. Scholars developed principles to interpret revelation when texts appeared to conflict or were not explicit.")
                         .font(.body)
@@ -2704,7 +2597,7 @@ struct MadhabView: View {
                         name: "Imam Abu Hanifa (may Allah have mercy on him)",
                         arabic: "أَبُو حَنِيفَة",
                         meta: "Hanafi (الحَنَفِي) · Kufa, Iraq (الكُوفَة، العِرَاق) · 80–150 AH / 699–767 CE",
-                        description: "The Imam of Kufa and founder of the Hanafi school. Known for his mastery of fiqh, ijtihad, and qiyas (analogical reasoning) and for his rigorous legal methodology. It is the most followed madhhab today, especially in South Asia, Turkey, Central Asia, and the Balkans."
+                        description: "The Imam of Kufa and founder of the Hanafi school. Known for his mastery of fiqh, ijtihad, and qiyas (قِيَاس, from ق-ي-س, to measure one thing against another: analogical reasoning) and for his rigorous legal methodology. It is the most followed madhhab today, especially in South Asia, Turkey, Central Asia, and the Balkans."
                     )
 
                     imamEntry(
@@ -2786,12 +2679,12 @@ struct MadhabView: View {
                     Text("The best generations did not do it. The Prophet (peace be upon him) said:")
                         .font(.body)
                     ScriptureQuote(text: "“The people of my generation are the best, then those who follow them, and then those who follow the latter” (Sahih al-Bukhari 2652).", arabic: "خَيْرُ النَّاسِ قَرْنِي، ثُمَّ الَّذِينَ يَلُونَهُمْ، ثُمَّ الَّذِينَ يَلُونَهُمْ", dimmed: true)
-                    Text("The Companions and their students asked whichever scholar was at hand: the people of Madinah asked Zayd ibn Thabit and Ibn Umar, the people of Makkah asked Ibn Abbas, the people of Kufa asked Ibn Mas‘ud and then Ali (may Allah be pleased with them), and none of them said, “I am on the madhhab of so-and-so.” The four imams belong to the generations after the Companions (the earliest of them, Abu Hanifah, saw the Companion Anas ibn Malik as a boy but took his fiqh from the Tabi‘in), so the first generations obviously had no Hanafi or Maliki school. Ibn Taymiyyah (may Allah have mercy on him) writes in Majmu‘ al-Fatawa that following the madhhab of a specific person, because one cannot learn the Shari‘ah except through him, is permitted for such a person but is not obligatory on everyone, and that no one is bound to follow one particular man in everything he says except the Messenger of Allah (peace be upon him). In practice: the scholar follows the evidence, the student learns through a school and checks it against the evidence as he grows, and the layman follows the trustworthy scholars available to him, whether they teach within a madhhab or not.")
+                    Text("The Companions and their students asked whichever scholar was at hand: the people of Madinah asked Zayd ibn Thabit and Ibn Umar, the people of Makkah asked Ibn Abbas, the people of Kufa asked Ibn Mas‘ud and then Ali (may Allah be pleased with them), and none of them said, “I am on the madhhab of so-and-so.” The four imams belong to the generations after the Companions (the earliest of them, Abu Hanifah, saw the Companion Anas ibn Malik as a boy but took his fiqh from the Tabi‘in), so the first generations obviously had no Hanafi or Maliki school. Ibn Taymiyyah (may Allah have mercy on him) writes in Majmu‘ al-Fatawa that following the madhhab of a specific person, because one cannot learn the Shari‘ah (شَرِيعَة, from ش-ر-ع, the path leading down to water, and so the revealed law) except through him, is permitted for such a person but is not obligatory on everyone, and that no one is bound to follow one particular man in everything he says except the Messenger of Allah (peace be upon him). In practice: the scholar follows the evidence, the student learns through a school and checks it against the evidence as he grows, and the layman follows the trustworthy scholars available to him, whether they teach within a madhhab or not.")
                         .font(.body)
 
                     Text("**Can I take a ruling from another madhhab, or change my madhhab?**")
                         .font(.body)
-                    Text("Yes, when it is done for the evidence or on the word of a scholar one trusts more, and not to hunt for the easiest answer. The imams’ own students did it: Abu Yusuf and Muhammad ash-Shaybani differed from Abu Hanifah in many questions, al-Muzani differed from ash-Shafi‘i, and ash-Shafi‘i revised his own madhhab when he moved to Egypt. Every school’s later scholars weighed (tarjih) between the reports from their imam and sometimes preferred another school’s view. Ibn Taymiyyah (may Allah have mercy on him) says in Majmu‘ al-Fatawa that whoever moves from one madhhab to another for a religious reason, because he finds the other closer to the Quran and Sunnah, has done well, and whoever does so for a worldly aim is blamed. What is condemned is tatabbu‘ ar-rukhas (تَتَبُّع الرُّخَص), collecting the most convenient opinion from each school out of desire. Sulayman at-Taymi (may Allah have mercy on him), one of the Tabi‘in, said that if you take the concession of every scholar, all evil gathers in you, and Ibn Abd al-Barr, who reports it in Jami‘ Bayan al-‘Ilm, adds that he knows of no disagreement on this. The touchstone is Quran 4:59 (quoted above): the dispute is referred to Allah and the Messenger, not to one’s ease.")
+                    Text("Yes, when it is done for the evidence or on the word of a scholar one trusts more, and not to hunt for the easiest answer. The imams’ own students did it: Abu Yusuf and Muhammad ash-Shaybani differed from Abu Hanifah in many questions, al-Muzani differed from ash-Shafi‘i, and ash-Shafi‘i revised his own madhhab when he moved to Egypt. Every school’s later scholars weighed (tarjih) between the reports from their imam and sometimes preferred another school’s view. Ibn Taymiyyah (may Allah have mercy on him) says in Majmu‘ al-Fatawa that whoever moves from one madhhab to another for a religious reason, because he finds the other closer to the Quran and Sunnah, has done well, and whoever does so for a worldly aim is blamed. What is condemned is tatabbu‘ ar-rukhas (تَتَبُّع الرُّخَص), collecting the most convenient opinion from each school out of desire. Sulayman at-Taymi (may Allah have mercy on him), one of the Tabi‘in, said that if you take the concession of every scholar, all evil gathers in you, and Ibn Abd al-Barr, who reports it in Jami‘ Bayan al-‘Ilm, adds that he knows of no disagreement on this. The touchstone is Quran 4:59 (quoted below): the dispute is referred to Allah and the Messenger, not to one’s ease.")
                         .font(.body)
 
                     Text("**What if my madhhab contradicts an authentic hadith?**")
@@ -2816,7 +2709,7 @@ struct MadhabView: View {
                     Text("Umar likewise did not know the ruling on the Magians until the report reached him:")
                         .font(.body)
                     ScriptureQuote(text: "“Umar did not take the jizyah from the Magians till Abdur-Rahman bin Auf testified that Allah's Messenger had taken the jizyah from the Magians of Hajar” (Sahih al-Bukhari 3156).", arabic: "وَلَمْ يَكُنْ عُمَرُ أَخَذَ الْجِزْيَةَ مِنَ الْمَجُوسِ. حَتَّى شَهِدَ عَبْدُ الرَّحْمَنِ بْنُ عَوْفٍ أَنَّ رَسُولَ اللَّهِ صلى الله عليه وسلم أَخَذَهَا مِنْ مَجُوسِ هَجَرٍ", dimmed: true)
-                    Text("Abrogation caused differences too: Ubayy ibn Ka‘b (may Allah be pleased with him) explained that the early fatwa that a bath is required only when there is emission was a concession from the beginning of Islam which the Prophet later replaced with the command to bathe (Sunan Abi Dawud 215; graded sahih by al-Albani), so whoever knew only the first ruling gave fatwa by it. And understanding differed: Ibn Umar reported that the dead are punished by their family’s weeping, while Aisha (may Allah be pleased with them) held that the report had been misunderstood, for what the Prophet said was that the deceased is punished for his own sin while his family weeps over him (Sahih al-Bukhari 3978). If Umar could miss a hadith and Ibn Umar could misunderstand one, an imam in Kufa or Madinah two generations later could do so more easily. Allah Himself records two prophets judging one case differently, and praises both:")
+                    Text("Abrogation caused differences too: Ubayy ibn Ka‘b (may Allah be pleased with him) explained that the early fatwa (فَتوَى, from ف-ت-ي, a considered answer given to a questioner) that a bath is required only when there is emission was a concession from the beginning of Islam which the Prophet later replaced with the command to bathe (Sunan Abi Dawud 215; graded sahih by al-Albani), so whoever knew only the first ruling gave fatwa by it. And understanding differed: Ibn Umar reported that the dead are punished by their family’s weeping, while Aisha (may Allah be pleased with them) held that the report had been misunderstood, for what the Prophet said was that the deceased is punished for his own sin while his family weeps over him (Sahih al-Bukhari 3978). If Umar could miss a hadith and Ibn Umar could misunderstand one, an imam in Kufa or Madinah two generations later could do so more easily. Allah Himself records two prophets judging one case differently, and praises both:")
                         .font(.body)
                     ScriptureQuote(text: "“And [mention] David and Solomon, when they judged concerning the field - when the sheep of a people overran it [at night], and We were witness to their judgement. And We gave understanding of the case to Solomon, and to each [of them] We gave judgement and knowledge” (Quran 21:78-79).", arabic: "وَدَاوُۥدَ وَسُلَيۡمَٰنَ إِذۡ يَحۡكُمَانِ فِي ٱلۡحَرۡثِ إِذۡ نَفَشَتۡ فِيهِ غَنَمُ ٱلۡقَوۡمِ وَكُنَّا لِحُكۡمِهِمۡ شَٰهِدِينَ ۝ فَفَهَّمۡنَٰهَا سُلَيۡمَٰنَۚ وَكُلًّا ءَاتَيۡنَا حُكۡمٗا وَعِلۡمٗاۚ")
                     Text("Add that Arabic words can carry more than one meaning, that texts can appear to conflict, and that the Companions differed in fiqh in the Prophet’s presence and he approved both sides (the Banu Qurayzah report quoted above), and the differences of the madhahib become what they are: sincere ijtihad over probable evidences, rewarded whether it hits or misses.")
@@ -2836,7 +2729,7 @@ struct MadhabView: View {
                     Text("Ibn Mas‘ud (may Allah be pleased with him) showed how the Companions handled a difference in fiqh: he disapproved of Uthman completing the prayer at Mina, yet prayed the full four behind him rather than split the congregation:")
                         .font(.body)
                     ScriptureQuote(text: "Abdullah (ibn Mas‘ud) once prayed four rak‘ahs. He was told, “You criticized Uthman but you yourself prayed four?” He replied, “Dissension is evil” (Sunan Abi Dawud 1960; graded sahih by al-Albani).", arabic: "أَنَّ عَبْدَ اللَّهِ صَلَّى أَرْبَعًا قَالَ فَقِيلَ لَهُ عِبْتَ عَلَى عُثْمَانَ ثُمَّ صَلَّيْتَ أَرْبَعًا قَالَ الْخِلاَفُ شَرٌّ", dimmed: true)
-                    Text("What is true is narrower: sincere ijtihad that misses the mark is excused and even rewarded (Sahih al-Bukhari 7352, quoted above), and the range of the Companions’ ijtihad left the ummah room; it is reported from Umar ibn Abd al-Aziz that he would not have loved the Companions to have agreed on everything, since their differing left a concession (Ibn Abd al-Barr, Jami‘ Bayan al-‘Ilm). The mercy is in the excuse and the ease, not in the differing itself, and what Allah commands is unity (the next question).")
+                    Text("What is true is narrower: sincere ijtihad that misses the mark is excused and even rewarded (Sahih al-Bukhari 7352, quoted below), and the range of the Companions’ ijtihad left the ummah room; it is reported from Umar ibn Abd al-Aziz that he would not have loved the Companions to have agreed on everything, since their differing left a concession (Ibn Abd al-Barr, Jami‘ Bayan al-‘Ilm). The mercy is in the excuse and the ease, not in the differing itself, and what Allah commands is unity (the next question).")
                         .font(.body)
 
                     Text("**Is following a madhhab a bid‘ah?**")
@@ -2876,7 +2769,7 @@ struct MadhabView: View {
                     Text("The Prophet (peace be upon him) warned of what happens when the untrained give rulings:")
                         .font(.body)
                     ScriptureQuote(text: "“Allah does not take away the knowledge by taking it away from the people, but takes it away by the death of the scholars, till when none of them remains, people will take as their leaders ignorant persons who, when consulted, will give their verdict without knowledge. So they will go astray and will lead the people astray” (Sahih al-Bukhari 100).", arabic: "إِنَّ اللَّهَ لاَ يَقْبِضُ الْعِلْمَ انْتِزَاعًا، يَنْتَزِعُهُ مِنَ الْعِبَادِ، وَلَكِنْ يَقْبِضُ الْعِلْمَ بِقَبْضِ الْعُلَمَاءِ، حَتَّى إِذَا لَمْ يُبْقِ عَالِمًا، اتَّخَذَ النَّاسُ رُءُوسًا جُهَّالاً فَسُئِلُوا، فَأَفْتَوْا بِغَيْرِ عِلْمٍ، فَضَلُّوا وَأَضَلُّوا", dimmed: true)
-                    Text("Ibn al-Qayyim (may Allah have mercy on him) explains in I‘lam al-Muwaqqi‘in that the layman’s asking a mufti is the very thing Allah commanded, not the blameworthy taqlid. What the layman can and must weigh is the mufti: he chooses the most knowledgeable and most God-fearing scholar he can reach, as he would choose a doctor, and when two trustworthy scholars differ he follows the one whose knowledge and piety he trusts more, or the one who shows him the evidence, without following his own desire. Learning the evidence for what one practises is praiseworthy, and a layman who sees a clear authentic hadith should ask about it rather than ignore it; but being unable to derive rulings is not a deficiency in him, it is the division of labour Allah set out in Quran 9:122 (quoted above), and Allah reminds every scholar that:")
+                    Text("Ibn al-Qayyim (may Allah have mercy on him) explains in I‘lam al-Muwaqqi‘in that the layman’s asking a mufti is the very thing Allah commanded, not the blameworthy taqlid (تَقلِيد, from ق-ل-د, to put a collar on an animal: following a man without knowing his evidence). What the layman can and must weigh is the mufti: he chooses the most knowledgeable and most God-fearing scholar he can reach, as he would choose a doctor, and when two trustworthy scholars differ he follows the one whose knowledge and piety he trusts more, or the one who shows him the evidence, without following his own desire. Learning the evidence for what one practises is praiseworthy, and a layman who sees a clear authentic hadith should ask about it rather than ignore it; but being unable to derive rulings is not a deficiency in him, it is the division of labour Allah set out in Quran 9:122 (quoted below), and Allah reminds every scholar that:")
                         .font(.body)
                     ScriptureQuote(text: "“over every possessor of knowledge is one [more] knowing” (Quran 12:76).", arabic: "وَفَوۡقَ كُلِّ ذِي عِلۡمٍ عَلِيمٞ")
 
@@ -2907,7 +2800,7 @@ struct MadhabView: View {
                     Text("The practical answer is to learn from the trustworthy scholars near you, in whichever of the four schools they teach, to learn the evidence for what you practise, and to put the authentic hadith first, as that school’s own imam commanded.")
                         .font(.body)
 
-                    Text("**What is the ruling on ijma‘, and can the ummah agree on an error?**")
+                    Text("**What is the ruling on ijma‘ (إِجمَاع, from ج-م-ع, to gather: the agreement of the scholars), and can the ummah agree on an error?**")
                         .font(.body)
                     Text("Ijma‘ is a binding proof, and the ummah as a whole is protected from agreeing on misguidance. Allah says:")
                         .font(.body)
@@ -2929,6 +2822,113 @@ struct MadhabView: View {
 
                 Section(header: Text("IN SUMMARY")) {
                     Text("Following a qualified school connects a Muslim to generations of disciplined scholarship; their differences are sincere ijtihad that Allah rewards, all four imams held one creed, and all four schools are within Ahl as-Sunnah.")
+                        .font(.body)
+                }
+
+                Section(header: Text("KEY TERMS")) {
+                    Text("**Fiqh (فِقْه)**: “deep understanding,” from the root ف-ق-ه, to grasp the meaning of a thing beneath its surface; the Quran uses the verb when Musa asks that the people “may understand my speech” (Quran 20:28). In the Shari‘ah, fiqh is the knowledge of the practical rulings of Islam (how to purify oneself, pray, fast, trade, marry, and inherit) drawn from their detailed evidences. The Prophet (peace be upon him) tied this understanding to Allah wanting good for a person (Sahih al-Bukhari 71, quoted above), and the Quran made it the purpose of setting out to seek knowledge:")
+                        .font(.body)
+                    ScriptureQuote(text: "“For there should separate from every division of them a group [remaining] to obtain understanding in the religion and warn their people when they return to them” (Quran 9:122).", arabic: "فَلَوۡلَا نَفَرَ مِن كُلِّ فِرۡقَةٖ مِّنۡهُمۡ طَآئِفَةٞ لِّيَتَفَقَّهُواْ فِي ٱلدِّينِ وَلِيُنذِرُواْ قَوۡمَهُمۡ إِذَا رَجَعُوٓاْ إِلَيۡهِمۡ")
+
+                    Text("**Faqih (فَقِيه)**, plural **fuqaha (فُقَهَاء)**: one who possesses fiqh, a jurist. The word is about understanding, not memory alone. The Prophet (peace be upon him) prayed for Ibn Abbas (may Allah be pleased with them) with the verb of this very word, allahumma faqqihhu fid-din:")
+                        .font(.body)
+                    ScriptureQuote(text: "“O Allah! Make him a learned scholar in the religion” (Sahih al-Bukhari 143).", arabic: "اللَّهُمَّ فَقِّهْهُ فِي الدِّينِ", dimmed: true)
+                    Text("And he distinguished the one who carries knowledge from the one who understands it:")
+                        .font(.body)
+                    ScriptureQuote(text: "“May Allah gladden a man who hears a hadith from us, so he memorizes it until he conveys it to someone else. Perhaps he carries fiqh to one who is more understanding than him, and perhaps the one who carries the fiqh is not a faqih” (Sunan al-Tirmidhi 2656; graded sahih by al-Albani).", arabic: "نَضَّرَ اللَّهُ امْرَأً سَمِعَ مِنَّا حَدِيثًا فَحَفِظَهُ حَتَّى يُبَلِّغَهُ غَيْرَهُ فَرُبَّ حَامِلِ فِقْهٍ إِلَى مَنْ هُوَ أَفْقَهُ مِنْهُ وَرُبَّ حَامِلِ فِقْهٍ لَيْسَ بِفَقِيهٍ", dimmed: true)
+                    Text("The Salaf added that fiqh without fear of Allah is not fiqh. When someone objected to al-Hasan al-Basri (may Allah have mercy on him), “The fuqaha do not say that,” he replied:")
+                        .font(.body)
+                    ScriptureQuote(text: "“Woe to you! Have you ever seen a faqih? The faqih is only the one who renounces this world, desires the Hereafter, has insight into the affair of his religion, and is constant in the worship of his Lord” (Sunan al-Darimi 297).", arabic: "وَيْحَكَ! وَرَأَيْتَ أَنْتَ فَقِيهًا قَطُّ؟ إِنَّمَا الْفَقِيهُ الزَّاهِدُ فِي الدُّنْيَا، الرَّاغِبُ فِي الْآخِرَةِ، الْبَصِيرُ بِأَمْرِ دِينِهِ، الْمُدَاوِمُ عَلَى عِبَادَةِ رَبِّهِ", dimmed: true)
+
+                    Text("**Madhhab (مَذْهَب)**, plural **madhahib (مَذَاهِب)**: from ذَهَبَ (dhahaba), “he went”; literally the way one goes, or the place one goes to. In fiqh it is the method an imam used to derive rulings, together with the body of rulings that his students preserved, refined, and passed on. A madhhab is a way to the Quran and Sunnah, not a source alongside them, and the imams themselves said so (see “Unity Through Diversity” below).")
+                        .font(.body)
+
+                    Text("**Shari‘ah (شَرِيعَة)**: from ش-ر-ع, the open path that leads down to water; the whole law that Allah revealed, which is why He says of the nations, “To each of you We prescribed a law and a method” (Quran 5:48). The Shari‘ah is one and infallible, because it is from Allah; fiqh is the scholars’ understanding of it, and a scholar can be right or mistaken. Keeping the two apart explains how the schools can differ while the religion stays one:")
+                        .font(.body)
+                    ScriptureQuote(text: "“Then We put you, [O Muhammad], on an ordained way concerning the matter [of religion]; so follow it and do not follow the inclinations of those who do not know” (Quran 45:18).", arabic: "ثُمَّ جَعَلۡنَٰكَ عَلَىٰ شَرِيعَةٖ مِّنَ ٱلۡأَمۡرِ فَٱتَّبِعۡهَا وَلَا تَتَّبِعۡ أَهۡوَآءَ ٱلَّذِينَ لَا يَعۡلَمُونَ")
+
+                    Text("**Usul al-fiqh (أُصُول الفِقْه)**: “the roots of fiqh,” usul being the plural of asl (أَصْل), a root or foundation. It is the science of the sources of the law and of the rules for deriving rulings from them: the Quran, the Sunnah, consensus, and analogy, together with the study of commands and prohibitions, the general and the specific, and the abrogating and the abrogated. Imam ash-Shafi‘i’s ar-Risalah (الرِّسَالَة) is the earliest book on it that has reached us. Scholars of usul point to one ayah that gathers the sources in order: obedience to Allah (the Quran), obedience to the Messenger (the Sunnah), the people of authority (whose agreement is consensus), and the referring of new disputes back to the two revelations (analogy):")
+                        .font(.body)
+                    ScriptureQuote(text: "“O you who have believed, obey Allah and obey the Messenger and those in authority among you” (Quran 4:59).", arabic: "يَٰٓأَيُّهَا ٱلَّذِينَ ءَامَنُوٓاْ أَطِيعُواْ ٱللَّهَ وَأَطِيعُواْ ٱلرَّسُولَ وَأُوْلِي ٱلۡأَمۡرِ مِنكُمۡۖ")
+                    Text("and then sends every dispute back to the two revelations:")
+                        .font(.body)
+                    ScriptureQuote(text: "“And if you disagree over anything, refer it to Allah and the Messenger, if you should believe in Allah and the Last Day” (Quran 4:59).", arabic: "فَإِن تَنَٰزَعۡتُمۡ فِي شَيۡءٖ فَرُدُّوهُ إِلَى ٱللَّهِ وَٱلرَّسُولِ إِن كُنتُمۡ تُؤۡمِنُونَ بِٱللَّهِ وَٱلۡيَوۡمِ ٱلۡأٓخِرِۚ")
+                    Text("The Sunnah is revelation alongside the Book, a source in its own right and not a mere commentary, and the Prophet (peace be upon him) foretold those who would try to set it aside:")
+                        .font(.body)
+                    ScriptureQuote(text: "“Beware! I have been given the Qur'an and something like it, yet the time is coming when a man replete on his couch will say: Keep to the Qur'an; what you find in it to be permissible treat as permissible, and what you find in it to be prohibited treat as prohibited” (Sunan Abi Dawud 4604; graded sahih by al-Albani).", arabic: "أَلاَ إِنِّي أُوتِيتُ الْكِتَابَ وَمِثْلَهُ مَعَهُ أَلاَ يُوشِكُ رَجُلٌ شَبْعَانُ عَلَى أَرِيكَتِهِ يَقُولُ عَلَيْكُمْ بِهَذَا الْقُرْآنِ فَمَا وَجَدْتُمْ فِيهِ مِنْ حَلاَلٍ فَأَحِلُّوهُ وَمَا وَجَدْتُمْ فِيهِ مِنْ حَرَامٍ فَحَرِّمُوهُ", dimmed: true)
+
+                    Text("**Dalil (دَلِيل)**, plural **adillah (أَدِلَّة)**: from د-ل-ل, to guide or point the way; a proof, that which leads to a ruling. The Quran uses the word of the sun, which marks out the movement of the shadow:")
+                        .font(.body)
+                    ScriptureQuote(text: "“Then We made the sun for it an indication” (Quran 25:45).", arabic: "ثُمَّ جَعَلۡنَا ٱلشَّمۡسَ عَلَيۡهِ دَلِيلٗا")
+                    Text("A dalil may be textual (naqli: an ayah or a hadith) or rational (‘aqli), and definitive (qat‘i) or probable (zanni). Most differences in fiqh arise over probable evidences, which is why they are tolerated; no difference is tolerated over what is definitive.")
+                        .font(.body)
+
+                    Text("**Ijtihad (اِجْتِهَاد)** and **mujtahid (مُجْتَهِد)**: from ج-ه-د, to exert oneself to the utmost. Ijtihad is the qualified scholar’s utmost effort to reach the ruling of Allah on a question the texts do not settle explicitly, and the mujtahid is the one qualified to make it: he must know the Quran, the Sunnah and its chains, the Arabic language, the points of consensus, the abrogating and the abrogated, and the rules of usul. Allah rewards the sincere, qualified effort even when it misses the mark:")
+                        .font(.body)
+                    ScriptureQuote(text: "“If a judge gives a verdict according to the best of his knowledge and his verdict is correct, he will receive a double reward, and if he gives a verdict according to the best of his knowledge and his verdict is wrong, even then he will get a reward” (Sahih al-Bukhari 7352, Sahih Muslim 1716).", arabic: "إِذَا حَكَمَ الْحَاكِمُ فَاجْتَهَدَ ثُمَّ أَصَابَ فَلَهُ أَجْرَانِ، وَإِذَا حَكَمَ فَاجْتَهَدَ ثُمَّ أَخْطَأَ فَلَهُ أَجْرٌ", dimmed: true)
+                    Text("Ijtihad reaches for the ruling of Allah but is not the same as it, which is why the Prophet (peace be upon him) instructed his commanders:")
+                        .font(.body)
+                    ScriptureQuote(text: "“When you besiege a fort and the besieged want you to let them out in accordance with Allah's command, do not let them come out in accordance with His command, but do so at your own command, for you do not know whether or not you will hit upon Allah's command with regard to them” (Sahih Muslim 1731).", arabic: "وَإِذَا حَاصَرْتَ أَهْلَ حِصْنٍ فَأَرَادُوكَ أَنْ تُنْزِلَهُمْ عَلَى حُكْمِ اللَّهِ فَلاَ تُنْزِلْهُمْ عَلَى حُكْمِ اللَّهِ وَلَكِنْ أَنْزِلْهُمْ عَلَى حُكْمِكَ فَإِنَّكَ لاَ تَدْرِي أَتُصِيبُ حُكْمَ اللَّهِ فِيهِمْ أَمْ لاَ", dimmed: true)
+
+                    Text("**Taqlid (تَقْلِيد)** and **ittiba‘ (اِتِّبَاع)**: taqlid is from qiladah (قِلَادَة), a collar or necklace; to make taqlid of someone is to hang your affair around his neck, accepting his statement without knowing its evidence. Ittiba‘ is from ت-ب-ع, to follow; it is following a statement because its evidence has become clear to you. The Quran condemns the taqlid that turns away from revelation:")
+                        .font(.body)
+                    ScriptureQuote(text: "“And when it is said to them, ‘Follow what Allah has revealed,’ they say, ‘Rather, we will follow that which we found our fathers doing.’ Even though their fathers understood nothing, nor were they guided?” (Quran 2:170).", arabic: "وَإِذَا قِيلَ لَهُمُ ٱتَّبِعُواْ مَآ أَنزَلَ ٱللَّهُ قَالُواْ بَلۡ نَتَّبِعُ مَآ أَلۡفَيۡنَا عَلَيۡهِ ءَابَآءَنَآۚ أَوَلَوۡ كَانَ ءَابَآؤُهُمۡ لَا يَعۡقِلُونَ شَيۡـٔٗا وَلَا يَهۡتَدُونَ")
+                    Text("and it makes ittiba‘ of the Messenger (peace be upon him) the proof of love for Allah:")
+                        .font(.body)
+                    ScriptureQuote(text: "“Say, [O Muhammad], ‘If you should love Allah, then follow me, [so] Allah will love you and forgive you your sins’” (Quran 3:31).", arabic: "قُلۡ إِن كُنتُمۡ تُحِبُّونَ ٱللَّهَ فَٱتَّبِعُونِي يُحۡبِبۡكُمُ ٱللَّهُ وَيَغۡفِرۡ لَكُمۡ ذُنُوبَكُمۡۚ")
+                    Text("Ibn Abd al-Barr (may Allah have mercy on him) records the scholars’ distinction in Jami‘ Bayan al-‘Ilm: taqlid is returning to a statement whose speaker has no proof for it, while ittiba‘ is what a proof has established. Ibn al-Qayyim (may Allah have mercy on him) builds on it in I‘lam al-Muwaqqi‘in, separating the blameworthy taqlid (turning away from what Allah revealed in favour of one’s forefathers, following someone one does not know to be qualified, and clinging to an opinion after the evidence against it has appeared) from the permitted asking of the people of knowledge by the one who cannot derive rulings himself, which is what Allah commanded in Quran 16:43 (quoted above). The scholar practises ittiba‘; the layman practises a permitted taqlid that should move toward ittiba‘ as he learns.")
+                        .font(.body)
+
+                    Text("**Ijma‘ (إِجْمَاع)**: from ج-م-ع, to gather or agree; the agreement of the qualified scholars of the ummah, after the Prophet (peace be upon him), on a ruling. It is the third source of the law, and its proof is that Allah threatened whoever follows other than the way of the believers (Quran 4:115, quoted above). Imam Ahmad (may Allah have mercy on him) warned against loose claims of it:")
+                        .font(.body)
+                    ScriptureQuote(text: "“Whoever claims consensus is lying” (Ibn al-Qayyim, I‘lam al-Muwaqqi‘in).", arabic: "مَنِ ادَّعَى الإِجْمَاعَ فَهُوَ كَاذِبٌ", dimmed: true)
+                    Text("He meant that a scholar may simply not know of a dissenting opinion, so a claim of ijma‘ must be verified; the ijma‘ known with certainty is that of the Companions and the first generations.")
+                        .font(.body)
+
+                    Text("**Qiyas (قِيَاس)**: from ق-ي-س, to measure one thing against another; extending the ruling of a case settled by a text to a new case that shares its effective cause (**‘illah, عِلَّة**). Wine is forbidden because it intoxicates, so every intoxicant is forbidden. The Prophet (peace be upon him) himself reasoned this way when a woman asked whether she could perform Hajj on behalf of her mother, who had vowed to perform it and died:")
+                        .font(.body)
+                    ScriptureQuote(text: "“Perform Hajj on her behalf. Had there been a debt on your mother, would you have paid it or not? So, pay Allah's debt, as He has more right to be paid” (Sahih al-Bukhari 1852).", arabic: "حُجِّي عَنْهَا، أَرَأَيْتِ لَوْ كَانَ عَلَى أُمِّكِ دَيْنٌ أَكُنْتِ قَاضِيَةً اقْضُوا اللَّهَ، فَاللَّهُ أَحَقُّ بِالْوَفَاءِ", dimmed: true)
+                    Text("Qiyas is a source only where no text speaks directly. It is accepted by the four schools and rejected by the Zahiris.")
+                        .font(.body)
+
+                    Text("**Fatwa (فَتْوَى)** and **mufti (مُفْتِي)**: from ف-ت-ي, to make a matter clear; a fatwa is an answer to a question about a ruling, and the mufti is the one qualified to give it. The Quran uses the very word of Allah answering His servants:")
+                        .font(.body)
+                    ScriptureQuote(text: "“They request from you a [legal] ruling. Say, ‘Allah gives you a ruling concerning one having neither descendants nor ascendants [as heirs]’” (Quran 4:176).", arabic: "يَسۡتَفۡتُونَكَ قُلِ ٱللَّهُ يُفۡتِيكُمۡ فِي ٱلۡكَلَٰلَةِۚ")
+                    Text("Giving fatwa without knowledge is a grave sin. The Prophet (peace be upon him) said:")
+                        .font(.body)
+                    ScriptureQuote(text: "“Whoever is given a fatwa that has no basis, then his sin will be upon the one who issued that fatwa” (Sunan Ibn Majah 53; graded hasan by al-Albani).", arabic: "مَنْ أُفْتِيَ بِفُتْيَا غَيْرَ ثَبَتٍ فَإِنَّمَا إِثْمُهُ عَلَى مَنْ أَفْتَاهُ", dimmed: true)
+
+                    Text("**The five rulings (الأَحْكَام الخَمْسَة)**: every act falls under one of five. **Fard (فَرْض)** or **wajib (وَاجِب)**: obligatory. Fard is from ف-ر-ض, to cut or fix definitively (Allah calls the shares of inheritance “an obligation [imposed] by Allah,” Quran 4:11), and wajib is from و-ج-ب, to be binding. Most scholars use the two as synonyms; the Hanafis reserve fard for what is established by definitive proof and wajib for what is established by probable proof. One is rewarded for doing it and punished for leaving it. **Mustahabb (مُسْتَحَبّ)**, also called sunnah or **mandub (مَنْدُوب)**: recommended, from ح-ب-ب, to love; rewarded if done, not punished if left. **Mubah (مُبَاح)**: permitted, from ب-و-ح, to be open; neither reward nor punishment in itself. **Makruh (مَكْرُوه)**: disliked, from ك-ر-ه, to hate; rewarded for leaving it, not punished for doing it. **Haram (حَرَام)**: forbidden, from ح-ر-م, to be inviolable; punished for doing it and rewarded for leaving it out of obedience. Only Allah assigns these categories:")
+                        .font(.body)
+                    ScriptureQuote(text: "“And do not say about what your tongues assert of untruth, ‘This is lawful and this is unlawful,’ to invent falsehood about Allah” (Quran 16:116).", arabic: "وَلَا تَقُولُواْ لِمَا تَصِفُ أَلۡسِنَتُكُمُ ٱلۡكَذِبَ هَٰذَا حَلَٰلٞ وَهَٰذَا حَرَامٞ لِّتَفۡتَرُواْ عَلَى ٱللَّهِ ٱلۡكَذِبَۚ")
+
+                    Text("**Halal (حَلَال)** and **haram (حَرَام)**: halal is from ح-ل-ل, to untie or release, hence what is permitted; haram is what is forbidden. Between the two lie doubtful matters, and piety is to keep clear of them. The Prophet (peace be upon him) said:")
+                        .font(.body)
+                    ScriptureQuote(text: "“The halal is clear and the haram is clear, and between them are doubtful things which many people do not know. So whoever guards against the doubtful things has kept his religion and his honour blameless” (Sahih al-Bukhari 52, Sahih Muslim 1599).", arabic: "الْحَلاَلُ بَيِّنٌ وَالْحَرَامُ بَيِّنٌ، وَبَيْنَهُمَا مُشَبَّهَاتٌ لاَ يَعْلَمُهَا كَثِيرٌ مِنَ النَّاسِ، فَمَنِ اتَّقَى الْمُشَبَّهَاتِ اسْتَبْرَأَ لِدِيِنِهِ وَعِرْضِهِ", dimmed: true)
+
+                    Text("**Rukhsah (رُخْصَة)** and **‘azimah (عَزِيمَة)**: ‘azimah, from ع-ز-م, resolve, is the original ruling; rukhsah, from ر-خ-ص, ease, is the concession Allah grants when there is hardship: shortening the prayer and breaking the fast on a journey, tayammum when water is absent, eating forbidden meat under necessity. Allah says of the fast:")
+                        .font(.body)
+                    ScriptureQuote(text: "“Allah intends for you ease and does not intend for you hardship” (Quran 2:185).", arabic: "يُرِيدُ ٱللَّهُ بِكُمُ ٱلۡيُسۡرَ وَلَا يُرِيدُ بِكُمُ ٱلۡعُسۡرَ")
+                    Text("When Umar (may Allah be pleased with him) asked the Prophet (peace be upon him) why the prayer is still shortened on journeys now that the Muslims are safe, he answered:")
+                        .font(.body)
+                    ScriptureQuote(text: "“It is an act of charity which Allah has done to you, so accept His charity” (Sahih Muslim 686).", arabic: "صَدَقَةٌ تَصَدَّقَ اللَّهُ بِهَا عَلَيْكُمْ فَاقْبَلُوا صَدَقَتَهُ", dimmed: true)
+                    Text("And when Hamzah ibn Amr al-Aslami (may Allah be pleased with him) asked whether he sinned by fasting on a journey, since he had the strength for it, he answered:")
+                        .font(.body)
+                    ScriptureQuote(text: "“It is a concession from Allah. He who took advantage of it, it is good for him, and he who preferred to observe the fast, there is no sin upon him” (Sahih Muslim 1121).", arabic: "هِيَ رُخْصَةٌ مِنَ اللَّهِ فَمَنْ أَخَذَ بِهَا فَحَسَنٌ وَمَنْ أَحَبَّ أَنْ يَصُومَ فَلاَ جُنَاحَ عَلَيْهِ", dimmed: true)
+
+                    Text("**The four schools**: the Hanafi school of Abu Hanifah an-Nu‘man ibn Thabit (d. 150 AH, Kufa), the Maliki school of Malik ibn Anas (d. 179 AH, Madinah), the Shafi‘i school of Muhammad ibn Idris ash-Shafi‘i (d. 204 AH, Egypt, after Makkah, Madinah, and Iraq), and the Hanbali school of Ahmad ibn Hanbal (d. 241 AH, Baghdad). Each is treated in “The Four Sunni Madhahib” below. Other imams of the same rank had schools that did not survive as living traditions, among them al-Awza‘i (d. 157 AH) in Syria, Sufyan ath-Thawri (d. 161 AH) in Kufa, al-Layth ibn Sa‘d (d. 175 AH) in Egypt, and Ibn Jarir at-Tabari (d. 310 AH) in Baghdad.")
+                        .font(.body)
+
+                    Text("**The Zahiri school (الظَّاهِرِيَّة)**: from zahir (ظَاهِر), the apparent; the school of Dawud ibn Ali al-Asbahani, known as az-Zahiri (d. 270 AH, Baghdad), a pupil of Ishaq ibn Rahawayh and Abu Thawr, and developed most fully by Ibn Hazm al-Andalusi (d. 456 AH), author of al-Muhalla in fiqh and al-Ihkam in usul. The Zahiris hold to the apparent meaning of the texts and to consensus, and reject qiyas as a source. Scholars valued its devotion to the texts (adh-Dhahabi records in Siyar A‘lam an-Nubala’ that al-‘Izz ibn Abd as-Salam counted al-Muhalla, with Ibn Qudamah’s al-Mughni, among the finest books of fiqh), while noting that in some questions of Allah’s attributes Ibn Hazm departed from the way of the Salaf. The school did not survive as a living tradition with its own continuous community.")
+                        .font(.body)
+
+                    Text("**Ahl ar-Ra’y (أَهْل الرَّأْي)** and **Ahl al-Hadith (أَهْل الحَدِيث)**: “the people of considered opinion” and “the people of hadith,” the two tendencies of early fiqh. Ahl ar-Ra’y, centred in Kufa and represented by Abu Hanifah and his companions, made wide use of qiyas and juristic preference (istihsan), partly because fewer narrations were established in Iraq, where forgery was also more common, so its jurists were stricter in what they accepted. Ahl al-Hadith, centred in Madinah and Makkah and represented by Malik, then by ash-Shafi‘i and Ahmad, kept close to the narrated texts and used qiyas sparingly. The labels describe an emphasis, not a rejection: the Hanafis accept authentic hadith, and the hadith scholars use analogy. Ash-Shafi‘i studied the Iraqi fiqh under Muhammad ash-Shaybani and the Madinan fiqh under Malik, and his usul brought the two together.")
+                        .font(.body)
+
+                    Text("**The seven fuqaha of Madinah (الفُقَهَاء السَّبْعَة)**: the seven jurists of the generation after the Companions who carried the fiqh of Madinah at the end of the first century AH: Sa‘id ibn al-Musayyib, ‘Urwah ibn az-Zubayr, al-Qasim ibn Muhammad ibn Abi Bakr, Kharijah ibn Zayd ibn Thabit, ‘Ubaydullah ibn Abdullah ibn ‘Utbah, Sulayman ibn Yasar, and a seventh whom the lists give as Abu Bakr ibn Abd ar-Rahman ibn al-Harith, Salim ibn Abdullah ibn Umar, or Abu Salamah ibn Abd ar-Rahman. Their students, above all Ibn Shihab az-Zuhri, taught Malik, so the Maliki school stands on the fiqh of Madinah at one remove from the Companions.")
+                        .font(.body)
+
+                    Text("**The four Abdullahs (العَبَادِلَة الأَرْبَعَة)**: four Companions named Abdullah whose fatawa shaped early fiqh: Abdullah ibn Umar, Abdullah ibn Abbas, Abdullah ibn az-Zubayr, and Abdullah ibn Amr ibn al-As (may Allah be pleased with them). When they agreed on a ruling it was called “the opinion of the Abadilah.” Abdullah ibn Mas‘ud (may Allah be pleased with him) died earlier and, as Imam Ahmad noted (reported by Ibn as-Salah in his Muqaddimah), is not counted among them, but he is the root of the fiqh of Kufa: his students Alqamah and al-Aswad taught Ibrahim an-Nakha‘i, who taught Hammad ibn Abi Sulayman, the teacher of Abu Hanifah. Ibn Abbas’s circle in Makkah (Ata’, Mujahid, Tawus, and Ikrimah) and Ibn Umar’s student Nafi‘, from whom Malik narrated, show that every madhhab goes back through the Tabi‘in to the Companions, and through them to the Prophet (peace be upon him).")
                         .font(.body)
                 }
             }
@@ -3332,17 +3332,6 @@ struct TafsirView: View {
                         .font(.body)
                 }
 
-                Section(header: Text("KEY TERMS")) {
-                    Text("**Asbab al-Nuzul (أَسبَاب النُّزُول)**: the reasons or occasions of revelation, i.e. the events a verse was revealed about.")
-                        .font(.body)
-
-                    Text("**Muhkam (مُحكَم)**: verses clear and decisive in meaning; **Mutashabih (مُتَشَابِه)**: verses whose full meaning is not entirely apparent, referred back to the clear ones.")
-                        .font(.body)
-
-                    Text("**An-Nasikh wal-Mansukh (النَّاسِخ وَالمَنسُوخ)**: the abrogating and abrogated; a later ruling that replaces an earlier one within the revelation.")
-                        .font(.body)
-                }
-
                 Section(header: Text("CONDITIONS OF THE MUFASSIR")) {
                     Text("Explaining the Quran is not by desire or guesswork. It requires sound belief, knowledge of the Arabic language, the Sunnah, the sayings of the early scholars, and the sciences of the Quran.")
                         .font(.body)
@@ -3368,6 +3357,17 @@ struct TafsirView: View {
 
                 Section(header: Text("IN SUMMARY")) {
                     Text("True Tafsir rests on knowledge, not opinion; through it the guidance of the Quran becomes clear and livable for every generation.")
+                        .font(.body)
+                }
+
+                Section(header: Text("KEY TERMS")) {
+                    Text("**Asbab al-Nuzul (أَسبَاب النُّزُول)**: the reasons or occasions of revelation, i.e. the events a verse was revealed about.")
+                        .font(.body)
+
+                    Text("**Muhkam (مُحكَم)**: verses clear and decisive in meaning; **Mutashabih (مُتَشَابِه)**: verses whose full meaning is not entirely apparent, referred back to the clear ones.")
+                        .font(.body)
+
+                    Text("**An-Nasikh wal-Mansukh (النَّاسِخ وَالمَنسُوخ)**: the abrogating and abrogated; a later ruling that replaces an earlier one within the revelation.")
                         .font(.body)
                 }
             }
