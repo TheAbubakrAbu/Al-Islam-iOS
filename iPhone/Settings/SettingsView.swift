@@ -1016,15 +1016,16 @@ struct SettingsAppearanceView: View {
                 .padding(.vertical, 2)
 
             if settings.showAccentGlow {
-                Toggle("Al-Islam Glow", isOn: $settings.alIslamGlow.animation(.easeInOut))
-                    .font(.subheadline)
-                    .padding(.top, 6)
-                    .onChange(of: settings.alIslamGlow) { _ in settings.hapticFeedback() }
+                VStack(alignment: .leading, spacing: 4) {
+                    Toggle("Al-Islam Glow", isOn: $settings.alIslamGlow.animation(.easeInOut))
+                        .font(.subheadline)
+                        .onChange(of: settings.alIslamGlow) { _ in settings.hapticFeedback() }
 
-                Text("Color the glow with Al-Islam's yellow and green - yellow from the left, green from the right - instead of your accent color.")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                    .padding(.vertical, 2)
+                    Text("Color the glow with Al-Islam's yellow and green - yellow from the left, green from the right - instead of your accent color.")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                .settingsDependent()
             }
         }
 

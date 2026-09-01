@@ -201,6 +201,36 @@ enum PackAudit {
             emit("JSON \(name) ext=\(ext) bytes=\(json.count) parses=\(parses) hash=\(fp.hex)")
         }
 
+        // MARK: Word-by-word layers
+        //
+        // The pack's own gate (Scripts/verify_wordbyword.py) proves the two layers line up with the
+        // app's tokens; this proves the SHIPPED pack still does after a repack, through the reader the
+        // app actually uses. The two counts must stay equal: a word with a meaning has a pronunciation.
+        if WordByWordStore.isBundled {
+            var fp = Fingerprint()
+            var tokens = 0, glossed = 0, transliterated = 0, unaligned = 0
+            for surah in 1...114 {
+                for ayah in 1...max(1, ayahCounts[surah] ?? 0) {
+                    guard let glosses = WordByWordStore.shared.glosses(surah: surah, ayah: ayah),
+                          let latin = WordByWordStore.shared.transliterations(surah: surah, ayah: ayah),
+                          glosses.count == latin.count else { unaligned += 1; continue }
+                    tokens += glosses.count
+                    glossed += glosses.count { !$0.isEmpty }
+                    transliterated += latin.count { !$0.isEmpty }
+                    for (gloss, translit) in zip(glosses, latin) { fp.add(gloss); fp.add(translit) }
+                }
+            }
+            emit("WBW tokens=\(tokens) glossed=\(glossed) transliterated=\(transliterated) "
+                 + "unaligned=\(unaligned) hash=\(fp.hex)")
+            for (surah, ayah) in [(1, 1), (2, 255), (112, 1)] {
+                let glosses = WordByWordStore.shared.glosses(surah: surah, ayah: ayah) ?? []
+                let latin = WordByWordStore.shared.transliterations(surah: surah, ayah: ayah) ?? []
+                emit("WBW probe \(surah):\(ayah) -> \(Array(zip(latin, glosses).prefix(4)))")
+            }
+        } else {
+            emit("WBW pack NOT BUNDLED")
+        }
+
         // MARK: Islam article corpus
 
         // Read through IslamArticles itself, so this proves the SHIPPED pack decodes with the

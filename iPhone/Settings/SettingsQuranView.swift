@@ -453,6 +453,7 @@ struct SettingsQuranView: View {
         Section(header: Text("ARABIC TEXT")) {
             arabicVisibilityToggle
             #if os(iOS)
+            tapWordGroup
             wordByWordGroup
             #endif
             tajweedSettingsGroup
@@ -461,13 +462,21 @@ struct SettingsQuranView: View {
     }
 
     #if os(iOS)
-    /// Word-by-word meanings. Gated the same way tajweed colors are: the glosses are indexed against
-    /// Hafs an Asim's wording, and beginner mode's letter-spacing breaks the word boundaries they are
-    /// counted in - so the toggle goes dead (rather than silently doing nothing) in those modes.
-    private var wordByWordGroup: some View {
+    /// Whether the two word-level features can do anything here. Gated the same way tajweed colors
+    /// are: the glosses are indexed against Hafs an Asim's wording, and beginner mode's
+    /// letter-spacing breaks the word boundaries they are counted in - so the toggles go dead
+    /// (rather than silently doing nothing) in those modes.
+    private var wordFeaturesAvailable: Bool {
+        settings.showArabicText && settings.isHafsDisplay
+            && !settings.beginnerMode && WordByWordStore.isBundled
+    }
+
+    /// Tap a word to open its card. Its own row: it shares the gloss pack with the study layout
+    /// below, but neither switch turns the other on, so nesting them in one block only suggested a
+    /// dependency that is not there.
+    private var tapWordGroup: some View {
         VStack(alignment: .leading) {
-            let canRenderNow = settings.showArabicText && settings.isHafsDisplay
-                && !settings.beginnerMode && WordByWordStore.isBundled
+            let canRenderNow = wordFeaturesAvailable
             let binding = Binding<Bool>(
                 get: { settings.wordByWordMeanings && canRenderNow },
                 set: { settings.wordByWordMeanings = $0 }
@@ -478,33 +487,74 @@ struct SettingsQuranView: View {
                 .disabled(!canRenderNow)
                 .onChange(of: settings.wordByWordMeanings) { enabled in
                     settings.hapticFeedback()
-                    // A megabyte of glosses has no business staying resident once the mode is off.
-                    if !enabled { WordByWordStore.shared.unload() }
+                    // A megabyte of glosses has no business staying resident once the mode is off -
+                    // unless the study layout below is still reading from it.
+                    if !enabled && !settings.wordByWordInline { WordByWordStore.shared.unload() }
                 }
 
             Text(canRenderNow || !settings.showArabicText
-                 ? "Tap any word while reading to see what that word means on its own. With tajweed colors on, the word's card also explains every tajweed color painted on it. Works offline."
+                 ? "Tap any word while reading to see what that word means on its own, and how it is pronounced. With tajweed colors on, the word's card also explains every tajweed color painted on it. Works offline."
+                 : "Available in Hafs an Asim, with beginner mode off - the meanings are counted word by word against that text.")
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .padding(.vertical, 2)
+        }
+    }
+
+    /// The study layout, and the two lines it can write under each word.
+    private var wordByWordGroup: some View {
+        VStack(alignment: .leading) {
+            let canRenderNow = wordFeaturesAvailable
+            let inlineBinding = Binding<Bool>(
+                get: { settings.wordByWordInline && canRenderNow },
+                set: { settings.wordByWordInline = $0 }
+            )
+
+            Toggle("Word by Word", isOn: inlineBinding.animation(.easeInOut))
+                .font(.subheadline)
+                .disabled(!canRenderNow)
+                .onChange(of: settings.wordByWordInline) { enabled in
+                    settings.hapticFeedback()
+                    if !enabled && !settings.wordByWordMeanings { WordByWordStore.shared.unload() }
+                }
+
+            Text(canRenderNow || !settings.showArabicText
+                 ? "Lays the ayah out word by word, with each word's meaning and pronunciation written directly beneath it. List mode only: page mode keeps the mushaf layout, so this has no effect there."
                  : "Available in Hafs an Asim, with beginner mode off - the meanings are counted word by word against that text.")
                 .font(.caption)
                 .foregroundColor(.secondary)
                 .padding(.vertical, 2)
 
-            if settings.wordByWordMeanings && canRenderNow {
-                let inlineBinding = Binding<Bool>(
-                    get: { settings.wordByWordInline && canRenderNow },
-                    set: { settings.wordByWordInline = $0 }
-                )
-                Toggle("Show Meanings Under Words (Word by Word)", isOn: inlineBinding.animation(.easeInOut))
-                    .font(.subheadline)
-                    .disabled(!canRenderNow)
-                    .onChange(of: settings.wordByWordInline) { _ in settings.hapticFeedback() }
-
-                Text("Lays the ayah out word by word, with each word's meaning written directly beneath it. List mode only: page mode keeps the mushaf layout, so this has no effect there.")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                    .padding(.vertical, 2)
+            if settings.wordByWordInline && canRenderNow {
+                wordByWordLineToggles
             }
         }
+    }
+
+    /// The two lines the study layout can write under each word. Each is disabled while it is the
+    /// only one still on: a word-by-word layout with neither line is the ayah with gaps in it, so
+    /// the switch that would empty it does not move.
+    private var wordByWordLineToggles: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Toggle("Translation", isOn: $settings.wordByWordInlineTranslation.animation(.easeInOut))
+                .font(.subheadline)
+                .disabled(!settings.wordByWordInlineTransliteration)
+                .onChange(of: settings.wordByWordInlineTranslation) { _ in settings.hapticFeedback() }
+
+            Text("What each word means on its own, from the Quranic Arabic Corpus via Quran.com. Literal and in place, so it reads differently from the flowing translation of the whole ayah.")
+                .font(.caption)
+                .foregroundColor(.secondary)
+
+            Toggle("Transliteration", isOn: $settings.wordByWordInlineTransliteration.animation(.easeInOut))
+                .font(.subheadline)
+                .disabled(!settings.wordByWordInlineTranslation)
+                .onChange(of: settings.wordByWordInlineTransliteration) { _ in settings.hapticFeedback() }
+
+            Text("How each word is pronounced, written above its meaning. Independent of the ayah's own transliteration line.")
+                .font(.caption)
+                .foregroundColor(.secondary)
+        }
+        .settingsDependent()
     }
     #endif
 
@@ -605,17 +655,19 @@ struct SettingsQuranView: View {
             #endif
             
             if settings.cleanArabicText || settings.removeArabicDots {
-                Toggle("Hide Arabic Dots", isOn: $settings.removeArabicDots.animation(.easeInOut))
-                    .font(.subheadline)
-                    .disabled(!settings.showArabicText)
-                    .onChange(of: settings.removeArabicDots) { _ in settings.hapticFeedback() }
+                VStack(alignment: .leading, spacing: 4) {
+                    Toggle("Hide Arabic Dots", isOn: $settings.removeArabicDots.animation(.easeInOut))
+                        .font(.subheadline)
+                        .disabled(!settings.showArabicText)
+                        .onChange(of: settings.removeArabicDots) { _ in settings.hapticFeedback() }
 
-                #if os(iOS)
-                Text("This removes Arabic dots, such as turning ب into ٮ. It is very difficult to read and is not recommended for beginners, but it allows you to experience how some of the earliest Muslims read and wrote the Quran in early manuscripts such as the Birmingham Manuscript.")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                    .padding(.vertical, 2)
-                #endif
+                    #if os(iOS)
+                    Text("This removes Arabic dots, such as turning ب into ٮ. It is very difficult to read and is not recommended for beginners, but it allows you to experience how some of the earliest Muslims read and wrote the Quran in early manuscripts such as the Birmingham Manuscript.")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    #endif
+                }
+                .settingsDependent()
             }
         }
     }
@@ -799,16 +851,19 @@ struct SettingsQuranView: View {
                 .font(.subheadline)
                 .disabled(!settings.showArabicText && !settings.showEnglishSaheeh && !settings.showEnglishMustafa)
                 .onChange(of: settings.showTransliteration) { _ in settings.hapticFeedback() }
+                .settingsDependent()
 
             Toggle("Show English Translation\nSaheeh International", isOn: $settings.showEnglishSaheeh.animation(.easeInOut))
                 .font(.subheadline)
                 .disabled(!settings.showArabicText && !settings.showTransliteration && !settings.showEnglishMustafa)
                 .onChange(of: settings.showEnglishSaheeh) { _ in settings.hapticFeedback() }
+                .settingsDependent()
 
             Toggle("Show English Translation\nClear Quran (Mustafa Khattab)", isOn: $settings.showEnglishMustafa.animation(.easeInOut))
                 .font(.subheadline)
                 .disabled(!settings.showArabicText && !settings.showTransliteration && !settings.showEnglishSaheeh)
                 .onChange(of: settings.showEnglishMustafa) { _ in settings.hapticFeedback() }
+                .settingsDependent()
         }
     }
 
@@ -826,6 +881,7 @@ struct SettingsQuranView: View {
                 }
                 Slider(value: $settings.englishFontSize.animation(.easeInOut), in: 13...20, step: 1)
             }
+            .settingsDependent()
         }
     }
 

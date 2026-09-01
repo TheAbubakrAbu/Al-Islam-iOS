@@ -347,6 +347,23 @@ struct AyahRow: View, Equatable {
             displayText: displayText
         )
     }
+
+    /// The per-word transliteration for the inline study layout, aligned with `wordByWordGlosses`.
+    ///
+    /// Gated on the study layout's OWN transliteration switch, not on the ayah's transliteration line:
+    /// the two answer different questions (how this word is said, versus how the whole ayah is said),
+    /// so a reader can want either without the other. Empty (not nil) when it can't apply, so the
+    /// layout just omits the line.
+    private func wordByWordTransliterations(displayText: String) -> [String] {
+        guard settings.wordByWordInlineTransliteration else { return [] }
+        let raw = ayah.displayArabicText(surahId: surah.id, clean: false, qiraahOverride: nil)
+        return WordByWordStore.shared.transliterations(
+            surah: surah.id,
+            ayah: ayah.id,
+            rawText: raw,
+            displayText: displayText
+        ) ?? []
+    }
     #endif
 
     /// The reader's normal Arabic - one `Text`, search-highlighted. Extracted so the word-by-word
@@ -1292,6 +1309,8 @@ struct AyahRow: View, Equatable {
                             fontSize: CGFloat(settings.fontArabicSize),
                             ayahNumberArabic: ayah.idArabic,
                             glosses: glosses,
+                            showsGlosses: settings.wordByWordInlineTranslation,
+                            transliterations: wordByWordTransliterations(displayText: arabicSource),
                             selectedWord: tappedWord?.index,
                             onSelectWord: selectWord
                         )

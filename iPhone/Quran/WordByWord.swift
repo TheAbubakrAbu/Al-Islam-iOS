@@ -3,7 +3,7 @@ import SwiftUI
 import UIKit
 import Compression
 
-// Word-by-word meanings: tap any word of an ayah and see what that word means.
+// Word-by-word meanings: tap any word of an ayah and see what that word means, and how it is said.
 //
 // Three pieces live here:
 //   * `WordByWordStore`   - the bundled gloss pack and the lookup that lines it up with the text
@@ -16,9 +16,13 @@ import Compression
 
 // MARK: - Store
 
-/// Per-word English glosses for all 6236 ayahs, from `WordByWord.json.xz`.
+/// Per-word English glosses AND Latin transliteration for all 6236 ayahs, from `WordByWord.json.xz`.
 ///
-/// THE INVARIANT THIS RESTS ON: the pack stores one gloss per whitespace-separated token of THIS APP's
+/// The two layers are aligned by the same build-time walk against the same tokens, so index *n* names
+/// the same word in both: a caller that has the glosses can ask for the transliteration with no second
+/// reconciliation.
+///
+/// THE INVARIANT THIS RESTS ON: the pack stores one entry per whitespace-separated token of THIS APP's
 /// Hafs text, in the app's own token order - the alignment against the upstream corpus (whose tokenizing
 /// differs on ~200 ayahs) is done at build time by `Scripts/build_wordbyword.py` and gated by
 /// `Scripts/verify_wordbyword.py`. So the reader never matches, normalizes, or guesses: it splits the
@@ -32,25 +36,46 @@ final class WordByWordStore: @unchecked Sendable {
     static let shared = WordByWordStore()
     private init() {}
 
+    /// The two aligned layers, each surah id → ayahs in id order → one entry per token.
+    struct Table {
+        let english: [Int: [[String]]]
+        let latin: [Int: [[String]]]
+    }
+
+    /// Which layer a lookup wants. Both are indexed identically.
+    enum Layer {
+        case english
+        case transliteration
+    }
+
     private let lock = NSLock()
-    /// surah id → ayahs in id order → one gloss per token.
-    private var table: [Int: [[String]]]?
+    private var table: Table?
     private var loadFailed = false
 
     /// Whether the pack is in the bundle at all - a cheap URL lookup, so callers can gate UI (the
     /// settings toggle) without paying for the parse.
     static let isBundled: Bool = packURL() != nil
 
-    /// Raw glosses for one ayah, in the app's Hafs token order. Prefer `glosses(surah:ayah:displayText:)`,
+    /// Raw entries for one ayah, in the app's Hafs token order. Prefer `entries(_:surah:ayah:rawText:displayText:)`,
     /// which reconciles this with what the reader is actually showing.
-    func glosses(surah: Int, ayah: Int) -> [String]? {
-        guard let table = loadedTable(),
-              let rows = table[surah],
-              ayah >= 1, ayah <= rows.count else { return nil }
+    func entries(_ layer: Layer, surah: Int, ayah: Int) -> [String]? {
+        guard let table = loadedTable() else { return nil }
+        let source = layer == .english ? table.english : table.latin
+        guard let rows = source[surah], ayah >= 1, ayah <= rows.count else { return nil }
         return rows[ayah - 1]
     }
 
-    /// Glosses lined up with the tokens of `displayText`, or nil when they cannot be lined up.
+    /// Raw English glosses for one ayah, in the app's Hafs token order.
+    func glosses(surah: Int, ayah: Int) -> [String]? {
+        entries(.english, surah: surah, ayah: ayah)
+    }
+
+    /// Raw per-word transliteration for one ayah, in the app's Hafs token order.
+    func transliterations(surah: Int, ayah: Int) -> [String]? {
+        entries(.transliteration, surah: surah, ayah: ayah)
+    }
+
+    /// Entries lined up with the tokens of `displayText`, or nil when they cannot be lined up.
     ///
     /// The reader does not always show the raw text: "Hide Tashkeel and Signs" strips U+06D6…U+06ED,
     /// which DELETES the standalone ۞ token from the 199 ayahs that carry one, so the displayed text has
@@ -58,8 +83,8 @@ final class WordByWordStore: @unchecked Sendable {
     /// alignment. Any other disagreement (a riwayah with different wording, beginner letter-spacing) is
     /// not reconcilable and returns nil, which switches the feature off for that ayah rather than
     /// showing a neighbouring word's meaning.
-    func glosses(surah: Int, ayah: Int, rawText: String, displayText: String) -> [String]? {
-        guard let raw = glosses(surah: surah, ayah: ayah) else { return nil }
+    func entries(_ layer: Layer, surah: Int, ayah: Int, rawText: String, displayText: String) -> [String]? {
+        guard let raw = entries(layer, surah: surah, ayah: ayah) else { return nil }
 
         let displayCount = WordTokens.count(in: displayText)
         if raw.count == displayCount { return raw }
@@ -67,14 +92,24 @@ final class WordByWordStore: @unchecked Sendable {
         let rawTokens = WordTokens.tokens(in: rawText)
         guard rawTokens.count == raw.count else { return nil }
 
-        // Keep only the glosses whose token still has content once the sign-stripping is applied.
+        // Keep only the entries whose token still has content once the sign-stripping is applied.
         var kept: [String] = []
         kept.reserveCapacity(displayCount)
-        for (token, gloss) in zip(rawTokens, raw) where !token.removingArabicDiacriticsAndSigns
+        for (token, entry) in zip(rawTokens, raw) where !token.removingArabicDiacriticsAndSigns
             .trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-            kept.append(gloss)
+            kept.append(entry)
         }
         return kept.count == displayCount ? kept : nil
+    }
+
+    /// English glosses lined up with the tokens of `displayText`, or nil when they cannot be lined up.
+    func glosses(surah: Int, ayah: Int, rawText: String, displayText: String) -> [String]? {
+        entries(.english, surah: surah, ayah: ayah, rawText: rawText, displayText: displayText)
+    }
+
+    /// Per-word transliteration lined up with the tokens of `displayText`, or nil when they cannot be.
+    func transliterations(surah: Int, ayah: Int, rawText: String, displayText: String) -> [String]? {
+        entries(.transliteration, surah: surah, ayah: ayah, rawText: rawText, displayText: displayText)
     }
 
     /// Drops the parsed table (the setting was switched off). The pack reloads on next use.
@@ -84,7 +119,7 @@ final class WordByWordStore: @unchecked Sendable {
         loadFailed = false
     }
 
-    private func loadedTable() -> [Int: [[String]]]? {
+    private func loadedTable() -> Table? {
         lock.lock()
         if let table { lock.unlock(); return table }
         if loadFailed { lock.unlock(); return nil }
@@ -108,19 +143,34 @@ final class WordByWordStore: @unchecked Sendable {
             ?? Bundle.main.url(forResource: "WordByWord", withExtension: "json.xz")
     }
 
-    private static func load() -> [Int: [[String]]]? {
+    private static func load() -> Table? {
         guard let url = packURL(),
               let blob = try? Data(contentsOf: url),
               let json = inflate(blob),
-              let raw = try? JSONSerialization.jsonObject(with: json) as? [String: [[String]]] else { return nil }
+              let root = try? JSONSerialization.jsonObject(with: json) as? [String: Any] else { return nil }
 
+        // Version 2 carries both layers under "en"/"tr". Version 1 was the English layer alone, with
+        // surah ids at the top level; it is still read so an older pack degrades to no transliteration
+        // rather than to no word-by-word at all.
+        if let english = root["en"] as? [String: [[String]]] {
+            let latin = root["tr"] as? [String: [[String]]] ?? [:]
+            let table = Table(english: keyedBySurah(english), latin: keyedBySurah(latin))
+            return table.english.isEmpty ? nil : table
+        }
+
+        guard let legacy = root as? [String: [[String]]] else { return nil }
+        let english = keyedBySurah(legacy)
+        return english.isEmpty ? nil : Table(english: english, latin: [:])
+    }
+
+    private static func keyedBySurah(_ raw: [String: [[String]]]) -> [Int: [[String]]] {
         var out: [Int: [[String]]] = [:]
         out.reserveCapacity(raw.count)
         for (surahKey, rows) in raw {
             guard let sid = Int(surahKey) else { continue }
             out[sid] = rows
         }
-        return out.isEmpty ? nil : out
+        return out
     }
 
     /// The payload is an xz stream (what `Scripts/build_wordbyword.py` writes); `COMPRESSION_LZMA` reads that container directly.
@@ -1081,6 +1131,12 @@ struct WordByWordInlineText: View {
     let fontSize: CGFloat
     let ayahNumberArabic: String
     let glosses: [String]
+    /// Whether the gloss LINE is drawn. The glosses themselves always arrive: a word still opens its
+    /// card on tap, and a word with no gloss still isn't tappable, whichever lines are showing.
+    let showsGlosses: Bool
+    /// Per-word transliteration, aligned with `glosses`. Empty when the pack could not line up, or
+    /// when the reader has the study layout's transliteration line switched off.
+    let transliterations: [String]
     /// The word currently showing its card, washed in the accent.
     let selectedWord: Int?
     let onSelectWord: (Int) -> Void
@@ -1091,6 +1147,7 @@ struct WordByWordInlineText: View {
         let id: Int
         let arabic: AttributedString
         let gloss: String
+        let transliteration: String
         var isOrnament: Bool { id == -1 }
     }
 
@@ -1178,16 +1235,21 @@ struct WordByWordInlineText: View {
             out.append(WordCell(
                 id: index,
                 arabic: AttributedString(base.attributedSubstring(from: range)),
-                gloss: glosses.indices.contains(index) ? glosses[index] : ""
+                gloss: glosses.indices.contains(index) ? glosses[index] : "",
+                transliteration: transliterations.indices.contains(index) ? transliterations[index] : ""
             ))
         }
-        out.append(WordCell(id: -1, arabic: AttributedString(ayahNumberArabic), gloss: ""))
+        out.append(WordCell(id: -1, arabic: AttributedString(ayahNumberArabic),
+                            gloss: "", transliteration: ""))
         return out
     }
 
     // MARK: Geometry
 
     private var glossFontSize: CGFloat { max(11, min(14, fontSize * 0.32)) }
+    /// The transliteration sits between the Arabic and its meaning, a shade smaller than the gloss:
+    /// it is how to SAY the word, so it reads as a pronunciation note rather than as a second gloss.
+    private var transliterationFontSize: CGFloat { max(10, glossFontSize - 1) }
     /// Widest a gloss may render; longer ones wrap to a second line, then truncate.
     private let glossMaxWidth: CGFloat = 110
     private let cellHorizontalPadding: CGFloat = 3
@@ -1202,7 +1264,17 @@ struct WordByWordInlineText: View {
                 .arabicFontDesign(custom: true)
                 .lineLimit(1)
                 .fixedSize()
-            if !cell.gloss.isEmpty {
+            if !cell.transliteration.isEmpty {
+                Text(cell.transliteration)
+                    .font(.system(size: transliterationFontSize).italic())
+                    .foregroundColor(settings.accentColor.color)
+                    .multilineTextAlignment(.center)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.7)
+                    .frame(maxWidth: glossMaxWidth)
+                    .environment(\.layoutDirection, .leftToRight)
+            }
+            if showsGlosses, !cell.gloss.isEmpty {
                 Text(cell.gloss)
                     .font(.system(size: glossFontSize))
                     .foregroundColor(.secondary)
@@ -1238,11 +1310,18 @@ struct WordByWordInlineText: View {
         let arabicWidth = ceil((String(cell.arabic.characters) as NSString)
             .size(withAttributes: [.font: font]).width)
         var glossWidth: CGFloat = 0
-        if !cell.gloss.isEmpty {
+        if showsGlosses, !cell.gloss.isEmpty {
             glossWidth = min(glossMaxWidth, ceil((cell.gloss as NSString)
                 .size(withAttributes: [.font: UIFont.systemFont(ofSize: glossFontSize)]).width))
         }
-        return max(arabicWidth, glossWidth) + cellHorizontalPadding * 2
+        // The transliteration renders on ONE line with a minimum scale, so it never widens the cell
+        // past the gloss cap - but a short gloss under a long transliteration still needs the room.
+        var latinWidth: CGFloat = 0
+        if !cell.transliteration.isEmpty {
+            latinWidth = min(glossMaxWidth, ceil((cell.transliteration as NSString)
+                .size(withAttributes: [.font: UIFont.italicSystemFont(ofSize: transliterationFontSize)]).width))
+        }
+        return max(arabicWidth, max(glossWidth, latinWidth)) + cellHorizontalPadding * 2
     }
 
     /// Rows of cell indices, greedily filled in reading order against the measured widths.
@@ -1892,6 +1971,18 @@ struct WordMeaningSheet: View {
     /// Basic), so the sheet matches the page it was opened from instead of always showing Uthmani.
     private var hafsFontName: String { settings.quranArabicFontName(for: nil) }
 
+    /// The word's Latin transliteration, from the same pack the meaning came from.
+    ///
+    /// Resolved here rather than threaded through the tap payload: `rawWord` already maps the display
+    /// position onto the RAW token index, and the raw tokens are exactly what the pack is built on, so
+    /// the two layers index identically.
+    private var transliteration: String {
+        guard let located = rawWord,
+              let latin = WordByWordStore.shared.transliterations(surah: surah.id, ayah: ayah.id),
+              latin.indices.contains(located.tokenIndex) else { return "" }
+        return latin[located.tokenIndex]
+    }
+
     /// The visible tajweed rules inside this word, in legend order.
     private var wordRules: [TajweedLegendCategory] {
         guard settings.showTajweedColors, settings.isHafsDisplay, let located = rawWord else { return [] }
@@ -1913,6 +2004,18 @@ struct WordMeaningSheet: View {
                         lineSpacing: 6
                     )
                     .padding(.top, 8)
+
+                    // How the word is SAID, between the Arabic and what it means - the order a reader
+                    // works in. Silent when the pack has no transliteration for this token (the ۞ mark,
+                    // the tail of a merged word), never a placeholder.
+                    if !transliteration.isEmpty {
+                        Text(transliteration)
+                            .font(.headline.italic())
+                            .foregroundColor(settings.accentColor.color)
+                            .multilineTextAlignment(.center)
+                            .frame(maxWidth: .infinity, alignment: .center)
+                            .textSelection(.enabled)
+                    }
 
                     // Centered under the centered Arabic word (user rule, 2026-08: reversed the earlier
                     // lead-align rule) - the gloss belongs to the word above it, not the block below.

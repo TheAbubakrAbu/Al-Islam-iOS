@@ -232,6 +232,16 @@ extension View {
             self
         }
     }
+
+    /// Indents a setting that only exists because the setting above it is on.
+    ///
+    /// A dependent switch shown flush with its parent reads as a peer, and a reader hunting for why
+    /// it vanished has nothing to look at; one step of indentation says "this belongs to the row
+    /// above" without a second header or a nested box. Used for the word-by-word lines, Hide Arabic
+    /// Dots under Hide Tashkeel, the nagging schedule under Nagging Mode, and their kin.
+    func settingsDependent() -> some View {
+        padding(.leading, 16).padding(.vertical, 2)
+    }
 }
 
 extension String {

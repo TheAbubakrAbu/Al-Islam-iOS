@@ -1610,6 +1610,13 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     /// meaning directly beneath it (the study layout). Rides on `wordByWordMeanings`' gloss pack
     /// and gates (Hafs an Asim display only) - with the parent toggle off this one does nothing.
     @AppStorage("wordByWordInline") var wordByWordInline: Bool = false
+    /// Which of the two word-by-word lines the study layout writes under each word. Translation is on
+    /// out of the box because it is what "word by word" means to most readers; transliteration is off
+    /// so the default row stays two lines tall, and either may run without the other (both off is not
+    /// reachable - the settings screen disables the last one still on, since a layout with no lines
+    /// under the words is just the ayah with gaps in it).
+    @AppStorage("wordByWordInlineTranslation") var wordByWordInlineTranslation: Bool = true
+    @AppStorage("wordByWordInlineTransliteration") var wordByWordInlineTransliteration: Bool = false
     /// ON by default: the colors are the fastest way to read correctly, and word-by-word (also
     /// default-on) leans on them - the tapped word's card names the rules its colors show.
     @AppStorage("showTajweedColors") var showTajweedColors: Bool = true

@@ -453,6 +453,8 @@ extension Settings {
             // opacity, and showFullSurahRow adds the page/juz line under search results.
             wordByWordMeanings ? "1" : "0",
             wordByWordInline ? "1" : "0",
+            wordByWordInlineTranslation ? "1" : "0",
+            wordByWordInlineTransliteration ? "1" : "0",
             riwayahTajweedHiddenRules,
             showMuqattaatHelper ? "1" : "0",
             quranSortModeRaw,

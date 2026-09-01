@@ -46,7 +46,7 @@ struct SplashScreen: View {
                                         .font(.title.bold())
                                         .foregroundColor(.primary)
 
-                                    Text("Peace be upon you - welcome to Al-Islam.")
+                                    Text("Peace be upon you - welcome to \(AppIdentifiers.appName).")
                                         .font(.subheadline)
                                         .foregroundColor(.secondary)
                                 }

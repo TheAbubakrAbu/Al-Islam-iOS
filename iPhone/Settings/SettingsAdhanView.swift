@@ -706,14 +706,16 @@ struct NotificationView: View {
                         .onChange(of: settings.dateNotifications) { _ in settings.hapticFeedback() }
 
                     if settings.dateNotifications {
-                        Toggle("Remind a Day Before", isOn: $settings.dateNotificationsDayBefore.animation(.easeInOut))
-                            .font(.subheadline)
-                            .onChange(of: settings.dateNotificationsDayBefore) { _ in settings.hapticFeedback() }
+                        VStack(alignment: .leading, spacing: 4) {
+                            Toggle("Remind a Day Before", isOn: $settings.dateNotificationsDayBefore.animation(.easeInOut))
+                                .font(.subheadline)
+                                .onChange(of: settings.dateNotificationsDayBefore) { _ in settings.hapticFeedback() }
 
-                        Text("Also sends a heads-up the evening before each Islamic date - so Ramadan, Eid, and the days of fasting never arrive unannounced.")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                            .padding(.vertical, 2)
+                            Text("Also sends a heads-up the evening before each Islamic date - so Ramadan, Eid, and the days of fasting never arrive unannounced.")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                        }
+                        .settingsDependent()
                     }
                 }
 
@@ -1173,6 +1175,7 @@ struct MoreNotificationView: View {
                     .pickerStyle(.segmented)
                     #endif
                     .onChange(of: settings.naggingStartOffset) { _ in settings.hapticFeedback() }
+                    .settingsDependent()
 
                     Group {
                         Toggle("Nagging before Fajr", isOn: Binding(
@@ -1230,6 +1233,7 @@ struct MoreNotificationView: View {
                         .onChange(of: settings.naggingIsha) { _ in settings.hapticFeedback() }
                     }
                     .tint(settings.accentColor.color)
+                    .settingsDependent()
                 }
             }
 

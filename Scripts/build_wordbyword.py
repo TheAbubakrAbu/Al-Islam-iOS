@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""Build Resources/Data/Quran/WordByWord.json.xz - the per-word English gloss
-pack that backs "tap a word" in the reader.
+"""Build Resources/Data/Quran/WordByWord.json.xz - the per-word English gloss and
+Latin transliteration pack that backs "tap a word" in the reader.
 
 WHY A BUILD-TIME ALIGNMENT AND NOT A RUNTIME ONE
 ------------------------------------------------
@@ -28,17 +28,25 @@ OUTPUT FORMAT
 xz (what iPhone/Quran/WordByWord.swift's inflate and
 Apple's COMPRESSION_ZLIB expect, matching the Qiraah*/Tajweed* payloads) over:
 
-    {"1": [["In (the) name", "(of) Allah", ...], ...], ..., "114": [...]}
+    {"v": 2,
+     "en": {"1": [["In (the) name", "(of) Allah", ...], ...], ..., "114": [...]},
+     "tr": {"1": [["bis'mi", "l-lahi", ...], ...], ..., "114": [...]}}
 
-  surah id (string) -> ayahs in id order -> glosses in token order.
+  layer -> surah id (string) -> ayahs in id order -> one entry per token.
+
+Both layers are aligned by the SAME walk against the SAME app tokens, so index n
+means the same word in both - the reader can show either or both without a second
+lookup. Version 1 packs (English only, surah ids at the top level) are still read
+by the app; this builder only ever writes version 2.
 
 RUN
 ---
-    python3 Scripts/build_wordbyword.py [path/to/word-by-word-en.json]
+    python3 Scripts/build_wordbyword.py [path/to/word-by-word-en.json] [path/to/word-by-word-translit.json]
 
-Defaults to ../Tilawa/assets/quran/word-by-word-en.json. Verification is part of
-the build: every one of the 6236 ayahs must align token-for-token or the script
-exits non-zero and writes nothing.
+Defaults to ../Tilawa/assets/quran/word-by-word-en.json and, beside it,
+word-by-word-translit.json (fetch that one with Scripts/fetch_wordbyword.py).
+Verification is part of the build: every one of the 6236 ayahs must align
+token-for-token in BOTH layers or the script exits non-zero and writes nothing.
 """
 
 from __future__ import annotations
@@ -63,6 +71,7 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 QURAN_JSON = ROOT / "Resources" / "JSONs-Deprecated" / "Quran.json"
 OUT = ROOT / "Resources" / "Data" / "Quran" / "WordByWord.json.xz"
 DEFAULT_SOURCE = ROOT.parent / "Tilawa" / "assets" / "quran" / "word-by-word-en.json"
+DEFAULT_TRANSLIT_SOURCE = DEFAULT_SOURCE.with_name("word-by-word-translit.json")
 
 # Everything that carries no consonantal identity: harakat, sukun/madda variants,
 # superscript alef, the small high marks (waqf signs, U+06D6-U+06ED), tatweel, and
@@ -124,12 +133,16 @@ def tokens_of(ayah_text: str) -> list[str]:
     return [t for t in re.split(r"\s+", ayah_text.strip()) if t]
 
 
-def align(tokens: list[str], words: list[dict]) -> list[str] | None:
-    """One gloss per token, or None when the two sides cannot be reconciled.
+def align(tokens: list[str], words: list[dict], key: str = "e") -> list[str] | None:
+    """One value per token, or None when the two sides cannot be reconciled.
+
+    `key` picks the layer being carried across: "e" for the English gloss, "t"
+    for the transliteration. The walk itself only ever looks at "a" (the upstream
+    Arabic), so both layers align identically as long as their word lists do.
 
     Greedy two-pointer with bounded lookahead in both directions: a token may
-    absorb several upstream words (their glosses join), and several tokens may
-    share one upstream word (the first takes the gloss, the rest take "").
+    absorb several upstream words (their values join), and several tokens may
+    share one upstream word (the first takes the value, the rest take "").
     """
     out: list[str] = []
     i = j = 0
@@ -147,7 +160,7 @@ def align(tokens: list[str], words: list[dict]) -> list[str] | None:
             return None
 
         if tok == norm(words[j]["a"]):
-            out.append(words[j]["e"])
+            out.append(words[j][key])
             i += 1
             j += 1
             continue
@@ -161,8 +174,8 @@ def align(tokens: list[str], words: list[dict]) -> list[str] | None:
                 merged = span
                 break
         if merged:
-            glosses = [w["e"] for w in words[j:j + merged] if w["e"]]
-            out.append(" ".join(glosses))
+            joined = [w[key] for w in words[j:j + merged] if w[key]]
+            out.append(" ".join(joined))
             i += 1
             j += merged
             continue
@@ -176,7 +189,7 @@ def align(tokens: list[str], words: list[dict]) -> list[str] | None:
                 split = span
                 break
         if split:
-            out.append(words[j]["e"])
+            out.append(words[j][key])
             out.extend([""] * (split - 1))
             i += split
             j += 1
@@ -189,54 +202,71 @@ def align(tokens: list[str], words: list[dict]) -> list[str] | None:
     return out if j == len(words) else None
 
 
-def main() -> None:
-    source = pathlib.Path(sys.argv[1]) if len(sys.argv) > 1 else DEFAULT_SOURCE
-    if not source.exists():
-        raise SystemExit(f"word-by-word source not found: {source}")
-
-    quran = json.loads(QURAN_JSON.read_text(encoding="utf-8"))
-    wbw = json.loads(source.read_text(encoding="utf-8"))
-
+def build_layer(quran: list, source: dict, key: str, label: str) -> tuple[dict, list[str], int, int]:
+    """Align one layer against the app's tokens. Returns (packed, failures, tokens, filled)."""
     packed: dict[str, list[list[str]]] = {}
     failures: list[str] = []
-    total_ayahs = total_tokens = glossed = 0
+    total_tokens = filled = 0
 
     for surah in quran:
         rows: list[list[str]] = []
         for ayah in surah["ayahs"]:
-            key = f"{surah['id']}:{ayah['id']}"
-            total_ayahs += 1
+            ref = f"{surah['id']}:{ayah['id']}"
             toks = tokens_of(ayah["textArabic"])
-            words = wbw.get(key)
+            words = source.get(ref)
             if words is None:
-                failures.append(f"{key}: absent from source")
+                failures.append(f"{label} {ref}: absent from source")
                 rows.append([""] * len(toks))
                 continue
             words = [w for w in words if norm(w["a"]) and not _DIGITS.match(norm(w["a"]))]
-            aligned = align(toks, words)
+            aligned = align(toks, words, key)
             if aligned is None or len(aligned) != len(toks):
-                failures.append(f"{key}: {len(toks)} tokens vs {len(words)} words - no alignment")
+                failures.append(f"{label} {ref}: {len(toks)} tokens vs {len(words)} words - no alignment")
                 rows.append([""] * len(toks))
                 continue
             total_tokens += len(aligned)
-            glossed += sum(1 for g in aligned if g)
+            filled += sum(1 for value in aligned if value)
             rows.append(aligned)
         packed[str(surah["id"])] = rows
 
+    return packed, failures, total_tokens, filled
+
+
+def main() -> None:
+    source = pathlib.Path(sys.argv[1]) if len(sys.argv) > 1 else DEFAULT_SOURCE
+    translit_source = pathlib.Path(sys.argv[2]) if len(sys.argv) > 2 else DEFAULT_TRANSLIT_SOURCE
+    if not source.exists():
+        raise SystemExit(f"word-by-word source not found: {source}")
+    if not translit_source.exists():
+        raise SystemExit(
+            f"transliteration source not found: {translit_source}\n"
+            "Fetch it once with: python3 Scripts/fetch_wordbyword.py"
+        )
+
+    quran = json.loads(QURAN_JSON.read_text(encoding="utf-8"))
+    english_source = json.loads(source.read_text(encoding="utf-8"))
+    latin_source = json.loads(translit_source.read_text(encoding="utf-8"))
+
+    english, en_failures, tokens, glossed = build_layer(quran, english_source, "e", "english")
+    latin, tr_failures, _, transliterated = build_layer(quran, latin_source, "t", "translit")
+
+    failures = en_failures + tr_failures
     if failures:
         print(f"FAILED: {len(failures)} ayahs did not align", file=sys.stderr)
         for line in failures[:20]:
             print(f"  {line}", file=sys.stderr)
         raise SystemExit(1)
 
-    body = json.dumps(packed, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+    body = json.dumps({"v": 2, "en": english, "tr": latin},
+                      ensure_ascii=False, separators=(",", ":")).encode("utf-8")
     blob = xz_compress(body)
 
     OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_bytes(blob)
 
-    print(f"{total_ayahs} ayahs aligned, {total_tokens:,} tokens "
-          f"({glossed:,} glossed, {total_tokens - glossed:,} ornament/merged)")
+    ayahs = sum(len(surah["ayahs"]) for surah in quran)
+    print(f"{ayahs} ayahs aligned in both layers, {tokens:,} tokens "
+          f"({glossed:,} glossed, {transliterated:,} transliterated)")
     print(f"{OUT.name}: {len(body):,} raw -> {len(blob):,} xz")
 
 
