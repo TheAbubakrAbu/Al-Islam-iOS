@@ -11,6 +11,7 @@ struct AlIslamApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     @Environment(\.scenePhase) private var scenePhase
 
+
     @State private var isLaunching = true
     // Keeps the splash mounted through its fade-out (see `rootContent`).
     @State private var splashPresented = false
