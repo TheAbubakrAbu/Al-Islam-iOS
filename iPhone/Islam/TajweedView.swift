@@ -147,7 +147,7 @@ struct TajweedFoundationsView: View {
                             Text("Tajweed Lessons")
                                 .font(.subheadline.weight(.semibold))
                                 .foregroundColor(settings.accentColor.color)
-                            Text("A guided course from the alphabet to the rules, with Quranic examples you can hear - from Tilawa, by Jamil Hammoudeh.")
+                            Text("A guided course from the alphabet to the rules, with Quranic examples you can hear.")
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                         }

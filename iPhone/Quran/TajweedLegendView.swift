@@ -360,7 +360,7 @@ struct TajweedLegendView: View {
     /// print-derived rule, listing which riwayat mark it (Hafs first where its own legend colors an
     /// equivalent, the rest alphabetical). LazyVStack, so by-qiraah cards only parse their pack when
     /// scrolled into view; the by-rule index is built once, off the main thread.
-    private var compareAllSection: some View {
+    private func compareAllSection(scroll: ScrollViewProxy?) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("All Riwayat Compared")
                 .font(.headline)
@@ -377,10 +377,14 @@ struct TajweedLegendView: View {
             .onChange(of: compareByRule) { _ in settings.hapticFeedback() }
 
             if compareByRule {
-                compareByRuleContent
+                compareByRuleContent(scroll: scroll)
             } else {
-                compareByQiraahContent
+                compareByQiraahContent(scroll: scroll)
             }
+
+            Text("Tap any riwayah to see its full legend.")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
         }
         .task(id: compareByRule) {
             guard compareByRule, ruleSections == nil else { return }
@@ -391,7 +395,7 @@ struct TajweedLegendView: View {
         }
     }
 
-    private var compareByQiraahContent: some View {
+    private func compareByQiraahContent(scroll: ScrollViewProxy?) -> some View {
         LazyVStack(alignment: .leading, spacing: 14) {
             ForEach(Self.compareQiraahGroups) { group in
                 VStack(alignment: .leading, spacing: 10) {
@@ -408,6 +412,8 @@ struct TajweedLegendView: View {
                                 compareRuleRow(color: item.color, english: item.transliteration)
                             }
                         }
+                        .contentShape(Rectangle())
+                        .onTapGesture { previewRiwayah(tag: Settings.Riwayah.hafsTag, scroll: scroll) }
                     }
 
                     ForEach(group.options, id: \.tag) { option in
@@ -416,6 +422,8 @@ struct TajweedLegendView: View {
                                 compareRuleRow(color: entry.color, english: entry.english)
                             }
                         }
+                        .contentShape(Rectangle())
+                        .onTapGesture { previewRiwayah(tag: option.tag, scroll: scroll) }
                     }
                 }
             }
@@ -423,7 +431,7 @@ struct TajweedLegendView: View {
     }
 
     @ViewBuilder
-    private var compareByRuleContent: some View {
+    private func compareByRuleContent(scroll: ScrollViewProxy?) -> some View {
         if let ruleSections {
             LazyVStack(alignment: .leading, spacing: 10) {
                 ForEach(ruleSections) { section in
@@ -451,6 +459,8 @@ struct TajweedLegendView: View {
                         LazyVGrid(columns: quickLegendColumns, alignment: .leading, spacing: 6) {
                             ForEach(section.rows) { row in
                                 compareRuleRow(color: row.color, english: row.title)
+                                    .contentShape(Rectangle())
+                                    .onTapGesture { previewRiwayah(tag: row.tag, scroll: scroll) }
                             }
                         }
                     }
@@ -517,6 +527,8 @@ struct TajweedLegendView: View {
         let id: String
         let color: Color
         let title: String
+        /// The riwayah this row stands for - tapping it previews that riwayah's own legend.
+        let tag: String
     }
 
     private struct CompareRuleSection: Identifiable {
@@ -538,6 +550,22 @@ struct TajweedLegendView: View {
         "madd_leen": [.maddSukoon],
     ]
 
+    /// Rule keys that are ONE rule printed under two captions, folded into a single section. Sixteen of
+    /// the prints call the magenta "the letter differing from Hafs" and three (ad-Duri, Khalaf, Khallad)
+    /// call it "the word differing from Hafs" - the same color marking the same thing. Split across two
+    /// sections the index read as "only some riwayat mark what differs from Hafs" (Abu's report); every
+    /// riwayah does. The per-riwayah cards still show each print's own wording.
+    nonisolated private static let compareRuleAliases: [String: String] = ["khilaf_word": "khilaf_harf"]
+
+    /// Titles and descriptions for a folded section, so it isn't named after whichever print sorted first.
+    nonisolated private static let compareRuleOverrides: [String: (english: String, arabic: String, description: String)] = [
+        "khilaf_harf": (
+            "Differing from Ḥafṣ",
+            "المخالف لحفص",
+            "Read differently from the Ḥafṣ an ʿĀṣim reading. Every riwayah marks this."
+        )
+    ]
+
     /// Loads every bundled pack's legend and inverts it: rule key -> the riwayat that mark it.
     /// Hafs-only engine rules do NOT get sections of their own (user rule) - Hafs appears only
     /// inside sections other riwayat opened, via `hafsColoredCounterparts`.
@@ -546,18 +574,32 @@ struct TajweedLegendView: View {
             var english: String
             var arabic: String
             var rows: [CompareRuleRowItem] = []
+            /// The printed caption each riwayah gives this rule, in label order - only ever more than
+            /// one for a folded section, and then it is worth telling the reader which print says what.
+            var captions: [(english: String, labels: [String])] = []
+
+            mutating func note(caption: String, label: String) {
+                if let idx = captions.firstIndex(where: { $0.english == caption }) {
+                    captions[idx].labels.append(label)
+                } else {
+                    captions.append((english: caption, labels: [label]))
+                }
+            }
         }
         var byKey: [String: Collected] = [:]
 
         for option in packOptions.sorted(by: { $0.label < $1.label }) {
             for entry in QiraahTajweedStore.shared.legend(for: option.tag) {
-                var collected = byKey[entry.key] ?? Collected(english: entry.english, arabic: entry.arabic)
+                let key = compareRuleAliases[entry.key] ?? entry.key
+                var collected = byKey[key] ?? Collected(english: entry.english, arabic: entry.arabic)
                 collected.rows.append(CompareRuleRowItem(
-                    id: "\(entry.key)-\(option.tag)",
+                    id: "\(key)-\(option.tag)",
                     color: entry.color,
-                    title: option.label
+                    title: option.label,
+                    tag: option.tag
                 ))
-                byKey[entry.key] = collected
+                collected.note(caption: entry.english, label: option.label)
+                byKey[key] = collected
             }
         }
 
@@ -567,18 +609,55 @@ struct TajweedLegendView: View {
                     CompareRuleRowItem(
                         id: "\(key)-hafs-\(category.rawValue)",
                         color: category.color,
-                        title: "\(Settings.Riwayah.hafsLabel) - \(category.transliteration)"
+                        title: "\(Settings.Riwayah.hafsLabel) - \(category.transliteration)",
+                        tag: Settings.Riwayah.hafsTag
                     )
                 }
+                let override = compareRuleOverrides[key]
+                let base = override?.description ?? QiraahTajweedStore.shortDescriptions[key] ?? ""
                 return CompareRuleSection(
                     key: key,
-                    english: collected.english,
-                    arabic: collected.arabic,
-                    description: QiraahTajweedStore.shortDescriptions[key] ?? "",
+                    english: override?.english ?? collected.english,
+                    arabic: override?.arabic ?? collected.arabic,
+                    description: [base, captionNote(collected.captions)]
+                        .filter { !$0.isEmpty }
+                        .joined(separator: " "),
                     rows: hafsRows + collected.rows
                 )
             }
             .sorted { $0.english < $1.english }
+    }
+
+#if DEBUG
+    /// "-auditTajweedLegends": the by-rule index exactly as the compare screen builds it, printed and
+    /// written to Documents/legendaudit.txt. The legend page is reachable only by tapping, and taps are
+    /// not scriptable in the simulator, so this is the only way to check what the index actually lists.
+    nonisolated static func auditRuleSections() {
+        var lines: [String] = []
+        for section in buildRuleSections() {
+            lines.append("\(section.key) | \(section.english) | \(section.arabic) | \(section.rows.count) rows")
+            lines.append("   rows: \(section.rows.map(\.title).joined(separator: ", "))")
+            if !section.description.isEmpty { lines.append("   \(section.description)") }
+        }
+        for line in lines { print("LEGEND AUDIT \(line)") }
+        fflush(stdout)
+        if let documents = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first {
+            try? lines.joined(separator: "\n").write(to: documents.appendingPathComponent("legendaudit.txt"),
+                                                     atomically: true, encoding: .utf8)
+        }
+    }
+#endif
+
+    /// "The prints caption it differently: ..." - written only for a folded section, and only naming the
+    /// riwayat whose caption is the minority one, so the sentence stays a sentence.
+    nonisolated private static func captionNote(_ captions: [(english: String, labels: [String])]) -> String {
+        guard captions.count > 1,
+              let majority = captions.max(by: { $0.labels.count < $1.labels.count }) else { return "" }
+        let others = captions
+            .filter { $0.english != majority.english }
+            .map { "“\($0.english)” in \(ListFormatter.localizedString(byJoining: $0.labels))" }
+        guard !others.isEmpty else { return "" }
+        return "The prints caption it differently: \(others.joined(separator: "; ")); “\(majority.english)” in the rest."
     }
 
     private func compareCardShell<Rows: View>(title: String, arabic: String,
@@ -604,6 +683,20 @@ struct TajweedLegendView: View {
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
         .conditionalGlassEffect(rectangle: true)
+    }
+
+    /// Tapping any riwayah in the comparison previews ITS legend - the reason to read the comparison
+    /// is to find the riwayah you want to look at properly, and the alternative was scrolling back to
+    /// the picker and finding the same name in a two-level menu. Leaves the compare mode (the previewed
+    /// legend is what you asked to see) and returns the page to the top, since the content underneath
+    /// the finger is replaced wholesale. Never touches what is being READ.
+    private func previewRiwayah(tag: String, scroll: ScrollViewProxy?) {
+        settings.hapticFeedback()
+        withAnimation {
+            previewTag = tag
+            compareAll = false
+            scroll?.scrollTo(Self.legendTopAnchorID, anchor: .top)
+        }
     }
 
     private func compareRuleRow(color: Color, english: String) -> some View {
@@ -684,7 +777,11 @@ struct TajweedLegendView: View {
     /// what you scroll past otherwise).
     private var compareOnlyMode: Bool { settings.showQiraahDetails && compareAll }
 
+    /// The page header, so a riwayah tapped deep inside the comparison lands with its legend in view.
+    private static let legendTopAnchorID = "tajweedLegendTop"
+
     var body: some View {
+        ScrollViewReader { scroll in
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
                 VStack(alignment: .leading, spacing: 8) {
@@ -697,20 +794,22 @@ struct TajweedLegendView: View {
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 }
+                .id(Self.legendTopAnchorID)
 
                 if compareOnlyMode {
                     // ONLY the comparison (plus the card holding the way back): clicking Compare All
                     // Riwayat brings the riwayat to the top instead of burying them under the legend.
                     riwayahPreviewCard
 
-                    compareAllSection
+                    compareAllSection(scroll: scroll)
                 } else {
-                    fullLegendContent
+                    fullLegendContent(scroll: scroll)
                 }
             }
             .padding(.horizontal, 20)
             .padding(.top, 20)
             .padding(.bottom, 28)
+        }
         }
         .accentWashedBackground()
         .navigationTitle("Legend")
@@ -734,7 +833,7 @@ struct TajweedLegendView: View {
     /// The ordinary legend page: master toggle, preview card, the applicable legend, signs and
     /// stops - and, with qiraah details on, the full riwayat comparison always at the very bottom.
     @ViewBuilder
-    private var fullLegendContent: some View {
+    private func fullLegendContent(scroll: ScrollViewProxy?) -> some View {
                 VStack(alignment: .leading, spacing: 6) {
                     Toggle(isOn: Binding(
                         get: { settings.showTajweedColors },
@@ -877,7 +976,7 @@ struct TajweedLegendView: View {
                 // The full riwayat comparison, ALWAYS at the very bottom with qiraah details on
                 // (user rule) - the Compare All Riwayat button above exists to bring it to the top.
                 if settings.showQiraahDetails {
-                    compareAllSection
+                    compareAllSection(scroll: scroll)
                 }
     }
 }

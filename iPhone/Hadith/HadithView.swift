@@ -791,21 +791,23 @@ struct HadithView: View {
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(settings.accentColor.color)
 
-                    // When only one language is visible (toggle off, or the entry lacks one), that
-                    // single preview reserves four lines so every history row keeps the same height
-                    // as a two-language one. With both visible, each keeps its usual two.
-                    let showsArabic = settings.showHadithArabic && !entry.arabicPreview.isEmpty
-                    let showsEnglish = settings.showHadithEnglish && !entry.englishPreview.isEmpty
-
-                    if showsArabic {
-                        HadithArabicPreview(text: entry.arabicPreview, lineLimit: showsEnglish ? 2 : 4)
+                    // Each visible language reserves its own two lines whether or not this entry HAS
+                    // that language - an empty string still reserves them - so a hadith with no
+                    // Arabic, or none translated, keeps the same row height as one carrying both.
+                    // Giving the surviving language four lines instead does NOT square them: four
+                    // Arabic lines are taller than two Arabic plus two English, and four English
+                    // lines are shorter, so those rows sat proud of or below their neighbours.
+                    // The toggles gate the slots, not the content, because a toggle applies to every
+                    // row at once and so cannot make the list ragged.
+                    if settings.showHadithArabic {
+                        HadithArabicPreview(text: entry.arabicPreview, lineLimit: 2)
                     }
 
-                    if showsEnglish {
+                    if settings.showHadithEnglish {
                         Text(entry.englishPreview)
                             .font(.caption)
                             .foregroundColor(.secondary)
-                            .reservedLineLimit(showsArabic ? 2 : 4)
+                            .reservedLineLimit(2)
                     }
                 }
                 .contentShape(Rectangle())
@@ -920,18 +922,22 @@ struct HadithView: View {
                     .lineLimit(1)
                     .minimumScaleFactor(0.6)
 
-                // A tile showing only one language (toggle off, or nothing stored for the other)
-                // reserves four lines for it, so the two tiles in the grid stay the same height.
-                // With both languages, each keeps its usual two.
-                if !arabic.isEmpty {
-                    HadithArabicPreview(text: arabic, lineLimit: english.isEmpty ? 4 : 2)
+                // Each visible language reserves its own two lines whether or not this hadith HAS
+                // that language - an empty string still reserves them - so the two tiles sitting
+                // side by side in the grid are the same height even when one has no Arabic or no
+                // translation. Giving the surviving language four lines instead does NOT square
+                // them: four Arabic lines are taller than two Arabic plus two English, and four
+                // English lines are shorter. The toggles gate the slots, not the content, because a
+                // toggle applies to both tiles at once and so cannot make them ragged.
+                if settings.showHadithArabic {
+                    HadithArabicPreview(text: arabic, lineLimit: 2)
                 }
 
-                if !english.isEmpty {
+                if settings.showHadithEnglish {
                     Text(english)
                         .font(.footnote)
                         .foregroundColor(.secondary)
-                        .reservedLineLimit(arabic.isEmpty ? 4 : 2)
+                        .reservedLineLimit(2)
                 }
             }
             // Hug the content - stretching to fill the row's height (maxHeight + a Spacer) parked

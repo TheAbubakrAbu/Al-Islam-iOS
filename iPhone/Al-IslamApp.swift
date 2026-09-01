@@ -11,7 +11,6 @@ struct AlIslamApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     @Environment(\.scenePhase) private var scenePhase
 
-
     @State private var isLaunching = true
     // Keeps the splash mounted through its fade-out (see `rootContent`).
     @State private var splashPresented = false
@@ -253,6 +252,12 @@ private struct MainTabView: View {
                 let pages = MushafPagination.pages(quran: QuranData.shared.quran,
                                                    qiraah: Settings.shared.displayQiraahForArabic)
                 MushafPageRenderCache.auditPrintLines(pages: pages)
+            }
+            // "-auditTajweedLegends" - print the tajweed legend's by-rule comparison index (the
+            // compare screen is only reachable by tapping; see TajweedLegendView.auditRuleSections).
+            .task {
+                guard ProcessInfo.processInfo.arguments.contains("-auditTajweedLegends") else { return }
+                await Task.detached(priority: .utility) { TajweedLegendView.auditRuleSections() }.value
             }
             // "-auditPacks" - fingerprint every bundled pack and loose payload through the app's own
             // readers (see PackAudit); run before and after a repack and diff Documents/packaudit.txt.

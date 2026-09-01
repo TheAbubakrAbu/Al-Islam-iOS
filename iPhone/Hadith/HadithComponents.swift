@@ -864,16 +864,14 @@ struct HadithBookmarkRow: View, Equatable {
 
                         // The reading rows' exact visibility rules: Arabic and English previews follow
                         // the same toggles the reader uses, so a bookmark looks like its hadith. Each
-                        // enabled slot ALWAYS renders - an empty string still reserves its lines - so a
-                        // hadith missing Arabic or English keeps the same row height as one that has
-                        // both, and the bookmark list never stair-steps. When only ONE slot renders
-                        // (the other toggled off), it reserves four lines instead of two, so a
-                        // single-language row matches the height of a two-language one.
-                        let arabicSlot = settings.showHadithArabic
-                        let englishSlot = settings.showHadithEnglish || bookmark.arabicPreview == nil
-
-                        if arabicSlot {
-                            HadithArabicPreview(text: bookmark.arabicPreview ?? "", lineLimit: englishSlot ? 2 : 4)
+                        // enabled slot reserves its own TWO lines whether or not this bookmark has
+                        // that language - an empty string still reserves them - so a hadith missing
+                        // Arabic or English keeps the same row height as one that has both, and the
+                        // list never stair-steps. Giving the surviving language four lines instead
+                        // does NOT square them: four Arabic lines are taller than two Arabic plus two
+                        // English, and four English lines are shorter.
+                        if settings.showHadithArabic {
+                            HadithArabicPreview(text: bookmark.arabicPreview ?? "", lineLimit: 2)
                         }
 
                         if settings.showHadithEnglish {
@@ -882,14 +880,14 @@ struct HadithBookmarkRow: View, Equatable {
                             Text(!english.isEmpty ? english : (bookmark.arabicPreview == nil ? bookmark.preview : ""))
                                 .font(.caption)
                                 .foregroundColor(.secondary)
-                                .reservedLineLimit(arabicSlot ? 2 : 4)
+                                .reservedLineLimit(2)
                         } else if bookmark.arabicPreview == nil {
                             // English hidden and nothing else stored: the legacy combined preview is all
-                            // this bookmark has.
+                            // this bookmark has, so it shows anyway rather than leaving a blank row.
                             Text(bookmark.preview)
                                 .font(.caption)
                                 .foregroundColor(.secondary)
-                                .reservedLineLimit(arabicSlot ? 2 : 4)
+                                .reservedLineLimit(2)
                         }
 
                         // The bookmark's note - the Quran bookmark rows' quiet one-liner.
@@ -1034,14 +1032,13 @@ struct HadithBookmarkGridTile: View, Equatable {
                 }
 
                 // The reader's own visibility toggles apply here exactly as in the bookmark list
-                // rows. Within an enabled slot an empty string still reserves its lines, so tiles
-                // keep their neighbors' height instead of hugging shorter. A tile showing only one
-                // language reserves four lines for it, matching the height of a two-language tile.
+                // rows, and each enabled slot reserves its own TWO lines whether or not this bookmark
+                // has that language - an empty string still reserves them - so tiles keep their
+                // neighbours' height instead of hugging shorter. Four lines for the surviving
+                // language does NOT square them: four Arabic lines are taller than two Arabic plus
+                // two English, and four English lines are shorter.
                 if settings.showHadithArabic {
-                    HadithArabicPreview(
-                        text: bookmark.arabicPreview ?? "", size: 14,
-                        lineLimit: settings.showHadithEnglish ? 2 : 4
-                    )
+                    HadithArabicPreview(text: bookmark.arabicPreview ?? "", size: 14, lineLimit: 2)
                 }
 
                 if settings.showHadithEnglish {
@@ -1049,7 +1046,7 @@ struct HadithBookmarkGridTile: View, Equatable {
                     Text(!english.isEmpty ? english : (bookmark.arabicPreview == nil ? bookmark.preview : ""))
                         .font(.caption2)
                         .foregroundColor(.secondary)
-                        .reservedLineLimit(settings.showHadithArabic ? 2 : 4)
+                        .reservedLineLimit(2)
                 }
             }
             // Hug the content - the old fixed 78pt frame left a band of dead space whenever the

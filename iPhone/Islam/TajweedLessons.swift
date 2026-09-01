@@ -198,7 +198,7 @@ struct TajweedLessonsView: View {
             }
 
             Section(footer:
-                Text("Curriculum written by Jamil Hammoudeh for Tilawa, ported with permission. Example recitations: the app's current reciter.")
+                Text("Example recitations: the app's current reciter.")
                     .font(.caption2)
             ) { EmptyView() }
         }

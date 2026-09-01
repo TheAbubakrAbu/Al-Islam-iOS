@@ -171,7 +171,7 @@ struct SimilarAyahsSheet: View {
     }
 
     private var sourcesFootnote: some View {
-        Text("Verified matches come from qurani.ai's similar-ayah corpus; the rest are phrase-overlap matches from Tilawa's generator. Ported from Tilawa with permission.")
+        Text("Verified matches come from qurani.ai's similar-ayah corpus; the rest are phrase-overlap matches.")
             .font(.caption2)
     }
 

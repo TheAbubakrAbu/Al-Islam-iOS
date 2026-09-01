@@ -851,19 +851,44 @@ struct HighlightedSnippet: View {
            let secondLam = nextNonMarkIndex(after: afterAlif, in: source),
            source[secondLam].allahBase == "ل",
            let heh = nextNonMarkIndex(after: secondLam, in: source),
-           source[heh].allahBase == "ه" {
+           source[heh].allahBase == "ه",
+           nameEndsTheWord(atHeh: heh, in: source) {
             return start..<rangeUpperBound(afterBaseAt: heh, in: source)
         }
 
         if source[start].allahBase == "ل",
+           nameStartsTheWord(atFirstLam: start, in: source),
            let secondLam = nextNonMarkIndex(after: start, in: source),
            source[secondLam].allahBase == "ل",
            let heh = nextNonMarkIndex(after: secondLam, in: source),
-           source[heh].allahBase == "ه" {
+           source[heh].allahBase == "ه",
+           nameEndsTheWord(atHeh: heh, in: source) {
             return start..<rangeUpperBound(afterBaseAt: heh, in: source)
         }
 
         return nil
+    }
+
+    /// The name must END its word - `ٱللَّهِ`, `لِلَّهِ` - with the one exception of the vocative `ٱللَّهُمَّ` (Allahumma).
+    /// Without this every word whose letters happen to run ل + ل + ه was painted red: `لَلۡهُدَىٰ` (92:12,
+    /// "the guidance" - Abu's report), `ٱللَّهۡوِ` (62:11, the amusement) and `ٱللَّهَبِ` (77:31, the flame).
+    /// A digit, a punctuation mark, an ayah medallion or a tatweel all count as the end of the word.
+    nonisolated private static func nameEndsTheWord(atHeh heh: String.Index, in source: String) -> Bool {
+        guard let next = nextNonMarkIndex(after: heh, in: source) else { return true }
+        guard let letter = source[next].arabicWordLetter else { return true }
+        guard letter == "م" else { return false }
+        guard let afterMeem = nextNonMarkIndex(after: next, in: source) else { return true }
+        return source[afterMeem].arabicWordLetter == nil
+    }
+
+    /// Alif-less `لله` is the name only where `لِ` is the word's own opening - `لِلَّهِ`, or that behind the
+    /// conjunctions و and ف (`وَلِلَّهِ`, `فَلِلَّهِ`). Every other preceding letter makes it an ordinary
+    /// doubled-lam word that the shadda-less spelling only looks like: `يُضۡلِلۡهُ`, `ظَلَّلَهُ`,
+    /// `خِلَٰلَهَا`. (Every preposition other than لِ keeps the alif - `بِٱللَّهِ` - so it lands in the alif branch.)
+    nonisolated private static func nameStartsTheWord(atFirstLam lam: String.Index, in source: String) -> Bool {
+        guard let previous = previousNonMarkIndex(before: lam, in: source) else { return true }
+        guard let letter = source[previous].arabicWordLetter else { return true }
+        return letter == "و" || letter == "ف"
     }
 
     nonisolated private static func nextNonMarkIndex(after index: String.Index, in source: String) -> String.Index? {
@@ -878,6 +903,21 @@ struct HighlightedSnippet: View {
                 return cursor
             }
             cursor = source.index(after: cursor)
+        }
+        return nil
+    }
+
+    nonisolated private static func previousNonMarkIndex(before index: String.Index, in source: String) -> String.Index? {
+        var cursor = index
+        while cursor > source.startIndex {
+            cursor = source.index(before: cursor)
+            // Same word boundary the forward walk keeps: what sits behind a space is a different word.
+            if source[cursor].isWhitespace {
+                return nil
+            }
+            if !source[cursor].isArabicMark {
+                return cursor
+            }
         }
         return nil
     }
@@ -984,7 +1024,9 @@ private extension Character {
     var allahBase: Character? {
         for scalar in unicodeScalars where !scalar.isArabicMarkScalar {
             switch scalar.value {
-            case 0x0627, 0x0671:
+            // Every alif spelling, hamza-carrying ones included: the hadith books write the questioning
+            // `آلله` and `ألله`, which have to reach the alif branch or the alif-less rule below rejects them.
+            case 0x0622, 0x0623, 0x0625, 0x0627, 0x0671...0x0673, 0x0675:
                 return "ا"
             case 0x0644:
                 return "ل"
@@ -1000,6 +1042,23 @@ private extension Character {
 
     var isAllahAlif: Bool {
         self == "ا"
+    }
+
+    /// The Arabic letter this cluster is built on, marks ignored - nil when the cluster is not a letter
+    /// at all (a space, a digit, punctuation, an ayah medallion, a tatweel), which is what makes a word
+    /// end for the name scan.
+    var arabicWordLetter: Character? {
+        for scalar in unicodeScalars where !scalar.isArabicMarkScalar {
+            switch scalar.value {
+            case 0x0621...0x063F, 0x0641...0x064A, 0x066E, 0x066F, 0x0671...0x06D3,
+                 0x06EE, 0x06EF, 0x06FA...0x06FF, 0x0750...0x077F:
+                return Character(scalar)
+            default:
+                continue
+            }
+        }
+
+        return nil
     }
 
     var isArabicMark: Bool {

@@ -404,6 +404,9 @@
 		7E5A00000000000000000010 /* SalafiyyahViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E5A0000000000000000000E /* SalafiyyahViews.swift */; };
 		7E5A00000000000000000012 /* ScholarsViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E5A00000000000000000011 /* ScholarsViews.swift */; };
 		7E5A00000000000000000013 /* ScholarsViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E5A00000000000000000011 /* ScholarsViews.swift */; };
+		93A9738F4B3246A8A3721BD4 /* IslamArticles.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A4F753DC4B547428BA844E0 /* IslamArticles.swift */; };
+		6BC3BA7721864963949CE2B7 /* IslamArticles.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A4F753DC4B547428BA844E0 /* IslamArticles.swift */; };
+		42E0C45E435D446AADEB5FA1 /* IslamArticles.json.deflate in Resources */ = {isa = PBXBuildFile; fileRef = CA25F21722904499829F8B2C /* IslamArticles.json.deflate */; };
 		7E5A00000000000000000015 /* AnswersViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E5A00000000000000000014 /* AnswersViews.swift */; };
 		7E5A00000000000000000016 /* AnswersViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7E5A00000000000000000014 /* AnswersViews.swift */; };
 /* End PBXBuildFile section */
@@ -681,6 +684,8 @@
 		7BF0000000000000000000A2 /* ThematicTopics.json.xz */ = {isa = PBXFileReference; lastKnownFileType = text; path = ThematicTopics.json.xz; sourceTree = "<group>"; };
 		7BF0000000000000000000A3 /* SurahSections.json.xz */ = {isa = PBXFileReference; lastKnownFileType = file; path = SurahSections.json.xz; sourceTree = "<group>"; };
 		7C00000000000000000000A1 /* TajweedLessons.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TajweedLessons.swift; sourceTree = "<group>"; };
+		4A4F753DC4B547428BA844E0 /* IslamArticles.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IslamArticles.swift; sourceTree = "<group>"; };
+		CA25F21722904499829F8B2C /* IslamArticles.json.deflate */ = {isa = PBXFileReference; lastKnownFileType = file; path = IslamArticles.json.deflate; sourceTree = "<group>"; };
 		7C00000000000000000000A2 /* TajweedLessons.json.xz */ = {isa = PBXFileReference; lastKnownFileType = file; path = TajweedLessons.json.xz; sourceTree = "<group>"; };
 		7DAD00000000000000000001 /* HadithFold.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HadithFold.swift; sourceTree = "<group>"; };
 		7DAD00000000000000000003 /* HadithPack.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HadithPack.swift; sourceTree = "<group>"; };
@@ -973,6 +978,14 @@
 			path = Quran;
 			sourceTree = "<group>";
 		};
+		2CD080F4DC014A60A55A9304 /* Islam */ = {
+			isa = PBXGroup;
+			children = (
+				CA25F21722904499829F8B2C /* IslamArticles.json.deflate */,
+			);
+			path = Islam;
+			sourceTree = "<group>";
+		};
 		7260F9222A8715D600E8FF87 /* Data */ = {
 			isa = PBXGroup;
 			children = (
@@ -980,6 +993,7 @@
 				7DAD00000000000000000027 /* Hadith */,
 				7DAF0000000000000000000D /* Tafsir */,
 				7A9A000000000000000000A0 /* Quran */,
+				2CD080F4DC014A60A55A9304 /* Islam */,
 			);
 			path = Data;
 			sourceTree = "<group>";
@@ -1015,6 +1029,7 @@
 		729115312AF817CF00A4EB2B /* Islam */ = {
 			isa = PBXGroup;
 			children = (
+				4A4F753DC4B547428BA844E0 /* IslamArticles.swift */,
 				7E5A00000000000000000014 /* AnswersViews.swift */,
 				7E5A00000000000000000011 /* ScholarsViews.swift */,
 				7E5A0000000000000000000E /* SalafiyyahViews.swift */,
@@ -1405,6 +1420,7 @@
 				7BE0000000000000000000C1 /* SimilarAyahs.json.xz in Resources */,
 				7BF0000000000000000000C1 /* ThematicTopics.json.xz in Resources */,
 				7C00000000000000000000C1 /* TajweedLessons.json.xz in Resources */,
+				42E0C45E435D446AADEB5FA1 /* IslamArticles.json.deflate in Resources */,
 				7BF0000000000000000000C2 /* SurahSections.json.xz in Resources */,
 				7A9A000000000000000000D3 /* surahinfos.qpk in Resources */,
 				7A9A000000000000000000D5 /* qiraat.qpk in Resources */,
@@ -1551,6 +1567,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				7E5A00000000000000000015 /* AnswersViews.swift in Sources */,
+				93A9738F4B3246A8A3721BD4 /* IslamArticles.swift in Sources */,
 				7E5A00000000000000000012 /* ScholarsViews.swift in Sources */,
 				7E5A0000000000000000000F /* SalafiyyahViews.swift in Sources */,
 				7E5A0000000000000000000C /* AqeedahViews.swift in Sources */,
@@ -1686,6 +1703,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				7E5A00000000000000000016 /* AnswersViews.swift in Sources */,
+				6BC3BA7721864963949CE2B7 /* IslamArticles.swift in Sources */,
 				7E5A00000000000000000013 /* ScholarsViews.swift in Sources */,
 				7E5A00000000000000000010 /* SalafiyyahViews.swift in Sources */,
 				7E5A0000000000000000000D /* AqeedahViews.swift in Sources */,

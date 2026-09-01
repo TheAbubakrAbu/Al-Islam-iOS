@@ -201,6 +201,28 @@ enum PackAudit {
             emit("JSON \(name) ext=\(ext) bytes=\(json.count) parses=\(parses) hash=\(fp.hex)")
         }
 
+        // MARK: Islam article corpus
+
+        // Read through IslamArticles itself, so this proves the SHIPPED pack decodes with the
+        // shipped reader - and the probes prove the retrieval lane actually finds the right article.
+        let corpus = IslamArticles.all
+        if corpus.isEmpty {
+            emit("ISLAM corpus FAILED TO LOAD")
+        } else {
+            var fp = Fingerprint()
+            for article in corpus {
+                fp.add(article.id); fp.add(article.title); fp.add(article.sections.count)
+                for section in article.sections { fp.add(section.heading); fp.add(section.text) }
+            }
+            let chars = corpus.reduce(0) { $0 + $1.sections.reduce(0) { $0 + $1.text.count } }
+            emit("ISLAM corpus articles=\(corpus.count) chars=\(chars) hash=\(fp.hex)")
+            for probe in ["how do i make wudhu", "what breaks the fast", "five pillars of islam",
+                          "what is tawhid", "who was ibn taymiyyah", "sunnah rakahs before dhuhr"] {
+                let hits = IslamArticles.search(probe, limit: 3).map(\.article.title)
+                emit("ISLAM probe \"\(probe)\" -> \(hits)")
+            }
+        }
+
         emit("DONE \(lines.count) lines")
         let report = lines.joined(separator: "\n") + "\n"
         if let documents = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first {

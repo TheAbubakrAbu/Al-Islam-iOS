@@ -248,7 +248,7 @@ struct ThemesBrowseView: View {
             // The credits hide while searching, the app's convention for trailing footers.
             if !isSearching {
                 Section(footer:
-                    Text("Topics from the Quran Semantic Annotation Corpus (CC BY 4.0), via Tilawa.")
+                    Text("Topics from the Quran Semantic Annotation Corpus (CC BY 4.0).")
                         .font(.caption2)
                 ) { EmptyView() }
             }

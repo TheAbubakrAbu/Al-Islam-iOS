@@ -29,6 +29,11 @@ struct AskAIPassage: Identifiable, Equatable {
         case tafsir(surah: Int, ayah: Int)
         /// A surah's background prose (the "About this surah" text) - the reader opens the surah.
         case surah(Int)
+        /// A section of an Islam-tab article (Pillars, Beliefs, How-to). The row reopens the article.
+        case article(id: String)
+        /// Today's prayer schedule as THIS app computed it for THIS location. The row is the answer
+        /// itself, not a link: there is no single screen a prayer time belongs to.
+        case prayer
     }
 
     let kind: Kind
@@ -47,9 +52,10 @@ struct AskAIPassage: Identifiable, Equatable {
 
 // MARK: - Retrieval
 
-/// The chat's own retrieval. Every question runs the Quran's semantic and keyword lanes and the hadith
-/// library's semantic lane, then interleaves the lanes so each gets a voice within the model's passage
-/// budget. Lanes that aren't ready (a corpus still building, Arabic against the English-only word
+/// The chat's own retrieval. Every question runs the Quran's semantic and keyword lanes, the hadith
+/// library's semantic and keyword lanes, the Islam tab's article corpus, and - for a question about
+/// prayer - today's computed prayer times, then interleaves the lanes so each gets a voice within the
+/// model's passage budget. Lanes that aren't ready (a corpus still building, Arabic against the English-only word
 /// vectors) simply contribute nothing - the model still answers.
 @MainActor
 enum AskAIRetriever {
@@ -223,9 +229,38 @@ enum AskAIRetriever {
             }
         }
 
-        // The named subject first, then interleave Quran meaning, hadith meaning, hadith keyword,
-        // Quran keyword - round-robin until the budget is spent, so no lane can crowd the others out.
-        var lanes = [quranSemantic[...], hadithSemantic[...], hadithKeyword[...], quranKeyword[...]]
+        // Lane 5: the app's OWN prayer schedule. "When is Maghrib", "how long until Asr", "how many
+        // sunnah rakahs before Dhuhr" are questions about THIS user's day at THIS location, which no
+        // model can know and no verse or hadith answers - so today's computed times go in whenever
+        // the question is about prayer at all.
+        var prayerTimes: [AskAIPassage] = []
+        if let passage = prayerPassage(for: searchText), seen.insert(passage.reference).inserted {
+            prayerTimes.append(passage)
+        }
+
+        // Lane 6: the Islam tab's own articles (Pillars, Beliefs, How-to). The app has a sourced page
+        // on wudhu, the madhahib, the pillars and forty other subjects; without this lane the model
+        // answered those questions from memory while the app's own page sat one tab away.
+        var articles: [AskAIPassage] = []
+        // Off the main actor: the corpus is 800 KB of prose, and scanning it inline showed up as a
+        // hitch on the keystroke that sent the question.
+        let articleHits = await Task.detached(priority: .userInitiated) {
+            IslamArticles.search(searchText, limit: 3)
+        }.value
+        for hit in articleHits {
+            guard seen.insert(hit.article.title).inserted else { continue }
+            let text = hit.section.heading.isEmpty
+                ? hit.section.text
+                : "\(hit.section.heading.capitalized): \(hit.section.text)"
+            articles.append(AskAIPassage(kind: .article(id: hit.article.id),
+                                         reference: hit.article.title, text: text, maxCharacters: 700))
+        }
+
+        // The named subject first, then interleave: prayer times and the app's articles lead (they
+        // answer what the model cannot), then Quran meaning, hadith meaning, hadith keyword, Quran
+        // keyword - round-robin until the budget is spent, so no lane can crowd the others out.
+        var lanes = [prayerTimes[...], articles[...],
+                     quranSemantic[...], hadithSemantic[...], hadithKeyword[...], quranKeyword[...]]
         var out: [AskAIPassage] = Array(referenced.prefix(limit))
         while out.count < limit, lanes.contains(where: { !$0.isEmpty }) {
             for index in lanes.indices where out.count < limit {
@@ -236,6 +271,51 @@ enum AskAIRetriever {
             }
         }
         return out
+    }
+
+    /// Words that make a question one about prayer - the prayer lane's whole gate. Deliberately wide
+    /// (a bare "when is maghrib" has one of these and nothing else), and cheap: a false positive costs
+    /// one passage the model can ignore, a false negative loses the only answer that exists.
+    private static let prayerWords: Set<String> = [
+        "prayer", "prayers", "pray", "prayed", "praying", "salah", "salat", "salaah", "namaz",
+        "fajr", "sunrise", "shuruq", "dhuhr", "duhr", "zuhr", "asr", "maghrib", "isha", "ishaa",
+        "jumuah", "jumaah", "jummah", "friday", "duha", "duhaa", "tahajjud", "witr", "qiyam",
+        "midnight", "rakah", "rakat", "rakahs", "rakaat", "sunnah", "adhan", "athan", "iqamah",
+        "next", "today", "tonight", "schedule", "timetable", "times", "time",
+    ]
+
+    /// Today's schedule as a passage: the times this app computed for this location, with each
+    /// prayer's fard count and its sunnah rakahs. Nil when the question is not about prayer, or when
+    /// no times have been computed yet (no location permission, first launch).
+    private static func prayerPassage(for question: String) -> AskAIPassage? {
+        let settings = Settings.shared
+        let words = Set(question.lowercased().components(separatedBy: CharacterSet.alphanumerics.inverted))
+        guard !words.isDisjoint(with: prayerWords) else { return nil }
+        guard let today = settings.prayers, !today.fullPrayers.isEmpty else { return nil }
+
+        let clock = DateFormatter()
+        clock.timeStyle = .short
+        clock.dateStyle = .none
+
+        var lines: [String] = []
+        for prayer in today.fullPrayers {
+            var line = "\(prayer.displayName) \(clock.string(from: prayer.time))"
+            var counts: [String] = []
+            if prayer.rakah != "0" { counts.append("\(prayer.rakah) fard") }
+            if prayer.sunnahBefore != "0" { counts.append("\(prayer.sunnahBefore) sunnah before") }
+            if prayer.sunnahAfter != "0" { counts.append("\(prayer.sunnahAfter) sunnah after") }
+            if !counts.isEmpty { line += " (" + counts.joined(separator: ", ") + ")" }
+            if let note = prayer.sunnahNote { line += ". " + note }
+            lines.append(line)
+        }
+        let day = today.day.formatted(date: .abbreviated, time: .omitted)
+        let place = today.city.isEmpty ? "" : " in \(today.city)"
+        // Told the current time too: "how long until Asr" is arithmetic the model can only do if it
+        // knows where the day stands.
+        let text = "Prayer times\(place) for \(day), computed by this app. It is now "
+            + "\(clock.string(from: Date())).\n" + lines.joined(separator: "\n")
+        return AskAIPassage(kind: .prayer, reference: "Prayer times today", text: text,
+                            maxCharacters: 900, isSubject: true)
     }
 
     /// What the keyword lane searches for: the whole question when it is short (a topic like
@@ -1134,6 +1214,18 @@ struct AskAIChatView: View {
                 }
                 .buttonStyle(.plain)
             }
+        case .article(let id):
+            if let destination = IslamArticles.destination(for: id) {
+                NavigationLink {
+                    destination
+                } label: {
+                    passageLabel(title: passage.reference, text: passage.text)
+                }
+                .buttonStyle(.plain)
+            }
+        case .prayer:
+            // No link: the times ARE the passage, and they are already on the app's first screen.
+            passageLabel(title: passage.reference, text: passage.text)
         case .hadith(let slug, let idInBook):
             if let book = HadithCatalogBook.bySlug[slug],
                let data = HadithStore.shared.book(book),
