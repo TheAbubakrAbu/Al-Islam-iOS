@@ -68,6 +68,10 @@ struct SettingsQuranView: View {
     /// pattern. DEBUG builds only.
     @State private var autoOpenArabicText =
         ProcessInfo.processInfo.arguments.contains("-launchQuranSettingsArabic")
+    /// `-launchQuranSettingsReciters` lands on the reciter list, for verifying the legend dots and
+    /// a partial reciter's coverage. DEBUG builds only.
+    @State private var autoOpenReciters =
+        ProcessInfo.processInfo.arguments.contains("-launchQuranSettingsReciters")
     #endif
 
     var body: some View {
@@ -109,6 +113,13 @@ struct SettingsQuranView: View {
         #if DEBUG && os(iOS)
         .background(
             NavigationLink(isActive: $autoOpenArabicText) { arabicTextDestination }
+                          label: { EmptyView() }
+                .hidden()
+        )
+        // In `.background`, not the List: a hidden link placed as a row still draws that row's
+        // background and separators.
+        .background(
+            NavigationLink(isActive: $autoOpenReciters) { ReciterListView().environmentObject(settings) }
                           label: { EmptyView() }
                 .hidden()
         )
@@ -2768,6 +2779,9 @@ private struct ReciterRow: View, Equatable {
     let onScrollToReciter: () -> Void
 
     @State private var confirmDownload = false
+    /// The two dot explanations. Separate flags so tapping one dot never opens the other's dialog.
+    @State private var showTypeDotInfo = false
+    @State private var showCoverageDotInfo = false
 
     /// The closures are recreated per parent pass; identity lives in the value inputs. This is what
     /// lets the one row whose snapshot changed re-render while the rest skip their bodies.
@@ -2815,19 +2829,17 @@ private struct ReciterRow: View, Equatable {
                 VStack(alignment: .leading, spacing: 4) {
                     HStack(spacing: 6) {
                         // The type dot the top-of-list legend explains - it replaced the caption note
-                        // each row used to carry.
+                        // each row used to carry. Tapping it explains THIS row's dot, so the meaning
+                        // is reachable from the reciter you are actually looking at rather than only
+                        // from the legend at the top of a 97-row list.
                         if !qiraah {
-                            Circle()
-                                .fill(reciterTypeDotColor)
-                                .frame(width: 8, height: 8)
+                            dotButton(color: reciterTypeDotColor) { showTypeDotInfo = true }
                         }
 
                         // Incomplete coverage is orthogonal to the playback-tier dot, so it gets its
                         // own purple dot - shown in qiraah sections too, where the tier dot is hidden.
                         if reciter.carriedSurahCount < 114 {
-                            Circle()
-                                .fill(Color.purple)
-                                .frame(width: 8, height: 8)
+                            dotButton(color: .purple) { showCoverageDotInfo = true }
                         }
 
                         HighlightedSnippet(
@@ -2951,9 +2963,60 @@ private struct ReciterRow: View, Equatable {
                 ? "This downloads all \(reciter.carriedSurahCount) full-surah recitations for offline playback. This reciter also supports ayah segments, so individual ayahs and custom ranges then play offline too, cut from the downloaded surah. It runs in the background and may use significant data and storage."
                 : "This downloads all \(reciter.carriedSurahCount) full-surah recitations for offline playback; it does not download ayah-by-ayah audio. It runs in the background and may use significant data and storage.")
         }
+        .confirmationDialog("Reciter Type", isPresented: $showTypeDotInfo, titleVisibility: .visible) {
+            Button("OK") {}
+        } message: {
+            Text(typeDotExplanation)
+        }
+        .confirmationDialog("Incomplete Mushaf", isPresented: $showCoverageDotInfo, titleVisibility: .visible) {
+            Button("OK") {}
+        } message: {
+            Text(coverageDotExplanation)
+        }
         .onAppear {
             downloadManager.ensureStateLoaded(for: reciter)
         }
+    }
+
+    /// A legend dot, tappable, with a hit area big enough to actually hit. The dot itself stays 8pt
+    /// (the legend's size); the padding around it is what the finger lands on, and `.contentShape`
+    /// makes that padding count. Without it a bare 8pt Circle is a coin-toss to tap.
+    private func dotButton(color: Color, action: @escaping () -> Void) -> some View {
+        Button {
+            settings.hapticFeedback()
+            action()
+        } label: {
+            Circle()
+                .fill(color)
+                .frame(width: 8, height: 8)
+                .padding(6)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        // The row itself selects the reciter; without this the tap would do both.
+        .accessibilityLabel("What this dot means")
+    }
+
+    /// What THIS row's playback-tier dot means, in the legend's own words.
+    private var typeDotExplanation: String {
+        if reciter.defaultToMinshawi {
+            return "Red: full surahs only. Individual ayahs and custom ranges play in Minshawi (Murattal) instead of this reciter's voice."
+        }
+        if let style = reciter.ayahMurattalStyleNote {
+            return reciter.supportsAyahSegments
+                ? "Orange: streamed ayahs play in \(style). Download a surah and its ayahs play in this reciter's own voice, cut from the downloaded file."
+                : "Orange: individual ayahs and custom ranges play in \(style), not in this reciter's own voice."
+        }
+        if reciter.supportsAyahSegments {
+            return "Blue: the highest tier. Full surahs and individual ayahs play in this reciter's own voice, and once a surah is downloaded its ayahs play offline too."
+        }
+        return "Green: individual ayahs play in this reciter's own voice while streaming."
+    }
+
+    /// What the purple dot means for THIS reciter, naming the surahs it actually carries.
+    private var coverageDotExplanation: String {
+        let carried = reciter.carriedSurahCount
+        return "Purple: incomplete. This reciter has recorded \(carried) of the 114 surahs.\n\nSupports surahs \(reciter.carriedSurahRangesDescription)."
     }
 
     /// The legend color for this reciter's ayah-playback type: blue = the highest tier (surahs AND

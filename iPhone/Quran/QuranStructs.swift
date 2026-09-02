@@ -389,6 +389,30 @@ struct Reciter: Identifiable, Comparable, Codable, Hashable {
         114 - (missingSurahs?.count ?? 0)
     }
 
+    /// The surahs this reciter actually carries, in mushaf order.
+    var carriedSurahs: [Int] {
+        (1...114).filter(carriesSurah)
+    }
+
+    /// The carried surahs written as compact ranges: "1-5, 10-20, 25". Consecutive runs collapse,
+    /// a run of one stays a bare number. "" when the reciter carries none, which cannot happen for
+    /// a shipped entry but keeps the caller total.
+    ///
+    /// Built from `missingSurahs` rather than stored, so it can never disagree with what playback
+    /// and the downloader do.
+    var carriedSurahRangesDescription: String {
+        var runs: [(Int, Int)] = []
+        for surah in carriedSurahs {
+            if let last = runs.last, surah == last.1 + 1 {
+                runs[runs.count - 1].1 = surah
+            } else {
+                runs.append((surah, surah))
+            }
+        }
+        return runs.map { $0.0 == $0.1 ? "\($0.0)" : "\($0.0)-\($0.1)" }
+            .joined(separator: ", ")
+    }
+
     /// Settings / lists: append English riwayah when this row is a non-Hafs surah feed.
     var displayNameWithEnglishQiraah: String {
         if let q = qiraah, !q.isEmpty { return "\(name) (\(q))" }
@@ -542,6 +566,9 @@ let recitersMurattal = [
     Reciter(name: "Ahmad Al-Nufais", ayahIdentifier: "ar.minshawi", ayahBitrate: "128", surahLink: "https://server16.mp3quran.net/nufais/Rewayat-Hafs-A-n-Assem/"),
     // mp3quran carries 109 of 114 surahs for this mushaf (their API's surah_list omits these five).
     Reciter(name: "Islam Sobhi", ayahIdentifier: "ar.minshawi", ayahBitrate: "128", surahLink: "https://server14.mp3quran.net/islam/Rewayat-Hafs-A-n-Assem/", missingSurahs: [37, 39, 40, 45, 65]),
+    // Only 24 surahs are recorded (mp3quran's surah_list), so this is written as the complement:
+    // spelling out the other 90 would be unreadable and would rot the moment he records another.
+    Reciter(name: "Mohammad Dibirov", ayahIdentifier: "ar.minshawi", ayahBitrate: "128", surahLink: "https://server16.mp3quran.net/m-dibirov/Rewayat-Hafs-A-n-Assem/", missingSurahs: Set(1...114).subtracting([2, 12, 13, 17, 18, 19, 20, 24, 26, 27, 31, 32, 36, 37, 41, 44, 53, 55, 56, 67, 70, 72, 76, 79])),
     Reciter(name: "Mohamed Al-Tablawi", ayahIdentifier: "ar.minshawi", ayahBitrate: "128", surahLink: "https://server12.mp3quran.net/tblawi/", everyayahFolder: "Mohammad_al_Tablaway_128kbps"),
     // See recitersMinshawi: the surviving 26 surahs of the 1387 AH recording.
     Reciter(name: "Muhammad Al-Minshawi (1387 AH)", ayahIdentifier: "ar.minshawi", ayahBitrate: "128", surahLink: "https://server10.mp3quran.net/minsh1387/", ayahMurattalStyleNote: "Muhammad Al-Minshawi (Murattal)", missingSurahs: Set([16, 23, 24]).union(Set(30...114))),
