@@ -199,6 +199,12 @@ struct ThemesBrowseView: View {
     @State private var collapsedDomains = Set<String>()
     /// Domains whose "Show All" was tapped - those sections list every topic instead of the first 10.
     @State private var showAllDomains = Set<String>()
+    #if DEBUG
+    /// Drives the hidden "-openThemeTopic" link, which only exists when the argument was passed.
+    /// DEBUG builds only.
+    @State private var debugOpenFirstTopic = false
+    private static let debugWantsTopic = ProcessInfo.processInfo.arguments.contains("-openThemeTopic")
+    #endif
 
     /// How many topics a section shows before the "Show All" button takes over. Big domains carry
     /// 40+ topics; ten keeps the browse scannable without hiding the small domains at all.
@@ -233,6 +239,24 @@ struct ThemesBrowseView: View {
         let groups = displayedGroups
 
         List {
+            #if DEBUG
+            // "-openThemeTopic" pushes the first topic on launch, so the ayah rows (which are the
+            // reader's own AyahRow) can be verified headlessly. DEBUG builds only.
+            //
+            // Inserted ONLY when the argument is actually present: a hidden zero-height view is
+            // still a List ROW, and it drew an empty card above the first domain.
+            if Self.debugWantsTopic, let first = groups.first?.topics.first {
+                NavigationLink(isActive: $debugOpenFirstTopic) {
+                    ThemeTopicDetailView(topic: first, onOpenAyah: onOpenAyah)
+                } label: { EmptyView() }
+                    .frame(height: 0)
+                    .listRowInsets(EdgeInsets())
+                    .listRowBackground(Color.clear)
+                    .hidden()
+                    .onAppear { debugOpenFirstTopic = true }
+            }
+            #endif
+
             ForEach(groups, id: \.domain) { group in
                 themeSection(group, isSearching: isSearching)
             }
@@ -392,6 +416,18 @@ private struct ThemeTopicDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
     }
 
+    /// The reader's OWN row, not a copy of it.
+    ///
+    /// This screen used to draw its own three `Text`s, which meant it quietly ignored every Arabic
+    /// setting the reader honours: tajweed colours, hide-tashkeel, hide-dots, beginner mode, the
+    /// chosen riwayah, the font face and size, word-by-word, which translations are on. Reading the
+    /// same ayah here and in the reader gave you two different-looking verses. `AyahRow` takes only
+    /// `surah` and `ayah` as required inputs, so the fix is to use it: everything else follows from
+    /// the same settings, for free, and stays right when a new setting is added.
+    ///
+    /// The two bindings it wants are inert here - this list has no scroll target and no search - so
+    /// they are constants. The row's tap opens the ayah in the reader instead of toggling the
+    /// reader's highlight, which is what this screen has always done.
     @ViewBuilder
     private func ayahRow(_ key: String) -> some View {
         let parts = key.split(separator: ":").compactMap { Int($0) }
@@ -400,42 +436,28 @@ private struct ThemeTopicDetailView: View {
         if parts.count == 2,
            let surah = quranData.surah(parts[0]),
            let ayah = quranData.ayah(surah: parts[0], ayah: parts[1]) {
-            VStack(alignment: .leading, spacing: 8) {
+            VStack(alignment: .leading, spacing: 6) {
+                // Which surah this is: the reader's row carries the ayah number but not the surah,
+                // and a topic list crosses all 114.
                 Text("\(surah.nameTransliteration) \(parts[0]):\(parts[1])")
                     .font(.subheadline.weight(.semibold))
                     .foregroundColor(settings.accentColor.color)
                     .frame(maxWidth: .infinity, alignment: .leading)
 
-                // The ayah itself, in Arabic, above the translation - the same order and the same
-                // fonts every other ayah list in the app uses (Similar Ayahs is the closest twin).
-                // A topic screen that showed only English was the one place in the Quran tab where
-                // you could read about an ayah without seeing it.
-                Text(ayah.displayArabicText(surahId: surah.id, clean: settings.cleanArabicText, qiraahOverride: ""))
-                    .font(.custom(settings.quranArabicFontName(for: nil), size: CGFloat(settings.fontArabicSize) - 4))
-                    .arabicFontDesign(custom: true)
-                    .multilineTextAlignment(.trailing)
-                    // Both are needed for a long ayah in a List row: the bundled Uthmani face reports a
-                    // line height the row's default sizing truncates against, so without an explicit
-                    // "take the height you need" the ayah stops at two lines and ellipsizes mid-word -
-                    // which on a screen whose whole job is showing you the ayah is the worst possible cut.
-                    .lineLimit(nil)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .frame(maxWidth: .infinity, alignment: .trailing)
-
-                Text(settings.showEnglishMustafa && !settings.showEnglishSaheeh
-                     ? ayah.textEnglishMustafa
-                     : ayah.textEnglishSaheeh)
-                    .font(.system(size: CGFloat(settings.englishFontSize)))
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                AyahRow(
+                    surah: surah,
+                    ayah: ayah,
+                    renderSettingsSignature: settings.ayahRenderSettingsSignature,
+                    scrollDown: .constant(nil),
+                    searchText: .constant(""),
+                    onToggleHighlight: {
+                        settings.hapticFeedback()
+                        onOpenAyah(parts[0], parts[1])
+                    }
+                )
+                .equatable()
             }
-            .padding(.vertical, 6)
-            .contentShape(Rectangle())
-            // The whole row opens the ayah in the reader. There is deliberately no play button: the
-            // row already has one job, and the reader it opens carries every playback control there is.
-            .onTapGesture {
-                settings.hapticFeedback()
-                onOpenAyah(parts[0], parts[1])
-            }
+            .padding(.vertical, 2)
         }
     }
 }

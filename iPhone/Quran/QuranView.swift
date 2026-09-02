@@ -200,6 +200,12 @@ struct QuranView: View {
     @State private var isQuranSearchFocused = false
     @State private var scrollToSurahID: Int = -1
     @State private var showingSettingsSheet = false
+    #if DEBUG
+    /// Drives the hidden "-openThemes" link, which only exists when the argument was passed.
+    /// DEBUG builds only.
+    @State private var debugOpenThemes = false
+    private static let debugWantsThemes = ProcessInfo.processInfo.arguments.contains("-openThemes")
+    #endif
     @State private var showReciterPickerSheet = false
     @State private var showReadingHistory = false
 
@@ -1472,6 +1478,9 @@ struct QuranView: View {
             if ProcessInfo.processInfo.arguments.contains("-launchQuranSettings") {
                 showingSettingsSheet = true
             }
+            if ProcessInfo.processInfo.arguments.contains("-openThemes") {
+                debugOpenThemes = true
+            }
             #endif
         }
         .sheet(isPresented: $showingSettingsSheet) {
@@ -2189,6 +2198,28 @@ struct QuranView: View {
             }
 
             if ThematicTopicsStore.isBundled {
+                #if DEBUG
+                // "-openThemes" pushes this screen on launch, for headless verification of the theme
+                // rows (which are the reader's own AyahRow). DEBUG builds only.
+                //
+                // Inserted ONLY when the argument is actually present. A hidden, zero-height view is
+                // still a ROW in a List: SwiftUI draws the row's background and its separators around
+                // it, which put an empty band in the summary card for every reader.
+                if Self.debugWantsThemes {
+                    NavigationLink(isActive: $debugOpenThemes) {
+                        LazyDestination {
+                            ThemesBrowseView { surahID, ayahID in
+                                push(surahID: surahID, ayahID: ayahID)
+                            }
+                        }
+                    } label: { EmptyView() }
+                        .frame(width: 0, height: 0)
+                        .listRowInsets(EdgeInsets())
+                        .listRowBackground(Color.clear)
+                        .hidden()
+                }
+                #endif
+
                 // A real push (LazyDestination so the topic corpus isn't touched until it's opened),
                 // not a sheet: on iPhone it takes the whole screen, and in the iPad/Mac split it pushes
                 // in the LEFT column, leaving the reader on the right - the hadith chapter grammar.
