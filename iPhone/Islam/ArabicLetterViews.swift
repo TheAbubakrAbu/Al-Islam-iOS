@@ -1888,6 +1888,9 @@ struct ArabicLetterRow: View, Equatable {
     let useFontArabic: Bool
     let fontArabic: String
     let searchQuery: String
+    /// "Scroll To Letter": clears the search and scrolls the alphabet to this letter's own row. Set
+    /// only on search-result rows; excluded from `==` (a closure - the row's content decides a redraw).
+    let onScrollTo: (() -> Void)?
 
     init(
         letterData: LetterData,
@@ -1895,8 +1898,10 @@ struct ArabicLetterRow: View, Equatable {
         accentColor: AccentColor = Settings.shared.accentColor,
         useFontArabic: Bool = Settings.shared.useFontArabic,
         fontArabic: String = Settings.shared.nonQuranArabicFontName,
-        searchQuery: String = ""
+        searchQuery: String = "",
+        onScrollTo: (() -> Void)? = nil
     ) {
+        self.onScrollTo = onScrollTo
         self.letterData = letterData
         self.isFavorite = isFavorite ?? Settings.shared.isLetterFavorite(letterData: letterData)
         self.accentColor = accentColor
@@ -2010,11 +2015,36 @@ struct ArabicLetterRow: View, Equatable {
         }
         #if os(iOS)
         .swipeActions(edge: .leading) { favButton() }
-        .swipeActions(edge: .trailing) { favButton() }
+        .swipeActions(edge: .trailing) {
+            favButton()
+            // The Quran list's trailing arrow: clears the search, scrolls to the letter's own row.
+            if let onScrollTo {
+                Button {
+                    settings.hapticFeedback()
+                    onScrollTo()
+                } label: {
+                    Image(systemName: "arrow.down.circle")
+                }
+                .tint(.secondary)
+            }
+        }
         // LIST ROWS ONLY. `ArabicLetterGridTile` deliberately has no menu: the grid is a LazyVGrid inside a
         // single List row, so a context menu on a tile lifts the WHOLE row - every tile at once - as its
         // preview. The tile's corner star is the favorite action instead.
-        .contextMenu { arabicLetterContextItems(letterData, isFavorite: isFavorite) }
+        .contextMenu {
+            arabicLetterContextItems(letterData, isFavorite: isFavorite)
+
+            if let onScrollTo {
+                Divider()
+
+                Button {
+                    settings.hapticFeedback()
+                    onScrollTo()
+                } label: {
+                    Label("Scroll To Letter", systemImage: "arrow.down.circle")
+                }
+            }
+        }
         #endif
     }
 

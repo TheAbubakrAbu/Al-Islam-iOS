@@ -22,18 +22,17 @@ struct PrayerCountdown: View {
     @State private var progress: Double = 0
     @State private var updateTimer: Timer?
 
-    private let slowTimerInterval: TimeInterval = 60
-    private let mediumTimerInterval: TimeInterval = 15
-    private let fastTimerInterval: TimeInterval = 5
-    private let urgentTimerInterval: TimeInterval = 1
-    private let urgentThreshold: TimeInterval = 30
-    private let fastThreshold: TimeInterval = 120
-    private let mediumThreshold: TimeInterval = 600
+    /// The progress bar's refresh. The visible countdown is a self-updating `Text(style: .timer)`, so
+    /// nothing here needs to tick faster than the bar can visibly move; the current/next flip is
+    /// scheduled at the boundary itself (`nextRefreshInterval`). The old 60/15/5/1 s ladder re-merged
+    /// and re-sorted three days of prayers once a second for the last half minute before every adhan.
+    private let progressTickInterval: TimeInterval = 60
 
     private var currentPrayer: Prayer? { settings.currentPrayer }
     private var nextPrayer: Prayer? { settings.nextPrayer }
 
     var body: some View {
+        let _ = RenderCounter.hit("PrayerCountdown")
         if let currentPrayer, let nextPrayer {
             countdownContent(current: currentPrayer, next: nextPrayer)
         }
@@ -302,30 +301,41 @@ struct PrayerCountdown: View {
 
     private func startTimer() {
         stopTimer()
-        let interval = nextRefreshInterval()
+        let (interval, atBoundary) = nextRefreshInterval()
         updateTimer = Timer.scheduledTimer(withTimeInterval: interval, repeats: false) { _ in
             DispatchQueue.main.async {
-                refreshProgressAndPrayerState()
+                if atBoundary {
+                    // The adhan moment: re-resolve current/next (which restarts this timer through
+                    // `.onChange(of: nextPrayer)`) and move the bar.
+                    refreshProgressAndPrayerState()
+                } else {
+                    // A progress tick: the bar moves, the hijri date is re-checked (cheap, self-guarded);
+                    // no timeline merge.
+                    settings.updateDates()
+                    updateProgress()
+                }
                 startTimer()
             }
         }
-        updateTimer?.tolerance = min(interval * 0.2, 5)
+        // A boundary fire must land on time (the label flips from "Asr" to "Maghrib" at the adhan); the
+        // progress tick can drift, which lets the system coalesce it with other timers.
+        updateTimer?.tolerance = atBoundary ? 0 : 5
     }
 
-    private func nextRefreshInterval() -> TimeInterval {
-        guard let nextPrayer else { return slowTimerInterval }
-
-        let remaining = nextPrayer.time.timeIntervalSinceNow
-        if remaining <= urgentThreshold {
-            return urgentTimerInterval
+    /// Seconds until the next refresh, and whether that refresh is the prayer boundary itself.
+    private func nextRefreshInterval() -> (TimeInterval, atBoundary: Bool) {
+        guard let nextPrayer else { return (progressTickInterval, false) }
+        // A quarter second past the boundary, so current/next resolve on its far side.
+        let untilBoundary = nextPrayer.time.timeIntervalSinceNow + 0.25
+        if untilBoundary <= 0 {
+            // Already past it and current/next still have not moved on (the day's list is stale until
+            // the next fetch): keep re-resolving, but at the slow tick, never in a tight loop.
+            return (progressTickInterval, true)
         }
-        if remaining <= fastThreshold {
-            return fastTimerInterval
+        if untilBoundary <= progressTickInterval {
+            return (untilBoundary, true)
         }
-        if remaining <= mediumThreshold {
-            return mediumTimerInterval
-        }
-        return slowTimerInterval
+        return (progressTickInterval, false)
     }
 
     private func stopTimer() {
@@ -348,8 +358,6 @@ extension PrayerCountdown: Equatable {
 }
 
 private struct CurrentPrayerCell: View {
-    @ObservedObject private var settings = Settings.shared
-
     let prayer: Prayer
 
     var body: some View {
@@ -389,8 +397,6 @@ private struct CurrentPrayerCell: View {
 }
 
 private struct UpcomingPrayerCell: View {
-    @ObservedObject private var settings = Settings.shared
-
     let prayer: Prayer
 
     var body: some View {
@@ -434,8 +440,10 @@ private func countdownDisplayName(for prayer: Prayer) -> String {
     prayer.nameTransliteration == "Islamic Midnight" ? "Midnight" : prayer.displayName
 }
 
+/// Leaf styling reads the accent off the appearance environment, not `Settings`: each of these
+/// cells was a whole-object subscriber that re-ran on every Settings publish.
 private struct PrayerTitleStyle: ViewModifier {
-    @ObservedObject private var settings = Settings.shared
+    @Environment(\.appearance) private var appearance
 
     let prayer: Prayer
 
@@ -446,12 +454,12 @@ private struct PrayerTitleStyle: ViewModifier {
             #else
             .font(.subheadline)
             #endif
-            .foregroundColor(prayer.nameTransliteration == "Shurooq" ? .primary : settings.accentColor.color)
+            .foregroundColor(prayer.nameTransliteration == "Shurooq" ? .primary : appearance.accent)
     }
 }
 
 private struct PrayerSubtitleView: View {
-    @ObservedObject private var settings = Settings.shared
+    @Environment(\.appearance) private var appearance
 
     let prayer: Prayer
     let alignment: TextAlignment
@@ -474,7 +482,7 @@ private struct PrayerSubtitleView: View {
     }
 
     private var subtitleColor: Color {
-        prayer.nameTransliteration == "Shurooq" ? .primary.opacity(0.7) : settings.accentColor.color.opacity(0.7)
+        prayer.nameTransliteration == "Shurooq" ? .primary.opacity(0.7) : appearance.accent.opacity(0.7)
     }
 
     var body: some View {

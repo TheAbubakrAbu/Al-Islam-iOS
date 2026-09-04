@@ -117,6 +117,9 @@ enum QuranPackLoader {
     /// path during migration rather than launching into an empty Quran.
     static func quran(includeQiraat: Bool) -> [Surah]? {
         guard let url = url("quran"), let pack = QuranPack(url: url) else { return nil }
+        // All four text blocks decoded at once across the cores (see `materializeAllBlocks`), so the
+        // sequential row walk below never waits on LZMA.
+        pack.materializeAllBlocks()
         let overlay = includeQiraat ? qiraatOverlay() : [:]
 
         var surahs: [Surah] = []

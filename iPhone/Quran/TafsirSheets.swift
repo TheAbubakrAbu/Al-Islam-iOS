@@ -349,8 +349,9 @@ struct AyahTafsirSheet: View {
             #endif
         }
         .navigationViewStyle(.stack)
-        // Synchronous: the packs are bundled, so the entries exist before the first frame renders.
-        .onAppear {
+        // `.task`, not `.onAppear`: the sheet's first frame presents empty and the entries fill it a
+        // turn later, so the lookup no longer sits inside the presentation transaction (Phase 5 step 11).
+        .task {
             viewModel.loadIfNeeded()
         }
     }

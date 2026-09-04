@@ -330,7 +330,12 @@ extension Settings {
     /// cold start can take a minute. This is why a whole flight used to pass with zero fixes.
     private static let offlineAcquisitionMaxDuration: TimeInterval = 90    // s
     /// Ignore sub-jitter coordinate changes when refining in place.
-    private static let refineMinMove: CLLocationDistance = 8               // m
+    /// A refining fix is committed only when it moves the saved point this far or sharpens the
+    /// accuracy by `refineMinAccuracyGain`. Each commit is a `currentLocation` publish (a JSON encode,
+    /// an App Group write and ~40 Adhan-tab observers), and indoors the burst used to commit every
+    /// 8 m / 5 m wobble for its full 25 s - that relayout was the "lag" people reported.
+    private static let refineMinMove: CLLocationDistance = 30              // m
+    private static let refineMinAccuracyGain: CLLocationDistance = 20      // m
     /// While moving, don't recompute more often than this even past the distance threshold.
     private static let movingCommitMinInterval: TimeInterval = 30          // s
     /// Refinements that move at least this far also recompute prayer times (smaller moves don't matter).
@@ -357,18 +362,25 @@ extension Settings {
     }
 
     private static var rawPrayerCache: [RawPrayerCacheKey: [Prayer]] = [:]
-    /// Insertion order for LRU eviction. Room for a couple of rendered calendar months plus the
-    /// countdown/widget days: a `[Prayer]` is a handful of tiny structs, so 96 entries is a few KB.
-    /// Eviction drops only the OLDEST entry - the old cap-10 `removeAll` wipe meant a month calendar
-    /// render thrashed the cache to zero hits and even evicted *today* out from under the countdown.
+    /// Insertion order for eviction. Room for the 13-month prayer calendar (~400 days) plus the
+    /// countdown, widget and tracker days: a `[Prayer]` is a handful of small structs, so 420 entries
+    /// is well under a megabyte. The old cap of 96 was smaller than the calendar it served, so the
+    /// build evicted its own first months and every later render recomputed them. Eviction drops only
+    /// the OLDEST entry - the older cap-10 `removeAll` wipe meant a month calendar render thrashed the
+    /// cache to zero hits and even evicted *today* out from under the countdown.
     private static var rawPrayerCacheOrder: [RawPrayerCacheKey] = []
-    private static let rawPrayerCacheLimit = 96
+    /// Index of the oldest live entry in `rawPrayerCacheOrder`: eviction advances it instead of
+    /// `removeFirst()` (a shift of the whole array), and the consumed prefix is dropped in one go
+    /// once it grows.
+    private static var rawPrayerCacheEvictionHead = 0
+    private static let rawPrayerCacheLimit = 420
 
     /// Drops memoized prayer times. Needed when something that is *baked into* a cached `Prayer` changes but
     /// isn't part of the cache key - custom prayer names, which alter the struct without altering the times.
     static func invalidatePrayerComputationCache() {
         rawPrayerCache.removeAll(keepingCapacity: true)
         rawPrayerCacheOrder.removeAll(keepingCapacity: true)
+        rawPrayerCacheEvictionHead = 0
     }
     private static let geocodeActor = GeocodeActor()
     private static let networkMonitor = NWPathMonitor()
@@ -484,11 +496,13 @@ extension Settings {
         switch status {
         case .authorizedAlways, .authorizedWhenInUse:
             showLocationAlert = false
+            // One self-terminating fix. The watch used to also `startUpdatingLocation()` here, which kept
+            // 100 m continuous updates streaming for its entire foreground life; a wrist app that shows
+            // prayer times needs one fix on wake plus the foreground cadence (`AppLifecycle`), not a
+            // live track.
             mgr.requestLocation()
             #if os(iOS)
             mgr.startMonitoringSignificantLocationChanges()
-            #else
-            mgr.startUpdatingLocation()
             #endif
             
         case .denied where !locationNeverAskAgain:
@@ -560,7 +574,7 @@ extension Settings {
         if refining {
             // Sitting in one place: accept a meaningfully better fix (or a small genuine move) so the
             // saved coordinate converges on the exact spot instead of keeping the first rough fix.
-            let moreAccurate = loc.horizontalAccuracy + 5 < (Self.lastFixAccuracy ?? .greatestFiniteMagnitude)
+            let moreAccurate = loc.horizontalAccuracy + Self.refineMinAccuracyGain <= (Self.lastFixAccuracy ?? .greatestFiniteMagnitude)
             guard moved >= Self.refineMinMove || moreAccurate else { return }
         } else {
             // Moving: only commit once you've actually relocated, and not more than once per interval,
@@ -581,10 +595,10 @@ extension Settings {
                 await updateCity(latitude: newCoord.latitude, longitude: newCoord.longitude)
             } else {
                 // Same place, just a sharper fix - keep the city label, sharpen the coordinates so the
-                // Qibla bearing and display use the most accurate position available.
-                withAnimation {
-                    currentLocation = Location(city: cur.city, latitude: newCoord.latitude, longitude: newCoord.longitude)
-                }
+                // Qibla bearing and display use the most accurate position available. A plain write:
+                // nothing visible moves (the city and the times are the same), and inside
+                // `withAnimation` the publish re-laid out the whole tab in an animation transaction.
+                currentLocation = Location(city: cur.city, latitude: newCoord.latitude, longitude: newCoord.longitude)
             }
             // Existing user with a location but no home yet: adopt the current location as home.
             seedHomeLocationIfNeeded()
@@ -619,6 +633,35 @@ extension Settings {
         #endif
     }
 
+    /// The expanded Qibla compass's burst: the one surface where a 12 m fix beats a 100 m one. Skipped
+    /// on the reduced tier (Low Power Mode is the wrong time to pin the GPS for 25 s) and when the
+    /// last commit is recent and already sharp. `refreshLocationIfStale`'s offline acquisition keeps
+    /// its own path through `beginLocationRefinement`: that one is about having a fix at all.
+    func beginLocationRefinementForCompass() {
+        #if os(iOS)
+        if PerformanceProfile.shared.tier == .reduced {
+            Self.logLocationBurst("skipped: reduced tier")
+            return
+        }
+        if let last = Self.lastLocationCommitAt, Date().timeIntervalSince(last) < 5 * 60,
+           let accuracy = Self.lastFixAccuracy, accuracy <= 50 {
+            Self.logLocationBurst("skipped: fix \(Int(Date().timeIntervalSince(last))) s old at \(Int(accuracy)) m")
+            return
+        }
+        Self.logLocationBurst(Self.isRefiningLocation ? "already running" : "start (compass)")
+        beginLocationRefinement()
+        #endif
+    }
+
+    /// `-renderCounter` (DEBUG): "LOCATION BURST ..." lines, so the burst gating can be read off the
+    /// simulator log next to the render counts.
+    private static func logLocationBurst(_ message: String) {
+        #if DEBUG
+        guard RenderCounter.enabled else { return }
+        NSLog("LOCATION BURST %@", message)
+        #endif
+    }
+
     func endLocationRefinement() {
         #if os(iOS)
         guard Self.isRefiningLocation else { return }
@@ -633,6 +676,7 @@ extension Settings {
         Self.locationManager.stopUpdatingLocation()
         Self.locationManager.distanceFilter = Self.halfMile
         Self.locationManager.desiredAccuracy = Self.restingAccuracy
+        Self.logLocationBurst("end")
         #endif
     }
 
@@ -644,7 +688,10 @@ extension Settings {
     // with single one-shot fixes - no continuous updates, no extra radio time when the last fix is recent.
 
     /// How stale the last committed fix may get while the app is frontmost before a one-shot refresh.
-    private static let foregroundLocationMaxAge: TimeInterval = 5 * 60
+    /// 15 minutes on the reduced tier: Low Power Mode is the wrong time to wake the GPS every five.
+    private static var foregroundLocationMaxAge: TimeInterval {
+        PerformanceProfile.shared.tier == .reduced ? 15 * 60 : 5 * 60
+    }
     private static var foregroundLocationTimer: Timer?
 
     /// Requests a fresh fix if the last committed one is older than `maxAge` (or none exists).
@@ -702,7 +749,7 @@ extension Settings {
             )
             currentCountryCode = ""
             Self.cityAnchor = nil
-            WidgetCenter.shared.reloadAllTimelines()
+            reloadWidgets(deferred: true)
         }
     }
     #endif
@@ -747,10 +794,9 @@ extension Settings {
                 Self.locationManager.requestAlwaysAuthorization()
             }
             Self.locationManager.startMonitoringSignificantLocationChanges()
-            #else
-            Self.locationManager.startUpdatingLocation()
             #endif
 
+            // The watch takes only this one-shot fix (see `didChangeAuthorization`).
             Self.locationManager.requestLocation()
         default:
             break
@@ -802,7 +848,7 @@ extension Settings {
                 currentCountryCode = ""
                 Self.cityAnchor = nil
             }
-            WidgetCenter.shared.reloadAllTimelines()
+            reloadWidgets(deferred: true)
         }
     }
 
@@ -1519,9 +1565,15 @@ extension Settings {
             .sorted { ($0.element.time, $0.offset) < ($1.element.time, $1.offset) }
             .map(\.element)
 
-        while Self.rawPrayerCache.count >= Self.rawPrayerCacheLimit, let oldest = Self.rawPrayerCacheOrder.first {
-            Self.rawPrayerCacheOrder.removeFirst()
+        while Self.rawPrayerCache.count >= Self.rawPrayerCacheLimit,
+              Self.rawPrayerCacheEvictionHead < Self.rawPrayerCacheOrder.count {
+            let oldest = Self.rawPrayerCacheOrder[Self.rawPrayerCacheEvictionHead]
+            Self.rawPrayerCacheEvictionHead += 1
             Self.rawPrayerCache.removeValue(forKey: oldest)
+        }
+        if Self.rawPrayerCacheEvictionHead >= 128 {
+            Self.rawPrayerCacheOrder.removeFirst(Self.rawPrayerCacheEvictionHead)
+            Self.rawPrayerCacheEvictionHead = 0
         }
         Self.rawPrayerCache[cacheKey] = list
         Self.rawPrayerCacheOrder.append(cacheKey)
@@ -1551,8 +1603,31 @@ extension Settings {
         // and most users), the old order computed TWO days of prayer times per call - and
         // `prayerBoundaryTimeline` makes this call three times per widget refresh, all discarded.
         guard showDuha || showIslamicMidnight || showLastThird else { return [] }
+        guard let here = currentLocation else { return [] }
+        return optionalPrayers(
+            for: date,
+            at: here,
+            duha: showDuha,
+            islamicMidnight: showIslamicMidnight,
+            lastThird: showLastThird
+        )
+    }
 
-        let raw = _computeRawPrayers(for: date)
+    /// The optional times for an explicit location and an explicit set of toggles, so a view-only
+    /// screen (City Prayer Times) can show Duhaa, Islamic Midnight and Last Third for another city
+    /// without touching the user's own toggles. `calculationOverride` follows the same rule as
+    /// `getPrayerTimes(for:at:fullPrayers:calculationOverride:)`.
+    func optionalPrayers(
+        for date: Date,
+        at location: Location,
+        calculationOverride: String? = nil,
+        duha: Bool,
+        islamicMidnight: Bool,
+        lastThird: Bool
+    ) -> [Prayer] {
+        guard duha || islamicMidnight || lastThird else { return [] }
+
+        let raw = _computeRawPrayers(for: date, at: location, calculationOverride: calculationOverride)
         guard !raw.isEmpty else { return [] }
 
         guard
@@ -1560,15 +1635,11 @@ extension Settings {
             let maghrib = raw.first(where: { $0.nameTransliteration == "Maghrib" })?.time
         else { return [] }
 
-        let nextDay = Calendar.current.date(byAdding: .day, value: 1, to: date) ?? date
-        let nextRaw = _computeRawPrayers(for: nextDay)
-        let fajrNext = nextRaw.first(where: { $0.nameTransliteration == "Fajr" })?.time
-
         var result: [Prayer] = []
 
-        if showDuha {
+        if duha {
             result.append(Prayer(
-                nameArabic: "صَلَاةُ الضُّحَى",
+                nameArabic: "صَلَاةُ الضُّحَى",
                 nameTransliteration: "Duhaa",
                 nameEnglish: "Forenoon Prayer",
                 time: sunrise.addingTimeInterval(15 * 60),
@@ -1579,36 +1650,40 @@ extension Settings {
             ))
         }
 
-        
+        // Tomorrow's Fajr is only needed for the two night times, so skip that second day of
+        // astronomy when neither is on.
+        guard islamicMidnight || lastThird else { return result }
 
-        if let fajrNext {
-            let nightDuration = fajrNext.timeIntervalSince(maghrib)
+        let nextDay = Calendar.current.date(byAdding: .day, value: 1, to: date) ?? date
+        let nextRaw = _computeRawPrayers(for: nextDay, at: location, calculationOverride: calculationOverride)
+        guard let fajrNext = nextRaw.first(where: { $0.nameTransliteration == "Fajr" })?.time else { return result }
 
-            if showIslamicMidnight {
-                result.append(Prayer(
-                    nameArabic: "نِصفُ اللَّيلِ الشَّرعِيُّ",
-                    nameTransliteration: "Islamic Midnight",
-                    nameEnglish: "Islamic Middle of Night",
-                    time: maghrib.addingTimeInterval(nightDuration / 2),
-                    image: "moon.fill",
-                    rakah: "0",
-                    sunnahBefore: "0",
-                    sunnahAfter: "0"
-                ))
-            }
+        let nightDuration = fajrNext.timeIntervalSince(maghrib)
 
-            if showLastThird {
-                result.append(Prayer(
-                    nameArabic: "الثُّلُثُ الأَخِيرُ مِنَ اللَّيلِ",
-                    nameTransliteration: "Last Third",
-                    nameEnglish: "Last Third of Night",
-                    time: fajrNext.addingTimeInterval(-nightDuration / 3),
-                    image: "moon.stars.fill",
-                    rakah: "0",
-                    sunnahBefore: "0",
-                    sunnahAfter: "0"
-                ))
-            }
+        if islamicMidnight {
+            result.append(Prayer(
+                nameArabic: "نِصفُ اللَّيلِ الشَّرعِيُّ",
+                nameTransliteration: "Islamic Midnight",
+                nameEnglish: "Islamic Middle of Night",
+                time: maghrib.addingTimeInterval(nightDuration / 2),
+                image: "moon.fill",
+                rakah: "0",
+                sunnahBefore: "0",
+                sunnahAfter: "0"
+            ))
+        }
+
+        if lastThird {
+            result.append(Prayer(
+                nameArabic: "الثُّلُثُ الأَخِيرُ مِنَ اللَّيلِ",
+                nameTransliteration: "Last Third",
+                nameEnglish: "Last Third of Night",
+                time: fajrNext.addingTimeInterval(-nightDuration / 3),
+                image: "moon.stars.fill",
+                rakah: "0",
+                sunnahBefore: "0",
+                sunnahAfter: "0"
+            ))
         }
 
         return result
@@ -1641,6 +1716,44 @@ extension Settings {
         }
     }
 
+    /// Trailing-debounced `fetchPrayerTimes` for property `didSet`s.
+    ///
+    /// About sixty settings recompute prayer times from their didSet, and each recompute is the whole
+    /// pipeline: the network check, a Hijri-date decode, the travel and calculation checks, the solar
+    /// math, a `Prayers` JSON encode plus App Group write, a 60-request notification reschedule and a
+    /// reload of every widget - then a publish to every Settings observer. An offset Stepper held down
+    /// fired that once per tick. This coalesces a burst (150 ms trailing) into one fetch carrying the
+    /// strongest flags seen: any `force` forces, any `notification` reschedules, and auto-checks stay
+    /// off if any caller asked for them off (the watch-sync apply's rule). Callers that need the
+    /// result synchronously (a `completion`, the background task) keep using `fetchPrayerTimes`.
+    func fetchPrayerTimesDebounced(force: Bool = false, notification: Bool = false, runAutoChecks: Bool = true, calledFrom: StaticString = #function) {
+        // A widget or complication process seeds ~10 of these properties from the App Group and then
+        // calls `fetchPrayerTimes()` itself, exactly once; the didSet-driven fetch 150 ms later was a
+        // second full recompute per extension launch that nothing read.
+        guard Self.isAppProcess else { return }
+        guard Thread.isMainThread else {
+            DispatchQueue.main.async {
+                self.fetchPrayerTimesDebounced(force: force, notification: notification, runAutoChecks: runAutoChecks, calledFrom: calledFrom)
+            }
+            return
+        }
+        pendingFetchFlags = (
+            pendingFetchFlags.force || force,
+            pendingFetchFlags.notification || notification,
+            pendingFetchFlags.runAutoChecks && runAutoChecks
+        )
+        pendingFetchWorkItem?.cancel()
+        let work = DispatchWorkItem { [weak self] in
+            guard let self else { return }
+            self.pendingFetchWorkItem = nil
+            let flags = self.pendingFetchFlags
+            self.pendingFetchFlags = (false, false, true)
+            self.fetchPrayerTimes(force: flags.force, notification: flags.notification, runAutoChecks: flags.runAutoChecks, calledFrom: calledFrom)
+        }
+        pendingFetchWorkItem = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15, execute: work)
+    }
+
     private func fetchPrayerTimesCore(force: Bool, notification: Bool, runAutoChecks: Bool, calledFrom: StaticString, completion: (() -> Void)?) {
         Self.ensureNetworkMonitorStarted()
         updateDates()
@@ -1650,8 +1763,7 @@ extension Settings {
             // Hijri-event reminders are date-based and don't need a location, so still (re)schedule
             // them even when prayer times can't be computed yet (the scheduler skips the prayer
             // parts and leaves existing prayer notifications untouched when there's no location).
-            scheduleNotifications(deferred: completion == nil)
-            completion?()
+            scheduleNotifications(deferred: true, completion: completion)
             return
         }
         
@@ -1717,10 +1829,13 @@ extension Settings {
         let emptyList  = stored?.prayers.isEmpty ?? true
         let needsFetch = force || autoStateChanged || stored == nil || staleCity || staleDate || emptyList
 
-        // A caller with a completion (notably the background-refresh task) needs the reschedule to finish
-        // before it returns/reports done, so it runs synchronously. Everyone else (the launch burst, setting
-        // toggles) defers + coalesces the heavy reschedule/widget-reload off the synchronous path.
+        // The notification reschedule is ALWAYS deferred and coalesced; a caller with a completion (the
+        // background-refresh task, the Adhan tab's post-refresh dialog) gets it run after the deferred
+        // pass instead of forcing the whole 60-request build onto the synchronous path. Only the widget
+        // reload still runs inline for a completion caller: the background task may be suspended
+        // before a deferred reload fires, and a reload is one cheap call.
         let deferWork = completion == nil
+        var reschedules = false
 
         if needsFetch {
             logger.debug("Fetching prayer times – caller: \(calledFrom)")
@@ -1738,15 +1853,21 @@ extension Settings {
                 setNotification: false
             )
             
-            scheduleNotifications(deferred: deferWork)
+            reschedules = true
             reloadWidgets(deferred: deferWork)
         } else if notification {
-            scheduleNotifications(deferred: deferWork)
-            reloadWidgets(deferred: deferWork)
+            // Notification preferences only: no widget shows them, so no reload. This branch is the
+            // didSet of ~45 properties, and reloading all 37 kinds from each one exhausted WidgetKit's
+            // daily budget in a minute of toggling (stale widgets later in the day).
+            reschedules = true
         }
         
         updateCurrentAndNextPrayer()
-        completion?()
+        if reschedules {
+            scheduleNotifications(deferred: true, completion: completion)
+        } else {
+            completion?()
+        }
     }
     
     /// Condenses the day into the traveling (Qasr) list: Fajr, Sunrise, Dhuhr+Asr, Maghrib+Isha.
@@ -1877,12 +1998,14 @@ extension Settings {
 
         switch status {
         case .authorized:
-            showNotificationAlert = false
+            // Guarded: an @AppStorage write publishes even when the value is unchanged, and this runs
+            // on every Adhan tab appear.
+            if showNotificationAlert { showNotificationAlert = false }
             return true
 
         case .provisional, .ephemeral:
             // Both allow delivering notifications, so treat them like authorized and keep scheduling.
-            showNotificationAlert = false
+            if showNotificationAlert { showNotificationAlert = false }
             return true
 
         case .denied:
@@ -1940,32 +2063,50 @@ extension Settings {
     /// synchronously (callers that must finish before reporting done - e.g. background refresh). `deferred ==
     /// true` trailing-debounces it on the main queue so the multiple `fetchPrayerTimes` calls fired during
     /// launch / setting changes collapse to one run, off the synchronous first-paint path.
-    func scheduleNotifications(deferred: Bool) {
+    /// `completion` runs after the pass, on main. With `deferred`, every completion handed in while a
+    /// pass is pending is kept and run when that one coalesced pass finishes, so the background
+    /// refresh task (which must not report done before its reschedule) and the Adhan tab's
+    /// post-refresh dialog both get the deferred, coalesced path instead of forcing a synchronous one.
+    func scheduleNotifications(deferred: Bool, completion: (() -> Void)? = nil) {
         // Only the APP schedules notifications. A widget whose cached prayers had gone stale used to reach
         // this through `fetchPrayerTimesCore` and schedule (or prune) the user's notifications from inside
         // the extension - and, via `reloadWidgets`, trigger a widget reload FROM a widget. Both were saved
         // only by the extension usually dying before the 0.35s defer fired.
-        guard Settings.isAppProcess else { return }
+        guard Settings.isAppProcess else {
+            completion?()
+            return
+        }
+        if let completion { pendingNotificationScheduleCompletions.append(completion) }
         pendingNotificationScheduleWorkItem?.cancel()
         pendingNotificationScheduleWorkItem = nil
         guard deferred else {
             schedulePrayerTimeNotifications()
+            runPendingNotificationScheduleCompletions()
             return
         }
         let work = DispatchWorkItem { [weak self] in
-            self?.pendingNotificationScheduleWorkItem = nil
-            self?.schedulePrayerTimeNotifications()
+            guard let self else { return }
+            self.pendingNotificationScheduleWorkItem = nil
+            self.schedulePrayerTimeNotifications()
+            self.runPendingNotificationScheduleCompletions()
         }
         pendingNotificationScheduleWorkItem = work
         // Under the launch cover, push the (up to 60-request) scheduling pass past the reveal: it
         // used to land 0.35s after the launch `fetchPrayerTimes`, i.e. in the middle of the
         // under-cover warm the launch screen waits on. The requests are for future prayer times -
-        // a few seconds' delay changes nothing about when they fire. Off-main callers (there are
-        // none today; the compute path asserts main) keep the old 0.35s rather than trap in
-        // `assumeIsolated`.
+        // a few seconds' delay changes nothing about when they fire. A caller waiting on a
+        // completion (the background task, which has no cover to wait for) keeps the short delay.
+        // Off-main callers (there are none today; the compute path asserts main) keep the old
+        // 0.35s rather than trap in `assumeIsolated`.
         let revealed = Thread.isMainThread ? MainActor.assumeIsolated({ AppReveal.revealed }) : true
-        let delay: TimeInterval = revealed ? 0.35 : 3.0
+        let delay: TimeInterval = (revealed || !pendingNotificationScheduleCompletions.isEmpty) ? 0.35 : 3.0
         DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: work)
+    }
+
+    private func runPendingNotificationScheduleCompletions() {
+        let completions = pendingNotificationScheduleCompletions
+        pendingNotificationScheduleCompletions.removeAll()
+        completions.forEach { $0() }
     }
 
     /// Static lookup table
@@ -2089,6 +2230,14 @@ extension Settings {
 
 
     func schedulePrayerTimeNotifications() {
+        #if DEBUG
+        let passStarted = Date()
+        defer {
+            if RenderCounter.enabled {
+                NSLog("SCHEDULE PASS %d ms", Int(Date().timeIntervalSince(passStarted) * 1000))
+            }
+        }
+        #endif
         #if os(watchOS)
         // Activation still pending: standalone-vs-companion is UNKNOWN. Scheduling would double-alert a
         // paired user; wiping would strand a truly standalone watch that suspends before activation.
@@ -2280,7 +2429,8 @@ extension Settings {
             }
         }
 
-        prayers?.setNotification = true
+        // No `prayers?.setNotification = true` here: nothing reads the flag, and the write re-encoded
+        // `prayersData` and published it, so every notification toggle rendered the Adhan tab twice.
         #else
         return
         #endif
@@ -2828,6 +2978,20 @@ extension Settings {
     /// foreground delegate compares it to "now" at delivery and silences anything that arrives late.
     static let intendedFireDateUserInfoKey = "intendedFireDate"
 
+    /// One `UNNotificationSound` per filename: a scheduling pass builds a few hundred candidate
+    /// requests, and every one of them made its own sound object for one of the two or three files
+    /// in play.
+    #if os(iOS)
+    private static var notificationSoundCache: [String: UNNotificationSound] = [:]
+
+    private static func notificationSound(named filename: String) -> UNNotificationSound {
+        if let cached = notificationSoundCache[filename] { return cached }
+        let sound = UNNotificationSound(named: UNNotificationSoundName(filename))
+        notificationSoundCache[filename] = sound
+        return sound
+    }
+    #endif
+
     private func prayerNotificationSound(for prayer: Prayer, minutesBefore: Int?) -> UNNotificationSound {
         #if os(iOS)
         // Only an obligatory prayer's AT-TIME notification may play the adhan. Everything else - a
@@ -2843,13 +3007,13 @@ extension Settings {
         if callsToPrayer {
             let length = adhanClipLength(forPrayer: prayer.nameTransliteration)
             if let filename = adhanNotificationSoundFilename(for: adhanNotificationSound, length: length) {
-                return UNNotificationSound(named: UNNotificationSoundName(filename))
+                return Self.notificationSound(named: filename)
             }
             return .default
         }
 
         if let filename = alertToneSoundFilename(for: alertToneSound) {
-            return UNNotificationSound(named: UNNotificationSoundName(filename))
+            return Self.notificationSound(named: filename)
         }
         return .default
         #else

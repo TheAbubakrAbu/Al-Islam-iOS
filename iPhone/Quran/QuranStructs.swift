@@ -105,8 +105,11 @@ struct VerseIndexEntry: Identifiable, Hashable, Codable {
     let id: String
     let surah: Int
     let ayah: Int
-    let arabicTashkeelBlob: String
-    let englishExactBlob: String
+    /// Positions into the `[Surah]` the index was built from. The two rare exact lanes (`#` with
+    /// tashkeel, exact English) read the raw texts through them on demand; every entry used to carry
+    /// both as two more copies of its own text, about a third of the index's ~15 MB.
+    let surahOffset: Int32
+    let ayahOffset: Int32
     let arabicBlob: String
     let silentArabicBlob: String
     /// The hamza-preserving twin of `arabicBlob`, consulted ONLY when the query carries a bare ء (see

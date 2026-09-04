@@ -248,7 +248,10 @@ struct Ayah: Codable, Identifiable, Equatable {
                 #endif
             }
         }()
-        return (raw ?? textHafs).trimmingCharacters(in: .whitespacesAndNewlines)
+        // No trim: every text this returns is stored trimmed. Verified 2026-09-04 over quran.qpk (24,944
+        // strings) and qiraat.qpk (43,538), zero with edge whitespace; the beta side table trims at
+        // parse (`BetaQiraatStore.load`). This runs per ayah on every index build, sweep and row.
+        return raw ?? textHafs
     }
     /// Clean (no diacritics) Arabic for the given display qiraah.
     func textCleanArabic(for displayQiraah: String?, surahID: Int? = nil) -> String {
@@ -271,11 +274,11 @@ struct Ayah: Codable, Identifiable, Equatable {
     /// True if this ayah exists as its own verse in the given qiraah. In Hafs every ayah exists; in Warsh/Qaloon/etc. some Hafs ayahs are merged, so we only show ayahs that have qiraah-specific text (e.g. Baqarah has 286 in Hafs but 285 in Warsh).
     func existsInQiraah(_ displayQiraah: String?, surahID: Int? = nil) -> Bool {
         guard let qIn = displayQiraah, !qIn.isEmpty, qIn != "Hafs" else {
-            return !textHafs.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            return !textHafs.isEmpty
         }
         let q = Settings.normalizeLegacyRiwayahTag(qIn)
         switch q {
-        case Settings.Riwayah.hafsTag: return !textHafs.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        case Settings.Riwayah.hafsTag: return !textHafs.isEmpty
         case Settings.Riwayah.warsh: return textWarsh != nil
         case Settings.Riwayah.qaloon: return textQaloon != nil
         case Settings.Riwayah.duri: return textDuri != nil
@@ -457,51 +460,6 @@ final class TajweedStore {
         init(_ value: AttributedString) { self.value = value }
     }
 
-    private struct TajweedAyahKey: Hashable {
-        let surah: Int
-        let ayah: Int
-    }
-
-    private struct TajweedRuleAnnotation: Decodable {
-        let start: Int
-        let end: Int
-        let rule: String
-    }
-
-    private struct TajweedRuleAyah: Decodable {
-        let surah: Int
-        let ayah: Int
-        let annotations: [TajweedRuleAnnotation]
-    }
-
-
-    /// Forces the lazy rule-tree decode (a multi-MB JSON read) to happen on the caller's thread - the
-    /// background Quran load calls this so the first tajweed-colored ayah doesn't hitch the main thread
-    /// with it. Safe from any thread: `static let` initialization is once-only and thread-safe.
-    static func prewarmRuleTrees() {
-        _ = tajweedRuleTreesByAyah.isEmpty
-    }
-
-    private static let tajweedRuleTreesByAyah: [TajweedAyahKey: [TajweedRuleAnnotation]] = {
-        guard let url = tajweedRulesResourceURL() else { return [:] }
-        guard let data = try? Data(contentsOf: url) else { return [:] }
-        guard let decoded = try? JSONDecoder().decode([TajweedRuleAyah].self, from: data) else { return [:] }
-        var out: [TajweedAyahKey: [TajweedRuleAnnotation]] = [:]
-        out.reserveCapacity(decoded.count)
-        for item in decoded {
-            out[TajweedAyahKey(surah: item.surah, ayah: item.ayah)] = item.annotations
-        }
-        return out
-    }()
-
-    private static func tajweedRulesResourceURL() -> URL? {
-        let bundle = Bundle.main
-        if let nested = bundle.url(forResource: "TajweedRules", withExtension: "json", subdirectory: "JSONs") {
-            return nested
-        }
-        return bundle.url(forResource: "TajweedRules", withExtension: "json")
-    }
-
     /// Self-evicting (and thread-safe) tajweed attributed-string cache. Replaces a plain dict whose only
     /// eviction was a full `removeAll` once it crossed the limit - a cliff that wiped the entire cache
     /// mid-scroll on long surahs (Baqarah), forcing the expensive projection+painting to re-run. `NSCache`
@@ -524,12 +482,26 @@ final class TajweedStore {
         c.countLimit = AppPerformance.tajweedAttributedCacheLimit
         return c
     }()
-    private var lastVisibilitySignature = ""
-    /// Guards `lastVisibilitySignature`'s check-and-clear. Most callers are main-thread renders, but the
-    /// share-image queue also calls `attributedText` - the NSCache is already thread-safe; this string was
-    /// the one unsynchronized piece of shared state.
+    /// The category visibility every paint reads, snapshotted from Settings at the start of each
+    /// `attributedText` call (Phase 5 step 1). The paint is a pure function of (text, snapshot), so
+    /// it runs on the prewarm queues as well as on main; a toggle that lands mid-paint is caught by
+    /// the end-of-paint signature check, which then refuses to cache that result.
+    private var visibleCategories: Set<TajweedLegendCategory> = []
     private let visibilityLock = NSLock()
     private let settings = Settings.shared
+
+    private func isVisible(_ category: TajweedLegendCategory) -> Bool {
+        visibilityLock.lock(); defer { visibilityLock.unlock() }
+        return visibleCategories.contains(category)
+    }
+
+    private func snapshotVisibility() -> String {
+        let visible = Set(TajweedLegendCategory.allCases.filter { settings.isTajweedCategoryVisible($0) })
+        visibilityLock.lock()
+        visibleCategories = visible
+        visibilityLock.unlock()
+        return TajweedLegendCategory.allCases.map { visible.contains($0) ? "1" : "0" }.joined()
+    }
 
 
     private struct PaintOp {
@@ -573,14 +545,9 @@ final class TajweedStore {
         beginnerSpacing: Bool = false,
         removeArabicDots: Bool? = nil
     ) -> AttributedString? {
-        let visibilitySignature = tajweedVisibilitySignature()
-        visibilityLock.lock()
-        if visibilitySignature != lastVisibilitySignature {
-            attributedCache.removeAllObjects()
-            opsCache.removeAllObjects()
-            lastVisibilitySignature = visibilitySignature
-        }
-        visibilityLock.unlock()
+        // The visibility is PART of the key now: toggling a legend category used to wipe all 1,800
+        // entries; now it just misses, and toggling back finds the old entries still there.
+        let visibilitySignature = snapshotVisibility()
 
         let shouldRemoveArabicDots = removeArabicDots ?? (cleanDisplayText && settings.removeArabicDots)
 
@@ -590,7 +557,7 @@ final class TajweedStore {
         // entirely. Previously the projection ran on every call just to build the key, even on hits, which is
         // the per-scroll-render cost. (surah/ayah are in the key because they change the painting, not the text.)
         let requestedDisplayDigest = requestedDisplayText.map(Self.stableTextDigest) ?? 0
-        let cacheKey = "\(surah):\(ayah):\(Self.stableTextDigest(text)):\(requestedDisplayDigest):\(cleanDisplayText ? 1 : 0):\(beginnerSpacing ? 1 : 0):\(shouldRemoveArabicDots ? 1 : 0)" as NSString
+        let cacheKey = "\(surah):\(ayah):\(Self.stableTextDigest(text)):\(requestedDisplayDigest):\(cleanDisplayText ? 1 : 0):\(beginnerSpacing ? 1 : 0):\(shouldRemoveArabicDots ? 1 : 0):\(visibilitySignature)" as NSString
         if let cached = attributedCache.object(forKey: cacheKey) {
             return cached.value
         }
@@ -608,9 +575,7 @@ final class TajweedStore {
         let displayText = projection?.displayText ?? text
 
         guard !text.isEmpty else { return nil }
-        guard TajweedLegendCategory.allCases.contains(where: { settings.isTajweedCategoryVisible($0) }) else {
-            return nil
-        }
+        guard visibilitySignature.contains("1") else { return nil }
 
         // Use NSAttributedString for UTF-16 painting. Per-code-unit Swift `Range(NSRange,in: String)` often
         // fails inside Arabic grapheme clusters, so `AttributedString.Index(..., within:)` skipped all colors.
@@ -626,7 +591,7 @@ final class TajweedStore {
         let clusters = characterClusters(in: text)
         let muqattaatProtectedIndices = muqattaatProtectedClusterIndices(surah: surah, ayah: ayah, clusters: clusters)
 
-        if settings.isTajweedCategoryVisible(.tafkhim) {
+        if isVisible(.tafkhim) {
             for index in clusters.indices where shouldUseHeavyColor(clusters: clusters, index: index) {
                 // Allah heavy-lam special case intentionally disabled for now.
                 // if clusters[index].primaryArabicLetter == "ل",
@@ -639,11 +604,11 @@ final class TajweedStore {
             }
         }
 
-        if settings.isTajweedCategoryVisible(.droppedLetter) {
+        if isVisible(.droppedLetter) {
             for index in clusters.indices where hasStandardSukoon(clusters[index]) {
                 let cluster = clusters[index]
                 guard let base = cluster.primaryArabicLetter, isArabicLetterBase(base) else { continue }
-                if TajweedRules.qalqalahLetters.contains(base), settings.isTajweedCategoryVisible(.qalqalah) {
+                if TajweedRules.qalqalahLetters.contains(base), isVisible(.qalqalah) {
                     continue
                 }
                 if shouldUseHeavyColor(clusters: clusters, index: index) {
@@ -653,13 +618,13 @@ final class TajweedStore {
             }
         }
 
-        if settings.isTajweedCategoryVisible(.lamShamsiyah) {
+        if isVisible(.lamShamsiyah) {
             for index in clusters.indices where isLamShamsiyah(clusters: clusters, index: index) {
                 ops.append(PaintOp(range: nsRange(for: clusters[index]), priority: PaintPriority.lamShamsiyah, category: .lamShamsiyah))
             }
         }
 
-        if settings.isTajweedCategoryVisible(.qalqalah) {
+        if isVisible(.qalqalah) {
             let verseFinalQalqalahIndex = indexOfVerseFinalQalqalahCluster(clusters: clusters)
             for idx in clusters.indices {
                 let cluster = clusters[idx]
@@ -692,7 +657,6 @@ final class TajweedStore {
 
         let _ = wordClusterRanges(clusters: clusters)
 
-        appendTreeDrivenPaintOps(surah: surah, ayah: ayah, text: text, utf16Count: rawUTF16Count, into: &ops)
         appendNuunMeemGhunnahHeuristicPaintOps(text: text, into: &ops)
 
         collectMaddAndWaslPaintOps(surah: surah, ayah: ayah, text: text, clusters: clusters, into: &ops)
@@ -700,7 +664,10 @@ final class TajweedStore {
         appendMuqattaatBareRaaTafkhimPaintOps(clusters: clusters, protectedIndices: muqattaatProtectedIndices, into: &ops)
         appendMuqattaatMaddLazimPaintOps(clusters: clusters, protectedIndices: muqattaatProtectedIndices, into: &ops)
         ops = filteredMuqattaatPaintOps(ops, clusters: clusters, protectedIndices: muqattaatProtectedIndices)
-        opsCache.setObject(PaintOpsBox(ops), forKey: cacheKey)
+        // A category toggled while this paint ran: the ops mix two visibilities. Return them (this
+        // frame) but cache nothing; the next call snapshots afresh and paints the settled set.
+        let settled = tajweedVisibilitySignature() == visibilitySignature
+        if settled { opsCache.setObject(PaintOpsBox(ops), forKey: cacheKey) }
 
         let rawWaqfUTF16Skip = Self.utf16IndicesOfWaqfOrnaments(in: text)
         let waqfUTF16Skip = Self.utf16IndicesOfWaqfOrnaments(in: displayText)
@@ -727,7 +694,7 @@ final class TajweedStore {
         guard anyPainted else { return nil }
 
         let result = AttributedString(attributed)
-        attributedCache.setObject(AttributedStringBox(result), forKey: cacheKey)
+        if settled { attributedCache.setObject(AttributedStringBox(result), forKey: cacheKey) }
         return result
     }
 
@@ -735,7 +702,7 @@ final class TajweedStore {
     /// in legend order. Runs the same pipeline as `attributedText` (and warms the same caches),
     /// so the list always agrees with the colors on screen. Empty when tajweed can't paint here.
     func ruleCategories(surah: Int, ayah: Int, text: String, wordRange: NSRange) -> [TajweedLegendCategory] {
-        let cacheKey = "\(surah):\(ayah):\(Self.stableTextDigest(text)):0:0:0:0" as NSString
+        let cacheKey = "\(surah):\(ayah):\(Self.stableTextDigest(text)):0:0:0:0:\(tajweedVisibilitySignature())" as NSString
         if opsCache.object(forKey: cacheKey) == nil {
             _ = attributedText(surah: surah, ayah: ayah, text: text)
         }
@@ -1006,7 +973,7 @@ final class TajweedStore {
             ? nil
             : indexOfFinalPronouncedArabicLetterCluster(clusters: clusters)
 
-        if settings.isTajweedCategoryVisible(.maddNaturalMiniature) {
+        if isVisible(.maddNaturalMiniature) {
             appendScalarPaintOps(
                 text: text,
                 scalars: [Self.smallWaw.value, Self.smallYeh.value, Self.daggerAlif.value],
@@ -1032,7 +999,7 @@ final class TajweedStore {
 
         appendExplicitMaddahPaintOps(text: text, clusters: clusters, words: words, finalAaridCarrier: finalAaridCarrier, ayahFinalNaturalIndex: ayahFinalMaddNaturalIndex, into: &ops)
 
-        if settings.isTajweedCategoryVisible(.maddNecessary) {
+        if isVisible(.maddNecessary) {
             for index in clusters.indices where isLazimCombinedAlifCluster(clusters[index]) {
                 if index == finalAaridCarrier { continue }
                 if hasMiniatureMaddScalar(clusters[index]) { continue }
@@ -1072,7 +1039,7 @@ final class TajweedStore {
             }
         }
 
-        if settings.isTajweedCategoryVisible(.maddConnected) {
+        if isVisible(.maddConnected) {
             for w in words {
                 let lo = w.lowerBound, hi = w.upperBound
                 guard hi - lo >= 3 else { continue }
@@ -1102,7 +1069,7 @@ final class TajweedStore {
             }
         }
 
-        if settings.isTajweedCategoryVisible(.maddSeparated) {
+        if isVisible(.maddSeparated) {
             for wi in words.indices.dropLast() {
                 let w1 = words[wi], w2 = words[wi + 1]
                 guard w1.upperBound - w1.lowerBound >= 2 else { continue }
@@ -1127,7 +1094,7 @@ final class TajweedStore {
 
         // Fallback: explicit maddah (ٓ) is not madd tabi'i.
         // If not already covered by connected/separated/necessary logic, color as necessary.
-        if settings.isTajweedCategoryVisible(.maddNecessary) {
+        if isVisible(.maddNecessary) {
             for i in clusters.indices where hasMaddah(clusters[i]) {
                 if i == finalAaridCarrier { continue }
                 if i == ayahFinalMaddNaturalIndex { continue }
@@ -1143,7 +1110,7 @@ final class TajweedStore {
             }
         }
 
-        if settings.isTajweedCategoryVisible(.maddSukoon),
+        if isVisible(.maddSukoon),
            let finalCarrier = finalAaridCarrier,
            !strongerMaddRuleCoversCluster(index: finalCarrier, ops: ops, clusters: clusters) {
             appendAaridMaddPaintOps(
@@ -1155,7 +1122,7 @@ final class TajweedStore {
             )
         }
 
-        if settings.isTajweedCategoryVisible(.maddNatural) {
+        if isVisible(.maddNatural) {
             for w in words {
                 let lo = w.lowerBound, hi = w.upperBound
                 for i in lo..<hi {
@@ -1188,7 +1155,7 @@ final class TajweedStore {
             }
         }
 
-        if settings.isTajweedCategoryVisible(.hamzatWaslSilent),
+        if isVisible(.hamzatWaslSilent),
            let firstContentUTF16 = utf16StartOfFirstNonWhitespace(clusters: clusters) {
             for index in clusters.indices where clusters[index].contains(Self.hamzatWasl) {
                 let cl = clusters[index]
@@ -1248,7 +1215,7 @@ final class TajweedStore {
             if index == ayahFinalNaturalIndex, classification.category == .maddNecessary {
                 classification = (.maddNatural, PaintPriority.maddNatural2)
             }
-            guard settings.isTajweedCategoryVisible(classification.category) else { continue }
+            guard isVisible(classification.category) else { continue }
             appendSpecialMaddPaintOps(
                 text: text,
                 range: nsRange(for: clusters[index]),
@@ -1921,7 +1888,7 @@ final class TajweedStore {
     }
 
     private func appendBareConsonantSilentPaintOps(clusters: [CharacterClusterInfo], muqattaatProtectedIndices: Set<Int>, into ops: inout [PaintOp]) {
-        guard settings.isTajweedCategoryVisible(.droppedLetter) else { return }
+        guard isVisible(.droppedLetter) else { return }
         let ayahFinalLetterIndex = indexOfFinalArabicLetterCluster(clusters: clusters)
         for index in clusters.indices {
             if muqattaatProtectedIndices.contains(index) { continue }
@@ -2014,7 +1981,7 @@ final class TajweedStore {
         protectedIndices: Set<Int>,
         into ops: inout [PaintOp]
     ) {
-        guard settings.isTajweedCategoryVisible(.maddNecessary) else { return }
+        guard isVisible(.maddNecessary) else { return }
         for index in protectedIndices where clusters.indices.contains(index) && hasMaddah(clusters[index]) {
             ops.append(
                 PaintOp(
@@ -2031,7 +1998,7 @@ final class TajweedStore {
         protectedIndices: Set<Int>,
         into ops: inout [PaintOp]
     ) {
-        guard settings.isTajweedCategoryVisible(.tafkhim) else { return }
+        guard isVisible(.tafkhim) else { return }
         for index in protectedIndices where clusters.indices.contains(index) {
             let cluster = clusters[index]
             guard isBareMuqattaatHeavyRaa(cluster) else { continue }
@@ -2089,7 +2056,7 @@ final class TajweedStore {
         category: TajweedLegendCategory,
         into ops: inout [PaintOp]
     ) {
-        guard settings.isTajweedCategoryVisible(category) else { return }
+        guard isVisible(category) else { return }
         ops.append(PaintOp(range: range, priority: priority, category: category, color: category.color))
     }
 
@@ -2222,6 +2189,8 @@ final class TajweedStore {
         NSRange(location: info.utf16Range.lowerBound, length: info.utf16Range.upperBound - info.utf16Range.lowerBound)
     }
 
+    /// The LIVE Settings visibility (not the snapshot): the end-of-paint check compares this against
+    /// the signature the paint started from.
     private func tajweedVisibilitySignature() -> String {
         TajweedLegendCategory.allCases
             .map { settings.isTajweedCategoryVisible($0) ? "1" : "0" }
@@ -2285,107 +2254,6 @@ final class TajweedStore {
         cluster.contains(Self.shadda)
     }
 
-    private func appendTreeDrivenPaintOps(surah: Int, ayah: Int, text: String, utf16Count: Int, into ops: inout [PaintOp]) {
-        let key = TajweedAyahKey(surah: surah, ayah: ayah)
-        guard let annotations = Self.tajweedRuleTreesByAyah[key], !annotations.isEmpty else { return }
-        let clusters = characterClusters(in: text)
-        let words = wordClusterRanges(clusters: clusters)
-        let finalWord = words.last
-        let finalAaridCarrier = finalWordMaddAaridCarrierIndex(words: words, clusters: clusters)
-
-        for annotation in annotations {
-            guard let category = TajweedRules.treeDrivenRuleMap[annotation.rule] else { continue }
-            guard settings.isTajweedCategoryVisible(category) else { continue }
-            guard TajweedRules.shouldPaintCategory(category) else { continue }
-            let start = max(0, min(annotation.start, utf16Count))
-            let end = max(start, min(annotation.end, utf16Count))
-            guard end > start else { continue }
-            let range = NSRange(location: start, length: end - start)
-            if category == .maddConnected,
-               let finalWord,
-               rangeIntersectsWord(range, word: finalWord, clusters: clusters) {
-                continue
-            }
-            if (category == .maddNecessary || category == .maddConnected),
-               let finalAaridCarrier,
-               rangeIntersectsCluster(range, clusterIndex: finalAaridCarrier, clusters: clusters) {
-                continue
-            }
-            let priority: Int
-            switch category {
-            case .maddNatural:
-                priority = PaintPriority.maddNatural2
-            case .maddSukoon:
-                continue
-            case .maddSeparated:
-                priority = PaintPriority.maddSeparated
-            case .maddConnected:
-                priority = PaintPriority.maddConnected
-            case .maddNecessary:
-                priority = PaintPriority.maddNecessary6
-            case .qalqalah:
-                priority = PaintPriority.qalqalah
-            case .hamzatWaslSilent:
-                if rangeIncludesFirstAyahLetterHamzatWasl(range, clusters: clusters) { continue }
-                priority = PaintPriority.hamzatWaslSilent
-            case .idghamGhunnah:
-                priority = PaintPriority.idghamBiGhunnahLight
-            case .generalGhunnah:
-                priority = PaintPriority.generalGhunnah
-            case .ikhfaaLight:
-                priority = PaintPriority.ikhfaa
-            case .ikhfaaHeavy:
-                priority = PaintPriority.ikhfaa
-            case .iqlaab:
-                priority = PaintPriority.iqlaab
-            case .idghamBilaGhunnah:
-                priority = PaintPriority.idghamBilaGhunnah
-            default:
-                continue
-            }
-
-            if category == .qalqalah {
-                appendQalqalahTreePaintOps(
-                    text: text,
-                    range: range,
-                    priority: priority,
-                    into: &ops
-                )
-                continue
-            }
-
-            if TajweedRules.specialTanweenCategories.contains(category) {
-                appendSpecialTanweenPaintOps(
-                    text: text,
-                    range: range,
-                    priority: priority,
-                    category: category,
-                    into: &ops
-                )
-                continue
-            }
-
-            if category == .maddNatural || category == .maddSeparated || category == .maddConnected || category == .maddNecessary {
-                appendSpecialMaddPaintOps(
-                    text: text,
-                    range: range,
-                    priority: priority,
-                    category: category,
-                    into: &ops
-                )
-                continue
-            }
-
-            ops.append(
-                PaintOp(
-                    range: range,
-                    priority: priority,
-                    category: category,
-                    color: category.color
-                )
-            )
-        }
-    }
 
     private func rangeIntersectsCluster(_ range: NSRange, clusterIndex: Int, clusters: [CharacterClusterInfo]) -> Bool {
         guard clusters.indices.contains(clusterIndex) else { return false }
@@ -3272,9 +3140,21 @@ final class QuranData: ObservableObject {
 
     static let shared: QuranData = {
         let q = QuranData()
+        // The watch defers the parse (quran.qpk + surahinfos.qpk, ~1.3 MB of LZMA on an S-series CPU)
+        // until the launch cover has lifted - `AlIslamApp.warmUnderCover` kicks it right after the
+        // reveal, and `QuranView.onAppear` is the backstop. A user who raised the wrist for prayer
+        // times was paying the whole Quran load before seeing them.
+        #if !os(watchOS)
         q.startLoading()
+        #endif
         return q
     }()
+
+    /// Starts the load if it has never run. Idempotent: a load in flight or finished is left alone.
+    func ensureLoading() {
+        guard loadState == .idle, loadTask == nil else { return }
+        startLoading()
+    }
 
     /// Set once the full "warm every surah" prewarm pass has completed (whether driven from the app root when
     /// the Adhan tab appears, or from QuranView). Shared so neither site repeats the broad pass.
@@ -3320,7 +3200,7 @@ final class QuranData: ObservableObject {
     private var searchIndexBuildTask: Task<Void, Never>?
     private var loadErrorDescription: String? = nil
 
-    private init() {}
+    private init() { ObjectPublishCounter.attach(self, label: "QuranData") }
 
     private static let arFormatter: NumberFormatter = {
         let f = NumberFormatter()
@@ -3332,6 +3212,27 @@ final class QuranData: ObservableObject {
         let qiraahKey: String
         let verseIndex: [VerseIndexEntry]
         let allVerseIndices: [Int]
+        /// The texts the entries were built from (a main-thread COW copy), for the on-demand lanes.
+        let surahs: [Surah]
+        let displayQiraah: String?
+
+        private func ayah(of entry: VerseIndexEntry) -> (surahID: Int, ayah: Ayah)? {
+            let si = Int(entry.surahOffset), ai = Int(entry.ayahOffset)
+            guard surahs.indices.contains(si), surahs[si].ayahs.indices.contains(ai) else { return nil }
+            return (surahs[si].id, surahs[si].ayahs[ai])
+        }
+
+        /// The tashkeel skeleton of the entry's raw Arabic, computed per candidate for `#` queries.
+        private func tashkeelBlob(of entry: VerseIndexEntry) -> String {
+            guard let hit = ayah(of: entry) else { return "" }
+            return arabicTashkeelBlob(hit.ayah.textArabic(for: displayQiraah, surahID: hit.surahID))
+        }
+
+        /// The lowercased, whitespace-normalised English (Saheeh, Mustafa, transliteration), per candidate.
+        private func exactEnglishBlob(of entry: VerseIndexEntry) -> String {
+            guard let hit = ayah(of: entry) else { return "" }
+            return exactPhraseBlob([hit.ayah.textEnglishSaheeh, hit.ayah.textEnglishMustafa, hit.ayah.textTransliteration].joined(separator: " "))
+        }
 
         private struct BooleanAyahTerm {
             enum MatchMode {
@@ -3622,12 +3523,12 @@ final class QuranData: ObservableObject {
                             term: term.value,
                             mode: term.matchMode
                         )
-                        let tashkeelMatch = term.tashkeelPattern.isEmpty || entry.arabicTashkeelBlob.contains(term.tashkeelPattern)
+                        let tashkeelMatch = term.tashkeelPattern.isEmpty || tashkeelBlob(of: entry).contains(term.tashkeelPattern)
                         containsTerm = lettersMatch && tashkeelMatch
                     } else if !useArabic, term.requiresExactEnglishMatch {
                         let exactTokens = searchTokens(from: term.exactEnglishPhrase)
                         containsTerm = !term.exactEnglishPhrase.isEmpty && ayahTermMatch(
-                            haystack: entry.englishExactBlob,
+                            haystack: exactEnglishBlob(of: entry),
                             tokens: exactTokens,
                             term: term.exactEnglishPhrase,
                             mode: term.matchMode
@@ -3691,62 +3592,62 @@ final class QuranData: ObservableObject {
         try? fileManager.removeItem(at: directoryURL)
     }
 
-    private func scheduleVerseSearchIndexBuild(
-        qiraahKey: String,
-        surahs: [Surah]
-    ) {
-        #if os(watchOS)
-        return
-        #else
+    /// Source for a deferred index build: the texts the last load published, keyed by the qiraah they
+    /// were read for. The index itself is built from this on the first search-field focus (or in its
+    /// post-reveal slot on the full tier), never on the launch path any more.
+    private var pendingVerseIndexSource: (qiraahKey: String, surahs: [Surah])?
+    /// Set once any caller has asked for the index this session: from then on a reload (a qiraah
+    /// switch) rebuilds it immediately, so an in-progress search is never left without one.
+    private var verseIndexWanted = false
+    private var verseIndexBuildGeneration = 0
+    private var verseIndexBuildInFlight = false
+
+    /// Build the ayah search index if it has not been built for the current text yet. Idempotent and
+    /// cheap on every keystroke: a ready index or a build in flight returns at once. `.userInitiated`
+    /// when someone is (about to be) waiting on it, `.utility` for the post-reveal prebuild.
+    @MainActor
+    func ensureVerseSearchIndex(priority: TaskPriority = .userInitiated) {
+        #if !os(watchOS)
+        verseIndexWanted = true
+        guard !isVerseSearchReady, !verseIndexBuildInFlight,
+              let source = pendingVerseIndexSource else { return }
+        scheduleVerseSearchIndexBuild(qiraahKey: source.qiraahKey, surahs: source.surahs, priority: priority)
+        #endif
+    }
+
+    /// The lowercased, whitespace-normalised English of one index hit, computed on demand now that
+    /// the index no longer stores it (the best-hit ranking's exact-phrase lane).
+    @MainActor
+    func exactEnglishBlob(for entry: VerseIndexEntry) -> String {
+        let si = Int(entry.surahOffset), ai = Int(entry.ayahOffset)
+        guard quran.indices.contains(si), quran[si].ayahs.indices.contains(ai) else { return "" }
+        let ayah = quran[si].ayahs[ai]
+        return exactPhraseBlob([ayah.textEnglishSaheeh, ayah.textEnglishMustafa, ayah.textTransliteration].joined(separator: " "))
+    }
+
+    /// Off-main build of the 6,236-entry index, published atomically on the main actor. A `[weak self]`
+    /// task at the caller's priority: the user is blocked on it when it comes from a search-field
+    /// focus (`.userInitiated`, and `.utility` is the tier Low Power Mode throttles hardest - under LPM
+    /// a utility build could take tens of seconds to appear, which read as "search is broken"). Only
+    /// ever runs from a main-thread COW copy of the texts, never the live published array.
+    @MainActor
+    private func scheduleVerseSearchIndexBuild(qiraahKey: String, surahs: [Surah], priority: TaskPriority) {
+        #if !os(watchOS)
         searchIndexBuildTask?.cancel()
+        verseIndexBuildGeneration &+= 1
+        let generation = verseIndexBuildGeneration
+        verseIndexBuildInFlight = true
 
-        // .userInitiated, not .utility: the user is blocked on this (search shows "preparing" until it
-        // lands), and .utility is the QoS tier Low Power Mode throttles hardest - under LPM the index could
-        // take tens of seconds to appear, which read as "search is broken."
-        searchIndexBuildTask = Task(priority: .userInitiated) { [weak self] in
+        searchIndexBuildTask = Task(priority: priority) { [weak self] in
             guard let self else { return }
-
-            // Give first render a chance to settle before building the heavier global ayah index.
-            try? await Task.sleep(nanoseconds: 250_000_000)
-            if Task.isCancelled { return }
-
-            let displayQiraah = qiraahKey.isEmpty ? nil : qiraahKey
-            var vIndex: [VerseIndexEntry] = []
-            let estimatedVerseCount = surahs.reduce(0) { $0 + $1.ayahs.count }
-            vIndex.reserveCapacity(estimatedVerseCount)
-
-            for surah in surahs {
-                for ayah in surah.ayahs {
-                    if Task.isCancelled { return }
-                    // surahID is REQUIRED for beta riwayat - without it both reads silently fall
-                    // back to Hafs and the index desyncs from what the reader displays.
-                    let raw = ayah.textArabic(for: displayQiraah, surahID: surah.id)
-                    let clean = ayah.textCleanArabic(for: displayQiraah, surahID: surah.id)
-                    vIndex.append(
-                        self.makeVerseIndexEntry(
-                            surahID: surah.id,
-                            ayahID: ayah.id,
-                            rawArabic: raw,
-                            cleanArabic: clean,
-                            englishSaheeh: ayah.textEnglishSaheeh,
-                            englishMustafa: ayah.textEnglishMustafa,
-                            transliteration: ayah.textTransliteration
-                        )
-                    )
-                }
-                await Task.yield()
-            }
-
-            if Task.isCancelled { return }
-
-            let finalizedVerseIndex = vIndex
-            let finalizedAllVerseIndices = Array(finalizedVerseIndex.indices)
-            let currentQiraahKey = await MainActor.run { self.settings.displayQiraahForArabic ?? "" }
-            guard currentQiraahKey == qiraahKey else { return }
-
+            let built = await self.buildVerseIndexEntries(qiraahKey: qiraahKey, surahs: surahs)
             await MainActor.run {
-                self.verseIndex = finalizedVerseIndex
-                self.allVerseIndices = finalizedAllVerseIndices
+                if self.verseIndexBuildGeneration == generation { self.verseIndexBuildInFlight = false }
+                guard let built, !Task.isCancelled else { return }
+                let currentQiraahKey = self.settings.displayQiraahForArabic ?? ""
+                guard currentQiraahKey == qiraahKey else { return }
+                self.verseIndex = built
+                self.allVerseIndices = Array(built.indices)
                 self.cachedVerseIndexQiraah = qiraahKey
                 self.cachedVerseSearchSnapshot = nil
                 self.isVerseSearchReady = true
@@ -3755,60 +3656,45 @@ final class QuranData: ObservableObject {
         #endif
     }
 
+    /// The entries, or nil if cancelled part-way.
+    private func buildVerseIndexEntries(qiraahKey: String, surahs: [Surah]) async -> [VerseIndexEntry]? {
+        let displayQiraah = qiraahKey.isEmpty ? nil : qiraahKey
+        var vIndex: [VerseIndexEntry] = []
+        vIndex.reserveCapacity(surahs.reduce(0) { $0 + $1.ayahs.count })
+
+        for (surahOffset, surah) in surahs.enumerated() {
+            for (ayahOffset, ayah) in surah.ayahs.enumerated() {
+                if Task.isCancelled { return nil }
+                // surahID is REQUIRED for beta riwayat - without it both reads silently fall
+                // back to Hafs and the index desyncs from what the reader displays.
+                let raw = ayah.textArabic(for: displayQiraah, surahID: surah.id)
+                let clean = ayah.textCleanArabic(for: displayQiraah, surahID: surah.id)
+                vIndex.append(
+                    makeVerseIndexEntry(
+                        surahID: surah.id,
+                        ayahID: ayah.id,
+                        surahOffset: surahOffset,
+                        ayahOffset: ayahOffset,
+                        rawArabic: raw,
+                        cleanArabic: clean,
+                        englishSaheeh: ayah.textEnglishSaheeh,
+                        englishMustafa: ayah.textEnglishMustafa,
+                        transliteration: ayah.textTransliteration
+                    )
+                )
+            }
+            await Task.yield()
+        }
+        return Task.isCancelled ? nil : vIndex
+    }
+
     #if !os(watchOS)
     /// The missed-invalidation escape hatch for `verseSearchSnapshot()`: the index's qiraah didn't match the
     /// display qiraah and no scheduled build is in flight, so rebuild off-main from a main-thread copy of
-    /// `quran` and publish atomically - the same shape as `scheduleVerseSearchIndexBuild`, minus the
-    /// dynamic-cache save (this path is a repair, not a normal load). MUST be called on the main actor
-    /// (it snapshots `quran` there).
+    /// `quran` and publish atomically. MUST be called on the main actor (it snapshots `quran` there).
     @MainActor
     private func scheduleFallbackVerseIndexRebuild(qiraahKey: String) {
-        searchIndexBuildTask?.cancel()
-
-        // A main-thread COW handoff, like the search snapshot itself: the task reads only this immutable
-        // local copy, never the live published array.
-        let surahs = quran
-
-        searchIndexBuildTask = Task(priority: .userInitiated) { [weak self] in
-            guard let self else { return }
-
-            let displayQiraah = qiraahKey.isEmpty ? nil : qiraahKey
-            var vIndex: [VerseIndexEntry] = []
-            vIndex.reserveCapacity(surahs.reduce(0) { $0 + $1.ayahs.count })
-
-            for surah in surahs {
-                for ayah in surah.ayahs {
-                    if Task.isCancelled { return }
-                    vIndex.append(
-                        self.makeVerseIndexEntry(
-                            surahID: surah.id,
-                            ayahID: ayah.id,
-                            rawArabic: ayah.textArabic(for: displayQiraah, surahID: surah.id),
-                            cleanArabic: ayah.textCleanArabic(for: displayQiraah, surahID: surah.id),
-                            englishSaheeh: ayah.textEnglishSaheeh,
-                            englishMustafa: ayah.textEnglishMustafa,
-                            transliteration: ayah.textTransliteration
-                        )
-                    )
-                }
-                await Task.yield()
-            }
-
-            if Task.isCancelled { return }
-
-            let finalizedVerseIndex = vIndex
-            let finalizedAllVerseIndices = Array(finalizedVerseIndex.indices)
-            let currentQiraahKey = await MainActor.run { self.settings.displayQiraahForArabic ?? "" }
-            guard currentQiraahKey == qiraahKey else { return }
-
-            await MainActor.run {
-                self.verseIndex = finalizedVerseIndex
-                self.allVerseIndices = finalizedAllVerseIndices
-                self.cachedVerseIndexQiraah = qiraahKey
-                self.cachedVerseSearchSnapshot = nil
-                self.isVerseSearchReady = true
-            }
-        }
+        scheduleVerseSearchIndexBuild(qiraahKey: qiraahKey, surahs: quran, priority: .userInitiated)
     }
     #endif
 
@@ -3853,19 +3739,6 @@ final class QuranData: ObservableObject {
             .filter { !$0.isEmpty }
     }
 
-    private static let arabicTashkeelCharacterSet: CharacterSet = {
-        var set = CharacterSet()
-        set.insert(charactersIn: "\u{0610}"..."\u{061A}")
-        set.insert(charactersIn: "\u{064B}"..."\u{065F}")
-        set.insert(charactersIn: "\u{0670}"..."\u{0670}")
-        set.insert(charactersIn: "\u{06D6}"..."\u{06ED}")
-        return set
-    }()
-
-    private func arabicTashkeelBlob(_ text: String) -> String {
-        String(text.unicodeScalars.filter { Self.arabicTashkeelCharacterSet.contains($0) })
-    }
-
     private func exactPhraseBlob(_ text: String) -> String {
         text
             .lowercased()
@@ -3877,6 +3750,8 @@ final class QuranData: ObservableObject {
     private func makeVerseIndexEntry(
         surahID: Int,
         ayahID: Int,
+        surahOffset: Int,
+        ayahOffset: Int,
         rawArabic: String,
         cleanArabic: String,
         englishSaheeh: String,
@@ -3907,8 +3782,8 @@ final class QuranData: ObservableObject {
             id: "\(surahID):\(ayahID)",
             surah: surahID,
             ayah: ayahID,
-            arabicTashkeelBlob: arabicTashkeelBlob(rawArabic),
-            englishExactBlob: exactPhraseBlob([englishSaheeh, englishMustafa, transliteration].joined(separator: " ")),
+            surahOffset: Int32(surahOffset),
+            ayahOffset: Int32(ayahOffset),
             arabicBlob: arabicBlob,
             silentArabicBlob: silentArabicBlob,
             hamzaArabicBlob: Settings.HamzaPrecisionFilter.corpusLanes(for: [rawArabic, cleanArabic]),
@@ -3920,31 +3795,23 @@ final class QuranData: ObservableObject {
     }
 
     func waitUntilLoaded() async {
-        while true {
-            let state = await MainActor.run { self.loadState }
-            if state == .ready || state == .failed {
-                return
-            }
-            if loadTask == nil {
-                return
-            }
-            try? await Task.sleep(nanoseconds: 25_000_000)
-        }
+        await waitForLoadState { $0 == .ready || $0 == .failed }
     }
 
     func waitUntilCoreLoaded() async {
-        while true {
-            let state = await MainActor.run { self.loadState }
-            if state == .buildingIndexes || state == .ready || state == .failed {
-                return
-            }
-            if loadTask == nil {
-                return
-            }
-            // A cancelled caller must leave: `Task.sleep` throws at once after cancellation, and the
-            // swallowed throw turned this into a hot spin until the core finished loading.
-            if Task.isCancelled { return }
-            try? await Task.sleep(nanoseconds: 25_000_000)
+        await waitForLoadState { $0 == .buildingIndexes || $0 == .ready || $0 == .failed }
+    }
+
+    /// Suspend until `loadState` satisfies `done`. Subscribes to the published state rather than
+    /// polling it: `@Published` replays the current value to a new subscriber, so a store that is already
+    /// there returns at once, and a store still loading wakes exactly when the state changes. The 25 ms
+    /// sleep loops this replaces were timers Low Power Mode throttles, with a dozen launch tasks each
+    /// running one. A store whose load never started (the watch defers it past the reveal) returns too:
+    /// there is nothing to wait for. A cancelled caller leaves at the next state change.
+    private func waitForLoadState(_ done: @escaping (LoadState) -> Bool) async {
+        for await state in $loadState.values {
+            if done(state) || Task.isCancelled { return }
+            if await MainActor.run(body: { self.loadTask == nil }) { return }
         }
     }
 
@@ -3979,14 +3846,6 @@ final class QuranData: ObservableObject {
             Self.purgeLegacyDerivedCaches()
         }
 
-        // While the core load already owns a background context: pay the tajweed rule-tree decode now
-        // if coloring is on, so the first colored ayah doesn't hitch the main thread with it.
-        // (The AI-search NLEmbedding probe is prewarmed similarly, from the app root - see Al-IslamApp;
-        // SemanticSearch.swift isn't compiled into every target this file is.)
-        if await MainActor.run(body: { Settings.shared.showTajweedColors }) {
-            TajweedStore.prewarmRuleTrees()
-        }
-
         defer {
             Task { @MainActor in
                 self.loadTask = nil
@@ -4002,9 +3861,10 @@ final class QuranData: ObservableObject {
                     // The Quran-widget snapshot writer silently no-ops while `quran` is still empty, and
                     // its other triggers (page flip, backgrounding) can all fire before the load finishes -
                     // after which nothing retried, so the widgets sat on sample data until the next reading
-                    // session. Data just became available: write the snapshot now.
+                    // session. Data just became available: write the snapshot now, but only if the one on
+                    // disk is missing or from an earlier day (every launch used to rebuild and reload all four).
                     if Settings.isAppProcess {
-                        Settings.shared.refreshQuranWidgets()
+                        Settings.shared.refreshQuranWidgetsIfStale()
                     }
                 }
                 return
@@ -4088,12 +3948,15 @@ final class QuranData: ObservableObject {
             self.isVerseSearchReady = false
         }
 
-        scheduleVerseSearchIndexBuild(
-            qiraahKey: finalizedQiraahKey,
-            surahs: surahsToPublish
-        )
-
+        // The ayah search index is no longer built on every launch (300-800 ms of CPU and ~10 MB for
+        // a search most sessions never run). It waits for the first search-field focus
+        // (`ensureVerseSearchIndex`) or its post-reveal slot on the full tier; only a session that has
+        // already asked for it rebuilds straight away here (a qiraah switch mid-search).
         await MainActor.run {
+            self.pendingVerseIndexSource = (finalizedQiraahKey, surahsToPublish)
+            if self.verseIndexWanted {
+                self.scheduleVerseSearchIndexBuild(qiraahKey: finalizedQiraahKey, surahs: surahsToPublish, priority: .userInitiated)
+            }
             self.loadState = .ready
         }
     }
@@ -4893,7 +4756,9 @@ final class QuranData: ObservableObject {
         let snapshot = VerseSearchSnapshot(
             qiraahKey: currentKey,
             verseIndex: verseIndex,
-            allVerseIndices: allVerseIndices
+            allVerseIndices: allVerseIndices,
+            surahs: quran,
+            displayQiraah: settings.displayQiraahForArabic
         )
         cachedVerseSearchSnapshot = snapshot
         return snapshot
@@ -5149,6 +5014,12 @@ enum QiraahComparison {
 
     private static var alignmentCache: [String: Alignment] = [:]
     private static var diffCache: [String: [(Int, Int)]] = [:]
+
+    /// Memory-warning purge (AppLifecycle): both tables rebuild on demand from the immutable texts.
+    static func purgeCaches() {
+        alignmentCache.removeAll()
+        diffCache.removeAll()
+    }
 
     /// The alignment for one surah of one riwayah, cached for the app's lifetime (texts are
     /// immutable). Nil for Hafs itself, unknown tags, or a riwayah with no text for this surah.

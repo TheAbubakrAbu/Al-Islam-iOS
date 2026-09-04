@@ -150,9 +150,40 @@ enum MushafPDFLibrary {
             return entry.document
         }
         guard let url = readableURL(for: tag), let document = PDFDocument(url: url) else { return nil }
+        insert(document, for: key)
+        return document
+    }
+
+    /// `document(for:)` with the one-time extraction off the main actor (Phase 5 step 7). A first
+    /// open used to xz-inflate ~23 MB inside a computed property the pager's body read; the reader
+    /// now shows a spinner page for that beat instead of hanging on it. The parse itself
+    /// (`PDFDocument(url:)`) stays on main: it is lazy and cheap, catalog and xref only.
+    @MainActor
+    static func loadDocument(for tag: String) async -> PDFDocument? {
+        let key = Settings.Riwayah.canonicalTag(tag)
+        if let hit = cache.firstIndex(where: { $0.tag == key }) {
+            let entry = cache.remove(at: hit)
+            cache.append(entry)
+            return entry.document
+        }
+        let url = await Task.detached(priority: .userInitiated) { readableURL(for: tag) }.value
+        guard let url, let document = PDFDocument(url: url) else { return nil }
+        // Someone else may have finished first while the extraction ran.
+        if let hit = cache.first(where: { $0.tag == key }) { return hit.document }
+        insert(document, for: key)
+        return document
+    }
+
+    @MainActor
+    private static func insert(_ document: PDFDocument, for key: String) {
         if cache.count >= cacheLimit { cache.removeFirst() }
         cache.append((key, document))
-        return document
+    }
+
+    /// Memory-warning purge (AppLifecycle): the measured ink crops re-measure on the next page.
+    @MainActor
+    static func purgeMeasuredCrops() {
+        MushafPDFPageView.purgeMeasuredCrops()
     }
 }
 
@@ -243,6 +274,11 @@ private struct MushafPDFPageView: UIViewRepresentable {
     /// Measured ink-hugging crops, keyed by (file, page, window) - one small thumbnail render each,
     /// paid once per page ever per session.
     @MainActor private static var inkCenteredCrops: [String: CGRect] = [:]
+
+    @MainActor
+    fileprivate static func purgeMeasuredCrops() {
+        inkCenteredCrops.removeAll(keepingCapacity: false)
+    }
 
     /// The window cut down vertically to the page's INK plus a small, symmetric cushion - so the text
     /// block sits with EQUAL air above and below, whatever the print left around it.

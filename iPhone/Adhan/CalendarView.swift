@@ -728,10 +728,18 @@ struct HijriMonthCalendarView: View {
     // MARK: Grid
 
     private var daysGrid: some View {
-        LazyVGrid(columns: columns, spacing: 6) {
+        // Resolved once per grid, not per cell: `isToday`, `gregorianDay` and `event(forDay:)` each
+        // cost an Umm al-Qura conversion (or a walk of the events table) PER CELL, four or five
+        // conversions times thirty cells on every render of this screen.
+        let today = todayHijriComponents()
+        let todayDay = (today.year == displayedYear && today.month == displayedMonth) ? today.day : nil
+        let gregorianDays = gregorianDaysOfDisplayedMonth()
+        let eventDays = Set(settings.specialEvents.compactMap { $0.1.month == displayedMonth ? $0.1.day : nil })
+
+        return LazyVGrid(columns: columns, spacing: 6) {
             ForEach(Array(monthCells.enumerated()), id: \.offset) { _, day in
                 if let day = day {
-                    dayCell(day)
+                    dayCell(day, isToday: todayDay == day, gregorianDay: gregorianDays[day], hasEvent: eventDays.contains(day))
                 } else {
                     Color.clear.frame(height: 46)
                 }
@@ -739,10 +747,23 @@ struct HijriMonthCalendarView: View {
         }
     }
 
-    private func dayCell(_ day: Int) -> some View {
-        let today = isToday(day)
+    /// Gregorian day-of-month for every Hijri day of the displayed month: ONE Umm al-Qura conversion
+    /// (day 1), then Gregorian day steps, since consecutive Hijri days are consecutive civil days.
+    private func gregorianDaysOfDisplayedMonth() -> [Int: Int] {
+        guard let first = gregorianDate(forDay: 1),
+              let hijriFirst = hijriCalendar.date(from: DateComponents(year: displayedYear, month: displayedMonth, day: 1)),
+              let range = hijriCalendar.range(of: .day, in: .month, for: hijriFirst) else { return [:] }
+        let gregorian = Calendar(identifier: .gregorian)
+        var days: [Int: Int] = [:]
+        for day in range {
+            guard let date = gregorian.date(byAdding: .day, value: day - 1, to: first) else { continue }
+            days[day] = gregorian.component(.day, from: date)
+        }
+        return days
+    }
+
+    private func dayCell(_ day: Int, isToday today: Bool, gregorianDay: Int?, hasEvent: Bool) -> some View {
         let selected = selectedDay == day
-        let hasEvent = event(forDay: day) != nil
 
         return Button {
             settings.hapticFeedback()
@@ -755,7 +776,7 @@ struct HijriMonthCalendarView: View {
                     .font(.subheadline.weight(today ? .bold : .medium))
                     .foregroundColor(today ? .white : .primary)
 
-                if let g = gregorianDay(forDay: day) {
+                if let g = gregorianDay {
                     Text("\(g)")
                         .font(.system(size: 9))
                         .foregroundColor(today ? .white.opacity(0.85) : .secondary)
@@ -870,11 +891,6 @@ struct HijriMonthCalendarView: View {
     private func gregorianDate(forDay day: Int) -> Date? {
         guard let d = hijriCalendar.date(from: DateComponents(year: displayedYear, month: displayedMonth, day: day)) else { return nil }
         return hijriCalendar.date(byAdding: .day, value: -settings.hijriOffset, to: d)
-    }
-
-    private func gregorianDay(forDay day: Int) -> Int? {
-        guard let g = gregorianDate(forDay: day) else { return nil }
-        return Calendar(identifier: .gregorian).component(.day, from: g)
     }
 
     /// Title/subtitle of an important Islamic event on the given Hijri day, if any.

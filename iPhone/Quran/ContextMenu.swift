@@ -44,6 +44,9 @@ extension AyahHighlightColor {
     /// with. Cached because a menu rebuilds its rows on every render pass of the row that owns it.
     private static var swatchCache: [String: Image] = [:]
 
+    /// Memory-warning purge (AppLifecycle); the swatches redraw on the next menu.
+    static func purgeSwatchCache() { swatchCache.removeAll() }
+
     /// `selected` draws the checkmark INSIDE the swatch. A menu row can't carry both a colored icon and a
     /// trailing checkmark (the trailing mark belongs to `Picker`, which can't express "tap the active
     /// color to clear it"), so the swatch does both jobs.

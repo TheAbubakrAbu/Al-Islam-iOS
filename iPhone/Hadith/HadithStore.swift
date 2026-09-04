@@ -382,6 +382,9 @@ final class HadithStore: ObservableObject {
         guard !targets.isEmpty else { return }
 
         Task {
+            // Never under the launch cover, whoever calls: the sweep's main-actor slices are the
+            // launch window's worst competitor.
+            await AppReveal.waitUntilRevealed()
             for book in targets where self.books[book.slug] == nil {
                 _ = self.book(book)
                 // One book per turn of the run loop: the whole sweep is milliseconds on modern

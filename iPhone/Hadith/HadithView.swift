@@ -707,14 +707,9 @@ struct HadithView: View {
                 // Usually a no-op: the pick was resolved at app launch. This just covers day rollover
                 // while the app stays open.
                 store.prepareDailyHadith()
-                // Same no-op rule: the launch task usually already warmed the likely books.
-                store.prewarmBooks()
-                #if HAS_QURAN
-                // The cross-language highlight's Quran-derived lexicon, built before the first query
-                // instead of on the first result row (which rendered before it was ready).
-                await QuranData.shared.waitUntilCoreLoaded()
-                CrossLanguageWordHighlight.prewarmLexicon()
-                #endif
+                // The 17-book shelf sweep and the cross-language lexicon are the app root's post-reveal
+                // work (Al-IslamApp's schedule), not this tab's: the under-cover tab walk realizes this
+                // view too, and both used to start here, inside the launch window, un-gated.
             }
             .onChange(of: searchText) { text in
                 // A new query invalidates the last all-books sweep and starts back at page one -

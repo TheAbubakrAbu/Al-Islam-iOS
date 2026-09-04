@@ -28,32 +28,170 @@ final class TasbihCounters: ObservableObject {
         didSet { UserDefaults.standard.set(freeCount, forKey: "tasbihFreeCount") }
     }
 
+    // MARK: Lifetime and streak
+
+    /// Every count ever tapped, across every counter. Only ever grows: a minus or a reset corrects a
+    /// tally, it does not un-remember the dhikr that was said. Seeded from the live counts the first
+    /// time this build runs, so nobody's history starts at zero.
+    @Published private(set) var lifetimeCount: Int {
+        didSet { UserDefaults.standard.set(lifetimeCount, forKey: "tasbihLifetimeCount") }
+    }
+
+    /// Counts tapped per local calendar day, keyed "yyyy-MM-dd". The keys ARE the days the tasbih was
+    /// used, which is what the streak walks; the values give today's count.
+    @Published private(set) var countsByDay: [String: Int] {
+        didSet { UserDefaults.standard.set(countsByDay, forKey: "tasbihCountsByDay") }
+    }
+
     private init() {
         freeCount = UserDefaults.standard.integer(forKey: "tasbihFreeCount")
         let stored = UserDefaults.standard.dictionary(forKey: "tasbihPresetCounts") as? [String: Int] ?? [:]
-        presetCounts = Dictionary(uniqueKeysWithValues: stored.compactMap { key, value in
+        let presets = Dictionary(uniqueKeysWithValues: stored.compactMap { key, value in
             Int(key).map { ($0, value) }
         })
+        presetCounts = presets
+        countsByDay = UserDefaults.standard.dictionary(forKey: "tasbihCountsByDay") as? [String: Int] ?? [:]
+        if let saved = UserDefaults.standard.object(forKey: "tasbihLifetimeCount") as? Int {
+            lifetimeCount = saved
+        } else {
+            // First run with a lifetime total: what is on the counters right now is the least the
+            // user has ever counted, so history begins there rather than at zero.
+            lifetimeCount = UserDefaults.standard.integer(forKey: "tasbihFreeCount") + presets.values.reduce(0, +)
+        }
     }
 
-    /// Everything ever counted here - the free counter plus every preset row. Read by the profile's
-    /// dhikr card and its badges; the individual counts stay private so nothing outside this object can
-    /// write them behind `binding(for:)`'s back.
+    /// Everything currently ON the counters - the free counter plus every preset row. The badges and
+    /// the profile read `lifetimeCount` instead, which a reset can no longer take away.
     var totalCount: Int {
         freeCount + presetCounts.values.reduce(0, +)
+    }
+
+    /// Local calendar day key. The device's calendar and time zone: a dhikr said at 11 pm belongs to
+    /// the day the user was living in, not to UTC's.
+    static func dayKey(_ date: Date = Date()) -> String {
+        let parts = Calendar.current.dateComponents([.year, .month, .day], from: date)
+        return String(format: "%04d-%02d-%02d", parts.year ?? 0, parts.month ?? 0, parts.day ?? 0)
+    }
+
+    private static func date(fromDayKey key: String) -> Date? {
+        let bits = key.split(separator: "-").compactMap { Int($0) }
+        guard bits.count == 3 else { return nil }
+        return Calendar.current.date(from: DateComponents(year: bits[0], month: bits[1], day: bits[2]))
+    }
+
+    /// Counts tapped today.
+    var todayCount: Int { countsByDay[Self.dayKey()] ?? 0 }
+
+    /// Days on which the tasbih was used at all.
+    var activeDayCount: Int { countsByDay.count }
+
+    /// Consecutive days of use ending today - or ending yesterday, so a streak is not shown as broken
+    /// before the user has had today's chance to keep it.
+    var currentStreak: Int {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+        var day = today
+        if countsByDay[Self.dayKey(day)] == nil {
+            guard let yesterday = calendar.date(byAdding: .day, value: -1, to: day),
+                  countsByDay[Self.dayKey(yesterday)] != nil else { return 0 }
+            day = yesterday
+        }
+        var streak = 0
+        while countsByDay[Self.dayKey(day)] != nil {
+            streak += 1
+            guard let previous = calendar.date(byAdding: .day, value: -1, to: day) else { break }
+            day = previous
+        }
+        return streak
+    }
+
+    /// The longest run of consecutive days ever.
+    var bestStreak: Int {
+        let calendar = Calendar.current
+        let days = countsByDay.keys.compactMap(Self.date(fromDayKey:)).map { calendar.startOfDay(for: $0) }.sorted()
+        var best = 0, run = 0
+        var previous: Date?
+        for day in days {
+            if let previous, let next = calendar.date(byAdding: .day, value: 1, to: previous), calendar.isDate(next, inSameDayAs: day) {
+                run += 1
+            } else {
+                run = 1
+            }
+            best = max(best, run)
+            previous = day
+        }
+        return max(best, currentStreak)
+    }
+
+    /// A count went UP by `amount`: remember it for life and for today.
+    private func record(increment amount: Int) {
+        guard amount > 0 else { return }
+        lifetimeCount += amount
+        countsByDay[Self.dayKey(), default: 0] += amount
     }
 
     func binding(for index: Int) -> Binding<Int> {
         if index == Self.freeIndex {
             return Binding(
                 get: { self.freeCount },
-                set: { self.freeCount = max(0, $0) }
+                set: { newValue in
+                    let clamped = max(0, newValue)
+                    self.record(increment: clamped - self.freeCount)
+                    self.freeCount = clamped
+                }
             )
         }
         return Binding(
             get: { self.presetCounts[index, default: 0] },
-            set: { self.presetCounts[index] = $0 }
+            set: { newValue in
+                self.record(increment: newValue - self.presetCounts[index, default: 0])
+                self.presetCounts[index] = newValue
+            }
         )
+    }
+}
+
+/// Today, the streak, the best streak and the lifetime total, in one glass strip at the top of the
+/// tasbih screen. Its own view so it alone observes `TasbihCounters` - the rest of the screen still
+/// skips every count tap.
+struct TasbihStatsStrip: View {
+    @ObservedObject private var settings = Settings.shared
+    @ObservedObject private var counts = TasbihCounters.shared
+
+    var body: some View {
+        let streak = counts.currentStreak
+        HStack(spacing: 8) {
+            stat(value: counts.todayCount, label: "Today", systemImage: "sun.max.fill")
+            stat(value: streak, label: streak == 1 ? "Day streak" : "Day streak", systemImage: "flame.fill", emphasized: streak > 0)
+            stat(value: counts.bestStreak, label: "Best", systemImage: "trophy.fill")
+            stat(value: counts.lifetimeCount, label: "Lifetime", systemImage: "infinity")
+        }
+        .padding(.vertical, 2)
+    }
+
+    private func stat(value: Int, label: String, systemImage: String, emphasized: Bool = false) -> some View {
+        VStack(spacing: 3) {
+            Image(systemName: systemImage)
+                .font(.caption)
+                .foregroundStyle(emphasized ? Color.orange : settings.accentColor.color)
+
+            Text(value.formatted(.number.notation(.compactName)))
+                .font(.headline.weight(.bold).monospacedDigit())
+                .foregroundColor(.primary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.6)
+                .numericContentTransition()
+                .animation(.easeOut(duration: 0.2), value: value)
+
+            Text(label)
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 8)
+        .conditionalGlassEffect(rectangle: true, interactive: false)
     }
 }
 
@@ -80,6 +218,7 @@ struct TasbihView: View {
     var body: some View {
         List {
             Group {
+                statsSection
                 freeDhikrSection
                 dhikrSelectionSection
                 #if os(watchOS)
@@ -100,6 +239,17 @@ struct TasbihView: View {
         .applyConditionalListStyle()
         .compactListSectionSpacing()
         .navigationTitle("Tasbih Counter")
+    }
+
+    /// Today's count, the day streak, the best streak and the lifetime total. Every count on this screen
+    /// feeds them; a reset or a minus corrects a tally without touching them.
+    private var statsSection: some View {
+        Section(header: Text("YOUR DHIKR"), footer: Text("Count on any day to keep the streak. Resets and corrections never lower the lifetime total.")) {
+            TasbihStatsStrip()
+                #if os(iOS)
+                .listRowInsets(EdgeInsets(top: 8, leading: 12, bottom: 8, trailing: 12))
+                #endif
+        }
     }
 
     /// A counter with no dhikr attached: name it whatever you're reciting, or nothing at all, and count.
@@ -312,6 +462,8 @@ struct ActiveTasbihCard: View {
                         .font(.system(size: 30, weight: .semibold))
                         .monospacedDigit()
                         .foregroundColor(.primary)
+                        .numericContentTransition()
+                        .animation(.easeOut(duration: 0.18), value: count)
 
                     // Position within the current turn, so a long session still tells you where you are.
                     Text("\(withinLap) / \(cycle)")
@@ -586,4 +738,20 @@ struct TasbihCounterControls: View {
     AlIslamPreviewContainer {
         TasbihView()
     }
+}
+
+/// `.contentTransition(.numericText())` where the OS has it (iOS 16 / watchOS 9); a plain redraw below.
+private struct NumericContentTransition: ViewModifier {
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if #available(iOS 16.0, watchOS 9.0, *) {
+            content.contentTransition(.numericText())
+        } else {
+            content
+        }
+    }
+}
+
+extension View {
+    func numericContentTransition() -> some View { modifier(NumericContentTransition()) }
 }

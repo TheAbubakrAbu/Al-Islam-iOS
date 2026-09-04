@@ -395,6 +395,8 @@ private struct ThemeTopicDetailView: View {
 
     let topic: ThemeTopic
     let onOpenAyah: (Int, Int) -> Void
+    /// The rows' sheet host (Phase 5 step 6): the reader's row presents nothing itself any more.
+    @State private var rowSheet: AyahRowSheetRequest?
 
     var body: some View {
         List {
@@ -414,6 +416,18 @@ private struct ThemeTopicDetailView: View {
         .applyConditionalListStyle(disableNowPlayingInset: true)
         .navigationTitle(topic.name)
         .navigationBarTitleDisplayMode(.inline)
+        .sheet(item: $rowSheet) { request in
+            AyahRowSheetContent(
+                request: request,
+                onRequestSecondary: { kind in
+                    rowSheet = nil
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                        rowSheet = AyahRowSheetRequest(surah: request.surah, ayah: request.ayah, kind: .secondary(kind))
+                    }
+                },
+                onDismiss: { rowSheet = nil }
+            )
+        }
     }
 
     /// The reader's OWN row, not a copy of it.
@@ -453,7 +467,11 @@ private struct ThemeTopicDetailView: View {
                     onToggleHighlight: {
                         settings.hapticFeedback()
                         onOpenAyah(parts[0], parts[1])
-                    }
+                    },
+                    onRequestSheet: { kind in
+                        rowSheet = AyahRowSheetRequest(surah: surah, ayah: ayah, kind: kind)
+                    },
+                    openSheet: (rowSheet?.surah.id == surah.id && rowSheet?.ayah.id == ayah.id) ? rowSheet?.kind : nil
                 )
                 .equatable()
             }

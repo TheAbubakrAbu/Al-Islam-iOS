@@ -89,15 +89,20 @@ final class HadithBlockCache: @unchecked Sendable {
     private var textEntries: [Key: TextBlock] = [:]
     private var textOrder: [Key] = []
     private var textBytes = 0
-    /// Enough for a long chapter and the ones on either side of it, at 256 KB a block.
-    private let textBudget = 6 * 1024 * 1024
+    /// Enough for a long chapter and the ones on either side of it (blocks inflate to 1.6-2.1 MB each,
+    /// so 6 MB is about three). On a 4 GB-class device the budget is 16 MB: memory there is not the
+    /// constraint, and every eviction is another main-thread-visible LZMA inflate when the reader
+    /// scrolls back. Abu approved the raise on 2026-09-04 (performance plan, Phase 7).
+    private let textBudget = PerformanceProfile.isLowEndDevice ? 6 * 1024 * 1024 : 16 * 1024 * 1024
 
     private var searchEntries: [Key: SearchBlock] = [:]
     private var searchOrder: [Key] = []
     private var searchBytes = 0
     /// A sweep only ever needs the block it is on; the budget just keeps the next query's first
-    /// blocks warm and covers a reader flicking between results in the same neighbourhood.
-    private let searchBudget = 3 * 1024 * 1024
+    /// blocks warm and covers a reader flicking between results in the same neighbourhood. 16 MB on a
+    /// 4 GB-class device holds the whole library's search payload (~11.7 MB LZFSE across 17 books),
+    /// so the all-books sweep stops re-inflating it on every settled query and every Load More.
+    private let searchBudget = PerformanceProfile.isLowEndDevice ? 3 * 1024 * 1024 : 16 * 1024 * 1024
 
     private func textCost(_ block: TextBlock) -> Int {
         block.reduce(0) { $0 + $1.utf8.count + 24 }

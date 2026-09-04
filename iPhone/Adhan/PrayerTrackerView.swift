@@ -137,10 +137,9 @@ extension Settings {
     /// The current statistics, recomputed only when the underlying data actually changed.
     var trackerStats: PrayerTrackerStats {
         var hasher = Hasher()
-        hasher.combine(prayerTrackerData)
-        hasher.combine(trackerExemptDaysData)
-        hasher.combine(mensesPauseActive)
-        hasher.combine(mensesPauseStartStamp)
+        // The write counter the four tracker fields bump (see `bumpTrackerGeneration`), instead of
+        // hashing years of marks on every render that asks.
+        hasher.combine(trackerGeneration)
         // The day rolling over changes today-dependent numbers even with identical data.
         hasher.combine(Calendar.current.startOfDay(for: Date()))
         let stamp = hasher.finalize()
@@ -334,7 +333,7 @@ private struct TrackerPrayerToggle: View {
                                     endPoint: .bottomTrailing
                                 )
                             )
-                            .shadow(color: tint.opacity(0.4), radius: 6, x: 0, y: 2)
+                            .softShadow(color: tint.opacity(0.4), radius: 6, x: 0, y: 2)
 
                         Image(systemName: mark.symbol)
                             .font(.subheadline.weight(.bold))
@@ -386,6 +385,7 @@ struct PrayerTrackerSection: View {
     }
 
     var body: some View {
+        let _ = RenderCounter.hit("PrayerTrackerSection")
         if settings.prayers != nil {
             Section(header: header) {
                 if settings.isTrackerExempt(on: Date()) {
@@ -974,9 +974,21 @@ struct PrayerTrackerView: View {
         var counts: Bool { !isFuture && !exempt }
     }
 
+    /// Memo for `dayRecords`, keyed on the tracker write counter and the civil day. The year view asks
+    /// for twelve months of records on every render, and the month and week views for theirs; the
+    /// answer changes only when a mark is written or the day rolls over.
+    private static var dayRecordsMemo: (generation: Int, day: Date, records: [String: [DayRecord]]) = (-1, .distantPast, [:])
+
     private func dayRecords(from start: Date, count: Int) -> [DayRecord] {
-        let snapshot = settings.trackerSnapshot()
         let today = calendar.startOfDay(for: Date())
+        let generation = settings.trackerGeneration
+        if Self.dayRecordsMemo.generation != generation || Self.dayRecordsMemo.day != today {
+            Self.dayRecordsMemo = (generation, today, [:])
+        }
+        let memoKey = "\(start.timeIntervalSinceReferenceDate)-\(count)"
+        if let cached = Self.dayRecordsMemo.records[memoKey] { return cached }
+
+        let snapshot = settings.trackerSnapshot()
         let formatter = PrayerTrackerStats.dayKeyFormatter
 
         var records: [DayRecord] = []
@@ -994,6 +1006,7 @@ struct PrayerTrackerView: View {
             // at 01:00, which then mis-flags today as future and feeds the grids drifting dates.
             day = calendar.startOfDay(for: next)
         }
+        Self.dayRecordsMemo.records[memoKey] = records
         return records
     }
 

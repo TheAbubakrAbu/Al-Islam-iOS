@@ -489,6 +489,28 @@ class Qpk:
         return out
 
     def reblock(self, target: int, solid: bool):
+        if self.kind == "quran" and not solid:
+            # The quran pack regroups by ROW (one ayah = four strings), so a target smaller than the
+            # current blocks SPLITS them: the app decodes this pack's blocks concurrently at launch
+            # (QuranPack.materializeAllBlocks), and four ~940 KB blocks (--target-bytes 960000, +62 KB
+            # of install size) spread that across the cores where two 1.9 MB ones kept it on two.
+            # Block indices are per ayah row here, in row order.
+            rows = []
+            for b in self.blocks:
+                strings = parse_strings(b["raw"])
+                if len(strings) % 4:
+                    raise ValueError("quran block does not hold whole rows")
+                for i in range(0, len(strings), 4):
+                    rows.append(b"".join(string_field(s) for s in strings[i:i + 4]))
+            if len(rows) != len(self.block_fields):
+                raise ValueError(f"{len(rows)} rows of text vs {len(self.block_fields)} ayah records")
+            groups = group_blocks([len(r) for r in rows], target, False)
+            for new_index, g in enumerate(groups):
+                for row in g:
+                    struct.pack_into("<H", self.eager, self.block_fields[row][0], new_index)
+            self.blocks = [{"first": g[0], "raw": b"".join(rows[i] for i in g)} for g in groups]
+            self._parse_eager()
+            return
         old_blocks = [f[1] for f in self.block_fields]
         if any(b > a for a, b in zip(old_blocks[1:], old_blocks)):
             raise ValueError("stored block indices are not in eager order; a shared block would be walked wrong")

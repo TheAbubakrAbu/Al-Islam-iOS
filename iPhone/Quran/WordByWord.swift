@@ -1054,7 +1054,7 @@ struct WordByWordText: View {
     }
 
     private var uiFont: UIFont {
-        if let fontName, let font = UIFont(name: fontName, size: fontSize) {
+        if let fontName, let font = QuranFontCache.font(name: fontName, size: fontSize) {
             return font
         }
         return .roundedSystemFont(ofSize: fontSize)
@@ -1062,7 +1062,28 @@ struct WordByWordText: View {
 
     /// The ayah as TextKit needs it: the same colors the list renders today, plus the ayah-number
     /// ornament, which always comes from the Uthmani face (the system font would print bare digits).
+    private static let attributedMemo: NSCache<NSString, NSAttributedString> = {
+        let cache = NSCache<NSString, NSAttributedString>()
+        cache.countLimit = 200
+        return cache
+    }()
+
+    /// Memoized per (text, faces, colours, tajweed digest): the build ran on every body pass of every
+    /// visible row, and the representable then compared the result attribute by attribute just to
+    /// find nothing had changed (Phase 5 step 1).
     private func attributedText() -> NSAttributedString {
+        let key = [
+            displayText, fontName ?? "", "\(fontSize)", ayahNumberArabic,
+            "\(settings.accentColor.color)", settings.highlightAllahNames ? "a" : "-",
+            preStyled.map { "\($0.renderDigest)" } ?? "plain",
+        ].joined(separator: "\u{1F}") as NSString
+        if let hit = Self.attributedMemo.object(forKey: key) { return hit }
+        let built = buildAttributedText()
+        Self.attributedMemo.setObject(built, forKey: key)
+        return built
+    }
+
+    private func buildAttributedText() -> NSAttributedString {
         let paragraph = NSMutableParagraphStyle()
         paragraph.alignment = fontName == nil ? .natural : .right
         paragraph.baseWritingDirection = .rightToLeft
@@ -1094,7 +1115,7 @@ struct WordByWordText: View {
             }
         }
 
-        let markerFont = UIFont(name: Settings.hafsUthmaniFontName, size: fontSize) ?? uiFont
+        let markerFont = QuranFontCache.font(name: Settings.hafsUthmaniFontName, size: fontSize) ?? uiFont
         body.append(NSAttributedString(
             string: " \(ayahNumberArabic)",
             attributes: [
@@ -1198,7 +1219,7 @@ struct WordByWordInlineText: View {
     }
 
     private var arabicUIFont: UIFont {
-        if let fontName, let font = UIFont(name: fontName, size: fontSize) { return font }
+        if let fontName, let font = QuranFontCache.font(name: fontName, size: fontSize) { return font }
         return .roundedSystemFont(ofSize: fontSize)
     }
 
@@ -1305,7 +1326,7 @@ struct WordByWordInlineText: View {
     /// unreliable under RTL inside a List).
     private func cellWidth(_ cell: WordCell) -> CGFloat {
         let font = cell.isOrnament
-            ? (UIFont(name: Settings.hafsUthmaniFontName, size: fontSize) ?? arabicUIFont)
+            ? (QuranFontCache.font(name: Settings.hafsUthmaniFontName, size: fontSize) ?? arabicUIFont)
             : arabicUIFont
         let arabicWidth = ceil((String(cell.arabic.characters) as NSString)
             .size(withAttributes: [.font: font]).width)
@@ -1400,7 +1421,7 @@ private struct SelectableWordText: View {
     }
 }
 
-struct TappedWord: Identifiable {
+struct TappedWord: Identifiable, Equatable {
     let index: Int
     let word: String
     let meaning: String
@@ -2174,7 +2195,7 @@ struct WordMeaningSheet: View {
 /// meanings are Hafs-token-aligned), so the card's job is different: name the riwayah's own rules
 /// on this word - what the colors mean and how the word is recited - and show the Hafs counterpart
 /// underneath, aligned word-by-word through the ayah alignment.
-struct RiwayahTappedWord: Identifiable {
+struct RiwayahTappedWord: Identifiable, Equatable {
     let index: Int
     let word: String
     let total: Int

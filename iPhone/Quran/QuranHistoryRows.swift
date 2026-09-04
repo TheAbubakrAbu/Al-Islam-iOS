@@ -141,11 +141,11 @@ struct LastListenedSurahRow: View {
                             .buttonStyle(.plain)
                             .contentShape(Rectangle())
                         } else {
-                            NavigationLink(destination:
+                            NavigationLink(destination: LazyDestination {
                                 SurahView(surah: surah)
                                     .transition(.opacity)
                                     .animation(.easeInOut, value: lastListenedSurah.surahName)
-                            ) {
+                            }) {
                                 lastListenedTitleRow(surah: surah)
                                     .frame(maxWidth: .infinity, alignment: .leading)
                                     .contentShape(Rectangle())
@@ -198,7 +198,7 @@ struct LastListenedSurahRow: View {
                                 .buttonStyle(.plain)
                                 .contentShape(Rectangle())
                             } else {
-                                NavigationLink(destination: SurahView(surah: historySurah)) {
+                                NavigationLink(destination: LazyDestination { SurahView(surah: historySurah) }) {
                                     listeningHistoryLabel(item)
                                         .frame(maxWidth: .infinity, alignment: .leading)
                                         .contentShape(Rectangle())
@@ -783,7 +783,7 @@ struct LastReadAyahRow: View {
                     .buttonStyle(.plain)
                     .contentShape(Rectangle())
                 } else {
-                    NavigationLink(destination: SurahView(surah: surah, ayah: ayah.id)) {
+                    NavigationLink(destination: LazyDestination { SurahView(surah: surah, ayah: ayah.id) }) {
                         lastReadRowContent
                     }
                     .tag(surah.id)
@@ -829,7 +829,7 @@ struct LastReadAyahRow: View {
                                 .buttonStyle(.plain)
                                 .contentShape(Rectangle())
                             } else {
-                                NavigationLink(destination: SurahView(surah: surah, ayah: ayah.id)) {
+                                NavigationLink(destination: LazyDestination { SurahView(surah: surah, ayah: ayah.id) }) {
                                     readHistoryLabel(surah: surah, ayah: ayah, timestamp: item.timestamp)
                                 }
                                 .tag(surah.id)
@@ -935,7 +935,7 @@ struct LastListenedAyahRow: View {
                     .buttonStyle(.plain)
                     .contentShape(Rectangle())
                 } else {
-                    NavigationLink(destination: SurahView(surah: histSurah, ayah: histAyah.id)) {
+                    NavigationLink(destination: LazyDestination { SurahView(surah: histSurah, ayah: histAyah.id) }) {
                         ayahHistoryLabel(histSurah: histSurah, histAyah: histAyah, timestamp: item.timestamp)
                     }
                     .tag(histSurah.id)
@@ -999,7 +999,7 @@ struct LastListenedAyahRow: View {
                     .buttonStyle(.plain)
                     .contentShape(Rectangle())
                 } else {
-                    NavigationLink(destination: SurahView(surah: surah, ayah: ayah.id)) {
+                    NavigationLink(destination: LazyDestination { SurahView(surah: surah, ayah: ayah.id) }) {
                         rowContent
                     }
                     .tag(surah.id)
@@ -1139,7 +1139,7 @@ struct AyahOfTheDayRow: View {
                     .buttonStyle(.plain)
                     .contentShape(Rectangle())
                 } else {
-                    NavigationLink(destination: SurahView(surah: surah, ayah: ayah.id)) {
+                    NavigationLink(destination: LazyDestination { SurahView(surah: surah, ayah: ayah.id) }) {
                         rowContent
                     }
                     .tag(surah.id)

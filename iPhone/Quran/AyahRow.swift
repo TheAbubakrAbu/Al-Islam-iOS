@@ -47,23 +47,8 @@ struct AyahRow: View, Equatable {
     /// recycled once it scrolls away, so the latch resets naturally. Order: translit, saheeh, mustafa, arabic.
     @State private var latchedForcedLines: [Bool] = [false, false, false, false]
 
-    #if os(iOS)
-    @State private var showingAyahSheet = false
-    @State private var showTafsirSheet = false
-    /// The word of this ayah whose meaning card is up (word-by-word mode). Nil when none is.
-    @State private var tappedWord: TappedWord?
-    /// The word whose riwayah card is up (non-Hafs word tap). Nil when none is.
-    @State private var tappedRiwayahWord: RiwayahTappedWord?
-
-    @State private var showingNoteSheet = false
-    @State private var draftNote: String = ""
-    @State private var showCustomRangeSheet = false
-    @State private var showQiraahComparisonSheet = false
-    @State private var showEnglishComparisonSheet = false
-    @State private var showSelectTextSheet = false
-    /// The long-press ayah actions sheet - the same `AyahActionsSheet` page mode presents.
-    @State private var showAyahActionsSheet = false
-    #endif
+    // (The row's sheets - share, tafsir, note, comparisons, custom range, the actions sheet and the
+    // word cards - are presented by the HOST now, through `onRequestSheet`; see Phase 5 step 6.)
     #if os(watchOS)
     @State private var showWatchPlaybackDialog = false
     #endif
@@ -105,42 +90,51 @@ struct AyahRow: View, Equatable {
     /// True when the player is currently on this exact ayah - drives the accent playing tint. Passed
     /// in (and compared in `==`) rather than read from an observed player; see the note on `quranPlayer`.
     var isPlayingThis: Bool = false
+    /// True when this exact ayah is the saved single-ayah listening position (the speaker badge on
+    /// the pill). Passed in and compared in `==` rather than decoded from Settings in every row's
+    /// body: the decode is memoized, but the read still ran per row per pass (Phase 5 step 3).
+    var isLastListened: Bool = false
 
-    @State private var showRespectAlert = false
+    #if os(iOS)
+    /// The host presents this row's sheets (Phase 5 step 6): twelve `.sheet`/`.confirmationDialog`
+    /// modifiers per row were ~100-150 presentation hosts churned per screenful of scrolling. The
+    /// kind of the sheet currently up for THIS ayah comes back as `openSheet`, so the row keeps its
+    /// attention tint while the sheet is open and lights the tapped word under its card.
+    var onRequestSheet: ((AyahRowSheetKind) -> Void)? = nil
+    var openSheet: AyahRowSheetKind? = nil
+
+    private func requestSheet(_ kind: AyahRowSheetKind) {
+        onRequestSheet?(kind)
+    }
+
+    private var openWordIndex: Int? {
+        if case .word(let tapped) = openSheet { return tapped.index }
+        return nil
+    }
+
+    private var openRiwayahWordIndex: Int? {
+        if case .riwayahWord(let tapped) = openSheet { return tapped.index }
+        return nil
+    }
+    #endif
+
+    private func sameOpenSheet(as other: Self) -> Bool {
+        #if os(iOS)
+        return openSheet == other.openSheet
+        #else
+        return true
+        #endif
+    }
 
     /// Whether any of this ayah's action sheets/dialogs is open - drives the "keep it lit until the sheet is
     /// gone" tint. watchOS has none of these sheets, so it's always false there.
     private var anyAyahSheetOpen: Bool {
         #if os(iOS)
-        showingAyahSheet || showTafsirSheet || showingNoteSheet || showCustomRangeSheet
-            || showQiraahComparisonSheet || showEnglishComparisonSheet || showSelectTextSheet
-            || showAyahActionsSheet || tappedWord != nil || tappedRiwayahWord != nil
+        openSheet != nil
         #else
         false
         #endif
     }
-
-    #if os(iOS)
-    /// Routes the actions sheet's "open another sheet" requests onto this row's own sheet states -
-    /// the list-mode twin of `MushafPageContent.requestSecondarySheet`. The actions sheet closes
-    /// first; UIKit can't present a second sheet while the first is still animating away.
-    private func requestRowSecondarySheet(_ kind: AyahSecondarySheet) {
-        showAyahActionsSheet = false
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
-            switch kind {
-            case .tafsir: showTafsirSheet = true
-            case .qiraah: showQiraahComparisonSheet = true
-            case .translations: showEnglishComparisonSheet = true
-            case .customRange: showCustomRangeSheet = true
-            case .note:
-                draftNote = currentNote
-                showingNoteSheet = true
-            case .share: showingAyahSheet = true
-            case .selectText: showSelectTextSheet = true
-            }
-        }
-    }
-    #endif
 
     static func == (lhs: Self, rhs: Self) -> Bool {
         lhs.surah == rhs.surah &&
@@ -150,11 +144,13 @@ struct AyahRow: View, Equatable {
         lhs.scrollDown == rhs.scrollDown &&
         lhs.isHighlighted == rhs.isHighlighted &&
         lhs.isPlayingThis == rhs.isPlayingThis &&
+        lhs.isLastListened == rhs.isLastListened &&
         lhs.arrivalTerm == rhs.arrivalTerm &&
         lhs.isSelecting == rhs.isSelecting &&
         lhs.isSelected == rhs.isSelected &&
         lhs.forceBeginner == rhs.forceBeginner &&
-        lhs.searchText == rhs.searchText
+        lhs.searchText == rhs.searchText &&
+        lhs.sameOpenSheet(as: rhs)
     }
 
     private static let arabicDisplayCache: NSCache<NSString, NSString> = {
@@ -651,12 +647,9 @@ struct AyahRow: View, Equatable {
     }
 
     var body: some View {
+        let _ = RenderCounter.hit("AyahRow")
         let isBookmarked = isBookmarkedHere
-        // This exact ayah is the last-listened single-ayah playback position - a speaker badge on
-        // the pill, the surah rows' listening grammar. The bookmark badge wins when both apply.
-        let isLastListened = settings.lastListenedAyah.map {
-            $0.surahNumber == surah.id && $0.ayahNumber == ayah.id
-        } ?? false
+        // (`isLastListened`, the speaker badge on the pill, is an input now - see the property.)
         let hafsOnly: Bool = if let override = comparisonQiraahOverride {
             override.isEmpty || override == "Hafs"
         } else {
@@ -852,55 +845,6 @@ struct AyahRow: View, Equatable {
                             .conditionalGlassEffect()
                             .frame(width: 28, height: 28)
                     }
-                    .sheet(isPresented: $showingAyahSheet) {
-                        ShareAyahSheet(
-                            surahNumber: surah.id,
-                            ayahNumber: ayah.id
-                        )
-                        .smallMediumSheetPresentation()
-                    }
-                    .sheet(isPresented: $showTafsirSheet) {
-                        AyahTafsirSheet(
-                            surahName: surah.nameTransliteration,
-                            surahNumber: surah.id,
-                            ayahNumber: ayah.id
-                        )
-                        .smallMediumSheetPresentation()
-                    }
-                    .sheet(isPresented: $showSelectTextSheet) {
-                        SelectAyahTextSheet(surah: surah, ayah: ayah)
-                            .smallMediumSheetPresentation()
-                    }
-                    .sheet(isPresented: $showQiraahComparisonSheet) {
-                        AyahQiraahComparisonSheet(surahNumber: surah.id, ayahNumber: ayah.id)
-                            .environmentObject(settings)
-                            .environmentObject(quranData)
-                            .smallMediumSheetPresentation()
-                    }
-                    .sheet(isPresented: $showEnglishComparisonSheet) {
-                        AyahEnglishComparisonSheet(surahNumber: surah.id, ayahNumber: ayah.id)
-                            .environmentObject(settings)
-                            .environmentObject(quranData)
-                            .smallMediumSheetPresentation()
-                    }
-                    .sheet(isPresented: $showingNoteSheet) {
-                        NoteEditorSheet(
-                            title: "Note for \(surah.nameTransliteration) \(surah.id):\(ayah.id)",
-                            text: $draftNote,
-                            onAttemptSave: { text in
-                                if isNoteAllowed(text) {
-                                    setNote(text)
-                                    return true
-                                } else {
-                                    showRespectAlert = true
-                                    return false
-                                }
-                            },
-                            onCancel: {},
-                            onSave: { setNote(draftNote) }
-                        )
-                        .smallMediumSheetPresentation()
-                    }
                     #else
                     HStack(spacing: 8) {
                         Image(systemName: isBookmarked ? "bookmark.fill" : "bookmark")
@@ -1007,15 +951,7 @@ struct AyahRow: View, Equatable {
         .onLongPressGesture {
             guard !isSelecting else { return }
             settings.hapticFeedback()
-            showAyahActionsSheet = true
-        }
-        .sheet(isPresented: $showAyahActionsSheet) {
-            AyahActionsSheet(
-                surah: surah,
-                ayah: ayah,
-                onRequestSheet: { kind in requestRowSecondarySheet(kind) }
-            )
-            .smallMediumSheetPresentation()
+            requestSheet(.actions)
         }
         // The tap-to-scroll jump, as a swipe too: while searching, swipe the result row to scroll down
         // to that ayah in the full list.
@@ -1033,11 +969,6 @@ struct AyahRow: View, Equatable {
             }
         }
         #endif
-        .confirmationDialog("Note not saved", isPresented: $showRespectAlert, titleVisibility: .visible) {
-            Button("OK") { }
-        } message: {
-            Text("Please keep notes Islamic and respectful.")
-        }
         .confirmationDialog(Settings.bookmarkNoteRemovalDialogTitle, isPresented: $confirmRemoveNote, titleVisibility: .visible) {
             Button("Remove", role: .destructive) {
                 settings.hapticFeedback()
@@ -1090,57 +1021,6 @@ struct AyahRow: View, Equatable {
             }
         } message: {
             Text("Choose how you want to start playback for this ayah.")
-        }
-        #else
-        .sheet(isPresented: $showCustomRangeSheet) {
-            PlayCustomRangeSheet(
-                surah: surah,
-                initialStartAyah: ayah.id,
-                initialEndAyah: PlayCustomRangeSheet.defaultEndAyah(
-                    startAyah: ayah.id,
-                    surah: surah,
-                    displayQiraah: settings.displayQiraahForArabic
-                ),
-                onPlay: { start, end, repAyah, repSec in
-                    quranPlayer.playCustomRange(
-                        surahNumber: surah.id,
-                        surahName: surah.nameTransliteration,
-                        startAyah: start,
-                        endAyah: end,
-                        repeatPerAyah: repAyah,
-                        repeatSection: repSec
-                    )
-                },
-                onCancel: { showCustomRangeSheet = false }
-            )
-            .environmentObject(settings)
-            .smallMediumSheetPresentation()
-        }
-        // Word-by-word: the card for the word the reader tapped. `item:` rather than `isPresented:` so
-        // tapping a DIFFERENT word while the card is up re-presents it with the new word instead of
-        // leaving the old one on screen.
-        .sheet(item: $tappedWord) { tapped in
-            WordMeaningSheet(
-                surah: surah,
-                ayah: ayah,
-                word: tapped.word,
-                meaning: tapped.meaning,
-                position: tapped.index + 1,
-                total: tapped.total
-            )
-            .environmentObject(settings)
-        }
-        // The riwayah word card: this riwayah's rules on the tapped word plus its Hafs counterpart.
-        .sheet(item: $tappedRiwayahWord) { tapped in
-            RiwayahWordSheet(
-                surah: surah,
-                ayah: ayah,
-                tag: tapped.tag,
-                word: tapped.word,
-                index: tapped.index,
-                total: tapped.total
-            )
-            .environmentObject(settings)
         }
         #endif
     }
@@ -1253,10 +1133,7 @@ struct AyahRow: View, Equatable {
                 #if os(iOS)
                 .onTapGesture {
                     settings.hapticFeedback()
-                    withAnimation {
-                        draftNote = currentNote
-                        showingNoteSheet = true
-                    }
+                    requestSheet(.secondary(.note))
                 }
                 #endif
                 .padding(.top, 4)
@@ -1290,12 +1167,12 @@ struct AyahRow: View, Equatable {
                 if let glosses = wordByWordGlosses(displayText: arabicSource, beginner: beginner,
                                                    highlightQuery: highlightQuery) {
                     let selectWord: (Int) -> Void = { index in
-                        tappedWord = TappedWord(
+                        requestSheet(.word(TappedWord(
                             index: index,
                             word: WordTokens.tokens(in: arabicSource)[index],
                             meaning: glosses[index],
                             total: glosses.count
-                        )
+                        )))
                     }
                     if settings.wordByWordInline {
                         // The study layout: each word a column with its meaning beneath it. Tapping
@@ -1311,7 +1188,7 @@ struct AyahRow: View, Equatable {
                             glosses: glosses,
                             showsGlosses: settings.wordByWordInlineTranslation,
                             transliterations: wordByWordTransliterations(displayText: arabicSource),
-                            selectedWord: tappedWord?.index,
+                            selectedWord: openWordIndex,
                             onSelectWord: selectWord
                         )
                         .id(tajweedAnimationKey)
@@ -1327,7 +1204,7 @@ struct AyahRow: View, Equatable {
                             fontSize: CGFloat(settings.fontArabicSize),
                             ayahNumberArabic: ayah.idArabic,
                             glosses: glosses,
-                            selectedWord: tappedWord?.index,
+                            selectedWord: openWordIndex,
                             onSelectWord: selectWord
                         )
                         .id(tajweedAnimationKey)
@@ -1346,9 +1223,9 @@ struct AyahRow: View, Equatable {
                             let tokens = WordTokens.tokens(in: arabicSource)
                             guard tokens.indices.contains(idx), glosses.indices.contains(idx) else { return }
                             DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                                tappedWord = TappedWord(
+                                requestSheet(.word(TappedWord(
                                     index: idx, word: tokens[idx], meaning: glosses[idx], total: glosses.count
-                                )
+                                )))
                             }
                         }
                     #endif
@@ -1366,16 +1243,16 @@ struct AyahRow: View, Equatable {
                         ayahNumberArabic: ayah.idArabic,
                         glosses: [],
                         alwaysTappable: true,
-                        selectedWord: tappedRiwayahWord?.index,
+                        selectedWord: openRiwayahWordIndex,
                         onSelectWord: { index in
                             let tokens = WordTokens.tokens(in: arabicSource)
                             guard tokens.indices.contains(index) else { return }
-                            tappedRiwayahWord = RiwayahTappedWord(
+                            requestSheet(.riwayahWord(RiwayahTappedWord(
                                 index: index,
                                 word: tokens[index],
                                 total: tokens.count,
                                 tag: riwayahTag
-                            )
+                            )))
                         }
                     )
                     .id(tajweedAnimationKey)
@@ -1391,16 +1268,16 @@ struct AyahRow: View, Equatable {
                             let tokens = WordTokens.tokens(in: arabicSource)
                             if tokens.indices.contains(idx) {
                                 DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                                    tappedRiwayahWord = RiwayahTappedWord(
+                                    requestSheet(.riwayahWord(RiwayahTappedWord(
                                         index: idx, word: tokens[idx], total: tokens.count, tag: riwayahTag
-                                    )
+                                    )))
                                 }
                             }
                         }
                         if Self.debugOpenComparison {
                             Self.debugOpenComparison = false
                             DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-                                showQiraahComparisonSheet = true
+                                requestSheet(.secondary(.qiraah))
                             }
                         }
                     }
@@ -1522,7 +1399,7 @@ struct AyahRow: View, Equatable {
 
                 Button {
                     settings.hapticFeedback()
-                    showCustomRangeSheet = true
+                    requestSheet(.secondary(.customRange))
                 } label: {
                     Label("Play Custom Range", systemImage: "slider.horizontal.3")
                 }
@@ -1532,7 +1409,7 @@ struct AyahRow: View, Equatable {
 
             Button {
                 settings.hapticFeedback()
-                showCustomRangeSheet = true
+                requestSheet(.secondary(.customRange))
             } label: {
                 Label("Play Custom Range", systemImage: "slider.horizontal.3")
             }
@@ -1569,7 +1446,7 @@ struct AyahRow: View, Equatable {
 
             Button {
                 settings.hapticFeedback()
-                showCustomRangeSheet = true
+                requestSheet(.secondary(.customRange))
             } label: {
                 Label("Play Custom Range", systemImage: "slider.horizontal.3")
             }
@@ -1580,7 +1457,7 @@ struct AyahRow: View, Equatable {
         Menu {
             Button {
                 settings.hapticFeedback()
-                showCustomRangeSheet = true
+                requestSheet(.secondary(.customRange))
             } label: {
                 Label("Play Custom Range", systemImage: "slider.horizontal.3")
             }
@@ -1609,14 +1486,14 @@ struct AyahRow: View, Equatable {
             Menu {
                 Button {
                     settings.hapticFeedback()
-                    showQiraahComparisonSheet = true
+                    requestSheet(.secondary(.qiraah))
                 } label: {
                     Label("Qiraah Comparison", systemImage: "character.book.closed.fill.ar")
                 }
 
                 Button {
                     settings.hapticFeedback()
-                    showEnglishComparisonSheet = true
+                    requestSheet(.secondary(.translations))
                 } label: {
                     Label("Translation Comparison", systemImage: "character.book.closed")
                 }
@@ -1626,14 +1503,14 @@ struct AyahRow: View, Equatable {
         } else if canShowQiraah {
             Button {
                 settings.hapticFeedback()
-                showQiraahComparisonSheet = true
+                requestSheet(.secondary(.qiraah))
             } label: {
                 Label("Qiraah Comparison", systemImage: "character.book.closed.fill.ar")
             }
         } else if canShowTranslation {
             Button {
                 settings.hapticFeedback()
-                showEnglishComparisonSheet = true
+                requestSheet(.secondary(.translations))
             } label: {
                 Label("Translation Comparison", systemImage: "character.book.closed")
             }
@@ -1694,8 +1571,7 @@ struct AyahRow: View, Equatable {
                 if !isBookmarked {
                     settings.ensureBookmarkExists(surah: surah.id, ayah: ayah.id)
                 }
-                draftNote = currentNote
-                showingNoteSheet = true
+                requestSheet(.secondary(.note))
             } label: {
                 Label(currentNote.isEmpty ? "Add Note" : "Edit Note", systemImage: "note.text")
             }
@@ -1714,7 +1590,7 @@ struct AyahRow: View, Equatable {
             if canShowTafsir {
                 Button {
                     settings.hapticFeedback()
-                    showTafsirSheet = true
+                    requestSheet(.secondary(.tafsir))
                 } label: {
                     Label("See Tafsir", systemImage: "text.book.closed")
                 }
@@ -1748,7 +1624,7 @@ struct AyahRow: View, Equatable {
 
             Button {
                 settings.hapticFeedback()
-                showSelectTextSheet = true
+                requestSheet(.secondary(.selectText))
             } label: {
                 Label("Select Text", systemImage: "highlighter")
             }
@@ -1762,7 +1638,7 @@ struct AyahRow: View, Equatable {
 
             Button {
                 settings.hapticFeedback()
-                showingAyahSheet = true
+                requestSheet(.secondary(.share))
             } label: {
                 Label("Share Ayah", systemImage: "square.and.arrow.up")
             }

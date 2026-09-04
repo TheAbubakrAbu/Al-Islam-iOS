@@ -1030,7 +1030,7 @@ struct AskAIChatView: View {
                 .padding(.horizontal, 16)
                 .padding(.top, 12)
             }
-            .scrollDismissesKeyboard(.interactively)
+            .scrollDismissesKeyboard(.immediately)
             // A deliberate drag means the reader is reading: stop pinning the bottom until they
             // reach it again (the sentinel's onAppear) or a new turn starts.
             .simultaneousGesture(DragGesture(minimumDistance: 12).onChanged { _ in followsStream = false })

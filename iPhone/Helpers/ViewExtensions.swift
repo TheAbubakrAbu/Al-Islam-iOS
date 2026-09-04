@@ -1,4 +1,5 @@
 import SwiftUI
+import Combine
 
 // MARK: - App-wide toggle style
 
@@ -14,6 +15,199 @@ struct PaddedSwitchToggleStyle: ToggleStyle {
         Toggle(isOn: configuration.$isOn) { configuration.label }
             .toggleStyle(.switch)
             .padding(.vertical, 2)
+    }
+}
+
+// MARK: - Appearance environment (one snapshot, no per-row Settings subscriptions)
+
+/// Everything the shared chrome used to read straight off `Settings`, snapshotted once at the app root.
+///
+/// `ConditionalGlassEffect`, `ThemedListRowBackground`, `ConditionalListStyle`, `AccentGlowOverlay`,
+/// `AccentWashedBackground`, `AccentIconChip` and `SectionPillHeader` were each an `@ObservedObject`
+/// subscriber to the whole `Settings` object - so a 114-row list registered 114 row-background
+/// subscribers plus a glass subscriber per pill, and EVERY Settings publish (a page turn, a GPS fix, a
+/// countdown tick) re-ran all of them. As an Equatable environment value it flows down once from the
+/// root and only views that read a field that actually changed re-evaluate.
+///
+/// The performance flags ride along so a Low Power Mode flip re-evaluates the same views the same way.
+struct AppearanceEnvironment: Equatable {
+    var accent: Color
+    var colorScheme: ColorScheme?
+    var defaultView: Bool
+    var hasCustomTheme: Bool
+    /// `Settings.themeBackgroundColor`, nil on Light/Dark/System.
+    var themeBackground: Color?
+    /// `Settings.themeRowBackgroundColor`, nil on Light/Dark/System (so a single `if let` gates the row paint).
+    var themeRowBackground: Color?
+    /// `Settings.themeGlassTint`, nil for untinted system glass.
+    var glassTint: Color?
+    var showAccentGlow: Bool
+    var alIslamGlow: Bool
+    /// `PerformanceProfile.shouldFlattenMaterials`: flat fills on the pre-Liquid-Glass fallback.
+    var flattenMaterials: Bool
+    /// `PerformanceProfile.shouldDropShadows`: `.softShadow` becomes a no-op.
+    var dropShadows: Bool
+    /// `PerformanceProfile.shouldReduceAnimations`: decorative animation off.
+    var reduceAnimations: Bool
+    /// `PerformanceProfile.tier == .reduced` (Low Power Mode, thermal throttling, a 3 GB-class device):
+    /// the gate for work that is neither a material nor a shadow nor an animation, such as the
+    /// Adhan tab's magnetometer, GPS burst and sky-clock cadence.
+    var isReducedTier: Bool
+    /// Whether the system's Liquid Glass is in use: iOS/watchOS 26 with the Classic Look off and, when
+    /// its Low Power Mode rule is on, Low Power Mode off. False on every earlier system, so a site can
+    /// read this alone. `ConditionalGlassEffect`, `adaptiveSafeArea`, the search field's backing and
+    /// the glass-only decorations key on it.
+    var liquidGlass: Bool
+
+    /// The resolved `liquidGlass` flag for a Settings/profile pair.
+    static func liquidGlass(_ settings: Settings, profile: PerformanceProfile) -> Bool {
+        guard #available(iOS 26.0, watchOS 26.0, *) else { return false }
+        #if DEBUG
+        // "-classicLook": force the Classic Look on the simulator without touching the stored toggle.
+        if ProcessInfo.processInfo.arguments.contains("-classicLook") { return false }
+        #endif
+        if settings.classicLook { return false }
+        if settings.classicLookInLowPower && profile.isLowPowerMode { return false }
+        return true
+    }
+
+    /// The live flag, for the few static helpers with no environment (`SafeAreaInsetVStackSpacing`).
+    static var liveLiquidGlass: Bool {
+        liquidGlass(Settings.shared, profile: PerformanceProfile.shared)
+    }
+
+    static func snapshot(_ settings: Settings, profile: PerformanceProfile) -> AppearanceEnvironment {
+        let custom = settings.hasCustomThemeColors
+        return AppearanceEnvironment(
+            accent: settings.accentColor.color,
+            colorScheme: settings.colorScheme,
+            defaultView: settings.defaultView,
+            hasCustomTheme: custom,
+            themeBackground: custom ? settings.themeBackgroundColor : nil,
+            themeRowBackground: custom ? settings.themeRowBackgroundColor : nil,
+            glassTint: settings.themeGlassTint,
+            showAccentGlow: settings.showAccentGlow,
+            alIslamGlow: settings.alIslamGlow,
+            flattenMaterials: profile.shouldFlattenMaterials,
+            dropShadows: profile.shouldDropShadows,
+            reduceAnimations: profile.shouldReduceAnimations,
+            isReducedTier: profile.tier == .reduced,
+            liquidGlass: liquidGlass(settings, profile: profile)
+        )
+    }
+}
+
+struct AppearanceEnvironmentKey: EnvironmentKey {
+    /// A one-time snapshot, for trees no root injects into (previews). Every real root applies
+    /// `.appearanceEnvironment()`, which keeps the value live.
+    static let defaultValue = AppearanceEnvironment.snapshot(Settings.shared, profile: PerformanceProfile.shared)
+}
+
+extension EnvironmentValues {
+    var appearance: AppearanceEnvironment {
+        get { self[AppearanceEnvironmentKey.self] }
+        set { self[AppearanceEnvironmentKey.self] = newValue }
+    }
+}
+
+/// The app root's view of `Settings`: the appearance fields above plus `firstLaunch`, re-snapshotted after
+/// each Settings publish and republished ONLY when one of them changed.
+///
+/// The root used to hold `Settings` as an `@StateObject`, so every one of its ~236 publishing fields
+/// re-evaluated the window, the tab host and all five mounted tab roots. This object turns that into a
+/// publish on the rare change that actually reaches the root (an accent, a theme, a color scheme, the
+/// first-launch flag). The refresh is coalesced to one per run-loop turn: `objectWillChange` fires
+/// before the write, so the snapshot has to be taken on the next tick anyway.
+final class RootAppearance: ObservableObject {
+    static let shared = RootAppearance()
+
+    @Published private(set) var environment: AppearanceEnvironment
+    @Published private(set) var firstLaunch: Bool
+
+    private var cancellable: AnyCancellable?
+    private var refreshScheduled = false
+
+    private init() {
+        let settings = Settings.shared
+        environment = AppearanceEnvironment.snapshot(settings, profile: PerformanceProfile.shared)
+        firstLaunch = settings.firstLaunch
+        cancellable = settings.objectWillChange.sink { [weak self] _ in self?.scheduleRefresh() }
+    }
+
+    private func scheduleRefresh() {
+        guard !refreshScheduled else { return }
+        refreshScheduled = true
+        DispatchQueue.main.async { [weak self] in
+            guard let self else { return }
+            self.refreshScheduled = false
+            self.refresh()
+        }
+    }
+
+    /// Re-read the inputs and publish what changed. Also called by `AppearanceEnvironmentInjector` on a
+    /// performance-profile publish, so a Low Power Mode flip lands in the same snapshot.
+    func refresh() {
+        let settings = Settings.shared
+        let next = AppearanceEnvironment.snapshot(settings, profile: PerformanceProfile.shared)
+        if next != environment { environment = next }
+        if settings.firstLaunch != firstLaunch { firstLaunch = settings.firstLaunch }
+    }
+}
+
+/// Applied once at each app root (and at any secondary `UIHostingController` root, like the achievement
+/// banner window): injects the live `AppearanceEnvironment` and asserts the accent + color scheme from it.
+struct AppearanceEnvironmentInjector: ViewModifier {
+    @ObservedObject private var root = RootAppearance.shared
+    @ObservedObject private var profile = PerformanceProfile.shared
+
+    func body(content: Content) -> some View {
+        var environment = root.environment
+        // Folded here rather than through `RootAppearance.refresh()` so a profile publish and its
+        // consequences land in the SAME body pass, with no intermediate frame on the old flags.
+        environment.flattenMaterials = profile.shouldFlattenMaterials
+        environment.dropShadows = profile.shouldDropShadows
+        environment.reduceAnimations = profile.shouldReduceAnimations
+        environment.isReducedTier = profile.tier == .reduced
+        environment.liquidGlass = AppearanceEnvironment.liquidGlass(Settings.shared, profile: profile)
+        return content
+            .environment(\.appearance, environment)
+            .accentColor(environment.accent)
+            .tint(environment.accent)
+            .preferredColorScheme(environment.colorScheme)
+    }
+}
+
+/// A drop shadow that disappears on the reduced performance tier. Shadows are offscreen render passes,
+/// and the Adhan tab alone stacks a dozen of them on material layers; on A11-A13 hardware under Low
+/// Power Mode that is the difference between a smooth and a stuttering scroll. Same signature and
+/// default color as `View.shadow`, so a site is a one-word rename.
+struct SoftShadow: ViewModifier {
+    @Environment(\.appearance) private var appearance
+
+    let color: Color
+    let radius: CGFloat
+    let x: CGFloat
+    let y: CGFloat
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if appearance.dropShadows {
+            content
+        } else {
+            content.shadow(color: color, radius: radius, x: x, y: y)
+        }
+    }
+}
+
+extension View {
+    /// See `AppearanceEnvironmentInjector`.
+    func appearanceEnvironment() -> some View {
+        modifier(AppearanceEnvironmentInjector())
+    }
+
+    /// `.shadow(...)` that the reduced performance tier skips. See `SoftShadow`.
+    func softShadow(color: Color = Color(.sRGBLinear, white: 0, opacity: 0.33), radius: CGFloat, x: CGFloat = 0, y: CGFloat = 0) -> some View {
+        modifier(SoftShadow(color: color, radius: radius, x: x, y: y))
     }
 }
 
@@ -186,24 +380,31 @@ extension View {
     }
 }
 
-extension View {
+/// `safeAreaBar` (the scroll-edge effect under a floating glass bar) on Liquid Glass systems, a plain
+/// `safeAreaInset` everywhere else, including the Classic Look on iOS 26.
+struct AdaptiveSafeArea<InsetContent: View>: ViewModifier {
+    @Environment(\.appearance) private var appearance
+
+    let edge: VerticalEdge
+    let inset: InsetContent
+
     @ViewBuilder
-    func adaptiveSafeArea<InsetContent: View>(edge: VerticalEdge, @ViewBuilder content: () -> InsetContent) -> some View {
+    func body(content: Content) -> some View {
         #if os(iOS)
-        if #available(iOS 26.0, *) {
-            self.safeAreaBar(edge: edge) {
-                content()
-            }
+        if #available(iOS 26.0, *), appearance.liquidGlass {
+            content.safeAreaBar(edge: edge) { inset }
         } else {
-            self.safeAreaInset(edge: edge) {
-                content()
-            }
+            content.safeAreaInset(edge: edge) { inset }
         }
         #else
-        self.safeAreaInset(edge: edge) {
-            content()
-        }
+        content.safeAreaInset(edge: edge) { inset }
         #endif
+    }
+}
+
+extension View {
+    func adaptiveSafeArea<InsetContent: View>(edge: VerticalEdge, @ViewBuilder content: () -> InsetContent) -> some View {
+        modifier(AdaptiveSafeArea(edge: edge, inset: content()))
     }
 
     func applyConditionalListStyle(disableNowPlayingInset: Bool = false, topContentMargin: CGFloat = 0) -> some View {
@@ -220,17 +421,12 @@ extension View {
     /// of it, which is what actually allows a partial highlight inside a List - see the note there
     /// for why the modifier alone can't. SwiftUI doesn't apply text selection to text inside
     /// controls, so rows that are navigation links or buttons keep behaving as taps.
-    @ViewBuilder
+    ///
+    /// It also carries the search's landing: a page opened from an article search result arrives with
+    /// `articleScrollTarget` set to a section heading, and the list scrolls to that `ArticleHeader`
+    /// as it appears (see IslamSearch.swift).
     func selectableArticleList(disableNowPlayingInset: Bool = false, topContentMargin: CGFloat = 0) -> some View {
-        let styled = applyConditionalListStyle(
-            disableNowPlayingInset: disableNowPlayingInset,
-            topContentMargin: topContentMargin
-        )
-        #if os(iOS)
-        styled.textSelection(.enabled)
-        #else
-        styled
-        #endif
+        modifier(SelectableArticleList(disableNowPlayingInset: disableNowPlayingInset, topContentMargin: topContentMargin))
     }
 
     /// Tints list rows for the Sepia / Gray reading themes. Apply this to the rows/sections INSIDE a `List`
@@ -283,13 +479,11 @@ extension View {
     }
 }
 
-/// Vertical spacing between views inside `safeAreaInset` stacks: iOS 26+ uses tighter 8pt; older systems use 16pt.
+/// Vertical spacing between views inside `safeAreaInset` stacks: 8pt under Liquid Glass, 12pt on
+/// older systems and on the Classic Look.
 enum SafeAreaInsetVStackSpacing {
     static var standard: CGFloat {
-        if #available(iOS 26.0, watchOS 26.0, *) {
-            return 8
-        }
-        return 12
+        AppearanceEnvironment.liveLiquidGlass ? 8 : 12
     }
 }
 
@@ -339,7 +533,7 @@ final class PlaybackVisibility: ObservableObject {
 /// pair for the Al-Islam glow, the app icon's palette split across the top corners. Everything
 /// collapses to invisible when the glow is off or a custom reading theme owns the background.
 struct AccentGlowOverlay: View {
-    @ObservedObject private var settings = Settings.shared
+    @Environment(\.appearance) private var appearance
     @Environment(\.colorScheme) private var systemColorScheme
 
     /// How far down the wash reaches before it is fully faded. The default covers the navigation
@@ -354,13 +548,26 @@ struct AccentGlowOverlay: View {
     /// yellow half especially, yellow-on-white being the weakest pairing in the brand palette. 0.26
     /// against dark's 0.16 reads as the same glow in both; measured side by side, not guessed.
     private var resolvedStrength: Double {
-        guard !settings.hasCustomThemeColors, settings.showAccentGlow else { return 0 }
-        return (settings.colorScheme ?? systemColorScheme) == .dark ? 0.16 : 0.26
+        guard !appearance.hasCustomTheme, appearance.showAccentGlow else { return 0 }
+        return (appearance.colorScheme ?? systemColorScheme) == .dark ? 0.16 : 0.26
     }
 
+    @ViewBuilder
     var body: some View {
         let strength = resolvedStrength
-        let brand = settings.alIslamGlow
+        let brand = appearance.alIslamGlow
+
+        // Nothing to draw: skip the GeometryReader and the three zero-opacity gradients rather than
+        // composing (and compositing) invisible layers behind ~90 screens. The wash lives inside a
+        // `.background`, so swapping this subtree never touches the List it sits behind.
+        if strength == 0 {
+            Color.clear.allowsHitTesting(false)
+        } else {
+            glow(strength: strength, brand: brand)
+        }
+    }
+
+    private func glow(strength: Double, brand: Bool) -> some View {
 
         // Top-only, by explicit choice (a bottom band was tried and rolled back): the wash lights the
         // navigation-bar edge and fades before mid-screen, leaving the bottom bars on plain background.
@@ -375,7 +582,7 @@ struct AccentGlowOverlay: View {
 
             ZStack {
                 RadialGradient(
-                    colors: [settings.accentColor.color.opacity(brand ? 0 : strength), .clear],
+                    colors: [appearance.accent.opacity(brand ? 0 : strength), .clear],
                     center: .top,
                     startRadius: 8,
                     endRadius: radius
@@ -418,13 +625,13 @@ struct AccentGlowOverlay: View {
 /// is off or a custom reading theme owns the background, and theme/accent flips never recreate the
 /// List they sit behind.
 struct WatchTopGlowOverlay: View {
-    @ObservedObject private var settings = Settings.shared
+    @Environment(\.appearance) private var appearance
 
     var body: some View {
         // The watch renders on pure black OLED, so the wash can sit a touch brighter than the
         // iPhone's dark-mode 0.16 and still stay quiet.
-        let strength: Double = (settings.hasCustomThemeColors || !settings.showAccentGlow) ? 0 : 0.20
-        let brand = settings.alIslamGlow
+        let strength: Double = (appearance.hasCustomTheme || !appearance.showAccentGlow) ? 0 : 0.20
+        let brand = appearance.alIslamGlow
 
         // Same width-tracking ellipse as the iPhone overlay: the radius follows the screen width
         // (198pt on a 45mm, wider on Ultra) so the wash spans the whole top edge, then compresses
@@ -435,7 +642,7 @@ struct WatchTopGlowOverlay: View {
 
             ZStack {
                 RadialGradient(
-                    colors: [settings.accentColor.color.opacity(brand ? 0 : strength), .clear],
+                    colors: [appearance.accent.opacity(brand ? 0 : strength), .clear],
                     center: .top,
                     startRadius: 4,
                     endRadius: radius
@@ -476,7 +683,7 @@ struct WatchTopGlowOverlay: View {
 /// and don't inherit the root's `preferredColorScheme` - without this, a forced-Dark theme would
 /// paint a black wash behind light-mode sheet content.
 struct AccentWashedBackground: ViewModifier {
-    @ObservedObject private var settings = Settings.shared
+    @Environment(\.appearance) private var appearance
     @Environment(\.colorScheme) private var systemColorScheme
 
     func body(content: Content) -> some View {
@@ -490,9 +697,9 @@ struct AccentWashedBackground: ViewModifier {
                 }
                 .ignoresSafeArea()
             )
-            .accentColor(settings.accentColor.color)
-            .tint(settings.accentColor.color)
-            .preferredColorScheme(settings.colorScheme)
+            .accentColor(appearance.accent)
+            .tint(appearance.accent)
+            .preferredColorScheme(appearance.colorScheme)
         #elseif os(watchOS)
         // The watch does NOT honor the reading themes (user rule: don't send background/theme colors
         // to the watch) - a themed ground painted the whole watch gray and its flat row color erased
@@ -513,13 +720,13 @@ struct AccentWashedBackground: ViewModifier {
     /// The list background every theme resolves to - identical to what `ConditionalListStyle` painted
     /// historically (`resolvedListBackground`), kept in ONE place now.
     private var resolvedBackground: Color {
-        if settings.hasCustomThemeColors {
-            return settings.themeBackgroundColor ?? Color(.systemGroupedBackground)
+        if appearance.hasCustomTheme {
+            return appearance.themeBackground ?? Color(.systemGroupedBackground)
         }
-        if settings.defaultView {
+        if appearance.defaultView {
             return Color(.systemGroupedBackground)
         }
-        return (settings.colorScheme ?? systemColorScheme) == .dark ? .black : .white
+        return (appearance.colorScheme ?? systemColorScheme) == .dark ? .black : .white
     }
     #endif
 }
@@ -528,10 +735,10 @@ struct AccentWashedBackground: ViewModifier {
 /// which draw their own `AccentGlowOverlay` but historically fell through to the bare system window
 /// background, so Sepia/Gray/Custom never reached them. No-op on Light/Dark/System.
 struct ThemedReaderBackground: ViewModifier {
-    @ObservedObject private var settings = Settings.shared
+    @Environment(\.appearance) private var appearance
 
     func body(content: Content) -> some View {
-        content.background((settings.themeBackgroundColor ?? Color.clear).ignoresSafeArea())
+        content.background((appearance.themeBackground ?? Color.clear).ignoresSafeArea())
     }
 }
 
@@ -570,7 +777,7 @@ struct ReservedLineLimit: ViewModifier {
 }
 
 struct ConditionalListStyle: ViewModifier {
-    @ObservedObject private var settings = Settings.shared
+    @Environment(\.appearance) private var appearance
     @ObservedObject private var playback = PlaybackVisibility.shared
 
     let disableNowPlayingInset: Bool
@@ -589,13 +796,13 @@ struct ConditionalListStyle: ViewModifier {
             watchStyledContent(content)
             #endif
         }
-        .accentColor(settings.accentColor.color)
-        .tint(settings.accentColor.color)
+        .accentColor(appearance.accent)
+        .tint(appearance.accent)
         .dismissKeyboardOnScroll()
         .topContentMargin(topContentMargin)
         // Force the theme's light/dark base here (not just at the app root) so sheets - which are their own
         // presentation contexts and don't inherit the root's preferredColorScheme - also adopt the theme.
-        .preferredColorScheme(settings.colorScheme)
+        .preferredColorScheme(appearance.colorScheme)
         #if os(iOS)
         .safeAreaInset(edge: .bottom) {
             if !disableNowPlayingInset && shouldShowNowPlaying, let bar = playback.barContent {
@@ -619,7 +826,7 @@ struct ConditionalListStyle: ViewModifier {
     // itself lives in `AccentWashedBackground` - one implementation for lists, sheets, and the watch.)
     @ViewBuilder
     private func styledContent(_ content: Content) -> some View {
-        let base = settings.defaultView ? AnyView(content) : AnyView(content.listStyle(.plain))
+        let base = appearance.defaultView ? AnyView(content) : AnyView(content.listStyle(.plain))
 
         if #available(iOS 16.0, *) {
             // Always hidden (not just for custom themes): the wash reproduces every theme's system
@@ -654,10 +861,45 @@ struct ConditionalListStyle: ViewModifier {
     #endif
 }
 
+/// `selectableArticleList`'s body: the list style, text selection on iOS, and the scroll to a search
+/// result's section. The scroll waits a beat for the pushed page to lay its rows out; scrolling in the
+/// same frame as `onAppear` lands on nothing.
+private struct SelectableArticleList: ViewModifier {
+    @Environment(\.articleScrollTarget) private var scrollTarget
+
+    let disableNowPlayingInset: Bool
+    let topContentMargin: CGFloat
+
+    func body(content: Content) -> some View {
+        ScrollViewReader { proxy in
+            styled(content)
+                .onAppear {
+                    guard let scrollTarget, !scrollTarget.isEmpty else { return }
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) {
+                        withAnimation { proxy.scrollTo(ArticleHeader.anchorID(scrollTarget), anchor: .top) }
+                    }
+                }
+        }
+    }
+
+    @ViewBuilder
+    private func styled(_ content: Content) -> some View {
+        let styled = content.applyConditionalListStyle(
+            disableNowPlayingInset: disableNowPlayingInset,
+            topContentMargin: topContentMargin
+        )
+        #if os(iOS)
+        styled.textSelection(.enabled)
+        #else
+        styled
+        #endif
+    }
+}
+
 /// Paints the per-row background for the Sepia / Gray reading themes. Must be applied to rows/sections inside
 /// a `List` so `.listRowBackground` actually reaches the cells. No-op for Light/Dark/System (system colors).
 struct ThemedListRowBackground: ViewModifier {
-    @ObservedObject private var settings = Settings.shared
+    @Environment(\.appearance) private var appearance
 
     @ViewBuilder
     func body(content: Content) -> some View {
@@ -665,7 +907,7 @@ struct ThemedListRowBackground: ViewModifier {
         // section cards (rows read as square, "cut off") - and the reading themes are phone-only
         // looks anyway (they no longer sync to the watch).
         #if os(iOS)
-        if settings.hasCustomThemeColors, let rowColor = settings.themeRowBackgroundColor {
+        if let rowColor = appearance.themeRowBackground {
             content.listRowBackground(rowColor)
         } else {
             content
@@ -774,6 +1016,8 @@ struct IslamArabicFontPicker: View {
 /// The small numeric badge the Quran tab's section headers wear - caption-semibold, monospaced digits,
 /// on glass. One view so every counted section in the app shows the identical pill.
 struct CountPill: View {
+    @Environment(\.appearance) private var appearance
+
     let count: Int
     /// "5+" style - set when the count is a floor from an early-exited search, not an exact total.
     var overflow: Bool = false
@@ -782,7 +1026,7 @@ struct CountPill: View {
         Text("\(count)\(overflow ? "+" : "")")
             .font(.caption.weight(.semibold))
             .monospacedDigit()
-            .foregroundStyle(Settings.shared.accentColor.color)
+            .foregroundStyle(appearance.accent)
             .padding(.horizontal, 8)
             .padding(.vertical, 4)
             .conditionalGlassEffect()
@@ -796,14 +1040,14 @@ struct CountPill: View {
 /// A small accent-gradient icon chip - the iOS Settings app's row-icon grammar, tinted the app's
 /// way. Shared by the Settings hub, settings search results, and the Islam tab's resource rows.
 struct AccentIconChip: View {
-    @ObservedObject private var settings = Settings.shared
+    @Environment(\.appearance) private var appearance
 
     let systemImage: String
     var tint: Color? = nil
     var size: CGFloat = 29
 
     var body: some View {
-        let tint = tint ?? settings.accentColor.color
+        let tint = tint ?? appearance.accent
         Image(systemName: systemImage)
             // Scales with the chip (~footnote at the default 29pt), so mini chips stay balanced.
             .font(.system(size: size * 0.45, weight: .semibold))
@@ -823,7 +1067,7 @@ struct AccentIconChip: View {
 }
 
 struct SectionPillHeader: View {
-    @ObservedObject private var settings = Settings.shared
+    @Environment(\.appearance) private var appearance
 
     let title: String
     let count: Int
@@ -845,12 +1089,12 @@ struct SectionPillHeader: View {
         HStack(spacing: 8) {
             if let icon {
                 Image(systemName: icon)
-                    .foregroundStyle(settings.accentColor.color)
+                    .foregroundStyle(appearance.accent)
             }
 
             if accentTitle {
                 Text(title)
-                    .foregroundStyle(settings.accentColor.color)
+                    .foregroundStyle(appearance.accent)
             } else {
                 Text(title)
             }
@@ -868,11 +1112,11 @@ struct SectionPillHeader: View {
                 // and as wide as it is tall.
                 Image(systemName: "shuffle")
                     .font(.caption2.weight(.semibold))
-                    .foregroundColor(settings.accentColor.color)
+                    .foregroundColor(appearance.accent)
                     .frame(width: Self.pillHeight, height: Self.pillHeight)
                     .conditionalGlassEffect(circle: true)
                     .onTapGesture {
-                        settings.hapticFeedback()
+                        Settings.shared.hapticFeedback()
                         onShuffle()
                     }
                     .accessibilityLabel("Random \(title.lowercased())")
@@ -880,11 +1124,11 @@ struct SectionPillHeader: View {
 
             if let isExpanded {
                 Image(systemName: isExpanded.wrappedValue ? "chevron.down.circle" : "chevron.up.circle")
-                    .foregroundColor(settings.accentColor.color)
+                    .foregroundColor(appearance.accent)
                     .padding(4)
                     .conditionalGlassEffect()
                     .onTapGesture {
-                        settings.hapticFeedback()
+                        Settings.shared.hapticFeedback()
                         withAnimation { isExpanded.wrappedValue.toggle() }
                     }
                     .accessibilityLabel(isExpanded.wrappedValue ? "Collapse \(title.lowercased())" : "Expand \(title.lowercased())")

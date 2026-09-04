@@ -1,121 +1,82 @@
 import SwiftUI
 
+/// The Pillars & Beliefs index. Its rows come from `IslamArticleCatalog` (the one list of articles the
+/// search also reads), grouped into the sections the screen has always shown. Searching swaps the
+/// index for two kinds of match: ARTICLES (row titles) and IN THE ARTICLES (a section of prose,
+/// labelled with the article and the heading it sits under, which opens scrolled to that heading).
 struct PillarsView: View {
     @ObservedObject var settings = Settings.shared
+    #if os(iOS)
+    @State private var searchText = ""
+    /// Apple Music-style bar minimization: true while scrolling down.
+    @State private var barsCollapsed = false
+    /// The index row a result asked to scroll to ("Scroll To Article"), consumed once the search clears.
+    @State private var scrollTarget: String?
+    @StateObject private var search = IslamArticleSearchModel()
+    #endif
 
     var body: some View {
-        List {
-            #if DEBUG
-            DebugArticleLink(articles: [
-                "god": AnyView(GodPillarView()), "islam": AnyView(IslamPillarView()), "muslim": AnyView(MuslimPillarView()),
-                "allah": AnyView(AllahPillarView()), "quran": AnyView(QuranPillarView()), "prophet": AnyView(ProphetPillarView()),
-                "sunnah": AnyView(SunnahPillarView()), "hadith": AnyView(HadithPillarView()),
-                "shahadah": AnyView(ShahadahView()), "salah": AnyView(SalahView()), "sawm": AnyView(SawmView()),
-                "zakah": AnyView(ZakahView()), "hajj": AnyView(HajjView()),
-                "belief-allah": AnyView(GodView()), "angels": AnyView(AngelsView()), "books": AnyView(BooksView()),
-                "prophets": AnyView(ProphetsView()), "lastday": AnyView(DayView()), "qadar": AnyView(QadarView()),
-                "haram": AnyView(HaramView()), "nabawi": AnyView(NabawiView()), "aqsa": AnyView(AqsaView()),
-                "compile": AnyView(CompileView()), "tafsir": AnyView(TafsirView()), "ahruf": AnyView(AhrufView()),
-                "qiraat": AnyView(QiraatView()), "hijri": AnyView(HijriCalendarView()),
-                "seerah": AnyView(SeerahView()), "farewell": AnyView(FarewellView()), "ahlulbayt": AnyView(AhlulBaytView()),
-                "wives": AnyView(WivesView()), "sahabah": AnyView(SahabahView()), "caliphates": AnyView(CaliphatesView()),
-                "madhab": AnyView(MadhabView()), "ahlussunnah": AnyView(AhlusSunnahView()), "manhaj": AnyView(FiqhAqeedahManhajView()),
-                "aqeedah": AnyView(AqeedahMadhabView()),
-                "sahabah-scholars": AnyView(SahabahScholarsView()), "salaf": AnyView(SalafScholarsView()), "tabari": AnyView(TabariView()),
-                "ibntaymiyyah": AnyView(IbnTaymiyyahView()), "ibnqayyim": AnyView(IbnQayyimView()), "dhahabi": AnyView(DhahabiView()),
-                "ibnkathir": AnyView(IbnKathirView()), "later": AnyView(LaterScholarsView()),
-                "tawhid": AnyView(TawhidView()), "salafiyyah": AnyView(SalafiyyahView()), "quransunnah": AnyView(QuranSunnahView()), "shirk": AnyView(ShirkView()),
-                "kufr": AnyView(KufrView()), "bidah": AnyView(BidahView()), "mawlid": AnyView(MawlidView()),
-                "sufism": AnyView(SufismAnswerView()), "shia": AnyView(ShiaAnswerView()), "christianity": AnyView(ChristianityAnswerView()),
-                "judaism": AnyView(JudaismAnswerView()), "hinduism": AnyView(HinduismAnswerView()), "paganism": AnyView(PaganismAnswerView()),
-                "buddhism": AnyView(BuddhismAnswerView()), "atheism": AnyView(AtheismAnswerView()),
-            ])
-            #endif
+        #if os(iOS)
+        let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        ScrollViewReader { proxy in
+            List {
+                #if DEBUG
+                DebugArticleLink(articles: IslamArticleCatalog.debugArticles(for: .pillars))
+                #endif
 
-            Group {
-                Section(header: Text("THE BASICS")) {
-                    NavigationLink(destination: LazyDestination { GodPillarView() }) {
-                        Text("Does God Exist?")
-                            .foregroundColor(settings.accentColor.color)
-                            .font(.headline)
-                    }
-                    .padding(.vertical, 4)
+                Group {
+                    if query.isEmpty {
+                        IslamArticleIndexSections(groups: IslamArticleCatalog.pillarsGroups)
+                    } else {
+                        AskAISearchSection(query: query)
 
-                    NavigationLink(destination: LazyDestination { IslamPillarView() }) {
-                        Text("What is Islam?")
-                            .foregroundColor(settings.accentColor.color)
-                            .font(.headline)
+                        IslamArticleSearchSections(
+                            query: query,
+                            homes: [.pillars],
+                            contentHits: search.contentHits,
+                            isSearching: search.isSearching
+                        ) { entry in
+                            withAnimation { searchText = "" }
+                            scrollTarget = entry.listID
+                        }
                     }
-                    .padding(.vertical, 4)
-
-                    NavigationLink(destination: LazyDestination { MuslimPillarView() }) {
-                        Text("What is a Muslim?")
-                            .foregroundColor(settings.accentColor.color)
-                            .font(.headline)
-                    }
-                    .padding(.vertical, 4)
-
-                    NavigationLink(destination: LazyDestination { AllahPillarView() }) {
-                        Text("Who is Allah ﷻ‎?")
-                            .foregroundColor(settings.accentColor.color)
-                            .font(.headline)
-                    }
-                    .padding(.vertical, 4)
-
-                    NavigationLink(destination: LazyDestination { QuranPillarView() }) {
-                        Text("What is the Quran?")
-                            .foregroundColor(settings.accentColor.color)
-                            .font(.headline)
-                    }
-                    .padding(.vertical, 4)
-
-                    NavigationLink(destination: LazyDestination { ProphetPillarView() }) {
-                        Text("Who is Prophet Muhammad ﷺ?")
-                            .foregroundColor(settings.accentColor.color)
-                            .font(.headline)
-                    }
-                    .padding(.vertical, 4)
-
-                    NavigationLink(destination: LazyDestination { SunnahPillarView() }) {
-                        Text("What is the Sunnah?")
-                            .foregroundColor(settings.accentColor.color)
-                            .font(.headline)
-                    }
-                    .padding(.vertical, 4)
-
-                    NavigationLink(destination: LazyDestination { HadithPillarView() }) {
-                        Text("What are Hadiths?")
-                            .foregroundColor(settings.accentColor.color)
-                            .font(.headline)
-                    }
-                    .padding(.vertical, 4)
                 }
-
-                IslamicPillarsView()
-
-                ImanPillarsView()
-
-                MosquesView()
-
-                BeliefsQuranView()
-
-                BeliefsHistoricalView()
-
-                ScholarsSectionView()
-
-                SalafiyyahSectionView()
+                .themedListRowBackground()
             }
-            .themedListRowBackground()
+            .applyConditionalListStyle()
+            .islamArticleIndexSearch(searchText: $searchText, barsCollapsed: $barsCollapsed,
+                                     scrollTarget: scrollTarget, proxy: proxy)
+        }
+        .navigationTitle("Pillars & Beliefs")
+        .onAppear {
+            IslamArticleSearchModel.prewarm()
+            #if DEBUG
+            if let seeded = IslamSearchDebug.launchQuery("-pillarsSearch"), searchText.isEmpty {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { searchText = seeded }
+            }
+            #endif
+        }
+        .onChange(of: searchText) { text in
+            search.update(query: text, homes: [.pillars])
+            if !text.isEmpty { scrollTarget = nil }
+        }
+        #else
+        List {
+            IslamArticleIndexSections(groups: IslamArticleCatalog.pillarsGroups)
+                .themedListRowBackground()
         }
         .applyConditionalListStyle()
         .navigationTitle("Pillars & Beliefs")
+        #endif
     }
 }
 
 #if DEBUG
 /// DEBUG launch argument `-pillarsArticle <key>` (and `-guidesArticle <key>` in the How-to guides): pushes
 /// one article as its list appears, the only headless route into these pages for screenshot checks.
-/// Renders nothing on its own: an invisible `NavigationLink` that is active from the first frame.
+/// `-articleSection <HEADING>` alongside it opens the article scrolled to that section, the way a
+/// search result does. Renders nothing on its own: an invisible `NavigationLink` that is active from
+/// the first frame.
 struct DebugArticleLink: View {
     let articles: [String: AnyView]
     var argument: String = "-pillarsArticle"
@@ -124,12 +85,16 @@ struct DebugArticleLink: View {
     private var requested: AnyView? {
         let arguments = ProcessInfo.processInfo.arguments
         guard let idx = arguments.firstIndex(of: argument), arguments.indices.contains(idx + 1) else { return nil }
-        return articles[arguments[idx + 1]]
+        guard let view = articles[arguments[idx + 1]] else { return nil }
+        if let sectionIdx = arguments.firstIndex(of: "-articleSection"), arguments.indices.contains(sectionIdx + 1) {
+            return AnyView(view.environment(\.articleScrollTarget, arguments[sectionIdx + 1]))
+        }
+        return view
     }
 
     var body: some View {
         if let requested {
-            NavigationLink(destination: requested, isActive: $isActive) { EmptyView() }
+            NavigationLink(destination: LazyDestination { requested }, isActive: $isActive) { EmptyView() }
                 .hidden()
                 .frame(height: 0)
                 .listRowInsets(EdgeInsets())
@@ -189,11 +154,17 @@ struct ScriptureQuote: View {
                     .multilineTextAlignment(.trailing)
                     .frame(maxWidth: .infinity, alignment: .trailing)
                     .foregroundColor(accent)
+                    // The AyahRow rule: a long Arabic line must WRAP, never clamp to "…". Inside a List
+                    // row the text is otherwise free to take a single-line height and truncate.
+                    .lineLimit(nil)
+                    .fixedSize(horizontal: false, vertical: true)
             }
 
             Text(text)
                 .font(.title3)
                 .foregroundColor(accent)
+                .lineLimit(nil)
+                .fixedSize(horizontal: false, vertical: true)
         }
         .padding(.vertical, 2)
         #if os(iOS)

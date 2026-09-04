@@ -20,9 +20,12 @@ struct GlanceCard: View {
     ]
 
     var body: some View {
+        let _ = RenderCounter.hit("GlanceCard")
+        let accent = settings.accentColor.color
         LazyVGrid(columns: columns, alignment: .leading, spacing: 10) {
             ForEach(tiles) { tile in
-                GlanceTile(tile: tile)
+                GlanceTile(tile: tile, accent: accent)
+                    .equatable()
             }
         }
         .padding(.vertical, 2)
@@ -162,7 +165,8 @@ struct GlanceCard: View {
     }
 
     private var moonSummary: String {
-        let phase = MoonPhase.on(Date())
+        // The hour-quantized phase shares the sky card's memo entry instead of evicting it.
+        let phase = MoonPhase.onCurrentHour()
         return "\(phase.name)\n\(phase.illuminationPercent)% illuminated"
     }
 
@@ -281,7 +285,7 @@ struct GlanceCard: View {
     }
 }
 
-struct GlanceItem: Identifiable {
+struct GlanceItem: Identifiable, Equatable {
     let icon: String
     let title: String
     let value: String
@@ -293,12 +297,16 @@ struct GlanceItem: Identifiable {
     var id: String { title }
 }
 
-private struct GlanceTile: View {
-    @ObservedObject private var settings = Settings.shared
-
+/// An Equatable leaf: eleven of these sit in the grid, and each used to observe the whole `Settings`
+/// object for the accent alone. The parent passes the accent as a plain value, so `==` folds every
+/// input the body reads (the tile's strings and the accent); the glass modifier reads its own
+/// environment and re-runs on a theme change by itself.
+private struct GlanceTile: View, Equatable {
     let tile: GlanceItem
+    let accent: Color
 
     var body: some View {
+        let _ = RenderCounter.hit("GlanceTile")
         // The value's FIRST line is the tile's headline; anything after is context. They used to
         // render identically, which made "14h 5m" and "-1 min vs yesterday" fight for attention.
         let lines = tile.value.split(separator: "\n", maxSplits: 1).map(String.init)
@@ -310,14 +318,14 @@ private struct GlanceTile: View {
                 Group {
                     if tile.showsMoonPhase {
                         // The REAL moon, exactly as lit tonight - the same glyph the sky card draws.
-                        let phase = MoonPhase.on(Date())
+                        let phase = MoonPhase.onCurrentHour()
                         MoonPhaseGlyph(illumination: phase.illumination, isWaxing: phase.isWaxing)
-                            .foregroundColor(settings.accentColor.color)
+                            .foregroundColor(accent)
                             .frame(width: 13, height: 13)
                     } else {
                         Image(systemName: tile.icon)
                             .font(.caption2)
-                            .foregroundStyle(settings.accentColor.color)
+                            .foregroundStyle(accent)
                             // The Qibla arrow points at the actual bearing.
                             .rotationEffect(.degrees(tile.iconRotation ?? 0))
                     }
@@ -349,7 +357,7 @@ private struct GlanceTile: View {
         .frame(maxWidth: .infinity, alignment: .topLeading)
         .padding(.horizontal, 12)
         .padding(.vertical, 9)
-        .conditionalGlassEffect(rectangle: true, useColor: 0.15)
+        .conditionalGlassEffect(rectangle: true, useColor: 0.15, flat: true)
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(tile.title). \(tile.value.replacingOccurrences(of: "\n", with: ", "))")
     }

@@ -1,33 +1,5 @@
 import SwiftUI
 
-/// The "Scholars of Ahl as-Sunnah" list section and its articles: the learned Companions, the Salaf and
-/// the imams, at-Tabari, Ibn Taymiyyah and his students (Ibn al-Qayyim, adh-Dhahabi, Ibn Kathir), and the
-/// later scholars of the Sunnah.
-struct ScholarsSectionView: View {
-    @ObservedObject var settings = Settings.shared
-
-    var body: some View {
-        Section(header: Text("SCHOLARS OF AHL AS-SUNNAH")) {
-            row("The Scholars of the Sahabah", destination: SahabahScholarsView())
-            row("The Salaf and the Imams", destination: SalafScholarsView())
-            row("Ibn Jarir at-Tabari", destination: TabariView())
-            row("Shaykh al-Islam Ibn Taymiyyah", destination: IbnTaymiyyahView())
-            row("Ibn al-Qayyim", destination: IbnQayyimView())
-            row("Adh-Dhahabi", destination: DhahabiView())
-            row("Ibn Kathir", destination: IbnKathirView())
-            row("Later Scholars of the Sunnah", destination: LaterScholarsView())
-        }
-    }
-
-    private func row<D: View>(_ title: String, destination: @autoclosure @escaping () -> D) -> some View {
-        NavigationLink(destination: LazyDestination { destination() }) {
-            Text(title)
-                .font(.subheadline)
-        }
-        .padding(.vertical, 4)
-    }
-}
-
 /// One scholar's entry: a bold name with the Arabic, a secondary line of dates and place, and a description.
 struct ScholarEntry: View {
     let name: String
@@ -57,12 +29,12 @@ struct SahabahScholarsView: View {
     var body: some View {
         List {
             Group {
-                Section(header: Text("SUMMARY")) {
+                Section(header: ArticleHeader("SUMMARY")) {
                     Text("In short: the first scholars of Islam were the Companions, taught directly by the Prophet. Every chain of knowledge in the religion passes through them.")
                         .font(.body)
                 }
 
-                Section(header: Text("WHY SCHOLARS MATTER")) {
+                Section(header: ArticleHeader("WHY SCHOLARS MATTER")) {
                     Text("Allah (Glorified and Exalted be He) raised the people of knowledge above others and made asking them an obligation on the one who does not know:")
                         .font(.body)
                     ScriptureQuote(text: "“Allah will raise those who have believed among you and those who were given knowledge, by degrees” (Quran 58:11).", arabic: "يَرۡفَعِ ٱللَّهُ ٱلَّذِينَ ءَامَنُواْ مِنكُمۡ وَٱلَّذِينَ أُوتُواْ ٱلۡعِلۡمَ دَرَجَٰتٖۚ")
@@ -75,23 +47,23 @@ struct SahabahScholarsView: View {
 
                     Text("The Prophet (peace be upon him) said:")
                         .font(.body)
-                    ScriptureQuote(text: "“Whomever Allah wishes good for, He gives him understanding of the religion” (Sahih al-Bukhari 71, Sahih Muslim 1037).", arabic: "مَنْ يُرِدِ اللَّهُ بِهِ خَيْرًا يُفَقِّهْهُ فِي الدِّينِ", dimmed: true)
+                    ScriptureQuote(text: "“If Allah wants to do good to a person, He makes him comprehend the religion” (Sahih al-Bukhari 71, Sahih Muslim 1037).", arabic: "مَنْ يُرِدِ اللَّهُ بِهِ خَيْرًا يُفَقِّهْهُ فِي الدِّينِ", dimmed: true)
 
-                    ScriptureQuote(text: "“Allah does not take away knowledge by snatching it from the people, but He takes it away by taking the scholars, until when no scholar remains the people take ignorant men as leaders, who are asked and give verdicts without knowledge, so they go astray and lead others astray” (Sahih al-Bukhari 100).", arabic: "إِنَّ اللَّهَ لاَ يَقْبِضُ الْعِلْمَ انْتِزَاعًا، يَنْتَزِعُهُ مِنَ الْعِبَادِ، وَلَكِنْ يَقْبِضُ الْعِلْمَ بِقَبْضِ الْعُلَمَاءِ، حَتَّى إِذَا لَمْ يُبْقِ عَالِمًا، اتَّخَذَ النَّاسُ رُءُوسًا جُهَّالاً فَسُئِلُوا، فَأَفْتَوْا بِغَيْرِ عِلْمٍ، فَضَلُّوا وَأَضَلُّوا", dimmed: true)
+                    ScriptureQuote(text: "“Allah does not take away the knowledge, by taking it away from (the hearts of) the people, but takes it away by the death of the religious learned men till when none of the (religious learned men) remains, people will take as their leaders ignorant persons who when consulted will give their verdict without knowledge. So they will go astray and will lead the people astray” (Sahih al-Bukhari 100).", arabic: "إِنَّ اللَّهَ لاَ يَقْبِضُ الْعِلْمَ انْتِزَاعًا، يَنْتَزِعُهُ مِنَ الْعِبَادِ، وَلَكِنْ يَقْبِضُ الْعِلْمَ بِقَبْضِ الْعُلَمَاءِ، حَتَّى إِذَا لَمْ يُبْقِ عَالِمًا، اتَّخَذَ النَّاسُ رُءُوسًا جُهَّالاً فَسُئِلُوا، فَأَفْتَوْا بِغَيْرِ عِلْمٍ، فَضَلُّوا وَأَضَلُّوا", dimmed: true)
 
                     Text("Knowledge in Islam is not opinion; it is transmission. A scholar is one who carries the Quran and the Sunnah with understanding, from a teacher who carried it from his, back to the Companions and the Prophet (peace be upon him). This is why the scholars of Ahl as-Sunnah are known by their chains and their teachers.")
                         .font(.body)
                 }
 
-                Section(header: Text("THE FIRST SCHOLARS")) {
+                Section(header: ArticleHeader("THE FIRST SCHOLARS")) {
                     Text("The Companions (may Allah be pleased with them) learned the Quran as it came down and the Sunnah from the one who lived it. Among them some were singled out for knowledge. The Prophet (peace be upon him) said:")
                         .font(.body)
-                    ScriptureQuote(text: "“The most merciful of my nation to my nation is Abu Bakr, the most severe of them in the command of Allah is Umar, the most truly modest of them is Uthman ibn Affan, the most knowledgeable of them in the lawful and the unlawful is Mu‘adh ibn Jabal, the most knowledgeable of them in inheritance is Zayd ibn Thabit, the best reciter among them is Ubayy ibn Ka‘b, and every nation has a trustworthy one, and the trustworthy one of this nation is Abu Ubaydah ibn al-Jarrah” (Sunan al-Tirmidhi 3790; graded sahih by al-Albani).", arabic: "أَرْحَمُ أُمَّتِي بِأُمَّتِي أَبُو بَكْرٍ وَأَشَدُّهُمْ فِي أَمْرِ اللَّهِ عُمَرُ وَأَصْدَقُهُمْ حَيَاءً عُثْمَانُ وَأَعْلَمُهُمْ بِالْحَلاَلِ وَالْحَرَامِ مُعَاذُ بْنُ جَبَلٍ وَأَفْرَضُهُمْ زَيْدُ بْنُ ثَابِتٍ وَأَقْرَؤُهُمْ أُبَىُّ بْنُ كَعْبٍ وَلِكُلِّ أُمَّةٍ أَمِينٌ وَأَمِينُ هَذِهِ الأُمَّةِ أَبُو عُبَيْدَةَ بْنُ الْجَرَّاحِ", dimmed: true)
+                    ScriptureQuote(text: "“The most merciful of my nation to my nation is Abu Bakr, and the most severe of them concerning the order of Allah is 'Umar, and the most truly modest of them is 'Uthman bin 'Affan. The most knowledgeable of them concerning the lawful and unlawful is Mu'adh Bin Jabal, the most knowledgeable of them concerning (the laws of) inheritance is Zaid bin Thabit, the best reciter (of the Qur'an) among them is Ubayy bin Ka'b, and every nation has a trustworthy one, and the trustworthy one of this nation is Abu 'Ubaidah Bin Al-Jarrah” (Sunan al-Tirmidhi 3790; graded sahih by al-Albani).", arabic: "أَرْحَمُ أُمَّتِي بِأُمَّتِي أَبُو بَكْرٍ وَأَشَدُّهُمْ فِي أَمْرِ اللَّهِ عُمَرُ وَأَصْدَقُهُمْ حَيَاءً عُثْمَانُ وَأَعْلَمُهُمْ بِالْحَلاَلِ وَالْحَرَامِ مُعَاذُ بْنُ جَبَلٍ وَأَفْرَضُهُمْ زَيْدُ بْنُ ثَابِتٍ وَأَقْرَؤُهُمْ أُبَىُّ بْنُ كَعْبٍ وَلِكُلِّ أُمَّةٍ أَمِينٌ وَأَمِينُ هَذِهِ الأُمَّةِ أَبُو عُبَيْدَةَ بْنُ الْجَرَّاحِ", dimmed: true)
 
-                    ScriptureQuote(text: "“Take the Quran from four: Abdullah ibn Mas‘ud, Salim, Mu‘adh, and Ubayy ibn Ka‘b” (Sahih al-Bukhari 4999).", arabic: "خُذُوا الْقُرْآنَ مِنْ أَرْبَعَةٍ مِنْ عَبْدِ اللَّهِ بْنِ مَسْعُودٍ وَسَالِمٍ وَمُعَاذٍ وَأُبَىِّ بْنِ كَعْبٍ", dimmed: true)
+                    ScriptureQuote(text: "“Take (learn) the Qur'an from four: `Abdullah bin Masud, Salim, Mu`adh and Ubai bin Ka`b” (Sahih al-Bukhari 4999).", arabic: "خُذُوا الْقُرْآنَ مِنْ أَرْبَعَةٍ مِنْ عَبْدِ اللَّهِ بْنِ مَسْعُودٍ وَسَالِمٍ وَمُعَاذٍ وَأُبَىِّ بْنِ كَعْبٍ", dimmed: true)
                 }
 
-                Section(header: Text("THE RIGHTLY GUIDED CALIPHS")) {
+                Section(header: ArticleHeader("THE RIGHTLY GUIDED CALIPHS")) {
                     ScholarEntry(name: "Abu Bakr as-Siddiq", arabic: "أَبُو بَكر الصِّدِّيق", meta: "d. 13 AH / 634 CE · Madinah", description: "The most knowledgeable of the Companions. When the Prophet (peace be upon him) hinted from the pulpit that a servant had been given the choice to meet his Lord, Abu Bakr alone understood and wept, and the narrator says, “Abu Bakr was the most knowledgeable of us“ (Sahih al-Bukhari 3654). He led the prayer in the Prophet’s final illness by his command (Sahih al-Bukhari 664), fought the apostates, and ordered the first collection of the Quran.")
 
                     ScholarEntry(name: "Umar ibn al-Khattab", arabic: "عُمَر بن الخَطَّاب", meta: "d. 23 AH / 644 CE · Madinah", description: "Of whom the Prophet (peace be upon him) said, “If there were to be a muhaddath (one inspired with the truth) in my nation, it would be Umar“ (Sahih al-Bukhari 3689). The Quran came down agreeing with his view more than once. He organised the Hijri calendar, the Tarawih congregation, the courts, and the provinces, and sent scholars such as Ibn Mas‘ud to teach the new cities.")
@@ -101,14 +73,14 @@ struct SahabahScholarsView: View {
                     ScholarEntry(name: "Ali ibn Abi Talib", arabic: "عَلِي بن أَبِي طَالِب", meta: "d. 40 AH / 661 CE · Kufah", description: "Raised in the Prophet’s house and among the first to believe. The Prophet (peace be upon him) gave him the banner at Khaybar, saying Allah would grant victory at his hands (Sahih al-Bukhari 3701). A judge of the highest rank, the teacher of the scholars of Kufah, and the narrator of the hadith on the Khawarij, whom he fought.")
                 }
 
-                Section(header: Text("THE SCHOLARS AMONG THE COMPANIONS")) {
+                Section(header: ArticleHeader("THE SCHOLARS AMONG THE COMPANIONS")) {
                     ScholarEntry(name: "Abdullah ibn Mas‘ud", arabic: "عَبد الله بن مَسعُود", meta: "d. 32 AH / 653 CE · Madinah, taught in Kufah", description: "The sixth person to accept Islam and the first to recite the Quran aloud in Makkah. The Prophet (peace be upon him) named him first among those to take the Quran from. Sent by Umar to Kufah, his students (Alqamah, al-Aswad, Masruq, then Ibrahim al-Nakha‘i, then Hammad, then Abu Hanifah) became the Iraqi school of fiqh.")
 
                     ScholarEntry(name: "Abdullah ibn Abbas", arabic: "عَبد الله بن عَبَّاس", meta: "d. 68 AH / 687 CE · Ta’if", description: "The Prophet’s cousin, for whom he prayed, “O Allah, teach him the Book“ (Sahih al-Bukhari 75) and “give him understanding of the religion“ (Sahih al-Bukhari 143). He became “the Interpreter of the Quran“ and “the Scholar of the Nation,“ the teacher of Mujahid, Ikrimah, Sa‘id ibn Jubayr, and Ata’, and the root of the Makkan school of tafsir.")
 
                     ScholarEntry(name: "Aisha bint Abi Bakr", arabic: "عَائِشَة بِنت أَبِي بَكر", meta: "d. 58 AH / 678 CE · Madinah", description: "The Mother of the Believers and the most knowledgeable woman of the nation; the Prophet (peace be upon him) said her superiority over women is like that of tharid over other food (Sahih al-Bukhari 3770). The senior Companions asked her about inheritance, the Prophet’s worship, and his private life, and she corrected scholars from the Quran and Sunnah. Over two thousand hadith are narrated from her.")
 
-                    ScholarEntry(name: "Zayd ibn Thabit", arabic: "زَيد بن ثَابِت", meta: "d. 45 AH / 665 CE · Madinah", description: "The Prophet’s scribe of revelation, who learned Hebrew at his command in a fortnight. The most knowledgeable in inheritance law (Sunan al-Tirmidhi 3790), he was chosen by Abu Bakr to collect the Quran and by Uthman to head its transcription.")
+                    ScholarEntry(name: "Zayd ibn Thabit", arabic: "زَيد بن ثَابِت", meta: "d. 45 AH / 665 CE · Madinah", description: "The Prophet’s scribe of revelation, who learned the script of the Jews at his command in about half a month (Sunan Abi Dawud 3645; Sunan al-Tirmidhi 2715; graded hasan sahih by al-Albani). The most knowledgeable in inheritance law (Sunan al-Tirmidhi 3790), he was chosen by Abu Bakr to collect the Quran and by Uthman to head its transcription.")
 
                     ScholarEntry(name: "Mu‘adh ibn Jabal", arabic: "مُعَاذ بن جَبَل", meta: "d. 18 AH / 639 CE · Syria", description: "The most knowledgeable in the lawful and the unlawful (Sunan al-Tirmidhi 3790). The Prophet (peace be upon him) sent him to Yemen as teacher and judge with the words, “let the first thing you call them to be the tawhid of Allah“ (Sahih al-Bukhari 7372), and rode with him while teaching him the right of Allah upon His servants (Sahih al-Bukhari 2856).")
 
@@ -123,12 +95,12 @@ struct SahabahScholarsView: View {
                     ScholarEntry(name: "Abu ad-Darda’, Abu Musa al-Ash‘ari, Abu Dharr, Jabir, Anas", arabic: "وَغَيرُهُم", meta: "the teachers of the cities", description: "Abu ad-Darda’ taught in Damascus; Abu Musa al-Ash‘ari, given “one of the flutes of the family of Dawud“ (Sahih al-Bukhari 5048), governed and taught Basrah and Kufah; Abu Dharr, than whom “the sky has not shaded nor the earth carried anyone more truthful“ (Sunan al-Tirmidhi 3801; graded sahih by al-Albani), was the voice of ascetic honesty; Jabir ibn Abdullah had a circle in the Prophet’s mosque; and Anas ibn Malik, the Prophet’s servant for ten years, blessed with long life and children by his prayer (Sahih al-Bukhari 6334), taught in Basrah until 93 AH.")
                 }
 
-                Section(header: Text("IN SUMMARY")) {
+                Section(header: ArticleHeader("IN SUMMARY")) {
                     Text("The Companions were the first scholars and the first teachers. Every madhhab of fiqh, every school of tafsir, and every chain of hadith goes back to one of these men and women sitting before the Prophet.")
                         .font(.body)
                 }
 
-                Section(header: Text("KEY TERMS")) {
+                Section(header: ArticleHeader("KEY TERMS")) {
                     Text("**Sahabi (صَحَابِيّ)**: a Companion, from the root ص-ح-ب, “to accompany.“ Ibn Hajar (may Allah have mercy on him) gives the accepted definition in al-Isabah:")
                         .font(.body)
                     ScriptureQuote(text: "“The Sahabi is one who met the Prophet (peace be upon him) believing in him, and died upon Islam” (Ibn Hajar, al-Isabah fi Tamyiz as-Sahabah).", arabic: "الصَّحَابِيُّ: مَنْ لَقِيَ النَّبِيَّ صلى الله عليه وسلم مُؤْمِنًا بِهِ، وَمَاتَ عَلَى الإِسْلَامِ", dimmed: true)
@@ -137,20 +109,20 @@ struct SahabahScholarsView: View {
                     ScriptureQuote(text: "“And the first forerunners [in the faith] among the Muhajireen and the Ansar and those who followed them with good conduct - Allah is pleased with them and they are pleased with Him” (Quran 9:100).", arabic: "وَٱلسَّٰبِقُونَ ٱلۡأَوَّلُونَ مِنَ ٱلۡمُهَٰجِرِينَ وَٱلۡأَنصَارِ وَٱلَّذِينَ ٱتَّبَعُوهُم بِإِحۡسَٰنٖ رَّضِيَ ٱللَّهُ عَنۡهُمۡ وَرَضُواْ عَنۡهُ")
                     Text("The Prophet (peace be upon him) forbade abusing them:")
                         .font(.body)
-                    ScriptureQuote(text: "“Do not abuse my Companions, for if any one of you spent gold equal to Uhud, it would not equal a mudd of one of them, or even half of it” (Sahih al-Bukhari 3673, Sahih Muslim 2541).", arabic: "لاَ تَسُبُّوا أَصْحَابِي، فَلَوْ أَنَّ أَحَدَكُمْ أَنْفَقَ مِثْلَ أُحُدٍ ذَهَبًا مَا بَلَغَ مُدَّ أَحَدِهِمْ وَلاَ نَصِيفَهُ", dimmed: true)
+                    ScriptureQuote(text: "“Do not abuse my companions for if any one of you spent gold equal to Uhud (in Allah's Cause) it would not be equal to a Mud or even a half Mud spent by one of them” (Sahih al-Bukhari 3673, Sahih Muslim 2541).", arabic: "لاَ تَسُبُّوا أَصْحَابِي، فَلَوْ أَنَّ أَحَدَكُمْ أَنْفَقَ مِثْلَ أُحُدٍ ذَهَبًا مَا بَلَغَ مُدَّ أَحَدِهِمْ وَلاَ نَصِيفَهُ", dimmed: true)
 
                     Text("**Ahlul Bayt (أَهل البَيت)**: “the People of the House,“ from bayt (بَيت), “house“: the household of the Prophet (peace be upon him). They are his wives, whom the verse of purification addresses in its context, and his relatives for whom zakah is forbidden, the families of Ali, Aqil, Ja‘far, and al-Abbas, as Zayd ibn Arqam explained (Sahih Muslim 2408). Allah says:")
                         .font(.body)
                     ScriptureQuote(text: "“Allah intends only to remove from you the impurity [of sin], O people of the [Prophet's] household, and to purify you with [extensive] purification” (Quran 33:33).", arabic: "إِنَّمَا يُرِيدُ ٱللَّهُ لِيُذۡهِبَ عَنكُمُ ٱلرِّجۡسَ أَهۡلَ ٱلۡبَيۡتِ وَيُطَهِّرَكُمۡ تَطۡهِيرٗا")
                     Text("The Prophet (peace be upon him) wrapped Ali, Fatimah, al-Hasan, and al-Husayn in his cloak and recited this verse over them (Sahih Muslim 2424), and at the pool of Khumm, between Makkah and Madinah, he said:")
                         .font(.body)
-                    ScriptureQuote(text: "“And the people of my household: I remind you of Allah regarding the people of my household” (Sahih Muslim 2408).", arabic: "وَأَهْلُ بَيْتِي أُذَكِّرُكُمُ اللَّهَ فِي أَهْلِ بَيْتِي", dimmed: true)
+                    ScriptureQuote(text: "“The second are the members of my household I remind you (of your duties) to the members of my family” (Sahih Muslim 2408).", arabic: "وَأَهْلُ بَيْتِي أُذَكِّرُكُمُ اللَّهَ فِي أَهْلِ بَيْتِي", dimmed: true)
                     Text("Ahl as-Sunnah love them, honour them, and keep this will, without raising them above the rank Allah gave them; see the page “The People of the House.“")
                         .font(.body)
 
                     Text("**The Ten Promised Paradise (العَشَرَة المُبَشَّرُون بِالجَنَّة)**: “the ten given glad tidings of Paradise,“ from bushra (بُشرَى), “glad tidings“: ten Companions named together as people of Paradise in one hadith. The Prophet (peace be upon him) said:")
                         .font(.body)
-                    ScriptureQuote(text: "“Abu Bakr is in Paradise, Umar is in Paradise, Uthman is in Paradise, Ali is in Paradise, Talhah is in Paradise, az-Zubayr is in Paradise, Abd ar-Rahman ibn Awf is in Paradise, Sa‘d is in Paradise, Sa‘id is in Paradise, and Abu Ubaydah ibn al-Jarrah is in Paradise” (Sunan al-Tirmidhi 3747; graded sahih by al-Albani).", arabic: "أَبُو بَكْرٍ فِي الْجَنَّةِ وَعُمَرُ فِي الْجَنَّةِ وَعُثْمَانُ فِي الْجَنَّةِ وَعَلِيٌّ فِي الْجَنَّةِ وَطَلْحَةُ فِي الْجَنَّةِ وَالزُّبَيْرُ فِي الْجَنَّةِ وَعَبْدُ الرَّحْمَنِ بْنُ عَوْفٍ فِي الْجَنَّةِ وَسَعْدٌ فِي الْجَنَّةِ وَسَعِيدٌ فِي الْجَنَّةِ وَأَبُو عُبَيْدَةَ بْنُ الْجَرَّاحِ فِي الْجَنَّةِ", dimmed: true)
+                    ScriptureQuote(text: "“Abu Bakr is in Paradise, 'Umar is in Paradise, 'Uthman is in Paradise, 'Ali is in Paradise, Talhah is in Paradise, Az-Zubair is in Paradise, 'Abdur-Rahman bin 'Awf is in Paradise, Sa'd bin Abi Waqqas is in Paradise, Sa'eed bin Zaid is in Paradise, and Abu 'Ubaidah bin Al-Jarrah is in Paradise” (Sunan al-Tirmidhi 3747; graded sahih by al-Albani).", arabic: "أَبُو بَكْرٍ فِي الْجَنَّةِ وَعُمَرُ فِي الْجَنَّةِ وَعُثْمَانُ فِي الْجَنَّةِ وَعَلِيٌّ فِي الْجَنَّةِ وَطَلْحَةُ فِي الْجَنَّةِ وَالزُّبَيْرُ فِي الْجَنَّةِ وَعَبْدُ الرَّحْمَنِ بْنُ عَوْفٍ فِي الْجَنَّةِ وَسَعْدٌ فِي الْجَنَّةِ وَسَعِيدٌ فِي الْجَنَّةِ وَأَبُو عُبَيْدَةَ بْنُ الْجَرَّاحِ فِي الْجَنَّةِ", dimmed: true)
                     Text("Sa‘d is Sa‘d ibn Abi Waqqas and Sa‘id is Sa‘id ibn Zayd, as Sa‘id ibn Zayd himself narrated (Sunan Abi Dawud 4649; graded sahih by al-Albani). Others were given the glad tidings individually, among them Fatimah (Sahih al-Bukhari 3623), al-Hasan and al-Husayn (Sunan al-Tirmidhi 3768; graded sahih by al-Albani), and Abdullah ibn Salam (Sahih al-Bukhari 3812); the ten are singled out because they were named in one breath.")
                         .font(.body)
 
@@ -172,7 +144,7 @@ struct SahabahScholarsView: View {
 
                     Text("**Salaf (سَلَف)**: “those who came before,“ from the root س-ل-ف, “to precede.“ In the usage of the scholars it means the Companions, the Tabi‘un, and the Tabi‘ at-Tabi‘in, the three best generations, and then those who followed their way. The Prophet (peace be upon him) used the word of himself when he told Fatimah of his approaching death:")
                         .font(.body)
-                    ScriptureQuote(text: "“So fear Allah and be patient, for I am the best predecessor (salaf) for you” (Sahih al-Bukhari 6285).", arabic: "فَاتَّقِي اللَّهَ وَاصْبِرِي، فَإِنِّي نِعْمَ السَّلَفُ أَنَا لَكَ", dimmed: true)
+                    ScriptureQuote(text: "“So, be afraid of Allah, and be patient, for I am the best predecessor for you (in the Hereafter)” (Sahih al-Bukhari 6285).", arabic: "فَاتَّقِي اللَّهَ وَاصْبِرِي، فَإِنِّي نِعْمَ السَّلَفُ أَنَا لَكَ", dimmed: true)
                     Text("“Salafi“ therefore means nothing more than one who follows the Salaf in creed and practice, as explained on the page “Salafiyyah.“")
                         .font(.body)
 
@@ -196,7 +168,7 @@ struct SahabahScholarsView: View {
 
                     Text("**Hafiz (حَافِظ)**: “preserver,“ from the root ح-ف-ظ. Among the hadith scholars it is the rank of one who has memorised a great body of hadith with their chains and knows their narrators, above the ordinary muhaddith; Ibn Hajar and adh-Dhahabi are called al-Hafiz. In common speech it is also used for one who has memorised the whole Quran. The Prophet (peace be upon him) prayed for those who preserve his words:")
                         .font(.body)
-                    ScriptureQuote(text: "“May Allah gladden a man who hears something from us and conveys it as he heard it; perhaps the one it is conveyed to understands it better than the one who heard it” (Sunan al-Tirmidhi 2657; graded sahih by al-Albani).", arabic: "نَضَّرَ اللَّهُ امْرَأً سَمِعَ مِنَّا شَيْئًا فَبَلَّغَهُ كَمَا سَمِعَ فَرُبَّ مُبَلَّغٍ أَوْعَى مِنْ سَامِعٍ", dimmed: true)
+                    ScriptureQuote(text: "“'May Allah gladden a man who hears something from us, so he conveys it as he heard it. Perhaps the one it is conveyed to is more understanding than the one who heard it” (Sunan al-Tirmidhi 2657; graded sahih by al-Albani).", arabic: "نَضَّرَ اللَّهُ امْرَأً سَمِعَ مِنَّا شَيْئًا فَبَلَّغَهُ كَمَا سَمِعَ فَرُبَّ مُبَلَّغٍ أَوْعَى مِنْ سَامِعٍ", dimmed: true)
 
                     Text("**Muhaddith (مُحَدِّث)**: from hadith (حَدِيث), “speech, report“: a scholar who transmits and examines the narrations of the Prophet (peace be upon him): their chains, their narrators, their wordings, and their hidden defects. Al-Bukhari, Muslim, Abu Dawud, and in our time al-Albani are muhaddithun. Not every muhaddith is a jurist; as the Prophet (peace be upon him) said in the hadith narrated by Zayd ibn Thabit, “many a bearer of knowledge conveys it to one who is more versed than he is, and many a bearer of knowledge is not versed in it“ (Sunan Abi Dawud 3660; graded sahih by al-Albani).")
                         .font(.body)
@@ -221,7 +193,7 @@ struct SahabahScholarsView: View {
 
                     Text("**Mujaddid (مُجَدِّد)**: “renewer,“ from the root ج-د-د: one who renews the religion after it has been neglected, by teaching the Sunnah and removing innovation. The Prophet (peace be upon him) said:")
                         .font(.body)
-                    ScriptureQuote(text: "“Allah will raise for this nation at the end of every hundred years one who will renew its religion for it” (Sunan Abi Dawud 4291; graded sahih by al-Albani).", arabic: "إِنَّ اللَّهَ يَبْعَثُ لِهَذِهِ الأُمَّةِ عَلَى رَأْسِ كُلِّ مِائَةِ سَنَةٍ مَنْ يُجَدِّدُ لَهَا دِينَهَا", dimmed: true)
+                    ScriptureQuote(text: "“Allah will raise for this community at the end of every hundred years the one who will renovate its religion for it” (Sunan Abi Dawud 4291; graded sahih by al-Albani).", arabic: "إِنَّ اللَّهَ يَبْعَثُ لِهَذِهِ الأُمَّةِ عَلَى رَأْسِ كُلِّ مِائَةِ سَنَةٍ مَنْ يُجَدِّدُ لَهَا دِينَهَا", dimmed: true)
                     Text("The scholars counted Umar ibn Abd al-Aziz as the renewer of the first century and ash-Shafi‘i of the second, and later scholars counted Ibn Taymiyyah and Muhammad ibn Abd al-Wahhab among the renewers of their centuries. The hadith does not say the renewer must be one man; Ibn Kathir wrote in al-Bidayah wan-Nihayah that it includes the carriers of knowledge of every field.")
                         .font(.body)
 
@@ -241,6 +213,8 @@ struct SahabahScholarsView: View {
                     Text("**Tabaqat (طَبَقَات)**: “layers“ or “generations,“ from the root ط-ب-ق. The scholars arranged the narrators and the jurists in generations, the Companions, then the Tabi‘un, and so on, in books such as at-Tabaqat al-Kubra of Ibn Sa‘d, Tabaqat al-Hanabilah of Ibn Abi Ya‘la, and Tabaqat ash-Shafi‘iyyah of as-Subki, so that a chain can be checked: each narrator must have lived in the generation that could meet the one above him.")
                         .font(.body)
                 }
+
+                ArticleSourcesSection(article: "SahabahScholarsView")
             }
             .themedListRowBackground()
         }
@@ -255,12 +229,12 @@ struct SalafScholarsView: View {
     var body: some View {
         List {
             Group {
-                Section(header: Text("SUMMARY")) {
+                Section(header: ArticleHeader("SUMMARY")) {
                     Text("In short: the Tabi'un learned from the Companions, their students became the imams of fiqh and hadith, and together these three generations are the Salaf whose understanding defines Ahl as-Sunnah.")
                         .font(.body)
                 }
 
-                Section(header: Text("THE TABI'UN (SUCCESSORS)")) {
+                Section(header: ArticleHeader("THE TABI'UN (SUCCESSORS)")) {
                     Text("The **Tabi‘un (التَّابِعُون)** met the Companions and took the religion from them. The Prophet (peace be upon him) called them the second best generation (Sahih al-Bukhari 2652). Among the greatest:")
                         .font(.body)
 
@@ -270,7 +244,7 @@ struct SalafScholarsView: View {
 
                     ScholarEntry(name: "Mujahid ibn Jabr", arabic: "مُجَاهِد بن جَبر", meta: "d. 104 AH / 722 CE · Makkah", description: "Who said he read the Quran to Ibn Abbas three times, stopping at every verse to ask about it. His explanations fill the tafsir of at-Tabari.")
 
-                    ScholarEntry(name: "Sa‘id ibn Jubayr, Ikrimah, Ata’ ibn Abi Rabah", arabic: "تَلَامِيذ ابن عَبَّاس", meta: "d. 95, 105, 114 AH · Kufah and Makkah", description: "The three other great students of Ibn Abbas. Sa‘id ibn Jubayr was killed by al-Hajjaj in 95 AH for his faith; Ikrimah carried his master’s tafsir; Ata’ was the mufti of Makkah in the Hajj season.")
+                    ScholarEntry(name: "Sa‘id ibn Jubayr, Ikrimah, Ata’ ibn Abi Rabah", arabic: "تَلَامِيذ ابن عَبَّاس", meta: "d. 95, 105, 114 AH · Kufah and Makkah", description: "The three other great students of Ibn Abbas. Sa‘id ibn Jubayr was killed by al-Hajjaj in 95 AH after the revolt of Ibn al-Ash‘ath, and his death is counted a martyrdom; Ikrimah carried his master’s tafsir; Ata’ was the mufti of Makkah in the Hajj season.")
 
                     ScholarEntry(name: "Muhammad ibn Sirin", arabic: "مُحَمَّد بن سِيرِين", meta: "d. 110 AH / 728 CE · Basrah", description: "The scrupulous jurist who said, “This knowledge is religion, so look from whom you take your religion“ (Muqaddimah of Sahih Muslim). His caution about narrators is the seed of the science of hadith criticism.")
 
@@ -281,13 +255,13 @@ struct SalafScholarsView: View {
                     ScholarEntry(name: "Ibn Shihab az-Zuhri", arabic: "ابن شِهَاب الزُّهرِي", meta: "d. 124 AH / 742 CE · Madinah", description: "The first to systematically record the hadith of Madinah, the teacher of Malik, and a narrator in the chains of a huge part of the Sunnah.")
                 }
 
-                Section(header: Text("THE IMAMS OF FIQH")) {
+                Section(header: ArticleHeader("THE IMAMS OF FIQH")) {
                     Text("The students of the Tabi‘un, the **Atba‘ at-Tabi‘in**, were the third generation. Among them the four imams of the schools of fiqh (see “The Madhahib of Fiqh“): **Abu Hanifah** (80–150 AH), **Malik** (93–179 AH), **al-Shafi‘i** (150–204 AH), and **Ahmad ibn Hanbal** (164–241 AH). Beside them stood imams of equal rank whose schools did not survive as madhahib but whose knowledge did:")
                         .font(.body)
 
-                    ScholarEntry(name: "Al-Awza‘i", arabic: "الأَوزَاعِي", meta: "88–157 AH · Beirut, Syria", description: "The imam of Syria, whose school was followed there and in Andalusia for two centuries, and who said, “Hold to the narrations of those who came before, even if the people reject you.“")
+                    ScholarEntry(name: "Al-Awza‘i", arabic: "الأَوزَاعِي", meta: "88–157 AH · Beirut, Syria", description: "The imam of Syria, whose school was followed there and in Andalusia for two centuries, and who said, “Hold to the narrations of those who came before, even if the people reject you“ (al-Khatib al-Baghdadi, Sharaf Ashab al-Hadith; al-Lalaka’i, Sharh Usul I‘tiqad Ahl as-Sunnah).")
 
-                    ScholarEntry(name: "Sufyan al-Thawri", arabic: "سُفيَان الثَّورِي", meta: "97–161 AH · Kufah", description: "Called “the Commander of the Believers in hadith,“ a jurist with his own school, and the ascetic who said innovation is more beloved to Iblis than sin.")
+                    ScholarEntry(name: "Sufyan al-Thawri", arabic: "سُفيَان الثَّورِي", meta: "97–161 AH · Kufah", description: "Called “the Commander of the Believers in hadith,“ a jurist with his own school, and the ascetic who said innovation is more beloved to Iblis than sin, for sin is repented of and innovation is not (al-Lalaka’i, Sharh Usul I‘tiqad Ahl as-Sunnah 238).")
 
                     ScholarEntry(name: "Al-Layth ibn Sa‘d", arabic: "اللَّيث بن سَعد", meta: "94–175 AH · Egypt", description: "The imam of Egypt, of whom al-Shafi‘i said he was a greater jurist than Malik but his students did not preserve his school.")
 
@@ -296,7 +270,7 @@ struct SalafScholarsView: View {
                     ScholarEntry(name: "Sufyan ibn Uyaynah, Waki‘, al-Fudayl ibn Iyad", arabic: "ابن عُيَينَة، وَكِيع، الفُضَيل", meta: "d. 198, 197, 187 AH · Makkah and Kufah", description: "Sufyan ibn Uyaynah, the hadith master of Makkah and teacher of al-Shafi‘i and Ahmad; Waki‘ ibn al-Jarrah, the teacher of al-Shafi‘i and Ahmad in Kufah; and al-Fudayl ibn Iyad, the repentant highwayman who became the worshipper of the Haram, whose words on sincerity the Salaf passed down.")
                 }
 
-                Section(header: Text("THE IMAMS OF HADITH")) {
+                Section(header: ArticleHeader("THE IMAMS OF HADITH")) {
                     Text("The generation after the four imams gave the nation the collections in which the Sunnah is preserved:")
                         .font(.body)
 
@@ -308,24 +282,26 @@ struct SalafScholarsView: View {
 
                     ScholarEntry(name: "Abu Dawud, al-Tirmidhi, al-Nasa’i, Ibn Majah", arabic: "أَصحَاب السُّنَن", meta: "d. 275, 279, 303, 273 AH", description: "The authors of the four Sunan, completing the six books. Al-Tirmidhi (a student of al-Bukhari) recorded the grade of each hadith and the opinions of the jurists; al-Nasa’i was the strictest of them in narrators.")
 
-                    ScholarEntry(name: "Ad-Darimi, Ibn Khuzaymah, Ibn Hibban, ad-Daraqutni, al-Hakim, al-Bayhaqi", arabic: "الحُفَّاظ", meta: "3rd to 5th century AH", description: "The hadith masters whose Sunan, Sahihs, and Mustadrak preserved what the six left, and whose books on creed (al-Bukhari’s Khalq Af‘al al-‘Ibad, ad-Darimi’s reply to the Jahmiyyah, Ibn Khuzaymah’s Kitab al-Tawhid, al-Bayhaqi’s al-Asma’ was-Sifat) recorded the Athari creed with its evidences.")
+                    ScholarEntry(name: "Ad-Darimi, Ibn Khuzaymah, Ibn Hibban, ad-Daraqutni, al-Hakim, al-Bayhaqi", arabic: "الحُفَّاظ", meta: "3rd to 5th century AH", description: "The hadith masters whose Sunan, Sahihs, and Mustadrak preserved what the six left, and whose books on creed (al-Bukhari’s Khalq Af‘al al-‘Ibad, ad-Darimi’s reply to the Jahmiyyah, Ibn Khuzaymah’s Kitab al-Tawhid) recorded the Athari creed with its evidences; al-Bayhaqi, though Ash‘ari in creed, preserved in al-Asma’ was-Sifat the narrations of the Salaf on the attributes.")
 
-                    ScholarEntry(name: "Al-Barbahari, Ibn Battah, al-Lalaka’i, Ibn Abd al-Barr, al-Khatib al-Baghdadi", arabic: "أَئِمَّة السُّنَّة", meta: "d. 329, 387, 418, 463, 463 AH", description: "The Hanbali imams of Baghdad who wrote the creed of the Salaf down sect by sect (Sharh as-Sunnah, al-Ibanah, Sharh Usul I‘tiqad Ahl as-Sunnah); the Maliki Ibn Abd al-Barr of Andalusia, the hadith master of the West; and al-Khatib, the historian of Baghdad and author of Sharaf Ashab al-Hadith.")
+                    ScholarEntry(name: "Al-Barbahari, Ibn Battah, al-Lalaka’i, Ibn Abd al-Barr, al-Khatib al-Baghdadi", arabic: "أَئِمَّة السُّنَّة", meta: "d. 329, 387, 418, 463, 463 AH", description: "Al-Barbahari and Ibn Battah, the Hanbali imams of Iraq, and the Shafi‘i al-Lalaka’i, who wrote the creed of the Salaf down sect by sect (Sharh as-Sunnah, al-Ibanah, Sharh Usul I‘tiqad Ahl as-Sunnah); the Maliki Ibn Abd al-Barr of Andalusia, the hadith master of the West; and al-Khatib, the historian of Baghdad and author of Sharaf Ashab al-Hadith.")
                 }
 
-                Section(header: Text("WHAT MADE THEM THE SALAF")) {
+                Section(header: ArticleHeader("WHAT MADE THEM THE SALAF")) {
                     Text("The Prophet (peace be upon him) said:")
                         .font(.body)
-                    ScriptureQuote(text: "“No people gather in one of the houses of Allah, reciting the Book of Allah and studying it together, except that tranquillity descends upon them, mercy covers them, the angels surround them, and Allah mentions them to those with Him” (Sahih Muslim 2699).", arabic: "وَمَا اجْتَمَعَ قَوْمٌ فِي بَيْتٍ مِنْ بُيُوتِ اللَّهِ يَتْلُونَ كِتَابَ اللَّهِ وَيَتَدَارَسُونَهُ بَيْنَهُمْ إِلاَّ نَزَلَتْ عَلَيْهِمُ السَّكِينَةُ وَغَشِيَتْهُمُ الرَّحْمَةُ وَحَفَّتْهُمُ الْمَلاَئِكَةُ وَذَكَرَهُمُ اللَّهُ فِيمَنْ عِنْدَهُ", dimmed: true)
+                    ScriptureQuote(text: "“those persons who assemble in the house among the houses of Allah (mosques) and recite the Book of Allah and they learn and teach the Qur'an (among themselves) there would descend upon them tranquility and mercy would cover them and the angels would surround them and Allah mentions them in the presence of those near Him” (Sahih Muslim 2699).", arabic: "وَمَا اجْتَمَعَ قَوْمٌ فِي بَيْتٍ مِنْ بُيُوتِ اللَّهِ يَتْلُونَ كِتَابَ اللَّهِ وَيَتَدَارَسُونَهُ بَيْنَهُمْ إِلاَّ نَزَلَتْ عَلَيْهِمُ السَّكِينَةُ وَغَشِيَتْهُمُ الرَّحْمَةُ وَحَفَّتْهُمُ الْمَلاَئِكَةُ وَذَكَرَهُمُ اللَّهُ فِيمَنْ عِنْدَهُ", dimmed: true)
 
                     Text("The Salaf were such gatherings: men who sat before the Companions and passed on what they heard, word for word, with the names of those they heard it from. They did not philosophise the creed, and they did not invent worship. Their agreement is a proof, because the Prophet (peace be upon him) guaranteed their goodness.")
                         .font(.body)
                 }
 
-                Section(header: Text("IN SUMMARY")) {
+                Section(header: ArticleHeader("IN SUMMARY")) {
                     Text("From Ibn al-Musayyib and al-Hasan al-Basri to the four imams and the authors of the six books, the Salaf carried the religion by chains of teacher and student. The understanding of these generations is the measure of every later scholar.")
                         .font(.body)
                 }
+
+                ArticleSourcesSection(article: "SalafScholarsView")
             }
             .themedListRowBackground()
         }
@@ -340,12 +316,12 @@ struct TabariView: View {
     var body: some View {
         List {
             Group {
-                Section(header: Text("SUMMARY")) {
+                Section(header: ArticleHeader("SUMMARY")) {
                     Text("In short: Ibn Jarir at-Tabari (224–310 AH) wrote the greatest early tafsir and the great early history of Islam, gathering the explanations of the Companions and Tabi'un with their chains.")
                         .font(.body)
                 }
 
-                Section(header: Text("HIS LIFE")) {
+                Section(header: ArticleHeader("HIS LIFE")) {
                     Text("**Abu Ja‘far Muhammad ibn Jarir at-Tabari (مُحَمَّد بن جَرِير الطَّبَرِي)** was born in 224 AH / 839 CE in Amul in Tabaristan, on the southern shore of the Caspian Sea. He memorised the Quran at seven, led the prayer at eight, and wrote hadith at nine. He travelled to Rayy, Baghdad, Basrah, Kufah, Syria, and Egypt in search of knowledge, then settled in Baghdad, where he taught until his death in 310 AH / 923 CE.")
                         .font(.body)
 
@@ -353,7 +329,7 @@ struct TabariView: View {
                         .font(.body)
                 }
 
-                Section(header: Text("HIS WORKS")) {
+                Section(header: ArticleHeader("HIS WORKS")) {
                     Text("**Jami‘ al-Bayan ‘an Ta’wil Ay al-Quran (جَامِع البَيَان)**, known as Tafsir at-Tabari: the mother of all books of tafsir. For each verse he gathers the explanations of the Companions and the Tabi‘un with their chains of narration, weighs them, and gives his judgement with the reasoning from the Arabic language. Later works of tafsir bil-ma’thur, including Ibn Kathir’s, draw on it.")
                         .font(.body)
 
@@ -364,7 +340,7 @@ struct TabariView: View {
                         .font(.body)
                 }
 
-                Section(header: Text("HIS CREED")) {
+                Section(header: ArticleHeader("HIS CREED")) {
                     Text("In Sarih as-Sunnah he laid out the belief of Ahl as-Sunnah: that the Quran is the speech of Allah, uncreated; that the believers will see their Lord on the Day of Resurrection; that faith is word and deed and increases and decreases; that the decree, good and bad, is from Allah; and that the best of the nation after its Prophet are Abu Bakr, Umar, Uthman, and Ali. He affirmed the attributes as they came, and his tafsir on the verse of the Throne affirms Allah’s rising without asking how.")
                         .font(.body)
 
@@ -372,10 +348,12 @@ struct TabariView: View {
                         .font(.body)
                 }
 
-                Section(header: Text("IN SUMMARY")) {
+                Section(header: ArticleHeader("IN SUMMARY")) {
                     Text("At-Tabari gathered what the first generations said about every verse and every year of history, with the chains that let the nation check it. He is the imam of the mufassirun and the historians.")
                         .font(.body)
                 }
+
+                ArticleSourcesSection(article: "TabariView")
             }
             .themedListRowBackground()
         }
@@ -390,12 +368,12 @@ struct IbnTaymiyyahView: View {
     var body: some View {
         List {
             Group {
-                Section(header: Text("SUMMARY")) {
+                Section(header: ArticleHeader("SUMMARY")) {
                     Text("In short: Ibn Taymiyyah (661–728 AH) is Shaykh al-Islam, the reviver who defended the creed of the Salaf against the sects and the philosophers, fought the Mongols, and died in prison for the truth. His students carried his knowledge to the whole nation.")
                         .font(.body)
                 }
 
-                Section(header: Text("HIS LIFE")) {
+                Section(header: ArticleHeader("HIS LIFE")) {
                     Text("**Taqi ad-Din Ahmad ibn Abd al-Halim ibn Abd as-Salam ibn Taymiyyah (أَحمَد بن عَبد الحَلِيم بن تَيمِيَّة)** was born on 10 Rabi‘ al-Awwal 661 AH / 22 January 1263 CE in Harran, in a family of Hanbali scholars. When the Mongols advanced, the family fled to Damascus in 667 AH, carrying their books on a cart. His father taught at the Umayyad Mosque, and when he died in 682 AH the son, at twenty-one, took his teaching post.")
                         .font(.body)
 
@@ -403,7 +381,7 @@ struct IbnTaymiyyahView: View {
                         .font(.body)
                 }
 
-                Section(header: Text("THE MONGOLS AND THE TRIALS")) {
+                Section(header: ArticleHeader("THE MONGOLS AND THE TRIALS")) {
                     Text("When the Mongols under Ghazan took Damascus in 699 AH, he went to the Mongol camp himself and demanded the release of the prisoners. In 702 AH, at the battle of Shaqhab, he stood among the soldiers, gave the fatwa that fighting the Mongols was obligatory although they professed Islam, since they ruled by the Yasa of Genghis Khan, and swore to the hesitant that Allah would give victory. The Mongols were defeated.")
                         .font(.body)
 
@@ -415,7 +393,7 @@ struct IbnTaymiyyahView: View {
                     ScriptureQuote(text: "“What can my enemies do to me? My paradise and my garden are in my breast; wherever I go they go with me and never leave me. My imprisonment is seclusion, my killing is martyrdom, and my expulsion from my land is travel” (Ibn al-Qayyim, al-Wabil as-Sayyib, p. 48).", arabic: "مَا يَصْنَعُ أَعْدَائِي بِي؟ أَنَا جَنَّتِي وَبُسْتَانِي فِي صَدْرِي، أَيْنَ رُحْتُ فَهِيَ مَعِي لَا تُفَارِقُنِي، إِنَّ حَبْسِي خَلْوَةٌ، وَقَتْلِي شَهَادَةٌ، وَإِخْرَاجِي مِنْ بَلَدِي سِيَاحَةٌ", dimmed: true)
                 }
 
-                Section(header: Text("HIS WORKS")) {
+                Section(header: ArticleHeader("HIS WORKS")) {
                     Text("**Al-Aqidah al-Wasitiyyah (العَقِيدَة الوَاسِطِيَّة)**: the creed of the Salaf in a few pages, written in one sitting for a judge from Wasit, and examined and approved in three public debates in Damascus in 705 AH.")
                         .font(.body)
                     Text("**Minhaj as-Sunnah an-Nabawiyyah (مِنهَاج السُّنَّة النَّبَوِيَّة)**: the reply to the Rafidi Ibn al-Mutahhar al-Hilli, and the most complete defence of the Companions and the caliphate ever written.")
@@ -426,18 +404,22 @@ struct IbnTaymiyyahView: View {
                         .font(.body)
                 }
 
-                Section(header: Text("HIS STUDENTS")) {
-                    Text("His greatest legacy is the men he taught: **Ibn al-Qayyim**, who never left him from 712 AH and was imprisoned with him; **adh-Dhahabi**, the historian of Islam; **Ibn Kathir**, the mufassir and historian; **al-Mizzi**, the master of the narrators of the six books; **Ibn Abd al-Hadi**, who wrote his biography; **Ibn Muflih**, the Hanbali jurist; and **al-Bazzar**, who recorded his manners. Each has his own article or entry here.")
+                Section(header: ArticleHeader("HIS STUDENTS")) {
+                    Text("His greatest legacy is the men he taught and who kept his company: **Ibn al-Qayyim**, who never left him from 712 AH and was imprisoned with him; **adh-Dhahabi**, the historian of Islam; **Ibn Kathir**, the mufassir and historian; **al-Mizzi**, his older companion and the master of the narrators of the six books; **Ibn Abd al-Hadi**, who wrote his biography; **Ibn Muflih**, the Hanbali jurist; and **al-Bazzar**, who recorded his manners. Ibn al-Qayyim, adh-Dhahabi, and Ibn Kathir have their own articles here.")
                         .font(.body)
 
                     Text("Adh-Dhahabi wrote that he had not seen anyone like him, and Ibn Hajar al-Asqalani, who differed with him on some matters, endorsed the book defending him and wrote that his fame needs no description. Like every scholar after the Prophet (peace be upon him), he could err, and the scholars of the Sunnah accepted from him what agreed with the evidence and left what did not, which is exactly what he asked of them.")
                         .font(.body)
                 }
 
-                Section(header: Text("IN SUMMARY")) {
+                Section(header: ArticleHeader("IN SUMMARY")) {
                     Text("Ibn Taymiyyah revived the creed of the Salaf when it had been buried under kalam and grave-worship, answered every sect from the Quran and Sunnah, and paid for it with his freedom and his life. The title Shaykh al-Islam is his by the agreement of those who came after.")
                         .font(.body)
                 }
+
+                ArticleSourcesSection(article: "IbnTaymiyyahView")
+
+                ArticleSourcesSection(article: "IbnQayyimView")
             }
             .themedListRowBackground()
         }
@@ -452,12 +434,12 @@ struct IbnQayyimView: View {
     var body: some View {
         List {
             Group {
-                Section(header: Text("SUMMARY")) {
+                Section(header: ArticleHeader("SUMMARY")) {
                     Text("In short: Ibn al-Qayyim (691–751 AH) was the closest student of Ibn Taymiyyah and the scholar who turned the creed of the Salaf into books on the heart, worship, and law that Muslims still read every day.")
                         .font(.body)
                 }
 
-                Section(header: Text("HIS LIFE")) {
+                Section(header: ArticleHeader("HIS LIFE")) {
                     Text("**Shams ad-Din Muhammad ibn Abi Bakr ibn Ayyub (مُحَمَّد بن أَبِي بَكر ابن قَيِّم الجَوزِيَّة)** was born in 691 AH / 1292 CE in Damascus. His father was the **qayyim**, the caretaker, of the Jawziyyah school, hence the name Ibn Qayyim al-Jawziyyah. He studied every science of the religion with the scholars of Damascus and, from 712 AH, devoted himself to Ibn Taymiyyah, staying with him until the shaykh died in 728 AH.")
                         .font(.body)
 
@@ -465,7 +447,7 @@ struct IbnQayyimView: View {
                         .font(.body)
                 }
 
-                Section(header: Text("HIS WORKS")) {
+                Section(header: ArticleHeader("HIS WORKS")) {
                     Text("**Madarij as-Salikin (مَدَارِج السَّالِكِين)**: the stations of the journey to Allah, taking the language of the Sufis and correcting it by the Quran and the Sunnah; his masterpiece on the purification of the heart.")
                         .font(.body)
                     Text("**Zad al-Ma‘ad (زَاد المَعَاد)**: the guidance of the Prophet (peace be upon him) in every part of life, from worship to medicine, drawn from the seerah and the hadith.")
@@ -476,17 +458,19 @@ struct IbnQayyimView: View {
                         .font(.body)
                 }
 
-                Section(header: Text("HIS WORDS")) {
+                Section(header: ArticleHeader("HIS WORDS")) {
                     ScriptureQuote(text: "“In the heart is a disorder that nothing gathers except turning to Allah; in it is a loneliness that nothing removes except intimacy with Him in solitude; in it is a sorrow that nothing takes away except the joy of knowing Him and the truthfulness of dealing with Him” (Madarij as-Salikin 3/156).", arabic: "فِي الْقَلْبِ شَعَثٌ لَا يَلُمُّهُ إِلَّا الْإِقْبَالُ عَلَى اللَّهِ، وَفِيهِ وَحْشَةٌ لَا يُزِيلُهَا إِلَّا الْأُنْسُ بِهِ فِي خَلْوَتِهِ، وَفِيهِ حُزْنٌ لَا يُذْهِبُهُ إِلَّا السُّرُورُ بِمَعْرِفَتِهِ وَصِدْقِ مُعَامَلَتِهِ", dimmed: true)
 
                     Text("His students included **Ibn Kathir**, who said he had not seen anyone who worshipped more than him, and **Ibn Rajab al-Hanbali**, the author of Jami‘ al-‘Ulum wal-Hikam, who studied with him in his last years.")
                         .font(.body)
                 }
 
-                Section(header: Text("IN SUMMARY")) {
+                Section(header: ArticleHeader("IN SUMMARY")) {
                     Text("Ibn al-Qayyim took the knowledge of his teacher and wrote it for the heart. On dhikr, repentance, sin, love of Allah, and the way of the Prophet, his books are the most read of any scholar of the Salaf after the imams themselves.")
                         .font(.body)
                 }
+
+                ArticleSourcesSection(article: "DhahabiView")
             }
             .themedListRowBackground()
         }
@@ -501,20 +485,20 @@ struct DhahabiView: View {
     var body: some View {
         List {
             Group {
-                Section(header: Text("SUMMARY")) {
+                Section(header: ArticleHeader("SUMMARY")) {
                     Text("In short: adh-Dhahabi (673–748 AH) was the hadith master and historian who wrote the biographies of the whole nation, judging every narrator and scholar by the standard of the Salaf.")
                         .font(.body)
                 }
 
-                Section(header: Text("HIS LIFE")) {
+                Section(header: ArticleHeader("HIS LIFE")) {
                     Text("**Shams ad-Din Muhammad ibn Ahmad ibn Uthman adh-Dhahabi (مُحَمَّد بن أَحمَد الذَّهَبِي)** was born in 673 AH / 1274 CE in Damascus to a family of Turkmen origin; his name comes from his father’s trade in gold. He began with the Quran and its readings, then gave himself to hadith, travelling to Ba‘labakk, Aleppo, Cairo, Alexandria, Makkah, and Madinah and hearing from more than a thousand teachers.")
                         .font(.body)
 
-                    Text("In Damascus he studied with Ibn Taymiyyah and al-Mizzi, and was appointed to teach hadith at several schools, including the Dar al-Hadith al-Ashrafiyyah. He lost his sight in his last years and died in 748 AH / 1348 CE.")
+                    Text("In Damascus he studied with Ibn Taymiyyah and al-Mizzi, and was appointed to teach hadith at several schools, including Turbat Umm as-Salih, an-Nafisiyyah, and at-Tankiziyyah. He lost his sight in his last years and died in 748 AH / 1348 CE.")
                         .font(.body)
                 }
 
-                Section(header: Text("HIS WORKS")) {
+                Section(header: ArticleHeader("HIS WORKS")) {
                     Text("**Siyar A‘lam an-Nubala’ (سِيَر أَعلَام النُّبَلَاء)**: the biographies of the notable figures of Islam from the Companions to his own time, in some twenty-five volumes, with his own judgements on their knowledge, creed, and character.")
                         .font(.body)
                     Text("**Tarikh al-Islam (تَارِيخ الإِسلَام)**: the history of Islam by decade with the deaths of the notable men of each, the largest work of its kind.")
@@ -525,18 +509,20 @@ struct DhahabiView: View {
                         .font(.body)
                 }
 
-                Section(header: Text("HIS STANDARD")) {
+                Section(header: ArticleHeader("HIS STANDARD")) {
                     Text("Describing the qualities a hadith master needs, he wrote that he must be pious, intelligent, learned in grammar and language, upright, modest, and **Salafi** (Siyar A‘lam an-Nubala’ 13/380), and throughout his biographies he praises scholars for being upon the creed of the Salaf and records where others fell into kalam. Of his teacher Ibn Taymiyyah he wrote that his like had not been seen, while noting his own reservations with fairness; this balance is why his verdicts are trusted by all.")
                         .font(.body)
 
-                    Text("He warned the scholars of his time against pride in knowledge, and his short treatises of advice, such as his letter to Ibn Taymiyyah on gentleness with people, show the humility the Salaf demanded of the learned.")
+                    Text("He warned the scholars of his time against pride in knowledge, and his short treatises of advice, such as Bayan Zaghal al-‘Ilm wat-Talab, show the humility the Salaf demanded of the learned.")
                         .font(.body)
                 }
 
-                Section(header: Text("IN SUMMARY")) {
+                Section(header: ArticleHeader("IN SUMMARY")) {
                     Text("Through adh-Dhahabi the nation knows who its scholars and narrators were, what they believed, and how far they can be trusted. He measured every one of them by the Sunnah, and he asked to be measured the same way.")
                         .font(.body)
                 }
+
+                ArticleSourcesSection(article: "IbnKathirView")
             }
             .themedListRowBackground()
         }
@@ -551,12 +537,12 @@ struct IbnKathirView: View {
     var body: some View {
         List {
             Group {
-                Section(header: Text("SUMMARY")) {
+                Section(header: ArticleHeader("SUMMARY")) {
                     Text("In short: Ibn Kathir (701–774 AH) wrote the most widely read tafsir of the Quran and the great history al-Bidayah wan-Nihayah, following the method of his teacher Ibn Taymiyyah: the Quran by the Quran, then the Sunnah, then the Salaf.")
                         .font(.body)
                 }
 
-                Section(header: Text("HIS LIFE")) {
+                Section(header: ArticleHeader("HIS LIFE")) {
                     Text("**Imad ad-Din Isma‘il ibn Umar ibn Kathir (إِسمَاعِيل بن عُمَر بن كَثِير)** was born in 701 AH / 1301 CE in a village near Busra in Syria. His father, a preacher, died when he was a small child, and his elder brother brought him to Damascus in 706 AH, where he memorised the Quran and studied with the great scholars of the city.")
                         .font(.body)
 
@@ -564,10 +550,10 @@ struct IbnKathirView: View {
                         .font(.body)
                 }
 
-                Section(header: Text("HIS WORKS")) {
-                    Text("**Tafsir al-Quran al-‘Azim (تَفسِير القُرآن العَظِيم)**: the tafsir most read by Muslims today, in which he explains each verse by other verses, then by the hadith with its grade, then by the Companions and Tabi‘un, and warns against the Israelite reports and weak narrations. He set out the method in his introduction:")
+                Section(header: ArticleHeader("HIS WORKS")) {
+                    Text("**Tafsir al-Quran al-‘Azim (تَفسِير القُرآن العَظِيم)**: the tafsir most read by Muslims today, in which he explains each verse by other verses, then by the hadith with its grade, then by the Companions and Tabi‘un, and warns against the Israelite reports and weak narrations. He set out the method in his introduction, quoting his teacher Ibn Taymiyyah’s Muqaddimah fi Usul at-Tafsir:")
                         .font(.body)
-                    ScriptureQuote(text: "“If someone asks: what is the best method of tafsir? The answer is that the soundest method is that the Quran be explained by the Quran; what is left general in one place is explained in another. If that defeats you, then by the Sunnah, for it explains the Quran and clarifies it” (Tafsir Ibn Kathir, introduction).", arabic: "فَإِنْ قَالَ قَائِلٌ: فَمَا أَحْسَنُ طُرُقِ التَّفْسِيرِ؟ فَالْجَوَابُ: إِنَّ أَصَحَّ الطُّرُقِ فِي ذَلِكَ أَنْ يُفَسَّرَ الْقُرْآنُ بِالْقُرْآنِ، فَمَا أُجْمِلَ فِي مَكَانٍ فَإِنَّهُ قَدْ فُسِّرَ فِي مَوْضِعٍ آخَرَ، فَإِنْ أَعْيَاكَ ذَلِكَ فَعَلَيْكَ بِالسُّنَّةِ فَإِنَّهَا شَارِحَةٌ لِلْقُرْآنِ وَمُوَضِّحَةٌ لَهُ", dimmed: true)
+                    ScriptureQuote(text: "“If someone asks: what is the best method of tafsir? The answer is that the soundest method is that the Quran be explained by the Quran; what is left general in one place is explained in another. If that defeats you, then by the Sunnah, for it explains the Quran and clarifies it” (Ibn Taymiyyah, Muqaddimah fi Usul at-Tafsir, quoted in the introduction of Tafsir Ibn Kathir).", arabic: "فَإِنْ قَالَ قَائِلٌ: فَمَا أَحْسَنُ طُرُقِ التَّفْسِيرِ؟ فَالْجَوَابُ: إِنَّ أَصَحَّ الطُّرُقِ فِي ذَلِكَ أَنْ يُفَسَّرَ الْقُرْآنُ بِالْقُرْآنِ، فَمَا أُجْمِلَ فِي مَكَانٍ فَإِنَّهُ قَدْ فُسِّرَ فِي مَوْضِعٍ آخَرَ، فَإِنْ أَعْيَاكَ ذَلِكَ فَعَلَيْكَ بِالسُّنَّةِ فَإِنَّهَا شَارِحَةٌ لِلْقُرْآنِ وَمُوَضِّحَةٌ لَهُ", dimmed: true)
 
                     Text("**Al-Bidayah wan-Nihayah (البِدَايَة وَالنِّهَايَة)**, “The Beginning and the End“: the history of the world from the creation, through the prophets, the seerah in great detail, the caliphates, and the events of every year to 768 AH, ending with the signs of the Hour and the Hereafter. **Qisas al-Anbiya’** (the stories of the prophets) and **as-Sirah an-Nabawiyyah** are drawn from it.")
                         .font(.body)
@@ -576,15 +562,17 @@ struct IbnKathirView: View {
                         .font(.body)
                 }
 
-                Section(header: Text("HIS PLACE")) {
+                Section(header: ArticleHeader("HIS PLACE")) {
                     Text("Ibn Kathir carried the knowledge of Ibn Taymiyyah and adh-Dhahabi into the two books that every later generation opened first: the tafsir and the history. In his tafsir the creed of the Salaf is stated at every verse of the attributes, and in his history the Companions are defended and the sects are exposed.")
                         .font(.body)
                 }
 
-                Section(header: Text("IN SUMMARY")) {
+                Section(header: ArticleHeader("IN SUMMARY")) {
                     Text("Ibn Kathir explained the Quran by the Quran, the Sunnah, and the Salaf, and told the history of the nation from the beginning to the end. No student of the Quran and no reader of the seerah is without his books.")
                         .font(.body)
                 }
+
+                ArticleSourcesSection(article: "LaterScholarsView")
             }
             .themedListRowBackground()
         }
@@ -599,49 +587,49 @@ struct LaterScholarsView: View {
     var body: some View {
         List {
             Group {
-                Section(header: Text("SUMMARY")) {
+                Section(header: ArticleHeader("SUMMARY")) {
                     Text("In short: after Ibn Taymiyyah's circle, the creed and the hadith of the Salaf were carried by scholars such as Ibn Rajab, Ibn Hajar, Muhammad ibn Abd al-Wahhab, and, in our own era, Ibn Baz, al-Albani, and Ibn al-Uthaymin.")
                         .font(.body)
                 }
 
-                Section(header: Text("THE EIGHTH AND NINTH CENTURIES")) {
+                Section(header: ArticleHeader("THE EIGHTH AND NINTH CENTURIES")) {
                     ScholarEntry(name: "Ibn Rajab al-Hanbali", arabic: "ابن رَجَب الحَنبَلِي", meta: "736–795 AH / 1335–1393 CE · Baghdad and Damascus", description: "The student of Ibn al-Qayyim, whose Jami‘ al-‘Ulum wal-Hikam explains fifty foundational hadith, whose Fath al-Bari on Sahih al-Bukhari was left unfinished, and whose Lata’if al-Ma‘arif and Dhayl Tabaqat al-Hanabilah are read to this day. He wrote that the way of the Salaf is the truth in every matter of creed.")
 
                     ScholarEntry(name: "Ibn Hajar al-Asqalani", arabic: "ابن حَجَر العَسقَلَانِي", meta: "773–852 AH / 1372–1449 CE · Cairo", description: "The Commander of the Believers in hadith of his age, whose Fath al-Bari on Sahih al-Bukhari is the greatest commentary on any hadith book, with Bulugh al-Maram, Tahdhib at-Tahdhib, al-Isabah on the Companions, and Nukhbat al-Fikar. A Shafi‘i who leaned toward the Ash‘ari school in some matters, he is honoured by all of Ahl as-Sunnah for his service to the Sunnah, and he endorsed the defence of Ibn Taymiyyah.")
                 }
 
-                Section(header: Text("THE REVIVAL IN NAJD")) {
+                Section(header: ArticleHeader("THE REVIVAL IN NAJD")) {
                     ScholarEntry(name: "Muhammad ibn Abd al-Wahhab", arabic: "مُحَمَّد بن عَبد الوَهَّاب", meta: "1115–1206 AH / 1703–1792 CE · Najd, Arabia", description: "A Hanbali scholar who found the people of Arabia calling upon the dead at graves and trees and returned them to tawhid with the Quran and Sunnah, in Kitab at-Tawhid, al-Usul ath-Thalathah, Kashf ash-Shubuhat, and the Nawaqid al-Islam. He wrote that he followed Imam Ahmad in fiqh and called to nothing but what the four imams called to. His call, supported by Muhammad ibn Sa‘ud, made the creed of the Salaf the creed of a state and spread its books through the nation.")
 
                     ScholarEntry(name: "Muhammad ibn Ali ash-Shawkani", arabic: "الشَّوكَانِي", meta: "1173–1250 AH / 1759–1834 CE · Sana‘a, Yemen", description: "The judge of Yemen who left the Zaydi school for the Sunnah, and wrote Nayl al-Awtar on the hadith of rulings, Fath al-Qadir in tafsir, and Irshad al-Fuhul on the principles of law.")
                 }
 
-                Section(header: Text("THE SCHOLARS OF OUR ERA")) {
+                Section(header: ArticleHeader("THE SCHOLARS OF OUR ERA")) {
                     ScholarEntry(name: "Abd al-Aziz ibn Baz", arabic: "عَبد العَزِيز بن بَاز", meta: "1330–1420 AH / 1910–1999 CE · Riyadh", description: "Blind from the age of twenty, the Grand Mufti of Saudi Arabia, known for his gentleness, his charity, and his fatawa, which were spread across the world, and for his patience in answering every questioner.")
 
                     ScholarEntry(name: "Muhammad Nasir ad-Din al-Albani", arabic: "مُحَمَّد نَاصِر الدِّين الأَلبَانِي", meta: "1332–1420 AH / 1914–1999 CE · Damascus and Amman", description: "The hadith master of the age, a watchmaker who taught himself in the Zahiriyyah library of Damascus and then graded the hadith of the Sunan and hundreds of other works: as-Silsilah as-Sahihah, as-Silsilah ad-Da‘ifah, Irwa’ al-Ghalil, and Sifat Salat an-Nabi. The grades “sahih by al-Albani“ cited in these pages are his.")
 
                     ScholarEntry(name: "Muhammad ibn Salih al-Uthaymin", arabic: "مُحَمَّد بن صَالِح العُثَيمِين", meta: "1347–1421 AH / 1929–2001 CE · Unayzah", description: "The teacher of the Qasim, whose explanations of al-Wasitiyyah, Kitab at-Tawhid, Riyad as-Salihin, and Bulugh al-Maram, and whose ash-Sharh al-Mumti‘ in fiqh, are the textbooks of students of knowledge today, taught with clarity and with an ease of manner remembered by all who sat with him.")
 
-                    Text("Beside these three stood **Muqbil ibn Hadi al-Wadi‘i** in Yemen, **Muhammad Aman al-Jami** and **Ahmad an-Najmi** in the Hijaz, and their teachers and students. They differed at times in fiqh and in judgement, as scholars do, and were one in creed: the creed of the Salaf.")
+                    Text("Beside these three stood **Muqbil ibn Hadi al-Wadi‘i** in Yemen, **Muhammad Aman al-Jami** in Madinah and **Ahmad an-Najmi** in Jazan, and their teachers and students. They differed at times in fiqh and in judgement, as scholars do, and were one in creed: the creed of the Salaf.")
                         .font(.body)
                 }
 
-                Section(header: Text("HOW TO TAKE FROM THE SCHOLARS")) {
+                Section(header: ArticleHeader("HOW TO TAKE FROM THE SCHOLARS")) {
                     Text("A scholar is followed for his evidence, not for himself. Imam Malik said that everyone’s words may be accepted or rejected except those of the one in the Prophet’s grave, and every imam after him said the same. So the Muslim learns from the scholars of the Sunnah with respect, asks them what he does not know, and keeps the Quran and Sunnah as the final word for all of them:")
                         .font(.body)
                     ScriptureQuote(text: "“And it is not for the believers to go forth [to battle] all at once. For there should separate from every division of them a group [remaining] to obtain understanding in the religion and warn their people when they return to them that they might be cautious” (Quran 9:122).", arabic: "وَمَا كَانَ ٱلۡمُؤۡمِنُونَ لِيَنفِرُواْ كَآفَّةٗۚ فَلَوۡلَا نَفَرَ مِن كُلِّ فِرۡقَةٖ مِّنۡهُمۡ طَآئِفَةٞ لِّيَتَفَقَّهُواْ فِي ٱلدِّينِ وَلِيُنذِرُواْ قَوۡمَهُمۡ إِذَا رَجَعُوٓاْ إِلَيۡهِمۡ لَعَلَّهُمۡ يَحۡذَرُونَ")
                 }
 
-                Section(header: Text("COMMON QUESTIONS")) {
+                Section(header: ArticleHeader("COMMON QUESTIONS")) {
                     Text("**Are the scholars infallible?**")
                         .font(.body)
                     Text("No. Only the Prophet (peace be upon him) is protected from error in what he conveys from Allah; every scholar after him is right at times and wrong at times, and is followed only as far as he follows the evidence. Allah made the Quran and the Sunnah, not any man, the court of appeal:")
                         .font(.body)
                     ScriptureQuote(text: "“And if you disagree over anything, refer it to Allah and the Messenger, if you should believe in Allah and the Last Day” (Quran 4:59).", arabic: "فَإِن تَنَٰزَعۡتُمۡ فِي شَيۡءٖ فَرُدُّوهُ إِلَى ٱللَّهِ وَٱلرَّسُولِ إِن كُنتُمۡ تُؤۡمِنُونَ بِٱللَّهِ وَٱلۡيَوۡمِ ٱلۡأٓخِرِۚ")
-                    Text("The Companions said this first. When people answered a hadith with the opinion of Abu Bakr and Umar, Ibn Abbas (may Allah be pleased with him) said:")
+                    Text("The Companions said this first. When Urwah answered a hadith with the practice of Abu Bakr and Umar, Ibn Abbas (may Allah be pleased with him) said:")
                         .font(.body)
-                    ScriptureQuote(text: "“Stones are about to rain down on you from the sky! I say, ‘the Messenger of Allah (peace be upon him) said,’ and you say, ‘Abu Bakr and Umar said’” (Ibn Abd al-Barr, Jami‘ Bayan al-‘Ilm wa Fadlih; Ibn al-Qayyim, I‘lam al-Muwaqqi‘in).", arabic: "يُوشِكُ أَنْ تَنْزِلَ عَلَيْكُمْ حِجَارَةٌ مِنَ السَّمَاءِ، أَقُولُ: قَالَ رَسُولُ اللَّهِ صلى الله عليه وسلم، وَتَقُولُونَ: قَالَ أَبُو بَكْرٍ وَعُمَرُ", dimmed: true)
+                    ScriptureQuote(text: "“I think they will perish! I say, ‘the Prophet (peace be upon him) said,’ and he says, ‘Abu Bakr and Umar forbade it’” (Musnad Ahmad 3121; at-Tabarani, al-Mu‘jam al-Awsat 1718, graded hasan by al-Haythami).", arabic: "أُرَاهُمْ سَيَهْلِكُونَ! أَقُولُ: قَالَ النَّبِيُّ صَلَّى اللَّهُ عَلَيْهِ وَسَلَّمَ، وَيَقُولُ: نَهَى أَبُو بَكْرٍ وَعُمَرُ", dimmed: true)
                     Text("The imams said the same of themselves. Malik’s saying that everyone’s words may be accepted or rejected except those of the one in the Prophet’s grave (Ibn Abd al-Barr, Jami‘ Bayan al-‘Ilm wa Fadlih) is given above. Ash-Shafi‘i (may Allah have mercy on him) said:")
                         .font(.body)
                     ScriptureQuote(text: "“The Muslims are agreed that whoever has a Sunnah of the Messenger of Allah (peace be upon him) made clear to him is not permitted to leave it for the saying of anyone” (Ibn al-Qayyim, I‘lam al-Muwaqqi‘in).", arabic: "أَجْمَعَ الْمُسْلِمُونَ عَلَى أَنَّ مَنِ اسْتَبَانَتْ لَهُ سُنَّةٌ عَنْ رَسُولِ اللَّهِ صلى الله عليه وسلم لَمْ يَحِلَّ لَهُ أَنْ يَدَعَهَا لِقَوْلِ أَحَدٍ", dimmed: true)
@@ -658,7 +646,7 @@ struct LaterScholarsView: View {
                     ScriptureQuote(text: "“But if they had referred it back to the Messenger or to those of authority among them, then the ones who [can] draw correct conclusions from it would have known about it” (Quran 4:83).", arabic: "وَلَوۡ رَدُّوهُ إِلَى ٱلرَّسُولِ وَإِلَىٰٓ أُوْلِي ٱلۡأَمۡرِ مِنۡهُمۡ لَعَلِمَهُ ٱلَّذِينَ يَسۡتَنۢبِطُونَهُۥ مِنۡهُمۡۗ")
                     Text("A layman is not asked to weigh the proofs himself; he asks the most knowledgeable and God-fearing scholar he can reach, and when he can understand the evidence he follows what it supports, even against his own teacher. Difference among scholars is not a licence to pick the easiest opinion: Sulayman at-Taymi (may Allah have mercy on him) said that if you take the concession of every scholar, all evil gathers in you (Ibn Abd al-Barr, Jami‘ Bayan al-‘Ilm wa Fadlih). And the scholar who errs after striving is not sinning. The Prophet (peace be upon him) said:")
                         .font(.body)
-                    ScriptureQuote(text: "“When a judge gives a ruling, striving to reach the truth, and is correct, he has two rewards; and when he gives a ruling, striving, and errs, he has one reward” (Sahih al-Bukhari 7352).", arabic: "إِذَا حَكَمَ الْحَاكِمُ فَاجْتَهَدَ ثُمَّ أَصَابَ فَلَهُ أَجْرَانِ، وَإِذَا حَكَمَ فَاجْتَهَدَ ثُمَّ أَخْطَأَ فَلَهُ أَجْرٌ", dimmed: true)
+                    ScriptureQuote(text: "“If a judge gives a verdict according to the best of his knowledge and his verdict is correct (i.e. agrees with Allah and His Apostle's verdict) he will receive a double reward, and if he gives a verdict according to the best of his knowledge and his verdict is wrong, (i.e. against that of Allah and His Apostle) even then he will get a reward” (Sahih al-Bukhari 7352).", arabic: "إِذَا حَكَمَ الْحَاكِمُ فَاجْتَهَدَ ثُمَّ أَصَابَ فَلَهُ أَجْرَانِ، وَإِذَا حَكَمَ فَاجْتَهَدَ ثُمَّ أَخْطَأَ فَلَهُ أَجْرٌ", dimmed: true)
                     Text("So difference among the scholars is not a reason to abandon all of them, nor to follow desire under the name of choice. Ask the best you can reach, follow the proof when it is clear, and do not make the differences of the scholars a religion of your own.")
                         .font(.body)
 
@@ -677,13 +665,13 @@ struct LaterScholarsView: View {
                         .font(.body)
                     Text("No. Minhaj as-Sunnah is a reply to a Rafidi book, and it refutes the exaggeration about Ali, not Ali. In it Ibn Taymiyyah affirms Ali’s virtues, his caliphate as the fourth of the rightly guided, and that he was nearer to the truth than those who fought him, citing the Prophet’s words about Ammar, who was killed in Ali’s army at Siffin:")
                         .font(.body)
-                    ScriptureQuote(text: "“A band of rebels will kill Ammar” (Sahih Muslim 2916).", arabic: "تَقْتُلُ عَمَّارًا الْفِئَةُ الْبَاغِيَةُ", dimmed: true)
+                    ScriptureQuote(text: "“A band of rebels would kill `Ammar” (Sahih Muslim 2916).", arabic: "تَقْتُلُ عَمَّارًا الْفِئَةُ الْبَاغِيَةُ", dimmed: true)
                     Text("In al-Wasitiyyah he writes that Ahl as-Sunnah:")
                         .font(.body)
                     ScriptureQuote(text: "“love the People of the House of the Messenger of Allah (peace be upon him), take them as allies, and keep the will of the Messenger of Allah (peace be upon him) concerning them” (Ibn Taymiyyah, al-Aqidah al-Wasitiyyah).", arabic: "وَيُحِبُّونَ أَهْلَ بَيْتِ رَسُولِ اللَّهِ صلى الله عليه وسلم وَيَتَوَلَّوْنَهُمْ، وَيَحْفَظُونَ فِيهِمْ وَصِيَّةَ رَسُولِ اللَّهِ صلى الله عليه وسلم", dimmed: true)
                     Text("This is the creed of every Sunni, for Ali (may Allah be pleased with him) reported the Prophet’s promise:")
                         .font(.body)
-                    ScriptureQuote(text: "“It is a promise of the unlettered Prophet (peace be upon him) to me that none loves me but a believer and none hates me but a hypocrite” (Sahih Muslim 78).", arabic: "إِنَّهُ لَعَهْدُ النَّبِيِّ الأُمِّيِّ صلى الله عليه وسلم إِلَىَّ أَنْ لاَ يُحِبَّنِي إِلاَّ مُؤْمِنٌ وَلاَ يُبْغِضَنِي إِلاَّ مُنَافِقٌ", dimmed: true)
+                    ScriptureQuote(text: "“the Apostle (may peace and blessings be upon him) gave me a promise that no one but a believer would love me, and none but a hypocrite would nurse grudge against me” (Sahih Muslim 78).", arabic: "إِنَّهُ لَعَهْدُ النَّبِيِّ الأُمِّيِّ صلى الله عليه وسلم إِلَىَّ أَنْ لاَ يُحِبَّنِي إِلاَّ مُؤْمِنٌ وَلاَ يُبْغِضَنِي إِلاَّ مُنَافِقٌ", dimmed: true)
                     Text("Imam Ahmad said that whoever does not affirm the caliphate of Ali is more astray than his family’s donkey (al-Khallal, as-Sunnah; Ibn Abi Ya‘la, Tabaqat al-Hanabilah), and Ibn Taymiyyah, a Hanbali, followed him in this. He was called an enemy of Ali by those whose claims against the other Companions he refused to accept; refusing to curse the Companions is a mark of the Sunnah, not of hatred.")
                         .font(.body)
 
@@ -694,7 +682,7 @@ struct LaterScholarsView: View {
                     ScriptureQuote(text: "“And do not let the hatred of a people prevent you from being just. Be just; that is nearer to righteousness” (Quran 5:8).", arabic: "وَلَا يَجۡرِمَنَّكُمۡ شَنَـَٔانُ قَوۡمٍ عَلَىٰٓ أَلَّا تَعۡدِلُواْۚ ٱعۡدِلُواْ هُوَ أَقۡرَبُ لِلتَّقۡوَىٰۖ")
                     Text("Adh-Dhahabi wrote in Siyar A‘lam an-Nubala’, in the biography of the imam Muhammad ibn Nasr al-Marwazi:")
                         .font(.body)
-                    ScriptureQuote(text: "“If every time an imam erred in his ijtihad in a single matter, with an error that is forgiven him, we rose against him, called him an innovator, and abandoned him, then neither Ibn Nasr nor Ibn Mandah nor those greater than them would be safe with us” (adh-Dhahabi, Siyar A‘lam an-Nubala’).", arabic: "وَلَوْ أَنَّا كُلَّمَا أَخْطَأَ إِمَامٌ فِي اجْتِهَادِهِ فِي آحَادِ الْمَسَائِلِ خَطَأً مَغْفُورًا لَهُ، قُمْنَا عَلَيْهِ وَبَدَّعْنَاهُ وَهَجَرْنَاهُ، لَمَا سَلِمَ مَعَنَا لَا ابْنُ نَصْرٍ وَلَا ابْنُ مَنْدَهْ وَلَا مَنْ هُوَ أَكْبَرُ مِنْهُمَا", dimmed: true)
+                    ScriptureQuote(text: "“If every time an imam erred in his ijtihad in a single matter, with an error that is forgiven him, we rose against him, called him an innovator, and abandoned him, then neither Ibn Nasr nor Ibn Mandah nor those greater than them would be safe with us” (adh-Dhahabi, Siyar A‘lam an-Nubala’ 14/40).", arabic: "وَلَوْ أَنَّا كُلَّمَا أَخْطَأَ إِمَامٌ فِي اجْتِهَادِهِ فِي آحَادِ الْمَسَائِلِ خَطَأً مَغْفُورًا لَهُ، قُمْنَا عَلَيْهِ وَبَدَّعْنَاهُ وَهَجَرْنَاهُ، لَمَا سَلِمَ مَعَنَا لَا ابْنُ نَصْرٍ وَلَا ابْنُ مَنْدَهْ وَلَا مَنْ هُوَ أَكْبَرُ مِنْهُمَا", dimmed: true)
                     Text("Ibn Baz and Ibn al-Uthaymin (may Allah have mercy on them), when asked about the two, answered in the same spirit: they are imams of Ahl as-Sunnah whose good is immense, who erred in the interpretation of some attributes, and whose error is not followed. The rule is that of Ahl as-Sunnah in every age: take the truth from whoever brings it, leave the error of whoever falls into it, and ask Allah’s mercy for the scholars.")
                         .font(.body)
 
@@ -749,10 +737,10 @@ struct LaterScholarsView: View {
                         .font(.body)
                     Text("No. Every Muslim must learn what his worship requires: the meaning of the testimony of faith, how to purify and pray, what to fast and give, and the rulings of whatever trade or situation he is in; this is obligatory on each individual, as Ibn Abd al-Barr explains in Jami‘ Bayan al-‘Ilm. Beyond that, becoming a scholar is a communal obligation which some must fulfil for all, as the verse of Surat at-Tawbah above lays down. And every Muslim carries what he has learned to others. The Prophet (peace be upon him) said:")
                         .font(.body)
-                    ScriptureQuote(text: "“Convey from me, even if it were a single sentence” (Sahih al-Bukhari 3461).", arabic: "بَلِّغُوا عَنِّي وَلَوْ آيَةً", dimmed: true)
+                    ScriptureQuote(text: "“Convey (my teachings) to the people even if it were a single sentence” (Sahih al-Bukhari 3461).", arabic: "بَلِّغُوا عَنِّي وَلَوْ آيَةً", dimmed: true)
                     Text("Every step on the road is rewarded:")
                         .font(.body)
-                    ScriptureQuote(text: "“Whoever treads a path in search of knowledge, Allah will make easy for him thereby a path to Paradise” (Sahih Muslim 2699).", arabic: "وَمَنْ سَلَكَ طَرِيقًا يَلْتَمِسُ فِيهِ عِلْمًا سَهَّلَ اللَّهُ لَهُ بِهِ طَرِيقًا إِلَى الْجَنَّةِ", dimmed: true)
+                    ScriptureQuote(text: "“he who treads the path in search of knowledge, Allah would make that path easy, leading to Paradise for him” (Sahih Muslim 2699).", arabic: "وَمَنْ سَلَكَ طَرِيقًا يَلْتَمِسُ فِيهِ عِلْمًا سَهَّلَ اللَّهُ لَهُ بِهِ طَرِيقًا إِلَى الْجَنَّةِ", dimmed: true)
                     Text("The Companions were farmers, traders, and soldiers, and they were the most knowledgeable of the nation, because they learned a little and acted on it before they learned more. Knowledge is for everyone who seeks it; the rank of scholar is for those who give their lives to it.")
                         .font(.body)
 
@@ -760,12 +748,12 @@ struct LaterScholarsView: View {
                         .font(.body)
                     Text("This page names three whose knowledge, creed, and character the scholars of the Sunnah have agreed upon and who have gone to their Lord: Ibn Baz, al-Albani, and Ibn al-Uthaymin (may Allah have mercy on them), with those named beside them. Their books, fatawa, and recorded lessons remain, and they are the safest starting point for a student today, together with the scholars of the Sunnah who learned from them. Abdullah ibn Mas‘ud (may Allah be pleased with him) gave the principle:")
                         .font(.body)
-                    ScriptureQuote(text: "“Whoever would follow a way, let him follow the way of one who has died, for the living is not safe from trial; those are the Companions of Muhammad (peace be upon him)” (Ibn Abd al-Barr, Jami‘ Bayan al-‘Ilm wa Fadlih).", arabic: "مَنْ كَانَ مُسْتَنًّا فَلْيَسْتَنَّ بِمَنْ قَدْ مَاتَ، فَإِنَّ الْحَيَّ لَا تُؤْمَنُ عَلَيْهِ الْفِتْنَةُ، أُولَئِكَ أَصْحَابُ مُحَمَّدٍ صلى الله عليه وسلم", dimmed: true)
+                    ScriptureQuote(text: "“Whoever of you would follow an example, let him follow the example of the Companions of the Messenger of Allah, for they were the most righteous of this nation in heart, the deepest in knowledge, and the least in affectation” (Ibn Abd al-Barr, Jami‘ Bayan al-‘Ilm wa Fadlih; Abu Nu‘aym, Hilyat al-Awliya’ 1/305).", arabic: "مَنْ كَانَ مِنْكُمْ مُتَأَسِّيًا فَلْيَتَأَسَّ بِأَصْحَابِ رَسُولِ اللَّهِ صَلَّى اللَّهُ عَلَيْهِ وَسَلَّمَ، فَإِنَّهُمْ كَانُوا أَبَرَّ هَذِهِ الْأُمَّةِ قُلُوبًا، وَأَعْمَقَهَا عِلْمًا، وَأَقَلَّهَا تَكَلُّفًا", dimmed: true)
                     Text("For the living, apply the test given above: sound creed, knowledge of the texts, a known chain of teachers, and practice, and ask the people of the Reminder when you do not know, as Allah commanded in the verse of Surat an-Nahl quoted above. The names change from age to age; the test does not.")
                         .font(.body)
                 }
 
-                Section(header: Text("IN SUMMARY")) {
+                Section(header: ArticleHeader("IN SUMMARY")) {
                     Text("The chain never broke. From Ibn Rajab and Ibn Hajar to the revival in Najd and the scholars of the last century, the creed of the Salaf and the science of hadith were handed down teacher to student, and the same is asked of the student today: take the evidence, honour the scholars, and follow the Prophet.")
                         .font(.body)
                 }

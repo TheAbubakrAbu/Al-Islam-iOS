@@ -9,7 +9,16 @@ struct AdhanView: View {
     @Environment(\.appRevealed) private var appRevealed
 
     @State private var showingSettingsSheet = false
-    @State private var showBigQibla = false
+    /// DEBUG launch argument `-showBigQibla`: the location row opens with the 100 pt compass expanded
+    /// (a tap toggles it and taps are not scriptable in the simulator), which is the only state that
+    /// starts the heading updates and the GPS refinement burst.
+    @State private var showBigQibla: Bool = {
+        #if DEBUG
+        ProcessInfo.processInfo.arguments.contains("-showBigQibla")
+        #else
+        false
+        #endif
+    }()
     @State private var showAlert: AlertType?
 
     enum AlertType: Identifiable {
@@ -63,6 +72,7 @@ struct AdhanView: View {
     }
 
     var body: some View {
+        let _ = RenderCounter.hit("AdhanView")
         Group {
             #if os(iOS)
             if #available(iOS 16.0, *) {
@@ -171,19 +181,34 @@ struct AdhanView: View {
             settings.refreshLocationIfStale(olderThan: 30)
             prayerTimeRefresh(force: true)
         }
+        // No GPS burst from the tab any more. It used to start a 25 s `kCLLocationAccuracyBest` burst on
+        // every appear and activation, and each fix it accepted published `currentLocation` inside an
+        // animation. A stale fix gets one cheap one-shot `requestLocation` instead (no-op when the last
+        // commit is under five minutes old); only the expanded Qibla compass starts the burst.
         .onAppear {
+            if appRevealed {
+                prayerTimeRefresh(force: false)
+                settings.refreshLocationIfStale()
+            } else {
+                // Behind the launch cover (this is the initial tab): compute today's list from the
+                // stored location so the tab is right when the cover lifts, but no notification
+                // round trip or prompt (a system alert over the launch screen) and no location work
+                // yet. `.onChange(of: appRevealed)` runs both the moment we are on screen.
+                settings.fetchPrayerTimes()
+            }
+        }
+        .onChange(of: appRevealed) { revealed in
+            guard revealed else { return }
             prayerTimeRefresh(force: false)
-            settings.beginLocationRefinement()
-
-
+            settings.refreshLocationIfStale()
         }
         .onDisappear {
             settings.endLocationRefinement()
         }
         .onChange(of: scenePhase) { newScenePhase in
+            // `AppLifecycle` already refreshes a stale fix on activation.
             if newScenePhase == .active {
                 prayerTimeRefresh(force: false)
-                settings.beginLocationRefinement()
             }
         }
         // The dialog is presented from ONE place only: the completion of a prayer refresh (see
@@ -520,7 +545,7 @@ private struct HijriDateRow: View {
 
     var body: some View {
         #if os(iOS)
-        NavigationLink(destination: CalendarView()) {
+        NavigationLink(destination: LazyDestination { CalendarView() }) {
             HStack(spacing: 12) {
                 AccentIconChip(systemImage: "calendar", size: 26)
 
@@ -571,6 +596,7 @@ private struct CurrentLocationRow: View {
     @State private var showingPrayerTimesMap = false
 
     var body: some View {
+        let _ = RenderCounter.hit("CurrentLocationRow")
         VStack(alignment: .leading, spacing: 8) {
             HStack {
                 VStack(alignment: .leading, spacing: 6) {
@@ -596,6 +622,14 @@ private struct CurrentLocationRow: View {
             #endif
         }
         #if os(iOS)
+        #if DEBUG
+        // "-openCityPrayerTimes": open the City Prayer Times sheet on appear (screenshot runs).
+        .onAppear {
+            if ProcessInfo.processInfo.arguments.contains("-openCityPrayerTimes") {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1) { showingPrayerTimesMap = true }
+            }
+        }
+        #endif
         .sheet(isPresented: $showingPrayerTimesMap) {
             NavigationView {
                 PrayerTimesMapView()

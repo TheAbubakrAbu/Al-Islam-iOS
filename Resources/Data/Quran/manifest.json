@@ -1,13 +1,13 @@
 {
-  "blockTargetBytes": 2097152,
+  "blockTargetBytes": 960000,
   "formatVersion": 1,
   "packs": [
     {
-      "blocks": 2,
-      "bytes": 864764,
+      "blocks": 4,
+      "bytes": 926720,
       "name": "quran",
       "records": 114,
-      "sha256": "888c455e968042ee3ab1c0edf431b07835f81aed3eece292dacb80144d143693",
+      "sha256": "ae00a0467af7fe415f30f8128edfaf4ab08bedd2adcdd11a7ad1723ae9be3269",
       "sourceBytes": 4645503,
       "units": 6236
     },

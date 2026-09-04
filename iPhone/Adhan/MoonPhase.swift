@@ -30,6 +30,13 @@ struct MoonPhase: Equatable {
     /// Main-thread only, like every caller.
     private static var lastComputed: (date: Date, phase: MoonPhase)?
 
+    /// The phase for the hour `date` falls in. The Adhan tab's callers (the sky card, both Glance
+    /// tiles) all go through this so they share the one memo entry above instead of evicting each
+    /// other's; the moon does not change measurably within an hour.
+    static func onCurrentHour(_ date: Date = Date()) -> MoonPhase {
+        on(Date(timeIntervalSinceReferenceDate: (date.timeIntervalSinceReferenceDate / 3600).rounded(.down) * 3600))
+    }
+
     static func on(_ date: Date) -> MoonPhase {
         if let cached = lastComputed, cached.date == date { return cached.phase }
         let phase = compute(date)
@@ -160,6 +167,9 @@ struct MoonPhaseView: View {
                         endPoint: .bottomTrailing
                     )
                 )
+                // A plain `.shadow`, not `.softShadow`: this file is shared with the widget target,
+                // which has no appearance environment. One 20 pt glow on the sky card is not worth a
+                // second copy of the modifier.
                 .shadow(color: .white.opacity(0.35 * phase.illumination), radius: 6)
         }
         .frame(width: diameter, height: diameter)

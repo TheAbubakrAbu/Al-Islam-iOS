@@ -165,9 +165,7 @@ struct PrayerSkyChrome: ViewModifier {
 
     func body(content: Content) -> some View {
         if showsSky {
-            content.modifier(PrayerSkyBackground(
-                colors: Settings.shared.skyGradientColors(forPrayer: entry.currentPrayer?.nameTransliteration)
-            ))
+            content.modifier(PrayerSkyBackground(colors: entry.skyColors))
         } else {
             content.widgetContainerBackground(legacyPadding: true)
         }

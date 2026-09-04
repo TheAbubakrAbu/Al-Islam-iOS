@@ -2,10 +2,13 @@ import SwiftUI
 
 @main
 struct AlIslamApp: App {
-    @StateObject private var settings = Settings.shared
-    @StateObject private var quranData = QuranData.shared
-    @StateObject private var quranPlayer = QuranPlayer.shared
-    @StateObject private var namesData = NamesViewModel.shared
+    // Plain references, not `@StateObject` - the iPhone root's rule: observing the stores here re-ran
+    // this body (and the whole TabView under it) on every publish of any of them. What the root reads
+    // comes from `RootAppearance` through `.appearanceEnvironment()`.
+    private let settings = Settings.shared
+    private let quranData = QuranData.shared
+    private let quranPlayer = QuranPlayer.shared
+    private let namesData = NamesViewModel.shared
 
     @Environment(\.scenePhase) private var scenePhase
     @State private var isLaunching = true
@@ -49,15 +52,14 @@ struct AlIslamApp: App {
             .environmentObject(quranData)
             .environmentObject(quranPlayer)
             .environmentObject(namesData)
-            .accentColor(settings.accentColor.color)
-            .tint(settings.accentColor.color)
+            // Accent, tint, color scheme and the shared chrome's `AppearanceEnvironment`, live.
+            .appearanceEnvironment()
             // The app-wide SF Rounded design, same as the iPhone root - covers every system-font Text on
             // the watch, styled or not (watchOS 9.1+; a visual no-op earlier).
             .appFontDesign()
             // Every Toggle breathes: the standard switch with 2pt of vertical padding (user rule),
             // applied once at the root exactly like the iPhone app.
             .toggleStyle(PaddedSwitchToggleStyle())
-            .preferredColorScheme(settings.colorScheme)
             .transition(.opacity)
             .animation(.easeInOut, value: isLaunching)
             .onAppear { settings.fetchPrayerTimes() }
@@ -83,12 +85,12 @@ struct AlIslamApp: App {
     private func warmUnderCover() async {
         guard !didWarm else { return }
         didWarm = true
+        // The Quran parse starts only once the cover is lifting (or was never up): the reveal used to
+        // wait on `waitUntilCoreLoaded()`, which on an S-series CPU WAS the cold launch. The Quran tab
+        // shows its loading state for the second or two the parse takes if it is opened at once.
+        defer { quranData.ensureLoading() }
 
         guard isLaunching else { LaunchWarmup.shared.markWarm(); return }
-
-        // Build the real surah list, not the empty loading state.
-        await quranData.waitUntilCoreLoaded()
-        if Task.isCancelled { LaunchWarmup.shared.markWarm(); return }
 
         selectedTab = .quran
         try? await Task.sleep(nanoseconds: 300_000_000)

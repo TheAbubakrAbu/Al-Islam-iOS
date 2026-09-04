@@ -1037,13 +1037,23 @@ struct HadithBookmarkGridTile: View, Equatable {
                 // neighbours' height instead of hugging shorter. Four lines for the surviving
                 // language does NOT square them: four Arabic lines are taller than two Arabic plus
                 // two English, and four English lines are shorter.
+                // Old saves carry only `preview`: route it to the slot its SCRIPT belongs in, so an
+                // Arabic-only book (Darimi, Ahmad) never lands its Arabic in the English slot with
+                // the Arabic slot collapsed above it.
+                let legacyIsArabic = bookmark.arabicPreview == nil && bookmark.preview.containsArabicScript
+                let arabic = bookmark.arabicPreview ?? (legacyIsArabic ? bookmark.preview : "")
+                let english = bookmark.englishPreview
+                    ?? ((bookmark.arabicPreview == nil && !legacyIsArabic) ? bookmark.preview : "")
+
+                // A blank slot still reserves its two lines: a single SPACE, never the empty string -
+                // an empty Text lays out at zero height whatever `reservesSpace` says, which is exactly
+                // how the Arabic-only tiles ended up shorter than their neighbours.
                 if settings.showHadithArabic {
-                    HadithArabicPreview(text: bookmark.arabicPreview ?? "", size: 14, lineLimit: 2)
+                    HadithArabicPreview(text: arabic.isEmpty ? " " : arabic, size: 14, lineLimit: 2)
                 }
 
                 if settings.showHadithEnglish {
-                    let english = bookmark.englishPreview ?? ""
-                    Text(!english.isEmpty ? english : (bookmark.arabicPreview == nil ? bookmark.preview : ""))
+                    Text(english.isEmpty ? " " : english)
                         .font(.caption2)
                         .foregroundColor(.secondary)
                         .reservedLineLimit(2)

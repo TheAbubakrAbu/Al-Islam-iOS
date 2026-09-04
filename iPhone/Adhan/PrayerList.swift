@@ -127,6 +127,7 @@ struct PrayerList: View {
     }
 
     var body: some View {
+        let _ = RenderCounter.hit("PrayerList")
         if settings.prayers != nil {
             prayerListSection
         }
@@ -423,6 +424,7 @@ struct PrayerList: View {
                 displayName: listDisplayName(for: prayer),
                 isCurrent: isCurrent,
                 iconColor: listIconColor,
+                highlight: settings.accentColor.accent2.opacity(0.25),
                 trailingContent: {
                     #if os(iOS)
                     prayerBell(for: prayer, rowColor: .primary)
@@ -546,11 +548,21 @@ struct PrayerList: View {
             repeating: GridItem(.flexible(), spacing: tileSpacing),
             count: columnCount
         )
+        // Once per grid, not per tile: the highlighted prayer, its index in this list and the accent.
+        let currentName = currentPrayerName
+        let currentIndex = prayers.firstIndex { $0.nameTransliteration == settings.currentPrayer?.nameTransliteration }
+        let accent = settings.accentColor.accent2
 
+        // Not wrapped in an iOS 26 `GlassEffectContainer`: tried, and it re-rendered the tiles flatter
+        // and dropped the current tile's glow. The flat pre-26 fill below is the win that matters
+        // (the A11-A13 devices that stutter never run iOS 26).
         LazyVGrid(columns: columns, spacing: tileSpacing) {
-            ForEach(prayers, id: \.stableDisplayID) { prayer in
-                let color: Color = isComparisonBaseline ? .secondary : (highlightsCurrent ? prayerColor(for: prayer, in: prayers) : .primary)
-                let isCurrent = highlightsCurrent && !isComparisonBaseline && isCurrentPrayer(prayer)
+            ForEach(Array(prayers.enumerated()), id: \.element.stableDisplayID) { index, prayer in
+                let color: Color = isComparisonBaseline
+                    ? .secondary
+                    : (highlightsCurrent ? prayerColor(at: index, currentIndex: currentIndex, accent: accent) : .primary)
+                let isCurrent = highlightsCurrent && !isComparisonBaseline
+                    && (currentName?.contains(prayer.nameTransliteration) ?? false)
 
                 VStack(alignment: .leading, spacing: 2) {
                     #if os(watchOS)
@@ -604,12 +616,13 @@ struct PrayerList: View {
                     clear: !isCurrent,
                     rectangle: true,
                     useColor: isCurrent ? 0.25 : nil,
-                    customTint: isCurrent ? settings.accentColor.accent2 : nil
+                    customTint: isCurrent ? accent : nil,
+                    flat: true
                 )
                 // The soft accent glow lifts the current prayer's tile off the board - the tint said
                 // "different", the glow says "now".
-                .shadow(color: isCurrent ? settings.accentColor.accent2.opacity(0.35) : .clear,
-                        radius: isCurrent ? 8 : 0, x: 0, y: 2)
+                .softShadow(color: isCurrent ? accent.opacity(0.35) : .clear,
+                            radius: isCurrent ? 8 : 0, x: 0, y: 2)
                 .contentShape(Rectangle())
                 .onTapGesture {
                     togglePrayerExpansion(for: prayer)
@@ -807,9 +820,20 @@ struct PrayerList: View {
 
     /// While the sun is being dragged along `SkyView`'s arc, the highlight follows the dragged moment rather
     /// than the live one, so scrubbing the day walks it down the rows.
+    private var currentPrayerName: String? {
+        (scrubHighlight.previewPrayer ?? settings.currentPrayer)?.nameTransliteration
+    }
+
     private func isCurrentPrayer(_ prayer: Prayer) -> Bool {
-        let reference = scrubHighlight.previewPrayer ?? settings.currentPrayer
-        return reference?.nameTransliteration.contains(prayer.nameTransliteration) ?? false
+        currentPrayerName?.contains(prayer.nameTransliteration) ?? false
+    }
+
+    /// `prayerColor(for:in:)` with the two index lookups hoisted out of the per-tile closure.
+    private func prayerColor(at index: Int, currentIndex: Int?, accent: Color) -> Color {
+        guard let currentIndex else { return .secondary }
+        if index < currentIndex { return .secondary }
+        if index == currentIndex { return accent }
+        return .primary
     }
 
     private func prayerColor(for prayer: Prayer, in prayers: [Prayer]) -> Color {
@@ -1002,7 +1026,7 @@ struct PrayerList: View {
             .rotationEffect(bellRotation(for: prayer))
             .contentShape(Rectangle())
             .padding(4)
-            .conditionalGlassEffect()
+            .conditionalGlassEffect(flat: true)
             .onTapGesture {
                 settings.hapticFeedback()
                 triggerBellAnimation(for: prayer)
@@ -1041,19 +1065,20 @@ struct PrayerList: View {
     }
 }
 
+/// A leaf that observes nothing: the highlight colour comes in as a value from the list, which
+/// already observes `Settings`.
 private struct PrayerListRowCard<TrailingContent: View>: View {
-    @ObservedObject private var settings = Settings.shared
-
     let prayer: Prayer
     let displayName: String
     let isCurrent: Bool
     let iconColor: Color
+    let highlight: Color
     @ViewBuilder let trailingContent: () -> TrailingContent
 
     var body: some View {
         ZStack {
             RoundedRectangle(cornerRadius: 20)
-                .fill(isCurrent ? settings.accentColor.accent2.opacity(0.25) : .clear)
+                .fill(isCurrent ? highlight : .clear)
                 #if os(iOS)
                 .padding(.vertical, backgroundVerticalPadding)
                 .padding(.horizontal, -12)

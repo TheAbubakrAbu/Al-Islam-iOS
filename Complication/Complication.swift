@@ -22,7 +22,7 @@ struct ComplicationSkyGradient: View {
 
     var body: some View {
         LinearGradient(
-            colors: Settings.shared.skyGradientColors(forPrayer: entry.currentPrayer?.nameTransliteration),
+            colors: entry.skyColors,
             startPoint: .top,
             endPoint: .bottom
         )

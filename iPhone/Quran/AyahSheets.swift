@@ -8,6 +8,147 @@ enum AyahSecondarySheet: String, Identifiable {
     var id: String { rawValue }
 }
 
+/// One of the sheets an ayah row asks its host to present (Phase 5 step 6). A list row used to carry
+/// twelve presentation modifiers of its own, ~100-150 presentation hosts churned per screenful of
+/// scrolling; `SurahView` hosts ONE `.sheet(item:)` now and the rows route requests through
+/// `AyahRow.onRequestSheet`, the way the page reader already did with `SecondarySheetRequest`.
+enum AyahRowSheetKind: Equatable {
+    /// The long-press actions sheet (`AyahActionsSheet`).
+    case actions
+    case secondary(AyahSecondarySheet)
+    /// The word-by-word meaning card.
+    case word(TappedWord)
+    /// The riwayah word card (non-Hafs word tap).
+    case riwayahWord(RiwayahTappedWord)
+}
+
+struct AyahRowSheetRequest: Identifiable {
+    let surah: Surah
+    let ayah: Ayah
+    let kind: AyahRowSheetKind
+
+    var id: String {
+        let kindKey: String
+        switch kind {
+        case .actions: kindKey = "actions"
+        case .secondary(let sheet): kindKey = sheet.rawValue
+        case .word(let tapped): kindKey = "word\(tapped.index)"
+        case .riwayahWord(let tapped): kindKey = "rword\(tapped.index)"
+        }
+        return "\(surah.id):\(ayah.id):\(kindKey)"
+    }
+}
+
+/// The body of a row-sheet host: every sheet a list row can ask for, built from the request.
+struct AyahRowSheetContent: View {
+    @ObservedObject private var settings = Settings.shared
+    @ObservedObject private var quranData = QuranData.shared
+    private var quranPlayer: QuranPlayer { .shared }
+
+    let request: AyahRowSheetRequest
+    /// The actions sheet asked for another sheet: the host closes this one first, then presents it.
+    let onRequestSecondary: (AyahSecondarySheet) -> Void
+    let onDismiss: () -> Void
+
+    init(request: AyahRowSheetRequest,
+         onRequestSecondary: @escaping (AyahSecondarySheet) -> Void,
+         onDismiss: @escaping () -> Void) {
+        self.request = request
+        self.onRequestSecondary = onRequestSecondary
+        self.onDismiss = onDismiss
+    }
+
+    var body: some View {
+        let surah = request.surah
+        let ayah = request.ayah
+
+        Group {
+            switch request.kind {
+            case .actions:
+                AyahActionsSheet(surah: surah, ayah: ayah, onRequestSheet: onRequestSecondary)
+                    .smallMediumSheetPresentation()
+
+            case .word(let tapped):
+                WordMeaningSheet(
+                    surah: surah,
+                    ayah: ayah,
+                    word: tapped.word,
+                    meaning: tapped.meaning,
+                    position: tapped.index + 1,
+                    total: tapped.total
+                )
+                .environmentObject(settings)
+
+            case .riwayahWord(let tapped):
+                RiwayahWordSheet(
+                    surah: surah,
+                    ayah: ayah,
+                    tag: tapped.tag,
+                    word: tapped.word,
+                    index: tapped.index,
+                    total: tapped.total
+                )
+                .environmentObject(settings)
+
+            case .secondary(let kind):
+                secondary(kind, surah: surah, ayah: ayah)
+                    .smallMediumSheetPresentation()
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func secondary(_ kind: AyahSecondarySheet, surah: Surah, ayah: Ayah) -> some View {
+        switch kind {
+        case .tafsir:
+            AyahTafsirSheet(surahName: surah.nameTransliteration, surahNumber: surah.id, ayahNumber: ayah.id)
+
+        case .qiraah:
+            AyahQiraahComparisonSheet(surahNumber: surah.id, ayahNumber: ayah.id)
+                .environmentObject(settings)
+                .environmentObject(quranData)
+
+        case .translations:
+            AyahEnglishComparisonSheet(surahNumber: surah.id, ayahNumber: ayah.id)
+                .environmentObject(settings)
+                .environmentObject(quranData)
+
+        case .customRange:
+            PlayCustomRangeSheet(
+                surah: surah,
+                initialStartAyah: ayah.id,
+                initialEndAyah: PlayCustomRangeSheet.defaultEndAyah(
+                    startAyah: ayah.id,
+                    surah: surah,
+                    displayQiraah: settings.displayQiraahForArabic
+                ),
+                onPlay: { start, end, repAyah, repSec in
+                    quranPlayer.playCustomRange(
+                        surahNumber: surah.id,
+                        surahName: surah.nameTransliteration,
+                        startAyah: start,
+                        endAyah: end,
+                        repeatPerAyah: repAyah,
+                        repeatSection: repSec
+                    )
+                    onDismiss()
+                },
+                onCancel: { onDismiss() }
+            )
+            .environmentObject(settings)
+
+        case .note:
+            AyahNoteSheet(surah: surah, ayah: ayah)
+
+        case .share:
+            ShareAyahSheet(surahNumber: surah.id, ayahNumber: ayah.id)
+
+        case .selectText:
+            SelectAyahTextSheet(surah: surah, ayah: ayah)
+        }
+    }
+}
+
 /// The note editor plus the draft it edits. A small view of its own so the *parent* can present the editor
 /// without owning the draft text and the profanity check.
 struct AyahNoteSheet: View {

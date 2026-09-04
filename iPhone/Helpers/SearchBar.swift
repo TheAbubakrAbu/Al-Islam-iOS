@@ -121,6 +121,7 @@ private struct SystemSearchField: UIViewRepresentable {
     /// pasteboard with `simctl pbcopy` before launching.
     nonisolated(unsafe) private static var didSchedulePasteProbe = false
     #endif
+    @Environment(\.appearance) private var appearance
     @Binding var text: String
     var focusRequestID: Int
     var cancelToken: Int
@@ -147,15 +148,7 @@ private struct SystemSearchField: UIViewRepresentable {
         }
         field.returnKeyType = .search
         field.clearButtonMode = .whileEditing
-        if #unavailable(iOS 26.0) {
-            // Pre-Liquid-Glass the bare field draws only its translucent gray fill, and floating over
-            // list content it read as "way too transparent" (user report). The old UISearchBar layered
-            // that same fill over an opaque bar; an opaque backing under the field restores that look.
-            // iOS 26 draws the field as glass and needs nothing.
-            field.backgroundColor = .secondarySystemBackground
-            field.layer.cornerRadius = 14
-            field.clipsToBounds = true
-        }
+        applyBacking(to: field, coordinator: context.coordinator)
         field.delegate = context.coordinator
         field.addTarget(context.coordinator, action: #selector(Coordinator.editingChanged(_:)), for: .editingChanged)
         field.addTarget(context.coordinator, action: #selector(Coordinator.editingBegan), for: .editingDidBegin)
@@ -193,9 +186,24 @@ private struct SystemSearchField: UIViewRepresentable {
         return field
     }
 
+    /// Without Liquid Glass the bare field draws only its translucent gray fill, and floating over
+    /// list content it read as "way too transparent" (user report). The old UISearchBar layered that
+    /// same fill over an opaque bar; an opaque backing under the field restores that look. Under
+    /// Liquid Glass the field draws itself as glass and needs nothing. Re-applied on update so the
+    /// Classic Look toggle (and its Low Power Mode rule) restyles a mounted field.
+    private func applyBacking(to field: UISearchTextField, coordinator: Coordinator) {
+        let opaque = !appearance.liquidGlass
+        guard coordinator.appliedOpaqueBacking != opaque else { return }
+        coordinator.appliedOpaqueBacking = opaque
+        field.backgroundColor = opaque ? .secondarySystemBackground : nil
+        field.layer.cornerRadius = opaque ? 14 : 0
+        field.clipsToBounds = opaque
+    }
+
     func updateUIView(_ field: UISearchTextField, context: Context) {
         context.coordinator.onSearchButtonClicked = onSearchButtonClicked
         context.coordinator.onFocusChanged = onFocusChanged
+        applyBacking(to: field, coordinator: context.coordinator)
 
         // Push SwiftUI's text into UIKit ONLY when it's a value the user didn't just type (a programmatic
         // set: the global-search handoff, a cleared query). While the field is being edited, UIKit is the
@@ -240,6 +248,9 @@ private struct SystemSearchField: UIViewRepresentable {
         /// The last focus request honoured, so a re-render can't keep re-taking first responder.
         var lastFocusRequestID = 0
         var lastCancelToken = 0
+        /// Whether the opaque (non-glass) backing is currently applied, so `applyBacking` only touches
+        /// the layer when the look actually changes.
+        var appliedOpaqueBacking: Bool?
         /// The last few values `editingChanged` pushed INTO SwiftUI. When one of them comes back through
         /// `updateUIView` it's an echo of the user's own typing (possibly stale by a beat), not a
         /// programmatic set - see the guard there.

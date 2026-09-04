@@ -1,7 +1,9 @@
 import SwiftUI
 
 struct HighlightedSnippet: View {
-    @ObservedObject var settings = Settings.shared
+    // Deliberately NOT observing Settings: every snippet on screen re-rendered on every Settings
+    // publish for a helper (`normalizeForAllahHighlight`) nothing called. Every input is a value the
+    // parent passes (Phase 5, section 13 of the performance plan).
 
     let source: String
     let term: String
@@ -45,28 +47,65 @@ struct HighlightedSnippet: View {
             .foregroundColor(trailingSuffixColor ?? fg)
 
         if needsAttributedWork {
-            // When highlighting a search term, base the attributed text on the PLAIN `source` - never a
-            // `preStyledSource` (e.g. tajweed-colored Arabic). The matched ranges are `String.Index` ranges
-            // into `source`; a preStyledSource can have a different character layout (clean text / removed
-            // dots / beginner spacing), so converting those indices into it silently fails (`Index(_, within:)`
-            // returns nil) and a real - even exact - match never gets colored. On a matched row the search
-            // highlight takes priority over tajweed, matching how text-search results are shown elsewhere.
-            let base = needsSearchHighlight ? plainSourceAttributed() : baseAttributedText()
-            let highlightedText = applyExtraRanges(
-                    to: highlightAllahIfNeeded(
-                        source: source,
-                        baseAttributed: highlight(
-                            source: source,
-                            baseAttributed: base,
-                            term: resolvedSearchTerm
-                        )
-                    )
-                )
+            let highlightedText = memoizedHighlightedText(term: resolvedSearchTerm,
+                                                          needsSearchHighlight: needsSearchHighlight)
 
             limited(Text("\(Text(highlightedText))\(suffixText)"))
         } else {
             limited(Text("\(Text(source).foregroundColor(fg))\(suffixText)"))
         }
+    }
+
+    /// The final string, memoized per (every input) - Phase 5 step 11. The highlight and the
+    /// Allah-name scan re-ran per body pass for every visible row, on every publish.
+    private func memoizedHighlightedText(term: String, needsSearchHighlight: Bool) -> AttributedString {
+        let memoKey = Self.memoKey(
+            source: source, term: term, font: font, accent: accent, fg: fg,
+            preStyled: preStyledSource, beginner: beginnerMode, allah: highlightAllahNames,
+            guarantee: guaranteeMatch, extra: extraHighlightRanges
+        )
+        if let hit = Self.memo.object(forKey: memoKey) { return hit.value }
+        // When highlighting a search term, base the attributed text on the PLAIN `source` - never a
+        // `preStyledSource` (e.g. tajweed-colored Arabic). The matched ranges are `String.Index` ranges
+        // into `source`; a preStyledSource can have a different character layout (clean text / removed
+        // dots / beginner spacing), so converting those indices into it silently fails (`Index(_, within:)`
+        // returns nil) and a real - even exact - match never gets colored. On a matched row the search
+        // highlight takes priority over tajweed, matching how text-search results are shown elsewhere.
+        let base = needsSearchHighlight ? plainSourceAttributed() : baseAttributedText()
+        let built = applyExtraRanges(
+            to: highlightAllahIfNeeded(
+                source: source,
+                baseAttributed: highlight(source: source, baseAttributed: base, term: term)
+            )
+        )
+        Self.memo.setObject(SnippetBox(built), forKey: memoKey)
+        return built
+    }
+
+    private final class SnippetBox {
+        let value: AttributedString
+        init(_ value: AttributedString) { self.value = value }
+    }
+
+    private static let memo: NSCache<NSString, SnippetBox> = {
+        let cache = NSCache<NSString, SnippetBox>()
+        cache.countLimit = 400
+        return cache
+    }()
+
+    /// Every input the attributed build reads. `font`, `accent` and `fg` fold through their
+    /// descriptions (stable for a given configuration); a pre-styled source folds through its
+    /// render digest (characters plus the colour runs), so a tajweed recolour is a different key.
+    private static func memoKey(source: String, term: String, font: Font, accent: Color, fg: Color,
+                                preStyled: AttributedString?, beginner: Bool, allah: Bool,
+                                guarantee: Bool, extra: [NSRange]) -> NSString {
+        var parts: [String] = [
+            source, term, "\(font)", "\(accent)", "\(fg)",
+            beginner ? "b" : "-", allah ? "a" : "-", guarantee ? "g" : "-",
+            extra.map { "\($0.location):\($0.length)" }.joined(separator: ","),
+        ]
+        parts.append(preStyled.map { "\($0.renderDigest)" } ?? "plain")
+        return parts.joined(separator: "\u{1F}") as NSString
     }
 
     /// Colors `extraHighlightRanges` with the accent. UTF-16 spans (instance-free, like the caches)
@@ -299,10 +338,6 @@ struct HighlightedSnippet: View {
         }
         return Settings.shared.cleanSearch(base, whitespace: trimWhitespace)
             .removingArabicDiacriticsAndSigns
-    }
-
-    private func normalizeForAllahHighlight(_ text: String) -> String {
-        settings.cleanSearch(text.removingArabicDiacriticsAndSigns, whitespace: false)
     }
 
     private func baseAttributedText() -> AttributedString {
@@ -1110,5 +1145,19 @@ extension String {
                 return false
             }
         }
+    }
+}
+
+extension AttributedString {
+    /// A cheap fingerprint of the characters and the foreground-colour runs, for memo keys that must
+    /// change when a pre-styled (tajweed) string is recoloured (Phase 5 step 11).
+    var renderDigest: Int {
+        var hasher = Hasher()
+        hasher.combine(String(characters))
+        for run in runs {
+            hasher.combine(characters.distance(from: run.range.lowerBound, to: run.range.upperBound))
+            if let color = run.foregroundColor { hasher.combine("\(color)") }
+        }
+        return hasher.finalize()
     }
 }

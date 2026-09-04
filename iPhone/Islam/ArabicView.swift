@@ -3,6 +3,8 @@ import SwiftUI
 struct ArabicView: View {
     @ObservedObject private var settings = Settings.shared
     @State private var searchText = ""
+    /// The letter a result asked to scroll to ("Scroll To Letter"), consumed once the search clears.
+    @State private var scrollTarget: String?
     /// Apple Music-style bar minimization: true while scrolling down.
     @State private var barsCollapsed = false
     @AppStorage("arabicFilterMode") private var filterModeRaw: String = ArabicFilterMode.normal.rawValue
@@ -288,7 +290,8 @@ struct ArabicView: View {
         let keywordVisible = true
         #endif
 
-        return List {
+        return ScrollViewReader { proxy in
+        List {
             Group {
                 #if os(watchOS)
                 arabicFontPickerSection
@@ -392,6 +395,13 @@ struct ArabicView: View {
             ArabicSpeech.shared.stop()
             ArabicPracticeSelection.shared.clear()
         }
+        .onChange(of: scrollTarget) { target in
+            guard let target else { return }
+            // The result rows are still animating out; scroll once the alphabet is back.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                withAnimation { proxy.scrollTo(target, anchor: .top) }
+            }
+        }
         #if os(iOS)
         .onChange(of: searchText) { text in
             // A new query starts back on the AI list.
@@ -422,6 +432,7 @@ struct ArabicView: View {
             }
         }
         #endif
+        }
     }
 
     private func adaptiveMenuButtonLabel<Content: View>(
@@ -598,10 +609,18 @@ struct ArabicView: View {
             accentColor: settings.accentColor,
             useFontArabic: settings.useFontArabic,
             fontArabic: settings.nonQuranArabicFontName,
-            searchQuery: searchText
+            searchQuery: searchText,
+            // Only search-result rows scroll: with the alphabet showing, the row is where it lives.
+            onScrollTo: searchText.isEmpty ? nil : {
+                withAnimation { searchText = "" }
+                scrollTarget = Self.letterRowID(letterData)
+            }
         )
         .equatable()
+        .id(Self.letterRowID(letterData))
     }
+
+    private static func letterRowID(_ letterData: LetterData) -> String { "letter_\(letterData.letter)" }
 
     @ViewBuilder
     private var mainLetterSections: some View {

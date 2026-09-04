@@ -23,6 +23,7 @@ final class SemanticSearchEngine: ObservableObject {
     static let shared = SemanticSearchEngine()
 
     private init() {
+        ObjectPublishCounter.attach(self, label: "SemanticSearchEngine")
         #if os(iOS)
         // Up to 3 resident corpora × ~10-25MB of vectors is the app's largest droppable allocation.
         // Under a real memory warning, shed everything but the most recently used corpus - the evicted
@@ -73,6 +74,9 @@ final class SemanticSearchEngine: ObservableObject {
             return supported
         }
     }
+
+    /// `isSupported` when the probe has already run, nil when reading it would load the model here.
+    nonisolated static var isSupportedIfResolved: Bool? { supportedResolved }
 
     /// Forces the `isSupported` model load onto the serial lane from a background context. Called from
     /// the Quran data load, so the first body that reads `isSupported` gets a cached Bool, not a model load.

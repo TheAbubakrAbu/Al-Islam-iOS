@@ -309,6 +309,10 @@ struct SurahPageReader<Controls: View>: View {
 
     @State private var pageIndex = 0
     @State private var didSetInitialPage = false
+    /// Extra centres for `pageWindow` while an animated turn is in flight: the page being LEFT and
+    /// the page being turned TO, so the mounted set does not change inside the animated transaction
+    /// (an insertion there renders as a crossfade, not a slide). Cleared once the slide has finished.
+    @State private var windowAnchors: Set<Int> = []
     /// The surah named by the pinned header at the top of the reader, and the ONLY thing that decides when
     /// the header (and the parent's toolbar title) re-renders. It is written by `reportSurah` and only when
     /// the top surah's id actually changes, so paging within one surah leaves it - and the header - alone.
@@ -442,7 +446,27 @@ struct SurahPageReader<Controls: View>: View {
         return MushafPagination.pageIndex(surahID: surah.id, ayahID: targetAyah, in: pages) ?? 0
     }
 
+    /// The page indices the pager mounts (Phase 5 step 4): the page on screen and three to either
+    /// side, plus the same ring around `windowAnchor` during an animated far turn. The `TabView` used
+    /// to be handed all 604 pages: every publish the reader observes (each player tick, each Settings
+    /// write) diffed 604 children and evaluated 604 `MushafPageContent` bodies (measured: 1,200 to
+    /// 2,400 body evaluations per second while the reader sat idle), and realizing the pager the first
+    /// time cost ~900 ms of main thread. Indices are the REAL page indices (`.tag(index)` unchanged),
+    /// so selection, jumps and the prewarm ring keep their contract; a page that leaves the window is
+    /// torn down and rebuilt from the render cache when it returns.
+    private func pageWindow(count: Int) -> [Int] {
+        guard count > 0 else { return [] }
+        func ring(_ centre: Int) -> ClosedRange<Int> {
+            let c = min(max(centre, 0), count - 1)
+            return max(0, c - 3)...min(count - 1, c + 3)
+        }
+        var indices = Set(ring(pageIndex))
+        for anchor in windowAnchors { indices.formUnion(ring(anchor)) }
+        return indices.sorted()
+    }
+
     var body: some View {
+        let _ = RenderCounter.hit("SurahPageReader")
         let pages = MushafPagination.pages(quran: quranData.quran, qiraah: settings.displayQiraahForArabic)
 
         // The live find state, computed ONCE per evaluation and shared by the find bar and the pages:
@@ -478,7 +502,7 @@ struct SurahPageReader<Controls: View>: View {
                     // Iterating `indices.reversed()` (a lazy range) instead of `Array(enumerated()).reversed()`
                     // keeps this body from materializing a fresh 604-tuple array on every swipe (and on every
                     // player tick while audio runs) just so the diff can walk it.
-                    ForEach(pages.indices.reversed(), id: \.self) { index in
+                    ForEach(pageWindow(count: pages.count).reversed(), id: \.self) { index in
                         Group {
                             // The facsimile swaps only the page BODY. Everything the reader wraps around it -
                             // the pinned surah header, the page/juz pickers and meters in the footer, search,
@@ -486,6 +510,10 @@ struct SurahPageReader<Controls: View>: View {
                             // one everywhere except the ink.
                             if let facsimile = facsimileDocument {
                                 MushafPDFPageBody(document: facsimile, mushafPage: pages[index].page)
+                            } else if !facsimileKey.isEmpty {
+                                // The edition is still extracting (first open of a `.pdf.xz`).
+                                ProgressView()
+                                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                             } else {
                                 MushafPageContent(
                                     page: pages[index],
@@ -563,7 +591,20 @@ struct SurahPageReader<Controls: View>: View {
                 .environmentObject(settings)
                 .environmentObject(quranData)
         }
+        .task(id: facsimileKey) {
+            let key = facsimileKey
+            guard !key.isEmpty else {
+                if facsimileDocument != nil { facsimileDocument = nil }
+                return
+            }
+            let document = await MushafPDFLibrary.loadDocument(for: key)
+            guard !Task.isCancelled, facsimileKey == key else { return }
+            facsimileDocument = document
+        }
         .onAppear {
+            // Page mode's launch readiness: the Quran tab auto-pushes this reader behind the launch cover,
+            // and the under-cover warm waits for the pager to exist rather than for a fixed settle.
+            LaunchWarmup.shared.markQuranTabLaidOut()
             #if DEBUG
             // Headless verification: `-mushafFindBar <query>` opens the in-page find pre-filled, the
             // only way to drive it from `simctl launch` (no tap injection in that harness).
@@ -758,6 +799,17 @@ struct SurahPageReader<Controls: View>: View {
         // DELIBERATE jump (the page/juz pickers) passes false: there a new page is a fresh start,
         // exactly as if it had been swiped to.
         if suppressClear { suppressNextPageTurnClear = true }
+        // Mount the target's ring NOW (this transaction, not animated) and keep the departure page
+        // mounted through the slide: the animated selection change below must find both pages
+        // already there, with the mounted set unchanged, or the pager crossfades instead of sliding
+        // (verified on the simulator: a ring inserted inside the animated transaction faded in).
+        // Released after the turn has settled, again outside any animation.
+        let departure = pageIndex
+        let anchors: Set<Int> = [departure, target]
+        windowAnchors = anchors
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
+            if windowAnchors == anchors { windowAnchors = [] }
+        }
         // Deferred one runloop tick, deliberately: this is called from `.onChange` handlers running
         // INSIDE the player publish's own update pass, and a selection write made there reached the
         // UIPageViewController without the animated transaction - the page SNAPPED instead of sliding
@@ -1170,9 +1222,14 @@ struct SurahPageReader<Controls: View>: View {
     ///
     /// nil unless the reader asked for the facsimile AND this riwayah has one bundled - so a riwayah without
     /// a PDF silently keeps the composed text rather than showing blank pages.
-    private var facsimileDocument: PDFDocument? {
-        guard settings.resolvedMushafPageLanguage.isPDF else { return nil }
-        return MushafPDFLibrary.document(for: settings.displayQiraahForArabic ?? Settings.Riwayah.hafsTag)
+    /// The facsimile edition to show, loaded by `.task(id: facsimileKey)` (Phase 5 step 7): nil while
+    /// the edition is extracting, or when page mode shows the composed text.
+    @State private var facsimileDocument: PDFDocument?
+
+    /// Non-empty exactly when page mode resolves to the printed mushaf: the riwayah whose edition to load.
+    private var facsimileKey: String {
+        guard settings.resolvedMushafPageLanguage.isPDF else { return "" }
+        return settings.displayQiraahForArabic ?? Settings.Riwayah.hafsTag
     }
 
     @ViewBuilder
@@ -1794,7 +1851,8 @@ private struct MushafPageContent: View {
     private var spineIsLeading: Bool { page.page % 2 == 0 }
 
     var body: some View {
-        GeometryReader { geo in
+        RenderCounter.hit("MushafPageContent")
+        return GeometryReader { geo in
             let width = max(geo.size.width - Self.textPadding * 2, 1)
             // The page's FRAME is the region it can show - every piece of reader chrome is already subtracted
             // from it. Measured on an iPhone 16 Pro (points, screen 874 tall) with the reader open:
@@ -2281,6 +2339,12 @@ enum MushafPrintLines {
         return QiraahTajweedStore.fileName(for: tag)?.replacingOccurrences(of: "Tajweed", with: "Lines")
     }
 
+    /// Memory-warning purge (AppLifecycle); a table re-parses in ~20 ms off the prewarm queue.
+    static func purge() {
+        lock.lock(); defer { lock.unlock() }
+        loaded.removeAll()
+    }
+
     static func table(for tag: String?) -> MushafPrintLineTable? {
         guard let name = fileName(for: tag) else { return nil }
         lock.lock()
@@ -2353,9 +2417,11 @@ struct MushafComposeConfig {
     static func current() -> MushafComposeConfig {
         let s = Settings.shared
         let language = s.resolvedMushafPageLanguage
+        // Read once: it resolves the tag and asks the tajweed store whether a pack exists.
+        let packTag = s.riwayahTajweedPackTag
         let riwayahTajweedTag: String? =
             (s.showTajweedColors && s.showArabicText && language == .arabic)
-            ? s.riwayahTajweedPackTag : nil
+            ? packTag : nil
         return MushafComposeConfig(
             pageLanguage: language,
             removeArabicDots: s.removeArabicDots,
@@ -2367,7 +2433,7 @@ struct MushafComposeConfig {
             beginnerAyahs: AyahBeginnerOverrides.shared.ayahs,
             showTajweed: s.showTajweedColors && s.showArabicText && s.isHafsDisplay && language == .arabic,
             riwayahTajweedTag: riwayahTajweedTag,
-            khilafMarkerTag: s.riwayahTajweedPackTag,
+            khilafMarkerTag: packTag,
             riwayahHiddenRules: s.riwayahTajweedHiddenRuleSet,
             highlightAllahNames: s.highlightAllahNames,
             fontSize: CGFloat(s.fontArabicSize),
@@ -2401,13 +2467,13 @@ struct MushafPageComposer {
 
     private func arabicFont(_ size: CGFloat) -> UIFont {
         usesSystemFont ? .roundedSystemFont(ofSize: size)
-                       : (UIFont(name: arabicFontName, size: size) ?? .roundedSystemFont(ofSize: size))
+                       : (QuranFontCache.font(name: arabicFontName, size: size) ?? .roundedSystemFont(ofSize: size))
     }
 
     /// Always the Uthmani face, even when the reader picked "Basic": that font is what draws the ayah number as the
     /// circled-flower ornament, so the system fallback would print bare digits mid-page.
     private func markerFont(_ size: CGFloat) -> UIFont {
-        UIFont(name: Settings.hafsUthmaniFontName, size: size) ?? .roundedSystemFont(ofSize: size)
+        QuranFontCache.font(name: Settings.hafsUthmaniFontName, size: size) ?? .roundedSystemFont(ofSize: size)
     }
 
     /// Mushaf pages 1 and 2 (al-Fatihah, and the opening of al-Baqarah). They used to be set fully centered
@@ -2739,7 +2805,7 @@ struct MushafPageComposer {
             ornament = (Self.taawwudhText.replacingOccurrences(of: " ", with: "\u{00A0}"),
                         arabicFont(nameSize * 0.85))
         } else {
-            let bismillahFont = UIFont(name: QuranGlyphFont.commonName, size: nameSize)
+            let bismillahFont = QuranFontCache.font(name: QuranGlyphFont.commonName, size: nameSize)
             ornament = (bismillahFont != nil ? QuranGlyphFont.bismillahOrnament : Self.basmalaText,
                         bismillahFont ?? arabicFont(nameSize * 0.85))
         }
@@ -3985,9 +4051,18 @@ enum MushafPageRenderCache {
         return c
     }()
 
-    /// Everything that changes the rendering but isn't the page or the geometry.
+    /// Everything that changes the rendering but isn't the page or the geometry. Memoized on the
+    /// main thread until the next Settings publish (`mushafSignatureCache`, Phase 5 step 5): every
+    /// mounted page rebuilt this from ~20 defaults reads on every publish.
     private static var settingsSignature: String {
         let s = Settings.shared
+        if Thread.isMainThread, let cached = s.mushafSignatureCache { return cached }
+        let signature = computeSettingsSignature(s)
+        if Thread.isMainThread { s.mushafSignatureCache = signature }
+        return signature
+    }
+
+    private static func computeSettingsSignature(_ s: Settings) -> String {
         return [
             s.fontArabic,
             // Was missing: `fontArabic` is only the reader's PICK (Uthmani/IndoPak/Basic) - which of the two
@@ -4543,6 +4618,12 @@ enum MushafPageRenderCache {
     private static var latestOrder: [Int] = []
     private static let latestLimit = 12
 
+    /// Memory-warning purge (AppLifecycle): a page with no fallback shows its spinner once, then refits.
+    static func purgeFallbackRenders() {
+        latestByPage.removeAll()
+        latestOrder.removeAll()
+    }
+
     private static func noteLatest(page: MushafPage, width: CGFloat, budget: CGFloat, rendered: MushafRenderedPage, signature: String? = nil) {
         let signature = signature ?? settingsSignature
         if latestByPage[page.page] != nil {
@@ -4754,7 +4835,27 @@ struct MushafPageTextView: UIViewRepresentable {
 
     /// The tints are painted on top of the cached, composed page rather than recomposing it - a background
     /// attribute doesn't change layout, so nothing has to be re-measured as playback moves down the page.
-    private func highlighted(_ text: NSAttributedString) -> NSAttributedString {
+    /// Clamps, sorts and merges overlapping ranges, so the in-place edit touches each run once.
+    private static func mergedRanges(_ ranges: [NSRange], limit: Int) -> [NSRange] {
+        let clamped = ranges.compactMap { range -> NSRange? in
+            let start = max(0, range.location)
+            let end = min(limit, range.location + range.length)
+            return end > start ? NSRange(location: start, length: end - start) : nil
+        }.sorted { $0.location < $1.location }
+        var merged: [NSRange] = []
+        for range in clamped {
+            if let last = merged.last, range.location <= last.location + last.length {
+                let end = max(last.location + last.length, range.location + range.length)
+                merged[merged.count - 1] = NSRange(location: last.location, length: end - last.location)
+            } else {
+                merged.append(range)
+            }
+        }
+        return merged
+    }
+
+    /// The page with its momentary tints, plus every range the pass painted (for the in-place edit).
+    private func highlighted(_ text: NSAttributedString) -> (NSAttributedString, [NSRange]) {
         var tints: [(NSRange, Color)] = [
             (range(of: mark), Color.secondary),
             (range(of: highlight), highlightColor),
@@ -4814,14 +4915,17 @@ struct MushafPageTextView: UIViewRepresentable {
             return (range, color.pageWashUIColor)
         }
 
-        guard !tints.isEmpty || !highlightWashes.isEmpty || termTarget != nil || searchIsActive else { return text }
+        guard !tints.isEmpty || !highlightWashes.isEmpty || termTarget != nil || searchIsActive else { return (text, []) }
 
+        var touched: [NSRange] = []
         let mutable = NSMutableAttributedString(attributedString: text)
         for (range, color) in highlightWashes {
             mutable.addAttribute(.backgroundColor, value: color, range: range)
+            touched.append(range)
         }
         for (range, color) in tints {
             mutable.addAttribute(.backgroundColor, value: UIColor(color).withAlphaComponent(0.22), range: range)
+            touched.append(range)
         }
         // Only when at least one match is actually located ON this page: flatten the page's tajweed to the
         // label color (headings keep their own styling; `> 0` skips the name-only subranges so the heading
@@ -4831,6 +4935,7 @@ struct MushafPageTextView: UIViewRepresentable {
         if searchIsActive, !searchTargets.isEmpty {
             for entry in ranges where entry.ayahID > 0 && NSMaxRange(entry.range) <= mutable.length {
                 mutable.addAttribute(.foregroundColor, value: UIColor.label, range: entry.range)
+                touched.append(entry.range)
             }
             for target in searchTargets {
                 for range in target.matches {
@@ -4844,6 +4949,7 @@ struct MushafPageTextView: UIViewRepresentable {
             // `termTarget` only exists when a substring was actually located, so this never fires on a
             // cross-translation miss.
             mutable.addAttribute(.foregroundColor, value: UIColor.label, range: termTarget.ayahRange)
+            touched.append(termTarget.ayahRange)
             for range in termTarget.matches {
                 mutable.addAttribute(.foregroundColor, value: UIColor(highlightColor), range: range)
             }
@@ -4855,9 +4961,10 @@ struct MushafPageTextView: UIViewRepresentable {
             for entry in ranges where entry.ayahID == MushafAyahRange.ayahMarkerID
                 && NSMaxRange(entry.range) <= mutable.length {
                 mutable.addAttribute(.foregroundColor, value: UIColor(highlightColor), range: entry.range)
+                touched.append(entry.range)
             }
         }
-        return mutable
+        return (mutable, touched)
     }
 
     /// Where `term` matches inside `ayahRange` of the page's plain text - using the EXACT SAME range ladder
@@ -5012,19 +5119,37 @@ struct MushafPageTextView: UIViewRepresentable {
             .sorted()
             .joined(separator: ",")
         let highlightKey = "\(key(highlight))|\(playingSurahID.map(String.init) ?? "")|\(key(mark))|\(termKey)|\(selectedKey)|\(searchKey)|\(bookmarkKey)"
-        if context.coordinator.lastAssignedText === attributed,
-           context.coordinator.lastHighlightKey == highlightKey,
-           context.coordinator.lastWidth == width {
+        let sameText = context.coordinator.lastAssignedText === attributed
+            && context.coordinator.lastWidth == width
+        if sameText, context.coordinator.lastHighlightKey == highlightKey {
             return
         }
         context.coordinator.lastAssignedText = attributed
         context.coordinator.lastHighlightKey = highlightKey
         context.coordinator.lastWidth = width
 
-        // Re-pin on every real update: the width changes on rotation / size-class changes.
-        tv.textContainer.widthTracksTextView = false
-        tv.textContainer.size = CGSize(width: width, height: .greatestFiniteMagnitude)
-        tv.attributedText = highlighted(attributed)
+        let (tinted, touched) = highlighted(attributed)
+        if sameText, tv.attributedText.length == tinted.length {
+            // Only the tints moved (a recitation advance, a tap-mark, a selection): edit the attributes
+            // of the ranges that changed IN PLACE, on the existing storage, instead of reassigning the
+            // page (Phase 5 step 5). A reassignment regenerated every glyph on the page and re-laid it
+            // out on every ayah advance; an attribute edit invalidates the touched lines only.
+            let ranges = Self.mergedRanges(context.coordinator.lastTouchedRanges + touched, limit: tinted.length)
+            let storage = tv.textStorage
+            storage.beginEditing()
+            for range in ranges {
+                tinted.enumerateAttributes(in: range, options: []) { attributes, run, _ in
+                    storage.setAttributes(attributes, range: run)
+                }
+            }
+            storage.endEditing()
+        } else {
+            // Re-pin on every real update: the width changes on rotation / size-class changes.
+            tv.textContainer.widthTracksTextView = false
+            tv.textContainer.size = CGSize(width: width, height: .greatestFiniteMagnitude)
+            tv.attributedText = tinted
+        }
+        context.coordinator.lastTouchedRanges = touched
         context.coordinator.updateBookmarkBadges(bookmarked, color: UIColor(highlightColor))
     }
 
@@ -5088,6 +5213,8 @@ struct MushafPageTextView: UIViewRepresentable {
         var lastAssignedText: NSAttributedString?
         var lastHighlightKey = ""
         var lastWidth: CGFloat = 0
+        /// The ranges the last tint pass painted, so the next in-place pass can restore them.
+        var lastTouchedRanges: [NSRange] = []
 
         /// The bookmark glyphs currently drawn over the page, so each update can clear the previous set.
         private var bookmarkBadges: [UIImageView] = []
@@ -5328,9 +5455,26 @@ enum QuranLaunchWarmup {
             }
         }
 
-        // Skip the broad warms on memory-constrained devices (same gate the Quran tab uses) - priority
-        // warming above still ran. This gates the mushaf prewarm below too: composing a ring of pages is
-        // exactly the class of work this device can't afford at launch.
+        // The last-read surah's neighbours (the likely next taps) join the priority set on every
+        // tier, off the main actor. [2026-09-04, Phase 5 step 9: this is where the sweep now STOPS.
+        // The all-114-surah walk that followed pushed 6,236 strings through a 5,000-entry cache that
+        // evicted itself mid-sweep, and cost every launch a utility-queue pass over surahs most
+        // sessions never open. A cold surah builds its own caches on the way in, off the reveal.]
+        let last = settings.lastReadSurah
+        let neighbours = [last - 1, last + 1, last - 2, last + 2].filter { (1...114).contains($0) }
+        var neighbourSurahs: [Surah] = []
+        for id in neighbours where seen.insert(id).inserted {
+            if let surah = quranData.surah(id) { neighbourSurahs.append(surah) }
+        }
+        // Claimed here so the Quran tab's own prewarm never starts a second pass.
+        QuranData.didBroadPrewarm = true
+        if !neighbourSurahs.isEmpty {
+            await SurahView.prewarmOffMain(surahs: neighbourSurahs, settings: settings)
+        }
+        if Task.isCancelled { return }
+
+        // Composing a ring of mushaf pages is exactly the class of work a reduced-tier device can't
+        // afford at launch.
         guard !AppPerformance.shouldAvoidBroadPrewarm else { return }
 
         // Page mode means the Quran tab opens straight into the mushaf, so also compose the last-read pages
@@ -5355,23 +5499,6 @@ enum QuranLaunchWarmup {
             }
             await Task.yield()
         }
-
-        // The broad all-surah sweep is POST-reveal work: warming every surah makes later pushes
-        // instant, but under the cover it competed with the tab walk for the main actor - on older
-        // hardware that contention (not the fixed settles) is what stretched the launch. The reveal
-        // flag flips as the cover starts dissolving; the extra beat clears the finale + dissolve so
-        // they run on a free CPU.
-        await AppReveal.waitUntilRevealed()
-        try? await Task.sleep(nanoseconds: 1_200_000_000)
-        if Task.isCancelled { return }
-
-        for surah in quranData.quran where seen.insert(surah.id).inserted {
-            if Task.isCancelled { return }
-            SurahView.prewarm(surah: surah, settings: settings)
-            await Task.yield()
-            try? await Task.sleep(nanoseconds: 12_000_000)   // throttle: keep the Adhan tab responsive
-        }
-        QuranData.didBroadPrewarm = true
     }
 }
 

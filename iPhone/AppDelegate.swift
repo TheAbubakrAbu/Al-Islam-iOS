@@ -28,14 +28,20 @@ class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterD
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
     ) -> Bool {
         registerBackgroundRefreshTask()
-        scheduleBackgroundRefreshes()
+        // The two `BGTaskScheduler.submit`s are synchronous XPC round trips: off the first-paint path.
+        // Every backgrounding re-arms them (below); the first arm waits for the launch cover to lift.
+        Task { @MainActor in
+            await AppReveal.waitUntilRevealed()
+            self.scheduleBackgroundRefreshes()
+        }
         UNUserNotificationCenter.current().delegate = self
 
         // The selected adhan's notification cuts live in Library/Sounds, rendered from the bundled
         // recording (AdhanClipStore). Start that now so the launch's scheduling pass, which runs a few
-        // seconds later, finds them; if they land after it, the pass runs again with the real sound.
+        // seconds later, finds them; if they land after it, only the notification schedule reruns with
+        // the real sound (the prayer times themselves do not depend on which caf a request carries).
         AdhanClipStore.ensureClips(for: Settings.shared.adhanNotificationSound) { rendered in
-            if rendered { Settings.shared.fetchPrayerTimes(notification: true) }
+            if rendered { Settings.shared.scheduleNotifications(deferred: true) }
         }
 
         // Re-arm the background refreshes every time the app is backgrounded - via the NOTIFICATION,

@@ -3,10 +3,17 @@ import WidgetKit
 
 @main
 struct AlIslamApp: App {
-    @StateObject private var settings = Settings.shared
-    @StateObject private var quranData = QuranData.shared
-    @StateObject private var quranPlayer = QuranPlayer.shared
-    @StateObject private var namesData = NamesViewModel.shared
+    // Plain references, NOT `@StateObject`: the root used to observe all four stores, so every publish
+    // of any of them - each of Settings' ~236 fields, every QuranPlayer progress tick, every step of the
+    // Quran load pipeline - re-evaluated this body, the window, the tab host and all five mounted tab
+    // roots. The stores are still handed down as environment objects for the views that want them;
+    // what the root itself reads (accent, color scheme, first launch) comes from `RootAppearance`,
+    // which publishes only when one of those changes.
+    private let settings = Settings.shared
+    private let quranData = QuranData.shared
+    private let quranPlayer = QuranPlayer.shared
+    private let namesData = NamesViewModel.shared
+    @ObservedObject private var appearance = RootAppearance.shared
 
     @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     @Environment(\.scenePhase) private var scenePhase
@@ -16,6 +23,7 @@ struct AlIslamApp: App {
     @State private var splashPresented = false
 
     init() {
+        LaunchClock.mark("app init")
         // Activate WatchConnectivity so settings sync (and watch app-installed detection) work both ways.
         _ = WatchConnectivityManager.shared
 
@@ -41,7 +49,7 @@ struct AlIslamApp: App {
         if isLaunching {
             return .launch
         }
-        return settings.firstLaunch ? .splash : .main
+        return appearance.firstLaunch ? .splash : .main
     }
 
     private var rootTransitionAnimation: Animation {
@@ -61,9 +69,9 @@ struct AlIslamApp: App {
                 .environmentObject(quranData)
                 .environmentObject(quranPlayer)
                 .environmentObject(namesData)
-                .accentColor(settings.accentColor.color)
-                .tint(settings.accentColor.color)
-                .preferredColorScheme(settings.colorScheme)
+                // Accent, tint, preferred color scheme and the `AppearanceEnvironment` every shared
+                // chrome modifier reads - one live snapshot instead of ~400 per-view Settings subscribers.
+                .appearanceEnvironment()
                 .appReviewPrompt()
                 // Set ABOVE (outside) `.appReviewPrompt()` too, or its `@Environment(\.appRevealed)`
                 // reads the key's default (true): the copy inside `rootContent` sits BELOW the review
@@ -74,7 +82,9 @@ struct AlIslamApp: App {
                 // here - it lives in its own window above the app (see `AchievementBannerPresenter`)
                 // so it can still be seen when the thing that earned it happened inside a sheet.
                 .achievementTracking()
-                .onAppear { settings.fetchPrayerTimes() }
+                // No `.onAppear { settings.fetchPrayerTimes() }` here: `AdhanView.onAppear` runs the launch
+                // fetch a frame later (it is the initial tab), so this was a second full recompute on
+                // the first-paint path.
                 //.statusBarHidden()
         }
         // No `.onChange` refreshes for settings here: each setting's own didSet performs its side
@@ -149,14 +159,14 @@ struct AlIslamApp: App {
 }
 
 private struct MainTabView: View {
-    @ObservedObject private var settings = Settings.shared
-    // Deliberately NOT observing QuranData/QuranPlayer: this body never reads either, but the old
-    // `@ObservedObject` subscriptions re-evaluated the ENTIRE TabView (all five tabs) on every
-    // publish of the Quran load pipeline - the 10-property core-load batch, each loadState flip,
-    // the verse-index landing - on the main thread, exactly while the under-cover warm needed it.
-    // On older hardware those re-evals were a real slice of the launch. The launch screen already
-    // shields itself the same way; the tab host must too. `warmUnderCover` reaches the singletons
-    // directly.
+    // Deliberately NOT observing Settings, QuranData or QuranPlayer: this body reads none of them, but
+    // an `@ObservedObject` subscription re-evaluated the ENTIRE TabView (all five tabs) on every
+    // publish - Settings alone publishes on every page turn, GPS fix and countdown tick, and the
+    // Quran load pipeline's 10-property core-load batch landed exactly while the under-cover warm
+    // needed the main thread. The one Settings field this body reads (`pendingNagQuestion`) arrives
+    // through its own publisher below. `warmUnderCover` reaches the singletons directly.
+    private let settings = Settings.shared
+    @State private var pendingNagQuestion: Settings.PendingNagQuestion?
 
     /// True while a launch/splash screen still covers the tabs (drives the under-cover warm below).
     let isCovered: Bool
@@ -164,7 +174,7 @@ private struct MainTabView: View {
     /// The in-app "Did you pray X?" answer: records the mark (on time or late) in the tracker and
     /// silences the rest of that nag cascade, exactly as the notification's own action buttons do.
     private func answerNagQuestion(mark: PrayerMark) {
-        if let question = settings.pendingNagQuestion {
+        if let question = pendingNagQuestion {
             settings.markPrayerPrayedFromNag(
                 asked: question.prayerName,
                 cascadePrayerName: question.cascadePrayerName,
@@ -202,10 +212,11 @@ private struct MainTabView: View {
             #endif
             // Tapping a nagging notification lands here with the question pending - asked at the TAB
             // level so it appears whichever tab the app reopens on.
+            .onReceive(settings.$pendingNagQuestion) { pendingNagQuestion = $0 }
             .confirmationDialog(
-                "Did you pray \(settings.pendingNagQuestion?.prayerName ?? "this prayer")?",
+                "Did you pray \(pendingNagQuestion?.prayerName ?? "this prayer")?",
                 isPresented: Binding(
-                    get: { settings.pendingNagQuestion != nil },
+                    get: { pendingNagQuestion != nil },
                     set: { if !$0 { settings.pendingNagQuestion = nil } }
                 ),
                 titleVisibility: .visible
@@ -305,26 +316,71 @@ private struct MainTabView: View {
             #endif
             // Al-Quran: the reader's font/page prewarm.
             .task { await QuranLaunchWarmup.prewarmAll() }
+            // POST-REVEAL SCHEDULE. Everything below waits for the cover to lift and then takes its own
+            // slot, so the sweeps never collide with each other or with the user's first taps (they used
+            // to fire at 1.2 / 1.5 / 2.0 / 2.0 s and overlap). Keep the slots apart when adding one:
+            //   +1.0 s  Hadith shelf sweep (main-actor slices, one book per runloop turn)
+            //   +1.5 s  cross-language lexicon + Islam article corpus (detached, utility)
+            //   +2.0 s  AI-search NLEmbedding probe (detached, utility)
+            //   +2.5 s  the broad Quran surah sweep (detached, utility; `QuranLaunchWarmup`)
+            //   +2.5 s  achievements catch-up (Achievements.swift)
+            //   +3.0 s  the Quran AI corpus build or disk load (QuranView)
+            //   +3.5 s  the 6,236-entry ayah search index (utility; full tier only, otherwise on demand)
+            //
             // Al-Quran: the AI-search capability probe loads a disk-backed NLEmbedding model, off-main.
             // Deferred until AFTER the reveal: it's only needed once a search field gains focus, and
             // .utility is the QoS tier Low Power Mode throttles hardest - under the cover it competed
             // with the pack loads for the disk while the launch screen sat waiting.
+            // Full tier only (Phase 5 step 2): on the reduced tier the model loads on the first search
+            // field focus instead (`QuranSemanticCorpus.prepare` resolves it off-main before building).
             .task {
                 await AppReveal.waitUntilRevealed()
                 try? await Task.sleep(nanoseconds: 2_000_000_000)
-                guard !Task.isCancelled else { return }
+                guard !Task.isCancelled, !AppPerformance.shouldAvoidBroadPrewarm else { return }
                 Task.detached(priority: .utility) { SemanticSearchEngine.prewarmOffMain() }
+            }
+            // Al-Quran: the ayah search index. Built ahead of the first search on the full tier so the
+            // "Preparing ayah search" row never shows; on the reduced tier (Low Power Mode, a 3 GB
+            // device) it is built on demand when the search field gains focus instead, because 300-800 ms
+            // of CPU and ~10 MB for a search most sessions never run is exactly the launch work the
+            // complaints are about. Skipped while the Quran is still loading; `ensureVerseSearchIndex`
+            // re-checks.
+            .task {
+                await AppReveal.waitUntilRevealed()
+                try? await Task.sleep(nanoseconds: 3_500_000_000)
+                guard !Task.isCancelled, !AppPerformance.shouldAvoidBroadPrewarm else { return }
+                await QuranData.shared.waitUntilCoreLoaded()
+                guard !Task.isCancelled else { return }
+                QuranData.shared.ensureVerseSearchIndex(priority: .utility)
+            }
+            // Shared: the cross-language highlight's lexicon (Quran-derived; the hadith and semantic
+            // result rows read it) and the Islam article corpus, inflated off-main after the reveal.
+            // These fired from the Quran, Hadith and Islam tab roots' own tasks, and the under-cover
+            // walk realizes all three, so they landed inside the launch window every time.
+            .task {
+                await AppReveal.waitUntilRevealed()
+                try? await Task.sleep(nanoseconds: 1_500_000_000)
+                guard !Task.isCancelled else { return }
+                await QuranData.shared.waitUntilCoreLoaded()
+                guard !Task.isCancelled else { return }
+                // The ~18k-key lexicon is a full-tier luxury (Phase 5 step 1): on the reduced tier the
+                // first cross-language query builds it itself (`lexiconIfReady` kicks the build once).
+                if !AppPerformance.shouldAvoidBroadPrewarm {
+                    Task.detached(priority: .utility) { CrossLanguageWordHighlight.prewarmLexicon() }
+                }
+                IslamArticleSearchModel.prewarm()
             }
             // Al-Hadith: today's card resolves under the cover (one book, so the Hadith tab realizes
             // with the card already there) - but the 17-book shelf sweep waits for the reveal. Parsing
             // ~51k rows on the main actor was the single heaviest launch item, competing with the tab
             // walk for the exact window the launch screen's reveal waits on; the extra beat also keeps
             // the finale + dissolve running on a free CPU. Books opened before the sweep reaches them
-            // load on demand, same as always.
+            // load on demand, same as always. This is the ONLY caller of `prewarmBooks` (the Hadith
+            // tab's own copy ran un-gated during the walk).
             .task {
                 HadithStore.shared.prepareDailyHadith()
                 await AppReveal.waitUntilRevealed()
-                try? await Task.sleep(nanoseconds: 1_500_000_000)
+                try? await Task.sleep(nanoseconds: 1_000_000_000)
                 guard !Task.isCancelled else { return }
                 HadithStore.shared.prewarmBooks()
                 // Tafsir ships inside the app now too - delete the pre-pack download cache (up to
@@ -333,9 +389,17 @@ private struct MainTabView: View {
             }
     }
 
-    /// Build + retain the Quran tab behind the launch cover, settle back on Adhan, then signal `LaunchWarmup`
+    /// Build + retain every tab behind the launch cover, settle back on Adhan, then signal `LaunchWarmup`
     /// that the UI is ready to reveal. Runs once. If we were mounted already-uncovered (not a cold launch),
     /// there's nothing to hide, so we just mark warm immediately.
+    ///
+    /// The walk runs in FRONT of the finale, never under it. It was tried under the finale (2026-09-04):
+    /// SwiftUI drives the finale's springs, blur and shimmer from the main thread, so a 300 ms tab build
+    /// under them froze the bloom and then jumped it - exactly the finale change that is not allowed. What
+    /// the walk can overlap instead is the Quran text decode: the three light tabs are realized while that
+    /// runs on a background thread and the main thread would otherwise idle, and only the Quran tab waits
+    /// for the text. Together with dropping the old 80-120 ms settles between tabs this takes ~700 ms off
+    /// a cold launch on the 17 Pro simulator with the finale untouched.
     @MainActor
     private func warmUnderCover() async {
         guard !didWarm else { return }
@@ -343,34 +407,46 @@ private struct MainTabView: View {
 
         guard isCovered else { LaunchWarmup.shared.markWarm(); return }
 
-        // Build the real surah list, not the empty loading state.
-        await QuranData.shared.waitUntilCoreLoaded()
+        // Never before the cover's own first frame: a tab build in the same run-loop pass would sit
+        // between the window and the icon.
+        await LaunchWarmup.shared.waitUntilCoverUp(maxWaitNanos: 1_000_000_000)
+        try? await Task.sleep(nanoseconds: 16_000_000)
         if Task.isCancelled { LaunchWarmup.shared.markWarm(); return }
 
-        // Walk every tab so TabView builds + RETAINS each view tree, heaviest (Quran) first with the longest
-        // settle, then return to the Adhan landing tab. First selection of any tab later reuses the warm tree
-        // instantly. This whole dance overlaps the launch screen's finale animation (which runs ~1.4s), so
-        // warming the extra tabs costs no wall-clock time on the reveal.
-        // Page mode gets a longer settle: entering the Quran tab then auto-pushes the mushaf, whose pager
-        // (a UIPageViewController wrapping all ~604 page identities) is the single heaviest view realization
-        // in the app. 350ms was enough for the surah list but not for the pager, so the leftover work ran at
-        // the user's first REAL switch into the tab - the visible lag this hides behind the launch cover.
-        selectedTab = .quran
-        try? await Task.sleep(nanoseconds: settings.quranPageMode ? 900_000_000 : 350_000_000)
-        // Low Power Mode / low-memory devices: walk ONLY the heavy Quran tab, then settle. The other
-        // three tabs realize on their first real visit instead - a small first-tap beat there buys
-        // ~280ms of fixed settles plus three tab-tree realizations off the throttled launch window,
-        // which on old hardware was a visible slice of "loading forever."
+        // 1) The light tabs, while the Quran text is still decoding off-main. One frame between tabs,
+        //    not a settle: a selection change realizes the tab synchronously in the next run-loop pass
+        //    (which is what a sleep's resume waits behind anyway), so the old settles were pure waiting.
+        //    Low Power Mode / low-memory devices: walk ONLY the heavy Quran tab. The other three realize
+        //    on their first real visit instead - a small first-tap beat there buys three tab-tree
+        //    realizations off the throttled launch window, which on old hardware was a visible slice of
+        //    "loading forever."
         if !AppPerformance.shouldAvoidBroadPrewarm {
-            selectedTab = .hadith
-            try? await Task.sleep(nanoseconds: 80_000_000)
-            selectedTab = .islam
-            try? await Task.sleep(nanoseconds: 120_000_000)
-            selectedTab = .settings
-            try? await Task.sleep(nanoseconds: 80_000_000)
+            for tab in [AppTab.hadith, .islam, .settings] {
+                selectedTab = tab
+                try? await Task.sleep(nanoseconds: 16_000_000)
+            }
         }
+        LaunchClock.mark("light tabs walked")
+
+        // 2) The heavy Quran tab, once the real surah list can be built (not the empty loading state).
+        await QuranData.shared.waitUntilCoreLoaded()
+        LaunchClock.mark("quran core loaded")
+        if Task.isCancelled { LaunchWarmup.shared.markWarm(); return }
+
+        // Readiness, not a fixed settle: the tab reports its first body (list mode) or its pushed reader
+        // (page mode, where the pager wrapping ~604 page identities is the single heaviest view
+        // realization in the app) through `LaunchWarmup.markQuranTabLaidOut`, and the old sleeps
+        // (350 ms list / 900 ms page mode) are now only the cap for a tab that never reports. One more
+        // frame after the report lets that layout commit before the tab is left.
+        selectedTab = .quran
+        await LaunchWarmup.shared.waitUntilQuranTabLaidOut(
+            maxWaitNanos: settings.quranPageMode ? 900_000_000 : 350_000_000
+        )
+        try? await Task.sleep(nanoseconds: 32_000_000)
+        LaunchClock.mark("quran tab settled")
+
+        // 3) Back on the landing tab; let it become the rendered tab again before the reveal.
         selectedTab = launchTab
-        // Let the landing tab become the rendered tab again before we allow the reveal.
         try? await Task.sleep(nanoseconds: 80_000_000)
 
         LaunchWarmup.shared.markWarm()

@@ -197,7 +197,18 @@ struct SettingsView: View {
     private var settingsList: some View {
         #if os(iOS)
         settingsListChrome(
-            List { settingsListContent(split: false) },
+            ScrollViewReader { proxy in
+                List { settingsListContent(split: false) }
+                #if DEBUG
+                // "-scrollToClassicLook": land on the Classic Look switch (screenshot runs).
+                .onAppear {
+                    guard ProcessInfo.processInfo.arguments.contains("-scrollToClassicLook") else { return }
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                        withAnimation { proxy.scrollTo("classicLook", anchor: .center) }
+                    }
+                }
+                #endif
+            },
             disableNowPlayingInset: false
         )
         #else
@@ -829,6 +840,7 @@ extension SettingsSearchEntry {
         .init(title: "Custom Background Color", path: "Appearance", keywords: "custom color background hex picker theme", destination: .appearance),
         .init(title: "Top Accent Glow", path: "Appearance", keywords: "glow wash gradient accent top background flat hide al islam green yellow brand", destination: .appearance),
         .init(title: "Default List View", path: "Appearance", keywords: "list style plain grouped inset layout", destination: .appearance),
+        .init(title: "Classic Look (No Liquid Glass)", path: "Appearance", keywords: "liquid glass classic look performance faster battery low power mode ios 26 old design", destination: .appearance),
         .init(title: "Haptic Feedback", path: "Appearance", keywords: "vibration taptic buzz feedback toggle", destination: .appearance),
     ]
 }
@@ -1038,6 +1050,34 @@ struct SettingsAppearanceView: View {
                 .font(.caption)
                 .foregroundColor(.secondary)
                 .padding(.vertical, 2)
+        }
+
+        if #available(iOS 26.0, *) {
+            VStack(alignment: .leading) {
+                Toggle("Classic Look", isOn: $settings.classicLook.animation(.easeInOut))
+                    .font(.subheadline)
+                    .onChange(of: settings.classicLook) { _ in settings.hapticFeedback() }
+
+                Text("Turns off Liquid Glass so the app looks the way it did before iOS 26. Faster and easier on the battery.")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .padding(.vertical, 2)
+
+                if !settings.classicLook {
+                    VStack(alignment: .leading) {
+                        Toggle("Automatically in Low Power Mode", isOn: $settings.classicLookInLowPower.animation(.easeInOut))
+                            .font(.subheadline)
+                            .onChange(of: settings.classicLookInLowPower) { _ in settings.hapticFeedback() }
+
+                        Text("Uses the Classic Look while Low Power Mode is on and brings Liquid Glass back when it is off.")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .padding(.vertical, 2)
+                    }
+                    .settingsDependent()
+                }
+            }
+            .id("classicLook")
         }
         #endif
 

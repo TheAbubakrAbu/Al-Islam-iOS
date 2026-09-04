@@ -128,6 +128,7 @@ final class QuranPlayer: ObservableObject {
     private static var isNetworkReachable = true
 
     private init() {
+        ObjectPublishCounter.attach(self, label: "QuranPlayer")
         // Self-registration into shared chrome (see the note above the class): the bar the now-playing
         // inset renders, and the speech engine's "does recitation still own the audio session?" probe.
         // Both closures resolve `.shared` lazily at CALL time - never during this init - and both stay
@@ -145,37 +146,19 @@ final class QuranPlayer: ObservableObject {
         ForegroundAdhanPlayer.resumeRecitation = { QuranPlayer.shared.resume() }
         #endif
 
-        Self.networkMonitor.pathUpdateHandler = { path in
-            let reachable = (path.status == .satisfied)
-            DispatchQueue.main.async { Self.isNetworkReachable = reachable }
-        }
-        Self.networkMonitor.start(queue: Self.networkMonitorQueue)
-        NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(handleInterruption),
-            name: AVAudioSession.interruptionNotification,
-            object: AVAudioSession.sharedInstance()
-        )
-        // Unplugging headphones (or a Bluetooth device dropping) must PAUSE, not continue out of the
-        // speaker - with a `.playback` session iOS does not do this for us, and recitation suddenly
-        // blasting from the phone in public is exactly what the standard media-app convention prevents.
-        NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(handleRouteChange),
-            name: AVAudioSession.routeChangeNotification,
-            object: AVAudioSession.sharedInstance()
-        )
-        // If the media server itself restarts, every AVPlayer and the session are dead objects; playing
-        // into them produces silent, stuck UI. Reset to a clean stopped state instead.
-        NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(handleMediaServicesReset),
-            name: AVAudioSession.mediaServicesWereResetNotification,
-            object: AVAudioSession.sharedInstance()
-        )
         loadHistoryFromDefaults()
-        setupRemoteTransportControls()
         isReadyForUI = true
+
+        // The audio session observers, the path monitor and the remote-command centre are installed
+        // AFTER the launch cover lifts (or on the first play, whichever is first): `AVAudioSession
+        // .sharedInstance()` and `MPRemoteCommandCenter.shared()` are process-wide services whose first
+        // touch is tens of milliseconds, and this object is created before the first frame for the
+        // environment. Nothing can play before the reveal except a Siri/debug start, which installs on
+        // its way in.
+        Task { @MainActor [weak self] in
+            await AppReveal.waitUntilRevealed()
+            self?.installAudioInfrastructureIfNeeded()
+        }
 
         #if DEBUG && os(iOS)
         // Headless verification: `-playSurah <n>` starts surah playback a moment after launch so the
@@ -221,11 +204,48 @@ final class QuranPlayer: ObservableObject {
     }
 
     func waitUntilReady() async {
-        while true {
-            let isReady = await MainActor.run { self.isReadyForUI }
-            if isReady { return }
-            try? await Task.sleep(nanoseconds: 10_000_000)
+        for await ready in $isReadyForUI.values where ready { return }
+    }
+
+    private var audioInfrastructureInstalled = false
+
+    /// The parts of playback setup that are not needed until something plays: interruption, route-change
+    /// and media-services-reset observers, the reachability monitor, and the lock-screen / Control Centre
+    /// command handlers. Idempotent; every play entry point calls it, and the reveal task in `init` calls
+    /// it for a session that never plays so the lock-screen controls exist the moment they are needed.
+    private func installAudioInfrastructureIfNeeded() {
+        guard !audioInfrastructureInstalled else { return }
+        audioInfrastructureInstalled = true
+
+        Self.networkMonitor.pathUpdateHandler = { path in
+            let reachable = (path.status == .satisfied)
+            DispatchQueue.main.async { Self.isNetworkReachable = reachable }
         }
+        Self.networkMonitor.start(queue: Self.networkMonitorQueue)
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleInterruption),
+            name: AVAudioSession.interruptionNotification,
+            object: AVAudioSession.sharedInstance()
+        )
+        // Unplugging headphones (or a Bluetooth device dropping) must PAUSE, not continue out of the
+        // speaker - with a `.playback` session iOS does not do this for us, and recitation suddenly
+        // blasting from the phone in public is exactly what the standard media-app convention prevents.
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleRouteChange),
+            name: AVAudioSession.routeChangeNotification,
+            object: AVAudioSession.sharedInstance()
+        )
+        // If the media server itself restarts, every AVPlayer and the session are dead objects; playing
+        // into them produces silent, stuck UI. Reset to a clean stopped state instead.
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleMediaServicesReset),
+            name: AVAudioSession.mediaServicesWereResetNotification,
+            object: AVAudioSession.sharedInstance()
+        )
+        setupRemoteTransportControls()
     }
     
     deinit {
@@ -722,7 +742,7 @@ final class QuranPlayer: ObservableObject {
     }
     
     func pause(saveInfo: Bool = true) {
-        if saveInfo { saveLastListenedSurah(); saveLastListenedAyah() }
+        if saveInfo { saveLastListenedSurah(); saveLastListenedAyah(immediate: true) }
         player?.pause()
         // No withAnimation: the now-playing inset animates its own appearance via `.animation(value:)`, and
         // isPlaying||isPaused stays true across pause/resume so nothing should move. A global withAnimation
@@ -733,6 +753,7 @@ final class QuranPlayer: ObservableObject {
         idleTimerSet(false)
     }
     func resume() {
+        installAudioInfrastructureIfNeeded()
         whenAudioSessionReady { [weak self] in
             self?.player?.play()
         }
@@ -777,7 +798,7 @@ final class QuranPlayer: ObservableObject {
         // observing screens (e.g. SurahView). Animating that republish mid-scroll makes the reading view
         // visibly "jump"/scroll a little when playback ends, so keep the save un-animated.
         saveLastListenedSurah()
-        saveLastListenedAyah()
+        saveLastListenedAyah(immediate: true)
 
         // No withAnimation here (or anywhere in the player). All animation is view-driven: the now-playing
         // views carry their own `.animation(value:)` so transitions are scoped and never animate the List.
@@ -885,6 +906,7 @@ final class QuranPlayer: ObservableObject {
         skipSurah: Bool = false,
         repeatCount: Int = 1
     ) {
+        installAudioInfrastructureIfNeeded()
         ayahBackPendingRestart?.cancel()
         ayahBackPendingRestart = nil
         ayahBackPendingRestartScheduledAt = nil
@@ -1151,6 +1173,9 @@ final class QuranPlayer: ObservableObject {
 
     private func prewarmNextSurah(number: Int, name: String) {
         discardPrewarm()
+        // A second AVPlayer buffering a whole surah is memory a 3 GB device does not have to spare
+        // (Phase 5 step 13); the hand-off there is a plain load, a beat of silence at worst.
+        guard !PerformanceProfile.isLowEndDevice else { return }
         guard let reciter = playbackReciter ?? resolvedSelectedReciter() else { return }
         let localURL = reciterDownloadManager.localSurahURL(reciter: reciter, surahNumber: number)
         let remote = URL(string: "\(reciter.surahLink)\(String(format: "%03d", number)).mp3")
@@ -1274,6 +1299,7 @@ final class QuranPlayer: ObservableObject {
         continueRecitation: Bool = false,
         repeatCount: Int = 1
     ) {
+        installAudioInfrastructureIfNeeded()
         ayahBackPendingRestart?.cancel()
         ayahBackPendingRestart = nil
         ayahBackPendingRestartScheduledAt = nil
@@ -1383,6 +1409,7 @@ final class QuranPlayer: ObservableObject {
         repeatSection: Int,
         initialSequenceIndex: Int = 0
     ) {
+        installAudioInfrastructureIfNeeded()
         ayahBackPendingRestart?.cancel()
         ayahBackPendingRestart = nil
         ayahBackPendingRestartScheduledAt = nil
@@ -1967,11 +1994,18 @@ final class QuranPlayer: ObservableObject {
         }
         info[MPNowPlayingInfoPropertyElapsedPlaybackTime] = CMTimeGetSeconds(player?.currentTime() ?? .zero)
         info[MPNowPlayingInfoPropertyPlaybackRate] = player?.rate
-        if let img = UIImage(named: AppIdentifiers.appName) {
-            info[MPMediaItemPropertyArtwork] = MPMediaItemArtwork(boundsSize: img.size) { _ in img }
+        if let artwork = Self.nowPlayingArtwork {
+            info[MPMediaItemPropertyArtwork] = artwork
         }
         MPNowPlayingInfoCenter.default().nowPlayingInfo = info
     }
+
+    /// Decoded once: `updateNowPlayingInfo` runs on every transition and every seek, and it was
+    /// re-reading the app icon from the asset catalog and wrapping it each time.
+    private static let nowPlayingArtwork: MPMediaItemArtwork? = {
+        guard let img = UIImage(named: AppIdentifiers.appName) else { return nil }
+        return MPMediaItemArtwork(boundsSize: img.size) { _ in img }
+    }()
 
     func saveLastListenedSurah() {
         guard settings.saveLastListenedSurah else { return }
@@ -1987,6 +2021,16 @@ final class QuranPlayer: ObservableObject {
         let fullDur = CMTimeGetSeconds(p.currentItem?.duration ?? .zero)
 
         if isPlayingSurah, let sur = quranData.quran.first(where: { $0.id == num }) {
+            let previous = settings.lastListenedSurah
+            defer {
+                // The Last Listened widget names the surah and reciter; the position inside it reaches the
+                // widget on the backgrounding flush. Reloading on the periodic duration patch too would
+                // spend the widget's WidgetKit budget on a single listening session.
+                if let now = settings.lastListenedSurah,
+                   previous?.surahNumber != now.surahNumber || previous?.reciter.name != now.reciter.name {
+                    settings.refreshQuranWidgets(.lastListenedSurah)
+                }
+            }
             // Tolerance, not ==: currentTime() and the item duration are Doubles from different clocks and
             // are almost never bit-identical, so exact equality made the "advance to the next surah" record
             // essentially unreachable.
@@ -2029,7 +2073,13 @@ final class QuranPlayer: ObservableObject {
 
     /// Persists the current single-ayah / custom-range position as the "Last Listened Ayah". Full-surah
     /// playback is handled by `saveLastListenedSurah()` instead, so this no-ops during surah playback.
-    func saveLastListenedAyah() {
+    ///
+    /// Settled 0.8 s (the `noteLastRead` rule, Phase 5 step 3): the write is a JSON encode, two
+    /// defaults writes, a history append and a `Settings` publish that re-runs every reader row, so
+    /// a run of skips coalesces into one. The position is snapshotted at the call, so a stop that
+    /// clears the player's numbers before the settle still commits the right ayah. `immediate`
+    /// flushes now (stop, backgrounding).
+    func saveLastListenedAyah(immediate: Bool = false) {
         guard settings.saveLastListenedAyah else { return }
         guard !isPlayingSurah,
               let surahNum = currentSurahNumber,
@@ -2038,20 +2088,42 @@ final class QuranPlayer: ObservableObject {
         else { return }
         let rec = playbackReciter ?? settings.resolvedSelectedReciterIgnoringRandom()
         guard let rec else { return }
-
-        // When moving to a new ayah, push the previous one into the listening history below the row.
-        if let previous = settings.lastListenedAyah,
-           !(previous.surahNumber == surahNum && previous.ayahNumber == ayahNum) {
-            recordAyahListeningHistory(previous)
-        }
-
-        settings.lastListenedAyah = LastListenedAyah(
+        let record = LastListenedAyah(
             surahNumber: surahNum,
             surahName: surah.nameTransliteration,
             ayahNumber: ayahNum,
             reciter: rec,
             savedAt: Date()
         )
+        pendingLastListenedAyahWork?.cancel()
+        if immediate {
+            commitLastListenedAyah(record, publish: true)
+            return
+        }
+        let work = DispatchWorkItem { [weak self] in self?.commitLastListenedAyah(record, publish: false) }
+        pendingLastListenedAyahWork = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.8, execute: work)
+    }
+
+    private var pendingLastListenedAyahWork: DispatchWorkItem?
+
+    /// `publish: false` is the mid-playback path: the position lands in the defaults silently (the
+    /// reader follows the player's own publishes, and the badge on the pill reads the value on its
+    /// next pass), and the widget is NOT reloaded per ayah, which spent the WidgetKit budget of a
+    /// day on one listening session. Stop, pause and backgrounding commit with `publish: true`,
+    /// which publishes Settings once and reloads the Last Listened widget.
+    private func commitLastListenedAyah(_ record: LastListenedAyah, publish: Bool) {
+        pendingLastListenedAyahWork = nil
+        let previous = settings.lastListenedAyah
+        let moved = previous?.surahNumber != record.surahNumber || previous?.ayahNumber != record.ayahNumber
+        // When moving to a new ayah, push the previous one into the listening history below the row.
+        if let previous, moved {
+            recordAyahListeningHistory(previous)
+        }
+        settings.setLastListenedAyah(record, publish: publish)
+        if publish {
+            settings.refreshQuranWidgets(.lastListenedAyah)
+        }
     }
 
     /// Adds a previously listened ayah to the history. Deduped by surah:ayah AND reciter: replaying the
@@ -2309,11 +2381,11 @@ final class QuranPlayer: ObservableObject {
         #endif
     }
     
-    func idleTimerSet(_ disabled: Bool) {
-        #if os(iOS)
-        UIApplication.shared.isIdleTimerDisabled = disabled
-        #endif
-    }
+    /// Playback no longer owns the idle timer (Phase 5 step 12). It used to keep the screen awake
+    /// while audio played from ANY tab, phone in pocket included; `ScreenAwake` (Globals.swift) now
+    /// keeps it awake only while a reader is on screen, and never on the reduced tier. Kept as a
+    /// no-op so the eleven call sites stay where they document the playback transitions.
+    func idleTimerSet(_ disabled: Bool) {}
 }
 
 final class ReciterDownloadManager: NSObject, ObservableObject, URLSessionDownloadDelegate {
@@ -2333,7 +2405,16 @@ final class ReciterDownloadManager: NSObject, ObservableObject, URLSessionDownlo
 
     private let sessionIdentifier = AppIdentifiers.reciterDownloadsBackgroundSessionIdentifier
     private let fileManager = FileManager.default
-    private var activeTasks: [String: URLSessionDownloadTask] = [:]
+    /// In-flight download tasks per reciter, keyed by surah number. Several run at once (see
+    /// `maxConcurrentSurahDownloads`): the old one-at-a-time chain needed the app WOKEN after every
+    /// single file to enqueue the next, and iOS throttles those wake-ups hard - so a "Download all"
+    /// crawled or stalled the moment the app left the foreground. A window of tasks lets the background
+    /// session keep transferring on its own between wake-ups.
+    private var activeTasks: [String: [Int: URLSessionDownloadTask]] = [:]
+    /// Surahs whose task is being CREATED (the timing-mapped reciters resolve their download URL
+    /// asynchronously first), so a refill pass does not enqueue the same surah twice.
+    private var reservedSurahs: [String: Set<Int>] = [:]
+    private let maxConcurrentSurahDownloads = 4
     private var backgroundCompletionHandler: (() -> Void)?
     private let dedupeQueue = DispatchQueue(label: AppIdentifiers.reciterDownloadDedupeQueueLabel, qos: .utility)
 
@@ -2414,7 +2495,7 @@ final class ReciterDownloadManager: NSObject, ObservableObject, URLSessionDownlo
             return
         }
 
-        if activeTasks[reciterID] != nil {
+        if !(activeTasks[reciterID]?.isEmpty ?? true) {
             return
         }
 
@@ -2434,8 +2515,9 @@ final class ReciterDownloadManager: NSObject, ObservableObject, URLSessionDownlo
 
     func cancelDownload(for reciter: Reciter) {
         let reciterID = reciter.id
-        activeTasks[reciterID]?.cancel()
+        activeTasks[reciterID]?.values.forEach { $0.cancel() }
         activeTasks[reciterID] = nil
+        reservedSurahs[reciterID] = nil
 
         // Drop this run's retry bookkeeping; any backoff timer still pending checks `isDownloading`
         // before re-enqueueing and finds it false.
@@ -2475,10 +2557,11 @@ final class ReciterDownloadManager: NSObject, ObservableObject, URLSessionDownlo
     }
 
     func deleteAllDownloads() {
-        for reciterID in activeTasks.keys {
-            activeTasks[reciterID]?.cancel()
+        for tasks in activeTasks.values {
+            tasks.values.forEach { $0.cancel() }
         }
         activeTasks.removeAll()
+        reservedSurahs.removeAll()
 
         do {
             let root = baseDirectoryURL()
@@ -2537,7 +2620,10 @@ final class ReciterDownloadManager: NSObject, ObservableObject, URLSessionDownlo
 
     private func finishWithError(for reciterID: String, message: String) {
         DispatchQueue.main.async {
+            // The run is over: nothing still in flight for this reciter may keep going and refill.
+            self.activeTasks[reciterID]?.values.forEach { $0.cancel() }
             self.activeTasks[reciterID] = nil
+            self.reservedSurahs[reciterID] = nil
             var state = self.statesByReciterID[reciterID] ?? DownloadState()
             state.isDownloading = false
             state.currentSurahNumber = nil
@@ -2580,7 +2666,7 @@ final class ReciterDownloadManager: NSObject, ObservableObject, URLSessionDownlo
                 }
 
                 DispatchQueue.main.async {
-                    self.activeTasks[reciter.id] = downloadTask
+                    self.activeTasks[reciter.id, default: [:]][surahNumber] = downloadTask
 
                     let existing = self.statesByReciterID[reciter.id] ?? self.stateSnapshot(for: reciter)
                     var nextState = existing
@@ -2602,23 +2688,32 @@ final class ReciterDownloadManager: NSObject, ObservableObject, URLSessionDownlo
             return
         }
 
+        // Top the window up: every missing surah not already in flight (or being created) gets a task
+        // until `maxConcurrentSurahDownloads` are running. Called at the start of a run and after each
+        // task completes - so once the window is full, completions simply refill it.
         let failedThisRun = failedSurahsByReciterID[reciter.id] ?? []
-        for surahNumber in 1...114 {
+        let inFlight = Set((activeTasks[reciter.id] ?? [:]).keys).union(reservedSurahs[reciter.id] ?? [])
+        var running = inFlight.count
+        for surahNumber in 1...114 where running < maxConcurrentSurahDownloads {
             // A partial mushaf's absent surahs aren't errors to retry - the file does not exist upstream.
             guard reciter.carriesSurah(surahNumber) else { continue }
 
             // Exhausted its retry budget this run: move past it so one bad file can't wedge the queue.
             // The final error summary (below) tells the user what is still missing.
             if failedThisRun.contains(surahNumber) { continue }
+            if inFlight.contains(surahNumber) { continue }
 
             let targetURL = localSurahFileURL(reciter: reciter, surahNumber: surahNumber)
             if fileManager.fileExists(atPath: targetURL.path) {
                 continue
             }
 
+            reservedSurahs[reciter.id, default: []].insert(surahNumber)
             enqueueSurahDownload(reciter: reciter, surahNumber: surahNumber)
-            return
+            running += 1
         }
+        // Something is still transferring (or was just enqueued): the run is not over.
+        if running > 0 { return }
 
         if failedThisRun.isEmpty {
             finishSuccess(for: reciter)
@@ -2684,9 +2779,12 @@ final class ReciterDownloadManager: NSObject, ObservableObject, URLSessionDownlo
         let backoff = pow(2.0, Double(attempts)) // 2s after the first failure, 4s after the second
         DispatchQueue.main.asyncAfter(deadline: .now() + backoff) { [weak self] in
             guard let self else { return }
-            // The run may have been cancelled (or replaced) while the backoff timer waited.
+            // The run may have been cancelled (or replaced) while the backoff timer waited, or the
+            // surah re-enqueued by a refill pass in the meantime.
             guard self.statesByReciterID[reciter.id]?.isDownloading == true,
-                  self.activeTasks[reciter.id] == nil else { return }
+                  self.activeTasks[reciter.id]?[surahNumber] == nil,
+                  !(self.reservedSurahs[reciter.id]?.contains(surahNumber) ?? false) else { return }
+            self.reservedSurahs[reciter.id, default: []].insert(surahNumber)
             self.enqueueSurahDownload(reciter: reciter, surahNumber: surahNumber)
         }
     }
@@ -2700,6 +2798,7 @@ final class ReciterDownloadManager: NSObject, ObservableObject, URLSessionDownlo
         } else {
             let remoteString = "\(reciter.surahLink)\(String(format: "%03d", surahNumber)).mp3"
             guard let url = URL(string: remoteString) else {
+                DispatchQueue.main.async { self.reservedSurahs[reciter.id]?.remove(surahNumber) }
                 finishWithError(for: reciter.id, message: "Invalid reciter link.")
                 return
             }
@@ -2711,11 +2810,21 @@ final class ReciterDownloadManager: NSObject, ObservableObject, URLSessionDownlo
         task.taskDescription = taskDescription(for: reciter, surahNumber: surahNumber)
 
         DispatchQueue.main.async {
-            self.activeTasks[reciter.id] = task
+            self.reservedSurahs[reciter.id]?.remove(surahNumber)
+            // Cancelled while the URL was being resolved: do not start a task the run no longer wants.
+            guard self.statesByReciterID[reciter.id]?.isDownloading == true else {
+                task.cancel()
+                return
+            }
+            self.activeTasks[reciter.id, default: [:]][surahNumber] = task
             var state = self.statesByReciterID[reciter.id] ?? self.stateSnapshot(for: reciter)
             state.isDownloading = true
-            state.currentSurahNumber = surahNumber
-            state.currentSurahProgress = 0
+            // The lowest surah in flight is "the current one" - the bar reads as one steady queue.
+            let lowest = self.activeTasks[reciter.id]?.keys.min() ?? surahNumber
+            if state.currentSurahNumber != lowest {
+                state.currentSurahNumber = lowest
+                state.currentSurahProgress = 0
+            }
             state.errorMessage = nil
             self.statesByReciterID[reciter.id] = state
             task.resume()
@@ -2766,6 +2875,8 @@ final class ReciterDownloadManager: NSObject, ObservableObject, URLSessionDownlo
         }
 
         DispatchQueue.main.async {
+            // Only the lowest in-flight surah drives the bar; the others report silently.
+            guard context.surahNumber == (self.activeTasks[context.reciter.id]?.keys.min() ?? context.surahNumber) else { return }
             var state = self.statesByReciterID[context.reciter.id] ?? self.stateSnapshot(for: context.reciter)
             state.isDownloading = true
             state.currentSurahNumber = context.surahNumber
@@ -2821,11 +2932,14 @@ final class ReciterDownloadManager: NSObject, ObservableObject, URLSessionDownlo
         let installFailed = error == nil && installFailedReciterIDs.remove(context.reciter.id) != nil
 
         DispatchQueue.main.async {
-            self.activeTasks[context.reciter.id] = nil
+            self.activeTasks[context.reciter.id]?[context.surahNumber] = nil
 
             if let nsError = error as NSError? {
                 if nsError.domain == NSURLErrorDomain && nsError.code == NSURLErrorCancelled {
-                    self.finishCancellation(for: context.reciter.id)
+                    // One cancelled task of several: the others report their own cancellation.
+                    if self.activeTasks[context.reciter.id]?.isEmpty ?? true {
+                        self.finishCancellation(for: context.reciter.id)
+                    }
                 } else {
                     // Transient failures (offline, timeout, server hiccup) retry with backoff; a surah
                     // that keeps failing is skipped so the rest of the queue still completes.
@@ -2841,6 +2955,8 @@ final class ReciterDownloadManager: NSObject, ObservableObject, URLSessionDownlo
             // A failed install already surfaced its error; scheduling the next download would pick the
             // still-missing surah again, forever. Stop the chain - the user retries explicitly.
             if installFailed { return }
+            // The run ended (an error summary, a cancel) while this task was finishing: do not refill.
+            guard self.statesByReciterID[context.reciter.id]?.isDownloading == true else { return }
 
             self.retryAttempts[self.retryKey(context.reciter.id, context.surahNumber)] = nil
             self.refreshState(for: context.reciter)

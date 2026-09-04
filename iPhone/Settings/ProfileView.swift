@@ -48,7 +48,12 @@ struct ProfileStats: Equatable {
     var hadithFavoriteBooks = 0
 
     // Dhikr
+    /// Lifetime count (never lowered by a reset), today's count, and the day streaks.
     var dhikrTotal = 0
+    var dhikrToday = 0
+    var dhikrStreak = 0
+    var dhikrBestStreak = 0
+    var dhikrActiveDays = 0
 
     /// Distinct highlight colors the reader has actually reached for.
     var highlightColorsUsed: Int {
@@ -88,7 +93,8 @@ struct ProfileStats: Equatable {
         l.favoriteSurahs == r.favoriteSurahs && l.favoriteReciters == r.favoriteReciters &&
         l.hadithBooksStarted == r.hadithBooksStarted && l.hadithBookmarks == r.hadithBookmarks &&
         l.hadithFavoriteBooks == r.hadithFavoriteBooks &&
-        l.dhikrTotal == r.dhikrTotal
+        l.dhikrTotal == r.dhikrTotal && l.dhikrToday == r.dhikrToday && l.dhikrStreak == r.dhikrStreak &&
+        l.dhikrBestStreak == r.dhikrBestStreak && l.dhikrActiveDays == r.dhikrActiveDays
     }
 
     /// Cache slot for `current(settings:quranData:)`, keyed by a stamp of everything the stats derive
@@ -116,7 +122,7 @@ struct ProfileStats: Equatable {
         let hadithStamp = HadithUserData.shared.bookmarks.count
             &+ (HadithUserData.shared.favoriteSlugs.count &* 1_000)
             &+ (HadithStore.shared.lastReadByBook.count &* 1_000_000)
-        let dhikrStamp = TasbihCounters.shared.totalCount
+        let dhikrStamp = TasbihCounters.shared.lifetimeCount &+ TasbihCounters.shared.currentStreak &* 1_000_003
         let stamp = settings.profileStatsStamp
 
         if let cached = cache,
@@ -226,7 +232,12 @@ struct ProfileStats: Equatable {
         stats.hadithBooksStarted = HadithStore.shared.lastReadByBook.count
 
         // Dhikr
-        stats.dhikrTotal = TasbihCounters.shared.totalCount
+        let tasbih = TasbihCounters.shared
+        stats.dhikrTotal = tasbih.lifetimeCount
+        stats.dhikrToday = tasbih.todayCount
+        stats.dhikrStreak = tasbih.currentStreak
+        stats.dhikrBestStreak = tasbih.bestStreak
+        stats.dhikrActiveDays = tasbih.activeDayCount
 
         return stats
     }
@@ -438,6 +449,10 @@ struct ProfileView: View {
     private func dhikrCard(_ stats: ProfileStats) -> some View {
         ProfileCard(title: "Dhikr", systemImage: "circle.hexagonpath.fill") {
             statRow("Counted on the tasbih", value: formatted(stats.dhikrTotal))
+            statRow("Counted today", value: formatted(stats.dhikrToday))
+            statRow("Day streak", value: "\(formatted(stats.dhikrStreak)) day\(stats.dhikrStreak == 1 ? "" : "s")")
+            statRow("Best streak", value: "\(formatted(stats.dhikrBestStreak)) day\(stats.dhikrBestStreak == 1 ? "" : "s")")
+            statRow("Days with dhikr", value: formatted(stats.dhikrActiveDays))
         }
     }
 

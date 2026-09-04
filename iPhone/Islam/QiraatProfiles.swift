@@ -650,7 +650,7 @@ struct QiraahMasterDetailView: View {
                 let riwayat = QiraatProfiles.narrators(ofMaster: profile.id)
                 Section {
                     ForEach(riwayat) { narrator in
-                        NavigationLink(destination: RiwayahNarratorDetailView(profile: narrator)) {
+                        NavigationLink(destination: LazyDestination { RiwayahNarratorDetailView(profile: narrator) }) {
                             QiraatProfileRow(title: narrator.name, arabic: narrator.arabic,
                                              detail: "\(narrator.city) · d. \(narrator.diedAH) AH")
                         }
@@ -721,7 +721,7 @@ struct RiwayahNarratorDetailView: View {
 
                 if let master = QiraatProfiles.master(id: profile.masterID) {
                     Section(header: Text("THE READING IT NARRATES")) {
-                        NavigationLink(destination: QiraahMasterDetailView(profile: master)) {
+                        NavigationLink(destination: LazyDestination { QiraahMasterDetailView(profile: master) }) {
                             QiraatProfileRow(title: master.id, arabic: master.arabic,
                                              detail: "\(master.city) · d. \(master.diedAH) AH")
                         }

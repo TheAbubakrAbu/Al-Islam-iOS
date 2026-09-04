@@ -4,6 +4,8 @@ import AVFoundation
 struct NowPlayingView: View {
     @ObservedObject var settings = Settings.shared
     @ObservedObject var quranPlayer = QuranPlayer.shared
+    /// The progress poll runs at 1 s on the reduced tier (Phase 5 step 11).
+    @Environment(\.appearance) private var appearance
 
     @State private var quranView: Bool
     @Binding private var scrollDown: Int
@@ -32,6 +34,7 @@ struct NowPlayingView: View {
     }
 
     var body: some View {
+        let _ = RenderCounter.hit("NowPlayingView")
         #if os(iOS)
         // The parent inset inserts/removes this view with `if isPlaying||isPaused` + `.animation`, which
         // animates BOTH the fade and the height collapse (a `.frame(height:)` between natural and 0 can't
@@ -232,7 +235,7 @@ struct NowPlayingView: View {
         // the periodic timeline kept redrawing this subtree twice a second over a frozen progress bar;
         // paused, one lazy tick keeps it alive, and the play/pause @Published change re-renders (and
         // re-schedules) immediately on resume.
-        TimelineView(.periodic(from: .now, by: isPlaying ? 0.5 : 3600)) { _ in
+        TimelineView(.periodic(from: .now, by: isPlaying ? (appearance.isReducedTier ? 1 : 0.5) : 3600)) { _ in
             let elapsed = CMTimeGetSeconds(quranPlayer.player?.currentTime() ?? .zero)
             let rawTotal = CMTimeGetSeconds(quranPlayer.player?.currentItem?.duration ?? .zero)
             let total = (rawTotal.isFinite && rawTotal > 0) ? rawTotal : 0

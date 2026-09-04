@@ -28,19 +28,72 @@ final class LaunchWarmup: ObservableObject {
     static let shared = LaunchWarmup()
     private init() {}
 
-    @Published private(set) var isWarm = false
+    /// A one-way flag with continuation-based waiters: `set()` resumes everyone parked in `wait`, and a
+    /// waiter's own cap resumes it alone. No poll (the 20 ms sleep loop this replaces was a timer Low
+    /// Power Mode throttles, which stretched the hold on the icon) and no task group: a group's `next()`
+    /// and its teardown each cost a main-actor turn, and during the tab walk a turn is a whole tab
+    /// realization (measured on the 17 Pro simulator: three such turns put the finale 650 ms after the
+    /// warm signal). One resume, one turn.
+    @MainActor
+    private final class Gate {
+        private(set) var isSet = false
+        private var waiters: [UUID: CheckedContinuation<Void, Never>] = [:]
 
-    func markWarm() { isWarm = true }
+        func set() {
+            guard !isSet else { return }
+            isSet = true
+            let parked = waiters
+            waiters.removeAll()
+            parked.values.forEach { $0.resume() }
+        }
+
+        func wait(maxWaitNanos: UInt64) async {
+            if isSet { return }
+            let id = UUID()
+            await withCheckedContinuation { continuation in
+                waiters[id] = continuation
+                Task { @MainActor [weak self] in
+                    try? await Task.sleep(nanoseconds: maxWaitNanos)
+                    guard let self, let parked = self.waiters.removeValue(forKey: id) else { return }
+                    parked.resume()
+                }
+            }
+        }
+    }
+
+    private let coverUpGate = Gate()
+    private let warmGate = Gate()
+    private let quranTabGate = Gate()
+
+    @Published private(set) var isWarm = false
+    /// The launch screen has appeared: the under-cover walk must not start before the cover's first
+    /// frame (its first tab build would otherwise sit between the window and the icon).
+    var isCoverUp: Bool { coverUpGate.isSet }
+    /// The Quran tab has evaluated its first body behind the cover (list mode) or pushed its reader
+    /// (page mode). `warmUnderCover` waits on this instead of a fixed settle, with the old sleep as
+    /// the cap.
+    var isQuranTabLaidOut: Bool { quranTabGate.isSet }
+
+    func markCoverUp() { coverUpGate.set() }
+    func markWarm() {
+        LaunchClock.mark("warm")
+        isWarm = true
+        warmGate.set()
+    }
+    func markQuranTabLaidOut() { quranTabGate.set() }
 
     /// Await `isWarm`, but never block the launch longer than `maxWaitNanos` (a safety cap so a failed warm can
     /// never strand the user on the launch screen).
     func waitUntilWarm(maxWaitNanos: UInt64) async {
-        var waited: UInt64 = 0
-        let step: UInt64 = 20_000_000
-        while !isWarm && waited < maxWaitNanos {
-            try? await Task.sleep(nanoseconds: step)
-            waited += step
-        }
+        await warmGate.wait(maxWaitNanos: maxWaitNanos)
+    }
+
+    func waitUntilQuranTabLaidOut(maxWaitNanos: UInt64) async {
+        await quranTabGate.wait(maxWaitNanos: maxWaitNanos)
+    }
+
+    func waitUntilCoverUp(maxWaitNanos: UInt64) async {
+        await coverUpGate.wait(maxWaitNanos: maxWaitNanos)
     }
 }
 
@@ -73,7 +126,6 @@ struct LaunchScreen: View {
     @State private var glassOpacity: Double = 0.0
     @State private var leftGlassOffset: CGFloat = 0
     @State private var rightGlassOffset: CGFloat = 0
-    @State private var contentBlur: CGFloat = 0
 
     var body: some View {
         GeometryReader { geo in
@@ -106,7 +158,8 @@ struct LaunchScreen: View {
                 await runLaunchAnimation()
             }
         }
-        .blur(radius: contentBlur)
+        // No `.blur(radius:)` on the whole screen any more: it was bound to a state that never left 0,
+        // and a zero-radius blur still put the entire launch screen through a filter pass per frame.
     }
 
     private var currentColorScheme: ColorScheme {
@@ -168,6 +221,11 @@ struct LaunchScreen: View {
                     shimmerOffset: shimmerOffset,
                     layoutScale: layoutScale
                 )
+                // One rasterized layer for the card, its two soft shadows and the shimmer, so the
+                // finale's scale spring transforms a single texture instead of re-rendering two
+                // 20-24 pt shadow blurs every frame. Pixel-identical (the shimmer never leaves the
+                // opaque icon, so its screen blend has nothing outside the group to mix with).
+                .compositingGroup()
                 .rotationEffect(.degrees(logoRotation))
                 .offset(y: logoYOffset)
                 .padding(16 * layoutScale)
@@ -184,6 +242,8 @@ struct LaunchScreen: View {
         //    (no gradient), so the heavy load + warm in step 2 stays perfectly smooth — there are no running
         //    animations to drop frames.
         triggerHapticFeedback(.soft)
+        LaunchClock.mark("launch screen up")
+        LaunchWarmup.shared.markCoverUp()
 
         // 2) Hold on the icon and wait for everything to finish initializing. Nothing is animating during this
         //    window, so background-init contention is invisible — the screen simply rests on the icon for as
@@ -196,9 +256,11 @@ struct LaunchScreen: View {
                 await QuranData.shared.waitUntilCoreLoaded()
             }
         }()
-        async let playerReady: Void = QuranPlayer.shared.waitUntilReady()
-        async let namesReady: Void = NamesViewModel.shared.waitUntilLoaded()
-        _ = await (settingsReady, quranReady, playerReady, namesReady)
+        // Only what the landing tab needs. The player and the 99 Names used to be in this group too;
+        // neither is on the Adhan tab, and the Names parse (8 s cap, a background-QoS task) lost the
+        // race under Low Power Mode and held the icon for whole seconds after the Quran was in.
+        _ = await (settingsReady, quranReady)
+        LaunchClock.mark("stores ready")
 
         #if os(iOS)
         // Still nothing animating: also let the main tabs build + warm behind this cover (the Quran tab is
@@ -207,6 +269,7 @@ struct LaunchScreen: View {
         // a failed warm can never strand us on the launch screen. iPhone-only: the Watch has no such tab warm.
         await LaunchWarmup.shared.waitUntilWarm(maxWaitNanos: 6_000_000_000)
         #endif
+        LaunchClock.mark("finale starts")
 
         // 3) Everything is ready and the CPU is free, so the finale plays smoothly on top of the resting icon:
         //    the gradient/glow blooms in, the rings expand, the shimmer sweeps the logo, and - a beat later -
@@ -243,6 +306,7 @@ struct LaunchScreen: View {
 
         // 4) Smoothly hand off to the app (revealing the already-warm Adhan tab underneath).
         triggerHapticFeedback(.soft)
+        LaunchClock.mark("reveal")
         withAnimation(.easeInOut(duration: 0.5)) {
             isLaunching = false
         }

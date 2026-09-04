@@ -72,7 +72,9 @@ struct QuranWidgetSnapshot: Codable {
 
 enum QuranWidgetStore {
     private static let key = "quranWidgetSnapshot"
-    private static var defaults: UserDefaults? { UserDefaults(suiteName: AppIdentifiers.appGroupSuiteName) }
+    /// One suite per process: `UserDefaults(suiteName:)` builds a fresh object (and its cfprefsd
+    /// connection) on every call, and this used to be a computed property hit on every load and save.
+    private static let defaults: UserDefaults? = UserDefaults(suiteName: AppIdentifiers.appGroupSuiteName)
 
     static func load() -> QuranWidgetSnapshot? {
         guard let data = defaults?.data(forKey: key) else { return nil }

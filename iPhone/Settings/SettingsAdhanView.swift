@@ -337,7 +337,7 @@ struct SettingsAdhanView: View {
     private var notificationsSection: some View {
         #if os(iOS)
         Section {
-            NavigationLink(destination: NotificationView()) {
+            NavigationLink(destination: LazyDestination { NotificationView() }) {
                 Label("Notification Settings", systemImage: "bell.badge")
             }
         }
@@ -823,7 +823,7 @@ struct NotificationView: View {
                 #endif
 
                 Section(header: Text("PRAYER REMINDERS")) {
-                    NavigationLink(destination: MoreNotificationView()) {
+                    NavigationLink(destination: LazyDestination { MoreNotificationView() }) {
                         Label("Prayer Notifications", systemImage: "bell.fill")
                             .font(.subheadline)
                     }

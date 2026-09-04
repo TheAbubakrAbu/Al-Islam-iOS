@@ -912,7 +912,7 @@ struct AyahSearchResultRow: View {
                 .buttonStyle(.plain)
                 .contentShape(Rectangle())
             } else {
-                NavigationLink(destination: SurahView(surah: surah, ayah: ayah.id)) {
+                NavigationLink(destination: LazyDestination { SurahView(surah: surah, ayah: ayah.id) }) {
                     row
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .contentShape(Rectangle())

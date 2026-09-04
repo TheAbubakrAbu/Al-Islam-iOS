@@ -8,14 +8,18 @@ import UIKit
 
 struct QiblaView: View {
     @ObservedObject private var settings = Settings.shared
+    @Environment(\.appearance) private var appearance
 
     let size: CGFloat
 
     private static let kaabaCoordinate = CLLocationCoordinate2D(latitude: 21.4225, longitude: 39.8262)
 
     @StateObject private var compass: LocalQiblaCompass
-    @State private var cachedDistanceLocationKey: String?
-    @State private var cachedDistanceToKaabaMiles: Double?
+
+    /// One entry, keyed on the coordinate: the distance is read on every render of the info card and
+    /// the coordinate changes a few times a day. Was a `@State` pair written from inside `body`
+    /// through `DispatchQueue.main.async`, i.e. a render that scheduled another render.
+    private static var distanceMemo: (latitude: Double, longitude: Double, miles: Double)?
 
     #if os(iOS)
     @State private var lastAngle: Double = 0
@@ -35,6 +39,17 @@ struct QiblaView: View {
         QiblaLayoutMetrics(size: size)
     }
 
+    /// The expanded compass (100 pt in the location row, 160 pt in settings). Only this one is worth
+    /// a GPS refinement burst, and on the reduced tier only this one drives the magnetometer at all.
+    private var isExpanded: Bool { size > 50 }
+
+    /// Whether the needle follows the phone's heading. The 50 pt compass in the location row keeps
+    /// turning on the full tier: with the 1° heading filter and the 0.5° / 100 ms publish gate below
+    /// it costs nothing while the phone rests, and the live row compass is the one people actually
+    /// use. Under Low Power Mode (or a 3 GB-class device) the row compass shows the static bearing
+    /// instead and the magnetometer stays off until the compass is expanded.
+    private var isLive: Bool { isExpanded || !appearance.isReducedTier }
+
     private var distanceToQibla: Double {
         angularDistance(compass.direction, 0)
     }
@@ -53,9 +68,9 @@ struct QiblaView: View {
               currentLocation.latitude != 1000,
               currentLocation.longitude != 1000 else { return nil }
 
-        let locationKey = "\(currentLocation.latitude),\(currentLocation.longitude)"
-        if cachedDistanceLocationKey == locationKey {
-            return cachedDistanceToKaabaMiles
+        if let memo = Self.distanceMemo,
+           memo.latitude == currentLocation.latitude, memo.longitude == currentLocation.longitude {
+            return memo.miles
         }
 
         let miles = haversineMiles(
@@ -64,19 +79,15 @@ struct QiblaView: View {
             toLatitude: Self.kaabaCoordinate.latitude,
             toLongitude: Self.kaabaCoordinate.longitude
         )
-        DispatchQueue.main.async {
-            cachedDistanceLocationKey = locationKey
-            cachedDistanceToKaabaMiles = miles
-        }
+        Self.distanceMemo = (currentLocation.latitude, currentLocation.longitude, miles)
         return miles
     }
 
     private var alignmentScore: Double {
-        // Quantized to 1/24 steps. The raw score changes on every compass sample (headingFilter is .none
-        // for a smooth arrow), and each distinct value re-rasterizes GlassyQiblaRing's three blurs +
-        // shadow + compositing group - exactly while the user is aligned and watching. Snapping to steps
-        // lets SwiftUI diff the ring out between visually identical frames; only the cheap arrow rotates
-        // per sample.
+        // Quantized to 1/24 steps. Each distinct value re-rasterizes GlassyQiblaRing's decoration
+        // layer (three blurs + a gradient border) - exactly while the user is aligned and watching.
+        // Snapping to steps lets SwiftUI diff the ring out between visually identical frames; only
+        // the cheap arrow rotates per sample.
         let raw = 1.0 - (min(20.0, distanceToQibla) / 20.0)
         return (raw * 24).rounded() / 24
     }
@@ -90,6 +101,7 @@ struct QiblaView: View {
     }
 
     var body: some View {
+        let _ = RenderCounter.hit("QiblaView")
         VStack(spacing: 10) {
             ZStack {
                 GlassyQiblaRing(size: size, tint: ringColor, alignmentScore: alignmentScore)
@@ -106,19 +118,36 @@ struct QiblaView: View {
         }
         .animation(nil, value: compass.direction)
         .onAppear {
-            compass.start()
-            settings.beginLocationRefinement()
+            configureCompass()
             prepareHaptics()
         }
         .onDisappear {
             compass.stop()
             settings.endLocationRefinement()
         }
+        // The location row swaps 50 pt for 100 pt in place, so the same view goes from resting to
+        // expanded: start the heading + burst then, and stop the burst on the way back.
+        .onChange(of: size) { _ in configureCompass() }
+        .onChange(of: appearance.isReducedTier) { _ in configureCompass() }
         #if os(iOS)
         .onChange(of: compass.direction) { newAngle in
             handleDirectionChange(newAngle)
         }
         #endif
+    }
+
+    /// Heading on or off, and the GPS burst, for the current size and tier. Idempotent.
+    private func configureCompass() {
+        if isLive {
+            compass.start(headingFilter: appearance.isReducedTier ? 3 : 1)
+        } else {
+            compass.showStaticBearing()
+        }
+        if isExpanded {
+            settings.beginLocationRefinementForCompass()
+        } else {
+            settings.endLocationRefinement()
+        }
     }
 
     private var pointerStack: some View {
@@ -127,7 +156,7 @@ struct QiblaView: View {
                 .animation(.easeInOut(duration: 0.2), value: arrowColor)
             Text("🕋")
                 .font(.system(size: layout.kaabaSize))
-                .shadow(
+                .softShadow(
                     color: .black.opacity(0.25),
                     radius: max(0.6, layout.kaabaSize * 0.08),
                     x: 0,
@@ -135,6 +164,9 @@ struct QiblaView: View {
                 )
         }
         .padding(.vertical, size * 0.16)
+        // One texture, rotated: without this the two shadows were re-rendered offscreen on every
+        // heading sample, because a shadow of a transformed layer is computed per frame.
+        .drawingGroup()
     }
 
     private var qiblaInfoCard: some View {
@@ -158,7 +190,7 @@ struct QiblaView: View {
         .padding(.horizontal)
         .padding(.vertical, 8)
         .conditionalGlassEffect()
-        .shadow(color: .primary.opacity(0.08), radius: 8, y: 2)
+        .softShadow(color: .primary.opacity(0.08), radius: 8, y: 2)
     }
 
     private func angularDistance(_ lhs: Double, _ rhs: Double) -> Double {
@@ -240,14 +272,22 @@ private struct QiblaLayoutMetrics {
 }
 
 struct GlassyQiblaRing: View {
+    @Environment(\.appearance) private var appearance
+
     let size: CGFloat
     let tint: Color
     let alignmentScore: Double
 
+    /// The material disc stays a live layer (a material samples what is behind it, so it cannot be
+    /// rasterized); everything drawn over it is one `drawingGroup` texture below.
     @ViewBuilder
     private var glassFill: some View {
         #if os(iOS)
-        Circle().fill(.ultraThinMaterial)
+        if appearance.flattenMaterials {
+            Circle().fill(Color(UIColor.secondarySystemBackground).opacity(0.7))
+        } else {
+            Circle().fill(.ultraThinMaterial)
+        }
         #else
         Circle().fill(Color.white.opacity(0.18))
         #endif
@@ -263,45 +303,49 @@ struct GlassyQiblaRing: View {
 
         ZStack {
             glassFill
-                .overlay(
-                    Circle()
-                        .stroke(Color.black.opacity(0.14), lineWidth: innerLineWidth)
-                        .blur(radius: innerBlur)
-                        .mask(Circle().stroke(lineWidth: innerLineWidth))
-                )
-                .overlay(
-                    Circle()
-                        .fill(
-                            LinearGradient(
-                                colors: [Color.white.opacity(0.55), Color.white.opacity(0.12), .clear],
-                                startPoint: .topLeading,
-                                endPoint: .center
-                            )
-                        )
-                        .blur(radius: max(0.5, size * 0.06))
-                        .scaleEffect(0.98)
-                        .mask(
-                            Circle()
-                                .inset(by: glossWidth * 0.35)
-                                .trim(from: 0, to: 0.58)
-                                .stroke(style: .init(lineWidth: glossWidth, lineCap: .round))
-                        )
-                )
-                .shadow(color: .black.opacity(0.18), radius: shadowRadius, x: 0, y: max(0.5, size * 0.04))
+                .softShadow(color: .black.opacity(0.18), radius: shadowRadius, x: 0, y: max(0.5, size * 0.04))
 
-            Circle()
-                .strokeBorder(
-                    AngularGradient(
-                        gradient: Gradient(colors: [tint.opacity(0.95), Color.white.opacity(0.75), tint.opacity(0.95)]),
-                        center: .center
-                    ),
-                    lineWidth: ringWidth
-                )
+            // The inner shade, the gloss, the gradient border and the alignment glow. NOT a
+            // `drawingGroup`: tried, and the Metal path rendered the masked blurs as a grey halo
+            // around the ring (light) and a grey square (reduced tier). The 24-step score above
+            // already keeps this subtree diffed out between visually identical frames.
+            ZStack {
+                Circle()
+                    .stroke(Color.black.opacity(0.14), lineWidth: innerLineWidth)
+                    .blur(radius: innerBlur)
+                    .mask(Circle().stroke(lineWidth: innerLineWidth))
 
-            Circle()
-                .stroke(tint.opacity(0.25 + 0.45 * alignmentScore), lineWidth: outerGlowWidth)
-                .blur(radius: max(0.6, size * 0.05))
-                .mask(Circle().stroke(lineWidth: outerGlowWidth))
+                Circle()
+                    .fill(
+                        LinearGradient(
+                            colors: [Color.white.opacity(0.55), Color.white.opacity(0.12), .clear],
+                            startPoint: .topLeading,
+                            endPoint: .center
+                        )
+                    )
+                    .blur(radius: max(0.5, size * 0.06))
+                    .scaleEffect(0.98)
+                    .mask(
+                        Circle()
+                            .inset(by: glossWidth * 0.35)
+                            .trim(from: 0, to: 0.58)
+                            .stroke(style: .init(lineWidth: glossWidth, lineCap: .round))
+                    )
+
+                Circle()
+                    .strokeBorder(
+                        AngularGradient(
+                            gradient: Gradient(colors: [tint.opacity(0.95), Color.white.opacity(0.75), tint.opacity(0.95)]),
+                            center: .center
+                        ),
+                        lineWidth: ringWidth
+                    )
+
+                Circle()
+                    .stroke(tint.opacity(0.25 + 0.45 * alignmentScore), lineWidth: outerGlowWidth)
+                    .blur(radius: max(0.6, size * 0.05))
+                    .mask(Circle().stroke(lineWidth: outerGlowWidth))
+            }
         }
         .frame(width: size, height: size)
         .contentShape(Circle())
@@ -325,7 +369,7 @@ struct QiblaArrow: View {
                     endPoint: .bottom
                 )
             )
-            .shadow(color: tint.opacity(0.35), radius: max(0.6, width * 0.18), x: 0, y: 0)
+            .softShadow(color: tint.opacity(0.35), radius: max(0.6, width * 0.18), x: 0, y: 0)
     }
 }
 
@@ -340,19 +384,28 @@ final class LocalQiblaCompass: NSObject, ObservableObject, CLLocationManagerDele
     /// Continuous (unwrapped) low-pass accumulator of the heading→qibla delta. Published `direction`
     /// is this normalized to 0..<360. Smoothing here keeps the needle sharp but free of compass jitter.
     private var smoothedDelta: Double?
+    /// Uptime of the last sample that was let through; samples closer than 100 ms are dropped.
+    private var lastSampleAt: TimeInterval = 0
+
+    /// Publish only when the needle would visibly move: below half a degree the rotation is a
+    /// sub-pixel change of a 50-160 pt needle, and each publish is a body evaluation of the row.
+    private static let minPublishedDelta: Double = 0.5
+    private static let minSampleInterval: TimeInterval = 0.1
 
     init(locationProvider: @escaping () -> Location?) {
         self.locationProvider = locationProvider
         super.init()
         locationManager.delegate = self
-        // Take every heading sample and do our own smoothing - gives a steadier, sharper needle than
-        // letting Core Location drop sub-degree changes.
-        locationManager.headingFilter = kCLHeadingFilterNone
         locationManager.headingOrientation = .portrait
     }
 
-    func start() {
-        guard !started, CLLocationManager.headingAvailable() else { return }
+    /// Start (or keep) heading updates. `headingFilter` is the change Core Location must see before
+    /// it delivers a sample at all: 1° on the full tier, 3° on the reduced one. It used to be
+    /// `kCLHeadingFilterNone`, which is 10-30 samples a second of sub-degree jitter, each a publish.
+    func start(headingFilter: CLLocationDegrees) {
+        guard CLLocationManager.headingAvailable() else { return }
+        locationManager.headingFilter = headingFilter
+        guard !started else { return }
         started = true
         locationManager.startUpdatingHeading()
     }
@@ -363,20 +416,36 @@ final class LocalQiblaCompass: NSObject, ObservableObject, CLLocationManagerDele
         locationManager.stopUpdatingHeading()
     }
 
-    func locationManager(_ manager: CLLocationManager, didUpdateHeading newHeading: CLHeading) {
-        guard newHeading.headingAccuracy >= 0, let currentLocation = locationProvider() else { return }
+    /// No magnetometer: point the needle at the Qibla bearing with north up, the same number the
+    /// Glance card prints. Used for the row compass on the reduced tier.
+    func showStaticBearing() {
+        stop()
+        smoothedDelta = nil
+        guard let bearing = qiblaDirection() else { return }
+        if direction != bearing { direction = bearing }
+    }
 
+    private func qiblaDirection() -> Double? {
+        guard let currentLocation = locationProvider() else { return nil }
         let locationKey = "\(currentLocation.latitude),\(currentLocation.longitude)"
-        let qiblaDirection: Double
         if cachedLocationKey == locationKey, let cachedQiblaDirection {
-            qiblaDirection = cachedQiblaDirection
-        } else {
-            qiblaDirection = Qibla(
-                coordinates: Coordinates(latitude: currentLocation.latitude, longitude: currentLocation.longitude)
-            ).direction
-            cachedLocationKey = locationKey
-            cachedQiblaDirection = qiblaDirection
+            return cachedQiblaDirection
         }
+        let qiblaDirection = Qibla(
+            coordinates: Coordinates(latitude: currentLocation.latitude, longitude: currentLocation.longitude)
+        ).direction
+        cachedLocationKey = locationKey
+        cachedQiblaDirection = qiblaDirection
+        return qiblaDirection
+    }
+
+    func locationManager(_ manager: CLLocationManager, didUpdateHeading newHeading: CLHeading) {
+        guard newHeading.headingAccuracy >= 0, let qiblaDirection = qiblaDirection() else { return }
+
+        let uptime = ProcessInfo.processInfo.systemUptime
+        guard uptime - lastSampleAt >= Self.minSampleInterval else { return }
+        lastSampleAt = uptime
+
         // Prefer the true (geographic) heading; magnetic is the fallback when declination is unknown.
         let heading = newHeading.trueHeading >= 0 ? newHeading.trueHeading : newHeading.magneticHeading
 
@@ -403,6 +472,11 @@ final class LocalQiblaCompass: NSObject, ObservableObject, CLLocationManagerDele
 
         var normalized = updated.truncatingRemainder(dividingBy: 360)
         if normalized < 0 { normalized += 360 }
+
+        var published = normalized - direction
+        published.formTruncatingRemainder(dividingBy: 360)
+        if published > 180 { published -= 360 } else if published < -180 { published += 360 }
+        guard abs(published) >= Self.minPublishedDelta else { return }
         direction = normalized
     }
 

@@ -38,13 +38,14 @@ OUT = ROOT / "Resources/Data/Islam/IslamArticles.json.deflate"
 STR = r'"""(?:.*?)"""|"(?:[^"\\\n]|\\.)*"'
 
 STRUCT_RE = re.compile(r"^struct (\w+): View \{", re.M)
-SECTION_RE = re.compile(r"Section\(header:\s*Text\((" + STR + r")\)", re.S)
+SECTION_RE = re.compile(r"Section\(header:\s*(?:ArticleHeader|Text)\((" + STR + r")\)", re.S)
 TEXT_RE = re.compile(r"(?<![\w.])Text\((" + STR + r")\)", re.S)
 QUOTE_RE = re.compile(r"ScriptureQuote\(\s*text:\s*(" + STR + r")", re.S)
 TITLE_RE = re.compile(r"\.navigationTitle\((" + STR + r")\)", re.S)
 
 # Views that are chrome, not an article: the index screens and the shared pieces.
-SKIP_VIEWS = {"GuidesView", "PillarsView", "DebugArticleLink", "ScriptureQuote", "GuideSourcesSection"}
+SKIP_VIEWS = {"GuidesView", "PillarsView", "DebugArticleLink", "ScriptureQuote", "GuideSourcesSection", "ArticleSourcesSection", "ArticleSource",
+              "IslamArticleIndexSections"}
 
 
 def unquote(literal: str) -> str:

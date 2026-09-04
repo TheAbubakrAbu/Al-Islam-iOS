@@ -117,12 +117,34 @@ struct QuranPackReader {
 ///   u32 LE index length, index JSON {"entries":[{"name","offset","length"},...]},
 ///   then the raw JSONs back to back; offsets are relative to the first byte after the index.
 enum SolidPack {
-    /// The raw JSON for one member, or nil if the pack or member is missing.
-    static func json(named name: String, inPack pack: String) -> Data? {
+    /// The inflated pack bodies, by pack name (Phase 5 step 8). A member lookup used to inflate the
+    /// WHOLE family every time: `qiraah.solidpack` is 17.6 MB inflated and a 12-riwayah comparison
+    /// asked for it twelve times. One inflate now serves every member of a burst; the bodies drop
+    /// on a memory warning (`purgeInflatedBodies`, wired in AppLifecycle) and the `NSCache` sheds
+    /// them under pressure on its own as well.
+    private static let inflatedBodies: NSCache<NSString, NSData> = {
+        let cache = NSCache<NSString, NSData>()
+        cache.totalCostLimit = 40 * 1024 * 1024
+        return cache
+    }()
+
+    static func purgeInflatedBodies() {
+        inflatedBodies.removeAllObjects()
+    }
+
+    private static func inflatedBody(ofPack pack: String) -> Data? {
+        if let hit = inflatedBodies.object(forKey: pack as NSString) { return hit as Data }
         guard let url = Bundle.main.url(forResource: pack, withExtension: "solidpack")
             ?? Bundle.main.url(forResource: pack, withExtension: "solidpack", subdirectory: "Data/Quran"),
               let compressed = try? Data(contentsOf: url),
               let body = xzDecompress(compressed) else { return nil }
+        inflatedBodies.setObject(body as NSData, forKey: pack as NSString, cost: body.count)
+        return body
+    }
+
+    /// The raw JSON for one member, or nil if the pack or member is missing.
+    static func json(named name: String, inPack pack: String) -> Data? {
+        guard let body = inflatedBody(ofPack: pack) else { return nil }
 
         var reader = QuranPackReader(data: body, cursor: 0)
         let indexLength = reader.u32()
@@ -158,6 +180,9 @@ enum SolidPack {
         defer { compression_stream_destroy(&stream) }
 
         var out = Data()
+        // The xz container carries no decompressed size up front; the packs this reads inflate 3x to
+        // 50x, so a 4x reservation spares the first few doublings without over-committing (step 7).
+        out.reserveCapacity(min(data.count * 4, 64 * 1024 * 1024))
         let finished: Bool? = data.withUnsafeBytes { (raw: UnsafeRawBufferPointer) -> Bool? in
             guard let base = raw.bindMemory(to: UInt8.self).baseAddress else { return nil }
             stream.src_ptr = base
@@ -227,10 +252,11 @@ final class QuranPackContainer: @unchecked Sendable {
     /// from the bundle, so it can all go under memory pressure.
     private let budget: Int
 
-    init?(url: URL, budget: Int = 4 * 1024 * 1024) {
+    init?(url: URL, budget: Int = 4 * 1024 * 1024, mapped useMapping: Bool = true) {
         // Mapped, not read: the compressed text never enters the app's footprint, and the
         // pages that do get touched are clean file-backed pages the OS can evict for free.
-        guard let mapped = try? Data(contentsOf: url, options: [.mappedIfSafe]),
+        // (`mapped: false` is the small-pack fallback: a plain read when mapping is refused.)
+        guard let mapped = try? Data(contentsOf: url, options: useMapping ? [.mappedIfSafe] : []),
               mapped.count >= 48 else { return nil }
         self.data = mapped
         self.budget = budget
@@ -272,6 +298,37 @@ final class QuranPackContainer: @unchecked Sendable {
     }
 
     var blockCount: Int { blocks.count }
+
+    /// Why `init?` returns nil for this file, as one line for a log or a failure row; nil when the
+    /// container opens. Re-walks the same steps so the message names the FIRST one that fails: a
+    /// report that says "lzfse decode failed" or "truncated file (0 bytes)" can be acted on, where
+    /// "could not be read" could not.
+    static func openFailure(url: URL, mapped useMapping: Bool = true) -> String? {
+        let data: Data
+        do {
+            data = try Data(contentsOf: url, options: useMapping ? [.mappedIfSafe] : [])
+        } catch {
+            return "unreadable file (\(error.localizedDescription))"
+        }
+        guard data.count >= 48 else { return "truncated file (\(data.count) bytes)" }
+        var header = QuranPackReader(data: data, cursor: 0)
+        guard header.u32() == 0x4B50_5251 else { return "not a pack (\(data.count) bytes)" }
+        guard header.u16() == 1 else { return "unknown pack version" }
+        let eagerCodecID = header.u8()
+        _ = header.u8(); _ = header.u16(); _ = header.u16()
+        _ = header.u32(); _ = header.u32()
+        let eagerOffset = header.u32()
+        let eagerLength = header.u32()
+        let eagerRawLength = header.u32()
+        guard let codec = Codec(rawValue: UInt8(truncatingIfNeeded: eagerCodecID)) else {
+            return "unknown codec \(eagerCodecID)"
+        }
+        guard decompress(data, offset: eagerOffset, length: eagerLength,
+                         rawLength: eagerRawLength, codec: codec) != nil else {
+            return "\(codec) decode failed (\(eagerLength) -> \(eagerRawLength) bytes, file \(data.count))"
+        }
+        return nil
+    }
 
     /// The decompressed bytes of one block, cached. Built OUTSIDE the lock: decompression is
     /// milliseconds, and holding the lock across it would serialise every reader behind one
@@ -393,6 +450,9 @@ final class QuranPack: @unchecked Sendable {
     /// every re-parse while holding at most one block's strings.
     private let parseLock = NSLock()
     private var parsedBlock: (index: Int, strings: [String])?
+    /// Every block's strings, parsed once and concurrently by `materializeAllBlocks()` for the bulk
+    /// load. Read under `parseLock` like the single slot; released by `purge()`.
+    private var bulkStrings: [[String]?] = []
 
     init?(url: URL) {
         guard let container = QuranPackContainer(url: url) else { return nil }
@@ -449,6 +509,35 @@ final class QuranPack: @unchecked Sendable {
         blockFirstRow = firstRows
     }
 
+    /// Decode and parse EVERY block at once, on all cores. quran.qpk is the one pack the app always
+    /// reads in full at launch (3.76 MB of text), and LZMA is the one codec whose decode is slow enough
+    /// to notice: block after block on one thread was 150-400 ms on an A12-class device. The pack is
+    /// written in four ~940 KB blocks (Scripts/reblock_packs.py --target-bytes 960000; +62 KB of
+    /// install size over two, where eight would have cost +129 KB) so the decode spreads across the
+    /// cores, and the 6,236 per-row reads that follow find their block already parsed instead of each
+    /// taking `parseLock` and re-checking the single slot.
+    func materializeAllBlocks() {
+        let count = container.blockCount
+        guard count > 0 else { return }
+        var parsed = [[String]?](repeating: nil, count: count)
+        parsed.withUnsafeMutableBufferPointer { buffer in
+            DispatchQueue.concurrentPerform(iterations: count) { index in
+                guard let raw = container.block(index) else { return }
+                var reader = QuranPackReader(bytes: raw)
+                var out: [String] = []
+                out.reserveCapacity(4096)
+                while reader.remaining >= 4 { out.append(reader.string()) }
+                // Distinct slots per iteration: no two threads touch the same element.
+                buffer[index] = out
+            }
+        }
+        parseLock.lock()
+        bulkStrings = parsed
+        parseLock.unlock()
+        // The decompressed bytes are parsed now; the container's cache of them can go.
+        container.purge()
+    }
+
     /// The four display strings of one ayah, by global row.
     func text(row: Int) -> AyahText? {
         guard row >= 0, row < ayahs.count else { return nil }
@@ -463,6 +552,10 @@ final class QuranPack: @unchecked Sendable {
 
     private func strings(inBlock index: Int) -> [String]? {
         parseLock.lock()
+        if index < bulkStrings.count, let bulk = bulkStrings[index] {
+            parseLock.unlock()
+            return bulk
+        }
         if let parsed = parsedBlock, parsed.index == index {
             defer { parseLock.unlock() }
             return parsed.strings
@@ -484,6 +577,7 @@ final class QuranPack: @unchecked Sendable {
     func purge() {
         parseLock.lock()
         parsedBlock = nil
+        bulkStrings = []
         parseLock.unlock()
         container.purge()
     }
@@ -649,8 +743,10 @@ struct NamesPack {
 
     let records: [Record]
 
-    init?(url: URL) {
-        guard let container = QuranPackContainer(url: url) else { return nil }
+    /// `mapped: false` reads the file into memory instead of mapping it - the fallback NamesViewModel
+    /// tries when the mapped open fails, since the pack is a few kilobytes.
+    init?(url: URL, mapped: Bool = true) {
+        guard let container = QuranPackContainer(url: url, mapped: mapped) else { return nil }
         var r = QuranPackReader(bytes: container.eager)
         let count = r.u32()
         guard count > 0, count <= 200, count == container.recordCount else { return nil }
@@ -673,5 +769,15 @@ struct NamesPack {
         }
         guard r.remaining == 0 else { return nil }
         records = list
+    }
+
+    /// One line saying why `init?` fails for this file: the container's reason, or the record
+    /// section not agreeing with the header. For the log and the 99 Names page's failure row.
+    static func failureDescription(url: URL) -> String {
+        if let reason = QuranPackContainer.openFailure(url: url) { return reason }
+        guard let container = QuranPackContainer(url: url) else { return "the pack opened once and then did not" }
+        var r = QuranPackReader(bytes: container.eager)
+        let count = r.u32()
+        return "record section did not parse (\(count) records listed, header says \(container.recordCount), \(container.eager.count) bytes)"
     }
 }

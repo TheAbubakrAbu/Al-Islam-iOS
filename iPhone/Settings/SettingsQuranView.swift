@@ -294,7 +294,7 @@ struct SettingsQuranView: View {
 
     private var reciterSelection: some View {
         VStack(alignment: .leading, spacing: 10) {
-            NavigationLink(destination: ReciterListView().environmentObject(settings)) {
+            NavigationLink(destination: LazyDestination { ReciterListView().environmentObject(settings) }) {
                 Label("Choose Reciter", systemImage: "headphones")
             }
 
@@ -607,7 +607,7 @@ struct SettingsQuranView: View {
                 .onChange(of: settings.showTajweedColors) { _ in settings.hapticFeedback() }
 
             #if os(iOS)
-            NavigationLink(destination: TajweedLegendView(showsDismissButton: false)) {
+            NavigationLink(destination: LazyDestination { TajweedLegendView(showsDismissButton: false) }) {
                 Text("Customize Tajweed Colors")
                     .font(.subheadline)
                     .foregroundColor(settings.accentColor.color)
@@ -1045,13 +1045,13 @@ struct SettingsQuranView: View {
 
     private var qiraahLinks: some View {
         Group {
-            NavigationLink(destination: AhrufView()) {
+            NavigationLink(destination: LazyDestination { AhrufView() }) {
                 Text("The 7 Ahruf (Modes)")
             }
             .font(.caption)
             .padding(.vertical, 2)
 
-            NavigationLink(destination: QiraatView()) {
+            NavigationLink(destination: LazyDestination { QiraatView() }) {
                 Text("The 10 Qiraat (Recitations)")
             }
             .font(.caption)
@@ -1788,7 +1788,55 @@ struct ReciterListView: View {
         return sections.filter { !$0.reciters.isEmpty }
     }
 
-    private var searchResultSections: [ReciterSectionGroup] {
+    /// Memo for the three grouped-section derivations below. Each was a computed property re-run on every
+    /// body pass - and the body reads `searchResultSections` three times per pass - while this view
+    /// observes the download manager, whose progress publishes several times a second during a
+    /// download: every tick regrouped every reciter. Keyed on the inputs the groupings read; the
+    /// download state only enters the key while the "downloaded only" filter is on.
+    private final class SectionMemo {
+        var key = ""
+        var search: [ReciterSectionGroup] = []
+        var murattal: [MurattalReciterGroup] = []
+        var qiraah: [QiraahSectionCluster] = []
+    }
+    @State private var sectionMemo = SectionMemo()
+
+    private var sectionMemoKey: String {
+        var parts = [
+            searchText,
+            settings.showQiraahDetails ? "1" : "0",
+            settings.betaQiraatEnabled ? "1" : "0",
+            settings.reciter,
+            settings.reciterId,
+            settings.displayQiraah,
+            settings.favoriteReciterIDs.joined(separator: ","),
+            "\(reciters.count)"
+        ]
+        #if os(iOS)
+        parts.append(showDownloadedOnly ? "1" : "0")
+        if showDownloadedOnly {
+            parts.append(downloadManager.statesByReciterID.filter { $0.value.completedSurahs > 0 }.keys.sorted().joined(separator: ","))
+        }
+        #endif
+        return parts.joined(separator: "|")
+    }
+
+    private func memoizedSections() -> SectionMemo {
+        let key = sectionMemoKey
+        if sectionMemo.key != key {
+            sectionMemo.key = key
+            sectionMemo.search = computeSearchResultSections()
+            sectionMemo.murattal = computeMurattalGroupedSections()
+            sectionMemo.qiraah = computeQiraahGroupedSections()
+        }
+        return sectionMemo
+    }
+
+    private var searchResultSections: [ReciterSectionGroup] { memoizedSections().search }
+    private var murattalGroupedSections: [MurattalReciterGroup] { memoizedSections().murattal }
+    private var qiraahGroupedSections: [QiraahSectionCluster] { memoizedSections().qiraah }
+
+    private func computeSearchResultSections() -> [ReciterSectionGroup] {
         guard isSearchingReciters else { return [] }
 
         // The same RECORDING (one reciter id) can live in several browse sections - Minshawi (Murattal)
@@ -1867,7 +1915,7 @@ struct ReciterListView: View {
         filteredReciters(recitersMurattal, excludingFeaturedMinshawi: shouldHideDuplicateMinshawiEntries)
     }
 
-    private var murattalGroupedSections: [MurattalReciterGroup] {
+    private func computeMurattalGroupedSections() -> [MurattalReciterGroup] {
         var groups: [MurattalReciterGroup] = []
 
         let all = murattalRecitersFiltered
@@ -1997,7 +2045,7 @@ struct ReciterListView: View {
     /// The qiraat area regrouped two-level: riwayah sections clustered under their qiraah imam,
     /// in the sections' existing order (imams ordered by first appearance, so the visible reciter
     /// order is exactly what the flat list showed).
-    private var qiraahGroupedSections: [QiraahSectionCluster] {
+    private func computeQiraahGroupedSections() -> [QiraahSectionCluster] {
         var clusters: [QiraahSectionCluster] = []
         var indexByTeacher: [String: Int] = [:]
 
@@ -2362,12 +2410,12 @@ struct ReciterListView: View {
                                 .font(.subheadline)
                                 .foregroundColor(.primary)
 
-                                NavigationLink(destination: AhrufView()) {
+                                NavigationLink(destination: LazyDestination { AhrufView() }) {
                                     Text("The 7 Ahruf (Modes)")
                                 }
                                 .font(.subheadline)
 
-                                NavigationLink(destination: QiraatView()) {
+                                NavigationLink(destination: LazyDestination { QiraatView() }) {
                                     Text("The 10 Qiraat (Recitations)")
                                 }
                                 .font(.subheadline)
@@ -2433,12 +2481,12 @@ struct ReciterListView: View {
                             .font(.subheadline)
                             .foregroundColor(.primary)
 
-                            NavigationLink(destination: AhrufView()) {
+                            NavigationLink(destination: LazyDestination { AhrufView() }) {
                                 Text("The 7 Ahruf (Modes)")
                             }
                             .font(.subheadline)
 
-                            NavigationLink(destination: QiraatView()) {
+                            NavigationLink(destination: LazyDestination { QiraatView() }) {
                                 Text("The 10 Qiraat (Recitations)")
                             }
                             .font(.subheadline)

@@ -116,10 +116,10 @@ struct NameOfAllah: Identifiable, Equatable {
     }
 }
 
-#if !HAS_QURAN
-/// The original NamesOfAllah.json shapes - the data path for apps without the Quran domain's
-/// pack reader. Handles both historical layouts: a bare array or the {code, status, data}
-/// wrapper, with the translation flat or nested under "en".
+/// The NamesOfAllah.json shapes: the data path for apps without the Quran domain's pack reader,
+/// and the fallback for the ones with it (`NamesOfAllahFallback.json` is this shape). Handles both
+/// historical layouts: a bare array or the {code, status, data} wrapper, with the translation flat
+/// or nested under "en".
 private struct JSONNamesRoot: Decodable {
     let code: Int
     let status: String
@@ -133,6 +133,7 @@ private struct JSONNameRecord: Decodable {
     let found: String
     let meaning: String
     let desc: String
+    let otherNames: [String]
 
     private struct Translation: Decodable {
         let meaning: String
@@ -140,7 +141,7 @@ private struct JSONNameRecord: Decodable {
     }
 
     private enum CodingKeys: String, CodingKey {
-        case name, transliteration, number, found, meaning, desc, en
+        case name, transliteration, number, found, meaning, desc, en, otherNames
     }
 
     init(from decoder: Decoder) throws {
@@ -149,6 +150,7 @@ private struct JSONNameRecord: Decodable {
         name = try c.decode(String.self, forKey: .name)
         transliteration = try c.decode(String.self, forKey: .transliteration)
         found = try c.decode(String.self, forKey: .found)
+        otherNames = try c.decodeIfPresent([String].self, forKey: .otherNames) ?? []
 
         if let flatMeaning = try c.decodeIfPresent(String.self, forKey: .meaning),
            let flatDesc = try c.decodeIfPresent(String.self, forKey: .desc) {
@@ -161,7 +163,6 @@ private struct JSONNameRecord: Decodable {
         }
     }
 }
-#endif
 
 final class NamesViewModel: ObservableObject {
     enum LoadState: Equatable {
@@ -173,13 +174,20 @@ final class NamesViewModel: ObservableObject {
 
     static let shared: NamesViewModel = {
         let model = NamesViewModel()
+        // The watch loads the names when the page is first opened (`retryIfNeeded` handles `.idle`),
+        // not at launch: the pack parse was on the cold-launch path of an app opened for prayer times.
+        #if !os(watchOS)
         model.startLoading()
+        #endif
         return model
     }()
 
     @Published var namesOfAllah: [NameOfAllah] = []
     @Published private(set) var firstFoundTargetsByNameNumber: [Int: (surahID: Int, ayahID: Int)] = [:]
     @Published private(set) var loadState: LoadState = .idle
+    /// Why the last load failed, for the Try Again row: a user report that says "the pack was not in
+    /// the bundle" or "the pack could not be read" is one that can be acted on.
+    @Published private(set) var failureReason: String?
     private var filterCache = [String: [NameOfAllah]]()
     private var loadTask: Task<Void, Never>?
 
@@ -227,6 +235,10 @@ final class NamesViewModel: ObservableObject {
             if state == .ready || state == .failed {
                 return
             }
+            // Never started (the watch defers the load past the reveal): nothing to wait for.
+            if state == .idle, loadTask == nil {
+                return
+            }
             try? await Task.sleep(nanoseconds: 25_000_000)
         }
     }
@@ -252,78 +264,108 @@ final class NamesViewModel: ObservableObject {
             }
         }
 
-        // namesofallah.qpk replaced NamesOfAllah.json (7.6 KB vs 25.9 KB; same container format as
-        // the Quran packs, verified field-for-field against the JSON it was built from). The pack
-        // reader lives in the Quran domain; apps without it (no `HAS_QURAN`) still bundle the
-        // original NamesOfAllah.json and decode that instead - no Quran symbol is even compiled.
+        // Three sources, tried in order; the first that yields records wins.
+        //   1. namesofallah.qpk (7 KB against the 25.9 KB JSON it replaced; the Quran packs'
+        //      container, verified field-for-field). Apps without the Quran domain (no `HAS_QURAN`)
+        //      compile no Quran symbol and start at 2.
+        //   2. NamesOfAllah.json, where an app still bundles it.
+        //   3. `NamesOfAllahFallback.json`, compiled into the executable. One install in the wild kept
+        //      failing on the pack (never reproduced here; the reason is now logged and shown on the
+        //      page), and a string literal cannot go missing from a bundle, refuse to map, or fail
+        //      to decode - so the page can no longer come up empty because of one file.
+        var records: [NameRecord] = []
+        var source = ""
+        var packProblem: String?
+
         #if HAS_QURAN
-        guard let url = QuranPackLoader.url("namesofallah") else {
-            logger.debug("❌ namesofallah.qpk not found.")
-            await MainActor.run {
-                self.loadState = .failed
+        var packURL = QuranPackLoader.url("namesofallah")
+        #if DEBUG
+        // `-namesPackUnreadable`: pretend the pack is gone, so the fallbacks can be exercised.
+        if ProcessInfo.processInfo.arguments.contains("-namesPackUnreadable") { packURL = nil }
+        #endif
+        if let url = packURL {
+            // Mapped first (free), then a plain copy into memory: a file that will not map on some
+            // storage still reads, and a 7 KB pack costs nothing to copy.
+            if let pack = NamesPack(url: url) ?? NamesPack(url: url, mapped: false) {
+                records = pack.records.map {
+                    (number: $0.number, name: $0.name, transliteration: $0.transliteration,
+                     found: $0.found, meaning: $0.meaning, otherNames: $0.otherNames, desc: $0.desc)
+                }
+                source = "namesofallah.qpk"
+            } else {
+                packProblem = NamesPack.failureDescription(url: url)
             }
-            return
-        }
-        #else
-        guard let url = Bundle.main.url(forResource: "NamesOfAllah", withExtension: "json") else {
-            logger.debug("❌ NamesOfAllah.json not found.")
-            await MainActor.run {
-                self.loadState = .failed
-            }
-            return
+        } else {
+            packProblem = "namesofallah.qpk is not in the bundle"
         }
         #endif
 
-        do {
-            #if HAS_QURAN
-            guard let pack = NamesPack(url: url) else {
-                throw NSError(domain: "NamesOfAllah", code: 1, userInfo: [NSLocalizedDescriptionKey: "namesofallah.qpk unreadable"])
-            }
-            let records = pack.records.map {
-                (number: $0.number, name: $0.name, transliteration: $0.transliteration,
-                 found: $0.found, meaning: $0.meaning, otherNames: $0.otherNames, desc: $0.desc)
-            }
-            #else
-            // Either historical JSON shape decodes: a bare array or the {code, status, data}
-            // wrapper, with translations flat or nested under "en".
-            let data = try Data(contentsOf: url, options: .mappedIfSafe)
-            let decoder = JSONDecoder()
-            let decoded: [JSONNameRecord]
-            if let array = try? decoder.decode([JSONNameRecord].self, from: data) {
-                decoded = array
-            } else {
-                decoded = try decoder.decode(JSONNamesRoot.self, from: data).data
-            }
-            let records = decoded.map {
-                (number: $0.number, name: $0.name, transliteration: $0.transliteration,
-                 found: $0.found, meaning: $0.meaning, otherNames: [String](), desc: $0.desc)
-            }
-            #endif
+        if records.isEmpty,
+           let url = Bundle.main.url(forResource: "NamesOfAllah", withExtension: "json"),
+           let data = try? Data(contentsOf: url, options: .mappedIfSafe),
+           let decoded = Self.decodeJSONNames(data) {
+            records = decoded
+            source = "NamesOfAllah.json"
+        }
+        if records.isEmpty, let decoded = Self.decodeJSONNames(Data(NamesOfAllahFallback.json.utf8)) {
+            records = decoded
+            source = "the built-in copy"
+        }
 
-            let names = records.map {
-                NameOfAllah(number: $0.number, name: $0.name, transliteration: $0.transliteration,
-                            found: $0.found, meaning: $0.meaning, otherNames: $0.otherNames, desc: $0.desc)
-            }
-            var targets = [Int: (surahID: Int, ayahID: Int)]()
-            targets.reserveCapacity(names.count)
-            for name in names {
-                guard let surah = name.firstFoundSurah,
-                      let ayah = name.firstFoundAyah else { continue }
-                targets[name.number] = (surahID: surah, ayahID: ayah)
-            }
-            let finalizedTargets = targets
+        if let packProblem {
+            // Loud on purpose: the page still works, but this is the line that explains a report.
+            logger.error("⚠️ 99 Names: the pack could not be used (\(packProblem)); loaded \(records.count) names from \(source).")
+        }
 
+        guard !records.isEmpty else {
+            let reason = packProblem ?? "No copy of the names could be read."
+            logger.error("❌ 99 Names: no source produced any names. \(reason)")
             await MainActor.run {
-                self.namesOfAllah = names
-                self.firstFoundTargetsByNameNumber = finalizedTargets
-                self.filterCache.removeAll(keepingCapacity: true)
-                self.loadState = .ready
-            }
-        } catch {
-            logger.debug("❌ JSON decode error: \(error)")
-            await MainActor.run {
+                self.failureReason = reason
                 self.loadState = .failed
             }
+            return
+        }
+
+        let names = records.map {
+            NameOfAllah(number: $0.number, name: $0.name, transliteration: $0.transliteration,
+                        found: $0.found, meaning: $0.meaning, otherNames: $0.otherNames, desc: $0.desc)
+        }
+        var targets = [Int: (surahID: Int, ayahID: Int)]()
+        targets.reserveCapacity(names.count)
+        for name in names {
+            guard let surah = name.firstFoundSurah,
+                  let ayah = name.firstFoundAyah else { continue }
+            targets[name.number] = (surahID: surah, ayahID: ayah)
+        }
+        let finalizedTargets = targets
+
+        await MainActor.run {
+            self.namesOfAllah = names
+            self.firstFoundTargetsByNameNumber = finalizedTargets
+            self.filterCache.removeAll(keepingCapacity: true)
+            self.failureReason = nil
+            self.loadState = .ready
+        }
+    }
+
+    private typealias NameRecord = (number: Int, name: String, transliteration: String, found: String,
+                                    meaning: String, otherNames: [String], desc: String)
+
+    /// Either historical JSON shape: a bare array or the {code, status, data} wrapper.
+    private static func decodeJSONNames(_ data: Data) -> [NameRecord]? {
+        let decoder = JSONDecoder()
+        let decoded: [JSONNameRecord]
+        if let array = try? decoder.decode([JSONNameRecord].self, from: data) {
+            decoded = array
+        } else if let root = try? decoder.decode(JSONNamesRoot.self, from: data) {
+            decoded = root.data
+        } else {
+            return nil
+        }
+        return decoded.map {
+            (number: $0.number, name: $0.name, transliteration: $0.transliteration,
+             found: $0.found, meaning: $0.meaning, otherNames: $0.otherNames, desc: $0.desc)
         }
     }
 
@@ -726,29 +768,41 @@ struct NamesView: View {
         if !hasActiveSearch {
             Section(header: Text("ALLAH")) {
                 VStack(alignment: .leading, spacing: 8) {
-                    HStack(alignment: .center, spacing: 12) {
-                        VStack(alignment: .leading, spacing: 3) {
-                            Text("Allah")
-                                .font(.subheadline.weight(.semibold))
-
-                            Text("The One True God")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-
-                            // No "First Found" line here, unlike the 99 name rows: the paragraph below says
-                            // this name opens the Quran and the button under it goes straight to 1:1, so the
-                            // header was stating the same reference a third time.
-                        }
-
-                        Spacer(minLength: 8)
-
-                        // Vowelled, and with no case ending on the final haa - the same treatment every one of
-                        // the 99 names gets (`displayArabicName` strips only the last letter's diacritic).
+                    // The name itself, set large and centred like calligraphy on a wall, with a soft
+                    // accent wash behind it - the one name the ninety-nine describe deserves the room.
+                    // Vowelled, and with no case ending on the final haa - the same treatment every one
+                    // of the 99 names gets (`displayArabicName` strips only the last letter's diacritic).
+                    VStack(spacing: 6) {
                         Text("اللَّه")
-                            .font(settings.useFontArabic ? Font.arabic(settings.nonQuranArabicFontName, size: 30) : .title)
+                            .font(settings.useFontArabic ? Font.arabic(settings.nonQuranArabicFontName, size: 56) : .system(size: 48, weight: .semibold))
                             .arabicFontDesign(custom: settings.useFontArabic && settings.nonQuranArabicFontName != Settings.systemArabicFontName)
                             .foregroundColor(settings.accentColor.color)
+                            .shadow(color: settings.accentColor.color.opacity(0.25), radius: 12)
+                            .padding(.top, 6)
+
+                        Text("Allah")
+                            .font(.headline)
+
+                        Text("The One True God")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+
+                        // No "First Found" line here, unlike the 99 name rows: the paragraph below says
+                        // this name opens the Quran and the button under it goes straight to 1:1, so the
+                        // header was stating the same reference a third time.
                     }
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .background(
+                        RoundedRectangle(cornerRadius: 20, style: .continuous)
+                            .fill(
+                                LinearGradient(
+                                    colors: [settings.accentColor.color.opacity(0.16), settings.accentColor.color.opacity(0.05)],
+                                    startPoint: .top, endPoint: .bottom
+                                )
+                            )
+                    )
+                    .padding(.bottom, 4)
 
                     // The Quran tail of the paragraph, the 1:1 quote and the link into the mushaf
                     // only exist where the Quran does.
@@ -772,7 +826,7 @@ struct NamesView: View {
                         .conditionalGlassEffect(useColor: 0.2)
                         .padding(.top, 2)
                         .background(
-                            NavigationLink("", destination: ayahsDestination(for: (surahID: 1, ayahID: 1)))
+                            NavigationLink("", destination: LazyDestination { ayahsDestination(for: (surahID: 1, ayahID: 1)) })
                                 .opacity(0)
                         )
                     #endif
@@ -810,6 +864,13 @@ struct NamesView: View {
                     Text("The names could not be loaded.")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
+
+                    if let reason = namesData.failureReason {
+                        Text(reason)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
 
                     Button {
                         settings.hapticFeedback()
@@ -1095,6 +1156,19 @@ private struct NameRow: View, Equatable {
                 Divider()
 
                 copyMenu
+
+                // While searching, the row's tap already clears the search and scrolls to the name
+                // (`handleNameTap`); the menu and the trailing swipe say so explicitly, the Quran list's way.
+                if !searchQuery.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    Divider()
+
+                    Button {
+                        Settings.shared.hapticFeedback()
+                        onTap()
+                    } label: {
+                        Label("Scroll To Name", systemImage: "arrow.down.circle")
+                    }
+                }
             }
             .swipeActions(edge: .leading) {
                 Button {
@@ -1117,6 +1191,16 @@ private struct NameRow: View, Equatable {
                     Image(systemName: isFavorite ? "star.fill" : "star")
                 }
                 .tint(accentColor.color)
+
+                if !searchQuery.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    Button {
+                        Settings.shared.hapticFeedback()
+                        onTap()
+                    } label: {
+                        Image(systemName: "arrow.down.circle")
+                    }
+                    .tint(.secondary)
+                }
             }
         #else
         content
@@ -1350,7 +1434,7 @@ private struct NameRowDetails: View {
                         .conditionalGlassEffect(useColor: 0.2)
                         .padding(.top, 6)
                         .background(
-                            NavigationLink("", destination: ayahsDestination(for: target))
+                            NavigationLink("", destination: LazyDestination { ayahsDestination(for: target) })
                                 .opacity(0)
                         )
                 }

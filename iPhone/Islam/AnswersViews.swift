@@ -9,35 +9,35 @@ struct SufismAnswerView: View {
     var body: some View {
         List {
             Group {
-                Section(header: Text("SUMMARY")) {
+                Section(header: ArticleHeader("SUMMARY")) {
                     Text("In short: purifying the heart is part of Islam, but the later Sufi orders added intermediaries, grave veneration, invented dhikr, absolute obedience to shaykhs, and claims that Allah dwells in or is one with creation. Each of these is answered by the Quran and the Sunnah.")
                         .font(.body)
                 }
 
-                Section(header: Text("WHAT IS SUFISM?")) {
+                Section(header: ArticleHeader("WHAT IS SUFISM?")) {
                     Text("**Tasawwuf (تَصَوُّف)**, Sufism, is named after **suf (صُوف)**, wool, for the coarse woollen garments the early ascetics wore. It began as a name for asceticism and devotion in the second and third centuries AH. The early ascetics of the Salaf, such as al-Fudayl ibn Iyad and Ibn al-Mubarak, were men of the Sunnah, and the purification of the heart (**tazkiyah**) is a duty in the Quran:")
                         .font(.body)
                     ScriptureQuote(text: "“He has succeeded who purifies it, and he has failed who instills it [with corruption]” (Quran 91:9-10).", arabic: "قَدۡ أَفۡلَحَ مَن زَكَّىٰهَا ۝ وَقَدۡ خَابَ مَن دَسَّىٰهَا")
 
                     Text("Over the centuries, however, organised **tariqahs (طُرُق)** appeared: a **tariqah (طَرِيقَة)**, from ط-ر-ق, is a road, and here an order with its own way of travelling to Allah. Each had a **shaykh (شَيخ)**, an elder or master, a pledge of obedience to him (**bay‘ah (بَيعَة)**, from ب-ي-ع, the pledge sealed by a clasp of hands), set formulas of **dhikr (ذِكر)**, the remembrance of Allah, and ranks of “saints,“ and ideas entered that the Salaf never knew: seeking help from the dead, building over graves, dhikr with music and dancing, the shaykh’s word above the text, and the doctrines of **hulul (حُلُول)**, from ح-ل-ل, to alight and dwell in a place (Allah dwelling in creation), and **wahdat al-wujud (وَحدَة الوُجُود)**, the oneness of being (that creation and Creator are one). Even al-Junayd (d. 297 AH), whom the Sufis take as their imam, tied the whole matter to the Sunnah:")
                         .font(.body)
-                    ScriptureQuote(text: "“All the paths are closed to the creation except for the one who follows the footsteps of the Messenger” (al-Qushayri, ar-Risalah).", arabic: "الطُّرُقُ كُلُّهَا مَسْدُودَةٌ عَلَى الْخَلْقِ إِلَّا مَنِ اقْتَفَى أَثَرَ الرَّسُولِ صَلَّى اللَّهُ عَلَيْهِ وَسَلَّمَ", dimmed: true)
+                    ScriptureQuote(text: "“All the paths are closed to the creation except for the one who follows the footsteps of the Messenger” (al-Junayd, in al-Qushayri, ar-Risalah).", arabic: "الطُّرُقُ كُلُّهَا مَسْدُودَةٌ عَلَى الْخَلْقِ إِلَّا عَلَى مَنِ اقْتَفَى أَثَرَ الرَّسُولِ صَلَّى اللَّهُ عَلَيْهِ وَسَلَّمَ", dimmed: true)
                 }
 
-                Section(header: Text("1. CLOSENESS TO ALLAH IS THROUGH WHAT HE LEGISLATED")) {
+                Section(header: ArticleHeader("1. CLOSENESS TO ALLAH IS THROUGH WHAT HE LEGISLATED")) {
                     Text("The Sufi orders offer a “path“ to Allah of their own devising. But Allah told us who His **awliya’ (أَولِيَاء)**, from و-ل-ي, nearness (the singular is **wali (وَلِي)**, a close friend of Allah), are and how they reach Him:")
                         .font(.body)
                     ScriptureQuote(text: "“Unquestionably, [for] the allies of Allah there will be no fear concerning them, nor will they grieve. Those who believed and were fearing Allah” (Quran 10:62-63).", arabic: "أَلَآ إِنَّ أَوۡلِيَآءَ ٱللَّهِ لَا خَوۡفٌ عَلَيۡهِمۡ وَلَا هُمۡ يَحۡزَنُونَ ۝ ٱلَّذِينَ ءَامَنُواْ وَكَانُواْ يَتَّقُونَ")
 
                     Text("And in the hadith qudsi:")
                         .font(.body)
-                    ScriptureQuote(text: "“The most beloved thing by which My servant draws near to Me is what I have made obligatory upon him, and My servant continues to draw near to Me with voluntary deeds until I love him” (Sahih al-Bukhari 6502).", arabic: "وَمَا تَقَرَّبَ إِلَىَّ عَبْدِي بِشَىْءٍ أَحَبَّ إِلَىَّ مِمَّا افْتَرَضْتُ عَلَيْهِ، وَمَا يَزَالُ عَبْدِي يَتَقَرَّبُ إِلَىَّ بِالنَّوَافِلِ حَتَّى أُحِبَّهُ", dimmed: true)
+                    ScriptureQuote(text: "“And the most beloved things with which My slave comes nearer to Me, is what I have enjoined upon him; and My slave keeps on coming closer to Me through performing Nawafil (praying or doing extra deeds besides what is obligatory) till I love him” (Sahih al-Bukhari 6502).", arabic: "وَمَا تَقَرَّبَ إِلَىَّ عَبْدِي بِشَىْءٍ أَحَبَّ إِلَىَّ مِمَّا افْتَرَضْتُ عَلَيْهِ، وَمَا يَزَالُ عَبْدِي يَتَقَرَّبُ إِلَىَّ بِالنَّوَافِلِ حَتَّى أُحِبَّهُ", dimmed: true)
 
                     Text("Obligations first, then the voluntary acts the Prophet (peace be upon him) taught. There is no third road of secret litanies, and no rank of wali reached by other than faith and taqwa.")
                         .font(.body)
                 }
 
-                Section(header: Text("2. NO INTERMEDIARIES BETWEEN THE SERVANT AND ALLAH")) {
+                Section(header: ArticleHeader("2. NO INTERMEDIARIES BETWEEN THE SERVANT AND ALLAH")) {
                     Text("Calling upon dead saints, prophets, or shaykhs for help, children, or rescue, the **istighathah** practised at shrines, is the shirk that the Quran was revealed against. The pagans of Makkah did exactly this, and with the same excuse:")
                         .font(.body)
                     ScriptureQuote(text: "“And those who take protectors besides Him [say], ‘We only worship them that they may bring us nearer to Allah in position’” (Quran 39:3).", arabic: "وَٱلَّذِينَ ٱتَّخَذُواْ مِن دُونِهِۦٓ أَوۡلِيَآءَ مَا نَعۡبُدُهُمۡ إِلَّا لِيُقَرِّبُونَآ إِلَى ٱللَّهِ زُلۡفَىٰٓ إِنَّ ٱللَّهَ يَحۡكُمُ بَيۡنَهُمۡ فِي مَا هُمۡ فِيهِ يَخۡتَلِفُونَۗ إِنَّ ٱللَّهَ لَا يَهۡدِي مَنۡ هُوَ كَٰذِبٞ كَفَّارٞ")
@@ -52,39 +52,39 @@ struct SufismAnswerView: View {
 
                     Text("The Companions understood this. In a drought, Umar (may Allah be pleased with him) did not go to the Prophet’s grave, a few steps away, to ask him; he asked the Prophet’s living uncle to supplicate:")
                         .font(.body)
-                    ScriptureQuote(text: "“O Allah, we used to ask You for rain through our Prophet and You gave us rain, and now we ask You through the uncle of our Prophet, so give us rain.” And they were given rain (Sahih al-Bukhari 1010).", arabic: "اللَّهُمَّ إِنَّا كُنَّا نَتَوَسَّلُ إِلَيْكَ بِنَبِيِّنَا فَتَسْقِينَا وَإِنَّا نَتَوَسَّلُ إِلَيْكَ بِعَمِّ نَبِيِّنَا فَاسْقِنَا. قَالَ فَيُسْقَوْنَ", dimmed: true)
+                    ScriptureQuote(text: "“O Allah! We used to ask our Prophet to invoke You for rain, and You would bless us with rain, and now we ask his uncle to invoke You for rain. O Allah! Bless us with rain” (Sahih al-Bukhari 1010).", arabic: "اللَّهُمَّ إِنَّا كُنَّا نَتَوَسَّلُ إِلَيْكَ بِنَبِيِّنَا فَتَسْقِينَا وَإِنَّا نَتَوَسَّلُ إِلَيْكَ بِعَمِّ نَبِيِّنَا فَاسْقِنَا. قَالَ فَيُسْقَوْنَ", dimmed: true)
 
                     Text("And the Prophet (peace be upon him) taught Ibn Abbas:")
                         .font(.body)
-                    ScriptureQuote(text: "“When you ask, ask Allah, and when you seek help, seek help from Allah” (Sunan al-Tirmidhi 2516; graded sahih by al-Albani).", arabic: "إِذَا سَأَلْتَ فَاسْأَلِ اللَّهَ وَإِذَا اسْتَعَنْتَ فَاسْتَعِنْ بِاللَّهِ", dimmed: true)
+                    ScriptureQuote(text: "“When you ask, ask Allah, and when you seek aid, seek Allah's aid” (Sunan al-Tirmidhi 2516; graded sahih by al-Albani).", arabic: "إِذَا سَأَلْتَ فَاسْأَلِ اللَّهَ وَإِذَا اسْتَعَنْتَ فَاسْتَعِنْ بِاللَّهِ", dimmed: true)
                 }
 
-                Section(header: Text("3. GRAVES ARE NOT SHRINES")) {
+                Section(header: ArticleHeader("3. GRAVES ARE NOT SHRINES")) {
                     Text("The domes, tombs, and festivals at the graves of the “saints“ are the opposite of what the Prophet (peace be upon him) commanded. Ali (may Allah be pleased with him) said to Abu al-Hayyaj:")
                         .font(.body)
-                    ScriptureQuote(text: "“Shall I not send you on the mission the Messenger of Allah sent me on? Do not leave an image without effacing it, nor a raised grave without levelling it” (Sahih Muslim 969).", arabic: "أَلاَّ أَبْعَثُكَ عَلَى مَا بَعَثَنِي عَلَيْهِ رَسُولُ اللَّهِ صلى الله عليه وسلم أَنْ لاَ تَدَعَ تِمْثَالاً إِلاَّ طَمَسْتَهُ وَلاَ قَبْرًا مُشْرِفًا إِلاَّ سَوَّيْتَهُ", dimmed: true)
+                    ScriptureQuote(text: "“Should I not send you on the same mission as Allah's Messenger (ﷺ) sent me? Do not leave an image without obliterating it, or a high grave without levelling It” (Sahih Muslim 969).", arabic: "أَلاَّ أَبْعَثُكَ عَلَى مَا بَعَثَنِي عَلَيْهِ رَسُولُ اللَّهِ صلى الله عليه وسلم أَنْ لاَ تَدَعَ تِمْثَالاً إِلاَّ طَمَسْتَهُ وَلاَ قَبْرًا مُشْرِفًا إِلاَّ سَوَّيْتَهُ", dimmed: true)
 
                     ScriptureQuote(text: "“Do not sit on the graves and do not pray facing towards them” (Sahih Muslim 972).", arabic: "لاَ تَجْلِسُوا عَلَى الْقُبُورِ وَلاَ تُصَلُّوا إِلَيْهَا", dimmed: true)
 
                     Text("Five days before his death he said:")
                         .font(.body)
-                    ScriptureQuote(text: "“Those before you used to take the graves of their prophets and righteous men as places of worship. Do not take graves as places of worship; I forbid you from that” (Sahih Muslim 532).", arabic: "أَلاَ وَإِنَّ مَنْ كَانَ قَبْلَكُمْ كَانُوا يَتَّخِذُونَ قُبُورَ أَنْبِيَائِهِمْ وَصَالِحِيهِمْ مَسَاجِدَ أَلاَ فَلاَ تَتَّخِذُوا الْقُبُورَ مَسَاجِدَ إِنِّي أَنْهَاكُمْ عَنْ ذَلِكَ", dimmed: true)
+                    ScriptureQuote(text: "“Beware of those who preceded you and used to take the graves of their prophets and righteous men as places of worship, but you must not take graves as mosques; I forbid you to do that” (Sahih Muslim 532).", arabic: "أَلاَ وَإِنَّ مَنْ كَانَ قَبْلَكُمْ كَانُوا يَتَّخِذُونَ قُبُورَ أَنْبِيَائِهِمْ وَصَالِحِيهِمْ مَسَاجِدَ أَلاَ فَلاَ تَتَّخِذُوا الْقُبُورَ مَسَاجِدَ إِنِّي أَنْهَاكُمْ عَنْ ذَلِكَ", dimmed: true)
 
-                    ScriptureQuote(text: "“Allah cursed the Jews and the Christians, who took the graves of their prophets as places of worship” (Sahih al-Bukhari 1330, Sahih Muslim 529).", arabic: "لَعَنَ اللَّهُ الْيَهُودَ وَالنَّصَارَى، اتَّخَذُوا قُبُورَ أَنْبِيَائِهِمْ مَسْجِدًا", dimmed: true)
+                    ScriptureQuote(text: "“Allah cursed the Jews and the Christians because they took the graves of their Prophets as places for praying” (Sahih al-Bukhari 1330, Sahih Muslim 529).", arabic: "لَعَنَ اللَّهُ الْيَهُودَ وَالنَّصَارَى، اتَّخَذُوا قُبُورَ أَنْبِيَائِهِمْ مَسْجِدًا", dimmed: true)
                 }
 
-                Section(header: Text("4. INVENTED DHIKR AND GATHERINGS")) {
+                Section(header: ArticleHeader("4. INVENTED DHIKR AND GATHERINGS")) {
                     Text("Dhikr is the life of the heart, and the Prophet (peace be upon him) taught its words, times, and numbers. The set formulas, counted litanies, swaying circles, music, and dancing of the orders are not from him. When the Companions saw men counting dhikr in circles in the mosque of Kufah, Ibn Mas‘ud (may Allah be pleased with him) said to them:")
                         .font(.body)
                     ScriptureQuote(text: "“By the One in whose hand is my soul, either you are upon a religion more guided than the religion of Muhammad, or you are opening a door of misguidance” (Sunan al-Darimi 206; graded sahih by al-Albani, as-Silsilah as-Sahihah 2005).", arabic: "وَالَّذِي نَفْسِي بِيَدِهِ، إِنَّكُمْ لَعَلَى مِلَّةٍ هِيَ أَهْدَى مِنْ مِلَّةِ مُحَمَّدٍ، أَوْ مُفْتَتِحُو بَابِ ضَلَالَةٍ", dimmed: true)
 
-                    ScriptureQuote(text: "“The worst of matters are the newly invented ones, and every innovation is misguidance” (Sahih Muslim 867).", arabic: "وَشَرُّ الأُمُورِ مُحْدَثَاتُهَا وَكُلُّ بِدْعَةٍ ضَلاَلَةٌ", dimmed: true)
+                    ScriptureQuote(text: "“And the most evil affairs are their innovations; and every innovation is error” (Sahih Muslim 867).", arabic: "وَشَرُّ الأُمُورِ مُحْدَثَاتُهَا وَكُلُّ بِدْعَةٍ ضَلاَلَةٌ", dimmed: true)
 
                     Text("As for music in worship, the Prophet (peace be upon him) counted musical instruments among the things people would try to make lawful (Sahih al-Bukhari 5590). Worship with drums and flutes is not the Sunnah.")
                         .font(.body)
                 }
 
-                Section(header: Text("5. NO EXCESS IN ASCETICISM")) {
+                Section(header: ArticleHeader("5. NO EXCESS IN ASCETICISM")) {
                     Text("The severe self-denial of some orders, withdrawal from marriage and society, and hunger as worship come from monasticism, which Allah said the Christians invented:")
                         .font(.body)
                     ScriptureQuote(text: "“And monasticism, which they innovated; We did not prescribe it for them” (Quran 57:27).", arabic: "وَرَهۡبَانِيَّةً ٱبۡتَدَعُوهَا مَا كَتَبۡنَٰهَا عَلَيۡهِمۡ")
@@ -93,10 +93,10 @@ struct SufismAnswerView: View {
 
                     Text("When three men resolved to pray all night, fast every day, and never marry, the Prophet (peace be upon him) said:")
                         .font(.body)
-                    ScriptureQuote(text: "“By Allah, I am the most fearful of Allah among you and the most conscious of Him, yet I fast and break my fast, I pray and I sleep, and I marry women. Whoever turns away from my Sunnah is not of me” (Sahih al-Bukhari 5063).", arabic: "أَمَا وَاللَّهِ إِنِّي لأَخْشَاكُمْ لِلَّهِ وَأَتْقَاكُمْ لَهُ، لَكِنِّي أَصُومُ وَأُفْطِرُ، وَأُصَلِّي وَأَرْقُدُ وَأَتَزَوَّجُ النِّسَاءَ، فَمَنْ رَغِبَ عَنْ سُنَّتِي فَلَيْسَ مِنِّي", dimmed: true)
+                    ScriptureQuote(text: "“By Allah, I am more submissive to Allah and more afraid of Him than you; yet I fast and break my fast, I do sleep and I also marry women. So he who does not follow my tradition in religion, is not from me (not one of my followers)” (Sahih al-Bukhari 5063).", arabic: "أَمَا وَاللَّهِ إِنِّي لأَخْشَاكُمْ لِلَّهِ وَأَتْقَاكُمْ لَهُ، لَكِنِّي أَصُومُ وَأُفْطِرُ، وَأُصَلِّي وَأَرْقُدُ وَأَتَزَوَّجُ النِّسَاءَ، فَمَنْ رَغِبَ عَنْ سُنَّتِي فَلَيْسَ مِنِّي", dimmed: true)
                 }
 
-                Section(header: Text("6. THE SHAYKH IS NOT ABOVE THE TEXT")) {
+                Section(header: ArticleHeader("6. THE SHAYKH IS NOT ABOVE THE TEXT")) {
                     Text("The orders teach that the disciple must be before his shaykh “like a corpse in the hands of its washer,“ and that the shaykh’s unveilings (**kashf (كَشف)**, from ك-ش-ف, to uncover) are a source of knowledge beside revelation. Allah described people who gave their scholars that place:")
                         .font(.body)
                     ScriptureQuote(text: "“They have taken their scholars and monks as lords besides Allah” (Quran 9:31).", arabic: "ٱتَّخَذُوٓاْ أَحۡبَارَهُمۡ وَرُهۡبَٰنَهُمۡ أَرۡبَابٗا مِّن دُونِ ٱللَّهِ")
@@ -107,7 +107,7 @@ struct SufismAnswerView: View {
                         .font(.body)
                 }
 
-                Section(header: Text("7. ALLAH IS NOT HIS CREATION")) {
+                Section(header: ArticleHeader("7. ALLAH IS NOT HIS CREATION")) {
                     Text("The doctrines of hulul and wahdat al-wujud, associated with al-Hallaj (d. 309 AH) and Ibn Arabi (d. 638 AH), say that Allah dwells in creation or that everything is Him. This is not Islam by any school. Allah is the Creator, separate from and above His creation, and nothing is like Him:")
                         .font(.body)
                     ScriptureQuote(text: "“There is nothing like unto Him, and He is the Hearing, the Seeing” (Quran 42:11).", arabic: "لَيۡسَ كَمِثۡلِهِۦ شَيۡءٞۖ وَهُوَ ٱلسَّمِيعُ ٱلۡبَصِيرُ")
@@ -121,7 +121,7 @@ struct SufismAnswerView: View {
                     ScriptureQuote(text: "“And We have already created man and know what his soul whispers to him, and We are closer to him than [his] jugular vein” (Quran 50:16).", arabic: "وَلَقَدۡ خَلَقۡنَا ٱلۡإِنسَٰنَ وَنَعۡلَمُ مَا تُوَسۡوِسُ بِهِۦ نَفۡسُهُۥۖ وَنَحۡنُ أَقۡرَبُ إِلَيۡهِ مِنۡ حَبۡلِ ٱلۡوَرِيدِ")
                 }
 
-                Section(header: Text("COMMON QUESTIONS")) {
+                Section(header: ArticleHeader("COMMON QUESTIONS")) {
                     Text("**Is all tasawwuf condemned?**")
                         .font(.body)
                     Text("No, and fairness is part of the religion. Ibn Taymiyyah (may Allah have mercy on him) gives the balanced verdict in Majmu‘ al-Fatawa (11/16-18): the early ascetics were people striving in the obedience of Allah as others strove, some of them foremost and drawn near, some moderate, and among both kinds were those who erred in their striving and those who sinned and repented or did not; so the truth is neither to accept everything called Sufism nor to condemn everyone called a Sufi. Adh-Dhahabi honours al-Fudayl ibn Iyad, Ibrahim ibn Adham, and al-Junayd in Siyar A‘lam an-Nubala’ as imams of worship and the Sunnah, and al-Junayd’s own words about the Sunnah were quoted above. The criterion is not the name but the Sunnah: what agrees with the Book and the Sunnah is accepted, whoever said it, and what opposes them is rejected, whoever said it.")
@@ -149,7 +149,7 @@ struct SufismAnswerView: View {
                         .font(.body)
                     Text("Gathering to learn, to recite, and to remember Allah as He is remembered in the Sunnah is beloved to Allah. The Prophet (peace be upon him) said:")
                         .font(.body)
-                    ScriptureQuote(text: "“No people sit remembering Allah but the angels surround them, mercy covers them, tranquillity descends upon them, and Allah mentions them to those who are with Him” (Sahih Muslim 2700).", arabic: "لاَ يَقْعُدُ قَوْمٌ يَذْكُرُونَ اللَّهَ عَزَّ وَجَلَّ إِلاَّ حَفَّتْهُمُ الْمَلاَئِكَةُ وَغَشِيَتْهُمُ الرَّحْمَةُ وَنَزَلَتْ عَلَيْهِمُ السَّكِينَةُ وَذَكَرَهُمُ اللَّهُ فِيمَنْ عِنْدَهُ", dimmed: true)
+                    ScriptureQuote(text: "“The people do not sit but they are surrounded by angels and covered by Mercy, and there descends upon them tranquillity as they remember Allah, and Allah makes a mention of them to those who are near Him” (Sahih Muslim 2700).", arabic: "لاَ يَقْعُدُ قَوْمٌ يَذْكُرُونَ اللَّهَ عَزَّ وَجَلَّ إِلاَّ حَفَّتْهُمُ الْمَلاَئِكَةُ وَغَشِيَتْهُمُ الرَّحْمَةُ وَنَزَلَتْ عَلَيْهِمُ السَّكِينَةُ وَذَكَرَهُمُ اللَّهُ فِيمَنْ عِنْدَهُ", dimmed: true)
 
                     Text("What is rejected is the invented form: chanting in unison, counted formulas assigned by a shaykh, swaying, drums, and the belief that these are the path. That is exactly what Ibn Mas‘ud (may Allah be pleased with him) denounced in Kufah (Sunan al-Darimi 206, quoted in section 4): the men in those circles were counting Allahu Akbar, la ilaha illa Allah, and subhan Allah a hundred times each on pebbles, words of truth, and he still called it a door of misguidance because the form was not from the Prophet (peace be upon him). When they protested that they had intended only good, he answered that many who intend good never reach it.")
                         .font(.body)
@@ -158,7 +158,7 @@ struct SufismAnswerView: View {
                         .font(.body)
                     Text("The Sunnah is to count on the fingers. The Prophet (peace be upon him) commanded the believing women to keep up the takbir, taqdis, and tahlil and:")
                         .font(.body)
-                    ScriptureQuote(text: "“to count them on the fingers, for they will be questioned and made to speak” (Sunan Abi Dawud 1501; graded hasan by al-Albani).", arabic: "وَأَنْ يَعْقِدْنَ بِالأَنَامِلِ فَإِنَّهُنَّ مَسْئُولاَتٌ مُسْتَنْطَقَاتٌ", dimmed: true)
+                    ScriptureQuote(text: "“that they should count them on fingers, for they (the fingers) will be questioned and asked to speak” (Sunan Abi Dawud 1501; graded hasan by al-Albani).", arabic: "وَأَنْ يَعْقِدْنَ بِالأَنَامِلِ فَإِنَّهُنَّ مَسْئُولاَتٌ مُسْتَنْطَقَاتٌ", dimmed: true)
 
                     Text("Ibn Taymiyyah held that counting on the fingers is the Sunnah, that counting with date stones or pebbles is good, and that a string of beads is permissible and not disliked when the intention is sound, though some of the scholars disliked it (Majmu‘ al-Fatawa, vol. 22). What is rejected is making the beads a badge of the order, or a thing worn for show.")
                         .font(.body)
@@ -203,7 +203,7 @@ struct SufismAnswerView: View {
                         .font(.body)
                     Text("No. In the Sunnah, bay‘ah is a pledge to the ruler to hear and obey in what is good. Ubadah ibn as-Samit (may Allah be pleased with him) said:")
                         .font(.body)
-                    ScriptureQuote(text: "“We gave the pledge of allegiance to the Messenger of Allah that we would listen and obey, both when we were active and when we were tired, that we would not dispute the authority with its people, and that we would stand for the truth or speak the truth wherever we were, not fearing for the sake of Allah the blame of any blamer” (Sahih al-Bukhari 7199, Sahih Muslim 1709).", arabic: "بَايَعْنَا رَسُولَ اللَّهِ صلى الله عليه وسلم عَلَى السَّمْعِ وَالطَّاعَةِ فِي الْمَنْشَطِ وَالْمَكْرَهِ. وَأَنْ لاَ نُنَازِعَ الأَمْرَ أَهْلَهُ، وَأَنْ نَقُومَ ـ أَوْ نَقُولَ ـ بِالْحَقِّ حَيْثُمَا كُنَّا لاَ نَخَافُ فِي اللَّهِ لَوْمَةَ لاَئِمٍ", dimmed: true)
+                    ScriptureQuote(text: "“We gave the oath of allegiance to Allah's Messenger (ﷺ) that we would listen to and obey him both at the time when we were active and at the time when we were tired and that we would not fight against the ruler or disobey him, and would stand firm for the truth or say the truth wherever we might be, and in the Way of Allah we would not be afraid of the blame of the blamers” (Sahih al-Bukhari 7199, Sahih Muslim 1709).", arabic: "بَايَعْنَا رَسُولَ اللَّهِ صلى الله عليه وسلم عَلَى السَّمْعِ وَالطَّاعَةِ فِي الْمَنْشَطِ وَالْمَكْرَهِ. وَأَنْ لاَ نُنَازِعَ الأَمْرَ أَهْلَهُ، وَأَنْ نَقُومَ ـ أَوْ نَقُولَ ـ بِالْحَقِّ حَيْثُمَا كُنَّا لاَ نَخَافُ فِي اللَّهِ لَوْمَةَ لاَئِمٍ", dimmed: true)
 
                     Text("There is no pledge to a shaykh in the Quran, in the Sunnah, or among the Companions. The only absolute following is of the Prophet (peace be upon him):")
                         .font(.body)
@@ -228,25 +228,25 @@ struct SufismAnswerView: View {
                         .font(.body)
                 }
 
-                Section(header: Text("THE INVITATION")) {
+                Section(header: ArticleHeader("THE INVITATION")) {
                     Text("What is true in Sufism, sincerity, remembrance, weeping over sin, love of Allah and His Messenger, is all in the Sunnah already, without the additions. The books of Ibn al-Qayyim, especially Madarij as-Salikin and al-Wabil as-Sayyib, take the whole science of the heart and return it to the Quran and the Sunnah. The one who wants Allah finds Him on the road of His Messenger, and the Prophet (peace be upon him) said of that road, in the hadith qudsi:")
                         .font(.body)
-                    ScriptureQuote(text: "“If he draws near to Me a hand-span, I draw near to him an arm’s length, and if he draws near to Me an arm’s length, I draw near to him a fathom, and if he comes to Me walking, I come to him running” (Sahih al-Bukhari 7405).", arabic: "وَإِنْ تَقَرَّبَ إِلَىَّ بِشِبْرٍ تَقَرَّبْتُ إِلَيْهِ ذِرَاعًا، وَإِنْ تَقَرَّبَ إِلَىَّ ذِرَاعًا تَقَرَّبْتُ إِلَيْهِ بَاعًا، وَإِنْ أَتَانِي يَمْشِي أَتَيْتُهُ هَرْوَلَةً", dimmed: true)
+                    ScriptureQuote(text: "“if he comes one span nearer to Me, I go one cubit nearer to him; and if he comes one cubit nearer to Me, I go a distance of two outstretched arms nearer to him; and if he comes to Me walking, I go to him running” (Sahih al-Bukhari 7405).", arabic: "وَإِنْ تَقَرَّبَ إِلَىَّ بِشِبْرٍ تَقَرَّبْتُ إِلَيْهِ ذِرَاعًا، وَإِنْ تَقَرَّبَ إِلَىَّ ذِرَاعًا تَقَرَّبْتُ إِلَيْهِ بَاعًا، وَإِنْ أَتَانِي يَمْشِي أَتَيْتُهُ هَرْوَلَةً", dimmed: true)
                 }
 
-                Section(header: Text("IN SUMMARY")) {
+                Section(header: ArticleHeader("IN SUMMARY")) {
                     Text("Purify the heart by the Sunnah, call upon Allah alone, leave the graves as the Prophet left them, and keep every shaykh beneath the text. That is the tazkiyah of the Salaf, and it needs no order.")
                         .font(.body)
                 }
 
-                Section(header: Text("KEY TERMS")) {
+                Section(header: ArticleHeader("KEY TERMS")) {
                     Text("**Sufi / tasawwuf (صُوفِيّ / تَصَوُّف)**: from **suf (صُوف)**, wool, after the coarse woollen garments worn by the early ascetics. Ibn Taymiyyah (may Allah have mercy on him) records that the name was not current in the first three generations, that the Sufis first appeared in Basra, and that the first small lodge of the Sufis was built there by some of the companions of Abd al-Wahid ibn Zayd, himself a companion of al-Hasan al-Basri (Majmu‘ al-Fatawa 11/5-7). He also shows why the other proposed origins fail the rules of Arabic derivation: the relative adjective from **as-Suffah** (the poor Companions who lived in the Prophet’s mosque) would be Suffi, from **as-saff** (the first row in prayer) it would be Saffi, and from **as-safwah** (the elect) it would be Safawi; so the name goes back to wool. The Greek **sophia** (wisdom), which some later writers proposed, is not an Arabic root at all. Al-Qushayri, himself a Sufi, admits in ar-Risalah that no analogy or derivation in the Arabic language supports the name and that it is rather like a nickname, and Ibn Khaldun (al-Muqaddimah) judges wool the most likely origin. The Companions and the Tabi‘in never used the word; their names for the matter were faith, worship, and zuhd.")
                         .font(.body)
 
                     Text("**Zuhd (زُهْد)**: from ز-ه-د, to turn away from a thing because one has no desire for it. True asceticism is not rags, hunger, or withdrawal from people; it is the heart’s freedom from the world. Ibn al-Qayyim relates from his teacher Ibn Taymiyyah that zuhd is to leave what does not benefit in the Hereafter, and wara‘ (scrupulousness) is to leave what one fears will harm there (Madarij as-Salikin). The Prophet (peace be upon him) said:")
                         .font(.body)
-                    ScriptureQuote(text: "“The world is a prison for the believer and a paradise for the disbeliever” (Sahih Muslim 2956).", arabic: "الدُّنْيَا سِجْنُ الْمُؤْمِنِ وَجَنَّةُ الْكَافِرِ", dimmed: true)
-                    ScriptureQuote(text: "“Be in this world as if you were a stranger or a traveller” (Sahih al-Bukhari 6416).", arabic: "كُنْ فِي الدُّنْيَا كَأَنَّكَ غَرِيبٌ، أَوْ عَابِرُ سَبِيلٍ", dimmed: true)
+                    ScriptureQuote(text: "“The world is a prison-house for a believer and Paradise for a non-believer” (Sahih Muslim 2956).", arabic: "الدُّنْيَا سِجْنُ الْمُؤْمِنِ وَجَنَّةُ الْكَافِرِ", dimmed: true)
+                    ScriptureQuote(text: "“Be in this world as if you were a stranger or a traveler” (Sahih al-Bukhari 6416).", arabic: "كُنْ فِي الدُّنْيَا كَأَنَّكَ غَرِيبٌ، أَوْ عَابِرُ سَبِيلٍ", dimmed: true)
 
                     Text("**Tariqah (طَرِيقَة)**, pl. turuq: “way,“ from ط-ر-ق; in Sufi usage an organised order with its own chain of shaykhs, litany, and rites. The major orders and the men they are named after: the **Qadiriyyah** after Abd al-Qadir al-Jilani (d. 561 AH), a Hanbali preacher of Baghdad whose own book al-Ghunyah affirms the creed of the Salaf, and whose later followers went far beyond him; the **Rifa‘iyyah** after Ahmad ar-Rifa‘i (d. 578 AH); the **Shadhiliyyah** after Abu al-Hasan ash-Shadhili (d. 656 AH); the **Naqshbandiyyah** after Baha’ ad-Din Naqshband (d. 791 AH); and the **Tijaniyyah** after Ahmad at-Tijani (d. 1230 AH). None of them existed in the three generations the Prophet (peace be upon him) called the best of people (Sahih al-Bukhari 2652), and a way to Allah that the best generations did not know is not the way of the Prophet (peace be upon him).")
                         .font(.body)
@@ -282,7 +282,7 @@ struct SufismAnswerView: View {
                     Text("**Fana’ / baqa’ (فَنَاء / بَقَاء)**: “passing away“ and “subsistence“: the claim that the self is annihilated in the witnessing of Allah until nothing but He is seen. Ibn Taymiyyah distinguishes three things called fana’: passing away from willing anything other than Allah, which is the state of the prophets and their followers; passing away from witnessing other than Him, which is a weakness that overcomes some worshippers and is not a goal; and the claim that nothing other than Him exists, which is the doctrine of hulul and ittihad (Majmu‘ al-Fatawa, vol. 10).")
                         .font(.body)
 
-                    Text("**Hulul (حُلُول)**: “indwelling,“ from ح-ل-ل, to alight in a place: the claim that Allah dwells in a creature. **Ittihad (اتِّحَاد)**: “union“: the claim that the servant becomes one with Allah. **Wahdat al-wujud (وَحْدَة الوُجُود)**: “the oneness of existence“: the doctrine of Ibn Arabi (d. 638 AH) that the existence of creation is the very existence of the Creator. Al-Hallaj (d. 309 AH) was executed in Baghdad after his saying “Ana al-Haqq“ (I am the Truth). Ibn Taymiyyah refuted this doctrine at length (Majmu‘ al-Fatawa, vol. 2), and section 7 below answers it from the Quran.")
+                    Text("**Hulul (حُلُول)**: “indwelling,“ from ح-ل-ل, to alight in a place: the claim that Allah dwells in a creature. **Ittihad (اتِّحَاد)**: “union“: the claim that the servant becomes one with Allah. **Wahdat al-wujud (وَحْدَة الوُجُود)**: “the oneness of existence“: the doctrine of Ibn Arabi (d. 638 AH) that the existence of creation is the very existence of the Creator. Al-Hallaj (d. 309 AH) was executed in Baghdad for heresy; the words “Ana al-Haqq“ (I am the Truth) are attributed to him. Ibn Taymiyyah refuted this doctrine at length (Majmu‘ al-Fatawa, vol. 2), and section 7 below answers it from the Quran.")
                         .font(.body)
 
                     Text("**Qutb / ghawth / abdal (قُطْب / غَوْث / أَبْدَال)**: “axis,“ “succour,“ and “substitutes“: in the orders, a hidden hierarchy of saints who are said to govern the world, the ghawth being the one people cry to for help. Ibn Taymiyyah says that the names ghawth, awtad, aqtab, and nujaba’ are found neither in the Book of Allah nor in any report from the Prophet (peace be upon him), and that the one term with a report behind it, the abdal, rests on a chain that is not established (Majmu‘ al-Fatawa, vol. 11); Ibn al-Qayyim rules that the hadiths of the abdal, aqtab, aghwath, nuqaba’, nujaba’, and awtad are all baseless attributions to the Messenger of Allah (al-Manar al-Munif). No creature governs the world; that belongs to Allah alone.")
@@ -299,11 +299,13 @@ struct SufismAnswerView: View {
 
                     Text("**Ihsan (إِحْسَان)**: “doing well,“ from ح-س-ن, beauty and excellence; the third level of the religion in the hadith of Jibril, after Islam and iman. The Prophet (peace be upon him) defined it:")
                         .font(.body)
-                    ScriptureQuote(text: "“That you worship Allah as if you see Him, for though you do not see Him, He sees you” (Sahih Muslim 8).", arabic: "أَنْ تَعْبُدَ اللَّهَ كَأَنَّكَ تَرَاهُ فَإِنْ لَمْ تَكُنْ تَرَاهُ فَإِنَّهُ يَرَاكَ", dimmed: true)
+                    ScriptureQuote(text: "“That you worship Allah as if you are seeing Him, for though you don't see Him, He, verily, sees you” (Sahih Muslim 8).", arabic: "أَنْ تَعْبُدَ اللَّهَ كَأَنَّكَ تَرَاهُ فَإِنْ لَمْ تَكُنْ تَرَاهُ فَإِنَّهُ يَرَاكَ", dimmed: true)
 
                     Text("This is the real spiritual path: worship with the presence of the heart, inside the shari‘ah, needing no order.")
                         .font(.body)
                 }
+
+                ArticleSourcesSection(article: "SufismAnswerView")
             }
             .themedListRowBackground()
         }
@@ -318,12 +320,12 @@ struct ShiaAnswerView: View {
     var body: some View {
         List {
             Group {
-                Section(header: Text("SUMMARY")) {
+                Section(header: ArticleHeader("SUMMARY")) {
                     Text("In short: the Shia claim that Ali was appointed by divine text, that the imams are infallible, and that the Companions betrayed the Prophet. The Quran praises the Companions, Ali himself ranked Abu Bakr and Umar above himself, and the imamate is found nowhere among the pillars of Islam.")
                         .font(.body)
                 }
 
-                Section(header: Text("WHO ARE THE SHIA?")) {
+                Section(header: ArticleHeader("WHO ARE THE SHIA?")) {
                     Text("**Shia (شِيعَة)** means “party“: the party of Ali. The largest group, the **Twelvers (الاِثنَا عَشَرِيَّة)**, hold that the Prophet (peace be upon him) appointed Ali as his successor by explicit command, that Ali and eleven of his descendants are infallible imams appointed by Allah, that belief in the imamate is a pillar of the religion, that the twelfth imam went into hiding in 260 AH and is still alive, and that most of the Companions, above all Abu Bakr, Umar, and Aisha, betrayed the Prophet after his death. From these beliefs came the cursing of the Companions, the wailing and self-beating of Ashura, the shrines, temporary marriage (**mut‘ah**), and **taqiyyah**, concealing one’s belief.")
                         .font(.body)
 
@@ -342,10 +344,10 @@ struct ShiaAnswerView: View {
                         .font(.body)
                 }
 
-                Section(header: Text("1. ALLAH PRAISED THE COMPANIONS")) {
+                Section(header: ArticleHeader("1. ALLAH PRAISED THE COMPANIONS")) {
                     Text("Allah (Glorified and Exalted be He) declared Himself pleased with the Companions, in verses revealed while they were alive, knowing what they would do:")
                         .font(.body)
-                    ScriptureQuote(text: "“And the first forerunners among the Muhajireen and the Ansar and those who followed them with good conduct - Allah is pleased with them and they are pleased with Him, and He has prepared for them gardens beneath which rivers flow, wherein they will abide forever. That is the great attainment” (Quran 9:100).", arabic: "وَٱلسَّٰبِقُونَ ٱلۡأَوَّلُونَ مِنَ ٱلۡمُهَٰجِرِينَ وَٱلۡأَنصَارِ وَٱلَّذِينَ ٱتَّبَعُوهُم بِإِحۡسَٰنٖ رَّضِيَ ٱللَّهُ عَنۡهُمۡ وَرَضُواْ عَنۡهُ")
+                    ScriptureQuote(text: "“And the first forerunners [in the faith] among the Muhajireen and the Ansar and those who followed them with good conduct - Allah is pleased with them and they are pleased with Him, and He has prepared for them gardens beneath which rivers flow, wherein they will abide forever. That is the great attainment” (Quran 9:100).", arabic: "وَٱلسَّٰبِقُونَ ٱلۡأَوَّلُونَ مِنَ ٱلۡمُهَٰجِرِينَ وَٱلۡأَنصَارِ وَٱلَّذِينَ ٱتَّبَعُوهُم بِإِحۡسَٰنٖ رَّضِيَ ٱللَّهُ عَنۡهُمۡ وَرَضُواْ عَنۡهُ")
 
                     ScriptureQuote(text: "“Certainly was Allah pleased with the believers when they pledged allegiance to you, [O Muhammad], under the tree, and He knew what was in their hearts, so He sent down tranquillity upon them and rewarded them with an imminent conquest” (Quran 48:18).", arabic: "لَّقَدۡ رَضِيَ ٱللَّهُ عَنِ ٱلۡمُؤۡمِنِينَ إِذۡ يُبَايِعُونَكَ تَحۡتَ ٱلشَّجَرَةِ فَعَلِمَ مَا فِي قُلُوبِهِمۡ فَأَنزَلَ ٱلسَّكِينَةَ عَلَيۡهِمۡ وَأَثَٰبَهُمۡ فَتۡحٗا قَرِيبٗا")
 
@@ -353,44 +355,44 @@ struct ShiaAnswerView: View {
 
                     Text("Then He made a share of the war spoils for “those who came after them,“ on the condition that they pray for the Companions and bear no resentment toward them (Quran 59:10). The Prophet (peace be upon him) said:")
                         .font(.body)
-                    ScriptureQuote(text: "“Do not abuse my Companions, for if one of you spent gold the size of Uhud, it would not reach a mudd of one of them, nor half of it” (Sahih al-Bukhari 3673, Sahih Muslim 2541).", arabic: "لاَ تَسُبُّوا أَصْحَابِي، فَلَوْ أَنَّ أَحَدَكُمْ أَنْفَقَ مِثْلَ أُحُدٍ ذَهَبًا مَا بَلَغَ مُدَّ أَحَدِهِمْ وَلاَ نَصِيفَهُ", dimmed: true)
+                    ScriptureQuote(text: "“Do not abuse my companions for if any one of you spent gold equal to Uhud (in Allah's Cause) it would not be equal to a Mud or even a half Mud spent by one of them” (Sahih al-Bukhari 3673, Sahih Muslim 2541).", arabic: "لاَ تَسُبُّوا أَصْحَابِي، فَلَوْ أَنَّ أَحَدَكُمْ أَنْفَقَ مِثْلَ أُحُدٍ ذَهَبًا مَا بَلَغَ مُدَّ أَحَدِهِمْ وَلاَ نَصِيفَهُ", dimmed: true)
 
-                    ScriptureQuote(text: "“My Companions are a safety for my nation, and when my Companions go, what has been promised to my nation will come to it” (Sahih Muslim 2531).", arabic: "وَأَصْحَابِي أَمَنَةٌ لأُمَّتِي فَإِذَا ذَهَبَ أَصْحَابِي أَتَى أُمَّتِي مَا يُوعَدُونَ", dimmed: true)
+                    ScriptureQuote(text: "“my Companions are a source of security for the Umma and as they would go there would fall to the lot of my Umma as (its people) have been promised” (Sahih Muslim 2531).", arabic: "وَأَصْحَابِي أَمَنَةٌ لأُمَّتِي فَإِذَا ذَهَبَ أَصْحَابِي أَتَى أُمَّتِي مَا يُوعَدُونَ", dimmed: true)
 
                     Text("A claim that these people apostatised is a claim that Allah praised apostates and the Prophet left his religion in the hands of traitors. It is a claim against Allah and His Messenger before it is a claim against the Companions.")
                         .font(.body)
                 }
 
-                Section(header: Text("2. ALI HIMSELF ON ABU BAKR AND UMAR")) {
+                Section(header: ArticleHeader("2. ALI HIMSELF ON ABU BAKR AND UMAR")) {
                     Text("The Prophet (peace be upon him) ordered Abu Bakr, and no one else, to lead the prayer in his final illness, repeating the order three times (Sahih al-Bukhari 664, Sahih Muslim 418), and said from the pulpit:")
                         .font(.body)
-                    ScriptureQuote(text: "“The person who has favoured me most with his company and his wealth is Abu Bakr. If I were to take a close friend other than my Lord, I would have taken Abu Bakr” (Sahih al-Bukhari 3654, Sahih Muslim 2382).", arabic: "إِنَّ مِنْ أَمَنِّ النَّاسِ عَلَىَّ فِي صُحْبَتِهِ وَمَالِهِ أَبَا بَكْرٍ، وَلَوْ كُنْتُ مُتَّخِذًا خَلِيلاً غَيْرَ رَبِّي لاَتَّخَذْتُ أَبَا بَكْرٍ", dimmed: true)
+                    ScriptureQuote(text: "“The person who has favored me most of all both with his company and wealth, is Abu Bakr. If I were to take a Khalil other than my Lord, I would have taken Abu Bakr as such, but (what relates us) is the Islamic brotherhood and friendliness” (Sahih al-Bukhari 3654, Sahih Muslim 2382).", arabic: "إِنَّ مِنْ أَمَنِّ النَّاسِ عَلَىَّ فِي صُحْبَتِهِ وَمَالِهِ أَبَا بَكْرٍ، وَلَوْ كُنْتُ مُتَّخِذًا خَلِيلاً غَيْرَ رَبِّي لاَتَّخَذْتُ أَبَا بَكْرٍ", dimmed: true)
 
                     Text("Ali’s own son, Muhammad ibn al-Hanafiyyah, asked him who the best of people was after the Messenger of Allah. Ali said:")
                         .font(.body)
-                    ScriptureQuote(text: "“Abu Bakr.” I said: Then who? He said: “Then Umar.” I feared he would say Uthman, so I said: Then you? He said: “I am only a man among the Muslims” (Sahih al-Bukhari 3671).", arabic: "قَالَ أَبُو بَكْرٍ. قُلْتُ ثُمَّ مَنْ قَالَ ثُمَّ عُمَرُ. وَخَشِيتُ أَنْ يَقُولَ عُثْمَانُ قُلْتُ ثُمَّ أَنْتَ قَالَ مَا أَنَا إِلاَّ رَجُلٌ مِنَ الْمُسْلِمِينَ", dimmed: true)
+                    ScriptureQuote(text: "“Abu Bakr.‘ I asked, ’Who then?‘ He said, ’Then `Umar. ‘ I was afraid he would say ’Uthman, so I said, ‘Then you?’ He said, ‘I am only an ordinary person” (Sahih al-Bukhari 3671).", arabic: "قَالَ أَبُو بَكْرٍ. قُلْتُ ثُمَّ مَنْ قَالَ ثُمَّ عُمَرُ. وَخَشِيتُ أَنْ يَقُولَ عُثْمَانُ قُلْتُ ثُمَّ أَنْتَ قَالَ مَا أَنَا إِلاَّ رَجُلٌ مِنَ الْمُسْلِمِينَ", dimmed: true)
 
                     Text("Ali gave his daughter Umm Kulthum, the granddaughter of the Prophet (peace be upon him), in marriage to Umar (Sahih al-Bukhari 2881; Sunan al-Nasa’i 1978), and named three of his own sons Abu Bakr, Umar, and Uthman, as the Shia biographers themselves record (al-Mufid, al-Irshad). A man does not marry his daughter to the one who “usurped“ his right and name his children after his enemies.")
                         .font(.body)
                 }
 
-                Section(header: Text("3. THE IMAMATE IS NOT A PILLAR")) {
+                Section(header: ArticleHeader("3. THE IMAMATE IS NOT A PILLAR")) {
                     Text("If belief in twelve imams were the greatest pillar of the religion, it would be the clearest thing in the Quran and the Sunnah. It is in neither. The Prophet (peace be upon him) counted the pillars:")
                         .font(.body)
-                    ScriptureQuote(text: "“Islam is built upon five: the testimony that there is no deity but Allah and that Muhammad is the Messenger of Allah, establishing the prayer, giving zakah, Hajj, and fasting Ramadan” (Sahih al-Bukhari 8, Sahih Muslim 16).", arabic: "بُنِيَ الإِسْلاَمُ عَلَى خَمْسٍ شَهَادَةِ أَنْ لاَ إِلَهَ إِلاَّ اللَّهُ وَأَنَّ مُحَمَّدًا رَسُولُ اللَّهِ، وَإِقَامِ الصَّلاَةِ، وَإِيتَاءِ الزَّكَاةِ، وَالْحَجِّ، وَصَوْمِ رَمَضَانَ", dimmed: true)
+                    ScriptureQuote(text: "“Islam is based on (the following) five (principles): To testify that none has the right to be worshipped but Allah and Muhammad is Allah's Messenger (ﷺ). To offer the (compulsory congregational) prayers dutifully and perfectly. To pay Zakat (i.e. obligatory charity). To perform Hajj. (i.e. Pilgrimage to Mecca) To observe fast during the month of Ramadan” (Sahih al-Bukhari 8, Sahih Muslim 16).", arabic: "بُنِيَ الإِسْلاَمُ عَلَى خَمْسٍ شَهَادَةِ أَنْ لاَ إِلَهَ إِلاَّ اللَّهُ وَأَنَّ مُحَمَّدًا رَسُولُ اللَّهِ، وَإِقَامِ الصَّلاَةِ، وَإِيتَاءِ الزَّكَاةِ، وَالْحَجِّ، وَصَوْمِ رَمَضَانَ", dimmed: true)
 
                     Text("And when Jibril asked him about faith, he counted six things (Sahih Muslim 8), none of them an imam. Allah completed the religion (Quran 5:3) without a word about it.")
                         .font(.body)
 
                     Text("As for the hadith of Ghadir Khumm, the Prophet (peace be upon him) said there, on the way back from the Farewell Hajj after complaints against Ali from the army of Yemen:")
                         .font(.body)
-                    ScriptureQuote(text: "“Whoever I am his mawla, then Ali is his mawla” (Sunan al-Tirmidhi 3713; graded sahih by al-Albani).", arabic: "مَنْ كُنْتُ مَوْلاَهُ فَعَلِيٌّ مَوْلاَهُ", dimmed: true)
+                    ScriptureQuote(text: "“For whomever I am his Mawla then 'Ali is his Mawla” (Sunan al-Tirmidhi 3713; graded sahih by al-Albani).", arabic: "مَنْ كُنْتُ مَوْلاَهُ فَعَلِيٌّ مَوْلاَهُ", dimmed: true)
 
                     Text("**Mawla** means beloved, ally, and supporter, the sense in which Allah is the mawla of the believers (Quran 47:11); it is not the word for ruler, and it was said to defend Ali’s honour, not to appoint him. In the same sermon the Prophet (peace be upon him) commanded holding fast to the Book of Allah and reminded the people of the rights of his household (Sahih Muslim 2408), which Ahl as-Sunnah do. If it had been an appointment, Ali would have said so at Saqifah, and instead he pledged allegiance to Abu Bakr, then Umar, then Uthman, and served under them.")
                         .font(.body)
                 }
 
-                Section(header: Text("4. NOBODY IS INFALLIBLE AFTER THE PROPHET")) {
+                Section(header: ArticleHeader("4. NOBODY IS INFALLIBLE AFTER THE PROPHET")) {
                     Text("The Quran addresses even the Prophet (peace be upon him) with correction:")
                         .font(.body)
                     ScriptureQuote(text: "“The Prophet frowned and turned away because there came to him the blind man, [interrupting]” (Quran 80:1-2).", arabic: "عَبَسَ وَتَوَلَّىٰٓ ۝ أَن جَآءَهُ ٱلۡأَعۡمَىٰ")
@@ -401,7 +403,7 @@ struct ShiaAnswerView: View {
                         .font(.body)
                 }
 
-                Section(header: Text("5. AISHA, THE MOTHER OF THE BELIEVERS")) {
+                Section(header: ArticleHeader("5. AISHA, THE MOTHER OF THE BELIEVERS")) {
                     Text("Allah declared the innocence of Aisha (may Allah be pleased with her) in ten verses of Surat an-Nur when the hypocrites slandered her, and ended:")
                         .font(.body)
                     ScriptureQuote(text: "“Those [good people] are declared innocent of what the slanderers say. For them is forgiveness and noble provision” (Quran 24:26).", arabic: "أُوْلَٰٓئِكَ مُبَرَّءُونَ مِمَّا يَقُولُونَۖ لَهُم مَّغۡفِرَةٞ وَرِزۡقٞ كَرِيمٞ")
@@ -412,29 +414,29 @@ struct ShiaAnswerView: View {
                         .font(.body)
                 }
 
-                Section(header: Text("6. FATIMAH AND THE INHERITANCE")) {
+                Section(header: ArticleHeader("6. FATIMAH AND THE INHERITANCE")) {
                     Text("The Shia say Abu Bakr wronged Fatimah (may Allah be pleased with her) over the land of Fadak. Abu Bakr applied the Prophet’s own words:")
                         .font(.body)
-                    ScriptureQuote(text: "“We are not inherited from; what we leave is charity, but the family of Muhammad may eat from this wealth.” And Abu Bakr said: “By Allah, I will not leave anything I saw the Messenger of Allah doing in it except that I do it” (Sahih al-Bukhari 6725, Sahih Muslim 1759).", arabic: "لاَ نُورَثُ، مَا تَرَكْنَا صَدَقَةٌ، إِنَّمَا يَأْكُلُ آلُ مُحَمَّدٍ مِنْ هَذَا الْمَالِ. قَالَ أَبُو بَكْرٍ وَاللَّهِ لاَ أَدَعُ أَمْرًا رَأَيْتُ رَسُولَ اللَّهِ صلى الله عليه وسلم يَصْنَعُهُ فِيهِ إِلاَّ صَنَعْتُهُ", dimmed: true)
+                    ScriptureQuote(text: "“Our property cannot be inherited, and whatever we leave is to be spent in charity, but the family of Muhammad may take their provisions from this property.‘ Abu Bakr added, ’By Allah, I will not leave the procedure I saw Allah's Messenger (ﷺ) following during his lifetime concerning this property” (Sahih al-Bukhari 6725, Sahih Muslim 1759).", arabic: "لاَ نُورَثُ، مَا تَرَكْنَا صَدَقَةٌ، إِنَّمَا يَأْكُلُ آلُ مُحَمَّدٍ مِنْ هَذَا الْمَالِ. قَالَ أَبُو بَكْرٍ وَاللَّهِ لاَ أَدَعُ أَمْرًا رَأَيْتُ رَسُولَ اللَّهِ صلى الله عليه وسلم يَصْنَعُهُ فِيهِ إِلاَّ صَنَعْتُهُ", dimmed: true)
 
                     Text("Ali and al-Abbas later confirmed to Umar that they knew the Prophet had said this, and when Ali became caliph he did not distribute Fadak as inheritance either. Abu Bakr followed the Sunnah, and Fatimah, a human being, was hurt; the Sunnah is not overturned by that.")
                         .font(.body)
                 }
 
-                Section(header: Text("7. MUT'AH, WAILING, AND TAQIYYAH")) {
+                Section(header: ArticleHeader("7. MUT'AH, WAILING, AND TAQIYYAH")) {
                     Text("Temporary marriage was forbidden by the Prophet (peace be upon him), and the narrator of its prohibition is Ali himself:")
                         .font(.body)
-                    ScriptureQuote(text: "“The Messenger of Allah forbade temporary marriage with women on the day of Khaybar, and the eating of the flesh of domestic donkeys” (Sahih al-Bukhari 5115, Sahih Muslim 1407).", arabic: "إِنَّ النَّبِيَّ صلى الله عليه وسلم نَهَى عَنِ الْمُتْعَةِ وَعَنْ لُحُومِ الْحُمُرِ الأَهْلِيَّةِ زَمَنَ خَيْبَرَ", dimmed: true)
+                    ScriptureQuote(text: "“During the battle of Khaibar the Prophet (ﷺ) forbade (Nikah) Al-Mut'a and the eating of donkey's meat” (Sahih al-Bukhari 5115, Sahih Muslim 1407).", arabic: "إِنَّ النَّبِيَّ صلى الله عليه وسلم نَهَى عَنِ الْمُتْعَةِ وَعَنْ لُحُومِ الْحُمُرِ الأَهْلِيَّةِ زَمَنَ خَيْبَرَ", dimmed: true)
 
                     Text("The self-beating and wailing of Ashura for al-Husayn (may Allah be pleased with him), whose martyrdom Ahl as-Sunnah grieve as a crime and a tragedy, is what the Prophet (peace be upon him) disowned:")
                         .font(.body)
-                    ScriptureQuote(text: "“He is not of us who strikes the cheeks, tears the garments, and calls with the call of the days of ignorance” (Sahih al-Bukhari 1294, Sahih Muslim 103).", arabic: "لَيْسَ مِنَّا مَنْ لَطَمَ الْخُدُودَ، وَشَقَّ الْجُيُوبَ، وَدَعَا بِدَعْوَى الْجَاهِلِيَّةِ", dimmed: true)
+                    ScriptureQuote(text: "“He who slaps his cheeks, tears his clothes and follows the ways and traditions of the Days of Ignorance is not one of us” (Sahih al-Bukhari 1294, Sahih Muslim 103).", arabic: "لَيْسَ مِنَّا مَنْ لَطَمَ الْخُدُودَ، وَشَقَّ الْجُيُوبَ، وَدَعَا بِدَعْوَى الْجَاهِلِيَّةِ", dimmed: true)
 
                     Text("And the doctrine that concealing one’s belief is a virtue has no place in a religion whose Prophet and Companions proclaimed it under torture; the Quran allows hiding faith only under real compulsion (Quran 16:106).")
                         .font(.body)
                 }
 
-                Section(header: Text("8. THE QURAN IS PRESERVED")) {
+                Section(header: ArticleHeader("8. THE QURAN IS PRESERVED")) {
                     Text("Some classical Twelver sources, including narrations in al-Kulayni’s al-Kafi (2/634), claim the Quran was altered and that the true Quran is with the hidden imam. Ahl as-Sunnah reject this absolutely, and hold every Muslim, Sunni or Shia, to Allah’s promise:")
                         .font(.body)
                     ScriptureQuote(text: "“Indeed, it is We who sent down the Qur'an and indeed, We will be its guardian” (Quran 15:9).", arabic: "إِنَّا نَحۡنُ نَزَّلۡنَا ٱلذِّكۡرَ وَإِنَّا لَهُۥ لَحَٰفِظُونَ")
@@ -443,25 +445,25 @@ struct ShiaAnswerView: View {
                         .font(.body)
                 }
 
-                Section(header: Text("COMMON QUESTIONS")) {
+                Section(header: ArticleHeader("COMMON QUESTIONS")) {
                     Text("**Do Sunnis love Ali and the Ahlul Bayt?**")
                         .font(.body)
                     Text("Yes, and it is part of the creed, not a courtesy. Ali (may Allah be pleased with him) said that the Prophet (peace be upon him) gave him a promise:")
                         .font(.body)
-                    ScriptureQuote(text: "“No one but a believer would love me, and none but a hypocrite would hate me” (Sahih Muslim 78).", arabic: "لاَ يُحِبَّنِي إِلاَّ مُؤْمِنٌ وَلاَ يُبْغِضَنِي إِلاَّ مُنَافِقٌ", dimmed: true)
+                    ScriptureQuote(text: "“no one but a believer would love me, and none but a hypocrite would nurse grudge against me” (Sahih Muslim 78).", arabic: "لاَ يُحِبَّنِي إِلاَّ مُؤْمِنٌ وَلاَ يُبْغِضَنِي إِلاَّ مُنَافِقٌ", dimmed: true)
 
                     Text("On the eve of the conquest of Khaybar the Prophet (peace be upon him) said:")
                         .font(.body)
-                    ScriptureQuote(text: "“Tomorrow I will give this flag to a man through whose hands Allah will give victory. He loves Allah and His Messenger, and Allah and His Messenger love him” (Sahih al-Bukhari 4210).", arabic: "لأُعْطِيَنَّ هَذِهِ الرَّايَةَ غَدًا رَجُلاً، يَفْتَحُ اللَّهُ عَلَى يَدَيْهِ، يُحِبُّ اللَّهَ وَرَسُولَهُ، وَيُحِبُّهُ اللَّهُ وَرَسُولُهُ", dimmed: true)
+                    ScriptureQuote(text: "“Tomorrow I will give this flag to a man through whose hands Allah will give us victory. He loves Allah and His Apostle, and he is loved by Allah and His Apostle” (Sahih al-Bukhari 4210).", arabic: "لأُعْطِيَنَّ هَذِهِ الرَّايَةَ غَدًا رَجُلاً، يَفْتَحُ اللَّهُ عَلَى يَدَيْهِ، يُحِبُّ اللَّهَ وَرَسُولَهُ، وَيُحِبُّهُ اللَّهُ وَرَسُولُهُ", dimmed: true)
 
                     Text("In the morning he called for Ali, prayed for his sore eyes, and gave him the flag. At Ghadir Khumm he said three times, “I remind you of Allah regarding my household“ (Sahih Muslim 2408), and Abu Bakr, the first caliph, lived by it:")
                         .font(.body)
-                    ScriptureQuote(text: "Abu Bakr used to say: “Look after Muhammad in his household” (Sahih al-Bukhari 3751).", arabic: "ارْقُبُوا مُحَمَّدًا صلى الله عليه وسلم فِي أَهْلِ بَيْتِهِ", dimmed: true)
+                    ScriptureQuote(text: "“Abu Bakr used to say, ‘Look after Muhammad (ﷺ) in (looking after) his family” (Sahih al-Bukhari 3751).", arabic: "ارْقُبُوا مُحَمَّدًا صلى الله عليه وسلم فِي أَهْلِ بَيْتِهِ", dimmed: true)
 
                     Text("Of al-Hasan the Prophet (peace be upon him) said from the pulpit:")
                         .font(.body)
-                    ScriptureQuote(text: "“This son of mine is a sayyid, and perhaps Allah will bring about peace between two groups of the Muslims through him” (Sahih al-Bukhari 3746).", arabic: "ابْنِي هَذَا سَيِّدٌ، وَلَعَلَّ اللَّهَ أَنْ يُصْلِحَ بِهِ بَيْنَ فِئَتَيْنِ مِنَ الْمُسْلِمِينَ", dimmed: true)
-                    ScriptureQuote(text: "“Al-Hasan and al-Husayn are the chiefs of the youths of Paradise” (Sunan al-Tirmidhi 3768; graded sahih by al-Albani).", arabic: "الْحَسَنُ وَالْحُسَيْنُ سَيِّدَا شَبَابِ أَهْلِ الْجَنَّةِ", dimmed: true)
+                    ScriptureQuote(text: "“This son of mine is a Saiyid (i.e. chief) and perhaps Allah will bring about an agreement between two sects of the Muslims through him” (Sahih al-Bukhari 3746).", arabic: "ابْنِي هَذَا سَيِّدٌ، وَلَعَلَّ اللَّهَ أَنْ يُصْلِحَ بِهِ بَيْنَ فِئَتَيْنِ مِنَ الْمُسْلِمِينَ", dimmed: true)
+                    ScriptureQuote(text: "“Al-Hasan and Al-Husain are the chiefs of the youths of Paradise” (Sunan al-Tirmidhi 3768; graded sahih by al-Albani).", arabic: "الْحَسَنُ وَالْحُسَيْنُ سَيِّدَا شَبَابِ أَهْلِ الْجَنَّةِ", dimmed: true)
 
                     Text("Ahl as-Sunnah send blessings on the family of Muhammad in every prayer, and their books of creed name love of the household among the marks of the Sunnah.")
                         .font(.body)
@@ -479,21 +481,21 @@ struct ShiaAnswerView: View {
                         .font(.body)
                     Text("Because he believed them to be the rightful caliphs and the best of the ummah after the Prophet (peace be upon him). Aisha relates that after Fatimah’s death Ali sought reconciliation with Abu Bakr, and in the mosque, after the Zuhr prayer:")
                         .font(.body)
-                    ScriptureQuote(text: "Ali uttered the tashahhud, magnified the right of Abu Bakr, and related that what he had done was not out of jealousy of Abu Bakr nor denial of that with which Allah had favoured him, “but we used to consider that we had a share in this affair, and he decided it without us, so we felt hurt.” The Muslims were pleased with that and said: You have done right (Sahih al-Bukhari 4240).", arabic: "وَتَشَهَّدَ عَلِيٌّ فَعَظَّمَ حَقَّ أَبِي بَكْرٍ، وَحَدَّثَ أَنَّهُ لَمْ يَحْمِلْهُ عَلَى الَّذِي صَنَعَ نَفَاسَةً عَلَى أَبِي بَكْرٍ، وَلاَ إِنْكَارًا لِلَّذِي فَضَّلَهُ اللَّهُ بِهِ، وَلَكِنَّا نَرَى لَنَا فِي هَذَا الأَمْرِ نَصِيبًا، فَاسْتَبَدَّ عَلَيْنَا، فَوَجَدْنَا فِي أَنْفُسِنَا، فَسُرَّ بِذَلِكَ الْمُسْلِمُونَ وَقَالُوا أَصَبْتَ", dimmed: true)
+                    ScriptureQuote(text: "`Ali (got up) and praying (to Allah) for forgiveness, he uttered Tashah-hud, praised Abu Bakr's right, and said, that he had not done what he had done because of jealousy of Abu Bakr or as a protest of that Allah had favored him with. `Ali added, ‘But we used to consider that we too had some right in this affair (of rulership) and that he (i.e. Abu Bakr) did not consult us in this matter, and therefore caused us to feel sorry.’ On that all the Muslims became happy and said, ‘You have done the right thing (Sahih al-Bukhari 4240).", arabic: "وَتَشَهَّدَ عَلِيٌّ فَعَظَّمَ حَقَّ أَبِي بَكْرٍ، وَحَدَّثَ أَنَّهُ لَمْ يَحْمِلْهُ عَلَى الَّذِي صَنَعَ نَفَاسَةً عَلَى أَبِي بَكْرٍ، وَلاَ إِنْكَارًا لِلَّذِي فَضَّلَهُ اللَّهُ بِهِ، وَلَكِنَّا نَرَى لَنَا فِي هَذَا الأَمْرِ نَصِيبًا، فَاسْتَبَدَّ عَلَيْنَا، فَوَجَدْنَا فِي أَنْفُسِنَا، فَسُرَّ بِذَلِكَ الْمُسْلِمُونَ وَقَالُوا أَصَبْتَ", dimmed: true)
 
                     Text("His own ranking, “Abu Bakr, then Umar,“ was quoted in section 2 (Sahih al-Bukhari 3671). A man of Ali’s courage, who feared no one, did not conceal his belief for twenty-five years and then serve as a counsellor and judge under those he thought had usurped him. The claim requires that Ali was either a coward or a hypocrite, and he was neither.")
                         .font(.body)
 
                     Text("**Did Umar attack Fatimah’s house?**")
                         .font(.body)
-                    Text("The story that Umar struck Fatimah, broke her rib, or caused her to miscarry has no chain of narration in the Sahih, the Sunan, or the Musnad, and Ibn Taymiyyah answers the claim in Minhaj as-Sunnah. What is established is the opposite: Umar married Umm Kulthum, the daughter of Ali and Fatimah, and when he distributed garments in Madinah his companions called her “your wife, the daughter of the Messenger of Allah“ (Sahih al-Bukhari 2881); Ibn Umar prayed the funeral prayer over “Umm Kulthum bint Ali, the wife of Umar ibn al-Khattab,“ and her son Zayd together (Sunan an-Nasa’i 1978; graded sahih by al-Albani). Ali also named one of his sons Umar. A father does not give his daughter to the man who broke her mother’s rib.")
+                    Text("The story that Umar struck Fatimah, broke her rib, or caused her to miscarry has no chain of narration in the Sahih, the Sunan, or the Musnad, and Ibn Taymiyyah answers the claim in Minhaj as-Sunnah. What is established is the opposite: Umar married Umm Kulthum, the daughter of Ali and Fatimah, and when he distributed garments in Madinah his companions called her “your wife, the daughter of the Messenger of Allah“ (Sahih al-Bukhari 2881); the funeral prayer over “Umm Kulthum bint Ali, the wife of Umar ibn al-Khattab,“ was offered together with that of her son Zayd, with Ibn Umar and Abu Hurayrah among those present (Sunan an-Nasa’i 1978; graded sahih by al-Albani). Ali also named one of his sons Umar. A father does not give his daughter to the man who broke her mother’s rib.")
                         .font(.body)
 
                     Text("**Did Abu Bakr wrong Fatimah over Fadak?**")
                         .font(.body)
                     Text("No. He applied the Prophet’s own words, “We are not inherited from; what we leave is charity“ (Sahih al-Bukhari 6725, Sahih Muslim 1759, quoted in section 6), and he maintained the Prophet’s household from that property exactly as the Prophet had done. When Ali met him about it, Abu Bakr wept and said:")
                         .font(.body)
-                    ScriptureQuote(text: "“By Him in whose hand is my soul, keeping good relations with the relatives of the Messenger of Allah is dearer to me than keeping good relations with my own relatives” (Sahih al-Bukhari 4240).", arabic: "وَالَّذِي نَفْسِي بِيَدِهِ لَقَرَابَةُ رَسُولِ اللَّهِ صلى الله عليه وسلم أَحَبُّ إِلَىَّ أَنْ أَصِلَ مِنْ قَرَابَتِي", dimmed: true)
+                    ScriptureQuote(text: "“By Him in Whose Hand my soul is to keep good relations with the relatives of Allah's Messenger (ﷺ) is dearer to me than to keep good relations with my own relatives” (Sahih al-Bukhari 4240).", arabic: "وَالَّذِي نَفْسِي بِيَدِهِ لَقَرَابَةُ رَسُولِ اللَّهِ صلى الله عليه وسلم أَحَبُّ إِلَىَّ أَنْ أَصِلَ مِنْ قَرَابَتِي", dimmed: true)
 
                     Text("Ali and al-Abbas later acknowledged the same hadith before Umar (Sahih al-Bukhari 3094, Sahih Muslim 1757), and when Ali became caliph he left Fadak as charity and did not distribute it as inheritance. Fatimah (may Allah be pleased with her) was hurt, and she is honoured for her station; but a hadith of the Prophet is not overturned by anyone’s hurt.")
                         .font(.body)
@@ -525,7 +527,7 @@ struct ShiaAnswerView: View {
 
                     Text("and He allowed the believer to guard himself against the disbelievers when he is in their power (Quran 3:28). Ibn Kathir records in his tafsir that the ayah of compulsion was revealed about Ammar ibn Yasir under torture in Makkah. It is not permission to conceal one’s creed among Muslims, to swear to what one does not believe, or to teach the religion one way in public and another in private. Concealing belief as a settled practice is what the Prophet (peace be upon him) described as the mark of the hypocrite:")
                         .font(.body)
-                    ScriptureQuote(text: "“The signs of a hypocrite are three: whenever he speaks, he tells a lie; whenever he promises, he breaks it; and if you trust him, he proves dishonest” (Sahih al-Bukhari 33).", arabic: "آيَةُ الْمُنَافِقِ ثَلاَثٌ إِذَا حَدَّثَ كَذَبَ، وَإِذَا وَعَدَ أَخْلَفَ، وَإِذَا اؤْتُمِنَ خَانَ", dimmed: true)
+                    ScriptureQuote(text: "“The signs of a hypocrite are three: Whenever he speaks, he tells a lie. Whenever he promises, he always breaks it (his promise ). If you trust him, he proves to be dishonest” (Sahih al-Bukhari 33).", arabic: "آيَةُ الْمُنَافِقِ ثَلاَثٌ إِذَا حَدَّثَ كَذَبَ، وَإِذَا وَعَدَ أَخْلَفَ، وَإِذَا اؤْتُمِنَ خَانَ", dimmed: true)
 
                     Text("The Companions proclaimed their faith under the whips of Makkah, and Ali, who is said to have practised taqiyyah for decades, was the boldest of men.")
                         .font(.body)
@@ -539,11 +541,11 @@ struct ShiaAnswerView: View {
                         .font(.body)
                     Text("Fairness here is a duty. The common Shia are Muslims of Ahl al-Qiblah, who testify to the two testimonies, pray toward the Ka‘bah, and fast Ramadan, and they are judged by their deeds like everyone else; the Prophet (peace be upon him) said:")
                         .font(.body)
-                    ScriptureQuote(text: "“Whoever prays our prayer, faces our qiblah, and eats our slaughtered meat is a Muslim, under the protection of Allah and His Messenger” (Sahih al-Bukhari 391).", arabic: "مَنْ صَلَّى صَلاَتَنَا، وَاسْتَقْبَلَ قِبْلَتَنَا، وَأَكَلَ ذَبِيحَتَنَا، فَذَلِكَ الْمُسْلِمُ الَّذِي لَهُ ذِمَّةُ اللَّهِ وَذِمَّةُ رَسُولِهِ", dimmed: true)
+                    ScriptureQuote(text: "“Whoever prays like us and faces our Qibla and eats our slaughtered animals is a Muslim and is under Allah's and His Apostle's protection” (Sahih al-Bukhari 391).", arabic: "مَنْ صَلَّى صَلاَتَنَا، وَاسْتَقْبَلَ قِبْلَتَنَا، وَأَكَلَ ذَبِيحَتَنَا، فَذَلِكَ الْمُسْلِمُ الَّذِي لَهُ ذِمَّةُ اللَّهِ وَذِمَّةُ رَسُولِهِ", dimmed: true)
 
                     Text("No specific person is declared a disbeliever without the conditions being met and the obstacles removed, and the scholars warn with the Prophet’s words:")
                         .font(.body)
-                    ScriptureQuote(text: "“If a man says to his brother, ‘O disbeliever,’ then surely one of them is such” (Sahih al-Bukhari 6103).", arabic: "إِذَا قَالَ الرَّجُلُ لأَخِيهِ يَا كَافِرُ فَقَدْ بَاءَ بِهِ أَحَدُهُمَا", dimmed: true)
+                    ScriptureQuote(text: "“If a man says to his brother, O Kafir (disbeliever)!' Then surely one of them is such (i.e., a Kafir)” (Sahih al-Bukhari 6103).", arabic: "إِذَا قَالَ الرَّجُلُ لأَخِيهِ يَا كَافِرُ فَقَدْ بَاءَ بِهِ أَحَدُهُمَا", dimmed: true)
 
                     Text("But certain beliefs are disbelief by the texts, whoever holds them: deifying Ali or the imams, claiming that the Quran was altered, or accusing Aisha of what Allah declared her innocent of (Quran 24:26, quoted in section 5). The scholars of Ahl as-Sunnah distinguish the ordinary Shia from those who hold these, and prayer behind an imam is judged by what he manifests; the safest course is to pray behind one whose creed is sound, while treating every Muslim with justice and good conduct.")
                         .font(.body)
@@ -552,7 +554,7 @@ struct ShiaAnswerView: View {
                         .font(.body)
                     Text("The Prophet (peace be upon him) said:")
                         .font(.body)
-                    ScriptureQuote(text: "“This religion will continue to remain powerful and dominant until there have been twelve caliphs… all of them from Quraysh” (Sahih Muslim 1821).", arabic: "لاَ يَزَالُ هَذَا الدِّينُ عَزِيزًا مَنِيعًا إِلَى اثْنَىْ عَشَرَ خَلِيفَةً … كُلُّهُمْ مِنْ قُرَيْشٍ", dimmed: true)
+                    ScriptureQuote(text: "“This religion would continue to remain powerful and dominant until there have been twelve Caliphs … He has said that all of them will be from the Quraish” (Sahih Muslim 1821).", arabic: "لاَ يَزَالُ هَذَا الدِّينُ عَزِيزًا مَنِيعًا إِلَى اثْنَىْ عَشَرَ خَلِيفَةً … كُلُّهُمْ مِنْ قُرَيْشٍ", dimmed: true)
 
                     Text("The hadith speaks of caliphs under whom the religion is strong and the people are gathered; that describes the rightly guided caliphs and the great caliphs of the Umayyads and early Abbasids, whom the ummah actually united under, as Ibn Kathir explains in his commentary on Quran 5:12. It cannot describe imams of whom only Ali, and al-Hasan for a few months before he made peace, ever ruled, and a twelfth who has been hidden for more than a thousand years, and the hadith makes no mention of Ali’s line, of infallibility, or of an appointment.")
                         .font(.body)
@@ -561,7 +563,7 @@ struct ShiaAnswerView: View {
                         .font(.body)
                     Text("No. Ahl as-Sunnah honour his protection of the Prophet (peace be upon him) and his defence of him against Quraysh, but the Sahih is explicit that he died on the religion of Abd al-Muttalib, refusing to say la ilaha illa Allah though the Prophet pleaded with him at his deathbed (Sahih al-Bukhari 1360, Sahih Muslim 24), and when al-Abbas asked what his protection had availed him, the Prophet (peace be upon him) said:")
                         .font(.body)
-                    ScriptureQuote(text: "“He is in a shallow fire, and had it not been for me, he would have been in the lowest depth of the Fire” (Sahih al-Bukhari 3883).", arabic: "هُوَ فِي ضَحْضَاحٍ مِنْ نَارٍ، وَلَوْلاَ أَنَا لَكَانَ فِي الدَّرَكِ الأَسْفَلِ مِنَ النَّارِ", dimmed: true)
+                    ScriptureQuote(text: "“He is in a shallow fire, and had It not been for me, he would have been in the bottom of the (Hell) Fire” (Sahih al-Bukhari 3883).", arabic: "هُوَ فِي ضَحْضَاحٍ مِنْ نَارٍ، وَلَوْلاَ أَنَا لَكَانَ فِي الدَّرَكِ الأَسْفَلِ مِنَ النَّارِ", dimmed: true)
 
                     Text("The claim that he was a secret believer contradicts these hadiths, one of them reported by his own brother al-Abbas, and it is made only to serve the doctrine that the imams’ ancestors must all have been believers.")
                         .font(.body)
@@ -572,18 +574,18 @@ struct ShiaAnswerView: View {
                         .font(.body)
                 }
 
-                Section(header: Text("THE INVITATION")) {
+                Section(header: ArticleHeader("THE INVITATION")) {
                     Text("Ahl as-Sunnah love Ali more truly than those who curse his companions in his name. He is the fourth of the rightly guided caliphs, the one of whom the Prophet (peace be upon him) said, “You are to me as Harun was to Musa, except that there is no prophet after me“ (Sahih Muslim 2404), and the husband of Fatimah and father of the two masters of the youth of Paradise. Loving him and loving Abu Bakr, Umar, Uthman, and Aisha are one love, because they loved one another. The Muslim asks for all of them:")
                         .font(.body)
                     ScriptureQuote(text: "“Our Lord, forgive us and our brothers who preceded us in faith and put not in our hearts [any] resentment toward those who have believed. Our Lord, indeed You are Kind and Merciful” (Quran 59:10).", arabic: "رَبَّنَا ٱغۡفِرۡ لَنَا وَلِإِخۡوَٰنِنَا ٱلَّذِينَ سَبَقُونَا بِٱلۡإِيمَٰنِ وَلَا تَجۡعَلۡ فِي قُلُوبِنَا غِلّٗا لِّلَّذِينَ ءَامَنُواْ رَبَّنَآ إِنَّكَ رَءُوفٞ رَّحِيمٌ")
                 }
 
-                Section(header: Text("IN SUMMARY")) {
+                Section(header: ArticleHeader("IN SUMMARY")) {
                     Text("Allah praised the Companions, Ali ranked Abu Bakr and Umar above himself and married his daughter to Umar, no imamate is among the pillars, and no one after the Prophet is infallible. Love of the Ahlul Bayt, which Ahl as-Sunnah share, does not require any of the beliefs built upon it.")
                         .font(.body)
                 }
 
-                Section(header: Text("KEY TERMS")) {
+                Section(header: ArticleHeader("KEY TERMS")) {
                     Text("**Shia / shi‘ah (شِيعَة)**: from ش-ي-ع, to follow and support: a party of followers, as explained above. In the language every man has his shi‘ah; as a name it came to mean those who hold that the leadership after the Prophet (peace be upon him) belonged to Ali and his descendants by divine text.")
                         .font(.body)
 
@@ -593,7 +595,7 @@ struct ShiaAnswerView: View {
 
                     Text("The Prophet (peace be upon him) then wrapped al-Hasan, al-Husayn, Fatimah, and Ali in his cloak and recited it over them (Sahih Muslim 2424), so they are inside it by his word. Zayd ibn Arqam (may Allah be pleased with him), who heard the sermon at Ghadir Khumm, was asked who the household are, and answered:")
                         .font(.body)
-                    ScriptureQuote(text: "“His wives are of his household, but his household are those who are forbidden the sadaqah after him.” He was asked: Who are they? He said: “The family of Ali, the family of Aqil, the family of Ja‘far, and the family of al-Abbas” (Sahih Muslim 2408).", arabic: "نِسَاؤُهُ مِنْ أَهْلِ بَيْتِهِ وَلَكِنْ أَهْلُ بَيْتِهِ مَنْ حُرِمَ الصَّدَقَةَ بَعْدَهُ. قَالَ وَمَنْ هُمْ قَالَ هُمْ آلُ عَلِيٍّ وَآلُ عَقِيلٍ وَآلُ جَعْفَرٍ وَآلُ عَبَّاسٍ", dimmed: true)
+                    ScriptureQuote(text: "“His wives are the members of his family (but here) the members of his family are those for whom acceptance of Zakat is forbidden. And he said: Who are they? Thereupon he said: 'Ali and the offspring of 'Ali, 'Aqil and the offspring of 'Aqil and the offspring of Ja'far and the offspring of 'Abbas” (Sahih Muslim 2408).", arabic: "نِسَاؤُهُ مِنْ أَهْلِ بَيْتِهِ وَلَكِنْ أَهْلُ بَيْتِهِ مَنْ حُرِمَ الصَّدَقَةَ بَعْدَهُ. قَالَ وَمَنْ هُمْ قَالَ هُمْ آلُ عَلِيٍّ وَآلُ عَقِيلٍ وَآلُ جَعْفَرٍ وَآلُ عَبَّاسٍ", dimmed: true)
 
                     Text("Ahl as-Sunnah love all of them, the wives and the relatives together, and it is part of their creed.")
                         .font(.body)
@@ -601,7 +603,7 @@ struct ShiaAnswerView: View {
                     Text("**Rafidah (الرَّافِضَة)**: “the rejecters,“ from ر-ف-ض: those who rejected Abu Bakr and Umar and deserted Zayd ibn Ali for refusing to disavow them, as explained above. The Salaf used the name for whoever curses the Companions.")
                         .font(.body)
 
-                    Text("**Zaydiyyah (الزَّيْدِيَّة)**: the followers of Zayd ibn Ali (d. 122 AH). They are the closest of the Shia to Ahl as-Sunnah: in the main they accept the caliphates of Abu Bakr and Umar, holding that the less excellent may lead while the more excellent is present, they do not curse the Companions, and they claim neither infallibility nor a hidden imam; their imam is any descendant of Fatimah who is learned and rises openly (ash-Shahrastani, al-Milal wan-Nihal).")
+                    Text("**Zaydiyyah (الزَّيْدِيَّة)**: the followers of Zayd ibn Ali (d. 122 AH). They are the closest of the Shia to Ahl as-Sunnah: Zayd himself and the early Zaydiyyah accepted the caliphates of Abu Bakr and Umar, holding that the less excellent may lead while the more excellent is present, and did not curse the Companions (the Jarudiyyah, who later prevailed in Yemen, fault the two caliphs), and and they claim neither infallibility nor a hidden imam; their imam is any descendant of Fatimah who is learned and rises openly (ash-Shahrastani, al-Milal wan-Nihal).")
                         .font(.body)
 
                     Text("**Imamiyyah / Ithna ‘Ashariyyah (الإِمَامِيَّة / الاِثْنَا عَشَرِيَّة)**: “the Twelvers,“ the largest body of the Shia today. Their twelve imams are Ali, al-Hasan, al-Husayn, Ali Zayn al-Abidin, Muhammad al-Baqir, Ja‘far as-Sadiq, Musa al-Kazim, Ali ar-Rida, Muhammad al-Jawad, Ali al-Hadi, al-Hasan al-Askari, and Muhammad ibn al-Hasan, who is said to have gone into occultation as a small child in Samarra in 260 AH. Ahl as-Sunnah honour the first of these as the fourth rightly guided caliph, the next two as the masters of the youth of Paradise, and Zayn al-Abidin, al-Baqir, and as-Sadiq as imams of knowledge and piety whose narrations are in the books of the Sunnah; the dispute is not over loving them but over the claims of divine appointment and infallibility made for them.")
@@ -615,7 +617,7 @@ struct ShiaAnswerView: View {
 
                     Text("**Ghulat (غُلَاة)**: “extremists,“ from غ-ل-و, to exceed the bound: those who raised Ali or the imams to divinity or prophethood. The first were the **Saba’iyyah**, the followers of Abdullah ibn Saba’, whom al-Ash‘ari (Maqalat al-Islamiyyin) and ash-Shahrastani (al-Milal wan-Nihal) count as the first of the ghulat. Ali (may Allah be pleased with him) burned a group of these heretics, whom the commentators, including Ibn Hajar in Fath al-Bari, identify as people who had claimed divinity for him, and Ibn Abbas commented:")
                         .font(.body)
-                    ScriptureQuote(text: "Ali burnt some people, and the news reached Ibn Abbas, who said: “Had I been in his place I would not have burnt them, as the Prophet said, ‘Do not punish with the punishment of Allah.’ But I would have killed them, for the Prophet said, ‘Whoever has changed his religion, kill him’” (Sahih al-Bukhari 3017).", arabic: "أَنَّ عَلِيًّا ـ رضى الله عنه ـ حَرَّقَ قَوْمًا، فَبَلَغَ ابْنَ عَبَّاسٍ فَقَالَ لَوْ كُنْتُ أَنَا لَمْ أُحَرِّقْهُمْ، لأَنَّ النَّبِيَّ صلى الله عليه وسلم قَالَ لاَ تُعَذِّبُوا بِعَذَابِ اللَّهِ. وَلَقَتَلْتُهُمْ كَمَا قَالَ النَّبِيُّ صلى الله عليه وسلم مَنْ بَدَّلَ دِينَهُ فَاقْتُلُوهُ", dimmed: true)
+                    ScriptureQuote(text: "“`Ali burnt some people and this news reached Ibn `Abbas, who said, ‘Had I been in his place I would not have burnt them, as the Prophet (ﷺ) said, 'Don't punish (anybody) with Allah's Punishment.' No doubt, I would have killed them, for the Prophet (ﷺ) said, 'If somebody (a Muslim) discards his religion, kill him” (Sahih al-Bukhari 3017).", arabic: "أَنَّ عَلِيًّا ـ رضى الله عنه ـ حَرَّقَ قَوْمًا، فَبَلَغَ ابْنَ عَبَّاسٍ فَقَالَ لَوْ كُنْتُ أَنَا لَمْ أُحَرِّقْهُمْ، لأَنَّ النَّبِيَّ صلى الله عليه وسلم قَالَ لاَ تُعَذِّبُوا بِعَذَابِ اللَّهِ. وَلَقَتَلْتُهُمْ كَمَا قَالَ النَّبِيُّ صلى الله عليه وسلم مَنْ بَدَّلَ دِينَهُ فَاقْتُلُوهُ", dimmed: true)
 
                     Text("Ali was the first to disown those who exaggerated about him, and the Imami Shia themselves disown the ghulat.")
                         .font(.body)
@@ -652,7 +654,7 @@ struct ShiaAnswerView: View {
 
                     Text("**Karbala (كَرْبَلَاء)**: the place in Iraq where al-Husayn ibn Ali (may Allah be pleased with him) was killed on 10 Muharram 61 AH, with most of his family and companions, by the army sent by Ubaydullah ibn Ziyad, the governor of Kufah for Yazid ibn Mu‘awiyah, after the people of Kufah who had invited him abandoned him (Ibn Kathir, al-Bidayah wan-Nihayah, events of 61 AH). Ahl as-Sunnah hold his killing to be one of the gravest crimes in the history of the ummah. The Prophet (peace be upon him) said:")
                         .font(.body)
-                    ScriptureQuote(text: "“Husayn is from me, and I am from Husayn. Allah loves whoever loves Husayn” (Sunan al-Tirmidhi 3775; graded hasan by al-Albani).", arabic: "حُسَيْنٌ مِنِّي وَأَنَا مِنْ حُسَيْنٍ أَحَبَّ اللَّهُ مَنْ أَحَبَّ حُسَيْنًا", dimmed: true)
+                    ScriptureQuote(text: "“Husain is from me, and I am from Husain. Allah loves whoever loves Husain” (Sunan al-Tirmidhi 3775; graded hasan by al-Albani).", arabic: "حُسَيْنٌ مِنِّي وَأَنَا مِنْ حُسَيْنٍ أَحَبَّ اللَّهُ مَنْ أَحَبَّ حُسَيْنًا", dimmed: true)
 
                     Text("**Marja‘ (مَرْجِع)**: “the one referred to,“ from ر-ج-ع, to return: in Twelver usage the senior jurist (marja‘ at-taqlid) whom the laity must follow during the occultation. Ahl as-Sunnah ask the people of knowledge (Quran 16:43) but bind themselves absolutely to no one but the Messenger (peace be upon him).")
                         .font(.body)
@@ -660,6 +662,8 @@ struct ShiaAnswerView: View {
                     Text("**Sahabi (صَحَابِيّ)**: a Companion: in the definition of Ibn Hajar, whoever met the Prophet (peace be upon him) believing in him and died upon Islam (al-Isabah). Allah’s praise of them is quoted in section 1 below, and no one who met the Prophet in faith and died upon it is outside it.")
                         .font(.body)
                 }
+
+                ArticleSourcesSection(article: "ShiaAnswerView")
             }
             .themedListRowBackground()
         }
@@ -674,15 +678,15 @@ struct ChristianityAnswerView: View {
     var body: some View {
         List {
             Group {
-                Section(header: Text("SUMMARY")) {
+                Section(header: ArticleHeader("SUMMARY")) {
                     Text("In short: Muslims honour Isa (Jesus) as one of the greatest messengers, born of a virgin, and reject that he is God, the son of God, or part of a trinity. The Quran, the words of Jesus in the Gospels, and reason all point the same way: Jesus called to the worship of one God.")
                         .font(.body)
                 }
 
-                Section(header: Text("WHAT MUSLIMS BELIEVE ABOUT JESUS")) {
+                Section(header: ArticleHeader("WHAT MUSLIMS BELIEVE ABOUT JESUS")) {
                     Text("No Muslim is a Muslim without believing in **Isa ibn Maryam (عِيسَى ابن مَريَم)**: that he is a messenger of Allah and His word, born of the virgin Maryam without a father, that he spoke in the cradle, healed the blind and the leper, and raised the dead by Allah’s permission, that he was neither killed nor crucified but raised alive to heaven, and that he will return before the end of the world. The Prophet (peace be upon him) said:")
                         .font(.body)
-                    ScriptureQuote(text: "“Whoever testifies that there is no deity but Allah alone with no partner, that Muhammad is His servant and Messenger, that Isa is the servant of Allah and His Messenger and His word which He cast to Maryam and a spirit from Him, and that Paradise is true and the Fire is true, Allah will admit him into Paradise according to his deeds” (Sahih al-Bukhari 3435).", arabic: "مَنْ شَهِدَ أَنْ لاَ إِلَهَ إِلاَّ اللَّهُ وَحْدَهُ لاَ شَرِيكَ لَهُ، وَأَنَّ مُحَمَّدًا عَبْدُهُ وَرَسُولُهُ، وَأَنَّ عِيسَى عَبْدُ اللَّهِ وَرَسُولُهُ وَكَلِمَتُهُ، أَلْقَاهَا إِلَى مَرْيَمَ، وَرُوحٌ مِنْهُ، وَالْجَنَّةُ حَقٌّ وَالنَّارُ حَقٌّ، أَدْخَلَهُ اللَّهُ الْجَنَّةَ عَلَى مَا كَانَ مِنَ الْعَمَلِ", dimmed: true)
+                    ScriptureQuote(text: "“If anyone testifies that None has the right to be worshipped but Allah Alone Who has no partners, and that Muhammad is His Slave and His Apostle, and that Jesus is Allah's Slave and His Apostle and His Word which He bestowed on Mary and a Spirit created by Him, and that Paradise is true, and Hell is true, Allah will admit him into Paradise with the deeds which he had done even if those deeds were few” (Sahih al-Bukhari 3435).", arabic: "مَنْ شَهِدَ أَنْ لاَ إِلَهَ إِلاَّ اللَّهُ وَحْدَهُ لاَ شَرِيكَ لَهُ، وَأَنَّ مُحَمَّدًا عَبْدُهُ وَرَسُولُهُ، وَأَنَّ عِيسَى عَبْدُ اللَّهِ وَرَسُولُهُ وَكَلِمَتُهُ، أَلْقَاهَا إِلَى مَرْيَمَ، وَرُوحٌ مِنْهُ، وَالْجَنَّةُ حَقٌّ وَالنَّارُ حَقٌّ، أَدْخَلَهُ اللَّهُ الْجَنَّةَ عَلَى مَا كَانَ مِنَ الْعَمَلِ", dimmed: true)
 
                     ScriptureQuote(text: "“And [mention] when the angels said, ‘O Mary, indeed Allah has chosen you and purified you and chosen you above the women of the worlds’” (Quran 3:42).", arabic: "وَإِذۡ قَالَتِ ٱلۡمَلَٰٓئِكَةُ يَٰمَرۡيَمُ إِنَّ ٱللَّهَ ٱصۡطَفَىٰكِ وَطَهَّرَكِ وَٱصۡطَفَىٰكِ عَلَىٰ نِسَآءِ ٱلۡعَٰلَمِينَ")
 
@@ -692,7 +696,7 @@ struct ChristianityAnswerView: View {
                         .font(.body)
                 }
 
-                Section(header: Text("1. JESUS IS NOT GOD")) {
+                Section(header: ArticleHeader("1. JESUS IS NOT GOD")) {
                     ScriptureQuote(text: "“They have certainly disbelieved who say, ‘Allah is the Messiah, the son of Mary’ while the Messiah has said, ‘O Children of Israel, worship Allah, my Lord and your Lord.’ Indeed, he who associates others with Allah - Allah has forbidden him Paradise, and his refuge is the Fire” (Quran 5:72).", arabic: "إِنَّهُۥ مَن يُشۡرِكۡ بِٱللَّهِ فَقَدۡ حَرَّمَ ٱللَّهُ عَلَيۡهِ ٱلۡجَنَّةَ وَمَأۡوَىٰهُ ٱلنَّارُۖ وَمَا لِلظَّٰلِمِينَ مِنۡ أَنصَارٖ")
 
                     ScriptureQuote(text: "“The Messiah, son of Mary, was not but a messenger; [other] messengers have passed on before him. And his mother was a supporter of truth. They both used to eat food. Look how We make clear to them the signs; then look how they are deluded” (Quran 5:75).", arabic: "مَّا ٱلۡمَسِيحُ ٱبۡنُ مَرۡيَمَ إِلَّا رَسُولٞ قَدۡ خَلَتۡ مِن قَبۡلِهِ ٱلرُّسُلُ وَأُمُّهُۥ صِدِّيقَةٞۖ كَانَا يَأۡكُلَانِ ٱلطَّعَامَۗ ٱنظُرۡ كَيۡفَ نُبَيِّنُ لَهُمُ ٱلۡأٓيَٰتِ ثُمَّ ٱنظُرۡ أَنَّىٰ يُؤۡفَكُونَ")
@@ -705,7 +709,7 @@ struct ChristianityAnswerView: View {
                         .font(.body)
                 }
 
-                Section(header: Text("2. GOD HAS NO SON")) {
+                Section(header: ArticleHeader("2. GOD HAS NO SON")) {
                     ScriptureQuote(text: "“And they say, ‘The Most Merciful has taken [for Himself] a son.’ You have done an atrocious thing. The heavens almost rupture therefrom and the earth splits open and the mountains collapse in devastation that they attribute to the Most Merciful a son. And it is not appropriate for the Most Merciful that He should take a son. There is no one in the heavens and earth but that he comes to the Most Merciful as a servant” (Quran 19:88-93).", arabic: "وَقَالُواْ ٱتَّخَذَ ٱلرَّحۡمَٰنُ وَلَدٗا ۝ لَّقَدۡ جِئۡتُمۡ شَيۡـًٔا إِدّٗا ۝ تَكَادُ ٱلسَّمَٰوَٰتُ يَتَفَطَّرۡنَ مِنۡهُ وَتَنشَقُّ ٱلۡأَرۡضُ وَتَخِرُّ ٱلۡجِبَالُ هَدًّا ۝ أَن دَعَوۡاْ لِلرَّحۡمَٰنِ وَلَدٗا ۝ وَمَا يَنۢبَغِي لِلرَّحۡمَٰنِ أَن يَتَّخِذَ وَلَدًا ۝ إِن كُلُّ مَن فِي ٱلسَّمَٰوَٰتِ وَٱلۡأَرۡضِ إِلَّآ ءَاتِي ٱلرَّحۡمَٰنِ عَبۡدٗا")
 
                     ScriptureQuote(text: "“Say, ‘He is Allah, [who is] One, Allah, the Eternal Refuge. He neither begets nor is born, nor is there to Him any equivalent’” (Quran 112:1-4).", arabic: "قُلۡ هُوَ ٱللَّهُ أَحَدٌ ۝ ٱللَّهُ ٱلصَّمَدُ ۝ لَمۡ يَلِدۡ وَلَمۡ يُولَدۡ ۝ وَلَمۡ يَكُن لَّهُۥ كُفُوًا أَحَدُۢ")
@@ -717,7 +721,7 @@ struct ChristianityAnswerView: View {
                     ScriptureQuote(text: "“I said not to them except what You commanded me - to worship Allah, my Lord and your Lord” (Quran 5:117).", arabic: "مَا قُلۡتُ لَهُمۡ إِلَّا مَآ أَمَرۡتَنِي بِهِۦٓ أَنِ ٱعۡبُدُواْ ٱللَّهَ رَبِّي وَرَبَّكُمۡۚ")
                 }
 
-                Section(header: Text("3. THE TRINITY")) {
+                Section(header: ArticleHeader("3. THE TRINITY")) {
                     ScriptureQuote(text: "“O People of the Scripture, do not commit excess in your religion or say about Allah except the truth. The Messiah, Jesus, the son of Mary, was but a messenger of Allah and His word which He directed to Mary and a soul [created at a command] from Him. So believe in Allah and His messengers. And do not say, ‘Three’; desist - it is better for you. Indeed, Allah is but one God” (Quran 4:171).", arabic: "يَٰٓأَهۡلَ ٱلۡكِتَٰبِ لَا تَغۡلُواْ فِي دِينِكُمۡ وَلَا تَقُولُواْ عَلَى ٱللَّهِ إِلَّا ٱلۡحَقَّۚ إِنَّمَا ٱلۡمَسِيحُ عِيسَى ٱبۡنُ مَرۡيَمَ رَسُولُ ٱللَّهِ وَكَلِمَتُهُۥٓ أَلۡقَىٰهَآ إِلَىٰ مَرۡيَمَ وَرُوحٞ مِّنۡهُۖ فَـَٔامِنُواْ بِٱللَّهِ وَرُسُلِهِۦۖ وَلَا تَقُولُواْ ثَلَٰثَةٌۚ ٱنتَهُواْ خَيۡرٗا لَّكُمۡۚ إِنَّمَا ٱللَّهُ إِلَٰهٞ وَٰحِدٞۖ")
 
                     ScriptureQuote(text: "“They have certainly disbelieved who say, ‘Allah is the third of three.’ And there is no god except one God” (Quran 5:73).", arabic: "لَّقَدۡ كَفَرَ ٱلَّذِينَ قَالُوٓاْ إِنَّ ٱللَّهَ ثَالِثُ ثَلَٰثَةٖۘ وَمَا مِنۡ إِلَٰهٍ إِلَّآ إِلَٰهٞ وَٰحِدٞۚ")
@@ -726,27 +730,27 @@ struct ChristianityAnswerView: View {
                         .font(.body)
                 }
 
-                Section(header: Text("4. THE CRUCIFIXION AND ORIGINAL SIN")) {
+                Section(header: ArticleHeader("4. THE CRUCIFIXION AND ORIGINAL SIN")) {
                     ScriptureQuote(text: "“And they did not kill him, nor did they crucify him; but [another] was made to resemble him to them. And indeed, those who differ over it are in doubt about it. They have no knowledge of it except the following of assumption. And they did not kill him, for certain. Rather, Allah raised him to Himself. And ever is Allah Exalted in Might and Wise” (Quran 4:157-158).", arabic: "وَقَوۡلِهِمۡ إِنَّا قَتَلۡنَا ٱلۡمَسِيحَ عِيسَى ٱبۡنَ مَرۡيَمَ رَسُولَ ٱللَّهِ وَمَا قَتَلُوهُ وَمَا صَلَبُوهُ وَلَٰكِن شُبِّهَ لَهُمۡۚ وَإِنَّ ٱلَّذِينَ ٱخۡتَلَفُواْ فِيهِ لَفِي شَكّٖ مِّنۡهُۚ مَا لَهُم بِهِۦ مِنۡ عِلۡمٍ إِلَّا ٱتِّبَاعَ ٱلظَّنِّۚ وَمَا قَتَلُوهُ يَقِينَۢا ۝ بَل رَّفَعَهُ ٱللَّهُ إِلَيۡهِۚ وَكَانَ ٱللَّهُ عَزِيزًا حَكِيمٗا")
 
-                    Text("The doctrine that all mankind inherits Adam’s sin and that God had to sacrifice His son to forgive it contradicts justice and the mercy of Allah. Adam repented and was forgiven (Quran 2:37); no one carries another’s guilt; and Allah forgives whom He wills, without a victim:")
+                    Text("The doctrine that all mankind inherits Adam’s sin (inherited guilt in the Western churches, inherited death and corruption in the Eastern) and that God had to sacrifice His son to forgive it contradicts justice and the mercy of Allah. Adam repented and was forgiven (Quran 2:37); no one carries another’s guilt; and Allah forgives whom He wills, without a victim:")
                         .font(.body)
                     ScriptureQuote(text: "“And every soul earns not [blame] except against itself, and no bearer of burdens will bear the burden of another” (Quran 6:164).", arabic: "وَلَا تَكۡسِبُ كُلُّ نَفۡسٍ إِلَّا عَلَيۡهَاۚ وَلَا تَزِرُ وَازِرَةٞ وِزۡرَ أُخۡرَىٰۚ")
 
                     ScriptureQuote(text: "“Say, ‘O My servants who have transgressed against themselves [by sinning], do not despair of the mercy of Allah. Indeed, Allah forgives all sins. Indeed, it is He who is the Forgiving, the Merciful’” (Quran 39:53).", arabic: "قُلۡ يَٰعِبَادِيَ ٱلَّذِينَ أَسۡرَفُواْ عَلَىٰٓ أَنفُسِهِمۡ لَا تَقۡنَطُواْ مِن رَّحۡمَةِ ٱللَّهِۚ إِنَّ ٱللَّهَ يَغۡفِرُ ٱلذُّنُوبَ جَمِيعًاۚ إِنَّهُۥ هُوَ ٱلۡغَفُورُ ٱلرَّحِيمُ")
                 }
 
-                Section(header: Text("5. JESUS FORETOLD MUHAMMAD")) {
+                Section(header: ArticleHeader("5. JESUS FORETOLD MUHAMMAD")) {
                     ScriptureQuote(text: "“And [mention] when Jesus, the son of Mary, said, ‘O children of Israel, indeed I am the messenger of Allah to you confirming what came before me of the Torah and bringing good tidings of a messenger to come after me, whose name is Ahmad’” (Quran 61:6).", arabic: "وَإِذۡ قَالَ عِيسَى ٱبۡنُ مَرۡيَمَ يَٰبَنِيٓ إِسۡرَٰٓءِيلَ إِنِّي رَسُولُ ٱللَّهِ إِلَيۡكُم مُّصَدِّقٗا لِّمَا بَيۡنَ يَدَيَّ مِنَ ٱلتَّوۡرَىٰةِ وَمُبَشِّرَۢا بِرَسُولٖ يَأۡتِي مِنۢ بَعۡدِي ٱسۡمُهُۥٓ أَحۡمَدُۖ")
 
                     ScriptureQuote(text: "“Those who follow the Messenger, the unlettered prophet, whom they find written in what they have of the Torah and the Gospel” (Quran 7:157).", arabic: "ٱلَّذِينَ يَتَّبِعُونَ ٱلرَّسُولَ ٱلنَّبِيَّ ٱلۡأُمِّيَّ ٱلَّذِي يَجِدُونَهُۥ مَكۡتُوبًا عِندَهُمۡ فِي ٱلتَّوۡرَىٰةِ وَٱلۡإِنجِيلِ")
 
-                    Text("Jesus promised “another Comforter“ who would abide forever and guide to all truth (John 14:16, 16:13); Moses promised a prophet like himself from the brothers of Israel, the children of Ishmael (Deuteronomy 18:18). And Jesus will return, the Prophet (peace be upon him) said, as a follower of the final revelation:")
+                    Text("Jesus promised “another Comforter“ who would abide forever and guide to all truth (John 14:16, 16:13); Moses promised a prophet like himself “from among their brethren“ (Deuteronomy 18:18), whom Ibn Taymiyyah and Ibn al-Qayyim identified as coming from the children of Ishmael, since no Israelite prophet after Moses came with a law and a nation as he did. And Jesus will return, the Prophet (peace be upon him) said, as a follower of the final revelation:")
                         .font(.body)
-                    ScriptureQuote(text: "“By the One in whose hand is my soul, the son of Maryam will soon descend among you as a just ruler; he will break the cross, kill the swine, and abolish the jizyah” (Sahih al-Bukhari 3448, Sahih Muslim 155).", arabic: "وَالَّذِي نَفْسِي بِيَدِهِ، لَيُوشِكَنَّ أَنْ يَنْزِلَ فِيكُمُ ابْنُ مَرْيَمَ حَكَمًا عَدْلاً، فَيَكْسِرَ الصَّلِيبَ، وَيَقْتُلَ الْخِنْزِيرَ، وَيَضَعَ الْجِزْيَةَ", dimmed: true)
+                    ScriptureQuote(text: "“By Him in Whose Hands my soul is, surely (Jesus,) the son of Mary will soon descend amongst you and will judge mankind justly (as a Just Ruler); he will break the Cross and kill the pigs and there will be no Jizya (i.e. taxation taken from non Muslims)” (Sahih al-Bukhari 3448, Sahih Muslim 155).", arabic: "وَالَّذِي نَفْسِي بِيَدِهِ، لَيُوشِكَنَّ أَنْ يَنْزِلَ فِيكُمُ ابْنُ مَرْيَمَ حَكَمًا عَدْلاً، فَيَكْسِرَ الصَّلِيبَ، وَيَقْتُلَ الْخِنْزِيرَ، وَيَضَعَ الْجِزْيَةَ", dimmed: true)
                 }
 
-                Section(header: Text("COMMON QUESTIONS")) {
+                Section(header: ArticleHeader("COMMON QUESTIONS")) {
                     Text("**Do Muslims believe in Jesus?**")
                         .font(.body)
                     Text("Yes, and it is an article of faith, as the hadith of the testimony quoted above shows (Sahih al-Bukhari 3435): whoever denies Jesus is not a Muslim. Allah commands the believers to say:")
@@ -761,7 +765,7 @@ struct ChristianityAnswerView: View {
                     Text("The Creator of the heavens and the earth, the God of Abraham, Moses and Jesus, is one, and Allah commands Muslims to say so to the People of the Scripture:")
                         .font(.body)
                     ScriptureQuote(text: "“And our God and your God is one; and we are Muslims [in submission] to Him” (Quran 29:46).", arabic: "وَإِلَٰهُنَا وَإِلَٰهُكُمۡ وَٰحِدٞ وَنَحۡنُ لَهُۥ مُسۡلِمُونَ")
-                    Text("But to describe Him as three, or as a man who was born and died, is to misdescribe Him: He neither begets nor is born (Quran 112:3, quoted above). So the object of worship is one, and what Islam corrects is the Christian description of Him. That is why Ibn Taymiyyah (may Allah have mercy on him) titled his great work al-Jawab as-Sahih li man baddala din al-Masih, “the correct answer to those who changed the religion of the Messiah“: the dispute is over what was changed, not over which God.")
+                    Text("But to describe Him as three, or as a man who was born and died, is to misdescribe Him: He neither begets nor is born (Quran 112:3, quoted above). The God they claim, the God of Abraham and Moses, is Allah, and in that sense the Lord is one (Quran 29:46); but worship directed to Jesus or his mother is worship of a creature (Quran 5:116), so what Islam corrects is both the description of God and the direction of the worship. That is why Ibn Taymiyyah (may Allah have mercy on him) titled his great work al-Jawab as-Sahih li man baddala din al-Masih, “the correct answer to those who changed the religion of the Messiah“: the dispute is over what was changed, not over which God.")
                         .font(.body)
 
                     Text("**Did Jesus ever say “I am God, worship me“?**")
@@ -809,7 +813,7 @@ struct ChristianityAnswerView: View {
 
                     Text("**Did Jesus foretell Muhammad?**")
                         .font(.body)
-                    Text("Yes, as the Quran states (Quran 61:6 and 7:157, quoted above). Jesus promised “another Comforter“ who would abide forever, “the Spirit of truth,“ who “shall not speak of himself; but whatsoever he shall hear, that shall he speak“ and who “will shew you things to come“ (John 14:16, 16:13). That is the description of a prophet who conveys only what he is given, which is exactly how the Quran describes Muhammad (peace be upon him):")
+                    Text("Yes, as the Quran states (Quran 61:6 and 7:157, quoted above). Jesus promised “another Comforter“ who would abide forever, “the Spirit of truth,“ who “shall not speak of himself; but whatsoever he shall hear, that shall he speak“ and who “will shew you things to come“ (John 14:16, 16:13). Christians read this as the Holy Spirit, since John 14:26 names him so; Muslims, following Quran 61:6, read it as pointing to Ahmad, and Ibn Taymiyyah argued in al-Jawab as-Sahih that one who “shall not speak of himself“ and “will shew you things to come“ is a human messenger who conveys only what he is given, which is exactly how the Quran describes Muhammad (peace be upon him):")
                         .font(.body)
                     ScriptureQuote(text: "“Nor does he speak from [his own] inclination. It is not but a revelation revealed” (Quran 53:3-4).", arabic: "وَمَا يَنطِقُ عَنِ ٱلۡهَوَىٰٓ ۝ إِنۡ هُوَ إِلَّا وَحۡيٞ يُوحَىٰ")
                     Text("The Jews of Jesus’s time were themselves awaiting three figures: the Messiah, Elijah, and “that Prophet“ (John 1:19-21, 25), the prophet like Moses of Deuteronomy 18:18. Ibn al-Qayyim gathered these prophecies in Hidayat al-Hayara fi Ajwibat al-Yahud wan-Nasara, and Ibn Taymiyyah in al-Jawab as-Sahih.")
@@ -823,7 +827,7 @@ struct ChristianityAnswerView: View {
                     ScriptureQuote(text: "“Say, ‘I hold not for myself [the power of] benefit or harm, except what Allah has willed’” (Quran 7:188).", arabic: "قُل لَّآ أَمۡلِكُ لِنَفۡسِي نَفۡعٗا وَلَا ضَرًّا إِلَّا مَا شَآءَ ٱللَّهُۚ")
                     Text("He himself forbade what the Christians did with Jesus:")
                         .font(.body)
-                    ScriptureQuote(text: "“Do not exaggerate in praising me as the Christians praised the son of Mary, for I am only a slave. So call me the slave of Allah and His Messenger” (Sahih al-Bukhari 3445).", arabic: "لاَ تُطْرُونِي كَمَا أَطْرَتِ النَّصَارَى ابْنَ مَرْيَمَ، فَإِنَّمَا أَنَا عَبْدُهُ، فَقُولُوا عَبْدُ اللَّهِ وَرَسُولُهُ", dimmed: true)
+                    ScriptureQuote(text: "“Do not exaggerate in praising me as the Christians praised the son of Mary, for I am only a Slave. So, call me the Slave of Allah and His Apostle” (Sahih al-Bukhari 3445).", arabic: "لاَ تُطْرُونِي كَمَا أَطْرَتِ النَّصَارَى ابْنَ مَرْيَمَ، فَإِنَّمَا أَنَا عَبْدُهُ، فَقُولُوا عَبْدُ اللَّهِ وَرَسُولُهُ", dimmed: true)
                     ScriptureQuote(text: "“Allah cursed the Jews and the Christians because they took the graves of their Prophets as places for praying” (Sahih al-Bukhari 1330, Sahih Muslim 529).", arabic: "لَعَنَ اللَّهُ الْيَهُودَ وَالنَّصَارَى، اتَّخَذُوا قُبُورَ أَنْبِيَائِهِمْ مَسْجِدًا", dimmed: true)
                     Text("When he died, Abu Bakr (may Allah be pleased with him) stood and said, “Whoever worshipped Muhammad, then Muhammad is dead; but whoever worshipped Allah, then Allah is alive and shall never die,“ and recited (Sahih al-Bukhari 3667):")
                         .font(.body)
@@ -859,7 +863,7 @@ struct ChristianityAnswerView: View {
                     Text("Whoever hears the message of Muhammad (peace be upon him) and dies rejecting it is not saved by attributing a son to Allah. The Quran says so of those who call Allah the Messiah or one of three (Quran 5:72-73, quoted above), and adds:")
                         .font(.body)
                     ScriptureQuote(text: "“And whoever desires other than Islam as religion - never will it be accepted from him, and he, in the Hereafter, will be among the losers” (Quran 3:85).", arabic: "وَمَن يَبۡتَغِ غَيۡرَ ٱلۡإِسۡلَٰمِ دِينٗا فَلَن يُقۡبَلَ مِنۡهُ وَهُوَ فِي ٱلۡأٓخِرَةِ مِنَ ٱلۡخَٰسِرِينَ")
-                    ScriptureQuote(text: "“By Him in whose hand is the life of Muhammad, he who among the community of Jews or Christians hears about me but does not affirm his belief in that with which I have been sent, and dies in this state, shall be but one of the denizens of Hellfire” (Sahih Muslim 153).", arabic: "وَالَّذِي نَفْسُ مُحَمَّدٍ بِيَدِهِ لاَ يَسْمَعُ بِي أَحَدٌ مِنْ هَذِهِ الأُمَّةِ يَهُودِيٌّ وَلاَ نَصْرَانِيٌّ ثُمَّ يَمُوتُ وَلَمْ يُؤْمِنْ بِالَّذِي أُرْسِلْتُ بِهِ إِلاَّ كَانَ مِنْ أَصْحَابِ النَّارِ", dimmed: true)
+                    ScriptureQuote(text: "“By Him in Whose hand is the life of Muhammad, he who amongst the community of Jews or Christians hears about me, but does not affirm his belief in that with which I have been sent and dies in this state (of disbelief), he shall be but one of the denizens of Hell-Fire” (Sahih Muslim 153).", arabic: "وَالَّذِي نَفْسُ مُحَمَّدٍ بِيَدِهِ لاَ يَسْمَعُ بِي أَحَدٌ مِنْ هَذِهِ الأُمَّةِ يَهُودِيٌّ وَلاَ نَصْرَانِيٌّ ثُمَّ يَمُوتُ وَلَمْ يُؤْمِنْ بِالَّذِي أُرْسِلْتُ بِهِ إِلاَّ كَانَ مِنْ أَصْحَابِ النَّارِ", dimmed: true)
                     Text("At the same time the Quran does not treat them as one mass (Quran 3:113). It praises those among the People of the Scripture who believed, and it records what is good in the Christians in particular:")
                         .font(.body)
                     ScriptureQuote(text: "“They are not [all] the same; among the People of the Scripture is a community standing [in obedience], reciting the verses of Allah during periods of the night and prostrating [in prayer]” (Quran 3:113).", arabic: "لَيۡسُواْ سَوَآءٗۗ مِّنۡ أَهۡلِ ٱلۡكِتَٰبِ أُمَّةٞ قَآئِمَةٞ يَتۡلُونَ ءَايَٰتِ ٱللَّهِ ءَانَآءَ ٱلَّيۡلِ وَهُمۡ يَسۡجُدُونَ")
@@ -887,19 +891,19 @@ struct ChristianityAnswerView: View {
                         .font(.body)
                 }
 
-                Section(header: Text("THE INVITATION")) {
+                Section(header: ArticleHeader("THE INVITATION")) {
                     ScriptureQuote(text: "“Say, ‘O People of the Scripture, come to a word that is equitable between us and you - that we will not worship except Allah and not associate anything with Him and not take one another as lords instead of Allah.’ But if they turn away, then say, ‘Bear witness that we are Muslims [submitting to Him]’” (Quran 3:64).", arabic: "قُلۡ يَٰٓأَهۡلَ ٱلۡكِتَٰبِ تَعَالَوۡاْ إِلَىٰ كَلِمَةٖ سَوَآءِۭ بَيۡنَنَا وَبَيۡنَكُمۡ أَلَّا نَعۡبُدَ إِلَّا ٱللَّهَ وَلَا نُشۡرِكَ بِهِۦ شَيۡـٔٗا وَلَا يَتَّخِذَ بَعۡضُنَا بَعۡضًا أَرۡبَابٗا مِّن دُونِ ٱللَّهِۚ فَإِن تَوَلَّوۡاْ فَقُولُواْ ٱشۡهَدُواْ بِأَنَّا مُسۡلِمُونَ")
 
                     Text("The Quran also notes what is good in them, that among them are priests and monks who are not arrogant (Quran 5:82), and commands kindness and justice to those who do not fight the Muslims (Quran 60:8). The Muslim invites the Christian to the religion of Jesus himself: one God, worshipped alone, and His messenger obeyed.")
                         .font(.body)
                 }
 
-                Section(header: Text("IN SUMMARY")) {
+                Section(header: ArticleHeader("IN SUMMARY")) {
                     Text("Islam gives Jesus his true place: a mighty messenger and the word of Allah, not God and not His son. He ate food, prayed, and called to the worship of his Lord and ours, and he foretold the one who would come after him.")
                         .font(.body)
                 }
 
-                Section(header: Text("KEY TERMS")) {
+                Section(header: ArticleHeader("KEY TERMS")) {
                     Text("**Nasara (النَّصَارَى)**: the Quran’s name for the Christians. Ibn Kathir (may Allah have mercy on him) gives two derivations in his tafsir of 2:62: from **an-Nasirah (النَّاصِرَة)**, Nazareth, the town of Jesus, or from **nasr (نَصْر)**, help, because they helped one another, as the disciples answered when Jesus asked who would be his helpers for Allah (Quran 3:52, 61:14):")
                         .font(.body)
                     ScriptureQuote(text: "“The disciples said, ‘We are supporters for Allah. We have believed in Allah and testify that we are Muslims [submitting to Him]’” (Quran 3:52).", arabic: "قَالَ ٱلۡحَوَارِيُّونَ نَحۡنُ أَنصَارُ ٱللَّهِ ءَامَنَّا بِٱللَّهِ وَٱشۡهَدۡ بِأَنَّا مُسۡلِمُونَ")
@@ -936,7 +940,7 @@ struct ChristianityAnswerView: View {
                     Text("**Crucifixion (الصَّلْب)**: Christianity teaches that Jesus was crucified, died, and rose on the third day. The Quran denies that he was killed or crucified: another was made to resemble him, and Allah raised him alive (Quran 4:157-158).")
                         .font(.body)
 
-                    Text("**Atonement and original sin (الفِدَاء والخَطِيئَة الأَصْلِيَّة)**: the doctrine that all mankind inherits the guilt of Adam and can be forgiven only through the sacrifice of the son of God. Islam teaches that Adam repented and was forgiven (Quran 2:37), that no soul bears the burden of another (Quran 6:164), and that Allah forgives whom He wills directly, without a victim (Quran 39:53).")
+                    Text("**Atonement and original sin (الفِدَاء والخَطِيئَة الأَصْلِيَّة)**: the Western Christian doctrine (Catholic and Protestant) that all mankind inherits the guilt of Adam, and the Eastern doctrine of inherited death and corruption; all agree that it is removed only through the sacrifice of the son of God. Islam teaches that Adam repented and was forgiven (Quran 2:37), that no soul bears the burden of another (Quran 6:164), and that Allah forgives whom He wills directly, without a victim (Quran 39:53).")
                         .font(.body)
 
                     Text("**“Son of God“ (ابْنُ الله)**: in the Bible the phrase is used loosely. Adam is “the son of God“ (Luke 3:38), Israel is God’s “firstborn son“ (Exodus 4:22), David is told “Thou art my Son“ (Psalm 2:7), and the peacemakers “shall be called the children of God“ (Matthew 5:9). It meant a beloved and obedient servant. Later Christians made it literal for Jesus alone, and the Quran rejects that in the strongest terms (Quran 9:30, 19:88-93, 112:1-4).")
@@ -947,8 +951,8 @@ struct ChristianityAnswerView: View {
                     ScriptureQuote(text: "“Say, [O Muhammad], ‘The Pure Spirit has brought it down from your Lord in truth to make firm those who believe and as guidance and good tidings to the Muslims’” (Quran 16:102).", arabic: "قُلۡ نَزَّلَهُۥ رُوحُ ٱلۡقُدُسِ مِن رَّبِّكَ بِٱلۡحَقِّ لِيُثَبِّتَ ٱلَّذِينَ ءَامَنُواْ وَهُدٗى وَبُشۡرَىٰ لِلۡمُسۡلِمِينَ")
                     Text("The Prophet (peace be upon him) prayed for the poet Hassan ibn Thabit (may Allah be pleased with him) with the same words, and in another narration named the angel:")
                         .font(.body)
-                    ScriptureQuote(text: "“O Hassan, reply on behalf of Allah’s Messenger. O Allah, help him with the Holy Spirit” (Sahih al-Bukhari 453, Sahih Muslim 2485).", arabic: "يَا حَسَّانُ، أَجِبْ عَنْ رَسُولِ اللَّهِ صلى الله عليه وسلم، اللَّهُمَّ أَيِّدْهُ بِرُوحِ الْقُدُسِ", dimmed: true)
-                    ScriptureQuote(text: "“Lampoon them, and Jibril is with you” (Sahih al-Bukhari 3213).", arabic: "اهْجُهُمْ ـ أَوْ هَاجِهِمْ ـ وَجِبْرِيلُ مَعَكَ", dimmed: true)
+                    ScriptureQuote(text: "“O Hassan! Reply on behalf of Allah's Messenger (ﷺ). O Allah! Help him with the Holy Spirit” (Sahih al-Bukhari 453, Sahih Muslim 2485).", arabic: "يَا حَسَّانُ، أَجِبْ عَنْ رَسُولِ اللَّهِ صلى الله عليه وسلم، اللَّهُمَّ أَيِّدْهُ بِرُوحِ الْقُدُسِ", dimmed: true)
+                    ScriptureQuote(text: "“Lampoon them (i.e. the pagans) and Gabriel is with you” (Sahih al-Bukhari 3213).", arabic: "اهْجُهُمْ ـ أَوْ هَاجِهِمْ ـ وَجِبْرِيلُ مَعَكَ", dimmed: true)
                     Text("So the Holy Spirit is a created angel, not a person of the Godhead.")
                         .font(.body)
 
@@ -973,6 +977,8 @@ struct ChristianityAnswerView: View {
                     Text("**The “Gospel of Barnabas“**: a book that presents Jesus as foretelling Muhammad by name. Muslims should not rely on it. No manuscript of it older than the sixteenth century is known, it contains historical errors, and it even denies that Jesus is the Messiah, which contradicts the Quran (Quran 3:45). The case of Islam rests on the Quran and the Sunnah, not on disputed books.")
                         .font(.body)
                 }
+
+                ArticleSourcesSection(article: "ChristianityAnswerView")
             }
             .themedListRowBackground()
         }
@@ -987,12 +993,12 @@ struct JudaismAnswerView: View {
     var body: some View {
         List {
             Group {
-                Section(header: Text("SUMMARY")) {
+                Section(header: ArticleHeader("SUMMARY")) {
                     Text("In short: Muslims believe in Musa (Moses), the Torah, and all the prophets of the Children of Israel. The Quran answers the rejection of Jesus and Muhammad, the changing of the scripture, and the claim of a chosen race, and calls the Jews back to the covenant of their own prophets.")
                         .font(.body)
                 }
 
-                Section(header: Text("WHAT MUSLIMS BELIEVE")) {
+                Section(header: ArticleHeader("WHAT MUSLIMS BELIEVE")) {
                     Text("Islam affirms **Musa (مُوسَى)** as one of the five greatest messengers, the **Tawrah (التَّورَاة)** as revelation, and Ibrahim, Ishaq, Ya‘qub, Yusuf, Dawud, Sulayman, and the other prophets of the Children of Israel, and it forbids distinguishing between them:")
                         .font(.body)
                     ScriptureQuote(text: "“Say, [O believers], ‘We have believed in Allah and what has been revealed to us and what has been revealed to Abraham and Ishmael and Isaac and Jacob and the Descendants and what was given to Moses and Jesus and what was given to the prophets from their Lord. We make no distinction between any of them, and we are Muslims [in submission] to Him’” (Quran 2:136).", arabic: "قُولُوٓاْ ءَامَنَّا بِٱللَّهِ وَمَآ أُنزِلَ إِلَيۡنَا وَمَآ أُنزِلَ إِلَىٰٓ إِبۡرَٰهِـۧمَ وَإِسۡمَٰعِيلَ وَإِسۡحَٰقَ وَيَعۡقُوبَ وَٱلۡأَسۡبَاطِ وَمَآ أُوتِيَ مُوسَىٰ وَعِيسَىٰ وَمَآ أُوتِيَ ٱلنَّبِيُّونَ مِن رَّبِّهِمۡ لَا نُفَرِّقُ بَيۡنَ أَحَدٖ مِّنۡهُمۡ وَنَحۡنُ لَهُۥ مُسۡلِمُونَ")
@@ -1003,7 +1009,7 @@ struct JudaismAnswerView: View {
                         .font(.body)
                 }
 
-                Section(header: Text("1. THE COVENANT AND THE PROPHETS WHO CAME AFTER")) {
+                Section(header: ArticleHeader("1. THE COVENANT AND THE PROPHETS WHO CAME AFTER")) {
                     Text("Allah reminds the Children of Israel of His favour upon them and of the covenant they gave, to believe in what He would send after Musa:")
                         .font(.body)
                     ScriptureQuote(text: "“O Children of Israel, remember My favor which I have bestowed upon you and fulfill My covenant [upon you] that I will fulfill your covenant [from Me], and be afraid of [only] Me. And believe in what I have sent down confirming that which is [already] with you, and be not the first to disbelieve in it” (Quran 2:40-41).", arabic: "يَٰبَنِيٓ إِسۡرَٰٓءِيلَ ٱذۡكُرُواْ نِعۡمَتِيَ ٱلَّتِيٓ أَنۡعَمۡتُ عَلَيۡكُمۡ وَأَوۡفُواْ بِعَهۡدِيٓ أُوفِ بِعَهۡدِكُمۡ وَإِيَّٰيَ فَٱرۡهَبُونِ ۝ وَءَامِنُواْ بِمَآ أَنزَلۡتُ مُصَدِّقٗا لِّمَا مَعَكُمۡ وَلَا تَكُونُوٓاْ أَوَّلَ كَافِرِۭ بِهِۦۖ وَلَا تَشۡتَرُواْ بِـَٔايَٰتِي ثَمَنٗا قَلِيلٗا وَإِيَّٰيَ فَٱتَّقُونِ")
@@ -1015,25 +1021,25 @@ struct JudaismAnswerView: View {
                     ScriptureQuote(text: "“Indeed, those who disbelieve in Allah and His messengers and wish to discriminate between Allah and His messengers and say, ‘We believe in some and disbelieve in others,’ and wish to adopt a way in between - Those are the disbelievers, truly” (Quran 4:150-151).", arabic: "إِنَّ ٱلَّذِينَ يَكۡفُرُونَ بِٱللَّهِ وَرُسُلِهِۦ وَيُرِيدُونَ أَن يُفَرِّقُواْ بَيۡنَ ٱللَّهِ وَرُسُلِهِۦ وَيَقُولُونَ نُؤۡمِنُ بِبَعۡضٖ وَنَكۡفُرُ بِبَعۡضٖ وَيُرِيدُونَ أَن يَتَّخِذُواْ بَيۡنَ ذَٰلِكَ سَبِيلًا ۝ أُوْلَٰٓئِكَ هُمُ ٱلۡكَٰفِرُونَ حَقّٗاۚ وَأَعۡتَدۡنَا لِلۡكَٰفِرِينَ عَذَابٗا مُّهِينٗا")
                 }
 
-                Section(header: Text("2. MUHAMMAD IS IN THEIR SCRIPTURE")) {
+                Section(header: ArticleHeader("2. MUHAMMAD IS IN THEIR SCRIPTURE")) {
                     ScriptureQuote(text: "“Those to whom We gave the Scripture know him as they know their own sons. But indeed, a party of them conceal the truth while they know [it]” (Quran 2:146).", arabic: "ٱلَّذِينَ ءَاتَيۡنَٰهُمُ ٱلۡكِتَٰبَ يَعۡرِفُونَهُۥ كَمَا يَعۡرِفُونَ أَبۡنَآءَهُمۡۖ وَإِنَّ فَرِيقٗا مِّنۡهُمۡ لَيَكۡتُمُونَ ٱلۡحَقَّ وَهُمۡ يَعۡلَمُونَ")
 
                     ScriptureQuote(text: "“Those who follow the Messenger, the unlettered prophet, whom they find written in what they have of the Torah and the Gospel” (Quran 7:157).", arabic: "ٱلَّذِينَ يَتَّبِعُونَ ٱلرَّسُولَ ٱلنَّبِيَّ ٱلۡأُمِّيَّ ٱلَّذِي يَجِدُونَهُۥ مَكۡتُوبًا عِندَهُمۡ فِي ٱلتَّوۡرَىٰةِ وَٱلۡإِنجِيلِ")
 
-                    Text("Moses told his people that God would raise up for them “a prophet from among their brethren, like unto you,“ and put His words in his mouth (Deuteronomy 18:18): the brethren of Israel are the children of Ishmael, and the prophet like Moses, with a law, a nation, and victory, is Muhammad (peace be upon him). The rabbi Abdullah ibn Salam recognised him on sight in Madinah, tested him with questions “that only a prophet knows,“ and declared, “I testify that you are the Messenger of Allah“ (Sahih al-Bukhari 3329).")
+                    Text("Moses told his people that God would raise up for them “a prophet from among their brethren, like unto you,“ and put His words in his mouth (Deuteronomy 18:18): Ibn Taymiyyah (al-Jawab as-Sahih) and Ibn al-Qayyim (Hidayat al-Hayara) read “their brethren“ as the children of Ishmael, and the prophet like Moses, with a law, a nation, and victory, as Muhammad (peace be upon him), since no Israelite prophet after Moses matched him in that. The rabbi Abdullah ibn Salam recognised him on sight in Madinah, tested him with questions “that only a prophet knows,“ and declared, “I testify that you are the Messenger of Allah“ (Sahih al-Bukhari 3329).")
                         .font(.body)
                 }
 
-                Section(header: Text("3. THE SCRIPTURE WAS CHANGED")) {
+                Section(header: ArticleHeader("3. THE SCRIPTURE WAS CHANGED")) {
                     ScriptureQuote(text: "“So for their breaking of the covenant We cursed them and made their hearts hard. They distort words from their [proper] usages and have forgotten a portion of that of which they were reminded” (Quran 5:13).", arabic: "فَبِمَا نَقۡضِهِم مِّيثَٰقَهُمۡ لَعَنَّٰهُمۡ وَجَعَلۡنَا قُلُوبَهُمۡ قَٰسِيَةٗۖ يُحَرِّفُونَ ٱلۡكَلِمَ عَن مَّوَاضِعِهِۦ وَنَسُواْ حَظّٗا مِّمَّا ذُكِّرُواْ بِهِۦۚ")
 
                     ScriptureQuote(text: "“So woe to those who write the ‘scripture’ with their own hands, then say, ‘This is from Allah,’ in order to exchange it for a small price” (Quran 2:79).", arabic: "فَوَيۡلٞ لِّلَّذِينَ يَكۡتُبُونَ ٱلۡكِتَٰبَ بِأَيۡدِيهِمۡ ثُمَّ يَقُولُونَ هَٰذَا مِنۡ عِندِ ٱللَّهِ لِيَشۡتَرُواْ بِهِۦ ثَمَنٗا قَلِيلٗاۖ")
 
-                    Text("The Torah of Moses was revelation; the text that exists today was written and edited over centuries by hands after him, as its own scholars acknowledge, and it contains the account of Moses’ death and burial. The Quran, by contrast, is guarded by Allah (Quran 15:9), memorised in full by millions, and unchanged since it was revealed.")
+                    Text("The Torah of Moses was revelation; the text that exists today was written down and transmitted by hands after him, as its own tradition concedes for its closing verses (Talmud, Bava Batra 15a) and as academic scholars of the text hold for much more, and it contains the account of Moses’ death and burial. The Quran, by contrast, is guarded by Allah (Quran 15:9), memorised in full by millions, and unchanged since it was revealed.")
                         .font(.body)
                 }
 
-                Section(header: Text("4. NO CHOSEN RACE")) {
+                Section(header: ArticleHeader("4. NO CHOSEN RACE")) {
                     Text("The Children of Israel were favoured with prophets and revelation, and the Quran says so (Quran 2:47). But favour is a trust, not a bloodline, and nobility before Allah is by faith and righteousness alone:")
                         .font(.body)
                     ScriptureQuote(text: "“O mankind, indeed We have created you from male and female and made you peoples and tribes that you may know one another. Indeed, the most noble of you in the sight of Allah is the most righteous of you” (Quran 49:13).", arabic: "يَٰٓأَيُّهَا ٱلنَّاسُ إِنَّا خَلَقۡنَٰكُم مِّن ذَكَرٖ وَأُنثَىٰ وَجَعَلۡنَٰكُمۡ شُعُوبٗا وَقَبَآئِلَ لِتَعَارَفُوٓاْۚ إِنَّ أَكۡرَمَكُمۡ عِندَ ٱللَّهِ أَتۡقَىٰكُمۡۚ")
@@ -1045,7 +1051,7 @@ struct JudaismAnswerView: View {
                     ScriptureQuote(text: "“Abraham was neither a Jew nor a Christian, but he was one inclining toward truth, a Muslim [submitting to Allah]. And he was not of the polytheists. Indeed, the most worthy of Abraham among the people are those who followed him [in submission to Allah] and this prophet, and those who believe [in his message]” (Quran 3:67-68).", arabic: "مَا كَانَ إِبۡرَٰهِيمُ يَهُودِيّٗا وَلَا نَصۡرَانِيّٗا وَلَٰكِن كَانَ حَنِيفٗا مُّسۡلِمٗا وَمَا كَانَ مِنَ ٱلۡمُشۡرِكِينَ ۝ إِنَّ أَوۡلَى ٱلنَّاسِ بِإِبۡرَٰهِيمَ لَلَّذِينَ ٱتَّبَعُوهُ وَهَٰذَا ٱلنَّبِيُّ وَٱلَّذِينَ ءَامَنُواْۗ وَٱللَّهُ وَلِيُّ ٱلۡمُؤۡمِنِينَ")
                 }
 
-                Section(header: Text("5. WHAT THE QURAN CONDEMNS AND WHAT IT DOES NOT")) {
+                Section(header: ArticleHeader("5. WHAT THE QURAN CONDEMNS AND WHAT IT DOES NOT")) {
                     Text("The Quran’s censure is of those who broke the covenant, killed the prophets, and concealed the truth, not of a people as such. It says of the People of the Scripture:")
                         .font(.body)
                     ScriptureQuote(text: "“They are not [all] the same; among the People of the Scripture is a community standing [in obedience], reciting the verses of Allah during periods of the night and prostrating [in prayer]. They believe in Allah and the Last Day, and they enjoin what is right and forbid what is wrong and hasten to good deeds. And those are among the righteous” (Quran 3:113-114).", arabic: "لَيۡسُواْ سَوَآءٗۗ مِّنۡ أَهۡلِ ٱلۡكِتَٰبِ أُمَّةٞ قَآئِمَةٞ يَتۡلُونَ ءَايَٰتِ ٱللَّهِ ءَانَآءَ ٱلَّيۡلِ وَهُمۡ يَسۡجُدُونَ ۝ يُؤۡمِنُونَ بِٱللَّهِ وَٱلۡيَوۡمِ ٱلۡأٓخِرِ وَيَأۡمُرُونَ بِٱلۡمَعۡرُوفِ وَيَنۡهَوۡنَ عَنِ ٱلۡمُنكَرِ وَيُسَٰرِعُونَ فِي ٱلۡخَيۡرَٰتِۖ وَأُوْلَٰٓئِكَ مِنَ ٱلصَّٰلِحِينَ")
@@ -1054,7 +1060,7 @@ struct JudaismAnswerView: View {
                         .font(.body)
                 }
 
-                Section(header: Text("COMMON QUESTIONS")) {
+                Section(header: ArticleHeader("COMMON QUESTIONS")) {
                     Text("**Do Muslims believe in Moses and the Torah?**")
                         .font(.body)
                     Text("Yes, as the ayah of faith in all the prophets (Quran 2:136, quoted above) and the Prophet’s fasting of Ashura for the deliverance of Musa (Sahih al-Bukhari 2004) show. Musa is one of the five messengers of firm resolve, and Allah honoured him by speaking to him directly:")
@@ -1088,9 +1094,9 @@ struct JudaismAnswerView: View {
                     ScriptureQuote(text: "“And indeed, among the People of the Scripture are those who believe in Allah and what was revealed to you and what was revealed to them, [being] humbly submissive to Allah. They do not exchange the verses of Allah for a small price. Those will have their reward with their Lord. Indeed, Allah is swift in account” (Quran 3:199).", arabic: "وَإِنَّ مِنۡ أَهۡلِ ٱلۡكِتَٰبِ لَمَن يُؤۡمِنُ بِٱللَّهِ وَمَآ أُنزِلَ إِلَيۡكُمۡ وَمَآ أُنزِلَ إِلَيۡهِمۡ خَٰشِعِينَ لِلَّهِ لَا يَشۡتَرُونَ بِـَٔايَٰتِ ٱللَّهِ ثَمَنٗا قَلِيلًاۚ أُوْلَٰٓئِكَ لَهُمۡ أَجۡرُهُمۡ عِندَ رَبِّهِمۡۗ إِنَّ ٱللَّهَ سَرِيعُ ٱلۡحِسَابِ")
                     Text("Even the ayah that describes the Jews of the Prophet’s time as the most hostile of people to the believers (Quran 5:82) is a report of conduct, not a verdict on descent, which is why the same Quran excepts those among them who believe (Quran 3:113-114). The Prophet’s own life settles the matter. Anas (may Allah be pleased with him) narrated:")
                         .font(.body)
-                    ScriptureQuote(text: "“A young Jewish boy used to serve the Prophet, and he became sick. So the Prophet went to visit him. He sat near his head and asked him to embrace Islam. The boy looked at his father, who was sitting there, and he told him to obey Abul-Qasim, and the boy embraced Islam. The Prophet came out saying, ‘Praise be to Allah who saved him from the Fire’” (Sahih al-Bukhari 1356).", arabic: "كَانَ غُلاَمٌ يَهُودِيٌّ يَخْدُمُ النَّبِيَّ صلى الله عليه وسلم فَمَرِضَ، فَأَتَاهُ النَّبِيُّ صلى الله عليه وسلم يَعُودُهُ، فَقَعَدَ عِنْدَ رَأْسِهِ فَقَالَ لَهُ أَسْلِمْ. فَنَظَرَ إِلَى أَبِيهِ وَهْوَ عِنْدَهُ فَقَالَ لَهُ أَطِعْ أَبَا الْقَاسِمِ صلى الله عليه وسلم. فَأَسْلَمَ، فَخَرَجَ النَّبِيُّ صلى الله عليه وسلم وَهْوَ يَقُولُ الْحَمْدُ لِلَّهِ الَّذِي أَنْقَذَهُ مِنَ النَّارِ", dimmed: true)
-                    ScriptureQuote(text: "“Allah’s Messenger died while his armour was mortgaged to a Jew for thirty sa‘ of barley” (Sahih al-Bukhari 2916).", arabic: "تُوُفِّيَ رَسُولُ اللَّهِ صلى الله عليه وسلم وَدِرْعُهُ مَرْهُونَةٌ عِنْدَ يَهُودِيٍّ بِثَلاَثِينَ صَاعًا مِنْ شَعِيرٍ", dimmed: true)
-                    ScriptureQuote(text: "“A funeral procession passed in front of the Prophet and he stood up. When he was told that it was the funeral of a Jew, he said, ‘Is it not a soul?’” (Sahih al-Bukhari 1312, Sahih Muslim 961).", arabic: "إِنَّ النَّبِيَّ صلى الله عليه وسلم مَرَّتْ بِهِ جَنَازَةٌ فَقَامَ فَقِيلَ لَهُ إِنَّهَا جَنَازَةُ يَهُودِيٍّ. فَقَالَ أَلَيْسَتْ نَفْسًا", dimmed: true)
+                    ScriptureQuote(text: "“A young Jewish boy used to serve the Prophet (ﷺ) and he became sick. So the Prophet (ﷺ) went to visit him. He sat near his head and asked him to embrace Islam. The boy looked at his father, who was sitting there; the latter told him to obey Abul-Qasim and the boy embraced Islam. The Prophet (ﷺ) came out saying: ‘Praises be to Allah Who saved the boy from the Hell-fire” (Sahih al-Bukhari 1356).", arabic: "كَانَ غُلاَمٌ يَهُودِيٌّ يَخْدُمُ النَّبِيَّ صلى الله عليه وسلم فَمَرِضَ، فَأَتَاهُ النَّبِيُّ صلى الله عليه وسلم يَعُودُهُ، فَقَعَدَ عِنْدَ رَأْسِهِ فَقَالَ لَهُ أَسْلِمْ. فَنَظَرَ إِلَى أَبِيهِ وَهْوَ عِنْدَهُ فَقَالَ لَهُ أَطِعْ أَبَا الْقَاسِمِ صلى الله عليه وسلم. فَأَسْلَمَ، فَخَرَجَ النَّبِيُّ صلى الله عليه وسلم وَهْوَ يَقُولُ الْحَمْدُ لِلَّهِ الَّذِي أَنْقَذَهُ مِنَ النَّارِ", dimmed: true)
+                    ScriptureQuote(text: "“Allah's Messenger (ﷺ) died while his (iron) armor was mortgaged to a Jew for thirty Sas of barley” (Sahih al-Bukhari 2916).", arabic: "تُوُفِّيَ رَسُولُ اللَّهِ صلى الله عليه وسلم وَدِرْعُهُ مَرْهُونَةٌ عِنْدَ يَهُودِيٍّ بِثَلاَثِينَ صَاعًا مِنْ شَعِيرٍ", dimmed: true)
+                    ScriptureQuote(text: "“A funeral procession passed in front of the Prophet (ﷺ) and he stood up. When he was told that it was the coffin of a Jew, he said, ‘Is it not a living being (soul)” (Sahih al-Bukhari 1312, Sahih Muslim 961).", arabic: "إِنَّ النَّبِيَّ صلى الله عليه وسلم مَرَّتْ بِهِ جَنَازَةٌ فَقَامَ فَقِيلَ لَهُ إِنَّهَا جَنَازَةُ يَهُودِيٍّ. فَقَالَ أَلَيْسَتْ نَفْسًا", dimmed: true)
                     Text("Safiyyah bint Huyayy (may Allah be pleased with her), a Mother of the Believers, was the daughter of the chief of Banu an-Nadir; the Prophet (peace be upon him) freed her and married her (Sahih al-Bukhari 371), and when Hafsah (may Allah be pleased with her) taunted her as “the daughter of a Jew“ he said:")
                         .font(.body)
                     ScriptureQuote(text: "“And you are the daughter of a Prophet, and your uncle is a Prophet, and you are married to a Prophet, so what is she boasting to you about?” (Sunan al-Tirmidhi 3894; graded sahih by al-Albani).", arabic: "إِنَّكِ لاَبْنَةُ نَبِيٍّ وَإِنَّ عَمَّكِ لَنَبِيٌّ وَإِنَّكِ لَتَحْتَ نَبِيٍّ فَفِيمَ تَفْخَرُ عَلَيْكِ", dimmed: true)
@@ -1118,7 +1124,7 @@ struct JudaismAnswerView: View {
                     ScriptureQuote(text: "“Those to whom We have given the Scripture recognize it as they recognize their [own] sons. Those who will lose themselves [in the Hereafter] do not believe” (Quran 6:20).", arabic: "ٱلَّذِينَ ءَاتَيۡنَٰهُمُ ٱلۡكِتَٰبَ يَعۡرِفُونَهُۥ كَمَا يَعۡرِفُونَ أَبۡنَآءَهُمُۘ ٱلَّذِينَ خَسِرُوٓاْ أَنفُسَهُمۡ فَهُمۡ لَا يُؤۡمِنُونَ")
                     Text("The cause the Quran names is envy that prophethood had passed from Bani Isra’il to the children of Isma‘il (Quran 2:90). The story of Abdullah ibn Salam (may Allah be pleased with him) shows it. Before announcing his Islam he asked the Prophet (peace be upon him) to question the Jews about him; they called him the best of them and the son of the best of them, and when he then declared his faith they called him the worst of them and the son of the worst (Sahih al-Bukhari 3938). The Prophet (peace be upon him) said:")
                         .font(.body)
-                    ScriptureQuote(text: "“Had ten of the Jews believed in me, the Jews would have believed in me” (Sahih al-Bukhari 3941).", arabic: "لَوْ آمَنَ بِي عَشَرَةٌ مِنَ الْيَهُودِ لآمَنَ بِي الْيَهُودُ", dimmed: true)
+                    ScriptureQuote(text: "“Had only ten Jews (amongst their chiefs) believe me, all the Jews would definitely have believed me” (Sahih al-Bukhari 3941).", arabic: "لَوْ آمَنَ بِي عَشَرَةٌ مِنَ الْيَهُودِ لآمَنَ بِي الْيَهُودُ", dimmed: true)
 
                     Text("**Is the Torah of today preserved?**")
                         .font(.body)
@@ -1133,8 +1139,8 @@ struct JudaismAnswerView: View {
                         .font(.body)
                     Text("Yes (Quran 7:157, quoted above). Abdullah ibn Amr (may Allah be pleased with them), who had read the earlier scriptures, was asked about the Prophet’s description in the Torah and answered:")
                         .font(.body)
-                    ScriptureQuote(text: "“O Prophet, We have sent you as a witness and a giver of glad tidings and a warner, and a guardian of the illiterates. You are My slave and My messenger; I have named you al-Mutawakkil. You are neither discourteous nor harsh, nor a noisemaker in the markets” (Sahih al-Bukhari 2125).", arabic: "يَا أَيُّهَا النَّبِيُّ إِنَّا أَرْسَلْنَاكَ شَاهِدًا وَمُبَشِّرًا وَنَذِيرًا، وَحِرْزًا لِلأُمِّيِّينَ، أَنْتَ عَبْدِي وَرَسُولِي سَمَّيْتُكَ الْمُتَوَكِّلَ، لَيْسَ بِفَظٍّ وَلاَ غَلِيظٍ وَلاَ سَخَّابٍ فِي الأَسْوَاقِ", dimmed: true)
-                    Text("In the Torah as it stands, Musa is promised a prophet “like unto“ himself from the “brethren“ of Israel (Deuteronomy 18:18), and the brethren of Israel are the children of Isma‘il, of whom Allah had promised Ibrahim twelve princes and a great nation (Genesis 17:20). The blessing of Musa says the Lord “came from Sinai, and rose up from Seir unto them; he shined forth from mount Paran“ (Deuteronomy 33:2): Sinai is the revelation to Musa, Seir the land of Isa, and Paran the wilderness where Isma‘il settled (Genesis 21:21), that is, the Hijaz. Isaiah 42 foretells a servant who brings law to the nations and calls on Kedar, the son of Isma‘il (Genesis 25:13), to sing a new song. Ibn al-Qayyim gathered these in Hidayat al-Hayara, and Ibn Taymiyyah in al-Jawab as-Sahih.")
+                    ScriptureQuote(text: "“O Prophet! We have sent you as a witness (for Allah's True religion) And a giver of glad tidings (to the faithful believers), And a warner (to the unbelievers) And guardian of the illiterates. You are My slave and My messenger (i.e. Apostle). I have named you ‘Al-Mutawakkil’ (who depends upon Allah). You are neither discourteous, harsh Nor a noisemaker in the markets” (Sahih al-Bukhari 2125).", arabic: "يَا أَيُّهَا النَّبِيُّ إِنَّا أَرْسَلْنَاكَ شَاهِدًا وَمُبَشِّرًا وَنَذِيرًا، وَحِرْزًا لِلأُمِّيِّينَ، أَنْتَ عَبْدِي وَرَسُولِي سَمَّيْتُكَ الْمُتَوَكِّلَ، لَيْسَ بِفَظٍّ وَلاَ غَلِيظٍ وَلاَ سَخَّابٍ فِي الأَسْوَاقِ", dimmed: true)
+                    Text("In the Torah as it stands, Musa is promised a prophet “like unto“ himself from the “brethren“ of Israel (Deuteronomy 18:18), which Ibn Taymiyyah and Ibn al-Qayyim read as the children of Isma‘il, of whom Allah had promised Ibrahim twelve princes and a great nation (Genesis 17:20). The blessing of Musa says the Lord “came from Sinai, and rose up from Seir unto them; he shined forth from mount Paran“ (Deuteronomy 33:2): Sinai is the revelation to Musa, Seir the land of Isa, and Paran the wilderness where Isma‘il settled (Genesis 21:21), that is, the Hijaz. Isaiah 42 foretells a servant who brings law to the nations and calls on Kedar, the son of Isma‘il (Genesis 25:13), to sing a new song. Ibn al-Qayyim gathered these in Hidayat al-Hayara, and Ibn Taymiyyah in al-Jawab as-Sahih.")
                         .font(.body)
 
                     Text("**Which son did Ibrahim take to sacrifice?**")
@@ -1175,11 +1181,11 @@ struct JudaismAnswerView: View {
                     Text("Whoever hears of Muhammad (peace be upon him) and rejects him is a disbeliever in the Quran’s terms, whatever his lineage, just as the Quran says of the Christians who call Allah one of three (Quran 5:73). Surat al-Bayyinah opens by naming “those who disbelieved among the People of the Scripture“ (Quran 98:1) and states their end:")
                         .font(.body)
                     ScriptureQuote(text: "“Indeed, they who disbelieved among the People of the Scripture and the polytheists will be in the fire of Hell, abiding eternally therein. Those are the worst of creatures” (Quran 98:6).", arabic: "إِنَّ ٱلَّذِينَ كَفَرُواْ مِنۡ أَهۡلِ ٱلۡكِتَٰبِ وَٱلۡمُشۡرِكِينَ فِي نَارِ جَهَنَّمَ خَٰلِدِينَ فِيهَآۚ أُوْلَٰٓئِكَ هُمۡ شَرُّ ٱلۡبَرِيَّةِ")
-                    ScriptureQuote(text: "“By Him in whose hand is the life of Muhammad, he who among the community of Jews or Christians hears about me but does not affirm his belief in that with which I have been sent, and dies in this state, shall be but one of the denizens of Hellfire” (Sahih Muslim 153).", arabic: "وَالَّذِي نَفْسُ مُحَمَّدٍ بِيَدِهِ لاَ يَسْمَعُ بِي أَحَدٌ مِنْ هَذِهِ الأُمَّةِ يَهُودِيٌّ وَلاَ نَصْرَانِيٌّ ثُمَّ يَمُوتُ وَلَمْ يُؤْمِنْ بِالَّذِي أُرْسِلْتُ بِهِ إِلاَّ كَانَ مِنْ أَصْحَابِ النَّارِ", dimmed: true)
+                    ScriptureQuote(text: "“By Him in Whose hand is the life of Muhammad, he who amongst the community of Jews or Christians hears about me, but does not affirm his belief in that with which I have been sent and dies in this state (of disbelief), he shall be but one of the denizens of Hell-Fire” (Sahih Muslim 153).", arabic: "وَالَّذِي نَفْسُ مُحَمَّدٍ بِيَدِهِ لاَ يَسْمَعُ بِي أَحَدٌ مِنْ هَذِهِ الأُمَّةِ يَهُودِيٌّ وَلاَ نَصْرَانِيٌّ ثُمَّ يَمُوتُ وَلَمْ يُؤْمِنْ بِالَّذِي أُرْسِلْتُ بِهِ إِلاَّ كَانَ مِنْ أَصْحَابِ النَّارِ", dimmed: true)
                     Text("Judgement of individuals belongs to Allah, who does not punish anyone the message never reached (Quran 17:15). What is owed to them in this world is justice, kindness where there is no war (Quran 60:8, quoted above), the honouring of treaties, and the protection of their lives and property:")
                         .font(.body)
                     ScriptureQuote(text: "“O you who have believed, be persistently standing firm for Allah, witnesses in justice, and do not let the hatred of a people prevent you from being just. Be just; that is nearer to righteousness. And fear Allah; indeed, Allah is Acquainted with what you do” (Quran 5:8).", arabic: "يَٰٓأَيُّهَا ٱلَّذِينَ ءَامَنُواْ كُونُواْ قَوَّٰمِينَ لِلَّهِ شُهَدَآءَ بِٱلۡقِسۡطِۖ وَلَا يَجۡرِمَنَّكُمۡ شَنَـَٔانُ قَوۡمٍ عَلَىٰٓ أَلَّا تَعۡدِلُواْۚ ٱعۡدِلُواْ هُوَ أَقۡرَبُ لِلتَّقۡوَىٰۖ وَٱتَّقُواْ ٱللَّهَۚ إِنَّ ٱللَّهَ خَبِيرُۢ بِمَا تَعۡمَلُونَ")
-                    ScriptureQuote(text: "“Whoever kills a person having a treaty with the Muslims shall not smell the fragrance of Paradise, though its fragrance is perceived from a distance of forty years” (Sahih al-Bukhari 3166).", arabic: "مَنْ قَتَلَ مُعَاهَدًا لَمْ يَرَحْ رَائِحَةَ الْجَنَّةِ، وَإِنَّ رِيحَهَا تُوجَدُ مِنْ مَسِيرَةِ أَرْبَعِينَ عَامًا", dimmed: true)
+                    ScriptureQuote(text: "“Whoever killed a person having a treaty with the Muslims, shall not smell the smell of Paradise though its smell is perceived from a distance of forty years” (Sahih al-Bukhari 3166).", arabic: "مَنْ قَتَلَ مُعَاهَدًا لَمْ يَرَحْ رَائِحَةَ الْجَنَّةِ، وَإِنَّ رِيحَهَا تُوجَدُ مِنْ مَسِيرَةِ أَرْبَعِينَ عَامًا", dimmed: true)
                     Text("Umar (may Allah be pleased with him) made fulfilling Allah’s covenant with the People of the Scripture part of his final advice (Sahih al-Bukhari 3162, mentioned above).")
                         .font(.body)
 
@@ -1199,24 +1205,24 @@ struct JudaismAnswerView: View {
                     ScriptureQuote(text: "“And [mention] when Jesus, the son of Mary, said, ‘O children of Israel, indeed I am the messenger of Allah to you confirming what came before me of the Torah and bringing good tidings of a messenger to come after me, whose name is Ahmad.’ But when he came to them with clear evidences, they said, ‘This is obvious magic’” (Quran 61:6).", arabic: "وَإِذۡ قَالَ عِيسَى ٱبۡنُ مَرۡيَمَ يَٰبَنِيٓ إِسۡرَٰٓءِيلَ إِنِّي رَسُولُ ٱللَّهِ إِلَيۡكُم مُّصَدِّقٗا لِّمَا بَيۡنَ يَدَيَّ مِنَ ٱلتَّوۡرَىٰةِ وَمُبَشِّرَۢا بِرَسُولٖ يَأۡتِي مِنۢ بَعۡدِي ٱسۡمُهُۥٓ أَحۡمَدُۖ فَلَمَّا جَآءَهُم بِٱلۡبَيِّنَٰتِ قَالُواْ هَٰذَا سِحۡرٞ مُّبِينٞ")
                     Text("The one who will come claiming to be the awaited Messiah is the Dajjal, of whom every prophet warned his people:")
                         .font(.body)
-                    ScriptureQuote(text: "“No prophet was sent but that he warned his followers against the one-eyed liar. Beware! He is blind in one eye, and your Lord is not so, and there will be written between his eyes ‘kafir’” (Sahih al-Bukhari 7131).", arabic: "مَا بُعِثَ نَبِيٌّ إِلاَّ أَنْذَرَ أُمَّتَهُ الأَعْوَرَ الْكَذَّابَ، أَلاَ إِنَّهُ أَعْوَرُ، وَإِنَّ رَبَّكُمْ لَيْسَ بِأَعْوَرَ، وَإِنَّ بَيْنَ عَيْنَيْهِ مَكْتُوبٌ كَافِرٌ", dimmed: true)
+                    ScriptureQuote(text: "“No prophet was sent but that he warned his followers against the one-eyed liar (Ad-Dajjal). Beware! He is blind in one eye, and your Lord is not so, and there will be written between his (Ad-Dajjal's) eyes (the word) Kafir (i.e., disbeliever)” (Sahih al-Bukhari 7131).", arabic: "مَا بُعِثَ نَبِيٌّ إِلاَّ أَنْذَرَ أُمَّتَهُ الأَعْوَرَ الْكَذَّابَ، أَلاَ إِنَّهُ أَعْوَرُ، وَإِنَّ رَبَّكُمْ لَيْسَ بِأَعْوَرَ، وَإِنَّ بَيْنَ عَيْنَيْهِ مَكْتُوبٌ كَافِرٌ", dimmed: true)
                     Text("Then the true Messiah will return (Sahih al-Bukhari 3448, Sahih Muslim 155), and those who have waited for a Messiah will find him to be the one their fathers rejected.")
                         .font(.body)
                 }
 
-                Section(header: Text("THE INVITATION")) {
+                Section(header: ArticleHeader("THE INVITATION")) {
                     ScriptureQuote(text: "“Say, ‘O People of the Scripture, come to a word that is equitable between us and you - that we will not worship except Allah and not associate anything with Him and not take one another as lords instead of Allah’” (Quran 3:64).", arabic: "قُلۡ يَٰٓأَهۡلَ ٱلۡكِتَٰبِ تَعَالَوۡاْ إِلَىٰ كَلِمَةٖ سَوَآءِۭ بَيۡنَنَا وَبَيۡنَكُمۡ أَلَّا نَعۡبُدَ إِلَّا ٱللَّهَ وَلَا نُشۡرِكَ بِهِۦ شَيۡـٔٗا وَلَا يَتَّخِذَ بَعۡضُنَا بَعۡضًا أَرۡبَابٗا مِّن دُونِ ٱللَّهِۚ")
 
                     Text("The God of Abraham, Isaac, Jacob, and Moses is Allah, and the religion they brought was submission to Him. The Muslim invites the Jew to the last prophet of that same line, foretold by Moses, and to the Book that confirms the truth of what came before it.")
                         .font(.body)
                 }
 
-                Section(header: Text("IN SUMMARY")) {
+                Section(header: ArticleHeader("IN SUMMARY")) {
                     Text("Islam honours Moses and the Torah, and asks the Children of Israel to keep the covenant they gave: to believe in the messengers who came after him, whom their own scripture foretold, and to worship the God of Abraham as Abraham did.")
                         .font(.body)
                 }
 
-                Section(header: Text("KEY TERMS")) {
+                Section(header: ArticleHeader("KEY TERMS")) {
                     Text("**Yahud (اليَهُود)**: the Jews. Ibn Kathir (may Allah have mercy on him), in his tafsir of 2:62, relates that the name comes from **hada (هَادَ)**, to return and repent, from the words of Musa’s people, “inna hudna ilayk“ (indeed, we have turned back to You); the commentators also mention **Yahudha (يَهُوذَا)**, Judah, the son of Ya‘qub whose tribe gave its name to the kingdom of Judah and then to the whole people:")
                         .font(.body)
                     ScriptureQuote(text: "“And decree for us in this world [that which is] good and [also] in the Hereafter; indeed, we have turned back to You” (Quran 7:156).", arabic: "وَٱكۡتُبۡ لَنَا فِي هَٰذِهِ ٱلدُّنۡيَا حَسَنَةٗ وَفِي ٱلۡأٓخِرَةِ إِنَّا هُدۡنَآ إِلَيۡكَۚ")
@@ -1250,7 +1256,7 @@ struct JudaismAnswerView: View {
                     ScriptureQuote(text: "“The sabbath was only appointed for those who differed over it. And indeed, your Lord will judge between them on the Day of Resurrection concerning that over which they used to differ” (Quran 16:124).", arabic: "إِنَّمَا جُعِلَ ٱلسَّبۡتُ عَلَى ٱلَّذِينَ ٱخۡتَلَفُواْ فِيهِۚ وَإِنَّ رَبَّكَ لَيَحۡكُمُ بَيۡنَهُمۡ يَوۡمَ ٱلۡقِيَٰمَةِ فِيمَا كَانُواْ فِيهِ يَخۡتَلِفُونَ")
                     Text("The Prophet (peace be upon him) said:")
                         .font(.body)
-                    ScriptureQuote(text: "“We are the last but will be the foremost on the Day of Resurrection, though the former nations were given the Scriptures before us. And this was their day, which was made obligatory for them, but they differed about it. So Allah guided us to it, and all the other people are behind us in this respect: the Jews’ is tomorrow and the Christians’ the day after tomorrow” (Sahih al-Bukhari 876).", arabic: "نَحْنُ الآخِرُونَ السَّابِقُونَ يَوْمَ الْقِيَامَةِ، بَيْدَ أَنَّهُمْ أُوتُوا الْكِتَابَ مِنْ قَبْلِنَا، ثُمَّ هَذَا يَوْمُهُمُ الَّذِي فُرِضَ عَلَيْهِمْ فَاخْتَلَفُوا فِيهِ، فَهَدَانَا اللَّهُ، فَالنَّاسُ لَنَا فِيهِ تَبَعٌ، الْيَهُودُ غَدًا وَالنَّصَارَى بَعْدَ غَدٍ", dimmed: true)
+                    ScriptureQuote(text: "“We (Muslims) are the last (to come) but (will be) the foremost on the Day of Resurrection though the former nations were given the Holy Scriptures before us. And this was their day (Friday) the celebration of which was made compulsory for them but they differed about it. So Allah gave us the guidance for it (Friday) and all the other people are behind us in this respect: the Jews' (holy day is) tomorrow (i.e. Saturday) and the Christians' (is) the day after tomorrow (i.e. Sunday)” (Sahih al-Bukhari 876).", arabic: "نَحْنُ الآخِرُونَ السَّابِقُونَ يَوْمَ الْقِيَامَةِ، بَيْدَ أَنَّهُمْ أُوتُوا الْكِتَابَ مِنْ قَبْلِنَا، ثُمَّ هَذَا يَوْمُهُمُ الَّذِي فُرِضَ عَلَيْهِمْ فَاخْتَلَفُوا فِيهِ، فَهَدَانَا اللَّهُ، فَالنَّاسُ لَنَا فِيهِ تَبَعٌ، الْيَهُودُ غَدًا وَالنَّصَارَى بَعْدَ غَدٍ", dimmed: true)
                     Text("Islam’s day is Friday, a day of congregational prayer, not of rest.")
                         .font(.body)
 
@@ -1287,11 +1293,15 @@ struct JudaismAnswerView: View {
 
                     Text("**Isra’iliyyat (الإِسْرَائِيلِيَّات)**: reports taken from Jewish sources that found their way into the books of tafsir and history. The Prophet (peace be upon him) permitted narrating them and forbade taking them as truth:")
                         .font(.body)
-                    ScriptureQuote(text: "“Convey from me even a single ayah, and narrate from Bani Isra’il, for there is no harm in that; and whoever tells a lie on me intentionally will surely take his place in the Fire” (Sahih al-Bukhari 3461).", arabic: "بَلِّغُوا عَنِّي وَلَوْ آيَةً، وَحَدِّثُوا عَنْ بَنِي إِسْرَائِيلَ وَلاَ حَرَجَ، وَمَنْ كَذَبَ عَلَىَّ مُتَعَمِّدًا فَلْيَتَبَوَّأْ مَقْعَدَهُ مِنَ النَّارِ", dimmed: true)
-                    ScriptureQuote(text: "“Do not believe the People of the Scripture and do not disbelieve them, but say, ‘We believe in Allah and what is revealed to us’” (Sahih al-Bukhari 4485).", arabic: "لاَ تُصَدِّقُوا أَهْلَ الْكِتَابِ وَلاَ تُكَذِّبُوهُمْ، وَقُولُوا آمَنَّا بِاللَّهِ وَمَا أُنْزِلَ الآيَةَ", dimmed: true)
+                    ScriptureQuote(text: "“Convey (my teachings) to the people even if it were a single sentence, and tell others the stories of Bani Israel (which have been taught to you), for it is not sinful to do so. And whoever tells a lie on me intentionally, will surely take his place in the (Hell) Fire” (Sahih al-Bukhari 3461).", arabic: "بَلِّغُوا عَنِّي وَلَوْ آيَةً، وَحَدِّثُوا عَنْ بَنِي إِسْرَائِيلَ وَلاَ حَرَجَ، وَمَنْ كَذَبَ عَلَىَّ مُتَعَمِّدًا فَلْيَتَبَوَّأْ مَقْعَدَهُ مِنَ النَّارِ", dimmed: true)
+                    ScriptureQuote(text: "“Do not believe the people of the Scripture or disbelieve them, but say:-- ‘We believe in Allah and what is revealed to us” (Sahih al-Bukhari 4485).", arabic: "لاَ تُصَدِّقُوا أَهْلَ الْكِتَابِ وَلاَ تُكَذِّبُوهُمْ، وَقُولُوا آمَنَّا بِاللَّهِ وَمَا أُنْزِلَ الآيَةَ", dimmed: true)
                     Text("Ibn Kathir set out the rule in the introduction to his tafsir: what the Quran and Sunnah confirm is accepted, what they contradict is rejected, and what they are silent about is neither believed nor denied, and it is not narrated as religion.")
                         .font(.body)
                 }
+
+                ArticleSourcesSection(article: "JudaismAnswerView")
+
+                ArticleSourcesSection(article: "HinduismAnswerView")
             }
             .themedListRowBackground()
         }
@@ -1306,12 +1316,12 @@ struct HinduismAnswerView: View {
     var body: some View {
         List {
             Group {
-                Section(header: Text("SUMMARY")) {
+                Section(header: ArticleHeader("SUMMARY")) {
                     Text("In short: Hinduism worships many gods through images and teaches rebirth and caste. The Quran answers with the argument of Ibrahim against idols, the oneness of the Creator, the resurrection instead of reincarnation, and the equality of all people before Allah.")
                         .font(.body)
                 }
 
-                Section(header: Text("WHAT HINDUISM TEACHES")) {
+                Section(header: ArticleHeader("WHAT HINDUISM TEACHES")) {
                     Text("Hinduism is not one creed but a family of traditions from India. Most Hindus worship many deities (Brahma, Vishnu, Shiva, Krishna, Rama, Ganesha, Durga, and others) through **murtis**, images and statues, in temples and homes; many also speak of one supreme reality, **Brahman**, behind them all, and some hold that the deities are its faces. Central are **karma** and **samsara**, the cycle of rebirth in which the soul returns in a new body according to its deeds, and the ordering of society into hereditary **castes**.")
                         .font(.body)
 
@@ -1319,7 +1329,7 @@ struct HinduismAnswerView: View {
                         .font(.body)
                 }
 
-                Section(header: Text("1. THE ARGUMENT OF IBRAHIM")) {
+                Section(header: ArticleHeader("1. THE ARGUMENT OF IBRAHIM")) {
                     Text("Ibrahim (peace be upon him) grew up among a people who carved and worshipped images, and the Quran records his challenge:")
                         .font(.body)
                     ScriptureQuote(text: "“When he said to his father and his people, ‘What are these statues to which you are devoted?’ They said, ‘We found our fathers worshippers of them.’ He said, ‘You were certainly, you and your fathers, in manifest error’” (Quran 21:52-54).", arabic: "إِذۡ قَالَ لِأَبِيهِ وَقَوۡمِهِۦ مَا هَٰذِهِ ٱلتَّمَاثِيلُ ٱلَّتِيٓ أَنتُمۡ لَهَا عَٰكِفُونَ ۝ قَالُواْ وَجَدۡنَآ ءَابَآءَنَا لَهَا عَٰبِدِينَ ۝ قَالَ لَقَدۡ كُنتُمۡ أَنتُمۡ وَءَابَآؤُكُمۡ فِي ضَلَٰلٖ مُّبِينٖ")
@@ -1331,7 +1341,7 @@ struct HinduismAnswerView: View {
                     ScriptureQuote(text: "“And when it is said to them, ‘Follow what Allah has revealed,’ they say, ‘Rather, we will follow that which we found our fathers doing.’ Even though their fathers understood nothing, nor were they guided?” (Quran 2:170).", arabic: "وَإِذَا قِيلَ لَهُمُ ٱتَّبِعُواْ مَآ أَنزَلَ ٱللَّهُ قَالُواْ بَلۡ نَتَّبِعُ مَآ أَلۡفَيۡنَا عَلَيۡهِ ءَابَآءَنَآۚ أَوَلَوۡ كَانَ ءَابَآؤُهُمۡ لَا يَعۡقِلُونَ شَيۡـٔٗا وَلَا يَهۡتَدُونَ")
                 }
 
-                Section(header: Text("2. THE CREATOR IS ONE, AND HAS NO IMAGE")) {
+                Section(header: ArticleHeader("2. THE CREATOR IS ONE, AND HAS NO IMAGE")) {
                     ScriptureQuote(text: "“Had there been within the heavens and earth gods besides Allah, they both would have been ruined. So exalted is Allah, Lord of the Throne, above what they describe” (Quran 21:22).", arabic: "لَوۡ كَانَ فِيهِمَآ ءَالِهَةٌ إِلَّا ٱللَّهُ لَفَسَدَتَاۚ فَسُبۡحَٰنَ ٱللَّهِ رَبِّ ٱلۡعَرۡشِ عَمَّا يَصِفُونَ")
 
                     ScriptureQuote(text: "“O people, an example is presented, so listen to it. Indeed, those you invoke besides Allah will never create [as much as] a fly, even if they gathered together for that purpose. And if the fly should steal away from them a [tiny] thing, they could not recover it from him. Weak are the pursuer and pursued” (Quran 22:73).", arabic: "يَٰٓأَيُّهَا ٱلنَّاسُ ضُرِبَ مَثَلٞ فَٱسۡتَمِعُواْ لَهُۥٓۚ إِنَّ ٱلَّذِينَ تَدۡعُونَ مِن دُونِ ٱللَّهِ لَن يَخۡلُقُواْ ذُبَابٗا وَلَوِ ٱجۡتَمَعُواْ لَهُۥۖ وَإِن يَسۡلُبۡهُمُ ٱلذُّبَابُ شَيۡـٔٗا لَّا يَسۡتَنقِذُوهُ مِنۡهُۚ ضَعُفَ ٱلطَّالِبُ وَٱلۡمَطۡلُوبُ")
@@ -1346,7 +1356,7 @@ struct HinduismAnswerView: View {
                         .font(.body)
                 }
 
-                Section(header: Text("3. RESURRECTION, NOT REBIRTH")) {
+                Section(header: ArticleHeader("3. RESURRECTION, NOT REBIRTH")) {
                     Text("There is no cycle of rebirth. Each soul lives once, dies once, and is raised once to be judged, with full justice and no forgetting:")
                         .font(.body)
                     ScriptureQuote(text: "“[For such is the state of the disbelievers], until, when death comes to one of them, he says, ‘My Lord, send me back that I might do righteousness in that which I left behind.’ No! It is only a word he is saying; and behind them is a barrier until the Day they are resurrected” (Quran 23:99-100).", arabic: "حَتَّىٰٓ إِذَا جَآءَ أَحَدَهُمُ ٱلۡمَوۡتُ قَالَ رَبِّ ٱرۡجِعُونِ ۝ لَعَلِّيٓ أَعۡمَلُ صَٰلِحٗا فِيمَا تَرَكۡتُۚ كـَلَّآۚ إِنَّهَا كَلِمَةٌ هُوَ قَآئِلُهَاۖ وَمِن وَرَآئِهِم بَرۡزَخٌ إِلَىٰ يَوۡمِ يُبۡعَثُونَ")
@@ -1359,7 +1369,7 @@ struct HinduismAnswerView: View {
                         .font(.body)
                 }
 
-                Section(header: Text("4. NO CASTE BEFORE ALLAH")) {
+                Section(header: ArticleHeader("4. NO CASTE BEFORE ALLAH")) {
                     ScriptureQuote(text: "“O mankind, indeed We have created you from male and female and made you peoples and tribes that you may know one another. Indeed, the most noble of you in the sight of Allah is the most righteous of you. Indeed, Allah is Knowing and Acquainted” (Quran 49:13).", arabic: "يَٰٓأَيُّهَا ٱلنَّاسُ إِنَّا خَلَقۡنَٰكُم مِّن ذَكَرٖ وَأُنثَىٰ وَجَعَلۡنَٰكُمۡ شُعُوبٗا وَقَبَآئِلَ لِتَعَارَفُوٓاْۚ إِنَّ أَكۡرَمَكُمۡ عِندَ ٱللَّهِ أَتۡقَىٰكُمۡۚ إِنَّ ٱللَّهَ عَلِيمٌ خَبِيرٞ")
 
                     ScriptureQuote(text: "“And We have certainly honored the children of Adam and carried them on the land and sea and provided for them of the good things and preferred them over much of what We have created, with [definite] preference” (Quran 17:70).", arabic: "وَلَقَدۡ كَرَّمۡنَا بَنِيٓ ءَادَمَ وَحَمَلۡنَٰهُمۡ فِي ٱلۡبَرِّ وَٱلۡبَحۡرِ وَرَزَقۡنَٰهُم مِّنَ ٱلطَّيِّبَٰتِ وَفَضَّلۡنَٰهُمۡ عَلَىٰ كَثِيرٖ مِّمَّنۡ خَلَقۡنَا تَفۡضِيلٗا")
@@ -1368,7 +1378,7 @@ struct HinduismAnswerView: View {
                         .font(.body)
                 }
 
-                Section(header: Text("COMMON QUESTIONS")) {
+                Section(header: ArticleHeader("COMMON QUESTIONS")) {
                     Text("**Do Hindus and Muslims worship the same God?**")
                         .font(.body)
                     Text("There is only one Creator, and whoever turns to the Maker of the heavens and the earth is turning to Him; the Quran told the Muslims to say to the People of the Scripture:")
@@ -1424,7 +1434,7 @@ struct HinduismAnswerView: View {
                     ScriptureQuote(text: "“Allah has not appointed [such innovations as] bahirah or sa'ibah or wasilah or ham. But those who disbelieve invent falsehood about Allah” (Quran 5:103).", arabic: "مَا جَعَلَ ٱللَّهُ مِنۢ بَحِيرَةٖ وَلَا سَآئِبَةٖ وَلَا وَصِيلَةٖ وَلَا حَامٖ وَلَٰكِنَّ ٱلَّذِينَ كَفَرُواْ يَفۡتَرُونَ عَلَى ٱللَّهِ ٱلۡكَذِبَۖ")
                     Text("The Prophet (peace be upon him) himself sacrificed cows. Aishah (may Allah be pleased with her) said of the Farewell Hajj:")
                         .font(.body)
-                    ScriptureQuote(text: "“On the day of Nahr beef was brought to us. I asked, ‘What is this?’ The reply was, ‘Allah’s Messenger (peace be upon him) has slaughtered on behalf of his wives’” (Sahih al-Bukhari 1709).", arabic: "فَدُخِلَ عَلَيْنَا يَوْمَ النَّحْرِ بِلَحْمِ بَقَرٍ. فَقُلْتُ مَا هَذَا قَالَ نَحَرَ رَسُولُ اللَّهِ صلى الله عليه وسلم عَنْ أَزْوَاجِهِ", dimmed: true)
+                    ScriptureQuote(text: "“On the day of Nahr (slaughtering of sacrifice) beef was brought to us. I asked, 'What is this?' The reply was, 'Allah's Apostle (p.b.u.h) has slaughtered (sacrifices) on behalf of his wives” (Sahih al-Bukhari 1709).", arabic: "فَدُخِلَ عَلَيْنَا يَوْمَ النَّحْرِ بِلَحْمِ بَقَرٍ. فَقُلْتُ مَا هَذَا قَالَ نَحَرَ رَسُولُ اللَّهِ صلى الله عليه وسلم عَنْ أَزْوَاجِهِ", dimmed: true)
                     Text("The Quran also records two warnings about sanctifying an animal: the calf that Bani Isra’il worshipped in Musa’s absence, of which Allah said:")
                         .font(.body)
                     ScriptureQuote(text: "“And he extracted for them [the statue of] a calf which had a lowing sound, and they said, ‘This is your god and the god of Moses, but he forgot.’ Did they not see that it could not return to them any speech and that it did not possess for them any harm or benefit?” (Quran 20:88-89).", arabic: "فَأَخۡرَجَ لَهُمۡ عِجۡلٗا جَسَدٗا لَّهُۥ خُوَارٞ فَقَالُواْ هَٰذَآ إِلَٰهُكُمۡ وَإِلَٰهُ مُوسَىٰ فَنَسِيَ ۝ أَفَلَا يَرَوۡنَ أَلَّا يَرۡجِعُ إِلَيۡهِمۡ قَوۡلٗا وَلَا يَمۡلِكُ لَهُمۡ ضَرّٗا وَلَا نَفۡعٗا")
@@ -1464,7 +1474,7 @@ struct HinduismAnswerView: View {
                     ScriptureQuote(text: "“And We have not sent you, [O Muhammad], except as a mercy to the worlds” (Quran 21:107).", arabic: "وَمَآ أَرۡسَلۡنَٰكَ إِلَّا رَحۡمَةٗ لِّلۡعَٰلَمِينَ")
                     Text("Among the Companions were an Abyssinian, a Persian, and a Roman. When Surat al-Jumu‘ah was revealed and Abu Hurayrah asked who the “others” not yet joined to the Arabs were, the Prophet (peace be upon him) put his hand on Salman al-Farisi and said:")
                         .font(.body)
-                    ScriptureQuote(text: "“If faith were at the Pleiades, men, or a man, from these people would attain it” (Sahih al-Bukhari 4897).", arabic: "لَوْ كَانَ الإِيمَانُ عِنْدَ الثُّرَيَّا لَنَالَهُ رِجَالٌ ـ أَوْ رَجُلٌ ـ مِنْ هَؤُلاَءِ", dimmed: true)
+                    ScriptureQuote(text: "“If Faith were at (the place of) Ath-Thuraiya (pleiades, the highest star), even then (some men or man from these people (i.e. Salman's folk) would attain it” (Sahih al-Bukhari 4897).", arabic: "لَوْ كَانَ الإِيمَانُ عِنْدَ الثُّرَيَّا لَنَالَهُ رِجَالٌ ـ أَوْ رَجُلٌ ـ مِنْ هَؤُلاَءِ", dimmed: true)
                     Text("Muhammad ibn al-Qasim entered Sindh in 92-93 AH (711-712 CE), within a century of the Hijrah (al-Baladhuri, Futuh al-Buldan), and today more Muslims live in South Asia than in all the Arab lands together. A religion is not judged by the land it started in but by whether it is true; Ibrahim, Musa, and Isa (peace be upon them) were none of them Indian, and the truth they brought was for every land.")
                         .font(.body)
 
@@ -1487,7 +1497,7 @@ struct HinduismAnswerView: View {
                     ScriptureQuote(text: "“He is Allah, other than whom there is no deity, Knower of the unseen and the witnessed. He is the Entirely Merciful, the Especially Merciful. He is Allah, other than whom there is no deity, the Sovereign, the Pure, the Perfection, the Bestower of Faith, the Overseer, the Exalted in Might, the Compeller, the Superior. Exalted is Allah above whatever they associate with Him. He is Allah, the Creator, the Inventor, the Fashioner; to Him belong the best names. Whatever is in the heavens and earth is exalting Him. And He is the Exalted in Might, the Wise” (Quran 59:22-24).", arabic: "هُوَ ٱللَّهُ ٱلَّذِي لَآ إِلَٰهَ إِلَّا هُوَۖ عَٰلِمُ ٱلۡغَيۡبِ وَٱلشَّهَٰدَةِۖ هُوَ ٱلرَّحۡمَٰنُ ٱلرَّحِيمُ ۝ هُوَ ٱللَّهُ ٱلَّذِي لَآ إِلَٰهَ إِلَّا هُوَ ٱلۡمَلِكُ ٱلۡقُدُّوسُ ٱلسَّلَٰمُ ٱلۡمُؤۡمِنُ ٱلۡمُهَيۡمِنُ ٱلۡعَزِيزُ ٱلۡجَبَّارُ ٱلۡمُتَكَبِّرُۚ سُبۡحَٰنَ ٱللَّهِ عَمَّا يُشۡرِكُونَ ۝ هُوَ ٱللَّهُ ٱلۡخَٰلِقُ ٱلۡبَارِئُ ٱلۡمُصَوِّرُۖ لَهُ ٱلۡأَسۡمَآءُ ٱلۡحُسۡنَىٰۚ يُسَبِّحُ لَهُۥ مَا فِي ٱلسَّمَٰوَٰتِ وَٱلۡأَرۡضِۖ وَهُوَ ٱلۡعَزِيزُ ٱلۡحَكِيمُ")
                     Text("He is One without parts or equal (Quran 112), nothing is like Him (Quran 42:11), and He is near to whoever calls Him (Quran 2:186). In a hadith qudsi He says:")
                         .font(.body)
-                    ScriptureQuote(text: "“I am just as My slave thinks I am, and I am with him if he remembers Me. If he remembers Me in himself, I too remember him in Myself; and if he remembers Me in a group of people, I remember him in a group that is better than they; and if he comes one span nearer to Me, I go one cubit nearer to him; and if he comes one cubit nearer to Me, I go a distance of two outstretched arms nearer to him; and if he comes to Me walking, I go to him running” (Sahih al-Bukhari 7405).", arabic: "أَنَا عِنْدَ ظَنِّ عَبْدِي بِي، وَأَنَا مَعَهُ إِذَا ذَكَرَنِي، فَإِنْ ذَكَرَنِي فِي نَفْسِهِ ذَكَرْتُهُ فِي نَفْسِي، وَإِنْ ذَكَرَنِي فِي مَلأٍ ذَكَرْتُهُ فِي مَلأٍ خَيْرٍ مِنْهُمْ، وَإِنْ تَقَرَّبَ إِلَىَّ بِشِبْرٍ تَقَرَّبْتُ إِلَيْهِ ذِرَاعًا، وَإِنْ تَقَرَّبَ إِلَىَّ ذِرَاعًا تَقَرَّبْتُ إِلَيْهِ بَاعًا، وَإِنْ أَتَانِي يَمْشِي أَتَيْتُهُ هَرْوَلَةً", dimmed: true)
+                    ScriptureQuote(text: "“'I am just as My slave thinks I am, (i.e. I am able to do for him what he thinks I can do for him) and I am with him if He remembers Me. If he remembers Me in himself, I too, remember him in Myself; and if he remembers Me in a group of people, I remember him in a group that is better than they; and if he comes one span nearer to Me, I go one cubit nearer to him; and if he comes one cubit nearer to Me, I go a distance of two outstretched arms nearer to him; and if he comes to Me walking, I go to him running” (Sahih al-Bukhari 7405).", arabic: "أَنَا عِنْدَ ظَنِّ عَبْدِي بِي، وَأَنَا مَعَهُ إِذَا ذَكَرَنِي، فَإِنْ ذَكَرَنِي فِي نَفْسِهِ ذَكَرْتُهُ فِي نَفْسِي، وَإِنْ ذَكَرَنِي فِي مَلأٍ ذَكَرْتُهُ فِي مَلأٍ خَيْرٍ مِنْهُمْ، وَإِنْ تَقَرَّبَ إِلَىَّ بِشِبْرٍ تَقَرَّبْتُ إِلَيْهِ ذِرَاعًا، وَإِنْ تَقَرَّبَ إِلَىَّ ذِرَاعًا تَقَرَّبْتُ إِلَيْهِ بَاعًا، وَإِنْ أَتَانِي يَمْشِي أَتَيْتُهُ هَرْوَلَةً", dimmed: true)
                     Text("An impersonal absolute cannot love you, hear you, or forgive you. Allah does all three.")
                         .font(.body)
 
@@ -1503,7 +1513,7 @@ struct HinduismAnswerView: View {
                         .font(.body)
                 }
 
-                Section(header: Text("THE INVITATION")) {
+                Section(header: ArticleHeader("THE INVITATION")) {
                     Text("Islam asks the Hindu to keep what the oldest of his scriptures said, that the One has no image and no second, and to leave the many gods for the One who made them all:")
                         .font(.body)
                     ScriptureQuote(text: "“Say, ‘Who is Lord of the heavens and earth?’ Say, ‘Allah.’ Say, ‘Have you then taken besides Him allies not possessing [even] for themselves any benefit or any harm?’ Say, ‘Is the blind equivalent to the seeing? Or is darkness equivalent to light?’” (Quran 13:16).", arabic: "قُلۡ مَن رَّبُّ ٱلسَّمَٰوَٰتِ وَٱلۡأَرۡضِ قُلِ ٱللَّهُۚ قُلۡ أَفَٱتَّخَذۡتُم مِّن دُونِهِۦٓ أَوۡلِيَآءَ لَا يَمۡلِكُونَ لِأَنفُسِهِمۡ نَفۡعٗا وَلَا ضَرّٗاۚ قُلۡ هَلۡ يَسۡتَوِي ٱلۡأَعۡمَىٰ وَٱلۡبَصِيرُ أَمۡ هَلۡ تَسۡتَوِي ٱلظُّلُمَٰتُ وَٱلنُّورُۗ")
@@ -1511,12 +1521,12 @@ struct HinduismAnswerView: View {
                     ScriptureQuote(text: "“Invite to the way of your Lord with wisdom and good instruction, and argue with them in a way that is best” (Quran 16:125).", arabic: "ٱدۡعُ إِلَىٰ سَبِيلِ رَبِّكَ بِٱلۡحِكۡمَةِ وَٱلۡمَوۡعِظَةِ ٱلۡحَسَنَةِۖ وَجَٰدِلۡهُم بِٱلَّتِي هِيَ أَحۡسَنُۚ")
                 }
 
-                Section(header: Text("IN SUMMARY")) {
+                Section(header: ArticleHeader("IN SUMMARY")) {
                     Text("One Creator without image, one life followed by judgement, and one humanity ranked only by piety: this is what Ibrahim taught in a land of idols, and what Islam offers in its place.")
                         .font(.body)
                 }
 
-                Section(header: Text("KEY TERMS")) {
+                Section(header: ArticleHeader("KEY TERMS")) {
                     Text("**Hindu (هِنْدُوسِيّ)**: not a name from any scripture. It comes from Sindhu, the Sanskrit name of the Indus river; the Persians pronounced it “Hindu” and used it for the land and the peoples beyond that river, and the Arabs took it from them as al-Hind (الهِنْد). “Hinduism” as the name of one religion is a modern usage, gathering under one word many traditions and philosophies that never called themselves by it.")
                         .font(.body)
 
@@ -1588,12 +1598,14 @@ struct HinduismAnswerView: View {
                     Text("**Fitrah (فِطْرَة)**: from fatara, to originate; the natural disposition on which Allah creates every human being, which knows its Maker and inclines to worship Him alone. The Hindu who looks past the images to a single supreme reality is feeling the pull of that fitrah:")
                         .font(.body)
                     ScriptureQuote(text: "“So direct your face toward the religion, inclining to truth. [Adhere to] the fitrah of Allah upon which He has created [all] people. No change should there be in the creation of Allah. That is the correct religion, but most of the people do not know” (Quran 30:30).", arabic: "فَأَقِمۡ وَجۡهَكَ لِلدِّينِ حَنِيفٗاۚ فِطۡرَتَ ٱللَّهِ ٱلَّتِي فَطَرَ ٱلنَّاسَ عَلَيۡهَاۚ لَا تَبۡدِيلَ لِخَلۡقِ ٱللَّهِۚ ذَٰلِكَ ٱلدِّينُ ٱلۡقَيِّمُ وَلَٰكِنَّ أَكۡثَرَ ٱلنَّاسِ لَا يَعۡلَمُونَ")
-                    ScriptureQuote(text: "“Every child is born upon the fitrah, and then his parents make him a Jew, a Christian, or a Magian” (Sahih al-Bukhari 1385).", arabic: "كُلُّ مَوْلُودٍ يُولَدُ عَلَى الْفِطْرَةِ، فَأَبَوَاهُ يُهَوِّدَانِهِ أَوْ يُنَصِّرَانِهِ أَوْ يُمَجِّسَانِهِ", dimmed: true)
+                    ScriptureQuote(text: "“Every child is born with a true faith of Islam (i.e. to worship none but Allah Alone) and his parents convert him to Judaism or Christianity or Magianism” (Sahih al-Bukhari 1385).", arabic: "كُلُّ مَوْلُودٍ يُولَدُ عَلَى الْفِطْرَةِ، فَأَبَوَاهُ يُهَوِّدَانِهِ أَوْ يُنَصِّرَانِهِ أَوْ يُمَجِّسَانِهِ", dimmed: true)
 
                     Text("**Ba‘th (بَعْث)**: “raising”; the resurrection of the body from the grave for judgement, the Islamic answer to rebirth:")
                         .font(.body)
                     ScriptureQuote(text: "“And [that they may know] that the Hour is coming - no doubt about it - and that Allah will resurrect those in the graves” (Quran 22:7).", arabic: "وَأَنَّ ٱلسَّاعَةَ ءَاتِيَةٞ لَّا رَيۡبَ فِيهَا وَأَنَّ ٱللَّهَ يَبۡعَثُ مَن فِي ٱلۡقُبُورِ")
                 }
+
+                ArticleSourcesSection(article: "PaganismAnswerView")
             }
             .themedListRowBackground()
         }
@@ -1608,24 +1620,24 @@ struct PaganismAnswerView: View {
     var body: some View {
         List {
             Group {
-                Section(header: Text("SUMMARY")) {
+                Section(header: ArticleHeader("SUMMARY")) {
                     Text("In short: paganism, old and new, worships created things: idols, spirits, ancestors, nature, and stars. The Quran shows where idol worship came from, why the pagans' own admission that Allah is the Creator refutes them, and why nothing created deserves worship.")
                         .font(.body)
                 }
 
-                Section(header: Text("WHAT IS PAGANISM?")) {
+                Section(header: ArticleHeader("WHAT IS PAGANISM?")) {
                     Text("**Shirk (شِرك)** in its oldest form: the worship of many gods, idols carved from stone and wood, spirits of the dead, sacred trees and stones, the sun, moon, and stars, and the spirits of places. The Arabs of Makkah were pagans of this kind, with 360 idols around the Ka‘bah, and the Quran addressed them first. Modern paganism, whether tribal, “new age,“ or a revival of old European and Near Eastern cults, is the same thing with new names.")
                         .font(.body)
 
                     Text("Ibn Abbas (may Allah be pleased with him) explained how it began. The idols of the people of Nuh, Wadd, Suwa‘, Yaghuth, Ya‘uq, and Nasr, were the names of righteous men:")
                         .font(.body)
-                    ScriptureQuote(text: "“When they died, Shaytan inspired their people to set up statues in the places where they used to sit and to name them after them. They did so, and they were not worshipped, until those people died and the knowledge was forgotten; then they were worshipped” (Sahih al-Bukhari 4920).", arabic: "فَلَمَّا هَلَكُوا أَوْحَى الشَّيْطَانُ إِلَى قَوْمِهِمْ أَنِ انْصِبُوا إِلَى مَجَالِسِهِمُ الَّتِي كَانُوا يَجْلِسُونَ أَنْصَابًا، وَسَمُّوهَا بِأَسْمَائِهِمْ فَفَعَلُوا فَلَمْ تُعْبَدْ حَتَّى إِذَا هَلَكَ أُولَئِكَ وَتَنَسَّخَ الْعِلْمُ عُبِدَتْ", dimmed: true)
+                    ScriptureQuote(text: "“when they died Satan inspired their people to (prepare and place idols at the places where they used to sit, and to call those idols by their names. The people did so, but the idols were not worshiped till those people (who initiated them) had died and the origin of the idols had become obscure, whereupon people began worshiping them” (Sahih al-Bukhari 4920).", arabic: "فَلَمَّا هَلَكُوا أَوْحَى الشَّيْطَانُ إِلَى قَوْمِهِمْ أَنِ انْصِبُوا إِلَى مَجَالِسِهِمُ الَّتِي كَانُوا يَجْلِسُونَ أَنْصَابًا، وَسَمُّوهَا بِأَسْمَائِهِمْ فَفَعَلُوا فَلَمْ تُعْبَدْ حَتَّى إِذَا هَلَكَ أُولَئِكَ وَتَنَسَّخَ الْعِلْمُ عُبِدَتْ", dimmed: true)
 
                     Text("Every idol began as excess in honouring someone or something Allah created. That is why Islam guards so carefully against the veneration of graves and saints: it is the road paganism took.")
                         .font(.body)
                 }
 
-                Section(header: Text("1. THE PAGANS ADMIT THE CREATOR")) {
+                Section(header: ArticleHeader("1. THE PAGANS ADMIT THE CREATOR")) {
                     Text("The pagans of Makkah did not deny Allah. They believed He created the heavens and the earth, and they turned to Him alone in the storm. Their shirk was to worship others alongside Him:")
                         .font(.body)
                     ScriptureQuote(text: "“And if you asked them who created them, they would surely say, ‘Allah.’ So how are they deluded?” (Quran 43:87).", arabic: "وَلَئِن سَأَلۡتَهُم مَّنۡ خَلَقَهُمۡ لَيَقُولُنَّ ٱللَّهُۖ فَأَنَّىٰ يُؤۡفَكُونَ")
@@ -1638,7 +1650,7 @@ struct PaganismAnswerView: View {
                         .font(.body)
                 }
 
-                Section(header: Text("2. NOTHING CREATED DESERVES WORSHIP")) {
+                Section(header: ArticleHeader("2. NOTHING CREATED DESERVES WORSHIP")) {
                     ScriptureQuote(text: "“Do they associate with Him those who create nothing and they are [themselves] created? And the false deities are unable to [give] them help, nor can they help themselves” (Quran 7:191-192).", arabic: "أَيُشۡرِكُونَ مَا لَا يَخۡلُقُ شَيۡـٔٗا وَهُمۡ يُخۡلَقُونَ ۝ وَلَا يَسۡتَطِيعُونَ لَهُمۡ نَصۡرٗا وَلَآ أَنفُسَهُمۡ يَنصُرُونَ")
 
                     ScriptureQuote(text: "“Indeed, those you [polytheists] call upon besides Allah are servants like you. So call upon them and let them respond to you, if you should be truthful” (Quran 7:194).", arabic: "إِنَّ ٱلَّذِينَ تَدۡعُونَ مِن دُونِ ٱللَّهِ عِبَادٌ أَمۡثَالُكُمۡۖ فَٱدۡعُوهُمۡ فَلۡيَسۡتَجِيبُواْ لَكُمۡ إِن كُنتُمۡ صَٰدِقِينَ")
@@ -1652,7 +1664,7 @@ struct PaganismAnswerView: View {
                     ScriptureQuote(text: "“Indeed, I have turned my face toward He who created the heavens and the earth, inclining toward truth, and I am not of those who associate others with Allah” (Quran 6:79).", arabic: "إِنِّي وَجَّهۡتُ وَجۡهِيَ لِلَّذِي فَطَرَ ٱلسَّمَٰوَٰتِ وَٱلۡأَرۡضَ حَنِيفٗاۖ وَمَآ أَنَا۠ مِنَ ٱلۡمُشۡرِكِينَ")
                 }
 
-                Section(header: Text("3. THE INTERCESSION EXCUSE")) {
+                Section(header: ArticleHeader("3. THE INTERCESSION EXCUSE")) {
                     Text("Pagans in every age say the idols are only a way to reach the High God, or that the spirits carry prayers to Him. The Quran quotes the excuse and rejects it:")
                         .font(.body)
                     ScriptureQuote(text: "“And they worship other than Allah that which neither harms them nor benefits them, and they say, ‘These are our intercessors with Allah.’ Say, ‘Do you inform Allah of something He does not know in the heavens or on the earth?’ Exalted is He and high above what they associate with Him” (Quran 10:18).", arabic: "وَيَعۡبُدُونَ مِن دُونِ ٱللَّهِ مَا لَا يَضُرُّهُمۡ وَلَا يَنفَعُهُمۡ وَيَقُولُونَ هَٰٓؤُلَآءِ شُفَعَٰٓؤُنَا عِندَ ٱللَّهِۚ قُلۡ أَتُنَبِّـُٔونَ ٱللَّهَ بِمَا لَا يَعۡلَمُ فِي ٱلسَّمَٰوَٰتِ وَلَا فِي ٱلۡأَرۡضِۚ سُبۡحَٰنَهُۥ وَتَعَٰلَىٰ عَمَّا يُشۡرِكُونَ")
@@ -1660,7 +1672,7 @@ struct PaganismAnswerView: View {
                     ScriptureQuote(text: "“You worship not besides Him except [mere] names you have named them, you and your fathers, for which Allah has sent down no authority. Legislation is not but for Allah. He has commanded that you worship not except Him. That is the correct religion, but most of the people do not know” (Quran 12:40).", arabic: "إِنِ ٱلۡحُكۡمُ إِلَّا لِلَّهِ أَمَرَ أَلَّا تَعۡبُدُوٓاْ إِلَّآ إِيَّاهُۚ ذَٰلِكَ ٱلدِّينُ ٱلۡقَيِّمُ وَلَٰكِنَّ أَكۡثَرَ ٱلنَّاسِ لَا يَعۡلَمُونَ")
                 }
 
-                Section(header: Text("4. THE END OF THE IDOLS")) {
+                Section(header: ArticleHeader("4. THE END OF THE IDOLS")) {
                     Text("When the Prophet (peace be upon him) entered Makkah in 8 AH, he struck the 360 idols around the Ka‘bah with his stick, reciting:")
                         .font(.body)
                     ScriptureQuote(text: "“And say, ‘Truth has come, and falsehood has departed. Indeed is falsehood, [by nature], ever bound to depart’” (Quran 17:81).", arabic: "وَقُلۡ جَآءَ ٱلۡحَقُّ وَزَهَقَ ٱلۡبَٰطِلُۚ إِنَّ ٱلۡبَٰطِلَ كَانَ زَهُوقٗا")
@@ -1669,7 +1681,7 @@ struct PaganismAnswerView: View {
                         .font(.body)
                 }
 
-                Section(header: Text("COMMON QUESTIONS")) {
+                Section(header: ArticleHeader("COMMON QUESTIONS")) {
                     Text("**Were the Arabs always idolaters?**")
                         .font(.body)
                     Text("No. Makkah was founded on tawhid. Ibrahim and Isma‘il (peace be upon them) raised the House for the worship of Allah alone and prayed that their descendants would be Muslims and would be sent a messenger from among themselves (Quran 2:127-129):")
@@ -1691,7 +1703,7 @@ struct PaganismAnswerView: View {
                     ScriptureQuote(text: "“So turn your face toward al-Masjid al-Haram. And wherever you [believers] are, turn your faces toward it [in prayer]” (Quran 2:144).", arabic: "فَوَلِّ وَجۡهَكَ شَطۡرَ ٱلۡمَسۡجِدِ ٱلۡحَرَامِۚ وَحَيۡثُ مَا كُنتُمۡ فَوَلُّواْ وُجُوهَكُمۡ شَطۡرَهُۥۗ")
                     Text("The House was built by Ibrahim on the condition “do not associate anything with Me” (Quran 22:26). As for the Black Stone, the Muslims kiss it only because the Prophet (peace be upon him) did, and the Companions said so plainly. ‘Umar (may Allah be pleased with him) came to it, kissed it, and said:")
                         .font(.body)
-                    ScriptureQuote(text: "“No doubt, I know that you are a stone and can neither benefit anyone nor harm anyone. Had I not seen Allah’s Messenger (peace be upon him) kissing you I would not have kissed you” (Sahih al-Bukhari 1597, Sahih Muslim 1270).", arabic: "إِنِّي أَعْلَمُ أَنَّكَ حَجَرٌ لاَ تَضُرُّ وَلاَ تَنْفَعُ، وَلَوْلاَ أَنِّي رَأَيْتُ النَّبِيَّ صلى الله عليه وسلم يُقَبِّلُكَ مَا قَبَّلْتُكَ", dimmed: true)
+                    ScriptureQuote(text: "“No doubt, I know that you are a stone and can neither benefit anyone nor harm anyone. Had I not seen Allah's Messenger (ﷺ) kissing you I would not have kissed you” (Sahih al-Bukhari 1597, Sahih Muslim 1270).", arabic: "إِنِّي أَعْلَمُ أَنَّكَ حَجَرٌ لاَ تَضُرُّ وَلاَ تَنْفَعُ، وَلَوْلاَ أَنِّي رَأَيْتُ النَّبِيَّ صلى الله عليه وسلم يُقَبِّلُكَ مَا قَبَّلْتُكَ", dimmed: true)
                     Text("No Muslim prays to the stone, asks it for anything, or believes it hears. Idolatry is directing worship to a created thing; following a command about where to face is obedience to the Creator.")
                         .font(.body)
 
@@ -1709,7 +1721,7 @@ struct PaganismAnswerView: View {
                     Text("Astrology is a branch of magic (Sunan Abi Dawud 3905) and attributing rain to a star is disbelief in Allah (Sahih al-Bukhari 846), both quoted below. Asking a fortune-teller voids the prayer of forty nights (Sahih Muslim 2230), and believing him is worse; the Prophet (peace be upon him) said that whoever goes to a kahin (كَاهِن, a soothsayer who claims to know the unseen) and believes what he says has nothing to do with what was sent down to Muhammad (Sunan Abi Dawud 3904; graded sahih by al-Albani). Where do the kahins get the occasional truth that impresses their clients? Aishah (may Allah be pleased with her) asked exactly that:")
                         .font(.body)
                     ScriptureQuote(text: "“That is a word pertaining to truth which a jinn snatches and throws into the ear of his friend, and makes an addition of one hundred lies to it” (Sahih Muslim 2228).", arabic: "تِلْكَ الْكَلِمَةُ الْحَقُّ يَخْطَفُهَا الْجِنِّيُّ فَيَقْذِفُهَا فِي أُذُنِ وَلِيِّهِ وَيَزِيدُ فِيهَا مِائَةَ كَذْبَةٍ", dimmed: true)
-                    ScriptureQuote(text: "“The angels descend in the clouds and mention this or that matter decreed in the Heaven. The devils listen stealthily to such a matter, come down to inspire the soothsayers with it, and the latter would add to it one hundred lies of their own” (Sahih al-Bukhari 3210).", arabic: "إِنَّ الْمَلاَئِكَةَ تَنْزِلُ فِي الْعَنَانِ ـ وَهْوَ السَّحَابُ ـ فَتَذْكُرُ الأَمْرَ قُضِيَ فِي السَّمَاءِ، فَتَسْتَرِقُ الشَّيَاطِينُ السَّمْعَ، فَتَسْمَعُهُ فَتُوحِيهِ إِلَى الْكُهَّانِ، فَيَكْذِبُونَ مَعَهَا مِائَةَ كَذْبَةٍ مِنْ عِنْدِ أَنْفُسِهِمْ", dimmed: true)
+                    ScriptureQuote(text: "“The angels descend, the clouds and mention this or that matter decreed in the Heaven. The devils listen stealthily to such a matter, come down to inspire the soothsayers with it, and the latter would add to it one-hundred lies of their own” (Sahih al-Bukhari 3210).", arabic: "إِنَّ الْمَلاَئِكَةَ تَنْزِلُ فِي الْعَنَانِ ـ وَهْوَ السَّحَابُ ـ فَتَذْكُرُ الأَمْرَ قُضِيَ فِي السَّمَاءِ، فَتَسْتَرِقُ الشَّيَاطِينُ السَّمْعَ، فَتَسْمَعُهُ فَتُوحِيهِ إِلَى الْكُهَّانِ، فَيَكْذِبُونَ مَعَهَا مِائَةَ كَذْبَةٍ مِنْ عِنْدِ أَنْفُسِهِمْ", dimmed: true)
                     Text("Magic is the second of the seven destroyers (Sahih al-Bukhari 2766), and the Quran says of those who buy it that they have no share in the Hereafter (Quran 2:102). Its practice involves serving devils, and that is shirk.")
                         .font(.body)
 
@@ -1717,7 +1729,7 @@ struct PaganismAnswerView: View {
                         .font(.body)
                     Text("Omens (**tiyarah (طِيَرَة)**, from ط-ي-ر, a bird, because the Arabs would startle a bird and take its direction of flight as a sign) are shirk by the Prophet’s own words (Sunan Abi Dawud 3910, quoted below), because they attach harm and benefit to something Allah gave no power. Black cats, broken mirrors, unlucky numbers and days, and “touch wood” all fall under it. Islam replaces the omen with the good word:")
                         .font(.body)
-                    ScriptureQuote(text: "“No ‘adwa nor tiyarah; but I like the fa’l.” They said, “What is the fa’l?” He said, “A good word” (Sahih al-Bukhari 5776).", arabic: "لاَ عَدْوَى، وَلاَ طِيَرَةَ، وَيُعْجِبُنِي الْفَأْلُ. قَالُوا وَمَا الْفَأْلُ قَالَ كَلِمَةٌ طَيِّبَةٌ", dimmed: true)
+                    ScriptureQuote(text: "“No 'Adwa nor Tiyara; but I like Fal.‘ They said, ’What is the Fal?‘ He said, ’A good word” (Sahih al-Bukhari 5776).", arabic: "لاَ عَدْوَى، وَلاَ طِيَرَةَ، وَيُعْجِبُنِي الْفَأْلُ. قَالُوا وَمَا الْفَأْلُ قَالَ كَلِمَةٌ طَيِّبَةٌ", dimmed: true)
                     Text("Even swearing by something other than Allah, as pagans swore by their idols and ancestors, was forbidden as a form of shirk:")
                         .font(.body)
                     ScriptureQuote(text: "“Whoever swears by other than Allah, he has committed disbelief or shirk” (Sunan al-Tirmidhi 1535; graded sahih by al-Albani).", arabic: "مَنْ حَلَفَ بِغَيْرِ اللَّهِ فَقَدْ كَفَرَ أَوْ أَشْرَكَ", dimmed: true)
@@ -1728,7 +1740,7 @@ struct PaganismAnswerView: View {
                         .font(.body)
                     Text("Yes, if one believes the thing itself gives blessing. On a campaign the Prophet (peace be upon him) passed a tree of the pagans called Dhat Anwat, on which they used to hang their weapons, and some of those with him asked for one like it:")
                         .font(.body)
-                    ScriptureQuote(text: "They said, “O Messenger of Allah, make a Dhat Anwat for us as they have a Dhat Anwat.” The Prophet (peace be upon him) said, “Subhan Allah! This is like what Musa’s people said: Make for us a god like their gods. By the One in Whose hand is my soul, you shall follow the way of those who were before you” (Sunan al-Tirmidhi 2180; graded sahih by al-Albani).", arabic: "فَقَالُوا يَا رَسُولَ اللَّهِ اجْعَلْ لَنَا ذَاتَ أَنْوَاطٍ كَمَا لَهُمْ ذَاتُ أَنْوَاطٍ. فَقَالَ النَّبِيُّ صلى الله عليه وسلم سُبْحَانَ اللَّهِ هَذَا كَمَا قَالَ قَوْمُ مُوسَى : (اجْعَلْ لَنَا إِلَهًا كَمَا لَهُمْ آلِهَةٌ ) وَالَّذِي نَفْسِي بِيَدِهِ لَتَرْكَبُنَّ سُنَّةَ مَنْ كَانَ قَبْلَكُمْ", dimmed: true)
+                    ScriptureQuote(text: "“O Messenger of Allah! Make a Dhat Anwat for us as they have a Dhat Anwat.' The Prophet (s.a.w) said: ‘Subhan Allah! This is like what Musa's people said: Make for us a god like their gods. By the One in Whose is my soul! You shall follow the way of those who were before you” (Sunan al-Tirmidhi 2180; graded sahih by al-Albani).", arabic: "فَقَالُوا يَا رَسُولَ اللَّهِ اجْعَلْ لَنَا ذَاتَ أَنْوَاطٍ كَمَا لَهُمْ ذَاتُ أَنْوَاطٍ. فَقَالَ النَّبِيُّ صلى الله عليه وسلم سُبْحَانَ اللَّهِ هَذَا كَمَا قَالَ قَوْمُ مُوسَى : (اجْعَلْ لَنَا إِلَهًا كَمَا لَهُمْ آلِهَةٌ ) وَالَّذِي نَفْسِي بِيَدِهِ لَتَرْكَبُنَّ سُنَّةَ مَنْ كَانَ قَبْلَكُمْ", dimmed: true)
                     Text("Blessing (barakah) belongs to Allah, who places it where He wills: in the Quran, in Zamzam, in the sacred places He named. It is not sought from a tree, a wall, a saint’s cloth, or a stone.")
                         .font(.body)
 
@@ -1755,7 +1767,7 @@ struct PaganismAnswerView: View {
                     ScriptureQuote(text: "“The Quraish people and those who embraced their religion, used to stay at Muzdalifa and used to call themselves al-Hums, while the rest of the Arabs used to stay at ‘Arafat. When Islam came, Allah ordered His Prophet to go to ‘Arafat and stay at it, and then pass on from there” (Sahih al-Bukhari 4520).", arabic: "كَانَتْ قُرَيْشٌ وَمَنْ دَانَ دِينَهَا يَقِفُونَ بِالْمُزْدَلِفَةِ، وَكَانُوا يُسَمَّوْنَ الْحُمْسَ، وَكَانَ سَائِرُ الْعَرَبِ يَقِفُونَ بِعَرَفَاتٍ، فَلَمَّا جَاءَ الإِسْلاَمُ أَمَرَ اللَّهُ نَبِيَّهُ صلى الله عليه وسلم أَنْ يَأْتِيَ عَرَفَاتٍ، ثُمَّ يَقِفَ بِهَا ثُمَّ يُفِيضَ مِنْهَا", dimmed: true)
                     Text("Islam stripped every one of these away and restored the rite of Ibrahim. In the year before the Farewell Hajj Abu Bakr had it proclaimed:")
                         .font(.body)
-                    ScriptureQuote(text: "“No pagan is allowed to perform Hajj after this year, and no naked person is allowed to perform Tawaf of the Ka‘bah” (Sahih al-Bukhari 1622).", arabic: "أَلاَ لاَ يَحُجُّ بَعْدَ الْعَامِ مُشْرِكٌ، وَلاَ يَطُوفُ بِالْبَيْتِ عُرْيَانٌ", dimmed: true)
+                    ScriptureQuote(text: "“'No pagan is allowed to perform Hajj after this year, and no naked person is allowed to perform Tawaf of the Ka`ba” (Sahih al-Bukhari 1622).", arabic: "أَلاَ لاَ يَحُجُّ بَعْدَ الْعَامِ مُشْرِكٌ، وَلاَ يَطُوفُ بِالْبَيْتِ عُرْيَانٌ", dimmed: true)
                     Text("And in the Farewell Hajj itself, standing at Arafat, the Prophet (peace be upon him) declared:")
                         .font(.body)
                     ScriptureQuote(text: "“Behold! Everything pertaining to the Days of Ignorance is under my feet completely abolished. Abolished are also the blood-revenges of the Days of Ignorance” (Sahih Muslim 1218).", arabic: "أَلاَ كُلُّ شَىْءٍ مِنْ أَمْرِ الْجَاهِلِيَّةِ تَحْتَ قَدَمَىَّ مَوْضُوعٌ وَدِمَاءُ الْجَاهِلِيَّةِ مَوْضُوعَةٌ", dimmed: true)
@@ -1766,7 +1778,7 @@ struct PaganismAnswerView: View {
                         .font(.body)
                     Text("Al-Lat was a white stone at Ta’if, the idol of Thaqif, with a house built over it; al-‘Uzza was a group of trees with a shrine at Nakhlah, the most venerated idol of Quraysh; Manat was a stone at Qudayd on the coast road to Madinah, venerated by the Aws and Khazraj. The Quran named them and stripped them of everything but their names (Quran 53:19-23, quoted below). After the conquest of Makkah in 8 AH the Prophet (peace be upon him) sent Khalid ibn al-Walid to al-‘Uzza, and he destroyed it and its shrine, and he sent Sa‘d ibn Zayd al-Ashhali to Manat; al-Lat was demolished when Thaqif accepted Islam in 9 AH, by al-Mughirah ibn Shu‘bah and Abu Sufyan (Ibn Hisham, as-Sirah an-Nabawiyyah; Ibn Kathir, al-Bidayah wan-Nihayah). He also sent Jarir ibn Abdullah to the idol-house of Khath‘am in the south:")
                         .font(.body)
-                    ScriptureQuote(text: "“Will you relieve me from Dhul-Khalasa?” Dhul-Khalasa was a house of an idol belonging to the tribe of Khath‘am called the Yemenite Ka‘bah (Sahih al-Bukhari 3020).", arabic: "أَلاَ تُرِيحُنِي مِنْ ذِي الْخَلَصَةِ. وَكَانَ بَيْتًا فِي خَثْعَمَ يُسَمَّى كَعْبَةَ الْيَمَانِيَةَ", dimmed: true)
+                    ScriptureQuote(text: "“Will you relieve me from Dhul-Khalasa? Dhul-Khalasa was a house (of an idol) belonging to the tribe of Khath'am called Al-Ka`ba Al-Yama-niya” (Sahih al-Bukhari 3020).", arabic: "أَلاَ تُرِيحُنِي مِنْ ذِي الْخَلَصَةِ. وَكَانَ بَيْتًا فِي خَثْعَمَ يُسَمَّى كَعْبَةَ الْيَمَانِيَةَ", dimmed: true)
                     Text("Jarir went with a hundred and fifty horsemen, tore it down, and burned it. Within two years of the conquest not one of the great idols of Arabia was standing.")
                         .font(.body)
 
@@ -1787,13 +1799,13 @@ struct PaganismAnswerView: View {
                     ScriptureQuote(text: "“And whatever you have of favor - it is from Allah. Then when adversity touches you, to Him you cry for help” (Quran 16:53).", arabic: "وَمَا بِكُم مِّن نِّعۡمَةٖ فَمِنَ ٱللَّهِۖ ثُمَّ إِذَا مَسَّكُمُ ٱلضُّرُّ فَإِلَيۡهِ تَجۡـَٔرُونَ")
                     Text("Islam has its own healing: medicine, which the Prophet (peace be upon him) commanded, and ruqyah with the Quran and the supplications he taught. When the Companions asked him about the incantations they had used in Jahiliyyah (جَاهِلِيَّة, from ج-ه-ل, ignorance: the age before Islam), he said:")
                         .font(.body)
-                    ScriptureQuote(text: "“Let me know your invocation. There is no harm in the invocation as long as there is no polytheism in it” (Sahih Muslim 2200).", arabic: "اعْرِضُوا عَلَىَّ رُقَاكُمْ لاَ بَأْسَ بِالرُّقَى مَا لَمْ يَكُنْ فِيهِ شِرْكٌ", dimmed: true)
+                    ScriptureQuote(text: "“Let me know your invocation and said: There is no harm in the invocation as long as there is no polytheism in it” (Sahih Muslim 2200).", arabic: "اعْرِضُوا عَلَىَّ رُقَاكُمْ لاَ بَأْسَ بِالرُّقَى مَا لَمْ يَكُنْ فِيهِ شِرْكٌ", dimmed: true)
                     Text("And the one who wants provision is told where it comes from:")
                         .font(.body)
                     ScriptureQuote(text: "“And whoever relies upon Allah - then He is sufficient for him” (Quran 65:3).", arabic: "وَمَن يَتَوَكَّلۡ عَلَى ٱللَّهِ فَهُوَ حَسۡبُهُۥٓۚ")
                 }
 
-                Section(header: Text("THE INVITATION")) {
+                Section(header: ArticleHeader("THE INVITATION")) {
                     ScriptureQuote(text: "“And [mention, O Muhammad], when Abraham said to his father and his people, ‘Indeed, I am disassociated from that which you worship except for He who created me; and indeed, He will guide me’” (Quran 43:26-27).", arabic: "وَإِذۡ قَالَ إِبۡرَٰهِيمُ لِأَبِيهِ وَقَوۡمِهِۦٓ إِنَّنِي بَرَآءٞ مِّمَّا تَعۡبُدُونَ ۝ إِلَّا ٱلَّذِي فَطَرَنِي فَإِنَّهُۥ سَيَهۡدِينِ")
 
                     ScriptureQuote(text: "“Say, ‘O disbelievers, I do not worship what you worship. Nor are you worshippers of what I worship. Nor will I be a worshipper of what you worship. Nor will you be worshippers of what I worship. For you is your religion, and for me is my religion’” (Quran 109:1-6).", arabic: "قُلۡ يَٰٓأَيُّهَا ٱلۡكَٰفِرُونَ ۝ لَآ أَعۡبُدُ مَا تَعۡبُدُونَ ۝ وَلَآ أَنتُمۡ عَٰبِدُونَ مَآ أَعۡبُدُ ۝ وَلَآ أَنَا۠ عَابِدٞ مَّا عَبَدتُّمۡ ۝ وَلَآ أَنتُمۡ عَٰبِدُونَ مَآ أَعۡبُدُ ۝ لَكُمۡ دِينُكُمۡ وَلِيَ دِينِ")
@@ -1802,12 +1814,12 @@ struct PaganismAnswerView: View {
                         .font(.body)
                 }
 
-                Section(header: Text("IN SUMMARY")) {
+                Section(header: ArticleHeader("IN SUMMARY")) {
                     Text("Paganism is the worship of created things, born of excess in honouring the dead and the beautiful. The pagans themselves admit that Allah created them, and that admission is the proof that He alone should be worshipped.")
                         .font(.body)
                 }
 
-                Section(header: Text("KEY TERMS")) {
+                Section(header: ArticleHeader("KEY TERMS")) {
                     Text("**Paganism / wathaniyyah (الوَثَنِيَّة)**: from **wathan (وَثَن)**, an idol; the scholars of language say a wathan is anything set up to be worshipped, of stone or otherwise, while a **sanam (صَنَم)** is an image carved in a form. The Quran uses both words for what Ibrahim (peace be upon him) rejected:")
                         .font(.body)
                     ScriptureQuote(text: "“So avoid the uncleanliness of idols and avoid false statement” (Quran 22:30).", arabic: "فَٱجۡتَنِبُواْ ٱلرِّجۡسَ مِنَ ٱلۡأَوۡثَٰنِ وَٱجۡتَنِبُواْ قَوۡلَ ٱلزُّورِ")
@@ -1828,7 +1840,7 @@ struct PaganismAnswerView: View {
 
                     Text("**Hubal, al-Lat, al-‘Uzza, and Manat**: the chief idols of the Arabs. Hubal stood at the Ka‘bah itself and was the idol of Quraysh; at Uhud Abu Sufyan, still a pagan, cried out in its name, and the Prophet (peace be upon him) had the Muslims answer him:")
                         .font(.body)
-                    ScriptureQuote(text: "Abu Sufyan said, “Superior may be Hubal!” On that the Prophet said, “Reply to him.” They asked, “What may we say?” He said, “Say: Allah is More Elevated and More Majestic!” (Sahih al-Bukhari 4043).", arabic: "قَالَ أَبُو سُفْيَانَ أُعْلُ هُبَلْ. فَقَالَ النَّبِيُّ صلى الله عليه وسلم أَجِيبُوهُ. قَالُوا مَا نَقُولُ قَالَ قُولُوا اللَّهُ أَعْلَى وَأَجَلُّ", dimmed: true)
+                    ScriptureQuote(text: "“Abu Sufyan said, ‘Superior may be Hubal!’ On that the Prophet said (to his companions), ‘Reply to him.’ They asked, ‘What may we say?’ He said, ‘Say: Allah is More Elevated and More Majestic” (Sahih al-Bukhari 4043).", arabic: "قَالَ أَبُو سُفْيَانَ أُعْلُ هُبَلْ. فَقَالَ النَّبِيُّ صلى الله عليه وسلم أَجِيبُوهُ. قَالُوا مَا نَقُولُ قَالَ قُولُوا اللَّهُ أَعْلَى وَأَجَلُّ", dimmed: true)
                     Text("Al-Lat was the idol of Thaqif at Ta’if; al-‘Uzza, the most honoured by Quraysh, was at Nakhlah on the road to Ta’if; and Manat stood at Qudayd by the sea, venerated by the Aws and Khazraj. The Quran named all three and mocked the claim that they were “daughters of Allah” while the pagans themselves wanted only sons:")
                         .font(.body)
                     ScriptureQuote(text: "“So have you considered al-Lat and al-'Uzza? And Manat, the third - the other one? Is the male for you and for Him the female? That, then, is an unjust division. They are not but [mere] names you have named them - you and your forefathers - for which Allah has sent down no authority. They follow not except assumption and what [their] souls desire, and there has already come to them from their Lord guidance” (Quran 53:19-23).", arabic: "أَفَرَءَيۡتُمُ ٱللَّٰتَ وَٱلۡعُزَّىٰ ۝ وَمَنَوٰةَ ٱلثَّالِثَةَ ٱلۡأُخۡرَىٰٓ ۝ أَلَكُمُ ٱلذَّكَرُ وَلَهُ ٱلۡأُنثَىٰ ۝ تِلۡكَ إِذٗا قِسۡمَةٞ ضِيزَىٰٓ ۝ إِنۡ هِيَ إِلَّآ أَسۡمَآءٞ سَمَّيۡتُمُوهَآ أَنتُمۡ وَءَابَآؤُكُم مَّآ أَنزَلَ ٱللَّهُ بِهَا مِن سُلۡطَٰنٍۚ إِن يَتَّبِعُونَ إِلَّا ٱلظَّنَّ وَمَا تَهۡوَى ٱلۡأَنفُسُۖ وَلَقَدۡ جَآءَهُم مِّن رَّبِّهِمُ ٱلۡهُدَىٰٓ")
@@ -1837,7 +1849,7 @@ struct PaganismAnswerView: View {
 
                     Text("**‘Amr ibn Luhayy**: the chief of Khuza‘ah who, generations before the Prophet (peace be upon him), brought idol worship into the pure religion of Ibrahim and Isma‘il at Makkah. Ibn Ishaq relates, in the Sirah of Ibn Hisham, that he was the first to change the religion of Isma‘il: he brought the idol Hubal from Syria, set it up for the people to worship, and instituted the sacred animals that were dedicated to the gods. The Prophet (peace be upon him) saw his punishment:")
                         .font(.body)
-                    ScriptureQuote(text: "“I saw ‘Amr bin ‘Amir bin Luhai al-Khuza‘i dragging his intestines in the Fire, for he was the first man who started the custom of releasing animals (for the sake of false gods)” (Sahih al-Bukhari 3521, Sahih Muslim 2856).", arabic: "رَأَيْتُ عَمْرَو بْنَ عَامِرِ بْنِ لُحَىٍّ الْخُزَاعِيَّ يَجُرُّ قُصْبَهُ فِي النَّارِ، وَكَانَ أَوَّلَ مَنْ سَيَّبَ السَّوَائِبَ", dimmed: true)
+                    ScriptureQuote(text: "“I saw `Amr bin 'Amir bin Luhai Al-Khuza`i dragging his intestines in the (Hell) Fire, for he was the first man who started the custom of releasing animals (for the sake of false gods)” (Sahih al-Bukhari 3521, Sahih Muslim 2856).", arabic: "رَأَيْتُ عَمْرَو بْنَ عَامِرِ بْنِ لُحَىٍّ الْخُزَاعِيَّ يَجُرُّ قُصْبَهُ فِي النَّارِ، وَكَانَ أَوَّلَ مَنْ سَيَّبَ السَّوَائِبَ", dimmed: true)
 
                     Text("**The idols of the people of Nuh**: Wadd, Suwa‘, Yaghuth, Ya‘uq, and Nasr (Quran 71:23), which Ibn Abbas (may Allah be pleased with him) explained were the names of righteous men whose statues were later worshipped (Sahih al-Bukhari 4920, quoted above). Ibn Taymiyyah (may Allah have mercy on him) drew from this the rule that shirk first entered mankind through excessive veneration of the righteous and their graves (Iqtida’ as-Sirat al-Mustaqim).")
                         .font(.body)
@@ -1847,7 +1859,7 @@ struct PaganismAnswerView: View {
                     ScriptureQuote(text: "“Taking omens is polytheism; taking omens is polytheism.” He said it three times (Sunan Abi Dawud 3910; graded sahih by al-Albani).", arabic: "الطِّيَرَةُ شِرْكٌ الطِّيَرَةُ شِرْكٌ", dimmed: true)
                     Text("The narrator, Ibn Mas‘ud (may Allah be pleased with him), added that there is none of us but that something of it touches him, but Allah removes it by reliance on Him. The Prophet (peace be upon him) also said:")
                         .font(.body)
-                    ScriptureQuote(text: "“There is no ‘adwa, nor tiyarah, nor hamah, nor safar” (Sahih al-Bukhari 5757).", arabic: "لاَ عَدْوَى، وَلاَ طِيَرَةَ، وَلاَ هَامَةَ، وَلاَ صَفَرَ", dimmed: true)
+                    ScriptureQuote(text: "“There is no 'Adwa, nor Tiyara, nor Hama, nor Safar” (Sahih al-Bukhari 5757).", arabic: "لاَ عَدْوَى، وَلاَ طِيَرَةَ، وَلاَ هَامَةَ، وَلاَ صَفَرَ", dimmed: true)
                     Text("That is: no disease spreads by itself without Allah’s decree, no bird-omen, no owl of the dead calling from a grave, and no ill luck in the month of Safar.")
                         .font(.body)
 
@@ -1858,7 +1870,7 @@ struct PaganismAnswerView: View {
 
                     Text("**Sihr (سِحْر)**: magic; spells, knots, and the summoning of devils to harm, bind, or separate. The Quran traces it to the devils in the days of Sulayman, who taught people “that by which they cause separation between a man and his wife” (Quran 2:102), and Surat al-Falaq seeks refuge from “the blowers in knots” (Quran 113:4). The Prophet (peace be upon him) counted it second only to shirk among the destroyers:")
                         .font(.body)
-                    ScriptureQuote(text: "“Avoid the seven great destructive sins.” They asked, “O Messenger of Allah, what are they?” He said, “To join others in worship along with Allah, to practice sorcery, to kill the life which Allah has forbidden except for a just cause, to eat up riba, to eat up an orphan’s wealth, to flee from the battlefield at the time of fighting, and to accuse chaste women who never even think of anything touching chastity and are good believers” (Sahih al-Bukhari 2766).", arabic: "اجْتَنِبُوا السَّبْعَ الْمُوبِقَاتِ. قَالُوا يَا رَسُولَ اللَّهِ، وَمَا هُنَّ قَالَ الشِّرْكُ بِاللَّهِ، وَالسِّحْرُ، وَقَتْلُ النَّفْسِ الَّتِي حَرَّمَ اللَّهُ إِلاَّ بِالْحَقِّ، وَأَكْلُ الرِّبَا، وَأَكْلُ مَالِ الْيَتِيمِ، وَالتَّوَلِّي يَوْمَ الزَّحْفِ، وَقَذْفُ الْمُحْصَنَاتِ الْمُؤْمِنَاتِ الْغَافِلاَتِ", dimmed: true)
+                    ScriptureQuote(text: "“Avoid the seven great destructive sins.‘ The people enquire, ’O Allah's Messenger (ﷺ)! What are they? ‘He said, ’To join others in worship along with Allah, to practice sorcery, to kill the life which Allah has forbidden except for a just cause, (according to Islamic law), to eat up Riba (usury), to eat up an orphan's wealth, to give back to the enemy and fleeing from the battlefield at the time of fighting, and to accuse, chaste women, who never even think of anything touching chastity and are good believers” (Sahih al-Bukhari 2766).", arabic: "اجْتَنِبُوا السَّبْعَ الْمُوبِقَاتِ. قَالُوا يَا رَسُولَ اللَّهِ، وَمَا هُنَّ قَالَ الشِّرْكُ بِاللَّهِ، وَالسِّحْرُ، وَقَتْلُ النَّفْسِ الَّتِي حَرَّمَ اللَّهُ إِلاَّ بِالْحَقِّ، وَأَكْلُ الرِّبَا، وَأَكْلُ مَالِ الْيَتِيمِ، وَالتَّوَلِّي يَوْمَ الزَّحْفِ، وَقَذْفُ الْمُحْصَنَاتِ الْمُؤْمِنَاتِ الْغَافِلاَتِ", dimmed: true)
 
                     Text("**Tanjim (تَنْجِيم)**: from najm, a star; astrology, reading fates and fortunes in the heavens. Astronomy, the study of the stars for calendars, direction, and knowledge, is praised in the Quran; astrology is a branch of magic:")
                         .font(.body)
@@ -1879,8 +1891,8 @@ struct PaganismAnswerView: View {
                     ScriptureQuote(text: "“And [mention, O Muhammad], when We designated for Abraham the site of the House, [saying], ‘Do not associate anything with Me and purify My House for those who perform Tawaf and those who stand [in prayer] and those who bow and prostrate’” (Quran 22:26).", arabic: "وَإِذۡ بَوَّأۡنَا لِإِبۡرَٰهِيمَ مَكَانَ ٱلۡبَيۡتِ أَن لَّا تُشۡرِكۡ بِي شَيۡـٔٗا وَطَهِّرۡ بَيۡتِيَ لِلطَّآئِفِينَ وَٱلۡقَآئِمِينَ وَٱلرُّكَّعِ ٱلسُّجُودِ")
                     Text("Allah then commanded Ibrahim to proclaim the Hajj, and described its sacrifice, its feeding of the poor, and its tawaf around the ancient House (Quran 22:27-29). The pagans kept the rites but corrupted them: they filled the House with idols, performed tawaf naked, and added a partner to the talbiyah. Ibn Abbas (may Allah be pleased with him) reported:")
                         .font(.body)
-                    ScriptureQuote(text: "“During the pre-Islamic days women circumambulated the Ka‘bah nakedly, and said: Who would provide cloth to cover the one who is circumambulating the Ka‘bah so that she would cover her private parts?” (Sahih Muslim 3028).", arabic: "كَانَتِ الْمَرْأَةُ تَطُوفُ بِالْبَيْتِ وَهِيَ عُرْيَانَةٌ فَتَقُولُ مَنْ يُعِيرُنِي تِطْوَافًا تَجْعَلُهُ عَلَى فَرْجِهَا", dimmed: true)
-                    ScriptureQuote(text: "“The polytheists used to say: Here I am at Your service, there is no associate with You. The Messenger of Allah (peace be upon him) would say: Woe to you, enough, enough! But they would say: except one associate who is Yours; You possess mastery over him, but he does not possess mastery. They used to say this while they circumambulated the Ka‘bah” (Sahih Muslim 1185).", arabic: "كَانَ الْمُشْرِكُونَ يَقُولُونَ لَبَّيْكَ لاَ شَرِيكَ لَكَ - قَالَ - فَيَقُولُ رَسُولُ اللَّهِ صلى الله عليه وسلم وَيْلَكُمْ قَدْ قَدْ. فَيَقُولُونَ إِلاَّ شَرِيكًا هُوَ لَكَ تَمْلِكُهُ وَمَا مَلَكَ. يَقُولُونَ هَذَا وَهُمْ يَطُوفُونَ بِالْبَيْتِ", dimmed: true)
+                    ScriptureQuote(text: "“During the pre-Islamic days women circumambulated the Ka'ba nakedly, and said: Who would provide cloth to cover the one who is circumambulating the Ka'ba so that she would cover her private parts” (Sahih Muslim 3028).", arabic: "كَانَتِ الْمَرْأَةُ تَطُوفُ بِالْبَيْتِ وَهِيَ عُرْيَانَةٌ فَتَقُولُ مَنْ يُعِيرُنِي تِطْوَافًا تَجْعَلُهُ عَلَى فَرْجِهَا", dimmed: true)
+                    ScriptureQuote(text: "“Here I am at Thy service, there is no associate with Thee. The Messenger of Allah (ﷺ) said: Woe be upon them, as they also said: But one associate with Thee, you possess mastery over him, but he does not possess mastery (over you). They used to say this and circumambulate the Ka'ba” (Sahih Muslim 1185).", arabic: "كَانَ الْمُشْرِكُونَ يَقُولُونَ لَبَّيْكَ لاَ شَرِيكَ لَكَ - قَالَ - فَيَقُولُ رَسُولُ اللَّهِ صلى الله عليه وسلم وَيْلَكُمْ قَدْ قَدْ. فَيَقُولُونَ إِلاَّ شَرِيكًا هُوَ لَكَ تَمْلِكُهُ وَمَا مَلَكَ. يَقُولُونَ هَذَا وَهُمْ يَطُوفُونَ بِالْبَيْتِ", dimmed: true)
                     ScriptureQuote(text: "“And their prayer at the House was not except whistling and handclapping. So taste the punishment for what you disbelieved” (Quran 8:35).", arabic: "وَمَا كَانَ صَلَاتُهُمۡ عِندَ ٱلۡبَيۡتِ إِلَّا مُكَآءٗ وَتَصۡدِيَةٗۚ فَذُوقُواْ ٱلۡعَذَابَ بِمَا كُنتُمۡ تَكۡفُرُونَ")
 
                     Text("**Modern paganism**: neo-paganism and Wicca, which revive the old gods and goddesses and “the Goddess”; crystals and stones believed to carry healing energy; “manifesting,” in which one asks “the universe” for what one wants; and astrology, tarot, and spirit-guides. These are the old shirk in new words: calling on what cannot hear, and attributing giving and healing to what has no power:")
@@ -1888,6 +1900,8 @@ struct PaganismAnswerView: View {
                     ScriptureQuote(text: "“And do not invoke besides Allah that which neither benefits you nor harms you, for if you did, then indeed you would be of the wrongdoers” (Quran 10:106).", arabic: "وَلَا تَدۡعُ مِن دُونِ ٱللَّهِ مَا لَا يَنفَعُكَ وَلَا يَضُرُّكَۖ فَإِن فَعَلۡتَ فَإِنَّكَ إِذٗا مِّنَ ٱلظَّٰلِمِينَ")
                     ScriptureQuote(text: "“And who is more astray than he who invokes besides Allah those who will not respond to him until the Day of Resurrection, and they, of their invocation, are unaware” (Quran 46:5).", arabic: "وَمَنۡ أَضَلُّ مِمَّن يَدۡعُواْ مِن دُونِ ٱللَّهِ مَن لَّا يَسۡتَجِيبُ لَهُۥٓ إِلَىٰ يَوۡمِ ٱلۡقِيَٰمَةِ وَهُمۡ عَن دُعَآئِهِمۡ غَٰفِلُونَ")
                 }
+
+                ArticleSourcesSection(article: "BuddhismAnswerView")
             }
             .themedListRowBackground()
         }
@@ -1902,17 +1916,17 @@ struct BuddhismAnswerView: View {
     var body: some View {
         List {
             Group {
-                Section(header: Text("SUMMARY")) {
+                Section(header: ArticleHeader("SUMMARY")) {
                     Text("In short: Buddhism seeks escape from suffering through detachment and rebirth, without a Creator. The Quran answers that the world has a purpose and a Maker, that suffering is a test with meaning, that the self is real and accountable, and that salvation is by Allah's mercy, not by extinguishing desire.")
                         .font(.body)
                 }
 
-                Section(header: Text("WHAT BUDDHISM TEACHES")) {
-                    Text("Buddhism follows Siddhartha Gautama, the Buddha (“the awakened one“), who lived in northern India around the fifth century BCE. Its core is the Four Noble Truths: life is suffering (**dukkha**), suffering comes from craving, it ends by ending craving, and the way is the Eightfold Path of ethics, meditation, and wisdom. It teaches **karma** and rebirth, denies a permanent self (**anatta**), and aims at **nirvana**, the extinction of craving and of rebirth. It has no Creator God; the Buddha did not teach one. In practice most Buddhists bow to and make offerings before images of the Buddha and of bodhisattvas, and some schools venerate many celestial beings.")
+                Section(header: ArticleHeader("WHAT BUDDHISM TEACHES")) {
+                    Text("Buddhism follows Siddhartha Gautama, the Buddha (“the awakened one“), who lived in northern India around the fifth century BCE. Its core is the Four Noble Truths: there is suffering, and all conditioned existence is marked by it (**dukkha**), suffering comes from craving, it ends by ending craving, and the way is the Eightfold Path of ethics, meditation, and wisdom. It teaches **karma** and rebirth, denies a permanent self (**anatta**), and aims at **nirvana**, the extinction of craving and of rebirth. It has no Creator God; the Buddha did not teach one. In practice most Buddhists bow to and make offerings before images of the Buddha and of bodhisattvas, and some schools venerate many celestial beings.")
                         .font(.body)
                 }
 
-                Section(header: Text("1. THE WORLD HAS A MAKER AND A PURPOSE")) {
+                Section(header: ArticleHeader("1. THE WORLD HAS A MAKER AND A PURPOSE")) {
                     Text("A path that begins with suffering but never asks who made the sufferer has left out the first question. The Quran puts it directly:")
                         .font(.body)
                     ScriptureQuote(text: "“Or were they created by nothing, or were they the creators [of themselves]? Or did they create the heavens and the earth? Rather, they are not certain” (Quran 52:35-36).", arabic: "أَمۡ خُلِقُواْ مِنۡ غَيۡرِ شَيۡءٍ أَمۡ هُمُ ٱلۡخَٰلِقُونَ ۝ أَمۡ خَلَقُواْ ٱلسَّمَٰوَٰتِ وَٱلۡأَرۡضَۚ بَل لَّا يُوقِنُونَ")
@@ -1926,7 +1940,7 @@ struct BuddhismAnswerView: View {
                     ScriptureQuote(text: "“[He] who created death and life to test you [as to] which of you is best in deed - and He is the Exalted in Might, the Forgiving” (Quran 67:2).", arabic: "ٱلَّذِي خَلَقَ ٱلۡمَوۡتَ وَٱلۡحَيَوٰةَ لِيَبۡلُوَكُمۡ أَيُّكُمۡ أَحۡسَنُ عَمَلٗاۚ وَهُوَ ٱلۡعَزِيزُ ٱلۡغَفُورُ")
                 }
 
-                Section(header: Text("2. SUFFERING HAS MEANING")) {
+                Section(header: ArticleHeader("2. SUFFERING HAS MEANING")) {
                     Text("Islam does not deny suffering; it gives it a reason and an end. It purifies, it is answered by patience, and it is followed by ease:")
                         .font(.body)
                     ScriptureQuote(text: "“And We will surely test you with something of fear and hunger and a loss of wealth and lives and fruits, but give good tidings to the patient, who, when disaster strikes them, say, ‘Indeed we belong to Allah, and indeed to Him we will return.’ Those are the ones upon whom are blessings from their Lord and mercy. And it is those who are the [rightly] guided” (Quran 2:155-157).", arabic: "وَلَنَبۡلُوَنَّكُم بِشَيۡءٖ مِّنَ ٱلۡخَوۡفِ وَٱلۡجُوعِ وَنَقۡصٖ مِّنَ ٱلۡأَمۡوَٰلِ وَٱلۡأَنفُسِ وَٱلثَّمَرَٰتِۗ وَبَشِّرِ ٱلصَّٰبِرِينَ ۝ ٱلَّذِينَ إِذَآ أَصَٰبَتۡهُم مُّصِيبَةٞ قَالُوٓاْ إِنَّا لِلَّهِ وَإِنَّآ إِلَيۡهِ رَٰجِعُونَ ۝ أُوْلَٰٓئِكَ عَلَيۡهِمۡ صَلَوَٰتٞ مِّن رَّبِّهِمۡ وَرَحۡمَةٞۖ وَأُوْلَٰٓئِكَ هُمُ ٱلۡمُهۡتَدُونَ")
@@ -1935,15 +1949,15 @@ struct BuddhismAnswerView: View {
 
                     Text("The Prophet (peace be upon him) said:")
                         .font(.body)
-                    ScriptureQuote(text: "“No fatigue, disease, sorrow, sadness, hurt, or distress befalls a Muslim, even the prick of a thorn, except that Allah expiates some of his sins by it” (Sahih al-Bukhari 5641).", arabic: "مَا يُصِيبُ الْمُسْلِمَ مِنْ نَصَبٍ وَلاَ وَصَبٍ وَلاَ هَمٍّ وَلاَ حُزْنٍ وَلاَ أَذًى وَلاَ غَمٍّ حَتَّى الشَّوْكَةِ يُشَاكُهَا، إِلاَّ كَفَّرَ اللَّهُ بِهَا مِنْ خَطَايَاهُ", dimmed: true)
+                    ScriptureQuote(text: "“No fatigue, nor disease, nor sorrow, nor sadness, nor hurt, nor distress befalls a Muslim, even if it were the prick he receives from a thorn, but that Allah expiates some of his sins for that” (Sahih al-Bukhari 5641).", arabic: "مَا يُصِيبُ الْمُسْلِمَ مِنْ نَصَبٍ وَلاَ وَصَبٍ وَلاَ هَمٍّ وَلاَ حُزْنٍ وَلاَ أَذًى وَلاَ غَمٍّ حَتَّى الشَّوْكَةِ يُشَاكُهَا، إِلاَّ كَفَّرَ اللَّهُ بِهَا مِنْ خَطَايَاهُ", dimmed: true)
 
-                    ScriptureQuote(text: "“How wonderful is the affair of the believer, for all of it is good, and that is for no one but the believer: if good comes to him he is thankful, and that is good for him, and if harm comes to him he is patient, and that is good for him” (Sahih Muslim 2999).", arabic: "عَجَبًا لأَمْرِ الْمُؤْمِنِ إِنَّ أَمْرَهُ كُلَّهُ خَيْرٌ وَلَيْسَ ذَاكَ لأَحَدٍ إِلاَّ لِلْمُؤْمِنِ إِنْ أَصَابَتْهُ سَرَّاءُ شَكَرَ فَكَانَ خَيْرًا لَهُ وَإِنْ أَصَابَتْهُ ضَرَّاءُ صَبَرَ فَكَانَ خَيْرًا لَهُ", dimmed: true)
+                    ScriptureQuote(text: "“Strange are the ways of a believer for there is good in every affair of his and this is not the case with anyone else except in the case of a believer for if he has an occasion to feel delight, he thanks (God), thus there is a good for him in it, and if he gets into trouble and shows resignation (and endures it patiently), there is a good for him in it” (Sahih Muslim 2999).", arabic: "عَجَبًا لأَمْرِ الْمُؤْمِنِ إِنَّ أَمْرَهُ كُلَّهُ خَيْرٌ وَلَيْسَ ذَاكَ لأَحَدٍ إِلاَّ لِلْمُؤْمِنِ إِنْ أَصَابَتْهُ سَرَّاءُ شَكَرَ فَكَانَ خَيْرًا لَهُ وَإِنْ أَصَابَتْهُ ضَرَّاءُ صَبَرَ فَكَانَ خَيْرًا لَهُ", dimmed: true)
 
                     Text("The answer to craving is not to extinguish the self but to direct it: to want Allah and the Hereafter more than the world. The Buddha sought to escape the cycle; the believer is not in a cycle, but on a single road to his Lord.")
                         .font(.body)
                 }
 
-                Section(header: Text("3. THE SOUL IS REAL AND RETURNS ONCE")) {
+                Section(header: ArticleHeader("3. THE SOUL IS REAL AND RETURNS ONCE")) {
                     Text("Buddhism denies a lasting self, yet speaks of rebirth; what, then, is reborn? The Quran affirms the soul as real, created, and known to its Maker, and affirms one death and one resurrection:")
                         .font(.body)
                     ScriptureQuote(text: "“And they ask you, [O Muhammad], about the soul. Say, ‘The soul is of the affair of my Lord. And mankind have not been given of knowledge except a little’” (Quran 17:85).", arabic: "وَيَسۡـَٔلُونَكَ عَنِ ٱلرُّوحِۖ قُلِ ٱلرُّوحُ مِنۡ أَمۡرِ رَبِّي وَمَآ أُوتِيتُم مِّنَ ٱلۡعِلۡمِ إِلَّا قَلِيلٗا")
@@ -1956,31 +1970,31 @@ struct BuddhismAnswerView: View {
                         .font(.body)
                 }
 
-                Section(header: Text("4. THE MIDDLE WAY IS THE SUNNAH")) {
+                Section(header: ArticleHeader("4. THE MIDDLE WAY IS THE SUNNAH")) {
                     Text("The Buddha left extreme asceticism for a “middle way,“ yet his path still turned monks from marriage, property, and the world. Islam’s middle way is fuller: enjoy what Allah made lawful, in moderation, and worship Him in the midst of life:")
                         .font(.body)
                     ScriptureQuote(text: "“Say, ‘Who has forbidden the adornment of Allah which He has produced for His servants and the good [lawful] things of provision?’” (Quran 7:32).", arabic: "قُلۡ مَنۡ حَرَّمَ زِينَةَ ٱللَّهِ ٱلَّتِيٓ أَخۡرَجَ لِعِبَادِهِۦ وَٱلطَّيِّبَٰتِ مِنَ ٱلرِّزۡقِۚ")
 
                     ScriptureQuote(text: "“And [they are] those who, when they spend, do so not excessively or sparingly but are ever, between that, [justly] moderate” (Quran 25:67).", arabic: "وَٱلَّذِينَ إِذَآ أَنفَقُواْ لَمۡ يُسۡرِفُواْ وَلَمۡ يَقۡتُرُواْ وَكَانَ بَيۡنَ ذَٰلِكَ قَوَامٗا")
 
-                    ScriptureQuote(text: "“Whoever turns away from my Sunnah is not of me” (Sahih al-Bukhari 5063).", arabic: "فَمَنْ رَغِبَ عَنْ سُنَّتِي فَلَيْسَ مِنِّي", dimmed: true)
+                    ScriptureQuote(text: "“So he who does not follow my tradition in religion, is not from me (not one of my followers)” (Sahih al-Bukhari 5063).", arabic: "فَمَنْ رَغِبَ عَنْ سُنَّتِي فَلَيْسَ مِنِّي", dimmed: true)
 
                     Text("And the goal is not the extinction of the self but its fulfilment: a soul at peace, returning to its Lord, in a Paradise where craving is satisfied, not destroyed.")
                         .font(.body)
                 }
 
-                Section(header: Text("5. SALVATION IS BY MERCY, NOT BY SELF-EFFORT ALONE")) {
+                Section(header: ArticleHeader("5. SALVATION IS BY MERCY, NOT BY SELF-EFFORT ALONE")) {
                     Text("Buddhism has no one to turn to; each person must work out his own release. Islam says the effort is required, but the end is a gift:")
                         .font(.body)
-                    ScriptureQuote(text: "“None of you will enter Paradise by his deeds.” They said: Not even you, O Messenger of Allah? He said: “Not even I, unless Allah covers me with His mercy” (Sahih al-Bukhari 5673, Sahih Muslim 2816).", arabic: "لَنْ يُدْخِلَ أَحَدًا عَمَلُهُ الْجَنَّةَ. قَالُوا وَلاَ أَنْتَ يَا رَسُولَ اللَّهِ قَالَ لاَ، وَلاَ أَنَا إِلاَّ أَنْ يَتَغَمَّدَنِي اللَّهُ بِفَضْلٍ وَرَحْمَةٍ", dimmed: true)
+                    ScriptureQuote(text: "“The good deeds of any person will not make him enter Paradise.‘ (i.e., None can enter Paradise through his good deeds.) They (the Prophet's companions) said, 'Not even you, O Allah's Messenger (ﷺ)?' He said, ’Not even myself, unless Allah bestows His favor and mercy on me” (Sahih al-Bukhari 5673, Sahih Muslim 2816).", arabic: "لَنْ يُدْخِلَ أَحَدًا عَمَلُهُ الْجَنَّةَ. قَالُوا وَلاَ أَنْتَ يَا رَسُولَ اللَّهِ قَالَ لاَ، وَلاَ أَنَا إِلاَّ أَنْ يَتَغَمَّدَنِي اللَّهُ بِفَضْلٍ وَرَحْمَةٍ", dimmed: true)
 
-                    ScriptureQuote(text: "“The strong believer is better and more beloved to Allah than the weak believer, and in both there is good. Be eager for what benefits you, seek help from Allah, and do not give up” (Sahih Muslim 2664).", arabic: "الْمُؤْمِنُ الْقَوِيُّ خَيْرٌ وَأَحَبُّ إِلَى اللَّهِ مِنَ الْمُؤْمِنِ الضَّعِيفِ وَفِي كُلٍّ خَيْرٌ احْرِصْ عَلَى مَا يَنْفَعُكَ وَاسْتَعِنْ بِاللَّهِ وَلاَ تَعْجِزْ", dimmed: true)
+                    ScriptureQuote(text: "“A strong believer is better and is more lovable to Allah than a weak believer, and there is good in everyone, (but) cherish that which gives you benefit (in the Hereafter) and seek help from Allah and do not lose heart” (Sahih Muslim 2664).", arabic: "الْمُؤْمِنُ الْقَوِيُّ خَيْرٌ وَأَحَبُّ إِلَى اللَّهِ مِنَ الْمُؤْمِنِ الضَّعِيفِ وَفِي كُلٍّ خَيْرٌ احْرِصْ عَلَى مَا يَنْفَعُكَ وَاسْتَعِنْ بِاللَّهِ وَلاَ تَعْجِزْ", dimmed: true)
 
-                    Text("As for the statues and offerings, the Buddha himself, by the Buddhist account, asked to be honoured by following his teaching, not by worship; and the worship of images is the shirk every prophet forbade (Quran 21:52-54).")
+                    Text("As for the statues and offerings, the Buddha himself, by the Buddhist account, said that he is truly honoured by following his teaching (Mahaparinibbana Sutta, DN 16); and the worship of images is the shirk every prophet forbade (Quran 21:52-54).")
                         .font(.body)
                 }
 
-                Section(header: Text("COMMON QUESTIONS")) {
+                Section(header: ArticleHeader("COMMON QUESTIONS")) {
                     Text("**Was the Buddha a prophet?**")
                         .font(.body)
                     Text("We do not know. Allah sent messengers whose stories He did not tell us:")
@@ -2060,7 +2074,7 @@ struct BuddhismAnswerView: View {
                     ScriptureQuote(text: "“And no soul knows what has been hidden for them of comfort for eyes as reward for what they used to do” (Quran 32:17).", arabic: "فَلَا تَعۡلَمُ نَفۡسٞ مَّآ أُخۡفِيَ لَهُم مِّن قُرَّةِ أَعۡيُنٖ جَزَآءَۢ بِمَا كَانُواْ يَعۡمَلُونَ")
                     Text("The Prophet (peace be upon him) said that Allah says:")
                         .font(.body)
-                    ScriptureQuote(text: "“I have prepared for My pious servants what no eye has ever seen, and no ear has ever heard, and no human heart has ever perceived” (Sahih al-Bukhari 3244, Sahih Muslim 2824).", arabic: "أَعْدَدْتُ لِعِبَادِي الصَّالِحِينَ مَا لاَ عَيْنَ رَأَتْ، وَلاَ أُذُنَ سَمِعَتْ، وَلاَ خَطَرَ عَلَى قَلْبِ بَشَرٍ", dimmed: true)
+                    ScriptureQuote(text: "“I have prepared for My Pious slaves things which have never been seen by an eye, or heard by an ear, or imagined by a human being” (Sahih al-Bukhari 3244, Sahih Muslim 2824).", arabic: "أَعْدَدْتُ لِعِبَادِي الصَّالِحِينَ مَا لاَ عَيْنَ رَأَتْ، وَلاَ أُذُنَ سَمِعَتْ، وَلاَ خَطَرَ عَلَى قَلْبِ بَشَرٍ", dimmed: true)
                     Text("The greatest of its joys is the one Buddhism cannot offer at all: seeing the Face of the Lord (Quran 75:22-23). Islam does not ask a man to stop wanting; it promises him what he wants, and better.")
                         .font(.body)
 
@@ -2072,7 +2086,7 @@ struct BuddhismAnswerView: View {
                     ScriptureQuote(text: "“And the camels and cattle We have appointed for you as among the symbols of Allah; for you therein is good. So mention the name of Allah upon them when lined up [for sacrifice]; and when they are [lifeless] on their sides, then eat from them and feed the needy and the beggar. Thus have We subjected them to you that you may be grateful” (Quran 22:36).", arabic: "وَٱلۡبُدۡنَ جَعَلۡنَٰهَا لَكُم مِّن شَعَٰٓئِرِ ٱللَّهِ لَكُمۡ فِيهَا خَيۡرٞۖ فَٱذۡكُرُواْ ٱسۡمَ ٱللَّهِ عَلَيۡهَا صَوَآفَّۖ فَإِذَا وَجَبَتۡ جُنُوبُهَا فَكُلُواْ مِنۡهَا وَأَطۡعِمُواْ ٱلۡقَانِعَ وَٱلۡمُعۡتَرَّۚ كَذَٰلِكَ سَخَّرۡنَٰهَا لَكُمۡ لَعَلَّكُمۡ تَشۡكُرُونَ")
                     Text("The Prophet (peace be upon him) ate meat, sacrificed animals, and sacrificed cows on behalf of his wives at Hajj (Sahih al-Bukhari 1709). To forbid what Allah allowed is itself a sin. But Islam commands mercy to animals more strictly than any vegetarian creed:")
                         .font(.body)
-                    ScriptureQuote(text: "“A woman entered the Fire because of a cat which she had tied, neither giving it food nor setting it free to eat from the vermin of the earth” (Sahih al-Bukhari 3318).", arabic: "دَخَلَتِ امْرَأَةٌ النَّارَ فِي هِرَّةٍ رَبَطَتْهَا، فَلَمْ تُطْعِمْهَا، وَلَمْ تَدَعْهَا تَأْكُلُ مِنْ خِشَاشِ الأَرْضِ", dimmed: true)
+                    ScriptureQuote(text: "“A woman entered the (Hell) Fire because of a cat which she had tied, neither giving it food nor setting it free to eat from the vermin of the earth” (Sahih al-Bukhari 3318).", arabic: "دَخَلَتِ امْرَأَةٌ النَّارَ فِي هِرَّةٍ رَبَطَتْهَا، فَلَمْ تُطْعِمْهَا، وَلَمْ تَدَعْهَا تَأْكُلُ مِنْ خِشَاشِ الأَرْضِ", dimmed: true)
                     ScriptureQuote(text: "“Verily Allah has enjoined goodness to everything; so when you kill, kill in a good way and when you slaughter, slaughter in a good way. So every one of you should sharpen his knife, and let the slaughtered animal die comfortably” (Sahih Muslim 1955).", arabic: "إِنَّ اللَّهَ كَتَبَ الإِحْسَانَ عَلَى كُلِّ شَىْءٍ فَإِذَا قَتَلْتُمْ فَأَحْسِنُوا الْقِتْلَةَ وَإِذَا ذَبَحْتُمْ فَأَحْسِنُوا الذَّبْحَ وَلْيُحِدَّ أَحَدُكُمْ شَفْرَتَهُ فَلْيُرِحْ ذَبِيحَتَهُ", dimmed: true)
                     Text("And a man was forgiven his sins for giving water to a thirsty dog; when the Companions asked whether there was reward in serving animals, the Prophet (peace be upon him) said there is a reward for serving any living creature (Sahih al-Bukhari 2363, Sahih Muslim 2244). The animals are communities like us (Quran 6:38); we are permitted to eat them, and forbidden to torment them.")
                         .font(.body)
@@ -2083,7 +2097,7 @@ struct BuddhismAnswerView: View {
                         .font(.body)
                     ScriptureQuote(text: "“He who shows no mercy to the people, Allah, the Exalted and Glorious, does not show mercy to him” (Sahih Muslim 2319, Sahih al-Bukhari 7376).", arabic: "مَنْ لاَ يَرْحَمِ النَّاسَ لاَ يَرْحَمْهُ اللَّهُ عَزَّ وَجَلَّ", dimmed: true)
                     ScriptureQuote(text: "“The Compassionate One has mercy on those who are merciful. If you show mercy to those who are on the earth, He Who is in the heaven will show mercy to you” (Sunan Abi Dawud 4941; graded sahih by al-Albani).", arabic: "الرَّاحِمُونَ يَرْحَمُهُمُ الرَّحْمَنُ ارْحَمُوا أَهْلَ الأَرْضِ يَرْحَمْكُمْ مَنْ فِي السَّمَاءِ", dimmed: true)
-                    ScriptureQuote(text: "“There are one hundred (parts of) mercy for Allah and He has sent down out of these one part of mercy upon the jinn and human beings and animals and the insects, and it is because of this (one part) that they love one another, show kindness to one another and even the beast treats its young one with affection, and Allah has reserved ninety-nine parts of mercy with which He would treat His servants on the Day of Resurrection” (Sahih Muslim 2752).", arabic: "إِنَّ لِلَّهِ مِائَةَ رَحْمَةٍ أَنْزَلَ مِنْهَا رَحْمَةً وَاحِدَةً بَيْنَ الْجِنِّ وَالإِنْسِ وَالْبَهَائِمِ وَالْهَوَامِّ فَبِهَا يَتَعَاطَفُونَ وَبِهَا يَتَرَاحَمُونَ وَبِهَا تَعْطِفُ الْوَحْشُ عَلَى وَلَدِهَا وَأَخَّرَ اللَّهُ تِسْعًا وَتِسْعِينَ رَحْمَةً يَرْحَمُ بِهَا عِبَادَهُ يَوْمَ الْقِيَامَةِ", dimmed: true)
+                    ScriptureQuote(text: "“There are one hundred (parts of) mercy for Allah and He has sent down out of these one part of mercy upon the jinn and human beings and animals and the insects, and it is because of this (one part) that they love one another, show kindness to one another and even the beast treats its young one with affection, and Allah has reserved ninety nine parts of mercy with which He would treat His servants on the Day of Resurrection” (Sahih Muslim 2752).", arabic: "إِنَّ لِلَّهِ مِائَةَ رَحْمَةٍ أَنْزَلَ مِنْهَا رَحْمَةً وَاحِدَةً بَيْنَ الْجِنِّ وَالإِنْسِ وَالْبَهَائِمِ وَالْهَوَامِّ فَبِهَا يَتَعَاطَفُونَ وَبِهَا يَتَرَاحَمُونَ وَبِهَا تَعْطِفُ الْوَحْشُ عَلَى وَلَدِهَا وَأَخَّرَ اللَّهُ تِسْعًا وَتِسْعِينَ رَحْمَةً يَرْحَمُ بِهَا عِبَادَهُ يَوْمَ الْقِيَامَةِ", dimmed: true)
                     Text("Islamic mercy is also joined to justice: it feeds the poor by law (zakah), protects the weak by law, and punishes the oppressor. A mercy that has no Judge behind it is only a feeling; the mercy of Islam is a command, a promise, and a Name.")
                         .font(.body)
 
@@ -2091,7 +2105,7 @@ struct BuddhismAnswerView: View {
                         .font(.body)
                     Text("No. Allah called it something people invented and then failed to keep (Quran 57:27, quoted below), and the Prophet (peace be upon him) said that whoever turns away from his Sunnah of marrying, sleeping, and eating is not of him (Sahih al-Bukhari 5063, quoted below). Sa‘d ibn Abi Waqqas (may Allah be pleased with him) said:")
                         .font(.body)
-                    ScriptureQuote(text: "“Allah’s Messenger (peace be upon him) forbade ‘Uthman bin Maz‘un to abstain from marrying, and if he had allowed him, we would have gotten ourselves castrated” (Sahih al-Bukhari 5073).", arabic: "رَدَّ رَسُولُ اللَّهِ صلى الله عليه وسلم عَلَى عُثْمَانَ بْنِ مَظْعُونٍ التَّبَتُّلَ، وَلَوْ أَذِنَ لَهُ لاَخْتَصَيْنَا", dimmed: true)
+                    ScriptureQuote(text: "“Allah's Messenger (ﷺ) forbade `Uthman bin Maz'un to abstain from marrying (and other pleasures) and if he had allowed him, we would have gotten ourselves castrated” (Sahih al-Bukhari 5073).", arabic: "رَدَّ رَسُولُ اللَّهِ صلى الله عليه وسلم عَلَى عُثْمَانَ بْنِ مَظْعُونٍ التَّبَتُّلَ، وَلَوْ أَذِنَ لَهُ لاَخْتَصَيْنَا", dimmed: true)
                     Text("The Muslim’s asceticism (zuhd) is in the heart, not in the abandonment of duties: he marries, earns, raises children, serves his neighbours, and fights injustice, and in the midst of all that he keeps his heart for Allah and seeks the Hereafter without forgetting his share of the world (Quran 28:77, above). The Companions were traders, farmers, soldiers, and fathers, and they were the best of this Ummah.")
                         .font(.body)
 
@@ -2119,25 +2133,25 @@ struct BuddhismAnswerView: View {
                         .font(.body)
                 }
 
-                Section(header: Text("THE INVITATION")) {
+                Section(header: ArticleHeader("THE INVITATION")) {
                     Text("Islam agrees with the Buddhist that craving for the world enslaves, that compassion is a duty, and that the mind must be disciplined. It adds what he lacks: the One who made him, the reason he suffers, the soul that will meet its Lord, and a mercy to hope in.")
                         .font(.body)
                     ScriptureQuote(text: "“Did I not enjoin upon you, O children of Adam, that you not worship Satan - [for] indeed, he is to you a clear enemy - and that you worship [only] Me? This is a straight path” (Quran 36:60-61).", arabic: "أَلَمۡ أَعۡهَدۡ إِلَيۡكُمۡ يَٰبَنِيٓ ءَادَمَ أَن لَّا تَعۡبُدُواْ ٱلشَّيۡطَٰنَۖ إِنَّهُۥ لَكُمۡ عَدُوّٞ مُّبِينٞ ۝ وَأَنِ ٱعۡبُدُونِيۚ هَٰذَا صِرَٰطٞ مُّسۡتَقِيمٞ")
                 }
 
-                Section(header: Text("IN SUMMARY")) {
+                Section(header: ArticleHeader("IN SUMMARY")) {
                     Text("Buddhism describes suffering and denies the Creator; Islam names the Creator and gives suffering its meaning. There is one life, one soul, one Judge, and one road: worship Allah, be patient, and hope for His mercy.")
                         .font(.body)
                 }
 
-                Section(header: Text("KEY TERMS")) {
+                Section(header: ArticleHeader("KEY TERMS")) {
                     Text("**Buddha**: Sanskrit for “the awakened one,” a title, not a name. It was taken by Siddhartha Gautama, a prince of the Shakya clan born at Lumbini at the foot of the Himalayas, who lived in northern India around the fifth century BCE (the traditional and the modern datings differ by some decades), left his palace and family in search of the end of suffering, and taught for the rest of his life. Buddhists hold that there were Buddhas before him and will be after him. Islam does not know whether any messenger of Allah was sent to that land in that age (Quran 40:78; see the questions below).")
                         .font(.body)
 
                     Text("**Dharma (Pali: dhamma)**: “the teaching,” the Buddha’s doctrine, and also the law of things. With **sangha**, the community of monks and nuns, and the Buddha himself, it forms the “three jewels” in which a Buddhist “takes refuge.” The Muslim takes refuge in Allah alone, and his religion is what Allah revealed, not what a man discovered.")
                         .font(.body)
 
-                    Text("**The Four Noble Truths**: that life is suffering (dukkha); that suffering arises from craving (tanha); that it ceases when craving ceases; and that the way to that cessation is the Eightfold Path. **The Eightfold Path**: right view, right intention, right speech, right action, right livelihood, right effort, right mindfulness, and right concentration. Much of this is sound conduct that Islam also commands; what is missing is the One who commands it and the One to whom the path leads.")
+                    Text("**The Four Noble Truths**: that there is suffering (dukkha) in all conditioned existence; that suffering arises from craving (tanha); that it ceases when craving ceases; and that the way to that cessation is the Eightfold Path. **The Eightfold Path**: right view, right intention, right speech, right action, right livelihood, right effort, right mindfulness, and right concentration. Much of this is sound conduct that Islam also commands; what is missing is the One who commands it and the One to whom the path leads.")
                         .font(.body)
 
                     Text("**Dukkha**: suffering, unsatisfactoriness, the ache of existence. The Quran does not deny it:")
@@ -2200,6 +2214,8 @@ struct BuddhismAnswerView: View {
                     Text("**Rahbaniyyah (رَهْبَانِيَّة)**: monasticism, from rahiba, to fear; the withdrawal from marriage and the world that the Quran describes as a human invention (Quran 57:27, above) and that the Prophet (peace be upon him) refused for his Ummah (Sahih al-Bukhari 5063, quoted above).")
                         .font(.body)
                 }
+
+                ArticleSourcesSection(article: "AtheismAnswerView")
             }
             .themedListRowBackground()
         }
@@ -2214,12 +2230,12 @@ struct AtheismAnswerView: View {
     var body: some View {
         List {
             Group {
-                Section(header: Text("SUMMARY")) {
+                Section(header: ArticleHeader("SUMMARY")) {
                     Text("In short: atheism says there is no God and the universe came from nothing or made itself. The Quran answers with the argument that made a Companion's heart nearly fly: nothing comes from nothing, order does not come from chaos, and the very fitrah of man knows its Maker.")
                         .font(.body)
                 }
 
-                Section(header: Text("WHAT ATHEISM CLAIMS")) {
+                Section(header: ArticleHeader("WHAT ATHEISM CLAIMS")) {
                     Text("Atheism denies that there is a Creator. The universe, in this view, either has no cause, or caused itself, or has always existed, and life, consciousness, and moral law arose from matter without purpose. The Quran met this claim in the Arabs who said:")
                         .font(.body)
                     ScriptureQuote(text: "“And they say, ‘There is not but our worldly life; we die and live, and nothing destroys us except time.’ And they have of that no knowledge; they are only assuming” (Quran 45:24).", arabic: "وَقَالُواْ مَا هِيَ إِلَّا حَيَاتُنَا ٱلدُّنۡيَا نَمُوتُ وَنَحۡيَا وَمَا يُهۡلِكُنَآ إِلَّا ٱلدَّهۡرُۚ وَمَا لَهُم بِذَٰلِكَ مِنۡ عِلۡمٍۖ إِنۡ هُمۡ إِلَّا يَظُنُّونَ")
@@ -2228,7 +2244,7 @@ struct AtheismAnswerView: View {
                         .font(.body)
                 }
 
-                Section(header: Text("1. THE ARGUMENT THAT SHOOK A HEART")) {
+                Section(header: ArticleHeader("1. THE ARGUMENT THAT SHOOK A HEART")) {
                     Text("Jubayr ibn Mut‘im, still a pagan, came to Madinah and heard the Prophet (peace be upon him) recite Surat at-Tur in the Maghrib prayer. He said that when the Prophet reached these verses, his heart nearly flew (Sahih al-Bukhari 4854):")
                         .font(.body)
                     ScriptureQuote(text: "“Or were they created by nothing, or were they the creators [of themselves]? Or did they create the heavens and the earth? Rather, they are not certain” (Quran 52:35-36).", arabic: "أَمۡ خُلِقُواْ مِنۡ غَيۡرِ شَيۡءٍ أَمۡ هُمُ ٱلۡخَٰلِقُونَ ۝ أَمۡ خَلَقُواْ ٱلسَّمَٰوَٰتِ وَٱلۡأَرۡضَۚ بَل لَّا يُوقِنُونَ")
@@ -2239,10 +2255,10 @@ struct AtheismAnswerView: View {
 
                     Text("The question “then who created God?“ does not apply: the argument is that whatever begins needs a maker, and Allah did not begin. The Prophet (peace be upon him) taught that this question comes from Shaytan and is to be cut off:")
                         .font(.body)
-                    ScriptureQuote(text: "“Shaytan comes to one of you and says: Who created such and such? Who created such and such? Until he says: Who created your Lord? When he reaches that, let him seek refuge in Allah and stop” (Sahih al-Bukhari 3276, Sahih Muslim 134).", arabic: "يَأْتِي الشَّيْطَانُ أَحَدَكُمْ فَيَقُولُ مَنْ خَلَقَ كَذَا مَنْ خَلَقَ كَذَا حَتَّى يَقُولَ مَنْ خَلَقَ رَبَّكَ فَإِذَا بَلَغَهُ فَلْيَسْتَعِذْ بِاللَّهِ، وَلْيَنْتَهِ", dimmed: true)
+                    ScriptureQuote(text: "“Satan comes to one of you and says, 'Who created so-and-so? 'till he says, 'Who has created your Lord?' So, when he inspires such a question, one should seek refuge with Allah and give up such thoughts” (Sahih al-Bukhari 3276, Sahih Muslim 134).", arabic: "يَأْتِي الشَّيْطَانُ أَحَدَكُمْ فَيَقُولُ مَنْ خَلَقَ كَذَا مَنْ خَلَقَ كَذَا حَتَّى يَقُولَ مَنْ خَلَقَ رَبَّكَ فَإِذَا بَلَغَهُ فَلْيَسْتَعِذْ بِاللَّهِ، وَلْيَنْتَهِ", dimmed: true)
                 }
 
-                Section(header: Text("2. ORDER POINTS TO A DESIGNER")) {
+                Section(header: ArticleHeader("2. ORDER POINTS TO A DESIGNER")) {
                     ScriptureQuote(text: "“[And] who created seven heavens in layers. You do not see in the creation of the Most Merciful any inconsistency. So return [your] vision [to the sky]; do you see any breaks? Then return [your] vision twice again. [Your] vision will return to you humbled while it is fatigued” (Quran 67:3-4).", arabic: "ٱلَّذِي خَلَقَ سَبۡعَ سَمَٰوَٰتٖ طِبَاقٗاۖ مَّا تَرَىٰ فِي خَلۡقِ ٱلرَّحۡمَٰنِ مِن تَفَٰوُتٖۖ فَٱرۡجِعِ ٱلۡبَصَرَ هَلۡ تَرَىٰ مِن فُطُورٖ ۝ ثُمَّ ٱرۡجِعِ ٱلۡبَصَرَ كَرَّتَيۡنِ يَنقَلِبۡ إِلَيۡكَ ٱلۡبَصَرُ خَاسِئٗا وَهُوَ حَسِيرٞ")
 
                     ScriptureQuote(text: "“Then do they not look at the camels - how they are created? And at the sky - how it is raised? And at the mountains - how they are erected? And at the earth - how it is spread out?” (Quran 88:17-20).", arabic: "أَفَلَا يَنظُرُونَ إِلَى ٱلۡإِبِلِ كَيۡفَ خُلِقَتۡ ۝ وَإِلَى ٱلسَّمَآءِ كَيۡفَ رُفِعَتۡ ۝ وَإِلَى ٱلۡجِبَالِ كَيۡفَ نُصِبَتۡ ۝ وَإِلَى ٱلۡأَرۡضِ كَيۡفَ سُطِحَتۡ")
@@ -2255,12 +2271,12 @@ struct AtheismAnswerView: View {
                     ScriptureQuote(text: "“We will show them Our signs in the horizons and within themselves until it becomes clear to them that it is the truth. But is it not sufficient concerning your Lord that He is, over all things, a Witness?” (Quran 41:53).", arabic: "سَنُرِيهِمۡ ءَايَٰتِنَا فِي ٱلۡأٓفَاقِ وَفِيٓ أَنفُسِهِمۡ حَتَّىٰ يَتَبَيَّنَ لَهُمۡ أَنَّهُ ٱلۡحَقُّۗ أَوَلَمۡ يَكۡفِ بِرَبِّكَ أَنَّهُۥ عَلَىٰ كُلِّ شَيۡءٖ شَهِيدٌ")
                 }
 
-                Section(header: Text("3. THE FITRAH")) {
+                Section(header: ArticleHeader("3. THE FITRAH")) {
                     Text("The **fitrah (فِطرَة)**, from ف-ط-ر, to originate or split something open anew, is the disposition Allah created every human upon. Belief in a Creator is not taught; it is born in every human being, and atheism is what has to be taught over it:")
                         .font(.body)
                     ScriptureQuote(text: "“So direct your face toward the religion, inclining to truth. [Adhere to] the fitrah of Allah upon which He has created [all] people. No change should there be in the creation of Allah. That is the correct religion, but most of the people do not know” (Quran 30:30).", arabic: "فَأَقِمۡ وَجۡهَكَ لِلدِّينِ حَنِيفٗاۚ فِطۡرَتَ ٱللَّهِ ٱلَّتِي فَطَرَ ٱلنَّاسَ عَلَيۡهَاۚ لَا تَبۡدِيلَ لِخَلۡقِ ٱللَّهِۚ ذَٰلِكَ ٱلدِّينُ ٱلۡقَيِّمُ وَلَٰكِنَّ أَكۡثَرَ ٱلنَّاسِ لَا يَعۡلَمُونَ")
 
-                    ScriptureQuote(text: "“Every child is born upon the fitrah, and then his parents make him a Jew, a Christian, or a Magian” (Sahih al-Bukhari 1385).", arabic: "كُلُّ مَوْلُودٍ يُولَدُ عَلَى الْفِطْرَةِ، فَأَبَوَاهُ يُهَوِّدَانِهِ أَوْ يُنَصِّرَانِهِ أَوْ يُمَجِّسَانِهِ", dimmed: true)
+                    ScriptureQuote(text: "“Every child is born with a true faith of Islam (i.e. to worship none but Allah Alone) and his parents convert him to Judaism or Christianity or Magianism” (Sahih al-Bukhari 1385).", arabic: "كُلُّ مَوْلُودٍ يُولَدُ عَلَى الْفِطْرَةِ، فَأَبَوَاهُ يُهَوِّدَانِهِ أَوْ يُنَصِّرَانِهِ أَوْ يُمَجِّسَانِهِ", dimmed: true)
 
                     ScriptureQuote(text: "“And [mention] when your Lord took from the children of Adam - from their loins - their descendants and made them testify of themselves, [saying to them], ‘Am I not your Lord?’ They said, ‘Yes, we have testified’” (Quran 7:172).", arabic: "وَإِذۡ أَخَذَ رَبُّكَ مِنۢ بَنِيٓ ءَادَمَ مِن ظُهُورِهِمۡ ذُرِّيَّتَهُمۡ وَأَشۡهَدَهُمۡ عَلَىٰٓ أَنفُسِهِمۡ أَلَسۡتُ بِرَبِّكُمۡۖ قَالُواْ بَلَىٰ شَهِدۡنَآۚ")
 
@@ -2269,7 +2285,7 @@ struct AtheismAnswerView: View {
                     ScriptureQuote(text: "“And when they board a ship, they supplicate Allah, sincere to Him in religion. But when He delivers them to the land, at once they associate others with Him” (Quran 29:65).", arabic: "فَإِذَا رَكِبُواْ فِي ٱلۡفُلۡكِ دَعَوُاْ ٱللَّهَ مُخۡلِصِينَ لَهُ ٱلدِّينَ فَلَمَّا نَجَّىٰهُمۡ إِلَى ٱلۡبَرِّ إِذَا هُمۡ يُشۡرِكُونَ")
                 }
 
-                Section(header: Text("4. THE RESURRECTION IS NOT HARDER THAN THE FIRST CREATION")) {
+                Section(header: ArticleHeader("4. THE RESURRECTION IS NOT HARDER THAN THE FIRST CREATION")) {
                     Text("The atheist says a dead body cannot live again. The Quran answers with the man’s own origin:")
                         .font(.body)
                     ScriptureQuote(text: "“And he presents for Us an example and forgets his [own] creation. He says, ‘Who will give life to bones while they are disintegrated?’ Say, ‘He will give them life who produced them the first time; and He is, of all creation, Knowing’” (Quran 36:78-79).", arabic: "وَضَرَبَ لَنَا مَثَلٗا وَنَسِيَ خَلۡقَهُۥۖ قَالَ مَن يُحۡيِ ٱلۡعِظَٰمَ وَهِيَ رَمِيمٞ ۝ قُلۡ يُحۡيِيهَا ٱلَّذِيٓ أَنشَأَهَآ أَوَّلَ مَرَّةٖۖ وَهُوَ بِكُلِّ خَلۡقٍ عَلِيمٌ")
@@ -2282,8 +2298,8 @@ struct AtheismAnswerView: View {
                         .font(.body)
                 }
 
-                Section(header: Text("5. WHY THE QURAN?")) {
-                    Text("To know that God exists is the first step; the second is to know what He wants. The Quran presents itself as His word and gives its proof: recited by an unlettered man fourteen centuries ago, preserved unchanged, without contradiction, describing the origin of the universe and the growth of the embryo in terms no one of that age knew:")
+                Section(header: ArticleHeader("5. WHY THE QURAN?")) {
+                    Text("To know that God exists is the first step; the second is to know what He wants. The Quran presents itself as His word and gives its proof: recited by an unlettered man fourteen centuries ago, preserved unchanged, without contradiction, and free of contradiction, as it challenges its readers to test:")
                         .font(.body)
                     ScriptureQuote(text: "“Have those who disbelieved not considered that the heavens and the earth were a joined entity, and We separated them and made from water every living thing? Then will they not believe?” (Quran 21:30).", arabic: "أَوَلَمۡ يَرَ ٱلَّذِينَ كَفَرُوٓاْ أَنَّ ٱلسَّمَٰوَٰتِ وَٱلۡأَرۡضَ كَانَتَا رَتۡقٗا فَفَتَقۡنَٰهُمَاۖ وَجَعَلۡنَا مِنَ ٱلۡمَآءِ كُلَّ شَيۡءٍ حَيٍّۚ أَفَلَا يُؤۡمِنُونَ")
 
@@ -2292,12 +2308,12 @@ struct AtheismAnswerView: View {
                     ScriptureQuote(text: "“Then do they not reflect upon the Qur'an? If it had been from [any] other than Allah, they would have found within it much contradiction” (Quran 4:82).", arabic: "أَفَلَا يَتَدَبَّرُونَ ٱلۡقُرۡءَانَۚ وَلَوۡ كَانَ مِنۡ عِندِ غَيۡرِ ٱللَّهِ لَوَجَدُواْ فِيهِ ٱخۡتِلَٰفٗا كَثِيرٗا")
                 }
 
-                Section(header: Text("COMMON QUESTIONS")) {
+                Section(header: ArticleHeader("COMMON QUESTIONS")) {
                     Text("**Who created God?**")
                         .font(.body)
                     Text("No one, and the question misunderstands the argument. The claim is not that everything has a cause but that everything that begins has a cause. The universe began; Allah did not. He is the First, with nothing before Him (Quran 57:3, quoted above), and the Eternal Refuge on whom all depend while He depends on nothing (Quran 112:2). The Prophet (peace be upon him) taught his Companions to say before sleeping:")
                         .font(.body)
-                    ScriptureQuote(text: "“O Allah, You are the First, there is nothing before You, and You are the Last, there is nothing after You, and You are the Evident, there is nothing above You, and You are the Innermost, there is nothing beyond You” (Sahih Muslim 2713).", arabic: "اللَّهُمَّ أَنْتَ الأَوَّلُ فَلَيْسَ قَبْلَكَ شَىْءٌ وَأَنْتَ الآخِرُ فَلَيْسَ بَعْدَكَ شَىْءٌ وَأَنْتَ الظَّاهِرُ فَلَيْسَ فَوْقَكَ شَىْءٌ وَأَنْتَ الْبَاطِنُ فَلَيْسَ دُونَكَ شَىْءٌ", dimmed: true)
+                    ScriptureQuote(text: "“O Allah, Thou art the First, there is naught before Thee, and Thou art the Last and there is naught after Thee, and Thou art Evident and there is nothing above Thee, and Thou art Innermost and there is nothing beyond Thee” (Sahih Muslim 2713).", arabic: "اللَّهُمَّ أَنْتَ الأَوَّلُ فَلَيْسَ قَبْلَكَ شَىْءٌ وَأَنْتَ الآخِرُ فَلَيْسَ بَعْدَكَ شَىْءٌ وَأَنْتَ الظَّاهِرُ فَلَيْسَ فَوْقَكَ شَىْءٌ وَأَنْتَ الْبَاطِنُ فَلَيْسَ دُونَكَ شَىْءٌ", dimmed: true)
                     Text("A chain of caused causes must end in an uncaused Cause, or nothing would ever have started; if every cause needed a prior cause the series would never reach the present. The Prophet (peace be upon him) told us that this question is Shaytan’s last move and is to be cut off with refuge in Allah (Sahih al-Bukhari 3276, Sahih Muslim 134, quoted above).")
                         .font(.body)
 
@@ -2312,9 +2328,9 @@ struct AtheismAnswerView: View {
                     ScriptureQuote(text: "“But perhaps you hate a thing and it is good for you; and perhaps you love a thing and it is bad for you. And Allah Knows, while you know not” (Quran 2:216).", arabic: "وَعَسَىٰٓ أَن تَكۡرَهُواْ شَيۡـٔٗا وَهُوَ خَيۡرٞ لَّكُمۡۖ وَعَسَىٰٓ أَن تُحِبُّواْ شَيۡـٔٗا وَهُوَ شَرّٞ لَّكُمۡۚ وَٱللَّهُ يَعۡلَمُ وَأَنتُمۡ لَا تَعۡلَمُونَ")
                     Text("Much of the suffering in the world is what human hands have earned (Quran 30:41), and for the believer no pain is wasted; the Prophet (peace be upon him) said:")
                         .font(.body)
-                    ScriptureQuote(text: "“No fatigue, disease, sorrow, sadness, hurt, or distress befalls a Muslim, even the prick of a thorn, except that Allah expiates some of his sins by it” (Sahih al-Bukhari 5641).", arabic: "مَا يُصِيبُ الْمُسْلِمَ مِنْ نَصَبٍ وَلاَ وَصَبٍ وَلاَ هَمٍّ وَلاَ حُزْنٍ وَلاَ أَذًى وَلاَ غَمٍّ حَتَّى الشَّوْكَةِ يُشَاكُهَا، إِلاَّ كَفَّرَ اللَّهُ بِهَا مِنْ خَطَايَاهُ", dimmed: true)
+                    ScriptureQuote(text: "“No fatigue, nor disease, nor sorrow, nor sadness, nor hurt, nor distress befalls a Muslim, even if it were the prick he receives from a thorn, but that Allah expiates some of his sins for that” (Sahih al-Bukhari 5641).", arabic: "مَا يُصِيبُ الْمُسْلِمَ مِنْ نَصَبٍ وَلاَ وَصَبٍ وَلاَ هَمٍّ وَلاَ حُزْنٍ وَلاَ أَذًى وَلاَ غَمٍّ حَتَّى الشَّوْكَةِ يُشَاكُهَا، إِلاَّ كَفَّرَ اللَّهُ بِهَا مِنْ خَطَايَاهُ", dimmed: true)
                     ScriptureQuote(text: "“If Allah wants to do good to somebody, He afflicts him with trials” (Sahih al-Bukhari 5645).", arabic: "مَنْ يُرِدِ اللَّهُ بِهِ خَيْرًا يُصِبْ مِنْهُ", dimmed: true)
-                    ScriptureQuote(text: "“How wonderful is the affair of the believer, for all of it is good, and that is for no one but the believer: if good comes to him he is thankful, and that is good for him, and if harm comes to him he is patient, and that is good for him” (Sahih Muslim 2999).", arabic: "عَجَبًا لأَمْرِ الْمُؤْمِنِ إِنَّ أَمْرَهُ كُلَّهُ خَيْرٌ وَلَيْسَ ذَاكَ لأَحَدٍ إِلاَّ لِلْمُؤْمِنِ إِنْ أَصَابَتْهُ سَرَّاءُ شَكَرَ فَكَانَ خَيْرًا لَهُ وَإِنْ أَصَابَتْهُ ضَرَّاءُ صَبَرَ فَكَانَ خَيْرًا لَهُ", dimmed: true)
+                    ScriptureQuote(text: "“Strange are the ways of a believer for there is good in every affair of his and this is not the case with anyone else except in the case of a believer for if he has an occasion to feel delight, he thanks (God), thus there is a good for him in it, and if he gets into trouble and shows resignation (and endures it patiently), there is a good for him in it” (Sahih Muslim 2999).", arabic: "عَجَبًا لأَمْرِ الْمُؤْمِنِ إِنَّ أَمْرَهُ كُلَّهُ خَيْرٌ وَلَيْسَ ذَاكَ لأَحَدٍ إِلاَّ لِلْمُؤْمِنِ إِنْ أَصَابَتْهُ سَرَّاءُ شَكَرَ فَكَانَ خَيْرًا لَهُ وَإِنْ أَصَابَتْهُ ضَرَّاءُ صَبَرَ فَكَانَ خَيْرًا لَهُ", dimmed: true)
                     Text("The Prophet (peace be upon him) himself was orphaned, buried six of his seven children, was driven from his city, and was wounded at Uhud. The atheist’s complaint proves the opposite of what he intends: if there is no God, “evil” is only what one animal dislikes, and there is nothing to complain to. The very sense that suffering ought not to be is a sense of a standard beyond the world, and of a Day when it is set right.")
                         .font(.body)
 
@@ -2325,7 +2341,7 @@ struct AtheismAnswerView: View {
                     ScriptureQuote(text: "“Vision perceives Him not, but He perceives [all] vision; and He is the Subtle, the Acquainted” (Quran 6:103).", arabic: "لَّا تُدۡرِكُهُ ٱلۡأَبۡصَٰرُ وَهُوَ يُدۡرِكُ ٱلۡأَبۡصَٰرَۖ وَهُوَ ٱللَّطِيفُ ٱلۡخَبِيرُ")
                     Text("The Prophet (peace be upon him) said:")
                         .font(.body)
-                    ScriptureQuote(text: "“His veil is the light. If He withdraws it, the splendour of His countenance would consume His creation so far as His sight reaches” (Sahih Muslim 179).", arabic: "حِجَابُهُ النُّورُ لَوْ كَشَفَهُ لأَحْرَقَتْ سُبُحَاتُ وَجْهِهِ مَا انْتَهَى إِلَيْهِ بَصَرُهُ مِنْ خَلْقِهِ", dimmed: true)
+                    ScriptureQuote(text: "“His veil is the light. In the hadith narrated by Abu Bakr (instead of the word ‘light’ ) it is fire. If he withdraws it (the veil), the splendour of His countenance would consume His creation so far as His sight reaches” (Sahih Muslim 179).", arabic: "حِجَابُهُ النُّورُ لَوْ كَشَفَهُ لأَحْرَقَتْ سُبُحَاتُ وَجْهِهِ مَا انْتَهَى إِلَيْهِ بَصَرُهُ مِنْ خَلْقِهِ", dimmed: true)
                     Text("Seeing is promised, in the Hereafter, to those who believed without it:")
                         .font(.body)
                     ScriptureQuote(text: "“[Some] faces, that Day, will be radiant, looking at their Lord” (Quran 75:22-23).", arabic: "وُجُوهٞ يَوۡمَئِذٖ نَّاضِرَةٌ ۝ إِلَىٰ رَبِّهَا نَاظِرَةٞ")
@@ -2390,8 +2406,8 @@ struct AtheismAnswerView: View {
                     ScriptureQuote(text: "“Indeed, the example of Jesus to Allah is like that of Adam. He created Him from dust; then He said to him, ‘Be,’ and he was” (Quran 3:59).", arabic: "إِنَّ مَثَلَ عِيسَىٰ عِندَ ٱللَّهِ كَمَثَلِ ءَادَمَۖ خَلَقَهُۥ مِن تُرَابٖ ثُمَّ قَالَ لَهُۥ كُن فَيَكُونُ")
                     Text("The Prophet (peace be upon him) said:")
                         .font(.body)
-                    ScriptureQuote(text: "“Allah created Adam, making him sixty cubits tall” (Sahih al-Bukhari 3326).", arabic: "خَلَقَ اللَّهُ آدَمَ وَطُولُهُ سِتُّونَ ذِرَاعًا", dimmed: true)
-                    ScriptureQuote(text: "“Indeed Allah Most High created Adam from a handful that He took from all of the earth. So the children of Adam come in accordance with the earth, some of them come red, and white and black, and between that” (Sunan al-Tirmidhi 2955; graded sahih by al-Albani).", arabic: "إِنَّ اللَّهَ تَعَالَى خَلَقَ آدَمَ مِنْ قَبْضَةٍ قَبَضَهَا مِنْ جَمِيعِ الأَرْضِ فَجَاءَ بَنُو آدَمَ عَلَى قَدْرِ الأَرْضِ فَجَاءَ مِنْهُمُ الأَحْمَرُ وَالأَبْيَضُ وَالأَسْوَدُ وَبَيْنَ ذَلِكَ", dimmed: true)
+                    ScriptureQuote(text: "“Allah created Adam, making him 60 cubits tall” (Sahih al-Bukhari 3326).", arabic: "خَلَقَ اللَّهُ آدَمَ وَطُولُهُ سِتُّونَ ذِرَاعًا", dimmed: true)
+                    ScriptureQuote(text: "“Indeed Allah Most High created Adam from a handful that He took from all of the earth. So the children of Adam come in according with the earth, some of them come red, and white and black, and between that, and the thin, the thick, the filthy, and the clean” (Sunan al-Tirmidhi 2955; graded sahih by al-Albani).", arabic: "إِنَّ اللَّهَ تَعَالَى خَلَقَ آدَمَ مِنْ قَبْضَةٍ قَبَضَهَا مِنْ جَمِيعِ الأَرْضِ فَجَاءَ بَنُو آدَمَ عَلَى قَدْرِ الأَرْضِ فَجَاءَ مِنْهُمُ الأَحْمَرُ وَالأَبْيَضُ وَالأَسْوَدُ وَبَيْنَ ذَلِكَ", dimmed: true)
                     Text("That living things vary and adapt is observed, and Islam does not deny it; the colours and forms of the children of Adam are themselves an example, and the hadith just quoted says where they came from. What a Muslim cannot accept is that Adam (peace be upon him) had a human or an animal ancestor, or that man is here with no Creator, no purpose, and no soul. On the first, Allah has told us plainly how Adam was made, and revelation is knowledge; the descent of species is an inference about a past nobody witnessed, however carefully it is drawn from the evidence we do have, and inferences are revised while what Allah said is not. On the second, no fossil and no mechanism can show that nobody made it: to describe how a thing works has never answered who made it, or why. So the believer studies the workings of life closely, as Allah’s handiwork, and holds what Allah said about Adam as certain.")
                         .font(.body)
 
@@ -2410,10 +2426,10 @@ struct AtheismAnswerView: View {
                         .font(.body)
                     Text("A passing doubt is not disbelief, and hating it is faith. The Companions came to the Prophet (peace be upon him) troubled by thoughts they were ashamed to speak:")
                         .font(.body)
-                    ScriptureQuote(text: "They said, “Verily we perceive in our minds that which every one of us considers too grave to express.” He said, “Do you really perceive it?” They said, “Yes.” He said, “That is the faith manifest” (Sahih Muslim 132).", arabic: "إِنَّا نَجِدُ فِي أَنْفُسِنَا مَا يَتَعَاظَمُ أَحَدُنَا أَنْ يَتَكَلَّمَ بِهِ. قَالَ وَقَدْ وَجَدْتُمُوهُ. قَالُوا نَعَمْ. قَالَ ذَاكَ صَرِيحُ الإِيمَانِ", dimmed: true)
+                    ScriptureQuote(text: "“Verily we perceive in our minds that which every one of us considers it too grave to express. He (the Holy Prophet) said: Do you really perceive it? They said: Yes. Upon this he remarked: That is the faith manifest” (Sahih Muslim 132).", arabic: "إِنَّا نَجِدُ فِي أَنْفُسِنَا مَا يَتَعَاظَمُ أَحَدُنَا أَنْ يَتَكَلَّمَ بِهِ. قَالَ وَقَدْ وَجَدْتُمُوهُ. قَالُوا نَعَمْ. قَالَ ذَاكَ صَرِيحُ الإِيمَانِ", dimmed: true)
                     Text("Ibrahim (peace be upon him) asked to be shown how the dead are raised, “only that my heart may be satisfied” (Quran 2:260), and the Prophet (peace be upon him) said:")
                         .font(.body)
-                    ScriptureQuote(text: "“We are more liable to be in doubt than Abraham when he said, ‘My Lord! Show me how You give life to the dead.’ He said, ‘Don’t you believe then?’ He said, ‘Yes, but (I ask) in order to be stronger in Faith’” (Sahih al-Bukhari 3372).", arabic: "نَحْنُ أَحَقُّ مِنْ إِبْرَاهِيمَ إِذْ قَالَ رَبِّ أَرِنِي كَيْفَ تُحْيِي الْمَوْتَى قَالَ أَوَلَمْ تُؤْمِنْ قَالَ بَلَى وَلَكِنْ لِيَطْمَئِنَّ قَلْبِي", dimmed: true)
+                    ScriptureQuote(text: "“We are more liable to be in doubt than Abraham when he said, 'My Lord! Show me how You give life to the dead.‘. He (i.e. Allah) slid: 'Don't you believe then?' He (i.e. Abraham) said: ’Yes, but (I ask) in order to be stronger in Faith” (Sahih al-Bukhari 3372).", arabic: "نَحْنُ أَحَقُّ مِنْ إِبْرَاهِيمَ إِذْ قَالَ رَبِّ أَرِنِي كَيْفَ تُحْيِي الْمَوْتَى قَالَ أَوَلَمْ تُؤْمِنْ قَالَ بَلَى وَلَكِنْ لِيَطْمَئِنَّ قَلْبِي", dimmed: true)
                     Text("Allah addressed His Prophet (peace be upon him) with a condition he never fell into, so that those after him would learn where to take a doubt:")
                         .font(.body)
                     ScriptureQuote(text: "“So if you are in doubt, [O Muhammad], about that which We have revealed to you, then ask those who have been reading the Scripture before you. The truth has certainly come to you from your Lord, so never be among the doubters” (Quran 10:94).", arabic: "فَإِن كُنتَ فِي شَكّٖ مِّمَّآ أَنزَلۡنَآ إِلَيۡكَ فَسۡـَٔلِ ٱلَّذِينَ يَقۡرَءُونَ ٱلۡكِتَٰبَ مِن قَبۡلِكَۚ لَقَدۡ جَآءَكَ ٱلۡحَقُّ مِن رَّبِّكَ فَلَا تَكُونَنَّ مِنَ ٱلۡمُمۡتَرِينَ")
@@ -2429,7 +2445,7 @@ struct AtheismAnswerView: View {
                     ScriptureQuote(text: "“And say, ‘The truth is from your Lord, so whoever wills - let him believe; and whoever wills - let him disbelieve’” (Quran 18:29).", arabic: "وَقُلِ ٱلۡحَقُّ مِن رَّبِّكُمۡۖ فَمَن شَآءَ فَلۡيُؤۡمِن وَمَن شَآءَ فَلۡيَكۡفُرۡۚ")
                     Text("When the Companions asked whether they should stop working and rely on what was written, the Prophet (peace be upon him) said:")
                         .font(.body)
-                    ScriptureQuote(text: "“Carry on doing deeds, for everybody will find easy to do such deeds as will lead him to his destined place for which he has been created” (Sahih al-Bukhari 4949).", arabic: "اعْمَلُوا فَكُلٌّ مُيَسَّرٌ لِمَا خُلِقَ لَهُ", dimmed: true)
+                    ScriptureQuote(text: "“Carry on doing (good) deeds, for everybody will find easy to do such deeds as will lead him to his destined place for which he has been created” (Sahih al-Bukhari 4949).", arabic: "اعْمَلُوا فَكُلٌّ مُيَسَّرٌ لِمَا خُلِقَ لَهُ", dimmed: true)
                     Text("You experience your choices as your own, you are praised and blamed for them by everyone including the atheist, and Allah’s foreknowledge no more forces them than a historian’s knowledge forces the past. He inspired the soul with its wickedness and its righteousness and made the purifying or the corrupting of it a man’s own deed, for which he answers (Quran 91:7-10), and He does not burden a soul beyond its capacity (Quran 2:286).")
                         .font(.body)
 
@@ -2459,7 +2475,7 @@ struct AtheismAnswerView: View {
                     ScriptureQuote(text: "“And never would We punish until We sent a messenger” (Quran 17:15).", arabic: "وَمَا كُنَّا مُعَذِّبِينَ حَتَّىٰ نَبۡعَثَ رَسُولٗا")
                     Text("The Fire is for the one who knew and refused, who was called for a lifetime and turned his back until death closed the door; and its people will themselves confess that a warner came to them and that they denied him (Quran 67:8-11). Rejecting the Creator knowingly is not a small sin against a small being; it is the rejection of the Infinite, and its refusal does not expire because the one who made it dies. Even so, the Prophet (peace be upon him) said:")
                         .font(.body)
-                    ScriptureQuote(text: "“If a believer were to know the punishment (in Hell) none would have the audacity to aspire for Paradise, and if a non-believer were to know what is there with Allah as a mercy, none would have been disappointed in regard to Paradise” (Sahih Muslim 2755).", arabic: "لَوْ يَعْلَمُ الْمُؤْمِنُ مَا عِنْدَ اللَّهِ مِنَ الْعُقُوبَةِ مَا طَمِعَ بِجَنَّتِهِ أَحَدٌ وَلَوْ يَعْلَمُ الْكَافِرُ مَا عِنْدَ اللَّهِ مِنَ الرَّحْمَةِ مَا قَنِطَ مِنْ جَنَّتِهِ أَحَدٌ", dimmed: true)
+                    ScriptureQuote(text: "“If a believer were to know the punishment (in Hell) none would have the audacity to aspire for Paradise (but he would earnestly desire to be rescued from Hell), and if a non-believer were to know what is there with Allah as a mercy. none would have been disappointed in regard to Paradise” (Sahih Muslim 2755).", arabic: "لَوْ يَعْلَمُ الْمُؤْمِنُ مَا عِنْدَ اللَّهِ مِنَ الْعُقُوبَةِ مَا طَمِعَ بِجَنَّتِهِ أَحَدٌ وَلَوْ يَعْلَمُ الْكَافِرُ مَا عِنْدَ اللَّهِ مِنَ الرَّحْمَةِ مَا قَنِطَ مِنْ جَنَّتِهِ أَحَدٌ", dimmed: true)
                     Text("The door is open until the last breath. Love that never judged would leave every oppressor unpunished and every victim unavenged; that is not love but indifference.")
                         .font(.body)
 
@@ -2475,19 +2491,19 @@ struct AtheismAnswerView: View {
                         .font(.body)
                 }
 
-                Section(header: Text("THE INVITATION")) {
+                Section(header: ArticleHeader("THE INVITATION")) {
                     ScriptureQuote(text: "“And on the earth are signs for the certain [in faith] and in yourselves. Then will you not see?” (Quran 51:20-21).", arabic: "وَفِي ٱلۡأَرۡضِ ءَايَٰتٞ لِّلۡمُوقِنِينَ ۝ وَفِيٓ أَنفُسِكُمۡۚ أَفَلَا تُبۡصِرُونَ")
 
                     Text("The atheist is asked only to be consistent: to follow the evidence for a cause to its Cause, and to listen to the voice in himself that already knows. Allah does not compel belief (Quran 10:99); He invites to it with reason, and He forgives whoever turns to Him.")
                         .font(.body)
                 }
 
-                Section(header: Text("IN SUMMARY")) {
+                Section(header: ArticleHeader("IN SUMMARY")) {
                     Text("Nothing comes from nothing, order does not write itself, and the fitrah knows its Maker. The universe that began was begun by the One who did not, and He sent a Book to say who He is and what He asks.")
                         .font(.body)
                 }
 
-                Section(header: Text("KEY TERMS")) {
+                Section(header: ArticleHeader("KEY TERMS")) {
                     Text("**Atheism / ilhad (إِلْحَاد)**: from lahada, to deviate or lean away; the lahd is the niche in a grave that is cut sideways, away from the straight shaft. Ilhad is thus any leaning away from the truth, and the **mulhid (مُلْحِد)** in later usage is the one who denies the Creator altogether. The Quran uses the root for those who twist Allah’s names and His verses:")
                         .font(.body)
                     ScriptureQuote(text: "“And to Allah belong the best names, so invoke Him by them. And leave [the company of] those who practice deviation concerning His names. They will be recompensed for what they have been doing” (Quran 7:180).", arabic: "وَلِلَّهِ ٱلۡأَسۡمَآءُ ٱلۡحُسۡنَىٰ فَٱدۡعُوهُ بِهَاۖ وَذَرُواْ ٱلَّذِينَ يُلۡحِدُونَ فِيٓ أَسۡمَٰٓئِهِۦۚ سَيُجۡزَوۡنَ مَا كَانُواْ يَعۡمَلُونَ")

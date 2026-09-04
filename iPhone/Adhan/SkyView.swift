@@ -110,7 +110,12 @@ private struct SolarArcShape: Shape {
 /// Positions are derived from a fixed seed rather than `Math.random`, so the sky doesn't reshuffle itself on
 /// every re-render - and the same star keeps the same twinkle phase across state changes.
 private struct StarFieldView: View {
+    @Environment(\.appearance) private var appearance
+
     let opacity: Double
+    /// True while the card is off screen (another tab is selected): TabView keeps the card alive,
+    /// and the 6 fps twinkle used to keep drawing invisibly all night.
+    let paused: Bool
 
     private struct Star {
         let x, y, radius, phase, brightness: Double
@@ -139,7 +144,7 @@ private struct StarFieldView: View {
         GeometryReader { geo in
             // Paused when invisible - and in Low Power Mode, where a 6fps twinkle is pure battery.
             TimelineView(.animation(minimumInterval: 1.0 / 6.0,
-                                    paused: opacity <= 0.01 || AppPerformance.shouldReduceAnimations)) { timeline in
+                                    paused: opacity <= 0.01 || paused || appearance.reduceAnimations)) { timeline in
                 Canvas { context, size in
                     let t = timeline.date.timeIntervalSinceReferenceDate
                     for star in Self.stars {
@@ -167,25 +172,68 @@ private struct StarFieldView: View {
 /// The Adhan tab's one card: the sun on today's arc, the moon at its true phase, the current and upcoming
 /// prayers, and the countdown. Drag the sun to scrub the day - the gradient, the clock and the prayer list
 /// below all follow.
+///
+/// This is the clock; `SkyCard` is the drawing. One minute-granularity tick (five minutes on the
+/// reduced tier) re-evaluates the card through `TimelineView`. It used to be a 1 s `Timer.publish`
+/// held in a struct `let` (recreated on every init, never disconnected, 60 inits a second during a
+/// sun drag) that re-rendered the whole card every second to move the sun 0.004 pt. The card observes
+/// Settings, the scrubber and the adhan player itself, so a drag or a prayer boundary still lands at
+/// once; the clock only has to cover the sun's creep and the moon's hour.
 struct SkyView: View {
+    @Environment(\.appearance) private var appearance
+    @Environment(\.scenePhase) private var scenePhase
+
+    @State private var isOnScreen = false
+    /// Restarting the schedule from now on appear and on activation snaps the clock forward after
+    /// the card was hidden or the app sat in the background.
+    @State private var clockAnchor = Date()
+
+    /// Horizontal row inset, measured off the sections around this card rather than assumed. A grouped row
+    /// already carries the list's own 20pt margin, so the card adds nothing; a plain row carries none, and
+    /// its neighbours (the location pill, the prayer tiles) sit at 19.33pt. On the wrapper, not the card:
+    /// a list trait set inside `TimelineView`'s content would not reach the row.
+    private var sideInset: CGFloat { appearance.defaultView ? 0 : 19.33 }
+
+    var body: some View {
+        let _ = RenderCounter.hit("SkyView")
+        let interval: TimeInterval = appearance.isReducedTier ? 300 : 60
+        TimelineView(.periodic(from: clockAnchor, by: interval)) { context in
+            SkyCard(now: Self.quantizedToMinute(context.date), isOnScreen: isOnScreen)
+        }
+        // The two list themes give a row different built-in margins, so the card has to make up the
+        // difference itself. Grouped rows already carry the list's 20pt margin - adding any more is what
+        // made this card sit inset from every other section. Plain rows carry almost none, so without this
+        // the card bleeds out past the sections above and below it.
+        .listRowInsets(EdgeInsets(top: 6, leading: sideInset, bottom: 6, trailing: sideInset))
+        .onAppear {
+            isOnScreen = true
+            clockAnchor = Date()
+        }
+        .onDisappear { isOnScreen = false }
+        .onChange(of: scenePhase) { phase in
+            if phase == .active { clockAnchor = Date() }
+        }
+    }
+
+    /// The sun moves 0.24 pt a minute (sub-pixel), so a minute is all the resolution the card can show.
+    private static func quantizedToMinute(_ date: Date) -> Date {
+        Date(timeIntervalSinceReferenceDate: (date.timeIntervalSinceReferenceDate / 60).rounded(.down) * 60)
+    }
+}
+
+/// The sky card's drawing, for one moment `now`. See `SkyView`.
+struct SkyCard: View {
     @ObservedObject private var settings = Settings.shared
     @ObservedObject private var scrubber = DayScrubber.shared
     // Publishes only when the picked DAY changes, so following it costs one re-render per date change.
     @ObservedObject private var selectedDay = SelectedDayPreview.shared
     @ObservedObject private var adhanPlayer = ForegroundAdhanPlayer.shared
     @Environment(\.layoutDirection) private var layoutDirection
-    @Environment(\.scenePhase) private var scenePhase
 
-    /// Ticks every second so the clock is a real live clock and the sun/solar progress advance continuously
-    /// (like the countdown's progress bar) rather than jumping once a minute. The star field has its own
-    /// `TimelineView` and a seeded star list, so it is unaffected by this re-render.
-    ///
-    /// The tick only *applies* while the card is on screen and the scene is active (see `onReceive`):
-    /// TabView keeps this view alive when another tab is selected, and without the gate the whole card -
-    /// gradients, arc path, moon - re-rendered every second invisibly, all day.
-    @State private var now = Date()
-    @State private var isOnScreen = false
-    private let tick = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
+    /// The live moment, quantized to the minute by `SkyView`.
+    let now: Date
+    /// False while another tab is selected; pauses the starfield.
+    let isOnScreen: Bool
 
     /// Holds the prayer columns, the arc, the moon and the countdown. Trimmed again: the scrubbed-moment
     /// readout used to need clear air above the moon row to float into, which left a dead band between the arc
@@ -193,10 +241,6 @@ struct SkyView: View {
     /// so that band can go.
     private let height: CGFloat = 212
 
-    /// Horizontal row inset, measured off the sections around this card rather than assumed. A grouped row
-    /// already carries the list's own 20pt margin, so the card adds nothing; a plain row carries none, and
-    /// its neighbours (the location pill, the prayer tiles) sit at 19.33pt.
-    private var sideInset: CGFloat { settings.defaultView ? 0 : 19.33 }
     /// Vertical padding on the arc, keeping its peak and trough clear of the text bands above and below.
     /// Scaled down with the card so the curve keeps the same shape in less height.
     private let inset: CGFloat = 78
@@ -271,6 +315,7 @@ struct SkyView: View {
     // MARK: Body
 
     var body: some View {
+        let _ = RenderCounter.hit("SkyCard")
         // ONE prayer-time resolution per render. `sunrise`/`sunset`/`window`/`curve` used to be computed
         // properties re-derived at every use site (the arc shape, the horizon line, the sun's height,
         // color and fraction) - ~20-30 cached `getPrayerTimes` lookups per second while the clock ticks.
@@ -301,7 +346,7 @@ struct SkyView: View {
             .animation(.easeInOut(duration: 0.4), value: skyPeriod)
             .animation(.easeInOut(duration: 0.25), value: settings.skyGradientsJSON)
 
-            StarFieldView(opacity: starOpacity)
+            StarFieldView(opacity: starOpacity, paused: !isOnScreen)
                 .animation(.easeInOut(duration: 0.6), value: starOpacity)
 
             arc(curve: curve, window: window)
@@ -333,30 +378,6 @@ struct SkyView: View {
             RoundedRectangle(cornerRadius: 18, style: .continuous)
                 .strokeBorder(Color.primary.opacity(0.10), lineWidth: 1)
         )
-        // The two list themes give a row different built-in margins, so the card has to make up the
-        // difference itself. Grouped rows already carry the list's 20pt margin - adding any more is what
-        // made this card sit inset from every other section. Plain rows carry almost none, so without this
-        // the card bleeds out past the sections above and below it.
-        .listRowInsets(EdgeInsets(top: 6, leading: sideInset, bottom: 6, trailing: sideInset))
-        .onReceive(tick) { date in
-            // No state change → no re-render. The timer itself keeps running (cheap); the per-second
-            // body evaluation was the cost worth gating.
-            guard isOnScreen, scenePhase == .active else { return }
-            // Reduce Motion: the continuously-creeping sun is decorative. A minute-granularity update
-            // keeps the card truthful without perpetual movement.
-            if AppPerformance.isReduceMotionEnabled,
-               Calendar.current.component(.second, from: date) != 0 { return }
-            now = date
-        }
-        .onAppear {
-            isOnScreen = true
-            now = Date()
-        }
-        .onDisappear { isOnScreen = false }
-        .onChange(of: scenePhase) { phase in
-            // Snap the clock forward on return; the gate above froze it while backgrounded.
-            if phase == .active { now = Date() }
-        }
     }
 
     /// Everything drawn over the sky: the two prayer columns, the moon and clock, and the countdown.
@@ -406,8 +427,8 @@ struct SkyView: View {
     /// One side of the header: the label, the prayer's symbol and name, and when it started or starts.
     /// No Arabic or English subtitle - the prayer list below carries those.
     ///
-    /// An Equatable leaf rather than a computed section of `SkyView`: the card re-runs its body every
-    /// second to move the sun, but a column's strings change only when the prayer rolls over (or the
+    /// An Equatable leaf rather than a computed section of `SkyCard`: the card re-runs its body every
+    /// minute to move the sun, but a column's strings change only when the prayer rolls over (or the
     /// user edits the time format - which flows through `timeText`, so `==` catches it). Comparing five
     /// values lets SwiftUI skip both columns' subtrees on every tick in between. All inputs are plain
     /// values formatted by the parent - the column itself observes nothing.
@@ -569,7 +590,7 @@ struct SkyView: View {
                 Circle()
                     .fill(sunFill)
                     .frame(width: 20, height: 20)
-                    .shadow(color: sunFill.opacity(isUp ? 0.9 : 0), radius: isUp ? 12 : 0)
+                    .softShadow(color: sunFill.opacity(isUp ? 0.9 : 0), radius: isUp ? 12 : 0)
                     .position(sunPoint)
                     .opacity(isUp ? 1 : 0.45)
             }

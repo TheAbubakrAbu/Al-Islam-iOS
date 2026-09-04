@@ -121,9 +121,11 @@ final class WatchConnectivityManager: NSObject, WCSessionDelegate {
         let store = UserDefaults(suiteName: AppIdentifiers.appGroupSuiteName) ?? .standard
         self.store = store
 
+        let seededThisLaunch: Bool
         if let data = store.data(forKey: Self.fieldsKey), let saved = Self.decodeFields(data) {
             self.fields = saved
             self.lastPushedFields = store.data(forKey: Self.pushedKey).flatMap(Self.decodeFields) ?? [:]
+            seededThisLaunch = false
         } else {
             // First run on the per-key protocol (fresh install, or migration from the whole-snapshot
             // build): stamp every currently-held setting at the old protocol's recency watermark - clamped
@@ -145,20 +147,42 @@ final class WatchConnectivityManager: NSObject, WCSessionDelegate {
             // Empty on purpose: the first activation compares the candidate payload against nothing and
             // pushes the full field map, so a peer that has never heard from this build gets everything.
             self.lastPushedFields = [:]
+            seededThisLaunch = true
         }
 
         super.init()
-        persistState()
+        // Only a freshly seeded state needs writing: the decoded one IS what is on disk, and re-encoding
+        // both maps into two plist writes through cfprefsd on every launch bought nothing.
+        if seededThisLaunch { persistState() }
         guard WCSession.isSupported() else { return }
 
         session.delegate = self
         session.activate()
 
         // Push any pending local change shortly after a settings edit (debounced to batch rapid edits).
+        // Hand-rolled rather than Combine's `debounce` so the window can stretch on the reduced tier:
+        // 400 ms normally, 2 s under Low Power Mode - the 122-key snapshot diff is not worth running
+        // on a throttled CPU after every publish.
         Settings.shared.objectWillChange
-            .debounce(for: .milliseconds(400), scheduler: DispatchQueue.main)
-            .sink { [weak self] in self?.sendSnapshotIfChanged() }
+            .sink { [weak self] in self?.scheduleSnapshotPush() }
             .store(in: &cancellables)
+    }
+
+    private var pendingSnapshotPush: DispatchWorkItem?
+
+    private func scheduleSnapshotPush() {
+        guard Thread.isMainThread else {
+            DispatchQueue.main.async { [weak self] in self?.scheduleSnapshotPush() }
+            return
+        }
+        pendingSnapshotPush?.cancel()
+        let work = DispatchWorkItem { [weak self] in
+            self?.pendingSnapshotPush = nil
+            self?.sendSnapshotIfChanged()
+        }
+        pendingSnapshotPush = work
+        let delay: TimeInterval = PerformanceProfile.shared.tier == .reduced ? 2.0 : 0.4
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: work)
     }
 
     // MARK: - Persistence
@@ -209,6 +233,11 @@ final class WatchConnectivityManager: NSObject, WCSessionDelegate {
     /// the last send/apply, then pushes the full field map if it differs from what the channel holds.
     private func sendSnapshotIfChanged() {
         guard session.activationState == .activated else { return }
+        #if os(iOS)
+        // No watch, no work: without this, every debounced publish on a phone that has never paired a
+        // watch still built and diffed the 122-key snapshot.
+        guard session.isPaired, session.isWatchAppInstalled else { return }
+        #endif
 
         let snapshot = Settings.shared.watchSyncSnapshot()
         let now = Date().timeIntervalSince1970
@@ -238,11 +267,19 @@ final class WatchConnectivityManager: NSObject, WCSessionDelegate {
 
         var outFields: [String: Any] = [:]
         var legacySettings: [String: Any] = [:]
+        // The fast path below carries only what changed since the last accepted push: the reliable
+        // channel already holds the full map, and re-sending all 122 keys (plus the legacy mirror) in
+        // the message doubled every edit's radio payload for a peer that merges per key anyway.
+        var deltaFields: [String: Any] = [:]
         var maxT = 0.0
         for (key, field) in candidate {
             outFields[key] = field.plist
             legacySettings[key] = field.v
             maxT = max(maxT, field.t)
+            if let pushed = lastPushedFields[key], pushed.t == field.t, pushed.r == field.r, Self.plistEqual(pushed.v, field.v) {
+                continue
+            }
+            deltaFields[key] = field.plist
         }
         let payload: [String: Any] = [
             "fields": outFields,
@@ -262,8 +299,12 @@ final class WatchConnectivityManager: NSObject, WCSessionDelegate {
         }
         persistState()
 
-        if session.isReachable {
-            session.sendMessage(payload, replyHandler: nil) { err in
+        // Skipped on the reduced tier (Low Power Mode, thermal): the context alone reaches the peer on its
+        // next activation, and the message is only the "peer is open right now" fast path.
+        if session.isReachable, !deltaFields.isEmpty, PerformanceProfile.shared.tier != .reduced {
+            // A peer on the whole-snapshot build ignores a message without `settings`; it still gets the
+            // full payload through the application context above.
+            session.sendMessage(["fields": deltaFields], replyHandler: nil) { err in
                 // No bookkeeping involvement: applicationContext (above) is the reliable channel and has
                 // this payload queued; the message is only the fast path for a peer that is open right now.
                 logger.debug("WC sendMessage error: \(err.localizedDescription)")
@@ -608,13 +649,11 @@ extension Settings {
         // switchHijriDateAtMaghrib lives in standard defaults but is mirrored into the App Group for the
         // widget/complication providers; the raw store.set above bypasses its didSet, so refresh the mirror.
         // On the watch this is the main write path for the key - the complication would never see it otherwise.
-        UserDefaults(suiteName: AppIdentifiers.appGroupSuiteName)?
-            .setValue(switchHijriDateAtMaghrib, forKey: "switchHijriDateAtMaghrib")
+        appGroupUserDefaults?.setValue(switchHijriDateAtMaghrib, forKey: "switchHijriDateAtMaghrib")
 
         // Same story for the sky palette (see `skyGradientsJSON`'s didSet): the complication reads the
         // App Group mirror, and on the watch this sync is the only thing that ever writes the key.
-        UserDefaults(suiteName: AppIdentifiers.appGroupSuiteName)?
-            .setValue(store.string(forKey: "skyGradients") ?? "", forKey: "skyGradients")
+        appGroupUserDefaults?.setValue(store.string(forKey: "skyGradients") ?? "", forKey: "skyGradients")
 
         // Same for the six manual prayer offsets: their didSet mirrors were bypassed by the raw
         // store.set above, and on the watch this sync IS the write path - without this the
@@ -627,9 +666,7 @@ extension Settings {
 
         objectWillChange.send()
         updateDates()
+        // The forced fetch reloads every widget itself (deferred); the immediate reload here doubled it.
         fetchPrayerTimes(force: true, runAutoChecks: false)
-        #if os(iOS) || os(watchOS)
-        WidgetCenter.shared.reloadAllTimelines()
-        #endif
     }
 }

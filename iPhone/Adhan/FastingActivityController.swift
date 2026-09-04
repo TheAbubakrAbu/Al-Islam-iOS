@@ -47,7 +47,12 @@ enum FastingActivityController {
             $0.attributes.phase == window.phase
                 && abs($0.content.state.endTime.timeIntervalSince(window.deadline)) < 60
         }) {
-            Task { await existing.update(ActivityContent(state: state, staleDate: staleDate)) }
+            // Every foregrounding used to push an identical state, and each push is a re-archive of the
+            // card's views by the system. Same times, same name: nothing to say.
+            if existing.content.state != state {
+                Task { await existing.update(ActivityContent(state: state, staleDate: staleDate)) }
+            }
+            scheduleFinalStretchRender(phase: window.phase, deadline: window.deadline)
             return
         }
 
@@ -60,9 +65,36 @@ enum FastingActivityController {
                 content: ActivityContent(state: state, staleDate: staleDate),
                 pushType: nil
             )
+            scheduleFinalStretchRender(phase: window.phase, deadline: window.deadline)
         } catch {
             logger.error("Fasting Live Activity request failed: \(error.localizedDescription)")
         }
+    }
+
+    private static var finalStretchWork: DispatchWorkItem?
+
+    /// The card's red "final stretch" tint (`ContentState.isFinalStretch`) reads the clock when the
+    /// system renders the card, and the system renders only on an update. With identical states no
+    /// longer pushed, this schedules the one update that matters: at ten minutes out, with the same
+    /// content, purely so the card is drawn again. Only while the app process lives, which is the same
+    /// limit the old "re-render on every foregrounding" had.
+    @available(iOS 16.2, *)
+    private static func scheduleFinalStretchRender(phase: FastingAttributes.Phase, deadline: Date) {
+        finalStretchWork?.cancel()
+        finalStretchWork = nil
+        let fireAt = deadline.addingTimeInterval(-10 * 60)
+        let delay = fireAt.timeIntervalSinceNow
+        guard delay > 0 else { return }
+        let work = DispatchWorkItem {
+            finalStretchWork = nil
+            guard let activity = Activity<FastingAttributes>.activities.first(where: {
+                $0.attributes.phase == phase && abs($0.content.state.endTime.timeIntervalSince(deadline)) < 60
+            }) else { return }
+            let content = ActivityContent(state: activity.content.state, staleDate: deadline.addingTimeInterval(60))
+            Task { await activity.update(content) }
+        }
+        finalStretchWork = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: work)
     }
 
     static func endAll() {

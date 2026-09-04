@@ -49,6 +49,7 @@ enum AlIslamBadge: String, CaseIterable, Identifiable {
     // Dhikr
     case oneTasbih, dhikrHundred, dhikrFiveHundred, dhikrThousand
     case dhikrFiveThousand, dhikrTenThousand, dhikrHundredThousand
+    case dhikrThreeDays, dhikrWeek, dhikrMonth, dhikrHundredDays
 
     var id: String { rawValue }
 
@@ -138,6 +139,10 @@ enum AlIslamBadge: String, CaseIterable, Identifiable {
         case .dhikrFiveThousand:    return "Five Thousand Remembrances"
         case .dhikrTenThousand:     return "Ten Thousand Remembrances"
         case .dhikrHundredThousand: return "A Hundred Thousand Remembrances"
+        case .dhikrThreeDays:       return "Three Days of Dhikr"
+        case .dhikrWeek:            return "A Week of Dhikr"
+        case .dhikrMonth:           return "A Month of Dhikr"
+        case .dhikrHundredDays:     return "A Hundred Days of Dhikr"
         }
     }
 
@@ -227,6 +232,10 @@ enum AlIslamBadge: String, CaseIterable, Identifiable {
         case .dhikrFiveThousand:    return "5,000 counted on the tasbih"
         case .dhikrTenThousand:     return "10,000 counted on the tasbih"
         case .dhikrHundredThousand: return "100,000 counted on the tasbih"
+        case .dhikrThreeDays:       return "Use the tasbih 3 days in a row"
+        case .dhikrWeek:            return "Use the tasbih 7 days in a row"
+        case .dhikrMonth:           return "Use the tasbih 30 days in a row"
+        case .dhikrHundredDays:     return "Use the tasbih 100 days in a row"
         }
     }
 
@@ -319,6 +328,10 @@ enum AlIslamBadge: String, CaseIterable, Identifiable {
         case .dhikrFiveThousand:    return "circle.circle.fill"
         case .dhikrTenThousand:     return "hands.sparkles.fill"
         case .dhikrHundredThousand: return "moon.stars.fill"
+        case .dhikrThreeDays:       return "flame"
+        case .dhikrWeek:            return "flame.fill"
+        case .dhikrMonth:           return "calendar.badge.checkmark"
+        case .dhikrHundredDays:     return "sparkles"
         }
     }
 
@@ -377,7 +390,8 @@ enum AlIslamBadge: String, CaseIterable, Identifiable {
             return .hadith
 
         case .oneTasbih, .dhikrHundred, .dhikrFiveHundred, .dhikrThousand,
-             .dhikrFiveThousand, .dhikrTenThousand, .dhikrHundredThousand:
+             .dhikrFiveThousand, .dhikrTenThousand, .dhikrHundredThousand,
+             .dhikrThreeDays, .dhikrWeek, .dhikrMonth, .dhikrHundredDays:
             return .dhikr
         }
     }
@@ -481,6 +495,11 @@ enum AlIslamBadge: String, CaseIterable, Identifiable {
         case .dhikrFiveThousand:    return (stats.dhikrTotal, 5_000)
         case .dhikrTenThousand:     return (stats.dhikrTotal, 10_000)
         case .dhikrHundredThousand: return (stats.dhikrTotal, 100_000)
+        // The best run, like the prayer streaks: a broken streak must not un-approach a badge.
+        case .dhikrThreeDays:       return (max(stats.dhikrStreak, stats.dhikrBestStreak), 3)
+        case .dhikrWeek:            return (max(stats.dhikrStreak, stats.dhikrBestStreak), 7)
+        case .dhikrMonth:           return (max(stats.dhikrStreak, stats.dhikrBestStreak), 30)
+        case .dhikrHundredDays:     return (max(stats.dhikrStreak, stats.dhikrBestStreak), 100)
         }
     }
 
@@ -783,7 +802,9 @@ final class AchievementBannerPresenter {
         guard let scene = scenes.first(where: { $0.activationState == .foregroundActive }) ?? scenes.first
         else { return }
 
-        let host = UIHostingController(rootView: AchievementBannerHost().appFontDesign())
+        // Its own window, so nothing from the app root's environment reaches it: inject the appearance
+        // snapshot here too, or the banner's glass and accent would read a frozen default.
+        let host = UIHostingController(rootView: AchievementBannerHost().appFontDesign().appearanceEnvironment())
         host.view.backgroundColor = .clear
 
         let window = PassthroughWindow(windowScene: scene)

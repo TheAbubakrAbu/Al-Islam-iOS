@@ -990,7 +990,8 @@ struct QuranView: View {
     }
 
     var body: some View {
-        navigationContainer
+        RenderCounter.hit("QuranView")
+        return navigationContainer
         .confirmationDialog(
             quranPlayer.playbackAlertTitle,
             isPresented: $quranPlayer.showInternetAlert,
@@ -1007,14 +1008,8 @@ struct QuranView: View {
         // is chosen (`QuranPlayer.needsMinshawiFallbackNotice(for:)`), so playing an ayah never asks.
         .task {
             prewarmQuranDestinations()
-            #if os(iOS)
-            // The cross-language highlight's corpus lexicon (the semantic-hit and hadith lane), built
-            // before the first query instead of on the first result row.
-            Task {
-                await quranData.waitUntilCoreLoaded()
-                CrossLanguageWordHighlight.prewarmLexicon()
-            }
-            #endif
+            // (The cross-language lexicon used to be kicked from here too; it is the app root's
+            // post-reveal work now, because this task also runs during the under-cover tab walk.)
             #if DEBUG
             // Headless visual verification (no tap access on the dev machine): `-quranSearch <term>`
             // pushes the term through the real search pipeline once the verse index is ready.
@@ -1023,6 +1018,7 @@ struct QuranView: View {
                 let term = ProcessInfo.processInfo.arguments[flagIndex + 1]
                 Task {
                     await quranData.waitUntilCoreLoaded()
+                    quranData.ensureVerseSearchIndex()
                     while !quranData.isVerseSearchReady, !Task.isCancelled {
                         try? await Task.sleep(nanoseconds: 200_000_000)
                     }
@@ -1030,20 +1026,9 @@ struct QuranView: View {
                 }
             }
             #endif
-            #if os(iOS)
-            // Build (or disk-load) the AI search index AHEAD of the first search - by the time anyone
-            // types, it's ready and the "Preparing" row never shows. AFTER the reveal, though: the
-            // disk load (or worse, a post-update re-embed) competed with the launch warm for IO and
-            // CPU under the cover, and the search-field FOCUS kick already covers anyone who starts
-            // searching before this fires.
-            Task {
-                await quranData.waitUntilCoreLoaded()
-                await AppReveal.waitUntilRevealed()
-                try? await Task.sleep(nanoseconds: 2_000_000_000)
-                guard !Task.isCancelled else { return }
-                prepareQuranSemanticCorpus()
-            }
-            #endif
+            // (The AI search index used to be built or disk-loaded here 3 s after the reveal for every
+            // user. It is on demand now, Phase 5 step 2: the search field's FOCUS kicks it, and a
+            // "Preparing" row covers the few seconds a first search on a fresh install has to wait.)
             #if os(iOS)
             // If the reader is already in page mode when the Quran tab is first built, resume in the mushaf at
             // the last-read ayah's page. Guarded so backing out to the list doesn't immediately re-open it.
@@ -1130,32 +1115,11 @@ struct QuranView: View {
                 }
             }
 
-            // The broad prewarm scans all 114 surahs. This `Task` is unstructured (not tied to `.task`), so
-            // leaving and re-entering the Quran tab - common on iPad/Mac split view - would otherwise spawn
-            // overlapping full prewarm passes. Run it at most once per session; caches are rebuilt lazily on
-            // demand afterward, so correctness is unaffected.
-            // Shared with the app-root prewarm that fires when the Adhan tab appears - whichever finishes the
-            // full sweep first sets the flag, and the other skips it (no duplicate pass).
-            guard shouldPrewarmAllQuranDestinations, !QuranData.didBroadPrewarm else { return }
-
-            // Post-reveal only, like its QuranLaunchWarmup twin: under the cover this main-actor
-            // sweep competed with the tab walk the launch screen's reveal waits on.
-            await AppReveal.waitUntilRevealed()
-            try? await Task.sleep(nanoseconds: 1_200_000_000)
-            if Task.isCancelled || QuranData.didBroadPrewarm { return }
-
-            for surah in quranData.quran {
-                guard seen.insert(surah.id).inserted else { continue }
-                SurahView.prewarm(surah: surah, settings: settings)
-                await Task.yield()
-                try? await Task.sleep(nanoseconds: 18_000_000)
-            }
-            QuranData.didBroadPrewarm = true
+            // The broad all-surah sweep lives in `QuranLaunchWarmup.prewarmAll` (MushafReader.swift), in
+            // the root's post-reveal schedule and off the main actor. This task used to run its own
+            // copy at the same moment; the two raced and, since each set the shared flag only at the
+            // end, both ran the full 114 surahs on the main actor.
         }
-    }
-
-    private var shouldPrewarmAllQuranDestinations: Bool {
-        !AppPerformance.shouldAvoidBroadPrewarm
     }
 
     private var navigationContainer: some View {
@@ -1294,7 +1258,7 @@ struct QuranView: View {
             }
             .contentShape(Rectangle())
         } else {
-            NavigationLink(destination: routeDestination(route)) {
+            NavigationLink(destination: LazyDestination { routeDestination(route) }) {
                 label()
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .contentShape(Rectangle())
@@ -1302,7 +1266,7 @@ struct QuranView: View {
             .contentShape(Rectangle())
         }
         #else
-        NavigationLink(destination: routeDestination(route)) {
+        NavigationLink(destination: LazyDestination { routeDestination(route) }) {
             label()
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .contentShape(Rectangle())
@@ -1408,7 +1372,11 @@ struct QuranView: View {
             // Focusing the search field starts the one-time AI vector build (or its disk load) EARLY, so
             // by the time a query is typed the semantic results usually appear with the keyword ones.
             .onChange(of: isQuranSearchFocused) { focused in
-                if focused { prepareQuranSemanticCorpus() }
+                guard focused else { return }
+                // The ayah index is built on demand (or ahead of time on the full tier, see Al-IslamApp);
+                // focusing the field is the earliest signal a search is coming.
+                quranData.ensureVerseSearchIndex()
+                prepareQuranSemanticCorpus()
             }
             // The one-time vector build finishing mid-query: re-run the pending AI search so the results
             // appear the moment the corpus is ready, without another keystroke.
@@ -1472,6 +1440,24 @@ struct QuranView: View {
             usesColumnNavigation: usesColumnNavigation
         ))
         .onAppear {
+            #if os(iOS)
+            // List mode's launch readiness: the under-cover warm waits for this body to have been
+            // evaluated once (plus a turn of the run loop for it to commit) instead of a fixed settle.
+            // Page mode reports from the pushed reader instead (`SurahPageReader.onAppear`).
+            if !settings.quranPageMode {
+                LaunchClock.mark("quran view appeared")
+                Task { @MainActor in
+                    await Task.yield()
+                    LaunchWarmup.shared.markQuranTabLaidOut()
+                }
+            }
+            #endif
+            #if os(watchOS)
+            // The watch defers the Quran parse past the launch reveal (`AlIslamApp.warmUnderCover`);
+            // this is the backstop for a visit before that hand-off has run. Not during the under-cover
+            // tab walk, which also lands here - that would put the parse back on the launch path.
+            if LaunchWarmup.shared.isWarm { quranData.ensureLoading() }
+            #endif
             #if DEBUG
             // Headless visual verification, the Hadith tab's pattern: `-launchQuranSettings`
             // presents this sheet directly. DEBUG builds only.
@@ -3912,7 +3898,7 @@ struct QuranView: View {
         guard !normalizedQuery.isEmpty else { return [] }
 
         func sources(_ hit: VerseIndexEntry) -> [String] {
-            [hit.arabicBlob, hit.englishBlob, hit.englishExactBlob]
+            [hit.arabicBlob, hit.englishBlob, quranData.exactEnglishBlob(for: hit)]
         }
 
         // An "exact" hit contains the full query phrase contiguously, not just its tokens scattered around.
@@ -4186,6 +4172,9 @@ struct QuranView: View {
             return
         }
 
+        // A query that arrived without the field ever gaining focus (a handed-off search, a debug arg)
+        // still needs the index; `.onChange(of: isVerseSearchReady)` re-runs this once it lands.
+        quranData.ensureVerseSearchIndex()
         guard quranData.isVerseSearchReady else {
             clearAyahSearchState()
             return
@@ -4300,9 +4289,25 @@ enum QuranSemanticCorpus {
 
     /// Resolve the corpus texts (both bundled translations per ayah, so either's phrasing matches) and
     /// hand them to the engine. No-ops once ready; cheap when the vectors are already on disk.
+    /// The corpus version already handed to the engine. `engine.isReady` stays false for the whole
+    /// build, and `runAISearch` calls `prepare` on every keystroke, so without this every keystroke
+    /// typed during the build re-resolved 6,236 texts on the main actor just to be told "in flight".
+    private static var handedOffVersion: String?
+
     @MainActor
     static func prepare(quranData: QuranData, engine: SemanticSearchEngine) {
-        guard SemanticSearchEngine.isSupported, !quranData.quran.isEmpty else { return }
+        guard !quranData.quran.isEmpty else { return }
+        // The capability probe loads a disk-backed NLEmbedding model on first touch. On the full tier
+        // the post-reveal schedule has already paid it off-main; on the reduced tier nothing has, so
+        // pay it on a background task and come back here rather than loading a model inside a body.
+        guard let supported = SemanticSearchEngine.isSupportedIfResolved else {
+            Task.detached(priority: .userInitiated) {
+                SemanticSearchEngine.prewarmOffMain()
+                await MainActor.run { prepare(quranData: quranData, engine: engine) }
+            }
+            return
+        }
+        guard supported else { return }
         if ayahMap.isEmpty {
             var map: [(Int, Int)] = []
             map.reserveCapacity(6236)
@@ -4314,6 +4319,9 @@ enum QuranSemanticCorpus {
             ayahMap = map
         }
         guard !engine.isReady(id) else { return }
+        let version = "en2-\(ayahMap.count)-\(sourceStamp)"
+        // A failed build may be retried (the engine drops the id from `failedCorpora` when it does).
+        if handedOffVersion == version, !engine.failedCorpora.contains(id) { return }
         var texts: [String] = []
         texts.reserveCapacity(ayahMap.count)
         for surah in quranData.quran {
@@ -4321,7 +4329,8 @@ enum QuranSemanticCorpus {
                 texts.append("\(ayah.textEnglishSaheeh) \(ayah.textEnglishMustafa)")
             }
         }
-        engine.prepare(corpusID: id, version: "en2-\(texts.count)-\(sourceStamp)", texts: texts)
+        handedOffVersion = version
+        engine.prepare(corpusID: id, version: version, texts: texts)
     }
 }
 #endif

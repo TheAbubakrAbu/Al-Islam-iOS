@@ -39,6 +39,8 @@ struct DuaView: View {
     @State private var searchText = ""
     /// Apple Music-style bar minimization: true while scrolling down.
     @State private var barsCollapsed = false
+    /// The collection row a result asked to scroll to ("Scroll To Collection"), consumed once the search clears.
+    @State private var scrollTarget: String?
 
     private static let collections: [DuaCollection] = [
         DuaCollections.common,
@@ -258,7 +260,8 @@ struct DuaView: View {
         let keywordVisible = true
         #endif
 
-        return List {
+        return ScrollViewReader { proxy in
+        List {
             Group {
             if query.isEmpty {
             Section(header: Text("SUPPLICATIONS TO ALLAH")) {
@@ -298,20 +301,69 @@ struct DuaView: View {
                         NavigationLink {
                             DuaCollectionView(collection: collection)
                         } label: {
-                            Label {
-                                VStack(alignment: .leading, spacing: 3) {
+                            // The Islam tab's resource-row grammar: an accent chip for the icon, the
+                            // title and its one-line subtitle, and the collection's size as a count
+                            // pill - so the shelf reads as a set of books rather than a plain menu.
+                            HStack(spacing: 12) {
+                                AccentIconChip(systemImage: collection.systemImage)
+
+                                VStack(alignment: .leading, spacing: 2) {
                                     Text(collection.title)
+                                        .font(.body.weight(.medium))
                                         .foregroundStyle(.primary)
 
                                     Text(collection.subtitle)
                                         .font(.caption)
                                         .foregroundStyle(.secondary)
+                                        .lineLimit(2)
                                 }
-                            } icon: {
-                                Image(systemName: collection.systemImage)
+
+                                Spacer(minLength: 8)
+
+                                Text("\(collection.items.count)")
+                                    .font(.caption.weight(.semibold))
+                                    .monospacedDigit()
                                     .foregroundStyle(settings.accentColor.color)
+                                    .padding(.horizontal, 9)
+                                    .padding(.vertical, 4)
+                                    .background(Capsule().fill(settings.accentColor.color.opacity(0.12)))
+                            }
+                            .padding(.vertical, 3)
+                        }
+                        .id(Self.collectionRowID(collection))
+                        #if os(iOS)
+                        .contextMenu {
+                            Text(collection.title)
+                                .foregroundStyle(.secondary)
+
+                            if !query.isEmpty {
+                                Button {
+                                    settings.hapticFeedback()
+                                    scrollToCollection(collection)
+                                } label: {
+                                    Label("Scroll To Collection", systemImage: "arrow.down.circle")
+                                }
+                            }
+
+                            Button {
+                                settings.hapticFeedback()
+                                UIPasteboard.general.string = collection.title
+                            } label: {
+                                Label("Copy Title", systemImage: "doc.on.doc")
                             }
                         }
+                        .swipeActions(edge: .trailing) {
+                            if !query.isEmpty {
+                                Button {
+                                    settings.hapticFeedback()
+                                    scrollToCollection(collection)
+                                } label: {
+                                    Image(systemName: "arrow.down.circle")
+                                }
+                                .tint(.secondary)
+                            }
+                        }
+                        #endif
                     }
                 } header: {
                     HStack {
@@ -343,7 +395,11 @@ struct DuaView: View {
                             searchQuery: searchText,
                             alwaysTrailing: true,
                             speechEnabled: true,
-                            source: item.reference
+                            source: item.reference,
+                            onScrollTo: Self.collection(of: item).map { collection in
+                                { scrollToCollection(collection) }
+                            },
+                            scrollLabel: "Scroll To Collection"
                         )
                         .equatable()
                     }
@@ -469,6 +525,28 @@ struct DuaView: View {
         }
         #endif
         .onDisappear { ArabicSpeech.shared.stop() }
+        .onChange(of: scrollTarget) { target in
+            guard let target else { return }
+            // The search rows are still animating out; scroll once the collection rows are back.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                withAnimation { proxy.scrollTo(target, anchor: .top) }
+            }
+        }
+        }
+    }
+
+    /// The row id of a collection in the root list.
+    private static func collectionRowID(_ collection: DuaCollection) -> String { "collection_\(collection.id)" }
+
+    /// The collection a dua belongs to - a matching dua's home on this screen, since the duas
+    /// themselves are listed only inside their collections.
+    private static func collection(of item: DuaItem) -> DuaCollection? {
+        collections.first { $0.items.contains { $0.id == item.id } }
+    }
+
+    private func scrollToCollection(_ collection: DuaCollection) {
+        withAnimation { searchText = "" }
+        scrollTarget = Self.collectionRowID(collection)
     }
 }
 
@@ -477,6 +555,8 @@ private struct DuaCollectionView: View {
     @State private var searchText = ""
     /// Apple Music-style bar minimization: true while scrolling down.
     @State private var barsCollapsed = false
+    /// The dua a result asked to scroll to ("Scroll To Dua"), consumed once the search clears.
+    @State private var scrollTarget: String?
 
     let collection: DuaCollection
 
@@ -527,7 +607,8 @@ private struct DuaCollectionView: View {
             ? collection.items
             : collection.items.filter { $0.searchBlob.contains(query) }
 
-        return List {
+        return ScrollViewReader { proxy in
+        List {
             Group {
             #if os(iOS)
             // Above the introduction, and only when not searching: a search is a lookup, and the last
@@ -542,7 +623,7 @@ private struct DuaCollectionView: View {
             #if os(iOS)
             if !query.isEmpty, !aiHits.isEmpty {
                 Section(header: SectionPillHeader(title: "AI MATCHES", count: aiHits.count, icon: "sparkles", accentTitle: true)) {
-                    duaRows(aiHits)
+                    duaRows(aiHits, scrollable: false)
                 }
             }
             #endif
@@ -585,6 +666,14 @@ private struct DuaCollectionView: View {
         .compactListSectionSpacing()
         .navigationTitle(collection.title)
         .onDisappear { ArabicSpeech.shared.stop() }
+        .onChange(of: scrollTarget) { target in
+            guard let target else { return }
+            // The filtered rows are still animating out; scroll once the whole collection is back.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                withAnimation { proxy.scrollTo(target, anchor: .top) }
+            }
+        }
+        }
     }
 
     private var introductionSection: some View {
@@ -597,8 +686,9 @@ private struct DuaCollectionView: View {
         }
     }
 
-    private func duaRows(_ shown: [DuaItem]) -> some View {
-        Section(header: duasHeader(shown)) {
+    private func duaRows(_ shown: [DuaItem], scrollable: Bool = true) -> some View {
+        let searching = !searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        return Section(header: duasHeader(shown)) {
             ForEach(shown) { item in
                 // Duas are always trailing, however short. They are quoted Quran, and a line of Quran
                 // should sit where Arabic prose sits - not flush left like a UI label. (Dhikr keeps the
@@ -611,7 +701,14 @@ private struct DuaCollectionView: View {
                     searchQuery: searchText,
                     alwaysTrailing: true,
                     speechEnabled: true,
-                    source: item.reference
+                    source: item.reference,
+                    rowID: scrollable ? item.id : nil,
+                    // Only while searching: with the whole collection showing, the row is already where it lives.
+                    onScrollTo: (searching && scrollable) ? {
+                        withAnimation { searchText = "" }
+                        scrollTarget = item.id
+                    } : nil,
+                    scrollLabel: "Scroll To Dua"
                 )
                 .equatable()
             }

@@ -58,7 +58,7 @@ struct HighlightedAyahRef: Equatable, Hashable {
 final class AyahBeginnerOverrides: ObservableObject {
     static let shared = AyahBeginnerOverrides()
 
-    private init() {}
+    private init() { ObjectPublishCounter.attach(self, label: "AyahBeginnerOverrides") }
 
     @Published private(set) var ayahs: Set<HighlightedAyahRef> = []
 
@@ -133,6 +133,7 @@ final class AyahArrivalTerm {
 /// and only when they actually change - and `ReaderPinnedHeader` is their only observer.
 @MainActor
 final class AyahVisibilityModel: ObservableObject {
+    init() { ObjectPublishCounter.attach(self, label: "AyahVisibilityModel") }
     var visibleAyahIDs = Set<Int>() { didSet { syncDerived() } }
     var visibleBoundaryAyahIDs = Set<Int>() { didSet { syncDerived() } }
     /// The active qiraah's last ayah id (set by the cache rebuild), so `isLastAyahVisible` derives here.
@@ -247,6 +248,11 @@ struct SurahView: View {
     // hits filtered to THIS surah - "patience" finds the sabr ayahs of the surah being read even
     // when the exact word never appears in the translation.
     @ObservedObject private var semanticEngine = SemanticSearchEngine.shared
+    @Environment(\.appearance) private var appearance
+    #if os(iOS)
+    /// The ONE sheet host for every ayah row (Phase 5 step 6); see `AyahRowSheetKind`.
+    @State private var rowSheet: AyahRowSheetRequest?
+    #endif
     @State private var surahAIHits: [(ayah: Int, score: Float)] = []
     @State private var surahAISearchTask: Task<Void, Never>?
 
@@ -436,6 +442,29 @@ struct SurahView: View {
     private var ayahRowRenderSettingsSignature: String {
         settings.ayahRenderSettingsSignature
     }
+
+    #if os(iOS)
+    /// Presents one of a row's sheets. A request while another sheet is up (the actions sheet asking
+    /// for tafsir) closes that one first: UIKit can't present a second sheet while the first is
+    /// still animating away.
+    private func presentRowSheet(_ kind: AyahRowSheetKind, surah: Surah, ayah: Ayah) {
+        let request = AyahRowSheetRequest(surah: surah, ayah: ayah, kind: kind)
+        guard rowSheet != nil else {
+            rowSheet = request
+            return
+        }
+        rowSheet = nil
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+            rowSheet = request
+        }
+    }
+
+    /// The kind of the sheet currently up for this ayah, or nil (the row's `openSheet` input).
+    private func openRowSheet(surahID: Int, ayahID: Int) -> AyahRowSheetKind? {
+        guard let rowSheet, rowSheet.surah.id == surahID, rowSheet.ayah.id == ayahID else { return nil }
+        return rowSheet.kind
+    }
+    #endif
 
     private func markKhatmViewedIfNeeded(_ ayahID: Int) {
         guard settings.quranSortMode == .khatm,
@@ -859,7 +888,7 @@ struct SurahView: View {
             settings: settings,
             limit: AppPerformance.prewarmArabicAyahLimit
         )
-        prewarmTajweed(surah: surah, settings: settings, limit: 12)
+        prewarmTajweed(surah: surah, settings: settings, limit: 40)
 
         // Priority surahs also warm their SEARCH blobs: the first search keystroke in a surah otherwise
         // pays the whole per-ayah normalization synchronously in body - the one-time build that made the
@@ -880,34 +909,60 @@ struct SurahView: View {
         }
     }
 
+    /// The broad post-reveal sweep: `preparedCache` and the Arabic display cache for many surahs on a
+    /// utility queue. Both caches are NSCaches (safe from any thread) and every input is a UserDefaults
+    /// read, so the sweep costs the main thread nothing; a row that renders the same surah meanwhile
+    /// simply builds its own copy and the cache keeps one. Tajweed is deliberately NOT here (the store
+    /// is main-confined; `prewarm` warms an opened surah's first screenful on main).
+    static func prewarmOffMain(surahs: [Surah], settings: Settings) async {
+        let tajweed = !AppPerformance.shouldAvoidBroadPrewarm
+        await Task.detached(priority: .utility) {
+            for surah in surahs {
+                if Task.isCancelled { return }
+                _ = preparedCache(for: surah, settings: settings)
+                AyahRow.prewarmArabicDisplay(
+                    surah: surah,
+                    settings: settings,
+                    limit: AppPerformance.prewarmArabicAyahLimit
+                )
+                // The tajweed paint joins the sweep now that the store is safe off-main (full tier).
+                if tajweed { prewarmTajweed(surah: surah, settings: settings, limit: 40) }
+                await Task.yield()
+            }
+        }.value
+    }
+
     /// Tajweed attributed text was the one thing the list prewarm never warmed: with tajweed colors on, each
     /// row's FIRST render paid the full per-ayah cluster analysis synchronously on the main thread, mid-
-    /// scroll - the first-scroll hitch for tajweed users. Warm the first screenful here instead, one ayah per
-    /// runloop hop so the warm itself can never hitch. (TajweedStore keeps main-confined state, so this runs
-    /// on main - spread out, at idle, instead of bunched under the user's finger.)
-    private static func prewarmTajweed(surah: Surah, settings: Settings, limit: Int) {
+    /// scroll - the first-scroll hitch for tajweed users. Warm the first few screenfuls here instead, on a
+    /// utility queue: `TajweedStore.attributedText` is pure given its inputs and its caches are `NSCache`s
+    /// (Phase 5 step 1), so the paint no longer has to take main-thread slices at all. A row that scrolls
+    /// in ahead of the warm paints its own entry, as before.
+    static func prewarmTajweed(surah: Surah, settings: Settings, limit: Int) {
         guard settings.showTajweedColors, settings.showArabicText, settings.isHafsDisplay else { return }
         let ayahs = Array(surah.ayahs.prefix(limit))
         guard !ayahs.isEmpty else { return }
+        let surahID = surah.id
+        let clean = settings.cleanArabicText
+        let beginner = settings.beginnerMode
 
-        func warm(_ index: Int) {
-            guard index < ayahs.count else { return }
-            let ayah = ayahs[index]
-            // Mirror exactly what AyahRow will ask for, so these warms fill the same cache entries.
-            let raw = ayah.displayArabicText(surahId: surah.id, clean: false)
-            let displayBase = settings.cleanArabicText ? ayah.displayArabicText(surahId: surah.id, clean: true) : raw
-            let display = settings.beginnerMode ? displayBase.beginnerSpaced : displayBase
-            _ = TajweedStore.shared.attributedText(
-                surah: surah.id,
-                ayah: ayah.id,
-                text: raw,
-                displayText: display,
-                cleanDisplayText: settings.cleanArabicText,
-                beginnerSpacing: settings.beginnerMode
-            )
-            DispatchQueue.main.async { warm(index + 1) }
+        Task.detached(priority: .utility) {
+            for ayah in ayahs {
+                if Task.isCancelled { return }
+                // Mirror exactly what AyahRow will ask for, so these warms fill the same cache entries.
+                let raw = ayah.displayArabicText(surahId: surahID, clean: false)
+                let displayBase = clean ? ayah.displayArabicText(surahId: surahID, clean: true) : raw
+                let display = beginner ? displayBase.beginnerSpaced : displayBase
+                _ = TajweedStore.shared.attributedText(
+                    surah: surahID,
+                    ayah: ayah.id,
+                    text: raw,
+                    displayText: display,
+                    cleanDisplayText: clean,
+                    beginnerSpacing: beginner
+                )
+            }
         }
-        DispatchQueue.main.async { warm(0) }
     }
 
     private static func preparedCache(for surah: Surah, settings: Settings) -> PreparedSurahCache {
@@ -1549,10 +1604,38 @@ struct SurahView: View {
     }
 
     var body: some View {
+        let _ = RenderCounter.hit("SurahView")
         #if os(iOS)
         // The centered title is now a Menu (Surah List / Surah Info / Revelation Info), so the toolbar
         // only carries the principal title and the trailing settings gear.
         applySurahToolbar(to: surahReadingBody)
+        // The reader is the one screen that keeps the display awake (Phase 5 step 12): reading or
+        // following a recitation here, the screen stays on; listening from any other tab it sleeps.
+        // Never on the reduced tier, and re-applied when the tier flips mid-session.
+        .onAppear { ScreenAwake.readerVisible = true }
+        .onDisappear { ScreenAwake.readerVisible = false }
+        .onChange(of: appearance.isReducedTier) { _ in ScreenAwake.apply() }
+        .sheet(item: $rowSheet) { request in
+            AyahRowSheetContent(
+                request: request,
+                onRequestSecondary: { kind in
+                    presentRowSheet(.secondary(kind), surah: request.surah, ayah: request.ayah)
+                },
+                onDismiss: { rowSheet = nil }
+            )
+        }
+        // The follow-the-recitation scroll holds still while a row's sheet is up (`AyahSheetPresence`);
+        // the host reports for every row now.
+        .onChange(of: rowSheet == nil) { closed in
+            if closed {
+                AyahSheetPresence.shared.sheetClosed()
+            } else {
+                AyahSheetPresence.shared.sheetOpened()
+            }
+        }
+        .onDisappear {
+            if rowSheet != nil { AyahSheetPresence.shared.sheetClosed() }
+        }
         .onAppear {
             quranPlayer.recordReadingHistory(surahNumber: surah.id, surahName: surah.nameTransliteration, ayahNumber: ayah ?? 1)
             if !didRecordOpen {
@@ -1737,7 +1820,29 @@ struct SurahView: View {
         #endif
     }
 
-    private func ayahListScreen(proxy: ScrollViewProxy) -> some View {
+    /// Everything `ayahListScreen` derives from the query text alone.
+    private struct ParsedSurahQuery {
+        let cleanQuery: String
+        let silentQuery: String?
+        let joinedQuery: String?
+        let joinedSilentQuery: String?
+        let hamzaFilter: Settings.HamzaPrecisionFilter?
+        let booleanGroups: [[BooleanAyahTerm]]?
+        let pageJuzQuery: PageJuzQuery
+        let ayahNumberQuery: Int?
+        let dividerKeywordMode: DividerKeywordMode?
+    }
+
+    /// One-slot memo, a class so filling it never publishes.
+    private final class ParsedQueryMemo {
+        var key: String?
+        var value: ParsedSurahQuery?
+    }
+
+    @State private var parsedQueryMemo = ParsedQueryMemo()
+
+    private func parsedQuery() -> ParsedSurahQuery {
+        if parsedQueryMemo.key == searchText, let value = parsedQueryMemo.value { return value }
         let cleanQuery = settings.cleanSearch(searchText, whitespace: true)
         // Mirror QuranView: an Arabic query also matches the silent-letter stripped form (the matching
         // silent forms are folded into the search blob above). Always on - the fold is strictly additive.
@@ -1756,18 +1861,46 @@ struct SurahView: View {
             let joined = $0.joiningVocativeYaForSearch
             return joined == $0 ? nil : joined
         }
-        // A typed hamza means it: the main fold drops ء, so نساء and نسى collapse together and searching
-        // يانساء pulled in يَنسَىٰ. Only ever removes results, and only when a bare ء was typed.
-        let hamzaFilter = Settings.HamzaPrecisionFilter(query: searchText)
-        let booleanGroups = booleanAyahSearchGroups(from: searchText)
-        let pageJuzQuery = parsePageJuzQuery(from: searchText)
-        let ayahNumberQuery = parseAyahNumberQuery(from: searchText)
         let trimmedLowerSearch = searchText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         let dividerKeywordMode: DividerKeywordMode? = {
             if trimmedLowerSearch == "page" || trimmedLowerSearch == "pages" { return .page }
             if trimmedLowerSearch == "juz" { return .juz }
             return nil
         }()
+        let value = ParsedSurahQuery(
+            cleanQuery: cleanQuery,
+            silentQuery: silentQuery,
+            joinedQuery: joinedQuery,
+            joinedSilentQuery: joinedSilentQuery,
+            // A typed hamza means it: the main fold drops ء, so نساء and نسى collapse together and
+            // searching يانساء pulled in يَنسَىٰ. Only ever removes results, and only when a bare ء was typed.
+            hamzaFilter: Settings.HamzaPrecisionFilter(query: searchText),
+            booleanGroups: booleanAyahSearchGroups(from: searchText),
+            pageJuzQuery: parsePageJuzQuery(from: searchText),
+            ayahNumberQuery: parseAyahNumberQuery(from: searchText),
+            dividerKeywordMode: dividerKeywordMode
+        )
+        parsedQueryMemo.key = searchText
+        parsedQueryMemo.value = value
+        return value
+    }
+
+    private func ayahListScreen(proxy: ScrollViewProxy) -> some View {
+        let _ = RenderCounter.hit("SurahView.ayahListScreen")
+        // Read once per pass, handed to the rows as a Bool (Phase 5 step 3).
+        let lastListened = settings.lastListenedAyah
+        // The parsed query is memoized per text (Phase 5 step 10): the body ran the folds and the
+        // parsers on every pass, including the playback-driven ones while the query never changed.
+        let parsed = parsedQuery()
+        let cleanQuery = parsed.cleanQuery
+        let silentQuery = parsed.silentQuery
+        let joinedQuery = parsed.joinedQuery
+        let joinedSilentQuery = parsed.joinedSilentQuery
+        let hamzaFilter = parsed.hamzaFilter
+        let booleanGroups = parsed.booleanGroups
+        let pageJuzQuery = parsed.pageJuzQuery
+        let ayahNumberQuery = parsed.ayahNumberQuery
+        let dividerKeywordMode = parsed.dividerKeywordMode
         let isDividerKeywordSearch = dividerKeywordMode != nil
         let isPageOrJuzSearch = pageJuzQuery.page != nil || pageJuzQuery.juz != nil
         // During a page/juz search the divider IS the context (it tells you which page/juz you're looking
@@ -2125,7 +2258,11 @@ struct SurahView: View {
                                         visibility.visibleAyahIDs.remove(ayah.id)
                                     },
                                     isPlayingThis: quranPlayer.currentSurahNumber == surah.id
-                                        && quranPlayer.currentAyahNumber == ayah.id
+                                        && quranPlayer.currentAyahNumber == ayah.id,
+                                    isLastListened: lastListened?.surahNumber == surah.id
+                                        && lastListened?.ayahNumber == ayah.id,
+                                    onRequestSheet: { kind in presentRowSheet(kind, surah: surah, ayah: ayah) },
+                                    openSheet: openRowSheet(surahID: surah.id, ayahID: ayah.id)
                                 )
                                 .equatable()
                             }
@@ -2146,7 +2283,9 @@ struct SurahView: View {
                                     visibility.visibleAyahIDs.remove(ayah.id)
                                 },
                                 isPlayingThis: quranPlayer.currentSurahNumber == surah.id
-                                    && quranPlayer.currentAyahNumber == ayah.id
+                                    && quranPlayer.currentAyahNumber == ayah.id,
+                                isLastListened: lastListened?.surahNumber == surah.id
+                                    && lastListened?.ayahNumber == ayah.id
                             )
                             .equatable()
                             #endif
@@ -3524,7 +3663,7 @@ struct SurahView: View {
         settings.lastReadSurah = surah.id
         settings.lastReadAyah = targetAyah
         settings.stampLastRead()
-        settings.refreshQuranWidgets()
+        settings.refreshQuranWidgets(.lastRead)
     }
 
     private func neighboringSurah(before currentSurahID: Int) -> Surah? {

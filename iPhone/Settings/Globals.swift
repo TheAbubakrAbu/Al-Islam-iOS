@@ -1,4 +1,5 @@
 import SwiftUI
+import Combine
 #if canImport(UIKit)
 import UIKit
 #endif
@@ -34,8 +35,9 @@ enum AppIdentifiers {
 }
 
 enum AppPerformance {
+    /// 3 GB-class and below - see `PerformanceProfile.isLowEndDevice` for the threshold's reasoning.
     static var isLowMemoryDevice: Bool {
-        ProcessInfo.processInfo.physicalMemory < 3_000_000_000
+        PerformanceProfile.isLowEndDevice
     }
 
     /// Live, not cached: the user can flip Low Power Mode at any moment, and every gate below should follow.
@@ -104,12 +106,124 @@ enum AppPerformance {
         #endif
     }
 
+    /// Capped everywhere now (Phase 5 step 9): nil on 3 GB+ devices pushed all 6,236 ayahs through
+    /// a 5,000-entry cache that evicted itself mid-sweep, so the tail of the sweep undid its head.
     static var prewarmArabicAyahLimit: Int? {
         #if os(watchOS)
         20
         #else
-        isLowMemoryDevice ? 32 : nil
+        isLowMemoryDevice ? 32 : 40
         #endif
+    }
+}
+
+// MARK: - Performance profile (live, observable)
+
+/// The live performance tier, as an object views can react to.
+///
+/// `AppPerformance`'s static gates are correct but inert: a body reads them once and keeps whatever it
+/// decided, so a view already on screen when the user flips Low Power Mode never notices. This object
+/// re-reads the inputs on their notifications (power state, thermal state, Reduce Motion, Reduce
+/// Transparency) and publishes only when the resolved flags actually change. The app root folds it into
+/// `AppearanceEnvironment`, so one publish here re-evaluates every mounted view exactly once, together,
+/// instead of each site subscribing on its own.
+///
+/// Main-thread only (every notification is delivered on the main queue; `shared` is first touched from
+/// the app root).
+final class PerformanceProfile: ObservableObject {
+    static let shared = PerformanceProfile()
+
+    enum Tier: Equatable {
+        /// Materials, shadows, decorative animation, broad prewarms.
+        case full
+        /// Low Power Mode, a serious/critical thermal state, or a 3 GB-class device: flat fills instead of
+        /// material blurs, no drop shadows, decorative animation off, prewarms narrowed to what is on screen.
+        case reduced
+    }
+
+    @Published private(set) var tier: Tier = .full
+    @Published private(set) var isLowPowerMode = false
+    @Published private(set) var isThermallyThrottled = false
+    @Published private(set) var isReduceMotionEnabled = false
+    @Published private(set) var isReduceTransparencyEnabled = false
+
+    /// 3 GB-class and below (iPhone 8, X, XR, the SE line). Memory is the one stable proxy for the GPU
+    /// generation that struggles with stacked material blurs; core count is no use (every iPhone since the
+    /// A11 reports six). 3.5 GB rather than 3: a "3 GB" device reports a little under 3_000_000_000 and
+    /// a "4 GB" one a little under 4_000_000_000, so the old `< 3 GB` test let the XR and X through as fast.
+    static let isLowEndDevice: Bool = ProcessInfo.processInfo.physicalMemory < 3_500_000_000
+
+    /// Decorative animation off: starfield twinkle, forever pulses, launch springs. Functional
+    /// transitions stay animated (Reduce Motion asks for less motion, not a frozen UI).
+    var shouldReduceAnimations: Bool { isLowPowerMode || isReduceMotionEnabled }
+
+    /// Flat fills instead of material blurs, on the pre-Liquid-Glass fallback. Each material is a
+    /// backdrop pass; the Adhan tab alone stacks ~35 of them, which is the single biggest GPU cost on
+    /// A11-A13 hardware. Reduce Transparency is the same request made through accessibility.
+    var shouldFlattenMaterials: Bool { tier == .reduced || isReduceTransparencyEnabled }
+
+    /// Drop shadows are offscreen render passes; skipped entirely on the reduced tier (`.softShadow`).
+    var shouldDropShadows: Bool { tier == .reduced }
+
+    private var observers: [NSObjectProtocol] = []
+
+    private init() {
+        refresh()
+
+        var names: [Notification.Name] = [
+            .NSProcessInfoPowerStateDidChange,
+            ProcessInfo.thermalStateDidChangeNotification
+        ]
+        #if os(iOS)
+        names.append(UIAccessibility.reduceMotionStatusDidChangeNotification)
+        names.append(UIAccessibility.reduceTransparencyStatusDidChangeNotification)
+        #elseif os(watchOS)
+        names.append(NSNotification.Name.WKAccessibilityReduceMotionStatusDidChange)
+        #endif
+        // `.main` queue: the power-state notification arrives on an arbitrary thread, and the
+        // `@Published` writes below must happen where SwiftUI reads them.
+        observers = names.map { name in
+            NotificationCenter.default.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in
+                self?.refresh()
+            }
+        }
+    }
+
+    deinit {
+        observers.forEach(NotificationCenter.default.removeObserver)
+    }
+
+    private func refresh() {
+        #if DEBUG
+        // "-lowPowerMode": pretend Low Power Mode is on (the simulator has no switch for it): the
+        // reduced tier plus everything keyed on the flag itself, such as the Classic Look's automatic rule.
+        let lpm = ProcessInfo.processInfo.isLowPowerModeEnabled
+            || ProcessInfo.processInfo.arguments.contains("-lowPowerMode")
+        #else
+        let lpm = ProcessInfo.processInfo.isLowPowerModeEnabled
+        #endif
+        let thermal = ProcessInfo.processInfo.thermalState
+        let throttled = thermal == .serious || thermal == .critical
+        let reduceMotion = AppPerformance.isReduceMotionEnabled
+        #if os(iOS)
+        let reduceTransparency = UIAccessibility.isReduceTransparencyEnabled
+        #else
+        let reduceTransparency = false
+        #endif
+        var tier: Tier = (lpm || throttled || Self.isLowEndDevice) ? .reduced : .full
+        #if DEBUG
+        // "-perfTierReduced": force the reduced tier on the simulator, where Low Power Mode cannot be
+        // switched on and the host Mac's memory reads as a fast device - the only way to screenshot
+        // the flat-material / no-shadow path headlessly.
+        if ProcessInfo.processInfo.arguments.contains("-perfTierReduced") { tier = .reduced }
+        #endif
+
+        // Assign only what changed: each `@Published` write is a publish, and the root re-renders per publish.
+        if isLowPowerMode != lpm { isLowPowerMode = lpm }
+        if isThermallyThrottled != throttled { isThermallyThrottled = throttled }
+        if isReduceMotionEnabled != reduceMotion { isReduceMotionEnabled = reduceMotion }
+        if isReduceTransparencyEnabled != reduceTransparency { isReduceTransparencyEnabled = reduceTransparency }
+        if self.tier != tier { self.tier = tier }
     }
 }
 
@@ -142,8 +256,19 @@ enum AccentColor: String, CaseIterable, Identifiable {
         // Resolved from the user's stored hex. Views observe `settings`, so changing the hex re-renders them.
         // Cached per hex: `.color`/`.accent1`/`.accent2` are read by nearly every row of every list, and
         // re-parsing the hex string on each read made the custom theme measurably slower than the built-ins.
-        case .custom: return Self.cachedCustomColor(hex: Settings.shared.customAccentColorHex)
+        case .custom: return Self.cachedCustomColor(hex: Self.customHexForThisProcess)
         }
+    }
+
+    /// The custom-accent hex as THIS process can see it. The app reads the live property; a widget or
+    /// complication reads the App Group mirror the app writes on every change, so painting `.custom`
+    /// no longer costs the extension the whole `Settings.init` (three location decodes, ~240 stored
+    /// properties) for one string. Read once per extension process - it is a short-lived one.
+    private static let extensionCustomHex: String = {
+        UserDefaults(suiteName: AppIdentifiers.appGroupSuiteName)?.string(forKey: "customAccentColorHex") ?? "34C759"
+    }()
+    private static var customHexForThisProcess: String {
+        Settings.isAppProcess ? Settings.shared.customAccentColorHex : extensionCustomHex
     }
 
     private static let customColorLock = NSLock()
@@ -726,21 +851,132 @@ extension EnvironmentValues {
     }
 }
 
+/// The DEBUG launch stopwatch (`-launchTiming`): "LAUNCH TIMING <label> +<ms>" lines, measured from the
+/// app struct's init (pre-main time is constant across builds and not something these phases touch). The
+/// marks sit at the hand-offs the launch is built from - stores ready, Quran tab settled, warm, finale,
+/// reveal - so a session can read where a cold launch spends its time instead of guessing from sleeps.
+enum LaunchClock {
+    static let start = Date()
+    static func elapsedMS() -> Int { Int(Date().timeIntervalSince(start) * 1000) }
+    #if DEBUG
+    static let enabled = ProcessInfo.processInfo.arguments.contains("-launchTiming")
+    static func mark(_ label: String) {
+        guard enabled else { return }
+        NSLog("LAUNCH TIMING %@ +%d ms", label, elapsedMS())
+    }
+    #else
+    @inline(__always) static func mark(_ label: String) {}
+    #endif
+}
+
+/// `-renderCounter` (DEBUG): counts the SwiftUI body evaluations of the views that call `hit` and logs
+/// "RENDER COUNT <label> n, ..." once per second, only for seconds that had any. The way to prove
+/// "zero body evaluations per second while idle" headlessly, where the SwiftUI instrument cannot run.
+/// Bodies run on the main thread, so the dictionary needs no lock.
+enum RenderCounter {
+    #if DEBUG
+    static let enabled = ProcessInfo.processInfo.arguments.contains("-renderCounter")
+    private static var counts: [String: Int] = [:]
+    private static var flushScheduled = false
+
+    static func hit(_ label: String) {
+        guard enabled else { return }
+        counts[label, default: 0] += 1
+        guard !flushScheduled else { return }
+        flushScheduled = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
+            flushScheduled = false
+            let line = counts.sorted { $0.key < $1.key }.map { "\($0.key) \($0.value)" }.joined(separator: ", ")
+            counts.removeAll(keepingCapacity: true)
+            NSLog("RENDER COUNT %@", line)
+        }
+    }
+    #else
+    @inline(__always) static func hit(_ label: String) {}
+    #endif
+}
+
+#if canImport(UIKit)
+/// `UIFont(name:size:)` resolves the face through the font registry every call; the mushaf composer
+/// asked for it ~450 times per page fit and the word-by-word layout once per cell (Phase 5 step 11).
+/// Keyed by name and size, thread-safe, never evicted (a few dozen entries at most).
+enum QuranFontCache {
+    private static let lock = NSLock()
+    nonisolated(unsafe) private static var fonts: [String: UIFont] = [:]
+
+    static func font(name: String, size: CGFloat) -> UIFont? {
+        let key = "\(name)|\(size)"
+        lock.lock()
+        if let hit = fonts[key] { lock.unlock(); return hit }
+        lock.unlock()
+        guard let font = UIFont(name: name, size: size) else { return nil }
+        lock.lock(); fonts[key] = font; lock.unlock()
+        return font
+    }
+}
+#endif
+
+/// `-renderCounter` companion for the OTHER observable objects (DEBUG): counts every `objectWillChange`
+/// of an attached object per second and logs "OBJECT PUBLISH <label> n, ...". `Settings` has its own
+/// counter (`-publishCounter`); this one answers "which store woke the readers up?".
+enum ObjectPublishCounter {
+    #if DEBUG
+    private static var counts: [String: Int] = [:]
+    private static var flushScheduled = false
+    private static var subscriptions: [AnyCancellable] = []
+
+    static func attach<Object: ObservableObject>(_ object: Object, label: String) {
+        guard RenderCounter.enabled else { return }
+        subscriptions.append(object.objectWillChange.sink { _ in note(label) })
+    }
+
+    private static func note(_ label: String) {
+        counts[label, default: 0] += 1
+        guard !flushScheduled else { return }
+        flushScheduled = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
+            flushScheduled = false
+            let line = counts.sorted { $0.key < $1.key }.map { "\($0.key) \($0.value)" }.joined(separator: ", ")
+            counts.removeAll(keepingCapacity: true)
+            NSLog("OBJECT PUBLISH %@", line)
+        }
+    }
+    #else
+    @inline(__always) static func attach<Object: ObservableObject>(_ object: Object, label: String) {}
+    #endif
+}
+
 /// Live mirror of the reveal state for code that checks it from ESCAPING tasks. A value-type modifier's
 /// captured `@Environment(\.appRevealed)` snapshot freezes at capture time - the review prompt's retry
 /// loop, whose capture chain starts before the launch cover lifts, read a stale `false` forever and
 /// silently suppressed the prompt for the whole session. Defaults to `true` for the same reason as the
 /// environment key (Watch app, previews); only the iPhone app root writes it.
 @MainActor enum AppReveal {
-    static var revealed = true
+    static var revealed = true {
+        didSet {
+            guard revealed else { return }
+            let parked = waiters
+            waiters.removeAll()
+            parked.forEach { $0.resume() }
+        }
+    }
+
+    private static var waiters: [CheckedContinuation<Void, Never>] = []
 
     /// Parks a task until the launch/splash cover has lifted. Deferred launch work (the 17-book
     /// hadith sweep, the broad surah sweep, the NLEmbedding probe) waits on this so the under-cover
     /// warm - the window the launch screen's reveal is actually gated on - keeps the main actor and
-    /// the disk to itself. 100ms poll: reveal latency is invisible at that grain.
+    /// the disk to itself. A continuation, not a poll: a dozen tasks park here at launch, and their
+    /// 100 ms wakeups were timers Low Power Mode throttles and the launch window paid for. A parked
+    /// task resumes on the reveal (always within seconds) and checks its own cancellation after.
     static func waitUntilRevealed() async {
-        while !revealed, !Task.isCancelled {
-            try? await Task.sleep(nanoseconds: 100_000_000)
+        if revealed || Task.isCancelled { return }
+        await withCheckedContinuation { continuation in
+            if revealed {
+                continuation.resume()
+            } else {
+                waiters.append(continuation)
+            }
         }
     }
 }
