@@ -379,6 +379,8 @@ private struct TrackerPrayerToggle: View {
 /// an inline closure of an already-deep view tree.
 struct PrayerTrackerSection: View {
     @ObservedObject private var settings = Settings.shared
+    /// Prayer times and the location publish from `LiveState`, not `Settings` (see its comment).
+    @ObservedObject private var live = LiveState.shared
 
     private var todaySlots: [Prayer] {
         settings.trackableSlots(for: Date())
@@ -386,7 +388,7 @@ struct PrayerTrackerSection: View {
 
     var body: some View {
         let _ = RenderCounter.hit("PrayerTrackerSection")
-        if settings.prayers != nil {
+        if live.prayers != nil {
             Section(header: header) {
                 if settings.isTrackerExempt(on: Date()) {
                     pausedCard

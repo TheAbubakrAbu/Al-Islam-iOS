@@ -945,6 +945,7 @@ struct SettingsAppearanceView: View {
             Text("System follows your device. Light theme in Light Mode, Dark theme in Dark Mode. Other themes are ignored.")
                 .font(.caption)
                 .foregroundColor(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
                 .padding(.vertical, 2)
         }
 
@@ -967,6 +968,7 @@ struct SettingsAppearanceView: View {
             Text("Pick any background color for the whole app. Light or dark text is chosen automatically so it stays readable.")
                 .font(.caption)
                 .foregroundColor(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
                 .padding(.vertical, 2)
         }
         #endif
@@ -1011,6 +1013,7 @@ struct SettingsAppearanceView: View {
             Text("Anas ibn Malik (may Allah be pleased with him) said, “The most beloved of colors to the Messenger of Allah (peace be upon him) was green.”")
                 .font(.caption)
                 .foregroundColor(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
                 .padding(.vertical, 2)
                 .padding(.top, 10)
             #endif
@@ -1025,6 +1028,7 @@ struct SettingsAppearanceView: View {
             Text("A soft wash of your accent color at the top of each screen. Turn it off for a flat background.")
                 .font(.caption)
                 .foregroundColor(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
                 .padding(.vertical, 2)
 
             if settings.showAccentGlow {
@@ -1036,6 +1040,7 @@ struct SettingsAppearanceView: View {
                     Text("Color the glow with Al-Islam's yellow and green - yellow from the left, green from the right - instead of your accent color.")
                         .font(.caption)
                         .foregroundColor(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
                 .settingsDependent()
             }
@@ -1049,6 +1054,7 @@ struct SettingsAppearanceView: View {
             Text("The default list view is the standard interface found in many of Apple's first party apps, including Notes.")
                 .font(.caption)
                 .foregroundColor(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
                 .padding(.vertical, 2)
         }
 
@@ -1061,6 +1067,7 @@ struct SettingsAppearanceView: View {
                 Text("Turns off Liquid Glass so the app looks the way it did before iOS 26. Faster and easier on the battery.")
                     .font(.caption)
                     .foregroundColor(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
                     .padding(.vertical, 2)
 
                 if !settings.classicLook {
@@ -1072,6 +1079,7 @@ struct SettingsAppearanceView: View {
                         Text("Uses the Classic Look while Low Power Mode is on and brings Liquid Glass back when it is off.")
                             .font(.caption)
                             .foregroundColor(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
                             .padding(.vertical, 2)
                     }
                     .settingsDependent()

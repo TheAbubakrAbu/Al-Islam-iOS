@@ -58,6 +58,26 @@ struct AppearanceEnvironment: Equatable {
     /// read this alone. `ConditionalGlassEffect`, `adaptiveSafeArea`, the search field's backing and
     /// the glass-only decorations key on it.
     var liquidGlass: Bool
+    /// The Islam tab's Arabic face (`Settings.nonQuranArabicFontName`) and whether it is a bundled face
+    /// rather than "Basic". Carried here so the article pages (Pillars, Beliefs, How-to guides, and
+    /// every `ScriptureQuote` in them) read their accent and faces from this one snapshot instead of
+    /// observing `Settings`: those pages are 100-300-node trees, and observation re-diffed all of them
+    /// on every publish (a location tick, a countdown) while the reader scrolled.
+    var islamArabicFontName: String
+    var islamUsesCustomArabicFace: Bool
+    /// The Quran face (`Settings.fontArabic`) for the ayat quoted on those pages, and its custom flag.
+    var quranArabicFontName: String
+    var quranUsesCustomArabicFace: Bool
+
+    /// `Settings.scalableIslamArabicFont(base:relativeTo:)` off the snapshot.
+    func islamArabicFont(base: CGFloat, relativeTo style: Font.TextStyle) -> Font {
+        Font.arabic(islamArabicFontName, size: base, relativeTo: style)
+    }
+
+    /// The Quran face at `size`, scaling with `style`.
+    func quranArabicFont(size: CGFloat, relativeTo style: Font.TextStyle) -> Font {
+        Font.arabic(quranArabicFontName, size: size, relativeTo: style)
+    }
 
     /// The resolved `liquidGlass` flag for a Settings/profile pair.
     static func liquidGlass(_ settings: Settings, profile: PerformanceProfile) -> Bool {
@@ -92,7 +112,11 @@ struct AppearanceEnvironment: Equatable {
             dropShadows: profile.shouldDropShadows,
             reduceAnimations: profile.shouldReduceAnimations,
             isReducedTier: profile.tier == .reduced,
-            liquidGlass: liquidGlass(settings, profile: profile)
+            liquidGlass: liquidGlass(settings, profile: profile),
+            islamArabicFontName: settings.nonQuranArabicFontName,
+            islamUsesCustomArabicFace: settings.islamUsesCustomArabicFace,
+            quranArabicFontName: settings.fontArabic,
+            quranUsesCustomArabicFace: settings.quranUsesCustomArabicFace
         )
     }
 }
@@ -176,6 +200,158 @@ struct AppearanceEnvironmentInjector: ViewModifier {
             .preferredColorScheme(environment.colorScheme)
     }
 }
+
+#if os(iOS)
+import ImageIO
+
+/// Large bundled images decoded at the size they are shown, not at their full pixel size.
+/// `Image("Phone Wallpaper").resizable()` decoded the whole 1893x4096 asset (31 MB) to paint a
+/// 340-point row; the four Wallpapers rows together were ~90 MB of footprint on open, a jetsam
+/// candidate on a 3 GB device (Performance Guide, Phase 6 step 4).
+///
+/// These assets are DATA sets in the catalog, not image sets, on purpose: `UIImage(named:)` plus
+/// `preparingThumbnail(of:)` decodes the full bitmap first and keeps it in the named-image cache
+/// (measured: +31 MB per wallpaper, thumbnail on top), whereas ImageIO's thumbnail path over the
+/// encoded bytes materialises only the thumbnail. The results live in a cost-limited cache so a
+/// second visit is instant and the total stays bounded.
+enum ImageThumbnails {
+    private static let cache: NSCache<NSString, UIImage> = {
+        let cache = NSCache<NSString, UIImage>()
+        cache.totalCostLimit = 40 << 20
+        return cache
+    }()
+    private static let aspectLock = NSLock()
+    nonisolated(unsafe) private static var aspects: [String: CGFloat] = [:]
+
+    /// A full-width list row in pixels: the screen minus the grouped insets, at the screen's scale.
+    /// On the reduced tier (Low Power Mode, a 3 GB-class device) the scale is capped at 2x: a phone
+    /// wallpaper thumbnail is 10 MB at 3x and 4.5 MB at 2x, and the preview row is the only place
+    /// the difference could show.
+    static var rowPixelWidth: CGFloat {
+        let screen = UIScreen.main
+        let scale = PerformanceProfile.shared.tier == .reduced ? min(screen.scale, 2) : screen.scale
+        return (screen.bounds.width - 40) * scale
+    }
+
+    private static func key(_ name: String, _ width: CGFloat) -> NSString { "\(name)@\(Int(width))" as NSString }
+
+    private static func source(_ name: String) -> CGImageSource? {
+        guard let data = NSDataAsset(name: name)?.data else { return nil }
+        return CGImageSourceCreateWithData(data as CFData, nil)
+    }
+
+    /// The full asset, decoded on demand (Copy / Save). Not cached: the caller keeps it only as
+    /// long as the pasteboard or the photo library needs it.
+    static func fullImage(_ name: String) -> UIImage? {
+        NSDataAsset(name: name).flatMap { UIImage(data: $0.data) }
+    }
+
+    /// width / height from the header, so a placeholder can hold the row's height before the decode.
+    static func aspectRatio(_ name: String) -> CGFloat {
+        aspectLock.lock(); defer { aspectLock.unlock() }
+        if let hit = aspects[name] { return hit }
+        var aspect: CGFloat = 1
+        if let source = source(name),
+           let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any],
+           let width = properties[kCGImagePropertyPixelWidth] as? CGFloat,
+           let height = properties[kCGImagePropertyPixelHeight] as? CGFloat, height > 0 {
+            aspect = width / height
+        }
+        aspects[name] = aspect
+        return aspect
+    }
+
+    static func cached(_ name: String, maxPixelWidth: CGFloat) -> UIImage? {
+        cache.object(forKey: key(name, maxPixelWidth))
+    }
+
+    /// The asset at most `maxPixelWidth` pixels wide (aspect kept), decoded off the main thread.
+    static func thumbnail(_ name: String, maxPixelWidth: CGFloat) async -> UIImage? {
+        if let hit = cached(name, maxPixelWidth: maxPixelWidth) { return hit }
+        let image = await Task.detached(priority: .userInitiated) { () -> UIImage? in
+            guard let source = source(name) else { return nil }
+            // The longest side is capped, so scale the cap by the aspect to land on the width.
+            let aspect = aspectRatio(name)
+            let maxPixel = aspect >= 1 ? maxPixelWidth : maxPixelWidth / aspect
+            let options: [CFString: Any] = [
+                kCGImageSourceCreateThumbnailFromImageAlways: true,
+                kCGImageSourceShouldCacheImmediately: true,
+                kCGImageSourceCreateThumbnailWithTransform: true,
+                kCGImageSourceThumbnailMaxPixelSize: Int(maxPixel.rounded(.up)),
+            ]
+            #if DEBUG
+            let before = MemoryFootprint.megabytes
+            #endif
+            guard let cgImage = CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary) else { return nil }
+            #if DEBUG
+            if RenderCounter.enabled {
+                NSLog("THUMB %@ -> %dx%d footprint %.1f -> %.1f MB", name, cgImage.width, cgImage.height, before, MemoryFootprint.megabytes)
+            }
+            #endif
+            return UIImage(cgImage: cgImage)
+        }.value
+        if let image {
+            let cost = Int(image.size.width * image.scale * image.size.height * image.scale * 4)
+            cache.setObject(image, forKey: key(name, maxPixelWidth), cost: cost)
+        }
+        return image
+    }
+}
+
+/// `Image(name).resizable()` for a large bundled DATA asset (see `ImageThumbnails`): shows the cached
+/// thumbnail at once when there is one, otherwise a placeholder with the asset's aspect ratio (so the
+/// row keeps its height) until the downsample lands. Add `.aspectRatio` / corner radii / menus
+/// exactly as on the `Image` it replaces.
+struct DownsampledImage: View {
+    let name: String
+    let maxPixelWidth: CGFloat
+    @State private var image: UIImage?
+
+    init(_ name: String, maxPixelWidth: CGFloat = ImageThumbnails.rowPixelWidth) {
+        self.name = name
+        self.maxPixelWidth = maxPixelWidth
+        _image = State(initialValue: ImageThumbnails.cached(name, maxPixelWidth: maxPixelWidth))
+    }
+
+    var body: some View {
+        Group {
+            if let image {
+                Image(uiImage: image)
+                    .resizable()
+            } else {
+                Color.clear
+                    .aspectRatio(ImageThumbnails.aspectRatio(name), contentMode: .fit)
+            }
+        }
+        .task(id: name) {
+            if image == nil {
+                image = await ImageThumbnails.thumbnail(name, maxPixelWidth: maxPixelWidth)
+            }
+        }
+    }
+}
+#else
+/// watchOS: the data asset decoded whole (the pre-Phase-6 behaviour), so the shared call sites read
+/// the same. `ImageIO` thumbnails are iOS-only here because the watch never lists these screens
+/// at a size where the decode matters.
+enum ImageThumbnails {
+    static func fullImage(_ name: String) -> UIImage? {
+        NSDataAsset(name: name).flatMap { UIImage(data: $0.data) }
+    }
+}
+
+struct DownsampledImage: View {
+    let name: String
+    init(_ name: String, maxPixelWidth: CGFloat = 0) { self.name = name }
+    var body: some View {
+        if let image = ImageThumbnails.fullImage(name) {
+            Image(uiImage: image).resizable()
+        } else {
+            Color.clear
+        }
+    }
+}
+#endif
 
 /// A drop shadow that disappears on the reduced performance tier. Shadows are offscreen render passes,
 /// and the Adhan tab alone stacks a dozen of them on material layers; on A11-A13 hardware under Low

@@ -47,16 +47,68 @@ final class ArabicSpeech: NSObject, ObservableObject {
         }
     }
 
+    /// Resolved once and kept; `speechVoices()` enumerates every installed voice (5-30 ms) and
+    /// used to run on every tap. A voice downloaded mid-session arrives through
+    /// `availableVoicesDidChangeNotification`, which re-resolves (Performance Guide, Phase 6 step 11).
     @discardableResult
     private func resolveVoice() -> AVSpeechSynthesisVoice? {
+        if voiceResolved { return arabicVoice }
         arabicVoice = Self.bestArabicVoice()
+        voiceResolved = true
         return arabicVoice
     }
+
+    private var voiceResolved = false
+    private var voicesObserver: NSObjectProtocol?
 
     override private init() {
         super.init()
         synthesizer.delegate = self
         arabicVoice = Self.bestArabicVoice()
+        voiceResolved = true
+        if #available(iOS 17.0, watchOS 10.0, *) {
+            voicesObserver = NotificationCenter.default.addObserver(
+                forName: AVSpeechSynthesizer.availableVoicesDidChangeNotification, object: nil, queue: .main
+            ) { _ in
+                MainActor.assumeIsolated {
+                    let speech = ArabicSpeech.shared
+                    speech.voiceResolved = false
+                    speech.resolveVoice()
+                }
+            }
+        }
+    }
+
+    /// The session is activated on a serial background lane: `setActive(true)` blocks 10-50 ms, and
+    /// it ran on the main thread on every tap. `sessionActive` skips the trip while speech is live
+    /// (`releaseSessionIfIdle` clears it). `then` runs on main once the session is up, or at once
+    /// when it already is; a tap that arrives meanwhile supersedes an older continuation.
+    private var sessionActive = false
+    private var speakGeneration = 0
+    private static let sessionQueue = DispatchQueue(label: "arabic.speech.session", qos: .userInitiated)
+
+    private func activateSession(then continuation: @escaping () -> Void) {
+        #if os(iOS)
+        if sessionActive { continuation(); return }
+        speakGeneration += 1
+        let generation = speakGeneration
+        Self.sessionQueue.async {
+            // .duckOthers so a recitation playing in the background dips rather than being stopped outright, and
+            // .playback so this is still audible with the ringer switch flipped to silent.
+            try? AVAudioSession.sharedInstance().setCategory(.playback, mode: .spokenAudio, options: [.duckOthers])
+            try? AVAudioSession.sharedInstance().setActive(true)
+            DispatchQueue.main.async {
+                MainActor.assumeIsolated {
+                    let speech = ArabicSpeech.shared
+                    guard generation == speech.speakGeneration else { return }
+                    speech.sessionActive = true
+                    continuation()
+                }
+            }
+        }
+        #else
+        continuation()
+        #endif
     }
 
     var isAvailable: Bool { arabicVoice != nil }
@@ -68,15 +120,6 @@ final class ArabicSpeech: NSObject, ObservableObject {
         guard let arabicVoice else { return false }
         if #available(iOS 16.0, watchOS 9.0, *), arabicVoice.quality == .premium { return false }
         return arabicVoice.quality != .enhanced
-    }
-
-    private func activateSession() {
-        #if os(iOS)
-        // .duckOthers so a recitation playing in the background dips rather than being stopped outright, and
-        // .playback so this is still audible with the ringer switch flipped to silent.
-        try? AVAudioSession.sharedInstance().setCategory(.playback, mode: .spokenAudio, options: [.duckOthers])
-        try? AVAudioSession.sharedInstance().setActive(true)
-        #endif
     }
 
     private func utterance(for text: String, rate: Float) -> AVSpeechUtterance {
@@ -159,9 +202,10 @@ final class ArabicSpeech: NSObject, ObservableObject {
         guard resolveVoice() != nil else { return }
 
         stop()
-        activateSession()
         currentText = text
-        enqueue(text, rate: rate, trailingDelay: 0)
+        activateSession { [self] in
+            enqueue(text, rate: rate, trailingDelay: 0)
+        }
     }
 
     /// Speaks every text in order - the "Listen All" button on the adhkar and dua sections. The synthesizer
@@ -171,11 +215,12 @@ final class ArabicSpeech: NSObject, ObservableObject {
         guard !cleaned.isEmpty, resolveVoice() != nil else { return }
 
         stop()
-        activateSession()
         isSpeakingQueue = true
         currentText = cleaned.first
-        for text in cleaned {
-            enqueue(text, rate: rate, trailingDelay: 0.7)
+        activateSession { [self] in
+            for text in cleaned {
+                enqueue(text, rate: rate, trailingDelay: 0.7)
+            }
         }
     }
 
@@ -221,6 +266,7 @@ final class ArabicSpeech: NSObject, ObservableObject {
     private func releaseSessionIfIdle() {
         #if os(iOS)
         guard !synthesizer.isSpeaking else { return }
+        sessionActive = false
         if Self.recitationOwnsSession?() == true {
             // This app's recitation still owns audio - restore its category rather than deactivating
             // the session out from under it.

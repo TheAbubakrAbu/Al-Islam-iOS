@@ -200,8 +200,8 @@ final class HadithStore: ObservableObject {
     /// Drops every decompressed block and all but the most recently opened books. The packs themselves
     /// stay mapped - a memory map is not resident memory, and dropping it would only cost a re-open.
     private func trimCachesForMemoryPressure() {
-        // The pager's derived caches retain whole chapters of text independent of the block cache.
-        HadithPagedView.clearDerivedCaches()
+        // The book screen's per-book chapter statistics are rebuilt in one pass over the chapter table.
+        HadithBookView.clearDerivedCaches()
         HadithBlockCache.shared.purge()
         let keep = 2
         guard openOrder.count > keep else { return }
@@ -210,8 +210,9 @@ final class HadithStore: ObservableObject {
         for slug in dropped { books.removeValue(forKey: slug) }
     }
 
-    /// Packs, mapped once and kept for the life of the app - each is a file mapping plus its id table,
-    /// so all 17 together are about a megabyte and open in tens of milliseconds.
+    /// Packs, mapped once and kept for the life of the app - each is a file mapping plus its id table.
+    /// The shelf's tables are ~9-10 MB resident all told (50,884 `Hadith` records plus the pack
+    /// rows and citation maps), opened off the main actor by the post-reveal sweep.
     private var packs: [String: HadithPack] = [:]
 
     /// The `HadithBookData` built over each open pack (its chapter list and per-hadith records), and
@@ -269,17 +270,26 @@ final class HadithStore: ObservableObject {
     }()
 
     func recordCounts(slug: String, chapters: Int, hadiths: Int) {
-        let value = [chapters, hadiths]
-        guard recordedCounts[slug] != value else { return }
-        recordedCounts[slug] = value
-        UserDefaults.standard.set(recordedCounts, forKey: "hadithBookCounts")
+        recordCounts([slug: [chapters, hadiths]])
     }
 
-    /// The book's shape for display, straight from the pack - which is the data, so there is no
-    /// hand-maintained table to drift. Opening a book is a memory map and an id table, cheap enough
-    /// for a catalog row to ask from its body; `recordedCounts` covers the moment before that lands.
+    /// Several books' shapes in ONE publish - the shelf sweep records all 17 together instead of
+    /// re-rendering the catalog once per book.
+    func recordCounts(_ updates: [String: [Int]]) {
+        var merged = recordedCounts
+        for (slug, value) in updates where merged[slug] != value { merged[slug] = value }
+        guard merged != recordedCounts else { return }
+        recordedCounts = merged
+        UserDefaults.standard.set(merged, forKey: "hadithBookCounts")
+    }
+
+    /// The book's shape for display: from the open book when it is open, else from the counts
+    /// recorded the last time it was. NEVER opens a book - this is read from catalog row bodies,
+    /// and on a first launch under Low Power Mode the old body-path open used to map and parse all
+    /// 17 packs synchronously before the sweep reached them (performance plan, Phase 7 step 6). A
+    /// never-opened book shows no chips until the post-reveal sweep records it, one publish for all.
     func counts(for book: HadithCatalogBook) -> (chapters: Int, hadiths: Int)? {
-        if let open = self.book(book) {
+        if let open = books[book.slug] {
             return (open.chapters.count, open.hadiths.count)
         }
         if let known = recordedCounts[book.slug], known.count == 2 {
@@ -381,26 +391,48 @@ final class HadithStore: ObservableObject {
             .filter { seen.insert($0.slug).inserted }
         guard !targets.isEmpty else { return }
 
+        Self.purgeLegacyBookCorpora()
+
         Task {
             // Never under the launch cover, whoever calls: the sweep's main-actor slices are the
             // launch window's worst competitor.
             await AppReveal.waitUntilRevealed()
+            var counts: [String: [Int]] = [:]
             for book in targets where self.books[book.slug] == nil {
-                _ = self.book(book)
-                // One book per turn of the run loop: the whole sweep is milliseconds on modern
-                // hardware, but launch has better things to do with an uninterrupted main thread
-                // than 17 of them in a row.
-                await Task.yield()
-                // Old / throttled devices get real air between books: under Low Power Mode the
-                // per-book parse is several times slower, and back-to-back turns still read as one
-                // long main-thread stall to the user.
+                guard let data = await self.openOffMain(book, priority: .utility) else { continue }
+                counts[book.slug] = [data.chapters.count, data.hadiths.count]
+                // Old / throttled devices get air between books so the background parse never
+                // saturates the one or two cores the user's taps are sharing.
                 if AppPerformance.shouldAvoidBroadPrewarm {
-                    try? await Task.sleep(nanoseconds: 60_000_000)
+                    try? await Task.sleep(nanoseconds: 30_000_000)
                 }
             }
+            // One publish for the whole shelf: the catalog rows re-render once, not seventeen times.
+            self.recordCounts(counts)
             // The whole shelf has been offered a chance to open - now the saved records' frozen
             // reference strings can be refreshed to the standard citations, once.
             self.refreshCitationReferences()
+        }
+    }
+
+    /// Delete the per-book AI corpora (`hadith-<slug>-*.vec3`, ~10 MB each, up to 17 of them) that
+    /// earlier builds wrote to Caches. Book and chapter AI search query the one all-books corpus now
+    /// (performance plan, Phase 7 step 3); those files would never be read again. Once, off-main.
+    private static func purgeLegacyBookCorpora() {
+        let flag = "hadithBookCorporaPurged1"
+        guard !UserDefaults.standard.bool(forKey: flag) else { return }
+        Task.detached(priority: .background) {
+            guard let caches = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first else { return }
+            let directory = caches.appendingPathComponent("SemanticVectors", isDirectory: true)
+            let allBooksPrefix = "\(HadithSemanticCorpus.id)-"
+            if let files = try? FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil) {
+                for file in files where file.pathExtension == "vec3" {
+                    let name = file.lastPathComponent
+                    guard name.hasPrefix("hadith-"), !name.hasPrefix(allBooksPrefix) else { continue }
+                    try? FileManager.default.removeItem(at: file)
+                }
+            }
+            await MainActor.run { UserDefaults.standard.set(true, forKey: flag) }
         }
     }
 
@@ -508,8 +540,16 @@ final class HadithStore: ObservableObject {
             }
             return open
         }
+        #if DEBUG
+        let started = RenderCounter.enabled ? CFAbsoluteTimeGetCurrent() : 0
+        #endif
         guard let pack = pack(book.slug) else { return nil }
         let data = HadithBookData(pack: pack)
+        #if DEBUG
+        if RenderCounter.enabled {
+            NSLog("HADITH OPEN main %@ %.1f ms", book.slug, (CFAbsoluteTimeGetCurrent() - started) * 1000)
+        }
+        #endif
         books[book.slug] = data
         openOrder.append(book.slug)
         // Deliberately deferred to the next main-actor turn: opening a book is now synchronous, so
@@ -524,6 +564,31 @@ final class HadithStore: ObservableObject {
                 self.recordCounts(slug: slug, chapters: chapters, hadiths: hadiths)
             }
         }
+        return data
+    }
+
+    /// The book, opened OFF the main actor when it is not open yet: the map, the eager-section
+    /// inflate and the 7,000-row table build run in a detached task and what crosses back is two
+    /// references, so the main thread's share is a dictionary insert. The shelf sweep and the
+    /// all-books search sweep use this; `book(_:)` stays the synchronous body-path fallback
+    /// (performance plan, Phase 7 step 6).
+    func openOffMain(_ book: HadithCatalogBook, priority: TaskPriority = .userInitiated) async -> HadithBookData? {
+        if let open = books[book.slug] { return open }
+        let slug = book.slug
+        let existingPack = packs[slug]
+        let opened = await Task.detached(priority: priority) { () -> (HadithPack, HadithBookData)? in
+            if let existingPack { return (existingPack, HadithBookData(pack: existingPack)) }
+            guard let url = HadithPack.bundledURL(slug), let pack = HadithPack(slug: slug, url: url) else {
+                return nil
+            }
+            return (pack, HadithBookData(pack: pack))
+        }.value
+        guard let (pack, data) = opened else { return nil }
+        // A body path may have opened the same book synchronously meanwhile - its copy wins.
+        if let open = books[slug] { return open }
+        packs[slug] = pack
+        books[slug] = data
+        openOrder.append(slug)
         return data
     }
 
@@ -544,10 +609,20 @@ final class HadithStore: ObservableObject {
 
     // MARK: Hadith of the Day
 
+    /// Today's pick with the two previews the summary tile draws, so the tile never asks the pack
+    /// for text: reading `hadith.arabic` from the tile body was a 130 ms main-thread LZMA inflate
+    /// under the launch cover, every launch (performance plan, Phase 7 step 5).
+    struct DailyPick {
+        let book: HadithCatalogBook
+        let hadith: HadithBookData.Hadith
+        let arabicPreview: String
+        let englishPreview: String
+    }
+
     /// Today's hadith, resolved BEFORE the tab ever opens (`prepareDailyHadith()` runs at launch) so
     /// the card renders instantly. Picked ONLY from collections available on this device; nil when
     /// nothing is available at all.
-    @Published private(set) var daily: (book: HadithCatalogBook, hadith: HadithBookData.Hadith)?
+    @Published private(set) var daily: DailyPick?
 
     private var dailyPreparedForDay: String?
     private static let dailyOverrideKey = "hadithOfTheDayOverride"
@@ -638,18 +713,21 @@ final class HadithStore: ObservableObject {
         if let ref = parseDailyRef(UserDefaults.standard.string(forKey: Self.dailyOverrideKey), dayKey: dayKey),
            let data = book(ref.book),
            let hadith = data.hadiths.first(where: { $0.idInBook == ref.idInBook }) {
-            daily = (ref.book, hadith)
+            let previews = await Self.previews(of: hadith, book: ref.book, dayKey: dayKey)
+            daily = DailyPick(book: ref.book, hadith: hadith, arabicPreview: previews.arabic, englishPreview: previews.english)
             dailyPreparedForDay = dayKey
-            recordDailyHistory(book: ref.book, hadith: hadith, dayKey: dayKey)
+            recordDailyHistory(book: ref.book, hadith: hadith, dayKey: dayKey, previews: previews)
             return
         }
 
-        // 2. Today's already-resolved pick: one book load, instant thereafter (memory cache).
+        // 2. Today's already-resolved pick: one book load, instant thereafter (memory cache). The
+        //    previews come from the day's history entry, written when the pick was made - no text.
         if !force,
            let ref = parseDailyRef(UserDefaults.standard.string(forKey: Self.dailyResolvedKey), dayKey: dayKey),
            let data = book(ref.book),
            let hadith = data.hadiths.first(where: { $0.idInBook == ref.idInBook }) {
-            daily = (ref.book, hadith)
+            let previews = await Self.previews(of: hadith, book: ref.book, dayKey: dayKey)
+            daily = DailyPick(book: ref.book, hadith: hadith, arabicPreview: previews.arabic, englishPreview: previews.english)
             dailyPreparedForDay = dayKey
             return
         }
@@ -666,14 +744,30 @@ final class HadithStore: ObservableObject {
             // behind the first frame. It returns a row, not a hadith, so nothing crosses back but an Int.
             guard let pickedRow = await Self.dailyWorthyRow(in: data, index: day) else { continue }
             let pick = data.hadiths[pickedRow]
-            daily = (candidate, pick)
+            let previews = await Self.previews(of: pick, book: candidate, dayKey: dayKey)
+            daily = DailyPick(book: candidate, hadith: pick, arabicPreview: previews.arabic, englishPreview: previews.english)
             dailyPreparedForDay = dayKey
             UserDefaults.standard.set("\(dayKey)|\(candidate.slug)|\(pick.idInBook)", forKey: Self.dailyResolvedKey)
-            recordDailyHistory(book: candidate, hadith: pick, dayKey: dayKey)
+            recordDailyHistory(book: candidate, hadith: pick, dayKey: dayKey, previews: previews)
             return
         }
         daily = nil
         dailyPreparedForDay = dayKey
+    }
+
+    /// The card's two previews: from today's history entry when it already names this hadith (the
+    /// common relaunch), else read from the pack in a detached task - never on the main actor.
+    private static func previews(of hadith: HadithBookData.Hadith, book: HadithCatalogBook,
+                                 dayKey: String) async -> (arabic: String, english: String) {
+        if let entry = loadDailyHistory().first(where: {
+            $0.dayKey == dayKey && $0.slug == book.slug && $0.idInBook == hadith.idInBook
+        }) {
+            return (entry.arabicPreview, entry.englishPreview)
+        }
+        return await Task.detached(priority: .userInitiated) {
+            let strings = hadith.allText
+            return (String(strings.arabic.prefix(120)), String(strings.text.prefix(140)))
+        }.value
     }
 
     /// A GENUINELY random hadith from any collection, stored as today's override.
@@ -691,23 +785,14 @@ final class HadithStore: ObservableObject {
     /// The row of a daily-worthy hadith in this book: the `index`-th one deterministically, or a
     /// random one when `index` is nil.
     private static func dailyWorthyRow(in data: HadithBookData, index: Int?) async -> Int? {
-        if trustsDailyFlags(data) {
-            // The normal path: a walk of the resident id table, reading two bits per hadith. No text,
-            // no decompression, no thread hop - microseconds for the largest book.
-            var worthy: [Int] = []
-            for (row, hadith) in data.hadiths.enumerated()
-            where isDailyWorthy(hadith, trustingFlags: true) {
-                worthy.append(row)
-            }
-            return pickDisplayable(worthy, index: index, data: data)
-        }
-
-        // The word list changed without a repack: fall back to reading the text of the hadiths that
-        // passed the length gate, off-main.
+        // Always detached: the flag walk itself is microseconds, but `pickDisplayable` reads the
+        // PICKED row's text (one block inflate) - and that ran on the main actor under the launch
+        // cover. The fallback (word list changed without a repack) reads many rows' text.
+        let trusting = trustsDailyFlags(data)
         return await Task.detached(priority: .userInitiated) { () -> Int? in
             var worthy: [Int] = []
             for (row, hadith) in data.hadiths.enumerated()
-            where isDailyWorthy(hadith, trustingFlags: false) {
+            where isDailyWorthy(hadith, trustingFlags: trusting) {
                 worthy.append(row)
             }
             return pickDisplayable(worthy, index: index, data: data)
@@ -744,16 +829,16 @@ final class HadithStore: ObservableObject {
     }
 
     /// Keeps the last 5 days on record, one entry per day (a shuffle REPLACES today's entry).
-    private func recordDailyHistory(book: HadithCatalogBook, hadith: HadithBookData.Hadith, dayKey: String) {
+    private func recordDailyHistory(book: HadithCatalogBook, hadith: HadithBookData.Hadith, dayKey: String,
+                                    previews: (arabic: String, english: String)) {
         var history = Self.loadDailyHistory()
-        let strings = hadith.allText
         let entry = DailyHadithEntry(
             dayKey: dayKey,
             slug: book.slug,
             idInBook: hadith.idInBook,
             reference: "\(book.englishTitle) \(hadith.displayNumber)",
-            arabicPreview: String(strings.arabic.prefix(120)),
-            englishPreview: String(strings.text.prefix(140)),
+            arabicPreview: previews.arabic,
+            englishPreview: previews.english,
             date: Date()
         )
         if let first = history.first, first.dayKey == dayKey {

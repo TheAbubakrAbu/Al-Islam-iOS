@@ -6,6 +6,8 @@ import UIKit
 
 struct MapView: View {
     @ObservedObject private var settings = Settings.shared
+    /// Prayer times and the location publish from `LiveState`, not `Settings` (see its comment).
+    @ObservedObject private var live = LiveState.shared
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var systemScheme
 
@@ -56,7 +58,7 @@ struct MapView: View {
     private var markers: [MarkerItem] {
         var items: [MarkerItem] = []
 
-        if let current = settings.currentLocation,
+        if let current = live.currentLocation,
            current.latitude != 1000,
            current.longitude != 1000 {
             items.append(
@@ -97,7 +99,7 @@ struct MapView: View {
 
     private var distanceString: String? {
         guard
-            let current = settings.currentLocation,
+            let current = live.currentLocation,
             let home = settings.homeLocation,
             current.latitude != 1000,
             current.longitude != 1000
@@ -240,14 +242,14 @@ struct MapView: View {
     }
 
     private var hasValidCurrentLocation: Bool {
-        guard let current = settings.currentLocation else { return false }
+        guard let current = live.currentLocation else { return false }
         return current.latitude != 1000 && current.longitude != 1000
     }
 
     private var useCurrentButton: some View {
         Button {
             settings.hapticFeedback()
-            guard let current = settings.currentLocation else { return }
+            guard let current = live.currentLocation else { return }
 
             withAnimation {
                 let coordinate = CLLocationCoordinate2D(latitude: current.latitude, longitude: current.longitude)
@@ -332,7 +334,7 @@ struct MapView: View {
     private func configureInitialRegion() {
         if let home = settings.homeLocation {
             updateRegion(to: home.coordinate)
-        } else if let current = settings.currentLocation {
+        } else if let current = live.currentLocation {
             updateRegion(to: CLLocationCoordinate2D(latitude: current.latitude, longitude: current.longitude))
         } else {
             updateRegion(to: kaabaCoordinate)
@@ -556,6 +558,8 @@ private struct SearchResultRow: View {
 
 private struct HomeLocationSummaryCard: View {
     @ObservedObject private var settings = Settings.shared
+    /// Prayer times and the location publish from `LiveState`, not `Settings` (see its comment).
+    @ObservedObject private var live = LiveState.shared
 
     let home: Location
     let distanceString: String?
@@ -564,7 +568,7 @@ private struct HomeLocationSummaryCard: View {
         VStack(alignment: .leading, spacing: 8) {
             locationInfoRow("Home", value: home.city, systemImage: "house.fill", accent: true)
 
-            if let current = settings.currentLocation {
+            if let current = live.currentLocation {
                 locationInfoRow("Current", value: current.city, systemImage: "location.fill", accent: true)
 
                 if let distanceString {

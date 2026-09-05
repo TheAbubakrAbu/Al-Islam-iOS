@@ -150,6 +150,7 @@ struct SettingsHadithView: View {
                         Text("Colors the majestic and glorious name الله (Allah) in red throughout the hadith texts, in both Arabic and English.")
                             .font(.caption)
                             .foregroundColor(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
                             .padding(.vertical, 2)
                     }
                 }

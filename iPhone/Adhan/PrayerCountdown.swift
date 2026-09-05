@@ -17,6 +17,8 @@ struct PrayerCountdown: View {
     var showPrayerInfoKey: Bool = Settings.shared.showPrayerInfo
 
     @ObservedObject private var settings = Settings.shared
+    /// Prayer times and the location publish from `LiveState`, not `Settings` (see its comment).
+    @ObservedObject private var live = LiveState.shared
     @Environment(\.scenePhase) private var scenePhase
 
     @State private var progress: Double = 0
@@ -28,8 +30,8 @@ struct PrayerCountdown: View {
     /// and re-sorted three days of prayers once a second for the last half minute before every adhan.
     private let progressTickInterval: TimeInterval = 60
 
-    private var currentPrayer: Prayer? { settings.currentPrayer }
-    private var nextPrayer: Prayer? { settings.nextPrayer }
+    private var currentPrayer: Prayer? { live.currentPrayer }
+    private var nextPrayer: Prayer? { live.nextPrayer }
 
     var body: some View {
         let _ = RenderCounter.hit("PrayerCountdown")
@@ -50,7 +52,7 @@ struct PrayerCountdown: View {
             .onChange(of: scenePhase) { phase in
                 handleScenePhaseChange(phase)
             }
-            .onChange(of: settings.prayers) { _ in
+            .onChange(of: live.prayers) { _ in
                 refreshProgressAndPrayerState()
                 startTimer()
             }

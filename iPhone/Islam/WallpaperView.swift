@@ -17,8 +17,6 @@ private let wallpapers: [Wallpaper] = [
 ]
 
 struct WallpaperView: View {
-    @ObservedObject private var settings = Settings.shared
-
     var body: some View {
         List {
             Group {
@@ -28,6 +26,9 @@ struct WallpaperView: View {
         }
         .applyConditionalListStyle()
         .navigationTitle("Wallpapers")
+        #if DEBUG
+        .onAppear { MemoryFootprint.logLater("wallpapers") }
+        #endif
     }
 
     @ViewBuilder
@@ -39,8 +40,6 @@ struct WallpaperView: View {
 }
 
 private struct WallpaperCell: View {
-    @ObservedObject private var settings = Settings.shared
-
     let wallpaper: Wallpaper
 
     var body: some View {
@@ -50,8 +49,8 @@ private struct WallpaperCell: View {
     }
 
     private var wallpaperImage: some View {
-        Image(wallpaper.imageName)
-            .resizable()
+        // Decoded at row width (Phase 6 step 4); Copy and Save below still take the full asset.
+        DownsampledImage(wallpaper.imageName)
             .aspectRatio(contentMode: .fit)
             .cornerRadius(24)
             #if os(iOS)
@@ -60,8 +59,8 @@ private struct WallpaperCell: View {
                     .foregroundStyle(.secondary)
 
                 Button {
-                    settings.hapticFeedback()
-                    if let uiImage = UIImage(named: wallpaper.imageName) {
+                    Settings.shared.hapticFeedback()
+                    if let uiImage = ImageThumbnails.fullImage(wallpaper.imageName) {
                         UIPasteboard.general.image = uiImage
                     }
                 } label: {
@@ -69,8 +68,8 @@ private struct WallpaperCell: View {
                 }
 
                 Button {
-                    settings.hapticFeedback()
-                    guard let uiImage = UIImage(named: wallpaper.imageName) else { return }
+                    Settings.shared.hapticFeedback()
+                    guard let uiImage = ImageThumbnails.fullImage(wallpaper.imageName) else { return }
 
                     PHPhotoLibrary.requestAuthorization(for: .addOnly) { status in
                         guard status == .authorized || status == .limited else { return }

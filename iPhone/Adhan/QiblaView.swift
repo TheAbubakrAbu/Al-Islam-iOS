@@ -8,6 +8,8 @@ import UIKit
 
 struct QiblaView: View {
     @ObservedObject private var settings = Settings.shared
+    /// Prayer times and the location publish from `LiveState`, not `Settings` (see its comment).
+    @ObservedObject private var live = LiveState.shared
     @Environment(\.appearance) private var appearance
 
     let size: CGFloat
@@ -44,10 +46,10 @@ struct QiblaView: View {
     private var isExpanded: Bool { size > 50 }
 
     /// Whether the needle follows the phone's heading. The 50 pt compass in the location row keeps
-    /// turning on the full tier: with the 1° heading filter and the 0.5° / 100 ms publish gate below
-    /// it costs nothing while the phone rests, and the live row compass is the one people actually
-    /// use. Under Low Power Mode (or a 3 GB-class device) the row compass shows the static bearing
-    /// instead and the magnetometer stays off until the compass is expanded.
+    /// turning on the full tier: with the 0.5° publish gate below it costs nothing while the phone
+    /// rests, and the live row compass is the one people actually use. Under Low Power Mode (or a
+    /// 3 GB-class device) the row compass shows the static bearing instead and the magnetometer
+    /// stays off until the compass is expanded.
     private var isLive: Bool { isExpanded || !appearance.isReducedTier }
 
     private var distanceToQibla: Double {
@@ -64,7 +66,7 @@ struct QiblaView: View {
     }
 
     private var distanceToKaabaMiles: Double? {
-        guard let currentLocation = settings.currentLocation,
+        guard let currentLocation = live.currentLocation,
               currentLocation.latitude != 1000,
               currentLocation.longitude != 1000 else { return nil }
 
@@ -139,7 +141,7 @@ struct QiblaView: View {
     /// Heading on or off, and the GPS burst, for the current size and tier. Idempotent.
     private func configureCompass() {
         if isLive {
-            compass.start(headingFilter: appearance.isReducedTier ? 3 : 1)
+            compass.start(minSampleInterval: appearance.isReducedTier ? 0.1 : 0)
         } else {
             compass.showStaticBearing()
         }
@@ -384,13 +386,15 @@ final class LocalQiblaCompass: NSObject, ObservableObject, CLLocationManagerDele
     /// Continuous (unwrapped) low-pass accumulator of the heading→qibla delta. Published `direction`
     /// is this normalized to 0..<360. Smoothing here keeps the needle sharp but free of compass jitter.
     private var smoothedDelta: Double?
-    /// Uptime of the last sample that was let through; samples closer than 100 ms are dropped.
+    /// Uptime of the last sample that was let through; samples closer than `minSampleInterval` are
+    /// dropped. Zero on the full tier (every sample feeds the low-pass, as it always did), 100 ms
+    /// on the reduced tier.
     private var lastSampleAt: TimeInterval = 0
+    private var minSampleInterval: TimeInterval = 0
 
     /// Publish only when the needle would visibly move: below half a degree the rotation is a
     /// sub-pixel change of a 50-160 pt needle, and each publish is a body evaluation of the row.
     private static let minPublishedDelta: Double = 0.5
-    private static let minSampleInterval: TimeInterval = 0.1
 
     init(locationProvider: @escaping () -> Location?) {
         self.locationProvider = locationProvider
@@ -399,12 +403,15 @@ final class LocalQiblaCompass: NSObject, ObservableObject, CLLocationManagerDele
         locationManager.headingOrientation = .portrait
     }
 
-    /// Start (or keep) heading updates. `headingFilter` is the change Core Location must see before
-    /// it delivers a sample at all: 1° on the full tier, 3° on the reduced one. It used to be
-    /// `kCLHeadingFilterNone`, which is 10-30 samples a second of sub-degree jitter, each a publish.
-    func start(headingFilter: CLLocationDegrees) {
+    /// Start (or keep) heading updates. The heading filter stays `kCLHeadingFilterNone` on purpose:
+    /// the low-pass below only converges while samples keep coming, and a 1° filter went silent the
+    /// moment the phone stopped turning, which froze the needle short of the Qibla ("mad laggy").
+    /// Cost is controlled downstream instead: the optional sample gate for the reduced tier, and the
+    /// half-degree publish gate that swallows resting jitter before it reaches SwiftUI.
+    func start(minSampleInterval: TimeInterval) {
         guard CLLocationManager.headingAvailable() else { return }
-        locationManager.headingFilter = headingFilter
+        self.minSampleInterval = minSampleInterval
+        locationManager.headingFilter = kCLHeadingFilterNone
         guard !started else { return }
         started = true
         locationManager.startUpdatingHeading()
@@ -442,9 +449,11 @@ final class LocalQiblaCompass: NSObject, ObservableObject, CLLocationManagerDele
     func locationManager(_ manager: CLLocationManager, didUpdateHeading newHeading: CLHeading) {
         guard newHeading.headingAccuracy >= 0, let qiblaDirection = qiblaDirection() else { return }
 
-        let uptime = ProcessInfo.processInfo.systemUptime
-        guard uptime - lastSampleAt >= Self.minSampleInterval else { return }
-        lastSampleAt = uptime
+        if minSampleInterval > 0 {
+            let uptime = ProcessInfo.processInfo.systemUptime
+            guard uptime - lastSampleAt >= minSampleInterval else { return }
+            lastSampleAt = uptime
+        }
 
         // Prefer the true (geographic) heading; magnetic is the fallback when declination is unknown.
         let heading = newHeading.trueHeading >= 0 ? newHeading.trueHeading : newHeading.magneticHeading

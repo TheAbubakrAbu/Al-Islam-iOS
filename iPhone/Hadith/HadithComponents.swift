@@ -147,7 +147,9 @@ extension Settings {
 /// points on one scale, so nothing here parses, ranks, or color-codes them. Renders nothing when the
 /// hadith carries no grading (Bukhari and Muslim carry none by design).
 struct HadithGradeLine: View {
-    @ObservedObject private var settings = Settings.shared
+    /// Read, not observed: the line is rendered by rows whose parents already observe Settings and
+    /// whose `==` folds the accent, so an observation here only bypassed that gate on every publish.
+    private let accent: Color = Settings.shared.accentColor.color
 
     let grades: [(name: String, grade: String)]
     /// Caption-scale for compact (search-result) rows, footnote for reading rows.
@@ -172,7 +174,7 @@ struct HadithGradeLine: View {
             if index > 0 {
                 result = result + Text(" · ").foregroundColor(.secondary)
             }
-            result = result + Text(entry.grade).foregroundColor(settings.accentColor.color)
+            result = result + Text(entry.grade).foregroundColor(accent)
             if !entry.name.isEmpty {
                 result = result + Text(" (\(entry.name))").foregroundColor(.secondary)
             }
@@ -191,7 +193,12 @@ struct HadithGradeLine: View {
 }
 
 struct HadithRow: View, Equatable {
-    @ObservedObject private var settings = Settings.shared
+    /// Read as a plain property, NOT observed: every Settings field this body reads is folded into
+    /// `renderSettingsSignature`, and the parents that build rows observe Settings themselves - so an
+    /// appearance change reaches the row through `==`, while an unrelated publish (a last-read
+    /// write, a prayer-time tick) no longer re-lays out every visible hadith. An `@ObservedObject`
+    /// here bypassed the Equatable gate entirely (performance plan, Phase 7 step 7).
+    private var settings: Settings { Settings.shared }
     /// The row renders ONLY bookmark/note state, so it observes the user-data object - not HadithStore,
     /// whose download/prewarm publishes used to re-render every visible row on every tick.
     @ObservedObject private var userData = HadithUserData.shared
@@ -350,6 +357,18 @@ struct HadithRow: View, Equatable {
     /// off the QUERY and the row's own text, never off which lane produced the row.
     private func crossLanguageSpans(text: (arabic: String, narrator: String, text: String))
     -> (arabic: [NSRange], narrator: [NSRange], text: [NSRange]) {
+        Self.crossLanguageSpans(query: searchText, text: text)
+    }
+
+    /// The search pipelines call this from their detached prewarm for the hits about to render, so
+    /// the row body's own call is a cache hit (`CrossLanguageWordHighlight` caches per query + text).
+    /// Pure string work over thread-safe caches - safe off the main actor.
+    nonisolated static func prewarmCrossLanguageSpans(query: String, text: (arabic: String, narrator: String, text: String)) {
+        _ = crossLanguageSpans(query: query, text: text)
+    }
+
+    nonisolated private static func crossLanguageSpans(query searchText: String, text: (arabic: String, narrator: String, text: String))
+    -> (arabic: [NSRange], narrator: [NSRange], text: [NSRange]) {
         #if HAS_QURAN
         let trimmed = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty,
@@ -371,6 +390,7 @@ struct HadithRow: View, Equatable {
     }
 
     var body: some View {
+        RenderCounter.hit(compact ? "HadithRow.compact" : "HadithRow")
         // One block-cache lookup for all three strings. `hadith.arabic`/`hadith.english` are each a
         // full trip into the (locked) block cache; this body used to make six of those per pass,
         // which is also lock traffic contended against any detached search sweep.
@@ -379,7 +399,13 @@ struct HadithRow: View, Equatable {
         let grades = hadith.grades
         let visibility = searchVisibility(text: text)
         let cross = crossLanguageSpans(text: text)
-        VStack(alignment: .leading, spacing: compact ? 5 : 10) {
+        // Decided once per body: `hadithArabicFont(for:)` and `hadithArabicUsesCustomFace(for:)`
+        // each walk the Arabic's grapheme count, and the body asked twice.
+        let arabicUsesCustomFace = settings.hadithArabicUsesCustomFace(for: text.arabic)
+        let arabicFont: Font = arabicUsesCustomFace
+            ? Font.arabic(settings.nonQuranArabicFontName, size: arabicFontSize)
+            : .system(size: arabicFontSize)
+        return VStack(alignment: .leading, spacing: compact ? 5 : 10) {
             HStack(spacing: 8) {
                 // ONE glass capsule (the ayah row's "S:A" pill language): the hadith's position WITHIN
                 // its chapter first, then the book-wide citation - "3 - 102 Sahih al-Bukhari" is the
@@ -465,7 +491,7 @@ struct HadithRow: View, Equatable {
                     // The longest narrations fall back to the system face: the custom KFGQPC faces
                     // DROP contextual shaping past a length cliff and every letter renders isolated
                     // (see `arabicShapingCharacterLimit`).
-                    font: settings.hadithArabicFont(for: text.arabic, size: arabicFontSize),
+                    font: arabicFont,
                     accent: settings.accentColor.color,
                     fg: .primary,
                     highlightAllahNames: settings.highlightAllahNamesHadith,
@@ -474,7 +500,7 @@ struct HadithRow: View, Equatable {
                     // system face.
                     extraHighlightRanges: cross.arabic
                 )
-                .arabicFontDesign(custom: settings.hadithArabicUsesCustomFace(for: text.arabic))
+                .arabicFontDesign(custom: arabicUsesCustomFace)
                 .multilineTextAlignment(.trailing)
                 .lineSpacing(compact ? 0 : 6)
                 .frame(maxWidth: .infinity, alignment: .trailing)
@@ -642,54 +668,25 @@ struct HadithRow: View, Equatable {
     }
 }
 
-/// The Quran tab's recent-searches chips, shared by the Hadith tab root AND the book view - one
-/// horizontal row of tappable glass chips over the search bar (tap to re-run, ✕ to remove). One
-/// component so every hadith search surface reads identically.
-struct HadithSearchHistoryChips: View {
-    @ObservedObject var settings = Settings.shared
+/// The hadith searches' recent-queries chips over the shared hadith history: the tab root and the
+/// book view both show these inside the search-help card that floats over the list while the field
+/// is focused and empty. Picking one re-runs it (and bumps it to the front), the ✕ forgets it.
+struct HadithRecentSearches: View {
+    @ObservedObject private var settings = Settings.shared
     @Binding var searchText: String
 
     var body: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 8) {
-                ForEach(settings.hadithSearchHistory, id: \.self) { query in
-                    chip(query: query)
-                }
-            }
-        }
-    }
-
-    private func chip(query: String) -> some View {
-        HStack(spacing: 4) {
-            Button {
-                settings.hapticFeedback()
+        RecentSearchChips(
+            queries: settings.hadithSearchHistory,
+            onPick: { query in
                 withAnimation {
                     searchText = query
                     settings.addHadithSearchHistory(query)
-                    self.endEditing()
                 }
-            } label: {
-                Text(query)
-                    .font(.caption)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.8)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 6)
-            }
-
-            Button {
-                settings.hapticFeedback()
-                withAnimation(.easeInOut) {
-                    settings.removeHadithSearchHistory(query)
-                }
-            } label: {
-                Image(systemName: "xmark")
-                    .font(.caption2.bold())
-                    .padding(.trailing, 8)
-            }
-        }
-        .foregroundStyle(settings.accentColor.color)
-        .conditionalGlassEffect(useColor: 0.25)
+                endEditing()
+            },
+            onRemove: { settings.removeHadithSearchHistory($0) }
+        )
     }
 }
 
@@ -730,55 +727,21 @@ struct HadithArabicPreview: View {
     }
 }
 
-/// The Quran search's Load More pair, for hadith matches: a menu offering 5/10/20 more, and a
-/// load-all underneath. Shared by the book view and the chapter view.
+/// The Quran search's Load More card, for hadith matches: a menu offering 5/10/20 more and a
+/// load-all row beneath it (see `LoadMoreControls`). Shared by the tab root, the book view and the
+/// chapter view.
 struct HadithLoadMoreControls: View {
-    @ObservedObject private var settings = Settings.shared
-
     let label: String
     let hasMore: Bool
     @Binding var limit: Int
 
     var body: some View {
         if hasMore {
-            Menu {
-                Text("Load More")
-                    .foregroundStyle(.secondary)
-
-                ForEach([5, 10, 20], id: \.self) { amount in
-                    Button {
-                        settings.hapticFeedback()
-                        limit += amount
-                    } label: {
-                        Label("Load \(amount)", systemImage: "\(amount).circle")
-                    }
-                }
-            } label: {
-                Text("Load more \(label)")
-                    .frame(maxWidth: .infinity, alignment: .center)
-                    .padding(8)
-                    .contentShape(Rectangle())
-            }
-            .conditionalGlassEffect()
-            .lineLimit(1)
-            .minimumScaleFactor(0.5)
-            .listRowSeparator(.hidden, edges: .bottom)
-            .padding(.bottom, -8)
-
-            Button {
-                settings.hapticFeedback()
-                limit = Int.max
-            } label: {
-                Text("Load all \(label)")
-            }
-            .foregroundColor(settings.accentColor.color)
-            .frame(maxWidth: .infinity, alignment: .center)
-            .padding(8)
-            .conditionalGlassEffect()
-            .lineLimit(1)
-            .minimumScaleFactor(0.5)
-            .padding(.top, -8)
-            .listRowSeparator(.hidden)
+            LoadMoreControls(
+                label: label,
+                onLoad: { limit += $0 },
+                onLoadAll: { limit = Int.max }
+            )
         }
     }
 }

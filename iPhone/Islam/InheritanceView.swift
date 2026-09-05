@@ -553,9 +553,13 @@ struct InheritanceCalculatorView: View {
         .navigationTitle("Inheritance Calculator")
         .applyConditionalListStyle()
         .toolbar {
-            ToolbarItemGroup(placement: .keyboard) {
-                Spacer()
-                Button("Done") { estateFocused = false }
+            // One item with an HStack, not a group with a bare Spacer: the bare Spacer in a keyboard
+            // toolbar logs SwiftUI's "Invalid frame dimension" runtime issue before the keyboard is up.
+            ToolbarItem(placement: .keyboard) {
+                HStack {
+                    Spacer(minLength: 0)
+                    Button("Done") { estateFocused = false }
+                }
             }
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button {

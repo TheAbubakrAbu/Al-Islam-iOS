@@ -238,16 +238,38 @@ enum IslamArticles {
         }
     }
 
-    /// Raw deflate (no zlib header), what build_islam_corpus.py writes.
+    /// Raw deflate (no zlib header), what build_islam_corpus.py writes. Streamed through
+    /// `compression_stream` into a buffer that grows by the output actually produced (the pack is
+    /// ~1 MB inflated), instead of a scratch allocation sized at 24x the input (Performance Guide,
+    /// Phase 6 step 9).
     private static func inflate(_ data: Data) -> Data? {
-        let capacity = max(data.count * 24, 1 << 22)
-        let buffer = UnsafeMutablePointer<UInt8>.allocate(capacity: capacity)
+        var stream = compression_stream(dst_ptr: UnsafeMutablePointer<UInt8>(bitPattern: 1)!, dst_size: 0,
+                                        src_ptr: UnsafePointer<UInt8>(bitPattern: 1)!, src_size: 0, state: nil)
+        guard compression_stream_init(&stream, COMPRESSION_STREAM_DECODE, COMPRESSION_ZLIB) == COMPRESSION_STATUS_OK else { return nil }
+        defer { compression_stream_destroy(&stream) }
+
+        let chunk = 256 << 10
+        let buffer = UnsafeMutablePointer<UInt8>.allocate(capacity: chunk)
         defer { buffer.deallocate() }
-        let written = data.withUnsafeBytes { (raw: UnsafeRawBufferPointer) -> Int in
-            guard let base = raw.bindMemory(to: UInt8.self).baseAddress else { return 0 }
-            return compression_decode_buffer(buffer, capacity, base, data.count, nil, COMPRESSION_ZLIB)
+        var out = Data()
+        out.reserveCapacity(min(data.count * 4, 4 << 20))
+
+        return data.withUnsafeBytes { (raw: UnsafeRawBufferPointer) -> Data? in
+            guard let base = raw.bindMemory(to: UInt8.self).baseAddress else { return nil }
+            stream.src_ptr = base
+            stream.src_size = data.count
+            while true {
+                stream.dst_ptr = buffer
+                stream.dst_size = chunk
+                let status = compression_stream_process(&stream, Int32(COMPRESSION_STREAM_FINALIZE.rawValue))
+                let produced = chunk - stream.dst_size
+                if produced > 0 { out.append(buffer, count: produced) }
+                switch status {
+                case COMPRESSION_STATUS_OK: continue
+                case COMPRESSION_STATUS_END: return out.isEmpty ? nil : out
+                default: return nil
+                }
+            }
         }
-        guard written > 0, written < capacity else { return nil }
-        return Data(bytes: buffer, count: written)
     }
 }

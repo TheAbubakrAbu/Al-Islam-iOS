@@ -7,8 +7,8 @@ import Compression
 // Why a pack and not the raw JSON: the 17 books are 75 MB of JSON. Bundled as-is that is 75 MB of
 // install footprint, and opening one meant decoding megabytes of JSON into Swift Strings on the
 // device - the whole shelf resident at once once the launch prewarm had run. The packs are 24 MB
-// total, and reading is: map the file (no resident cost), decompress ONE ~256 KB block, hand back
-// the strings inside it.
+// total, and reading is: map the file (no resident cost), decompress ONE block (1.6-2.1 MB raw,
+// `blockTargetBytes` 2 MiB in the packer), hand back the strings inside it.
 //
 // FILE LAYOUT (little-endian throughout; written by Hadith-JSON-Engine/tools/pack/pack-hadith.swift)
 //
@@ -126,7 +126,9 @@ final class HadithBlockCache: @unchecked Sendable {
         // would serialise every reader in the app behind one block. Two threads can therefore build
         // the same block at once - they produce identical content, and the accounting below charges
         // for exactly one of them (charging twice would leak bytes and evict a live chapter).
+        let started = Self.decodeClock()
         guard let built = build() else { return nil }
+        Self.logDecode("text", pack: pack, block: block, since: started)
         let cost = textCost(built)
 
         lock.lock()
@@ -155,7 +157,9 @@ final class HadithBlockCache: @unchecked Sendable {
         }
         lock.unlock()
 
+        let started = Self.decodeClock()
         guard let built = build() else { return nil }
+        Self.logDecode("search", pack: pack, block: block, since: started)
         let cost = searchCost(built)
 
         lock.lock()
@@ -172,6 +176,33 @@ final class HadithBlockCache: @unchecked Sendable {
         }
         lock.unlock()
         return built
+    }
+
+    /// Whether this block is already decoded and resident - the prefetch paths ask before spending a
+    /// background thread on it.
+    func hasText(pack: HadithPack, block: Int) -> Bool {
+        let key = Key(slug: pack.slug, block: block)
+        lock.lock()
+        defer { lock.unlock() }
+        return textEntries[key] != nil
+    }
+
+    /// `-renderCounter` evidence for the performance plan (Phase 7): every block decode, with the
+    /// thread it ran on. A "MAIN" line is a main-thread LZMA/LZFSE inflate a view body paid for.
+    @inline(__always) private static func decodeClock() -> CFAbsoluteTime {
+        #if DEBUG
+        return RenderCounter.enabled ? CFAbsoluteTimeGetCurrent() : 0
+        #else
+        return 0
+        #endif
+    }
+
+    private static func logDecode(_ kind: String, pack: HadithPack, block: Int, since started: CFAbsoluteTime) {
+        #if DEBUG
+        guard RenderCounter.enabled else { return }
+        let ms = (CFAbsoluteTimeGetCurrent() - started) * 1000
+        NSLog("HADITH BLOCK %@ %@#%d %.1f ms %@", kind, pack.slug, block, ms, Thread.isMainThread ? "MAIN" : "bg")
+        #endif
     }
 
     private func touch(_ order: inout [Key], _ key: Key) {
@@ -449,6 +480,52 @@ final class HadithPack: @unchecked Sendable {
         }
     }
 
+    /// The block a row's text lives in, for the prefetch paths.
+    func textBlockIndex(ofRow row: Int) -> Int? {
+        guard row >= 0, row < rows.count else { return nil }
+        let index = Int(rows[row].block)
+        return index < blocks.count ? index : nil
+    }
+
+    /// Whether every text block the rows in `range` touch is resident in the cache right now.
+    func hasText(rows range: Range<Int>) -> Bool {
+        let lower = max(0, range.lowerBound)
+        let upper = min(rows.count, range.upperBound)
+        guard lower < upper else { return true }
+        var row = lower
+        while row < upper {
+            let index = Int(rows[row].block)
+            guard index < blocks.count else { return false }
+            if !HadithBlockCache.shared.hasText(pack: self, block: index) { return false }
+            let next = index + 1 < blocks.count ? blocks[index + 1].firstRow : upper
+            row = max(next, row + 1)
+        }
+        return true
+    }
+
+    /// Decode (into the shared cache) every text block the rows in `range` touch, skipping the ones
+    /// already resident. Called from a detached task BEFORE a chapter's rows render, so the LZMA
+    /// inflate - 130 ms per block on the simulator, several times that on an A12 - never runs inside
+    /// a view body on the main thread (performance plan, Phase 7 step 1).
+    func prefetchText(rows range: Range<Int>) {
+        guard !range.isEmpty, !rows.isEmpty else { return }
+        let lower = max(0, range.lowerBound)
+        let upper = min(rows.count, range.upperBound)
+        guard lower < upper else { return }
+        var seen = Set<Int>()
+        var row = lower
+        while row < upper {
+            let index = Int(rows[row].block)
+            guard index < blocks.count else { break }
+            if seen.insert(index).inserted, !HadithBlockCache.shared.hasText(pack: self, block: index) {
+                _ = textBlock(index)
+            }
+            // Jump to the next block's first row instead of walking every row of this one.
+            let next = index + 1 < blocks.count ? blocks[index + 1].firstRow : upper
+            row = max(next, row + 1)
+        }
+    }
+
     private func textBlock(_ index: Int) -> HadithBlockCache.TextBlock? {
         HadithBlockCache.shared.text(pack: self, block: index) { [self] in
             let block = blocks[index]
@@ -489,6 +566,55 @@ final class HadithPack: @unchecked Sendable {
                        needle.baseAddress!, needle.count) != nil
             }
         }
+    }
+
+    /// The rows in `range` (book order) whose prebuilt fold contains the query, at most `limit` of
+    /// them. One search-block fetch per BLOCK, not per row - `matches(row:)` took the cache lock and
+    /// re-touched the LRU order for every one of Bukhari's 7,277 rows on a sweep. The scan is
+    /// cancellation-aware (checked once per block) so an abandoned query stops at a block boundary.
+    func matchingRows(in range: Range<Int>, query: HadithFold.Query, limit: Int) -> [Int] {
+        guard !query.bytes.isEmpty, limit > 0, !rows.isEmpty else { return [] }
+        let lower = max(0, range.lowerBound)
+        let upper = min(rows.count, range.upperBound)
+        guard lower < upper else { return [] }
+        var found: [Int] = []
+        var row = lower
+        let needle = query.bytes
+        while row < upper {
+            if Task.isCancelled { break }
+            let blockIndex = Int(rows[row].block)
+            guard blockIndex < blocks.count else { break }
+            let block = blocks[blockIndex]
+            let blockEnd = blockIndex + 1 < blocks.count ? blocks[blockIndex + 1].firstRow : rows.count
+            let scanEnd = min(upper, blockEnd)
+            guard let search = searchBlock(blockIndex) else {
+                row = max(scanEnd, row + 1)
+                continue
+            }
+            let ranges = query.isArabic ? search.arabic : search.english
+            search.bytes.withUnsafeBufferPointer { haystack in
+                needle.withUnsafeBufferPointer { needlePointer in
+                    guard let base = haystack.baseAddress, let needleBase = needlePointer.baseAddress else { return }
+                    var current = row
+                    while current < scanEnd {
+                        let slot = current - block.firstRow
+                        if slot >= 0, slot < ranges.count {
+                            let range = ranges[slot]
+                            if range.count >= needle.count, range.lowerBound >= 0,
+                               range.upperBound <= haystack.count,
+                               memmem(base + range.lowerBound, range.count, needleBase, needle.count) != nil {
+                                found.append(current)
+                                if found.count >= limit { return }
+                            }
+                        }
+                        current += 1
+                    }
+                }
+            }
+            if found.count >= limit { break }
+            row = max(scanEnd, row + 1)
+        }
+        return found
     }
 
     private func searchBlock(_ index: Int) -> HadithBlockCache.SearchBlock? {

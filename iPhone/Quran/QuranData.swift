@@ -536,6 +536,91 @@ final class TajweedStore {
         return hash
     }
 
+    private func paintCacheKey(
+        surah: Int, ayah: Int, text: String, requestedDisplayText: String?,
+        cleanDisplayText: Bool, beginnerSpacing: Bool, removeArabicDots: Bool, visibilitySignature: String
+    ) -> NSString {
+        let requestedDisplayDigest = requestedDisplayText.map(Self.stableTextDigest) ?? 0
+        return "\(surah):\(ayah):\(Self.stableTextDigest(text)):\(requestedDisplayDigest):\(cleanDisplayText ? 1 : 0):\(beginnerSpacing ? 1 : 0):\(removeArabicDots ? 1 : 0):\(visibilitySignature)" as NSString
+    }
+
+    /// What the caches know about one ayah's paint, for a row that must not paint in its body.
+    enum CachedPaint {
+        case painted(AttributedString)
+        /// A finished paint that coloured nothing (`attributedText` returned nil).
+        case nothing
+    }
+
+    /// Keys whose settled paint coloured nothing, so `cachedAttributedText` can answer `.nothing`
+    /// instead of sending such an ayah through `paintOffMain` on every render.
+    private let unpaintedKeys: NSCache<NSString, NSNumber> = {
+        let cache = NSCache<NSString, NSNumber>()
+        cache.countLimit = 2000
+        return cache
+    }()
+    /// Keys with a `paintOffMain` task in flight. Main-only.
+    private var inFlightPaintKeys = Set<String>()
+
+    /// A cache-only lookup with the same inputs as `attributedText`: `.painted` or `.nothing` when the
+    /// paint has run, nil when it has not. Nil is the row's cue to call `paintOffMain`.
+    func cachedAttributedText(
+        surah: Int,
+        ayah: Int,
+        text: String,
+        displayText requestedDisplayText: String? = nil,
+        cleanDisplayText: Bool = false,
+        beginnerSpacing: Bool = false,
+        removeArabicDots: Bool? = nil
+    ) -> CachedPaint? {
+        let shouldRemoveArabicDots = removeArabicDots ?? (cleanDisplayText && settings.removeArabicDots)
+        let cacheKey = paintCacheKey(
+            surah: surah, ayah: ayah, text: text, requestedDisplayText: requestedDisplayText,
+            cleanDisplayText: cleanDisplayText, beginnerSpacing: beginnerSpacing,
+            removeArabicDots: shouldRemoveArabicDots, visibilitySignature: snapshotVisibility()
+        )
+        if let cached = attributedCache.object(forKey: cacheKey) { return .painted(cached.value) }
+        if unpaintedKeys.object(forKey: cacheKey) != nil { return .nothing }
+        return nil
+    }
+
+    /// Paints one ayah on a user-initiated task (the paint is pure and the caches are `NSCache`s) and
+    /// calls `completion` on main once the caches hold the result, one flight per key. For a row that
+    /// scrolled in ahead of `SurahView.prewarmTajweed`: it renders plain this frame and coloured on
+    /// the next, instead of running the cluster analysis in its body.
+    @MainActor
+    func paintOffMain(
+        surah: Int,
+        ayah: Int,
+        text: String,
+        displayText requestedDisplayText: String? = nil,
+        cleanDisplayText: Bool = false,
+        beginnerSpacing: Bool = false,
+        completion: @escaping @MainActor () -> Void
+    ) {
+        let shouldRemoveArabicDots = cleanDisplayText && settings.removeArabicDots
+        let cacheKey = paintCacheKey(
+            surah: surah, ayah: ayah, text: text, requestedDisplayText: requestedDisplayText,
+            cleanDisplayText: cleanDisplayText, beginnerSpacing: beginnerSpacing,
+            removeArabicDots: shouldRemoveArabicDots, visibilitySignature: snapshotVisibility()
+        ) as String
+        guard !inFlightPaintKeys.contains(cacheKey) else { return }
+        inFlightPaintKeys.insert(cacheKey)
+        #if DEBUG
+        if RenderCounter.enabled { NSLog("TAJWEED PAINT off-main %d:%d", surah, ayah) }
+        #endif
+        Task.detached(priority: .userInitiated) { [self] in
+            _ = self.attributedText(
+                surah: surah, ayah: ayah, text: text, displayText: requestedDisplayText,
+                cleanDisplayText: cleanDisplayText, beginnerSpacing: beginnerSpacing,
+                removeArabicDots: shouldRemoveArabicDots
+            )
+            await MainActor.run {
+                self.inFlightPaintKeys.remove(cacheKey)
+                completion()
+            }
+        }
+    }
+
     func attributedText(
         surah: Int,
         ayah: Int,
@@ -556,8 +641,11 @@ final class TajweedStore {
         // those is equivalent - but it lets a cache HIT skip `tajweedProjection` (a full per-scalar pass)
         // entirely. Previously the projection ran on every call just to build the key, even on hits, which is
         // the per-scroll-render cost. (surah/ayah are in the key because they change the painting, not the text.)
-        let requestedDisplayDigest = requestedDisplayText.map(Self.stableTextDigest) ?? 0
-        let cacheKey = "\(surah):\(ayah):\(Self.stableTextDigest(text)):\(requestedDisplayDigest):\(cleanDisplayText ? 1 : 0):\(beginnerSpacing ? 1 : 0):\(shouldRemoveArabicDots ? 1 : 0):\(visibilitySignature)" as NSString
+        let cacheKey = paintCacheKey(
+            surah: surah, ayah: ayah, text: text, requestedDisplayText: requestedDisplayText,
+            cleanDisplayText: cleanDisplayText, beginnerSpacing: beginnerSpacing,
+            removeArabicDots: shouldRemoveArabicDots, visibilitySignature: visibilitySignature
+        )
         if let cached = attributedCache.object(forKey: cacheKey) {
             return cached.value
         }
@@ -691,7 +779,10 @@ final class TajweedStore {
         }
 
         let anyPainted = priorityPerUTF16.contains { $0 > 0 }
-        guard anyPainted else { return nil }
+        guard anyPainted else {
+            if settled { unpaintedKeys.setObject(NSNumber(value: true), forKey: cacheKey) }
+            return nil
+        }
 
         let result = AttributedString(attributed)
         if settled { attributedCache.setObject(AttributedStringBox(result), forKey: cacheKey) }

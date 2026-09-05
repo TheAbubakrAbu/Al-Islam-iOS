@@ -327,6 +327,7 @@ struct SettingsQuranView: View {
         Text("The Quran recitations are streamed online by default. You can open Choose Reciter to download full surahs per reciter for offline playback and reduced data use.")
             .font(.caption)
             .foregroundColor(.secondary)
+            .fixedSize(horizontal: false, vertical: true)
             .padding(.vertical, 2)
         #endif
     }
@@ -342,6 +343,7 @@ struct SettingsQuranView: View {
                 Text("Adds extra details (revelation type, ayah count, page count, and more) beneath each surah in the main Quran list, the screen where all the surahs are shown.")
                     .font(.caption)
                     .foregroundColor(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
                     .padding(.vertical, 2)
             }
 
@@ -368,6 +370,7 @@ struct SettingsQuranView: View {
                 Text("Shows a different ayah each day at the top of the Quran tab.")
                     .font(.caption)
                     .foregroundColor(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
                     .padding(.vertical, 2)
             }
 
@@ -379,6 +382,7 @@ struct SettingsQuranView: View {
                 Text("Remembers and shows the last surah you were listening to at the top of the Quran tab.")
                     .font(.caption)
                     .foregroundColor(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
                     .padding(.vertical, 2)
             }
 
@@ -390,6 +394,7 @@ struct SettingsQuranView: View {
                 Text("Remembers and shows the last single ayah or custom range you were listening to at the top of the Quran tab.")
                     .font(.caption)
                     .foregroundColor(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
                     .padding(.vertical, 2)
             }
 
@@ -401,6 +406,7 @@ struct SettingsQuranView: View {
                 Text("Remembers and shows the last ayah you were reading at the top of the Quran tab.")
                     .font(.caption)
                     .foregroundColor(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
                     .padding(.vertical, 2)
             }
         }
@@ -415,6 +421,7 @@ struct SettingsQuranView: View {
             Text("Shows a divider inside a surah wherever a new mushaf page or juz begins, plus a small floating label with the current page and juz while you read.")
                 .font(.caption)
                 .foregroundColor(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
                 .padding(.vertical, 2)
         }
     }
@@ -508,6 +515,7 @@ struct SettingsQuranView: View {
                  : "Available in Hafs an Asim, with beginner mode off - the meanings are counted word by word against that text.")
                 .font(.caption)
                 .foregroundColor(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
                 .padding(.vertical, 2)
         }
     }
@@ -534,6 +542,7 @@ struct SettingsQuranView: View {
                  : "Available in Hafs an Asim, with beginner mode off - the meanings are counted word by word against that text.")
                 .font(.caption)
                 .foregroundColor(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
                 .padding(.vertical, 2)
 
             if settings.wordByWordInline && canRenderNow {
@@ -555,6 +564,7 @@ struct SettingsQuranView: View {
             Text("What each word means on its own, from the Quranic Arabic Corpus via Quran.com. Literal and in place, so it reads differently from the flowing translation of the whole ayah.")
                 .font(.caption)
                 .foregroundColor(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
 
             Toggle("Transliteration", isOn: $settings.wordByWordInlineTransliteration.animation(.easeInOut))
                 .font(.subheadline)
@@ -564,6 +574,7 @@ struct SettingsQuranView: View {
             Text("How each word is pronounced, written above its meaning. Independent of the ayah's own transliteration line.")
                 .font(.caption)
                 .foregroundColor(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
         }
         .settingsDependent()
     }
@@ -586,6 +597,7 @@ struct SettingsQuranView: View {
             Text("Colors the majestic and glorius name الله (Allah) in red throughout the Quran.")
                 .font(.caption)
                 .foregroundColor(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
                 .padding(.vertical, 2)
         }
     }
@@ -621,6 +633,7 @@ struct SettingsQuranView: View {
                      : "This riwayah colors words the way its printed mushaf does (differences from Hafs, idgham, imalah, ...). See its legend in Customize Tajweed Colors.")
                     .font(.caption)
                     .foregroundColor(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
                     .padding(.vertical, 2)
             }
         }
@@ -662,6 +675,7 @@ struct SettingsQuranView: View {
             Text("This option removes Tashkeel (like Fatha, Damma, Kasra, and others), while keeping vowel letters like Alif, Yaa, and Waw. It also adjusts \"Mad\" letters and the \"Hamzatul Wasl,\" and removes tiny vowel letters, stopping signs, chapter markers, and prayer indicators. This option is not recommended.")
                 .font(.caption)
                 .foregroundColor(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
                 .padding(.vertical, 2)
             #endif
             
@@ -676,6 +690,7 @@ struct SettingsQuranView: View {
                     Text("This removes Arabic dots, such as turning ب into ٮ. It is very difficult to read and is not recommended for beginners, but it allows you to experience how some of the earliest Muslims read and wrote the Quran in early manuscripts such as the Birmingham Manuscript.")
                         .font(.caption)
                         .foregroundColor(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
                     #endif
                 }
                 .settingsDependent()
@@ -713,12 +728,14 @@ struct SettingsQuranView: View {
                 Text(face.historyCaption)
                     .font(.caption)
                     .foregroundColor(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
                     .padding(.vertical, 2)
             }
 
             Text(Settings.uthmaniRasmCaption)
                 .font(.caption)
                 .foregroundColor(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
                 .padding(.vertical, 2)
             #endif
         }
@@ -744,6 +761,7 @@ struct SettingsQuranView: View {
                 Text("The letters are the same in all three; only the vowel marks change. Light and Bold are the usual marks at two weights. Dot Vowels writes them the way the earliest vocalised mushafs did: a dot above the letter is fatha, below it is kasra, in front of it is damma, and doubled dots are tanween.")
                     .font(.caption)
                     .foregroundColor(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
                     .padding(.vertical, 2)
                 #endif
             }
@@ -779,6 +797,7 @@ struct SettingsQuranView: View {
                 Text(settings.arabicScriptStyle.detail(namingRiwayat: showQiraah))
                     .font(.caption)
                     .foregroundColor(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
 
                 // Only for readers who have the qiraat on screen: what the script choice is really
                 // choosing between, named by the ten rather than the twenty (both riwayat of a
@@ -787,6 +806,7 @@ struct SettingsQuranView: View {
                     Text(Settings.waslNotationNote)
                         .font(.caption)
                         .foregroundColor(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
             }
             .padding(.vertical, 2)
@@ -822,6 +842,7 @@ struct SettingsQuranView: View {
             Text("In reading mode, sets each mushaf page the way this riwayah's printed mushaf sets it: the same lines, broken at the same words, at the largest size that fits on one screen - larger or smaller than the size above, whatever the page allows - in your own font and colors. Turn this off to read at exactly the size above and scroll.")
                 .font(.caption)
                 .foregroundColor(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
                 .padding(.vertical, 2)
         }
     }
@@ -837,6 +858,7 @@ struct SettingsQuranView: View {
             Text("Puts a space between each Arabic letter to make it easier for beginners to read the Quran.")
                 .font(.caption)
                 .foregroundColor(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
                 .padding(.vertical, 2)
         }
     }
@@ -1076,6 +1098,7 @@ struct SettingsQuranView: View {
             Text("When on, the ayah view shows a riwayah picker above the search bar even on Hafs, so you can switch and compare qiraat in that screen. In any other riwayah the picker is always there.")
                 .font(.caption)
                 .foregroundColor(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
                 .padding(.vertical, 2)
 
         }
@@ -2301,6 +2324,7 @@ struct ReciterListView: View {
                             Text("Ayah download is not supported, only surah download.")
                                 .font(.caption)
                                 .foregroundColor(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
                                 .padding(.vertical, 2)
                         }
 
@@ -2308,6 +2332,7 @@ struct ReciterListView: View {
                         Text("Downloaded reciters: \(downloadedCount)")
                             .font(.caption)
                             .foregroundColor(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
                             .padding(.vertical, 2)
 
                         if downloadedCount > 0 {
@@ -2752,6 +2777,7 @@ struct ReciterListView: View {
                 Text("A new reciter is chosen at random for every session.")
                     .font(.caption)
                     .foregroundColor(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
                     .padding(.vertical, 2)
             }
         }
@@ -2980,6 +3006,7 @@ private struct ReciterRow: View, Equatable {
                 Text("Downloading surah \(downloadState.currentSurahNumber ?? max(downloadState.completedSurahs + 1, 1)) of \(downloadState.totalSurahs) (\(Int(overallProgress * 100))%)")
                     .font(.caption)
                     .foregroundColor(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
                     .padding(.vertical, 2)
             }
 
@@ -2987,6 +3014,7 @@ private struct ReciterRow: View, Equatable {
                 Text("Storage used: \(downloadManager.storageText(bytes: downloadState.totalBytes))")
                     .font(.caption)
                     .foregroundColor(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
                     .padding(.vertical, 2)
             }
 
@@ -3102,6 +3130,7 @@ private struct ReciterRow: View, Equatable {
         Text(text)
             .font(.caption)
             .foregroundColor(.secondary)
+            .fixedSize(horizontal: false, vertical: true)
             .padding(.vertical, 2)
     }
 
@@ -3148,6 +3177,7 @@ private struct WatchReciterRow: View {
                     Text("This reciter supports surahs only. Ayahs default to Minshawi (Murattal).")
                         .font(.caption)
                         .foregroundColor(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
                         .padding(.vertical, 2)
                 }
             }

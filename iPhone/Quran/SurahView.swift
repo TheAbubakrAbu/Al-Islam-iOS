@@ -196,6 +196,8 @@ struct SurahView: View {
     @ObservedObject var settings = Settings.shared
     @ObservedObject var quranData = QuranData.shared
     @ObservedObject var quranPlayer = QuranPlayer.shared
+    /// The failure dialog publishes on `alerts`, not the player (see `PlaybackAlerts`).
+    @ObservedObject private var playbackAlerts = QuranPlayer.shared.alerts
 
     @Environment(\.scenePhase) private var scenePhase
 
@@ -1805,14 +1807,14 @@ struct SurahView: View {
         } message: { info in
             Text(info.message)
         }
-        .onChange(of: quranPlayer.showInternetAlert) { if $0 { showAlert = true; quranPlayer.showInternetAlert = false } }
-        .confirmationDialog(quranPlayer.playbackAlertTitle, isPresented: $showAlert, titleVisibility: .visible) {
-            if let offer = quranPlayer.offlineReciterSwitch {
+        .onChange(of: playbackAlerts.showInternetAlert) { if $0 { showAlert = true; playbackAlerts.showInternetAlert = false } }
+        .confirmationDialog(playbackAlerts.playbackAlertTitle, isPresented: $showAlert, titleVisibility: .visible) {
+            if let offer = playbackAlerts.offlineReciterSwitch {
                 Button("Play \(offer.suggested.name)") { quranPlayer.acceptOfflineReciterSwitch() }
             }
-            Button("OK") { quranPlayer.offlineReciterSwitch = nil }
+            Button("OK") { playbackAlerts.offlineReciterSwitch = nil }
         } message: {
-            Text(quranPlayer.playbackAlertMessage)
+            Text(playbackAlerts.playbackAlertMessage)
         }
         #else
         surahCoreBody

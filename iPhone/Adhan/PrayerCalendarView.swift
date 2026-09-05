@@ -8,6 +8,8 @@ import UIKit
 /// ~400 days × 6 prayers, and computing that in one eager pass stalled the push animation.
 struct PrayerCalendarView: View {
     @ObservedObject var settings = Settings.shared
+    /// Prayer times and the location publish from `LiveState`, not `Settings` (see its comment).
+    @ObservedObject private var live = LiveState.shared
 
     @State private var months: [MonthModel] = []
     @State private var shareItem: ShareItem?
@@ -24,7 +26,7 @@ struct PrayerCalendarView: View {
 
     var body: some View {
         List {
-            if settings.currentLocation == nil {
+            if live.currentLocation == nil {
                 Text("Prayer times need a location before a calendar can be built.")
                     .font(.subheadline)
                     .foregroundColor(.secondary)
@@ -136,7 +138,7 @@ struct PrayerCalendarView: View {
     private func export(_ format: ExportFormat) {
         isExporting = true
         let months = self.months
-        let city = settings.currentLocation?.city ?? ""
+        let city = live.currentLocation?.city ?? ""
         let columns = Self.columns
         let titles = columns.map { settings.customPrayerName(for: $0) ?? $0 }
 
@@ -166,7 +168,7 @@ struct PrayerCalendarView: View {
     /// scrolling render in the gaps instead of stalling behind ~400 days built in one blocking pass.
     /// Resumes from wherever it left off if the `.task` was cancelled mid-build (view popped and re-pushed).
     private func buildMonthsIfNeeded() async {
-        guard settings.currentLocation != nil else { return }
+        guard live.currentLocation != nil else { return }
         while months.count < 13 {
             guard !Task.isCancelled else { return }
             guard let month = PrayerCalendarBuilder.month(

@@ -109,8 +109,7 @@ extension Settings {
 }
 
 struct AdhkarRow: View, Equatable {
-    @ObservedObject var settings = Settings.shared
-
+    @Environment(\.appearance) private var appearance
     let arabicText: String
     let transliteration: String
     let translation: String
@@ -171,12 +170,12 @@ struct AdhkarRow: View, Equatable {
     }
 
     private var arabicFont: Font {
-        useQuranicFont ? Font.arabic(settings.nonQuranArabicFontName, size: 30) : .title2
+        useQuranicFont ? Font.arabic(appearance.islamArabicFontName, size: 30) : .title2
     }
 
     /// Whether `arabicFont` resolves to a bundled face, and so must opt out of the app-wide rounded design.
     private var usesCustomArabicFace: Bool {
-        useQuranicFont && settings.islamUsesCustomArabicFace
+        useQuranicFont && appearance.islamUsesCustomArabicFace
     }
 
     var body: some View {
@@ -213,8 +212,8 @@ struct AdhkarRow: View, Equatable {
                 source: arabicText,
                 term: searchQuery,
                 font: arabicFont,
-                accent: settings.accentColor.color,
-                fg: settings.accentColor.color,
+                accent: appearance.accent,
+                fg: appearance.accent,
                 guaranteeMatch: matches(arabicText)
             )
                 .arabicFontDesign(custom: usesCustomArabicFace)
@@ -248,7 +247,7 @@ struct AdhkarRow: View, Equatable {
                 source: transliteration,
                 term: searchQuery,
                 font: .subheadline,
-                accent: settings.accentColor.color,
+                accent: appearance.accent,
                 fg: .primary,
                 guaranteeMatch: matches(transliteration)
             )
@@ -258,7 +257,7 @@ struct AdhkarRow: View, Equatable {
                 source: translation,
                 term: searchQuery,
                 font: .subheadline,
-                accent: settings.accentColor.color,
+                accent: appearance.accent,
                 fg: .secondary,
                 guaranteeMatch: matches(translation)
             )
@@ -272,7 +271,7 @@ struct AdhkarRow: View, Equatable {
                             source: source,
                             term: searchQuery,
                             font: .caption.weight(.semibold),
-                            accent: settings.accentColor.color,
+                            accent: appearance.accent,
                             fg: .secondary,
                             guaranteeMatch: matches(source)
                         )
@@ -292,28 +291,28 @@ struct AdhkarRow: View, Equatable {
         .padding(.vertical, 4)
         // The row being read aloud carries a soft accent wash; during Listen All it walks down the
         // section one row at a time as the queue advances. (Its own observing view - see SpokenRowWash.)
-        .background(SpokenRowWash(text: arabicText, color: settings.accentColor.color))
+        .background(SpokenRowWash(text: arabicText, color: appearance.accent))
         #if os(iOS)
         .contextMenu {
             Text("Copy")
                 .foregroundStyle(.secondary)
 
             Button {
-                settings.hapticFeedback()
+                Settings.shared.hapticFeedback()
                 UIPasteboard.general.string = arabicText
             } label: {
                 Label("Copy Arabic", systemImage: "doc.on.doc")
             }
 
             Button {
-                settings.hapticFeedback()
+                Settings.shared.hapticFeedback()
                 UIPasteboard.general.string = transliteration
             } label: {
                 Label("Copy Transliteration", systemImage: "doc.on.doc")
             }
 
             Button {
-                settings.hapticFeedback()
+                Settings.shared.hapticFeedback()
                 UIPasteboard.general.string = translation
             } label: {
                 Label("Copy Translation", systemImage: "doc.on.doc")
@@ -323,7 +322,7 @@ struct AdhkarRow: View, Equatable {
                 Divider()
 
                 Button {
-                    settings.hapticFeedback()
+                    Settings.shared.hapticFeedback()
                     onScrollTo()
                 } label: {
                     Label(scrollLabel, systemImage: "arrow.down.circle")
@@ -334,7 +333,7 @@ struct AdhkarRow: View, Equatable {
         .swipeActions(edge: .trailing) {
             if let onScrollTo {
                 Button {
-                    settings.hapticFeedback()
+                    Settings.shared.hapticFeedback()
                     onScrollTo()
                 } label: {
                     Image(systemName: "arrow.down.circle")
@@ -520,7 +519,7 @@ struct AdhkarView: View {
                     }
                 }
             } else if !semanticEngine.failedCorpora.contains(Self.semanticCorpusID) {
-                Section { AISearchStatusRow(progress: semanticEngine.progress(Self.semanticCorpusID), failed: false) }
+                Section { AISearchStatusRow(corpusID: Self.semanticCorpusID, failed: false) }
             }
         }
     }

@@ -3,6 +3,8 @@ import CoreLocation
 
 struct AdhanView: View {
     @ObservedObject var settings = Settings.shared
+    /// Prayer times and the location publish from `LiveState`, not `Settings` (see its comment).
+    @ObservedObject private var live = LiveState.shared
 
     @Environment(\.scenePhase) private var scenePhase
     // False while this view is being built behind the launch/splash cover; holds prompts until we're on screen.
@@ -135,7 +137,7 @@ struct AdhanView: View {
                     DateAndLocationSection(showBigQibla: $showBigQibla)
                 }
 
-                if settings.showSkyView, settings.prayers != nil, settings.currentLocation != nil {
+                if settings.showSkyView, live.prayers != nil, live.currentLocation != nil {
                     Section {
                         SkyView()
                             .listRowBackground(Color.clear)
@@ -256,7 +258,7 @@ struct AdhanView: View {
     @ViewBuilder
     private var prayersSection: some View {
         #if os(iOS)
-        if settings.prayers != nil && settings.currentLocation != nil {
+        if live.prayers != nil && live.currentLocation != nil {
             // With the sky on, the countdown rides inside its card (see `SkyView.countdownStrip`). With the
             // sky off, it returns to being its own section - nothing is lost by turning the drawing off.
             if !settings.showSkyView {
@@ -268,7 +270,7 @@ struct AdhanView: View {
             PrayerList()
         }
         #else
-        if settings.prayers != nil {
+        if live.prayers != nil {
             PrayerList()
             PrayerCountdown()
                 .equatable()
@@ -296,11 +298,11 @@ struct AdhanView: View {
                     }
 
                     HStack(spacing: 4) {
-                        Image(systemName: settings.currentLocation != nil ? "location.fill" : "location.slash")
+                        Image(systemName: live.currentLocation != nil ? "location.fill" : "location.slash")
                             .font(showBigQibla ? .system(size: 9) : .caption2)
                             .foregroundColor(settings.accentColor.accent1)
 
-                        Text((settings.prayers != nil ? settings.currentLocation?.city : nil) ?? "No location")
+                        Text((live.prayers != nil ? live.currentLocation?.city : nil) ?? "No location")
                             .font(showBigQibla ? .system(size: 10) : .caption)
                             .lineLimit(showBigQibla ? 1 : 2)
                             .minimumScaleFactor(0.8)
@@ -318,7 +320,7 @@ struct AdhanView: View {
 
                 // The exact spot the bearing was computed from - useful precisely when you are questioning
                 // whether the compass is pointing where it should.
-                if let location = settings.currentLocation,
+                if let location = live.currentLocation,
                    location.latitude != 1000, location.longitude != 1000 {
                     Text(formatCoordinates(
                         latitude: location.latitude,
@@ -591,6 +593,8 @@ private struct HijriDateRow: View {
 
 private struct CurrentLocationRow: View {
     @ObservedObject private var settings = Settings.shared
+    /// Prayer times and the location publish from `LiveState`, not `Settings` (see its comment).
+    @ObservedObject private var live = LiveState.shared
 
     let showBigQibla: Bool
     @State private var showingPrayerTimesMap = false
@@ -626,7 +630,13 @@ private struct CurrentLocationRow: View {
         // "-openCityPrayerTimes": open the City Prayer Times sheet on appear (screenshot runs).
         .onAppear {
             if ProcessInfo.processInfo.arguments.contains("-openCityPrayerTimes") {
-                DispatchQueue.main.asyncAfter(deadline: .now() + 1) { showingPrayerTimesMap = true }
+                // After the reveal, like a real tap: presenting during the under-cover tab walk
+                // presents from a detached NavigationStack (UIKit assert in the log).
+                Task { @MainActor in
+                    await AppReveal.waitUntilRevealed()
+                    try? await Task.sleep(nanoseconds: 500_000_000)
+                    showingPrayerTimesMap = true
+                }
             }
         }
         #endif
@@ -644,7 +654,7 @@ private struct CurrentLocationRow: View {
     @ViewBuilder
     private var locationLabel: some View {
         #if os(iOS)
-        if let currentLoc = settings.currentLocation {
+        if let currentLoc = live.currentLocation {
             let currentCity = currentLoc.city
 
             Button {
@@ -675,7 +685,7 @@ private struct CurrentLocationRow: View {
 
                             // The coordinates were only copyable from the pill that appears when the compass is
                             // enlarged, which is a strange place to have to go looking for them.
-                            if let location = settings.currentLocation,
+                            if let location = live.currentLocation,
                                location.latitude != 1000, location.longitude != 1000 {
                                 Button {
                                     settings.hapticFeedback()
@@ -711,7 +721,7 @@ private struct CurrentLocationRow: View {
         }
         #else
         Group {
-            if settings.prayers != nil, let currentLoc = settings.currentLocation {
+            if live.prayers != nil, let currentLoc = live.currentLocation {
                 Text(currentLoc.city)
             } else {
                 Text("No location")
@@ -727,7 +737,7 @@ private struct CurrentLocationRow: View {
     @ViewBuilder
     private var coordinatesLabel: some View {
         if showBigQibla,
-           let loc = settings.currentLocation,
+           let loc = live.currentLocation,
            loc.latitude != 1000, loc.longitude != 1000 {
             HStack(spacing: 6) {
                 Image(systemName: "globe")

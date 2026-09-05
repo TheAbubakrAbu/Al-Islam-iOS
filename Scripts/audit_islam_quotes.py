@@ -49,7 +49,7 @@ def contains(hay,needle):
 quotes=[]
 for f in FILES:
     src=io.open(ROOT+f+'.swift',encoding='utf-8').read()
-    for m in re.finditer(r'ScriptureQuote\(text:\s*"((?:[^"\\]|\\.)*)"(?:,\s*arabic:\s*"((?:[^"\\]|\\.)*)")?(?:,\s*dimmed:\s*(true|false))?\)',src):
+    for m in re.finditer(r'(?:ScriptureQuote|\.quote)\(text:\s*"((?:[^"\\]|\\.)*)"(?:,\s*arabic:\s*"((?:[^"\\]|\\.)*)")?(?:,\s*dimmed:\s*(true|false))?\)',src):
         line=src.count('\n',0,m.start())+1
         t=unswift(m.group(1)); ar=unswift(m.group(2) or '')
         cm=re.search(r'\(([^()]*(?:\([^()]*\)[^()]*)*)\)\.?\s*$',t)

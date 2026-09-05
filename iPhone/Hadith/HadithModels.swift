@@ -251,7 +251,9 @@ struct HadithCatalogBook: Identifiable, Hashable {
 /// One open collection. It holds no text: `HadithPack` has the book memory-mapped, and every string
 /// below is fetched from it (and its block cache) at the moment a view asks for it. That is what lets
 /// all 17 books - 50,884 hadiths - be open at once for the price of their id tables.
-struct HadithBookData {
+/// `@unchecked Sendable`: every stored property is a `let` (the pack is Sendable by design, the rest
+/// are value arrays), so the store can build one in a detached task and hand it to the main actor.
+struct HadithBookData: @unchecked Sendable {
     struct Metadata {
         struct Titles {
             let title: String
@@ -410,12 +412,42 @@ struct HadithBookData {
             pack.chapters.enumerated().map { ($0.element.id, $0.offset) },
             uniquingKeysWith: { first, _ in first }
         )
-        var citationRows: [Int: [Int]] = [:]
-        citationRows.reserveCapacity(pack.rows.count)
+        // First row per base as a flat Int32 map; the rare bases that own several rows (Sahih
+        // Muslim's 8a...8e) keep their tail in an overflow map. The old `[Int: [Int]]` held one heap
+        // array per cited row - 47,476 allocations and ~3 MB shelf-wide for a table that is one
+        // integer almost everywhere (performance plan, Phase 7 step 6).
+        var firstRows: [Int32: Int32] = [:]
+        firstRows.reserveCapacity(pack.rows.count)
+        var overflow: [Int32: [Int32]] = [:]
         for (row, record) in pack.rows.enumerated() where record.citationBase > 0 {
-            citationRows[Int(record.citationBase), default: []].append(row)
+            if firstRows[record.citationBase] == nil {
+                firstRows[record.citationBase] = Int32(row)
+            } else {
+                overflow[record.citationBase, default: []].append(Int32(row))
+            }
         }
-        rowsByCitationBase = citationRows
+        citationFirstRow = firstRows
+        citationOverflowRows = overflow
+    }
+
+    // MARK: Text prefetch
+
+    /// Whether every text block behind `rows` is already decoded and resident - the chapter reader
+    /// renders its rows at once when this is true and gates them behind a prefetch otherwise.
+    func hasText(rows range: Range<Int>) -> Bool {
+        pack.hasText(rows: range)
+    }
+
+    /// Decode the text blocks behind `rows` into the shared cache - see `HadithPack.prefetchText`.
+    /// Call from a detached task; it is pure pack work and touches nothing on the main actor.
+    func prewarmText(rows range: Range<Int>) {
+        pack.prefetchText(rows: range)
+    }
+
+    /// The rows in `range` matching the query, at most `limit`, scanned one search block at a
+    /// time - the sweep primitive every hadith search uses (`HadithPack.matchingRows`).
+    func matchingRows(in range: Range<Int>, query: HadithFold.Query, limit: Int) -> [Int] {
+        pack.matchingRows(in: range, query: query, limit: limit)
     }
 
     // MARK: Chapters
@@ -490,13 +522,19 @@ struct HadithBookData {
 
     // MARK: Citations
 
-    /// Citation base number -> the rows carrying it, in book order. "Sahih Muslim 8" owns five rows
-    /// (8a...8e); most bases own exactly one.
-    private let rowsByCitationBase: [Int: [Int]]
+    /// Citation base number -> the FIRST row carrying it; `citationOverflowRows` holds the rest for
+    /// the bases that own several ("Sahih Muslim 8" owns five rows, 8a...8e; most own exactly one).
+    private let citationFirstRow: [Int32: Int32]
+    private let citationOverflowRows: [Int32: [Int32]]
 
     /// Every hadith cited under base `number` ("muslim 8" -> 8a, 8b, 8c, 8d, 8e), in book order.
     func hadiths(citing number: Int) -> [Hadith] {
-        (rowsByCitationBase[number] ?? []).map { hadiths[$0] }
+        guard let base = Int32(exactly: number), let first = citationFirstRow[base] else { return [] }
+        var result = [hadiths[Int(first)]]
+        if let rest = citationOverflowRows[base] {
+            result.append(contentsOf: rest.map { hadiths[Int($0)] })
+        }
+        return result
     }
 
     /// What a citation means in this book: the hadith cited `number` (+ optional variant letter),

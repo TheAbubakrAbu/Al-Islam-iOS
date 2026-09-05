@@ -33,11 +33,22 @@ enum OnDeviceAsk {
     /// Whether the on-device model can run right now (device eligible + Apple Intelligence enabled +
     /// model assets ready). Checked at render time so enabling Apple Intelligence lights this up
     /// without an app restart.
+    /// Cached for a few seconds: `SystemLanguageModel.default.availability` is an XPC-backed query,
+    /// and the Islam root, its search, the 99 Names, Adhkar, Dua and Arabic screens each asked it
+    /// several times per body (Performance Guide, Phase 6 step 12). Availability only changes on a
+    /// model download or a Settings flip, so a short TTL keeps every screen honest.
     static var isAvailable: Bool {
         guard #available(iOS 26.0, *) else { return false }
-        if case .available = SystemLanguageModel.default.availability { return true }
-        return false
+        let now = CFAbsoluteTimeGetCurrent()
+        if let cached = availabilityCache, now - cached.at < availabilityTTL { return cached.available }
+        var available = false
+        if case .available = SystemLanguageModel.default.availability { available = true }
+        availabilityCache = (available, now)
+        return available
     }
+
+    nonisolated(unsafe) private static var availabilityCache: (available: Bool, at: CFAbsoluteTime)?
+    private static let availabilityTTL: CFAbsoluteTime = 5
 
     /// The rules a CHAT session is created with: answer like a knowledgeable assistant, use the
     /// retrieved passages as support and cite the ones used, never recreate scripture from memory,

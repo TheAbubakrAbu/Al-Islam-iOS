@@ -358,14 +358,34 @@ extension View {
         }
     }
 
-    /// Indents a setting that only exists because the setting above it is on.
+    /// Marks a setting that only exists because the setting above it is on.
     ///
     /// A dependent switch shown flush with its parent reads as a peer, and a reader hunting for why
-    /// it vanished has nothing to look at; one step of indentation says "this belongs to the row
-    /// above" without a second header or a nested box. Used for the word-by-word lines, Hide Arabic
-    /// Dots under Hide Tashkeel, the nagging schedule under Nagging Mode, and their kin.
+    /// it vanished has nothing to look at. One step of indentation plus a thin accent rail on the
+    /// leading edge says "this belongs to the row above" without a second header or a nested box.
+    /// Used for the word-by-word lines, Hide Arabic Dots under Hide Tashkeel, the nagging schedule
+    /// under Nagging Mode, and their kin. Vertically fixed so a caption wraps instead of truncating
+    /// when the row animates in.
     func settingsDependent() -> some View {
-        padding(.leading, 16).padding(.vertical, 2)
+        modifier(SettingsDependentRail())
+    }
+}
+
+/// The indent + accent rail behind `settingsDependent()`. Reads the accent straight off Settings:
+/// every view that uses the rail already observes Settings, so the rail follows accent changes
+/// without observing anything itself (and the watch, which has no appearance environment, compiles).
+private struct SettingsDependentRail: ViewModifier {
+    func body(content: Content) -> some View {
+        content
+            .fixedSize(horizontal: false, vertical: true)
+            .padding(.leading, 14)
+            .padding(.vertical, 4)
+            .overlay(alignment: .leading) {
+                Capsule()
+                    .fill(Settings.shared.accentColor.color.opacity(0.55))
+                    .frame(width: 3)
+                    .padding(.vertical, 2)
+            }
     }
 }
 
@@ -895,6 +915,37 @@ enum RenderCounter {
     @inline(__always) static func hit(_ label: String) {}
     #endif
 }
+
+#if DEBUG
+/// `-renderCounter` companion: the process's physical footprint, for before/after checks of image
+/// decodes (the Wallpapers screen, the app-icon tiles). `MemoryFootprint.log("label")` writes one
+/// "FOOTPRINT label 123.4 MB" line; silent without the argument.
+enum MemoryFootprint {
+    static var megabytes: Double {
+        var info = task_vm_info_data_t()
+        var count = mach_msg_type_number_t(MemoryLayout<task_vm_info_data_t>.size / MemoryLayout<natural_t>.size)
+        let result = withUnsafeMutablePointer(to: &info) {
+            $0.withMemoryRebound(to: integer_t.self, capacity: Int(count)) {
+                task_info(mach_task_self_, task_flavor_t(TASK_VM_INFO), $0, &count)
+            }
+        }
+        guard result == KERN_SUCCESS else { return 0 }
+        return Double(info.phys_footprint) / 1_048_576
+    }
+
+    static func log(_ label: String) {
+        guard RenderCounter.enabled else { return }
+        NSLog("FOOTPRINT %@ %.1f MB", label, megabytes)
+    }
+
+    /// Log now and again after `delay`, so a lazy decode that lands a frame later is counted too.
+    static func logLater(_ label: String, delay: Double = 3) {
+        guard RenderCounter.enabled else { return }
+        log(label)
+        DispatchQueue.main.asyncAfter(deadline: .now() + delay) { log(label + " +\(Int(delay))s") }
+    }
+}
+#endif
 
 #if canImport(UIKit)
 /// `UIFont(name:size:)` resolves the face through the font registry every call; the mushaf composer

@@ -179,8 +179,15 @@ final class QuranSearchHandoff: ObservableObject {
 
 struct QuranView: View {
     @ObservedObject var settings = Settings.shared
+    /// The last-read position publishes from `ReadingState`, not `Settings` (see its comment).
+    @ObservedObject private var reading = ReadingState.shared
     @ObservedObject var quranData = QuranData.shared
-    @ObservedObject var quranPlayer = QuranPlayer.shared
+    /// Actions only: not observed. The root used to re-evaluate on every ayah advance for the three
+    /// slices it draws, which now publish on their own objects (see `NowPlayingState`).
+    let quranPlayer = QuranPlayer.shared
+    @ObservedObject private var playbackPhase = QuranPlayer.shared.phase
+    @ObservedObject private var playbackAlerts = QuranPlayer.shared.alerts
+    @ObservedObject private var playbackHistory = QuranPlayer.shared.history
     @ObservedObject private var searchHandoff = QuranSearchHandoff.shared
     @Environment(\.dismiss) private var dismiss
     #if os(iOS)
@@ -214,6 +221,8 @@ struct QuranView: View {
     /// half-width grid cell, so they open as ordinary list rows under the summary - and because this is one
     /// value rather than four booleans, opening a tile's recents closes whichever was open before.
     @State private var summaryHistoryExpansion: SummaryHistoryKind?
+    /// Natural content height per summary tile, keyed by title - the grid gives all of them the max.
+    @State private var summaryTileHeights: [String: CGFloat] = [:]
 
     enum SummaryHistoryKind: String, Identifiable {
         case ayahOfTheDay, reading, listenedAyah, listenedSurah
@@ -242,6 +251,8 @@ struct QuranView: View {
     @State private var listMotionIdleTask: Task<Void, Never>?
     @State private var ayahSearchTask: Task<Void, Never>?
     @State private var showAyahSearchLearnMore = false
+    /// The help card folded to its title + recent chips (persists; the -/+ on the card).
+    @AppStorage("quranSearchHelpCollapsed") private var quranSearchHelpCollapsed = false
     @State private var khatmEditMode = false
     @State private var showKhatmExtraDetails = false
     @State private var khatmExtraTotals: (words: Int, letters: Int, totalWords: Int, totalLetters: Int)? = nil
@@ -360,11 +371,11 @@ struct QuranView: View {
     }
 
     var lastReadSurah: Surah? {
-        quranData.surah(settings.lastReadSurah)
+        quranData.surah(reading.lastReadSurah)
     }
 
     var lastReadAyah: Ayah? {
-        lastReadSurah?.ayahs.first(where: { $0.id == settings.lastReadAyah })
+        lastReadSurah?.ayahs.first(where: { $0.id == reading.lastReadAyah })
     }
 
     /// The (surah, ayah) for the last individually-listened ayah, resolved against loaded Quran data.
@@ -809,10 +820,10 @@ struct QuranView: View {
         #if os(iOS)
         guard usesColumnNavigation || path.isEmpty else { return }
 
-        if settings.lastReadSurah > 0,
-           settings.lastReadAyah > 0,
-           quranData.surah(settings.lastReadSurah) != nil {
-            push(surahID: settings.lastReadSurah, ayahID: settings.lastReadAyah)
+        if reading.lastReadSurah > 0,
+           reading.lastReadAyah > 0,
+           quranData.surah(reading.lastReadSurah) != nil {
+            push(surahID: reading.lastReadSurah, ayahID: reading.lastReadAyah)
         } else {
             push(surahID: 1)
         }
@@ -924,10 +935,29 @@ struct QuranView: View {
 
     private var searchHelpOverlayCard: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("Quick Search Help")
-                .font(.subheadline.bold())
-                .foregroundStyle(settings.accentColor.color)
+            // The help folds away behind a -/+ (a reader who knows the syntax keeps only the recent
+            // chips); the chips stay, at the BOTTOM, nearest the field and the thumb.
+            HStack(spacing: 8) {
+                Text("Quick Search Help")
+                    .font(.subheadline.bold())
+                    .foregroundStyle(settings.accentColor.color)
 
+                Spacer(minLength: 0)
+
+                Button {
+                    settings.hapticFeedback()
+                    withAnimation(.easeInOut) { quranSearchHelpCollapsed.toggle() }
+                } label: {
+                    Image(systemName: quranSearchHelpCollapsed ? "plus.circle" : "minus.circle")
+                        .font(.subheadline)
+                        .foregroundStyle(settings.accentColor.color)
+                        .contentShape(Rectangle().inset(by: -8))
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(quranSearchHelpCollapsed ? "Show search help" : "Hide search help")
+            }
+
+            if !quranSearchHelpCollapsed {
             VStack(alignment: .leading, spacing: 4) {
                 Text("• Surah: number, Arabic, English, transliteration, or 'surah X'")
                 Text("• Ayah: X:Y or text (Arabic/English/transliteration)")
@@ -971,6 +1001,9 @@ struct QuranView: View {
                 }
                 .frame(maxHeight: 180)
             }
+            }
+
+            quranRecentSearches
         }
         .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -993,16 +1026,16 @@ struct QuranView: View {
         RenderCounter.hit("QuranView")
         return navigationContainer
         .confirmationDialog(
-            quranPlayer.playbackAlertTitle,
-            isPresented: $quranPlayer.showInternetAlert,
+            playbackAlerts.playbackAlertTitle,
+            isPresented: $playbackAlerts.showInternetAlert,
             titleVisibility: .visible
         ) {
-            if let offer = quranPlayer.offlineReciterSwitch {
+            if let offer = playbackAlerts.offlineReciterSwitch {
                 Button("Play \(offer.suggested.name)") { quranPlayer.acceptOfflineReciterSwitch() }
             }
-            Button("OK") { quranPlayer.offlineReciterSwitch = nil }
+            Button("OK") { playbackAlerts.offlineReciterSwitch = nil }
         } message: {
-            Text(quranPlayer.playbackAlertMessage)
+            Text(playbackAlerts.playbackAlertMessage)
         }
         // No Minshawi-substitution dialog here any more: that heads-up moved to the moment the reciter
         // is chosen (`QuranPlayer.needsMinshawiFallbackNotice(for:)`), so playing an ayah never asks.
@@ -1087,8 +1120,8 @@ struct QuranView: View {
         let priorityRoutes = [
             defaultDetailRoute,
             QuranRoute.ayahs(
-                surahID: settings.lastReadSurah,
-                ayah: settings.lastReadAyah > 0 ? settings.lastReadAyah : nil
+                surahID: reading.lastReadSurah,
+                ayah: reading.lastReadAyah > 0 ? reading.lastReadAyah : nil
             ),
             settings.bookmarkedAyahs.first.map { QuranRoute.ayahs(surahID: $0.surah, ayah: $0.ayah) },
             settings.favoriteSurahs.first.map { QuranRoute.ayahs(surahID: $0, ayah: nil) }
@@ -1189,10 +1222,10 @@ struct QuranView: View {
     }
 
     private var defaultDetailRoute: QuranRoute {
-        if settings.lastReadSurah > 0,
-           settings.lastReadAyah > 0,
-           quranData.surah(settings.lastReadSurah) != nil {
-            return .ayahs(surahID: settings.lastReadSurah, ayah: settings.lastReadAyah)
+        if reading.lastReadSurah > 0,
+           reading.lastReadAyah > 0,
+           quranData.surah(reading.lastReadSurah) != nil {
+            return .ayahs(surahID: reading.lastReadSurah, ayah: reading.lastReadAyah)
         }
 
         if let bookmark = settings.bookmarkedAyahs.first,
@@ -1528,7 +1561,7 @@ struct QuranView: View {
         // On iPad/Mac the open-surah (detail) pane shows its own Now Playing bar; don't duplicate it in
         // the sidebar list when using side-by-side column navigation.
         if !usesColumnNavigation {
-            let active = quranPlayer.isPlaying || quranPlayer.isPaused
+            let active = playbackPhase.isPlaying || playbackPhase.isPaused
             // Insert/remove the bar on isPlaying||isPaused with `.animation` so SwiftUI animates BOTH the fade
             // (the bar's `.transition`) and the height collapse natively. The bar keeps its content while
             // fading out via `retainedContext`, and "Stop Playing" defers `stop()`, so closing still works.
@@ -1536,7 +1569,7 @@ struct QuranView: View {
                 if active {
                     if #available(iOS 16.0, *) {
                         NowPlayingView(quranView: true, scrollDown: $scrollToSurahID, searchText: $searchText) { context in
-                            push(surahID: context.surah.id, ayahID: quranPlayer.isPlayingSurah ? nil : context.ayahNumber)
+                            push(surahID: context.surah.id, ayahID: playbackPhase.isPlayingSurah ? nil : context.ayahNumber)
                         }
                     } else {
                         NowPlayingView(quranView: true, scrollDown: $scrollToSurahID, searchText: $searchText)
@@ -1562,15 +1595,10 @@ struct QuranView: View {
         // Scroll-collapse is OFF: the sort row stays put while scrolling.
         // (Was: `!barsCollapsed || isQuranSearchFocused` - restore to fold it away again.)
         let secondaryVisible = true
-        let chipsVisible = secondaryVisible && isQuranSearchFocused && !settings.quranSearchHistory.isEmpty
 
         VStack(spacing: SafeAreaInsetVStackSpacing.standard) {
-            searchHistoryChips
-                .frame(height: chipsVisible ? nil : 0)
-                .clipped()
-                .opacity(chipsVisible ? 1 : 0)
-                .allowsHitTesting(chipsVisible)
-                .animation(.spring(response: 0.35, dampingFraction: 0.85), value: chipsVisible)
+            // (Recent-search chips used to stack above the sort row while the field was focused;
+            // they live in the search-help card over the list now - see `searchHelpOverlayCard`.)
             sortControls
                 .frame(height: secondaryVisible ? nil : 0)
                 .clipped()
@@ -1598,50 +1626,20 @@ struct QuranView: View {
         #endif
     }
 
-    /// Always mounted; visibility is driven by the caller via height+opacity. An `if` insertion/removal
-    /// snapshots the glass chips as hard black boxes - Liquid Glass can't participate in view transitions.
+    /// Recent searches, inside the search-help card (the Safari / App Store placement).
     @ViewBuilder
-    private var searchHistoryChips: some View {
+    private var quranRecentSearches: some View {
         #if os(iOS)
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 8) {
-                ForEach(settings.quranSearchHistory, id: \.self) { query in
-                    searchHistoryChip(query: query)
-                }
-            }
-        }
-        #endif
-    }
-
-    private func searchHistoryChip(query: String) -> some View {
-        HStack(spacing: 4) {
-            Button {
-                settings.hapticFeedback()
+        RecentSearchChips(
+            queries: settings.quranSearchHistory,
+            onPick: { query in
                 searchText = query
                 settings.addQuranSearchHistory(query)
-                self.endEditing()
-            } label: {
-                Text(query)
-                    .font(.caption)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.8)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 6)
-            }
-
-            Button {
-                settings.hapticFeedback()
-                withAnimation(.easeInOut) {
-                    settings.removeQuranSearchHistory(query)
-                }
-            } label: {
-                Image(systemName: "xmark")
-                    .font(.caption2.bold())
-                    .padding(.trailing, 8)
-            }
-        }
-        .foregroundStyle(settings.accentColor.color)
-        .conditionalGlassEffect(useColor: 0.25)
+                endEditing()
+            },
+            onRemove: { settings.removeQuranSearchHistory($0) }
+        )
+        #endif
     }
 
     private var sortControls: some View {
@@ -1845,7 +1843,7 @@ struct QuranView: View {
     private var playbackMenuButton: some View {
         #if os(iOS)
         VStack {
-            if quranPlayer.isLoading || quranPlayer.isPlaying || quranPlayer.isPaused {
+            if playbackPhase.isLoading || playbackPhase.isPlaying || playbackPhase.isPaused {
                 Button {
                     settings.hapticFeedback()
                     // Fully stop whether loading or playing - a loading tap used to only pause the in-flight
@@ -1853,7 +1851,7 @@ struct QuranView: View {
                     quranPlayer.stop()
                 } label: {
                     playbackMenuControlLabel {
-                        if quranPlayer.isLoading {
+                        if playbackPhase.isLoading {
                             RotatingGearView().transition(.opacity)
                         } else {
                             Image(systemName: "xmark.circle.fill")
@@ -2037,14 +2035,14 @@ struct QuranView: View {
                 }
             }
         case .reading:
-            ForEach(quranPlayer.readingHistory) { item in
+            ForEach(playbackHistory.readingHistory) { item in
                 if let surah = quranData.surah(item.surahNumber),
                    let ayah = surah.ayahs.first(where: { $0.id == max(1, item.ayahNumber) }) {
                     summaryHistoryRow(surah: surah, ayah: ayah, caption: nil, timestamp: item.timestamp)
                 }
             }
         case .listenedAyah:
-            ForEach(quranPlayer.ayahListeningHistory) { item in
+            ForEach(playbackHistory.ayahListeningHistory) { item in
                 if let surah = quranData.surah(item.surahNumber),
                    let ayah = surah.ayahs.first(where: { $0.id == item.ayahNumber }) {
                     summaryHistoryRow(
@@ -2056,7 +2054,7 @@ struct QuranView: View {
                 }
             }
         case .listenedSurah:
-            ForEach(quranPlayer.listeningHistory) { item in
+            ForEach(playbackHistory.listeningHistory) { item in
                 if let surah = quranData.surah(item.surahNumber) {
                     Button {
                         settings.hapticFeedback()
@@ -2127,6 +2125,8 @@ struct QuranView: View {
     @ViewBuilder
     private func summaryTilesSection(context: SearchDisplayContext) -> some View {
         let showAyah = settings.showAyahOfTheDay && settings.isAyahOfTheDayHiddenToday == false
+        // Every tile gets the tallest tile's natural height (see `SummaryTileHeightKey`).
+        let rowHeight = summaryTileHeights.values.max()
         Section(header:
             HStack(spacing: 8) {
                 Image(systemName: "sparkles")
@@ -2142,14 +2142,16 @@ struct QuranView: View {
             ) {
                 if settings.saveLastReadAyah, let lastReadSurah, let lastReadAyah {
                     SummaryAyahTile(title: "Last Read Ayah", icon: "book", surah: lastReadSurah, ayah: lastReadAyah, titleColor: settings.accentColor.color,
+                                    rowHeight: rowHeight,
                                     isExpanded: summaryHistoryExpansion == .reading,
-                                    onExpand: quranPlayer.readingHistory.isEmpty ? nil : { toggleSummaryExpansion(.reading) }) {
+                                    onExpand: playbackHistory.readingHistory.isEmpty ? nil : { toggleSummaryExpansion(.reading) }) {
                         push(surahID: lastReadSurah.id, ayahID: lastReadAyah.id)
                     }
-                    .animation(.easeInOut, value: settings.lastReadSurah * 1000 + settings.lastReadAyah)
+                    .animation(.easeInOut, value: reading.lastReadSurah * 1000 + reading.lastReadAyah)
                 }
                 if showAyah, let pair = ayahOfTheDayPair {
                     SummaryAyahTile(title: "Ayah of the Day", icon: "sparkles", surah: pair.surah, ayah: pair.ayah, titleColor: settings.accentColor.color,
+                                    rowHeight: rowHeight,
                                     isExpanded: summaryHistoryExpansion == .ayahOfTheDay,
                                     onExpand: { toggleSummaryExpansion(.ayahOfTheDay) }) {
                         push(surahID: pair.surah.id, ayahID: pair.ayah.id)
@@ -2158,8 +2160,9 @@ struct QuranView: View {
                 }
                 if settings.saveLastListenedAyah, let pair = lastListenedAyahPair {
                     SummaryAyahTile(title: "Last Listened Ayah", icon: "headphones.circle", surah: pair.surah, ayah: pair.ayah, titleColor: settings.accentColor.color,
+                                    rowHeight: rowHeight,
                                     isExpanded: summaryHistoryExpansion == .listenedAyah,
-                                    onExpand: quranPlayer.ayahListeningHistory.isEmpty ? nil : { toggleSummaryExpansion(.listenedAyah) }) {
+                                    onExpand: playbackHistory.ayahListeningHistory.isEmpty ? nil : { toggleSummaryExpansion(.listenedAyah) }) {
                         push(surahID: pair.surah.id, ayahID: pair.ayah.id)
                     }
                     .animation(.easeInOut, value: pair.surah.id * 1000 + pair.ayah.id)
@@ -2168,14 +2171,18 @@ struct QuranView: View {
                    let last = settings.lastListenedSurah,
                    let surah = quranData.surah(last.surahNumber) {
                     SummarySurahTile(title: "Last Listened Surah", icon: "headphones", surah: surah, lastListenedSurah: last, titleColor: settings.accentColor.color,
-                                     isExpanded: summaryHistoryExpansion == .listenedSurah,
-                                     onExpand: quranPlayer.listeningHistory.isEmpty ? nil : { toggleSummaryExpansion(.listenedSurah) }) {
+                                     rowHeight: rowHeight,
+                                    isExpanded: summaryHistoryExpansion == .listenedSurah,
+                                     onExpand: playbackHistory.listeningHistory.isEmpty ? nil : { toggleSummaryExpansion(.listenedSurah) }) {
                         push(surahID: surah.id, ayahID: nil)
                     }
                     .animation(.easeInOut, value: last.surahNumber)
                 }
             }
             .padding(.vertical, 4)
+            .onPreferenceChange(SummaryTileHeightKey.self) { heights in
+                if heights != summaryTileHeights { summaryTileHeights = heights }
+            }
 
             // The one open expansion, unfolded as plain rows right under the tiles.
             if let kind = summaryHistoryExpansion {
@@ -3789,7 +3796,7 @@ struct QuranView: View {
                     }
                 }
             } else if !semanticEngine.failedCorpora.contains(quranSemanticCorpusID) {
-                Section { AISearchStatusRow(progress: semanticEngine.progress(quranSemanticCorpusID), failed: false) }
+                Section { AISearchStatusRow(corpusID: quranSemanticCorpusID, failed: false) }
             }
         }
     }
@@ -4056,29 +4063,11 @@ struct QuranView: View {
     private func ayahLoadMoreControls(context: SearchDisplayContext) -> some View {
         if context.canShowMoreAyahHits && quranData.isVerseSearchReady {
             #if os(iOS)
-            Menu {
-                Text("Load More")
-                    .foregroundStyle(.secondary)
-
-                ForEach([5, 10, 20], id: \.self) { amount in
-                    Button {
-                        settings.hapticFeedback()
-                        loadMoreAyahMatches(amount)
-                    } label: {
-                        Label("Load \(amount)", systemImage: "\(amount).circle")
-                    }
-                }
-            } label: {
-                Text("Load more ayah matches")
-                    .frame(maxWidth: .infinity, alignment: .center)
-                    .padding(8)
-                    .contentShape(Rectangle())
-            }
-            .conditionalGlassEffect()
-            .lineLimit(1)
-            .minimumScaleFactor(0.5)
-            .listRowSeparator(.hidden, edges: .bottom)
-            .padding(.bottom, -8)
+            LoadMoreControls(
+                label: "ayah matches",
+                onLoad: { loadMoreAyahMatches($0) },
+                onLoadAll: { loadAllAyahMatches() }
+            )
             #else
             Button("Load \(hitPageSize) ayah matches") {
                 loadMoreAyahMatches(hitPageSize)
@@ -4089,21 +4078,10 @@ struct QuranView: View {
             .conditionalGlassEffect()
             .lineLimit(1)
             .minimumScaleFactor(0.5)
-            #endif
 
             Button {
                 settings.hapticFeedback()
-                ayahSearchTask?.cancel()
-                let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
-                ayahSearchTask = Task {
-                    let allHits = await fetchAllHitsOffMain(query: query)
-                    guard !Task.isCancelled else { return }
-                    await MainActor.run {
-                        guard query == searchText.trimmingCharacters(in: .whitespacesAndNewlines) else { return }
-                        verseHits = dedupedHits(allHits)
-                        hasMoreHits = false
-                    }
-                }
+                loadAllAyahMatches()
             } label: {
                 Text("Load all ayah matches")
             }
@@ -4114,10 +4092,21 @@ struct QuranView: View {
             .multilineTextAlignment(.center)
             .lineLimit(1)
             .minimumScaleFactor(0.5)
-            #if os(iOS)
-            .padding(.top, -8)
-            .listRowSeparator(.hidden)
             #endif
+        }
+    }
+
+    private func loadAllAyahMatches() {
+        ayahSearchTask?.cancel()
+        let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        ayahSearchTask = Task {
+            let allHits = await fetchAllHitsOffMain(query: query)
+            guard !Task.isCancelled else { return }
+            await MainActor.run {
+                guard query == searchText.trimmingCharacters(in: .whitespacesAndNewlines) else { return }
+                verseHits = dedupedHits(allHits)
+                hasMoreHits = false
+            }
         }
     }
 

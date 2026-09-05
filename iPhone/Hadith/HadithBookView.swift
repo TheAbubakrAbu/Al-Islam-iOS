@@ -91,8 +91,14 @@ struct HadithBookView: View {
     @ObservedObject private var semanticEngine = SemanticSearchEngine.shared
     @State private var aiHits: [HadithBookData.Hadith] = []
     @State private var aiSearchTask: Task<Void, Never>?
+    /// True while this screen owns the all-books gather (the corpus's slow path).
+    @State private var isGatheringCorpus = false
 
-    private var semanticCorpusID: String { "hadith-\(book.slug)" }
+    /// The ONE all-books corpus, filtered to this book. There is no per-book corpus any more: each
+    /// book used to build and persist its own ~10 MB vector file on open (17 of them, ~100 MB in
+    /// Caches, three resident at ~43 MB), while the all-books corpus already keys every row by
+    /// "slug|idInBook" (Performance Guide, Phase 7 step 3).
+    private var semanticCorpusID: String { HadithSemanticCorpus.id }
 
     /// True when the live query is one the semantic engine can answer (English text, long enough).
     private var aiQueryEligible: Bool {
@@ -105,8 +111,19 @@ struct HadithBookView: View {
             && HadithBookData.citationNumber(inQuery: trimmed) == nil
     }
 
-    private func prepareSemanticCorpus(_ data: HadithBookData) {
-        prepareBookSemanticCorpus(semanticEngine, data: data, corpusID: semanticCorpusID)
+    /// Load-or-build the all-books corpus, on the first AI-eligible query - never on open.
+    private func prepareSemanticCorpus() {
+        guard SemanticSearchEngine.isSupported,
+              !semanticEngine.isReady(semanticCorpusID),
+              !semanticEngine.isBuilding(semanticCorpusID),
+              !isGatheringCorpus,
+              !HadithSemanticCorpus.isGathering else { return }
+        isGatheringCorpus = true
+        Task {
+            await HadithSemanticCorpus.prepare(engine: semanticEngine, store: store)
+            isGatheringCorpus = false
+            if semanticEngine.isReady(semanticCorpusID) { runAISearch(query: searchText, data: data) }
+        }
     }
 
     // Ask AI: the on-device chat (`AskAIChatView`), opened from the ASK AI row above the matches
@@ -115,7 +132,11 @@ struct HadithBookView: View {
     @State private var showAskAI = false
     /// The AI-vs-keyword segmented switch, shown only when BOTH result kinds exist (the Quran search's
     /// `showKeywordResults`). Reset to the AI list on every new query.
+    #if DEBUG
+    @State private var showBookKeywordResults = ProcessInfo.processInfo.arguments.contains("-hadithKeywordResults")
+    #else
     @State private var showBookKeywordResults = false
+    #endif
 
     private func runAISearch(query: String, data: HadithBookData?) {
         aiSearchTask?.cancel()
@@ -125,27 +146,29 @@ struct HadithBookView: View {
             if !aiHits.isEmpty { aiHits = [] }
             return
         }
-        prepareSemanticCorpus(data)
+        prepareSemanticCorpus()
         let corpusID = semanticCorpusID
+        let slugPrefix = "\(book.slug)|"
 
         aiSearchTask = Task {
             try? await Task.sleep(nanoseconds: 300_000_000)
             guard !Task.isCancelled else { return }
-            let results = await semanticEngine.search(corpusID: corpusID, query: trimmed, limit: 10)
+            // Over-fetch from the whole shelf and keep this book's rows - filtering after ranking
+            // is what replaced the per-book corpus.
+            let results = await semanticEngine.search(corpusID: corpusID, query: trimmed, limit: 60)
             guard !Task.isCancelled else { return }
-            // Resolve through the corpus KEYS (idInBook), falling back to position only for a corpus
-            // persisted before keys existed - position is wrong the moment the source reorders.
             let keys = await MainActor.run { semanticEngine.corpus(corpusID)?.itemKeys }
             await MainActor.run {
                 guard trimmed == searchText.trimmingCharacters(in: .whitespacesAndNewlines) else { return }
                 // Plain apply: an animated section insert racing the keyword scan's own apply is the
                 // collection-view assertion crash the Quran search hit.
-                aiHits = results.compactMap { result in
-                    if let keys, keys.indices.contains(result.index), let idInBook = Int(keys[result.index]) {
-                        return data.hadiths.first(where: { $0.idInBook == idInBook })
-                    }
-                    return data.hadiths.indices.contains(result.index) ? data.hadiths[result.index] : nil
+                aiHits = results.compactMap { result -> HadithBookData.Hadith? in
+                    guard let keys, keys.indices.contains(result.index) else { return nil }
+                    let key = keys[result.index]
+                    guard key.hasPrefix(slugPrefix), let idInBook = Int(key.dropFirst(slugPrefix.count)) else { return nil }
+                    return data.hadith(numbered: idInBook)
                 }
+                .prefix(10).map { $0 }
             }
         }
     }
@@ -217,6 +240,12 @@ struct HadithBookView: View {
 
     private static var statsCache: [String: ChapterStats] = [:]
 
+    /// Drops the per-book chapter statistics; the store's memory-pressure trim calls this (they are
+    /// one pass over the chapter table to rebuild).
+    static func clearDerivedCaches() {
+        statsCache.removeAll(keepingCapacity: false)
+    }
+
     private func chapterStats(_ data: HadithBookData) -> ChapterStats {
         if let cached = Self.statsCache[book.slug] { return cached }
         let stats = ChapterStats(data)
@@ -261,19 +290,23 @@ struct HadithBookView: View {
 
         inBookSearchTask = Task {
             // Debounce so typing pays once per settled query; the scan itself runs detached, with
-            // cancellation bridged in (detached tasks don't inherit it).
+            // cancellation bridged in (detached tasks don't inherit it). One search-block fetch per
+            // block, and the shown rows' TEXT blocks are inflated in the same detached pass, so the
+            // result rows never decode on the main thread.
             try? await Task.sleep(nanoseconds: 200_000_000)
             guard !Task.isCancelled else { return }
             let scan = Task.detached(priority: .userInitiated) { () -> (shown: [HadithBookData.Hadith], hasMore: Bool) in
-                var results: [HadithBookData.Hadith] = []
-                for hadith in data.hadiths {
-                    if Task.isCancelled { return (results, false) }
-                    if data.matches(hadith, folded) {
-                        results.append(hadith)
-                        if results.count > limit { return (Array(results.prefix(limit)), true) }
-                    }
+                let rows = data.matchingRows(in: 0..<data.hadiths.count, query: folded, limit: limit + 1)
+                if Task.isCancelled { return ([], false) }
+                let shown = rows.prefix(limit).map { data.hadiths[$0] }
+                for hadith in shown {
+                    if Task.isCancelled { break }
+                    data.prewarmText(rows: hadith.row..<(hadith.row + 1))
+                    let strings = hadith.allText
+                    HighlightedSnippet.prewarmNormalization(of: [strings.arabic, strings.text, strings.narrator])
+                    HadithRow.prewarmCrossLanguageSpans(query: query, text: strings)
                 }
-                return (results, false)
+                return (shown, rows.count > limit)
             }
             let result = await withTaskCancellationHandler {
                 await scan.value
@@ -285,20 +318,6 @@ struct HadithBookView: View {
                 guard query == searchText.trimmingCharacters(in: .whitespacesAndNewlines) else { return }
                 // Plain apply - see the aiHits apply note (collection-view assertion).
                 inBookMatches = result
-            }
-            // First render of each result row hits the highlight cache instead of paying the fold.
-            // Detached: this task inherits the view's @MainActor.
-            var sources: [String] = []
-            sources.reserveCapacity(result.shown.count * 3)
-            for hadith in result.shown {
-                let strings = hadith.allText
-                sources.append(strings.arabic)
-                sources.append(strings.text)
-                sources.append(strings.narrator)
-            }
-            let prewarm = sources
-            Task.detached(priority: .utility) {
-                HighlightedSnippet.prewarmNormalization(of: prewarm)
             }
         }
     }
@@ -328,17 +347,8 @@ struct HadithBookView: View {
         // English - so each query pays for exactly ONE field, matched against the fold the pack
         // already carries.
         let folded = HadithFold.query(query)
-
-        var results: [HadithBookData.Hadith] = []
-        for hadith in data.hadiths {
-            if data.matches(hadith, folded) {
-                results.append(hadith)
-                if results.count > hadithMatchLimit {
-                    return (Array(results.prefix(hadithMatchLimit)), true)
-                }
-            }
-        }
-        return (results, false)
+        let rows = data.matchingRows(in: 0..<data.hadiths.count, query: folded, limit: hadithMatchLimit + 1)
+        return (rows.prefix(hadithMatchLimit).map { data.hadiths[$0] }, rows.count > hadithMatchLimit)
     }
 
     /// The two invisible `isActive` pushes this screen drives programmatically: the chapter a grid tile
@@ -565,9 +575,21 @@ struct HadithBookView: View {
                         }
                     }
 
-                    // Both result kinds landed: ONE segmented switch decides which list fills the page
-                    // (the Quran search's rule). With only one kind present, no picker - it just shows.
-                    let showResultsPicker = !aiHits.isEmpty && (!matches.shown.isEmpty || !shownChapters.isEmpty)
+                    // Matching chapters sit ABOVE the AI/keyword switch (the Quran search's surah-list
+                    // rule): navigation, not a competing result kind, so they show in both modes.
+                    if !shownChapters.isEmpty {
+                        Section(header: SectionPillHeader(title: "MATCHING CHAPTERS", count: shownChapters.count)) {
+                            ForEach(shownChapters.prefix(chapterMatchLimit)) { chapter in
+                                chapterRowLink(chapter, data: data)
+                            }
+
+                            HadithLoadMoreControls(label: "chapter matches", hasMore: shownChapters.count > chapterMatchLimit, limit: $chapterMatchLimit)
+                        }
+                    }
+
+                    // Both HADITH result kinds landed: ONE segmented switch decides which list fills
+                    // the page (the Quran search's rule). With only one kind present, no picker.
+                    let showResultsPicker = !aiHits.isEmpty && !matches.shown.isEmpty
                     if showResultsPicker {
                         Section {
                             Picker("Results", selection: $showBookKeywordResults) {
@@ -583,16 +605,6 @@ struct HadithBookView: View {
                     // grammar - no mode to enter.
                     if !showResultsPicker || !showBookKeywordResults {
                         aiMatchesSection(data)
-                    }
-
-                    if keywordVisible, !shownChapters.isEmpty {
-                        Section(header: SectionPillHeader(title: "MATCHING CHAPTERS", count: shownChapters.count)) {
-                            ForEach(shownChapters.prefix(chapterMatchLimit)) { chapter in
-                                chapterRowLink(chapter, data: data)
-                            }
-
-                            HadithLoadMoreControls(label: "chapter matches", hasMore: shownChapters.count > chapterMatchLimit, limit: $chapterMatchLimit)
-                        }
                     }
 
                     // Hadith matches, the Quran ayah-search way: compact rows grouped per chapter,
@@ -651,11 +663,8 @@ struct HadithBookView: View {
         // the whole LAST READ section). They hang off the outer container in `body` instead, where the
         // List's content can't reach them. See `pushLinks`.
         .onAppear {
-            // Build (or disk-load) this book's AI index shortly AFTER the book renders - ready by
-            // the first search keystroke, but never competing with the open itself. No-ops when built.
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
-                prepareSemanticCorpus(data)
-            }
+            // (No AI index build on open any more: the all-books corpus loads or builds on the first
+            // AI-eligible query, from `runAISearch`.)
 
             // Resolve and push the target chapter once, after this screen settles (an immediate
             // isActive flip on arrival is unreliable in the pre-NavigationStack containers).
@@ -700,7 +709,7 @@ struct HadithBookView: View {
         }
         // The one-time vector build finishing mid-query: surface the results without another keystroke.
         .onChange(of: semanticEngine.readyCorpora) { ready in
-            guard ready.contains(semanticCorpusID) else { return }
+            guard ready.contains(semanticCorpusID), !searchText.isEmpty else { return }
             runAISearch(query: searchText, data: data)
         }
         .onChange(of: pendingScrollToChapterId) { chapterId in
@@ -714,20 +723,17 @@ struct HadithBookView: View {
                 withAnimation { scrollProxy.scrollTo("hadith-chapter-\(chapterId)", anchor: .top) }
             }
         }
+        // Recent searches float over the list top while the field is focused and empty (the tab
+        // root's help card, minus the help: a book search needs no syntax guide).
+        .overlay(alignment: .top) {
+            bookSearchHelpOverlay
+                .animation(.easeInOut, value: isBookSearchFocused)
+        }
         // Apple Music-style: the bottom search bar minimizes while scrolling down. The whole bottom
-        // bar is the tab root's exact grammar - recent-searches chips over the field while focused.
+        // bar is the tab root's exact grammar - just the field.
         .collapseBarsOnScroll($barsCollapsed)
         .adaptiveSafeArea(edge: .bottom) {
-            let chipsVisible = isBookSearchFocused && !settings.hadithSearchHistory.isEmpty
             VStack(spacing: SafeAreaInsetVStackSpacing.standard) {
-                HadithSearchHistoryChips(searchText: $searchText)
-                    .frame(height: chipsVisible ? nil : 0)
-                    .clipped()
-                    .opacity(chipsVisible ? 1 : 0)
-                    .allowsHitTesting(chipsVisible)
-                    .animation(.spring(response: 0.35, dampingFraction: 0.85), value: chipsVisible)
-                    .padding(.horizontal, 24)
-
                 SearchBar(
                     // Animated with the app-wide gate; the in-book hadith matches already animate at
                     // their debounced apply site, so this covers the chapter-filter diff while typing.
@@ -749,6 +755,21 @@ struct HadithBookView: View {
             .background(Color.white.opacity(0.00001))
             .transaction { $0.animation = nil }
         }
+        }
+    }
+
+    @ViewBuilder
+    private var bookSearchHelpOverlay: some View {
+        if isBookSearchFocused,
+           searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+           !settings.hadithSearchHistory.isEmpty {
+            HadithRecentSearches(searchText: $searchText)
+                .padding(14)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .conditionalGlassEffect(rectangle: true)
+                .padding(.horizontal, 16)
+                .padding(.top, 8)
+                .transition(.move(edge: .top).combined(with: .opacity))
         }
     }
 
@@ -872,8 +893,9 @@ struct HadithBookView: View {
                         }
                     }
                 }
-            } else if !semanticEngine.failedCorpora.contains(semanticCorpusID) {
-                Section { AISearchStatusRow(progress: semanticEngine.progress(semanticCorpusID), failed: false) }
+            } else if !semanticEngine.failedCorpora.contains(semanticCorpusID),
+                      isGatheringCorpus || HadithSemanticCorpus.isGathering || semanticEngine.isBuilding(semanticCorpusID) {
+                Section { AISearchStatusRow(corpusID: semanticCorpusID, failed: false) }
             }
         }
     }
@@ -1542,6 +1564,11 @@ struct HadithChapterView: View {
     @State private var chapterIndex: Int
     @State private var allChapterHadiths: [HadithBookData.Hadith]
     @State private var chapterRange: ClosedRange<Int>?
+    /// Whether the chapter's text blocks are decoded and resident. True at init when they already
+    /// are (a chapter revisited, a neighbour of one just read); otherwise the rows wait behind a
+    /// detached prefetch so the LZMA inflate never runs inside a row body on the main thread
+    /// (Performance Guide, Phase 7 step 1). The push animation stays smooth; the rows land a beat later.
+    @State private var textReady: Bool
 
     init(
         book: HadithCatalogBook,
@@ -1559,6 +1586,34 @@ struct HadithChapterView: View {
         let hadiths = Array(bookData.hadiths(in: chapter))
         _allChapterHadiths = State(initialValue: hadiths)
         _chapterRange = State(initialValue: HadithChapterView.range(of: hadiths))
+        _textReady = State(initialValue: bookData.hasText(rows: HadithChapterView.rowRange(of: chapter)))
+    }
+
+    /// The chapter's rows in the book's row table.
+    private static func rowRange(of chapter: HadithBookData.Chapter) -> Range<Int> {
+        chapter.firstRow..<(chapter.firstRow + chapter.rowCount)
+    }
+
+    /// Inflate the chapter's text blocks OFF the main thread, the target hadith's block first, and
+    /// flip `textReady` when they are resident. A no-op (ready at once) when they already are.
+    private func prefetchChapterText(_ target: HadithBookData.Chapter, scrollTarget: Int?) {
+        let range = Self.rowRange(of: target)
+        if bookData.hasText(rows: range) {
+            if !textReady { textReady = true }
+            return
+        }
+        let data = bookData
+        let targetRow = scrollTarget.flatMap { id in data.hadiths(in: target).first { $0.idInBook == id }?.row }
+        let chapterID = target.id
+        Task.detached(priority: .userInitiated) {
+            if let targetRow { data.prewarmText(rows: targetRow..<(targetRow + 1)) }
+            data.prewarmText(rows: range)
+            await MainActor.run {
+                // A swap to another chapter meanwhile runs its own prefetch; this one stands down.
+                guard chapter.id == chapterID else { return }
+                textReady = true
+            }
+        }
     }
 
     /// The span of CITED hadith numbers a chapter covers ("1234-1256") - citation base numbers,
@@ -1591,6 +1646,7 @@ struct HadithChapterView: View {
     private func navigateToChapter(_ target: HadithBookData.Chapter, recordLastRead: Bool = true) {
         settings.hapticFeedback()
         let hadiths = Array(bookData.hadiths(in: target))
+        let ready = bookData.hasText(rows: Self.rowRange(of: target))
         withAnimation(.easeInOut) {
             chapter = target
             chapterIndex = bookData.chapters.firstIndex(where: { $0.id == target.id }) ?? 0
@@ -1599,7 +1655,9 @@ struct HadithChapterView: View {
             searchText = ""
             visibility.visibleIDs = []
             highlightedHadithID = nil
+            textReady = ready
         }
+        prefetchChapterText(target, scrollTarget: nil)
         onChapterChanged?(target)
         if recordLastRead, let first = hadiths.first {
             // Through the shared debounce slot, like every other last-read record: an immediate store
@@ -1615,8 +1673,8 @@ struct HadithChapterView: View {
     @State private var searchText = ""
 
     #if os(iOS)
-    // Within-chapter AI search: the book's own corpus ("hadith-<slug>", one vector cache shared
-    // with the book screen), hits filtered to this chapter's rows.
+    // Within-chapter AI search: the ONE all-books corpus (no per-book corpus any more - Performance
+    // Guide, Phase 7 step 3), hits filtered to this book and chapter.
     @ObservedObject private var semanticEngine = SemanticSearchEngine.shared
     @State private var chapterAIHits: [HadithBookData.Hadith] = []
     @State private var chapterAISearchTask: Task<Void, Never>?
@@ -1629,29 +1687,30 @@ struct HadithChapterView: View {
             if !chapterAIHits.isEmpty { chapterAIHits = [] }
             return
         }
-        let corpusID = "hadith-\(book.slug)"
-        prepareBookSemanticCorpus(semanticEngine, data: bookData, corpusID: corpusID)
+        let corpusID = HadithSemanticCorpus.id
+        if !semanticEngine.isReady(corpusID), !semanticEngine.isBuilding(corpusID), !HadithSemanticCorpus.isGathering {
+            // Load-or-build on the first AI-eligible query; `readyCorpora` re-runs this search.
+            let engine = semanticEngine
+            Task { await HadithSemanticCorpus.prepare(engine: engine, store: HadithStore.shared) }
+        }
+        let slugPrefix = "\(book.slug)|"
+        let chapterID = chapter.id
 
         chapterAISearchTask = Task {
             try? await Task.sleep(nanoseconds: 300_000_000)
             guard !Task.isCancelled else { return }
-            // Over-fetch from the whole book, keep this chapter's rows - filtering after ranking
-            // beats a per-chapter corpus.
-            let results = await semanticEngine.search(corpusID: corpusID, query: trimmed, limit: 48)
+            // Over-fetch from the whole shelf, keep this chapter's rows - filtering after ranking
+            // beats a per-chapter (or per-book) corpus.
+            let results = await semanticEngine.search(corpusID: corpusID, query: trimmed, limit: 120)
             guard !Task.isCancelled else { return }
             let keys = await MainActor.run { semanticEngine.corpus(corpusID)?.itemKeys }
             await MainActor.run {
                 guard trimmed == searchText.trimmingCharacters(in: .whitespacesAndNewlines) else { return }
                 chapterAIHits = results.compactMap { result -> HadithBookData.Hadith? in
-                    let hadith: HadithBookData.Hadith?
-                    if let keys, keys.indices.contains(result.index), let number = Int(keys[result.index]) {
-                        hadith = bookData.hadith(numbered: number)
-                    } else if bookData.hadiths.indices.contains(result.index) {
-                        hadith = bookData.hadiths[result.index]
-                    } else {
-                        hadith = nil
-                    }
-                    guard let hadith, hadith.chapterId == chapter.id else { return nil }
+                    guard let keys, keys.indices.contains(result.index) else { return nil }
+                    let key = keys[result.index]
+                    guard key.hasPrefix(slugPrefix), let number = Int(key.dropFirst(slugPrefix.count)),
+                          let hadith = bookData.hadith(numbered: number), hadith.chapterId == chapterID else { return nil }
                     return hadith
                 }
                 .prefix(6).map { $0 }
@@ -1659,6 +1718,57 @@ struct HadithChapterView: View {
         }
     }
     #endif
+
+    /// The chapter's keyword matches for the settled query - filled by `runChapterKeywordSearch`
+    /// (debounced, scanned off-main one search block at a time). The body reads this; it used to
+    /// scan the chapter inside `body` on every keystroke and on every corpus progress tick.
+    @State private var chapterKeywordMatches: [HadithBookData.Hadith] = []
+    @State private var chapterKeywordTask: Task<Void, Never>?
+
+    private func runChapterKeywordSearch(query: String) {
+        chapterKeywordTask?.cancel()
+        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else {
+            if !chapterKeywordMatches.isEmpty { chapterKeywordMatches = [] }
+            return
+        }
+        // Script-aware, same as the book search: one field per query, matched against the fold the
+        // pack carries - which is also the fold the highlighter uses, so "Allah's" and "A'ishah"
+        // match what gets coloured. Number matches get their own labelled section above; a text
+        // match on the same hadith would otherwise draw the identical row twice.
+        let folded = HadithFold.query(trimmed)
+        let numbered = Set(numberMatches().map(\.hadith.row))
+        let data = bookData
+        let range = Self.rowRange(of: chapter)
+
+        chapterKeywordTask = Task {
+            try? await Task.sleep(nanoseconds: 150_000_000)
+            guard !Task.isCancelled else { return }
+            let scan = Task.detached(priority: .userInitiated) { () -> [HadithBookData.Hadith] in
+                let rows = data.matchingRows(in: range, query: folded, limit: Int.max)
+                if Task.isCancelled { return [] }
+                let hits = rows.filter { !numbered.contains($0) }.map { data.hadiths[$0] }
+                // The first screenful's highlight folds and cross-language spans, warm before render.
+                for hadith in hits.prefix(12) {
+                    if Task.isCancelled { break }
+                    let strings = hadith.allText
+                    HighlightedSnippet.prewarmNormalization(of: [strings.arabic, strings.text, strings.narrator])
+                    HadithRow.prewarmCrossLanguageSpans(query: trimmed, text: strings)
+                }
+                return hits
+            }
+            let hits = await withTaskCancellationHandler {
+                await scan.value
+            } onCancel: {
+                scan.cancel()
+            }
+            guard !Task.isCancelled else { return }
+            await MainActor.run {
+                guard trimmed == searchText.trimmingCharacters(in: .whitespacesAndNewlines) else { return }
+                chapterKeywordMatches = hits
+            }
+        }
+    }
     /// Apple Music-style bar minimization: true while scrolling down.
     @State private var barsCollapsed = false
     @State private var showChapterSettings = false
@@ -1683,20 +1793,13 @@ struct HadithChapterView: View {
         !searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
-    /// The chapter's hadith search, SurahView's way now: filter the reading list itself and show every
-    /// match as a FULL row - no paging, no load-more, exactly how the ayah list filters in place. The
-    /// chapter is bounded (a few hundred hadiths at most), so the full scan is instant.
+    /// The chapter's hadith search, SurahView's way: filter the reading list itself and show every
+    /// match as a FULL row - no paging, no load-more, exactly how the ayah list filters in place.
+    /// The matches come from state (`runChapterKeywordSearch`), never from a scan in the body.
     private func chapterMatches() -> [HadithBookData.Hadith] {
         let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !query.isEmpty else { return allChapterHadiths }
-        // Script-aware, same as the book search: one field per query, matched against the fold the
-        // pack carries - which is also the fold the highlighter uses, so "Allah's" and "A'ishah"
-        // match what gets coloured.
-        let folded = HadithFold.query(query)
-        let numbered = Set(numberMatches().map(\.hadith.row))
-        // Number matches get their own labelled section above; a text match on the same hadith would
-        // otherwise draw the identical row twice.
-        return allChapterHadiths.filter { !numbered.contains($0.row) && bookData.matches($0, folded) }
+        return chapterKeywordMatches
     }
 
     /// One reading of a pure-number query, with the label that says WHICH reading it is.
@@ -1778,16 +1881,24 @@ struct HadithChapterView: View {
     }
 
     var body: some View {
-        Group {
+        RenderCounter.hit("HadithChapterView")
+        return Group {
             // Page mode is the user's reading mode, deep link or not: a target hadith opens the PAGER
             // seeded to its page (the mushaf's way). It used to force the list - "open last read" while
             // in page mode dumped you into list mode, the reported bug.
             if hadithPageMode {
-                HadithPagedView(book: book, bookData: bookData, chapterIndex: $chapterIndex, seedHadithID: scrollToHadithId)
-                    // The chapter list gets the top accent glow through `applyConditionalListStyle`;
-                    // the pager is not a list, so it draws the same wash itself - themed base included.
-                    .background(AccentGlowOverlay())
-                    .themedReaderBackground()
+                Group {
+                    if textReady {
+                        HadithPagedView(book: book, bookData: bookData, chapterIndex: $chapterIndex, seedHadithID: scrollToHadithId)
+                    } else {
+                        textLoadingPlaceholder
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    }
+                }
+                // The chapter list gets the top accent glow through `applyConditionalListStyle`;
+                // the pager is not a list, so it draws the same wash itself - themed base included.
+                .background(AccentGlowOverlay())
+                .themedReaderBackground()
             } else {
                 chapterList
             }
@@ -1829,12 +1940,15 @@ struct HadithChapterView: View {
                 .tint(settings.accentColor.accent2)
             }
         }
-        #if os(iOS)
         .onChange(of: searchText) { text in
+            runChapterKeywordSearch(query: text)
+            #if os(iOS)
             runChapterAISearch(query: text)
+            #endif
         }
+        #if os(iOS)
         .onChange(of: semanticEngine.readyCorpora) { ready in
-            guard ready.contains("hadith-\(book.slug)"), !searchText.isEmpty else { return }
+            guard ready.contains(HadithSemanticCorpus.id), !searchText.isEmpty else { return }
             runChapterAISearch(query: searchText)
         }
         #endif
@@ -1866,6 +1980,8 @@ struct HadithChapterView: View {
         }
         #endif
         .onAppear {
+            // The chapter's text, decoded off-main before any row asks for it (no-op when resident).
+            prefetchChapterText(chapter, scrollTarget: scrollToHadithId)
             // In LIST mode the chapter is the reading surface, so it owns the Last Read record - routed
             // through the ONE shared debounce slot, deferred past the push transition (`recordLastRead`
             // publishes through the store the PARENT book screen observes and renders, and re-diffing
@@ -1913,7 +2029,28 @@ struct HadithChapterView: View {
         highlightedHadithID = nil
         isSelectingHadiths = false
         selectedHadithIDs = []
+        textReady = bookData.hasText(rows: Self.rowRange(of: target))
+        prefetchChapterText(target, scrollTarget: nil)
         onChapterChanged?(target)
+    }
+
+    /// What stands in for the rows while their blocks inflate off-main: a beat of spinner, never a
+    /// frozen push transition.
+    private var textLoadingPlaceholder: some View {
+        ProgressView()
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 40)
+    }
+
+    /// A search result or reference landed here: settle, then scroll to the hadith itself - and MARK
+    /// it (the Quran's arrival rule: the selection shows you where you landed; tap to clear). Fired
+    /// once the rows exist, which is `textReady` - not the List's appearance.
+    private func scheduleArrivalScroll(_ scrollProxy: ScrollViewProxy) {
+        guard let target = scrollToHadithId else { return }
+        highlightedHadithID = target
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            withAnimation { scrollProxy.scrollTo("chapter-hadith-\(target)", anchor: .top) }
+        }
     }
 
     /// The SurahView title button, for a chapter: the glass label opens a menu with the chapter picker,
@@ -2102,7 +2239,11 @@ struct HadithChapterView: View {
                             .id("chapter-top-nav")
                     }
 
-                    ForEach(allChapterHadiths) { hadith in
+                    if !textReady {
+                        Section { textLoadingPlaceholder }
+                    }
+
+                    ForEach(textReady ? allChapterHadiths : []) { hadith in
                         Section {
                             let isSelected = selectedHadithIDs.contains(hadith.idInBook)
                             HadithRow(book: book, hadith: hadith, searchText: searchText, showsChapterPosition: true).equatable()
@@ -2152,13 +2293,10 @@ struct HadithChapterView: View {
         .applyConditionalListStyle(topContentMargin: 11)
         .compactListSectionSpacing()
         .onAppear {
-            // A search result or reference landed here: settle, then scroll to the hadith itself - and
-            // MARK it (the Quran's arrival rule: the selection shows you where you landed; tap to clear).
-            guard let target = scrollToHadithId else { return }
-            highlightedHadithID = target
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                withAnimation { scrollProxy.scrollTo("chapter-hadith-\(target)", anchor: .top) }
-            }
+            if textReady { scheduleArrivalScroll(scrollProxy) }
+        }
+        .onChange(of: textReady) { ready in
+            if ready { scheduleArrivalScroll(scrollProxy) }
         }
         // (The pinned chapter header + progress bar live at the BODY level now, shared with page mode.)
         .onChange(of: chapterIndex) { _ in
@@ -2519,9 +2657,6 @@ struct HadithChapterPickerSheet: View {
 /// always travel together.
 struct HadithPagedView: View {
     @ObservedObject private var settings = Settings.shared
-    /// The paged header's bookmark tint reads user marks (via the store's forwards) - this
-    /// observation is what refreshes it when a bookmark toggles.
-    @ObservedObject private var userData = HadithUserData.shared
 
     let book: HadithCatalogBook
     let bookData: HadithBookData
@@ -2533,11 +2668,6 @@ struct HadithPagedView: View {
     /// the book's last-read seed. Nil for a plain chapter open.
     var seedHadithID: Int? = nil
     @State private var pageIndex = 0
-    /// ONE hadith per page, rendered at the user's exact hadith font sizes - no fit-to-page shrinking
-    /// and no mid-hadith splitting. A hadith taller than the screen simply scrolls within its page.
-    private struct BuiltPage {
-        let elements: [PageElement]
-    }
 
     /// Seed-once guard: the reader opens on the page holding this book's last-read hadith (when it is
     /// in this chapter), then never yanks the user again.
@@ -2553,133 +2683,77 @@ struct HadithPagedView: View {
     @State private var hadithPickerSelection = 0
     @State private var chapterPickerSelection = 0
 
-    /// One renderable part of a hadith's page (header capsule, Arabic, narrator, English).
-    private enum PageElement: Identifiable {
-        case hadithHeader(HadithBookData.Hadith)
-        case arabic(HadithBookData.Hadith)
-        case narrator(HadithBookData.Hadith)
-        case english(HadithBookData.Hadith)
-        case grades(HadithBookData.Hadith)
-
-        var id: String {
-            switch self {
-            case .hadithHeader(let hadith): return "hdr-\(hadith.id)"
-            case .arabic(let hadith): return "ar-\(hadith.id)"
-            case .narrator(let hadith): return "narr-\(hadith.id)"
-            case .english(let hadith): return "en-\(hadith.id)"
-            case .grades(let hadith): return "gr-\(hadith.id)"
-            }
-        }
-
-        var hadith: HadithBookData.Hadith? {
-            switch self {
-            case .hadithHeader(let hadith), .arabic(let hadith),
-                 .narrator(let hadith), .english(let hadith),
-                 .grades(let hadith):
-                return hadith
-            }
-        }
-    }
-
     private var chapter: HadithBookData.Chapter? {
         bookData.chapters.indices.contains(chapterIndex) ? bookData.chapters[chapterIndex] : nil
     }
 
-    private var chapterHadiths: [HadithBookData.Hadith] {
-        // A slice of the row table, so there is nothing left to memoize: the cache this used to keep
-        // existed only to avoid re-filtering the whole book on every body pass.
+    /// ONE hadith per page, so the page list IS the chapter's row slice: page i shows hadith i, the
+    /// ordinal is i + 1, and nothing here reads a hadith's text. The old `builtPages` walked every
+    /// hadith's text and grades in `body` (two block inflates on the main thread per chapter open)
+    /// to decide which blocks a page carried; the page view decides that for itself at render time
+    /// (Performance Guide, Phase 7 step 11).
+    private var chapterHadiths: ArraySlice<HadithBookData.Hadith> {
         guard let chapter else { return [] }
-        return Array(bookData.hadiths(in: chapter))
-    }
-
-    /// Drops every derived static cache (built pages, ordinals). Built pages retain whole chapters of
-    /// text, so the store's memory-pressure trim calls this - otherwise the trim's savings would be
-    /// partly pinned here, holding decompressed chapters the reader has left.
-    static func clearDerivedCaches() {
-        builtPagesCache.removeAll(keepingCapacity: false)
-        ordinalCache.removeAll(keepingCapacity: false)
-    }
-
-    /// Built pages, memoized on the only inputs that change them: the chapter and the two display
-    /// toggles. `body` runs on every page turn and every settings publish (a font-size slider drag
-    /// publishes per step), and this map used to re-allocate O(chapter) arrays each time.
-    private static var builtPagesCache: [String: [BuiltPage]] = [:]
-
-    private func builtPages() -> [BuiltPage] {
-        let key = "\(book.slug)-\(chapter?.id ?? -1)-\(settings.showHadithArabic ? 1 : 0)\(settings.showHadithEnglish ? 1 : 0)"
-        if let cached = Self.builtPagesCache[key] { return cached }
-
-        let pages = chapterHadiths.map { hadith in
-            // One block lookup for the emptiness checks instead of one per field.
-            let text = hadith.allText
-            var elements: [PageElement] = [.hadithHeader(hadith)]
-            if settings.showHadithArabic, !text.arabic.isEmpty {
-                elements.append(.arabic(hadith))
-            }
-            if settings.showHadithEnglish {
-                if !text.narrator.isEmpty { elements.append(.narrator(hadith)) }
-                if !text.text.isEmpty { elements.append(.english(hadith)) }
-            }
-            // The grade line trails the text - after the English, or after the Arabic when English is
-            // off or absent (the reading rows' placement). Always shown: the grading is part of the
-            // hadith, not a preference - a reader must be able to tell sahih from da'if.
-            if !hadith.grades.isEmpty {
-                elements.append(.grades(hadith))
-            }
-            return BuiltPage(elements: elements)
-        }
-        if Self.builtPagesCache.count > 24 { Self.builtPagesCache.removeAll(keepingCapacity: true) }
-        Self.builtPagesCache[key] = pages
-        return pages
+        return bookData.hadiths(in: chapter)
     }
 
     var body: some View {
-        let pages = builtPages()
+        RenderCounter.hit("HadithPagedView")
+        let hadiths = chapterHadiths
+        let pageCount = hadiths.count
 
-        Group {
-            if pages.isEmpty {
+        return Group {
+            if pageCount == 0 {
                 Text("This chapter has no hadiths.")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 // Right-to-left, exactly like the mushaf: the DATA is reversed rather than the layout
-                // direction, so page 0 sits at the far right and reading advances leftward.
+                // direction, so page 0 sits at the far right and reading advances leftward. Each page
+                // is its own View STRUCT, so the `.page` TabView evaluates only the pages it realizes
+                // (the mushaf's `MushafPageContent` rule) instead of building every page's blocks
+                // inline on every turn.
                 TabView(selection: $pageIndex) {
-                    ForEach(pages.indices.reversed(), id: \.self) { index in
-                        pageBody(pages[index].elements)
-                            .tag(index)
+                    ForEach((0..<pageCount).reversed(), id: \.self) { index in
+                        HadithPageContent(
+                            book: book,
+                            hadith: hadiths[hadiths.startIndex + index],
+                            ordinal: index + 1
+                        )
+                        .tag(index)
                     }
                 }
                 .tabViewStyle(.page(indexDisplayMode: .never))
             }
         }
         .safeAreaInset(edge: .bottom) {
-            pagerFooter(pageCount: pages.count)
+            pagerFooter(hadiths: hadiths)
         }
         .onAppear {
             // Open on the page holding the deep-link target (or this book's last-read hadith) - the
             // mushaf's "open where you stopped" - then record that page as the new last read via the
             // ONE debounced recorder below.
-            let seeded = seedPageIfNeeded(pages)
-            scheduleRecordLastRead(pages: pages, at: seeded ?? pageIndex)
+            let seeded = seedPageIfNeeded(hadiths)
+            scheduleRecordLastRead(hadiths: hadiths, at: seeded ?? pageIndex)
         }
         .onChange(of: pageIndex) { index in
-            scheduleRecordLastRead(pages: pages, at: index)
+            scheduleRecordLastRead(hadiths: hadiths, at: index)
         }
         .onChange(of: chapterIndex) { _ in
             // A chapter swap re-arms the last-read seed: when the book's last read lives in the
             // NEW chapter (the page-mode entry jump), land on its exact page - otherwise hadith 1.
             didSeedPage = false
             activePicker = nil
-            if let seeded = seedPageIfNeeded(pages) {
-                scheduleRecordLastRead(pages: pages, at: seeded)
+            let swapped = chapterHadiths
+            if let seeded = seedPageIfNeeded(swapped) {
+                scheduleRecordLastRead(hadiths: swapped, at: seeded)
             } else {
                 // Record page 1 EXPLICITLY: when `pageIndex` was already 0 (jumping chapters from the
                 // wheel while on a chapter's first page), the assignment below fires no `.onChange`,
                 // and the newly-opened chapter never became the last read.
                 pageIndex = 0
-                scheduleRecordLastRead(pages: pages, at: 0)
+                scheduleRecordLastRead(hadiths: swapped, at: 0)
             }
         }
         // No title of its own: the parent chapter view's principal title-menu button owns the bar.
@@ -2691,15 +2765,18 @@ struct HadithPagedView: View {
     /// ancestor book screen (which observes the store) and could pop this very view; and a page turn
     /// inside the first second recorded instantly, only to be overwritten by the stale deferred landing
     /// record. A single debounce slot means the LAST record standing wins, always past the transition.
-    private func scheduleRecordLastRead(pages: [BuiltPage], at index: Int) {
+    private func scheduleRecordLastRead(hadiths: ArraySlice<HadithBookData.Hadith>, at index: Int) {
+        guard index >= 0, index < hadiths.count else { return }
+        let hadith = hadiths[hadiths.startIndex + index]
+        let book = book
         HadithLastReadDebounce.schedule {
-            recordPageLastRead(pages: pages, at: index)
+            HadithStore.shared.recordLastRead(book: book, hadith: hadith)
         }
     }
 
     /// Land on the target hadith's page, once per open: the explicit deep-link target when there is
     /// one, this book's last-read hadith otherwise. Returns the seeded index when it resolved.
-    private func seedPageIfNeeded(_ pages: [BuiltPage]) -> Int? {
+    private func seedPageIfNeeded(_ hadiths: ArraySlice<HadithBookData.Hadith>) -> Int? {
         guard !didSeedPage else { return nil }
         didSeedPage = true
 
@@ -2717,216 +2794,22 @@ struct HadithPagedView: View {
             guard let chapter,
                   let lastRead = HadithStore.shared.lastRead(for: book.slug),
                   lastRead.chapterId == chapter.id
-                    || chapterHadiths.contains(where: { $0.idInBook == lastRead.idInBook })
+                    || hadiths.contains(where: { $0.idInBook == lastRead.idInBook })
             else { return nil }
             return lastRead.idInBook
         }()
 
-        guard let targetID, let index = pages.firstIndex(where: { page in
-            page.elements.contains { $0.hadith?.idInBook == targetID }
-        }) else { return nil }
+        guard let targetID, let position = hadiths.firstIndex(where: { $0.idInBook == targetID }) else { return nil }
+        let index = position - hadiths.startIndex
         // Report the landing page even when it's the one already showing - callers treat nil as
         // "nothing to seed" and reset to page 1.
         if index != pageIndex { pageIndex = index }
         return index
     }
 
-    /// The CURRENT page's first hadith becomes the Last Read - it used to record the chapter's first
-    /// hadith on every turn, so "last read" never moved past page one.
-    private func recordPageLastRead(pages: [BuiltPage], at index: Int) {
-        guard pages.indices.contains(index) else { return }
-        for element in pages[index].elements {
-            if let hadith = element.hadith {
-                HadithStore.shared.recordLastRead(book: book, hadith: hadith)
-                return
-            }
-        }
-    }
-
-    /// 1-based ordinals by `idInBook`, memoized per chapter. The old arithmetic
-    /// (`idInBook - first.idInBook + 1`) assumed a chapter's ids are gapless - any gap in the source
-    /// data displayed a wrong (even out-of-range) position. Position IS the ordinal; derive it from it.
-    private static var ordinalCache: [String: [Int: Int]] = [:]
-
-    /// The hadith's position within this chapter, for the header capsule ("3 - 102 Book").
-    private func chapterHadithNumber(_ hadith: HadithBookData.Hadith) -> Int? {
-        let key = "\(book.slug)-\(chapter?.id ?? -1)"
-        if let map = Self.ordinalCache[key] { return map[hadith.idInBook] }
-        // `uniquingKeysWith`: the whole point of this rewrite is that CDN ids are imperfect - a
-        // duplicate idInBook within a chapter must show the first position, not trap the app.
-        let map = Dictionary(chapterHadiths.enumerated().map { ($1.idInBook, $0 + 1) },
-                             uniquingKeysWith: { first, _ in first })
-        if Self.ordinalCache.count > 48 { Self.ordinalCache.removeAll(keepingCapacity: true) }
-        Self.ordinalCache[key] = map
-        return map[hadith.idInBook]
-    }
-
-    /// The page header's actions, shared verbatim by the ellipsis Menu and the long-press context menu.
-    @ViewBuilder
-    private func hadithHeaderActions(_ hadith: HadithBookData.Hadith, isBookmarked: Bool) -> some View {
-        Button {
-            settings.hapticFeedback()
-            withAnimation(.easeInOut) { HadithStore.shared.toggleBookmark(book: book, hadith: hadith) }
-        } label: {
-            Label(isBookmarked ? "Remove Bookmark" : "Bookmark Hadith",
-                  systemImage: isBookmarked ? "bookmark.fill" : "bookmark")
-        }
-
-        Button {
-            settings.hapticFeedback()
-            UIPasteboard.general.string = HadithShareSheet.composedText(book: book, hadith: hadith)
-        } label: {
-            Label("Copy Hadith", systemImage: "doc.on.doc")
-        }
-
-        Button {
-            settings.hapticFeedback()
-            presentSystemShareSheet(items: [HadithShareSheet.composedText(book: book, hadith: hadith)])
-        } label: {
-            Label("Share Hadith", systemImage: "square.and.arrow.up")
-        }
-    }
-
-    private func pageBody(_ elements: [PageElement]) -> some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 12) {
-                ForEach(elements) { element in
-                    blockView(element)
-                }
-            }
-            .padding(.horizontal, 20)
-            .padding(.vertical, 12)
-        }
-    }
-
-    /// One flowed block, rendered with the reading rows' exact styles (fonts, comma fallback, Allah
-    /// highlighting) - the page IS the row, just flowing across pages.
-    @ViewBuilder
-    private func blockView(_ element: PageElement) -> some View {
-        switch element {
-        case .hadithHeader(let hadith):
-            // The reading row's exact header grammar: tap the pill to toggle the bookmark (tinted +
-            // corner badge when set), and the same actions behind an always-ellipsis button - page
-            // mode used to offer only a long-press context menu, which read as "can't bookmark here".
-            let isBookmarked = HadithStore.shared.isBookmarked(slug: book.slug, idInBook: hadith.idInBook)
-
-            HStack(spacing: 8) {
-                HStack(spacing: 5) {
-                    if let chapterNumber = chapterHadithNumber(hadith) {
-                        Text("\(chapterNumber)")
-                            .font(.subheadline.monospacedDigit().weight(.semibold))
-
-                        Text("-")
-                            .font(.caption.weight(.semibold))
-                            .opacity(0.55)
-                    }
-
-                    Text(hadith.displayNumber)
-                        .font(.subheadline.monospacedDigit().weight(.semibold))
-
-                    Text(book.englishTitle)
-                        .font(.caption.weight(.semibold))
-                }
-                .foregroundColor(settings.accentColor.color)
-                .lineLimit(1)
-                .minimumScaleFactor(0.6)
-                .padding(.horizontal, 8)
-                .frame(height: 26)
-                .conditionalGlassEffect(
-                    useColor: isBookmarked ? 0.3 : nil,
-                    customTint: isBookmarked ? settings.accentColor.color : nil,
-                    interactive: false
-                )
-                .contentShape(Rectangle())
-                .onTapGesture {
-                    settings.hapticFeedback()
-                    withAnimation(.easeInOut) { HadithStore.shared.toggleBookmark(book: book, hadith: hadith) }
-                }
-                .overlay(alignment: .topTrailing) {
-                    if isBookmarked {
-                        Image(systemName: "bookmark.fill")
-                            .font(.caption2)
-                            .foregroundStyle(settings.accentColor.color)
-                            .padding(4)
-                            .offset(x: 8, y: -6)
-                    }
-                }
-
-                Spacer(minLength: 0)
-
-                Menu {
-                    hadithHeaderActions(hadith, isBookmarked: isBookmarked)
-                } label: {
-                    Image(systemName: "ellipsis.circle")
-                        .resizable()
-                        .aspectRatio(contentMode: .fit)
-                        .frame(width: 23, height: 23)
-                        .foregroundColor(settings.accentColor.color)
-                        .conditionalGlassEffect()
-                        .frame(width: 26, height: 26)
-                        .contentShape(Rectangle())
-                }
-            }
-            .contextMenu {
-                hadithHeaderActions(hadith, isBookmarked: isBookmarked)
-            }
-
-        case .arabic(let hadith):
-            // The font comes from `hadithArabicFont(for:)`: the longest narrations fall back to the
-            // system face, because the custom KFGQPC faces DROP contextual shaping past a length
-            // cliff and every letter renders isolated (see `arabicShapingCharacterLimit`).
-            HighlightedSnippet(
-                source: hadith.arabic,
-                term: "",
-                font: settings.hadithArabicFont(for: hadith.arabic, size: settings.hadithArabicFontSize),
-                accent: settings.accentColor.color,
-                fg: .primary,
-                highlightAllahNames: settings.highlightAllahNamesHadith
-            )
-            .arabicFontDesign(custom: settings.hadithArabicUsesCustomFace(for: hadith.arabic))
-            .multilineTextAlignment(.trailing)
-            .lineSpacing(6)
-            .frame(maxWidth: .infinity, alignment: .trailing)
-            .fixedSize(horizontal: false, vertical: true)
-            .textSelection(.enabled)
-
-        case .narrator(let hadith):
-            // HighlightedSnippet (not a plain Text) so the narrator line gets the Allah highlight in
-            // page mode too - it's English text like the body, and the list rows already color it.
-            HighlightedSnippet(
-                source: hadith.english.narrator,
-                term: "",
-                font: .system(size: settings.hadithEnglishFontSize).italic(),
-                accent: settings.accentColor.color,
-                fg: .secondary,
-                highlightAllahNames: settings.highlightAllahNamesHadith
-            )
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .fixedSize(horizontal: false, vertical: true)
-            .textSelection(.enabled)
-
-        case .english(let hadith):
-            HighlightedSnippet(
-                source: hadith.english.text,
-                term: "",
-                font: .system(size: settings.hadithEnglishFontSize),
-                accent: settings.accentColor.color,
-                fg: .primary,
-                highlightAllahNames: settings.highlightAllahNamesHadith
-            )
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .fixedSize(horizontal: false, vertical: true)
-            .textSelection(.enabled)
-
-        case .grades(let hadith):
-            // The reading rows' grade line, verbatim - never parsed, ranked, or colored.
-            HadithGradeLine(grades: hadith.grades)
-                .textSelection(.enabled)
-        }
-    }
-
-    private func pagerFooter(pageCount: Int) -> some View {
-        VStack(spacing: 6) {
+    private func pagerFooter(hadiths: ArraySlice<HadithBookData.Hadith>) -> some View {
+        let pageCount = hadiths.count
+        return VStack(spacing: 6) {
             TrackedBar(
                 fraction: pageCount > 1 ? CGFloat(pageIndex) / CGFloat(pageCount - 1) : 1,
                 height: 3,
@@ -2935,7 +2818,7 @@ struct HadithPagedView: View {
             .padding(.horizontal, 2)
 
             if activePicker != nil {
-                inlinePicker(pageCount: pageCount)
+                inlinePicker(hadiths: hadiths)
                     .transition(.move(edge: .bottom).combined(with: .opacity))
             }
 
@@ -3000,8 +2883,9 @@ struct HadithPagedView: View {
 
     /// The hadith and chapter pickers, in place rather than as a sheet - the mushaf's page/juz picker
     /// chrome (xmark / title / checkmark over a wheel), reshaped for this reader.
-    private func inlinePicker(pageCount: Int) -> some View {
-        VStack(spacing: 0) {
+    private func inlinePicker(hadiths: ArraySlice<HadithBookData.Hadith>) -> some View {
+        let pageCount = hadiths.count
+        return VStack(spacing: 0) {
             HStack {
                 Button {
                     settings.hapticFeedback()
@@ -3048,9 +2932,10 @@ struct HadithPagedView: View {
                 if activePicker == .hadith {
                     Picker("Hadith", selection: $hadithPickerSelection) {
                         ForEach(0..<max(pageCount, 1), id: \.self) { i in
-                            // Within-chapter position plus the book-wide citation number.
-                            if chapterHadiths.indices.contains(i) {
-                                Text("Hadith \(i + 1)  (#\(chapterHadiths[i].displayNumber))").tag(i)
+                            // Within-chapter position plus the book-wide citation number. The slice
+                            // is read in place - it used to be COPIED twice per wheel row.
+                            if i < pageCount {
+                                Text("Hadith \(i + 1)  (#\(hadiths[hadiths.startIndex + i].displayNumber))").tag(i)
                             } else {
                                 Text("Hadith \(i + 1)").tag(i)
                             }
@@ -3075,43 +2960,187 @@ struct HadithPagedView: View {
     }
 }
 
-#endif
+/// One page of the paged reader: the hadith's header capsule and its text blocks, rendered with the
+/// reading rows' exact styles (fonts, comma fallback, Allah highlighting) - the page IS the row, just
+/// flowing across pages. A separate View so the `.page` TabView evaluates only the pages it realizes.
+private struct HadithPageContent: View {
+    @ObservedObject private var settings = Settings.shared
+    /// The header's bookmark tint reads user marks - this observation refreshes it on a toggle.
+    @ObservedObject private var userData = HadithUserData.shared
 
-#if os(iOS)
-/// Builds (or disk-loads) one book's semantic corpus - shared by the book screen's search and the
-/// within-chapter search, which scope the same corpus differently.
-@MainActor
-private func prepareBookSemanticCorpus(_ engine: SemanticSearchEngine, data: HadithBookData, corpusID: String) {
-        guard SemanticSearchEngine.isSupported,
-              !engine.isReady(corpusID),
-              !engine.isBuilding(corpusID) else { return }
-        // The count, not the texts: the version must not be what forces the whole book into memory.
-        let version = "v3-\(data.hadiths.count)"
-        // Disk-first probe with no texts at all - a corpus built in an earlier session loads in one
-        // read, and the gather below never runs. (`prepare` no-ops on an empty list past that check.)
-        engine.prepare(corpusID: corpusID, version: version, texts: [])
-        guard !engine.isReady(corpusID) else { return }
+    let book: HadithCatalogBook
+    let hadith: HadithBookData.Hadith
+    /// The hadith's position within its chapter, for the header capsule ("3 - 102 Book").
+    let ordinal: Int
 
-        Task {
-            // OFF-MAIN: this reads every hadith in the book, which over the packs means decompressing
-            // all of it. It used to run inline here, on the main thread, a second after the book opened.
-            let built = await Task.detached(priority: .utility) { () -> (texts: [String], keys: [String]) in
-                var texts: [String] = []
-                var keys: [String] = []
-                texts.reserveCapacity(data.hadiths.count)
-                keys.reserveCapacity(data.hadiths.count)
-                for hadith in data.hadiths {
-                    let strings = hadith.allText
-                    texts.append("\(strings.narrator) \(strings.text)")
-                    // Keyed by idInBook (the all-books corpus's rule): positional mapping meant a data
-                    // update that REORDERS hadiths without changing the count served persisted vectors
-                    // for the wrong hadith. v3 bumps past existing positional caches.
-                    keys.append(String(hadith.idInBook))
+    var body: some View {
+        RenderCounter.hit("HadithPageContent")
+        // One block lookup for the whole page; the blocks below decide their own presence from it.
+        let text = hadith.allText
+        let grades = hadith.grades
+        let isBookmarked = userData.isBookmarked(slug: book.slug, idInBook: hadith.idInBook)
+
+        return ScrollView {
+            VStack(alignment: .leading, spacing: 12) {
+                header(isBookmarked: isBookmarked)
+
+                if settings.showHadithArabic, !text.arabic.isEmpty {
+                    // The font comes from `hadithArabicFont(for:)`: the longest narrations fall back
+                    // to the system face, because the custom KFGQPC faces DROP contextual shaping past
+                    // a length cliff and every letter renders isolated (see `arabicShapingCharacterLimit`).
+                    let usesCustomFace = settings.hadithArabicUsesCustomFace(for: text.arabic)
+                    HighlightedSnippet(
+                        source: text.arabic,
+                        term: "",
+                        font: usesCustomFace
+                            ? Font.arabic(settings.nonQuranArabicFontName, size: settings.hadithArabicFontSize)
+                            : .system(size: settings.hadithArabicFontSize),
+                        accent: settings.accentColor.color,
+                        fg: .primary,
+                        highlightAllahNames: settings.highlightAllahNamesHadith
+                    )
+                    .arabicFontDesign(custom: usesCustomFace)
+                    .multilineTextAlignment(.trailing)
+                    .lineSpacing(6)
+                    .frame(maxWidth: .infinity, alignment: .trailing)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .textSelection(.enabled)
                 }
-                return (texts, keys)
-            }.value
-            engine.prepare(corpusID: corpusID, version: version,
-                                   texts: built.texts, keys: built.keys)
+
+                if settings.showHadithEnglish {
+                    if !text.narrator.isEmpty {
+                        // HighlightedSnippet (not a plain Text) so the narrator line gets the Allah
+                        // highlight in page mode too - it's English text like the body.
+                        HighlightedSnippet(
+                            source: text.narrator,
+                            term: "",
+                            font: .system(size: settings.hadithEnglishFontSize).italic(),
+                            accent: settings.accentColor.color,
+                            fg: .secondary,
+                            highlightAllahNames: settings.highlightAllahNamesHadith
+                        )
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .textSelection(.enabled)
+                    }
+
+                    if !text.text.isEmpty {
+                        HighlightedSnippet(
+                            source: text.text,
+                            term: "",
+                            font: .system(size: settings.hadithEnglishFontSize),
+                            accent: settings.accentColor.color,
+                            fg: .primary,
+                            highlightAllahNames: settings.highlightAllahNamesHadith
+                        )
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .textSelection(.enabled)
+                    }
+                }
+
+                // The grade line trails the text - after the English, or after the Arabic when
+                // English is off or absent (the reading rows' placement). Always shown: the grading
+                // is part of the hadith, not a preference.
+                if !grades.isEmpty {
+                    HadithGradeLine(grades: grades)
+                        .textSelection(.enabled)
+                }
+            }
+            .padding(.horizontal, 20)
+            .padding(.vertical, 12)
         }
+    }
+
+    /// The reading row's exact header grammar: tap the pill to toggle the bookmark (tinted + corner
+    /// badge when set), and the same actions behind an always-ellipsis button - page mode used to
+    /// offer only a long-press context menu, which read as "can't bookmark here".
+    private func header(isBookmarked: Bool) -> some View {
+        HStack(spacing: 8) {
+            HStack(spacing: 5) {
+                Text("\(ordinal)")
+                    .font(.subheadline.monospacedDigit().weight(.semibold))
+
+                Text("-")
+                    .font(.caption.weight(.semibold))
+                    .opacity(0.55)
+
+                Text(hadith.displayNumber)
+                    .font(.subheadline.monospacedDigit().weight(.semibold))
+
+                Text(book.englishTitle)
+                    .font(.caption.weight(.semibold))
+            }
+            .foregroundColor(settings.accentColor.color)
+            .lineLimit(1)
+            .minimumScaleFactor(0.6)
+            .padding(.horizontal, 8)
+            .frame(height: 26)
+            .conditionalGlassEffect(
+                useColor: isBookmarked ? 0.3 : nil,
+                customTint: isBookmarked ? settings.accentColor.color : nil,
+                interactive: false
+            )
+            .contentShape(Rectangle())
+            .onTapGesture {
+                settings.hapticFeedback()
+                withAnimation(.easeInOut) { HadithStore.shared.toggleBookmark(book: book, hadith: hadith) }
+            }
+            .overlay(alignment: .topTrailing) {
+                if isBookmarked {
+                    Image(systemName: "bookmark.fill")
+                        .font(.caption2)
+                        .foregroundStyle(settings.accentColor.color)
+                        .padding(4)
+                        .offset(x: 8, y: -6)
+                }
+            }
+
+            Spacer(minLength: 0)
+
+            Menu {
+                headerActions(isBookmarked: isBookmarked)
+            } label: {
+                Image(systemName: "ellipsis.circle")
+                    .resizable()
+                    .aspectRatio(contentMode: .fit)
+                    .frame(width: 23, height: 23)
+                    .foregroundColor(settings.accentColor.color)
+                    .conditionalGlassEffect()
+                    .frame(width: 26, height: 26)
+                    .contentShape(Rectangle())
+            }
+        }
+        .contextMenu {
+            headerActions(isBookmarked: isBookmarked)
+        }
+    }
+
+    /// The page header's actions, shared verbatim by the ellipsis Menu and the long-press context menu.
+    @ViewBuilder
+    private func headerActions(isBookmarked: Bool) -> some View {
+        Button {
+            settings.hapticFeedback()
+            withAnimation(.easeInOut) { HadithStore.shared.toggleBookmark(book: book, hadith: hadith) }
+        } label: {
+            Label(isBookmarked ? "Remove Bookmark" : "Bookmark Hadith",
+                  systemImage: isBookmarked ? "bookmark.fill" : "bookmark")
+        }
+
+        Button {
+            settings.hapticFeedback()
+            UIPasteboard.general.string = HadithShareSheet.composedText(book: book, hadith: hadith)
+        } label: {
+            Label("Copy Hadith", systemImage: "doc.on.doc")
+        }
+
+        Button {
+            settings.hapticFeedback()
+            presentSystemShareSheet(items: [HadithShareSheet.composedText(book: book, hadith: hadith)])
+        } label: {
+            Label("Share Hadith", systemImage: "square.and.arrow.up")
+        }
+    }
 }
+
 #endif

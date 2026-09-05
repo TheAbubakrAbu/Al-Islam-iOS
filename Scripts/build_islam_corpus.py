@@ -38,9 +38,15 @@ OUT = ROOT / "Resources/Data/Islam/IslamArticles.json.deflate"
 STR = r'"""(?:.*?)"""|"(?:[^"\\\n]|\\.)*"'
 
 STRUCT_RE = re.compile(r"^struct (\w+): View \{", re.M)
-SECTION_RE = re.compile(r"Section\(header:\s*(?:ArticleHeader|Text)\((" + STR + r")\)", re.S)
-TEXT_RE = re.compile(r"(?<![\w.])Text\((" + STR + r")\)", re.S)
-QUOTE_RE = re.compile(r"ScriptureQuote\(\s*text:\s*(" + STR + r")", re.S)
+# `Text("...")`, `Text(verbatim: "...")` and `Text(articleMarkdown: "...")` are the same prose: the
+# article files spell plain literals verbatim and markdown ones through the parse cache (Performance
+# Guide, Phase 6 step 2), so the corpus reads all three.
+# The data-backed articles (step 3) spell the same prose as `ArticleSection("HEADING", [` with
+# `.text("...")`, `.markdown("...")` and `.quote(text: "...")` blocks; read those too.
+TEXT_ARG = r"(?:verbatim:\s*|articleMarkdown:\s*)?"
+SECTION_RE = re.compile(r"(?:Section\(header:\s*(?:ArticleHeader\(|Text\(" + TEXT_ARG + r")|ArticleSection\()(" + STR + r")[),]", re.S)
+TEXT_RE = re.compile(r"(?:(?<![\w.])Text\(" + TEXT_ARG + r"|(?<!\w)\.(?:text|markdown)\()(" + STR + r")\)", re.S)
+QUOTE_RE = re.compile(r"(?:ScriptureQuote|(?<!\w)\.quote)\(\s*text:\s*(" + STR + r")", re.S)
 TITLE_RE = re.compile(r"\.navigationTitle\((" + STR + r")\)", re.S)
 
 # Views that are chrome, not an article: the index screens and the shared pieces.

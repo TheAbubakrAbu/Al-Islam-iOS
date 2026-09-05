@@ -87,6 +87,8 @@ struct PlaceLocatorProfile {
 
 struct PlaceLocatorView: View {
     @ObservedObject private var settings = Settings.shared
+    /// Prayer times and the location publish from `LiveState`, not `Settings` (see its comment).
+    @ObservedObject private var live = LiveState.shared
     @Environment(\.dismiss) private var dismiss
     @Environment(\.colorScheme) private var sysScheme
 
@@ -140,7 +142,7 @@ struct PlaceLocatorView: View {
     }
 
     private var hasRealLocation: Bool {
-        if let cur = settings.currentLocation, cur.latitude != 1000, cur.longitude != 1000 { return true }
+        if let cur = live.currentLocation, cur.latitude != 1000, cur.longitude != 1000 { return true }
         return false
     }
 
@@ -231,7 +233,7 @@ struct PlaceLocatorView: View {
     private var markers: [MarkerItem] {
         var items: [MarkerItem] = []
 
-        if let cur = settings.currentLocation,
+        if let cur = live.currentLocation,
            cur.latitude != 1000,
            cur.longitude != 1000 {
             items.append(
@@ -295,7 +297,7 @@ struct PlaceLocatorView: View {
             // A fan-out of ~6 concurrent MKLocalSearch requests started just before leaving would run to
             // completion for a screen nobody is looking at - cancel it with the screen.
             .onDisappear { searchTask?.cancel() }
-            .onReceive(settings.$currentLocation) { location in
+            .onReceive(live.$currentLocation) { location in
                 guard awaitingFirstFix,
                       let location, location.latitude != 1000, location.longitude != 1000 else { return }
                 awaitingFirstFix = false
@@ -507,7 +509,7 @@ struct PlaceLocatorView: View {
     }
 
     private func centerOnCurrentLocation() {
-        if let cur = settings.currentLocation, cur.latitude != 1000, cur.longitude != 1000 {
+        if let cur = live.currentLocation, cur.latitude != 1000, cur.longitude != 1000 {
             updateRegion(to: cur.coordinate)
         } else if let home = settings.homeLocation {
             updateRegion(to: home.coordinate)
@@ -581,7 +583,7 @@ struct PlaceLocatorView: View {
     }
 
     private func distanceFromCurrentLocation(to item: MKMapItem) -> String? {
-        guard let cur = settings.currentLocation,
+        guard let cur = live.currentLocation,
               cur.latitude != 1000,
               cur.longitude != 1000 else { return nil }
 
@@ -611,7 +613,7 @@ struct PlaceLocatorView: View {
         // distance sort all run in `performPlaceSearch`, off the main actor.
         let sortOrigin: CLLocationCoordinate2D? = {
             guard trimmed.isEmpty else { return nil }
-            if let cur = settings.currentLocation, cur.latitude != 1000, cur.longitude != 1000 {
+            if let cur = live.currentLocation, cur.latitude != 1000, cur.longitude != 1000 {
                 return cur.coordinate
             }
             if let homeCoordinate {
@@ -670,7 +672,9 @@ struct PlaceLocatorView: View {
     }
 
     private func warmHomeCacheIfNeeded() {
-        guard let home = settings.homeLocation else { return }
+        // Reduced tier: the visible search is enough traffic; the home cache refreshes on a full-tier
+        // visit or when the map opens at home (Performance Guide, Phase 6 step 13).
+        guard !AppPerformance.shouldAvoidBroadPrewarm, let home = settings.homeLocation else { return }
         // When the map opened near home, the live search running right now covers the same area and
         // already persists into the cache (`persistHomeCacheIfNeeded` uses the same radius) - a second
         // identical five-query fan-out would just double the MKLocalSearch traffic. Warm only when the
@@ -767,9 +771,17 @@ private func performPlaceSearch(
     limit: Int = 12
 ) async -> [MKMapItem] {
     var buckets = [[MKMapItem]](repeating: [], count: queries.count)
+    // Five or six MKLocalSearch requests in flight at once on the full tier; two at a time on the
+    // reduced tier, where the radio and the CPU are what Low Power Mode is rationing.
+    let maxInFlight = AppPerformance.shouldAvoidBroadPrewarm ? 2 : queries.count
 
     await withTaskGroup(of: (Int, [MKMapItem]).self) { group in
+        var inFlight = 0
         for (index, query) in queries.enumerated() {
+            if inFlight >= maxInFlight, let (doneIndex, items) = await group.next() {
+                buckets[doneIndex] = items
+                inFlight -= 1
+            }
             group.addTask {
                 let request = MKLocalSearch.Request()
                 request.naturalLanguageQuery = query
@@ -782,6 +794,7 @@ private func performPlaceSearch(
                 let response = try? await MKLocalSearch(request: request).start()
                 return (index, response?.mapItems ?? [])
             }
+            inFlight += 1
         }
         for await (index, items) in group {
             buckets[index] = items

@@ -44,8 +44,9 @@ final class ForegroundAdhanPlayer: NSObject, ObservableObject {
     private override init() {
         super.init()
         // Re-arm whenever prayer times or relevant settings change (debounced to batch rapid edits and the
-        // burst of changes during a prayer-time refresh).
+        // burst of changes during a prayer-time refresh). Prayer times publish from `LiveState`.
         Settings.shared.objectWillChange
+            .merge(with: LiveState.shared.objectWillChange)
             .debounce(for: .seconds(1), scheduler: DispatchQueue.main)
             .sink { [weak self] in self?.reschedule() }
             .store(in: &cancellables)

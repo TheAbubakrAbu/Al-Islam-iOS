@@ -11,6 +11,8 @@ import Adhan
 /// sunrise) are dropped rather than shown as "Unavailable", so the card never pads itself with dead cells.
 struct GlanceCard: View {
     @ObservedObject private var settings = Settings.shared
+    /// Prayer times and the location publish from `LiveState`, not `Settings` (see its comment).
+    @ObservedObject private var live = LiveState.shared
 
     private static let kaaba = CLLocation(latitude: 21.4225, longitude: 39.8262)
 
@@ -37,7 +39,7 @@ struct GlanceCard: View {
         var items: [GlanceItem] = []
 
         items.append(.init(icon: "location.fill", title: "Current Location",
-                           value: settings.currentLocation?.city ?? "Unavailable"))
+                           value: live.currentLocation?.city ?? "Unavailable"))
 
         items.append(.init(icon: "function", title: "Prayer Calculation", value: calculationSummary))
 
@@ -238,7 +240,7 @@ struct GlanceCard: View {
     // MARK: - Helpers
 
     private var validCoordinate: CLLocationCoordinate2D? {
-        guard let location = settings.currentLocation,
+        guard let location = live.currentLocation,
               location.latitude != 1000, location.longitude != 1000
         else { return nil }
         return CLLocationCoordinate2D(latitude: location.latitude, longitude: location.longitude)

@@ -224,6 +224,8 @@ struct SkyView: View {
 /// The sky card's drawing, for one moment `now`. See `SkyView`.
 struct SkyCard: View {
     @ObservedObject private var settings = Settings.shared
+    /// Prayer times and the location publish from `LiveState`, not `Settings` (see its comment).
+    @ObservedObject private var live = LiveState.shared
     @ObservedObject private var scrubber = DayScrubber.shared
     // Publishes only when the picked DAY changes, so following it costs one re-render per date change.
     @ObservedObject private var selectedDay = SelectedDayPreview.shared
@@ -265,7 +267,7 @@ struct SkyCard: View {
     /// name. Feeding the scrubber the full six would look up "Dhuhr" while the row says "Dhuhr/Asr", and the
     /// highlight would silently vanish for anyone in traveling mode.
     private var highlightTimeline: [Prayer] {
-        let displayed = settings.prayers?.prayers ?? todaysPrayers
+        let displayed = live.prayers?.prayers ?? todaysPrayers
         return settings.prayersIncludingOptional(displayed, for: now)
     }
 
@@ -280,7 +282,7 @@ struct SkyCard: View {
     private var displayedDate: Date { scrubber.scrubbedDate ?? now }
 
     private var displayedPrayer: Prayer? {
-        scrubber.previewPrayer ?? settings.currentPrayer
+        scrubber.previewPrayer ?? live.currentPrayer
     }
 
     /// The TRUE prayer period at `date`, resolved against the FULL prayer set - never the traveling
@@ -386,18 +388,18 @@ struct SkyCard: View {
             HStack(alignment: .top, spacing: 8) {
                 SkyPrayerColumn(
                     title: "CURRENT",
-                    displayName: settings.currentPrayer?.displayName,
-                    image: settings.currentPrayer?.image,
-                    timeText: settings.currentPrayer.map { settings.formatDate($0.time) },
+                    displayName: live.currentPrayer?.displayName,
+                    image: live.currentPrayer?.image,
+                    timeText: live.currentPrayer.map { settings.formatDate($0.time) },
                     trailing: false
                 )
                 .equatable()
                 Spacer(minLength: 0)
                 SkyPrayerColumn(
                     title: "UPCOMING",
-                    displayName: settings.nextPrayer?.displayName,
-                    image: settings.nextPrayer?.image,
-                    timeText: settings.nextPrayer.map { settings.formatDate($0.time) },
+                    displayName: live.nextPrayer?.displayName,
+                    image: live.nextPrayer?.image,
+                    timeText: live.nextPrayer.map { settings.formatDate($0.time) },
                     trailing: true
                 )
                 .equatable()
@@ -410,7 +412,7 @@ struct SkyCard: View {
             moonAndClock
                 .padding(.bottom, 10)
 
-            if settings.prayers != nil {
+            if live.prayers != nil {
                 // Equatable-gated: the countdown's real updates come from its own timer state and its own
                 // Settings observation, so this card's per-second re-render has nothing new to tell it.
                 PrayerCountdown(presentation: .skyFooter)

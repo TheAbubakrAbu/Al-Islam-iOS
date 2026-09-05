@@ -22,6 +22,8 @@ final class AyahSheetPresence: ObservableObject {
 }
 
 struct AyahRow: View, Equatable {
+    /// Bumped when an off-main tajweed paint for this row lands (see `arabicTajweedText`).
+    @State private var tajweedPaintGeneration = 0
     @ObservedObject var settings = Settings.shared
     @ObservedObject var quranData = QuranData.shared
     /// Only the highlighter's wash reads this: the same hue needs a heavier alpha on the dark page to
@@ -393,14 +395,31 @@ struct AyahRow: View, Equatable {
     private func arabicTajweedText(displayText renderedDisplayText: String, beginner: Bool) -> AttributedString? {
         guard shouldShowTajweedColors else { return nil }
         let text = ayah.displayArabicText(surahId: surah.id, clean: false, qiraahOverride: comparisonQiraahOverride)
-        return TajweedStore.shared.attributedText(
+        switch TajweedStore.shared.cachedAttributedText(
             surah: surah.id,
             ayah: ayah.id,
             text: text,
             displayText: renderedDisplayText,
             cleanDisplayText: settings.cleanArabicText,
             beginnerSpacing: beginner
-        )
+        ) {
+        case .painted(let styled):
+            return styled
+        case .nothing:
+            return nil
+        case nil:
+            // Ahead of the warm: never the cluster analysis in body. Paint off main and re-render
+            // this one row (the @State bump) when the cache holds it.
+            TajweedStore.shared.paintOffMain(
+                surah: surah.id,
+                ayah: ayah.id,
+                text: text,
+                displayText: renderedDisplayText,
+                cleanDisplayText: settings.cleanArabicText,
+                beginnerSpacing: beginner
+            ) { tajweedPaintGeneration &+= 1 }
+            return nil
+        }
     }
 
     /// The color of this row's trailing ayah number. The prints ring an ayah's number medallion
@@ -740,7 +759,7 @@ struct AyahRow: View, Equatable {
                     .padding(.vertical, ayahHighlightBackgroundVerticalPadding)
             }
 
-            VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: 8) {
                 HStack(spacing: 4) {
                     Text("\(surah.id):\(ayah.id)")
                         .font(.subheadline.monospacedDigit().weight(.semibold))
@@ -867,7 +886,7 @@ struct AyahRow: View, Equatable {
                     }
                     #endif
                 }
-                .padding(.bottom, settings.showArabicText ? 8 : 2)
+                .padding(.bottom, settings.showArabicText ? 4 : 2)
                 .padding(.trailing, 1)
 
                 ayahTextBlock(
@@ -1112,7 +1131,7 @@ struct AyahRow: View, Equatable {
         let prefixOnSaheeh    = groupHasEnglishOrTranslit && !showTranslit && showEnglishSaheeh
         let prefixOnMustafa   = groupHasEnglishOrTranslit && !showTranslit && !showEnglishSaheeh && showEnglishMustafa
 
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: 10) {
             if !currentNote.isEmpty {
                 HStack(alignment: .top, spacing: 8) {
                     Image(systemName: "note.text")
@@ -1316,7 +1335,7 @@ struct AyahRow: View, Equatable {
             if showEnglishSaheeh {
                 let prefix = prefixOnSaheeh ? "\(ayah.id). " : ""
                 let txt = prefix + ayah.textEnglishSaheeh
-                VStack(alignment: .leading, spacing: 4) {
+                VStack(alignment: .leading, spacing: 2) {
                     HighlightedSnippet(
                         source: txt,
                         term: highlightQuery,
@@ -1327,9 +1346,9 @@ struct AyahRow: View, Equatable {
                         guaranteeMatch: matchedSaheeh,
                         extraHighlightRanges: Self.offsetSpans(crossSaheeh, by: (prefix as NSString).length)
                     )
-                    Text("- Saheeh International")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+                    Text("Saheeh International")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
                 }
                 .multilineTextAlignment(.leading)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -1339,7 +1358,7 @@ struct AyahRow: View, Equatable {
             if showEnglishMustafa {
                 let prefix = prefixOnMustafa ? "\(ayah.id). " : ""
                 let txt = prefix + ayah.textEnglishMustafa
-                VStack(alignment: .leading, spacing: 4) {
+                VStack(alignment: .leading, spacing: 2) {
                     HighlightedSnippet(
                         source: txt,
                         term: highlightQuery,
@@ -1350,9 +1369,9 @@ struct AyahRow: View, Equatable {
                         guaranteeMatch: matchedMustafa,
                         extraHighlightRanges: Self.offsetSpans(crossMustafa, by: (prefix as NSString).length)
                     )
-                    Text("- Clear Quran (Mustafa Khattab)")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+                    Text("Clear Quran (Mustafa Khattab)")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
                 }
                 .multilineTextAlignment(.leading)
                 .frame(maxWidth: .infinity, alignment: .leading)

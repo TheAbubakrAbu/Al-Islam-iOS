@@ -1,6 +1,7 @@
 import SwiftUI
 import AVFoundation
 import MediaPlayer
+import Combine
 import Foundation
 import CryptoKit
 import Network
@@ -15,6 +16,133 @@ struct SurahQueueItem: Identifiable, Equatable {
 // NOT here - so shared chrome compiles in sibling apps without the Quran module. This player feeds it
 // from the `isPlaying`/`isPaused` didSets and installs its bar content + the speech session hook in
 // `init` below; that self-registration is the Quran module's entire wiring into shared code.
+/// The playback failure dialog's state. Its own object so the Quran root and the readers, which
+/// present the dialog, need not observe the player and its per-ayah publishes (see `NowPlayingState`).
+final class PlaybackAlerts: ObservableObject {
+    @Published var showInternetAlert = false
+    @Published var playbackAlertTitle = "Playback Error"
+    @Published var playbackAlertMessage = "Unable to load this recitation right now. Please try again."
+    @Published var offlineReciterSwitch: QuranPlayer.OfflineReciterSwitch?
+    init() { ObjectPublishCounter.attach(self, label: "PlaybackAlerts") }
+}
+
+/// The three history lists the Quran tab's summary tiles draw. Same reason as `PlaybackAlerts`: the
+/// tiles used to observe the whole player and re-evaluate on every ayah advance. The player installs
+/// the persistence hooks in its init; writes through the player's forwarding properties or directly
+/// on this object both persist.
+final class PlaybackHistory: ObservableObject {
+    @Published var listeningHistory: [ListeningHistoryItem] = [] { didSet { didChangeListening?() } }
+    @Published var readingHistory: [ReadingHistoryItem] = [] { didSet { didChangeReading?() } }
+    @Published var ayahListeningHistory: [AyahListeningHistoryItem] = [] { didSet { didChangeAyahListening?() } }
+    var didChangeListening: (() -> Void)?
+    var didChangeReading: (() -> Void)?
+    var didChangeAyahListening: (() -> Void)?
+    init() { ObjectPublishCounter.attach(self, label: "PlaybackHistory") }
+}
+
+/// The coarse play state for views that mount or enable a control on it and draw nothing per ayah:
+/// the Quran root (the bar's slot, the stop button) and the summary tiles (their play buttons).
+/// Changes a handful of times per session, where `NowPlayingState` changes on every ayah. Refreshed
+/// from the same coalesced pass as the snapshot; each field publishes only when it changes.
+final class PlaybackPhase: ObservableObject {
+    @Published private(set) var isPlaying = false
+    @Published private(set) var isPaused = false
+    @Published private(set) var isLoading = false
+    @Published private(set) var isPlayingSurah = false
+    init() { ObjectPublishCounter.attach(self, label: "PlaybackPhase") }
+
+    func update(isPlaying: Bool, isPaused: Bool, isLoading: Bool, isPlayingSurah: Bool) {
+        if self.isPlaying != isPlaying { self.isPlaying = isPlaying }
+        if self.isPaused != isPaused { self.isPaused = isPaused }
+        if self.isLoading != isLoading { self.isLoading = isLoading }
+        if self.isPlayingSurah != isPlayingSurah { self.isPlayingSurah = isPlayingSurah }
+    }
+}
+
+/// The slice of the player the Now Playing card draws, republished at most once per main-queue turn.
+///
+/// An ayah advance writes the player five or six times in a row (`currentAyahNumber`, the four
+/// custom-range counters, `isLoading` from the item's status observer), and the card is mounted once
+/// per list on screen: the Quran tab's own inset plus `PlaybackVisibility.barContent` under every
+/// other tab's list. Observing the player directly cost sixteen to twenty-two card bodies per
+/// advance. The card observes this object instead: the player's `objectWillChange` schedules one
+/// refresh on the main queue, and the refresh publishes only when a field the card reads changed
+/// (`Snapshot` is `Equatable`). Actions (`pause`, `seek`, ...) and the `AVPlayer` itself are still
+/// called on the un-observed player; they publish nothing.
+final class NowPlayingState: ObservableObject {
+    struct Snapshot: Equatable {
+        var isPlaying = false
+        var isPaused = false
+        var isLoading = false
+        var currentSurahNumber: Int?
+        var currentAyahNumber: Int?
+        var isPlayingSurah = false
+        var isPlayingCustomRange = false
+        var nowPlayingTitle: String?
+        var nowPlayingReciter: String?
+        var customRangeStartAyah: Int?
+        var customRangeEndAyah: Int?
+        var customRangeRepeatPerAyah = 1
+        var customRangeRepeatSection = 1
+        var customRangeCurrentIndex: Int?
+        var customRangeTotalItems: Int?
+        var customRangeCurrentRepeatWithinAyah: Int?
+        var customRangeRepeatSectionIndex: Int?
+        var surahQueue: [SurahQueueItem] = []
+    }
+
+    @Published private(set) var snapshot = Snapshot()
+    private var refreshScheduled = false
+
+    init() { ObjectPublishCounter.attach(self, label: "NowPlaying") }
+
+    var isPlaying: Bool { snapshot.isPlaying }
+    var isPaused: Bool { snapshot.isPaused }
+    var isLoading: Bool { snapshot.isLoading }
+    var currentSurahNumber: Int? { snapshot.currentSurahNumber }
+    var currentAyahNumber: Int? { snapshot.currentAyahNumber }
+    var isPlayingSurah: Bool { snapshot.isPlayingSurah }
+    var isPlayingCustomRange: Bool { snapshot.isPlayingCustomRange }
+    var nowPlayingTitle: String? { snapshot.nowPlayingTitle }
+    var nowPlayingReciter: String? { snapshot.nowPlayingReciter }
+    var customRangeStartAyah: Int? { snapshot.customRangeStartAyah }
+    var customRangeEndAyah: Int? { snapshot.customRangeEndAyah }
+    var customRangeRepeatPerAyah: Int { snapshot.customRangeRepeatPerAyah }
+    var customRangeRepeatSection: Int { snapshot.customRangeRepeatSection }
+    var customRangeCurrentIndex: Int? { snapshot.customRangeCurrentIndex }
+    var customRangeTotalItems: Int? { snapshot.customRangeTotalItems }
+    var customRangeCurrentRepeatWithinAyah: Int? { snapshot.customRangeCurrentRepeatWithinAyah }
+    var customRangeRepeatSectionIndex: Int? { snapshot.customRangeRepeatSectionIndex }
+    var surahQueue: [SurahQueueItem] { snapshot.surahQueue }
+
+    /// Called from the player's `objectWillChange` (before the write lands), so the read is deferred to
+    /// the next main-queue turn, by which time every write of the burst has landed.
+    func scheduleRefresh(from player: QuranPlayer) {
+        guard !refreshScheduled else { return }
+        refreshScheduled = true
+        DispatchQueue.main.async { [weak self, weak player] in
+            guard let self else { return }
+            self.refreshScheduled = false
+            guard let player else { return }
+            player.phase.update(isPlaying: player.isPlaying, isPaused: player.isPaused,
+                                isLoading: player.isLoading, isPlayingSurah: player.isPlayingSurah)
+            let next = Snapshot(
+                isPlaying: player.isPlaying, isPaused: player.isPaused, isLoading: player.isLoading,
+                currentSurahNumber: player.currentSurahNumber, currentAyahNumber: player.currentAyahNumber,
+                isPlayingSurah: player.isPlayingSurah, isPlayingCustomRange: player.isPlayingCustomRange,
+                nowPlayingTitle: player.nowPlayingTitle, nowPlayingReciter: player.nowPlayingReciter,
+                customRangeStartAyah: player.customRangeStartAyah, customRangeEndAyah: player.customRangeEndAyah,
+                customRangeRepeatPerAyah: player.customRangeRepeatPerAyah, customRangeRepeatSection: player.customRangeRepeatSection,
+                customRangeCurrentIndex: player.customRangeCurrentIndex, customRangeTotalItems: player.customRangeTotalItems,
+                customRangeCurrentRepeatWithinAyah: player.customRangeCurrentRepeatWithinAyah,
+                customRangeRepeatSectionIndex: player.customRangeRepeatSectionIndex,
+                surahQueue: player.surahQueue
+            )
+            if next != self.snapshot { self.snapshot = next }
+        }
+    }
+}
+
 final class QuranPlayer: ObservableObject {
     static let shared = QuranPlayer()
     private static let listeningHistoryKey = "quranListeningHistoryData"
@@ -37,9 +165,20 @@ final class QuranPlayer: ObservableObject {
     @Published var currentAyahNumber: Int?
     @Published var isPlayingSurah = false
     @Published var isPlayingCustomRange = false
-    @Published var showInternetAlert = false
-    @Published var playbackAlertTitle = "Playback Error"
-    @Published var playbackAlertMessage = "Unable to load this recitation right now. Please try again."
+    /// The failure dialog, on `alerts` (see `PlaybackAlerts`); these forward and do not publish on the player.
+    let alerts = PlaybackAlerts()
+    var showInternetAlert: Bool {
+        get { alerts.showInternetAlert }
+        set { alerts.showInternetAlert = newValue }
+    }
+    var playbackAlertTitle: String {
+        get { alerts.playbackAlertTitle }
+        set { alerts.playbackAlertTitle = newValue }
+    }
+    var playbackAlertMessage: String {
+        get { alerts.playbackAlertMessage }
+        set { alerts.playbackAlertMessage = newValue }
+    }
 
     /// Offered alongside the playback alert when streaming is impossible but other reciters have this
     /// surah on disk: the dialog gains a "switch and play" button for `suggested`.
@@ -49,7 +188,10 @@ final class QuranPlayer: ObservableObject {
         let downloadedReciters: [Reciter]
         let suggested: Reciter
     }
-    @Published var offlineReciterSwitch: OfflineReciterSwitch?
+    var offlineReciterSwitch: OfflineReciterSwitch? {
+        get { alerts.offlineReciterSwitch }
+        set { alerts.offlineReciterSwitch = newValue }
+    }
 
     /// Reciter ids whose Minshawi ayah substitution the user has already been told about. Joined with a
     /// unit separator because `Reciter.id` itself contains "|". Remembered across launches.
@@ -67,14 +209,19 @@ final class QuranPlayer: ObservableObject {
     @Published private(set) var customRangeCurrentRepeatWithinAyah: Int?
     @Published private(set) var customRangeRepeatSectionIndex: Int?
 
-    @Published var listeningHistory: [ListeningHistoryItem] = [] {
-        didSet { persistListeningHistory() }
+    /// The history lists, on `history` (see `PlaybackHistory`); these forward and do not publish on the player.
+    let history = PlaybackHistory()
+    var listeningHistory: [ListeningHistoryItem] {
+        get { history.listeningHistory }
+        set { history.listeningHistory = newValue }
     }
-    @Published var readingHistory: [ReadingHistoryItem] = [] {
-        didSet { persistReadingHistory() }
+    var readingHistory: [ReadingHistoryItem] {
+        get { history.readingHistory }
+        set { history.readingHistory = newValue }
     }
-    @Published var ayahListeningHistory: [AyahListeningHistoryItem] = [] {
-        didSet { persistAyahListeningHistory() }
+    var ayahListeningHistory: [AyahListeningHistoryItem] {
+        get { history.ayahListeningHistory }
+        set { history.ayahListeningHistory = newValue }
     }
 
     private var lastSavedListeningSurahNumber: Int?
@@ -115,6 +262,11 @@ final class QuranPlayer: ObservableObject {
     
     var nowPlayingTitle: String?
     var nowPlayingReciter: String?
+    /// What `NowPlayingView` observes (see `NowPlayingState`); refreshed from `objectWillChange` below.
+    let nowPlaying = NowPlayingState()
+    /// The coarse play state (see `PlaybackPhase`), refreshed in the same pass.
+    let phase = PlaybackPhase()
+    private var nowPlayingRefreshSink: AnyCancellable?
 
     private let reciterDownloadManager = ReciterDownloadManager.shared
     private let localSurahStartupBuffer: TimeInterval = 0.03
@@ -129,6 +281,13 @@ final class QuranPlayer: ObservableObject {
 
     private init() {
         ObjectPublishCounter.attach(self, label: "QuranPlayer")
+        nowPlayingRefreshSink = objectWillChange.sink { [weak self] _ in
+            guard let self else { return }
+            self.nowPlaying.scheduleRefresh(from: self)
+        }
+        history.didChangeListening = { [weak self] in self?.persistListeningHistory() }
+        history.didChangeReading = { [weak self] in self?.persistReadingHistory() }
+        history.didChangeAyahListening = { [weak self] in self?.persistAyahListeningHistory() }
         // Self-registration into shared chrome (see the note above the class): the bar the now-playing
         // inset renders, and the speech engine's "does recitation still own the audio session?" probe.
         // Both closures resolve `.shared` lazily at CALL time - never during this init - and both stay
@@ -2432,7 +2591,17 @@ final class ReciterDownloadManager: NSObject, ObservableObject, URLSessionDownlo
     private override init() {
         super.init()
         configureBaseDirectory()
-        restoreOngoingDownloads()
+        // The background `URLSession` (a process-wide service, tens of milliseconds to create) and its
+        // task query used to run right here, inside `QuranPlayer.init`, inside `AlIslamApp.init`: part
+        // of every cold launch's first frame for a download nobody may have. Past the reveal instead;
+        // `session` is lazy, so a system relaunch for background events still creates it on demand
+        // from the AppDelegate hand-off, and the reciter list shows a resumed download a few seconds
+        // after launch instead of at once.
+        Task { @MainActor [weak self] in
+            await AppReveal.waitUntilRevealed()
+            try? await Task.sleep(nanoseconds: 1_000_000_000)
+            self?.restoreOngoingDownloads()
+        }
         dedupeQueue.async {
             self.deduplicateExistingDownloadsIfNeeded()
         }

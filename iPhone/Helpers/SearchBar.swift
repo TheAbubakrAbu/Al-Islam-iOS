@@ -287,6 +287,132 @@ private struct SystemSearchField: UIViewRepresentable {
     }
 }
 
+// MARK: - Shared search chrome
+
+/// The "Load more / Load all" pair under a truncated result list, as ONE card: a menu row offering
+/// 5/10/20 more, a hairline, and the load-all row beneath it. It used to be two glass capsules pulled
+/// together with negative padding, which Liquid Glass merged into one blob but every earlier system
+/// drew as two overlapping pills with a pinched waist (Abu's iOS 18 report). A single rounded card
+/// reads the same on both.
+struct LoadMoreControls: View {
+    @Environment(\.appearance) private var appearance
+
+    /// What is being loaded, e.g. "hadith matches" / "ayah matches" (the rows read "Load more X").
+    let label: String
+    var amounts: [Int] = [5, 10, 20]
+    let onLoad: (Int) -> Void
+    let onLoadAll: () -> Void
+
+    var body: some View {
+        VStack(spacing: 0) {
+            Menu {
+                Text("Load More")
+                    .foregroundStyle(.secondary)
+
+                ForEach(amounts, id: \.self) { amount in
+                    Button {
+                        Settings.shared.hapticFeedback()
+                        onLoad(amount)
+                    } label: {
+                        Label("Load \(amount)", systemImage: "\(amount).circle")
+                    }
+                }
+            } label: {
+                row("Load more \(label)")
+            }
+
+            Divider()
+                .padding(.horizontal, 16)
+
+            Button {
+                Settings.shared.hapticFeedback()
+                onLoadAll()
+            } label: {
+                row("Load all \(label)")
+            }
+            .buttonStyle(.plain)
+        }
+        .foregroundStyle(appearance.accent)
+        .tint(appearance.accent)
+        .conditionalGlassEffect(rectangle: true)
+        .listRowSeparator(.hidden)
+    }
+
+    private func row(_ text: String) -> some View {
+        Text(text)
+            .lineLimit(1)
+            .minimumScaleFactor(0.6)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 11)
+            .padding(.horizontal, 12)
+            .contentShape(Rectangle())
+    }
+}
+
+/// Recent searches as tappable glass chips (tap re-runs, the ✕ forgets one) in a horizontal row.
+/// Shown INSIDE the search-help card that floats over the list while the field is focused and empty,
+/// the Safari / App Store placement - not stacked over the bottom bar, where a row of chips floated on
+/// top of whatever the list had scrolled under the field. One component for the Quran and both
+/// hadith searches so they read identically.
+struct RecentSearchChips: View {
+    @Environment(\.appearance) private var appearance
+
+    let queries: [String]
+    let onPick: (String) -> Void
+    let onRemove: (String) -> Void
+    /// The host card's inner padding: the row scrolls edge to edge of the CARD, not of the padded
+    /// content, so a chip slides under the card's edge instead of being chopped at the padding line.
+    var bleed: CGFloat = 14
+
+    var body: some View {
+        if !queries.isEmpty {
+            VStack(alignment: .leading, spacing: 8) {
+                Text("RECENT")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        ForEach(queries, id: \.self) { query in
+                            chip(query)
+                        }
+                    }
+                    .padding(.horizontal, bleed)
+                }
+                .padding(.horizontal, -bleed)
+            }
+        }
+    }
+
+    private func chip(_ query: String) -> some View {
+        HStack(spacing: 4) {
+            Button {
+                Settings.shared.hapticFeedback()
+                onPick(query)
+            } label: {
+                Text(query)
+                    .font(.caption)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+            }
+
+            Button {
+                Settings.shared.hapticFeedback()
+                withAnimation(.easeInOut) { onRemove(query) }
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.caption2.bold())
+                    .padding(.trailing, 8)
+            }
+            .accessibilityLabel("Forget \(query)")
+        }
+        .foregroundStyle(appearance.accent)
+        .conditionalGlassEffect(useColor: 0.25, themeTint: false)
+    }
+}
+
 #Preview {
     SearchBar(text: .constant(""))
 }

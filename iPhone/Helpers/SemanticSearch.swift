@@ -38,17 +38,23 @@ final class SemanticSearchEngine: ObservableObject {
         #endif
     }
 
+    /// Keep only the most recently used corpus (Ask AI's `onDisappear`; Phase 6 step 5).
+    func releaseIdleCorpora() {
+        trimForMemoryPressure()
+    }
+
     private func trimForMemoryPressure() {
         while lruOrder.count > 1, let oldest = lruOrder.first {
             lruOrder.removeFirst()
             corpora.removeValue(forKey: oldest)
             readyCorpora.remove(oldest)
-            buildProgress[oldest] = nil
+            SemanticBuildProgress.shared.set(oldest, nil)
         }
     }
 
-    /// Corpus build state, published for the UI's progress row. 1.0 == ready.
-    @Published private(set) var buildProgress: [String: Double] = [:]
+    /// Corpus build state, 1.0 == ready. Lives in `SemanticBuildProgress` - its own publisher - so a
+    /// build's per-chunk ticks re-render only the status row, never the List observing this engine.
+    var buildProgress: [String: Double] { SemanticBuildProgress.shared.progress }
     /// Ids whose vectors are loaded in memory and queryable right now.
     @Published private(set) var readyCorpora: Set<String> = []
     /// A build that failed (embedding unavailable, disk write failure) - the UI stays keyword-only.
@@ -86,6 +92,9 @@ final class SemanticSearchEngine: ObservableObject {
 
     private var corpora: [String: SemanticCorpus] = [:]
     private var buildsInFlight: Set<String> = []
+    /// Disk loads in progress, by corpus id: `prepare` reads a persisted corpus in a detached task
+    /// (a 22 MB file parsed on the main actor was a 100-300 ms stall on every search-field focus).
+    private var loadsInFlight: [String: Task<SemanticCorpus?, Never>] = [:]
     /// Most-recently-used corpus ids, newest last - memory cap: a corpus's vocab matrix is ~10-25MB of
     /// Float32s, so only the few the user is actively searching stay resident.
     private var lruOrder: [String] = []
@@ -151,8 +160,22 @@ final class SemanticSearchEngine: ObservableObject {
     }
 
     func isReady(_ corpusID: String) -> Bool { readyCorpora.contains(corpusID) }
-    func isBuilding(_ corpusID: String) -> Bool { buildsInFlight.contains(corpusID) }
+    /// True while the corpus is being built OR loaded from disk - either way a `prepare` would be a
+    /// duplicate, and the UI shows the preparing row.
+    func isBuilding(_ corpusID: String) -> Bool {
+        buildsInFlight.contains(corpusID) || loadsInFlight[corpusID] != nil
+    }
     func progress(_ corpusID: String) -> Double { buildProgress[corpusID] ?? 0 }
+
+    /// Waits for an in-flight DISK LOAD of this corpus to land (or fail over to a build). Callers
+    /// that used to read the corpus in the same turn as `prepare` await this instead.
+    func awaitDiskLoad(_ corpusID: String) async {
+        while let load = loadsInFlight[corpusID] {
+            _ = await load.value
+            // The load's own continuation stores the corpus on the main actor; let it run first.
+            await Task.yield()
+        }
+    }
 
     /// The loaded corpus, for callers that need its per-item keys (the all-books hadith corpus maps
     /// positional results back to "slug|idInBook" through them).
@@ -164,25 +187,48 @@ final class SemanticSearchEngine: ObservableObject {
     /// `texts` is resolved ON MAIN by the caller and copied into the build task. `keys`, when given,
     /// are persisted positional identifiers (one per text) that survive across launches - how a
     /// cross-book corpus knows which book+hadith each row is without re-decoding every book.
-    func prepare(corpusID: String, version: String, texts: @autoclosure () -> [String], keys: [String]? = nil) {
+    func prepare(corpusID: String, version: String, texts: @escaping @autoclosure () -> [String], keys: [String]? = nil) {
         guard Self.isSupported else { return }
-        guard corpora[corpusID] == nil, !buildsInFlight.contains(corpusID) else { return }
+        guard corpora[corpusID] == nil, !buildsInFlight.contains(corpusID), loadsInFlight[corpusID] == nil else { return }
         failedCorpora.remove(corpusID)
 
-        // Disk first: a corpus built in ANY earlier session loads in one read.
-        if let loaded = SemanticCorpus.load(id: corpusID, version: version) {
-            store(loaded, id: corpusID)
+        // Disk first: a corpus built in ANY earlier session loads in one read - OFF the main actor
+        // (Performance Guide, Phase 7 step 2). `isBuilding` is true meanwhile, so a second caller
+        // neither duplicates the load nor gathers texts it will not need.
+        if SemanticCorpus.exists(id: corpusID, version: version) {
+            let load = Task.detached(priority: .userInitiated) {
+                SemanticCorpus.load(id: corpusID, version: version)
+            }
+            loadsInFlight[corpusID] = load
+            Task { @MainActor [weak self] in
+                let loaded = await load.value
+                guard let self else { return }
+                self.loadsInFlight[corpusID] = nil
+                if let loaded {
+                    self.store(loaded, id: corpusID)
+                } else {
+                    // Unreadable or stale file: build from the texts as if it never existed.
+                    self.startBuild(corpusID: corpusID, version: version, texts: texts(), keys: keys)
+                }
+            }
             return
         }
+        startBuild(corpusID: corpusID, version: version, texts: texts(), keys: keys)
+    }
 
-        let list = texts()
+    private func startBuild(corpusID: String, version: String, texts list: [String], keys: [String]?) {
+        guard corpora[corpusID] == nil, !buildsInFlight.contains(corpusID) else { return }
         let itemKeys = keys
         guard !list.isEmpty, itemKeys == nil || itemKeys?.count == list.count else { return }
         buildsInFlight.insert(corpusID)
-        buildProgress[corpusID] = 0
+        SemanticBuildProgress.shared.set(corpusID, 0)
 
-        // userInitiated: the user is literally watching the progress row.
-        Task.detached(priority: .userInitiated) {
+        // userInitiated: the user is literally watching the progress row. Every build is behind a
+        // typed query or a search-field focus (nothing builds speculatively any more); on the reduced
+        // tier it still runs, at utility, so a 51k-hadith embedding never competes with the taps
+        // that asked for it (Performance Guide, Phase 6 step 6).
+        let priority: TaskPriority = AppPerformance.shouldAvoidBroadPrewarm ? .utility : .userInitiated
+        Task.detached(priority: priority) {
             // Pass 1: tokenize every text and collect the vocabulary.
             var itemTokens: [[String]] = []
             itemTokens.reserveCapacity(list.count)
@@ -220,14 +266,14 @@ final class SemanticSearchEngine: ObservableObject {
                 }
                 position = end
                 let fraction = Double(position) / Double(max(vocabWords.count, 1))
-                await MainActor.run { SemanticSearchEngine.shared.buildProgress[corpusID] = fraction }
+                await MainActor.run { SemanticBuildProgress.shared.set(corpusID, fraction) }
             }
 
             guard dim > 0, !keptWords.isEmpty else {
                 await MainActor.run {
                     let engine = SemanticSearchEngine.shared
                     engine.buildsInFlight.remove(corpusID)
-                    engine.buildProgress[corpusID] = nil
+                    SemanticBuildProgress.shared.set(corpusID, nil)
                     engine.failedCorpora.insert(corpusID)
                 }
                 return
@@ -257,7 +303,7 @@ final class SemanticSearchEngine: ObservableObject {
 
     private func store(_ corpus: SemanticCorpus, id: String) {
         corpora[id] = corpus
-        buildProgress[id] = 1
+        SemanticBuildProgress.shared.set(id, 1)
         readyCorpora.insert(id)
         lruOrder.removeAll { $0 == id }
         lruOrder.append(id)
@@ -265,7 +311,7 @@ final class SemanticSearchEngine: ObservableObject {
             lruOrder.removeFirst()
             corpora.removeValue(forKey: oldest)
             readyCorpora.remove(oldest)
-            buildProgress[oldest] = nil
+            SemanticBuildProgress.shared.set(oldest, nil)
         }
     }
 
@@ -297,35 +343,85 @@ final class SemanticSearchEngine: ObservableObject {
     }
 }
 
+/// The build-progress publisher, split out of the engine: the engine's `objectWillChange` is
+/// observed by whole search screens (their `readyCorpora` onChange needs it), and a 51k-hadith
+/// build used to publish 60-120 times through it - each a full List rebuild. Only
+/// `AISearchStatusRow` observes this object, and it publishes at most every 100 ms.
+@MainActor
+final class SemanticBuildProgress: ObservableObject {
+    static let shared = SemanticBuildProgress()
+
+    @Published private(set) var progress: [String: Double] = [:]
+    private var lastPublish: [String: CFAbsoluteTime] = [:]
+
+    /// nil clears the entry; 1.0 (ready) and nil always publish, intermediate ticks are throttled.
+    func set(_ corpusID: String, _ value: Double?) {
+        guard let value else {
+            lastPublish[corpusID] = nil
+            if progress[corpusID] != nil { progress[corpusID] = nil }
+            return
+        }
+        let now = CFAbsoluteTimeGetCurrent()
+        if value < 1, let last = lastPublish[corpusID], now - last < 0.1 { return }
+        lastPublish[corpusID] = now
+        progress[corpusID] = value
+    }
+}
+
 /// One corpus's immutable MaxSim tables - safe to hand to any thread.
 /// `vocabVectors` is the row-major (vocab × dim) matrix of normalized word vectors; each item is the
 /// list of its words' rows. Scoring: mean over query words of the best per-word similarity in the item.
+///
+/// The per-item word rows are stored FLAT (`itemWords` + `itemOffsets`, CSR-style) rather than as
+/// `[[Int32]]`: the all-books hadith corpus has 50,884 items, and one heap array each was 50,884
+/// allocations on every load plus a `subdata` copy apiece (performance plan, Phase 7 step 2).
 final class SemanticCorpus: @unchecked Sendable {
     let id: String
     let version: String
     let dimension: Int
     let vocabWords: [String]
     let vocabVectors: [Float]
-    let itemWordIndices: [[Int32]]
+    /// Item i's word rows are `itemWords[itemOffsets[i]..<itemOffsets[i + 1]]`.
+    let itemWords: [Int32]
+    let itemOffsets: [Int32]
     /// Optional positional identifiers ("slug|idInBook"), persisted - lets the all-books corpus map a
     /// result row back to its book without re-decoding anything.
     let itemKeys: [String]?
 
-    init(id: String, version: String, dimension: Int,
+    var itemCount: Int { max(itemOffsets.count - 1, 0) }
+
+    convenience init(id: String, version: String, dimension: Int,
          vocabWords: [String], vocabVectors: [Float], itemWordIndices: [[Int32]],
+         itemKeys: [String]? = nil) {
+        var words: [Int32] = []
+        var offsets: [Int32] = [0]
+        words.reserveCapacity(itemWordIndices.reduce(0) { $0 + $1.count })
+        offsets.reserveCapacity(itemWordIndices.count + 1)
+        for indices in itemWordIndices {
+            words.append(contentsOf: indices)
+            offsets.append(Int32(words.count))
+        }
+        self.init(id: id, version: version, dimension: dimension, vocabWords: vocabWords,
+                  vocabVectors: vocabVectors, itemWords: words, itemOffsets: offsets, itemKeys: itemKeys)
+    }
+
+    init(id: String, version: String, dimension: Int,
+         vocabWords: [String], vocabVectors: [Float], itemWords: [Int32], itemOffsets: [Int32],
          itemKeys: [String]? = nil) {
         self.id = id
         self.version = version
         self.dimension = dimension
         self.vocabWords = vocabWords
         self.vocabVectors = vocabVectors
-        self.itemWordIndices = itemWordIndices
+        self.itemWords = itemWords
+        self.itemOffsets = itemOffsets
         self.itemKeys = itemKeys
     }
 
     func topMatches(queryVectors: [[Float]], limit: Int) -> [(index: Int, score: Float)] {
         let vocabCount = vocabWords.count
-        guard vocabCount > 0, !itemWordIndices.isEmpty else { return [] }
+        let itemCount = self.itemCount
+        guard vocabCount > 0, itemCount > 0 else { return [] }
 
         // One sgemv per query word: its similarity against the WHOLE vocabulary at once.
         var similarityTables: [[Float]] = []
@@ -347,28 +443,36 @@ final class SemanticCorpus: @unchecked Sendable {
 
         // MaxSim per item: mean over query words of the best table value among the item's words.
         var scored: [(index: Int, score: Float)] = []
-        scored.reserveCapacity(min(limit * 4, itemWordIndices.count))
+        scored.reserveCapacity(min(limit * 4, itemCount))
         var best: Float = 0
-        for (index, wordRows) in itemWordIndices.enumerated() {
-            // Abandoned query (the debounce task was cancelled after this scan started): stop burning
-            // CPU. Cheap flag check, meaningful for the tens-of-thousands-item all-books hadith corpus.
-            if index & 0x3FF == 0, Task.isCancelled { return [] }
-            guard !wordRows.isEmpty else { continue }
-            var total: Float = 0
-            for table in similarityTables {
-                var maxSim: Float = -1
-                for row in wordRows {
-                    let sim = table[Int(row)]
-                    if sim > maxSim { maxSim = sim }
+        var cancelled = false
+        let tableCount = Float(similarityTables.count)
+        itemWords.withUnsafeBufferPointer { words in
+            itemOffsets.withUnsafeBufferPointer { offsets in
+                for index in 0..<itemCount {
+                    // Abandoned query (the debounce task was cancelled after this scan started): stop
+                    // burning CPU. Cheap flag check, meaningful for the 51k-item all-books corpus.
+                    if index & 0x3FF == 0, Task.isCancelled { cancelled = true; return }
+                    let start = Int(offsets[index]), end = Int(offsets[index + 1])
+                    guard end > start else { continue }
+                    var total: Float = 0
+                    for table in similarityTables {
+                        var maxSim: Float = -1
+                        for position in start..<end {
+                            let sim = table[Int(words[position])]
+                            if sim > maxSim { maxSim = sim }
+                        }
+                        total += maxSim
+                    }
+                    let score = total / tableCount
+                    if score > best { best = score }
+                    if score >= 0.30 {   // coarse pre-filter; the calibrated floor below does the real gating
+                        scored.append((index, score))
+                    }
                 }
-                total += maxSim
-            }
-            let score = total / Float(similarityTables.count)
-            if score > best { best = score }
-            if score >= 0.30 {   // coarse pre-filter; the calibrated floor below does the real gating
-                scored.append((index, score))
             }
         }
+        if cancelled { return [] }
 
         // The calibrated floor: absolute 0.38 (below it nothing is a real match), tightened toward the
         // best hit so a strong result set sheds its weak tail.
@@ -405,82 +509,128 @@ final class SemanticCorpus: @unchecked Sendable {
         appendU32(Self.magic)
         appendU32(UInt32(dimension))
         appendU32(UInt32(vocabWords.count))
-        appendU32(UInt32(itemWordIndices.count))
+        appendU32(UInt32(itemCount))
         appendU32(UInt32(wordsBlob.count))
         data.append(wordsBlob)
         appendU32(UInt32(keysBlob?.count ?? 0))
         if let keysBlob { data.append(keysBlob) }
         vocabVectors.withUnsafeBufferPointer { data.append(Data(buffer: $0)) }
-        for indices in itemWordIndices {
-            appendU32(UInt32(indices.count))
-            indices.withUnsafeBufferPointer { data.append(Data(buffer: $0)) }
+        itemWords.withUnsafeBufferPointer { words in
+            for index in 0..<itemCount {
+                let start = Int(itemOffsets[index]), end = Int(itemOffsets[index + 1])
+                appendU32(UInt32(end - start))
+                if end > start {
+                    data.append(Data(buffer: UnsafeBufferPointer(rebasing: words[start..<end])))
+                }
+            }
         }
         try? data.write(to: url, options: .atomic)
+        // Older versions of the SAME corpus are dead weight from here on: the Quran corpus folds the
+        // bundled source's stamp into its version, so every app update (and every dev rebuild) left
+        // one more 8 MB file behind - six of them on the dev simulator. One id, one file.
+        let prefix = "\(id)-"
+        let keep = url.lastPathComponent
+        if let files = try? FileManager.default.contentsOfDirectory(at: url.deletingLastPathComponent(),
+                                                                    includingPropertiesForKeys: nil) {
+            for file in files where file.pathExtension == "vec3" {
+                let name = file.lastPathComponent
+                guard name != keep, name.hasPrefix(prefix) else { continue }
+                // "quran-en-…" must not match "quran-en-extra-…": the version follows the id directly,
+                // and no other corpus id starts with this id plus a dash today; kept exact by prefix.
+                try? FileManager.default.removeItem(at: file)
+            }
+        }
     }
 
+    /// Whether a persisted build exists for this id + version - the cheap check `prepare` makes on
+    /// the main actor before starting the (detached) load.
+    static func exists(id: String, version: String) -> Bool {
+        guard let url = fileURL(id: id, version: version) else { return false }
+        return FileManager.default.fileExists(atPath: url.path)
+    }
+
+    /// Parse a persisted corpus. Runs OFF the main actor (see `SemanticSearchEngine.prepare`): the
+    /// file is mapped, every table is copied out with one `memcpy` per table - no `subdata` per
+    /// item - and the item rows land in the flat CSR arrays directly.
     static func load(id: String, version: String) -> SemanticCorpus? {
         guard let url = fileURL(id: id, version: version),
-              let data = try? Data(contentsOf: url), data.count > 24 else { return nil }
+              let data = try? Data(contentsOf: url, options: [.mappedIfSafe]), data.count > 24 else { return nil }
 
-        var offset = 0
-        func readU32() -> UInt32? {
-            guard offset + 4 <= data.count else { return nil }
-            var value: UInt32 = 0
-            _ = withUnsafeMutableBytes(of: &value) { data.copyBytes(to: $0, from: offset..<(offset + 4)) }
-            offset += 4
-            return UInt32(littleEndian: value)
-        }
-        func readBlob(_ length: Int) -> String? {
-            guard length >= 0, offset + length <= data.count else { return nil }
-            defer { offset += length }
-            return String(data: data.subdata(in: offset..<(offset + length)), encoding: .utf8)
-        }
-
-        guard readU32() == magic,
-              let dim32 = readU32(), let vocabCount32 = readU32(),
-              let itemCount32 = readU32(), let blobLen32 = readU32() else { return nil }
-        let dim = Int(dim32), vocabCount = Int(vocabCount32)
-        let itemCount = Int(itemCount32)
-
-        guard dim > 0, vocabCount > 0,
-              let wordsString = readBlob(Int(blobLen32)) else { return nil }
-        let words = wordsString.components(separatedBy: "\n")
-        guard words.count == vocabCount else { return nil }
-
-        guard let keysLen32 = readU32() else { return nil }
-        var keys: [String]?
-        if keysLen32 > 0 {
-            guard let keysString = readBlob(Int(keysLen32)) else { return nil }
-            let parsed = keysString.components(separatedBy: "\n")
-            guard parsed.count == itemCount else { return nil }
-            keys = parsed
-        }
-
-        let vectorBytes = vocabCount * dim * 4
-        guard offset + vectorBytes <= data.count else { return nil }
-        let vectors = data.subdata(in: offset..<(offset + vectorBytes)).withUnsafeBytes {
-            [Float]($0.bindMemory(to: Float.self))
-        }
-        offset += vectorBytes
-
-        var items: [[Int32]] = []
-        items.reserveCapacity(itemCount)
-        for _ in 0..<itemCount {
-            guard let count32 = readU32() else { return nil }
-            let count = Int(count32)
-            let bytes = count * 4
-            guard offset + bytes <= data.count else { return nil }
-            let indices = data.subdata(in: offset..<(offset + bytes)).withUnsafeBytes {
-                [Int32]($0.bindMemory(to: Int32.self))
+        return data.withUnsafeBytes { (raw: UnsafeRawBufferPointer) -> SemanticCorpus? in
+            guard let base = raw.baseAddress else { return nil }
+            let total = raw.count
+            var offset = 0
+            func readU32() -> UInt32? {
+                guard offset + 4 <= total else { return nil }
+                let value = UInt32(littleEndian: base.loadUnaligned(fromByteOffset: offset, as: UInt32.self))
+                offset += 4
+                return value
             }
-            offset += bytes
-            guard indices.allSatisfy({ Int($0) < vocabCount }) else { return nil }
-            items.append(indices)
-        }
+            func readBlob(_ length: Int) -> String? {
+                guard length >= 0, offset + length <= total else { return nil }
+                defer { offset += length }
+                let bytes = UnsafeRawBufferPointer(rebasing: raw[offset..<(offset + length)])
+                return String(decoding: bytes, as: UTF8.self)
+            }
 
-        return SemanticCorpus(id: id, version: version, dimension: dim,
-                              vocabWords: words, vocabVectors: vectors, itemWordIndices: items,
-                              itemKeys: keys)
+            guard readU32() == magic,
+                  let dim32 = readU32(), let vocabCount32 = readU32(),
+                  let itemCount32 = readU32(), let blobLen32 = readU32() else { return nil }
+            let dim = Int(dim32), vocabCount = Int(vocabCount32)
+            let itemCount = Int(itemCount32)
+
+            guard dim > 0, vocabCount > 0,
+                  let wordsString = readBlob(Int(blobLen32)) else { return nil }
+            let words = wordsString.components(separatedBy: "\n")
+            guard words.count == vocabCount else { return nil }
+
+            guard let keysLen32 = readU32() else { return nil }
+            var keys: [String]?
+            if keysLen32 > 0 {
+                guard let keysString = readBlob(Int(keysLen32)) else { return nil }
+                let parsed = keysString.components(separatedBy: "\n")
+                guard parsed.count == itemCount else { return nil }
+                keys = parsed
+            }
+
+            let vectorCount = vocabCount * dim
+            let vectorBytes = vectorCount * 4
+            guard offset + vectorBytes <= total else { return nil }
+            let vectorStart = offset
+            let vectors = [Float](unsafeUninitializedCapacity: vectorCount) { buffer, initialized in
+                memcpy(buffer.baseAddress!, base + vectorStart, vectorBytes)
+                initialized = vectorCount
+            }
+            offset += vectorBytes
+
+            // Every remaining byte past the per-item counts is a word row: an upper bound that lets
+            // the flat array reserve once.
+            var itemWords: [Int32] = []
+            itemWords.reserveCapacity(max(0, (total - offset) / 4 - itemCount))
+            var itemOffsets: [Int32] = [0]
+            itemOffsets.reserveCapacity(itemCount + 1)
+            for _ in 0..<itemCount {
+                guard let count32 = readU32() else { return nil }
+                let count = Int(count32)
+                let bytes = count * 4
+                guard offset + bytes <= total else { return nil }
+                let start = offset
+                let previous = itemWords.count
+                itemWords.append(contentsOf: [Int32](unsafeUninitializedCapacity: count) { buffer, initialized in
+                    if count > 0 { memcpy(buffer.baseAddress!, base + start, bytes) }
+                    initialized = count
+                })
+                for position in previous..<itemWords.count where Int(itemWords[position]) >= vocabCount {
+                    return nil
+                }
+                offset += bytes
+                itemOffsets.append(Int32(itemWords.count))
+            }
+
+            return SemanticCorpus(id: id, version: version, dimension: dim,
+                                  vocabWords: words, vocabVectors: vectors,
+                                  itemWords: itemWords, itemOffsets: itemOffsets, itemKeys: keys)
+        }
     }
 }
 
@@ -488,9 +638,15 @@ final class SemanticCorpus: @unchecked Sendable {
 // (AI results appear automatically alongside keyword results - there is deliberately no mode toggle.)
 
 /// The one-time build state row: progress while vectors build, a plain note when unsupported/failed.
+/// It observes `SemanticBuildProgress` ITSELF, so a build's ticks re-render this row alone and not
+/// the search screen hosting it.
 struct AISearchStatusRow: View {
-    let progress: Double
+    @ObservedObject private var build = SemanticBuildProgress.shared
+
+    let corpusID: String
     let failed: Bool
+
+    private var progress: Double { build.progress[corpusID] ?? 0 }
 
     var body: some View {
         HStack(spacing: 10) {

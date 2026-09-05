@@ -114,29 +114,48 @@ struct DebugArticleLink: View {
 /// hadith are the matn as printed in the bundled collection, so what the reader sees here is what they
 /// find when they open the same reference in the Quran or Hadith tabs.
 struct ScriptureQuote: View {
-    @ObservedObject private var settings = Settings.shared
+    let text: String
+    var arabic: String? = nil
+    var dimmed: Bool = false
+
+    // Two layers: this thin wrapper takes the call site's plain inputs and hands them to an Equatable
+    // body behind `.equatable()`, so the 1,400+ quotes across the article pages do not re-evaluate when
+    // their article's body runs again with the same words (a section reveal, a deep-link scroll). The
+    // accent and the Arabic faces come from `AppearanceEnvironment`, not from observing `Settings`, so
+    // a location tick or a countdown never reaches a quote at all.
+    var body: some View {
+        ScriptureQuoteBody(text: text, arabic: arabic, dimmed: dimmed).equatable()
+    }
+}
+
+private struct ScriptureQuoteBody: View, Equatable {
+    @Environment(\.appearance) private var appearance
 
     /// The English rendering with its citation.
     let text: String
     /// The Arabic original: the ayah, or the hadith's matn (the Prophet's words, or the Companion's
     /// report), without the chain of narrators.
-    var arabic: String? = nil
+    let arabic: String?
     /// Hadith and the words of the Companions render slightly softened (0.85 opacity) so ayat keep
     /// the fullest accent, and their Arabic is set in the Islam tab's face rather than the mushaf face.
-    var dimmed: Bool = false
+    let dimmed: Bool
 
-    private var accent: Color { settings.accentColor.color.opacity(dimmed ? 0.85 : 1) }
+    static func == (lhs: ScriptureQuoteBody, rhs: ScriptureQuoteBody) -> Bool {
+        lhs.text == rhs.text && lhs.arabic == rhs.arabic && lhs.dimmed == rhs.dimmed
+    }
+
+    private var accent: Color { appearance.accent.opacity(dimmed ? 0.85 : 1) }
 
     /// Ayat follow the Quran font picker (they ARE Quran, with its pause marks and Uthmani spelling);
     /// everything else follows the Islam tab's Arabic face, the same one the duas and adhkar use.
     private var arabicFont: Font {
         dimmed
-            ? settings.scalableIslamArabicFont(base: 22, relativeTo: .title2)
-            : Font.arabic(settings.fontArabic, size: 24, relativeTo: .title2)
+            ? appearance.islamArabicFont(base: 22, relativeTo: .title2)
+            : appearance.quranArabicFont(size: 24, relativeTo: .title2)
     }
 
     private var arabicUsesCustomFace: Bool {
-        dimmed ? settings.islamUsesCustomArabicFace : settings.quranUsesCustomArabicFace
+        dimmed ? appearance.islamUsesCustomArabicFace : appearance.quranUsesCustomArabicFace
     }
 
     private var copyText: String {
@@ -145,6 +164,7 @@ struct ScriptureQuote: View {
     }
 
     var body: some View {
+        let _ = RenderCounter.hit("ScriptureQuote")
         let quote = VStack(alignment: .leading, spacing: 10) {
             if let arabic, !arabic.isEmpty {
                 Text(arabic.decomposingAlefMadda)
@@ -179,7 +199,7 @@ struct ScriptureQuote: View {
                     .foregroundStyle(.secondary)
 
                 Button {
-                    settings.hapticFeedback()
+                    Settings.shared.hapticFeedback()
                     UIPasteboard.general.string = copyText
                 } label: {
                     Label("Copy Quote", systemImage: "doc.on.doc")

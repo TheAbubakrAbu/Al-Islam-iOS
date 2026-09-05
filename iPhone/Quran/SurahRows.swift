@@ -511,6 +511,8 @@ struct SurahRow: View, Equatable {
 }
 
 struct SurahAyahRow: View, Equatable {
+    /// Bumped when an off-main tajweed paint for this row lands (see `arabicTajweedText`).
+    @State private var tajweedPaintGeneration = 0
     @ObservedObject var settings = Settings.shared
     @State private var confirmRemoveNote = false
 
@@ -578,14 +580,31 @@ struct SurahAyahRow: View, Equatable {
         let text = ayah.displayArabicText(surahId: surah.id, clean: false)
         let displayText = settings.cleanArabicText ? ayah.displayArabicText(surahId: surah.id, clean: true) : text
         let renderedDisplayText = settings.beginnerMode ? displayText.beginnerSpaced : displayText
-        return TajweedStore.shared.attributedText(
+        switch TajweedStore.shared.cachedAttributedText(
             surah: surah.id,
             ayah: ayah.id,
             text: text,
             displayText: renderedDisplayText,
             cleanDisplayText: settings.cleanArabicText,
             beginnerSpacing: settings.beginnerMode
-        )
+        ) {
+        case .painted(let styled):
+            return styled
+        case .nothing:
+            return nil
+        case nil:
+            // Ahead of the warm: never the cluster analysis in body. Paint off main and re-render
+            // this one row (the @State bump) when the cache holds it (see `AyahRow`).
+            TajweedStore.shared.paintOffMain(
+            surah: surah.id,
+            ayah: ayah.id,
+            text: text,
+            displayText: renderedDisplayText,
+            cleanDisplayText: settings.cleanArabicText,
+            beginnerSpacing: settings.beginnerMode
+            ) { tajweedPaintGeneration &+= 1 }
+            return nil
+        }
     }
 
     private var tajweedAnimationKey: String {
@@ -788,6 +807,8 @@ struct SurahAyahRow: View, Equatable {
 /// tajweed colors, beginner-mode spacing, and Allah highlighting - sized by `scale`. Used for compact
 /// previews such as the page/juz dividers in SurahView.
 struct AyahArabicSnippet: View, Equatable {
+    /// Bumped when an off-main tajweed paint for this row lands (see `arabicTajweedText`).
+    @State private var tajweedPaintGeneration = 0
     @ObservedObject var settings = Settings.shared
 
     let surah: Surah
@@ -821,14 +842,31 @@ struct AyahArabicSnippet: View, Equatable {
         let text = ayah.displayArabicText(surahId: surah.id, clean: false)
         let displayText = settings.cleanArabicText ? ayah.displayArabicText(surahId: surah.id, clean: true) : text
         let renderedDisplayText = settings.beginnerMode ? displayText.beginnerSpaced : displayText
-        return TajweedStore.shared.attributedText(
+        switch TajweedStore.shared.cachedAttributedText(
             surah: surah.id,
             ayah: ayah.id,
             text: text,
             displayText: renderedDisplayText,
             cleanDisplayText: settings.cleanArabicText,
             beginnerSpacing: settings.beginnerMode
-        )
+        ) {
+        case .painted(let styled):
+            return styled
+        case .nothing:
+            return nil
+        case nil:
+            // Ahead of the warm: never the cluster analysis in body. Paint off main and re-render
+            // this one row (the @State bump) when the cache holds it (see `AyahRow`).
+            TajweedStore.shared.paintOffMain(
+            surah: surah.id,
+            ayah: ayah.id,
+            text: text,
+            displayText: renderedDisplayText,
+            cleanDisplayText: settings.cleanArabicText,
+            beginnerSpacing: settings.beginnerMode
+            ) { tajweedPaintGeneration &+= 1 }
+            return nil
+        }
     }
 
     var body: some View {
@@ -946,6 +984,8 @@ struct AyahSearchResultRow: View {
 }
 
 struct AyahSearchRow: View, Equatable {
+    /// Bumped when an off-main tajweed paint for this row lands (see `arabicTajweedText`).
+    @State private var tajweedPaintGeneration = 0
     @ObservedObject private var settings = Settings.shared
     @State private var confirmRemoveNote = false
 
@@ -1104,14 +1144,31 @@ struct AyahSearchRow: View, Equatable {
 
     private func arabicTajweedText() -> AttributedString? {
         guard shouldShowTajweedColors else { return nil }
-        return TajweedStore.shared.attributedText(
+        switch TajweedStore.shared.cachedAttributedText(
             surah: surah,
             ayah: ayah,
             text: arabic,
             displayText: arabicDisplayText(),
             cleanDisplayText: settings.cleanArabicText,
             beginnerSpacing: settings.beginnerMode
-        )
+        ) {
+        case .painted(let styled):
+            return styled
+        case .nothing:
+            return nil
+        case nil:
+            // Ahead of the warm: never the cluster analysis in body. Paint off main and re-render
+            // this one row (the @State bump) when the cache holds it (see `AyahRow`).
+            TajweedStore.shared.paintOffMain(
+            surah: surah,
+            ayah: ayah,
+            text: arabic,
+            displayText: arabicDisplayText(),
+            cleanDisplayText: settings.cleanArabicText,
+            beginnerSpacing: settings.beginnerMode
+            ) { tajweedPaintGeneration &+= 1 }
+            return nil
+        }
     }
 
     private var tajweedAnimationKey: String {

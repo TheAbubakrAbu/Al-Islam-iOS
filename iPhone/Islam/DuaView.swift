@@ -237,7 +237,7 @@ struct DuaView: View {
                     }
                 }
             } else if !semanticEngine.failedCorpora.contains(Self.semanticCorpusID) {
-                Section { AISearchStatusRow(progress: semanticEngine.progress(Self.semanticCorpusID), failed: false) }
+                Section { AISearchStatusRow(corpusID: Self.semanticCorpusID, failed: false) }
             }
         }
     }

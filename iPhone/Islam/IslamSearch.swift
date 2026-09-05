@@ -230,6 +230,14 @@ enum IslamArticleCatalog {
 
     static let byID: [String: IslamArticleEntry] = Dictionary(all.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
 
+    /// Index position per article id (result order) and the folded title+group+aliases haystack per
+    /// id: both used to be rebuilt on every keystroke (Performance Guide, Phase 6 step 10).
+    static let order: [String: Int] = Dictionary(all.enumerated().map { ($1.id, $0) }, uniquingKeysWith: { a, _ in a })
+    static let foldedHaystacks: [String: String] = Dictionary(
+        all.map { ($0.id, IslamArticles.fold(([$0.title, $0.group] + $0.aliases).joined(separator: " "))) },
+        uniquingKeysWith: { a, _ in a }
+    )
+
     /// The `-pillarsArticle` / `-guidesArticle` dictionaries, built from the catalog instead of by hand.
     @MainActor
     static func debugArticles(for home: IslamArticleHome) -> [String: AnyView] {
@@ -264,7 +272,7 @@ enum IslamArticleCatalog {
 /// The index screens' sections, drawn from the catalog: one `Section` per group, one navigation row per
 /// article. THE BASICS rows keep their larger accent title; every other row is a subheadline.
 struct IslamArticleIndexSections: View {
-    @ObservedObject private var settings = Settings.shared
+    @Environment(\.appearance) private var appearance
 
     let groups: [IslamArticleGroup]
 
@@ -283,7 +291,7 @@ struct IslamArticleIndexSections: View {
         let link = NavigationLink(destination: LazyDestination { IslamArticleCatalog.destination(entry) }) {
             if entry.emphasized {
                 Text(entry.title)
-                    .foregroundColor(settings.accentColor.color)
+                    .foregroundColor(appearance.accent)
                     .font(.headline)
             } else {
                 Text(entry.title)
@@ -321,6 +329,93 @@ struct ArticleHeader: View {
     static func anchorID(_ heading: String) -> String { "articleSection_\(heading)" }
 }
 
+/// One block of article prose, as data. The largest articles (Phase 6 step 3 of the Performance Guide)
+/// keep their sections in a `static let [ArticleSection]` rendered by `ArticleSectionsView`, so the List
+/// gets a keyed `ForEach` tree whose rows are built as they scroll in, instead of a 200-leaf static
+/// tuple that SwiftUI materialises in full when the page opens. The spellings are fixed: the corpus
+/// builder (Scripts/build_islam_corpus.py) and the quote audit (Scripts/audit_islam_quotes.py) read
+/// `.text(`, `.markdown(`, `.quote(text:` and `ArticleSection("HEADING"` straight out of the source.
+enum ArticleBlock {
+    /// Plain prose, drawn with `Text(verbatim:)`.
+    case text(String)
+    /// Prose with inline **bold** terms, drawn through `Text(articleMarkdown:)`.
+    case markdown(String)
+    /// A `ScriptureQuote`, same arguments.
+    case quote(text: String, arabic: String? = nil, dimmed: Bool = false)
+}
+
+struct ArticleSection {
+    let heading: String
+    let blocks: [ArticleBlock]
+
+    init(_ heading: String, _ blocks: [ArticleBlock]) {
+        self.heading = heading
+        self.blocks = blocks
+    }
+}
+
+/// The sections of a data-backed article: one `Section(header: ArticleHeader(...))` each, the same
+/// anchors a search result scrolls to, one row per block.
+struct ArticleSectionsView: View {
+    let sections: [ArticleSection]
+
+    var body: some View {
+        ForEach(sections.indices, id: \.self) { index in
+            let section = sections[index]
+            Section(header: ArticleHeader(section.heading)) {
+                ForEach(section.blocks.indices, id: \.self) { blockIndex in
+                    ArticleBlockView(block: section.blocks[blockIndex])
+                }
+            }
+        }
+    }
+}
+
+struct ArticleBlockView: View {
+    let block: ArticleBlock
+
+    var body: some View {
+        switch block {
+        case .text(let prose):
+            Text(verbatim: prose)
+                .font(.body)
+        case .markdown(let prose):
+            Text(articleMarkdown: prose)
+                .font(.body)
+        case .quote(let text, let arabic, let dimmed):
+            ScriptureQuote(text: text, arabic: arabic, dimmed: dimmed)
+        }
+    }
+}
+
+extension Text {
+    /// Article prose with inline markdown (the **bold** key terms). `Text("...")` takes a
+    /// `LocalizedStringKey`, which looks the literal up in a strings table and parses its markdown
+    /// every time the text resolves; the app has no strings table, and an article carries up to 270
+    /// such literals. This parses once per literal into a process-wide cache. Plain literals are
+    /// spelled `Text(verbatim:)` in the article files for the same reason (no lookup, no parse).
+    init(articleMarkdown: String) {
+        self.init(ArticleMarkdownCache.attributed(articleMarkdown))
+    }
+}
+
+enum ArticleMarkdownCache {
+    private static let lock = NSLock()
+    nonisolated(unsafe) private static var cache: [String: AttributedString] = [:]
+
+    static func attributed(_ markdown: String) -> AttributedString {
+        lock.lock(); defer { lock.unlock() }
+        if let hit = cache[markdown] { return hit }
+        // The same inline-only grammar `LocalizedStringKey` uses, so nothing renders differently.
+        let parsed = (try? AttributedString(
+            markdown: markdown,
+            options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace)
+        )) ?? AttributedString(markdown)
+        cache[markdown] = parsed
+        return parsed
+    }
+}
+
 private struct ArticleScrollTargetKey: EnvironmentKey {
     static let defaultValue: String? = nil
 }
@@ -352,6 +447,18 @@ enum IslamArticleSearch {
         static func == (l: Self, r: Self) -> Bool { l.id == r.id && l.snippet == r.snippet }
     }
 
+    /// Non-overlapping occurrences of `term` in `haystack`, without the array `components(separatedBy:)`
+    /// allocated per term per section (~1,000 sections per keystroke).
+    static func occurrences(of term: String, in haystack: String) -> Int {
+        var count = 0
+        var start = haystack.startIndex
+        while start < haystack.endIndex, let range = haystack.range(of: term, range: start..<haystack.endIndex) {
+            count += 1
+            start = range.upperBound
+        }
+        return count
+    }
+
     /// The folded query words: lowercased, punctuation flattened, empties dropped.
     static func words(_ query: String) -> [String] {
         IslamArticles.fold(query).split(separator: " ").map(String.init).filter { !$0.isEmpty }
@@ -362,8 +469,7 @@ enum IslamArticleSearch {
         let terms = words(query)
         guard !terms.isEmpty else { return [] }
         return IslamArticleCatalog.all.filter { entry in
-            guard homes.contains(entry.home) else { return false }
-            let haystack = IslamArticles.fold(([entry.title, entry.group] + entry.aliases).joined(separator: " "))
+            guard homes.contains(entry.home), let haystack = IslamArticleCatalog.foldedHaystacks[entry.id] else { return false }
             return terms.allSatisfy { haystack.contains($0) }
         }
     }
@@ -378,7 +484,7 @@ enum IslamArticleSearch {
         let terms = words(query)
         guard !terms.isEmpty else { return [] }
         // Index order, so the results read top to bottom like the list they came from.
-        let order = Dictionary(IslamArticleCatalog.all.enumerated().map { ($1.id, $0) }, uniquingKeysWith: { a, _ in a })
+        let order = IslamArticleCatalog.order
         let articles = IslamArticles.all
             .filter { article in
                 guard let entry = IslamArticleCatalog.byID[article.id] else { return false }
@@ -388,12 +494,14 @@ enum IslamArticleSearch {
 
         var hits: [ContentHit] = []
         for article in articles {
+            // A newer keystroke has already replaced this search: stop walking 93 articles for it.
+            if Task.isCancelled { return hits }
             var scored: [(index: Int, count: Int)] = []
             for (index, section) in article.sections.enumerated() {
                 var total = 0
                 var all = true
                 for term in terms {
-                    let count = section.folded.components(separatedBy: term).count - 1
+                    let count = occurrences(of: term, in: section.folded)
                     if count == 0 { all = false; break }
                     total += count
                 }
@@ -496,7 +604,7 @@ final class IslamArticleSearchModel: ObservableObject {
 /// An index row as a search result: the title with the match coloured, and beneath it the section it
 /// lives in (and, when several resources are searched at once, which resource).
 struct IslamArticleTitleRow: View {
-    @ObservedObject private var settings = Settings.shared
+    @Environment(\.appearance) private var appearance
 
     let entry: IslamArticleEntry
     let query: String
@@ -516,8 +624,8 @@ struct IslamArticleTitleRow: View {
                     source: entry.title,
                     term: query,
                     font: entry.emphasized ? .headline : .subheadline,
-                    accent: settings.accentColor.color,
-                    fg: entry.emphasized ? settings.accentColor.color : .primary
+                    accent: appearance.accent,
+                    fg: entry.emphasized ? appearance.accent : .primary
                 )
 
                 Text(caption)
@@ -535,7 +643,7 @@ struct IslamArticleTitleRow: View {
 /// A passage that matched: "Article \u{203A} SECTION" in the accent, then the prose around the match.
 /// Opens the article scrolled to that section.
 struct IslamArticleContentRow: View {
-    @ObservedObject private var settings = Settings.shared
+    @Environment(\.appearance) private var appearance
 
     let hit: IslamArticleSearch.ContentHit
     let query: String
@@ -558,14 +666,14 @@ struct IslamArticleContentRow: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(caption)
                     .font(.caption.weight(.semibold))
-                    .foregroundColor(settings.accentColor.color)
+                    .foregroundColor(appearance.accent)
                     .lineLimit(2)
 
                 HighlightedSnippet(
                     source: hit.snippet,
                     term: query,
                     font: .subheadline,
-                    accent: settings.accentColor.color,
+                    accent: appearance.accent,
                     fg: .primary,
                     lineLimit: 4,
                     guaranteeMatch: true
@@ -580,8 +688,6 @@ struct IslamArticleContentRow: View {
 /// The Quran list's row grammar on an article result: a context menu (scroll to the article's index
 /// row, copy) and a trailing swipe whose arrow does the same scroll.
 private struct IslamArticleRowActions: ViewModifier {
-    @ObservedObject private var settings = Settings.shared
-
     let title: String
     let copyText: String?
     let scrollLabel: String
@@ -595,7 +701,7 @@ private struct IslamArticleRowActions: ViewModifier {
 
                 if let onScrollTo {
                     Button {
-                        settings.hapticFeedback()
+                        Settings.shared.hapticFeedback()
                         onScrollTo()
                     } label: {
                         Label(scrollLabel, systemImage: "arrow.down.circle")
@@ -605,7 +711,7 @@ private struct IslamArticleRowActions: ViewModifier {
                 }
 
                 Button {
-                    settings.hapticFeedback()
+                    Settings.shared.hapticFeedback()
                     UIPasteboard.general.string = title
                 } label: {
                     Label("Copy Title", systemImage: "doc.on.doc")
@@ -613,7 +719,7 @@ private struct IslamArticleRowActions: ViewModifier {
 
                 if let copyText, !copyText.isEmpty {
                     Button {
-                        settings.hapticFeedback()
+                        Settings.shared.hapticFeedback()
                         UIPasteboard.general.string = copyText.replacingOccurrences(of: "\u{2026}", with: "")
                     } label: {
                         Label("Copy Passage", systemImage: "doc.on.doc")
@@ -623,7 +729,7 @@ private struct IslamArticleRowActions: ViewModifier {
             .swipeActions(edge: .trailing) {
                 if let onScrollTo {
                     Button {
-                        settings.hapticFeedback()
+                        Settings.shared.hapticFeedback()
                         onScrollTo()
                     } label: {
                         Image(systemName: "arrow.down.circle")
@@ -702,7 +808,7 @@ struct IslamArticleSearchSections: View {
 /// The "Ask AI about ..." row every searching Islam screen offers, with its sheet. Rendered only where
 /// Apple Intelligence can run the chat.
 struct AskAISearchSection: View {
-    @ObservedObject private var settings = Settings.shared
+    @Environment(\.appearance) private var appearance
     @State private var showAskAI = false
 
     let query: String
@@ -714,9 +820,9 @@ struct AskAISearchSection: View {
                 Text("ASK AI")
                 Spacer()
             }
-            .foregroundStyle(settings.accentColor.color)) {
+            .foregroundStyle(appearance.accent)) {
                 Button {
-                    settings.hapticFeedback()
+                    Settings.shared.hapticFeedback()
                     showAskAI = true
                 } label: {
                     HStack(spacing: 8) {
@@ -732,7 +838,7 @@ struct AskAISearchSection: View {
                             .font(.caption2.weight(.semibold))
                             .foregroundStyle(.secondary)
                     }
-                    .foregroundColor(settings.accentColor.color)
+                    .foregroundColor(appearance.accent)
                     .padding(.vertical, 8)
                     .padding(.horizontal, 12)
                     .conditionalGlassEffect(clear: true, rectangle: true)

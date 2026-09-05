@@ -601,7 +601,7 @@ struct NamesView: View {
                     }
                 }
             } else if !semanticEngine.failedCorpora.contains(Self.semanticCorpusID) {
-                Section { AISearchStatusRow(progress: semanticEngine.progress(Self.semanticCorpusID), failed: false) }
+                Section { AISearchStatusRow(corpusID: Self.semanticCorpusID, failed: false) }
             }
         }
     }
@@ -1489,7 +1489,6 @@ private struct VerseReflectionCard: View {
 /// No `contextMenu` here, deliberately - see the note on `NameRow`'s: the whole grid is one List row, so a
 /// menu on a tile lifts every tile at once as its preview. The tile's star is the favorite action instead.
 private struct NameGridTile: View, Equatable {
-    @ObservedObject private var settings = Settings.shared
 
     let name: NameOfAllah
     let isFavorite: Bool
@@ -1546,11 +1545,11 @@ private struct NameGridTile: View, Equatable {
             accent: accentColor.color,
             accessibilityName: name.transliteration
         ) {
-            settings.toggleNameFavorite(number: name.number)
+            Settings.shared.toggleNameFavorite(number: name.number)
         }
         .onTapGesture {
-            settings.hapticFeedback()
-            settings.toggleNameFavorite(number: name.number)
+            Settings.shared.hapticFeedback()
+            Settings.shared.toggleNameFavorite(number: name.number)
         }
     }
 }

@@ -29,6 +29,47 @@ let logger = Logger(subsystem: AppIdentifiers.bundleIdentifier, category: "Setti
 ///   3. **App Storage - Quran** - `@AppStorage` reciter, favorites, sajdah/muqatta'at, bookmarks, khatm.
 ///   4. **App Storage - Arabic/Names + appearance/misc** - fonts, themes, haptics, color scheme.
 /// Keep new settings in the matching section (and storage mechanism) so the split stays clean.
+/// The high-churn half of `Settings` (performance plan, Phase 1 step 6). These fields change on their
+/// own while the user is somewhere else in the app: a prayer boundary, a location fix, a recomputed day
+/// of prayer times. While they lived on `Settings`, every `@ObservedObject settings` in the app (the
+/// Hadith, Islam and Settings tab roots, the reader, the Now Playing bar) re-evaluated for each of them,
+/// and one prayer change was nine publishes. Only the views that show prayer times or the location
+/// observe this object; `Settings` keeps forwarding properties under the same names, so non-view code
+/// (the scheduler, widgets, shortcuts, the watch) is unchanged.
+///
+/// Rule: a view whose BODY reads `currentPrayer`, `nextPrayer`, `prayers` or `currentLocation` must hold
+/// `@ObservedObject private var live = LiveState.shared` and read them from `live`, otherwise it renders
+/// stale (Settings no longer publishes for these). The forwarding properties are for non-view code.
+final class LiveState: ObservableObject {
+    static let shared = LiveState()
+
+    @Published var currentPrayer: Prayer?
+    @Published var nextPrayer: Prayer?
+    /// The encoded `Prayers`; `Settings.prayers` decodes it through its main-thread cache.
+    @Published var prayersData = Data()
+    @Published var currentLocation: Location?
+
+    /// The decoded prayers, for view bodies that already read the other fields from here.
+    var prayers: Prayers? { Settings.shared.prayers }
+
+    private init() { ObjectPublishCounter.attach(self, label: "LiveState") }
+}
+
+/// The last-read position, split out for the same reason: a reading pause writes it every 0.8 s, and
+/// the whole Adhan tab used to re-render for each write. Observed by the Quran tab root and the readers;
+/// everything else goes through the forwarding properties on `Settings`.
+final class ReadingState: ObservableObject {
+    static let shared = ReadingState()
+
+    @AppStorage("lastReadSurah") var lastReadSurah: Int = 0
+    @AppStorage("lastReadAyah") var lastReadAyah: Int = 0
+    /// When the last-read position was recorded (`Settings.stampLastRead`). 0 = saved by a build
+    /// without stamps.
+    @AppStorage("lastReadTimestamp") var lastReadTimestampRaw: Double = 0
+
+    private init() { ObjectPublishCounter.attach(self, label: "ReadingState") }
+}
+
 final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     static let shared = Settings()
     // Internal (not private): the per-domain extension files (SettingsQuran and friends) mirror their
@@ -113,7 +154,7 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
             UserDefaults.standard.set(false, forKey: "alIslamGlow")
         }
 
-        self.prayersData = appGroupUserDefaults?.data(forKey: "prayersData") ?? Data()
+        LiveState.shared.prayersData = appGroupUserDefaults?.data(forKey: "prayersData") ?? Data()
         self.travelingMode = appGroupUserDefaults?.bool(forKey: "travelingMode") ?? false
         self.hanafiMadhab = appGroupUserDefaults?.bool(forKey: "hanafiMadhab") ?? false
         self.prayerCalculation = appGroupUserDefaults?.string(forKey: "prayerCalculation") ?? "Muslim World League"
@@ -124,7 +165,7 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
         if let locationData = appGroupUserDefaults?.data(forKey: "currentLocation") {
             do {
                 let location = try Self.decoder.decode(Location.self, from: locationData)
-                currentLocation = location
+                LiveState.shared.currentLocation = location
             } catch {
                 logger.debug("Failed to decode location: \(error)")
             }
@@ -172,7 +213,9 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
         // Widget and complication processes read the App Group mirrors and never touch the khatm cache,
         // the migrations or CoreLocation authorization: all of it is app-only work.
         if Self.isAppProcess {
+            LaunchClock.mark("settings init: before khatm cache")
             loadKhatmProgressCacheFromStorage()
+            LaunchClock.mark("settings init: khatm cache loaded")
             Self.locationManager.delegate = self
         }
 
@@ -335,9 +378,12 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
         #endif
 
         if Self.isAppProcess {
+            LaunchClock.mark("settings init: before migrations")
             runQuranStartupMigrations()
+            LaunchClock.mark("settings init: quran migrations done")
             runAdhanSoundStartupMigrations()
             runWatchSyncKeyMigration()
+            LaunchClock.mark("settings init: migrations done")
         }
 
         #if os(watchOS)
@@ -717,12 +763,16 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     }
 
 
-    @Published var prayersData: Data {
-        didSet {
+    /// Forwarded to `LiveState` (see its comment): same name, but the publish reaches only the views
+    /// that observe `LiveState`.
+    var prayersData: Data {
+        get { LiveState.shared.prayersData }
+        set {
+            LiveState.shared.prayersData = newValue
             cachedPrayersValid = false   // backing bytes changed - drop the decoded cache
             guard Self.isAppProcess else { return }
-            if !prayersData.isEmpty {
-                appGroupUserDefaults?.setValue(prayersData, forKey: "prayersData")
+            if !newValue.isEmpty {
+                appGroupUserDefaults?.setValue(newValue, forKey: "prayersData")
             }
         }
     }
@@ -759,10 +809,13 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
         }
     }
 
-    @Published var currentLocation: Location? {
-        didSet {
+    /// Forwarded to `LiveState`; the App Group mirror for the widgets is written here.
+    var currentLocation: Location? {
+        get { LiveState.shared.currentLocation }
+        set {
+            LiveState.shared.currentLocation = newValue
             guard Self.isAppProcess else { return }
-            guard let location = currentLocation else { return }
+            guard let location = newValue else { return }
             do {
                 let locationData = try Self.encoder.encode(location)
                 appGroupUserDefaults?.setValue(locationData, forKey: "currentLocation")
@@ -926,17 +979,22 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
         }
     }
 
-    @AppStorage("currentPrayerData") var currentPrayerData: Data?
-    @Published var currentPrayer: Prayer? {
-        didSet {
-            currentPrayerData = try? Self.encoder.encode(currentPrayer)
+    /// Forwarded to `LiveState`. The `currentPrayerData` / `nextPrayerData` keys used to be `@AppStorage`
+    /// mirrors that nothing reads; each write was a publish plus SwiftUI's defaults-observer echo, so a
+    /// prayer boundary cost four publishes for two values. Plain writes keep the keys populated.
+    var currentPrayer: Prayer? {
+        get { LiveState.shared.currentPrayer }
+        set {
+            LiveState.shared.currentPrayer = newValue
+            UserDefaults.standard.set(try? Self.encoder.encode(newValue), forKey: "currentPrayerData")
         }
     }
 
-    @AppStorage("nextPrayerData") var nextPrayerData: Data?
-    @Published var nextPrayer: Prayer? {
-        didSet {
-            nextPrayerData = try? Self.encoder.encode(nextPrayer)
+    var nextPrayer: Prayer? {
+        get { LiveState.shared.nextPrayer }
+        set {
+            LiveState.shared.nextPrayer = newValue
+            UserDefaults.standard.set(try? Self.encoder.encode(newValue), forKey: "nextPrayerData")
         }
     }
 
@@ -1575,12 +1633,23 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     // a toggle removed by request - the recitation-style fold is strictly additive, so there is no
     // reason to turn it off). The old UserDefaults key is simply orphaned.
 
-    @AppStorage("lastReadSurah") var lastReadSurah: Int = 0
-    @AppStorage("lastReadAyah") var lastReadAyah: Int = 0
+    // Forwarded to `ReadingState` (see its comment): a view whose body shows the last-read position
+    // observes `ReadingState`; these keep the old names for the writers and non-view readers.
+    var lastReadSurah: Int {
+        get { ReadingState.shared.lastReadSurah }
+        set { ReadingState.shared.lastReadSurah = newValue }
+    }
+    var lastReadAyah: Int {
+        get { ReadingState.shared.lastReadAyah }
+        set { ReadingState.shared.lastReadAyah = newValue }
+    }
     /// When the last-read position was recorded, for the summary tile's "Today 5:30 PM" caption.
     /// Stamped via `stampLastRead()` at both real save paths (list reader, mushaf pager flush) -
-    /// clearing the position deliberately does not stamp. 0 = saved by a build without stamps.
-    @AppStorage("lastReadTimestamp") private var lastReadTimestampRaw: Double = 0
+    /// clearing the position deliberately does not stamp.
+    private var lastReadTimestampRaw: Double {
+        get { ReadingState.shared.lastReadTimestampRaw }
+        set { ReadingState.shared.lastReadTimestampRaw = newValue }
+    }
 
     var lastReadDate: Date? {
         lastReadTimestampRaw > 0 ? Date(timeIntervalSince1970: lastReadTimestampRaw) : nil

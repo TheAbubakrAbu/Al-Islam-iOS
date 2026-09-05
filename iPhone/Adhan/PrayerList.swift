@@ -5,6 +5,8 @@ import SwiftUI
 /// two are the same color and this looks exactly as it always did.
 struct PrayerList: View {
     @ObservedObject private var settings = Settings.shared
+    /// Prayer times and the location publish from `LiveState`, not `Settings` (see its comment).
+    @ObservedObject private var live = LiveState.shared
     @Environment(\.scenePhase) private var scenePhase
     // The HIGHLIGHT slice of the scrubber, not the scrubber itself: `ScrubHighlight` publishes only when
     // the prayer under the thumb changes (a handful of times per drag). Observing `DayScrubber` here made
@@ -105,11 +107,11 @@ struct PrayerList: View {
     }
 
     /// Prayer times for an arbitrary day, computed on demand. Today reuses the already-fetched
-    /// `settings.prayers`; any other day is generated directly (the generator is cached and fast).
+    /// `live.prayers`; any other day is generated directly (the generator is cached and fast).
     /// Computing this purely from `date` - instead of relying on `onChange` to populate published
     /// state - is what makes selecting a different day reliably refresh every display mode.
     private func prayers(for date: Date) -> [Prayer] {
-        if Calendar.current.isDate(date, inSameDayAs: Date()), let prayers = settings.prayers {
+        if Calendar.current.isDate(date, inSameDayAs: Date()), let prayers = live.prayers {
             let base = fullPrayers ? prayers.fullPrayers : prayers.prayers
             return mergedWithOptional(base, for: prayers.day)
         }
@@ -128,7 +130,7 @@ struct PrayerList: View {
 
     var body: some View {
         let _ = RenderCounter.hit("PrayerList")
-        if settings.prayers != nil {
+        if live.prayers != nil {
             prayerListSection
         }
     }
@@ -161,7 +163,7 @@ struct PrayerList: View {
             }
         }
         // The stored `prayers` object still carries YESTERDAY's date (and times). `currentPrayer` heals
-        // itself via the countdown's boundary timeline, but the displayed list served `settings.prayers`
+        // itself via the countdown's boundary timeline, but the displayed list served `live.prayers`
         // as "today" until the app was next backgrounded and reopened - an app left foregrounded past
         // midnight showed yesterday's times all night. The fetch's own `staleDate` check makes this a
         // no-op whenever the stored day is somehow already correct.
@@ -550,7 +552,7 @@ struct PrayerList: View {
         )
         // Once per grid, not per tile: the highlighted prayer, its index in this list and the accent.
         let currentName = currentPrayerName
-        let currentIndex = prayers.firstIndex { $0.nameTransliteration == settings.currentPrayer?.nameTransliteration }
+        let currentIndex = prayers.firstIndex { $0.nameTransliteration == live.currentPrayer?.nameTransliteration }
         let accent = settings.accentColor.accent2
 
         // Not wrapped in an iOS 26 `GlassEffectContainer`: tried, and it re-rendered the tiles flatter
@@ -821,7 +823,7 @@ struct PrayerList: View {
     /// While the sun is being dragged along `SkyView`'s arc, the highlight follows the dragged moment rather
     /// than the live one, so scrubbing the day walks it down the rows.
     private var currentPrayerName: String? {
-        (scrubHighlight.previewPrayer ?? settings.currentPrayer)?.nameTransliteration
+        (scrubHighlight.previewPrayer ?? live.currentPrayer)?.nameTransliteration
     }
 
     private func isCurrentPrayer(_ prayer: Prayer) -> Bool {
@@ -841,7 +843,7 @@ struct PrayerList: View {
             return .secondary
         }
 
-        guard let currentPrayerIndex = prayers.firstIndex(where: { $0.nameTransliteration == settings.currentPrayer?.nameTransliteration }) else {
+        guard let currentPrayerIndex = prayers.firstIndex(where: { $0.nameTransliteration == live.currentPrayer?.nameTransliteration }) else {
             return .secondary
         }
 
@@ -855,7 +857,7 @@ struct PrayerList: View {
     }
 
     private func legacyGridPrayerColor(for prayer: Prayer, in prayers: [Prayer]) -> Color {
-        guard let currentPrayer = settings.currentPrayer else {
+        guard let currentPrayer = live.currentPrayer else {
             return .secondary
         }
 

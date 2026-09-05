@@ -102,6 +102,7 @@ struct SettingsAdhanView: View {
                         Text("The sun on today's arc, the moon at its true phase, and the stars at night. Drag the sun to see any moment of the day. Turn it off for a plain Current/Upcoming card.")
                             .font(.caption)
                             .foregroundColor(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
                             .padding(.vertical, 2)
                     }
 
@@ -384,6 +385,7 @@ struct SettingsAdhanView: View {
                     Text(subtitle)
                         .font(.caption)
                         .foregroundColor(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
                         .padding(.vertical, 2)
                 }
             }
@@ -469,6 +471,7 @@ struct SettingsAdhanView: View {
             Text("If you are traveling more than 48 mi (77.25 km), then it is obligatory to pray Qasr, where you combine Dhuhr and Asr (2 rakahs each) and Maghrib and Isha (3 and 2 rakahs). Allah said in the Quran, “When you travel through the land, it is permissible for you to shorten the prayer” [Quran 4:101]. \(settings.travelAutomatic ? "This feature turns on and off automatically, but you can also control it manually here." : "You can control traveling mode manually here.")")
                 .font(.caption)
                 .foregroundColor(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
                 .padding(.vertical, 2)
             #endif
         }
@@ -632,11 +635,13 @@ struct PrayerOffsetsView: View {
                 Text("When enabled, the displayed Hijri date changes at the calculated Maghrib time instead of at midnight. Off by default.")
                     .font(.caption)
                     .foregroundColor(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
                     .padding(.vertical, 2)
 
                 Text("In Islam, the day begins at sunset (Maghrib). Keeping this on follows that Islamic tradition, while turning it off matches the usual midnight-to-midnight day.")
                     .font(.caption)
                     .foregroundColor(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
                     .padding(.vertical, 2)
             }
         }
@@ -652,11 +657,13 @@ struct PrayerOffsetsView: View {
             Text("In traveling mode, Dhuhr offset also affects the combined Dhuhr/Asr prayer, and Maghrib offset also affects the combined Maghrib/Isha prayer.")
                 .font(.caption)
                 .foregroundColor(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
                 .padding(.vertical, 2)
 
             Text("Use these offsets to shift the calculated prayer times earlier or later. Negative values move the time earlier, positive values move it later.")
                 .font(.caption)
                 .foregroundColor(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
                 .padding(.vertical, 2)
         }
     }
@@ -714,6 +721,7 @@ struct NotificationView: View {
                             Text("Also sends a heads-up the evening before each Islamic date - so Ramadan, Eid, and the days of fasting never arrive unannounced.")
                                 .font(.caption)
                                 .foregroundColor(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
                         }
                         .settingsDependent()
                     }
@@ -750,6 +758,7 @@ struct NotificationView: View {
                         Label("Notification sounds are off in iPhone Settings, so the adhan will be silent.", systemImage: "speaker.slash.fill")
                             .font(.caption)
                             .foregroundColor(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
                             .padding(.vertical, 2)
                     }
 
@@ -772,6 +781,7 @@ struct NotificationView: View {
                     Text("The notification plays the adhan's first 30 seconds; iOS won't play a longer notification sound. Previewing, or having the app open when the prayer comes in, plays it in full. Prenotifications, the optional times, and prayers with the adhan switched off use the alert tone below.")
                         .font(.caption)
                         .foregroundColor(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
                         .padding(.vertical, 2)
                 }
 
@@ -812,6 +822,7 @@ struct NotificationView: View {
                     Text("Used for prenotifications, the optional times (Shurooq, Duhaa, Islamic Midnight, Last Third), and any prayer whose adhan is switched off, so you can tell a prayer notification from every other alert on your phone. None of these is a call to prayer. Echo and Takbir are soft; Chime, Ring, and Alarm are pitched to carry through background noise, Alarm the most of all. Choose Default to go back to the iPhone's own alert sound.")
                         .font(.caption)
                         .foregroundColor(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
                         .padding(.vertical, 2)
                 }
 
@@ -1127,6 +1138,7 @@ struct MoreNotificationView: View {
                 Text("Nagging mode helps those who struggle to pray on time. Once enabled, you'll get a notification at the chosen start time before each prayer, then another every 15 minutes, plus final reminders at 10 and 5 minutes remaining.")
                     .font(.caption)
                     .foregroundColor(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
                     .padding(.vertical, 2)
 
                 Toggle("Turn on Nagging Mode", isOn: Binding(
@@ -1449,6 +1461,7 @@ struct NotificationSettingsSection: View {
                         Text("Turn off to get an ordinary notification sound for this prayer, while the others still call the adhan.")
                             .font(.caption)
                             .foregroundColor(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
                             .padding(.vertical, 2)
                     }
 
@@ -1462,6 +1475,7 @@ struct NotificationSettingsSection: View {
                             Text("Plays a brief excerpt instead of the adhan's first 30 seconds.")
                                 .font(.caption)
                                 .foregroundColor(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
                                 .padding(.vertical, 2)
                         }
                     }
@@ -1472,6 +1486,7 @@ struct NotificationSettingsSection: View {
                 Text(travelNotificationCaption)
                     .font(.caption)
                     .foregroundColor(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
                     .padding(.vertical, 2)
             }
         }
@@ -1518,6 +1533,8 @@ extension SettingsSearchEntry {
 /// only the dozen methods the Adhan package's enum happened to contain.
 struct PrayerCalculationListView: View {
     @ObservedObject var settings = Settings.shared
+    /// Prayer times and the location publish from `LiveState`, not `Settings` (see its comment).
+    @ObservedObject private var live = LiveState.shared
 
     @State private var searchText = ""
 
@@ -1605,6 +1622,7 @@ struct PrayerCalculationListView: View {
             Text("Picks the method customary in the country you are in. Choosing a method by hand below turns this off.")
                 .font(.caption)
                 .foregroundColor(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
                 .padding(.vertical, 2)
         }
     }
@@ -1664,6 +1682,7 @@ struct PrayerCalculationListView: View {
                 Text(region)
                     .font(.caption)
                     .foregroundColor(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
                     .padding(.vertical, 2)
             }
         }
@@ -1710,6 +1729,7 @@ struct PrayerCalculationListView: View {
                 Text("Only set your own angles if you know the values your local mosque uses. A wrong angle means praying at the wrong time.")
                     .font(.caption)
                     .foregroundColor(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
                     .padding(.vertical, 2)
             }
         }
@@ -1729,6 +1749,7 @@ struct PrayerCalculationListView: View {
                 Text("The Hanafi madhab uses the shadow ratio of 2 to 1 for Asr, while many other schools use 1 to 1. Enable this only if you follow the Hanafi method.")
                     .font(.caption)
                     .foregroundColor(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
                     .padding(.vertical, 2)
             }
 
@@ -1750,6 +1771,7 @@ struct PrayerCalculationListView: View {
                 Text(highLatitudeRuleCaption)
                     .font(.caption)
                     .foregroundColor(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
                     .padding(.vertical, 2)
             }
         }
@@ -1761,7 +1783,7 @@ struct PrayerCalculationListView: View {
         var caption = "When the night is short, the sun never sinks low enough for the twilight that defines "
             + "Fajr and Isha, so they are estimated. This matters most far from the equator, but can shift "
             + "summer times at any latitude."
-        if let location = settings.currentLocation, location.latitude != 1000, location.longitude != 1000 {
+        if let location = live.currentLocation, location.latitude != 1000, location.longitude != 1000 {
             let coordinates = Coordinates(latitude: location.latitude, longitude: location.longitude)
             caption += " Automatic uses \(settings.recommendedHighLatitudeRuleLabel(at: coordinates)) in \(location.city)."
         }
@@ -1773,16 +1795,19 @@ struct PrayerCalculationListView: View {
             Text("Fajr begins at true dawn and Isha at nightfall. Neither is a clock time: both are defined by how far the sun has sunk below the horizon, and the bodies below differ on where exactly to draw that line. A larger angle means an earlier Fajr and a later Isha.")
                 .font(.caption)
                 .foregroundColor(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
                 .padding(.vertical, 2)
 
             Text("Umm Al-Qura and Qatar use a fixed interval after Maghrib for Isha instead of an angle, because at their latitude the twilight is consistent enough for a clock to be reliable.")
                 .font(.caption)
                 .foregroundColor(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
                 .padding(.vertical, 2)
 
             Text("Use the method your local mosque uses. If you do not know it, leave this on automatic.")
                 .font(.caption)
                 .foregroundColor(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
                 .padding(.vertical, 2)
         }
     }

@@ -162,9 +162,9 @@ enum AskAIRetriever {
         // answer without hadiths rather than sit on a spinner.
         if semantic {
             let store = HadithStore.shared
-            // The disk load is synchronous and instant when a persisted build exists - so it is done
-            // HERE, in this turn; only the cold gather + embedding is left to run in the background.
-            if !HadithSemanticCorpus.probeDisk(engine: engine) {
+            // The disk load runs off the main actor and is awaited HERE, so a persisted build answers
+            // this very question; only the cold gather + embedding is left to run in the background.
+            if !(await HadithSemanticCorpus.probeDisk(engine: engine)) {
                 Task { await HadithSemanticCorpus.prepare(engine: engine, store: store) }
             }
             if engine.isReady(HadithSemanticCorpus.id), let keys = engine.corpus(HadithSemanticCorpus.id)?.itemKeys {
@@ -680,10 +680,19 @@ final class AskAIConversation: ObservableObject {
         var asksForRuling = false
 
         /// The passages the answer actually cites, in the order they first appear. Parsed off the live
-        /// text, so the rows stay in lockstep with whatever the answer says as it streams. A surah
-        /// passage counts as cited when the answer names the surah; a tafsir excerpt never gets its
-        /// own row (its ayah's row opens the reader, where the tafsir lives).
-        var citedPassages: [AskAIPassage] {
+        /// text by `refreshCitations()` at every coalesced stream update and when the reply settles,
+        /// so the rows stay in lockstep with whatever the answer says as it streams. Stored rather
+        /// than computed: the transcript's body read it per message per render, and the regex pass
+        /// over a 900-token answer was paid on every token (Performance Guide, Phase 6 step 5).
+        /// A surah passage counts as cited when the answer names the surah; a tafsir excerpt never
+        /// gets its own row (its ayah's row opens the reader, where the tafsir lives).
+        private(set) var citedPassages: [AskAIPassage] = []
+
+        mutating func refreshCitations() {
+            citedPassages = computeCitedPassages()
+        }
+
+        private func computeCitedPassages() -> [AskAIPassage] {
             guard role == .assistant, !text.isEmpty, !passages.isEmpty else { return [] }
             // "(Sahih al-Bukhari, 6114)", "Sahih Muslim no. 8a" - the reference with its
             // punctuation and "no." variants folded to the app's own "Book Number" form.
@@ -760,7 +769,7 @@ final class AskAIConversation: ObservableObject {
         task = Task { @MainActor in
             let passages = await AskAIRetriever.passages(for: trimmed, previousQuestion: previousQuestion, carried: carried)
             guard !Task.isCancelled else { return }
-            updateReply { $0.passages = passages }
+            updateReply { $0.passages = passages; $0.refreshCitations() }
             await answer(question: trimmed, passages: passages, transcript: transcript)
         }
     }
@@ -773,17 +782,32 @@ final class AskAIConversation: ObservableObject {
         var prompt = question
         var retriedForContext = false
         var retriedForGuardrail = false
+        #if DEBUG
+        // `-askAISyntheticStream`: a 600-word answer pushed through the same coalescing path at
+        // ~200 tokens a second, to read the token-vs-flush counters under `-renderCounter` on a
+        // simulator whose model streams too slowly to exercise them.
+        if ProcessInfo.processInfo.arguments.contains("-askAISyntheticStream") {
+            resetStream()
+            for await text in Self.syntheticStream() {
+                guard !Task.isCancelled else { resetStream(); return }
+                if receiveStreamed(text) { break }
+            }
+            flushStreamed()
+            finishReply(failed: false)
+            return
+        }
+        #endif
         while true {
             do {
+                resetStream()
                 for try await text in OnDeviceAsk.streamChatAnswer(question: prompt, sources: sources, transcript: turns) {
-                    guard !Task.isCancelled else { return }
-                    let cleaned = AskAIAnswerText.stripMarkdown(text)
-                    updateReply { $0.text = cleaned }
+                    guard !Task.isCancelled else { resetStream(); return }
                     // A small model can fall into repeating itself until the token ceiling: the
-                    // moment a paragraph comes back, the answer is over.
-                    if AskAIAnswerText.isLooping(cleaned) { break }
+                    // moment a paragraph comes back (checked per flush), the answer is over.
+                    if receiveStreamed(text) { break }
                 }
-                guard !Task.isCancelled else { return }
+                guard !Task.isCancelled else { resetStream(); return }
+                flushStreamed()
                 finishReply(failed: false)
                 return
             } catch {
@@ -794,7 +818,8 @@ final class AskAIConversation: ObservableObject {
                     retriedForContext = true
                     sources = Array(sources.prefix(3))
                     turns = []
-                    updateReply { $0.text = "" }
+                    resetStream()
+                    updateReply { $0.text = ""; $0.refreshCitations() }
                     continue
                 }
                 // Apple's guardrail trips on ordinary religious topics (war, punishment, death).
@@ -802,7 +827,8 @@ final class AskAIConversation: ObservableObject {
                 if !retriedForGuardrail, OnDeviceAsk.isGuardrail(error) {
                     retriedForGuardrail = true
                     prompt = "For an educational explanation of Islamic teaching and scripture: \(question)"
-                    updateReply { $0.text = "" }
+                    resetStream()
+                    updateReply { $0.text = ""; $0.refreshCitations() }
                     continue
                 }
                 finishReply(failed: true, message: OnDeviceAsk.failureMessage(for: error))
@@ -816,6 +842,22 @@ final class AskAIConversation: ObservableObject {
     }
     #endif
 
+    #if DEBUG
+    private static func syntheticStream() -> AsyncStream<String> {
+        AsyncStream { continuation in
+            Task.detached {
+                var text = ""
+                for index in 1...600 {
+                    text += (index % 60 == 0 ? "sentence \(index).\n\n" : "word \(index) ")
+                    continuation.yield(text)
+                    try? await Task.sleep(nanoseconds: 5_000_000)
+                }
+                continuation.finish()
+            }
+        }
+    }
+    #endif
+
     private static let rulingRegex = try! NSRegularExpression(
         pattern: #"(?i)\b(?:haram|halal|haraam|halaal|permissible|permitted|allowed|forbidden|prohibited|makruh|makrooh|obligatory|wajib|fard|sinful|a sin|is it ok|is it okay|can i|am i allowed|may i)\b|حرام|حلال|يجوز|جائز"#)
 
@@ -823,6 +865,59 @@ final class AskAIConversation: ObservableObject {
     /// the views and defer, but a fixed note is not something a small model can forget.
     static func asksForRuling(_ question: String) -> Bool {
         rulingRegex.firstMatch(in: question, range: NSRange(location: 0, length: (question as NSString).length)) != nil
+    }
+
+    // MARK: Stream coalescing
+
+    /// The model hands back the whole answer-so-far on every token, and the transcript used to
+    /// re-render on each one: `stripMarkdown` + `isLooping` over the full text, a `messages`
+    /// publish, a `UITextView` re-layout and a scroll-to-bottom, ~900 times for a 900-token answer.
+    /// Tokens now land in `streamedText` and reach the UI at most every `streamInterval` (a
+    /// time-gated flush, plus one trailing flush so a pause never leaves text unshown).
+    private var streamedText = ""
+    private var streamFlushTask: Task<Void, Never>?
+    private var lastStreamFlush: CFAbsoluteTime = 0
+    private static let streamInterval: CFAbsoluteTime = 0.1
+
+    private func resetStream() {
+        streamFlushTask?.cancel()
+        streamFlushTask = nil
+        streamedText = ""
+        lastStreamFlush = 0
+    }
+
+    /// Records the latest text; publishes it when the interval has passed, else arms the trailing
+    /// flush. Returns true when the published text shows the model looping (stop the stream).
+    private func receiveStreamed(_ text: String) -> Bool {
+        streamedText = text
+        RenderCounter.hit("AskAIToken")
+        if CFAbsoluteTimeGetCurrent() - lastStreamFlush >= Self.streamInterval {
+            return flushStreamed()
+        }
+        if streamFlushTask == nil {
+            streamFlushTask = Task { @MainActor [weak self] in
+                try? await Task.sleep(nanoseconds: UInt64(Self.streamInterval * 1_000_000_000))
+                guard let self, !Task.isCancelled else { return }
+                self.streamFlushTask = nil
+                self.flushStreamed()
+            }
+        }
+        return false
+    }
+
+    @discardableResult
+    private func flushStreamed() -> Bool {
+        streamFlushTask?.cancel()
+        streamFlushTask = nil
+        lastStreamFlush = CFAbsoluteTimeGetCurrent()
+        let cleaned = AskAIAnswerText.stripMarkdown(streamedText)
+        RenderCounter.hit("AskAIFlush")
+        updateReply {
+            guard $0.text != cleaned else { return }
+            $0.text = cleaned
+            $0.refreshCitations()
+        }
+        return AskAIAnswerText.isLooping(cleaned)
     }
 
     private func updateReply(_ change: (inout Message) -> Void) {
@@ -850,6 +945,7 @@ final class AskAIConversation: ObservableObject {
                 reply.removedCitations = policed.removed
                 reply.flaggedQuotations = quoted.flagged
             }
+            reply.refreshCitations()
         }
         isAnswering = false
         #if DEBUG
@@ -890,6 +986,7 @@ final class AskAIConversation: ObservableObject {
     func cancel() {
         task?.cancel()
         task = nil
+        resetStream()
         guard isAnswering else { return }
         isAnswering = false
         if let index = messages.indices.last, messages[index].role == .assistant, messages[index].isStreaming {
@@ -984,6 +1081,10 @@ struct AskAIChatView: View {
             DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { chat.ask(next) }
         }
         #endif
+        // The chat is the one screen that can hold three corpora (Quran, hadith, articles) at
+        // once; leaving it keeps only the most recent instead of waiting for a memory warning.
+        // The evicted ones reload from disk in one read on the next question.
+        .onDisappear { SemanticSearchEngine.shared.releaseIdleCorpora() }
         .onAppear {
             if #available(iOS 26.0, *) { OnDeviceAsk.prewarmChatModel() }
             guard !askedInitial else { return }
@@ -1043,39 +1144,38 @@ struct AskAIChatView: View {
                 proxy.scrollTo("bottom", anchor: .bottom)
             }
         }
-        .safeAreaInset(edge: .bottom) { inputBar }
+        // The app's floating bottom-bar grammar (safeAreaBar under Liquid Glass, a plain inset before
+        // it), not a flat `.bar` strip: the field and its send button read like every search bar.
+        .adaptiveSafeArea(edge: .bottom) { inputBar }
     }
 
+    /// The empty transcript: a hero card, the starter questions, a three-row "how it works" card and
+    /// the caution. It was one unbroken column of body text before (Abu: "hideous"); the same
+    /// content, set the way the rest of the app sets it - glass cards, section labels, glyph rows.
     private var welcome: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            HStack(spacing: 8) {
+        VStack(alignment: .leading, spacing: 18) {
+            HStack(alignment: .top, spacing: 12) {
                 Image(systemName: "sparkles")
-                Text("Ask anything about Islam")
+                    .font(.title3.weight(.semibold))
+                    .foregroundStyle(settings.accentColor.color)
+                    .frame(width: 44, height: 44)
+                    .conditionalGlassEffect(circle: true, useColor: 0.25, interactive: false, themeTint: false)
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Ask anything about Islam")
+                        .font(.headline)
+                    Text("A question, a follow-up, a \u{201C}what does this mean\u{201D}: answered on your device by Apple Intelligence, with the ayahs and hadiths the app found cited beneath each reply, ready to open. Nothing leaves your phone.")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
             }
-            .font(.headline)
-            .foregroundStyle(settings.accentColor.color)
-
-            Text("A question, a follow-up, a \u{201C}what does this mean\u{201D}: the answer comes from Apple Intelligence on your device, and the ayahs and hadiths the app finds for your question are cited beneath each reply, ready to open. Nothing leaves your phone.")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-
-            Label("This is a machine, not a scholar. It is here for quick, simple, general questions, and it can be confidently wrong. It does not give rulings, it is never the final answer, and anything that actually matters belongs with a knowledgeable scholar of Ahl as-Sunnah wa al-Jama\u{2018}ah.", systemImage: "exclamationmark.triangle")
-                .font(.footnote)
-                .foregroundStyle(.secondary)
-
-            // How it works, in the app itself: a reader who knows the model cannot quote scripture
-            // and cannot invent a reference can judge what they are reading. Kept to four lines.
-            VStack(alignment: .leading, spacing: 6) {
-                Text("HOW IT WORKS")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.secondary)
-
-                Text("Your question first searches this app's own Quran and hadith libraries. What it finds is handed to Apple Intelligence running on your device, which answers in its own words and cites the passages it used.\n\nIt is not allowed to write out a verse or a hadith, and not allowed to cite a reference the app did not give it: anything it invents is stripped out before you see it, and a quotation that matches nothing is marked \u{201C}wording not verified\u{201D}. Every citation becomes a row beneath the answer that opens the real source, so you can always check it yourself.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-            }
+            .padding(14)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .conditionalGlassEffect(rectangle: true, useColor: 0.12, interactive: false)
 
             VStack(alignment: .leading, spacing: 8) {
+                welcomeLabel("TRY ASKING")
+
                 ForEach(Self.starters, id: \.self) { question in
                     Button {
                         settings.hapticFeedback()
@@ -1088,20 +1188,58 @@ struct AskAIChatView: View {
                             Spacer(minLength: 0)
                             Image(systemName: "arrow.up.right")
                                 .font(.caption.weight(.semibold))
-                                .foregroundStyle(.secondary)
+                                .foregroundStyle(settings.accentColor.color)
                         }
                         .foregroundColor(.primary)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 10)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 12)
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        .conditionalGlassEffect(clear: true, rectangle: true)
                         .contentShape(Rectangle())
+                        .conditionalGlassEffect(rectangle: true)
                     }
                     .buttonStyle(.plain)
                 }
             }
+
+            // How it works, in the app itself: a reader who knows the model cannot quote scripture
+            // and cannot invent a reference can judge what they are reading.
+            VStack(alignment: .leading, spacing: 8) {
+                welcomeLabel("HOW IT WORKS")
+
+                VStack(alignment: .leading, spacing: 12) {
+                    howItWorksRow(icon: "magnifyingglass", text: "Your question first searches this app's own Quran and hadith libraries.")
+                    howItWorksRow(icon: "iphone", text: "What it finds is handed to Apple Intelligence running on your device, which answers in its own words and cites the passages it used.")
+                    howItWorksRow(icon: "checkmark.shield", text: "It is not allowed to write out a verse or a hadith, or to cite a reference the app did not give it: anything it invents is stripped out before you see it, and a quotation that matches nothing is marked \u{201C}wording not verified\u{201D}. Every citation is a row that opens the real source, so you can always check it yourself.")
+                }
+                .padding(14)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .conditionalGlassEffect(rectangle: true, interactive: false)
+            }
+
+            Label("This is a machine, not a scholar. It is here for quick, simple, general questions, and it can be confidently wrong. It does not give rulings, it is never the final answer, and anything that actually matters belongs with a knowledgeable scholar of Ahl as-Sunnah wa al-Jama\u{2018}ah.", systemImage: "exclamationmark.triangle")
+                .font(.caption)
+                .foregroundStyle(.secondary)
         }
         .padding(.bottom, 4)
+    }
+
+    private func welcomeLabel(_ text: String) -> some View {
+        Text(text)
+            .font(.caption.weight(.semibold))
+            .foregroundStyle(.secondary)
+            .padding(.leading, 4)
+    }
+
+    private func howItWorksRow(icon: String, text: String) -> some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: icon)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(settings.accentColor.color)
+                .frame(width: 22)
+            Text(text)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
     }
 
     @ViewBuilder
@@ -1187,7 +1325,9 @@ struct AskAIChatView: View {
             }
             .padding(12)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .conditionalGlassEffect(clear: true, rectangle: true)
+            // Regular glass, not clear: clear glass on a dark ground is invisible, and the answer
+            // read as loose text floating in the transcript instead of a card.
+            .conditionalGlassEffect(rectangle: true, interactive: false)
         }
     }
 
@@ -1269,48 +1409,63 @@ struct AskAIChatView: View {
         .contentShape(Rectangle())
     }
 
+    /// The composer: the app's 50pt glass field with a sparkles glyph where the search bars carry
+    /// their magnifier, and the circle-glass send (or stop) button beside it - the SearchBar's ✕ in
+    /// the accent. The one-line caution that used to sit under the field is gone: it already sits
+    /// under every answer and on the welcome.
     private var inputBar: some View {
-        VStack(spacing: 6) {
-            HStack(alignment: .bottom, spacing: 8) {
+        let canSend = !draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        return HStack(alignment: .bottom, spacing: 8) {
+            HStack(alignment: .center, spacing: 8) {
+                Image(systemName: "sparkles")
+                    .font(.body)
+                    .foregroundStyle(settings.accentColor.color)
+
                 TextField("Ask about the Quran, hadith, or Islam", text: $draft, axis: .vertical)
                     .lineLimit(1...5)
                     .focused($inputFocused)
                     .textFieldStyle(.plain)
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 9)
-                    .conditionalGlassEffect(clear: true)
-
-                if chat.isAnswering {
-                    Button {
-                        settings.hapticFeedback()
-                        chat.cancel()
-                    } label: {
-                        Image(systemName: "stop.circle.fill")
-                            .font(.title)
-                    }
-                    .accessibilityLabel("Stop answering")
-                } else {
-                    Button {
-                        send()
-                    } label: {
-                        Image(systemName: "arrow.up.circle.fill")
-                            .font(.title)
-                    }
-                    .disabled(draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                    .accessibilityLabel("Send")
-                }
             }
-            .tint(settings.accentColor.color)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
+            .frame(minHeight: 50)
+            .conditionalGlassEffect()
 
-            Text("Apple Intelligence, on device. Answers can be wrong and are never a religious ruling.")
-                .font(.caption2)
-                .foregroundStyle(.secondary)
-                .frame(maxWidth: .infinity, alignment: .leading)
+            if chat.isAnswering {
+                Button {
+                    settings.hapticFeedback()
+                    chat.cancel()
+                } label: {
+                    Image(systemName: "stop.fill")
+                        .font(.body.weight(.semibold))
+                        .foregroundColor(.primary)
+                        .frame(width: 50, height: 50)
+                        .contentShape(Circle())
+                        .conditionalGlassEffect(circle: true)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Stop answering")
+            } else {
+                Button {
+                    send()
+                } label: {
+                    Image(systemName: "arrow.up")
+                        .font(.body.weight(.bold))
+                        .foregroundColor(canSend ? .white : .secondary)
+                        .frame(width: 50, height: 50)
+                        .contentShape(Circle())
+                        .conditionalGlassEffect(circle: true, useColor: canSend ? 0.9 : nil)
+                }
+                .buttonStyle(.plain)
+                .disabled(!canSend)
+                .accessibilityLabel("Send")
+            }
         }
-        .padding(.horizontal, 16)
-        .padding(.top, 8)
-        .padding(.bottom, 8)
-        .background(.bar)
+        .padding(.horizontal, 24)
+        .padding(.bottom, BottomBarCushion.standard)
+        .background(Color.white.opacity(0.00001))
+        .animation(.easeInOut(duration: 0.2), value: canSend)
+        .animation(.easeInOut(duration: 0.2), value: chat.isAnswering)
     }
 
     private func send() {

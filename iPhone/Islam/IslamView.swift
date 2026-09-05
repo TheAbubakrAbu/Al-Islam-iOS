@@ -180,10 +180,13 @@ struct IslamView: View {
             }
         }
 
-        /// The row title, subtitle and keywords, folded once for matching.
-        var searchBlob: String {
-            IslamArticles.fold(([title, subtitle] + searchKeywords).joined(separator: " "))
-        }
+        /// The row title, subtitle and keywords, folded ONCE per launch for matching (this was
+        /// re-folded for every resource on every keystroke; Performance Guide, Phase 6 step 10).
+        var searchBlob: String { Self.searchBlobs[self] ?? "" }
+
+        private static let searchBlobs: [IslamDestination: String] = Dictionary(uniqueKeysWithValues: allCases.map {
+            ($0, IslamArticles.fold(([$0.title, $0.subtitle] + $0.searchKeywords).joined(separator: " ")))
+        })
 
         /// Every resource this device can show: all of them, minus Ask AI where Apple Intelligence
         /// can't run it (a row that opens onto "not available here" is worse than no row).
@@ -302,6 +305,7 @@ struct IslamView: View {
 
             ProphetQuote()
             AlIslamAppsSection()
+                .id("apps")
         }
         .themedListRowBackground()
     }
@@ -356,6 +360,10 @@ struct IslamView: View {
             // also lands here, and that inflate belongs to the root's post-reveal schedule instead.
             if AppReveal.revealed { IslamArticleSearchModel.prewarm() }
             #if DEBUG
+            // `-islamScrollToApps`: bring the app tiles at the foot of the list into a screenshot.
+            if ProcessInfo.processInfo.arguments.contains("-islamScrollToApps") {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { scrollTarget = "apps" }
+            }
             if let seeded = IslamSearchDebug.launchQuery("-islamSearch"), searchText.isEmpty {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { searchText = seeded }
             }
@@ -1071,6 +1079,9 @@ struct AlIslamAppsSection: View {
             }
             .conditionalGlassEffect(rectangle: true)
             .onAppear(perform: runAppCardsPopAnimation)
+            #if DEBUG
+            .onAppear { MemoryFootprint.logLater("app tiles") }
+            #endif
             .onDisappear {
                 withAnimation {
                     popLeft = false
@@ -1153,6 +1164,14 @@ struct AlIslamAppsSection: View {
         popCenter = true
         popRight = true
         #else
+        // Reduced tier / Reduce Motion: the cards just show, settled (Performance Guide, Phase 6
+        // step 8) - three springs on every tab appearance are decoration.
+        if AppPerformance.shouldReduceAnimations {
+            popLeft = true
+            popCenter = true
+            popRight = true
+            return
+        }
         popLeft = false
         popCenter = false
         popRight = false
@@ -1188,7 +1207,9 @@ private struct Card: View {
 
     var body: some View {
         VStack {
-            Image(title)
+            // The 300 px "<name> Tile" asset, not the 1024 px icon: a 100-point tile decoded from the
+            // full icon cost 4 MB apiece on every Islam and Settings tab switch (Phase 6 step 4).
+            Image("\(title) Tile")
                 .resizable()
                 .scaledToFit()
                 .cornerRadius(18)

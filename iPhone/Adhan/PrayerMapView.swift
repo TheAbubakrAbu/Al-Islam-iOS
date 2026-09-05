@@ -6,6 +6,8 @@ import CoreLocation
 
 struct PrayerTimesMapView: View {
     @ObservedObject private var settings = Settings.shared
+    /// Prayer times and the location publish from `LiveState`, not `Settings` (see its comment).
+    @ObservedObject private var live = LiveState.shared
     @Environment(\.dismiss) private var dismiss
 
     @AppStorage("prayerTimesMapShowCityTime") private var showCityTime: Bool = true
@@ -32,11 +34,11 @@ struct PrayerTimesMapView: View {
     private let columnWidth: CGFloat = 80
 
     private var effectiveLocation: Location? {
-        selectedLocation ?? settings.currentLocation
+        selectedLocation ?? live.currentLocation
     }
 
     private var canCompareAutomaticLocation: Bool {
-        guard let current = settings.currentLocation,
+        guard let current = live.currentLocation,
               let selected = selectedLocation else { return false }
         return !isSameLocation(current, selected)
     }
@@ -129,7 +131,7 @@ struct PrayerTimesMapView: View {
         }
         .onChange(of: selectedCalculation) { _ in refreshPrayers() }
         .onChange(of: showCityTime) { _ in settings.hapticFeedback(); refreshTimeZones() }
-        .onChange(of: settings.currentLocation) { _ in refreshPrayers() }
+        .onChange(of: live.currentLocation) { _ in refreshPrayers() }
         .onChange(of: showDuhaHere) { _ in refreshPrayers() }
         .onChange(of: showIslamicMidnightHere) { _ in refreshPrayers() }
         .onChange(of: showLastThirdHere) { _ in refreshPrayers() }
@@ -380,7 +382,7 @@ struct PrayerTimesMapView: View {
     private var prayerTimesSection: some View {
         if let location = effectiveLocation {
             Section {
-                if isComparing, let current = settings.currentLocation, let selected = selectedLocation {
+                if isComparing, let current = live.currentLocation, let selected = selectedLocation {
                     comparisonContent(current: current, selected: selected)
                 } else if prayers.isEmpty {
                     emptyPrayersLabel
@@ -550,7 +552,7 @@ struct PrayerTimesMapView: View {
         // The current location always keeps the user's own global method.
         let override = (selectedLocation == nil || selectedCalculation.isEmpty) ? nil : selectedCalculation
         prayers = prayersWithOptionalTimes(at: location, calculationOverride: override)
-        if canCompareAutomaticLocation, let current = settings.currentLocation {
+        if canCompareAutomaticLocation, let current = live.currentLocation {
             currentLocationPrayers = prayersWithOptionalTimes(at: current, calculationOverride: nil)
         } else {
             currentLocationPrayers = []
@@ -618,7 +620,7 @@ struct PrayerTimesMapView: View {
         if let location = effectiveLocation {
             requestTimeZone(for: location)
         }
-        if canCompareAutomaticLocation, let current = settings.currentLocation {
+        if canCompareAutomaticLocation, let current = live.currentLocation {
             requestTimeZone(for: current)
         }
     }
