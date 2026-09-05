@@ -72,7 +72,9 @@ struct SearchBar: View {
                         .foregroundColor(.primary)
                         .frame(width: 50, height: 50)
                         .contentShape(Circle())
-                        .conditionalGlassEffect(circle: true)
+                        // System glass whenever the OS has it, like the field it pairs with: the
+                        // search bar stays Liquid Glass under the Classic Look.
+                        .conditionalGlassEffect(circle: true, systemGlass: true)
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("Cancel search")
@@ -186,16 +188,33 @@ private struct SystemSearchField: UIViewRepresentable {
         return field
     }
 
-    /// Without Liquid Glass the bare field draws only its translucent gray fill, and floating over
-    /// list content it read as "way too transparent" (user report). The old UISearchBar layered that
-    /// same fill over an opaque bar; an opaque backing under the field restores that look. Under
-    /// Liquid Glass the field draws itself as glass and needs nothing. Re-applied on update so the
-    /// Classic Look toggle (and its Low Power Mode rule) restyles a mounted field.
+    /// Before iOS 26 the bare field draws only its translucent gray fill, and floating over list
+    /// content it read as "way too transparent" (user report). The old UISearchBar layered that same
+    /// fill over an opaque bar; an opaque backing under the field restores that look. On iOS 26 the
+    /// field draws itself as Liquid Glass and needs nothing, and it KEEPS that glass under the Classic
+    /// Look (Abu, 2026-09-04: "even for classic look keep the search bar liquid glass"), so this keys
+    /// on the OS, not on `appearance.liquidGlass`. Re-applied on update all the same, cheaply.
+    ///
+    /// The backing is the reading theme's row color on Sepia / Gray / Custom (the system gray read as
+    /// a lavender slab on the Sepia page, Abu 2026-09-05) and the system secondary background
+    /// otherwise, and it is re-applied whenever THAT color changes, not only when the opaque-or-glass
+    /// choice flips: `appearance` is an environment value, so a theme switch re-runs `updateUIView`.
     private func applyBacking(to field: UISearchTextField, coordinator: Coordinator) {
-        let opaque = !appearance.liquidGlass
-        guard coordinator.appliedOpaqueBacking != opaque else { return }
+        let opaque: Bool
+        if #available(iOS 26.0, *) { opaque = false } else { opaque = true }
+        let themeRow = opaque ? appearance.themeRowBackground : nil
+        guard coordinator.appliedOpaqueBacking != opaque || coordinator.appliedThemeRow != themeRow else { return }
         coordinator.appliedOpaqueBacking = opaque
-        field.backgroundColor = opaque ? .secondarySystemBackground : nil
+        coordinator.appliedThemeRow = themeRow
+        if !opaque {
+            field.backgroundColor = nil
+        } else if let themeRow {
+            field.backgroundColor = UIColor(themeRow)
+        } else {
+            // The system dynamic color itself, not a `UIColor(Color(...))` round trip, which would
+            // freeze it to the appearance current at that moment.
+            field.backgroundColor = .secondarySystemBackground
+        }
         field.layer.cornerRadius = opaque ? 14 : 0
         field.clipsToBounds = opaque
     }
@@ -248,9 +267,11 @@ private struct SystemSearchField: UIViewRepresentable {
         /// The last focus request honoured, so a re-render can't keep re-taking first responder.
         var lastFocusRequestID = 0
         var lastCancelToken = 0
-        /// Whether the opaque (non-glass) backing is currently applied, so `applyBacking` only touches
-        /// the layer when the look actually changes.
+        /// Whether the opaque (non-glass) backing is currently applied, and which reading-theme row
+        /// color it carries (nil = the system color), so `applyBacking` only touches the layer when
+        /// the look actually changes.
         var appliedOpaqueBacking: Bool?
+        var appliedThemeRow: Color?
         /// The last few values `editingChanged` pushed INTO SwiftUI. When one of them comes back through
         /// `updateUIView` it's an echo of the user's own typing (possibly stale by a beat), not a
         /// programmatic set - see the guard there.

@@ -150,8 +150,8 @@ struct SolarArcGraph: View {
 
 // MARK: - Entry views
 
-/// Medium: the current prayer and countdown over the day's full solar arc, sunrise and sunset
-/// times anchoring the corners.
+/// Medium: the current prayer and countdown, then the date and city, over the day's full solar arc,
+/// sunrise and sunset times anchoring the corners.
 struct SolarArcEntryView: View {
     var entry: PrayersProvider.Entry
     var skyStyle: Bool = false
@@ -182,6 +182,10 @@ struct SolarArcEntryView: View {
                 .lineLimit(1)
                 .minimumScaleFactor(0.6)
 
+                // The date and city under the header: the arc gives up one line, the corners keep
+                // sunrise and sunset.
+                PrayerWidgetContextRow(entry: entry, skyStyle: skyStyle)
+
                 SolarArcGraph(entry: entry, skyStyle: skyStyle)
 
                 HStack {
@@ -209,7 +213,10 @@ struct SolarArcEntryView: View {
 /// (white over the gradient); the standard background uses the monochrome glyph so the moon
 /// stays visible in light mode.
 struct MoonEntryView: View {
-    @Environment(\.widgetFamily) var widgetFamily
+    @Environment(\.widgetFamily) private var systemWidgetFamily
+    @Environment(\.previewWidgetFamily) private var previewWidgetFamily
+    /// The gallery's override first (see `previewWidgetFamily`), else WidgetKit's.
+    private var widgetFamily: WidgetFamily { previewWidgetFamily ?? systemWidgetFamily }
 
     var entry: PrayersProvider.Entry
     var skyStyle: Bool = false
@@ -234,6 +241,19 @@ struct MoonEntryView: View {
                         Text(AdhanWidgetDateFormatting.hijriDate(for: entry, style: .medium))
                             .font(.caption2)
                             .foregroundColor(skyStyle ? .white.opacity(0.75) : .secondary)
+
+                        // The city under the date, in this column rather than the trailing one: that
+                        // one is whatever width the phase lines leave, and a long city name truncated
+                        // there even at its smallest scale.
+                        if !entry.currentCity.isEmpty {
+                            HStack(spacing: 3) {
+                                Image(systemName: "location.fill")
+
+                                Text(entry.currentCity)
+                            }
+                            .font(.caption2)
+                            .foregroundColor(skyStyle ? .white.opacity(0.75) : .secondary)
+                        }
                     }
                     .lineLimit(1)
                     .minimumScaleFactor(0.6)
@@ -286,8 +306,8 @@ struct MoonEntryView: View {
     }
 }
 
-/// Large: the whole sky - the solar arc up top, the moon beneath it, and the day's prayer times
-/// along the bottom with the current one accented.
+/// Large: the whole sky - the solar arc up top, the moon beneath it with the date and city, and the
+/// day's prayer times along the bottom with the current one accented.
 struct SolarMoonBoardEntryView: View {
     var entry: PrayersProvider.Entry
     var skyStyle: Bool = false
@@ -343,9 +363,8 @@ struct SolarMoonBoardEntryView: View {
 
                     Spacer()
 
-                    Text(AdhanWidgetDateFormatting.hijriDate(for: entry, style: .medium))
-                        .font(.caption2)
-                        .foregroundColor(skyStyle ? .white.opacity(0.75) : .secondary)
+                    // The date and city, stacked against the trailing edge beside the moon.
+                    PrayerWidgetContextRow(entry: entry, skyStyle: skyStyle, stacked: true, alignment: .trailing)
                 }
                 .lineLimit(1)
                 .minimumScaleFactor(0.6)

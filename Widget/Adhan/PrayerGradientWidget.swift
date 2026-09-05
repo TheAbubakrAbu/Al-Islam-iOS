@@ -9,7 +9,10 @@ import WidgetKit
 // and the layout here is also offered on the standard widget background as "Prayer Glance".
 
 struct PrayerGradientEntryView: View {
-    @Environment(\.widgetFamily) var widgetFamily
+    @Environment(\.widgetFamily) private var systemWidgetFamily
+    @Environment(\.previewWidgetFamily) private var previewWidgetFamily
+    /// The gallery's override first (see `previewWidgetFamily`), else WidgetKit's.
+    private var widgetFamily: WidgetFamily { previewWidgetFamily ?? systemWidgetFamily }
 
     var entry: PrayersProvider.Entry
     /// false = the identical layout on the standard widget background with accent coloring ("Prayer Glance").
@@ -112,6 +115,22 @@ struct PrayerGradientEntryView: View {
                     entryDate: entry.date,
                     tint: showsSky ? .white : entry.accentColor.color
                 )
+
+                Spacer(minLength: 0)
+
+                // The city at the foot of this column, level with the Hijri date at the foot of the
+                // right one: together they are the layout's date-and-place line.
+                if !entry.currentCity.isEmpty {
+                    HStack(spacing: 3) {
+                        Image(systemName: "location.fill")
+
+                        Text(entry.currentCity)
+                    }
+                    .font(.caption2)
+                    .opacity(0.75)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
+                }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
 
@@ -178,7 +197,9 @@ struct PrayerSkyChrome: ViewModifier {
 struct PrayerSkyBackground: ViewModifier {
     let colors: [Color]
 
-    private var background: some View {
+    /// The gradient with its scrim, on its own: also what the app's widget gallery paints behind a sky
+    /// layout, where `containerBackground` is a no-op.
+    static func fill(colors: [Color]) -> some View {
         LinearGradient(colors: colors, startPoint: .top, endPoint: .bottom)
             .overlay(
                 LinearGradient(
@@ -187,6 +208,10 @@ struct PrayerSkyBackground: ViewModifier {
                     endPoint: .bottom
                 )
             )
+    }
+
+    private var background: some View {
+        Self.fill(colors: colors)
     }
 
     func body(content: Content) -> some View {

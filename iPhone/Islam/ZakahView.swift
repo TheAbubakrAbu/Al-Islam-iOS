@@ -73,11 +73,20 @@ struct ZakahCalculatorView: View {
         }
         .navigationTitle("Zakah Calculator")
         .applyConditionalListStyle()
+        #if DEBUG
+        // "-focusAmount": focus the amount fields after appear (keyboard toolbar screenshot runs).
+        .onAppear {
+            if ProcessInfo.processInfo.arguments.contains("-focusAmount") {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { focusedField = true }
+            }
+        }
+        #endif
         .toolbar {
-            // One item with an HStack, not a group with a bare Spacer: the bare Spacer in a keyboard
-            // toolbar logs SwiftUI's "Invalid frame dimension" runtime issue before the keyboard is up.
-            ToolbarItem(placement: .keyboard) {
-                HStack {
+            // Content only while a field is focused: with no keyboard up, SwiftUI laid the accessory
+            // bar's item out with a negative width ("Invalid frame dimension" runtime issue; see
+            // InheritanceView, lldb-verified 2026-09-04).
+            ToolbarItemGroup(placement: .keyboard) {
+                if focusedField {
                     Spacer(minLength: 0)
                     Button("Done") { focusedField = false }
                 }

@@ -1701,9 +1701,10 @@ private struct MushafPageContent: View {
     // environment object. Observing it made every mounted page re-render on every QuranData publish.
     private let quranData = QuranData.shared
     @ObservedObject private var quranPlayer = QuranPlayer.shared
-    /// Observed so toggling an ayah's beginner spacing re-evaluates this page: the composed text changes, and
-    /// the render cache key (which folds in this page's overrides) has to be recomputed to pick it up.
-    @ObservedObject private var beginnerOverrides = AyahBeginnerOverrides.shared
+    /// Observed so pinning an ayah's display choices (beginner spacing, tajweed, tashkeel, dots, ...)
+    /// re-evaluates this page: the composed text changes, and the render cache key (which folds in this
+    /// page's pins) has to be recomputed to pick it up.
+    @ObservedObject private var displayOverrides = AyahDisplayOverrides.shared
 
     let page: MushafPage
 
@@ -1742,6 +1743,10 @@ private struct MushafPageContent: View {
 
     /// The ayah a long press landed on, driving the actions sheet. It is tinted while the sheet is open.
     @State private var sheetAyah: TappedAyahRef?
+    #if DEBUG
+    /// "-openPageSheet" fires once per launch, on the first page that carries the target ayah.
+    private static var debugPageSheetFired = false
+    #endif
 
     /// Bumped when an async render lands so the body re-reads the cache (see `renderAsync`).
     @State private var renderTick = 0
@@ -1987,6 +1992,28 @@ private struct MushafPageContent: View {
                 AyahSheetPresence.shared.sheetClosed()
             }
         }
+        #if DEBUG
+        // "-openPageSheet actions|tafsir" opens that sheet for the "-lastRead" ayah once its page is on
+        // screen (the list reader has "-openRowSheet"): a long press cannot be driven headlessly.
+        .onAppear {
+            let args = ProcessInfo.processInfo.arguments
+            guard !Self.debugPageSheetFired,
+                  let i = args.firstIndex(of: "-openPageSheet"), i + 1 < args.count,
+                  let j = args.firstIndex(of: "-lastRead"), j + 1 < args.count else { return }
+            let parts = args[j + 1].split(separator: ":")
+            guard parts.count == 2, let surahID = Int(parts[0]), let ayahID = Int(parts[1]),
+                  let ref = ayahRef(surahID: surahID, ayahID: ayahID) else { return }
+            Self.debugPageSheetFired = true
+            let kind = args[i + 1]
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                if kind == "tafsir" {
+                    secondarySheet = SecondarySheetRequest(kind: .tafsir, surah: ref.0, ayah: ref.1)
+                } else {
+                    sheetAyah = TappedAyahRef(surah: ref.0, ayah: ref.1)
+                }
+            }
+        }
+        #endif
     }
 
     /// Whether any sheet presented from THIS page (actions, secondary, surah info, word card) is up.
@@ -2000,10 +2027,18 @@ private struct MushafPageContent: View {
     /// word tap). The word index arrives over the COMPOSED page's tokens; the ayah's trailing number
     /// ornament is one extra final token, dropped here by the bounds check against the display text.
     private func presentWordMeaning(surahID: Int, ayahID: Int, wordIndex: Int) {
-        guard !isSelecting, let (surah, ayah) = ayahRef(surahID: surahID, ayahID: ayahID) else { return }
+        // The same switch as the list reader's word tap: "Tap a Word for Its Meaning" covers both
+        // modes (its caption says so), so with it off a double tap here does nothing.
+        guard settings.wordByWordMeanings, !isSelecting,
+              let (surah, ayah) = ayahRef(surahID: surahID, ayahID: ayahID) else { return }
+        // The ayah's own pins shape the composed text the tap landed on; beginner spacing splits every
+        // letter into a token, so no word index can be trusted there (the list rows opt out the same way).
+        let choices = displayOverrides.choices(surah: surah.id, ayah: ayah.id, settings: settings)
+        guard !choices.beginner else { return }
         let displayText = ayah.displayArabicText(
             surahId: surah.id,
-            clean: settings.cleanArabicText,
+            clean: choices.hideTashkeel,
+            removeDots: choices.hideDots,
             qiraahOverride: settings.displayQiraahForArabic
         )
         let tokens = WordTokens.tokens(in: displayText)
@@ -2380,13 +2415,18 @@ struct MushafComposeConfig {
     let displayQiraah: String?
     let cleanArabicText: Bool
     let beginnerMode: Bool
-    /// Individual ayahs the reader set letter-by-letter (the per-ayah toggle, or the multi-select "Beginner"
-    /// bulk action), on top of the global `beginnerMode`. Captured here with the rest of the snapshot so the
-    /// off-main fit passes never reach back to the main actor for it.
-    let beginnerAyahs: Set<HighlightedAyahRef>
-    /// Already folded: tajweed toggles AND the page being Arabic. English pages never paint tajweed.
+    /// Individual ayahs pinning their own display choices (the per-ayah "Apply Settings" menu, or the
+    /// multi-select bulk menu) over the global toggles above. Captured here with the rest of the snapshot
+    /// so the off-main fit passes never reach back to the main actor for it; `choices(surahID:ayahID:)`
+    /// resolves one ayah.
+    let ayahOverrides: [HighlightedAyahRef: AyahDisplayOverride]
+    /// The global tajweed toggle. An ayah may pin its own - see `choices(surahID:ayahID:)`.
     let showTajweed: Bool
-    /// Non-nil = paint this non-Hafs riwayah's print-derived colors (tajweed on, pack bundled).
+    /// Whether tajweed CAN paint on this page at all: Hafs, Arabic text shown, an Arabic page. English
+    /// pages never paint tajweed.
+    let tajweedAvailable: Bool
+    /// Non-nil = this non-Hafs riwayah's print-derived colors are available (pack bundled, Arabic page);
+    /// each ayah's tajweed toggle decides whether they paint.
     let riwayahTajweedTag: String?
     /// Non-nil = this non-Hafs riwayah's pack is bundled, so khilaf-NUMBERED ayahs (its counting
     /// merges/splits vs Hafs) tint their number medallion magenta the way the print rings them.
@@ -2419,9 +2459,7 @@ struct MushafComposeConfig {
         let language = s.resolvedMushafPageLanguage
         // Read once: it resolves the tag and asks the tajweed store whether a pack exists.
         let packTag = s.riwayahTajweedPackTag
-        let riwayahTajweedTag: String? =
-            (s.showTajweedColors && s.showArabicText && language == .arabic)
-            ? packTag : nil
+        let riwayahTajweedTag: String? = (s.showArabicText && language == .arabic) ? packTag : nil
         return MushafComposeConfig(
             pageLanguage: language,
             removeArabicDots: s.removeArabicDots,
@@ -2430,8 +2468,9 @@ struct MushafComposeConfig {
             displayQiraah: s.displayQiraahForArabic,
             cleanArabicText: s.cleanArabicText,
             beginnerMode: s.beginnerMode,
-            beginnerAyahs: AyahBeginnerOverrides.shared.ayahs,
-            showTajweed: s.showTajweedColors && s.showArabicText && s.isHafsDisplay && language == .arabic,
+            ayahOverrides: AyahDisplayOverrides.shared.overrides,
+            showTajweed: s.showTajweedColors,
+            tajweedAvailable: s.showArabicText && s.isHafsDisplay && language == .arabic,
             riwayahTajweedTag: riwayahTajweedTag,
             khilafMarkerTag: packTag,
             riwayahHiddenRules: s.riwayahTajweedHiddenRuleSet,
@@ -2440,6 +2479,33 @@ struct MushafComposeConfig {
             fitPage: s.mushafFitPage,
             printLines: nil,
             accent: UIColor(s.accentColor.color)
+        )
+    }
+
+    /// What one ayah composes with: its pins over the global toggles. Pure over the snapshot, so the
+    /// off-main fit lanes resolve it too.
+    struct AyahChoices {
+        let beginner: Bool
+        let clean: Bool
+        let dots: Bool
+        /// Paint the Hafs tajweed colors (available AND on for this ayah).
+        let tajweed: Bool
+        /// Paint this riwayah's print-derived colors (available AND on for this ayah).
+        let riwayahTag: String?
+        let highlightAllah: Bool
+    }
+
+    func choices(surahID: Int, ayahID: Int) -> AyahChoices {
+        let pin = ayahOverrides[HighlightedAyahRef(surahID: surahID, ayahID: ayahID)] ?? .none
+        let clean = pin.hideTashkeel ?? cleanArabicText
+        let tajweedOn = pin.tajweed ?? showTajweed
+        return AyahChoices(
+            beginner: pin.beginner ?? beginnerMode,
+            clean: clean,
+            dots: clean && (pin.hideDots ?? removeArabicDots),
+            tajweed: tajweedAvailable && tajweedOn,
+            riwayahTag: tajweedOn ? riwayahTajweedTag : nil,
+            highlightAllah: pin.highlightAllah ?? highlightAllahNames
         )
     }
 }
@@ -2463,7 +2529,6 @@ struct MushafPageComposer {
     /// so the old forced system-face fallback is gone everywhere (`AyahRow`/`SurahHeaders` match).
     private var usesSystemFont: Bool { isEnglish || config.quranUsesSystemArabicFont }
     private var arabicFontName: String { config.arabicFontName }
-    private var shouldShowTajweed: Bool { config.showTajweed }
 
     private func arabicFont(_ size: CGFloat) -> UIFont {
         usesSystemFont ? .roundedSystemFont(ofSize: size)
@@ -2489,8 +2554,9 @@ struct MushafPageComposer {
     /// page is justifiable Arabic, and no beginner letter-spacing is in play (that multiplies the
     /// tokens, so the print's word offsets no longer mean anything on it).
     var usesPrintLines: Bool {
-        guard let table = config.printLines, isJustifiable, !config.beginnerMode,
-              page.ayahRefs.allSatisfy({ !config.beginnerAyahs.contains($0) }) else { return false }
+        guard let table = config.printLines, isJustifiable,
+              !page.ayahRefs.contains(where: { config.choices(surahID: $0.surahID, ayahID: $0.ayahID).beginner })
+        else { return false }
         // A page the table knows nothing about (a damaged pack; every page of every riwayah has
         // entries today) would compose as unbreakable "lines" and drive the fit to its floor:
         // such a page takes the ordinary fit instead.
@@ -2581,6 +2647,9 @@ struct MushafPageComposer {
     private func ayahText(_ ayah: Ayah, surah: Surah, size: CGFloat, colored: Bool,
                           extraLineSpacing: CGFloat = 0) -> NSAttributedString {
         let para = paragraph(size, extraLineSpacing: extraLineSpacing)
+        // The global toggles, or this one ayah's own pins (the per-ayah "Apply Settings" menu and the
+        // multi-select bulk menu) - so a pinned ayah reads exactly as pinned, on the page as in the list.
+        let choice = config.choices(surahID: surah.id, ayahID: ayah.id)
 
         if isEnglish {
             // No tajweed, no beginner letter-spacing - both are Arabic-script concepts.
@@ -2592,39 +2661,38 @@ struct MushafPageComposer {
                     .paragraphStyle: para,
                 ]
             )
-            if colored { paintAllahNames(in: ns) }
+            if colored { paintAllahNames(in: ns, enabled: choice.highlightAllah) }
             return ns
         }
 
-        let clean = config.cleanArabicText
-        // The global setting OR this one ayah's own override - so the per-ayah toggle and the multi-select
-        // "Beginner" bulk action space out exactly the ayahs they were applied to, on the page as in the list.
-        let beginner = config.beginnerMode
-            || config.beginnerAyahs.contains(HighlightedAyahRef(surahID: surah.id, ayahID: ayah.id))
+        let clean = choice.clean
+        let beginner = choice.beginner
         let qiraahOverride = config.displayQiraah ?? "Hafs"
-        let base = ayah.displayArabicText(surahId: surah.id, clean: clean, qiraahOverride: qiraahOverride)
+        let base = ayah.displayArabicText(surahId: surah.id, clean: clean, removeDots: choice.dots,
+                                          qiraahOverride: qiraahOverride)
         let display = beginner ? base.beginnerSpaced : base
         let font = arabicFont(size)
 
-        if colored, shouldShowTajweed,
+        if colored, choice.tajweed,
            let styled = TajweedStore.shared.attributedText(
                surah: surah.id,
                ayah: ayah.id,
                text: ayah.displayArabicText(surahId: surah.id, clean: false, qiraahOverride: qiraahOverride),
                displayText: display,
                cleanDisplayText: clean,
-               beginnerSpacing: beginner
+               beginnerSpacing: beginner,
+               removeArabicDots: choice.dots
            ) {
             // The tajweed colours are already UIColor; overlay the font/paragraph without touching them.
             let ns = NSMutableAttributedString(attributedString: NSAttributedString(styled))
             ns.addAttributes([.font: font, .paragraphStyle: para], range: NSRange(location: 0, length: ns.length))
-            paintAllahNames(in: ns)
+            paintAllahNames(in: ns, enabled: choice.highlightAllah)
             return ns
         }
 
         // Non-Hafs riwayat: the print-derived word colors of THAT mushaf. Beginner spacing keeps
         // its colors: the store re-tokenizes the spaced text by the 2+ space original word gaps.
-        if colored, let tag = config.riwayahTajweedTag,
+        if colored, let tag = choice.riwayahTag,
            let styled = QiraahTajweedStore.shared.attributedText(
                tag: tag, surah: surah.id, ayah: ayah.id, displayText: display,
                beginnerSpacing: beginner,
@@ -2639,7 +2707,7 @@ struct MushafPageComposer {
            ) {
             let ns = NSMutableAttributedString(attributedString: NSAttributedString(styled))
             ns.addAttributes([.font: font, .paragraphStyle: para], range: NSRange(location: 0, length: ns.length))
-            paintAllahNames(in: ns)
+            paintAllahNames(in: ns, enabled: choice.highlightAllah)
             return ns
         }
 
@@ -2647,7 +2715,7 @@ struct MushafPageComposer {
             string: display,
             attributes: [.font: font, .foregroundColor: UIColor.label, .paragraphStyle: para]
         )
-        if colored { paintAllahNames(in: ns) }
+        if colored { paintAllahNames(in: ns, enabled: choice.highlightAllah) }
         return ns
     }
 
@@ -2657,8 +2725,8 @@ struct MushafPageComposer {
     /// SAME shared scanner the list and word-by-word renderers use - one detector, and it already
     /// stops the red before a trailing stop-sign ornament; English matches "Allah" case-insensitively.
     /// A foreground color never moves a glyph, so the fitted layout is untouched.
-    private func paintAllahNames(in ns: NSMutableAttributedString) {
-        guard config.highlightAllahNames else { return }
+    private func paintAllahNames(in ns: NSMutableAttributedString, enabled: Bool) {
+        guard enabled else { return }
         let text = ns.string
         if isEnglish {
             var searchStart = text.startIndex
@@ -4298,9 +4366,10 @@ enum MushafPageRenderCache {
             config.displayQiraah ?? "Hafs",
             config.cleanArabicText ? "c" : "-",
             config.beginnerMode ? "b" : "-",
-            // Per-ayah beginner overrides change the composed text, so they change the fit. Scoped to THIS
-            // page's ayahs: a toggle elsewhere in the mushaf must not throw away this page's measured fit.
-            AyahBeginnerOverrides.signature(config.beginnerAyahs, limitedTo: page.ayahRefs),
+            // Per-ayah pins that move glyphs (beginner spacing, tashkeel, dots) change the composed text, so
+            // they change the fit. Scoped to THIS page's ayahs: a pin elsewhere in the mushaf must not throw
+            // away this page's measured fit. Color pins repaint without relayout and stay out of this key.
+            AyahDisplayOverrides.signature(config.ayahOverrides, limitedTo: page.ayahRefs, layoutOnly: true),
             "\(config.fontSize)",
             config.fitPage ? "f" : "-",
         ].joined(separator: "|")
@@ -4512,10 +4581,10 @@ enum MushafPageRenderCache {
 
     private static func cacheKey(page: MushafPage, width: CGFloat, height: CGFloat, signature: String) -> NSString {
         // Geometry is rounded so a sub-point layout jitter can't miss the cache on every frame.
-        // The per-ayah beginner overrides join in PER PAGE rather than through `settingsSignature`: they
-        // change the composed text, but toggling one ayah must only evict the page that ayah is on.
-        let beginner = AyahBeginnerOverrides.signature(AyahBeginnerOverrides.shared.ayahs, limitedTo: page.ayahRefs)
-        return "\(page.page)|\(Int(width.rounded()))|\(Int(height.rounded()))|\(signature)|\(beginner)" as NSString
+        // The per-ayah pins join in PER PAGE rather than through `settingsSignature`: they change the
+        // composed text or its colors, but pinning one ayah must only evict the page that ayah is on.
+        let pins = AyahDisplayOverrides.signature(AyahDisplayOverrides.shared.overrides, limitedTo: page.ayahRefs)
+        return "\(page.page)|\(Int(width.rounded()))|\(Int(height.rounded()))|\(signature)|\(pins)" as NSString
     }
 
     /// The pure, heavy part: fit the size, spread the leftover height, measure. Runs on the prewarm queue

@@ -76,6 +76,57 @@ struct PrayerWidgetEmptyState: View {
     }
 }
 
+/// The date and the place: today's Hijri date and the city the times are computed for, the two lines of
+/// context every medium and large layout carries (user rule, 2026-09-05). One row, date leading and city
+/// trailing, where a layout has the width; stacked where it doesn't. Dimmed on both backgrounds: it is
+/// context, never the message. The city is left out until the app has one.
+struct PrayerWidgetContextRow: View {
+    let entry: PrayersProvider.Entry
+    /// true = over a sky gradient: white at reduced opacity instead of secondary.
+    var skyStyle: Bool = false
+    /// true = the date above the city (a narrow column) instead of side by side.
+    var stacked: Bool = false
+    /// The stacked pair's edge.
+    var alignment: HorizontalAlignment = .leading
+    var font: Font = .caption2
+
+    var body: some View {
+        Group {
+            if stacked {
+                VStack(alignment: alignment, spacing: 2) {
+                    date
+                    city
+                }
+            } else {
+                HStack(spacing: 8) {
+                    date
+                    Spacer(minLength: 0)
+                    city
+                }
+            }
+        }
+        .font(font)
+        .foregroundColor(skyStyle ? .white.opacity(0.75) : .secondary)
+        .lineLimit(1)
+        .minimumScaleFactor(0.6)
+    }
+
+    private var date: some View {
+        Text(AdhanWidgetDateFormatting.hijriDate(for: entry, style: .medium))
+    }
+
+    @ViewBuilder
+    private var city: some View {
+        if !entry.currentCity.isEmpty {
+            HStack(spacing: 3) {
+                Image(systemName: "location.fill")
+
+                Text(entry.currentCity)
+            }
+        }
+    }
+}
+
 /// The tier ladder every full-day prayer list shares: past prayers recede, the current one takes
 /// the accent (white over a sky gradient), upcoming ones stay readable. One ladder - the same
 /// three tiers used to be copied per widget, each hand-edited in lockstep.
@@ -341,10 +392,6 @@ struct PrayerDayView: View {
     /// (accent-on-gradient is unreadable). Layout is untouched.
     var skyStyle: Bool = false
 
-    private var hijriDate: String {
-        AdhanWidgetDateFormatting.hijriDate(for: entry, style: .medium)
-    }
-
     private func tint(_ prayer: Prayer) -> Color {
         if skyStyle { return .white }
         return prayer.nameTransliteration == "Shurooq" ? .primary : entry.accentColor.color
@@ -357,30 +404,30 @@ struct PrayerDayView: View {
     var body: some View {
         if let current = entry.currentPrayer, let next = entry.nextPrayer {
             VStack(spacing: 8) {
-                HStack {
-                    HStack(spacing: 6) {
-                        Image(systemName: current.image)
-                            .font(.subheadline)
+                // The prayer and its countdown at the two ends, the date and city on their own line
+                // beneath: the date used to sit between them, which left no room for the city.
+                VStack(spacing: 3) {
+                    HStack {
+                        HStack(spacing: 6) {
+                            Image(systemName: current.image)
+                                .font(.subheadline)
 
-                        Text(current.displayName)
-                            .font(.headline)
+                            Text(current.displayName)
+                                .font(.headline)
+                        }
+                        .foregroundColor(tint(current))
+
+                        Spacer()
+
+                        Text(next.time, style: .timer)
+                            .font(.subheadline.monospacedDigit())
+                            .multilineTextAlignment(.trailing)
                     }
-                    .foregroundColor(tint(current))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
 
-                    Spacer()
-
-                    Text(hijriDate)
-                        .font(.caption2)
-                        .foregroundColor(skyStyle ? .white.opacity(0.75) : .secondary)
-
-                    Spacer()
-
-                    Text(next.time, style: .timer)
-                        .font(.subheadline.monospacedDigit())
-                        .multilineTextAlignment(.trailing)
+                    PrayerWidgetContextRow(entry: entry, skyStyle: skyStyle)
                 }
-                .lineLimit(1)
-                .minimumScaleFactor(0.6)
 
                 PrayerIntervalProgressBar(
                     current: current,
@@ -791,8 +838,9 @@ struct PrayerListSmallSkyWidget: Widget {
 
 // MARK: - Home screen: next prayer board
 
-/// A medium split: the CURRENT prayer with its live countdown, the window's progress and one "Next"
-/// line on the left; the full day's list on the right with the current prayer accented.
+/// A medium split: the CURRENT prayer with its live countdown, what's next, the date and city, the
+/// day's arc and the window's progress on the left; the full day's list on the right with the current
+/// prayer accented.
 struct NextPrayerBoardView: View {
     var entry: PrayersProvider.Entry
     /// true = rendered inside the sky-gradient twin: white tiers replace accent/secondary/primary.
@@ -806,25 +854,30 @@ struct NextPrayerBoardView: View {
             // full-height divider, with dead space above Fajr and below Isha.
             HStack(alignment: .top, spacing: 12) {
                 VStack(alignment: .leading, spacing: 3) {
-                    Text("CURRENT")
-                        .font(.caption2.weight(.semibold))
-                        .foregroundColor(skyStyle ? .white.opacity(0.75) : .secondary)
-
+                    // The prayer and its countdown on ONE line (the "CURRENT" label above them and the
+                    // title-sized timer beneath are gone): the two lines that freed hold the date and
+                    // the city, which this layout had no room for (user request, 2026-09-05).
                     HStack(spacing: 5) {
                         Image(systemName: current.image)
                             .font(.subheadline)
 
                         Text(current.displayName)
                             .font(.headline)
+
+                        Spacer(minLength: 4)
+
+                        Text(next.time, style: .timer)
+                            .font(.subheadline.weight(.semibold).monospacedDigit())
+                            .foregroundColor(skyStyle ? .white : .primary)
+                            .multilineTextAlignment(.trailing)
                     }
                     .foregroundColor(skyStyle ? .white : (current.nameTransliteration == "Shurooq" ? .primary : entry.accentColor.color))
-
-                    Text(next.time, style: .timer)
-                        .font(.title2.weight(.semibold).monospacedDigit())
 
                     Text("Next: \(next.displayName) \(Text(next.time, style: .time))")
                         .font(.caption)
                         .foregroundColor(skyStyle ? .white.opacity(0.75) : .secondary)
+
+                    PrayerWidgetContextRow(entry: entry, skyStyle: skyStyle, stacked: true)
 
                     // The day's solar arc fills what used to be dead space between the countdown
                     // and the progress bar - nothing below moved, the flexible gap just draws now.

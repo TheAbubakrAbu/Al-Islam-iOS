@@ -53,10 +53,11 @@ struct AppearanceEnvironment: Equatable {
     /// the gate for work that is neither a material nor a shadow nor an animation, such as the
     /// Adhan tab's magnetometer, GPS burst and sky-clock cadence.
     var isReducedTier: Bool
-    /// Whether the system's Liquid Glass is in use: iOS/watchOS 26 with the Classic Look off and, when
-    /// its Low Power Mode rule is on, Low Power Mode off. False on every earlier system, so a site can
-    /// read this alone. `ConditionalGlassEffect`, `adaptiveSafeArea`, the search field's backing and
-    /// the glass-only decorations key on it.
+    /// Whether the app's own glass surfaces use Liquid Glass: iOS/watchOS 26 with the Classic Look off
+    /// and, when its Low Power Mode rule is on, Low Power Mode off. False on every earlier system, so a
+    /// site can read this alone. `ConditionalGlassEffect` and the glass-only decorations key on it.
+    /// Not keyed on it, by design: the search field (system glass on every iOS 26, Classic Look or
+    /// not, Abu's rule) and `adaptiveSafeArea` (a flip there recreated every List).
     var liquidGlass: Bool
     /// The Islam tab's Arabic face (`Settings.nonQuranArabicFontName`) and whether it is a bundled face
     /// rather than "Basic". Carried here so the article pages (Pillars, Beliefs, How-to guides, and
@@ -156,6 +157,7 @@ final class RootAppearance: ObservableObject {
         environment = AppearanceEnvironment.snapshot(settings, profile: PerformanceProfile.shared)
         firstLaunch = settings.firstLaunch
         cancellable = settings.objectWillChange.sink { [weak self] _ in self?.scheduleRefresh() }
+        ObjectPublishCounter.attach(self, label: "RootAppearance")
     }
 
     private func scheduleRefresh() {
@@ -178,6 +180,33 @@ final class RootAppearance: ObservableObject {
     }
 }
 
+#if DEBUG
+/// `-printChanges` companion: logs WHICH `AppearanceEnvironment` fields differ between consecutive
+/// injections ("APPEARANCE ENV changed: ..."), since every view reading `\.appearance` re-evaluates on
+/// each change and a launch-time churn there is an app-wide re-render per flip.
+enum AppearanceChangeLog {
+    private static var last: AppearanceEnvironment?
+    private static let enabled = ProcessInfo.processInfo.arguments.contains("-printChanges")
+
+    private static var injections = 0
+
+    static func note(_ next: AppearanceEnvironment) {
+        guard enabled else { return }
+        injections += 1
+        NSLog("APPEARANCE ENV injection %d", injections)
+        defer { last = next }
+        guard let last else { return }
+        guard last != next else { return }
+        var changed: [String] = []
+        for (before, after) in zip(Mirror(reflecting: last).children, Mirror(reflecting: next).children)
+        where String(describing: before.value) != String(describing: after.value) {
+            changed.append("\(before.label ?? "?"): \(before.value) -> \(after.value)")
+        }
+        NSLog("APPEARANCE ENV changed: %@", changed.joined(separator: "; "))
+    }
+}
+#endif
+
 /// Applied once at each app root (and at any secondary `UIHostingController` root, like the achievement
 /// banner window): injects the live `AppearanceEnvironment` and asserts the accent + color scheme from it.
 struct AppearanceEnvironmentInjector: ViewModifier {
@@ -193,6 +222,9 @@ struct AppearanceEnvironmentInjector: ViewModifier {
         environment.reduceAnimations = profile.shouldReduceAnimations
         environment.isReducedTier = profile.tier == .reduced
         environment.liquidGlass = AppearanceEnvironment.liquidGlass(Settings.shared, profile: profile)
+        #if DEBUG
+        AppearanceChangeLog.note(environment)
+        #endif
         return content
             .environment(\.appearance, environment)
             .accentColor(environment.accent)
@@ -556,31 +588,67 @@ extension View {
     }
 }
 
-/// `safeAreaBar` (the scroll-edge effect under a floating glass bar) on Liquid Glass systems, a plain
-/// `safeAreaInset` everywhere else, including the Classic Look on iOS 26.
-struct AdaptiveSafeArea<InsetContent: View>: ViewModifier {
-    @Environment(\.appearance) private var appearance
+#if os(iOS)
+/// The navigation container for a SHEET: `NavigationStack` on iOS 16 and later, a stack-style
+/// `NavigationView` on iOS 15. Sheets that open straight onto a sub-screen (the Adhan settings on
+/// Traveling Mode or Prayer Calculation) push through `navigationDestination(isPresented:)`, which
+/// only a `NavigationStack` honours; a legacy `NavigationLink(isActive:)` that is already true when a
+/// `NavigationView` mounts never pushes at all (2026-09-05, seen on iOS 26).
+struct SheetNavigationContainer<Content: View>: View {
+    @ViewBuilder let content: () -> Content
 
+    var body: some View {
+        if #available(iOS 16.0, *) {
+            NavigationStack { content() }
+        } else {
+            NavigationView { content() }
+                .navigationViewStyle(.stack)
+        }
+    }
+}
+#endif
+
+/// `safeAreaBar` (the scroll-edge effect under a floating bar) on iOS 26, a plain `safeAreaInset`
+/// on earlier systems.
+///
+/// The branch is on the OS ONLY, never on `appearance.liquidGlass`. It used to switch to
+/// `safeAreaInset` under the Classic Look, and that flip (the toggle itself, or Low Power Mode
+/// with the automatic rule on) swapped the modifier around the List, which recreated the List and
+/// scrolled every screen back to the top; the Adhan tab, with no bottom bar, was the one screen
+/// that kept its place. A constant modifier chain keeps the List's identity, so a look change is
+/// now a restyle, not a reset. The bar's pills still follow the Classic Look through
+/// `conditionalGlassEffect`; only the scroll-edge treatment under them stays the system's.
+///
+/// `spacing` is the pre-26 `safeAreaInset` spacing between the bar and what sits above it. Its
+/// default there is 8pt, while `safeAreaBar` adds none, so a screen that stacks a second bar above
+/// this one (the surah reader's legend row, the Quran tab's mini player) read 16pt between the two
+/// on iOS 18 against 8pt on iOS 26. Those screens pass 0; a lone bar keeps the default clearance.
+struct AdaptiveSafeArea<InsetContent: View>: ViewModifier {
     let edge: VerticalEdge
+    var spacing: CGFloat? = nil
     let inset: InsetContent
 
     @ViewBuilder
     func body(content: Content) -> some View {
         #if os(iOS)
-        if #available(iOS 26.0, *), appearance.liquidGlass {
+        if #available(iOS 26.0, *) {
             content.safeAreaBar(edge: edge) { inset }
         } else {
-            content.safeAreaInset(edge: edge) { inset }
+            content.safeAreaInset(edge: edge, spacing: spacing) { inset }
         }
         #else
-        content.safeAreaInset(edge: edge) { inset }
+        content.safeAreaInset(edge: edge, spacing: spacing) { inset }
         #endif
     }
 }
 
 extension View {
-    func adaptiveSafeArea<InsetContent: View>(edge: VerticalEdge, @ViewBuilder content: () -> InsetContent) -> some View {
-        modifier(AdaptiveSafeArea(edge: edge, inset: content()))
+    func adaptiveSafeArea<InsetContent: View>(
+        edge: VerticalEdge,
+        spacing: CGFloat? = nil,
+        @ViewBuilder content: () -> InsetContent
+    ) -> some View {
+        modifier(AdaptiveSafeArea(edge: edge, spacing: spacing, inset: content()))
     }
 
     func applyConditionalListStyle(disableNowPlayingInset: Bool = false, topContentMargin: CGFloat = 0) -> some View {
@@ -655,12 +723,11 @@ extension View {
     }
 }
 
-/// Vertical spacing between views inside `safeAreaInset` stacks: 8pt under Liquid Glass, 12pt on
-/// older systems and on the Classic Look.
+/// Vertical spacing between views inside `safeAreaInset` stacks: 8pt everywhere. It was 12pt on
+/// pre-26 systems and on the Classic Look, which read as a visibly wider gap between the sort row
+/// and the search field than iOS 26 draws (Abu, 2026-09-04: "make it like post 26").
 enum SafeAreaInsetVStackSpacing {
-    static var standard: CGFloat {
-        AppearanceEnvironment.liveLiquidGlass ? 8 : 12
-    }
+    static var standard: CGFloat { 8 }
 }
 
 /// The cushion UNDER a floating bottom bar (above the tab bar / home indicator). On iOS 26 the bar

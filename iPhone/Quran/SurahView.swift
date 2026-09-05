@@ -40,7 +40,175 @@ struct HighlightedAyahRef: Equatable, Hashable {
     let ayahID: Int
 }
 
-/// Which individual ayahs are set letter-by-letter, regardless of the global "Arabic Beginner Mode" setting.
+/// One ayah's own display choices, on top of the app's Quran settings (Abu, 2026-09-05: "change just one
+/// ayah ... beginner mode, tajweed on or off, remove tashkeel, remove dots ... many can be selected at the
+/// same time"). Every field is three-state: nil follows the app setting, true / false pins THIS ayah
+/// whatever the setting says - so one ayah can drop its tajweed colors while the rest keep them, or
+/// gain beginner spacing while the global switch stays off.
+struct AyahDisplayOverride: Equatable, Hashable, Sendable {
+    var beginner: Bool? = nil
+    var tajweed: Bool? = nil
+    var hideTashkeel: Bool? = nil
+    var hideDots: Bool? = nil
+    var highlightAllah: Bool? = nil
+    /// The inline study layout (meaning under every word). List mode only: a composed mushaf page has
+    /// no room for glosses, so the page reader ignores it.
+    var wordByWord: Bool? = nil
+
+    static let none = AyahDisplayOverride()
+
+    var isEmpty: Bool { self == .none }
+
+    subscript(option: AyahDisplayOption) -> Bool? {
+        get {
+            switch option {
+            case .beginner:       return beginner
+            case .tajweed:        return tajweed
+            case .hideTashkeel:   return hideTashkeel
+            case .hideDots:       return hideDots
+            case .highlightAllah: return highlightAllah
+            case .wordByWord:     return wordByWord
+            }
+        }
+        set {
+            switch option {
+            case .beginner:       beginner = newValue
+            case .tajweed:        tajweed = newValue
+            case .hideTashkeel:   hideTashkeel = newValue
+            case .hideDots:       hideDots = newValue
+            case .highlightAllah: highlightAllah = newValue
+            case .wordByWord:     wordByWord = newValue
+            }
+        }
+    }
+
+    /// One character per option, in `AyahDisplayOption.allCases` order: "-" follows the app, "1" / "0"
+    /// pinned. Cache keys fold this in.
+    var code: String {
+        String(AyahDisplayOption.allCases.map { option -> Character in
+            switch self[option] {
+            case nil:    return "-"
+            case true?:  return "1"
+            case false?: return "0"
+            }
+        })
+    }
+
+    /// The same digest over the options that MOVE glyphs (beginner spacing, tashkeel, dots) - the
+    /// mushaf fit key wants only those; colors repaint without relayout.
+    var layoutCode: String {
+        String(AyahDisplayOption.allCases.map { option -> Character in
+            guard option.movesGlyphs else { return "-" }
+            switch self[option] {
+            case nil:    return "-"
+            case true?:  return "1"
+            case false?: return "0"
+            }
+        })
+    }
+
+    /// The choices this ayah actually renders with: every pin applied over the app settings. The
+    /// dots rule matches the settings screen (hiding the dots presupposes hidden tashkeel; turning
+    /// tashkeel back on there resets the dots), so `hideDots` never reads true on its own.
+    @MainActor
+    func resolved(_ settings: Settings) -> AyahDisplayChoices {
+        let tashkeel = hideTashkeel ?? settings.cleanArabicText
+        return AyahDisplayChoices(
+            beginner: beginner ?? settings.beginnerMode,
+            tajweed: tajweed ?? settings.showTajweedColors,
+            hideTashkeel: tashkeel,
+            hideDots: tashkeel && (hideDots ?? settings.removeArabicDots),
+            highlightAllah: highlightAllah ?? settings.highlightAllahNames,
+            wordByWord: wordByWord ?? settings.wordByWordInline
+        )
+    }
+}
+
+/// An ayah's effective display choices (see `AyahDisplayOverride.resolved`).
+struct AyahDisplayChoices: Equatable, Sendable {
+    var beginner: Bool
+    var tajweed: Bool
+    var hideTashkeel: Bool
+    var hideDots: Bool
+    var highlightAllah: Bool
+    var wordByWord: Bool
+
+    subscript(option: AyahDisplayOption) -> Bool {
+        switch option {
+        case .beginner:       return beginner
+        case .tajweed:        return tajweed
+        case .hideTashkeel:   return hideTashkeel
+        case .hideDots:       return hideDots
+        case .highlightAllah: return highlightAllah
+        case .wordByWord:     return wordByWord
+        }
+    }
+}
+
+/// The settings an ayah can pin for itself, in the order the "Apply Settings" menu lists them.
+enum AyahDisplayOption: CaseIterable, Hashable, Sendable {
+    case beginner, tajweed, hideTashkeel, hideDots, highlightAllah, wordByWord
+
+    var title: String {
+        switch self {
+        case .beginner:       return "Beginner Mode"
+        case .tajweed:        return "Tajweed Colors"
+        case .hideTashkeel:   return "Hide Tashkeel"
+        case .hideDots:       return "Hide Dots"
+        case .highlightAllah: return "Highlight Allah"
+        case .wordByWord:     return "Word by Word"
+        }
+    }
+
+    var systemImage: String {
+        switch self {
+        case .beginner:       return "textformat.size.ar"
+        case .tajweed:        return "paintpalette"
+        case .hideTashkeel:   return "character.textbox.ar"
+        case .hideDots:       return "circle.dotted"
+        case .highlightAllah: return "paintbrush.pointed"
+        case .wordByWord:     return "text.word.spacing"
+        }
+    }
+
+    /// Whether the option changes the SHAPE of the text (and so the mushaf page's fit), not just its colors.
+    var movesGlyphs: Bool {
+        switch self {
+        case .beginner, .hideTashkeel, .hideDots: return true
+        case .tajweed, .highlightAllah, .wordByWord: return false
+        }
+    }
+
+    /// The letter the DEBUG "-ayahDisplay" seed spells this option with.
+    var seedLetter: Character {
+        switch self {
+        case .beginner:       return "b"
+        case .tajweed:        return "t"
+        case .hideTashkeel:   return "c"
+        case .hideDots:       return "d"
+        case .highlightAllah: return "h"
+        case .wordByWord:     return "w"
+        }
+    }
+
+    /// What the app setting says for this option.
+    @MainActor
+    func appValue(_ settings: Settings) -> Bool {
+        switch self {
+        case .beginner:       return settings.beginnerMode
+        case .tajweed:        return settings.showTajweedColors
+        case .hideTashkeel:   return settings.cleanArabicText
+        case .hideDots:       return settings.cleanArabicText && settings.removeArabicDots
+        case .highlightAllah: return settings.highlightAllahNames
+        case .wordByWord:     return settings.wordByWordInline
+        }
+    }
+}
+
+/// Which individual ayahs pin their own display choices (see `AyahDisplayOverride`), regardless of the
+/// app's Quran settings. Grew out of the per-ayah "Beginner Mode" toggle, which it replaces (Abu,
+/// 2026-09-05: an "Apply Settings" menu with beginner, tajweed, tashkeel, dots and more, several at once,
+/// plus a reset when an ayah differs from the app).
 ///
 /// One shared, session-scoped store rather than per-view state, for two reasons:
 ///
@@ -50,48 +218,133 @@ struct HighlightedAyahRef: Equatable, Hashable {
 ///    dropped off. That is the "beginner mode option per ayah sometimes doesn't work" report: the toggle
 ///    worked, its state just didn't outlive the row.
 ///
-/// 2. **Both readers need the same answer.** The list rows, the surah header's basmala, the mushaf page
-///    composer and the multi-select "Beginner" bulk action all ask the same question, so they all read it here.
+/// 2. **Every reader needs the same answer.** The list rows, the mushaf page composer, the ayah preview
+///    cards (page actions sheet, tafsir sheet) and the multi-select bulk menu all ask the same question,
+///    so they all read it here.
 ///
-/// Deliberately NOT persisted: like the global toggle, it is a reading aid for the session you are in.
+/// Deliberately NOT persisted: like the global toggles it shadows, it is a reading aid for the session
+/// you are in.
 @MainActor
-final class AyahBeginnerOverrides: ObservableObject {
-    static let shared = AyahBeginnerOverrides()
+final class AyahDisplayOverrides: ObservableObject {
+    static let shared = AyahDisplayOverrides()
 
-    private init() { ObjectPublishCounter.attach(self, label: "AyahBeginnerOverrides") }
-
-    @Published private(set) var ayahs: Set<HighlightedAyahRef> = []
-
-    func contains(surah: Int, ayah: Int) -> Bool {
-        ayahs.contains(HighlightedAyahRef(surahID: surah, ayahID: ayah))
+    private init() {
+        ObjectPublishCounter.attach(self, label: "AyahDisplayOverrides")
+        #if DEBUG
+        seedFromLaunchArguments()
+        #endif
     }
 
-    func toggle(surah: Int, ayah: Int) {
-        let ref = HighlightedAyahRef(surahID: surah, ayahID: ayah)
-        if ayahs.contains(ref) {
-            ayahs.remove(ref)
-        } else {
-            ayahs.insert(ref)
+    @Published private(set) var overrides: [HighlightedAyahRef: AyahDisplayOverride] = [:]
+
+    func override(surah: Int, ayah: Int) -> AyahDisplayOverride {
+        overrides[HighlightedAyahRef(surahID: surah, ayahID: ayah)] ?? .none
+    }
+
+    func override(for ref: HighlightedAyahRef) -> AyahDisplayOverride {
+        overrides[ref] ?? .none
+    }
+
+    /// The choices one ayah renders with today: its pins over the app settings.
+    func choices(surah: Int, ayah: Int, settings: Settings) -> AyahDisplayChoices {
+        override(surah: surah, ayah: ayah).resolved(settings)
+    }
+
+    /// Whether any of these ayahs pins anything - the "Reset to App Settings" item shows exactly then.
+    func hasOverride(_ refs: Set<HighlightedAyahRef>) -> Bool {
+        refs.contains { !(overrides[$0]?.isEmpty ?? true) }
+    }
+
+    /// Whether every one of these ayahs renders `option` on.
+    func allOn(_ option: AyahDisplayOption, for refs: Set<HighlightedAyahRef>, settings: Settings) -> Bool {
+        !refs.isEmpty && refs.allSatisfy { override(for: $0).resolved(settings)[option] }
+    }
+
+    /// Flip `option` for every ref, on the EFFECTIVE state: all on turns it off, otherwise it turns on.
+    /// A pin that lands back on the app setting is dropped, so an ayah with nothing different has
+    /// nothing to reset. The tashkeel / dots coupling follows the settings screen: hiding the dots
+    /// hides the tashkeel with them, and showing the tashkeel shows the dots again.
+    func toggle(_ option: AyahDisplayOption, for refs: Set<HighlightedAyahRef>, settings: Settings) {
+        let turnOn = !allOn(option, for: refs, settings: settings)
+        set(option, to: turnOn, for: refs, settings: settings)
+    }
+
+    /// Pin `option` to `value` for every ref (dropping pins that equal the app setting).
+    func set(_ option: AyahDisplayOption, to value: Bool, for refs: Set<HighlightedAyahRef>, settings: Settings) {
+        var next = overrides
+        for ref in refs {
+            var entry = next[ref] ?? .none
+            Self.pin(option, to: value, in: &entry, settings: settings)
+            if option == .hideDots, value {
+                Self.pin(.hideTashkeel, to: true, in: &entry, settings: settings)
+            }
+            if option == .hideTashkeel, !value {
+                Self.pin(.hideDots, to: false, in: &entry, settings: settings)
+            }
+            next[ref] = entry.isEmpty ? nil : entry
         }
+        if next != overrides { overrides = next }
     }
 
-    func insert(_ refs: Set<HighlightedAyahRef>) { ayahs.formUnion(refs) }
-    func remove(_ refs: Set<HighlightedAyahRef>) { ayahs.subtract(refs) }
+    /// Back to the app settings for every ref.
+    func reset(_ refs: Set<HighlightedAyahRef>) {
+        var next = overrides
+        for ref in refs { next[ref] = nil }
+        if next != overrides { overrides = next }
+    }
 
-    /// A stable digest of the overrides that fall on ONE mushaf page. The page render cache and the persisted
-    /// fit metrics key on it - per page, not globally, so toggling one ayah invalidates the page it sits on
-    /// rather than every composed page in the cache and every fit ever measured.
-    /// `present` is an autoclosure so the common case - no overrides anywhere - costs nothing: this runs on
+    private static func pin(_ option: AyahDisplayOption, to value: Bool,
+                            in entry: inout AyahDisplayOverride, settings: Settings) {
+        entry[option] = value == option.appValue(settings) ? nil : value
+    }
+
+    /// A stable digest of the pins that fall on ONE mushaf page. The page render cache and the persisted
+    /// fit metrics key on it - per page, not globally, so pinning one ayah invalidates the page it sits on
+    /// rather than every composed page in the cache and every fit ever measured. `layoutOnly` keeps just
+    /// the glyph-moving pins (the fit key); the render key wants them all.
+    /// `present` is an autoclosure so the common case - no pins anywhere - costs nothing: this runs on
     /// every cache-key and fit-key build, including inside the prewarm ring's per-page loop.
-    nonisolated static func signature(_ overrides: Set<HighlightedAyahRef>,
-                                      limitedTo present: @autoclosure () -> [HighlightedAyahRef]) -> String {
+    nonisolated static func signature(_ overrides: [HighlightedAyahRef: AyahDisplayOverride],
+                                      limitedTo present: @autoclosure () -> [HighlightedAyahRef],
+                                      layoutOnly: Bool = false) -> String {
         guard !overrides.isEmpty else { return "-" }
         let onPage = present()
-            .filter { overrides.contains($0) }
-            .sorted { ($0.surahID, $0.ayahID) < ($1.surahID, $1.ayahID) }
+            .compactMap { ref -> (ref: HighlightedAyahRef, code: String)? in
+                guard let entry = overrides[ref] else { return nil }
+                let code = layoutOnly ? entry.layoutCode : entry.code
+                return code.allSatisfy({ $0 == "-" }) ? nil : (ref, code)
+            }
+            .sorted { ($0.ref.surahID, $0.ref.ayahID) < ($1.ref.surahID, $1.ref.ayahID) }
         guard !onPage.isEmpty else { return "-" }
-        return onPage.map { "\($0.surahID).\($0.ayahID)" }.joined(separator: ",")
+        return onPage.map { "\($0.ref.surahID).\($0.ref.ayahID)=\($0.code)" }.joined(separator: ",")
     }
+
+    #if DEBUG
+    /// "-ayahDisplay 2:3=b1t0,2:5=c1d1" seeds pins at launch for headless verification: per ayah, one
+    /// letter per option (`AyahDisplayOption.seedLetter`) followed by 1 or 0.
+    private func seedFromLaunchArguments() {
+        let args = ProcessInfo.processInfo.arguments
+        guard let i = args.firstIndex(of: "-ayahDisplay"), i + 1 < args.count else { return }
+        var seeded: [HighlightedAyahRef: AyahDisplayOverride] = [:]
+        for spec in args[i + 1].split(separator: ",") {
+            let parts = spec.split(separator: "=")
+            guard parts.count == 2 else { continue }
+            let ref = parts[0].split(separator: ":")
+            guard ref.count == 2, let surah = Int(ref[0]), let ayah = Int(ref[1]) else { continue }
+            var entry = AyahDisplayOverride.none
+            let letters = Array(parts[1])
+            var k = 0
+            while k + 1 < letters.count {
+                if let option = AyahDisplayOption.allCases.first(where: { $0.seedLetter == letters[k] }) {
+                    entry[option] = letters[k + 1] == "1"
+                }
+                k += 2
+            }
+            seeded[HighlightedAyahRef(surahID: surah, ayahID: ayah)] = entry
+        }
+        overrides = seeded
+    }
+    #endif
 }
 
 /// Carries the search TERM along an "open this ayah" navigation, so the destination reader renders the
@@ -226,11 +479,10 @@ struct SurahView: View {
     /// and a page can carry the tail of one surah and the head of the next - so the selection has to name the
     /// surah of every ayah in it (user rule: "allow me to select across multiple pages").
     @State private var selectedAyahs: Set<HighlightedAyahRef> = []
-    /// Ayahs shown letter-by-letter on top of the global setting - the bulk "Beginner" action and the
-    /// per-ayah toggle write the same shared store, so the list rows, the surah header and the mushaf page
-    /// composer all agree, and the choice survives a row being recycled.
-    @ObservedObject private var beginnerOverrides = AyahBeginnerOverrides.shared
-    private var beginnerAyahs: Set<HighlightedAyahRef> { beginnerOverrides.ayahs }
+    /// Ayahs pinning their own display choices (beginner spacing, tajweed, tashkeel, dots, ...) - the bulk
+    /// "Settings" menu and the per-ayah menu write the same shared store, so the list rows, the ayah
+    /// preview cards and the mushaf page composer all agree, and the choice survives a row being recycled.
+    @ObservedObject private var displayOverrides = AyahDisplayOverrides.shared
     @State private var showBulkNoteSheet = false
     @State private var bulkNoteDraft = ""
     @State private var showBulkRespectAlert = false
@@ -1665,6 +1917,20 @@ struct SurahView: View {
                     showCustomRangeSheet = true
                 }
             }
+            // "-openRowSheet actions|tafsir" opens that sheet for the "-lastRead" ayah of this surah
+            // in LIST mode (the page reader has "-openPageSheet"), since neither a long press nor the
+            // ellipsis menu can be driven headlessly.
+            let launchArgs = ProcessInfo.processInfo.arguments
+            if let i = launchArgs.firstIndex(of: "-openRowSheet"), i + 1 < launchArgs.count,
+               let target = ayah, let targetAyah = surah.ayahs.first(where: { $0.id == target }) {
+                let kind: AyahRowSheetKind? = launchArgs[i + 1] == "tafsir" ? .secondary(.tafsir)
+                    : launchArgs[i + 1] == "actions" ? .actions : nil
+                if let kind {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                        presentRowSheet(kind, surah: surah, ayah: targetAyah)
+                    }
+                }
+            }
             #endif
         }
         .sheet(isPresented: $showingSettingsSheet) {
@@ -2248,7 +2514,6 @@ struct SurahView: View {
                                     onToggleHighlight: { toggleListHighlight(ayah.id) },
                                     isSelecting: isSelectingAyahs,
                                     isSelected: selectedAyahs.contains(HighlightedAyahRef(surahID: surah.id, ayahID: ayah.id)),
-                                    forceBeginner: beginnerAyahs.contains(HighlightedAyahRef(surahID: surah.id, ayahID: ayah.id)),
                                     onToggleSelection: {
                                         toggleSelection(surahID: surah.id, ayahID: ayah.id)
                                     },
@@ -2477,12 +2742,16 @@ struct SurahView: View {
                                   let firstID = ayahsForQiraah.first?.id,
                                   let lastID = ayahsForQiraah.last?.id,
                                   lastID > firstID else { return nil }
+                            // The real scroll position, all the way to 1.0 at the very bottom: it
+                            // used to be capped at 97% with the footer's appearance forcing 100%,
+                            // which made the bar leap the moment the footer's top edge scrolled in
+                            // and drop back when it left ("it just jumps at the end", Abu,
+                            // 2026-09-04). The footer rule stays only for the pre-18 anchor fill.
+                            if let scrollFraction {
+                                return CGFloat(scrollFraction)
+                            }
                             if footerVisible { return 1 }
                             if nextSurah == nil, lastAyahVisible { return 1 }
-                            // Never quite full while scrolling: 100% is reserved for the footer.
-                            if let scrollFraction {
-                                return min(CGFloat(scrollFraction), 0.97)
-                            }
                             let currentID = anchorID.flatMap { ayahByID[$0] }?.id ?? firstID
                             return min(CGFloat(currentID - firstID) / CGFloat(lastID - firstID), 0.97)
                         }()
@@ -2552,7 +2821,9 @@ struct SurahView: View {
                 .animation(.easeInOut, value: active)
                 .animation(.spring(response: 0.35, dampingFraction: 0.85), value: barsCollapsed)
             }
-            .adaptiveSafeArea(edge: .bottom) {
+            // `spacing: 0`: the legend row above already carries the 8pt cushion; pre-26
+            // `safeAreaInset`'s default 8pt on top of it made the gap 16pt where iOS 26 draws 8.
+            .adaptiveSafeArea(edge: .bottom, spacing: 0) {
                 bottomInsetContent(proxy: proxy)
                     // Apple Music-style: the search/play row shrinks toward the bottom edge while scrolling
                     // down; typing in it always restores full size.
@@ -2818,10 +3089,6 @@ struct SurahView: View {
         !selectedAyahs.isEmpty && selectedAyahs.allSatisfy { settings.isBookmarked(surah: $0.surahID, ayah: $0.ayahID) }
     }
 
-    private var allSelectedBeginner: Bool {
-        !selectedAyahs.isEmpty && selectedAyahs.allSatisfy { beginnerAyahs.contains($0) }
-    }
-
     private var selectionActionBar: some View {
         VStack(spacing: 10) {
             HStack {
@@ -2881,15 +3148,19 @@ struct SurahView: View {
                     bulkNoteDraft = ""
                     showBulkNoteSheet = true
                 }
-                bulkActionButton("Beginner", systemImage: allSelectedBeginner ? "textformat.size.larger" : "textformat.size") {
-                    withAnimation(.easeInOut) {
-                        if allSelectedBeginner {
-                            beginnerOverrides.remove(selectedAyahs)
-                        } else {
-                            beginnerOverrides.insert(selectedAyahs)
-                        }
-                    }
+                // Was a "Beginner" toggle: now the whole "Apply Settings" menu (beginner spacing, tajweed,
+                // tashkeel, dots, Highlight Allah, word by word) applied to every selected ayah at once,
+                // with a reset when any of them differs from the app settings.
+                Menu {
+                    // The inline study layout only draws in the list reader; the composed page has no
+                    // room for glosses, so page mode's bulk menu leaves "Word by Word" out.
+                    ayahDisplayMenuItems(refs: selectedAyahs, settings: settings,
+                                         offersWordByWord: !settings.quranPageMode)
+                } label: {
+                    bulkActionLabel("Settings", systemImage: "slider.horizontal.3",
+                                    tint: displayOverrides.hasOverride(selectedAyahs) ? settings.accentColor.accent1 : nil)
                 }
+                .buttonStyle(.plain)
             }
             .disabled(selectedAyahs.isEmpty)
             .opacity(selectedAyahs.isEmpty ? 0.45 : 1)

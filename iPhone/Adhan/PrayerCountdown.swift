@@ -35,6 +35,7 @@ struct PrayerCountdown: View {
 
     var body: some View {
         let _ = RenderCounter.hit("PrayerCountdown")
+        let _ = ChangePrinter.hit(Self.self)
         if let currentPrayer, let nextPrayer {
             countdownContent(current: currentPrayer, next: nextPrayer)
         }
@@ -81,9 +82,10 @@ struct PrayerCountdown: View {
             #endif
         case .skyFooter:
             // No `Section` - the sky card already is one, and a nested section inside a list row breaks it.
-            VStack(spacing: 2) {
+            // The big centred countdown over the bar; the card draws the moon and "until X" footer itself.
+            VStack(spacing: 10) {
+                bigTimeLeft(next: next)
                 countdownProgress(next: next)
-                timeLeftRow(next: next)
             }
             .lineLimit(1)
             .minimumScaleFactor(0.25)
@@ -103,18 +105,19 @@ struct PrayerCountdown: View {
             }
     }
 
+    /// The plain card (sky off), in the sky card's grammar: the two prayer columns, the countdown big
+    /// and centred, the bar, then the moon and "until X" on one footer line (Abu, 2026-09-04, from the
+    /// sky mock-up: "the time left is big in the middle and whatnot").
     private func countdownBody(current: Prayer, next: Prayer) -> some View {
-        VStack {
+        VStack(spacing: 10) {
             prayerSummary(current: current, next: next)
+            bigTimeLeft(next: next)
             countdownProgress(next: next)
-            timeLeftRow(next: next)
+            footerRow(next: next)
         }
         .lineLimit(1)
         .minimumScaleFactor(0.25)
-        // Tightened: the card was carrying a lot of empty vertical space.
-        .padding(.vertical, {
-            if #available(iOS 26, *) { return 0 } else { return 4 }
-        }())
+        .padding(.vertical, 4)
     }
 
     private var sectionHeader: some View {
@@ -239,23 +242,46 @@ struct PrayerCountdown: View {
         #endif
     }
 
-    /// Was a plain "Time Left: 00:12:34" headline - visually a relic next to the rest of the card. Now it
-    /// reads as a compact meter caption: a muted label on the left, the live timer in the accent on the right.
-    private func timeLeftRow(next: Prayer) -> some View {
-        HStack(spacing: 6) {
-            Image(systemName: "hourglass")
-                .font(.caption2)
+    /// The countdown as the card's centrepiece: a small "TIME LEFT" caption over big rounded digits,
+    /// hours and minutes large and the seconds a step smaller. Inherits the card's foreground (white on
+    /// the sky, primary on the plain card); the caption is the secondary shade of that. One step below
+    /// `caption2` and 30 pt digits (from 36): Abu found both "a little too big" on 2026-09-05.
+    private func bigTimeLeft(next: Prayer) -> some View {
+        VStack(spacing: 2) {
+            HStack(spacing: 4) {
+                Image(systemName: "hourglass")
+                Text("TIME LEFT")
+            }
+            .font(.system(size: 10, weight: .semibold))
+            .foregroundStyle(.secondary)
 
-            Text("Time left")
-                .font(.caption)
-
-            Spacer(minLength: 4)
-
-            Text(next.time, style: .timer)
-                .font(.caption.monospacedDigit().weight(.semibold))
+            CountdownDigits(target: next.time)
         }
-        .foregroundStyle(.secondary)
         .frame(maxWidth: .infinity)
+    }
+
+    /// "until Fajr": the footer's right side, shared with the sky card.
+    static func untilLabel(for prayer: Prayer) -> String {
+        "until \(countdownDisplayName(for: prayer))"
+    }
+
+    /// The plain card's footer: tonight's moon on the left, the prayer the countdown runs to on the right.
+    private func footerRow(next: Prayer) -> some View {
+        HStack(spacing: 6) {
+            #if os(iOS)
+            let phase = MoonPhase.onCurrentHour()
+            MoonPhaseGlyph(illumination: phase.illumination, isWaxing: phase.isWaxing)
+                .frame(width: 14, height: 14)
+            Text("\(phase.name) · \(phase.illuminationPercent)%")
+            #endif
+
+            Spacer(minLength: 8)
+
+            Text(Self.untilLabel(for: next))
+                .fontWeight(.semibold)
+        }
+        .font(.caption)
+        .foregroundStyle(.secondary)
     }
 
     private func handleScenePhaseChange(_ phase: ScenePhase) {
@@ -633,6 +659,45 @@ private struct PrayerSunnahInfoView: View {
             PrayerCountdown()
         }
         .applyConditionalListStyle(disableNowPlayingInset: true)
+    }
+}
+
+/// The big digits. Hours and minutes in one size, the seconds a step smaller: `Text(style: .timer)`
+/// cannot be split, so the full tier ticks a one-second timeline (this leaf only, never the card) and
+/// the reduced tier and Reduce Motion fall back to the system timer text in one size, which updates
+/// without any body evaluation at all.
+private struct CountdownDigits: View {
+    @Environment(\.appearance) private var appearance
+
+    let target: Date
+
+    var body: some View {
+        if appearance.reduceAnimations || appearance.isReducedTier {
+            Text(target, style: .timer)
+                .font(.system(size: 30, weight: .bold, design: .rounded).monospacedDigit())
+        } else {
+            TimelineView(.periodic(from: Date(), by: 1)) { context in
+                let parts = Self.parts(remaining: target.timeIntervalSince(context.date))
+                HStack(alignment: .lastTextBaseline, spacing: 1) {
+                    Text(parts.main)
+                        .font(.system(size: 30, weight: .bold, design: .rounded))
+                    Text(parts.seconds)
+                        .font(.system(size: 17, weight: .semibold, design: .rounded))
+                        .opacity(0.75)
+                }
+                .monospacedDigit()
+            }
+        }
+    }
+
+    /// "6:09" and ":35" for six hours, nine minutes and thirty-five seconds; never negative (a stale
+    /// target across a prayer boundary reads 0:00 until the card re-resolves).
+    static func parts(remaining: TimeInterval) -> (main: String, seconds: String) {
+        let total = max(0, Int(remaining.rounded(.down)))
+        let hours = total / 3600
+        let minutes = (total % 3600) / 60
+        let seconds = total % 60
+        return (String(format: "%d:%02d", hours, minutes), String(format: ":%02d", seconds))
     }
 }
 

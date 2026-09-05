@@ -254,13 +254,15 @@ struct Ayah: Codable, Identifiable, Equatable {
         return raw ?? textHafs
     }
     /// Clean (no diacritics) Arabic for the given display qiraah.
-    func textCleanArabic(for displayQiraah: String?, surahID: Int? = nil) -> String {
+    /// `removeDots` nil follows the app setting; a per-ayah pin (see `AyahDisplayOverride`) and the
+    /// off-main page composer pass it explicitly, so neither reads Settings for it.
+    func textCleanArabic(for displayQiraah: String?, surahID: Int? = nil, removeDots: Bool? = nil) -> String {
         // `surahID` matters for the 12 BETA riwayat: without it `textArabic` cannot reach the
         // BetaQiraatStore side-table and SILENTLY falls back to Hafs - the search-index-vs-display
         // desync bug (index said 3:65 matched, the reader showed the riwayah's own 3:65 = different
         // words). Every caller that has the surah must pass it.
         let raw = textArabic(for: displayQiraah, surahID: surahID)
-        let removeDots = Settings.shared.removeArabicDots
+        let removeDots = removeDots ?? Settings.shared.removeArabicDots
         let key = ((removeDots ? "D1:" : "D0:") + raw) as NSString
         if let cached = CleanArabicTextCache.cache.object(forKey: key) {
             return cached as String
@@ -308,7 +310,8 @@ struct Ayah: Codable, Identifiable, Equatable {
 
     /// Arabic to show in UI. For Fatiha ayah 1 with clean mode, if the ayah doesn’t start with بسم (e.g. ta'awwudh), shows Bismillah instead.
     /// - Parameter qiraahOverride: When non-nil, use this qiraah instead of Settings (e.g. comparison mode). Use "" for Hafs.
-    func displayArabicText(surahId: Int, clean: Bool, qiraahOverride: String? = nil) -> String {
+    /// - Parameter removeDots: With `clean`, whether the dots go too. Nil follows the app setting.
+    func displayArabicText(surahId: Int, clean: Bool, removeDots: Bool? = nil, qiraahOverride: String? = nil) -> String {
         let qiraah: String? = if let override = qiraahOverride {
             (override.isEmpty || override == "Hafs") ? nil : override
         } else {
@@ -318,9 +321,9 @@ struct Ayah: Codable, Identifiable, Equatable {
         // maps (all 20 texts ship fully vocalized; the skeleton is derived at render time), and
         // stripping tashkeel + signs is exactly what exposes the shared Uthmani rasm across qiraat.
         let text = if qiraah == nil {
-            clean ? textCleanArabic(for: qiraah) : textArabic(for: qiraah, surahID: surahId)
+            clean ? textCleanArabic(for: qiraah, removeDots: removeDots) : textArabic(for: qiraah, surahID: surahId)
         } else if clean {
-            textCleanArabic(for: qiraah, surahID: surahId)
+            textCleanArabic(for: qiraah, surahID: surahId, removeDots: removeDots)
         } else {
             textArabic(for: qiraah, surahID: surahId).removingArabicSukoon
         }
@@ -595,9 +598,10 @@ final class TajweedStore {
         displayText requestedDisplayText: String? = nil,
         cleanDisplayText: Bool = false,
         beginnerSpacing: Bool = false,
+        removeArabicDots: Bool? = nil,
         completion: @escaping @MainActor () -> Void
     ) {
-        let shouldRemoveArabicDots = cleanDisplayText && settings.removeArabicDots
+        let shouldRemoveArabicDots = removeArabicDots ?? (cleanDisplayText && settings.removeArabicDots)
         let cacheKey = paintCacheKey(
             surah: surah, ayah: ayah, text: text, requestedDisplayText: requestedDisplayText,
             cleanDisplayText: cleanDisplayText, beginnerSpacing: beginnerSpacing,

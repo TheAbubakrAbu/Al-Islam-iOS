@@ -35,6 +35,17 @@ struct SummarizeSheet: View {
     /// the editions not yet loaded); the sheet shows a gathering state meanwhile. The closure returns
     /// the pre-combined, pre-clipped text plus its truncation flag - `sourceText` is ignored.
     var gatherSource: (() async -> (text: String, truncated: Bool))? = nil
+    /// The language the summary and every follow-up answer are written in (Abu, 2026-09-05: the
+    /// Arabic tafsirs get a "summarize in Arabic" button next to the English one).
+    var language: OnDeviceAsk.SummaryLanguage = .english
+    /// Multi-source mode focused on ONE section (its "=== label ==="): the rest is context the model
+    /// reads but does not summarize. See `OnDeviceAsk.streamSummary(focus:)`.
+    var focus: String? = nil
+    /// What the caller left OUT of the source and why (the Arabic editions while the model has no
+    /// Arabic) - appended to the note card so the reader knows the summary's reach.
+    var excludedNote: String? = nil
+
+    private var writesArabic: Bool { language == .arabic }
 
     private struct Turn: Identifiable {
         let id = UUID()
@@ -47,6 +58,11 @@ struct SummarizeSheet: View {
     @State private var summary = ""
     @State private var isSummarizing = false
     @State private var summaryFailed = false
+    /// The model's own reason when it has one the reader can act on (`OnDeviceAsk.failureMessage`),
+    /// else nil and the generic wording applies.
+    @State private var summaryFailureMessage: String?
+    /// The shortened source a context-overflow retry summarized - follow-ups ground on the same text.
+    @State private var leanerSource: String?
     @State private var turns: [Turn] = []
     @State private var questionText = ""
     @State private var streamTask: Task<Void, Never>?
@@ -133,6 +149,8 @@ struct SummarizeSheet: View {
         // main-isolated view state from its own task.
         let title = self.title
         let multiSource = self.multiSource
+        let language = self.language
+        let focus = self.focus
         let source = clippedSource.text
         guard !source.isEmpty else {
             // A gatherer that came back with nothing (every fetch failed) is a real failure, not
@@ -146,14 +164,32 @@ struct SummarizeSheet: View {
 
         streamTask?.cancel()
         streamTask = Task { @MainActor in
-            do {
-                for try await snapshot in OnDeviceAsk.streamSummary(title: title, source: source, multiSource: multiSource) {
-                    summary = snapshot
-                }
-            } catch {
-                if !(error is CancellationError) {
+            // One leaner retry on a context overflow: a dense text can still tip the 4,096-token
+            // window at the character budgets, and two thirds of it summarized beats a failure.
+            var attemptSource = source
+            var retriedLeaner = false
+            while true {
+                do {
+                    for try await snapshot in OnDeviceAsk.streamSummary(
+                        title: title, source: attemptSource, multiSource: multiSource, language: language, focus: focus
+                    ) {
+                        summary = snapshot
+                    }
+                } catch {
+                    if error is CancellationError { break }
+                    #if DEBUG
+                    NSLog("SUMMARIZE FAILED: %@", String(describing: error))
+                    #endif
+                    if !retriedLeaner, summary.isEmpty, OnDeviceAsk.isContextOverflow(error) {
+                        retriedLeaner = true
+                        attemptSource = String(attemptSource.prefix(attemptSource.count * 2 / 3)) + "…"
+                        leanerSource = attemptSource
+                        continue
+                    }
                     summaryFailed = summary.isEmpty
+                    summaryFailureMessage = OnDeviceAsk.failureMessage(for: error)
                 }
+                break
             }
             isSummarizing = false
         }
@@ -170,7 +206,9 @@ struct SummarizeSheet: View {
         // Snapshot everything the stream needs as plain values, before leaving the main actor.
         let title = self.title
         let multiSource = self.multiSource
-        let source = clippedSource.text
+        let language = self.language
+        let focus = self.focus
+        let source = leanerSource ?? clippedSource.text
         guard !source.isEmpty else { return }
         let transcript = turns
             .filter { !$0.answer.isEmpty && !$0.failed }
@@ -184,7 +222,7 @@ struct SummarizeSheet: View {
             do {
                 for try await snapshot in OnDeviceAsk.streamFollowUp(
                     title: title, source: source, transcript: transcript, question: question,
-                    multiSource: multiSource
+                    multiSource: multiSource, language: language, focus: focus
                 ) {
                     updateTurn(turnID) { $0.answer = snapshot }
                 }
@@ -207,20 +245,49 @@ struct SummarizeSheet: View {
         mutate(&turns[index])
     }
 
+    /// The model is told "no markdown", and still headed a single-tafsir summary "### Summary:" with
+    /// "**bold**" points (seen 2026-09-05). The sheet renders plain text, so the markers would show
+    /// as-is: strip heading hashes, bold / italic asterisks and backticks, keeping the words.
+    static func plainProse(_ text: String) -> String {
+        var lines: [String] = []
+        for rawLine in text.split(separator: "\n", omittingEmptySubsequences: false) {
+            var line = String(rawLine)
+            let trimmed = line.trimmingCharacters(in: .whitespaces)
+            if trimmed.hasPrefix("#") {
+                line = String(trimmed.drop(while: { $0 == "#" })).trimmingCharacters(in: .whitespaces)
+            }
+            line = line.replacingOccurrences(of: "**", with: "")
+                .replacingOccurrences(of: "`", with: "")
+            lines.append(line)
+        }
+        return lines.joined(separator: "\n")
+    }
+
     // MARK: - Pieces
 
     private var sourceNoteText: String {
+        let base = sourceNoteBase
+        guard let excludedNote, !isGathering else { return base }
+        return base + " " + excludedNote
+    }
+
+    private var sourceNoteBase: String {
         if isGathering {
             return "Gathering every available text for this summary…"
+        }
+        if let focus {
+            return "Summarizing \(focus) only" + (clippedSource.truncated ? " (shortened to fit the on-device model)" : "")
+                + ". The ayah's English translations and an English commentary are given to the model just to help it read the Arabic; questions are answered from the focused text first."
         }
         if multiSource || gatherSource != nil {
             return clippedSource.truncated
                 ? "Summarizing ALL the available texts together - longer ones were shortened proportionally to fit the on-device model."
                 : "Summarizing ALL the available texts together, and answering questions about any of them."
         }
+        let language = writesArabic ? " in Arabic" : ""
         return clippedSource.truncated
-            ? "Summarizing the first \(OnDeviceAsk.summarizeSourceLimit.formatted()) characters of this text - it was shortened to fit the on-device model."
-            : "Summarizing the text currently shown, and answering questions about it."
+            ? "Summarizing the first \(OnDeviceAsk.summarizeSourceLimit.formatted()) characters of this text\(language) - it was shortened to fit the on-device model."
+            : "Summarizing the text currently shown\(language), and answering questions about it."
     }
 
     private var sourceNoteCard: some View {
@@ -259,9 +326,10 @@ struct SummarizeSheet: View {
             .foregroundStyle(settings.accentColor.color)
 
             if summaryFailed {
-                Text(gatherSource != nil
-                     ? "Couldn't load the texts to summarize. Check your connection, close, and try again."
-                     : "The on-device model couldn't summarize this text. Close and try again.")
+                Text(summaryFailureMessage
+                     ?? (gatherSource != nil
+                         ? "Couldn't load the texts to summarize. Check your connection, close, and try again."
+                         : "The on-device model couldn't summarize this text. Close and try again."))
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             } else if summary.isEmpty {
@@ -270,8 +338,10 @@ struct SummarizeSheet: View {
                     .foregroundStyle(.secondary)
             } else {
                 // A generated summary is read to be quoted from - the drag-selectable text view,
-                // not the modifier that only yields a whole-block copy.
-                SelectableProse(text: summary, textStyle: .subheadline)
+                // not the modifier that only yields a whole-block copy. An Arabic summary lays out
+                // right-to-left, from the right edge.
+                SelectableProse(text: Self.plainProse(summary), textStyle: .subheadline,
+                                isArabic: writesArabic, alignment: writesArabic ? .right : nil)
             }
 
             Text(multiSource || gatherSource != nil
@@ -329,7 +399,8 @@ struct SummarizeSheet: View {
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 } else {
-                    SelectableProse(text: turn.answer, textStyle: .subheadline)
+                    SelectableProse(text: Self.plainProse(turn.answer), textStyle: .subheadline,
+                                    isArabic: writesArabic, alignment: writesArabic ? .right : nil)
                 }
             }
             .padding(12)

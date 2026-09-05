@@ -130,6 +130,7 @@ struct PrayerList: View {
 
     var body: some View {
         let _ = RenderCounter.hit("PrayerList")
+        let _ = ChangePrinter.hit(Self.self)
         if live.prayers != nil {
             prayerListSection
         }
@@ -703,10 +704,11 @@ struct PrayerList: View {
             }
             #if os(iOS)
             .sheet(isPresented: $showTravelingModeSettings) {
-                NavigationView {
+                // A stack container, so the sheet opens straight onto Traveling Mode (see
+                // `SheetNavigationContainer`).
+                SheetNavigationContainer {
                     SettingsAdhanView(showNotifications: false, presentedAsSheet: true, openTravelingMode: true)
                 }
-                .navigationViewStyle(.stack)
                 .smallMediumSheetPresentation()
             }
             #endif

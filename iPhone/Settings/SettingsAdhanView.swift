@@ -28,12 +28,24 @@ struct SettingsAdhanView: View {
     private let presentedAsSheet: Bool
     /// Lands straight on the Traveling Mode screen - for the prayer list's Qasr footer, whose whole point is
     /// "take me to where I can turn this off".
-    @State private var openTravelingMode: Bool
+    /// The programmatic entrances: Traveling Mode (its dialog, the prayer list's row, the Distance
+    /// From Home glance tile) and Prayer Calculation (its glance tile). The request is remembered
+    /// and the push is raised a beat after appear: iOS 16+ pushes through
+    /// `navigationDestination(isPresented:)` (a `NavigationStack`), iOS 15 through the hidden
+    /// `isActive` links in the sections below, and either one set true before the container has
+    /// mounted never pushes (2026-09-05, seen on iOS 26).
+    private let requestedTravelingMode: Bool
+    private let requestedPrayerCalculation: Bool
+    @State private var openTravelingMode = false
+    @State private var openPrayerCalculation = false
+    @State private var deepLinkFired = false
 
-    init(showNotifications: Bool, presentedAsSheet: Bool = false, openTravelingMode: Bool = false) {
+    init(showNotifications: Bool, presentedAsSheet: Bool = false, openTravelingMode: Bool = false,
+         openPrayerCalculation: Bool = false) {
         self._showNotifications = State(initialValue: showNotifications)
         self.presentedAsSheet = presentedAsSheet
-        self._openTravelingMode = State(initialValue: openTravelingMode)
+        self.requestedTravelingMode = openTravelingMode
+        self.requestedPrayerCalculation = openPrayerCalculation
     }
 
     private var dialogTitle: String {
@@ -57,22 +69,24 @@ struct SettingsAdhanView: View {
                     adhanSettingsLink(title: "Prayer Calculation", systemImage: "function") {
                         prayerCalculationDestination
                     }
+                    #if os(iOS)
+                    // The iOS 15 programmatic entrance (see `requestedPrayerCalculation`).
+                    .modifier(LegacyProgrammaticLink(isActive: $openPrayerCalculation) {
+                        prayerCalculationDestination
+                    })
+                    #endif
                 }
                 Section {
                     adhanSettingsLink(title: "Traveling Mode", systemImage: "airplane") {
                         travelingModeDestination
                     }
-                    // The programmatic entrance to the same screen (see `openTravelingMode`). A hidden
-                    // isActive link rather than a nav-path push because this view still supports the
-                    // pre-NavigationStack containers it is presented in. iOS-only: the watch never
-                    // opens this programmatically, and `isActive:` is deprecated on watchOS 9+.
+                    // The iOS 15 programmatic entrance (see `requestedTravelingMode`). iOS-only: the
+                    // watch never opens this programmatically, and `isActive:` is deprecated on
+                    // watchOS 9+.
                     #if os(iOS)
-                    .background(
-                        NavigationLink(isActive: $openTravelingMode) {
-                            travelingModeDestination
-                        } label: { EmptyView() }
-                        .hidden()
-                    )
+                    .modifier(LegacyProgrammaticLink(isActive: $openTravelingMode) {
+                        travelingModeDestination
+                    })
                     #endif
                 }
                 Section {
@@ -118,6 +132,22 @@ struct SettingsAdhanView: View {
             .themedListRowBackground()
         }
         .applyConditionalListStyle()
+        #if os(iOS)
+        .modifier(ProgrammaticDestinations(
+            openTravelingMode: $openTravelingMode,
+            openPrayerCalculation: $openPrayerCalculation,
+            travelingMode: { AnyView(travelingModeDestination) },
+            prayerCalculation: { AnyView(prayerCalculationDestination) }
+        ))
+        .onAppear {
+            guard !deepLinkFired, requestedTravelingMode || requestedPrayerCalculation else { return }
+            deepLinkFired = true
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                if requestedTravelingMode { openTravelingMode = true }
+                if requestedPrayerCalculation { openPrayerCalculation = true }
+            }
+        }
+        #endif
         .compactListSectionSpacing()
         .navigationTitle("Al-Adhan Settings")
         #if os(iOS)
@@ -1822,5 +1852,44 @@ extension SettingsSearchEntry {
         .init(title: "High Latitude Rule", path: "Prayer Settings → Prayer Calculation", keywords: "midnight seventh night twilight northern latitude", destination: .prayerCalculation),
         .init(title: "Hanafi Madhab (Asr Time)", path: "Prayer Settings → Prayer Calculation", keywords: "asr later shadow madhhab school shafi", destination: .prayerCalculation),
     ]
+}
+#endif
+
+#if os(iOS)
+/// The iOS 16+ half of the Adhan settings' programmatic entrances: `navigationDestination(isPresented:)`,
+/// which a `NavigationStack` honours. On iOS 15 this is a no-op and `LegacyProgrammaticLink` pushes.
+private struct ProgrammaticDestinations: ViewModifier {
+    @Binding var openTravelingMode: Bool
+    @Binding var openPrayerCalculation: Bool
+    let travelingMode: () -> AnyView
+    let prayerCalculation: () -> AnyView
+
+    func body(content: Content) -> some View {
+        if #available(iOS 16.0, *) {
+            content
+                .navigationDestination(isPresented: $openTravelingMode) { travelingMode() }
+                .navigationDestination(isPresented: $openPrayerCalculation) { prayerCalculation() }
+        } else {
+            content
+        }
+    }
+}
+
+/// The iOS 15 half: a hidden `NavigationLink(isActive:)` behind the row. Applied on iOS 15 ONLY, so
+/// a `NavigationStack` never sees two links for one flag.
+private struct LegacyProgrammaticLink<Destination: View>: ViewModifier {
+    @Binding var isActive: Bool
+    @ViewBuilder let destination: () -> Destination
+
+    func body(content: Content) -> some View {
+        if #available(iOS 16.0, *) {
+            content
+        } else {
+            content.background(
+                NavigationLink(isActive: $isActive) { destination() } label: { EmptyView() }
+                    .hidden()
+            )
+        }
+    }
 }
 #endif

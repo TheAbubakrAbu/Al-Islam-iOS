@@ -263,7 +263,7 @@ struct AyahQiraahComparisonSheet: View {
             }
             .sheet(isPresented: $showSummarize) {
                 SummarizeSheet(
-                    title: "Tafsir, riwayat & translations of \(ayahSheetTitle(surahNumber: surahNumber, ayahNumber: ayahNumber))",
+                    title: "\(AyahAISources.combinedTitlePrefix) of \(ayahSheetTitle(surahNumber: surahNumber, ayahNumber: ayahNumber))",
                     sourceText: "",
                     multiSource: true,
                     gatherSource: {
@@ -279,7 +279,8 @@ struct AyahQiraahComparisonSheet: View {
                                 onlineTranslations: online
                             )
                         )
-                    }
+                    },
+                    excludedNote: AyahAISources.arabicExcludedNote
                 )
             }
             #endif
@@ -998,7 +999,7 @@ struct AyahEnglishComparisonSheet: View {
             }
             .sheet(isPresented: $showSummarize) {
                 SummarizeSheet(
-                    title: "Tafsir, riwayat & translations of \(ayahSheetTitle(surahNumber: surahNumber, ayahNumber: ayahNumber))",
+                    title: "\(AyahAISources.combinedTitlePrefix) of \(ayahSheetTitle(surahNumber: surahNumber, ayahNumber: ayahNumber))",
                     sourceText: "",
                     multiSource: true,
                     gatherSource: {
@@ -1017,7 +1018,8 @@ struct AyahEnglishComparisonSheet: View {
                                 onlineTranslations: online
                             )
                         )
-                    }
+                    },
+                    excludedNote: AyahAISources.arabicExcludedNote
                 )
             }
             #endif
@@ -1333,6 +1335,17 @@ enum AyahAISources {
         )
     }
 
+    /// What the combined ayah source covers, for the summarize sheets' titles.
+    static var combinedTitlePrefix: String {
+        OnDeviceAsk.supportsArabic ? "Tafsir, riwayat & translations" : "English tafsirs & translations"
+    }
+
+    /// The note a summarize sheet shows when the Arabic sources were left out (see `combinedSections`).
+    static var arabicExcludedNote: String? {
+        OnDeviceAsk.supportsArabic ? nil
+            : "The Arabic tafsir editions and the riwayat readings are left out: Apple Intelligence can\u{2019}t read Arabic on this device yet."
+    }
+
     static func combinedSections(
         surahNumber: Int,
         ayahNumber: Int,
@@ -1340,17 +1353,22 @@ enum AyahAISources {
         onlineTranslations: [String: String] = [:]
     ) -> [OnDeviceAsk.SummarizeSection] {
         let anchor = hafsAnchor(surahNumber: surahNumber, ayahNumber: ayahNumber)
+        // The model rejects a prompt with a substantial Arabic passage while it has no Arabic
+        // (`OnDeviceAsk.supportsArabic`): the three Arabic editions and the riwayat readings (pure
+        // Arabic) stay out until it does. Before this gate the six-edition prompt failed outright.
+        let readsArabic = OnDeviceAsk.supportsArabic
 
         // All six bundled tafsir editions - a synchronous pack read (Hafs numbering).
         let tafsirSections = TafsirAuthor.allCases.compactMap { author -> OnDeviceAsk.SummarizeSection? in
-            guard let entry = TafsirStore.shared.entry(author: author, surah: surahNumber, ayah: anchor) else { return nil }
+            guard readsArabic || !author.isArabic,
+                  let entry = TafsirStore.shared.entry(author: author, surah: surahNumber, ayah: anchor) else { return nil }
             return OnDeviceAsk.SummarizeSection(label: author.summarizeSectionLabel, text: entry.content)
         }
 
-        let qiraahSections = [OnDeviceAsk.SummarizeSection(
+        let qiraahSections = readsArabic ? [OnDeviceAsk.SummarizeSection(
             label: "Riwayat (qiraah readings) of this ayah",
             text: qiraahComparisonText(surahNumber: surahNumber, ayahNumber: ayahNumber)
-        )].filter { !$0.text.isEmpty }
+        )].filter { !$0.text.isEmpty } : []
 
         let translationSections = [OnDeviceAsk.SummarizeSection(
             label: "English translations of this ayah",

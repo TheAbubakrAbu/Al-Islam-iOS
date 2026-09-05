@@ -802,6 +802,8 @@ struct WordByWordTextView: UIViewRepresentable {
     /// The word whose meaning is showing, lit in the accent.
     var selectedWord: Int?
     var highlightColor: Color
+    /// Taps that open a word - two in the reader rows, one on the ayah preview cards (see `WordByWordText`).
+    var tapsRequired: Int = 2
     let onTapWord: (Int) -> Void
 
     func makeUIView(context: Context) -> UITextView {
@@ -825,6 +827,12 @@ struct WordByWordTextView: UIViewRepresentable {
         _ = view.layoutManager
 
         let tap = UITapGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.handleTap(_:)))
+        // TWO taps open a word, in list mode as in page mode (Abu, 2026-09-04: a single tap kept
+        // opening cards by accident). The row's own single tap is not made to wait for this one,
+        // so marking an ayah stays instant; a double tap marks it twice (a visual no-op) and then
+        // opens the card, the same trade page mode makes (see `onDoubleTapWord`). The ayah preview
+        // cards ask for ONE tap instead (Abu, 2026-09-05): there is no row tap to collide with.
+        tap.numberOfTapsRequired = max(1, tapsRequired)
         // The coordinator needs the view before the recognizer can hit-test against it.
         context.coordinator.textView = view
         tap.delegate = context.coordinator
@@ -946,38 +954,84 @@ struct WordByWordTextView: UIViewRepresentable {
             word(at: gestureRecognizer.location(in: textView)) != nil
         }
 
-        /// ...and when it DOES land on a word, the row's tap must not also fire: the reader asked for the
-        /// word, not for the ayah to be marked. Requiring the other recognizer to wait for this one is
-        /// the only lever available here - SwiftUI's tap gesture lives on an ancestor this view cannot
-        /// reach to configure directly.
+        /// The row's single tap is NOT made to wait for this double tap: with the recognizer at two
+        /// taps, forcing the ancestor's tap to wait for it would delay every ayah mark by the
+        /// double-tap timeout. So a double tap on a word marks the ayah twice (no visible change)
+        /// and then opens the card, exactly as page mode's double tap does.
         func gestureRecognizer(
             _ gestureRecognizer: UIGestureRecognizer,
             shouldBeRequiredToFailBy otherGestureRecognizer: UIGestureRecognizer
         ) -> Bool {
-            true
+            false
         }
     }
 }
 
-/// Builds the attributed ayah (tajweed colors, the name الله, the trailing ayah ornament) and hands it to
-/// the text view above. Kept separate so the representable stays a dumb renderer.
-struct WordByWordText: View {
-    @ObservedObject private var settings = Settings.shared
-
+/// One ayah's share of a `WordByWordText` run: its display text, its tajweed paint, its glosses and its
+/// trailing number ornament. A reader row passes one; the ayah preview cards (page actions sheet, tafsir
+/// sheet) pass one per ayah of a group, laid out as ONE continuous run with inline markers - the mushaf's
+/// shape - and every word of every segment stays tappable.
+struct WordByWordSegment {
     /// What the reader is showing - already clean-mode / dots-mode processed.
     let displayText: String
     /// Tajweed-colored version of `displayText`, when tajweed colors are on.
     let preStyled: AttributedString?
-    let fontName: String?
-    let fontSize: CGFloat
     let ayahNumberArabic: String
     let glosses: [String]
     /// Non-Hafs riwayat have no gloss pack, but their words still open the riwayah word card -
     /// every LETTERED token is tappable regardless of `glosses` (ornament-only tokens stay silent).
     var alwaysTappable: Bool = false
+    /// "Highlight Allah" for this ayah: the app setting, or the ayah's own pin (`AyahDisplayOverride`).
+    var highlightAllahNames: Bool = true
+}
+
+/// A word of a `WordByWordText` run: which segment (ayah) and which token of it.
+struct WordByWordRef: Hashable {
+    let segment: Int
+    let index: Int
+}
+
+/// Builds the attributed ayah run (tajweed colors, the name الله, the trailing ayah ornaments) and hands it
+/// to the text view above. Kept separate so the representable stays a dumb renderer.
+struct WordByWordText: View {
+    @ObservedObject private var settings = Settings.shared
+
+    let segments: [WordByWordSegment]
+    let fontName: String?
+    let fontSize: CGFloat
+    /// Taps that open a word: TWO in the reader rows (Abu, 2026-09-04: single taps opened cards by
+    /// accident), ONE on the ayah preview cards (Abu, 2026-09-05: the card is there to be touched).
+    var tapsRequired: Int = 2
     /// The word currently showing its card, lit in the accent.
-    let selectedWord: Int?
-    let onSelectWord: (Int) -> Void
+    let selectedWord: WordByWordRef?
+    let onSelectWord: (WordByWordRef) -> Void
+
+    /// The single-ayah form the reader rows use.
+    init(displayText: String, preStyled: AttributedString?, fontName: String?, fontSize: CGFloat,
+         ayahNumberArabic: String, glosses: [String], alwaysTappable: Bool = false,
+         highlightAllahNames: Bool, tapsRequired: Int = 2,
+         selectedWord: Int?, onSelectWord: @escaping (Int) -> Void) {
+        self.segments = [WordByWordSegment(
+            displayText: displayText, preStyled: preStyled, ayahNumberArabic: ayahNumberArabic,
+            glosses: glosses, alwaysTappable: alwaysTappable, highlightAllahNames: highlightAllahNames
+        )]
+        self.fontName = fontName
+        self.fontSize = fontSize
+        self.tapsRequired = tapsRequired
+        self.selectedWord = selectedWord.map { WordByWordRef(segment: 0, index: $0) }
+        self.onSelectWord = { onSelectWord($0.index) }
+    }
+
+    /// The multi-ayah form the preview cards use.
+    init(segments: [WordByWordSegment], fontName: String?, fontSize: CGFloat, tapsRequired: Int = 2,
+         selectedWord: WordByWordRef?, onSelectWord: @escaping (WordByWordRef) -> Void) {
+        self.segments = segments
+        self.fontName = fontName
+        self.fontSize = fontSize
+        self.tapsRequired = tapsRequired
+        self.selectedWord = selectedWord
+        self.onSelectWord = onSelectWord
+    }
 
     /// The reader's content width. Seeded from the last measurement so only the very first row of a
     /// session has to wait for a layout pass to know it.
@@ -985,7 +1039,38 @@ struct WordByWordText: View {
 
     private static var lastMeasuredWidth: CGFloat = 0
 
-    private var wordRanges: [NSRange] { WordTokens.ranges(in: displayText) }
+    /// Where every segment's tokens sit in the concatenated run: `wordRanges` are UTF-16 ranges into the
+    /// string `buildAttributedText` assembles (each segment's text, then " marker", then a joining space
+    /// before the next), and `segmentStarts[i]` is the index of segment i's first token in it.
+    private struct RunLayout {
+        var wordRanges: [NSRange] = []
+        var segmentStarts: [Int] = []
+    }
+
+    private var runLayout: RunLayout {
+        var layout = RunLayout()
+        var offset = 0
+        for (i, segment) in segments.enumerated() {
+            layout.segmentStarts.append(layout.wordRanges.count)
+            for range in WordTokens.ranges(in: segment.displayText) {
+                layout.wordRanges.append(NSRange(location: range.location + offset, length: range.length))
+            }
+            offset += (segment.displayText as NSString).length
+                + (" \(segment.ayahNumberArabic)" as NSString).length
+            if i < segments.count - 1 { offset += 1 }
+        }
+        return layout
+    }
+
+    private func globalIndex(of ref: WordByWordRef, in layout: RunLayout) -> Int? {
+        guard layout.segmentStarts.indices.contains(ref.segment) else { return nil }
+        return layout.segmentStarts[ref.segment] + ref.index
+    }
+
+    private func ref(ofGlobal index: Int, in layout: RunLayout) -> WordByWordRef? {
+        guard let segment = layout.segmentStarts.lastIndex(where: { $0 <= index }) else { return nil }
+        return WordByWordRef(segment: segment, index: index - layout.segmentStarts[segment])
+    }
 
     var body: some View {
         // Until the width is known the text view would lay out on one endless line; the plain snippet
@@ -993,45 +1078,55 @@ struct WordByWordText: View {
         // block while measuring.
         Group {
             if width > 0 {
+                let layout = runLayout
                 WordByWordTextView(
                     attributed: attributedText(),
-                    wordRanges: wordRanges,
+                    wordRanges: layout.wordRanges,
                     width: width,
-                    selectedWord: selectedWord,
+                    selectedWord: selectedWord.flatMap { globalIndex(of: $0, in: layout) },
                     highlightColor: settings.accentColor.color,
+                    tapsRequired: tapsRequired,
                     onTapWord: { index in
+                        guard let ref = ref(ofGlobal: index, in: layout),
+                              segments.indices.contains(ref.segment) else { return }
+                        let segment = segments[ref.segment]
                         // A token with no gloss of its own (the ۞ mark, the tail of a merged word) has
                         // nothing to show - stay silent rather than open an empty card. In riwayah mode
                         // (no glosses exist at all) any token that carries letters opens the word card.
-                        if alwaysTappable {
-                            let tokens = WordTokens.tokens(in: displayText)
-                            guard tokens.indices.contains(index),
-                                  !tokens[index].removingArabicDiacriticsAndSigns
+                        if segment.alwaysTappable {
+                            let tokens = WordTokens.tokens(in: segment.displayText)
+                            guard tokens.indices.contains(ref.index),
+                                  !tokens[ref.index].removingArabicDiacriticsAndSigns
                                       .trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
                         } else {
-                            guard glosses.indices.contains(index), !glosses[index].isEmpty else { return }
+                            guard segment.glosses.indices.contains(ref.index),
+                                  !segment.glosses[ref.index].isEmpty else { return }
                         }
                         settings.hapticFeedback()
-                        onSelectWord(index)
+                        onSelectWord(ref)
                     }
                 )
                 .frame(maxWidth: .infinity, alignment: .trailing)
             } else {
-                HighlightedSnippet(
-                    source: displayText,
-                    term: "",
-                    font: swiftUIFont,
-                    accent: settings.accentColor.color,
-                    fg: .primary,
-                    preStyledSource: preStyled,
-                    trailingSuffix: " \(ayahNumberArabic)",
-                    trailingSuffixFont: .custom(Settings.hafsUthmaniFontName, size: fontSize),
-                    trailingSuffixColor: settings.accentColor.color,
-                    highlightAllahNames: settings.highlightAllahNames
-                )
-                .arabicFontDesign(custom: true)
-                .multilineTextAlignment(.trailing)
-                .frame(maxWidth: .infinity, alignment: .trailing)
+                VStack(alignment: .trailing, spacing: 4) {
+                    ForEach(segments.indices, id: \.self) { i in
+                        HighlightedSnippet(
+                            source: segments[i].displayText,
+                            term: "",
+                            font: swiftUIFont,
+                            accent: settings.accentColor.color,
+                            fg: .primary,
+                            preStyledSource: segments[i].preStyled,
+                            trailingSuffix: " \(segments[i].ayahNumberArabic)",
+                            trailingSuffixFont: .custom(Settings.hafsUthmaniFontName, size: fontSize),
+                            trailingSuffixColor: settings.accentColor.color,
+                            highlightAllahNames: segments[i].highlightAllahNames
+                        )
+                        .arabicFontDesign(custom: true)
+                        .multilineTextAlignment(.trailing)
+                        .frame(maxWidth: .infinity, alignment: .trailing)
+                    }
+                }
             }
         }
         .background(
@@ -1068,63 +1163,79 @@ struct WordByWordText: View {
         return cache
     }()
 
-    /// Memoized per (text, faces, colours, tajweed digest): the build ran on every body pass of every
+    /// Memoized per (texts, faces, colours, tajweed digests): the build ran on every body pass of every
     /// visible row, and the representable then compared the result attribute by attribute just to
     /// find nothing had changed (Phase 5 step 1).
     private func attributedText() -> NSAttributedString {
-        let key = [
-            displayText, fontName ?? "", "\(fontSize)", ayahNumberArabic,
-            "\(settings.accentColor.color)", settings.highlightAllahNames ? "a" : "-",
-            preStyled.map { "\($0.renderDigest)" } ?? "plain",
-        ].joined(separator: "\u{1F}") as NSString
+        var parts: [String] = [fontName ?? "", "\(fontSize)", "\(settings.accentColor.color)"]
+        for segment in segments {
+            parts.append(segment.displayText)
+            parts.append(segment.ayahNumberArabic)
+            parts.append(segment.highlightAllahNames ? "a" : "-")
+            parts.append(segment.preStyled.map { "\($0.renderDigest)" } ?? "plain")
+        }
+        let key = parts.joined(separator: "\u{1F}") as NSString
         if let hit = Self.attributedMemo.object(forKey: key) { return hit }
         let built = buildAttributedText()
         Self.attributedMemo.setObject(built, forKey: key)
         return built
     }
 
+    /// Assembles the run exactly as `runLayout` measures it: every segment's text, its " marker", and one
+    /// joining space before the next segment.
     private func buildAttributedText() -> NSAttributedString {
         let paragraph = NSMutableParagraphStyle()
         paragraph.alignment = fontName == nil ? .natural : .right
         paragraph.baseWritingDirection = .rightToLeft
-
-        let body: NSMutableAttributedString
-        // A pre-styled string whose characters don't match the display text (a mode the tajweed store
-        // couldn't map) would shift every word range - fall back to the plain text rather than paint the
-        // wrong word.
-        if let preStyled, String(preStyled.characters) == displayText {
-            body = NSMutableAttributedString(attributedString: NSAttributedString(preStyled))
-            // Tajweed colors are already UIColors on the string; only the font and paragraph go on top.
-            body.addAttributes(
-                [.font: uiFont, .paragraphStyle: paragraph],
-                range: NSRange(location: 0, length: body.length)
-            )
-        } else {
-            body = NSMutableAttributedString(
-                string: displayText,
-                attributes: [.font: uiFont, .foregroundColor: UIColor.label, .paragraphStyle: paragraph]
-            )
-        }
-
-        if settings.highlightAllahNames {
-            let ns = displayText as NSString
-            for range in HighlightedSnippet.arabicAllahRanges(in: displayText) {
-                let utf16 = NSRange(range, in: displayText)
-                guard utf16.location + utf16.length <= ns.length else { continue }
-                body.addAttribute(.foregroundColor, value: UIColor.systemRed, range: utf16)
-            }
-        }
-
         let markerFont = QuranFontCache.font(name: Settings.hafsUthmaniFontName, size: fontSize) ?? uiFont
-        body.append(NSAttributedString(
-            string: " \(ayahNumberArabic)",
-            attributes: [
-                .font: markerFont,
-                .foregroundColor: UIColor(settings.accentColor.color),
-                .paragraphStyle: paragraph,
-            ]
-        ))
-        return body
+
+        let run = NSMutableAttributedString()
+        for (i, segment) in segments.enumerated() {
+            let displayText = segment.displayText
+            let body: NSMutableAttributedString
+            // A pre-styled string whose characters don't match the display text (a mode the tajweed store
+            // couldn't map) would shift every word range - fall back to the plain text rather than paint the
+            // wrong word.
+            if let preStyled = segment.preStyled, String(preStyled.characters) == displayText {
+                body = NSMutableAttributedString(attributedString: NSAttributedString(preStyled))
+                // Tajweed colors are already UIColors on the string; only the font and paragraph go on top.
+                body.addAttributes(
+                    [.font: uiFont, .paragraphStyle: paragraph],
+                    range: NSRange(location: 0, length: body.length)
+                )
+            } else {
+                body = NSMutableAttributedString(
+                    string: displayText,
+                    attributes: [.font: uiFont, .foregroundColor: UIColor.label, .paragraphStyle: paragraph]
+                )
+            }
+
+            if segment.highlightAllahNames {
+                let ns = displayText as NSString
+                for range in HighlightedSnippet.arabicAllahRanges(in: displayText) {
+                    let utf16 = NSRange(range, in: displayText)
+                    guard utf16.location + utf16.length <= ns.length else { continue }
+                    body.addAttribute(.foregroundColor, value: UIColor.systemRed, range: utf16)
+                }
+            }
+
+            body.append(NSAttributedString(
+                string: " \(segment.ayahNumberArabic)",
+                attributes: [
+                    .font: markerFont,
+                    .foregroundColor: UIColor(settings.accentColor.color),
+                    .paragraphStyle: paragraph,
+                ]
+            ))
+            if i < segments.count - 1 {
+                body.append(NSAttributedString(
+                    string: " ",
+                    attributes: [.font: uiFont, .paragraphStyle: paragraph]
+                ))
+            }
+            run.append(body)
+        }
+        return run
     }
 }
 
@@ -1152,6 +1263,8 @@ struct WordByWordInlineText: View {
     let fontSize: CGFloat
     let ayahNumberArabic: String
     let glosses: [String]
+    /// "Highlight Allah" for this ayah: the app setting, or the ayah's own pin (`AyahDisplayOverride`).
+    let highlightAllahNames: Bool
     /// Whether the gloss LINE is drawn. The glosses themselves always arrive: a word still opens its
     /// card on tap, and a word with no gloss still isn't tappable, whichever lines are showing.
     let showsGlosses: Bool
@@ -1160,7 +1273,9 @@ struct WordByWordInlineText: View {
     let transliterations: [String]
     /// The word currently showing its card, washed in the accent.
     let selectedWord: Int?
-    let onSelectWord: (Int) -> Void
+    /// Nil when "Tap a Word for Its Meaning" is off: the study layout still draws, its words just
+    /// do not open a card (the two switches are independent).
+    let onSelectWord: ((Int) -> Void)?
 
     @State private var width: CGFloat = 0
 
@@ -1193,7 +1308,7 @@ struct WordByWordInlineText: View {
                     trailingSuffix: " \(ayahNumberArabic)",
                     trailingSuffixFont: .custom(Settings.hafsUthmaniFontName, size: fontSize),
                     trailingSuffixColor: settings.accentColor.color,
-                    highlightAllahNames: settings.highlightAllahNames
+                    highlightAllahNames: highlightAllahNames
                 )
                 .arabicFontDesign(custom: true)
                 .multilineTextAlignment(.trailing)
@@ -1239,7 +1354,7 @@ struct WordByWordInlineText: View {
                 attributes: [.foregroundColor: UIColor.label]
             )
         }
-        if settings.highlightAllahNames {
+        if highlightAllahNames {
             let ns = displayText as NSString
             for range in HighlightedSnippet.arabicAllahRanges(in: displayText) {
                 let utf16 = NSRange(range, in: displayText)
@@ -1312,10 +1427,11 @@ struct WordByWordInlineText: View {
                 .fill(selected ? settings.accentColor.color.opacity(0.18) : Color.clear)
         )
         .contentShape(Rectangle())
-        .onTapGesture {
+        // Two taps, like every word in the app (Abu, 2026-09-04).
+        .onTapGesture(count: 2) {
             // A token with no gloss of its own (the ۞ mark, the tail of a merged word) has nothing
             // to show - stay silent rather than open an empty card.
-            guard !cell.isOrnament, !cell.gloss.isEmpty else { return }
+            guard let onSelectWord, !cell.isOrnament, !cell.gloss.isEmpty else { return }
             settings.hapticFeedback()
             onSelectWord(cell.id)
         }

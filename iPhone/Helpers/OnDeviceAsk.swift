@@ -159,6 +159,8 @@ enum OnDeviceAsk {
             return "Apple Intelligence can\u{2019}t work in that language yet. Try asking in English."
         case .rateLimited, .concurrentRequests:
             return "Apple Intelligence is busy right now. Try again in a moment."
+        case .exceededContextWindowSize:
+            return "This text is longer than Apple Intelligence can read in one go on this device."
         default:
             return nil
         }
@@ -166,9 +168,53 @@ enum OnDeviceAsk {
 
     // MARK: - Summarize (tafsir / surah info / comparison sheets)
 
+    /// The language a summary and its follow-ups are written in. English is the app's language; Arabic
+    /// is offered on the Arabic tafsir editions and surah sources (Abu, 2026-09-05), only when the
+    /// on-device model can write it (`supportsArabicOutput`).
+    enum SummaryLanguage: String, Sendable {
+        case english, arabic
+
+        /// The instruction rule for the language.
+        var rule: String {
+            switch self {
+            case .english:
+                return "ALWAYS write in ENGLISH, even when the source text is in Arabic; keep key Arabic terms, transliterated."
+            case .arabic:
+                return "ALWAYS write in ARABIC (clear Modern Standard Arabic), even when the source text is in English."
+            }
+        }
+
+        /// The upper-case name the task lines use ("IN ENGLISH").
+        var promptName: String { self == .arabic ? "ARABIC" : "ENGLISH" }
+    }
+
+    /// Whether the on-device model accepts Arabic at all - reading it in a prompt or writing it.
+    /// Apple Intelligence's language list has no Arabic as of iOS 26.0, and the framework rejects a
+    /// prompt carrying a substantial unsupported-language passage outright
+    /// (`unsupportedLanguageOrLocale`, seen 2026-09-05 with a 3,000-character Arabic tafsir under
+    /// 4,600 characters of English, and with the six-edition "summarize all" prompt). So while this
+    /// is false every AI entry point leaves its Arabic sources out (the Arabic tafsir editions, the
+    /// riwayat readings, Arabic surah-info sources) and offers no Arabic-edition or Arabic-output
+    /// summarize buttons. Cached like `isAvailable`: it is read in view bodies.
+    static var supportsArabic: Bool {
+        guard #available(iOS 26.0, *), isAvailable else { return false }
+        let now = CFAbsoluteTimeGetCurrent()
+        if let cached = arabicSupportCache, now - cached.at < availabilityTTL { return cached.supported }
+        let supported = SystemLanguageModel.default.supportsLocale(Locale(identifier: "ar"))
+        arabicSupportCache = (supported, now)
+        return supported
+    }
+
+    nonisolated(unsafe) private static var arabicSupportCache: (supported: Bool, at: CFAbsoluteTime)?
+
     /// The rules a SUMMARIZE session is created with: the given source text is the whole world -
-    /// summarize it faithfully, answer follow-ups only from it, invent nothing, no rulings.
-    private static let summarizeInstructions = """
+    /// summarize it faithfully, answer follow-ups only from it, invent nothing, no rulings. The
+    /// language rule comes last (see `SummaryLanguage`).
+    private static func summarizeInstructions(_ language: SummaryLanguage) -> String {
+        summarizeInstructionsBase + "\n6. " + language.rule + "\n"
+    }
+
+    private static let summarizeInstructionsBase = """
     You are a careful reading assistant inside a Quran and Hadith reading app. You will be given a \
     SOURCE TEXT (a tafsir passage, surah background prose, or a set of translations of one ayah) \
     and asked to summarize it, then possibly to answer follow-up questions about it.
@@ -189,15 +235,16 @@ enum OnDeviceAsk {
     """
 
     /// The rules a MULTI-SOURCE summarize session is created with (the "all tafsirs" case): read every
-    /// labeled section, Arabic included, always write in English, synthesize one picture, and answer
+    /// labeled section, Arabic included, write in the asked language, synthesize one picture, and answer
     /// follow-ups from ANY of the sources - naming which one a point comes from when relevant.
-    private static let summarizeMultiInstructions = """
+    private static func summarizeMultiInstructions(_ language: SummaryLanguage) -> String {
+        """
     You are a careful reading assistant inside a Quran and Hadith reading app. You will be given \
     SOURCE TEXTS: several sections, each headed "=== ... ===" naming which tafsir (Quranic \
     commentary) or source it is. Some sections are in English and some in Arabic.
 
     Rules, in order:
-    1. Read ALL the sections, including the Arabic ones, but ALWAYS write in ENGLISH.
+    1. Read ALL the sections, including the Arabic ones, but \(language.rule)
     2. Ground EVERYTHING in the given sections. Synthesize one complete picture from all of them \
     together: report only what the texts actually say, in your own words, keeping their emphasis. \
     Where sources add distinct points, bring them together and name the source when that helps \
@@ -214,6 +261,7 @@ enum OnDeviceAsk {
     7. Write clearly and completely: short paragraphs, plain respectful language, no markdown \
     formatting.
     """
+    }
 
     /// How much source text a summarize prompt carries. ~6000 characters is a sensible fit for the
     /// on-device model's small context window once instructions, transcript, and answer share it.
@@ -222,7 +270,11 @@ enum OnDeviceAsk {
     /// The cap for the MULTI-SOURCE case (all tafsirs of an ayah at once): higher, because the whole
     /// point is breadth, but still leaving the small context window room for instructions, the
     /// transcript, and the answer. Each section is truncated proportionally against this.
-    static let summarizeMultiSourceLimit = 12000
+    /// Was 12,000: three English tafsirs plus the translations at that size came to 4,304 tokens
+    /// against the model's 4,096 (measured 2026-09-05; tafsir prose tokenizes at ~3 characters a
+    /// token). 9,000 leaves ~1,000 tokens for the instructions and the answer, and the sheet retries
+    /// leaner once should a dense text still overflow (`isContextOverflow`).
+    static let summarizeMultiSourceLimit = 9000
 
     /// The source text a summarize session is grounded on: trimmed, clipped to the model's sensible
     /// context, with a flag so the UI can disclose the truncation.
@@ -281,34 +333,58 @@ enum OnDeviceAsk {
     /// Stream a faithful summary of `source` (pass it pre-clipped via `clippedSource`, or
     /// pre-combined via `combinedSource` with `multiSource: true`). Snapshots, like `streamChatAnswer`:
     /// each yielded value is the full text so far.
+    /// `focus`: a multi-source summary of ONE section only (its "=== label ==="); the other sections
+    /// are context the model may read but must not summarize. How an Arabic tafsir edition gets an
+    /// English summary at all: the model rejects a prompt that is mostly Arabic
+    /// (`unsupportedLanguageOrLocale`), so the edition travels with the ayah's English translations
+    /// and an English commentary, which the detector reads as an English prompt.
     @available(iOS 26.0, *)
     static func streamSummary(title: String, source: String,
-                              multiSource: Bool = false) -> AsyncThrowingStream<String, Error> {
+                              multiSource: Bool = false,
+                              language: SummaryLanguage = .english,
+                              focus: String? = nil) -> AsyncThrowingStream<String, Error> {
         if multiSource {
-            return streamSummarizeTask(instructions: summarizeMultiInstructions, prompt: """
+            let task = focus.map { focusTask($0, language: language) } ?? """
+            TASK: Read every section above, including the Arabic ones, and write ONE synthesized \
+            summary IN \(language.promptName): the complete picture these sources give together, in a few short \
+            paragraphs, naming a specific source where it adds a distinct point. Nothing added.
+            """
+            return streamSummarizeTask(instructions: summarizeMultiInstructions(language), prompt: """
             SOURCE TEXTS ("\(title)"):
             \(source)
 
-            TASK: Read every section above, including the Arabic ones, and write ONE synthesized \
-            summary IN ENGLISH: the complete picture these sources give together, in a few short \
-            paragraphs, naming a specific source where it adds a distinct point. Nothing added.
+            \(task)
             """)
         }
-        return streamSummarizeTask(instructions: summarizeInstructions, prompt: """
+        return streamSummarizeTask(instructions: summarizeInstructions(language), prompt: """
         SOURCE TEXT ("\(title)"):
         \(source)
 
-        TASK: Summarize this source text faithfully in a few short paragraphs: its main points, \
-        in its own emphasis, nothing added.
+        TASK: Summarize this source text faithfully IN \(language.promptName), in a few short paragraphs: \
+        its main points, in its own emphasis, nothing added.
         """)
     }
 
     /// Stream the answer to a follow-up question, re-grounded on the SAME source text plus the
     /// running transcript. Older turns are dropped and long answers clipped so the source text
     /// always keeps its full share of the context window.
+    /// The task line of a focused multi-source summary (see `streamSummary(focus:)`).
+    private static func focusTask(_ focus: String, language: SummaryLanguage) -> String {
+        """
+        TASK: Summarize ONLY the section headed "=== \(focus) ===", IN \(language.promptName), in a few \
+        short paragraphs: its main points, in its own emphasis, nothing added. The OTHER sections are \
+        context to help you read it (the same ayah's English translations and an English commentary): \
+        do not summarize them, and do not attribute their points to "\(focus)" unless it makes them \
+        too. If you cannot read the focused section well enough to summarize it faithfully, say so \
+        plainly instead of guessing.
+        """
+    }
+
     @available(iOS 26.0, *)
     static func streamFollowUp(title: String, source: String, transcript: [SummarizeTurn],
-                               question: String, multiSource: Bool = false) -> AsyncThrowingStream<String, Error> {
+                               question: String, multiSource: Bool = false,
+                               language: SummaryLanguage = .english,
+                               focus: String? = nil) -> AsyncThrowingStream<String, Error> {
         let recent = transcript.suffix(6).map { turn in
             "Q: \(String(turn.question.prefix(300)))\nA: \(String(turn.answer.prefix(600)))"
         }.joined(separator: "\n")
@@ -320,13 +396,19 @@ enum OnDeviceAsk {
         """
 
         let sourceHeading = multiSource ? "SOURCE TEXTS" : "SOURCE TEXT"
-        let closing = multiSource
-            ? "Answer IN ENGLISH, only from the source texts above - any of the sections may " +
+        let closing: String
+        if let focus {
+            closing = "Answer IN \(language.promptName), from the section headed \"=== \(focus) ===\" first; " +
+                "the other sections are context, so name them when a point comes from one of them instead."
+        } else if multiSource {
+            closing = "Answer IN \(language.promptName), only from the source texts above - any of the sections may " +
               "supply the answer; name which source a point comes from when relevant."
-            : "Answer only from the source text above."
+        } else {
+            closing = "Answer IN \(language.promptName), only from the source text above."
+        }
 
         return streamSummarizeTask(
-            instructions: multiSource ? summarizeMultiInstructions : summarizeInstructions,
+            instructions: multiSource ? summarizeMultiInstructions(language) : summarizeInstructions(language),
             prompt: """
             \(sourceHeading) ("\(title)"):
             \(source)

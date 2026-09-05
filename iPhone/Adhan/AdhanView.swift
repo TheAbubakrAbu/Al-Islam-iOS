@@ -10,7 +10,18 @@ struct AdhanView: View {
     // False while this view is being built behind the launch/splash cover; holds prompts until we're on screen.
     @Environment(\.appRevealed) private var appRevealed
 
-    @State private var showingSettingsSheet = false
+    #if os(iOS)
+    /// The Adhan settings sheet, and which screen it opens on: the gear opens the root, the Prayer
+    /// Calculation and Distance From Home glance tiles open their own screens (see `handleGlance`).
+    /// An item sheet, not a Bool plus a separate target: the content closure of an `isPresented`
+    /// sheet was built with the target still at its old value (logged 2026-09-05), whereas an item
+    /// sheet hands the content the exact value that presented it.
+    @State private var settingsSheet: SettingsSheetTarget?
+    /// The sheet a glance tile opened, if any.
+    @State private var glanceSheet: GlanceSheet?
+    /// The calendar a glance tile pushed, if any (the two calendars are pushes, like the toolbar's).
+    @State private var pushedCalendar: GlancePush?
+    #endif
     /// DEBUG launch argument `-showBigQibla`: the location row opens with the 100 pt compass expanded
     /// (a tap toggles it and taps are not scriptable in the simulator), which is the only state that
     /// starts the heading updates and the GPS refinement burst.
@@ -75,6 +86,7 @@ struct AdhanView: View {
 
     var body: some View {
         let _ = RenderCounter.hit("AdhanView")
+        let _ = ChangePrinter.hit(Self.self)
         Group {
             #if os(iOS)
             if #available(iOS 16.0, *) {
@@ -160,7 +172,7 @@ struct AdhanView: View {
                 }
 
                 Section(header: Text("AT A GLANCE")) {
-                    GlanceCard()
+                    GlanceCard(onSelect: handleGlance)
                 }
                 #else
                 // Watch: the countdown and prayer times come first (that's the whole reason you raised your
@@ -237,23 +249,101 @@ struct AdhanView: View {
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button {
                     settings.hapticFeedback()
-                    showingSettingsSheet = true
+                    settingsSheet = .root
                 } label: {
                     Image(systemName: "gear")
                 }
                 .tint(settings.accentColor.accent2)
             }
         }
-        .sheet(isPresented: $showingSettingsSheet) {
-            NavigationView {
-                SettingsAdhanView(showNotifications: true, presentedAsSheet: true)
+        .sheet(item: $settingsSheet) { target in
+            // A stack container, so the sheet can open straight onto a sub-screen (see
+            // `SheetNavigationContainer`).
+            SheetNavigationContainer {
+                SettingsAdhanView(
+                    showNotifications: true,
+                    presentedAsSheet: true,
+                    openTravelingMode: target == .travelingMode,
+                    openPrayerCalculation: target == .prayerCalculation
+                )
             }
-            .navigationViewStyle(.stack)
             .smallMediumSheetPresentation()
         }
+        // On the List, not on the glance row: the row is lazy and sits at the bottom of the tab, so a
+        // destination declared there does not exist until the row has scrolled on screen.
+        .modifier(GlanceCalendarPushes(pushed: $pushedCalendar))
+        .sheet(item: $glanceSheet) { sheet in
+            switch sheet {
+            case .cityPrayerTimes:
+                NavigationView {
+                    PrayerTimesMapView()
+                        .environmentObject(settings)
+                }
+                .navigationViewStyle(.stack)
+                .smallMediumSheetPresentation()
+            case .homeLocation:
+                MapView(choosingPrayerTimes: false)
+                    .environmentObject(settings)
+                    .smallMediumSheetPresentation()
+            case let .qibla(bearing, distance):
+                QiblaSheet(bearing: bearing, distance: distance)
+            }
+        }
+        #if DEBUG
+        // "-glanceAction <name>": fire a glance tile's action after the reveal, since tiles are not
+        // tappable from simctl. Names: city, calculation, qibla, prayerCalendar, hijriCalendar,
+        // home, traveling.
+        .onAppear {
+            let args = ProcessInfo.processInfo.arguments
+            guard let i = args.firstIndex(of: "-glanceAction"), args.indices.contains(i + 1) else { return }
+            let action: GlanceAction? = {
+                switch args[i + 1] {
+                case "city": return .cityPrayerTimes
+                case "calculation": return .prayerCalculation
+                case "qibla": return .qibla(bearing: "19° NNE", distance: "8,198 mi (13,193 km)")
+                case "prayerCalendar": return .prayerCalendar
+                case "hijriCalendar": return .hijriCalendar
+                case "home": return .homeLocation
+                case "traveling": return .travelingMode
+                default: return nil
+                }
+            }()
+            guard let action else { return }
+            Task { @MainActor in
+                await AppReveal.waitUntilRevealed()
+                try? await Task.sleep(nanoseconds: 700_000_000)
+                handleGlance(action)
+            }
+        }
+        #endif
         #endif
         .applyConditionalListStyle()
     }
+
+    #if os(iOS)
+    /// A glance tile was tapped: sheets for the place, compass and settings screens, pushes for the
+    /// two calendars (the same destinations the tab's own controls reach, so a tile is a shortcut,
+    /// never a second copy of a screen).
+    private func handleGlance(_ action: GlanceAction) {
+        switch action {
+        case .cityPrayerTimes:
+            glanceSheet = .cityPrayerTimes
+        case .homeLocation:
+            glanceSheet = .homeLocation
+        case let .qibla(bearing, distance):
+            glanceSheet = .qibla(bearing: bearing, distance: distance)
+        case .prayerCalendar:
+            pushedCalendar = .prayerCalendar
+        case .hijriCalendar:
+            pushedCalendar = .hijriCalendar
+        case .prayerCalculation:
+            settingsSheet = .prayerCalculation
+        case .travelingMode:
+            settingsSheet = .travelingMode
+        }
+    }
+
+    #endif
 
     @ViewBuilder
     private var prayersSection: some View {
@@ -598,9 +688,24 @@ private struct CurrentLocationRow: View {
 
     let showBigQibla: Bool
     @State private var showingPrayerTimesMap = false
+    #if DEBUG
+    @State private var showingWidgetGallery = false
+    private static var widgetGalleryOpened = false
+
+    /// The `-widgetGallery <page>` argument, read when the cover is built rather than held in state: this
+    /// row is re-created by the list between its first appearance and the reveal, and a fresh state
+    /// presented its default page.
+    private static var widgetGalleryPage: String {
+        let arguments = ProcessInfo.processInfo.arguments
+        guard let index = arguments.firstIndex(of: "-widgetGallery"),
+              arguments.indices.contains(index + 1), !arguments[index + 1].hasPrefix("-") else { return "glance" }
+        return arguments[index + 1]
+    }
+    #endif
 
     var body: some View {
         let _ = RenderCounter.hit("CurrentLocationRow")
+        let _ = ChangePrinter.hit(Self.self)
         VStack(alignment: .leading, spacing: 8) {
             HStack {
                 VStack(alignment: .leading, spacing: 6) {
@@ -637,6 +742,23 @@ private struct CurrentLocationRow: View {
                     try? await Task.sleep(nanoseconds: 500_000_000)
                     showingPrayerTimesMap = true
                 }
+            }
+        }
+        // "-widgetGallery <page>": every Adhan widget layout at its real size, for screenshot runs
+        // (see WidgetGalleryView for the pages and `-widgetCity`). Presented after the reveal, like
+        // the sheet above; once, since this row re-appears as the list scrolls.
+        .onAppear {
+            guard ProcessInfo.processInfo.arguments.contains("-widgetGallery"), !Self.widgetGalleryOpened else { return }
+            Self.widgetGalleryOpened = true
+            Task { @MainActor in
+                await AppReveal.waitUntilRevealed()
+                try? await Task.sleep(nanoseconds: 500_000_000)
+                showingWidgetGallery = true
+            }
+        }
+        .fullScreenCover(isPresented: $showingWidgetGallery) {
+            if #available(iOS 16.0, *) {
+                WidgetGalleryView(page: Self.widgetGalleryPage)
             }
         }
         #endif
@@ -783,6 +905,112 @@ func formatCoordinates(latitude: Double, longitude: Double) -> String {
 }
 
 
+
+#if os(iOS)
+private enum SettingsSheetTarget: String, Identifiable {
+    case root, prayerCalculation, travelingMode
+
+    var id: String { rawValue }
+}
+
+private enum GlancePush {
+    case prayerCalendar, hijriCalendar
+}
+
+/// The two calendar pushes a glance tile can make. `navigationDestination(isPresented:)` on the
+/// tab's `NavigationStack` (iOS 16+); hidden `isActive` links for iOS 15's `NavigationView`, where
+/// the destination modifier does nothing.
+private struct GlanceCalendarPushes: ViewModifier {
+    @Binding var pushed: GlancePush?
+
+    func body(content: Content) -> some View {
+        if #available(iOS 16.0, *) {
+            content
+                .navigationDestination(isPresented: binding(.prayerCalendar)) { PrayerCalendarView() }
+                .navigationDestination(isPresented: binding(.hijriCalendar)) { CalendarView() }
+        } else {
+            content.background(
+                ZStack {
+                    NavigationLink(isActive: binding(.prayerCalendar)) {
+                        PrayerCalendarView()
+                    } label: { EmptyView() }
+                    NavigationLink(isActive: binding(.hijriCalendar)) {
+                        CalendarView()
+                    } label: { EmptyView() }
+                }
+                .hidden()
+            )
+        }
+    }
+
+    private func binding(_ target: GlancePush) -> Binding<Bool> {
+        Binding(
+            get: { pushed == target },
+            set: { active in if !active, pushed == target { pushed = nil } }
+        )
+    }
+}
+
+private enum GlanceSheet: Identifiable {
+    case cityPrayerTimes
+    case homeLocation
+    case qibla(bearing: String?, distance: String?)
+
+    var id: String {
+        switch self {
+        case .cityPrayerTimes: return "city"
+        case .homeLocation: return "home"
+        case .qibla: return "qibla"
+        }
+    }
+}
+
+/// The Qibla and Distance to Makkah tiles' sheet: the big compass over the two lines the tiles showed.
+/// At this size `QiblaView` starts the heading updates and the GPS refinement burst by itself.
+private struct QiblaSheet: View {
+    @ObservedObject private var settings = Settings.shared
+
+    let bearing: String?
+    let distance: String?
+
+    var body: some View {
+        NavigationView {
+            VStack(spacing: 18) {
+                QiblaView(size: 220)
+                    .padding(.top, 12)
+
+                VStack(spacing: 4) {
+                    if let bearing {
+                        Text(bearing)
+                            .font(.title3.weight(.semibold))
+                            .foregroundColor(settings.accentColor.color)
+                    }
+                    if let distance {
+                        Text("\(distance) to the Kaaba")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
+                Text("Hold the phone flat and turn until the arrow points straight up.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal)
+
+                Spacer(minLength: 0)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(Color(UIColor.systemGroupedBackground).ignoresSafeArea())
+            .navigationTitle("Qibla")
+            .navigationBarTitleDisplayMode(.inline)
+            .sheetDismissToolbar()
+        }
+        .navigationViewStyle(.stack)
+        .smallMediumSheetPresentation()
+    }
+}
+#endif
 
 #Preview {
     AlIslamPreviewContainer(embedInNavigation: false) {

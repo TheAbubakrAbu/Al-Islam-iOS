@@ -84,6 +84,13 @@ final class SemanticSearchEngine: ObservableObject {
     /// `isSupported` when the probe has already run, nil when reading it would load the model here.
     nonisolated static var isSupportedIfResolved: Bool? { supportedResolved }
 
+    /// The English word embedding's revision on this device: the stamp a shipped pack must match
+    /// (`SemanticCorpus.loadBundled`). Apple revises the model between OS releases, and a pack's
+    /// vectors are only comparable with query vectors from the same revision.
+    nonisolated static var embeddingRevision: Int {
+        NLEmbedding.currentRevision(for: .english)
+    }
+
     /// Forces the `isSupported` model load onto the serial lane from a background context. Called from
     /// the Quran data load, so the first body that reads `isSupported` gets a cached Bool, not a model load.
     nonisolated static func prewarmOffMain() {
@@ -92,6 +99,10 @@ final class SemanticSearchEngine: ObservableObject {
 
     private var corpora: [String: SemanticCorpus] = [:]
     private var buildsInFlight: Set<String> = []
+    /// Bundled packs that failed validation this launch (another embedding revision, other source
+    /// texts, unreadable): tried once, then the on-device build owns the id, and its Caches file
+    /// serves every later launch.
+    private var rejectedBundledPacks: Set<String> = []
     /// Disk loads in progress, by corpus id: `prepare` reads a persisted corpus in a detached task
     /// (a 22 MB file parsed on the main actor was a 100-300 ms stall on every search-field focus).
     private var loadsInFlight: [String: Task<SemanticCorpus?, Never>] = [:]
@@ -187,7 +198,11 @@ final class SemanticSearchEngine: ObservableObject {
     /// `texts` is resolved ON MAIN by the caller and copied into the build task. `keys`, when given,
     /// are persisted positional identifiers (one per text) that survive across launches - how a
     /// cross-book corpus knows which book+hadith each row is without re-decoding every book.
-    func prepare(corpusID: String, version: String, texts: @escaping @autoclosure () -> [String], keys: [String]? = nil) {
+    /// `fingerprint` names the source texts without reading them (evaluated off the main actor): with
+    /// it, a pack shipped in the bundle (`<id>.svec`) answers before any build, provided its recorded
+    /// fingerprint and NLEmbedding revision match this app on this OS (`SemanticCorpus.loadBundled`).
+    func prepare(corpusID: String, version: String, fingerprint: (@Sendable () -> String)? = nil,
+                 texts: @escaping @autoclosure () -> [String], keys: [String]? = nil) {
         guard Self.isSupported else { return }
         guard corpora[corpusID] == nil, !buildsInFlight.contains(corpusID), loadsInFlight[corpusID] == nil else { return }
         failedCorpora.remove(corpusID)
@@ -208,6 +223,38 @@ final class SemanticSearchEngine: ObservableObject {
                     self.store(loaded, id: corpusID)
                 } else {
                     // Unreadable or stale file: build from the texts as if it never existed.
+                    self.startBuild(corpusID: corpusID, version: version, texts: texts(), keys: keys)
+                }
+            }
+            return
+        }
+
+        // No build of this version in Caches. A pack shipped in the bundle is next, when the caller
+        // can name what it was built from: loaded off the main actor like the Caches file, used only
+        // when its embedding revision and source fingerprint match this app on this OS, and
+        // otherwise rejected once per launch in favour of the on-device build below.
+        if let fingerprint, !rejectedBundledPacks.contains(corpusID),
+           let bundled = SemanticCorpus.bundledURL(id: corpusID) {
+            let load = Task.detached(priority: .userInitiated) {
+                SemanticCorpus.loadBundled(url: bundled, id: corpusID, version: version,
+                                           expectedFingerprint: fingerprint())
+            }
+            loadsInFlight[corpusID] = load
+            Task { @MainActor [weak self] in
+                let loaded = await load.value
+                guard let self else { return }
+                self.loadsInFlight[corpusID] = nil
+                if let loaded {
+                    #if DEBUG
+                    NSLog("SEMANTIC PACK %@ loaded from the bundle (%ld words, %ld items)",
+                          corpusID, loaded.vocabWords.count, loaded.itemCount)
+                    #endif
+                    self.store(loaded, id: corpusID)
+                } else {
+                    #if DEBUG
+                    NSLog("SEMANTIC PACK %@ rejected (embedding revision or source fingerprint differ, or unreadable): building on device", corpusID)
+                    #endif
+                    self.rejectedBundledPacks.insert(corpusID)
                     self.startBuild(corpusID: corpusID, version: version, texts: texts(), keys: keys)
                 }
             }
@@ -633,6 +680,324 @@ final class SemanticCorpus: @unchecked Sendable {
         }
     }
 }
+
+// MARK: - Bundled packs (Resources/Data/Semantic/<id>.svec, shipped read-only)
+
+extension SemanticCorpus {
+    // A corpus's first build on a device took minutes (the all-books hadith corpus embeds 14,700
+    // words and first opens all 17 books), so the two corpora ship prebuilt, at half the Caches
+    // format's size: Float16 vectors (unit length; the largest cosine change a half-precision round
+    // trip made on either corpus measured 1.4e-4, against floors of 0.38 and 0.85 x best) and
+    // 16-bit word rows while the vocabulary fits (both do; the writer widens past 65,535 words).
+    //
+    // GUARDED, never trusted: the header records the NLEmbedding revision the vectors came from and
+    // a fingerprint of the source texts; `loadBundled` refuses the pack when either differs from the
+    // running app, and the engine then builds on device exactly as before. Apple can change the
+    // embedding between OS releases (which is what `NLEmbedding.currentRevision(for:)` reports), and
+    // a pack built against last month's translations must not answer for this month's.
+    //
+    // [magic "SEM4"][dim][embedding revision][fingerprint len][fingerprint][vocabCount][itemCount]
+    // [vocab blob len][vocab words \n][keys blob len (0 = none)][keys \n][index width 2|4]
+    // [vectors: vocab x dim Float16][per item: u32 count, count x index]
+    //
+    // Export: "-exportSemanticPacks" (DEBUG, `SemanticPackExport`) writes both packs to the app
+    // container's Documents/semantic-packs; "-auditSemanticPacks" says whether the shipped packs
+    // still match the bundled sources.
+
+    private static let bundledMagic: UInt32 = 0x53454D34   // "SEM4"
+
+    struct BundledHeader {
+        let dimension: Int
+        let embeddingRevision: Int
+        let fingerprint: String
+        let vocabCount: Int
+        let itemCount: Int
+    }
+
+    /// The shipped pack for a corpus id, wherever Xcode put it in the bundle.
+    static func bundledURL(id: String) -> URL? {
+        Bundle.main.url(forResource: id, withExtension: "svec")
+            ?? Bundle.main.url(forResource: id, withExtension: "svec", subdirectory: "Semantic")
+            ?? Bundle.main.url(forResource: id, withExtension: "svec", subdirectory: "Data/Semantic")
+    }
+
+    private struct PackReader {
+        let raw: UnsafeRawBufferPointer
+        var offset = 0
+
+        init(_ raw: UnsafeRawBufferPointer) { self.raw = raw }
+
+        var remaining: Int { raw.count - offset }
+
+        mutating func u32() -> UInt32? {
+            guard let base = raw.baseAddress, offset + 4 <= raw.count else { return nil }
+            let value = UInt32(littleEndian: base.loadUnaligned(fromByteOffset: offset, as: UInt32.self))
+            offset += 4
+            return value
+        }
+
+        mutating func string(_ length: Int) -> String? {
+            guard let bytes = bytes(length) else { return nil }
+            return String(decoding: bytes, as: UTF8.self)
+        }
+
+        /// The next `count` bytes, unparsed; nil when the file is short.
+        mutating func bytes(_ count: Int) -> UnsafeRawBufferPointer? {
+            guard count >= 0, offset + count <= raw.count else { return nil }
+            defer { offset += count }
+            return UnsafeRawBufferPointer(rebasing: raw[offset..<(offset + count)])
+        }
+    }
+
+    private static func readBundledHeader(_ reader: inout PackReader) -> BundledHeader? {
+        guard reader.u32() == bundledMagic,
+              let dim = reader.u32(), let revision = reader.u32(),
+              let fingerprintLength = reader.u32(), let fingerprint = reader.string(Int(fingerprintLength)),
+              let vocabCount = reader.u32(), let itemCount = reader.u32(),
+              dim > 0, vocabCount > 0 else { return nil }
+        return BundledHeader(dimension: Int(dim), embeddingRevision: Int(revision), fingerprint: fingerprint,
+                             vocabCount: Int(vocabCount), itemCount: Int(itemCount))
+    }
+
+    /// The identity fields alone (a few hundred bytes of a mapped file), for the audit.
+    static func bundledHeader(at url: URL) -> BundledHeader? {
+        guard let data = try? Data(contentsOf: url, options: [.mappedIfSafe]) else { return nil }
+        return data.withUnsafeBytes { (raw: UnsafeRawBufferPointer) -> BundledHeader? in
+            var reader = PackReader(raw)
+            return readBundledHeader(&reader)
+        }
+    }
+
+    /// Parse a shipped pack, or nil when it is unreadable, built by another embedding revision, or
+    /// built from other texts than `expectedFingerprint` names. Runs off the main actor: the file is
+    /// mapped, the vectors widen to Float32 in one vImage pass, and the word rows land in the flat
+    /// CSR arrays directly.
+    static func loadBundled(url: URL, id: String, version: String, expectedFingerprint: String) -> SemanticCorpus? {
+        guard let data = try? Data(contentsOf: url, options: [.mappedIfSafe]) else { return nil }
+        let revision = SemanticSearchEngine.embeddingRevision
+        return data.withUnsafeBytes { (raw: UnsafeRawBufferPointer) -> SemanticCorpus? in
+            var reader = PackReader(raw)
+            guard let header = readBundledHeader(&reader),
+                  header.embeddingRevision == revision,
+                  header.fingerprint == expectedFingerprint else { return nil }
+            let dim = header.dimension, vocabCount = header.vocabCount, itemCount = header.itemCount
+
+            guard let wordsLength = reader.u32(), let wordsString = reader.string(Int(wordsLength)) else { return nil }
+            let words = wordsString.components(separatedBy: "\n")
+            guard words.count == vocabCount else { return nil }
+
+            guard let keysLength = reader.u32() else { return nil }
+            var keys: [String]?
+            if keysLength > 0 {
+                guard let keysString = reader.string(Int(keysLength)) else { return nil }
+                let parsed = keysString.components(separatedBy: "\n")
+                guard parsed.count == itemCount else { return nil }
+                keys = parsed
+            }
+            guard let width32 = reader.u32(), width32 == 2 || width32 == 4 else { return nil }
+            let indexWidth = Int(width32)
+
+            let vectorCount = vocabCount * dim
+            guard let halves = reader.bytes(vectorCount * 2), let halfBase = halves.baseAddress else { return nil }
+            var vectors = [Float](repeating: 0, count: vectorCount)
+            let converted = vectors.withUnsafeMutableBufferPointer { out -> Bool in
+                var source = vImage_Buffer(data: UnsafeMutableRawPointer(mutating: halfBase),
+                                           height: vImagePixelCount(vocabCount), width: vImagePixelCount(dim),
+                                           rowBytes: dim * 2)
+                var destination = vImage_Buffer(data: out.baseAddress!,
+                                                height: vImagePixelCount(vocabCount), width: vImagePixelCount(dim),
+                                                rowBytes: dim * 4)
+                return vImageConvert_Planar16FtoPlanarF(&source, &destination, vImage_Flags(kvImageNoFlags)) == kvImageNoError
+            }
+            guard converted else { return nil }
+
+            var itemWords: [Int32] = []
+            itemWords.reserveCapacity(max(0, reader.remaining / indexWidth))
+            var itemOffsets: [Int32] = [0]
+            itemOffsets.reserveCapacity(itemCount + 1)
+            for _ in 0..<itemCount {
+                guard let count32 = reader.u32(), let rows = reader.bytes(Int(count32) * indexWidth) else { return nil }
+                let count = Int(count32)
+                if indexWidth == 2 {
+                    for position in 0..<count {
+                        let index = Int32(UInt16(littleEndian: rows.loadUnaligned(fromByteOffset: position * 2, as: UInt16.self)))
+                        guard Int(index) < vocabCount else { return nil }
+                        itemWords.append(index)
+                    }
+                } else {
+                    for position in 0..<count {
+                        let index = Int32(littleEndian: rows.loadUnaligned(fromByteOffset: position * 4, as: Int32.self))
+                        guard index >= 0, Int(index) < vocabCount else { return nil }
+                        itemWords.append(index)
+                    }
+                }
+                itemOffsets.append(Int32(itemWords.count))
+            }
+            return SemanticCorpus(id: id, version: version, dimension: dim,
+                                  vocabWords: words, vocabVectors: vectors,
+                                  itemWords: itemWords, itemOffsets: itemOffsets, itemKeys: keys)
+        }
+    }
+
+    /// This corpus in the bundled form (the DEBUG export, `SemanticPackExport`).
+    func writeBundledPack(to url: URL, fingerprint: String, embeddingRevision: Int) throws {
+        guard !vocabWords.isEmpty, vocabVectors.count == vocabWords.count * dimension else {
+            throw CocoaError(.fileWriteUnknown)
+        }
+        var data = Data()
+        func appendU32(_ value: UInt32) {
+            withUnsafeBytes(of: value.littleEndian) { data.append(contentsOf: $0) }
+        }
+        let fingerprintBlob = Data(fingerprint.utf8)
+        let wordsBlob = Data(vocabWords.joined(separator: "\n").utf8)
+        let keysBlob = itemKeys.map { Data($0.joined(separator: "\n").utf8) }
+        let wide = vocabWords.count > 65_535
+        appendU32(Self.bundledMagic)
+        appendU32(UInt32(dimension))
+        appendU32(UInt32(embeddingRevision))
+        appendU32(UInt32(fingerprintBlob.count))
+        data.append(fingerprintBlob)
+        appendU32(UInt32(vocabWords.count))
+        appendU32(UInt32(itemCount))
+        appendU32(UInt32(wordsBlob.count))
+        data.append(wordsBlob)
+        appendU32(UInt32(keysBlob?.count ?? 0))
+        if let keysBlob { data.append(keysBlob) }
+        appendU32(wide ? 4 : 2)
+
+        var halves = [UInt16](repeating: 0, count: vocabVectors.count)
+        let rows = vImagePixelCount(vocabWords.count), columns = vImagePixelCount(dimension)
+        let converted = vocabVectors.withUnsafeBufferPointer { source -> Bool in
+            halves.withUnsafeMutableBufferPointer { destination -> Bool in
+                var input = vImage_Buffer(data: UnsafeMutableRawPointer(mutating: source.baseAddress!),
+                                          height: rows, width: columns, rowBytes: dimension * 4)
+                var output = vImage_Buffer(data: destination.baseAddress!,
+                                           height: rows, width: columns, rowBytes: dimension * 2)
+                return vImageConvert_PlanarFtoPlanar16F(&input, &output, vImage_Flags(kvImageNoFlags)) == kvImageNoError
+            }
+        }
+        guard converted else { throw CocoaError(.fileWriteUnknown) }
+        halves.withUnsafeBufferPointer { data.append(Data(buffer: $0)) }
+
+        for index in 0..<itemCount {
+            let start = Int(itemOffsets[index]), end = Int(itemOffsets[index + 1])
+            appendU32(UInt32(end - start))
+            for position in start..<end {
+                if wide {
+                    appendU32(UInt32(itemWords[position]))
+                } else {
+                    withUnsafeBytes(of: UInt16(itemWords[position]).littleEndian) { data.append(contentsOf: $0) }
+                }
+            }
+        }
+        try data.write(to: url, options: .atomic)
+    }
+}
+
+#if DEBUG
+/// "-exportSemanticPacks": the shipped vector packs come out of the app itself, so the tokenizer,
+/// the texts and the embedding are exactly the runtime's. Run it in the iPhone simulator (the
+/// simulator's vectors matched iOS 18.6's and iOS 26's byte for byte; NLEmbedding's English word
+/// model is revision 1 on all three), wait for "SEMANTIC EXPORT done" in the log, then copy the
+/// container's Documents/semantic-packs/*.svec over Resources/Data/Semantic/. Re-run after quran.qpk
+/// or any .hpk changes; "-auditSemanticPacks" (`audit`) says whether the shipped packs still match.
+enum SemanticPackExport {
+    static let ids = [QuranSemanticCorpus.id, HadithSemanticCorpus.id]
+
+    @MainActor
+    private static func expectedFingerprints() -> [String: String] {
+        [
+            QuranSemanticCorpus.id: QuranSemanticCorpus.fingerprint(
+                texts: QuranSemanticCorpus.texts(quranData: QuranData.shared)),
+            HadithSemanticCorpus.id: HadithSemanticCorpus.fingerprint,
+        ]
+    }
+
+    @MainActor
+    static func run() async {
+        let engine = SemanticSearchEngine.shared
+        let quranData = QuranData.shared
+        let store = HadithStore.shared
+        let deadline = Date().addingTimeInterval(30 * 60)
+        var lastKick = Date.distantPast
+        while !ids.allSatisfy({ engine.isReady($0) }), Date() < deadline {
+            // Both no-op while building or loading; the hadith gather is the slow start.
+            if Date().timeIntervalSince(lastKick) > 5 {
+                lastKick = Date()
+                if !engine.isReady(QuranSemanticCorpus.id) {
+                    QuranSemanticCorpus.prepare(quranData: quranData, engine: engine)
+                }
+                if !engine.isReady(HadithSemanticCorpus.id) {
+                    await HadithSemanticCorpus.prepare(engine: engine, store: store)
+                }
+            }
+            try? await Task.sleep(nanoseconds: 500_000_000)
+        }
+        guard let documents = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else { return }
+        let directory = documents.appendingPathComponent("semantic-packs", isDirectory: true)
+        try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let revision = SemanticSearchEngine.embeddingRevision
+        let fingerprints = expectedFingerprints()
+
+        for id in ids {
+            guard let corpus = engine.corpus(id), let fingerprint = fingerprints[id] else {
+                NSLog("SEMANTIC EXPORT %@ not ready, skipped", id)
+                continue
+            }
+            let url = directory.appendingPathComponent("\(id).svec")
+            do {
+                try corpus.writeBundledPack(to: url, fingerprint: fingerprint, embeddingRevision: revision)
+            } catch {
+                NSLog("SEMANTIC EXPORT %@ FAILED: %@", id, "\(error)")
+                continue
+            }
+            let size = (try? FileManager.default.attributesOfItem(atPath: url.path)[.size] as? UInt64) ?? 0
+            // Round trip through the reader: what ships is what loads, and how far Float16 moved it.
+            guard let loaded = SemanticCorpus.loadBundled(url: url, id: id, version: corpus.version,
+                                                          expectedFingerprint: fingerprint) else {
+                NSLog("SEMANTIC EXPORT %@ wrote %llu bytes but the pack DOES NOT LOAD BACK", id, size)
+                continue
+            }
+            var maxDrift: Float = 0
+            if loaded.vocabVectors.count == corpus.vocabVectors.count {
+                for index in 0..<loaded.vocabVectors.count {
+                    maxDrift = max(maxDrift, abs(loaded.vocabVectors[index] - corpus.vocabVectors[index]))
+                }
+            } else {
+                maxDrift = .infinity
+            }
+            let sameRows = loaded.itemWords == corpus.itemWords && loaded.itemOffsets == corpus.itemOffsets
+                && loaded.vocabWords == corpus.vocabWords && loaded.itemKeys == corpus.itemKeys
+            NSLog("SEMANTIC EXPORT %@ -> %@ (%llu bytes; %ld words, %ld items, dim %ld, revision %ld; rows %@; max vector drift %.2e; %@)",
+                  id, url.path, size, corpus.vocabWords.count, corpus.itemCount, corpus.dimension, revision,
+                  sameRows ? "identical" : "DIFFER", maxDrift, fingerprint)
+        }
+        NSLog("SEMANTIC EXPORT done")
+    }
+
+    /// "-auditSemanticPacks": VALID or STALE for each shipped pack against this build's sources.
+    @MainActor
+    static func audit() {
+        let revision = SemanticSearchEngine.embeddingRevision
+        let fingerprints = expectedFingerprints()
+        for id in ids {
+            let expected = fingerprints[id] ?? ""
+            guard let url = SemanticCorpus.bundledURL(id: id) else {
+                NSLog("SEMANTIC PACK %@: NOT BUNDLED (expected %@, revision %ld)", id, expected, revision)
+                continue
+            }
+            guard let header = SemanticCorpus.bundledHeader(at: url) else {
+                NSLog("SEMANTIC PACK %@: UNREADABLE at %@", id, url.path)
+                continue
+            }
+            let valid = header.embeddingRevision == revision && header.fingerprint == expected
+            NSLog("SEMANTIC PACK %@: %@ (pack revision %ld, device %ld; %ld words, %ld items, dim %ld; pack %@; expected %@)",
+                  id, valid ? "VALID" : "STALE", header.embeddingRevision, revision,
+                  header.vocabCount, header.itemCount, header.dimension, header.fingerprint, expected)
+        }
+    }
+}
+#endif
 
 // MARK: - Shared UI: the build-progress row
 // (AI results appear automatically alongside keyword results - there is deliberately no mode toggle.)

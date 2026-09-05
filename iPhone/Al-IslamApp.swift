@@ -276,6 +276,34 @@ private struct MainTabView: View {
                 guard ProcessInfo.processInfo.arguments.contains("-auditPacks") else { return }
                 await Task.detached(priority: .utility) { PackAudit.run() }.value
             }
+            // "-exportSemanticPacks" - build (or load) the Quran and all-books hadith AI corpora and
+            // write them as bundle packs to Documents/semantic-packs/<id>.svec, for
+            // Resources/Data/Semantic (see SemanticPackExport). Re-run after quran.qpk or any .hpk
+            // changes; "-auditSemanticPacks" logs VALID or STALE for the shipped packs.
+            .task {
+                guard ProcessInfo.processInfo.arguments.contains("-exportSemanticPacks") else { return }
+                await AppReveal.waitUntilRevealed()
+                while QuranData.shared.quran.count < 114 {
+                    try? await Task.sleep(nanoseconds: 250_000_000)
+                    guard !Task.isCancelled else { return }
+                }
+                await SemanticPackExport.run()
+            }
+            .task {
+                guard ProcessInfo.processInfo.arguments.contains("-auditSemanticPacks") else { return }
+                while QuranData.shared.quran.count < 114 {
+                    try? await Task.sleep(nanoseconds: 250_000_000)
+                    guard !Task.isCancelled else { return }
+                }
+                SemanticPackExport.audit()
+            }
+            #if DEBUG
+            // "-tsanSelfTest": prove a Thread Sanitizer build reports (see SanitizerSelfTest).
+            .task {
+                guard ProcessInfo.processInfo.arguments.contains("-tsanSelfTest") else { return }
+                SanitizerSelfTest.race()
+            }
+            #endif
             // "-dumpComparison 1:3" - print the qiraah comparison sheet's own rows for one ayah
             // (its copy text, built by the same resolver the rows render), since a sheet cannot be
             // scrolled headlessly.

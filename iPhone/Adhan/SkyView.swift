@@ -77,15 +77,17 @@ struct SolarWindow {
     }
 }
 
-/// The dashed sun path. Drawn as a polyline of the normalized curve, mapped into the rect with `inset` of
-/// vertical padding so the peak and trough don't touch the edges.
+/// The dashed sun path. Drawn as a polyline of the normalized curve, mapped into the band between
+/// `topInset` and `bottomInset` so the peak and trough land where the card wants them (see
+/// `SkyCard.arcTopInset` for how that band is chosen).
 private struct SolarArcShape: Shape {
     let curve: SolarCurve
-    let inset: CGFloat
+    let topInset: CGFloat
+    let bottomInset: CGFloat
 
     func yPosition(of height: Double, in rect: CGRect) -> CGFloat {
-        let usable = rect.height - 2 * inset
-        return rect.maxY - inset - CGFloat((height + 1) / 2) * usable
+        let usable = rect.height - topInset - bottomInset
+        return rect.maxY - bottomInset - CGFloat((height + 1) / 2) * usable
     }
 
     func path(in rect: CGRect) -> Path {
@@ -131,8 +133,9 @@ private struct StarFieldView: View {
         return (0..<44).map { _ in
             Star(
                 x: next(),
-                // Bias toward the top: the lower half of the card is below the horizon.
-                y: next() * 0.62,
+                // Bias toward the top: the horizon line runs 84-116 pt down the 236 pt card (see
+                // `SkyCard.arcTopInset`), and stars below it would be underground.
+                y: next() * 0.44,
                 radius: 0.6 + next() * 1.1,
                 phase: next(),
                 brightness: 0.35 + next() * 0.55
@@ -196,6 +199,7 @@ struct SkyView: View {
 
     var body: some View {
         let _ = RenderCounter.hit("SkyView")
+        let _ = ChangePrinter.hit(Self.self)
         let interval: TimeInterval = appearance.isReducedTier ? 300 : 60
         TimelineView(.periodic(from: clockAnchor, by: interval)) { context in
             SkyCard(now: Self.quantizedToMinute(context.date), isOnScreen: isOnScreen)
@@ -241,11 +245,19 @@ struct SkyCard: View {
     /// readout used to need clear air above the moon row to float into, which left a dead band between the arc
     /// and the moon. It now floats over the prayer columns at the top of the card instead (see `scrubReadout`),
     /// so that band can go.
-    private let height: CGFloat = 212
+    private let height: CGFloat = 236
 
-    /// Vertical padding on the arc, keeping its peak and trough clear of the text bands above and below.
-    /// Scaled down with the card so the curve keeps the same shape in less height.
-    private let inset: CGFloat = 78
+    /// The arc's vertical band, as insets from the card's top and bottom edges. The card is three bands: the
+    /// prayer columns end about 72 pt down and the countdown block (its "TIME LEFT" caption first) starts
+    /// about 131 pt down, so the arc lives in the 59 pt between them: peak at 68, trough at 130. The horizon
+    /// line is derived from the day's length (`SolarCurve.horizon`) and lands anywhere from ~84 pt (an
+    /// 8-hour winter day) to ~116 pt (a 16-hour summer day) of this band, always clear of the caption under
+    /// it. It used to be one symmetric 78 pt inset from when the countdown was a single caption row: the
+    /// arc was centred on the card, and once the big digits arrived the horizon ran straight under
+    /// "TIME LEFT" (and through it on long summer days). Re-derive both numbers whenever the columns or
+    /// the countdown block change height.
+    private let arcTopInset: CGFloat = 68
+    private let arcBottomInset: CGFloat = 106
 
     // MARK: Derived state
 
@@ -318,6 +330,7 @@ struct SkyCard: View {
 
     var body: some View {
         let _ = RenderCounter.hit("SkyCard")
+        let _ = ChangePrinter.hit(Self.self)
         // ONE prayer-time resolution per render. `sunrise`/`sunset`/`window`/`curve` used to be computed
         // properties re-derived at every use site (the arc shape, the horizon line, the sun's height,
         // color and fraction) - ~20-30 cached `getPrayerTimes` lookups per second while the clock ticks.
@@ -407,18 +420,18 @@ struct SkyCard: View {
 
             Spacer(minLength: 0)
 
-            // Lifted off the countdown so the moon reads as part of the sky rather than as a caption on the
-            // progress bar. The `Spacer` above absorbs it, so the card doesn't grow.
-            moonAndClock
-                .padding(.bottom, 10)
-
             if live.prayers != nil {
                 // Equatable-gated: the countdown's real updates come from its own timer state and its own
-                // Settings observation, so this card's per-second re-render has nothing new to tell it.
+                // Settings observation, so this card's per-minute re-render has nothing new to tell it.
+                // Big and centred over the bar (Abu, 2026-09-04): the card's centrepiece.
                 PrayerCountdown(presentation: .skyFooter)
                     .equatable()
-                    .padding(.top, 4)
             }
+
+            // The moon on the left, the prayer the countdown runs to on the right; the adhan's stop
+            // button takes the whole line while it sounds.
+            footer
+                .padding(.top, 8)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 12)
@@ -467,13 +480,34 @@ struct SkyCard: View {
         }
     }
 
-    /// Bottom-centre: the moment being shown and the moon's phase. While dragging, the previewed prayer's name
-    /// joins them - the columns above always report the *live* prayer, so the scrub would otherwise be mute.
+    /// The card's last line: the moon's phase, and which prayer the countdown runs to. While the adhan
+    /// sounds in-app the stop button replaces both.
     @ViewBuilder
-    private var moonAndClock: some View {
+    private var footer: some View {
         if let playingPrayerName = adhanPlayer.playingPrayerName {
             adhanStopButton(prayerName: playingPrayerName)
+                .frame(maxWidth: .infinity)
         } else {
+            HStack(spacing: 6) {
+                moonRow
+
+                Spacer(minLength: 8)
+
+                if let next = live.nextPrayer {
+                    Text(PrayerCountdown.untilLabel(for: next))
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(.white.opacity(0.8))
+                }
+            }
+            .lineLimit(1)
+            .minimumScaleFactor(0.7)
+        }
+    }
+
+    /// The moon and its phase. While the sun is being scrubbed the moon follows the drag; otherwise, when
+    /// the prayer list is browsing another day, it previews THAT night's phase.
+    @ViewBuilder
+    private var moonRow: some View {
             // Only the moon and its phase live in the layout - the clock is *not* shown at rest (it just added
             // height for something the status bar already says). While the sun is being scrubbed, the previewed
             // moment floats in as an overlay ABOVE, so the card's height never changes.
@@ -488,24 +522,15 @@ struct SkyCard: View {
                 (moonReference.timeIntervalSinceReferenceDate / 3600).rounded(.down) * 3600)
             let moonPhase = MoonPhase.on(moonDate)
             HStack(spacing: 6) {
-                MoonPhaseView(date: moonDate, diameter: 20)
+                MoonPhaseView(date: moonDate, diameter: 18)
 
-                Text(moonPhase.name)
+                // The name and, after a dot, how lit it actually is - the one thing the phase NAME
+                // can't tell you ("Waxing Crescent" spans a fingernail to nearly half). The glyph
+                // beside it is drawn from this same number.
+                Text("\(moonPhase.name) · \(moonPhase.illuminationPercent)%")
                     .font(.caption2)
                     .foregroundStyle(.white.opacity(0.75))
-
-                // How lit it actually is, which is the one thing the phase NAME can't tell you -
-                // "Waxing Crescent" spans everything from a fingernail to nearly half. Smaller and
-                // dimmer than the name so it reads as the footnote it is. The glyph beside it is
-                // drawn from this same number, so the row now says in words what it already draws.
-                Text("\(moonPhase.illuminationPercent)% lit")
-                    .font(.system(size: 9, weight: .medium))
-                    .foregroundStyle(.white.opacity(0.55))
             }
-            .lineLimit(1)
-            .minimumScaleFactor(0.7)
-            .frame(maxWidth: .infinity)
-        }
     }
 
     /// The moment (and prayer) being previewed while the sun is dragged. It rides at the TOP of the card, over
@@ -541,7 +566,7 @@ struct SkyCard: View {
         GeometryReader { geo in
             let rect = CGRect(origin: .zero, size: geo.size)
             let displayedFraction = window.fraction(of: displayedDate)
-            let shape = SolarArcShape(curve: curve, inset: inset)
+            let shape = SolarArcShape(curve: curve, topInset: arcTopInset, bottomInset: arcBottomInset)
             let horizonY = shape.yPosition(of: curve.horizon, in: rect)
             let sunHeight = curve.height(at: displayedFraction)
             let sunPoint = CGPoint(

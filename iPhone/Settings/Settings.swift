@@ -368,6 +368,10 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
                         NSLog("RAW WRITE PROBE lastReadSurah reads %d", shared.lastReadSurah)
                     case "offsetFajr": shared.offsetFajr = Int(kv[1]) ?? shared.offsetFajr
                     case "notificationFajr": shared.notificationFajr = kv[1] == "1"
+                    // The Classic Look flip, headlessly: paired with "-scrollToClassicLook" it shows
+                    // whether a look change keeps the Settings list where it was (2026-09-04: it
+                    // used to jump to the top, because the bottom bar's modifier changed shape).
+                    case "classicLook": shared.classicLook = kv[1] == "1"
                     case "tab":
                         NotificationCenter.default.post(name: Notification.Name("AlIslamDebugSwitchTab"), object: kv[1])
                     default: break
@@ -1701,11 +1705,23 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     // MARK: - [Al-Quran] Surah stats (times opened / played)
     // A tiny [surahID: count] map JSON-encoded in one key each - at most 114 small entries, so it costs
     // almost nothing in memory and is only decoded when a surah header is shown.
-    @AppStorage("surahOpenCountsData") private var surahOpenCountsData: Data = Data() {
-        didSet { bumpContentGeneration() }
+    // Manual defaults access, not `@AppStorage` (same reason as `lastListenedAyahData`): the wrapper
+    // publishes TWICE per write, its own set plus SwiftUI's defaults-observer echo, and a tap on play
+    // wrote the open count, the play count and the last-listened surah inside one second: six app-wide
+    // publishes, every Settings observer re-rendered three times over (2026-09-05 `-publishTrace`).
+    // One publish per write now; the memo below still keys on the bytes.
+    private var surahOpenCountsData: Data {
+        get { UserDefaults.standard.data(forKey: "surahOpenCountsData") ?? Data() }
+        set { setSurahCountsData(newValue, forKey: "surahOpenCountsData") }
     }
-    @AppStorage("surahPlayCountsData") private var surahPlayCountsData: Data = Data() {
-        didSet { bumpContentGeneration() }
+    private var surahPlayCountsData: Data {
+        get { UserDefaults.standard.data(forKey: "surahPlayCountsData") ?? Data() }
+        set { setSurahCountsData(newValue, forKey: "surahPlayCountsData") }
+    }
+    private func setSurahCountsData(_ data: Data, forKey key: String) {
+        objectWillChange.send()
+        UserDefaults.standard.set(data, forKey: key)
+        bumpContentGeneration()
     }
 
     /// Two-slot memo (open counts, play counts) keyed on the bytes, so a surah header's two reads and
@@ -1792,7 +1808,19 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
             UserDefaults.standard.removeObject(forKey: "lastListenedAyahData")
         }
     }
-    @AppStorage("lastListenedSurahData") var lastListenedSurahData: Data?
+    /// Manual defaults access like `lastListenedAyahData` above: one publish per write instead of the
+    /// wrapper's two (the typed accessor in SettingsQuran.swift mirrors it to the App Group suite).
+    var lastListenedSurahData: Data? {
+        get { UserDefaults.standard.data(forKey: "lastListenedSurahData") }
+        set {
+            objectWillChange.send()
+            if let newValue {
+                UserDefaults.standard.set(newValue, forKey: "lastListenedSurahData")
+            } else {
+                UserDefaults.standard.removeObject(forKey: "lastListenedSurahData")
+            }
+        }
+    }
 
     /// Which qiraah/riwayah to show for Arabic text. Empty or "Hafs" = Hafs an Asim (default). Transliteration and translations only apply to Hafs.
     @AppStorage("displayQiraah") var displayQiraah: String = "" {
@@ -1932,18 +1960,20 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     /// ON by default, like the tajweed colors (user rule): the divine name reads red out of the box.
     /// A user who explicitly turned it off has a stored false, which this default never overrides.
     @AppStorage("highlightAllahNames") var highlightAllahNames: Bool = true
-    /// Tap a word in the reader to see what it means. OFF by default (Abu's call, 2026-09-04, from the
-    /// performance plan): every ayah row with it on is a UITextView with a tap coordinator and the gloss
-    /// pack stays resident, which is a real cost on older phones for a feature most readers never use;
-    /// tajweed colours stay on by default. A tap that lands on a word opens its card; a tap anywhere
-    /// else in the ayah still marks the ayah exactly as before (see `WordByWordTextView.Coordinator`,
-    /// which only claims the tap when it is actually on a word). Only Hafs an Asim - the bundled glosses
-    /// are indexed against its wording, and another riwayah's words would not line up (see
-    /// `WordByWordStore`, which the iOS settings screen unloads when this is switched off).
-    @AppStorage("wordByWordMeanings") var wordByWordMeanings: Bool = false
+    /// Double-tap a word in the reader to see what it means. ON by default (Abu, 2026-09-04,
+    /// reversing the performance plan's off-by-default: he wants the feature findable). The cost
+    /// it carries is unchanged: every ayah row with it on is a UITextView with a tap coordinator,
+    /// and the gloss pack stays resident. It takes TWO taps, in list mode and page mode alike
+    /// (single taps opened cards by accident); a single tap anywhere in the ayah still marks the
+    /// ayah exactly as before (see `WordByWordTextView.Coordinator`). Only Hafs an Asim - the
+    /// bundled glosses are indexed against its wording, and another riwayah's words would not line
+    /// up (see `WordByWordStore`, which the iOS settings screen unloads when both word switches
+    /// are off).
+    @AppStorage("wordByWordMeanings") var wordByWordMeanings: Bool = true
     /// Word-by-word INLINE: the reader lays the ayah out word by word with each word's English
-    /// meaning directly beneath it (the study layout). Rides on `wordByWordMeanings`' gloss pack
-    /// and gates (Hafs an Asim display only) - with the parent toggle off this one does nothing.
+    /// meaning directly beneath it (the study layout). Shares the gloss pack and the Hafs-only gate
+    /// with `wordByWordMeanings` but is INDEPENDENT of it: the layout draws with the tap switch
+    /// off, and then its words simply do not open a card.
     @AppStorage("wordByWordInline") var wordByWordInline: Bool = false
     /// Which of the two word-by-word lines the study layout writes under each word. Translation is on
     /// out of the box because it is what "word by word" means to most readers; transliteration is off
@@ -2666,11 +2696,18 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
 
     /// Tint blended into Liquid Glass cards/controls for custom themes, so glass reads as warm cream
     /// (Sepia) or neutral charcoal (Gray) instead of plain white/black. Nil = untinted system glass.
+    ///
+    /// A faint veil, not a paint: at 0.55 of a saturated tan / mid grey every glass surface came out as
+    /// a solid tinted block (measured on iOS 26: the clear-glass summary tiles were #e1cfa9 on a #ede5d1
+    /// card in Sepia and #47474a on #303033 in Gray, where Light and Dark keep a 4% step), which Abu read
+    /// as "too tinted" with "wayyy too less opacity" (2026-09-05). The colors now sit close to the theme's
+    /// own ground at about a quarter of the strength, so the glass keeps its depth and the theme shows
+    /// through as a hue.
     var themeGlassTint: Color? {
         switch colorSchemeString {
-        case "sepia": return Color(red: 0.85, green: 0.74, blue: 0.50).opacity(0.55)
-        case "gray":  return Color(red: 0.33, green: 0.33, blue: 0.35).opacity(0.55)
-        case "custom": return adjustedCustomBackground(by: (customBackgroundLuminance ?? 1) < 0.5 ? 0.12 : -0.08)?.opacity(0.55)
+        case "sepia": return Color(red: 0.90, green: 0.83, blue: 0.69).opacity(0.32)
+        case "gray":  return Color(red: 0.36, green: 0.36, blue: 0.38).opacity(0.22)
+        case "custom": return adjustedCustomBackground(by: (customBackgroundLuminance ?? 1) < 0.5 ? 0.12 : -0.08)?.opacity(0.25)
         default:      return nil
         }
     }

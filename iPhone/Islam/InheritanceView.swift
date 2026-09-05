@@ -552,11 +552,21 @@ struct InheritanceCalculatorView: View {
         }
         .navigationTitle("Inheritance Calculator")
         .applyConditionalListStyle()
+        #if DEBUG
+        // "-focusEstate": focus the estate field after appear (keyboard toolbar screenshot runs).
+        .onAppear {
+            if ProcessInfo.processInfo.arguments.contains("-focusEstate") {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { estateFocused = true }
+            }
+        }
+        #endif
         .toolbar {
-            // One item with an HStack, not a group with a bare Spacer: the bare Spacer in a keyboard
-            // toolbar logs SwiftUI's "Invalid frame dimension" runtime issue before the keyboard is up.
-            ToolbarItem(placement: .keyboard) {
-                HStack {
+            // Content only while the field is focused: with no keyboard up, SwiftUI laid the
+            // accessory bar's item out with a negative width ("Invalid frame dimension" runtime
+            // issue, lldb-verified in `InputAccessoryBar.body` 2026-09-04; removing the item
+            // cleared it). A group, because its content is a ViewBuilder on iOS 15.
+            ToolbarItemGroup(placement: .keyboard) {
+                if estateFocused {
                     Spacer(minLength: 0)
                     Button("Done") { estateFocused = false }
                 }
@@ -621,6 +631,7 @@ struct InheritanceCalculatorView: View {
                     set: { setCount(heir, $0 ? 1 : 0) }
                 ))
                 .labelsHidden()
+                .fixedSize()
                 .tint(settings.accentColor.color)
             } else {
                 Text("\(count(heir))")
@@ -636,6 +647,7 @@ struct InheritanceCalculatorView: View {
                     setCount(heir, count(heir) - 1)
                 }
                 .labelsHidden()
+                .fixedSize()
             }
         }
         .padding(.vertical, 2)

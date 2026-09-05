@@ -865,7 +865,7 @@ struct ArabicLetterView: View {
             }
             .minimizedBarStyle(barsCollapsed)
             .padding(.horizontal, 24)
-            .padding(.bottom)
+            .padding(.bottom, BottomBarCushion.standard)
             .background(Color.white.opacity(0.00001))
         }
         #endif

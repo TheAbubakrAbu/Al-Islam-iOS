@@ -1060,11 +1060,11 @@ struct SettingsAppearanceView: View {
 
         if #available(iOS 26.0, *) {
             VStack(alignment: .leading) {
-                Toggle("Classic Look", isOn: $settings.classicLook.animation(.easeInOut))
+                Toggle("Classic Look (No Liquid Glass)", isOn: $settings.classicLook.animation(.easeInOut))
                     .font(.subheadline)
                     .onChange(of: settings.classicLook) { _ in settings.hapticFeedback() }
 
-                Text("Turns off Liquid Glass so the app looks the way it did before iOS 26. Faster and easier on the battery.")
+                Text("Turns off Liquid Glass so the app looks the way it did before iOS 26. Faster and easier on the battery. The search bar keeps its Liquid Glass.")
                     .font(.caption)
                     .foregroundColor(.secondary)
                     .fixedSize(horizontal: false, vertical: true)

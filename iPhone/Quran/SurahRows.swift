@@ -580,6 +580,12 @@ struct SurahAyahRow: View, Equatable {
         let text = ayah.displayArabicText(surahId: surah.id, clean: false)
         let displayText = settings.cleanArabicText ? ayah.displayArabicText(surahId: surah.id, clean: true) : text
         let renderedDisplayText = settings.beginnerMode ? displayText.beginnerSpaced : displayText
+        // The paint completion bumps `tajweedPaintGeneration`, but SwiftUI re-evaluates a body only
+        // for state the body READ: a bumped-but-never-read @State is a silent no-op, and the row kept
+        // its plain first paint until something else re-rendered it (a tap, a font change, even the
+        // screenshot that "verified" this path). Reading it here, inside the body pass, is the
+        // dependency (2026-09-05, Abu: "some ayahs have tajweed off unless I tap a word or an ayah").
+        _ = tajweedPaintGeneration
         switch TajweedStore.shared.cachedAttributedText(
             surah: surah.id,
             ayah: ayah.id,
@@ -842,6 +848,12 @@ struct AyahArabicSnippet: View, Equatable {
         let text = ayah.displayArabicText(surahId: surah.id, clean: false)
         let displayText = settings.cleanArabicText ? ayah.displayArabicText(surahId: surah.id, clean: true) : text
         let renderedDisplayText = settings.beginnerMode ? displayText.beginnerSpaced : displayText
+        // The paint completion bumps `tajweedPaintGeneration`, but SwiftUI re-evaluates a body only
+        // for state the body READ: a bumped-but-never-read @State is a silent no-op, and the row kept
+        // its plain first paint until something else re-rendered it (a tap, a font change, even the
+        // screenshot that "verified" this path). Reading it here, inside the body pass, is the
+        // dependency (2026-09-05, Abu: "some ayahs have tajweed off unless I tap a word or an ayah").
+        _ = tajweedPaintGeneration
         switch TajweedStore.shared.cachedAttributedText(
             surah: surah.id,
             ayah: ayah.id,
@@ -1144,6 +1156,12 @@ struct AyahSearchRow: View, Equatable {
 
     private func arabicTajweedText() -> AttributedString? {
         guard shouldShowTajweedColors else { return nil }
+        // The paint completion bumps `tajweedPaintGeneration`, but SwiftUI re-evaluates a body only
+        // for state the body READ: a bumped-but-never-read @State is a silent no-op, and the row kept
+        // its plain first paint until something else re-rendered it (a tap, a font change, even the
+        // screenshot that "verified" this path). Reading it here, inside the body pass, is the
+        // dependency (2026-09-05, Abu: "some ayahs have tajweed off unless I tap a word or an ayah").
+        _ = tajweedPaintGeneration
         switch TajweedStore.shared.cachedAttributedText(
             surah: surah,
             ayah: ayah,

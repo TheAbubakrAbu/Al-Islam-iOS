@@ -36,11 +36,15 @@ struct AyahRow: View, Equatable {
     /// instead, so an ayah advance re-renders exactly the two rows whose tint changes.
     private var quranPlayer: QuranPlayer { .shared }
 
-    /// The per-ayah "Beginner Mode" toggle, held in a shared session store rather than in this row's own
-    /// `@State`. A row in a lazy list is torn down when it scrolls away and rebuilt from its inputs when it
-    /// comes back, so private state could not survive - which is why the toggle "sometimes didn't work".
-    @ObservedObject private var beginnerOverrides = AyahBeginnerOverrides.shared
-    private var ayahBeginnerMode: Bool { beginnerOverrides.contains(surah: surah.id, ayah: ayah.id) }
+    /// The per-ayah "Apply Settings" pins (beginner spacing, tajweed, tashkeel, dots, Highlight Allah,
+    /// word by word), held in a shared session store rather than in this row's own `@State`. A row in a
+    /// lazy list is torn down when it scrolls away and rebuilt from its inputs when it comes back, so
+    /// private state could not survive - which is why the old toggle "sometimes didn't work".
+    @ObservedObject private var displayOverrides = AyahDisplayOverrides.shared
+    /// What this ayah renders with: its pins over the app settings.
+    private var displayChoices: AyahDisplayChoices {
+        displayOverrides.choices(surah: surah.id, ayah: ayah.id, settings: settings)
+    }
 
     /// Lines a match FORCED visible (a search hit / arrival showing the transliteration or a translation
     /// even though its toggle is off), latched for as long as this row stays mounted: clearing the arrival
@@ -78,9 +82,6 @@ struct AyahRow: View, Equatable {
     /// beginner). Taps toggle membership instead of highlighting, and a checkmark circle leads the row.
     var isSelecting: Bool = false
     var isSelected: Bool = false
-    /// Bulk "Beginner" action: render this ayah's Arabic letter-by-letter even though the global beginner
-    /// mode (and this row's own context-menu toggle) are off.
-    var forceBeginner: Bool = false
     var onToggleSelection: (() -> Void)? = nil
 
     /// Fired when the ayah's actual text block (Arabic / translations) scrolls into view, not just the
@@ -150,7 +151,6 @@ struct AyahRow: View, Equatable {
         lhs.arrivalTerm == rhs.arrivalTerm &&
         lhs.isSelecting == rhs.isSelecting &&
         lhs.isSelected == rhs.isSelected &&
-        lhs.forceBeginner == rhs.forceBeginner &&
         lhs.searchText == rhs.searchText &&
         lhs.sameOpenSheet(as: rhs)
     }
@@ -239,36 +239,36 @@ struct AyahRow: View, Equatable {
         settings.removeBookmarkNote(surah: surah.id, ayah: ayah.id)
     }
 
-    private func spacedArabic(_ text: String) -> String {
-        (settings.beginnerMode || ayahBeginnerMode || forceBeginner) ? text.beginnerSpaced : text
-    }
-
     private func arabicDisplayText() -> String {
-        let clean = settings.cleanArabicText
+        let choices = displayChoices
+        let clean = choices.hideTashkeel
         let qiraahKey = comparisonQiraahOverride ?? (settings.displayQiraahForArabic ?? "Hafs")
         // The dots flag must be in the key: it changes the text `textCleanArabic` returns for the
         // same `clean` bit, and nothing purges this cache when the toggle flips.
-        let key = "\(surah.id):\(ayah.id)|\(clean ? 1 : 0)\(settings.removeArabicDots ? 1 : 0)|\((settings.beginnerMode || ayahBeginnerMode || forceBeginner) ? 1 : 0)|\(qiraahKey)"
+        let key = "\(surah.id):\(ayah.id)|\(clean ? 1 : 0)\(choices.hideDots ? 1 : 0)|\(choices.beginner ? 1 : 0)|\(qiraahKey)"
 
         if let cached = Self.arabicDisplayCache.object(forKey: key as NSString) {
             return cached as String
         }
 
-        let baseText = ayah.displayArabicText(surahId: surah.id, clean: clean, qiraahOverride: comparisonQiraahOverride)
-        let spaced = spacedArabic(baseText)
+        let baseText = ayah.displayArabicText(surahId: surah.id, clean: clean, removeDots: choices.hideDots,
+                                              qiraahOverride: comparisonQiraahOverride)
+        let spaced = choices.beginner ? baseText.beginnerSpaced : baseText
         Self.arabicDisplayCache.setObject(spaced as NSString, forKey: key as NSString)
         return spaced
     }
 
     static func prewarmArabicDisplay(surah: Surah, settings: Settings, limit: Int? = nil) {
         let clean = settings.cleanArabicText
+        // Same key shape as `arabicDisplayText` (dots only count with hidden tashkeel), so the warm hits.
+        let dots = clean && settings.removeArabicDots
         let beginner = settings.beginnerMode
         let qiraah = settings.displayQiraahForArabic
         let qiraahKey = qiraah ?? "Hafs"
         let ayahs = limit.map { Array(surah.ayahs.prefix($0)) } ?? surah.ayahs
 
         for ayah in ayahs where ayah.existsInQiraah(qiraah, surahID: surah.id) {
-            let key = "\(surah.id):\(ayah.id)|\(clean ? 1 : 0)\(settings.removeArabicDots ? 1 : 0)|\(beginner ? 1 : 0)|\(qiraahKey)" as NSString
+            let key = "\(surah.id):\(ayah.id)|\(clean ? 1 : 0)\(dots ? 1 : 0)|\(beginner ? 1 : 0)|\(qiraahKey)" as NSString
             if Self.arabicDisplayCache.object(forKey: key) != nil { continue }
 
             let baseText = ayah.displayArabicText(surahId: surah.id, clean: clean, qiraahOverride: qiraah)
@@ -316,7 +316,7 @@ struct AyahRow: View, Equatable {
             settings.isHafsDisplay
         }
 
-        return settings.showTajweedColors
+        return displayChoices.tajweed
             && settings.showArabicText
             && usingHafs
     }
@@ -329,7 +329,9 @@ struct AyahRow: View, Equatable {
     /// a comparison column isn't the reader's own text, and an active search needs the tap to belong to
     /// the search highlight rather than to a word. Multi-select owns the tap outright.
     private func wordByWordGlosses(displayText: String, beginner: Bool, highlightQuery: String) -> [String]? {
-        guard settings.wordByWordMeanings,
+        // Either word feature wants the glosses: the study layout draws them under the words, the
+        // tap opens them in a card. The two are independent switches (Abu, 2026-09-04).
+        guard settings.wordByWordMeanings || displayChoices.wordByWord,
               settings.showArabicText,
               settings.isHafsDisplay,
               !beginner,
@@ -381,7 +383,7 @@ struct AyahRow: View, Equatable {
             trailingSuffix: " \(ayah.idArabic)",
             trailingSuffixFont: suffixFont,
             trailingSuffixColor: ayahNumberColor,
-            highlightAllahNames: settings.highlightAllahNames,
+            highlightAllahNames: displayChoices.highlightAllah,
             guaranteeMatch: matchedArabic,
             extraHighlightRanges: extraRanges
         )
@@ -395,15 +397,28 @@ struct AyahRow: View, Equatable {
     private func arabicTajweedText(displayText renderedDisplayText: String, beginner: Bool) -> AttributedString? {
         guard shouldShowTajweedColors else { return nil }
         let text = ayah.displayArabicText(surahId: surah.id, clean: false, qiraahOverride: comparisonQiraahOverride)
+        // The paint completion bumps `tajweedPaintGeneration`, but SwiftUI re-evaluates a body only
+        // for state the body READ: a bumped-but-never-read @State is a silent no-op, and the row kept
+        // its plain first paint until something else re-rendered it (a tap, a font change, even the
+        // screenshot that "verified" this path). Reading it here, inside the body pass, is the
+        // dependency (2026-09-05, Abu: "some ayahs have tajweed off unless I tap a word or an ayah").
+        _ = tajweedPaintGeneration
+        let choices = displayChoices
         switch TajweedStore.shared.cachedAttributedText(
             surah: surah.id,
             ayah: ayah.id,
             text: text,
             displayText: renderedDisplayText,
-            cleanDisplayText: settings.cleanArabicText,
-            beginnerSpacing: beginner
+            cleanDisplayText: choices.hideTashkeel,
+            beginnerSpacing: beginner,
+            removeArabicDots: choices.hideDots
         ) {
         case .painted(let styled):
+            #if DEBUG
+            if RenderCounter.enabled, tajweedPaintGeneration > 0 {
+                NSLog("TAJWEED REPAINT %d:%d generation %d", surah.id, ayah.id, tajweedPaintGeneration)
+            }
+            #endif
             return styled
         case .nothing:
             return nil
@@ -415,8 +430,9 @@ struct AyahRow: View, Equatable {
                 ayah: ayah.id,
                 text: text,
                 displayText: renderedDisplayText,
-                cleanDisplayText: settings.cleanArabicText,
-                beginnerSpacing: beginner
+                cleanDisplayText: choices.hideTashkeel,
+                beginnerSpacing: beginner,
+                removeArabicDots: choices.hideDots
             ) { tajweedPaintGeneration &+= 1 }
             return nil
         }
@@ -485,7 +501,7 @@ struct AyahRow: View, Equatable {
     /// non-nil the computed diff tint stands down (even on ayahs the print leaves uncolored).
     private var riwayahTajweedTag: String? {
         #if os(iOS)
-        guard settings.showTajweedColors, settings.showArabicText else { return nil }
+        guard displayChoices.tajweed, settings.showArabicText else { return nil }
         guard searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return nil }
         let raw = comparisonQiraahOverride ?? (settings.displayQiraahForArabic ?? "")
         let tag = Settings.Riwayah.canonicalTag(raw == "Hafs" ? "" : raw)
@@ -506,7 +522,7 @@ struct AyahRow: View, Equatable {
         // With "Hide Tashkeel and Signs" on, the store colors the FULL text and projects the runs
         // onto the stripped rendering - so the print's coloring survives the strip, like Hafs's does.
         let fullText: String? = {
-            guard settings.cleanArabicText else { return nil }
+            guard displayChoices.hideTashkeel else { return nil }
             let full = ayah.displayArabicText(surahId: surah.id, clean: false, qiraahOverride: comparisonQiraahOverride)
             return beginner ? full.beginnerSpaced : full
         }()
@@ -545,7 +561,8 @@ struct AyahRow: View, Equatable {
         var referenceParts: [String] = []
         for n in span {
             if let hafsAyah = quranData.ayah(surah: surah.id, ayah: n) {
-                referenceParts.append(hafsAyah.displayArabicText(surahId: surah.id, clean: settings.cleanArabicText, qiraahOverride: ""))
+                referenceParts.append(hafsAyah.displayArabicText(surahId: surah.id, clean: displayChoices.hideTashkeel,
+                                                                 removeDots: displayChoices.hideDots, qiraahOverride: ""))
             }
         }
         guard !referenceParts.isEmpty else { return nil }
@@ -629,7 +646,7 @@ struct AyahRow: View, Equatable {
     /// Uses surah/ayah 0 so the cache and rule lookups don't collide with the real ayah's coloring.
     @ViewBuilder
     private func muqattaatNamesView(_ p: Muqattaat.Pronunciation, font: Font) -> some View {
-        if settings.showTajweedColors,
+        if displayChoices.tajweed,
            let styled = TajweedStore.shared.attributedText(
                surah: 0,
                ayah: 0,
@@ -647,11 +664,14 @@ struct AyahRow: View, Equatable {
     private var tajweedAnimationKey: String {
         let categorySignature = settings.tajweedCategoryVisibilitySignature
         let qiraahKey = comparisonQiraahOverride ?? settings.displayQiraah
+        let choices = displayChoices
         return [
-            settings.showTajweedColors ? "1" : "0",
-            settings.highlightAllahNames ? "1" : "0",
-            settings.cleanArabicText ? "1" : "0",
-            (settings.beginnerMode || ayahBeginnerMode || forceBeginner) ? "1" : "0",
+            choices.tajweed ? "1" : "0",
+            choices.highlightAllah ? "1" : "0",
+            choices.hideTashkeel ? "1" : "0",
+            choices.hideDots ? "1" : "0",
+            choices.beginner ? "1" : "0",
+            choices.wordByWord ? "1" : "0",
             qiraahKey,
             categorySignature,
             settings.riwayahTajweedHiddenRules
@@ -1056,13 +1076,13 @@ struct AyahRow: View, Equatable {
         guard !trimmed.isEmpty,
               settings.isHafsDisplay,
               comparisonQiraahOverride == nil,
-              !(settings.beginnerMode || ayahBeginnerMode || forceBeginner),
+              !displayChoices.beginner,
               WordByWordStore.isBundled else { return ([], [], []) }
 
         let displayText = arabicDisplayText()
         // The gloss pack's token order is defined against the RAW (unstripped) text; with "Hide
         // Tashkeel and Signs" off the display text IS raw, so the second resolve is skipped.
-        let rawText = settings.cleanArabicText
+        let rawText = displayChoices.hideTashkeel
             ? ayah.displayArabicText(surahId: surah.id, clean: false, qiraahOverride: nil)
             : displayText
 
@@ -1130,6 +1150,8 @@ struct AyahRow: View, Equatable {
         let prefixOnTranslit  = groupHasEnglishOrTranslit && showTranslit
         let prefixOnSaheeh    = groupHasEnglishOrTranslit && !showTranslit && showEnglishSaheeh
         let prefixOnMustafa   = groupHasEnglishOrTranslit && !showTranslit && !showEnglishSaheeh && showEnglishMustafa
+        // This ayah's pins over the app settings - one resolve for the whole block.
+        let choices = displayChoices
 
         VStack(alignment: .leading, spacing: 10) {
             if !currentNote.isEmpty {
@@ -1162,7 +1184,7 @@ struct AyahRow: View, Equatable {
 
 
             if showArabic {
-                let beginner = settings.beginnerMode || ayahBeginnerMode || forceBeginner
+                let beginner = choices.beginner
                 let arabicSource = arabicDisplayText()
                 // "Basic" font renders with the standard Apple system font. The design is named explicitly rather
                 // than inherited, because this view opts out of the app-wide rounded design below (its ayah-number
@@ -1185,15 +1207,17 @@ struct AyahRow: View, Equatable {
                 #if os(iOS)
                 if let glosses = wordByWordGlosses(displayText: arabicSource, beginner: beginner,
                                                    highlightQuery: highlightQuery) {
-                    let selectWord: (Int) -> Void = { index in
+                    // The card opens from a word only with "Tap a Word for Its Meaning" on; the
+                    // study layout below still draws its glosses without it.
+                    let selectWord: ((Int) -> Void)? = settings.wordByWordMeanings ? { index in
                         requestSheet(.word(TappedWord(
                             index: index,
                             word: WordTokens.tokens(in: arabicSource)[index],
                             meaning: glosses[index],
                             total: glosses.count
                         )))
-                    }
-                    if settings.wordByWordInline {
+                    } : nil
+                    if choices.wordByWord {
                         // The study layout: each word a column with its meaning beneath it. Tapping
                         // still opens the same word card.
                         WordByWordInlineText(
@@ -1205,6 +1229,7 @@ struct AyahRow: View, Equatable {
                             fontSize: CGFloat(settings.fontArabicSize),
                             ayahNumberArabic: ayah.idArabic,
                             glosses: glosses,
+                            highlightAllahNames: choices.highlightAllah,
                             showsGlosses: settings.wordByWordInlineTranslation,
                             transliterations: wordByWordTransliterations(displayText: arabicSource),
                             selectedWord: openWordIndex,
@@ -1213,7 +1238,10 @@ struct AyahRow: View, Equatable {
                         .id(tajweedAnimationKey)
                         .frame(maxWidth: .infinity, alignment: .trailing)
                     } else {
-                        // Same text, same colors - rendered through TextKit so a single word can be tapped.
+                        // Same text, same colors - rendered through TextKit so a single word can be
+                        // tapped. `wordByWordGlosses` returns glosses only with one of the two word
+                        // switches on, so with the study layout off the tap switch is the one that is
+                        // on and `selectWord` is set; the fallback closure is never reached.
                         WordByWordText(
                             displayText: arabicSource,
                             preStyled: preStyled,
@@ -1223,8 +1251,9 @@ struct AyahRow: View, Equatable {
                             fontSize: CGFloat(settings.fontArabicSize),
                             ayahNumberArabic: ayah.idArabic,
                             glosses: glosses,
+                            highlightAllahNames: choices.highlightAllah,
                             selectedWord: openWordIndex,
-                            onSelectWord: selectWord
+                            onSelectWord: selectWord ?? { _ in }
                         )
                         .id(tajweedAnimationKey)
                         .frame(maxWidth: .infinity, alignment: .trailing)
@@ -1262,6 +1291,7 @@ struct AyahRow: View, Equatable {
                         ayahNumberArabic: ayah.idArabic,
                         glosses: [],
                         alwaysTappable: true,
+                        highlightAllahNames: choices.highlightAllah,
                         selectedWord: openRiwayahWordIndex,
                         onSelectWord: { index in
                             let tokens = WordTokens.tokens(in: arabicSource)
@@ -1324,7 +1354,7 @@ struct AyahRow: View, Equatable {
                     font: .system(size: fontSizeEN),
                     accent: settings.accentColor.color,
                     fg: .primary,
-                    highlightAllahNames: settings.highlightAllahNames,
+                    highlightAllahNames: choices.highlightAllah,
                     guaranteeMatch: matchedTranslit
                 )
                 .multilineTextAlignment(.leading)
@@ -1342,7 +1372,7 @@ struct AyahRow: View, Equatable {
                         font: .system(size: fontSizeEN),
                         accent: settings.accentColor.color,
                         fg: .primary,
-                        highlightAllahNames: settings.highlightAllahNames,
+                        highlightAllahNames: choices.highlightAllah,
                         guaranteeMatch: matchedSaheeh,
                         extraHighlightRanges: Self.offsetSpans(crossSaheeh, by: (prefix as NSString).length)
                     )
@@ -1365,7 +1395,7 @@ struct AyahRow: View, Equatable {
                         font: .system(size: fontSizeEN),
                         accent: settings.accentColor.color,
                         fg: .primary,
-                        highlightAllahNames: settings.highlightAllahNames,
+                        highlightAllahNames: choices.highlightAllah,
                         guaranteeMatch: matchedMustafa,
                         extraHighlightRanges: Self.offsetSpans(crossMustafa, by: (prefix as NSString).length)
                     )
@@ -1382,9 +1412,10 @@ struct AyahRow: View, Equatable {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.top, 4)
         .padding(.bottom, 2)
-        #if os(iOS)
-        .textSelection(.enabled)
-        #endif
+        // No `.textSelection(.enabled)` here (it was, since 4.5.0): inside a List it gives only a
+        // whole-block Copy/Share on long press, and that long press won over the row's own, so
+        // holding the translation showed Copy/Share instead of the ayah actions sheet (Abu,
+        // 2026-09-04). Copy and Share live in that sheet and in the ellipsis menu.
         .onAppear { onAyahTextAppear?() }
         .onDisappear { onAyahTextDisappear?() }
     }
@@ -1620,17 +1651,15 @@ struct AyahRow: View, Equatable {
                 canShowTranslation: canCompareEnglishText
             )
 
-            if settings.showArabicText && !settings.beginnerMode {
-                Button {
-                    settings.hapticFeedback()
-                    withAnimation {
-                        beginnerOverrides.toggle(surah: surah.id, ayah: ayah.id)
-                    }
+            // Was a per-ayah "Beginner Mode" toggle: now the whole "Apply Settings" menu (Abu,
+            // 2026-09-05) - beginner spacing, tajweed, tashkeel, dots, Highlight Allah, word by word,
+            // several at once, pinned to THIS ayah, with a reset when it differs from the app.
+            if settings.showArabicText {
+                Menu {
+                    ayahDisplayMenuItems(refs: [HighlightedAyahRef(surahID: surah.id, ayahID: ayah.id)],
+                                         settings: settings, offersWordByWord: true)
                 } label: {
-                    Label("Beginner Mode",
-                          systemImage: ayahBeginnerMode
-                          ? "textformat.size.larger.ar"
-                          : "textformat.size.ar")
+                    Label("Apply Settings", systemImage: "slider.horizontal.3")
                 }
             }
 

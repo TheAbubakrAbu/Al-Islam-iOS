@@ -22,6 +22,10 @@ struct ConditionalGlassEffect: ViewModifier {
     /// flat colour renders as that flat colour anyway, and each one was a backdrop-blur pass. iOS 26
     /// keeps its real glass.
     var flat: Bool = false
+    /// Liquid Glass on every iOS 26, Classic Look or not. For the search bar's own chrome, which
+    /// keeps the system glass field even when the rest of the app is on the classic fallback
+    /// (Abu, 2026-09-04). Pre-26 systems still take the fallback.
+    var systemGlass: Bool = false
 
     /// A 24pt radius reads right on iPhone-sized cards; on the watch's small tiles it rounds them into
     /// near-stadiums that look chopped, so the watch uses a gentler curve.
@@ -36,7 +40,7 @@ struct ConditionalGlassEffect: ViewModifier {
     func body(content: Content) -> some View {
         // `appearance.liquidGlass` is false on every pre-26 system and under the Classic Look (manual,
         // or automatic in Low Power Mode), so one flag routes all ~207 sites to the fallback.
-        if #available(iOS 26.0, watchOS 26.0, *), appearance.liquidGlass {
+        if #available(iOS 26.0, watchOS 26.0, *), appearance.liquidGlass || systemGlass {
             modernGlass(content: content)
         } else {
             fallbackGlass(content: content)
@@ -239,9 +243,10 @@ extension View {
         customTint: Color? = nil,
         interactive: Bool = true,
         themeTint: Bool = true,
-        flat: Bool = false
+        flat: Bool = false,
+        systemGlass: Bool = false
     ) -> some View {
-        modifier(ConditionalGlassEffect(clear: clear, rectangle: rectangle, circle: circle, useColor: useColor, customTint: customTint, interactive: interactive, themeTint: themeTint, flat: flat))
+        modifier(ConditionalGlassEffect(clear: clear, rectangle: rectangle, circle: circle, useColor: useColor, customTint: customTint, interactive: interactive, themeTint: themeTint, flat: flat, systemGlass: systemGlass))
     }
 
     /// Presents a `Menu`'s items in DECLARED order, top to bottom, wherever the menu pops up from.

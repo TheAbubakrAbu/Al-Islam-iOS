@@ -116,6 +116,49 @@ func ayahHighlightMenuItems(surah: Int, ayah: Int, settings: Settings) -> some V
     }
 }
 
+#if os(iOS)
+/// The "Apply Settings" menu body, shared by the list row's ellipsis menu, the ayah actions sheet's tile
+/// and the multi-select bar (Abu, 2026-09-05): one checkmark row per display option, each flipping the
+/// EFFECTIVE state of every ayah in `refs` (see `AyahDisplayOverrides.toggle`), several at once, and a
+/// reset back to the app settings whenever any of them pins something. "Word by Word" is offered only
+/// where the inline study layout can draw: the list reader, on Hafs.
+@MainActor
+@ViewBuilder
+func ayahDisplayMenuItems(refs: Set<HighlightedAyahRef>, settings: Settings,
+                          offersWordByWord: Bool) -> some View {
+    let overrides = AyahDisplayOverrides.shared
+
+    ForEach(AyahDisplayOption.allCases, id: \.self) { option in
+        if option != .wordByWord || (offersWordByWord && settings.isHafsDisplay) {
+            Toggle(isOn: Binding(
+                get: { overrides.allOn(option, for: refs, settings: settings) },
+                set: { _ in
+                    settings.hapticFeedback()
+                    withAnimation(.easeInOut) {
+                        overrides.toggle(option, for: refs, settings: settings)
+                    }
+                }
+            )) {
+                Label(option.title, systemImage: option.systemImage)
+            }
+        }
+    }
+
+    if overrides.hasOverride(refs) {
+        Divider()
+
+        Button(role: .destructive) {
+            settings.hapticFeedback()
+            withAnimation(.easeInOut) {
+                overrides.reset(refs)
+            }
+        } label: {
+            Label("Reset to App Settings", systemImage: "arrow.counterclockwise")
+        }
+    }
+}
+#endif
+
 struct SurahContextMenu: View {
     @ObservedObject var settings = Settings.shared
     @ObservedObject var quranData = QuranData.shared

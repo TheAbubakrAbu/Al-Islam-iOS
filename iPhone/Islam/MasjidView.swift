@@ -223,8 +223,13 @@ struct PlaceLocatorView: View {
                 .scaleEffect(isVisible ? 1 : 0.72)
                 .opacity(isVisible ? 1 : 0)
                 .onAppear {
-                    withAnimation(.spring(response: 0.24, dampingFraction: 0.82)) {
-                        isVisible = true
+                    // Annotation views are built inside the Map's own update, where this onAppear
+                    // fires synchronously; a state write there is "Modifying state during view
+                    // update". One turn later the pop-in animates the same.
+                    DispatchQueue.main.async {
+                        withAnimation(.spring(response: 0.24, dampingFraction: 0.82)) {
+                            isVisible = true
+                        }
                     }
                 }
         }
@@ -285,11 +290,17 @@ struct PlaceLocatorView: View {
                 // This screen is all about "near me", so it asks for location itself instead of assuming the
                 // prayer-times flow already did. No-op when already granted or denied.
                 settings.requestLocationAuthorization()
-                awaitingFirstFix = !hasRealLocation
-                configureInitialRegion()
-                loadCachedHomeResultsIfPossible()
-                scheduleSearch(for: "", force: true)
-                warmHomeCacheIfNeeded()
+                // One turn later, not inside this update: `init` already centred the map, and a
+                // `region` write here lands in the same update the Map is built in, where the
+                // deprecated `coordinateRegion` binding writes back ("Modifying state during view
+                // update" in the log).
+                DispatchQueue.main.async {
+                    awaitingFirstFix = !hasRealLocation
+                    configureInitialRegion()
+                    loadCachedHomeResultsIfPossible()
+                    scheduleSearch(for: "", force: true)
+                    warmHomeCacheIfNeeded()
+                }
             }
             .onChange(of: searchText) { newValue in
                 scheduleSearch(for: newValue, force: false)
@@ -309,10 +320,74 @@ struct PlaceLocatorView: View {
             .tint(settings.accentColor.color)
     }
 
+    @ViewBuilder
     private var mapContent: some View {
-        Map(coordinateRegion: $region, annotationItems: markers) { item in
-            MapAnnotation(coordinate: item.coordinate) {
-                markerBubble(for: item)
+        if #available(iOS 17.0, *) {
+            CameraMap(region: $region, markers: markers)
+        } else {
+            Map(coordinateRegion: $region, annotationItems: markers) { item in
+                MapAnnotation(coordinate: item.coordinate) {
+                    markerBubble(for: item)
+                }
+            }
+        }
+    }
+
+    /// `MKCoordinateRegion` is not Equatable; this is the part of it a camera move can change.
+    private struct RegionKey: Equatable {
+        let latitude: Double
+        let longitude: Double
+        let latitudeDelta: Double
+        let longitudeDelta: Double
+
+        init(_ region: MKCoordinateRegion) {
+            latitude = region.center.latitude
+            longitude = region.center.longitude
+            latitudeDelta = region.span.latitudeDelta
+            longitudeDelta = region.span.longitudeDelta
+        }
+    }
+
+    /// iOS 17+: the camera-position Map. The deprecated `Map(coordinateRegion:)` writes its binding
+    /// back from inside its own update whenever the app moves the region (MapKit's
+    /// `mapLayerDidChangeVisibleRegion` into `Binding.setter`, "Modifying state during view update"
+    /// in the log, verified with lldb 2026-09-04). Here the app's `region` stays the source the search
+    /// reads; the map only hears about it through `position`, and reports pans back once a camera
+    /// move ends, outside any update.
+    @available(iOS 17.0, *)
+    private struct CameraMap: View {
+        @Binding var region: MKCoordinateRegion
+        let markers: [MarkerItem]
+
+        @State private var position: MapCameraPosition
+        /// The last region the camera reported, so echoing it back into `region` does not re-move the camera.
+        @State private var reported: RegionKey?
+
+        init(region: Binding<MKCoordinateRegion>, markers: [MarkerItem]) {
+            _region = region
+            self.markers = markers
+            _position = State(initialValue: .region(region.wrappedValue))
+        }
+
+        var body: some View {
+            Map(position: $position) {
+                ForEach(markers) { item in
+                    Annotation("", coordinate: item.coordinate, anchor: .center) {
+                        AnimatedMarkerBubble(tint: item.tint, systemImage: item.systemImage)
+                    }
+                    .annotationTitles(.hidden)
+                }
+            }
+            .onChange(of: RegionKey(region)) { _, key in
+                guard key != reported else { return }
+                position = .region(region)
+            }
+            .onMapCameraChange(frequency: .onEnd) { context in
+                let key = RegionKey(context.region)
+                reported = key
+                if key != RegionKey(region) {
+                    region = context.region
+                }
             }
         }
     }

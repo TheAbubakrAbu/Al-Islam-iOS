@@ -2,7 +2,10 @@ import SwiftUI
 import WidgetKit
 
 struct PrayersEntryView: View {
-    @Environment(\.widgetFamily) var widgetFamily
+    @Environment(\.widgetFamily) private var systemWidgetFamily
+    @Environment(\.previewWidgetFamily) private var previewWidgetFamily
+    /// The gallery's override first (see `previewWidgetFamily`), else WidgetKit's.
+    private var widgetFamily: WidgetFamily { previewWidgetFamily ?? systemWidgetFamily }
 
     var entry: PrayersProvider.Entry
     /// true = this layout is rendered inside a sky-gradient widget: everything recolors to white tiers
@@ -28,8 +31,13 @@ struct PrayersEntryView: View {
         AdhanWidgetDateFormatting.hijriDate(for: entry, style: .full)
     }
     
+    /// The medium tile has 126pt for two grid rows plus the date-and-city line: the stack's default
+    /// gaps and the cells' default text spacing cost 30pt between them and squeezed that line to half
+    /// size, so the medium size runs tight and the large keeps the defaults.
+    private var isMedium: Bool { widgetFamily == .systemMedium }
+
     var body: some View {
-        VStack {
+        VStack(spacing: isMedium ? 2 : nil) {
             if entry.prayers.isEmpty {
                 PrayerWidgetEmptyState(tint: accent, skyStyle: skyStyle)
             } else {
@@ -54,9 +62,9 @@ struct PrayersEntryView: View {
                         GridItem(.flexible(), spacing: 12),
                         GridItem(.flexible(), spacing: 12),
                         GridItem(.flexible(), spacing: 12),
-                    ], spacing: 12) {
+                    ], spacing: isMedium ? 6 : 12) {
                         ForEach(entry.prayers) { prayer in
-                            VStack(alignment: .center) {
+                            VStack(alignment: .center, spacing: isMedium ? 2 : nil) {
                                 HStack {
                                     Image(systemName: prayer.image)
                                         .font(.subheadline)
@@ -75,14 +83,15 @@ struct PrayersEntryView: View {
                             }
                         }
                     }
-                    .padding(4)
+                    .padding(.horizontal, 4)
+                    .padding(.vertical, isMedium ? 0 : 4)
                 } else {
                     LazyVGrid(columns: [
                         GridItem(.flexible(), spacing: 12),
                         GridItem(.flexible(), spacing: 12),
-                    ], spacing: 12) {
+                    ], spacing: isMedium ? 6 : 12) {
                         ForEach(entry.prayers) { prayer in
-                            VStack(alignment: .center) {
+                            VStack(alignment: .center, spacing: isMedium ? 2 : nil) {
                                 HStack {
                                     Image(systemName: prayer.image)
                                         .font(.subheadline)
@@ -101,11 +110,19 @@ struct PrayersEntryView: View {
                             }
                         }
                     }
-                    .padding(4)
+                    .padding(.horizontal, 4)
+                    .padding(.vertical, isMedium ? 0 : 4)
                 }
                 
                 Spacer()
-                
+
+                if isMedium {
+                    // The medium grid's one line of context, the date and city along the bottom (the
+                    // large size carries them in its own header and footer).
+                    PrayerWidgetContextRow(entry: entry, skyStyle: skyStyle)
+                        .padding(.horizontal, 4)
+                }
+
                 if widgetFamily == .systemLarge {
                     Divider()
                         .background(dividerTint)

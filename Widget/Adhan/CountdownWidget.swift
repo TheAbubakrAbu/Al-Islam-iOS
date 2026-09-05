@@ -2,7 +2,10 @@ import SwiftUI
 import WidgetKit
 
 struct CountdownEntryView: View {
-    @Environment(\.widgetFamily) var widgetFamily
+    @Environment(\.widgetFamily) private var systemWidgetFamily
+    @Environment(\.previewWidgetFamily) private var previewWidgetFamily
+    /// The gallery's override first (see `previewWidgetFamily`), else WidgetKit's.
+    private var widgetFamily: WidgetFamily { previewWidgetFamily ?? systemWidgetFamily }
 
     var entry: PrayersProvider.Entry
     /// true = this layout is rendered inside a sky-gradient widget: accent-colored elements go white

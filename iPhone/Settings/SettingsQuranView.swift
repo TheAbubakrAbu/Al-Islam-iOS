@@ -511,7 +511,7 @@ struct SettingsQuranView: View {
                 }
 
             Text(canRenderNow || !settings.showArabicText
-                 ? "Tap any word while reading to see what that word means on its own, and how it is pronounced. With tajweed colors on, the word's card also explains every tajweed color painted on it. Works offline."
+                 ? "Tap a word twice while reading, in list mode or page mode, to see what that word means on its own and how it is pronounced. With tajweed colors on, the word's card also explains every tajweed color painted on it. A single tap still marks the ayah. Works offline."
                  : "Available in Hafs an Asim, with beginner mode off - the meanings are counted word by word against that text.")
                 .font(.caption)
                 .foregroundColor(.secondary)
@@ -538,7 +538,7 @@ struct SettingsQuranView: View {
                 }
 
             Text(canRenderNow || !settings.showArabicText
-                 ? "Lays the ayah out word by word, with each word's meaning and pronunciation written directly beneath it. List mode only: page mode keeps the mushaf layout, so this has no effect there."
+                 ? "Lays the ayah out word by word, with each word's meaning and pronunciation written directly beneath it. Works on its own, with or without the tap above. List mode only: page mode keeps the mushaf layout, so this has no effect there."
                  : "Available in Hafs an Asim, with beginner mode off - the meanings are counted word by word against that text.")
                 .font(.caption)
                 .foregroundColor(.secondary)

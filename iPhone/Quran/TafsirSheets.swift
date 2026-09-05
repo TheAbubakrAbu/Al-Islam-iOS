@@ -63,6 +63,11 @@ struct AyahTafsirSheet: View {
     @State private var matchCount = 0
     @State private var currentMatchIndex = 0
     @State private var showSummarize = false
+    #if canImport(FoundationModels)
+    /// A summary of ONE edition - the one on screen - in English or Arabic (the top-right button
+    /// summarizes all six plus the riwayat and translations).
+    @State private var singleSummary: SingleTafsirSummary?
+    #endif
     @AppStorage("quran.tafsir.author") private var selectedAuthorRawValue = TafsirAuthor.ibnKathir.rawValue
 
     init(surahName: String, surahNumber: Int, ayahNumber: Int) {
@@ -128,45 +133,6 @@ struct AyahTafsirSheet: View {
     private func goToMatch(_ delta: Int) {
         guard matchCount > 0 else { return }
         currentMatchIndex = (currentMatchIndex + delta + matchCount) % matchCount
-    }
-
-    /// Every ayah of the group as ONE concatenated Text, each followed by its Arabic ayah number in
-    /// the accent - the same inline-marker flow a mushaf page uses.
-    private var combinedArabicRun: Text {
-        var result = Text(verbatim: "")
-        for ayah in tafsirArabicAyahs {
-            let piece: Text
-            if let styled = tafsirTajweedText(ayah) {
-                piece = Text(styled)
-            } else {
-                piece = Text(tafsirArabicDisplay(ayah))
-            }
-            result = result + piece + Text(" \(ayah.idArabic) ").foregroundColor(settings.accentColor.accent1)
-        }
-        return result
-    }
-
-    /// The reader's display text for one of the card's ayahs: clean/no-dots per settings, beginner
-    /// letter spacing when on - the same string an AyahRow would show.
-    private func tafsirArabicDisplay(_ ayah: Ayah) -> String {
-        let text = ayah.displayArabicText(surahId: surahNumber, clean: settings.cleanArabicText, qiraahOverride: settings.displayQiraahForArabic)
-        return settings.beginnerMode ? text.beginnerSpaced : text
-    }
-
-    /// Tajweed-colored attributed text for the card, when tajweed is on and the display is Hafs.
-    private func tafsirTajweedText(_ ayah: Ayah) -> AttributedString? {
-        guard settings.showTajweedColors, settings.showArabicText, settings.isHafsDisplay else { return nil }
-        let text = ayah.displayArabicText(surahId: surahNumber, clean: false)
-        let displayText = settings.cleanArabicText ? ayah.displayArabicText(surahId: surahNumber, clean: true) : text
-        let rendered = settings.beginnerMode ? displayText.beginnerSpaced : displayText
-        return TajweedStore.shared.attributedText(
-            surah: surahNumber,
-            ayah: ayah.id,
-            text: text,
-            displayText: rendered,
-            cleanDisplayText: settings.cleanArabicText,
-            beginnerSpacing: settings.beginnerMode
-        )
     }
 
     private var tafsirAyahRange: ClosedRange<Int> {
@@ -259,6 +225,30 @@ struct AyahTafsirSheet: View {
                                         .font(.headline)
                                         .frame(maxWidth: .infinity, alignment: selectedAuthor.isArabic ? .trailing : .leading)
 
+                                    // Summarize JUST this edition (Abu, 2026-09-05: "maybe I just want that
+                                    // tafsir summarized"); the toolbar's sparkles button does all of them.
+                                    // An Arabic edition offers English and, when the on-device model can
+                                    // write it, Arabic.
+                                    // An Arabic edition gets its chips only once the model can read Arabic
+                                    // (`OnDeviceAsk.supportsArabic`): until then the prompt is rejected
+                                    // whatever language the answer is asked in.
+                                    #if canImport(FoundationModels)
+                                    if OnDeviceAsk.isAvailable, !selectedAuthor.isArabic || OnDeviceAsk.supportsArabic {
+                                        let author = selectedAuthor
+                                        HStack(spacing: 8) {
+                                            SummarizeChip(title: author.isArabic ? "Summarize in English" : "Summarize This Tafsir") {
+                                                singleSummary = SingleTafsirSummary(author: author, language: .english)
+                                            }
+                                            if author.isArabic {
+                                                SummarizeChip(title: "لخّص بالعربية") {
+                                                    singleSummary = SingleTafsirSummary(author: author, language: .arabic)
+                                                }
+                                            }
+                                        }
+                                        .frame(maxWidth: .infinity, alignment: author.isArabic ? .trailing : .leading)
+                                    }
+                                    #endif
+
                                     tafsirContentView(for: tafsirText)
                                         .frame(maxWidth: .infinity, alignment: selectedAuthor.isArabic ? .trailing : .leading)
                                 }
@@ -294,6 +284,16 @@ struct AyahTafsirSheet: View {
                     }
                     .onChange(of: searchText) { _ in recomputeMatches() }
                     .onChange(of: selectedTafsirText) { _ in recomputeMatches() }
+                    #if DEBUG
+                    // "-scrollTafsirToText" scrolls the selected edition's title to the top a beat after
+                    // the sheet appears, so a headless screenshot shows the per-edition summarize chips.
+                    .onAppear {
+                        guard ProcessInfo.processInfo.arguments.contains("-scrollTafsirToText") else { return }
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                            withAnimation { proxy.scrollTo(selectedAuthor.rawValue, anchor: .top) }
+                        }
+                    }
+                    #endif
                     }
             }
             // Title reflects the tafsir's FULL range: when the selected tafsir groups several ayahs (Ibn
@@ -303,7 +303,9 @@ struct AyahTafsirSheet: View {
             // The app's own bottom search bar, not `.searchable` - matching the reciter picker
             // (`SettingsQuranView.reciterSearchControlsInset`) and every other search in the app.
             // Behavior is unchanged: the same `searchText` still drives `recomputeMatches` and the find bar.
-            .adaptiveSafeArea(edge: .bottom) {
+            // `spacing: 0`: the find bar stacked above carries its own cushion; pre-26 `safeAreaInset`
+            // added a default 8pt on top of it that iOS 26's `safeAreaBar` does not.
+            .adaptiveSafeArea(edge: .bottom, spacing: 0) {
                 SearchBar(text: AppPerformance.shouldReduceAnimations ? $searchText : $searchText.animation(.easeInOut), placeholder: "Search tafsir")
                     .padding(.horizontal, 24)
                     .padding(.bottom, BottomBarCushion.standard)
@@ -326,9 +328,36 @@ struct AyahTafsirSheet: View {
                     }
                 }
             }
+            .sheet(item: $singleSummary) { request in
+                // The English section label ("Tafsir Ibn Kathir (Arabic)"), not the Arabic display title:
+                // an Arabic title inside an English sentence reorders under bidi ("on 2:2 تفسير ابن كثير").
+                let title = "\(request.author.summarizeSectionLabel) on \(tafsirRangeTitle)"
+                let content = viewModel.tafsirs.first(where: { request.author.matches($0.author) })?.content ?? ""
+                if request.author.isArabic {
+                    // An Arabic edition cannot go in alone: the model rejects a prompt that is mostly
+                    // Arabic ("Unsupported language", seen 2026-09-05). It travels as the FOCUSED
+                    // section of a multi-source prompt, with the ayah's English translations and an
+                    // English commentary (Ibn Kathir's English edition) as context - see
+                    // `OnDeviceAsk.streamSummary(focus:)`.
+                    let combined = Self.focusedArabicSource(
+                        author: request.author, content: content,
+                        surahNumber: surahNumber, ayahNumber: ayahNumber, tafsirs: viewModel.tafsirs
+                    )
+                    SummarizeSheet(
+                        title: title,
+                        sourceText: combined.text,
+                        multiSource: true,
+                        sourceTruncated: combined.truncated,
+                        language: request.language,
+                        focus: request.author.summarizeSectionLabel
+                    )
+                } else {
+                    SummarizeSheet(title: title, sourceText: content, language: request.language)
+                }
+            }
             .sheet(isPresented: $showSummarize) {
                 SummarizeSheet(
-                    title: "Tafsir, riwayat & translations of \(tafsirRangeTitle)",
+                    title: "\(AyahAISources.combinedTitlePrefix) of \(tafsirRangeTitle)",
                     sourceText: "",
                     multiSource: true,
                     gatherSource: {
@@ -343,7 +372,8 @@ struct AyahTafsirSheet: View {
                                 onlineTranslations: online
                             )
                         )
-                    }
+                    },
+                    excludedNote: AyahAISources.arabicExcludedNote
                 )
             }
             #endif
@@ -353,8 +383,58 @@ struct AyahTafsirSheet: View {
         // turn later, so the lookup no longer sits inside the presentation transaction (Phase 5 step 11).
         .task {
             viewModel.loadIfNeeded()
+            #if DEBUG && canImport(FoundationModels)
+            // "-summarizeTafsir en|ar" opens the single-edition summary of the selected tafsir a beat
+            // after the sheet appears (its chip cannot be tapped headlessly).
+            let args = ProcessInfo.processInfo.arguments
+            if let i = args.firstIndex(of: "-summarizeTafsir"), i + 1 < args.count {
+                let language: OnDeviceAsk.SummaryLanguage = args[i + 1] == "ar" ? .arabic : .english
+                if !OnDeviceAsk.supportsArabic {
+                    NSLog("SUMMARIZE TAFSIR: Arabic unsupported on this model")
+                }
+                try? await Task.sleep(nanoseconds: 1_000_000_000)
+                if args[i + 1] == "all" {
+                    showSummarize = true
+                } else {
+                    singleSummary = SingleTafsirSummary(author: selectedAuthor, language: language)
+                }
+            }
+            #endif
         }
     }
+
+    #if canImport(FoundationModels)
+    /// The focused multi-source text for an Arabic edition: the edition itself (first, the focus),
+    /// the ayah's bundled English translations, and Ibn Kathir's English edition as an orienting
+    /// commentary. Pre-clipped so the English outweighs the Arabic for the model's language check
+    /// while the whole stays inside its context window (Arabic tokenizes denser than English).
+    static func focusedArabicSource(author: TafsirAuthor, content: String, surahNumber: Int, ayahNumber: Int,
+                                    tafsirs: [AyahTafsirEntry]) -> (text: String, truncated: Bool) {
+        let arabicLimit = 3000
+        let englishLimit = 4000
+        var truncated = false
+        func clipped(_ text: String, _ limit: Int) -> String {
+            let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard trimmed.count > limit else { return trimmed }
+            truncated = true
+            return String(trimmed.prefix(limit)) + "…"
+        }
+        var sections = [OnDeviceAsk.SummarizeSection(label: author.summarizeSectionLabel, text: clipped(content, arabicLimit))]
+        let anchor = AyahAISources.hafsAnchor(surahNumber: surahNumber, ayahNumber: ayahNumber)
+        let translations = AyahAISources.translationsText(surahNumber: surahNumber, hafsAyah: anchor, online: [:])
+        if !translations.isEmpty {
+            sections.append(OnDeviceAsk.SummarizeSection(label: "English translations of this ayah (context only)", text: translations))
+        }
+        if let english = tafsirs.first(where: { TafsirAuthor.ibnKathir.matches($0.author) })?.content {
+            sections.append(OnDeviceAsk.SummarizeSection(
+                label: "\(TafsirAuthor.ibnKathir.summarizeSectionLabel), for orientation only",
+                text: clipped(english, englishLimit)
+            ))
+        }
+        let combined = OnDeviceAsk.combinedSource(sections)
+        return (combined.text, truncated || combined.truncated)
+    }
+    #endif
 
     private var noticeCard: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -373,67 +453,16 @@ struct AyahTafsirSheet: View {
         )
     }
 
-    // The same ayah-card format as the page actions sheet: Arabic first, then the "Name S:A" reference
-    // caption, then the ayah's ACTUAL text in the active translation - not just the translation's name.
+    // The SAME card the page actions sheet shows for a tapped ayah (Abu, 2026-09-05: "make it use the
+    // same exact code ... so it looks and acts the exact same"): the group's ayahs as one run in the
+    // reader's rendering, every word opening its card on one tap, the plain-text toggle, the
+    // reference caption, the translation of every ayah the tafsir covers, and any notes.
+    @ViewBuilder
     private var arabicAyahsCard: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            if tafsirArabicAyahs.isEmpty {
-                Text("Arabic ayah unavailable.")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-            } else {
-                // ONE continuous run with inline ayah markers - the mushaf page's shape, not a stack of
-                // separate rows. Rendered like the reader: the QURAN face, tajweed colors when on,
-                // clean-text / no-dots choices, and beginner letter spacing.
-                combinedArabicRun
-                    .font(Font.arabic(settings.quranDisplayFontName, size: UIFont.preferredFont(forTextStyle: .title3).pointSize))
-                    .arabicFontDesign(custom: settings.quranDisplayUsesCustomArabicFace)
-                    // NO `.environment(\.layoutDirection, .rightToLeft)` here - see the same note on
-                    // `AyahActionsSheet.ayahPreview`. `.trailing` means "the END edge", not "the right edge",
-                    // so an RTL override resolves BOTH modifiers above to the LEFT and the ayah renders
-                    // leading - which is exactly what it was doing. The bidi algorithm already lays the
-                    // Arabic out right-to-left from the characters themselves; the visual right edge is
-                    // `.trailing` in the app's left-to-right layout.
-                    .multilineTextAlignment(.trailing)
-                    .lineSpacing(6)
-                    .frame(maxWidth: .infinity, alignment: .trailing)
-            }
-
-            // The reference header and the translation are English, so they read from the leading edge -
-            // the mirror image of the Arabic run above, which sits trailing.
-            VStack(alignment: .leading, spacing: 3) {
-                Text(tafsirRangeTitle)
-                    .font(.caption2.weight(.semibold))
-                    .foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-
-                // The translation of every ayah the tafsir covers - one flowing paragraph (numbered
-                // inline when the group spans several ayahs), matching the Arabic run above.
-                let translations = tafsirArabicAyahs.compactMap { ayah -> String? in
-                    guard let text = currentTranslationText(for: ayah) else { return nil }
-                    return tafsirArabicAyahs.count > 1 ? "\(text) (\(ayah.id))" : text
-                }
-                if !translations.isEmpty {
-                    Text(translations.joined(separator: " "))
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.leading)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
+        if let surah = quranData.surah(surahNumber) {
+            AyahPreviewCard(surah: surah, ayahs: tafsirArabicAyahs)
+                .animation(.easeInOut, value: tafsirRangeTitle)
         }
-        .padding(14)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        // Clear glass - the accent-tinted wash fought the tajweed colors and the accent ayah markers.
-        .conditionalGlassEffect(clear: true, rectangle: true)
-        .overlay(
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .stroke(settings.accentColor.color.opacity(0.18), lineWidth: 1)
-        )
-        .textSelection(.enabled)
-        .animation(.easeInOut, value: tafsirRangeTitle)
     }
 
     @ViewBuilder
@@ -480,6 +509,10 @@ struct SurahInfoSheet: View {
     @State private var matchCount = 0
     @State private var currentMatchIndex = 0
     @State private var showSummarize = false
+    #if canImport(FoundationModels)
+    /// A summary of ONE source - the one on screen (the toolbar button summarizes every source).
+    @State private var singleSummary: SingleSourceSummary?
+    #endif
     @AppStorage("quran.surahInfo.source") private var selectedSourceName = ""
 
     private var sources: [SurahInfoSource] {
@@ -595,6 +628,24 @@ struct SurahInfoSheet: View {
                                         .font(.headline)
                                         .frame(maxWidth: .infinity, alignment: arabic ? .trailing : .leading)
 
+                                    // Summarize JUST this source - the same per-text button the tafsir
+                                    // sheet has; the toolbar's sparkles button does every source.
+                                    #if canImport(FoundationModels)
+                                    if OnDeviceAsk.isAvailable, !arabic || OnDeviceAsk.supportsArabic {
+                                        HStack(spacing: 8) {
+                                            SummarizeChip(title: arabic ? "Summarize in English" : "Summarize This Source") {
+                                                singleSummary = SingleSourceSummary(name: source.name, contents: source.contents, language: .english)
+                                            }
+                                            if arabic {
+                                                SummarizeChip(title: "لخّص بالعربية") {
+                                                    singleSummary = SingleSourceSummary(name: source.name, contents: source.contents, language: .arabic)
+                                                }
+                                            }
+                                        }
+                                        .frame(maxWidth: .infinity, alignment: arabic ? .trailing : .leading)
+                                    }
+                                    #endif
+
                                     TafsirMarkdownView(
                                         markdown: source.contents,
                                         searchText: searchText,
@@ -629,7 +680,7 @@ struct SurahInfoSheet: View {
             .navigationTitle("Surah \(surahNumber): \(surahName)")
             .navigationBarTitleDisplayMode(.inline)
             // The app's own bottom search bar, not `.searchable` - see the tafsir sheet above.
-            .adaptiveSafeArea(edge: .bottom) {
+            .adaptiveSafeArea(edge: .bottom, spacing: 0) {
                 SearchBar(text: AppPerformance.shouldReduceAnimations ? $searchText : $searchText.animation(.easeInOut), placeholder: "Search info")
                     .padding(.horizontal, 24)
                     .padding(.bottom, BottomBarCushion.standard)
@@ -662,14 +713,27 @@ struct SurahInfoSheet: View {
                 }
             }
             .sheet(isPresented: $showSummarize) {
-                let combined = OnDeviceAsk.combinedSource(sources.map {
+                // Arabic sources stay out while the model has no Arabic (the prompt is rejected
+                // otherwise - see `OnDeviceAsk.supportsArabic`).
+                let readable = sources.filter { OnDeviceAsk.supportsArabic || !Self.isArabic($0.contents) }
+                let combined = OnDeviceAsk.combinedSource(readable.map {
                     OnDeviceAsk.SummarizeSection(label: "\($0.name) - About this Surah", text: $0.contents)
                 })
                 SummarizeSheet(
                     title: "About Surah \(surahNumber): \(surahName)",
                     sourceText: combined.text,
                     multiSource: true,
-                    sourceTruncated: combined.truncated
+                    sourceTruncated: combined.truncated,
+                    excludedNote: readable.count < sources.count
+                        ? "The Arabic sources are left out: Apple Intelligence can\u{2019}t read Arabic on this device yet."
+                        : nil
+                )
+            }
+            .sheet(item: $singleSummary) { request in
+                SummarizeSheet(
+                    title: "\(request.name) - About Surah \(surahNumber): \(surahName)",
+                    sourceText: request.contents,
+                    language: request.language
                 )
             }
             #endif
@@ -1227,5 +1291,48 @@ private struct TafsirFindBar: View {
         .frame(maxWidth: .infinity, alignment: .center)
     }
 }
+
+#if canImport(FoundationModels)
+/// A request to summarize ONE tafsir edition (the one on screen), in English or Arabic.
+private struct SingleTafsirSummary: Identifiable {
+    let author: TafsirAuthor
+    let language: OnDeviceAsk.SummaryLanguage
+    var id: String { "\(author.rawValue).\(language.rawValue)" }
+}
+
+/// A request to summarize ONE surah-info source (the one on screen), in English or Arabic.
+private struct SingleSourceSummary: Identifiable {
+    let name: String
+    let contents: String
+    let language: OnDeviceAsk.SummaryLanguage
+    var id: String { "\(name).\(language.rawValue)" }
+}
+
+/// The small capsule button under a tafsir's or source's title that summarizes JUST that text (Abu,
+/// 2026-09-05: "maybe I just want that tafsir summarized"); the toolbar's sparkles button summarizes
+/// everything the app has. Callers gate it on `OnDeviceAsk.isAvailable`, like the toolbar button.
+private struct SummarizeChip: View {
+    @ObservedObject private var settings = Settings.shared
+
+    let title: String
+    let action: () -> Void
+
+    var body: some View {
+        Button {
+            settings.hapticFeedback()
+            action()
+        } label: {
+            Label(title, systemImage: "sparkles")
+                .font(.caption.weight(.semibold))
+                .padding(.horizontal, 10)
+                .padding(.vertical, 6)
+                .background(Capsule().fill(settings.accentColor.color.opacity(0.12)))
+                .contentShape(Capsule())
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(settings.accentColor.color)
+    }
+}
+#endif
 
 #endif

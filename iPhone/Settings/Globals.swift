@@ -169,6 +169,7 @@ final class PerformanceProfile: ObservableObject {
 
     private init() {
         refresh()
+        ObjectPublishCounter.attach(self, label: "PerformanceProfile")
 
         var names: [Notification.Name] = [
             .NSProcessInfoPowerStateDidChange,
@@ -917,6 +918,42 @@ enum RenderCounter {
 }
 
 #if DEBUG
+#if DEBUG
+/// `-printChanges` (DEBUG): calls `_printChanges()` from the bodies that also call `RenderCounter.hit`, so
+/// a burst of body evaluations can be read as "which dependency woke this body" (SwiftUI names the
+/// changed @State / @ObservedObject / environment). The lines go to stdout, not the unified log: capture
+/// them with `simctl launch --stdout=<file>`.
+enum ChangePrinter {
+    static let enabled = ProcessInfo.processInfo.arguments.contains("-printChanges")
+    static func hit<V: View>(_ type: V.Type) {
+        guard enabled else { return }
+        V._printChanges()
+    }
+}
+#else
+enum ChangePrinter {
+    @inline(__always) static func hit<V: View>(_ type: V.Type) {}
+}
+#endif
+
+#if DEBUG
+/// `-tsanSelfTest` (DEBUG): a deliberate data race (two threads bump one global with no lock), so a
+/// Thread Sanitizer build of the app can be PROVEN to report before its silence on the real screens is
+/// believed. A TSan run that logs "TSAN SELF TEST" and no "WARNING: ThreadSanitizer" is not instrumented.
+enum SanitizerSelfTest {
+    nonisolated(unsafe) private static var counter = 0
+
+    static func race() {
+        for _ in 0..<2 {
+            Thread.detachNewThread {
+                for _ in 0..<200_000 { counter &+= 1 }
+            }
+        }
+        NSLog("TSAN SELF TEST: race started")
+    }
+}
+#endif
+
 /// `-renderCounter` companion: the process's physical footprint, for before/after checks of image
 /// decodes (the Wallpapers screen, the app-icon tiles). `MemoryFootprint.log("label")` writes one
 /// "FOOTPRINT label 123.4 MB" line; silent without the argument.

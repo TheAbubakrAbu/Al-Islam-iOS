@@ -1562,7 +1562,7 @@ struct AhrufView: View {
                         .font(.body)
                 }
 
-                ArticleSourcesSection(article: "QiraatView")
+                ArticleSourcesSection(article: "AhrufView")
             }
             .themedListRowBackground()
         }
@@ -1693,34 +1693,72 @@ struct QiraatView: View {
                         .font(.body)
                 }
 
-                Section(header: ArticleHeader("THE 10 QIRAAT (القراءات)")) {
-                    Text(verbatim: "The 10 Qiraat are the canonical recitation methods of the Quran. Each is named after its primary teacher (the Imam of that recitation). Tap any of them to read about the imam and reach his two narrators.")
+                // The ten as scholars actually count them: the seven of Ibn Mujahid, then the three
+                // Ibn al-Jazari completed them with (Abu, 2026-09-04: "split up the 10 qiraat into the
+                // original 7 and then the added 3"). Every row also says where the reading is recited
+                // today, and the profile pages carry the full sentence.
+                Section(header: ArticleHeader("THE SEVEN QIRAAT (القراءات السبع)")) {
+                    Text(verbatim: "The seven readings Imam Abu Bakr Ibn Mujahid (d. 324 AH) collected in his Kitab al-Sab'ah, one from each of the great centres of recitation: Madinah, Makkah, Basra and Damascus, and three from Kufa. Each is named after its imam. Tap any of them to read about the imam, his two narrators, and where the reading is recited today.")
                         .font(.body)
 
-                    ForEach(QiraatProfiles.masters) { master in
+                    ForEach(QiraatProfiles.masters(in: QiraatProfiles.sevenIDs)) { master in
                         NavigationLink(destination: LazyDestination { QiraahMasterDetailView(profile: master) }) {
                             QiraatProfileRow(
                                 title: master.id,
                                 arabic: master.arabic,
-                                detail: "\(master.city), died \(master.diedAH) AH"
+                                detail: "\(master.city), died \(master.diedAH) AH",
+                                note: QiraatProfiles.recitedTodayShort(master: master.id)
                             )
                         }
                     }
                 }
 
-                Section(header: ArticleHeader("THE 20 RIWAYAAT (روايات)")) {
-                    Text(verbatim: "Each Qiraah (recitation method) has two primary riwayaat (narrations). These are the 20 canonical transmissions used in teaching and ijazah (chain certification). Tap any of them to read about the narrator.")
+                Section(header: ArticleHeader("THE THREE COMPLETING QIRAAT (القراءات الثلاث المتممة)")) {
+                    Text(verbatim: "The three readings Imam Ibn al-Jazari (d. 833 AH) established as equally mutawatir in al-Durrah al-Mutammimah, completing the ten: Abu Ja'far of Madinah, Ya'qub of Basra and Khalaf of Kufa (the tenth reader, a different reading from his own narration of Hamzah). Together with the seven they are the ten Qiraat.")
                         .font(.body)
 
-                    // Grouped under their imam, in the same order as the ten above, so the pairing is
-                    // visible rather than something you reconstruct from the names.
-                    ForEach(QiraatProfiles.masters) { master in
+                    ForEach(QiraatProfiles.masters(in: QiraatProfiles.threeIDs)) { master in
+                        NavigationLink(destination: LazyDestination { QiraahMasterDetailView(profile: master) }) {
+                            QiraatProfileRow(
+                                title: master.id,
+                                arabic: master.arabic,
+                                detail: "\(master.city), died \(master.diedAH) AH",
+                                note: QiraatProfiles.recitedTodayShort(master: master.id)
+                            )
+                        }
+                    }
+                }
+
+                Section(header: ArticleHeader("THE 14 RIWAYAAT OF THE SEVEN")) {
+                    Text(verbatim: "Each Qiraah (recitation method) has two primary riwayaat (narrations). These are the fourteen transmissions of the seven readings, grouped under their imam in the same order as above, with where each is recited today. Tap any of them to read about the narrator.")
+                        .font(.body)
+
+                    ForEach(QiraatProfiles.masters(in: QiraatProfiles.sevenIDs)) { master in
                         ForEach(QiraatProfiles.narrators(ofMaster: master.id)) { narrator in
                             NavigationLink(destination: LazyDestination { RiwayahNarratorDetailView(profile: narrator) }) {
                                 QiraatProfileRow(
                                     title: "\(narrator.name) an \(master.id)",
                                     arabic: narrator.arabic,
-                                    detail: "died \(narrator.diedAH) AH"
+                                    detail: "died \(narrator.diedAH) AH",
+                                    note: QiraatProfiles.recitedTodayShort(narrator: narrator.id)
+                                )
+                            }
+                        }
+                    }
+                }
+
+                Section(header: ArticleHeader("THE 6 RIWAYAAT OF THE THREE")) {
+                    Text(verbatim: "The six transmissions of the three completing readings. All twenty riwayaat together are the canonical transmissions used in teaching and ijazah (chain certification).")
+                        .font(.body)
+
+                    ForEach(QiraatProfiles.masters(in: QiraatProfiles.threeIDs)) { master in
+                        ForEach(QiraatProfiles.narrators(ofMaster: master.id)) { narrator in
+                            NavigationLink(destination: LazyDestination { RiwayahNarratorDetailView(profile: narrator) }) {
+                                QiraatProfileRow(
+                                    title: "\(narrator.name) an \(master.id)",
+                                    arabic: narrator.arabic,
+                                    detail: "died \(narrator.diedAH) AH",
+                                    note: QiraatProfiles.recitedTodayShort(narrator: narrator.id)
                                 )
                             }
                         }
@@ -1852,47 +1890,30 @@ struct QiraatView: View {
                     Text(verbatim: "The differences among the Qiraat are all revelation and add richness of meaning; none contradicts another, and all are recited today.")
                         .font(.body)
 
-                    // The buried way into the textual comparison. Everything above this point is the
-                    // settled record of the qurra; that page is the output of a program that diffed the
-                    // printed mushafs, and a reader who meets a table of "how far each riwayah differs"
-                    // without its caveats can badly misread it. So it is not linked, not searchable, and
-                    // not in any list: seven taps on the closing line open it, and the page itself leads
-                    // with the warning rather than the data.
+                    // The textual comparison: the output of a program that diffed the printed mushafs,
+                    // word by word against Hafs. It hid behind seven taps on the closing line until
+                    // 2026-09-04, when Abu could not find it; it is a plain row now, and the page itself
+                    // still opens with its caveats before any number.
                     #if os(iOS)
                     Text(verbatim: "Every Qiraah is the Quran, complete.")
                         .font(.footnote)
                         .foregroundColor(.secondary)
                         .frame(maxWidth: .infinity, alignment: .center)
-                        .contentShape(Rectangle())
-                        .onTapGesture {
-                            analysisTaps += 1
-                            if analysisTaps == 7 {
-                                Settings.shared.hapticFeedback()
-                                withAnimation(.easeInOut) { showTextAnalysis = true }
-                            }
-                        }
 
-                    if showTextAnalysis {
-                        NavigationLink(destination: LazyDestination { QiraatTextAnalysisView() }) {
-                            Label("Textual Comparison (Analysis)", systemImage: "flask")
-                        }
-                        .foregroundColor(appearance.accent)
+                    NavigationLink(destination: LazyDestination { QiraatTextAnalysisView() }) {
+                        Label("Riwayah Statistics: How Far Each Differs from Hafs", systemImage: "flask")
                     }
+                    .foregroundColor(appearance.accent)
                     #endif
                 }
 
-                ArticleSourcesSection(article: "FarewellView")
+                ArticleSourcesSection(article: "QiraatView")
             }
             .themedListRowBackground()
         }
         .navigationTitle("10 Qiraat (Recitations)")
         .selectableArticleList()
     }
-
-    /// Taps on the closing line; at seven the textual-comparison link appears. Not persisted, so the
-    /// page goes back into hiding every time the guide is left.
-    @State private var analysisTaps = 0
-    @State private var showTextAnalysis = false
 
     /// A tappable Instagram handle that opens the creator's profile, used for the infographic credits.
     private func qiraatCreditLink(handle: String) -> some View {

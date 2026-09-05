@@ -754,7 +754,14 @@ struct HadithView: View {
                 if ProcessInfo.processInfo.arguments.contains(where: {
                     $0 == "-launchHadithSettings" || $0 == "-launchHadithSettingsReading"
                 }) {
-                    showHadithSettings = true
+                    // After the reveal, like a real tap: this onAppear also runs during the
+                    // under-cover tab walk, where the sheet would present from a detached tab
+                    // host (UIKit assert in the log).
+                    Task { @MainActor in
+                        await AppReveal.waitUntilRevealed()
+                        try? await Task.sleep(nanoseconds: 500_000_000)
+                        showHadithSettings = true
+                    }
                 }
                 #endif
             }
@@ -2099,6 +2106,19 @@ enum HadithSemanticCorpus {
     /// True while the slow path (reading every book to gather texts) runs, pre-embedding.
     private(set) static var isGathering = false
 
+    /// What a shipped pack was built from, named without opening a book: every catalog slug with
+    /// its pack's byte size. A text correction changes the compressed pack's size in practice, and
+    /// the pack rebuild procedure re-exports the vectors regardless (Performance Guide, section 15).
+    nonisolated static var fingerprint: String {
+        let parts = HadithCatalogBook.all.map(\.slug).sorted().map { slug -> String in
+            let size = HadithPack.bundledURL(slug)
+                .flatMap { try? FileManager.default.attributesOfItem(atPath: $0.path) }
+                .flatMap { $0[.size] as? UInt64 } ?? 0
+            return "\(slug):\(size)"
+        }
+        return "hadith-all:" + parts.joined(separator: ",")
+    }
+
     /// The instant half of `prepare`: load a persisted build from disk (off the main actor, awaited
     /// here) so a caller can search the corpus as soon as this returns. True when the corpus is
     /// ready afterwards. (`texts` is an autoclosure the engine evaluates only when no persisted
@@ -2107,7 +2127,7 @@ enum HadithSemanticCorpus {
     static func probeDisk(engine: SemanticSearchEngine) async -> Bool {
         guard SemanticSearchEngine.isSupported else { return false }
         if !engine.isReady(id), !engine.isBuilding(id) {
-            engine.prepare(corpusID: id, version: version, texts: [])
+            engine.prepare(corpusID: id, version: version, fingerprint: { Self.fingerprint }, texts: [])
         }
         await engine.awaitDiskLoad(id)
         return engine.isReady(id)
@@ -2149,7 +2169,8 @@ enum HadithSemanticCorpus {
             }
             return (texts, keys)
         }.value
-        engine.prepare(corpusID: id, version: version, texts: built.texts, keys: built.keys)
+        engine.prepare(corpusID: id, version: version, fingerprint: { Self.fingerprint },
+                       texts: built.texts, keys: built.keys)
         return true
     }
 }

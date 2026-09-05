@@ -16,34 +16,155 @@ enum AdhanWidgetDateFormatting {
         return formatter
     }()
 
-    static let fullHijriFormatter: DateFormatter = {
+    /// "Rabiʻ I 24, 1448 AH": the full style minus its weekday, which `hijriDate(for:style:)` adds itself.
+    static let longHijriFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.calendar = hijriCalendar
-        formatter.dateStyle = .full
+        formatter.dateStyle = .long
         formatter.locale = Locale(identifier: "en")
         return formatter
     }()
 
-    static func hijriDate(for entry: PrayersEntry, style: DateFormatter.Style) -> String {
-        let formatter = style == .full ? fullHijriFormatter : mediumHijriFormatter
+    /// The moment the Hijri WEEKDAY is read for: `entry.date`, pushed a day forward once Maghrib has
+    /// passed when the switch-at-Maghrib setting is on (the Islamic day begins at sunset, and so does
+    /// its weekday name: after Maghrib on Saturday it is the night of Sunday).
+    static func hijriWeekdayDate(for entry: PrayersEntry) -> Date {
         // entry.date, never Date(): WidgetKit archives entry views when the timeline is built, so Date()
         // here is the build time - wrong for every pre-built future entry. entry.date is the moment the
         // entry is actually on screen.
         let now = entry.date
-        var referenceDate = now
-
-        if entry.switchHijriDateAtMaghrib,
-           let maghrib = entry.fullPrayers.first(where: { $0.nameTransliteration == "Maghrib" })?.time,
-           now >= maghrib {
-            referenceDate = Calendar.current.date(byAdding: .day, value: 1, to: now) ?? now
-        }
-
-        guard let offsetDate = hijriCalendar.date(byAdding: .day, value: entry.hijriOffset, to: referenceDate) else {
-            return formatter.string(from: referenceDate)
-        }
-
-        return formatter.string(from: offsetDate)
+        guard entry.switchHijriDateAtMaghrib,
+              let maghrib = entry.fullPrayers.first(where: { $0.nameTransliteration == "Maghrib" })?.time,
+              now >= maghrib else { return now }
+        return Calendar.current.date(byAdding: .day, value: 1, to: now) ?? now
     }
+
+    /// The Hijri day the entry is showing, as a date: the weekday date plus the user's day adjustment.
+    /// The adjustment moves the day of the MONTH (the sighting was a day off from Umm al-Qura), never
+    /// the day of the week, which is why the weekday is read from the date above and everything else
+    /// from this one. Every Hijri string the widgets show comes from these two, so a caption on a
+    /// home-screen widget and the lock-screen date widgets can never disagree on the day.
+    static func hijriReferenceDate(for entry: PrayersEntry) -> Date {
+        let date = hijriWeekdayDate(for: entry)
+        return hijriCalendar.date(byAdding: .day, value: entry.hijriOffset, to: date) ?? date
+    }
+
+    /// `.medium`: "Rab. I 24, 1448 AH". `.full`: "Sunday, Rabiʻ I 24, 1448 AH", composed rather than
+    /// formatted in one go, so the weekday is the weekday date's and the rest the adjusted date's (a
+    /// single formatter printed the adjusted date's weekday, a day off under any adjustment).
+    static func hijriDate(for entry: PrayersEntry, style: DateFormatter.Style) -> String {
+        let date = hijriReferenceDate(for: entry)
+        guard style == .full else { return mediumHijriFormatter.string(from: date) }
+        let weekday = englishWeekdayFormatter.string(from: hijriWeekdayDate(for: entry))
+        return "\(weekday), \(longHijriFormatter.string(from: date))"
+    }
+
+    // MARK: The lock-screen date widgets' pieces
+
+    /// The language a date widget writes in. Arabic is a widget of its own per layout rather than a
+    /// setting: a lock-screen widget can't be configured without an App Intent, and separate kinds put
+    /// both in the gallery at once.
+    enum Language {
+        case english
+        case arabic
+    }
+
+    /// One Hijri date broken into the pieces the lock-screen date widgets set separately: a circular
+    /// shows the day number under the month, a rectangular stacks weekday, day-and-month and year.
+    ///
+    /// The English month names are the app's own (`hijriMonths`: "Rabi al-Awwal"), the spelling the Hijri
+    /// Calendar page uses, not CLDR's "Rabiʻ I". The Arabic ones are the formatter's plain unvowelled
+    /// names ("ربيع الأول"), as the Adhan tab's Hijri row shows them: the shared table's vowelled forms
+    /// blur at lock-screen sizes. Digits are Arabic-Indic in Arabic, and the year carries its era mark
+    /// ("1448 AH" / "١٤٤٨ هـ").
+    struct HijriDateParts {
+        let language: Language
+        let weekday: String
+        let day: String
+        let month: String
+        let year: String
+
+        /// "23 Rabi al-Awwal" / "٢٣ ربيع الأول"
+        var dayMonth: String { "\(day) \(month)" }
+        /// "23 Rabi al-Awwal 1448 AH" / "٢٣ ربيع الأول ١٤٤٨ هـ"
+        var dayMonthYear: String { "\(dayMonth) \(year)" }
+        /// "Saturday, 23 Rabi al-Awwal" / "السبت، ٢٣ ربيع الأول": the inline family's text, which
+        /// replaces the lock screen's own date line and so mirrors its shape (weekday, day, month).
+        var weekdayDayMonth: String {
+            language == .arabic ? "\(weekday)، \(dayMonth)" : "\(weekday), \(dayMonth)"
+        }
+    }
+
+    private static func hijriFormatter(locale: String, format: String) -> DateFormatter {
+        let formatter = DateFormatter()
+        formatter.calendar = hijriCalendar
+        formatter.locale = Locale(identifier: locale)
+        formatter.dateFormat = format
+        return formatter
+    }
+
+    private static let englishWeekdayFormatter = hijriFormatter(locale: "en", format: "EEEE")
+    private static let arabicWeekdayFormatter = hijriFormatter(locale: "ar", format: "EEEE")
+    private static let arabicMonthFormatter = hijriFormatter(locale: "ar", format: "MMMM")
+
+    static func hijriParts(for entry: PrayersEntry, language: Language) -> HijriDateParts {
+        let date = hijriReferenceDate(for: entry)
+        let weekdayDate = hijriWeekdayDate(for: entry)
+        let components = hijriCalendar.dateComponents([.day, .month, .year], from: date)
+        let day = components.day ?? 1
+        let month = components.month ?? 1
+        let year = components.year ?? 1
+
+        switch language {
+        case .english:
+            return HijriDateParts(
+                language: .english,
+                weekday: englishWeekdayFormatter.string(from: weekdayDate),
+                day: String(day),
+                month: hijriMonths.first { $0.number == month }?.english ?? "",
+                year: "\(year) AH"
+            )
+        case .arabic:
+            return HijriDateParts(
+                language: .arabic,
+                weekday: arabicWeekdayFormatter.string(from: weekdayDate),
+                day: arabicNumberString(from: day),
+                month: arabicMonthFormatter.string(from: date),
+                year: "\(arabicNumberString(from: year)) هـ"
+            )
+        }
+    }
+
+    // MARK: Gregorian dates and clock times, in the device's own locale (as the app shows them)
+
+    /// "Saturday": the weekday the clock is on. Always from `entry.date`, the civil date - the Hijri day
+    /// may already have turned at Maghrib, the clock's has not.
+    static let gregorianWeekdayFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.setLocalizedDateFormatFromTemplate("EEEE")
+        return formatter
+    }()
+
+    /// "September 5, 2026" (the weekday sits on the line above it).
+    static let gregorianLongFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .long
+        return formatter
+    }()
+
+    /// "Sep 5", for the inline family.
+    static let gregorianShortDayFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.setLocalizedDateFormatFromTemplate("dMMM")
+        return formatter
+    }()
+
+    /// "3:45 PM" (or 15:45 under a 24-hour clock).
+    static let shortTimeFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.timeStyle = .short
+        return formatter
+    }()
 }
 
 struct PrayersProvider: TimelineProvider {
@@ -53,7 +174,7 @@ struct PrayersProvider: TimelineProvider {
 
     // MARK: Per-process memo
     //
-    // Every Adhan kind (33 on iOS, 2 on the watch) has its own provider, and after a reload WidgetKit
+    // Every Adhan kind (37 on iOS, 2 on the watch) has its own provider, and after a reload WidgetKit
     // asks each placed one for a timeline in one burst - each of which re-seeded Settings from the App
     // Group, re-ran the prayer computation and rebuilt the boundary timeline. The inputs are the same
     // for all of them, so the first build is cached and the rest return it. Keyed on every App Group

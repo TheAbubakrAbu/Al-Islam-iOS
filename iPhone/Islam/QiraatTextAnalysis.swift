@@ -2,14 +2,15 @@ import SwiftUI
 
 #if os(iOS)
 
-// A machine comparison of the twenty riwayaat against Hafs an Asim, reached from the bottom of the
-// Qiraat guide.
+// A machine comparison of the twenty riwayaat against Hafs an Asim, reached from the last section
+// of the Qiraat guide ("Riwayah Statistics").
 //
-// WHY IT IS BURIED. Everything else in the Qiraat guide is the settled biographical and historical
-// record. This page is not: it is the output of a program that read the printed mushafs and diffed
-// them, and while the method is sound the numbers carry the extraction's own errors. A reader who
-// stumbles onto a table of "how much each riwayah differs" without that context can badly misread
-// it, so the page sits behind a deliberate gesture and opens with the caveat rather than the data.
+// WHY IT LEADS WITH THE CAVEAT. Everything else in the Qiraat guide is the settled biographical and
+// historical record. This page is not: it is the output of a program that read the printed mushafs
+// and diffed them, and while the method is sound the numbers carry the extraction's own errors. A
+// reader who meets a table of "how much each riwayah differs" without that context can badly misread
+// it, so the page opens with the caveat rather than the data. (Until 2026-09-04 it also hid behind
+// seven taps on the guide's closing line; Abu could not find it, so it is a plain row now.)
 //
 // SOURCING. The figures are this app's own measurements, described in "How these numbers were
 // produced" below. The framing around them (why the counting traditions differ, what a printed

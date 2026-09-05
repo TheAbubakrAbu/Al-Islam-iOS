@@ -104,6 +104,7 @@ struct QiblaView: View {
 
     var body: some View {
         let _ = RenderCounter.hit("QiblaView")
+        let _ = ChangePrinter.hit(Self.self)
         VStack(spacing: 10) {
             ZStack {
                 GlassyQiblaRing(size: size, tint: ringColor, alignmentScore: alignmentScore)

@@ -1549,7 +1549,9 @@ struct QuranView: View {
         .safeAreaInset(edge: .bottom) {
             nowPlayingInset
         }
-        .adaptiveSafeArea(edge: .bottom) {
+        // `spacing: 0`: the mini player above carries its own 8pt cushion; pre-26 `safeAreaInset`'s
+        // default 8pt on top of it made the gap 16pt where iOS 26 draws 8.
+        .adaptiveSafeArea(edge: .bottom, spacing: 0) {
             bottomControls
         }
         #endif
@@ -4311,15 +4313,40 @@ enum QuranSemanticCorpus {
         let version = "en2-\(ayahMap.count)-\(sourceStamp)"
         // A failed build may be retried (the engine drops the id from `failedCorpora` when it does).
         if handedOffVersion == version, !engine.failedCorpora.contains(id) { return }
+        let texts = Self.texts(quranData: quranData)
+        handedOffVersion = version
+        engine.prepare(corpusID: id, version: version, fingerprint: { Self.fingerprint(texts: texts) }, texts: texts)
+    }
+
+    /// The corpus texts in `ayahMap` order: both bundled translations per ayah, so either's phrasing
+    /// matches a question.
+    @MainActor
+    static func texts(quranData: QuranData) -> [String] {
         var texts: [String] = []
-        texts.reserveCapacity(ayahMap.count)
+        texts.reserveCapacity(6286)
         for surah in quranData.quran {
             for ayah in surah.ayahs {
                 texts.append("\(ayah.textEnglishSaheeh) \(ayah.textEnglishMustafa)")
             }
         }
-        handedOffVersion = version
-        engine.prepare(corpusID: id, version: version, texts: texts)
+        return texts
+    }
+
+    /// What a shipped pack was built from, named without trusting file dates: FNV-1a 64 over every
+    /// text in order (about 2 MB, a few milliseconds off the main actor). A translation correction
+    /// changes it; a rebuilt bundle with the same texts does not (unlike `sourceStamp`, which is
+    /// right for the Caches file and wrong for a pack that ships inside the app).
+    static func fingerprint(texts: [String]) -> String {
+        var hash: UInt64 = 0xcbf2_9ce4_8422_2325
+        for text in texts {
+            for byte in text.utf8 {
+                hash ^= UInt64(byte)
+                hash = hash &* 0x0000_0100_0000_01b3
+            }
+            hash ^= 0x0A
+            hash = hash &* 0x0000_0100_0000_01b3
+        }
+        return "quran-en:\(texts.count):\(String(hash, radix: 16))"
     }
 }
 #endif

@@ -14,11 +14,11 @@ struct Prayers2EntryView: View {
         skyStyle ? .white : entry.accentColor.color
     }
 
-    
+
     var hijriDate: String {
-        AdhanWidgetDateFormatting.hijriDate(for: entry, style: .full)
+        AdhanWidgetDateFormatting.hijriDate(for: entry, style: .medium)
     }
-    
+
     var body: some View {
         VStack {
             if entry.prayers.isEmpty {
@@ -99,7 +99,14 @@ struct Prayers2EntryView: View {
                     }
                     
                     Spacer()
-                    
+
+                    // The Hijri date beside the city (it was computed here and never shown).
+                    Text(hijriDate)
+                        .font(.caption2)
+                        .foregroundColor(skyStyle ? .white.opacity(0.75) : .secondary)
+                        .minimumScaleFactor(0.6)
+                        .padding(.trailing, 6)
+
                     Image(AppIdentifiers.appName)
                         .resizable()
                         .aspectRatio(contentMode: .fit)
