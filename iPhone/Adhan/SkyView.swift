@@ -244,8 +244,10 @@ struct SkyCard: View {
     /// Holds the prayer columns, the arc, the moon and the countdown. Trimmed again: the scrubbed-moment
     /// readout used to need clear air above the moon row to float into, which left a dead band between the arc
     /// and the moon. It now floats over the prayer columns at the top of the card instead (see `scrubReadout`),
-    /// so that band can go.
-    private let height: CGFloat = 236
+    /// so that band can go. Trimmed once more on 2026-09-07: the digits went from 30 to 26 pt and their
+    /// gap to the bar from 10 to 3 pt, 12 pt in all, and the card gives that back (the countdown block is
+    /// bottom-anchored, so keeping 236 would only have opened a dead band above "TIME LEFT").
+    private let height: CGFloat = 224
 
     /// The arc's vertical band, as insets from the card's top and bottom edges. The card is three bands: the
     /// prayer columns end about 72 pt down and the countdown block (its "TIME LEFT" caption first) starts
@@ -255,9 +257,10 @@ struct SkyCard: View {
     /// it. It used to be one symmetric 78 pt inset from when the countdown was a single caption row: the
     /// arc was centred on the card, and once the big digits arrived the horizon ran straight under
     /// "TIME LEFT" (and through it on long summer days). Re-derive both numbers whenever the columns or
-    /// the countdown block change height.
+    /// the countdown block change height. (2026-09-07: the card lost 12 pt at the bottom, so the bottom
+    /// inset lost the same 12, from 106, and the trough still sits at 130.)
     private let arcTopInset: CGFloat = 68
-    private let arcBottomInset: CGFloat = 106
+    private let arcBottomInset: CGFloat = 94
 
     // MARK: Derived state
 

@@ -30,6 +30,11 @@ struct PrayerCountdown: View {
     /// and re-sorted three days of prayers once a second for the last half minute before every adhan.
     private let progressTickInterval: TimeInterval = 60
 
+    /// The gap between the countdown digits and the progress bar under them, on both cards. The digits'
+    /// line height already leaves air beneath the glyphs, so the stack's 10 pt read as twice that
+    /// (Abu, 2026-09-07: "the padding between the line and time left is too big").
+    private static let digitsToBarSpacing: CGFloat = 3
+
     private var currentPrayer: Prayer? { live.currentPrayer }
     private var nextPrayer: Prayer? { live.nextPrayer }
 
@@ -83,7 +88,7 @@ struct PrayerCountdown: View {
         case .skyFooter:
             // No `Section` - the sky card already is one, and a nested section inside a list row breaks it.
             // The big centred countdown over the bar; the card draws the moon and "until X" footer itself.
-            VStack(spacing: 10) {
+            VStack(spacing: Self.digitsToBarSpacing) {
                 bigTimeLeft(next: next)
                 countdownProgress(next: next)
             }
@@ -111,8 +116,10 @@ struct PrayerCountdown: View {
     private func countdownBody(current: Prayer, next: Prayer) -> some View {
         VStack(spacing: 10) {
             prayerSummary(current: current, next: next)
-            bigTimeLeft(next: next)
-            countdownProgress(next: next)
+            VStack(spacing: Self.digitsToBarSpacing) {
+                bigTimeLeft(next: next)
+                countdownProgress(next: next)
+            }
             footerRow(next: next)
         }
         .lineLimit(1)
@@ -245,7 +252,8 @@ struct PrayerCountdown: View {
     /// The countdown as the card's centrepiece: a small "TIME LEFT" caption over big rounded digits,
     /// hours and minutes large and the seconds a step smaller. Inherits the card's foreground (white on
     /// the sky, primary on the plain card); the caption is the secondary shade of that. One step below
-    /// `caption2` and 30 pt digits (from 36): Abu found both "a little too big" on 2026-09-05.
+    /// `caption2`, and 26 pt digits (36, then 30): Abu found them "a little too big" on 2026-09-05 and
+    /// "still a little too big" on 2026-09-07.
     private func bigTimeLeft(next: Prayer) -> some View {
         VStack(spacing: 2) {
             HStack(spacing: 4) {
@@ -674,15 +682,15 @@ private struct CountdownDigits: View {
     var body: some View {
         if appearance.reduceAnimations || appearance.isReducedTier {
             Text(target, style: .timer)
-                .font(.system(size: 30, weight: .bold, design: .rounded).monospacedDigit())
+                .font(.system(size: 26, weight: .bold, design: .rounded).monospacedDigit())
         } else {
             TimelineView(.periodic(from: Date(), by: 1)) { context in
                 let parts = Self.parts(remaining: target.timeIntervalSince(context.date))
                 HStack(alignment: .lastTextBaseline, spacing: 1) {
                     Text(parts.main)
-                        .font(.system(size: 30, weight: .bold, design: .rounded))
+                        .font(.system(size: 26, weight: .bold, design: .rounded))
                     Text(parts.seconds)
-                        .font(.system(size: 17, weight: .semibold, design: .rounded))
+                        .font(.system(size: 15, weight: .semibold, design: .rounded))
                         .opacity(0.75)
                 }
                 .monospacedDigit()

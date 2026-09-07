@@ -286,7 +286,7 @@ enum QiraatProfiles {
             paragraphs: [
                 "Hamzah was called az-Zayyat because he traded in oil between Kufa and Hulwan. He became the imam of recitation in Kufa after Asim, and his reading is among the most distinctive of the ten.",
                 "He was known for long night prayer and for an exacting devotion to tajwid. His reading asks more of the reciter than most: the elongations are the longest of the ten, and the treatment of the hamzah when pausing is a subject studied on its own.",
-                "His student Khalaf later made his own selection from Hamzah's reading and became the tenth imam in his own right - which is why Khalaf appears twice in the guide, once as a narrator and once as a master.",
+                "His student Khalaf later made his own selection from Hamzah's reading and became the tenth imam in his own right, which is why Khalaf appears twice in the guide, once as a narrator and once as a master.",
             ],
             hallmarks: [
                 "The longest madd (elongation) of the ten readings.",
@@ -340,7 +340,7 @@ enum QiraatProfiles {
             summary: "A narrator of Hamzah who became the tenth imam in his own right.",
             paragraphs: [
                 "Khalaf memorised the Quran as a boy and read on Sulaym, the student of Hamzah, becoming one of Hamzah's two canonical narrators. He then made his own considered selection (ikhtiyar) from the readings he had received, and that selection is the tenth of the ten Qiraat.",
-                "This is why his name appears twice in the guide: Khalaf an Hamzah is a riwayah of the sixth reading, while Khalaf al-Ashir - Khalaf the Tenth - is a reading of its own, with its own two narrators, Ishaq and Idris.",
+                "This is why his name appears twice in the guide: Khalaf an Hamzah is a riwayah of the sixth reading, while Khalaf al-Ashir (Khalaf the Tenth) is a reading of its own, with its own two narrators, Ishaq and Idris.",
                 "He was a scholar of Baghdad known for his precision and his asceticism, and his selection was recognised as canonical because it met the same three conditions as the rest: the Uthmanic rasm, sound Arabic, and authentic mass transmission.",
             ],
             hallmarks: [
@@ -358,7 +358,7 @@ enum QiraatProfiles {
             summary: "Imam of Madinah for seventy years; the reading of North and West Africa.",
             paragraphs: [
                 "Nafi was of Isfahani descent and lived in Madinah, where he led recitation in the Prophet's Mosque for some seventy years. He is reported to have read on around seventy of the Successors, Abu Ja'far al-Madani among them.",
-                "He was asked which of his teachers he followed and answered that he took what at least two of them agreed upon - a method that gives his reading its particular authority, since it represents the settled practice of Madinah rather than one chain.",
+                "He was asked which of his teachers he followed and answered that he took what at least two of them agreed upon, a method that gives his reading its particular authority, since it represents the settled practice of Madinah rather than one chain.",
                 "Through Warsh his reading became the recitation of North and West Africa, where it remains dominant; through Qalun it is the reading of Libya and parts of Tunisia.",
             ],
             hallmarks: [
@@ -399,7 +399,7 @@ enum QiraatProfiles {
             summary: "The narration almost the entire Muslim world recites from today.",
             paragraphs: [
                 "Hafs was the stepson of Asim and read on him over many years. Of the two narrators of Asim, Hafs is the one described as the more precise in conveying exactly what Asim taught.",
-                "His narration became the basis of the Ottoman printed mushaf and then of the Madinah mushaf, and through printing it spread until it became the recitation of the overwhelming majority of Muslims - commonly estimated at more than nine in ten.",
+                "His narration became the basis of the Ottoman printed mushaf and then of the Madinah mushaf, and through printing it spread until it became the recitation of the overwhelming majority of Muslims, commonly estimated at more than nine in ten.",
                 "That dominance is a fact of history and printing, not of rank: every one of the twenty riwayat is equally the Quran.",
             ],
             hallmarks: [
@@ -414,7 +414,7 @@ enum QiraatProfiles {
             summary: "Asim's other narrator, famed for caution and for long worship.",
             paragraphs: [
                 "Shu'bah read the Quran on Asim three times over and was one of the great worshippers of his age; the reports say he completed the Quran in prayer regularly for decades.",
-                "He was so cautious about transmitting that he is said to have wished he had never narrated at all rather than risk a single error - a scrupulousness that is itself part of why his narration is trusted.",
+                "He was so cautious about transmitting that he is said to have wished he had never narrated at all rather than risk a single error, a scrupulousness that is itself part of why his narration is trusted.",
                 "His riwayah differs from Hafs in a few hundred places, most of them small differences of vowel or of assimilation.",
             ],
             hallmarks: [
@@ -446,7 +446,7 @@ enum QiraatProfiles {
             summary: "Nafi's closest Madinan student; the reading of Libya.",
             paragraphs: [
                 "Qalun was Nafi's stepson and read on him for some twenty years. The name Qalun was given to him by Nafi himself and is said to be a Byzantine word for 'good', a comment on the quality of his recitation.",
-                "He is reported to have gone deaf in later life and yet to have continued correcting students by watching their lips - a story the biographers tell to convey how completely he had internalised the reading.",
+                "He is reported to have gone deaf in later life and yet to have continued correcting students by watching their lips, a story the biographers tell to convey how completely he had internalised the reading.",
                 "His narration is the recitation of Libya and of parts of Tunisia today.",
             ],
             hallmarks: [
@@ -547,7 +547,7 @@ enum QiraatProfiles {
             id: Settings.Riwayah.khalaf, name: "Khalaf", arabic: "خَلَف",
             fullName: "Abu Muhammad Khalaf ibn Hisham al-Bazzar al-Baghdadi",
             masterID: Settings.Riwayah.hamzahTeacher, city: "Baghdad", bornAH: 150, diedAH: 229,
-            summary: "Narrator of Hamzah - and the tenth imam under his own name.",
+            summary: "Narrator of Hamzah, and the tenth imam under his own name.",
             paragraphs: [
                 "Khalaf read on Sulaym, Hamzah's student, and is one of Hamzah's two canonical narrators. He is the same Khalaf who later made his own selection and became the tenth of the ten imams, which is why the guide lists him in both places.",
                 "Read as a narrator of Hamzah, he transmits Hamzah's reading with its long madd and its distinctive pauses; read as Khalaf al-Ashir, he is following his own considered choices.",
@@ -867,7 +867,7 @@ struct QiraatSourceSection: View {
     var body: some View {
         Section(header: Text("FURTHER READING")) {
             Link(destination: QiraatProfiles.sourceURL) {
-                Label("QiraatHub - profiles of the ten readings and their narrators", systemImage: "link")
+                Label("QiraatHub: profiles of the ten readings and their narrators", systemImage: "link")
             }
             .font(.caption)
 

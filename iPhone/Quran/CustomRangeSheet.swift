@@ -3,6 +3,11 @@ import SwiftUI
 
 struct PlayCustomRangeSheet: View {
     @ObservedObject var settings = Settings.shared
+    @Environment(\.appearance) private var appearance
+    /// Which detent the sheet sits at (iOS 16+). It OPENS at the full height, where the layered layout
+    /// has room for the range controls above the preview pane, and the pane shrinks at the half height.
+    @State private var isExpanded = true
+    @Environment(\.verticalSizeClass) private var verticalSizeClass
 
     enum SelectionMode: String, CaseIterable {
         case ayahs, pages
@@ -479,7 +484,7 @@ struct PlayCustomRangeSheet: View {
                 }
                 .listStyle(.insetGrouped)
                 .applyConditionalListStyle(disableNowPlayingInset: true)
-                .frame(height: Self.previewPaneHeight)
+                .frame(height: previewPaneHeightForLayout)
             }
             .navigationTitle("Custom Ayah Range")
             .navigationBarTitleDisplayMode(.inline)
@@ -499,6 +504,7 @@ struct PlayCustomRangeSheet: View {
             }
         }
         .navigationViewStyle(.stack)
+        .modifier(CustomRangeSheetPresentation(isExpanded: $isExpanded))
         .onAppear {
             clampRangeToMaxAyah()
             clampStoredRepeatValues()
@@ -557,7 +563,7 @@ struct PlayCustomRangeSheet: View {
             }
 
             if hasPageData {
-                Picker("Selection mode", selection: $selectionMode.animation(.easeInOut)) {
+                Picker("Selection mode", selection: $selectionMode) {
                     ForEach(SelectionMode.allCases, id: \.self) { mode in
                         Text(mode.title).tag(mode)
                     }
@@ -864,6 +870,19 @@ struct PlayCustomRangeSheet: View {
     /// half (.medium) detent a GeometryReader is proposed the full-detent size, which is exactly the
     /// bug that killed the previous layered layout. ~a third of the full-detent sheet.
     private static let previewPaneHeight: CGFloat = 250
+    /// The pane at the sheet's half (.medium) detent: the first/last ayah and the summary, with the
+    /// From/To rows still on screen above it. At 250 the half-height sheet showed the pane alone.
+    private static let previewPaneHeightAtMedium: CGFloat = 130
+
+    /// An iPad form sheet is a fixed ~620 pt tall whatever detent is asked for, and an iPhone in
+    /// landscape is shorter still: with the 250 pt pane only the From/To rows stayed on screen there
+    /// (iPad pass, 2026-09-06). Those layouts always take the half-detent pane.
+    private var previewPaneHeightForLayout: CGFloat {
+        if UIDevice.current.userInterfaceIdiom != .phone || verticalSizeClass == .compact {
+            return Self.previewPaneHeightAtMedium
+        }
+        return isExpanded ? Self.previewPaneHeight : Self.previewPaneHeightAtMedium
+    }
 
     /// Every ayah the chosen range will actually play, in playback order - clamped to the active
     /// qiraah (an ayah absent from the riwayah's text is skipped by playback too).
@@ -1084,9 +1103,11 @@ struct PlayCustomRangeSheet: View {
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 16)
-                .foregroundColor(.white)
+                // Primary text on the accent glass, the splash screen's CTA exactly: white text on
+                // the tinted glass was barely readable over a light ground on iOS 26.
+                .foregroundColor(.primary)
                 .conditionalGlassEffect(
-                    useColor: 0.35,
+                    useColor: 0.38,
                     customTint: canPlay ? settings.accentColor.color : .secondary
                 )
                 .contentShape(Rectangle())
@@ -1094,7 +1115,39 @@ struct PlayCustomRangeSheet: View {
             .disabled(!canPlay)
             .padding(.horizontal, 24)
             .padding(.vertical, 12)
-            .background(Color(UIColor.systemGroupedBackground))
+            // The reading theme's ground, not the system one: on Sepia the bar was a white band.
+            .background(appearance.themeBackground ?? Color(UIColor.systemGroupedBackground))
+        }
+    }
+}
+
+/// The range sheet's own detents: full height FIRST (the layered layout needs it - at the half height the
+/// 250 pt preview pane left the range controls no room at all), the half height a drag away, with the
+/// pane shrinking there. The standard `smallMediumSheetPresentation()` opens at the half height, so the
+/// hosts that present this sheet leave it off and let this one speak. iPad keeps the full-size sheet.
+private struct CustomRangeSheetPresentation: ViewModifier {
+    @Binding var isExpanded: Bool
+
+    func body(content: Content) -> some View {
+        if #available(iOS 16.0, *) {
+            if UIDevice.current.userInterfaceIdiom == .phone {
+                content
+                    .presentationDetents(
+                        [.medium, .large],
+                        selection: Binding(
+                            get: { isExpanded ? .large : .medium },
+                            set: { isExpanded = $0 == .large }
+                        )
+                    )
+                    .presentationDragIndicator(.visible)
+            } else {
+                content
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .presentationDetents([.large])
+                    .presentationDragIndicator(.hidden)
+            }
+        } else {
+            content
         }
     }
 }

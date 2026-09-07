@@ -1001,7 +1001,8 @@ private struct QiblaSheet: View {
                 Spacer(minLength: 0)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(Color(UIColor.systemGroupedBackground).ignoresSafeArea())
+            // The reading theme's ground (the system grouped color was white on Sepia).
+            .accentWashedBackground()
             .navigationTitle("Qibla")
             .navigationBarTitleDisplayMode(.inline)
             .sheetDismissToolbar()

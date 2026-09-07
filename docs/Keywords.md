@@ -8,12 +8,12 @@ Keep this in sync whenever a major feature ships (e.g. Hadith, Tafsir).
 ## How the keyword field works
 
 - **100 characters**, comma-separated, entered in App Store Connect (Keywords field, per localization).
-- **No spaces after commas** - every space wastes a character. Use `quran,tafsir`, never `quran, tafsir`.
-- **Never repeat** words already in the app **name** or **subtitle** - Apple already indexes those. So do **not** spend keyword characters on: `al`, `islam`, `islamic`, `pillars`, or anything in the current subtitle.
+- **No spaces after commas**: every space wastes a character. Use `quran,tafsir`, never `quran, tafsir`.
+- **Never repeat** words already in the app **name** or **subtitle**: Apple already indexes those. So do **not** spend keyword characters on: `al`, `islam`, `islamic`, `pillars`, or anything in the current subtitle.
 - **Apple auto-combines** single keywords into phrases, so `prayer,times` already ranks for "prayer times." Don't waste characters on multi-word phrases like `prayer times`.
-- **Apple stems** singular/plural and common variants - pick one form (`surah`, not `surah,surahs`).
-- **Alternate spellings matter** - many terms have several common transliterations (`quran`/`koran`, `adhan`/`azan`, `salah`/`salat`/`namaz`, `masjid`/`mosque`, `dhikr`/`zikr`). These are distinct search terms, so it's worth spending characters on the high-value ones.
-- The keyword field is **not** shown to users - it is purely for ranking. The name, subtitle, and description do the human-facing work.
+- **Apple stems** singular/plural and common variants, so pick one form (`surah`, not `surah,surahs`).
+- **Alternate spellings matter**: many terms have several common transliterations (`quran`/`koran`, `adhan`/`azan`, `salah`/`salat`/`namaz`, `masjid`/`mosque`, `dhikr`/`zikr`). These are distinct search terms, so it's worth spending characters on the high-value ones.
+- The keyword field is **not** shown to users; it is purely for ranking. The name, subtitle, and description do the human-facing work.
 
 ---
 
@@ -23,7 +23,7 @@ Keep this in sync whenever a major feature ships (e.g. Hadith, Tafsir).
 quran,tafsir,hadith,sunnah,bukhari,prayer,tracker,salah,adhan,namaz,qibla,dua,dhikr,ramadan,muslim
 ```
 
-**98 / 100 characters.** Covers the app's five biggest search surfaces - Quran, Tafsir, Hadith, prayer/adhan/tracker, and the everyday-tools terms - while avoiding the name/subtitle words. (4.6.0: `tracker` replaced `masjid` - `prayer` + `tracker` auto-combine to rank for "prayer tracker," the new headline feature, while the Masjid Locator remains a secondary feature covered by the description.)
+**98 / 100 characters.** Covers the app's five biggest search surfaces (Quran, Tafsir, Hadith, prayer/adhan/tracker, and the everyday-tools terms) while avoiding the name/subtitle words. (4.6.0: `tracker` replaced `masjid`; `prayer` + `tracker` auto-combine to rank for "prayer tracker," the new headline feature, while the Masjid Locator remains a secondary feature covered by the description.)
 
 ### Why each term
 
@@ -35,10 +35,10 @@ quran,tafsir,hadith,sunnah,bukhari,prayer,tracker,salah,adhan,namaz,qibla,dua,dh
 | `sunnah` | Pairs with Hadith intent; searched by users looking for authenticated narrations. |
 | `bukhari` | The single most-searched Hadith collection name; stands in for the whole Nine Books. |
 | `prayer` | Auto-combines to "prayer times," "prayer app." Highest-volume prayer term in English. |
-| `tracker` | New in 4.6.0 (Prayer Tracker); auto-combines with `prayer` for "prayer tracker" - a high-intent, fast-growing search. |
+| `tracker` | New in 4.6.0 (Prayer Tracker); auto-combines with `prayer` for "prayer tracker", a high-intent, fast-growing search. |
 | `salah` | The Arabic-transliteration prayer term; distinct search from "prayer." |
 | `adhan` | The call to prayer; the app's Adhan tab and notification sounds. |
-| `namaz` | Urdu/Persian/Turkish word for prayer - large South-Asian and Turkish audience. |
+| `namaz` | Urdu/Persian/Turkish word for prayer, with a large South-Asian and Turkish audience. |
 | `qibla` | Qibla compass feature; high-intent, moderate competition. |
 | `dua` | Dua collections; very high volume, stems toward "duas." |
 | `dhikr` | Adhkar + Tasbih counter. |
@@ -88,7 +88,7 @@ masjid, mosque, kaaba, mecca, madinah, halal, halal food
 **dua**, **dhikr**, **ramadan**, tasbih, zikr, adhkar, supplication, misbaha, tasbeeh, fasting, iftar, suhoor, eid, hijri, calendar
 
 ### AI features (4.6.0)
-ai (very short, only worth testing in an alternate field - AI Search and Ask AI are described in the description, which is not a ranking input, so `ai` competes on its own)
+ai (very short, only worth testing in an alternate field; AI Search and Ask AI are described in the description, which is not a ranking input, so `ai` competes on its own)
 
 ### Identity / audience
 **muslim**, deen, iman, faith, sunni, worship, allah, revert, convert
@@ -110,7 +110,7 @@ Each localization has its **own** 100-character keyword field. High-value additi
 - **Indonesian / Malay (id, ms)**: `sholat`, `adzan`, `quran`, `kiblat`, `doa`, `dzikir`, `puasa`, `tafsir`, `hadits`.
 - **French (fr)**: `coran`, `priere`, `salat`, `adhan`, `qibla`, `mosquee`, `doua`, `ramadan`, `tafsir`, `hadith`.
 
-Keep the transliteration variants that match how each region actually types - that is where most of the incremental installs come from.
+Keep the transliteration variants that match how each region actually types; that is where most of the incremental installs come from.
 
 ---
 
@@ -118,9 +118,9 @@ Keep the transliteration variants that match how each region actually types - th
 
 The keyword field is one of three ranking inputs. The others, already written elsewhere, should stay keyword-rich:
 
-- **App name / subtitle** - carry "Islam," "Islamic," "Pillars," "Quran," "Prayer" so the keyword field doesn't have to.
-- **Description** - see `App Store Description.md`; leads with Quran, Hadith, tafsir, prayer times.
-- **Promotional text** - see `Promotional Text.md`; updated per release, does not affect ranking but drives conversion.
+- **App name / subtitle**: carry "Islam," "Islamic," "Pillars," "Quran," "Prayer" so the keyword field doesn't have to.
+- **Description**: see `App Store Description.md`; leads with Quran, Hadith, tafsir, prayer times.
+- **Promotional text**: see `Promotional Text.md`; updated per release, does not affect ranking but drives conversion.
 
 ---
 

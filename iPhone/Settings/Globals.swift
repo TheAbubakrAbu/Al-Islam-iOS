@@ -7,6 +7,16 @@ import UIKit
 import WatchKit
 #endif
 
+#if os(watchOS)
+/// The 40 mm face (162 pt wide) truncates what every other watch fits: "Shurooq" in a prayer tile,
+/// a surah's Arabic name beside its transliteration, "Remembrances" beside its icon (2026-09-06 watch
+/// pass). Rows and tiles that stack or slim down for it key off this one number; the 41 mm (176 pt)
+/// and up keep the wide layouts.
+enum WatchScreen {
+    static let isNarrow: Bool = WKInterfaceDevice.current().screenBounds.width < 170
+}
+#endif
+
 // MARK: - App identifiers
 /// Central place for reverse-DNS strings and the App Group name.
 /// When you change these, update `Resources/Entitlements-Main.entitlements`,
@@ -341,6 +351,17 @@ extension View {
         }
     }
 
+    #if os(iOS)
+    /// iPad and Mac: the same 17 pt body text that fills an iPhone reads small on an 834-1366 pt
+    /// canvas, so the pad idiom runs one Dynamic Type step above the user's setting whenever that
+    /// setting is at the default `.large` or below (a user who already chose a larger size keeps it).
+    /// Only SwiftUI text follows this: the reader's stored point sizes have their own iPad defaults
+    /// (`Settings.readerDefaultScale`), and UIKit bars keep the system size. 2026-09-06 iPad/Mac pass.
+    func regularIdiomTypeBoost() -> some View {
+        modifier(RegularIdiomTypeBoost())
+    }
+    #endif
+
     /// Declares how Arabic text in this subtree should interact with the app-wide rounded design.
     ///
     /// Pass `true` when a real bundled Arabic face (Uthmani / Qiraat / IndoPak) is in play, which opts the subtree
@@ -371,6 +392,20 @@ extension View {
         modifier(SettingsDependentRail())
     }
 }
+
+#if os(iOS)
+/// See `regularIdiomTypeBoost()`. Idiom-based, not size-class based: an iPad window in Slide Over
+/// shows the iPhone layouts, but its text is still read from an iPad's distance.
+private struct RegularIdiomTypeBoost: ViewModifier {
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+
+    private static let boosts: Bool = UIDevice.current.userInterfaceIdiom != .phone
+
+    func body(content: Content) -> some View {
+        content.dynamicTypeSize(Self.boosts ? max(dynamicTypeSize, .xLarge) : dynamicTypeSize)
+    }
+}
+#endif
 
 /// The indent + accent rail behind `settingsDependent()`. Reads the accent straight off Settings:
 /// every view that uses the rail already observes Settings, so the rail follows accent changes
@@ -798,6 +833,48 @@ struct LazyDestination<Content: View>: View {
     var body: Content { build() }
 }
 
+/// Pushes `destination` onto the enclosing navigation stack when `isPresented` turns true, through
+/// `navigationDestination(isPresented:)`, never through a hidden `NavigationLink(isActive:)` row: inside a
+/// `NavigationStack(path:)` such a row crashed (EXC_BAD_ACCESS in SwiftUI's NavigationLinkViewRule.dismiss,
+/// 3 of 6 launches on iOS 26.5) when its push raced the page-mode mushaf auto-open, and a zero-height link
+/// is still a List row that draws a band. Attach it to the List itself (a lazy row's destination never
+/// fires). No-op before iOS 16 / watchOS 9.
+///
+/// Two users: the DEBUG "open this screen on launch" hooks (`debugPushDestination`), and the article
+/// search, whose results open an article's index first and then push the article on top of it
+/// (`ArticleAutoOpen`).
+struct PushDestination<Destination: View>: ViewModifier {
+    @Binding var isPresented: Bool
+    @ViewBuilder let destination: () -> Destination
+
+    func body(content: Content) -> some View {
+        if #available(iOS 16.0, watchOS 9.0, *) {
+            content.navigationDestination(isPresented: $isPresented, destination: destination)
+        } else {
+            content
+        }
+    }
+}
+
+extension View {
+    func pushDestination<Destination: View>(
+        isPresented: Binding<Bool>,
+        @ViewBuilder destination: @escaping () -> Destination
+    ) -> some View {
+        modifier(PushDestination(isPresented: isPresented, destination: destination))
+    }
+
+    #if DEBUG
+    /// The DEBUG launch hooks' spelling of `pushDestination`, kept so their call sites read as what they are.
+    func debugPushDestination<Destination: View>(
+        isPresented: Binding<Bool>,
+        @ViewBuilder destination: @escaping () -> Destination
+    ) -> some View {
+        pushDestination(isPresented: isPresented, destination: destination)
+    }
+    #endif
+}
+
 /// What the mushaf page reader draws as a page's body text. `arabic` is the mushaf itself; the English
 /// cases swap the page's text wholesale for a Latin-script rendering (same canonical page boundaries,
 /// same fit-to-page). Raw values are persisted in `Settings.mushafPageLanguage`.
@@ -918,7 +995,6 @@ enum RenderCounter {
 }
 
 #if DEBUG
-#if DEBUG
 /// `-printChanges` (DEBUG): calls `_printChanges()` from the bodies that also call `RenderCounter.hit`, so
 /// a burst of body evaluations can be read as "which dependency woke this body" (SwiftUI names the
 /// changed @State / @ObservedObject / environment). The lines go to stdout, not the unified log: capture
@@ -954,6 +1030,7 @@ enum SanitizerSelfTest {
 }
 #endif
 
+#if DEBUG
 /// `-renderCounter` companion: the process's physical footprint, for before/after checks of image
 /// decodes (the Wallpapers screen, the app-icon tiles). `MemoryFootprint.log("label")` writes one
 /// "FOOTPRINT label 123.4 MB" line; silent without the argument.
@@ -1002,6 +1079,41 @@ enum QuranFontCache {
         return font
     }
 }
+
+#if os(iOS)
+/// The readers' title pill (the surah and hadith-chapter `Menu` labels in the navigation bar) is
+/// navigation-bar chrome: like the system's inline title it stops following Dynamic Type at the
+/// extra-large step, or it outgrows the 44 pt bar and draws over the back and gear buttons (seen at the
+/// largest non-accessibility size with "Sahih al-Bukhari" plus its Arabic). `typeSizeCeiling` clamps the
+/// pill's SwiftUI text styles; `pointSize` applies the same ceiling to the UIKit metric the pills size
+/// their Arabic from, which the SwiftUI clamp never reaches.
+enum NavigationTitlePill {
+    static let typeSizeCeiling: DynamicTypeSize = .xLarge
+
+    static func pointSize(_ style: UIFont.TextStyle, at size: DynamicTypeSize) -> CGFloat {
+        let traits = UITraitCollection(preferredContentSizeCategory: contentSizeCategory(min(size, typeSizeCeiling)))
+        return UIFont.preferredFont(forTextStyle: style, compatibleWith: traits).pointSize
+    }
+
+    private static func contentSizeCategory(_ size: DynamicTypeSize) -> UIContentSizeCategory {
+        switch size {
+        case .xSmall: return .extraSmall
+        case .small: return .small
+        case .medium: return .medium
+        case .large: return .large
+        case .xLarge: return .extraLarge
+        case .xxLarge: return .extraExtraLarge
+        case .xxxLarge: return .extraExtraExtraLarge
+        case .accessibility1: return .accessibilityMedium
+        case .accessibility2: return .accessibilityLarge
+        case .accessibility3: return .accessibilityExtraLarge
+        case .accessibility4: return .accessibilityExtraExtraLarge
+        case .accessibility5: return .accessibilityExtraExtraExtraLarge
+        @unknown default: return .large
+        }
+    }
+}
+#endif
 #endif
 
 /// `-renderCounter` companion for the OTHER observable objects (DEBUG): counts every `objectWillChange`

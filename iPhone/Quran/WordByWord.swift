@@ -983,6 +983,11 @@ struct WordByWordSegment {
     var alwaysTappable: Bool = false
     /// "Highlight Allah" for this ayah: the app setting, or the ayah's own pin (`AyahDisplayOverride`).
     var highlightAllahNames: Bool = true
+    /// The active search term's matches (UTF-16 ranges into `displayText`), painted in the accent.
+    /// Non-empty puts the run into its search look: the plain text under the accent spans, tajweed
+    /// standing down exactly as it does in `HighlightedSnippet` - so a searched row keeps THIS
+    /// renderer (and its geometry) instead of swapping to the one-Text snippet and back.
+    var highlightRanges: [NSRange] = []
 }
 
 /// A word of a `WordByWordText` run: which segment (ayah) and which token of it.
@@ -1009,11 +1014,12 @@ struct WordByWordText: View {
     /// The single-ayah form the reader rows use.
     init(displayText: String, preStyled: AttributedString?, fontName: String?, fontSize: CGFloat,
          ayahNumberArabic: String, glosses: [String], alwaysTappable: Bool = false,
-         highlightAllahNames: Bool, tapsRequired: Int = 2,
+         highlightAllahNames: Bool, highlightRanges: [NSRange] = [], tapsRequired: Int = 2,
          selectedWord: Int?, onSelectWord: @escaping (Int) -> Void) {
         self.segments = [WordByWordSegment(
             displayText: displayText, preStyled: preStyled, ayahNumberArabic: ayahNumberArabic,
-            glosses: glosses, alwaysTappable: alwaysTappable, highlightAllahNames: highlightAllahNames
+            glosses: glosses, alwaysTappable: alwaysTappable, highlightAllahNames: highlightAllahNames,
+            highlightRanges: highlightRanges
         )]
         self.fontName = fontName
         self.fontSize = fontSize
@@ -1173,6 +1179,7 @@ struct WordByWordText: View {
             parts.append(segment.ayahNumberArabic)
             parts.append(segment.highlightAllahNames ? "a" : "-")
             parts.append(segment.preStyled.map { "\($0.renderDigest)" } ?? "plain")
+            parts.append(segment.highlightRanges.map { "\($0.location):\($0.length)" }.joined(separator: ","))
         }
         let key = parts.joined(separator: "\u{1F}") as NSString
         if let hit = Self.attributedMemo.object(forKey: key) { return hit }
@@ -1195,8 +1202,10 @@ struct WordByWordText: View {
             let body: NSMutableAttributedString
             // A pre-styled string whose characters don't match the display text (a mode the tajweed store
             // couldn't map) would shift every word range - fall back to the plain text rather than paint the
-            // wrong word.
-            if let preStyled = segment.preStyled, String(preStyled.characters) == displayText {
+            // wrong word. A search match also takes the plain base: on a matched row the accent spans
+            // win over tajweed, the priority `HighlightedSnippet` gives them.
+            if segment.highlightRanges.isEmpty,
+               let preStyled = segment.preStyled, String(preStyled.characters) == displayText {
                 body = NSMutableAttributedString(attributedString: NSAttributedString(preStyled))
                 // Tajweed colors are already UIColors on the string; only the font and paragraph go on top.
                 body.addAttributes(
@@ -1217,6 +1226,14 @@ struct WordByWordText: View {
                     guard utf16.location + utf16.length <= ns.length else { continue }
                     body.addAttribute(.foregroundColor, value: UIColor.systemRed, range: utf16)
                 }
+            }
+
+            // The search term's words in the accent - the one-Text snippet's paint, on this renderer.
+            let textLength = (displayText as NSString).length
+            let accent = UIColor(settings.accentColor.color)
+            for range in segment.highlightRanges
+            where range.location >= 0 && range.length > 0 && range.location + range.length <= textLength {
+                body.addAttribute(.foregroundColor, value: accent, range: range)
             }
 
             body.append(NSAttributedString(
@@ -1252,6 +1269,17 @@ private struct WordByWordWidthKey: PreferenceKey {
 /// each word a small column with its English gloss directly beneath it, the way word-by-word study
 /// mushafs print it. Same data, same colors, and the same tap (the word card) as `WordByWordText`;
 /// only the geometry differs, so the two stay interchangeable behind the one setting.
+/// The active search term as the study layout paints it: which Arabic tokens the term matched
+/// (UTF-16 ranges into the display text, from the same ladder the one-Text snippet uses, plus the
+/// cross-language spans), and the folded term itself, so a gloss or a transliteration that carries
+/// it lights as well. While this is set the layout wears its search look: every line primary (the
+/// transliteration's accent and the glosses' grey both stand down) and only the matched words - their
+/// Arabic, their transliteration and their meaning - in the accent (Abu, 2026-09-05).
+struct WordByWordSearchPaint: Equatable {
+    var arabicRanges: [NSRange]
+    var normalizedQuery: String
+}
+
 struct WordByWordInlineText: View {
     @ObservedObject private var settings = Settings.shared
 
@@ -1276,6 +1304,8 @@ struct WordByWordInlineText: View {
     /// Nil when "Tap a Word for Its Meaning" is off: the study layout still draws, its words just
     /// do not open a card (the two switches are independent).
     let onSelectWord: ((Int) -> Void)?
+    /// The active search term's paint, nil when nothing is being searched (see the type).
+    var searchPaint: WordByWordSearchPaint? = nil
 
     @State private var width: CGFloat = 0
 
@@ -1284,6 +1314,8 @@ struct WordByWordInlineText: View {
         let arabic: AttributedString
         let gloss: String
         let transliteration: String
+        /// The search term landed on this word (its Arabic, its transliteration or its meaning).
+        var isHit: Bool = false
         var isOrnament: Bool { id == -1 }
     }
 
@@ -1345,8 +1377,9 @@ struct WordByWordInlineText: View {
         let base: NSMutableAttributedString
         // A pre-styled string whose characters don't match the display text (a mode the tajweed
         // store couldn't map) would shift every word range - fall back to plain rather than paint
-        // the wrong word (same rule as `WordByWordText`).
-        if let preStyled, String(preStyled.characters) == displayText {
+        // the wrong word (same rule as `WordByWordText`). A search takes the plain base too: on a
+        // matched row the accent wins over tajweed, as it does in the one-Text snippet.
+        if searchPaint == nil, let preStyled, String(preStyled.characters) == displayText {
             base = NSMutableAttributedString(attributedString: NSAttributedString(preStyled))
         } else {
             base = NSMutableAttributedString(
@@ -1365,19 +1398,41 @@ struct WordByWordInlineText: View {
 
         var out: [WordCell] = []
         let ranges = WordTokens.ranges(in: displayText)
+        let accent = UIColor(settings.accentColor.color)
         out.reserveCapacity(ranges.count + 1)
         for (index, range) in ranges.enumerated() {
             guard range.location + range.length <= base.length else { continue }
+            let gloss = glosses.indices.contains(index) ? glosses[index] : ""
+            let transliteration = transliterations.indices.contains(index) ? transliterations[index] : ""
+            let hit = isHit(tokenRange: range, gloss: gloss, transliteration: transliteration)
+            // A matched word is painted whole (the ladder snaps its spans to whole words anyway).
+            if hit { base.addAttribute(.foregroundColor, value: accent, range: range) }
             out.append(WordCell(
                 id: index,
                 arabic: AttributedString(base.attributedSubstring(from: range)),
-                gloss: glosses.indices.contains(index) ? glosses[index] : "",
-                transliteration: transliterations.indices.contains(index) ? transliterations[index] : ""
+                gloss: gloss,
+                transliteration: transliteration,
+                isHit: hit
             ))
         }
         out.append(WordCell(id: -1, arabic: AttributedString(ayahNumberArabic),
                             gloss: "", transliteration: ""))
         return out
+    }
+
+    /// Whether the search term landed on this word: its Arabic intersects a matched span, or - for a
+    /// Latin query - its transliteration or its meaning carries the folded term (the same fold the
+    /// snippet matches with, so "lawful" lights أُحِلَّ through its gloss "are made lawful").
+    private func isHit(tokenRange: NSRange, gloss: String, transliteration: String) -> Bool {
+        guard let paint = searchPaint else { return false }
+        if paint.arabicRanges.contains(where: { NSIntersectionRange($0, tokenRange).length > 0 }) { return true }
+        let query = paint.normalizedQuery
+        guard !query.isEmpty, !query.containsArabicLetters else { return false }
+        if !gloss.isEmpty,
+           HighlightedSnippet.normalizeForSearchText(gloss, trimWhitespace: true).contains(query) { return true }
+        if !transliteration.isEmpty,
+           HighlightedSnippet.normalizeForSearchText(transliteration, trimWhitespace: true).contains(query) { return true }
+        return false
     }
 
     // MARK: Geometry
@@ -1388,22 +1443,44 @@ struct WordByWordInlineText: View {
     private var transliterationFontSize: CGFloat { max(10, glossFontSize - 1) }
     /// Widest a gloss may render; longer ones wrap to a second line, then truncate.
     private let glossMaxWidth: CGFloat = 110
-    private let cellHorizontalPadding: CGFloat = 3
-    private let cellSpacing: CGFloat = 4
+    /// No padding inside a cell: the Arabic sits as close to its neighbours as the plain one-Text
+    /// rendering puts it (the spacing the reader preferred, Abu 2026-09-05). The selected word's wash
+    /// grows outward on its own instead (see `cellView`).
+    private let cellHorizontalPadding: CGFloat = 0
+    /// The gap between words is the face's own space glyph, the width a space takes in the plain
+    /// rendering - so a run of words with short meanings under them reads exactly like flowing text.
+    private var cellSpacing: CGFloat {
+        max(3, ceil((" " as NSString).size(withAttributes: [.font: arabicUIFont]).width))
+    }
+    /// Rows of bare Arabic stack at the face's own line pitch, like the lines of a paragraph; rows
+    /// carrying a transliteration or meaning line keep a small gap so one row's Latin never crowds
+    /// the next row's marks.
+    private var rowSpacing: CGFloat {
+        let hasLatinLines = (showsGlosses && glosses.contains { !$0.isEmpty })
+            || transliterations.contains { !$0.isEmpty }
+        return hasLatinLines ? 6 : 0
+    }
 
     private func cellView(_ cell: WordCell) -> some View {
         let selected = !cell.isOrnament && selectedWord == cell.id
+        let accent = settings.accentColor.color
+        // The search look: everything primary, the matched words alone in the accent - the
+        // transliteration's accent and the glosses' grey are the READING look, not a highlight, and
+        // they would drown the one word the search is pointing at.
+        let searching = searchPaint != nil
+        let transliterationColor: Color = searching ? (cell.isHit ? accent : .primary) : accent
+        let glossColor: Color = searching ? (cell.isHit ? accent : .primary) : .secondary
         return VStack(spacing: 2) {
             Text(cell.arabic)
                 .font(cell.isOrnament ? .custom(Settings.hafsUthmaniFontName, size: fontSize) : arabicSwiftUIFont)
-                .foregroundColor(cell.isOrnament ? settings.accentColor.color : nil)
+                .foregroundColor(cell.isOrnament ? accent : nil)
                 .arabicFontDesign(custom: true)
                 .lineLimit(1)
                 .fixedSize()
             if !cell.transliteration.isEmpty {
                 Text(cell.transliteration)
                     .font(.system(size: transliterationFontSize).italic())
-                    .foregroundColor(settings.accentColor.color)
+                    .foregroundColor(transliterationColor)
                     .multilineTextAlignment(.center)
                     .lineLimit(1)
                     .minimumScaleFactor(0.7)
@@ -1413,7 +1490,7 @@ struct WordByWordInlineText: View {
             if showsGlosses, !cell.gloss.isEmpty {
                 Text(cell.gloss)
                     .font(.system(size: glossFontSize))
-                    .foregroundColor(.secondary)
+                    .foregroundColor(glossColor)
                     .multilineTextAlignment(.center)
                     .lineLimit(2)
                     .frame(maxWidth: glossMaxWidth)
@@ -1424,7 +1501,10 @@ struct WordByWordInlineText: View {
         .padding(.horizontal, cellHorizontalPadding)
         .background(
             RoundedRectangle(cornerRadius: 6)
-                .fill(selected ? settings.accentColor.color.opacity(0.18) : Color.clear)
+                .fill(selected ? accent.opacity(0.18) : Color.clear)
+                // The wash reaches 3pt past the glyphs on each side, the room the cell padding used
+                // to give it, without spreading the words themselves.
+                .padding(.horizontal, -3)
         )
         .contentShape(Rectangle())
         // Two taps, like every word in the app (Abu, 2026-09-04).
@@ -1481,7 +1561,7 @@ struct WordByWordInlineText: View {
     }
 
     private func flow(containerWidth: CGFloat) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: rowSpacing) {
             ForEach(Array(partitionedRows(containerWidth: containerWidth).enumerated()), id: \.offset) { _, row in
                 HStack(alignment: .top, spacing: cellSpacing) {
                     ForEach(row) { cell in
@@ -1605,8 +1685,14 @@ private struct BeginnerLettersSection: View {
 private struct WordRiwayahReading: Identifiable {
     let word: String
     let options: [Settings.Riwayah.Option]
-    /// True for the reading the card was opened in - it gets the accent tint.
+    /// True for the reading the card was opened in - its row (and its qiraah's cell) gets the
+    /// accent-tinted background.
     let includesCurrent: Bool
+    /// True when this spelling is not what Hafs prints for the same word - the word itself wears
+    /// the accent wherever it is shown (Abu, 2026-09-07: "every time you show the word color
+    /// different from hafs no matter where"). The Hafs baseline, not the reader's riwayah: that is
+    /// the reference every reader knows, and the one the khilaf coloring in the prints uses too.
+    let differsFromHafs: Bool
 
     var id: String { (options.first?.tag ?? "") + "|" + word }
 
@@ -1798,7 +1884,7 @@ private enum WordAcrossRiwayat {
 
     /// The tapped word grouped by spelling, in the qiraat's own order.
     static func readings(_ context: Context, word: String) -> [WordRiwayahReading] {
-        group(spellings(context, word: word), currentTag: context.tag)
+        group(spellings(context, word: word), currentTag: context.tag, hafsSpelling: hafsCounterpart(context))
     }
 
     /// One cell per QIRAAH, in the classical order of the Ten, each carrying what its two rawis
@@ -1806,19 +1892,22 @@ private enum WordAcrossRiwayat {
     /// word with both names under it rather than the same word twice.
     static func byQiraah(_ context: Context, word: String) -> [WordQiraahCell] {
         let pairs = spellings(context, word: word)
+        let hafs = hafsCounterpart(context)
         return Settings.Riwayah.teacherOrder.compactMap { teacher in
             let mine = pairs.filter { $0.option.teacher == teacher }
             guard let first = mine.first else { return nil }
             return WordQiraahCell(teacher: teacher,
                                   teacherArabic: first.option.teacherArabic,
                                   isBeta: mine.allSatisfy { $0.option.beta },
-                                  readings: group(mine, currentTag: context.tag))
+                                  readings: group(mine, currentTag: context.tag, hafsSpelling: hafs))
         }
     }
 
     /// Collapse per-riwayah spellings into one entry per distinct spelling, first-seen order kept.
+    /// `hafsSpelling` is the Hafs word(s) for the same span (nil when Hafs has no counterpart, in
+    /// which case nothing is marked as differing - there is nothing to differ from).
     private static func group(_ pairs: [(option: Settings.Riwayah.Option, spelling: String)],
-                              currentTag: String) -> [WordRiwayahReading] {
+                              currentTag: String, hafsSpelling: String?) -> [WordRiwayahReading] {
         var order: [String] = []
         var byWord: [String: [Settings.Riwayah.Option]] = [:]
         var currentSpelling: String?
@@ -1827,9 +1916,26 @@ private enum WordAcrossRiwayat {
             byWord[spelling, default: []].append(option)
             if Settings.Riwayah.canonicalTag(option.tag) == currentTag { currentSpelling = spelling }
         }
-        return order.map {
-            WordRiwayahReading(word: $0, options: byWord[$0] ?? [], includesCurrent: $0 == currentSpelling)
+        let hafsKey = hafsSpelling.map(spellingKey)
+        return order.map { spelling in
+            WordRiwayahReading(word: spelling, options: byWord[spelling] ?? [],
+                               includesCurrent: spelling == currentSpelling,
+                               differsFromHafs: hafsKey.map { spellingKey(spelling) != $0 } ?? false)
         }
+    }
+
+    /// Two spellings are the same reading when they match after canonical composition with the
+    /// tatweel and the zero-width characters dropped: the packs agree on the marks they print, not
+    /// always on the byte order they print them in. Marks are otherwise kept - a vowel is a reading.
+    static func spellingKey(_ word: String) -> String {
+        var scalars = String.UnicodeScalarView()
+        for scalar in word.precomposedStringWithCanonicalMapping.unicodeScalars {
+            switch scalar.value {
+            case 0x0640, 0x200B...0x200F, 0x2060, 0xFEFF: continue
+            default: scalars.append(scalar)
+            }
+        }
+        return String(scalars)
     }
 
     /// One riwayah's own words for the Hafs span, resolved ayah by ayah through
@@ -1875,7 +1981,7 @@ private struct WordAcrossRiwayatSection: View {
     private var summary: String {
         readings.count == 1
             ? "All \(riwayahCount) riwayat print this word the same way."
-            : "\(readings.count) spellings across \(riwayahCount) riwayat."
+            : "\(readings.count) spellings across \(riwayahCount) riwayat. A word in the accent color differs from Hafs an Asim."
     }
 
     var body: some View {
@@ -1893,6 +1999,9 @@ private struct WordAcrossRiwayatSection: View {
                         .foregroundColor(.secondary)
                 }
                 ForEach(readings) { reading in
+                    // The word wears the accent when it is not Hafs's spelling; the reading the
+                    // card was opened in is marked by its tinted background instead, the same
+                    // grammar as the by-qiraah cells below.
                     VStack(alignment: .center, spacing: 4) {
                         Text(reading.word)
                             .font(Font.arabic(
@@ -1900,7 +2009,7 @@ private struct WordAcrossRiwayatSection: View {
                                 size: CGFloat(settings.fontArabicSize) + 4
                             ))
                             .arabicFontDesign(custom: settings.quranUsesCustomArabicFace)
-                            .foregroundColor(reading.includesCurrent ? settings.accentColor.color : .primary)
+                            .foregroundColor(reading.differsFromHafs ? settings.accentColor.color : .primary)
                             .multilineTextAlignment(.center)
                         Text(reading.names)
                             .font(.caption)
@@ -1908,6 +2017,12 @@ private struct WordAcrossRiwayatSection: View {
                             .multilineTextAlignment(.center)
                     }
                     .frame(maxWidth: .infinity)
+                    .padding(.vertical, 6)
+                    .padding(.horizontal, 8)
+                    .background(
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .fill(settings.accentColor.color.opacity(reading.includesCurrent ? 0.10 : 0))
+                    )
                 }
 
                 WordByQiraahGrid(cells: cells)
@@ -1946,6 +2061,14 @@ private struct WordByQiraahGrid: View {
 
     let cells: [WordQiraahCell]
 
+    /// Every cell the height of the tallest (Abu, 2026-09-07: "make sure each grid is the same
+    /// height"): a qiraah whose two rawis disagree stacks two words where the others show one, and
+    /// the grid came out ragged. Each cell reports its natural height through a preference, the
+    /// maximum goes back to all of them as a minimum height, and the words center in whatever room
+    /// that leaves. Stable by construction: a cell only ever reports the larger of its own content
+    /// and the height it was already given, so the maximum settles after one pass.
+    @State private var uniformHeight: CGFloat = 0
+
     private let columns = [GridItem(.adaptive(minimum: 140), spacing: 8, alignment: .top)]
 
     /// Deliberately smaller than the reader's Arabic size and clamped at both ends: ten cells of a
@@ -1953,6 +2076,17 @@ private struct WordByQiraahGrid: View {
     /// at a glance, not for reading from.
     private var cellFontSize: CGFloat {
         min(max(CGFloat(settings.fontArabicSize) - 10, 15), 24)
+    }
+
+    private var anyDiffersFromHafs: Bool {
+        cells.contains { $0.readings.contains(where: \.differsFromHafs) }
+    }
+
+    private var caption: String {
+        let count = cells.count == 1
+            ? "The one qiraah with its riwayat."
+            : "Each of the \(cells.count) qiraat with its two riwayat."
+        return anyDiffersFromHafs ? count + " A word in the accent color differs from Hafs an Asim." : count
     }
 
     var body: some View {
@@ -1966,9 +2100,7 @@ private struct WordByQiraahGrid: View {
                         .font(.caption)
                         .fontWeight(.semibold)
                         .foregroundColor(.secondary)
-                    Text(cells.count == 1
-                         ? "The one qiraah with its riwayat."
-                         : "Each of the \(cells.count) qiraat with its two riwayat.")
+                    Text(caption)
                         .font(.caption2)
                         .foregroundColor(.secondary)
                 }
@@ -1976,6 +2108,9 @@ private struct WordByQiraahGrid: View {
                     ForEach(cells) { cell in
                         cellView(cell)
                     }
+                }
+                .onPreferenceChange(WordQiraahCellHeightKey.self) { tallest in
+                    if tallest > uniformHeight { uniformHeight = tallest }
                 }
             }
         }
@@ -1997,15 +2132,18 @@ private struct WordByQiraahGrid: View {
                     .lineLimit(1)
                     .minimumScaleFactor(0.75)
             }
+            Spacer(minLength: 0)
             ForEach(cell.readings) { reading in
                 VStack(alignment: .center, spacing: 0) {
+                    // Accent = not Hafs's spelling, in every cell alike; the reader's own qiraah is
+                    // told by the cell's tinted background and name, never by the word's color.
                     Text(reading.word)
                         .font(Font.arabic(
                             settings.quranArabicFontName(for: reading.options.first?.tag),
                             size: cellFontSize
                         ))
                         .arabicFontDesign(custom: settings.quranUsesCustomArabicFace)
-                        .foregroundColor(reading.includesCurrent ? settings.accentColor.color : .primary)
+                        .foregroundColor(reading.differsFromHafs ? settings.accentColor.color : .primary)
                         .multilineTextAlignment(.center)
                         .minimumScaleFactor(0.5)
                         .lineLimit(1)
@@ -2017,14 +2155,29 @@ private struct WordByQiraahGrid: View {
                         .minimumScaleFactor(0.7)
                 }
             }
+            Spacer(minLength: 0)
         }
         .padding(.vertical, 7)
         .padding(.horizontal, 6)
         .frame(maxWidth: .infinity)
         .background(
+            GeometryReader { geometry in
+                Color.clear.preference(key: WordQiraahCellHeightKey.self, value: geometry.size.height)
+            }
+        )
+        .frame(minHeight: uniformHeight > 0 ? uniformHeight : nil)
+        .background(
             RoundedRectangle(cornerRadius: 12, style: .continuous)
                 .fill((cell.isCurrent ? settings.accentColor.color : Color.secondary).opacity(0.10))
         )
+    }
+}
+
+/// The tallest by-qiraah cell, for `WordByQiraahGrid`'s uniform cell height.
+private struct WordQiraahCellHeightKey: PreferenceKey {
+    static let defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = max(value, nextValue())
     }
 }
 
@@ -2222,6 +2375,11 @@ struct WordMeaningSheet: View {
                             }
                         }
                         .padding(.top, 4)
+                    }
+
+                    // The word's root and dictionary form, and the way to every other word of the root.
+                    if let located = rawWord {
+                        WordMorphologySection(surah: surah, ayah: ayah, tokenIndex: located.tokenIndex)
                     }
 
                     // The whole ayah underneath, so the word is never read out of its sentence. Named,

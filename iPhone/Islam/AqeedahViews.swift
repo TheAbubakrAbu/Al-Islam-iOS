@@ -15,7 +15,7 @@ struct AqeedahMadhabView: View {
             .themedListRowBackground()
         }
         .navigationTitle("Madhahib of Aqeedah")
-        .selectableArticleList()
+        .selectableArticleList(article: "AqeedahMadhabView")
     }
 
     static let sections: [ArticleSection] = [

@@ -6,6 +6,14 @@ import SwiftUI
 /// labelled with the article and the heading it sits under, which opens scrolled to that heading).
 struct PillarsView: View {
     @ObservedObject var settings = Settings.shared
+    /// An article to push on top of the index as it appears: a result on the Islam tab's root. Nil opens
+    /// the plain index (a DEBUG build may still take one from `-pillarsArticle`, see `ArticleAutoOpen`).
+    var openArticle: IslamArticleOpenRequest?
+
+    init(openArticle: IslamArticleOpenRequest? = nil) {
+        self.openArticle = openArticle
+    }
+
     #if os(iOS)
     @State private var searchText = ""
     /// Apple Music-style bar minimization: true while scrolling down.
@@ -20,10 +28,6 @@ struct PillarsView: View {
         let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
         ScrollViewReader { proxy in
             List {
-                #if DEBUG
-                DebugArticleLink(articles: IslamArticleCatalog.debugArticles(for: .pillars))
-                #endif
-
                 Group {
                     if query.isEmpty {
                         IslamArticleIndexSections(groups: IslamArticleCatalog.pillarsGroups)
@@ -34,16 +38,18 @@ struct PillarsView: View {
                             query: query,
                             homes: [.pillars],
                             contentHits: search.contentHits,
-                            isSearching: search.isSearching
-                        ) { entry in
-                            withAnimation { searchText = "" }
-                            scrollTarget = entry.listID
-                        }
+                            isSearching: search.isSearching,
+                            onScrollTo: { entry in
+                                withAnimation { searchText = "" }
+                                scrollTarget = entry.listID
+                            }
+                        )
                     }
                 }
                 .themedListRowBackground()
             }
             .applyConditionalListStyle()
+            .autoOpenArticle(openArticle, home: .pillars)
             .islamArticleIndexSearch(searchText: $searchText, barsCollapsed: $barsCollapsed,
                                      scrollTarget: scrollTarget, proxy: proxy)
         }
@@ -71,40 +77,64 @@ struct PillarsView: View {
     }
 }
 
-#if DEBUG
-/// DEBUG launch argument `-pillarsArticle <key>` (and `-guidesArticle <key>` in the How-to guides): pushes
-/// one article as its list appears, the only headless route into these pages for screenshot checks.
-/// `-articleSection <HEADING>` alongside it opens the article scrolled to that section, the way a
-/// search result does. Renders nothing on its own: an invisible `NavigationLink` that is active from
-/// the first frame.
-struct DebugArticleLink: View {
-    let articles: [String: AnyView]
-    var argument: String = "-pillarsArticle"
+/// Pushes one article on top of its index as the index appears: what a result on the Islam tab's root
+/// asks for (`IslamArticleOpenRequest`), so the article stacks on Pillars & Beliefs or the How-to Guides
+/// and Back returns to the index, the way a hadith opened from the Hadith tab's search stacks on its
+/// book and chapter. In DEBUG builds the launch argument `-pillarsArticle <key>` (or `-guidesArticle
+/// <key>`, with `-articleSection <HEADING>` alongside) makes the same request: the only headless route
+/// into these pages for screenshot checks. Attached to the index List and pushed through the List's own
+/// `navigationDestination(isPresented:)` (see `PushDestination`); it used to be an invisible
+/// `NavigationLink(isActive:)` row, deprecated on watchOS 9 and the pattern that crashed the Quran tab.
+struct ArticleAutoOpen: ViewModifier {
+    let home: IslamArticleHome
+    let request: IslamArticleOpenRequest?
     @State private var isActive = false
+    /// Once: the index's `onAppear` fires again when the reader comes Back from the article.
+    @State private var didOpen = false
 
-    private var requested: AnyView? {
-        let arguments = ProcessInfo.processInfo.arguments
-        guard let idx = arguments.firstIndex(of: argument), arguments.indices.contains(idx + 1) else { return nil }
-        guard let view = articles[arguments[idx + 1]] else { return nil }
-        if let sectionIdx = arguments.firstIndex(of: "-articleSection"), arguments.indices.contains(sectionIdx + 1) {
-            return AnyView(view.environment(\.articleScrollTarget, arguments[sectionIdx + 1]))
-        }
-        return view
+    private var resolved: IslamArticleOpenRequest? { request ?? Self.launchRequest(for: home) }
+
+    func body(content: Content) -> some View {
+        content
+            .pushDestination(isPresented: $isActive) {
+                if let resolved {
+                    IslamArticleCatalog.destination(id: resolved.id, section: resolved.section)
+                }
+            }
+            .onAppear {
+                guard let resolved, !didOpen else { return }
+                didOpen = true
+                #if DEBUG
+                NSLog("ARTICLEOPEN home=%@ article=%@ section=%@", home.rawValue, resolved.id, resolved.section ?? "")
+                #endif
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { isActive = true }
+            }
     }
 
-    var body: some View {
-        if let requested {
-            NavigationLink(destination: LazyDestination { requested }, isActive: $isActive) { EmptyView() }
-                .hidden()
-                .frame(height: 0)
-                .listRowInsets(EdgeInsets())
-                .onAppear {
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { isActive = true }
-                }
+    /// The DEBUG launch arguments' request: nil in Release, and when none was passed.
+    static func launchRequest(for home: IslamArticleHome) -> IslamArticleOpenRequest? {
+        #if DEBUG
+        let arguments = ProcessInfo.processInfo.arguments
+        let argument = home == .pillars ? "-pillarsArticle" : "-guidesArticle"
+        guard let idx = arguments.firstIndex(of: argument), arguments.indices.contains(idx + 1),
+              let entry = IslamArticleCatalog.groups(for: home).flatMap(\.entries)
+                .first(where: { $0.debugKey == arguments[idx + 1] }) else { return nil }
+        var section: String?
+        if let sectionIdx = arguments.firstIndex(of: "-articleSection"), arguments.indices.contains(sectionIdx + 1) {
+            section = arguments[sectionIdx + 1]
         }
+        return IslamArticleOpenRequest(id: entry.id, section: section)
+        #else
+        return nil
+        #endif
     }
 }
-#endif
+
+extension View {
+    func autoOpenArticle(_ request: IslamArticleOpenRequest?, home: IslamArticleHome) -> some View {
+        modifier(ArticleAutoOpen(home: home, request: request))
+    }
+}
 
 /// A quoted ayah or hadith in the Pillars, Beliefs and How-to guides: the original Arabic above its
 /// English, in the accent colour, as one reusable view with a context menu that copies both, source

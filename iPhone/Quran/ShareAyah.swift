@@ -31,6 +31,8 @@ struct ShareAyahSheet: View {
     @AppStorage("copyAyahTransliteration") private var storedCopyTransliteration = false
     @AppStorage("copyAyahEnglishSaheeh") private var storedCopyEnglishSaheeh = false
     @AppStorage("copyAyahEnglishMustafa") private var storedCopyEnglishMustafa = false
+    /// The image card's design (see `ShareBackdrop`); Copy Image from the actions sheet follows it.
+    @AppStorage(ShareBackdrop.storageKey) private var storedBackdrop = ShareBackdrop.classic.rawValue
     @State private var actionMode: ActionMode = .image
 
     // The sheet's own riwayah, seeded from the reading view's, so switching here never disturbs the reader.
@@ -503,6 +505,9 @@ struct ShareAyahSheet: View {
 
                 ScrollView {
                     VStack(spacing: 2) {
+                        if actionMode == .image {
+                            backdropRow
+                        }
                         toggle("Arabic", persistentCopyBinding(
                             get: { storedCopyArabic },
                             set: { storedCopyArabic = $0 },
@@ -680,7 +685,7 @@ struct ShareAyahSheet: View {
                 }
                 .frame(maxHeight: 200)
 
-                Picker("Action Mode", selection: $actionMode.animation(.easeInOut)) {
+                Picker("Action Mode", selection: $actionMode) {
                     Text("Image").tag(ActionMode.image)
                     Text("Text").tag(ActionMode.text)
                 }
@@ -765,6 +770,10 @@ struct ShareAyahSheet: View {
             settings.hapticFeedback()
             generatePreviewImage()
         }
+        .onChange(of: storedBackdrop) { _ in
+            guard didFinishInitialSetup else { return }
+            generatePreviewImage()
+        }
         .onChange(of: settings.showSurahInformation) { _ in
             guard didFinishInitialSetup else { return }
             settings.hapticFeedback()
@@ -818,6 +827,36 @@ struct ShareAyahSheet: View {
     }
 
     @ViewBuilder
+    /// The image card's design, one chip per backdrop; the choice is remembered and Copy Image
+    /// from the actions sheet follows it.
+    private var backdropRow: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(ShareBackdrop.allCases) { backdrop in
+                    let selected = storedBackdrop == backdrop.rawValue
+                    Button {
+                        settings.hapticFeedback()
+                        withAnimation(.easeInOut) { storedBackdrop = backdrop.rawValue }
+                    } label: {
+                        HStack(spacing: 6) {
+                            Image(systemName: backdrop.symbol)
+                            Text(backdrop.title)
+                        }
+                        .font(.caption.weight(.semibold))
+                        .foregroundColor(selected ? .white : .primary)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 7)
+                        .background(Capsule().fill(selected ? settings.accentColor.color : Color.primary.opacity(0.08)))
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityAddTraits(selected ? .isSelected : [])
+                }
+            }
+            .padding(.horizontal, 20)
+        }
+        .padding(.vertical, 4)
+    }
+
     private func toggle(_ title: LocalizedStringKey, _ binding: Binding<Bool>, disabled: Bool) -> some View {
         Toggle(isOn: binding.animation(.easeInOut)) {
             Text(title).foregroundColor(.primary)
@@ -926,6 +965,7 @@ struct ShareAyahSheet: View {
         let qiraahSnapshot = shareQiraah
         let includeNoteSnapshot = includeNote
         let noteSnapshot = noteText
+        let backdropSnapshot = ShareBackdrop(rawValue: storedBackdrop) ?? .classic
         // The RESOLVED ayahs too: resolving them (smart ayah matching) walks QiraahComparison's
         // main-actor alignment cache - an unsynchronized static dictionary the render queue must
         // never touch while the main thread (this sheet's own footer) is reading/populating it.
@@ -960,7 +1000,8 @@ struct ShareAyahSheet: View {
                     qiraah: qiraahSnapshot,
                     includeNote: includeNoteSnapshot,
                     noteText: noteSnapshot,
-                    screenWidth: screenWidth
+                    screenWidth: screenWidth,
+                    backdrop: backdropSnapshot
                 )
             }
             DispatchQueue.main.async {
@@ -981,7 +1022,7 @@ struct ShareAyahSheet: View {
 
     /// Runs on the render queue - `surah`/`ayah`/`hafsAyah` are passed in as main-thread snapshots,
     /// never resolved here (resolution touches the main-actor alignment cache).
-    private func drawImage(surah: Surah?, ayah: Ayah?, hafsAyah hafsAyahSnapshot: Ayah?, shareSettings: ShareSettings, qiraah shareQiraah: String, includeNote: Bool, noteText: String?, screenWidth: CGFloat) -> UIImage {
+    private func drawImage(surah: Surah?, ayah: Ayah?, hafsAyah hafsAyahSnapshot: Ayah?, shareSettings: ShareSettings, qiraah shareQiraah: String, includeNote: Bool, noteText: String?, screenWidth: CGFloat, backdrop: ShareBackdrop) -> UIImage {
         guard let surah, let ayah else { return UIImage() }
         let hafsAyah = hafsAyahSnapshot ?? ayah
 
@@ -998,15 +1039,20 @@ struct ShareAyahSheet: View {
         let arabicNumberFont = UIFont(name: Settings.hafsUthmaniFontName, size: bodyFont.pointSize * 1.15) ?? arabicFont
         let captionFont = UIFont.roundedSystemFont(ofSize: UIFont.preferredFont(forTextStyle: .caption2).pointSize)
 
-        let textColor      = UIColor.white
-        let secondaryColor = UIColor.secondaryLabel
-        let accent         = settings.accentColor.color.uiColor
+        // The backdrop's inks: the classic card keeps the reader's accent, the designs carry their own.
+        let palette = backdrop.palette
+        let textColor      = palette.text
+        let arabicColor    = palette.arabic
+        let secondaryColor = palette.caption
+        let accent         = palette.accent ?? settings.accentColor.color.uiColor
 
         // --- Layout constants
-        let padding: CGFloat = 20, spacing: CGFloat = 8, extraSpacing: CGFloat = 30
+        let spacing: CGFloat = 8, extraSpacing: CGFloat = 30
         let iPhoneCanvasCap: CGFloat = 500
         let deviceWidth = screenWidth - 50
         let maxWidth = min(deviceWidth, iPhoneCanvasCap)
+        let padding = backdrop.padding(forWidth: maxWidth)
+        let headroom = backdrop.headroom(forWidth: maxWidth)
 
         // Paragraph styles
         let right = NSMutableParagraphStyle();  right.alignment = .right
@@ -1014,9 +1060,17 @@ struct ShareAyahSheet: View {
         let cent  = NSMutableParagraphStyle();  cent.alignment  = .center
 
         // Attr dictionaries
-        let bodyAttr = [NSAttributedString.Key.font: bodyFont, .foregroundColor: textColor] as [NSAttributedString.Key: Any]
-        let arAttr = [NSAttributedString.Key.font: arabicFont, .foregroundColor: textColor, .paragraphStyle: right]
-        let arNumberAttr = [NSAttributedString.Key.font: arabicNumberFont, .foregroundColor: textColor, .paragraphStyle: right]
+        var bodyAttr = [NSAttributedString.Key.font: bodyFont, .foregroundColor: textColor] as [NSAttributedString.Key: Any]
+        if palette.textShadow {
+            // Translation lines over scenery carry a soft shadow so they read on the sky.
+            let shadow = NSShadow()
+            shadow.shadowOffset = CGSize(width: 0, height: 1)
+            shadow.shadowBlurRadius = 8
+            shadow.shadowColor = UIColor(white: 0, alpha: 0.55)
+            bodyAttr[.shadow] = shadow
+        }
+        let arAttr = [NSAttributedString.Key.font: arabicFont, .foregroundColor: arabicColor, .paragraphStyle: right]
+        let arNumberAttr = [NSAttributedString.Key.font: arabicNumberFont, .foregroundColor: arabicColor, .paragraphStyle: right]
         let accentAttr = [NSAttributedString.Key.font: bodyFont, .foregroundColor: accent,    .paragraphStyle: left]
         let arAccent = [NSAttributedString.Key.font: arabicFont, .foregroundColor: accent,    .paragraphStyle: right]
         let centAccent = [NSAttributedString.Key.font: bodyFont, .foregroundColor: accent,    .paragraphStyle: cent]
@@ -1056,7 +1110,7 @@ struct ShareAyahSheet: View {
                 qiraah: shareQiraah,
                 font: arabicFont,
                 paragraphStyle: right,
-                textColor: textColor
+                textColor: arabicColor
             ) {
                 appendAttributed(tajweedText)
                 if !settings.showAyahInformation {
@@ -1157,16 +1211,22 @@ struct ShareAyahSheet: View {
         let constraint = CGSize(width: availWidth, height: .greatestFiniteMagnitude)
         var textRect = text.boundingRect(with: constraint, options: [.usesLineFragmentOrigin, .usesFontLeading], context: nil).integral
         textRect.size.width  += 2*padding
-        textRect.size.height += logoSize.height + extraSpacing + 25
+        // The classic card's 20/15 vertical margins, widened with the design's padding.
+        textRect.size.height += logoSize.height + extraSpacing + 25 + 2 * (padding - 20)
 
-        let canvas = CGRect(origin: .zero, size: CGSize(width: maxWidth, height: textRect.height))
+        let canvas = CGRect(origin: .zero, size: CGSize(width: maxWidth, height: textRect.height + headroom.top + headroom.bottom))
+        // The editorial card's watermark: the ayah itself, faint and large, behind the words.
+        let watermark = Self.backdropWatermark(backdrop: backdrop, surah: surah, ayah: ayah, shareSettings: shareSettings,
+                                               qiraah: shareQiraah, fontName: arabicFontName, width: maxWidth, color: arabicColor)
 
         let r1 = UIGraphicsImageRenderer(size: canvas.size)
         let blackCard = r1.image { ctx in
-            UIColor.black.setFill(); ctx.fill(canvas)
-            text.draw(in: CGRect(x: padding, y: padding, width: canvas.width - 2*padding, height: canvas.height))
+            let textFrame = CGRect(x: padding, y: headroom.top + padding, width: canvas.width - 2*padding,
+                                   height: textRect.height - 2*padding)
+            backdrop.paint(canvas: canvas, textFrame: textFrame, watermark: watermark, in: ctx.cgContext)
+            text.draw(in: CGRect(x: padding, y: headroom.top + padding, width: canvas.width - 2*padding, height: canvas.height))
 
-            let wmY = canvas.height - logoSize.height - extraSpacing/2
+            let wmY = canvas.height - headroom.bottom - (padding - 20) - logoSize.height - extraSpacing/2
             let wmX = (canvas.width - (logoSize.width + spacing + wmTextSize.width)) / 2
             if let logo = logo {
                 let rect = CGRect(origin: CGPoint(x: wmX, y: wmY), size: logoSize)
@@ -1176,9 +1236,25 @@ struct ShareAyahSheet: View {
             wmText.draw(in: CGRect(x: wmX + logoSize.width + spacing, y: wmY, width: wmTextSize.width, height: wmTextSize.height))
         }
         return UIGraphicsImageRenderer(size: canvas.size).image { _ in
-            UIBezierPath(roundedRect: canvas, cornerRadius: 20).addClip()
+            UIBezierPath(roundedRect: canvas, cornerRadius: backdrop.cornerRadius).addClip()
             blackCard.draw(at: .zero)
         }
+    }
+
+    /// The editorial backdrop's watermark: the shared Arabic, marks stripped, in the chosen face,
+    /// sized down for long ayahs. Nil for every other design.
+    static func backdropWatermark(backdrop: ShareBackdrop, surah: Surah, ayah: Ayah, shareSettings: ShareSettings,
+                                  qiraah: String?, fontName: String, width: CGFloat, color: UIColor) -> NSAttributedString? {
+        guard backdrop == .editorial, shareSettings.arabic else { return nil }
+        let plain = shareArabicText(surah: surah, ayah: ayah, cleanArabic: true, hideArabicDots: false, qiraahOverride: qiraah)
+        let words = max(1, plain.split(whereSeparator: { $0.isWhitespace }).count)
+        let scale = min(1, max(0.46, 30 / CGFloat(words)))
+        let size = max(26, (width * 0.18 * scale).rounded())
+        let font = UIFont(name: fontName, size: size) ?? UIFont.systemFont(ofSize: size)
+        let style = NSMutableParagraphStyle()
+        style.alignment = .center
+        style.lineHeightMultiple = 1.2
+        return NSAttributedString(string: plain, attributes: [.font: font, .foregroundColor: color, .paragraphStyle: style])
     }
 }
 
@@ -1192,6 +1268,12 @@ extension ShareAyahSheet {
     ///   choice, which is what a single "Copy" action wants. The mushaf's actions sheet offers Copy
     ///   Text and Copy Image as separate tiles and passes the mode outright, so what you tap is what
     ///   you get rather than whatever you last shared as.
+    /// What "Copy Ayah" copies right now ("as image" / "as text"), for the actions sheet's row caption.
+    static var copyModeLabel: String {
+        let raw = UserDefaults.standard.string(forKey: copyActionModeKey) ?? ActionMode.image.rawValue
+        return (ActionMode(rawValue: raw) ?? .image) == .image ? "as image" : "as text"
+    }
+
     static func copyAyahToPasteboard(surahNumber: Int, ayahNumber: Int, settings: Settings,
                                      quranData: QuranData, mode: ActionMode? = nil) {
         guard let surah = quranData.surah(surahNumber),
@@ -1318,19 +1400,32 @@ extension ShareAyahSheet {
             ?? UIFont.roundedSystemFont(ofSize: bodyFont.pointSize * 1.15)
         let arabicNumberFont = UIFont(name: Settings.hafsUthmaniFontName, size: bodyFont.pointSize * 1.15) ?? arabicFont
         let captionFont = UIFont.roundedSystemFont(ofSize: UIFont.preferredFont(forTextStyle: .caption2).pointSize)
-        let textColor = UIColor.white
-        let secondaryColor = UIColor.secondaryLabel
-        let accent = settings.accentColor.color.uiColor
-        let padding: CGFloat = 20, spacing: CGFloat = 8, extraSpacing: CGFloat = 30
+        // The remembered backdrop (the share sheet's chips), so Copy Image matches the last share.
+        let backdrop = ShareBackdrop.stored
+        let palette = backdrop.palette
+        let textColor = palette.text
+        let arabicColor = palette.arabic
+        let secondaryColor = palette.caption
+        let accent = palette.accent ?? settings.accentColor.color.uiColor
+        let spacing: CGFloat = 8, extraSpacing: CGFloat = 30
         let iPhoneCanvasCap: CGFloat = 500
         let deviceWidth = screenWidth - 50
         let maxWidth = min(deviceWidth, iPhoneCanvasCap)
+        let padding = backdrop.padding(forWidth: maxWidth)
+        let headroom = backdrop.headroom(forWidth: maxWidth)
         let right = NSMutableParagraphStyle(); right.alignment = .right
         let left = NSMutableParagraphStyle(); left.alignment = .left
         let cent = NSMutableParagraphStyle(); cent.alignment = .center
-        let bodyAttr = [NSAttributedString.Key.font: bodyFont, .foregroundColor: textColor] as [NSAttributedString.Key: Any]
-        let arAttr = [NSAttributedString.Key.font: arabicFont, .foregroundColor: textColor, .paragraphStyle: right] as [NSAttributedString.Key: Any]
-        let arNumberAttr = [NSAttributedString.Key.font: arabicNumberFont, .foregroundColor: textColor, .paragraphStyle: right] as [NSAttributedString.Key: Any]
+        var bodyAttr = [NSAttributedString.Key.font: bodyFont, .foregroundColor: textColor] as [NSAttributedString.Key: Any]
+        if palette.textShadow {
+            let shadow = NSShadow()
+            shadow.shadowOffset = CGSize(width: 0, height: 1)
+            shadow.shadowBlurRadius = 8
+            shadow.shadowColor = UIColor(white: 0, alpha: 0.55)
+            bodyAttr[.shadow] = shadow
+        }
+        let arAttr = [NSAttributedString.Key.font: arabicFont, .foregroundColor: arabicColor, .paragraphStyle: right] as [NSAttributedString.Key: Any]
+        let arNumberAttr = [NSAttributedString.Key.font: arabicNumberFont, .foregroundColor: arabicColor, .paragraphStyle: right] as [NSAttributedString.Key: Any]
         let accentAttr = [NSAttributedString.Key.font: bodyFont, .foregroundColor: accent, .paragraphStyle: left] as [NSAttributedString.Key: Any]
         let _ = [NSAttributedString.Key.font: arabicFont, .foregroundColor: accent, .paragraphStyle: right] as [NSAttributedString.Key: Any]
         let centAccent = [NSAttributedString.Key.font: bodyFont, .foregroundColor: accent, .paragraphStyle: cent] as [NSAttributedString.Key: Any]
@@ -1431,13 +1526,17 @@ extension ShareAyahSheet {
         let constraint = CGSize(width: availWidth, height: .greatestFiniteMagnitude)
         var textRect = text.boundingRect(with: constraint, options: [.usesLineFragmentOrigin, .usesFontLeading], context: nil).integral
         textRect.size.width += 2 * padding
-        textRect.size.height += logoSize.height + extraSpacing + 25
-        let canvas = CGRect(origin: .zero, size: CGSize(width: maxWidth, height: textRect.height))
+        textRect.size.height += logoSize.height + extraSpacing + 25 + 2 * (padding - 20)
+        let canvas = CGRect(origin: .zero, size: CGSize(width: maxWidth, height: textRect.height + headroom.top + headroom.bottom))
+        let watermark = backdropWatermark(backdrop: backdrop, surah: surah, ayah: ayah, shareSettings: shareSettings,
+                                          qiraah: settings.displayQiraahForArabic, fontName: arabicFontName, width: maxWidth, color: arabicColor)
         let r1 = UIGraphicsImageRenderer(size: canvas.size)
         let blackCard = r1.image { ctx in
-            UIColor.black.setFill(); ctx.fill(canvas)
-            text.draw(in: CGRect(x: padding, y: padding, width: canvas.width - 2 * padding, height: canvas.height))
-            let wmY = canvas.height - logoSize.height - extraSpacing / 2
+            let textFrame = CGRect(x: padding, y: headroom.top + padding, width: canvas.width - 2 * padding,
+                                   height: textRect.height - 2 * padding)
+            backdrop.paint(canvas: canvas, textFrame: textFrame, watermark: watermark, in: ctx.cgContext)
+            text.draw(in: CGRect(x: padding, y: headroom.top + padding, width: canvas.width - 2 * padding, height: canvas.height))
+            let wmY = canvas.height - headroom.bottom - (padding - 20) - logoSize.height - extraSpacing / 2
             let wmX = (canvas.width - (logoSize.width + spacing + wmTextSize.width)) / 2
             if let logo = logo {
                 let rect = CGRect(origin: CGPoint(x: wmX, y: wmY), size: logoSize)
@@ -1447,7 +1546,7 @@ extension ShareAyahSheet {
             wmText.draw(in: CGRect(x: wmX + logoSize.width + spacing, y: wmY, width: wmTextSize.width, height: wmTextSize.height))
         }
         return UIGraphicsImageRenderer(size: canvas.size).image { _ in
-            UIBezierPath(roundedRect: canvas, cornerRadius: 20).addClip()
+            UIBezierPath(roundedRect: canvas, cornerRadius: backdrop.cornerRadius).addClip()
             blackCard.draw(at: .zero)
         }
     }

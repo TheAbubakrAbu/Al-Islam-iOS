@@ -9,7 +9,9 @@ struct IslamView: View {
     // window compact - the sidebar/detail layout must collapse to the iPhone shape there (see
     // `usesColumnNavigation`), or the split collapses onto a pre-selected detail with no way back.
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
-    @State private var selectedResource: IslamDestination? = .arabicAlphabet
+    /// iPad: the split view's sidebar selection. Seeded from `-islamDestination` too, so the DEBUG
+    /// hook lands on the resource in the detail column as it does on the iPhone stack (2026-09-06).
+    @State private var selectedResource: IslamDestination? = Self.launchDestination ?? .arabicAlphabet
     /// Bumped when the SAME sidebar row is re-tapped: the detail stack is keyed on it, so the tap
     /// always lands (pops that section back to its root) instead of dying against unchanged state.
     @State private var islamDetailRefreshToken = 0
@@ -25,6 +27,24 @@ struct IslamView: View {
     /// The resource row a result asked to scroll to ("Scroll To ..."), consumed once the search clears.
     @State private var scrollTarget: String?
     @StateObject private var articleSearch = IslamArticleSearchModel()
+
+    #if DEBUG
+    /// `-islamOpenArticle <catalog id>` (with `-articleSection <HEADING>` alongside): what tapping an
+    /// article result on this screen does, headlessly - the article's index pushed as a destination and
+    /// the article on top of it - so the two-hop landing can be screenshot.
+    @State private var debugOpenArticle = false
+
+    private static var debugArticleRequest: (home: IslamArticleHome, request: IslamArticleOpenRequest)? {
+        let arguments = ProcessInfo.processInfo.arguments
+        guard let idx = arguments.firstIndex(of: "-islamOpenArticle"), arguments.indices.contains(idx + 1),
+              let entry = IslamArticleCatalog.byID[arguments[idx + 1]] else { return nil }
+        var section: String?
+        if let sectionIdx = arguments.firstIndex(of: "-articleSection"), arguments.indices.contains(sectionIdx + 1) {
+            section = arguments[sectionIdx + 1]
+        }
+        return (entry.home, IslamArticleOpenRequest(id: entry.id, section: section))
+    }
+    #endif
 
     /// DEBUG launch argument `-islamDestination <rawValue>` (e.g. `namesOfAllah`): the resource is
     /// pushed as the tab appears, the only headless route into a resource page (see Settings.init).
@@ -74,6 +94,8 @@ struct IslamView: View {
         case islamicWallpapers
         case pillarsAndBasics
         case howToGuides
+        case miraclesOfQuran
+        case journal
 
         var title: String {
             switch self {
@@ -92,6 +114,8 @@ struct IslamView: View {
             case .islamicWallpapers: return "Islamic Wallpapers"
             case .pillarsAndBasics: return "Pillars & Beliefs"
             case .howToGuides: return "How-To Guides"
+            case .miraclesOfQuran: return "Miracles of the Quran"
+            case .journal: return "Journal"
             }
         }
 
@@ -112,6 +136,8 @@ struct IslamView: View {
             case .islamicWallpapers: return "photo.on.rectangle"
             case .pillarsAndBasics: return "moon.stars"
             case .howToGuides: return "list.bullet.rectangle"
+            case .miraclesOfQuran: return "sparkle.magnifyingglass"
+            case .journal: return "square.and.pencil"
             }
         }
 
@@ -133,6 +159,8 @@ struct IslamView: View {
             case .islamicWallpapers: return "Beautiful wallpapers to save"
             case .pillarsAndBasics: return "The Five Pillars and Six Beliefs"
             case .howToGuides: return "Wudu, salah, Jumuah, and more"
+            case .miraclesOfQuran: return "Signs in creation, science, and history"
+            case .journal: return "Notes from khutbahs, classes, and your reading"
             }
         }
 
@@ -156,6 +184,8 @@ struct IslamView: View {
             case .islamicWallpapers: return "Islamic\nWallpapers"
             case .pillarsAndBasics: return "Pillars &\nBeliefs"
             case .howToGuides: return "How-To\nGuides"
+            case .miraclesOfQuran: return "Miracles of\nthe Quran"
+            case .journal: return "Journal"
             }
         }
 
@@ -177,6 +207,8 @@ struct IslamView: View {
             case .islamicWallpapers: return ["wallpaper", "background", "lock screen", "calligraphy"]
             case .pillarsAndBasics: return ["beliefs", "aqeedah", "articles", "basics", "iman", "faith"]
             case .howToGuides: return ["how to", "guide", "steps", "wudu", "salah", "ghusl"]
+            case .miraclesOfQuran: return ["miracles", "miracle", "science", "scientific", "signs", "creation", "embryology", "astronomy", "cosmology", "universe", "ijaz"]
+            case .journal: return ["journal", "notes", "note", "diary", "khutbah", "lecture", "class", "study", "reflection", "write"]
             }
         }
 
@@ -323,6 +355,13 @@ struct IslamView: View {
             }
             .applyConditionalListStyle()
             .navigationTitle("Al-Islam")
+            #if DEBUG
+            .debugPushDestination(isPresented: $debugOpenArticle) {
+                if let debug = Self.debugArticleRequest {
+                    IslamArticleCatalog.homeDestination(debug.home, opening: debug.request)
+                }
+            }
+            #endif
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     if #available(iOS 16.0, *), query.isEmpty {
@@ -366,6 +405,9 @@ struct IslamView: View {
             }
             if let seeded = IslamSearchDebug.launchQuery("-islamSearch"), searchText.isEmpty {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { searchText = seeded }
+            }
+            if Self.debugArticleRequest != nil {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { debugOpenArticle = true }
             }
             #endif
         }
@@ -415,13 +457,15 @@ struct IslamView: View {
                 contentHits: articleSearch.contentHits,
                 isSearching: articleSearch.isSearching,
                 showHome: true,
+                openViaHome: true,
                 hasOtherResults: !resources.isEmpty,
-                scrollLabel: { "Scroll To \($0.home.title)" }
-            ) { entry in
-                // The article's own row is inside its resource; the nearest thing on THIS screen is
-                // the resource row, so that is where the list scrolls.
-                scrollToResource(entry.home == .pillars ? .pillarsAndBasics : .howToGuides)
-            }
+                scrollLabel: { "Scroll To \($0.home.title)" },
+                onScrollTo: { entry in
+                    // The article's own row is inside its resource; the nearest thing on THIS screen is
+                    // the resource row, so that is where the list scrolls.
+                    scrollToResource(entry.home == .pillars ? .pillarsAndBasics : .howToGuides)
+                }
+            )
         }
         .themedListRowBackground()
     }
@@ -671,6 +715,10 @@ struct IslamView: View {
             PillarsView()
         case .howToGuides:
             GuidesView()
+        case .miraclesOfQuran:
+            MiraclesView()
+        case .journal:
+            JournalView()
         }
     }
     #endif
@@ -794,8 +842,18 @@ struct IslamView: View {
     }
 
     private func toolLabel(_ title: String, systemImage: String, subtitle: String? = nil) -> some View {
-        HStack(spacing: 12) {
-            AccentIconChip(systemImage: systemImage)
+        #if os(watchOS)
+        // The 40 mm face leaves about 103 pt beside the standard chip, and "Remembrances" (108 pt at
+        // its body size) broke as "Remem-" / "brances"; a smaller chip and gap there give the title
+        // the line it needs, at full size.
+        let chipSize: CGFloat = WatchScreen.isNarrow ? 24 : 29
+        let chipSpacing: CGFloat = WatchScreen.isNarrow ? 8 : 12
+        #else
+        let chipSize: CGFloat = 29
+        let chipSpacing: CGFloat = 12
+        #endif
+        return HStack(spacing: chipSpacing) {
+            AccentIconChip(systemImage: systemImage, size: chipSize)
 
             VStack(alignment: .leading, spacing: 1) {
                 Text(title)

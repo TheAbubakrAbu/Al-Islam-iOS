@@ -5,7 +5,7 @@ the product page for the current release. Changing it requires a new build (unli
 
 ## Guidelines
 
-- **Hard cap 4,000 characters** - count the release section only (the `# Version 4.6.0` heading and
+- **Hard cap 4,000 characters**: count the release section only (the `# Version 4.6.0` heading and
   the `**n / 4,000**` tally line are for this file, not the store). Verify before shipping:
   `awk '/^# Version 4.6.0$/{f=1;next} /^# Version /{f=0} f' "Docs/Whats New.md" | grep -v '^\*\*' | wc -m`
 - **Aim for ~2,000-2,500.** Nobody reads a wall of text on a phone; the description sells the app,
@@ -16,7 +16,7 @@ the product page for the current release. Changing it requires a new build (unli
   Al-Adhan, Apple Watch, Islamic Tools, Bug fixes and optimizations). Drop a heading with nothing
   new to say rather than padding it.
 - Lead with a one-sentence summary of the release, then the biggest feature first.
-- Plain text only - no markdown, emoji, or links; the store renders none of it.
+- Plain text only: no markdown, emoji, or links; the store renders none of it.
 - Keep past versions below for reference; only the top section ships.
 
 # Version 4.6.0
@@ -24,7 +24,7 @@ the product page for the current release. Changing it requires a new build (unli
 The major Hadith collections, on-device AI search, a prayer tracker, tafsir, a living sky over your prayer times, and a gallery of new widgets.
 
 AI Search:
-- Search by meaning, not keywords - "patience in hardship" finds ayahs about sabr.
+- Search by meaning, not keywords: "patience in hardship" finds ayahs about sabr.
 - Works across the Quran, Hadith, 99 Names, duas, adhkar, and Settings.
 - Private, offline, and free. With Apple Intelligence, Ask AI answers from the ayahs and hadiths it cites, never with a ruling.
 
@@ -66,10 +66,10 @@ Islamic Tools:
 - Settings split into Adhan, Quran, and Hadith screens, with search.
 
 Bug fixes and optimizations:
-- A smaller download and much faster launch - all content ships in a compact binary format.
+- A smaller download and much faster launch: all content ships in a compact binary format.
 - Smoother hadith scrolling, lighter widget refreshes, and polish throughout.
 
-**2,612 / 4,000 characters.**
+**2,610 / 4,000 characters.**
 
 
 # Version 4.5.3
@@ -108,7 +108,7 @@ Introducing the new Liquid Glass look, designed to complement the UI across iOS,
 Liquid Glass & UI:
 
 - Refreshed launch and splash experience for a clearer, more polished first impression.
-- Liquid Glass-style controls across the app - search bars, pickers, and other surfaces updated for a more consistent, modern feel.
+- Liquid Glass-style controls across the app: search bars, pickers, and other surfaces updated for a more consistent, modern feel.
 - General UI polish throughout for clearer layout and smoother day-to-day use.
 
 Al-Adhan:
@@ -119,11 +119,11 @@ Al-Adhan:
 
 Al-Quran:
 
-- Tajweed in the Quran: optional color-coded tajweed, and a dedicated Tajweed reference - so rules are easier to notice while you read and listen (in beta).
+- Tajweed in the Quran: optional color-coded tajweed, and a dedicated Tajweed reference, so rules are easier to notice while you read and listen (in beta).
 - Page and Juz structure: new page and Juz dividers, plus an overlay so you always see which Surah and Juz you’re in.
 - Smarter search: find ayahs by Juz and page, whether you’re searching within a Surah or across the whole Quran.
 - Quran search history for quicker repeat lookups.
-- Continue where you left off with your last listened Surah and last read ayah - now with up to 5 recent Surahs and 5 recent ayahs.
+- Continue where you left off with your last listened Surah and last read ayah, now with up to 5 recent Surahs and 5 recent ayahs.
 
 Al-Islamic Tools:
 

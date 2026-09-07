@@ -172,7 +172,7 @@ struct BetaTextConsentCard: View {
                         .foregroundStyle(.secondary)
                 }
 
-                Text("The printed mushaf of this riwayah is exact - the scanned pages of its published print. Its SELECTABLE TEXT is a beta transcription:\n\n\(Settings.betaQiraatNotice)")
+                Text("The printed mushaf of this riwayah is exact: the scanned pages of its published print. Its SELECTABLE TEXT is a beta transcription:\n\n\(Settings.betaQiraatNotice)")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)

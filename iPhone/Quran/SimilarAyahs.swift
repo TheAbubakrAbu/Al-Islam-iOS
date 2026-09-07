@@ -5,10 +5,13 @@ import Compression
 // Similar Ayahs: pick an ayah, see the other places the Quran says something like it.
 //
 // The data is `Resources/Data/Quran/SimilarAyahs.json.xz`, built by
-// Scripts/build_similar_ayahs.py and gated by Scripts/verify_similar_ayahs.py. Two kinds of
-// rows, merged and RANKED AT BUILD TIME so nothing here scores or sorts:
+// Scripts/build_similar_ayahs.py and gated by Scripts/verify_similar_ayahs.py. Three sources,
+// merged and RANKED AT BUILD TIME so nothing here scores or sorts:
 //   * verified - qurani.ai's similar-ayah corpus (the classical mutashabihat), shown first;
-//   * generated - phrase-overlap matches from the Tilawa app's generator, with reason labels.
+//   * generated - phrase-overlap matches from the Tilawa app's generator, with reason labels;
+//   * QUL - the Quranic Universal Library's similar-ayah table, which adds the SPANS of the shared
+//     words in the matched ayah (tinted in the rows) and the pairs the other two lack.
+// The sheet's second tab is the repeated PHRASES of the ayah (`MutashabihatStore`).
 //
 // Ported from Tilawa (by Jamil Hammoudeh), with permission - see CreditsView.
 
@@ -22,6 +25,11 @@ struct SimilarAyahMatch: Identifiable {
     let phrase: String
     let verified: Bool
     let labels: [String]
+    /// 0-based inclusive token ranges of the shared words in the TARGET ayah's raw Hafs text
+    /// (QUL rows); empty when only the phrase is known.
+    var spans: [ClosedRange<Int>] = []
+    /// QUL's 0-100 similarity score, when it listed the pair.
+    var score: Int? = nil
 
     var id: String { "\(surah):\(ayah)" }
 }
@@ -88,15 +96,21 @@ final class SimilarAyahsStore: @unchecked Sendable {
             var matches: [SimilarAyahMatch] = []
             matches.reserveCapacity(rows.count)
             for row in rows {
-                // row = [surah, ayah, phrase, verifiedFlag, labels?] - see the build script.
+                // row = [surah, ayah, phrase, verifiedFlag, labels?, spans?, score?] - see the build script.
                 guard row.count >= 4,
                       let surah = row[0] as? Int,
                       let ayah = row[1] as? Int,
                       let phrase = row[2] as? String,
                       let flag = row[3] as? Int else { continue }
                 let labels = row.count > 4 ? (row[4] as? [String] ?? []) : []
+                let spans = (row.count > 5 ? row[5] as? [[Int]] : nil)?.compactMap { span -> ClosedRange<Int>? in
+                    guard span.count == 2, span[1] >= span[0] else { return nil }
+                    return span[0]...span[1]
+                } ?? []
+                let score = row.count > 6 ? row[6] as? Int : nil
                 matches.append(SimilarAyahMatch(
-                    surah: surah, ayah: ayah, phrase: phrase, verified: flag == 1, labels: labels
+                    surah: surah, ayah: ayah, phrase: phrase, verified: flag == 1, labels: labels,
+                    spans: spans, score: score
                 ))
             }
             if !matches.isEmpty { out[key] = matches }
@@ -114,21 +128,86 @@ final class SimilarAyahsStore: @unchecked Sendable {
 
 /// The related verses for one ayah, readable in place: reference, why it matched (verified
 /// badge or the matcher's reasons), the shared wording, then the full Arabic and English.
+/// Why a match is a match, from its reason labels: the generator names a shared phrase, shared
+/// roots ("Root ktb", Buckwalter letters) and shared themes. The chips above the list filter on them.
+enum SimilarAyahFilter: String, CaseIterable, Identifiable {
+    case all, verified, phrase, root, theme
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .all: return "All"
+        case .verified: return "Verified"
+        case .phrase: return "Phrase"
+        case .root: return "Roots"
+        case .theme: return "Themes"
+        }
+    }
+
+    func matches(_ match: SimilarAyahMatch) -> Bool {
+        switch self {
+        case .all: return true
+        case .verified: return match.verified
+        case .phrase: return !match.phrase.isEmpty || !match.spans.isEmpty || match.labels.contains("Shared phrase")
+        case .root: return match.labels.contains { $0.hasPrefix("Root ") }
+        case .theme: return match.labels.contains { $0 != "Shared phrase" && !$0.hasPrefix("Root ") }
+        }
+    }
+
+    /// The Buckwalter transliteration the labels carry roots in, back to Arabic letters.
+    private static let buckwalter: [Character: String] = [
+        "'": "ء", "|": "آ", ">": "أ", "&": "ؤ", "<": "إ", "}": "ئ", "A": "ا", "b": "ب", "p": "ة",
+        "t": "ت", "v": "ث", "j": "ج", "H": "ح", "x": "خ", "d": "د", "*": "ذ", "r": "ر", "z": "ز",
+        "s": "س", "$": "ش", "S": "ص", "D": "ض", "T": "ط", "Z": "ظ", "E": "ع", "g": "غ", "f": "ف",
+        "q": "ق", "k": "ك", "l": "ل", "m": "م", "n": "ن", "h": "ه", "w": "و", "Y": "ى", "y": "ي",
+        "{": "ٱ",
+    ]
+
+    /// "Root ktb" -> "Root ك ت ب": the shared root spelled out in Arabic, letters spaced.
+    static func displayLabel(_ label: String) -> String {
+        guard label.hasPrefix("Root ") else { return label }
+        let root = label.dropFirst(5).filter { $0 != " " && $0 != "-" }
+        let letters = root.compactMap { buckwalter[$0] }
+        return letters.isEmpty ? label : "Root " + letters.joined(separator: " ")
+    }
+}
+
 struct SimilarAyahsSheet: View {
     @ObservedObject private var settings = Settings.shared
     @ObservedObject private var quranData = QuranData.shared
 
+    /// The sheet's two lists: ayahs that say something like this one, and the phrases this one
+    /// repeats word for word elsewhere (mutashabihat).
+    enum Tab: String, CaseIterable, Identifiable {
+        case similar, phrases
+        var id: String { rawValue }
+        var title: String { self == .similar ? "Similar Ayahs" : "Repeated Phrases" }
+    }
+
     let surahNumber: Int
     let ayahNumber: Int
+
+    init(surahNumber: Int, ayahNumber: Int, initialTab: Tab = .similar) {
+        self.surahNumber = surahNumber
+        self.ayahNumber = ayahNumber
+        _tab = State(initialValue: MutashabihatStore.isBundled ? initialTab : .similar)
+    }
+
+    @State private var tab: Tab
 
     /// nil while the pack is still parsing. The first open pays a ~4.5 MB JSON parse, so it
     /// happens off the main thread behind a spinner instead of freezing the sheet's slide-up;
     /// every later open is a dictionary hit and resolves before the spinner can appear.
     @State private var matches: [SimilarAyahMatch]?
+    /// The repeated phrases, loaded alongside (a much smaller pack).
+    @State private var phrases: [MutashabihatStore.Phrase]?
+    /// Which reasons the similar list is narrowed to (the chips above it).
+    @State private var filter: SimilarAyahFilter = .all
 
     private var sheetTitle: String {
         let name = quranData.surah(surahNumber)?.nameTransliteration ?? "Surah \(surahNumber)"
-        return "Similar to \(name) \(surahNumber):\(ayahNumber)"
+        return tab == .similar ? "Similar to \(name) \(surahNumber):\(ayahNumber)" : "Phrases in \(name) \(surahNumber):\(ayahNumber)"
     }
 
     var body: some View {
@@ -136,13 +215,53 @@ struct SimilarAyahsSheet: View {
             Group {
                 if let matches {
                     List {
-                        if matches.isEmpty {
+                        if MutashabihatStore.isBundled {
+                            Section {
+                                Picker("List", selection: $tab) {
+                                    ForEach(Tab.allCases) { item in
+                                        Text(item.title).tag(item)
+                                    }
+                                }
+                                .pickerStyle(.segmented)
+                                .onChange(of: tab) { _ in settings.hapticFeedback() }
+                                .listRowInsets(EdgeInsets(top: 4, leading: 12, bottom: 4, trailing: 12))
+                                .listRowBackground(Color.clear)
+                            }
+                        }
+
+                        if tab == .phrases {
+                            let list = phrases ?? []
+                            if list.isEmpty {
+                                Text("No repeated phrases are recorded for this ayah.")
+                                    .font(.body)
+                                    .foregroundColor(.secondary)
+                            } else {
+                                Section(footer:
+                                    Text("Phrases this ayah shares word for word with others, longest first, from the Quranic Universal Library's Mutashabihat ul Quran. Open one to read every occurrence side by side.")
+                                        .font(.caption2)
+                                ) {
+                                    MutashabihatRows(surahNumber: surahNumber, ayahNumber: ayahNumber, phrases: list)
+                                }
+                            }
+                        } else if matches.isEmpty {
                             Text("No similar ayahs are recorded for this ayah.")
                                 .font(.body)
                                 .foregroundColor(.secondary)
                         } else {
+                            let shown = matches.filter { filter.matches($0) }
+                            Section {
+                                filterChips(matches)
+                                    .listRowInsets(EdgeInsets(top: 2, leading: 12, bottom: 2, trailing: 12))
+                                    .listRowBackground(Color.clear)
+                            }
+
                             Section(footer: sourcesFootnote) {
-                                ForEach(matches) { match in
+                                if shown.isEmpty {
+                                    Text("No \(filter.title.lowercased()) matches for this ayah. Try another filter.")
+                                        .font(.subheadline)
+                                        .foregroundStyle(.secondary)
+                                }
+                                ForEach(shown) { match in
                                     matchRow(match)
                                 }
                             }
@@ -162,17 +281,102 @@ struct SimilarAyahsSheet: View {
         .smallMediumSheetPresentation()
         .task {
             let surah = surahNumber, ayah = ayahNumber
-            // The store is lock-guarded, so the parse is safe off the main actor.
+            // The stores are lock-guarded, so the parses are safe off the main actor.
             let loaded = await Task.detached(priority: .userInitiated) {
-                SimilarAyahsStore.shared.matches(surah: surah, ayah: ayah)
+                (SimilarAyahsStore.shared.matches(surah: surah, ayah: ayah),
+                 MutashabihatStore.isBundled ? MutashabihatStore.shared.phrases(surah: surah, ayah: ayah) : [])
             }.value
-            matches = loaded
+            phrases = loaded.1
+            matches = loaded.0
+        }
+    }
+
+    /// One chip per reason kind that has matches, with its count; a chip only appears when it would
+    /// show something, so short lists carry two chips and long ones five.
+    private func filterChips(_ matches: [SimilarAyahMatch]) -> some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(SimilarAyahFilter.allCases) { kind in
+                    let count = matches.filter { kind.matches($0) }.count
+                    if count > 0, kind == .all || count < matches.count || kind == .verified {
+                        let selected = filter == kind
+                        Button {
+                            settings.hapticFeedback()
+                            withAnimation(.easeInOut) { filter = kind }
+                        } label: {
+                            HStack(spacing: 5) {
+                                Text(kind.title)
+                                Text("\(count)")
+                                    .foregroundColor(selected ? .white.opacity(0.85) : .secondary)
+                            }
+                            .font(.caption.weight(.semibold))
+                            .foregroundColor(selected ? .white : .primary)
+                            .padding(.horizontal, 11)
+                            .padding(.vertical, 6)
+                            .background(Capsule().fill(selected ? settings.accentColor.color : Color.primary.opacity(0.08)))
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
+            .padding(.horizontal, 4)
+            .padding(.vertical, 4)
+        }
+    }
+
+    /// The reasons as chips: the shared phrase in the accent, roots spelled in Arabic, themes plain.
+    private func reasonChips(_ labels: [String]) -> some View {
+        FlowLayoutView(spacing: 6) {
+            ForEach(Array(labels.enumerated()), id: \.offset) { _, label in
+                let isPhrase = label == "Shared phrase"
+                let isRoot = label.hasPrefix("Root ")
+                Text(SimilarAyahFilter.displayLabel(label))
+                    .font(.caption2.weight(.semibold))
+                    .foregroundColor(isPhrase ? settings.accentColor.color : .secondary)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .background(
+                        Capsule().fill(isPhrase ? settings.accentColor.color.opacity(0.14)
+                                       : (isRoot ? Color.primary.opacity(0.10) : Color.primary.opacity(0.06)))
+                    )
+            }
         }
     }
 
     private var sourcesFootnote: some View {
-        Text("Verified matches come from qurani.ai's similar-ayah corpus; the rest are phrase-overlap matches.")
+        Text("Verified matches come from qurani.ai's similar-ayah corpus; the rest are phrase-overlap matches, with the shared words tinted where the Quranic Universal Library's similar-ayah table places them.")
             .font(.caption2)
+    }
+
+    /// The tinted spans of a match, mapped from raw-text token indices onto the text on screen
+    /// (Hide Tashkeel deletes the standalone ۞ token, so the display can be one token shorter).
+    private func displayRanges(for match: SimilarAyahMatch, surah: Surah, ayah: Ayah, display: String) -> [NSRange] {
+        guard !match.spans.isEmpty else { return [] }
+        let raw = ayah.displayArabicText(surahId: surah.id, clean: false, qiraahOverride: "")
+        let rawTokens = WordTokens.tokens(in: raw)
+        let displayRanges = WordTokens.ranges(in: display)
+        // Raw token index → display token index: identity when the counts agree, else the raw
+        // tokens that survive sign-stripping, in order.
+        var displayIndex: [Int] = []
+        if rawTokens.count == displayRanges.count {
+            displayIndex = Array(rawTokens.indices)
+        } else {
+            var next = 0
+            for token in rawTokens {
+                let survives = !token.removingArabicDiacriticsAndSigns.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                displayIndex.append(survives ? next : -1)
+                if survives { next += 1 }
+            }
+            guard next == displayRanges.count else { return [] }
+        }
+        var out: [NSRange] = []
+        for span in match.spans {
+            for token in span where displayIndex.indices.contains(token) {
+                let mapped = displayIndex[token]
+                if mapped >= 0, displayRanges.indices.contains(mapped) { out.append(displayRanges[mapped]) }
+            }
+        }
+        return out
     }
 
     @ViewBuilder
@@ -211,13 +415,21 @@ struct SimilarAyahsSheet: View {
                 }
 
                 if !match.labels.isEmpty {
-                    Text(match.labels.joined(separator: " · "))
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+                    reasonChips(match.labels)
                 }
 
-                Text(ayah.displayArabicText(surahId: surah.id, clean: settings.cleanArabicText, qiraahOverride: ""))
-                    .font(.custom(settings.quranArabicFontName(for: nil), size: CGFloat(settings.fontArabicSize) - 4))
+                // The shared words tinted: QUL's spans where it lists the pair, else the phrase the
+                // corpus recorded, found by the snippet's own Arabic match ladder.
+                let display = ayah.displayArabicText(surahId: surah.id, clean: settings.cleanArabicText, qiraahOverride: "")
+                let spans = displayRanges(for: match, surah: surah, ayah: ayah, display: display)
+                HighlightedSnippet(
+                    source: display,
+                    term: spans.isEmpty ? match.phrase : "",
+                    font: .custom(settings.quranArabicFontName(for: nil), size: CGFloat(settings.fontArabicSize) - 4),
+                    accent: settings.accentColor.color,
+                    fg: .primary,
+                    extraHighlightRanges: spans
+                )
                     .arabicFontDesign(custom: true)
                     .multilineTextAlignment(.trailing)
                     // Same fix as the theme topic rows: without an explicit "take the height you need",

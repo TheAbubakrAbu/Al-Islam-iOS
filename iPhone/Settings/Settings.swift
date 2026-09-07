@@ -1025,7 +1025,7 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
 
             ("First Day of Ramadan", DateComponents(year: currentHijriYear, month: 9, day: 1), "Begin obligatory fast", "The month of fasting begins; all Muslims must fast from Fajr (dawn) to Maghrib (sunset)."),
             ("Last 10 Nights of Ramadan", DateComponents(year: currentHijriYear, month: 9, day: 21), "Seek Laylatul Qadr", "The most virtuous nights of the year; increase worship as these nights are beloved to Allah and contain Laylatul Qadr."),
-            ("27th Night of Ramadan", DateComponents(year: currentHijriYear, month: 9, day: 27), "Likely Laylatul Qadr", "A strong possibility for Laylatul Qadr - the Night of Decree when the Qur’an was sent down - though not confirmed."),
+            ("27th Night of Ramadan", DateComponents(year: currentHijriYear, month: 9, day: 27), "Likely Laylatul Qadr", "A strong possibility for Laylatul Qadr, the Night of Decree when the Qur’an was sent down, though not confirmed."),
             ("Eid Al-Fitr", DateComponents(year: currentHijriYear, month: 10, day: 1), "Celebration of ending the fast", "Celebration marking the end of Ramadan; fasting is prohibited on this day; encouraged to fast 6 days in Shawwal."),
 
             ("First 10 Days of Dhul-Hijjah", DateComponents(year: currentHijriYear, month: 12, day: 1), "Most beloved days", "The best days for righteous deeds; fasting the first nine days and dhikr are highly encouraged (the 10th is Eid al-Adha, on which fasting is not permitted)."),
@@ -1780,6 +1780,7 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     @AppStorage("saveLastListenedAyah") var saveLastListenedAyah: Bool = true
     /// When on, the Quran tab shows the daily "Ayah of the Day" card.
     @AppStorage("showAyahOfTheDay") var showAyahOfTheDay: Bool = true
+    @AppStorage("showWordOfTheDay") var showWordOfTheDay: Bool = true
     /// Day key (yyyy-MM-dd) for which the Ayah of the Day card has been hidden via "Hide for Today".
     @AppStorage("ayahOfTheDayHiddenDate") var ayahOfTheDayHiddenDate: String = ""
     /// A shuffled replacement for TODAY's Ayah of the Day, as "dayKey|surahID|ayahID". Stale days no
@@ -1890,7 +1891,7 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
         These twelve riwayat were digitized by machine from a printed mushaf and have \
         not yet been checked word by word. Their ayah numbering and surah divisions are \
         verified, but individual marks or letters may still be wrong. Please do not rely \
-        on them for memorization or recitation - use Hafs or another verified riwayah \
+        on them for memorization or recitation; use Hafs or another verified riwayah \
         for that.
         """
 
@@ -2071,7 +2072,18 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
         hadithSearchHistory.removeAll { $0.caseInsensitiveCompare(query) == .orderedSame }
     }
 
-    @AppStorage("englishFontSize") var englishFontSize: Double = Double(UIFont.preferredFont(forTextStyle: .body).pointSize)
+    /// The reader's default point sizes, iPad and Mac: the same 28 pt Arabic / 17 pt English that
+    /// fill an iPhone column sit in an 800 pt one there, so a fresh install starts 15% larger. Only
+    /// the DEFAULT - a size the user has set is a size the user keeps (2026-09-06 iPad/Mac pass).
+    private static let readerDefaultScale: Double = {
+        #if os(iOS)
+        return UIDevice.current.userInterfaceIdiom == .phone ? 1 : 1.15
+        #else
+        return 1
+        #endif
+    }()
+
+    @AppStorage("englishFontSize") var englishFontSize: Double = (Double(UIFont.preferredFont(forTextStyle: .body).pointSize) * Settings.readerDefaultScale).rounded()
     
     // MARK: - [Al-Hadith] Hadith display
 
@@ -2085,8 +2097,8 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     /// ON by default, matching the Quran toggle's new default (user rule).
     @AppStorage("highlightAllahNamesHadith") var highlightAllahNamesHadith: Bool = true
     /// Hadith text sizes, independent of the Quran's own sliders.
-    @AppStorage("hadithArabicFontSize") var hadithArabicFontSize: Double = Double(UIFont.preferredFont(forTextStyle: .body).pointSize + 4)
-    @AppStorage("hadithEnglishFontSize") var hadithEnglishFontSize: Double = Double(UIFont.preferredFont(forTextStyle: .body).pointSize)
+    @AppStorage("hadithArabicFontSize") var hadithArabicFontSize: Double = (Double(UIFont.preferredFont(forTextStyle: .body).pointSize + 4) * Settings.readerDefaultScale).rounded()
+    @AppStorage("hadithEnglishFontSize") var hadithEnglishFontSize: Double = (Double(UIFont.preferredFont(forTextStyle: .body).pointSize) * Settings.readerDefaultScale).rounded()
 
     // MARK: - [Islam tab] Arabic letters & 99 Names
     
@@ -2121,7 +2133,7 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     }
     
     @AppStorage("THEfontArabic") var fontArabic: String = "KFGQPCHAFSUthmanicScript-Regula"
-    @AppStorage("fontArabicSize") var fontArabicSize: Double = Double(UIFont.preferredFont(forTextStyle: .title1).pointSize)
+    @AppStorage("fontArabicSize") var fontArabicSize: Double = (Double(UIFont.preferredFont(forTextStyle: .title1).pointSize) * Settings.readerDefaultScale).rounded()
     @AppStorage("useFontArabic") var useFontArabic = true
     /// Raw storage for `arabicScriptStyle` (see SettingsQuran). Empty means the reader has never
     /// chosen, which resolves to Madani - the effective default. A value written here is always an
@@ -2395,6 +2407,19 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     func cleanSearchIgnoringSilentArabicLetters(_ text: String, whitespace: Bool = false) -> String {
         cleanSearch(text.removingSilentArabicLettersForSearch, whitespace: whitespace)
             .removingAlifWiqayaForSearch
+    }
+
+    /// The transliteration's search twin. The natural-reading scheme the ayahs carry doubles long
+    /// vowels ("Rahmaanir Raheem", "Qaiyoom") and joins particles with hyphens ("wa-laa"), so a
+    /// reader who types "rahman" or "raheem" the short way would miss. The index keeps BOTH the
+    /// plain fold and this one; the query is never folded, so English words ("book", "see") are
+    /// untouched.
+    func foldedTransliterationForSearch(_ text: String) -> String {
+        var folded = cleanSearch(text)
+        for (long, short) in [("aa", "a"), ("ee", "i"), ("ii", "i"), ("oo", "u"), ("uu", "u")] {
+            folded = folded.replacingOccurrences(of: long, with: short)
+        }
+        return folded
     }
 
     /// The hamza-PRECISION lane: the same fold as `cleanSearch` except every hamza - the bare ء and the

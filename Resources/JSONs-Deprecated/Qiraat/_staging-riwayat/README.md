@@ -1,4 +1,4 @@
-# The 12 extra riwayat — extraction record
+# The 12 extra riwayat: extraction record
 
 > **2026-08-24: read [HANDOFF-2026-08-24.md](HANDOFF-2026-08-24.md) first.**
 > A correction pass is in progress (Hamzah). Three things in this file are now known to be
@@ -20,19 +20,19 @@ Aug 2026), via the deterministic pipeline in `pipeline/`. Bundled at
 `Resources/Data/Quran/Qiraah*.json.deflate`, gated behind Settings → Quran →
 *Beta Qiraat (12 More Riwayat)*. This folder holds the uncompressed reference copies.
 
-## Verified accuracy — measured, not estimated (Aug 3, 2026 final)
+## Verified accuracy: measured, not estimated (Aug 3, 2026 final)
 
 Scored by round-tripping riwayat the app already has King Fahd-verified text for
 through the *identical* machinery. "ex-pause" excludes waqf pause marks, which the
 Madani/Basri volumes' print vintage does not ink at all (an edition difference,
-not an extraction error — KFGQPC and Islamweb follow different waqf systems):
+not an extraction error; KFGQPC and Islamweb follow different waqf systems):
 
 | Bridge (family) | ayah-exact | ex-pause | char-acc (ex-pause) |
 |---|---|---|---|
-| Shu'bah (Kufi — covers 8 of the 12) | 87.4% | 91.3% | **99.89%** |
-| Qaloon (Madani — covers Abu Jafar's 2) | 17.2% | 54.8% | **97.44%** |
+| Shu'bah (Kufi, covers 8 of the 12) | 87.4% | 91.3% | **99.89%** |
+| Qaloon (Madani, covers Abu Jafar's 2) | 17.2% | 54.8% | **97.44%** |
 | Warsh (Madani) | 14.4% | 40.0% | **97.90%** |
-| ad-Duri (Basri — covers Yaqub's 2) | 47.5% | 48.2% | **87.72%** |
+| ad-Duri (Basri, covers Yaqub's 2) | 47.5% | 48.2% | **87.72%** |
 | as-Susi (Basri) | 37.3% | 37.9% | **87.73%** |
 
 So: the eight Kufi-counted riwayat (Hisham*, Ibn Dhakwan*, Khalaf, Khallad, Abu
@@ -43,16 +43,16 @@ candidates for holding back. (*Shami pair rides the Kufi glyph family.)
 ## Hamzatul-wasl repair (Aug 6, 2026)
 
 The extraction under-captured the Maghribi wasl notation (`ا` + haraka + `۬`) in the
-Madani/Basri volumes — ~1,300 bare alefs per riwayah against the same-family KFGQPC
+Madani/Basri volumes: ~1,300 bare alefs per riwayah against the same-family KFGQPC
 bridges. `pipeline/fix_wasl.py` restored them by skeleton-matched copy from the bridges
 (Qaloon/Warsh for Abu Jafar's pair, Duri/Susi for Yaqub's), additive-only and asserted
 per word: ibnwardan +1,236 · ibnjammaz +1,233 · ruways +1,352 · rawh +1,297. Words whose
 skeleton differs were untouched (genuine riwayah orthography), and the carrier guard
-correctly refused the two-hamza tas-hil words (`ءَٰا۬نذَرۡتَهُمۡ` is Abu Amr's smoothing —
+correctly refused the two-hamza tas-hil words (`ءَٰا۬نذَرۡتَهُمۡ` is Abu Amr's smoothing;
 Yaqub reads the full hamza; rawh's 102 refusals are exactly these). Staging JSONs and the
 shipped `.json.deflate` bundles were both rewritten and round-trip-verified.
 
-## Structural invariants — ALL PASS
+## Structural invariants: ALL PASS
 
 - Exact canonical ayah counts, all 12: Kufi 6,236 ×6; **Dimashqi 6,226 ×2** (the four
   page-boundary-split markers recovered from their orphaned bracket glyphs);
@@ -68,7 +68,7 @@ shipped `.json.deflate` bundles were both rewritten and round-trip-verified.
 
 ## What "100%" means here, honestly
 
-There is no independent digital ground truth for these 12 — that is the entire reason
+There is no independent digital ground truth for these 12; that is the entire reason
 they were extracted. The numbers above are the strongest verification available:
 identical-machinery round-trips against the 8 verified riwayat, plus structural
 invariants that cannot be faked. Residual known gaps: pause marks and maddah signs

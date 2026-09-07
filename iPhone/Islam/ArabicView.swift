@@ -502,7 +502,7 @@ struct ArabicView: View {
     private var arabicFontPicker: some View {
         #if os(watchOS)
         // The watch keeps the simple two-way choice; the richer three-way face picker is a phone thing.
-        Picker("Arabic Font", selection: $settings.useFontArabic.animation(.easeInOut)) {
+        Picker("Arabic Font", selection: $settings.useFontArabic) {
             Text("Quranic Font").tag(true)
             Text("Basic Font").tag(false)
         }

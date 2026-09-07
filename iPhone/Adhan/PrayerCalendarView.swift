@@ -10,6 +10,7 @@ struct PrayerCalendarView: View {
     @ObservedObject var settings = Settings.shared
     /// Prayer times and the location publish from `LiveState`, not `Settings` (see its comment).
     @ObservedObject private var live = LiveState.shared
+    @Environment(\.appearance) private var appearance
 
     @State private var months: [MonthModel] = []
     @State private var shareItem: ShareItem?
@@ -100,7 +101,9 @@ struct PrayerCalendarView: View {
         .font(.caption2.monospacedDigit())
         .foregroundColor(day.isToday ? settings.accentColor.color : .primary)
         .listRowInsets(EdgeInsets(top: 5, leading: 10, bottom: 5, trailing: 10))
-        .listRowBackground(day.isToday ? settings.accentColor.color.opacity(0.12) : nil)
+        // Today's wash, else the reading theme's row color (nil = the system row): a bare nil here
+        // overrode `themedListRowBackground()`, so every row but today was white on Sepia.
+        .listRowBackground(day.isToday ? settings.accentColor.color.opacity(0.12) : appearance.themeRowBackground)
         .accessibilityElement(children: .combine)
         .accessibilityLabel(day.accessibilityLabel)
     }

@@ -369,7 +369,7 @@ struct TajweedLegendView: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
-            Picker("Group By", selection: $compareByRule.animation(.easeInOut)) {
+            Picker("Group By", selection: $compareByRule) {
                 Text("By Qiraah").tag(false)
                 Text("By Rule").tag(true)
             }
@@ -880,7 +880,7 @@ struct TajweedLegendView: View {
                         Text("Quick Guide")
                             .font(.headline)
 
-                        Text("The colors follow \(optionLabel(forTag: riwayahTag))'s printed mushaf - each word or letter is colored exactly where that print colors it.")
+                        Text("The colors follow \(optionLabel(forTag: riwayahTag))'s printed mushaf: each word or letter is colored exactly where that print colors it.")
                             .font(.caption)
                             .foregroundStyle(.secondary)
 

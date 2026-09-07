@@ -8,7 +8,13 @@ Checks, in order of what has actually gone wrong while building it:
   3. every id in the pack has a case in IslamArticles.destination(for:), so a
      cited article always reopens instead of rendering a dead row;
   4. no article's prose still carries Swift escapes or markdown emphasis, which
-     would reach the model as literal "**" and "\\u{2026}".
+     would reach the model as literal "**" and "\\u{2026}";
+  5. every catalog article's view tags its list with its own id
+     (`.selectableArticleList(article: "XView")`), which is what gives the page
+     its search bar;
+  6. every catalog article's view carries exactly one `ArticleSourcesSection`
+     naming ITSELF (a 2026-09 injection had shifted them one article along, so
+     Shahadah listed Salah's sources).
 """
 import json
 import re
@@ -68,6 +74,25 @@ if PACK.exists():
     routed = set(re.findall(r'case "(\w+)": return AnyView\(', loader))
     check(packed <= routed, f"no destination case for {sorted(packed - routed)} in IslamArticles.swift")
     check(routed <= packed, f"IslamArticles.swift routes ids that are not in the pack: {sorted(routed - packed)}")
+
+# 5/6: the pages themselves - their search tag and their own sources section.
+catalog_ids = set(re.findall(r'\("(\w+View)", "', (ROOT / "iPhone/Islam/IslamSearch.swift").read_text()))
+check(len(catalog_ids) >= 45, f"only {len(catalog_ids)} catalog ids found in IslamSearch.swift")
+struct_re = re.compile(r"^struct (\w+): View \{", re.M)
+seen = set()
+for path in builder.SOURCES:
+    src = path.read_text()
+    bounds = [(m.group(1), m.start()) for m in struct_re.finditer(src)] + [("", len(src))]
+    for (name, start), (_, end) in zip(bounds, bounds[1:]):
+        if name not in catalog_ids:
+            continue
+        seen.add(name)
+        body = src[start:end]
+        check(f'.selectableArticleList(article: "{name}"' in body,
+              f"{name}: no .selectableArticleList(article:) tag - the page gets no search bar")
+        sources = re.findall(r'ArticleSourcesSection\(article: "(\w+)"\)', body)
+        check(sources == [name], f"{name}: sources section names {sources}, must be exactly its own")
+check(seen == catalog_ids, f"catalog ids without a view struct in the article files: {sorted(catalog_ids - seen)}")
 
 if failures:
     for f in failures:

@@ -446,6 +446,8 @@ private struct ReaderPinnedHeader<Content: View>: View {
 }
 
 struct SurahView: View {
+    /// For the title pill's Dynamic Type ceiling (see `NavigationTitlePill`).
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @ObservedObject var settings = Settings.shared
     @ObservedObject var quranData = QuranData.shared
     @ObservedObject var quranPlayer = QuranPlayer.shared
@@ -483,6 +485,10 @@ struct SurahView: View {
     /// "Settings" menu and the per-ayah menu write the same shared store, so the list rows, the ayah
     /// preview cards and the mushaf page composer all agree, and the choice survives a row being recycled.
     @ObservedObject private var displayOverrides = AyahDisplayOverrides.shared
+    #if os(iOS)
+    /// The lit themes' washes on the rows (see `ThemeHighlights`).
+    @ObservedObject private var themeHighlights = ThemeHighlights.shared
+    #endif
     @State private var showBulkNoteSheet = false
     @State private var bulkNoteDraft = ""
     @State private var showBulkRespectAlert = false
@@ -653,7 +659,7 @@ struct SurahView: View {
         }
     }
 
-    private static let preparedSurahCache: NSCache<NSString, PreparedSurahCache> = {
+    nonisolated(unsafe) private static let preparedSurahCache: NSCache<NSString, PreparedSurahCache> = {
         let cache = NSCache<NSString, PreparedSurahCache>()
         cache.countLimit = AppPerformance.preparedSurahCacheLimit
         return cache
@@ -935,6 +941,17 @@ struct SurahView: View {
             }
         }
 
+        // "5:5" typed inside surah 5 is this surah's ayah 5 - the reference form the Quran tab's
+        // search takes, so the same query answers the same way in both places. Read as text, its
+        // digits ("55") matched ayah 55's number in the search blob instead (Abu, 2026-09-05).
+        let referenceParts = trimmed.split(separator: ":").map { $0.trimmingCharacters(in: .whitespaces) }
+        if referenceParts.count == 2,
+           let surahPart = Int(referenceParts[0]) ?? arabicToEnglishNumber(referenceParts[0]),
+           let ayahPart = Int(referenceParts[1]) ?? arabicToEnglishNumber(referenceParts[1]),
+           surahPart == surah.id, ayahPart >= 1 {
+            return ayahPart
+        }
+
         return nil
     }
 
@@ -1192,7 +1209,7 @@ struct SurahView: View {
     /// utility queue: `TajweedStore.attributedText` is pure given its inputs and its caches are `NSCache`s
     /// (Phase 5 step 1), so the paint no longer has to take main-thread slices at all. A row that scrolls
     /// in ahead of the warm paints its own entry, as before.
-    static func prewarmTajweed(surah: Surah, settings: Settings, limit: Int) {
+    nonisolated static func prewarmTajweed(surah: Surah, settings: Settings, limit: Int) {
         guard settings.showTajweedColors, settings.showArabicText, settings.isHafsDisplay else { return }
         let ayahs = Array(surah.ayahs.prefix(limit))
         guard !ayahs.isEmpty else { return }
@@ -1219,7 +1236,7 @@ struct SurahView: View {
         }
     }
 
-    private static func preparedCache(for surah: Surah, settings: Settings) -> PreparedSurahCache {
+    nonisolated private static func preparedCache(for surah: Surah, settings: Settings) -> PreparedSurahCache {
         let qiraahKey = settings.displayQiraahForArabic ?? ""
         let cacheKey = "\(surah.id)|\(qiraahKey)" as NSString
         if let cached = preparedSurahCache.object(forKey: cacheKey) {
@@ -1286,7 +1303,7 @@ struct SurahView: View {
         return prepared
     }
 
-    private static func boundaryText(for ayah: Ayah, in surah: Surah) -> String? {
+    nonisolated private static func boundaryText(for ayah: Ayah, in surah: Surah) -> String? {
         if let page = ayah.page, let juz = ayah.juz {
             return "\(mushafPageLabel(forAbsolutePage: page, in: surah)) • Juz \(juz)"
         }
@@ -1499,9 +1516,94 @@ struct SurahView: View {
     }
 
     /// True when the shared attention-highlight lands on this surah's given ayah.
+
+    /// The row itself, built in its own function: inside the List's expression the twenty-argument
+    /// `AyahRow` init tipped the type-checker over its budget ("unable to type-check this expression
+    /// in reasonable time"), and every added input made it worse.
+    @ViewBuilder
+    private func ayahRowGroup(_ ayah: Ayah) -> some View {
+                        #if os(iOS)
+                        Section {
+                            AyahRow(
+                                surah: surah,
+                                ayah: ayah,
+                                renderSettingsSignature: ayahRowRenderSettingsSignature,
+                                scrollDown: $scrollDown,
+                                searchText: $searchText,
+                                arrivalTerm: arrivalTerm(for: ayah.id),
+                                isHighlighted: isAyahHighlighted(ayah.id),
+                                onToggleHighlight: { toggleListHighlight(ayah.id) },
+                                isSelecting: isSelectingAyahs,
+                                isSelected: isSelectedAyah(ayah.id),
+                                onToggleSelection: {
+                                    toggleSelection(surahID: surah.id, ayahID: ayah.id)
+                                },
+                                onAyahTextAppear: {
+                                    visibility.visibleAyahIDs.insert(ayah.id)
+                                    markKhatmViewedIfNeeded(ayah.id)
+                                },
+                                onAyahTextDisappear: {
+                                    visibility.visibleAyahIDs.remove(ayah.id)
+                                },
+                                isPlayingThis: isPlayingAyah(ayah.id),
+                                isLastListened: isLastListenedAyah(ayah.id),
+                                themeWash: themeWash(for: ayah.id),
+                                onRequestSheet: { kind in presentRowSheet(kind, surah: surah, ayah: ayah) },
+                                openSheet: openRowSheet(surahID: surah.id, ayahID: ayah.id)
+                            )
+                            .equatable()
+                        }
+                        #else
+                        AyahRow(
+                            surah: surah,
+                            ayah: ayah,
+                            renderSettingsSignature: ayahRowRenderSettingsSignature,
+                            scrollDown: $scrollDown,
+                            searchText: $searchText,
+                            isHighlighted: isAyahHighlighted(ayah.id),
+                            onToggleHighlight: { toggleListHighlight(ayah.id) },
+                            onAyahTextAppear: {
+                                visibility.visibleAyahIDs.insert(ayah.id)
+                                markKhatmViewedIfNeeded(ayah.id)
+                            },
+                            onAyahTextDisappear: {
+                                visibility.visibleAyahIDs.remove(ayah.id)
+                            },
+                            isPlayingThis: isPlayingAyah(ayah.id),
+                            isLastListened: isLastListenedAyah(ayah.id)
+                        )
+                        .equatable()
+                        #endif
+    }
+
     private func isAyahHighlighted(_ ayahID: Int) -> Bool {
         highlightedAyah?.surahID == surah.id && highlightedAyah?.ayahID == ayahID
     }
+
+    // Three of the row's inputs as plain calls: inline, the twenty-argument `AyahRow` init tipped
+    // the type-checker over its budget ("unable to type-check this expression in reasonable time").
+    private func isPlayingAyah(_ ayahID: Int) -> Bool {
+        quranPlayer.currentSurahNumber == surah.id && quranPlayer.currentAyahNumber == ayahID
+    }
+
+    private func arrivalTerm(for ayahID: Int) -> String {
+        arrivalAyahID == ayahID ? (arrivalTerm ?? "") : ""
+    }
+
+    private func isSelectedAyah(_ ayahID: Int) -> Bool {
+        selectedAyahs.contains(HighlightedAyahRef(surahID: surah.id, ayahID: ayahID))
+    }
+
+    private func isLastListenedAyah(_ ayahID: Int) -> Bool {
+        let lastListened = settings.lastListenedAyah
+        return lastListened?.surahNumber == surah.id && lastListened?.ayahNumber == ayahID
+    }
+
+    #if os(iOS)
+    private func themeWash(for ayahID: Int) -> ThemeWashColor? {
+        themeHighlights.wash(surah: surah.id, ayah: ayahID)
+    }
+    #endif
 
     /// Tap an ayah in the list to mark it (task: highlight it); tap the marked ayah again to clear it. Writes
     /// the shared highlight so the mark carries over to the page reader.
@@ -1816,6 +1918,9 @@ struct SurahView: View {
             // Behind the glow: the reading theme's base color (Sepia/Gray/Custom), which the pager -
             // not being a List - never got from `applyConditionalListStyle`.
             .themedReaderBackground()
+            // Inline here too: on iPad/Mac the page reader is the detail column's root (see the list
+            // branch below for the large-title band this removes).
+            .navigationBarTitleDisplayMode(.inline)
             // No `.id(surah.id)` here, deliberately: identity-swapping the reader tore down and rebuilt the
             // ~604-page UIPageViewController - the single heaviest view realization in the app (~900ms) -
             // on EVERY surah jump. The reader now re-seeds its own page index when `surah.id` changes
@@ -1849,6 +1954,11 @@ struct SurahView: View {
                 }
         } else {
             surahCoreBody
+                // Inline on every idiom. On the iPad (and a Mac window) this reader is the detail column's
+                // root, where the automatic mode reserved a large-title band under the title pill that
+                // nothing ever filled: ~52 pt of the page's height (Abu, 2026-09-06: "more vertical
+                // wasted space on iPad/Mac"). iPhone pushes the reader, which was already inline.
+                .navigationBarTitleDisplayMode(.inline)
                 // Back in list mode the title is fixed to this view's own surah again.
                 .onAppear { pageSurah = nil }
         }
@@ -1923,12 +2033,45 @@ struct SurahView: View {
             let launchArgs = ProcessInfo.processInfo.arguments
             if let i = launchArgs.firstIndex(of: "-openRowSheet"), i + 1 < launchArgs.count,
                let target = ayah, let targetAyah = surah.ayahs.first(where: { $0.id == target }) {
+                // "word" opens the word card for the "-wordIndex <n>" token (0-based) of the ayah.
+                let wordIndex = launchArgs.firstIndex(of: "-wordIndex").flatMap { launchArgs.indices.contains($0 + 1) ? Int(launchArgs[$0 + 1]) : nil } ?? 0
+                let wordKind: AyahRowSheetKind? = {
+                    let raw = targetAyah.displayArabicText(surahId: surah.id, clean: false, qiraahOverride: "")
+                    let tokens = WordTokens.tokens(in: raw)
+                    guard tokens.indices.contains(wordIndex) else { return nil }
+                    let glosses = WordByWordStore.shared.glosses(surah: surah.id, ayah: targetAyah.id) ?? []
+                    return .word(TappedWord(index: wordIndex, word: tokens[wordIndex],
+                                            meaning: glosses.indices.contains(wordIndex) ? glosses[wordIndex] : "",
+                                            total: tokens.count))
+                }()
                 let kind: AyahRowSheetKind? = launchArgs[i + 1] == "tafsir" ? .secondary(.tafsir)
+                    : launchArgs[i + 1] == "customRange" ? .secondary(.customRange)
+                    : launchArgs[i + 1] == "similar" ? .secondary(.similarAyahs)
+                    : launchArgs[i + 1] == "mutashabihat" ? .secondary(.mutashabihat)
+                    : launchArgs[i + 1] == "word" ? wordKind
+                    : launchArgs[i + 1] == "qiraah" ? .secondary(.qiraah)
+                    : launchArgs[i + 1] == "share" ? .secondary(.share)
                     : launchArgs[i + 1] == "actions" ? .actions : nil
                 if let kind {
                     DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
                         presentRowSheet(kind, surah: surah, ayah: targetAyah)
                     }
+                }
+            }
+            // "-openSurahInfo" opens the About this Surah sheet the header's info button opens.
+            if launchArgs.contains("-openSurahInfo") {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { showSurahInfoSheet = true }
+            }
+            // "-openSurahPicker" opens the Choose Surah sheet the title menu offers.
+            if launchArgs.contains("-openSurahPicker") {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { showSurahPickerSheet = true }
+            }
+            // "-surahSearch <text>" types into the reader's OWN search field a beat after it appears,
+            // so the rows' search state (filtered list, term highlight) can be screenshotted headlessly.
+            if let i = launchArgs.firstIndex(of: "-surahSearch"), i + 1 < launchArgs.count {
+                let term = launchArgs[i + 1]
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                    searchText = term
                 }
             }
             #endif
@@ -2023,7 +2166,7 @@ struct SurahView: View {
                 onCancel: { showCustomRangeSheet = false }
             )
             .environmentObject(settings)
-            .smallMediumSheetPresentation()
+            // Detents: the sheet's own (it opens at full height).
         }
         .sheet(isPresented: $showReciterPickerSheet) {
             NavigationView {
@@ -2156,7 +2299,6 @@ struct SurahView: View {
     private func ayahListScreen(proxy: ScrollViewProxy) -> some View {
         let _ = RenderCounter.hit("SurahView.ayahListScreen")
         // Read once per pass, handed to the rows as a Bool (Phase 5 step 3).
-        let lastListened = settings.lastListenedAyah
         // The parsed query is memoized per text (Phase 5 step 10): the body ran the folds and the
         // parsers on every pass, including the playback-driven ones while the query never changed.
         let parsed = parsedQuery()
@@ -2500,63 +2642,7 @@ struct SurahView: View {
                             }
                         }
 
-                        Group {
-                            #if os(iOS)
-                            Section {
-                                AyahRow(
-                                    surah: surah,
-                                    ayah: ayah,
-                                    renderSettingsSignature: ayahRowRenderSettingsSignature,
-                                    scrollDown: $scrollDown,
-                                    searchText: $searchText,
-                                    arrivalTerm: arrivalAyahID == ayah.id ? (arrivalTerm ?? "") : "",
-                                    isHighlighted: isAyahHighlighted(ayah.id),
-                                    onToggleHighlight: { toggleListHighlight(ayah.id) },
-                                    isSelecting: isSelectingAyahs,
-                                    isSelected: selectedAyahs.contains(HighlightedAyahRef(surahID: surah.id, ayahID: ayah.id)),
-                                    onToggleSelection: {
-                                        toggleSelection(surahID: surah.id, ayahID: ayah.id)
-                                    },
-                                    onAyahTextAppear: {
-                                        visibility.visibleAyahIDs.insert(ayah.id)
-                                        markKhatmViewedIfNeeded(ayah.id)
-                                    },
-                                    onAyahTextDisappear: {
-                                        visibility.visibleAyahIDs.remove(ayah.id)
-                                    },
-                                    isPlayingThis: quranPlayer.currentSurahNumber == surah.id
-                                        && quranPlayer.currentAyahNumber == ayah.id,
-                                    isLastListened: lastListened?.surahNumber == surah.id
-                                        && lastListened?.ayahNumber == ayah.id,
-                                    onRequestSheet: { kind in presentRowSheet(kind, surah: surah, ayah: ayah) },
-                                    openSheet: openRowSheet(surahID: surah.id, ayahID: ayah.id)
-                                )
-                                .equatable()
-                            }
-                            #else
-                            AyahRow(
-                                surah: surah,
-                                ayah: ayah,
-                                renderSettingsSignature: ayahRowRenderSettingsSignature,
-                                scrollDown: $scrollDown,
-                                searchText: $searchText,
-                                isHighlighted: isAyahHighlighted(ayah.id),
-                                onToggleHighlight: { toggleListHighlight(ayah.id) },
-                                onAyahTextAppear: {
-                                    visibility.visibleAyahIDs.insert(ayah.id)
-                                    markKhatmViewedIfNeeded(ayah.id)
-                                },
-                                onAyahTextDisappear: {
-                                    visibility.visibleAyahIDs.remove(ayah.id)
-                                },
-                                isPlayingThis: quranPlayer.currentSurahNumber == surah.id
-                                    && quranPlayer.currentAyahNumber == ayah.id,
-                                isLastListened: lastListened?.surahNumber == surah.id
-                                    && lastListened?.ayahNumber == ayah.id
-                            )
-                            .equatable()
-                            #endif
-                        }
+                        ayahRowGroup(ayah)
                         .id(ayah.id)
                         #if os(watchOS)
                         .padding(.vertical)
@@ -2594,7 +2680,7 @@ struct SurahView: View {
                 }
                 .themedListRowBackground()
             }
-            .applyConditionalListStyle(disableNowPlayingInset: true, topContentMargin: 11)
+            .applyConditionalListStyle(disableNowPlayingInset: true, topContentMargin: 11, readingWidth: true)
             // Apple Music-style: the bottom bars minimize while scrolling down, restore on scroll-up.
             .collapseBarsOnScroll($barsCollapsed)
             .trackUserScrollTouch($userTouchingReader)
@@ -3385,7 +3471,7 @@ struct SurahView: View {
                     .accessibilityLabel("Search this page")
 
                     if comparisonVisible {
-                        ArabicTextRiwayahPicker(selection: $settings.displayQiraah.animation(.easeInOut))
+                        ArabicTextRiwayahPicker(selection: $settings.displayQiraah)
                             .layoutPriority(1)
                     }
                 }
@@ -3435,7 +3521,7 @@ struct SurahView: View {
                 .accessibilityLabel("Search the whole Quran for what is typed in the search bar")
 
                 if comparisonVisible {
-                    ArabicTextRiwayahPicker(selection: $settings.displayQiraah.animation(.easeInOut))
+                    ArabicTextRiwayahPicker(selection: $settings.displayQiraah)
                         .layoutPriority(1)
                 }
             }
@@ -3845,12 +3931,12 @@ struct SurahView: View {
                         // Arabic scales down rather than truncating: a clipped Arabic name is unreadable,
                         // where a smaller one is not.
                         Text(settings.cleanedQuranArabic(surah.nameArabic))
-                            .font(Font.arabic(settings.quranDisplayFontName, size: UIFont.preferredFont(forTextStyle: .headline).pointSize + 2))
+                            .font(Font.arabic(settings.quranDisplayFontName, size: NavigationTitlePill.pointSize(.headline, at: dynamicTypeSize) + 2))
                             .arabicFontDesign(custom: settings.quranUsesCustomArabicFace)
                             .lineLimit(1)
 
                         Text(surah.idArabic)
-                            .font(.custom(Settings.hafsUthmaniFontName, size: UIFont.preferredFont(forTextStyle: .headline).pointSize + 3))
+                            .font(.custom(Settings.hafsUthmaniFontName, size: NavigationTitlePill.pointSize(.headline, at: dynamicTypeSize) + 3))
                             .arabicFontDesign(custom: true)
                             .foregroundColor(settings.accentColor.color)
                             .lineLimit(1)
@@ -3862,6 +3948,8 @@ struct SurahView: View {
                     .lineLimit(1)
                     .padding(.top, -8)
             }
+            // Bar chrome: the pill stops scaling at the extra-large text size (see `NavigationTitlePill`).
+            .dynamicTypeSize(...NavigationTitlePill.typeSizeCeiling)
             .frame(maxWidth: .infinity)
             .foregroundColor(.primary)
             .contentShape(Rectangle())
@@ -4214,19 +4302,14 @@ private struct SurahPickerSheet: View {
     let currentSurahID: Int
     let onSelect: (Surah) -> Void
 
+    /// The Quran tab's own surah query grammar (`QuranData.surahListResults(for:)`), so ٥٦, "2:255",
+    /// "surah -1", "> 100 ayahs" and "makki" all work here too; the old name-only filter found nothing
+    /// for Arabic-Indic digits (Abu, 2026-09-07: "when I type ٥٦ nothing shows up"). Always in mushaf
+    /// order: the unfiltered list is, and results that jumped to the tab's revelation-order sort would
+    /// read as a different list.
     private var filteredSurahs: [Surah] {
-        let query = normalized(searchText)
-        guard !query.isEmpty else { return quranData.quran }
-
-        return quranData.quran.filter { surah in
-            let tokens = [
-                "\(surah.id)",
-                normalized(surah.nameEnglish),
-                normalized(surah.nameTransliteration),
-                normalized(surah.nameArabic)
-            ]
-            return tokens.contains { $0.contains(query) }
-        }
+        guard !searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return quranData.quran }
+        return quranData.surahListResults(for: searchText).sorted { $0.id < $1.id }
     }
 
     private func adjacentSurah(before surahID: Int) -> Surah? {
@@ -4332,8 +4415,8 @@ private struct SurahPickerSheet: View {
                                         // `searchQuery` is what paints the match: SurahRow feeds it to the
                                         // shared `HighlightedSnippet` for the transliteration, the English
                                         // name and the Arabic name - the exact treatment the Quran tab's
-                                        // search rows get (QuranView.surahSearchRow). Pass the RAW text, not
-                                        // `normalized(...)`: the snippet does its own script-aware
+                                        // search rows get (QuranView.surahSearchRow). Pass the RAW text: the
+                                        // snippet does its own script-aware
                                         // normalization, and `guaranteeMatch` stays off (the default) so a
                                         // query that only matched the transliteration doesn't also tint the
                                         // English and Arabic names.
@@ -4383,6 +4466,14 @@ private struct SurahPickerSheet: View {
                 .onAppear {
                     // Open ALREADY positioned on the current surah - no visible scroll animation.
                     scrollToCurrentSurah(proxy, animated: false)
+                    #if DEBUG
+                    // "-pickerSearch <text>" types into this search field a beat after the sheet opens, so
+                    // its results can be screenshotted headlessly (idb types ASCII only: no keycode for ٥).
+                    let args = ProcessInfo.processInfo.arguments
+                    if let i = args.firstIndex(of: "-pickerSearch"), i + 1 < args.count {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 1) { searchText = args[i + 1] }
+                    }
+                    #endif
                 }
                 .onChange(of: searchText) { _ in
                     guard searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
@@ -4392,10 +4483,6 @@ private struct SurahPickerSheet: View {
             }
         }
         .navigationViewStyle(.stack)
-    }
-
-    private func normalized(_ text: String) -> String {
-        settings.cleanSearch(text, whitespace: true)
     }
 }
 #endif
@@ -4490,7 +4577,7 @@ struct ArabicTextRiwayahPicker: View {
             }
         }
         #else
-        Picker("Arabic Riwayah", selection: $selection.animation(.easeInOut)) {
+        Picker("Arabic Riwayah", selection: $selection) {
             ForEach(Settings.Riwayah.textGroups) { group in
                 Section {
                     ForEach(group.options, id: \.tag) { option in

@@ -143,7 +143,7 @@ struct GodPillarView: View {
             }
             .themedListRowBackground()
         }
-        .selectableArticleList()
+        .selectableArticleList(article: "GodPillarView")
         .navigationTitle("Does God Exist?")
     }
 }
@@ -259,7 +259,7 @@ struct IslamPillarView: View {
             }
             .themedListRowBackground()
         }
-        .selectableArticleList()
+        .selectableArticleList(article: "IslamPillarView")
         .navigationTitle("What is Islam?")
     }
 }
@@ -331,7 +331,7 @@ struct MuslimPillarView: View {
             }
             .themedListRowBackground()
         }
-        .selectableArticleList()
+        .selectableArticleList(article: "MuslimPillarView")
         .navigationTitle("What is a Muslim?")
     }
 }
@@ -416,12 +416,10 @@ struct AllahPillarView: View {
                 }
 
                 ArticleSourcesSection(article: "AllahPillarView")
-
-                ArticleSourcesSection(article: "QuranPillarView")
             }
             .themedListRowBackground()
         }
-        .selectableArticleList()
+        .selectableArticleList(article: "AllahPillarView")
         .navigationTitle("Who is Allah?")
     }
 }
@@ -502,11 +500,11 @@ struct QuranPillarView: View {
                         .font(.body)
                 }
 
-                ArticleSourcesSection(article: "MuqattaatPillarView")
+                ArticleSourcesSection(article: "QuranPillarView")
             }
             .themedListRowBackground()
         }
-        .selectableArticleList()
+        .selectableArticleList(article: "QuranPillarView")
         .navigationTitle("What is the Quran?")
     }
 }
@@ -615,11 +613,13 @@ struct MuqattaatPillarView: View {
                     Text(verbatim: "Their precise meaning is known to Allah; the believer recites them as revealed, and they testify to the Quran's inimitable nature.")
                         .font(.body)
                 }
+
+                ArticleSourcesSection(article: "MuqattaatPillarView")
             }
             .themedListRowBackground()
         }
         .navigationTitle("Muqatta'at Letters")
-        .selectableArticleList()
+        .selectableArticleList(article: "MuqattaatPillarView")
     }
 
     private func muqattaatRow(_ row: MuqattaatRow) -> some View {
@@ -739,12 +739,10 @@ struct ProphetPillarView: View {
                 }
 
                 ArticleSourcesSection(article: "ProphetPillarView")
-
-                ArticleSourcesSection(article: "SunnahPillarView")
             }
             .themedListRowBackground()
         }
-        .selectableArticleList()
+        .selectableArticleList(article: "ProphetPillarView")
         .navigationTitle("Who is the Prophet?")
     }
 }
@@ -818,11 +816,11 @@ struct SunnahPillarView: View {
                         .font(.body)
                 }
 
-                ArticleSourcesSection(article: "HadithPillarView")
+                ArticleSourcesSection(article: "SunnahPillarView")
             }
             .themedListRowBackground()
         }
-        .selectableArticleList()
+        .selectableArticleList(article: "SunnahPillarView")
         .navigationTitle("What is the Sunnah?")
     }
 }
@@ -917,11 +915,11 @@ struct HadithPillarView: View {
                         .font(.body)
                 }
 
-                ArticleSourcesSection(article: "ShahadahView")
+                ArticleSourcesSection(article: "HadithPillarView")
             }
             .themedListRowBackground()
         }
-        .selectableArticleList()
+        .selectableArticleList(article: "HadithPillarView")
         .navigationTitle("What are Hadiths?")
     }
 }
@@ -1010,11 +1008,11 @@ struct ShahadahView: View {
                         .font(.body)
                 }
 
-                ArticleSourcesSection(article: "SalahView")
+                ArticleSourcesSection(article: "ShahadahView")
             }
             .themedListRowBackground()
         }
-        .selectableArticleList()
+        .selectableArticleList(article: "ShahadahView")
         .navigationTitle("Shahadah")
     }
 }
@@ -1092,11 +1090,11 @@ struct SalahView: View {
                         .font(.body)
                 }
 
-                ArticleSourcesSection(article: "SawmView")
+                ArticleSourcesSection(article: "SalahView")
             }
             .themedListRowBackground()
         }
-        .selectableArticleList()
+        .selectableArticleList(article: "SalahView")
         .navigationTitle("Salah")
     }
 }
@@ -1173,11 +1171,11 @@ struct SawmView: View {
                         .font(.body)
                 }
 
-                ArticleSourcesSection(article: "ZakahView")
+                ArticleSourcesSection(article: "SawmView")
             }
             .themedListRowBackground()
         }
-        .selectableArticleList()
+        .selectableArticleList(article: "SawmView")
         .navigationTitle("Sawm")
     }
 }
@@ -1237,11 +1235,11 @@ struct ZakahView: View {
                         .font(.body)
                 }
 
-                ArticleSourcesSection(article: "HajjView")
+                ArticleSourcesSection(article: "ZakahView")
             }
             .themedListRowBackground()
         }
-        .selectableArticleList()
+        .selectableArticleList(article: "ZakahView")
         .navigationTitle("Zakah")
     }
 }
@@ -1316,11 +1314,11 @@ struct HajjView: View {
                         .font(.body)
                 }
 
-                ArticleSourcesSection(article: "GodView")
+                ArticleSourcesSection(article: "HajjView")
             }
             .themedListRowBackground()
         }
-        .selectableArticleList()
+        .selectableArticleList(article: "HajjView")
         .navigationTitle("Hajj")
     }
 }
@@ -1383,11 +1381,11 @@ struct GodView: View {
                         .font(.body)
                 }
 
-                ArticleSourcesSection(article: "AngelsView")
+                ArticleSourcesSection(article: "GodView")
             }
             .themedListRowBackground()
         }
-        .selectableArticleList()
+        .selectableArticleList(article: "GodView")
         .navigationTitle("Belief in Allah")
     }
 }
@@ -1481,11 +1479,11 @@ struct AngelsView: View {
                         .font(.body)
                 }
 
-                ArticleSourcesSection(article: "BooksView")
+                ArticleSourcesSection(article: "AngelsView")
             }
             .themedListRowBackground()
         }
-        .selectableArticleList()
+        .selectableArticleList(article: "AngelsView")
         .navigationTitle("Belief in the Angels")
     }
 }
@@ -1560,11 +1558,11 @@ struct BooksView: View {
                         .font(.body)
                 }
 
-                ArticleSourcesSection(article: "ProphetsView")
+                ArticleSourcesSection(article: "BooksView")
             }
             .themedListRowBackground()
         }
-        .selectableArticleList()
+        .selectableArticleList(article: "BooksView")
         .navigationTitle("Belief in the Books")
     }
 }
@@ -1676,11 +1674,11 @@ struct ProphetsView: View {
                         .font(.body)
                 }
 
-                ArticleSourcesSection(article: "DayView")
+                ArticleSourcesSection(article: "ProphetsView")
             }
             .themedListRowBackground()
         }
-        .selectableArticleList()
+        .selectableArticleList(article: "ProphetsView")
         .navigationTitle("Belief in the Prophets")
     }
 }
@@ -1750,11 +1748,11 @@ struct DayView: View {
                         .font(.body)
                 }
 
-                ArticleSourcesSection(article: "QadarView")
+                ArticleSourcesSection(article: "DayView")
             }
             .themedListRowBackground()
         }
-        .selectableArticleList()
+        .selectableArticleList(article: "DayView")
         .navigationTitle("Belief in the Last Day")
     }
 }
@@ -1820,10 +1818,12 @@ struct QadarView: View {
                     Text(verbatim: "Belief in the divine decree brings patience in hardship and gratitude in ease, trusting that Allah's wisdom is always perfect.")
                         .font(.body)
                 }
+
+                ArticleSourcesSection(article: "QadarView")
             }
             .themedListRowBackground()
         }
-        .selectableArticleList()
+        .selectableArticleList(article: "QadarView")
         .navigationTitle("Belief in Al-Qadar")
     }
 }

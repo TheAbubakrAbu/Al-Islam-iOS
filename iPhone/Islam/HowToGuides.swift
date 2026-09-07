@@ -3,6 +3,14 @@ import SwiftUI
 /// The How-to Guides index. Rows come from `IslamArticleCatalog.guidesGroups`, the same list the
 /// search reads, so a result can say which section a guide sits in - see PillarsView for the shape.
 struct GuidesView: View {
+    /// An article to push on top of the index as it appears: a result on the Islam tab's root. Nil opens
+    /// the plain index (a DEBUG build may still take one from `-guidesArticle`, see `ArticleAutoOpen`).
+    var openArticle: IslamArticleOpenRequest?
+
+    init(openArticle: IslamArticleOpenRequest? = nil) {
+        self.openArticle = openArticle
+    }
+
     #if os(iOS)
     @State private var searchText = ""
     /// Apple Music-style bar minimization: true while scrolling down.
@@ -17,10 +25,6 @@ struct GuidesView: View {
         let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
         ScrollViewReader { proxy in
             List {
-                #if DEBUG
-                DebugArticleLink(articles: IslamArticleCatalog.debugArticles(for: .guides), argument: "-guidesArticle")
-                #endif
-
                 Group {
                     if query.isEmpty {
                         IslamArticleIndexSections(groups: IslamArticleCatalog.guidesGroups)
@@ -31,16 +35,18 @@ struct GuidesView: View {
                             query: query,
                             homes: [.guides],
                             contentHits: search.contentHits,
-                            isSearching: search.isSearching
-                        ) { entry in
-                            withAnimation { searchText = "" }
-                            scrollTarget = entry.listID
-                        }
+                            isSearching: search.isSearching,
+                            onScrollTo: { entry in
+                                withAnimation { searchText = "" }
+                                scrollTarget = entry.listID
+                            }
+                        )
                     }
                 }
                 .themedListRowBackground()
             }
             .applyConditionalListStyle()
+            .autoOpenArticle(openArticle, home: .guides)
             .islamArticleIndexSearch(searchText: $searchText, barsCollapsed: $barsCollapsed,
                                      scrollTarget: scrollTarget, proxy: proxy)
         }
@@ -194,7 +200,7 @@ struct HowToPrayView: View {
             }
             .themedListRowBackground()
         }
-        .selectableArticleList()
+        .selectableArticleList(article: "HowToPrayView")
         .navigationTitle("How to Pray")
     }
 }
@@ -271,7 +277,7 @@ struct HowToFastView: View {
             }
             .themedListRowBackground()
         }
-        .selectableArticleList()
+        .selectableArticleList(article: "HowToFastView")
         .navigationTitle("How to Fast")
     }
 }
@@ -327,7 +333,7 @@ struct HowToZakahView: View {
             }
             .themedListRowBackground()
         }
-        .selectableArticleList()
+        .selectableArticleList(article: "HowToZakahView")
         .navigationTitle("How to Give Zakah")
     }
 }
@@ -384,12 +390,10 @@ struct HowToHajjView: View {
                 }
 
                 ArticleSourcesSection(article: "HowToHajjView")
-
-                ArticleSourcesSection(article: "HowToUmrahView")
             }
             .themedListRowBackground()
         }
-        .selectableArticleList()
+        .selectableArticleList(article: "HowToHajjView")
         .navigationTitle("How to Perform Hajj")
     }
 }
@@ -443,10 +447,12 @@ struct HowToUmrahView: View {
                         .font(.body)
                     ScriptureQuote(text: "“Alternate between Hajj and Umrah; for those two remove poverty and sins just as the bellows removes filth from iron, gold, and silver - and there is no reward for Al-Hajj Al-Mabrur except for Paradise” (Sunan al-Tirmidhi 810; graded hasan sahih by al-Albani).", arabic: "تَابِعُوا بَيْنَ الْحَجِّ وَالْعُمْرَةِ فَإِنَّهُمَا يَنْفِيَانِ الْفَقْرَ وَالذُّنُوبَ كَمَا يَنْفِي الْكِيرُ خَبَثَ الْحَدِيدِ وَالذَّهَبِ وَالْفِضَّةِ وَلَيْسَ لِلْحَجَّةِ الْمَبْرُورَةِ ثَوَابٌ إِلاَّ الْجَنَّةُ", dimmed: true)
                 }
+
+                ArticleSourcesSection(article: "HowToUmrahView")
             }
             .themedListRowBackground()
         }
-        .selectableArticleList()
+        .selectableArticleList(article: "HowToUmrahView")
         .navigationTitle("How to Perform Umrah")
     }
 }
@@ -508,12 +514,10 @@ struct TayammumView: View {
                 }
 
                 ArticleSourcesSection(article: "TayammumView")
-
-                ArticleSourcesSection(article: "RawatibView")
             }
             .themedListRowBackground()
         }
-        .selectableArticleList()
+        .selectableArticleList(article: "TayammumView")
         .navigationTitle("How to Make Tayammum")
     }
 }
@@ -577,11 +581,11 @@ struct RawatibView: View {
                         .font(.body)
                 }
 
-                ArticleSourcesSection(article: "WitrView")
+                ArticleSourcesSection(article: "RawatibView")
             }
             .themedListRowBackground()
         }
-        .selectableArticleList()
+        .selectableArticleList(article: "RawatibView")
         .navigationTitle("How to Pray the Sunnah Prayers")
     }
 }
@@ -647,11 +651,11 @@ struct WitrView: View {
                         .font(.body)
                 }
 
-                ArticleSourcesSection(article: "TahajjudView")
+                ArticleSourcesSection(article: "WitrView")
             }
             .themedListRowBackground()
         }
-        .selectableArticleList()
+        .selectableArticleList(article: "WitrView")
         .navigationTitle("How to Pray Witr")
     }
 }
@@ -716,11 +720,11 @@ struct TahajjudView: View {
                         .font(.body)
                 }
 
-                ArticleSourcesSection(article: "DuhaView")
+                ArticleSourcesSection(article: "TahajjudView")
             }
             .themedListRowBackground()
         }
-        .selectableArticleList()
+        .selectableArticleList(article: "TahajjudView")
         .navigationTitle("How to Pray Tahajjud")
     }
 }
@@ -770,11 +774,11 @@ struct DuhaView: View {
                         .font(.body)
                 }
 
-                ArticleSourcesSection(article: "TaraweehView")
+                ArticleSourcesSection(article: "DuhaView")
             }
             .themedListRowBackground()
         }
-        .selectableArticleList()
+        .selectableArticleList(article: "DuhaView")
         .navigationTitle("How to Pray Duha")
     }
 }
@@ -829,11 +833,11 @@ struct TaraweehView: View {
                         .font(.body)
                 }
 
-                ArticleSourcesSection(article: "JanazahView")
+                ArticleSourcesSection(article: "TaraweehView")
             }
             .themedListRowBackground()
         }
-        .selectableArticleList()
+        .selectableArticleList(article: "TaraweehView")
         .navigationTitle("How to Pray Taraweeh")
     }
 }
@@ -908,11 +912,11 @@ struct JanazahView: View {
                         .font(.body)
                 }
 
-                ArticleSourcesSection(article: "IstikharahView")
+                ArticleSourcesSection(article: "JanazahView")
             }
             .themedListRowBackground()
         }
-        .selectableArticleList()
+        .selectableArticleList(article: "JanazahView")
         .navigationTitle("How to Pray the Funeral Prayer")
     }
 }
@@ -974,11 +978,11 @@ struct IstikharahView: View {
                         .font(.body)
                 }
 
-                ArticleSourcesSection(article: "TravelPrayerView")
+                ArticleSourcesSection(article: "IstikharahView")
             }
             .themedListRowBackground()
         }
-        .selectableArticleList()
+        .selectableArticleList(article: "IstikharahView")
         .navigationTitle("How to Pray Istikharah")
     }
 }
@@ -1044,11 +1048,11 @@ struct TravelPrayerView: View {
                         .font(.body)
                 }
 
-                ArticleSourcesSection(article: "SickPrayerView")
+                ArticleSourcesSection(article: "TravelPrayerView")
             }
             .themedListRowBackground()
         }
-        .selectableArticleList()
+        .selectableArticleList(article: "TravelPrayerView")
         .navigationTitle("How to Pray While Traveling")
     }
 }
@@ -1111,11 +1115,11 @@ struct SickPrayerView: View {
                         .font(.body)
                 }
 
-                ArticleSourcesSection(article: "MissedPrayerView")
+                ArticleSourcesSection(article: "SickPrayerView")
             }
             .themedListRowBackground()
         }
-        .selectableArticleList()
+        .selectableArticleList(article: "SickPrayerView")
         .navigationTitle("How to Pray When Sick")
     }
 }
@@ -1171,11 +1175,11 @@ struct MissedPrayerView: View {
                         .font(.body)
                 }
 
-                ArticleSourcesSection(article: "SujudSahwView")
+                ArticleSourcesSection(article: "MissedPrayerView")
             }
             .themedListRowBackground()
         }
-        .selectableArticleList()
+        .selectableArticleList(article: "MissedPrayerView")
         .navigationTitle("How to Make Up Missed Prayers")
     }
 }
@@ -1227,11 +1231,11 @@ struct SujudSahwView: View {
                         .font(.body)
                 }
 
-                ArticleSourcesSection(article: "VoluntaryFastsView")
+                ArticleSourcesSection(article: "SujudSahwView")
             }
             .themedListRowBackground()
         }
-        .selectableArticleList()
+        .selectableArticleList(article: "SujudSahwView")
         .navigationTitle("How to Perform Sujud as-Sahw")
     }
 }
@@ -1309,11 +1313,11 @@ struct VoluntaryFastsView: View {
                         .font(.body)
                 }
 
-                ArticleSourcesSection(article: "ItikafView")
+                ArticleSourcesSection(article: "VoluntaryFastsView")
             }
             .themedListRowBackground()
         }
-        .selectableArticleList()
+        .selectableArticleList(article: "VoluntaryFastsView")
         .navigationTitle("How to Fast Voluntary Fasts")
     }
 }
@@ -1367,11 +1371,11 @@ struct ItikafView: View {
                         .font(.body)
                 }
 
-                ArticleSourcesSection(article: "ZakatFitrView")
+                ArticleSourcesSection(article: "ItikafView")
             }
             .themedListRowBackground()
         }
-        .selectableArticleList()
+        .selectableArticleList(article: "ItikafView")
         .navigationTitle("How to Perform I'tikaf")
     }
 }
@@ -1421,11 +1425,11 @@ struct ZakatFitrView: View {
                         .font(.body)
                 }
 
-                ArticleSourcesSection(article: "UdhiyahView")
+                ArticleSourcesSection(article: "ZakatFitrView")
             }
             .themedListRowBackground()
         }
-        .selectableArticleList()
+        .selectableArticleList(article: "ZakatFitrView")
         .navigationTitle("How to Give Zakat al-Fitr")
     }
 }
@@ -1495,11 +1499,11 @@ struct UdhiyahView: View {
                         .font(.body)
                 }
 
-                ArticleSourcesSection(article: "BecomeMuslimView")
+                ArticleSourcesSection(article: "UdhiyahView")
             }
             .themedListRowBackground()
         }
-        .selectableArticleList()
+        .selectableArticleList(article: "UdhiyahView")
         .navigationTitle("How to Offer the Eid Sacrifice")
     }
 }
@@ -1583,11 +1587,11 @@ struct BecomeMuslimView: View {
                         .font(.body)
                 }
 
-                ArticleSourcesSection(article: "TawbahView")
+                ArticleSourcesSection(article: "BecomeMuslimView")
             }
             .themedListRowBackground()
         }
-        .selectableArticleList()
+        .selectableArticleList(article: "BecomeMuslimView")
         .navigationTitle("How to Become a Muslim")
     }
 }
@@ -1656,11 +1660,11 @@ struct TawbahView: View {
                         .font(.body)
                 }
 
-                ArticleSourcesSection(article: "MakeDuaView")
+                ArticleSourcesSection(article: "TawbahView")
             }
             .themedListRowBackground()
         }
-        .selectableArticleList()
+        .selectableArticleList(article: "TawbahView")
         .navigationTitle("How to Repent")
     }
 }
@@ -1726,10 +1730,12 @@ struct MakeDuaView: View {
                     Text(verbatim: "Praise Him, send prayers on His Prophet, raise your hands, ask with certainty and persistence at the hours He loves, and know that no sincere call to Allah is ever lost.")
                         .font(.body)
                 }
+
+                ArticleSourcesSection(article: "MakeDuaView")
             }
             .themedListRowBackground()
         }
-        .selectableArticleList()
+        .selectableArticleList(article: "MakeDuaView")
         .navigationTitle("How to Make Dua")
     }
 }

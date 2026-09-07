@@ -229,7 +229,7 @@ enum OnDeviceAsk {
     permitted or forbidden, describe only what the text says and note that a qualified scholar \
     should be consulted for personal rulings.
     4. If a question asks about something the source text does not cover, say plainly that this \
-    text does not address it - do not fill the gap from general knowledge.
+    text does not address it. Do not fill the gap from general knowledge.
     5. Write clearly and completely: short paragraphs, plain respectful language, no markdown \
     formatting.
     """
@@ -249,7 +249,7 @@ enum OnDeviceAsk {
     together: report only what the texts actually say, in your own words, keeping their emphasis. \
     Where sources add distinct points, bring them together and name the source when that helps \
     (e.g. "al-Tabari notes..."). Never fabricate or extend their content.
-    3. When answering follow-up questions, draw on ANY of the sections - not just one - and name \
+    3. When answering follow-up questions, draw on ANY of the sections, not just one, and name \
     which tafsir a point comes from when relevant.
     4. Never write out the text of a verse or hadith from memory. If a source quotes one, refer to \
     it briefly in your own words rather than reproducing it.
@@ -257,7 +257,7 @@ enum OnDeviceAsk {
     permitted or forbidden, describe only what they say and note that a qualified scholar should \
     be consulted for personal rulings.
     6. If a question asks about something none of the sections cover, say plainly that these texts \
-    do not address it - do not fill the gap from general knowledge.
+    do not address it. Do not fill the gap from general knowledge.
     7. Write clearly and completely: short paragraphs, plain respectful language, no markdown \
     formatting.
     """
@@ -401,7 +401,7 @@ enum OnDeviceAsk {
             closing = "Answer IN \(language.promptName), from the section headed \"=== \(focus) ===\" first; " +
                 "the other sections are context, so name them when a point comes from one of them instead."
         } else if multiSource {
-            closing = "Answer IN \(language.promptName), only from the source texts above - any of the sections may " +
+            closing = "Answer IN \(language.promptName), only from the source texts above. Any of the sections may " +
               "supply the answer; name which source a point comes from when relevant."
         } else {
             closing = "Answer IN \(language.promptName), only from the source text above."
@@ -420,6 +420,39 @@ enum OnDeviceAsk {
             """)
     }
 
+    /// The on-device model occasionally falls into a loop and repeats one sentence (or a pair of
+    /// them) until its token budget runs out: "what breaks wudu" on 2026-09-06 filled the whole chat
+    /// with the same line. Three identical consecutive sentences (or sentence pairs) at the tail of a
+    /// snapshot mean it is looping; the text is cut at the start of the second copy and the stream
+    /// ends there, so the answer keeps everything the model said before it stalled.
+    static func repetitionCutoff(in text: String) -> String.Index? {
+        let terminators: Set<Character> = [".", "!", "?", "\n", "\u{61F}", "\u{6D4}"]
+        var sentences: [(start: String.Index, key: String)] = []
+        var start = text.startIndex
+        var index = text.startIndex
+        while index < text.endIndex {
+            if terminators.contains(text[index]) {
+                let end = text.index(after: index)
+                let key = text[start..<end].trimmingCharacters(in: .whitespacesAndNewlines)
+                if !key.isEmpty { sentences.append((start, key)) }
+                start = end
+            }
+            index = text.index(after: index)
+        }
+        for window in 1...2 {
+            let needed = window * 3
+            guard sentences.count >= needed else { continue }
+            let tail = Array(sentences.suffix(needed))
+            let groups = stride(from: 0, to: needed, by: window).map { offset in
+                tail[offset..<offset + window].map(\.key).joined(separator: " ")
+            }
+            guard let first = groups.first, first.count >= 24,
+                  groups.allSatisfy({ $0 == first }) else { continue }
+            return tail[window].start
+        }
+        return nil
+    }
+
     @available(iOS 26.0, *)
     private static func streamSummarizeTask(instructions: String, prompt: String,
                                             options: GenerationOptions = GenerationOptions()) -> AsyncThrowingStream<String, Error> {
@@ -430,6 +463,11 @@ enum OnDeviceAsk {
                     let stream = session.streamResponse(to: prompt, options: options)
                     for try await partial in stream {
                         if Task.isCancelled { break }
+                        if let cut = repetitionCutoff(in: partial.content) {
+                            let kept = String(partial.content[..<cut]).trimmingCharacters(in: .whitespacesAndNewlines)
+                            continuation.yield(kept)
+                            break
+                        }
                         continuation.yield(partial.content)
                     }
                     continuation.finish()

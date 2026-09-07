@@ -69,6 +69,15 @@ struct IslamArticleGroup: Identifiable {
     var id: String { "\(home.rawValue)/\(title)" }
 }
 
+/// An article to open on top of its index: what a result on the Islam tab's root asks Pillars & Beliefs
+/// or the How-to Guides to push as they appear, so the article stacks on its index (Islam \u{203A} Pillars &
+/// Beliefs \u{203A} Shahadah) and Back returns to the index, the way a hadith opened from the Hadith tab's
+/// search stacks on its book and chapter. `section` lands the page on that heading.
+struct IslamArticleOpenRequest: Hashable {
+    let id: String
+    var section: String? = nil
+}
+
 enum IslamArticleCatalog {
     private static func entry(_ id: String, _ title: String, _ group: String, _ home: IslamArticleHome,
                               key: String, emphasized: Bool = false, aliases: [String] = []) -> IslamArticleEntry {
@@ -238,14 +247,19 @@ enum IslamArticleCatalog {
         uniquingKeysWith: { a, _ in a }
     )
 
-    /// The `-pillarsArticle` / `-guidesArticle` dictionaries, built from the catalog instead of by hand.
+    /// The article's index screen, told to push the article as it appears (`ArticleAutoOpen`). Before
+    /// iOS 16 there is no `navigationDestination(isPresented:)`, so the article opens directly.
     @MainActor
-    static func debugArticles(for home: IslamArticleHome) -> [String: AnyView] {
-        var out: [String: AnyView] = [:]
-        for entry in groups(for: home).flatMap(\.entries) {
-            if let view = IslamArticles.destination(for: entry.id) { out[entry.debugKey] = view }
+    static func homeDestination(_ home: IslamArticleHome, opening request: IslamArticleOpenRequest) -> AnyView {
+        #if os(iOS)
+        if #available(iOS 16.0, *) {
+            switch home {
+            case .pillars: return AnyView(PillarsView(openArticle: request))
+            case .guides: return AnyView(GuidesView(openArticle: request))
+            }
         }
-        return out
+        #endif
+        return destination(id: request.id, section: request.section)
     }
 
     /// The article page. With a `section`, the page scrolls to that heading as it appears (see
@@ -322,12 +336,124 @@ struct ArticleHeader: View {
     init(_ title: String) { self.title = title }
 
     var body: some View {
+        #if os(iOS)
+        Text(title)
+            .background(ArticleHeaderProbe(heading: title))
+            .id(Self.anchorID(title))
+        #else
         Text(title)
             .id(Self.anchorID(title))
+        #endif
     }
 
     static func anchorID(_ heading: String) -> String { "articleSection_\(heading)" }
 }
+
+/// The scroll to a section heading: three plain jumps a third of a second apart, then the exact offset.
+/// A List measures its rows as they come on screen, so `scrollTo` aims at ESTIMATED row heights; an
+/// animated scroll keeps measuring rows on its way and lands a section early or late on a long page
+/// (Abu: a result "doesn't scroll to the right place"), while a jump lands, lets the rows around the
+/// target measure, and the next jump corrects from a consistent layout. Even then `scrollTo` puts the
+/// section's first ROW at the top and leaves the heading itself under the navigation bar, so the last
+/// word goes to `ArticleScrollHandle.settle`, which reads the heading's measured frame and sets the
+/// offset that shows it `topPadding` points below the bar.
+enum ArticleScroll {
+    static let topPadding: CGFloat = 16
+
+    static func land(on heading: String, proxy: ScrollViewProxy, after delay: Double, handle: ArticleScrollHandle?) {
+        let id = ArticleHeader.anchorID(heading)
+        for step in 0..<3 {
+            DispatchQueue.main.asyncAfter(deadline: .now() + delay + Double(step) * 0.3) {
+                proxy.scrollTo(id, anchor: .top)
+                guard step == 2 else { return }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    handle?.settle(on: heading, padding: topPadding)
+                }
+            }
+        }
+    }
+}
+
+/// The page's UIKit handle for the landing: the header views by heading, registered by
+/// `ArticleHeaderProbe` from inside the List, so `settle` can place a heading from its ACTUAL frame
+/// instead of from what `ScrollViewProxy.scrollTo` makes of a section header. One per page, handed to
+/// the headers through `articleScrollHandle`.
+final class ArticleScrollHandle: ObservableObject {
+    #if os(iOS)
+    private final class Weak {
+        weak var view: UIView?
+        init(_ view: UIView) { self.view = view }
+    }
+
+    private var headers: [String: Weak] = [:]
+
+    func register(_ view: UIView, heading: String) {
+        headers[heading] = Weak(view)
+    }
+    #endif
+
+    /// Sets the scroll offset that shows `heading` `padding` points below the top of the visible area.
+    /// Nothing happens while the heading is off screen (its view is not laid out), which is why the
+    /// jumps in `ArticleScroll.land` come first.
+    func settle(on heading: String, padding: CGFloat) {
+        #if os(iOS)
+        guard let header = headers[heading]?.view, header.window != nil else { return }
+        var ancestor = header.superview
+        while let candidate = ancestor, !(candidate is UIScrollView) { ancestor = candidate.superview }
+        guard let scrollView = ancestor as? UIScrollView else { return }
+        let top = header.convert(CGPoint.zero, to: scrollView).y
+        let inset = scrollView.adjustedContentInset
+        let minY = -inset.top
+        let maxY = max(minY, scrollView.contentSize.height + inset.bottom - scrollView.bounds.height)
+        let y = min(max(top - inset.top - padding, minY), maxY)
+        scrollView.setContentOffset(CGPoint(x: scrollView.contentOffset.x, y: y), animated: false)
+        #endif
+    }
+}
+
+private struct ArticleScrollHandleKey: EnvironmentKey {
+    static let defaultValue: ArticleScrollHandle? = nil
+}
+
+extension EnvironmentValues {
+    /// The page's `ArticleScrollHandle`, set by `selectableArticleList` for the headers inside the page.
+    var articleScrollHandle: ArticleScrollHandle? {
+        get { self[ArticleScrollHandleKey.self] }
+        set { self[ArticleScrollHandleKey.self] = newValue }
+    }
+}
+
+#if os(iOS)
+/// A drawing-free UIView behind a section heading, registered with the page's handle once it is in the
+/// window: the heading's measured frame, for `ArticleScrollHandle.settle`.
+private struct ArticleHeaderProbe: UIViewRepresentable {
+    @Environment(\.articleScrollHandle) private var handle
+
+    let heading: String
+
+    func makeUIView(context: Context) -> ProbeView {
+        let view = ProbeView()
+        view.isUserInteractionEnabled = false
+        view.backgroundColor = .clear
+        return view
+    }
+
+    func updateUIView(_ view: ProbeView, context: Context) {
+        view.heading = heading
+        view.handle = handle
+    }
+
+    final class ProbeView: UIView {
+        var heading = ""
+        weak var handle: ArticleScrollHandle?
+
+        override func didMoveToWindow() {
+            super.didMoveToWindow()
+            if window != nil { handle?.register(self, heading: heading) }
+        }
+    }
+}
+#endif
 
 /// One block of article prose, as data. The largest articles (Phase 6 step 3 of the Performance Guide)
 /// keep their sections in a `static let [ArticleSection]` rendered by `ArticleSectionsView`, so the List
@@ -519,6 +645,20 @@ enum IslamArticleSearch {
         return hits
     }
 
+    /// Every section of ONE article whose prose carries every word of the query, in page order: the
+    /// page's own search, which has no per-article cap. Off the main actor, like `contentHits`.
+    static func sectionHits(_ query: String, articleID: String) -> [ContentHit] {
+        let terms = words(query)
+        guard !terms.isEmpty, let article = IslamArticles.all.first(where: { $0.id == articleID }) else { return [] }
+        var hits: [ContentHit] = []
+        for (index, section) in article.sections.enumerated() where !section.heading.isEmpty {
+            guard terms.allSatisfy({ section.folded.contains($0) }) else { continue }
+            hits.append(ContentHit(article: article, section: section, sectionIndex: index,
+                                   snippet: snippet(of: section.text, around: query, terms: terms)))
+        }
+        return hits
+    }
+
     /// A window of `text` around the first occurrence of the query (or of its first word), cut at
     /// word boundaries with ellipses, so the row shows the match in context rather than the section's
     /// opening line.
@@ -566,6 +706,8 @@ enum IslamArticleSearch {
 @MainActor
 final class IslamArticleSearchModel: ObservableObject {
     @Published private(set) var contentHits: [IslamArticleSearch.ContentHit] = []
+    /// Every matching section of the page's own article (`update(query:homes:within:)`), in page order.
+    @Published private(set) var articleHits: [IslamArticleSearch.ContentHit] = []
     /// True between a query change and its results landing, so the screen can hold "no matches"
     /// until the scan has actually run.
     @Published private(set) var isSearching = false
@@ -577,11 +719,14 @@ final class IslamArticleSearchModel: ObservableObject {
         Task.detached(priority: .utility) { _ = IslamArticles.all }
     }
 
-    func update(query: String, homes: Set<IslamArticleHome>) {
+    /// `within`: the open article's id on an article page. Its own sections come back in `articleHits`
+    /// (all of them), while `contentHits` still covers every article for the "other articles" rows.
+    func update(query: String, homes: Set<IslamArticleHome>, within articleID: String? = nil) {
         task?.cancel()
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else {
             if !contentHits.isEmpty { contentHits = [] }
+            if !articleHits.isEmpty { articleHits = [] }
             isSearching = false
             return
         }
@@ -589,11 +734,13 @@ final class IslamArticleSearchModel: ObservableObject {
         task = Task { [weak self] in
             try? await Task.sleep(nanoseconds: 180_000_000)
             guard !Task.isCancelled else { return }
-            let hits = await Task.detached(priority: .userInitiated) {
-                IslamArticleSearch.contentHits(trimmed, homes: homes)
+            let (hits, own) = await Task.detached(priority: .userInitiated) {
+                (IslamArticleSearch.contentHits(trimmed, homes: homes),
+                 articleID.map { IslamArticleSearch.sectionHits(trimmed, articleID: $0) } ?? [])
             }.value
             guard !Task.isCancelled else { return }
             self?.contentHits = hits
+            self?.articleHits = own
             self?.isSearching = false
         }
     }
@@ -609,6 +756,8 @@ struct IslamArticleTitleRow: View {
     let entry: IslamArticleEntry
     let query: String
     var showHome: Bool = false
+    /// True on the Islam tab's root: the row opens the article's index with the article pushed on top.
+    var openViaHome: Bool = false
     var scrollLabel: String = "Scroll To Article"
     /// Clears the search and scrolls the index to this article's row. Nil = no such row on this screen.
     var onScrollTo: (() -> Void)? = nil
@@ -617,8 +766,15 @@ struct IslamArticleTitleRow: View {
         showHome ? "\(entry.home.title) \u{203A} \(entry.group)" : entry.group
     }
 
+    @MainActor
+    private var destination: AnyView {
+        openViaHome
+            ? IslamArticleCatalog.homeDestination(entry.home, opening: IslamArticleOpenRequest(id: entry.id))
+            : IslamArticleCatalog.destination(entry)
+    }
+
     var body: some View {
-        NavigationLink(destination: LazyDestination { IslamArticleCatalog.destination(entry) }) {
+        NavigationLink(destination: LazyDestination { destination }) {
             VStack(alignment: .leading, spacing: 3) {
                 HighlightedSnippet(
                     source: entry.title,
@@ -648,6 +804,8 @@ struct IslamArticleContentRow: View {
     let hit: IslamArticleSearch.ContentHit
     let query: String
     var showHome: Bool = false
+    /// True on the Islam tab's root: the row opens the article's index with the article pushed on top.
+    var openViaHome: Bool = false
     var scrollLabel: String = "Scroll To Article"
     var onScrollTo: (() -> Void)? = nil
 
@@ -659,10 +817,17 @@ struct IslamArticleContentRow: View {
         return parts.joined(separator: " \u{203A} ")
     }
 
+    @MainActor
+    private var destination: AnyView {
+        if openViaHome, let home = hit.home {
+            return IslamArticleCatalog.homeDestination(
+                home, opening: IslamArticleOpenRequest(id: hit.article.id, section: hit.section.heading))
+        }
+        return IslamArticleCatalog.destination(id: hit.article.id, section: hit.section.heading)
+    }
+
     var body: some View {
-        NavigationLink(destination: LazyDestination {
-            IslamArticleCatalog.destination(id: hit.article.id, section: hit.section.heading)
-        }) {
+        NavigationLink(destination: LazyDestination { destination }) {
             VStack(alignment: .leading, spacing: 4) {
                 Text(caption)
                     .font(.caption.weight(.semibold))
@@ -757,39 +922,48 @@ struct IslamArticleSearchSections: View {
     let contentHits: [IslamArticleSearch.ContentHit]
     let isSearching: Bool
     var showHome: Bool = false
+    /// True on the Islam tab's root: a result opens the article's index with the article pushed on top.
+    var openViaHome: Bool = false
+    /// The open article on an article page: it has its own IN THIS ARTICLE rows, so it is left out here.
+    var excludeArticle: String? = nil
+    /// The two headers: ARTICLES and IN THE ARTICLES on the indexes and the root, OTHER ARTICLES and IN
+    /// OTHER ARTICLES under a page's own matches.
+    var articlesTitle: String = "ARTICLES"
+    var passagesTitle: String = "IN THE ARTICLES"
     /// True when the screen has other matches of its own (the Islam tab's resources), so an empty
     /// article result is not "nothing matched".
     var hasOtherResults: Bool = false
     /// The menu label for the scroll action: "Scroll To Article" on an index, the resource's name on
     /// the Islam tab root, where the scroll lands on the resource row instead.
     var scrollLabel: (IslamArticleEntry) -> String = { _ in "Scroll To Article" }
-    let onScrollTo: (IslamArticleEntry) -> Void
+    /// Clears the search and scrolls the index to the article's row. Nil on an article page, which has
+    /// no index rows to scroll to.
+    var onScrollTo: ((IslamArticleEntry) -> Void)? = nil
 
     var body: some View {
-        let titleHits = IslamArticleSearch.titleHits(query, homes: homes)
+        let titleHits = IslamArticleSearch.titleHits(query, homes: homes).filter { $0.id != excludeArticle }
+        let passages = excludeArticle == nil ? contentHits : contentHits.filter { $0.article.id != excludeArticle }
 
         if !titleHits.isEmpty {
-            Section(header: SectionPillHeader(title: "ARTICLES", count: titleHits.count)) {
+            Section(header: SectionPillHeader(title: articlesTitle, count: titleHits.count)) {
                 ForEach(titleHits) { entry in
-                    IslamArticleTitleRow(entry: entry, query: query, showHome: showHome,
-                                         scrollLabel: scrollLabel(entry)) {
-                        onScrollTo(entry)
-                    }
+                    IslamArticleTitleRow(entry: entry, query: query, showHome: showHome, openViaHome: openViaHome,
+                                         scrollLabel: scrollLabel(entry), onScrollTo: scrollAction(for: entry))
                 }
             }
         }
 
-        if !contentHits.isEmpty {
-            Section(header: SectionPillHeader(title: "IN THE ARTICLES", count: contentHits.count)) {
-                ForEach(contentHits) { hit in
-                    IslamArticleContentRow(hit: hit, query: query, showHome: showHome,
+        if !passages.isEmpty {
+            Section(header: SectionPillHeader(title: passagesTitle, count: passages.count)) {
+                ForEach(passages) { hit in
+                    IslamArticleContentRow(hit: hit, query: query, showHome: showHome, openViaHome: openViaHome,
                                            scrollLabel: hit.entry.map(scrollLabel) ?? "Scroll To Article",
-                                           onScrollTo: scrollAction(for: hit))
+                                           onScrollTo: hit.entry.flatMap(scrollAction))
                 }
             }
         }
 
-        if titleHits.isEmpty, contentHits.isEmpty, !isSearching, !hasOtherResults {
+        if titleHits.isEmpty, passages.isEmpty, !isSearching, !hasOtherResults {
             Section {
                 Text("No articles match your search.")
                     .font(.subheadline)
@@ -798,9 +972,9 @@ struct IslamArticleSearchSections: View {
         }
     }
 
-    /// The row's "Scroll To Article" action, or nil for a passage whose article has no index row here.
-    private func scrollAction(for hit: IslamArticleSearch.ContentHit) -> (() -> Void)? {
-        guard let entry = hit.entry else { return nil }
+    /// The row's "Scroll To Article" action, or nil where this screen has no index row to scroll to.
+    private func scrollAction(for entry: IslamArticleEntry) -> (() -> Void)? {
+        guard let onScrollTo else { return nil }
         return { onScrollTo(entry) }
     }
 }
@@ -893,6 +1067,181 @@ extension View {
                                  scrollTarget: String?, proxy: ScrollViewProxy) -> some View {
         modifier(IslamArticleIndexSearch(searchText: searchText, barsCollapsed: barsCollapsed,
                                          scrollTarget: scrollTarget, proxy: proxy))
+    }
+}
+
+// MARK: - The article page's own search
+
+/// The search bar at the foot of an article page and its results. Installed by
+/// `selectableArticleList(article:)` around the page's List: while a query is typed the page fades out
+/// under a results list that shares its wash and bottom insets - IN THIS ARTICLE first (every section
+/// of the page that matches, tapped to scroll the page to that heading), then the other articles, which
+/// push the way the index results do.
+struct ArticleSearchChrome: ViewModifier {
+    let articleID: String
+    let proxy: ScrollViewProxy
+    /// The page's landing handle (see `ArticleScroll`).
+    let handle: ArticleScrollHandle
+    let disableNowPlayingInset: Bool
+    let topContentMargin: CGFloat
+
+    @State private var searchText = ""
+    /// Apple Music-style bar minimization: true while scrolling down.
+    @State private var barsCollapsed = false
+    /// The heading a result asked for, consumed once the results have faded out.
+    @State private var scrollTarget: String?
+    @StateObject private var search = IslamArticleSearchModel()
+
+    private var query: String { searchText.trimmingCharacters(in: .whitespacesAndNewlines) }
+
+    func body(content: Content) -> some View {
+        let searching = !query.isEmpty
+        content
+            // Faded rather than removed: the page keeps its scroll position and its measured rows, so the
+            // scroll to a picked section starts from where the reader was.
+            .opacity(searching ? 0 : 1)
+            .overlay {
+                if searching {
+                    ArticleSearchResults(articleID: articleID, query: query, search: search) { heading in
+                        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                        withAnimation { searchText = "" }
+                        scrollTarget = heading
+                    }
+                    .transition(.opacity)
+                }
+            }
+            // Apple Music-style: the bottom bar minimizes while scrolling down, restores on scroll-up.
+            .collapseBarsOnScroll($barsCollapsed)
+            .articleListStyle(disableNowPlayingInset: disableNowPlayingInset, topContentMargin: topContentMargin)
+            .adaptiveSafeArea(edge: .bottom) {
+                SearchBar(text: (AppPerformance.shouldReduceAnimations ? $searchText : $searchText.animation(.easeInOut)),
+                          placeholder: "Search this article")
+                    .minimizedBarStyle(barsCollapsed)
+                    .animation(.spring(response: 0.35, dampingFraction: 0.85), value: barsCollapsed)
+                    .padding(.horizontal, 24)
+                    .padding(.bottom, BottomBarCushion.standard)
+                    .background(Color.white.opacity(0.00001))
+            }
+            .onAppear {
+                IslamArticleSearchModel.prewarm()
+                #if DEBUG
+                // `-articleSearch <query>` seeds the page's search; `-articleSearchPick` alongside then
+                // taps the first IN THIS ARTICLE row, the only headless way to screenshot both.
+                if let seeded = IslamSearchDebug.launchQuery("-articleSearch"), searchText.isEmpty {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { searchText = seeded }
+                    if ProcessInfo.processInfo.arguments.contains("-articleSearchPick") {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 3.5) {
+                            guard let first = search.articleHits.first else { return }
+                            withAnimation { searchText = "" }
+                            scrollTarget = first.section.heading
+                        }
+                    }
+                }
+                #endif
+            }
+            .onChange(of: searchText) { text in
+                search.update(query: text, homes: [.pillars, .guides], within: articleID)
+                if !text.isEmpty { scrollTarget = nil }
+            }
+            .onChange(of: scrollTarget) { target in
+                guard let target else { return }
+                // The results are still fading out; scroll once the page is back.
+                ArticleScroll.land(on: target, proxy: proxy, after: 0.2, handle: handle)
+            }
+    }
+}
+
+/// The results over an article page: Ask AI, the page's own matching sections, then the other articles.
+private struct ArticleSearchResults: View {
+    let articleID: String
+    let query: String
+    @ObservedObject var search: IslamArticleSearchModel
+    /// Called with the heading of a tapped section: clears the search and scrolls the page to it.
+    let onScrollTo: (String) -> Void
+
+    var body: some View {
+        List {
+            Group {
+                AskAISearchSection(query: query)
+
+                // Held until the scan has run, so the page never flashes "nothing matches" mid-keystroke.
+                if !search.articleHits.isEmpty || !search.isSearching {
+                    Section(header: SectionPillHeader(title: "IN THIS ARTICLE", count: search.articleHits.count)) {
+                        if search.articleHits.isEmpty {
+                            Text("Nothing in this article matches your search.")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                        }
+
+                        ForEach(search.articleHits) { hit in
+                            ArticleSectionHitRow(hit: hit, query: query) {
+                                onScrollTo(hit.section.heading)
+                            }
+                        }
+                    }
+                }
+
+                IslamArticleSearchSections(
+                    query: query,
+                    homes: [.pillars, .guides],
+                    contentHits: search.contentHits,
+                    isSearching: search.isSearching,
+                    showHome: true,
+                    excludeArticle: articleID,
+                    articlesTitle: "OTHER ARTICLES",
+                    passagesTitle: "IN OTHER ARTICLES",
+                    hasOtherResults: true
+                )
+            }
+            .themedListRowBackground()
+        }
+    }
+}
+
+/// One matching section of the open page: the heading in the accent, then the prose around the match.
+/// Tapping scrolls the page to the heading - no push, the reader is already on the page.
+private struct ArticleSectionHitRow: View {
+    @Environment(\.appearance) private var appearance
+
+    let hit: IslamArticleSearch.ContentHit
+    let query: String
+    let onSelect: () -> Void
+
+    var body: some View {
+        Button {
+            Settings.shared.hapticFeedback()
+            onSelect()
+        } label: {
+            HStack(spacing: 10) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(hit.section.heading)
+                        .font(.caption.weight(.semibold))
+                        .foregroundColor(appearance.accent)
+                        .lineLimit(2)
+
+                    HighlightedSnippet(
+                        source: hit.snippet,
+                        term: query,
+                        font: .subheadline,
+                        accent: appearance.accent,
+                        fg: .primary,
+                        lineLimit: 4,
+                        guaranteeMatch: true
+                    )
+                }
+
+                Spacer(minLength: 4)
+
+                Image(systemName: "arrow.down.circle")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+            .padding(.vertical, 4)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .islamArticleRowActions(title: hit.section.heading, copyText: hit.snippet,
+                                scrollLabel: "Scroll To Section", onScrollTo: onSelect)
     }
 }
 

@@ -283,7 +283,7 @@ struct PrayerList: View {
     private func rakaahGuideCell(_ lines: [String]) -> some View {
         VStack(alignment: .leading, spacing: 1) {
             if lines.isEmpty {
-                Text("—")
+                Text("None")
                     .foregroundColor(.secondary.opacity(0.5))
             } else {
                 ForEach(lines, id: \.self) { line in
@@ -372,7 +372,7 @@ struct PrayerList: View {
             #if os(iOS)
             Spacer()
 
-            Picker("", selection: $prayerDisplayModeRawValue.animation(.easeInOut)) {
+            Picker("", selection: $prayerDisplayModeRawValue) {
                 Section {
                     ForEach(PrayerDisplayMode.allCases) { mode in
                         Text(mode.displayName).tag(mode.rawValue)
@@ -570,9 +570,14 @@ struct PrayerList: View {
                 VStack(alignment: .leading, spacing: 2) {
                     #if os(watchOS)
                     HStack(spacing: 3) {
-                        Image(systemName: prayer.image)
-                            .font(.system(size: 11, weight: .medium))
-                            .foregroundColor(color)
+                        // The 40 mm face leaves a half-width tile about 46 pt for the name beside the
+                        // icon, and "Shurooq" / "Maghrib" truncated there; the icon steps aside on that
+                        // face so the name keeps its size (the time line still carries the tint).
+                        if !WatchScreen.isNarrow {
+                            Image(systemName: prayer.image)
+                                .font(.system(size: 11, weight: .medium))
+                                .foregroundColor(color)
+                        }
 
                         // The name owns the line: a fixed-size icon plus layoutPriority keeps a long
                         // name ("Shurooq") from being the one tile that scales to a sliver while its
@@ -580,7 +585,7 @@ struct PrayerList: View {
                         Text(prayer.compactDisplayName)
                             .font(.caption.weight(.semibold))
                             .foregroundColor(color)
-                            .minimumScaleFactor(0.8)
+                            .minimumScaleFactor(WatchScreen.isNarrow ? 0.7 : 0.8)
                             .layoutPriority(1)
                     }
 
@@ -762,11 +767,11 @@ struct PrayerList: View {
         #if os(watchOS)
         // No Travel Settings button on the watch - the pointer would dangle.
         let homeSentence = (homeCity?.isEmpty == false)
-            ? "Your home city is \(homeCity!) - you can change it in the iPhone app's Travel Settings."
+            ? "Your home city is \(homeCity!). You can change it in the iPhone app's Travel Settings."
             : "You can set your home city in the iPhone app's Travel Settings."
         #else
         let homeSentence = (homeCity?.isEmpty == false)
-            ? "Your home city is \(homeCity!) - you can change it by tapping Travel Settings below."
+            ? "Your home city is \(homeCity!). You can change it by tapping Travel Settings below."
             : "You can set your home city by tapping Travel Settings below."
         #endif
         return Text("Traveling mode is on. If you are traveling more than 48 mi from home, you can pray Qasr, where you shorten and combine prayers. \(homeSentence)")

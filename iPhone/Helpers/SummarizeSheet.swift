@@ -281,12 +281,12 @@ struct SummarizeSheet: View {
         }
         if multiSource || gatherSource != nil {
             return clippedSource.truncated
-                ? "Summarizing ALL the available texts together - longer ones were shortened proportionally to fit the on-device model."
+                ? "Summarizing ALL the available texts together. Longer ones were shortened proportionally to fit the on-device model."
                 : "Summarizing ALL the available texts together, and answering questions about any of them."
         }
         let language = writesArabic ? " in Arabic" : ""
         return clippedSource.truncated
-            ? "Summarizing the first \(OnDeviceAsk.summarizeSourceLimit.formatted()) characters of this text\(language) - it was shortened to fit the on-device model."
+            ? "Summarizing the first \(OnDeviceAsk.summarizeSourceLimit.formatted()) characters of this text\(language). It was shortened to fit the on-device model."
             : "Summarizing the text currently shown\(language), and answering questions about it."
     }
 

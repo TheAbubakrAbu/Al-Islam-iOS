@@ -617,6 +617,47 @@ final class HadithPack: @unchecked Sendable {
         return found
     }
 
+    /// Visits every row in `range` (book order) with its prebuilt fold as raw bytes: the ranked search's
+    /// scanner (`HadithRankedSearch`), which scores each hadith on several words at once and therefore
+    /// cannot stop at a first match the way `matchingRows` does. One search-block fetch per BLOCK, the
+    /// same cost as a full sweep; cancellation is checked once per block.
+    func scanSearchFolds(in range: Range<Int>, isArabic: Bool,
+                         _ body: (_ row: Int, _ fold: UnsafeBufferPointer<UInt8>) -> Void) {
+        guard !rows.isEmpty else { return }
+        let lower = max(0, range.lowerBound)
+        let upper = min(rows.count, range.upperBound)
+        guard lower < upper else { return }
+        var row = lower
+        while row < upper {
+            if Task.isCancelled { break }
+            let blockIndex = Int(rows[row].block)
+            guard blockIndex < blocks.count else { break }
+            let block = blocks[blockIndex]
+            let blockEnd = blockIndex + 1 < blocks.count ? blocks[blockIndex + 1].firstRow : rows.count
+            let scanEnd = min(upper, blockEnd)
+            guard let search = searchBlock(blockIndex) else {
+                row = max(scanEnd, row + 1)
+                continue
+            }
+            let ranges = isArabic ? search.arabic : search.english
+            search.bytes.withUnsafeBufferPointer { haystack in
+                guard let base = haystack.baseAddress else { return }
+                var current = row
+                while current < scanEnd {
+                    let slot = current - block.firstRow
+                    if slot >= 0, slot < ranges.count {
+                        let range = ranges[slot]
+                        if range.lowerBound >= 0, range.upperBound <= haystack.count {
+                            body(current, UnsafeBufferPointer(start: base + range.lowerBound, count: range.count))
+                        }
+                    }
+                    current += 1
+                }
+            }
+            row = max(scanEnd, row + 1)
+        }
+    }
+
     private func searchBlock(_ index: Int) -> HadithBlockCache.SearchBlock? {
         HadithBlockCache.shared.search(pack: self, block: index) { [self] in
             let block = blocks[index]

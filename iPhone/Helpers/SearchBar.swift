@@ -104,6 +104,9 @@ private final class PaddedSearchTextField: UISearchTextField {
 
     override func textRect(forBounds bounds: CGRect) -> CGRect {
         let rect = super.textRect(forBounds: bounds)
+        // With text in it the resting field shows its clear button (`clearButtonMode = .always`), and
+        // `super` has already kept the text clear of that; the extra gap is for the empty field.
+        guard (text ?? "").isEmpty else { return rect }
         // Trailing, not "right": mirrored for a right-to-left INTERFACE, which is a different thing
         // from right-to-left text inside a left-to-right interface.
         let isRTL = effectiveUserInterfaceLayoutDirection == .rightToLeft
@@ -149,7 +152,12 @@ private struct SystemSearchField: UIViewRepresentable {
             field.inlinePredictionType = .no
         }
         field.returnKeyType = .search
-        field.clearButtonMode = .whileEditing
+        // At rest too, not only while editing: the small ✕ that empties the field stays once the
+        // keyboard is gone, so a finished query can be cleared without tapping back into the field
+        // first (Abu, 2026-09-07: "when not focused it should still have the tiny x on the right which
+        // gets rid of the text, NOT the big X that collapses"). The big ✕ beside the field, which
+        // cancels the search, is still editing-only.
+        field.clearButtonMode = .always
         applyBacking(to: field, coordinator: context.coordinator)
         field.delegate = context.coordinator
         field.addTarget(context.coordinator, action: #selector(Coordinator.editingChanged(_:)), for: .editingChanged)

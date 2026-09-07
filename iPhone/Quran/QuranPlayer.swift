@@ -635,7 +635,7 @@ final class QuranPlayer: ObservableObject {
                                 wasLocal: Bool = false) -> (title: String, message: String) {
         if wasLocal {
             return ("Downloaded File Problem",
-                    "The downloaded audio for this \(what) could not be played - the file may be damaged. Re-download this reciter in Settings → Manage Audio.")
+                    "The downloaded audio for this \(what) could not be played. The file may be damaged. Re-download this reciter in Settings → Manage Audio.")
         }
         switch Self.classifyPlaybackError(error) {
         case .offline:
@@ -647,7 +647,7 @@ final class QuranPlayer: ObservableObject {
         case .notFound:
             let name = reciter?.name ?? "this reciter"
             return ("Recitation Not Available",
-                    "The audio for this \(what) could not be found on the server - \(name) may not have recorded it. Try another reciter.")
+                    "The audio for this \(what) could not be found on the server. \(name) may not have recorded it. Try another reciter.")
         case .server:
             return ("Server Problem",
                     "The audio server could not serve this \(what) right now. Please try again later or pick another reciter.")

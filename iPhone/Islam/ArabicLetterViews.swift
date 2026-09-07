@@ -165,7 +165,7 @@ struct TashkeelLettersView: View {
 
             if isShaddah {
                 // A bare shaddah is only ever half the story - these are the readings it actually appears with.
-                Picker("Shaddah vowel", selection: $shaddahVowelName.animation(.easeInOut)) {
+                Picker("Shaddah vowel", selection: $shaddahVowelName) {
                     Text("Shaddah").tag(String?.none)
                     ForEach(shaddahVowels, id: \.english) { vowel in
                         Text("+ \(vowel.english)").tag(String?.some(vowel.english))
@@ -178,7 +178,7 @@ struct TashkeelLettersView: View {
 
             if isSukoon {
                 // Same mark, two scripts: the plain sukoon, and the Uthmani one a printed mushaf uses.
-                Picker("Sukoon script", selection: $useQuranicSukoon.animation(.easeInOut)) {
+                Picker("Sukoon script", selection: $useQuranicSukoon) {
                     Text("Normal").tag(false)
                     Text("Quranic").tag(true)
                 }
@@ -288,7 +288,7 @@ struct TashkeelLettersView: View {
         } header: {
             Text("EVERY MARK ON EVERY LETTER")
         } footer: {
-            Text("Read each row right to left: fatha, kasra, damma, sukoon, then the three tanween - and beneath them the shaddah carrying each vowel. The \"an\" tanween is written with its silent alif, as it appears at the end of words. Tap a row to select it - the selected row offers play, and a chevron that writes the shaddah line out beneath as the two letters it stands for.")
+            Text("Read each row right to left: fatha, kasra, damma, sukoon, then the three tanween, and beneath them the shaddah carrying each vowel. The \"an\" tanween is written with its silent alif, as it appears at the end of words. Tap a row to select it: the selected row offers play, and a chevron that writes the shaddah line out beneath as the two letters it stands for.")
         }
     }
 
@@ -463,7 +463,7 @@ struct TashkeelLettersView: View {
                 } header: {
                     Text("\(letter.transliteration.uppercased()) WITH SHADDAH")
                 } footer: {
-                    Text("A shaddah doubles the letter: the first is silent (sukoon) and the second carries the vowel. It never appears at the start of a word. Press the chevron to see the doubling written out beneath - the letter with sukoon, then the letter with its vowel.")
+                    Text("A shaddah doubles the letter: the first is silent (sukoon) and the second carries the vowel. It never appears at the start of a word. Press the chevron to see the doubling written out beneath: the letter with sukoon, then the letter with its vowel.")
                 }
             }
             .themedListRowBackground()
@@ -670,7 +670,7 @@ struct ArabicLetterView: View {
                 Section(header: Text("QALQALAH (BOUNCE LETTER)")) {
                     VStack(alignment: .leading, spacing: 10) {
                         HStack(alignment: .center, spacing: 12) {
-                            Text("\(letterData.transliteration.capitalized) is one of the five qalqalah letters (قُطۡبُ جَدٍّ - ق ط ب ج د). When it carries a sukoon, or you stop on it, it is pronounced with a short, crisp bounce - a quick echo of the letter, never a flat stop. The Quran reader colors it this way when tajweed colors are on.")
+                            Text("\(letterData.transliteration.capitalized) is one of the five qalqalah letters (قُطۡبُ جَدٍّ: ق ط ب ج د). When it carries a sukoon, or you stop on it, it is pronounced with a short, crisp bounce: a quick echo of the letter, never a flat stop. The Quran reader colors it this way when tajweed colors are on.")
                                 .font(.body)
                                 .fixedSize(horizontal: false, vertical: true)
 
@@ -816,7 +816,7 @@ struct ArabicLetterView: View {
                 } header: {
                     Text("WITH HAMZA")
                 } footer: {
-                    Text("Tap a syllable to select it, then press play to hear it. The last three rows carry a shaddah: select one and press the chevron to see each syllable written out beneath as the two letters the shaddah stands for - the letter with sukoon, then the letter with the tashkeel.")
+                    Text("Tap a syllable to select it, then press play to hear it. The last three rows carry a shaddah: select one and press the chevron to see each syllable written out beneath as the two letters the shaddah stands for: the letter with sukoon, then the letter with the tashkeel.")
                 }
             }
 
@@ -934,7 +934,7 @@ struct ArabicLetterView: View {
             ArabicExampleRow(
                 arabic: "سُورَةُ ٱلۡبَقَرَة",
                 transliteration: "suratu-l-baqarah",
-                note: "Surah al-Baqarah - the first ة is read \"t\"; the last is stopped on as \"h\""
+                note: "Surah al-Baqarah: the first ة is read \"t\", and the last is stopped on as \"h\""
             )
             ArabicExampleRow(
                 arabic: "مَدِينَةُ ٱلنَّبِيِّ",
@@ -985,7 +985,7 @@ struct ArabicLetterView: View {
             ArabicExampleRow(
                 arabic: "عَلَىٰ",
                 transliteration: "'alaa",
-                note: "Upon - the dagger alif above the ى writes the long \"aa\""
+                note: "Upon: the dagger alif above the ى writes the long \"aa\""
             )
             ArabicExampleRow(
                 arabic: "إِلَىٰ",
@@ -995,12 +995,12 @@ struct ArabicLetterView: View {
             ArabicExampleRow(
                 arabic: "مُوسَىٰ",
                 transliteration: "Musaa",
-                note: "Musa (Moses) - names ending in the \"aa\" sound use it too"
+                note: "Musa (Moses): names ending in the \"aa\" sound use it too"
             )
             ArabicExampleRow(
                 arabic: "هُدٗى",
                 transliteration: "hudan",
-                note: "Guidance - with tanween the maqsurah still looks the same"
+                note: "Guidance: with tanween the maqsurah still looks the same"
             )
         } header: {
             Text("WITH THE DAGGER ALIF")
@@ -1017,7 +1017,7 @@ struct ArabicLetterView: View {
             ArabicExampleRow(
                 arabic: "فِي",
                 transliteration: "fee",
-                note: "KASRA before it \u{2192} a yaa, read \"ee\" - dotless in the mushaf"
+                note: "KASRA before it \u{2192} a yaa, read \"ee\", dotless in the mushaf"
             )
             ArabicExampleRow(
                 arabic: "ٱلَّذِي",
@@ -1044,7 +1044,7 @@ struct ArabicLetterView: View {
     private var arabicFontPicker: some View {
         #if os(watchOS)
         // The watch keeps the simple two-way choice; the richer three-way face picker is a phone thing.
-        Picker("Arabic Font", selection: $settings.useFontArabic.animation(.easeInOut)) {
+        Picker("Arabic Font", selection: $settings.useFontArabic) {
             Text("Quranic Font").tag(true)
             Text("Basic Font").tag(false)
         }
@@ -1111,17 +1111,17 @@ struct ArabicLetterView: View {
                     .font(.body)
                 } else if data.transliteration == "alif maqSoorah" {
                     Group {
-                        Text("Alif maqSoorah is an alif written in the SHAPE of a dotless yaa (ى). It only ever appears at the end of a word, and it is pronounced exactly like a regular alif - a 2-count \"aa\".")
-                        Text("In the Quran it usually carries a small dagger alif above it (ىٰ), as in عَلَىٰ and مُوسَىٰ - that tiny mark IS the alif sound, written small. The examples below practise it.")
-                        Text("Telling it apart from yaa: the mushaf writes the final yaa without dots too, so the shape alone cannot decide. Read the vowel before the letter - a fatha before it means alif maqSoorah (\"aa\", as in ٱهۡتَدَىٰ); a kasra before it means yaa (\"ee\", as in فِي and ٱلَّذِي).")
+                        Text("Alif maqSoorah is an alif written in the SHAPE of a dotless yaa (ى). It only ever appears at the end of a word, and it is pronounced exactly like a regular alif, a 2-count \"aa\".")
+                        Text("In the Quran it usually carries a small dagger alif above it (ىٰ), as in عَلَىٰ and مُوسَىٰ. That tiny mark IS the alif sound, written small. The examples below practise it.")
+                        Text("Telling it apart from yaa: the mushaf writes the final yaa without dots too, so the shape alone cannot decide. Read the vowel before the letter: a fatha before it means alif maqSoorah (\"aa\", as in ٱهۡتَدَىٰ); a kasra before it means yaa (\"ee\", as in فِي and ٱلَّذِي).")
                     }
                     .font(.body)
                 } else if data.transliteration == "laam alif" {
                     // The case used to check "laa", which is not this letter's transliteration - so the
                     // PURPOSE section rendered empty for the one ligature letter (user report).
                     Group {
-                        Text("When laam (ل) is followed by alif (ا), the two must be written as one joined shape: لا. It is the only compulsory ligature in Arabic script - writing them side by side unjoined is considered incorrect - which is why it is taught alongside the alphabet.")
-                        Text("The sound does not change: read it simply as laam, then the long alif. Order matters, though - the definite article ٱل is alif then laam, so no ligature forms there.")
+                        Text("When laam (ل) is followed by alif (ا), the two must be written as one joined shape: لا. It is the only compulsory ligature in Arabic script (writing them side by side unjoined is considered incorrect), which is why it is taught alongside the alphabet.")
+                        Text("The sound does not change: read it simply as laam, then the long alif. Order matters, though: the definite article ٱل is alif then laam, so no ligature forms there.")
                         Text("You meet it constantly in the Quran, most familiarly as the word of negation لَا (\"no\" / \"not\") and in لَآ إِلَٰهَ إِلَّا ٱللَّهُ.")
                     }
                     .font(.body)

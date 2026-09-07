@@ -239,14 +239,14 @@ struct LaunchScreen: View {
     @MainActor
     private func runLaunchAnimation() async {
         // 1) Nothing animates yet. The initial state already shows just the Al-Islam icon on a plain background
-        //    (no gradient), so the heavy load + warm in step 2 stays perfectly smooth — there are no running
+        //    (no gradient), so the heavy load + warm in step 2 stays perfectly smooth: there are no running
         //    animations to drop frames.
         triggerHapticFeedback(.soft)
         LaunchClock.mark("launch screen up")
         LaunchWarmup.shared.markCoverUp()
 
         // 2) Hold on the icon and wait for everything to finish initializing. Nothing is animating during this
-        //    window, so background-init contention is invisible — the screen simply rests on the icon for as
+        //    window, so background-init contention is invisible; the screen simply rests on the icon for as
         //    long as it takes. This is the "keep Al-Islam there and wait" behavior.
         async let settingsReady: Void = Settings.shared.waitUntilReady()
         async let quranReady: Void = {

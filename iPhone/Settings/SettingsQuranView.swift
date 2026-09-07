@@ -72,6 +72,9 @@ struct SettingsQuranView: View {
     /// a partial reciter's coverage. DEBUG builds only.
     @State private var autoOpenReciters =
         ProcessInfo.processInfo.arguments.contains("-launchQuranSettingsReciters")
+    /// `-launchQuranSettingsSunnah` lands on the Sunnah Reminders screen. DEBUG builds only.
+    @State private var autoOpenSunnah =
+        ProcessInfo.processInfo.arguments.contains("-launchQuranSettingsSunnah")
     #endif
 
     var body: some View {
@@ -103,6 +106,12 @@ struct SettingsQuranView: View {
                 #if os(iOS)
                 favoritesAndBookmarksSection
 
+                Section {
+                    quranSettingsLink(title: "Sunnah Reminders", systemImage: "bell.badge") {
+                        SunnahRemindersView()
+                    }
+                }
+
                 readingModeSection
                 #endif
             }
@@ -120,6 +129,11 @@ struct SettingsQuranView: View {
         // background and separators.
         .background(
             NavigationLink(isActive: $autoOpenReciters) { ReciterListView().environmentObject(settings) }
+                          label: { EmptyView() }
+                .hidden()
+        )
+        .background(
+            NavigationLink(isActive: $autoOpenSunnah) { SunnahRemindersView() }
                           label: { EmptyView() }
                 .hidden()
         )
@@ -150,7 +164,7 @@ struct SettingsQuranView: View {
     /// Settings and moving a segmented control IS the deliberate act the dialog was guarding.
     private var readingModeSection: some View {
         Section(footer: Text("List shows a surah as a scrolling list of ayahs. Pages shows it as a mushaf, one page at a time.")) {
-            Picker("Reading View", selection: $settings.quranPageMode.animation(.easeInOut)) {
+            Picker("Reading View", selection: $settings.quranPageMode) {
                 Text("List").tag(false)
                 Text("Pages").tag(true)
             }
@@ -307,7 +321,7 @@ struct SettingsQuranView: View {
     }
 
     private var recitationEndingPicker: some View {
-        Picker("After Surah Recitation Ends", selection: $settings.reciteType.animation(.easeInOut)) {
+        Picker("After Surah Recitation Ends", selection: $settings.reciteType) {
             Section {
                 Text("Go to Next").tag("Continue to Next")
                 Text("Go to Previous").tag("Continue to Previous")
@@ -373,6 +387,22 @@ struct SettingsQuranView: View {
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.vertical, 2)
             }
+
+            #if os(iOS)
+            if WordOfDayStore.isBundled {
+                VStack(alignment: .leading, spacing: 4) {
+                    Toggle("Show Word of the Day", isOn: $settings.showWordOfTheDay.animation(.easeInOut))
+                        .font(.subheadline)
+                        .onChange(of: settings.showWordOfTheDay) { _ in settings.hapticFeedback() }
+
+                    Text("Shows a piece of Quranic vocabulary each day at the top of the Quran tab, with every ayah it appears in.")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.vertical, 2)
+                }
+            }
+            #endif
 
             VStack(alignment: .leading, spacing: 4) {
                 Toggle("Show Last Listened Surah", isOn: $settings.saveLastListenedSurah.animation(.easeInOut))
@@ -512,7 +542,7 @@ struct SettingsQuranView: View {
 
             Text(canRenderNow || !settings.showArabicText
                  ? "Tap a word twice while reading, in list mode or page mode, to see what that word means on its own and how it is pronounced. With tajweed colors on, the word's card also explains every tajweed color painted on it. A single tap still marks the ayah. Works offline."
-                 : "Available in Hafs an Asim, with beginner mode off - the meanings are counted word by word against that text.")
+                 : "Available in Hafs an Asim, with beginner mode off: the meanings are counted word by word against that text.")
                 .font(.caption)
                 .foregroundColor(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -539,7 +569,7 @@ struct SettingsQuranView: View {
 
             Text(canRenderNow || !settings.showArabicText
                  ? "Lays the ayah out word by word, with each word's meaning and pronunciation written directly beneath it. Works on its own, with or without the tap above. List mode only: page mode keeps the mushaf layout, so this has no effect there."
-                 : "Available in Hafs an Asim, with beginner mode off - the meanings are counted word by word against that text.")
+                 : "Available in Hafs an Asim, with beginner mode off: the meanings are counted word by word against that text.")
                 .font(.caption)
                 .foregroundColor(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -629,7 +659,7 @@ struct SettingsQuranView: View {
 
             if settings.showQiraahDetails {
                 Text(settings.isHafsDisplay
-                     ? "Hafs an Asim colors every rule from the tajweed rule engine. The other qiraat and riwayat color words the way their own printed mushaf does - each with its own legend."
+                     ? "Hafs an Asim colors every rule from the tajweed rule engine. The other qiraat and riwayat color words the way their own printed mushaf does, each with its own legend."
                      : "This riwayah colors words the way its printed mushaf does (differences from Hafs, idgham, imalah, ...). See its legend in Customize Tajweed Colors.")
                     .font(.caption)
                     .foregroundColor(.secondary)
@@ -704,10 +734,15 @@ struct SettingsQuranView: View {
             // below, which exists only while Hijazi is selected (five segments is all an iPhone
             // width fits). Order: the two printed-mushaf hands, then the two historical scripts
             // oldest first, then the system font.
+            //
+            // No `.animation` on the selection (app-wide rule for pickers, 2026-09-07): an animated
+            // transaction on a segmented control's binding made the indicator slide to the tapped
+            // segment, snap back to the old one and slide again, landing ~0.6 s after the tap while
+            // the caption below had already changed (frame capture on the iPhone 17 Pro simulator).
             Picker("Arabic Font", selection: Binding(
                 get: { Settings.pickerFaceName(for: settings.fontArabic) },
                 set: { settings.fontArabic = $0 }
-            ).animation(.easeInOut)) {
+            )) {
                 Text("Uthmani").tag(Settings.hafsUthmaniFontName)
                 Text("Indopak").tag(Settings.indopakFontName)
                 // The hand of the earliest mushafs themselves (Al-Islam Hijazi, built from hijazifont).
@@ -747,7 +782,7 @@ struct SettingsQuranView: View {
     private var hijaziMarkStylePicker: some View {
         if Settings.isHijaziFontName(settings.fontArabic) {
             VStack(alignment: .leading, spacing: 8) {
-                Picker("Hijazi Marks", selection: $settings.fontArabic.animation(.easeInOut)) {
+                Picker("Hijazi Marks", selection: $settings.fontArabic) {
                     ForEach(Settings.HijaziMarkStyle.allCases) { style in
                         Text(style.label).tag(style.fontName)
                     }
@@ -783,7 +818,7 @@ struct SettingsQuranView: View {
                     get: { settings.arabicScriptStyle },
                     set: { newValue in
                         settings.hapticFeedback()
-                        withAnimation(.easeInOut) { settings.arabicScriptStyle = newValue }
+                        settings.arabicScriptStyle = newValue
                     }
                 )) {
                     ForEach(Settings.ArabicScriptStyle.options(showQiraah: showQiraah)) { style in
@@ -839,7 +874,7 @@ struct SettingsQuranView: View {
                 .font(.subheadline)
                 .onChange(of: settings.mushafFitPage) { _ in settings.hapticFeedback() }
 
-            Text("In reading mode, sets each mushaf page the way this riwayah's printed mushaf sets it: the same lines, broken at the same words, at the largest size that fits on one screen - larger or smaller than the size above, whatever the page allows - in your own font and colors. Turn this off to read at exactly the size above and scroll.")
+            Text("In reading mode, sets each mushaf page the way this riwayah's printed mushaf sets it: the same lines, broken at the same words, at the largest size that fits on one screen (larger or smaller than the size above, whatever the page allows), in your own font and colors. Turn this off to read at exactly the size above and scroll.")
                 .font(.caption)
                 .foregroundColor(.secondary)
                 .fixedSize(horizontal: false, vertical: true)
@@ -976,7 +1011,7 @@ struct SettingsQuranView: View {
             }
         } footer: {
             if settings.showQiraahDetails {
-                Text("This app supports all 20 riwayat — 12 are in beta.\n\nThe riwayat printed in the Maghribi script use the official King Fahd Complex Warsh typeface; the others share the Uthmani (Madani) script typeface. You can override this under Arabic Text → Uthmani Script.\n\nPlay Ayahs is unsupported for other qiraat. For full surahs, you can choose reciters by riwayah. If you play a surah while viewing a different qiraah on screen, the reciter may be in another riwayah, so the audio may not match the text you see. For beginners, staying with Hafs an Asim for both reading and listening is recommended.")
+                Text("This app supports all 20 riwayat, 12 of them in beta.\n\nThe riwayat printed in the Maghribi script use the official King Fahd Complex Warsh typeface; the others share the Uthmani (Madani) script typeface. You can override this under Arabic Text → Uthmani Script.\n\nPlay Ayahs is unsupported for other qiraat. For full surahs, you can choose reciters by riwayah. If you play a surah while viewing a different qiraah on screen, the reciter may be in another riwayah, so the audio may not match the text you see. For beginners, staying with Hafs an Asim for both reading and listening is recommended.")
             }
         }
     }
@@ -1022,7 +1057,7 @@ struct SettingsQuranView: View {
         )) {
             VStack(alignment: .leading, spacing: 2) {
                 Label("Beta Text (12 Riwayat)", systemImage: "flask")
-                Text("Selectable text for Ibn Amir, Hamzah, al-Kisai, Abu Jafar, Yaqub and Khalaf al-Ashir. Their printed mushafs are exact and always available in page mode - only this machine-extracted text is beta.")
+                Text("Selectable text for Ibn Amir, Hamzah, al-Kisai, Abu Jafar, Yaqub and Khalaf al-Ashir. Their printed mushafs are exact and always available in page mode; only this machine-extracted text is beta.")
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -2308,7 +2343,7 @@ struct ReciterListView: View {
 
                     #if os(iOS)
                     Section(header: Text("DOWNLOADED SURAHS")) {
-                        Picker("Reciter Filter", selection: $showDownloadedOnly.animation(.easeInOut)) {
+                        Picker("Reciter Filter", selection: $showDownloadedOnly) {
                             Text("All Reciters").tag(false)
                             Text("Downloaded Only").tag(true)
                         }

@@ -56,12 +56,12 @@ struct ArabicBasicsView: View {
             ArabicExampleRow(
                 arabic: "مُسۡلِم",
                 transliteration: "muslim",
-                note: "A Muslim man - no ة"
+                note: "A Muslim man: no ة"
             )
             ArabicExampleRow(
                 arabic: "مُسۡلِمَة",
                 transliteration: "muslimah",
-                note: "A Muslim woman - the ة marks the feminine"
+                note: "A Muslim woman: the ة marks the feminine"
             )
             ArabicExampleRow(
                 arabic: "مُعَلِّم \u{2190} مُعَلِّمَة",
@@ -85,12 +85,12 @@ struct ArabicBasicsView: View {
             ArabicExampleRow(
                 arabic: "كِتَابَانِ",
                 transliteration: "kitaabaan(i)",
-                note: "Two books - subject form (raf'): add ـَانِ"
+                note: "Two books, subject form (raf'): add ـَانِ"
             )
             ArabicExampleRow(
                 arabic: "كِتَابَيۡنِ",
                 transliteration: "kitaabayn(i)",
-                note: "Two books - object or after-preposition form (nasb/jarr): add ـَيۡنِ"
+                note: "Two books, object or after-preposition form (nasb/jarr): add ـَيۡنِ"
             )
         } header: {
             Text("THE DUAL: EXACTLY TWO")
@@ -134,7 +134,7 @@ struct ArabicBasicsView: View {
         } header: {
             Text("PLURALS")
         } footer: {
-            Text("Sound plurals add an ending and leave the word alone. Broken plurals reshape the inside of the word and follow no single rule - each one is memorized with its noun.")
+            Text("Sound plurals add an ending and leave the word alone. Broken plurals reshape the inside of the word and follow no single rule; each one is memorized with its noun.")
         }
     }
 
@@ -143,17 +143,17 @@ struct ArabicBasicsView: View {
             ArabicExampleRow(
                 arabic: "جَآءَ ٱلرَّجُلُ",
                 transliteration: "jaa'a r-rajulu",
-                note: "Raf' (marfuu'): damma - the subject. \"The man came.\""
+                note: "Raf' (marfuu'): damma, the subject. \"The man came.\""
             )
             ArabicExampleRow(
                 arabic: "رَأَيۡتُ ٱلرَّجُلَ",
                 transliteration: "ra'aytu r-rajula",
-                note: "Nasb (mansuub): fatha - the object. \"I saw the man.\""
+                note: "Nasb (mansuub): fatha, the object. \"I saw the man.\""
             )
             ArabicExampleRow(
                 arabic: "فِي ٱلۡبَيۡتِ",
                 transliteration: "fi l-bayti",
-                note: "Jarr (majruur): kasra - after a preposition or in idafah. \"In the house.\""
+                note: "Jarr (majruur): kasra, after a preposition or in idafah. \"In the house.\""
             )
         } header: {
             Text("THE THREE CASES (I'RAAB)")

@@ -651,8 +651,12 @@ extension View {
         modifier(AdaptiveSafeArea(edge: edge, spacing: spacing, inset: content()))
     }
 
-    func applyConditionalListStyle(disableNowPlayingInset: Bool = false, topContentMargin: CGFloat = 0) -> some View {
-        modifier(ConditionalListStyle(disableNowPlayingInset: disableNowPlayingInset, topContentMargin: topContentMargin))
+    /// `readingWidth`: a reading list (the ayah list, a hadith chapter, an article) keeps its rows
+    /// inside a ~840 pt column on wide layouts, see `ReadingColumnMargins`.
+    func applyConditionalListStyle(disableNowPlayingInset: Bool = false, topContentMargin: CGFloat = 0,
+                                   readingWidth: Bool = false) -> some View {
+        modifier(ConditionalListStyle(disableNowPlayingInset: disableNowPlayingInset, topContentMargin: topContentMargin,
+                                      readingWidth: readingWidth))
     }
 
 
@@ -669,8 +673,31 @@ extension View {
     /// It also carries the search's landing: a page opened from an article search result arrives with
     /// `articleScrollTarget` set to a section heading, and the list scrolls to that `ArticleHeader`
     /// as it appears (see IslamSearch.swift).
-    func selectableArticleList(disableNowPlayingInset: Bool = false, topContentMargin: CGFloat = 0) -> some View {
-        modifier(SelectableArticleList(disableNowPlayingInset: disableNowPlayingInset, topContentMargin: topContentMargin))
+    ///
+    /// `article` is the page's catalog id ("ShahadahView") for the Pillars & Beliefs and How-to pages:
+    /// it puts the page's own search bar at the foot (`ArticleSearchChrome`), which finds the page's
+    /// sections and scrolls to them. Pages outside the catalog (the tajweed topics, the qiraat
+    /// biographies) have no searchable text and leave it nil.
+    func selectableArticleList(article: String? = nil, disableNowPlayingInset: Bool = false,
+                               topContentMargin: CGFloat = 0) -> some View {
+        modifier(SelectableArticleList(article: article, disableNowPlayingInset: disableNowPlayingInset,
+                                       topContentMargin: topContentMargin))
+    }
+
+    /// The article pages' list styling on its own: the reading-width list style plus text selection on
+    /// iOS. `selectableArticleList` applies it, and so does the in-page search, which has to wrap the
+    /// page BEFORE the style so its results share the page's wash and bottom insets.
+    func articleListStyle(disableNowPlayingInset: Bool = false, topContentMargin: CGFloat = 0) -> some View {
+        let styled = applyConditionalListStyle(
+            disableNowPlayingInset: disableNowPlayingInset,
+            topContentMargin: topContentMargin,
+            readingWidth: true
+        )
+        #if os(iOS)
+        return styled.textSelection(.enabled)
+        #else
+        return styled
+        #endif
     }
 
     /// Tints list rows for the Sepia / Gray reading themes. Apply this to the rows/sections INSIDE a `List`
@@ -1019,12 +1046,46 @@ struct ReservedLineLimit: ViewModifier {
     }
 }
 
+#if os(iOS)
+/// Reading lists on wide layouts: an iPad landscape detail column is ~800 pt, the 13-inch and a Mac
+/// window over 1,000, and a 20 pt translation ran 110+ characters per line there (2026-09-06 iPad
+/// pass). The list's scroll content is held to `readingWidth` and centered, so the ayah / hadith /
+/// article cards and their text narrow together; margins are 0 until the column is wider than that,
+/// and iPhones never get the modifier (constant per device, so the List is never rebuilt). Measured
+/// from the list's own frame, so it follows split-view resizes and rotation. iOS 17+ (`contentMargins`);
+/// earlier systems keep the full width.
+private struct ReadingColumnMargins: ViewModifier {
+    let enabled: Bool
+    @State private var width: CGFloat = 0
+
+    static let readingWidth: CGFloat = 840
+    private static let wideIdiom: Bool = UIDevice.current.userInterfaceIdiom != .phone
+
+    func body(content: Content) -> some View {
+        if enabled, Self.wideIdiom, #available(iOS 17.0, *) {
+            content
+                .contentMargins(.horizontal, max(0, (width - Self.readingWidth) / 2), for: .scrollContent)
+                .background(
+                    GeometryReader { proxy in
+                        Color.clear
+                            .onAppear { width = proxy.size.width }
+                            .onChange(of: proxy.size.width) { width = $0 }
+                    }
+                )
+        } else {
+            content
+        }
+    }
+}
+#endif
+
 struct ConditionalListStyle: ViewModifier {
     @Environment(\.appearance) private var appearance
     @ObservedObject private var playback = PlaybackVisibility.shared
 
     let disableNowPlayingInset: Bool
     var topContentMargin: CGFloat = 0
+    var readingWidth: Bool = false
 
     private var shouldShowNowPlaying: Bool {
         playback.showsNowPlaying
@@ -1034,6 +1095,7 @@ struct ConditionalListStyle: ViewModifier {
         Group {
             #if os(iOS)
             styledContent(content)
+                .modifier(ReadingColumnMargins(enabled: readingWidth))
                 .navigationBarTitleDisplayMode(.inline)
             #else
             watchStyledContent(content)
@@ -1104,37 +1166,42 @@ struct ConditionalListStyle: ViewModifier {
     #endif
 }
 
-/// `selectableArticleList`'s body: the list style, text selection on iOS, and the scroll to a search
-/// result's section. The scroll waits a beat for the pushed page to lay its rows out; scrolling in the
-/// same frame as `onAppear` lands on nothing.
+/// `selectableArticleList`'s body: the list style, text selection on iOS, the page's own search bar
+/// (catalog articles), and the scroll to a search result's section. The scroll waits a beat for the
+/// pushed page to lay its rows out; scrolling in the same frame as `onAppear` lands on nothing.
 private struct SelectableArticleList: ViewModifier {
     @Environment(\.articleScrollTarget) private var scrollTarget
+    /// The page's landing handle: the headers register their views with it (see `ArticleScroll`).
+    @StateObject private var handle = ArticleScrollHandle()
 
+    let article: String?
     let disableNowPlayingInset: Bool
     let topContentMargin: CGFloat
 
     func body(content: Content) -> some View {
         ScrollViewReader { proxy in
-            styled(content)
+            styled(content, proxy: proxy)
+                .environment(\.articleScrollHandle, handle)
                 .onAppear {
                     guard let scrollTarget, !scrollTarget.isEmpty else { return }
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) {
-                        withAnimation { proxy.scrollTo(ArticleHeader.anchorID(scrollTarget), anchor: .top) }
-                    }
+                    ArticleScroll.land(on: scrollTarget, proxy: proxy, after: 0.45, handle: handle)
                 }
         }
     }
 
     @ViewBuilder
-    private func styled(_ content: Content) -> some View {
-        let styled = content.applyConditionalListStyle(
-            disableNowPlayingInset: disableNowPlayingInset,
-            topContentMargin: topContentMargin
-        )
+    private func styled(_ content: Content, proxy: ScrollViewProxy) -> some View {
         #if os(iOS)
-        styled.textSelection(.enabled)
+        if let article {
+            // The search chrome applies `articleListStyle` itself, around the page AND its results.
+            content.modifier(ArticleSearchChrome(articleID: article, proxy: proxy, handle: handle,
+                                                 disableNowPlayingInset: disableNowPlayingInset,
+                                                 topContentMargin: topContentMargin))
+        } else {
+            content.articleListStyle(disableNowPlayingInset: disableNowPlayingInset, topContentMargin: topContentMargin)
+        }
         #else
-        styled
+        content.articleListStyle(disableNowPlayingInset: disableNowPlayingInset, topContentMargin: topContentMargin)
         #endif
     }
 }
@@ -1240,7 +1307,7 @@ struct IslamArabicFontPicker: View {
             set: { newValue in
                 guard newValue != settings.islamArabicFace else { return }
                 settings.hapticFeedback()
-                withAnimation(.easeInOut) { settings.islamArabicFace = newValue }
+                settings.islamArabicFace = newValue
             }
         )) {
             Text("Uthmani").tag(Settings.IslamArabicFace.uthmani)

@@ -492,7 +492,10 @@ struct SummaryAyahTile: View {
                         Text(title)
                             .font(.caption2.weight(.semibold))
                             .foregroundColor(titleColor)
-                            .lineLimit(1)
+                            // Two lines at the large text sizes ("Last Listened Ayah" was "Last Li..."
+                            // in a half-width tile), one everywhere else.
+                            .lineLimit(2)
+                            .fixedSize(horizontal: false, vertical: true)
                             .layoutPriority(1)
 
                         // No timestamp on the compact tile - the "when" lives on the unfolded
@@ -522,6 +525,10 @@ struct SummaryAyahTile: View {
                 ayahPreview
             }
             .padding(12)
+            // The content keeps its IDEAL height whatever the tile is stretched to, so the measurement
+            // below can never depend on the frame it feeds. (The loop that once froze this grid lived
+            // in `SummarySurahTile.oneLineReciterHeight`; this keeps the ayah tiles out of any other.)
+            .fixedSize(horizontal: false, vertical: true)
             // Natural height, measured BEFORE the fill frame below (which stretches to the row).
             .background(GeometryReader { proxy in
                 Color.clear.preference(key: SummaryTileHeightKey.self, value: [title: proxy.size.height])
@@ -609,19 +616,48 @@ struct SummarySurahTile: View {
     /// which is the opposite of "only when there is room".
     @State private var reciterHeight: CGFloat = 0
     @State private var contentHeight: CGFloat = 0
-
-    private static var oneReciterLine: CGFloat { UIFont.preferredFont(forTextStyle: .caption2).lineHeight }
+    /// What the reciter line measures at exactly ONE line and at TWO, from two hidden twins of the
+    /// visible `Text` (same string, font, width and scaling) that never change their line limit - so
+    /// the height this tile reports is the same number whichever limit the visible line is showing.
+    /// The one-line figure used to be `UIFont.lineHeight`, which counts leading that a SwiftUI `Text`
+    /// does not: the figure reported with the reciter WRAPPED came out a point or two shorter than
+    /// the figure reported unwrapped, and when the row's spare height sat inside that gap (the largest
+    /// text size with a long last-read ayah beside this tile, 2:255) the line limit flipped 1, 2, 1,
+    /// 2 forever - a layout loop that froze the Quran tab at 100% CPU. (Latching the visible line's
+    /// own one-line measurement instead raced the content measurement and looped at every size.)
+    @State private var oneLineReciterHeight: CGFloat = 0
+    @State private var twoLineReciterHeight: CGFloat = 0
 
     private var oneLineContentHeight: CGFloat {
-        contentHeight - max(0, reciterHeight - Self.oneReciterLine)
+        contentHeight - max(0, reciterHeight - oneLineReciterHeight)
     }
 
     /// Two reciter lines ONLY when the row is already tall enough for the second one (an ayah tile
     /// beside it showing Arabic + transliteration + English, say); otherwise one line, truncated,
     /// so this tile never makes the row taller than its neighbours.
     private var reciterLineLimit: Int {
-        guard let rowHeight, contentHeight > 0 else { return 1 }
-        return rowHeight - oneLineContentHeight >= Self.oneReciterLine - 0.5 ? 2 : 1
+        guard let rowHeight, contentHeight > 0, oneLineReciterHeight > 0,
+              twoLineReciterHeight > oneLineReciterHeight else { return 1 }
+        return rowHeight - oneLineContentHeight >= twoLineReciterHeight - oneLineReciterHeight - 0.5 ? 2 : 1
+    }
+
+    private var reciterDisplayName: String { lastListenedSurah.reciter.displayNameWithEnglishQiraah }
+
+    /// A hidden twin of the reciter line at a fixed line limit, reporting its height (see
+    /// `oneLineReciterHeight`). Laid out at the visible line's full width; never drawn.
+    private func reciterTwin(lines: Int, report: @escaping (CGFloat) -> Void) -> some View {
+        Text(reciterDisplayName)
+            .font(.caption2)
+            .lineLimit(lines)
+            .minimumScaleFactor(0.6)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .fixedSize(horizontal: false, vertical: true)
+            .hidden()
+            .background(GeometryReader { proxy in
+                Color.clear.onAppear { report(proxy.size.height) }
+                    .onChange(of: proxy.size.height) { report($0) }
+            })
+            .accessibilityHidden(true)
     }
 
     /// e.g. "1 - Al-Fatiha"
@@ -640,7 +676,9 @@ struct SummarySurahTile: View {
                     Text(title)
                         .font(.caption2.weight(.semibold))
                         .foregroundColor(titleColor)
-                        .lineLimit(1)
+                        // Two lines at the large text sizes, one everywhere else (see `SummaryAyahTile`).
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
                         .layoutPriority(1)
 
                     // No timestamp on the compact tile - the "when" lives on the unfolded
@@ -668,7 +706,7 @@ struct SummarySurahTile: View {
 
                 // One line unless the row has room for two (`reciterLineLimit`): a long reciter +
                 // riwayah name truncates rather than pushing the tile taller than its neighbour.
-                Text(lastListenedSurah.reciter.displayNameWithEnglishQiraah)
+                Text(reciterDisplayName)
                     .font(.caption2)
                     .foregroundColor(.primary)
                     .lineLimit(reciterLineLimit)
@@ -678,6 +716,13 @@ struct SummarySurahTile: View {
                         Color.clear.onAppear { reciterHeight = proxy.size.height }
                             .onChange(of: proxy.size.height) { reciterHeight = $0 }
                     })
+                    // The twins: what this line measures at one line and at two, whatever it shows.
+                    .background(alignment: .topLeading) {
+                        reciterTwin(lines: 1) { oneLineReciterHeight = $0 }
+                    }
+                    .background(alignment: .topLeading) {
+                        reciterTwin(lines: 2) { twoLineReciterHeight = $0 }
+                    }
 
                 HStack(spacing: 6) {
                     Text("\(formatMMSS(lastListenedSurah.currentDuration)) / \(formatMMSS(lastListenedSurah.fullDuration))")
@@ -729,6 +774,8 @@ struct SummarySurahTile: View {
                 .padding(.top, 1)
             }
             .padding(12)
+            // See `SummaryAyahTile`: the measured content never depends on the proposed height.
+            .fixedSize(horizontal: false, vertical: true)
             .background(GeometryReader { proxy in
                 Color.clear.onAppear { contentHeight = proxy.size.height }
                     .onChange(of: proxy.size.height) { contentHeight = $0 }

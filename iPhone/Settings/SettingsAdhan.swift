@@ -203,11 +203,11 @@ extension Settings {
     /// minutes"), one of the non-obligatory times (Shurooq, Duhaa, Islamic Midnight, Last Third), or a
     /// prayer whose adhan the user has switched off.
     ///
-    /// All of those used to fall through to `UNNotificationSound.default` — the system tri-tone, which
+    /// All of those used to fall through to `UNNotificationSound.default`: the system tri-tone, which
     /// is indistinguishable from every other app's alert, so a reader had no way to know a notification
     /// came from the prayer app at all. That was the whole of the complaint, and it was never a missing
     /// recording: `echo` has been bundled the entire time, described in `supportedAdhanSounds` as "a
-    /// 3.6-second chime, not a call to prayer — for being told without being called". Nothing consulted
+    /// 3.6-second chime, not a call to prayer, for being told without being called". Nothing consulted
     /// it for these notifications because the guards returned `.default` first.
     ///
     /// Always the `-short` cut. A pre-alert that plays 30 seconds of adhan and is then followed by the
@@ -1546,7 +1546,7 @@ extension Settings {
                        rakah: "2",
                        sunnahBefore: "0",
                        sunnahAfter: "2 and 2 (masjid) or 2 (home)",
-                       sunnahNote: "Pray 4 sunnah rakahs after Jumuah - as 2 then 2 - when praying at the masjid (Sahih Muslim 881), or 2 rakahs when praying at home (Sahih al-Bukhari 937).")
+                       sunnahNote: "Pray 4 sunnah rakahs after Jumuah (as 2 then 2) when praying at the masjid (Sahih Muslim 881), or 2 rakahs when praying at home (Sahih al-Bukhari 937).")
             )
         } else {
             list.append(prayer(from: "Dhuhr", time: dhuhr))
@@ -2197,6 +2197,21 @@ extension Settings {
     private static let ownedNotificationIDPrefixes: [String] =
         notifTable.keys.map { "\($0)-" } + ["Event-", "RefreshReminder-"]
 
+    /// The Sunnah reminders' share of the pending budget, read straight from the defaults so every
+    /// target that schedules prayers (the app, the watch, the extensions) sees the same count
+    /// without compiling the reminders module. `SunnahReminderStore` writes this key.
+    enum SunnahReminderBudget {
+        static let defaultsKey = "sunnahReminders"
+
+        private struct Config: Decodable { var enabled: Bool? }
+
+        static func enabledCount(in defaults: UserDefaults = .standard) -> Int {
+            guard let data = defaults.data(forKey: defaultsKey),
+                  let decoded = try? JSONDecoder().decode([String: Config].self, from: data) else { return 0 }
+            return decoded.values.filter { $0.enabled == true }.count
+        }
+    }
+
     /// Pre‑computes the full list of minutes‑before offsets for a prayer.
     /// The distinct minutes-before offsets a prayer should fire at. Deduplicated: a prenotification of 15
     /// minutes and a nagging step at 15 minutes describe the same notification, and every offset consumes one
@@ -2334,7 +2349,13 @@ extension Settings {
         // more than that (multiple prayers × offsets × days × nags + events), which is why adhan /
         // notification sounds previously "didn't always work" - later prayers got dropped. Collect every
         // candidate, then add them in priority order under a safe cap so the at-time adhan always survives.
-        let maxPending = 60
+        var maxPending = 60
+        #if os(iOS)
+        // Every enabled Sunnah reminder is a repeating request of its own (`SunnahReminderStore`,
+        // outside this scheduler's prune prefixes); it comes out of this budget so the whole queue
+        // stays under iOS's 64.
+        maxPending -= SunnahReminderBudget.enabledCount()
+        #endif
 
         var adhanRequests: [(spec: PendingNotificationSpec, date: Date)] = []
         var reminderRequests: [(spec: PendingNotificationSpec, date: Date)] = []

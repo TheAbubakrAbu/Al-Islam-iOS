@@ -334,7 +334,7 @@ struct PrayerTimesMapView: View {
     private var optionsSection: some View {
         Section {
             VStack(alignment: .leading, spacing: 6) {
-                Picker("Show Times In", selection: $showCityTime.animation(.easeInOut)) {
+                Picker("Show Times In", selection: $showCityTime) {
                     Text("City Time").tag(true)
                     Text("My Time").tag(false)
                 }

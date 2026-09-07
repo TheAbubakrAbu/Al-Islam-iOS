@@ -878,7 +878,7 @@ private struct BadgeDetailSheet: View {
                     // unmarked, a bookmark deleted) says so instead of letting the two lines
                     // silently contradict each other.
                     if earned, !badge.isEarned(stats) {
-                        Text("Kept - once earned, a badge stays earned.")
+                        Text("Kept: once earned, a badge stays earned.")
                             .font(.caption2)
                             .foregroundStyle(.secondary)
                             .multilineTextAlignment(.center)

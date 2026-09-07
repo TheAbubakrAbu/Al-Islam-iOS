@@ -549,6 +549,7 @@ private struct HijriEventRow: View {
 
 struct HijriMonthCalendarView: View {
     @ObservedObject private var settings = Settings.shared
+    @Environment(\.appearance) private var appearance
 
     @State private var displayedYear = 1445
     @State private var displayedMonth = 1
@@ -841,7 +842,8 @@ struct HijriMonthCalendarView: View {
             }
             .padding(16)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color(UIColor.secondarySystemGroupedBackground))
+            // The reading theme's card color when there is one (the system card was white on Sepia).
+            .background(appearance.themeRowBackground ?? Color(UIColor.secondarySystemGroupedBackground))
             .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         }
     }

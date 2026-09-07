@@ -165,7 +165,10 @@ struct ZakahCalculatorView: View {
 
             Text(title)
                 .font(.subheadline)
-                .lineLimit(1)
+                // Wraps before it scales: at the large text sizes "Cash & bank balances" was
+                // "Cash & bank bala..." beside the amount field.
+                .lineLimit(2)
+                .fixedSize(horizontal: false, vertical: true)
                 .minimumScaleFactor(0.7)
 
             Spacer(minLength: 8)

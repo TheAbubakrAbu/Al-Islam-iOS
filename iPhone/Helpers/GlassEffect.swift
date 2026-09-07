@@ -163,11 +163,27 @@ struct SheetPresentationModifier: ViewModifier {
     private static let forceLarge = false
     #endif
 
+    /// Open at the large detent, with the medium one still a drag away: for a sheet whose content
+    /// the medium detent would show only a sliver of (the ayah actions sheet of a long ayah, whose
+    /// preview card reads at the reader's size). A plain Bool rather than a stored
+    /// `PresentationDetent`, which does not exist on iOS 15.
+    @State private var isLarge: Bool
+
+    init(startLarge: Bool = false) {
+        _isLarge = State(initialValue: startLarge)
+    }
+
     func body(content: Content) -> some View {
         if #available(iOS 16.0, *) {
             if UIDevice.current.userInterfaceIdiom == .phone {
                 content
-                    .presentationDetents(Self.forceLarge ? [.large] : [.medium, .large])
+                    .presentationDetents(
+                        Self.forceLarge ? [.large] : [.medium, .large],
+                        selection: Binding(
+                            get: { (isLarge || Self.forceLarge) ? .large : .medium },
+                            set: { isLarge = $0 == .large }
+                        )
+                    )
                     .presentationDragIndicator(.visible)
             } else {
                 content
@@ -264,8 +280,9 @@ extension View {
     }
 
     #if os(iOS)
-    func smallMediumSheetPresentation() -> some View {
-        modifier(SheetPresentationModifier())
+    /// `startLarge` opens the sheet at full height (see `SheetPresentationModifier.isLarge`).
+    func smallMediumSheetPresentation(startLarge: Bool = false) -> some View {
+        modifier(SheetPresentationModifier(startLarge: startLarge))
     }
 
     /// An X to close, plus an optional checkmark to confirm. See `SheetDismissToolbar`.

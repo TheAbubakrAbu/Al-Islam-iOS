@@ -30,7 +30,7 @@ def bare(s):
     s=re.sub(r'[^\u0600-\u06ff]+',' ',s)
     return re.sub(r'\s+',' ',s).strip()
 def norm_en(s):
-    s=s.replace('’',"'").replace('‘',"'").replace('“','"').replace('”','"').replace('–','-').replace('—','-')
+    s=s.replace('’',"'").replace('‘',"'").replace('“','"').replace('”','"').replace('\u2013','-').replace('\u2014','-')  # en/em dash folded for matching
     s=re.sub(r'\s+',' ',s)
     return s.strip().lower()
 def en_pieces(s):

@@ -116,6 +116,14 @@ class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterD
         withCompletionHandler completionHandler: @escaping () -> Void
     ) {
         let content = response.notification.request.content
+        // A Sunnah reminder: open the Quran where the reminder points (`SunnahReminderStore`). The
+        // target is parked on `AppNavigation`; the tab view and the Quran tab take it from there.
+        if let encoded = content.userInfo[SunnahReminderStore.targetUserInfoKey] as? String,
+           let target = QuranOpenTarget(encoded: encoded) {
+            DispatchQueue.main.async { AppNavigation.shared.open(target) }
+            completionHandler()
+            return
+        }
         guard content.categoryIdentifier == Settings.nagCategoryIdentifier,
               let cascadeName = content.userInfo[Settings.nagPrayerNameUserInfoKey] as? String else {
             completionHandler()
@@ -188,7 +196,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterD
 
     private func submit(_ request: BGTaskRequest, label: String) {
         if let date = request.earliestBeginDate {
-            logger.debug("🔧 Scheduling \(label) – earliestBeginDate: \(date.formatted())")
+            logger.debug("🔧 Scheduling \(label), earliest begin date: \(date.formatted())")
         }
         do {
             try BGTaskScheduler.shared.submit(request)
@@ -267,7 +275,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterD
             }
 
             Settings.shared.fetchPrayerTimes {
-                logger.debug("🎉 BG task completed – prayer times refreshed")
+                logger.debug("🎉 BG task completed, prayer times refreshed")
                 guard requestedLocationFix else {
                     complete(true)
                     return

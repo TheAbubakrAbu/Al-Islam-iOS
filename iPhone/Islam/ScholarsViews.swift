@@ -217,7 +217,7 @@ struct SahabahScholarsView: View {
             .themedListRowBackground()
         }
         .navigationTitle("Scholars of the Sahabah")
-        .selectableArticleList()
+        .selectableArticleList(article: "SahabahScholarsView")
     }
 }
 
@@ -302,7 +302,7 @@ struct SalafScholarsView: View {
             .themedListRowBackground()
         }
         .navigationTitle("The Salaf and the Imams")
-        .selectableArticleList()
+        .selectableArticleList(article: "SalafScholarsView")
     }
 }
 
@@ -352,7 +352,7 @@ struct TabariView: View {
             .themedListRowBackground()
         }
         .navigationTitle("At-Tabari")
-        .selectableArticleList()
+        .selectableArticleList(article: "TabariView")
     }
 }
 
@@ -410,13 +410,11 @@ struct IbnTaymiyyahView: View {
                 }
 
                 ArticleSourcesSection(article: "IbnTaymiyyahView")
-
-                ArticleSourcesSection(article: "IbnQayyimView")
             }
             .themedListRowBackground()
         }
         .navigationTitle("Ibn Taymiyyah")
-        .selectableArticleList()
+        .selectableArticleList(article: "IbnTaymiyyahView")
     }
 }
 
@@ -460,12 +458,12 @@ struct IbnQayyimView: View {
                         .font(.body)
                 }
 
-                ArticleSourcesSection(article: "DhahabiView")
+                ArticleSourcesSection(article: "IbnQayyimView")
             }
             .themedListRowBackground()
         }
         .navigationTitle("Ibn al-Qayyim")
-        .selectableArticleList()
+        .selectableArticleList(article: "IbnQayyimView")
     }
 }
 
@@ -510,12 +508,12 @@ struct DhahabiView: View {
                         .font(.body)
                 }
 
-                ArticleSourcesSection(article: "IbnKathirView")
+                ArticleSourcesSection(article: "DhahabiView")
             }
             .themedListRowBackground()
         }
         .navigationTitle("Adh-Dhahabi")
-        .selectableArticleList()
+        .selectableArticleList(article: "DhahabiView")
     }
 }
 
@@ -558,12 +556,12 @@ struct IbnKathirView: View {
                         .font(.body)
                 }
 
-                ArticleSourcesSection(article: "LaterScholarsView")
+                ArticleSourcesSection(article: "IbnKathirView")
             }
             .themedListRowBackground()
         }
         .navigationTitle("Ibn Kathir")
-        .selectableArticleList()
+        .selectableArticleList(article: "IbnKathirView")
     }
 }
 
@@ -741,10 +739,12 @@ struct LaterScholarsView: View {
                     Text(verbatim: "The chain never broke. From Ibn Rajab and Ibn Hajar to the revival in Najd and the scholars of the last century, the creed of the Salaf and the science of hadith were handed down teacher to student, and the same is asked of the student today: take the evidence, honour the scholars, and follow the Prophet.")
                         .font(.body)
                 }
+
+                ArticleSourcesSection(article: "LaterScholarsView")
             }
             .themedListRowBackground()
         }
         .navigationTitle("Later Scholars")
-        .selectableArticleList()
+        .selectableArticleList(article: "LaterScholarsView")
     }
 }

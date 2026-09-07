@@ -329,7 +329,7 @@ struct TawhidView: View {
             .themedListRowBackground()
         }
         .navigationTitle("Tawhid: The Oneness of Allah")
-        .selectableArticleList()
+        .selectableArticleList(article: "TawhidView")
     }
 }
 
@@ -344,7 +344,7 @@ struct SalafiyyahView: View {
             .themedListRowBackground()
         }
         .navigationTitle("Salafiyyah")
-        .selectableArticleList()
+        .selectableArticleList(article: "SalafiyyahView")
     }
 
     static let sections: [ArticleSection] = [
@@ -771,7 +771,7 @@ struct QuranSunnahView: View {
             .themedListRowBackground()
         }
         .navigationTitle("Quran and Sunnah")
-        .selectableArticleList()
+        .selectableArticleList(article: "QuranSunnahView")
     }
 }
 
@@ -782,13 +782,11 @@ struct ShirkView: View {
                 ArticleSectionsView(sections: Self.sections)
 
                 ArticleSourcesSection(article: "ShirkView")
-
-                ArticleSourcesSection(article: "KufrView")
             }
             .themedListRowBackground()
         }
         .navigationTitle("Shirk")
-        .selectableArticleList()
+        .selectableArticleList(article: "ShirkView")
     }
 
     static let sections: [ArticleSection] = [
@@ -1277,12 +1275,12 @@ struct KufrView: View {
                         .font(.body)
                 }
 
-                ArticleSourcesSection(article: "BidahView")
+                ArticleSourcesSection(article: "KufrView")
             }
             .themedListRowBackground()
         }
         .navigationTitle("Kufr")
-        .selectableArticleList()
+        .selectableArticleList(article: "KufrView")
     }
 }
 
@@ -1564,12 +1562,12 @@ struct BidahView: View {
                         .font(.body)
                 }
 
-                ArticleSourcesSection(article: "MawlidView")
+                ArticleSourcesSection(article: "BidahView")
             }
             .themedListRowBackground()
         }
         .navigationTitle("Bid'ah")
-        .selectableArticleList()
+        .selectableArticleList(article: "BidahView")
     }
 }
 
@@ -1761,10 +1759,12 @@ struct MawlidView: View {
                     Text(articleMarkdown: "**Monday fasting (صَوْم الاثْنَيْن)**: the one act the Prophet (peace be upon him) connected to his birth, weekly and by fasting, in the hadith quoted above (Sahih Muslim 1162). It is the Sunnah of honouring his birth, and it is what the Companions did.")
                         .font(.body)
                 }
+
+                ArticleSourcesSection(article: "MawlidView")
             }
             .themedListRowBackground()
         }
         .navigationTitle("The Mawlid")
-        .selectableArticleList()
+        .selectableArticleList(article: "MawlidView")
     }
 }

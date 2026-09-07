@@ -141,6 +141,12 @@ func ayahDisplayMenuItems(refs: Set<HighlightedAyahRef>, settings: Settings,
             )) {
                 Label(option.title, systemImage: option.systemImage)
             }
+            // The app root styles every Toggle as a padded switch (`PaddedSwitchToggleStyle`), and
+            // that style reaches into menu content too: on iOS 26 the menu then drew each row as
+            // the label plus an empty second line with a stray checkmark (Abu, 2026-09-07: "what
+            // the heck, this looks weird"). The automatic style hands the row back to the menu,
+            // which renders it as the native checkmark row.
+            .toggleStyle(.automatic)
         }
     }
 
@@ -470,8 +476,10 @@ struct AyahContextMenuModifier: ViewModifier {
     @State private var showCustomRangeSheet = false
     @State private var showTafsirSheet = false
     @State private var showSimilarAyahsSheet = false
+    @State private var showMutashabihatSheet = false
     @State private var showQiraahComparisonSheet = false
     @State private var showEnglishComparisonSheet = false
+    @State private var showSelectTextSheet = false
 
     private var isBookmarked: Bool {
         bookmarkedAyahs.contains("\(surah)-\(ayah)")
@@ -664,16 +672,52 @@ struct AyahContextMenuModifier: ViewModifier {
                     }
                 }
 
+                // The repeated phrases (mutashabihat): the same sheet, opened on its phrases tab.
+                if settings.isHafsDisplay && MutashabihatStore.isBundled {
+                    Button {
+                        settings.hapticFeedback()
+                        showMutashabihatSheet = true
+                    } label: {
+                        Label("Mutashabihat", systemImage: "text.quote")
+                    }
+                }
+
                 comparisonMenuBlock
 
+                // From here down, the reader rows' ellipsis menu block for block (user rule
+                // 2026-09-05: every ayah menu offers the same actions in the same order) - minus
+                // "Apply Settings", whose per-ayah pins only the readers draw.
                 if settings.isHafsDisplay {
+                    Divider()
+
+                    Menu {
+                        ForEach([2, 3, 5, 10, 15, 20], id: \.self) { count in
+                            Button {
+                                settings.hapticFeedback()
+                                quranPlayer.playAyah(surahNumber: surah, ayahNumber: ayah, repeatCount: count)
+                            } label: {
+                                Label("Repeat \(count)×", systemImage: "\(count).circle")
+                            }
+                        }
+
+                        Button {
+                            settings.hapticFeedback()
+                            showCustomRangeSheet = true
+                        } label: {
+                            Label("Play Custom Range", systemImage: "slider.horizontal.3")
+                        }
+                    } label: {
+                        Label("Repeat Ayah", systemImage: "repeat")
+                    }
+
                     Menu {
                         Button {
                             settings.hapticFeedback()
-                            quranPlayer.playAyah(surahNumber: surah, ayahNumber: ayah)
+                            showCustomRangeSheet = true
                         } label: {
-                            Label("Play This Ayah", systemImage: "play.circle")
+                            Label("Play Custom Range", systemImage: "slider.horizontal.3")
                         }
+
                         Button {
                             settings.hapticFeedback()
                             quranPlayer.playAyah(
@@ -684,15 +728,25 @@ struct AyahContextMenuModifier: ViewModifier {
                         } label: {
                             Label("Play From Ayah", systemImage: "play.circle.fill")
                         }
+
                         Button {
                             settings.hapticFeedback()
-                            showCustomRangeSheet = true
+                            quranPlayer.playAyah(surahNumber: surah, ayahNumber: ayah)
                         } label: {
-                            Label("Play Custom Range", systemImage: "slider.horizontal.3")
+                            Label("Play This Ayah", systemImage: "play.circle")
                         }
                     } label: {
                         Label("Play Ayah", systemImage: "play.circle")
                     }
+                }
+
+                Divider()
+
+                Button {
+                    settings.hapticFeedback()
+                    showSelectTextSheet = true
+                } label: {
+                    Label("Select Text", systemImage: "highlighter")
                 }
 
                 Button {
@@ -777,6 +831,15 @@ struct AyahContextMenuModifier: ViewModifier {
             .sheet(isPresented: $showSimilarAyahsSheet) {
                 SimilarAyahsSheet(surahNumber: surah, ayahNumber: ayah)
             }
+            .sheet(isPresented: $showMutashabihatSheet) {
+                SimilarAyahsSheet(surahNumber: surah, ayahNumber: ayah, initialTab: .phrases)
+            }
+            .sheet(isPresented: $showSelectTextSheet) {
+                if let surahObj = surahObj, let ayahObj = quranData.ayah(surah: surah, ayah: ayah) {
+                    SelectAyahTextSheet(surah: surahObj, ayah: ayahObj)
+                        .smallMediumSheetPresentation()
+                }
+            }
             .sheet(isPresented: $showCustomRangeSheet) {
                 if let surahObj = surahObj {
                     PlayCustomRangeSheet(
@@ -800,7 +863,7 @@ struct AyahContextMenuModifier: ViewModifier {
                         onCancel: { showCustomRangeSheet = false }
                     )
                     .environmentObject(settings)
-                    .smallMediumSheetPresentation()
+                    // Detents: the sheet's own (it opens at full height).
                 }
             }
             .sheet(isPresented: $showQiraahComparisonSheet) {
@@ -1399,7 +1462,7 @@ struct SelectAyahTextSheet: View {
                 Group {
                     if settings.showQiraahDetails {
                         Section {
-                            ArabicTextRiwayahPicker(selection: $selectedQiraah.animation(.easeInOut), useMenuRow: true)
+                            ArabicTextRiwayahPicker(selection: $selectedQiraah, useMenuRow: true)
 
                             // The same words across riwayat (anchored through Hafs, like the comparison
                             // sheet) vs. whatever verse sits at the raw tapped number. Only shown once the
@@ -1422,7 +1485,7 @@ struct SelectAyahTextSheet: View {
                     }
 
                     Section {
-                        Picker("Arabic Font", selection: $selectedFontName.animation(.easeInOut)) {
+                        Picker("Arabic Font", selection: $selectedFontName) {
                             Text("Uthmani").tag(Settings.hafsUthmaniFontName)
                             Text("Maghribi").tag(Settings.warshUthmaniFontName)
                             Text("Indopak").tag(Settings.indopakFontName)

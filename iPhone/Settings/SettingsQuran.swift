@@ -825,6 +825,18 @@ extension Settings {
         useFontArabic && islamUsesCustomArabicFace && text.count < Self.arabicShapingCharacterLimit
     }
 
+    /// The face decision with no length cliff: the reading surfaces now render a long narration as
+    /// several `Text`s of at most `hadithArabicChunkLimit` characters each, every one of them in the
+    /// chosen face, instead of dropping the whole hadith to the system face (Abu, 2026-09-07: the
+    /// fallback "doesn't help", keep the hadith font). See `HadithArabicChunks`.
+    var hadithArabicWantsCustomFace: Bool {
+        useFontArabic && islamUsesCustomArabicFace
+    }
+
+    /// The longest single `Text` a custom face is trusted with; the longest known-good render was
+    /// about 3,000 characters, so a chunk stops well before the cliff.
+    static let hadithArabicChunkLimit = 2_600
+
     func cleanedQuranArabic(_ text: String) -> String {
         var out = text
         if cleanArabicText { out = out.removingArabicDiacriticsAndSigns }

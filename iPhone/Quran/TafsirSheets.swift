@@ -204,13 +204,13 @@ struct AyahTafsirSheet: View {
 
                             // Two-level author choice: language first, then the three authors of that
                             // language - six segments in one control were unreadably cramped.
-                            Picker("Language", selection: languageBinding.animation(.easeInOut)) {
+                            Picker("Language", selection: languageBinding) {
                                 Text("English").tag(false)
                                 Text("العربية").tag(true)
                             }
                             .pickerStyle(.segmented)
 
-                            Picker("Tafsir", selection: selectedAuthorBinding.animation(.easeInOut)) {
+                            Picker("Tafsir", selection: selectedAuthorBinding) {
                                 ForEach(selectedAuthor.isArabic ? TafsirAuthor.arabicCases : TafsirAuthor.englishCases) { author in
                                     Text(author.shortTitle).tag(author)
                                 }
@@ -495,6 +495,61 @@ struct AyahTafsirSheet: View {
     }
 }
 
+/// The surah info sheet's source picker as a row of scrolling chips rather than a segmented control:
+/// five sources (Maududi, Ibn Ashur in two languages, Quranpedia's outline, the QUL passage themes)
+/// crushed the segments into "Outline (…" and "Passage…" (Abu, 2026-09-07: "the picker is too
+/// crowded"). Each chip wears the source's short name; the heading under the row still says the full
+/// one. The selected chip scrolls into view when the sheet opens, since the remembered source may be
+/// the last one.
+private struct SurahInfoSourceChips: View {
+    @ObservedObject private var settings = Settings.shared
+
+    let sources: [SurahInfoSource]
+    @Binding var selection: String
+
+    var body: some View {
+        ScrollViewReader { proxy in
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    ForEach(sources) { source in
+                        let selected = source.name == selection
+                        Button {
+                            withAnimation(.easeInOut) { selection = source.name }
+                        } label: {
+                            Text(source.shortName)
+                                .font(.subheadline.weight(.semibold))
+                                .lineLimit(1)
+                                .padding(.horizontal, 14)
+                                .padding(.vertical, 8)
+                                .foregroundStyle(selected ? Color.white : settings.accentColor.color)
+                                .background(
+                                    Capsule()
+                                        .fill(selected ? settings.accentColor.color : settings.accentColor.color.opacity(0.12))
+                                )
+                                .contentShape(Capsule())
+                        }
+                        .buttonStyle(.plain)
+                        .id(source.name)
+                    }
+                }
+                .padding(.horizontal, 2)
+                .padding(.vertical, 2)
+            }
+            .onAppear { proxy.scrollTo(selection, anchor: .center) }
+            .onChange(of: selection) { name in
+                withAnimation(.easeInOut) { proxy.scrollTo(name, anchor: .center) }
+            }
+        }
+    }
+}
+
+private extension SurahInfoSource {
+    /// "Outline (Quranpedia)" → "Outline": the chip drops the parenthetical, the heading keeps it.
+    var shortName: String {
+        name.replacingOccurrences(of: #"\s*\([^)]*\)\s*$"#, with: "", options: .regularExpression)
+    }
+}
+
 /// "About this Surah" sheet - bundled surah background, mirroring the Tafsir sheet: a source picker
 /// (Maududi / Ibn Ashur), searchable content, and the same accent-foreground search match (no highlight box).
 struct SurahInfoSheet: View {
@@ -523,6 +578,10 @@ struct SurahInfoSheet: View {
         // store symbol.
         if let outline = SurahSectionsStore.shared.outlineMarkdown(surah: surahNumber) {
             list.append(SurahInfoSource(name: "Outline (Quranpedia)", contents: outline))
+        }
+        // The Quranic Universal Library's passage themes, one sentence per run of ayahs, the same way.
+        if let themes = AyahThemesStore.shared.outlineMarkdown(surah: surahNumber) {
+            list.append(SurahInfoSource(name: "Passage Themes (QUL)", contents: themes))
         }
         return list
     }
@@ -611,14 +670,8 @@ struct SurahInfoSheet: View {
                             surahHeaderCard
 
                             if sources.count > 1 {
-                                Picker("Source", selection: selectedSourceBinding.animation(.easeInOut)) {
-                                    ForEach(sources) { source in
-                                        Text(source.name).tag(source.name)
-                                    }
-                                }
-                                .pickerStyle(.segmented)
-                                .animation(.easeInOut, value: selectedSource)
-                                .onChange(of: selectedSourceName) { _ in settings.hapticFeedback() }
+                                SurahInfoSourceChips(sources: sources, selection: selectedSourceBinding)
+                                    .onChange(of: selectedSourceName) { _ in settings.hapticFeedback() }
                             }
 
                             if let source = selectedSource {

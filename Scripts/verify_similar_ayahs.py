@@ -38,6 +38,8 @@ def main() -> None:
 
     packed = json.loads(raw.decode("utf-8"))
     counts = _builder.ayah_counts()
+    quran = json.loads(_builder.QURAN_JSON.read_text(encoding="utf-8"))
+    token_counts = {(s["id"], a["id"]): len(a["textArabic"].split()) for s in quran for a in s["ayahs"]}
 
     problems: list[str] = []
     rows = verified = 0
@@ -50,9 +52,18 @@ def main() -> None:
             problems.append(f"{key}: {len(matches)} rows (must be 1..{_builder.MAX_MATCHES})")
         for row in matches:
             rows += 1
-            if not (4 <= len(row) <= 5) or row[3] not in (0, 1) or not isinstance(row[2], str):
+            if not (4 <= len(row) <= 7) or row[3] not in (0, 1) or not isinstance(row[2], str):
                 problems.append(f"{key}: malformed row {row[:4]}")
                 continue
+            if len(row) >= 5 and not all(isinstance(label, str) for label in row[4]):
+                problems.append(f"{key}: malformed labels {row[4]}")
+            if len(row) >= 6:
+                target_tokens = token_counts.get((row[0], row[1]), 0)
+                for span in row[5]:
+                    if len(span) != 2 or not 0 <= span[0] <= span[1] < target_tokens:
+                        problems.append(f"{key}: span {span} outside {row[0]}:{row[1]} ({target_tokens} tokens)")
+                if len(row) == 6 or not isinstance(row[6], int) or not 0 <= row[6] <= 100:
+                    problems.append(f"{key}: spans without a valid score {row[5:]}")
             verified += row[3]
             target = (row[0], row[1])
             if target[0] not in counts or not 1 <= target[1] <= counts[target[0]]:

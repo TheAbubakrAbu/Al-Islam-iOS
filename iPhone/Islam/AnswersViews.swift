@@ -308,7 +308,7 @@ struct SufismAnswerView: View {
             .themedListRowBackground()
         }
         .navigationTitle("Answering Sufism")
-        .selectableArticleList()
+        .selectableArticleList(article: "SufismAnswerView")
     }
 }
 
@@ -664,7 +664,7 @@ struct ShiaAnswerView: View {
             .themedListRowBackground()
         }
         .navigationTitle("Answering the Shia")
-        .selectableArticleList()
+        .selectableArticleList(article: "ShiaAnswerView")
     }
 }
 
@@ -977,7 +977,7 @@ struct ChristianityAnswerView: View {
             .themedListRowBackground()
         }
         .navigationTitle("Answering Christianity")
-        .selectableArticleList()
+        .selectableArticleList(article: "ChristianityAnswerView")
     }
 }
 
@@ -1292,13 +1292,11 @@ struct JudaismAnswerView: View {
                 }
 
                 ArticleSourcesSection(article: "JudaismAnswerView")
-
-                ArticleSourcesSection(article: "HinduismAnswerView")
             }
             .themedListRowBackground()
         }
         .navigationTitle("Answering Judaism")
-        .selectableArticleList()
+        .selectableArticleList(article: "JudaismAnswerView")
     }
 }
 
@@ -1595,12 +1593,12 @@ struct HinduismAnswerView: View {
                     ScriptureQuote(text: "“And [that they may know] that the Hour is coming - no doubt about it - and that Allah will resurrect those in the graves” (Quran 22:7).", arabic: "وَأَنَّ ٱلسَّاعَةَ ءَاتِيَةٞ لَّا رَيۡبَ فِيهَا وَأَنَّ ٱللَّهَ يَبۡعَثُ مَن فِي ٱلۡقُبُورِ")
                 }
 
-                ArticleSourcesSection(article: "PaganismAnswerView")
+                ArticleSourcesSection(article: "HinduismAnswerView")
             }
             .themedListRowBackground()
         }
         .navigationTitle("Answering Hinduism")
-        .selectableArticleList()
+        .selectableArticleList(article: "HinduismAnswerView")
     }
 }
 
@@ -1889,12 +1887,12 @@ struct PaganismAnswerView: View {
                     ScriptureQuote(text: "“And who is more astray than he who invokes besides Allah those who will not respond to him until the Day of Resurrection, and they, of their invocation, are unaware” (Quran 46:5).", arabic: "وَمَنۡ أَضَلُّ مِمَّن يَدۡعُواْ مِن دُونِ ٱللَّهِ مَن لَّا يَسۡتَجِيبُ لَهُۥٓ إِلَىٰ يَوۡمِ ٱلۡقِيَٰمَةِ وَهُمۡ عَن دُعَآئِهِمۡ غَٰفِلُونَ")
                 }
 
-                ArticleSourcesSection(article: "BuddhismAnswerView")
+                ArticleSourcesSection(article: "PaganismAnswerView")
             }
             .themedListRowBackground()
         }
         .navigationTitle("Answering Paganism")
-        .selectableArticleList()
+        .selectableArticleList(article: "PaganismAnswerView")
     }
 }
 
@@ -2201,12 +2199,12 @@ struct BuddhismAnswerView: View {
                         .font(.body)
                 }
 
-                ArticleSourcesSection(article: "AtheismAnswerView")
+                ArticleSourcesSection(article: "BuddhismAnswerView")
             }
             .themedListRowBackground()
         }
         .navigationTitle("Answering Buddhism")
-        .selectableArticleList()
+        .selectableArticleList(article: "BuddhismAnswerView")
     }
 }
 
@@ -2215,11 +2213,13 @@ struct AtheismAnswerView: View {
         List {
             Group {
                 ArticleSectionsView(sections: Self.sections)
+
+                ArticleSourcesSection(article: "AtheismAnswerView")
             }
             .themedListRowBackground()
         }
         .navigationTitle("Answering Atheism")
-        .selectableArticleList()
+        .selectableArticleList(article: "AtheismAnswerView")
     }
 
     static let sections: [ArticleSection] = [

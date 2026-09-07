@@ -87,7 +87,7 @@ struct HaramView: View {
             }
             .themedListRowBackground()
         }
-        .selectableArticleList()
+        .selectableArticleList(article: "HaramView")
         .navigationTitle("Masjid Al-Haram")
     }
 }
@@ -192,7 +192,7 @@ struct NabawiView: View {
             }
             .themedListRowBackground()
         }
-        .selectableArticleList()
+        .selectableArticleList(article: "NabawiView")
         .navigationTitle("Masjid An-Nabawi")
     }
 }
@@ -281,7 +281,7 @@ struct AqsaView: View {
             }
             .themedListRowBackground()
         }
-        .selectableArticleList()
+        .selectableArticleList(article: "AqsaView")
         .navigationTitle("Masjid Al-Aqsa")
     }
 }
@@ -392,12 +392,10 @@ struct WudhuView: View {
                 }
 
                 ArticleSourcesSection(article: "WudhuView")
-
-                ArticleSourcesSection(article: "GhuslView")
             }
             .themedListRowBackground()
         }
-        .selectableArticleList()
+        .selectableArticleList(article: "WudhuView")
         .navigationTitle("How to Make Wudhu")
     }
 }
@@ -494,11 +492,11 @@ struct GhuslView: View {
                         .font(.body)
                 }
 
-                ArticleSourcesSection(article: "JumuahView")
+                ArticleSourcesSection(article: "GhuslView")
             }
             .themedListRowBackground()
         }
-        .selectableArticleList()
+        .selectableArticleList(article: "GhuslView")
         .navigationTitle("How to Make Ghusl")
     }
 }
@@ -580,11 +578,11 @@ struct JumuahView: View {
                         .font(.body)
                 }
 
-                ArticleSourcesSection(article: "AdhanOtherView")
+                ArticleSourcesSection(article: "JumuahView")
             }
             .themedListRowBackground()
         }
-        .selectableArticleList()
+        .selectableArticleList(article: "JumuahView")
         .navigationTitle("Jumuah")
     }
 }
@@ -720,11 +718,11 @@ struct AdhanOtherView: View {
                     ScriptureQuote(text: "“Whoever after listening to the Adhan says, 'Allahumma Rabba hadhihi-dda` watit-tammah, was-salatil qa'imah, ati Muhammadan al-wasilata wal-fadilah, wa b`ath-hu maqaman mahmudan-il-ladhi wa`adtahu' [O Allah! Lord of this perfect call (perfect by not ascribing partners to You) and of the regular prayer which is going to be established, give Muhammad the right of intercession and illustriousness, and resurrect him to the best and the highest place in Paradise that You promised him (of)], then my intercession for him will be allowed on the Day of Resurrection” (Sahih al-Bukhari 614).", arabic: "مَنْ قَالَ حِينَ يَسْمَعُ النِّدَاءَ اللَّهُمَّ رَبَّ هَذِهِ الدَّعْوَةِ التَّامَّةِ وَالصَّلاَةِ الْقَائِمَةِ آتِ مُحَمَّدًا الْوَسِيلَةَ وَالْفَضِيلَةَ وَابْعَثْهُ مَقَامًا مَحْمُودًا الَّذِي وَعَدْتَهُ، حَلَّتْ لَهُ شَفَاعَتِي يَوْمَ الْقِيَامَةِ", dimmed: true)
                 }
 
-                ArticleSourcesSection(article: "IqamahView")
+                ArticleSourcesSection(article: "AdhanOtherView")
             }
             .themedListRowBackground()
         }
-        .selectableArticleList()
+        .selectableArticleList(article: "AdhanOtherView")
         .navigationTitle("Adhan")
     }
 }
@@ -831,11 +829,11 @@ struct IqamahView: View {
                     ScriptureQuote(text: "“When you hear the Iqama, proceed to offer the prayer with calmness and solemnity and do not make haste. And pray whatever you are able to pray and complete whatever you have missed” (Sahih al-Bukhari 636, Sahih Muslim 602).", arabic: "إِذَا سَمِعْتُمُ الإِقَامَةَ فَامْشُوا إِلَى الصَّلاَةِ، وَعَلَيْكُمْ بِالسَّكِينَةِ وَالْوَقَارِ وَلاَ تُسْرِعُوا، فَمَا أَدْرَكْتُمْ فَصَلُّوا وَمَا فَاتَكُمْ فَأَتِمُّوا", dimmed: true)
                 }
 
-                ArticleSourcesSection(article: "TakbiratView")
+                ArticleSourcesSection(article: "IqamahView")
             }
             .themedListRowBackground()
         }
-        .selectableArticleList()
+        .selectableArticleList(article: "IqamahView")
         .navigationTitle("Iqamah")
     }
 }
@@ -999,12 +997,12 @@ struct TakbiratView: View {
                         .font(.body)
                 }
 
-                ArticleSourcesSection(article: "HijriCalendarView")
+                ArticleSourcesSection(article: "TakbiratView")
             }
             .themedListRowBackground()
         }
         .navigationTitle("How to Pray Eid")
-        .selectableArticleList()
+        .selectableArticleList(article: "TakbiratView")
     }
 }
 
@@ -1070,12 +1068,12 @@ struct HijriCalendarView: View {
                         .font(.body)
                 }
 
-                ArticleSourcesSection(article: "CompileView")
+                ArticleSourcesSection(article: "HijriCalendarView")
             }
             .themedListRowBackground()
         }
         .navigationTitle("Hijri Calendar")
-        .selectableArticleList()
+        .selectableArticleList(article: "HijriCalendarView")
     }
 }
 
@@ -1220,12 +1218,12 @@ struct CompileView: View {
                         .font(.body)
                 }
 
-                ArticleSourcesSection(article: "TajweedView")
+                ArticleSourcesSection(article: "CompileView")
             }
             .themedListRowBackground()
         }
         .navigationTitle("Compilation of the Quran")
-        .selectableArticleList()
+        .selectableArticleList(article: "CompileView")
     }
 }
 
@@ -1327,12 +1325,12 @@ struct TajweedView: View {
                         .font(.body)
                 }
 
-                ArticleSourcesSection(article: "JuzView")
+                ArticleSourcesSection(article: "TajweedView")
             }
             .themedListRowBackground()
         }
         .navigationTitle("Tajweed")
-        .selectableArticleList()
+        .selectableArticleList(article: "TajweedView")
         #if os(iOS)
         .sheet(isPresented: $showTajweedLegend) {
             NavigationView {
@@ -1434,12 +1432,12 @@ struct JuzView: View {
                         .font(.body)
                 }
 
-                ArticleSourcesSection(article: "AhrufView")
+                ArticleSourcesSection(article: "JuzView")
             }
             .themedListRowBackground()
         }
         .navigationTitle("Thirty Juz")
-        .selectableArticleList()
+        .selectableArticleList(article: "JuzView")
     }
 }
 
@@ -1567,12 +1565,17 @@ struct AhrufView: View {
             .themedListRowBackground()
         }
         .navigationTitle("7 Ahruf (Modes)")
-        .selectableArticleList()
+        .selectableArticleList(article: "AhrufView")
     }
 }
 
 struct QiraatView: View {
     @Environment(\.appearance) private var appearance
+
+    #if DEBUG && os(iOS)
+    /// "-openQiraatExplorer": push the explorer as the article appears.
+    @State private var debugOpenExplorer = false
+    #endif
 
     var body: some View {
         List {
@@ -1581,6 +1584,30 @@ struct QiraatView: View {
                     Text(verbatim: "In short: the ten Qiraat are the authentic, mass-transmitted ways of reciting the Quran, each traced through a continuous chain to the Prophet.")
                         .font(.body)
                 }
+
+                // The reading is one thing, seeing it another: the explorer walks the places where
+                // the riwayat actually differ, ayah by ayah, with every reading side by side.
+                #if os(iOS)
+                Section(header: ArticleHeader("EXPLORE")) {
+                    NavigationLink(destination: LazyDestination { QiraatExplorerView() }) {
+                        HStack(spacing: 12) {
+                            Image(systemName: "arrow.left.and.right.text.vertical")
+                                .font(.title3)
+                                .foregroundColor(appearance.accent)
+                                .frame(width: 30)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Qiraat Explorer")
+                                    .font(.subheadline.weight(.semibold))
+                                Text("See where the riwayat differ, ayah by ayah: what changes, what it means, and every reading side by side")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                        }
+                        .padding(.vertical, 2)
+                    }
+                }
+                #endif
 
                 Section(header: ArticleHeader("OVERVIEW")) {
                     Text(verbatim: "The 10 Qiraat (قِرَاءَات), from the root q–r–a (قرأ) meaning “to read/recite,” literally means “readings/recitations.” Islamically and Quranically, a Qiraah (قِرَاءَة) is a specific, verified method of reciting the Quran. The 10 Qiraat are the preserved, mass-transmitted (mutawatir, مُتَوَاتِر) recitations of the Quran, each a precise method taught by Prophet Muhammad (peace and blessings be upon him) and transmitted through authentic chains of narrators (isnad إِسنَاد). They do not represent different Qurans, but different prophetic ways of reciting the same revelation.")
@@ -1911,8 +1938,15 @@ struct QiraatView: View {
             }
             .themedListRowBackground()
         }
+        #if DEBUG && os(iOS)
+        .debugPushDestination(isPresented: $debugOpenExplorer) { QiraatExplorerView() }
+        .onAppear {
+            guard ProcessInfo.processInfo.arguments.contains("-openQiraatExplorer") else { return }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { debugOpenExplorer = true }
+        }
+        #endif
         .navigationTitle("10 Qiraat (Recitations)")
-        .selectableArticleList()
+        .selectableArticleList(article: "QiraatView")
     }
 
     /// A tappable Instagram handle that opens the creator's profile, used for the infographic credits.
@@ -1987,12 +2021,12 @@ struct FarewellView: View {
                         .font(.body)
                 }
 
-                ArticleSourcesSection(article: "SahabahView")
+                ArticleSourcesSection(article: "FarewellView")
             }
             .themedListRowBackground()
         }
         .navigationTitle("Farewell Sermon")
-        .selectableArticleList()
+        .selectableArticleList(article: "FarewellView")
     }
 }
 
@@ -2097,12 +2131,12 @@ struct SahabahView: View {
                         .font(.body)
                 }
 
-                ArticleSourcesSection(article: "WivesView")
+                ArticleSourcesSection(article: "SahabahView")
             }
             .themedListRowBackground()
         }
         .navigationTitle("The Sahabah")
-        .selectableArticleList()
+        .selectableArticleList(article: "SahabahView")
     }
 }
 
@@ -2253,12 +2287,12 @@ struct WivesView: View {
                         .font(.body)
                 }
 
-                ArticleSourcesSection(article: "CaliphatesView")
+                ArticleSourcesSection(article: "WivesView")
             }
             .themedListRowBackground()
         }
         .navigationTitle("The Wives")
-        .selectableArticleList()
+        .selectableArticleList(article: "WivesView")
     }
 }
 
@@ -2395,12 +2429,12 @@ struct CaliphatesView: View {
                         .font(.body)
                 }
 
-                ArticleSourcesSection(article: "MadhabView")
+                ArticleSourcesSection(article: "CaliphatesView")
             }
             .themedListRowBackground()
         }
         .navigationTitle("The Caliphates")
-        .selectableArticleList()
+        .selectableArticleList(article: "CaliphatesView")
     }
 }
 
@@ -2445,12 +2479,12 @@ struct MadhabView: View {
 
                 ArticleSectionsView(sections: Self.sections2)
 
-                ArticleSourcesSection(article: "AhlulBaytView")
+                ArticleSourcesSection(article: "MadhabView")
             }
             .themedListRowBackground()
         }
         .navigationTitle("Madhahib of Fiqh")
-        .selectableArticleList()
+        .selectableArticleList(article: "MadhabView")
     }
 
     /// One imam's entry: a bold name (with the Arabic name), a secondary line of school / region / dates, and a
@@ -2779,12 +2813,12 @@ struct AhlulBaytView: View {
                         .font(.body)
                 }
 
-                ArticleSourcesSection(article: "AhlusSunnahView")
+                ArticleSourcesSection(article: "AhlulBaytView")
             }
             .themedListRowBackground()
         }
         .navigationTitle("The People of the House")
-        .selectableArticleList()
+        .selectableArticleList(article: "AhlulBaytView")
     }
 }
 
@@ -2898,12 +2932,12 @@ struct AhlusSunnahView: View {
                         .font(.body)
                 }
 
-                ArticleSourcesSection(article: "SeerahView")
+                ArticleSourcesSection(article: "AhlusSunnahView")
             }
             .themedListRowBackground()
         }
         .navigationTitle("Ahl As-Sunnah")
-        .selectableArticleList()
+        .selectableArticleList(article: "AhlusSunnahView")
     }
 }
 
@@ -2992,12 +3026,12 @@ struct SeerahView: View {
                         .font(.body)
                 }
 
-                ArticleSourcesSection(article: "TafsirView")
+                ArticleSourcesSection(article: "SeerahView")
             }
             .themedListRowBackground()
         }
         .navigationTitle("The Seerah")
-        .selectableArticleList()
+        .selectableArticleList(article: "SeerahView")
     }
 }
 
@@ -3079,12 +3113,12 @@ struct TafsirView: View {
                         .font(.body)
                 }
 
-                ArticleSourcesSection(article: "FiqhAqeedahManhajView")
+                ArticleSourcesSection(article: "TafsirView")
             }
             .themedListRowBackground()
         }
         .navigationTitle("Tafsir")
-        .selectableArticleList()
+        .selectableArticleList(article: "TafsirView")
     }
 }
 
@@ -3145,11 +3179,13 @@ struct FiqhAqeedahManhajView: View {
                     Text(verbatim: "United in creed, allowing valid differences in jurisprudence, and following the method of the first generations: this is the balance a Muslim strives for.")
                         .font(.body)
                 }
+
+                ArticleSourcesSection(article: "FiqhAqeedahManhajView")
             }
             .themedListRowBackground()
         }
         .navigationTitle("Fiqh, Aqeedah, Manhaj")
-        .selectableArticleList()
+        .selectableArticleList(article: "FiqhAqeedahManhajView")
     }
 }
 

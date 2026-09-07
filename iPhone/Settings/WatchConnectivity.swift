@@ -8,12 +8,12 @@ import WidgetKit
 /// The protocol is a **per-key last-writer-wins merge** (an LWW map). Every synced setting travels with
 /// its own `(timestamp, deviceRank)` stamp, and a device applies an incoming key only when that key's
 /// stamp is newer than the one it already holds (strictly later wall-clock time; the higher-ranked
-/// device — iPhone — wins only an exact-same-instant tie).
+/// device, the iPhone, wins only an exact-same-instant tie).
 ///
 /// Why per-key and not whole-snapshot: the previous protocol stamped the *entire* snapshot with one
 /// timestamp per send. Any send from a device holding one stale value re-asserted that stale value as
 /// "just written," so a watch that hadn't yet received a phone edit could revert it merely by syncing an
-/// unrelated change — the "Hanafi calculation keeps reverting" bug — and the phone's still-queued edit
+/// unrelated change (the "Hanafi calculation keeps reverting" bug), and the phone's still-queued edit
 /// then looked old to the watch and was rejected, which presented as sync being broken entirely. With
 /// per-key stamps a device only fresh-stamps keys whose value it actually changed, so a stale peer loses
 /// exactly the keys it is stale on and nothing else.
@@ -29,7 +29,7 @@ import WidgetKit
 ///   holds; after applying a peer's keys we mark them pushed, so the local didSets an apply fires never
 ///   echo identical state back. Each side compares only against its *own* payload form, so structural
 ///   asymmetries (the watch never sends `travelingMode`) can't cause endless re-send ping-pong.
-/// - **Reliable channel.** `updateApplicationContext` (always delivered, latest-state-wins — safe here
+/// - **Reliable channel.** `updateApplicationContext` (always delivered, latest-state-wins; safe here
 ///   because every payload carries the full field map) plus an immediate `sendMessage` fast path when
 ///   reachable; duplicates are harmless because of the per-key recency check.
 /// - **Clock-skew fencing.** A field stamped absurdly far in our future (mis-set peer clock) is skipped,
@@ -37,7 +37,7 @@ import WidgetKit
 ///   can never run away into the future and freeze out legitimate edits.
 /// - **Legacy interop.** A payload from a peer still on the whole-snapshot build (its single timestamp
 ///   applied to every key) merges through the same per-key gate, seeded from the old protocol's persisted
-///   recency watermark — so a stale legacy peer is rejected exactly as it was before. Outgoing payloads
+///   recency watermark, so a stale legacy peer is rejected exactly as it was before. Outgoing payloads
 ///   still mirror the legacy fields so an un-updated peer keeps receiving.
 ///
 /// All sync bookkeeping is read and mutated only on the main thread (main queue hops + `@MainActor`

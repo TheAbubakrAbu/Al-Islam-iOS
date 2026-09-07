@@ -676,7 +676,6 @@ final class TajweedStore {
         attributed.addAttribute(.foregroundColor, value: platformLabelColor(), range: fullRange)
 
         let utf16Count = attributed.length
-        let rawUTF16Count = text.utf16.count
         var priorityPerUTF16 = [Int](repeating: 0, count: utf16Count)
 
         var ops: [PaintOp] = []
@@ -3059,12 +3058,12 @@ final class TajweedStore {
     }
 
     /// A saakin raa preceded by hamzatul-wasl (`وَٱرۡتَبۡتُمۡ` 57:14, `قَالُوا۟ ٱرۡجِعُوا۟`) has no vowel of its own to
-    /// lean on, and the wasl hamza is dropped in connected reading — so the weight is decided by whatever comes
+    /// lean on, and the wasl hamza is dropped in connected reading, so the weight is decided by whatever comes
     /// before the hamza, reaching back across the word boundary if need be (in 57:14 that's the fatha on the
     /// و of وَ, which makes the raa heavy; the old code stopped at the vowel-less hamza and called it light).
     ///
     /// Only when the hamza opens the ayah is it actually pronounced, and then it carries its own assumed vowel:
-    /// the classic rule is that it takes a damma when the word's third letter has one, and a kasra otherwise —
+    /// the classic rule is that it takes a damma when the word's third letter has one, and a kasra otherwise,
     /// so damma → heavy, anything else → light.
     private func saakinRaaVowelContext(clusters: [CharacterClusterInfo], index: Int) -> SaakinRaaVowelContext {
         // Stops at the word boundary, so this only ever finds a hamzatul-wasl that sits in the raa's own word.
@@ -3081,7 +3080,7 @@ final class TajweedStore {
     }
 
     /// Like `previousPronouncedArabicLetterClusterIndex`, but steps over word boundaries instead of stopping at
-    /// them — needed only where a letter is dropped in connected reading and the sound carries over from the
+    /// them; needed only where a letter is dropped in connected reading and the sound carries over from the
     /// previous word.
     private func previousPronouncedArabicLetterClusterIndexCrossingWords(clusters: [CharacterClusterInfo], before index: Int) -> Int? {
         var i = index - 1
@@ -3667,7 +3666,9 @@ final class QuranData: ObservableObject {
         }()
     }
 
-    private func arabicToEnglishNumber(_ arabicNumber: String) -> Int? {
+    /// Internal, not private: the surah-list query grammar (`QuranData.surahListResults`, in
+    /// QuranView.swift) resolves Arabic-Indic digits through it too.
+    func arabicToEnglishNumber(_ arabicNumber: String) -> Int? {
         Self.arFormatter.number(from: arabicNumber)?.intValue
     }
 
@@ -3866,8 +3867,11 @@ final class QuranData: ObservableObject {
         let silentArabicBlob = [rawArabic, cleanArabic]
             .map { settings.cleanSearchIgnoringSilentArabicLetters($0) }
             .joined(separator: " ")
-        let englishBlob = [englishSaheeh, englishMustafa, transliteration]
+        // The transliteration rides twice: as typed in the pack, and vowel-folded (see
+        // `Settings.foldedTransliterationForSearch`), so "rahmaan" and "rahman" both land.
+        let englishBlob = ([englishSaheeh, englishMustafa, transliteration]
             .map { settings.cleanSearch($0) }
+            + [settings.foldedTransliterationForSearch(transliteration)])
             .joined(separator: " ")
         let arabicTokens = searchTokens(from: arabicBlob)
         let silentArabicTokens = searchTokens(from: silentArabicBlob)
@@ -5533,7 +5537,7 @@ enum QiraahComparison {
                                           option.label, surahID, diagnostic.countScore, diagnostic.finalScore))
                 } else if diagnostic.finalScore < 0.75 {
                     weakCount += 1
-                    weak.append(String(format: "  %@ surah %d: %.3f (word check scored %.3f - kept the count mapping)",
+                    weak.append(String(format: "  %@ surah %d: %.3f (word check scored %.3f, kept the count mapping)",
                                        option.label, surahID, diagnostic.finalScore, diagnostic.walkScore ?? -1))
                     weak.append(contentsOf: weakDetail(surahID: surahID, tag: tag, quranData: quranData))
                 }
@@ -5542,7 +5546,7 @@ enum QiraahComparison {
         print("ALIGNMENT AUDIT: \(count) surah/riwayah pairs, worst score \(String(format: "%.3f", worst))")
         print(String(format: "ALIGNMENT AUDIT: %.0f ms total, slowest %.1f ms (%@)",
                      Date().timeIntervalSince(started) * 1000, slowest.ms, slowest.pair))
-        print(String(format: "ALIGNMENT AUDIT: phases - texts %.0f ms, agreement %.0f ms, content table %.0f ms, count walk %.0f ms",
+        print(String(format: "ALIGNMENT AUDIT phases: texts %.0f ms, agreement %.0f ms, content table %.0f ms, count walk %.0f ms",
                      phaseMillis[0], phaseMillis[1], phaseMillis[2], phaseMillis[3]))
         print("ALIGNMENT AUDIT: \(repairs.count) repaired by the word check")
         repairs.forEach { print($0) }

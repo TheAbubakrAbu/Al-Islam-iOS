@@ -52,7 +52,7 @@ struct SplashScreen: View {
                                         .font(.title.bold())
                                         .foregroundColor(.primary)
 
-                                    Text("Peace be upon you - welcome to \(AppIdentifiers.appName).")
+                                    Text("Peace be upon you, and welcome to \(AppIdentifiers.appName).")
                                         .font(.subheadline)
                                         .foregroundColor(.secondary)
                                 }
@@ -64,12 +64,12 @@ struct SplashScreen: View {
                                     splashFeatureRow(
                                         icon: "lock.shield.fill",
                                         title: "Private by design",
-                                        text: "Everything stays on your device - no accounts, no tracking, works offline."
+                                        text: "Everything stays on your device: no accounts, no tracking, works offline."
                                     )
                                     splashFeatureRow(
                                         icon: "heart.fill",
                                         title: "Free forever",
-                                        text: "No ads, no fees, no subscriptions - offered as sadaqah jariyah."
+                                        text: "No ads, no fees, no subscriptions. Offered as sadaqah jariyah."
                                     )
                                     splashFeatureRow(
                                         icon: "square.grid.2x2.fill",

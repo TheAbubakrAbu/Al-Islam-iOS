@@ -30,6 +30,8 @@ struct SettingsSearchEntry: Identifiable {
         case hadithSettings
         case appearance
         case credits
+        /// One credited source on the Credits page (`CreditItem.id`): the page opens scrolled to it.
+        case credit(String)
 
         /// The chip icon a search result renders with - derived here so entries never repeat it.
         var icon: String {
@@ -45,6 +47,7 @@ struct SettingsSearchEntry: Identifiable {
             case .hadithSettings: return "text.book.closed.fill"
             case .appearance: return "paintpalette.fill"
             case .credits: return "scroll.fill"
+            case .credit: return "link"
             }
         }
     }
@@ -238,7 +241,38 @@ struct SettingsView: View {
             }
             .navigationTitle("Settings")
             .applyConditionalListStyle(disableNowPlayingInset: disableNowPlayingInset)
+            #if DEBUG
+            // `-openCredit <CreditItem.id>`: what a credit row in the search results does, headlessly.
+            .debugPushDestination(isPresented: $debugOpenCredit) {
+                if let id = Self.debugCreditID { CreditsView(presentedAsSheet: false, scrollTo: id) }
+            }
+            .onAppear {
+                // `-settingsSearch <query>` seeds the search a moment after the tab appears; `-showCredits`
+                // presents the Credits sheet. Typing and tapping are not scriptable in the simulator.
+                if let seeded = Self.launchValue("-settingsSearch"), settingsSearchText.isEmpty {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { settingsSearchText = seeded }
+                }
+                if ProcessInfo.processInfo.arguments.contains("-showCredits") {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { showingCredits = true }
+                }
+                if Self.debugCreditID != nil {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { debugOpenCredit = true }
+                }
+            }
+            #endif
     }
+
+    #if DEBUG
+    @State private var debugOpenCredit = false
+
+    private static var debugCreditID: String? { launchValue("-openCredit") }
+
+    private static func launchValue(_ argument: String) -> String? {
+        let arguments = ProcessInfo.processInfo.arguments
+        guard let idx = arguments.firstIndex(of: argument), arguments.indices.contains(idx + 1) else { return nil }
+        return arguments[idx + 1]
+    }
+    #endif
 
     /// The floating bottom search bar, shared by the iPhone list and the iPad sidebar so settings
     /// search works identically in both shapes.
@@ -344,10 +378,7 @@ struct SettingsView: View {
         + SettingsSearchEntry.quranEntries
         + SettingsSearchEntry.hadithEntries
         + SettingsSearchEntry.appearanceEntries
-        + [
-            // About (owned by this file's credits link).
-            .init(title: "Credits & Contact", path: "Credits", keywords: "about version website email review", destination: .credits)
-        ]
+        + SettingsSearchEntry.creditEntries
 
     @ViewBuilder
     private func searchDestinationView(_ destination: SettingsSearchEntry.Destination) -> some View {
@@ -362,7 +393,8 @@ struct SettingsView: View {
         case .reciters: ReciterListView()
         case .hadithSettings: SettingsHadithView(presentedAsSheet: false)
         case .appearance: AppearanceSettingsScreen()
-        case .credits: CreditsView()
+        case .credits: CreditsView(presentedAsSheet: false)
+        case .credit(let id): CreditsView(presentedAsSheet: false, scrollTo: id)
         }
     }
 
@@ -849,6 +881,15 @@ extension SettingsSearchEntry {
 struct SettingsAppearanceView: View {
     @ObservedObject var settings = Settings.shared
 
+    #if os(iOS)
+    /// The iPad sidebar gives the five-segment theme control about 54 pt a segment, and "System"
+    /// showed as "Syst..." there (2026-09-06 iPad pass); iPads say "Auto". Keyed on the idiom, not
+    /// the size class: a split view's sidebar column reports `.compact` even on a 13-inch iPad.
+    private var systemThemeLabel: String {
+        UIDevice.current.userInterfaceIdiom != .phone ? "Auto" : "System"
+    }
+    #endif
+
     // Accent-swatch grid metrics. The watch gets fewer, smaller swatches with tighter gutters so each circle
     // actually FITS its column (see the note on the grid below); the phone keeps the roomier original.
     #if os(watchOS)
@@ -931,8 +972,8 @@ struct SettingsAppearanceView: View {
     var body: some View {
         #if os(iOS)
         VStack(alignment: .leading) {
-            Picker("Color Theme", selection: $settings.colorSchemeString.animation(.easeInOut)) {
-                Text("System").tag("system")
+            Picker("Color Theme", selection: $settings.colorSchemeString) {
+                Text(systemThemeLabel).tag("system")
                 Text("Light").tag("light")
                 Text("Dark").tag("dark")
                 Text("Gray").tag("gray")
@@ -1037,7 +1078,7 @@ struct SettingsAppearanceView: View {
                         .font(.subheadline)
                         .onChange(of: settings.alIslamGlow) { _ in settings.hapticFeedback() }
 
-                    Text("Color the glow with Al-Islam's yellow and green - yellow from the left, green from the right - instead of your accent color.")
+                    Text("Color the glow with Al-Islam's yellow and green (yellow from the left, green from the right) instead of your accent color.")
                         .font(.caption)
                         .foregroundColor(.secondary)
                         .fixedSize(horizontal: false, vertical: true)

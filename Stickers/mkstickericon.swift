@@ -29,7 +29,7 @@ if let c = CGContext(data: &px, width: 1, height: 1, bitsPerComponent: 8, bytesP
 let pad = (r: CGFloat(px[0]) / 255, g: CGFloat(px[1]) / 255, b: CGFloat(px[2]) / 255)
 fputs(String(format: "pad color: #%02X%02X%02X\n", px[0], px[1], px[2]), stderr)
 
-// (filename, width, height) — the 13 slots Xcode's stickersiconset template requires.
+// (filename, width, height): the 13 slots Xcode's stickersiconset template requires.
 let slots: [(String, Int, Int)] = [
     ("icon-29@2x.png",           58,   58),
     ("icon-29@3x.png",           87,   87),

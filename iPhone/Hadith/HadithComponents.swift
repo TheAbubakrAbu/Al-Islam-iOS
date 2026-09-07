@@ -401,7 +401,9 @@ struct HadithRow: View, Equatable {
         let cross = crossLanguageSpans(text: text)
         // Decided once per body: `hadithArabicFont(for:)` and `hadithArabicUsesCustomFace(for:)`
         // each walk the Arabic's grapheme count, and the body asked twice.
-        let arabicUsesCustomFace = settings.hadithArabicUsesCustomFace(for: text.arabic)
+        // Length-blind now: a long narration renders in chunks (`HadithArabicText`) or, clamped, as a
+        // prefix (`HadithArabicChunks.preview`), so the chosen face always applies.
+        let arabicUsesCustomFace = settings.hadithArabicWantsCustomFace
         let arabicFont: Font = arabicUsesCustomFace
             ? Font.arabic(settings.nonQuranArabicFontName, size: arabicFontSize)
             : .system(size: arabicFontSize)
@@ -485,12 +487,24 @@ struct HadithRow: View, Equatable {
             // rows' `showArabicLine` rule.
             if compact || settings.showHadithArabic || visibility.mArabic || visibility.guaranteeArabic
                 || !cross.arabic.isEmpty, !text.arabic.isEmpty {
+                Group {
+                if !compact, HadithArabicChunks.needed(text.arabic) {
+                    // The longest narrations, in the chosen face: sentence-bounded chunks, each short
+                    // enough for the KFGQPC faces to shape (see `HadithArabicChunks`).
+                    HadithArabicText(
+                        text: text.arabic,
+                        term: searchText,
+                        font: arabicFont,
+                        lineSpacing: 6,
+                        guaranteeMatch: visibility.guaranteeArabic,
+                        extraHighlightRanges: cross.arabic
+                    )
+                } else {
                 HighlightedSnippet(
-                    source: text.arabic,
+                    // A clamped row shows two lines, so a giant narration's opening is all it needs,
+                    // and the opening is short enough for the chosen face.
+                    source: compact ? HadithArabicChunks.preview(text.arabic) : text.arabic,
                     term: searchText,
-                    // The longest narrations fall back to the system face: the custom KFGQPC faces
-                    // DROP contextual shaping past a length cliff and every letter renders isolated
-                    // (see `arabicShapingCharacterLimit`).
                     font: arabicFont,
                     accent: settings.accentColor.color,
                     fg: .primary,
@@ -504,6 +518,8 @@ struct HadithRow: View, Equatable {
                 .multilineTextAlignment(.trailing)
                 .lineSpacing(compact ? 0 : 6)
                 .frame(maxWidth: .infinity, alignment: .trailing)
+                }
+                }
                 .fixedSize(horizontal: false, vertical: true)
             }
 
@@ -690,6 +706,132 @@ struct HadithRecentSearches: View {
     }
 }
 
+// MARK: - Long narrations in the custom face
+
+/// A long Arabic narration cut into pieces the custom faces shape correctly.
+///
+/// The KFGQPC faces drop contextual shaping when ONE `Text` lays out a very long string (every letter
+/// draws isolated, the "shattered Arabic" of the longest narrations). Falling back to the system face
+/// past a length cliff kept the letters joined and threw the hadith font away, which is the wrong
+/// trade for a reading screen. The text is instead split at sentence boundaries into runs under
+/// `Settings.hadithArabicChunkLimit` characters, each rendered as its own `Text` in the chosen face:
+/// a break between two sentences changes nothing a reader sees, and each run is short enough to shape.
+/// Highlight spans that were computed over the whole string are re-based onto the chunk they fall in.
+enum HadithArabicChunks {
+    struct Chunk: Identifiable {
+        let index: Int
+        let text: String
+        /// The chunk's start in the source, in UTF-16 units (what `NSRange` counts).
+        let utf16Offset: Int
+        var id: Int { index }
+    }
+
+    /// Where a sentence may end: the Arabic full stop and comma, the semicolon and question mark, the
+    /// Latin full stop, and a line break.
+    private static let boundaries: Set<Character> = [".", "\u{06D4}", "\u{060C}", "\u{061B}", "\u{061F}", "\n", "\u{06D6}"]
+
+    static func needed(_ text: String) -> Bool {
+        text.count >= Settings.arabicShapingCharacterLimit
+    }
+
+    /// The whole text as one chunk when it is short enough; sentence-bounded runs otherwise.
+    static func split(_ text: String, limit: Int = Settings.hadithArabicChunkLimit) -> [Chunk] {
+        guard needed(text) else { return [Chunk(index: 0, text: text, utf16Offset: 0)] }
+        var chunks: [Chunk] = []
+        var start = text.startIndex
+        var lastBoundary: String.Index?
+        var count = 0
+        var index = text.startIndex
+        func emit(upTo end: String.Index) {
+            let piece = String(text[start..<end])
+            chunks.append(Chunk(index: chunks.count, text: piece,
+                                utf16Offset: text.utf16.distance(from: text.utf16.startIndex, to: start)))
+            start = end
+            count = 0
+            lastBoundary = nil
+        }
+        while index < text.endIndex {
+            let character = text[index]
+            count += 1
+            if boundaries.contains(character) {
+                lastBoundary = text.index(after: index)
+            }
+            if count >= limit {
+                // Cut at the last sentence end inside the run, else at the last space, else here.
+                let cut = lastBoundary
+                    ?? text[start..<index].lastIndex(where: { $0 == " " }).map { text.index(after: $0) }
+                    ?? text.index(after: index)
+                emit(upTo: cut)
+                index = cut
+                continue
+            }
+            index = text.index(after: index)
+        }
+        if start < text.endIndex { emit(upTo: text.endIndex) }
+        return chunks
+    }
+
+    /// The spans of `ranges` (UTF-16, over the whole text) that fall inside `chunk`, re-based to it.
+    static func ranges(_ ranges: [NSRange], in chunk: Chunk) -> [NSRange] {
+        guard !ranges.isEmpty else { return [] }
+        let length = chunk.text.utf16.count
+        let chunkRange = NSRange(location: chunk.utf16Offset, length: length)
+        return ranges.compactMap { range in
+            let clipped = NSIntersectionRange(range, chunkRange)
+            guard clipped.length > 0 else { return nil }
+            return NSRange(location: clipped.location - chunk.utf16Offset, length: clipped.length)
+        }
+    }
+
+    /// The opening of a narration for a clamped preview (two lines of it are shown): short enough for
+    /// the custom face, cut at a word.
+    static func preview(_ text: String, limit: Int = Settings.hadithArabicChunkLimit) -> String {
+        guard needed(text) else { return text }
+        let head = text.prefix(limit)
+        if let space = head.lastIndex(of: " ") { return String(head[..<space]) }
+        return String(head)
+    }
+}
+
+/// The full Arabic of a hadith in the reading surfaces: one `HighlightedSnippet` per chunk (see
+/// `HadithArabicChunks`), all in the chosen face, stacked with the paragraph spacing of a single text.
+struct HadithArabicText: View {
+    @ObservedObject private var settings = Settings.shared
+
+    let text: String
+    let term: String
+    let font: Font
+    let lineSpacing: CGFloat
+    var guaranteeMatch: Bool = false
+    var extraHighlightRanges: [NSRange] = []
+
+    var body: some View {
+        let chunks = HadithArabicChunks.split(text)
+        let custom = settings.hadithArabicWantsCustomFace
+        VStack(alignment: .trailing, spacing: lineSpacing) {
+            ForEach(chunks) { chunk in
+                HighlightedSnippet(
+                    source: chunk.text,
+                    term: term,
+                    font: font,
+                    accent: settings.accentColor.color,
+                    fg: .primary,
+                    highlightAllahNames: settings.highlightAllahNamesHadith,
+                    // Only the first chunk carries the guarantee: forcing a paint on every piece would
+                    // mark a run the term is not in.
+                    guaranteeMatch: guaranteeMatch && chunk.index == 0 && chunks.count == 1,
+                    extraHighlightRanges: HadithArabicChunks.ranges(extraHighlightRanges, in: chunk)
+                )
+                .arabicFontDesign(custom: custom)
+                .multilineTextAlignment(.trailing)
+                .lineSpacing(lineSpacing)
+                .frame(maxWidth: .infinity, alignment: .trailing)
+                .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+    }
+}
+
 /// Hadith Arabic in the Islam face, trailing - with commas falling back to the system face (the
 /// classical faces draw "\u{060C}" as an ornament circle). Every preview row renders through this so
 /// bookmarks, Hadith of the Day, Last Read, and the summary tiles all match the reader.
@@ -707,12 +849,12 @@ struct HadithArabicPreview: View {
 
     var body: some View {
         HighlightedSnippet(
-            source: text,
+            // A clamped card shows two lines, so a giant narration's opening is all it needs, and the
+            // opening is short enough for the chosen face to shape (see `HadithArabicChunks`).
+            source: HadithArabicChunks.preview(text),
             term: "",
-            // Length-aware face (see `arabicShapingCharacterLimit`): a card whose source is a full
-            // giant narration must not shatter just because it is clamped to two lines.
             font: settings.useFontArabic
-                ? settings.hadithArabicFont(for: text, size: size)
+                ? (settings.hadithArabicWantsCustomFace ? Font.arabic(settings.nonQuranArabicFontName, size: size) : .system(size: size))
                 : .footnote,
             accent: settings.accentColor.color,
             fg: .primary,
@@ -721,7 +863,7 @@ struct HadithArabicPreview: View {
             lineLimit: lineLimit,
             reservesSpace: true
         )
-        .arabicFontDesign(custom: settings.hadithArabicUsesCustomFace(for: text))
+        .arabicFontDesign(custom: settings.hadithArabicWantsCustomFace)
         .multilineTextAlignment(.trailing)
         .frame(maxWidth: .infinity, alignment: .trailing)
     }
@@ -1340,7 +1482,7 @@ struct HadithShareSheet: View {
                         // property of the drawn card, not of the text).
                         if includeArabic, !text.arabic.isEmpty {
                             if actionMode == .image {
-                                Picker("Arabic Font", selection: shareFaceBinding.animation(.easeInOut)) {
+                                Picker("Arabic Font", selection: shareFaceBinding) {
                                     Text("Uthmani").tag(Settings.IslamArabicFace.uthmani)
                                     Text("IndoPak").tag(Settings.IslamArabicFace.indopak)
                                     Text("Hijazi").tag(Settings.IslamArabicFace.hijazi)
@@ -1362,7 +1504,7 @@ struct HadithShareSheet: View {
                 }
                 .frame(maxHeight: 200)
 
-                Picker("Action Mode", selection: $actionMode.animation(.easeInOut)) {
+                Picker("Action Mode", selection: $actionMode) {
                     Text("Image").tag(ActionMode.image)
                     Text("Text").tag(ActionMode.text)
                 }

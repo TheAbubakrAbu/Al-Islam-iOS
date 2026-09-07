@@ -1538,6 +1538,8 @@ enum HadithLastReadDebounce {
 }
 
 struct HadithChapterView: View {
+    /// For the title pill's Dynamic Type ceiling (see `NavigationTitlePill`).
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     #if DEBUG
     /// `-launchHadithShare` (with `-launchHadithOpen`): the landed hadith's share sheet, presented headlessly.
     @State private var debugShareHadith: HadithBookData.Hadith? = nil
@@ -2048,8 +2050,17 @@ struct HadithChapterView: View {
     private func scheduleArrivalScroll(_ scrollProxy: ScrollViewProxy) {
         guard let target = scrollToHadithId else { return }
         highlightedHadithID = target
+        // Landing on the chapter's FIRST hadith lands at the literal top, the Previous/Next pair
+        // included (the chapter-swap rule): anchoring hadith 1 itself left the pair's bottom edge
+        // peeking out under the bar.
+        let anchorID: String
+        if allChapterHadiths.first?.idInBook == target, previousChapter != nil || nextChapter != nil {
+            anchorID = "chapter-top-nav"
+        } else {
+            anchorID = "chapter-hadith-\(target)"
+        }
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-            withAnimation { scrollProxy.scrollTo("chapter-hadith-\(target)", anchor: .top) }
+            withAnimation { scrollProxy.scrollTo(anchorID, anchor: .top) }
         }
     }
 
@@ -2131,7 +2142,7 @@ struct HadithChapterView: View {
                 HighlightedSnippet(
                     source: book.arabicTitle,
                     term: "",
-                    font: Font.arabic(settings.nonQuranArabicFontName, size: UIFont.preferredFont(forTextStyle: .headline).pointSize + 2),
+                    font: Font.arabic(settings.nonQuranArabicFontName, size: NavigationTitlePill.pointSize(.headline, at: dynamicTypeSize) + 2),
                     accent: settings.accentColor.color,
                     fg: settings.accentColor.color,
                     lineLimit: 1
@@ -2147,6 +2158,8 @@ struct HadithChapterView: View {
                 // real descenders here - at -8 they sat on top of this line with no gap at all.
                 .padding(.top, -2)
         }
+        // Bar chrome: the pill stops scaling at the extra-large text size (see `NavigationTitlePill`).
+        .dynamicTypeSize(...NavigationTitlePill.typeSizeCeiling)
         .frame(maxWidth: .infinity)
         .foregroundColor(.primary)
         .contentShape(Rectangle())
@@ -2290,7 +2303,7 @@ struct HadithChapterView: View {
         }
         // The ayah list's fix for a pinned header sitting flush on the first row: breathing room
         // via the list's top content margin, not a phantom spacer row.
-        .applyConditionalListStyle(topContentMargin: 11)
+        .applyConditionalListStyle(topContentMargin: 11, readingWidth: true)
         .compactListSectionSpacing()
         .onAppear {
             if textReady { scheduleArrivalScroll(scrollProxy) }
@@ -2985,25 +2998,17 @@ private struct HadithPageContent: View {
                 header(isBookmarked: isBookmarked)
 
                 if settings.showHadithArabic, !text.arabic.isEmpty {
-                    // The font comes from `hadithArabicFont(for:)`: the longest narrations fall back
-                    // to the system face, because the custom KFGQPC faces DROP contextual shaping past
-                    // a length cliff and every letter renders isolated (see `arabicShapingCharacterLimit`).
-                    let usesCustomFace = settings.hadithArabicUsesCustomFace(for: text.arabic)
-                    HighlightedSnippet(
-                        source: text.arabic,
+                    // Always the chosen face: the longest narrations render as sentence-bounded chunks
+                    // the KFGQPC faces can shape (see `HadithArabicChunks`), never as the system face.
+                    let usesCustomFace = settings.hadithArabicWantsCustomFace
+                    HadithArabicText(
+                        text: text.arabic,
                         term: "",
                         font: usesCustomFace
                             ? Font.arabic(settings.nonQuranArabicFontName, size: settings.hadithArabicFontSize)
                             : .system(size: settings.hadithArabicFontSize),
-                        accent: settings.accentColor.color,
-                        fg: .primary,
-                        highlightAllahNames: settings.highlightAllahNamesHadith
+                        lineSpacing: 6
                     )
-                    .arabicFontDesign(custom: usesCustomFace)
-                    .multilineTextAlignment(.trailing)
-                    .lineSpacing(6)
-                    .frame(maxWidth: .infinity, alignment: .trailing)
-                    .fixedSize(horizontal: false, vertical: true)
                     .textSelection(.enabled)
                 }
 

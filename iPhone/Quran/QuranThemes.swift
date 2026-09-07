@@ -33,6 +33,8 @@ final class ThematicTopicsStore: @unchecked Sendable {
     /// The grouped browse list, built once. The topics never change after load, and the browse screen's
     /// body used to re-group all 323 of them (dictionary + order walk) on every render pass.
     private var groupedCache: [(domain: String, topics: [ThemeTopic])]?
+    /// ayah key → indices into `topics()`, built once on first use (the insights card under an ayah).
+    private var byAyahCache: [String: [Int]]?
     private var loadFailed = false
 
     static let isBundled: Bool = ThemesPack.url("ThematicTopics") != nil
@@ -77,6 +79,44 @@ final class ThematicTopicsStore: @unchecked Sendable {
         // the pack load.
         if groupedCache == nil, !grouped.isEmpty { groupedCache = grouped }
         return groupedCache ?? grouped
+    }
+
+    /// Every topic annotating this ayah, in corpus order.
+    func topics(forSurah surah: Int, ayah: Int) -> [ThemeTopic] {
+        let all = topics()
+        guard !all.isEmpty else { return [] }
+        lock.lock()
+        if byAyahCache == nil {
+            var index: [String: [Int]] = [:]
+            for (offset, topic) in all.enumerated() {
+                for key in topic.ayahs { index[key, default: []].append(offset) }
+            }
+            byAyahCache = index
+        }
+        let hits = byAyahCache?["\(surah):\(ayah)"] ?? []
+        lock.unlock()
+        return hits.compactMap { all.indices.contains($0) ? all[$0] : nil }
+    }
+
+    /// Topics whose name, category or description carries the query, exact names first.
+    func search(_ query: String, limit: Int = 12) -> [ThemeTopic] {
+        let settings = Settings.shared
+        let folded = settings.cleanSearch(query, whitespace: true)
+        guard folded.count >= 2 else { return [] }
+        var hits = topics().filter { topic in
+            settings.cleanSearch(topic.name).contains(folded)
+                || settings.cleanSearch(topic.category).contains(folded)
+                || settings.cleanSearch(topic.description).contains(folded)
+        }
+        hits.sort { a, b in
+            let an = settings.cleanSearch(a.name), bn = settings.cleanSearch(b.name)
+            let aExact = an == folded, bExact = bn == folded
+            if aExact != bExact { return aExact }
+            let aPrefix = an.hasPrefix(folded), bPrefix = bn.hasPrefix(folded)
+            if aPrefix != bPrefix { return aPrefix }
+            return a.ayahs.count > b.ayahs.count
+        }
+        return Array(hits.prefix(limit))
     }
 
     private static func load() -> [ThemeTopic]? {
@@ -189,12 +229,55 @@ enum ThemesPack {
 /// That is also why this owns no NavigationView of its own - it must inherit whichever column it was
 /// pushed into. "Open in reader" hands the ayah back to QuranView through `onOpenAyah`, which routes it
 /// via `push(surahID:ayahID:)` and therefore does the right thing in both layouts for free.
+/// The four corpora Browse by Theme walks: the app's QSAC themes, and the Quranic Universal
+/// Library's thematic topics, concepts and A-Z index (see `QuranTopicsStore`).
+enum ThemeBrowseFamily: String, CaseIterable, Identifiable {
+    case themes, topics, concepts, index
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .themes: return "Themes"
+        case .topics: return "Topics"
+        case .concepts: return "Concepts"
+        case .index: return "Index"
+        }
+    }
+
+    var qulFamily: QuranTopicsStore.Family? {
+        switch self {
+        case .themes: return nil
+        case .topics: return .thematic
+        case .concepts: return .ontology
+        case .index: return .index
+        }
+    }
+
+    var footnote: String {
+        qulFamily?.footnote ?? "Topics from the Quran Semantic Annotation Corpus (CC BY 4.0)."
+    }
+
+    var searchPlaceholder: String {
+        switch self {
+        case .themes: return "Search themes"
+        case .topics: return "Search topics"
+        case .concepts: return "Search concepts"
+        case .index: return "Search the index"
+        }
+    }
+}
+
 struct ThemesBrowseView: View {
     @ObservedObject private var settings = Settings.shared
+    @ObservedObject private var themeHighlights = ThemeHighlights.shared
 
     let onOpenAyah: (Int, Int) -> Void
 
     @State private var searchText = ""
+    /// Which corpus the list shows. The QSAC themes are the app's own and open first; the other
+    /// three exist only while the QUL topics pack is bundled.
+    @State private var family: ThemeBrowseFamily = .themes
     /// Domains the user folded shut. Stored as the EXCEPTION set so every section starts expanded.
     @State private var collapsedDomains = Set<String>()
     /// Domains whose "Show All" was tapped - those sections list every topic instead of the first 10.
@@ -214,10 +297,19 @@ struct ThemesBrowseView: View {
         searchText.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
-    /// The memoized store grouping, filtered in the view (the store's comment: never re-group per
-    /// render). Searching matches a topic's name, description, category, or its domain's name.
+    /// The memoized store grouping of the chosen family, filtered in the view (the store's comment:
+    /// never re-group per render). Searching matches a topic's name, description, category, or its
+    /// domain's name.
     private var displayedGroups: [(domain: String, topics: [ThemeTopic])] {
-        let groups = ThematicTopicsStore.shared.topicsByDomain()
+        let groups: [(domain: String, topics: [ThemeTopic])]
+        if let qul = family.qulFamily {
+            let store = QuranTopicsStore.shared
+            groups = store.sections(for: qul).map { section in
+                (section.title, section.topics.map { $0.asThemeTopic(parentName: store.parent(of: $0)?.name) })
+            }
+        } else {
+            groups = ThematicTopicsStore.shared.topicsByDomain()
+        }
         let query = settings.cleanSearch(trimmedQuery, whitespace: true)
         guard !query.isEmpty else { return groups }
 
@@ -239,23 +331,62 @@ struct ThemesBrowseView: View {
         let groups = displayedGroups
 
         List {
-            #if DEBUG
-            // "-openThemeTopic" pushes the first topic on launch, so the ayah rows (which are the
-            // reader's own AyahRow) can be verified headlessly. DEBUG builds only.
-            //
-            // Inserted ONLY when the argument is actually present: a hidden zero-height view is
-            // still a List ROW, and it drew an empty card above the first domain.
-            if Self.debugWantsTopic, let first = groups.first?.topics.first {
-                NavigationLink(isActive: $debugOpenFirstTopic) {
-                    ThemeTopicDetailView(topic: first, onOpenAyah: onOpenAyah)
-                } label: { EmptyView() }
-                    .frame(height: 0)
-                    .listRowInsets(EdgeInsets())
+            // The four corpora as one segmented switch: the app's themes, then the Quranic Universal
+            // Library's thematic topics, concepts and A-Z index. Only with the QUL pack bundled.
+            if QuranTopicsStore.isBundled {
+                Section {
+                    Picker("Corpus", selection: $family) {
+                        ForEach(ThemeBrowseFamily.allCases) { item in
+                            Text(item.title).tag(item)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .onChange(of: family) { _ in
+                        settings.hapticFeedback()
+                        collapsedDomains.removeAll()
+                        showAllDomains.removeAll()
+                    }
+                    .listRowInsets(EdgeInsets(top: 4, leading: 12, bottom: 4, trailing: 12))
                     .listRowBackground(Color.clear)
-                    .hidden()
-                    .onAppear { debugOpenFirstTopic = true }
+                }
             }
-            #endif
+
+            // What is lit in the reader right now, with a way to put each one (or all) out.
+            if !isSearching, !themeHighlights.lit.isEmpty {
+                Section(header: HStack {
+                    Text("LIT IN THE READER")
+                    Spacer()
+                    Button("Clear All") {
+                        settings.hapticFeedback()
+                        withAnimation(.easeInOut) { themeHighlights.clear() }
+                    }
+                    .font(.caption.weight(.semibold))
+                    .foregroundColor(settings.accentColor.color)
+                }) {
+                    ForEach(themeHighlights.lit) { theme in
+                        HStack(spacing: 10) {
+                            Circle()
+                                .fill(theme.color.color)
+                                .frame(width: 12, height: 12)
+                            Text(theme.name)
+                                .font(.subheadline)
+                            Spacer()
+                            Text("\(theme.count)")
+                                .font(.caption.weight(.semibold).monospacedDigit())
+                                .foregroundStyle(.secondary)
+                            Button {
+                                settings.hapticFeedback()
+                                withAnimation(.easeInOut) { themeHighlights.remove(theme.id) }
+                            } label: {
+                                Image(systemName: "xmark.circle.fill")
+                                    .foregroundStyle(.tertiary)
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel("Put out \(theme.name)")
+                        }
+                    }
+                }
+            }
 
             ForEach(groups, id: \.domain) { group in
                 themeSection(group, isSearching: isSearching)
@@ -263,7 +394,7 @@ struct ThemesBrowseView: View {
 
             if isSearching && groups.isEmpty {
                 Section {
-                    Text("No themes match your search.")
+                    Text("Nothing here matches your search.")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 }
@@ -272,17 +403,37 @@ struct ThemesBrowseView: View {
             // The credits hide while searching, the app's convention for trailing footers.
             if !isSearching {
                 Section(footer:
-                    Text("Topics from the Quran Semantic Annotation Corpus (CC BY 4.0).")
+                    Text(family.footnote)
                         .font(.caption2)
                 ) { EmptyView() }
             }
         }
         .applyConditionalListStyle(disableNowPlayingInset: true)
+        #if DEBUG
+        // "-openThemeTopic" pushes the first topic on launch, so the ayah rows (which are the reader's
+        // own AyahRow) can be verified headlessly. Through the List's own destination (see
+        // `DebugPushDestination`), never a hidden link row. DEBUG builds only.
+        .debugPushDestination(isPresented: $debugOpenFirstTopic) {
+            if let first = displayedGroups.first?.topics.first {
+                ThemeTopicDetailView(topic: first, onOpenAyah: onOpenAyah)
+            }
+        }
+        .onAppear {
+            // "-themesFamily topics|concepts|index" opens that corpus, for headless screenshots.
+            let args = ProcessInfo.processInfo.arguments
+            if let i = args.firstIndex(of: "-themesFamily"), i + 1 < args.count,
+               let wanted = ThemeBrowseFamily(rawValue: args[i + 1]) {
+                family = wanted
+            }
+            guard Self.debugWantsTopic else { return }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { debugOpenFirstTopic = true }
+        }
+        #endif
         .dismissKeyboardOnScroll()
         // The app's own bottom search bar, not `.searchable` - the same inset the surah picker and
         // the Quran/Hadith readers use, so every search in the app sits in the same place.
         .adaptiveSafeArea(edge: .bottom) {
-            SearchBar(text: AppPerformance.shouldReduceAnimations ? $searchText : $searchText.animation(.easeInOut), placeholder: "Search themes")
+            SearchBar(text: AppPerformance.shouldReduceAnimations ? $searchText : $searchText.animation(.easeInOut), placeholder: family.searchPlaceholder)
                 .padding(.horizontal, 24)
                 .padding(.bottom, BottomBarCushion.standard)
                 .background(Color.white.opacity(0.00001))
@@ -389,21 +540,124 @@ struct ThemesBrowseView: View {
     }
 }
 
-private struct ThemeTopicDetailView: View {
+/// One topic's ayahs: the app's QSAC themes and the QUL topics alike (a QUL topic's id carries the
+/// "qul-" prefix, and its Arabic name, subtopics, related topics and reference link come from
+/// `QuranTopicsStore`). Pushed from Browse by Theme (rows open the reader through `onOpenAyah`) and
+/// from the topic chips under an ayah in its sheets (no reader to open there: `onOpenAyah` is nil,
+/// and the rows keep their own menus).
+struct ThemeTopicDetailView: View {
     @ObservedObject private var settings = Settings.shared
     @ObservedObject private var quranData = QuranData.shared
+    @ObservedObject private var themeHighlights = ThemeHighlights.shared
 
     let topic: ThemeTopic
-    let onOpenAyah: (Int, Int) -> Void
+    let onOpenAyah: ((Int, Int) -> Void)?
     /// The rows' sheet host (Phase 5 step 6): the reader's row presents nothing itself any more.
     @State private var rowSheet: AyahRowSheetRequest?
 
+    /// The QUL topic behind a "qul-N" id, for the extras the QSAC rows do not have.
+    private var qulTopic: QuranTopicsStore.Topic? {
+        guard topic.id.hasPrefix("qul-"), let id = Int(topic.id.dropFirst(4)) else { return nil }
+        return QuranTopicsStore.shared.topic(id: id)
+    }
+
     var body: some View {
+        let qul = qulTopic
+        let store = QuranTopicsStore.shared
+        let subtopics = qul.map { store.children(of: $0) } ?? []
+        let related = qul.map { $0.related.compactMap { store.topic(id: $0) } } ?? []
+        let ancestors = qul.map { store.ancestors(of: $0) } ?? []
+
         List {
-            if !topic.description.isEmpty {
+            if !topic.description.isEmpty || qul != nil {
                 Section {
-                    Text(topic.description)
-                        .font(.body)
+                    VStack(alignment: .leading, spacing: 8) {
+                        if let qul, !qul.arabic.isEmpty {
+                            Text(qul.arabic)
+                                .font(.custom(settings.quranArabicFontName(for: nil), size: 24))
+                                .arabicFontDesign(custom: true)
+                                .foregroundColor(settings.accentColor.color)
+                                .frame(maxWidth: .infinity, alignment: .trailing)
+                        }
+                        if !ancestors.isEmpty {
+                            Text((["\(topic.domain)"] + ancestors.map(\.name)).joined(separator: " › "))
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                        if !topic.description.isEmpty {
+                            Text(topic.description)
+                                .font(.body)
+                        }
+                        if let qul, !qul.wiki.isEmpty, let url = URL(string: qul.wiki) {
+                            Link(destination: url) {
+                                Label("Read more on Wikipedia", systemImage: "safari")
+                                    .font(.caption.weight(.medium))
+                            }
+                            .tint(settings.accentColor.color)
+                        }
+                    }
+                    .padding(.vertical, 2)
+                }
+            }
+
+            // Light the theme in the reader: every ayah it names takes a faint wash of one color, in
+            // both readers, until it is put out here or in Browse by Theme.
+            if !topic.ayahs.isEmpty {
+                let litColor = themeHighlights.color(for: topic.id)
+                Section {
+                    Toggle(isOn: Binding(
+                        get: { themeHighlights.isLit(topic.id) },
+                        set: { _ in
+                            settings.hapticFeedback()
+                            withAnimation(.easeInOut) { themeHighlights.toggle(topic) }
+                        }
+                    )) {
+                        HStack(spacing: 10) {
+                            Circle()
+                                .fill((litColor ?? themeHighlights.nextColor).color)
+                                .frame(width: 14, height: 14)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Highlight in the Reader")
+                                    .font(.subheadline.weight(.semibold))
+                                Text(litColor.map { "Lit in \($0.name.lowercased()) across \(topic.ayahs.count) ayahs" }
+                                     ?? "A faint \(themeHighlights.nextColor.name.lowercased()) wash on its \(topic.ayahs.count) ayahs")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                    }
+                    .tint(settings.accentColor.color)
+                } footer: {
+                    Text("Up to \(ThemeHighlights.limit) themes can be lit at once, each in its own color, in the list and page readers. Put them out here or at the top of Browse by Theme.")
+                        .font(.caption)
+                }
+            }
+
+            if !subtopics.isEmpty {
+                Section(header: SectionPillHeader(title: "SUBTOPICS", count: subtopics.count)) {
+                    ForEach(subtopics) { child in
+                        NavigationLink {
+                            ThemeTopicDetailView(topic: child.asThemeTopic(parentName: topic.name), onOpenAyah: onOpenAyah)
+                        } label: {
+                            HStack {
+                                Text(child.name)
+                                    .font(.subheadline)
+                                Spacer()
+                                if !child.ayahs.isEmpty {
+                                    Text("\(child.ayahs.count)")
+                                        .font(.caption.weight(.semibold).monospacedDigit())
+                                        .foregroundStyle(settings.accentColor.color)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            if !related.isEmpty {
+                Section(header: Text("RELATED")) {
+                    TopicChipFlow(topics: related.map { $0.asThemeTopic(parentName: store.parent(of: $0)?.name) })
+                        .padding(.vertical, 4)
                 }
             }
 
@@ -464,9 +718,11 @@ private struct ThemeTopicDetailView: View {
                     renderSettingsSignature: settings.ayahRenderSettingsSignature,
                     scrollDown: .constant(nil),
                     searchText: .constant(""),
-                    onToggleHighlight: {
-                        settings.hapticFeedback()
-                        onOpenAyah(parts[0], parts[1])
+                    onToggleHighlight: onOpenAyah.map { open in
+                        {
+                            settings.hapticFeedback()
+                            open(parts[0], parts[1])
+                        }
                     },
                     onRequestSheet: { kind in
                         rowSheet = AyahRowSheetRequest(surah: surah, ayah: ayah, kind: kind)

@@ -1,4 +1,5 @@
 import SwiftUI
+import AVFoundation
 
 struct DuaItem: Identifiable {
     let arabicText: String
@@ -7,6 +8,10 @@ struct DuaItem: Identifiable {
     let reference: String?
     let displayTranslation: String
     let searchBlob: String
+    /// A recitation to stream (the Hisn al-Muslim entries), shown as a play pill under the row.
+    var audioURL: URL? = nil
+    /// A stable id for entries that have one (Hisn's "hisn-12"); the text-derived id otherwise.
+    var identity: String? = nil
 
     init(arabicText: String, transliteration: String, translation: String, reference: String? = nil) {
         self.arabicText = arabicText
@@ -19,7 +24,7 @@ struct DuaItem: Identifiable {
             .folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
     }
 
-    var id: String { "\(reference ?? transliteration)-\(arabicText)" }
+    var id: String { identity ?? ("\(reference ?? transliteration)-\(arabicText)") }
 }
 
 struct DuaCollection: Identifiable {
@@ -37,6 +42,14 @@ struct DuaView: View {
     @ObservedObject var settings = Settings.shared
 
     @State private var searchText = ""
+    #if os(iOS)
+    /// Hisn al-Muslim, loaded off the main thread for the front page's dua of the day.
+    @State private var hisnLibrary: HisnDuasStore.Library?
+    #if DEBUG
+    /// "-openHisnLibrary": push the Fortress at launch.
+    @State private var debugOpenHisn = false
+    #endif
+    #endif
     /// Apple Music-style bar minimization: true while scrolling down.
     @State private var barsCollapsed = false
     /// The collection row a result asked to scroll to ("Scroll To Collection"), consumed once the search clears.
@@ -90,7 +103,7 @@ struct DuaView: View {
 
     fileprivate static let semanticCorpusID = "duas-en"
     /// One flat list across the collections - the corpus rows, in a stable order.
-    fileprivate static let allDuaItems: [DuaItem] = collections.flatMap(\.items)
+    static let allDuaItems: [DuaItem] = collections.flatMap(\.items)
 
     /// True when the live query is one the semantic engine can answer (English text, long enough).
     private var aiQueryEligible: Bool {
@@ -270,6 +283,38 @@ struct DuaView: View {
                     .foregroundColor(.primary)
                     .padding(.vertical, 8)
             }
+
+            #if os(iOS)
+            // Hisn al-Muslim: the whole Fortress, and today's dua from it.
+            if HisnDuasStore.isBundled {
+                if let hisnLibrary, let today = HisnDuasStore.shared.duaOfTheDay() {
+                    Section {
+                        HisnDuaOfTheDayCard(entry: today, category: hisnLibrary.categories.first { $0.id == today.categoryID }, library: hisnLibrary)
+                    }
+                }
+                Section(header: Text("HISN AL-MUSLIM")) {
+                    NavigationLink(destination: LazyDestination { HisnDuaLibraryView() }) {
+                        HStack(spacing: 12) {
+                            AccentIconChip(systemImage: "shield.lefthalf.filled")
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text("Fortress of the Muslim")
+                                    .font(.body.weight(.medium))
+                                    .foregroundStyle(.primary)
+                                Text("268 duas for 132 situations, with references and recitations")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                    .lineLimit(2)
+                            }
+                            Spacer(minLength: 8)
+                            Text("حصن المسلم")
+                                .font(.custom(settings.nonQuranArabicFontName, size: 16))
+                                .arabicFontDesign(custom: settings.islamUsesCustomArabicFace)
+                                .foregroundStyle(settings.accentColor.color)
+                        }
+                    }
+                }
+            }
+            #endif
             }
 
             #if os(iOS)
@@ -508,6 +553,17 @@ struct DuaView: View {
         .compactListSectionSpacing()
         .navigationTitle("Dua & Supplications")
         #if os(iOS)
+        .task {
+            guard hisnLibrary == nil, HisnDuasStore.isBundled else { return }
+            hisnLibrary = await Task.detached(priority: .userInitiated) { HisnDuasStore.shared.loaded() }.value
+        }
+        #if DEBUG
+        .debugPushDestination(isPresented: $debugOpenHisn) { HisnDuaLibraryView() }
+        .onAppear {
+            guard ProcessInfo.processInfo.arguments.contains("-openHisnLibrary") else { return }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { debugOpenHisn = true }
+        }
+        #endif
         .onChange(of: searchText) { text in
             // A new query starts back on the AI list.
             showKeywordResults = false
@@ -711,6 +767,15 @@ private struct DuaCollectionView: View {
                     scrollLabel: "Scroll To Dua"
                 )
                 .equatable()
+
+                #if os(iOS)
+                // The Hisn al-Muslim rows carry a recitation: the play pill sits under the dua.
+                if let audio = item.audioURL {
+                    HisnDuaAudioButton(url: audio)
+                        .padding(.top, -4)
+                        .padding(.bottom, 4)
+                }
+                #endif
             }
         }
     }
@@ -980,3 +1045,460 @@ private struct DuaReflectionCard: View {
         DuaView()
     }
 }
+
+// MARK: - Hisn al-Muslim
+
+#if os(iOS)
+/// The Fortress of the Muslim (Hisn al-Muslim, Sa'id ibn Ali ibn Wahf al-Qahtani): 268 supplications
+/// in 132 situations, with the 14 collections the day is read by (morning, evening, after salah,
+/// before sleep, travel, food...). From `Resources/Data/Islam/HisnDuas.json.xz`
+/// (Scripts/build_hisn_duas.py), the islamic.app Dhikr API import Tilawa ships, with hisnmuslim.com
+/// recitations. Ported from Tilawa (Jamil Hammoudeh, with permission).
+final class HisnDuasStore: @unchecked Sendable {
+    static let shared = HisnDuasStore()
+    private init() {}
+
+    struct Category: Identifiable {
+        let id: String
+        let number: String
+        let label: String
+        let arabic: String
+        let count: Int
+    }
+
+    struct Collection: Identifiable {
+        let id: String
+        let label: String
+        let arabic: String
+        let subtitle: String
+        let icon: String
+        let tint: String
+        let entryIDs: [String]
+        let categoryNumbers: [String]
+
+        /// The shelf's SF symbol (the pack carries Tilawa's icon keys).
+        var systemImage: String {
+            switch icon {
+            case "sunrise": return "sunrise.fill"
+            case "sunset": return "sunset.fill"
+            case "prayer": return "hands.and.sparkles.fill"
+            case "moon": return "moon.stars.fill"
+            case "book": return "book.fill"
+            case "landmark": return "building.columns.fill"
+            case "travel": return "airplane"
+            case "food": return "fork.knife"
+            case "home": return "house.fill"
+            case "heart": return "heart.fill"
+            case "shield": return "shield.fill"
+            case "hand": return "hand.raised.fill"
+            case "compass": return "location.north.circle.fill"
+            default: return "text.book.closed.fill"
+            }
+        }
+    }
+
+    struct Entry: Identifiable {
+        let id: String
+        let number: String
+        let categoryID: String
+        let title: String
+        let arabic: String
+        let transliteration: String
+        let translation: String
+        let notes: String
+        let benefits: String
+        let repeatCount: Int
+        let reference: String
+        let audio: URL?
+
+        /// "Recite 3x · Muslim 4/2083": what the row prints under the dua.
+        var sourceLine: String {
+            var parts: [String] = []
+            if repeatCount > 1 { parts.append("Recite \(repeatCount)x") }
+            else if !notes.isEmpty, notes != "Recite 1x" { parts.append(notes) }
+            if !reference.isEmpty { parts.append(reference) }
+            return parts.joined(separator: " · ")
+        }
+
+        var asDuaItem: DuaItem {
+            var item = DuaItem(arabicText: arabic, transliteration: transliteration, translation: translation,
+                               reference: sourceLine.isEmpty ? nil : sourceLine)
+            item.audioURL = audio
+            item.identity = id
+            return item
+        }
+    }
+
+    struct Library {
+        let categories: [Category]
+        let collections: [Collection]
+        let entries: [Entry]
+        let entriesByCategory: [String: [Entry]]
+        let entryByID: [String: Entry]
+    }
+
+    private let lock = NSLock()
+    private var library: Library?
+    private var loadFailed = false
+
+    /// The pack lands flat in the bundle (Xcode copies loose resources without their folder), so the
+    /// lookup falls through the same chain the Miracles pack uses.
+    static var packURL: URL? {
+        Bundle.main.url(forResource: "HisnDuas", withExtension: "json.xz", subdirectory: "Data/Islam")
+            ?? Bundle.main.url(forResource: "HisnDuas", withExtension: "json.xz", subdirectory: "Islam")
+            ?? Bundle.main.url(forResource: "HisnDuas", withExtension: "json.xz")
+    }
+
+    static let isBundled: Bool = packURL != nil
+
+    func loaded() -> Library? {
+        lock.lock()
+        if let library { lock.unlock(); return library }
+        if loadFailed { lock.unlock(); return nil }
+        lock.unlock()
+        let parsed = Self.load()
+        lock.lock(); defer { lock.unlock() }
+        if let library { return library }
+        if let parsed { library = parsed } else { loadFailed = true }
+        return parsed
+    }
+
+    /// The day's dua, rotating through the whole book.
+    func duaOfTheDay() -> Entry? {
+        guard let library = loaded(), !library.entries.isEmpty else { return nil }
+        let day = Int(Date().timeIntervalSince1970 / 86_400)
+        return library.entries[((day * 7) % library.entries.count + library.entries.count) % library.entries.count]
+    }
+
+    private static func load() -> Library? {
+        guard let url = packURL,
+              let blob = try? Data(contentsOf: url),
+              let json = SolidPack.xzDecompress(blob),
+              let root = try? JSONSerialization.jsonObject(with: json) as? [String: Any] else { return nil }
+        let categories = (root["categories"] as? [[String: Any]] ?? []).compactMap { row -> Category? in
+            guard let id = row["id"] as? String, let label = row["label"] as? String else { return nil }
+            return Category(id: id, number: row["number"] as? String ?? "", label: label,
+                            arabic: row["arabic"] as? String ?? "", count: row["count"] as? Int ?? 0)
+        }
+        let collections = (root["collections"] as? [[String: Any]] ?? []).compactMap { row -> Collection? in
+            guard let id = row["id"] as? String, let label = row["label"] as? String else { return nil }
+            return Collection(id: id, label: label, arabic: row["arabic"] as? String ?? "",
+                              subtitle: row["subtitle"] as? String ?? "", icon: row["icon"] as? String ?? "",
+                              tint: row["tint"] as? String ?? "", entryIDs: row["entryIds"] as? [String] ?? [],
+                              categoryNumbers: row["categoryNumbers"] as? [String] ?? [])
+        }
+        let entries = (root["entries"] as? [[String: Any]] ?? []).compactMap { row -> Entry? in
+            guard let id = row["id"] as? String, let arabic = row["arabic"] as? String, !arabic.isEmpty else { return nil }
+            return Entry(id: id, number: row["number"] as? String ?? "", categoryID: row["category"] as? String ?? "",
+                         title: row["title"] as? String ?? "", arabic: arabic,
+                         transliteration: row["transliteration"] as? String ?? "",
+                         translation: row["translation"] as? String ?? "", notes: row["notes"] as? String ?? "",
+                         benefits: row["benefits"] as? String ?? "", repeatCount: row["repeat"] as? Int ?? 1,
+                         reference: row["reference"] as? String ?? "",
+                         audio: (row["audio"] as? String).flatMap { $0.isEmpty ? nil : URL(string: $0) })
+        }
+        guard !entries.isEmpty else { return nil }
+        var byCategory: [String: [Entry]] = [:]
+        for entry in entries { byCategory[entry.categoryID, default: []].append(entry) }
+        return Library(categories: categories, collections: collections, entries: entries,
+                       entriesByCategory: byCategory,
+                       entryByID: Dictionary(entries.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a }))
+    }
+}
+
+/// One recitation at a time, streamed from hisnmuslim.com; the play button on a dua row.
+@MainActor
+final class HisnDuaPlayer: ObservableObject {
+    static let shared = HisnDuaPlayer()
+    @Published private(set) var playingURL: URL?
+    @Published private(set) var isLoading = false
+    private var player: AVPlayer?
+    private var endObserver: Any?
+
+    private init() {}
+
+    func toggle(_ url: URL) {
+        if playingURL == url {
+            stop()
+            return
+        }
+        stop()
+        // Recitation plays through the shared session the Quran player configured; a dua is short.
+        try? AVAudioSession.sharedInstance().setCategory(.playback, mode: .default, options: [])
+        try? AVAudioSession.sharedInstance().setActive(true)
+        let item = AVPlayerItem(url: url)
+        let player = AVPlayer(playerItem: item)
+        self.player = player
+        playingURL = url
+        isLoading = true
+        endObserver = NotificationCenter.default.addObserver(forName: .AVPlayerItemDidPlayToEndTime, object: item, queue: .main) { [weak self] _ in
+            Task { @MainActor in self?.stop() }
+        }
+        player.play()
+        Task { @MainActor [weak self] in
+            try? await Task.sleep(nanoseconds: 800_000_000)
+            self?.isLoading = false
+        }
+    }
+
+    func stop() {
+        player?.pause()
+        player = nil
+        playingURL = nil
+        isLoading = false
+        if let endObserver { NotificationCenter.default.removeObserver(endObserver) }
+        endObserver = nil
+    }
+}
+
+/// The play control under a Hisn dua: the recitation from hisnmuslim.com, streamed on demand.
+struct HisnDuaAudioButton: View {
+    @ObservedObject private var settings = Settings.shared
+    @ObservedObject private var player = HisnDuaPlayer.shared
+    let url: URL
+
+    var body: some View {
+        let playing = player.playingURL == url
+        Button {
+            settings.hapticFeedback()
+            player.toggle(url)
+        } label: {
+            HStack(spacing: 6) {
+                Image(systemName: playing ? "stop.fill" : "play.fill")
+                    .font(.caption2)
+                Text(playing ? "Stop" : "Recitation")
+                    .font(.caption.weight(.semibold))
+            }
+            .foregroundColor(playing ? .white : settings.accentColor.color)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 5)
+            .background(Capsule().fill(playing ? settings.accentColor.color : settings.accentColor.color.opacity(0.12)))
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(playing ? "Stop the recitation" : "Play the recitation")
+    }
+}
+
+/// The library's root: the 14 collections of the day, then every situation the book covers.
+struct HisnDuaLibraryView: View {
+    @ObservedObject private var settings = Settings.shared
+    @State private var searchText = ""
+    @State private var library: HisnDuasStore.Library?
+
+    private var accent: Color { settings.accentColor.color }
+    private var query: String {
+        searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+            .folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
+    }
+
+    /// A category as one of the dua screen's collections, so its page is the same page every other
+    /// collection opens (rows, search, listen-all, the walkthrough).
+    static func collection(for category: HisnDuasStore.Category, library: HisnDuasStore.Library) -> DuaCollection {
+        let entries = library.entriesByCategory[category.id] ?? []
+        return DuaCollection(
+            title: category.label,
+            subtitle: category.arabic,
+            systemImage: "text.book.closed.fill",
+            introductionTitle: "From Hisn al-Muslim",
+            introduction: "\(category.label): \(entries.count == 1 ? "one supplication" : "\(entries.count) supplications") from the Fortress of the Muslim, with the reference each is narrated from. Tap the play pill under a dua to hear it recited.",
+            items: entries.map(\.asDuaItem)
+        )
+    }
+
+    static func collection(for shelf: HisnDuasStore.Collection, library: HisnDuasStore.Library) -> DuaCollection {
+        let entries = shelf.entryIDs.compactMap { library.entryByID[$0] }
+        return DuaCollection(
+            title: shelf.label,
+            subtitle: shelf.arabic,
+            systemImage: shelf.systemImage,
+            introductionTitle: shelf.label,
+            introduction: shelf.subtitle.isEmpty ? "\(entries.count) supplications from Hisn al-Muslim." : shelf.subtitle,
+            items: entries.map(\.asDuaItem)
+        )
+    }
+
+    var body: some View {
+        List {
+            Group {
+                if let library {
+                    if query.isEmpty {
+                        Section(header: Text("THE FORTRESS OF THE MUSLIM")) {
+                            Text("Hisn al-Muslim, the pocket book of supplications compiled by Sa'id ibn Ali ibn Wahf al-Qahtani from the Quran and the authentic Sunnah: \(library.entries.count) duas for \(library.categories.count) situations, each with its reference, and a recitation to follow along with.")
+                                .font(.subheadline)
+                                .padding(.vertical, 6)
+                        }
+
+                        Section(header: SectionPillHeader(title: "THROUGH THE DAY", count: library.collections.count)) {
+                            ForEach(library.collections) { shelf in
+                                NavigationLink(destination: LazyDestination { DuaCollectionView(collection: Self.collection(for: shelf, library: library)) }) {
+                                    HStack(spacing: 12) {
+                                        AccentIconChip(systemImage: shelf.systemImage)
+                                        VStack(alignment: .leading, spacing: 2) {
+                                            Text(shelf.label)
+                                                .font(.body.weight(.medium))
+                                            Text(shelf.arabic)
+                                                .font(.caption)
+                                                .foregroundStyle(.secondary)
+                                        }
+                                        Spacer(minLength: 8)
+                                        Text("\(shelf.entryIDs.count)")
+                                            .font(.caption.weight(.semibold).monospacedDigit())
+                                            .foregroundStyle(accent)
+                                            .padding(.horizontal, 9)
+                                            .padding(.vertical, 4)
+                                            .background(Capsule().fill(accent.opacity(0.12)))
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    let categories = query.isEmpty ? library.categories : library.categories.filter { category in
+                        let key = (category.label + " " + category.arabic).folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
+                        return key.contains(query)
+                    }
+                    let matches = query.isEmpty ? [] : library.entries.filter { entry in
+                        (entry.translation + " " + entry.transliteration + " " + entry.arabic)
+                            .folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current).contains(query)
+                    }
+
+                    if !query.isEmpty, !matches.isEmpty {
+                        Section(header: SectionPillHeader(title: "MATCHING DUAS", count: matches.count)) {
+                            ForEach(matches.prefix(30)) { entry in
+                                NavigationLink(destination: LazyDestination {
+                                    DuaCollectionView(collection: Self.collection(for: library.categories.first { $0.id == entry.categoryID } ?? HisnDuasStore.Category(id: entry.categoryID, number: "", label: entry.title, arabic: "", count: 1), library: library))
+                                }) {
+                                    VStack(alignment: .leading, spacing: 4) {
+                                        Text(library.categories.first { $0.id == entry.categoryID }?.label ?? entry.title)
+                                            .font(.caption.weight(.semibold))
+                                            .foregroundColor(accent)
+                                        HighlightedSnippet(source: entry.translation, term: searchText, font: .subheadline, accent: accent, fg: .primary)
+                                            .lineLimit(3)
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    Section(header: SectionPillHeader(title: "EVERY SITUATION", count: categories.count)) {
+                        if categories.isEmpty, matches.isEmpty {
+                            Text("No duas match your search.")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                        }
+                        ForEach(categories) { category in
+                            NavigationLink(destination: LazyDestination { DuaCollectionView(collection: Self.collection(for: category, library: library)) }) {
+                                HStack(spacing: 10) {
+                                    Text(category.number)
+                                        .font(.caption2.weight(.semibold).monospacedDigit())
+                                        .foregroundStyle(.secondary)
+                                        .frame(width: 30, alignment: .leading)
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        HighlightedSnippet(source: category.label, term: searchText, font: .subheadline, accent: accent, fg: .primary)
+                                        Text(category.arabic)
+                                            .font(.caption)
+                                            .foregroundStyle(.secondary)
+                                    }
+                                    Spacer(minLength: 8)
+                                    Text("\(category.count)")
+                                        .font(.caption2.weight(.semibold).monospacedDigit())
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
+                        }
+                    }
+
+                    if query.isEmpty {
+                        Section(footer:
+                            Text("Hisn al-Muslim texts and references from the islamic.app Dhikr API; recitations by hisnmuslim.com. Ported from the Tilawa app by Jamil Hammoudeh, with permission.")
+                                .font(.caption2)
+                        ) { EmptyView() }
+                    }
+                } else {
+                    Section {
+                        HStack {
+                            Spacer()
+                            ProgressView()
+                            Spacer()
+                        }
+                    }
+                }
+            }
+            .themedListRowBackground()
+        }
+        .applyConditionalListStyle(disableNowPlayingInset: true)
+        .compactListSectionSpacing()
+        .adaptiveSafeArea(edge: .bottom) {
+            SearchBar(text: AppPerformance.shouldReduceAnimations ? $searchText : $searchText.animation(.easeInOut), placeholder: "Search Hisn al-Muslim")
+                .padding(.horizontal, 24)
+                .padding(.bottom, BottomBarCushion.standard)
+                .background(Color.white.opacity(0.00001))
+        }
+        .navigationTitle("Hisn al-Muslim")
+        .navigationBarTitleDisplayMode(.inline)
+        .task {
+            guard library == nil else { return }
+            library = await Task.detached(priority: .userInitiated) { HisnDuasStore.shared.loaded() }.value
+        }
+    }
+}
+
+/// The day's dua from Hisn al-Muslim, on the dua screen's front page.
+struct HisnDuaOfTheDayCard: View {
+    @ObservedObject private var settings = Settings.shared
+    let entry: HisnDuasStore.Entry
+    let category: HisnDuasStore.Category?
+    let library: HisnDuasStore.Library
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 6) {
+                Image(systemName: "sun.max.fill")
+                Text("DUA OF THE DAY")
+                Spacer()
+                if let category {
+                    Text(category.label)
+                        .lineLimit(1)
+                }
+            }
+            .font(.caption2.weight(.bold))
+            .foregroundColor(settings.accentColor.color)
+
+            Text(entry.arabic)
+                .font(.custom(settings.nonQuranArabicFontName, size: 24))
+                .arabicFontDesign(custom: settings.islamUsesCustomArabicFace)
+                .multilineTextAlignment(.trailing)
+                .lineSpacing(6)
+                .frame(maxWidth: .infinity, alignment: .trailing)
+                .fixedSize(horizontal: false, vertical: true)
+
+            Text(entry.translation)
+                .font(.footnote)
+                .fixedSize(horizontal: false, vertical: true)
+
+            HStack {
+                if !entry.sourceLine.isEmpty {
+                    Text(entry.sourceLine)
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(2)
+                }
+                Spacer()
+                if let audio = entry.audio {
+                    HisnDuaAudioButton(url: audio)
+                }
+            }
+
+            if let category {
+                NavigationLink(destination: LazyDestination { DuaCollectionView(collection: HisnDuaLibraryView.collection(for: category, library: library)) }) {
+                    Label("More duas for this situation", systemImage: "arrow.right.circle")
+                        .font(.caption.weight(.semibold))
+                        .foregroundColor(settings.accentColor.color)
+                }
+            }
+        }
+        .padding(.vertical, 6)
+        .textSelection(.enabled)
+    }
+}
+#endif

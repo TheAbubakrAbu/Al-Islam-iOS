@@ -152,7 +152,7 @@ struct DateView: View {
 
     @ViewBuilder
     private var conversionPicker: some View {
-        Picker("Conversion Type", selection: $selectedTab.animation(.easeInOut)) {
+        Picker("Conversion Type", selection: $selectedTab) {
             Text("Hijri to Gregorian").tag(ConversionTab.hijriToGregorian)
             Text("Gregorian to Hijri").tag(ConversionTab.gregorianToHijri)
         }

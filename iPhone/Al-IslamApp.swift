@@ -62,6 +62,8 @@ struct AlIslamApp: App {
                 // Every system font in the app is SF Rounded. Views that render a bundled Arabic face opt back
                 // out with `arabicFontDesign(custom:)` - see the note in `Globals.swift`.
                 .appFontDesign()
+                // iPad and Mac read one Dynamic Type step larger (see `regularIdiomTypeBoost`).
+                .regularIdiomTypeBoost()
                 // Every Toggle in the app breathes: the standard switch with 2pt of vertical padding
                 // (user rule), applied once here so no individual row can forget it.
                 .toggleStyle(PaddedSwitchToggleStyle())
@@ -213,6 +215,11 @@ private struct MainTabView: View {
             // Tapping a nagging notification lands here with the question pending - asked at the TAB
             // level so it appears whichever tab the app reopens on.
             .onReceive(settings.$pendingNagQuestion) { pendingNagQuestion = $0 }
+            // A Sunnah reminder's tap (or its "Open" row anywhere in Settings) lands on the Quran
+            // tab; the tab's own `.onReceive` opens the reader from there.
+            .onReceive(AppNavigation.shared.$pendingQuran) { target in
+                if target != nil { selectedTab = .quran }
+            }
             .confirmationDialog(
                 "Did you pray \(pendingNagQuestion?.prayerName ?? "this prayer")?",
                 isPresented: Binding(
@@ -289,6 +296,19 @@ private struct MainTabView: View {
                 }
                 await SemanticPackExport.run()
             }
+            // "-exportQiraatPlaces" - compute where every riwayah differs from Hafs (the Qiraat
+            // Explorer's index) and write Documents/qiraat-places.json, for
+            // Resources/Data/Quran/QiraatPlaces.json.xz (see QiraatPlacesExport). Run with
+            // "-seedBool betaQiraatEnabled=1" so the beta riwayat's texts are read too.
+            .task {
+                guard ProcessInfo.processInfo.arguments.contains("-exportQiraatPlaces") else { return }
+                await AppReveal.waitUntilRevealed()
+                while QuranData.shared.quran.count < 114 {
+                    try? await Task.sleep(nanoseconds: 250_000_000)
+                    guard !Task.isCancelled else { return }
+                }
+                await QiraatPlacesExport.run()
+            }
             .task {
                 guard ProcessInfo.processInfo.arguments.contains("-auditSemanticPacks") else { return }
                 while QuranData.shared.quran.count < 114 {
@@ -297,6 +317,10 @@ private struct MainTabView: View {
                 }
                 SemanticPackExport.audit()
             }
+            // "-selfShot <name>" (+ "-selfShotDelay", "-windowSize WxH") - render the key window to
+            // Documents/selfshots/<name>.png and exit; the Mac (Designed for iPad) screenshot path,
+            // see DebugSelfShot.
+            .task { await DebugSelfShot.handleLaunchArguments() }
             #if DEBUG
             // "-tsanSelfTest": prove a Thread Sanitizer build reports (see SanitizerSelfTest).
             .task {
@@ -473,8 +497,9 @@ private struct MainTabView: View {
         try? await Task.sleep(nanoseconds: 32_000_000)
         LaunchClock.mark("quran tab settled")
 
-        // 3) Back on the landing tab; let it become the rendered tab again before the reveal.
-        selectedTab = launchTab
+        // 3) Back on the landing tab; let it become the rendered tab again before the reveal. A
+        // launch from a Sunnah reminder's tap lands on the Quran tab instead.
+        selectedTab = AppNavigation.shared.pendingQuran != nil ? .quran : launchTab
         try? await Task.sleep(nanoseconds: 80_000_000)
 
         LaunchWarmup.shared.markWarm()
@@ -561,3 +586,99 @@ private struct MainTabView: View {
     }
 }
 
+#if DEBUG
+import UIKit
+/// "-selfShot <name>": renders the key window into Documents/selfshots/<name>.png (plus a .txt with
+/// the window size, scale and idiom) and exits. The only screenshot path for the Mac (Designed for
+/// iPad) build: `screencapture` needs a Screen Recording grant the build harness does not have, and
+/// `simctl io screenshot` is simulator-only. "-selfShotDelay <secs>" (default 6) waits for the reveal
+/// and any launch-argument navigation; "-windowSize WxH" pins the window scene to that size first
+/// (a Mac window resizes to it; iPhone and iPad ignore it); "-landscape" rotates the interface
+/// (iOS 16+), the only way to see an iPad simulator in landscape headlessly.
+enum DebugSelfShot {
+    static func handleLaunchArguments() async {
+        let args = ProcessInfo.processInfo.arguments
+        if args.contains("-landscape") {
+            // "-landscape": rotate the interface (iOS 16+); the simulator has no rotate command.
+            await rotateToLandscape(after: 0.3)
+        }
+        if let i = args.firstIndex(of: "-landscapeAfter"), i + 1 < args.count, let secs = Double(args[i + 1]) {
+            // "-landscapeAfter <secs>": rotate once the screen is already up, the headless stand-in for
+            // a Mac window being resized after a page has rendered.
+            Task { await rotateToLandscape(after: secs) }
+        }
+        if let i = args.firstIndex(of: "-windowSize"), i + 1 < args.count {
+            let parts = args[i + 1].lowercased().split(separator: "x")
+            if parts.count == 2, let w = Double(parts[0]), let h = Double(parts[1]) {
+                try? await Task.sleep(nanoseconds: 300_000_000)
+                await MainActor.run { pinWindowSize(CGSize(width: w, height: h)) }
+            }
+        }
+        guard let i = args.firstIndex(of: "-selfShot"), i + 1 < args.count else { return }
+        var delay: Double = 6
+        if let d = args.firstIndex(of: "-selfShotDelay"), d + 1 < args.count, let v = Double(args[d + 1]) {
+            delay = v
+        }
+        try? await Task.sleep(nanoseconds: UInt64(delay * 1_000_000_000))
+        await MainActor.run { capture(name: args[i + 1]) }
+    }
+
+    /// Waits for a foreground window scene (a cold launch may not have one yet when the root task
+    /// starts, which left the earlier fixed 300 ms sleep rotating nothing), then asks for landscape.
+    private static func rotateToLandscape(after seconds: Double) async {
+        try? await Task.sleep(nanoseconds: UInt64(max(seconds, 0) * 1_000_000_000))
+        for _ in 0..<40 {
+            let done = await MainActor.run { () -> Bool in
+                guard #available(iOS 16.0, *) else { return true }
+                let active = scenes().filter { $0.activationState == .foregroundActive }
+                guard !active.isEmpty else { return false }
+                for scene in active {
+                    scene.requestGeometryUpdate(.iOS(interfaceOrientations: .landscapeRight))
+                }
+                return true
+            }
+            if done { return }
+            try? await Task.sleep(nanoseconds: 250_000_000)
+        }
+    }
+
+    @MainActor
+    private static func scenes() -> [UIWindowScene] {
+        UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
+    }
+
+    @MainActor
+    private static func pinWindowSize(_ size: CGSize) {
+        for scene in scenes() {
+            scene.sizeRestrictions?.minimumSize = size
+            scene.sizeRestrictions?.maximumSize = size
+        }
+    }
+
+    @MainActor
+    private static func capture(name: String) {
+        let all = scenes()
+        guard let scene = all.first(where: { $0.activationState == .foregroundActive }) ?? all.first,
+              let window = scene.windows.first(where: { $0.isKeyWindow }) ?? scene.windows.first else {
+            print("SELFSHOT \(name) no window"); exit(1)
+        }
+        let bounds = window.bounds
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = window.screen.scale
+        let image = UIGraphicsImageRenderer(bounds: bounds, format: format).image { _ in
+            window.drawHierarchy(in: bounds, afterScreenUpdates: true)
+        }
+        let dir = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("selfshots")
+        try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        try? image.pngData()?.write(to: dir.appendingPathComponent("\(name).png"))
+        let info = "bounds=\(Int(bounds.width))x\(Int(bounds.height)) scale=\(format.scale) "
+            + "idiom=\(UIDevice.current.userInterfaceIdiom.rawValue) "
+            + "mac=\(ProcessInfo.processInfo.isiOSAppOnMac) "
+            + "sizeClass=\(window.traitCollection.horizontalSizeClass.rawValue)/\(window.traitCollection.verticalSizeClass.rawValue)"
+        try? info.write(to: dir.appendingPathComponent("\(name).txt"), atomically: true, encoding: .utf8)
+        print("SELFSHOT \(name) \(info)")
+        exit(0)
+    }
+}
+#endif

@@ -62,4 +62,4 @@ App Store: <https://apps.apple.com/us/app/al-islam-islamic-pillars/id6449729655>
 
 ## A Note on Intent
 
-This app is offered as *sadaqah jariyah* - a contribution for the benefit of the Muslim community and anyone building tools to pray on time and learn about Islam, and access the Quran. If it helps you, please keep the chain of attribution intact and consider contributing improvements back.
+This app is offered as *sadaqah jariyah*, a contribution for the benefit of the Muslim community and anyone building tools to pray on time and learn about Islam, and access the Quran. If it helps you, please keep the chain of attribution intact and consider contributing improvements back.

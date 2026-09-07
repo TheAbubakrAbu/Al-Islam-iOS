@@ -559,18 +559,21 @@ struct PrayerTrackerView: View {
             // Plain stacks, not a lazy grid: four tiles inside one List row have nothing to be lazy
             // about, and a lazy container's own diffing is one more moving part inside a row.
             VStack(spacing: 10) {
+                // Each pair sized by its taller tile (the tiles fill the row's height).
                 HStack(spacing: 10) {
                     statTile(value: "\(stats.currentStreak)", unit: stats.currentStreak == 1 ? "day" : "days",
                              label: "Current Streak", symbol: "flame.fill")
                     statTile(value: "\(stats.bestStreak)", unit: stats.bestStreak == 1 ? "day" : "days",
                              label: "Best Streak", symbol: "trophy.fill")
                 }
+                .fixedSize(horizontal: false, vertical: true)
                 HStack(spacing: 10) {
                     statTile(value: "\(stats.perfectDays)", unit: stats.perfectDays == 1 ? "day" : "days",
                              label: "Perfect Days", symbol: "star.fill")
                     statTile(value: "\(stats.totalPrayed)", unit: "prayers",
                              label: "Prayers Logged", symbol: "checkmark.seal.fill")
                 }
+                .fixedSize(horizontal: false, vertical: true)
                 if stats.onTimeCount + stats.lateCount + stats.missedCount > 0 {
                     markBreakdown(stats)
                 }
@@ -598,7 +601,10 @@ struct PrayerTrackerView: View {
                 Text(label.uppercased())
                     .font(.caption2.weight(.semibold))
                     .foregroundColor(.secondary)
-                    .lineLimit(1)
+                    // Wraps to a second line at the large text sizes ("CURRENT STR..." before), and
+                    // only then scales.
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
                     .minimumScaleFactor(0.7)
             }
 
@@ -612,7 +618,8 @@ struct PrayerTrackerView: View {
                     .foregroundColor(.secondary)
             }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        // Fills the row's height too, so a wrapped caption never leaves its neighbour a shorter tile.
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .padding(12)
         .conditionalGlassEffect(rectangle: true)
     }

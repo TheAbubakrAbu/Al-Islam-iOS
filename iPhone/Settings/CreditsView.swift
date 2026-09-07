@@ -1,33 +1,369 @@
 #if os(iOS)
 import SwiftUI
 
+/// One credited source, as data: the line the Credits page prints, its link, and the words a searcher
+/// types for it. Shared by the page's own search and by the Settings search (`SettingsSearchEntry.creditEntries`),
+/// whose results open the page scrolled to the row.
+struct CreditItem: Identifiable, Hashable {
+    enum Group: String {
+        case adhan = "Prayer Times"
+        case quran = "Quran"
+        case hadith = "Hadith"
+        case app = "App"
+    }
+
+    /// Stable slug: the row id on the page and the Settings search destination.
+    let id: String
+    /// The short name a Settings search result shows ("Arabic text and qiraat data: KFGQPC").
+    let title: String
+    /// The full credit line the page prints.
+    let detail: String
+    let url: String
+    let group: Group
+    /// Words the line does not carry but a searcher might type.
+    var keywords: String = ""
+
+    var rowID: String { "credit_\(id)" }
+
+    static let all: [CreditItem] = [
+        // Al-Adhan
+        CreditItem(id: "adhan-calculations", title: "Adhan calculations: Batoul Apps",
+                   detail: "Credit for the Adhan calculations, which does everything offline on the device, goes to Batoul Apps",
+                   url: "https://github.com/batoulapps/adhan-swift", group: .adhan, keywords: "prayer times library swift"),
+        CreditItem(id: "adhan-sounds", title: "Adhan sounds: Omar Al-Ejel",
+                   detail: "Credit for the Adhan sounds goes to Omar Al-Ejel",
+                   url: "https://github.com/oalejel/Athan-Utility", group: .adhan, keywords: "audio athan utility"),
+        CreditItem(id: "serene-adhan", title: "Serene adhan: Adam-synagda (CC0)",
+                   detail: "The Serene adhan is \"Beautiful adhan\" by Adam-synagda (CC0, via Wikimedia Commons), trimmed and loudness-normalized",
+                   url: "https://commons.wikimedia.org/wiki/File:Beautiful_adhan.ogg", group: .adhan, keywords: "audio sound license"),
+        CreditItem(id: "aaqib-adhan", title: "Aaqib Azeez adhan (CC BY-SA 4.0)",
+                   detail: "The Aaqib Azeez adhan is by Aaqib Azeez (CC BY-SA 4.0, via Wikimedia Commons), trimmed and loudness-normalized; the clips remain CC BY-SA 4.0",
+                   url: "https://commons.wikimedia.org/wiki/File:The_Adhan_-_Muslim_Call_to_Prayer_-_Aaqib_Azeez.mp3", group: .adhan, keywords: "audio sound license"),
+        CreditItem(id: "takbir-tone", title: "Takbir alert tone: Aaqib Azeez (CC BY-SA 4.0)",
+                   detail: "The Takbir alert tone is the opening takbir pair of the Aaqib Azeez adhan (CC BY-SA 4.0, via Wikimedia Commons), trimmed and loudness-normalized; the clip remains CC BY-SA 4.0",
+                   url: "https://commons.wikimedia.org/wiki/File:The_Adhan_-_Muslim_Call_to_Prayer_-_Aaqib_Azeez.mp3", group: .adhan, keywords: "notification sound reminder"),
+        CreditItem(id: "chime-tone", title: "Chime alert tone: GabFitzgerald (CC0)",
+                   detail: "The Chime alert tone is \"[UI Sound] Approval - High Pitched Bell Synth\" by GabFitzgerald (CC0, via Freesound), trimmed, repeated, and loudness-normalized",
+                   url: "https://freesound.org/people/GabFitzgerald/sounds/625174/", group: .adhan, keywords: "notification sound reminder"),
+        CreditItem(id: "ring-tone", title: "Ring alert tone: Vendarro (CC0)",
+                   detail: "The Ring alert tone is \"Signal-Ring 1\" by Vendarro (CC0, via Freesound), trimmed, repeated, and loudness-normalized",
+                   url: "https://freesound.org/people/Vendarro/sounds/399315/", group: .adhan, keywords: "notification sound reminder"),
+        CreditItem(id: "alarm-tone", title: "Alarm alert tone: Kesu (CC0)",
+                   detail: "The Alarm alert tone is \"Alarm clock beep\" by Kesu (CC0, via Freesound), trimmed, repeated, and loudness-normalized",
+                   url: "https://freesound.org/people/Kesu/sounds/182351/", group: .adhan, keywords: "notification sound reminder"),
+        CreditItem(id: "moon-phase", title: "Moon phase algorithm: SunCalc",
+                   detail: "Credit for the moon phase algorithm behind the sky card and the Moon widgets goes to SunCalc by Vladimir Agafonkin, built on the lunar theory in Meeus' Astronomical Algorithms",
+                   url: "https://github.com/mourner/suncalc", group: .adhan, keywords: "lunar hijri widget sky"),
+
+        // Al-Quran
+        CreditItem(id: "transliteration", title: "English transliteration: QUL (Tarteel) and Risan Bagja Pradana",
+                   detail: "Credit for the ayah transliteration, written the way each ayah is recited, goes to the English Transliteration (Tajweed) dataset of the Quranic Universal Library by Tarteel; the app's original transliteration came from Risan Bagja Pradana's quran-json",
+                   url: "https://qul.tarteel.ai/resources/transliteration", group: .quran, keywords: "quran json latin pronunciation tajweed"),
+        CreditItem(id: "saheeh", title: "Saheeh International translation: Global Quran",
+                   detail: "Credit for the English Saheeh International translation of the Quran data goes to Global Quran",
+                   url: "https://globalquran.com/download/data/", group: .quran, keywords: "english translation"),
+        CreditItem(id: "kfgqpc-text", title: "Arabic text and qiraat data: KFGQPC",
+                   detail: "Credit for all the Quranic Arabic text and all qiraat/riwayaat data goes to quran-data-kfgqpc (KFGQPC)",
+                   url: "https://github.com/thetruetruth/quran-data-kfgqpc", group: .quran, keywords: "king fahd complex uthmani hafs warsh qaloon riwayah readings"),
+        CreditItem(id: "islamweb", title: "Printed mushaf PDFs and beta qiraat text: Islamweb",
+                   detail: "Credit for the printed mushaf PDFs (one per riwayah) and the beta qiraat text goes to Islamweb",
+                   url: "https://www.islamweb.net", group: .quran, keywords: "mushaf pdf riwayah beta"),
+        CreditItem(id: "qiraathub", title: "Qiraat companion reference: QiraatHub",
+                   detail: "Credit for the qiraat guide's companion reference on the ten imams and twenty narrators goes to QiraatHub",
+                   url: "https://qiraathub.com/", group: .quran, keywords: "imams narrators readings"),
+        CreditItem(id: "uthmani-fonts", title: "Uthmani Quran fonts: KFGQPC",
+                   detail: "Credit for the Uthmani Quran fonts (the Hafs face, and the Warsh face behind the Maghribi script style) goes to King Fahad Complex (KFGQPC)",
+                   url: "https://qul.tarteel.ai/resources/font/245", group: .quran, keywords: "font typeface script hafs warsh maghribi"),
+        CreditItem(id: "indopak-font", title: "Indopak Nastaleeq font: Ayman Siddiqui and R. Siddiqua",
+                   detail: "Credit for the Indopak Nastaleeq Quran font goes to Ayman Siddiqui and R. Siddiqua",
+                   url: "https://qul.tarteel.ai/resources/font/242", group: .quran, keywords: "font typeface script urdu"),
+        CreditItem(id: "kufi-font", title: "Kufi Quran font: Noto Kufi Arabic",
+                   detail: "Credit for the Kufi Quran font (Noto Kufi Arabic) goes to the Noto Project Authors at Google, used under the SIL Open Font License 1.1",
+                   url: "https://fonts.google.com/noto/specimen/Noto+Kufi+Arabic", group: .quran, keywords: "font typeface script google"),
+        CreditItem(id: "hijazi-font", title: "Hijazi Quran font: Khalid Alabdullah",
+                   detail: "Credit for the Hijazi Quran font goes to Khalid Alabdullah, whose hijazifont models the hand of the earliest mushafs (CC BY-NC 4.0, used with the author's permission); the vowel marks, hamza, digits and mark positioning of Al-Islam Hijazi, in its light, bold and dot-vowel styles, were added by this app",
+                   url: "https://github.com/khalidalabdullah/hijazifont", group: .quran, keywords: "font typeface script early mushaf"),
+        CreditItem(id: "mp3quran", title: "Surah recitations: MP3 Quran",
+                   detail: "Credit for the Surah Quran Recitations goes to MP3 Quran",
+                   url: "https://mp3quran.net/eng", group: .quran, keywords: "audio reciters reciter listen"),
+        CreditItem(id: "alquran-cloud-audio", title: "Ayah recitations: Al Quran Cloud",
+                   detail: "Credit for the Ayah Quran Recitations goes to Al Quran",
+                   url: "https://alquran.cloud/cdn", group: .quran, keywords: "audio reciters reciter listen verse"),
+        CreditItem(id: "everyayah", title: "Additional ayah recitations: EveryAyah",
+                   detail: "Credit for additional Ayah Quran Recitations goes to EveryAyah",
+                   url: "https://everyayah.com/", group: .quran, keywords: "audio reciters reciter listen verse"),
+        CreditItem(id: "qdc-timings", title: "Ayah audio timings: Quran.com (Quran Foundation)",
+                   detail: "Credit for the ayah audio timings that power offline ayah playback goes to the QDC audio API by Quran.com (Quran Foundation)",
+                   url: "https://api-docs.quran.foundation/", group: .quran, keywords: "audio offline playback segments"),
+        CreditItem(id: "word-by-word-meanings", title: "Word-by-word meanings: Quran.com and the Quranic Arabic Corpus",
+                   detail: "Credit for the word-by-word English meanings, shown when you tap a word while reading, goes to the QDC content API by Quran.com (Quran Foundation), whose per-word glosses come from the Quranic Arabic Corpus by Kais Dukes",
+                   url: "https://corpus.quran.com/", group: .quran, keywords: "gloss word card translation"),
+        CreditItem(id: "tilawa-word-by-word", title: "Word-by-word reader: Tilawa, by Jamil Hammoudeh",
+                   detail: "Credit for the word-by-word reader itself (the idea, and the assembled gloss corpus this app's pack was built from) goes to Tilawa, by my friend Jamil Hammoudeh",
+                   url: "https://github.com/jamilhammoudeh/quran-app", group: .quran, keywords: "gloss word card"),
+        CreditItem(id: "similar-ayahs", title: "Similar Ayahs: qurani.ai, Tilawa and QUL",
+                   detail: "Credit for the verified Similar Ayahs matches goes to qurani.ai's similar-ayah corpus; the phrase-overlap matches come from Tilawa's generator, built on the Quranic Arabic Corpus morphology by Kais Dukes; the tinted shared words and further pairs come from the similar-ayah table of the Quranic Universal Library",
+                   url: "https://qurani.ai/", group: .quran, keywords: "verses related shared words"),
+        CreditItem(id: "qul-mutashabihat", title: "Repeated phrases (Mutashabihat): QUL (Tarteel)",
+                   detail: "Credit for the repeated phrases of the Quran, every occurrence with its words marked, goes to the Mutashabihat ul Quran dataset of the Quranic Universal Library by Tarteel",
+                   url: "https://qul.tarteel.ai/resources/mutashabihat", group: .quran, keywords: "mutashabihat phrases memorisation hifz"),
+        CreditItem(id: "qac-morphology", title: "Roots and dictionary forms: Quranic Arabic Corpus",
+                   detail: "Credit for the root and dictionary form of every word, on the word card and behind the root search, goes to the Quranic Arabic Corpus morphology by Kais Dukes, via the Quranic Universal Library",
+                   url: "https://corpus.quran.com/", group: .quran, keywords: "root lemma morphology grammar word"),
+        CreditItem(id: "clear-quran-topics", title: "Thematic topics: The Clear Quran",
+                   detail: "Credit for the Topics corpus of Browse by Theme (Doctrine, Stories, The Unseen) goes to the thematic index of The Clear Quran by Dr. Mustafa Khattab, via the Quranic Universal Library",
+                   url: "https://theclearquran.org/", group: .quran, keywords: "topics themes doctrine stories unseen khattab"),
+        CreditItem(id: "quran-ontology", title: "Quranic concepts: Quranic Arabic Corpus ontology",
+                   detail: "Credit for the Concepts corpus of Browse by Theme goes to the Quranic Ontology of the Quranic Arabic Corpus by Kais Dukes, via the Quranic Universal Library",
+                   url: "https://corpus.quran.com/ontology.jsp", group: .quran, keywords: "concepts ontology named entities"),
+        CreditItem(id: "qul-index", title: "Topic index, passage themes and mushaf divisions: QUL (Tarteel)",
+                   detail: "Credit for the general A-Z topic index, the passage themes (one line per run of ayahs) and the hizb, ruku and manzil boundaries goes to the Quranic Universal Library by Tarteel",
+                   url: "https://qul.tarteel.ai/", group: .quran, keywords: "index passages themes hizb ruku manzil"),
+        CreditItem(id: "quran-com-qiraat", title: "Readings of the Ten: Quran.com (Quran Foundation)",
+                   detail: "Credit for the annotated variant readings under an ayah (who among the Ten reads which form, with its meaning and notes) goes to the qiraat reference of Quran.com by the Quran Foundation",
+                   url: "https://quran.com/1:4/qiraat", group: .quran, keywords: "qiraat readings variants ten imams transmitters"),
+        CreditItem(id: "qsac-themes", title: "Browse by Theme topics: QSAC by Ahmad Bilal",
+                   detail: "Credit for the Browse by Theme topics goes to the Quran Semantic Annotation Corpus (QSAC) by Ahmad Bilal, used under CC BY 4.0",
+                   url: "https://github.com/dev-ahmadbilal/quran-semantic-annotation-corpus", group: .quran, keywords: "topics themes subjects"),
+        CreditItem(id: "quranpedia-outlines", title: "Surah outlines: Quranpedia",
+                   detail: "Credit for the surah outlines (the Outline source in About this Surah) goes to Quranpedia",
+                   url: "https://quranpedia.net/", group: .quran, keywords: "surah info sections"),
+        CreditItem(id: "tajweed-lessons", title: "Tajweed Lessons course: Jamil Hammoudeh (Tilawa)",
+                   detail: "Credit for the Tajweed Lessons course (every chapter, lesson, drill, and example) goes to my friend Jamil Hammoudeh, who wrote it for Tilawa and gave his permission to bring it here",
+                   url: "https://github.com/jamilhammoudeh/quran-app", group: .quran, keywords: "tajwid rules course"),
+        CreditItem(id: "translation-api", title: "Translation comparison API: Al Quran Cloud",
+                   detail: "Credit for the English Quran translation comparison API goes to Al Quran Cloud",
+                   url: "https://alquran.cloud/api", group: .quran, keywords: "translations compare"),
+        CreditItem(id: "tafsir-api", title: "English Tafsir API: Quran API Pages",
+                   detail: "Credit for the English Tafsir API goes to Quran API Pages",
+                   url: "https://quranapi.pages.dev/", group: .quran, keywords: "tafseer commentary"),
+        CreditItem(id: "arabic-tafsir-api", title: "Arabic Tafsirs: Tafsir API by spa5k",
+                   detail: "Credit for the Arabic Tafsirs (Ibn Kathir, al-Tabari, as-Sa'di) goes to the Tafsir API by spa5k, built from QUL (Tarteel) data",
+                   url: "https://github.com/spa5k/tafsir_api", group: .quran, keywords: "tafseer commentary ibn kathir tabari saadi"),
+        CreditItem(id: "surah-info", title: "Surah Info: Quran.com (Quran Foundation)",
+                   detail: "Credit for the Surah Info goes to Quran.com (Quran Foundation)",
+                   url: "https://api-docs.quran.foundation/docs/content_apis_versioned/4.0.0/get-chapter-info/#get-chapter-info", group: .quran, keywords: "about this surah chapter"),
+
+        // Al-Hadith
+        CreditItem(id: "hadith-json", title: "Hadith collections: hadith-json by Ahmed Baset",
+                   detail: "Credit for the Hadith collections goes to hadith-json by Ahmed Baset",
+                   url: "https://github.com/AhmedBaset/hadith-json", group: .hadith, keywords: "bukhari muslim books"),
+        CreditItem(id: "hadith-restored", title: "Restored English narrations: sunnah.com scrapes",
+                   detail: "The English narrations that hadith-json truncated are restored from the clean scrapes of fawazahmed0/hadith-api and CheeseWithSauce/HadithsJSONFormat; all of them trace back to sunnah.com",
+                   url: "https://sunnah.com", group: .hadith, keywords: "translation english text"),
+        CreditItem(id: "hadith-gradings", title: "Hadith gradings and numbering: sunnah.com",
+                   detail: "The scholar gradings (sahih, hasan, da'if) and the standard hadith numbering shown throughout the app also come from those two scrapes of sunnah.com, which quotes the published verdicts of Al-Albani, Zubair Ali Zai, Ahmad Muhammad Shakir, Shuaib Al Arnaut, the Darussalam editors, and others",
+                   url: "https://sunnah.com", group: .hadith, keywords: "grade authentic weak albani"),
+
+        // All apps
+        CreditItem(id: "names-of-allah", title: "99 Names of Allah: MyIslam",
+                   detail: "Credit for the 99 Names of Allah goes to MyIslam",
+                   url: "https://myislam.org/99-names-of-allah/", group: .app, keywords: "asma ul husna"),
+    ]
+
+    static let byID: [String: CreditItem] = Dictionary(all.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
+
+    /// Case- and diacritic-insensitive, the Settings search's folding.
+    static func fold(_ text: String) -> String {
+        text.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
+    }
+
+    /// True when every word of the query appears in the title, the line or the keywords.
+    func matches(_ terms: [String]) -> Bool {
+        let haystack = Self.fold("\(title) \(detail) \(keywords)")
+        return terms.allSatisfy { haystack.contains($0) }
+    }
+}
+
 struct CreditsView: View {
     @ObservedObject var settings = Settings.shared
     @Environment(\.presentationMode) private var presentationMode
-    
+
+    /// True as the sheet the Settings tab presents (its own NavigationView + dismiss X); false when
+    /// PUSHED from a Settings search result, where the surrounding navigation provides the chrome.
+    var presentedAsSheet: Bool = true
+    /// A credit to land on (`CreditItem.id`): a Settings search result opens the page scrolled to it.
+    var scrollTo: String? = nil
+
+    /// The page's own search: credits, apps and bots whose text carries every word typed. Results
+    /// replace the page while a query is typed, the Islam tab's grammar.
+    @State private var searchText = ""
+    /// Apple Music-style bar minimization: true while scrolling down.
+    @State private var barsCollapsed = false
+    /// The row a result asked to scroll to, consumed once the search has cleared.
+    @State private var scrollTarget: String?
+    /// The row tinted for a moment after a landing, so the reader sees which credit they searched for.
+    @State private var highlighted: String?
+
     var body: some View {
-        NavigationView {
+        if presentedAsSheet {
+            NavigationView {
+                creditsList
+                    // Dismisses through the same X every other sheet uses, instead of a full-width "Done"
+                    // button pinned over the bottom of the content.
+                    .sheetDismissToolbar()
+            }
+            .navigationViewStyle(.stack)
+        } else {
             creditsList
         }
-        .navigationViewStyle(.stack)
     }
 
+    private var query: String { searchText.trimmingCharacters(in: .whitespacesAndNewlines) }
+
     private var creditsList: some View {
-        List {
-            headerSection
-            storySection
-            versionSection
-            creditsLinksSection
-            appsSection
-            botsSection
-            intentSection
+        ScrollViewReader { proxy in
+            List {
+                if query.isEmpty {
+                    headerSection
+                    storySection
+                    versionSection
+                    creditsLinksSection
+                    appsSection
+                    botsSection
+                    intentSection
+                } else {
+                    searchResults
+                }
+            }
+            .applyConditionalListStyle()
+            .navigationTitle("Credits")
+            // Apple Music-style: the bottom bar minimizes while scrolling down, restores on scroll-up.
+            .collapseBarsOnScroll($barsCollapsed)
+            .adaptiveSafeArea(edge: .bottom) {
+                SearchBar(text: (AppPerformance.shouldReduceAnimations ? $searchText : $searchText.animation(.easeInOut)),
+                          placeholder: "Search credits")
+                    .minimizedBarStyle(barsCollapsed)
+                    .animation(.spring(response: 0.35, dampingFraction: 0.85), value: barsCollapsed)
+                    .padding(.horizontal, 24)
+                    .padding(.bottom, BottomBarCushion.standard)
+                    .background(Color.white.opacity(0.00001))
+            }
+            .onChange(of: searchText) { text in
+                if !text.isEmpty { scrollTarget = nil }
+            }
+            .onChange(of: scrollTarget) { target in
+                guard let target else { return }
+                // The result rows are still animating out; scroll once the page is back.
+                land(on: target, proxy: proxy, after: 0.2)
+            }
+            .onAppear {
+                #if DEBUG
+                // `-creditsSearch <query>`: seeds the page's search a moment after it appears.
+                let arguments = ProcessInfo.processInfo.arguments
+                if let idx = arguments.firstIndex(of: "-creditsSearch"), arguments.indices.contains(idx + 1), searchText.isEmpty {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) { searchText = arguments[idx + 1] }
+                }
+                #endif
+                guard let scrollTo, let item = CreditItem.byID[scrollTo] else { return }
+                // The pushed page lays its rows out first; scrolling in the same frame lands on nothing.
+                land(on: item.rowID, proxy: proxy, after: 0.45)
+            }
         }
-        .applyConditionalListStyle()
-        .navigationTitle("Credits")
-        // Dismisses through the same X every other sheet uses, instead of a full-width "Done" button pinned
-        // over the bottom of the content.
-        .sheetDismissToolbar()
     }
+
+    /// Jumps to a row three times a third of a second apart (the article pages' rule, `ArticleScroll`: an
+    /// animated scroll measures rows on its way and overshoots a far row, a jump lands and the next jump
+    /// corrects from the measured layout) and tints the row for a moment once it has settled.
+    private func land(on rowID: String, proxy: ScrollViewProxy, after delay: Double) {
+        for step in 0..<3 {
+            DispatchQueue.main.asyncAfter(deadline: .now() + delay + Double(step) * 0.35) {
+                proxy.scrollTo(rowID, anchor: .center)
+                guard step == 2 else { return }
+                withAnimation(.easeInOut(duration: 0.3)) { highlighted = rowID }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                    withAnimation(.easeInOut(duration: 0.6)) {
+                        if highlighted == rowID { highlighted = nil }
+                    }
+                }
+            }
+        }
+    }
+
+    /// The landing tint: the accent, faint, on the row a search asked for.
+    private func landingBackground(_ rowID: String) -> Color? {
+        highlighted == rowID ? settings.accentColor.color.opacity(0.16) : nil
+    }
+
+    // MARK: - Search
+
+    /// Clears the search and scrolls the page to `rowID`, the Quran list's "Scroll To" grammar.
+    private func scrollToRow(_ rowID: String) {
+        settings.hapticFeedback()
+        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+        withAnimation { searchText = "" }
+        scrollTarget = rowID
+    }
+
+    private var terms: [String] {
+        CreditItem.fold(query).split(separator: " ").map(String.init).filter { !$0.isEmpty }
+    }
+
+    @ViewBuilder
+    private var searchResults: some View {
+        let words = terms
+        let credits = CreditItem.all.filter { $0.matches(words) }
+        let apps = appsByAbubakr.filter { app in words.allSatisfy { CreditItem.fold(app.title).contains($0) } }
+        let bots = botsByAbubakr.filter { bot in words.allSatisfy { CreditItem.fold(bot.title).contains($0) } }
+
+        if credits.isEmpty, apps.isEmpty, bots.isEmpty {
+            Section {
+                Text("Nothing in the credits matches your search.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+        }
+
+        if !credits.isEmpty {
+            Section(header: SectionPillHeader(title: "CREDITS", count: credits.count)) {
+                ForEach(credits) { item in
+                    creditResultRow(item)
+                }
+            }
+        }
+
+        if !apps.isEmpty {
+            Section(header: SectionPillHeader(title: "APPS", count: apps.count)) {
+                ForEach(apps) { app in
+                    AppLinkRow(imageName: app.imageName, title: app.title, url: app.url, query: query)
+                        .creditRowActions(label: "Scroll To App") { scrollToRow(Self.appRowID(app)) }
+                }
+            }
+        }
+
+        if !bots.isEmpty {
+            Section(header: SectionPillHeader(title: "DISCORD BOTS", count: bots.count)) {
+                ForEach(bots) { bot in
+                    AppLinkRow(imageName: bot.imageName, title: bot.title, url: bot.url, query: query)
+                        .creditRowActions(label: "Scroll To Bot") { scrollToRow(Self.botRowID(bot)) }
+                }
+            }
+        }
+    }
+
+    /// A credit as a search result: the line with the match coloured. Tapping opens the link, as on the
+    /// page; the menu and the trailing swipe scroll the page back to the credit's own row.
+    @ViewBuilder
+    private func creditResultRow(_ item: CreditItem) -> some View {
+        if let destination = URL(string: item.url) {
+            Link(destination: destination) {
+                HighlightedSnippet(
+                    source: item.detail,
+                    term: query,
+                    font: .body,
+                    accent: settings.accentColor.color,
+                    fg: .primary
+                )
+                .padding(.vertical, 2)
+            }
+            .creditRowActions(label: "Scroll To Credit", copyURL: item.url) { scrollToRow(item.rowID) }
+        }
+    }
+
+    private static func appRowID(_ app: AppItem) -> String { "app_\(app.title)" }
+    private static func botRowID(_ bot: AppItem) -> String { "bot_\(bot.title)" }
+
+    // MARK: - The page
 
     private var headerSection: some View {
         VStack(alignment: .center, spacing: 10) {
@@ -154,85 +490,14 @@ struct CreditsView: View {
         }
     }
 
+    /// The credited sources, one row each from `CreditItem.all`, in the order the page has always
+    /// listed them (prayer times, then Quran, then hadith, then the names).
     private var creditsLinksSection: some View {
         Section(header: Text("CREDITS")) {
-            Group {
-                // Al-Adhan
-                creditLink("Credit for the Adhan calculations, which does everything offline on the device, goes to Batoul Apps", url: "https://github.com/batoulapps/adhan-swift")
-                
-                creditLink("Credit for the Adhan sounds goes to Omar Al-Ejel", url: "https://github.com/oalejel/Athan-Utility")
-
-                creditLink("The Serene adhan is \"Beautiful adhan\" by Adam-synagda (CC0, via Wikimedia Commons), trimmed and loudness-normalized", url: "https://commons.wikimedia.org/wiki/File:Beautiful_adhan.ogg")
-
-                creditLink("The Aaqib Azeez adhan is by Aaqib Azeez (CC BY-SA 4.0, via Wikimedia Commons), trimmed and loudness-normalized; the clips remain CC BY-SA 4.0", url: "https://commons.wikimedia.org/wiki/File:The_Adhan_-_Muslim_Call_to_Prayer_-_Aaqib_Azeez.mp3")
-
-                creditLink("The Takbir alert tone is the opening takbir pair of the Aaqib Azeez adhan (CC BY-SA 4.0, via Wikimedia Commons), trimmed and loudness-normalized; the clip remains CC BY-SA 4.0", url: "https://commons.wikimedia.org/wiki/File:The_Adhan_-_Muslim_Call_to_Prayer_-_Aaqib_Azeez.mp3")
-
-                creditLink("The Chime alert tone is \"[UI Sound] Approval - High Pitched Bell Synth\" by GabFitzgerald (CC0, via Freesound), trimmed, repeated, and loudness-normalized", url: "https://freesound.org/people/GabFitzgerald/sounds/625174/")
-
-                creditLink("The Ring alert tone is \"Signal-Ring 1\" by Vendarro (CC0, via Freesound), trimmed, repeated, and loudness-normalized", url: "https://freesound.org/people/Vendarro/sounds/399315/")
-
-                creditLink("The Alarm alert tone is \"Alarm clock beep\" by Kesu (CC0, via Freesound), trimmed, repeated, and loudness-normalized", url: "https://freesound.org/people/Kesu/sounds/182351/")
-
-                creditLink("Credit for the moon phase algorithm behind the sky card and the Moon widgets goes to SunCalc by Vladimir Agafonkin, built on the lunar theory in Meeus' Astronomical Algorithms", url: "https://github.com/mourner/suncalc")
-
-                // Al-Quran
-                
-                creditLink("Credit for the English transliteration of the Quran data goes to Risan Bagja Pradana", url: "https://github.com/risan/quran-json")
-                
-                creditLink("Credit for the English Saheeh International translation of the Quran data goes to Global Quran", url: "https://globalquran.com/download/data/")
-                
-                creditLink("Credit for all the Quranic Arabic text and all qiraat/riwayaat data goes to quran-data-kfgqpc (KFGQPC)", url: "https://github.com/thetruetruth/quran-data-kfgqpc")
-
-                creditLink("Credit for the printed mushaf PDFs (one per riwayah) and the beta qiraat text goes to Islamweb", url: "https://www.islamweb.net")
-
-                creditLink("Credit for the qiraat guide's companion reference on the ten imams and twenty narrators goes to QiraatHub", url: "https://qiraathub.com/")
-
-                creditLink("Credit for the Uthmani Quran fonts (the Hafs face, and the Warsh face behind the Maghribi script style) goes to King Fahad Complex (KFGQPC)", url: "https://qul.tarteel.ai/resources/font/245")
-                
-                creditLink("Credit for the Indopak Nastaleeq Quran font goes to Ayman Siddiqui and R. Siddiqua", url: "https://qul.tarteel.ai/resources/font/242")
-
-                creditLink("Credit for the Kufi Quran font (Noto Kufi Arabic) goes to the Noto Project Authors at Google, used under the SIL Open Font License 1.1", url: "https://fonts.google.com/noto/specimen/Noto+Kufi+Arabic")
-
-                creditLink("Credit for the Hijazi Quran font goes to Khalid Alabdullah, whose hijazifont models the hand of the earliest mushafs (CC BY-NC 4.0, used with the author's permission); the vowel marks, hamza, digits and mark positioning of Al-Islam Hijazi, in its light, bold and dot-vowel styles, were added by this app", url: "https://github.com/khalidalabdullah/hijazifont")
-                
-                creditLink("Credit for the Surah Quran Recitations goes to MP3 Quran", url: "https://mp3quran.net/eng")
-                
-                creditLink("Credit for the Ayah Quran Recitations goes to Al Quran", url: "https://alquran.cloud/cdn")
-
-                creditLink("Credit for additional Ayah Quran Recitations goes to EveryAyah", url: "https://everyayah.com/")
-
-                creditLink("Credit for the ayah audio timings that power offline ayah playback goes to the QDC audio API by Quran.com (Quran Foundation)", url: "https://api-docs.quran.foundation/")
-
-                creditLink("Credit for the word-by-word English meanings, shown when you tap a word while reading, goes to the QDC content API by Quran.com (Quran Foundation), whose per-word glosses come from the Quranic Arabic Corpus by Kais Dukes", url: "https://corpus.quran.com/")
-
-                creditLink("Credit for the word-by-word reader itself - the idea, and the assembled gloss corpus this app's pack was built from - goes to Tilawa, by my friend Jamil Hammoudeh", url: "https://github.com/jamilhammoudeh/quran-app")
-
-                creditLink("Credit for the verified Similar Ayahs matches goes to qurani.ai's similar-ayah corpus; the additional phrase-overlap matches come from Tilawa's generator, built on the Quranic Arabic Corpus morphology by Kais Dukes", url: "https://qurani.ai/")
-
-                creditLink("Credit for the Browse by Theme topics goes to the Quran Semantic Annotation Corpus (QSAC) by Ahmad Bilal, used under CC BY 4.0", url: "https://github.com/dev-ahmadbilal/quran-semantic-annotation-corpus")
-
-                creditLink("Credit for the surah outlines (the Outline source in About this Surah) goes to Quranpedia", url: "https://quranpedia.net/")
-
-                creditLink("Credit for the Tajweed Lessons course - every chapter, lesson, drill, and example - goes to my friend Jamil Hammoudeh, who wrote it for Tilawa and gave his permission to bring it here", url: "https://github.com/jamilhammoudeh/quran-app")
-
-                creditLink("Credit for the English Quran translation comparison API goes to Al Quran Cloud", url: "https://alquran.cloud/api")
-
-                creditLink("Credit for the English Tafsir API goes to Quran API Pages", url: "https://quranapi.pages.dev/")
-
-                creditLink("Credit for the Arabic Tafsirs (Ibn Kathir, al-Tabari, as-Sa'di) goes to the Tafsir API by spa5k, built from QUL (Tarteel) data", url: "https://github.com/spa5k/tafsir_api")
-
-                creditLink("Credit for the Surah Info goes to Quran.com (Quran Foundation)", url: "https://api-docs.quran.foundation/docs/content_apis_versioned/4.0.0/get-chapter-info/#get-chapter-info")
-                
-                // Al-Hadith
-                creditLink("Credit for the Hadith collections goes to hadith-json by Ahmed Baset", url: "https://github.com/AhmedBaset/hadith-json")
-
-                creditLink("The English narrations that hadith-json truncated are restored from the clean scrapes of fawazahmed0/hadith-api and CheeseWithSauce/HadithsJSONFormat; all of them trace back to sunnah.com", url: "https://sunnah.com")
-
-                creditLink("The scholar gradings (sahih, hasan, da'if) and the standard hadith numbering shown throughout the app also come from those two scrapes of sunnah.com, which quotes the published verdicts of Al-Albani, Zubair Ali Zai, Ahmad Muhammad Shakir, Shuaib Al Arnaut, the Darussalam editors, and others", url: "https://sunnah.com")
-
-                // All Apps
-                creditLink("Credit for the 99 Names of Allah goes to MyIslam", url: "https://myislam.org/99-names-of-allah/")
+            ForEach(CreditItem.all) { item in
+                creditLink(item)
+                    .id(item.rowID)
+                    .listRowBackground(landingBackground(item.rowID))
             }
             .foregroundColor(settings.accentColor.color)
             .font(.body)
@@ -243,6 +508,8 @@ struct CreditsView: View {
         Section(header: Text("APPS BY ABUBAKR ELMALLAH")) {
             ForEach(appsByAbubakr) { app in
                 AppLinkRow(imageName: app.imageName, title: app.title, url: app.url)
+                    .id(Self.appRowID(app))
+                    .listRowBackground(landingBackground(Self.appRowID(app)))
             }
         }
     }
@@ -251,6 +518,8 @@ struct CreditsView: View {
         Section(header: Text("DISCORD BOTS BY ABUBAKR ELMALLAH")) {
             ForEach(botsByAbubakr) { bot in
                 AppLinkRow(imageName: bot.imageName, title: bot.title, url: bot.url)
+                    .id(Self.botRowID(bot))
+                    .listRowBackground(landingBackground(Self.botRowID(bot)))
             }
         }
     }
@@ -262,38 +531,68 @@ struct CreditsView: View {
     }
 
     @ViewBuilder
-    private func creditLink(_ title: String, url: String) -> some View {
-        if let destination = URL(string: url) {
-            Link(title, destination: destination)
+    private func creditLink(_ item: CreditItem) -> some View {
+        if let destination = URL(string: item.url) {
+            Link(item.detail, destination: destination)
                 .contextMenu {
                     Text("Copy")
                         .foregroundStyle(.secondary)
 
                     Button {
                         settings.hapticFeedback()
-                        UIPasteboard.general.string = url
+                        UIPasteboard.general.string = item.url
                     } label: {
                         Label("Copy Link", systemImage: "doc.on.doc")
                     }
                 }
         }
     }
+}
 
-    private var doneButton: some View {
-        Button {
-            settings.hapticFeedback()
-            presentationMode.wrappedValue.dismiss()
-        } label: {
-            Text("Done")
-                .font(.headline)
-                .foregroundColor(.primary)
-                .frame(maxWidth: .infinity, alignment: .center)
-                .padding()
-        }
-        .foregroundColor(settings.accentColor.color)
-        .conditionalGlassEffect(useColor: 0.25)
-        .padding(.horizontal, 24)
-        .padding(.bottom, BottomBarCushion.standard)
+/// The Quran list's row grammar on a Credits search result: a context menu (scroll to the row's place on
+/// the page, copy the link) and a trailing swipe whose arrow does the same scroll.
+private struct CreditRowActions: ViewModifier {
+    let label: String
+    let copyURL: String?
+    let onScrollTo: () -> Void
+
+    func body(content: Content) -> some View {
+        content
+            .contextMenu {
+                Text("Credit Actions")
+                    .foregroundStyle(.secondary)
+
+                Button {
+                    onScrollTo()
+                } label: {
+                    Label(label, systemImage: "arrow.down.circle")
+                }
+
+                if let copyURL {
+                    Divider()
+
+                    Button {
+                        Settings.shared.hapticFeedback()
+                        UIPasteboard.general.string = copyURL
+                    } label: {
+                        Label("Copy Link", systemImage: "doc.on.doc")
+                    }
+                }
+            }
+            .swipeActions(edge: .trailing) {
+                Button {
+                    onScrollTo()
+                } label: {
+                    Image(systemName: "arrow.down.circle")
+                }
+                .tint(.secondary)
+            }
+    }
+}
+
+private extension View {
+    func creditRowActions(label: String, copyURL: String? = nil, onScrollTo: @escaping () -> Void) -> some View {
+        modifier(CreditRowActions(label: label, copyURL: copyURL, onScrollTo: onScrollTo))
     }
 }
 
@@ -323,6 +622,8 @@ struct AppLinkRow: View {
     var imageName: String
     var title: String
     var url: String
+    /// A search query to colour in the title (the Credits page's results); empty on the page itself.
+    var query: String = ""
 
     var body: some View {
         HStack {
@@ -334,8 +635,17 @@ struct AppLinkRow: View {
                 .padding(.trailing, 8)
 
             if let destination = URL(string: url) {
-                Link(title, destination: destination)
-                    .font(.subheadline)
+                Link(destination: destination) {
+                    HighlightedSnippet(
+                        source: title,
+                        term: query,
+                        font: .subheadline,
+                        accent: settings.accentColor.color,
+                        // The page's rows read in the accent, a Link's own colour; a result row goes
+                        // primary so the accent-coloured match stands out.
+                        fg: query.isEmpty ? settings.accentColor.color : .primary
+                    )
+                }
             }
         }
         .contextMenu {
@@ -350,6 +660,19 @@ struct AppLinkRow: View {
             }
         }
     }
+}
+
+extension SettingsSearchEntry {
+    /// The Credits page's rows in the Settings search: the page itself, then one row per credited source,
+    /// each opening the page scrolled to that credit - so "kfgqpc", "hijazi" or "sunnah.com" typed into
+    /// the Settings search finds the credit that names it.
+    static let creditEntries: [SettingsSearchEntry] =
+        [.init(title: "Credits & Contact", path: "Credits",
+               keywords: "about version website email review sources attribution licenses thanks", destination: .credits)]
+        + CreditItem.all.map {
+            .init(title: $0.title, path: "Credits \u{2192} \($0.group.rawValue)",
+                  keywords: "\($0.detail) \($0.keywords)", destination: .credit($0.id))
+        }
 }
 
 #Preview {

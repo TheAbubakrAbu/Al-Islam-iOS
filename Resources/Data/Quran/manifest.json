@@ -4,11 +4,11 @@
   "packs": [
     {
       "blocks": 4,
-      "bytes": 926720,
+      "bytes": 948856,
       "name": "quran",
       "records": 114,
-      "sha256": "ae00a0467af7fe415f30f8128edfaf4ab08bedd2adcdd11a7ad1723ae9be3269",
-      "sourceBytes": 4645503,
+      "sha256": "2e7af35745a8a0f5faae26e5627487ad7472a61f3e41d739aa98f91d044003f1",
+      "sourceBytes": 4663906,
       "units": 6236
     },
     {
@@ -32,5 +32,6 @@
   ],
   "textCodec": "lzma",
   "totalPackBytes": 3116372,
-  "blockNote": "Re-blocked 2026-08-29 by Scripts/reblock_packs.py: quran 2 MiB blocks, qiraat one solid block, surahinfos 1 MiB blocks."
+  "blockNote": "Re-blocked 2026-08-29 by Scripts/reblock_packs.py: quran 2 MiB blocks, qiraat one solid block, surahinfos 1 MiB blocks.",
+  "transliterationNote": "Ayah transliteration replaced 2026-09-07 by Scripts/swap_transliteration.py with QUL's English Transliteration (Tajweed)."
 }

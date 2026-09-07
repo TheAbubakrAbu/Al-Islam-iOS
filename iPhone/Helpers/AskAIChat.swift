@@ -1046,6 +1046,9 @@ struct AskAIChatView: View {
                 unavailable
             }
         }
+        // The reading themes' ground (Sepia and Gray rendered this screen white): the app's plain
+        // ScrollView screens all carry it explicitly.
+        .accentWashedBackground()
         .navigationTitle("Ask AI")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {

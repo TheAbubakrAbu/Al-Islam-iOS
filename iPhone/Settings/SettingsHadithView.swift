@@ -113,7 +113,7 @@ struct SettingsHadithView: View {
 
     private var readingModeSection: some View {
         Section(footer: Text("List opens a chapter as a scrolling list of hadiths. Pages opens it as a right-to-left paged reader, fitting as many hadiths per page as your font sizes allow.")) {
-            Picker("Reading View", selection: $hadithPageMode.animation(.easeInOut)) {
+            Picker("Reading View", selection: $hadithPageMode) {
                 Text("List").tag(false)
                 Text("Pages").tag(true)
             }

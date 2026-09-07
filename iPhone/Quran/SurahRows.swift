@@ -257,7 +257,10 @@ struct SurahRow: View, Equatable {
         if grid { gridBody } else { listBody }
         #else
         VStack {
-            HStack {
+            if WatchScreen.isNarrow {
+                // The 40 mm face splits a 140 pt line between the two names, and the Arabic lost its
+                // first letters to a leading ellipsis ("...آل عمران"); there each name takes a line of
+                // its own at full size, the Arabic on the trailing edge where the wide layout keeps it.
                 Text("\(surah.id) - \(surah.nameTransliteration)")
                     .font(.subheadline)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -267,6 +270,18 @@ struct SurahRow: View, Equatable {
                     .foregroundColor(settings.accentColor.color)
                     .frame(maxWidth: .infinity, alignment: .trailing)
                     .minimumScaleFactor(0.9)
+            } else {
+                HStack {
+                    Text("\(surah.id) - \(surah.nameTransliteration)")
+                        .font(.subheadline)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+
+                    Text("\(Settings.shared.cleanedQuranArabic(surah.nameArabic)) - \(surah.idArabic)")
+                        .font(.headline)
+                        .foregroundColor(settings.accentColor.color)
+                        .frame(maxWidth: .infinity, alignment: .trailing)
+                        .minimumScaleFactor(0.9)
+                }
             }
 
             Text("\(revelationEmoji) • \(surah.numberOfAyahs) Ayahs • \(pageLine)")

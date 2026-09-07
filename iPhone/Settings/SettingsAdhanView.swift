@@ -701,6 +701,7 @@ struct PrayerOffsetsView: View {
 
 struct NotificationView: View {
     @ObservedObject var settings = Settings.shared
+    @Environment(\.appearance) private var appearance
 
     @Environment(\.scenePhase) private var scenePhase
 
@@ -748,7 +749,7 @@ struct NotificationView: View {
                                 .font(.subheadline)
                                 .onChange(of: settings.dateNotificationsDayBefore) { _ in settings.hapticFeedback() }
 
-                            Text("Also sends a heads-up the evening before each Islamic date - so Ramadan, Eid, and the days of fasting never arrive unannounced.")
+                            Text("Also sends a heads-up the evening before each Islamic date, so Ramadan, Eid, and the days of fasting never arrive unannounced.")
                                 .font(.caption)
                                 .foregroundColor(.secondary)
                                 .fixedSize(horizontal: false, vertical: true)
@@ -758,8 +759,23 @@ struct NotificationView: View {
                 }
 
                 #if os(iOS)
+                Section(header: Text("QURAN AND SUNNAH")) {
+                    NavigationLink(destination: LazyDestination { SunnahRemindersView() }) {
+                        VStack(alignment: .leading, spacing: 3) {
+                            Label("Sunnah Reminders", systemImage: "bell.and.waves.left.and.right")
+                                .font(.subheadline)
+                            Text("Al-Kahf on Friday, al-Mulk before sleep, the Mu'awwidhat, and more, each with its hadith.")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                        .padding(.vertical, 2)
+                    }
+                    .tint(settings.accentColor.color)
+                }
+
                 Section(header: Text("ADHAN SOUND")) {
-                    Picker("Adhan Sound", selection: $settings.adhanNotificationSound.animation(.easeInOut)) {
+                    Picker("Adhan Sound", selection: $settings.adhanNotificationSound) {
                         // Two groups, not one run of nineteen names: the tones (with Default, the same
                         // six the ALERT TONE picker offers) and then the calls to prayer.
                         Section {
@@ -816,7 +832,7 @@ struct NotificationView: View {
                 }
 
                 Section(header: Text("ALERT TONE")) {
-                    Picker("Alert Tone", selection: $settings.alertToneSound.animation(.easeInOut)) {
+                    Picker("Alert Tone", selection: $settings.alertToneSound) {
                         Section {
                             // Tones only, no adhans: this sound plays exactly where the adhan was
                             // declined (prenotifications, optional times, adhan-off prayers).
@@ -965,7 +981,8 @@ struct NotificationView: View {
         .padding()
         .background(
             RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .fill(Color(UIColor.secondarySystemBackground))
+                // The reading theme's card color when there is one (the system card was white on Sepia).
+                .fill(appearance.themeRowBackground ?? Color(UIColor.secondarySystemBackground))
                 .overlay(
                     RoundedRectangle(cornerRadius: 22, style: .continuous)
                         .stroke(Color.primary.opacity(0.12), lineWidth: 1)
@@ -1207,7 +1224,7 @@ struct MoreNotificationView: View {
                 .onChange(of: settings.naggingMode) { _ in settings.hapticFeedback() }
 
                 if settings.naggingMode {
-                    Picker("Starting Time", selection: $settings.naggingStartOffset.animation(.easeInOut)) {
+                    Picker("Starting Time", selection: $settings.naggingStartOffset) {
                         Text("45 mins").tag(45)
                         Text("30 mins").tag(30)
                         Text("15 mins").tag(15)
@@ -1784,7 +1801,7 @@ struct PrayerCalculationListView: View {
             }
 
             VStack(alignment: .leading) {
-                Picker("High Latitude Rule", selection: $settings.highLatitudeRule.animation(.easeInOut)) {
+                Picker("High Latitude Rule", selection: $settings.highLatitudeRule) {
                     Section {
                         ForEach(Settings.highLatitudeRuleOptions, id: \.self) { option in
                             Text(option).tag(option)

@@ -5,22 +5,22 @@ under the screenshots. Changing it requires a new build (unlike Promotional Text
 
 ## Guidelines
 
-- **Hard cap 4,000 characters** - everything below the `## Description` heading ships (the `**n /
+- **Hard cap 4,000 characters**: everything below the `## Description` heading ships (the `**n /
   4,000**` tally line does not). Verify before submitting:
   `awk '/^## Description$/{f=1;next} f' "Docs/App Store Description.md" | grep -v '^\*\*' | wc -m`
 - **Aim for ~3,800** so a new feature can be added later without a rewrite.
-- Only the first ~3 lines show before "more" - the opening paragraph has to sell the app alone.
+- Only the first ~3 lines show before "more", so the opening paragraph has to sell the app alone.
 - **One line per bullet.** Cut "Fully", "complete", "at once", and any clause after a dash that
   restates the first half. Name the feature, say what it does, stop.
 - Keep the ALL-CAPS section headers; they are the only structure the store renders.
-- Proper nouns earn their length (Bukhari, Ibn Kathir, as-Sa'di, Riyad as-Salihin) - they are what
+- Proper nouns earn their length (Bukhari, Ibn Kathir, as-Sa'di, Riyad as-Salihin): they are what
   people search for. Generic adjectives do not.
-- Plain text only - no markdown, emoji, or links.
+- Plain text only: no markdown, emoji, or links.
 - Keep in sync with `Keywords.md`, `Promotional Text.md`, and `Whats New.md` whenever a feature ships.
 
 ## Description
 
-Al-Islam is your complete companion for practicing Islam, whether you are a lifelong believer, a new convert, or exploring the faith. The Quran, the major Hadith collections, tafsir, prayer times, a prayer tracker, and on-device AI search in one simple app - completely free, ad free, and private.
+Al-Islam is your complete companion for practicing Islam, whether you are a lifelong believer, a new convert, or exploring the faith. The Quran, the major Hadith collections, tafsir, prayer times, a prayer tracker, and on-device AI search in one simple app: completely free, ad free, and private.
 
 ON-DEVICE AI SEARCH
 - Search the Quran and Hadith by meaning, not keywords: "patience in hardship" finds ayahs about sabr.
@@ -28,9 +28,9 @@ ON-DEVICE AI SEARCH
 - Fully on-device: private, offline, and free. With Apple Intelligence, Ask AI answers from the ayahs and hadiths it cites, never with a religious ruling.
 
 PRAYER TRACKER
-- Mark each prayer with a tap - streaks, perfect days, and a calendar heatmap.
+- Mark each prayer with a tap: streaks, perfect days, and a calendar heatmap.
 - Jumuah and combined traveling prayers count correctly, and a menstruation and postpartum pause protects your streak.
-- Nagging Mode reminds you every 15 minutes until you pray - answer right from the notification.
+- Nagging Mode reminds you every 15 minutes until you pray, and answer right from the notification.
 
 UNIQUE FEATURES
 - Traveling Mode: shorten prayers while traveling, automatically or manually, synced to your Watch.
@@ -41,7 +41,7 @@ UNIQUE FEATURES
 THE COMPLETE QURAN
 - Read by Surah, Juz, or page, with dividers and a marker that always shows where you are.
 - Arabic, transliteration, and translation side by side, with optional color coded tajweed and a reference.
-- Tafsir for any ayah: Ibn Kathir, Maarif Ul Quran, and Tazkirul Quran in English, plus Ibn Kathir, al-Tabari, and as-Sa'di in Arabic - saved offline.
+- Tafsir for any ayah: Ibn Kathir, Maarif Ul Quran, and Tazkirul Quran in English, plus Ibn Kathir, al-Tabari, and as-Sa'di in Arabic, saved offline.
 - Find any verse by Surah:Ayah (like 5:27), page, Juz, or keyword.
 - Listen to over 60 reciters, with full Surah and verse by verse playback, offline.
 
@@ -52,23 +52,23 @@ THE MAJOR HADITH COLLECTIONS
 
 PRAYER TIMES AND QIBLA
 - Accurate prayer times calculated privately on your device, with a method suggested for your region.
-- A living sky above your prayer times: a real sun arc, night stars, and the true moon phase - drag to preview any moment.
+- A living sky above your prayer times: a real sun arc, night stars, and the true moon phase. Drag to preview any moment.
 - Qibla compass, adhan sounds, pre alerts, and an At a Glance board with distance to Makkah, daylight, and your fasting window.
-- A full widget gallery: every prayer widget in a standard look and a Sky twin, plus Solar Arc, Moon Phase, and Day & Night - with full Apple Watch support.
+- A full widget gallery: every prayer widget in a standard look and a Sky twin, plus Solar Arc, Moon Phase, and Day & Night, with full Apple Watch support.
 - A Rakaah Guide with every prayer's fard and sunnah counts.
 
 ESSENTIAL TOOLS AND LEARNING
 - Hijri date and Islamic calendar with events like Ramadan and Eid, plus date notifications.
 - Authenticated adhkar and dua collections, with Listen buttons that read the Arabic aloud.
 - Tasbih counter, the 99 Names of Allah, Masjid and Halal Food locators, a Hijri converter, and Islamic wallpapers.
-- Learn the Arabic alphabet, the Five Pillars, the Six Pillars of Faith, and core beliefs - explained simply for beginners.
+- Learn the Arabic alphabet, the Five Pillars, the Six Pillars of Faith, and core beliefs, explained simply for beginners.
 
 MADE YOUR WAY
-- Customize text sizes, Arabic fonts, accent and sky colors - settings search jumps to any option.
+- Customize text sizes, Arabic fonts, accent and sky colors. Settings search jumps to any option.
 
 FREE, AD FREE, AND PRIVATE
 Al-Islam is completely free. No ads, no fees, and no subscriptions. Your data never leaves your device.
 
 Whether you seek prayer times, the Quran, the Hadith of the Prophet Muhammad (peace be upon him), or a deeper understanding of Islam, download Al-Islam today.
 
-**3,805 / 4,000 characters.**
+**3,801 / 4,000 characters.**

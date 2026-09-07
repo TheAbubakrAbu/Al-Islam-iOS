@@ -1,6 +1,6 @@
 # Al-Islam | Islamic Pillars
 
-**Apple Ecosystem App** – Available on iPhone, iPad, Mac, and Apple Watch
+**Apple Ecosystem App**: available on iPhone, iPad, Mac, and Apple Watch
 
 Explore Islam with **Al-Islam**! Perfect for converts & all Muslims, featuring Traveling Mode & Beginner Quran Mode. Dive deeper, anywhere, anytime.
 
@@ -21,26 +21,26 @@ Five repositories: three apps, and the two engines they are built on. Everything
 
 **Apps**
 
-- [**Al-Islam | Islamic Pillars**](https://github.com/TheAbubakrAbu/Al-Islam-iOS) — *this repository*. Prayer times, the Quran, hadith, tafsir, and the Islamic essentials in one app
-- [**Al-Adhan | Prayer Times**](https://github.com/TheAbubakrAbu/Al-Adhan-iOS) — prayer times, adhan notifications, and the Qibla
-- [**Al-Quran | Beginner Quran**](https://github.com/TheAbubakrAbu/Al-Quran-iOS) — the Quran for beginners and Arabic learners
+- [**Al-Islam | Islamic Pillars**](https://github.com/TheAbubakrAbu/Al-Islam-iOS): *this repository*. Prayer times, the Quran, hadith, tafsir, and the Islamic essentials in one app
+- [**Al-Adhan | Prayer Times**](https://github.com/TheAbubakrAbu/Al-Adhan-iOS): prayer times, adhan notifications, and the Qibla
+- [**Al-Quran | Beginner Quran**](https://github.com/TheAbubakrAbu/Al-Quran-iOS): the Quran for beginners and Arabic learners
 
-**Engines** — the data layers behind these apps, extracted so anyone can build on them in any language
+**Engines**: the data layers behind these apps, extracted so anyone can build on them in any language
 
-- [**Hadith JSON Engine**](https://github.com/TheAbubakrAbu/Hadith-JSON-Engine) — 50,884 hadiths across 17 collections: repaired, graded, cited, and packed. Al-Islam's Hadith tab ships its packs
-- [**Quran Tajweed Engine**](https://github.com/TheAbubakrAbu/Quran-Tajweed-Engine) — 6,236 ayahs with pre-computed tajweed, qiraat, and recitations
+- [**Hadith JSON Engine**](https://github.com/TheAbubakrAbu/Hadith-JSON-Engine): 50,884 hadiths across 17 collections, repaired, graded, cited, and packed. Al-Islam's Hadith tab ships its packs
+- [**Quran Tajweed Engine**](https://github.com/TheAbubakrAbu/Quran-Tajweed-Engine): 6,236 ayahs with pre-computed tajweed, qiraat, and recitations
 
 ## Overview
-Al-Islam is a simply designed and feature-rich app that helps Muslims strengthen their faith and seamlessly practice Islam. Whether you’re a lifelong believer, a new convert, or simply exploring Islam, this app provides everything you need - from accurate prayer times and a prayer tracker to the complete Quran, the major Hadith collections, tafsir, on-device AI search, and essential Islamic tools.
+Al-Islam is a simply designed and feature-rich app that helps Muslims strengthen their faith and seamlessly practice Islam. Whether you’re a lifelong believer, a new convert, or simply exploring Islam, this app provides everything you need, from accurate prayer times and a prayer tracker to the complete Quran, the major Hadith collections, tafsir, on-device AI search, and essential Islamic tools.
 
 ## Unique Features
-- **On-Device AI Search** – Search by meaning, not just keywords - "patience in hardship" finds ayahs about sabr even when neither word appears. It works across the whole app: the Quran and Hadith, inside the very surah or hadith chapter you are reading, the 99 Names, duas, adhkar, the Arabic alphabet, and even Settings ("make text bigger" finds the font controls). Built entirely with Apple's on-device language frameworks: private, offline, and free. On devices with Apple Intelligence, **Ask AI** answers questions in a few sentences drawn only from the ayahs and hadiths it cites right below the answer - and it never gives religious rulings.
+- **On-Device AI Search** – Search by meaning, not just keywords: "patience in hardship" finds ayahs about sabr even when neither word appears. It works across the whole app: the Quran and Hadith, inside the very surah or hadith chapter you are reading, the 99 Names, duas, adhkar, the Arabic alphabet, and even Settings ("make text bigger" finds the font controls). Built entirely with Apple's on-device language frameworks: private, offline, and free. On devices with Apple Intelligence, **Ask AI** answers questions in a few sentences drawn only from the ayahs and hadiths it cites right below the answer, and it never gives religious rulings.
 - **Prayer Tracker** – Mark each prayer with a tap right on the Adhan tab, and watch your streaks, perfect days, and totals grow in History & Insights, a calendar heatmap by day, week, month, and year. Travel-aware and Friday-aware (Jumuah counts as Dhuhr, combined traveling prayers count as both), with a menstruation and postpartum pause that keeps exempt days from ever breaking a streak.
 - **Traveling Mode** – Automatically activates when traveling or can be manually enabled, and syncs between iPhone and Apple Watch. Adjust settings like prayer calculations, Hanafi madhab, and prayer offsets.
 - **Nagging Mode** – Never miss a prayer! Receive notifications at a chosen start time before each prayer, then reminders every 15 minutes, with final alerts at 10 and 5 minutes remaining. Answer "Yes, I prayed it" right from the notification to mark the prayer tracker and stop the remaining reminders.
 - **Arabic Beginner Mode** – Spaces out Arabic letters to help beginners recognize them more easily while learning to read the Quran.
 - **Unique Ayah Sharing** – Share Quranic verses as text or images effortlessly, or select multiple ayahs at once to share, copy, bookmark, or annotate together.
-- **Siri Shortcuts** – Play any surah by name or number, play a random surah, resume your last listened surah, or ask "When is Maghrib?" - in English and Arabic.
+- **Siri Shortcuts** – Play any surah by name or number, play a random surah, resume your last listened surah, or ask "When is Maghrib?", in English and Arabic.
 
 ## Comprehensive Prayer Times
 - Accurate prayer times for any location, calculated privately on-device, with a full calculation method catalogue browsable by region.
@@ -50,20 +50,20 @@ Al-Islam is a simply designed and feature-rich app that helps Muslims strengthen
 - Prayer notifications with pre-alerts and your choice of adhan sounds.
 - View and plan daily and future prayer times.
 - A full widget gallery: every prayer widget comes in a standard look and a Sky twin painted with the current prayer's own gradient, plus a Solar Arc widget with the sun on its true path, a Moon Phase widget showing tonight's real moon, and a large Day & Night board carrying both with the whole day's prayers.
-- A Rakaah Guide right under the prayer times: every prayer's fard count with its primary (mu'akkadah) and secondary sunnahs, including Jumuah's masjid/home difference - and each prayer's own detail shows the same counts.
+- A Rakaah Guide right under the prayer times: every prayer's fard count with its primary (mu'akkadah) and secondary sunnahs, including Jumuah's masjid/home difference, and each prayer's own detail shows the same counts.
 
 ## The Complete Quran
 - View by Surah or Juz, with Juz displaying the starting ayah.
 - Read as a scrolling ayah list or as a mushaf, page by page.
 - Read in Arabic, English transliteration, and translation (Saheeh International and Clear Quran).
 - Color-coded tajweed with a built-in reference for the rules.
-- Tap any word to see what that word means on its own - all 77,629 words of the Quran, bundled and offline, with the word lit in place while its card is up.
-- Tafsir for any ayah - Ibn Kathir, Maarif Ul Quran, and Tazkirul Quran in English, plus Ibn Kathir, al-Tabari, and as-Sa'di in Arabic - fetched once and saved for offline reading, with an option to download all tafsirs.
+- Tap any word to see what that word means on its own: all 77,629 words of the Quran, bundled and offline, with the word lit in place while its card is up.
+- Tafsir for any ayah (Ibn Kathir, Maarif Ul Quran, and Tazkirul Quran in English, plus Ibn Kathir, al-Tabari, and as-Sa'di in Arabic), fetched once and saved for offline reading, with an option to download all tafsirs.
 - Compare the qiraat (readings) and English translations side by side.
 - Select multiple ayahs to share, copy, bookmark, note, or switch to beginner mode all at once.
 - Bookmark, favorite, add notes, and track last read/listened ayah with recent history.
-- Quran Planner: pick a finish date (or a daily pace) and get a daily reading amount that automatically redistributes when you miss a day, with streaks and a weekly chart - built on khatm progress, so reading in the app advances the plan by itself.
-- Powerful Quran search by keyword, meaning (on-device AI), ayah (e.g., `5:27`), page, or Juz - reachable from anywhere you are reading.
+- Quran Planner: pick a finish date (or a daily pace) and get a daily reading amount that automatically redistributes when you miss a day, with streaks and a weekly chart, built on khatm progress, so reading in the app advances the plan by itself.
+- Powerful Quran search by keyword, meaning (on-device AI), ayah (e.g., `5:27`), page, or Juz, reachable from anywhere you are reading.
 - Remove tashkeel (diacritics) for cleaner reading.
 - Listen to recitations from over 60 reciters and qiraat, with full-Surah and verse-by-verse playback, offline downloads, and offline ayah timings for many reciters so single ayahs play in the reciter's own voice.
 - Random Surah mode for discovery.
@@ -71,9 +71,9 @@ Al-Islam is a simply designed and feature-rich app that helps Muslims strengthen
 ## Hadith Collections
 - All of the major Hadith books in one place: the Nine Books (Sahih al-Bukhari, Sahih Muslim, Sunan an-Nasa'i, Sunan Abi Dawud, Jami` at-Tirmidhi, Sunan Ibn Majah, Muwatta Malik, Sunan ad-Darimi, and Musnad Ahmad), the forty-Hadith collections (Nawawi's Forty, Hadith Qudsi, and Shah Waliullah's Forty), and other classics (Riyad as-Salihin, Mishkat al-Masabih, Bulugh al-Maram, Al-Adab Al-Mufrad, and Shama'il Muhammadiyah).
 - Browse by collection and chapter, in Arabic with English translation and narrator chains, as a list or page by page.
-- A Hadith of the Day, bookmarks, favorites, and reference lookups like "Bukhari 5" or "Muslim 8a" - using the standard sunnah.com numbering, including variant letters.
-- Search within any book - or across every book at once - by keyword or by meaning (on-device AI) across the Arabic and English text.
-- Every collection is built into the app in a compact format - nothing to download, and everything works fully offline.
+- A Hadith of the Day, bookmarks, favorites, and reference lookups like "Bukhari 5" or "Muslim 8a", using the standard sunnah.com numbering, including variant letters.
+- Search within any book, or across every book at once, by keyword or by meaning (on-device AI) across the Arabic and English text.
+- Every collection is built into the app in a compact format: nothing to download, and everything works fully offline.
 - Copy or share any Hadith with its full reference.
 
 ## Islamic Calendar and Event Notifications
@@ -100,7 +100,7 @@ Al-Islam is a simply designed and feature-rich app that helps Muslims strengthen
 
 ## Fully Customizable and User-Friendly
 - Customize Quran text size, Arabic fonts, accent colors, sky colors, and prayer settings.
-- Settings organized into dedicated Adhan, Quran, and Hadith screens, with a settings search that jumps straight to any option - and understands meaning, so "make text bigger" finds the font controls.
+- Settings organized into dedicated Adhan, Quran, and Hadith screens, with a settings search that jumps straight to any option, and understands meaning, so "make text bigger" finds the font controls.
 - Widgets and Apple Watch support for quick prayer time access, including full-surah recitation on the watch.
 - Simple and clean interface for effortless navigation.
 
@@ -110,7 +110,7 @@ Al-Islam is a simply designed and feature-rich app that helps Muslims strengthen
 
 ## A Note on Intent
 
-This project is offered as *sadaqah jariyah* - a contribution for the benefit of the Muslim community and anyone building tools to read, learn, and listen to the Quran. If it helps you, please keep the chain of attribution intact and consider contributing improvements back.
+This project is offered as *sadaqah jariyah*, a contribution for the benefit of the Muslim community and anyone building tools to read, learn, and listen to the Quran. If it helps you, please keep the chain of attribution intact and consider contributing improvements back.
 
 ## License
 

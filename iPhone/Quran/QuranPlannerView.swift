@@ -322,16 +322,16 @@ enum QuranPlannerReminder {
 
     private static func body(plan: QuranPlan, todayTarget: Int?, pagesEquivalent: Int?) -> String {
         if let target = todayTarget, target > 0 {
-            var line = "Time for today's Quran reading — \(target) ayahs"
+            var line = "Time for today's Quran reading: \(target) ayahs"
             if let pages = pagesEquivalent { line += " (~\(pages) page\(pages == 1 ? "" : "s"))" }
             if let end = plan.endDate { line += " to finish by \(mediumDate.string(from: end))." } else { line += "." }
             return line
         }
         if let end = plan.endDate {
-            return "Time for today's Quran reading — keep your pace to finish by \(mediumDate.string(from: end))."
+            return "Time for today's Quran reading. Keep your pace to finish by \(mediumDate.string(from: end))."
         }
         if let perDay = plan.ayahsPerDay {
-            return "Time for today's Quran reading — \(perDay) ayahs a day at your chosen pace."
+            return "Time for today's Quran reading: \(perDay) ayahs a day at your chosen pace."
         }
         return "Time for today's Quran reading."
     }
@@ -572,7 +572,7 @@ struct QuranPlannerView: View {
         .themedListRowBackground()
 
         Section {
-            Picker("Goal", selection: $goalMode.animation(.easeInOut)) {
+            Picker("Goal", selection: $goalMode) {
                 ForEach(GoalMode.allCases) { mode in
                     Text(mode.rawValue).tag(mode)
                 }

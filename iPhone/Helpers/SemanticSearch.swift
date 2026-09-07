@@ -1018,7 +1018,7 @@ struct AISearchStatusRow: View {
             if failed {
                 Image(systemName: "exclamationmark.triangle")
                     .foregroundStyle(.secondary)
-                Text("AI search couldn't prepare on this device - keyword results are shown.")
+                Text("AI search couldn't prepare on this device, so keyword results are shown.")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             } else {
