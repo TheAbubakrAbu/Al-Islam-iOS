@@ -67,30 +67,35 @@ enum QuranRankedSearch {
 
     // MARK: - Corpus lanes
 
-    /// The per-ayah strings the scorer reads, derived once per index build and shared by every query.
+    /// The per-ayah folds the scorer reads, derived once per index build and shared by every query.
+    /// Stored as UTF-8 bytes and searched with `memmem`: the same tests on Swift strings cost over a
+    /// second per query on the simulator (`String.contains` is a Unicode-aware search, and a query
+    /// runs it up to eight times per ayah over 6,236 of them).
     private final class Lanes {
         let key: String
-        /// Space-padded folds, so a whole-word test is a plain `contains(" word ")`.
-        let english: [String]
-        let arabic: [String]
-        let arabicStems: [String]
+        /// Space-padded folds, so a whole-word test is a plain search for " word ".
+        let english: [[UInt8]]
+        let arabic: [[UInt8]]
+        let arabicStems: [[UInt8]]
         /// Consonant skeletons of the Arabic, word breaks kept (precision) and removed (recall).
-        let skeletonWords: [String]
-        let skeletonTight: [String]
+        let skeletonWords: [[UInt8]]
+        let skeletonTight: [[UInt8]]
         let wordCounts: [Int]
-        /// Every Latin word the translations use, for spelling correction.
+        /// Every Latin word the translations use, for spelling correction: the set for membership,
+        /// the space-joined blob (bytes) for the substring test, the words by length (bytes) for the
+        /// edit-distance walk, which used to allocate a `[Character]` per candidate.
         let vocabulary: Set<String>
-        let vocabularyBlob: String
-        let vocabularyByLength: [Int: [String]]
+        let vocabularyBlob: [UInt8]
+        let vocabularyByLength: [Int: [VocabularyWord]]
 
         init(snapshot: QuranData.VerseSearchSnapshot) {
             key = Self.key(for: snapshot)
             let entries = snapshot.verseIndex
-            var english: [String] = []
-            var arabic: [String] = []
-            var arabicStems: [String] = []
-            var skeletonWords: [String] = []
-            var skeletonTight: [String] = []
+            var english: [[UInt8]] = []
+            var arabic: [[UInt8]] = []
+            var arabicStems: [[UInt8]] = []
+            var skeletonWords: [[UInt8]] = []
+            var skeletonTight: [[UInt8]] = []
             var wordCounts: [Int] = []
             english.reserveCapacity(entries.count)
             arabic.reserveCapacity(entries.count)
@@ -100,15 +105,15 @@ enum QuranRankedSearch {
             wordCounts.reserveCapacity(entries.count)
             var words = Set<String>()
             for entry in entries {
-                english.append(" " + entry.englishBlob + " ")
-                arabic.append(" " + entry.arabicBlob + " ")
+                english.append(Array((" " + entry.englishBlob + " ").utf8))
+                arabic.append(Array((" " + entry.arabicBlob + " ").utf8))
                 // The clean Arabic (the second of the blob's folds) is the one the skeletons and stems
                 // are taken from: one copy of the text, no diacritics, no duplicated lanes.
                 let cleanTokens = Self.cleanArabicTokens(entry, snapshot: snapshot)
-                arabicStems.append(" " + cleanTokens.map(stemArabic).joined(separator: " ") + " ")
+                arabicStems.append(Array((" " + cleanTokens.map(stemArabic).joined(separator: " ") + " ").utf8))
                 let skeletons = cleanTokens.map(arabicSkeleton).filter { !$0.isEmpty }
-                skeletonWords.append(" " + skeletons.joined(separator: " ") + " ")
-                skeletonTight.append(collapseSkeleton(skeletons.joined()))
+                skeletonWords.append(Array((" " + skeletons.joined(separator: " ") + " ").utf8))
+                skeletonTight.append(Array(collapseSkeleton(skeletons.joined()).utf8))
                 wordCounts.append(max(1, cleanTokens.count))
                 for word in entry.englishTokens where word.count >= fuzzyMinLength && Self.isLatinWord(word) {
                     words.insert(word)
@@ -121,9 +126,9 @@ enum QuranRankedSearch {
             self.skeletonTight = skeletonTight
             self.wordCounts = wordCounts
             vocabulary = words
-            vocabularyBlob = " " + words.joined(separator: " ") + " "
-            var byLength: [Int: [String]] = [:]
-            for word in words { byLength[word.count, default: []].append(word) }
+            vocabularyBlob = Array((" " + words.joined(separator: " ") + " ").utf8)
+            var byLength: [Int: [VocabularyWord]] = [:]
+            for word in words { byLength[word.utf8.count, default: []].append(VocabularyWord(Array(word.utf8))) }
             vocabularyByLength = byLength
         }
 
@@ -149,20 +154,50 @@ enum QuranRankedSearch {
 
     private static let lanesLock = NSLock()
     private static var cachedLanes: Lanes?
+    /// The key being built right now, so a second query in flight waits for it instead of building
+    /// a copy of its own (the old cache released the lock during the build).
+    private static var lanesBuildingKey: String?
+    private static let lanesBuilt = DispatchGroup()
 
-    private static func lanes(for snapshot: QuranData.VerseSearchSnapshot) -> Lanes {
+    /// The lanes for `snapshot`, built here when nobody has (tens of milliseconds on the simulator,
+    /// once per index build) with the build time, so the query that paid for it can say so.
+    private static func lanes(for snapshot: QuranData.VerseSearchSnapshot) -> (lanes: Lanes, buildMs: Double) {
         let key = Lanes.key(for: snapshot)
-        lanesLock.lock()
-        if let cached = cachedLanes, cached.key == key {
+        while true {
+            lanesLock.lock()
+            if let cached = cachedLanes, cached.key == key {
+                lanesLock.unlock()
+                return (cached, 0)
+            }
+            if lanesBuildingKey == key {
+                lanesLock.unlock()
+                lanesBuilt.wait()
+                continue
+            }
+            lanesBuildingKey = key
+            lanesBuilt.enter()
             lanesLock.unlock()
-            return cached
+            break
         }
-        lanesLock.unlock()
+        let started = DispatchTime.now().uptimeNanoseconds
         let built = Lanes(snapshot: snapshot)
+        let ms = Double(DispatchTime.now().uptimeNanoseconds - started) / 1_000_000
         lanesLock.lock()
         cachedLanes = built
+        lanesBuildingKey = nil
         lanesLock.unlock()
-        return built
+        lanesBuilt.leave()
+        return (built, ms)
+    }
+
+    /// Builds the lanes ahead of the first ranked query, off the main thread: the post-reveal
+    /// schedule does it on the full tier, the search field's focus on the reduced one (Tilawa
+    /// Guide, Phase 4 step 2). A no-op once they are cached.
+    static func prewarmLanes(snapshot: QuranData.VerseSearchSnapshot) {
+        let (_, ms) = lanes(for: snapshot)
+        #if DEBUG
+        if RenderCounter.enabled, ms > 0 { NSLog("RANKED quran lanes prebuilt %.1f ms", ms) }
+        #endif
     }
 
     // MARK: - Query parsing
@@ -177,6 +212,29 @@ enum QuranRankedSearch {
         let skeleton: String?
         /// The same skeleton ungated, for joining a multi-word query into one run.
         let rawSkeleton: String
+        // The same forms as bytes, bare and space-padded, for the lanes.
+        let textBytes: [UInt8]
+        let textPadded: [UInt8]
+        let stemBytes: [[UInt8]]
+        let fuzzyBytes: [UInt8]?
+        let fuzzyPadded: [UInt8]?
+        let skeletonBytes: [UInt8]?
+        let skeletonPadded: [UInt8]?
+
+        init(text: String, stems: [String], fuzzy: String?, skeleton: String?, rawSkeleton: String) {
+            self.text = text
+            self.stems = stems
+            self.fuzzy = fuzzy
+            self.skeleton = skeleton
+            self.rawSkeleton = rawSkeleton
+            textBytes = Array(text.utf8)
+            textPadded = Array(" \(text) ".utf8)
+            stemBytes = stems.map { Array($0.utf8) }
+            fuzzyBytes = fuzzy.map { Array($0.utf8) }
+            fuzzyPadded = fuzzy.map { Array(" \($0) ".utf8) }
+            skeletonBytes = skeleton.map { Array($0.utf8) }
+            skeletonPadded = skeleton.map { Array(" \($0) ".utf8) }
+        }
     }
 
     private struct Query {
@@ -186,6 +244,24 @@ enum QuranRankedSearch {
         let tokens: [Token]
         let corrections: [Correction]
         let terms: [String]
+        let phraseBytes: [UInt8]
+        let phrasePadded: [UInt8]
+        let requiredBytes: [[UInt8]]
+        /// The tokens' skeletons as one run (adjacency is the precision story for a multi-word query).
+        let joinedSkeleton: [UInt8]
+
+        init(isArabic: Bool, phrase: String, required: [String], tokens: [Token], corrections: [Correction], terms: [String]) {
+            self.isArabic = isArabic
+            self.phrase = phrase
+            self.required = required
+            self.tokens = tokens
+            self.corrections = corrections
+            self.terms = terms
+            phraseBytes = Array(phrase.utf8)
+            phrasePadded = Array(" \(phrase) ".utf8)
+            requiredBytes = required.map { Array($0.utf8) }
+            joinedSkeleton = Array(collapseSkeleton(tokens.map(\.rawSkeleton).joined()).utf8)
+        }
     }
 
     private static let englishStopwords: Set<String> = [
@@ -260,43 +336,76 @@ enum QuranRankedSearch {
     /// as a substring is left alone: a half-typed "merc" is a prefix, not a typo for "merciful".
     private static func nearestWord(_ token: String, lanes: Lanes) -> String? {
         guard token.count >= fuzzyMinLength, Lanes.isLatinWord(token) else { return nil }
-        if lanes.vocabularyBlob.contains(token) { return nil }
+        let bytes = Array(token.utf8)
+        if contains(bytes, in: lanes.vocabularyBlob) { return nil }
         let max = token.count >= fuzzyLongWord ? 2 : 1
-        var best: String?
+        let mask = VocabularyWord.letterMask(of: bytes)
+        var best: [UInt8]?
         var bestDistance = max + 1
-        let chars = Array(token)
-        for length in (token.count - max)...(token.count + max) {
+        for length in (bytes.count - max)...(bytes.count + max) {
             for candidate in lanes.vocabularyByLength[length] ?? [] {
-                let distance = boundedEditDistance(chars, Array(candidate), max: max)
+                guard candidate.mayBeWithin(max, of: mask) else { continue }
+                let distance = boundedEditDistance(bytes, candidate.bytes, max: max)
                 if distance < bestDistance {
                     bestDistance = distance
-                    best = candidate
-                    if distance == 1 { return best }
+                    best = candidate.bytes
+                    if distance == 1 { return String(decoding: candidate.bytes, as: UTF8.self) }
                 }
             }
         }
-        return best
+        return best.map { String(decoding: $0, as: UTF8.self) }
     }
 
-    /// Levenshtein, abandoned as soon as every cell in a row exceeds the budget.
-    static func boundedEditDistance(_ a: [Character], _ b: [Character], max: Int) -> Int {
+    /// A vocabulary word with the set of letters it uses, for the exact pre-test that spares the edit
+    /// distance most of its candidates: every letter of the query that the word lacks (and the other
+    /// way round) costs at least one edit, so a word within `max` edits shares all but `max` of them.
+    struct VocabularyWord {
+        let bytes: [UInt8]
+        let mask: UInt32
+
+        init(_ bytes: [UInt8]) {
+            self.bytes = bytes
+            mask = Self.letterMask(of: bytes)
+        }
+
+        /// One bit per lowercase ASCII letter (the vocabularies hold nothing else).
+        static func letterMask(of bytes: [UInt8]) -> UInt32 {
+            var mask: UInt32 = 0
+            for byte in bytes where byte >= 0x61 && byte <= 0x7A {
+                mask |= 1 << UInt32(byte - 0x61)
+            }
+            return mask
+        }
+
+        func mayBeWithin(_ max: Int, of other: UInt32) -> Bool {
+            (other & ~mask).nonzeroBitCount <= max && (mask & ~other).nonzeroBitCount <= max
+        }
+    }
+
+    /// Levenshtein, abandoned as soon as every cell in a row exceeds the budget. One row buffer per
+    /// call (the classic single-row form): the version that allocated a fresh row per step spent
+    /// most of a query's parse time in the allocator, over the thousands of candidates a correction
+    /// walks. Over any elements (both lanes call it on ASCII bytes).
+    static func boundedEditDistance<Element: Equatable>(_ a: [Element], _ b: [Element], max: Int) -> Int {
         if abs(a.count - b.count) > max { return max + 1 }
-        var previous = Array(0...b.count)
-        for i in 1...Swift.max(1, a.count) where i <= a.count {
-            var current = [i]
-            current.reserveCapacity(b.count + 1)
+        if a.isEmpty { return b.count > max ? max + 1 : b.count }
+        if b.isEmpty { return a.count > max ? max + 1 : a.count }
+        var row = [Int](0...b.count)
+        for i in 1...a.count {
+            var diagonal = row[0]
+            row[0] = i
             var rowBest = i
-            for j in 1...Swift.max(1, b.count) where j <= b.count {
+            for j in 1...b.count {
+                let above = row[j]
                 let cost = a[i - 1] == b[j - 1] ? 0 : 1
-                let value = Swift.min(previous[j] + 1, current[j - 1] + 1, previous[j - 1] + cost)
-                current.append(value)
+                let value = Swift.min(above + 1, row[j - 1] + 1, diagonal + cost)
+                row[j] = value
+                diagonal = above
                 if value < rowBest { rowBest = value }
             }
-            if b.isEmpty { return i > max ? max + 1 : i }
             if rowBest > max { return max + 1 }
-            previous = current
         }
-        return previous[b.count]
+        return row[b.count]
     }
 
     private static func parse(_ raw: String, lanes: Lanes) -> Query? {
@@ -340,7 +449,17 @@ enum QuranRankedSearch {
                 stems.append(stem)
             }
             stems.forEach(remember)
+            #if DEBUG
+            let fuzzyStarted = DispatchTime.now().uptimeNanoseconds
+            #endif
             let fuzzy = isArabic ? nil : nearestWord(text, lanes: lanes)
+            #if DEBUG
+            if RenderCounter.enabled {
+                let candidates = ((text.count - 2)...(text.count + 2)).reduce(0) { $0 + (lanes.vocabularyByLength[$1]?.count ?? 0) }
+                NSLog("RANKED quran fuzzy %@ -> %@ %.1f ms (%d candidates of %d words)", text, fuzzy ?? "-",
+                      Double(DispatchTime.now().uptimeNanoseconds - fuzzyStarted) / 1_000_000, candidates, lanes.vocabulary.count)
+            }
+            #endif
             if let fuzzy {
                 corrections.append(Correction(from: text, to: fuzzy))
                 remember(fuzzy)
@@ -363,30 +482,54 @@ enum QuranRankedSearch {
         var position: Int
     }
 
-    private static func position(of needle: String, in text: String) -> Int {
-        guard let range = text.range(of: needle) else { return 0 }
-        return text.utf16.distance(from: text.utf16.startIndex, to: range.lowerBound)
+    /// The byte offset of the first occurrence of `needle` in `haystack`, or nil.
+    private static func find(_ needle: [UInt8], in haystack: [UInt8]) -> Int? {
+        guard !needle.isEmpty, haystack.count >= needle.count else { return nil }
+        return haystack.withUnsafeBufferPointer { text -> Int? in
+            needle.withUnsafeBufferPointer { pattern -> Int? in
+                guard let base = text.baseAddress, let patternBase = pattern.baseAddress,
+                      let hit = memmem(base, text.count, patternBase, pattern.count) else { return nil }
+                return UnsafeRawPointer(hit).assumingMemoryBound(to: UInt8.self) - base
+            }
+        }
+    }
+
+    private static func contains(_ needle: [UInt8], in haystack: [UInt8]) -> Bool {
+        find(needle, in: haystack) != nil
+    }
+
+    /// The position score's unit is UTF-16 units into the field, as it was on strings: for Arabic
+    /// and Latin (both in the BMP) that is one unit per scalar, so the continuation bytes are skipped.
+    private static func units(before byteOffset: Int, in haystack: [UInt8]) -> Int {
+        var count = 0
+        var index = 0
+        while index < byteOffset {
+            if haystack[index] & 0xC0 != 0x80 { count += 1 }
+            index += 1
+        }
+        return count
     }
 
     /// What one query word is worth against one padded field, or nil.
-    private static func tokenHit(_ text: String, token: Token, weight: Int) -> FieldScore? {
-        if text.contains(token.text) {
-            let whole = text.contains(" \(token.text) ")
-            return FieldScore(score: weight + (whole ? wholeWordBonus : 0), matched: 1,
-                              position: position(of: token.text, in: text))
+    private static func tokenHit(_ text: [UInt8], token: Token, weight: Int) -> FieldScore? {
+        if let at = find(token.textBytes, in: text) {
+            let whole = contains(token.textPadded, in: text)
+            return FieldScore(score: weight + (whole ? wholeWordBonus : 0), matched: 1, position: units(before: at, in: text))
         }
-        for stem in token.stems where text.contains(stem) {
-            return FieldScore(score: weight - stemPenalty, matched: 1, position: position(of: stem, in: text))
+        for stem in token.stemBytes {
+            if let at = find(stem, in: text) {
+                return FieldScore(score: weight - stemPenalty, matched: 1, position: units(before: at, in: text))
+            }
         }
-        if let fuzzy = token.fuzzy, text.contains(fuzzy) {
-            let whole = text.contains(" \(fuzzy) ")
+        if let fuzzy = token.fuzzyBytes, let at = find(fuzzy, in: text) {
+            let whole = token.fuzzyPadded.map { contains($0, in: text) } ?? false
             return FieldScore(score: weight - fuzzyPenalty + (whole ? wholeWordBonus : 0), matched: 1,
-                              position: position(of: fuzzy, in: text))
+                              position: units(before: at, in: text))
         }
         return nil
     }
 
-    private static func scoreField(_ text: String, query: Query, weight: Int) -> FieldScore? {
+    private static func scoreField(_ text: [UInt8], query: Query, weight: Int) -> FieldScore? {
         var score = 0
         var matched = 0
         var position = Int.max
@@ -397,34 +540,34 @@ enum QuranRankedSearch {
             position = Swift.min(position, hit.position)
         }
         guard matched > 0 else { return nil }
-        if query.tokens.count > 1, !query.phrase.isEmpty, text.contains(query.phrase) {
+        if query.tokens.count > 1, !query.phraseBytes.isEmpty, contains(query.phraseBytes, in: text) {
             score += phraseBonus
-            if text.contains(" \(query.phrase) ") { score += wholePhraseBonus }
+            if contains(query.phrasePadded, in: text) { score += wholePhraseBonus }
         }
         return FieldScore(score: score, matched: matched, position: position == Int.max ? 0 : position)
     }
 
-    private static func scoreSkeleton(words: String, tight: String, query: Query, weight: Int, wholeBonus: Int) -> FieldScore? {
+    private static func scoreSkeleton(words: [UInt8], tight: [UInt8], query: Query, weight: Int, wholeBonus: Int) -> FieldScore? {
         // Adjacency is the whole precision story for a multi-word query, so it is matched as ONE run
         // against the tight view: "qul huwa allahu" must not be satisfied by three fragments.
-        let joined = collapseSkeleton(query.tokens.map(\.rawSkeleton).joined())
-        if query.tokens.count > 1, joined.count >= minSkeletonLength, tight.contains(joined) {
+        let joined = query.joinedSkeleton
+        if query.tokens.count > 1, joined.count >= minSkeletonLength, let at = find(joined, in: tight) {
             let score = (Swift.max(1, weight - skeletonPenalty) + wholeBonus) * query.tokens.count
-            return FieldScore(score: score, matched: query.tokens.count, position: position(of: joined, in: tight))
+            return FieldScore(score: score, matched: query.tokens.count, position: units(before: at, in: tight))
         }
         var score = 0
         var matched = 0
         var position = Int.max
         let base = Swift.max(1, weight - skeletonPenalty)
         for token in query.tokens {
-            guard let skeleton = token.skeleton else { continue }
-            if words.contains(skeleton) {
-                score += base + (words.contains(" \(skeleton) ") ? wholeBonus : 0)
-                position = Swift.min(position, Self.position(of: skeleton, in: words))
-            } else if tight.contains(skeleton) {
+            guard let skeleton = token.skeletonBytes, let padded = token.skeletonPadded else { continue }
+            if let at = find(skeleton, in: words) {
+                score += base + (contains(padded, in: words) ? wholeBonus : 0)
+                position = Swift.min(position, units(before: at, in: words))
+            } else if let at = find(skeleton, in: tight) {
                 // One romanised token routinely spans two Arabic ones ("alhamdulillah" is الحمد لله).
                 score += base + (skeleton.count >= minSkeletonLength ? wholeBonus : 0)
-                position = Swift.min(position, Self.position(of: skeleton, in: tight))
+                position = Swift.min(position, units(before: at, in: tight))
             } else {
                 continue
             }
@@ -451,8 +594,27 @@ enum QuranRankedSearch {
         // the exact scan.
         if trimmed.rangeOfCharacter(from: .decimalDigits) != nil { return Outcome() }
         if trimmed.contains(where: { "&|!#^%$=".contains($0) }) { return Outcome() }
-        let lanes = lanes(for: snapshot)
-        guard let query = parse(trimmed, lanes: lanes) else { return Outcome() }
+        #if DEBUG
+        let searchStarted = DispatchTime.now().uptimeNanoseconds
+        var lanesMs = 0.0
+        var parseMs = 0.0
+        defer {
+            if RenderCounter.enabled {
+                NSLog("RANKED quran %.1f ms (lanes %.1f ms, parse %.1f ms)",
+                      Double(DispatchTime.now().uptimeNanoseconds - searchStarted) / 1_000_000, lanesMs, parseMs)
+            }
+        }
+        #endif
+        let (lanes, builtMs) = lanes(for: snapshot)
+        #if DEBUG
+        lanesMs = builtMs
+        let parseStarted = DispatchTime.now().uptimeNanoseconds
+        #endif
+        let parsed = parse(trimmed, lanes: lanes)
+        #if DEBUG
+        parseMs = Double(DispatchTime.now().uptimeNanoseconds - parseStarted) / 1_000_000
+        #endif
+        guard let query = parsed else { return Outcome() }
 
         let entries = snapshot.verseIndex
         // The skeleton tier is the noisiest one, so it is only consulted for words the translations do
@@ -465,8 +627,8 @@ enum QuranRankedSearch {
             if index & 0x1FF == 0, Task.isCancelled { return Outcome() }
             let arabicText = lanes.arabic[index]
             let englishText = lanes.english[index]
-            if !query.required.isEmpty {
-                let carries = query.required.allSatisfy { arabicText.contains($0) || englishText.contains($0) }
+            if !query.requiredBytes.isEmpty {
+                let carries = query.requiredBytes.allSatisfy { contains($0, in: arabicText) || contains($0, in: englishText) }
                 if !carries { continue }
             }
 

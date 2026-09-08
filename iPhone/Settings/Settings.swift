@@ -124,7 +124,8 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     /// One publish per user action and zero while idle is the target; a page turn printing 3, a
     /// toggle printing 2 or a GPS fix printing 1 per sample is the fan-out the performance plan removes.
     private var debugPublishCount = 0
-    private static let debugPublishCounterEnabled = ProcessInfo.processInfo.arguments.contains("-publishCounter")
+    /// Internal, not private: the widget snapshot stores log their byte counts under the same flag.
+    static let debugPublishCounterEnabled = ProcessInfo.processInfo.arguments.contains("-publishCounter")
     #endif
 
     static let encoder: JSONEncoder = {
@@ -1768,6 +1769,7 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
 
     func recordSurahPlayed(_ surahID: Int) {
         guard (1...114).contains(surahID) else { return }
+        ActivityLog.shared.record(.listen)
         var counts = decodeSurahCounts(surahPlayCountsData)
         counts[surahID, default: 0] += 1
         if let data = try? Self.encoder.encode(counts) { surahPlayCountsData = data }
@@ -1781,6 +1783,15 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     /// When on, the Quran tab shows the daily "Ayah of the Day" card.
     @AppStorage("showAyahOfTheDay") var showAyahOfTheDay: Bool = true
     @AppStorage("showWordOfTheDay") var showWordOfTheDay: Bool = true
+    /// Every "of the day" feature turns over at Fajr (from the prayer calculation) rather than at
+    /// midnight; see `DailyRollover`. Off, or with no location, the boundary is midnight.
+    @AppStorage("dailyRolloverAtFajr") var dailyRolloverAtFajr: Bool = true
+    /// The daily boundary's memos (DailyRollover.swift): one Fajr per (day, prayer inputs) and one
+    /// 30-day table per day, both read on the main thread only. Plain stored vars: never published.
+    var dailyFajrMemo: (day: Date, signature: String, fajr: Date?)?
+    var fajrTableMemo: (day: Date, days: Int, signature: String, table: [String: TimeInterval])?
+    /// The Reminder of the Day presented once a day when the app opens (from the second day on).
+    @AppStorage("showDailyReminderSheet") var showDailyReminderSheet: Bool = true
     /// Day key (yyyy-MM-dd) for which the Ayah of the Day card has been hidden via "Hide for Today".
     @AppStorage("ayahOfTheDayHiddenDate") var ayahOfTheDayHiddenDate: String = ""
     /// A shuffled replacement for TODAY's Ayah of the Day, as "dayKey|surahID|ayahID". Stale days no

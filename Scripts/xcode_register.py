@@ -7,6 +7,11 @@ Both paths are repo-relative. The new file joins the sibling's group and every b
 sibling is in (Sources for Swift, Resources for data), with fresh UUIDs. Idempotent: a file the
 project already references is left alone. The project uses classic groups, not synchronized
 folders, so every added source or resource needs this (or Xcode).
+
+    ./Scripts/xcode_register.py --check <file> [<file> ...]
+
+exits 1 naming every file the project does not reference (a pack that was written but never
+registered ships nowhere: the app reads "0 narrations" from an empty bundle lookup).
 """
 import re, sys, uuid
 from pathlib import Path
@@ -66,8 +71,21 @@ def register(new_path: str, like: str) -> None:
     print(f"{new_name}: registered like {like_name} ({len(additions)} phase(s))")
 
 
+def check(paths: list[str]) -> int:
+    text = PBX.read_text()
+    missing = [path for path in paths if f"/* {Path(path).name} */" not in text]
+    for path in missing:
+        print(f"{Path(path).name}: NOT registered")
+    for path in paths:
+        if path not in missing:
+            print(f"{Path(path).name}: registered")
+    return 1 if missing else 0
+
+
 if __name__ == "__main__":
     args = sys.argv[1:]
+    if len(args) >= 2 and args[0] == "--check":
+        sys.exit(check(args[1:]))
     if len(args) != 3 or args[1] != "--like":
         sys.exit(__doc__)
     register(args[0], args[2])

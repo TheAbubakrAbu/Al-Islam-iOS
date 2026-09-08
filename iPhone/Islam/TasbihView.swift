@@ -197,6 +197,7 @@ final class TasbihCounters: ObservableObject {
         guard amount > 0 else { return }
         lifetimeCount += amount
         countsByDay[Self.dayKey(), default: 0] += amount
+        ActivityLog.shared.record(.dhikr, count: amount)
     }
 
     func binding(for index: Int) -> Binding<Int> {

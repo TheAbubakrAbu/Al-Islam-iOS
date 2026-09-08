@@ -55,7 +55,14 @@ enum HadithRankedSearch {
     struct Hit {
         let row: Int
         let score: Int
+        /// How many of the query's words landed (in the narration or its chapter): the caller keeps
+        /// the rows carrying every word and, only when none does, the ones carrying the most of it.
+        let matched: Int
     }
+
+    /// What a relaxed row (fewer than every word of a multi-word query) adds per matched word, on
+    /// top of `Hit.score`, when the relaxed rows are the ones shown.
+    static func relaxedBonus(matched: Int) -> Int { matched * relaxedTokenWeight }
 
     struct BookOutcome {
         let hits: [Hit]
@@ -198,10 +205,13 @@ enum HadithRankedSearch {
 
     // MARK: - One book
 
-    /// Every hadith of `data` scored against `query`, best first: the strict pass, or, when nothing
-    /// carries every word of a multi-word query, the relaxed one. Runs off the main thread; checks
+    /// Every hadith of `data` carrying at least one word of `query`, with how many words it carries
+    /// and its score before the relaxed bonus: ONE pass over the book serves both the strict list
+    /// (every word) and the relaxed one (the most words), where two passes used to scan the library
+    /// twice for a multi-word query. Blocks in which no word of the query occurs at all, in any
+    /// form, are skipped whole unless a chapter of theirs matched. Runs off the main thread; checks
     /// cancellation per block through the pack scanner.
-    static func rank(book: HadithCatalogBook, data: HadithBookData, query: Query, requireAll: Bool) -> [Hit] {
+    static func rank(book: HadithCatalogBook, data: HadithBookData, query: Query) -> [Hit] {
         guard !query.isEmpty else { return [] }
         let pack = data.pack
         // The chapter and citation buckets are the same for every row of a chapter, so they are
@@ -229,9 +239,18 @@ enum HadithRankedSearch {
             if query.tokens.count > 1, contains(query.phrase, in: fold) { score += phraseBonusPrimary }
             buckets[chapter.id] = Bucket(score: score, matched: matched)
         }
+        // Chapters where a word landed in the title or the citation: a block whose folds carry no
+        // word at all can still hold rows that match through their chapter, so those blocks scan.
+        let matchedChapters = Set(buckets.filter { !$0.value.matched.isEmpty }.map(\.key))
         let rows = data.hadiths
         var hits: [Hit] = []
-        pack.scanSearchFolds(in: 0..<rows.count, isArabic: query.isArabic) { row, fold in
+        pack.scanSearchFolds(in: 0..<rows.count, isArabic: query.isArabic, blockFilter: { blockRows, span in
+            if !matchedChapters.isEmpty,
+               blockRows.contains(where: { rows.indices.contains($0) && matchedChapters.contains(rows[$0].chapterId) }) {
+                return true
+            }
+            return query.tokens.contains { appears($0, in: span) }
+        }) { row, fold in
             let chapterId = rows.indices.contains(row) ? rows[row].chapterId : -1
             let bucket = buckets[chapterId]
             var score = 0
@@ -239,39 +258,195 @@ enum HadithRankedSearch {
             for (index, token) in query.tokens.enumerated() {
                 let body = tokenHit(token, in: fold, weight: bodyWeight)
                 let above = (bucket?.matched.contains(index) ?? false)
-                if body == 0, !above {
-                    if requireAll { return }
-                    continue
-                }
+                if body == 0, !above { continue }
                 matched += 1
                 score += body
             }
             guard matched > 0 else { return }
             score += bucket?.score ?? 0
-            if !requireAll { score += matched * relaxedTokenWeight }
             if query.tokens.count > 1, find(query.phrase, in: fold, wholeWord: false, wordStart: false).found {
                 score += phraseBonusBody
             }
-            hits.append(Hit(row: row, score: score))
+            hits.append(Hit(row: row, score: score, matched: matched))
         }
         return hits
+    }
+
+    /// Whether any form of the word (as typed, the other spelling, the stem, the correction) occurs
+    /// anywhere in `span`: the block-level pre-test, one `memmem` per form.
+    private static func appears(_ token: Token, in span: UnsafeBufferPointer<UInt8>) -> Bool {
+        if find(token.text, in: span, wholeWord: false, wordStart: false).found { return true }
+        if let variant = token.variant, find(variant, in: span, wholeWord: false, wordStart: false).found { return true }
+        if let stem = token.stem, find(stem, in: span, wholeWord: false, wordStart: false).found { return true }
+        if let fuzzy = token.fuzzy, find(fuzzy, in: span, wholeWord: false, wordStart: false).found { return true }
+        return false
+    }
+}
+
+// MARK: - Bounded top-k
+
+/// The best `capacity` elements of a stream, kept in a small heap ordered by `outranks`, so a common
+/// word's tens of thousands of hits are never sorted whole for a forty-row cap. The root is the
+/// WORST kept element; a newcomer that outranks it replaces it.
+struct TopK<Element> {
+    private var heap: [Element] = []
+    let capacity: Int
+    /// True when the first element ranks above the second.
+    private let outranks: (Element, Element) -> Bool
+    /// Everything offered, kept or not: the total the screen reports.
+    private(set) var offered = 0
+
+    init(capacity: Int, outranks: @escaping (Element, Element) -> Bool) {
+        self.capacity = max(1, capacity)
+        self.outranks = outranks
+        heap.reserveCapacity(self.capacity)
+    }
+
+    mutating func offer(_ element: Element) {
+        offered += 1
+        if heap.count < capacity {
+            heap.append(element)
+            siftUp(heap.count - 1)
+        } else if let worst = heap.first, outranks(element, worst) {
+            heap[0] = element
+            siftDown(0)
+        }
+    }
+
+    /// The kept elements, best first.
+    func sorted() -> [Element] {
+        heap.sorted { outranks($0, $1) }
+    }
+
+    private mutating func siftUp(_ index: Int) {
+        var child = index
+        while child > 0 {
+            let parent = (child - 1) / 2
+            // A parent that outranks its child is out of place: the worse element belongs above.
+            guard outranks(heap[parent], heap[child]) else { break }
+            heap.swapAt(parent, child)
+            child = parent
+        }
+    }
+
+    private mutating func siftDown(_ index: Int) {
+        var parent = index
+        while true {
+            let left = 2 * parent + 1
+            let right = left + 1
+            var worst = parent
+            if left < heap.count, outranks(heap[worst], heap[left]) { worst = left }
+            if right < heap.count, outranks(heap[worst], heap[right]) { worst = right }
+            guard worst != parent else { break }
+            heap.swapAt(parent, worst)
+            parent = worst
+        }
     }
 }
 
 // MARK: - Vocabulary
 
-/// Every English word the library uses, for correcting typed ones: built once from the packs' folds
-/// (a walk over every search block), kept on disk, loaded on the first hadith search. Until it is
-/// ready a query is simply searched as typed.
+/// Every English word the library uses, for correcting typed ones. Shipped in the bundle
+/// (`HadithVocabulary.txt.xz`, decision B of the Tilawa Guide, 2026-09-07: exported by the app's own
+/// walk over every search block, so the list and the rule can never disagree), with the walk kept as
+/// the fallback for a list built from other packs. Until it is ready a query is searched as typed.
 final class HadithVocabulary: @unchecked Sendable {
     static let shared = HadithVocabulary()
     private init() {}
 
+    // MARK: The shipped list
+
+    private static var bundledURL: URL? {
+        Bundle.main.url(forResource: "HadithVocabulary", withExtension: "txt.xz", subdirectory: "Data/Hadith")
+            ?? Bundle.main.url(forResource: "HadithVocabulary", withExtension: "txt.xz", subdirectory: "Hadith")
+            ?? Bundle.main.url(forResource: "HadithVocabulary", withExtension: "txt.xz")
+    }
+
+    static let isBundled: Bool = bundledURL != nil
+
+    /// The shipped list's first line: "#shelf " and the fingerprint of the packs it was built from.
+    static let headerPrefix = "#shelf "
+
+    /// FNV-1a over "slug:bytes" of every pack on the shelf, by slug: names the shelf a list was
+    /// built from, and costs seventeen file sizes to recompute (no pack is opened). The same value
+    /// is computed by Scripts/build_hadith_vocabulary.py and Scripts/verify_tilawa_packs.py.
+    static let shelfFingerprint: String = {
+        var hash: UInt64 = 0xcbf2_9ce4_8422_2325
+        for slug in HadithCatalogBook.all.map(\.slug).sorted() {
+            let size = HadithPack.bundledURL(slug).flatMap { try? $0.resourceValues(forKeys: [.fileSizeKey]).fileSize } ?? 0
+            for byte in "\(slug):\(size)\n".utf8 {
+                hash ^= UInt64(byte)
+                hash = hash &* 0x0000_0100_0000_01B3
+            }
+        }
+        return String(hash, radix: 16)
+    }()
+
+    /// The shipped words, or nil when the resource is missing or was built for other packs.
+    private static func loadBundledWords() -> [String]? {
+        guard let url = bundledURL, let blob = try? Data(contentsOf: url),
+              let raw = SolidPack.xzDecompress(blob) else { return nil }
+        var lines = String(decoding: raw, as: UTF8.self).split(separator: "\n", omittingEmptySubsequences: true)
+        guard let first = lines.first, first.hasPrefix(headerPrefix),
+              first.dropFirst(headerPrefix.count) == shelfFingerprint else { return nil }
+        lines.removeFirst()
+        return lines.map(String.init)
+    }
+
+    /// For "-auditPacks": the shipped list's size and whether it matches the shelf.
+    static func bundledSummary() -> (words: Int, matchesShelf: Bool)? {
+        guard let url = bundledURL, let blob = try? Data(contentsOf: url),
+              let raw = SolidPack.xzDecompress(blob) else { return nil }
+        let lines = String(decoding: raw, as: UTF8.self).split(separator: "\n", omittingEmptySubsequences: true)
+        let matches = lines.first.map { $0.hasPrefix(headerPrefix) && $0.dropFirst(headerPrefix.count) == shelfFingerprint } ?? false
+        return (max(0, lines.count - 1), matches)
+    }
+
+    /// Installs the shipped list (a small xz inflate) and says whether the list is ready afterwards:
+    /// the post-reveal schedule's first try, before it opens any book for the walk.
+    @discardableResult
+    func prepareFromBundle() -> Bool {
+        lock.lock()
+        if ready { lock.unlock(); return true }
+        if building {
+            lock.unlock()
+            built.wait()
+            return isReady
+        }
+        building = true
+        built.enter()
+        lock.unlock()
+        defer { built.leave() }
+        if let words = Self.loadBundledWords() {
+            install(words: words)
+            return true
+        }
+        lock.lock(); building = false; lock.unlock()
+        return false
+    }
+
+    #if DEBUG
+    /// "-exportHadithVocabulary": the walk's list, written to Documents/hadith-vocabulary.txt behind
+    /// the shelf fingerprint line, for Scripts/build_hadith_vocabulary.py.
+    static func exportList(books: [HadithBookData]) {
+        let words = collectWords(books: books)
+        guard let documents = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first else { return }
+        let url = documents.appendingPathComponent("hadith-vocabulary.txt")
+        let text = headerPrefix + shelfFingerprint + "\n" + words.joined(separator: "\n") + "\n"
+        try? text.write(to: url, atomically: true, encoding: .utf8)
+        print("VOCAB EXPORT \(words.count) words from \(books.count) books -> \(url.path)")
+    }
+    #endif
+
     private let lock = NSLock()
-    private var blob = ""
-    private var byLength: [Int: [String]] = [:]
+    /// The space-joined words as bytes (the substring test) and by length as bytes (the edit-distance
+    /// walk, which used to allocate a `[Character]` per candidate).
+    private var blob: [UInt8] = []
+    private var byLength: [Int: [QuranRankedSearch.VocabularyWord]] = [:]
     private var ready = false
     private var building = false
+    /// Entered while a build runs; a query that needs the list waits on it instead of polling.
+    private let built = DispatchGroup()
 
     private static let minLength = 4
     private static let longWord = 7
@@ -281,9 +456,11 @@ final class HadithVocabulary: @unchecked Sendable {
         return ready
     }
 
+    /// The walk's cache, scoped to the shelf it was built from so a pack update can never read back
+    /// the words of the old packs.
     private static var fileURL: URL? {
         guard let base = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first else { return nil }
-        return base.appendingPathComponent("hadith-vocabulary-v1.txt")
+        return base.appendingPathComponent("hadith-vocabulary-\(shelfFingerprint).txt")
     }
 
     /// Builds (or reloads) the list in the background. Cheap to call: a second call while the first is
@@ -292,6 +469,7 @@ final class HadithVocabulary: @unchecked Sendable {
         lock.lock()
         if ready || building { lock.unlock(); return }
         building = true
+        built.enter()
         lock.unlock()
         Task.detached(priority: .utility) { [self] in
             build(books: books)
@@ -306,66 +484,94 @@ final class HadithVocabulary: @unchecked Sendable {
         if ready { lock.unlock(); return }
         if building {
             lock.unlock()
-            var waited = 0
-            while waited < 60 {
-                Thread.sleep(forTimeInterval: 0.1)
-                waited += 1
-                if isReady { return }
-            }
+            built.wait()
             return
         }
         building = true
+        built.enter()
         lock.unlock()
         build(books: books)
     }
 
+    /// Only the whole shelf makes a list worth keeping: a search typed before the launch sweep had
+    /// opened every book used to write a partial vocabulary to disk and read it back forever.
+    private static func isWholeShelf(_ books: [HadithBookData]) -> Bool {
+        books.count >= HadithCatalogBook.all.count
+    }
+
     private func build(books: [HadithBookData]) {
-        do {
-            if let url = Self.fileURL, let text = try? String(contentsOf: url, encoding: .utf8), !text.isEmpty {
-                install(words: text.split(separator: "\n").map(String.init))
-                return
-            }
-            var words = Set<String>()
-            for data in books {
-                data.pack.scanSearchFolds(in: 0..<data.hadiths.count, isArabic: false) { _, fold in
-                    var start = 0
-                    let count = fold.count
-                    var index = 0
-                    while index <= count {
-                        let atEnd = index == count
-                        let byte = atEnd ? 0x20 : fold[index]
-                        if byte == 0x20 || byte == 0x0A || byte == 0x09 || byte == 0x0D {
-                            let length = index - start
-                            if length >= Self.minLength, length <= 24 {
-                                var isWord = true
-                                for offset in start..<index where !(0x61...0x7A).contains(fold[offset]) { isWord = false; break }
-                                if isWord, let word = String(bytes: UnsafeBufferPointer(rebasing: fold[start..<index]), encoding: .utf8) {
-                                    words.insert(word)
-                                }
+        defer { built.leave() }
+        // The shipped list first: no book is touched when it matches the shelf.
+        if let words = Self.loadBundledWords() {
+            install(words: words)
+            return
+        }
+        if let url = Self.fileURL, let text = try? String(contentsOf: url, encoding: .utf8), !text.isEmpty {
+            install(words: text.split(separator: "\n").map(String.init))
+            return
+        }
+        guard Self.isWholeShelf(books) else {
+            lock.lock()
+            building = false
+            lock.unlock()
+            return
+        }
+        let sorted = Self.collectWords(books: books)
+        if let url = Self.fileURL {
+            try? sorted.joined(separator: "\n").write(to: url, atomically: true, encoding: .utf8)
+        }
+        install(words: sorted)
+    }
+
+    /// The walk itself: every 4-24 letter lowercase ASCII word of every book's English search folds,
+    /// sorted. The export and the fallback build share it, which is what keeps the shipped list honest.
+    private static func collectWords(books: [HadithBookData]) -> [String] {
+        var words = Set<String>()
+        for data in books {
+            data.pack.scanSearchFolds(in: 0..<data.hadiths.count, isArabic: false) { _, fold in
+                var start = 0
+                let count = fold.count
+                var index = 0
+                while index <= count {
+                    let atEnd = index == count
+                    let byte = atEnd ? 0x20 : fold[index]
+                    if byte == 0x20 || byte == 0x0A || byte == 0x09 || byte == 0x0D {
+                        let length = index - start
+                        if length >= minLength, length <= 24 {
+                            var isWord = true
+                            for offset in start..<index where !(0x61...0x7A).contains(fold[offset]) { isWord = false; break }
+                            if isWord, let word = String(bytes: UnsafeBufferPointer(rebasing: fold[start..<index]), encoding: .utf8) {
+                                words.insert(word)
                             }
-                            start = index + 1
                         }
-                        index += 1
+                        start = index + 1
                     }
+                    index += 1
                 }
             }
-            let sorted = words.sorted()
-            if let url = Self.fileURL {
-                try? sorted.joined(separator: "\n").write(to: url, atomically: true, encoding: .utf8)
-            }
-            install(words: sorted)
         }
+        return words.sorted()
     }
 
     private func install(words: [String]) {
-        var byLength: [Int: [String]] = [:]
-        for word in words { byLength[word.count, default: []].append(word) }
+        var byLength: [Int: [QuranRankedSearch.VocabularyWord]] = [:]
+        for word in words { byLength[word.utf8.count, default: []].append(QuranRankedSearch.VocabularyWord(Array(word.utf8))) }
         lock.lock()
-        blob = " " + words.joined(separator: " ") + " "
+        blob = Array((" " + words.joined(separator: " ") + " ").utf8)
         self.byLength = byLength
         ready = true
         building = false
         lock.unlock()
+    }
+
+    private static func occurs(_ needle: [UInt8], in haystack: [UInt8]) -> Bool {
+        guard !needle.isEmpty, haystack.count >= needle.count else { return false }
+        return haystack.withUnsafeBufferPointer { text in
+            needle.withUnsafeBufferPointer { pattern in
+                guard let base = text.baseAddress, let patternBase = pattern.baseAddress else { return false }
+                return memmem(base, text.count, patternBase, pattern.count) != nil
+            }
+        }
     }
 
     /// The library word a mistyped one most likely meant, or nil to leave it be. Anything the library
@@ -373,21 +579,23 @@ final class HadithVocabulary: @unchecked Sendable {
     func nearestWord(to token: String) -> String? {
         guard token.count >= Self.minLength, HadithRankedSearch.isLatinWord(token) else { return nil }
         lock.lock(); defer { lock.unlock() }
-        guard ready, !blob.contains(token) else { return nil }
+        let bytes = Array(token.utf8)
+        guard ready, !Self.occurs(bytes, in: blob) else { return nil }
         let max = token.count >= Self.longWord ? 2 : 1
-        let chars = Array(token)
-        var best: String?
+        let mask = QuranRankedSearch.VocabularyWord.letterMask(of: bytes)
+        var best: [UInt8]?
         var bestDistance = max + 1
-        for length in (token.count - max)...(token.count + max) {
+        for length in (bytes.count - max)...(bytes.count + max) {
             for candidate in byLength[length] ?? [] {
-                let distance = QuranRankedSearch.boundedEditDistance(chars, Array(candidate), max: max)
+                guard candidate.mayBeWithin(max, of: mask) else { continue }
+                let distance = QuranRankedSearch.boundedEditDistance(bytes, candidate.bytes, max: max)
                 if distance < bestDistance {
                     bestDistance = distance
-                    best = candidate
-                    if distance == 1 { return best }
+                    best = candidate.bytes
+                    if distance == 1 { return String(decoding: candidate.bytes, as: UTF8.self) }
                 }
             }
         }
-        return best
+        return best.map { String(decoding: $0, as: UTF8.self) }
     }
 }

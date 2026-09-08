@@ -240,10 +240,16 @@ final class MiraclesStore: @unchecked Sendable {
     }
 
     private static func load() -> Library? {
-        guard let url = packURL(),
-              let blob = try? Data(contentsOf: url),
-              let json = SolidPack.xzDecompress(blob),
-              let root = (try? JSONSerialization.jsonObject(with: json)) as? [String: Any],
+        PackTrace.measure("Miracles") { () -> (result: Library?, bytes: Int) in
+            guard let url = packURL(),
+                  let blob = try? Data(contentsOf: url),
+                  let json = SolidPack.xzDecompress(blob) else { return (nil, 0) }
+            return (parse(json), json.count)
+        }
+    }
+
+    private static func parse(_ json: Data) -> Library? {
+        guard let root = (try? JSONSerialization.jsonObject(with: json)) as? [String: Any],
               let rows = root["articles"] as? [[String: Any]] else { return nil }
 
         var articles: [MiracleArticle] = []
@@ -306,10 +312,13 @@ final class MiraclesStore: @unchecked Sendable {
 /// The door into the library: browse by subject (grouped by the background it assumes) or search,
 /// because 202 articles need both.
 struct MiraclesView: View {
-    @ObservedObject private var settings = Settings.shared
 
     @State private var library: MiraclesStore.Library?
     @State private var searchText = ""
+    /// The articles matching the settled query: from `.onChange` (150 ms after the last keystroke)
+    /// and the library's arrival, never from the body, which used to re-fold 202 keys per evaluation.
+    @State private var results: [MiracleArticle] = []
+    @State private var filterTask: Task<Void, Never>?
     @State private var barsCollapsed = false
     #if DEBUG
     @State private var debugArticle: MiracleArticle?
@@ -319,14 +328,24 @@ struct MiraclesView: View {
     private var query: String { searchText.trimmingCharacters(in: .whitespacesAndNewlines) }
 
     /// Every term has to hit, so "mountain root" finds the one article that "mountain" alone would bury.
-    private var results: [MiracleArticle] {
+    private static func filter(_ library: MiraclesStore.Library?, query: String) -> [MiracleArticle] {
         guard let library else { return [] }
         let terms = IslamArticles.fold(query).split(separator: " ").map(String.init)
         guard !terms.isEmpty else { return [] }
         return library.articles.filter { article in terms.allSatisfy { article.searchKey.contains($0) } }
     }
 
+    private func scheduleFilter(_ text: String) {
+        filterTask?.cancel()
+        filterTask = Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 150_000_000)
+            guard !Task.isCancelled else { return }
+            results = Self.filter(library, query: text.trimmingCharacters(in: .whitespacesAndNewlines))
+        }
+    }
+
     var body: some View {
+        let _ = RenderCounter.hit("MiraclesView")
         List {
             if let library {
                 if query.isEmpty {
@@ -339,9 +358,9 @@ struct MiraclesView: View {
                     ForEach(MiracleLevel.allCases) { level in
                         Section(header: Text(level.title.uppercased())) {
                             ForEach(MiracleCategory.allCases.filter { $0.level == level }) { category in
-                                NavigationLink {
+                                NavigationLink(destination: LazyDestination {
                                     MiracleCategoryView(category: category)
-                                } label: {
+                                }) {
                                     HStack {
                                         Label(category.title, systemImage: category.systemImage)
                                         Spacer()
@@ -366,10 +385,10 @@ struct MiraclesView: View {
                     } else {
                         Section(header: SectionPillHeader(title: "ARTICLES", count: matches.count)) {
                             ForEach(matches) { article in
-                                NavigationLink {
+                                NavigationLink(destination: LazyDestination {
                                     MiracleArticleView(article: article)
-                                } label: {
-                                    MiracleArticleRow(article: article, showCategory: true, query: query)
+                                }) {
+                                    MiracleArticleRow(article: article, showCategory: true, query: query).equatable()
                                 }
                             }
                         }
@@ -385,8 +404,9 @@ struct MiraclesView: View {
                 }
             }
         }
-        .modifier(MiracleListChrome())
+        .applyConditionalListStyle()
         .navigationTitle("Miracles of the Quran")
+        .onChange(of: searchText) { text in scheduleFilter(text) }
         .collapseBarsOnScroll($barsCollapsed)
         .adaptiveSafeArea(edge: .bottom) {
             SearchBar(text: AppPerformance.shouldReduceAnimations ? $searchText : $searchText.animation(.easeInOut),
@@ -406,6 +426,7 @@ struct MiraclesView: View {
             guard library == nil else { return }
             let loaded = await Task.detached(priority: .userInitiated) { MiraclesStore.shared.library() }.value
             library = loaded
+            results = Self.filter(loaded, query: query)
             #if DEBUG
             // "-miracleArticle <slug>" pushes one article on top of the index, the only headless way in.
             let args = ProcessInfo.processInfo.arguments
@@ -420,13 +441,6 @@ struct MiraclesView: View {
 }
 
 /// The list styling the three library screens share.
-private struct MiracleListChrome: ViewModifier {
-    func body(content: Content) -> some View {
-        content
-            .applyConditionalListStyle()
-    }
-}
-
 /// One subject's articles, grouped by level only when the subject spans more than one: a single header
 /// over the whole list would be noise, not structure.
 struct MiracleCategoryView: View {
@@ -435,6 +449,7 @@ struct MiracleCategoryView: View {
     @State private var articles: [MiracleArticle]?
 
     var body: some View {
+        let _ = RenderCounter.hit("MiracleCategoryView")
         List {
             if let articles {
                 let levels = MiracleLevel.allCases.map { level in (level, articles.filter { $0.level == level }) }
@@ -443,10 +458,10 @@ struct MiracleCategoryView: View {
                     ForEach(levels, id: \.0) { level, rows in
                         Section(header: SectionPillHeader(title: level.title.uppercased(), count: rows.count)) {
                             ForEach(rows) { article in
-                                NavigationLink {
+                                NavigationLink(destination: LazyDestination {
                                     MiracleArticleView(article: article)
-                                } label: {
-                                    MiracleArticleRow(article: article, showCategory: false, query: "")
+                                }) {
+                                    MiracleArticleRow(article: article, showCategory: false, query: "").equatable()
                                 }
                             }
                         }
@@ -454,10 +469,10 @@ struct MiracleCategoryView: View {
                 } else {
                     Section(header: SectionPillHeader(title: "ARTICLES", count: articles.count)) {
                         ForEach(articles) { article in
-                            NavigationLink {
+                            NavigationLink(destination: LazyDestination {
                                 MiracleArticleView(article: article)
-                            } label: {
-                                MiracleArticleRow(article: article, showCategory: false, query: "")
+                            }) {
+                                MiracleArticleRow(article: article, showCategory: false, query: "").equatable()
                             }
                         }
                     }
@@ -473,7 +488,7 @@ struct MiracleCategoryView: View {
                 }
             }
         }
-        .modifier(MiracleListChrome())
+        .applyConditionalListStyle()
         .navigationTitle(category.title)
         .navigationBarTitleDisplayMode(.inline)
         .task {
@@ -487,12 +502,22 @@ struct MiracleCategoryView: View {
 }
 
 /// A row in a list of articles: the title, and under it the one line saying what the article argues.
-struct MiracleArticleRow: View {
-    @ObservedObject private var settings = Settings.shared
-
+struct MiracleArticleRow: View, Equatable {
     let article: MiracleArticle
     let showCategory: Bool
     let query: String
+    private let accent: Color
+
+    init(article: MiracleArticle, showCategory: Bool, query: String) {
+        self.article = article
+        self.showCategory = showCategory
+        self.query = query
+        accent = Settings.shared.accentColor.color
+    }
+
+    static func == (lhs: MiracleArticleRow, rhs: MiracleArticleRow) -> Bool {
+        lhs.article.slug == rhs.article.slug && lhs.showCategory == rhs.showCategory && lhs.query == rhs.query && lhs.accent == rhs.accent
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 3) {
@@ -500,7 +525,7 @@ struct MiracleArticleRow: View {
                 source: article.title,
                 term: query,
                 font: .body.weight(.semibold),
-                accent: settings.accentColor.color,
+                accent: accent,
                 fg: .primary,
                 lineLimit: 2
             )
@@ -510,7 +535,7 @@ struct MiracleArticleRow: View {
                     source: article.summary,
                     term: query,
                     font: .subheadline,
-                    accent: settings.accentColor.color,
+                    accent: accent,
                     fg: .secondary,
                     lineLimit: 2
                 )
@@ -519,7 +544,7 @@ struct MiracleArticleRow: View {
             if showCategory {
                 Text("\(article.category.title) · \(article.level.title)")
                     .font(.caption2.weight(.semibold))
-                    .foregroundStyle(settings.accentColor.color)
+                    .foregroundStyle(accent)
             }
         }
         .padding(.vertical, 2)
@@ -536,7 +561,7 @@ private struct MiracleCreditFooter: View {
 // MARK: - One article
 
 struct MiracleArticleView: View {
-    @ObservedObject private var settings = Settings.shared
+    @Environment(\.appearance) private var appearance
     @ObservedObject private var quranData = QuranData.shared
 
     let article: MiracleArticle
@@ -551,13 +576,14 @@ struct MiracleArticleView: View {
     @State private var copied = false
 
     var body: some View {
+        let _ = RenderCounter.hit("MiracleArticleView")
         List {
             Group {
                 Section {
                     VStack(alignment: .leading, spacing: 8) {
                         Text("\(article.category.title) · \(article.level.title)")
                             .font(.caption.weight(.semibold))
-                            .foregroundStyle(settings.accentColor.color)
+                            .foregroundStyle(appearance.accent)
 
                         ForEach(Array(article.blocks.enumerated()), id: \.offset) { _, block in
                             if case .claim(let text, let links) = block {
@@ -577,9 +603,9 @@ struct MiracleArticleView: View {
                 if siblings.previous != nil || siblings.next != nil {
                     Section(header: Text("IN \(article.category.title.uppercased())")) {
                         if let previous = siblings.previous {
-                            NavigationLink {
+                            NavigationLink(destination: LazyDestination {
                                 MiracleArticleView(article: previous)
-                            } label: {
+                            }) {
                                 Label {
                                     VStack(alignment: .leading, spacing: 2) {
                                         Text("Previous")
@@ -590,14 +616,14 @@ struct MiracleArticleView: View {
                                     }
                                 } icon: {
                                     Image(systemName: "chevron.left.circle")
-                                        .foregroundStyle(settings.accentColor.color)
+                                        .foregroundStyle(appearance.accent)
                                 }
                             }
                         }
                         if let next = siblings.next {
-                            NavigationLink {
+                            NavigationLink(destination: LazyDestination {
                                 MiracleArticleView(article: next)
-                            } label: {
+                            }) {
                                 Label {
                                     VStack(alignment: .leading, spacing: 2) {
                                         Text("Next")
@@ -608,7 +634,7 @@ struct MiracleArticleView: View {
                                     }
                                 } icon: {
                                     Image(systemName: "chevron.right.circle")
-                                        .foregroundStyle(settings.accentColor.color)
+                                        .foregroundStyle(appearance.accent)
                                 }
                             }
                         }
@@ -626,7 +652,7 @@ struct MiracleArticleView: View {
             ToolbarItem(placement: .navigationBarTrailing) {
                 Menu {
                     Button {
-                        settings.hapticFeedback()
+                        Settings.shared.hapticFeedback()
                         UIPasteboard.general.string = article.plainText(quranData: quranData)
                         withAnimation { copied = true }
                         DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { withAnimation { copied = false } }
@@ -634,7 +660,7 @@ struct MiracleArticleView: View {
                         Label(copied ? "Copied" : "Copy Article", systemImage: copied ? "checkmark" : "doc.on.doc")
                     }
                     Button {
-                        settings.hapticFeedback()
+                        Settings.shared.hapticFeedback()
                         presentSystemShareSheet(items: [article.plainText(quranData: quranData)])
                     } label: {
                         Label("Share Article", systemImage: "square.and.arrow.up")
@@ -642,7 +668,7 @@ struct MiracleArticleView: View {
                 } label: {
                     Image(systemName: "ellipsis.circle")
                 }
-                .tint(settings.accentColor.color)
+                .tint(appearance.accent)
             }
         }
         // The prose's in-app links land here: `MiracleProse` routes them through `openURL` with the
@@ -651,13 +677,13 @@ struct MiracleArticleView: View {
             guard url.scheme == MiracleProse.scheme else { return .systemAction }
             if url.host == "article", let slug = url.pathComponents.dropFirst().first,
                let target = MiraclesStore.shared.article(slug: slug) {
-                settings.hapticFeedback()
+                Settings.shared.hapticFeedback()
                 linkedArticle = target
                 linkedCategory = nil
                 linkOpen = true
             } else if url.host == "category", let raw = url.pathComponents.dropFirst().first,
                       let category = MiracleCategory(rawValue: raw) {
-                settings.hapticFeedback()
+                Settings.shared.hapticFeedback()
                 linkedCategory = category
                 linkedArticle = nil
                 linkOpen = true
@@ -672,6 +698,10 @@ struct MiracleArticleView: View {
             }
         }
         .task {
+            #if DEBUG
+            MemoryFootprint.log("Miracles article open")
+            MemoryFootprint.logLater("Miracles article", delay: 12)
+            #endif
             let category = article.category, slug = article.slug
             let pair = await Task.detached(priority: .utility) { () -> (MiracleArticle?, MiracleArticle?) in
                 let rows = MiraclesStore.shared.library()?.articles(in: category) ?? []
@@ -685,7 +715,7 @@ struct MiracleArticleView: View {
 
 /// One block of an article as a list row.
 struct MiracleBlockView: View {
-    @ObservedObject private var settings = Settings.shared
+    @Environment(\.appearance) private var appearance
     @ObservedObject private var quranData = QuranData.shared
 
     let block: MiracleBlock
@@ -713,7 +743,7 @@ struct MiracleBlockView: View {
                     if let ayah = quranData.ayah(surah: surah, ayah: number) {
                         ScriptureQuote(
                             text: "“\(ayah.textEnglishSaheeh)” (Quran \(surah):\(number)).",
-                            arabic: ayah.displayArabicText(surahId: surah, clean: settings.cleanArabicText, qiraahOverride: "")
+                            arabic: ayah.displayArabicText(surahId: surah, clean: appearance.cleanArabicText, qiraahOverride: "")
                         )
                     }
                 }
@@ -735,11 +765,38 @@ struct MiracleProse: View {
 
     static let scheme = "alislam-miracle"
 
-    @ObservedObject private var settings = Settings.shared
-
     let text: String
     let links: [MiracleLink]
     let style: Style
+    /// The linked, tinted paragraph, built once per (text, links, accent): it was rebuilt on every
+    /// body evaluation of every paragraph (a `range(of:)` per link), and the article's rows
+    /// re-evaluate on every Settings publish.
+    private let attributed: AttributedString
+
+    private final class Box {
+        let value: AttributedString
+        init(_ value: AttributedString) { self.value = value }
+    }
+    nonisolated(unsafe) private static let memo: NSCache<NSString, Box> = {
+        let cache = NSCache<NSString, Box>()
+        cache.countLimit = 400
+        return cache
+    }()
+
+    init(text: String, links: [MiracleLink], style: Style) {
+        self.text = text
+        self.links = links
+        self.style = style
+        let accent = Settings.shared.accentColor.color
+        let key = "\(text.hashValue):\(links.count):\(Settings.shared.accentColor.rawValue)" as NSString
+        if let cached = Self.memo.object(forKey: key) {
+            attributed = cached.value
+        } else {
+            let built = Self.build(text: text, links: links, accent: accent)
+            Self.memo.setObject(Box(built), forKey: key)
+            attributed = built
+        }
+    }
 
     var body: some View {
         let base = Text(attributed)
@@ -759,7 +816,7 @@ struct MiracleProse: View {
         }
     }
 
-    private var attributed: AttributedString {
+    private static func build(text: String, links: [MiracleLink], accent: Color) -> AttributedString {
         var result = AttributedString(text)
         guard !links.isEmpty else { return result }
         var claimed: [Range<String.Index>] = []
@@ -775,13 +832,13 @@ struct MiracleProse: View {
             guard let lower = AttributedString.Index(range.lowerBound, within: result),
                   let upper = AttributedString.Index(range.upperBound, within: result) else { continue }
             result[lower..<upper].link = url
-            result[lower..<upper].foregroundColor = settings.accentColor.color
+            result[lower..<upper].foregroundColor = accent
             result[lower..<upper].underlineStyle = .single
         }
         return result
     }
 
-    private func destination(for link: MiracleLink) -> URL? {
+    private static func destination(for link: MiracleLink) -> URL? {
         if let slug = link.slug { return URL(string: "\(Self.scheme)://article/\(slug)") }
         if let category = link.category { return URL(string: "\(Self.scheme)://category/\(category)") }
         if let url = link.url { return URL(string: url) }
@@ -792,7 +849,7 @@ struct MiracleProse: View {
 /// A short excerpt from an outside publisher, with its source one tap away. The passage was trimmed at
 /// import, so this row's job is to keep the attribution visible.
 private struct MiracleQuoteView: View {
-    @ObservedObject private var settings = Settings.shared
+    @Environment(\.appearance) private var appearance
 
     let text: String
     let sourceLabel: String
@@ -813,7 +870,7 @@ private struct MiracleQuoteView: View {
                         .font(.caption.weight(.semibold))
                         .lineLimit(2)
                 }
-                .tint(settings.accentColor.color)
+                .tint(appearance.accent)
             } else if !sourceLabel.isEmpty {
                 Text(sourceLabel)
                     .font(.caption.weight(.semibold))
@@ -899,7 +956,7 @@ private struct MiracleAnimatedImage: UIViewRepresentable {
 }
 
 @MainActor
-private final class MiracleImageLoader: ObservableObject {
+final class MiracleImageLoader: ObservableObject {
     enum State {
         case loading
         case loaded(UIImage, CGFloat)
@@ -909,12 +966,53 @@ private final class MiracleImageLoader: ObservableObject {
     @Published var state: State = .loading
 
     /// Decoded images, shared across the library and dropped under memory pressure; the bytes
-    /// themselves sit in the URL cache, so a re-open re-decodes without re-downloading.
-    private static let decoded = NSCache<NSString, UIImage>()
+    /// themselves sit in the URL cache, so a re-open re-decodes without re-downloading. Bounded:
+    /// 48 MB on the full tier, 16 MB on the reduced one (a 40-frame animation at 480 px is ~27 MB,
+    /// and an article with several used to hold well over 100 MB until the system evicted).
+    private static let decoded: NSCache<NSString, UIImage> = {
+        let cache = NSCache<NSString, UIImage>()
+        cache.totalCostLimit = 48 << 20
+        return cache
+    }()
+
+    /// At most two illustrations downloading and decoding at once per process, so the first one
+    /// appears before the sixth is requested (every image of an article used to start together).
+    private actor LoadGate {
+        private var slots = 2
+        private var waiters: [CheckedContinuation<Void, Never>] = []
+
+        func acquire() async {
+            if slots > 0 {
+                slots -= 1
+                return
+            }
+            await withCheckedContinuation { waiters.append($0) }
+        }
+
+        func release() {
+            if waiters.isEmpty {
+                slots += 1
+            } else {
+                waiters.removeFirst().resume()
+            }
+        }
+    }
+    private static let gate = LoadGate()
+
+    /// Drops every decoded illustration (the shared memory-warning trim, `MemoryTrim`); a visible
+    /// image re-decodes from the URL cache on its next appearance.
+    static func purgeDecodedImages() {
+        decoded.removeAllObjects()
+    }
     private static let session: URLSession = {
         let config = URLSessionConfiguration.default
         config.requestCachePolicy = .returnCacheDataElseLoad
         config.urlCache = URLCache(memoryCapacity: 16 << 20, diskCapacity: 256 << 20, diskPath: "miracles-images")
+        // Fail fast: an offline reader sees "Image unavailable" in 20 s, not after the default
+        // minute per image, and the placeholder never spins waiting for connectivity.
+        config.timeoutIntervalForRequest = 20
+        config.timeoutIntervalForResource = 20
+        config.waitsForConnectivity = false
         return URLSession(configuration: config)
     }()
 
@@ -928,13 +1026,19 @@ private final class MiracleImageLoader: ObservableObject {
             return
         }
         state = .loading
+        let reduced = AppPerformance.shouldAvoidBroadPrewarm
+        Self.decoded.totalCostLimit = reduced ? 16 << 20 : 48 << 20
+        let maxFrames = reduced ? 24 : Self.maxFrames
+        let maxPixels = reduced ? 360 : Self.maxPixels
+        await Self.gate.acquire()
+        defer { Task { await Self.gate.release() } }
         do {
             let (data, response) = try await Self.session.data(from: url)
             if let http = response as? HTTPURLResponse, !(200..<300).contains(http.statusCode) {
                 state = .failed
                 return
             }
-            let image = await Task.detached(priority: .userInitiated) { Self.decode(data) }.value
+            let image = await Task.detached(priority: .userInitiated) { Self.decode(data, maxFrames: maxFrames, maxPixels: maxPixels) }.value
             guard let image else {
                 state = .failed
                 return
@@ -956,11 +1060,12 @@ private final class MiracleImageLoader: ObservableObject {
     }
 
     /// Frame cap and size cap keep a 288-frame animation from decoding into hundreds of megabytes: the
-    /// frames are sampled evenly and rendered at most 480 points wide, which is what the column shows.
+    /// frames are sampled evenly and rendered at most 480 points wide, which is what the column shows
+    /// (24 frames at 360 points on the reduced tier).
     nonisolated private static let maxFrames = 40
     nonisolated private static let maxPixels = 480
 
-    nonisolated private static func decode(_ data: Data) -> UIImage? {
+    nonisolated private static func decode(_ data: Data, maxFrames: Int, maxPixels: Int) -> UIImage? {
         guard let source = CGImageSourceCreateWithData(data as CFData, nil) else { return UIImage(data: data) }
         let count = CGImageSourceGetCount(source)
         guard count > 1 else { return UIImage(data: data) }

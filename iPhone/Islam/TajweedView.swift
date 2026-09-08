@@ -1,6 +1,9 @@
 import SwiftUI
 
 struct TajweedFoundationsView: View {
+    #if DEBUG
+    @State private var debugOpenLessons = false
+    #endif
     @ObservedObject var settings = Settings.shared
     @State private var showTajweedLegend = false
 
@@ -170,6 +173,16 @@ struct TajweedFoundationsView: View {
             .themedListRowBackground()
         }
         .selectableArticleList()
+        #if os(iOS) && DEBUG
+        // "-openTajweedLessons": the lessons list pushed as this article appears (the hook sits on
+        // the List itself: a hook on the lessons row only fired once that lazy row scrolled into view).
+        .debugPushDestination(isPresented: $debugOpenLessons) { TajweedLessonsView() }
+        .onAppear {
+            if ProcessInfo.processInfo.arguments.contains("-openTajweedLessons") {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { debugOpenLessons = true }
+            }
+        }
+        #endif
         .navigationTitle("Tajweed Foundations")
         #if os(iOS)
         .sheet(isPresented: $showTajweedLegend) {

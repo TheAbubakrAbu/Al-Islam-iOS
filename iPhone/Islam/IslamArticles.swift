@@ -72,6 +72,8 @@ enum IslamArticles {
         case "IqamahView": return AnyView(IqamahView())
         case "TakbiratView": return AnyView(TakbiratView())
         case "HijriCalendarView": return AnyView(HijriCalendarView())
+        case "SacredMonthsView": return AnyView(SacredMonthsView())
+        case "MoonSightingView": return AnyView(MoonSightingView())
         case "CompileView": return AnyView(CompileView())
         case "TajweedView": return AnyView(TajweedView())
         case "JuzView": return AnyView(JuzView())

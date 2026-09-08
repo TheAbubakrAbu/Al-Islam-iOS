@@ -402,6 +402,36 @@ struct SettingsQuranView: View {
                         .padding(.vertical, 2)
                 }
             }
+
+            if DailyReminderStore.isBundled {
+                VStack(alignment: .leading, spacing: 4) {
+                    Toggle("Reminder of the Day When the App Opens", isOn: $settings.showDailyReminderSheet.animation(.easeInOut))
+                        .font(.subheadline)
+                        .onChange(of: settings.showDailyReminderSheet) { _ in settings.hapticFeedback() }
+
+                    Text("Once a day, the first time the app opens, today's reminder (a verse, a hadith, a Sunnah, a dua, a dhikr or a Name of Allah) comes up as a card. The card always sits at the top of the Islam tab as well.")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.vertical, 2)
+                }
+            }
+
+            VStack(alignment: .leading, spacing: 4) {
+                Toggle("Daily Cards Turn Over at Fajr", isOn: $settings.dailyRolloverAtFajr.animation(.easeInOut))
+                    .font(.subheadline)
+                    .onChange(of: settings.dailyRolloverAtFajr) { _ in
+                        settings.hapticFeedback()
+                        settings.refreshQuranWidgets(.ayahOfTheDay)
+                        DailyReminderStore.shared.refreshWidgets(force: true)
+                    }
+
+                Text("The Ayah, Hadith, Dua, Word, Name and Reminder of the Day change at Fajr from your prayer times instead of at midnight, so the night still belongs to the day before. Off, or without a location, they change at midnight.")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.vertical, 2)
+            }
             #endif
 
             VStack(alignment: .leading, spacing: 4) {

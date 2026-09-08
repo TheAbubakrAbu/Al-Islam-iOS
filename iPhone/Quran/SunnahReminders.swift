@@ -33,6 +33,14 @@ enum QuranOpenTarget: Equatable {
     }
 }
 
+/// Where a Reminder of the Day card opens on the Islam (or Hadith) tab.
+enum IslamOpenTarget: Equatable {
+    case hadithTab
+    case duas
+    case adhkar
+    case names(Int?)
+}
+
 /// Cross-tab navigation requests. A notification tap arrives in the AppDelegate with no view in
 /// hand; it drops the target here, the tab view switches to the Quran tab on the publish, and the
 /// Quran tab opens the reader (see `QuranView.openPendingQuranTarget`). `@Published` replays its
@@ -43,6 +51,13 @@ final class AppNavigation: ObservableObject {
     private init() {}
 
     @Published var pendingQuran: QuranOpenTarget?
+
+    /// The Islam tab's pending destination: MainTabView switches tabs, IslamView pushes and clears it.
+    @Published var pendingIslam: IslamOpenTarget?
+
+    func openIslam(_ target: IslamOpenTarget) {
+        pendingIslam = target
+    }
 
     func open(_ target: QuranOpenTarget) {
         pendingQuran = target
@@ -86,11 +101,10 @@ struct SunnahReminderPreset: Identifiable {
 
     var isWeekly: Bool { defaultWeekday != nil }
 
-    /// "Open Surat al-Mulk", "Open the Quran".
     var openLabel: String {
         switch target {
         case .tab: return "Open the Quran"
-        case .surah, .ayah: return "Open \(title)"
+        case .surah, .ayah: return "Open in Quran"
         }
     }
 
@@ -247,13 +261,32 @@ final class SunnahReminderStore: ObservableObject {
         var loaded = Self.loadConfigs(from: .standard)
         #if DEBUG
         // "-sunnahSeed": three presets on, for headless screenshots of the rows and the schedule.
+        // Persisted like a real change, so the prayer scheduler's budget sees them too.
         if ProcessInfo.processInfo.arguments.contains("-sunnahSeed") {
             for id in ["mulk", "kahf", "baqarah-last-two"] {
                 loaded[id, default: Config()].enabled = true
             }
+            if let data = try? JSONEncoder().encode(loaded) {
+                UserDefaults.standard.set(data, forKey: Self.defaultsKey)
+            }
         }
         #endif
         configs = loaded
+        ObjectPublishCounter.attach(self, label: "SunnahReminderStore")
+        #if DEBUG
+        // "-sunnahScrub": thirty time-wheel ticks on Surat al-Mulk over 1.5 s, after the reveal, to
+        // prove the debounce below (one "REMINDER PASS sunnah ... (change)" line, not thirty).
+        if ProcessInfo.processInfo.arguments.contains("-sunnahScrub"), let mulk = SunnahReminderPreset.preset(id: "mulk") {
+            Task { @MainActor in
+                await AppReveal.waitUntilRevealed()
+                try? await Task.sleep(nanoseconds: 3_000_000_000)
+                for tick in 0..<30 {
+                    self.setMinutes(mulk, 21 * 60 + tick)
+                    try? await Task.sleep(nanoseconds: 50_000_000)
+                }
+            }
+        }
+        #endif
     }
 
     // MARK: Reading
@@ -297,13 +330,14 @@ final class SunnahReminderStore: ObservableObject {
         change(&config)
         configs[preset.id] = config
         save()
-        reschedule()
+        scheduleReschedule()
     }
 
     private func save() {
         if let data = try? JSONEncoder().encode(configs) {
             UserDefaults.standard.set(data, forKey: Self.defaultsKey)
         }
+        Settings.SunnahReminderBudget.invalidateLiveCount()
     }
 
     private nonisolated static func loadConfigs(from defaults: UserDefaults) -> [String: Config] {
@@ -314,17 +348,52 @@ final class SunnahReminderStore: ObservableObject {
 
     // MARK: Scheduling
 
+    private var rescheduleTask: Task<Void, Never>?
+
+    /// A settled change re-fits the queue once: a time wheel scrub used to run the whole pass (the
+    /// pending fetch, the removes, the adds and the prayer scheduler) on every minute tick.
+    private func scheduleReschedule() {
+        rescheduleTask?.cancel()
+        rescheduleTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(nanoseconds: 500_000_000)
+            guard !Task.isCancelled, let self else { return }
+            self.rescheduleTask = nil
+            await self.rearm(reschedulePrayers: true, reason: "change")
+        }
+    }
+
     /// Replaces every pending Sunnah reminder with the current set, then lets the prayer scheduler
     /// re-fit its own requests under the lowered cap.
-    func reschedule() {
+    func reschedule(reschedulePrayers: Bool = true) {
         Task { @MainActor in
-            let center = UNUserNotificationCenter.current()
-            let pending = await center.pendingNotificationRequests()
-            let stale = pending.map(\.identifier).filter { $0.hasPrefix(Self.identifierPrefix) }
-            center.removePendingNotificationRequests(withIdentifiers: stale)
-            for preset in enabledPresets {
-                try? await center.add(request(for: preset))
-            }
+            await self.rearm(reschedulePrayers: reschedulePrayers, reason: "change")
+        }
+    }
+
+    /// The pass itself: the stale requests under this store's prefix removed, one repeating request
+    /// per enabled preset added (a reinstall or an update drops pending requests and nothing else
+    /// re-creates a repeating one, which is why the launch pass always runs it). `pendingIDs` spares
+    /// a second fetch when the caller already has the list (`ReminderScheduler`).
+    func rearm(pendingIDs: [String]? = nil, reschedulePrayers: Bool = false, reason: String) async {
+        let center = UNUserNotificationCenter.current()
+        let ids: [String]
+        if let pendingIDs {
+            ids = pendingIDs
+        } else {
+            ids = await center.pendingNotificationRequests().map(\.identifier)
+        }
+        let stale = ids.filter { $0.hasPrefix(Self.identifierPrefix) }
+        center.removePendingNotificationRequests(withIdentifiers: stale)
+        let requests = enabledPresets.map(request(for:))
+        for request in requests {
+            try? await center.add(request)
+        }
+        #if DEBUG
+        if Settings.debugPublishCounterEnabled {
+            NSLog("REMINDER PASS sunnah %d requests (%@)", requests.count, reason)
+        }
+        #endif
+        if reschedulePrayers {
             Settings.shared.scheduleNotifications(deferred: true)
         }
     }
@@ -397,7 +466,6 @@ final class SunnahReminderStore: ObservableObject {
 /// Settings › Notifications › Sunnah Reminders (also under Quran Settings): the eight presets in
 /// two cadences, each with its time, its hadith, and a door to what it is about.
 struct SunnahRemindersView: View {
-    @ObservedObject private var settings = Settings.shared
     @ObservedObject private var store = SunnahReminderStore.shared
 
     @State private var permissionDenied = false
@@ -442,6 +510,8 @@ struct SunnahRemindersView: View {
                 }
             }
 
+            ExtraReminderSections()
+
             Section(footer:
                 Text("Reminders repeat on their own, even when the app has not been opened for a while. The Quran Planner on the Quran tab has its own daily reminder for a paced reading plan.")
                     .font(.caption2)
@@ -461,7 +531,7 @@ struct SunnahRemindersView: View {
 }
 
 private struct SunnahReminderRow: View {
-    @ObservedObject private var settings = Settings.shared
+    @Environment(\.appearance) private var appearance
     @ObservedObject private var store = SunnahReminderStore.shared
 
     let preset: SunnahReminderPreset
@@ -473,10 +543,10 @@ private struct SunnahReminderRow: View {
         Binding(
             get: { store.isEnabled(preset) },
             set: { enabled in
-                settings.hapticFeedback()
+                Settings.shared.hapticFeedback()
                 if enabled {
                     Task { @MainActor in
-                        _ = await settings.requestNotificationAuthorization()
+                        _ = await Settings.shared.requestNotificationAuthorization()
                         store.setEnabled(preset, true)
                     }
                 } else {
@@ -548,7 +618,7 @@ private struct SunnahReminderRow: View {
                                 }
                             }
                             .pickerStyle(.menu)
-                            .tint(settings.accentColor.color)
+                            .tint(appearance.accent)
                         }
                     }
 
@@ -558,12 +628,12 @@ private struct SunnahReminderRow: View {
 
                     if let link = preset.link {
                         Button {
-                            settings.hapticFeedback()
+                            Settings.shared.hapticFeedback()
                             onShowHadith(link)
                         } label: {
                             Label("\(preset.source) · \(preset.grading)", systemImage: "text.book.closed")
                                 .font(.caption)
-                                .foregroundColor(settings.accentColor.color)
+                                .foregroundColor(appearance.accent)
                                 .fixedSize(horizontal: false, vertical: true)
                         }
                         .buttonStyle(.plain)
@@ -576,7 +646,7 @@ private struct SunnahReminderRow: View {
 
                     HStack(spacing: 18) {
                         Button {
-                            settings.hapticFeedback()
+                            Settings.shared.hapticFeedback()
                             AppNavigation.shared.open(preset.target)
                         } label: {
                             Label(preset.openLabel, systemImage: "book")
@@ -584,7 +654,7 @@ private struct SunnahReminderRow: View {
                         .buttonStyle(.plain)
 
                         Button {
-                            settings.hapticFeedback()
+                            Settings.shared.hapticFeedback()
                             store.preview(preset)
                             previewArmed = true
                             DispatchQueue.main.asyncAfter(deadline: .now() + 6) { previewArmed = false }
@@ -595,7 +665,7 @@ private struct SunnahReminderRow: View {
                         .disabled(previewArmed)
                     }
                     .font(.caption.weight(.semibold))
-                    .foregroundColor(settings.accentColor.color)
+                    .foregroundColor(appearance.accent)
                     .padding(.top, 2)
                 }
                 .settingsDependent()

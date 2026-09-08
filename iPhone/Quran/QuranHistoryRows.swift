@@ -1297,3 +1297,209 @@ struct AyahOfTheDayRow: View {
 /// Compact, Arabic-only ayah row: the ayah reference (and an optional leading label like "Page 3")
 /// plus the Arabic text with tajweed + all reading settings applied, sized down to read nicely in
 /// page/juz search results and the Pages browse list.
+
+#if os(iOS)
+// MARK: - The Quran tab's history screen
+
+/// Everything the Quran tab remembers, on one screen: what you read, what you listened to (surah and
+/// ayah), the Ayah of the Day on earlier days, and your recent searches. The hadith tab's History
+/// door, for the Quran (Abu, 2026-09-07).
+///
+/// The summary tiles each unfold their OWN slice inline; this is the whole of it in one place, so a
+/// reader who wants "where was I last week" does not have to open four tiles. Every row pushes
+/// through `onOpen`, the tab's own `push(surahID:ayahID:)`, so a history row lands in the reader
+/// exactly like a bookmark does.
+struct QuranHistoryView: View {
+    @ObservedObject private var settings = Settings.shared
+    @ObservedObject private var quranData = QuranData.shared
+    @ObservedObject private var playbackHistory = QuranPlayer.shared.history
+    @Environment(\.dismiss) private var dismiss
+
+    /// Pushes the reader at this ayah (nil ayah = the surah's top).
+    let onOpen: (Int, Int?) -> Void
+
+    private static let dayFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .none
+        return formatter
+    }()
+
+    /// The last ten days' Ayah of the Day, oldest last - the same walk the summary tile's expansion does.
+    private var recentAyahsOfTheDay: [(dayLabel: String, surah: Surah, ayah: Ayah)] {
+        (0..<10).compactMap { daysBack in
+            guard let date = Calendar.current.date(byAdding: .day, value: -daysBack, to: Date()),
+                  let ref = settings.ayahOfTheDayReference(for: date),
+                  let surah = quranData.surah(ref.surahID),
+                  let ayah = surah.ayahs.first(where: { $0.id == ref.ayahID })
+            else { return nil }
+            return (Self.dayFormatter.string(from: date), surah, ayah)
+        }
+    }
+
+    var body: some View {
+        let _ = RenderCounter.hit("QuranHistoryView")
+        let reading = playbackHistory.readingHistory
+        let listenedAyahs = playbackHistory.ayahListeningHistory
+        let listenedSurahs = playbackHistory.listeningHistory
+        let daily = settings.showAyahOfTheDay ? recentAyahsOfTheDay : []
+        let searches = settings.quranSearchHistory
+
+        List {
+            Group {
+                // What the screen is, said once at the top rather than as a caption on the door that
+                // opens it (Abu, 2026-09-07).
+                Section {
+                    Text(verbatim: "Everything this tab remembers: the ayahs you read, what you listened to, the Ayah of the Day on earlier days, and your recent searches. Tap any of them to open it in the reader. It never leaves this device.")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+
+                if reading.isEmpty, listenedAyahs.isEmpty, listenedSurahs.isEmpty, daily.isEmpty, searches.isEmpty {
+                    Section {
+                        Text(verbatim: "Nothing yet. Read an ayah, play a surah or search, and it collects here.")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
+                if !reading.isEmpty {
+                    Section(header: Text("WHAT YOU READ")) {
+                        ForEach(reading) { item in
+                            if let surah = quranData.surah(item.surahNumber),
+                               let ayah = surah.ayahs.first(where: { $0.id == max(1, item.ayahNumber) }) {
+                                ayahRow(surah: surah, ayah: ayah, caption: nil, timestamp: item.timestamp)
+                            }
+                        }
+                    }
+                }
+
+                if !listenedAyahs.isEmpty {
+                    Section(header: Text("AYAHS YOU LISTENED TO")) {
+                        ForEach(listenedAyahs) { item in
+                            if let surah = quranData.surah(item.surahNumber),
+                               let ayah = surah.ayahs.first(where: { $0.id == item.ayahNumber }) {
+                                ayahRow(surah: surah, ayah: ayah,
+                                        caption: item.reciter.displayNameWithEnglishQiraah,
+                                        timestamp: item.timestamp)
+                            }
+                        }
+                    }
+                }
+
+                if !listenedSurahs.isEmpty {
+                    Section(header: Text("SURAHS YOU LISTENED TO")) {
+                        ForEach(listenedSurahs) { item in
+                            if let surah = quranData.surah(item.surahNumber) {
+                                surahRow(surah: surah,
+                                         reciter: item.reciter.displayNameWithEnglishQiraah,
+                                         timestamp: item.timestamp)
+                            }
+                        }
+                    }
+                }
+
+                if !daily.isEmpty {
+                    Section(header: Text("AYAH OF THE DAY, EARLIER")) {
+                        ForEach(Array(daily.enumerated()), id: \.element.dayLabel) { index, entry in
+                            // Today's row IS the current ayah, not history - full brightness.
+                            ayahRow(surah: entry.surah, ayah: entry.ayah,
+                                    caption: entry.dayLabel, timestamp: nil, dimmed: index != 0)
+                        }
+                    }
+                }
+
+                if !searches.isEmpty {
+                    Section(header: Text("RECENT SEARCHES")) {
+                        ForEach(searches, id: \.self) { term in
+                            Button {
+                                settings.hapticFeedback()
+                                QuranSearchHandoff.shared.request(term)
+                                dismiss()
+                            } label: {
+                                HStack(spacing: 10) {
+                                    Image(systemName: "magnifyingglass")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
+                                    Text(term)
+                                        .font(.subheadline)
+                                        .foregroundColor(.primary)
+                                    Spacer(minLength: 0)
+                                }
+                                .contentShape(Rectangle())
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                }
+            }
+            .themedListRowBackground()
+        }
+        .applyConditionalListStyle()
+        .navigationTitle("History")
+        .navigationBarTitleDisplayMode(.inline)
+    }
+
+    private func ayahRow(surah: Surah, ayah: Ayah, caption: String?, timestamp: Date?, dimmed: Bool = true) -> some View {
+        Button {
+            settings.hapticFeedback()
+            onOpen(surah.id, ayah.id)
+        } label: {
+            VStack(alignment: .leading, spacing: 4) {
+                if let caption {
+                    Text(caption)
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
+
+                // The "when" sits over SurahAyahRow's 65 pt number-pill column, the summary
+                // expansions' grammar.
+                if let timestamp {
+                    Text(formatCompactHistoryTimestamp(timestamp))
+                        .font(.caption2)
+                        .monospacedDigit()
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .frame(width: 65)
+                }
+
+                SurahAyahRow(surah: surah, ayah: ayah)
+                    .equatable()
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .contentShape(Rectangle())
+            .opacity(dimmed ? 0.75 : 1)
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func surahRow(surah: Surah, reciter: String, timestamp: Date) -> some View {
+        Button {
+            settings.hapticFeedback()
+            onOpen(surah.id, nil)
+        } label: {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(formatCompactHistoryTimestamp(timestamp))
+                    .font(.caption2)
+                    .monospacedDigit()
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+
+                Text("\(surah.id) - \(surah.nameTransliteration)")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundColor(settings.accentColor.color)
+
+                Text(reciter)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .contentShape(Rectangle())
+            .opacity(0.75)
+        }
+        .buttonStyle(.plain)
+    }
+}
+#endif

@@ -728,8 +728,66 @@ enum HadithReferenceParser {
 
     /// Parse "bukhari 5", "muslim 8a", or "muslim 3:12" (also "3.12" / "3-12"). Returns nil when the
     /// text before the numbers doesn't name exactly one collection.
+    /// The looser shapes readers actually type, folded into "book N" before the grammar runs:
+    /// a pasted sunnah.com link ("https://sunnah.com/muslim:8a", "sunnah.com/bukhari/1/2"),
+    /// "sahih muslim hadith no. 2013", "muslim #2013", "muslim2013", "2013 muslim",
+    /// "muslim book 3 hadith 12", and Arabic-Indic digits in any of them.
+    // The looser shapes' patterns, compiled once: `canonical` runs on every hadith search keystroke
+    // and used to compile four expressions per call.
+    private static let wordNoiseRegex = try? NSRegularExpression(pattern: #"\b(hadith|hadeeth|no|number|num)\.?\s*"#, options: [.caseInsensitive])
+    private static let bookNumberRegex = try? NSRegularExpression(pattern: #"\bbook\s+(\d{1,5})\s+(\d{1,5})\b"#, options: [.caseInsensitive])
+    private static let gluedNumberRegex = try? NSRegularExpression(pattern: #"(?<=[A-Za-z'\u2019])(?=\d)"#)
+    private static let numberFirstRegex = try? NSRegularExpression(pattern: #"^\s*(\d{1,5}[a-z]?)\s+([A-Za-z].*)$"#)
+
+    private static func replacing(_ regex: NSRegularExpression?, in text: String, with template: String) -> String {
+        guard let regex else { return text }
+        return regex.stringByReplacingMatches(in: text, range: NSRange(text.startIndex..., in: text), withTemplate: template)
+    }
+
+    /// Whether `text` could carry any of the looser shapes; a plain "bukhari 5" skips every regex.
+    private static func needsCanonicalising(_ text: String) -> Bool {
+        if let first = text.unicodeScalars.first, CharacterSet.decimalDigits.contains(first) { return true }
+        var previousWasLetter = false
+        for scalar in text.unicodeScalars {
+            if scalar == "#" { return true }
+            let isDigit = CharacterSet.decimalDigits.contains(scalar)
+            if isDigit, previousWasLetter { return true }
+            previousWasLetter = CharacterSet.letters.contains(scalar) || scalar == "'" || scalar == "\u{2019}"
+        }
+        let lowered = text.lowercased()
+        return lowered.contains("hadith") || lowered.contains("hadeeth") || lowered.contains("book")
+            || lowered.contains("num") || lowered.contains("no.") || lowered.contains(" no ") || lowered.hasSuffix(" no")
+    }
+
+    static func canonical(_ raw: String) -> String {
+        var text = raw.trimmingCharacters(in: .whitespacesAndNewlines).normalizingArabicIndicDigitsToWestern
+        let lowered = text.lowercased()
+        if let range = lowered.range(of: "sunnah.com/") {
+            var tail = String(text[range.upperBound...])
+            if let query = tail.firstIndex(where: { $0 == "?" || $0 == "#" }) { tail = String(tail[..<query]) }
+            let parts = tail.split(whereSeparator: { $0 == "/" || $0 == ":" }).map(String.init)
+            if parts.count >= 3 { return "\(parts[0]) \(parts[1]):\(parts[2])" }
+            if parts.count == 2 { return "\(parts[0]) \(parts[1])" }
+            return tail
+        }
+        guard needsCanonicalising(text) else {
+            return text.split(whereSeparator: { $0.isWhitespace }).joined(separator: " ")
+        }
+        text = text.replacingOccurrences(of: "#", with: " ")
+        text = replacing(wordNoiseRegex, in: text, with: " ")
+        text = replacing(bookNumberRegex, in: text, with: "$1:$2")
+        // "muslim2013" -> "muslim 2013", and "2013 muslim" -> "muslim 2013".
+        text = replacing(gluedNumberRegex, in: text, with: " ")
+        if let regex = numberFirstRegex,
+           let match = regex.firstMatch(in: text, range: NSRange(text.startIndex..., in: text)),
+           let number = Range(match.range(at: 1), in: text), let rest = Range(match.range(at: 2), in: text) {
+            text = String(text[rest]) + " " + String(text[number])
+        }
+        return text.split(whereSeparator: { $0.isWhitespace }).joined(separator: " ")
+    }
+
     static func parse(_ query: String) -> Reference? {
-        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmed = canonical(query)
         guard let regex = referenceRegex,
               let result = regex.firstMatch(in: trimmed, range: NSRange(trimmed.startIndex..., in: trimmed)) else { return nil }
 
@@ -770,6 +828,9 @@ struct HadithBookmark: Codable, Identifiable, Equatable {
     /// loading the book. Optional: bookmarks saved before citations existed decode without it and
     /// are refreshed once by the store's citation migration.
     var citation: String? = nil
+    /// When the bookmark was made (2026-09-07 on; older rows decode without it), for a bookmark
+    /// anniversary one day (Tilawa Guide, Phase 9 step 8).
+    var createdAt: Date? = nil
 
     var id: String { "\(slug)-\(idInBook)" }
 

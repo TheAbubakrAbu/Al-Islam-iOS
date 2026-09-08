@@ -72,18 +72,22 @@ struct Fraction: Equatable, Hashable {
 
 // MARK: - The heirs
 
-/// The heirs this calculator handles: the ones who actually turn up in ordinary estates. Distant
-/// residuaries (uncles, nephews, cousins) and the outer grandparents are deliberately out of scope -
-/// see `InheritanceCalculatorView.scopeNote`.
+/// The heirs this calculator handles. The Quranic heirs (ashab al-furud) and the whole male
+/// residuary line (‘asabah bi'l-nafs) down to the uncle's sons, which is where the classical
+/// chain ends before the estate passes to the wider relatives by kinship (dhawu al-arham).
 enum FaraidHeir: String, CaseIterable, Hashable {
     case husband, wives
     case father, mother
-    case grandfather, grandmothers
+    case grandfather
+    case maternalGrandmother, paternalGrandmother
     case sons, daughters
     case grandsons, granddaughters
     case fullBrothers, fullSisters
     case paternalBrothers, paternalSisters
     case maternalSiblings
+    case fullNephews, paternalNephews
+    case fullUncles, paternalUncles
+    case fullCousins, paternalCousins
 
     /// Singular/plural handled by the caller; this is the row label.
     var title: String {
@@ -92,8 +96,9 @@ enum FaraidHeir: String, CaseIterable, Hashable {
         case .wives: return "Wives"
         case .father: return "Father"
         case .mother: return "Mother"
-        case .grandfather: return "Paternal grandfather"
-        case .grandmothers: return "Grandmothers"
+        case .grandfather: return "Father's father"
+        case .maternalGrandmother: return "Mother's mother"
+        case .paternalGrandmother: return "Father's mother"
         case .sons: return "Sons"
         case .daughters: return "Daughters"
         case .grandsons: return "Son's sons"
@@ -103,26 +108,49 @@ enum FaraidHeir: String, CaseIterable, Hashable {
         case .paternalBrothers: return "Paternal half-brothers"
         case .paternalSisters: return "Paternal half-sisters"
         case .maternalSiblings: return "Maternal half-siblings"
+        case .fullNephews: return "Full brother's sons"
+        case .paternalNephews: return "Half-brother's sons"
+        case .fullUncles: return "Father's full brothers"
+        case .paternalUncles: return "Father's half-brothers"
+        case .fullCousins: return "Full uncle's sons"
+        case .paternalCousins: return "Half-uncle's sons"
         }
     }
 
     /// Heirs there can only ever be one of take a toggle; the rest take a stepper.
     var isSingular: Bool {
         switch self {
-        case .husband, .father, .mother, .grandfather: return true
-        default: return false
+        case .husband, .father, .mother, .grandfather, .maternalGrandmother, .paternalGrandmother:
+            return true
+        default:
+            return false
         }
     }
 
-    /// The most the UI will let you enter. Four wives is the legal maximum; two grandmothers is the
-    /// most that can inherit (the mother's mother and the father's mother).
+    /// The most the UI will let you enter. Four wives is the legal maximum.
     var maximum: Int {
         switch self {
         case .wives: return 4
-        case .grandmothers: return 2
         default: return 20
         }
     }
+
+    /// The male residuary line, nearest first: each tier takes the whole residue and shuts out
+    /// every tier below it. The grandfather sits above the brothers on the view this calculator
+    /// follows (see the note fired in `distribute`). The two sisters' slots are the places a
+    /// sister stands in her brother's rank because a daughter made her a residuary.
+    static let residuaryOrder: [FaraidHeir] = [
+        .sons, .grandsons, .father, .grandfather,
+        .fullBrothers, .fullSisters, .paternalBrothers, .paternalSisters,
+        .fullNephews, .paternalNephews,
+        .fullUncles, .paternalUncles, .fullCousins, .paternalCousins
+    ]
+
+    /// The tail of that line: pure residuaries with no Quranic share of their own, so their whole
+    /// story is "the nearest one takes what is left, the rest take nothing".
+    static let distantResiduaries: Set<FaraidHeir> = [
+        .fullNephews, .paternalNephews, .fullUncles, .paternalUncles, .fullCousins, .paternalCousins
+    ]
 }
 
 // MARK: - The distribution
@@ -162,9 +190,9 @@ enum Faraid {
     /// The whole distribution, from a count per heir. Pure: same input, same output, no state.
     ///
     /// Order matters and follows the classical sequence - block first, then pay the fixed shares
-    /// (ashab al-furud), then hand the residue to the nearest residuary (asabah), then correct with
-    /// ‘awl or radd. Doing residue before blocking, or ‘awl before the residue, gives wrong answers
-    /// on ordinary estates.
+    /// (ashab al-furud), then hand the residue to the nearest residuary (‘asabah), then correct
+    /// with ‘awl or radd. Doing residue before blocking, or ‘awl before the residue, gives wrong
+    /// answers on ordinary estates.
     static func distribute(counts: [FaraidHeir: Int]) -> Result {
         func n(_ heir: FaraidHeir) -> Int { max(0, counts[heir] ?? 0) }
 
@@ -196,16 +224,26 @@ enum Faraid {
             hasGrandfather = false
         }
 
-        // The mother shuts out every grandmother. The FATHER shuts out his own mother on the
-        // majority view but never the mother's mother; this calculator does not ask which
-        // grandmother survives, so it blocks only on the mother and flags the difference.
-        var grandmothers = n(.grandmothers)
-        if grandmothers > 0 && hasMother {
-            blocked.append((.grandmothers, "blocked by the mother"))
-            grandmothers = 0
-        } else if grandmothers > 0 && hasFather {
-            notes.append("A paternal grandmother is blocked by the father on the majority view, while a maternal grandmother is not. This calculator does not ask which grandmother survives, so check that share against your own case.")
+        // Grandmothers take a sixth between them: "the Prophet (peace be upon him) gave the
+        // grandmother a sixth" (Abu Dawud 2894, at-Tirmidhi 2101, sahih). The mother shuts out
+        // both of them; the father shuts out only his own mother, never the mother's mother.
+        var maternalGrandmother = n(.maternalGrandmother) > 0
+        var paternalGrandmother = n(.paternalGrandmother) > 0
+        if hasMother {
+            if maternalGrandmother {
+                blocked.append((.maternalGrandmother, "blocked by the mother"))
+                maternalGrandmother = false
+            }
+            if paternalGrandmother {
+                blocked.append((.paternalGrandmother, "blocked by the mother"))
+                paternalGrandmother = false
+            }
         }
+        if hasFather && paternalGrandmother {
+            blocked.append((.paternalGrandmother, "blocked by the father, her own son"))
+            paternalGrandmother = false
+        }
+        let grandmothers = (maternalGrandmother ? 1 : 0) + (paternalGrandmother ? 1 : 0)
 
         let hasMaleDescendant = sons > 0 || grandsons > 0
         let hasDescendant = hasMaleDescendant || daughters > 0 || granddaughters > 0
@@ -217,7 +255,7 @@ enum Faraid {
 
         // Full and paternal siblings fall to a male descendant or to the father. The grandfather is
         // the classical dispute (Abu Bakr shut them out, Zayd shared with them); this follows Abu
-        // Bakr's view, which is what most published calculators use.
+        // Bakr, the view Ibn Taymiyyah chose.
         let agnaticSiblingsBlocked = hasMaleDescendant || hasFather || hasGrandfather
         // Maternal siblings fall to ANY descendant, daughters included, and to the father/grandfather:
         // they inherit only in a kalalah estate (4:12), one with no parent and no child.
@@ -234,8 +272,8 @@ enum Faraid {
             if paternalBrothers > 0 { blocked.append((.paternalBrothers, reason)) }
             if paternalSisters > 0 { blocked.append((.paternalSisters, reason)) }
             fullBrothers = 0; fullSisters = 0; paternalBrothers = 0; paternalSisters = 0
-            if hasGrandfather && !hasFather && siblingHeadCount > 0 {
-                notes.append("Siblings alongside a grandfather is a genuine difference among the Companions: Abu Bakr shut them out (followed here), while Zayd ibn Thabit shared the estate between them. If this estate has both, consult a scholar.")
+            if hasGrandfather && !hasFather && siblingHeadCount > n(.maternalSiblings) {
+                notes.append("Siblings alongside a grandfather is a genuine difference among the Companions. Abu Bakr shut them out, and Ibn ‘Abbas, ‘A’ishah and later Ibn Taymiyyah held the same; that is the view applied here. Zayd ibn Thabit divided the estate between them instead, and Malik, ash-Shafi‘i and Ahmad followed him, so a court may well answer differently. Take an estate with both to a scholar.")
             }
         }
         if maternalBlocked && maternalSiblings > 0 {
@@ -246,11 +284,51 @@ enum Faraid {
         // A full brother shuts out the paternal siblings entirely.
         if fullBrothers > 0 {
             if paternalBrothers > 0 { blocked.append((.paternalBrothers, "blocked by the full brother")) }
-            if paternalSisters > 0 { blocked.append((.paternalSisters, "blocked by the full sister's brother")) }
+            if paternalSisters > 0 { blocked.append((.paternalSisters, "blocked by the full brother")) }
             paternalBrothers = 0; paternalSisters = 0
         }
 
-        // ---- 2. The fixed shares (ashab al-furud) ----
+        // A sister with no brother of her own becomes a residuary behind a daughter or a son's
+        // daughter (‘asabah ma‘a al-ghayr) instead of taking a fixed share, and in that rank she
+        // shuts out everyone her brother would have.
+        let fullSistersTakeResidueWithDaughters = fullSisters > 0 && fullBrothers == 0
+            && (daughters > 0 || granddaughters > 0)
+        let paternalSistersTakeResidueWithDaughters = paternalSisters > 0 && paternalBrothers == 0
+            && fullSisters == 0 && (daughters > 0 || granddaughters > 0)
+        if fullSistersTakeResidueWithDaughters && paternalSisters > 0 && paternalBrothers == 0 {
+            blocked.append((.paternalSisters, "blocked by the full sister, who inherits here as a residuary"))
+            paternalSisters = 0
+        }
+
+        // ---- 2. The residuary line (‘asabah), nearest first ----
+
+        // Walking it once fixes both halves of the same question: who takes the residue, and which
+        // of the wider male relatives is shut out by someone nearer.
+        let present: [FaraidHeir: Bool] = [
+            .sons: sons > 0,
+            .grandsons: grandsons > 0,
+            .father: hasFather,
+            .grandfather: hasGrandfather,
+            .fullBrothers: fullBrothers > 0,
+            .fullSisters: fullSistersTakeResidueWithDaughters,
+            .paternalBrothers: paternalBrothers > 0,
+            .paternalSisters: paternalSistersTakeResidueWithDaughters,
+            .fullNephews: n(.fullNephews) > 0,
+            .paternalNephews: n(.paternalNephews) > 0,
+            .fullUncles: n(.fullUncles) > 0,
+            .paternalUncles: n(.paternalUncles) > 0,
+            .fullCousins: n(.fullCousins) > 0,
+            .paternalCousins: n(.paternalCousins) > 0
+        ]
+        let residuary = FaraidHeir.residuaryOrder.first { present[$0] == true }
+        if let residuary {
+            for heir in FaraidHeir.residuaryOrder
+            where heir != residuary && FaraidHeir.distantResiduaries.contains(heir) && n(heir) > 0 {
+                blocked.append((heir, "blocked by a nearer relative on the father's side (\(residuary.title.lowercased()))"))
+            }
+        }
+
+        // ---- 3. The fixed shares (ashab al-furud) ----
 
         var fard: [FaraidHeir: (share: Fraction, basis: String)] = [:]
 
@@ -274,7 +352,12 @@ enum Faraid {
         }
 
         if grandmothers > 0 {
-            fard[.grandmothers] = (Fraction(1, 6), grandmothers == 1 ? "1/6 as grandmother" : "1/6 shared between the grandmothers")
+            let each = Fraction(1, 6) / Fraction(grandmothers)
+            let basis = grandmothers == 1
+                ? "1/6 as grandmother (Abu Dawud 2894)"
+                : "1/6 shared between the two grandmothers (Abu Dawud 2894)"
+            if maternalGrandmother { fard[.maternalGrandmother] = (each, basis) }
+            if paternalGrandmother { fard[.paternalGrandmother] = (each, basis) }
         }
 
         // Father - 4:11. A sixth whenever there is a child; he takes the residue on top of it when
@@ -319,7 +402,6 @@ enum Faraid {
 
         // Full sisters - 4:176. With a daughter or son's daughter they become residuaries instead
         // (‘asabah ma‘a al-ghayr), handled in the residue step below.
-        let fullSistersTakeResidueWithDaughters = fullSisters > 0 && fullBrothers == 0 && (daughters > 0 || granddaughters > 0)
         if fullSisters > 0 && fullBrothers == 0 && !fullSistersTakeResidueWithDaughters {
             fard[.fullSisters] = fullSisters == 1
                 ? (Fraction(1, 2), "1/2 as the only full sister (4:176)")
@@ -327,15 +409,13 @@ enum Faraid {
         }
 
         // Paternal half-sisters, behind whatever the full sisters took.
-        let paternalSistersTakeResidueWithDaughters = paternalSisters > 0 && paternalBrothers == 0
-            && fullSisters == 0 && (daughters > 0 || granddaughters > 0)
         if paternalSisters > 0 && paternalBrothers == 0 && !paternalSistersTakeResidueWithDaughters {
-            if fullSisters >= 2 && !fullSistersTakeResidueWithDaughters {
+            if fullSisters >= 2 {
                 blocked.append((.paternalSisters, "the full sisters already take the full two-thirds"))
                 paternalSisters = 0
-            } else if fullSisters == 1 && !fullSistersTakeResidueWithDaughters {
+            } else if fullSisters == 1 {
                 fard[.paternalSisters] = (Fraction(1, 6), "1/6, completing the full sister's half to two-thirds")
-            } else if fullSisters == 0 {
+            } else {
                 fard[.paternalSisters] = paternalSisters == 1
                     ? (Fraction(1, 2), "1/2 as the only paternal half-sister")
                     : (Fraction(2, 3), "2/3 shared among the paternal half-sisters")
@@ -352,52 +432,66 @@ enum Faraid {
             let remainder = Fraction.one - spouseShare
             fard[.mother] = (remainder * Fraction(1, 3), "1/3 of what remains after the spouse (the ‘Umariyyatan)")
         }
+        // The same family with the grandfather in the father's place is NOT the ‘Umariyyatan: the
+        // mother takes a third of the whole estate, because the rule is about the father himself.
+        if hasGrandfather && hasMother && !hasDescendant && siblingHeadCount == 0
+            && (n(.husband) > 0 || n(.wives) > 0) {
+            notes.append("With the grandfather standing in the father's place the mother takes a third of the WHOLE estate, not a third of what remains after the spouse: the ‘Umariyyatan rule is about the father himself. Malik, ash-Shafi‘i and Ahmad read it that way; Abu Hanifa applied the rule to the grandfather too.")
+        }
 
-        // ---- 3. Residue to the nearest residuary (‘asabah) ----
+        // ---- 4. Residue to the nearest residuary (‘asabah) ----
 
         var fardTotal = fard.values.reduce(Fraction.zero) { $0 + $1.share }
         var residue = Fraction.one - fardTotal
         var residueAwards: [FaraidHeir: (share: Fraction, basis: String)] = [:]
 
-        if residue > .zero {
-            // Strict order of nearness. The first tier that exists takes the whole residue.
-            if sons > 0 {
+        if residue > .zero, let residuary {
+            switch residuary {
+            case .sons:
                 // "To the male, a portion equal to that of two females" (4:11).
                 let parts = sons * 2 + daughters
                 residueAwards[.sons] = (residue * Fraction(sons * 2, parts), daughters > 0 ? "residue, two shares to the daughter's one (4:11)" : "residue as the sons")
                 if daughters > 0 {
                     residueAwards[.daughters] = (residue * Fraction(daughters, parts), "residue, one share to the son's two (4:11)")
                 }
-            } else if grandsons > 0 {
+            case .grandsons:
                 let parts = grandsons * 2 + granddaughters
                 residueAwards[.grandsons] = (residue * Fraction(grandsons * 2, parts), "residue as the son's sons")
                 if granddaughters > 0 {
                     residueAwards[.granddaughters] = (residue * Fraction(granddaughters, parts), "residue, one share to the son's son's two")
                 }
-            } else if hasFather {
+            case .father:
                 residueAwards[.father] = (residue, hasDescendant ? "the residue on top of his sixth" : "the whole residue as father")
-            } else if hasGrandfather {
+            case .grandfather:
                 residueAwards[.grandfather] = (residue, hasDescendant ? "the residue on top of his sixth" : "the whole residue as grandfather")
-            } else if fullBrothers > 0 {
+            case .fullBrothers:
                 let parts = fullBrothers * 2 + fullSisters
                 residueAwards[.fullBrothers] = (residue * Fraction(fullBrothers * 2, parts), fullSisters > 0 ? "residue, two shares to the sister's one (4:176)" : "residue as the full brothers")
                 if fullSisters > 0 {
                     residueAwards[.fullSisters] = (residue * Fraction(fullSisters, parts), "residue, one share to the brother's two (4:176)")
                 }
-            } else if fullSistersTakeResidueWithDaughters {
+            case .fullSisters:
                 residueAwards[.fullSisters] = (residue, "residue as full sisters alongside a daughter (‘asabah ma‘a al-ghayr)")
-            } else if paternalBrothers > 0 {
+            case .paternalBrothers:
                 let parts = paternalBrothers * 2 + paternalSisters
                 residueAwards[.paternalBrothers] = (residue * Fraction(paternalBrothers * 2, parts), "residue as the paternal half-brothers")
                 if paternalSisters > 0 {
                     residueAwards[.paternalSisters] = (residue * Fraction(paternalSisters, parts), "residue, one share to the brother's two")
                 }
-            } else if paternalSistersTakeResidueWithDaughters {
-                residueAwards[.paternalSisters] = (residue, "residue as paternal half-sisters alongside a daughter")
+            case .paternalSisters:
+                residueAwards[.paternalSisters] = (residue, "residue as paternal half-sisters alongside a daughter (‘asabah ma‘a al-ghayr)")
+            default:
+                residueAwards[residuary] = (residue, "the residue, as the nearest surviving male relative in the father's line")
             }
         }
 
-        // ---- 4. ‘Awl and radd ----
+        // Al-Mushtarakah, the case they argued over in front of ‘Umar: the fixed shares leave the
+        // full siblings with nothing while the maternal half-siblings take their third.
+        if maternalSiblings >= 2 && (fullBrothers > 0 || fullSisters > 0) && !(residue > .zero) {
+            notes.append("This is the case the scholars call al-Mushtarakah. The fixed shares leave nothing for the full siblings while the maternal half-siblings take their third. ‘Umar first ruled exactly that, and Abu Hanifa and Ahmad kept it, which is what is shown here. ‘Umar later shared the third among them all, and Malik and ash-Shafi‘i followed that. Take a real case to a scholar.")
+        }
+
+        // ---- 5. ‘Awl and radd ----
 
         var didAwl = false
         var didRadd = false
@@ -430,11 +524,11 @@ enum Faraid {
                 notes.append("Nobody is left to take the residue, so it returns to the fixed-share heirs in proportion to their shares (radd). A spouse does not share in the return.")
             } else {
                 unclaimed = residue
-                notes.append("No heir in this calculator can take the remaining share. In classical law it passes to the wider male relatives (uncles, nephews, cousins) and, failing them, to the public treasury.")
+                notes.append("No heir in this calculator can take the remaining share. In classical law it passes to the relatives who inherit by kinship (dhawu al-arham: a daughter's children, a sister's children, a maternal uncle) and, failing them, to the public treasury. Most courts today give it to the spouse when there is nobody else at all.")
             }
         }
 
-        // ---- 5. Merge, and split each group's share per person ----
+        // ---- 6. Merge, and split each group's share per person ----
 
         var merged: [FaraidHeir: (share: Fraction, basis: String)] = fard
         for (heir, value) in residueAwards {
@@ -453,27 +547,47 @@ enum Faraid {
                          each: value.share / Fraction(count), basis: value.basis)
         }
 
+        // Anyone entered who ends with nothing and no reason yet is a residuary who arrived to find
+        // the estate already spent. Saying so matters: an heir who simply vanishes from the screen
+        // reads as a bug in the calculator rather than as the answer.
+        let awarded = Set(awards.map { $0.heir })
+        var named = Set(blocked.map { $0.heir })
+        for heir in order where n(heir) > 0 && !awarded.contains(heir) && !named.contains(heir) {
+            blocked.append((heir, didAwl
+                ? "nothing left: the fixed shares already overflow the estate (‘awl)"
+                : "nothing left: the fixed shares use up the whole estate"))
+            named.insert(heir)
+        }
+
+        // One row per heir, whatever path put them there.
+        var seen = Set<FaraidHeir>()
+        let uniqueBlocked = blocked.filter { seen.insert($0.heir).inserted }
+
         return Result(awards: awards, didAwl: didAwl, didRadd: didRadd,
-                      unclaimed: unclaimed, blocked: blocked, notes: notes)
+                      unclaimed: unclaimed, blocked: uniqueBlocked, notes: notes)
     }
 }
 
 // MARK: - The screen
 
 /// A calculator for the Quranic shares: enter who survived, and it works out each heir's fraction of
-/// the estate, applying the blocking rules, ‘awl and radd. The estate value is optional - without it
-/// the answer is fractions and percentages, which is what the law actually specifies.
+/// the estate, applying the blocking rules, ‘awl and radd. The estate figures are optional - without
+/// them the answer is fractions and percentages, which is what the law actually specifies.
 struct InheritanceCalculatorView: View {
     @ObservedObject private var settings = Settings.shared
 
     // Persisted so a half-entered family survives leaving the screen, matching the zakah calculator.
     @AppStorage("faraidEstate") private var estate = ""
+    @AppStorage("faraidFuneral") private var funeral = ""
+    @AppStorage("faraidDebts") private var debts = ""
+    @AppStorage("faraidBequest") private var bequest = ""
     @AppStorage("faraidCounts") private var storedCounts = ""
+    @AppStorage("faraidShowWider") private var showWider = false
 
-    @FocusState private var estateFocused: Bool
+    @FocusState private var amountFocused: Bool
 
-    /// `heir.rawValue:count` pairs. One key rather than fifteen: the set of heirs is likely to grow,
-    /// and a stored dictionary does not need a schema migration each time it does.
+    /// `heir.rawValue:count` pairs. One key rather than twenty-two: the set of heirs is likely to
+    /// grow, and a stored dictionary does not need a schema migration each time it does.
     private var counts: [FaraidHeir: Int] {
         get {
             var out: [FaraidHeir: Int] = [:]
@@ -509,13 +623,28 @@ struct InheritanceCalculatorView: View {
 
     private var result: Faraid.Result { Faraid.distribute(counts: counts) }
 
-    private var estateValue: Double {
-        let cleaned = estate.filter { $0.isNumber || $0 == "." || $0 == "," }
+    // MARK: The estate, in the order the law spends it
+
+    private func amount(_ text: String) -> Double {
+        let cleaned = text.filter { $0.isNumber || $0 == "." || $0 == "," }
         let normalized = cleaned.contains(".")
             ? cleaned.replacingOccurrences(of: ",", with: "")
             : cleaned.replacingOccurrences(of: ",", with: ".")
         return Double(normalized) ?? 0
     }
+
+    private var estateValue: Double { amount(estate) }
+    /// What is left once the burial and the debts are settled. The shares are never taken from this
+    /// directly: the bequest comes out of it first.
+    private var afterDebts: Double { max(estateValue - amount(funeral) - amount(debts), 0) }
+    /// "A third, and a third is a lot" (al-Bukhari 2744): the cap the Prophet (peace be upon him)
+    /// put on Sa‘d ibn Abi Waqqas, and the reason a bequest can never eat an heir's share.
+    private var bequestCap: Double { afterDebts / 3 }
+    private var bequestApplied: Double { min(amount(bequest), bequestCap) }
+    private var bequestOverThird: Bool { amount(bequest) > bequestCap + 0.005 }
+    /// The tarikah the shares actually divide.
+    private var distributable: Double { max(afterDebts - bequestApplied, 0) }
+    private var hasEstateFigures: Bool { estateValue > 0 }
 
     private static let amountFormatter: NumberFormatter = {
         let formatter = NumberFormatter()
@@ -533,30 +662,75 @@ struct InheritanceCalculatorView: View {
         String(format: "%.2f%%", fraction.doubleValue * 100)
     }
 
+    private static let widerHeirs: [FaraidHeir] = [
+        .fullNephews, .paternalNephews, .fullUncles, .paternalUncles, .fullCousins, .paternalCousins
+    ]
+
+    private var widerEntered: Int {
+        Self.widerHeirs.reduce(0) { $0 + count($1) }
+    }
+
+    /// "-faraidSection <name>": render one section alone, so a simulator screenshot can reach the
+    /// parts that sit below the fold (the shares themselves, most of the time).
+    private func shows(_ name: String) -> Bool {
+        #if DEBUG
+        return Self.debugSection == nil || Self.debugSection == name
+        #else
+        return true
+        #endif
+    }
+
+    #if DEBUG
+    private static let debugSection: String? = {
+        let arguments = ProcessInfo.processInfo.arguments
+        guard let index = arguments.firstIndex(of: "-faraidSection"),
+              index + 1 < arguments.count else { return nil }
+        return arguments[index + 1]
+    }()
+    #endif
+
     var body: some View {
         List {
             Group {
-                estateSection
+                if shows("estate") { estateSection }
+                if shows("heirs") {
                 heirSection("SPOUSE", heirs: [.husband, .wives])
-                heirSection("PARENTS & GRANDPARENTS", heirs: [.father, .mother, .grandfather, .grandmothers])
+                heirSection("PARENTS & GRANDPARENTS", heirs: [.father, .mother, .grandfather, .maternalGrandmother, .paternalGrandmother],
+                            footer: "The mother shuts out both grandmothers. The father shuts out his own mother only, never the mother's mother.")
                 heirSection("CHILDREN & GRANDCHILDREN", heirs: [.sons, .daughters, .grandsons, .granddaughters],
                             footer: "Son's sons and son's daughters inherit only when there is no surviving son.")
                 heirSection("SIBLINGS", heirs: [.fullBrothers, .fullSisters, .paternalBrothers, .paternalSisters, .maternalSiblings],
                             footer: "Maternal half-siblings are the children of the mother only. They inherit only when there is no child and no father.")
-                resultSection
-                if !result.blocked.isEmpty { blockedSection }
-                if !result.notes.isEmpty { notesSection }
-                scopeSection
+                }
+                if shows("heirs") || shows("wider") { widerSection }
+                if shows("shares") { resultSection }
+                if shows("shares"), !result.blocked.isEmpty { blockedSection }
+                if shows("shares"), !result.notes.isEmpty { notesSection }
+                if shows("scope") { scopeSection }
             }
             .themedListRowBackground()
         }
         .navigationTitle("Inheritance Calculator")
         .applyConditionalListStyle()
         #if DEBUG
-        // "-focusEstate": focus the estate field after appear (keyboard toolbar screenshot runs).
+        // "-focusEstate": focus the amount fields after appear (keyboard toolbar screenshot runs).
+        // "-faraidSeed": the Minbariyyah, the case ‘Ali answered from the pulpit, with figures.
         .onAppear {
-            if ProcessInfo.processInfo.arguments.contains("-focusEstate") {
-                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { estateFocused = true }
+            let arguments = ProcessInfo.processInfo.arguments
+            if arguments.contains("-faraidSeed") {
+                storedCounts = "daughters:2,father:1,mother:1,wives:1"
+                estate = "120000"
+                funeral = "5000"
+                debts = "10000"
+                bequest = "40000"
+            }
+            if arguments.contains("-faraidWiderSeed") {
+                storedCounts = "fullNephews:2,fullUncles:1,husband:1,maternalGrandmother:1"
+                estate = ""
+                showWider = true
+            }
+            if arguments.contains("-focusEstate") {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { amountFocused = true }
             }
         }
         #endif
@@ -566,9 +740,9 @@ struct InheritanceCalculatorView: View {
             // issue, lldb-verified in `InputAccessoryBar.body` 2026-09-04; removing the item
             // cleared it). A group, because its content is a ViewBuilder on iOS 15.
             ToolbarItemGroup(placement: .keyboard) {
-                if estateFocused {
+                if amountFocused {
                     Spacer(minLength: 0)
-                    Button("Done") { estateFocused = false }
+                    Button("Done") { amountFocused = false }
                 }
             }
             ToolbarItem(placement: .navigationBarTrailing) {
@@ -576,35 +750,47 @@ struct InheritanceCalculatorView: View {
                     settings.hapticFeedback()
                     storedCounts = ""
                     estate = ""
+                    funeral = ""
+                    debts = ""
+                    bequest = ""
                 } label: {
                     Text("Reset")
                 }
-                .disabled(storedCounts.isEmpty && estate.isEmpty)
+                .disabled(storedCounts.isEmpty && estate.isEmpty && funeral.isEmpty && debts.isEmpty && bequest.isEmpty)
             }
         }
     }
 
+    // MARK: Sections
+
     private var estateSection: some View {
-        Section(header: Text("ESTATE (OPTIONAL)"),
-                footer: Text("What is left AFTER the funeral costs, then the debts, then any bequest of up to a third. Leave it empty to see the shares as fractions only.")) {
-            HStack(spacing: 10) {
-                Image(systemName: "banknote")
-                    .foregroundColor(settings.accentColor.color)
-                    .frame(width: 24, alignment: .center)
+        Section(header: Text("THE ESTATE (OPTIONAL)"),
+                footer: Text("The order is fixed and it is not the heirs' to change: the burial first, then every debt, then a bequest of up to a third of what is left, and only then the shares below. A bequest to somebody who already inherits is not valid unless the other heirs agree to it. Leave these empty to see the shares as fractions only.")) {
+            amountRow("Total estate", systemImage: "banknote", text: $estate)
+            amountRow("Funeral costs", systemImage: "leaf", text: $funeral)
+            amountRow("Debts owed", systemImage: "creditcard", text: $debts)
+            amountRow("Bequest (wasiyyah)", systemImage: "doc.text", text: $bequest)
 
-                Text("Net estate")
-                    .font(.subheadline)
+            if hasEstateFigures {
+                resultRow("After funeral and debts", value: afterDebts)
+                if amount(bequest) > 0 {
+                    resultRow("Bequest applied", value: bequestApplied)
+                }
+                HStack {
+                    Text("To divide among the heirs")
+                        .font(.subheadline.weight(.semibold))
+                    Spacer()
+                    Text(formattedAmount(distributable))
+                        .font(.subheadline.monospacedDigit())
+                        .foregroundColor(settings.accentColor.accent2)
+                }
 
-                Spacer(minLength: 8)
-
-                TextField("0", text: $estate)
-                    .keyboardType(.decimalPad)
-                    .multilineTextAlignment(.trailing)
-                    .font(.subheadline.monospacedDigit())
-                    .frame(maxWidth: 120)
-                    .focused($estateFocused)
+                if bequestOverThird {
+                    Label("A bequest above a third of the estate binds nobody unless the heirs agree to it, so only \(formattedAmount(bequestCap)) is applied here. \"A third, and a third is a lot\" (al-Bukhari 2744).", systemImage: "exclamationmark.triangle")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
             }
-            .padding(.vertical, 2)
         }
     }
 
@@ -612,6 +798,45 @@ struct InheritanceCalculatorView: View {
         Section(header: Text(title), footer: footer.map { Text($0) }) {
             ForEach(heirs, id: \.self) { heir in
                 heirRow(heir)
+            }
+        }
+    }
+
+    /// The wider male line is folded away by default: it decides an estate only when nobody nearer
+    /// survives, and six more steppers above the answer would cost every ordinary case.
+    private var widerSection: some View {
+        Section(header: Text("WIDER RELATIVES"),
+                footer: Text("Half here always means through the father: a maternal half-brother's sons are not heirs at all, and neither is a maternal uncle. The nearest of these takes whatever the fixed shares leave and shuts out everyone below him. A sister's children and a daughter's children are outside these rules too: they inherit as dhawu al-arham, once nobody above them survives.")) {
+            Button {
+                settings.hapticFeedback()
+                withAnimation { showWider.toggle() }
+            } label: {
+                HStack {
+                    Text("Brother's sons, uncles, cousins")
+                        .font(.subheadline)
+                        .foregroundColor(.primary)
+
+                    Spacer(minLength: 8)
+
+                    if widerEntered > 0 && !showWider {
+                        Text("\(widerEntered)")
+                            .font(.subheadline.monospacedDigit())
+                            .foregroundColor(settings.accentColor.accent2)
+                    }
+
+                    Image(systemName: showWider ? "chevron.up" : "chevron.down")
+                        .font(.caption.weight(.semibold))
+                        .foregroundColor(.secondary)
+                }
+                .padding(.vertical, 2)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+
+            if showWider {
+                ForEach(Self.widerHeirs, id: \.self) { heir in
+                    heirRow(heir)
+                }
             }
         }
     }
@@ -651,6 +876,42 @@ struct InheritanceCalculatorView: View {
             }
         }
         .padding(.vertical, 2)
+    }
+
+    private func amountRow(_ title: String, systemImage: String, text: Binding<String>) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: systemImage)
+                .foregroundColor(settings.accentColor.color)
+                .frame(width: 24, alignment: .center)
+
+            Text(title)
+                .font(.subheadline)
+                .lineLimit(2)
+                .fixedSize(horizontal: false, vertical: true)
+                .minimumScaleFactor(0.7)
+
+            Spacer(minLength: 8)
+
+            TextField("0", text: text)
+                .keyboardType(.decimalPad)
+                .multilineTextAlignment(.trailing)
+                .font(.subheadline.monospacedDigit())
+                .frame(maxWidth: 120)
+                .focused($amountFocused)
+        }
+        .padding(.vertical, 2)
+    }
+
+    private func resultRow(_ title: String, value: Double) -> some View {
+        HStack {
+            Text(title)
+                .font(.subheadline)
+                .foregroundColor(.secondary)
+            Spacer()
+            Text(formattedAmount(value))
+                .font(.subheadline.monospacedDigit())
+                .foregroundColor(.secondary)
+        }
     }
 
     private var resultSection: some View {
@@ -712,13 +973,13 @@ struct InheritanceCalculatorView: View {
                     .foregroundColor(.secondary)
             }
 
-            if estateValue > 0 {
+            if distributable > 0 {
                 HStack {
                     Text(award.count > 1 ? "Each of the \(award.count)" : "Amount")
                         .font(.caption)
                         .foregroundColor(.secondary)
                     Spacer()
-                    Text(formattedAmount(award.each.doubleValue * estateValue))
+                    Text(formattedAmount(award.each.doubleValue * distributable))
                         .font(.caption.monospacedDigit())
                         .foregroundColor(.primary)
                 }
@@ -728,8 +989,8 @@ struct InheritanceCalculatorView: View {
         .contextMenu {
             Button {
                 settings.hapticFeedback()
-                UIPasteboard.general.string = estateValue > 0
-                    ? "\(award.heir.title): \(award.share.displayString) (\(formattedAmount(award.share.doubleValue * estateValue)))"
+                UIPasteboard.general.string = distributable > 0
+                    ? "\(award.heir.title): \(award.share.displayString) (\(formattedAmount(award.share.doubleValue * distributable)))"
                     : "\(award.heir.title): \(award.share.displayString)"
             } label: {
                 Label("Copy Share", systemImage: "doc.on.doc")
@@ -775,14 +1036,14 @@ struct InheritanceCalculatorView: View {
     }
 
     private var scopeSection: some View {
-        Section {
+        Section(header: Text("BEFORE YOU DIVIDE ANYTHING")) {
             Text(Self.scopeNote)
                 .font(.caption)
                 .foregroundColor(.secondary)
         }
     }
 
-    static let scopeNote = "The shares are fixed by Allah in Surah an-Nisa: 4:11, 4:12 and 4:176. يُوصِيكُمُ ٱللَّهُ فِىٓ أَوْلَـٰدِكُمْ \"Allah instructs you concerning your children\" (4:11). Settle the funeral costs first, then the debts, then any bequest of up to a third of what is left, and only then divide what remains.\n\nThis is a quick, rough guide for the simple case, and nothing more. It is not a fatwa and it is not the final answer. It covers the heirs who turn up in ordinary estates and it does NOT handle the wider male relatives (uncles, nephews, cousins), great-grandparents, a missing or unborn heir, an estate with no relative at all, or the places the schools genuinely differ, such as the grandfather inheriting alongside siblings.\n\nInheritance is the branch of knowledge the Prophet (peace be upon him) singled out for careful learning, and a real estate is somebody's wealth and somebody's grief at once. Take yours to a knowledgeable scholar of Ahl as-Sunnah wa al-Jamaʿah, and to a court where one is needed, before anything is divided on these numbers."
+    static let scopeNote = "The shares are fixed by Allah in Surah an-Nisa: 4:11, 4:12 and 4:176. يُوصِيكُمُ ٱللَّهُ فِىٓ أَوْلَـٰدِكُمْ \"Allah instructs you concerning your children\" (4:11), and the verses close with تِلْكَ حُدُودُ ٱللَّهِ \"these are the limits set by Allah\" (4:13).\n\nTwo things stop a relative inheriting however close they are. A killer takes nothing from the one he killed, and there is no inheritance between a Muslim and a non-Muslim: \"The Muslim does not inherit from the disbeliever, nor the disbeliever from the Muslim\" (al-Bukhari 6764). An heir must also be alive when the death happens, which is why an unborn child's share is held back until the birth.\n\nThis is a quick guide for the ordinary case, and nothing more. It is not a fatwa. It covers the Quranic heirs and the male line on the father's side down to the uncle's sons. It does NOT handle the relatives who inherit by kinship alone (a daughter's children, a sister's children, a maternal uncle), great-grandparents, a missing or unborn heir, an estate divided across countries, or the places the Companions themselves differed, such as the grandfather inheriting alongside siblings.\n\nInheritance is the branch of knowledge the Prophet (peace be upon him) singled out for careful learning, and a real estate is somebody's wealth and somebody's grief at once. Take yours to a knowledgeable scholar of Ahl as-Sunnah wa al-Jamaʿah, and to a court where one is needed, before anything is divided on these numbers."
 }
 
 #Preview {

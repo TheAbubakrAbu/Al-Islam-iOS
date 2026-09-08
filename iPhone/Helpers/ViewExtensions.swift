@@ -69,6 +69,20 @@ struct AppearanceEnvironment: Equatable {
     /// The Quran face (`Settings.fontArabic`) for the ayat quoted on those pages, and its custom flag.
     var quranArabicFontName: String
     var quranUsesCustomArabicFace: Bool
+    /// `Settings.quranArabicFontName(for: nil)`: the Quran face as the readers resolve it, with the
+    /// script style folded in. The ported screens quote ayat in this one, not in the raw selection
+    /// above, and it rides in the snapshot so a script-style change re-renders them.
+    var quranDisplayFace: String
+    /// The reader's type sizes and face switches (`Settings.useFontArabic`, `fontArabicSize`,
+    /// `hadithArabicFontSize`, `englishFontSize`, `hadithArabicWantsCustomFace`, `cleanArabicText`):
+    /// what the Tilawa port's pushed screens read beside the accent and the faces, carried here so
+    /// they stop observing `Settings` (Tilawa Guide, Phase 8 step 1's tail, 2026-09-07).
+    var useFontArabic: Bool
+    var fontArabicSize: Double
+    var hadithArabicFontSize: Double
+    var englishFontSize: Double
+    var hadithArabicWantsCustomFace: Bool
+    var cleanArabicText: Bool
 
     /// `Settings.scalableIslamArabicFont(base:relativeTo:)` off the snapshot.
     func islamArabicFont(base: CGFloat, relativeTo style: Font.TextStyle) -> Font {
@@ -117,7 +131,14 @@ struct AppearanceEnvironment: Equatable {
             islamArabicFontName: settings.nonQuranArabicFontName,
             islamUsesCustomArabicFace: settings.islamUsesCustomArabicFace,
             quranArabicFontName: settings.fontArabic,
-            quranUsesCustomArabicFace: settings.quranUsesCustomArabicFace
+            quranUsesCustomArabicFace: settings.quranUsesCustomArabicFace,
+            quranDisplayFace: settings.quranArabicFontName(for: nil),
+            useFontArabic: settings.useFontArabic,
+            fontArabicSize: settings.fontArabicSize,
+            hadithArabicFontSize: settings.hadithArabicFontSize,
+            englishFontSize: settings.englishFontSize,
+            hadithArabicWantsCustomFace: settings.hadithArabicWantsCustomFace,
+            cleanArabicText: settings.cleanArabicText
         )
     }
 }

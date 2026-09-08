@@ -442,7 +442,7 @@ struct HadithRow: View, Equatable {
                 .contentShape(Rectangle())
                 .onTapGesture {
                     settings.hapticFeedback()
-                    withAnimation(.easeInOut) { userData.toggleBookmark(book: book, hadith: hadith) }
+                    withAnimation(.easeInOut) { userData.toggleBookmarkOrConfirm(book: book, hadith: hadith) }
                 }
                 // The ayah pill's badge grammar: the bookmark badge when bookmarked (the tinted pill
                 // plus this corner mark IS the bookmarked state - the actions button no longer morphs),
@@ -629,7 +629,7 @@ struct HadithRow: View, Equatable {
             Button(role: .destructive) {
                 settings.hapticFeedback()
                 withAnimation(.easeInOut) {
-                    userData.toggleBookmark(book: book, hadith: hadith)
+                    userData.toggleBookmarkOrConfirm(book: book, hadith: hadith)
                 }
             } label: {
                 Label("Remove Bookmark", systemImage: "bookmark.fill")
@@ -638,7 +638,7 @@ struct HadithRow: View, Equatable {
             Button {
                 settings.hapticFeedback()
                 withAnimation(.easeInOut) {
-                    userData.toggleBookmark(book: book, hadith: hadith)
+                    userData.toggleBookmarkOrConfirm(book: book, hadith: hadith)
                 }
             } label: {
                 Label("Bookmark Hadith", systemImage: "bookmark")
@@ -734,9 +734,34 @@ enum HadithArabicChunks {
         text.count >= Settings.arabicShapingCharacterLimit
     }
 
+    /// The splits of the narrations on screen, keyed by the text's hash and length (a hadith's
+    /// Arabic is immutable): `HadithArabicText` used to walk every character of a long narration on
+    /// every body evaluation. Thread-safe, bounded, dropped under a memory warning.
+    private final class ChunkList {
+        let chunks: [Chunk]
+        init(_ chunks: [Chunk]) { self.chunks = chunks }
+    }
+    nonisolated(unsafe) private static let splitCache: NSCache<NSString, ChunkList> = {
+        let cache = NSCache<NSString, ChunkList>()
+        cache.countLimit = 300
+        return cache
+    }()
+
+    static func purgeCache() {
+        splitCache.removeAllObjects()
+    }
+
     /// The whole text as one chunk when it is short enough; sentence-bounded runs otherwise.
     static func split(_ text: String, limit: Int = Settings.hadithArabicChunkLimit) -> [Chunk] {
         guard needed(text) else { return [Chunk(index: 0, text: text, utf16Offset: 0)] }
+        let key = "\(text.hashValue):\(text.utf8.count):\(limit)" as NSString
+        if let cached = splitCache.object(forKey: key) { return cached.chunks }
+        let chunks = computeSplit(text, limit: limit)
+        splitCache.setObject(ChunkList(chunks), forKey: key)
+        return chunks
+    }
+
+    private static func computeSplit(_ text: String, limit: Int) -> [Chunk] {
         var chunks: [Chunk] = []
         var start = text.startIndex
         var lastBoundary: String.Index?
@@ -784,7 +809,7 @@ enum HadithArabicChunks {
     }
 
     /// The opening of a narration for a clamped preview (two lines of it are shown): short enough for
-    /// the custom face, cut at a word.
+    /// the custom face, cut at a word. Cheap already (a prefix walk), so not memoized.
     static func preview(_ text: String, limit: Int = Settings.hadithArabicChunkLimit) -> String {
         guard needed(text) else { return text }
         let head = text.prefix(limit)
@@ -921,6 +946,14 @@ struct HadithBookmarkRow: View, Equatable {
         HadithStore.shared.book(book)?.hadith(numbered: bookmark.idInBook)
     }
 
+    /// Removal only needs the identity fields; the store matches on slug + idInBook.
+    private var placeholderHadith: HadithBookData.Hadith {
+        HadithBookData.Hadith(
+            id: -1, idInBook: bookmark.idInBook, chapterId: bookmark.chapterId ?? -1,
+            arabic: "", english: HadithBookData.Hadith.EnglishText(narrator: "", text: "")
+        )
+    }
+
     /// Value link on iOS 16, legacy destination push on iOS 15 - see the note at the call site.
     @ViewBuilder
     private func bookmarkLink<Label: View>(book: HadithCatalogBook, @ViewBuilder label: () -> Label) -> some View {
@@ -946,19 +979,34 @@ struct HadithBookmarkRow: View, Equatable {
             // path to append to.
             bookmarkLink(book: book) {
                 HStack(spacing: 8) {
-                    // The same accent-tinted glass number badge the Quran's bookmarked ayah rows lead with.
-                    Text(bookmark.displayNumber)
-                        .font(.subheadline.monospacedDigit().weight(.semibold))
-                        .foregroundColor(settings.accentColor.color)
-                        .padding(5)
-                        .frame(minWidth: 44)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.5)
-                        .conditionalGlassEffect(
-                            useColor: 0.3,
-                            customTint: settings.accentColor.color,
-                            interactive: false
-                        )
+                    // The same accent-tinted glass number badge the Quran's bookmarked ayah rows lead
+                    // with - and, like theirs, the filled bookmark sits in its corner and tapping the
+                    // badge removes the bookmark (after the confirmation every removal asks for).
+                    ZStack(alignment: .topTrailing) {
+                        Text(bookmark.displayNumber)
+                            .font(.subheadline.monospacedDigit().weight(.semibold))
+                            .foregroundColor(settings.accentColor.color)
+                            .padding(5)
+                            .frame(minWidth: 44)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.5)
+                            .conditionalGlassEffect(
+                                useColor: 0.3,
+                                customTint: settings.accentColor.color,
+                                interactive: false
+                            )
+                            .onTapGesture {
+                                settings.hapticFeedback()
+                                userData.toggleBookmarkOrConfirm(book: book, hadith: placeholderHadith, reference: bookmark.reference)
+                            }
+                            .accessibilityLabel("Remove bookmark")
+
+                        Image(systemName: "bookmark.fill")
+                            .font(.caption2)
+                            .foregroundStyle(settings.accentColor.color)
+                            .padding(4)
+                            .offset(x: 8, y: -6)
+                    }
 
                     VStack(alignment: .leading, spacing: 3) {
                         Text(bookmark.reference)
@@ -1024,7 +1072,7 @@ struct HadithBookmarkRow: View, Equatable {
                         id: -1, idInBook: bookmark.idInBook, chapterId: bookmark.chapterId ?? -1,
                         arabic: "", english: HadithBookData.Hadith.EnglishText(narrator: "", text: "")
                     )
-                    userData.toggleBookmark(book: book, hadith: placeholder)
+                    userData.toggleBookmarkOrConfirm(book: book, hadith: placeholder, reference: bookmark.reference)
                 } label: {
                     Label("Remove Bookmark", systemImage: "bookmark.fill")
                 }
@@ -1103,7 +1151,8 @@ struct HadithBookmarkRow: View, Equatable {
 }
 
 /// The grid form of a bookmarked hadith - the Quran's bookmark grid tile shape: reference on top,
-/// one-line Arabic, one-line English, on clear glass.
+/// two-line Arabic, two-line English, on clear glass, with the filled bookmark in the top-right corner
+/// where tapping it removes the bookmark (after the confirmation) - the ayah tile's corner exactly.
 struct HadithBookmarkGridTile: View, Equatable {
     @ObservedObject private var settings = Settings.shared
 
@@ -1118,22 +1167,29 @@ struct HadithBookmarkGridTile: View, Equatable {
         l.bookmark == r.bookmark && l.renderSettingsSignature == r.renderSettingsSignature
     }
 
+    /// Removal only needs the identity fields; the store matches on slug + idInBook.
+    private var placeholderHadith: HadithBookData.Hadith {
+        HadithBookData.Hadith(
+            id: -1, idInBook: bookmark.idInBook, chapterId: bookmark.chapterId ?? -1,
+            arabic: "", english: HadithBookData.Hadith.EnglishText(narrator: "", text: "")
+        )
+    }
+
     var body: some View {
         Button {
             settings.hapticFeedback()
             onTap()
         } label: {
             VStack(alignment: .leading, spacing: 4) {
-                HStack(spacing: 5) {
-                    Image(systemName: "bookmark.fill")
-                        .font(.caption2)
-                        .foregroundStyle(settings.accentColor.color)
-
+                HStack(spacing: 6) {
                     Text(bookmark.reference)
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(settings.accentColor.color)
                         .lineLimit(1)
                         .minimumScaleFactor(0.6)
+
+                    // Leaves the corner clear for the tappable bookmark overlay below.
+                    Spacer(minLength: 20)
                 }
 
                 // The reader's own visibility toggles apply here exactly as in the bookmark list
@@ -1172,6 +1228,29 @@ struct HadithBookmarkGridTile: View, Equatable {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        // The Quran bookmark tile's corner: the filled bookmark on the RIGHT, and tapping it is how the
+        // tile is unbookmarked. Outside the Button (like `gridFavoriteStar`) so the corner tap never
+        // opens the hadith.
+        .overlay(alignment: .topTrailing) {
+            Image(systemName: "bookmark.fill")
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundColor(settings.accentColor.color)
+                // The 30pt target is centered on the glyph and sized BEFORE the corner paddings (the
+                // `gridFavoriteStar` fix): a target inflated after them swallowed the tile's right side.
+                .frame(width: 30, height: 30)
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    settings.hapticFeedback()
+                    if let book = HadithCatalogBook.bySlug[bookmark.slug] {
+                        HadithUserData.shared.toggleBookmarkOrConfirm(
+                            book: book, hadith: placeholderHadith, reference: bookmark.reference
+                        )
+                    }
+                }
+                .padding(.top, 1)
+                .padding(.trailing, 2)
+                .accessibilityLabel("Remove bookmark")
+        }
     }
 }
 

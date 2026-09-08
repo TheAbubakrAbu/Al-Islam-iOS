@@ -621,7 +621,13 @@ final class HadithPack: @unchecked Sendable {
     /// scanner (`HadithRankedSearch`), which scores each hadith on several words at once and therefore
     /// cannot stop at a first match the way `matchingRows` does. One search-block fetch per BLOCK, the
     /// same cost as a full sweep; cancellation is checked once per block.
+    ///
+    /// `blockFilter`, when given, sees each block's rows and the one contiguous span holding every
+    /// fold of the language in that block before any row is visited; returning false skips the
+    /// block. The ranked search pre-tests its query words against the span with one `memmem` each,
+    /// so a rare word visits a handful of blocks instead of every row of the library.
     func scanSearchFolds(in range: Range<Int>, isArabic: Bool,
+                         blockFilter: ((_ rows: Range<Int>, _ span: UnsafeBufferPointer<UInt8>) -> Bool)? = nil,
                          _ body: (_ row: Int, _ fold: UnsafeBufferPointer<UInt8>) -> Void) {
         guard !rows.isEmpty else { return }
         let lower = max(0, range.lowerBound)
@@ -642,6 +648,20 @@ final class HadithPack: @unchecked Sendable {
             let ranges = isArabic ? search.arabic : search.english
             search.bytes.withUnsafeBufferPointer { haystack in
                 guard let base = haystack.baseAddress else { return }
+                if let blockFilter {
+                    // The language's records are laid out one after another, so the rows about to be
+                    // visited are one span from the first record's start to the last one's end.
+                    let firstSlot = max(0, row - block.firstRow)
+                    let lastSlot = min(ranges.count, scanEnd - block.firstRow)
+                    if firstSlot < lastSlot {
+                        let start = ranges[firstSlot].lowerBound
+                        let end = ranges[lastSlot - 1].upperBound
+                        if start >= 0, end <= haystack.count, start < end,
+                           !blockFilter(row..<scanEnd, UnsafeBufferPointer(start: base + start, count: end - start)) {
+                            return
+                        }
+                    }
+                }
                 var current = row
                 while current < scanEnd {
                     let slot = current - block.firstRow

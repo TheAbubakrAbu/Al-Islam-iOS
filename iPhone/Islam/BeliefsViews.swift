@@ -1077,6 +1077,252 @@ struct HijriCalendarView: View {
     }
 }
 
+struct SacredMonthsView: View {
+    var body: some View {
+        List {
+            Group {
+                Section(header: ArticleHeader("SUMMARY")) {
+                    Text(verbatim: "In short: four of the twelve Hijri months are sacred (Dhul-Qadah, Dhul-Hijjah, Muharram, and Rajab), and Allah singled them out for honour, forbade fighting in them, and warned against wronging oneself in them.")
+                        .font(.body)
+                }
+
+                Section(header: ArticleHeader("OVERVIEW")) {
+                    Text(verbatim: "The Hijri year is twelve lunar months, and Allah set four of them apart from the day He created the heavens and the earth. They are not sacred because the Arabs treated them so; the Arabs inherited their sanctity from the religion of Ibrahim (peace be upon him) and then tampered with it, and Islam restored them to their places.")
+                        .font(.body)
+
+                    Text(verbatim: "Allah (Glorified and Exalted be He) says in the Quran:")
+                        .font(.body)
+
+                    ScriptureQuote(text: "“Indeed, the number of months with Allah is twelve [lunar] months in the register of Allah [from] the day He created the heavens and the earth; of these, four are sacred. That is the correct religion, so do not wrong yourselves during them” (Quran 9:36).", arabic: "إِنَّ عِدَّةَ ٱلشُّهُورِ عِندَ ٱللَّهِ ٱثۡنَا عَشَرَ شَهۡرٗا فِي كِتَٰبِ ٱللَّهِ يَوۡمَ خَلَقَ ٱلسَّمَٰوَٰتِ وَٱلۡأَرۡضَ مِنۡهَآ أَرۡبَعَةٌ حُرُمٞۚ ذَٰلِكَ ٱلدِّينُ ٱلۡقَيِّمُۚ فَلَا تَظۡلِمُواْ فِيهِنَّ أَنفُسَكُمۡۚ")
+                }
+
+                Section(header: ArticleHeader("WHICH FOUR THEY ARE")) {
+                    Text(verbatim: "Prophet Muhammad (peace and blessings be upon him) named them in his sermon at the Farewell Pilgrimage: three that run together at the turn of the year, and one on its own in the middle.")
+                        .font(.body)
+
+                    ScriptureQuote(text: "“The division of time has turned to its original form which was current when Allah created the Heavens and the Earths. The year is of twelve months, out of which four months are sacred: Three are in succession Dhul-Qa’ da, Dhul-Hijja and Muharram, and (the fourth is) Rajab of (the tribe of) Mudar which comes between Jumadi-ath-Thaniyah and Sha ban” (Sahih al-Bukhari 3197).", arabic: "الزَّمَانُ قَدِ اسْتَدَارَ كَهَيْئَتِهِ يَوْمَ خَلَقَ السَّمَوَاتِ وَالأَرْضَ، السَّنَةُ اثْنَا عَشَرَ شَهْرًا، مِنْهَا أَرْبَعَةٌ حُرُمٌ، ثَلاَثَةٌ مُتَوَالِيَاتٌ ذُو الْقَعْدَةِ وَذُو الْحِجَّةِ وَالْمُحَرَّمُ، وَرَجَبُ مُضَرَ الَّذِي بَيْنَ جُمَادَى وَشَعْبَانَ", dimmed: true)
+
+                    Text(articleMarkdown: """
+                         The four, in the order of the Hijri year:
+                         1. **Muharram (مُحَرَّم)**: the first month, and the only one Allah's Messenger (peace and blessings be upon him) called “the month of Allah”
+                         2. **Rajab (رَجَب)**: the seventh, alone between Jumada al-Thaniyah and Shaaban
+                         3. **Dhul-Qadah (ذُو ٱلقَعدَة)**: the eleventh, named for the “sitting” that came with laying down weapons
+                         4. **Dhul-Hijjah (ذُو ٱلحِجَّة)**: the twelfth, the month of Hajj
+                         """)
+                    .font(.body)
+
+                    Text(verbatim: "“Rajab of Mudar” settles which Rajab is meant. The tribe of Mudar kept it in its true place while other tribes shifted it, so the Prophet (peace and blessings be upon him) fixed it to the month Mudar honoured: the one between Jumada al-Thaniyah and Shaaban.")
+                        .font(.body)
+                }
+
+                Section(header: ArticleHeader("WHAT THEIR SANCTITY MEANS")) {
+                    Text(verbatim: "Two things are established. Fighting was forbidden in them, so that pilgrims and traders could travel in safety to Makkah and home again, and the two Hajj months plus the month before and the month after are exactly the window a journey needed. And sin in them is graver than sin outside them.")
+                        .font(.body)
+
+                    Text(verbatim: "Ibn Kathir (may Allah have mercy on him) explains “so do not wrong yourselves during them” to mean: in these months especially, for a sin in a sacred time is heavier, just as a good deed in a sacred time is greater. Qatadah said that wrongdoing in them is a greater burden and a greater sin than wrongdoing in any other month, though wrongdoing is grave in every case.")
+                        .font(.body)
+
+                    Text(verbatim: "This is a warning against sin, not a licence to invent worship. No prayer, no fast, and no gathering is prescribed for a month merely because it is sacred; what is prescribed in them is what the Quran and the Sunnah actually name, and that is set out below.")
+                        .font(.body)
+                }
+
+                Section(header: ArticleHeader("AN-NASI: MOVING THE MONTHS")) {
+                    Text(verbatim: "Before Islam the Arabs would postpone a sacred month when it did not suit a war they wanted to fight, declaring Muharram ordinary that year and making Safar sacred instead, so that the count of four was kept while the months themselves were moved. Allah called this an increase in disbelief.")
+                        .font(.body)
+
+                    ScriptureQuote(text: "“Indeed, the postponing [of restriction within sacred months] is an increase in disbelief by which those who have disbelieved are led [further] astray. They make it lawful one year and unlawful another year to correspond to the number made unlawful by Allah and [thus] make lawful what Allah has made unlawful” (Quran 9:37).", arabic: "إِنَّمَا ٱلنَّسِيٓءُ زِيَادَةٞ فِي ٱلۡكُفۡرِۖ يُضَلُّ بِهِ ٱلَّذِينَ كَفَرُواْ يُحِلُّونَهُۥ عَامٗا وَيُحَرِّمُونَهُۥ عَامٗا لِّيُوَاطِـُٔواْ عِدَّةَ مَا حَرَّمَ ٱللَّهُ فَيُحِلُّواْ مَا حَرَّمَ ٱللَّهُۚ")
+
+                    Text(verbatim: "This is why the Prophet (peace and blessings be upon him) opened his Farewell Sermon by saying that time had come back round to its original state as it was on the day Allah created the heavens and the earth: the months were back in their true places, and they have stayed there since.")
+                        .font(.body)
+                }
+
+                Section(header: ArticleHeader("MUHARRAM AND THE DAY OF ASHURA")) {
+                    Text(verbatim: "Muharram carries the one virtue the Sunnah states outright for a sacred month as a whole. Asked which fast is best after the month of Ramadan, Prophet Muhammad (peace and blessings be upon him) answered:")
+                        .font(.body)
+
+                    ScriptureQuote(text: "“The month of Allah which is called Muharram” (Sunan Ibn Majah 1742; graded sahih by al-Albani, and the same report is in Sahih Muslim 1163).", arabic: "شَهْرُ اللَّهِ الَّذِي تَدْعُونَهُ الْمُحَرَّمَ", dimmed: true)
+
+                    Text(verbatim: "Within it is Ashura, the tenth of Muharram. When Prophet Muhammad (peace and blessings be upon him) came to Madinah he found the Jews fasting it, because it was the day Allah saved Musa and the Children of Israel from their enemy, and he said:")
+                        .font(.body)
+
+                    ScriptureQuote(text: "“We have more claim over Moses than you” (Sahih al-Bukhari 2004).", arabic: "فَأَنَا أَحَقُّ بِمُوسَى مِنْكُمْ", dimmed: true)
+
+                    Text(verbatim: "He fasted it and told the Muslims to fast it, and he named its reward:")
+                        .font(.body)
+
+                    ScriptureQuote(text: "“...and I seek from Allah that fasting on the day of Ashura may atone for the sins of the preceding year” (Sahih Muslim 1162).", arabic: "وَصِيَامُ يَوْمِ عَاشُورَاءَ أَحْتَسِبُ عَلَى اللَّهِ أَنْ يُكَفِّرَ السَّنَةَ الَّتِي قَبْلَهُ", dimmed: true)
+
+                    Text(verbatim: "In the last year of his life he intended to add the ninth, to differ from the People of the Book:")
+                        .font(.body)
+
+                    ScriptureQuote(text: "“If I live until next year, I will fast the ninth day (of Muharram) too” (Sunan Ibn Majah 1736; graded sahih by al-Albani, and the same report is in Sahih Muslim 1134).", arabic: "لَئِنْ بَقِيتُ إِلَى قَابِلٍ لأَصُومَنَّ الْيَوْمَ التَّاسِعَ", dimmed: true)
+
+                    Text(verbatim: "He died before that year came, so the scholars hold it recommended to fast the ninth with the tenth. What is not from the Sunnah is anything else built onto this day: no mourning, no celebration, no special dish, no gathering. The day is a fast, and that is all that was given.")
+                        .font(.body)
+                }
+
+                Section(header: ArticleHeader("DHUL-HIJJAH AND ITS FIRST TEN DAYS")) {
+                    Text(verbatim: "Dhul-Hijjah opens with the ten days about which Prophet Muhammad (peace and blessings be upon him) said:")
+                        .font(.body)
+
+                    ScriptureQuote(text: "“No good deeds done on other days are superior to those done on these (first ten days of Dhul Hijja)” (Sahih al-Bukhari 969).", arabic: "مَا الْعَمَلُ فِي أَيَّامِ الْعَشْرِ أَفْضَلَ مِنَ الْعَمَلِ فِي هَذِهِ", dimmed: true)
+
+                    Text(verbatim: "The ninth is the Day of Arafah, whose fast the Prophet (peace and blessings be upon him) said he hoped would atone for the year before it and the year after it, for anyone not standing at Arafah. The tenth is the Day of Sacrifice, Eid al-Adha, and it is not fasted. Hajj itself falls in this month, which is why Dhul-Qadah before it and Muharram after it are sacred alongside it.")
+                        .font(.body)
+                }
+
+                Section(header: ArticleHeader("WHAT IS NOT ESTABLISHED IN RAJAB")) {
+                    Text(verbatim: "Rajab is a sacred month, and nothing beyond that is authentically reported about it. Ibn Hajar al-Asqalani (may Allah have mercy on him) wrote a treatise on exactly this question, Tabyin al-Ajab bima Warada fi Fadl Rajab, and concluded that no sound hadith fit to use as evidence exists on the virtue of Rajab, on fasting it specifically, or on praying a particular prayer in it.")
+                        .font(.body)
+
+                    Text(articleMarkdown: """
+                         So the following have no authentic basis and are not from the Sunnah:
+                         - **Salat ar-Ragha’ib** on the first Friday night of Rajab, which scholars including an-Nawawi and Ibn as-Salah declared a rejected innovation
+                         - Fasting Rajab in full, or singling out its days for fasting because it is Rajab
+                         - The **Umrah of Rajab** as a special act; Aishah (may Allah be pleased with her) denied that the Prophet (peace and blessings be upon him) ever performed Umrah in Rajab
+                         - Celebrating the twenty-seventh night as the night of al-Isra wal-Miraj; the date itself is not established, and no worship was legislated for it
+                         - The **Atirah**, a sacrifice offered in Rajab in the days of ignorance, which Islam abolished
+                         """)
+                    .font(.body)
+
+                    Text(verbatim: "None of this diminishes the month. It means the honour Allah gave it is the honour it has, and adding to it is not devotion but innovation. Whoever fasts Mondays and Thursdays, or the three white days, and those days fall in Rajab, is doing what the Sunnah already asks, and there is nothing wrong with that.")
+                        .font(.body)
+                }
+
+                Section(header: ArticleHeader("IN SUMMARY")) {
+                    Text(verbatim: "Four months of the twelve are sacred by Allah's decree: Dhul-Qadah, Dhul-Hijjah, Muharram, and Rajab. Fighting in them was forbidden, sin in them is heavier, and moving them, as the Arabs once did, was called an increase in disbelief. What is legislated in them is what the texts name: the fast of Ashura in Muharram, and the ten days, Arafah, and Hajj in Dhul-Hijjah. What is not named, above all in Rajab, is left alone.")
+                        .font(.body)
+                }
+
+                Section(header: ArticleHeader("KEY TERMS")) {
+                    Text(articleMarkdown: "**Al-Ashhur al-Hurum (ٱلأَشهُر ٱلحُرُم)**: “the sacred months,” the four Allah set apart in Quran 9:36. Hurum is the plural of haram, meaning inviolable: the same root as the Haram of Makkah and as ihram, the sacred state of a pilgrim.")
+                        .font(.body)
+
+                    Text(articleMarkdown: "**An-Nasi (ٱلنَّسِيء)**: “postponement,” the pre-Islamic practice of shifting a sacred month to a different month so that a war could be fought on time, condemned in Quran 9:37.")
+                        .font(.body)
+
+                    Text(articleMarkdown: "**Ashura (عَاشُورَاء)**: the tenth of Muharram, from ashr, ten. The day Allah saved Musa (peace be upon him) and his people; its fast expiates the year before it.")
+                        .font(.body)
+
+                    Text(articleMarkdown: "**Atirah (عَتِيرَة)**: a sheep the Arabs slaughtered in Rajab for their idols or their customs. Islam abolished it.")
+                        .font(.body)
+
+                    Text(articleMarkdown: "**Rajab of Mudar**: the Rajab kept in its true place by the tribe of Mudar, named by the Prophet (peace and blessings be upon him) so that no one could mistake which month was meant.")
+                        .font(.body)
+                }
+
+                ArticleSourcesSection(article: "SacredMonthsView")
+            }
+            .themedListRowBackground()
+        }
+        .navigationTitle("The Sacred Months")
+        .selectableArticleList(article: "SacredMonthsView")
+    }
+}
+
+struct MoonSightingView: View {
+    var body: some View {
+        List {
+            Group {
+                Section(header: ArticleHeader("SUMMARY")) {
+                    Text(verbatim: "In short: a Hijri month begins when the new crescent is sighted, and if it cannot be seen the month before is completed as thirty days. Sighting, not calculation, is what the Sunnah made the sign.")
+                        .font(.body)
+                }
+
+                Section(header: ArticleHeader("OVERVIEW")) {
+                    Text(verbatim: "A lunar month is the moon's full circuit, a little over twenty-nine and a half days, so a Hijri month is always either twenty-nine or thirty days and never a fixed number. Allah made the moon itself the clock:")
+                        .font(.body)
+
+                    ScriptureQuote(text: "“It is He who made the sun a shining light and the moon a derived light and determined for it phases - that you may know the number of years and account [of time]” (Quran 10:5).", arabic: "هُوَ ٱلَّذِي جَعَلَ ٱلشَّمۡسَ ضِيَآءٗ وَٱلۡقَمَرَ نُورٗا وَقَدَّرَهُۥ مَنَازِلَ لِتَعۡلَمُواْ عَدَدَ ٱلسِّنِينَ وَٱلۡحِسَابَۚ")
+
+                    Text(verbatim: "And when the Companions asked about the crescents themselves, the answer named their purpose:")
+                        .font(.body)
+
+                    ScriptureQuote(text: "“They ask you, [O Muhammad], about the new moons. Say, ‘They are measurements of time for the people and for Hajj.’” (Quran 2:189).", arabic: "يَسۡـَٔلُونَكَ عَنِ ٱلۡأَهِلَّةِۖ قُلۡ هِيَ مَوَٰقِيتُ لِلنَّاسِ وَٱلۡحَجِّۗ")
+                }
+
+                Section(header: ArticleHeader("THE RULE")) {
+                    Text(verbatim: "Prophet Muhammad (peace and blessings be upon him) gave the whole rule in one sentence, and it is the rule for every Hijri month, not for Ramadan alone:")
+                        .font(.body)
+
+                    ScriptureQuote(text: "“Start fasting on seeing the crescent (of Ramadan), and give up fasting on seeing the crescent (of Shawwal), and if the sky is overcast (and you cannot see it), complete thirty days of Sha’ban” (Sahih al-Bukhari 1909).", arabic: "صُومُوا لِرُؤْيَتِهِ، وَأَفْطِرُوا لِرُؤْيَتِهِ، فَإِنْ غُبِّيَ عَلَيْكُمْ فَأَكْمِلُوا عِدَّةَ شَعْبَانَ ثَلاَثِينَ", dimmed: true)
+
+                    Text(verbatim: "The Quran ties the obligation to the same act of witnessing:")
+                        .font(.body)
+
+                    ScriptureQuote(text: "“So whoever sights [the new moon of] the month, let him fast it” (Quran 2:185).", arabic: "فَمَن شَهِدَ مِنكُمُ ٱلشَّهۡرَ فَلۡيَصُمۡهُۖ")
+
+                    Text(verbatim: "So there are two ways a month can begin and no third: the crescent is seen by a trustworthy witness, or the month in progress reaches thirty days and the next one starts by itself. Doubt never begins a month, which is why fasting the “day of doubt” before Ramadan is forbidden.")
+                        .font(.body)
+                }
+
+                Section(header: ArticleHeader("WHY SIGHTING AND NOT CALCULATION")) {
+                    Text(verbatim: "Astronomers can compute the moon's conjunction to the second, and Muslim astronomers could do so early. The Sunnah still tied the month to the eye, and the Prophet (peace and blessings be upon him) said why:")
+                        .font(.body)
+
+                    ScriptureQuote(text: "“We are an illiterate nation; we neither write, nor know accounts. The month is like this and this, i.e. sometimes of 29 days and sometimes of thirty days” (Sahih al-Bukhari 1913).", arabic: "إِنَّا أُمَّةٌ أُمِّيَّةٌ، لاَ نَكْتُبُ وَلاَ نَحْسُبُ الشَّهْرُ هَكَذَا وَهَكَذَا", dimmed: true)
+
+                    Text(verbatim: "The point is not that arithmetic is blameworthy but that the sign Allah gave is one every believer can use, in every century and in every place, with no instrument and no expert. A conjunction is not the same thing as a visible crescent either: the moon can be astronomically new and still be invisible from the earth that evening.")
+                        .font(.body)
+
+                    Text(verbatim: "This is the position of the great body of scholars, and of the Permanent Committee for Scholarly Research and Ifta and Ibn Baz (may Allah have mercy on him) in our own time: calculation may support a sighting, may show that a claimed sighting was impossible, and may tell an observer where to look, but it does not by itself begin or end a month.")
+                        .font(.body)
+                }
+
+                Section(header: ArticleHeader("ONE SIGHTING, OR EACH LAND ITS OWN?")) {
+                    Text(verbatim: "The moon does not rise over the whole earth at once, so a crescent visible in one country may be below the horizon in another. The Companions already faced this. Kurayb saw the crescent of Ramadan in Syria on a Friday night and told Ibn Abbas (may Allah be pleased with them) in Madinah, who had seen it on Saturday night. Ibn Abbas kept to the sighting of Madinah and said: this is how Allah's Messenger (peace and blessings be upon him) commanded us (Sahih Muslim 1087).")
+                        .font(.body)
+
+                    Text(articleMarkdown: """
+                         Two positions have stood since:
+                         - **Each region follows its own sighting** (ikhtilaf al-matali): the view many scholars take from Ibn Abbas's report, and the practice of Ibn Uthaymin (may Allah have mercy on him)
+                         - **One sighting binds all Muslims**: the view that “fast when you see it” addresses the whole ummah, held by Ibn Baz and by the Permanent Committee
+                         """)
+                    .font(.body)
+
+                    Text(verbatim: "Both are the ijtihad of scholars on a question the texts leave open, and neither side declares the other astray. The practical guidance the scholars of both views give is the same: a Muslim fasts, breaks the fast and prays Eid with the Muslims of the land he is in. Unity in the matter is itself part of the worship, and the Prophet (peace and blessings be upon him) said that the fast is the day the people fast and the breaking of the fast is the day the people break it.")
+                        .font(.body)
+                }
+
+                Section(header: ArticleHeader("WHAT DEPENDS ON IT")) {
+                    Text(verbatim: "Almost every dated act of worship hangs on the crescent: the start and end of Ramadan and so the night of Laylat al-Qadr, Zakat al-Fitr and the Eid prayer, the day of Arafah and the day of Sacrifice, the whole timing of Hajj, the day of Ashura, and the hawl (the full lunar year) after which zakah becomes due on wealth.")
+                        .font(.body)
+
+                    Text(verbatim: "This is also why the Hijri date and the Gregorian date drift apart. A lunar year is about eleven days shorter than a solar one, so Ramadan moves back through the seasons and returns to the same season roughly once in every thirty-three years.")
+                        .font(.body)
+                }
+
+                Section(header: ArticleHeader("IN SUMMARY")) {
+                    Text(verbatim: "The month begins with the eye, not the calendar: the crescent is sighted, or thirty days are completed. Calculation serves the sighting and does not replace it. Whether one sighting binds the whole ummah or each land follows its own is a real difference among scholars, and in practice a Muslim keeps the fast and the Eid of the people among whom he lives.")
+                        .font(.body)
+                }
+
+                Section(header: ArticleHeader("KEY TERMS")) {
+                    Text(articleMarkdown: "**Hilal (هِلاَل)**: the new crescent, the thin arc visible shortly after sunset that begins a Hijri month. The plural, ahillah, is the word Quran 2:189 uses.")
+                        .font(.body)
+
+                    Text(articleMarkdown: "**Ruyah (رُؤْيَة)**: sighting with the eye. The phrase of the hadith, li-ruyatihi, means “on account of sighting it.”")
+                        .font(.body)
+
+                    Text(articleMarkdown: "**Ikmal (إِكْمَال)**: “completing,” the fallback when the sky is overcast: finish the current month at thirty days.")
+                        .font(.body)
+
+                    Text(articleMarkdown: "**Ikhtilaf al-matali (ٱخْتِلاَف ٱلمَطَالِع)**: the difference of the places of rising, the reality that a crescent visible in one land may not be visible in another, and the name of the position that each land follows its own sighting.")
+                        .font(.body)
+
+                    Text(articleMarkdown: "**Yawm ash-shakk (يَوْم ٱلشَّكّ)**: the day of doubt, the thirtieth of Shaaban when the crescent was not seen. It is not fasted as Ramadan.")
+                        .font(.body)
+                }
+
+                ArticleSourcesSection(article: "MoonSightingView")
+            }
+            .themedListRowBackground()
+        }
+        .navigationTitle("Sighting the New Month")
+        .selectableArticleList(article: "MoonSightingView")
+    }
+}
+
 struct CompileView: View {
     var body: some View {
         List {

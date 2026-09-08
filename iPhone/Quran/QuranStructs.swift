@@ -88,6 +88,9 @@ struct BookmarkedAyah: Codable, Identifiable, Equatable, Hashable {
     /// The highlighter's color, stored raw (not as the enum) so an unrecognized value degrades to "no
     /// highlight" instead of failing the array's decode - see `AyahHighlightColor.resolve`.
     var highlightRaw: String? = nil
+    /// When the bookmark was made (2026-09-07 on; older rows decode without it), so a bookmark
+    /// anniversary can exist one day (Tilawa Guide, Phase 9 step 8).
+    var createdAt: Date? = nil
 
     var hasNote: Bool {
         !(note?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true)

@@ -212,9 +212,23 @@ struct QuranView: View {
     /// DEBUG builds only.
     @State private var debugOpenThemes = false
     private static let debugWantsThemes = ProcessInfo.processInfo.arguments.contains("-openThemes")
-    /// "-openWordOfDay" pushes today's Word of the Day screen the same way.
-    @State private var debugOpenWordOfDay = false
+    /// "-openWordOfDay" pushes today's Word of the Day screen the same way, through `openWordOfDay`.
     private static let debugWantsWordOfDay = ProcessInfo.processInfo.arguments.contains("-openWordOfDay")
+
+    /// "-openQuranHistory" pushes the History screen on launch, the third headless door under the
+    /// summary (the reader's auto-open is suppressed for it, exactly as for the other two).
+    private static let debugWantsHistory = ProcessInfo.processInfo.arguments.contains("-openQuranHistory")
+    @State private var debugOpenHistory = false
+    #endif
+    /// Pushes today's Word of the Day screen: the summary tile's and row's tap (and DEBUG's
+    /// "-openWordOfDay"). A state push through the List's own destination, not a NavigationLink: a
+    /// link tile picked up the List's chevron and shrank, and a hidden `isActive` link raced the
+    /// mushaf auto-open (see `PushDestination`).
+    @State private var openWordOfDay = false
+    #if os(iOS)
+    /// Whether the Word of the Day corpus is in memory: usually before this view exists (the app-init
+    /// prewarm), else it flips from the task below and the tile or row appears then. See `wordOfTheDay`.
+    @State private var wordOfDayReady = WordOfDayStore.shared.isLoaded
     #endif
     @State private var showReciterPickerSheet = false
     @State private var showReadingHistory = false
@@ -740,12 +754,21 @@ struct QuranView: View {
     private func openFromOutside(surahID: Int, ayahID: Int?) {
         #if os(iOS)
         guard quranData.surah(surahID) != nil else { return }
+        // An explicit first ayah for a whole-surah target: with nil the page reader resumes at the
+        // last-read page, which for another surah is the wrong page under the right header.
+        let route = QuranRoute.ayahs(surahID: surahID, ayah: ayahID ?? 1)
         if usesColumnNavigation {
-            selectQuranRoute(QuranRoute.ayahs(surahID: surahID, ayah: ayahID))
+            selectQuranRoute(route)
             return
         }
-        if #available(iOS 16.0, *) {
-            path = [QuranRoute.ayahs(surahID: surahID, ayah: ayahID)]
+        guard #available(iOS 16.0, *) else { return }
+        if path.isEmpty {
+            path = [route]
+        } else {
+            // Swapping the route in place keeps the reader's own state (the page pager stayed on its
+            // page under the new surah's header): pop everything, then push once the pop has landed.
+            path = []
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { path = [route] }
         }
         #endif
     }
@@ -812,13 +835,25 @@ struct QuranView: View {
         guard let snapshot = await MainActor.run(body: { quranData.verseSearchSnapshot() }) else {
             return nil
         }
-        let scan = Task.detached(priority: .userInitiated) {
+        let scan = Task.detached(priority: AppPerformance.shouldAvoidBroadPrewarm ? .utility : .userInitiated) {
             QuranRankedSearch.search(query, snapshot: snapshot, limit: limit)
         }
         return await withTaskCancellationHandler {
             await scan.value
         } onCancel: {
             scan.cancel()
+        }
+    }
+
+    /// The ranked lane's corpus lanes, built off-main once the verse index is there (a no-op once
+    /// cached): the full tier does this in the post-reveal schedule; the reduced tier here, on the
+    /// search field's focus, the earliest sign a search is coming.
+    private func prewarmRankedLanes() {
+        let quranData = self.quranData
+        Task {
+            for await ready in quranData.$isVerseSearchReady.values where ready { break }
+            guard let snapshot = await MainActor.run(body: { quranData.verseSearchSnapshot() }) else { return }
+            Task.detached(priority: .utility) { QuranRankedSearch.prewarmLanes(snapshot: snapshot) }
         }
     }
 
@@ -993,14 +1028,24 @@ struct QuranView: View {
         .onReceive(AppNavigation.shared.$pendingQuran) { target in
             if let target { openPendingQuranTarget(target) }
         }
+        #if os(iOS)
+        .task {
+            // The Word of the Day corpus lands from the app-init prewarm; a cold root that beat it
+            // gets its tile when it does (one evaluation) instead of parsing the pack in its body.
+            if !wordOfDayReady {
+                await WordOfDayStore.shared.waitUntilLoaded()
+                wordOfDayReady = true
+            }
+        }
+        #endif
         .task {
             prewarmQuranDestinations()
             #if os(iOS)
             // The topic and morphology packs parse off-main here, so a root typed into the search
-            // or a chip under an ayah never waits on a first parse.
+            // or a chip under an ayah never waits on a first parse. (The Word of the Day corpus is
+            // prewarmed at app init, ahead of the under-cover walk this task runs in.)
             QuranTopicsStore.prewarm()
             MorphologyStore.prewarm()
-            WordOfDayStore.prewarm()
             #endif
             // (The cross-language lexicon used to be kicked from here too; it is the app root's
             // post-reveal work now, because this task also runs during the under-cover tab walk.)
@@ -1036,7 +1081,7 @@ struct QuranView: View {
             shouldAutoOpen = shouldAutoOpen || ProcessInfo.processInfo.arguments.contains("-quranListMode")
             // "-openThemes" pushes its own screen the moment the tab appears; a second push from the
             // mushaf auto-open in the same instant was a reproducible crash (see `DebugPushDestination`).
-            if Self.debugWantsThemes || Self.debugWantsWordOfDay { shouldAutoOpen = false }
+            if Self.debugWantsThemes || Self.debugWantsWordOfDay || Self.debugWantsHistory { shouldAutoOpen = false }
             #endif
             // A Sunnah reminder's target is about to open the reader itself (`openPendingQuranTarget`);
             // a second push from the auto-open in the same instant is the crash `-openThemes` hit.
@@ -1181,7 +1226,7 @@ struct QuranView: View {
                 // `NavigationLink(isActive:)` row in the summary list - that row raced the page-mode
                 // auto-open and crashed inside SwiftUI (3 of 6 launches on iOS 26.5).
                 .debugPushDestination(isPresented: $debugOpenThemes) { themesBrowseDestination }
-                .debugPushDestination(isPresented: $debugOpenWordOfDay) { wordOfDayDebugDestination }
+                .debugPushDestination(isPresented: $debugOpenHistory) { quranHistoryDestination }
                 #endif
         }
     }
@@ -1197,11 +1242,21 @@ struct QuranView: View {
         }
     }
 
-    /// Today's Word of the Day, or nil when the pack isn't bundled. O(1) after the first parse
-    /// (`WordOfDayStore.prewarm()` runs it off-main in the tab's launch task).
+    /// The History screen: everything this tab remembers, built lazily like the themes door.
+    private var quranHistoryDestination: some View {
+        LazyDestination {
+            QuranHistoryView { surahID, ayahID in
+                push(surahID: surahID, ayahID: ayahID)
+            }
+        }
+    }
+
+    /// Today's Word of the Day, or nil when the pack isn't bundled or its parse (kicked at app init,
+    /// off-main) has not landed yet: never a parse in this body. `wordOfDayReady` flips from the
+    /// tab's task when a cold root beat the prewarm, and the tile or row appears then.
     private var wordOfTheDay: WordOfDayEntry? {
-        guard WordOfDayStore.isBundled else { return nil }
-        return WordOfDayStore.shared.entry()
+        guard WordOfDayStore.isBundled, wordOfDayReady else { return nil }
+        return WordOfDayStore.shared.entryIfLoaded()
     }
 
     private func wordOfDayDestination(_ word: WordOfDayEntry) -> some View {
@@ -1212,16 +1267,16 @@ struct QuranView: View {
         }
     }
 
-    #if DEBUG
+    /// What `openWordOfDay` pushes: today's word, or a plain notice when the pack isn't bundled (only
+    /// the DEBUG "-openWordOfDay" hook can get there; the tile and row exist only when there is a word).
     @ViewBuilder
-    private var wordOfDayDebugDestination: some View {
+    private var wordOfDayPushedDestination: some View {
         if let word = wordOfTheDay {
             wordOfDayDestination(word)
         } else {
             Text("No Word of the Day pack")
         }
     }
-    #endif
     #endif
 
     @ViewBuilder
@@ -1399,6 +1454,11 @@ struct QuranView: View {
                 .themedListRowBackground()
             }
             .applyConditionalListStyle(disableNowPlayingInset: true)
+            #if os(iOS)
+            // The Word of the Day's push lives on the List itself (a lazy row's destination never fires),
+            // so it works in the iPhone stack and in the iPad split's sidebar column alike.
+            .pushDestination(isPresented: $openWordOfDay) { wordOfDayPushedDestination }
+            #endif
             .compactListSectionSpacing()
             .listSectionIndexVisibilityWhenAvailable(visible: settings.quranSortMode == .juz && searchText.isEmpty)
             // Apple Music-style: the bottom bar minimizes while scrolling down, restores on scroll-up.
@@ -1424,6 +1484,7 @@ struct QuranView: View {
                 // focusing the field is the earliest signal a search is coming.
                 quranData.ensureVerseSearchIndex()
                 prepareQuranSemanticCorpus()
+                prewarmRankedLanes()
             }
             // The one-time vector build finishing mid-query: re-run the pending AI search so the results
             // appear the moment the corpus is ready, without another keystroke.
@@ -1514,8 +1575,11 @@ struct QuranView: View {
             if ProcessInfo.processInfo.arguments.contains("-openThemes") {
                 debugOpenThemes = true
             }
+            if Self.debugWantsHistory {
+                debugOpenHistory = true
+            }
             if ProcessInfo.processInfo.arguments.contains("-openWordOfDay") {
-                debugOpenWordOfDay = true
+                openWordOfDay = true
             }
             #endif
         }
@@ -2146,13 +2210,29 @@ struct QuranView: View {
     }
 
     /// Compact "summary mode": all enabled history items as tappable tiles in a single section.
-    /// Order: Last Read Ayah · Ayah of the Day, then Last Listened Ayah · Last Listened Surah.
+    /// Order: Last Read Ayah · Ayah of the Day, then Last Listened Ayah · Last Listened Surah - and
+    /// the Word of the Day as the closing tile whenever those leave the grid one short of even.
     @ViewBuilder
     private func summaryTilesSection(context: SearchDisplayContext) -> some View {
         let showAyah = settings.showAyahOfTheDay && settings.isAyahOfTheDayHiddenToday == false
         // Every tile gets the tallest tile's natural height (see `SummaryTileHeightKey`) - except at the
         // accessibility text sizes, where the tiles simply take their own.
         let rowHeight = dynamicTypeSize.isAccessibilitySize ? nil : summaryTileHeights.values.max()
+        // What the grid holds right now, resolved once so the Word of the Day can count it: with 1 or 3
+        // history tiles the word takes the empty slot beside them; with 0, 2 or 4 it sits as a row
+        // under the theme door instead (Abu, 2026-09-07) - never a fifth tile alone on its own row,
+        // never a hole beside three.
+        let hasLastRead = settings.saveLastReadAyah && lastReadSurah != nil && lastReadAyah != nil
+        let ayahOfTheDay = showAyah ? ayahOfTheDayPair : nil
+        let lastListenedAyah = settings.saveLastListenedAyah ? lastListenedAyahPair : nil
+        let lastListened = settings.saveLastListenedSurah ? settings.lastListenedSurah : nil
+        let lastListenedSurah = lastListened.flatMap { quranData.surah($0.surahNumber) }
+        let historyTileCount = [hasLastRead, ayahOfTheDay != nil, lastListenedAyah != nil, lastListenedSurah != nil]
+            .filter { $0 }
+            .count
+        let word = settings.showWordOfTheDay ? wordOfTheDay : nil
+        let wordSurah = word.flatMap { quranData.surah($0.surah) }
+        let wordFillsGrid = historyTileCount % 2 == 1
         Section(header:
             HStack(spacing: 8) {
                 Image(systemName: "sparkles")
@@ -2166,7 +2246,7 @@ struct QuranView: View {
                 alignment: .leading,
                 spacing: 10
             ) {
-                if settings.saveLastReadAyah, let lastReadSurah, let lastReadAyah {
+                if hasLastRead, let lastReadSurah, let lastReadAyah {
                     SummaryAyahTile(title: "Last Read Ayah", icon: "book", surah: lastReadSurah, ayah: lastReadAyah, titleColor: settings.accentColor.color,
                                     rowHeight: rowHeight,
                                     isExpanded: summaryHistoryExpansion == .reading,
@@ -2175,7 +2255,7 @@ struct QuranView: View {
                     }
                     .animation(.easeInOut, value: reading.lastReadSurah * 1000 + reading.lastReadAyah)
                 }
-                if showAyah, let pair = ayahOfTheDayPair {
+                if let pair = ayahOfTheDay {
                     SummaryAyahTile(title: "Ayah of the Day", icon: "sparkles", surah: pair.surah, ayah: pair.ayah, titleColor: settings.accentColor.color,
                                     rowHeight: rowHeight,
                                     isExpanded: summaryHistoryExpansion == .ayahOfTheDay,
@@ -2184,17 +2264,7 @@ struct QuranView: View {
                     }
                     .animation(.easeInOut, value: pair.surah.id * 1000 + pair.ayah.id)
                 }
-                #if os(iOS)
-                // A pushed screen, not a `push(surahID:)`: the word's page lists every ayah it
-                // appears in, and each of those pushes the reader from there.
-                if settings.showWordOfTheDay, let word = wordOfTheDay, let wordSurah = quranData.surah(word.surah) {
-                    NavigationLink(destination: wordOfDayDestination(word)) {
-                        SummaryWordTile(word: word, surahName: wordSurah.nameTransliteration, rowHeight: rowHeight)
-                    }
-                    .buttonStyle(.plain)
-                }
-                #endif
-                if settings.saveLastListenedAyah, let pair = lastListenedAyahPair {
+                if let pair = lastListenedAyah {
                     SummaryAyahTile(title: "Last Listened Ayah", icon: "headphones.circle", surah: pair.surah, ayah: pair.ayah, titleColor: settings.accentColor.color,
                                     rowHeight: rowHeight,
                                     isExpanded: summaryHistoryExpansion == .listenedAyah,
@@ -2203,9 +2273,7 @@ struct QuranView: View {
                     }
                     .animation(.easeInOut, value: pair.surah.id * 1000 + pair.ayah.id)
                 }
-                if settings.saveLastListenedSurah,
-                   let last = settings.lastListenedSurah,
-                   let surah = quranData.surah(last.surahNumber) {
+                if let last = lastListened, let surah = lastListenedSurah {
                     SummarySurahTile(title: "Last Listened Surah", icon: "headphones", surah: surah, lastListenedSurah: last, titleColor: settings.accentColor.color,
                                      rowHeight: rowHeight,
                                     isExpanded: summaryHistoryExpansion == .listenedSurah,
@@ -2213,6 +2281,14 @@ struct QuranView: View {
                         push(surahID: surah.id, ayahID: nil)
                     }
                     .animation(.easeInOut, value: last.surahNumber)
+                }
+                if wordFillsGrid, let word, let wordSurah {
+                    // Pushed through `openWordOfDay` rather than `push(surahID:)`: the word's page lists
+                    // every ayah it appears in and pushes the reader itself.
+                    SummaryWordTile(word: word, surahName: wordSurah.nameTransliteration, rowHeight: rowHeight) {
+                        openWordOfDay = true
+                    }
+                    .equatable()
                 }
             }
             .padding(.vertical, 4)
@@ -2230,6 +2306,19 @@ struct QuranView: View {
                     .transition(.opacity)
             }
 
+            // The Word of the Day's row form, ABOVE the doors (Abu, 2026-09-07), when the grid above
+            // is already even. A Button, not a link, so it carries no chevron; same push as the tile.
+            if !wordFillsGrid, let word, let wordSurah {
+                Button {
+                    settings.hapticFeedback()
+                    openWordOfDay = true
+                } label: {
+                    WordOfDayRow(word: word, surahName: wordSurah.nameTransliteration)
+                        .equatable()
+                        .contentShape(Rectangle())
+                }
+            }
+
             if ThematicTopicsStore.isBundled {
                 // (The "-openThemes" launch hook pushes this same screen from `pathNavigation`, never
                 // from a hidden link row here: a zero-height row is still a List row that draws its
@@ -2238,27 +2327,31 @@ struct QuranView: View {
                 // A real push (LazyDestination so the topic corpus isn't touched until it's opened),
                 // not a sheet: on iPhone it takes the whole screen, and in the iPad/Mac split it pushes
                 // in the LEFT column, leaving the reader on the right - the hadith chapter grammar.
+                // No caption under the title: the screen says what it is when it opens (Abu, 2026-09-07).
                 NavigationLink(destination: themesBrowseDestination) {
-                    HStack(spacing: 12) {
-                        AccentIconChip(systemImage: "square.grid.2x2.fill", size: 30)
-
-                        VStack(alignment: .leading, spacing: 1) {
-                            Text("Browse by Theme")
-                                .font(.subheadline.weight(.semibold))
-                                .foregroundColor(.primary)
-
-                            Text("Find ayahs by what they speak about")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                                .lineLimit(1)
-                                .minimumScaleFactor(0.8)
-                        }
-                    }
-                    .padding(.vertical, 3)
+                    summaryDoorLabel(title: "Browse by Theme", systemImage: "square.grid.2x2.fill")
                 }
                 .tint(settings.accentColor.color)
             }
+
+            NavigationLink(destination: quranHistoryDestination) {
+                summaryDoorLabel(title: "History", systemImage: "clock.arrow.circlepath")
+            }
+            .tint(settings.accentColor.color)
         }
+    }
+
+    /// A door row under the summary tiles: the accent chip and the name, nothing else. The screen it
+    /// opens introduces itself in its own first section.
+    private func summaryDoorLabel(title: String, systemImage: String) -> some View {
+        HStack(spacing: 12) {
+            AccentIconChip(systemImage: systemImage, size: 30)
+
+            Text(title)
+                .font(.subheadline.weight(.semibold))
+                .foregroundColor(.primary)
+        }
+        .padding(.vertical, 3)
     }
     #endif
 
@@ -2465,7 +2558,7 @@ struct QuranView: View {
                 accent: settings.accentColor.color,
                 accessibilityName: surah.nameTransliteration
             ) {
-                settings.toggleSurahFavorite(surah: surah.id)
+                settings.toggleSurahFavoriteOrConfirm(surah: surah.id)
             }
             #else
             Button {
@@ -3111,7 +3204,7 @@ struct QuranView: View {
             accent: settings.accentColor.color,
             accessibilityName: surah.nameTransliteration
         ) {
-            settings.toggleSurahFavorite(surah: surah.id)
+            settings.toggleSurahFavoriteOrConfirm(surah: surah.id)
         }
         .id("surah_\(surah.id)")
         .onAppear {
@@ -3340,7 +3433,7 @@ struct QuranView: View {
                 accent: settings.accentColor.color,
                 accessibilityName: surah.nameTransliteration
             ) {
-                settings.toggleSurahFavorite(surah: surah.id)
+                settings.toggleSurahFavoriteOrConfirm(surah: surah.id)
             }
         }
     }
@@ -4358,17 +4451,28 @@ struct QuranView: View {
 
             let (first, more) = await fetchHitsOffMain(query: query, limit: hitPageSize, offset: 0)
             guard !Task.isCancelled else { return }
-            let ranked = await fetchRankedOffMain(query: query, limit: Self.rankedHitLimit)
-            guard !Task.isCancelled else { return }
+            // The exact page lands the moment it is back; the ranked lane (which on a cold index also
+            // builds its corpus lanes) used to hold it until both were done (Tilawa Guide, Phase 4).
             await MainActor.run {
                 guard query == searchText.trimmingCharacters(in: .whitespacesAndNewlines) else { return }
                 // NOT animated - like every other searchText-driven List mutation (see the SearchBar
                 // binding note): the keyword and AI pipelines land in separate passes, and an animated
                 // apply racing another in-flight animated diff is the collection-view assertion crash.
                 prewarmHighlightCaches(for: first)
-                if let ranked { prewarmHighlightCaches(for: ranked.hits) }
                 verseHits = dedupedHits(first)
                 hasMoreHits = more
+                rankedOutcome = nil
+            }
+            // The reduced tier runs the lane only where the exact list cannot answer alone: two or
+            // more words, or a single word the exact scan found nothing for (a likely typo).
+            if AppPerformance.shouldAvoidBroadPrewarm, !first.isEmpty,
+               query.split(whereSeparator: { $0.isWhitespace }).count < 2 { return }
+            guard !Task.isCancelled else { return }
+            let ranked = await fetchRankedOffMain(query: query, limit: Self.rankedHitLimit)
+            guard !Task.isCancelled else { return }
+            await MainActor.run {
+                guard query == searchText.trimmingCharacters(in: .whitespacesAndNewlines) else { return }
+                if let ranked { prewarmHighlightCaches(for: ranked.hits) }
                 rankedOutcome = ranked
             }
         }

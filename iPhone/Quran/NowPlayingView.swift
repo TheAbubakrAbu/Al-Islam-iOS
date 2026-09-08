@@ -15,7 +15,6 @@ struct NowPlayingView: View {
     @Binding private var searchText: String
     private let onOpenPlayback: ((PlaybackContext) -> Void)?
 
-    @State private var confirmRemoveNote = false
     @State private var confirmClearQueue = false
     /// Last real playback context, kept so the bar can stay mounted (hidden) after playback stops - tearing
     /// it down inside the stop action was cancelling "Stop Playing". A reference box under `@State`, not a
@@ -356,18 +355,6 @@ struct NowPlayingView: View {
         // no longer wraps the toggle in a global `withAnimation` (that animated the whole List - squishing
         // rows and resetting the Quran scroll), so there's no longer a second animation to fight with.
         .animation(.easeInOut, value: isExpanded)
-        .confirmationDialog(Settings.bookmarkNoteRemovalDialogTitle, isPresented: $confirmRemoveNote, titleVisibility: .visible) {
-            Button("Remove", role: .destructive) {
-                let surah = nowPlaying.currentSurahNumber ?? 1
-                let ayah = nowPlaying.currentAyahNumber ?? 1
-
-                settings.hapticFeedback()
-                settings.toggleBookmark(surah: surah, ayah: ayah)
-            }
-            Button("Cancel") {}
-        } message: {
-            Text(Settings.bookmarkNoteRemovalDialogMessage)
-        }
         #else
         VStack(alignment: .center, spacing: 6) {
             titleBlock(expanded: false)
@@ -525,13 +512,12 @@ struct NowPlayingView: View {
         .tint(.secondary)
     }
 
-    private func toggleBookmarkWithNoteGuard() {
-        let surah = nowPlaying.currentSurahNumber ?? 1
-        let ayah = nowPlaying.currentAyahNumber ?? 1
-
-        if !settings.toggleBookmarkIfNoNoteLoss(surah: surah, ayah: ayah) {
-            confirmRemoveNote = true
-        }
+    /// Bookmarks the playing ayah, or asks before removing its bookmark (`Settings.toggleBookmarkOrConfirm`).
+    private func toggleBookmarkOrConfirm() {
+        settings.toggleBookmarkOrConfirm(
+            surah: nowPlaying.currentSurahNumber ?? 1,
+            ayah: nowPlaying.currentAyahNumber ?? 1
+        )
     }
 
     /// The ±10s seek pair, as a palette-style row at the top of the compact player's context menu.
@@ -613,7 +599,7 @@ struct NowPlayingView: View {
 
         Button(role: isFavorite ? .destructive : nil) {
             settings.hapticFeedback()
-            settings.toggleSurahFavorite(surah: context.surah.id)
+            settings.toggleSurahFavoriteOrConfirm(surah: context.surah.id)
         } label: {
             Label(
                 isFavorite ? "Unfavorite Surah" : "Favorite Surah",
@@ -623,7 +609,7 @@ struct NowPlayingView: View {
 
         Button(role: isBookmarked ? .destructive : nil) {
             settings.hapticFeedback()
-            toggleBookmarkWithNoteGuard()
+            toggleBookmarkOrConfirm()
         } label: {
             Label(
                 isBookmarked ? "Unbookmark Ayah" : "Bookmark Ayah",

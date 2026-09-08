@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build Resources/Data/Hadith/HadeethEnc.json.xz from Tilawa's HadeethEnc dataset.
+"""Build Resources/Data/Hadith/HadeethEnc.henc from Tilawa's HadeethEnc dataset.
 
     ./Scripts/build_hadeethenc_pack.py [/path/to/Tilawa]
 
@@ -13,9 +13,22 @@ explanation and benefits) has its em dashes re-punctuated by `soften_dashes` bel
 or parentheses in the dash's place, no word added or removed (the app never shows an em dash;
 Abu's rule, 2026-09-07).
 
+The pack (version 2, Tilawa Guide decision A, 2026-09-07) is a small container the app reads
+on demand instead of one 14 MB JSON parsed at the door:
+
+    "HENC" u16 version=2 u16 entriesPerBlock u32 headerXZ u32 headerRaw u32 blocks u32 entries u32 tree
+    block table: blocks x (u32 firstEntry, u32 offset, u32 compressed, u32 raw); offsets from the payload start
+    header (xz): two string tables, the topic tree then the light entries (id, topics, English title,
+                 intro, grade, attribution): everything the door and the lists show
+    payload: one xz string table per block of `entriesPerBlock` full narrations, in id order
+
+A string table is `u32 records`, each `u32 fields` then fields of `u32 length` + UTF-8. No JSON in
+the app's path; `HadeethEncStore` (iPhone/Hadith/HadeethEncView.swift) is the reader, `read_pack`
+below the Python twin (Scripts/verify_tilawa_packs.py uses it).
+
 Node decodes the brotli files (Python ships no brotli); pass the Tilawa checkout.
 """
-import json, lzma, re, subprocess, sys
+import json, lzma, re, struct, subprocess, sys
 from pathlib import Path
 
 # MARK: - Em dashes in the commentary
@@ -178,7 +191,118 @@ def soften(text: str) -> str:
 ROOT = Path(__file__).resolve().parent.parent
 TILAWA = Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT.parent / "Tilawa"
 SRC = TILAWA / "api/data/hadeethenc"
-OUT = ROOT / "Resources/Data/Hadith/HadeethEnc.json.xz"
+OUT = ROOT / "Resources/Data/Hadith/HadeethEnc.henc"
+MAGIC = b"HENC"
+VERSION = 2
+ENTRIES_PER_BLOCK = 128
+UNIT = "\x1f"   # joins a benefits list inside one field
+HEADER = "<4sHHIIIII"
+BLOCK_ROW = "<IIII"
+
+# The field order of a full narration inside a block; `HadeethEncStore.parseBlock` reads it by index.
+FULL_FIELDS = (
+    ("id",), ("cats",),
+    ("ar", "title"), ("ar", "intro"), ("ar", "body"), ("ar", "explanation"), ("ar", "benefits"),
+    ("ar", "attribution"), ("ar", "grade"), ("ar", "reference"),
+    ("en", "title"), ("en", "intro"), ("en", "body"), ("en", "explanation"), ("en", "benefits"),
+    ("en", "attribution"), ("en", "grade"),
+)
+
+
+def xz(raw: bytes) -> bytes:
+    return lzma.compress(raw, format=lzma.FORMAT_XZ, preset=9 | lzma.PRESET_EXTREME)
+
+
+def string_table(records) -> bytes:
+    out = bytearray(struct.pack("<I", len(records)))
+    for record in records:
+        out += struct.pack("<I", len(record))
+        for field in record:
+            data = str(field).encode("utf-8")
+            out += struct.pack("<I", len(data)) + data
+    return bytes(out)
+
+
+def full_record(entry: dict) -> list[str]:
+    record = []
+    for path in FULL_FIELDS:
+        if path == ("id",):
+            record.append(entry["id"])
+        elif path == ("cats",):
+            record.append(",".join(entry["cats"]))
+        else:
+            value = entry[path[0]].get(path[1], "")
+            if path[1] == "benefits":
+                assert all(UNIT not in b for b in value), entry["id"]
+                value = UNIT.join(value)
+            record.append(value)
+    return record
+
+
+def write_pack(tree: list[dict], entries: list[dict], out: Path = OUT, per_block: int = ENTRIES_PER_BLOCK) -> dict:
+    tree_rows = [[n["id"], n.get("parent") or "", n["en"], n["ar"], n["direct"], n["total"]] for n in tree]
+    light_rows = [[e["id"], ",".join(e["cats"]), e["en"]["title"], e["en"]["intro"], e["en"]["grade"], e["en"]["attribution"]]
+                  for e in entries]
+    header_raw = string_table(tree_rows) + string_table(light_rows)
+    header_xz = xz(header_raw)
+    table, payload = [], bytearray()
+    for start in range(0, len(entries), per_block):
+        raw = string_table([full_record(e) for e in entries[start:start + per_block]])
+        compressed = xz(raw)
+        table.append((start, len(payload), len(compressed), len(raw)))
+        payload += compressed
+    head = struct.pack(HEADER, MAGIC, VERSION, per_block, len(header_xz), len(header_raw), len(table), len(entries), len(tree))
+    out.write_bytes(head + b"".join(struct.pack(BLOCK_ROW, *row) for row in table) + header_xz + bytes(payload))
+    return {"blocks": len(table), "header_raw": len(header_raw), "header_xz": len(header_xz),
+            "payload": len(payload), "bytes": out.stat().st_size}
+
+
+def read_table(raw: bytes, pos: int) -> tuple[list[list[str]], int]:
+    (count,) = struct.unpack_from("<I", raw, pos)
+    pos += 4
+    records = []
+    for _ in range(count):
+        (fields,) = struct.unpack_from("<I", raw, pos)
+        pos += 4
+        record = []
+        for _ in range(fields):
+            (length,) = struct.unpack_from("<I", raw, pos)
+            pos += 4
+            record.append(raw[pos:pos + length].decode("utf-8"))
+            pos += length
+        records.append(record)
+    return records, pos
+
+
+def read_pack(path: Path = OUT) -> dict:
+    """The pack as {"tree": [...], "entries": [light rows], "full": [full entries]} through the same
+    layout the app reads, for the verifier and for the self-check below."""
+    data = path.read_bytes()
+    magic, version, per_block, header_xz, header_raw, blocks, entry_count, tree_count = struct.unpack_from(HEADER, data, 0)
+    assert magic == MAGIC and version == VERSION, (magic, version)
+    pos = struct.calcsize(HEADER)
+    table = [struct.unpack_from(BLOCK_ROW, data, pos + i * struct.calcsize(BLOCK_ROW)) for i in range(blocks)]
+    pos += blocks * struct.calcsize(BLOCK_ROW)
+    header = lzma.decompress(data[pos:pos + header_xz])
+    assert len(header) == header_raw
+    payload_start = pos + header_xz
+    tree, cursor = read_table(header, 0)
+    light, cursor = read_table(header, cursor)
+    assert len(tree) == tree_count and len(light) == entry_count, (len(tree), len(light))
+    full = []
+    for first, offset, compressed, raw_len in table:
+        raw = lzma.decompress(data[payload_start + offset:payload_start + offset + compressed])
+        assert len(raw) == raw_len
+        rows, _ = read_table(raw, 0)
+        assert len(full) == first
+        for row in rows:
+            entry = {"id": row[0], "cats": row[1].split(",") if row[1] else [], "ar": {}, "en": {}}
+            for path, value in zip(FULL_FIELDS[2:], row[2:]):
+                entry[path[0]][path[1]] = value.split(UNIT) if path[1] == "benefits" and value else ([] if path[1] == "benefits" else value)
+            full.append(entry)
+    return {"version": version, "entriesPerBlock": per_block, "tree": [
+        {"id": r[0], "parent": r[1] or None, "en": r[2], "ar": r[3], "direct": int(r[4]), "total": int(r[5])} for r in tree],
+        "entries": light, "full": full}
 
 
 def decode(name: str):
@@ -234,15 +358,16 @@ def main():
             },
         })
     entries.sort(key=lambda e: int(e["id"]))
-    pack = {
-        "version": 1,
-        "source": "hadeethenc.com (the Hadith Encyclopedia), via Tilawa's build of 2026-09-05",
-        "tree": tree,
-        "entries": entries,
-    }
-    raw = json.dumps(pack, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
-    OUT.write_bytes(lzma.compress(raw, format=lzma.FORMAT_XZ, preset=9 | lzma.PRESET_EXTREME))
-    print(f"{len(entries)} hadiths, {len(tree)} categories; {len(raw):,} bytes raw -> {OUT.stat().st_size:,} bytes xz")
+    # Source: hadeethenc.com (the Hadith Encyclopedia), via Tilawa's build of 2026-09-05.
+    sizes = write_pack(tree, entries)
+    back = read_pack()
+    assert [e["id"] for e in back["full"]] == [e["id"] for e in entries]
+    assert all(a["en"]["body"] == b["en"]["body"] and a["ar"]["body"] == b["ar"]["body"] and a["en"]["benefits"] == b["en"]["benefits"]
+               for a, b in zip(back["full"], entries))
+    assert [n["id"] for n in back["tree"]] == [n["id"] for n in tree]
+    print(f"{len(entries)} hadiths, {len(tree)} categories; {sizes['blocks']} blocks of {ENTRIES_PER_BLOCK}, "
+          f"header {sizes['header_raw']:,} -> {sizes['header_xz']:,} bytes, payload {sizes['payload']:,} bytes, "
+          f"{sizes['bytes']:,} bytes at {OUT}")
 
 
 if __name__ == "__main__":

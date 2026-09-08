@@ -1027,6 +1027,7 @@ extension Settings {
         guard isHafsDisplay else { return }
         let key = khatmKey(surah: surah, ayah: ayah)
         guard khatmCompletedAyahSetCache.insert(key).inserted else { return }
+        ActivityLog.shared.record(.read)
         khatmCompletedAyahIntCache.insert(Self.khatmIntKey(surah: surah, ayah: ayah))
         khatmCompletedSurahCountsCache[surah, default: 0] += 1
         if immediate { objectWillChange.send() }
@@ -1060,9 +1061,6 @@ extension Settings {
         return khatmCompletedAyahSetCache.count
     }
 
-    static let bookmarkNoteRemovalDialogTitle = "Remove bookmark and delete note?"
-    static let bookmarkNoteRemovalDialogMessage = "This ayah has a note. Unbookmarking will delete the note."
-
     func bookmarkIndex(surah: Int, ayah: Int) -> Int? {
         bookmarkLookup["\(surah)-\(ayah)"]
     }
@@ -1086,23 +1084,13 @@ extension Settings {
             if let index = bookmarkIndex(surah: surah, ayah: ayah) {
                 bookmarkedAyahs.remove(at: index)
             } else {
-                bookmarkedAyahs.append(BookmarkedAyah(surah: surah, ayah: ayah))
+                bookmarkedAyahs.append(BookmarkedAyah(surah: surah, ayah: ayah, createdAt: Date()))
             }
         }
     }
 
     func isBookmarked(surah: Int, ayah: Int) -> Bool {
         bookmarkIndex(surah: surah, ayah: ayah) != nil
-    }
-
-    @discardableResult
-    func toggleBookmarkIfNoNoteLoss(surah: Int, ayah: Int) -> Bool {
-        guard !(isBookmarked(surah: surah, ayah: ayah) && bookmarkHasNote(surah: surah, ayah: ayah)) else {
-            return false
-        }
-
-        toggleBookmark(surah: surah, ayah: ayah)
-        return true
     }
 
     func ensureBookmarkExists(surah: Int, ayah: Int) {
@@ -1120,7 +1108,7 @@ extension Settings {
                 bookmark.note = storedNote
                 bookmarkedAyahs[index] = bookmark
             } else {
-                bookmarkedAyahs.append(BookmarkedAyah(surah: surah, ayah: ayah, note: storedNote))
+                bookmarkedAyahs.append(BookmarkedAyah(surah: surah, ayah: ayah, note: storedNote, createdAt: Date()))
             }
         }
     }
@@ -1149,7 +1137,7 @@ extension Settings {
                 bookmark.highlight = color
                 bookmarkedAyahs[index] = bookmark
             } else if let color {
-                bookmarkedAyahs.append(BookmarkedAyah(surah: surah, ayah: ayah, highlightRaw: color.rawValue))
+                bookmarkedAyahs.append(BookmarkedAyah(surah: surah, ayah: ayah, highlightRaw: color.rawValue, createdAt: Date()))
             }
         }
     }
@@ -1291,7 +1279,7 @@ extension Settings {
 
     /// True when the user tapped "Hide for Today" on the Ayah of the Day card for the current day.
     var isAyahOfTheDayHiddenToday: Bool {
-        ayahOfTheDayHiddenDate == Self.dayKey()
+        ayahOfTheDayHiddenDate == dailyDayKey()
     }
 
     /// Words that keep an ayah/hadith out of the daily rotations - not because anything is wrong with
@@ -1362,7 +1350,8 @@ extension Settings {
         let refs = Self.gentleAyahRefs(data)
         guard !refs.isEmpty else { return nil }
 
-        let day = UInt64(bitPattern: Int64(date.timeIntervalSince1970 / 86_400))
+        // The daily-rollover day (Fajr by default), shared with every other "of the day" feature.
+        let day = UInt64(bitPattern: Int64(dailyDayIndex(for: date)))
         // Knuth multiplicative hash (UInt64 to stay valid on 32-bit Int platforms like older watchOS).
         let index = Int((day &* 2_654_435_761) % UInt64(refs.count))
         return refs[index]
@@ -1372,7 +1361,7 @@ extension Settings {
     /// and ignored.
     private func ayahOfTheDayOverrideRef(for date: Date) -> (surahID: Int, ayahID: Int)? {
         let parts = ayahOfTheDayOverride.split(separator: "|")
-        guard parts.count == 3, String(parts[0]) == Self.dayKey(date),
+        guard parts.count == 3, String(parts[0]) == dailyDayKey(for: date),
               let surahID = Int(parts[1]), let ayahID = Int(parts[2]) else { return nil }
         return (surahID, ayahID)
     }
@@ -1394,7 +1383,7 @@ extension Settings {
         }
         guard let pick else { return }
 
-        ayahOfTheDayOverride = "\(Self.dayKey())|\(pick.surahID)|\(pick.ayahID)"
+        ayahOfTheDayOverride = "\(dailyDayKey())|\(pick.surahID)|\(pick.ayahID)"
         refreshQuranWidgets(.ayahOfTheDay)
     }
 
@@ -1465,7 +1454,7 @@ extension Settings {
                 snapshot.ayahOfTheDay = quranWidgetAyahCard(surah: surah, ayah: ayah)
                 // Stamp which day this card is for, so the widget stops showing it once the day rolls over
                 // and falls back to its own daily rotation instead of a days-old "Ayah of the Day".
-                snapshot.ayahOfTheDayDay = QuranWidgetSnapshot.dayBucket()
+                snapshot.ayahOfTheDayDay = dailyDayIndex()
             }
             kinds.append("RandomAyahWidget")
         }
@@ -1477,6 +1466,7 @@ extension Settings {
             if !kinds.contains("RandomAyahWidget") { kinds.append("RandomAyahWidget") }
         }
 
+        snapshot.fajrByDay = fajrTable()
         QuranWidgetStore.save(snapshot)
         // Only the kinds whose card changed (and only the placed ones): this runs on every settled
         // surah change, and reloading the Adhan widgets too (reloadAllTimelines) burned their WidgetKit
@@ -1496,14 +1486,14 @@ extension Settings {
         }
         if snapshot.randomPool.isEmpty || snapshot.randomPool.contains(where: { $0.fontName == nil }) {
             refreshQuranWidgets(.all)
-        } else if showAyahOfTheDay, snapshot.ayahOfTheDayDay != QuranWidgetSnapshot.dayBucket() {
+        } else if showAyahOfTheDay, snapshot.ayahOfTheDayDay != dailyDayIndex() {
             refreshQuranWidgets(.ayahOfTheDay)
         }
     }
 
     /// Builds a widget ayah card with the Arabic rendered per the user's display settings (clean text /
     /// dots) and tagged with the selected Arabic font so the widget can match the in-app look.
-    private func quranWidgetAyahCard(surah: Surah, ayah: Ayah) -> QuranWidgetSnapshot.AyahCard {
+    func quranWidgetAyahCard(surah: Surah, ayah: Ayah) -> QuranWidgetSnapshot.AyahCard {
         let arabic = ayah.displayArabicText(surahId: surah.id, clean: cleanArabicText)
         return QuranWidgetSnapshot.AyahCard(
             arabic: arabic,

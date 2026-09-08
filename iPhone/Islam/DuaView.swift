@@ -1072,7 +1072,6 @@ final class HisnDuasStore: @unchecked Sendable {
         let arabic: String
         let subtitle: String
         let icon: String
-        let tint: String
         let entryIDs: [String]
         let categoryNumbers: [String]
 
@@ -1166,15 +1165,22 @@ final class HisnDuasStore: @unchecked Sendable {
     /// The day's dua, rotating through the whole book.
     func duaOfTheDay() -> Entry? {
         guard let library = loaded(), !library.entries.isEmpty else { return nil }
-        let day = Int(Date().timeIntervalSince1970 / 86_400)
+        // The daily-rollover day (Fajr by default), shared with every other "of the day" feature.
+        let day = Settings.shared.dailyDayIndex()
         return library.entries[((day * 7) % library.entries.count + library.entries.count) % library.entries.count]
     }
 
     private static func load() -> Library? {
-        guard let url = packURL,
-              let blob = try? Data(contentsOf: url),
-              let json = SolidPack.xzDecompress(blob),
-              let root = try? JSONSerialization.jsonObject(with: json) as? [String: Any] else { return nil }
+        PackTrace.measure("HisnDuas") { () -> (result: Library?, bytes: Int) in
+            guard let url = packURL,
+                  let blob = try? Data(contentsOf: url),
+                  let json = SolidPack.xzDecompress(blob) else { return (nil, 0) }
+            return (parse(json), json.count)
+        }
+    }
+
+    private static func parse(_ json: Data) -> Library? {
+        guard let root = (try? JSONSerialization.jsonObject(with: json)) as? [String: Any] else { return nil }
         let categories = (root["categories"] as? [[String: Any]] ?? []).compactMap { row -> Category? in
             guard let id = row["id"] as? String, let label = row["label"] as? String else { return nil }
             return Category(id: id, number: row["number"] as? String ?? "", label: label,
@@ -1184,7 +1190,7 @@ final class HisnDuasStore: @unchecked Sendable {
             guard let id = row["id"] as? String, let label = row["label"] as? String else { return nil }
             return Collection(id: id, label: label, arabic: row["arabic"] as? String ?? "",
                               subtitle: row["subtitle"] as? String ?? "", icon: row["icon"] as? String ?? "",
-                              tint: row["tint"] as? String ?? "", entryIDs: row["entryIds"] as? [String] ?? [],
+                              entryIDs: row["entryIds"] as? [String] ?? [],
                               categoryNumbers: row["categoryNumbers"] as? [String] ?? [])
         }
         let entries = (root["entries"] as? [[String: Any]] ?? []).compactMap { row -> Entry? in
@@ -1214,8 +1220,11 @@ final class HisnDuaPlayer: ObservableObject {
     @Published private(set) var isLoading = false
     private var player: AVPlayer?
     private var endObserver: Any?
+    private var statusObservation: NSKeyValueObservation?
 
-    private init() {}
+    private init() {
+        ObjectPublishCounter.attach(self, label: "HisnDuaPlayer")
+    }
 
     func toggle(_ url: URL) {
         if playingURL == url {
@@ -1223,9 +1232,8 @@ final class HisnDuaPlayer: ObservableObject {
             return
         }
         stop()
-        // Recitation plays through the shared session the Quran player configured; a dua is short.
-        try? AVAudioSession.sharedInstance().setCategory(.playback, mode: .default, options: [])
-        try? AVAudioSession.sharedInstance().setActive(true)
+        // A playing surah pauses and the qiraat clip stops first (`AuxiliaryAudio`); a dua is short.
+        AuxiliaryAudio.prepareToPlay(stopping: { QiraatClipPlayer.shared.stop() })
         let item = AVPlayerItem(url: url)
         let player = AVPlayer(playerItem: item)
         self.player = player
@@ -1234,11 +1242,16 @@ final class HisnDuaPlayer: ObservableObject {
         endObserver = NotificationCenter.default.addObserver(forName: .AVPlayerItemDidPlayToEndTime, object: item, queue: .main) { [weak self] _ in
             Task { @MainActor in self?.stop() }
         }
-        player.play()
-        Task { @MainActor [weak self] in
-            try? await Task.sleep(nanoseconds: 800_000_000)
-            self?.isLoading = false
+        // The spinner follows the item's status (a fixed 0.8 s used to clear it while a slow stream
+        // was still buffering, and hold it after a fast one had begun).
+        statusObservation = item.observe(\.status, options: [.new]) { [weak self] item, _ in
+            Task { @MainActor in
+                guard let self, self.player?.currentItem === item else { return }
+                if item.status == .failed { self.stop() }
+                if item.status == .readyToPlay { self.isLoading = false }
+            }
         }
+        player.play()
     }
 
     func stop() {
@@ -1246,6 +1259,7 @@ final class HisnDuaPlayer: ObservableObject {
         player = nil
         playingURL = nil
         isLoading = false
+        statusObservation = nil
         if let endObserver { NotificationCenter.default.removeObserver(endObserver) }
         endObserver = nil
     }
@@ -1284,6 +1298,11 @@ struct HisnDuaLibraryView: View {
     @ObservedObject private var settings = Settings.shared
     @State private var searchText = ""
     @State private var library: HisnDuasStore.Library?
+    /// The situations and duas matching the settled query: from `.onChange` (150 ms after the last
+    /// keystroke) and the library's arrival, never from the body, which re-folded every row per evaluation.
+    @State private var shownCategories: [HisnDuasStore.Category] = []
+    @State private var shownMatches: [HisnDuasStore.Entry] = []
+    @State private var filterTask: Task<Void, Never>?
 
     private var accent: Color { settings.accentColor.color }
     private var query: String {
@@ -1318,6 +1337,7 @@ struct HisnDuaLibraryView: View {
     }
 
     var body: some View {
+        let _ = RenderCounter.hit("HisnDuaLibraryView")
         List {
             Group {
                 if let library {
@@ -1353,14 +1373,8 @@ struct HisnDuaLibraryView: View {
                         }
                     }
 
-                    let categories = query.isEmpty ? library.categories : library.categories.filter { category in
-                        let key = (category.label + " " + category.arabic).folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
-                        return key.contains(query)
-                    }
-                    let matches = query.isEmpty ? [] : library.entries.filter { entry in
-                        (entry.translation + " " + entry.transliteration + " " + entry.arabic)
-                            .folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current).contains(query)
-                    }
+                    let categories = shownCategories
+                    let matches = shownMatches
 
                     if !query.isEmpty, !matches.isEmpty {
                         Section(header: SectionPillHeader(title: "MATCHING DUAS", count: matches.count)) {
@@ -1436,9 +1450,39 @@ struct HisnDuaLibraryView: View {
         }
         .navigationTitle("Hisn al-Muslim")
         .navigationBarTitleDisplayMode(.inline)
+        .onChange(of: searchText) { _ in scheduleFilter() }
         .task {
             guard library == nil else { return }
             library = await Task.detached(priority: .userInitiated) { HisnDuasStore.shared.loaded() }.value
+            applyFilter()
+        }
+    }
+
+    private static func filter(_ library: HisnDuasStore.Library?, query: String) -> (categories: [HisnDuasStore.Category], matches: [HisnDuasStore.Entry]) {
+        guard let library else { return ([], []) }
+        guard !query.isEmpty else { return (library.categories, []) }
+        let categories = library.categories.filter { category in
+            (category.label + " " + category.arabic).folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current).contains(query)
+        }
+        let matches = library.entries.filter { entry in
+            (entry.translation + " " + entry.transliteration + " " + entry.arabic)
+                .folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current).contains(query)
+        }
+        return (categories, matches)
+    }
+
+    private func applyFilter() {
+        let result = Self.filter(library, query: query)
+        shownCategories = result.categories
+        shownMatches = result.matches
+    }
+
+    private func scheduleFilter() {
+        filterTask?.cancel()
+        filterTask = Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 150_000_000)
+            guard !Task.isCancelled else { return }
+            applyFilter()
         }
     }
 }

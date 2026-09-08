@@ -428,7 +428,7 @@ struct RootOccurrencesView: View {
         let content = WordOccurrenceRow(
             surah: row.surah, ayah: row.ayah, tokens: row.tokens,
             isOrigin: highlight?.surah == row.surah.id && highlight?.ayah == row.ayah.id
-        )
+        ).equatable()
         if let onOpenAyah {
             Button {
                 settings.hapticFeedback()
@@ -446,8 +446,11 @@ struct RootOccurrencesView: View {
 
 /// One ayah with some of its words tinted: the reference, the Arabic (raw Hafs text, so the token
 /// indices from the packs land exactly), and the current translation. Shared by the root list and
-/// the repeated-phrases list.
-struct WordOccurrenceRow: View {
+/// the repeated-phrases list. Everything the body needs is derived once at init (the inputs are
+/// immutable) and the row is Equatable over it, so a list of 170 of these re-renders a row only when
+/// its own words, or a setting it reads, changed (Tilawa Guide, Phase 6 step 8). Wrap call sites in
+/// `.equatable()`.
+struct WordOccurrenceRow: View, Equatable {
     @ObservedObject private var settings = Settings.shared
 
     let surah: Surah
@@ -460,33 +463,59 @@ struct WordOccurrenceRow: View {
     /// was opened from, so two near-identical ayahs are told apart at a glance.
     var contrastTokens: [Int] = []
 
-    private var arabic: String {
-        ayah.displayArabicText(surahId: surah.id, clean: false, qiraahOverride: "")
-    }
-
-    private var tintRanges: [NSRange] {
-        let ranges = WordTokens.ranges(in: arabic)
-        return tokens.compactMap { ranges.indices.contains($0) ? ranges[$0] : nil }
-    }
-
+    // Derived at init.
+    private let arabic: String
+    private let tintRanges: [NSRange]
     /// The two-color rendering: shared words in the accent, differing words in orange.
-    private var contrastStyled: AttributedString? {
-        guard !contrastTokens.isEmpty else { return nil }
-        let text = arabic
+    private let contrastStyled: AttributedString?
+    private let translation: String?
+    // The settings the body reads, captured so `==` can compare them.
+    private let accent: Color
+    private let fontName: String
+    private let arabicSize: CGFloat
+    private let englishSize: CGFloat
+
+    init(surah: Surah, ayah: Ayah, tokens: [Int], isOrigin: Bool = false, caption: String? = nil, contrastTokens: [Int] = []) {
+        self.surah = surah
+        self.ayah = ayah
+        self.tokens = tokens
+        self.isOrigin = isOrigin
+        self.caption = caption
+        self.contrastTokens = contrastTokens
+        let settings = Settings.shared
+        accent = settings.accentColor.color
+        fontName = settings.quranArabicFontName(for: nil)
+        arabicSize = CGFloat(settings.fontArabicSize) - 4
+        englishSize = CGFloat(settings.englishFontSize)
+        let text = ayah.displayArabicText(surahId: surah.id, clean: false, qiraahOverride: "")
+        arabic = text
         let ranges = WordTokens.ranges(in: text)
-        var styled = AttributedString(text)
-        styled.foregroundColor = .primary
-        func paint(_ indices: [Int], _ color: Color) {
-            for index in indices where ranges.indices.contains(index) {
-                guard let range = Range(ranges[index], in: text),
-                      let lo = AttributedString.Index(range.lowerBound, within: styled),
-                      let hi = AttributedString.Index(range.upperBound, within: styled), lo < hi else { continue }
-                styled[lo..<hi].foregroundColor = color
+        tintRanges = tokens.compactMap { ranges.indices.contains($0) ? ranges[$0] : nil }
+        if contrastTokens.isEmpty {
+            contrastStyled = nil
+        } else {
+            var styled = AttributedString(text)
+            styled.foregroundColor = .primary
+            func paint(_ indices: [Int], _ color: Color) {
+                for index in indices where ranges.indices.contains(index) {
+                    guard let range = Range(ranges[index], in: text),
+                          let lo = AttributedString.Index(range.lowerBound, within: styled),
+                          let hi = AttributedString.Index(range.upperBound, within: styled), lo < hi else { continue }
+                    styled[lo..<hi].foregroundColor = color
+                }
             }
+            paint(contrastTokens, .orange)
+            paint(tokens, accent)
+            contrastStyled = styled
         }
-        paint(contrastTokens, .orange)
-        paint(tokens, settings.accentColor.color)
-        return styled
+        translation = currentTranslationText(for: ayah)
+    }
+
+    static func == (lhs: WordOccurrenceRow, rhs: WordOccurrenceRow) -> Bool {
+        lhs.surah.id == rhs.surah.id && lhs.ayah.id == rhs.ayah.id && lhs.tokens == rhs.tokens
+            && lhs.isOrigin == rhs.isOrigin && lhs.caption == rhs.caption && lhs.contrastTokens == rhs.contrastTokens
+            && lhs.accent == rhs.accent && lhs.fontName == rhs.fontName && lhs.arabicSize == rhs.arabicSize
+            && lhs.englishSize == rhs.englishSize && lhs.translation == rhs.translation
     }
 
     var body: some View {
@@ -494,15 +523,15 @@ struct WordOccurrenceRow: View {
             HStack(spacing: 8) {
                 Text("\(surah.nameTransliteration) \(surah.id):\(ayah.id)")
                     .font(.subheadline.weight(.semibold))
-                    .foregroundColor(settings.accentColor.color)
+                    .foregroundColor(accent)
 
                 if isOrigin {
                     Text("This ayah")
                         .font(.caption2.weight(.semibold))
                         .padding(.horizontal, 6)
                         .padding(.vertical, 2)
-                        .background(Capsule().fill(settings.accentColor.color.opacity(0.15)))
-                        .foregroundColor(settings.accentColor.color)
+                        .background(Capsule().fill(accent.opacity(0.15)))
+                        .foregroundColor(accent)
                 }
 
                 if let caption {
@@ -520,7 +549,7 @@ struct WordOccurrenceRow: View {
                 } label: {
                     Image(systemName: "play.circle")
                         .font(.body)
-                        .foregroundColor(settings.accentColor.color)
+                        .foregroundColor(accent)
                 }
                 .buttonStyle(.plain)
             }
@@ -528,8 +557,8 @@ struct WordOccurrenceRow: View {
             HighlightedSnippet(
                 source: arabic,
                 term: "",
-                font: .custom(settings.quranArabicFontName(for: nil), size: CGFloat(settings.fontArabicSize) - 4),
-                accent: settings.accentColor.color,
+                font: .custom(fontName, size: arabicSize),
+                accent: accent,
                 fg: .primary,
                 preStyledSource: contrastStyled,
                 extraHighlightRanges: contrastStyled == nil ? tintRanges : []
@@ -540,9 +569,9 @@ struct WordOccurrenceRow: View {
             .fixedSize(horizontal: false, vertical: true)
             .frame(maxWidth: .infinity, alignment: .trailing)
 
-            if let translation = currentTranslationText(for: ayah) {
+            if let translation {
                 Text(translation)
-                    .font(.system(size: CGFloat(settings.englishFontSize)))
+                    .font(.system(size: englishSize))
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }

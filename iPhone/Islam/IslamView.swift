@@ -79,9 +79,9 @@ struct IslamView: View {
     /// favorites section all draw from one source of truth instead of three hand-maintained row lists.
     private enum IslamDestination: String, Hashable, CaseIterable {
         /// The on-device chat. Listed only where Apple Intelligence can run it (`available`).
-        case askAI
         case arabicAlphabet
         case tajweedFoundations
+        case tajweedCourse
         case commonAdhkar
         case commonDuas
         case tasbihCounter
@@ -91,17 +91,19 @@ struct IslamView: View {
         case hijriCalendarConverter
         case masjidLocator
         case halalFoodLocator
-        case islamicWallpapers
         case pillarsAndBasics
         case howToGuides
         case miraclesOfQuran
+        case islamicWallpapers
         case journal
+        case askAI
 
         var title: String {
             switch self {
             case .askAI: return "Ask AI"
             case .arabicAlphabet: return "Arabic Alphabet"
             case .tajweedFoundations: return "Tajweed Foundations"
+            case .tajweedCourse: return "Tajweed Course"
             case .commonAdhkar: return "Dhikr & Remembrances"
             case .commonDuas: return "Dua & Supplications"
             case .tasbihCounter: return "Tasbih Counter"
@@ -115,7 +117,7 @@ struct IslamView: View {
             case .pillarsAndBasics: return "Pillars & Beliefs"
             case .howToGuides: return "How-To Guides"
             case .miraclesOfQuran: return "Miracles of the Quran"
-            case .journal: return "Journal"
+            case .journal: return "Islamic Journal"
             }
         }
 
@@ -124,6 +126,7 @@ struct IslamView: View {
             case .askAI: return "sparkles"
             case .arabicAlphabet: return "textformat.size.ar"
             case .tajweedFoundations: return "waveform"
+            case .tajweedCourse: return "graduationcap"
             case .commonAdhkar: return "book.closed"
             case .commonDuas: return "text.book.closed"
             case .tasbihCounter: return "circles.hexagonpath.fill"
@@ -147,6 +150,7 @@ struct IslamView: View {
             case .askAI: return "Ask anything about Islam, on device"
             case .arabicAlphabet: return "Letters, forms, diacritics, and signs"
             case .tajweedFoundations: return "The rules of beautiful recitation"
+            case .tajweedCourse: return "A guided course, lesson by lesson"
             case .commonAdhkar: return "Morning, evening, and daily remembrances"
             case .commonDuas: return "Authenticated supplications with sources"
             case .tasbihCounter: return "Count dhikr with a tap"
@@ -172,6 +176,7 @@ struct IslamView: View {
             case .askAI: return "Ask\nAI"
             case .arabicAlphabet: return "Arabic\nAlphabet"
             case .tajweedFoundations: return "Tajweed\nFoundations"
+            case .tajweedCourse: return "Tajweed\nCourse"
             case .commonAdhkar: return "Dhikr &\nRemembrances"
             case .commonDuas: return "Dua &\nSupplications"
             case .tasbihCounter: return "Tasbih\nCounter"
@@ -185,7 +190,7 @@ struct IslamView: View {
             case .pillarsAndBasics: return "Pillars &\nBeliefs"
             case .howToGuides: return "How-To\nGuides"
             case .miraclesOfQuran: return "Miracles of\nthe Quran"
-            case .journal: return "Journal"
+            case .journal: return "Islamic\nJournal"
             }
         }
 
@@ -195,11 +200,12 @@ struct IslamView: View {
             case .askAI: return ["chat", "question", "assistant", "apple intelligence"]
             case .arabicAlphabet: return ["letters", "harakat", "huruf", "alphabet", "tashkeel", "numbers"]
             case .tajweedFoundations: return ["recitation", "rules", "makharij", "ghunnah", "qalqalah", "madd"]
+            case .tajweedCourse: return ["lessons", "course", "learn", "practice", "beginner", "step by step", "tajwid"]
             case .commonAdhkar: return ["dhikr", "adhkar", "azkar", "remembrance", "tasbih", "subhanallah"]
             case .commonDuas: return ["dua", "duas", "supplication", "prayer", "invocation"]
             case .tasbihCounter: return ["counter", "beads", "misbaha", "count"]
-            case .zakahCalculator: return ["zakat", "charity", "nisab", "gold", "silver", "2.5"]
-            case .inheritanceCalculator: return ["faraid", "mirath", "estate", "heirs", "shares"]
+            case .zakahCalculator: return ["zakat", "charity", "nisab", "gold", "silver", "2.5", "fitr", "zakat al-fitr", "sadaqah", "hawl", "sa'"]
+            case .inheritanceCalculator: return ["faraid", "mirath", "estate", "heirs", "shares", "will", "wasiyyah", "bequest", "awl", "radd", "asabah"]
             case .namesOfAllah: return ["asma", "husna", "asmaul husna", "attributes", "ar-rahman"]
             case .hijriCalendarConverter: return ["calendar", "date", "islamic date", "gregorian", "converter"]
             case .masjidLocator: return ["mosque", "masjid", "near me", "map", "prayer place"]
@@ -223,7 +229,12 @@ struct IslamView: View {
         /// Every resource this device can show: all of them, minus Ask AI where Apple Intelligence
         /// can't run it (a row that opens onto "not available here" is worse than no row).
         static var available: [IslamDestination] {
-            allCases.filter { $0 != .askAI || OnDeviceAsk.isAvailable }
+            allCases.filter {
+                if $0 == .askAI { return OnDeviceAsk.isAvailable }
+                // The course is a pack, not code: no pack, no tile.
+                if $0 == .tajweedCourse { return TajweedLessonsStore.isBundled }
+                return true
+            }
         }
     }
 
@@ -259,6 +270,32 @@ struct IslamView: View {
 
     var body: some View {
         navigationContainer
+            #if os(iOS)
+            // A Reminder of the Day card's "Open": the resource pushed onto this tab's stack (or
+            // selected in the iPad sidebar), then the request cleared so it never replays.
+            .onReceive(AppNavigation.shared.$pendingIslam) { target in
+                guard let target else { return }
+                let destination: IslamDestination?
+                switch target {
+                case .duas: destination = .commonDuas
+                case .adhkar: destination = .commonAdhkar
+                case .names(let number):
+                    NamesViewModel.shared.pendingNameNumber = number
+                    destination = .namesOfAllah
+                case .hadithTab: destination = nil
+                }
+                guard let destination else { return }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                    if columnLayoutActive {
+                        selectedResource = destination
+                        islamDetailRefreshToken += 1
+                    } else if #available(iOS 16.0, *) {
+                        islamPath = [destination]
+                    }
+                    AppNavigation.shared.pendingIslam = nil
+                }
+            }
+            #endif
             // The window crossed the compact/regular boundary (iPad Split View drag, Slide Over, Stage
             // Manager): carry the open resource across the sidebar/stack swap so the user stays where
             // they were instead of being dumped back on the list.
@@ -321,6 +358,8 @@ struct IslamView: View {
     @ViewBuilder
     private func islamListEntries(split: Bool) -> some View {
         Group {
+            // No Reminder of the Day card here (Abu, 2026-09-07): the reminder still opens as the
+            // daily sheet and feeds the widgets, and this tab is the resource grid.
             Group {
                 #if os(iOS)
                 if split, #available(iOS 16.0, *) {
@@ -691,6 +730,8 @@ struct IslamView: View {
             #else
             TajweedFoundationsView()
             #endif
+        case .tajweedCourse:
+            TajweedLessonsView()
         case .commonAdhkar:
             AdhkarView()
         case .commonDuas:
@@ -733,6 +774,12 @@ struct IslamView: View {
                 TajweedFoundationsView()
             }
 
+            #if os(iOS)
+            resourceLink(title: "Tajweed Course", systemImage: "graduationcap") {
+                TajweedLessonsView()
+            }
+            #endif
+
             resourceLink(title: "Dhikr & Remembrances", systemImage: "book.closed") {
                 AdhkarView()
             }
@@ -773,16 +820,16 @@ struct IslamView: View {
             }
             #endif
 
-            resourceLink(title: "Islamic Wallpapers", systemImage: "photo.on.rectangle") {
-                WallpaperView()
-            }
-
             resourceLink(title: "Pillars & Beliefs", systemImage: "moon.stars") {
                 PillarsView()
             }
 
             resourceLink(title: "How-To Guides", systemImage: "list.bullet.rectangle") {
                 GuidesView()
+            }
+
+            resourceLink(title: "Islamic Wallpapers", systemImage: "photo.on.rectangle") {
+                WallpaperView()
             }
         }
     }

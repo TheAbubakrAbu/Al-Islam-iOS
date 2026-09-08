@@ -182,7 +182,10 @@ enum PackAudit {
         // MARK: Loose JSON payloads (deflate or xz, whichever ships)
 
         for name in ["SimilarAyahs", "WordByWord", "ThematicTopics", "SurahSections", "TajweedLessons",
-                     "Morphology", "Mutashabihat", "QuranTopics", "AyahThemes", "QiraatVariants"] {
+                     "Morphology", "Mutashabihat", "QuranTopics", "AyahThemes", "QiraatVariants",
+                     // The Tilawa port's packs (loose xz, flat in the bundle).
+                     "DailyReminders", "WordOfDay", "HadithTopics", "NamesDetails", "QiraatVariantAudio",
+                     "QiraatPlaces", "Miracles", "HisnDuas"] {
             var raw: Data?
             var ext = "?"
             if let url = bundled(name, "json.xz"), let blob = try? Data(contentsOf: url) {
@@ -200,6 +203,45 @@ enum PackAudit {
             fp.add(String(decoding: json, as: UTF8.self))
             let parses = (try? JSONSerialization.jsonObject(with: json)) != nil
             emit("JSON \(name) ext=\(ext) bytes=\(json.count) parses=\(parses) hash=\(fp.hex)")
+        }
+
+        // MARK: The Hadith Encyclopedia container (Tilawa Guide, decision A)
+
+        // Through the store's own reader: the header (tree + light rows), every block's narrations
+        // in order, and the fast folds against the String folds they replace (they must agree: the
+        // query folds through the fast ones).
+        if HadeethEncStore.isBundled, let library = HadeethEncStore.shared.library() {
+            var fp = Fingerprint()
+            for category in library.categories {
+                fp.add(category.id); fp.add(category.english); fp.add(category.arabic); fp.add(category.total)
+            }
+            var full = 0, missing = 0
+            for entry in library.entries {
+                fp.add(entry.id); fp.add(entry.title); fp.add(entry.grade)
+                guard let hadith = HadeethEncStore.shared.hadith(for: entry), hadith.id == entry.id else { missing += 1; continue }
+                fp.add(hadith.arabic.body); fp.add(hadith.english.body); fp.add(hadith.english.explanation)
+                fp.add(hadith.english.benefits.count); fp.add(hadith.arabic.reference)
+                full += 1
+            }
+            let folds = HadeethEncStore.shared.auditFolds()
+            emit("HENC topics=\(library.categories.count) entries=\(library.entries.count) full=\(full) missing=\(missing) "
+                 + "foldMismatches=en:\(folds.english)/ar:\(folds.arabic) hash=\(fp.hex)")
+            for probe in ["mercy", "actions are by intentions", "الأعمال بالنيات"] {
+                let hits = HadeethEncStore.shared.search(probe, limit: 3).map(\.id)
+                emit("HENC probe \"\(probe)\" -> \(hits)")
+            }
+        } else {
+            emit("HENC NOT BUNDLED OR UNREADABLE")
+        }
+
+        // MARK: The hadith typo vocabulary (Tilawa Guide, decision B)
+
+        // The shipped list is the app's own walk, exported; STALE means the .hpk files changed
+        // since the export (re-run "-exportHadithVocabulary" + Scripts/build_hadith_vocabulary.py).
+        if let summary = HadithVocabulary.bundledSummary() {
+            emit("VOCAB words=\(summary.words) shelf=\(summary.matchesShelf ? "MATCH" : "STALE") fingerprint=\(HadithVocabulary.shelfFingerprint)")
+        } else {
+            emit("VOCAB NOT BUNDLED fingerprint=\(HadithVocabulary.shelfFingerprint)")
         }
 
         // MARK: Word-by-word layers

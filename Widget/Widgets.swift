@@ -67,5 +67,7 @@ struct Widgets: WidgetBundle {
         LastListenedAyahWidget()
         LastReadSurahWidget()
         AyahOfTheDayWidget()
+        DailyReminderWidget()
+        NameOfAllahWidget()
     }
 }

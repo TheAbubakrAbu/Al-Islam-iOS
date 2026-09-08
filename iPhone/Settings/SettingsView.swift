@@ -243,6 +243,7 @@ struct SettingsView: View {
             .applyConditionalListStyle(disableNowPlayingInset: disableNowPlayingInset)
             #if DEBUG
             // `-openCredit <CreditItem.id>`: what a credit row in the search results does, headlessly.
+            .debugPushDestination(isPresented: $debugOpenProfile) { ProfileView() }
             .debugPushDestination(isPresented: $debugOpenCredit) {
                 if let id = Self.debugCreditID { CreditsView(presentedAsSheet: false, scrollTo: id) }
             }
@@ -258,12 +259,16 @@ struct SettingsView: View {
                 if Self.debugCreditID != nil {
                     DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) { debugOpenCredit = true }
                 }
+                if ProcessInfo.processInfo.arguments.contains("-openProfile") {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { debugOpenProfile = true }
+                }
             }
             #endif
     }
 
     #if DEBUG
     @State private var debugOpenCredit = false
+    @State private var debugOpenProfile = false
 
     private static var debugCreditID: String? { launchValue("-openCredit") }
 

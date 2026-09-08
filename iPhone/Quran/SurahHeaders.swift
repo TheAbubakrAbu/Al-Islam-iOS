@@ -324,7 +324,7 @@ struct SurahSectionHeader: View {
             .font(starFont)
             .onTapGesture {
                 settings.hapticFeedback()
-                settings.toggleSurahFavorite(surah: surah.id)
+                settings.toggleSurahFavoriteOrConfirm(surah: surah.id)
             }
     }
 }

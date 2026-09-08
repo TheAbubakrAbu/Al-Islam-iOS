@@ -82,9 +82,10 @@ final class ThemeHighlights: ObservableObject {
 
     @Published private(set) var lit: [LitTheme] = []
     /// ayah key -> the wash it wears (the earliest-lit theme wins where two overlap).
-    private var lookup: [String: ThemeWashColor] = [:]
+    private var lookup: [Int: ThemeWashColor] = [:]
 
     private init() {
+        ObjectPublishCounter.attach(self, label: "ThemeHighlights")
         load()
         #if DEBUG && os(iOS)
         // "-litTheme <topic id>": light a theme at launch (the readers' wash cannot be toggled
@@ -141,15 +142,21 @@ final class ThemeHighlights: ObservableObject {
         save()
     }
 
-    /// The wash this ayah wears, if any lit theme names it.
+    /// The wash this ayah wears, if any lit theme names it. An integer key: the readers ask per row
+    /// per body, and the "s:a" string this built per call was the cost, not the lookup.
     func wash(surah: Int, ayah: Int) -> ThemeWashColor? {
-        lookup.isEmpty ? nil : lookup["\(surah):\(ayah)"]
+        lookup.isEmpty ? nil : lookup[surah * 1000 + ayah]
     }
 
     private func rebuild() {
-        var table: [String: ThemeWashColor] = [:]
+        var table: [Int: ThemeWashColor] = [:]
         for theme in lit {
-            for key in theme.ayahs where table[key] == nil { table[key] = theme.color }
+            for key in theme.ayahs {
+                let parts = key.split(separator: ":")
+                guard parts.count == 2, let surah = Int(parts[0]), let ayah = Int(parts[1]) else { continue }
+                let slot = surah * 1000 + ayah
+                if table[slot] == nil { table[slot] = theme.color }
+            }
         }
         lookup = table
     }

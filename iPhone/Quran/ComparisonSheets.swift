@@ -802,6 +802,11 @@ struct AyahQiraahComparisonSheet: View {
                 .multilineTextAlignment(.trailing)
                 .lineSpacing(6)
                 .frame(maxWidth: .infinity, alignment: .trailing)
+
+            // Hearing the difference: the same reciter, both readings, where a pair exists.
+            if text != nil, QiraatVariantAudioStore.isBundled {
+                QiraatVariantAudioButtons(tag: option.tag, surah: surahNumber, ayah: ayahNumber)
+            }
         }
         .padding(.vertical, 4)
         .opacity(text == nil ? 0.55 : 1)

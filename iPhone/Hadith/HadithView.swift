@@ -67,6 +67,8 @@ struct HadithView: View {
     #if DEBUG
     /// `-launchHadithEncyclopedia`: the Hadith Encyclopedia pushed on launch, the headless way in.
     @State private var debugOpenEncyclopedia = false
+    @State private var debugOpenTopics = false
+    @State private var debugOpenHistory = false
     #endif
 
     /// Collapse state for the favorites/bookmarks sections, same as the Quran tab's.
@@ -220,6 +222,16 @@ struct HadithView: View {
             }
 
             let top = hits
+            // The rows' text blocks, inflated off the main actor before they show (the ranked and
+            // sweep rows are warmed the same way; these decoded theirs in their bodies on main).
+            await withTaskGroup(of: Void.self) { group in
+                for hit in top where hit.hadith.row >= 0 {
+                    let data = hit.data
+                    let row = hit.hadith.row
+                    group.addTask(priority: .userInitiated) { data.prewarmText(rows: row..<(row + 1)) }
+                }
+            }
+            guard !Task.isCancelled else { return }
             await MainActor.run {
                 guard trimmed == searchText.trimmingCharacters(in: .whitespacesAndNewlines) else { return }
                 // Plain apply: an animated section insert racing the keyword sweep's own apply is the
@@ -552,12 +564,12 @@ struct HadithView: View {
                     // of them on a single stack frame, which is exactly what overflowed the device main
                     // thread's 1MB stack in QuranView (the simulator's 8MB stack hid it). See `boxed`.
                     if searchText.isEmpty {
-                        // Before any reading has happened there is no Last Read - and an empty
-                        // "Your Summary" header is just noise. Summary tiles are the only form now;
-                        // the old full-row sections went with the removed Summary Mode setting.
-                        if dailyHadith != nil || store.lastRead != nil {
-                            boxed(summaryTilesSection)
-                        }
+                        // Summary tiles are the only form now (the old full-row sections went with the
+                        // removed Summary Mode setting), and the three doors - topics, history, the
+                        // encyclopedia - hang off the bottom of this same section (Abu, 2026-09-07),
+                        // the way Browse by Theme hangs off the Quran tab's summary. So it renders even
+                        // before there is a Last Read: the doors are always worth showing.
+                        boxed(summaryTilesSection)
                     }
 
                     if let reference = referenceResult {
@@ -602,12 +614,6 @@ struct HadithView: View {
                             ))
                         }
 
-                        // The Hadith Encyclopedia: not a collection to read through but a reference
-                        // explaining 2,328 narrations, so it sits as its own door above the shelf.
-                        if searchText.isEmpty, HadeethEncStore.isBundled {
-                            boxed(encyclopediaSection)
-                        }
-
                         ForEach(HadithCatalogBook.Group.allCases, id: \.self) { group in
                             let books = filteredBooks(in: group)
                             if !books.isEmpty {
@@ -638,7 +644,16 @@ struct HadithView: View {
             .background(legacyHiddenPushLinks)
             #if DEBUG
             .debugPushDestination(isPresented: $debugOpenEncyclopedia) { HadeethEncView() }
+            .debugPushDestination(isPresented: $debugOpenTopics) { HadithTopicsView() }
+            .debugPushDestination(isPresented: $debugOpenHistory) { HadithHistoryView() }
             #endif
+            // A recent search tapped in History (a pushed screen, which pops itself): the term goes
+            // into the field once the pop has landed, the way the Quran tab's history chips search.
+            .onReceive(HadithSearchHandoff.shared.$pendingTerm) { term in
+                guard let term else { return }
+                HadithSearchHandoff.shared.pendingTerm = nil
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) { searchText = term }
+            }
             // Column mode navigates by value instead: both hidden links above are legacy
             // `destination` links, which a split view routes into the DETAIL column - the reader's
             // place. Intercepting the two state vars here keeps every caller in the tab unchanged.
@@ -751,6 +766,13 @@ struct HadithView: View {
                 // `-hadeethEncOpen <id>` or `-hadeethEncSearch <term>` for what lies behind it).
                 if ProcessInfo.processInfo.arguments.contains("-launchHadithEncyclopedia") {
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { debugOpenEncyclopedia = true }
+                }
+                // `-launchHadithTopics` / `-launchHadithHistory`: the topic library and the history page.
+                if ProcessInfo.processInfo.arguments.contains("-launchHadithTopics") {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { debugOpenTopics = true }
+                }
+                if ProcessInfo.processInfo.arguments.contains("-launchHadithHistory") {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) { debugOpenHistory = true }
                 }
                 // `-launchHadithBook bukhari`: the book's chapter list itself, no chapter pushed.
                 if #available(iOS 16.0, *), bookPath.isEmpty,
@@ -954,39 +976,43 @@ struct HadithView: View {
             }
             .foregroundColor(settings.accentColor.color)
         ) {
-            LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 10) {
-                if let dailyHadith {
-                    summaryTile(
-                        title: "Hadith of the Day",
-                        icon: "sparkles",
-                        reference: "\(dailyHadith.book.englishTitle) \(dailyHadith.hadith.displayNumber)",
-                        // The previews were captured when the pick was made - the tile never touches a pack.
-                        arabic: settings.showHadithArabic ? dailyHadith.arabicPreview : "",
-                        english: settings.showHadithEnglish ? dailyHadith.englishPreview : ""
-                    ) {
-                        pushedReference = HadithBookmark(
-                            slug: dailyHadith.book.slug, idInBook: dailyHadith.hadith.idInBook,
-                            reference: "", preview: ""
-                        )
+            // The grid only when there is something in it: before any reading the section is just the
+            // three doors, and an empty grid would still draw its own padded row.
+            if showSummaryTiles {
+                LazyVGrid(columns: [GridItem(.flexible(), spacing: 10), GridItem(.flexible(), spacing: 10)], spacing: 10) {
+                    if let dailyHadith {
+                        summaryTile(
+                            title: "Hadith of the Day",
+                            icon: "sparkles",
+                            reference: "\(dailyHadith.book.englishTitle) \(dailyHadith.hadith.displayNumber)",
+                            // The previews were captured when the pick was made - the tile never touches a pack.
+                            arabic: settings.showHadithArabic ? dailyHadith.arabicPreview : "",
+                            english: settings.showHadithEnglish ? dailyHadith.englishPreview : ""
+                        ) {
+                            pushedReference = HadithBookmark(
+                                slug: dailyHadith.book.slug, idInBook: dailyHadith.hadith.idInBook,
+                                reference: "", preview: ""
+                            )
+                        }
                     }
-                }
 
-                if let lastRead = store.lastRead {
-                    summaryTile(
-                        title: "Last Read Hadith",
-                        icon: "book",
-                        reference: lastRead.reference,
-                        arabic: settings.showHadithArabic ? lastRead.arabicPreview : "",
-                        english: settings.showHadithEnglish ? lastRead.englishPreview : ""
-                    ) {
-                        pushedReference = HadithBookmark(
-                            slug: lastRead.slug, idInBook: lastRead.idInBook,
-                            reference: lastRead.reference, preview: ""
-                        )
+                    if let lastRead = store.lastRead {
+                        summaryTile(
+                            title: "Last Read Hadith",
+                            icon: "book",
+                            reference: lastRead.reference,
+                            arabic: settings.showHadithArabic ? lastRead.arabicPreview : "",
+                            english: settings.showHadithEnglish ? lastRead.englishPreview : ""
+                        ) {
+                            pushedReference = HadithBookmark(
+                                slug: lastRead.slug, idInBook: lastRead.idInBook,
+                                reference: lastRead.reference, preview: ""
+                            )
+                        }
                     }
                 }
+                .padding(.vertical, 4)
             }
-            .padding(.vertical, 4)
 
             if showDailyHistory {
                 ForEach(Array(dailyHistory.enumerated()), id: \.element.dayKey) { index, entry in
@@ -994,7 +1020,15 @@ struct HadithView: View {
                         .opacity(index == 0 ? 1 : 0.75)
                 }
             }
+
+            encyclopediaDoors
         }
+    }
+
+    /// Whether there is anything to put in the tile grid at all. The section renders regardless - the
+    /// three doors below the grid are always worth showing.
+    private var showSummaryTiles: Bool {
+        dailyHadith != nil || store.lastRead != nil
     }
 
     private func summaryTile(title: String, icon: String, reference: String, arabic: String, english: String, onTap: @escaping () -> Void) -> some View {
@@ -1050,46 +1084,50 @@ struct HadithView: View {
     }
 
 
+    // MARK: The doors under the summary
+
+    /// The three doors under the summary tiles: browse by topic, the Hadith Encyclopedia, and the
+    /// history. Rows, not a section of their own (Abu, 2026-09-07): they hang off the bottom of
+    /// "Your Summary" the way Browse by Theme hangs off the Quran tab's, in the same order the Quran
+    /// uses, with History last. No caption under any of the three names either, and no Arabic name
+    /// beside them (Abu, 2026-09-08): plain rows, and each screen introduces itself in its own first
+    /// section instead.
+    @ViewBuilder
+    private var encyclopediaDoors: some View {
+        if HadithTopicsStore.isBundled {
+            NavigationLink(destination: LazyDestination { HadithTopicsView() }) {
+                doorLabel(title: "Browse by Topic", systemImage: "square.grid.2x2.fill")
+            }
+        }
+
+        if HadeethEncStore.isBundled {
+            NavigationLink(destination: LazyDestination { HadeethEncView() }) {
+                doorLabel(title: "Hadith Encyclopedia", systemImage: "books.vertical.fill")
+            }
+        }
+
+        NavigationLink(destination: LazyDestination { HadithHistoryView() }) {
+            doorLabel(title: "History", systemImage: "clock.arrow.circlepath")
+        }
+    }
+
+    /// One door row: the accent chip and the name. Deliberately the twin of the Quran tab's
+    /// `summaryDoorLabel`, so the two summaries read the same.
+    private func doorLabel(title: String, systemImage: String) -> some View {
+        HStack(spacing: 12) {
+            AccentIconChip(systemImage: systemImage, size: 30)
+
+            Text(title)
+                .font(.subheadline.weight(.semibold))
+                .foregroundColor(.primary)
+        }
+        .padding(.vertical, 3)
+    }
+
     // MARK: About hadith
 
     /// One polished orientation card: the two pillar screens as proper links on a glass card, with the
     /// pointer to where the full teachings live.
-    /// The door to the Hadith Encyclopedia, styled as the shelf's rows: the English name and what it
-    /// holds, the Arabic name trailing in the accent.
-    private var encyclopediaSection: some View {
-        Section(header: Text("HADITH ENCYCLOPEDIA")) {
-            NavigationLink(destination: LazyDestination { HadeethEncView() }) {
-                HStack(alignment: .center) {
-                    Image(systemName: "books.vertical.fill")
-                        .font(.title3)
-                        .foregroundColor(settings.accentColor.color)
-                        .frame(width: 34)
-                        .padding(.trailing, 2)
-
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("Hadith Encyclopedia")
-                            .font(.subheadline.weight(.semibold))
-                        Text("2,328 hadiths explained: meaning, lessons, grading and sources")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                            .lineLimit(2)
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-
-                    Text("الموسوعة الحديثية")
-                        .font(arabicTitleFont(.subheadline, bump: 2))
-                        .arabicFontDesign(custom: settings.islamUsesCustomArabicFace)
-                        .foregroundColor(settings.accentColor.color)
-                        .lineLimit(2)
-                        .multilineTextAlignment(.trailing)
-                        .minimumScaleFactor(0.5)
-                        .padding(.leading, 8)
-                }
-                .contentShape(Rectangle())
-            }
-        }
-    }
-
     private var aboutHadithSection: some View {
         Section {
             VStack(alignment: .leading, spacing: 10) {
@@ -1853,34 +1891,61 @@ struct HadithView: View {
                 let score: Int
             }
             let cap = Self.rankedHadithCap
-            let scan = Task.detached(priority: .userInitiated) { () -> (top: [Scored], total: Int, relaxed: Bool, query: HadithRankedSearch.Query)? in
-                // The typo vocabulary first (a one-time walk of the packs, then a file read), so the
-                // first search of a session corrects spelling like every later one.
+            let reduced = AppPerformance.shouldAvoidBroadPrewarm
+            // The reduced tier runs the lane only where the exact list cannot answer alone: two or
+            // more words, or a single word the sweep found nothing for (a likely typo).
+            if reduced, !finalHadiths.isEmpty || !finalChapters.isEmpty,
+               query.split(whereSeparator: { $0.isWhitespace }).count < 2 { return }
+            let scan = Task.detached(priority: reduced ? .utility : .userInitiated) { () -> (top: [Scored], total: Int, relaxed: Bool, query: HadithRankedSearch.Query)? in
+                #if DEBUG
+                let vocabStarted = DispatchTime.now().uptimeNanoseconds
+                #endif
+                // The typo vocabulary first (a file read; on a fresh install the post-reveal schedule
+                // walks the packs for it, and a search before that walks them here), so the first
+                // search of a session corrects spelling like every later one.
                 HadithVocabulary.shared.buildIfNeeded(books: books.map(\.data))
+                #if DEBUG
+                let vocabMs = Double(DispatchTime.now().uptimeNanoseconds - vocabStarted) / 1_000_000
+                let rankStarted = DispatchTime.now().uptimeNanoseconds
+                #endif
                 guard !Task.isCancelled,
                       let parsed = HadithRankedSearch.parse(query, vocabulary: HadithVocabulary.shared) else { return nil }
-                func pass(requireAll: Bool) -> [Scored] {
-                    var out: [Scored] = []
-                    for (index, entry) in books.enumerated() {
-                        if Task.isCancelled { break }
-                        for hit in HadithRankedSearch.rank(book: entry.book, data: entry.data, query: parsed, requireAll: requireAll) {
-                            out.append(Scored(bookIndex: index, row: hit.row, score: hit.score))
-                        }
-                    }
-                    return out
-                }
-                var scored = pass(requireAll: true)
-                var relaxed = false
-                if scored.isEmpty, parsed.tokens.count > 1, !Task.isCancelled {
-                    scored = pass(requireAll: false)
-                    relaxed = !scored.isEmpty
-                }
-                scored.sort { a, b in
+                #if DEBUG
+                let parseMs = Double(DispatchTime.now().uptimeNanoseconds - rankStarted) / 1_000_000
+                #endif
+                // One pass over the library, every row with how many words it carries: the strict
+                // list is the rows carrying every word; the relaxed one (multi-word queries, only when
+                // nothing is strict) the rows carrying the most of it. Each list keeps its forty best
+                // in a bounded heap instead of sorting every hit of a common word.
+                let tokenCount = parsed.tokens.count
+                let outranks: (Scored, Scored) -> Bool = { a, b in
                     if a.score != b.score { return a.score > b.score }
                     if a.bookIndex != b.bookIndex { return a.bookIndex < b.bookIndex }
                     return a.row < b.row
                 }
-                return (Array(scored.prefix(cap)), scored.count, relaxed, parsed)
+                var strict = TopK<Scored>(capacity: cap, outranks: outranks)
+                var partial = TopK<Scored>(capacity: cap, outranks: outranks)
+                for (index, entry) in books.enumerated() {
+                    if Task.isCancelled { break }
+                    for hit in HadithRankedSearch.rank(book: entry.book, data: entry.data, query: parsed) {
+                        if hit.matched == tokenCount {
+                            strict.offer(Scored(bookIndex: index, row: hit.row, score: hit.score))
+                        } else if tokenCount > 1 {
+                            partial.offer(Scored(bookIndex: index, row: hit.row,
+                                                 score: hit.score + HadithRankedSearch.relaxedBonus(matched: hit.matched)))
+                        }
+                    }
+                }
+                let relaxed = strict.offered == 0 && partial.offered > 0
+                let chosen = relaxed ? partial : strict
+                #if DEBUG
+                if RenderCounter.enabled {
+                    NSLog("RANKED hadith %.1f ms (strict %d, partial %d, relaxed %d, parse %.1f ms, vocab %.1f ms)",
+                          Double(DispatchTime.now().uptimeNanoseconds - rankStarted) / 1_000_000,
+                          strict.offered, partial.offered, relaxed ? 1 : 0, parseMs, vocabMs)
+                }
+                #endif
+                return (chosen.sorted(), chosen.offered, relaxed, parsed)
             }
             guard let ranked = await withTaskCancellationHandler(operation: { await scan.value },
                                                                  onCancel: { scan.cancel() }),
@@ -1891,8 +1956,9 @@ struct HadithView: View {
                 guard entry.data.hadiths.indices.contains(item.row) else { return nil }
                 return GlobalHadithHit(book: entry.book, data: entry.data, hadith: entry.data.hadiths[item.row])
             }
-            // Warm the rows about to show, the way the sweep warms its page.
-            let warmRanked = Array(rankedHits.prefix(12))
+            // Warm the first two screens of ranked rows off-main (the cache dedupes the blocks), the
+            // way the sweep warms its page; the List realizes more rows than are visible.
+            let warmRanked = Array(rankedHits.prefix(20))
             await withTaskGroup(of: Void.self) { group in
                 for hit in warmRanked where hit.hadith.row >= 0 {
                     let row = hit.hadith.row
@@ -1919,6 +1985,12 @@ struct HadithView: View {
                 globalRankedCorrections = parsed.corrections
                 globalRankedHighlight = parsed.highlightQuery
                 if !rankedHits.isEmpty { persistHadithSearchHistoryIfNeeded(query) }
+                #if DEBUG
+                if RenderCounter.enabled {
+                    let refs = rankedHits.map { "\($0.book.slug):\($0.hadith.idInBook)" }.joined(separator: " ")
+                    NSLog("RANKED hadith refs %@ total=%d relaxed=%d [%@]", query, ranked.total, ranked.relaxed ? 1 : 0, refs)
+                }
+                #endif
             }
         }
     }
@@ -1954,7 +2026,8 @@ struct HadithView: View {
         )) {
             if showHadithBookmarks {
                 // Every bookmark lives right here, Quran-bookmark style - no capped preview with a
-                // "View All" push. In grid mode they render as tiles, like the Quran's bookmark grid.
+                // "View All" push, and no folders above them: bookmarks ARE the filing system
+                // (Abu, 2026-09-07). In grid mode they render as tiles, like the Quran's bookmark grid.
                 if hadithGridMode {
                     LazyVGrid(columns: gridColumns, alignment: .leading, spacing: 10) {
                         ForEach(store.bookmarks) { bookmark in
@@ -2037,7 +2110,7 @@ struct HadithView: View {
                         .swipeActions(edge: .leading, allowsFullSwipe: true) {
                             Button {
                                 settings.hapticFeedback()
-                                withAnimation(.easeInOut) { store.toggleFavorite(book.slug) }
+                                withAnimation(.easeInOut) { store.toggleFavoriteOrConfirm(book) }
                             } label: {
                                 Image(systemName: store.isFavorite(book.slug) ? "star.fill" : "star")
                             }
@@ -2082,7 +2155,7 @@ struct HadithView: View {
 
         Button(role: store.isFavorite(book.slug) ? .destructive : .cancel) {
             settings.hapticFeedback()
-            withAnimation(.easeInOut) { store.toggleFavorite(book.slug) }
+            withAnimation(.easeInOut) { store.toggleFavoriteOrConfirm(book) }
         } label: {
             Label(store.isFavorite(book.slug) ? "Unfavorite Book" : "Favorite Book",
                   systemImage: store.isFavorite(book.slug) ? "star.fill" : "star")
@@ -2154,7 +2227,7 @@ struct HadithView: View {
                 )
                 .onTapGesture {
                     settings.hapticFeedback()
-                    withAnimation(.easeInOut) { store.toggleFavorite(book.slug) }
+                    withAnimation(.easeInOut) { store.toggleFavoriteOrConfirm(book) }
                 }
                 .accessibilityLabel("Book \(book.number)\(isLastRead ? ", last read" : "")")
 
@@ -2290,7 +2363,7 @@ struct HadithView: View {
             accent: settings.accentColor.color,
             accessibilityName: book.englishTitle
         ) {
-            store.toggleFavorite(book.slug)
+            store.toggleFavoriteOrConfirm(book)
         }
         // No context menu on grid tiles - the long-press preview snapshot fought the tile's glass and
         // the row form still carries the full menu.

@@ -166,6 +166,13 @@ final class WatchConnectivityManager: NSObject, WCSessionDelegate {
         Settings.shared.objectWillChange
             .sink { [weak self] in self?.scheduleSnapshotPush() }
             .store(in: &cancellables)
+        #if os(watchOS)
+        // A surah read or played on the wrist: the watch's activity days ride in the next context
+        // (`Settings.watchActivityKey`), so the phone's streak counts them.
+        NotificationCenter.default.publisher(for: ActivityLog.didChangeNotification)
+            .sink { [weak self] _ in self?.scheduleSnapshotPush() }
+            .store(in: &cancellables)
+        #endif
     }
 
     private var pendingSnapshotPush: DispatchWorkItem?
@@ -527,6 +534,10 @@ extension Settings {
         "travelingMode", "prayerCalculation", "calculationAutomatic",
     ]
 
+    /// The watch's activity days (`ActivityLog.mirrorPayload`): sent by the watch alone, merged by
+    /// the phone alone (`ActivityLog.mergeWatchDays`), never a setting. One way, watch -> phone.
+    static let watchActivityKey = "watchActivityDays"
+
     /// A snapshot of the synced settings, containing **only keys this device has actually set**. A value
     /// the user never touched is absent from its backing store, so it is left out - and the receiver only
     /// writes keys that are present. That is the core safeguard against the "everything reset" bug: a
@@ -562,6 +573,12 @@ extension Settings {
         #if os(iOS)
         if chosen.contains("travelingMode") { dict["travelingMode"] = travelingMode }
         if chosen.contains("prayerCalculation") { dict["prayerCalculation"] = prayerCalculation }
+        #endif
+        #if os(watchOS)
+        // The wrist's own reading and listening days, for the phone's streak (decision C of the
+        // Tilawa Guide). Absent while the watch has nothing to report: "no opinion", never a delete.
+        let activity = ActivityLog.shared.mirrorPayload()
+        if !activity.isEmpty { dict[Self.watchActivityKey] = activity }
         #endif
 
         // @AppStorage settings - likewise only keys that have been explicitly written.
@@ -615,6 +632,14 @@ extension Settings {
         if let v = dict["prayerCalculation"] as? String, v != prayerCalculation {
             prayerCalculation = v
             changed = true
+        }
+        #endif
+
+        #if os(iOS)
+        // The watch's activity days: merged into the log, not a setting, so they never mark `changed`
+        // (no prayer refetch for a surah read on the wrist).
+        if let activity = dict[Self.watchActivityKey] as? [String: [String: Int]] {
+            ActivityLog.shared.mergeWatchDays(activity)
         }
         #endif
 

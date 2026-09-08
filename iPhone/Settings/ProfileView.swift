@@ -338,6 +338,7 @@ struct ProfileView: View {
             VStack(spacing: 16) {
                 RingHero(stats: stats)
                 streakStrip(stats)
+                ActivityDashboardCard()
                 prayerCard(stats)
                 quranCard(stats)
                 libraryCard(stats)
@@ -435,6 +436,19 @@ struct ProfileView: View {
 
             statRow("Favorite surahs", value: formatted(stats.favoriteSurahs))
             statRow("Favorite reciters", value: formatted(stats.favoriteReciters))
+            if !SavedReflectionsStore.shared.items.isEmpty {
+                NavigationLink(destination: LazyDestination { SavedReflectionsView() }) {
+                    HStack {
+                        Text("Saved reflections")
+                            .font(.subheadline)
+                        Spacer()
+                        Text(formatted(SavedReflectionsStore.shared.items.count))
+                            .font(.subheadline.weight(.semibold).monospacedDigit())
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .buttonStyle(.plain)
+            }
         }
     }
 

@@ -1033,7 +1033,7 @@ struct HadithBookView: View {
             Button {
                 settings.hapticFeedback()
                 withAnimation(.easeInOut) {
-                    store.toggleChapterFavorite(slug: book.slug, chapterId: chapter.id)
+                    store.toggleChapterFavoriteOrConfirm(book: book, chapter: chapter)
                 }
             } label: {
                 Image(systemName: store.isChapterFavorite(slug: book.slug, chapterId: chapter.id) ? "star.fill" : "star")
@@ -1090,7 +1090,7 @@ struct HadithBookView: View {
                 .onTapGesture {
                     settings.hapticFeedback()
                     withAnimation(.easeInOut) {
-                        store.toggleChapterFavorite(slug: book.slug, chapterId: chapter.id)
+                        store.toggleChapterFavoriteOrConfirm(book: book, chapter: chapter)
                     }
                 }
                 .accessibilityLabel("Chapter \(chapterOrdinal(chapter, data: data))\(isLastRead ? ", last read" : "")")
@@ -1286,7 +1286,7 @@ struct HadithBookView: View {
             accent: settings.accentColor.color,
             accessibilityName: chapter.english
         ) {
-            store.toggleChapterFavorite(slug: book.slug, chapterId: chapter.id)
+            store.toggleChapterFavoriteOrConfirm(book: book, chapter: chapter)
         }
     }
 
@@ -1324,7 +1324,7 @@ struct HadithBookView: View {
         Button(role: store.isChapterFavorite(slug: book.slug, chapterId: chapter.id) ? .destructive : .cancel) {
             settings.hapticFeedback()
             withAnimation(.easeInOut) {
-                store.toggleChapterFavorite(slug: book.slug, chapterId: chapter.id)
+                store.toggleChapterFavoriteOrConfirm(book: book, chapter: chapter)
             }
         } label: {
             Label(store.isChapterFavorite(slug: book.slug, chapterId: chapter.id) ? "Unfavorite Chapter" : "Favorite Chapter",
@@ -1589,6 +1589,10 @@ struct HadithChapterView: View {
         _allChapterHadiths = State(initialValue: hadiths)
         _chapterRange = State(initialValue: HadithChapterView.range(of: hadiths))
         _textReady = State(initialValue: bookData.hasText(rows: HadithChapterView.rowRange(of: chapter)))
+        #if DEBUG
+        // Under `-renderCounter`: a chapter screen built before a tap (an eager link) shows here.
+        if RenderCounter.enabled { NSLog("HADITH CHAPTER INIT %@ chapter %d", book.slug, chapter.id) }
+        #endif
     }
 
     /// The chapter's rows in the book's row table.
@@ -3089,7 +3093,7 @@ private struct HadithPageContent: View {
             .contentShape(Rectangle())
             .onTapGesture {
                 settings.hapticFeedback()
-                withAnimation(.easeInOut) { HadithStore.shared.toggleBookmark(book: book, hadith: hadith) }
+                withAnimation(.easeInOut) { HadithStore.shared.toggleBookmarkOrConfirm(book: book, hadith: hadith) }
             }
             .overlay(alignment: .topTrailing) {
                 if isBookmarked {
@@ -3126,7 +3130,7 @@ private struct HadithPageContent: View {
     private func headerActions(isBookmarked: Bool) -> some View {
         Button {
             settings.hapticFeedback()
-            withAnimation(.easeInOut) { HadithStore.shared.toggleBookmark(book: book, hadith: hadith) }
+            withAnimation(.easeInOut) { HadithStore.shared.toggleBookmarkOrConfirm(book: book, hadith: hadith) }
         } label: {
             Label(isBookmarked ? "Remove Bookmark" : "Bookmark Hadith",
                   systemImage: isBookmarked ? "bookmark.fill" : "bookmark")

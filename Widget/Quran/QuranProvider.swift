@@ -72,11 +72,9 @@ struct QuranWidgetProvider: TimelineProvider {
         let policy: TimelineReloadPolicy
         switch kind {
         case .ayahOfTheDay:
-            // Via the calendar, not +86,400s: DST transition days are 23 or 25 hours long.
-            let todayStart = Calendar.current.startOfDay(for: Date())
-            let nextMidnight = Calendar.current.date(byAdding: .day, value: 1, to: todayStart)
-                ?? Date().addingTimeInterval(86_400)
-            policy = .after(nextMidnight)
+            // The day turns over when the app's daily cards do: Fajr from the table the app wrote,
+            // else local midnight (via the calendar, not +86,400s: DST days are 23 or 25 hours).
+            policy = .after(DailyRollover.nextRollover(after: Date(), fajrByDay: QuranWidgetStore.load()?.fajrByDay))
         case .lastReadAyah, .lastListenedSurah, .lastListenedAyah:
             policy = .never
         }
@@ -131,7 +129,8 @@ struct QuranWidgetProvider: TimelineProvider {
             // yesterday, or an old snapshot without the day stamp) rotate through the pool ourselves so
             // the "Ayah of the Day" actually changes daily.
             let appCard: QuranWidgetSnapshot.AyahCard? = {
-                guard let snapshot, snapshot.ayahOfTheDayDay == QuranWidgetSnapshot.dayBucket() else { return nil }
+                guard let snapshot,
+                      snapshot.ayahOfTheDayDay == QuranWidgetSnapshot.dailyDayIndex(fajrByDay: snapshot.fajrByDay) else { return nil }
                 return snapshot.ayahOfTheDay
             }()
             return makeAyahEntry(accent: accent, card: appCard ?? ayahOfTheDayCard(from: snapshot))
@@ -180,7 +179,7 @@ struct QuranWidgetProvider: TimelineProvider {
     /// app-provided pool by day, so the widget still shows one stable ayah per day.
     private func ayahOfTheDayCard(from snapshot: QuranWidgetSnapshot?) -> QuranWidgetSnapshot.AyahCard? {
         guard let pool = snapshot?.randomPool, !pool.isEmpty else { return nil }
-        let bucket = Int(Date().timeIntervalSince1970 / 86_400)
+        let bucket = QuranWidgetSnapshot.dailyDayIndex(fajrByDay: snapshot?.fajrByDay)
         return pool[((bucket % pool.count) + pool.count) % pool.count]
     }
 

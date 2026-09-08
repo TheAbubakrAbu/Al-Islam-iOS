@@ -27,6 +27,12 @@ struct AlIslamApp: App {
         // Activate WatchConnectivity so settings sync (and watch app-installed detection) work both ways.
         _ = WatchConnectivityManager.shared
 
+        // The daily corpora (Reminder of the Day, Word of the Day: 20 + 16 KB of xz, a few ms of parse
+        // off-main) start now, before the under-cover tab walk builds the Islam and Quran roots that
+        // read them, so neither root ever parses on the main thread (Tilawa Guide, Phase 1 step 1).
+        DailyReminderStore.shared.prewarm()
+        WordOfDayStore.prewarm()
+
         if #unavailable(iOS 26.0) {
             // Pre-Liquid-Glass, a scroll view resting at its bottom edge flips the tab bar to its
             // scroll-edge appearance - which iOS leaves fully TRANSPARENT by default, so list content
@@ -169,6 +175,8 @@ private struct MainTabView: View {
     // through its own publisher below. `warmUnderCover` reaches the singletons directly.
     private let settings = Settings.shared
     @State private var pendingNagQuestion: Settings.PendingNagQuestion?
+    /// The once-a-day Reminder of the Day sheet; the store publishes once a day at most.
+    @ObservedObject private var dailyReminders = DailyReminderStore.shared
 
     /// True while a launch/splash screen still covers the tabs (drives the under-cover warm below).
     let isCovered: Bool
@@ -220,6 +228,20 @@ private struct MainTabView: View {
             .onReceive(AppNavigation.shared.$pendingQuran) { target in
                 if target != nil { selectedTab = .quran }
             }
+            // A Reminder of the Day card's "Open" lands on the Islam tab (or the Hadith tab); the
+            // Islam tab's own `.onReceive` pushes the resource from there.
+            .onReceive(AppNavigation.shared.$pendingIslam) { target in
+                guard let target else { return }
+                if case .hadithTab = target {
+                    selectedTab = .hadith
+                    AppNavigation.shared.pendingIslam = nil
+                } else {
+                    selectedTab = .islam
+                }
+            }
+            .sheet(item: $dailyReminders.sheetEntry) { entry in
+                DailyReminderSheet(entry: entry)
+            }
             .confirmationDialog(
                 "Did you pray \(pendingNagQuestion?.prayerName ?? "this prayer")?",
                 isPresented: Binding(
@@ -238,6 +260,54 @@ private struct MainTabView: View {
             // root is copied into a companion app, delete the domains it doesn't ship.
             // Shared: the tab walk behind the launch cover.
             .task { await warmUnderCover() }
+            // Shared: the once-a-day Reminder of the Day sheet, after the reveal and a beat for the
+            // landing tab to settle. It used to be timed from the end of the walk, which put its
+            // slide-up under the finale; and the scene-phase call at launch used to be able to present
+            // it under the cover. The store itself refuses while the cover is up, while a prayer nag
+            // is pending or while a notification/deep-link destination is, and only stamps the day
+            // when it actually presents, so the nag's dismissal below simply asks again.
+            .task {
+                await AppReveal.waitUntilRevealed()
+                try? await Task.sleep(nanoseconds: 600_000_000)
+                guard !Task.isCancelled else { return }
+                #if DEBUG
+                let force = ProcessInfo.processInfo.arguments.contains("-openDailyReminder")
+                #else
+                let force = false
+                #endif
+                DailyReminderStore.shared.presentSheetIfDue(force: force)
+            }
+            .onChange(of: pendingNagQuestion == nil) { nagClosed in
+                if nagClosed { DailyReminderStore.shared.presentSheetIfDue() }
+            }
+            #if DEBUG
+            // "-rankedBench <query>": the Quran ranked lane timed in isolation, three runs at reveal
+            // + 12 s when the launch's own sweeps are over (the handed-off search at +2.5 s runs
+            // beside the AI corpus and index builds, which inflates its "RANKED quran" line).
+            .task {
+                let arguments = ProcessInfo.processInfo.arguments
+                guard let index = arguments.firstIndex(of: "-rankedBench"), arguments.indices.contains(index + 1) else { return }
+                let term = arguments[index + 1]
+                await AppReveal.waitUntilRevealed()
+                try? await Task.sleep(nanoseconds: 12_000_000_000)
+                let quranData = QuranData.shared
+                quranData.ensureVerseSearchIndex()
+                for await ready in quranData.$isVerseSearchReady.values where ready { break }
+                guard let snapshot = quranData.verseSearchSnapshot() else { return }
+                Task.detached(priority: .userInitiated) {
+                    for _ in 0..<3 { _ = QuranRankedSearch.search(term, snapshot: snapshot, limit: 6) }
+                    NSLog("RANKED BENCH done %@", term)
+                }
+            }
+            // "-dailyRolloverProbe": the daily boundary as the app computes it and as the widget would
+            // from the written Fajr table, side by side in the log (Tilawa Guide, Phase 1 step 11).
+            .task {
+                guard ProcessInfo.processInfo.arguments.contains("-dailyRolloverProbe") else { return }
+                await AppReveal.waitUntilRevealed()
+                try? await Task.sleep(nanoseconds: 1_500_000_000)
+                Settings.shared.logDailyRolloverProbe()
+            }
+            #endif
             #if DEBUG
             // "-auditQiraahAlignment" - print the whole-Quran riwayah alignment audit once the
             // texts are in (see QiraahComparison.auditAlignments).
@@ -277,6 +347,29 @@ private struct MainTabView: View {
                 guard ProcessInfo.processInfo.arguments.contains("-auditTajweedLegends") else { return }
                 await Task.detached(priority: .utility) { TajweedLegendView.auditRuleSections() }.value
             }
+            // "-exportHadithVocabulary" - walk every book's English search folds for the ranked
+            // lane's typo vocabulary and write Documents/hadith-vocabulary.txt (first line: the
+            // shelf fingerprint), for Scripts/build_hadith_vocabulary.py ->
+            // Resources/Data/Hadith/HadithVocabulary.txt.xz. Re-run after any .hpk changes; the
+            // verifier and "-auditPacks" say when the shipped list no longer matches the shelf.
+            .task {
+                guard ProcessInfo.processInfo.arguments.contains("-exportHadithVocabulary") else { return }
+                await AppReveal.waitUntilRevealed()
+                var books: [HadithBookData] = []
+                for book in HadithCatalogBook.all {
+                    if let data = await HadithStore.shared.openOffMain(book, priority: .utility) { books.append(data) }
+                }
+                let opened = books
+                await Task.detached(priority: .utility) { HadithVocabulary.exportList(books: opened) }.value
+            }
+            // "-duaSlotProbe" - the seeded dua slots (Tilawa Guide, decision D), printed twice;
+            // run it twice on the same day with "-extraSeed" and diff the lines.
+            .task {
+                guard ProcessInfo.processInfo.arguments.contains("-duaSlotProbe") else { return }
+                await AppReveal.waitUntilRevealed()
+                try? await Task.sleep(nanoseconds: 2_500_000_000)
+                ExtraRemindersStore.logDuaSlotProbe()
+            }
             // "-auditPacks" - fingerprint every bundled pack and loose payload through the app's own
             // readers (see PackAudit); run before and after a repack and diff Documents/packaudit.txt.
             .task {
@@ -308,6 +401,20 @@ private struct MainTabView: View {
                     guard !Task.isCancelled else { return }
                 }
                 await QiraatPlacesExport.run()
+            }
+            // "-qiraatBench [places]" - time the Qiraat Explorer's Next tap over the real place
+            // list, alignment split from the resolve and diff (see QiraatExplorerBench). Build with
+            // SWIFT_OPTIMIZATION_LEVEL=-O first; -Onone reads 2 to 30x slow depending on the phase.
+            .task {
+                let args = ProcessInfo.processInfo.arguments
+                guard let index = args.firstIndex(of: "-qiraatBench") else { return }
+                let places = args.indices.contains(index + 1) ? Int(args[index + 1]) ?? 60 : 60
+                await AppReveal.waitUntilRevealed()
+                while QuranData.shared.quran.count < 114 {
+                    try? await Task.sleep(nanoseconds: 250_000_000)
+                    guard !Task.isCancelled else { return }
+                }
+                QiraatExplorerBench.run(places: places)
             }
             .task {
                 guard ProcessInfo.processInfo.arguments.contains("-auditSemanticPacks") else { return }
@@ -373,11 +480,14 @@ private struct MainTabView: View {
             // to fire at 1.2 / 1.5 / 2.0 / 2.0 s and overlap). Keep the slots apart when adding one:
             //   +1.0 s  Hadith shelf sweep (main-actor slices, one book per runloop turn)
             //   +1.5 s  cross-language lexicon + Islam article corpus (detached, utility)
+            //   +1.5 s  the reminders' launch pass (one pending fetch, the adds off-main; ReminderKinds.swift)
             //   +2.0 s  AI-search NLEmbedding probe (detached, utility)
             //   +2.5 s  the broad Quran surah sweep (detached, utility; `QuranLaunchWarmup`)
             //   +2.5 s  achievements catch-up (Achievements.swift)
             //   +3.0 s  the Quran AI corpus build or disk load (QuranView)
             //   +3.5 s  the 6,236-entry ayah search index (utility; full tier only, otherwise on demand)
+            //   +4.0 s  the ranked search's corpus lanes, once the index is there (utility; full tier only)
+            //   +4.5 s  the hadith typo vocabulary (a file read, or once a walk of the packs; full tier only)
             //
             // Al-Quran: the AI-search capability probe loads a disk-backed NLEmbedding model, off-main.
             // Deferred until AFTER the reveal: it's only needed once a search field gains focus, and
@@ -422,6 +532,63 @@ private struct MainTabView: View {
                 }
                 IslamArticleSearchModel.prewarm()
             }
+            // Al-Quran: the ranked search's corpus lanes (6,236 folds, stems, skeletons), right after
+            // the verse index the +3.5 s task builds, so the first ranked query never builds them
+            // under the reader's thumb. Full tier only; the reduced tier builds them on the search
+            // field's focus (`QuranView.prewarmRankedLanes`).
+            .task {
+                await AppReveal.waitUntilRevealed()
+                try? await Task.sleep(nanoseconds: 4_000_000_000)
+                guard !Task.isCancelled, !AppPerformance.shouldAvoidBroadPrewarm else { return }
+                let quranData = QuranData.shared
+                for await ready in quranData.$isVerseSearchReady.values where ready { break }
+                guard !Task.isCancelled, let snapshot = quranData.verseSearchSnapshot() else { return }
+                Task.detached(priority: .utility) { QuranRankedSearch.prewarmLanes(snapshot: snapshot) }
+            }
+            // Al-Hadith: the ranked lane's typo vocabulary, off the first search's own path. The
+            // shipped list first (decision B of the Tilawa Guide: one small xz inflate, no book
+            // opened); the walk of every book's search folds only when that list is missing or was
+            // built for other packs. Full tier only; the books are the shelf sweep's, open by now.
+            .task {
+                await AppReveal.waitUntilRevealed()
+                try? await Task.sleep(nanoseconds: 4_500_000_000)
+                guard !Task.isCancelled, !AppPerformance.shouldAvoidBroadPrewarm else { return }
+                let shipped = await Task.detached(priority: .utility) { HadithVocabulary.shared.prepareFromBundle() }.value
+                if shipped { return }
+                guard !Task.isCancelled else { return }
+                var books: [HadithBookData] = []
+                for book in HadithCatalogBook.all {
+                    guard !Task.isCancelled else { return }
+                    if let data = await HadithStore.shared.openOffMain(book, priority: .utility) { books.append(data) }
+                }
+                HadithVocabulary.shared.prepare(books: books)
+            }
+            // Shared: the reminders' one launch pass (the Sunnah presets re-added, the extra kinds
+            // rebuilt only when their inputs changed), off the AppDelegate's reveal wait where it
+            // used to run twice.
+            .task {
+                await AppReveal.waitUntilRevealed()
+                try? await Task.sleep(nanoseconds: 1_500_000_000)
+                guard !Task.isCancelled else { return }
+                await ReminderScheduler.rearmAfterLaunch()
+            }
+            #if DEBUG
+            // "-simulateReminderTap surah:67" (or "ayah:2:285", "open", "hadith"): what a reminder's
+            // or a daily card's tap does, two seconds after the reveal, from whichever tab the launch
+            // landed on (Tilawa Guide, Phase 2 step 9).
+            .task {
+                let arguments = ProcessInfo.processInfo.arguments
+                guard let index = arguments.firstIndex(of: "-simulateReminderTap"),
+                      arguments.indices.contains(index + 1) else { return }
+                await AppReveal.waitUntilRevealed()
+                try? await Task.sleep(nanoseconds: 2_000_000_000)
+                if arguments[index + 1] == "hadith" {
+                    AppNavigation.shared.openIslam(.hadithTab)
+                } else if let target = QuranOpenTarget(encoded: arguments[index + 1]) {
+                    AppNavigation.shared.open(target)
+                }
+            }
+            #endif
             // Al-Hadith: today's card resolves under the cover (one book, so the Hadith tab realizes
             // with the card already there) - but the 17-book shelf sweep waits for the reveal. Parsing
             // ~51k rows on the main actor was the single heaviest launch item, competing with the tab
@@ -500,6 +667,11 @@ private struct MainTabView: View {
         // 3) Back on the landing tab; let it become the rendered tab again before the reveal. A
         // launch from a Sunnah reminder's tap lands on the Quran tab instead.
         selectedTab = AppNavigation.shared.pendingQuran != nil ? .quran : launchTab
+        // A launch that arrived through a notification or a deep link keeps its own destination and
+        // skips the daily sheet for the day; otherwise the post-reveal task in `body` presents it.
+        if AppNavigation.shared.pendingQuran != nil || AppNavigation.shared.pendingIslam != nil {
+            DailyReminderStore.shared.skipSheetToday()
+        }
         try? await Task.sleep(nanoseconds: 80_000_000)
 
         LaunchWarmup.shared.markWarm()

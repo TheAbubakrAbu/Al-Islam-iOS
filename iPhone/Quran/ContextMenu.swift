@@ -212,7 +212,7 @@ struct SurahContextMenu: View {
         Button(role: isFavorite ? .destructive : .cancel) {
             settings.hapticFeedback()
             withAnimation(.easeInOut) {
-                settings.toggleSurahFavorite(surah: surahID)
+                settings.toggleSurahFavoriteOrConfirm(surah: surahID)
             }
         } label: {
             Label(
@@ -561,13 +561,11 @@ struct AyahContextMenuModifier: ViewModifier {
         settings.removeBookmarkNote(surah: surah, ayah: ayah)
     }
 
-    @State private var confirmRemoveNote = false
     @State private var confirmDeleteForever = false
 
-    private func toggleBookmarkWithNoteGuard() {
-        if !settings.toggleBookmarkIfNoNoteLoss(surah: surah, ayah: ayah) {
-            confirmRemoveNote = true
-        }
+    /// Bookmarks the ayah, or asks before removing the bookmark (`Settings.toggleBookmarkOrConfirm`).
+    private func toggleBookmarkOrConfirm() {
+        settings.toggleBookmarkOrConfirm(surah: surah, ayah: ayah)
     }
 
     /// The full action list, shared verbatim by the long-press context menu and (when
@@ -609,7 +607,7 @@ struct AyahContextMenuModifier: ViewModifier {
 
                 Button(role: isBookmarked ? .destructive : .cancel) {
                     settings.hapticFeedback()
-                    toggleBookmarkWithNoteGuard()
+                    toggleBookmarkOrConfirm()
                 } label: {
                     Label(
                         isBookmarked ? "Unbookmark Ayah" : "Bookmark Ayah",
@@ -903,15 +901,6 @@ struct AyahContextMenuModifier: ViewModifier {
             } message: {
                 Text("Please keep notes Islamic and respectful.")
             }
-            .confirmationDialog(Settings.bookmarkNoteRemovalDialogTitle, isPresented: $confirmRemoveNote, titleVisibility: .visible) {
-                Button("Remove", role: .destructive) {
-                    settings.hapticFeedback()
-                    settings.toggleBookmark(surah: surah, ayah: ayah)
-                }
-                Button("Cancel") {}
-            } message: {
-                Text(Settings.bookmarkNoteRemovalDialogMessage)
-            }
             .confirmationDialog("Are you sure?", isPresented: $confirmDeleteForever, titleVisibility: .visible) {
                 Button("Remove Permanently", role: .destructive) {
                     settings.hapticFeedback()
@@ -1000,12 +989,8 @@ struct LeftSwipeActions: ViewModifier {
         settings.bookmarkNoteText(surah: bookmarkedSurah ?? 1, ayah: bookmarkedAyah ?? 1)
     }
 
-    @State private var confirmRemoveNote = false
-
-    private func toggleBookmarkWithNoteGuard(_ surah: Int, _ ayah: Int) {
-        if !settings.toggleBookmarkIfNoNoteLoss(surah: surah, ayah: ayah) {
-            confirmRemoveNote = true
-        }
+    private func toggleBookmarkOrConfirm(_ surah: Int, _ ayah: Int) {
+        settings.toggleBookmarkOrConfirm(surah: surah, ayah: ayah)
     }
 
     func body(content: Content) -> some View {
@@ -1015,7 +1000,7 @@ struct LeftSwipeActions: ViewModifier {
                 Button {
                     settings.hapticFeedback()
                     withAnimation(.easeInOut) {
-                        settings.toggleSurahFavorite(surah: surah)
+                        settings.toggleSurahFavoriteOrConfirm(surah: surah)
                     }
                 } label: {
                     Image(systemName: isFavorite ? "star.fill" : "star")
@@ -1025,7 +1010,7 @@ struct LeftSwipeActions: ViewModifier {
                 if let s = bookmarkedSurah, let a = bookmarkedAyah {
                     Button {
                         settings.hapticFeedback()
-                        toggleBookmarkWithNoteGuard(s, a)
+                        toggleBookmarkOrConfirm(s, a)
                     } label: {
                         Image(systemName: isBookmarked ? "bookmark.fill" : "bookmark")
                     }
@@ -1033,15 +1018,6 @@ struct LeftSwipeActions: ViewModifier {
                 }
             }
             #endif
-            .confirmationDialog(Settings.bookmarkNoteRemovalDialogTitle, isPresented: $confirmRemoveNote, titleVisibility: .visible) {
-                Button("Remove", role: .destructive) {
-                    settings.hapticFeedback()
-                    settings.toggleBookmark(surah: bookmarkedSurah ?? 1, ayah: bookmarkedAyah ?? 1)
-                }
-                Button("Cancel") {}
-            } message: {
-                Text(Settings.bookmarkNoteRemovalDialogMessage)
-            }
     }
 }
 

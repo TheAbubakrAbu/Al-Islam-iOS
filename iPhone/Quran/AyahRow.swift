@@ -808,7 +808,7 @@ struct AyahRow: View, Equatable {
                         )
                         .onTapGesture {
                             settings.hapticFeedback()
-                            toggleBookmarkWithNoteGuard()
+                            toggleBookmarkOrConfirm()
                         }
                         // The bookmark keeps the RIGHT corner - that is where saving an ayah has always
                         // shown up. The listening badge moves to the LEFT (user rule), so the two no longer
@@ -1024,15 +1024,6 @@ struct AyahRow: View, Equatable {
             }
         }
         #endif
-        .confirmationDialog(Settings.bookmarkNoteRemovalDialogTitle, isPresented: $confirmRemoveNote, titleVisibility: .visible) {
-            Button("Remove", role: .destructive) {
-                settings.hapticFeedback()
-                settings.toggleBookmark(surah: surah.id, ayah: ayah.id)
-            }
-            Button("Cancel") {}
-        } message: {
-            Text(Settings.bookmarkNoteRemovalDialogMessage)
-        }
         #if os(watchOS)
         .confirmationDialog("Play Ayah", isPresented: $showWatchPlaybackDialog, titleVisibility: .visible) {
             Button("Play Ayah") {
@@ -1466,12 +1457,9 @@ struct AyahRow: View, Equatable {
         .onDisappear { onAyahTextDisappear?() }
     }
 
-    @State private var confirmRemoveNote = false
-
-    private func toggleBookmarkWithNoteGuard() {
-        if !settings.toggleBookmarkIfNoNoteLoss(surah: surah.id, ayah: ayah.id) {
-            confirmRemoveNote = true
-        }
+    /// Bookmarks the ayah, or asks before removing the bookmark (`Settings.toggleBookmarkOrConfirm`).
+    private func toggleBookmarkOrConfirm() {
+        settings.toggleBookmarkOrConfirm(surah: surah.id, ayah: ayah.id)
     }
 
     #if os(iOS)
@@ -1642,7 +1630,7 @@ struct AyahRow: View, Equatable {
 
             Button(role: isBookmarked ? .destructive : nil) {
                 settings.hapticFeedback()
-                toggleBookmarkWithNoteGuard()
+                toggleBookmarkOrConfirm()
             } label: {
                 Label(
                     isBookmarked ? "Unbookmark Ayah" : "Bookmark Ayah",

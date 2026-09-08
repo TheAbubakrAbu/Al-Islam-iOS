@@ -339,14 +339,7 @@ struct ActivityView: UIViewControllerRepresentable {
 /// time the action runs - so present the activity controller on the topmost view controller instead.
 @MainActor
 func presentSystemShareSheet(items: [Any]) {
-    let scene = UIApplication.shared.connectedScenes
-        .compactMap { $0 as? UIWindowScene }
-        .first { $0.activationState == .foregroundActive }
-
-    guard let window = scene?.windows.first(where: \.isKeyWindow) ?? scene?.windows.first,
-          var top = window.rootViewController else { return }
-
-    while let presented = top.presentedViewController { top = presented }
+    guard let top = topmostViewController() else { return }
 
     let controller = UIActivityViewController(activityItems: items, applicationActivities: nil)
     // iPad requires an anchor or the popover asserts on presentation.

@@ -105,7 +105,8 @@ final class HadithUserData: ObservableObject {
                     chapterId: hadith.chapterId,
                     arabicPreview: String(hadith.arabic.prefix(120)),
                     englishPreview: String(hadith.english.text.prefix(140)),
-                    citation: hadith.citation
+                    citation: hadith.citation,
+                    createdAt: Date()
                 ),
                 at: 0
             )
@@ -165,7 +166,8 @@ final class HadithUserData: ObservableObject {
                 arabicPreview: old.arabicPreview,
                 englishPreview: old.englishPreview,
                 note: old.note,
-                citation: update.citation
+                citation: update.citation,
+                createdAt: old.createdAt
             )
             changed = true
         }
@@ -199,7 +201,7 @@ final class HadithStore: ObservableObject {
 
     /// Drops every decompressed block and all but the most recently opened books. The packs themselves
     /// stay mapped - a memory map is not resident memory, and dropping it would only cost a re-open.
-    private func trimCachesForMemoryPressure() {
+    func trimCachesForMemoryPressure() {
         // The book screen's per-book chapter statistics are rebuilt in one pass over the chapter table.
         HadithBookView.clearDerivedCaches()
         HadithBlockCache.shared.purge()
@@ -319,6 +321,7 @@ final class HadithStore: ObservableObject {
     }
 
     func loadLastRead() {
+        viewedLog.loadIfNeeded()
         guard lastReadByBook.isEmpty else { return }
         if let data = UserDefaults.standard.data(forKey: Self.lastReadByBookKey),
            let decoded = try? JSONDecoder().decode([String: HadithLastRead].self, from: data) {
@@ -335,7 +338,99 @@ final class HadithStore: ObservableObject {
         }
     }
 
+    // MARK: Viewed log (the History screen)
+
+    struct ViewedEntry: Codable, Identifiable, Equatable {
+        let slug: String
+        let idInBook: Int
+        let reference: String
+        let arabicPreview: String
+        let englishPreview: String
+        let viewedAt: Date
+        var chapterId: Int? = nil
+
+        var id: String { "\(slug)-\(idInBook)-\(viewedAt.timeIntervalSince1970)" }
+    }
+
+    /// Every hadith opened, newest first, capped: its own observable object, so an open never
+    /// publishes the store (the tab root, the book screen and every row helper observe it, and a
+    /// publish mid-transition was the pop hazard Phase 7 of the Performance Guide closed) and its
+    /// defaults write is debounced off the main thread. The History screen observes this.
+    final class ViewedLog: ObservableObject {
+        static let key = "hadithViewedLog"
+        static let cap = 200
+
+        @Published private(set) var entries: [ViewedEntry] = []
+        private var didLoad = false
+        private var saveWork: DispatchWorkItem?
+
+        init() {
+            ObjectPublishCounter.attach(self, label: "HadithViewedLog")
+        }
+
+        /// Decodes the stored log on first use (main thread; it publishes).
+        func loadIfNeeded() {
+            guard !didLoad else { return }
+            didLoad = true
+            if let data = UserDefaults.standard.data(forKey: Self.key),
+               let decoded = try? JSONDecoder().decode([ViewedEntry].self, from: data) {
+                entries = decoded
+            }
+        }
+
+        func record(_ entry: ViewedEntry) {
+            loadIfNeeded()
+            // The same hadith re-opened within the hour is one visit, not two.
+            if let last = entries.first, last.slug == entry.slug, last.idInBook == entry.idInBook,
+               entry.viewedAt.timeIntervalSince(last.viewedAt) < 3_600 { return }
+            entries.insert(entry, at: 0)
+            if entries.count > Self.cap { entries.removeLast(entries.count - Self.cap) }
+            scheduleSave()
+        }
+
+        private func scheduleSave() {
+            saveWork?.cancel()
+            let snapshot = entries
+            let work = DispatchWorkItem {
+                guard let data = try? JSONEncoder().encode(snapshot) else { return }
+                UserDefaults.standard.set(data, forKey: Self.key)
+            }
+            saveWork = work
+            DispatchQueue.global(qos: .utility).asyncAfter(deadline: .now() + 1, execute: work)
+        }
+
+        /// Writes now (the app is leaving the foreground).
+        func flush() {
+            guard let work = saveWork else { return }
+            saveWork = nil
+            work.cancel()
+            let snapshot = entries
+            DispatchQueue.global(qos: .utility).async {
+                guard let data = try? JSONEncoder().encode(snapshot) else { return }
+                UserDefaults.standard.set(data, forKey: Self.key)
+            }
+        }
+    }
+
+    let viewedLog = ViewedLog()
+
+    /// The log's rows, loaded on first read (main thread).
+    var viewed: [ViewedEntry] {
+        viewedLog.loadIfNeeded()
+        return viewedLog.entries
+    }
+
+    private func recordViewed(book: HadithCatalogBook, hadith: HadithBookData.Hadith) {
+        viewedLog.record(ViewedEntry(slug: book.slug, idInBook: hadith.idInBook,
+                                     reference: "\(book.englishTitle) \(hadith.displayNumber)",
+                                     arabicPreview: String(hadith.arabic.prefix(120)),
+                                     englishPreview: String(hadith.english.text.prefix(140)),
+                                     viewedAt: Date(), chapterId: hadith.chapterId))
+        ActivityLog.shared.record(.hadith)
+    }
+
     func recordLastRead(book: HadithCatalogBook, hadith: HadithBookData.Hadith) {
+        recordViewed(book: book, hadith: hadith)
         // Re-recording the position already held is a NO-OP, publish included. Opening "Last Read" (or
         // the auto-open landing on the remembered chapter) records the very hadith the store already
         // holds - and that publish re-rendered the screens hosting the programmatic navigation links
@@ -656,7 +751,7 @@ final class HadithStore: ObservableObject {
         return !Settings.containsDailyBlockedWord(strings.text + " " + strings.narrator)
     }
 
-    struct DailyHadithEntry: Codable {
+    struct DailyHadithEntry: Codable, Equatable {
         let dayKey: String
         let slug: String
         let idInBook: Int
@@ -706,7 +801,7 @@ final class HadithStore: ObservableObject {
     }
 
     private func resolveDaily(force: Bool) async {
-        let dayKey = Settings.dayKey()
+        let dayKey = Settings.shared.dailyDayKey()
         if !force, dailyPreparedForDay == dayKey, daily != nil { return }
 
         // 1. A shuffle override for today wins.

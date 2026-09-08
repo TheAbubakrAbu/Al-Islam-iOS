@@ -153,6 +153,7 @@ final class JournalStore: ObservableObject {
     }
 
     private init() {
+        ObjectPublishCounter.attach(self, label: "JournalStore")
         load()
         #if DEBUG
         // "-journalSeed": two sample entries when the journal is empty, for screenshots.
@@ -170,10 +171,15 @@ final class JournalStore: ObservableObject {
         }
     }
 
+    /// Every tag by use, most used first; rebuilt after a save (it sorted on every read before).
+    private var tagsCache: [String]?
     var tags: [String] {
+        if let tagsCache { return tagsCache }
         var counts: [String: Int] = [:]
         for entry in entries { for tag in entry.tags { counts[tag, default: 0] += 1 } }
-        return counts.sorted { a, b in a.value != b.value ? a.value > b.value : a.key < b.key }.map(\.key)
+        let sorted = counts.sorted { a, b in a.value != b.value ? a.value > b.value : a.key < b.key }.map(\.key)
+        tagsCache = sorted
+        return sorted
     }
 
     var speakers: [String] {
@@ -212,9 +218,16 @@ final class JournalStore: ObservableObject {
         persist()
     }
 
-    /// The whole journal as one text, for sharing or keeping outside the app.
-    func exportText() -> String {
-        var out = "# Journal\n\n"
+    /// The whole journal as one text, for sharing or keeping outside the app. A pure function of
+    /// the entries, so the share menu can run it detached and present when it is done.
+    func exportText() -> String { Self.exportText(entries: entries) }
+
+    nonisolated static func exportText(entries: [JournalEntry]) -> String {
+        let ordered = entries.sorted { a, b in
+            if a.pinned != b.pinned { return a.pinned }
+            return a.createdAt > b.createdAt
+        }
+        var out = "# Islamic Journal\n\n"
         let formatter = DateFormatter()
         formatter.dateStyle = .long
         formatter.timeStyle = .short
@@ -237,12 +250,19 @@ final class JournalStore: ObservableObject {
         return out
     }
 
+    /// Encodes and writes a snapshot off the main thread, atomically (the reflections store's rule);
+    /// the tag cache goes with every change.
     private func persist() {
-        do {
-            let data = try JSONEncoder().encode(entries)
-            try data.write(to: Self.fileURL, options: .atomic)
-        } catch {
-            NSLog("Journal save failed: %@", "\(error)")
+        tagsCache = nil
+        let snapshot = entries
+        let url = Self.fileURL
+        DispatchQueue.global(qos: .utility).async {
+            do {
+                let data = try JSONEncoder().encode(snapshot)
+                try data.write(to: url, options: .atomic)
+            } catch {
+                NSLog("Journal save failed: %@", "\(error)")
+            }
         }
     }
 
@@ -291,9 +311,10 @@ enum JournalPrompts {
         "What did a hadith you read this week ask of you?",
     ]
 
-    /// The day's prompt (rotates daily); `step` moves to the next one.
+    /// The day's prompt (rotates daily, on the same boundary as every other "of the day" surface:
+    /// Fajr by default, see `DailyRollover`); `step` moves to the next one. Main thread only.
     static func prompt(step: Int = 0) -> String {
-        let day = Int(Date().timeIntervalSince1970 / 86_400)
+        let day = Settings.shared.dailyDayIndex()
         let index = ((day + step) % all.count + all.count) % all.count
         return all[index]
     }
@@ -331,7 +352,32 @@ struct JournalView: View {
 
     private var accent: Color { settings.accentColor.color }
 
-    private var marginNotes: [JournalMarginNote] {
+    /// What the timeline shows for the settled query, filter, entries and margin notes. Derived by
+    /// `refreshShown()` (at once for a filter or store change, 150 ms after a keystroke) into state,
+    /// never in the body, which used to fold every entry and both bookmark lists twice per evaluation
+    /// and allocate a formatter per group.
+    private struct Shown {
+        var groups: [(title: String, entries: [JournalEntry])] = []
+        var notes: [JournalMarginNote] = []
+        var notesCount = 0
+        /// The filter chips' counts, from one pass over the entries.
+        var kindCounts: [JournalKind: Int] = [:]
+        var pinnedCount = 0
+        var tagCounts: [(tag: String, count: Int)] = []
+    }
+    @State private var shown = Shown()
+    @State private var refreshTask: Task<Void, Never>?
+
+    private static let dayFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "EEEE, d MMMM yyyy"
+        return formatter
+    }()
+
+    private var query: String { IslamArticles.fold(searchText.trimmingCharacters(in: .whitespacesAndNewlines)) }
+
+    /// The notes the reader left on bookmarked ayahs and hadiths, read from the bookmark records.
+    private func marginNotes() -> [JournalMarginNote] {
         var notes: [JournalMarginNote] = []
         for bookmark in settings.bookmarkedAyahs {
             guard let note = bookmark.note?.trimmingCharacters(in: .whitespacesAndNewlines), !note.isEmpty else { continue }
@@ -351,9 +397,10 @@ struct JournalView: View {
         return notes
     }
 
-    private var query: String { IslamArticles.fold(searchText.trimmingCharacters(in: .whitespacesAndNewlines)) }
+    private func refreshShown() {
+        let terms = query.split(separator: " ").map(String.init)
+        let allNotes = marginNotes()
 
-    private var shownEntries: [JournalEntry] {
         var list = store.ordered
         switch filter {
         case .all, .marginNotes: break
@@ -362,35 +409,47 @@ struct JournalView: View {
         case .tag(let tag): list = list.filter { $0.tags.contains(tag) }
         }
         if filter == .marginNotes { list = [] }
-        guard !query.isEmpty else { return list }
-        let terms = query.split(separator: " ").map(String.init)
-        return list.filter { entry in
-            let key = entry.searchKey
-            return terms.allSatisfy { key.contains($0) }
+        if !terms.isEmpty {
+            list = list.filter { entry in
+                let key = entry.searchKey
+                return terms.allSatisfy { key.contains($0) }
+            }
         }
+
+        var notes: [JournalMarginNote] = []
+        if filter == .all || filter == .marginNotes {
+            notes = terms.isEmpty ? allNotes : allNotes.filter { note in
+                let key = IslamArticles.fold(note.title + " " + note.text + " " + note.preview)
+                return terms.allSatisfy { key.contains($0) }
+            }
+        }
+        var next = Shown(groups: Self.dayGroups(of: list, filter: filter), notes: notes, notesCount: allNotes.count)
+        var tagCounts: [String: Int] = [:]
+        for entry in store.entries {
+            next.kindCounts[entry.kind, default: 0] += 1
+            if entry.pinned { next.pinnedCount += 1 }
+            for tag in entry.tags { tagCounts[tag, default: 0] += 1 }
+        }
+        next.tagCounts = store.tags.prefix(12).map { ($0, tagCounts[$0] ?? 0) }
+        shown = next
     }
 
-    private var shownMarginNotes: [JournalMarginNote] {
-        guard filter == .all || filter == .marginNotes else { return [] }
-        let notes = marginNotes
-        guard !query.isEmpty else { return notes }
-        let terms = query.split(separator: " ").map(String.init)
-        return notes.filter { note in
-            let key = IslamArticles.fold(note.title + " " + note.text + " " + note.preview)
-            return terms.allSatisfy { key.contains($0) }
+    private func scheduleRefresh() {
+        refreshTask?.cancel()
+        refreshTask = Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 150_000_000)
+            guard !Task.isCancelled else { return }
+            refreshShown()
         }
     }
 
     /// Entries grouped by calendar day, newest day first; pinned entries sit in their own group.
-    private var dayGroups: [(title: String, entries: [JournalEntry])] {
-        let entries = shownEntries
+    private static func dayGroups(of entries: [JournalEntry], filter: Filter) -> [(title: String, entries: [JournalEntry])] {
         let pinned = entries.filter(\.pinned)
         let rest = entries.filter { !$0.pinned }
         var groups: [(String, [JournalEntry])] = []
         if !pinned.isEmpty, filter != .pinned { groups.append(("PINNED", pinned)) }
         let calendar = Calendar.current
-        let formatter = DateFormatter()
-        formatter.dateFormat = "EEEE, d MMMM yyyy"
         var byDay: [(Date, [JournalEntry])] = []
         for entry in (filter == .pinned ? entries : rest) {
             let day = calendar.startOfDay(for: entry.createdAt)
@@ -404,13 +463,14 @@ struct JournalView: View {
             let title: String
             if calendar.isDateInToday(day) { title = "TODAY" }
             else if calendar.isDateInYesterday(day) { title = "YESTERDAY" }
-            else { title = formatter.string(from: day).uppercased() }
+            else { title = dayFormatter.string(from: day).uppercased() }
             groups.append((title, list))
         }
         return groups
     }
 
     var body: some View {
+        let _ = RenderCounter.hit("JournalView")
         List {
             Group {
                 if query.isEmpty {
@@ -419,7 +479,7 @@ struct JournalView: View {
 
                 filterSection
 
-                let groups = dayGroups
+                let groups = shown.groups
                 ForEach(Array(groups.enumerated()), id: \.offset) { _, group in
                     Section(header: Text(group.title)) {
                         ForEach(group.entries) { entry in
@@ -437,7 +497,7 @@ struct JournalView: View {
                     }
                 }
 
-                let notes = shownMarginNotes
+                let notes = shown.notes
                 if !notes.isEmpty {
                     Section(header: SectionPillHeader(title: "NOTES ON AYAHS AND HADITHS", count: notes.count)) {
                         ForEach(notes) { note in
@@ -479,8 +539,12 @@ struct JournalView: View {
                 .padding(.bottom, BottomBarCushion.standard)
                 .background(Color.white.opacity(0.00001))
         }
-        .navigationTitle("Journal")
+        .navigationTitle("Islamic Journal")
         .navigationBarTitleDisplayMode(.inline)
+        .onAppear { refreshShown() }
+        .onReceive(store.$entries) { _ in refreshShown() }
+        .onChange(of: filter) { _ in refreshShown() }
+        .onChange(of: searchText) { _ in scheduleRefresh() }
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 Menu {
@@ -491,7 +555,12 @@ struct JournalView: View {
                     if !store.entries.isEmpty {
                         Button {
                             settings.hapticFeedback()
-                            presentSystemShareSheet(items: [store.exportText()])
+                            // The text of every entry is built detached, then the sheet presents.
+                            let snapshot = store.entries
+                            Task {
+                                let text = await Task.detached(priority: .userInitiated) { JournalStore.exportText(entries: snapshot) }.value
+                                presentSystemShareSheet(items: [text])
+                            }
                         } label: { Label("Export as Text", systemImage: "square.and.arrow.up") }
                     }
                 } label: {
@@ -591,10 +660,9 @@ struct JournalView: View {
 
     @ViewBuilder
     private var filterSection: some View {
-        let kinds = JournalKind.allCases.filter { kind in store.entries.contains { $0.kind == kind } }
-        let tags = Array(store.tags.prefix(12))
-        let pinnedCount = store.entries.filter(\.pinned).count
-        let notesCount = marginNotes.count
+        let kinds = JournalKind.allCases.filter { (shown.kindCounts[$0] ?? 0) > 0 }
+        let pinnedCount = shown.pinnedCount
+        let notesCount = shown.notesCount
         if !store.entries.isEmpty || notesCount > 0 {
             Section {
                 ScrollView(.horizontal, showsIndicators: false) {
@@ -602,11 +670,11 @@ struct JournalView: View {
                         filterChip("All", count: store.entries.count + notesCount, .all)
                         if pinnedCount > 0 { filterChip("Pinned", count: pinnedCount, .pinned) }
                         ForEach(kinds) { kind in
-                            filterChip(kind.title, count: store.entries.filter { $0.kind == kind }.count, .kind(kind))
+                            filterChip(kind.title, count: shown.kindCounts[kind] ?? 0, .kind(kind))
                         }
                         if notesCount > 0 { filterChip("Margin notes", count: notesCount, .marginNotes) }
-                        ForEach(tags, id: \.self) { tag in
-                            filterChip("#" + tag, count: store.entries.filter { $0.tags.contains(tag) }.count, .tag(tag))
+                        ForEach(shown.tagCounts, id: \.tag) { item in
+                            filterChip("#" + item.tag, count: item.count, .tag(item.tag))
                         }
                     }
                     .padding(.horizontal, 4)
@@ -725,7 +793,7 @@ struct JournalView: View {
 // MARK: - Entry
 
 struct JournalEntryView: View {
-    @ObservedObject private var settings = Settings.shared
+    @Environment(\.appearance) private var appearance
     @ObservedObject private var store = JournalStore.shared
     @Environment(\.dismiss) private var dismiss
 
@@ -733,10 +801,11 @@ struct JournalEntryView: View {
     @State private var editing: JournalEntry?
     @State private var confirmDelete = false
 
-    private var accent: Color { settings.accentColor.color }
+    private var accent: Color { appearance.accent }
     private var entry: JournalEntry? { store.entry(id: entryID) }
 
     var body: some View {
+        let _ = RenderCounter.hit("JournalEntryView")
         List {
             if let entry {
                 Group {
@@ -807,19 +876,19 @@ struct JournalEntryView: View {
                 if let entry {
                     Menu {
                         Button {
-                            settings.hapticFeedback()
+                            Settings.shared.hapticFeedback()
                             editing = entry
                         } label: { Label("Edit", systemImage: "pencil") }
                         Button {
-                            settings.hapticFeedback()
+                            Settings.shared.hapticFeedback()
                             store.togglePin(id: entry.id)
                         } label: { Label(entry.pinned ? "Unpin" : "Pin", systemImage: entry.pinned ? "pin.slash" : "pin") }
                         Button {
-                            settings.hapticFeedback()
+                            Settings.shared.hapticFeedback()
                             UIPasteboard.general.string = Self.shareText(entry)
                         } label: { Label("Copy", systemImage: "doc.on.doc") }
                         Button {
-                            settings.hapticFeedback()
+                            Settings.shared.hapticFeedback()
                             presentSystemShareSheet(items: [Self.shareText(entry)])
                         } label: { Label("Share", systemImage: "square.and.arrow.up") }
                         Divider()
@@ -891,7 +960,7 @@ struct JournalTextBody: View {
 }
 
 struct JournalAttachmentCard: View {
-    @ObservedObject private var settings = Settings.shared
+    @Environment(\.appearance) private var appearance
     let attachment: JournalAttachment
 
     var body: some View {
@@ -908,11 +977,11 @@ struct JournalAttachmentCard: View {
                         .foregroundStyle(.secondary)
                 }
             }
-            .foregroundColor(settings.accentColor.color)
+            .foregroundColor(appearance.accent)
 
             if !attachment.arabic.isEmpty {
                 Text(attachment.arabic)
-                    .font(.custom(attachment.kind == .ayah ? settings.quranArabicFontName(for: nil) : settings.nonQuranArabicFontName, size: 22))
+                    .font(.custom(attachment.kind == .ayah ? appearance.quranDisplayFace : appearance.islamArabicFontName, size: 22))
                     .arabicFontDesign(custom: true)
                     .multilineTextAlignment(.trailing)
                     .lineSpacing(6)
@@ -947,7 +1016,7 @@ struct JournalAttachmentCard: View {
 // MARK: - Editor
 
 struct JournalEditorSheet: View {
-    @ObservedObject private var settings = Settings.shared
+    @Environment(\.appearance) private var appearance
     @ObservedObject private var store = JournalStore.shared
     @ObservedObject private var quranData = QuranData.shared
     @Environment(\.dismiss) private var dismiss
@@ -962,7 +1031,7 @@ struct JournalEditorSheet: View {
         _tagsText = State(initialValue: entry.tags.map { "#" + $0 }.joined(separator: " "))
     }
 
-    private var accent: Color { settings.accentColor.color }
+    private var accent: Color { appearance.accent }
     private var isNew: Bool { store.entry(id: entry.id) == nil }
 
     var body: some View {
@@ -975,7 +1044,7 @@ struct JournalEditorSheet: View {
                                 ForEach(JournalKind.allCases) { kind in
                                     let selected = entry.kind == kind
                                     Button {
-                                        settings.hapticFeedback()
+                                        Settings.shared.hapticFeedback()
                                         withAnimation(.easeInOut) { choose(kind) }
                                     } label: {
                                         HStack(spacing: 5) {
@@ -1029,7 +1098,7 @@ struct JournalEditorSheet: View {
                                 HStack(spacing: 6) {
                                     ForEach(store.tags.prefix(12), id: \.self) { tag in
                                         Button {
-                                            settings.hapticFeedback()
+                                            Settings.shared.hapticFeedback()
                                             if !tagsText.contains("#" + tag) {
                                                 tagsText = (tagsText + " #" + tag).trimmingCharacters(in: .whitespaces)
                                             }
@@ -1052,7 +1121,7 @@ struct JournalEditorSheet: View {
                         Text("ATTACHED")
                         Spacer()
                         Button {
-                            settings.hapticFeedback()
+                            Settings.shared.hapticFeedback()
                             showAttach = true
                         } label: {
                             Label("Attach", systemImage: "paperclip")
@@ -1114,7 +1183,7 @@ struct JournalEditorSheet: View {
 
 /// Carry something in: an ayah by reference, a bookmarked hadith, or a dua from the app's collections.
 struct JournalAttachSheet: View {
-    @ObservedObject private var settings = Settings.shared
+    @Environment(\.appearance) private var appearance
     @ObservedObject private var quranData = QuranData.shared
     @Environment(\.dismiss) private var dismiss
 
@@ -1122,8 +1191,11 @@ struct JournalAttachSheet: View {
 
     @State private var reference = ""
     @State private var duaQuery = ""
+    /// Matches for the settled dua query (150 ms after the last keystroke), not a scan of every dua per body.
+    @State private var duaMatches: [DuaItem] = []
+    @State private var duaTask: Task<Void, Never>?
 
-    private var accent: Color { settings.accentColor.color }
+    private var accent: Color { appearance.accent }
 
     private var resolvedAyah: (surah: Surah, ayah: Ayah)? {
         let parts = reference.replacingOccurrences(of: " ", with: "").split(separator: ":").compactMap { Int($0) }
@@ -1132,11 +1204,20 @@ struct JournalAttachSheet: View {
         return (surah, ayah)
     }
 
-    private var duaMatches: [DuaItem] {
-        let query = duaQuery.trimmingCharacters(in: .whitespacesAndNewlines)
+    private static func duaMatches(for raw: String) -> [DuaItem] {
+        let query = raw.trimmingCharacters(in: .whitespacesAndNewlines)
             .folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
         guard query.count >= 2 else { return [] }
         return Array(DuaView.allDuaItems.filter { $0.searchBlob.contains(query) }.prefix(12))
+    }
+
+    private func scheduleDuaFilter(_ text: String) {
+        duaTask?.cancel()
+        duaTask = Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 150_000_000)
+            guard !Task.isCancelled else { return }
+            duaMatches = Self.duaMatches(for: text)
+        }
     }
 
     var body: some View {
@@ -1148,7 +1229,7 @@ struct JournalAttachSheet: View {
                             .keyboardType(.numbersAndPunctuation)
                         if let resolved = resolvedAyah {
                             Button {
-                                settings.hapticFeedback()
+                                Settings.shared.hapticFeedback()
                                 onPick(JournalAttachment(
                                     kind: .ayah, refID: "\(resolved.surah.id):\(resolved.ayah.id)",
                                     title: "\(resolved.surah.nameTransliteration) \(resolved.surah.id):\(resolved.ayah.id)",
@@ -1158,7 +1239,7 @@ struct JournalAttachSheet: View {
                             } label: {
                                 VStack(alignment: .trailing, spacing: 6) {
                                     Text(resolved.ayah.displayArabicText(surahId: resolved.surah.id, clean: false, qiraahOverride: ""))
-                                        .font(.custom(settings.quranArabicFontName(for: nil), size: 22))
+                                        .font(.custom(appearance.quranDisplayFace, size: 22))
                                         .arabicFontDesign(custom: true)
                                         .multilineTextAlignment(.trailing)
                                         .frame(maxWidth: .infinity, alignment: .trailing)
@@ -1182,7 +1263,7 @@ struct JournalAttachSheet: View {
                         Section(header: SectionPillHeader(title: "BOOKMARKED HADITHS", count: bookmarks.count)) {
                             ForEach(bookmarks.prefix(40)) { bookmark in
                                 Button {
-                                    settings.hapticFeedback()
+                                    Settings.shared.hapticFeedback()
                                     onPick(JournalAttachment(
                                         kind: .hadith, refID: "\(bookmark.slug):\(bookmark.idInBook)",
                                         title: bookmark.reference, subtitle: bookmark.displayNumber,
@@ -1210,14 +1291,14 @@ struct JournalAttachSheet: View {
                         TextField("Search duas", text: $duaQuery)
                         ForEach(duaMatches) { dua in
                             Button {
-                                settings.hapticFeedback()
+                                Settings.shared.hapticFeedback()
                                 onPick(JournalAttachment(kind: .dua, refID: dua.id, title: "Dua",
                                                          arabic: dua.arabicText, body: dua.translation, source: dua.reference ?? ""))
                                 dismiss()
                             } label: {
                                 VStack(alignment: .trailing, spacing: 4) {
                                     Text(dua.arabicText)
-                                        .font(.custom(settings.nonQuranArabicFontName, size: 20))
+                                        .font(.custom(appearance.islamArabicFontName, size: 20))
                                         .arabicFontDesign(custom: true)
                                         .multilineTextAlignment(.trailing)
                                         .lineLimit(2)
@@ -1240,6 +1321,7 @@ struct JournalAttachSheet: View {
             .compactListSectionSpacing()
             .navigationTitle("Attach")
             .navigationBarTitleDisplayMode(.inline)
+            .onChange(of: duaQuery) { text in scheduleDuaFilter(text) }
             .sheetDismissToolbar()
             .accentWashedBackground()
         }

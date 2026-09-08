@@ -1146,6 +1146,25 @@ enum ObjectPublishCounter {
     #endif
 }
 
+/// `-renderCounter` companion for the bundled-pack parses of the Tilawa stores (DEBUG): every parse
+/// logs "PACK PARSE <name> <inflated KB> <ms> MAIN|bg", so a main-thread parse at launch is a grep
+/// the way `HADITH BLOCK ... MAIN` is for the hadith packs (Tilawa Guide, Phase 8 step 4). `parse`
+/// returns the result with the inflated byte count it parsed (0 when it never got that far).
+enum PackTrace {
+    #if DEBUG
+    static func measure<T>(_ name: String, _ parse: () -> (result: T, bytes: Int)) -> T {
+        guard RenderCounter.enabled else { return parse().result }
+        let start = DispatchTime.now().uptimeNanoseconds
+        let outcome = parse()
+        let ms = Double(DispatchTime.now().uptimeNanoseconds - start) / 1_000_000
+        NSLog("PACK PARSE %@ %d KB %.1f ms %@", name, outcome.bytes / 1024, ms, Thread.isMainThread ? "MAIN" : "bg")
+        return outcome.result
+    }
+    #else
+    @inline(__always) static func measure<T>(_ name: String, _ parse: () -> (result: T, bytes: Int)) -> T { parse().result }
+    #endif
+}
+
 /// Live mirror of the reveal state for code that checks it from ESCAPING tasks. A value-type modifier's
 /// captured `@Environment(\.appRevealed)` snapshot freezes at capture time - the review prompt's retry
 /// loop, whose capture chain starts before the launch cover lifts, read a stale `false` forever and

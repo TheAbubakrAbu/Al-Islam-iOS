@@ -74,6 +74,12 @@ final class QiraatVariantsStore: @unchecked Sendable {
 
     static let isBundled: Bool = ThemesPack.url("QiraatVariants") != nil
 
+    /// Parses the table off the calling thread (the explorer's detached task), once. Without it
+    /// the first `junctures` call inflated 949 KB on the main thread from a row build.
+    func prewarm() {
+        _ = loadedTable()
+    }
+
     func junctures(surah: Int, ayah: Int) -> [Juncture] {
         loadedTable()?.ayahs["\(surah):\(ayah)"] ?? []
     }

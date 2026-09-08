@@ -2202,13 +2202,58 @@ extension Settings {
     /// without compiling the reminders module. `SunnahReminderStore` writes this key.
     enum SunnahReminderBudget {
         static let defaultsKey = "sunnahReminders"
+        /// The reader's own reminders and the dua/nudge switches (ReminderKinds.swift) live under
+        /// these keys; counted here because the widget target compiles this file but not that one.
+        static let customKey = "customReminders"
+        static let extraKey = "extraReminders"
+        /// Look-ahead days for the one-shot nudges, and the cap on queued dua notifications.
+        static let nudgeDays = 3
+        static let duaCap = 8
 
         private struct Config: Decodable { var enabled: Bool? }
+        private struct CustomRow: Decodable { var enabled: Bool? }
+        private struct Extra: Decodable {
+            var duaEnabled: Bool?
+            var lastReadEnabled: Bool?
+            var streakEnabled: Bool?
+        }
 
+        /// Pending slots the reader's own reminders, the dua notifications and the nudges can hold.
+        static func extraCount(in defaults: UserDefaults = .standard) -> Int {
+            var count = 0
+            if let data = defaults.data(forKey: customKey),
+               let rows = try? JSONDecoder().decode([CustomRow].self, from: data) {
+                count += rows.filter { $0.enabled == true }.count
+            }
+            if let data = defaults.data(forKey: extraKey),
+               let extra = try? JSONDecoder().decode(Extra.self, from: data) {
+                if extra.duaEnabled == true { count += duaCap }
+                if extra.lastReadEnabled == true { count += nudgeDays }
+                if extra.streakEnabled == true { count += nudgeDays }
+            }
+            return count
+        }
+
+        /// The last total decoded from the standard defaults, kept until either reminder store saves
+        /// (`invalidateLiveCount`): a prayer pass used to decode three defaults blobs every time.
+        /// Main-confined, like the pass and the stores.
+        private static var liveEnabledCount: Int?
+
+        static func invalidateLiveCount() {
+            liveEnabledCount = nil
+        }
+
+        /// Every slot the Sunnah presets and the extra kinds together can hold.
         static func enabledCount(in defaults: UserDefaults = .standard) -> Int {
-            guard let data = defaults.data(forKey: defaultsKey),
-                  let decoded = try? JSONDecoder().decode([String: Config].self, from: data) else { return 0 }
-            return decoded.values.filter { $0.enabled == true }.count
+            let isStandard = defaults === UserDefaults.standard
+            if isStandard, let liveEnabledCount { return liveEnabledCount }
+            var count = extraCount(in: defaults)
+            if let data = defaults.data(forKey: defaultsKey),
+               let decoded = try? JSONDecoder().decode([String: Config].self, from: data) {
+                count += decoded.values.filter { $0.enabled == true }.count
+            }
+            if isStandard { liveEnabledCount = count }
+            return count
         }
     }
 

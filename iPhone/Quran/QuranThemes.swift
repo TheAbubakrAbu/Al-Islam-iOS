@@ -204,10 +204,17 @@ enum ThemesPack {
     }
 
     static func json(_ name: String) -> Any? {
+        PackTrace.measure(name) { () -> (result: Any?, bytes: Int) in
+            guard let json = data(name) else { return (nil, 0) }
+            return (try? JSONSerialization.jsonObject(with: json), json.count)
+        }
+    }
+
+    /// The inflated JSON bytes of a pack, for a store that parses (and measures) them itself.
+    static func data(_ name: String) -> Data? {
         guard let url = url(name),
-              let blob = try? Data(contentsOf: url),
-              let json = inflate(blob) else { return nil }
-        return try? JSONSerialization.jsonObject(with: json)
+              let blob = try? Data(contentsOf: url) else { return nil }
+        return inflate(blob)
     }
 
     /// The payload is an xz stream; `COMPRESSION_LZMA` reads that container directly.
@@ -331,6 +338,16 @@ struct ThemesBrowseView: View {
         let groups = displayedGroups
 
         List {
+            // What this screen is, said here rather than as a caption on the door that opens it
+            // (Abu, 2026-09-07). Hidden while searching - the results are the answer then.
+            if !isSearching {
+                Section {
+                    Text(verbatim: "Ayahs grouped by what they speak about. Open a subject to read its ayahs, and light it up to see it marked in the reader as you read.")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                }
+            }
+
             // The four corpora as one segmented switch: the app's themes, then the Quranic Universal
             // Library's thematic topics, concepts and A-Z index. Only with the QUL pack bundled.
             if QuranTopicsStore.isBundled {

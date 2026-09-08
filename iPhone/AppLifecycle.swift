@@ -83,8 +83,17 @@ enum AppLifecycle {
         // Only when LEAVING the foreground: that's when the widgets become visible and need the fresh
         // snapshot. Running this on every transition (including becoming active) paid a JSON encode plus
         // a reload of every widget timeline each time, against WidgetKit's daily reload budget.
+        if phase == .active {
+            // The daily surfaces: the once-a-day sheet, the widgets' corpus and Fajr table, and the
+            // one-shot nudges that depend on today's reading. Each is a no-op within its own day.
+            DailyReminderStore.shared.presentSheetIfDue()
+            DailyReminderStore.shared.refreshWidgets()
+            ActivityLog.shared.refreshSummaryIfDayChanged()
+            ExtraRemindersStore.shared.rearmIfNeeded()
+        }
         if phase != .active {
             settings.refreshQuranWidgets()
+            ActivityLog.shared.flush()
             // A page flip within the last second may still have its last-read write pending.
             settings.flushPendingLastRead()
             // A khatm mark made in the last 250ms is still on the debounce timer; persist it before
@@ -97,7 +106,11 @@ enum AppLifecycle {
 
     @MainActor
     private static func hadithScenePhaseChanged(to phase: ScenePhase) {
-        guard phase == .active else { return }
+        guard phase == .active else {
+            // A hadith opened in the last second still has its log write on the debounce timer.
+            HadithStore.shared.viewedLog.flush()
+            return
+        }
         // Re-resolve Hadith of the Day: `.task` fires only when the view tree is rebuilt, so an
         // app foregrounded across midnight (never cold-launched) kept showing yesterday's card.
         // No-ops within the same day.
@@ -131,6 +144,7 @@ enum AppLifecycle {
         AyahHighlightColor.purgeSwatchCache()
         MushafPDFLibrary.purgeMeasuredCrops()
         SolidPack.purgeInflatedBodies()
+        MemoryTrim.trimAll()
     }
 
     // MARK: - Shared (watch sync - keep in every app that ships a watch companion)
@@ -141,6 +155,27 @@ enum AppLifecycle {
         // Send any just-made setting change before the app is suspended, so it can't be lost (and
         // can't be reverted by a stale synced value on the next launch).
         WatchConnectivityManager.shared.flushPendingSync()
+    }
+}
+
+/// The one owner of the memory-warning trim for the stores the Tilawa port added (Tilawa Guide,
+/// Phase 8 step 5): every large store registers here rather than growing an observer of its own.
+/// The hadith store keeps its own (it predates the port). Each call is safe when nothing is loaded.
+enum MemoryTrim {
+    @MainActor
+    static func trimAll() {
+        // The Hadith Encyclopedia's header, parsed blocks and search folds: rebuilt on the next open.
+        HadeethEncStore.shared.unload()
+        // The Miracles library and its decoded illustrations (a 40-frame animation is ~27 MB).
+        MiraclesStore.shared.unload()
+        MiracleImageLoader.purgeDecodedImages()
+        // The long-narration chunk memo (rebuilt per row on demand).
+        HadithArabicChunks.purgeCache()
+        // The explorer's computed place tables and counts.
+        QiraatPlacesStore.shared.purgeComputed()
+        #if DEBUG
+        MemoryFootprint.logLater("memory warning trim", delay: 2)
+        #endif
     }
 }
 

@@ -282,11 +282,38 @@ final class QiraatPlacesStore {
     static let shared = QiraatPlacesStore()
     private init() {}
 
-    static let isBundled: Bool = ThemesPack.url("QiraatPlaces") != nil
+    nonisolated static let isBundled: Bool = ThemesPack.url("QiraatPlaces") != nil
 
-    private var bundled: [String: [Int: [Int: [Int]]]]?
-    private var bundledLoaded = false
+    // The bundled index is parsed off the main actor (the explorer's task); these three are guarded
+    // by `indexLock` rather than by the actor.
+    nonisolated(unsafe) private var bundled: [String: [Int: [Int: [Int]]]]?
+    nonisolated(unsafe) private var bundledLoaded = false
+    nonisolated private let indexLock = NSLock()
     private var computed: [String: [Int: [Int: [Int]]]] = [:]
+    /// `variantAyahs` per (surah, tags, tier): `step` walks up to 114 surahs and the explorer's bar
+    /// asked three times per body; cleared when the beta gate changes the tag set.
+    private var variantCache: [String: [Int]] = [:]
+
+    /// Whether the bundled index is parsed (or found missing).
+    nonisolated var isIndexLoaded: Bool {
+        indexLock.lock(); defer { indexLock.unlock() }
+        return bundledLoaded
+    }
+
+    /// Parses the bundled index off the calling thread (the explorer's task, detached), once.
+    nonisolated func prewarmIndex() {
+        _ = loadBundled()
+    }
+
+    func invalidateVariantCache() {
+        variantCache.removeAll()
+    }
+
+    /// The per-surah tables computed for riwayat the pack lacks, and the counts cache: rebuilt on demand.
+    func purgeComputed() {
+        computed.removeAll()
+        variantCache.removeAll()
+    }
 
     /// The riwayat the explorer compares: every riwayah whose text may render (the beta gate),
     /// Hafs excluded since it is the reference.
@@ -327,13 +354,17 @@ final class QiraatPlacesStore {
 
     /// The Hafs ayahs of a surah where any riwayah in `tags` differs under the tier, ascending.
     func variantAyahs(surah: Int, tags: [String], everyDifference: Bool) -> [Int] {
+        let key = "\(surah)|\(everyDifference ? 1 : 0)|\(tags.joined(separator: ","))"
+        if let cached = variantCache[key] { return cached }
         var union = Set<Int>()
         for tag in tags {
             for (ayah, words) in places(surah: surah, tag: tag) where Self.counts(words, everyDifference: everyDifference) {
                 union.insert(ayah)
             }
         }
-        return union.sorted()
+        let sorted = union.sorted()
+        variantCache[key] = sorted
+        return sorted
     }
 
     func count(surah: Int, tags: [String], everyDifference: Bool) -> Int {
@@ -362,24 +393,31 @@ final class QiraatPlacesStore {
         step(from: 1, ayah: 0, forward: true, tags: tags, everyDifference: everyDifference)
     }
 
-    private func loadBundled() -> [String: [Int: [Int: [Int]]]]? {
-        if bundledLoaded { return bundled }
-        bundledLoaded = true
-        guard Self.isBundled,
-              let root = ThemesPack.json("QiraatPlaces") as? [String: Any],
-              let riwayat = root["riwayat"] as? [String: [String: [[Int]]]] else { return nil }
-        var table: [String: [Int: [Int: [Int]]]] = [:]
-        for (tag, surahs) in riwayat {
-            var perSurah: [Int: [Int: [Int]]] = [:]
-            for (key, rows) in surahs {
-                guard let surah = Int(key) else { continue }
-                var byAyah: [Int: [Int]] = [:]
-                for row in rows where !row.isEmpty { byAyah[row[0]] = Array(row.dropFirst()) }
-                perSurah[surah] = byAyah
+    nonisolated private func loadBundled() -> [String: [Int: [Int: [Int]]]]? {
+        indexLock.lock()
+        if bundledLoaded { indexLock.unlock(); return bundled }
+        indexLock.unlock()
+        let table = PackTrace.measure("QiraatPlaces") { () -> (result: [String: [Int: [Int: [Int]]]]?, bytes: Int) in
+            guard Self.isBundled, let json = ThemesPack.data("QiraatPlaces"),
+                  let root = (try? JSONSerialization.jsonObject(with: json)) as? [String: Any],
+                  let riwayat = root["riwayat"] as? [String: [String: [[Int]]]] else { return (nil, 0) }
+            var table: [String: [Int: [Int: [Int]]]] = [:]
+            for (tag, surahs) in riwayat {
+                var perSurah: [Int: [Int: [Int]]] = [:]
+                for (key, rows) in surahs {
+                    guard let surah = Int(key) else { continue }
+                    var byAyah: [Int: [Int]] = [:]
+                    for row in rows where !row.isEmpty { byAyah[row[0]] = Array(row.dropFirst()) }
+                    perSurah[surah] = byAyah
+                }
+                table[Settings.Riwayah.canonicalTag(tag)] = perSurah
             }
-            table[Settings.Riwayah.canonicalTag(tag)] = perSurah
+            return (table, json.count)
         }
+        indexLock.lock(); defer { indexLock.unlock() }
+        if bundledLoaded { return bundled }
         bundled = table
+        bundledLoaded = true
         return table
     }
 
@@ -458,6 +496,100 @@ enum QiraatPlacesExport {
         }
     }
 }
+
+/// "-qiraatBench [places]": what a Next tap in the explorer actually costs, split into the two
+/// halves Phase 6 step 2 asks about - the per-surah alignment every resolve needs (cached for the
+/// app's life) and the per-place resolve and word diff. Walks the real place list with the real
+/// enabled riwayat, so the numbers are the ones a user feels. Run it on an optimized build
+/// (`SWIFT_OPTIMIZATION_LEVEL=-O`) before drawing any conclusion: the diff is 30x slower at -Onone.
+enum QiraatExplorerBench {
+    @MainActor
+    static func run(places wanted: Int) {
+        let quranData = QuranData.shared
+        let store = QiraatPlacesStore.shared
+        let tags = store.enabledTags
+        let everyDifference = UserDefaults.standard.bool(forKey: "qiraatExplorerEveryDifference")
+        guard !tags.isEmpty, var place = store.firstPlace(tags: tags, everyDifference: everyDifference) else {
+            NSLog("QIRAAT BENCH: no places for %d tags", tags.count)
+            return
+        }
+
+        var alignedSurahs = Set<Int>()
+        var newSurahMillis: [Double] = []
+        var sameSurahMillis: [Double] = []
+        var alignmentMillis = 0.0
+        var rowsMillis = 0.0
+        var stepMillis = 0.0
+        var firstLine = ""
+
+        for index in 0..<max(1, wanted) {
+            let started = DispatchTime.now().uptimeNanoseconds
+            // The cold half: the alignment of this surah for each riwayah, which the resolve below
+            // would otherwise pull in unmeasured.
+            let alignStarted = DispatchTime.now().uptimeNanoseconds
+            let coldSurah = !alignedSurahs.contains(place.surah)
+            if coldSurah {
+                alignedSurahs.insert(place.surah)
+                for tag in tags { _ = QiraahComparison.alignment(surahID: place.surah, tag: tag, quranData: quranData) }
+            }
+            let align = Self.millis(since: alignStarted)
+            alignmentMillis += align
+
+            // The warm half: exactly what `refreshRows` rebuilds per place.
+            let rowsStarted = DispatchTime.now().uptimeNanoseconds
+            for tag in tags {
+                guard let resolved = QiraahAyahResolver.resolve(surahNumber: place.surah, ayahNumber: place.ayah,
+                                                                anchorHafsAyah: place.ayah, optionTag: tag, clean: false) else { continue }
+                _ = QiraatExplorerView.change(for: tag, surah: place.surah, hafsAyah: place.ayah,
+                                              resolved: resolved, quranData: quranData)
+            }
+            let rows = Self.millis(since: rowsStarted)
+            rowsMillis += rows
+
+            // The bar: both step lookups and the caption's count, per place.
+            let stepStarted = DispatchTime.now().uptimeNanoseconds
+            _ = store.step(from: place.surah, ayah: place.ayah, forward: false, tags: tags, everyDifference: everyDifference)
+            let next = store.step(from: place.surah, ayah: place.ayah, forward: true, tags: tags, everyDifference: everyDifference)
+            _ = store.variantAyahs(surah: place.surah, tags: tags, everyDifference: everyDifference)
+            stepMillis += Self.millis(since: stepStarted)
+
+            let total = Self.millis(since: started)
+            if index == 0 {
+                firstLine = String(format: "QIRAAT BENCH first place %d:%d %.1f ms (alignment %.1f, rows %.1f)",
+                                   place.surah, place.ayah, total, align, rows)
+            } else if coldSurah {
+                newSurahMillis.append(total)
+            } else {
+                sameSurahMillis.append(total)
+            }
+
+            guard let onward = next else { break }
+            place = onward
+        }
+
+        func report(_ label: String, _ samples: [Double]) {
+            guard !samples.isEmpty else { return }
+            let sorted = samples.sorted()
+            NSLog("QIRAAT BENCH %@: %d places, mean %.1f ms, median %.1f ms, worst %.1f ms",
+                  label, sorted.count, sorted.reduce(0, +) / Double(sorted.count),
+                  sorted[sorted.count / 2], sorted[sorted.count - 1])
+        }
+
+        NSLog("QIRAAT BENCH tags %d, everyDifference %@, %d surahs touched",
+              tags.count, everyDifference ? "on" : "off", alignedSurahs.count)
+        NSLog("%@", firstLine)
+        report("new surah", newSurahMillis)
+        report("same surah", sameSurahMillis)
+        NSLog("QIRAAT BENCH totals: alignment %.0f ms, rows %.0f ms, bar %.0f ms",
+              alignmentMillis, rowsMillis, stepMillis)
+        NSLog("QIRAAT BENCH done")
+    }
+
+    private static func millis(since start: UInt64) -> Double {
+        Double(DispatchTime.now().uptimeNanoseconds - start) / 1_000_000
+    }
+}
+
 #endif
 
 // MARK: - Rows
@@ -490,7 +622,8 @@ struct QiraatExplorerView: View {
         case ayah, surah
     }
 
-    private static let surahPage = 20
+    /// Rows per page of the surah walk: ten on the reduced tier (each row is a resolve and a diff).
+    private static var surahPage: Int { AppPerformance.shouldAvoidBroadPrewarm ? 10 : 20 }
 
     @State private var mode: Mode = .ayah
     @State private var surahID: Int
@@ -516,13 +649,31 @@ struct QiraatExplorerView: View {
         _hafsAyah = State(initialValue: anchor)
     }
 
-    /// Opens on the first place in the Quran where a riwayah differs (al-Fatiha's مالك / ملك).
+    /// Opens on the first place in the Quran where a riwayah differs: al-Fatiha's مالك / ملك (1:4),
+    /// which is the first place in every riwayah set, so it is a constant here and the index (a
+    /// 56 KB pack, parsed on the main thread in this init before) loads off-main in the task below,
+    /// which corrects the place in the rare case the index says otherwise.
     init() {
-        let every = UserDefaults.standard.bool(forKey: "qiraatExplorerEveryDifference")
-        let first = QiraatPlacesStore.shared.firstPlace(tags: QiraatPlacesStore.shared.enabledTags, everyDifference: every) ?? (1, 1)
-        _surahID = State(initialValue: first.surah)
-        _hafsAyah = State(initialValue: first.ayah)
+        _surahID = State(initialValue: 1)
+        _hafsAyah = State(initialValue: 4)
+        _openedAtDefault = State(initialValue: true)
     }
+
+    /// True when the explorer opened at the constant first place and the index has not confirmed it yet.
+    @State private var openedAtDefault = false
+    /// Everything the ayah mode derives from the rows, the tags and the tier: computed in `refreshRows`,
+    /// never per body (the previous/next place each walked up to 114 surahs per evaluation).
+    private struct AyahDerived {
+        var previous: (surah: Int, ayah: Int)?
+        var next: (surah: Int, ayah: Int)?
+        var caption = ""
+        var reference = AttributedString()
+        var groups: [QiraatReadingGroup] = []
+        var junctures: [QiraatVariantsStore.Juncture] = []
+    }
+    @State private var derived = AyahDerived()
+    /// The rolling warm of the next surah's alignments (see `warmNextSurah`).
+    @State private var warmTask: Task<Void, Never>?
 
     private var store: QiraatPlacesStore { QiraatPlacesStore.shared }
     private var enabledTags: [String] { store.enabledTags }
@@ -538,6 +689,7 @@ struct QiraatExplorerView: View {
     private var compareOption: Settings.Riwayah.Option { Settings.Riwayah.option(for: compareTag) }
 
     var body: some View {
+        let _ = RenderCounter.hit("QiraatExplorerView")
         List {
             Group {
                 if mode == .ayah {
@@ -570,7 +722,37 @@ struct QiraatExplorerView: View {
                 }
             }
         }
-        .onAppear { refresh() }
+        .task {
+            // The place index (56 KB xz) parses off the main thread here, never in the push; the
+            // constant first place is corrected once the index is in, and the counts cache follows.
+            let store = QiraatPlacesStore.shared
+            if !store.isIndexLoaded {
+                await Task.detached(priority: .userInitiated) { store.prewarmIndex() }.value
+            }
+            // The riwayat's tajweed packs (one raw-deflate JSON each) carry the print's khilaf
+            // wash, which `QiraatChange.analyze` reads for every row. The first place used to
+            // inflate all of them on the main thread: 103 ms for the seven default riwayat, 224 ms
+            // for all nineteen (`-qiraatBench` on an optimized build). The store is lock-guarded
+            // and Sendable, so they inflate here, before the first row build asks for one.
+            // The juncture table (949 KB) and the clip index (32 KB) went the same way: both are
+            // read from the row build and both parsed on the main thread there.
+            let tags = enabledTags
+            await Task.detached(priority: .userInitiated) {
+                for tag in tags { _ = QiraahTajweedStore.shared.pack(for: tag) }
+                QiraatVariantsStore.shared.prewarm()
+                QiraatVariantAudioStore.shared.prewarm()
+            }.value
+            if openedAtDefault {
+                openedAtDefault = false
+                if let first = store.firstPlace(tags: enabledTags, everyDifference: everyDifference),
+                   first.surah != surahID || first.ayah != hafsAyah {
+                    surahID = first.surah
+                    hafsAyah = first.ayah
+                }
+            }
+            refresh()
+        }
+        .onDisappear { warmTask?.cancel() }
         .onChange(of: hafsAyah) { _ in refresh() }
         .onChange(of: surahID) { _ in
             visibleRows = Self.surahPage
@@ -590,7 +772,10 @@ struct QiraatExplorerView: View {
             visibleRows = Self.surahPage
             refresh()
         }
-        .onChange(of: settings.betaQiraatEnabled) { _ in refresh() }
+        .onChange(of: settings.betaQiraatEnabled) { _ in
+            QiraatPlacesStore.shared.invalidateVariantCache()
+            refresh()
+        }
     }
 
     // MARK: Header
@@ -616,15 +801,11 @@ struct QiraatExplorerView: View {
         .overlay(Divider(), alignment: .bottom)
     }
 
-    private var previousPlace: (surah: Int, ayah: Int)? {
-        store.step(from: surahID, ayah: hafsAyah, forward: false, tags: enabledTags, everyDifference: everyDifference)
-    }
+    private var previousPlace: (surah: Int, ayah: Int)? { derived.previous }
+    private var nextPlace: (surah: Int, ayah: Int)? { derived.next }
+    private var placeCaption: String { derived.caption }
 
-    private var nextPlace: (surah: Int, ayah: Int)? {
-        store.step(from: surahID, ayah: hafsAyah, forward: true, tags: enabledTags, everyDifference: everyDifference)
-    }
-
-    private var placeCaption: String {
+    private func computePlaceCaption() -> String {
         let places = store.variantAyahs(surah: surahID, tags: enabledTags, everyDifference: everyDifference)
         if let index = places.firstIndex(of: hafsAyah) {
             return "Place \(index + 1) of \(places.count) in this surah"
@@ -766,8 +947,10 @@ struct QiraatExplorerView: View {
         ayahObject?.displayArabicText(surahId: surahID, clean: false, qiraahOverride: "") ?? ""
     }
 
-    /// The Hafs text with every word any riwayah changes tinted.
-    private var referenceAttributed: AttributedString {
+    /// The Hafs text with every word any riwayah changes tinted (set in `refreshRows`).
+    private var referenceAttributed: AttributedString { derived.reference }
+
+    private func computeReferenceAttributed() -> AttributedString {
         let text = hafsText
         var words = Set<Int>()
         for row in rows {
@@ -786,7 +969,9 @@ struct QiraatExplorerView: View {
         return "\(differ) of \(available) riwayat read this ayah differently."
     }
 
-    private var readingGroups: [QiraatReadingGroup] {
+    private var readingGroups: [QiraatReadingGroup] { derived.groups }
+
+    private func computeReadingGroups() -> [QiraatReadingGroup] {
         var groups: [QiraatReadingGroup] = []
         var index: [String: Int] = [:]
         for row in differingRows {
@@ -806,9 +991,7 @@ struct QiraatExplorerView: View {
         return groups
     }
 
-    private var junctures: [QiraatVariantsStore.Juncture] {
-        QiraatVariantsStore.shared.junctures(surah: surahID, ayah: hafsAyah)
-    }
+    private var junctures: [QiraatVariantsStore.Juncture] { derived.junctures }
 
     @ViewBuilder
     private var ayahSections: some View {
@@ -1056,6 +1239,11 @@ struct QiraatExplorerView: View {
                                           words: Set(change.riwayahWords), base: .primary, tint: accent),
                     tag: row.option.tag
                 )
+                // Hearing the difference: the same reciter, both readings (four riwayat have one).
+                if QiraatVariantAudioStore.isBundled {
+                    QiraatVariantAudioButtons(tag: row.option.tag, surah: surahID, ayah: hafsAyah)
+                        .padding(.top, 2)
+                }
             } else {
                 Text("This ayah is not separate in this riwayah.")
                     .font(.footnote)
@@ -1256,24 +1444,78 @@ struct QiraatExplorerView: View {
         } else {
             refreshSurahRows()
         }
+        warmNextSurah()
     }
 
-    /// Every enabled riwayah at the current ayah, resolved through Hafs and diffed once.
+    /// Every resolve needs its surah's alignment against Hafs, and building one costs about 7 ms a
+    /// riwayah: stepping into a new surah blocked the main thread for 46 ms with the seven default
+    /// riwayat and 240 ms with all nineteen (`-qiraatBench`, optimized build, iPhone 17 Pro
+    /// simulator). It cannot simply move off the main thread (`QiraahComparison` is main-only by
+    /// the crash-hardening rule), so it moves EARLY instead: while the reader looks at this place,
+    /// the NEXT surah is aligned one riwayah per runloop turn, and the step into it finds the
+    /// tables already built. Forward only (that is the direction the bar walks), and never on the
+    /// reduced tier, which does no prebuilds at all.
+    private func warmNextSurah() {
+        warmTask?.cancel()
+        guard !AppPerformance.shouldAvoidBroadPrewarm, surahID < 114 else { return }
+        let next = surahID + 1
+        let tags = mode == .ayah ? enabledTags : [compareTag]
+        guard !tags.isEmpty else { return }
+        warmTask = Task { @MainActor in
+            #if DEBUG
+            let started = DispatchTime.now().uptimeNanoseconds
+            #endif
+            for tag in tags {
+                guard !Task.isCancelled else { return }
+                _ = QiraahComparison.alignment(surahID: next, tag: tag, quranData: quranData)
+                await Task.yield()
+            }
+            #if DEBUG
+            if RenderCounter.enabled {
+                NSLog("EXPLORER warm surah %d, %d riwayat, %.1f ms spread", next, tags.count,
+                      Double(DispatchTime.now().uptimeNanoseconds - started) / 1_000_000)
+            }
+            #endif
+        }
+    }
+
+    /// Every enabled riwayah at the current ayah, resolved through Hafs and diffed once, and the
+    /// values the bar and the reference block derive from them.
     private func refreshRows() {
         let tags = enabledTags
-        let key = "\(surahID)|\(hafsAyah)|\(tags.joined(separator: ","))"
+        let key = "\(surahID)|\(hafsAyah)|\(everyDifference ? 1 : 0)|\(settings.accentColor.rawValue)|\(tags.joined(separator: ","))"
         guard key != rowsKey else { return }
+        #if DEBUG
+        let started = DispatchTime.now().uptimeNanoseconds
+        #endif
+        let rowsChanged = !rowsKey.hasPrefix("\(surahID)|\(hafsAyah)|") || rows.isEmpty
         rowsKey = key
-        showIdentical = false
-        rows = tags.map { tag in
-            let option = Settings.Riwayah.option(for: tag)
-            guard let resolved = QiraahAyahResolver.resolve(surahNumber: surahID, ayahNumber: hafsAyah,
-                                                            anchorHafsAyah: hafsAyah, optionTag: tag, clean: false) else {
-                return QiraatRiwayahRow(option: option, resolved: nil, change: nil)
+        if rowsChanged {
+            showIdentical = false
+            rows = tags.map { tag in
+                let option = Settings.Riwayah.option(for: tag)
+                guard let resolved = QiraahAyahResolver.resolve(surahNumber: surahID, ayahNumber: hafsAyah,
+                                                                anchorHafsAyah: hafsAyah, optionTag: tag, clean: false) else {
+                    return QiraatRiwayahRow(option: option, resolved: nil, change: nil)
+                }
+                return QiraatRiwayahRow(option: option, resolved: resolved,
+                                        change: Self.change(for: tag, surah: surahID, hafsAyah: hafsAyah, resolved: resolved, quranData: quranData))
             }
-            return QiraatRiwayahRow(option: option, resolved: resolved,
-                                    change: Self.change(for: tag, surah: surahID, hafsAyah: hafsAyah, resolved: resolved, quranData: quranData))
         }
+        var next = AyahDerived()
+        next.previous = store.step(from: surahID, ayah: hafsAyah, forward: false, tags: tags, everyDifference: everyDifference)
+        next.next = store.step(from: surahID, ayah: hafsAyah, forward: true, tags: tags, everyDifference: everyDifference)
+        next.caption = computePlaceCaption()
+        next.reference = computeReferenceAttributed()
+        next.groups = computeReadingGroups()
+        next.junctures = QiraatVariantsStore.shared.junctures(surah: surahID, ayah: hafsAyah)
+        derived = next
+        #if DEBUG
+        if RenderCounter.enabled {
+            NSLog("EXPLORER rows %d:%d %d riwayat %.1f ms (rows %@)", surahID, hafsAyah, tags.count,
+                  Double(DispatchTime.now().uptimeNanoseconds - started) / 1_000_000, rowsChanged ? "rebuilt" : "kept")
+        }
+        #endif
     }
 
     /// The Hafs side is the ayah itself or the whole span the riwayah joins; the riwayah side is its
@@ -1296,6 +1538,14 @@ struct QiraatExplorerView: View {
         let key = "\(surahID)|\(compareTag)|\(onlyDifferences)|\(everyDifference)|\(listed.count)"
         guard key != surahRowsKey else { return }
         surahRowsKey = key
+        #if DEBUG
+        let started = DispatchTime.now().uptimeNanoseconds
+        defer {
+            if RenderCounter.enabled {
+                NSLog("EXPLORER surah %d %d rows %.1f ms", surahID, listed.count, Double(DispatchTime.now().uptimeNanoseconds - started) / 1_000_000)
+            }
+        }
+        #endif
         var models: [Int: QiraatSurahRowModel] = [:]
         for ayah in listed {
             models[ayah] = QiraatSurahRowModel.make(surah: surahID, hafsAyah: ayah, tag: compareTag, quranData: quranData, accent: accent)
@@ -1336,7 +1586,7 @@ struct QiraatSurahRowModel {
 /// Where to go next: the places of this surah (each with the Hafs words that change), or any surah
 /// with its count of places.
 struct QiraatPlacePickerSheet: View {
-    @ObservedObject private var settings = Settings.shared
+    @Environment(\.appearance) private var appearance
     @ObservedObject private var quranData = QuranData.shared
     @Environment(\.dismiss) private var dismiss
 
@@ -1363,9 +1613,10 @@ struct QiraatPlacePickerSheet: View {
     }
 
     private var store: QiraatPlacesStore { QiraatPlacesStore.shared }
-    private var accent: Color { settings.accentColor.color }
+    private var accent: Color { appearance.accent }
 
     var body: some View {
+        let _ = RenderCounter.hit("QiraatPlacePickerSheet")
         NavigationView {
             List {
                 Group {
@@ -1421,7 +1672,7 @@ struct QiraatPlacePickerSheet: View {
             }
             ForEach(places, id: \.self) { ayah in
                 Button {
-                    settings.hapticFeedback()
+                    Settings.shared.hapticFeedback()
                     onPick(surahID, ayah)
                     dismiss()
                 } label: {
@@ -1460,7 +1711,7 @@ struct QiraatPlacePickerSheet: View {
             }
             Spacer()
             Text(phrase.isEmpty ? "added words" : phrase)
-                .font(phrase.isEmpty ? .caption : .custom(settings.quranArabicFontName(for: nil), size: 20))
+                .font(phrase.isEmpty ? .caption : .custom(appearance.quranDisplayFace, size: 20))
                 .arabicFontDesign(custom: !phrase.isEmpty)
                 .foregroundColor(phrase.isEmpty ? .secondary : accent)
                 .multilineTextAlignment(.trailing)
@@ -1481,7 +1732,7 @@ struct QiraatPlacePickerSheet: View {
         return Section(header: Text("SURAHS")) {
             ForEach(filteredSurahs) { surah in
                 Button {
-                    settings.hapticFeedback()
+                    Settings.shared.hapticFeedback()
                     onPick(surah.id, nil)
                     dismiss()
                 } label: {
@@ -1506,7 +1757,7 @@ struct QiraatPlacePickerSheet: View {
                                 .foregroundColor(count == 0 ? .secondary : accent)
                         }
                         Text(surah.nameArabic)
-                            .font(.custom(settings.quranArabicFontName(for: nil), size: 18))
+                            .font(.custom(appearance.quranDisplayFace, size: 18))
                             .arabicFontDesign(custom: true)
                             .foregroundColor(.primary)
                     }

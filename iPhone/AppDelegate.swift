@@ -33,6 +33,8 @@ class AppDelegate: UIResponder, UIApplicationDelegate, UNUserNotificationCenterD
         Task { @MainActor in
             await AppReveal.waitUntilRevealed()
             self.scheduleBackgroundRefreshes()
+            // (The reminders' launch pass, the Sunnah presets and the extra kinds together, runs
+            // from MainTabView's post-reveal schedule at +1.5 s: `ReminderScheduler.rearmAfterLaunch`.)
         }
         UNUserNotificationCenter.current().delegate = self
 

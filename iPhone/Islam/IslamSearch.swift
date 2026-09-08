@@ -136,6 +136,8 @@ enum IslamArticleCatalog {
         ]),
         group("THE ISLAMIC CALENDAR", .pillars, [
             ("HijriCalendarView", "Hijri Calendar", "hijri", ["islamic calendar", "lunar", "months", "muharram", "ramadan"]),
+            ("SacredMonthsView", "The Sacred Months", "sacred-months", ["ashhur al-hurum", "hurum", "muharram", "rajab", "dhul qadah", "dhul hijjah", "ashura", "nasi", "atirah"]),
+            ("MoonSightingView", "Sighting the New Month", "moon-sighting", ["hilal", "crescent", "moon sighting", "ruyah", "new moon", "calculation", "matali", "day of doubt", "eid"]),
         ]),
         group("HISTORICAL & BIOGRAPHICAL", .pillars, [
             ("SeerahView", "The Seerah (Biography)", "seerah", ["sirah", "biography", "life of the prophet", "hijrah", "badr"]),
@@ -1504,6 +1506,24 @@ enum ArticleSources {
             ArticleSource(title: "Fath al-Bari", subtitle: "Ibn Hajar al-Asqalani, commentary on Sahih al-Bukhari"),
             ArticleSource(title: "Why Is the Age of Islam Based on the Beginning of Hijrah?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/176819"),
             ArticleSource(title: "The reason why the Hijri months are called by their well-known names", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/211395"),
+        ],
+        "SacredMonthsView": [
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
+            ArticleSource(title: "Tafsir Ibn Kathir", subtitle: "Tafsir al-Quran al-Azim, on Quran 9:36-37"),
+            ArticleSource(title: "Tabyin al-Ajab bima Warada fi Fadl Rajab", subtitle: "Ibn Hajar al-Asqalani, on what is and is not established about Rajab"),
+            ArticleSource(title: "Lataif al-Maarif", subtitle: "Ibn Rajab al-Hanbali, on the seasons of the year and their acts of worship"),
+            ArticleSource(title: "Majmu al-Fatawa", subtitle: "Ibn Taymiyyah, on the sacred months and on innovated observances"),
+            ArticleSource(title: "The virtue of the month of Muharram and fasting on Ashura", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/21776"),
+            ArticleSource(title: "Innovations in the month of Rajab", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/75394"),
+        ],
+        "MoonSightingView": [
+            ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),
+            ArticleSource(title: "Fath al-Bari", subtitle: "Ibn Hajar al-Asqalani, the book of fasting, on sighting the crescent"),
+            ArticleSource(title: "Al-Majmu Sharh al-Muhadhdhab", subtitle: "An-Nawawi, on the sighting and on the differing places of moonrise"),
+            ArticleSource(title: "Fatawa Ibn Baz and the Permanent Committee for Scholarly Research and Ifta", subtitle: "On sighting versus calculation, and on one sighting for the ummah"),
+            ArticleSource(title: "Ash-Sharh al-Mumti", subtitle: "Ibn al-Uthaymin, on each land following its own sighting"),
+            ArticleSource(title: "Sighting the new moon of Ramadan and relying on astronomical calculations", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/1226"),
+            ArticleSource(title: "Do the people of every land have their own sighting?", subtitle: "IslamQA", url: "https://islamqa.info/en/answers/12666"),
         ],
         "SeerahView": [
             ArticleSource(title: "The Quran and the authentic Sunnah", subtitle: "Saheeh International translation; Sahih al-Bukhari and Sahih Muslim, with the graded Sunan"),

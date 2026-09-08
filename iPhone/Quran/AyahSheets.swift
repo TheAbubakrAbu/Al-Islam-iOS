@@ -519,8 +519,6 @@ struct AyahActionsSheet: View {
     /// menu offers the per-ayah "Word by Word" pin.
     var offersWordByWord: Bool = false
 
-    @State private var confirmRemoveNote = false
-
     private var isBookmarked: Bool { settings.bookmarkIndex(surah: surah.id, ayah: ayah.id) != nil }
     private var currentNote: String { settings.bookmarkNoteText(surah: surah.id, ayah: ayah.id) }
     private var currentHighlight: AyahHighlightColor? {
@@ -603,9 +601,7 @@ struct AyahActionsSheet: View {
                 systemImage: isBookmarked ? "bookmark.fill" : "bookmark",
                 action: {
                     settings.hapticFeedback()
-                    if !settings.toggleBookmarkIfNoNoteLoss(surah: surah.id, ayah: ayah.id) {
-                        confirmRemoveNote = true
-                    }
+                    settings.toggleBookmarkOrConfirm(surah: surah.id, ayah: ayah.id)
                 }
             ),
             // Next to the bookmark tile, because it is one: picking a color saves the ayah and colors its
@@ -918,15 +914,6 @@ struct AyahActionsSheet: View {
             .accentWashedBackground()
         }
         .navigationViewStyle(.stack)
-        .confirmationDialog(Settings.bookmarkNoteRemovalDialogTitle, isPresented: $confirmRemoveNote, titleVisibility: .visible) {
-            Button("Remove", role: .destructive) {
-                settings.hapticFeedback()
-                settings.toggleBookmark(surah: surah.id, ayah: ayah.id)
-            }
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            Text(Settings.bookmarkNoteRemovalDialogMessage)
-        }
     }
 }
 

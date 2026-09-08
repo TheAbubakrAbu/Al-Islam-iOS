@@ -253,6 +253,7 @@ struct PhraseOccurrencesView: View {
                 ForEach(list) { row in
                     WordOccurrenceRow(surah: row.surah, ayah: row.ayah, tokens: row.tokens,
                                       isOrigin: row.key == (originKey ?? phrase.sourceKey), contrastTokens: row.contrast)
+                        .equatable()
                         .id(row.id)
                 }
             }

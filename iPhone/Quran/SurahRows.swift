@@ -216,7 +216,7 @@ struct SurahRow: View, Equatable {
             )
             .onTapGesture {
                 settings.hapticFeedback()
-                settings.toggleSurahFavorite(surah: surah.id)
+                settings.toggleSurahFavoriteOrConfirm(surah: surah.id)
             }
             .accessibilityLabel("Surah \(surah.id)\(isLastRead ? ", last read" : isLastListened ? ", last listened" : "")")
             // The favourite star keeps the RIGHT corner - that is where favouriting a surah has always
@@ -529,7 +529,6 @@ struct SurahAyahRow: View, Equatable {
     /// Bumped when an off-main tajweed paint for this row lands (see `arabicTajweedText`).
     @State private var tajweedPaintGeneration = 0
     @ObservedObject var settings = Settings.shared
-    @State private var confirmRemoveNote = false
 
     var surah: Surah
     var ayah: Ayah
@@ -571,10 +570,8 @@ struct SurahAyahRow: View, Equatable {
         settings.bookmarkHighlight(surah: surah.id, ayah: ayah.id)?.color ?? settings.accentColor.color
     }
 
-    private func toggleBookmarkWithNoteGuard() {
-        if !settings.toggleBookmarkIfNoNoteLoss(surah: surah.id, ayah: ayah.id) {
-            confirmRemoveNote = true
-        }
+    private func toggleBookmarkOrConfirm() {
+        settings.toggleBookmarkOrConfirm(surah: surah.id, ayah: ayah.id)
     }
 
     private func arabicDisplayText() -> String {
@@ -669,7 +666,7 @@ struct SurahAyahRow: View, Equatable {
                         )
                         .onTapGesture {
                             settings.hapticFeedback()
-                            toggleBookmarkWithNoteGuard()
+                            toggleBookmarkOrConfirm()
                         }
 
                     if isBookmarked {
@@ -791,7 +788,7 @@ struct SurahAyahRow: View, Equatable {
                 .contentShape(Rectangle())
                 .onTapGesture {
                     settings.hapticFeedback()
-                    withAnimation(.easeInOut) { toggleBookmarkWithNoteGuard() }
+                    withAnimation(.easeInOut) { toggleBookmarkOrConfirm() }
                 }
                 .padding(.top, 1)
                 .padding(.trailing, 2)
@@ -810,17 +807,6 @@ struct SurahAyahRow: View, Equatable {
             #endif
         }
         .contentShape(Rectangle())
-        .confirmationDialog(Settings.bookmarkNoteRemovalDialogTitle, isPresented: $confirmRemoveNote, titleVisibility: .visible) {
-            Button("Remove", role: .destructive) {
-                settings.hapticFeedback()
-                withAnimation(.easeInOut) {
-                    settings.toggleBookmark(surah: surah.id, ayah: ayah.id)
-                }
-            }
-            Button("Cancel") {}
-        } message: {
-            Text(Settings.bookmarkNoteRemovalDialogMessage)
-        }
     }
 }
 
@@ -1014,7 +1000,6 @@ struct AyahSearchRow: View, Equatable {
     /// Bumped when an off-main tajweed paint for this row lands (see `arabicTajweedText`).
     @State private var tajweedPaintGeneration = 0
     @ObservedObject private var settings = Settings.shared
-    @State private var confirmRemoveNote = false
 
     
     let surahName: String
@@ -1117,10 +1102,8 @@ struct AyahSearchRow: View, Equatable {
         }
     }
 
-    private func toggleBookmarkWithNoteGuard() {
-        if !settings.toggleBookmarkIfNoNoteLoss(surah: surah, ayah: ayah) {
-            confirmRemoveNote = true
-        }
+    private func toggleBookmarkOrConfirm() {
+        settings.toggleBookmarkOrConfirm(surah: surah, ayah: ayah)
     }
 
     @ViewBuilder
@@ -1141,7 +1124,7 @@ struct AyahSearchRow: View, Equatable {
                 )
                 .onTapGesture {
                     settings.hapticFeedback()
-                    toggleBookmarkWithNoteGuard()
+                    toggleBookmarkOrConfirm()
                 }
 
             if isBookmarked {
@@ -1445,17 +1428,6 @@ struct AyahSearchRow: View, Equatable {
             }
 
             pageJuzMetadata
-        }
-        .confirmationDialog(Settings.bookmarkNoteRemovalDialogTitle, isPresented: $confirmRemoveNote, titleVisibility: .visible) {
-            Button("Remove", role: .destructive) {
-                settings.hapticFeedback()
-                withAnimation(.easeInOut) {
-                    settings.toggleBookmark(surah: surah, ayah: ayah)
-                }
-            }
-            Button("Cancel") {}
-        } message: {
-            Text(Settings.bookmarkNoteRemovalDialogMessage)
         }
     }
 

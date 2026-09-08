@@ -133,7 +133,7 @@ private struct StarFieldView: View {
         return (0..<44).map { _ in
             Star(
                 x: next(),
-                // Bias toward the top: the horizon line runs 84-116 pt down the 236 pt card (see
+                // Bias toward the top: the horizon line runs 79-112 pt down the 200 pt card (see
                 // `SkyCard.arcTopInset`), and stars below it would be underground.
                 y: next() * 0.44,
                 radius: 0.6 + next() * 1.1,
@@ -244,23 +244,29 @@ struct SkyCard: View {
     /// Holds the prayer columns, the arc, the moon and the countdown. Trimmed again: the scrubbed-moment
     /// readout used to need clear air above the moon row to float into, which left a dead band between the arc
     /// and the moon. It now floats over the prayer columns at the top of the card instead (see `scrubReadout`),
-    /// so that band can go. Trimmed once more on 2026-09-07: the digits went from 30 to 26 pt and their
-    /// gap to the bar from 10 to 3 pt, 12 pt in all, and the card gives that back (the countdown block is
-    /// bottom-anchored, so keeping 236 would only have opened a dead band above "TIME LEFT").
-    private let height: CGFloat = 224
+    /// so that band can go. Trimmed twice on 2026-09-07: first the digits went 30 -> 26 pt (236 -> 224),
+    /// then Abu measured the air still left above "TIME LEFT" and it went 224 -> 200. See `arcTopInset`
+    /// for why the card's height is the lever that closes that gap.
+    private let height: CGFloat = 200
 
     /// The arc's vertical band, as insets from the card's top and bottom edges. The card is three bands: the
-    /// prayer columns end about 72 pt down and the countdown block (its "TIME LEFT" caption first) starts
-    /// about 131 pt down, so the arc lives in the 59 pt between them: peak at 68, trough at 130. The horizon
-    /// line is derived from the day's length (`SolarCurve.horizon`) and lands anywhere from ~84 pt (an
-    /// 8-hour winter day) to ~116 pt (a 16-hour summer day) of this band, always clear of the caption under
-    /// it. It used to be one symmetric 78 pt inset from when the countdown was a single caption row: the
-    /// arc was centred on the card, and once the big digits arrived the horizon ran straight under
-    /// "TIME LEFT" (and through it on long summer days). Re-derive both numbers whenever the columns or
-    /// the countdown block change height. (2026-09-07: the card lost 12 pt at the bottom, so the bottom
-    /// inset lost the same 12, from 106, and the trough still sits at 130.)
+    /// prayer columns end about 69 pt down, the countdown block is bottom-anchored (a flexible `Spacer`
+    /// above it), and the arc lives in between: peak at 68, trough at `height - arcBottomInset`.
+    ///
+    /// The horizon LINE is not at the trough - it is derived from the day's length (`SolarCurve.horizon`)
+    /// and rides up and down the band with the season, which is what makes the air above "TIME LEFT"
+    /// vary. With the countdown block occupying about 91 pt of the card's bottom, the gap between the
+    /// line and the caption works out to `arcBottomInset + f * band - 91`, where f runs from 0.75 on an
+    /// 8-hour winter day to 0.25 on a 16-hour summer one. So the two ways to close that gap are a
+    /// shorter card (the block rises) and a shallower band (the line stops swinging so far), and both
+    /// were used on 2026-09-07: 224 -> 200 and 62 -> 44 took a measured 31.5 pt gap down to about 16.
+    /// A negative padding cannot do this: the flexible spacer above simply absorbs it.
+    ///
+    /// `arcBottomInset` also sets the floor - the gap at f = 0 is `arcBottomInset - 91` - so it must not
+    /// drop much below 88 or the line grazes the caption at Arctic midsummer. Re-derive all three numbers
+    /// whenever the columns or the countdown block change height.
     private let arcTopInset: CGFloat = 68
-    private let arcBottomInset: CGFloat = 94
+    private let arcBottomInset: CGFloat = 88
 
     // MARK: Derived state
 

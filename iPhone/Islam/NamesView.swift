@@ -183,6 +183,8 @@ final class NamesViewModel: ObservableObject {
     }()
 
     @Published var namesOfAllah: [NameOfAllah] = []
+    /// A name the list should scroll to and open as it appears (a Reminder of the Day card's door).
+    @Published var pendingNameNumber: Int?
     @Published private(set) var firstFoundTargetsByNameNumber: [Int: (surahID: Int, ayahID: Int)] = [:]
     @Published private(set) var loadState: LoadState = .idle
     /// Why the last load failed, for the Try Again row: a user report that says "the pack was not in
@@ -403,6 +405,19 @@ struct NamesView: View {
     /// Apple Music-style bar minimization: true while scrolling down.
     @State private var barsCollapsed = false
     @State private var expandedNameNumbers = Set<Int>()
+    #if os(iOS)
+    /// The theme chip that is lit (NamesDepth): nil is all 99.
+    @State private var activeTheme: String?
+    #if DEBUG
+    /// `-openNameDetail <number>`: that name's page pushed as the list appears, for screenshots.
+    @State private var debugOpenName = false
+    private static var debugNameNumber: Int? {
+        guard let idx = ProcessInfo.processInfo.arguments.firstIndex(of: "-openNameDetail"),
+              ProcessInfo.processInfo.arguments.indices.contains(idx + 1) else { return nil }
+        return Int(ProcessInfo.processInfo.arguments[idx + 1])
+    }
+    #endif
+    #endif
     
     /// Cached so the diacritic-stripping `clean()` only runs when the query changes - not on every `body`
     /// re-eval (expand/collapse, favorite toggles, font switches all re-run body but leave the query alone).
@@ -417,7 +432,13 @@ struct NamesView: View {
     }
 
     private var filteredNames: [NameOfAllah] {
-        namesData.filteredNames(cleanedQuery: cleanedSearch)
+        let names = namesData.filteredNames(cleanedQuery: cleanedSearch)
+        #if os(iOS)
+        if let activeTheme {
+            return names.filter { NamesDetailsStore.shared.detail($0.number)?.theme == activeTheme }
+        }
+        #endif
+        return names
     }
 
     /// Collapse state for the favorites section, same as the Quran tab's Favorite Surahs.
@@ -632,6 +653,11 @@ struct NamesView: View {
                     allahSection(hasActiveSearch: hasActiveSearch)
                     favoriteNamesSection(favorites, hasActiveSearch: hasActiveSearch, proxy: proxy)
                     #if os(iOS)
+                    if !hasActiveSearch, NamesDetailsStore.isBundled {
+                        Section(header: Text("BROWSE BY THEME")) {
+                            NameThemeChips(active: $activeTheme)
+                        }
+                    }
                     if hasActiveSearch {
                         askAISection(hasResults: !aiHits.isEmpty || !names.isEmpty, favoriteSet: favoriteSet, hasActiveSearch: hasActiveSearch, proxy: proxy)
                         if showResultsPicker { resultsPickerSection }
@@ -682,6 +708,36 @@ struct NamesView: View {
         .navigationTitle("99 Names of Allah")
         // A load that failed at launch gets another go the moment the page is actually opened.
         .onAppear { namesData.retryIfNeeded() }
+        #if os(iOS)
+        // A card's door into one name: scroll to it and open its description once the names are up.
+        .onReceive(namesData.$pendingNameNumber) { number in
+            guard let number, namesData.isReadyForUI else { return }
+            namesData.pendingNameNumber = nil
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                withAnimation(.easeInOut) {
+                    _ = expandedNameNumbers.insert(number)
+                }
+            }
+        }
+        #if DEBUG
+        .debugPushDestination(isPresented: $debugOpenName) {
+            if let number = Self.debugNameNumber,
+               let name = namesData.namesOfAllah.first(where: { $0.number == number }) {
+                NameDetailView(name: name)
+            }
+        }
+        .onChange(of: namesData.loadState) { state in
+            if state == .ready, Self.debugNameNumber != nil {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { debugOpenName = true }
+            }
+        }
+        .onAppear {
+            if namesData.loadState == .ready, Self.debugNameNumber != nil {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { debugOpenName = true }
+            }
+        }
+        #endif
+        #endif
         .onChange(of: searchText) { newValue in
             cleanedSearch = Self.clean(newValue)
             #if os(iOS)
@@ -1422,6 +1478,12 @@ private struct NameRowDetails: View {
                     .foregroundColor(.secondary)
                     .transition(.opacity)
                     .padding(.top, 2)
+
+                #if os(iOS)
+                if NamesDetailsStore.isBundled {
+                    NameDetailLink(name: name)
+                }
+                #endif
 
                 #if HAS_QURAN
                 if showDescription || isExpanded, let target = firstFoundTarget {

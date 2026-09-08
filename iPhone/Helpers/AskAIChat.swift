@@ -231,8 +231,8 @@ enum AskAIRetriever {
 
         // Lane 5: the app's OWN prayer schedule. "When is Maghrib", "how long until Asr", "how many
         // sunnah rakahs before Dhuhr" are questions about THIS user's day at THIS location, which no
-        // model can know and no verse or hadith answers - so today's computed times go in whenever
-        // the question is about prayer at all.
+        // model can know and no verse or hadith answers. Gated tightly (see `prayerPassage`): this
+        // lane leads the interleave, so a loose gate puts a timetable at the top of every answer.
         var prayerTimes: [AskAIPassage] = []
         if let passage = prayerPassage(for: searchText), seen.insert(passage.reference).inserted {
             prayerTimes.append(passage)
@@ -273,15 +273,30 @@ enum AskAIRetriever {
         return out
     }
 
-    /// Words that make a question one about prayer - the prayer lane's whole gate. Deliberately wide
-    /// (a bare "when is maghrib" has one of these and nothing else), and cheap: a false positive costs
-    /// one passage the model can ignore, a false negative loses the only answer that exists.
-    private static let prayerWords: Set<String> = [
+    /// A NAMED prayer: on its own, enough to put today's schedule in front of the model. "When is
+    /// maghrib", "how many rakahs is dhuhr" and "did I miss asr" all carry one and nothing else.
+    private static let prayerNameWords: Set<String> = [
+        "fajr", "sunrise", "shuruq", "shurooq", "dhuhr", "duhr", "zuhr", "dhur", "asr",
+        "maghrib", "isha", "ishaa", "esha", "jumuah", "jumaah", "jummah", "duha", "duhaa",
+        "tahajjud", "witr", "qiyam",
+    ]
+
+    /// Prayer in general, with no prayer named. On its own this must NOT fetch the schedule: "what is
+    /// the reward of prayer" and "how do I pray" are answered by the Quran and the hadith, not by a
+    /// timetable. It fetches only alongside a clock word.
+    private static let prayerGeneralWords: Set<String> = [
         "prayer", "prayers", "pray", "prayed", "praying", "salah", "salat", "salaah", "namaz",
-        "fajr", "sunrise", "shuruq", "dhuhr", "duhr", "zuhr", "asr", "maghrib", "isha", "ishaa",
-        "jumuah", "jumaah", "jummah", "friday", "duha", "duhaa", "tahajjud", "witr", "qiyam",
-        "midnight", "rakah", "rakat", "rakahs", "rakaat", "sunnah", "adhan", "athan", "iqamah",
-        "next", "today", "tonight", "schedule", "timetable", "times", "time",
+        "adhan", "athan", "iqamah", "rakah", "rakahs", "rakat", "rakaat",
+    ]
+
+    /// Words that make a question one about the clock. Useless alone (this is a Quran and hadith app;
+    /// "time", "today" and "next" turn up in half the questions asked of it), which is exactly why
+    /// they used to drag the whole timetable into answers about charity: the gate below pairs them
+    /// with `prayerGeneralWords` instead of firing on them (Abu, 2026-09-07).
+    private static let clockWords: Set<String> = [
+        "time", "times", "when", "schedule", "timetable", "today", "tonight", "now", "next",
+        "left", "until", "till", "start", "starts", "started", "begin", "begins", "end", "ends",
+        "late", "early", "minutes", "hours", "remaining", "countdown", "clock", "oclock",
     ]
 
     /// Today's schedule as a passage: the times this app computed for this location, with each
@@ -290,7 +305,12 @@ enum AskAIRetriever {
     private static func prayerPassage(for question: String) -> AskAIPassage? {
         let settings = Settings.shared
         let words = Set(question.lowercased().components(separatedBy: CharacterSet.alphanumerics.inverted))
-        guard !words.isDisjoint(with: prayerWords) else { return nil }
+        // A named prayer, or prayer in general AND a clock word. Nothing else: "sunnah", "friday" and
+        // "midnight" were in the old flat list, so "a hadith about charity in the sunnah" pulled in
+        // today's timetable and the model wrote a paragraph about it.
+        let named = !words.isDisjoint(with: prayerNameWords)
+        let asksTheClock = !words.isDisjoint(with: prayerGeneralWords) && !words.isDisjoint(with: clockWords)
+        guard named || asksTheClock else { return nil }
         guard let today = settings.prayers, !today.fullPrayers.isEmpty else { return nil }
 
         let clock = DateFormatter()
