@@ -6,7 +6,7 @@ Explore Islam with **Al-Islam**! Perfect for converts & all Muslims, featuring T
 
 Created by **Abubakr Elmallah**, who was a **17-year-old** high school student when this app was published on the App Store on **July 26, 2023**.
 
-🏆 **Winner of the Congressional App Challenge 2023 – Best Original Idea**  
+🏆 **Winner of the Congressional App Challenge 2023: Best Original Idea**  
 I received a **Certificate of Congressional Recognition** from U.S. Representative **Young Kim** for my work on Al-Islam, which I began after completing my AP and IB exams. The app was recognized for its originality and impact, especially for its **Arabic Beginner Mode** and **Traveling Mode** designed to support new Muslims and Arabic learners.
 
 [**Download Al-Islam on the App Store here**](https://apps.apple.com/us/app/al-islam-islamic-pillars/id6449729655?platform=iphone)
@@ -30,17 +30,26 @@ Five repositories: three apps, and the two engines they are built on. Everything
 - [**Hadith JSON Engine**](https://github.com/TheAbubakrAbu/Hadith-JSON-Engine): 50,884 hadiths across 17 collections, repaired, graded, cited, and packed. Al-Islam's Hadith tab ships its packs
 - [**Quran Tajweed Engine**](https://github.com/TheAbubakrAbu/Quran-Tajweed-Engine): 6,236 ayahs with pre-computed tajweed, qiraat, and recitations
 
+**Where the raw JSON lives.** This app ships compressed packs (`Resources/Data/`), not source
+JSON. The uncompressed sources those packs are built from live here in
+`Resources/JSONs-Deprecated/` (nothing in that folder is bundled into any target; `Scripts/`
+reads it), and are published for everyone else in the engines:
+
+- Quran text, "About this Surah", the 99 Names, the qiraah overlays, the beta riwayat and their
+  extraction pipeline: [`sources/`](https://github.com/TheAbubakrAbu/Quran-Tajweed-Engine/tree/main/sources)
+- All 50,884 hadiths across 17 collections, as plain JSON: [`db/`](https://github.com/TheAbubakrAbu/Hadith-JSON-Engine/tree/main/db)
+
 ## Overview
 Al-Islam is a simply designed and feature-rich app that helps Muslims strengthen their faith and seamlessly practice Islam. Whether you’re a lifelong believer, a new convert, or simply exploring Islam, this app provides everything you need, from accurate prayer times and a prayer tracker to the complete Quran, the major Hadith collections, tafsir, on-device AI search, and essential Islamic tools.
 
 ## Unique Features
-- **On-Device AI Search** – Search by meaning, not just keywords: "patience in hardship" finds ayahs about sabr even when neither word appears. It works across the whole app: the Quran and Hadith, inside the very surah or hadith chapter you are reading, the 99 Names, duas, adhkar, the Arabic alphabet, and even Settings ("make text bigger" finds the font controls). Built entirely with Apple's on-device language frameworks: private, offline, and free. On devices with Apple Intelligence, **Ask AI** answers questions in a few sentences drawn only from the ayahs and hadiths it cites right below the answer, and it never gives religious rulings.
-- **Prayer Tracker** – Mark each prayer with a tap right on the Adhan tab, and watch your streaks, perfect days, and totals grow in History & Insights, a calendar heatmap by day, week, month, and year. Travel-aware and Friday-aware (Jumuah counts as Dhuhr, combined traveling prayers count as both), with a menstruation and postpartum pause that keeps exempt days from ever breaking a streak.
-- **Traveling Mode** – Automatically activates when traveling or can be manually enabled, and syncs between iPhone and Apple Watch. Adjust settings like prayer calculations, Hanafi madhab, and prayer offsets.
-- **Nagging Mode** – Never miss a prayer! Receive notifications at a chosen start time before each prayer, then reminders every 15 minutes, with final alerts at 10 and 5 minutes remaining. Answer "Yes, I prayed it" right from the notification to mark the prayer tracker and stop the remaining reminders.
-- **Arabic Beginner Mode** – Spaces out Arabic letters to help beginners recognize them more easily while learning to read the Quran.
-- **Unique Ayah Sharing** – Share Quranic verses as text or images effortlessly, or select multiple ayahs at once to share, copy, bookmark, or annotate together.
-- **Siri Shortcuts** – Play any surah by name or number, play a random surah, resume your last listened surah, or ask "When is Maghrib?", in English and Arabic.
+- **On-Device AI Search**: Search by meaning, not just keywords: "patience in hardship" finds ayahs about sabr even when neither word appears. It works across the whole app: the Quran and Hadith, inside the very surah or hadith chapter you are reading, the 99 Names, duas, adhkar, the Arabic alphabet, and even Settings ("make text bigger" finds the font controls). Built entirely with Apple's on-device language frameworks: private, offline, and free. On devices with Apple Intelligence, **Ask AI** answers questions in a few sentences drawn only from the ayahs and hadiths it cites right below the answer, and it never gives religious rulings.
+- **Prayer Tracker**: Mark each prayer with a tap right on the Adhan tab, and watch your streaks, perfect days, and totals grow in History & Insights, a calendar heatmap by day, week, month, and year. Travel-aware and Friday-aware (Jumuah counts as Dhuhr, combined traveling prayers count as both), with a menstruation and postpartum pause that keeps exempt days from ever breaking a streak.
+- **Traveling Mode**: Automatically activates when traveling or can be manually enabled, and syncs between iPhone and Apple Watch. Adjust settings like prayer calculations, Hanafi madhab, and prayer offsets.
+- **Nagging Mode**: Never miss a prayer! Receive notifications at a chosen start time before each prayer, then reminders every 15 minutes, with final alerts at 10 and 5 minutes remaining. Answer "Yes, I prayed it" right from the notification to mark the prayer tracker and stop the remaining reminders.
+- **Arabic Beginner Mode**: Spaces out Arabic letters to help beginners recognize them more easily while learning to read the Quran.
+- **Unique Ayah Sharing**: Share Quranic verses as text or images effortlessly, or select multiple ayahs at once to share, copy, bookmark, or annotate together.
+- **Siri Shortcuts**: Play any surah by name or number, play a random surah, resume your last listened surah, or ask "When is Maghrib?", in English and Arabic.
 
 ## Comprehensive Prayer Times
 - Accurate prayer times for any location, calculated privately on-device, with a full calculation method catalogue browsable by region.
