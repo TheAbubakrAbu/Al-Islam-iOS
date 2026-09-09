@@ -76,8 +76,12 @@ struct WidgetGalleryView: View {
             city = arguments[index + 1]
         }
         let prayers = settings.prayers
+        let now = Date()
+        // The sky's own period, exactly as the provider resolves it: the full, uncombined set, so the
+        // gallery shows a traveler the same night sky the real widget will (see `Settings.skyPeriodName`).
+        let skyPeriod = settings.skyPeriodName(at: now)
         return PrayersEntry(
-            date: Date(),
+            date: now,
             accentColor: settings.accentColor,
             currentCity: city,
             prayers: prayers?.prayers ?? [],
@@ -86,7 +90,8 @@ struct WidgetGalleryView: View {
             nextPrayer: settings.nextPrayer,
             hijriOffset: settings.hijriOffset,
             switchHijriDateAtMaghrib: settings.switchHijriDateAtMaghrib,
-            skyColors: settings.skyGradientColors(forPrayer: settings.currentPrayer?.nameTransliteration)
+            skyPeriod: skyPeriod,
+            skyColors: settings.skyGradientColors(forPrayer: skyPeriod)
         )
     }
 
@@ -301,7 +306,9 @@ struct WidgetGalleryView: View {
         if isAccessory(item.family) {
             Color.black
         } else if item.sky {
-            PrayerSkyBackground.fill(colors: entry.skyColors)
+            PrayerSkyBackground.fill(colors: entry.skyColors,
+                                     starOpacity: SkyStars.opacity(forPeriod: entry.skyPeriod),
+                                     twinkleTime: entry.date.timeIntervalSinceReferenceDate)
         } else {
             Color(uiColor: .secondarySystemGroupedBackground)
         }

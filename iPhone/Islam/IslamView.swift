@@ -298,20 +298,25 @@ struct IslamView: View {
             #endif
             // The window crossed the compact/regular boundary (iPad Split View drag, Slide Over, Stage
             // Manager): carry the open resource across the sidebar/stack swap so the user stays where
-            // they were instead of being dumped back on the list.
-            .onChange(of: columnLayoutActive) { columns in
-                #if os(iOS)
+            // they were instead of being dumped back on the list. Only for a crossing the USER made -
+            // backgrounding the app makes iOS flip the window compact and back for its app-switcher
+            // snapshots, and this migration cannot survive that round trip (see `ColumnLayoutMigration`).
+            //
+            // `islamPath.isEmpty` on the way out: the path is the thing being rebuilt, so it must not
+            // overwrite a stack that already has something in it.
+            #if os(iOS)
+            .columnLayoutMigration(columns: columnLayoutActive) { columns in
                 guard #available(iOS 16.0, *) else { return }
                 if columns {
                     if let top = islamPath.last {
                         selectedResource = top
                         islamPath.removeAll()
                     }
-                } else if let selected = selectedResource {
+                } else if let selected = selectedResource, islamPath.isEmpty {
                     islamPath = [selected]
                 }
-                #endif
             }
+            #endif
     }
 
     private var navigationContainer: some View {

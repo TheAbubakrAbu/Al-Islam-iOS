@@ -94,7 +94,12 @@ struct SolarArcGraph: View {
         let sunHeight = day.height(at: sunFraction)
         let isUp = day.isDaylight(at: sunFraction)
         let sunFill = widgetSunColor(height: sunHeight, horizon: day.horizon)
-        let dots = entry.prayers.filter { Settings.adhanEligiblePrayerNames.contains($0.nameTransliteration) }
+        // The FULL five (Jumuah on Friday), never the traveling combined pairs: the arc describes the
+        // day's real structure, and a traveler still wants to see where Asr and Isha fall even while the
+        // list beside it reads "Dhuhr/Asr" (user rule - the app's card marks its dots the same way).
+        // Off `entry.prayers` this drew three dots while traveling, and the two Asr/Isha marks the app
+        // showed were simply missing.
+        let dots = entry.fullPrayers.filter { Settings.adhanEligiblePrayerNames.contains($0.nameTransliteration) }
 
         GeometryReader { geo in
             let rect = geo.frame(in: .local)

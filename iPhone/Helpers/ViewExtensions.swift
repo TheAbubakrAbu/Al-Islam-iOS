@@ -1467,3 +1467,68 @@ struct SectionPillHeader: View {
         }
     }
 }
+
+// MARK: - Compact/regular layout migrations
+
+// Not iOS-gated: the Quran tab (which owns one of these migrations) compiles for watchOS too, where
+// `columns` is simply always false and this never fires. Nothing inside is platform-specific.
+/// Runs a sidebar/stack state migration when the window REALLY crosses the compact/regular boundary,
+/// and never when iOS crosses it on its own behalf.
+///
+/// The iPad and Mac tabs (Islam, Quran, Hadith) each swap between a `NavigationSplitView` and a
+/// `NavigationStack`, and each carries the open item across the swap so a Split View drag or a Stage
+/// Manager resize does not dump the user back on the list. Those migrations are LOSSY by nature - the
+/// stack path holds only the top-level section, so anything pushed deeper inside the detail column's
+/// own stack (a Pillars & Beliefs article, say) is not in it and does not survive the round trip.
+///
+/// That was fine while only a real resize could trigger one. It isn't: sending the app to the
+/// background makes iOS re-lay the window out COMPACT and then REGULAR again for its app-switcher
+/// snapshots. Measured on an iPad Pro 11-inch, half a second after `.background`: compact at +494 ms,
+/// regular again at +931 ms. Both flips ran the migration with nobody looking, so simply leaving the
+/// app and coming back re-seated the navigation - the article gone, the section back at its root, the
+/// scroll position lost. "When I screenshot or disappear and come back sometimes it reorients itself"
+/// (Abu, 2026-09-09, iPad/Mac).
+///
+/// So: never migrate while the scene is `.background`, and remember the layout each migration settled
+/// on. A flip observed while the app is away updates nothing, so the state still describes the layout
+/// the user left. If the window genuinely DID change shape while the app was away (resized from the
+/// app switcher, say), the phase change on the way back finds the mismatch and migrates then, once.
+///
+/// `.background` rather than "only while `.active`": the snapshot passes all land squarely in
+/// `.background` (measured), while `.inactive` is an ordinary state for a foreground app - a system
+/// alert over it, a Control Center pull, an unfocused Mac window - and a resize made in any of those
+/// is a real one that should still carry.
+struct ColumnLayoutMigration: ViewModifier {
+    let columns: Bool
+    let migrate: (Bool) -> Void
+
+    @Environment(\.scenePhase) private var scenePhase
+    /// The layout the state was last reconciled against; nil until the first active observation, which
+    /// only records (there is nothing to carry across on the way in).
+    @State private var reconciled: Bool?
+
+    func body(content: Content) -> some View {
+        content
+            .onChange(of: columns) { _ in reconcile() }
+            .onChange(of: scenePhase) { _ in reconcile() }
+            .onAppear { reconcile() }
+    }
+
+    private func reconcile() {
+        guard scenePhase != .background else { return }
+        guard let previous = reconciled else {
+            reconciled = columns
+            return
+        }
+        guard previous != columns else { return }
+        reconciled = columns
+        migrate(columns)
+    }
+}
+
+extension View {
+    /// See `ColumnLayoutMigration`: `migrate` runs only for a boundary crossing the USER caused.
+    func columnLayoutMigration(columns: Bool, migrate: @escaping (Bool) -> Void) -> some View {
+        modifier(ColumnLayoutMigration(columns: columns, migrate: migrate))
+    }
+}

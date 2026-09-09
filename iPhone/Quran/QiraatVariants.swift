@@ -110,10 +110,24 @@ final class QiraatVariantsStore: @unchecked Sendable {
     }
 
     /// The reading the riwayah with this tag follows at the juncture, if the matrix names it.
+    /// A reading names an imam when BOTH his transmitters follow it, and names a transmitter when
+    /// the two part company, so a transmitter named on one reading overrides his imam's listing on
+    /// a sibling. He has to be looked for across the whole juncture before falling back to the
+    /// imams: at 12:109 Asim is named on نوحي while Shubah is named on يوحى, and Shubah recites
+    /// يوحى. Scanning reading by reading would show him his imam's form instead of his own.
     func reading(in juncture: Juncture, followedBy tag: String) -> Reading? {
         let canonical = Settings.Riwayah.canonicalTag(tag)
+        let named = juncture.readings.first { reading in
+            reading.transmitters.contains { transmitter(id: $0)?.tag == canonical }
+        }
+        if let named { return named }
+        guard let table = loadedTable() else { return nil }
         return juncture.readings.first { reading in
-            transmitters(following: reading).contains { $0.tag == canonical }
+            reading.readers.contains { readerID in
+                (table.transmittersByReader[readerID] ?? []).contains { id in
+                    table.transmitters[id]?.tag == canonical
+                }
+            }
         }
     }
 

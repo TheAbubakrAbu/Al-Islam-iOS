@@ -578,6 +578,17 @@ struct SurahView: View {
     @State private var showSurahInfoSheet = false
     @State private var showReciterPickerSheet = false
     @State private var showSurahPickerSheet = false
+    /// The surah Choose Surah picked, navigated to from the picker sheet's `onDismiss` rather than from
+    /// the pick itself.
+    ///
+    /// The pick used to navigate 0.15 s after closing the sheet - inside its own dismissal animation.
+    /// Swapping the surah there re-published this whole reader (and wrote `recordSurahOpened`, an
+    /// @AppStorage write, which republishes from the root) while UIKit was still tearing the sheet's
+    /// controller down, and the presentation stack never recovered: the picker closed, the surah
+    /// changed, and from then on NOTHING would present - not a row's actions sheet, not Surah Info,
+    /// not Revelation Info (user report). `onDismiss` runs after the animation has finished and the
+    /// controller is gone, which is the only safe moment to touch the host.
+    @State private var pendingPickedSurah: Surah?
     @State private var confirmConvertQiraahToHafs = false
     /// Consent dialog for switching a beta riwayah's page text from the (exact) facsimile
     /// to its beta transcription - the reader-menu twin of `BetaTextConsentCard`.
@@ -2123,19 +2134,17 @@ struct SurahView: View {
         } message: {
             Text("Please keep notes Islamic and respectful.")
         }
-        .sheet(isPresented: $showSurahPickerSheet) {
+        // The pick is only RECORDED here; `onDismiss` performs it once the sheet is fully gone. See
+        // `pendingPickedSurah`. The picker closes itself (its `select` calls `dismiss()`), so this
+        // callback must not also write the binding: two dismissals of one presentation is the other
+        // half of the same hazard.
+        .sheet(isPresented: $showSurahPickerSheet, onDismiss: navigateToPickedSurah) {
             // `displayedSurah`, not `surah`: in page mode the reader roams freely, so the surah on
             // SCREEN (pageSurah) is the one the picker must treat as current - comparing against the
             // surah the reader was merely opened from made "Choose Surah" a silent no-op whenever the
             // pick matched it (most commonly: paging away and picking the starting surah to go back).
             SurahPickerSheet(currentSurahID: displayedSurah.id) { selectedSurah in
-                settings.hapticFeedback()
-                showSurahPickerSheet = false
-
-                guard selectedSurah.id != displayedSurah.id else { return }
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-                    navigateToSurah(selectedSurah)
-                }
+                pendingPickedSurah = selectedSurah.id == displayedSurah.id ? nil : selectedSurah
             }
             .environmentObject(settings)
             .environmentObject(quranData)
@@ -4171,6 +4180,15 @@ struct SurahView: View {
         }
     }
 
+    /// Runs when the Choose Surah sheet has finished dismissing: the surah swap and everything it
+    /// republishes happens with no presentation in flight. Nothing picked (the sheet was swiped away,
+    /// or the pick was the surah already on screen) means nothing to do.
+    private func navigateToPickedSurah() {
+        guard let picked = pendingPickedSurah else { return }
+        pendingPickedSurah = nil
+        navigateToSurah(picked)
+    }
+
     private func navigateToSurah(_ targetSurah: Surah) {
         // Compare against what's on SCREEN (in page mode the reader may be pages away from `surah`),
         // not the surah this view was opened from - see the picker-sheet note.
@@ -4322,6 +4340,8 @@ private struct SurahPickerSheet: View {
         return quranData.quran[index + 1]
     }
 
+    /// `dismiss()` is this sheet's ONE closing path: the host records the pick in `onSelect` and acts
+    /// on it in the sheet's `onDismiss`, so it must not close the sheet a second time by hand.
     private func select(_ surah: Surah) {
         onSelect(surah)
         dismiss()

@@ -370,7 +370,11 @@ struct HadithView: View {
             // The window crossed the compact/regular boundary (iPad Split View drag, Slide Over, Stage
             // Manager) and the container swapped between the split view and the stack. Carry the open
             // book across the swap instead of dropping the reader back on the catalog.
-            .onChange(of: usesColumnNavigation) { columns in
+            // Only for a boundary crossing the USER made - backgrounding the app makes iOS flip the
+            // window compact and back for its app-switcher snapshots, and this migration empties
+            // `bookPath` on the way out, so a round trip closed the open book. See
+            // `ColumnLayoutMigration`.
+            .columnLayoutMigration(columns: usesColumnNavigation) { columns in
                 guard #available(iOS 16.0, *) else { return }
                 if columns {
                     // Stack → columns: a book opened through the tracked hidden links becomes the

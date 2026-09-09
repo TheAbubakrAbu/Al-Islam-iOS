@@ -184,7 +184,11 @@ struct PrayerSkyChrome: ViewModifier {
 
     func body(content: Content) -> some View {
         if showsSky {
-            content.modifier(PrayerSkyBackground(colors: entry.skyColors))
+            content.modifier(PrayerSkyBackground(
+                colors: entry.skyColors,
+                starOpacity: SkyStars.opacity(forPeriod: entry.skyPeriod),
+                twinkleTime: entry.date.timeIntervalSinceReferenceDate
+            ))
         } else {
             content.widgetContainerBackground(legacyPadding: true)
         }
@@ -196,11 +200,31 @@ struct PrayerSkyChrome: ViewModifier {
 /// shadow - the sky keeps its colors, but white text no longer washes out against the bright daytime stops.
 struct PrayerSkyBackground: ViewModifier {
     let colors: [Color]
+    /// How strongly the stars show, from the entry's TRUE sky period (`SkyStars.opacity(forPeriod:)`) -
+    /// zero by day. The app's card has always had them; a widget wearing the same night gradient with a
+    /// bare sky was the visible half of the two skies having drifted apart.
+    var starOpacity: Double = 0
+    /// Which frame of the twinkle this entry shows (seconds; the app passes its live clock). Entries
+    /// minutes apart land on different frames, so the field is not frozen in the same pose all night.
+    var twinkleTime: TimeInterval = 0
 
-    /// The gradient with its scrim, on its own: also what the app's widget gallery paints behind a sky
-    /// layout, where `containerBackground` is a no-op.
-    static func fill(colors: [Color]) -> some View {
+    /// The gradient with its stars and scrim, on its own: also what the app's widget gallery paints
+    /// behind a sky layout, where `containerBackground` is a no-op.
+    static func fill(colors: [Color], starOpacity: Double = 0, twinkleTime: TimeInterval = 0) -> some View {
         LinearGradient(colors: colors, startPoint: .top, endPoint: .bottom)
+            // Between the gradient and the scrim, the order the app's card stacks them in. A widget
+            // cannot animate, so this is one still frame of the shared field rather than a twinkle;
+            // the entry's own moment picks the frame, so consecutive entries differ slightly, exactly
+            // as two glances at the app a few minutes apart would.
+            .overlay {
+                Canvas { context, size in
+                    SkyStars.draw(in: &context,
+                                  size: size,
+                                  time: twinkleTime,
+                                  opacity: starOpacity)
+                }
+                .allowsHitTesting(false)
+            }
             .overlay(
                 LinearGradient(
                     colors: [.black.opacity(0.10), .black.opacity(0.28)],
@@ -211,7 +235,7 @@ struct PrayerSkyBackground: ViewModifier {
     }
 
     private var background: some View {
-        Self.fill(colors: colors)
+        Self.fill(colors: colors, starOpacity: starOpacity, twinkleTime: twinkleTime)
     }
 
     func body(content: Content) -> some View {

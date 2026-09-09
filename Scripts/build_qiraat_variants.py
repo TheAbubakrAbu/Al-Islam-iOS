@@ -70,6 +70,22 @@ def skeleton(word: str) -> str:
     return re.sub(r"[^ء-ي]", "", w)
 
 
+# Errata against the Quran.com matrix, applied on build so a re-run cannot undo them. Keyed by
+# ayah, then by the reading's text; the value replaces that reading's reader list.
+#
+# 16:43 نُّوحِىٓ: the source gives نُوحِي an empty matrix (no reader, no transmitter) and puts all
+# ten imams on يُوحَى, leaving the form Hafs actually recites attributed to nobody. The same word in
+# 12:109 and 21:7 carries the standard attribution and this restores it: Asim on نُوحِي, the other
+# nine on يُوحَى, and Shubah named there too because he parts from his imam here. The riwayah texts
+# confirm it - Hafs alone reads نُوحِي, Shubah and the rest read يُوحَى.
+VARIANT_READER_ERRATA = {
+    "16:43": {
+        "نُوحِيْ": [5],
+        "يُوحَى": [1, 2, 3, 4, 6, 7, 8, 9, 10],
+    },
+}
+
+
 def locate(words: list[str], tokens: list[str]) -> tuple[int, int] | None:
     """The token range carrying `words` (skeletons), or None."""
     target = [skeleton(w) for w in words if skeleton(w)]
@@ -110,6 +126,8 @@ def main() -> None:
 
     ayahs = {}
     junctures = readings = placed = unplaced = 0
+    # Which errata actually found their reading; checked against the table after the walk.
+    applied_errata: set[tuple[str, str]] = set()
     for key, record in source["ayahs"].items():
         if key not in tokens_by_key:
             raise SystemExit(f"{key} is not an ayah of this app")
@@ -134,12 +152,16 @@ def main() -> None:
             rows = []
             for reading in juncture["readings"]:
                 cells = reading.get("matrix") or {}
+                text = reading.get("textUthmani") or reading.get("text") or ""
+                fixed = VARIANT_READER_ERRATA.get(key, {}).get(text)
+                if fixed is not None:
+                    applied_errata.add((key, text))
                 row = {
-                    "t": reading.get("textUthmani") or reading.get("text") or "",
+                    "t": text,
                     "tr": reading.get("transliteration") or "",
                     "en": reading.get("translation") or "",
                     "ex": ((reading.get("explanation") or {}).get("text") or "").strip(),
-                    "rd": sorted(int(r) for r in (cells.get("readers") or [])),
+                    "rd": sorted(fixed if fixed is not None else (int(r) for r in (cells.get("readers") or []))),
                     "tm": sorted(int(t) for t in (cells.get("transmitters") or [])),
                 }
                 if reading.get("grammaticalForm"):
@@ -158,6 +180,17 @@ def main() -> None:
             junctures += 1
         if packed:
             ayahs[key] = packed
+
+    # Every erratum must have found its reading. The table is keyed by the reading's exact text, so a
+    # single diacritic re-normalized upstream would make the lookup miss and the build would quietly
+    # ship the source's own (wrong) matrix again - the fix silently un-applying, which is the worst way
+    # for it to fail. Fail the build instead, loudly, naming what no longer matches.
+    expected_errata = {(ayah, text) for ayah, fixes in VARIANT_READER_ERRATA.items() for text in fixes}
+    if missed := expected_errata - applied_errata:
+        raise SystemExit(
+            "ERROR: reader errata never matched a reading (the source's text changed?): "
+            + ", ".join(f"{ayah} {text!r}" for ayah, text in sorted(missed))
+        )
 
     body = json.dumps({"v": 1, "readers": readers, "transmitters": transmitters, "ayahs": ayahs},
                       ensure_ascii=False, separators=(",", ":"), sort_keys=True).encode("utf-8")

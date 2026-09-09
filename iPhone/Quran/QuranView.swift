@@ -1082,6 +1082,12 @@ struct QuranView: View {
             // "-openThemes" pushes its own screen the moment the tab appears; a second push from the
             // mushaf auto-open in the same instant was a reproducible crash (see `DebugPushDestination`).
             if Self.debugWantsThemes || Self.debugWantsWordOfDay || Self.debugWantsHistory { shouldAutoOpen = false }
+            // "-noAutoOpenMushaf": page mode ON but the reader NOT auto-opened, so the tab sits on the
+            // surah list with an empty path. That is the state a user reaches by tapping Back out of the
+            // mushaf, and the only way to reach it headlessly - it is what the tab-exit re-open below is
+            // for, and re-verifying that fix means being able to get here (pair it with
+            // "-settingsProbe tab=adhan@14,tab=quran@22" to leave the tab and come back).
+            if ProcessInfo.processInfo.arguments.contains("-noAutoOpenMushaf") { shouldAutoOpen = false }
             #endif
             // A Sunnah reminder's target is about to open the reader itself (`openPendingQuranTarget`);
             // a second push from the auto-open in the same instant is the crash `-openThemes` hit.
@@ -1105,21 +1111,50 @@ struct QuranView: View {
             }
             #endif
         }
-        // Coming BACK to the Quran tab (from Adhan, Settings, ...) while page mode is on re-opens the mushaf -
-        // but only when the tab was left sitting on the surah list with no reader open. `openMushafWhereLeftOff`
-        // can't make that call itself: on iPad it deliberately re-points the detail column whatever is in it,
-        // which would throw an iPad user off whatever they had open every time they came back to the tab.
+        // Page mode re-opens the mushaf when the tab is LEFT, not when it is returned to. The pager wraps
+        // ~604 page identities and is the heaviest view realization in the app; built on the way IN, the
+        // return paid all of it at once (measured: the reader appeared 484 ms after the tab came back and
+        // the main thread was not free again for 864 ms) and then slid it in on a push animation - "it
+        // lags a little to open the page" (Abu, 2026-09-09). Built on the way OUT, the same work happens
+        // while the user is on another tab, where nothing is waiting on the main thread, and the tab is
+        // found with the mushaf already standing on it.
+        //
+        // Both directions run the same open. The way out is where it normally happens; the way in is the
+        // backstop for a tab that goes active without ever having been left. Whichever fires first fills
+        // `path`, and the other one's `path.isEmpty` guard then finds nothing to do.
+        //
+        // Either way only when the tab is sitting on the surah list with no reader open - going back to
+        // the list and STAYING there is a deliberate act, and it survives until the tab is left.
+        // `openMushafWhereLeftOff` can't make that call itself: on iPad it deliberately re-points the
+        // detail column whatever is in it, which would throw an iPad user off whatever they had open.
         .onChange(of: isActiveTab) { active in
             #if os(iOS)
-            guard active, settings.quranPageMode, path.isEmpty, selectedRoute == nil else { return }
-            openMushafWhereLeftOff()
+            guard settings.quranPageMode, path.isEmpty, selectedRoute == nil else { return }
+            // The way in (the backstop) opens at once - there is a user waiting on it.
+            guard !active else { openMushafWhereLeftOff(); return }
+            // The way out waits a beat first: the pager's build is half a second of main thread, and
+            // the tab being switched TO has its own first frame to paint (Adhan's countdown and sky
+            // animate). Let that land, then build behind it. Re-checked on arrival - the user may have
+            // come straight back, or opened something themselves in between.
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                guard settings.quranPageMode, path.isEmpty, selectedRoute == nil else { return }
+                // Unanimated: off screen there is nothing to animate, and a half-finished push
+                // transition is exactly what the returning tab must not walk into.
+                var transaction = Transaction()
+                transaction.disablesAnimations = true
+                withTransaction(transaction) { openMushafWhereLeftOff() }
+            }
             #endif
         }
         .onChange(of: searchHandoff.pendingQuery) { query in
             guard let query else { return }
             runHandedOffSearch(query)
         }
-        .onChange(of: columnLayoutActive) { columns in
+        // Only for a boundary crossing the USER made: backgrounding the app makes iOS flip the window
+        // compact and back for its app-switcher snapshots, which ran this migration twice with nobody
+        // looking - and here that also re-keys the detail column's `.id`, rebuilding the ~604-page
+        // mushaf pager for nothing. See `ColumnLayoutMigration`.
+        .columnLayoutMigration(columns: columnLayoutActive) { columns in
             handleColumnLayoutChange(toColumns: columns)
         }
         .onDisappear {

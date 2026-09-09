@@ -1003,11 +1003,27 @@ struct AyahRow: View, Equatable {
         // Long press opens the SAME ayah actions sheet page mode's long press shows (user rule: one
         // grammar for "act on this ayah" in both modes) - the old .contextMenu is retired. The row's
         // ellipsis menu keeps the inline menu for discoverability.
-        .onLongPressGesture {
-            guard !isSelecting else { return }
-            settings.hapticFeedback()
-            requestSheet(.actions)
-        }
+        //
+        // `highPriorityGesture`, not `.onLongPressGesture`: as a plain modifier the press ranked BELOW
+        // the row's own tap, so it had to wait for that tap to fail - and a tap only fails when the
+        // finger LIFTS. The sheet arrived on release, while the same press on a mushaf page (a UIKit
+        // recognizer acting at `.began`) opens it mid-hold; one gesture, two feels (user report).
+        // Higher precedence is SwiftUI's `tap.require(toFail: press)`: the press wins the moment its
+        // 0.45 s is up, with the finger still down, and the tap is the one that gets cancelled.
+        // `LongPressGesture.onEnded` fires at that duration, not at the lift. 0.45 s is what the
+        // boundary-divider presses in this reader already use.
+        //
+        // Masked off while multi-selecting: there a tap on the row IS the interaction, and a winning
+        // press would swallow it. `.subviews` disables only this gesture, so the row keeps its
+        // identity (and its position in the list) when select mode turns on.
+        .highPriorityGesture(
+            LongPressGesture(minimumDuration: 0.45)
+                .onEnded { _ in
+                    settings.hapticFeedback()
+                    requestSheet(.actions)
+                },
+            including: isSelecting ? .subviews : .all
+        )
         // The tap-to-scroll jump, as a swipe too: while searching, swipe the result row to scroll down
         // to that ayah in the full list.
         .swipeActions(edge: .leading, allowsFullSwipe: true) {

@@ -101,6 +101,28 @@ extension Settings {
             .map { Color(hex: $0) ?? .black }
     }
 
+    /// The TRUE prayer period at `date`, resolved against the FULL, uncombined prayer set - never the
+    /// traveling-mode pairs. This is what the sky is painted from: past Isha the sky wears Isha's colors
+    /// and at Asr time Asr's, even while the list (and the current-prayer label) reads "Maghrib/Isha" or
+    /// "Dhuhr/Asr" (user rule). Before the day's Fajr the previous night's period still holds, which is
+    /// what the second pass over yesterday is for.
+    ///
+    /// It lives here, beside the palette, because every surface that paints a sky has to answer this the
+    /// same way. The widgets used to answer it with the COMBINED timeline, which has no Isha boundary at
+    /// all while traveling: a traveler's home screen sat on Maghrib's colors all night long while the app
+    /// beside it had turned to Isha hours earlier (Abu, 2026-09-09).
+    func skyPeriodName(at date: Date) -> String? {
+        let calendar = Calendar.current
+        for dayOffset in [0, -1] {
+            guard let day = calendar.date(byAdding: .day, value: dayOffset, to: date),
+                  let table = getPrayerTimes(for: day, fullPrayers: true) else { continue }
+            if let period = prayersIncludingOptional(table, for: day).last(where: { $0.time <= date }) {
+                return period.nameTransliteration
+            }
+        }
+        return nil
+    }
+
     func setSkyGradient(top: Color, bottom: Color, for key: String) {
         var overrides = skyGradientOverrides
         let pair = [top.hexString, bottom.hexString]
@@ -118,6 +140,68 @@ extension Settings {
 
     func resetSkyGradients() {
         skyGradientsJSON = ""
+    }
+}
+
+/// The night sky's stars - the same forty-four of them wherever a sky is drawn.
+///
+/// The app's card twinkles them on a `TimelineView`; a widget draws one still frame of the same field,
+/// since a widget cannot animate. Sharing the generator is what makes the two the same sky: the field is
+/// deterministic, so a widget's stars sit exactly where the app's do, and both come out at the same hour.
+enum SkyStars {
+    struct Star {
+        let x, y, radius, phase, brightness: Double
+    }
+
+    static let all: [Star] = {
+        // A tiny linear congruential generator: deterministic, and no dependency on the Foundation RNG.
+        var seed: UInt64 = 0x5EED_1517
+        func next() -> Double {
+            seed = seed &* 6_364_136_223_846_793_005 &+ 1_442_695_040_888_963_407
+            return Double((seed >> 33) & 0xFFFF) / Double(0xFFFF)
+        }
+        return (0..<44).map { _ in
+            Star(
+                x: next(),
+                // Bias toward the top: on the app's card the horizon runs 79-112 pt down its 200 pt
+                // (see `SkyCard.arcTopInset`), and stars below it would be underground. The fraction
+                // carries to a widget of any size.
+                y: next() * 0.44,
+                radius: 0.6 + next() * 1.1,
+                phase: next(),
+                brightness: 0.35 + next() * 0.55
+            )
+        }
+    }()
+
+    /// Stars come out at night: full through Isha and the late-night times, fading in over Maghrib and
+    /// back out through Fajr, and gone once the sun is up. Keyed on the TRUE (full-set) period, so the
+    /// stars agree with the gradient while traveling - see `Settings.skyPeriodName(at:)`.
+    static func opacity(forPeriod period: String?) -> Double {
+        switch period {
+        case "Isha", "Islamic Midnight", "Last Third": return 1
+        case "Fajr":                                   return 0.5
+        case "Maghrib":                                return 0.3
+        default:                                       return 0
+        }
+    }
+
+    /// One frame of the field. `time` drives the twinkle: the app passes its timeline's date, a widget
+    /// passes its entry's, which freezes the field at that instant.
+    static func draw(in context: inout GraphicsContext, size: CGSize, time: TimeInterval, opacity: Double) {
+        guard opacity > 0.01 else { return }
+        for star in all {
+            // Each star twinkles on its own cycle, offset by its phase.
+            let twinkle = 0.55 + 0.45 * sin(2 * .pi * (time / 4.0 + star.phase))
+            let alpha = star.brightness * twinkle * opacity
+            let rect = CGRect(
+                x: star.x * size.width - star.radius,
+                y: star.y * size.height - star.radius,
+                width: star.radius * 2,
+                height: star.radius * 2
+            )
+            context.fill(Path(ellipseIn: rect), with: .color(.white.opacity(alpha)))
+        }
     }
 }
 #endif

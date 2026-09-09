@@ -26,6 +26,17 @@ struct ComplicationSkyGradient: View {
             startPoint: .top,
             endPoint: .bottom
         )
+        // The same night stars the phone's sky widgets wear, from the same shared field, between the
+        // gradient and the scrim - the mirror is only a mirror if the night looks like night here too.
+        .overlay {
+            Canvas { context, size in
+                SkyStars.draw(in: &context,
+                              size: size,
+                              time: entry.date.timeIntervalSinceReferenceDate,
+                              opacity: SkyStars.opacity(forPeriod: entry.skyPeriod))
+            }
+            .allowsHitTesting(false)
+        }
         .overlay(
             LinearGradient(
                 colors: [.black.opacity(0.10), .black.opacity(0.28)],

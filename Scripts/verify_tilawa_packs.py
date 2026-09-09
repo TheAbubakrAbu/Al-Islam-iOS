@@ -352,6 +352,23 @@ def main() -> None:
             fail(f"HadeethEnc: {empty} narrations lack a body")
         notes.append(f"HadeethEnc: {count} narrations, {len(encyclopedia['tree'])} topics, "
                      f"{encyclopedia['entriesPerBlock']} per block")
+        dash_census("HadeethEnc English commentary",
+                    [full["en"].get("explanation", "") for full in encyclopedia["full"]]
+                    + [b for full in encyclopedia["full"] for b in full["en"].get("benefits", [])])
+        paragraphs = sum(full["en"].get("explanation", "").count("\n\n") for full in encyclopedia["full"])
+        notes.append(f"HadeethEnc explanations: {paragraphs} paragraph breaks kept")
+        # The dash filter re-punctuates; it must not move a word or lose a paragraph. It did both
+        # once (2026-09-08): the sentence split was rejoined with a single space, so every blank
+        # line in a dash-bearing explanation went with it. This probe is that bug, kept.
+        probe = ("He raised his hands to his knees—the Sunnah—and then paused.\n\n"
+                 "The Prophet (peace be upon him) said: pray as you have seen me pray.")
+        softened = henc.soften(probe)
+        if softened.count("\n\n") != probe.count("\n\n"):
+            fail("HadeethEnc: soften() drops paragraph breaks")
+        if re.findall(r"[^\W_]+", softened.lower()) != re.findall(r"[^\W_]+", probe.lower()):
+            fail(f"HadeethEnc: soften() changes the wording: {softened!r}")
+        if EM_DASH in softened:
+            fail("HadeethEnc: soften() leaves an em dash behind")
 
     # The hadith typo vocabulary: shipped, and built for the packs on disk (decision B).
     vocabulary = DATA / "Hadith" / "HadithVocabulary.txt.xz"

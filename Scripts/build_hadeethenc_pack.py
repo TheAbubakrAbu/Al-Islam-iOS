@@ -99,13 +99,19 @@ def _join_single(before: str, after: str) -> str:
 
 def soften_dashes(text: str) -> str:
     """Re-punctuates every em dash in `text` (see the module doc). Sentence by sentence, so a pair
-    never spans a full stop."""
+    never spans a full stop. The split captures its separators and the rejoin puts them back exactly,
+    so a paragraph break between two sentences survives: rejoining on a single space used to flatten
+    every blank line in any text that happened to contain a dash."""
     if "\u2014" not in text:
         return text
-    # Normalize the spaced variants (" — ", "— ", " —") to a bare dash between the two halves.
-    text = re.sub(r"\s*\u2014\s*", "\u2014", text)
+    # Normalize the spaced variants (" — ", "— ", " —") to a bare dash between the two
+    # halves. Horizontal whitespace only: a line break beside a dash is structure, not spacing.
+    text = re.sub(r"[^\S\n]*\u2014[^\S\n]*", "\u2014", text)
     out = []
-    for sentence in re.split(r"(?<=[.!?])\s+", text):
+    for index, sentence in enumerate(re.split(r"((?<=[.!?])\s+)", text)):
+        if index % 2 == 1:
+            out.append(sentence)   # the whitespace the split captured, put back as it was
+            continue
         parts = sentence.split("\u2014")
         if len(parts) == 1:
             out.append(sentence)
@@ -149,7 +155,7 @@ def soften_dashes(text: str) -> str:
                     result = _join_single(result, after)
                 i += 1
         out.append(result)
-    return " ".join(out)
+    return "".join(out)
 
 
 # Hand-picked readings for the few sentences the rules above punctuate awkwardly (before -> after,

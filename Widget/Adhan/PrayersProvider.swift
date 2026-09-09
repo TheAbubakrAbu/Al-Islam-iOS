@@ -289,6 +289,14 @@ struct PrayersProvider: TimelineProvider {
         // string formatted from `entry.date`) stayed on the PREVIOUS day all night for everyone with
         // the maghrib-switch off - the default.
         var flipTimes = boundaries.filter { $0.time > now && $0.time <= horizon }.map(\.time)
+
+        // ...plus every boundary of the FULL, uncombined set, which is what the sky turns on. While
+        // traveling the combined timeline has no Isha boundary at all - Maghrib runs to dawn - so there
+        // was no entry at Isha for the gradient to change on, and the home screen kept sunset's colors
+        // through the night while the app's card had long since gone dark (Abu, 2026-09-09). Off
+        // traveling mode the two sets are identical and this adds nothing (`Set` below dedupes).
+        let skyBoundaries = settings.prayerBoundaryTimeline(around: now, forcingFullPrayers: true)
+        flipTimes += skyBoundaries.filter { $0.time > now && $0.time <= horizon }.map(\.time)
         var midnight = Calendar.current.startOfDay(for: now)
         while midnight <= horizon {
             if midnight > now { flipTimes.append(midnight) }
@@ -311,14 +319,21 @@ struct PrayersProvider: TimelineProvider {
         // view (`Settings.skyGradientColors` decodes the palette overrides behind a memo, but the
         // gradient widget and the complication each called it once per entry per kind).
         var skyColorsByKey: [String: [Color]] = [:]
-        func skyColors(for prayer: Prayer?) -> [Color] {
-            let key = SkyPalette.editableKey(for: prayer?.nameTransliteration)
+        func skyColors(forPeriod period: String?) -> [Color] {
+            let key = SkyPalette.editableKey(for: period)
             if let cached = skyColorsByKey[key] { return cached }
-            let colors = settings.skyGradientColors(forPrayer: prayer?.nameTransliteration)
+            let colors = settings.skyGradientColors(forPrayer: period)
             skyColorsByKey[key] = colors
             return colors
         }
-        skyColorsByKey[SkyPalette.editableKey(for: first.currentPrayer?.nameTransliteration)] = first.skyColors
+        skyColorsByKey[SkyPalette.editableKey(for: first.skyPeriod)] = first.skyColors
+
+        // The sky period per entry moment, off the full set (see `skyBoundaries`). Resolved from the same
+        // list the flip instants came from rather than by re-deriving prayer tables per entry.
+        func skyPeriod(at moment: Date) -> String? {
+            skyBoundaries.last { $0.time <= moment }?.nameTransliteration
+                ?? settings.skyPeriodName(at: moment)
+        }
 
         // Per-day prayer tables, so an entry that is on screen TOMORROW morning lists tomorrow's clock
         // times in the grid/split layouts - copying today's table drifted them by a minute or two.
@@ -341,6 +356,7 @@ struct PrayersProvider: TimelineProvider {
             guard let current = boundaries.last(where: { $0.time <= t }),
                   let next = boundaries.first(where: { $0.time > t }) else { continue }
             let table = tables(for: t)
+            let period = skyPeriod(at: t)
             entries.append(PrayersEntry(
                 date:                       t,
                 accentColor:                first.accentColor,
@@ -351,7 +367,8 @@ struct PrayersProvider: TimelineProvider {
                 nextPrayer:                 next,
                 hijriOffset:                first.hijriOffset,
                 switchHijriDateAtMaghrib:   first.switchHijriDateAtMaghrib,
-                skyColors:                  skyColors(for: current)
+                skyPeriod:                  period,
+                skyColors:                  skyColors(forPeriod: period)
             ))
         }
         return entries
@@ -403,8 +420,11 @@ struct PrayersProvider: TimelineProvider {
             return emptyEntry(accent: settings.accentColor)
         }
 
+        let now = Date()
+        let skyPeriod = settings.skyPeriodName(at: now)
+
         return PrayersEntry(
-            date:                       Date(),
+            date:                       now,
             accentColor:                settings.accentColor,
             currentCity:                settings.currentLocation?.city ?? "",
             prayers:                    obj.prayers,
@@ -413,7 +433,10 @@ struct PrayersProvider: TimelineProvider {
             nextPrayer:                 settings.nextPrayer,
             hijriOffset:                settings.hijriOffset,
             switchHijriDateAtMaghrib:   settings.switchHijriDateAtMaghrib,
-            skyColors:                  settings.skyGradientColors(forPrayer: settings.currentPrayer?.nameTransliteration)
+            // The SKY period, not `currentPrayer`: while traveling the latter is "Maghrib/Isha" from
+            // sunset until dawn, which held the home screen on Maghrib's colors all night.
+            skyPeriod:                  skyPeriod,
+            skyColors:                  settings.skyGradientColors(forPrayer: skyPeriod)
         )
     }
 
@@ -447,6 +470,7 @@ struct PrayersProvider: TimelineProvider {
             nextPrayer: prayers.first { $0.time > now } ?? prayers.first,
             hijriOffset: 0,
             switchHijriDateAtMaghrib: false,
+            skyPeriod: current?.nameTransliteration,
             skyColors: settings.skyGradientColors(forPrayer: current?.nameTransliteration)
         )
     }
@@ -459,6 +483,7 @@ struct PrayersProvider: TimelineProvider {
               currentPrayer: nil, nextPrayer: nil,
               hijriOffset: 0,
               switchHijriDateAtMaghrib: false,
+              skyPeriod: nil,
               skyColors: settings.skyGradientColors(forPrayer: nil))
     }
 }
@@ -473,6 +498,10 @@ struct PrayersEntry: TimelineEntry {
     let nextPrayer: Prayer?
     let hijriOffset: Int
     let switchHijriDateAtMaghrib: Bool
-    /// The sky gradient for `currentPrayer`, resolved by the provider (see `makeTimelineEntriesOnMain`).
+    /// The TRUE prayer period this entry's sky is painted from - the full, uncombined set, never
+    /// `currentPrayer`'s traveling pair (`Settings.skyPeriodName(at:)`). It is what the app's card uses,
+    /// so the two skies turn together; it also keys the star field's night fade.
+    let skyPeriod: String?
+    /// The sky gradient for `skyPeriod`, resolved by the provider (see `makeTimelineEntriesOnMain`).
     let skyColors: [Color]
 }

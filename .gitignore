@@ -5,6 +5,11 @@
 xcuserdata/
 DerivedData/
 Resources/Packages/adhan-swift-main/build/
+# Xcode's own output when the project builds to the LEGACY location (in-project ./build)
+# rather than DerivedData: five .app/.appex products plus every intermediate - ~510 files,
+# 34 MB, and it flooded the source-control list until it was ignored here. The package's
+# build dir above was already covered; the project's own never was.
+/build/
 
 # Tajweed extraction pipeline: intermediate per-page ink data and per-riwayah
 # stage-2 results. Regenerable from the PDFs (run_all_stage1.sh + tj_stage2_v3.py);

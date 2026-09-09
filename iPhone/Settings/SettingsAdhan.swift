@@ -1907,12 +1907,17 @@ extension Settings {
     /// prayers. This is what current/next are resolved against - shared with the widget provider, which
     /// walks the same timeline to pre-build one entry per prayer boundary (so widgets flip at the exact
     /// prayer time without depending on WidgetKit granting a reload on schedule).
-    func prayerBoundaryTimeline(around now: Date = Date()) -> [Prayer] {
+    /// `forcingFullPrayers` ignores the traveling rule and always walks the uncombined set. That is what
+    /// the SKY runs on, in the app and in the widgets alike: the gradient has to turn at the real Isha
+    /// even when the prayer list is holding "Maghrib/Isha", so the widget timeline needs an entry at that
+    /// instant, and the combined timeline has none to give it. Nothing about the displayed current/next
+    /// prayer goes through this door - those still follow the rule below.
+    func prayerBoundaryTimeline(around now: Date = Date(), forcingFullPrayers: Bool = false) -> [Prayer] {
         guard let prayerObj = prayers, !prayerObj.prayers.isEmpty else { return [] }
 
         // "View Full Prayers" while traveling: the countdown and current/next follow the UNCOMBINED
         // five, so passing Asr time rolls the current prayer to Asr instead of holding "Dhuhr/Asr".
-        let useFullPrayers = travelingMode && travelingShowFullPrayers
+        let useFullPrayers = forcingFullPrayers || (travelingMode && travelingShowFullPrayers)
         let calendar = Calendar.current
         return [-1, 0, 1]
             .compactMap { calendar.date(byAdding: .day, value: $0, to: now) }
