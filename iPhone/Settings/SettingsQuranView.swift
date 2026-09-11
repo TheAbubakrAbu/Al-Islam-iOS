@@ -50,17 +50,6 @@ struct SettingsQuranView: View {
         )
     }
 
-    private var cleanArabicTextBinding: Binding<Bool> {
-        Binding(
-            get: { settings.cleanArabicText },
-            set: { newValue in
-                settings.cleanArabicText = newValue
-                if !newValue {
-                    settings.removeArabicDots = false
-                }
-            }
-        )
-    }
     
     #if DEBUG && os(iOS)
     /// Headless visual verification (no tap access on the dev machine): `-launchQuranSettingsArabic`
@@ -724,11 +713,22 @@ struct SettingsQuranView: View {
         cleanArabicTextToggles
     }
 
+    // The two switches are INDEPENDENT, and that is the fix (2026-09-11). Hide Dots used to be
+    // rendered only `if cleanArabicText || removeArabicDots`, and turning Hide Tashkeel off also
+    // force-cleared it, so the pair behaved like nothing else in the app: the second box appeared
+    // and disappeared as you touched the first, and switching the first off silently unchecked the
+    // second. Between them that made "dots hidden, tashkeel shown" - the closest thing to an early
+    // manuscript, which is the whole point of the option - unreachable, with no way to tell that
+    // from a bug. They read the same text through two independent transforms, so they belong on
+    // screen as two independent switches.
+    //
+    // No `.disabled(!showArabicText)` on either: `arabicDisplayControls` already renders this whole
+    // group only while Show Arabic Quran Text is on, so the modifier could never fire and only
+    // suggested that a disabled-but-ticked state existed somewhere.
     private var cleanArabicTextToggles: some View {
         VStack(alignment: .leading) {
-            Toggle("Hide Arabic Tashkeel (Vowel Diacritics) and Signs", isOn: cleanArabicTextBinding.animation(.easeInOut))
+            Toggle("Hide Arabic Tashkeel (Vowel Diacritics) and Signs", isOn: $settings.cleanArabicText.animation(.easeInOut))
                 .font(.subheadline)
-                .disabled(!settings.showArabicText)
                 .onChange(of: settings.cleanArabicText) { _ in settings.hapticFeedback() }
 
             #if os(iOS)
@@ -739,22 +739,18 @@ struct SettingsQuranView: View {
                 .padding(.vertical, 2)
             #endif
             
-            if settings.cleanArabicText || settings.removeArabicDots {
-                VStack(alignment: .leading, spacing: 4) {
-                    Toggle("Hide Arabic Dots", isOn: $settings.removeArabicDots.animation(.easeInOut))
-                        .font(.subheadline)
-                        .disabled(!settings.showArabicText)
-                        .onChange(of: settings.removeArabicDots) { _ in settings.hapticFeedback() }
+            // No `.settingsDependent()` rail any more: that indent marks a row as belonging to the
+            // one above it, which is exactly the relationship this row no longer has.
+            Toggle("Hide Arabic Dots", isOn: $settings.removeArabicDots.animation(.easeInOut))
+                .font(.subheadline)
+                .onChange(of: settings.removeArabicDots) { _ in settings.hapticFeedback() }
 
-                    #if os(iOS)
-                    Text("This removes Arabic dots, such as turning ب into ٮ. It is very difficult to read and is not recommended for beginners, but it allows you to experience how some of the earliest Muslims read and wrote the Quran in early manuscripts such as the Birmingham Manuscript.")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                    #endif
-                }
-                .settingsDependent()
-            }
+            #if os(iOS)
+            Text("This removes Arabic dots, such as turning ب into ٮ. It is very difficult to read and is not recommended for beginners, but it allows you to experience how some of the earliest Muslims read and wrote the Quran in early manuscripts such as the Birmingham Manuscript.")
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+            #endif
         }
     }
 

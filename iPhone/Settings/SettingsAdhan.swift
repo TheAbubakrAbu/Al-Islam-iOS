@@ -639,19 +639,30 @@ extension Settings {
     /// on the reduced tier (Low Power Mode is the wrong time to pin the GPS for 25 s) and when the
     /// last commit is recent and already sharp. `refreshLocationIfStale`'s offline acquisition keeps
     /// its own path through `beginLocationRefinement`: that one is about having a fix at all.
-    func beginLocationRefinementForCompass() {
+    /// Returns true only when THIS call started the burst, so the caller knows whether it owns it.
+    /// `endLocationRefinement` is global and not reference counted, so a view that ends a burst it
+    /// merely joined cancels the one its real owner is waiting on.
+    @discardableResult
+    func beginLocationRefinementForCompass() -> Bool {
         #if os(iOS)
         if PerformanceProfile.shared.tier == .reduced {
             Self.logLocationBurst("skipped: reduced tier")
-            return
+            return false
         }
         if let last = Self.lastLocationCommitAt, Date().timeIntervalSince(last) < 5 * 60,
            let accuracy = Self.lastFixAccuracy, accuracy <= 50 {
             Self.logLocationBurst("skipped: fix \(Int(Date().timeIntervalSince(last))) s old at \(Int(accuracy)) m")
-            return
+            return false
         }
-        Self.logLocationBurst(Self.isRefiningLocation ? "already running" : "start (compass)")
+        if Self.isRefiningLocation {
+            Self.logLocationBurst("already running")
+            return false
+        }
+        Self.logLocationBurst("start (compass)")
         beginLocationRefinement()
+        return Self.isRefiningLocation
+        #else
+        return false
         #endif
     }
 

@@ -1481,11 +1481,11 @@ struct SelectAyahTextSheet: View {
                             .font(.subheadline)
                             .onChange(of: hideTashkeel) { _ in settings.hapticFeedback() }
 
-                        if hideTashkeel || hideDots {
-                            Toggle("Hide Arabic Dots", isOn: $hideDots.animation(.easeInOut))
-                                .font(.subheadline)
-                                .onChange(of: hideDots) { _ in settings.hapticFeedback() }
-                        }
+                        // Independent, like the settings page it is seeded from: gating this row
+                        // on the one above made "dots hidden, tashkeel shown" unreachable here too.
+                        Toggle("Hide Arabic Dots", isOn: $hideDots.animation(.easeInOut))
+                            .font(.subheadline)
+                            .onChange(of: hideDots) { _ in settings.hapticFeedback() }
                     } footer: {
                         Text("Shapes only the Arabic text below; the reading view keeps its own settings.")
                             .font(.caption)

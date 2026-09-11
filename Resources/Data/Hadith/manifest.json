@@ -114,11 +114,11 @@
     },
     {
       "blocks" : 1,
-      "bytes" : 5017,
+      "bytes" : 4961,
       "chapters" : 1,
       "dailyCandidates" : 37,
       "hadiths" : 40,
-      "sha256" : "d473779a4ca407485a73843f99df1fd06d85ee65c75ce48b22b47836687d3bfe",
+      "sha256" : "7e75cd7efef1ade51e78c489967a1499a914b8833749de646f788c8388b6cca9",
       "slug" : "shahwaliullah40",
       "sourceBytes" : 10897
     },
@@ -154,11 +154,11 @@
     },
     {
       "blocks" : 19,
-      "bytes" : 1982752,
+      "bytes" : 1982725,
       "chapters" : 25,
       "dailyCandidates" : 1231,
       "hadiths" : 4428,
-      "sha256" : "2a15293f9a6032cbf8f1262b9e6690c5c3710d8730abd886f75a81e3c7939b4b",
+      "sha256" : "9a1f3a7478cfcf2cf1dc681d8ef1d53e1e8414488a1870674902983b7801e96b",
       "slug" : "mishkat_almasabih",
       "sourceBytes" : 5389681
     },
@@ -179,5 +179,5 @@
   "textCodec" : "lzma",
   "totalChapters" : 607,
   "totalHadiths" : 50884,
-  "totalPackBytes" : 25498862
+  "totalPackBytes" : 25498779
 }

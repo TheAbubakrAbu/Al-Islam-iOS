@@ -262,12 +262,50 @@ struct HadithRow: View, Equatable {
     @State private var showNoteSheet = false
     @State private var noteDraft = ""
     @State private var showRespectAlert = false
+    @State private var showSummarize = false
 
     /// "Sahih al-Bukhari 1234" - the standard way a hadith is cited (the sunnah.com citation when
     /// one exists, the internal row number for the books that have none).
     private var reference: String {
         "\(book.englishTitle) \(hadith.displayNumber)"
     }
+
+    #if os(iOS) && canImport(FoundationModels)
+    /// What "Summarize with AI" hands the model: the citation, the narrator, then the narration.
+    ///
+    /// The citation leads because the model is told to ground on this text and nothing else, and a
+    /// narration that names its own source is one it cannot quietly attribute elsewhere.
+    ///
+    /// The ARABIC is deliberately left out while `OnDeviceAsk.supportsArabic` is false, which is
+    /// what every other AI entry point in the app does. Apple Intelligence has no Arabic as of
+    /// iOS 26 and rejects a prompt carrying a substantial Arabic passage outright
+    /// (`unsupportedLanguageOrLocale`), so including the narration's own Arabic would not enrich
+    /// the summary - it would fail the request, and fail it hardest on the short narrations where
+    /// the Arabic outweighs its translation. `excludedNote` says so on the sheet rather than
+    /// letting the reader assume the Arabic was read.
+    private var summarizeSource: String {
+        let text = hadith.allText
+        var parts = [reference]
+        if !text.narrator.isEmpty { parts.append(text.narrator) }
+        if OnDeviceAsk.supportsArabic, !text.arabic.isEmpty { parts.append(text.arabic) }
+        if !text.text.isEmpty { parts.append(text.text) }
+        return parts.joined(separator: "\n\n")
+    }
+
+    /// The note the sheet shows about what it could not read, or nil once the model gains Arabic.
+    private var summarizeExcludedNote: String? {
+        OnDeviceAsk.supportsArabic ? nil
+            : "The narration\u{2019}s Arabic is left out: Apple Intelligence can\u{2019}t read Arabic on this device yet."
+    }
+
+    /// Whether there is anything the model can actually read. A few collections ship no English at
+    /// all (Sunan ad-Darimi carries none), and offering a button that can only fail is worse than
+    /// not offering it.
+    private var canSummarize: Bool {
+        let text = hadith.allText
+        return OnDeviceAsk.supportsArabic ? !(text.text.isEmpty && text.arabic.isEmpty) : !text.text.isEmpty
+    }
+    #endif
 
     private var isBookmarked: Bool {
         userData.isBookmarked(slug: book.slug, idInBook: hadith.idInBook)
@@ -590,6 +628,18 @@ struct HadithRow: View, Equatable {
             HadithShareSheet(book: book, hadith: hadith)
                 .smallMediumSheetPresentation()
         }
+        #if os(iOS) && canImport(FoundationModels)
+        .sheet(isPresented: $showSummarize) {
+            // Single-source: one narration, not a set of editions, so no `multiSource` and no
+            // gatherer - the text is already in hand. Follow-up questions re-ground on this same
+            // narration, which is what keeps the answers about THIS hadith.
+            SummarizeSheet(
+                title: reference,
+                sourceText: summarizeSource,
+                excludedNote: summarizeExcludedNote
+            )
+        }
+        #endif
         .sheet(isPresented: $showNoteSheet) {
             // The ayah note editor, for a hadith: same sheet, same respect check, saved onto the bookmark.
             NoteEditorSheet(
@@ -681,6 +731,22 @@ struct HadithRow: View, Equatable {
         } label: {
             Label("Share Hadith", systemImage: "square.and.arrow.up")
         }
+
+        #if os(iOS) && canImport(FoundationModels)
+        // The availability check is INSIDE the menu, the pattern every other OnDeviceAsk entry
+        // point uses: the row is simply absent on a device without Apple Intelligence rather than
+        // present and dead. Last in the menu because it is the only item that leaves the screen.
+        if OnDeviceAsk.isAvailable, canSummarize {
+            Divider()
+
+            Button {
+                settings.hapticFeedback()
+                showSummarize = true
+            } label: {
+                Label("Summarize with AI", systemImage: "text.append")
+            }
+        }
+        #endif
     }
 }
 
@@ -1358,7 +1424,17 @@ struct HadithShareSheet: View {
     // exactly as the reading rows do it.
     // The Share Ayah sheet's applicable options, for hadith: the Arabic face, tashkeel, and the note.
     @AppStorage("shareHadithFontFace") private var shareFontFaceRaw = ""
-    @AppStorage("shareHadithHideTashkeel") private var hideTashkeel = false
+    // DEFAULTS to the app-wide Hide Tashkeel, the way the ayah share sheet is seeded
+    // (`ContextMenu.swift`). It used to default to `false` and never look at the global, so a
+    // reader who had switched Hide Tashkeel on in Settings opened this sheet to find the box
+    // unchecked and the diacritics back - one setting, disagreeing with itself in two places.
+    //
+    // Still `@AppStorage`, deliberately: the key is also read by the static `composedText` below,
+    // which is what the context menu's Copy Hadith calls, and that parity is the reason the two
+    // produce identical text. An `@AppStorage` default only applies while the key is ABSENT, so
+    // this follows the global until the reader touches it here and becomes their own per-share
+    // choice afterwards - and `composedText` reads it through the same absent-key fallback.
+    @AppStorage("shareHadithHideTashkeel") private var hideTashkeel = Settings.shared.cleanArabicText
     @AppStorage("shareHadithIncludeNote") private var includeNote = true
     /// ShareAyah's `shareAyahLastActionMode`, for hadith: the sheet reopens in the mode last used.
     @AppStorage("shareHadithLastActionMode") private var storedActionModeRaw: String = ActionMode.image.rawValue
@@ -1417,7 +1493,11 @@ struct HadithShareSheet: View {
         // One block lookup for all three strings (this runs in a loop when sharing a whole chapter).
         let text = hadith.allText
         // Hide Tashkeel strips the diacritics for a cleaner shared text, the Share Ayah option's twin.
-        let hideTashkeel = defaults.bool(forKey: "shareHadithHideTashkeel")
+        // Absent means "not chosen here yet", which follows the app-wide setting - the same rule the
+        // sheet's own `@AppStorage` default uses, so Copy Hadith and Share Hadith never disagree.
+        let hideTashkeel = defaults.object(forKey: "shareHadithHideTashkeel") == nil
+            ? Settings.shared.cleanArabicText
+            : defaults.bool(forKey: "shareHadithHideTashkeel")
         let includeReference = flag("shareHadithReference")
         let includeArabic = flag("shareHadithArabic") && !text.arabic.isEmpty
         // The narrator is part of the English (no switch of its own, the reading rows' rule): English

@@ -273,6 +273,34 @@ struct Ayah: Codable, Identifiable, Equatable {
         return result
     }
 
+    /// The vocalized text with its dots removed when Hide Dots is on: the skeleton, still carrying
+    /// every harakah.
+    ///
+    /// This is the half of Hide Dots that was missing (2026-09-11). `removingArabicDots` ran in
+    /// exactly one place, inside `textCleanArabic`, so the option could only ever take effect while
+    /// Hide Tashkeel was ALSO on - switch on Hide Dots by itself and the reader did not change by a
+    /// pixel. The settings screen hid the contradiction rather than fixing it, by rendering the Hide
+    /// Dots row only while Hide Tashkeel was on and force-clearing it whenever Hide Tashkeel went
+    /// off, so the inert state was simply unreachable. Both halves belong to one bug: the switch now
+    /// stands on its own in the UI, and here is where it earns that.
+    ///
+    /// Dots without vowels is a real reading, not a curiosity: the vowel marks were added to the
+    /// mushaf BEFORE the consonant pointing was universal, so a dotless text that keeps its harakat
+    /// is a stage the script genuinely passed through.
+    ///
+    /// Cached in the same NSCache as the clean text, under its own key prefix, because this now runs
+    /// per ayah on every row of the list reader.
+    private func vocalized(_ raw: String, removeDots: Bool?) -> String {
+        guard removeDots ?? Settings.shared.removeArabicDots else { return raw }
+        let key = ("V1:" + raw) as NSString
+        if let cached = CleanArabicTextCache.cache.object(forKey: key) {
+            return cached as String
+        }
+        let result = raw.removingArabicDots
+        CleanArabicTextCache.cache.setObject(result as NSString, forKey: key)
+        return result
+    }
+
     /// True if this ayah exists as its own verse in the given qiraah. In Hafs every ayah exists; in Warsh/Qaloon/etc. some Hafs ayahs are merged, so we only show ayahs that have qiraah-specific text (e.g. Baqarah has 286 in Hafs but 285 in Warsh).
     func existsInQiraah(_ displayQiraah: String?, surahID: Int? = nil) -> Bool {
         guard let qIn = displayQiraah, !qIn.isEmpty, qIn != "Hafs" else {
@@ -310,7 +338,7 @@ struct Ayah: Codable, Identifiable, Equatable {
 
     /// Arabic to show in UI. For Fatiha ayah 1 with clean mode, if the ayah doesn’t start with بسم (e.g. ta'awwudh), shows Bismillah instead.
     /// - Parameter qiraahOverride: When non-nil, use this qiraah instead of Settings (e.g. comparison mode). Use "" for Hafs.
-    /// - Parameter removeDots: With `clean`, whether the dots go too. Nil follows the app setting.
+    /// - Parameter removeDots: Whether the dots go, with or without `clean`. Nil follows the app setting.
     func displayArabicText(surahId: Int, clean: Bool, removeDots: Bool? = nil, qiraahOverride: String? = nil) -> String {
         let qiraah: String? = if let override = qiraahOverride {
             (override.isEmpty || override == "Hafs") ? nil : override
@@ -321,11 +349,12 @@ struct Ayah: Codable, Identifiable, Equatable {
         // maps (all 20 texts ship fully vocalized; the skeleton is derived at render time), and
         // stripping tashkeel + signs is exactly what exposes the shared Uthmani rasm across qiraat.
         let text = if qiraah == nil {
-            clean ? textCleanArabic(for: qiraah, removeDots: removeDots) : textArabic(for: qiraah, surahID: surahId)
+            clean ? textCleanArabic(for: qiraah, removeDots: removeDots)
+                  : vocalized(textArabic(for: qiraah, surahID: surahId), removeDots: removeDots)
         } else if clean {
             textCleanArabic(for: qiraah, surahID: surahId, removeDots: removeDots)
         } else {
-            textArabic(for: qiraah, surahID: surahId).removingArabicSukoon
+            vocalized(textArabic(for: qiraah, surahID: surahId).removingArabicSukoon, removeDots: removeDots)
         }
         if surahId == 1 && id == 1 && clean {
             let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)

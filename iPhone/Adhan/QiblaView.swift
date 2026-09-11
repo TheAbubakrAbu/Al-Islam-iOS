@@ -10,7 +10,6 @@ struct QiblaView: View {
     @ObservedObject private var settings = Settings.shared
     /// Prayer times and the location publish from `LiveState`, not `Settings` (see its comment).
     @ObservedObject private var live = LiveState.shared
-    @Environment(\.appearance) private var appearance
 
     let size: CGFloat
 
@@ -22,6 +21,9 @@ struct QiblaView: View {
     /// the coordinate changes a few times a day. Was a `@State` pair written from inside `body`
     /// through `DispatchQueue.main.async`, i.e. a render that scheduled another render.
     private static var distanceMemo: (latitude: Double, longitude: Double, miles: Double)?
+
+    /// Whether THIS compass is the one that started the GPS refinement burst. See `endRefinementIfStarted`.
+    @State private var startedRefinement = false
 
     #if os(iOS)
     @State private var lastAngle: Double = 0
@@ -41,23 +43,30 @@ struct QiblaView: View {
         QiblaLayoutMetrics(size: size)
     }
 
-    /// The expanded compass (100 pt in the location row, 160 pt in settings). Only this one is worth
-    /// a GPS refinement burst, and on the reduced tier only this one drives the magnetometer at all.
+    /// The expanded compass (100 pt in the location row, 160 pt in settings, 220 pt in the Glance
+    /// sheet). Only this one is worth a GPS refinement burst.
     private var isExpanded: Bool { size > 50 }
-
-    /// Whether the needle follows the phone's heading. The 50 pt compass in the location row keeps
-    /// turning on the full tier: with the 0.5° publish gate below it costs nothing while the phone
-    /// rests, and the live row compass is the one people actually use. Under Low Power Mode (or a
-    /// 3 GB-class device) the row compass shows the static bearing instead and the magnetometer
-    /// stays off until the compass is expanded.
-    private var isLive: Bool { isExpanded || !appearance.isReducedTier }
 
     private var distanceToQibla: Double {
         angularDistance(compass.direction, 0)
     }
 
+    /// Nothing here may claim alignment before a real heading sample has landed: `direction` starts
+    /// at 0, and 0 is exactly the value that means "facing the Kaaba". A phone with no magnetometer,
+    /// an uncalibrated one, or one with no location yet used to draw a straight-up needle, an accent
+    /// ring and the words "You are facing the Kaaba" - the failure state was indistinguishable from
+    /// success, which is what makes a broken compass read as a working one pointing the wrong way.
+    private var isAligned: Bool { compass.hasHeading && distanceToQibla <= 1 }
+    private var isNearlyAligned: Bool { compass.hasHeading && distanceToQibla <= 5 }
+    private var isWithinArc: Bool { compass.hasHeading && distanceToQibla <= 20 }
+
     private var qiblaTurnText: String? {
-        guard distanceToQibla > 1 else { return "You are facing the Kaaba" }
+        guard compass.hasHeading else {
+            return CLLocationManager.headingAvailable()
+                ? "Waiting for the compass\u{2026}"
+                : "No compass on this device"
+        }
+        guard !isAligned else { return "You are facing the Kaaba" }
 
         let delta = shortestDelta(from: 0, to: compass.direction)
         let direction = delta < 0 ? "left" : "right"
@@ -86,6 +95,7 @@ struct QiblaView: View {
     }
 
     private var alignmentScore: Double {
+        guard compass.hasHeading else { return 0 }
         // Quantized to 1/24 steps. Each distinct value re-rasterizes GlassyQiblaRing's decoration
         // layer (three blurs + a gradient border) - exactly while the user is aligned and watching.
         // Snapping to steps lets SwiftUI diff the ring out between visually identical frames; only
@@ -95,11 +105,11 @@ struct QiblaView: View {
     }
 
     private var arrowColor: Color {
-        distanceToQibla <= 5 ? settings.accentColor.color : .primary
+        isNearlyAligned ? settings.accentColor.color : .primary
     }
 
     private var ringColor: Color {
-        distanceToQibla <= 20 ? settings.accentColor.color : .primary
+        isWithinArc ? settings.accentColor.color : .primary
     }
 
     var body: some View {
@@ -126,12 +136,12 @@ struct QiblaView: View {
         }
         .onDisappear {
             compass.stop()
-            settings.endLocationRefinement()
+            endRefinementIfStarted()
         }
         // The location row swaps 50 pt for 100 pt in place, so the same view goes from resting to
-        // expanded: start the heading + burst then, and stop the burst on the way back.
+        // expanded: start the burst then, and stop it on the way back. The needle itself is live at
+        // both sizes, so nothing about the heading changes here.
         .onChange(of: size) { _ in configureCompass() }
-        .onChange(of: appearance.isReducedTier) { _ in configureCompass() }
         #if os(iOS)
         .onChange(of: compass.direction) { newAngle in
             handleDirectionChange(newAngle)
@@ -139,18 +149,36 @@ struct QiblaView: View {
         #endif
     }
 
-    /// Heading on or off, and the GPS burst, for the current size and tier. Idempotent.
+    /// Heading updates and the GPS burst for the current size. Idempotent.
+    ///
+    /// The needle is live at EVERY size and on every performance tier. The 50 pt row compass used to
+    /// fall back to `showStaticBearing()` under Low Power Mode (or on a 3 GB-class device), which
+    /// published the ABSOLUTE Qibla bearing into `direction` - a number the rest of this view reads
+    /// as "how far off you are". The row needle then sat permanently at the bearing angle in the
+    /// unaligned colour, and jumped to a completely different angle the moment a tap expanded it and
+    /// back again on the way down. The magnetometer is not what costs battery here; the GPS burst is,
+    /// and that is still expanded-only.
     private func configureCompass() {
-        if isLive {
-            compass.start(minSampleInterval: appearance.isReducedTier ? 0.1 : 0)
-        } else {
-            compass.showStaticBearing()
-        }
+        compass.start(needleRadius: size / 2)
         if isExpanded {
-            settings.beginLocationRefinementForCompass()
+            if !startedRefinement, settings.beginLocationRefinementForCompass() {
+                startedRefinement = true
+            }
         } else {
-            settings.endLocationRefinement()
+            endRefinementIfStarted()
         }
+    }
+
+    /// Ends only a burst THIS compass started. `endLocationRefinement()` is global and not reference
+    /// counted, so the collapsed row compass calling it unconditionally on appear cancelled whatever
+    /// burst someone else had going - in particular the offline acquisition burst
+    /// `refreshLocationIfStale` starts, which is the app's only way to get a fix at all with no
+    /// network. With no `currentLocation` there is no bearing to compute, so every heading sample is
+    /// dropped and the needle never moves: "the Qibla doesn't work".
+    private func endRefinementIfStarted() {
+        guard startedRefinement else { return }
+        startedRefinement = false
+        settings.endLocationRefinement()
     }
 
     private var pointerStack: some View {
@@ -167,9 +195,11 @@ struct QiblaView: View {
                 )
         }
         .padding(.vertical, size * 0.16)
-        // One texture, rotated: without this the two shadows were re-rendered offscreen on every
-        // heading sample, because a shadow of a transformed layer is computed per frame.
-        .drawingGroup()
+        // NOT a `drawingGroup`: it rasterized the needle and then rotated the bitmap, so every
+        // heading sample resampled a texture instead of redrawing a vector, and the buffer is the
+        // stack's own bounds - which have no horizontal padding, so it clipped the two shadows it
+        // was added to make cheap. `softShadow` already drops both on the reduced tier, which is
+        // where that cost mattered. (The same Metal path is why `GlassyQiblaRing` below is not one.)
     }
 
     private var qiblaInfoCard: some View {
@@ -177,7 +207,7 @@ struct QiblaView: View {
             if let qiblaTurnText {
                 Text(qiblaTurnText)
                     .font(.caption2.weight(.semibold))
-                    .foregroundStyle(distanceToQibla <= 20 ? settings.accentColor.color : .primary)
+                    .foregroundStyle(isWithinArc ? settings.accentColor.color : .primary)
                     .lineLimit(1)
                     .minimumScaleFactor(0.7)
             }
@@ -281,8 +311,8 @@ struct GlassyQiblaRing: View {
     let tint: Color
     let alignmentScore: Double
 
-    /// The material disc stays a live layer (a material samples what is behind it, so it cannot be
-    /// rasterized); everything drawn over it is one `drawingGroup` texture below.
+    /// The material disc stays a live layer: a material samples what is behind it, so it cannot be
+    /// rasterized. The decorations are a separate subtree below, kept off the Metal path too.
     @ViewBuilder
     private var glassFill: some View {
         #if os(iOS)
@@ -379,6 +409,11 @@ struct QiblaArrow: View {
 final class LocalQiblaCompass: NSObject, ObservableObject, CLLocationManagerDelegate {
     @Published var direction: Double = 0
 
+    /// True once a usable heading has actually landed. `direction` starts at 0 and 0 means "aligned",
+    /// so without this flag a compass that has never received a sample - no magnetometer, an
+    /// uncalibrated one, or no location to compute a bearing from - draws as a perfect alignment.
+    @Published private(set) var hasHeading = false
+
     private let locationManager = CLLocationManager()
     private let locationProvider: () -> Location?
     private var started = false
@@ -387,15 +422,13 @@ final class LocalQiblaCompass: NSObject, ObservableObject, CLLocationManagerDele
     /// Continuous (unwrapped) low-pass accumulator of the heading→qibla delta. Published `direction`
     /// is this normalized to 0..<360. Smoothing here keeps the needle sharp but free of compass jitter.
     private var smoothedDelta: Double?
-    /// Uptime of the last sample that was let through; samples closer than `minSampleInterval` are
-    /// dropped. Zero on the full tier (every sample feeds the low-pass, as it always did), 100 ms
-    /// on the reduced tier.
-    private var lastSampleAt: TimeInterval = 0
-    private var minSampleInterval: TimeInterval = 0
 
-    /// Publish only when the needle would visibly move: below half a degree the rotation is a
-    /// sub-pixel change of a 50-160 pt needle, and each publish is a body evaluation of the row.
-    private static let minPublishedDelta: Double = 0.5
+    /// Publish only when the needle would visibly move, set from the needle's radius by `start`.
+    /// This was a flat 0.5° at every size, which is a different thing at each of them: half a degree
+    /// moves a 50 pt needle's tip by a fifth of a point and a 220 pt one's by a full point, so the
+    /// big compass published in visible steps - a stuttering needle rather than a turning one, since
+    /// the rotation is deliberately unanimated.
+    private var minPublishedDelta: Double = 0.5
 
     init(locationProvider: @escaping () -> Location?) {
         self.locationProvider = locationProvider
@@ -404,33 +437,45 @@ final class LocalQiblaCompass: NSObject, ObservableObject, CLLocationManagerDele
         locationManager.headingOrientation = .portrait
     }
 
-    /// Start (or keep) heading updates. The heading filter stays `kCLHeadingFilterNone` on purpose:
-    /// the low-pass below only converges while samples keep coming, and a 1° filter went silent the
-    /// moment the phone stopped turning, which froze the needle short of the Qibla ("mad laggy").
-    /// Cost is controlled downstream instead: the optional sample gate for the reduced tier, and the
-    /// half-degree publish gate that swallows resting jitter before it reaches SwiftUI.
-    func start(minSampleInterval: TimeInterval) {
+    /// Start (or keep) heading updates for a needle of `needleRadius` points. The heading filter
+    /// stays `kCLHeadingFilterNone` on purpose: the low-pass below only converges while samples keep
+    /// coming, and a 1° filter went silent the moment the phone stopped turning, which froze the
+    /// needle short of the Qibla ("mad laggy"). Cost is controlled downstream instead, by the publish
+    /// gate that swallows sub-pixel jitter before it ever reaches SwiftUI.
+    ///
+    /// There is no sample-rate gate any more. Dropping to 10 Hz on the reduced tier starved the
+    /// low-pass and, with the rotation unanimated, showed as a needle that jumped in chunks.
+    func start(needleRadius: CGFloat) {
         guard CLLocationManager.headingAvailable() else { return }
-        self.minSampleInterval = minSampleInterval
+        minPublishedDelta = Self.publishThreshold(needleRadius: needleRadius)
         locationManager.headingFilter = kCLHeadingFilterNone
         guard !started else { return }
         started = true
         locationManager.startUpdatingHeading()
     }
 
+    /// The rotation, in degrees, that moves the needle's tip half a point: below that a publish
+    /// costs a body evaluation and buys nothing. Clamped so the smallest compass still can't publish
+    /// more than once per degree and the largest still tracks finely.
+    private static func publishThreshold(needleRadius: CGFloat) -> Double {
+        let radius = max(1, Double(needleRadius))
+        return min(1.0, max(0.1, (0.5 / radius) * 180 / .pi))
+    }
+
     func stop() {
         guard started else { return }
         started = false
         locationManager.stopUpdatingHeading()
+        smoothedDelta = nil
+        if hasHeading { hasHeading = false }
     }
 
-    /// No magnetometer: point the needle at the Qibla bearing with north up, the same number the
-    /// Glance card prints. Used for the row compass on the reduced tier.
-    func showStaticBearing() {
-        stop()
-        smoothedDelta = nil
-        guard let bearing = qiblaDirection() else { return }
-        if direction != bearing { direction = bearing }
+    /// Offers the system's figure-eight calibration sheet while the compass is on screen. The
+    /// default for this delegate method is `false`, so it was never offered: a phone whose
+    /// magnetometer needed calibrating delivered nothing but `headingAccuracy < 0` samples, every
+    /// one of which is dropped below, and the needle simply never moved.
+    func locationManagerShouldDisplayHeadingCalibration(_ manager: CLLocationManager) -> Bool {
+        started
     }
 
     private func qiblaDirection() -> Double? {
@@ -450,18 +495,14 @@ final class LocalQiblaCompass: NSObject, ObservableObject, CLLocationManagerDele
     func locationManager(_ manager: CLLocationManager, didUpdateHeading newHeading: CLHeading) {
         guard newHeading.headingAccuracy >= 0, let qiblaDirection = qiblaDirection() else { return }
 
-        if minSampleInterval > 0 {
-            let uptime = ProcessInfo.processInfo.systemUptime
-            guard uptime - lastSampleAt >= minSampleInterval else { return }
-            lastSampleAt = uptime
-        }
-
         // Prefer the true (geographic) heading; magnetic is the fallback when declination is unknown.
         let heading = newHeading.trueHeading >= 0 ? newHeading.trueHeading : newHeading.magneticHeading
 
         var target = qiblaDirection - heading
         target.formTruncatingRemainder(dividingBy: 360)
         if target < 0 { target += 360 }
+
+        if !hasHeading { hasHeading = true }
 
         guard let current = smoothedDelta else {
             smoothedDelta = target
@@ -486,12 +527,15 @@ final class LocalQiblaCompass: NSObject, ObservableObject, CLLocationManagerDele
         var published = normalized - direction
         published.formTruncatingRemainder(dividingBy: 360)
         if published > 180 { published -= 360 } else if published < -180 { published += 360 }
-        guard abs(published) >= Self.minPublishedDelta else { return }
+        guard abs(published) >= minPublishedDelta else { return }
         direction = normalized
     }
 
     deinit {
-        stop()
+        // Not `stop()`: that publishes `hasHeading`, and an object being deallocated must not send
+        // `objectWillChange`.
+        guard started else { return }
+        locationManager.stopUpdatingHeading()
     }
 }
 
