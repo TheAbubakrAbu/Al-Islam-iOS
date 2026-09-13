@@ -561,7 +561,7 @@ struct TajweedLegendView: View {
     nonisolated private static let compareRuleOverrides: [String: (english: String, arabic: String, description: String)] = [
         "khilaf_harf": (
             "Differing from Ḥafṣ",
-            "المخالف لحفص",
+            "المُخَالِفُ لِحَفصٍ",
             "Read differently from the Ḥafṣ an ʿĀṣim reading. Every riwayah marks this."
         )
     ]

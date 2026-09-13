@@ -358,6 +358,8 @@
 		8002DAF1C54F431584A67885 /* ReminderKinds.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3D1F3BE4F44B4F36B0D4BA76 /* ReminderKinds.swift */; };
 		D6A5633747944F29B32D2A76 /* HadithTopics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2F97FCF19068461EABA18494 /* HadithTopics.swift */; };
 		30FE8A7FAF354709994B334E /* QiraatVariantAudio.swift in Sources */ = {isa = PBXBuildFile; fileRef = 86B53D4DECCB4120A92C35B7 /* QiraatVariantAudio.swift */; };
+		1822661768B64004AE3B659C /* QiraatNarratorDifferences.swift in Sources */ = {isa = PBXBuildFile; fileRef = 87D2AAD9DAD24ADC84F0DA9D /* QiraatNarratorDifferences.swift */; };
+		9F8BCAF8265B419F95001686 /* QiraatIsnad.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF2040FC77C948C58B211CE9 /* QiraatIsnad.swift */; };
 		8BC79DE7ED0C409080E5FF50 /* NamesDepth.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC8542345D7B4EE5822130B2 /* NamesDepth.swift */; };
 		61AF8E73B7014978A2A58F89 /* DailyReminders.swift in Sources */ = {isa = PBXBuildFile; fileRef = F9C3B6F6C0E04927991AF898 /* DailyReminders.swift */; };
 		7ADD171722F0000000AA0017 /* HadithBookView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7ADD171622F0000000AA0016 /* HadithBookView.swift */; };
@@ -751,6 +753,8 @@
 		3D1F3BE4F44B4F36B0D4BA76 /* ReminderKinds.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ReminderKinds.swift; sourceTree = "<group>"; };
 		2F97FCF19068461EABA18494 /* HadithTopics.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = HadithTopics.swift; sourceTree = "<group>"; };
 		86B53D4DECCB4120A92C35B7 /* QiraatVariantAudio.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = QiraatVariantAudio.swift; sourceTree = "<group>"; };
+		87D2AAD9DAD24ADC84F0DA9D /* QiraatNarratorDifferences.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = QiraatNarratorDifferences.swift; sourceTree = "<group>"; };
+		EF2040FC77C948C58B211CE9 /* QiraatIsnad.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = QiraatIsnad.swift; sourceTree = "<group>"; };
 		DC8542345D7B4EE5822130B2 /* NamesDepth.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NamesDepth.swift; sourceTree = "<group>"; };
 		F9C3B6F6C0E04927991AF898 /* DailyReminders.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = DailyReminders.swift; sourceTree = "<group>"; };
 		7ADD171622F0000000AA0016 /* HadithBookView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = HadithBookView.swift; sourceTree = "<group>"; };
@@ -1107,6 +1111,8 @@
 				7ADD180A00000000AA0018 /* ComparisonSheets.swift */,
 				14C71261B09B4D21B7658D3D /* QiraatExplorer.swift */,
 				86B53D4DECCB4120A92C35B7 /* QiraatVariantAudio.swift */,
+				87D2AAD9DAD24ADC84F0DA9D /* QiraatNarratorDifferences.swift */,
+				EF2040FC77C948C58B211CE9 /* QiraatIsnad.swift */,
 				5C3F924E746F407ABF466CE4 /* QuranRankedSearch.swift */,
 				0ADC7477F58F426E98493CD8 /* ThemeHighlights.swift */,
 				6FB947DE3A1743BF85A01EE6 /* SunnahReminders.swift */,
@@ -1808,6 +1814,8 @@
 				8002DAF1C54F431584A67885 /* ReminderKinds.swift in Sources */,
 				D6A5633747944F29B32D2A76 /* HadithTopics.swift in Sources */,
 				30FE8A7FAF354709994B334E /* QiraatVariantAudio.swift in Sources */,
+				1822661768B64004AE3B659C /* QiraatNarratorDifferences.swift in Sources */,
+				9F8BCAF8265B419F95001686 /* QiraatIsnad.swift in Sources */,
 				8BC79DE7ED0C409080E5FF50 /* NamesDepth.swift in Sources */,
 				61AF8E73B7014978A2A58F89 /* DailyReminders.swift in Sources */,
 				7ADD171722F0000000AA0017 /* HadithBookView.swift in Sources */,

@@ -43,7 +43,7 @@ struct SplashScreen: View {
                         ScrollView(showsIndicators: false) {
                             VStack(spacing: 20 * s) {
                                 VStack(spacing: 6 * s) {
-                                    Text("ٱلسَّلَامُ عَلَيْكُمْ")
+                                    Text("ٱلسَّلَامُ عَلَيكُم")
                                         .font(Font.arabic(settings.nonQuranArabicFontName, size: 38 * s))
                                         .arabicFontDesign(custom: settings.islamUsesCustomArabicFace)
                                         .foregroundColor(settings.accentColor.color)

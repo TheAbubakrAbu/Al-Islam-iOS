@@ -615,44 +615,16 @@ struct AyahQiraahComparisonSheet: View {
         .padding(.vertical, 2)
     }
 
+    /// One side's picker: the app's one riwayah picker (the nested qiraah menu), in its side-card
+    /// form (user rule: every riwayah picker is the comparison bar's).
     private func duelPicker(side: String, selected: QiraahDisplay?, choose: @escaping (String) -> Void) -> some View {
-        Menu {
-            ForEach(options) { option in
-                Button {
-                    settings.hapticFeedback()
-                    withAnimation(.easeInOut) { choose(option.tag) }
-                } label: {
-                    let title = "\(option.label) - \(option.teacher)\(option.beta ? " (Beta)" : "")"
-                    if option.id == selected?.id {
-                        Label(title, systemImage: "checkmark")
-                    } else {
-                        Text(title)
-                    }
-                }
-            }
-        } label: {
-            VStack(spacing: 2) {
-                Text(side)
-                    .font(.caption2.weight(.bold))
-                    .foregroundStyle(.secondary)
-
-                HStack(spacing: 4) {
-                    Text(selected?.label ?? "Choose")
-                        .font(.subheadline.weight(.semibold))
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.7)
-
-                    Image(systemName: "chevron.up.chevron.down")
-                        .font(.caption2.weight(.semibold))
-                        .foregroundStyle(.secondary)
-                }
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 6)
-            .padding(.horizontal, 8)
-            .background(RoundedRectangle(cornerRadius: 10).fill(settings.accentColor.color.opacity(0.08)))
-        }
-        .buttonStyle(.plain)
+        ArabicTextRiwayahPicker(
+            selection: Binding(
+                get: { selected?.tag ?? Settings.Riwayah.hafsTag },
+                set: { tag in withAnimation(.easeInOut) { choose(tag) } }
+            ),
+            sideLabel: side
+        )
     }
 
     /// One side of the duel: the riwayah's aligned text, diffed against the OTHER side (not against

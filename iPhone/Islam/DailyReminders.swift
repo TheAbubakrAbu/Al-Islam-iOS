@@ -148,11 +148,6 @@ final class DailyReminderStore: ObservableObject {
     /// moment the parse lands instead of parsing the pack itself.
     @Published private(set) var isLoaded = false
 
-    /// The card the once-a-day sheet is showing, when it is.
-    @Published var sheetEntry: DailyReminderEntry?
-
-    private static let firstOpenKey = "dailyReminderFirstOpenDay"
-    private static let lastShownKey = "dailyReminderSheetLastShownDay"
     private static let widgetsWrittenKey = "dailyWidgetsWrittenDay"
 
     private init() {
@@ -258,42 +253,6 @@ final class DailyReminderStore: ObservableObject {
             return (ayah.displayArabicText(surahId: s, clean: false, qiraahOverride: ""), ayah.textEnglishSaheeh)
         }
         return (entry.arabic, entry.english)
-    }
-
-    // MARK: The once-a-day sheet
-
-    /// Shows today's card if it has not been shown today. Day one (the first open ever) is left
-    /// alone, so a new reader meets the app before the app starts talking. Refuses while the launch
-    /// cover is up (MainTabView's post-reveal task is the launch-time presenter), while the prayer
-    /// nag is pending (its dismissal asks again) and while a notification or deep-link destination
-    /// is; the day is stamped only when the sheet actually presents.
-    @MainActor
-    func presentSheetIfDue(force: Bool = false) {
-        guard Self.isBundled else { return }
-        let defaults = UserDefaults.standard
-        let today = Settings.shared.dailyDayKey()
-        if !force {
-            guard Settings.shared.showDailyReminderSheet else { return }
-            if defaults.string(forKey: Self.firstOpenKey) == nil {
-                defaults.set(today, forKey: Self.firstOpenKey)
-                return
-            }
-            guard defaults.string(forKey: Self.firstOpenKey) != today,
-                  defaults.string(forKey: Self.lastShownKey) != today else { return }
-            guard AppReveal.revealed, sheetEntry == nil,
-                  Settings.shared.pendingNagQuestion == nil,
-                  AppNavigation.shared.pendingQuran == nil, AppNavigation.shared.pendingIslam == nil else { return }
-        }
-        guard let entry = entry() else { return }
-        defaults.set(today, forKey: Self.lastShownKey)
-        sheetEntry = entry
-    }
-
-    /// A launch that arrived through a notification or a deep link keeps its own destination: the
-    /// sheet is skipped for the day.
-    @MainActor
-    func skipSheetToday() {
-        UserDefaults.standard.set(Settings.shared.dailyDayKey(), forKey: Self.lastShownKey)
     }
 
     // MARK: Widgets
@@ -518,14 +477,13 @@ extension DailyReminderEntry {
 /// Islam root from launch, so it reads its accent and faces from the appearance snapshot and
 /// observes only the reflections store (a publish per Save): observing `Settings` re-rendered it on
 /// every publish (a location tick, a countdown), and observing `QuranData` on every load step.
+/// A card, never a sheet: the once-a-day sheet clipped the card and covered the landing tab, so it
+/// was removed (Abu, 2026-09-12).
 struct ReminderOfTheDayCard: View {
     @Environment(\.appearance) private var appearance
     @ObservedObject private var reflections = SavedReflectionsStore.shared
 
     let entry: DailyReminderEntry
-    /// Whether the card is drawn as a List row (the Islam tab) or inside the daily sheet.
-    var inSheet = false
-    var onDismiss: (() -> Void)? = nil
 
     @State private var hadithLink: DailyReminderEntry.HadithLink?
 
@@ -541,7 +499,7 @@ struct ReminderOfTheDayCard: View {
             HStack(spacing: 8) {
                 AccentIconChip(systemImage: entry.kind.symbol, size: 26)
                 VStack(alignment: .leading, spacing: 1) {
-                    Text(inSheet ? "TODAY'S REMINDER" : "REMINDER OF THE DAY")
+                    Text("REMINDER OF THE DAY")
                         .font(.caption2.weight(.bold))
                         .foregroundStyle(.secondary)
                     Text(entry.kind.label)
@@ -549,7 +507,7 @@ struct ReminderOfTheDayCard: View {
                         .foregroundColor(accent)
                 }
                 Spacer(minLength: 8)
-                if !inSheet, !reflections.items.isEmpty {
+                if !reflections.items.isEmpty {
                     NavigationLink(destination: LazyDestination { SavedReflectionsView() }) {
                         HStack(spacing: 4) {
                             Image(systemName: "bookmark.fill")
@@ -567,7 +525,7 @@ struct ReminderOfTheDayCard: View {
             }
 
             if !texts.arabic.isEmpty {
-                DailyReminderArabicText(text: texts.arabic, isQuran: entry.isQuranArabic, size: inSheet ? 30 : 24)
+                DailyReminderArabicText(text: texts.arabic, isQuran: entry.isQuranArabic, size: 24)
             }
 
             if let transliteration = entry.transliteration, !transliteration.isEmpty {
@@ -579,7 +537,7 @@ struct ReminderOfTheDayCard: View {
 
             if !texts.english.isEmpty {
                 Text(texts.english)
-                    .font(inSheet ? .body : .subheadline)
+                    .font(.subheadline)
                     .fixedSize(horizontal: false, vertical: true)
             }
 
@@ -610,7 +568,6 @@ struct ReminderOfTheDayCard: View {
                 } else if let target {
                     Button {
                         Settings.shared.hapticFeedback()
-                        onDismiss?()
                         target.open()
                     } label: {
                         Label(target.buttonLabel, systemImage: "arrow.up.right.square")
@@ -672,46 +629,17 @@ struct DailyReminderArabicText: View {
     }
 }
 
-// MARK: - The once-a-day sheet
-
-/// Today's reminder as a moment of its own: presented once per day as the app opens.
-struct DailyReminderSheet: View {
-    @Environment(\.appearance) private var appearance
-    @Environment(\.dismiss) private var dismiss
-
-    let entry: DailyReminderEntry
+/// The Islam tab's top section: today's card once the corpus has parsed (the parse is kicked at app
+/// init; `isLoaded` flips on the main thread when it lands), nothing at all until then and nothing
+/// when the pack is missing.
+struct ReminderOfTheDaySection: View {
+    @ObservedObject private var store = DailyReminderStore.shared
 
     var body: some View {
-        SheetNavigationContainer {
-            List {
-                Section {
-                    ReminderOfTheDayCard(entry: entry, inSheet: true) { dismiss() }
-                }
-                .themedListRowBackground()
-
-                Section(footer:
-                    Text("A reminder arrives here once a day, the first time the app opens. Turn it off under Settings › Quran › Daily Cards; the card itself stays on the Islam tab.")
-                        .font(.caption2)
-                ) {
-                    Button {
-                        Settings.shared.hapticFeedback()
-                        dismiss()
-                    } label: {
-                        HStack {
-                            Spacer()
-                            Text("Sami'na wa ata'na · We hear and we obey")
-                                .font(.subheadline.weight(.semibold))
-                            Spacer()
-                        }
-                    }
-                    .foregroundColor(appearance.accent)
-                }
-                .themedListRowBackground()
+        if DailyReminderStore.isBundled, store.isLoaded, let entry = store.entryIfLoaded() {
+            Section {
+                ReminderOfTheDayCard(entry: entry)
             }
-            .applyConditionalListStyle()
-            .navigationTitle("Reminder of the Day")
-            .navigationBarTitleDisplayMode(.inline)
-            .sheetDismissToolbar()
         }
     }
 }

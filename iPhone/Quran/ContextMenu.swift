@@ -312,18 +312,18 @@ enum TafsirAuthor: String, CaseIterable, Identifiable {
         case .ibnKathir:       return "Ibn Kathir"
         case .maarifUlQuran:   return "Maarif"
         case .tazkirulQuran:   return "Tazkirul"
-        case .ibnKathirArabic: return "ابن كثير"
-        case .tabariArabic:    return "الطبري"
-        case .saadiArabic:     return "السعدي"
+        case .ibnKathirArabic: return "ابنُ كَثِير"
+        case .tabariArabic:    return "الطَّبَرِي"
+        case .saadiArabic:     return "السَّعدِي"
         }
     }
 
     /// The heading shown above the tafsir body.
     var displayTitle: String {
         switch self {
-        case .ibnKathirArabic: return "تفسير ابن كثير"
-        case .tabariArabic:    return "تفسير الطبري"
-        case .saadiArabic:     return "تفسير السعدي"
+        case .ibnKathirArabic: return "تَفسِيرُ ابنِ كَثِير"
+        case .tabariArabic:    return "تَفسِيرُ الطَّبَرِي"
+        case .saadiArabic:     return "تَفسِيرُ السَّعدِي"
         default:               return rawValue
         }
     }

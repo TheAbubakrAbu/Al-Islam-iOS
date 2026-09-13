@@ -175,9 +175,6 @@ private struct MainTabView: View {
     // through its own publisher below. `warmUnderCover` reaches the singletons directly.
     private let settings = Settings.shared
     @State private var pendingNagQuestion: Settings.PendingNagQuestion?
-    /// The once-a-day Reminder of the Day sheet; the store publishes once a day at most.
-    @ObservedObject private var dailyReminders = DailyReminderStore.shared
-
     /// True while a launch/splash screen still covers the tabs (drives the under-cover warm below).
     let isCovered: Bool
 
@@ -239,9 +236,6 @@ private struct MainTabView: View {
                     selectedTab = .islam
                 }
             }
-            .sheet(item: $dailyReminders.sheetEntry) { entry in
-                DailyReminderSheet(entry: entry)
-            }
             .confirmationDialog(
                 "Did you pray \(pendingNagQuestion?.prayerName ?? "this prayer")?",
                 isPresented: Binding(
@@ -260,26 +254,8 @@ private struct MainTabView: View {
             // root is copied into a companion app, delete the domains it doesn't ship.
             // Shared: the tab walk behind the launch cover.
             .task { await warmUnderCover() }
-            // Shared: the once-a-day Reminder of the Day sheet, after the reveal and a beat for the
-            // landing tab to settle. It used to be timed from the end of the walk, which put its
-            // slide-up under the finale; and the scene-phase call at launch used to be able to present
-            // it under the cover. The store itself refuses while the cover is up, while a prayer nag
-            // is pending or while a notification/deep-link destination is, and only stamps the day
-            // when it actually presents, so the nag's dismissal below simply asks again.
-            .task {
-                await AppReveal.waitUntilRevealed()
-                try? await Task.sleep(nanoseconds: 600_000_000)
-                guard !Task.isCancelled else { return }
-                #if DEBUG
-                let force = ProcessInfo.processInfo.arguments.contains("-openDailyReminder")
-                #else
-                let force = false
-                #endif
-                DailyReminderStore.shared.presentSheetIfDue(force: force)
-            }
-            .onChange(of: pendingNagQuestion == nil) { nagClosed in
-                if nagClosed { DailyReminderStore.shared.presentSheetIfDue() }
-            }
+            // The Reminder of the Day is a card at the top of the Islam tab, never a sheet (Abu,
+            // 2026-09-12: the sheet clipped the card and covered the landing tab).
             #if DEBUG
             // "-rankedBench <query>": the Quran ranked lane timed in isolation, three runs at reveal
             // + 12 s when the launch's own sweeps are over (the handed-off search at +2.5 s runs
@@ -667,11 +643,6 @@ private struct MainTabView: View {
         // 3) Back on the landing tab; let it become the rendered tab again before the reveal. A
         // launch from a Sunnah reminder's tap lands on the Quran tab instead.
         selectedTab = AppNavigation.shared.pendingQuran != nil ? .quran : launchTab
-        // A launch that arrived through a notification or a deep link keeps its own destination and
-        // skips the daily sheet for the day; otherwise the post-reveal task in `body` presents it.
-        if AppNavigation.shared.pendingQuran != nil || AppNavigation.shared.pendingIslam != nil {
-            DailyReminderStore.shared.skipSheetToday()
-        }
         try? await Task.sleep(nanoseconds: 80_000_000)
 
         LaunchWarmup.shared.markWarm()

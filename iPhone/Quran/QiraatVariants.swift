@@ -59,6 +59,29 @@ final class QiraatVariantsStore: @unchecked Sendable {
         let segments: [Segment]
         let readings: [Reading]
         let note: String
+
+        /// What the reference's category code says about the readings, or nil when it says nothing.
+        /// The legend is inferred from the matrix itself (the source publishes the codes without
+        /// one): every "A" juncture's readings render differently in English; "B" junctures render
+        /// alike, the difference being form or pronunciation; an "M" suffix marks a word the early
+        /// codices (the Uthmanic masahif) themselves spell differently.
+        var senseNote: String? {
+            switch category.first {
+            case "A": return "Differs in sense"
+            case "B": return "Same sense, another form"
+            default: return nil
+            }
+        }
+
+        var codicesDiffer: Bool { category.hasSuffix("M") }
+
+        /// "Differs in sense · The early codices spell it differently", or nil.
+        var categoryCaption: String? {
+            var parts: [String] = []
+            if let senseNote { parts.append(senseNote) }
+            if codicesDiffer { parts.append("The early codices spell it differently") }
+            return parts.isEmpty ? nil : parts.joined(separator: " · ")
+        }
     }
 
     private struct Table {
@@ -321,6 +344,12 @@ struct AyahQiraatVariantsSection: View {
                 .foregroundColor(settings.accentColor.color)
                 .frame(maxWidth: .infinity, alignment: .trailing)
 
+            if let caption = juncture.categoryCaption {
+                Text(caption)
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+            }
+
             ForEach(juncture.readings) { reading in
                 let isMine = mine?.id == reading.id
                 HStack(alignment: .top, spacing: 8) {
@@ -393,6 +422,12 @@ struct AyahQiraatVariantsView: View {
                         .foregroundColor(settings.accentColor.color)
                         .frame(maxWidth: .infinity, alignment: .trailing)
                         .padding(.vertical, 4)
+
+                    if let caption = juncture.categoryCaption {
+                        Text(caption)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
 
                     ForEach(juncture.readings) { reading in
                         readingRow(reading, mine: QiraatVariantsStore.shared.reading(in: juncture, followedBy: currentTag)?.id == reading.id)

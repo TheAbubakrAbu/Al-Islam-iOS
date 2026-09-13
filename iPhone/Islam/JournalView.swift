@@ -280,7 +280,7 @@ final class JournalStore: ObservableObject {
         khutbah.speaker = "Sh. Yasir"
         khutbah.place = "Masjid an-Nur"
         khutbah.attachments = [JournalAttachment(kind: .ayah, refID: "14:7", title: "Ibrahim 14:7",
-                                                 arabic: "وَإِذْ تَأَذَّنَ رَبُّكُمْ لَئِن شَكَرْتُمْ لَأَزِيدَنَّكُمْ",
+                                                 arabic: "وَإِذ تَأَذَّنَ رَبُّكُم لَئِن شَكَرتُم لَأَزِيدَنَّكُم",
                                                  body: "And [remember] when your Lord proclaimed, 'If you are grateful, I will surely increase you [in favor]'",
                                                  source: "Saheeh International")]
         khutbah.pinned = true

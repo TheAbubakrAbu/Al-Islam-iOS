@@ -635,7 +635,7 @@ struct SurahPageReader<Controls: View>: View {
                 if facsimileDocument != nil { facsimileDocument = nil }
                 return
             }
-            let document = await MushafPDFLibrary.loadDocument(for: key)
+            let document = await MushafPDFLibrary.loadDocument(for: Self.facsimileTag(of: key))
             guard !Task.isCancelled, facsimileKey == key else { return }
             facsimileDocument = document
         }
@@ -1278,9 +1278,19 @@ struct SurahPageReader<Controls: View>: View {
     @State private var facsimileDocument: PDFDocument?
 
     /// Non-empty exactly when page mode resolves to the printed mushaf: the riwayah whose edition to load.
+    ///
+    /// Prefixed, because the Hafs tag is the EMPTY string: keyed on the bare tag, Hafs (the default
+    /// everyone starts on) produced "" here, which the loader below read as "not the facsimile", and
+    /// "Read Pages as Printed Mushaf" silently kept composing text for Hafs while every other
+    /// riwayah opened its print (2026-09-12).
     private var facsimileKey: String {
         guard settings.resolvedMushafPageLanguage.isPDF else { return "" }
-        return settings.displayQiraahForArabic ?? Settings.Riwayah.hafsTag
+        return "pdf:" + (settings.displayQiraahForArabic ?? Settings.Riwayah.hafsTag)
+    }
+
+    /// The riwayah tag inside a non-empty `facsimileKey`.
+    private static func facsimileTag(of key: String) -> String {
+        key.hasPrefix("pdf:") ? String(key.dropFirst(4)) : key
     }
 
     /// A wide reader (an iPad or Mac window at least 900 pt across, regular width) has the room to

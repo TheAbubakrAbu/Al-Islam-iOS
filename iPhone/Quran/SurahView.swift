@@ -4524,6 +4524,14 @@ struct ArabicTextRiwayahPicker: View {
     /// opening the SAME nested qiraah menu the comparison bar chip uses - one picker grammar
     /// everywhere. `false` = the bare glass chip for toolbars/bars.
     var useMenuRow: Bool = false
+    /// The row's leading title (`useMenuRow`).
+    var title: String = "Arabic Riwayah"
+    /// Whether Hafs is offered. Off for a picker that chooses what to compare AGAINST Hafs.
+    var includeHafs: Bool = true
+    /// A compact side card ("A" / "B") for head-to-head pickers: the side letter over the current
+    /// riwayah, on a soft accent tile. The same nested menu opens from it (user rule: every
+    /// riwayah picker in the app is this one).
+    var sideLabel: String? = nil
 
     private var currentLabel: String {
         Settings.Riwayah.option(for: selection).label
@@ -4541,7 +4549,35 @@ struct ArabicTextRiwayahPicker: View {
     @ViewBuilder
     private var content: some View {
         #if os(iOS)
-        if useMenuRow {
+        if let sideLabel {
+            Menu {
+                qiraahMenuContent
+            } label: {
+                VStack(spacing: 2) {
+                    Text(sideLabel)
+                        .font(.caption2.weight(.bold))
+                        .foregroundStyle(.secondary)
+
+                    HStack(spacing: 4) {
+                        Text(currentLabel)
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundColor(.primary)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.7)
+
+                        Image(systemName: "chevron.up.chevron.down")
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 6)
+                .padding(.horizontal, 8)
+                .background(RoundedRectangle(cornerRadius: 10).fill(settings.accentColor.color.opacity(0.08)))
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+        } else if useMenuRow {
             // The comparison bar's nested-menu picker (Hafs up top, then one submenu per qiraah), in
             // row form for Forms and sheets: title leading, the current riwayah trailing, the whole
             // row the tap target. This replaced a flat grouped `Picker` that lost the per-qiraah
@@ -4550,7 +4586,7 @@ struct ArabicTextRiwayahPicker: View {
                 qiraahMenuContent
             } label: {
                 HStack {
-                    Text("Arabic Riwayah")
+                    Text(title)
                         .foregroundColor(.primary)
 
                     Spacer()
@@ -4622,15 +4658,17 @@ struct ArabicTextRiwayahPicker: View {
         // The standalone Hafs entry keeps its full "(default)" label but drops the death-year
         // subtitle - that detail belongs on the copy INSIDE the Asim submenu, where Hafs sits next
         // to Shubah and the dates mean something (user rule).
-        qiraahButton(
-            Settings.Riwayah.option(for: Settings.Riwayah.hafsTag),
-            current: current,
-            hideDetail: true
-        )
+        if includeHafs {
+            qiraahButton(
+                Settings.Riwayah.option(for: Settings.Riwayah.hafsTag),
+                current: current,
+                hideDetail: true
+            )
+        }
 
         ForEach(Settings.Riwayah.textGroups) { group in
             Menu {
-                ForEach(group.options, id: \.tag) { option in
+                ForEach(group.options.filter { includeHafs || !$0.tag.isEmpty }, id: \.tag) { option in
                     qiraahButton(option, current: current)
                 }
             } label: {

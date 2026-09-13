@@ -93,13 +93,14 @@ struct SettingsQuranView: View {
                     }
                 }
                 #if os(iOS)
-                favoritesAndBookmarksSection
-
+                // Sunnah Reminders sit ABOVE Favorites and Bookmarks (Abu, 2026-09-12).
                 Section {
                     quranSettingsLink(title: "Sunnah Reminders", systemImage: "bell.badge") {
                         SunnahRemindersView()
                     }
                 }
+
+                favoritesAndBookmarksSection
 
                 readingModeSection
                 #endif
@@ -385,20 +386,6 @@ struct SettingsQuranView: View {
                         .onChange(of: settings.showWordOfTheDay) { _ in settings.hapticFeedback() }
 
                     Text("Shows a piece of Quranic vocabulary each day at the top of the Quran tab, with every ayah it appears in.")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .padding(.vertical, 2)
-                }
-            }
-
-            if DailyReminderStore.isBundled {
-                VStack(alignment: .leading, spacing: 4) {
-                    Toggle("Reminder of the Day When the App Opens", isOn: $settings.showDailyReminderSheet.animation(.easeInOut))
-                        .font(.subheadline)
-                        .onChange(of: settings.showDailyReminderSheet) { _ in settings.hapticFeedback() }
-
-                    Text("Once a day, the first time the app opens, today's reminder (a verse, a hadith, a Sunnah, a dua, a dhikr or a Name of Allah) comes up as a card. The card always sits at the top of the Islam tab as well.")
                         .font(.caption)
                         .foregroundColor(.secondary)
                         .fixedSize(horizontal: false, vertical: true)

@@ -57,8 +57,8 @@ struct GodPillarView: View {
                 Section(header: ArticleHeader("THE COSMOLOGICAL ARGUMENT")) {
                     Text(verbatim: "Every effect has a cause. The universe began to exist, so it must have had a cause. Modern cosmology also points to a beginning, but where did the energy come from? What caused it to expand? Who set the laws of physics in motion? The Quran speaks of the heavens and the earth as once joined and then separated, and of a heaven that Allah continues to expand. The early commentators (Ibn Abbas, Mujahid, and Qatadah, as at-Tabari and Ibn Kathir record) read these verses in their own terms, and some contemporary scholars see in them an allusion to what cosmology later found. Either way, the verses point to a Creator who began the universe and sustains it:")
                         .font(.body)
-                    ScriptureQuote(text: "“Have those who disbelieved not considered that the heavens and the earth were a joined entity, and We separated them and made from water every living thing? Then will they not believe?” (Quran 21:30)", arabic: "أَوَلَمۡ يَرَ ٱلَّذِينَ كَفَرُوٓاْ أَنَّ ٱلسَّمَٰوَٰتِ وَٱلۡأَرۡضَ كَانَتَا رَتۡقٗا فَفَتَقۡنَٰهُمَاۖ وَجَعَلۡنَا مِنَ ٱلۡمَآءِ كُلَّ شَيۡءٍ حَيٍّۚ أَفَلَا يُؤۡمِنُونَ")
-                    ScriptureQuote(text: "“And the heaven We constructed with strength, and indeed, We are its expander” (Quran 51:47).", arabic: "وَٱلسَّمَآءَ بَنَيۡنَٰهَا بِأَيۡيْدٖ وَإِنَّا لَمُوسِعُونَ")
+                    ScriptureQuote(text: "“Have those who disbelieved not considered that the heavens and the earth were a joined entity, and We separated them and made from water every living thing? Then will they not believe?” (Quran 21:30)", arabic: "أَوَلَم يَرَ ٱلَّذِينَ كَفَرُوٓا أَنَّ ٱلسَّمَٰوَٰتِ وَٱلأَرضَ كَانَتَا رَتقٗا فَفَتَقنَٰهُمَاۖ وَجَعَلنَا مِنَ ٱلمَآءِ كُلَّ شَيءٍ حَيٍّۚ أَفَلَا يُؤمِنُونَ")
+                    ScriptureQuote(text: "“And the heaven We constructed with strength, and indeed, We are its expander” (Quran 51:47).", arabic: "وَٱلسَّمَآءَ بَنَينَٰهَا بِأَييدٖ وَإِنَّا لَمُوسِعُونَ")
                     Text(verbatim: "The existence of anything (matter, time, space) requires an uncaused, necessary being beyond the system: Allah (Glorified and Exalted be He).")
                         .font(.body)
                 }
@@ -80,7 +80,7 @@ struct GodPillarView: View {
                 Section(header: ArticleHeader("HUMAN INTELLIGENCE: BEYOND EVOLUTION")) {
                     Text(articleMarkdown: "Human beings are orders of magnitude more intelligent than any other creature. Humans build cities, fly planes, write poetry, and explore the universe. They possess self-awareness, language, morality, free will, and the capacity for worship. If evolution alone explains the human brain, why don't other species come close? Why the quantum leap in ability? Human exceptionalism points to a Creator who endowed humanity with reason, **Aql (عَقل)**, a faculty Allah (Glorified and Exalted be He) gave to humans (and to the jinn, who are likewise accountable) and not to the animals.")
                         .font(.body)
-                    ScriptureQuote(text: "“We have certainly created man in the best of stature” (Quran 95:4).", arabic: "لَقَدۡ خَلَقۡنَا ٱلۡإِنسَٰنَ فِيٓ أَحۡسَنِ تَقۡوِيمٖ")
+                    ScriptureQuote(text: "“We have certainly created man in the best of stature” (Quran 95:4).", arabic: "لَقَد خَلَقنَا ٱلإِنسَٰنَ فِيٓ أَحسَنِ تَقوِيمٖ")
                 }
 
                 Section(header: ArticleHeader("THE FINE-TUNING OF THE UNIVERSE")) {
@@ -96,7 +96,7 @@ struct GodPillarView: View {
                 Section(header: ArticleHeader("ARGUMENT FROM BEAUTY, ORDER, AND DESIGN")) {
                     Text(verbatim: "Look at the trees, stars, animals, oceans. Look at the symmetry of flowers and the precision of ecosystems. Human creation (skyscrapers, smartphones, aircraft) demonstrates purposeful design. Just as buildings imply builders, the cosmos implies a Creator.")
                         .font(.body)
-                    ScriptureQuote(text: "“Or were they created by nothing, or were they the creators of themselves? Or did they create the heavens and the earth? Rather, they are not certain” (Quran 52:35-36).", arabic: "أَمۡ خُلِقُواْ مِنۡ غَيۡرِ شَيۡءٍ أَمۡ هُمُ ٱلۡخَٰلِقُونَ ۝ أَمۡ خَلَقُواْ ٱلسَّمَٰوَٰتِ وَٱلۡأَرۡضَۚ بَل لَّا يُوقِنُونَ")
+                    ScriptureQuote(text: "“Or were they created by nothing, or were they the creators of themselves? Or did they create the heavens and the earth? Rather, they are not certain” (Quran 52:35-36).", arabic: "أَم خُلِقُوا مِن غَيرِ شَيءٍ أَم هُمُ ٱلخَٰلِقُونَ ۝ أَم خَلَقُوا ٱلسَّمَٰوَٰتِ وَٱلأَرضَۚ بَل لَّا يُوقِنُونَ")
                 }
 
                 Section(header: ArticleHeader("WHAT MAKES A RELIGION TRUE?")) {
@@ -111,13 +111,13 @@ struct GodPillarView: View {
                         Text(verbatim: "Islam aligns with these criteria.")
                             .font(.body)
                     }
-                    ScriptureQuote(text: "“Have you seen he who has taken as his god his [own] desire…?” (Quran 45:23)", arabic: "أَفَرَءَيۡتَ مَنِ ٱتَّخَذَ إِلَٰهَهُۥ هَوَىٰهُ")
+                    ScriptureQuote(text: "“Have you seen he who has taken as his god his [own] desire…?” (Quran 45:23)", arabic: "أَفَرَءَيتَ مَنِ ٱتَّخَذَ إِلَٰهَهُۥ هَوَىٰهُ")
                 }
 
                 Section(header: ArticleHeader("FINAL REFLECTION")) {
                     Text(articleMarkdown: "Belief in God is not blind faith; it is the most rational and coherent explanation for existence, morality, consciousness, and design. Every human is born upon the **Fitrah (فِطرَة)**, the natural disposition to believe in one Creator. However, ego, society, and culture often obscure this truth. Islam calls humanity back to this original clarity.")
                         .font(.body)
-                    ScriptureQuote(text: "“And do not pursue that of which you have no knowledge. Indeed, the hearing, the sight and the heart - about all those [one] will be questioned” (Quran 17:36).", arabic: "وَلَا تَقۡفُ مَا لَيۡسَ لَكَ بِهِۦ عِلۡمٌۚ إِنَّ ٱلسَّمۡعَ وَٱلۡبَصَرَ وَٱلۡفُؤَادَ كُلُّ أُوْلَٰٓئِكَ كَانَ عَنۡهُ مَسۡـُٔولٗا")
+                    ScriptureQuote(text: "“And do not pursue that of which you have no knowledge. Indeed, the hearing, the sight and the heart - about all those [one] will be questioned” (Quran 17:36).", arabic: "وَلَا تَقفُ مَا لَيسَ لَكَ بِهِۦ عِلمٌۚ إِنَّ ٱلسَّمعَ وَٱلبَصَرَ وَٱلفُؤَادَ كُلُّ أُولَٰٓئِكَ كَانَ عَنهُ مَسـُٔولٗا")
                 }
 
                 Section(header: ArticleHeader("ADVICE TO THE SINCERE SEEKER")) {
@@ -163,10 +163,10 @@ struct IslamPillarView: View {
                         .font(.body)
 
                     Text(articleMarkdown: "The essence of Islam is **Tawhid (تَوحِيد)**, absolute monotheism: there is no deity worthy of worship except Allah. Allah says in the Quran:").font(.body)
-                    ScriptureQuote(text: "“And your god is one God. There is no deity [worthy of worship] except Him, the Entirely Merciful, the Especially Merciful” (Quran 2:163).", arabic: "وَإِلَٰهُكُمۡ إِلَٰهٞ وَٰحِدٞۖ لَّآ إِلَٰهَ إِلَّا هُوَ ٱلرَّحۡمَٰنُ ٱلرَّحِيمُ")
+                    ScriptureQuote(text: "“And your god is one God. There is no deity [worthy of worship] except Him, the Entirely Merciful, the Especially Merciful” (Quran 2:163).", arabic: "وَإِلَٰهُكُم إِلَٰهٞ وَٰحِدٞۖ لَّآ إِلَٰهَ إِلَّا هُوَ ٱلرَّحمَٰنُ ٱلرَّحِيمُ")
 
                     Text(verbatim: "Prophet Muhammad (peace and blessings be upon him) is the final and last messenger of Allah, sent as a mercy to all of creation. Allah says in the Quran:").font(.body)
-                    ScriptureQuote(text: "“And We have not sent you, [O Muhammad], except as a mercy to the worlds” (Quran 21:107).", arabic: "وَمَآ أَرۡسَلۡنَٰكَ إِلَّا رَحۡمَةٗ لِّلۡعَٰلَمِينَ")
+                    ScriptureQuote(text: "“And We have not sent you, [O Muhammad], except as a mercy to the worlds” (Quran 21:107).", arabic: "وَمَآ أَرسَلنَٰكَ إِلَّا رَحمَةٗ لِّلعَٰلَمِينَ")
 
                     Text(verbatim: "Islam has been the way of life for humanity since the creation of Adam (peace be upon him), who was the first prophet and the first Muslim. Every nation that correctly followed the teachings of its prophet was considered Muslim in submission to Allah (Glorified and Exalted be He). For example, the Israelites who followed Moses (peace be upon him) and the disciples who followed Jesus (peace be upon him) were considered Muslims of their time.")
                             .font(.body)
@@ -175,7 +175,7 @@ struct IslamPillarView: View {
                 Section(header: ArticleHeader("THE FIVE PILLARS")) {
                     Text(verbatim: "Islam is built on five pillars, which are the fundamental acts of worship for every Muslim. The Prophet Muhammad (peace and blessings be upon him) said:")
                         .font(.body)
-                    ScriptureQuote(text: "“Verily, al-Islam is founded on five (pillars): testifying the fact that there is no god but Allah, establishment of prayer, payment of Zakat, fast of Ramadan and Pilgrimage to the House” (Sahih Muslim 16d).", arabic: "إِنَّ الإِسْلاَمَ بُنِيَ عَلَى خَمْسٍ شَهَادَةِ أَنْ لاَ إِلَهَ إِلاَّ اللَّهُ وَإِقَامِ الصَّلاَةِ وَإِيتَاءِ الزَّكَاةِ وَصِيَامِ رَمَضَانَ وَحَجِّ الْبَيْتِ", dimmed: true)
+                    ScriptureQuote(text: "“Verily, al-Islam is founded on five (pillars): testifying the fact that there is no god but Allah, establishment of prayer, payment of Zakat, fast of Ramadan and Pilgrimage to the House” (Sahih Muslim 16d).", arabic: "إِنَّ الإِسلاَمَ بُنِيَ عَلَى خَمسٍ شَهَادَةِ أَن لاَ إِلَهَ إِلاَّ اللَّهُ وَإِقَامِ الصَّلاَةِ وَإِيتَاءِ الزَّكَاةِ وَصِيَامِ رَمَضَانَ وَحَجِّ البَيتِ", dimmed: true)
 
                     Text(verbatim: "The Five Pillars are:").font(.body)
                     Text(articleMarkdown: "1. **Shahadah (شَهَادَة)**, from the root **sh-h-d (ش ه د)**, to witness or testify: the testimony of faith, “There is no god but Allah, and Muhammad is His Messenger.” You are not reporting an opinion; you are bearing witness. It is the foundation of a Muslim's faith.")
@@ -188,10 +188,10 @@ struct IslamPillarView: View {
                 Section(header: ArticleHeader("THE SIX PILLARS OF IMAN")) {
                     Text(articleMarkdown: "The Six Pillars of **Iman (إِيمَان)**, from the root **a-m-n (أ م ن)**, meaning faith, trust, and security, are the core beliefs every Muslim must hold. These are based on the Quran and the teachings of Prophet Muhammad (peace and blessings be upon him). Allah says in the Quran:")
                         .font(.body)
-                    ScriptureQuote(text: "“The Messenger has believed in what was revealed to him from his Lord, and [so have] the believers. All of them have believed in Allah and His angels and His books and His messengers, [saying], ‘We make no distinction between any of His messengers.’ And they say, ‘We hear and we obey. [We seek] Your forgiveness, our Lord, and to You is the [final] destination.’” (Quran 2:285)", arabic: "ءَامَنَ ٱلرَّسُولُ بِمَآ أُنزِلَ إِلَيۡهِ مِن رَّبِّهِۦ وَٱلۡمُؤۡمِنُونَۚ كُلٌّ ءَامَنَ بِٱللَّهِ وَمَلَٰٓئِكَتِهِۦ وَكُتُبِهِۦ وَرُسُلِهِۦ لَا نُفَرِّقُ بَيۡنَ أَحَدٖ مِّن رُّسُلِهِۦۚ وَقَالُواْ سَمِعۡنَا وَأَطَعۡنَاۖ غُفۡرَانَكَ رَبَّنَا وَإِلَيۡكَ ٱلۡمَصِيرُ")
+                    ScriptureQuote(text: "“The Messenger has believed in what was revealed to him from his Lord, and [so have] the believers. All of them have believed in Allah and His angels and His books and His messengers, [saying], ‘We make no distinction between any of His messengers.’ And they say, ‘We hear and we obey. [We seek] Your forgiveness, our Lord, and to You is the [final] destination.’” (Quran 2:285)", arabic: "ءَامَنَ ٱلرَّسُولُ بِمَآ أُنزِلَ إِلَيهِ مِن رَّبِّهِۦ وَٱلمُؤمِنُونَۚ كُلٌّ ءَامَنَ بِٱللَّهِ وَمَلَٰٓئِكَتِهِۦ وَكُتُبِهِۦ وَرُسُلِهِۦ لَا نُفَرِّقُ بَينَ أَحَدٖ مِّن رُّسُلِهِۦۚ وَقَالُوا سَمِعنَا وَأَطَعنَاۖ غُفرَانَكَ رَبَّنَا وَإِلَيكَ ٱلمَصِيرُ")
 
                     Text(verbatim: "The Prophet Muhammad (peace and blessings be upon him) explained the pillars of Iman when he said:").font(.body)
-                    ScriptureQuote(text: "“That you affirm your faith in Allah, in His angels, in His Books, in His Apostles, in the Day of Judgment, and you affirm your faith in the Divine Decree about good and evil” (Sahih Muslim 8a).", arabic: "أَنْ تُؤْمِنَ بِاللَّهِ وَمَلاَئِكَتِهِ وَكُتُبِهِ وَرُسُلِهِ وَالْيَوْمِ الآخِرِ وَتُؤْمِنَ بِالْقَدَرِ خَيْرِهِ وَشَرِّهِ", dimmed: true)
+                    ScriptureQuote(text: "“That you affirm your faith in Allah, in His angels, in His Books, in His Apostles, in the Day of Judgment, and you affirm your faith in the Divine Decree about good and evil” (Sahih Muslim 8a).", arabic: "أَن تُؤمِنَ بِاللَّهِ وَمَلاَئِكَتِهِ وَكُتُبِهِ وَرُسُلِهِ وَاليَومِ الآخِرِ وَتُؤمِنَ بِالقَدَرِ خَيرِهِ وَشَرِّهِ", dimmed: true)
 
                     Text(verbatim: "The Six Pillars of Iman are:").font(.body)
                     Text(articleMarkdown: "1. **Belief in Allah**, **Tawhid (تَوحِيد)** from the root **w-h-d (و ح د)**, to make one: the oneness of Allah, who has no partners or equals.")
@@ -205,28 +205,28 @@ struct IslamPillarView: View {
                 Section(header: ArticleHeader("PROPHETHOOD")) {
                     Text(verbatim: "Allah sent prophets to every nation to guide them to worship Him alone. These prophets include Adam, Noah, Abraham, Moses, David, Solomon, Jesus, and many others (peace be upon them all). Allah says in the Quran:")
                         .font(.body)
-                    ScriptureQuote(text: "“We make no distinction between any of His messengers” (Quran 2:285).", arabic: "لَا نُفَرِّقُ بَيۡنَ أَحَدٖ مِّن رُّسُلِهِۦۚ")
+                    ScriptureQuote(text: "“We make no distinction between any of His messengers” (Quran 2:285).", arabic: "لَا نُفَرِّقُ بَينَ أَحَدٖ مِّن رُّسُلِهِۦۚ")
 
                     Text(verbatim: "However, all previous prophets were sent for their specific people and times. Prophet Muhammad (peace and blessings be upon him) is unique as the final and universal messenger, sent for all of humanity until the end of time. Allah says in the Quran:")
                         .font(.body)
-                    ScriptureQuote(text: "“Muhammad is not the father of [any] one of your men, but [he is] the Messenger of Allah and last of the prophets. And ever is Allah, of all things, Knowing” (Quran 33:40).", arabic: "مَّا كَانَ مُحَمَّدٌ أَبَآ أَحَدٖ مِّن رِّجَالِكُمۡ وَلَٰكِن رَّسُولَ ٱللَّهِ وَخَاتَمَ ٱلنَّبِيِّـۧنَۗ وَكَانَ ٱللَّهُ بِكُلِّ شَيۡءٍ عَلِيمٗا")
+                    ScriptureQuote(text: "“Muhammad is not the father of [any] one of your men, but [he is] the Messenger of Allah and last of the prophets. And ever is Allah, of all things, Knowing” (Quran 33:40).", arabic: "مَّا كَانَ مُحَمَّدٌ أَبَآ أَحَدٖ مِّن رِّجَالِكُم وَلَٰكِن رَّسُولَ ٱللَّهِ وَخَاتَمَ ٱلنَّبِيِّـۧنَۗ وَكَانَ ٱللَّهُ بِكُلِّ شَيءٍ عَلِيمٗا")
 
                     Text(verbatim: "Regarding Prophet Abraham (peace be upon him), Allah clarifies in the Quran:")
                         .font(.body)
-                    ScriptureQuote(text: "“Abraham was neither a Jew nor a Christian, but he was one inclining toward truth, a Muslim [submitting to Allah]. And he was not of the polytheists” (Quran 3:67).", arabic: "مَا كَانَ إِبۡرَٰهِيمُ يَهُودِيّٗا وَلَا نَصۡرَانِيّٗا وَلَٰكِن كَانَ حَنِيفٗا مُّسۡلِمٗا وَمَا كَانَ مِنَ ٱلۡمُشۡرِكِينَ")
+                    ScriptureQuote(text: "“Abraham was neither a Jew nor a Christian, but he was one inclining toward truth, a Muslim [submitting to Allah]. And he was not of the polytheists” (Quran 3:67).", arabic: "مَا كَانَ إِبرَٰهِيمُ يَهُودِيّٗا وَلَا نَصرَانِيّٗا وَلَٰكِن كَانَ حَنِيفٗا مُّسلِمٗا وَمَا كَانَ مِنَ ٱلمُشرِكِينَ")
                 }
 
                 Section(header: ArticleHeader("PREVIOUS SCRIPTURES")) {
                     Text(verbatim: "Islam acknowledges earlier divine scriptures such as the Torah given to Moses (peace be upon him) and the Gospel given to Jesus (peace be upon him). However, these scriptures were altered over time, and the current versions of the Bible and Torah are not the original revelations. Allah says in the Quran:")
                         .font(.body)
-                    ScriptureQuote(text: "“So woe to those who write the ‘scripture’ with their own hands, then say, ‘This is from Allah,’ in order to exchange it for a small price. Woe to them for what their hands have written and woe to them for what they earn” (Quran 2:79).", arabic: "فَوَيۡلٞ لِّلَّذِينَ يَكۡتُبُونَ ٱلۡكِتَٰبَ بِأَيۡدِيهِمۡ ثُمَّ يَقُولُونَ هَٰذَا مِنۡ عِندِ ٱللَّهِ لِيَشۡتَرُواْ بِهِۦ ثَمَنٗا قَلِيلٗاۖ فَوَيۡلٞ لَّهُم مِّمَّا كَتَبَتۡ أَيۡدِيهِمۡ وَوَيۡلٞ لَّهُم مِّمَّا يَكۡسِبُونَ")
+                    ScriptureQuote(text: "“So woe to those who write the ‘scripture’ with their own hands, then say, ‘This is from Allah,’ in order to exchange it for a small price. Woe to them for what their hands have written and woe to them for what they earn” (Quran 2:79).", arabic: "فَوَيلٞ لِّلَّذِينَ يَكتُبُونَ ٱلكِتَٰبَ بِأَيدِيهِم ثُمَّ يَقُولُونَ هَٰذَا مِن عِندِ ٱللَّهِ لِيَشتَرُوا بِهِۦ ثَمَنٗا قَلِيلٗاۖ فَوَيلٞ لَّهُم مِّمَّا كَتَبَت أَيدِيهِم وَوَيلٞ لَّهُم مِّمَّا يَكسِبُونَ")
 
                     Text(verbatim: "The Quran is the final, complete, and preserved revelation sent to all of mankind for all time. Allah says in the Quran:")
                         .font(.body)
-                    ScriptureQuote(text: "“Indeed, it is We who sent down the Quran and indeed, We will be its guardian” (Quran 15:9).", arabic: "إِنَّا نَحۡنُ نَزَّلۡنَا ٱلذِّكۡرَ وَإِنَّا لَهُۥ لَحَٰفِظُونَ")
+                    ScriptureQuote(text: "“Indeed, it is We who sent down the Quran and indeed, We will be its guardian” (Quran 15:9).", arabic: "إِنَّا نَحنُ نَزَّلنَا ٱلذِّكرَ وَإِنَّا لَهُۥ لَحَٰفِظُونَ")
 
                     Text(verbatim: "Prophet Muhammad (peace and blessings be upon him) said about the Quran:").font(.body)
-                    ScriptureQuote(text: "“The best among you (Muslims) are those who learn the Quran and teach it” (Sahih al-Bukhari 5027).", arabic: "خَيْرُكُمْ مَنْ تَعَلَّمَ الْقُرْآنَ وَعَلَّمَهُ", dimmed: true)
+                    ScriptureQuote(text: "“The best among you (Muslims) are those who learn the Quran and teach it” (Sahih al-Bukhari 5027).", arabic: "خَيرُكُم مَن تَعَلَّمَ القُرآنَ وَعَلَّمَهُ", dimmed: true)
                 }
 
                 Section(header: ArticleHeader("ISLAMIC VALUES")) {
@@ -234,16 +234,16 @@ struct IslamPillarView: View {
                         .font(.body)
 
                     Text(verbatim: "Allah commands Muslims to act justly and to do good:").font(.body)
-                    ScriptureQuote(text: "“Indeed, Allah orders justice and good conduct and giving to relatives and forbids immorality and bad conduct and oppression. He admonishes you that perhaps you will be reminded” (Quran 16:90).", arabic: "إِنَّ ٱللَّهَ يَأۡمُرُ بِٱلۡعَدۡلِ وَٱلۡإِحۡسَٰنِ وَإِيتَآيِٕ ذِي ٱلۡقُرۡبَىٰ وَيَنۡهَىٰ عَنِ ٱلۡفَحۡشَآءِ وَٱلۡمُنكَرِ وَٱلۡبَغۡيِۚ يَعِظُكُمۡ لَعَلَّكُمۡ تَذَكَّرُونَ")
+                    ScriptureQuote(text: "“Indeed, Allah orders justice and good conduct and giving to relatives and forbids immorality and bad conduct and oppression. He admonishes you that perhaps you will be reminded” (Quran 16:90).", arabic: "إِنَّ ٱللَّهَ يَأمُرُ بِٱلعَدلِ وَٱلإِحسَٰنِ وَإِيتَآيِٕ ذِي ٱلقُربَىٰ وَيَنهَىٰ عَنِ ٱلفَحشَآءِ وَٱلمُنكَرِ وَٱلبَغيِۚ يَعِظُكُم لَعَلَّكُم تَذَكَّرُونَ")
 
                     Text(verbatim: "True righteousness is not limited to mere belief or rituals but includes good deeds and moral conduct. Allah says in the Quran:").font(.body)
-                    ScriptureQuote(text: "“Righteousness is not that you turn your faces toward the east or the west, but [true] righteousness is [in] one who believes in Allah, the Last Day, the angels, the Book, and the prophets and gives wealth, in spite of love for it, to relatives, orphans, the needy, the traveler, those who ask [for help], and for freeing slaves; [and who] establishes prayer and gives zakah; [those who] fulfill their promise when they promise; and [those who] are patient in poverty and hardship and during battle. Those are the ones who have been true, and it is those who are the righteous” (Quran 2:177).", arabic: "لَّيۡسَ ٱلۡبِرَّ أَن تُوَلُّواْ وُجُوهَكُمۡ قِبَلَ ٱلۡمَشۡرِقِ وَٱلۡمَغۡرِبِ وَلَٰكِنَّ ٱلۡبِرَّ مَنۡ ءَامَنَ بِٱللَّهِ وَٱلۡيَوۡمِ ٱلۡأٓخِرِ وَٱلۡمَلَٰٓئِكَةِ وَٱلۡكِتَٰبِ وَٱلنَّبِيِّـۧنَ وَءَاتَى ٱلۡمَالَ عَلَىٰ حُبِّهِۦ ذَوِي ٱلۡقُرۡبَىٰ وَٱلۡيَتَٰمَىٰ وَٱلۡمَسَٰكِينَ وَٱبۡنَ ٱلسَّبِيلِ وَٱلسَّآئِلِينَ وَفِي ٱلرِّقَابِ وَأَقَامَ ٱلصَّلَوٰةَ وَءَاتَى ٱلزَّكَوٰةَ وَٱلۡمُوفُونَ بِعَهۡدِهِمۡ إِذَا عَٰهَدُواْۖ وَٱلصَّٰبِرِينَ فِي ٱلۡبَأۡسَآءِ وَٱلضَّرَّآءِ وَحِينَ ٱلۡبَأۡسِۗ أُوْلَٰٓئِكَ ٱلَّذِينَ صَدَقُواْۖ وَأُوْلَٰٓئِكَ هُمُ ٱلۡمُتَّقُونَ")
+                    ScriptureQuote(text: "“Righteousness is not that you turn your faces toward the east or the west, but [true] righteousness is [in] one who believes in Allah, the Last Day, the angels, the Book, and the prophets and gives wealth, in spite of love for it, to relatives, orphans, the needy, the traveler, those who ask [for help], and for freeing slaves; [and who] establishes prayer and gives zakah; [those who] fulfill their promise when they promise; and [those who] are patient in poverty and hardship and during battle. Those are the ones who have been true, and it is those who are the righteous” (Quran 2:177).", arabic: "لَّيسَ ٱلبِرَّ أَن تُوَلُّوا وُجُوهَكُم قِبَلَ ٱلمَشرِقِ وَٱلمَغرِبِ وَلَٰكِنَّ ٱلبِرَّ مَن ءَامَنَ بِٱللَّهِ وَٱليَومِ ٱلأٓخِرِ وَٱلمَلَٰٓئِكَةِ وَٱلكِتَٰبِ وَٱلنَّبِيِّـۧنَ وَءَاتَى ٱلمَالَ عَلَىٰ حُبِّهِۦ ذَوِي ٱلقُربَىٰ وَٱليَتَٰمَىٰ وَٱلمَسَٰكِينَ وَٱبنَ ٱلسَّبِيلِ وَٱلسَّآئِلِينَ وَفِي ٱلرِّقَابِ وَأَقَامَ ٱلصَّلَوٰةَ وَءَاتَى ٱلزَّكَوٰةَ وَٱلمُوفُونَ بِعَهدِهِم إِذَا عَٰهَدُواۖ وَٱلصَّٰبِرِينَ فِي ٱلبَأسَآءِ وَٱلضَّرَّآءِ وَحِينَ ٱلبَأسِۗ أُولَٰٓئِكَ ٱلَّذِينَ صَدَقُواۖ وَأُولَٰٓئِكَ هُمُ ٱلمُتَّقُونَ")
 
                     Text(verbatim: "The Prophet Muhammad (peace and blessings be upon him) highlighted the importance of good manners and character. He said:").font(.body)
-                    ScriptureQuote(text: "“The best among you are those who have the best manners and character” (Sahih al-Bukhari 6029)", arabic: "إِنَّ مِنْ أَخْيَرِكُمْ أَحْسَنَكُمْ خُلُقًا", dimmed: true)
+                    ScriptureQuote(text: "“The best among you are those who have the best manners and character” (Sahih al-Bukhari 6029)", arabic: "إِنَّ مِن أَخيَرِكُم أَحسَنَكُم خُلُقًا", dimmed: true)
 
                     Text(verbatim: "He also said:").font(.body)
-                    ScriptureQuote(text: "“The most beloved of people to Allah are those most beneficial to people, and the most beloved of deeds to Allah is joy you bring to a Muslim, or a hardship you remove from him, or a debt you pay off for him, or hunger you drive away from him” (al-Mu'jam al-Awsat of at-Tabarani 6026; graded hasan by al-Albani, as-Silsilah as-Sahihah 906).", arabic: "أَحَبُّ النَّاسِ إِلَى اللَّهِ أَنْفَعُهُمْ لِلنَّاسِ، وَأَحَبُّ الْأَعْمَالِ إِلَى اللَّهِ سُرُورٌ تُدْخِلُهُ عَلَى مُسْلِمٍ، أَوْ تَكْشِفُ عَنْهُ كُرْبَةً، أَوْ تَقْضِي عَنْهُ دَيْنًا، أَوْ تَطْرُدُ عَنْهُ جُوعًا", dimmed: true)
+                    ScriptureQuote(text: "“The most beloved of people to Allah are those most beneficial to people, and the most beloved of deeds to Allah is joy you bring to a Muslim, or a hardship you remove from him, or a debt you pay off for him, or hunger you drive away from him” (al-Mu'jam al-Awsat of at-Tabarani 6026; graded hasan by al-Albani, as-Silsilah as-Sahihah 906).", arabic: "أَحَبُّ النَّاسِ إِلَى اللَّهِ أَنفَعُهُم لِلنَّاسِ، وَأَحَبُّ الأَعمَالِ إِلَى اللَّهِ سُرُورٌ تُدخِلُهُ عَلَى مُسلِمٍ، أَو تَكشِفُ عَنهُ كُربَةً، أَو تَقضِي عَنهُ دَينًا، أَو تَطرُدُ عَنهُ جُوعًا", dimmed: true)
 
                     Text(verbatim: "These teachings show that Islam is not only about fulfilling religious obligations but also about treating others with respect, kindness, and fairness. Upholding good character is considered a sign of true faith and devotion to Allah (Glorified and Exalted be He).")
                         .font(.body)
@@ -281,7 +281,7 @@ struct MuslimPillarView: View {
                 Section(header: ArticleHeader("ALLAH KNOWS US BEST")) {
                     Text(verbatim: "Before He calls us to worship Him, Allah reminds us that He created us, knows us completely, and is nearer to us than we imagine:")
                         .font(.body)
-                    ScriptureQuote(text: "“And We have already created man and know what his soul whispers to him, and We are closer to him than his jugular vein” (Quran 50:16).", arabic: "وَلَقَدۡ خَلَقۡنَا ٱلۡإِنسَٰنَ وَنَعۡلَمُ مَا تُوَسۡوِسُ بِهِۦ نَفۡسُهُۥۖ وَنَحۡنُ أَقۡرَبُ إِلَيۡهِ مِنۡ حَبۡلِ ٱلۡوَرِيدِ")
+                    ScriptureQuote(text: "“And We have already created man and know what his soul whispers to him, and We are closer to him than his jugular vein” (Quran 50:16).", arabic: "وَلَقَد خَلَقنَا ٱلإِنسَٰنَ وَنَعلَمُ مَا تُوَسوِسُ بِهِۦ نَفسُهُۥۖ وَنَحنُ أَقرَبُ إِلَيهِ مِن حَبلِ ٱلوَرِيدِ")
                     Text(verbatim: "Submission, then, is not to a stranger; it is to the Lord who made us and knows us better than we know ourselves.")
                         .font(.body)
                 }
@@ -289,37 +289,37 @@ struct MuslimPillarView: View {
                 Section(header: ArticleHeader("SUBMISSION TO ALLAH ALONE")) {
                     Text(verbatim: "To be a Muslim is to answer Allah's call as Ibrahim (Abraham, peace be upon him) did:")
                         .font(.body)
-                    ScriptureQuote(text: "“When his Lord said to him, ‘Submit,’ he said, ‘I have submitted [in Islam] to the Lord of the worlds’” (Quran 2:131).", arabic: "إِذۡ قَالَ لَهُۥ رَبُّهُۥٓ أَسۡلِمۡۖ قَالَ أَسۡلَمۡتُ لِرَبِّ ٱلۡعَٰلَمِينَ")
+                    ScriptureQuote(text: "“When his Lord said to him, ‘Submit,’ he said, ‘I have submitted [in Islam] to the Lord of the worlds’” (Quran 2:131).", arabic: "إِذ قَالَ لَهُۥ رَبُّهُۥٓ أَسلِمۖ قَالَ أَسلَمتُ لِرَبِّ ٱلعَٰلَمِينَ")
                     Text(verbatim: "Ibrahim was neither a Jew nor a Christian, but a Muslim in the truest sense, devoted to the worship of the one God:")
                         .font(.body)
-                    ScriptureQuote(text: "“Abraham was neither a Jew nor a Christian, but he was one inclining toward truth, a Muslim [submitting to Allah]. And he was not of the polytheists” (Quran 3:67).", arabic: "مَا كَانَ إِبۡرَٰهِيمُ يَهُودِيّٗا وَلَا نَصۡرَانِيّٗا وَلَٰكِن كَانَ حَنِيفٗا مُّسۡلِمٗا وَمَا كَانَ مِنَ ٱلۡمُشۡرِكِينَ")
+                    ScriptureQuote(text: "“Abraham was neither a Jew nor a Christian, but he was one inclining toward truth, a Muslim [submitting to Allah]. And he was not of the polytheists” (Quran 3:67).", arabic: "مَا كَانَ إِبرَٰهِيمُ يَهُودِيّٗا وَلَا نَصرَانِيّٗا وَلَٰكِن كَانَ حَنِيفٗا مُّسلِمٗا وَمَا كَانَ مِنَ ٱلمُشرِكِينَ")
                 }
 
                 Section(header: ArticleHeader("FOLLOWING THE QURAN AND SUNNAH")) {
                     Text(articleMarkdown: "A Muslim follows the **Quran (قُرءان)**, the word of Allah, and the guidance of His Messenger Muhammad (peace and blessings be upon him), preserved in his **Sunnah (سُنَّة)** through authentic **Hadith (حَدِيث)**. Love of Allah is shown by following His Messenger:")
                         .font(.body)
-                    ScriptureQuote(text: "“Say, [O Muhammad], ‘If you should love Allah, then follow me, [so] Allah will love you and forgive you your sins’” (Quran 3:31).", arabic: "قُلۡ إِن كُنتُمۡ تُحِبُّونَ ٱللَّهَ فَٱتَّبِعُونِي يُحۡبِبۡكُمُ ٱللَّهُ وَيَغۡفِرۡ لَكُمۡ ذُنُوبَكُمۡۚ")
+                    ScriptureQuote(text: "“Say, [O Muhammad], ‘If you should love Allah, then follow me, [so] Allah will love you and forgive you your sins’” (Quran 3:31).", arabic: "قُل إِن كُنتُم تُحِبُّونَ ٱللَّهَ فَٱتَّبِعُونِي يُحبِبكُمُ ٱللَّهُ وَيَغفِر لَكُم ذُنُوبَكُمۚ")
                 }
 
                 Section(header: ArticleHeader("AS THE FIRST GENERATIONS UNDERSTOOD IT")) {
                     Text(articleMarkdown: "The Quran and Sunnah are understood as the first believers understood them: the Companions, **the Sahabah (صَحَابَة)**; the Prophet's household, **the Ahl al-Bayt (أَهل البَيت)**, which includes his wives; and the righteous first three generations, **the Salaf (السَّلَف)**.")
                         .font(.body)
-                    ScriptureQuote(text: "“And the first forerunners [in the faith] among the Muhajireen and the Ansar and those who followed them with good conduct - Allah is pleased with them and they are pleased with Him” (Quran 9:100).", arabic: "وَٱلسَّٰبِقُونَ ٱلۡأَوَّلُونَ مِنَ ٱلۡمُهَٰجِرِينَ وَٱلۡأَنصَارِ وَٱلَّذِينَ ٱتَّبَعُوهُم بِإِحۡسَٰنٖ رَّضِيَ ٱللَّهُ عَنۡهُمۡ وَرَضُواْ عَنۡهُ")
+                    ScriptureQuote(text: "“And the first forerunners [in the faith] among the Muhajireen and the Ansar and those who followed them with good conduct - Allah is pleased with them and they are pleased with Him” (Quran 9:100).", arabic: "وَٱلسَّٰبِقُونَ ٱلأَوَّلُونَ مِنَ ٱلمُهَٰجِرِينَ وَٱلأَنصَارِ وَٱلَّذِينَ ٱتَّبَعُوهُم بِإِحسَٰنٖ رَّضِيَ ٱللَّهُ عَنهُم وَرَضُوا عَنهُ")
                 }
 
                 Section(header: ArticleHeader("WHAT IS A MU'MIN (BELIEVER)?")) {
                     Text(articleMarkdown: "A **Mu'min (مُؤمِن)**, a true believer, is one whose faith lives in the heart and shows in action. Allah describes them:")
                         .font(.body)
-                    ScriptureQuote(text: "“The believers are only those who, when Allah is mentioned, their hearts become fearful, and when His verses are recited to them, it increases them in faith; and upon their Lord they rely” (Quran 8:2).", arabic: "إِنَّمَا ٱلۡمُؤۡمِنُونَ ٱلَّذِينَ إِذَا ذُكِرَ ٱللَّهُ وَجِلَتۡ قُلُوبُهُمۡ وَإِذَا تُلِيَتۡ عَلَيۡهِمۡ ءَايَٰتُهُۥ زَادَتۡهُمۡ إِيمَٰنٗا وَعَلَىٰ رَبِّهِمۡ يَتَوَكَّلُونَ")
+                    ScriptureQuote(text: "“The believers are only those who, when Allah is mentioned, their hearts become fearful, and when His verses are recited to them, it increases them in faith; and upon their Lord they rely” (Quran 8:2).", arabic: "إِنَّمَا ٱلمُؤمِنُونَ ٱلَّذِينَ إِذَا ذُكِرَ ٱللَّهُ وَجِلَت قُلُوبُهُم وَإِذَا تُلِيَت عَلَيهِم ءَايَٰتُهُۥ زَادَتهُم إِيمَٰنٗا وَعَلَىٰ رَبِّهِم يَتَوَكَّلُونَ")
                 }
 
                 Section(header: ArticleHeader("THE BELIEVERS ARE ONE")) {
                     Text(verbatim: "Muslims are a single brotherhood, united in faith across every race and land:")
                         .font(.body)
-                    ScriptureQuote(text: "“The believers are but brothers, so make settlement between your brothers. And fear Allah that you may receive mercy” (Quran 49:10).", arabic: "إِنَّمَا ٱلۡمُؤۡمِنُونَ إِخۡوَةٞ فَأَصۡلِحُواْ بَيۡنَ أَخَوَيۡكُمۡۚ وَٱتَّقُواْ ٱللَّهَ لَعَلَّكُمۡ تُرۡحَمُونَ")
+                    ScriptureQuote(text: "“The believers are but brothers, so make settlement between your brothers. And fear Allah that you may receive mercy” (Quran 49:10).", arabic: "إِنَّمَا ٱلمُؤمِنُونَ إِخوَةٞ فَأَصلِحُوا بَينَ أَخَوَيكُمۚ وَٱتَّقُوا ٱللَّهَ لَعَلَّكُم تُرحَمُونَ")
                     Text(verbatim: "The Prophet (peace and blessings be upon him) said:")
                         .font(.body)
-                    ScriptureQuote(text: "“The similitude of believers in regard to mutual love, affection, fellow-feeling is that of one body; when any limb of it aches, the whole body aches, because of sleeplessness and fever” (Sahih Muslim 2586).", arabic: "مَثَلُ الْمُؤْمِنِينَ فِي تَوَادِّهِمْ وَتَرَاحُمِهِمْ وَتَعَاطُفِهِمْ مَثَلُ الْجَسَدِ إِذَا اشْتَكَى مِنْهُ عُضْوٌ تَدَاعَى لَهُ سَائِرُ الْجَسَدِ بِالسَّهَرِ وَالْحُمَّى", dimmed: true)
+                    ScriptureQuote(text: "“The similitude of believers in regard to mutual love, affection, fellow-feeling is that of one body; when any limb of it aches, the whole body aches, because of sleeplessness and fever” (Sahih Muslim 2586).", arabic: "مَثَلُ المُؤمِنِينَ فِي تَوَادِّهِم وَتَرَاحُمِهِم وَتَعَاطُفِهِم مَثَلُ الجَسَدِ إِذَا اشتَكَى مِنهُ عُضوٌ تَدَاعَى لَهُ سَائِرُ الجَسَدِ بِالسَّهَرِ وَالحُمَّى", dimmed: true)
                 }
 
                 Section(header: ArticleHeader("IN SUMMARY")) {
@@ -352,10 +352,10 @@ struct AllahPillarView: View {
 
                     Text(articleMarkdown: "Allah has the Most Beautiful Names, **Al-Asma al-Husna (الأَسمَاء الحُسنَى)**, such as the Most Gracious, the Most Merciful, the All-Knowing, and the King. They describe His perfect qualities, and He is far above any need, limitation, or resemblance to His creation. Allah says:")
                         .font(.body)
-                    ScriptureQuote(text: "“And to Allah belong the best names, so invoke Him by them. And leave [the company of] those who practice deviation concerning His names. They will be recompensed for what they have been doing” (Quran 7:180).", arabic: "وَلِلَّهِ ٱلۡأَسۡمَآءُ ٱلۡحُسۡنَىٰ فَٱدۡعُوهُ بِهَاۖ وَذَرُواْ ٱلَّذِينَ يُلۡحِدُونَ فِيٓ أَسۡمَٰٓئِهِۦۚ سَيُجۡزَوۡنَ مَا كَانُواْ يَعۡمَلُونَ")
+                    ScriptureQuote(text: "“And to Allah belong the best names, so invoke Him by them. And leave [the company of] those who practice deviation concerning His names. They will be recompensed for what they have been doing” (Quran 7:180).", arabic: "وَلِلَّهِ ٱلأَسمَآءُ ٱلحُسنَىٰ فَٱدعُوهُ بِهَاۖ وَذَرُوا ٱلَّذِينَ يُلحِدُونَ فِيٓ أَسمَٰٓئِهِۦۚ سَيُجزَونَ مَا كَانُوا يَعمَلُونَ")
 
                     Text(verbatim: "The Prophet (peace and blessings be upon him) said:").font(.body)
-                    ScriptureQuote(text: "“Allah has ninety-nine names, i.e. one-hundred minus one, and whoever knows them will go to Paradise” (Sahih al-Bukhari 2736, Sahih Muslim 2677).", arabic: "إِنَّ لِلَّهِ تِسْعَةً وَتِسْعِينَ اسْمَا مِائَةً إِلاَّ وَاحِدًا مَنْ أَحْصَاهَا دَخَلَ الْجَنَّةَ", dimmed: true)
+                    ScriptureQuote(text: "“Allah has ninety-nine names, i.e. one-hundred minus one, and whoever knows them will go to Paradise” (Sahih al-Bukhari 2736, Sahih Muslim 2677).", arabic: "إِنَّ لِلَّهِ تِسعَةً وَتِسعِينَ اسمَا مِائَةً إِلاَّ وَاحِدًا مَن أَحصَاهَا دَخَلَ الجَنَّةَ", dimmed: true)
 
                     Text(verbatim: "Ahl as-Sunnah affirm these Names and Attributes exactly as Allah and His Messenger affirmed them: without denying their meanings, without asking how, and without likening Him to His creation. Allah says: “There is nothing like unto Him, and He is the Hearing, the Seeing” (Quran 42:11).")
                         .font(.body)
@@ -364,49 +364,49 @@ struct AllahPillarView: View {
                 Section(header: ArticleHeader("ALLAH IN PRE-ISLAMIC TIMES")) {
                     Text(verbatim: "Before Islam, the Arabs acknowledged a supreme God named Allah but associated partners with Him by worshipping idols and other deities. When Prophet Muhammad (peace and blessings be upon him) brought Islam, he reaffirmed the Oneness of Allah, rejecting all forms of idolatry and polytheism. Allah says in the Quran:")
                         .font(.body)
-                    ScriptureQuote(text: "“And they were not commanded except to worship Allah, [being] sincere to Him in religion, inclining to truth, and to establish prayer and to give zakah. And that is the correct religion” (Quran 98:5).", arabic: "وَمَآ أُمِرُوٓاْ إِلَّا لِيَعۡبُدُواْ ٱللَّهَ مُخۡلِصِينَ لَهُ ٱلدِّينَ حُنَفَآءَ وَيُقِيمُواْ ٱلصَّلَوٰةَ وَيُؤۡتُواْ ٱلزَّكَوٰةَۚ وَذَٰلِكَ دِينُ ٱلۡقَيِّمَةِ")
+                    ScriptureQuote(text: "“And they were not commanded except to worship Allah, [being] sincere to Him in religion, inclining to truth, and to establish prayer and to give zakah. And that is the correct religion” (Quran 98:5).", arabic: "وَمَآ أُمِرُوٓا إِلَّا لِيَعبُدُوا ٱللَّهَ مُخلِصِينَ لَهُ ٱلدِّينَ حُنَفَآءَ وَيُقِيمُوا ٱلصَّلَوٰةَ وَيُؤتُوا ٱلزَّكَوٰةَۚ وَذَٰلِكَ دِينُ ٱلقَيِّمَةِ")
                 }
 
                 Section(header: ArticleHeader("QURANIC REFERENCES")) {
                     Text(verbatim: "Allah describes Himself in the Quran as the One and Only God, the source of all mercy and compassion. Allah says:")
                         .font(.body)
-                    ScriptureQuote(text: "“And your god is one God. There is no deity [worthy of worship] except Him, the Entirely Merciful, the Especially Merciful” (Quran 2:163).", arabic: "وَإِلَٰهُكُمۡ إِلَٰهٞ وَٰحِدٞۖ لَّآ إِلَٰهَ إِلَّا هُوَ ٱلرَّحۡمَٰنُ ٱلرَّحِيمُ")
+                    ScriptureQuote(text: "“And your god is one God. There is no deity [worthy of worship] except Him, the Entirely Merciful, the Especially Merciful” (Quran 2:163).", arabic: "وَإِلَٰهُكُم إِلَٰهٞ وَٰحِدٞۖ لَّآ إِلَٰهَ إِلَّا هُوَ ٱلرَّحمَٰنُ ٱلرَّحِيمُ")
 
                     Text(verbatim: "He also says:").font(.body)
-                    ScriptureQuote(text: "“There is nothing like unto Him, and He is the Hearing, the Seeing” (Quran 42:11).", arabic: "لَيۡسَ كَمِثۡلِهِۦ شَيۡءٞۖ وَهُوَ ٱلسَّمِيعُ ٱلۡبَصِيرُ")
+                    ScriptureQuote(text: "“There is nothing like unto Him, and He is the Hearing, the Seeing” (Quran 42:11).", arabic: "لَيسَ كَمِثلِهِۦ شَيءٞۖ وَهُوَ ٱلسَّمِيعُ ٱلبَصِيرُ")
                 }
 
                 Section(header: ArticleHeader("ESSENCE OF WORSHIP")) {
                     Text(verbatim: "The primary purpose of life is to worship Allah (Glorified and Exalted be He). This worship is not limited to rituals but encompasses every sincere action done to seek Allah's pleasure. Allah says in the Quran:")
                         .font(.body)
-                    ScriptureQuote(text: "“And I did not create the jinn and mankind except to worship Me” (Quran 51:56).", arabic: "وَمَا خَلَقۡتُ ٱلۡجِنَّ وَٱلۡإِنسَ إِلَّا لِيَعۡبُدُونِ")
+                    ScriptureQuote(text: "“And I did not create the jinn and mankind except to worship Me” (Quran 51:56).", arabic: "وَمَا خَلَقتُ ٱلجِنَّ وَٱلإِنسَ إِلَّا لِيَعبُدُونِ")
 
                     Text(verbatim: "Worshiping Allah includes prayer, supplication, charity, good conduct, and obedience to His commands as revealed in the Quran and the teachings of Prophet Muhammad (peace and blessings be upon him).").font(.body)
 
                     Text(verbatim: "This life is also a test from Allah to determine who among His servants will strive to fulfill their purpose with sincerity and patience. Allah says in the Quran:")
                         .font(.body)
-                    ScriptureQuote(text: "“Indeed, We have made that which is on the earth adornment for it that We may test them [as to] which of them is best in deed” (Quran 18:7).", arabic: "إِنَّا جَعَلۡنَا مَا عَلَى ٱلۡأَرۡضِ زِينَةٗ لَّهَا لِنَبۡلُوَهُمۡ أَيُّهُمۡ أَحۡسَنُ عَمَلٗا")
+                    ScriptureQuote(text: "“Indeed, We have made that which is on the earth adornment for it that We may test them [as to] which of them is best in deed” (Quran 18:7).", arabic: "إِنَّا جَعَلنَا مَا عَلَى ٱلأَرضِ زِينَةٗ لَّهَا لِنَبلُوَهُم أَيُّهُم أَحسَنُ عَمَلٗا")
 
                     Text(verbatim: "Allah further reminds us:").font(.body)
-                    ScriptureQuote(text: "“And We test you with evil and with good as trial; and to Us you will be returned” (Quran 21:35).", arabic: "وَنَبۡلُوكُم بِٱلشَّرِّ وَٱلۡخَيۡرِ فِتۡنَةٗۖ وَإِلَيۡنَا تُرۡجَعُونَ")
+                    ScriptureQuote(text: "“And We test you with evil and with good as trial; and to Us you will be returned” (Quran 21:35).", arabic: "وَنَبلُوكُم بِٱلشَّرِّ وَٱلخَيرِ فِتنَةٗۖ وَإِلَينَا تُرجَعُونَ")
 
                     Text(verbatim: "Through these tests, believers have the opportunity to demonstrate their devotion, patience, and trust in Allah. Success lies in worshiping Him sincerely and following the straight path outlined in the Quran and Sunnah.")
                         .font(.body)
                 }
 
                 Section(header: ArticleHeader("SURAH AL-IKHLAS")) {
-                    ScriptureQuote(text: "“Say, ‘He is Allah, [who is] One, Allah, the Eternal Refuge. He neither begets nor is born, nor is there to Him any equivalent.’” (Quran 112:1-4)", arabic: "قُلۡ هُوَ ٱللَّهُ أَحَدٌ ۝ ٱللَّهُ ٱلصَّمَدُ ۝ لَمۡ يَلِدۡ وَلَمۡ يُولَدۡ ۝ وَلَمۡ يَكُن لَّهُۥ كُفُوًا أَحَدُۢ")
+                    ScriptureQuote(text: "“Say, ‘He is Allah, [who is] One, Allah, the Eternal Refuge. He neither begets nor is born, nor is there to Him any equivalent.’” (Quran 112:1-4)", arabic: "قُل هُوَ ٱللَّهُ أَحَدٌ ۝ ٱللَّهُ ٱلصَّمَدُ ۝ لَم يَلِد وَلَم يُولَد ۝ وَلَم يَكُن لَّهُۥ كُفُوًا أَحَدُۢ")
 
                     Text(articleMarkdown: "This short yet powerful chapter, **Surah Al-Ikhlas (الإِخلَاص)**, perfectly encapsulates the core of Islamic monotheism, affirming that Allah is eternal, without offspring or equal, and incomparable to any of His creation.")
                         .font(.body)
                 }
 
                 Section(header: ArticleHeader("AYAT AL-KURSI")) {
-                    ScriptureQuote(text: "“Allah - there is no deity except Him, the Ever-Living, the Sustainer of [all] existence. Neither drowsiness overtakes Him nor sleep. To Him belongs whatever is in the heavens and whatever is on the earth. Who is it that can intercede with Him except by His permission? He knows what is [presently] before them and what will be after them, and they encompass not a thing of His knowledge except for what He wills. His Kursi extends over the heavens and the earth, and their preservation tires Him not. And He is the Most High, the Most Great” (Quran 2:255)", arabic: "ٱللَّهُ لَآ إِلَٰهَ إِلَّا هُوَ ٱلۡحَيُّ ٱلۡقَيُّومُۚ لَا تَأۡخُذُهُۥ سِنَةٞ وَلَا نَوۡمٞۚ لَّهُۥ مَا فِي ٱلسَّمَٰوَٰتِ وَمَا فِي ٱلۡأَرۡضِۗ مَن ذَا ٱلَّذِي يَشۡفَعُ عِندَهُۥٓ إِلَّا بِإِذۡنِهِۦۚ يَعۡلَمُ مَا بَيۡنَ أَيۡدِيهِمۡ وَمَا خَلۡفَهُمۡۖ وَلَا يُحِيطُونَ بِشَيۡءٖ مِّنۡ عِلۡمِهِۦٓ إِلَّا بِمَا شَآءَۚ وَسِعَ كُرۡسِيُّهُ ٱلسَّمَٰوَٰتِ وَٱلۡأَرۡضَۖ وَلَا يَـُٔودُهُۥ حِفۡظُهُمَاۚ وَهُوَ ٱلۡعَلِيُّ ٱلۡعَظِيمُ")
+                    ScriptureQuote(text: "“Allah - there is no deity except Him, the Ever-Living, the Sustainer of [all] existence. Neither drowsiness overtakes Him nor sleep. To Him belongs whatever is in the heavens and whatever is on the earth. Who is it that can intercede with Him except by His permission? He knows what is [presently] before them and what will be after them, and they encompass not a thing of His knowledge except for what He wills. His Kursi extends over the heavens and the earth, and their preservation tires Him not. And He is the Most High, the Most Great” (Quran 2:255)", arabic: "ٱللَّهُ لَآ إِلَٰهَ إِلَّا هُوَ ٱلحَيُّ ٱلقَيُّومُۚ لَا تَأخُذُهُۥ سِنَةٞ وَلَا نَومٞۚ لَّهُۥ مَا فِي ٱلسَّمَٰوَٰتِ وَمَا فِي ٱلأَرضِۗ مَن ذَا ٱلَّذِي يَشفَعُ عِندَهُۥٓ إِلَّا بِإِذنِهِۦۚ يَعلَمُ مَا بَينَ أَيدِيهِم وَمَا خَلفَهُمۖ وَلَا يُحِيطُونَ بِشَيءٖ مِّن عِلمِهِۦٓ إِلَّا بِمَا شَآءَۚ وَسِعَ كُرسِيُّهُ ٱلسَّمَٰوَٰتِ وَٱلأَرضَۖ وَلَا يَـُٔودُهُۥ حِفظُهُمَاۚ وَهُوَ ٱلعَلِيُّ ٱلعَظِيمُ")
 
                     Text(articleMarkdown: "**Ayat al-Kursi (آيَة الكُرسِي)**, the Throne Verse, emphasizes Allah's supreme power, unmatched knowledge, and sovereignty over the universe. It is the greatest verse in the Quran, as the Prophet (peace and blessings be upon him) told Ubayy ibn Ka'b (Sahih Muslim 810), and the Prophet (peace and blessings be upon him) confirmed the words of the one who told Abu Hurayrah (may Allah be pleased with him):")
                         .font(.body)
-                    ScriptureQuote(text: "“Whenever you go to bed, recite ‘Ayat-al-Kursi’-- 'Allahu la ilaha illa huwa-l-Haiy-ul Qaiyum' till you finish the whole verse. (If you do so), Allah will appoint a guard for you who will stay with you and no satan will come near you till morning” (Sahih al-Bukhari 2311).", arabic: "إِذَا أَوَيْتَ إِلَى فِرَاشِكَ فَاقْرَأْ آيَةَ الْكُرْسِيِّ اللَّهُ لاَ إِلَهَ إِلاَّ هُوَ الْحَىُّ الْقَيُّومُ حَتَّى تَخْتِمَ الآيَةَ، فَإِنَّكَ لَنْ يَزَالَ عَلَيْكَ مِنَ اللَّهِ حَافِظٌ وَلاَ يَقْرَبَنَّكَ شَيْطَانٌ حَتَّى تُصْبِحَ", dimmed: true)
+                    ScriptureQuote(text: "“Whenever you go to bed, recite ‘Ayat-al-Kursi’-- 'Allahu la ilaha illa huwa-l-Haiy-ul Qaiyum' till you finish the whole verse. (If you do so), Allah will appoint a guard for you who will stay with you and no satan will come near you till morning” (Sahih al-Bukhari 2311).", arabic: "إِذَا أَوَيتَ إِلَى فِرَاشِكَ فَاقرَأ آيَةَ الكُرسِيِّ اللَّهُ لاَ إِلَهَ إِلاَّ هُوَ الحَىُّ القَيُّومُ حَتَّى تَختِمَ الآيَةَ، فَإِنَّكَ لَن يَزَالَ عَلَيكَ مِنَ اللَّهِ حَافِظٌ وَلاَ يَقرَبَنَّكَ شَيطَانٌ حَتَّى تُصبِحَ", dimmed: true)
                 }
 
 
@@ -440,7 +440,7 @@ struct QuranPillarView: View {
 
                     Text(verbatim: "Unlike previous scriptures sent to specific nations and later altered, the Quran is a universal message for all people and all times. Allah says in the Quran:")
                         .font(.body)
-                    ScriptureQuote(text: "“And We have not sent you [O Muhammad] except as a mercy to the worlds” (Quran 21:107).", arabic: "وَمَآ أَرۡسَلۡنَٰكَ إِلَّا رَحۡمَةٗ لِّلۡعَٰلَمِينَ")
+                    ScriptureQuote(text: "“And We have not sent you [O Muhammad] except as a mercy to the worlds” (Quran 21:107).", arabic: "وَمَآ أَرسَلنَٰكَ إِلَّا رَحمَةٗ لِّلعَٰلَمِينَ")
                 }
 
                 Section(header: ArticleHeader("ELOQUENCE AND MIRACULOUS NATURE")) {
@@ -449,11 +449,11 @@ struct QuranPillarView: View {
 
                     Text(verbatim: "The Quran challenged the greatest poets and linguists of its time, many of whom were astounded by its profound imagery, rhythmic flow, and clarity. Allah says in the Quran:")
                         .font(.body)
-                    ScriptureQuote(text: "“Say, ‘If mankind and the jinn gathered in order to produce the like of this Qur'an, they could not produce the like of it, even if they were to each other assistants.’” (Quran 17:88).", arabic: "قُل لَّئِنِ ٱجۡتَمَعَتِ ٱلۡإِنسُ وَٱلۡجِنُّ عَلَىٰٓ أَن يَأۡتُواْ بِمِثۡلِ هَٰذَا ٱلۡقُرۡءَانِ لَا يَأۡتُونَ بِمِثۡلِهِۦ وَلَوۡ كَانَ بَعۡضُهُمۡ لِبَعۡضٖ ظَهِيرٗا")
+                    ScriptureQuote(text: "“Say, ‘If mankind and the jinn gathered in order to produce the like of this Qur'an, they could not produce the like of it, even if they were to each other assistants.’” (Quran 17:88).", arabic: "قُل لَّئِنِ ٱجتَمَعَتِ ٱلإِنسُ وَٱلجِنُّ عَلَىٰٓ أَن يَأتُوا بِمِثلِ هَٰذَا ٱلقُرءَانِ لَا يَأتُونَ بِمِثلِهِۦ وَلَو كَانَ بَعضُهُم لِبَعضٖ ظَهِيرٗا")
 
                     Text(articleMarkdown: "What makes the challenge sharper is who it came through. Prophet Muhammad (peace and blessings be upon him) was **ummi (أُمِّيّ)**, unlettered: he could neither read nor write, and had never studied poetry, scripture, or the sciences of language. Allah says:")
                         .font(.body)
-                    ScriptureQuote(text: "“And you did not recite before it any scripture, nor did you inscribe one with your right hand. Otherwise the falsifiers would have had [cause for] doubt” (Quran 29:48).", arabic: "وَمَا كُنتَ تَتۡلُواْ مِن قَبۡلِهِۦ مِن كِتَٰبٖ وَلَا تَخُطُّهُۥ بِيَمِينِكَۖ إِذٗا لَّٱرۡتَابَ ٱلۡمُبۡطِلُونَ")
+                    ScriptureQuote(text: "“And you did not recite before it any scripture, nor did you inscribe one with your right hand. Otherwise the falsifiers would have had [cause for] doubt” (Quran 29:48).", arabic: "وَمَا كُنتَ تَتلُوا مِن قَبلِهِۦ مِن كِتَٰبٖ وَلَا تَخُطُّهُۥ بِيَمِينِكَۖ إِذٗا لَّٱرتَابَ ٱلمُبطِلُونَ")
 
                     Text(verbatim: "The Arabs of that era were masters of the spoken word. Poetry was their pride, and their finest odes were memorised and celebrated across Arabia. Yet when the Quran was recited to them, they could not place it. It was not poetry, not rhymed prose, not the speech of a soothsayer, and none of their categories fit. They accused him of magic and of madness precisely because they had no literary answer to give. The challenge to produce even a single surah like it (Quran 2:23) was made openly to the very people best equipped to meet it, and it was never met.")
                         .font(.body)
@@ -470,7 +470,7 @@ struct QuranPillarView: View {
                         .font(.body)
 
                     Text(verbatim: "Allah promises in the Quran:").font(.body)
-                    ScriptureQuote(text: "“Indeed, it is We who sent down the Quran and indeed, We will be its guardian” (Quran 15:9).", arabic: "إِنَّا نَحۡنُ نَزَّلۡنَا ٱلذِّكۡرَ وَإِنَّا لَهُۥ لَحَٰفِظُونَ")
+                    ScriptureQuote(text: "“Indeed, it is We who sent down the Quran and indeed, We will be its guardian” (Quran 15:9).", arabic: "إِنَّا نَحنُ نَزَّلنَا ٱلذِّكرَ وَإِنَّا لَهُۥ لَحَٰفِظُونَ")
 
                     Text(verbatim: "Millions of Muslims, from children to scholars, continue to memorize the Quran in its entirety, ensuring its unaltered transmission across generations. The Quran's preservation is a testament to its divine origin.")
                         .font(.body)
@@ -479,7 +479,7 @@ struct QuranPillarView: View {
                 Section(header: ArticleHeader("GUIDANCE AND MESSAGE")) {
                     Text(verbatim: "The Quran is not merely a book of laws or stories; it provides a comprehensive guide for personal, spiritual, and social life. Allah says in the Quran:")
                         .font(.body)
-                    ScriptureQuote(text: "“This is the Book about which there is no doubt, a guidance for those conscious of Allah” (Quran 2:2).", arabic: "ذَٰلِكَ ٱلۡكِتَٰبُ لَا رَيۡبَۛ فِيهِۛ هُدٗى لِّلۡمُتَّقِينَ")
+                    ScriptureQuote(text: "“This is the Book about which there is no doubt, a guidance for those conscious of Allah” (Quran 2:2).", arabic: "ذَٰلِكَ ٱلكِتَٰبُ لَا رَيبَۛ فِيهِۛ هُدٗى لِّلمُتَّقِينَ")
 
                     Text(verbatim: "It addresses themes such as the oneness of Allah, the purpose of life, moral conduct, and preparation for the Hereafter. The Quran calls for justice, compassion, and humility while offering hope and solace to those who reflect on its verses.")
                         .font(.body)
@@ -488,7 +488,7 @@ struct QuranPillarView: View {
                 Section(header: ArticleHeader("UNIVERSAL MESSAGE")) {
                     Text(verbatim: "Unlike previous scriptures, which were sent to specific nations and for specific times, the Quran is meant for all of humanity, regardless of race, language, or geography. Allah says in the Quran:")
                         .font(.body)
-                    ScriptureQuote(text: "“And We have certainly made the Quran easy for remembrance, so is there any who will remember?” (Quran 54:17)", arabic: "وَلَقَدۡ يَسَّرۡنَا ٱلۡقُرۡءَانَ لِلذِّكۡرِ فَهَلۡ مِن مُّدَّكِرٖ")
+                    ScriptureQuote(text: "“And We have certainly made the Quran easy for remembrance, so is there any who will remember?” (Quran 54:17)", arabic: "وَلَقَد يَسَّرنَا ٱلقُرءَانَ لِلذِّكرِ فَهَل مِن مُّدَّكِرٖ")
 
                     Text(verbatim: "The Quran’s universality and timeless guidance make it relevant to every generation, providing solutions to contemporary issues and inspiring billions of people worldwide.")
                         .font(.body)
@@ -676,7 +676,7 @@ struct ProphetPillarView: View {
 
                 Section(header: ArticleHeader("FINAL PROPHET")) {
                     Text(verbatim: "Allah (Glorified and Exalted be He) says in the Quran:").font(.body)
-                    ScriptureQuote(text: "“Muhammad is not the father of [any] one of your men, but [he is] the Messenger of Allah and last of the prophets. And ever is Allah, of all things, Knowing” (Quran 33:40).", arabic: "مَّا كَانَ مُحَمَّدٌ أَبَآ أَحَدٖ مِّن رِّجَالِكُمۡ وَلَٰكِن رَّسُولَ ٱللَّهِ وَخَاتَمَ ٱلنَّبِيِّـۧنَۗ وَكَانَ ٱللَّهُ بِكُلِّ شَيۡءٍ عَلِيمٗا")
+                    ScriptureQuote(text: "“Muhammad is not the father of [any] one of your men, but [he is] the Messenger of Allah and last of the prophets. And ever is Allah, of all things, Knowing” (Quran 33:40).", arabic: "مَّا كَانَ مُحَمَّدٌ أَبَآ أَحَدٖ مِّن رِّجَالِكُم وَلَٰكِن رَّسُولَ ٱللَّهِ وَخَاتَمَ ٱلنَّبِيِّـۧنَۗ وَكَانَ ٱللَّهُ بِكُلِّ شَيءٍ عَلِيمٗا")
 
                     Text(verbatim: "Prophet Muhammad (peace and blessings be upon him) is the last and final prophet, completing the chain of messengers that began with Adam (peace be upon him). He delivered the final revelation, the Quran, and exemplified its teachings as the ultimate role model.")
                         .font(.body)
@@ -687,22 +687,22 @@ struct ProphetPillarView: View {
                     ScriptureQuote(text: "“And indeed, you are of a great moral character” (Quran 68:4).", arabic: "وَإِنَّكَ لَعَلَىٰ خُلُقٍ عَظِيمٖ")
 
                     Text(verbatim: "He was known for his compassion, humility, and justice. Even toward his enemies, he demonstrated forgiveness and kindness. Aisha (may Allah be pleased with her), his wife, described him by saying:").font(.body)
-                    ScriptureQuote(text: "“The character of the Messenger of Allah (ﷺ) was the Qur'an” (Sahih Muslim 746).", arabic: "فَإِنَّ خُلُقَ نَبِيِّ اللَّهِ صلى الله عليه وسلم كَانَ الْقُرْآنَ", dimmed: true)
+                    ScriptureQuote(text: "“The character of the Messenger of Allah (ﷺ) was the Qur'an” (Sahih Muslim 746).", arabic: "فَإِنَّ خُلُقَ نَبِيِّ اللَّهِ صَلَّى اللَّهُ عَلَيهِ وَسَلَّمَ كَانَ القُرآنَ", dimmed: true)
 
                     Text(verbatim: "Allah also says in the Quran:").font(.body)
-                    ScriptureQuote(text: "“There has certainly been for you in the Messenger of Allah an excellent pattern for anyone whose hope is in Allah and the Last Day and [who] remembers Allah often” (Quran 33:21).", arabic: "لَّقَدۡ كَانَ لَكُمۡ فِي رَسُولِ ٱللَّهِ أُسۡوَةٌ حَسَنَةٞ لِّمَن كَانَ يَرۡجُواْ ٱللَّهَ وَٱلۡيَوۡمَ ٱلۡأٓخِرَ وَذَكَرَ ٱللَّهَ كَثِيرٗا")
+                    ScriptureQuote(text: "“There has certainly been for you in the Messenger of Allah an excellent pattern for anyone whose hope is in Allah and the Last Day and [who] remembers Allah often” (Quran 33:21).", arabic: "لَّقَد كَانَ لَكُم فِي رَسُولِ ٱللَّهِ أُسوَةٌ حَسَنَةٞ لِّمَن كَانَ يَرجُوا ٱللَّهَ وَٱليَومَ ٱلأٓخِرَ وَذَكَرَ ٱللَّهَ كَثِيرٗا")
 
                     Text(verbatim: "Obedience to the Prophet (peace and blessings be upon him) is also linked to obedience to Allah. Allah says in the Quran:").font(.body)
-                    ScriptureQuote(text: "“He who obeys the Messenger has obeyed Allah; but those who turn away - We have not sent you over them as a guardian” (Quran 4:80).", arabic: "مَّن يُطِعِ ٱلرَّسُولَ فَقَدۡ أَطَاعَ ٱللَّهَۖ وَمَن تَوَلَّىٰ فَمَآ أَرۡسَلۡنَٰكَ عَلَيۡهِمۡ حَفِيظٗا")
+                    ScriptureQuote(text: "“He who obeys the Messenger has obeyed Allah; but those who turn away - We have not sent you over them as a guardian” (Quran 4:80).", arabic: "مَّن يُطِعِ ٱلرَّسُولَ فَقَد أَطَاعَ ٱللَّهَۖ وَمَن تَوَلَّىٰ فَمَآ أَرسَلنَٰكَ عَلَيهِم حَفِيظٗا")
 
                     Text(verbatim: "His humility is evident in many of his interactions. When a companion's voice trembled as he talked to the prophet, the prophet (peace and blessings be upon him) said:").font(.body)
-                    ScriptureQuote(text: "“Be calm, for I am not a king. Verily, I am only the son of a woman who ate dried meat” (Sunan Ibn Majah 3312; graded sahih by al-Albani).", arabic: "هَوِّنْ عَلَيْكَ فَإِنِّي لَسْتُ بِمَلِكٍ إِنَّمَا أَنَا ابْنُ امْرَأَةٍ تَأْكُلُ الْقَدِيدَ", dimmed: true)
+                    ScriptureQuote(text: "“Be calm, for I am not a king. Verily, I am only the son of a woman who ate dried meat” (Sunan Ibn Majah 3312; graded sahih by al-Albani).", arabic: "هَوِّن عَلَيكَ فَإِنِّي لَستُ بِمَلِكٍ إِنَّمَا أَنَا ابنُ امرَأَةٍ تَأكُلُ القَدِيدَ", dimmed: true)
 
                     Text(verbatim: "He also said:").font(.body)
-                    ScriptureQuote(text: "“I eat as the servant eats, and I sit as the servant sits, for I am only a servant” (as-Silsilah as-Sahihah 544; authenticated by al-Albani).", arabic: "آكُلُ كَمَا يَأْكُلُ الْعَبْدُ، وَأَجْلِسُ كَمَا يَجْلِسُ الْعَبْدُ، فَإِنَّمَا أَنَا عَبْدٌ", dimmed: true)
+                    ScriptureQuote(text: "“I eat as the servant eats, and I sit as the servant sits, for I am only a servant” (as-Silsilah as-Sahihah 544; authenticated by al-Albani).", arabic: "آكُلُ كَمَا يَأكُلُ العَبدُ، وَأَجلِسُ كَمَا يَجلِسُ العَبدُ، فَإِنَّمَا أَنَا عَبدٌ", dimmed: true)
 
                     Text(verbatim: "Similarly, the Prophet (peace and blessings be upon him) warned against excessive praise, saying:").font(.body)
-                    ScriptureQuote(text: "“Do not exaggerate in praising me as the Christians praised the son of Mary, for I am only a Slave. So, call me the Slave of Allah and His Apostle” (Sahih al-Bukhari 3445).", arabic: "لاَ تُطْرُونِي كَمَا أَطْرَتِ النَّصَارَى ابْنَ مَرْيَمَ، فَإِنَّمَا أَنَا عَبْدُهُ، فَقُولُوا عَبْدُ اللَّهِ وَرَسُولُهُ", dimmed: true)
+                    ScriptureQuote(text: "“Do not exaggerate in praising me as the Christians praised the son of Mary, for I am only a Slave. So, call me the Slave of Allah and His Apostle” (Sahih al-Bukhari 3445).", arabic: "لاَ تُطرُونِي كَمَا أَطرَتِ النَّصَارَى ابنَ مَريَمَ، فَإِنَّمَا أَنَا عَبدُهُ، فَقُولُوا عَبدُ اللَّهِ وَرَسُولُهُ", dimmed: true)
                 }
 
                 Section(header: ArticleHeader("HIS TEACHINGS")) {
@@ -718,7 +718,7 @@ struct ProphetPillarView: View {
                         .font(.body)
 
                     Text(verbatim: "Allah (Glorified and Exalted be He) says in the Quran:").font(.body)
-                    ScriptureQuote(text: "“And We have not sent you, [O Muhammad], except as a mercy to the worlds” (Quran 21:107).", arabic: "وَمَآ أَرۡسَلۡنَٰكَ إِلَّا رَحۡمَةٗ لِّلۡعَٰلَمِينَ")
+                    ScriptureQuote(text: "“And We have not sent you, [O Muhammad], except as a mercy to the worlds” (Quran 21:107).", arabic: "وَمَآ أَرسَلنَٰكَ إِلَّا رَحمَةٗ لِّلعَٰلَمِينَ")
                 }
 
                 Section(header: ArticleHeader("HIS LEGACY")) {
@@ -726,10 +726,10 @@ struct ProphetPillarView: View {
                         .font(.body)
 
                     Text(verbatim: "He said:").font(.body)
-                    ScriptureQuote(text: "“O people, your Lord is one and your father is one. There is no superiority of an Arab over a non-Arab, nor of a non-Arab over an Arab, nor of a red (light-skinned) person over a black person, nor of a black person over a red person, except by taqwa” (Musnad Ahmad 23489; graded sahih by al-Albani, as-Silsilah as-Sahihah 2700, and by Shu'ayb al-Arna'ut).", arabic: "يَا أَيُّهَا النَّاسُ، أَلَا إِنَّ رَبَّكُمْ وَاحِدٌ، وَإِنَّ أَبَاكُمْ وَاحِدٌ، أَلَا لَا فَضْلَ لِعَرَبِيٍّ عَلَى عَجَمِيٍّ، وَلَا لِعَجَمِيٍّ عَلَى عَرَبِيٍّ، وَلَا أَحْمَرَ عَلَى أَسْوَدَ، وَلَا أَسْوَدَ عَلَى أَحْمَرَ، إِلَّا بِالتَّقْوَى", dimmed: true)
+                    ScriptureQuote(text: "“O people, your Lord is one and your father is one. There is no superiority of an Arab over a non-Arab, nor of a non-Arab over an Arab, nor of a red (light-skinned) person over a black person, nor of a black person over a red person, except by taqwa” (Musnad Ahmad 23489; graded sahih by al-Albani, as-Silsilah as-Sahihah 2700, and by Shu'ayb al-Arna'ut).", arabic: "يَا أَيُّهَا النَّاسُ، أَلَا إِنَّ رَبَّكُم وَاحِدٌ، وَإِنَّ أَبَاكُم وَاحِدٌ، أَلَا لَا فَضلَ لِعَرَبِيٍّ عَلَى عَجَمِيٍّ، وَلَا لِعَجَمِيٍّ عَلَى عَرَبِيٍّ، وَلَا أَحمَرَ عَلَى أَسوَدَ، وَلَا أَسوَدَ عَلَى أَحمَرَ، إِلَّا بِالتَّقوَى", dimmed: true)
 
                     Text(verbatim: "This is the Quran's own standard:").font(.body)
-                    ScriptureQuote(text: "“Indeed, the most noble of you in the sight of Allah is the most righteous of you” (Quran 49:13).", arabic: "إِنَّ أَكۡرَمَكُمۡ عِندَ ٱللَّهِ أَتۡقَىٰكُمۡۚ")
+                    ScriptureQuote(text: "“Indeed, the most noble of you in the sight of Allah is the most righteous of you” (Quran 49:13).", arabic: "إِنَّ أَكرَمَكُم عِندَ ٱللَّهِ أَتقَىٰكُمۚ")
                 }
 
 
@@ -762,7 +762,7 @@ struct SunnahPillarView: View {
                         .font(.body)
 
                     Text(verbatim: "Allah says in the Quran:").font(.body)
-                    ScriptureQuote(text: "“And whatever the Messenger has given you – take; and what he has forbidden you – refrain from. And fear Allah; indeed, Allah is severe in penalty” (Quran 59:7).", arabic: "وَمَآ ءَاتَىٰكُمُ ٱلرَّسُولُ فَخُذُوهُ وَمَا نَهَىٰكُمۡ عَنۡهُ فَٱنتَهُواْۚ وَٱتَّقُواْ ٱللَّهَۖ إِنَّ ٱللَّهَ شَدِيدُ ٱلۡعِقَابِ")
+                    ScriptureQuote(text: "“And whatever the Messenger has given you – take; and what he has forbidden you – refrain from. And fear Allah; indeed, Allah is severe in penalty” (Quran 59:7).", arabic: "وَمَآ ءَاتَىٰكُمُ ٱلرَّسُولُ فَخُذُوهُ وَمَا نَهَىٰكُم عَنهُ فَٱنتَهُواۚ وَٱتَّقُوا ٱللَّهَۖ إِنَّ ٱللَّهَ شَدِيدُ ٱلعِقَابِ")
                 }
 
                 Section(header: ArticleHeader("IMPORTANCE")) {
@@ -770,13 +770,13 @@ struct SunnahPillarView: View {
                         .font(.body)
 
                     Text(verbatim: "The Prophet (peace and blessings be upon him) said:").font(.body)
-                    ScriptureQuote(text: "“Pray as you have seen me praying” (Sahih al-Bukhari 631).", arabic: "وَصَلُّوا كَمَا رَأَيْتُمُونِي أُصَلِّي", dimmed: true)
+                    ScriptureQuote(text: "“Pray as you have seen me praying” (Sahih al-Bukhari 631).", arabic: "وَصَلُّوا كَمَا رَأَيتُمُونِي أُصَلِّي", dimmed: true)
 
                     Text(verbatim: "The Sunnah also serves as an example for personal conduct and social interactions. Allah says in the Quran:").font(.body)
-                    ScriptureQuote(text: "“There has certainly been for you in the Messenger of Allah an excellent pattern for anyone whose hope is in Allah and the Last Day and [who] remembers Allah often” (Quran 33:21).", arabic: "لَّقَدۡ كَانَ لَكُمۡ فِي رَسُولِ ٱللَّهِ أُسۡوَةٌ حَسَنَةٞ لِّمَن كَانَ يَرۡجُواْ ٱللَّهَ وَٱلۡيَوۡمَ ٱلۡأٓخِرَ وَذَكَرَ ٱللَّهَ كَثِيرٗا")
+                    ScriptureQuote(text: "“There has certainly been for you in the Messenger of Allah an excellent pattern for anyone whose hope is in Allah and the Last Day and [who] remembers Allah often” (Quran 33:21).", arabic: "لَّقَد كَانَ لَكُم فِي رَسُولِ ٱللَّهِ أُسوَةٌ حَسَنَةٞ لِّمَن كَانَ يَرجُوا ٱللَّهَ وَٱليَومَ ٱلأٓخِرَ وَذَكَرَ ٱللَّهَ كَثِيرٗا")
 
                     Text(verbatim: "Obedience to the Sunnah is considered obedience to Allah. Allah says in the Quran:").font(.body)
-                    ScriptureQuote(text: "“He who obeys the Messenger has obeyed Allah; but those who turn away - We have not sent you over them as a guardian” (Quran 4:80).", arabic: "مَّن يُطِعِ ٱلرَّسُولَ فَقَدۡ أَطَاعَ ٱللَّهَۖ وَمَن تَوَلَّىٰ فَمَآ أَرۡسَلۡنَٰكَ عَلَيۡهِمۡ حَفِيظٗا")
+                    ScriptureQuote(text: "“He who obeys the Messenger has obeyed Allah; but those who turn away - We have not sent you over them as a guardian” (Quran 4:80).", arabic: "مَّن يُطِعِ ٱلرَّسُولَ فَقَد أَطَاعَ ٱللَّهَۖ وَمَن تَوَلَّىٰ فَمَآ أَرسَلنَٰكَ عَلَيهِم حَفِيظٗا")
                 }
 
                 Section(header: ArticleHeader("HADITH LITERATURE")) {
@@ -840,7 +840,7 @@ struct HadithPillarView: View {
                         .font(.body)
 
                     Text(verbatim: "Allah (Glorified and Exalted be He) commands in the Quran:").font(.body)
-                    ScriptureQuote(text: "“And whatever the Messenger has given you – take; and what he has forbidden you – refrain from. And fear Allah; indeed, Allah is severe in penalty” (Quran 59:7).", arabic: "وَمَآ ءَاتَىٰكُمُ ٱلرَّسُولُ فَخُذُوهُ وَمَا نَهَىٰكُمۡ عَنۡهُ فَٱنتَهُواْۚ وَٱتَّقُواْ ٱللَّهَۖ إِنَّ ٱللَّهَ شَدِيدُ ٱلۡعِقَابِ")
+                    ScriptureQuote(text: "“And whatever the Messenger has given you – take; and what he has forbidden you – refrain from. And fear Allah; indeed, Allah is severe in penalty” (Quran 59:7).", arabic: "وَمَآ ءَاتَىٰكُمُ ٱلرَّسُولُ فَخُذُوهُ وَمَا نَهَىٰكُم عَنهُ فَٱنتَهُواۚ وَٱتَّقُوا ٱللَّهَۖ إِنَّ ٱللَّهَ شَدِيدُ ٱلعِقَابِ")
 
                     Text(verbatim: "Hadiths are indispensable for understanding and implementing the Quran’s teachings, as they provide practical examples of how Prophet Muhammad (peace and blessings be upon him) lived according to Allah’s commands.")
                         .font(.body)
@@ -848,22 +848,22 @@ struct HadithPillarView: View {
 
                 Section(header: ArticleHeader("RELATIONSHIP WITH THE QURAN")) {
                     Text(verbatim: "Hadiths are essential for interpreting and contextualizing the Quran. Allah says in the Quran:").font(.body)
-                    ScriptureQuote(text: "“It is He who has sent down to you, [O Muhammad], the Book; in it are verses [that are] precise... and others unspecific” (Quran 3:7).", arabic: "هُوَ ٱلَّذِيٓ أَنزَلَ عَلَيۡكَ ٱلۡكِتَٰبَ مِنۡهُ ءَايَٰتٞ مُّحۡكَمَٰتٌ هُنَّ أُمُّ ٱلۡكِتَٰبِ وَأُخَرُ مُتَشَٰبِهَٰتٞۖ")
+                    ScriptureQuote(text: "“It is He who has sent down to you, [O Muhammad], the Book; in it are verses [that are] precise... and others unspecific” (Quran 3:7).", arabic: "هُوَ ٱلَّذِيٓ أَنزَلَ عَلَيكَ ٱلكِتَٰبَ مِنهُ ءَايَٰتٞ مُّحكَمَٰتٌ هُنَّ أُمُّ ٱلكِتَٰبِ وَأُخَرُ مُتَشَٰبِهَٰتٞۖ")
 
                     Text(articleMarkdown: "While the Quran provides general principles, the Hadith clarifies how to implement these teachings. For example, the Quran commands Muslims to pray, and the Hadith describes how the Prophet (peace and blessings be upon him) performed **Salah (صَلَاة)**. He said:").font(.body)
-                    ScriptureQuote(text: "“Pray as you have seen me praying” (Sahih al-Bukhari 631).", arabic: "وَصَلُّوا كَمَا رَأَيْتُمُونِي أُصَلِّي", dimmed: true)
+                    ScriptureQuote(text: "“Pray as you have seen me praying” (Sahih al-Bukhari 631).", arabic: "وَصَلُّوا كَمَا رَأَيتُمُونِي أُصَلِّي", dimmed: true)
                 }
 
                 Section(header: ArticleHeader("TYPES OF HADITHS")) {
                     Text(verbatim: "There are two main types of Hadiths:").font(.body)
 
                     Text(articleMarkdown: "1. **Hadith Qudsi (حَدِيث قُدسِي), the Sacred Hadith:** These are sayings where the Prophet (peace and blessings be upon him) conveys meanings from Allah (Glorified and Exalted be He), but the wording is his own. Unlike the Quran, which is the exact verbatim word of Allah, Hadith Qudsi reflects divine inspiration shared through the Prophet’s speech. For example, the Prophet said:").font(.body)
-                    ScriptureQuote(text: "“Allah says: 'I am just as My slave thinks I am, (i.e. I am able to do for him what he thinks I can do for him) and I am with him if He remembers Me” (Sahih al-Bukhari 7405)", arabic: "يَقُولُ اللَّهُ تَعَالَى أَنَا عِنْدَ ظَنِّ عَبْدِي بِي، وَأَنَا مَعَهُ إِذَا ذَكَرَنِي", dimmed: true)
+                    ScriptureQuote(text: "“Allah says: 'I am just as My slave thinks I am, (i.e. I am able to do for him what he thinks I can do for him) and I am with him if He remembers Me” (Sahih al-Bukhari 7405)", arabic: "يَقُولُ اللَّهُ تَعَالَى أَنَا عِندَ ظَنِّ عَبدِي بِي، وَأَنَا مَعَهُ إِذَا ذَكَرَنِي", dimmed: true)
                     Text(verbatim: "While the Quran was revealed through the Angel Jibril (Gabriel) and recited exactly as revealed, Hadith Qudsi might have been conveyed to the Prophet through a dream or inspiration. It holds a special status but is not part of the Quran.")
                         .font(.body)
 
                     Text(articleMarkdown: "2. **Hadith Nabawi (حَدِيث نَبَوِي), the Prophetic Hadith:** These include the Prophet’s own words, actions, and approvals, reflecting his teachings and practices. For instance, he said:").font(.body)
-                    ScriptureQuote(text: "“The best among you (Muslims) are those who learn the Quran and teach it” (Sahih al-Bukhari 5027).", arabic: "خَيْرُكُمْ مَنْ تَعَلَّمَ الْقُرْآنَ وَعَلَّمَهُ", dimmed: true)
+                    ScriptureQuote(text: "“The best among you (Muslims) are those who learn the Quran and teach it” (Sahih al-Bukhari 5027).", arabic: "خَيرُكُم مَن تَعَلَّمَ القُرآنَ وَعَلَّمَهُ", dimmed: true)
 
                     Text(verbatim: "Learn the difference here: https://www.youtube.com/watch?v=F7vfmGC-o-A")
                         .font(.caption)
@@ -875,7 +875,7 @@ struct HadithPillarView: View {
                     Text(articleMarkdown: "2. **Matn (مَتن), the Text:** The content of the hadith itself, which is examined for consistency with established Islamic teachings and linguistic accuracy.").font(.body)
 
                     Text(verbatim: "The rigorous analysis of isnad and matn is crucial because some individuals attempted to fabricate sayings of the Prophet (peace and blessings be upon him). To safeguard against such corruption, scholars developed a meticulous science of hadith authentication. The Prophet (peace and blessings be upon him) warned:").font(.body)
-                    ScriptureQuote(text: "“Whoever tells a lie against me intentionally, then (surely) let him occupy his seat in Hell-fire” (Sahih al-Bukhari 108).", arabic: "مَنْ تَعَمَّدَ عَلَىَّ كَذِبًا فَلْيَتَبَوَّأْ مَقْعَدَهُ مِنَ النَّارِ", dimmed: true)
+                    ScriptureQuote(text: "“Whoever tells a lie against me intentionally, then (surely) let him occupy his seat in Hell-fire” (Sahih al-Bukhari 108).", arabic: "مَن تَعَمَّدَ عَلَىَّ كَذِبًا فَليَتَبَوَّأ مَقعَدَهُ مِنَ النَّارِ", dimmed: true)
 
                     Text(verbatim: "This rigorous methodology prevented the kind of corruption and fabrications found in other scriptures, such as the Bible, where authors are often anonymous, and transmission chains are unknown. In Islam, every accepted hadith is traced back to the Prophet (peace and blessings be upon him) through a chain whose narrators were individually examined; reports that fail that test are rejected.").font(.body)
 
@@ -898,10 +898,10 @@ struct HadithPillarView: View {
                     Text(articleMarkdown: "3. **Strengthening Faith:** They contain spiritual guidance and wisdom that deepen a Muslim’s connection to Allah (Glorified and Exalted be He).").font(.body)
 
                     Text(verbatim: "The Prophet (peace and blessings be upon him) said:").font(.body)
-                    ScriptureQuote(text: "“I have left among you the Book of Allah, and if you hold fast to it, you would never go astray” (Sahih Muslim 1218).", arabic: "وَقَدْ تَرَكْتُ فِيكُمْ مَا لَنْ تَضِلُّوا بَعْدَهُ إِنِ اعْتَصَمْتُمْ بِهِ كِتَابَ اللَّهِ", dimmed: true)
+                    ScriptureQuote(text: "“I have left among you the Book of Allah, and if you hold fast to it, you would never go astray” (Sahih Muslim 1218).", arabic: "وَقَد تَرَكتُ فِيكُم مَا لَن تَضِلُّوا بَعدَهُ إِنِ اعتَصَمتُم بِهِ كِتَابَ اللَّهِ", dimmed: true)
 
                     Text(verbatim: "And he commanded holding to his Sunnah:").font(.body)
-                    ScriptureQuote(text: "“You must then follow my sunnah and that of the rightly-guided caliphs. Hold to it and stick fast to it. Avoid novelties, for every novelty is an innovation, and every innovation is an error” (Sunan Abi Dawud 4607; graded sahih by al-Albani).", arabic: "فَعَلَيْكُمْ بِسُنَّتِي وَسُنَّةِ الْخُلَفَاءِ الْمَهْدِيِّينَ الرَّاشِدِينَ تَمَسَّكُوا بِهَا وَعَضُّوا عَلَيْهَا بِالنَّوَاجِذِ وَإِيَّاكُمْ وَمُحْدَثَاتِ الأُمُورِ فَإِنَّ كُلَّ مُحْدَثَةٍ بِدْعَةٌ وَكُلَّ بِدْعَةٍ ضَلاَلَةٌ", dimmed: true)
+                    ScriptureQuote(text: "“You must then follow my sunnah and that of the rightly-guided caliphs. Hold to it and stick fast to it. Avoid novelties, for every novelty is an innovation, and every innovation is an error” (Sunan Abi Dawud 4607; graded sahih by al-Albani).", arabic: "فَعَلَيكُم بِسُنَّتِي وَسُنَّةِ الخُلَفَاءِ المَهدِيِّينَ الرَّاشِدِينَ تَمَسَّكُوا بِهَا وَعَضُّوا عَلَيهَا بِالنَّوَاجِذِ وَإِيَّاكُم وَمُحدَثَاتِ الأُمُورِ فَإِنَّ كُلَّ مُحدَثَةٍ بِدعَةٌ وَكُلَّ بِدعَةٍ ضَلاَلَةٌ", dimmed: true)
                 }
 
                 Section(header: ArticleHeader("RESOURCES")) {
@@ -943,7 +943,7 @@ struct ShahadahView: View {
 
                     Text(verbatim: "This simple yet profound statement encapsulates the essence of Islam: the worship of Allah alone and adherence to the teachings of His messenger. Allah (Glorified and Exalted be He) says in the Quran:")
                         .font(.body)
-                    ScriptureQuote(text: "“And We sent not before you any messenger except that We revealed to him that, ‘There is no deity except Me, so worship Me’” (Quran 21:25).", arabic: "وَمَآ أَرۡسَلۡنَا مِن قَبۡلِكَ مِن رَّسُولٍ إِلَّا نُوحِيٓ إِلَيۡهِ أَنَّهُۥ لَآ إِلَٰهَ إِلَّآ أَنَا۠ فَٱعۡبُدُونِ")
+                    ScriptureQuote(text: "“And We sent not before you any messenger except that We revealed to him that, ‘There is no deity except Me, so worship Me’” (Quran 21:25).", arabic: "وَمَآ أَرسَلنَا مِن قَبلِكَ مِن رَّسُولٍ إِلَّا نُوحِيٓ إِلَيهِ أَنَّهُۥ لَآ إِلَٰهَ إِلَّآ أَنَا۠ فَٱعبُدُونِ")
                 }
 
                 Section(header: ArticleHeader("VERSIONS")) {
@@ -994,10 +994,10 @@ struct ShahadahView: View {
                 Section(header: ArticleHeader("SIGNIFICANCE")) {
                     Text(verbatim: "Pronouncing the Shahadah with sincere faith confirms Tawhid (absolute monotheism) and the acceptance of Muhammad (peace and blessings be upon him) as the final Prophet. Allah (Glorified and Exalted be He) says in the Quran:")
                         .font(.body)
-                    ScriptureQuote(text: "“So know [O Muhammad], that there is no deity except Allah” (Quran 47:19).", arabic: "فَٱعۡلَمۡ أَنَّهُۥ لَآ إِلَٰهَ إِلَّا ٱللَّهُ")
+                    ScriptureQuote(text: "“So know [O Muhammad], that there is no deity except Allah” (Quran 47:19).", arabic: "فَٱعلَم أَنَّهُۥ لَآ إِلَٰهَ إِلَّا ٱللَّهُ")
 
                     Text(verbatim: "The Prophet (peace and blessings be upon him) said:").font(.body)
-                    ScriptureQuote(text: "“He who died knowing (fully well) that there is no god but Allah entered Paradise” (Sahih Muslim 26).", arabic: "مَنْ مَاتَ وَهُوَ يَعْلَمُ أَنَّهُ لاَ إِلَهَ إِلاَّ اللَّهُ دَخَلَ الْجَنَّةَ", dimmed: true)
+                    ScriptureQuote(text: "“He who died knowing (fully well) that there is no god but Allah entered Paradise” (Sahih Muslim 26).", arabic: "مَن مَاتَ وَهُوَ يَعلَمُ أَنَّهُ لاَ إِلَهَ إِلاَّ اللَّهُ دَخَلَ الجَنَّةَ", dimmed: true)
 
                     Text(verbatim: "The Shahadah is a lifelong declaration of faith and is recited during the daily prayers, serving as a constant reminder of a Muslim's commitment to Allah and His messenger.")
                         .font(.body)
@@ -1031,7 +1031,7 @@ struct SalahView: View {
                         .font(.body)
 
                     Text(verbatim: "Allah (Glorified and Exalted be He) says in the Quran:").font(.body)
-                    ScriptureQuote(text: "“Indeed, I am Allah. There is no deity except Me, so worship Me and establish prayer for My remembrance” (Quran 20:14).", arabic: "إِنَّنِيٓ أَنَا ٱللَّهُ لَآ إِلَٰهَ إِلَّآ أَنَا۠ فَٱعۡبُدۡنِي وَأَقِمِ ٱلصَّلَوٰةَ لِذِكۡرِيٓ")
+                    ScriptureQuote(text: "“Indeed, I am Allah. There is no deity except Me, so worship Me and establish prayer for My remembrance” (Quran 20:14).", arabic: "إِنَّنِيٓ أَنَا ٱللَّهُ لَآ إِلَٰهَ إِلَّآ أَنَا۠ فَٱعبُدنِي وَأَقِمِ ٱلصَّلَوٰةَ لِذِكرِيٓ")
                 }
 
                 Section(header: ArticleHeader("TIMINGS")) {
@@ -1043,7 +1043,7 @@ struct SalahView: View {
                     Text(articleMarkdown: "5. **Isha (Night):** Performed in the late evening.").font(.body)
 
                     Text(verbatim: "Allah (Glorified and Exalted be He) says in the Quran:").font(.body)
-                    ScriptureQuote(text: "“Indeed, prayer has been decreed upon the believers a decree of specified times” (Quran 4:103).", arabic: "إِنَّ ٱلصَّلَوٰةَ كَانَتۡ عَلَى ٱلۡمُؤۡمِنِينَ كِتَٰبٗا مَّوۡقُوتٗا")
+                    ScriptureQuote(text: "“Indeed, prayer has been decreed upon the believers a decree of specified times” (Quran 4:103).", arabic: "إِنَّ ٱلصَّلَوٰةَ كَانَت عَلَى ٱلمُؤمِنِينَ كِتَٰبٗا مَّوقُوتٗا")
                 }
 
                 Section(header: ArticleHeader("NUMBER OF UNITS (RAKAH)")) {
@@ -1057,7 +1057,7 @@ struct SalahView: View {
 
                 Section(header: ArticleHeader("HOW TO PRAY")) {
                     Text(verbatim: "The Prophet (peace and blessings be upon him) instructed:").font(.body)
-                    ScriptureQuote(text: "“Pray as you have seen me praying” (Sahih al-Bukhari 631).", arabic: "وَصَلُّوا كَمَا رَأَيْتُمُونِي أُصَلِّي", dimmed: true)
+                    ScriptureQuote(text: "“Pray as you have seen me praying” (Sahih al-Bukhari 631).", arabic: "وَصَلُّوا كَمَا رَأَيتُمُونِي أُصَلِّي", dimmed: true)
                     Text(articleMarkdown: "Facing the Qibla, with the **Niyyah (نِيَّة)**, the intention, settled in the heart, the prayer proceeds as follows (the opening takbir with the hands raised and the opening supplication belong to the first rak'ah only; every later rak'ah begins from the recitation):").font(.body)
                     Text(articleMarkdown: "1. **Takbir (تَكبِير)**: raise the hands and say “Allahu Akbar” (Allah is the Greatest), then place the right hand over the left upon the chest.").font(.body)
                     Text(articleMarkdown: "2. **Recitation**: in the first rak'ah recite the opening supplication (Sahih al-Bukhari 744), then Surah **Al-Fatiha (الفَاتِحَة)**, obligatory in every rak'ah, followed by another passage of the Quran in the first two rak'ah.").font(.body)
@@ -1074,15 +1074,15 @@ struct SalahView: View {
                         .font(.body)
 
                     Text(verbatim: "Salah also serves as a means of expiation for minor sins. The Prophet Muhammad (peace and blessings be upon him) said:").font(.body)
-                    ScriptureQuote(text: "“The five (daily) prayers and from one Friday prayer to the (next) Friday prayer, and from Ramadhan to Ramadhan are expiations for the (sins) committed in between (their intervals) provided one shuns the major sins” (Sahih Muslim 233c).", arabic: "الصَّلَوَاتُ الْخَمْسُ وَالْجُمُعَةُ إِلَى الْجُمُعَةِ وَرَمَضَانُ إِلَى رَمَضَانَ مُكَفِّرَاتٌ مَا بَيْنَهُنَّ إِذَا اجْتَنَبَ الْكَبَائِرَ", dimmed: true)
+                    ScriptureQuote(text: "“The five (daily) prayers and from one Friday prayer to the (next) Friday prayer, and from Ramadhan to Ramadhan are expiations for the (sins) committed in between (their intervals) provided one shuns the major sins” (Sahih Muslim 233c).", arabic: "الصَّلَوَاتُ الخَمسُ وَالجُمُعَةُ إِلَى الجُمُعَةِ وَرَمَضَانُ إِلَى رَمَضَانَ مُكَفِّرَاتٌ مَا بَينَهُنَّ إِذَا اجتَنَبَ الكَبَائِرَ", dimmed: true)
                 }
 
                 Section(header: ArticleHeader("IMPORTANCE OF SALAH")) {
                     Text(verbatim: "Salah is the first deed for which a person will be held accountable on the Day of Judgment. The Prophet Muhammad (peace and blessings be upon him) said:").font(.body)
-                    ScriptureQuote(text: "“Indeed the first deed by which a servant will be called to account on the Day of Resurrection is his Salat. If it is complete, he is successful and saved, but if it is defective, he has failed and lost. So if something is deficient in his obligatory (prayers) then the Lord, Mighty and Sublime says: 'Look! Are there any voluntary (prayers) for my worshipper?' So with them, what was deficient in his obligatory (prayers) will be completed. Then the rest of his deeds will be treated like that” (Sunan al-Tirmidhi 413; graded sahih by al-Albani).", arabic: "إِنَّ أَوَّلَ مَا يُحَاسَبُ بِهِ الْعَبْدُ يَوْمَ الْقِيَامَةِ مِنْ عَمَلِهِ صَلاَتُهُ فَإِنْ صَلُحَتْ فَقَدْ أَفْلَحَ وَأَنْجَحَ وَإِنْ فَسَدَتْ فَقَدْ خَابَ وَخَسِرَ فَإِنِ انْتَقَصَ مِنْ فَرِيضَتِهِ شَيْءٌ قَالَ الرَّبُّ عَزَّ وَجَلَّ انْظُرُوا هَلْ لِعَبْدِي مِنْ تَطَوُّعٍ فَيُكَمَّلَ بِهَا مَا انْتَقَصَ مِنَ الْفَرِيضَةِ ثُمَّ يَكُونُ سَائِرُ عَمَلِهِ عَلَى ذَلِكَ", dimmed: true)
+                    ScriptureQuote(text: "“Indeed the first deed by which a servant will be called to account on the Day of Resurrection is his Salat. If it is complete, he is successful and saved, but if it is defective, he has failed and lost. So if something is deficient in his obligatory (prayers) then the Lord, Mighty and Sublime says: 'Look! Are there any voluntary (prayers) for my worshipper?' So with them, what was deficient in his obligatory (prayers) will be completed. Then the rest of his deeds will be treated like that” (Sunan al-Tirmidhi 413; graded sahih by al-Albani).", arabic: "إِنَّ أَوَّلَ مَا يُحَاسَبُ بِهِ العَبدُ يَومَ القِيَامَةِ مِن عَمَلِهِ صَلاَتُهُ فَإِن صَلُحَت فَقَد أَفلَحَ وَأَنجَحَ وَإِن فَسَدَت فَقَد خَابَ وَخَسِرَ فَإِنِ انتَقَصَ مِن فَرِيضَتِهِ شَيءٌ قَالَ الرَّبُّ عَزَّ وَجَلَّ انظُرُوا هَل لِعَبدِي مِن تَطَوُّعٍ فَيُكَمَّلَ بِهَا مَا انتَقَصَ مِنَ الفَرِيضَةِ ثُمَّ يَكُونُ سَائِرُ عَمَلِهِ عَلَى ذَلِكَ", dimmed: true)
 
                     Text(verbatim: "It is also a key to success in this life and the Hereafter. Allah (Glorified and Exalted be He) says:").font(.body)
-                    ScriptureQuote(text: "“Certainly will the believers have succeeded: They who are during their prayer humbly submissive” (Quran 23:1-2).", arabic: "قَدۡ أَفۡلَحَ ٱلۡمُؤۡمِنُونَ ۝ ٱلَّذِينَ هُمۡ فِي صَلَاتِهِمۡ خَٰشِعُونَ")
+                    ScriptureQuote(text: "“Certainly will the believers have succeeded: They who are during their prayer humbly submissive” (Quran 23:1-2).", arabic: "قَد أَفلَحَ ٱلمُؤمِنُونَ ۝ ٱلَّذِينَ هُم فِي صَلَاتِهِم خَٰشِعُونَ")
                 }
 
                 Section(header: ArticleHeader("IN SUMMARY")) {
@@ -1114,7 +1114,7 @@ struct SawmView: View {
 
                     Text(verbatim: "Fasting during the sacred month of Ramadan is obligatory for all adult Muslims who are physically and mentally capable. Allah (Glorified and Exalted be He) says in the Quran:")
                         .font(.body)
-                    ScriptureQuote(text: "“The month of Ramadhan [is that] in which was revealed the Qur'an, a guidance for the people and clear proofs of guidance and criterion” (Quran 2:185).", arabic: "شَهۡرُ رَمَضَانَ ٱلَّذِيٓ أُنزِلَ فِيهِ ٱلۡقُرۡءَانُ هُدٗى لِّلنَّاسِ وَبَيِّنَٰتٖ مِّنَ ٱلۡهُدَىٰ وَٱلۡفُرۡقَانِۚ")
+                    ScriptureQuote(text: "“The month of Ramadhan [is that] in which was revealed the Qur'an, a guidance for the people and clear proofs of guidance and criterion” (Quran 2:185).", arabic: "شَهرُ رَمَضَانَ ٱلَّذِيٓ أُنزِلَ فِيهِ ٱلقُرءَانُ هُدٗى لِّلنَّاسِ وَبَيِّنَٰتٖ مِّنَ ٱلهُدَىٰ وَٱلفُرقَانِۚ")
                 }
 
                 Section(header: ArticleHeader("PURPOSE")) {
@@ -1122,7 +1122,7 @@ struct SawmView: View {
                         .font(.body)
 
                     Text(verbatim: "Allah (Glorified and Exalted be He) says in the Quran:").font(.body)
-                    ScriptureQuote(text: "“O you who have believed, decreed upon you is fasting as it was decreed upon those before you that you may become righteous” (Quran 2:183).", arabic: "يَٰٓأَيُّهَا ٱلَّذِينَ ءَامَنُواْ كُتِبَ عَلَيۡكُمُ ٱلصِّيَامُ كَمَا كُتِبَ عَلَى ٱلَّذِينَ مِن قَبۡلِكُمۡ لَعَلَّكُمۡ تَتَّقُونَ")
+                    ScriptureQuote(text: "“O you who have believed, decreed upon you is fasting as it was decreed upon those before you that you may become righteous” (Quran 2:183).", arabic: "يَٰٓأَيُّهَا ٱلَّذِينَ ءَامَنُوا كُتِبَ عَلَيكُمُ ٱلصِّيَامُ كَمَا كُتِبَ عَلَى ٱلَّذِينَ مِن قَبلِكُم لَعَلَّكُم تَتَّقُونَ")
                 }
 
                 Section(header: ArticleHeader("METHOD")) {
@@ -1147,12 +1147,12 @@ struct SawmView: View {
                     Text(verbatim: "Sawm is a means of spiritual growth and self-discipline. It helps Muslims focus on worship, gratitude, and reliance on Allah (Glorified and Exalted be He). It also fosters empathy for the less fortunate and strengthens the sense of community. Prophet Muhammad (peace and blessings be upon him) said: ")
                         .font(.body)
 
-                    ScriptureQuote(text: "“Verily, the smell of the mouth of a fasting person is better to Allah than the smell of musk” (Sahih al-Bukhari 5927)", arabic: "وَلَخَلُوفُ فَمِ الصَّائِمِ أَطْيَبُ عِنْدَ اللَّهِ مِنْ رِيحِ الْمِسْكِ", dimmed: true)
+                    ScriptureQuote(text: "“Verily, the smell of the mouth of a fasting person is better to Allah than the smell of musk” (Sahih al-Bukhari 5927)", arabic: "وَلَخَلُوفُ فَمِ الصَّائِمِ أَطيَبُ عِندَ اللَّهِ مِن رِيحِ المِسكِ", dimmed: true)
                 }
 
                 Section(header: ArticleHeader("REWARDS OF FASTING")) {
                     Text(verbatim: "The Prophet Muhammad (peace and blessings be upon him) also said:").font(.body)
-                    ScriptureQuote(text: "“Whoever observes fasts during the month of Ramadan out of sincere faith, and hoping to attain Allah's rewards, then all his past sins will be forgiven” (Sahih al-Bukhari 38).", arabic: "مَنْ صَامَ رَمَضَانَ إِيمَانًا وَاحْتِسَابًا غُفِرَ لَهُ مَا تَقَدَّمَ مِنْ ذَنْبِهِ", dimmed: true)
+                    ScriptureQuote(text: "“Whoever observes fasts during the month of Ramadan out of sincere faith, and hoping to attain Allah's rewards, then all his past sins will be forgiven” (Sahih al-Bukhari 38).", arabic: "مَن صَامَ رَمَضَانَ إِيمَانًا وَاحتِسَابًا غُفِرَ لَهُ مَا تَقَدَّمَ مِن ذَنبِهِ", dimmed: true)
 
                     Text(verbatim: "Fasting is an act of worship that purifies the heart and brings immense spiritual rewards from Allah.")
                         .font(.body)
@@ -1163,7 +1163,7 @@ struct SawmView: View {
                         .font(.body)
 
                     Text(verbatim: "Allah (Glorified and Exalted be He) says in the Quran:").font(.body)
-                    ScriptureQuote(text: "“Indeed, We sent the Quran down during the Night of Decree. And what can make you know what is the Night of Decree? The Night of Decree is better than a thousand months” (Quran 97:1-3).", arabic: "إِنَّآ أَنزَلۡنَٰهُ فِي لَيۡلَةِ ٱلۡقَدۡرِ ۝ وَمَآ أَدۡرَىٰكَ مَا لَيۡلَةُ ٱلۡقَدۡرِ ۝ لَيۡلَةُ ٱلۡقَدۡرِ خَيۡرٞ مِّنۡ أَلۡفِ شَهۡرٖ")
+                    ScriptureQuote(text: "“Indeed, We sent the Quran down during the Night of Decree. And what can make you know what is the Night of Decree? The Night of Decree is better than a thousand months” (Quran 97:1-3).", arabic: "إِنَّآ أَنزَلنَٰهُ فِي لَيلَةِ ٱلقَدرِ ۝ وَمَآ أَدرَىٰكَ مَا لَيلَةُ ٱلقَدرِ ۝ لَيلَةُ ٱلقَدرِ خَيرٞ مِّن أَلفِ شَهرٖ")
                 }
 
                 Section(header: ArticleHeader("IN SUMMARY")) {
@@ -1194,7 +1194,7 @@ struct ZakahView: View {
                         .font(.body)
 
                     Text(verbatim: "Allah (Glorified and Exalted be He) says in the Quran:").font(.body)
-                    ScriptureQuote(text: "“Take, [O, Muhammad], from their wealth a charity by which you purify them and cause them increase, and invoke [Allah 's blessings] upon them. Indeed, your invocations are reassurance for them. And Allah is Hearing and Knowing” (Quran 9:103).", arabic: "خُذۡ مِنۡ أَمۡوَٰلِهِمۡ صَدَقَةٗ تُطَهِّرُهُمۡ وَتُزَكِّيهِم بِهَا وَصَلِّ عَلَيۡهِمۡۖ إِنَّ صَلَوٰتَكَ سَكَنٞ لَّهُمۡۗ وَٱللَّهُ سَمِيعٌ عَلِيمٌ")
+                    ScriptureQuote(text: "“Take, [O, Muhammad], from their wealth a charity by which you purify them and cause them increase, and invoke [Allah 's blessings] upon them. Indeed, your invocations are reassurance for them. And Allah is Hearing and Knowing” (Quran 9:103).", arabic: "خُذ مِن أَموَٰلِهِم صَدَقَةٗ تُطَهِّرُهُم وَتُزَكِّيهِم بِهَا وَصَلِّ عَلَيهِمۖ إِنَّ صَلَوٰتَكَ سَكَنٞ لَّهُمۗ وَٱللَّهُ سَمِيعٌ عَلِيمٌ")
                 }
 
                 Section(header: ArticleHeader("PURPOSE")) {
@@ -1209,7 +1209,7 @@ struct ZakahView: View {
                         .font(.body)
 
                     Text(verbatim: "Allah (Glorified and Exalted be He) specifies eight categories of Zakah recipients in the Quran:").font(.body)
-                    ScriptureQuote(text: "“Zakah expenditures are only for the poor and for the needy and for those employed to collect [zakah] and for bringing hearts together [for Islam] and for freeing captives [or slaves] and for those in debt and for the cause of Allah and for the [stranded] traveler” (Quran 9:60).", arabic: "إِنَّمَا ٱلصَّدَقَٰتُ لِلۡفُقَرَآءِ وَٱلۡمَسَٰكِينِ وَٱلۡعَٰمِلِينَ عَلَيۡهَا وَٱلۡمُؤَلَّفَةِ قُلُوبُهُمۡ وَفِي ٱلرِّقَابِ وَٱلۡغَٰرِمِينَ وَفِي سَبِيلِ ٱللَّهِ وَٱبۡنِ ٱلسَّبِيلِۖ")
+                    ScriptureQuote(text: "“Zakah expenditures are only for the poor and for the needy and for those employed to collect [zakah] and for bringing hearts together [for Islam] and for freeing captives [or slaves] and for those in debt and for the cause of Allah and for the [stranded] traveler” (Quran 9:60).", arabic: "إِنَّمَا ٱلصَّدَقَٰتُ لِلفُقَرَآءِ وَٱلمَسَٰكِينِ وَٱلعَٰمِلِينَ عَلَيهَا وَٱلمُؤَلَّفَةِ قُلُوبُهُم وَفِي ٱلرِّقَابِ وَٱلغَٰرِمِينَ وَفِي سَبِيلِ ٱللَّهِ وَٱبنِ ٱلسَّبِيلِۖ")
                 }
 
                 Section(header: ArticleHeader("CALCULATION")) {
@@ -1221,10 +1221,10 @@ struct ZakahView: View {
 
                 Section(header: ArticleHeader("REWARDS OF ZAKAH")) {
                     Text(verbatim: "The Prophet Muhammad (peace and blessings be upon him) said:").font(.body)
-                    ScriptureQuote(text: "“Charity does not decrease wealth, no one forgives another except that Allah increases his honor, and no one humbles himself for the sake of Allah except that Allah raises his status” (Sahih Muslim 2588).", arabic: "مَا نَقَصَتْ صَدَقَةٌ مِنْ مَالٍ وَمَا زَادَ اللَّهُ عَبْدًا بِعَفْوٍ إِلاَّ عِزًّا وَمَا تَوَاضَعَ أَحَدٌ لِلَّهِ إِلاَّ رَفَعَهُ اللَّهُ", dimmed: true)
+                    ScriptureQuote(text: "“Charity does not decrease wealth, no one forgives another except that Allah increases his honor, and no one humbles himself for the sake of Allah except that Allah raises his status” (Sahih Muslim 2588).", arabic: "مَا نَقَصَت صَدَقَةٌ مِن مَالٍ وَمَا زَادَ اللَّهُ عَبدًا بِعَفوٍ إِلاَّ عِزًّا وَمَا تَوَاضَعَ أَحَدٌ لِلَّهِ إِلاَّ رَفَعَهُ اللَّهُ", dimmed: true)
 
                     Text(verbatim: "He also said:").font(.body)
-                    ScriptureQuote(text: "“Save yourself from Hell-fire even by giving half a date-fruit in charity” (Sahih al-Bukhari 1417).", arabic: "اتَّقُوا النَّارَ وَلَوْ بِشِقِّ تَمْرَةٍ", dimmed: true)
+                    ScriptureQuote(text: "“Save yourself from Hell-fire even by giving half a date-fruit in charity” (Sahih al-Bukhari 1417).", arabic: "اتَّقُوا النَّارَ وَلَو بِشِقِّ تَمرَةٍ", dimmed: true)
 
                     Text(verbatim: "Fulfilling the obligation of Zakah not only earns Allah’s pleasure but also protects one’s soul and wealth from harm.")
                         .font(.body)
@@ -1264,7 +1264,7 @@ struct HajjView: View {
                 Section(header: ArticleHeader("OBLIGATION")) {
                     Text(verbatim: "Hajj is mandatory for every Muslim who is physically and financially capable at least once in their lifetime. Allah (Glorified and Exalted be He) says in the Quran:")
                         .font(.body)
-                    ScriptureQuote(text: "“And [due] to Allah from the people is a pilgrimage to the House – for whoever is able to find thereto a way. But whoever disbelieves – then indeed, Allah is free from need of the worlds” (Quran 3:97).", arabic: "وَلِلَّهِ عَلَى ٱلنَّاسِ حِجُّ ٱلۡبَيۡتِ مَنِ ٱسۡتَطَاعَ إِلَيۡهِ سَبِيلٗاۚ وَمَن كَفَرَ فَإِنَّ ٱللَّهَ غَنِيٌّ عَنِ ٱلۡعَٰلَمِينَ")
+                    ScriptureQuote(text: "“And [due] to Allah from the people is a pilgrimage to the House – for whoever is able to find thereto a way. But whoever disbelieves – then indeed, Allah is free from need of the worlds” (Quran 3:97).", arabic: "وَلِلَّهِ عَلَى ٱلنَّاسِ حِجُّ ٱلبَيتِ مَنِ ٱستَطَاعَ إِلَيهِ سَبِيلٗاۚ وَمَن كَفَرَ فَإِنَّ ٱللَّهَ غَنِيٌّ عَنِ ٱلعَٰلَمِينَ")
 
                     Text(verbatim: "Hajj is both a personal and communal act of worship, emphasizing the importance of fulfilling one's obligations to Allah and the global Muslim community.")
                         .font(.body)
@@ -1276,7 +1276,7 @@ struct HajjView: View {
 
                     Text(verbatim: "Prophet Ibrahim (peace be upon him) and Prophet Ismail (peace be upon him) were commanded by Allah to build the Kaaba, the sacred House of Allah. Allah says in the Quran:")
                         .font(.body)
-                    ScriptureQuote(text: "“And [mention] when Abraham was raising the foundations of the House and [with him] Ishmael, [saying], ‘Our Lord, accept [this] from us. Indeed You are the Hearing, the Knowing.’” (Quran 2:127).", arabic: "وَإِذۡ يَرۡفَعُ إِبۡرَٰهِـۧمُ ٱلۡقَوَاعِدَ مِنَ ٱلۡبَيۡتِ وَإِسۡمَٰعِيلُ رَبَّنَا تَقَبَّلۡ مِنَّآۖ إِنَّكَ أَنتَ ٱلسَّمِيعُ ٱلۡعَلِيمُ")
+                    ScriptureQuote(text: "“And [mention] when Abraham was raising the foundations of the House and [with him] Ishmael, [saying], ‘Our Lord, accept [this] from us. Indeed You are the Hearing, the Knowing.’” (Quran 2:127).", arabic: "وَإِذ يَرفَعُ إِبرَٰهِـۧمُ ٱلقَوَاعِدَ مِنَ ٱلبَيتِ وَإِسمَٰعِيلُ رَبَّنَا تَقَبَّل مِنَّآۖ إِنَّكَ أَنتَ ٱلسَّمِيعُ ٱلعَلِيمُ")
 
                     Text(verbatim: "The rituals of Hajj also commemorate Hajar's (may Allah be pleased with her) trust in Allah as she searched for water for her infant son, Ismail. Her desperate search between the hills of Safa and Marwah is reenacted during Hajj as the Sa’i.")
                         .font(.body)
@@ -1298,7 +1298,7 @@ struct HajjView: View {
                         .font(.body)
 
                     Text(verbatim: "The Prophet Muhammad (peace and blessings be upon him) said:").font(.body)
-                    ScriptureQuote(text: "“Whoever performs Hajj for Allah's pleasure and does not have sexual relations with his wife, and does not do evil or sins then he will return (after Hajj free from all sins) as if he were born anew” (Sahih al-Bukhari 1521).", arabic: "مَنْ حَجَّ لِلَّهِ فَلَمْ يَرْفُثْ وَلَمْ يَفْسُقْ رَجَعَ كَيَوْمِ وَلَدَتْهُ أُمُّهُ", dimmed: true)
+                    ScriptureQuote(text: "“Whoever performs Hajj for Allah's pleasure and does not have sexual relations with his wife, and does not do evil or sins then he will return (after Hajj free from all sins) as if he were born anew” (Sahih al-Bukhari 1521).", arabic: "مَن حَجَّ لِلَّهِ فَلَم يَرفُث وَلَم يَفسُق رَجَعَ كَيَومِ وَلَدَتهُ أُمُّهُ", dimmed: true)
                 }
 
                 Section(header: ArticleHeader("CONCLUSION")) {
@@ -1306,7 +1306,7 @@ struct HajjView: View {
                         .font(.body)
 
                     Text(verbatim: "Allah says in the Quran:").font(.body)
-                    ScriptureQuote(text: "“And proclaim to the people the Hajj [pilgrimage]; they will come to you on foot and on every lean camel; they will come from every distant pass” (Quran 22:27).", arabic: "وَأَذِّن فِي ٱلنَّاسِ بِٱلۡحَجِّ يَأۡتُوكَ رِجَالٗا وَعَلَىٰ كُلِّ ضَامِرٖ يَأۡتِينَ مِن كُلِّ فَجٍّ عَمِيقٖ")
+                    ScriptureQuote(text: "“And proclaim to the people the Hajj [pilgrimage]; they will come to you on foot and on every lean camel; they will come from every distant pass” (Quran 22:27).", arabic: "وَأَذِّن فِي ٱلنَّاسِ بِٱلحَجِّ يَأتُوكَ رِجَالٗا وَعَلَىٰ كُلِّ ضَامِرٖ يَأتِينَ مِن كُلِّ فَجٍّ عَمِيقٖ")
                 }
 
                 Section(header: ArticleHeader("IN SUMMARY")) {
@@ -1337,7 +1337,7 @@ struct GodView: View {
                 Section(header: ArticleHeader("OVERVIEW")) {
                     Text(articleMarkdown: "Belief in Allah (Glorified and Exalted be He), the One and Only God, is the core of Islamic faith, **Iman (إِيمَان)**. He is the Creator and Sustainer of the entire universe. He is eternal, self-sustaining, and has no equal. Allah (Glorified and Exalted be He) says in the Quran:")
                         .font(.body)
-                    ScriptureQuote(text: "“Say, ‘He is Allah, [who is] One, Allah, the Eternal Refuge. He neither begets nor is born, nor is there to Him any equivalent.’” (Quran 112:1-4)", arabic: "قُلۡ هُوَ ٱللَّهُ أَحَدٌ ۝ ٱللَّهُ ٱلصَّمَدُ ۝ لَمۡ يَلِدۡ وَلَمۡ يُولَدۡ ۝ وَلَمۡ يَكُن لَّهُۥ كُفُوًا أَحَدُۢ")
+                    ScriptureQuote(text: "“Say, ‘He is Allah, [who is] One, Allah, the Eternal Refuge. He neither begets nor is born, nor is there to Him any equivalent.’” (Quran 112:1-4)", arabic: "قُل هُوَ ٱللَّهُ أَحَدٌ ۝ ٱللَّهُ ٱلصَّمَدُ ۝ لَم يَلِد وَلَم يُولَد ۝ وَلَم يَكُن لَّهُۥ كُفُوًا أَحَدُۢ")
 
                     Text(articleMarkdown: "This chapter, **Surah Al-Ikhlas (الإِخلَاص)**, summarizes Allah’s Oneness and clarifies that He does not share His divine attributes with any of His creation. Muslims affirm that He is All-Knowing, All-Merciful, and above all limitations.")
                         .font(.body)
@@ -1357,15 +1357,15 @@ struct GodView: View {
                 Section(header: ArticleHeader("QURANIC EVIDENCE")) {
                     Text(verbatim: "Allah (Glorified and Exalted be He) repeatedly emphasizes His Oneness and supremacy in the Quran. He says:")
                         .font(.body)
-                    ScriptureQuote(text: "“Allah - there is no deity except Him, the Ever-Living, the Sustainer of [all] existence. Neither drowsiness overtakes Him nor sleep. To Him belongs whatever is in the heavens and whatever is on the earth” (Quran 2:255, Ayat al-Kursi).", arabic: "ٱللَّهُ لَآ إِلَٰهَ إِلَّا هُوَ ٱلۡحَيُّ ٱلۡقَيُّومُۚ لَا تَأۡخُذُهُۥ سِنَةٞ وَلَا نَوۡمٞۚ لَّهُۥ مَا فِي ٱلسَّمَٰوَٰتِ وَمَا فِي ٱلۡأَرۡضِۗ")
+                    ScriptureQuote(text: "“Allah - there is no deity except Him, the Ever-Living, the Sustainer of [all] existence. Neither drowsiness overtakes Him nor sleep. To Him belongs whatever is in the heavens and whatever is on the earth” (Quran 2:255, Ayat al-Kursi).", arabic: "ٱللَّهُ لَآ إِلَٰهَ إِلَّا هُوَ ٱلحَيُّ ٱلقَيُّومُۚ لَا تَأخُذُهُۥ سِنَةٞ وَلَا نَومٞۚ لَّهُۥ مَا فِي ٱلسَّمَٰوَٰتِ وَمَا فِي ٱلأَرضِۗ")
 
-                    ScriptureQuote(text: "“And your god is one God. There is no deity [worthy of worship] except Him, the Entirely Merciful, the Especially Merciful” (Quran 2:163).", arabic: "وَإِلَٰهُكُمۡ إِلَٰهٞ وَٰحِدٞۖ لَّآ إِلَٰهَ إِلَّا هُوَ ٱلرَّحۡمَٰنُ ٱلرَّحِيمُ")
+                    ScriptureQuote(text: "“And your god is one God. There is no deity [worthy of worship] except Him, the Entirely Merciful, the Especially Merciful” (Quran 2:163).", arabic: "وَإِلَٰهُكُم إِلَٰهٞ وَٰحِدٞۖ لَّآ إِلَٰهَ إِلَّا هُوَ ٱلرَّحمَٰنُ ٱلرَّحِيمُ")
                 }
 
                 Section(header: ArticleHeader("HADITH ON BELIEF IN ALLAH")) {
                     Text(verbatim: "The Prophet Muhammad (peace and blessings be upon him) explained the essence of belief in Allah. He said:")
                         .font(.body)
-                    ScriptureQuote(text: "“Inform me about Iman (faith). He (the Holy Prophet) replied: That you affirm your faith in Allah, in His angels, in His Books, in His Apostles, in the Day of Judgment, and you affirm your faith in the Divine Decree about good and evil” (Sahih Muslim 8a).", arabic: "أَنْ تُؤْمِنَ بِاللَّهِ وَمَلاَئِكَتِهِ وَكُتُبِهِ وَرُسُلِهِ وَالْيَوْمِ الآخِرِ وَتُؤْمِنَ بِالْقَدَرِ خَيْرِهِ وَشَرِّهِ", dimmed: true)
+                    ScriptureQuote(text: "“Inform me about Iman (faith). He (the Holy Prophet) replied: That you affirm your faith in Allah, in His angels, in His Books, in His Apostles, in the Day of Judgment, and you affirm your faith in the Divine Decree about good and evil” (Sahih Muslim 8a).", arabic: "أَن تُؤمِنَ بِاللَّهِ وَمَلاَئِكَتِهِ وَكُتُبِهِ وَرُسُلِهِ وَاليَومِ الآخِرِ وَتُؤمِنَ بِالقَدَرِ خَيرِهِ وَشَرِّهِ", dimmed: true)
                 }
 
                 Section(header: ArticleHeader("IMPORTANCE OF BELIEF IN ALLAH")) {
@@ -1404,7 +1404,7 @@ struct AngelsView: View {
                         .font(.body)
 
                     Text(verbatim: "The Prophet Muhammad (peace and blessings be upon him) said:").font(.body)
-                    ScriptureQuote(text: "“The Angels were born out of light” (Sahih Muslim 2996).", arabic: "خُلِقَتِ الْمَلاَئِكَةُ مِنْ نُورٍ وَخُلِقَ الْجَانُّ مِنْ مَارِجٍ مِنْ نَارٍ وَخُلِقَ آدَمُ مِمَّا وُصِفَ لَكُمْ", dimmed: true)
+                    ScriptureQuote(text: "“The Angels were born out of light” (Sahih Muslim 2996).", arabic: "خُلِقَتِ المَلاَئِكَةُ مِن نُورٍ وَخُلِقَ الجَانُّ مِن مَارِجٍ مِن نَارٍ وَخُلِقَ آدَمُ مِمَّا وُصِفَ لَكُم", dimmed: true)
                 }
 
                 Section(header: ArticleHeader("CHARACTERISTICS OF ANGELS")) {
@@ -1415,7 +1415,7 @@ struct AngelsView: View {
                         .font(.body)
                     Text(articleMarkdown: "2. **Infallible Obedience**: They never disobey Allah and do exactly as commanded. Allah says in the Quran:")
                         .font(.body)
-                    ScriptureQuote(text: "“They do not disobey Allah in what He commands them but do what they are commanded” (Quran 66:6).", arabic: "لَّا يَعۡصُونَ ٱللَّهَ مَآ أَمَرَهُمۡ وَيَفۡعَلُونَ مَا يُؤۡمَرُونَ")
+                    ScriptureQuote(text: "“They do not disobey Allah in what He commands them but do what they are commanded” (Quran 66:6).", arabic: "لَّا يَعصُونَ ٱللَّهَ مَآ أَمَرَهُم وَيَفعَلُونَ مَا يُؤمَرُونَ")
                     Text(articleMarkdown: "3. **Invisible to Humans**: Although normally unseen, they can appear in human form, as Angel Jibril (Gabriel) did when he visited the Prophet Muhammad (peace and blessings be upon him).")
                         .font(.body)
                     Text(articleMarkdown: "4. **Lack of Free Will**: Angels exist solely to serve Allah and cannot deviate from their roles.")
@@ -1428,7 +1428,7 @@ struct AngelsView: View {
 
                     Text(articleMarkdown: "1. **Jibril (Gabriel)**: The angel of revelation who conveyed Allah’s messages to the prophets, including the Quran to Prophet Muhammad (peace and blessings be upon him). Allah says:")
                         .font(.body)
-                    ScriptureQuote(text: "“Say, ‘Whoever is an enemy to Gabriel - it is [none but] he who has brought the Qur'an down upon your heart, [O Muhammad], by permission of Allah, confirming that which was before it and as guidance and good tidings for the believers.’” (Quran 2:97)", arabic: "قُلۡ مَن كَانَ عَدُوّٗا لِّـجِبۡرِيلَ فَإِنَّهُۥ نَزَّلَهُۥ عَلَىٰ قَلۡبِكَ بِإِذۡنِ ٱللَّهِ")
+                    ScriptureQuote(text: "“Say, ‘Whoever is an enemy to Gabriel - it is [none but] he who has brought the Qur'an down upon your heart, [O Muhammad], by permission of Allah, confirming that which was before it and as guidance and good tidings for the believers.’” (Quran 2:97)", arabic: "قُل مَن كَانَ عَدُوّٗا لِّـجِبرِيلَ فَإِنَّهُۥ نَزَّلَهُۥ عَلَىٰ قَلبِكَ بِإِذنِ ٱللَّهِ")
 
                     Text(articleMarkdown: "2. **Mikail (مِيكَائِيل)**, Michael: Responsible for provisions, including rain and sustenance.")
                         .font(.body)
@@ -1438,18 +1438,18 @@ struct AngelsView: View {
 
                     Text(articleMarkdown: "4. **Malik (مَالِك)**: The guardian of Hellfire. Allah says:")
                         .font(.body)
-                    ScriptureQuote(text: "“And they will call, ‘O Malik, let your Lord put an end to us!’ He will say, ‘Indeed, you will remain.’” (Quran 43:77)", arabic: "وَنَادَوۡاْ يَٰمَٰلِكُ لِيَقۡضِ عَلَيۡنَا رَبُّكَۖ قَالَ إِنَّكُم مَّٰكِثُونَ")
+                    ScriptureQuote(text: "“And they will call, ‘O Malik, let your Lord put an end to us!’ He will say, ‘Indeed, you will remain.’” (Quran 43:77)", arabic: "وَنَادَوا يَٰمَٰلِكُ لِيَقضِ عَلَينَا رَبُّكَۖ قَالَ إِنَّكُم مَّٰكِثُونَ")
 
                     Text(articleMarkdown: "5. **Kiraman Katibin (كِرَامًا كَاتِبِين)**: Angels who record every deed:")
                         .font(.body)
-                    ScriptureQuote(text: "“Man does not utter any word except that with him is an observer prepared [to record]” (Quran 50:18).", arabic: "مَّا يَلۡفِظُ مِن قَوۡلٍ إِلَّا لَدَيۡهِ رَقِيبٌ عَتِيدٞ")
+                    ScriptureQuote(text: "“Man does not utter any word except that with him is an observer prepared [to record]” (Quran 50:18).", arabic: "مَّا يَلفِظُ مِن قَولٍ إِلَّا لَدَيهِ رَقِيبٌ عَتِيدٞ")
 
                     Text(articleMarkdown: "6. **Munkar and Nakir (مُنكَر وَنَكِير)**: Angels who question the deceased in their graves about their faith. The Prophet (peace and blessings be upon him) named them in the hadith of the questioning in the grave (Jami' at-Tirmidhi 1071; graded hasan by al-Albani).")
                         .font(.body)
 
                     Text(articleMarkdown: "7. **The Keeper of Paradise (خَازِن الجَنَّة)**: an angel appointed over its gates. The authentic hadith calls him only “the keeper”; the name “Ridwan” is widely known among later scholars but is not established in the Quran or the authentic Sunnah. The Prophet (peace and blessings be upon him) said:")
                         .font(.body)
-                    ScriptureQuote(text: "“I will come to the gate of Paradise on the Day of Resurrection. and would seek its opening. and the keeper would say: Who art thou? I would say: Muhammad. He would then say: It is for thee that I have been ordered, and not to open it for anyone before thee” (Sahih Muslim 197).", arabic: "آتِي بَابَ الْجَنَّةِ يَوْمَ الْقِيَامَةِ فَأَسْتَفْتِحُ فَيَقُولُ الْخَازِنُ مَنْ أَنْتَ فَأَقُولُ مُحَمَّدٌ. فَيَقُولُ بِكَ أُمِرْتُ لاَ أَفْتَحُ لأَحَدٍ قَبْلَكَ", dimmed: true)
+                    ScriptureQuote(text: "“I will come to the gate of Paradise on the Day of Resurrection. and would seek its opening. and the keeper would say: Who art thou? I would say: Muhammad. He would then say: It is for thee that I have been ordered, and not to open it for anyone before thee” (Sahih Muslim 197).", arabic: "آتِي بَابَ الجَنَّةِ يَومَ القِيَامَةِ فَأَستَفتِحُ فَيَقُولُ الخَازِنُ مَن أَنتَ فَأَقُولُ مُحَمَّدٌ. فَيَقُولُ بِكَ أُمِرتُ لاَ أَفتَحُ لأَحَدٍ قَبلَكَ", dimmed: true)
                 }
 
                 Section(header: ArticleHeader("IMPORTANCE OF BELIEF IN ANGELS")) {
@@ -1466,7 +1466,7 @@ struct AngelsView: View {
 
                 Section(header: ArticleHeader("HADITH ON ANGELS")) {
                     Text(verbatim: "The Prophet Muhammad (peace and blessings be upon him) said:").font(.body)
-                    ScriptureQuote(text: "“If Allah loves a person, He calls Gabriel, saying, 'Allah loves so and so, O Gabriel love him' So Gabriel would love him and then would make an announcement in the Heavens: 'Allah has loved so and-so therefore you should love him also.' So all the dwellers of the Heavens would love him, and then he is granted the pleasure of the people on the earth” (Sahih al-Bukhari 7485).", arabic: "إِنَّ اللَّهَ تَبَارَكَ وَتَعَالَى إِذَا أَحَبَّ عَبْدًا نَادَى جِبْرِيلَ إِنَّ اللَّهَ قَدْ أَحَبَّ فُلاَنًا فَأَحِبَّهُ فَيُحِبُّهُ جِبْرِيلُ، ثُمَّ يُنَادِي جِبْرِيلُ فِي السَّمَاءِ إِنَّ اللَّهَ قَدْ أَحَبَّ فُلاَنًا فَأَحِبُّوهُ، فَيُحِبُّهُ أَهْلُ السَّمَاءِ وَيُوضَعُ لَهُ الْقَبُولُ فِي أَهْلِ الأَرْضِ", dimmed: true)
+                    ScriptureQuote(text: "“If Allah loves a person, He calls Gabriel, saying, 'Allah loves so and so, O Gabriel love him' So Gabriel would love him and then would make an announcement in the Heavens: 'Allah has loved so and-so therefore you should love him also.' So all the dwellers of the Heavens would love him, and then he is granted the pleasure of the people on the earth” (Sahih al-Bukhari 7485).", arabic: "إِنَّ اللَّهَ تَبَارَكَ وَتَعَالَى إِذَا أَحَبَّ عَبدًا نَادَى جِبرِيلَ إِنَّ اللَّهَ قَد أَحَبَّ فُلاَنًا فَأَحِبَّهُ فَيُحِبُّهُ جِبرِيلُ، ثُمَّ يُنَادِي جِبرِيلُ فِي السَّمَاءِ إِنَّ اللَّهَ قَد أَحَبَّ فُلاَنًا فَأَحِبُّوهُ، فَيُحِبُّهُ أَهلُ السَّمَاءِ وَيُوضَعُ لَهُ القَبُولُ فِي أَهلِ الأَرضِ", dimmed: true)
                 }
 
                 Section(header: ArticleHeader("CONCLUSION")) {
@@ -1502,7 +1502,7 @@ struct BooksView: View {
                         .font(.body)
 
                     Text(verbatim: "Allah (Glorified and Exalted be He) says in the Quran:").font(.body)
-                    ScriptureQuote(text: "“Indeed, We sent down the Torah, in which was guidance and light” (Quran 5:44).", arabic: "إِنَّآ أَنزَلۡنَا ٱلتَّوۡرَىٰةَ فِيهَا هُدٗى وَنُورٞۚ")
+                    ScriptureQuote(text: "“Indeed, We sent down the Torah, in which was guidance and light” (Quran 5:44).", arabic: "إِنَّآ أَنزَلنَا ٱلتَّورَىٰةَ فِيهَا هُدٗى وَنُورٞۚ")
 
                     Text(verbatim: "Each scripture served as a guide for its respective nation and time, culminating in the Quran, which is the final and universal revelation.")
                         .font(.body)
@@ -1511,7 +1511,7 @@ struct BooksView: View {
                 Section(header: ArticleHeader("THE QURAN")) {
                     Text(articleMarkdown: "The **Quran (القُرآن)**, meaning “the Recitation,” is the final and complete revelation from Allah, sent to all of humanity through the Prophet Muhammad (peace and blessings be upon him). It is preserved word for word, as Allah has promised:")
                         .font(.body)
-                    ScriptureQuote(text: "“Indeed, it is We who sent down the Quran and indeed, We will be its guardian” (Quran 15:9).", arabic: "إِنَّا نَحۡنُ نَزَّلۡنَا ٱلذِّكۡرَ وَإِنَّا لَهُۥ لَحَٰفِظُونَ")
+                    ScriptureQuote(text: "“Indeed, it is We who sent down the Quran and indeed, We will be its guardian” (Quran 15:9).", arabic: "إِنَّا نَحنُ نَزَّلنَا ٱلذِّكرَ وَإِنَّا لَهُۥ لَحَٰفِظُونَ")
 
                     Text(verbatim: "The Quran confirms and corrects previous scriptures while providing comprehensive guidance for all aspects of life. It remains unchanged since its revelation and is recited, memorized, and revered by Muslims worldwide.")
                         .font(.body)
@@ -1531,12 +1531,12 @@ struct BooksView: View {
                         .font(.body)
 
                     Text(verbatim: "Allah (Glorified and Exalted be He) says:").font(.body)
-                    ScriptureQuote(text: "“Indeed, this is in the former scriptures, the scriptures of Abraham and Moses” (Quran 87:18-19).", arabic: "إِنَّ هَٰذَا لَفِي ٱلصُّحُفِ ٱلۡأُولَىٰ ۝ صُحُفِ إِبۡرَٰهِيمَ وَمُوسَىٰ")
+                    ScriptureQuote(text: "“Indeed, this is in the former scriptures, the scriptures of Abraham and Moses” (Quran 87:18-19).", arabic: "إِنَّ هَٰذَا لَفِي ٱلصُّحُفِ ٱلأُولَىٰ ۝ صُحُفِ إِبرَٰهِيمَ وَمُوسَىٰ")
                 }
 
                 Section(header: ArticleHeader("IMPORTANCE OF BELIEVING IN THE BOOKS")) {
                     Text(verbatim: "Belief in Allah’s books is a fundamental pillar of Iman (faith). The Prophet Muhammad (peace and blessings be upon him) said:").font(.body)
-                    ScriptureQuote(text: "“Inform me about Iman (faith). He (the Holy Prophet) replied: That you affirm your faith in Allah, in His angels, in His Books, in His Apostles, in the Day of Judgment, and you affirm your faith in the Divine Decree about good and evil” (Sahih Muslim 8a).", arabic: "أَنْ تُؤْمِنَ بِاللَّهِ وَمَلاَئِكَتِهِ وَكُتُبِهِ وَرُسُلِهِ وَالْيَوْمِ الآخِرِ وَتُؤْمِنَ بِالْقَدَرِ خَيْرِهِ وَشَرِّهِ", dimmed: true)
+                    ScriptureQuote(text: "“Inform me about Iman (faith). He (the Holy Prophet) replied: That you affirm your faith in Allah, in His angels, in His Books, in His Apostles, in the Day of Judgment, and you affirm your faith in the Divine Decree about good and evil” (Sahih Muslim 8a).", arabic: "أَن تُؤمِنَ بِاللَّهِ وَمَلاَئِكَتِهِ وَكُتُبِهِ وَرُسُلِهِ وَاليَومِ الآخِرِ وَتُؤمِنَ بِالقَدَرِ خَيرِهِ وَشَرِّهِ", dimmed: true)
 
                     Text(articleMarkdown: "Each scripture taught monotheism, **Tawhid (تَوحِيد)**, and righteousness, serving as a guide for the people of its time. The Quran, as the final revelation, is universal and timeless, applicable to all of humanity until the Day of Judgment.")
                         .font(.body)
@@ -1608,10 +1608,10 @@ struct ProphetsView: View {
                     .font(.body)
 
                     Text(verbatim: "Allah (Glorified and Exalted be He) says in the Quran:").font(.body)
-                    ScriptureQuote(text: "“And We gave to Abraham, Isaac and Jacob - all [of them] We guided. And Noah We guided before; and among his descendants, David and Solomon and Job and Joseph and Moses and Aaron. Thus do We reward the doers of good. And Zechariah and John and Jesus and Elias - and all were of the righteous” (Quran 6:84-85).", arabic: "وَوَهَبۡنَا لَهُۥٓ إِسۡحَٰقَ وَيَعۡقُوبَۚ كُلًّا هَدَيۡنَاۚ وَنُوحًا هَدَيۡنَا مِن قَبۡلُۖ وَمِن ذُرِّيَّتِهِۦ دَاوُۥدَ وَسُلَيۡمَٰنَ وَأَيُّوبَ وَيُوسُفَ وَمُوسَىٰ وَهَٰرُونَۚ وَكَذَٰلِكَ نَجۡزِي ٱلۡمُحۡسِنِينَ ۝ وَزَكَرِيَّا وَيَحۡيَىٰ وَعِيسَىٰ وَإِلۡيَاسَۖ كُلّٞ مِّنَ ٱلصَّٰلِحِينَ")
+                    ScriptureQuote(text: "“And We gave to Abraham, Isaac and Jacob - all [of them] We guided. And Noah We guided before; and among his descendants, David and Solomon and Job and Joseph and Moses and Aaron. Thus do We reward the doers of good. And Zechariah and John and Jesus and Elias - and all were of the righteous” (Quran 6:84-85).", arabic: "وَوَهَبنَا لَهُۥٓ إِسحَٰقَ وَيَعقُوبَۚ كُلًّا هَدَينَاۚ وَنُوحًا هَدَينَا مِن قَبلُۖ وَمِن ذُرِّيَّتِهِۦ دَاوُۥدَ وَسُلَيمَٰنَ وَأَيُّوبَ وَيُوسُفَ وَمُوسَىٰ وَهَٰرُونَۚ وَكَذَٰلِكَ نَجزِي ٱلمُحسِنِينَ ۝ وَزَكَرِيَّا وَيَحيَىٰ وَعِيسَىٰ وَإِليَاسَۖ كُلّٞ مِّنَ ٱلصَّٰلِحِينَ")
 
                     Text(verbatim: "Each prophet conveyed Allah’s guidance and served as role models for their people. While all prophets were sent to specific nations and times, Prophet Muhammad was sent as the final messenger for all of humanity. Allah (Glorified and Exalted be He) says in the Quran:").font(.body)
-                    ScriptureQuote(text: "“Muhammad is not the father of [any] one of your men, but [he is] the Messenger of Allah and last of the prophets” (Quran 33:40).", arabic: "مَّا كَانَ مُحَمَّدٌ أَبَآ أَحَدٖ مِّن رِّجَالِكُمۡ وَلَٰكِن رَّسُولَ ٱللَّهِ وَخَاتَمَ ٱلنَّبِيِّـۧنَۗ")
+                    ScriptureQuote(text: "“Muhammad is not the father of [any] one of your men, but [he is] the Messenger of Allah and last of the prophets” (Quran 33:40).", arabic: "مَّا كَانَ مُحَمَّدٌ أَبَآ أَحَدٖ مِّن رِّجَالِكُم وَلَٰكِن رَّسُولَ ٱللَّهِ وَخَاتَمَ ٱلنَّبِيِّـۧنَۗ")
                 }
 
                 Section(header: ArticleHeader("PROPHETS AND MESSENGERS")) {
@@ -1629,14 +1629,14 @@ struct ProphetsView: View {
                 Section(header: ArticleHeader("THE CHILDREN OF ISRAEL")) {
                     Text(articleMarkdown: "More prophets were sent to the **Children of Israel, Bani Israil (بَنِي إِسرَائِيل)**, than to any other people. Allah favoured them openly, and the Quran says so:")
                         .font(.body)
-                    ScriptureQuote(text: "“O Children of Israel, remember My favor that I have bestowed upon you and that I preferred you over the worlds” (Quran 2:47).", arabic: "يَٰبَنِيٓ إِسۡرَٰٓءِيلَ ٱذۡكُرُواْ نِعۡمَتِيَ ٱلَّتِيٓ أَنۡعَمۡتُ عَلَيۡكُمۡ وَأَنِّي فَضَّلۡتُكُمۡ عَلَى ٱلۡعَٰلَمِينَ")
+                    ScriptureQuote(text: "“O Children of Israel, remember My favor that I have bestowed upon you and that I preferred you over the worlds” (Quran 2:47).", arabic: "يَٰبَنِيٓ إِسرَٰٓءِيلَ ٱذكُرُوا نِعمَتِيَ ٱلَّتِيٓ أَنعَمتُ عَلَيكُم وَأَنِّي فَضَّلتُكُم عَلَى ٱلعَٰلَمِينَ")
 
                     Text(articleMarkdown: "That favour came with a **covenant, Mithaq (مِيثَاق)**: to worship Allah alone, to uphold the Torah, and to obey the prophets sent to them. The favour was never a birthright. It was a trust, and a trust can be broken.")
                         .font(.body)
 
                     Text(verbatim: "They broke it repeatedly. They worshipped the calf while Musa (peace be upon him) was away, they demanded to see Allah openly, they refused to enter the land they were commanded to enter, and they twisted the words of the scripture from their places. Worst of all, when the prophets came to them with what they did not want to hear, they rejected them, and they killed them. Allah says:")
                         .font(.body)
-                    ScriptureQuote(text: "“And they were covered with humiliation and poverty and returned with anger from Allah [upon them]. That was because they [repeatedly] disbelieved in the signs of Allah and killed the prophets without right. That was because they disobeyed and were [habitually] transgressing” (Quran 2:61).", arabic: "وَضُرِبَتۡ عَلَيۡهِمُ ٱلذِّلَّةُ وَٱلۡمَسۡكَنَةُ وَبَآءُو بِغَضَبٖ مِّنَ ٱللَّهِۚ ذَٰلِكَ بِأَنَّهُمۡ كَانُواْ يَكۡفُرُونَ بِـَٔايَٰتِ ٱللَّهِ وَيَقۡتُلُونَ ٱلنَّبِيِّـۧنَ بِغَيۡرِ ٱلۡحَقِّۚ ذَٰلِكَ بِمَا عَصَواْ وَّكَانُواْ يَعۡتَدُونَ")
+                    ScriptureQuote(text: "“And they were covered with humiliation and poverty and returned with anger from Allah [upon them]. That was because they [repeatedly] disbelieved in the signs of Allah and killed the prophets without right. That was because they disobeyed and were [habitually] transgressing” (Quran 2:61).", arabic: "وَضُرِبَت عَلَيهِمُ ٱلذِّلَّةُ وَٱلمَسكَنَةُ وَبَآءُو بِغَضَبٖ مِّنَ ٱللَّهِۚ ذَٰلِكَ بِأَنَّهُم كَانُوا يَكفُرُونَ بِـَٔايَٰتِ ٱللَّهِ وَيَقتُلُونَ ٱلنَّبِيِّـۧنَ بِغَيرِ ٱلحَقِّۚ ذَٰلِكَ بِمَا عَصَوا وَّكَانُوا يَعتَدُونَ")
 
                     Text(verbatim: "Historical reports mention Zakariya and Yahya (peace be upon them) among the prophets who were killed, and the Quran records their plot against Isa (peace be upon him), though Allah raised him to Himself and saved him from them.")
                         .font(.body)
@@ -1650,10 +1650,10 @@ struct ProphetsView: View {
 
                 Section(header: ArticleHeader("IMPORTANCE OF BELIEF IN PROPHETS")) {
                     Text(articleMarkdown: "Belief in the prophets is a pillar of **Iman (إِيمَان)**, faith. The Prophet Muhammad said:").font(.body)
-                    ScriptureQuote(text: "“Inform me about Iman (faith). He (the Holy Prophet) replied: That you affirm your faith in Allah, in His angels, in His Books, in His Apostles, in the Day of Judgment, and you affirm your faith in the Divine Decree about good and evil” (Sahih Muslim 8a).", arabic: "أَنْ تُؤْمِنَ بِاللَّهِ وَمَلاَئِكَتِهِ وَكُتُبِهِ وَرُسُلِهِ وَالْيَوْمِ الآخِرِ وَتُؤْمِنَ بِالْقَدَرِ خَيْرِهِ وَشَرِّهِ", dimmed: true)
+                    ScriptureQuote(text: "“Inform me about Iman (faith). He (the Holy Prophet) replied: That you affirm your faith in Allah, in His angels, in His Books, in His Apostles, in the Day of Judgment, and you affirm your faith in the Divine Decree about good and evil” (Sahih Muslim 8a).", arabic: "أَن تُؤمِنَ بِاللَّهِ وَمَلاَئِكَتِهِ وَكُتُبِهِ وَرُسُلِهِ وَاليَومِ الآخِرِ وَتُؤمِنَ بِالقَدَرِ خَيرِهِ وَشَرِّهِ", dimmed: true)
 
                     Text(verbatim: "Muslims respect and honor all prophets equally, as they all conveyed the same message: to worship Allah alone. Allah (Glorified and Exalted be He) says:").font(.body)
-                    ScriptureQuote(text: "“The Messenger has believed in what was revealed to him from his Lord, and [so have] the believers. All of them have believed in Allah and His angels and His books and His messengers” (Quran 2:285).", arabic: "ءَامَنَ ٱلرَّسُولُ بِمَآ أُنزِلَ إِلَيۡهِ مِن رَّبِّهِۦ وَٱلۡمُؤۡمِنُونَۚ كُلٌّ ءَامَنَ بِٱللَّهِ وَمَلَٰٓئِكَتِهِۦ وَكُتُبِهِۦ وَرُسُلِهِۦ")
+                    ScriptureQuote(text: "“The Messenger has believed in what was revealed to him from his Lord, and [so have] the believers. All of them have believed in Allah and His angels and His books and His messengers” (Quran 2:285).", arabic: "ءَامَنَ ٱلرَّسُولُ بِمَآ أُنزِلَ إِلَيهِ مِن رَّبِّهِۦ وَٱلمُؤمِنُونَۚ كُلٌّ ءَامَنَ بِٱللَّهِ وَمَلَٰٓئِكَتِهِۦ وَكُتُبِهِۦ وَرُسُلِهِۦ")
                 }
 
                 Section(header: ArticleHeader("LEGACY OF PROPHETS")) {
@@ -1697,22 +1697,22 @@ struct DayView: View {
                         .font(.body)
 
                     Text(verbatim: "Allah (Glorified and Exalted be He) says in the Quran:").font(.body)
-                    ScriptureQuote(text: "“So whoever does an atom’s weight of good will see it, And whoever does an atom’s weight of evil will see it” (Quran 99:7-8).", arabic: "فَمَن يَعۡمَلۡ مِثۡقَالَ ذَرَّةٍ خَيۡرٗا يَرَهُۥ ۝ وَمَن يَعۡمَلۡ مِثۡقَالَ ذَرَّةٖ شَرّٗا يَرَهُۥ")
+                    ScriptureQuote(text: "“So whoever does an atom’s weight of good will see it, And whoever does an atom’s weight of evil will see it” (Quran 99:7-8).", arabic: "فَمَن يَعمَل مِثقَالَ ذَرَّةٍ خَيرٗا يَرَهُۥ ۝ وَمَن يَعمَل مِثقَالَ ذَرَّةٖ شَرّٗا يَرَهُۥ")
                 }
 
                 Section(header: ArticleHeader("EVENTS OF THE DAY")) {
                     Text(verbatim: "The Day of Judgment will unfold in stages, including:").font(.body)
 
                     Text(articleMarkdown: "1. **The Blowing of the Trumpet**: The angel entrusted with the Horn will blow the trumpet twice: first to end all life and then to resurrect everyone. Allah says:").font(.body)
-                    ScriptureQuote(text: "“And the Horn will be blown, and whoever is in the heavens and whoever is on the earth will fall dead except whom Allah wills. Then it will be blown again, and at once they will be standing, looking on” (Quran 39:68).", arabic: "وَنُفِخَ فِي ٱلصُّورِ فَصَعِقَ مَن فِي ٱلسَّمَٰوَٰتِ وَمَن فِي ٱلۡأَرۡضِ إِلَّا مَن شَآءَ ٱللَّهُۖ ثُمَّ نُفِخَ فِيهِ أُخۡرَىٰ فَإِذَا هُمۡ قِيَامٞ يَنظُرُونَ")
+                    ScriptureQuote(text: "“And the Horn will be blown, and whoever is in the heavens and whoever is on the earth will fall dead except whom Allah wills. Then it will be blown again, and at once they will be standing, looking on” (Quran 39:68).", arabic: "وَنُفِخَ فِي ٱلصُّورِ فَصَعِقَ مَن فِي ٱلسَّمَٰوَٰتِ وَمَن فِي ٱلأَرضِ إِلَّا مَن شَآءَ ٱللَّهُۖ ثُمَّ نُفِخَ فِيهِ أُخرَىٰ فَإِذَا هُم قِيَامٞ يَنظُرُونَ")
 
                     Text(articleMarkdown: "2. **Resurrection**: All people will rise from their graves to face their Lord. Allah says:").font(.body)
-                    ScriptureQuote(text: "“And the Horn will be blown, and at once from the graves to their Lord they will hasten” (Quran 36:51).", arabic: "وَنُفِخَ فِي ٱلصُّورِ فَإِذَا هُم مِّنَ ٱلۡأَجۡدَاثِ إِلَىٰ رَبِّهِمۡ يَنسِلُونَ")
+                    ScriptureQuote(text: "“And the Horn will be blown, and at once from the graves to their Lord they will hasten” (Quran 36:51).", arabic: "وَنُفِخَ فِي ٱلصُّورِ فَإِذَا هُم مِّنَ ٱلأَجدَاثِ إِلَىٰ رَبِّهِم يَنسِلُونَ")
 
                     Text(articleMarkdown: "3. **The Reckoning, **Hisab (حِسَاب)**,**: Every individual’s deeds will be reviewed, and their record of actions will be presented to them. Those who receive their record in their right hand will rejoice, while those who receive it in their left will despair.").font(.body)
 
                     Text(articleMarkdown: "4. **The Scale, **Mizan (مِيزَان)**,**: Deeds will be weighed on a divine scale. Good deeds that outweigh bad deeds will lead to Paradise. Allah says:").font(.body)
-                    ScriptureQuote(text: "“And the weighing [of deeds] that Day will be the truth. So those whose scales are heavy - it is they who will be the successful” (Quran 7:8).", arabic: "وَٱلۡوَزۡنُ يَوۡمَئِذٍ ٱلۡحَقُّۚ فَمَن ثَقُلَتۡ مَوَٰزِينُهُۥ فَأُوْلَٰٓئِكَ هُمُ ٱلۡمُفۡلِحُونَ")
+                    ScriptureQuote(text: "“And the weighing [of deeds] that Day will be the truth. So those whose scales are heavy - it is they who will be the successful” (Quran 7:8).", arabic: "وَٱلوَزنُ يَومَئِذٍ ٱلحَقُّۚ فَمَن ثَقُلَت مَوَٰزِينُهُۥ فَأُولَٰٓئِكَ هُمُ ٱلمُفلِحُونَ")
 
                     Text(articleMarkdown: "5. **The Bridge, **As-Sirat (الصِّرَاط)**,**: A bridge over Hellfire that all people must cross. The righteous will cross safely, while others will fall.").font(.body)
                 }
@@ -1723,7 +1723,7 @@ struct DayView: View {
                     Text(articleMarkdown: "2. **Moral Uprightness**: Encourages Muslims to lead righteous lives, avoid sin, and fulfill their obligations to Allah and others.").font(.body)
 
                     Text(articleMarkdown: "3. **Justice and Fairness**: The Day of Judgment is the ultimate manifestation of Allah’s justice. Every wrong will be rectified, and no one will be wronged. Allah says:").font(.body)
-                    ScriptureQuote(text: "“Indeed, Allah does not wrong the people at all, but it is the people who are wronging themselves” (Quran 10:44).", arabic: "إِنَّ ٱللَّهَ لَا يَظۡلِمُ ٱلنَّاسَ شَيۡـٔٗا وَلَٰكِنَّ ٱلنَّاسَ أَنفُسَهُمۡ يَظۡلِمُونَ")
+                    ScriptureQuote(text: "“Indeed, Allah does not wrong the people at all, but it is the people who are wronging themselves” (Quran 10:44).", arabic: "إِنَّ ٱللَّهَ لَا يَظلِمُ ٱلنَّاسَ شَيـٔٗا وَلَٰكِنَّ ٱلنَّاسَ أَنفُسَهُم يَظلِمُونَ")
 
                     Text(articleMarkdown: "4. **Hope and Fear**: Belief in the Day of Judgment inspires hope in Allah’s mercy and fear of His punishment, creating a balance in a Muslim’s spiritual life.").font(.body)
                 }
@@ -1731,13 +1731,13 @@ struct DayView: View {
                 Section(header: ArticleHeader("QURANIC EMPHASIS")) {
                     Text(verbatim: "Allah (Glorified and Exalted be He) repeatedly emphasizes the Day of Judgment in the Quran as a reminder of the ultimate return to Him. He says:")
                         .font(.body)
-                    ScriptureQuote(text: "“The Day they come forth, nothing concerning them will be concealed from Allah. To whom belongs [all] sovereignty this Day? To Allah, the One, the Prevailing” (Quran 40:16).", arabic: "يَوۡمَ هُم بَٰرِزُونَۖ لَا يَخۡفَىٰ عَلَى ٱللَّهِ مِنۡهُمۡ شَيۡءٞۚ لِّمَنِ ٱلۡمُلۡكُ ٱلۡيَوۡمَۖ لِلَّهِ ٱلۡوَٰحِدِ ٱلۡقَهَّارِ")
+                    ScriptureQuote(text: "“The Day they come forth, nothing concerning them will be concealed from Allah. To whom belongs [all] sovereignty this Day? To Allah, the One, the Prevailing” (Quran 40:16).", arabic: "يَومَ هُم بَٰرِزُونَۖ لَا يَخفَىٰ عَلَى ٱللَّهِ مِنهُم شَيءٞۚ لِّمَنِ ٱلمُلكُ ٱليَومَۖ لِلَّهِ ٱلوَٰحِدِ ٱلقَهَّارِ")
 
                     Text(verbatim: "In Surah Al-Qariah, Allah vividly describes the weighing of deeds:").font(.body)
-                    ScriptureQuote(text: "“Then as for one whose scales are heavy [with good deeds], he will be in a pleasant life. But as for one whose scales are light, his refuge will be an abyss” (Quran 101:6-9).", arabic: "فَأَمَّا مَن ثَقُلَتۡ مَوَٰزِينُهُۥ ۝ فَهُوَ فِي عِيشَةٖ رَّاضِيَةٖ ۝ وَأَمَّا مَنۡ خَفَّتۡ مَوَٰزِينُهُۥ ۝ فَأُمُّهُۥ هَاوِيَةٞ")
+                    ScriptureQuote(text: "“Then as for one whose scales are heavy [with good deeds], he will be in a pleasant life. But as for one whose scales are light, his refuge will be an abyss” (Quran 101:6-9).", arabic: "فَأَمَّا مَن ثَقُلَت مَوَٰزِينُهُۥ ۝ فَهُوَ فِي عِيشَةٖ رَّاضِيَةٖ ۝ وَأَمَّا مَن خَفَّت مَوَٰزِينُهُۥ ۝ فَأُمُّهُۥ هَاوِيَةٞ")
 
                     Text(verbatim: "The Prophet Muhammad (peace and blessings be upon him) said about the Day of Judgment:").font(.body)
-                    ScriptureQuote(text: "“Rights will certainly be restored to those entitled to them on the Day of Resurrection, (to the point that) even the hornless sheep will lay claim upon the horned one” (Sahih Muslim 2582).", arabic: "لَتُؤَدُّنَّ الْحُقُوقَ إِلَى أَهْلِهَا يَوْمَ الْقِيَامَةِ حَتَّى يُقَادَ لِلشَّاةِ الْجَلْحَاءِ مِنَ الشَّاةِ الْقَرْنَاءِ", dimmed: true)
+                    ScriptureQuote(text: "“Rights will certainly be restored to those entitled to them on the Day of Resurrection, (to the point that) even the hornless sheep will lay claim upon the horned one” (Sahih Muslim 2582).", arabic: "لَتُؤَدُّنَّ الحُقُوقَ إِلَى أَهلِهَا يَومَ القِيَامَةِ حَتَّى يُقَادَ لِلشَّاةِ الجَلحَاءِ مِنَ الشَّاةِ القَرنَاءِ", dimmed: true)
 
                     Text(verbatim: "This highlights Allah’s perfect justice, where no soul will be wronged, not even among animals.")
                         .font(.body)
@@ -1771,7 +1771,7 @@ struct QadarView: View {
                         .font(.body)
 
                     Text(verbatim: "Allah (Glorified and Exalted be He) says in the Quran:").font(.body)
-                    ScriptureQuote(text: "“No disaster strikes upon the earth or among yourselves except that it is in a register before We bring it into being - indeed that, for Allah, is easy” (Quran 57:22).", arabic: "مَآ أَصَابَ مِن مُّصِيبَةٖ فِي ٱلۡأَرۡضِ وَلَا فِيٓ أَنفُسِكُمۡ إِلَّا فِي كِتَٰبٖ مِّن قَبۡلِ أَن نَّبۡرَأَهَآۚ إِنَّ ذَٰلِكَ عَلَى ٱللَّهِ يَسِيرٞ")
+                    ScriptureQuote(text: "“No disaster strikes upon the earth or among yourselves except that it is in a register before We bring it into being - indeed that, for Allah, is easy” (Quran 57:22).", arabic: "مَآ أَصَابَ مِن مُّصِيبَةٖ فِي ٱلأَرضِ وَلَا فِيٓ أَنفُسِكُم إِلَّا فِي كِتَٰبٖ مِّن قَبلِ أَن نَّبرَأَهَآۚ إِنَّ ذَٰلِكَ عَلَى ٱللَّهِ يَسِيرٞ")
 
                     Text(verbatim: "This belief fosters patience during trials, gratitude in blessings, and complete trust in Allah’s wisdom. It also reminds Muslims that Allah’s knowledge encompasses all things and that nothing happens outside of His will.")
                         .font(.body)
@@ -1781,16 +1781,16 @@ struct QadarView: View {
                     Text(verbatim: "Scholars identify four essential components of Qadar:").font(.body)
 
                     Text(articleMarkdown: "1. **Allah’s Knowledge, Ilm (عِلم)**: Allah’s knowledge is infinite and perfect. He knows everything that has happened, is happening, and will happen. Allah says:").font(.body)
-                    ScriptureQuote(text: "“And with Him are the keys of the unseen; none knows them except Him. And He knows what is on the land and in the sea. Not a leaf falls but that He knows it” (Quran 6:59).", arabic: "وَعِندَهُۥ مَفَاتِحُ ٱلۡغَيۡبِ لَا يَعۡلَمُهَآ إِلَّا هُوَۚ وَيَعۡلَمُ مَا فِي ٱلۡبَرِّ وَٱلۡبَحۡرِۚ وَمَا تَسۡقُطُ مِن وَرَقَةٍ إِلَّا يَعۡلَمُهَا")
+                    ScriptureQuote(text: "“And with Him are the keys of the unseen; none knows them except Him. And He knows what is on the land and in the sea. Not a leaf falls but that He knows it” (Quran 6:59).", arabic: "وَعِندَهُۥ مَفَاتِحُ ٱلغَيبِ لَا يَعلَمُهَآ إِلَّا هُوَۚ وَيَعلَمُ مَا فِي ٱلبَرِّ وَٱلبَحرِۚ وَمَا تَسقُطُ مِن وَرَقَةٍ إِلَّا يَعلَمُهَا")
 
                     Text(articleMarkdown: "2. **Allah’s Writing, Kitabah (كِتَابَة)**: All things are written in **Al-Lawh Al-Mahfuz (اللَّوح المَحفُوظ)**, the Preserved Tablet, where every event, action, and outcome is recorded. Allah says:").font(.body)
-                    ScriptureQuote(text: "“Do you not know that Allah knows what is in the heaven and earth? Indeed, that is in a Record. Indeed that, for Allah, is easy” (Quran 22:70).", arabic: "أَلَمۡ تَعۡلَمۡ أَنَّ ٱللَّهَ يَعۡلَمُ مَا فِي ٱلسَّمَآءِ وَٱلۡأَرۡضِۚ إِنَّ ذَٰلِكَ فِي كِتَٰبٍۚ إِنَّ ذَٰلِكَ عَلَى ٱللَّهِ يَسِيرٞ")
+                    ScriptureQuote(text: "“Do you not know that Allah knows what is in the heaven and earth? Indeed, that is in a Record. Indeed that, for Allah, is easy” (Quran 22:70).", arabic: "أَلَم تَعلَم أَنَّ ٱللَّهَ يَعلَمُ مَا فِي ٱلسَّمَآءِ وَٱلأَرضِۚ إِنَّ ذَٰلِكَ فِي كِتَٰبٍۚ إِنَّ ذَٰلِكَ عَلَى ٱللَّهِ يَسِيرٞ")
 
                     Text(articleMarkdown: "3. **Allah’s Will, Mashiah (مَشِيئَة)**: Whatever Allah wills happens, and whatever He does not will does not happen. Allah says:").font(.body)
-                    ScriptureQuote(text: "“And the disbelievers planned, but Allah planned. And Allah is the best of planners” (Quran 3:54).", arabic: "وَمَكَرُواْ وَمَكَرَ ٱللَّهُۖ وَٱللَّهُ خَيۡرُ ٱلۡمَٰكِرِينَ")
+                    ScriptureQuote(text: "“And the disbelievers planned, but Allah planned. And Allah is the best of planners” (Quran 3:54).", arabic: "وَمَكَرُوا وَمَكَرَ ٱللَّهُۖ وَٱللَّهُ خَيرُ ٱلمَٰكِرِينَ")
 
                     Text(articleMarkdown: "4. **Allah’s Creation, Khalq (خَلق)**: Allah is the Creator of all things, including actions, circumstances, and outcomes. Allah says:").font(.body)
-                    ScriptureQuote(text: "“Allah is the Creator of all things, and He is, over all things, Disposer of affairs” (Quran 39:62).", arabic: "ٱللَّهُ خَٰلِقُ كُلِّ شَيۡءٖۖ وَهُوَ عَلَىٰ كُلِّ شَيۡءٖ وَكِيلٞ")
+                    ScriptureQuote(text: "“Allah is the Creator of all things, and He is, over all things, Disposer of affairs” (Quran 39:62).", arabic: "ٱللَّهُ خَٰلِقُ كُلِّ شَيءٖۖ وَهُوَ عَلَىٰ كُلِّ شَيءٖ وَكِيلٞ")
                 }
 
                 Section(header: ArticleHeader("BALANCE BETWEEN FREE WILL AND QADR")) {
@@ -1798,12 +1798,12 @@ struct QadarView: View {
                         .font(.body)
 
                     Text(verbatim: "The Prophet Muhammad (peace and blessings be upon him) said:").font(.body)
-                    ScriptureQuote(text: "“cherish that which gives you benefit (in the Hereafter) and seek help from Allah and do not lose heart, and if anything (in the form of trouble) comes to you, don't say: If I had not done that, it would not have happened so and so, but say: Allah did that what He had ordained to do and your‘ if’ opens the (gate) for the Satan” (Sahih Muslim 2664).", arabic: "احْرِصْ عَلَى مَا يَنْفَعُكَ وَاسْتَعِنْ بِاللَّهِ وَلاَ تَعْجِزْ وَإِنْ أَصَابَكَ شَىْءٌ فَلاَ تَقُلْ لَوْ أَنِّي فَعَلْتُ كَانَ كَذَا وَكَذَا. وَلَكِنْ قُلْ قَدَرُ اللَّهِ وَمَا شَاءَ فَعَلَ فَإِنَّ لَوْ تَفْتَحُ عَمَلَ الشَّيْطَانِ", dimmed: true)
+                    ScriptureQuote(text: "“cherish that which gives you benefit (in the Hereafter) and seek help from Allah and do not lose heart, and if anything (in the form of trouble) comes to you, don't say: If I had not done that, it would not have happened so and so, but say: Allah did that what He had ordained to do and your‘ if’ opens the (gate) for the Satan” (Sahih Muslim 2664).", arabic: "احرِص عَلَى مَا يَنفَعُكَ وَاستَعِن بِاللَّهِ وَلاَ تَعجِز وَإِن أَصَابَكَ شَىءٌ فَلاَ تَقُل لَو أَنِّي فَعَلتُ كَانَ كَذَا وَكَذَا. وَلَكِن قُل قَدَرُ اللَّهِ وَمَا شَاءَ فَعَلَ فَإِنَّ لَو تَفتَحُ عَمَلَ الشَّيطَانِ", dimmed: true)
                 }
 
                 Section(header: ArticleHeader("PATIENT AND GRATEFUL")) {
                     Text(verbatim: "Belief in Qadar teaches Muslims to face life’s trials and blessings with patience and gratitude. Allah says in the Quran:").font(.body)
-                    ScriptureQuote(text: "“And We will surely test you with something of fear and hunger and a loss of wealth and lives and fruits, but give good tidings to the patient, Who, when disaster strikes them, say, ‘Indeed we belong to Allah, and indeed to Him we will return.’” (Quran 2:155-156)", arabic: "وَلَنَبۡلُوَنَّكُم بِشَيۡءٖ مِّنَ ٱلۡخَوۡفِ وَٱلۡجُوعِ وَنَقۡصٖ مِّنَ ٱلۡأَمۡوَٰلِ وَٱلۡأَنفُسِ وَٱلثَّمَرَٰتِۗ وَبَشِّرِ ٱلصَّٰبِرِينَ ۝ ٱلَّذِينَ إِذَآ أَصَٰبَتۡهُم مُّصِيبَةٞ قَالُوٓاْ إِنَّا لِلَّهِ وَإِنَّآ إِلَيۡهِ رَٰجِعُونَ")
+                    ScriptureQuote(text: "“And We will surely test you with something of fear and hunger and a loss of wealth and lives and fruits, but give good tidings to the patient, Who, when disaster strikes them, say, ‘Indeed we belong to Allah, and indeed to Him we will return.’” (Quran 2:155-156)", arabic: "وَلَنَبلُوَنَّكُم بِشَيءٖ مِّنَ ٱلخَوفِ وَٱلجُوعِ وَنَقصٖ مِّنَ ٱلأَموَٰلِ وَٱلأَنفُسِ وَٱلثَّمَرَٰتِۗ وَبَشِّرِ ٱلصَّٰبِرِينَ ۝ ٱلَّذِينَ إِذَآ أَصَٰبَتهُم مُّصِيبَةٞ قَالُوٓا إِنَّا لِلَّهِ وَإِنَّآ إِلَيهِ رَٰجِعُونَ")
 
                     Text(verbatim: "Through this belief, Muslims trust that every hardship is a test and every blessing is a favor from Allah, leading them closer to Him.")
                         .font(.body)

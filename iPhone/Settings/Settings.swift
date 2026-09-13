@@ -1791,7 +1791,6 @@ final class Settings: NSObject, CLLocationManagerDelegate, ObservableObject {
     var dailyFajrMemo: (day: Date, signature: String, fajr: Date?)?
     var fajrTableMemo: (day: Date, days: Int, signature: String, table: [String: TimeInterval])?
     /// The Reminder of the Day presented once a day when the app opens (from the second day on).
-    @AppStorage("showDailyReminderSheet") var showDailyReminderSheet: Bool = true
     /// Day key (yyyy-MM-dd) for which the Ayah of the Day card has been hidden via "Hide for Today".
     @AppStorage("ayahOfTheDayHiddenDate") var ayahOfTheDayHiddenDate: String = ""
     /// A shuffled replacement for TODAY's Ayah of the Day, as "dayKey|surahID|ayahID". Stale days no

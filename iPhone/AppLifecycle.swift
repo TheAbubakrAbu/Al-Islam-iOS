@@ -84,9 +84,8 @@ enum AppLifecycle {
         // snapshot. Running this on every transition (including becoming active) paid a JSON encode plus
         // a reload of every widget timeline each time, against WidgetKit's daily reload budget.
         if phase == .active {
-            // The daily surfaces: the once-a-day sheet, the widgets' corpus and Fajr table, and the
-            // one-shot nudges that depend on today's reading. Each is a no-op within its own day.
-            DailyReminderStore.shared.presentSheetIfDue()
+            // The daily surfaces: the widgets' corpus and Fajr table, and the one-shot nudges that
+            // depend on today's reading. Each is a no-op within its own day.
             DailyReminderStore.shared.refreshWidgets()
             ActivityLog.shared.refreshSummaryIfDayChanged()
             ExtraRemindersStore.shared.rearmIfNeeded()

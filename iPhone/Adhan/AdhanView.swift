@@ -33,6 +33,9 @@ struct AdhanView: View {
         #endif
     }()
     @State private var showAlert: AlertType?
+    /// Whether the list is in front (between `onAppear` and `onDisappear`): the flag-driven presentation
+    /// in `autoChangeFlagsDidChange` only fires while it is.
+    @State private var isOnScreen = false
 
     enum AlertType: Identifiable {
         case travelTurnOnAutomatic
@@ -40,6 +43,14 @@ struct AdhanView: View {
         case calculationAutomaticChanged
         case locationAlert
         case notificationAlert
+
+        /// The cards that answer a standing auto-change flag (as opposed to the permission nags).
+        var isAutoChangeCard: Bool {
+            switch self {
+            case .travelTurnOnAutomatic, .travelTurnOffAutomatic, .calculationAutomaticChanged: return true
+            case .locationAlert, .notificationAlert: return false
+            }
+        }
 
         var id: Int {
             switch self {
@@ -200,6 +211,7 @@ struct AdhanView: View {
         // animation. A stale fix gets one cheap one-shot `requestLocation` instead (no-op when the last
         // commit is under five minutes old); only the expanded Qibla compass starts the burst.
         .onAppear {
+            isOnScreen = true
             if appRevealed {
                 prayerTimeRefresh(force: false)
                 settings.refreshLocationIfStale()
@@ -217,6 +229,7 @@ struct AdhanView: View {
             settings.refreshLocationIfStale()
         }
         .onDisappear {
+            isOnScreen = false
             settings.endLocationRefinement()
         }
         .onChange(of: scenePhase) { newScenePhase in
@@ -225,13 +238,18 @@ struct AdhanView: View {
                 prayerTimeRefresh(force: false)
             }
         }
-        // The dialog is presented from ONE place only: the completion of a prayer refresh (see
-        // `prayerTimeRefresh`), a beat later. It is deliberately NOT presented from an `.onChange` on the
-        // travel/calculation flags. Watching those flags means the dialog fires the instant the flag flips - 
-        // from any background path, whether or not this screen is even on screen - which is what made it
-        // re-present over and over. The flags are cleared by the dialog's own buttons (`confirmTravelAutomaticChange`
-        // / `overrideTravelingMode`), so a change that happens while you're away is still waiting for you the
-        // next time the tab refreshes, and is announced exactly once.
+        // The dialog is presented from two places: the completion of a prayer refresh (see
+        // `prayerTimeRefresh`), a beat later, and - only while this list is in front - a change of the
+        // standing travel/calculation flags (`autoChangeFlagsDidChange`). The second catches the common
+        // case: the launch refresh completes on the STORED location, and the fresh fix that flips the
+        // verdict lands a second later. Without it the card waited for the next refresh, and a card
+        // already up kept showing the previous verdict (a "returned home" card in Las Vegas, reproduced
+        // 2026-09-13). An earlier blanket `.onChange` re-presented forever because Cancel left the flag
+        // armed; every dismissal clears the flags now, so a flag only ever changes on a real verdict, and
+        // a change that happens while you're away still waits for the next refresh, announced once.
+        .onChange(of: settings.travelTurnOnAutomatic) { _ in autoChangeFlagsDidChange() }
+        .onChange(of: settings.travelTurnOffAutomatic) { _ in autoChangeFlagsDidChange() }
+        .onChange(of: settings.calculationAutoChanged) { _ in autoChangeFlagsDidChange() }
         .navigationTitle("Al-Adhan")
         #if os(iOS)
         .toolbar {
@@ -455,6 +473,36 @@ struct AdhanView: View {
                     if showAlert == nil { showAlert = nextAlertToPresent }
                 }
             }
+        }
+    }
+
+    /// A standing auto-change flag changed: keep `showAlert` in step with the flags. A card not yet chosen
+    /// is presented now, but only while this list is in front. A card already chosen but not yet visible
+    /// (behind the launch cover - the launch refresh picks from the stored location, and the fresh fix
+    /// that flips the verdict lands before the cover lifts) is simply swapped. A card already on screen
+    /// is dismissed and re-presented a beat later, because a presented confirmation dialog does not
+    /// re-render its title and buttons in place. Flags cleared under a card (its own button, or the
+    /// retirement in `checkIfTraveling`) take the card down. Permission nags are never presented from here.
+    private func autoChangeFlagsDidChange() {
+        let next = nextAlertToPresent.flatMap { $0.isAutoChangeCard ? $0 : nil }
+        switch showAlert {
+        case nil:
+            guard isOnScreen, appRevealed, scenePhase == .active, let next else { return }
+            showAlert = next
+        case .travelTurnOnAutomatic, .travelTurnOffAutomatic, .calculationAutomaticChanged:
+            guard next?.id != showAlert?.id else { return }
+            guard appRevealed else {
+                showAlert = next
+                return
+            }
+            showAlert = nil
+            guard next != nil else { return }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+                guard showAlert == nil, let again = nextAlertToPresent, again.isAutoChangeCard else { return }
+                showAlert = again
+            }
+        default:
+            break
         }
     }
 

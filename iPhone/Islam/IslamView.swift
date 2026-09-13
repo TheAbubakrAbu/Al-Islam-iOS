@@ -363,8 +363,13 @@ struct IslamView: View {
     @ViewBuilder
     private func islamListEntries(split: Bool) -> some View {
         Group {
-            // No Reminder of the Day card here (Abu, 2026-09-07): the reminder still opens as the
-            // daily sheet and feeds the widgets, and this tab is the resource grid.
+            // The Reminder of the Day lives HERE, as the first card of the tab (Abu, 2026-09-12:
+            // "keep it in Islam, don't have it be a sheet"). It renders only once the corpus has
+            // parsed, so the resource grid never waits on it.
+            #if os(iOS)
+            ReminderOfTheDaySection()
+            #endif
+
             Group {
                 #if os(iOS)
                 if split, #available(iOS 16.0, *) {

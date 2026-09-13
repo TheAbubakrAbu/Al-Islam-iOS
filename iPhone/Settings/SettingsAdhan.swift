@@ -338,11 +338,18 @@ extension Settings {
     private static let refineMinAccuracyGain: CLLocationDistance = 20      // m
     /// While moving, don't recompute more often than this even past the distance threshold.
     private static let movingCommitMinInterval: TimeInterval = 30          // s
+    /// A move at least this large commits immediately even inside `movingCommitMinInterval`: a road trip
+    /// covers about a kilometre in 30 s, so anything bigger is a flight, a wake after a long gap or a
+    /// simulated jump - exactly the fixes the traveling check must not lose. Smaller moves inside the
+    /// interval are deferred to its end rather than dropped (see `deferMovingCommit`).
+    private static let movingCommitBypassDistance: CLLocationDistance = 8_000   // m ≈ 5 mi
+    private static var deferredMovingCommit: DispatchWorkItem?
     /// Refinements that move at least this far also recompute prayer times (smaller moves don't matter).
     private static let prayerRecomputeDistance: CLLocationDistance = 75    // m
     
     private static let geocoder = CLGeocoder()
     private static var cachedPlacemark: (coord: CLLocationCoordinate2D, city: String, countryCode: String)?
+    private static var latestGeocodeCoord: CLLocationCoordinate2D?
     private struct RawPrayerCacheKey: Hashable {
         let year: Int
         let month: Int
@@ -403,8 +410,9 @@ extension Settings {
     /// enough that the threshold stays essentially exact.
     static let travelHysteresisM: CLLocationDistance = 1 * oneMile   // ≈ 1 609 m
 
-    /// The auto-toggle can't notify more often than this, whatever the location does. A backstop for the case
-    /// hysteresis can't cover: genuinely crossing back and forth over the line (a commute that straddles it).
+    /// Inside this window an auto-change banner is posted silently and replaces the previous one, instead of
+    /// ringing again. A backstop for the case hysteresis can't cover: genuinely crossing back and forth over
+    /// the line (a commute that straddles it). It never drops an announcement - see `postAutoChangeNotification`.
     static let travelNotifyCooldown: TimeInterval = 30 * 60
 
     /// How far you can be from where a city name was *resolved* and still plausibly be in that city. Wide
@@ -582,10 +590,20 @@ extension Settings {
             // Moving: only commit once you've actually relocated, and not more than once per interval,
             // so a road trip / walk / flight doesn't constantly recompute.
             guard moved >= Self.halfMile else { return }
-            if let last = Self.lastLocationCommitAt,
-               Date().timeIntervalSince(last) < Self.movingCommitMinInterval { return }
+            if let last = Self.lastLocationCommitAt {
+                let remaining = Self.movingCommitMinInterval - Date().timeIntervalSince(last)
+                if remaining > 0, moved < Self.movingCommitBypassDistance {
+                    // Inside the interval: DEFER, never drop. A dropped fix used to be the last word when
+                    // nothing followed it (the phone went still right after), leaving the city, the times
+                    // and the traveling check on the previous point until the next unrelated fix.
+                    deferMovingCommit(loc, after: remaining)
+                    return
+                }
+            }
         }
 
+        Self.deferredMovingCommit?.cancel()
+        Self.deferredMovingCommit = nil
         Self.lastLocationCommitAt = Date()
         Self.lastFixAccuracy = loc.horizontalAccuracy
 
@@ -611,6 +629,19 @@ extension Settings {
                 fetchPrayerTimes(force: true)
             }
         }
+    }
+
+    /// Re-runs `commitLocation` for `loc` once the moving-commit interval has elapsed, unless a newer fix
+    /// commits first (every commit cancels the pending one). It goes through the same guards again, so a
+    /// fix that a later commit has made redundant is filtered like any other.
+    private func deferMovingCommit(_ loc: CLLocation, after delay: TimeInterval) {
+        Self.deferredMovingCommit?.cancel()
+        let work = DispatchWorkItem { [weak self] in
+            Self.deferredMovingCommit = nil
+            self?.commitLocation(loc, refining: false)
+        }
+        Self.deferredMovingCommit = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + max(delay, 0.1), execute: work)
     }
 
     /// Briefly switch to high-accuracy continuous updates to lock in a precise fix, then auto-stop.
@@ -817,10 +848,22 @@ extension Settings {
     }
     
     actor GeocodeActor {
-        private let gc = CLGeocoder()
+        private var inFlight: (location: CLLocation, task: Task<CLPlacemark?, Error>)?
+
+        /// One request per point. Two callers asking for (practically) the same point share the request
+        /// in flight; a caller asking for a different point supersedes it. The old single-geocoder
+        /// version cancelled whatever was in flight on every call, so the launch fetch and the first
+        /// commit - which ask within the same second - cancelled each other and paid a 2 s retry
+        /// (kCLErrorDomain 10) on every launch.
         func placemark(for location: CLLocation) async throws -> CLPlacemark? {
-            if gc.isGeocoding { gc.cancelGeocode() }
-            return try await gc.reverseGeocodeLocation(location).first
+            if let inFlight, inFlight.location.distance(from: location) < 100 {
+                return try await inFlight.task.value
+            }
+            inFlight?.task.cancel()
+            let task = Task { try await CLGeocoder().reverseGeocodeLocation(location).first }
+            inFlight = (location, task)
+            defer { if inFlight?.task == task { inFlight = nil } }
+            return try await task.value
         }
     }
     
@@ -865,6 +908,17 @@ extension Settings {
         }
     }
 
+    /// The label is unchanged but the point moved: keep the city, take the coordinates. Without this a
+    /// move that stays under one geocode label (across a metro, a county-level label, the simulator's
+    /// default city) never updated `currentLocation`, so prayer times, the Qibla and the traveling check
+    /// kept computing from where the label was first resolved. A plain write: nothing visible changes.
+    @MainActor
+    private func adoptCoordinatesKeepingCity(latitude: Double, longitude: Double) {
+        guard let cur = currentLocation, cur.latitude != latitude || cur.longitude != longitude else { return }
+        currentLocation = Location(city: cur.city, latitude: latitude, longitude: longitude)
+        reloadWidgets(deferred: true)
+    }
+
     /// Reverse‑geocode utilities.
     ///
     /// `maxAttempts` defaults higher than one round-trip because watchOS reverse-geocoding (which often
@@ -880,6 +934,14 @@ extension Settings {
         Self.ensureNetworkMonitorStarted()
 
         let coord = CLLocationCoordinate2D(latitude: latitude, longitude: longitude)
+        // The newest point asked for. A request that has been superseded by a newer point (a slow
+        // geocode finishing late, or a retry after the newer request cancelled it) must not write its
+        // label - or, through `adoptCoordinatesKeepingCity`, its coordinates - back over the newer one.
+        if attempt == 0 { Self.latestGeocodeCoord = coord }
+        func superseded() -> Bool {
+            guard let latest = Self.latestGeocodeCoord else { return false }
+            return latest.latitude != coord.latitude || latest.longitude != coord.longitude
+        }
 
         // On watchOS, `NWPathMonitor` frequently reports `.unsatisfied` even though `CLGeocoder` still
         // resolves fine by relaying through the paired iPhone - and because the path never "becomes
@@ -902,6 +964,7 @@ extension Settings {
              .distance(from: CLLocation(latitude: coord.latitude, longitude: coord.longitude)) < 100,
                      cached.city == currentLocation?.city,
                      cached.countryCode == currentCountryCode {
+            adoptCoordinatesKeepingCity(latitude: latitude, longitude: longitude)
             return
         }
 
@@ -911,6 +974,7 @@ extension Settings {
             guard let placemark = try await Self.geocodeActor.placemark(for: location) else {
                 throw CLError(.geocodeFoundNoResult)
             }
+            guard !superseded() else { return }
 
             let newCity: String = {
                 let cityLike = placemark.locality
@@ -934,6 +998,8 @@ extension Settings {
                 // `reloadWidgets` owns the "never from an extension" guard and the coalescing; a raw
                 // WidgetKit call had no business inside a withAnimation block anyway.
                 reloadWidgets(deferred: true)
+            } else {
+                adoptCoordinatesKeepingCity(latitude: latitude, longitude: longitude)
             }
 
             Self.cachedPlacemark = (coord, newCity, detectedCountryCode)
@@ -942,6 +1008,8 @@ extension Settings {
             Self.cityAnchor = CLLocation(latitude: latitude, longitude: longitude)
 
         } catch {
+            // Superseded: the newer point's own request owns the label now; nothing to retry or defer.
+            guard !superseded() else { return }
             // On iOS an unreachable path means "wait for reconnect." On watchOS the path flag is unreliable
             // (see above), so only a genuine network geocode error defers - otherwise we fall through to the
             // backed-off retry, which is what actually lands a city on the watch.
@@ -1139,24 +1207,17 @@ extension Settings {
         guard !alreadyAnswered, detectedParams != currentParams else { return true }
 
         #if os(iOS)
-        // Same rate limit as the traveling-mode announcement: the method itself still switches; only the
-        // notification is capped, so a border area (or geocode noise flipping the detected country) can't
-        // announce every flip.
-        let now = Date()
-        if let last = lastCalculationNotificationAt,
-           now.timeIntervalSince(last) < Self.travelNotifyCooldown {
-            logger.debug("Calculation-switch notification suppressed (cooldown)")
-            return true   // the method DID switch; only the announcement is suppressed
+        // Same rate limit as the traveling-mode announcement (see `postAutoChangeNotification`): the
+        // method always switches and is always announced; inside the cooldown the banner is silent and
+        // replaces the previous one, so a border area (or geocode noise flipping the detected country)
+        // can't ring on every flip.
+        if postAutoChangeNotification(
+            id: Self.calculationNotificationId,
+            body: "Prayer calculation switched to \(detectedMethod) for \(Self.spokenPlace(currentLocation.city)).",
+            lastAnnouncedAt: lastCalculationNotificationAt
+        ) {
+            lastCalculationNotificationAt = Date()
         }
-        lastCalculationNotificationAt = now
-
-        let content = UNMutableNotificationContent()
-        content.title = AppIdentifiers.appName
-        content.body = "Prayer calculation switched to \(detectedMethod) for \(currentLocation.city)."
-        content.sound = .default
-        let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 1, repeats: false)
-        let req = UNNotificationRequest(identifier: Self.calculationNotificationId, content: content, trigger: trigger)
-        UNUserNotificationCenter.current().add(req)
         #endif
         return true
     }
@@ -1228,52 +1289,82 @@ extension Settings {
             isAway = distance >= Self.travelThresholdM
         }
 
+        let hereName = Self.spokenPlace(currentLocation.city)
+        let homeName = homeLocation.city.contains("(") ? "your home" : "your home city of \(homeLocation.city)"
         if isAway {
             if !travelingMode {
                 withAnimation { travelingMode = true }
                 travelTurnOffAutomatic = false
                 travelTurnOnAutomatic  = true
-                notifyTravelingModeChanged(
-                    body: "Traveling mode automatically turned on at \(currentLocation.city), away from your home city of \(homeLocation.city)"
-                )
+                notifyTravelingModeChanged(body: "Traveling mode automatically turned on at \(hereName), away from \(homeName)")
                 return true
             }
+            // Already on: a standing "turned off" flag can only be stale (the mode is on), and its card
+            // would offer to confirm turning off what is on. Retire it. Guarded writes - a flag write is
+            // a publish, and this runs on every fetch.
+            if travelTurnOffAutomatic { travelTurnOffAutomatic = false }
         } else {
             if travelingMode {
                 withAnimation { travelingMode = false }
                 travelTurnOnAutomatic  = false
                 travelTurnOffAutomatic = true
-                notifyTravelingModeChanged(
-                    body: "Traveling mode automatically turned off at \(currentLocation.city), near your home city of \(homeLocation.city)"
-                )
+                notifyTravelingModeChanged(body: "Traveling mode automatically turned off at \(hereName), near \(homeName)")
                 return true
             }
+            if travelTurnOnAutomatic { travelTurnOnAutomatic = false }
         }
         return false
     }
 
-    /// The auto-toggle's notification, rate-limited. Even with hysteresis, a route that genuinely crosses the
-    /// 48-mile line repeatedly (a commute that straddles it) would otherwise notify on every crossing - so a
-    /// cooldown caps it. The mode itself still switches; only the *announcement* is suppressed.
+    /// A place name fit for a sentence: the coordinate placeholder that stands in for a city while
+    /// offline ("(36.17, -115.14)") reads as "your current location" instead.
+    private static func spokenPlace(_ city: String) -> String {
+        city.contains("(") ? "your current location" : city
+    }
+
+    /// The auto-toggle's announcement. See `postAutoChangeNotification` for the rate limit.
     private func notifyTravelingModeChanged(body: String) {
         #if os(iOS)
-        let now = Date()
-        if let last = lastTravelingNotificationAt,
-           now.timeIntervalSince(last) < Self.travelNotifyCooldown {
-            logger.debug("Traveling-mode notification suppressed (cooldown)")
-            return
+        if postAutoChangeNotification(id: Self.travelingNotificationId, body: body, lastAnnouncedAt: lastTravelingNotificationAt) {
+            lastTravelingNotificationAt = Date()
         }
-        lastTravelingNotificationAt = now
+        #endif
+    }
+
+    #if os(iOS)
+    /// Posts an auto-change announcement (traveling mode, calculation method). EVERY change is posted, so
+    /// the banner always states the current verdict: the previous cooldown dropped the whole announcement,
+    /// which is how a genuine flip inside 30 min of an earlier one - a wobble near home followed by the
+    /// real departure, or the launch-time check against the stored location followed by the fresh fix -
+    /// switched the mode without a word (reproduced 2026-09-13). The cooldown now only decides whether the
+    /// banner makes a SOUND, and a banner inside it replaces the earlier one (the same identifier replaces
+    /// a pending request; a delivered one is removed explicitly), so a route that straddles the 48-mile
+    /// line shows one quiet, up-to-date banner instead of a stack of loud ones. A stamp in the future (a
+    /// clock set back) counts as expired rather than silencing every announcement until the clock catches
+    /// up. Returns whether the announcement was audible, i.e. whether the caller should refresh its stamp.
+    @discardableResult
+    private func postAutoChangeNotification(id: String, body: String, lastAnnouncedAt: Date?) -> Bool {
+        let now = Date()
+        let inCooldown: Bool = {
+            guard let last = lastAnnouncedAt, last <= now else { return false }
+            return now.timeIntervalSince(last) < Self.travelNotifyCooldown
+        }()
 
         let content = UNMutableNotificationContent()
         content.title = AppIdentifiers.appName
         content.body  = body
-        content.sound = .default
+        content.sound = inCooldown ? nil : .default
         let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 1, repeats: false)
-        let req = UNNotificationRequest(identifier: Self.travelingNotificationId, content: content, trigger: trigger)
-        UNUserNotificationCenter.current().add(req)
-        #endif
+        let req = UNNotificationRequest(identifier: id, content: content, trigger: trigger)
+        let center = UNUserNotificationCenter.current()
+        center.removeDeliveredNotifications(withIdentifiers: [id])
+        center.add(req) { error in
+            if let error { logger.error("Auto-change notification failed: \(error.localizedDescription)") }
+        }
+        if inCooldown { logger.debug("Auto-change notification posted silently (cooldown): \(id)") }
+        return !inCooldown
     }
+    #endif
     
     private static let hijriCalendarAR: Calendar = {
         var c = Calendar(identifier: .islamicUmmAlQura)

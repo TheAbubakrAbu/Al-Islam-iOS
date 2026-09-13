@@ -206,7 +206,7 @@ struct AyahTafsirSheet: View {
                             // language - six segments in one control were unreadably cramped.
                             Picker("Language", selection: languageBinding) {
                                 Text("English").tag(false)
-                                Text("العربية").tag(true)
+                                Text("العَرَبِيَّة").tag(true)
                             }
                             .pickerStyle(.segmented)
 
@@ -240,7 +240,7 @@ struct AyahTafsirSheet: View {
                                                 singleSummary = SingleTafsirSummary(author: author, language: .english)
                                             }
                                             if author.isArabic {
-                                                SummarizeChip(title: "لخّص بالعربية") {
+                                                SummarizeChip(title: "لَخِّص بِالعَرَبِيَّة") {
                                                     singleSummary = SingleTafsirSummary(author: author, language: .arabic)
                                                 }
                                             }
@@ -690,7 +690,7 @@ struct SurahInfoSheet: View {
                                                 singleSummary = SingleSourceSummary(name: source.name, contents: source.contents, language: .english)
                                             }
                                             if arabic {
-                                                SummarizeChip(title: "لخّص بالعربية") {
+                                                SummarizeChip(title: "لَخِّص بِالعَرَبِيَّة") {
                                                     singleSummary = SingleSourceSummary(name: source.name, contents: source.contents, language: .arabic)
                                                 }
                                             }

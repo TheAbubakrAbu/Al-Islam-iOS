@@ -473,7 +473,7 @@ struct DuaSessionView: View {
 
             // No streak, no badge, no "you're on fire" - finishing is the reward, and inventing a
             // scoreboard around dhikr is exactly the thing this app doesn't do.
-            Text("تَقَبَّلَ اللهُ مِنَّا وَمِنْكُمْ")
+            Text("تَقَبَّلَ اللهُ مِنَّا وَمِنكُم")
                 .font(
                     settings.islamUsesCustomArabicFace
                         ? Font.arabic(settings.nonQuranArabicFontName, size: 20, relativeTo: .body)

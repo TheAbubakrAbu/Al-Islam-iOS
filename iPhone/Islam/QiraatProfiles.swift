@@ -92,6 +92,11 @@ enum QiraatProfiles {
         ids.compactMap { master(id: $0) }
     }
 
+    /// The imam's number among the ten, in the classical order (the seven, then the three).
+    static func ordinal(ofMaster id: String) -> Int? {
+        (sevenIDs + threeIDs).firstIndex(of: id).map { $0 + 1 }
+    }
+
     // MARK: - Where each reading is recited today
 
     /// Where a reading is actually recited in public worship today, as opposed to where its imam
@@ -701,22 +706,10 @@ struct QiraahMasterDetailView: View {
     var body: some View {
         List {
             Group {
-                Section(header: Text("THE IMAM")) {
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text(profile.arabic)
-                            .font(.title2)
-                            .foregroundColor(settings.accentColor.color)
-                        Text(profile.fullName)
-                            .font(.body.weight(.semibold))
-                        Text("\(profile.city) · \(profile.lifespan)")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-                    .padding(.vertical, 2)
-
-                    Text(profile.summary)
-                        .font(.body)
-                        .foregroundColor(settings.accentColor.color)
+                Section {
+                    QiraatProfileHero(kicker: "THE IMAM · ONE OF THE TEN", name: profile.fullName,
+                                      meta: "\(profile.city) · \(profile.lifespan)", arabic: profile.arabic,
+                                      summary: profile.summary)
                 }
 
                 Section(header: Text("BIOGRAPHY")) {
@@ -735,16 +728,24 @@ struct QiraahMasterDetailView: View {
                     ProseText(text: QiraatProfiles.recitedToday(master: profile.id))
                 }
 
+                #if os(iOS)
+                QiraatIsnadSection(title: "The reading of \(profile.id)",
+                                   subtitle: "\(profile.arabic) · the chain of the reading to the Prophet ﷺ",
+                                   sentence: profile.companions,
+                                   layers: QiraatIsnad.chain(master: profile.id))
+                #else
                 Section(header: Text("CHAIN TO THE COMPANIONS")) {
                     ProseText(text: profile.companions)
                 }
+                #endif
 
                 let riwayat = QiraatProfiles.narrators(ofMaster: profile.id)
                 Section {
                     ForEach(riwayat) { narrator in
                         NavigationLink(destination: LazyDestination { RiwayahNarratorDetailView(profile: narrator) }) {
                             QiraatProfileRow(title: narrator.name, arabic: narrator.arabic,
-                                             detail: "\(narrator.city) · d. \(narrator.diedAH) AH")
+                                             detail: "\(narrator.city) · d. \(narrator.diedAH) AH",
+                                             systemImage: "link")
                         }
                     }
                 } header: {
@@ -770,24 +771,30 @@ struct RiwayahNarratorDetailView: View {
     let profile: RiwayahNarratorProfile
 
     var body: some View {
+        ScrollViewReader { proxy in
+            narratorList
+                #if DEBUG && os(iOS)
+                // "-scrollToDifferences" / "-scrollToChain": bring that section into a headless screenshot.
+                .onAppear {
+                    let arguments = ProcessInfo.processInfo.arguments
+                    let target = arguments.contains("-scrollToDifferences") ? "riwayah-differences"
+                        : arguments.contains("-scrollToChain") ? "riwayah-chain" : nil
+                    guard let target else { return }
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
+                        withAnimation { proxy.scrollTo(target, anchor: .top) }
+                    }
+                }
+                #endif
+        }
+    }
+
+    private var narratorList: some View {
         List {
             Group {
-                Section(header: Text("THE NARRATOR")) {
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text(profile.arabic)
-                            .font(.title2)
-                            .foregroundColor(settings.accentColor.color)
-                        Text(profile.fullName)
-                            .font(.body.weight(.semibold))
-                        Text("\(profile.city) · \(profile.lifespan)")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-                    .padding(.vertical, 2)
-
-                    Text(profile.summary)
-                        .font(.body)
-                        .foregroundColor(settings.accentColor.color)
+                Section {
+                    QiraatProfileHero(kicker: "THE NARRATOR · RIWAYAH OF \(profile.masterID.uppercased())", name: profile.fullName,
+                                      meta: "\(profile.city) · \(profile.lifespan)", arabic: profile.arabic,
+                                      summary: profile.summary)
                 }
 
                 Section(header: Text("BIOGRAPHY")) {
@@ -811,6 +818,22 @@ struct RiwayahNarratorDetailView: View {
                     }
                 }
 
+                #if os(iOS)
+                // The chain: teacher by teacher up to the Prophet ﷺ, and the students below (Abu,
+                // 2026-09-12: "a chain from the narrator, both teacher and student, all the way to
+                // the Prophet, and an image of it").
+                QiraatIsnadSection(title: "\(profile.name) an \(profile.masterID)",
+                                   subtitle: "\(profile.arabic) · the chain of the narration to the Prophet ﷺ",
+                                   sentence: QiraatIsnad.sentence(narrator: profile.id),
+                                   layers: QiraatIsnad.chain(narrator: profile.id))
+                    .id("riwayah-chain")
+
+                if !profile.id.isEmpty {
+                    RiwayahDifferencesSection(tag: profile.id, name: profile.name)
+                        .id("riwayah-differences")
+                }
+                #endif
+
                 Section(header: Text("RECITED TODAY")) {
                     ProseText(text: QiraatProfiles.recitedToday(narrator: profile.id))
                 }
@@ -819,7 +842,8 @@ struct RiwayahNarratorDetailView: View {
                     Section(header: Text("THE READING IT NARRATES")) {
                         NavigationLink(destination: LazyDestination { QiraahMasterDetailView(profile: master) }) {
                             QiraatProfileRow(title: master.id, arabic: master.arabic,
-                                             detail: "\(master.city) · d. \(master.diedAH) AH")
+                                             detail: "\(master.city) · d. \(master.diedAH) AH",
+                                             ordinal: QiraatProfiles.ordinal(ofMaster: master.id))
                         }
                     }
                 }
@@ -833,32 +857,111 @@ struct RiwayahNarratorDetailView: View {
     }
 }
 
-/// The row shape shared by every list of imams and narrators in the guide.
+/// The row shape shared by every list of imams and narrators in the guide: a badge (the imam's
+/// number among the ten, or a symbol), the name with its detail line, and the Arabic name in the
+/// Islam tab's face on the trailing edge.
 struct QiraatProfileRow: View {
-    @ObservedObject var settings = Settings.shared
+    @Environment(\.appearance) private var appearance
     let title: String
     let arabic: String
     let detail: String
     /// Where the reading is recited today, when the list wants it on the row.
     var note: String? = nil
+    /// The imam's place among the ten (1 to 10), drawn as the leading badge.
+    var ordinal: Int? = nil
+    /// A symbol badge instead of a number (narrators, chains).
+    var systemImage: String? = nil
 
     var body: some View {
-        HStack(alignment: .firstTextBaseline) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title).font(.body)
-                Text(detail).font(.caption).foregroundColor(.secondary)
+        HStack(alignment: .center, spacing: 12) {
+            badge
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text(title)
+                    .font(.subheadline.weight(.semibold))
+                Text(detail)
+                    .font(.caption)
+                    .foregroundColor(.secondary)
                 if let note {
                     Label(note, systemImage: "mappin.and.ellipse")
                         .font(.caption2)
-                        .foregroundColor(settings.accentColor.color.opacity(0.9))
+                        .foregroundColor(appearance.accent.opacity(0.9))
                         .lineLimit(2)
                 }
             }
+
             Spacer(minLength: 8)
+
             Text(arabic)
-                .font(.body)
-                .foregroundColor(settings.accentColor.color)
+                .font(appearance.islamArabicFont(base: 18, relativeTo: .body))
+                .arabicFontDesign(custom: appearance.islamUsesCustomArabicFace)
+                .foregroundColor(appearance.accent)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
         }
+        .padding(.vertical, 3)
+    }
+
+    @ViewBuilder
+    private var badge: some View {
+        if let ordinal {
+            Text("\(ordinal)")
+                .font(.system(size: 13, weight: .bold, design: .rounded))
+                .foregroundColor(.white)
+                .frame(width: 30, height: 30)
+                .background(
+                    Circle().fill(
+                        LinearGradient(colors: [appearance.accent.opacity(0.95), appearance.accent.opacity(0.65)],
+                                       startPoint: .topLeading, endPoint: .bottomTrailing)
+                    )
+                )
+        } else if let systemImage {
+            AccentIconChip(systemImage: systemImage, size: 30)
+        }
+    }
+}
+
+/// The top of an imam's or a narrator's page: the kicker, the full name and dates, the Arabic name
+/// large on the trailing edge, and the one-line summary in the accent.
+struct QiraatProfileHero: View {
+    @Environment(\.appearance) private var appearance
+    let kicker: String
+    let name: String
+    let meta: String
+    let arabic: String
+    let summary: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(alignment: .top, spacing: 12) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(kicker)
+                        .font(.caption2.weight(.bold))
+                        .tracking(0.8)
+                        .foregroundStyle(.secondary)
+                    Text(name)
+                        .font(.title3.weight(.bold))
+                        .fixedSize(horizontal: false, vertical: true)
+                    Text(meta)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+                Spacer(minLength: 8)
+                Text(arabic)
+                    .font(appearance.islamArabicFont(base: 30, relativeTo: .largeTitle))
+                    .arabicFontDesign(custom: appearance.islamUsesCustomArabicFace)
+                    .foregroundColor(appearance.accent)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.6)
+                    .multilineTextAlignment(.trailing)
+            }
+
+            Text(summary)
+                .font(.subheadline)
+                .foregroundColor(appearance.accent)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(.vertical, 6)
     }
 }
 

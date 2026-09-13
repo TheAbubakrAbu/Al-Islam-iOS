@@ -135,7 +135,7 @@ struct CreditItem: Identifiable, Hashable {
                    detail: "Credit for the Word of the Day curation (149 words, their themes interleaved) goes to my friend Jamil Hammoudeh, who chose them for Tilawa and gave his permission to bring them here; each word's gloss is Quran.com's word-by-word English, and every occurrence is located in this app's own Hafs text",
                    url: "https://github.com/jamilhammoudeh/quran-app", group: .quran, keywords: "vocabulary word of the day tilawa gloss"),
         CreditItem(id: "tilawa-qiraat-explorer", title: "Qiraat Explorer and place index: Tilawa and Quran.com",
-                   detail: "Credit for the Qiraat Explorer's idea (every place the riwayat differ, by ayah and by surah) goes to Tilawa, by my friend Jamil Hammoudeh; the place index is computed from this app's own riwayah texts, and the readings' meanings draw on Quran.com's qiraat reference",
+                   detail: "Credit for the Qiraat Explorer's idea (every place the riwayat differ, by ayah and by surah) and for the worked examples on each narrator's page (where he differs from Hafs, with a recording where one exists) goes to Tilawa, by my friend Jamil Hammoudeh; the place index is computed from this app's own riwayah texts, and the readings' meanings draw on Quran.com's qiraat reference",
                    url: "https://github.com/jamilhammoudeh/quran-app", group: .quran, keywords: "qiraat explorer riwayat differences tilawa"),
         CreditItem(id: "tilawa-theme-wash", title: "Theme wash and share backdrops: Tilawa",
                    detail: "Credit for lighting the ayahs of a theme in the reader (the theme wash) and for the four share backdrop designs goes to Tilawa, by my friend Jamil Hammoudeh, with his permission; the wash here is fainter than Tilawa's, like the bookmark highlighter",
@@ -410,7 +410,7 @@ struct CreditsView: View {
             Text(AppIdentifiers.appName)
                 .font(.title2.bold())
 
-            Text("Created by Abubakr Elmallah (أبوبكر الملاح), a 17-year-old high school student when the app launched on July 26, 2023.")
+            Text("Created by Abubakr Elmallah (أَبُوبَكر المَلَّاح), a 17-year-old high school student when the app launched on July 26, 2023.")
                 .font(.subheadline)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)

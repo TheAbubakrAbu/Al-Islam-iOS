@@ -54,13 +54,13 @@ struct TajweedFoundationsView: View {
                 Text("This guide applies specifically to riwayat Hafs an Asim, which is the most widely recited qiraah in the world today and the standard riwayah used in the majority of printed mushafs.")
                     .font(.body)
 
-                Text("Tajweed (تجويد) refers to the science and practice of reciting the Quran correctly and beautifully, by giving each letter its proper articulation and characteristics. Linguistically, the word tajweed comes from the Arabic root ج-و-د (j-w-d), meaning \"to improve,\" \"to make excellent,\" or \"to perfect.\" In the context of the Quran, it means reciting the words of Allah as they were revealed precisely, clearly, and with care.")
+                Text("Tajweed (تَجوِيد) refers to the science and practice of reciting the Quran correctly and beautifully, by giving each letter its proper articulation and characteristics. Linguistically, the word tajweed comes from the Arabic root ج-و-د (j-w-d), meaning \"to improve,\" \"to make excellent,\" or \"to perfect.\" In the context of the Quran, it means reciting the words of Allah as they were revealed precisely, clearly, and with care.")
                     .font(.body)
 
-                Text("Recitation (قراءة qiraah or تلاوة tilawah) refers to the act of reading the Quran. While qiraah simply means \"reading,\" tilawah carries a deeper meaning of reciting with attentiveness, reflection, and adherence to proper method. Quranic recitation is not just reading text; it is the transmission of a preserved oral tradition passed down from the Prophet ﷺ through generations.")
+                Text("Recitation (قِرَاءَة qiraah or تِلَاوَة tilawah) refers to the act of reading the Quran. While qiraah simply means \"reading,\" tilawah carries a deeper meaning of reciting with attentiveness, reflection, and adherence to proper method. Quranic recitation is not just reading text; it is the transmission of a preserved oral tradition passed down from the Prophet ﷺ through generations.")
                     .font(.body)
 
-                Text("Pronunciation in Quranic recitation is governed by two key components: makharij (مخارج الحروف) and sifat (صفات الحروف). Makharij are the points of articulation, where each letter originates in the mouth or throat, while sifat are the characteristics of those letters, such as heaviness (tafkhim), lightness (tarqiq), or echoing (qalqalah). Together, they ensure that each letter is pronounced distinctly and correctly.")
+                Text("Pronunciation in Quranic recitation is governed by two key components: makharij (مَخَارِجُ الحُرُوفِ) and sifat (صِفَاتُ الحُرُوفِ). Makharij are the points of articulation, where each letter originates in the mouth or throat, while sifat are the characteristics of those letters, such as heaviness (tafkhim), lightness (tarqiq), or echoing (qalqalah). Together, they ensure that each letter is pronounced distinctly and correctly.")
                     .font(.body)
 
                 Text("These elements are essential because even slight changes in pronunciation can alter meanings. Tajweed preserves not only the beauty of the Quran, but also its accuracy and integrity. The Quran was revealed to be recited, and Allah commands:")
@@ -733,7 +733,7 @@ private struct TajweedMakharijView: View {
                     .font(.body)
             }
 
-            Section("1. THROAT LETTERS (الحروف الحلقية)") {
+            Section("1. THROAT LETTERS (الحُرُوفُ الحَلقِيَّةُ)") {
                 Text("These letters originate from the throat, not the tongue.")
                     .font(.body)
 
@@ -789,7 +789,7 @@ private struct TajweedMakharijView: View {
                     .foregroundColor(settings.accentColor.color)
             }
 
-            Section("2. TONGUE LETTERS (أغلب الحروف)") {
+            Section("2. TONGUE LETTERS (أَغلَبُ الحُرُوفِ)") {
                 Text("Most Arabic letters come from the tongue, but different parts of the tongue.")
                     .font(.body)
 
@@ -838,7 +838,7 @@ private struct TajweedMakharijView: View {
                     .foregroundColor(settings.accentColor.color)
             }
 
-            Section("3. LIP LETTERS (الحروف الشفوية)") {
+            Section("3. LIP LETTERS (الحُرُوفُ الشَّفَوِيَّةُ)") {
                 Text("These letters are produced using the lips.")
                     .font(.body)
 
@@ -925,7 +925,7 @@ private struct TajweedHeavyLightView: View {
                     .font(.body)
             }
 
-            Section("1. HEAVY LETTERS (تفخيم)") {
+            Section("1. HEAVY LETTERS (تَفخِيم)") {
                 Text("These letters are always heavy, regardless of the vowel.")
                     .font(.body)
 
@@ -959,7 +959,7 @@ private struct TajweedHeavyLightView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
 
-            Section("2. LIGHT LETTERS (ترقيق)") {
+            Section("2. LIGHT LETTERS (تَرقِيق)") {
                 Text("These letters are always light and never pronounced heavy.")
                     .font(.body)
 
